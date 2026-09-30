@@ -145,7 +145,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const w = k.legT * H * 0.8, hh = Math.max(3.5, w * 0.72);
   const croupY = -H + 2 + k.croup * 2.5;
   const hq = k.hq || 1;
-  const maneLenE = k.mane === "kurz" ? 0.085 : k.maneLen;
+  // Mähnenlänge: natürliche Länge der Rasse oder geschnitten (opt.maehne: steh | kurz | mittel | lang)
+  const natur = naturMaehne(rasseId);
+  const laenge = opt.maehne || natur;
+  const mstil = laenge === "steh" ? "fjord" : laenge === "kurz" ? "kurz" : "lang";
+  const maneLenE = laenge === "kurz" ? 0.085 : laenge === "mittel" ? (natur === "mittel" ? k.maneLen : 0.15) : laenge === "lang" ? (natur === "lang" ? k.maneLen : 0.26) : 0;
   const crest = k.crest + (hengst ? 0.04 : 0);
   const alle = []; // für Bounding-Box
   const merke = arr => { alle.push(...arr); return arr; };
@@ -164,6 +168,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   let maneOuter = mane, maneStripe = null;
   if (k.mane === "fjord") { maneOuter = "#efe6d2"; maneStripe = C.stripe || mane; }
   const tailCol = k.mane === "fjord" ? mix(maneOuter, maneStripe, 0.25) : mane;
+  if (mstil === "fjord" && k.mane !== "fjord") { maneOuter = mane; maneStripe = null; }
+  if (mstil !== "fjord" && k.mane === "fjord") { maneOuter = mix("#efe6d2", C.stripe || mane, 0.2); maneStripe = null; }
 
   // --- Rumpf ---
   const rumpf = merke([
@@ -258,7 +264,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
 
   // --- Mähne ---
   let maehneD = "", streifenD = "";
-  if (k.mane === "lang" || k.mane === "kurz") {
+  if (mstil === "lang" || mstil === "kurz") {
     const n = Math.round(6 + k.vol * 2), oben = [], unten = [];
     const runter = norm(P(0.12, 1));
     for (let i = 0; i <= n; i++) {
@@ -280,7 +286,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     }
     maehneD = d + "Z";
     merke(oben); merke(unten);
-  } else if (k.mane === "fjord") {
+  } else if (mstil === "fjord") {
     const oben = [], unten = [], so = [], su = [];
     for (let i = 0; i <= 12; i++) {
       const t = i / 12, p = kamm(t), taper = Math.sin(Math.PI * (0.08 + 0.84 * t));
@@ -288,12 +294,12 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       so.push(add(p, mul(nOut, 1 + 5.8 * taper))); su.push(add(p, mul(nOut, 1 + 2.4 * taper)));
     }
     maehneD = glatt(oben.concat(unten.reverse()));
-    streifenD = glatt(so.slice(1, 12).concat(su.slice(1, 12).reverse()));
+    if (maneStripe) streifenD = glatt(so.slice(1, 12).concat(su.slice(1, 12).reverse()));
     merke(oben);
   }
   // Schopf
-  const fl = k.fore;
-  const schopf = k.mane === "fjord"
+  const fl = mstil === "fjord" ? Math.max(k.fore, 0.5) : laenge === "kurz" ? Math.min(k.fore, 0.4) : k.fore;
+  const schopf = mstil === "fjord"
     ? [hp(-0.04, -0.04), hp(-0.02, -0.16), hp(0.06, -0.12), hp(0.1, -0.02), hp(0.05, 0.05)]
     : null;
   // Schopf: wächst am Genick zwischen den Ohren und fällt über die Stirn nach unten,
@@ -437,7 +443,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
 
   // Mähne
   if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
-  if (k.mane === "lang") {
+  if (mstil === "lang") {
     const runter = norm(P(0.12, 1));
     for (const t of [0.2, 0.38, 0.56, 0.74]) {
       const p = add(kamm(t), mul(nOut, 1)), len = maneLenE * H * (0.2 + 0.8 * Math.sin(Math.PI * Math.min(1, 0.08 + t * 0.95))) * 0.75;
@@ -451,7 +457,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
 
   // Kopfdetails
   g += `<g>`;
-  if (fl >= 0.25) g += `<path d="${schopf ? glatt(schopf) : schopfBueschel()}" fill="${k.mane === "fjord" ? maneOuter : mane}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  if (fl >= 0.25) g += `<path d="${schopf ? glatt(schopf) : schopfBueschel()}" fill="${mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
   if (fl >= 0.25 && !schopf) g += schopfStraehnen();
   g += ohr(Eb, head);
   // Comic-Auge: Weiß, Iris, Pupille, Glanzlicht, Oberlid, Braue – blinzelt
@@ -569,3 +575,12 @@ function erzeugePflege(pferd, heute) {
     zahn: t - Math.floor(30 + r() * 300),
   };
 }
+
+// Natürliche Mähnenlänge der Rasse
+function naturMaehne(rasseId) {
+  const k = rasseById(rasseId).k;
+  if (k.mane === "fjord") return "steh";
+  if (k.mane === "kurz") return "kurz";
+  return k.maneLen >= 0.2 ? "lang" : "mittel";
+}
+const MAEHNEN = [["steh", "Stehmähne"], ["kurz", "Kurze Mähne"], ["mittel", "Mittlere Mähne"], ["lang", "Lange Mähne"]];

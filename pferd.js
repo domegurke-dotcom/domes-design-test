@@ -105,6 +105,7 @@ const rasseById = id => RASSEN.find(r => r.id === id);
 const f = n => (Math.round(n * 10) / 10).toString();
 const P = (x, y) => ({ x, y });
 const add = (a, b) => P(a.x + b.x, a.y + b.y);
+const sub = (a, b) => P(a.x - b.x, a.y - b.y);
 const mul = (a, s) => P(a.x * s, a.y * s);
 const mid = (a, b) => P((a.x + b.x) / 2, (a.y + b.y) / 2);
 const norm = a => { const l = Math.hypot(a.x, a.y) || 1; return P(a.x / l, a.y / l); };
@@ -152,9 +153,13 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const body = C.body, mane = C.mane, head = C.head || body;
   const pts = C.points || null;
   const hoof = C.pattern === "tobiano" ? "#b8a88f" : (C.hoof || "#3b3531");
-  const dunkel = c => mix(c, "#000000", 0.22);
-  const linie = mix(body, "#000000", 0.6);
-  const manLinie = mix(mane, "#000000", 0.55);
+  const dunkel = c => mix(c, "#1b1530", 0.25);
+  const INK = "#261a14";
+  const linie = INK, manLinie = INK;
+  const dunkelWert = hexRgb(body).reduce((x, y) => x + y) / 3;
+  const schatten = mix(body, dunkelWert < 60 ? "#000000" : "#2b2240", dunkelWert < 60 ? 0.45 : 0.3);
+  const licht = dunkelWert < 60 ? mix(body, "#8a9bc0", 0.35) : mix(body, "#ffffff", 0.35);
+  const inkFein = (d, sw = 1.3, extra = "") => `<path d="${d}" fill="none" stroke="${INK}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" ${extra}/>`;
   let maneOuter = mane, maneStripe = null;
   if (k.mane === "fjord") { maneOuter = "#efe6d2"; maneStripe = C.stripe || mane; }
   const tailCol = k.mane === "fjord" ? mix(maneOuter, maneStripe, 0.45) : mane;
@@ -236,7 +241,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     let c2 = add(add(b2, mul(e, el * 0.55)), mul(q, bw * 0.5));
     if (k.curl) { tip = add(tip, P(-0.42 * el, 0.08 * el)); c1 = add(c1, P(0.05 * el, -0.1 * el)); c2 = add(c2, P(0.25 * el, -0.35 * el)); }
     merke([tip]);
-    return `<path d="M${f(b1.x)},${f(b1.y)}Q${f(c1.x)},${f(c1.y)} ${f(tip.x)},${f(tip.y)}Q${f(c2.x)},${f(c2.y)} ${f(b2.x)},${f(b2.y)}Z" fill="${farbe}" stroke="${linie}" stroke-width="1.3" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
+    const i1 = add(b1, mul(q, bw * 0.45)), i2 = add(b2, mul(q, -bw * 0.35)), itip = add(tip, mul(sub(Eb, tip), 0.25));
+    return `<path d="M${f(b1.x)},${f(b1.y)}Q${f(c1.x)},${f(c1.y)} ${f(tip.x)},${f(tip.y)}Q${f(c2.x)},${f(c2.y)} ${f(b2.x)},${f(b2.y)}Z" fill="${farbe}" stroke="${INK}" stroke-width="1.9" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>` +
+      `<path d="M${f(i1.x)},${f(i1.y)}Q${f(mid(i1, itip).x - 1)},${f(mid(i1, itip).y)} ${f(itip.x)},${f(itip.y)}Q${f(mid(i2, itip).x + 1)},${f(mid(i2, itip).y)} ${f(i2.x)},${f(i2.y)}Z" fill="${mix(farbe, "#2b2240", .35)}"/>`;
   };
   const Eb = hp(0.04, -0.03);
 
@@ -275,7 +282,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     : [hp(-0.03, -0.04), hp(0.06, -0.07), hp(0.1 + 0.18 * fl, -0.06), hp(0.14 + 0.2 * fl, -0.01), hp(0.08 + 0.1 * fl, 0.04 + 0.03 * fl), hp(0.01, 0.05)];
 
   // --- Details ---
-  const auge = hp(0.3, 0.1), er = 0.034 * hl * (k.eye || 1);
+  const auge = hp(0.3, 0.1), er = 0.04 * hl * (k.eye || 1);
   const nuester = hp(0.9, 0.1);
   const maulA = hp(0.985, 0.19), maulB = hp(0.86, 0.215);
 
@@ -290,7 +297,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const fern = [[glatt(vorderF), beinFillF], [glatt(hinterF), beinFillF], ...behF.map(b => [glatt(b), featherColF])];
   const haupt = [[halsD, body], [glatt(rumpf), body], [glatt(vorderN), beinFill], [glatt(hinterN), beinFill],
     ...behN.map(b => [glatt(b), featherCol]), [glatt(kopf), head]];
-  const umriss = (teile, farbe, sw = 2.2) =>
+  const umriss = (teile, farbe, sw = 3.6) =>
     `<g fill="${farbe}" stroke="${farbe}" stroke-width="${sw}" stroke-linejoin="round" vector-effect="non-scaling-stroke">` +
     teile.map(t => `<path d="${t[0]}" vector-effect="non-scaling-stroke"/>`).join("") + "</g>" +
     teile.map(t => `<path d="${t[0]}" fill="${t[1]}"/>`).join("");
@@ -303,8 +310,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   defs += `<clipPath id="cr-${uid}"><path d="${halsD}"/><path d="${glatt(rumpf)}"/></clipPath>`;
   defs += `<clipPath id="cf-${uid}">${fern.map(t => `<path d="${t[0]}"/>`).join("")}</clipPath>`;
   if (pts) {
-    defs += `<linearGradient id="lg-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-0.62 * Lg)}" x2="0" y2="${f(-0.42 * Lg)}"><stop offset="0" stop-color="${body}"/><stop offset="1" stop-color="${pts}"/></linearGradient>`;
-    defs += `<linearGradient id="lgf-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-0.62 * Lg)}" x2="0" y2="${f(-0.42 * Lg)}"><stop offset="0" stop-color="${dunkel(body)}"/><stop offset="1" stop-color="${dunkel(pts)}"/></linearGradient>`;
+    defs += `<linearGradient id="lg-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-0.62 * Lg)}" x2="0" y2="${f(-0.42 * Lg)}"><stop offset=".5" stop-color="${body}"/><stop offset=".5" stop-color="${pts}"/></linearGradient>`;
+    defs += `<linearGradient id="lgf-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-0.62 * Lg)}" x2="0" y2="${f(-0.42 * Lg)}"><stop offset=".5" stop-color="${dunkel(body)}"/><stop offset=".5" stop-color="${dunkel(pts)}"/></linearGradient>`;
   }
   defs += `<linearGradient id="sh-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-H * 1.1)}" x2="0" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset=".62" stop-color="#000" stop-opacity=".05"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>`;
   if (C.pattern === "dapple") defs += `<pattern id="dp-${uid}" patternUnits="userSpaceOnUse" width="8" height="7"><circle cx="4" cy="3.5" r="2.6" fill="${C.dapple}" opacity=".75"/><circle cx="0" cy="0" r="2.2" fill="${C.dapple}" opacity=".6"/><circle cx="8" cy="0" r="2.2" fill="${C.dapple}" opacity=".6"/><circle cx="0" cy="7" r="2.2" fill="${C.dapple}" opacity=".6"/><circle cx="8" cy="7" r="2.2" fill="${C.dapple}" opacity=".6"/></pattern>`;
@@ -315,9 +322,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   let g = `<defs>${defs}</defs>`;
 
   // Hintere Beine
-  g += `<g>${umriss(fern, dunkel(linie))}`;
+  g += `<g>${umriss(fern, INK)}`;
   if (C.pattern === "tobiano") g += `<rect x="${f(minX)}" y="${f(-0.68 * Lg)}" width="${f(maxX - minX)}" height="${f(0.68 * Lg + 2)}" fill="#dedad3" clip-path="url(#cf-${uid})"/>`;
-  g += `<g stroke="${dunkel(linie)}" stroke-width="1.2" vector-effect="non-scaling-stroke">` +
+  g += `<g stroke="${INK}" stroke-width="1.6" vector-effect="non-scaling-stroke">` +
     [huf(fx2), huf(hx2)].map(h => `<path d="${eckig(h)}" fill="${dunkel(hoof)}" vector-effect="non-scaling-stroke"/>`).join("") + "</g></g>";
 
   // Kopfbewegung (leichtes Nicken): Kopf-Gruppe
@@ -351,33 +358,75 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (C.stripe) g += `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${C.stripe}" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>`;
   if (C.muzzle) g += `<ellipse cx="${f(hp(0.93, 0.12).x)}" cy="${f(hp(0.93, 0.12).y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.93, 0.12).x)} ${f(hp(0.93, 0.12).y)})" fill="${C.muzzle}" opacity=".75"/>`;
   if (k.metallic) g += `<rect ${bx} fill="url(#mt-${uid})"/>`;
-  g += `<rect ${bx} fill="url(#sh-${uid})"/>`;
+  // Cel-Shading: harter Bauchschatten, Halsschatten, Lichtkante am Rücken
+  g += `<g clip-path="url(#cr-${uid})"><path d="${glatt([P(-0.12 * H, top + 0.72 * D), P(0.12 * L, bottom - 0.22 * D), P(0.45 * L, bottom - 0.2 * D), P(0.72 * L, bottom - 0.26 * D), P(L + 0.1 * H, top + 0.62 * D), P(L + 0.1 * H, 5), P(-0.12 * H, 5)])}" fill="${schatten}" opacity=".55"/></g>`;
+  g += `<path d="${glatt([T, add(mid(T, Cn), mul(nOut, -2)), Cn, add(Cn, P(8, 6)), add(mid(T, Cn), mul(nOut, 5)), add(T, mul(nOut, 4))])}" fill="${schatten}" opacity=".45"/>`;
+  g += `<path d="${glatt([hp(0.1, 0.42 * hw), hp(0.3, 0.47 * hw * jw), hp(0.55, 0.36 * hw), hp(0.8, 0.28 * hw), hp(0.6, 0.3 * hw), hp(0.35, 0.37 * hw * jw)])}" fill="${schatten}" opacity=".45"/>`;
+  g += `<path d="${glatt([P(0.24 * L, -H + 3.5), P(0.42 * L, top + 5), P(0.62 * L, top + 4), P(0.8 * L, croupY + 3), P(0.8 * L, croupY + 6.5), P(0.62 * L, top + 7.5), P(0.42 * L, top + 8.5)], true)}" fill="${licht}" opacity=".6"/>`;
   g += `</g>`;
+  // Comic-Detaillinien (Schulter, Ellbogen, Hüfte, Knie, Sprunggelenk, Ganasche)
+  g += inkFein(`M${f(0.2 * L)},${f(-H + 7)}Q${f(0.16 * L)},${f(top + 0.62 * D)} ${f(0.02 * L)},${f(top + 0.82 * D)}`, 1.3, 'opacity=".7"');
+  g += inkFein(`M${f(fx + 1.4 * w)},${f(bottom - 7)}Q${f(fx + 1.8 * w)},${f(bottom - 1)} ${f(fx + 1.3 * w)},${f(bottom + 3)}`, 1.2, 'opacity=".6"');
+  g += inkFein(`M${f(0.7 * L)},${f(top + 0.22 * D)}Q${f(0.9 * L)},${f(top + 0.35 * D)} ${f(hx - 0.08 * L)},${f(bottom + 1)}`, 1.3, 'opacity=".7"');
+  g += inkFein(`M${f(0.62 * L)},${f(bottom - 0.3 * D)}Q${f(0.66 * L)},${f(bottom - 0.12 * D)} ${f(0.63 * L)},${f(bottom - 2)}`, 1.1, 'opacity=".45"');
+  g += inkFein(`M${f(fx - 0.5 * w)},${f(-0.47 * Lg)}l${f(0.6 * w)},0`, 1.1, 'opacity=".55"');
+  g += inkFein(`M${f(hx + 0.3 * w)},${f(-0.54 * Lg)}l${f(0.6 * w)},${f(-1)}`, 1.1, 'opacity=".55"');
+  g += inkFein(`M${f(hp(0.34, 0.2).x)},${f(hp(0.34, 0.2).y)}Q${f(hp(0.52, 0.4).x)},${f(hp(0.52, 0.4).y)} ${f(hp(0.3, 0.47 * hw * jw).x)},${f(hp(0.3, 0.47 * hw * jw).y)}`, 1.4, 'opacity=".75"');
   // Hufe vorn
-  g += `<g stroke="${linie}" stroke-width="1.2" vector-effect="non-scaling-stroke">` +
-    [huf(fx), huf(hx)].map(h => `<path d="${eckig(h)}" fill="${hoof}" vector-effect="non-scaling-stroke"/>`).join("") + "</g>";
+  g += `<g stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke">` +
+    [huf(fx), huf(hx)].map(h => `<path d="${eckig(h)}" fill="${hoof}" vector-effect="non-scaling-stroke"/>`).join("") + "</g>" +
+    [fx, hx].map(xc => `<path d="M${f(xc - 0.55 * w)},${f(-hh + 1.2)}L${f(xc - 0.75 * w)},${f(-1.2)}" stroke="#fff" stroke-opacity=".35" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`).join("");
   // Behang über Hufe (vorn)
   if (behN.length) {
     const bc = C.pattern === "tobiano" ? "#f7f5f1" : featherCol;
-    g += behN.map(b => `<path d="${glatt(b)}" fill="${bc}" stroke="${mix(bc, "#000000", .45)}" stroke-width="1" vector-effect="non-scaling-stroke"/>`).join("");
+    g += behN.map(b => `<path d="${glatt(b)}" fill="${bc}" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`).join("");
   }
   g += `</g>`;
 
-  // Schweif
-  g += `<g class="schweif"><path d="${schweifD}" fill="${tailCol}" stroke="${manLinie}" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round">` +
-    `<animateTransform attributeName="transform" type="rotate" values="0 ${f(X)} ${f(Y)};5 ${f(X)} ${f(Y)};-2 ${f(X)} ${f(Y)};0 ${f(X)} ${f(Y)}" dur="3.4s" repeatCount="indefinite"/></path></g>`;
+  // Schweif (mit Strähnen)
+  const tailStr = (o, sc) => `M${f(X + 1 + 3 * s + o)},${f(Y + 8 - 10 * s)}C${f(X + 4 + 8 * s + tv * 2 + o)},${f(Y + 0.35 * tl)} ${f(X + 3 + 6 * s + tv * 3 + o)},${f(Y + 0.7 * tl)} ${f(X + 2 + 5 * s + tv * 2 + o * 0.6)},${f(Y + tl * sc)}`;
+  g += `<g class="schweif"><animateTransform attributeName="transform" type="rotate" values="0 ${f(X)} ${f(Y)};5 ${f(X)} ${f(Y)};-2 ${f(X)} ${f(Y)};0 ${f(X)} ${f(Y)}" dur="3.4s" repeatCount="indefinite"/>` +
+    `<path d="${schweifD}" fill="${tailCol}" stroke="${INK}" stroke-width="2.4" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>` +
+    inkFein(tailStr(0, 0.88), 1.1, 'opacity=".55"') + inkFein(tailStr(2.5 + tv, 0.7), 1, 'opacity=".45"') +
+    `<path d="${tailStr(-1.5, 0.6)}" fill="none" stroke="${mix(tailCol, "#ffffff", .45)}" stroke-width="1.6" stroke-linecap="round" opacity=".7" vector-effect="non-scaling-stroke"/></g>`;
 
   // Mähne
-  if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${mix(maneOuter, "#000000", .5)}" stroke-width="1.4" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
+  if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
+  if (k.mane === "lang") {
+    const runter = norm(P(0.12, 1));
+    for (const t of [0.2, 0.38, 0.56, 0.74]) {
+      const p = add(kamm(t), mul(nOut, 1)), len = k.maneLen * H * (0.2 + 0.8 * Math.sin(Math.PI * Math.min(1, 0.08 + t * 0.95))) * 0.75;
+      const e = add(p, mul(runter, len)), c = add(mid(p, e), P(-2, 0));
+      g += inkFein(`M${f(p.x)},${f(p.y)}Q${f(c.x)},${f(c.y)} ${f(e.x)},${f(e.y)}`, 1, 'opacity=".5"');
+    }
+    const h1 = add(kamm(0.3), mul(nOut, 0.5)), h2 = add(kamm(0.75), mul(nOut, 0.5));
+    g += `<path d="M${f(h1.x)},${f(h1.y)}Q${f(kamm(0.52).x)},${f(kamm(0.52).y + 2)} ${f(h2.x)},${f(h2.y)}" fill="none" stroke="${mix(maneOuter, "#ffffff", .45)}" stroke-width="2" stroke-linecap="round" opacity=".7" vector-effect="non-scaling-stroke"/>`;
+  }
   if (streifenD) g += `<path d="${streifenD}" fill="${maneStripe}"/>`;
 
   // Kopfdetails
   g += `<g>${ohr(Eb, head)}`;
-  if (fl >= 0.35) g += `<path d="${glatt(schopf)}" fill="${k.mane === "fjord" ? maneOuter : mane}" stroke="${manLinie}" stroke-width="1.2" vector-effect="non-scaling-stroke"/>`;
-  g += `<ellipse cx="${f(auge.x)}" cy="${f(auge.y)}" rx="${f(er)}" ry="${f(er * 1.05)}" fill="#1a1210"><animate attributeName="ry" values="${f(er * 1.05)};${f(er * 1.05)};${f(er * 0.1)};${f(er * 1.05)}" keyTimes="0;.93;.96;1" dur="4.5s" repeatCount="indefinite"/></ellipse>`;
-  g += `<circle cx="${f(auge.x - er * 0.35)}" cy="${f(auge.y - er * 0.35)}" r="${f(er * 0.3)}" fill="#fff" opacity=".8"/>`;
-  g += `<ellipse cx="${f(nuester.x)}" cy="${f(nuester.y)}" rx="${f(0.028 * hl)}" ry="${f(0.045 * hl)}" transform="rotate(${f(-k.hAng + 70)} ${f(nuester.x)} ${f(nuester.y)})" fill="${mix(C.muzzle || head, "#000000", .5)}"/>`;
-  g += `<path d="M${f(maulA.x)},${f(maulA.y)}Q${f(mid(maulA, maulB).x)},${f(mid(maulA, maulB).y + 0.8)} ${f(maulB.x)},${f(maulB.y)}" fill="none" stroke="${mix(C.muzzle || head, "#000000", .5)}" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+  if (fl >= 0.35) g += `<path d="${glatt(schopf)}" fill="${k.mane === "fjord" ? maneOuter : mane}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  // Comic-Auge: Weiß, Iris, Pupille, Glanzlicht, Oberlid, Braue – blinzelt
+  const ang = Math.atan2(u.y, u.x) * 180 / Math.PI + 180;
+  const ex = er * 1.9, ey = er * 1.4;
+  const iris = C.augen || "#5a3418";
+  g += `<g transform="translate(${f(auge.x)},${f(auge.y)}) rotate(${f(ang - 180 + 12)})"><g>` +
+    `<animateTransform attributeName="transform" type="scale" values="1 1;1 1;1 .08;1 1" keyTimes="0;.93;.96;1" dur="4.5s" repeatCount="indefinite"/>` +
+    `<ellipse rx="${f(ex)}" ry="${f(ey)}" fill="#fbf7f0" stroke="${INK}" stroke-width="1.4" vector-effect="non-scaling-stroke"/>` +
+    `<circle cx="${f(-ex * 0.2)}" cy="${f(ey * 0.05)}" r="${f(ey * 0.9)}" fill="${iris}"/>` +
+    `<circle cx="${f(-ex * 0.25)}" cy="${f(ey * 0.08)}" r="${f(ey * 0.55)}" fill="#120c09"/>` +
+    `<circle cx="${f(-ex * 0.45)}" cy="${f(-ey * 0.35)}" r="${f(ey * 0.3)}" fill="#fff"/>` +
+    `<circle cx="${f(ex * 0.05)}" cy="${f(ey * 0.35)}" r="${f(ey * 0.13)}" fill="#fff" opacity=".8"/>` +
+    `</g>` +
+    `<path d="M${f(-ex * 1.15)},${f(ey * 0.1)}Q${f(-ex * 0.2)},${f(-ey * 1.55)} ${f(ex * 1.05)},${f(-ey * 0.2)}" fill="none" stroke="${INK}" stroke-width="2.2" stroke-linecap="round" vector-effect="non-scaling-stroke"/>` +
+    `<path d="M${f(-ex * 0.8)},${f(-ey * 1.9)}Q${f(ex * 0.1)},${f(-ey * 2.5)} ${f(ex * 0.9)},${f(-ey * 1.7)}" fill="none" stroke="${INK}" stroke-width="1.2" stroke-linecap="round" opacity=".55" vector-effect="non-scaling-stroke"/>` +
+    `</g>`;
+  // Nüster (Comic-Kringel) + Maul
+  const n1 = hp(0.86, 0.06), n2 = hp(0.95, 0.07), n3 = hp(0.9, 0.15);
+  g += inkFein(`M${f(n1.x)},${f(n1.y)}Q${f(n2.x)},${f(n2.y)} ${f(n3.x)},${f(n3.y)}`, 1.8);
+  g += inkFein(`M${f(maulA.x)},${f(maulA.y)}Q${f(mid(maulA, maulB).x)},${f(mid(maulA, maulB).y + 1)} ${f(maulB.x)},${f(maulB.y)}`, 1.5);
+  g += inkFein(`M${f(hp(0.88, 0.25 * m).x)},${f(hp(0.88, 0.25 * m).y)}Q${f(hp(0.8, 0.22).x)},${f(hp(0.8, 0.22).y)} ${f(hp(0.74, 0.25).x)},${f(hp(0.74, 0.25).y)}`, 1.1, 'opacity=".5"');
   g += `</g>`;
 
   return { svg: `<g>${g}</g>`, box: { minX, maxX, minY } };

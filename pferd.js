@@ -550,9 +550,9 @@ function ausbildungsKlasse(werte, alter) {
   if (m < 10) return "roh – wird gerade angeritten";
   if (m < 25) return "angeritten";
   if (m < 40) return "Klasse E (Einsteiger)";
-  if (m < 55) return "Klasse A";
-  if (m < 70) return "Klasse L";
-  if (m < 82) return "Klasse M";
-  return "Klasse S";
+  if (m < 55) return "Klasse A (Anfänger)";
+  if (m < 70) return "Klasse L (Leicht)";
+  if (m < 82) return "Klasse M (Mittel)";
+  return "Klasse S (Schwer)";
 }
 const NOTENWORT = n => n >= 10 ? "ausgezeichnet" : n >= 9 ? "sehr gut" : n >= 8 ? "gut" : n >= 7 ? "ziemlich gut" : n >= 6 ? "befriedigend" : n >= 5 ? "genügend" : "mangelhaft";

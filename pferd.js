@@ -183,9 +183,24 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
 
   // --- Hals + Kopf ---
   const Wn = P(0.22 * L, -H + 1), Cn = P(-0.07 * H, top + 0.42 * D);
-  const a = (k.nAng - 20) * Math.PI / 180, N = k.neck * H * 1.1;
+  // Haltung je nach Gesundheit: normal | leicht | waagerecht | tief | liegend
+  // Waagerechte = Buggelenk (Brustspitze) und Maul auf gleicher Höhe
+  const haltung = opt.haltung || "normal", liegt = haltung === "liegend";
+  const gl = w * 1.5;                       // Höhe der untergeschlagenen Beine beim Liegen
+  const dLiegen = liegt ? Lg - gl : 0;      // so weit sinkt der Körper beim Liegen ab
+  const a0 = (k.nAng - 20) * Math.PI / 180, N = k.neck * H * 1.1;
+  const hl = k.head * H;
+  const th0 = k.hAng * Math.PI / 180;
+  const th = th0 + ({ normal: 0, leicht: 8, waagerecht: 12, tief: 16, liegend: 16 }[haltung] || 0) * Math.PI / 180;
+  const maulY = (aa, tt) => Wn.y - N * Math.sin(aa) + (Math.sin(tt) * 1.01 + Math.cos(tt) * 0.14 * k.muz) * hl;
+  const bugY = top + 0.45 * D, normY = maulY(a0, th0);
+  const zielY = { leicht: normY + 0.62 * (bugY - normY), waagerecht: bugY, tief: bugY + 0.5 * (-hh - 3 - bugY), liegend: -dLiegen - 2.5 }[haltung];
+  let a = a0;
+  if (zielY != null) {
+    const c = (Math.sin(th) * 1.01 + Math.cos(th) * 0.14 * k.muz) * hl;
+    a = Math.asin(Math.max(-0.97, Math.min(Math.sin(a0), (Wn.y + c - zielY) / N)));
+  }
   const Pll = P(Wn.x - N * Math.cos(a), Wn.y - N * Math.sin(a));
-  const hl = k.head * H, th = k.hAng * Math.PI / 180;
   const u = P(-Math.cos(th), Math.sin(th)), v = P(Math.sin(th), Math.cos(th));
   const hp = (s, b) => P(Pll.x + (u.x * s + v.x * b) * hl, Pll.y + (u.y * s + v.y * b) * hl);
   const pr = k.profile, hw = k.hw, jw = k.jw, m = k.muz;
@@ -231,11 +246,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       P(xc + 0.1 * w, 0.8), P(xc - 0.4 * w, -1.2), P(xc - 0.8 * w, 0.8), P(xc - 1.05 * w - 1.2 * fl, 0.6), P(xc - 0.9 * w - 0.6 * fl, -0.06 * Lg), P(xc - 0.6 * w, tp * 0.85)];
   };
   const fx = 0.12 * L, fx2 = 0.2 * L, hx = 0.87 * L, hx2 = 0.8 * L;
-  merke([P(fx - 1.2 * w, 0), P(hx + 1.2 * w, 0)]);
+  if (!liegt) merke([P(fx - 1.2 * w, 0), P(hx + 1.2 * w, 0)]);
 
   // --- Schweif ---
   const Tb = P(L - 0.015 * H, croupY + 1.5 + k.croup * 3.5);
-  const tl = Math.min(k.tail * H, -Tb.y - 1.5), tv = k.tvol, s = k.tset;
+  const tl = Math.min(k.tail * H, -Tb.y - dLiegen - 1.5), tv = k.tvol, s = k.tset;
   const X = Tb.x, Y = Tb.y;
   const schweifD =
     `M${f(X)},${f(Y)}C${f(X + 3)},${f(Y - 18 * s - 0.5)} ${f(X + 8 + 12 * s)},${f(Y - 14 * s + 3)} ${f(X + 7 + 11 * s + tv * 3)},${f(Y + 0.3 * tl - 4 * s)}` +
@@ -336,8 +351,18 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const featherCol = pts || body, featherColF = dunkel(pts || body);
 
   // Teile: [d, fill]
-  const fern = [[glatt(vorderF), beinFillF], [glatt(hinterF), beinFillF], ...behF.map(b => [glatt(b), featherColF])];
-  const haupt = [[halsD, body], [glatt(rumpf), body], [glatt(vorderN), beinFill], [glatt(hinterN), beinFill],
+  // Untergeschlagene Beine beim Liegen (Brustlage)
+  const G = bottom + gl;
+  const K = P(fx - 0.3 * Lg, G - 0.45 * w);
+  const vorderLiegend = [P(fx + 1.4 * w, bottom - 8), P(fx - 1.0 * w, bottom - 6), P(K.x - 0.4 * w, K.y - 0.75 * w), P(K.x - 1.0 * w, K.y + 0.1 * w), P(K.x - 0.4 * w, G), P(fx + 1.2 * w, G)];
+  const vorderLiegendUnten = [P(K.x - 0.2 * w, G - 0.95 * w), P(K.x + 0.26 * Lg, G - 0.75 * w), P(K.x + 0.26 * Lg + 0.4 * w, G), P(K.x - 0.3 * w, G)];
+  const hinterLiegend = [P(hx + 1.2 * w, bottom - 8), P(hx + 1.6 * w, G - 0.9 * w), P(hx + 1.0 * w, G), P(hx - 0.32 * Lg, G), P(hx - 0.32 * Lg - 0.2 * w, G - 0.8 * w), P(hx - 0.05 * Lg, G - 1.1 * w), P(hx - 0.2 * w, bottom - 4)];
+  const hufLiegend = [P(K.x + 0.26 * Lg, G - 0.8 * w), P(K.x + 0.26 * Lg + 0.9 * w, G - 0.7 * w), P(K.x + 0.26 * Lg + 1.0 * w, G), P(K.x + 0.26 * Lg - 0.1 * w, G)];
+  const hufLiegendH = [P(hx - 0.32 * Lg - 0.9 * w, G - 0.75 * w), P(hx - 0.32 * Lg + 0.1 * w, G - 0.8 * w), P(hx - 0.32 * Lg + 0.1 * w, G), P(hx - 0.32 * Lg - 1.0 * w, G)];
+  if (liegt) merke([P(K.x - 1.2 * w, G), P(hx + 1.6 * w, G)]);
+  const ptsFill = pts || body;
+  const fern = liegt ? [] : [[glatt(vorderF), beinFillF], [glatt(hinterF), beinFillF], ...behF.map(b => [glatt(b), featherColF])];
+  const haupt = liegt ? [[halsD, body], [glatt(rumpf), body], [glatt(hinterLiegend), body], [glatt(vorderLiegend), body], [eckig(vorderLiegendUnten), ptsFill], [glatt(kopf), head]] : [[halsD, body], [glatt(rumpf), body], [glatt(vorderN), beinFill], [glatt(hinterN), beinFill],
     ...behN.map(b => [glatt(b), featherCol]), [glatt(kopf), head]];
   const umriss = (teile, farbe, sw = 3.6) =>
     `<g fill="${farbe}" stroke="${farbe}" stroke-width="${sw}" stroke-linejoin="round" vector-effect="non-scaling-stroke">` +
@@ -368,7 +393,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += `<g>${umriss(fern, INK)}`;
   if (C.pattern === "tobiano") g += `<rect x="${f(minX)}" y="${f(-0.68 * Lg)}" width="${f(maxX - minX)}" height="${f(0.68 * Lg + 2)}" fill="#dedad3" clip-path="url(#cf-${uid})"/>`;
   g += `<g stroke="${INK}" stroke-width="1.6" vector-effect="non-scaling-stroke">` +
-    [huf(fx2), huf(hx2)].map(h => `<path d="${eckig(h)}" fill="${dunkel(hoof)}" vector-effect="non-scaling-stroke"/>`).join("") + "</g></g>";
+    (liegt ? [] : [huf(fx2), huf(hx2)]).map(h => `<path d="${eckig(h)}" fill="${dunkel(hoof)}" vector-effect="non-scaling-stroke"/>`).join("") + "</g></g>";
 
   // Kopfbewegung (leichtes Nicken): Kopf-Gruppe
   const nick = `<animateTransform attributeName="transform" type="rotate" values="0 ${f(Pn.x)} ${f(Pn.y)};0 ${f(Pn.x)} ${f(Pn.y)};-3 ${f(Pn.x)} ${f(Pn.y)};0 ${f(Pn.x)} ${f(Pn.y)}" keyTimes="0;.8;.9;1" dur="6s" repeatCount="indefinite"/>`;
@@ -415,8 +440,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += inkFein(`M${f(fx + 1.4 * w)},${f(bottom - 7)}Q${f(fx + 1.8 * w)},${f(bottom - 1)} ${f(fx + 1.3 * w)},${f(bottom + 3)}`, 1.2, 'opacity=".6"');
   g += inkFein(`M${f(0.7 * L)},${f(top + 0.22 * D)}Q${f(0.9 * L)},${f(top + 0.35 * D)} ${f(hx - 0.08 * L)},${f(bottom + 1)}`, 1.3, 'opacity=".7"');
   g += inkFein(`M${f(0.62 * L)},${f(bottom - 0.3 * D)}Q${f(0.66 * L)},${f(bottom - 0.12 * D)} ${f(0.63 * L)},${f(bottom - 2)}`, 1.1, 'opacity=".45"');
-  g += inkFein(`M${f(fx - 0.5 * w)},${f(-0.47 * Lg)}l${f(0.6 * w)},0`, 1.1, 'opacity=".55"');
-  g += inkFein(`M${f(hx + 0.3 * w)},${f(-0.54 * Lg)}l${f(0.6 * w)},${f(-1)}`, 1.1, 'opacity=".55"');
+  if (!liegt) g += inkFein(`M${f(fx - 0.5 * w)},${f(-0.47 * Lg)}l${f(0.6 * w)},0`, 1.1, 'opacity=".55"');
+  if (!liegt) g += inkFein(`M${f(hx + 0.3 * w)},${f(-0.54 * Lg)}l${f(0.6 * w)},${f(-1)}`, 1.1, 'opacity=".55"');
   g += inkFein(`M${f(hp(0.34, 0.2).x)},${f(hp(0.34, 0.2).y)}Q${f(hp(0.52, 0.4).x)},${f(hp(0.52, 0.4).y)} ${f(hp(0.3, 0.47 * hw * jw).x)},${f(hp(0.3, 0.47 * hw * jw).y)}`, 1.4, 'opacity=".75"');
   // kurze Fellstriche wie bei einer Tuschezeichnung
   const strich = (p, dx, dy) => inkFein(`M${f(p.x)},${f(p.y)}l${f(dx)},${f(dy)}`, 1, 'opacity=".45"');
@@ -425,8 +450,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += strich(add(mid(T, Cn), mul(nOut, 1)), 2, 1.5) + strich(add(mid(T, Cn), P(1, 4)), 2, 1.2);
   // Hufe vorn
   g += `<g stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke">` +
-    [huf(fx), huf(hx)].map(h => `<path d="${eckig(h)}" fill="${hoof}" vector-effect="non-scaling-stroke"/>`).join("") + "</g>" +
-    [fx, hx].map(xc => `<path d="M${f(xc - 0.55 * w)},${f(-hh + 1.2)}L${f(xc - 0.75 * w)},${f(-1.2)}" stroke="#fff" stroke-opacity=".35" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`).join("");
+    (liegt ? [hufLiegend, hufLiegendH] : [huf(fx), huf(hx)]).map(h => `<path d="${eckig(h)}" fill="${hoof}" vector-effect="non-scaling-stroke"/>`).join("") + "</g>" +
+    (liegt ? [] : [fx, hx]).map(xc => `<path d="M${f(xc - 0.55 * w)},${f(-hh + 1.2)}L${f(xc - 0.75 * w)},${f(-1.2)}" stroke="#fff" stroke-opacity=".35" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`).join("");
   // Behang über Hufe (vorn)
   if (behN.length) {
     const bc = C.pattern === "tobiano" ? "#f7f5f1" : featherCol;
@@ -484,7 +509,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += inkFein(`M${f(hp(0.9, 0.3 * m).x)},${f(hp(0.9, 0.3 * m).y)}Q${f(hp(0.84, 0.27).x)},${f(hp(0.84, 0.27).y)} ${f(hp(0.78, 0.31).x)},${f(hp(0.78, 0.31).y)}`, 1.1, 'opacity=".5"');
   g += `</g>`;
 
-  return { svg: `<g>${g}</g>`, box: { minX, maxX, minY } };
+  return { svg: `<g transform="translate(0,${f(dLiegen)})">${g}</g>`, box: { minX, maxX, minY: minY + dLiegen } };
 }
 
 // =====================================================================

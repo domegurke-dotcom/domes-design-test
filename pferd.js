@@ -198,18 +198,18 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
 
   // --- Beine ---
   const vorder = xc => [
-    P(xc - 1.0 * w, bottom - 12), P(xc - 1.2 * w, bottom + 1), P(xc - 1.15 * w, -0.74 * Lg), P(xc - 0.9 * w, -0.6 * Lg), P(xc - 0.78 * w, -0.5 * Lg),
-    P(xc - 0.72 * w, -0.44 * Lg), P(xc - 0.52 * w, -0.38 * Lg), P(xc - 0.48 * w, -0.2 * Lg), P(xc - 0.62 * w, -0.1 * Lg), P(xc - 0.8 * w, -0.05 * Lg),
+    P(xc - 1.0 * w, bottom - 12), P(xc - 1.2 * w, bottom + 1), P(xc - 1.15 * w, -0.74 * Lg), P(xc - 0.9 * w, -0.6 * Lg), P(xc - 0.8 * w, -0.51 * Lg),
+    P(xc - 0.92 * w, -0.46 * Lg), P(xc - 0.5 * w, -0.39 * Lg), P(xc - 0.42 * w, -0.2 * Lg), P(xc - 0.72 * w, -0.1 * Lg), P(xc - 0.8 * w, -0.05 * Lg),
     P(xc - 0.9 * w, -hh + 0.5),
-    P(xc + 0.4 * w, -hh + 0.5), P(xc + 0.82 * w, -0.08 * Lg), P(xc + 0.5 * w, -0.17 * Lg),
+    P(xc + 0.4 * w, -hh + 0.5), P(xc + 0.92 * w, -0.08 * Lg), P(xc + 0.42 * w, -0.18 * Lg),
     P(xc + 0.45 * w, -0.36 * Lg), P(xc + 0.62 * w, -0.46 * Lg), P(xc + 0.72 * w, -0.52 * Lg), P(xc + 0.68 * w, -0.64 * Lg),
     P(xc + 1.05 * w, bottom + 1), P(xc + 1.7 * w, bottom - 3), P(xc + 1.4 * w, bottom - 12),
   ];
   const hinter = hx => [
     P(0.7 * L, bottom - 12), P(0.79 * L, bottom + 0.015 * H), P(hx - 0.25 * w, -0.72 * Lg), P(hx - 0.35 * w, -0.62 * Lg),
-    P(hx - 0.62 * w, -0.52 * Lg), P(hx - 0.5 * w, -0.4 * Lg), P(hx - 0.48 * w, -0.2 * Lg), P(hx - 0.62 * w, -0.1 * Lg),
+    P(hx - 0.7 * w, -0.53 * Lg), P(hx - 0.45 * w, -0.41 * Lg), P(hx - 0.42 * w, -0.2 * Lg), P(hx - 0.72 * w, -0.1 * Lg),
     P(hx - 0.9 * w, -hh + 0.5),
-    P(hx + 0.4 * w, -hh + 0.5), P(hx + 0.82 * w, -0.08 * Lg), P(hx + 0.5 * w, -0.17 * Lg),
+    P(hx + 0.4 * w, -hh + 0.5), P(hx + 0.92 * w, -0.08 * Lg), P(hx + 0.42 * w, -0.18 * Lg),
     P(hx + 0.5 * w, -0.44 * Lg), P(hx + 1.15 * w, -0.57 * Lg), P(hx + 1.0 * w, -0.66 * Lg), P(hx + 1.45 * w + hq, -0.8 * Lg),
     P(L + 0.005 * H * hq, bottom - 0.05 * D), P(L + 0.035 * H * hq, top + 0.62 * D), P(hx, top + 0.45 * D),
   ];
@@ -230,7 +230,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const schweifD =
     `M${f(X)},${f(Y)}C${f(X + 3)},${f(Y - 18 * s - 0.5)} ${f(X + 8 + 12 * s)},${f(Y - 14 * s + 3)} ${f(X + 7 + 11 * s + tv * 3)},${f(Y + 0.3 * tl - 4 * s)}` +
     `C${f(X + 7 + 9 * s + tv * 5)},${f(Y + 0.6 * tl)} ${f(X + 5 + 8 * s + tv * 5)},${f(Y + 0.85 * tl)} ${f(X + 5 + 7 * s + tv * 5)},${f(Y + tl)}` +
-    `Q${f(X + 3 + 6 * s + tv * 3)},${f(Y + tl + 1)} ${f(X + 1 + 5 * s + tv * 2)},${f(Y + tl - 2.5)}Q${f(X + 5 * s)},${f(Y + tl + 1.5)} ${f(X - 3.5 + 4 * s)},${f(Y + tl - 0.5)}` +
+    `L${f(X + 3 + 6 * s + tv * 3)},${f(Y + tl - 4)}Q${f(X + 2 + 6 * s + tv * 2)},${f(Y + tl - 2)} ${f(X + 1.5 + 5.5 * s + tv * 2)},${f(Y + tl + 1.5)}L${f(X + 0.5 + 5 * s + tv)},${f(Y + tl - 3.5)}Q${f(X - 0.5 + 4.5 * s)},${f(Y + tl - 1)} ${f(X - 1.5 + 4.5 * s)},${f(Y + tl + 0.5)}L${f(X - 2.5 + 4 * s)},${f(Y + tl - 3)}Q${f(X - 3.5 + 4 * s)},${f(Y + tl - 1.5)} ${f(X - 4.5 + 4 * s)},${f(Y + tl - 0.5)}` +
     `C${f(X - 3 + 4 * s)},${f(Y + 0.6 * tl)} ${f(X + 2 + 7 * s)},${f(Y + 0.35 * tl)} ${f(X + 3 + 9 * s)},${f(Y + 12 - 14 * s)}` +
     `C${f(X + 2 + 5 * s)},${f(Y + 6 - 12 * s)} ${f(X - 2)},${f(Y + 5 - 4 * s)} ${f(X - 3)},${f(Y + 4)}Z`;
   merke([P(X + 12 + 11 * s + tv * 6, Y - 14 * s), P(X, Y + tl)]);
@@ -254,7 +254,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // --- Mähne ---
   let maehneD = "", streifenD = "";
   if (k.mane === "lang") {
-    const n = 12, oben = [], unten = [];
+    const n = Math.round(6 + k.vol * 2), oben = [], unten = [];
     const runter = norm(P(0.12, 1));
     for (let i = 0; i <= n; i++) {
       const t = i / n, p = kamm(t);
@@ -262,7 +262,18 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       const len = k.maneLen * H * (0.2 + 0.8 * Math.sin(Math.PI * Math.min(1, 0.08 + t * 0.95))) + (i % 2 ? -1.5 : 1.5) * k.vol;
       unten.push(add(p, mul(runter, Math.max(3, len * (i === 0 || i === n ? 0.35 : 1)))));
     }
-    maehneD = glatt(oben.concat(unten.reverse()), true, 0.9);
+    // Unterkante als spitze, leicht nach hinten geschwungene Haarbüschel
+    let d = glatt(oben, false, 0.9);
+    const ub = unten.slice().reverse(); // vom Genick zum Widerrist
+    d += `L${f(ub[0].x)},${f(ub[0].y)}`;
+    for (let j = 0; j < ub.length - 1; j++) {
+      const a0 = ub[j], a1 = ub[j + 1], m0 = mid(a0, a1);
+      const base0 = add(a0, mul(sub(kamm(1 - j / n), a0), 0.15));
+      const tip = add(add(m0, mul(sub(m0, kamm(1 - (j + 0.5) / n)), 0.22 + (j % 2) * 0.12)), P(2.2 + (j % 3) * 0.8, 0));
+      const back = add(a1, mul(sub(kamm(1 - (j + 1) / n), a1), 0.15));
+      d += `Q${f(mid(base0, tip).x - 0.8)},${f(mid(base0, tip).y + 0.6)} ${f(tip.x)},${f(tip.y)}Q${f(mid(tip, back).x - 1.2)},${f(mid(tip, back).y - 0.4)} ${f(back.x)},${f(back.y)}`;
+    }
+    maehneD = d + "Z";
     merke(oben); merke(unten);
   } else if (k.mane === "kurz") {
     const oben = [], unten = [];
@@ -283,10 +294,16 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const fl = k.fore;
   const schopf = k.mane === "fjord"
     ? [hp(-0.04, -0.04), hp(-0.02, -0.16), hp(0.06, -0.12), hp(0.1, -0.02), hp(0.05, 0.05)]
-    : [hp(-0.03, -0.04), hp(0.06, -0.07), hp(0.1 + 0.18 * fl, -0.06), hp(0.14 + 0.2 * fl, -0.01), hp(0.08 + 0.1 * fl, 0.04 + 0.03 * fl), hp(0.01, 0.05)];
+    : null;
+  const schopfBueschel = () => {
+    const l = 0.12 + 0.2 * fl, A = hp(-0.04, -0.05), E = hp(0.01, 0.07);
+    const t1 = hp(0.1 + l * 0.85, -0.11), v1 = hp(0.1, -0.035), t2 = hp(0.14 + l, -0.02), v2 = hp(0.1, 0.03), t3 = hp(0.1 + l * 0.8, 0.08);
+    const q = (p1, p2, dx, dy) => `Q${f(mid(p1, p2).x + dx)},${f(mid(p1, p2).y + dy)} ${f(p2.x)},${f(p2.y)}`;
+    return `M${f(A.x)},${f(A.y)}` + q(A, t1, 1, -1) + q(t1, v1, 0.5, 0.8) + q(v1, t2, 1, -0.5) + q(t2, v2, 0.5, 0.8) + q(v2, t3, 0.8, 0) + q(t3, E, -0.5, 0.5) + "Z";
+  };
 
   // --- Details ---
-  const auge = hp(0.3, 0.1), er = 0.04 * hl * (k.eye || 1);
+  const auge = hp(0.3, 0.11), er = 0.048 * hl * (k.eye || 1);
   const nuester = hp(0.9, 0.1);
   const maulA = hp(1.0, 0.22 * m), maulB = hp(0.88, 0.25 * m);
 
@@ -323,6 +340,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (k.metallic) defs += `<linearGradient id="mt-${uid}" gradientUnits="userSpaceOnUse" x1="${f(-0.1 * L)}" y1="${f(-H * 1.3)}" x2="${f(L)}" y2="0"><stop offset=".15" stop-color="#fff" stop-opacity="0"/><stop offset=".35" stop-color="#fff" stop-opacity=".38"/><stop offset=".48" stop-color="#fff" stop-opacity="0"/><stop offset=".62" stop-color="#fff" stop-opacity=".22"/><stop offset=".75" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
 
   const bx = `x="${f(minX - 5)}" y="${f(minY - 5)}" width="${f(maxX - minX + 10)}" height="${f(-minY + 10)}"`;
+  defs += `<filter id="wb-${uid}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.2"/></filter>`;
   let g = `<defs>${defs}</defs>`;
 
   // Hintere Beine
@@ -362,12 +380,15 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (C.stripe) g += `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${C.stripe}" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>`;
   if (C.muzzle) g += `<ellipse cx="${f(hp(0.93, 0.12).x)}" cy="${f(hp(0.93, 0.12).y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.93, 0.12).x)} ${f(hp(0.93, 0.12).y)})" fill="${C.muzzle}" opacity=".75"/>`;
   if (k.metallic) g += `<rect ${bx} fill="url(#mt-${uid})"/>`;
-  // Cel-Shading: harter Bauchschatten, Halsschatten, Lichtkante am Rücken
+  // Weiche Schattierung (Airbrush-Look): Schattenformen werden weichgezeichnet
+  g += `<rect ${bx} fill="url(#sh-${uid})" opacity=".8"/><g filter="url(#wb-${uid})">`;
   g += `<g clip-path="url(#cr-${uid})"><path d="${glatt([P(-0.12 * H, top + 0.75 * D), P(0.15 * L, bottom - 0.2 * D), P(0.4 * L, bottom - 0.18 * D), P(0.65 * L, bottom - 0.3 * D), P(0.8 * L, bottom - 0.2 * D), P(L + 0.1 * H, top + 0.7 * D), P(L + 0.1 * H, 5), P(-0.12 * H, 5)])}" fill="${schatten}" opacity=".55"/></g>`;
   g += `<path d="${glatt([T, add(mid(T, Cn), mul(nOut, -2)), Cn, add(Cn, P(8, 6)), add(mid(T, Cn), mul(nOut, 5)), add(T, mul(nOut, 4))])}" fill="${schatten}" opacity=".45"/>`;
   g += `<path d="${glatt([hp(0.1, 0.42 * hw), hp(0.3, 0.47 * hw * jw), hp(0.55, 0.36 * hw), hp(0.8, 0.28 * hw), hp(0.6, 0.3 * hw), hp(0.35, 0.37 * hw * jw)])}" fill="${schatten}" opacity=".45"/>`;
-  g += `<path d="${glatt([P(0.24 * L, -H + 3.5), P(0.42 * L, top + 5), P(0.62 * L, top + 4), P(0.8 * L, croupY + 3), P(0.8 * L, croupY + 6.5), P(0.62 * L, top + 7.5), P(0.42 * L, top + 8.5)], true)}" fill="${licht}" opacity=".6"/>`;
-  g += `</g>`;
+  g += `<path d="${glatt([P(0.24 * L, -H + 3.5), P(0.42 * L, top + 5), P(0.62 * L, top + 4), P(0.8 * L, croupY + 3), P(0.8 * L, croupY + 6.5), P(0.62 * L, top + 7.5), P(0.42 * L, top + 8.5)], true)}" fill="${licht}" opacity=".7"/>`;
+  g += `<ellipse cx="${f(0.1 * L)}" cy="${f(top + 0.3 * D)}" rx="${f(0.08 * L)}" ry="${f(0.2 * D)}" fill="${licht}" opacity=".35"/>`;
+  g += `<ellipse cx="${f(0.84 * L)}" cy="${f(top + 0.28 * D)}" rx="${f(0.1 * L)}" ry="${f(0.22 * D)}" fill="${licht}" opacity=".35"/>`;
+  g += `</g></g>`;
   // Comic-Detaillinien (Schulter, Ellbogen, Hüfte, Knie, Sprunggelenk, Ganasche)
   g += inkFein(`M${f(0.2 * L)},${f(-H + 7)}Q${f(0.16 * L)},${f(top + 0.62 * D)} ${f(0.02 * L)},${f(top + 0.82 * D)}`, 1.3, 'opacity=".7"');
   g += inkFein(`M${f(fx + 1.4 * w)},${f(bottom - 7)}Q${f(fx + 1.8 * w)},${f(bottom - 1)} ${f(fx + 1.3 * w)},${f(bottom + 3)}`, 1.2, 'opacity=".6"');
@@ -376,6 +397,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += inkFein(`M${f(fx - 0.5 * w)},${f(-0.47 * Lg)}l${f(0.6 * w)},0`, 1.1, 'opacity=".55"');
   g += inkFein(`M${f(hx + 0.3 * w)},${f(-0.54 * Lg)}l${f(0.6 * w)},${f(-1)}`, 1.1, 'opacity=".55"');
   g += inkFein(`M${f(hp(0.34, 0.2).x)},${f(hp(0.34, 0.2).y)}Q${f(hp(0.52, 0.4).x)},${f(hp(0.52, 0.4).y)} ${f(hp(0.3, 0.47 * hw * jw).x)},${f(hp(0.3, 0.47 * hw * jw).y)}`, 1.4, 'opacity=".75"');
+  // kurze Fellstriche wie bei einer Tuschezeichnung
+  const strich = (p, dx, dy) => inkFein(`M${f(p.x)},${f(p.y)}l${f(dx)},${f(dy)}`, 1, 'opacity=".45"');
+  g += strich(P(-0.05 * H, top + 0.62 * D), 1.5, 2.5) + strich(P(-0.03 * H, top + 0.72 * D), 1.5, 2.2) + strich(P(-0.045 * H, top + 0.52 * D), 1.8, 2);
+  g += strich(P(0.36 * L, bottom - 1), 1.2, -2.2) + strich(P(0.42 * L, bottom - 1), 1, -2) + strich(P(0.72 * L, bottom - 0.12 * D), -0.5, -2.4);
+  g += strich(add(mid(T, Cn), mul(nOut, 1)), 2, 1.5) + strich(add(mid(T, Cn), P(1, 4)), 2, 1.2);
   // Hufe vorn
   g += `<g stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke">` +
     [huf(fx), huf(hx)].map(h => `<path d="${eckig(h)}" fill="${hoof}" vector-effect="non-scaling-stroke"/>`).join("") + "</g>" +
@@ -410,18 +436,18 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
 
   // Kopfdetails
   g += `<g>${ohr(Eb, head)}`;
-  if (fl >= 0.35) g += `<path d="${glatt(schopf)}" fill="${k.mane === "fjord" ? maneOuter : mane}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  if (fl >= 0.25) g += `<path d="${schopf ? glatt(schopf) : schopfBueschel()}" fill="${k.mane === "fjord" ? maneOuter : mane}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
   // Comic-Auge: Weiß, Iris, Pupille, Glanzlicht, Oberlid, Braue – blinzelt
-  const ex = er * 1.75, ey = er * 1.25;
-  const iris = C.augen || "#4a2a14";
+  const ex = er * 1.55, ey = er * 1.42;
+  const iris = C.augen || "#2e1a0e";
   const lid = `M${f(-ex)},${f(ey * 0.15)}Q${f(-ex * 0.1)},${f(-ey * 1.45)} ${f(ex)},${f(-ey * 0.05)}`;
   g += `<g transform="translate(${f(auge.x)},${f(auge.y)}) rotate(-14)"><g>` +
     `<animateTransform attributeName="transform" type="scale" values="1 1;1 1;1 .1;1 1" keyTimes="0;.93;.96;1" dur="4.5s" repeatCount="indefinite"/>` +
     `<path d="${lid}Q${f(ex * 0.1)},${f(ey * 1.25)} ${f(-ex)},${f(ey * 0.15)}Z" fill="#fbf7f0"/>` +
     `<clipPath id="ea-${uid}"><path d="${lid}Q${f(ex * 0.1)},${f(ey * 1.25)} ${f(-ex)},${f(ey * 0.15)}Z"/></clipPath>` +
-    `<g clip-path="url(#ea-${uid})"><circle cx="${f(-ex * 0.12)}" cy="${f(ey * 0.05)}" r="${f(ey * 1.0)}" fill="${iris}"/>` +
-    `<circle cx="${f(-ex * 0.15)}" cy="${f(ey * 0.1)}" r="${f(ey * 0.58)}" fill="#0f0a08"/>` +
-    `<circle cx="${f(-ex * 0.38)}" cy="${f(-ey * 0.3)}" r="${f(ey * 0.3)}" fill="#fff"/>` +
+    `<g clip-path="url(#ea-${uid})"><circle cx="${f(-ex * 0.12)}" cy="${f(ey * 0.05)}" r="${f(ey * 1.08)}" fill="${iris}"/>` +
+    `<circle cx="${f(-ex * 0.15)}" cy="${f(ey * 0.1)}" r="${f(ey * 0.7)}" fill="#0a0605"/>` +
+    `<circle cx="${f(-ex * 0.34)}" cy="${f(-ey * 0.32)}" r="${f(ey * 0.36)}" fill="#fff"/>` +
     `<circle cx="${f(ex * 0.12)}" cy="${f(ey * 0.4)}" r="${f(ey * 0.13)}" fill="#fff" opacity=".8"/></g>` +
     `<path d="M${f(-ex * 0.75)},${f(ey * 0.55)}Q${f(ex * 0.1)},${f(ey * 1.25)} ${f(ex * 0.85)},${f(ey * 0.25)}" fill="none" stroke="${INK}" stroke-width="${f(er * 0.18)}" stroke-linecap="round" opacity=".6"/>` +
     `<path d="${lid}" fill="none" stroke="${INK}" stroke-width="${f(er * 0.42)}" stroke-linecap="round"/>` +

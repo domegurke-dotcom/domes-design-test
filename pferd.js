@@ -293,11 +293,25 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const schopf = k.mane === "fjord"
     ? [hp(-0.04, -0.04), hp(-0.02, -0.16), hp(0.06, -0.12), hp(0.1, -0.02), hp(0.05, 0.05)]
     : null;
+  // Schopf: wächst am Genick zwischen den Ohren und fällt über die Stirn nach unten,
+  // liegt dabei an der Stirnlinie an (Kopf-Koordinaten: s entlang des Gesichts, b quer dazu)
   const schopfBueschel = () => {
-    const l = 0.16 + 0.2 * fl, A = add(Eb, P(-1.2, 0.5)), E = add(Eb, P(3.2, 2.2));
-    const t1 = hp(0.1 + l * 0.85, -0.11), v1 = hp(0.1, -0.035), t2 = hp(0.14 + l, -0.02), v2 = hp(0.1, 0.03), t3 = hp(0.1 + l * 0.8, 0.08);
-    const q = (p1, p2, dx, dy) => `Q${f(mid(p1, p2).x + dx)},${f(mid(p1, p2).y + dy)} ${f(p2.x)},${f(p2.y)}`;
-    return `M${f(A.x)},${f(A.y)}` + q(A, t1, 1, -1) + q(t1, v1, 0.5, 0.8) + q(v1, t2, 1, -0.5) + q(t2, v2, 0.5, 0.8) + q(v2, t3, 0.8, 0) + q(t3, E, -0.5, 0.5) + "Z";
+    const l = 0.16 + 0.22 * fl;
+    const R0 = hp(-0.06, -0.02), R1 = hp(-0.03, 0.13);            // Ansatz zwischen den Ohren
+    const o1 = hp(0.04, -0.085), o2 = hp(0.1 + l * 0.35, -0.085);  // Vorderkante, liegt knapp vor der Stirn
+    const t1 = hp(0.08 + l, -0.05), v1 = hp(0.06 + l * 0.72, -0.01);
+    const t2 = hp(0.07 + l * 0.92, 0.035), v2 = hp(0.05 + l * 0.6, 0.06);
+    const t3 = hp(0.04 + l * 0.72, 0.1), b1 = hp(0.02, 0.13);
+    const c = (p1, p2, ds, db) => { const m = mid(p1, p2), q = hp(0, 0), r = hp(ds, db); return P(m.x + r.x - q.x, m.y + r.y - q.y); };
+    const Q = (ctrl, p) => `Q${f(ctrl.x)},${f(ctrl.y)} ${f(p.x)},${f(p.y)}`;
+    return `M${f(R0.x)},${f(R0.y)}` + Q(c(R0, o1, 0, -0.02), o1) + Q(c(o1, o2, 0, -0.012), o2) + Q(c(o2, t1, 0, -0.01), t1) +
+      Q(c(t1, v1, 0, 0.012), v1) + Q(c(v1, t2, 0, -0.012), t2) + Q(c(t2, v2, 0, 0.012), v2) + Q(c(v2, t3, 0, -0.01), t3) +
+      Q(c(t3, b1, 0.03, 0.01), b1) + Q(c(b1, R1, -0.02, 0), R1) + "Z";
+  };
+  const schopfStraehnen = () => {
+    const l = 0.16 + 0.22 * fl;
+    return [[hp(0.0, -0.03), hp(0.05 + l * 0.8, -0.04)], [hp(0.0, 0.04), hp(0.05 + l * 0.75, 0.02)], [hp(0.0, 0.1), hp(0.03 + l * 0.55, 0.08)]]
+      .map(([a, b]) => { const m = mid(a, b), r = sub(hp(0, -0.015), hp(0, 0)); return inkFein(`M${f(a.x)},${f(a.y)}Q${f(m.x + r.x)},${f(m.y + r.y)} ${f(b.x)},${f(b.y)}`, 0.9, 'opacity=".45"'); }).join("");
   };
 
   // --- Details ---
@@ -435,6 +449,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Kopfdetails
   g += `<g>`;
   if (fl >= 0.25) g += `<path d="${schopf ? glatt(schopf) : schopfBueschel()}" fill="${k.mane === "fjord" ? maneOuter : mane}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  if (fl >= 0.25 && !schopf) g += schopfStraehnen();
   g += ohr(Eb, head);
   // Comic-Auge: Weiß, Iris, Pupille, Glanzlicht, Oberlid, Braue – blinzelt
   const ex = er * 1.55, ey = er * 1.42;

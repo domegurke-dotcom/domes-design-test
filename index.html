@@ -66,6 +66,20 @@
   #nacht.an { opacity: 1; pointer-events: auto; }
   #nacht .gross { font-size: 3rem; }
   #nacht .klein { font-size: 1.2rem; font-weight: 700; }
+  /* Umschalter Steckbrief / Pferdepflege */
+  .modus { display: flex; background: #e4d3b4; border-radius: 12px; padding: 3px; margin-bottom: 8px; }
+  .modus button { flex: 1; border: 0; background: none; padding: 9px 6px; border-radius: 9px; font: inherit; font-weight: 700; font-size: .92rem; color: #6b5440; cursor: pointer; }
+  .modus button.an { background: var(--karte); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+  .liste { list-style: none; margin: 0; padding: 0; }
+  .liste li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #efe4d2; font-size: .92rem; }
+  .liste li:last-child { border-bottom: 0; }
+  .liste .ico { font-size: 1.3rem; width: 28px; text-align: center; flex: none; }
+  .liste .txt { flex: 1; line-height: 1.3; }
+  .liste .txt small { display: block; color: var(--leise); font-size: .8rem; }
+  .stat { flex: none; font-size: .78rem; font-weight: 700; border-radius: 99px; padding: 3px 9px; white-space: nowrap; }
+  .stat.ok { background: #e3f1dc; color: #2f6b22; }
+  .stat.warn { background: #fbecd0; color: #93600f; }
+  .stat.bad { background: #f8dcd6; color: #9b2c1c; }
   /* Pferdeakte mit Aktenreitern */
   .akte { width: 100%; max-width: 560px; }
   .reiter { display: flex; gap: 3px; overflow-x: auto; scrollbar-width: none; padding: 0 4px; }
@@ -273,7 +287,7 @@
         <g stroke="#6f8a2c" stroke-width="1" stroke-linecap="round" fill="none"><path d="M66.0,154.2 l5,-2"/><path d="M57.0,155.1 l5,-2"/><path d="M47.0,156.1 l5,-2"/><path d="M38.0,157.0 l5,-2"/><path d="M29.0,157.9 l5,-2"/><path d="M24.0,154.6 l6,1"/><path d="M41.5,152.8 l6,1"/><path d="M56.5,151.3 l6,1"/></g>
         <g stroke="#eef09c" stroke-width="1" stroke-linecap="round"><path d="M63.0,152.7 l6,-2"/><path d="M43.0,154.7 l7,-1"/></g>
       </g>
-      <g stroke="#2f3a32" stroke-width="2.4" stroke-linecap="round"><path d="M8,183.6 L28,191.6"/></g>
+      <g stroke="#2f3a32" stroke-width="2.6" stroke-linecap="round"><path d="M7,185.6 L40,198.6"/></g>
       <g>
       </g>
       <rect x="-2" y="125.6" width="82" height="75.0" fill="transparent"/>
@@ -317,11 +331,12 @@
     boxen: [{ nr: 1, pferd: { id: "start", name: "Schneeflocke", rasse: "araber", farbe: "schimmel", geschlecht: "Stute", alter: 5, stockmass: 150 } }],
   };
   try { const s = JSON.parse(localStorage.getItem(SPEICHER)); if (s && s.boxen) spiel = s; } catch (e) {}
-  spiel.boxen.forEach(b => { if (b.pferd && !b.pferd.werte) b.pferd.werte = erzeugeWerte(b.pferd); if (b.krippeVoll == null) b.krippeVoll = false; if (b.mistig == null) b.mistig = true; });
+  if (!spiel.ausruestung) spiel.ausruestung = { halfter: true, strick: true, putzkiste: true, sattel: false, trense: false, schabracke: false, decke: false, gamaschen: false };
+  spiel.boxen.forEach(b => { if (b.pferd && !b.pferd.werte) b.pferd.werte = erzeugeWerte(b.pferd); if (b.pferd && !b.pferd.pflege) b.pferd.pflege = erzeugePflege(b.pferd); if (b.krippeVoll == null) b.krippeVoll = false; if (b.mistig == null) b.mistig = true; });
   if (!spiel.tag) spiel.tag = 1;
   const speichern = () => { try { localStorage.setItem(SPEICHER, JSON.stringify(spiel)); } catch (e) {} };
 
-  let aktenReiter = "steckbrief";
+  let aktenReiter = "steckbrief", aktenModus = "steckbrief";
   const fmt = n => n.toLocaleString("de-DE") + " €";
   const $ = id => document.getElementById(id);
 
@@ -340,7 +355,10 @@
   // ---------- Pferdeakte ----------
   function zeigeAkte() {
     const p = spiel.boxen[0].pferd, r = rasseById(p.rasse), w = p.werte;
-    const reiter = [["steckbrief", "Steckbrief"], ["gang", "Gangwerk"], ["charakter", "Charakter"], ["ausbildung", "Ausbildung"]];
+    const reiter = aktenModus === "steckbrief"
+      ? [["steckbrief", "Steckbrief"], ["gang", "Gangwerk"], ["charakter", "Charakter"], ["ausbildung", "Ausbildung"]]
+      : [["gesundheit", "Gesundheit"], ["ausruestung", "Ausrüstung"], ["platz", "Platz"]];
+    const box = spiel.boxen[0], pf = p.pflege;
     let inhalt = "";
     if (aktenReiter === "steckbrief") {
       inhalt = `<dl class="werte">
@@ -369,20 +387,76 @@
         <div class="zeile-wert"><div class="kopf"><b>${t.titel}</b></div>
         <div class="skala"><i style="left:${c[t.key]}%"></i></div>
         <div class="pole"><span>${t.links}</span><span>${t.rechts}</span></div></div>`).join("");
-    } else {
+    } else if (aktenReiter === "ausbildung") {
       const aw = ausbildungsWerte(p);
       inhalt = `<div class="klasse">Ausbildungsstand: <b>${ausbildungsKlasse(aw, p.alter)}</b></div>` + aw.map(x => `
         <div class="zeile-wert"><div class="kopf"><b>${x.name}</b><span>${x.wert} %</span></div>
         <div class="balken"><i style="width:${x.wert}%"></i></div></div>`).join("") +
         `<p class="text">Nach der Skala der Ausbildung: Takt → Losgelassenheit → Anlehnung → Schwung → Geraderichtung → Versammlung.</p>`;
     }
+    else if (aktenReiter === "gesundheit") {
+      const g = pf.gesundheit;
+      const zustand = g >= 85 ? ["kerngesund", "ok"] : g >= 65 ? ["gesund", "ok"] : g >= 45 ? ["angeschlagen", "warn"] : ["krank", "bad"];
+      const termin = (ico, name, tagZuletzt, intervall, info) => {
+        const vor = spiel.tag - tagZuletzt, rest = intervall - vor;
+        const st = rest < 0 ? ["überfällig", "bad"] : rest <= 7 ? ["bald fällig", "warn"] : ["ok", "ok"];
+        return `<li><span class="ico">${ico}</span><span class="txt">${name}<small>zuletzt vor ${vor} ${vor === 1 ? "Tag" : "Tagen"} · ${info}</small></span><span class="stat ${st[1]}">${st[0]}</span></li>`;
+      };
+      inhalt = `<div class="zeile-wert"><div class="kopf"><b>Gesundheitszustand</b><span>${g} % · ${zustand[0]}</span></div>
+          <div class="balken"><i style="width:${g}%;${g < 45 ? "background:#c0503a" : ""}"></i></div></div>
+        <ul class="liste">
+          <li><span class="ico">🌾</span><span class="txt">Fütterung heute<small>Heu in der Futterkrippe</small></span><span class="stat ${box.krippeVoll ? "ok" : "warn"}">${box.krippeVoll ? "gefüttert" : "noch nicht"}</span></li>
+          <li><span class="ico">💧</span><span class="txt">Wasser<small>Selbsttränke</small></span><span class="stat ok">frisch</span></li>
+          <li><span class="ico">🧹</span><span class="txt">Boxenhygiene<small>Einstreu aus Stroh</small></span><span class="stat ${box.mistig ? "warn" : "ok"}">${box.mistig ? "ausmisten" : "sauber"}</span></li>
+          ${termin("🔨", "Hufpflege (Hufschmied)", pf.huf, 42, "alle 6–8 Wochen")}
+          ${termin("💉", "Impfung (Tierarzt)", pf.impf, 180, "Influenza & Herpes halbjährlich")}
+          ${termin("💊", "Wurmkur", pf.wurm, 90, "etwa vierteljährlich")}
+          ${termin("🦷", "Zahnkontrolle", pf.zahn, 365, "einmal im Jahr")}
+        </ul>`;
+    } else if (aktenReiter === "ausruestung") {
+      const sm = p.stockmass;
+      const gr = sm < 100 ? "Shetty" : sm < 125 ? "Pony" : sm < 148 ? "Cob" : sm < 168 ? "Warmblut (Full)" : "Extra Full (XF)";
+      const decke = Math.max(75, Math.round((sm - 25) / 5) * 5);
+      const teile = [
+        ["halfter", "🐴", "Halfter", `Größe ${gr}`], ["strick", "🪢", "Führstrick", "mit Panikhaken"],
+        ["putzkiste", "🧰", "Putzkiste", "Striegel, Kardätsche, Hufkratzer, Mähnenkamm"],
+        ["sattel", "🏇", "Sattel", "Kammerweite muss angepasst werden"], ["trense", "🔗", "Trense", `Größe ${gr}`],
+        ["schabracke", "🟫", "Schabracke", sm < 125 ? "Pony" : "Warmblut / Vollblut"],
+        ["decke", "🧣", "Abschwitzdecke", `Deckengröße ${decke} cm`], ["gamaschen", "🦵", "Gamaschen", `Größe ${gr}`],
+      ];
+      const hat = teile.filter(t => spiel.ausruestung[t[0]]).length;
+      inhalt = `<p class="text" style="margin:0 0 4px">${hat} von ${teile.length} Ausrüstungsteilen vorhanden · Größen passend für ${sm} cm Stockmaß</p>
+        <ul class="liste">${teile.map(([k, ico, n, info]) => `<li><span class="ico">${ico}</span><span class="txt">${n}<small>${info}</small></span><span class="stat ${spiel.ausruestung[k] ? "ok" : "bad"}">${spiel.ausruestung[k] ? "vorhanden" : "fehlt"}</span></li>`).join("")}</ul>`;
+    } else if (aktenReiter === "platz") {
+      const wh = p.stockmass / 100, minF = Math.pow(2 * wh, 2), flaeche = 3.5 * 3.5, passt = flaeche >= minF;
+      const zahl = n => n.toFixed(1).replace(".", ",");
+      inhalt = `<ul class="liste">
+          <li><span class="ico">🏠</span><span class="txt">Stellplatz<small>Box 1 · Innenbox mit Paddock</small></span></li>
+          <li><span class="ico">📐</span><span class="txt">Boxengröße: 3,5 × 3,5 m (${zahl(flaeche)} m²)<small>Mindestfläche (2 × Widerristhöhe)² = ${zahl(minF)} m²</small></span><span class="stat ${passt ? "ok" : "bad"}">${passt ? "ausreichend" : "zu klein"}</span></li>
+          <li><span class="ico">🧱</span><span class="txt">Wände<small>Kalksteinmauer · Seitenwände Holz, halbhoch mit Gitterbogen</small></span></li>
+          <li><span class="ico">🟨</span><span class="txt">Einstreu<small>Stroh</small></span><span class="stat ${box.mistig ? "warn" : "ok"}">${box.mistig ? "mistig" : "sauber"}</span></li>
+          <li><span class="ico">🌾</span><span class="txt">Futterkrippe<small>an der linken Seitenwand</small></span><span class="stat ${box.krippeVoll ? "ok" : "warn"}">${box.krippeVoll ? "gefüllt" : "leer"}</span></li>
+          <li><span class="ico">💧</span><span class="txt">Selbsttränke<small>an der rechten Seitenwand</small></span><span class="stat ok">in Ordnung</span></li>
+          <li><span class="ico">🌤️</span><span class="txt">Auslauf<small>Sandpaddock, direkt über den Paddockausgang erreichbar</small></span><span class="stat ok">offen</span></li>
+          <li><span class="ico">🐎</span><span class="txt">Nachbarn<small>Boxen links und rechts sind frei</small></span></li>
+        </ul>`;
+    }
     $("info").innerHTML = `
+      <div class="modus" role="group" aria-label="Ansicht">
+        <button data-m="steckbrief" class="${aktenModus === "steckbrief" ? "an" : ""}">📋 Steckbrief</button>
+        <button data-m="pflege" class="${aktenModus === "pflege" ? "an" : ""}">🧽 Pferdepflege</button>
+      </div>
       <div class="reiter" role="tablist">${reiter.map(([id, t]) => `<button role="tab" data-r="${id}" class="${aktenReiter === id ? "an" : ""}" aria-selected="${aktenReiter === id}">${t}</button>`).join("")}</div>
       <div class="karte" role="tabpanel">
         <div class="akte-kopf"><h2>${esc(p.name)}</h2><span>${r.name}</span></div>
         ${inhalt}
       </div>`;
     $("info").querySelectorAll(".reiter button").forEach(b => b.onclick = () => { aktenReiter = b.dataset.r; zeigeAkte(); });
+    $("info").querySelectorAll(".modus button").forEach(b => b.onclick = () => {
+      aktenModus = b.dataset.m;
+      aktenReiter = aktenModus === "steckbrief" ? "steckbrief" : "gesundheit";
+      zeigeAkte();
+    });
   }
   const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
@@ -476,6 +550,7 @@
       wahl.name = (wahl.name || "").trim() || zufallAus(NAMEN[wahl.geschlecht]);
       spiel.boxen[0].pferd = { ...wahl };
       spiel.boxen[0].pferd.werte = erzeugeWerte(spiel.boxen[0].pferd);
+      spiel.boxen[0].pferd.pflege = erzeugePflege(spiel.boxen[0].pferd);
       aktenReiter = "steckbrief";
       speichern(); zeigeStall(); zeigeTag(); schliessen();
     };
@@ -563,6 +638,7 @@
     $("stall").classList.toggle("leer", !box.krippeVoll);
     $("stall").classList.toggle("mistig", !!box.mistig);
     if (box.mistig) { zeichneMist(); $("mist").classList.remove("weg"); } else $("mist").classList.add("weg");
+    if (box.pferd.pflege) zeigeAkte();
   }
   $("krippe").addEventListener("click", () => {
     const box = spiel.boxen[0];
@@ -587,7 +663,16 @@
     $("nacht").classList.add("an");
     setTimeout(() => {
       spiel.tag += 1;
-      spiel.boxen.forEach(b => { b.krippeVoll = false; b.mistig = true; });
+      spiel.boxen.forEach(b => {
+        const pf = b.pferd.pflege;
+        let g = pf.gesundheit;
+        if (!b.krippeVoll) g -= 12;
+        if (b.mistig) g -= 6;
+        if (b.krippeVoll && !b.mistig) g += 4;
+        if (spiel.tag - pf.huf > 56) g -= 2;
+        pf.gesundheit = Math.max(0, Math.min(100, g));
+        b.krippeVoll = false; b.mistig = true;
+      });
       speichern(); zeigeTag();
       $("nachtSymbol").textContent = "☀️"; $("nachtText").textContent = `Tag ${spiel.tag} beginnt`;
     }, 1100);

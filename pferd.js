@@ -186,6 +186,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Haltung je nach Gesundheit: normal | leicht | waagerecht | tief | liegend
   // Waagerechte = Buggelenk (Brustspitze) und Maul auf gleicher Höhe
   const haltung = opt.haltung || "normal", liegt = haltung === "liegend";
+  const ohrenHaengen = haltung === "tief" || liegt;
   const gl = w * 1.5;                       // Höhe der untergeschlagenen Beine beim Liegen
   const dLiegen = liegt ? Lg - gl : 0;      // so weit sinkt der Körper beim Liegen ab
   const a0 = (k.nAng - 20) * Math.PI / 180, N = k.neck * H * 1.1;
@@ -263,12 +264,13 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // --- Ohren ---
   const el = k.ear * H * 1.25;
   const ohr = (Eb, farbe, ohneMuschel = false) => {
-    const e = norm(P(-0.22, -1)), q = P(-e.y, e.x), bw = 0.28 * el;
+    // Ohren hängen, wenn der Kopf unter der Waagerechten ist (tief / liegend)
+    const e = ohrenHaengen ? norm(P(0.85, 0.3)) : norm(P(-0.22, -1)), q = P(-e.y, e.x), bw = 0.28 * el;
     const b1 = add(Eb, mul(q, -bw)), b2 = add(Eb, mul(q, bw));
     let tip = add(Eb, mul(e, el));
     let c1 = add(add(b1, mul(e, el * 0.75)), mul(q, -bw * 0.2));
     let c2 = add(add(b2, mul(e, el * 0.55)), mul(q, bw * 0.5));
-    if (k.curl) { tip = add(tip, P(-0.42 * el, 0.08 * el)); c1 = add(c1, P(0.05 * el, -0.1 * el)); c2 = add(c2, P(0.25 * el, -0.35 * el)); }
+    if (k.curl && !ohrenHaengen) { tip = add(tip, P(-0.42 * el, 0.08 * el)); c1 = add(c1, P(0.05 * el, -0.1 * el)); c2 = add(c2, P(0.25 * el, -0.35 * el)); }
     merke([tip]);
     const i1 = add(b1, mul(q, bw * 0.45)), i2 = add(b2, mul(q, -bw * 0.35)), itip = add(tip, mul(sub(Eb, tip), 0.25));
     return `<path d="M${f(b1.x)},${f(b1.y)}Q${f(c1.x)},${f(c1.y)} ${f(tip.x)},${f(tip.y)}Q${f(c2.x)},${f(c2.y)} ${f(b2.x)},${f(b2.y)}Z" fill="${farbe}" stroke="${INK}" stroke-width="1.9" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>` + (ohneMuschel ? "" :

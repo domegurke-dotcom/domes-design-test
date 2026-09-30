@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#5b3a24">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Pferdezucht</title>
 <style>
   :root {
@@ -30,7 +33,17 @@
   .tagknopf small { font-size: .68rem; font-weight: 600; opacity: .8; white-space: nowrap; }
   @media (max-width: 430px) { header h1 { font-size: 1rem; } header h1 .emoji { display: none; } }
   .tagknopf:active { transform: translateY(2px); box-shadow: none; }
-  .geld { background: rgba(255,255,255,.15); padding: 4px 10px; border-radius: 999px; font-weight: 600; }
+  .menue { position: relative; }
+  .menueknopf { width: 42px; height: 38px; border: 0; border-radius: 10px; background: rgba(255,255,255,.14); cursor: pointer;
+    display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; }
+  .menueknopf span { display: block; width: 22px; height: 3px; border-radius: 2px; background: #fff; }
+  .menueknopf[aria-expanded="true"] { background: rgba(255,255,255,.28); }
+  .menueliste { position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; min-width: 190px; background: var(--karte); border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.28); overflow: hidden; }
+  .menueliste[hidden] { display: none; }
+  .menueliste button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 13px 16px; font: inherit; font-weight: 600; color: var(--text); cursor: pointer; }
+  .menueliste button + button { border-top: 1px solid #efe4d2; }
+  .menueliste button:active, .menueliste button:hover { background: #f6ecdc; }
   main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 16px; gap: 14px; }
   #stall { width: 100%; max-width: 560px; display: block; border-radius: 14px; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
   .karte { width: 100%; max-width: 520px; background: var(--karte); border-radius: 14px; padding: 14px 16px; box-shadow: 0 4px 14px rgba(0,0,0,.12); }
@@ -106,7 +119,9 @@
   .akte .karte { max-width: none; border-radius: 0 14px 14px 14px; min-height: 220px; }
   .akte-kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 10px; }
   .akte-kopf h2 { margin: 0; font-size: 1.2rem; }
-  .akte-kopf span { color: var(--leise); font-size: .85rem; }
+  .akte-kopf h2 { cursor: pointer; }
+  .akte-kopf .stift { font-size: .75rem; opacity: .45; }
+  .akte-kopf input { font: inherit; font-size: 1.15rem; font-weight: 700; padding: 4px 8px; border: 2px solid var(--akzent); border-radius: 8px; width: 100%; max-width: 280px; background: #fff; color: var(--text); }
   .zeile-wert { margin: 10px 0; }
   .zeile-wert .kopf { display: flex; justify-content: space-between; font-size: .92rem; margin-bottom: 4px; }
   .zeile-wert .kopf b { font-weight: 700; }
@@ -161,7 +176,13 @@
 <header>
   <button class="tagknopf" id="tagAnzeige" title="Tag beenden"><b>☀️ Tag 1</b><small>beenden 🌙</small></button>
   <h1><span class="emoji">🐴 </span>Mein Zuchtstall</h1>
-  <span class="geld" id="geld">1.000 €</span>
+  <div class="menue">
+    <button class="menueknopf" id="menueKnopf" aria-label="Menü" aria-expanded="false" aria-controls="menueListe"><span></span><span></span><span></span></button>
+    <div class="menueliste" id="menueListe" role="menu" hidden>
+      <button role="menuitem" id="mVollbild">⛶ Vollbild</button>
+      <button role="menuitem" id="mNeustart">↺ Neustart</button>
+    </div>
+  </div>
 </header>
 
 <main>
@@ -333,7 +354,17 @@
 
 <div id="auswahl" role="dialog" aria-modal="true" aria-label="Pferd auswählen"></div>
 
-<script src="pferd.js?v=24"></script>
+<script>
+  // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
+  const SPIEL_VERSION = "26";
+  fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
+    if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
+      sessionStorage.setItem("neu-" + v.version, "1");
+      location.replace(location.pathname + "?v=" + v.version);
+    }
+  }).catch(() => {});
+</script>
+<script src="pferd.js?v=26"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -370,7 +401,6 @@
   const HALTUNG_TEXT = { normal: "steht aufmerksam, Kopf und Hals oben", leicht: "lässt Kopf und Hals etwas hängen", waagerecht: "trägt Kopf und Hals nur noch waagerecht", tief: "lässt den Kopf tief hängen", liegend: "liegt matt in der Box" };
   function zeigeStall() {
     const p = spiel.boxen[0].pferd;
-    $("geld").textContent = fmt(spiel.geld);
     const z = zeichnePferd(p.rasse, p.farbe, { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, haltung: haltungFuer(p) });
     const s = p.stockmass * STALL.cmZuEinheit / 100;
     const cx = (z.box.minX + z.box.maxX) / 2;
@@ -429,7 +459,7 @@
         const st = rest < 0 ? ["überfällig", "bad"] : rest <= 7 ? ["bald fällig", "warn"] : ["ok", "ok"];
         return `<li><span class="ico">${ico}</span><span class="txt">${name}<small>zuletzt vor ${vor} ${vor === 1 ? "Tag" : "Tagen"} · ${info}</small></span><span class="stat ${st[1]}">${st[0]}</span></li>`;
       };
-      inhalt = `<div class="zeile-wert"><div class="kopf"><b>Gesundheitszustand</b><span>${g} % · ${zustand[0]}</span></div>
+      inhalt = `<div class="zeile-wert"><div class="kopf"><b>Gesundheitszustand</b><span>${g.toLocaleString("de-DE", { maximumFractionDigits: 1 })} % · ${zustand[0]}</span></div>
           <div class="balken"><i style="width:${g}%;${g < 45 ? "background:#c0503a" : ""}"></i></div>
           <p class="text" style="margin:6px 0 0">${esc(p.name)} ${HALTUNG_TEXT[haltungFuer(p)]}.</p></div>
         <ul class="liste">
@@ -487,7 +517,7 @@
       const da = plaetze.filter(x => spiel.anlage[x[0]]).length;
       inhalt = `<p class="text" style="margin:0 0 4px">${da} von ${plaetze.length} Plätzen auf deiner Anlage vorhanden</p>
         <div class="kacheln">${plaetze.map(([k, ico, n, info, kurz]) => `<div class="kachel ${spiel.anlage[k] ? "" : "fehlt"}" title="${n.replace(/\u00ad/g, "")}: ${info}${spiel.anlage[k] ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></div>`).join("")}</div>
-        <p class="text">Box 1 misst 3,5 × 3,5 m (12,3 m²) und ist ${passt ? "groß genug" : "zu klein"} für ${wh.toFixed(2).replace(".", ",")} m Stockmaß (Mindestfläche ${zahl(minF)} m²).</p>`;
+`;
     }
     $("info").innerHTML = `
       <div class="modus" role="group" aria-label="Ansicht">
@@ -496,10 +526,21 @@
       </div>
       <div class="reiter" role="tablist">${reiter.map(([id, t]) => `<button role="tab" data-r="${id}" class="${aktenReiter === id ? "an" : ""}" aria-selected="${aktenReiter === id}">${t}</button>`).join("")}</div>
       <div class="karte" role="tabpanel">
-        <div class="akte-kopf"><h2>${esc(p.name)}</h2><span>${r.name}</span></div>
+        <div class="akte-kopf"><h2 id="pferdName" role="button" tabindex="0" title="Namen ändern">${esc(p.name)} <span class="stift">✏️</span></h2></div>
         ${inhalt}
       </div>`;
     $("info").querySelectorAll(".reiter button").forEach(b => b.onclick = () => { aktenReiter = b.dataset.r; scherModus = false; meldung = ""; zeigeAkte(); });
+    const pn = $("pferdName");
+    if (pn) pn.onclick = () => {
+      pn.outerHTML = `<input id="nameEdit" maxlength="24" value="${esc(p.name)}" aria-label="Neuer Name">`;
+      const inp = $("nameEdit"); inp.focus(); inp.select();
+      const fertig = speichernJa => {
+        if (speichernJa) { const n = inp.value.trim(); if (n) { p.name = n; speichern(); } }
+        zeigeAkte();
+      };
+      inp.onkeydown = e => { if (e.key === "Enter") fertig(true); if (e.key === "Escape") fertig(false); };
+      inp.onblur = () => fertig(true);
+    };
     const sk = $("scherKachel"); if (sk) sk.onclick = () => { scherModus = true; meldung = ""; zeigeAkte(); };
     const sz = $("scherZurueck"); if (sz) sz.onclick = () => { scherModus = false; zeigeAkte(); };
     $("info").querySelectorAll("[data-schnitt]").forEach(b => { if (b.dataset.schnitt) b.onclick = () => {
@@ -657,28 +698,41 @@
     return [xmin + r() * (xmax - xmin), y];
   }
   function zeichneMist() {
-    const r = zufall("mist-tag-" + spiel.tag);
+    const box = spiel.boxen[0], stufe = Math.max(1, box.mistStufe || 1);
     let g = "";
-    // zertretene, feuchte Stellen
+    // je länger nicht ausgemistet, desto dunkler und schmuddeliger das Stroh
+    if (stufe > 1) g += `<polygon points="0,300 0,266 60,212 340,212 400,266 400,300" fill="#5e4218" opacity="${Math.min(0.42, 0.09 * (stufe - 1)).toFixed(2)}"/>`;
+    // jeder nicht gemistete Tag hinterlässt eine eigene Schicht (ältere Äpfel liegen an derselben Stelle)
+    for (let d = stufe - 1; d >= 0; d--) g += mistSchicht(zufall("mist-tag-" + (spiel.tag - d)), d);
+    // Fliegen, wenn es richtig schmuddelig wird
+    if (stufe >= 3) {
+      const r = zufall("fliegen-" + spiel.tag);
+      for (let i = 0; i < Math.min(8, (stufe - 2) * 3); i++) {
+        const [x, y] = bodenPunkt(r), dur = (1.2 + r() * 1.5).toFixed(1);
+        g += `<circle cx="${x.toFixed(0)}" cy="${(y - 12).toFixed(0)}" r="1.3" fill="#1b1612"><animateMotion dur="${dur}s" repeatCount="indefinite" path="M0,0 c6,-6 12,2 6,6 c-6,5 -12,-2 -6,-6"/></circle>`;
+      }
+    }
+    $("mist").innerHTML = g;
+  }
+  function mistSchicht(r, alter) {
+    let g = "";
+    const dunkler = alter > 0;
     for (let i = 0; i < 6; i++) { const [x, y] = bodenPunkt(r), s = 0.6 + (y - 212) / 90;
-      g += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${(18 + r() * 20) * s}" ry="${(5 + r() * 5) * s}" fill="${r() < .5 ? "#a57f2e" : "#8c6a2c"}" opacity="${(.35 + r() * .25).toFixed(2)}"/>`; }
-    // wild verstreute Halme
+      g += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${(18 + r() * 20) * s}" ry="${(5 + r() * 5) * s}" fill="${dunkler ? "#6e5320" : r() < .5 ? "#a57f2e" : "#8c6a2c"}" opacity="${(.35 + r() * .25).toFixed(2)}"/>`; }
     for (let i = 0; i < 45; i++) { const [x, y] = bodenPunkt(r), a = r() * Math.PI, l = 5 + r() * 8;
-      g += `<path d="M${x.toFixed(1)},${y.toFixed(1)} l${(Math.cos(a) * l).toFixed(1)},${(-Math.sin(a) * l * .6).toFixed(1)}" stroke="${["#8a6420", "#c99a2c", "#f7e38c", "#7a5a1e"][i % 4]}" stroke-width="1.2" stroke-linecap="round"/>`; }
-    // Strohbüschel / Haufen
+      g += `<path d="M${x.toFixed(1)},${y.toFixed(1)} l${(Math.cos(a) * l).toFixed(1)},${(-Math.sin(a) * l * .6).toFixed(1)}" stroke="${(dunkler ? ["#6b4c18", "#8a6420", "#a5822e", "#5a4216"] : ["#8a6420", "#c99a2c", "#f7e38c", "#7a5a1e"])[i % 4]}" stroke-width="1.2" stroke-linecap="round"/>`; }
     for (let i = 0; i < 4; i++) { const [x, y] = bodenPunkt(r), s = 0.6 + (y - 212) / 90;
-      g += `<path d="M${(x - 14 * s).toFixed(1)},${y.toFixed(1)} q${(6 * s).toFixed(1)},${(-9 * s).toFixed(1)} ${(14 * s).toFixed(1)},${(-6 * s).toFixed(1)} q${(8 * s).toFixed(1)},${(-5 * s).toFixed(1)} ${(14 * s).toFixed(1)},${(6 * s).toFixed(1)} z" fill="#d9b04a" stroke="#2b1d14" stroke-width="1"/>`; }
-    // Pferdeäpfel
+      g += `<path d="M${(x - 14 * s).toFixed(1)},${y.toFixed(1)} q${(6 * s).toFixed(1)},${(-9 * s).toFixed(1)} ${(14 * s).toFixed(1)},${(-6 * s).toFixed(1)} q${(8 * s).toFixed(1)},${(-5 * s).toFixed(1)} ${(14 * s).toFixed(1)},${(6 * s).toFixed(1)} z" fill="${dunkler ? "#b58f3a" : "#d9b04a"}" stroke="#2b1d14" stroke-width="1"/>`; }
     const anzahl = 3 + Math.floor(r() * 3);
     for (let i = 0; i < anzahl; i++) {
       const [x, y] = bodenPunkt(r), s = 0.65 + (y - 212) / 80;
       const baelle = [[-5, 0], [0, -1], [5, 0.5], [-2.5, -4.5], [2.5, -4.2], [0, -8]].slice(0, 4 + Math.floor(r() * 3));
       g += `<ellipse cx="${x.toFixed(1)}" cy="${(y + 3 * s).toFixed(1)}" rx="${(11 * s).toFixed(1)}" ry="${(3 * s).toFixed(1)}" fill="#5a4015" opacity=".35"/>`;
-      g += baelle.map(([dx, dy]) => `<ellipse cx="${(x + dx * s).toFixed(1)}" cy="${(y + dy * s).toFixed(1)}" rx="${(4 * s).toFixed(1)}" ry="${(3.4 * s).toFixed(1)}" fill="#6b4a22" stroke="#2b1d14" stroke-width=".9"/>` +
-        `<ellipse cx="${(x + dx * s - 1.2 * s).toFixed(1)}" cy="${(y + dy * s - 1.2 * s).toFixed(1)}" rx="${(1.4 * s).toFixed(1)}" ry="${(0.9 * s).toFixed(1)}" fill="#9a7440"/>`).join("");
+      g += baelle.map(([dx, dy]) => `<ellipse cx="${(x + dx * s).toFixed(1)}" cy="${(y + dy * s).toFixed(1)}" rx="${(4 * s).toFixed(1)}" ry="${(3.4 * s).toFixed(1)}" fill="${dunkler ? "#4f3616" : "#6b4a22"}" stroke="#2b1d14" stroke-width=".9"/>` +
+        `<ellipse cx="${(x + dx * s - 1.2 * s).toFixed(1)}" cy="${(y + dy * s - 1.2 * s).toFixed(1)}" rx="${(1.4 * s).toFixed(1)}" ry="${(0.9 * s).toFixed(1)}" fill="${dunkler ? "#6e5230" : "#9a7440"}"/>`).join("");
       g += `<path d="M${(x - 3 * s).toFixed(1)},${(y - 1 * s).toFixed(1)} l${(3 * s).toFixed(1)},${(1.5 * s).toFixed(1)}" stroke="#c99a2c" stroke-width=".8"/>`;
     }
-    $("mist").innerHTML = g;
+    return g;
   }
   function funkeln() {
     let g = "";
@@ -706,7 +760,7 @@
   const ausmisten = () => {
     const box = spiel.boxen[0];
     if (!box.mistig) return;
-    box.mistig = false;
+    box.mistig = false; box.mistStufe = 0;
     speichern(); zeigeTag(); funkeln();
   };
   $("mist").addEventListener("click", ausmisten);
@@ -723,11 +777,12 @@
       spiel.boxen.forEach(b => {
         const pf = b.pferd.pflege;
         let g = pf.gesundheit;
-        if (!b.krippeVoll) g -= 12;
-        if (b.mistig) g -= 6;
+        if (!b.krippeVoll) g -= 19;      // hungrig ins Bett: −19 Punkte
+        if (b.mistig) g -= 9.5;          // Box nicht gemistet: −9,5 Punkte
         if (b.krippeVoll && !b.mistig) g += 4;
         if (spiel.tag - pf.huf > 56) g -= 2;
-        pf.gesundheit = Math.max(0, Math.min(100, g));
+        pf.gesundheit = Math.max(0, Math.min(100, Math.round(g * 10) / 10));
+        b.mistStufe = b.mistig ? Math.min(6, (b.mistStufe || 1) + 1) : 1;
         b.krippeVoll = false; b.mistig = true;
         // Mähne wächst alle 5 Tage eine Stufe (bis „extra lang“)
         const pf2 = b.pferd, idx = MAEHNEN.findIndex(m => m[0] === (pf2.maehne || naturMaehne(pf2.rasse)));
@@ -740,6 +795,38 @@
       $("nachtSymbol").textContent = "☀️"; $("nachtText").textContent = `Tag ${spiel.tag} beginnt`;
     }, 1100);
     setTimeout(() => $("nacht").classList.remove("an"), 2300);
+  };
+
+  // ---------- Menü ----------
+  const menueZu = () => { $("menueListe").hidden = true; $("menueKnopf").setAttribute("aria-expanded", "false"); };
+  $("menueKnopf").onclick = e => {
+    e.stopPropagation();
+    const auf = $("menueListe").hidden;
+    $("menueListe").hidden = !auf; $("menueKnopf").setAttribute("aria-expanded", String(auf));
+  };
+  document.addEventListener("click", e => { if (!e.target.closest(".menue")) menueZu(); });
+  $("mVollbild").onclick = () => {
+    menueZu();
+    const el = document.documentElement;
+    if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else if (el.requestFullscreen) el.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else alert("Dein Browser unterstützt keinen Vollbildmodus. Tipp: Seite über „Zum Home-Bildschirm“ hinzufügen – dann startet das Spiel randlos.");
+  };
+  const vollbildText = () => { $("mVollbild").textContent = (document.fullscreenElement || document.webkitFullscreenElement) ? "⛶ Vollbild beenden" : "⛶ Vollbild"; };
+  document.addEventListener("fullscreenchange", vollbildText); document.addEventListener("webkitfullscreenchange", vollbildText);
+  $("mNeustart").onclick = () => {
+    menueZu();
+    if (!confirm("Neustart: Die Tage beginnen wieder bei Tag 1 und alle Werte deines Pferdes werden zurückgesetzt. Fortfahren?")) return;
+    spiel.tag = 1;
+    spiel.boxen.forEach(b => {
+      const p = b.pferd;
+      delete p.maehne; p.maehneSeit = 1;
+      p.pflege = erzeugePflege(p, 1);
+      b.krippeVoll = false; b.mistig = true; b.mistStufe = 1;
+    });
+    aktenReiter = "steckbrief"; aktenModus = "steckbrief"; scherModus = false; meldung = "";
+    speichern(); zeigeStall(); zeigeTag();
   };
 
   $("waehlen").onclick = zeigeRassen;

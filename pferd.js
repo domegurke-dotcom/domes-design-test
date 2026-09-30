@@ -189,12 +189,15 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     hp(0.76, 0.32 * hw), hp(0.52, 0.38 * hw), hp(0.34, 0.48 * hw * jw), hp(0.18, 0.52 * hw * jw),
     hp(0.06, 0.45 * hw), hp(-0.03, 0.22 * hw),
   ]);
-  const T = hp(0.12, 0.46 * hw), Pn = hp(-0.02, 0.04);
+  const T = hp(0.15, 0.5 * hw), Pn = hp(-0.02, 0.04);
   const d = norm(P(Pn.x - Wn.x, Pn.y - Wn.y));
   const nOut = P(-d.y, d.x);
   const crestCtrl = add(mid(Wn, Pn), mul(nOut, crest * H + 4));
   const underCtrl = add(mid(T, Cn), mul(nOut, 1));
-  const halsD = `M${f(Wn.x)},${f(Wn.y)}Q${f(crestCtrl.x)},${f(crestCtrl.y)} ${f(Pn.x)},${f(Pn.y)}L${f(hp(0.06, 0.2).x)},${f(hp(0.06, 0.2).y)}L${f(T.x)},${f(T.y)}Q${f(underCtrl.x)},${f(underCtrl.y)} ${f(Cn.x)},${f(Cn.y)}L${f(0.35 * L)},${f(top + 0.6 * D)}Z`;
+  // Kehle: weicher, offener Übergang von der Ganasche in die Halsunterseite
+  const kehle1 = add(add(T, mul(sub(Cn, T), 0.25)), mul(nOut, 10));
+  const kehle2 = add(add(Cn, mul(sub(T, Cn), 0.35)), mul(nOut, 1.5));
+  const halsD = `M${f(Wn.x)},${f(Wn.y)}Q${f(crestCtrl.x)},${f(crestCtrl.y)} ${f(Pn.x)},${f(Pn.y)}L${f(hp(0.06, 0.2).x)},${f(hp(0.06, 0.2).y)}L${f(T.x)},${f(T.y)}C${f(kehle1.x)},${f(kehle1.y)} ${f(kehle2.x)},${f(kehle2.y)} ${f(Cn.x)},${f(Cn.y)}L${f(0.35 * L)},${f(top + 0.6 * D)}Z`;
   const kamm = t => { const s = 1 - t; return P(s * s * Wn.x + 2 * s * t * crestCtrl.x + t * t * Pn.x, s * s * Wn.y + 2 * s * t * crestCtrl.y + t * t * Pn.y); };
 
   // --- Beine ---

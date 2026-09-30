@@ -190,7 +190,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const gl = w * 1.5;                       // Höhe der untergeschlagenen Beine beim Liegen
   const dLiegen = liegt ? Lg - gl : 0;      // so weit sinkt der Körper beim Liegen ab
   const a0 = (k.nAng - 20) * Math.PI / 180;
-  const N = k.neck * H * 1.1 * ((haltung === "tief" || liegt) ? 1 + Math.max(0, 0.56 - k.neck) * 2.2 : 1);
+  const N = k.neck * H * 1.1 * ({ waagerecht: 1.6, tief: 2.2, liegend: 2.2 }[haltung] ? 1 + Math.max(0, 0.56 - k.neck) * { waagerecht: 1.6, tief: 2.2, liegend: 2.2 }[haltung] : 1);
   const hl = k.head * H;
   const th0 = k.hAng * Math.PI / 180;
   const th = th0 + ({ normal: 0, leicht: 8, waagerecht: 12, tief: 16, liegend: 16 }[haltung] || 0) * Math.PI / 180;

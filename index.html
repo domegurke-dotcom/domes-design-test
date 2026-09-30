@@ -356,7 +356,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "27";
+  const SPIEL_VERSION = "28";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -364,7 +364,7 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=27"></script>
+<script src="pferd.js?v=28"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -381,13 +381,14 @@
   };
   try { const s = JSON.parse(localStorage.getItem(SPEICHER)); if (s && s.boxen) spiel = s; } catch (e) {}
   if (!spiel.anlage) spiel.anlage = { stall: true, paddock: true, weide: false, waschplatz: false, roundpen: false, reitplatz: false, reithalle: false, gelaende: true, anhaenger: false };
-  if (!spiel.ausruestung) spiel.ausruestung = { halfter: true, strick: true, putzkiste: true, sattel: false, trense: false, schabracke: false, decke: false, gamaschen: false, schere: true };
+  if (!spiel.ausruestung) spiel.ausruestung = { halfter: true, strick: true, putzkiste: true, sattel: false, trense: false, schabracke: false, decke: false, gamaschen: false, schere: true, medizin: true };
+  if (spiel.ausruestung.medizin == null) spiel.ausruestung.medizin = true;
   if (spiel.ausruestung.schere == null) spiel.ausruestung.schere = true;
   spiel.boxen.forEach(b => { if (b.pferd && !b.pferd.werte) b.pferd.werte = erzeugeWerte(b.pferd); if (b.pferd && !b.pferd.pflege) b.pferd.pflege = erzeugePflege(b.pferd); if (b.pferd && b.pferd.maehneSeit == null) b.pferd.maehneSeit = spiel.tag || 1; if (b.krippeVoll == null) b.krippeVoll = false; if (b.mistig == null) b.mistig = true; });
   if (!spiel.tag) spiel.tag = 1;
   const speichern = () => { try { localStorage.setItem(SPEICHER, JSON.stringify(spiel)); } catch (e) {} };
 
-  let aktenReiter = "steckbrief", aktenModus = "steckbrief", scherModus = false, meldung = "";
+  let aktenReiter = "steckbrief", aktenModus = "steckbrief", scherModus = false, medModus = false, meldung = "";
   const fmt = n => n.toLocaleString("de-DE") + " €";
   const $ = id => document.getElementById(id);
 
@@ -399,6 +400,16 @@
     return g >= 80 ? "normal" : g >= 60 ? "leicht" : g >= 40 ? "waagerecht" : g >= 20 ? "tief" : "liegend";
   }
   const HALTUNG_TEXT = { normal: "steht aufmerksam, Kopf und Hals oben", leicht: "lässt Kopf und Hals etwas hängen", waagerecht: "trägt Kopf und Hals nur noch waagerecht", tief: "lässt den Kopf tief hängen", liegend: "liegt matt in der Box" };
+  const MEDIZIN = [
+    { id: "schmerz", ico: "💊", name: "Schmerz\u00admittel", kurz: "+15 Gesundheit", plus: 15, info: "Lindert Schmerzen – Gesundheit +15, einmal am Tag" },
+    { id: "wunde", ico: "🧴", name: "Wund\u00adsalbe", kurz: "+3 Gesundheit", plus: 3, info: "Für kleine Schrammen und Wunden" },
+    { id: "augen", ico: "👁️", name: "Augen\u00adtropfen", kurz: "+2 Gesundheit", plus: 2, info: "Gegen tränende, gereizte Augen" },
+    { id: "husten", ico: "🍯", name: "Husten\u00adsaft", kurz: "+3 Gesundheit", plus: 3, info: "Kräutersaft für die Atemwege" },
+    { id: "elektrolyte", ico: "🧂", name: "Elektro\u00adlyte", kurz: "+2 Gesundheit", plus: 2, info: "Mineralien nach Anstrengung" },
+    { id: "wurmkur", ico: "🪱", name: "Wurmkur", kurz: "Termin erneuern", plus: 0, info: "Entwurmung – setzt den Wurmkur-Termin zurück" },
+    { id: "kuehl", ico: "🧊", name: "Kühl\u00adgel", kurz: "+2 Gesundheit", plus: 2, info: "Kühlt warme, geschwollene Beine" },
+    { id: "huf", ico: "🪮", name: "Huföl", kurz: "+1 Gesundheit", plus: 1, info: "Pflegt Hufhorn und Kronrand" },
+  ];
   function zeigeStall() {
     const p = spiel.boxen[0].pferd;
     const z = zeichnePferd(p.rasse, p.farbe, { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, haltung: haltungFuer(p) });
@@ -483,9 +494,19 @@
         ["schabracke", "🟫", "Scha\u00adbracke", sm < 125 ? "Pony" : "Warmblut / Vollblut", sm < 125 ? "Pony" : "WB/VB"],
         ["decke", "🧣", "Decke", `Abschwitzdecke, Deckengröße ${decke} cm`, `${decke} cm`], ["gamaschen", "🦵", "Gama\u00adschen", `Größe ${gr}`, grK],
         ["schere", "✂️", "Schere", "zum Mähne schneiden – antippen", "Mähne schneiden"],
+        ["medizin", "💊", "Medizin", "Stallapotheke – antippen", "Apotheke"],
       ];
       const hat = teile.filter(t => spiel.ausruestung[t[0]]).length;
-      if (scherModus) {
+      if (medModus) {
+        const heute = (p.medizin && p.medizin.tag === spiel.tag) ? p.medizin.gegeben : [];
+        inhalt = (meldung ? `<div class="klasse">${meldung}</div>` : "") + `<p class="text" style="margin:0 0 4px">💊 <b>Stallapotheke</b> · Gesundheit: ${p.pflege.gesundheit.toLocaleString("de-DE", { maximumFractionDigits: 1 })} %<br><small>Jedes Mittel kann einmal am Tag gegeben werden.</small></p>
+          <div class="kacheln">${MEDIZIN.map(m => {
+            const schon = heute.includes(m.id);
+            return `<button class="kachel ${schon ? "fehlt" : "klickbar"}" data-med="${m.id}" ${schon ? "disabled" : ""} title="${m.info}">
+              <span class="ico">${m.ico}</span><b>${m.name}</b><small>${schon ? "heute gegeben" : m.kurz}</small></button>`;
+          }).join("")}</div>
+          <button class="zurueck" id="medZurueck">‹ Zurück zur Ausrüstung</button>`;
+      } else if (scherModus) {
         const jetzt = p.maehne || naturMaehne(p.rasse), ji = MAEHNEN.findIndex(m => m[0] === jetzt);
         inhalt = `<p class="text" style="margin:0 0 4px">✂️ <b>Mähne schneiden</b> · aktuell: ${MAEHNEN[ji][1]}. ${ji === 0 ? "Kürzer geht es nicht mehr." : "Wähle die neue Länge:"}<br><small>${ji === MAEHNEN.length - 1 ? "Die Mähne hat die maximale Länge erreicht." : `Wächst in ${Math.max(1, MAEHNE_WACHSTUM - (spiel.tag - (p.maehneSeit || spiel.tag)))} ${Math.max(1, MAEHNE_WACHSTUM - (spiel.tag - (p.maehneSeit || spiel.tag))) === 1 ? "Tag" : "Tagen"} eine Stufe länger.`}</small></p>
           <div class="kacheln">${MAEHNEN.map(([id, name], i) => {
@@ -499,7 +520,7 @@
           <button class="zurueck" id="scherZurueck">‹ Zurück zur Ausrüstung</button>`;
       } else
       inhalt = (meldung ? `<div class="klasse">${meldung}</div>` : "") + `<p class="text" style="margin:0 0 4px">${hat} von ${teile.length} Ausrüstungsteilen vorhanden · Größen passend für ${sm} cm Stockmaß</p>
-        <div class="kacheln">${teile.map(([k, ico, n, info, kurz]) => `<div class="kachel ${spiel.ausruestung[k] ? "" : "fehlt"} ${k === "schere" && spiel.ausruestung[k] ? "klickbar" : ""}" ${k === "schere" ? 'id="scherKachel" role="button" tabindex="0"' : ""} title="${n.replace(/\u00ad/g, "")}: ${info}${spiel.ausruestung[k] ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></div>`).join("")}</div>`;
+        <div class="kacheln">${teile.map(([k, ico, n, info, kurz]) => `<div class="kachel ${spiel.ausruestung[k] ? "" : "fehlt"} ${(k === "schere" || k === "medizin") && spiel.ausruestung[k] ? "klickbar" : ""}" ${k === "schere" ? 'id="scherKachel" role="button" tabindex="0"' : k === "medizin" ? 'id="medKachel" role="button" tabindex="0"' : ""} title="${n.replace(/\u00ad/g, "")}: ${info}${spiel.ausruestung[k] ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></div>`).join("")}</div>`;
     } else if (aktenReiter === "platz") {
       const wh = p.stockmass / 100, minF = Math.pow(2 * wh, 2), passt = 12.25 >= minF;
       const zahl = n => n.toFixed(1).replace(".", ",");
@@ -529,7 +550,7 @@
         <div class="akte-kopf"><h2 id="pferdName" role="button" tabindex="0" title="Namen ändern">${esc(p.name)} <span class="stift">✏️</span></h2></div>
         ${inhalt}
       </div>`;
-    $("info").querySelectorAll(".reiter button").forEach(b => b.onclick = () => { aktenReiter = b.dataset.r; scherModus = false; meldung = ""; zeigeAkte(); });
+    $("info").querySelectorAll(".reiter button").forEach(b => b.onclick = () => { aktenReiter = b.dataset.r; scherModus = false; medModus = false; meldung = ""; zeigeAkte(); });
     const pn = $("pferdName");
     if (pn) pn.onclick = () => {
       pn.outerHTML = `<input id="nameEdit" maxlength="24" value="${esc(p.name)}" aria-label="Neuer Name">`;
@@ -542,6 +563,20 @@
       inp.onblur = () => fertig(true);
     };
     const sk = $("scherKachel"); if (sk) sk.onclick = () => { scherModus = true; meldung = ""; zeigeAkte(); };
+    const mk = $("medKachel"); if (mk) mk.onclick = () => { medModus = true; meldung = ""; zeigeAkte(); };
+    const mz = $("medZurueck"); if (mz) mz.onclick = () => { medModus = false; meldung = ""; zeigeAkte(); };
+    $("info").querySelectorAll("[data-med]").forEach(b => b.onclick = () => {
+      const m = MEDIZIN.find(x => x.id === b.dataset.med);
+      if (!p.medizin || p.medizin.tag !== spiel.tag) p.medizin = { tag: spiel.tag, gegeben: [] };
+      if (p.medizin.gegeben.includes(m.id)) return;
+      p.medizin.gegeben.push(m.id);
+      const vorher = p.pflege.gesundheit;
+      p.pflege.gesundheit = Math.min(100, Math.round((vorher + m.plus) * 10) / 10);
+      if (m.id === "wurmkur") p.pflege.wurm = spiel.tag;
+      const diff = Math.round((p.pflege.gesundheit - vorher) * 10) / 10;
+      meldung = `${m.ico} ${esc(p.name)} hat ${m.name} bekommen${diff > 0 ? ` – Gesundheit +${String(diff).replace(".", ",")}` : ""}.`;
+      speichern(); zeigeAkte();
+    });
     const sz = $("scherZurueck"); if (sz) sz.onclick = () => { scherModus = false; zeigeAkte(); };
     $("info").querySelectorAll("[data-schnitt]").forEach(b => { if (b.dataset.schnitt) b.onclick = () => {
       p.maehne = b.dataset.schnitt; p.maehneSeit = spiel.tag; scherModus = false;
@@ -769,7 +804,6 @@
     const box = spiel.boxen[0], offen = [];
     if (!box.krippeVoll) offen.push("die Krippe ist noch leer");
     if (box.mistig) offen.push("die Box ist noch nicht ausgemistet");
-    if (offen.length && !confirm(`Achtung: ${offen.join(" und ")}. Trotzdem den Tag beenden?`)) return;
     $("nachtSymbol").textContent = "🌙"; $("nachtText").textContent = `Ende von Tag ${spiel.tag}`;
     $("nacht").classList.add("an");
     setTimeout(() => {
@@ -825,7 +859,7 @@
       p.pflege = erzeugePflege(p, 1);
       b.krippeVoll = true; b.mistig = false; b.mistStufe = 0;
     });
-    aktenReiter = "steckbrief"; aktenModus = "steckbrief"; scherModus = false; meldung = "";
+    aktenReiter = "steckbrief"; aktenModus = "steckbrief"; scherModus = false; medModus = false; meldung = "";
     speichern(); zeigeStall(); zeigeTag();
   };
 

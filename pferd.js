@@ -80,7 +80,7 @@ const RASSEN = [
   { id: "quarter", name: "Quarter Horse", herkunft: "USA", h: [142, 163],
     text: "Muskulöses Westernpferd mit kurzem Kopf, großen Ganaschen und extrem kräftiger Hinterhand.",
     farben: ["fuchs", "brauner", "rappe", "palomino", "buckskin", "braunfalbe", "mausfalbe", "blueroan", "rotschimmel"],
-    k: { len: .95, depth: .47, legT: .09, neck: .47, nAng: 40, crest: .04, head: .38, hAng: 48, profile: 0, hw: 1.05, jw: 1.25, muz: .85, ear: .08, mane: "kurz", maneLen: .06, vol: .8, fore: .3, tail: .65, tvol: .8, tset: .1, feather: 0, croup: .5, hq: 1.2, eye: 1 } },
+    k: { len: .96, depth: .47, legT: .09, neck: .5, nAng: 54, crest: .05, head: .42, hAng: 56, profile: 0, hw: 1.08, jw: 1.25, muz: .95, ear: .085, mane: "kurz", maneLen: .06, vol: .8, fore: .3, tail: .65, tvol: .8, tset: .1, feather: 0, croup: .5, hq: 1.2, eye: 1 } },
   { id: "hannoveraner", name: "Hannoveraner", herkunft: "Deutschland", h: [160, 175],
     text: "Großrahmiges Warmblut für Dressur und Springen – langer Hals, gerader Kopf, viel Rahmen.",
     farben: ["brauner", "dunkelbrauner", "fuchs", "rappe", "schimmel"],
@@ -96,7 +96,7 @@ const RASSEN = [
   { id: "tekke", name: "Achal-Tekkiner", herkunft: "Turkmenistan", h: [147, 163],
     text: "Schlankes Wüstenpferd mit langem Hals, feiner, kurzer Mähne und einzigartigem metallischem Fellglanz.",
     farben: ["isabell", "palomino", "buckskin", "brauner", "fuchs", "rappe", "schimmel"],
-    k: { len: 1.08, depth: .37, legT: .065, neck: .6, nAng: 58, crest: .01, head: .42, hAng: 46, profile: -.1, hw: .85, jw: .95, muz: .9, ear: .13, mane: "kurz", maneLen: .03, vol: .4, fore: .15, tail: .55, tvol: .45, tset: .4, feather: 0, croup: .3, hq: .95, eye: 1.1, metallic: true } },
+    k: { len: 1.06, depth: .41, legT: .07, neck: .56, nAng: 56, crest: .02, head: .41, hAng: 54, profile: -.1, hw: .92, jw: 1, muz: .92, ear: .11, mane: "kurz", maneLen: .03, vol: .4, fore: .15, tail: .55, tvol: .45, tset: .4, feather: 0, croup: .3, hq: .95, eye: 1.1, metallic: true } },
 ];
 
 const rasseById = id => RASSEN.find(r => r.id === id);
@@ -145,6 +145,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const w = k.legT * H * 0.8, hh = Math.max(3.5, w * 0.72);
   const croupY = -H + 2 + k.croup * 2.5;
   const hq = k.hq || 1;
+  const maneLenE = k.mane === "kurz" ? 0.085 : k.maneLen;
   const crest = k.crest + (hengst ? 0.04 : 0);
   const alle = []; // für Bounding-Box
   const merke = arr => { alle.push(...arr); return arr; };
@@ -215,7 +216,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   ];
   const huf = xc => [P(xc - 0.9 * w, -hh), P(xc + 0.42 * w, -hh), P(xc + 0.62 * w, 0), P(xc - 1.2 * w, 0)];
   const behang = xc => {
-    const fl = k.feather; if (fl < 0.5) return null;
+    return null; // Kötenbehang vorerst bei allen Pferden ausgeblendet
     const tp = -(0.08 + 0.24 * fl) * Lg;
     return [P(xc + 0.5 * w, tp), P(xc + 0.8 * w + 2 * fl, -0.12 * Lg), P(xc + 1.0 * w + 5.5 * fl, 0), P(xc + 0.4 * w + 2 * fl, -2),
       P(xc + 0.1 * w, 0.8), P(xc - 0.4 * w, -1.2), P(xc - 0.8 * w, 0.8), P(xc - 1.05 * w - 1.2 * fl, 0.6), P(xc - 0.9 * w - 0.6 * fl, -0.06 * Lg), P(xc - 0.6 * w, tp * 0.85)];
@@ -236,7 +237,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   merke([P(X + 12 + 11 * s + tv * 6, Y - 14 * s), P(X, Y + tl)]);
 
   // --- Ohren ---
-  const el = k.ear * H;
+  const el = k.ear * H * 1.25;
   const ohr = (Eb, farbe) => {
     const e = norm(P(-0.22, -1)), q = P(-e.y, e.x), bw = 0.28 * el;
     const b1 = add(Eb, mul(q, -bw)), b2 = add(Eb, mul(q, bw));
@@ -247,19 +248,20 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     merke([tip]);
     const i1 = add(b1, mul(q, bw * 0.45)), i2 = add(b2, mul(q, -bw * 0.35)), itip = add(tip, mul(sub(Eb, tip), 0.25));
     return `<path d="M${f(b1.x)},${f(b1.y)}Q${f(c1.x)},${f(c1.y)} ${f(tip.x)},${f(tip.y)}Q${f(c2.x)},${f(c2.y)} ${f(b2.x)},${f(b2.y)}Z" fill="${farbe}" stroke="${INK}" stroke-width="1.9" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>` +
-      `<path d="M${f(i1.x)},${f(i1.y)}Q${f(mid(i1, itip).x - 1)},${f(mid(i1, itip).y)} ${f(itip.x)},${f(itip.y)}Q${f(mid(i2, itip).x + 1)},${f(mid(i2, itip).y)} ${f(i2.x)},${f(i2.y)}Z" fill="${mix(farbe, "#2b2240", .35)}"/>`;
+      `<path d="M${f(i1.x)},${f(i1.y)}Q${f(mid(i1, itip).x - 1)},${f(mid(i1, itip).y)} ${f(itip.x)},${f(itip.y)}Q${f(mid(i2, itip).x + 1)},${f(mid(i2, itip).y)} ${f(i2.x)},${f(i2.y)}Z" fill="${hexRgb(farbe).reduce((x, y) => x + y) / 3 < 70 ? mix(farbe, "#b59a9a", .5) : mix(farbe, "#2b2240", .35)}"/>` +
+      (hexRgb(farbe).reduce((x, y) => x + y) / 3 < 70 ? `<path d="M${f(add(b1, mul(q, bw * 0.2)).x)},${f(add(b1, mul(q, bw * 0.2)).y)}Q${f(c1.x + 0.6)},${f(c1.y + 0.4)} ${f(tip.x + 0.3)},${f(tip.y + 0.8)}" fill="none" stroke="#9aa8c8" stroke-width="1.2" stroke-linecap="round" opacity=".8" vector-effect="non-scaling-stroke"/>` : "");
   };
   const Eb = hp(0.04, -0.03);
 
   // --- Mähne ---
   let maehneD = "", streifenD = "";
-  if (k.mane === "lang") {
+  if (k.mane === "lang" || k.mane === "kurz") {
     const n = Math.round(6 + k.vol * 2), oben = [], unten = [];
     const runter = norm(P(0.12, 1));
     for (let i = 0; i <= n; i++) {
       const t = i / n, p = kamm(t);
       oben.push(add(p, mul(nOut, 1.5 + k.vol * 1.5)));
-      const len = k.maneLen * H * (0.2 + 0.8 * Math.sin(Math.PI * Math.min(1, 0.08 + t * 0.95))) + (i % 2 ? -1.5 : 1.5) * k.vol;
+      const len = maneLenE * H * (0.2 + 0.8 * Math.sin(Math.PI * Math.min(1, 0.08 + t * 0.95))) + (i % 2 ? -1.5 : 1.5) * k.vol;
       unten.push(add(p, mul(runter, Math.max(3, len * (i === 0 || i === n ? 0.35 : 1)))));
     }
     // Unterkante als spitze, leicht nach hinten geschwungene Haarbüschel
@@ -275,10 +277,6 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     }
     maehneD = d + "Z";
     merke(oben); merke(unten);
-  } else if (k.mane === "kurz") {
-    const oben = [], unten = [];
-    for (let i = 0; i <= 10; i++) { const p = kamm(i / 10); oben.push(add(p, mul(nOut, 1.8 * k.vol + 0.6))); unten.push(add(p, mul(nOut, -(2 + k.maneLen * 40)))); }
-    maehneD = glatt(oben.concat(unten.reverse()));
   } else if (k.mane === "fjord") {
     const oben = [], unten = [], so = [], su = [];
     for (let i = 0; i <= 12; i++) {
@@ -353,7 +351,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const nick = `<animateTransform attributeName="transform" type="rotate" values="0 ${f(Pn.x)} ${f(Pn.y)};0 ${f(Pn.x)} ${f(Pn.y)};-3 ${f(Pn.x)} ${f(Pn.y)};0 ${f(Pn.x)} ${f(Pn.y)}" keyTimes="0;.8;.9;1" dur="6s" repeatCount="indefinite"/>`;
 
   // Fernes Ohr
-  g += ohr(add(Eb, P(3.5, 1.5)), dunkel(head));
+  g += ohr(add(Eb, P(4.5, 0.5)), dunkel(head));
 
   // Hauptkörper
   g += `<g>${umriss(haupt, linie)}`;
@@ -425,7 +423,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (k.mane === "lang") {
     const runter = norm(P(0.12, 1));
     for (const t of [0.2, 0.38, 0.56, 0.74]) {
-      const p = add(kamm(t), mul(nOut, 1)), len = k.maneLen * H * (0.2 + 0.8 * Math.sin(Math.PI * Math.min(1, 0.08 + t * 0.95))) * 0.75;
+      const p = add(kamm(t), mul(nOut, 1)), len = maneLenE * H * (0.2 + 0.8 * Math.sin(Math.PI * Math.min(1, 0.08 + t * 0.95))) * 0.75;
       const e = add(p, mul(runter, len)), c = add(mid(p, e), P(-2, 0));
       g += inkFein(`M${f(p.x)},${f(p.y)}Q${f(c.x)},${f(c.y)} ${f(e.x)},${f(e.y)}`, 1, 'opacity=".5"');
     }
@@ -435,8 +433,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (streifenD) g += `<path d="${streifenD}" fill="${maneStripe}"/>`;
 
   // Kopfdetails
-  g += `<g>${ohr(Eb, head)}`;
+  g += `<g>`;
   if (fl >= 0.25) g += `<path d="${schopf ? glatt(schopf) : schopfBueschel()}" fill="${k.mane === "fjord" ? maneOuter : mane}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  g += ohr(Eb, head);
   // Comic-Auge: Weiß, Iris, Pupille, Glanzlicht, Oberlid, Braue – blinzelt
   const ex = er * 1.55, ey = er * 1.42;
   const iris = C.augen || "#2e1a0e";

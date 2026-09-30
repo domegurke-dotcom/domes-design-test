@@ -333,7 +333,7 @@
 
 <div id="auswahl" role="dialog" aria-modal="true" aria-label="Pferd auswählen"></div>
 
-<script src="pferd.js?v=22"></script>
+<script src="pferd.js?v=23"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -352,7 +352,7 @@
   if (!spiel.anlage) spiel.anlage = { stall: true, paddock: true, weide: false, waschplatz: false, roundpen: false, reitplatz: false, reithalle: false, gelaende: true, anhaenger: false };
   if (!spiel.ausruestung) spiel.ausruestung = { halfter: true, strick: true, putzkiste: true, sattel: false, trense: false, schabracke: false, decke: false, gamaschen: false, schere: true };
   if (spiel.ausruestung.schere == null) spiel.ausruestung.schere = true;
-  spiel.boxen.forEach(b => { if (b.pferd && !b.pferd.werte) b.pferd.werte = erzeugeWerte(b.pferd); if (b.pferd && !b.pferd.pflege) b.pferd.pflege = erzeugePflege(b.pferd); if (b.krippeVoll == null) b.krippeVoll = false; if (b.mistig == null) b.mistig = true; });
+  spiel.boxen.forEach(b => { if (b.pferd && !b.pferd.werte) b.pferd.werte = erzeugeWerte(b.pferd); if (b.pferd && !b.pferd.pflege) b.pferd.pflege = erzeugePflege(b.pferd); if (b.pferd && b.pferd.maehneSeit == null) b.pferd.maehneSeit = spiel.tag || 1; if (b.krippeVoll == null) b.krippeVoll = false; if (b.mistig == null) b.mistig = true; });
   if (!spiel.tag) spiel.tag = 1;
   const speichern = () => { try { localStorage.setItem(SPEICHER, JSON.stringify(spiel)); } catch (e) {} };
 
@@ -450,14 +450,14 @@
       const hat = teile.filter(t => spiel.ausruestung[t[0]]).length;
       if (scherModus) {
         const jetzt = p.maehne || naturMaehne(p.rasse), ji = MAEHNEN.findIndex(m => m[0] === jetzt);
-        inhalt = `<p class="text" style="margin:0 0 4px">✂️ <b>Mähne schneiden</b> · aktuell: ${MAEHNEN[ji][1]}. ${ji === 0 ? "Kürzer geht es nicht mehr." : "Wähle die neue Länge:"}</p>
+        inhalt = `<p class="text" style="margin:0 0 4px">✂️ <b>Mähne schneiden</b> · aktuell: ${MAEHNEN[ji][1]}. ${ji === 0 ? "Kürzer geht es nicht mehr." : "Wähle die neue Länge:"}<br><small>${ji === MAEHNEN.length - 1 ? "Die Mähne hat die maximale Länge erreicht." : `Wächst in ${Math.max(1, MAEHNE_WACHSTUM - (spiel.tag - (p.maehneSeit || spiel.tag)))} ${Math.max(1, MAEHNE_WACHSTUM - (spiel.tag - (p.maehneSeit || spiel.tag))) === 1 ? "Tag" : "Tagen"} eine Stufe länger.`}</small></p>
           <div class="kacheln">${MAEHNEN.map(([id, name], i) => {
             const z = zeichnePferd(p.rasse, p.farbe, { seed: p.id, geschlecht: p.geschlecht, maehne: id });
             const status = i === ji ? "aktuell" : i < ji ? "schneiden" : "zu lang";
             const moeglich = i < ji;
             return `<button class="kachel ${moeglich ? "klickbar" : i === ji ? "aktuell" : "fehlt"}" data-schnitt="${moeglich ? id : ""}" ${moeglich ? "" : "disabled"}>
               <svg class="mini" viewBox="${(z.box.minX - 6).toFixed(1)} ${(z.box.minY - 6).toFixed(1)} 110 92"><g>${z.svg}</g></svg>
-              <b>${({ steh: "Steh\u00admähne", kurz: "Kurz", mittel: "Mittel", lang: "Lang" })[id]}</b><small>${status}</small></button>`;
+              <b>${({ steh: "Steh\u00admähne", kurz: "Kurz", mittel: "Mittel", lang: "Lang", extralang: "Extra lang" })[id]}</b><small>${status}</small></button>`;
           }).join("")}</div>
           <button class="zurueck" id="scherZurueck">‹ Zurück zur Ausrüstung</button>`;
       } else
@@ -496,7 +496,7 @@
     const sk = $("scherKachel"); if (sk) sk.onclick = () => { scherModus = true; meldung = ""; zeigeAkte(); };
     const sz = $("scherZurueck"); if (sz) sz.onclick = () => { scherModus = false; zeigeAkte(); };
     $("info").querySelectorAll("[data-schnitt]").forEach(b => { if (b.dataset.schnitt) b.onclick = () => {
-      p.maehne = b.dataset.schnitt; scherModus = false;
+      p.maehne = b.dataset.schnitt; p.maehneSeit = spiel.tag; scherModus = false;
       meldung = `✂️ Die Mähne von ${esc(p.name)} ist jetzt: <b>${MAEHNEN.find(m => m[0] === p.maehne)[1]}</b>`;
       speichern(); zeigeStall();
     }; });
@@ -598,6 +598,7 @@
       wahl.name = (wahl.name || "").trim() || zufallAus(NAMEN[wahl.geschlecht]);
       spiel.boxen[0].pferd = { ...wahl };
       delete spiel.boxen[0].pferd.maehne;
+      spiel.boxen[0].pferd.maehneSeit = spiel.tag;
       spiel.boxen[0].pferd.werte = erzeugeWerte(spiel.boxen[0].pferd);
       spiel.boxen[0].pferd.pflege = erzeugePflege(spiel.boxen[0].pferd);
       aktenReiter = "steckbrief";
@@ -721,6 +722,12 @@
         if (spiel.tag - pf.huf > 56) g -= 2;
         pf.gesundheit = Math.max(0, Math.min(100, g));
         b.krippeVoll = false; b.mistig = true;
+        // Mähne wächst alle 5 Tage eine Stufe (bis „extra lang“)
+        const pf2 = b.pferd, idx = MAEHNEN.findIndex(m => m[0] === (pf2.maehne || naturMaehne(pf2.rasse)));
+        if (spiel.tag - (pf2.maehneSeit || spiel.tag) >= MAEHNE_WACHSTUM) {
+          if (idx < MAEHNEN.length - 1) pf2.maehne = MAEHNEN[idx + 1][0];
+          pf2.maehneSeit = spiel.tag;
+        }
       });
       speichern(); zeigeTag();
       $("nachtSymbol").textContent = "☀️"; $("nachtText").textContent = `Tag ${spiel.tag} beginnt`;

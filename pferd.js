@@ -148,8 +148,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Mähnenlänge: natürliche Länge der Rasse oder geschnitten (opt.maehne: steh | kurz | mittel | lang)
   const natur = naturMaehne(rasseId);
   const laenge = opt.maehne || natur;
-  const mstil = laenge === "steh" ? "fjord" : laenge === "kurz" ? "kurz" : "lang";
-  const maneLenE = laenge === "kurz" ? 0.085 : laenge === "mittel" ? (natur === "mittel" ? k.maneLen : 0.15) : laenge === "lang" ? (natur === "lang" ? k.maneLen : 0.26) : 0;
+  const mstil = laenge === "steh" ? "fjord" : laenge === "kurz" ? "kurz" : "lang"; // lang, mittel und extralang teilen sich die Zeichnung
+  const maneLenE = laenge === "kurz" ? 0.085 : laenge === "mittel" ? (natur === "mittel" ? k.maneLen : 0.15) : laenge === "lang" ? (natur === "lang" ? k.maneLen : 0.26) : laenge === "extralang" ? Math.max(0.42, (natur === "lang" ? k.maneLen : 0.26) * 1.4) : 0;
   const crest = k.crest + (hengst ? 0.04 : 0);
   const alle = []; // für Bounding-Box
   const merke = arr => { alle.push(...arr); return arr; };
@@ -298,7 +298,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     merke(oben);
   }
   // Schopf
-  const fl = mstil === "fjord" ? Math.max(k.fore, 0.5) : laenge === "kurz" ? Math.min(k.fore, 0.4) : k.fore;
+  const fl = mstil === "fjord" ? Math.max(k.fore, 0.5) : laenge === "kurz" ? Math.min(k.fore, 0.4) : laenge === "extralang" ? Math.max(k.fore * 1.3, 0.9) : k.fore;
   const schopf = mstil === "fjord"
     ? [hp(-0.04, -0.04), hp(-0.02, -0.16), hp(0.06, -0.12), hp(0.1, -0.02), hp(0.05, 0.05)]
     : null;
@@ -583,4 +583,5 @@ function naturMaehne(rasseId) {
   if (k.mane === "kurz") return "kurz";
   return k.maneLen >= 0.2 ? "lang" : "mittel";
 }
-const MAEHNEN = [["steh", "Stehmähne"], ["kurz", "Kurze Mähne"], ["mittel", "Mittlere Mähne"], ["lang", "Lange Mähne"]];
+const MAEHNEN = [["steh", "Stehmähne"], ["kurz", "Kurze Mähne"], ["mittel", "Mittlere Mähne"], ["lang", "Lange Mähne"], ["extralang", "Extra lange Mähne"]];
+const MAEHNE_WACHSTUM = 5; // alle 5 Tage wächst die Mähne eine Stufe

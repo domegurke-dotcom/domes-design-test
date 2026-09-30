@@ -556,3 +556,16 @@ function ausbildungsKlasse(werte, alter) {
   return "Klasse S (Schwer)";
 }
 const NOTENWORT = n => n >= 10 ? "ausgezeichnet" : n >= 9 ? "sehr gut" : n >= 8 ? "gut" : n >= 7 ? "ziemlich gut" : n >= 6 ? "befriedigend" : n >= 5 ? "genügend" : "mangelhaft";
+
+// Pflege-Startwerte: wann zuletzt Hufschmied, Impfung, Wurmkur und Zahnkontrolle waren (Tag-Nummern)
+function erzeugePflege(pferd, heute) {
+  const r = zufall("pflege-" + pferd.id);
+  const t = heute || (typeof spiel !== "undefined" ? spiel.tag : 1) || 1;
+  return {
+    gesundheit: 100,
+    huf: t - Math.floor(3 + r() * 30),
+    impf: t - Math.floor(20 + r() * 150),
+    wurm: t - Math.floor(5 + r() * 70),
+    zahn: t - Math.floor(30 + r() * 300),
+  };
+}

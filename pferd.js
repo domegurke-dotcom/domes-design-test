@@ -189,7 +189,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const ohrenHaengen = haltung === "tief" || liegt;
   const gl = w * 1.5;                       // Höhe der untergeschlagenen Beine beim Liegen
   const dLiegen = liegt ? Lg - gl : 0;      // so weit sinkt der Körper beim Liegen ab
-  const a0 = (k.nAng - 20) * Math.PI / 180, N = k.neck * H * 1.1;
+  const a0 = (k.nAng - 20) * Math.PI / 180;
+  const N = k.neck * H * 1.1 * ((haltung === "tief" || liegt) ? 1 + Math.max(0, 0.56 - k.neck) * 2.2 : 1);
   const hl = k.head * H;
   const th0 = k.hAng * Math.PI / 180;
   const th = th0 + ({ normal: 0, leicht: 8, waagerecht: 12, tief: 16, liegend: 16 }[haltung] || 0) * Math.PI / 180;
@@ -198,7 +199,10 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const zielY = { leicht: normY + 0.62 * (bugY - normY), waagerecht: bugY, tief: bugY + 0.5 * (-hh - 3 - bugY), liegend: -dLiegen - 2.5 }[haltung];
   let a = a0;
   if (zielY != null) {
-    const c = (Math.sin(th) * 1.01 + Math.cos(th) * 0.14 * k.muz) * hl;
+    // Messpunkt: bei „waagerecht“ die Mitte des Nasenrückens, sonst das Maul
+    const c = haltung === "waagerecht"
+      ? (Math.sin(th) * 0.55 - Math.cos(th) * 0.045) * hl
+      : (Math.sin(th) * 1.01 + Math.cos(th) * 0.14 * k.muz) * hl;
     a = Math.asin(Math.max(-0.97, Math.min(Math.sin(a0), (Wn.y + c - zielY) / N)));
   }
   const Pll = P(Wn.x - N * Math.cos(a), Wn.y - N * Math.sin(a));
@@ -265,6 +269,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const el = k.ear * H * 1.25;
   const ohr = (Eb, farbe, ohneMuschel = false) => {
     // Ohren hängen, wenn der Kopf unter der Waagerechten ist (tief / liegend)
+    if (ohrenHaengen) ohneMuschel = true;
     const e = ohrenHaengen ? norm(P(0.85, 0.3)) : norm(P(-0.22, -1)), q = P(-e.y, e.x), bw = 0.28 * el;
     const b1 = add(Eb, mul(q, -bw)), b2 = add(Eb, mul(q, bw));
     let tip = add(Eb, mul(e, el));

@@ -251,7 +251,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       `<path d="M${f(i1.x)},${f(i1.y)}Q${f(mid(i1, itip).x - 1)},${f(mid(i1, itip).y)} ${f(itip.x)},${f(itip.y)}Q${f(mid(i2, itip).x + 1)},${f(mid(i2, itip).y)} ${f(i2.x)},${f(i2.y)}Z" fill="${hexRgb(farbe).reduce((x, y) => x + y) / 3 < 70 ? mix(farbe, "#b59a9a", .5) : mix(farbe, "#2b2240", .35)}"/>` +
       (hexRgb(farbe).reduce((x, y) => x + y) / 3 < 70 ? `<path d="M${f(add(b1, mul(q, bw * 0.2)).x)},${f(add(b1, mul(q, bw * 0.2)).y)}Q${f(c1.x + 0.6)},${f(c1.y + 0.4)} ${f(tip.x + 0.3)},${f(tip.y + 0.8)}" fill="none" stroke="#9aa8c8" stroke-width="1.2" stroke-linecap="round" opacity=".8" vector-effect="non-scaling-stroke"/>` : "");
   };
-  const Eb = hp(-0.03, 0.07);
+  const Eb = hp(-0.02, 0.045);
 
   // --- Mähne ---
   let maehneD = "", streifenD = "";
@@ -297,11 +297,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // liegt dabei an der Stirnlinie an (Kopf-Koordinaten: s entlang des Gesichts, b quer dazu)
   const schopfBueschel = () => {
     const l = 0.16 + 0.22 * fl;
-    const R0 = hp(-0.06, -0.02), R1 = hp(-0.03, 0.13);            // Ansatz zwischen den Ohren
-    const o1 = hp(0.04, -0.085), o2 = hp(0.1 + l * 0.35, -0.085);  // Vorderkante, liegt knapp vor der Stirn
-    const t1 = hp(0.08 + l, -0.05), v1 = hp(0.06 + l * 0.72, -0.01);
-    const t2 = hp(0.07 + l * 0.92, 0.035), v2 = hp(0.05 + l * 0.6, 0.06);
-    const t3 = hp(0.04 + l * 0.72, 0.1), b1 = hp(0.02, 0.13);
+    const R0 = hp(-0.1, -0.03), R1 = hp(-0.07, 0.12);            // Ansatz zwischen den Ohren
+    const o1 = hp(-0.01, -0.09), o2 = hp(0.06 + l * 0.35, -0.088);  // Vorderkante, liegt knapp vor der Stirn
+    const t1 = hp(0.03 + l, -0.055), v1 = hp(0.01 + l * 0.72, -0.015);
+    const t2 = hp(0.02 + l * 0.92, 0.03), v2 = hp(0.0 + l * 0.6, 0.055);
+    const t3 = hp(-0.01 + l * 0.72, 0.095), b1 = hp(-0.03, 0.125);
     const c = (p1, p2, ds, db) => { const m = mid(p1, p2), q = hp(0, 0), r = hp(ds, db); return P(m.x + r.x - q.x, m.y + r.y - q.y); };
     const Q = (ctrl, p) => `Q${f(ctrl.x)},${f(ctrl.y)} ${f(p.x)},${f(p.y)}`;
     return `M${f(R0.x)},${f(R0.y)}` + Q(c(R0, o1, 0, -0.02), o1) + Q(c(o1, o2, 0, -0.012), o2) + Q(c(o2, t1, 0, -0.01), t1) +
@@ -310,7 +310,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   };
   const schopfStraehnen = () => {
     const l = 0.16 + 0.22 * fl;
-    return [[hp(0.0, -0.03), hp(0.05 + l * 0.8, -0.04)], [hp(0.0, 0.04), hp(0.05 + l * 0.75, 0.02)], [hp(0.0, 0.1), hp(0.03 + l * 0.55, 0.08)]]
+    return [[hp(-0.05, -0.035), hp(0.0 + l * 0.8, -0.045)], [hp(-0.05, 0.04), hp(0.0 + l * 0.75, 0.015)], [hp(-0.05, 0.1), hp(-0.02 + l * 0.55, 0.075)]]
       .map(([a, b]) => { const m = mid(a, b), r = sub(hp(0, -0.015), hp(0, 0)); return inkFein(`M${f(a.x)},${f(a.y)}Q${f(m.x + r.x)},${f(m.y + r.y)} ${f(b.x)},${f(b.y)}`, 0.9, 'opacity=".45"'); }).join("");
   };
 
@@ -477,3 +477,79 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
 
   return { svg: `<g>${g}</g>`, box: { minX, maxX, minY } };
 }
+
+// =====================================================================
+//  Pferdeakte: Gangwerk, Charakter, Ausbildung (rassetypisch)
+// =====================================================================
+// gang: Grundnoten Schritt/Trab/Galopp · toelt/pass: Wahrscheinlichkeit, dass die Gangart vorhanden ist
+// char: Temperament, Mut, Wachheit, Menschenbezug, Arbeitswille, Nervenstärke (0–100)
+// dress: Eignung für die Dressurausbildung (beeinflusst Schwung, Geraderichtung, Versammlung)
+const PROFIL = {
+  araber:       { gang: [7, 7, 7.5],   char: [80, 50, 85, 75, 70, 45], dress: .75 },
+  friese:       { gang: [7.5, 8, 7],   char: [45, 60, 60, 80, 75, 65], dress: .85 },
+  marwari:      { gang: [7, 6.5, 7.5], char: [70, 70, 80, 60, 70, 55], dress: .7, pass: .5, passName: "Pass (Revaal)" },
+  fjord:        { gang: [7, 6.5, 6.5], char: [30, 70, 55, 80, 70, 85], dress: .65 },
+  haflinger:    { gang: [7, 7, 6.5],   char: [45, 70, 65, 80, 70, 80], dress: .7 },
+  shetty:       { gang: [6, 6.5, 6],   char: [55, 70, 80, 60, 40, 75], dress: .55 },
+  shire:        { gang: [7, 6.5, 6],   char: [20, 75, 45, 85, 70, 90], dress: .5 },
+  andalusier:   { gang: [7.5, 7.5, 7.5], char: [60, 65, 75, 80, 80, 65], dress: .95 },
+  lipizzaner:   { gang: [7, 7.5, 7],   char: [55, 65, 75, 75, 85, 70], dress: 1 },
+  vollblut:     { gang: [7, 7, 9],     char: [90, 55, 85, 60, 80, 35], dress: .7 },
+  quarter:      { gang: [7, 6.5, 7.5], char: [35, 75, 65, 80, 80, 85], dress: .75 },
+  hannoveraner: { gang: [8, 8, 8],     char: [60, 60, 70, 70, 80, 60], dress: 1 },
+  isi:          { gang: [7, 6.5, 7],   char: [60, 70, 80, 75, 80, 75], dress: .7, toelt: 1, pass: .55 },
+  tinker:       { gang: [6.5, 6.5, 6], char: [30, 70, 55, 85, 60, 85], dress: .6 },
+  tekke:        { gang: [7.5, 7, 8.5], char: [85, 55, 85, 55, 75, 40], dress: .7 },
+};
+
+const CHARAKTER = [
+  { key: "temperament", titel: "Temperament",    links: "ruhig",        rechts: "temperamentvoll" },
+  { key: "mut",         titel: "Mut",            links: "scheu",        rechts: "mutig" },
+  { key: "wachheit",    titel: "Wachheit",       links: "verträumt",    rechts: "aufgeweckt" },
+  { key: "bezug",       titel: "Menschenbezug",  links: "eigenständig", rechts: "verschmust" },
+  { key: "wille",       titel: "Arbeitswille",   links: "eigensinnig",  rechts: "leistungsbereit" },
+  { key: "nerven",      titel: "Nervenstärke",   links: "nervös",       rechts: "gelassen" },
+];
+const AUSBILDUNG = ["Takt", "Losgelassenheit", "Anlehnung", "Schwung", "Geraderichtung", "Versammlung"];
+
+function erzeugeWerte(pferd) {
+  const pr = PROFIL[pferd.rasse] || PROFIL.hannoveraner;
+  const r = zufall("werte-" + pferd.id + pferd.rasse);
+  const gauss = () => (r() + r() + r() - 1.5) / 1.5; // ungefähr -1 … 1
+  const note = b => Math.max(4, Math.min(10, Math.round((b + gauss() * 1.1) * 2) / 2));
+  const gang = { schritt: note(pr.gang[0]), trab: note(pr.gang[1]), galopp: note(pr.gang[2]) };
+  if (pr.toelt && r() < pr.toelt) gang.toelt = note(7.5);
+  if (pr.pass && r() < pr.pass) gang.pass = note(6.5);
+  const charakter = {};
+  CHARAKTER.forEach((c, i) => charakter[c.key] = Math.round(Math.max(3, Math.min(97, pr.char[i] + gauss() * 22))));
+  const reinOpt = [100, 100, 100, 100, 100, 93.75, 87.5, 75];
+  return {
+    reinrassig: reinOpt[Math.floor(r() * reinOpt.length)],
+    gang, charakter,
+    talent: Math.round((0.8 + r() * 0.4) * 100) / 100,
+    streuung: AUSBILDUNG.map(() => Math.round(gauss() * 8)),
+  };
+}
+
+// Ausbildungsstand ergibt sich aus Alter, Talent und Rasseneignung (0–100 je Punkt der Skala)
+function ausbildungsWerte(pferd) {
+  const w = pferd.werte, pr = PROFIL[pferd.rasse] || PROFIL.hannoveraner;
+  const a = pferd.alter;
+  const basis = a < 3 ? 0 : Math.min(95, (a - 2.5) * 14) * w.talent;
+  return AUSBILDUNG.map((name, i) => {
+    let v = basis * (1.12 - i * 0.13) * Math.pow(pr.dress, i / 4) + (basis > 0 ? w.streuung[i] : 0);
+    return { name, wert: Math.round(Math.max(0, Math.min(97, v))) };
+  });
+}
+function ausbildungsKlasse(werte, alter) {
+  if (alter < 3) return "Fohlen / Jungpferd – noch nicht angeritten";
+  const m = werte.reduce((s, x) => s + x.wert, 0) / werte.length;
+  if (m < 10) return "roh – wird gerade angeritten";
+  if (m < 25) return "angeritten";
+  if (m < 40) return "Klasse E (Einsteiger)";
+  if (m < 55) return "Klasse A";
+  if (m < 70) return "Klasse L";
+  if (m < 82) return "Klasse M";
+  return "Klasse S";
+}
+const NOTENWORT = n => n >= 10 ? "ausgezeichnet" : n >= 9 ? "sehr gut" : n >= 8 ? "gut" : n >= 7 ? "ziemlich gut" : n >= 6 ? "befriedigend" : n >= 5 ? "genügend" : "mangelhaft";

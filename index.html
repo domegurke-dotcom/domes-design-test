@@ -23,7 +23,13 @@
     padding: 12px 16px; padding-top: max(12px, env(safe-area-inset-top));
     background: var(--holz-dunkel); color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.25);
   }
-  header h1 { font-size: 1.15rem; margin: 0; }
+  header h1 { font-size: 1.1rem; margin: 0; flex: 1; padding-left: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tagknopf { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.1; border: 0; cursor: pointer; font: inherit;
+    background: #f3c64d; color: #3a2610; border-radius: 10px; padding: 5px 10px; box-shadow: 0 2px 0 #b58a1f; }
+  .tagknopf b { font-size: .98rem; white-space: nowrap; }
+  .tagknopf small { font-size: .68rem; font-weight: 600; opacity: .8; white-space: nowrap; }
+  @media (max-width: 430px) { header h1 { font-size: 1rem; } header h1 .emoji { display: none; } }
+  .tagknopf:active { transform: translateY(2px); box-shadow: none; }
   .geld { background: rgba(255,255,255,.15); padding: 4px 10px; border-radius: 999px; font-weight: 600; }
   main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 16px; gap: 14px; }
   #stall { width: 100%; max-width: 560px; display: block; border-radius: 14px; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
@@ -43,7 +49,13 @@
   .tagesleiste button { border: 0; border-radius: 10px; padding: 10px 12px; font: inherit; font-weight: 700; font-size: .9rem;
     background: #3b4a7a; color: #fff; cursor: pointer; white-space: nowrap; }
   .tagesleiste button:active { transform: scale(.97); }
-  #krippe { cursor: pointer; }
+  #krippe, #boden, #mist { cursor: pointer; }
+  #mist { transition: opacity .6s; }
+  #mist.weg { opacity: 0; pointer-events: none; }
+  #mistHinweis { display: none; animation: hopsen 1.2s ease-in-out infinite; }
+  #stall.mistig #mistHinweis { display: inline; }
+  .funkeln { animation: funkeln .9s ease-out forwards; }
+  @keyframes funkeln { from { opacity: 1; transform: translateY(0) scale(.6); } to { opacity: 0; transform: translateY(-14px) scale(1.2); } }
   #stall .heu { transform-box: fill-box; transform-origin: 50% 100%; transition: transform .6s cubic-bezier(.3,1.5,.5,1), opacity .4s; }
   #stall.leer .heu { transform: scaleY(0); opacity: 0; }
   #krippenHinweis { display: none; animation: hopsen 1.2s ease-in-out infinite; }
@@ -117,7 +129,8 @@
 </head>
 <body>
 <header>
-  <h1>🐴 Mein Zuchtstall</h1>
+  <button class="tagknopf" id="tagAnzeige" title="Tag beenden"><b>☀️ Tag 1</b><small>beenden 🌙</small></button>
+  <h1><span class="emoji">🐴 </span>Mein Zuchtstall</h1>
   <span class="geld" id="geld">1.000 €</span>
 </header>
 
@@ -177,7 +190,7 @@
       <rect x="0" y="0" width="400" height="8" fill="#8f6a45" stroke="#2b1d14" stroke-width="1.2"/>
       <rect x="-2" y="44" width="404" height="10" fill="#9c7650" stroke="#2b1d14" stroke-width="1.3"/>
       <!-- Boden -->
-      <polygon points="0,300 0,266 60,212 340,212 400,266 400,300" fill="url(#stroh)" stroke="#2b1d14" stroke-width="1.2"/>
+      <polygon id="boden" points="0,300 0,266 60,212 340,212 400,266 400,300" fill="url(#stroh)" stroke="#2b1d14" stroke-width="1.2"/>
       <!-- Seitenwände: unten Holz, oben Gitterbogen -->
       <!-- Nachbarboxen hinter den Gittern -->
       <polygon points="0,50 60,50 60,212 0,266" fill="url(#kalkstein)"/><polygon points="0,50 60,50 60,212 0,266" fill="#3a2614" opacity=".45"/>
@@ -273,11 +286,6 @@
     </g>
   </svg>
 
-  <div class="tagesleiste">
-    <span class="tag" id="tagAnzeige">☀️ Tag 1</span>
-    <span class="status" id="tagStatus"></span>
-    <button id="tagEnde">Tag beenden 🌙</button>
-  </div>
   <section class="akte" id="info" aria-label="Pferdeakte"></section>
   <button class="knopf" id="waehlen">Pferd auswählen</button>
   <button class="knopf aus" disabled>+ Neue Box bauen (bald)</button>
@@ -303,7 +311,7 @@
     boxen: [{ nr: 1, pferd: { id: "start", name: "Schneeflocke", rasse: "araber", farbe: "schimmel", geschlecht: "Stute", alter: 5, stockmass: 150 } }],
   };
   try { const s = JSON.parse(localStorage.getItem(SPEICHER)); if (s && s.boxen) spiel = s; } catch (e) {}
-  spiel.boxen.forEach(b => { if (b.pferd && !b.pferd.werte) b.pferd.werte = erzeugeWerte(b.pferd); if (b.krippeVoll == null) b.krippeVoll = false; });
+  spiel.boxen.forEach(b => { if (b.pferd && !b.pferd.werte) b.pferd.werte = erzeugeWerte(b.pferd); if (b.krippeVoll == null) b.krippeVoll = false; if (b.mistig == null) b.mistig = true; });
   if (!spiel.tag) spiel.tag = 1;
   const speichern = () => { try { localStorage.setItem(SPEICHER, JSON.stringify(spiel)); } catch (e) {} };
 
@@ -499,13 +507,56 @@
       <rect x="14" y="112" width="70" height="20" rx="10" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4"/>
       <path d="M36,131.5 l5,8 l5,-8" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4" stroke-linejoin="round"/><path d="M35.5,131 h11" stroke="#fffaf0" stroke-width="2"/>
       <text x="49" y="126" text-anchor="middle" font-size="10" font-weight="700" fill="#2b1d12" font-family="system-ui, sans-serif">Heu füllen!</text></g>`);
+  // Unordentlicher, mistiger Boxenboden (jeden Tag etwas anders verteilt)
+  $("pferdPlatz").insertAdjacentHTML("beforebegin", `<g id="mist" filter="url(#hand)"></g>`);
+  $("krippenHinweis").insertAdjacentHTML("afterend", `<g id="mistHinweis" pointer-events="none">
+      <rect x="268" y="222" width="70" height="20" rx="10" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4"/>
+      <path d="M296,241.5 l5,8 l5,-8" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4" stroke-linejoin="round"/><path d="M295.5,241 h11" stroke="#fffaf0" stroke-width="2"/>
+      <text x="303" y="236" text-anchor="middle" font-size="10" font-weight="700" fill="#2b1d12" font-family="system-ui, sans-serif">Ausmisten!</text></g>`);
+  function bodenPunkt(r) {
+    const y = 224 + r() * 68, rand = 60 - (y - 212) * (60 / 54);
+    const xmin = Math.max(8, rand + 14), xmax = Math.min(392, 400 - rand - 14);
+    return [xmin + r() * (xmax - xmin), y];
+  }
+  function zeichneMist() {
+    const r = zufall("mist-tag-" + spiel.tag);
+    let g = "";
+    // zertretene, feuchte Stellen
+    for (let i = 0; i < 6; i++) { const [x, y] = bodenPunkt(r), s = 0.6 + (y - 212) / 90;
+      g += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${(18 + r() * 20) * s}" ry="${(5 + r() * 5) * s}" fill="${r() < .5 ? "#a57f2e" : "#8c6a2c"}" opacity="${(.35 + r() * .25).toFixed(2)}"/>`; }
+    // wild verstreute Halme
+    for (let i = 0; i < 45; i++) { const [x, y] = bodenPunkt(r), a = r() * Math.PI, l = 5 + r() * 8;
+      g += `<path d="M${x.toFixed(1)},${y.toFixed(1)} l${(Math.cos(a) * l).toFixed(1)},${(-Math.sin(a) * l * .6).toFixed(1)}" stroke="${["#8a6420", "#c99a2c", "#f7e38c", "#7a5a1e"][i % 4]}" stroke-width="1.2" stroke-linecap="round"/>`; }
+    // Strohbüschel / Haufen
+    for (let i = 0; i < 4; i++) { const [x, y] = bodenPunkt(r), s = 0.6 + (y - 212) / 90;
+      g += `<path d="M${(x - 14 * s).toFixed(1)},${y.toFixed(1)} q${(6 * s).toFixed(1)},${(-9 * s).toFixed(1)} ${(14 * s).toFixed(1)},${(-6 * s).toFixed(1)} q${(8 * s).toFixed(1)},${(-5 * s).toFixed(1)} ${(14 * s).toFixed(1)},${(6 * s).toFixed(1)} z" fill="#d9b04a" stroke="#2b1d14" stroke-width="1"/>`; }
+    // Pferdeäpfel
+    const anzahl = 3 + Math.floor(r() * 3);
+    for (let i = 0; i < anzahl; i++) {
+      const [x, y] = bodenPunkt(r), s = 0.65 + (y - 212) / 80;
+      const baelle = [[-5, 0], [0, -1], [5, 0.5], [-2.5, -4.5], [2.5, -4.2], [0, -8]].slice(0, 4 + Math.floor(r() * 3));
+      g += `<ellipse cx="${x.toFixed(1)}" cy="${(y + 3 * s).toFixed(1)}" rx="${(11 * s).toFixed(1)}" ry="${(3 * s).toFixed(1)}" fill="#5a4015" opacity=".35"/>`;
+      g += baelle.map(([dx, dy]) => `<ellipse cx="${(x + dx * s).toFixed(1)}" cy="${(y + dy * s).toFixed(1)}" rx="${(4 * s).toFixed(1)}" ry="${(3.4 * s).toFixed(1)}" fill="#6b4a22" stroke="#2b1d14" stroke-width=".9"/>` +
+        `<ellipse cx="${(x + dx * s - 1.2 * s).toFixed(1)}" cy="${(y + dy * s - 1.2 * s).toFixed(1)}" rx="${(1.4 * s).toFixed(1)}" ry="${(0.9 * s).toFixed(1)}" fill="#9a7440"/>`).join("");
+      g += `<path d="M${(x - 3 * s).toFixed(1)},${(y - 1 * s).toFixed(1)} l${(3 * s).toFixed(1)},${(1.5 * s).toFixed(1)}" stroke="#c99a2c" stroke-width=".8"/>`;
+    }
+    $("mist").innerHTML = g;
+  }
+  function funkeln() {
+    let g = "";
+    for (let i = 0; i < 7; i++) { const x = 90 + Math.random() * 220, y = 230 + Math.random() * 55;
+      g += `<text class="funkeln" x="${x.toFixed(0)}" y="${y.toFixed(0)}" font-size="12" style="animation-delay:${(i * 0.08).toFixed(2)}s">✨</text>`; }
+    const el = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    el.innerHTML = g; $("stall").appendChild(el);
+    setTimeout(() => el.remove(), 1600);
+  }
   function zeigeTag() {
     const box = spiel.boxen[0];
-    $("tagAnzeige").textContent = `☀️ Tag ${spiel.tag}`;
+    $("tagAnzeige").innerHTML = `<b>☀️ Tag ${spiel.tag}</b><small>beenden 🌙</small>`;
+    $("tagAnzeige").setAttribute("aria-label", `Tag ${spiel.tag} – antippen, um den Tag zu beenden`);
     $("stall").classList.toggle("leer", !box.krippeVoll);
-    $("tagStatus").innerHTML = box.krippeVoll
-      ? `Krippe <b>gefüllt</b> ✓<br>${esc(box.pferd.name)} frisst.`
-      : `Krippe <b>leer</b><br>Krippe antippen zum Füllen`;
+    $("stall").classList.toggle("mistig", !!box.mistig);
+    if (box.mistig) { zeichneMist(); $("mist").classList.remove("weg"); } else $("mist").classList.add("weg");
   }
   $("krippe").addEventListener("click", () => {
     const box = spiel.boxen[0];
@@ -513,14 +564,24 @@
     box.krippeVoll = true;
     speichern(); zeigeTag();
   });
-  $("tagEnde").onclick = () => {
+  const ausmisten = () => {
     const box = spiel.boxen[0];
-    if (!box.krippeVoll && !confirm(`Die Krippe ist noch leer – ${box.pferd.name} hätte heute kein Heu bekommen. Trotzdem den Tag beenden?`)) return;
-    $("nachtSymbol").textContent = "🌙"; $("nachtText").textContent = "Nacht …";
+    if (!box.mistig) return;
+    box.mistig = false;
+    speichern(); zeigeTag(); funkeln();
+  };
+  $("mist").addEventListener("click", ausmisten);
+  $("boden").addEventListener("click", ausmisten);
+  $("tagAnzeige").onclick = () => {
+    const box = spiel.boxen[0], offen = [];
+    if (!box.krippeVoll) offen.push("die Krippe ist noch leer");
+    if (box.mistig) offen.push("die Box ist noch nicht ausgemistet");
+    if (offen.length && !confirm(`Achtung: ${offen.join(" und ")}. Trotzdem den Tag beenden?`)) return;
+    $("nachtSymbol").textContent = "🌙"; $("nachtText").textContent = `Ende von Tag ${spiel.tag}`;
     $("nacht").classList.add("an");
     setTimeout(() => {
       spiel.tag += 1;
-      spiel.boxen.forEach(b => b.krippeVoll = false);
+      spiel.boxen.forEach(b => { b.krippeVoll = false; b.mistig = true; });
       speichern(); zeigeTag();
       $("nachtSymbol").textContent = "☀️"; $("nachtText").textContent = `Tag ${spiel.tag} beginnt`;
     }, 1100);

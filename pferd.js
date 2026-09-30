@@ -1,0 +1,384 @@
+// =====================================================================
+//  Pferde-Generator: Rassen, Fellfarben und SVG-Zeichnung
+//  Einheiten: Widerristhöhe = 100, Boden bei y = 0, Pferd schaut nach links
+// =====================================================================
+
+// ---------- Fellfarben ----------
+const FARBEN = {
+  schimmel:      { name: "Schimmel (weiß)",        body: "#f3f1ed", mane: "#e2ddd3", muzzle: "#6f6a6a", hoof: "#8a8580" },
+  apfelschimmel: { name: "Apfelschimmel",          body: "#b9b9b6", mane: "#626262", points: "#666666", head: "#aaaaa7", muzzle: "#4a4646", pattern: "dapple", dapple: "#e6e6e3", hoof: "#474442" },
+  rappe:         { name: "Rappe (schwarz)",        body: "#211e1f", mane: "#121011", hoof: "#2c2a29" },
+  brauner:       { name: "Brauner",                body: "#7c3f1d", mane: "#161212", points: "#1b1616", hoof: "#2c2a29" },
+  dunkelbrauner: { name: "Dunkelbrauner",          body: "#402419", mane: "#120f0f", points: "#161212", hoof: "#2c2a29" },
+  fuchs:         { name: "Fuchs",                  body: "#b65a29", mane: "#a64c22", hoof: "#4a3a30" },
+  hellfuchs:     { name: "Fuchs mit Flachsmähne",  body: "#c98843", mane: "#f3e6c2", hoof: "#4a3a30" },
+  dunkelfuchs:   { name: "Dunkelfuchs mit Flachsmähne", body: "#8f4a24", mane: "#eadbb0", hoof: "#3c3029" },
+  palomino:      { name: "Palomino",               body: "#dcb164", mane: "#f6eed6", hoof: "#6b5a48" },
+  isabell:       { name: "Isabell (Cremello)",     body: "#efe4cc", mane: "#f7f1e3", muzzle: "#d8a699", hoof: "#b9a88f" },
+  buckskin:      { name: "Buckskin",               body: "#c9a064", mane: "#171313", points: "#1d1818", hoof: "#2c2a29" },
+  braunfalbe:    { name: "Braunfalbe",             body: "#c9a878", mane: "#1d1818", points: "#2a2220", stripe: "#2a2220", hoof: "#2c2a29" },
+  rotfalbe:      { name: "Rotfalbe",               body: "#d8a882", mane: "#9a5a38", stripe: "#9e5c38", hoof: "#5a4538" },
+  mausfalbe:     { name: "Mausfalbe (Grullo)",     body: "#8f887c", mane: "#1a1818", points: "#1f1d1c", stripe: "#1f1d1c", head: "#6d675f", hoof: "#2c2a29" },
+  weissfalbe:    { name: "Weißfalbe",              body: "#efe5cc", mane: "#ebdfc4", stripe: "#c3a67a", hoof: "#8a7a66" },
+  gelbfalbe:     { name: "Gelbfalbe",              body: "#e2c07f", mane: "#efe3c4", stripe: "#b3844a", hoof: "#6b5a48" },
+  windfarben:    { name: "Windfarben (Silver)",    body: "#5c4034", mane: "#ded6c7", points: "#4d362c", hoof: "#3a302a" },
+  rappschecke:   { name: "Rappschecke",            body: "#211e1f", mane: "#121011", hoof: "#2c2a29", pattern: "tobiano" },
+  braunschecke:  { name: "Braunschecke",           body: "#7c3f1d", mane: "#161212", points: "#1b1616", hoof: "#2c2a29", pattern: "tobiano" },
+  fuchsschecke:  { name: "Fuchsschecke",           body: "#b65a29", mane: "#a64c22", hoof: "#4a3a30", pattern: "tobiano" },
+  blueroan:      { name: "Blue Roan",              body: "#757c82", mane: "#1a1818", points: "#222021", head: "#2c2a2a", pattern: "roan", hoof: "#2c2a29" },
+  rotschimmel:   { name: "Rotschimmel (Roan)",     body: "#c3947c", mane: "#8a4424", points: "#8f4a28", head: "#9a4e2a", pattern: "roan", hoof: "#4a3a30" },
+};
+
+// ---------- Rassen ----------
+// Körperwerte relativ zur Widerristhöhe:
+// len Rumpflänge · depth Rumpftiefe · legT Beindicke · neck Halslänge · nAng Halswinkel
+// crest Mähnenkamm · head Kopflänge · hAng Kopfwinkel · profile (-1 Hechtkopf … +1 Ramskopf)
+// hw Kopfbreite · jw Ganasche · muz Maulgröße · ear Ohrlänge · curl Marwari-Ohren
+// mane Mähnenart · maneLen · vol · fore Schopf · tail Schweiflänge · tvol · tset Schweifansatz
+// feather Kötenbehang · croup Kruppenneigung · hq Hinterhand · eye Augengröße
+const RASSEN = [
+  { id: "araber", name: "Araber", herkunft: "Arabische Halbinsel", h: [145, 155],
+    text: "Edles Wüstenpferd mit Hechtkopf, großen Augen, flacher Kruppe und hoch getragenem Schweif.",
+    farben: ["schimmel", "fuchs", "brauner", "rappe"],
+    k: { len: .96, depth: .42, legT: .072, neck: .56, nAng: 54, crest: .03, head: .35, hAng: 52, profile: -1, hw: .92, jw: 1.2, muz: .8, ear: .09, mane: "lang", maneLen: .13, vol: .6, fore: .5, tail: .62, tvol: .7, tset: 1, feather: 0, croup: 0, hq: 1, eye: 1.3 } },
+  { id: "friese", name: "Friese", herkunft: "Niederlande", h: [158, 172],
+    text: "Barockes Rappenpferd mit hoch aufgesetztem Hals, üppiger Mähne und langem Kötenbehang.",
+    farben: ["rappe"],
+    k: { len: 1.0, depth: .47, legT: .095, neck: .6, nAng: 64, crest: .08, head: .44, hAng: 62, profile: .1, hw: 1, jw: 1, muz: 1, ear: .11, mane: "lang", maneLen: .38, vol: 1.1, fore: 1, tail: .95, tvol: 1.2, tset: .1, feather: .75, croup: .5, hq: 1, eye: 1 } },
+  { id: "marwari", name: "Marwari", herkunft: "Indien (Rajasthan)", h: [145, 163],
+    text: "Kriegspferd der Rajputen – berühmt für die nach innen gebogenen Ohren, deren Spitzen sich berühren.",
+    farben: ["brauner", "fuchs", "schimmel", "braunfalbe", "braunschecke"],
+    k: { len: 1.0, depth: .41, legT: .075, neck: .56, nAng: 58, crest: .04, head: .42, hAng: 55, profile: .3, hw: .95, jw: 1, muz: .9, ear: .115, curl: true, mane: "lang", maneLen: .12, vol: .6, fore: .4, tail: .7, tvol: .8, tset: .5, feather: 0, croup: .3, hq: 1, eye: 1.1 } },
+  { id: "fjord", name: "Fjordpferd (Norweger)", herkunft: "Norwegen", h: [135, 150],
+    text: "Kompaktes Falbpferd mit Aalstrich und typisch gestutzter Stehmähne mit dunklem Mittelstreifen.",
+    farben: ["braunfalbe", "rotfalbe", "mausfalbe", "weissfalbe", "gelbfalbe"],
+    k: { len: .98, depth: .52, legT: .1, neck: .45, nAng: 48, crest: .08, head: .44, hAng: 50, profile: 0, hw: 1.1, jw: 1.1, muz: 1, ear: .085, mane: "fjord", maneLen: 0, vol: 1, fore: .5, tail: .75, tvol: 1, tset: .2, feather: .15, croup: .5, hq: 1.05, eye: 1 } },
+  { id: "haflinger", name: "Haflinger", herkunft: "Südtirol / Österreich", h: [138, 150],
+    text: "Kräftiges Gebirgspferd, immer fuchsfarben mit heller Flachsmähne.",
+    farben: ["hellfuchs", "dunkelfuchs"],
+    k: { len: 1.0, depth: .5, legT: .095, neck: .48, nAng: 50, crest: .06, head: .42, hAng: 52, profile: 0, hw: 1.05, jw: 1.05, muz: 1, ear: .09, mane: "lang", maneLen: .2, vol: .9, fore: .8, tail: .8, tvol: 1, tset: .3, feather: .1, croup: .6, hq: 1.05, eye: 1 } },
+  { id: "shetty", name: "Shetlandpony", herkunft: "Shetlandinseln (Schottland)", h: [80, 107],
+    text: "Kleines, robustes Pony mit kurzen Beinen, dichtem Fell, üppiger Mähne und großem Kopf im Verhältnis.",
+    farben: ["rappe", "brauner", "fuchs", "schimmel", "windfarben", "rappschecke", "braunschecke"],
+    k: { len: .98, depth: .56, legT: .12, neck: .38, nAng: 45, crest: .06, head: .47, hAng: 52, profile: 0, hw: 1.1, jw: 1.1, muz: 1, ear: .08, mane: "lang", maneLen: .28, vol: 1.3, fore: 1.2, tail: .9, tvol: 1.3, tset: .2, feather: .2, croup: .5, hq: 1, eye: 1.05 } },
+  { id: "shire", name: "Shire Horse", herkunft: "England", h: [168, 190],
+    text: "Eines der größten Pferde der Welt: massiger Kaltblüter mit Ramsnase und langem Fesselbehang.",
+    farben: ["rappe", "brauner", "dunkelbrauner", "schimmel"],
+    k: { len: 1.08, depth: .5, legT: .125, neck: .55, nAng: 55, crest: .08, head: .48, hAng: 55, profile: .6, hw: 1.1, jw: 1, muz: 1.05, ear: .1, mane: "lang", maneLen: .15, vol: 1, fore: .6, tail: .6, tvol: 1, tset: .2, feather: 1, croup: .6, hq: 1.05, eye: .95 } },
+  { id: "andalusier", name: "Andalusier (PRE)", herkunft: "Spanien", h: [152, 166],
+    text: "Barockpferd mit leicht geramsnastem Kopf, kräftigem, hoch aufgesetztem Hals und welliger Langmähne.",
+    farben: ["schimmel", "apfelschimmel", "brauner", "rappe"],
+    k: { len: .98, depth: .46, legT: .085, neck: .57, nAng: 62, crest: .09, head: .42, hAng: 60, profile: .45, hw: 1, jw: 1, muz: 1, ear: .1, mane: "lang", maneLen: .3, vol: 1.1, fore: .9, tail: .85, tvol: 1.1, tset: .2, feather: .05, croup: .7, hq: 1, eye: 1 } },
+  { id: "lipizzaner", name: "Lipizzaner", herkunft: "Slowenien / Österreich", h: [148, 158],
+    text: "Die weißen Pferde der Spanischen Hofreitschule – kompakt, mit Ramskopf. Fohlen kommen dunkel zur Welt.",
+    farben: ["schimmel", "apfelschimmel", "brauner", "rappe"],
+    k: { len: .97, depth: .47, legT: .09, neck: .52, nAng: 58, crest: .08, head: .44, hAng: 58, profile: .6, hw: 1, jw: 1, muz: 1, ear: .1, mane: "lang", maneLen: .2, vol: .9, fore: .7, tail: .75, tvol: 1, tset: .3, feather: 0, croup: .6, hq: 1, eye: 1 } },
+  { id: "vollblut", name: "Englisches Vollblut", herkunft: "England", h: [155, 172],
+    text: "Das Rennpferd schlechthin: lange Beine, tiefe Brust, langer schräger Hals und feiner Kopf.",
+    farben: ["brauner", "dunkelbrauner", "fuchs", "rappe", "schimmel"],
+    k: { len: 1.02, depth: .41, legT: .075, neck: .6, nAng: 45, crest: .02, head: .42, hAng: 50, profile: 0, hw: .92, jw: 1, muz: .9, ear: .1, mane: "kurz", maneLen: .05, vol: .6, fore: .3, tail: .6, tvol: .6, tset: .3, feather: 0, croup: .3, hq: 1, eye: 1.05 } },
+  { id: "quarter", name: "Quarter Horse", herkunft: "USA", h: [142, 163],
+    text: "Muskulöses Westernpferd mit kurzem Kopf, großen Ganaschen und extrem kräftiger Hinterhand.",
+    farben: ["fuchs", "brauner", "rappe", "palomino", "buckskin", "braunfalbe", "mausfalbe", "blueroan", "rotschimmel"],
+    k: { len: .95, depth: .47, legT: .09, neck: .47, nAng: 40, crest: .04, head: .38, hAng: 48, profile: 0, hw: 1.05, jw: 1.25, muz: .85, ear: .08, mane: "kurz", maneLen: .06, vol: .8, fore: .3, tail: .65, tvol: .8, tset: .1, feather: 0, croup: .5, hq: 1.2, eye: 1 } },
+  { id: "hannoveraner", name: "Hannoveraner", herkunft: "Deutschland", h: [160, 175],
+    text: "Großrahmiges Warmblut für Dressur und Springen – langer Hals, gerader Kopf, viel Rahmen.",
+    farben: ["brauner", "dunkelbrauner", "fuchs", "rappe", "schimmel"],
+    k: { len: 1.03, depth: .45, legT: .09, neck: .6, nAng: 52, crest: .05, head: .44, hAng: 55, profile: 0, hw: 1, jw: 1, muz: 1, ear: .1, mane: "kurz", maneLen: .05, vol: .7, fore: .3, tail: .65, tvol: .8, tset: .3, feather: 0, croup: .4, hq: 1, eye: 1 } },
+  { id: "isi", name: "Islandpferd", herkunft: "Island", h: [130, 145],
+    text: "Robustes Gangpferd (Tölt!) mit dichter Doppelmähne und fast allen Farben der Pferdewelt.",
+    farben: ["fuchs", "brauner", "rappe", "schimmel", "braunfalbe", "mausfalbe", "palomino", "windfarben", "isabell", "fuchsschecke", "braunschecke"],
+    k: { len: 1.0, depth: .53, legT: .1, neck: .45, nAng: 50, crest: .06, head: .44, hAng: 52, profile: 0, hw: 1.05, jw: 1.05, muz: 1, ear: .08, mane: "lang", maneLen: .25, vol: 1.3, fore: 1.1, tail: .9, tvol: 1.3, tset: .2, feather: .15, croup: .6, hq: 1, eye: 1 } },
+  { id: "tinker", name: "Tinker (Irish Cob)", herkunft: "Irland / Großbritannien", h: [135, 160],
+    text: "Kräftiger Cob, meist gescheckt, mit langer Mähne, Bart und üppigem Fesselbehang.",
+    farben: ["rappschecke", "braunschecke", "fuchsschecke", "rappe"],
+    k: { len: 1.02, depth: .52, legT: .115, neck: .5, nAng: 52, crest: .1, head: .46, hAng: 55, profile: .4, hw: 1.1, jw: 1, muz: 1.05, ear: .09, mane: "lang", maneLen: .3, vol: 1.3, fore: 1.1, tail: .9, tvol: 1.3, tset: .15, feather: 1, croup: .7, hq: 1.05, eye: 1 } },
+  { id: "tekke", name: "Achal-Tekkiner", herkunft: "Turkmenistan", h: [147, 163],
+    text: "Schlankes Wüstenpferd mit langem Hals, feiner, kurzer Mähne und einzigartigem metallischem Fellglanz.",
+    farben: ["isabell", "palomino", "buckskin", "brauner", "fuchs", "rappe", "schimmel"],
+    k: { len: 1.08, depth: .37, legT: .065, neck: .68, nAng: 56, crest: .01, head: .42, hAng: 46, profile: -.1, hw: .85, jw: .95, muz: .9, ear: .13, mane: "kurz", maneLen: .03, vol: .4, fore: .15, tail: .55, tvol: .45, tset: .4, feather: 0, croup: .3, hq: .95, eye: 1.1, metallic: true } },
+];
+
+const rasseById = id => RASSEN.find(r => r.id === id);
+
+// ---------- Hilfsfunktionen ----------
+const f = n => (Math.round(n * 10) / 10).toString();
+const P = (x, y) => ({ x, y });
+const add = (a, b) => P(a.x + b.x, a.y + b.y);
+const mul = (a, s) => P(a.x * s, a.y * s);
+const mid = (a, b) => P((a.x + b.x) / 2, (a.y + b.y) / 2);
+const norm = a => { const l = Math.hypot(a.x, a.y) || 1; return P(a.x / l, a.y / l); };
+const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const mix = (a, b, t) => "#" + hexRgb(a).map((v, i) => Math.round(v + (hexRgb(b)[i] - v) * t).toString(16).padStart(2, "0")).join("");
+
+function glatt(pts, zu = true, t = 1) {
+  const n = pts.length;
+  const g = i => zu ? pts[(i + n) % n] : pts[Math.max(0, Math.min(n - 1, i))];
+  let d = `M${f(pts[0].x)},${f(pts[0].y)}`;
+  const end = zu ? n : n - 1;
+  for (let i = 0; i < end; i++) {
+    const p0 = g(i - 1), p1 = g(i), p2 = g(i + 1), p3 = g(i + 2);
+    d += `C${f(p1.x + (p2.x - p0.x) / 6 * t)},${f(p1.y + (p2.y - p0.y) / 6 * t)} ${f(p2.x - (p3.x - p1.x) / 6 * t)},${f(p2.y - (p3.y - p1.y) / 6 * t)} ${f(p2.x)},${f(p2.y)}`;
+  }
+  return zu ? d + "Z" : d;
+}
+const eckig = pts => "M" + pts.map(p => `${f(p.x)},${f(p.y)}`).join("L") + "Z";
+
+function zufall(seedStr) {
+  let h = 1779033703;
+  for (const c of String(seedStr)) h = Math.imul(h ^ c.charCodeAt(0), 3432918353), h = (h << 13) | (h >>> 19);
+  return () => { h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); return ((h ^= h >>> 16) >>> 0) / 4294967296; };
+}
+
+let _uid = 0;
+
+// ---------- Zeichnen ----------
+// Liefert { svg: "<g>…</g>", box: {minX,maxX,minY} } in Pferde-Einheiten (Widerrist = 100)
+function zeichnePferd(rasseId, farbId, opt = {}) {
+  const R = rasseById(rasseId), k = R.k, C = FARBEN[farbId] || FARBEN.schimmel;
+  const uid = "p" + (++_uid);
+  const rnd = zufall(opt.seed || rasseId + farbId);
+  const hengst = opt.geschlecht === "Hengst";
+  const H = 100, L = k.len * H, D = k.depth * H, Lg = H - D - 4;
+  const bottom = -Lg, top = bottom - D;
+  const w = k.legT * H, hh = Math.max(4, w * 0.62);
+  const croupY = -H + 2 + k.croup * 2.5;
+  const hq = k.hq || 1;
+  const crest = k.crest + (hengst ? 0.04 : 0);
+  const alle = []; // für Bounding-Box
+  const merke = arr => { alle.push(...arr); return arr; };
+
+  // Farben
+  const body = C.body, mane = C.mane, head = C.head || body;
+  const pts = C.points || null;
+  const hoof = C.pattern === "tobiano" ? "#b8a88f" : (C.hoof || "#3b3531");
+  const dunkel = c => mix(c, "#000000", 0.22);
+  const linie = mix(body, "#000000", 0.6);
+  const manLinie = mix(mane, "#000000", 0.55);
+  let maneOuter = mane, maneStripe = null;
+  if (k.mane === "fjord") { maneOuter = "#efe6d2"; maneStripe = C.stripe || mane; }
+  const tailCol = k.mane === "fjord" ? mix(maneOuter, maneStripe, 0.45) : mane;
+
+  // --- Rumpf ---
+  const rumpf = merke([
+    P(-0.02 * H, top + 0.22 * D), P(-0.07 * H, top + 0.52 * D), P(-0.03 * H, top + 0.85 * D), P(0.1 * L, bottom + 1),
+    P(0.45 * L, bottom + 2), P(0.74 * L, bottom - 1),
+    P(L + 0.02 * H * hq, top + 0.72 * D), P(L + 0.05 * H * hq, top + 0.3 * D),
+    P(L - 0.02 * H, croupY + 2 + k.croup * 3), P(0.8 * L, croupY - (hq - 1) * 8),
+    P(0.6 * L, top + 1.5), P(0.42 * L, top + 2.5), P(0.28 * L, -H + 1.5), P(0.2 * L, -H),
+    P(0.08 * L, top + 0.1 * D),
+  ]);
+
+  // --- Hals + Kopf ---
+  const Wn = P(0.22 * L, -H + 1), Cn = P(-0.06 * H, top + 0.55 * D);
+  const a = (k.nAng - 20) * Math.PI / 180, N = k.neck * H * 1.22;
+  const Pll = P(Wn.x - N * Math.cos(a), Wn.y - N * Math.sin(a));
+  const hl = k.head * H, th = k.hAng * Math.PI / 180;
+  const u = P(-Math.cos(th), Math.sin(th)), v = P(Math.sin(th), Math.cos(th));
+  const hp = (s, b) => P(Pll.x + (u.x * s + v.x * b) * hl, Pll.y + (u.y * s + v.y * b) * hl);
+  const pr = k.profile, hw = k.hw, jw = k.jw, m = k.muz;
+  const kopf = merke([
+    hp(-0.03, -0.03), hp(0.12, -0.065), hp(0.3, -0.06), hp(0.55, -0.045 - pr * 0.045), hp(0.8, -0.03 - pr * 0.02),
+    hp(0.94, -0.01), hp(1.0, 0.06 * m), hp(1.01, 0.14 * m), hp(0.97, 0.22 * m), hp(0.88, 0.25 * m),
+    hp(0.74, 0.27 * hw), hp(0.5, 0.35 * hw), hp(0.33, 0.45 * hw * jw), hp(0.18, 0.49 * hw * jw),
+    hp(0.06, 0.43 * hw), hp(-0.03, 0.22 * hw),
+  ]);
+  const T = hp(0.12, 0.42 * hw), Pn = hp(-0.02, 0.04);
+  const d = norm(P(Pn.x - Wn.x, Pn.y - Wn.y));
+  const nOut = P(-d.y, d.x);
+  const crestCtrl = add(mid(Wn, Pn), mul(nOut, crest * H + 4));
+  const underCtrl = add(mid(T, Cn), mul(nOut, -8));
+  const halsD = `M${f(Wn.x)},${f(Wn.y)}Q${f(crestCtrl.x)},${f(crestCtrl.y)} ${f(Pn.x)},${f(Pn.y)}L${f(hp(0.06, 0.2).x)},${f(hp(0.06, 0.2).y)}L${f(T.x)},${f(T.y)}Q${f(underCtrl.x)},${f(underCtrl.y)} ${f(Cn.x)},${f(Cn.y)}L${f(0.35 * L)},${f(top + 0.6 * D)}Z`;
+  const kamm = t => { const s = 1 - t; return P(s * s * Wn.x + 2 * s * t * crestCtrl.x + t * t * Pn.x, s * s * Wn.y + 2 * s * t * crestCtrl.y + t * t * Pn.y); };
+
+  // --- Beine ---
+  const vorder = xc => [
+    P(xc - 1.1 * w, bottom - 10), P(xc - 1.0 * w, bottom + 4), P(xc - 0.8 * w, -0.62 * Lg), P(xc - 0.72 * w, -0.46 * Lg), P(xc - 0.5 * w, -0.36 * Lg),
+    P(xc - 0.5 * w, -0.16 * Lg), P(xc - 0.62 * w, -0.09 * Lg), P(xc - 0.85 * w, -hh - 0.5),
+    P(xc + 0.45 * w, -hh - 0.5), P(xc + 0.7 * w, -0.1 * Lg), P(xc + 0.5 * w, -0.2 * Lg), P(xc + 0.5 * w, -0.38 * Lg),
+    P(xc + 0.62 * w, -0.47 * Lg), P(xc + 0.75 * w, -0.62 * Lg), P(xc + 1.2 * w, bottom + 2), P(xc + 1.5 * w, bottom - 4), P(xc + 1.3 * w, bottom - 10),
+  ];
+  const hinter = hx => [
+    P(hx - 0.2 * L, bottom - 8), P(hx - 0.09 * L, bottom + 0.02 * H), P(hx - 0.3 * w, -0.66 * Lg), P(hx - 0.55 * w, -0.5 * Lg),
+    P(hx - 0.5 * w, -0.36 * Lg), P(hx - 0.5 * w, -0.16 * Lg), P(hx - 0.62 * w, -0.09 * Lg), P(hx - 0.85 * w, -hh - 0.5),
+    P(hx + 0.45 * w, -hh - 0.5), P(hx + 0.7 * w, -0.1 * Lg), P(hx + 0.5 * w, -0.2 * Lg), P(hx + 0.55 * w, -0.46 * Lg),
+    P(hx + 1.05 * w, -0.56 * Lg), P(hx + 1.15 * w, -0.64 * Lg), P(hx + 1.6 * w + 2 * hq, -0.82 * Lg), P(L + 0.03 * H * hq, bottom - 0.12 * D), P(L + 0.03 * H * hq, top + 0.6 * D), P(hx, top + 0.5 * D),
+  ];
+  const huf = xc => [P(xc - 0.85 * w, -hh), P(xc + 0.45 * w, -hh), P(xc + 0.62 * w, 0), P(xc - 1.15 * w, 0)];
+  const behang = xc => {
+    const fl = k.feather; if (fl <= 0) return null;
+    const tp = -(0.08 + 0.24 * fl) * Lg;
+    return [P(xc + 0.5 * w, tp), P(xc + 0.8 * w + 2 * fl, -0.12 * Lg), P(xc + 1.0 * w + 5.5 * fl, 0), P(xc + 0.4 * w + 2 * fl, -2),
+      P(xc + 0.1 * w, 0.8), P(xc - 0.4 * w, -1.2), P(xc - 0.8 * w, 0.8), P(xc - 1.05 * w - 1.2 * fl, 0.6), P(xc - 0.9 * w - 0.6 * fl, -0.06 * Lg), P(xc - 0.6 * w, tp * 0.85)];
+  };
+  const fx = 0.12 * L, fx2 = 0.2 * L, hx = 0.87 * L, hx2 = 0.8 * L;
+  merke([P(fx - 1.2 * w, 0), P(hx + 1.2 * w, 0)]);
+
+  // --- Schweif ---
+  const Tb = P(L - 0.015 * H, croupY + 1.5 + k.croup * 3.5);
+  const tl = Math.min(k.tail * H, -Tb.y - 1.5), tv = k.tvol, s = k.tset;
+  const X = Tb.x, Y = Tb.y;
+  const schweifD =
+    `M${f(X)},${f(Y)}C${f(X + 3)},${f(Y - 18 * s - 0.5)} ${f(X + 8 + 12 * s)},${f(Y - 14 * s + 3)} ${f(X + 7 + 11 * s + tv * 3)},${f(Y + 0.3 * tl - 4 * s)}` +
+    `C${f(X + 7 + 9 * s + tv * 5)},${f(Y + 0.6 * tl)} ${f(X + 5 + 8 * s + tv * 5)},${f(Y + 0.85 * tl)} ${f(X + 5 + 7 * s + tv * 5)},${f(Y + tl)}` +
+    `L${f(X + 2 + 7 * s + tv * 3)},${f(Y + tl - 3)}L${f(X + 5 * s + tv * 1.5)},${f(Y + tl)}L${f(X - 2 + 4 * s)},${f(Y + tl - 3.5)}L${f(X - 3.5 + 4 * s)},${f(Y + tl - 0.5)}` +
+    `C${f(X - 3 + 4 * s)},${f(Y + 0.6 * tl)} ${f(X + 2 + 7 * s)},${f(Y + 0.35 * tl)} ${f(X + 3 + 9 * s)},${f(Y + 12 - 14 * s)}` +
+    `C${f(X + 2 + 5 * s)},${f(Y + 6 - 12 * s)} ${f(X - 2)},${f(Y + 5 - 4 * s)} ${f(X - 3)},${f(Y + 4)}Z`;
+  merke([P(X + 12 + 11 * s + tv * 6, Y - 14 * s), P(X, Y + tl)]);
+
+  // --- Ohren ---
+  const el = k.ear * H;
+  const ohr = (Eb, farbe) => {
+    const e = norm(P(-0.22, -1)), q = P(-e.y, e.x), bw = 0.28 * el;
+    const b1 = add(Eb, mul(q, -bw)), b2 = add(Eb, mul(q, bw));
+    let tip = add(Eb, mul(e, el));
+    let c1 = add(add(b1, mul(e, el * 0.75)), mul(q, -bw * 0.2));
+    let c2 = add(add(b2, mul(e, el * 0.55)), mul(q, bw * 0.5));
+    if (k.curl) { tip = add(tip, P(-0.42 * el, 0.08 * el)); c1 = add(c1, P(0.05 * el, -0.1 * el)); c2 = add(c2, P(0.25 * el, -0.35 * el)); }
+    merke([tip]);
+    return `<path d="M${f(b1.x)},${f(b1.y)}Q${f(c1.x)},${f(c1.y)} ${f(tip.x)},${f(tip.y)}Q${f(c2.x)},${f(c2.y)} ${f(b2.x)},${f(b2.y)}Z" fill="${farbe}" stroke="${linie}" stroke-width="1.3" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
+  };
+  const Eb = hp(0.04, -0.03);
+
+  // --- Mähne ---
+  let maehneD = "", streifenD = "";
+  if (k.mane === "lang") {
+    const n = 12, oben = [], unten = [];
+    const runter = norm(P(0.12, 1));
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, p = kamm(t);
+      oben.push(add(p, mul(nOut, 1.5 + k.vol * 1.5)));
+      const len = k.maneLen * H * (0.2 + 0.8 * Math.sin(Math.PI * Math.min(1, 0.08 + t * 0.95))) + (i % 2 ? -1.5 : 1.5) * k.vol;
+      unten.push(add(p, mul(runter, Math.max(4, len))));
+    }
+    maehneD = glatt(oben, false) + unten.reverse().map(p => `L${f(p.x)},${f(p.y)}`).join("") + "Z";
+    merke(oben); merke(unten);
+  } else if (k.mane === "kurz") {
+    const oben = [], unten = [];
+    for (let i = 0; i <= 10; i++) { const p = kamm(i / 10); oben.push(add(p, mul(nOut, 1.8 * k.vol + 0.6))); unten.push(add(p, mul(nOut, -(2 + k.maneLen * 40)))); }
+    maehneD = glatt(oben.concat(unten.reverse()));
+  } else if (k.mane === "fjord") {
+    const oben = [], unten = [], so = [], su = [];
+    for (let i = 0; i <= 12; i++) {
+      const t = i / 12, p = kamm(t), taper = Math.sin(Math.PI * (0.08 + 0.84 * t));
+      oben.push(add(p, mul(nOut, 1 + 7 * taper))); unten.push(add(p, mul(nOut, -1.5)));
+      so.push(add(p, mul(nOut, 1 + 5.8 * taper))); su.push(add(p, mul(nOut, 1 + 2.4 * taper)));
+    }
+    maehneD = glatt(oben.concat(unten.reverse()));
+    streifenD = glatt(so.slice(1, 12).concat(su.slice(1, 12).reverse()));
+    merke(oben);
+  }
+  // Schopf
+  const fl = k.fore;
+  const schopf = k.mane === "fjord"
+    ? [hp(-0.04, -0.04), hp(-0.02, -0.16), hp(0.06, -0.12), hp(0.1, -0.02), hp(0.05, 0.05)]
+    : [hp(-0.03, -0.04), hp(0.06, -0.07), hp(0.1 + 0.18 * fl, -0.06), hp(0.14 + 0.2 * fl, -0.01), hp(0.08 + 0.1 * fl, 0.04 + 0.03 * fl), hp(0.01, 0.05)];
+
+  // --- Details ---
+  const auge = hp(0.3, 0.1), er = 0.034 * hl * (k.eye || 1);
+  const nuester = hp(0.9, 0.1);
+  const maulA = hp(0.985, 0.19), maulB = hp(0.86, 0.215);
+
+  // ---------- SVG zusammensetzen ----------
+  const beinFill = pts ? `url(#lg-${uid})` : body;
+  const beinFillF = pts ? `url(#lgf-${uid})` : dunkel(body);
+  const vorderN = vorder(fx), hinterN = hinter(hx), vorderF = vorder(fx2), hinterF = hinter(hx2);
+  const behN = [behang(fx), behang(hx)].filter(Boolean), behF = [behang(fx2), behang(hx2)].filter(Boolean);
+  const featherCol = pts || body, featherColF = dunkel(pts || body);
+
+  // Teile: [d, fill]
+  const fern = [[glatt(vorderF), beinFillF], [glatt(hinterF), beinFillF], ...behF.map(b => [glatt(b), featherColF])];
+  const haupt = [[halsD, body], [glatt(rumpf), body], [glatt(vorderN), beinFill], [glatt(hinterN), beinFill],
+    ...behN.map(b => [glatt(b), featherCol]), [glatt(kopf), head]];
+  const umriss = (teile, farbe, sw = 2.2) =>
+    `<g fill="${farbe}" stroke="${farbe}" stroke-width="${sw}" stroke-linejoin="round" vector-effect="non-scaling-stroke">` +
+    teile.map(t => `<path d="${t[0]}" vector-effect="non-scaling-stroke"/>`).join("") + "</g>" +
+    teile.map(t => `<path d="${t[0]}" fill="${t[1]}"/>`).join("");
+
+  // Bounding-Box
+  let minX = Infinity, maxX = -Infinity, minY = 0;
+  alle.forEach(p => { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); });
+
+  let defs = `<clipPath id="cl-${uid}">${haupt.map(t => `<path d="${t[0]}"/>`).join("")}</clipPath>`;
+  defs += `<clipPath id="cr-${uid}"><path d="${halsD}"/><path d="${glatt(rumpf)}"/></clipPath>`;
+  defs += `<clipPath id="cf-${uid}">${fern.map(t => `<path d="${t[0]}"/>`).join("")}</clipPath>`;
+  if (pts) {
+    defs += `<linearGradient id="lg-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-0.62 * Lg)}" x2="0" y2="${f(-0.42 * Lg)}"><stop offset="0" stop-color="${body}"/><stop offset="1" stop-color="${pts}"/></linearGradient>`;
+    defs += `<linearGradient id="lgf-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-0.62 * Lg)}" x2="0" y2="${f(-0.42 * Lg)}"><stop offset="0" stop-color="${dunkel(body)}"/><stop offset="1" stop-color="${dunkel(pts)}"/></linearGradient>`;
+  }
+  defs += `<linearGradient id="sh-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-H * 1.1)}" x2="0" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset=".62" stop-color="#000" stop-opacity=".05"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>`;
+  if (C.pattern === "dapple") defs += `<pattern id="dp-${uid}" patternUnits="userSpaceOnUse" width="8" height="7"><circle cx="4" cy="3.5" r="2.6" fill="${C.dapple}" opacity=".75"/><circle cx="0" cy="0" r="2.2" fill="${C.dapple}" opacity=".6"/><circle cx="8" cy="0" r="2.2" fill="${C.dapple}" opacity=".6"/><circle cx="0" cy="7" r="2.2" fill="${C.dapple}" opacity=".6"/><circle cx="8" cy="7" r="2.2" fill="${C.dapple}" opacity=".6"/></pattern>`;
+  if (C.pattern === "roan") defs += `<pattern id="rn-${uid}" patternUnits="userSpaceOnUse" width="3" height="3"><circle cx="1" cy="1" r=".55" fill="#fff" opacity=".55"/><circle cx="2.4" cy="2.2" r=".45" fill="#fff" opacity=".45"/></pattern>`;
+  if (k.metallic) defs += `<linearGradient id="mt-${uid}" gradientUnits="userSpaceOnUse" x1="${f(-0.1 * L)}" y1="${f(-H * 1.3)}" x2="${f(L)}" y2="0"><stop offset=".15" stop-color="#fff" stop-opacity="0"/><stop offset=".35" stop-color="#fff" stop-opacity=".38"/><stop offset=".48" stop-color="#fff" stop-opacity="0"/><stop offset=".62" stop-color="#fff" stop-opacity=".22"/><stop offset=".75" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
+
+  const bx = `x="${f(minX - 5)}" y="${f(minY - 5)}" width="${f(maxX - minX + 10)}" height="${f(-minY + 10)}"`;
+  let g = `<defs>${defs}</defs>`;
+
+  // Hintere Beine
+  g += `<g>${umriss(fern, dunkel(linie))}`;
+  if (C.pattern === "tobiano") g += `<rect x="${f(minX)}" y="${f(-0.68 * Lg)}" width="${f(maxX - minX)}" height="${f(0.68 * Lg + 2)}" fill="#dedad3" clip-path="url(#cf-${uid})"/>`;
+  g += `<g stroke="${dunkel(linie)}" stroke-width="1.2" vector-effect="non-scaling-stroke">` +
+    [huf(fx2), huf(hx2)].map(h => `<path d="${eckig(h)}" fill="${dunkel(hoof)}" vector-effect="non-scaling-stroke"/>`).join("") + "</g></g>";
+
+  // Kopfbewegung (leichtes Nicken): Kopf-Gruppe
+  const nick = `<animateTransform attributeName="transform" type="rotate" values="0 ${f(Pn.x)} ${f(Pn.y)};0 ${f(Pn.x)} ${f(Pn.y)};-3 ${f(Pn.x)} ${f(Pn.y)};0 ${f(Pn.x)} ${f(Pn.y)}" keyTimes="0;.8;.9;1" dur="6s" repeatCount="indefinite"/>`;
+
+  // Fernes Ohr
+  g += ohr(add(Eb, P(3.5, 1.5)), dunkel(head));
+
+  // Hauptkörper
+  g += `<g>${umriss(haupt, linie)}`;
+  // Überlagerungen
+  g += `<g clip-path="url(#cl-${uid})">`;
+  if (C.pattern === "dapple") g += `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#dp-${uid})"/></g>`;
+  if (C.pattern === "roan") g += `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#rn-${uid})"/></g>`;
+  if (C.pattern === "tobiano") {
+    const flecken = [];
+    const blob = (cx, cy, rx, ry, n = 13) => {
+      const ps = [];
+      for (let i = 0; i < n; i++) { const an = i / n * Math.PI * 2, r = 0.72 + rnd() * 0.5; ps.push(P(cx + Math.cos(an) * rx * r, cy + Math.sin(an) * ry * r)); }
+      return glatt(ps);
+    };
+    flecken.push(blob(0.45 * L + (rnd() - .5) * 0.15 * L, top + 0.15 * D, 0.2 * L + rnd() * 0.1 * L, 0.75 * D));
+    if (rnd() > 0.3) flecken.push(blob(0.1 * L, -H - 8, 0.12 * L, 0.35 * D + 6));
+    if (rnd() > 0.35) flecken.push(blob(0.86 * L, top + 0.3 * D, 0.1 * L + rnd() * 0.08 * L, 0.45 * D));
+    g += flecken.map(fd => `<path d="${fd}" fill="#f7f5f1"/>`).join("");
+    const wl = [P(minX, 2)];
+    for (let x = minX; x <= maxX; x += 6) wl.push(P(x, -(0.66 + 0.1 * Math.sin(x * 0.21) + rnd() * 0.06) * Lg));
+    wl.push(P(maxX, 2));
+    g += `<path d="${eckig(wl)}" fill="#f7f5f1"/>`;
+  }
+  if (C.stripe) g += `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${C.stripe}" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>`;
+  if (C.muzzle) g += `<ellipse cx="${f(hp(0.93, 0.12).x)}" cy="${f(hp(0.93, 0.12).y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.93, 0.12).x)} ${f(hp(0.93, 0.12).y)})" fill="${C.muzzle}" opacity=".75"/>`;
+  if (k.metallic) g += `<rect ${bx} fill="url(#mt-${uid})"/>`;
+  g += `<rect ${bx} fill="url(#sh-${uid})"/>`;
+  g += `</g>`;
+  // Hufe vorn
+  g += `<g stroke="${linie}" stroke-width="1.2" vector-effect="non-scaling-stroke">` +
+    [huf(fx), huf(hx)].map(h => `<path d="${eckig(h)}" fill="${hoof}" vector-effect="non-scaling-stroke"/>`).join("") + "</g>";
+  // Behang über Hufe (vorn)
+  if (behN.length) {
+    const bc = C.pattern === "tobiano" ? "#f7f5f1" : featherCol;
+    g += behN.map(b => `<path d="${glatt(b)}" fill="${bc}" stroke="${mix(bc, "#000000", .45)}" stroke-width="1" vector-effect="non-scaling-stroke"/>`).join("");
+  }
+  g += `</g>`;
+
+  // Schweif
+  g += `<g class="schweif"><path d="${schweifD}" fill="${tailCol}" stroke="${manLinie}" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round">` +
+    `<animateTransform attributeName="transform" type="rotate" values="0 ${f(X)} ${f(Y)};5 ${f(X)} ${f(Y)};-2 ${f(X)} ${f(Y)};0 ${f(X)} ${f(Y)}" dur="3.4s" repeatCount="indefinite"/></path></g>`;
+
+  // Mähne
+  if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${mix(maneOuter, "#000000", .5)}" stroke-width="1.4" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
+  if (streifenD) g += `<path d="${streifenD}" fill="${maneStripe}"/>`;
+
+  // Kopfdetails
+  g += `<g>${ohr(Eb, head)}`;
+  if (fl >= 0.35) g += `<path d="${glatt(schopf)}" fill="${k.mane === "fjord" ? maneOuter : mane}" stroke="${manLinie}" stroke-width="1.2" vector-effect="non-scaling-stroke"/>`;
+  g += `<ellipse cx="${f(auge.x)}" cy="${f(auge.y)}" rx="${f(er)}" ry="${f(er * 1.05)}" fill="#1a1210"><animate attributeName="ry" values="${f(er * 1.05)};${f(er * 1.05)};${f(er * 0.1)};${f(er * 1.05)}" keyTimes="0;.93;.96;1" dur="4.5s" repeatCount="indefinite"/></ellipse>`;
+  g += `<circle cx="${f(auge.x - er * 0.35)}" cy="${f(auge.y - er * 0.35)}" r="${f(er * 0.3)}" fill="#fff" opacity=".8"/>`;
+  g += `<ellipse cx="${f(nuester.x)}" cy="${f(nuester.y)}" rx="${f(0.028 * hl)}" ry="${f(0.045 * hl)}" transform="rotate(${f(-k.hAng + 70)} ${f(nuester.x)} ${f(nuester.y)})" fill="${mix(C.muzzle || head, "#000000", .5)}"/>`;
+  g += `<path d="M${f(maulA.x)},${f(maulA.y)}Q${f(mid(maulA, maulB).x)},${f(mid(maulA, maulB).y + 0.8)} ${f(maulB.x)},${f(maulB.y)}" fill="none" stroke="${mix(C.muzzle || head, "#000000", .5)}" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+  g += `</g>`;
+
+  return { svg: `<g>${g}</g>`, box: { minX, maxX, minY } };
+}

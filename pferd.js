@@ -96,7 +96,7 @@ const RASSEN = [
   { id: "tekke", name: "Achal-Tekkiner", herkunft: "Turkmenistan", h: [147, 163],
     text: "Schlankes Wüstenpferd mit langem Hals, feiner, kurzer Mähne und einzigartigem metallischem Fellglanz.",
     farben: ["isabell", "palomino", "buckskin", "brauner", "fuchs", "rappe", "schimmel"],
-    k: { len: 1.06, depth: .41, legT: .07, neck: .56, nAng: 56, crest: .02, head: .41, hAng: 54, profile: -.1, hw: .92, jw: 1, muz: .92, ear: .11, mane: "kurz", maneLen: .03, vol: .4, fore: .15, tail: .55, tvol: .45, tset: .4, feather: 0, croup: .3, hq: .95, eye: 1.1, metallic: true } },
+    k: { len: 1.06, depth: .41, legT: .07, neck: .56, nAng: 56, crest: .02, head: .41, hAng: 54, profile: -.1, hw: .92, jw: 1, muz: .92, ear: .11, earDx: -1.6, mane: "kurz", maneLen: .03, vol: .4, fore: .15, tail: .55, tvol: .45, tset: .4, feather: 0, croup: .3, hq: .95, eye: 1.1, metallic: true } },
 ];
 
 const rasseById = id => RASSEN.find(r => r.id === id);
@@ -241,7 +241,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
 
   // --- Ohren ---
   const el = k.ear * H * 1.25;
-  const ohr = (Eb, farbe) => {
+  const ohr = (Eb, farbe, ohneMuschel = false) => {
     const e = norm(P(-0.22, -1)), q = P(-e.y, e.x), bw = 0.28 * el;
     const b1 = add(Eb, mul(q, -bw)), b2 = add(Eb, mul(q, bw));
     let tip = add(Eb, mul(e, el));
@@ -250,11 +250,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     if (k.curl) { tip = add(tip, P(-0.42 * el, 0.08 * el)); c1 = add(c1, P(0.05 * el, -0.1 * el)); c2 = add(c2, P(0.25 * el, -0.35 * el)); }
     merke([tip]);
     const i1 = add(b1, mul(q, bw * 0.45)), i2 = add(b2, mul(q, -bw * 0.35)), itip = add(tip, mul(sub(Eb, tip), 0.25));
-    return `<path d="M${f(b1.x)},${f(b1.y)}Q${f(c1.x)},${f(c1.y)} ${f(tip.x)},${f(tip.y)}Q${f(c2.x)},${f(c2.y)} ${f(b2.x)},${f(b2.y)}Z" fill="${farbe}" stroke="${INK}" stroke-width="1.9" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>` +
+    return `<path d="M${f(b1.x)},${f(b1.y)}Q${f(c1.x)},${f(c1.y)} ${f(tip.x)},${f(tip.y)}Q${f(c2.x)},${f(c2.y)} ${f(b2.x)},${f(b2.y)}Z" fill="${farbe}" stroke="${INK}" stroke-width="1.9" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>` + (ohneMuschel ? "" :
       `<path d="M${f(i1.x)},${f(i1.y)}Q${f(mid(i1, itip).x - 1)},${f(mid(i1, itip).y)} ${f(itip.x)},${f(itip.y)}Q${f(mid(i2, itip).x + 1)},${f(mid(i2, itip).y)} ${f(i2.x)},${f(i2.y)}Z" fill="${hexRgb(farbe).reduce((x, y) => x + y) / 3 < 70 ? mix(farbe, "#b59a9a", .5) : mix(farbe, "#2b2240", .35)}"/>` +
-      (hexRgb(farbe).reduce((x, y) => x + y) / 3 < 70 ? `<path d="M${f(add(b1, mul(q, bw * 0.2)).x)},${f(add(b1, mul(q, bw * 0.2)).y)}Q${f(c1.x + 0.6)},${f(c1.y + 0.4)} ${f(tip.x + 0.3)},${f(tip.y + 0.8)}" fill="none" stroke="#9aa8c8" stroke-width="1.2" stroke-linecap="round" opacity=".8" vector-effect="non-scaling-stroke"/>` : "");
+      (hexRgb(farbe).reduce((x, y) => x + y) / 3 < 70 ? `<path d="M${f(add(b1, mul(q, bw * 0.2)).x)},${f(add(b1, mul(q, bw * 0.2)).y)}Q${f(c1.x + 0.6)},${f(c1.y + 0.4)} ${f(tip.x + 0.3)},${f(tip.y + 0.8)}" fill="none" stroke="#9aa8c8" stroke-width="1.2" stroke-linecap="round" opacity=".8" vector-effect="non-scaling-stroke"/>` : ""));
   };
-  const Eb = hp(-0.02, 0.045);
+  const Eb = add(hp(-0.02, 0.045), P(k.earDx || 0, 0));
 
   // --- Mähne ---
   let maehneD = "", streifenD = "";
@@ -368,7 +368,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const nick = `<animateTransform attributeName="transform" type="rotate" values="0 ${f(Pn.x)} ${f(Pn.y)};0 ${f(Pn.x)} ${f(Pn.y)};-3 ${f(Pn.x)} ${f(Pn.y)};0 ${f(Pn.x)} ${f(Pn.y)}" keyTimes="0;.8;.9;1" dur="6s" repeatCount="indefinite"/>`;
 
   // Fernes Ohr
-  g += ohr(add(Eb, P(4.5, 0.5)), dunkel(head));
+  g += ohr(add(Eb, P(4.5, 0.5)), dunkel(head), true);
 
   // Hauptkörper
   g += `<g>${umriss(haupt, linie)}`;

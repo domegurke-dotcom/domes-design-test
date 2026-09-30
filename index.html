@@ -87,6 +87,13 @@
   .kachel b { font-size: .74rem; line-height: 1.15; word-break: normal; overflow-wrap: normal; hyphens: manual; }
   .kachel small { font-size: .66rem; color: var(--leise); line-height: 1.2; }
   .kachel.fehlt { background: #f4f0ea; border-style: dashed; }
+  button.kachel { font: inherit; color: inherit; cursor: default; }
+  .kachel.klickbar { cursor: pointer; border-color: var(--akzent); box-shadow: 0 2px 0 #e7c4a3; }
+  .kachel.klickbar:active { transform: translateY(1px); box-shadow: none; }
+  .kachel.aktuell { border-color: #7aa95c; background: #f1f8ec; }
+  .kachel .mini { width: 100%; height: auto; border-radius: 8px; background: #eaf5fb; }
+  .kachel.fehlt .mini { filter: grayscale(1); opacity: .45; }
+  .zurueck { margin-top: 10px; border: 0; background: none; color: var(--akzent); font: inherit; font-weight: 700; cursor: pointer; padding: 6px 0; }
   .kachel.fehlt .ico { filter: grayscale(1); opacity: .35; }
   .kachel.fehlt b, .kachel.fehlt small { color: #a99a8a; }
   /* Pferdeakte mit Aktenreitern */
@@ -326,7 +333,7 @@
 
 <div id="auswahl" role="dialog" aria-modal="true" aria-label="Pferd auswählen"></div>
 
-<script src="pferd.js?v=21"></script>
+<script src="pferd.js?v=22"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -343,12 +350,13 @@
   };
   try { const s = JSON.parse(localStorage.getItem(SPEICHER)); if (s && s.boxen) spiel = s; } catch (e) {}
   if (!spiel.anlage) spiel.anlage = { stall: true, paddock: true, weide: false, waschplatz: false, roundpen: false, reitplatz: false, reithalle: false, gelaende: true, anhaenger: false };
-  if (!spiel.ausruestung) spiel.ausruestung = { halfter: true, strick: true, putzkiste: true, sattel: false, trense: false, schabracke: false, decke: false, gamaschen: false };
+  if (!spiel.ausruestung) spiel.ausruestung = { halfter: true, strick: true, putzkiste: true, sattel: false, trense: false, schabracke: false, decke: false, gamaschen: false, schere: true };
+  if (spiel.ausruestung.schere == null) spiel.ausruestung.schere = true;
   spiel.boxen.forEach(b => { if (b.pferd && !b.pferd.werte) b.pferd.werte = erzeugeWerte(b.pferd); if (b.pferd && !b.pferd.pflege) b.pferd.pflege = erzeugePflege(b.pferd); if (b.krippeVoll == null) b.krippeVoll = false; if (b.mistig == null) b.mistig = true; });
   if (!spiel.tag) spiel.tag = 1;
   const speichern = () => { try { localStorage.setItem(SPEICHER, JSON.stringify(spiel)); } catch (e) {} };
 
-  let aktenReiter = "steckbrief", aktenModus = "steckbrief";
+  let aktenReiter = "steckbrief", aktenModus = "steckbrief", scherModus = false, meldung = "";
   const fmt = n => n.toLocaleString("de-DE") + " €";
   const $ = id => document.getElementById(id);
 
@@ -357,7 +365,7 @@
   function zeigeStall() {
     const p = spiel.boxen[0].pferd;
     $("geld").textContent = fmt(spiel.geld);
-    const z = zeichnePferd(p.rasse, p.farbe, { seed: p.id, geschlecht: p.geschlecht });
+    const z = zeichnePferd(p.rasse, p.farbe, { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne });
     const s = p.stockmass * STALL.cmZuEinheit / 100;
     const cx = (z.box.minX + z.box.maxX) / 2;
     $("pferdPlatz").innerHTML = `<g transform="translate(${(STALL.mitte - cx * s).toFixed(1)},${STALL.boden}) scale(${s.toFixed(4)})">${z.svg}</g>`;
@@ -377,6 +385,7 @@
           <dt>Name</dt><dd>${esc(p.name)}</dd>
           <dt>Rasse</dt><dd>${r.name} · ${String(w.reinrassig).replace(".", ",")} % reinrassig</dd>
           <dt>Farbe</dt><dd>${FARBEN[p.farbe].name}</dd>
+          <dt>Mähne</dt><dd>${MAEHNEN.find(m => m[0] === (p.maehne || naturMaehne(p.rasse)))[1]}</dd>
           <dt>Geschlecht</dt><dd>${p.geschlecht}</dd>
           <dt>Alter</dt><dd>${p.alter} ${p.alter === 1 ? "Jahr" : "Jahre"}</dd>
           <dt>Stockmaß</dt><dd>${p.stockmass} cm</dd>
@@ -436,10 +445,24 @@
         ["sattel", "🏇", "Sattel", "Kammerweite muss angepasst werden", "anpassen"], ["trense", "🔗", "Trense", `Größe ${gr}`, grK],
         ["schabracke", "🟫", "Scha\u00adbracke", sm < 125 ? "Pony" : "Warmblut / Vollblut", sm < 125 ? "Pony" : "WB/VB"],
         ["decke", "🧣", "Decke", `Abschwitzdecke, Deckengröße ${decke} cm`, `${decke} cm`], ["gamaschen", "🦵", "Gama\u00adschen", `Größe ${gr}`, grK],
+        ["schere", "✂️", "Schere", "zum Mähne schneiden – antippen", "Mähne schneiden"],
       ];
       const hat = teile.filter(t => spiel.ausruestung[t[0]]).length;
-      inhalt = `<p class="text" style="margin:0 0 4px">${hat} von ${teile.length} Ausrüstungsteilen vorhanden · Größen passend für ${sm} cm Stockmaß</p>
-        <div class="kacheln">${teile.map(([k, ico, n, info, kurz]) => `<div class="kachel ${spiel.ausruestung[k] ? "" : "fehlt"}" title="${n.replace(/\u00ad/g, "")}: ${info}${spiel.ausruestung[k] ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></div>`).join("")}</div>`;
+      if (scherModus) {
+        const jetzt = p.maehne || naturMaehne(p.rasse), ji = MAEHNEN.findIndex(m => m[0] === jetzt);
+        inhalt = `<p class="text" style="margin:0 0 4px">✂️ <b>Mähne schneiden</b> · aktuell: ${MAEHNEN[ji][1]}. ${ji === 0 ? "Kürzer geht es nicht mehr." : "Wähle die neue Länge:"}</p>
+          <div class="kacheln">${MAEHNEN.map(([id, name], i) => {
+            const z = zeichnePferd(p.rasse, p.farbe, { seed: p.id, geschlecht: p.geschlecht, maehne: id });
+            const status = i === ji ? "aktuell" : i < ji ? "schneiden" : "zu lang";
+            const moeglich = i < ji;
+            return `<button class="kachel ${moeglich ? "klickbar" : i === ji ? "aktuell" : "fehlt"}" data-schnitt="${moeglich ? id : ""}" ${moeglich ? "" : "disabled"}>
+              <svg class="mini" viewBox="${(z.box.minX - 6).toFixed(1)} ${(z.box.minY - 6).toFixed(1)} 110 92"><g>${z.svg}</g></svg>
+              <b>${({ steh: "Steh\u00admähne", kurz: "Kurz", mittel: "Mittel", lang: "Lang" })[id]}</b><small>${status}</small></button>`;
+          }).join("")}</div>
+          <button class="zurueck" id="scherZurueck">‹ Zurück zur Ausrüstung</button>`;
+      } else
+      inhalt = (meldung ? `<div class="klasse">${meldung}</div>` : "") + `<p class="text" style="margin:0 0 4px">${hat} von ${teile.length} Ausrüstungsteilen vorhanden · Größen passend für ${sm} cm Stockmaß</p>
+        <div class="kacheln">${teile.map(([k, ico, n, info, kurz]) => `<div class="kachel ${spiel.ausruestung[k] ? "" : "fehlt"} ${k === "schere" && spiel.ausruestung[k] ? "klickbar" : ""}" ${k === "schere" ? 'id="scherKachel" role="button" tabindex="0"' : ""} title="${n.replace(/\u00ad/g, "")}: ${info}${spiel.ausruestung[k] ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></div>`).join("")}</div>`;
     } else if (aktenReiter === "platz") {
       const wh = p.stockmass / 100, minF = Math.pow(2 * wh, 2), passt = 12.25 >= minF;
       const zahl = n => n.toFixed(1).replace(".", ",");
@@ -469,7 +492,14 @@
         <div class="akte-kopf"><h2>${esc(p.name)}</h2><span>${r.name}</span></div>
         ${inhalt}
       </div>`;
-    $("info").querySelectorAll(".reiter button").forEach(b => b.onclick = () => { aktenReiter = b.dataset.r; zeigeAkte(); });
+    $("info").querySelectorAll(".reiter button").forEach(b => b.onclick = () => { aktenReiter = b.dataset.r; scherModus = false; meldung = ""; zeigeAkte(); });
+    const sk = $("scherKachel"); if (sk) sk.onclick = () => { scherModus = true; meldung = ""; zeigeAkte(); };
+    const sz = $("scherZurueck"); if (sz) sz.onclick = () => { scherModus = false; zeigeAkte(); };
+    $("info").querySelectorAll("[data-schnitt]").forEach(b => { if (b.dataset.schnitt) b.onclick = () => {
+      p.maehne = b.dataset.schnitt; scherModus = false;
+      meldung = `✂️ Die Mähne von ${esc(p.name)} ist jetzt: <b>${MAEHNEN.find(m => m[0] === p.maehne)[1]}</b>`;
+      speichern(); zeigeStall();
+    }; });
     $("info").querySelectorAll(".modus button").forEach(b => b.onclick = () => {
       aktenModus = b.dataset.m;
       aktenReiter = aktenModus === "steckbrief" ? "steckbrief" : "gesundheit";
@@ -567,6 +597,7 @@
     $("einstellen").onclick = () => {
       wahl.name = (wahl.name || "").trim() || zufallAus(NAMEN[wahl.geschlecht]);
       spiel.boxen[0].pferd = { ...wahl };
+      delete spiel.boxen[0].pferd.maehne;
       spiel.boxen[0].pferd.werte = erzeugeWerte(spiel.boxen[0].pferd);
       spiel.boxen[0].pferd.pflege = erzeugePflege(spiel.boxen[0].pferd);
       aktenReiter = "steckbrief";

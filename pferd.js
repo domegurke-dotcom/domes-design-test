@@ -80,7 +80,7 @@ const RASSEN = [
   { id: "quarter", name: "Quarter Horse", herkunft: "USA", h: [142, 163],
     text: "Muskulöses Westernpferd mit kurzem Kopf, großen Ganaschen und extrem kräftiger Hinterhand.",
     farben: ["fuchs", "brauner", "rappe", "palomino", "buckskin", "braunfalbe", "mausfalbe", "blueroan", "rotschimmel"],
-    k: { len: .96, depth: .47, legT: .09, neck: .5, nAng: 54, crest: .05, head: .42, hAng: 56, profile: 0, hw: 1.08, jw: 1.25, muz: .95, ear: .085, mane: "kurz", maneLen: .06, vol: .8, fore: .3, tail: .65, tvol: .8, tset: .1, feather: 0, croup: .5, hq: 1.2, eye: 1 } },
+    k: { len: .96, depth: .47, legT: .09, neck: .5, nAng: 54, crest: .05, head: .42, hAng: 56, profile: 0, hw: 1.08, jw: 1.06, muz: .95, ear: .085, mane: "kurz", maneLen: .06, vol: .8, fore: .3, tail: .65, tvol: .8, tset: .1, feather: 0, croup: .5, hq: 1.2, eye: 1 } },
   { id: "hannoveraner", name: "Hannoveraner", herkunft: "Deutschland", h: [160, 175],
     text: "Großrahmiges Warmblut für Dressur und Springen – langer Hals, gerader Kopf, viel Rahmen.",
     farben: ["brauner", "dunkelbrauner", "fuchs", "rappe", "schimmel"],
@@ -251,7 +251,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       `<path d="M${f(i1.x)},${f(i1.y)}Q${f(mid(i1, itip).x - 1)},${f(mid(i1, itip).y)} ${f(itip.x)},${f(itip.y)}Q${f(mid(i2, itip).x + 1)},${f(mid(i2, itip).y)} ${f(i2.x)},${f(i2.y)}Z" fill="${hexRgb(farbe).reduce((x, y) => x + y) / 3 < 70 ? mix(farbe, "#b59a9a", .5) : mix(farbe, "#2b2240", .35)}"/>` +
       (hexRgb(farbe).reduce((x, y) => x + y) / 3 < 70 ? `<path d="M${f(add(b1, mul(q, bw * 0.2)).x)},${f(add(b1, mul(q, bw * 0.2)).y)}Q${f(c1.x + 0.6)},${f(c1.y + 0.4)} ${f(tip.x + 0.3)},${f(tip.y + 0.8)}" fill="none" stroke="#9aa8c8" stroke-width="1.2" stroke-linecap="round" opacity=".8" vector-effect="non-scaling-stroke"/>` : "");
   };
-  const Eb = hp(0.04, -0.03);
+  const Eb = hp(-0.03, 0.07);
 
   // --- Mähne ---
   let maehneD = "", streifenD = "";
@@ -294,7 +294,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     ? [hp(-0.04, -0.04), hp(-0.02, -0.16), hp(0.06, -0.12), hp(0.1, -0.02), hp(0.05, 0.05)]
     : null;
   const schopfBueschel = () => {
-    const l = 0.12 + 0.2 * fl, A = hp(-0.04, -0.05), E = hp(0.01, 0.07);
+    const l = 0.16 + 0.2 * fl, A = add(Eb, P(-1.2, 0.5)), E = add(Eb, P(3.2, 2.2));
     const t1 = hp(0.1 + l * 0.85, -0.11), v1 = hp(0.1, -0.035), t2 = hp(0.14 + l, -0.02), v2 = hp(0.1, 0.03), t3 = hp(0.1 + l * 0.8, 0.08);
     const q = (p1, p2, dx, dy) => `Q${f(mid(p1, p2).x + dx)},${f(mid(p1, p2).y + dy)} ${f(p2.x)},${f(p2.y)}`;
     return `M${f(A.x)},${f(A.y)}` + q(A, t1, 1, -1) + q(t1, v1, 0.5, 0.8) + q(v1, t2, 1, -0.5) + q(t2, v2, 0.5, 0.8) + q(v2, t3, 0.8, 0) + q(t3, E, -0.5, 0.5) + "Z";

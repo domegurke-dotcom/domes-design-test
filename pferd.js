@@ -220,22 +220,24 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const u = P(-Math.cos(th), Math.sin(th)), v = P(Math.sin(th), Math.cos(th));
   const hp = (s, b) => P(Pll.x + (u.x * s + v.x * b) * hl, Pll.y + (u.y * s + v.y * b) * hl);
   const pr = k.profile, hw = k.hw, jw = k.jw, m = k.muz;
+  const nkK = 1 - 0.32 * (k.nk || 0); // bei kräftigem Hals geht die Ganasche weich in den Hals über
   const kopf = merke([
     hp(-0.03, -0.03), hp(0.12, -0.065), hp(0.3, -0.06), hp(0.55, -0.045 - pr * 0.045), hp(0.8, -0.03 - pr * 0.02),
     hp(0.94, -0.01), hp(1.0, 0.07 * m), hp(1.025, 0.17 * m), hp(0.99, 0.27 * m), hp(0.92, 0.3 * m), hp(0.86, 0.29 * m),
-    hp(0.76, 0.32 * hw), hp(0.52, 0.38 * hw), hp(0.34, 0.48 * hw * jw), hp(0.18, 0.52 * hw * jw),
-    hp(0.06, 0.45 * hw), hp(-0.03, 0.22 * hw),
+    hp(0.76, 0.32 * hw), hp(0.52, 0.38 * hw), hp(0.34, 0.48 * hw * jw * (0.85 + 0.15 * nkK)), hp(0.18, 0.52 * hw * jw * nkK),
+    hp(0.06, 0.45 * hw * nkK), hp(-0.03, 0.22 * hw),
   ]);
   const nk = k.nk || 0; // kräftiger Hals: Kehle setzt weiter vorn unter der Ganasche an
-  const T0 = hp(0.15, 0.5 * hw), T1 = hp(0.36, 0.44 * hw * jw);
+  const T0 = hp(0.15, 0.5 * hw), T1 = hp(0.46, 0.4 * hw * Math.min(jw, 1.1));
   const T = P(T0.x + (T1.x - T0.x) * nk, T0.y + (T1.y - T0.y) * nk), Pn = hp(-0.02, 0.04);
   const d = norm(P(Pn.x - Wn.x, Pn.y - Wn.y));
   const nOut = P(-d.y, d.x);
   const crestCtrl = add(mid(Wn, Pn), mul(nOut, crest * H + 4));
   const underCtrl = add(mid(T, Cn), mul(nOut, 1));
   // Kehle: weicher, offener Übergang von der Ganasche in die Halsunterseite
-  const kehle1 = add(add(T, mul(sub(Cn, T), 0.3)), mul(nOut, 10 * (1 - nk) - 1.5 * nk));
-  const kehle2 = add(add(Cn, mul(sub(T, Cn), 0.35)), mul(nOut, 1.5 - 3.5 * nk));
+  // weicher Bogen am Kopfansatz: die Linie läuft erst ein Stück an der Ganasche entlang nach hinten und biegt dann nach unten
+  const kehle1 = add(add(add(T, mul(sub(Cn, T), 0.3 * (1 - nk))), mul(nOut, 10 * (1 - nk))), P(0.22 * hl * nk, 0.1 * hl * nk));
+  const kehle2 = add(add(Cn, mul(sub(T, Cn), 0.35 + 0.1 * nk)), mul(nOut, 1.5 - 4 * nk));
   const halsD = `M${f(Wn.x)},${f(Wn.y)}Q${f(crestCtrl.x)},${f(crestCtrl.y)} ${f(Pn.x)},${f(Pn.y)}L${f(hp(0.06, 0.2).x)},${f(hp(0.06, 0.2).y)}L${f(T.x)},${f(T.y)}C${f(kehle1.x)},${f(kehle1.y)} ${f(kehle2.x)},${f(kehle2.y)} ${f(Cn.x)},${f(Cn.y)}L${f(0.35 * L)},${f(top + 0.6 * D)}Z`;
   const kamm = t => { const s = 1 - t; return P(s * s * Wn.x + 2 * s * t * crestCtrl.x + t * t * Pn.x, s * s * Wn.y + 2 * s * t * crestCtrl.y + t * t * Pn.y); };
 
@@ -530,6 +532,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += inkFein(`M${f(hp(0.9, 0.3 * m).x)},${f(hp(0.9, 0.3 * m).y)}Q${f(hp(0.84, 0.27).x)},${f(hp(0.84, 0.27).y)} ${f(hp(0.78, 0.31).x)},${f(hp(0.78, 0.31).y)}`, 1.1, 'opacity=".5"');
   g += `</g>`;
 
+  if (opt.debug) g += [T, kehle1, kehle2, Cn].map((q, i) => `<circle cx="${f(q.x)}" cy="${f(q.y)}" r="1.2" fill="${["red","lime","blue","orange"][i]}"/>`).join("");
   return { svg: `<g transform="translate(0,${f(dLiegen)})">${g}</g>`, box: { minX, maxX, minY: minY + dLiegen } };
 }
 

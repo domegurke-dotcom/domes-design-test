@@ -106,6 +106,7 @@ const f = n => (Math.round(n * 10) / 10).toString();
 const P = (x, y) => ({ x, y });
 const add = (a, b) => P(a.x + b.x, a.y + b.y);
 const sub = (a, b) => P(a.x - b.x, a.y - b.y);
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const mul = (a, s) => P(a.x * s, a.y * s);
 const mid = (a, b) => P((a.x + b.x) / 2, (a.y + b.y) / 2);
 const norm = a => { const l = Math.hypot(a.x, a.y) || 1; return P(a.x / l, a.y / l); };
@@ -545,34 +546,39 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     g += `</g>`;
   }
   if (!liegt && typ === "sportlich") {
-    // Muskeln an den anatomisch richtigen Stellen (nur innerhalb des Körpers)
-    const m = (d, o = ".5", sw = 1.1) => inkFein(d, sw, `opacity="${o}"`);
-    const lt = (cx, cy, rx, ry, rot, o = ".35") => `<ellipse cx="${f(cx)}" cy="${f(cy)}" rx="${f(rx)}" ry="${f(ry)}" transform="rotate(${rot} ${f(cx)} ${f(cy)})" fill="${licht}" opacity="${o}"/>`;
-    const Hm = mid(Pn, Wn), Hu = mid(T, Cn);
-    g += `<g clip-path="url(#cl-${uid})">`;
-    // Hals: Halsmuskel (Brachiocephalicus) vom Genick zum Buggelenk, Trapezmuskel unter dem Kamm
-    g += m(`M${f(Pn.x + 3)},${f(Pn.y + 8)}Q${f(Hu.x + 8)},${f(Hu.y - 4)} ${f(-0.03 * H)},${f(top + 0.42 * D)}`, ".45");
-    g += m(`M${f(Hm.x + 3)},${f(Hm.y + 7)}Q${f(0.08 * L)},${f(-H - 2)} ${f(0.2 * L)},${f(-H + 7)}`, ".35");
-    // Schulter: Schultergräte und Deltamuskel, Trizeps hinter dem Ellbogen
-    g += m(`M${f(0.21 * L)},${f(-H + 6)}Q${f(0.15 * L)},${f(top + 0.4 * D)} ${f(0.03 * L)},${f(top + 0.62 * D)}`, ".55", 1.2);
-    g += m(`M${f(0.03 * L)},${f(top + 0.62 * D)}Q${f(0.12 * L)},${f(top + 0.62 * D)} ${f(0.2 * L)},${f(top + 0.5 * D)}`, ".4");
-    g += m(`M${f(0.2 * L)},${f(top + 0.5 * D)}Q${f(0.27 * L)},${f(top + 0.75 * D)} ${f(fx + 1.4 * w)},${f(bottom - 2)}`, ".5", 1.2);
-    // Unterarm (Streckmuskel)
-    g += m(`M${f(fx - 0.5 * w)},${f(bottom + 2)}Q${f(fx - 0.9 * w)},${f(-0.62 * Lg)} ${f(fx - 0.55 * w)},${f(-0.48 * Lg)}`, ".4");
-    // Rücken: langer Rückenmuskel, Rippenbogen
-    g += m(`M${f(0.3 * L)},${f(top + 0.14 * D)}Q${f(0.5 * L)},${f(top + 0.2 * D)} ${f(0.7 * L)},${f(top + 0.14 * D)}`, ".35");
-    g += m(`M${f(0.36 * L)},${f(bottom - 0.08 * D)}Q${f(0.52 * L)},${f(top + 0.5 * D)} ${f(0.66 * L)},${f(top + 0.36 * D)}`, ".3");
-    // Hinterhand: Kruppenmuskel, Hüftstrecker (Bizeps femoris), Halbsehnenmuskel, Unterschenkel
-    g += m(`M${f(0.66 * L)},${f(top + 0.18 * D)}Q${f(0.76 * L)},${f(top + 0.3 * D)} ${f(0.86 * L)},${f(top + 0.22 * D)}`, ".45");
-    g += m(`M${f(0.82 * L)},${f(top + 0.24 * D)}Q${f(0.8 * L)},${f(top + 0.7 * D)} ${f(hx - 0.05 * L)},${f(bottom + 0.05 * H)}`, ".55", 1.2);
-    g += m(`M${f(L - 0.005 * H)},${f(top + 0.5 * D)}Q${f(0.95 * L)},${f(bottom - 0.05 * D)} ${f(hx + 0.6 * w)},${f(-0.62 * Lg)}`, ".45");
-    g += m(`M${f(hx - 0.3 * w)},${f(-0.66 * Lg)}Q${f(hx + 0.5 * w)},${f(-0.6 * Lg)} ${f(hx + 0.9 * w)},${f(-0.56 * Lg)}`, ".35");
-    // Lichtkanten auf den Muskelbäuchen
-    g += `<g filter="url(#wb-${uid})" opacity=".8">`;
-    g += lt(0.12 * L, top + 0.4 * D, 0.06 * L, 0.15 * D, -20) + lt(0.24 * L, top + 0.68 * D, 0.035 * L, 0.11 * D, -10, ".3");
-    g += lt(0.76 * L, top + 0.36 * D, 0.06 * L, 0.18 * D, 10) + lt(0.92 * L, top + 0.5 * D, 0.035 * L, 0.16 * D, 0, ".3");
-    g += lt(Hu.x + 7, Hu.y - 2, 0.05 * L, 0.03 * L, 50, ".3");
-    g += `</g>`;
+    // Muskelbäuche wie in Cartoon-Muskelzeichnungen: oben hell, unten Schatten, dazwischen feine Furchen (dezent)
+    const hell = mix(body, "#ffffff", dunkelWert < 60 ? 0.28 : 0.24), tief = mix(body, "#1b1020", 0.35);
+    const Hu = mid(T, Cn), Hm = mid(Pn, Wn);
+    let mu = "";
+    const muskel = (cx, cy, rx, ry, rot, st = 1) => {
+      const r = rot * Math.PI / 180, ox = Math.sin(r), oy = -Math.cos(r);
+      mu += `<ellipse cx="${f(cx - ox * ry * 0.18)}" cy="${f(cy - oy * ry * 0.18)}" rx="${f(rx * 0.98)}" ry="${f(ry)}" transform="rotate(${f(rot)} ${f(cx)} ${f(cy)})" fill="${tief}" opacity="${(0.3 * st).toFixed(2)}"/>`;
+      mu += `<ellipse cx="${f(cx + ox * ry * 0.22)}" cy="${f(cy + oy * ry * 0.22)}" rx="${f(rx * 0.82)}" ry="${f(ry * 0.72)}" transform="rotate(${f(rot)} ${f(cx)} ${f(cy)})" fill="${hell}" opacity="${(0.55 * st).toFixed(2)}"/>`;
+    };
+    const ang = (a, b) => Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
+    // Hals: Halsmuskel unten, Kammmuskel oben
+    muskel(mid(Hu, Cn).x + 4, mid(Hu, Cn).y - 2, 0.05 * L, dist(Hu, Cn) * 0.5, ang(Hu, Cn) - 90, .9);
+    muskel(mid(Hm, Wn).x + 3, mid(Hm, Wn).y + 7, 0.045 * L, dist(Hm, Wn) * 0.45, ang(Hm, Wn) - 90, .8);
+    // Schulter, Oberarm (Trizeps), Brust, Unterarm
+    muskel(0.12 * L, top + 0.36 * D, 0.075 * L, 0.3 * D, 25);
+    muskel(0.17 * L, top + 0.74 * D, 0.07 * L, 0.16 * D, -10);
+    muskel(-0.035 * H, top + 0.66 * D, 0.035 * L, 0.18 * D, 5, .8);
+    muskel(fx + 0.15 * w, -0.66 * Lg, 0.75 * w, 0.17 * Lg, 0, .8);
+    // Rücken (Sattellage) und Rippenbogen
+    muskel(0.5 * L, top + 0.17 * D, 0.17 * L, 0.11 * D, 90, .6);
+    // Hinterhand: Kruppe, Hinterbacke, Oberschenkel, Unterschenkel (Gaskin)
+    muskel(0.8 * L, top + 0.2 * D, 0.13 * L, 0.13 * D, 90 + 8, .9);
+    muskel(0.93 * L, top + 0.58 * D, 0.065 * L, 0.3 * D, -8);
+    muskel(0.79 * L, top + 0.66 * D, 0.065 * L, 0.26 * D, 12);
+    muskel(hx + 0.4 * w, -0.66 * Lg, 0.85 * w, 0.14 * Lg, -18, .8);
+    g += `<g clip-path="url(#cl-${uid})"><g filter="url(#wm-${uid})">${mu}</g>`;
+    // feine Furchen zwischen den Muskelgruppen
+    const fu = (d, o = ".4") => inkFein(d, 1, `opacity="${o}"`);
+    g += fu(`M${f(0.2 * L)},${f(-H + 6)}Q${f(0.18 * L)},${f(top + 0.42 * D)} ${f(0.06 * L)},${f(top + 0.6 * D)}`);
+    g += fu(`M${f(0.07 * L)},${f(top + 0.6 * D)}Q${f(0.17 * L)},${f(top + 0.54 * D)} ${f(0.25 * L)},${f(top + 0.62 * D)}`, ".35");
+    g += fu(`M${f(0.72 * L)},${f(top + 0.34 * D)}Q${f(0.82 * L)},${f(top + 0.4 * D)} ${f(0.88 * L)},${f(top + 0.3 * D)}`, ".35");
+    g += fu(`M${f(0.87 * L)},${f(top + 0.32 * D)}Q${f(0.84 * L)},${f(top + 0.7 * D)} ${f(0.87 * L)},${f(bottom + 0.03 * H)}`);
+    g += fu(`M${f(Hu.x + 3)},${f(Hu.y)}Q${f(mid(Hu, Cn).x + 8)},${f(mid(Hu, Cn).y - 6)} ${f(0.05 * L)},${f(top + 0.28 * D)}`, ".35");
     g += `</g>`;
   }
   if (!liegt && typ === "dick") {

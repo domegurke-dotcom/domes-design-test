@@ -533,25 +533,47 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += inkFein(`M${f(hp(0.34, 0.2).x)},${f(hp(0.34, 0.2).y)}Q${f(hp(0.52, 0.4).x)},${f(hp(0.52, 0.4).y)} ${f(hp(0.3, 0.47 * hw * jw).x)},${f(hp(0.3, 0.47 * hw * jw).y)}`, 1.4, 'opacity=".75"');
   // Körpertyp-Details
   if (!liegt && typ === "duenn") {
+    g += `<g clip-path="url(#cr-${uid})">`;   // Rippen nur innerhalb des Körpers
     for (let i = 0; i < 6; i++) {
-      const x = 0.36 * L + i * 0.052 * L, y0 = top + 0.3 * D, y1 = bottom - 0.12 * D + Math.abs(i - 2.5) * 1.2;
+      const x = 0.36 * L + i * 0.052 * L, y0 = top + 0.3 * D, y1 = bottom - 0.16 * D + Math.abs(i - 2.5) * 1.2;
       g += inkFein(`M${f(x)},${f(y0)}Q${f(x + 0.04 * L)},${f((y0 + y1) / 2)} ${f(x + 0.012 * L)},${f(y1)}`, 1.15, 'opacity=".55"');
       g += `<path d="M${f(x + 1.2)},${f(y0 + 2)}Q${f(x + 0.04 * L + 1.2)},${f((y0 + y1) / 2)} ${f(x + 0.012 * L + 1.2)},${f(y1 - 2)}" fill="none" stroke="${licht}" stroke-width="1.4" stroke-linecap="round" opacity=".55" vector-effect="non-scaling-stroke"/>`;
     }
-    g += inkFein(`M${f(0.76 * L)},${f(croupY + 6)}q${f(0.03 * L)},-5 ${f(0.07 * L)},-1`, 1.3, 'opacity=".65"');            // Hüfthöcker
-    g += inkFein(`M${f(0.28 * L)},${f(top + 3)}Q${f(0.5 * L)},${f(top + 5.5)} ${f(0.74 * L)},${f(top + 3)}`, 1, 'opacity=".45"'); // Wirbelsäule
-    g += inkFein(`M${f(0.08 * L)},${f(top + 0.12 * D)}q${f(-2)},${f(0.25 * D)} ${f(0.02 * L)},${f(0.45 * D)}`, 1, 'opacity=".5"'); // Schulterblatt
+    g += inkFein(`M${f(0.76 * L)},${f(croupY + 6)}q${f(0.03 * L)},-5 ${f(0.07 * L)},-1`, 1.3, 'opacity=".65"');
+    g += inkFein(`M${f(0.28 * L)},${f(top + 3)}Q${f(0.5 * L)},${f(top + 5.5)} ${f(0.74 * L)},${f(top + 3)}`, 1, 'opacity=".45"');
+    g += inkFein(`M${f(0.08 * L)},${f(top + 0.12 * D)}q${f(-2)},${f(0.25 * D)} ${f(0.02 * L)},${f(0.45 * D)}`, 1, 'opacity=".5"');
+    g += `</g>`;
   }
   if (!liegt && typ === "sportlich") {
-    const m = (d, o = ".55") => inkFein(d, 1.2, `opacity="${o}"`);
-    g += m(`M${f(0.05 * L)},${f(top + 0.2 * D)}Q${f(0.2 * L)},${f(top + 0.45 * D)} ${f(0.16 * L)},${f(bottom - 0.12 * D)}`);          // Schultermuskel
-    g += m(`M${f(0.22 * L)},${f(top + 0.35 * D)}Q${f(0.26 * L)},${f(top + 0.7 * D)} ${f(0.19 * L)},${f(bottom - 0.02 * D)}`, ".45");   // Trizeps
-    g += m(`M${f(0.82 * L)},${f(croupY + 4)}Q${f(L + 0.02 * H)},${f(top + 0.5 * D)} ${f(0.9 * L)},${f(bottom + 0.06 * H)}`);         // Hinterbacke
-    g += m(`M${f(0.74 * L)},${f(top + 0.25 * D)}Q${f(0.86 * L)},${f(top + 0.7 * D)} ${f(0.8 * L)},${f(bottom + 0.02 * H)}`, ".45");  // Oberschenkel
-    g += m(`M${f(0.45 * L)},${f(bottom - 0.25 * D)}Q${f(0.58 * L)},${f(bottom - 0.32 * D)} ${f(0.68 * L)},${f(bottom - 0.2 * D)}`, ".35"); // Bauchmuskel
-    g += m(`M${f(Pn.x + 4)},${f(Pn.y + 6)}Q${f(mid(Pn, Wn).x + 2)},${f(mid(Pn, Wn).y + 10)} ${f(0.06 * L)},${f(top + 0.25 * D)}`, ".45"); // Halsmuskel
-    g += `<ellipse cx="${f(0.11 * L)}" cy="${f(top + 0.42 * D)}" rx="${f(0.06 * L)}" ry="${f(0.14 * D)}" fill="${licht}" opacity=".35"/>`;
-    g += `<ellipse cx="${f(0.88 * L)}" cy="${f(top + 0.35 * D)}" rx="${f(0.07 * L)}" ry="${f(0.16 * D)}" fill="${licht}" opacity=".35"/>`;
+    // Muskeln an den anatomisch richtigen Stellen (nur innerhalb des Körpers)
+    const m = (d, o = ".5", sw = 1.1) => inkFein(d, sw, `opacity="${o}"`);
+    const lt = (cx, cy, rx, ry, rot, o = ".35") => `<ellipse cx="${f(cx)}" cy="${f(cy)}" rx="${f(rx)}" ry="${f(ry)}" transform="rotate(${rot} ${f(cx)} ${f(cy)})" fill="${licht}" opacity="${o}"/>`;
+    const Hm = mid(Pn, Wn), Hu = mid(T, Cn);
+    g += `<g clip-path="url(#cl-${uid})">`;
+    // Hals: Halsmuskel (Brachiocephalicus) vom Genick zum Buggelenk, Trapezmuskel unter dem Kamm
+    g += m(`M${f(Pn.x + 3)},${f(Pn.y + 8)}Q${f(Hu.x + 8)},${f(Hu.y - 4)} ${f(-0.03 * H)},${f(top + 0.42 * D)}`, ".45");
+    g += m(`M${f(Hm.x + 3)},${f(Hm.y + 7)}Q${f(0.08 * L)},${f(-H - 2)} ${f(0.2 * L)},${f(-H + 7)}`, ".35");
+    // Schulter: Schultergräte und Deltamuskel, Trizeps hinter dem Ellbogen
+    g += m(`M${f(0.21 * L)},${f(-H + 6)}Q${f(0.15 * L)},${f(top + 0.4 * D)} ${f(0.03 * L)},${f(top + 0.62 * D)}`, ".55", 1.2);
+    g += m(`M${f(0.03 * L)},${f(top + 0.62 * D)}Q${f(0.12 * L)},${f(top + 0.62 * D)} ${f(0.2 * L)},${f(top + 0.5 * D)}`, ".4");
+    g += m(`M${f(0.2 * L)},${f(top + 0.5 * D)}Q${f(0.27 * L)},${f(top + 0.75 * D)} ${f(fx + 1.4 * w)},${f(bottom - 2)}`, ".5", 1.2);
+    // Unterarm (Streckmuskel)
+    g += m(`M${f(fx - 0.5 * w)},${f(bottom + 2)}Q${f(fx - 0.9 * w)},${f(-0.62 * Lg)} ${f(fx - 0.55 * w)},${f(-0.48 * Lg)}`, ".4");
+    // Rücken: langer Rückenmuskel, Rippenbogen
+    g += m(`M${f(0.3 * L)},${f(top + 0.14 * D)}Q${f(0.5 * L)},${f(top + 0.2 * D)} ${f(0.7 * L)},${f(top + 0.14 * D)}`, ".35");
+    g += m(`M${f(0.36 * L)},${f(bottom - 0.08 * D)}Q${f(0.52 * L)},${f(top + 0.5 * D)} ${f(0.66 * L)},${f(top + 0.36 * D)}`, ".3");
+    // Hinterhand: Kruppenmuskel, Hüftstrecker (Bizeps femoris), Halbsehnenmuskel, Unterschenkel
+    g += m(`M${f(0.66 * L)},${f(top + 0.18 * D)}Q${f(0.76 * L)},${f(top + 0.3 * D)} ${f(0.86 * L)},${f(top + 0.22 * D)}`, ".45");
+    g += m(`M${f(0.82 * L)},${f(top + 0.24 * D)}Q${f(0.8 * L)},${f(top + 0.7 * D)} ${f(hx - 0.05 * L)},${f(bottom + 0.05 * H)}`, ".55", 1.2);
+    g += m(`M${f(L - 0.005 * H)},${f(top + 0.5 * D)}Q${f(0.95 * L)},${f(bottom - 0.05 * D)} ${f(hx + 0.6 * w)},${f(-0.62 * Lg)}`, ".45");
+    g += m(`M${f(hx - 0.3 * w)},${f(-0.66 * Lg)}Q${f(hx + 0.5 * w)},${f(-0.6 * Lg)} ${f(hx + 0.9 * w)},${f(-0.56 * Lg)}`, ".35");
+    // Lichtkanten auf den Muskelbäuchen
+    g += `<g filter="url(#wb-${uid})" opacity=".8">`;
+    g += lt(0.12 * L, top + 0.4 * D, 0.06 * L, 0.15 * D, -20) + lt(0.24 * L, top + 0.68 * D, 0.035 * L, 0.11 * D, -10, ".3");
+    g += lt(0.76 * L, top + 0.36 * D, 0.06 * L, 0.18 * D, 10) + lt(0.92 * L, top + 0.5 * D, 0.035 * L, 0.16 * D, 0, ".3");
+    g += lt(Hu.x + 7, Hu.y - 2, 0.05 * L, 0.03 * L, 50, ".3");
+    g += `</g>`;
+    g += `</g>`;
   }
   if (!liegt && typ === "dick") {
     const fett = (d, o = ".45") => inkFein(d, 1.1, `opacity="${o}"`);

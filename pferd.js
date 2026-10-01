@@ -249,7 +249,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     const e_ = A.x - (a_ * K.genick.x - b_ * K.genick.y), f_ = A.y - (b_ * K.genick.x + a_ * K.genick.y);
     const M = (x, y) => P(a_ * x - b_ * y + e_, b_ * x + a_ * y + f_), Mv = (x, y) => norm(P(a_ * x - b_ * y, b_ * x + a_ * y));
     T = M(K.kehle.x, K.kehle.y);
-    ekKehle = Mv(K.kehle.dx, K.kehle.dy);
+    ekKehle = true;
   }
   const underCtrl = add(mid(T, Cn), mul(nOut, 1));
   // Kehle: weicher, offener Übergang von der Ganasche in die Halsunterseite
@@ -257,7 +257,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const kehle1 = add(add(add(T, mul(sub(Cn, T), 0.3 * (1 - nk))), mul(nOut, 10 * (1 - nk))), P((0.22 + ((k.kb != null ? k.kb : 0.22) - 0.22) * kSp) * hl * nk, 0.14 * hl * nk));
   const kehle2 = add(add(Cn, mul(sub(T, Cn), 0.35 + 0.1 * nk)), mul(nOut, 1.5 - (4 + (k.kw || 0) * kSp) * nk));
   const kehleLen = Math.hypot(Cn.x - T.x, Cn.y - T.y);
-  const k1 = ekKehle ? add(T, mul(ekKehle, 0.35 * kehleLen)) : kehle1, k2 = ekKehle ? add(add(Cn, mul(sub(T, Cn), 0.4)), mul(nOut, 1.5)) : kehle2;
+  const k1 = ekKehle ? add(add(T, mul(sub(Cn, T), 0.35)), mul(nOut, 0.06 * kehleLen)) : kehle1, k2 = ekKehle ? add(add(Cn, mul(sub(T, Cn), 0.35)), mul(nOut, 0.04 * kehleLen)) : kehle2;
   const halsD = `M${f(Wn.x)},${f(Wn.y)}Q${f(crestCtrl.x)},${f(crestCtrl.y)} ${f(Pn.x)},${f(Pn.y)}L${f(hp(0.06, 0.2).x)},${f(hp(0.06, 0.2).y)}L${f(T.x)},${f(T.y)}C${f(k1.x)},${f(k1.y)} ${f(k2.x)},${f(k2.y)} ${f(Cn.x)},${f(Cn.y)}L${f(0.35 * L)},${f(top + 0.6 * D)}Z`;
   const kamm = t => { const s = 1 - t; return P(s * s * Wn.x + 2 * s * t * crestCtrl.x + t * t * Pn.x, s * s * Wn.y + 2 * s * t * crestCtrl.y + t * t * Pn.y); };
 

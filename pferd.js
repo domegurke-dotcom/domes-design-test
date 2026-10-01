@@ -60,7 +60,7 @@ const RASSEN = [
   { id: "shetty", name: "Shetlandpony", herkunft: "Shetlandinseln (Schottland)", h: [80, 107],
     text: "Kleines, robustes Pony mit kurzen Beinen, dichtem Fell, üppiger Mähne und großem Kopf im Verhältnis.",
     farben: ["rappe", "brauner", "fuchs", "schimmel", "windfarben", "rappschecke", "braunschecke"],
-    k: { nk: 0.8, len: .98, depth: .56, legT: .12, neck: .38, nAng: 45, crest: .06, head: .47, hAng: 52, profile: 0, hw: 1.1, jw: 1.1, muz: 1, ear: .08, mane: "lang", maneLen: .28, vol: 1.3, fore: 1.2, tail: .9, tvol: 1.3, tset: .2, feather: .2, croup: .5, hq: 1, eye: 1.05 } },
+    k: { nk: 1, kb: 0.04, kw: 6, ts: 0.56, len: .98, depth: .56, legT: .12, neck: .38, nAng: 45, crest: .06, head: .47, hAng: 52, profile: 0, hw: 1.1, jw: 1.1, muz: 1, ear: .08, mane: "lang", maneLen: .28, vol: 1.3, fore: 1.2, tail: .9, tvol: 1.3, tset: .2, feather: .2, croup: .5, hq: 1, eye: 1.05 } },
   { id: "shire", name: "Shire Horse", herkunft: "England", h: [168, 190],
     text: "Eines der größten Pferde der Welt: massiger Kaltblüter mit Ramsnase und langem Fesselbehang.",
     farben: ["rappe", "brauner", "dunkelbrauner", "schimmel"],
@@ -228,7 +228,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     hp(0.06, 0.45 * hw * nkK), hp(-0.03, 0.22 * hw),
   ]);
   const nk = k.nk || 0; // kräftiger Hals: Kehle setzt weiter vorn unter der Ganasche an
-  const T0 = hp(0.15, 0.5 * hw), T1 = hp(0.46, 0.4 * hw * Math.min(jw, 1.1));
+  const T0 = hp(0.15, 0.5 * hw), kSp = (haltung === "normal" || haltung === "leicht") && k.ts ? 1 : 0, T1 = hp(0.46 + ((k.ts || 0.46) - 0.46) * kSp, (0.4 - 0.04 * kSp) * hw * Math.min(jw, 1.1));
   const T = P(T0.x + (T1.x - T0.x) * nk, T0.y + (T1.y - T0.y) * nk), Pn = hp(-0.02, 0.04);
   const d = norm(P(Pn.x - Wn.x, Pn.y - Wn.y));
   const nOut = P(-d.y, d.x);
@@ -236,8 +236,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const underCtrl = add(mid(T, Cn), mul(nOut, 1));
   // Kehle: weicher, offener Übergang von der Ganasche in die Halsunterseite
   // weicher Bogen am Kopfansatz: die Linie läuft erst ein Stück an der Ganasche entlang nach hinten und biegt dann nach unten
-  const kehle1 = add(add(add(T, mul(sub(Cn, T), 0.3 * (1 - nk))), mul(nOut, 10 * (1 - nk))), P(0.22 * hl * nk, 0.1 * hl * nk));
-  const kehle2 = add(add(Cn, mul(sub(T, Cn), 0.35 + 0.1 * nk)), mul(nOut, 1.5 - 4 * nk));
+  const kehle1 = add(add(add(T, mul(sub(Cn, T), 0.3 * (1 - nk))), mul(nOut, 10 * (1 - nk))), P((0.22 + ((k.kb != null ? k.kb : 0.22) - 0.22) * kSp) * hl * nk, 0.14 * hl * nk));
+  const kehle2 = add(add(Cn, mul(sub(T, Cn), 0.35 + 0.1 * nk)), mul(nOut, 1.5 - (4 + (k.kw || 0) * kSp) * nk));
   const halsD = `M${f(Wn.x)},${f(Wn.y)}Q${f(crestCtrl.x)},${f(crestCtrl.y)} ${f(Pn.x)},${f(Pn.y)}L${f(hp(0.06, 0.2).x)},${f(hp(0.06, 0.2).y)}L${f(T.x)},${f(T.y)}C${f(kehle1.x)},${f(kehle1.y)} ${f(kehle2.x)},${f(kehle2.y)} ${f(Cn.x)},${f(Cn.y)}L${f(0.35 * L)},${f(top + 0.6 * D)}Z`;
   const kamm = t => { const s = 1 - t; return P(s * s * Wn.x + 2 * s * t * crestCtrl.x + t * t * Pn.x, s * s * Wn.y + 2 * s * t * crestCtrl.y + t * t * Pn.y); };
 
@@ -293,9 +293,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     if (ohrenGeknickt) { tip = add(add(Eb, mul(e, el * 0.6)), mul(norm(P(1, 0.15)), el * 0.42)); c1 = add(add(b1, mul(e, el * 0.62)), mul(q, -bw * 0.1)); c2 = add(add(b2, mul(e, el * 0.45)), mul(q, bw * 0.2)); }
     if (k.curl && !ohrenHaengen && !ohrenGeknickt) { tip = add(tip, P(-0.42 * el, 0.08 * el)); c1 = add(c1, P(0.05 * el, -0.1 * el)); c2 = add(c2, P(0.25 * el, -0.35 * el)); }
     merke([tip]);
-    const i1 = add(b1, mul(q, bw * 0.45)), i2 = add(b2, mul(q, -bw * 0.35)), itip = add(tip, mul(sub(Eb, tip), 0.25));
+    // Ohrmuschel: füllt die vordere Ohrfläche von der Basis bis zur Spitze, nur hinten bleibt ein Rand
+    const i1 = add(b1, mul(q, bw * 0.12)), i2 = add(b1, mul(q, bw * 1.45)), itip = add(tip, mul(sub(Eb, tip), 0.06));
+    const ic1 = add(c1, mul(q, bw * 0.12)), ic2 = add(mid(itip, i2), mul(q, -bw * 0.05));
     return `<path d="M${f(b1.x)},${f(b1.y)}Q${f(c1.x)},${f(c1.y)} ${f(tip.x)},${f(tip.y)}Q${f(c2.x)},${f(c2.y)} ${f(b2.x)},${f(b2.y)}Z" fill="${farbe}" stroke="${INK}" stroke-width="1.9" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>` + (ohneMuschel ? "" :
-      `<path d="M${f(i1.x)},${f(i1.y)}Q${f(mid(i1, itip).x - 1)},${f(mid(i1, itip).y)} ${f(itip.x)},${f(itip.y)}Q${f(mid(i2, itip).x + 1)},${f(mid(i2, itip).y)} ${f(i2.x)},${f(i2.y)}Z" fill="${hexRgb(farbe).reduce((x, y) => x + y) / 3 < 70 ? mix(farbe, "#b59a9a", .5) : mix(farbe, "#2b2240", .35)}"/>` +
+      `<path d="M${f(i1.x)},${f(i1.y)}Q${f(ic1.x)},${f(ic1.y)} ${f(itip.x)},${f(itip.y)}Q${f(ic2.x)},${f(ic2.y)} ${f(i2.x)},${f(i2.y)}Z" fill="${hexRgb(farbe).reduce((x, y) => x + y) / 3 < 70 ? mix(farbe, "#b59a9a", .5) : mix(farbe, "#2b2240", .35)}"/>` +
       (hexRgb(farbe).reduce((x, y) => x + y) / 3 < 70 ? `<path d="M${f(add(b1, mul(q, bw * 0.2)).x)},${f(add(b1, mul(q, bw * 0.2)).y)}Q${f(c1.x + 0.6)},${f(c1.y + 0.4)} ${f(tip.x + 0.3)},${f(tip.y + 0.8)}" fill="none" stroke="#9aa8c8" stroke-width="1.2" stroke-linecap="round" opacity=".8" vector-effect="non-scaling-stroke"/>` : ""));
   };
   const Eb = add(hp(-0.02, 0.045), P(k.earDx || 0, 0));

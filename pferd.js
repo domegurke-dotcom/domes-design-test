@@ -136,7 +136,7 @@ let _uid = 0;
 // ---------- Zeichnen ----------
 // Liefert { svg: "<g>…</g>", box: {minX,maxX,minY} } in Pferde-Einheiten (Widerrist = 100)
 function zeichnePferd(rasseId, farbId, opt = {}) {
-  const R = rasseById(rasseId), k = R.k, C = FARBEN[farbId] || FARBEN.schimmel;
+  const R = rasseById(rasseId), k = opt.k ? { ...R.k, ...opt.k } : R.k, C = FARBEN[farbId] || FARBEN.schimmel;
   const uid = "p" + (++_uid);
   const rnd = zufall(opt.seed || rasseId + farbId);
   const hengst = opt.geschlecht === "Hengst";
@@ -173,7 +173,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
 
   // --- Rumpf ---
   const rumpf = merke([
-    P(0.2 * L, -H), P(0.32 * L, top + 1.2), P(0.48 * L, top + 2.6), P(0.66 * L, top + 1.4),
+    P(0.2 * L, -H), P(0.32 * L, top + 1.2 + 0.6 * (k.sag || 0)), P(0.48 * L, top + 2.6 + (k.sag || 0)), P(0.66 * L, top + 1.4 + 0.7 * (k.sag || 0)),
     P(0.8 * L, croupY - (hq - 1) * 8), P(L - 0.02 * H, croupY + 2.5 + k.croup * 3),
     P(L + 0.045 * H * hq, top + 0.3 * D), P(L + 0.04 * H * hq, top + 0.6 * D), P(L - 0.01 * H, bottom - 0.05 * D),
     P(0.8 * L, bottom + 0.015 * H), P(0.71 * L, bottom - 0.1 * D), P(0.55 * L, bottom - 0.02 * D),
@@ -222,7 +222,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const pr = k.profile, hw = k.hw, jw = k.jw, m = k.muz;
   const nkK = 1 - 0.32 * (k.nk || 0); // bei kräftigem Hals geht die Ganasche weich in den Hals über
   const kopf = merke([
-    hp(-0.03, -0.03), hp(0.12, -0.065), hp(0.3, -0.06), hp(0.55, -0.045 - pr * 0.045), hp(0.8, -0.03 - pr * 0.02),
+    hp(-0.03, -0.03), hp(0.12, -0.065), hp(0.3, -0.06 - pr * 0.015), hp(0.55, -0.045 - pr * 0.05), hp(0.8, -0.03 - pr * 0.035),
     hp(0.94, -0.01), hp(1.0, 0.07 * m), hp(1.025, 0.17 * m), hp(0.99, 0.27 * m), hp(0.92, 0.3 * m), hp(0.86, 0.29 * m),
     hp(0.76, 0.32 * hw), hp(0.52, 0.38 * hw), hp(0.34, 0.48 * hw * jw * (0.85 + 0.15 * nkK)), hp(0.18, 0.52 * hw * jw * nkK),
     hp(0.06, 0.45 * hw * nkK), hp(-0.03, 0.22 * hw),
@@ -399,6 +399,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   alle.forEach(p => { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); });
 
   let defs = `<clipPath id="cl-${uid}">${haupt.map(t => `<path d="${t[0]}"/>`).join("")}</clipPath>`;
+  defs += `<clipPath id="ck-${uid}"><path d="${glatt(kopf)}"/></clipPath>`;
+  if (!liegt) defs += `<clipPath id="cb-${uid}"><path d="${glatt(vorderN)}"/><path d="${glatt(hinterN)}"/><path d="${glatt(vorderF)}"/><path d="${glatt(hinterF)}"/></clipPath>`;
   defs += `<clipPath id="cr-${uid}"><path d="${halsD}"/><path d="${glatt(rumpf)}"/></clipPath>`;
   defs += `<clipPath id="cf-${uid}">${fern.map(t => `<path d="${t[0]}"/>`).join("")}</clipPath>`;
   if (pts) {
@@ -450,6 +452,34 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   }
   if (C.stripe) g += `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${C.stripe}" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>`;
   if (C.muzzle) g += `<ellipse cx="${f(hp(0.93, 0.12).x)}" cy="${f(hp(0.93, 0.12).y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.93, 0.12).x)} ${f(hp(0.93, 0.12).y)})" fill="${C.muzzle}" opacity=".75"/>`;
+  // Abzeichen (weiß): Kopf und Beine
+  const abz = opt.abzeichen || {};
+  const WEISS = "#fbfaf6";
+  if (abz.kopf) {
+    const band = (s1, s2, b1, b2, rund) => {
+      const pts = [];
+      for (let i = 0; i <= 8; i++) { const s = s1 + (s2 - s1) * i / 8; pts.push(hp(s, b1 - 0.02)); }
+      for (let i = 8; i >= 0; i--) { const s = s1 + (s2 - s1) * i / 8, w = rund ? Math.sin(Math.PI * i / 8) : 1; pts.push(hp(s, b1 + (b2 - b1) * (0.35 + 0.65 * w))); }
+      return glatt(pts);
+    };
+    const fleck = (s, b, r) => { const c = hp(s, b); return `<ellipse cx="${f(c.x)}" cy="${f(c.y)}" rx="${f(r * hl)}" ry="${f(r * 0.75 * hl)}" transform="rotate(${f(-k.hAng)} ${f(c.x)} ${f(c.y)})" fill="${WEISS}"/>`; };
+    let m = "";
+    const t = abz.kopf;
+    if (t === "flocke") m += fleck(0.26, -0.045, 0.045);
+    if (t === "stern" || t === "sternschnippe") m += `<path d="${band(0.14, 0.36, -0.08, 0.05, true)}" fill="${WEISS}"/>`;
+    if (t === "schnippe" || t === "sternschnippe") m += `<path d="${band(0.84, 1.03, 0.0, 0.13, true)}" fill="${WEISS}"/>`;
+    if (t === "blesse") m += `<path d="${band(0.16, 1.04, -0.09, 0.03, false)}" fill="${WEISS}"/>`;
+    if (t === "laterne") m += `<path d="${band(0.12, 1.06, -0.1, 0.24, false)}" fill="${WEISS}"/>`;
+    if (t === "durchgehend") m += `<path d="${band(0.14, 1.06, -0.09, 0.08, false)}" fill="${WEISS}"/>`;
+    g += `<g clip-path="url(#ck-${uid})">${m}</g>`;
+  }
+  if (abz.beine && !liegt) {
+    const hoehe = { krone: 0.05, fessel: 0.12, halbefessel: 0.085, halbstrumpf: 0.33, strumpf: 0.55, hochweiss: 0.75 }[abz.beine] || 0;
+    const welle = [P(minX - 5, 2)];
+    for (let x = minX - 5; x <= maxX + 5; x += 3) welle.push(P(x, -hoehe * Lg - hh - 1 + Math.sin(x * 0.7) * 0.8));
+    welle.push(P(maxX + 5, 2));
+    g += `<g clip-path="url(#cb-${uid})"><path d="${eckig(welle)}" fill="${WEISS}"/></g>`;
+  }
   if (k.metallic) g += `<rect ${bx} fill="url(#mt-${uid})"/>`;
   // Weiche Schattierung (Airbrush-Look): Schattenformen werden weichgezeichnet
   g += `<rect ${bx} fill="url(#sh-${uid})" opacity=".8"/><g filter="url(#wb-${uid})">`;
@@ -636,3 +666,59 @@ function naturMaehne(rasseId) {
 }
 const MAEHNEN = [["steh", "Stehmähne"], ["kurz", "Kurze Mähne"], ["mittel", "Mittlere Mähne"], ["lang", "Lange Mähne"], ["extralang", "Extra lange Mähne"]];
 const MAEHNE_WACHSTUM = 5; // alle 5 Tage wächst die Mähne eine Stufe
+
+// =====================================================================
+//  Genetik: Abstammung (Mutter, Muttersvater, Vater, Vatersvater) und Rassenanteile
+// =====================================================================
+const FREMDBLUT = {
+  araber: "vollblut", friese: "andalusier", marwari: "araber", fjord: "haflinger", haflinger: "araber",
+  shetty: "isi", shire: "tinker", andalusier: "araber", lipizzaner: "andalusier", vollblut: "araber",
+  quarter: "vollblut", hannoveraner: "vollblut", isi: "fjord", tinker: "shire", tekke: "araber",
+};
+const NAMEN_STUTE = ["Bella", "Luna", "Fee", "Amira", "Freya", "Nala", "Zora", "Dana", "Aurora", "Wilma", "Rosalie", "Gräfin", "Melodie", "Primel", "Selma"];
+const NAMEN_HENGST = ["Donnerhall", "Sturmwind", "Apollo", "Merlin", "Farid", "Orkan", "Picasso", "Zeus", "Gandalf", "Samir", "Titan", "Odin", "Rubin", "Falko", "Kaiser"];
+function erzeugeAhnen(pferd) {
+  const r = zufall("ahnen-" + pferd.id);
+  const anteil = pferd.werte ? pferd.werte.reinrassig : 100;
+  const fremd = 100 - anteil;          // Fremdblut-Anteil des Pferdes
+  const fremdRasse = FREMDBLUT[pferd.rasse] || "vollblut";
+  const name = (liste) => liste[Math.floor(r() * liste.length)];
+  const vaterTraegt = r() < 0.5;       // welcher Elternteil bringt das Fremdblut mit
+  const elternMix = Math.max(0, 100 - 2 * fremd);
+  const vaterPct = vaterTraegt ? elternMix : 100, mutterPct = vaterTraegt ? 100 : elternMix;
+  // Großvater: wer selbst gemischt ist, hat entweder einen reinrassigen oder einen fremdrassigen Vater
+  const gv = (pct) => pct >= 100 ? { rasse: pferd.rasse, pct: 100 } : (pct >= 50 ? { rasse: pferd.rasse, pct: 100 } : { rasse: fremdRasse, pct: 100 });
+  const vv = gv(vaterPct), mv = gv(mutterPct);
+  return {
+    fremdRasse,
+    vater:   { name: name(NAMEN_HENGST), rasse: vaterPct > 0 ? pferd.rasse : fremdRasse, pct: vaterPct > 0 ? vaterPct : 100 },
+    vatersvater: { name: name(NAMEN_HENGST), rasse: vv.rasse, pct: vv.pct },
+    mutter:  { name: name(NAMEN_STUTE), rasse: mutterPct > 0 ? pferd.rasse : fremdRasse, pct: mutterPct > 0 ? mutterPct : 100 },
+    muttersvater: { name: name(NAMEN_HENGST), rasse: mv.rasse, pct: mv.pct },
+  };
+}
+
+const FARBBESCHREIBUNG = {
+  schimmel: "Weißes Fell – Schimmel werden dunkel geboren und hellen mit dem Alter auf.",
+  apfelschimmel: "Grauschimmel mit hellen, runden Flecken (Äpfeln) im Fell.",
+  rappe: "Schwarzes Fell, schwarze Mähne und schwarzer Schweif.",
+  brauner: "Braunes Fell mit schwarzer Mähne, schwarzem Schweif und dunklen Beinen.",
+  dunkelbrauner: "Sehr dunkles Braun, wirkt fast schwarz.",
+  fuchs: "Rotbraunes Fell, Mähne und Schweif gleichfarbig.",
+  hellfuchs: "Fuchs mit heller Flachsmähne – typisch Haflinger.",
+  dunkelfuchs: "Dunkler, schokoladiger Fuchs mit Flachsmähne.",
+  palomino: "Goldgelbes Fell mit weißer Mähne (Fuchs + ein Cream-Gen).",
+  isabell: "Cremefarben mit rosa Haut und blauen Augen (doppeltes Cream-Gen).",
+  buckskin: "Gelbbraunes Fell mit schwarzen Beinen und schwarzer Mähne.",
+  braunfalbe: "Falbfarben mit Aalstrich und dunklen Beinen.",
+  rotfalbe: "Falbe auf Fuchsbasis, rötlicher Aalstrich.",
+  mausfalbe: "Mausgraues Fell mit dunklem Kopf, Beinen und Aalstrich (Grullo).",
+  weissfalbe: "Sehr helle, fast weiße Falbfarbe.",
+  gelbfalbe: "Gelbliche Falbfarbe mit heller Mähne.",
+  windfarben: "Dunkles Fell mit heller, silbriger Mähne (Silver-Gen).",
+  rappschecke: "Schwarz-weiß gescheckt (Tobiano).",
+  braunschecke: "Braun-weiß gescheckt.",
+  fuchsschecke: "Fuchsfarben-weiß gescheckt.",
+  blueroan: "Schwarzes Fell mit eingestreuten weißen Haaren, wirkt bläulich.",
+  rotschimmel: "Rötliches Fell mit eingestreuten weißen Haaren (Roan).",
+};

@@ -191,6 +191,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Haltung je nach Gesundheit: normal | leicht | waagerecht | tief | liegend
   // Waagerechte = Buggelenk (Brustspitze) und Maul auf gleicher Höhe
   const haltung = opt.haltung || "normal", liegt = haltung === "liegend";
+  const eigenKopf = opt.eigenKopf && typeof KOPFTEILE !== "undefined" ? opt.eigenKopf : null;
   const ohrenHaengen = haltung === "tief" || liegt;
   const ohrenGeknickt = !ohrenHaengen && opt.ohren === "geknickt";
   const gl = w * 1.5;                       // Höhe der untergeschlagenen Beine beim Liegen
@@ -415,8 +416,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (liegt) merke([P(K.x - 1.2 * w, G), P(hx + 1.6 * w, G)]);
   const ptsFill = pts || body;
   const fern = liegt ? [] : [[glatt(vorderF), beinFillF], [glatt(hinterF), beinFillF], ...behF.map(b => [glatt(b), featherColF])];
-  const haupt = liegt ? [[halsD, body], [glatt(rumpf), body], [glatt(hinterLiegend), body], [glatt(vorderLiegend), body], [eckig(vorderLiegendUnten), ptsFill], [glatt(kopf), head]] : [[halsD, body], [glatt(rumpf), body], [glatt(vorderN), beinFill], [glatt(hinterN), beinFill],
-    ...behN.map(b => [glatt(b), featherCol]), [glatt(kopf), head]];
+  const haupt = liegt ? [[halsD, body], [glatt(rumpf), body], [glatt(hinterLiegend), body], [glatt(vorderLiegend), body], [eckig(vorderLiegendUnten), ptsFill], ...(eigenKopf ? [] : [[glatt(kopf), head]])] : [[halsD, body], [glatt(rumpf), body], [glatt(vorderN), beinFill], [glatt(hinterN), beinFill],
+    ...behN.map(b => [glatt(b), featherCol]), ...(eigenKopf ? [] : [[glatt(kopf), head]])];
   const umriss = (teile, farbe, sw = 3.6) =>
     `<g fill="${farbe}" stroke="${farbe}" stroke-width="${sw}" stroke-linejoin="round" vector-effect="non-scaling-stroke">` +
     teile.map(t => `<path d="${t[0]}" vector-effect="non-scaling-stroke"/>`).join("") + "</g>" +
@@ -459,7 +460,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const nick = `<animateTransform attributeName="transform" type="rotate" values="0 ${f(Pn.x)} ${f(Pn.y)};0 ${f(Pn.x)} ${f(Pn.y)};-3 ${f(Pn.x)} ${f(Pn.y)};0 ${f(Pn.x)} ${f(Pn.y)}" keyTimes="0;.8;.9;1" dur="6s" repeatCount="indefinite"/>`;
 
   // Fernes Ohr
-  g += ohr(add(Eb, P(4.5, 0.5)), dunkel(head), true);
+  if (!eigenKopf) g += ohr(add(Eb, P(4.5, 0.5)), dunkel(head), true);
 
   // Hauptkörper
   g += `<g>${umriss(haupt, linie)}`;
@@ -484,11 +485,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     g += `<path d="${eckig(wl)}" fill="#f7f5f1"/></g>`;
   }
   if (C.stripe) g += `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${C.stripe}" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>`;
-  if (C.muzzle) g += `<ellipse cx="${f(hp(0.93, 0.12).x)}" cy="${f(hp(0.93, 0.12).y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.93, 0.12).x)} ${f(hp(0.93, 0.12).y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>`;
+  if (C.muzzle && !eigenKopf) g += `<ellipse cx="${f(hp(0.93, 0.12).x)}" cy="${f(hp(0.93, 0.12).y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.93, 0.12).x)} ${f(hp(0.93, 0.12).y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>`;
   // Abzeichen (weiß): Kopf und Beine
   const abz = opt.abzeichen || {};
   const WEISS = "#fbfaf6";
-  if (abz.kopf) {
+  if (abz.kopf && !eigenKopf) {
     const band = (s1, s2, b1, b2, rund) => {
       const pts = [];
       for (let i = 0; i <= 8; i++) { const s = s1 + (s2 - s1) * i / 8; pts.push(hp(s, b1 - 0.02)); }
@@ -519,7 +520,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += `<rect ${bx} fill="url(#sh-${uid})" opacity=".8"/><g filter="url(#wb-${uid})">`;
   g += `<g clip-path="url(#cr-${uid})"><path d="${glatt([P(-0.12 * H, top + 0.75 * D), P(0.15 * L, bottom - 0.2 * D), P(0.4 * L, bottom - 0.18 * D), P(0.65 * L, bottom - 0.3 * D), P(0.8 * L, bottom - 0.2 * D), P(L + 0.1 * H, top + 0.7 * D), P(L + 0.1 * H, 5), P(-0.12 * H, 5)])}" fill="${schatten}" opacity=".55"/></g>`;
   g += `<path d="${glatt([T, add(mid(T, Cn), mul(nOut, -2)), Cn, add(Cn, P(8, 6)), add(mid(T, Cn), mul(nOut, 5)), add(T, mul(nOut, 4))])}" fill="${schatten}" opacity=".45"/>`;
-  g += `<path d="${glatt([hp(0.1, 0.42 * hw), hp(0.3, 0.47 * hw * jw), hp(0.55, 0.36 * hw), hp(0.8, 0.28 * hw), hp(0.6, 0.3 * hw), hp(0.35, 0.37 * hw * jw)])}" fill="${schatten}" opacity=".45"/>`;
+  if (!eigenKopf) g += `<path d="${glatt([hp(0.1, 0.42 * hw), hp(0.3, 0.47 * hw * jw), hp(0.55, 0.36 * hw), hp(0.8, 0.28 * hw), hp(0.6, 0.3 * hw), hp(0.35, 0.37 * hw * jw)])}" fill="${schatten}" opacity=".45"/>`;
   g += `<path d="${glatt([P(0.24 * L, -H + 3.5), P(0.42 * L, top + 5), P(0.62 * L, top + 4), P(0.8 * L, croupY + 3), P(0.8 * L, croupY + 6.5), P(0.62 * L, top + 7.5), P(0.42 * L, top + 8.5)], true)}" fill="${licht}" opacity=".7"/>`;
   g += `<ellipse cx="${f(0.1 * L)}" cy="${f(top + 0.3 * D)}" rx="${f(0.08 * L)}" ry="${f(0.2 * D)}" fill="${licht}" opacity=".35"/>`;
   g += `<ellipse cx="${f(0.84 * L)}" cy="${f(top + 0.28 * D)}" rx="${f(0.1 * L)}" ry="${f(0.22 * D)}" fill="${licht}" opacity=".35"/>`;
@@ -531,7 +532,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += inkFein(`M${f(0.62 * L)},${f(bottom - 0.3 * D)}Q${f(0.66 * L)},${f(bottom - 0.12 * D)} ${f(0.63 * L)},${f(bottom - 2)}`, 1.1, 'opacity=".45"');
   if (!liegt) g += inkFein(`M${f(fx - 0.5 * w)},${f(-0.47 * Lg)}l${f(0.6 * w)},0`, 1.1, 'opacity=".55"');
   if (!liegt) g += inkFein(`M${f(hx + 0.3 * w)},${f(-0.54 * Lg)}l${f(0.6 * w)},${f(-1)}`, 1.1, 'opacity=".55"');
-  g += inkFein(`M${f(hp(0.34, 0.2).x)},${f(hp(0.34, 0.2).y)}Q${f(hp(0.52, 0.4).x)},${f(hp(0.52, 0.4).y)} ${f(hp(0.3, 0.47 * hw * jw).x)},${f(hp(0.3, 0.47 * hw * jw).y)}`, 1.4, 'opacity=".75"');
+  if (!eigenKopf) g += inkFein(`M${f(hp(0.34, 0.2).x)},${f(hp(0.34, 0.2).y)}Q${f(hp(0.52, 0.4).x)},${f(hp(0.52, 0.4).y)} ${f(hp(0.3, 0.47 * hw * jw).x)},${f(hp(0.3, 0.47 * hw * jw).y)}`, 1.4, 'opacity=".75"');
   // Körpertyp-Details
   if (!liegt && typ === "duenn") {
     g += `<g clip-path="url(#cr-${uid})">`;   // Rippen nur innerhalb des Körpers
@@ -612,6 +613,20 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     inkFein(tailStr(0, 0.88), 1.1, 'opacity=".55"') + inkFein(tailStr(2.5 + tv, 0.7), 1, 'opacity=".45"') +
     `<path d="${tailStr(-1.5, 0.6)}" fill="none" stroke="${mix(tailCol, "#ffffff", .45)}" stroke-width="1.6" stroke-linecap="round" opacity=".7" vector-effect="non-scaling-stroke"/></g>`;
 
+  if (eigenKopf) {
+    // Handgezeichneter Kopf: Stirn- und Nasenpunkt der Zeichnung auf den Spielkopf abbilden
+    const K = KOPFTEILE, A = add(Pn, mul(nOut, 1.2)), B = hp(0.97, 0.0);
+    const ux = K.nase.x - K.genick.x, uy = K.nase.y - K.genick.y, vx = B.x - A.x, vy = B.y - A.y;
+    const den = ux * ux + uy * uy, a_ = (vx * ux + vy * uy) / den, b_ = (vy * ux - vx * uy) / den;
+    const e_ = A.x - (a_ * K.genick.x - b_ * K.genick.y), f_ = A.y - (b_ * K.genick.x + a_ * K.genick.y);
+    // nur den Kopf zeigen: alles hinter der Linie Genick–Kehle abschneiden
+    const nT = norm(sub(T, Pn)), weit = 4 * hl;
+    const zur = mul(u, -0.06 * hl), L1 = add(add(Pn, zur), mul(nT, -weit)), L2 = add(add(T, zur), mul(nT, weit));
+    const clip = [L1, L2, add(L2, mul(u, weit)), add(L1, mul(u, weit))];
+    const muschel = hexRgb(head).reduce((x, y) => x + y) / 3 < 70 ? mix(head, "#b59a9a", .5) : mix(head, "#2b2240", .35);
+    g += `<clipPath id="ek-${uid}"><path d="${eckig(clip)}"/></clipPath>`;
+    g += `<g clip-path="url(#ek-${uid})"><g transform="matrix(${[a_, b_, -b_, a_, e_, f_].map(x => x.toFixed(5)).join(" ")})">${kopfteileSVG(eigenKopf, "ek" + uid, { fell: head, muschel, ink: INK, dueneLinie: true })}</g></g>`;
+  }
   // Mähne
   if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
   if (mstil === "lang") {
@@ -628,6 +643,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
 
   // Kopfdetails
   g += `<g>`;
+  if (eigenKopf) {
+    // (handgezeichneter Kopf wurde schon vor der Mähne gezeichnet)
+  } else {
   if (fl >= 0.25) g += `<path d="${schopf ? glatt(schopf) : schopfBueschel()}" fill="${mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
   if (fl >= 0.25 && !schopf) g += schopfStraehnen();
   g += ohr(Eb, head);
@@ -653,6 +671,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += inkFein(`M${f(n1.x)},${f(n1.y)}Q${f(n2.x)},${f(n2.y)} ${f(n3.x)},${f(n3.y)}`, 1.8);
   g += inkFein(`M${f(maulA.x)},${f(maulA.y)}Q${f(mid(maulA, maulB).x)},${f(mid(maulA, maulB).y + 1)} ${f(maulB.x)},${f(maulB.y)}`, 1.5);
   g += inkFein(`M${f(hp(0.9, 0.3 * m).x)},${f(hp(0.9, 0.3 * m).y)}Q${f(hp(0.84, 0.27).x)},${f(hp(0.84, 0.27).y)} ${f(hp(0.78, 0.31).x)},${f(hp(0.78, 0.31).y)}`, 1.1, 'opacity=".5"');
+  }
   g += `</g>`;
 
   if (opt.debug) g += [T, kehle1, kehle2, Cn].map((q, i) => `<circle cx="${f(q.x)}" cy="${f(q.y)}" r="1.2" fill="${["red","lime","blue","orange"][i]}"/>`).join("");

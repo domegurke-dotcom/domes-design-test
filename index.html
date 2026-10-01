@@ -63,6 +63,9 @@
     background: #3b4a7a; color: #fff; cursor: pointer; white-space: nowrap; }
   .tagesleiste button:active { transform: scale(.97); }
   #krippe, #boden, #mist { cursor: pointer; }
+  #stall.tot > :not(#totText) { filter: grayscale(1) brightness(.85); }
+  #stall.tot #krippenHinweis, #stall.tot #mistHinweis { display: none !important; }
+  #stall.tot #krippe, #stall.tot #boden, #stall.tot #mist { cursor: default; }
   #mist { transition: opacity .6s; }
   #mist.weg { opacity: 0; pointer-events: none; }
   #mistHinweis { display: none; animation: hopsen 1.2s ease-in-out infinite; }
@@ -356,7 +359,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "28";
+  const SPIEL_VERSION = "29";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -364,7 +367,7 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=28"></script>
+<script src="pferd.js?v=29"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -412,7 +415,7 @@
   ];
   function zeigeStall() {
     const p = spiel.boxen[0].pferd;
-    const z = zeichnePferd(p.rasse, p.farbe, { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, haltung: haltungFuer(p) });
+    const z = zeichnePferd(p.rasse, p.farbe, { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, haltung: haltungFuer(p), ohren: (p.pflege && p.pflege.gesundheit >= 45 && p.pflege.gesundheit < 65) ? "geknickt" : "" });
     const s = p.stockmass * STALL.cmZuEinheit / 100;
     const cx = (z.box.minX + z.box.maxX) / 2;
     $("pferdPlatz").innerHTML = `<g transform="translate(${(STALL.mitte - cx * s).toFixed(1)},${STALL.boden}) scale(${s.toFixed(4)})">${z.svg}</g>`;
@@ -464,7 +467,7 @@
     }
     else if (aktenReiter === "gesundheit") {
       const g = pf.gesundheit;
-      const zustand = g >= 85 ? ["kerngesund", "ok"] : g >= 65 ? ["gesund", "ok"] : g >= 45 ? ["angeschlagen", "warn"] : ["krank", "bad"];
+      const zustand = box.tot ? ["verstorben", "bad"] : g >= 85 ? ["kerngesund", "ok"] : g >= 65 ? ["gesund", "ok"] : g >= 45 ? ["angeschlagen", "warn"] : ["krank", "bad"];
       const termin = (ico, name, tagZuletzt, intervall, info) => {
         const vor = spiel.tag - tagZuletzt, rest = intervall - vor;
         const st = rest < 0 ? ["überfällig", "bad"] : rest <= 7 ? ["bald fällig", "warn"] : ["ok", "ok"];
@@ -472,7 +475,7 @@
       };
       inhalt = `<div class="zeile-wert"><div class="kopf"><b>Gesundheitszustand</b><span>${g.toLocaleString("de-DE", { maximumFractionDigits: 1 })} % · ${zustand[0]}</span></div>
           <div class="balken"><i style="width:${g}%;${g < 45 ? "background:#c0503a" : ""}"></i></div>
-          <p class="text" style="margin:6px 0 0">${esc(p.name)} ${HALTUNG_TEXT[haltungFuer(p)]}.</p></div>
+          <p class="text" style="margin:6px 0 0">${box.tot ? `${esc(p.name)} ist verstorben. Über das Menü (☰) → Neustart oder „Pferd auswählen“ geht es weiter.` : `${esc(p.name)} ${HALTUNG_TEXT[haltungFuer(p)]}${g >= 45 && g < 65 ? " – die Ohren sind halb abgeknickt" : ""}.`}</p></div>
         <ul class="liste">
           <li><span class="ico">🌾</span><span class="txt">Fütterung heute<small>Heu in der Futterkrippe</small></span><span class="stat ${box.krippeVoll ? "ok" : "warn"}">${box.krippeVoll ? "gefüttert" : "noch nicht"}</span></li>
           <li><span class="ico">💧</span><span class="txt">Wasser<small>Selbsttränke</small></span><span class="stat ok">frisch</span></li>
@@ -684,6 +687,7 @@
       spiel.boxen[0].pferd.maehneSeit = spiel.tag;
       spiel.boxen[0].pferd.werte = erzeugeWerte(spiel.boxen[0].pferd);
       spiel.boxen[0].pferd.pflege = erzeugePflege(spiel.boxen[0].pferd);
+      spiel.boxen[0].tot = false;
       aktenReiter = "steckbrief";
       speichern(); zeigeStall(); zeigeTag(); schliessen();
     };
@@ -723,6 +727,13 @@
       <text x="49" y="126" text-anchor="middle" font-size="10" font-weight="700" fill="#2b1d12" font-family="system-ui, sans-serif">Heu füllen!</text></g>`);
   // Unordentlicher, mistiger Boxenboden (jeden Tag etwas anders verteilt)
   $("pferdPlatz").insertAdjacentHTML("beforebegin", `<g id="mist" filter="url(#hand)"></g>`);
+  $("stall").insertAdjacentHTML("beforeend", `<g id="totText" style="display:none" pointer-events="none">
+      <rect x="0" y="0" width="400" height="300" fill="#000" opacity=".35"/>
+      <g transform="rotate(-14 200 150)">
+        <rect x="-20" y="118" width="440" height="64" fill="#000" opacity=".55"/>
+        <text x="200" y="146" text-anchor="middle" font-size="19" font-weight="800" fill="#fff" font-family="system-ui, sans-serif">Dein Pferd ist leider</text>
+        <text x="200" y="170" text-anchor="middle" font-size="19" font-weight="800" fill="#fff" font-family="system-ui, sans-serif">heute Nacht verstorben!</text>
+      </g></g>`);
   $("krippenHinweis").insertAdjacentHTML("afterend", `<g id="mistHinweis" pointer-events="none">
       <rect x="268" y="222" width="70" height="20" rx="10" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4"/>
       <path d="M296,241.5 l5,8 l5,-8" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4" stroke-linejoin="round"/><path d="M295.5,241 h11" stroke="#fffaf0" stroke-width="2"/>
@@ -784,17 +795,19 @@
     $("stall").classList.toggle("leer", !box.krippeVoll);
     $("stall").classList.toggle("mistig", !!box.mistig);
     if (box.mistig) { zeichneMist(); $("mist").classList.remove("weg"); } else $("mist").classList.add("weg");
+    $("stall").classList.toggle("tot", !!box.tot);
+    $("totText").style.display = box.tot ? "" : "none";
     if (box.pferd.pflege) zeigeAkte();
   }
   $("krippe").addEventListener("click", () => {
     const box = spiel.boxen[0];
-    if (box.krippeVoll) return;
+    if (box.tot || box.krippeVoll) return;
     box.krippeVoll = true;
     speichern(); zeigeTag();
   });
   const ausmisten = () => {
     const box = spiel.boxen[0];
-    if (!box.mistig) return;
+    if (box.tot || !box.mistig) return;
     box.mistig = false; box.mistStufe = 0;
     speichern(); zeigeTag(); funkeln();
   };
@@ -802,6 +815,7 @@
   $("boden").addEventListener("click", ausmisten);
   $("tagAnzeige").onclick = () => {
     const box = spiel.boxen[0], offen = [];
+    if (box.tot) return;
     if (!box.krippeVoll) offen.push("die Krippe ist noch leer");
     if (box.mistig) offen.push("die Box ist noch nicht ausgemistet");
     $("nachtSymbol").textContent = "🌙"; $("nachtText").textContent = `Ende von Tag ${spiel.tag}`;
@@ -815,7 +829,10 @@
         if (b.mistig) g -= 9.5;          // Box nicht gemistet: −9,5 Punkte
         if (b.krippeVoll && !b.mistig) g += 4;
         if (spiel.tag - pf.huf > 56) g -= 2;
-        pf.gesundheit = Math.max(0, Math.min(100, Math.round(g * 10) / 10));
+        g = Math.round(g * 10) / 10;
+        // Rettungsnetz: wer über 1 % lag, fällt nur auf 1 %. Wer schon bei 1 % (oder weniger) war, stirbt bei 0.
+        if (g <= 0) { if (pf.gesundheit > 1) g = 1; else { g = 0; b.tot = true; } }
+        pf.gesundheit = Math.max(0, Math.min(100, g));
         b.mistStufe = b.mistig ? Math.min(6, (b.mistStufe || 1) + 1) : 1;
         b.krippeVoll = false; b.mistig = true;
         // Mähne wächst alle 5 Tage eine Stufe (bis „extra lang“)
@@ -857,7 +874,7 @@
       const p = b.pferd;
       delete p.maehne; p.maehneSeit = 1;
       p.pflege = erzeugePflege(p, 1);
-      b.krippeVoll = true; b.mistig = false; b.mistStufe = 0;
+      b.krippeVoll = true; b.mistig = false; b.mistStufe = 0; b.tot = false;
     });
     aktenReiter = "steckbrief"; aktenModus = "steckbrief"; scherModus = false; medModus = false; meldung = "";
     speichern(); zeigeStall(); zeigeTag();

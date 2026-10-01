@@ -187,16 +187,27 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Waagerechte = Buggelenk (Brustspitze) und Maul auf gleicher Höhe
   const haltung = opt.haltung || "normal", liegt = haltung === "liegend";
   const ohrenHaengen = haltung === "tief" || liegt;
+  const ohrenGeknickt = !ohrenHaengen && opt.ohren === "geknickt";
   const gl = w * 1.5;                       // Höhe der untergeschlagenen Beine beim Liegen
   const dLiegen = liegt ? Lg - gl : 0;      // so weit sinkt der Körper beim Liegen ab
-  const a0 = (k.nAng - 20) * Math.PI / 180;
+  let a0 = (k.nAng - 20) * Math.PI / 180;
   const N = k.neck * H * 1.1 * ({ waagerecht: 1.6, tief: 2.2, liegend: 2.2 }[haltung] ? 1 + Math.max(0, 0.56 - k.neck) * { waagerecht: 1.6, tief: 2.2, liegend: 2.2 }[haltung] : 1);
   const hl = k.head * H;
   const th0 = k.hAng * Math.PI / 180;
   const th = th0 + ({ normal: 0, leicht: 8, waagerecht: 12, tief: 16, liegend: 16 }[haltung] || 0) * Math.PI / 180;
   const maulY = (aa, tt) => Wn.y - N * Math.sin(aa) + (Math.sin(tt) * 1.01 + Math.cos(tt) * 0.14 * k.muz) * hl;
-  const bugY = top + 0.45 * D, normY = maulY(a0, th0);
-  const zielY = { leicht: normY + 0.62 * (bugY - normY), waagerecht: bugY, tief: bugY + 0.5 * (-hh - 3 - bugY), liegend: -dLiegen - 2.5 }[haltung];
+  const bugY = top + 0.45 * D;
+  // Gesunde Pferde tragen den Kopf deutlich über der Waagerechten (hebt v. a. kurze, tief angesetzte Hälse wie beim Shetty)
+  const normMinY = bugY - 0.22 * H;
+  if (maulY(a0, th0) > normMinY) {
+    const c0 = (Math.sin(th0) * 1.01 + Math.cos(th0) * 0.14 * k.muz) * hl;
+    a0 = Math.asin(Math.min(0.97, (Wn.y + c0 - normMinY) / N));
+  }
+  const normY = maulY(a0, th0);
+  // „leicht“: mindestens ~18° tiefer als normal (wichtig für Pferde mit kurzem, tief angesetztem Hals),
+  // das Maul bleibt aber sichtbar über der Waagerechten
+  const leichtY = Math.max(normY + 0.62 * (bugY - normY), Math.min(maulY(a0 - 18 * Math.PI / 180, th), bugY - 0.06 * H));
+  const zielY = { leicht: leichtY, waagerecht: bugY, tief: bugY + 0.5 * (-hh - 3 - bugY), liegend: -dLiegen - 2.5 }[haltung];
   let a = a0;
   if (zielY != null) {
     // Messpunkt: bei „waagerecht“ die Mitte des Nasenrückens, sonst das Maul
@@ -270,12 +281,13 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const ohr = (Eb, farbe, ohneMuschel = false) => {
     // Ohren hängen, wenn der Kopf unter der Waagerechten ist (tief / liegend)
     if (ohrenHaengen) ohneMuschel = true;
-    const e = ohrenHaengen ? norm(P(0.85, 0.3)) : norm(P(-0.22, -1)), q = P(-e.y, e.x), bw = 0.28 * el;
+    const e = ohrenHaengen ? norm(P(0.85, 0.3)) : ohrenGeknickt ? norm(P(0.6, -0.8)) : norm(P(-0.22, -1)), q = P(-e.y, e.x), bw = 0.28 * el;
     const b1 = add(Eb, mul(q, -bw)), b2 = add(Eb, mul(q, bw));
     let tip = add(Eb, mul(e, el));
     let c1 = add(add(b1, mul(e, el * 0.75)), mul(q, -bw * 0.2));
     let c2 = add(add(b2, mul(e, el * 0.55)), mul(q, bw * 0.5));
-    if (k.curl && !ohrenHaengen) { tip = add(tip, P(-0.42 * el, 0.08 * el)); c1 = add(c1, P(0.05 * el, -0.1 * el)); c2 = add(c2, P(0.25 * el, -0.35 * el)); }
+    if (ohrenGeknickt) { tip = add(add(Eb, mul(e, el * 0.6)), mul(norm(P(1, 0.15)), el * 0.42)); c1 = add(add(b1, mul(e, el * 0.62)), mul(q, -bw * 0.1)); c2 = add(add(b2, mul(e, el * 0.45)), mul(q, bw * 0.2)); }
+    if (k.curl && !ohrenHaengen && !ohrenGeknickt) { tip = add(tip, P(-0.42 * el, 0.08 * el)); c1 = add(c1, P(0.05 * el, -0.1 * el)); c2 = add(c2, P(0.25 * el, -0.35 * el)); }
     merke([tip]);
     const i1 = add(b1, mul(q, bw * 0.45)), i2 = add(b2, mul(q, -bw * 0.35)), itip = add(tip, mul(sub(Eb, tip), 0.25));
     return `<path d="M${f(b1.x)},${f(b1.y)}Q${f(c1.x)},${f(c1.y)} ${f(tip.x)},${f(tip.y)}Q${f(c2.x)},${f(c2.y)} ${f(b2.x)},${f(b2.y)}Z" fill="${farbe}" stroke="${INK}" stroke-width="1.9" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>` + (ohneMuschel ? "" :

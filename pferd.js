@@ -368,7 +368,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     merke(oben);
   }
   // Schopf
-  const fl = mstil === "fjord" ? Math.max(k.fore, 0.5) : laenge === "kurz" ? Math.min(k.fore, 0.4) : laenge === "extralang" ? Math.max(k.fore * 1.3, 0.9) : k.fore;
+  const naturS = k.fore < 0.25 ? null : k.fore < 0.45 ? "kurz" : k.fore < 0.75 ? "mittel" : k.fore < 1 ? "lang" : "extralang";
+  const schopfL = naturS ? (opt.schopf || naturS) : null;
+  const fl = !schopfL ? k.fore : mstil === "fjord" ? Math.max(k.fore, 0.5) : schopfL === naturS ? k.fore : ({ kurz: 0.35, mittel: 0.6, lang: 0.85, extralang: 1.15 })[schopfL];
   const schopf = mstil === "fjord"
     ? [hp(-0.04, -0.04), hp(-0.02, -0.16), hp(0.06, -0.12), hp(0.1, -0.02), hp(0.05, 0.05)]
     : null;
@@ -653,7 +655,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += `<g>`;
   if (eigenKopf) {
     // (handgezeichneter Kopf wurde schon vor der Mähne gezeichnet) – hier kommt Domes Schopf obendrauf
-    const sv = k.fore < 0.25 ? null : ({ steh: "kurz", kurz: "kurz", mittel: "mittel", lang: "lang", extralang: "extralang" })[laenge];
+    const sv = schopfL;
     if (sv && ekMatrix) g += `<g transform="matrix(${ekMatrix})">${schopfSVG(sv, mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane, INK, true)}</g>`;
   } else {
   if (fl >= 0.25) g += `<path d="${schopf ? glatt(schopf) : schopfBueschel()}" fill="${mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
@@ -795,6 +797,12 @@ function naturMaehne(rasseId) {
   return k.maneLen >= 0.2 ? "lang" : "mittel";
 }
 const MAEHNEN = [["steh", "Stehmähne"], ["kurz", "Kurze Mähne"], ["mittel", "Mittlere Mähne"], ["lang", "Lange Mähne"], ["extralang", "Extra lange Mähne"]];
+// Schopf: eigene Länge, wächst wie die Mähne
+const SCHOEPFE = [["kurz", "Kurzer Schopf"], ["mittel", "Mittlerer Schopf"], ["lang", "Langer Schopf"], ["extralang", "Extra langer Schopf"]];
+function naturSchopf(rasseId) {
+  const f = rasseById(rasseId).k.fore;
+  return f < 0.25 ? null : f < 0.45 ? "kurz" : f < 0.75 ? "mittel" : f < 1 ? "lang" : "extralang";
+}
 const MAEHNE_WACHSTUM = 5; // alle 5 Tage wächst die Mähne eine Stufe
 
 // =====================================================================

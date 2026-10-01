@@ -388,7 +388,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "50";
+  const SPIEL_VERSION = "51";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -396,8 +396,8 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=50"></script>
-<script src="kopfteile.js?v=50"></script>
+<script src="pferd.js?v=51"></script>
+<script src="kopfteile.js?v=51"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -417,7 +417,7 @@
   if (!spiel.ausruestung) spiel.ausruestung = { halfter: true, strick: true, putzkiste: true, sattel: false, trense: false, schabracke: false, decke: false, gamaschen: false, schere: true, medizin: true };
   if (spiel.ausruestung.medizin == null) spiel.ausruestung.medizin = true;
   if (spiel.ausruestung.schere == null) spiel.ausruestung.schere = true;
-  spiel.boxen.forEach(b => { if (b.pferd && !b.pferd.werte) b.pferd.werte = erzeugeWerte(b.pferd); if (b.pferd && !b.pferd.pflege) b.pferd.pflege = erzeugePflege(b.pferd); if (b.pferd && b.pferd.maehneSeit == null) b.pferd.maehneSeit = spiel.tag || 1; if (b.krippeVoll == null) b.krippeVoll = false; if (b.mistig == null) b.mistig = true; });
+  spiel.boxen.forEach(b => { if (b.pferd && !b.pferd.werte) b.pferd.werte = erzeugeWerte(b.pferd); if (b.pferd && !b.pferd.pflege) b.pferd.pflege = erzeugePflege(b.pferd); if (b.pferd && b.pferd.maehneSeit == null) b.pferd.maehneSeit = spiel.tag || 1; if (b.pferd && b.pferd.schopfSeit == null) b.pferd.schopfSeit = b.pferd.maehneSeit; if (b.krippeVoll == null) b.krippeVoll = false; if (b.mistig == null) b.mistig = true; });
   if (!spiel.tag) spiel.tag = 1;
   const speichern = () => { try { localStorage.setItem(SPEICHER, JSON.stringify(spiel)); } catch (e) {} };
 
@@ -445,7 +445,7 @@
   ];
   function zeigeStall() {
     const p = spiel.boxen[0].pferd;
-    const z = zeichnePferd(p.rasse, p.farbe, { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, typ: p.typ, eigenKopf: p.nase && p.nase !== "spiel" ? p.nase : undefined, haltung: haltungFuer(p), ohren: (p.pflege && p.pflege.gesundheit >= 45 && p.pflege.gesundheit < 65) ? "geknickt" : "" });
+    const z = zeichnePferd(p.rasse, p.farbe, { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, schopf: p.schopf, typ: p.typ, eigenKopf: p.nase && p.nase !== "spiel" ? p.nase : undefined, haltung: haltungFuer(p), ohren: (p.pflege && p.pflege.gesundheit >= 45 && p.pflege.gesundheit < 65) ? "geknickt" : "" });
     const s = p.stockmass * STALL.cmZuEinheit / 100;
     const cx = (z.box.minX + z.box.maxX) / 2;
     $("pferdPlatz").innerHTML = `<g transform="translate(${(STALL.mitte - cx * s).toFixed(1)},${STALL.boden}) scale(${s.toFixed(4)})">${z.svg}</g>`;
@@ -466,6 +466,7 @@
           <dt>Rasse</dt><dd>${r.name} · ${String(w.reinrassig).replace(".", ",")} % reinrassig</dd>
           <dt>Farbe</dt><dd>${FARBEN[p.farbe].name}</dd>
           <dt>Mähne</dt><dd>${MAEHNEN.find(m => m[0] === (p.maehne || naturMaehne(p.rasse)))[1]}</dd>
+          <dt>Schopf</dt><dd>${naturSchopf(p.rasse) ? SCHOEPFE.find(m => m[0] === (p.schopf || naturSchopf(p.rasse)))[1] : "kein Schopf"}</dd>
           <dt>Geschlecht</dt><dd>${p.geschlecht}</dd>
           <dt>Alter</dt><dd>${p.alter} ${p.alter === 1 ? "Jahr" : "Jahre"}</dd>
           <dt>Stockmaß</dt><dd>${p.stockmass} cm</dd>
@@ -539,7 +540,7 @@
         ["sattel", "🏇", "Sattel", "Kammerweite muss angepasst werden", "anpassen"], ["trense", "🔗", "Trense", `Größe ${gr}`, grK],
         ["schabracke", "🟫", "Scha\u00adbracke", sm < 125 ? "Pony" : "Warmblut / Vollblut", sm < 125 ? "Pony" : "WB/VB"],
         ["decke", "🧣", "Decke", `Abschwitzdecke, Deckengröße ${decke} cm`, `${decke} cm`], ["gamaschen", "🦵", "Gama\u00adschen", `Größe ${gr}`, grK],
-        ["schere", "✂️", "Schere", "zum Mähne schneiden – antippen", "Mähne schneiden"],
+        ["schere", "✂️", "Schere", "zum Mähne und Schopf schneiden – antippen", "Mähne & Schopf"],
         ["medizin", "💊", "Medizin", "Stallapotheke – antippen", "Apotheke"],
       ];
       const hat = teile.filter(t => spiel.ausruestung[t[0]]).length;
@@ -556,13 +557,27 @@
         const jetzt = p.maehne || naturMaehne(p.rasse), ji = MAEHNEN.findIndex(m => m[0] === jetzt);
         inhalt = `<p class="text" style="margin:0 0 4px">✂️ <b>Mähne schneiden</b> · aktuell: ${MAEHNEN[ji][1]}. ${ji === 0 ? "Kürzer geht es nicht mehr." : "Wähle die neue Länge:"}<br><small>${ji === MAEHNEN.length - 1 ? "Die Mähne hat die maximale Länge erreicht." : `Wächst in ${Math.max(1, MAEHNE_WACHSTUM - (spiel.tag - (p.maehneSeit || spiel.tag)))} ${Math.max(1, MAEHNE_WACHSTUM - (spiel.tag - (p.maehneSeit || spiel.tag))) === 1 ? "Tag" : "Tagen"} eine Stufe länger.`}</small></p>
           <div class="kacheln">${MAEHNEN.map(([id, name], i) => {
-            const z = zeichnePferd(p.rasse, p.farbe, { seed: p.id, geschlecht: p.geschlecht, maehne: id });
+            const z = zeichnePferd(p.rasse, p.farbe, { seed: p.id, geschlecht: p.geschlecht, maehne: id, schopf: p.schopf, eigenKopf: p.nase && p.nase !== "spiel" ? p.nase : undefined, statisch: 1 });
             const status = i === ji ? "aktuell" : i < ji ? "schneiden" : "zu lang";
             const moeglich = i < ji;
             return `<button class="kachel ${moeglich ? "klickbar" : i === ji ? "aktuell" : "fehlt"}" data-schnitt="${moeglich ? id : ""}" ${moeglich ? "" : "disabled"}>
               <svg class="mini" viewBox="${(z.box.minX - 6).toFixed(1)} ${(z.box.minY - 6).toFixed(1)} 110 92"><g>${z.svg}</g></svg>
               <b>${({ steh: "Steh\u00admähne", kurz: "Kurz", mittel: "Mittel", lang: "Lang", extralang: "Extra lang" })[id]}</b><small>${status}</small></button>`;
           }).join("")}</div>
+          ${(() => {
+            const ns = naturSchopf(p.rasse);
+            if (!ns) return `<p class="text" style="margin:8px 0 4px">✂️ <b>Schopf</b> · ${esc(p.name)} hat von Natur aus keinen Schopf.</p>`;
+            const sj = SCHOEPFE.findIndex(m => m[0] === (p.schopf || ns)), rest = Math.max(1, MAEHNE_WACHSTUM - (spiel.tag - (p.schopfSeit || spiel.tag)));
+            const pk = zeichnePferd(p.rasse, p.farbe, { punkte: 1, seed: p.id }), vb = [pk.nase.x - 4, pk.genick.y - 16, 50, 52].map(x => x.toFixed(1)).join(" ");
+            return `<p class="text" style="margin:8px 0 4px">✂️ <b>Schopf schneiden</b> · aktuell: ${SCHOEPFE[sj][1]}. ${sj === 0 ? "Kürzer geht es nicht mehr." : "Wähle die neue Länge:"}<br><small>${sj === SCHOEPFE.length - 1 ? "Der Schopf hat die maximale Länge erreicht." : `Wächst in ${rest} ${rest === 1 ? "Tag" : "Tagen"} eine Stufe länger.`}</small></p>
+            <div class="kacheln">${SCHOEPFE.map(([id], i) => {
+              const z = zeichnePferd(p.rasse, p.farbe, { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, schopf: id, eigenKopf: p.nase && p.nase !== "spiel" ? p.nase : undefined, statisch: 1 });
+              const moeglich = i < sj;
+              return `<button class="kachel ${moeglich ? "klickbar" : i === sj ? "aktuell" : "fehlt"}" data-schopf="${moeglich ? id : ""}" ${moeglich ? "" : "disabled"}>
+                <svg class="mini" viewBox="${vb}" style="background:#fff">${z.svg.replace(/<animate[^>]*\/>/g, "")}</svg>
+                <b>${({ kurz: "Kurz", mittel: "Mittel", lang: "Lang", extralang: "Extra lang" })[id]}</b><small>${i === sj ? "aktuell" : moeglich ? "schneiden" : "zu lang"}</small></button>`;
+            }).join("")}</div>`;
+          })()}
           <button class="zurueck" id="scherZurueck">‹ Zurück zur Ausrüstung</button>`;
       } else
       inhalt = (meldung ? `<div class="klasse">${meldung}</div>` : "") + `<p class="text" style="margin:0 0 4px">${hat} von ${teile.length} Ausrüstungsteilen vorhanden · Größen passend für ${sm} cm Stockmaß</p>
@@ -591,7 +606,7 @@
       const jetzt = p.typ || "normal";
       inhalt = `<p class="text" style="margin:0 0 4px">🧪 <b>Test: Körpertyp</b> · antippen zum Umschalten</p>
         <div class="kacheln">${typen.map(([id, n, info]) => {
-          const z = zeichnePferd(p.rasse, p.farbe, { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, typ: id });
+          const z = zeichnePferd(p.rasse, p.farbe, { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, schopf: p.schopf, typ: id });
           const svg = z.svg.replace(/<animate[^>]*\/>/g, "");
           return `<button class="kachel ${id === jetzt ? "aktuell" : "klickbar"}" data-typ="${id}">
             <svg class="mini" viewBox="${(z.box.minX - 3).toFixed(1)} ${(z.box.minY - 3).toFixed(1)} ${(z.box.maxX - z.box.minX + 6).toFixed(1)} ${(-z.box.minY + 6).toFixed(1)}">${svg}</svg>
@@ -602,7 +617,7 @@
             <svg class="mini" viewBox="15 15 120 125" style="background:#fff">${kopfteileSVG(id, undefined, { fell: FARBEN[p.farbe].head || FARBEN[p.farbe].body })}</svg>
             <b>${n.name}</b><small>${id === p.nase ? "aktuell" : "auswählen"}</small></button>`).join("")}
           <button class="kachel ${!p.nase || p.nase === "spiel" ? "aktuell" : "klickbar"}" data-nase="spiel">
-            <svg class="mini" viewBox="${(() => { const z = zeichnePferd(p.rasse, p.farbe, { punkte: 1, seed: p.id }); return [z.nase.x - 4, z.genick.y - 16, 50, 52].map(x => x.toFixed(1)).join(" "); })()}" style="background:#fff">${zeichnePferd(p.rasse, p.farbe, { seed: p.id, maehne: p.maehne }).svg.replace(/<animate[^>]*\/>/g, "")}</svg>
+            <svg class="mini" viewBox="${(() => { const z = zeichnePferd(p.rasse, p.farbe, { punkte: 1, seed: p.id }); return [z.nase.x - 4, z.genick.y - 16, 50, 52].map(x => x.toFixed(1)).join(" "); })()}" style="background:#fff">${zeichnePferd(p.rasse, p.farbe, { seed: p.id, maehne: p.maehne, schopf: p.schopf }).svg.replace(/<animate[^>]*\/>/g, "")}</svg>
             <b>Spielkopf</b><small>${!p.nase || p.nase === "spiel" ? "aktuell" : "bisheriger"}</small></button></div>`;
     }
     $("info").innerHTML = `
@@ -648,6 +663,11 @@
     $("info").querySelectorAll("[data-schnitt]").forEach(b => { if (b.dataset.schnitt) b.onclick = () => {
       p.maehne = b.dataset.schnitt; p.maehneSeit = spiel.tag; scherModus = false;
       meldung = `✂️ Die Mähne von ${esc(p.name)} ist jetzt: <b>${MAEHNEN.find(m => m[0] === p.maehne)[1]}</b>`;
+      speichern(); zeigeStall();
+    }; });
+    $("info").querySelectorAll("[data-schopf]").forEach(b => { if (b.dataset.schopf) b.onclick = () => {
+      p.schopf = b.dataset.schopf; p.schopfSeit = spiel.tag; scherModus = false;
+      meldung = `✂️ Der Schopf von ${esc(p.name)} ist jetzt: <b>${SCHOEPFE.find(m => m[0] === p.schopf)[1]}</b>`;
       speichern(); zeigeStall();
     }; });
     $("info").querySelectorAll(".modus button").forEach(b => b.onclick = () => {
@@ -754,6 +774,7 @@
       spiel.boxen[0].pferd = { ...wahl };
       delete spiel.boxen[0].pferd.maehne;
       spiel.boxen[0].pferd.maehneSeit = spiel.tag;
+      delete spiel.boxen[0].pferd.schopf; spiel.boxen[0].pferd.schopfSeit = spiel.tag;
       spiel.boxen[0].pferd.werte = erzeugeWerte(spiel.boxen[0].pferd);
       spiel.boxen[0].pferd.pflege = erzeugePflege(spiel.boxen[0].pferd);
       spiel.boxen[0].tot = false;
@@ -911,6 +932,13 @@
           if (idx < MAEHNEN.length - 1) pf2.maehne = MAEHNEN[idx + 1][0];
           pf2.maehneSeit = spiel.tag;
         }
+        // Schopf wächst genauso (Rassen ohne Schopf bleiben ohne)
+        const ns2 = naturSchopf(pf2.rasse);
+        if (ns2 && spiel.tag - (pf2.schopfSeit || spiel.tag) >= MAEHNE_WACHSTUM) {
+          const si = SCHOEPFE.findIndex(m => m[0] === (pf2.schopf || ns2));
+          if (si < SCHOEPFE.length - 1) pf2.schopf = SCHOEPFE[si + 1][0];
+          pf2.schopfSeit = spiel.tag;
+        }
       });
       speichern(); zeigeStall(); zeigeTag();
       $("nachtSymbol").textContent = "☀️"; $("nachtText").textContent = `Tag ${spiel.tag} beginnt`;
@@ -1012,7 +1040,7 @@
     spiel.tag = 1;
     spiel.boxen.forEach(b => {
       const p = b.pferd;
-      delete p.maehne; p.maehneSeit = 1;
+      delete p.maehne; p.maehneSeit = 1; delete p.schopf; p.schopfSeit = 1;
       p.pflege = erzeugePflege(p, 1);
       b.krippeVoll = true; b.mistig = false; b.mistStufe = 0; b.tot = false;
     });

@@ -656,7 +656,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       (C.muzzle ? `<ellipse cx="${f(mz.x)}" cy="${f(mz.y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(mz.x)} ${f(mz.y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>` : "") +
       `<g filter="url(#wb-${uid})"><path d="${glatt([hp(0.1, 0.42 * hw), hp(0.3, 0.47 * hw * jw), hp(0.55, 0.36 * hw), hp(0.8, 0.28 * hw), hp(0.6, 0.3 * hw), hp(0.35, 0.37 * hw * jw)])}" fill="${schatten}" opacity=".45"/>` +
       `<ellipse cx="${f(hp(0.3, -0.1).x)}" cy="${f(hp(0.3, -0.1).y)}" rx="${f(0.22 * hl)}" ry="${f(0.07 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.3, -0.1).x)} ${f(hp(0.3, -0.1).y)})" fill="${licht}" opacity=".45"/></g></g>`;
-    g += `<g transform="matrix(${ekMatrix})">${kopfteileSVG(eigenKopf, "ek" + uid, { fell: head, muschel, ink: INK, dueneLinie: true, statisch: opt.statisch, schattierung: schatt })}</g>`;
+    g += `<g transform="matrix(${ekMatrix})">${kopfteileSVG(eigenKopf, "ek" + uid, { fell: head, muschel, ink: INK, statisch: opt.statisch, schattierung: schatt })}</g>`;
   }
   // Mähne
   if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
@@ -677,7 +677,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (eigenKopf) {
     // (handgezeichneter Kopf wurde schon vor der Mähne gezeichnet) – hier kommt Domes Schopf obendrauf
     const sv = schopfL;
-    if (sv && ekMatrix) g += `<g transform="matrix(${ekMatrix})">${schopfSVG(sv, mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane, INK, true)}</g>`;
+    if (sv && ekMatrix) g += `<g transform="matrix(${ekMatrix})">${schopfSVG(sv, mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane, INK, false)}</g>`;
   } else {
   if (fl >= 0.25) g += `<path d="${schopf ? glatt(schopf) : schopfBueschel()}" fill="${mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
   if (fl >= 0.25 && !schopf) g += schopfStraehnen();

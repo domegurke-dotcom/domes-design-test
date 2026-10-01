@@ -397,7 +397,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "55";
+  const SPIEL_VERSION = "56";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -405,8 +405,8 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=55"></script>
-<script src="kopfteile.js?v=55"></script>
+<script src="pferd.js?v=56"></script>
+<script src="kopfteile.js?v=56"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -430,7 +430,7 @@
   if (!spiel.tag) spiel.tag = 1;
   const speichern = () => { try { localStorage.setItem(SPEICHER, JSON.stringify(spiel)); } catch (e) {} };
 
-  let aktenReiter = "steckbrief", aktenModus = "steckbrief", scherModus = false, medModus = false, meldung = "";
+  let aktenReiter = "steckbrief", aktenModus = "steckbrief", scherModus = false, medModus = false, zaumModus = false, meldung = "";
   const fmt = n => n.toLocaleString("de-DE") + " €";
   const $ = id => document.getElementById(id);
 
@@ -474,8 +474,6 @@
           <dt>Name</dt><dd>${esc(p.name)}</dd>
           <dt>Rasse</dt><dd>${r.name} · ${String(w.reinrassig).replace(".", ",")} % reinrassig</dd>
           <dt>Farbe</dt><dd>${FARBEN[p.farbe].name}</dd>
-          <dt>Mähne</dt><dd>${MAEHNEN.find(m => m[0] === (p.maehne || naturMaehne(p.rasse)))[1]}</dd>
-          <dt>Schopf</dt><dd>${naturSchopf(p.rasse) ? SCHOEPFE.find(m => m[0] === (p.schopf || naturSchopf(p.rasse)))[1] : "kein Schopf"}</dd>
           <dt>Geschlecht</dt><dd>${p.geschlecht}</dd>
           <dt>Alter</dt><dd>${p.alter} ${p.alter === 1 ? "Jahr" : "Jahre"}</dd>
           <dt>Stockmaß</dt><dd>${p.stockmass} cm</dd>
@@ -544,16 +542,25 @@
       const decke = Math.max(75, Math.round((sm - 25) / 5) * 5);
       const grK = sm < 100 ? "Shetty" : sm < 125 ? "Pony" : sm < 148 ? "Cob" : sm < 168 ? "Full" : "XF";
       const teile = [
-        ["halfter", "🐴", "Halfter", `Größe ${gr}`, grK], ["strick", "🪢", "Führ\u00adstrick", "mit Panikhaken", "Panikhaken"],
-        ["putzkiste", "🧰", "Putz\u00adkiste", "Striegel, Kardätsche, Hufkratzer, Mähnenkamm", "komplett"],
+        ["halfter", "🐴", "Halfter", `Größe ${gr}`, grK],
         ["sattel", "🏇", "Sattel", "Kammerweite muss angepasst werden", "anpassen"], ["trense", "🔗", "Trense", `Größe ${gr}`, grK],
         ["schabracke", "🟫", "Scha\u00adbracke", sm < 125 ? "Pony" : "Warmblut / Vollblut", sm < 125 ? "Pony" : "WB/VB"],
         ["decke", "🧣", "Decke", `Abschwitzdecke, Deckengröße ${decke} cm`, `${decke} cm`], ["gamaschen", "🦵", "Gama\u00adschen", `Größe ${gr}`, grK],
+      ];
+      const zaumHat = teile.filter(t => spiel.ausruestung[t[0]]).length, zaumAnz = teile.length;
+      const haupt = [
+        ["zaumzeug", "🏇", "Zaum\u00adzeug", "Halfter, Sattel, Trense, Schabracke, Decke, Gamaschen – antippen", `${zaumHat} von ${zaumAnz}`],
+        ["putzkiste", "🧰", "Putz\u00adkiste", "Striegel, Kardätsche, Hufkratzer, Mähnenkamm", "komplett"],
         ["schere", "✂️", "Schere", "zum Mähne und Schopf schneiden – antippen", "Mähne & Schopf"],
         ["medizin", "💊", "Medizin", "Stallapotheke – antippen", "Apotheke"],
       ];
-      const hat = teile.filter(t => spiel.ausruestung[t[0]]).length;
-      if (medModus) {
+      const kachel = ([k, ico, n, info, kurz]) => { const da = k === "zaumzeug" || spiel.ausruestung[k], klick = da && (k === "schere" || k === "medizin" || k === "zaumzeug");
+        return `<div class="kachel ${da ? "" : "fehlt"} ${klick ? "klickbar" : ""}" ${klick ? `id="${({ schere: "scherKachel", medizin: "medKachel", zaumzeug: "zaumKachel" })[k]}" role="button" tabindex="0"` : ""} title="${n.replace(/\u00ad/g, "")}: ${info}${da ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></div>`; };
+      if (zaumModus) {
+        inhalt = `<p class="text" style="margin:0 0 4px">🏇 <b>Zaumzeug</b> · ${zaumHat} von ${zaumAnz} Teilen vorhanden<br><small>Größen passend für ${sm} cm Stockmaß</small></p>
+          <div class="kacheln">${teile.map(kachel).join("")}</div>
+          <button class="zurueck" id="zaumZurueck">‹ Zurück zur Ausrüstung</button>`;
+      } else if (medModus) {
         const heute = (p.medizin && p.medizin.tag === spiel.tag) ? p.medizin.gegeben : [];
         inhalt = (meldung ? `<div class="klasse">${meldung}</div>` : "") + `<p class="text" style="margin:0 0 4px">💊 <b>Stallapotheke</b> · Gesundheit: ${p.pflege.gesundheit.toLocaleString("de-DE", { maximumFractionDigits: 1 })} %<br><small>Jedes Mittel kann einmal am Tag gegeben werden.</small></p>
           <div class="kacheln">${MEDIZIN.map(m => {
@@ -589,8 +596,7 @@
           })()}
           <button class="zurueck" id="scherZurueck">‹ Zurück zur Ausrüstung</button>`;
       } else
-      inhalt = (meldung ? `<div class="klasse">${meldung}</div>` : "") + `<p class="text" style="margin:0 0 4px">${hat} von ${teile.length} Ausrüstungsteilen vorhanden · Größen passend für ${sm} cm Stockmaß</p>
-        <div class="kacheln">${teile.map(([k, ico, n, info, kurz]) => `<div class="kachel ${spiel.ausruestung[k] ? "" : "fehlt"} ${(k === "schere" || k === "medizin") && spiel.ausruestung[k] ? "klickbar" : ""}" ${k === "schere" ? 'id="scherKachel" role="button" tabindex="0"' : k === "medizin" ? 'id="medKachel" role="button" tabindex="0"' : ""} title="${n.replace(/\u00ad/g, "")}: ${info}${spiel.ausruestung[k] ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></div>`).join("")}</div>`;
+      inhalt = (meldung ? `<div class="klasse">${meldung}</div>` : "") + `<div class="kacheln">${haupt.map(kachel).join("")}</div>`;
     } else if (aktenReiter === "platz") {
       const wh = p.stockmass / 100, minF = Math.pow(2 * wh, 2), passt = 12.25 >= minF;
       const zahl = n => n.toFixed(1).replace(".", ",");
@@ -639,7 +645,7 @@
         <div class="akte-kopf"><h2 id="pferdName" role="button" tabindex="0" title="Namen ändern">${esc(p.name)} <span class="stift">✏️</span></h2></div>
         ${inhalt}
       </div>`;
-    $("info").querySelectorAll(".reiter button").forEach(b => b.onclick = () => { aktenReiter = b.dataset.r; scherModus = false; medModus = false; meldung = ""; zeigeAkte(); });
+    $("info").querySelectorAll(".reiter button").forEach(b => b.onclick = () => { aktenReiter = b.dataset.r; scherModus = false; medModus = false; zaumModus = false; meldung = ""; zeigeAkte(); });
     const pn = $("pferdName");
     if (pn) pn.onclick = () => {
       pn.outerHTML = `<input id="nameEdit" maxlength="24" value="${esc(p.name)}" aria-label="Neuer Name">`;
@@ -654,6 +660,8 @@
     $("info").querySelectorAll("[data-nase]").forEach(b => b.onclick = () => { p.nase = b.dataset.nase; speichern(); zeigeStall(); });
     $("info").querySelectorAll("[data-typ]").forEach(b => b.onclick = () => { p.typ = b.dataset.typ; speichern(); zeigeStall(); });
     const sk = $("scherKachel"); if (sk) sk.onclick = () => { scherModus = true; meldung = ""; zeigeAkte(); };
+    const zk = $("zaumKachel"); if (zk) zk.onclick = () => { zaumModus = true; meldung = ""; zeigeAkte(); };
+    const zz = $("zaumZurueck"); if (zz) zz.onclick = () => { zaumModus = false; zeigeAkte(); };
     const mk = $("medKachel"); if (mk) mk.onclick = () => { medModus = true; meldung = ""; zeigeAkte(); };
     const mz = $("medZurueck"); if (mz) mz.onclick = () => { medModus = false; meldung = ""; zeigeAkte(); };
     $("info").querySelectorAll("[data-med]").forEach(b => b.onclick = () => {
@@ -1061,7 +1069,7 @@
       p.pflege = erzeugePflege(p, 1);
       b.krippeVoll = true; b.mistig = false; b.mistStufe = 0; b.tot = false;
     });
-    aktenReiter = "steckbrief"; aktenModus = "steckbrief"; scherModus = false; medModus = false; meldung = "";
+    aktenReiter = "steckbrief"; aktenModus = "steckbrief"; scherModus = false; medModus = false; zaumModus = false; meldung = "";
     speichern(); zeigeStall(); zeigeTag();
   };
 

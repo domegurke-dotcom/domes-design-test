@@ -298,14 +298,14 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       // Marwari: schmale Mondsichel entlang eines Bogens; die Spitze dreht nach vorn/innen
       const phiMax = 1.5 * sStark, R = el * (k.curl ? 0.78 : 1.02 / phiMax), vorn = mul(q, -1), O = add(Eb, mul(vorn, R));
       const mitte = t => { const phi = t * phiMax; return add(O, add(mul(vorn, -R * Math.cos(phi)), mul(e, R * Math.sin(phi)))); };
-      const breite = t => k.curl ? bw * Math.pow(1 - t, 0.8) + 0.15 : bw * Math.pow(1 - t * t, 0.9) * (1 - 0.55 * t) + 0.2;
+      const breite = t => k.curl ? bw * Math.pow(1 - t, 0.8) + 0.15 : bw * Math.pow(1 - t * t, 0.9) * (1 - 0.55 * t) + 0.2 + 0.4 * Math.pow(t, 2.5); // abgerundete Spitze
       const aussen = [], innen = [];
       for (let i = 0; i <= 10; i++) {
         const t = i / 10, c = mitte(t), c2_ = mitte(Math.min(1, t + 0.01)), c0 = mitte(Math.max(0, t - 0.01));
         const tan = norm(sub(c2_, c0)), nrm = P(-tan.y, tan.x);
         aussen.push(add(c, mul(nrm, breite(t)))); innen.push(add(c, mul(nrm, -breite(t))));
       }
-      const spitze = mitte(1.04);
+      const spitze = mitte(k.curl ? 1.04 : 1.035);
       merke([spitze]);
       const pfad = glatt(aussen.concat([spitze], innen.reverse()), true, 0.9);
       const dunkelOhr = hexRgb(farbe).reduce((x, y) => x + y) / 3 < 70;

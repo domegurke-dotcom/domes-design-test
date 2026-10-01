@@ -665,6 +665,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     b += `<path d="${eckig(huf(fx))}" fill="${hoof}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
     return { svg: `<g>${b}</g>`, box: { minX: fx - 1.6 * w, maxX: fx + 1.8 * w, minY: bottom - 8 } };
   }
+  if (opt.punkte) return { svg: `<g>${g}</g>`, box: { minX, maxX, minY }, kopf: glatt(kopf), stirn: hp(0.2, -0.06), nase: hp(0.95, -0.01), genick: hp(-0.03, -0.03), maul: hp(1.0, 0.22 * m), auge, er };
   return { svg: `<g transform="translate(0,${f(dLiegen)})">${g}</g>`, box: { minX, maxX, minY: minY + dLiegen } };
 }
 

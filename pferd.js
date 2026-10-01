@@ -635,7 +635,15 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       return { matrix: [ia, ib, -ib, ia, ie, iff], schopf: schopf ? glatt(schopf) : schopfBueschel(), fl };
     }
     ekMatrix = [a_, b_, -b_, a_, e_, f_].map(x => x.toFixed(5)).join(" ");
-    g += `<g transform="matrix(${ekMatrix})">${kopfteileSVG(eigenKopf, "ek" + uid, { fell: head, muschel, ink: INK, dueneLinie: true, statisch: opt.statisch })}</g>`;
+    // Licht & Schatten wie beim Spielkopf (in Pferdekoordinaten, dann zurück in Zeichnungskoordinaten)
+    const det = a_ * a_ + b_ * b_, ia = a_ / det, ib = -b_ / det, ie = -(ia * e_ - ib * f_), iff = -(ib * e_ + ia * f_);
+    const mz = hp(0.93, 0.12);
+    const schatt = `<g transform="matrix(${[ia, ib, -ib, ia, ie, iff].map(x => x.toFixed(5)).join(" ")})">` +
+      `<rect ${bx} fill="url(#sh-${uid})" opacity=".8"/>` +
+      (C.muzzle ? `<ellipse cx="${f(mz.x)}" cy="${f(mz.y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(mz.x)} ${f(mz.y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>` : "") +
+      `<g filter="url(#wb-${uid})"><path d="${glatt([hp(0.1, 0.42 * hw), hp(0.3, 0.47 * hw * jw), hp(0.55, 0.36 * hw), hp(0.8, 0.28 * hw), hp(0.6, 0.3 * hw), hp(0.35, 0.37 * hw * jw)])}" fill="${schatten}" opacity=".45"/>` +
+      `<ellipse cx="${f(hp(0.3, -0.1).x)}" cy="${f(hp(0.3, -0.1).y)}" rx="${f(0.22 * hl)}" ry="${f(0.07 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.3, -0.1).x)} ${f(hp(0.3, -0.1).y)})" fill="${licht}" opacity=".45"/></g></g>`;
+    g += `<g transform="matrix(${ekMatrix})">${kopfteileSVG(eigenKopf, "ek" + uid, { fell: head, muschel, ink: INK, dueneLinie: true, statisch: opt.statisch, schattierung: schatt })}</g>`;
   }
   // Mähne
   if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;

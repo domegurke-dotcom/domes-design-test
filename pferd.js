@@ -236,16 +236,29 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   ]);
   const nk = k.nk || 0; // kräftiger Hals: Kehle setzt weiter vorn unter der Ganasche an
   const T0 = hp(0.15, 0.5 * hw), kSp = (haltung === "normal" || haltung === "leicht") && k.ts ? 1 : 0, T1 = hp(0.46 + ((k.ts || 0.46) - 0.46) * kSp, (0.4 - 0.04 * kSp) * hw * Math.min(jw, 1.1));
-  const T = P(T0.x + (T1.x - T0.x) * nk, T0.y + (T1.y - T0.y) * nk), Pn = hp(-0.02, 0.04);
+  let T = P(T0.x + (T1.x - T0.x) * nk, T0.y + (T1.y - T0.y) * nk); const Pn = hp(-0.02, 0.04);
   const d = norm(P(Pn.x - Wn.x, Pn.y - Wn.y));
   const nOut = P(-d.y, d.x);
   const crestCtrl = add(mid(Wn, Pn), mul(nOut, crest * H + 4));
+  // Handgezeichneter Kopf: Kehle setzt genau am Ende seiner Ganaschenlinie an
+  let ekKehle = null;
+  if (opt.eigenKopf && typeof KOPFTEILE !== "undefined") {
+    const K = KOPFTEILE, A = add(Pn, mul(nOut, 1.2)), B = hp(0.97, 0.0);
+    const ux = K.nase.x - K.genick.x, uy = K.nase.y - K.genick.y, vx = B.x - A.x, vy = B.y - A.y;
+    const den = ux * ux + uy * uy, a_ = (vx * ux + vy * uy) / den, b_ = (vy * ux - vx * uy) / den;
+    const e_ = A.x - (a_ * K.genick.x - b_ * K.genick.y), f_ = A.y - (b_ * K.genick.x + a_ * K.genick.y);
+    const M = (x, y) => P(a_ * x - b_ * y + e_, b_ * x + a_ * y + f_), Mv = (x, y) => norm(P(a_ * x - b_ * y, b_ * x + a_ * y));
+    T = M(K.kehle.x, K.kehle.y);
+    ekKehle = Mv(K.kehle.dx, K.kehle.dy);
+  }
   const underCtrl = add(mid(T, Cn), mul(nOut, 1));
   // Kehle: weicher, offener Übergang von der Ganasche in die Halsunterseite
   // weicher Bogen am Kopfansatz: die Linie läuft erst ein Stück an der Ganasche entlang nach hinten und biegt dann nach unten
   const kehle1 = add(add(add(T, mul(sub(Cn, T), 0.3 * (1 - nk))), mul(nOut, 10 * (1 - nk))), P((0.22 + ((k.kb != null ? k.kb : 0.22) - 0.22) * kSp) * hl * nk, 0.14 * hl * nk));
   const kehle2 = add(add(Cn, mul(sub(T, Cn), 0.35 + 0.1 * nk)), mul(nOut, 1.5 - (4 + (k.kw || 0) * kSp) * nk));
-  const halsD = `M${f(Wn.x)},${f(Wn.y)}Q${f(crestCtrl.x)},${f(crestCtrl.y)} ${f(Pn.x)},${f(Pn.y)}L${f(hp(0.06, 0.2).x)},${f(hp(0.06, 0.2).y)}L${f(T.x)},${f(T.y)}C${f(kehle1.x)},${f(kehle1.y)} ${f(kehle2.x)},${f(kehle2.y)} ${f(Cn.x)},${f(Cn.y)}L${f(0.35 * L)},${f(top + 0.6 * D)}Z`;
+  const kehleLen = Math.hypot(Cn.x - T.x, Cn.y - T.y);
+  const k1 = ekKehle ? add(T, mul(ekKehle, 0.35 * kehleLen)) : kehle1, k2 = ekKehle ? add(add(Cn, mul(sub(T, Cn), 0.4)), mul(nOut, 1.5)) : kehle2;
+  const halsD = `M${f(Wn.x)},${f(Wn.y)}Q${f(crestCtrl.x)},${f(crestCtrl.y)} ${f(Pn.x)},${f(Pn.y)}L${f(hp(0.06, 0.2).x)},${f(hp(0.06, 0.2).y)}L${f(T.x)},${f(T.y)}C${f(k1.x)},${f(k1.y)} ${f(k2.x)},${f(k2.y)} ${f(Cn.x)},${f(Cn.y)}L${f(0.35 * L)},${f(top + 0.6 * D)}Z`;
   const kamm = t => { const s = 1 - t; return P(s * s * Wn.x + 2 * s * t * crestCtrl.x + t * t * Pn.x, s * s * Wn.y + 2 * s * t * crestCtrl.y + t * t * Pn.y); };
 
   // --- Beine ---
@@ -597,7 +610,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const strich = (p, dx, dy) => inkFein(`M${f(p.x)},${f(p.y)}l${f(dx)},${f(dy)}`, 1, 'opacity=".45"');
   g += strich(P(-0.05 * H, top + 0.62 * D), 1.5, 2.5) + strich(P(-0.03 * H, top + 0.72 * D), 1.5, 2.2) + strich(P(-0.045 * H, top + 0.52 * D), 1.8, 2);
   g += strich(P(0.36 * L, bottom - 1), 1.2, -2.2) + strich(P(0.42 * L, bottom - 1), 1, -2) + strich(P(0.72 * L, bottom - 0.12 * D), -0.5, -2.4);
-  g += strich(add(mid(T, Cn), mul(nOut, 1)), 2, 1.5) + strich(add(mid(T, Cn), P(1, 4)), 2, 1.2);
+  g += `<g clip-path="url(#cr-${uid})">` + strich(add(mid(T, Cn), mul(nOut, -2)), 2, 1.5) + strich(add(mid(T, Cn), add(mul(nOut, -2), P(1, 4))), 2, 1.2) + `</g>`;
   // Hufe vorn
   g += `<g stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke">` +
     (liegt ? [hufLiegend, hufLiegendH] : [huf(fx), huf(hx)]).map(h => `<path d="${eckig(h)}" fill="${hoof}" vector-effect="non-scaling-stroke"/>`).join("") + "</g>" +

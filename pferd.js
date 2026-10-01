@@ -44,35 +44,35 @@ const RASSEN = [
   { id: "friese", name: "Friese", herkunft: "Niederlande", h: [158, 172],
     text: "Barockes Rappenpferd mit hoch aufgesetztem Hals, üppiger Mähne und langem Kötenbehang.",
     farben: ["rappe"],
-    k: { len: 1.0, depth: .47, legT: .095, neck: .6, nAng: 64, crest: .08, head: .44, hAng: 62, profile: .1, hw: 1, jw: 1, muz: 1, ear: .11, mane: "lang", maneLen: .38, vol: 1.1, fore: 1, tail: .95, tvol: 1.2, tset: .1, feather: .75, croup: .5, hq: 1, eye: 1 } },
+    k: { nk: 1, len: 1.0, depth: .47, legT: .095, neck: .6, nAng: 64, crest: .08, head: .44, hAng: 62, profile: .1, hw: 1, jw: 1, muz: 1, ear: .11, mane: "lang", maneLen: .38, vol: 1.1, fore: 1, tail: .95, tvol: 1.2, tset: .1, feather: .75, croup: .5, hq: 1, eye: 1 } },
   { id: "marwari", name: "Marwari", herkunft: "Indien (Rajasthan)", h: [145, 163],
     text: "Kriegspferd der Rajputen – berühmt für die nach innen gebogenen Ohren, deren Spitzen sich berühren.",
     farben: ["brauner", "fuchs", "schimmel", "braunfalbe", "braunschecke"],
-    k: { len: 1.0, depth: .41, legT: .075, neck: .56, nAng: 58, crest: .04, head: .42, hAng: 55, profile: .3, hw: .95, jw: 1, muz: .9, ear: .115, curl: true, mane: "lang", maneLen: .12, vol: .6, fore: .4, tail: .7, tvol: .8, tset: .5, feather: 0, croup: .3, hq: 1, eye: 1.1 } },
+    k: { nk: 0.3, len: 1.0, depth: .41, legT: .075, neck: .56, nAng: 58, crest: .04, head: .42, hAng: 55, profile: .3, hw: .95, jw: 1, muz: .9, ear: .115, curl: true, mane: "lang", maneLen: .12, vol: .6, fore: .4, tail: .7, tvol: .8, tset: .5, feather: 0, croup: .3, hq: 1, eye: 1.1 } },
   { id: "fjord", name: "Fjordpferd (Norweger)", herkunft: "Norwegen", h: [135, 150],
     text: "Kompaktes Falbpferd mit Aalstrich und typisch gestutzter Stehmähne mit dunklem Mittelstreifen.",
     farben: ["braunfalbe", "rotfalbe", "mausfalbe", "weissfalbe", "gelbfalbe"],
-    k: { len: .98, depth: .52, legT: .1, neck: .45, nAng: 48, crest: .08, head: .44, hAng: 50, profile: 0, hw: 1.1, jw: 1.1, muz: 1, ear: .085, mane: "fjord", maneLen: 0, vol: 1, fore: .5, tail: .75, tvol: 1, tset: .2, feather: .15, croup: .5, hq: 1.05, eye: 1 } },
+    k: { nk: 1, len: .98, depth: .52, legT: .1, neck: .45, nAng: 48, crest: .08, head: .44, hAng: 50, profile: 0, hw: 1.1, jw: 1.1, muz: 1, ear: .085, mane: "fjord", maneLen: 0, vol: 1, fore: .5, tail: .75, tvol: 1, tset: .2, feather: .15, croup: .5, hq: 1.05, eye: 1 } },
   { id: "haflinger", name: "Haflinger", herkunft: "Südtirol / Österreich", h: [138, 150],
     text: "Kräftiges Gebirgspferd, immer fuchsfarben mit heller Flachsmähne.",
     farben: ["hellfuchs", "dunkelfuchs"],
-    k: { len: 1.0, depth: .5, legT: .095, neck: .48, nAng: 50, crest: .06, head: .42, hAng: 52, profile: 0, hw: 1.05, jw: 1.05, muz: 1, ear: .09, mane: "lang", maneLen: .2, vol: .9, fore: .8, tail: .8, tvol: 1, tset: .3, feather: .1, croup: .6, hq: 1.05, eye: 1 } },
+    k: { nk: 0.8, len: 1.0, depth: .5, legT: .095, neck: .48, nAng: 50, crest: .06, head: .42, hAng: 52, profile: 0, hw: 1.05, jw: 1.05, muz: 1, ear: .09, mane: "lang", maneLen: .2, vol: .9, fore: .8, tail: .8, tvol: 1, tset: .3, feather: .1, croup: .6, hq: 1.05, eye: 1 } },
   { id: "shetty", name: "Shetlandpony", herkunft: "Shetlandinseln (Schottland)", h: [80, 107],
     text: "Kleines, robustes Pony mit kurzen Beinen, dichtem Fell, üppiger Mähne und großem Kopf im Verhältnis.",
     farben: ["rappe", "brauner", "fuchs", "schimmel", "windfarben", "rappschecke", "braunschecke"],
-    k: { len: .98, depth: .56, legT: .12, neck: .38, nAng: 45, crest: .06, head: .47, hAng: 52, profile: 0, hw: 1.1, jw: 1.1, muz: 1, ear: .08, mane: "lang", maneLen: .28, vol: 1.3, fore: 1.2, tail: .9, tvol: 1.3, tset: .2, feather: .2, croup: .5, hq: 1, eye: 1.05 } },
+    k: { nk: 0.8, len: .98, depth: .56, legT: .12, neck: .38, nAng: 45, crest: .06, head: .47, hAng: 52, profile: 0, hw: 1.1, jw: 1.1, muz: 1, ear: .08, mane: "lang", maneLen: .28, vol: 1.3, fore: 1.2, tail: .9, tvol: 1.3, tset: .2, feather: .2, croup: .5, hq: 1, eye: 1.05 } },
   { id: "shire", name: "Shire Horse", herkunft: "England", h: [168, 190],
     text: "Eines der größten Pferde der Welt: massiger Kaltblüter mit Ramsnase und langem Fesselbehang.",
     farben: ["rappe", "brauner", "dunkelbrauner", "schimmel"],
-    k: { len: 1.08, depth: .5, legT: .125, neck: .55, nAng: 55, crest: .08, head: .48, hAng: 55, profile: .6, hw: 1.1, jw: 1, muz: 1.05, ear: .1, mane: "lang", maneLen: .15, vol: 1, fore: .6, tail: .6, tvol: 1, tset: .2, feather: 1, croup: .6, hq: 1.05, eye: .95 } },
+    k: { nk: 1, len: 1.08, depth: .5, legT: .125, neck: .55, nAng: 55, crest: .08, head: .48, hAng: 55, profile: .6, hw: 1.1, jw: 1, muz: 1.05, ear: .1, mane: "lang", maneLen: .15, vol: 1, fore: .6, tail: .6, tvol: 1, tset: .2, feather: 1, croup: .6, hq: 1.05, eye: .95 } },
   { id: "andalusier", name: "Andalusier (PRE)", herkunft: "Spanien", h: [152, 166],
     text: "Barockpferd mit leicht geramsnastem Kopf, kräftigem, hoch aufgesetztem Hals und welliger Langmähne.",
     farben: ["schimmel", "apfelschimmel", "brauner", "rappe"],
-    k: { len: .98, depth: .46, legT: .085, neck: .57, nAng: 62, crest: .09, head: .42, hAng: 60, profile: .45, hw: 1, jw: 1, muz: 1, ear: .1, mane: "lang", maneLen: .3, vol: 1.1, fore: .9, tail: .85, tvol: 1.1, tset: .2, feather: .05, croup: .7, hq: 1, eye: 1 } },
+    k: { nk: 0.9, len: .98, depth: .46, legT: .085, neck: .57, nAng: 62, crest: .09, head: .42, hAng: 60, profile: .45, hw: 1, jw: 1, muz: 1, ear: .1, mane: "lang", maneLen: .3, vol: 1.1, fore: .9, tail: .85, tvol: 1.1, tset: .2, feather: .05, croup: .7, hq: 1, eye: 1 } },
   { id: "lipizzaner", name: "Lipizzaner", herkunft: "Slowenien / Österreich", h: [148, 158],
     text: "Die weißen Pferde der Spanischen Hofreitschule – kompakt, mit Ramskopf. Fohlen kommen dunkel zur Welt.",
     farben: ["schimmel", "apfelschimmel", "brauner", "rappe"],
-    k: { len: .97, depth: .47, legT: .09, neck: .52, nAng: 58, crest: .08, head: .44, hAng: 58, profile: .6, hw: 1, jw: 1, muz: 1, ear: .1, mane: "lang", maneLen: .2, vol: .9, fore: .7, tail: .75, tvol: 1, tset: .3, feather: 0, croup: .6, hq: 1, eye: 1 } },
+    k: { nk: 0.8, len: .97, depth: .47, legT: .09, neck: .52, nAng: 58, crest: .08, head: .44, hAng: 58, profile: .6, hw: 1, jw: 1, muz: 1, ear: .1, mane: "lang", maneLen: .2, vol: .9, fore: .7, tail: .75, tvol: 1, tset: .3, feather: 0, croup: .6, hq: 1, eye: 1 } },
   { id: "vollblut", name: "Englisches Vollblut", herkunft: "England", h: [155, 172],
     text: "Das Rennpferd schlechthin: lange Beine, tiefe Brust, langer schräger Hals und feiner Kopf.",
     farben: ["brauner", "dunkelbrauner", "fuchs", "rappe", "schimmel"],
@@ -80,19 +80,19 @@ const RASSEN = [
   { id: "quarter", name: "Quarter Horse", herkunft: "USA", h: [142, 163],
     text: "Muskulöses Westernpferd mit kurzem Kopf, großen Ganaschen und extrem kräftiger Hinterhand.",
     farben: ["fuchs", "brauner", "rappe", "palomino", "buckskin", "braunfalbe", "mausfalbe", "blueroan", "rotschimmel"],
-    k: { len: .96, depth: .47, legT: .09, neck: .5, nAng: 54, crest: .05, head: .42, hAng: 56, profile: 0, hw: 1.08, jw: 1.06, muz: .95, ear: .085, mane: "kurz", maneLen: .06, vol: .8, fore: .3, tail: .65, tvol: .8, tset: .1, feather: 0, croup: .5, hq: 1.2, eye: 1 } },
+    k: { nk: 0.7, len: .96, depth: .47, legT: .09, neck: .5, nAng: 54, crest: .05, head: .42, hAng: 56, profile: 0, hw: 1.08, jw: 1.06, muz: .95, ear: .085, mane: "kurz", maneLen: .06, vol: .8, fore: .3, tail: .65, tvol: .8, tset: .1, feather: 0, croup: .5, hq: 1.2, eye: 1 } },
   { id: "hannoveraner", name: "Hannoveraner", herkunft: "Deutschland", h: [160, 175],
     text: "Großrahmiges Warmblut für Dressur und Springen – langer Hals, gerader Kopf, viel Rahmen.",
     farben: ["brauner", "dunkelbrauner", "fuchs", "rappe", "schimmel"],
-    k: { len: 1.03, depth: .45, legT: .09, neck: .6, nAng: 52, crest: .05, head: .44, hAng: 55, profile: 0, hw: 1, jw: 1, muz: 1, ear: .1, mane: "kurz", maneLen: .05, vol: .7, fore: .3, tail: .65, tvol: .8, tset: .3, feather: 0, croup: .4, hq: 1, eye: 1 } },
+    k: { nk: 0.4, len: 1.03, depth: .45, legT: .09, neck: .6, nAng: 52, crest: .05, head: .44, hAng: 55, profile: 0, hw: 1, jw: 1, muz: 1, ear: .1, mane: "kurz", maneLen: .05, vol: .7, fore: .3, tail: .65, tvol: .8, tset: .3, feather: 0, croup: .4, hq: 1, eye: 1 } },
   { id: "isi", name: "Islandpferd", herkunft: "Island", h: [130, 145],
     text: "Robustes Gangpferd (Tölt!) mit dichter Doppelmähne und fast allen Farben der Pferdewelt.",
     farben: ["fuchs", "brauner", "rappe", "schimmel", "braunfalbe", "mausfalbe", "palomino", "windfarben", "isabell", "fuchsschecke", "braunschecke"],
-    k: { len: 1.0, depth: .53, legT: .1, neck: .45, nAng: 50, crest: .06, head: .44, hAng: 52, profile: 0, hw: 1.05, jw: 1.05, muz: 1, ear: .08, mane: "lang", maneLen: .25, vol: 1.3, fore: 1.1, tail: .9, tvol: 1.3, tset: .2, feather: .15, croup: .6, hq: 1, eye: 1 } },
+    k: { nk: 0.7, len: 1.0, depth: .53, legT: .1, neck: .45, nAng: 50, crest: .06, head: .44, hAng: 52, profile: 0, hw: 1.05, jw: 1.05, muz: 1, ear: .08, mane: "lang", maneLen: .25, vol: 1.3, fore: 1.1, tail: .9, tvol: 1.3, tset: .2, feather: .15, croup: .6, hq: 1, eye: 1 } },
   { id: "tinker", name: "Tinker (Irish Cob)", herkunft: "Irland / Großbritannien", h: [135, 160],
     text: "Kräftiger Cob, meist gescheckt, mit langer Mähne, Bart und üppigem Fesselbehang.",
     farben: ["rappschecke", "braunschecke", "fuchsschecke", "rappe"],
-    k: { len: 1.02, depth: .52, legT: .115, neck: .5, nAng: 52, crest: .1, head: .46, hAng: 55, profile: .4, hw: 1.1, jw: 1, muz: 1.05, ear: .09, mane: "lang", maneLen: .3, vol: 1.3, fore: 1.1, tail: .9, tvol: 1.3, tset: .15, feather: 1, croup: .7, hq: 1.05, eye: 1 } },
+    k: { nk: 1, len: 1.02, depth: .52, legT: .115, neck: .5, nAng: 52, crest: .1, head: .46, hAng: 55, profile: .4, hw: 1.1, jw: 1, muz: 1.05, ear: .09, mane: "lang", maneLen: .3, vol: 1.3, fore: 1.1, tail: .9, tvol: 1.3, tset: .15, feather: 1, croup: .7, hq: 1.05, eye: 1 } },
   { id: "tekke", name: "Achal-Tekkiner", herkunft: "Turkmenistan", h: [147, 163],
     text: "Schlankes Wüstenpferd mit langem Hals, feiner, kurzer Mähne und einzigartigem metallischem Fellglanz.",
     farben: ["isabell", "palomino", "buckskin", "brauner", "fuchs", "rappe", "schimmel"],
@@ -226,14 +226,16 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     hp(0.76, 0.32 * hw), hp(0.52, 0.38 * hw), hp(0.34, 0.48 * hw * jw), hp(0.18, 0.52 * hw * jw),
     hp(0.06, 0.45 * hw), hp(-0.03, 0.22 * hw),
   ]);
-  const T = hp(0.15, 0.5 * hw), Pn = hp(-0.02, 0.04);
+  const nk = k.nk || 0; // kräftiger Hals: Kehle setzt weiter vorn unter der Ganasche an
+  const T0 = hp(0.15, 0.5 * hw), T1 = hp(0.36, 0.44 * hw * jw);
+  const T = P(T0.x + (T1.x - T0.x) * nk, T0.y + (T1.y - T0.y) * nk), Pn = hp(-0.02, 0.04);
   const d = norm(P(Pn.x - Wn.x, Pn.y - Wn.y));
   const nOut = P(-d.y, d.x);
   const crestCtrl = add(mid(Wn, Pn), mul(nOut, crest * H + 4));
   const underCtrl = add(mid(T, Cn), mul(nOut, 1));
   // Kehle: weicher, offener Übergang von der Ganasche in die Halsunterseite
-  const kehle1 = add(add(T, mul(sub(Cn, T), 0.25)), mul(nOut, 10));
-  const kehle2 = add(add(Cn, mul(sub(T, Cn), 0.35)), mul(nOut, 1.5));
+  const kehle1 = add(add(T, mul(sub(Cn, T), 0.3)), mul(nOut, 10 * (1 - nk) - 1.5 * nk));
+  const kehle2 = add(add(Cn, mul(sub(T, Cn), 0.35)), mul(nOut, 1.5 - 3.5 * nk));
   const halsD = `M${f(Wn.x)},${f(Wn.y)}Q${f(crestCtrl.x)},${f(crestCtrl.y)} ${f(Pn.x)},${f(Pn.y)}L${f(hp(0.06, 0.2).x)},${f(hp(0.06, 0.2).y)}L${f(T.x)},${f(T.y)}C${f(kehle1.x)},${f(kehle1.y)} ${f(kehle2.x)},${f(kehle2.y)} ${f(Cn.x)},${f(Cn.y)}L${f(0.35 * L)},${f(top + 0.6 * D)}Z`;
   const kamm = t => { const s = 1 - t; return P(s * s * Wn.x + 2 * s * t * crestCtrl.x + t * t * Pn.x, s * s * Wn.y + 2 * s * t * crestCtrl.y + t * t * Pn.y); };
 

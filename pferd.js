@@ -404,8 +404,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   defs += `<clipPath id="cr-${uid}"><path d="${halsD}"/><path d="${glatt(rumpf)}"/></clipPath>`;
   defs += `<clipPath id="cf-${uid}">${fern.map(t => `<path d="${t[0]}"/>`).join("")}</clipPath>`;
   if (pts) {
-    defs += `<linearGradient id="lg-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-0.62 * Lg)}" x2="0" y2="${f(-0.42 * Lg)}"><stop offset=".5" stop-color="${body}"/><stop offset=".5" stop-color="${pts}"/></linearGradient>`;
-    defs += `<linearGradient id="lgf-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-0.62 * Lg)}" x2="0" y2="${f(-0.42 * Lg)}"><stop offset=".5" stop-color="${dunkel(body)}"/><stop offset=".5" stop-color="${dunkel(pts)}"/></linearGradient>`;
+    defs += `<linearGradient id="lg-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-0.72 * Lg)}" x2="0" y2="${f(-0.32 * Lg)}"><stop offset=".15" stop-color="${body}"/><stop offset=".85" stop-color="${pts}"/></linearGradient>`;
+    defs += `<linearGradient id="lgf-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-0.72 * Lg)}" x2="0" y2="${f(-0.32 * Lg)}"><stop offset=".15" stop-color="${dunkel(body)}"/><stop offset=".85" stop-color="${dunkel(pts)}"/></linearGradient>`;
   }
   defs += `<linearGradient id="sh-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-H * 1.1)}" x2="0" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset=".62" stop-color="#000" stop-opacity=".05"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>`;
   // Apfelschimmel / Roan: jeder Fleck mit kreisförmiger Blende (weicher Verlauf von innen nach außen)
@@ -416,12 +416,14 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (k.metallic) defs += `<linearGradient id="mt-${uid}" gradientUnits="userSpaceOnUse" x1="${f(-0.1 * L)}" y1="${f(-H * 1.3)}" x2="${f(L)}" y2="0"><stop offset=".15" stop-color="#fff" stop-opacity="0"/><stop offset=".35" stop-color="#fff" stop-opacity=".38"/><stop offset=".48" stop-color="#fff" stop-opacity="0"/><stop offset=".62" stop-color="#fff" stop-opacity=".22"/><stop offset=".75" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
 
   const bx = `x="${f(minX - 5)}" y="${f(minY - 5)}" width="${f(maxX - minX + 10)}" height="${f(-minY + 10)}"`;
+  if (C.pattern === "dapple" || C.pattern === "roan") defs += `<mask id="mk-${uid}" maskUnits="userSpaceOnUse" ${bx}><g filter="url(#wm6-${uid})"><path d="${halsD}" fill="#fff"/><path d="${glatt(rumpf)}" fill="#fff" transform="translate(0,-3)"/></g></mask><filter id="wm6-${uid}" filterUnits="userSpaceOnUse" ${bx}><feGaussianBlur stdDeviation="5"/></filter>`;
+  defs += `<filter id="wm-${uid}" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="1.3"/></filter>`;
   defs += `<filter id="wb-${uid}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.2"/></filter>`;
   let g = `<defs>${defs}</defs>`;
 
   // Hintere Beine
   g += `<g>${umriss(fern, INK)}`;
-  if (C.pattern === "tobiano") g += `<rect x="${f(minX)}" y="${f(-0.68 * Lg)}" width="${f(maxX - minX)}" height="${f(0.68 * Lg + 2)}" fill="#dedad3" clip-path="url(#cf-${uid})"/>`;
+  if (C.pattern === "tobiano") g += `<rect x="${f(minX)}" y="${f(-0.68 * Lg)}" width="${f(maxX - minX)}" height="${f(0.68 * Lg + 2)}" fill="#dedad3" clip-path="url(#cf-${uid})" filter="url(#wm-${uid})"/>`;
   g += `<g stroke="${INK}" stroke-width="1.6" vector-effect="non-scaling-stroke">` +
     (liegt ? [] : [huf(fx2), huf(hx2)]).map(h => `<path d="${eckig(h)}" fill="${dunkel(hoof)}" vector-effect="non-scaling-stroke"/>`).join("") + "</g></g>";
 
@@ -435,8 +437,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += `<g>${umriss(haupt, linie)}`;
   // Überlagerungen
   g += `<g clip-path="url(#cl-${uid})">`;
-  if (C.pattern === "dapple") g += `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#dp-${uid})"/></g>`;
-  if (C.pattern === "roan") g += `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#rn-${uid})"/></g>`;
+  if (C.pattern === "dapple") g += `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#dp-${uid})" mask="url(#mk-${uid})"/></g>`;
+  if (C.pattern === "roan") g += `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#rn-${uid})" mask="url(#mk-${uid})"/></g>`;
   if (C.pattern === "tobiano") {
     const flecken = [];
     const blob = (cx, cy, rx, ry, n = 13) => {
@@ -447,14 +449,14 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     flecken.push(blob(0.45 * L + (rnd() - .5) * 0.15 * L, top + 0.15 * D, 0.2 * L + rnd() * 0.1 * L, 0.75 * D));
     if (rnd() > 0.3) flecken.push(blob(0.1 * L, -H - 8, 0.12 * L, 0.35 * D + 6));
     if (rnd() > 0.35) flecken.push(blob(0.86 * L, top + 0.3 * D, 0.1 * L + rnd() * 0.08 * L, 0.45 * D));
-    g += flecken.map(fd => `<path d="${fd}" fill="#f7f5f1"/>`).join("");
+    g += `<g filter="url(#wm-${uid})">` + flecken.map(fd => `<path d="${fd}" fill="#f7f5f1"/>`).join("");
     const wl = [P(minX, 2)];
     for (let x = minX; x <= maxX; x += 6) wl.push(P(x, -(0.66 + 0.1 * Math.sin(x * 0.21) + rnd() * 0.06) * Lg));
     wl.push(P(maxX, 2));
-    g += `<path d="${eckig(wl)}" fill="#f7f5f1"/>`;
+    g += `<path d="${eckig(wl)}" fill="#f7f5f1"/></g>`;
   }
-  if (C.stripe) g += `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${C.stripe}" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>`;
-  if (C.muzzle) g += `<ellipse cx="${f(hp(0.93, 0.12).x)}" cy="${f(hp(0.93, 0.12).y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.93, 0.12).x)} ${f(hp(0.93, 0.12).y)})" fill="${C.muzzle}" opacity=".75"/>`;
+  if (C.stripe) g += `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${C.stripe}" stroke-width="2.8" stroke-linecap="round" opacity=".85" filter="url(#wm-${uid})"/>`;
+  if (C.muzzle) g += `<ellipse cx="${f(hp(0.93, 0.12).x)}" cy="${f(hp(0.93, 0.12).y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.93, 0.12).x)} ${f(hp(0.93, 0.12).y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>`;
   // Abzeichen (weiß): Kopf und Beine
   const abz = opt.abzeichen || {};
   const WEISS = "#fbfaf6";
@@ -483,6 +485,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     welle.push(P(maxX + 5, 2));
     g += `<g clip-path="url(#cb-${uid})"><path d="${eckig(welle)}" fill="${WEISS}"/></g>`;
   }
+  if (C.head && C.head !== body) g += `<g filter="url(#wm-${uid})"><path d="${glatt([hp(-0.1, -0.1), hp(-0.12, 0.3), add(T, mul(sub(Cn, T), 0.25)), add(Pn, mul(sub(Wn, Pn), 0.18)), hp(-0.1, -0.1)])}" fill="${C.head}" opacity=".85"/></g>`;
   if (k.metallic) g += `<rect ${bx} fill="url(#mt-${uid})"/>`;
   // Weiche Schattierung (Airbrush-Look): Schattenformen werden weichgezeichnet
   g += `<rect ${bx} fill="url(#sh-${uid})" opacity=".8"/><g filter="url(#wb-${uid})">`;

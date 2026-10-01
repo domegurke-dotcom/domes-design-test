@@ -400,7 +400,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
 
   let defs = `<clipPath id="cl-${uid}">${haupt.map(t => `<path d="${t[0]}"/>`).join("")}</clipPath>`;
   defs += `<clipPath id="ck-${uid}"><path d="${glatt(kopf)}"/></clipPath>`;
-  if (!liegt) defs += `<clipPath id="cb-${uid}"><path d="${glatt(vorderN)}"/><path d="${glatt(hinterN)}"/><path d="${glatt(vorderF)}"/><path d="${glatt(hinterF)}"/></clipPath>`;
+  if (!liegt) defs += `<clipPath id="cb-${uid}"><path d="${glatt(vorderN)}"/></clipPath>`;
   defs += `<clipPath id="cr-${uid}"><path d="${halsD}"/><path d="${glatt(rumpf)}"/></clipPath>`;
   defs += `<clipPath id="cf-${uid}">${fern.map(t => `<path d="${t[0]}"/>`).join("")}</clipPath>`;
   if (pts) {
@@ -408,8 +408,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     defs += `<linearGradient id="lgf-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-0.62 * Lg)}" x2="0" y2="${f(-0.42 * Lg)}"><stop offset=".5" stop-color="${dunkel(body)}"/><stop offset=".5" stop-color="${dunkel(pts)}"/></linearGradient>`;
   }
   defs += `<linearGradient id="sh-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-H * 1.1)}" x2="0" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset=".62" stop-color="#000" stop-opacity=".05"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>`;
-  if (C.pattern === "dapple") defs += `<pattern id="dp-${uid}" patternUnits="userSpaceOnUse" width="8" height="7"><circle cx="4" cy="3.5" r="2.6" fill="${C.dapple}" opacity=".75"/><circle cx="0" cy="0" r="2.2" fill="${C.dapple}" opacity=".6"/><circle cx="8" cy="0" r="2.2" fill="${C.dapple}" opacity=".6"/><circle cx="0" cy="7" r="2.2" fill="${C.dapple}" opacity=".6"/><circle cx="8" cy="7" r="2.2" fill="${C.dapple}" opacity=".6"/></pattern>`;
-  if (C.pattern === "roan") defs += `<pattern id="rn-${uid}" patternUnits="userSpaceOnUse" width="3" height="3"><circle cx="1" cy="1" r=".55" fill="#fff" opacity=".55"/><circle cx="2.4" cy="2.2" r=".45" fill="#fff" opacity=".45"/></pattern>`;
+  // Apfelschimmel / Roan: jeder Fleck mit kreisförmiger Blende (weicher Verlauf von innen nach außen)
+  if (C.pattern === "dapple") defs += `<radialGradient id="dg-${uid}"><stop offset="0" stop-color="${C.dapple}" stop-opacity=".95"/><stop offset=".55" stop-color="${C.dapple}" stop-opacity=".7"/><stop offset="1" stop-color="${C.dapple}" stop-opacity="0"/></radialGradient>` +
+    `<pattern id="dp-${uid}" patternUnits="userSpaceOnUse" width="8" height="7"><circle cx="4" cy="3.5" r="3" fill="url(#dg-${uid})"/><circle cx="0" cy="0" r="2.7" fill="url(#dg-${uid})"/><circle cx="8" cy="0" r="2.7" fill="url(#dg-${uid})"/><circle cx="0" cy="7" r="2.7" fill="url(#dg-${uid})"/><circle cx="8" cy="7" r="2.7" fill="url(#dg-${uid})"/></pattern>`;
+  if (C.pattern === "roan") defs += `<radialGradient id="rg-${uid}"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>` +
+    `<pattern id="rn-${uid}" patternUnits="userSpaceOnUse" width="3" height="3"><circle cx="1" cy="1" r=".85" fill="url(#rg-${uid})"/><circle cx="2.4" cy="2.2" r=".7" fill="url(#rg-${uid})"/></pattern>`;
   if (k.metallic) defs += `<linearGradient id="mt-${uid}" gradientUnits="userSpaceOnUse" x1="${f(-0.1 * L)}" y1="${f(-H * 1.3)}" x2="${f(L)}" y2="0"><stop offset=".15" stop-color="#fff" stop-opacity="0"/><stop offset=".35" stop-color="#fff" stop-opacity=".38"/><stop offset=".48" stop-color="#fff" stop-opacity="0"/><stop offset=".62" stop-color="#fff" stop-opacity=".22"/><stop offset=".75" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
 
   const bx = `x="${f(minX - 5)}" y="${f(minY - 5)}" width="${f(maxX - minX + 10)}" height="${f(-minY + 10)}"`;

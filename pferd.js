@@ -285,8 +285,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const ohr = (Eb, farbe, ohneMuschel = false) => {
     // Ohren hängen, wenn der Kopf unter der Waagerechten ist (tief / liegend)
     if (ohrenHaengen) ohneMuschel = true;
-    const sichel = k.curl && !ohrenHaengen && !ohrenGeknickt;
-    const e = ohrenHaengen ? norm(P(0.85, 0.3)) : ohrenGeknickt ? norm(P(0.6, -0.8)) : sichel ? norm(P(0.25, -1)) : norm(P(-0.22, -1)), q = P(-e.y, e.x), bw = (sichel ? 0.2 : 0.28) * el;
+    const sichel = !ohrenHaengen && !ohrenGeknickt; // alle Pferde: Sichelform (Marwari stark, andere ganz fein)
+    const sStark = k.curl ? 1 : 0.32;
+    const e = ohrenHaengen ? norm(P(0.85, 0.3)) : ohrenGeknickt ? norm(P(0.6, -0.8)) : sichel ? norm(P(k.curl ? 0.25 : -0.12, -1)) : norm(P(-0.22, -1)), q = P(-e.y, e.x), bw = (sichel && k.curl ? 0.2 : 0.28) * el;
     const b1 = add(Eb, mul(q, -bw)), b2 = add(Eb, mul(q, bw));
     let tip = add(Eb, mul(e, el));
     let c1 = add(add(b1, mul(e, el * 0.75)), mul(q, -bw * 0.2));
@@ -295,9 +296,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     // Marwari: schmale Mondsichel – beide Kanten biegen parallel nach hinten aus, die Spitze dreht nach innen
     if (sichel) {
       // Marwari: schmale Mondsichel entlang eines Bogens; die Spitze dreht nach vorn/innen
-      const R = el * 0.78, vorn = mul(q, -1), O = add(Eb, mul(vorn, R));
-      const mitte = t => { const phi = t * 1.5; return add(O, add(mul(vorn, -R * Math.cos(phi)), mul(e, R * Math.sin(phi)))); };
-      const breite = t => bw * Math.pow(1 - t, 0.8) + 0.15;
+      const phiMax = 1.5 * sStark, R = el * (k.curl ? 0.78 : 1.02 / phiMax), vorn = mul(q, -1), O = add(Eb, mul(vorn, R));
+      const mitte = t => { const phi = t * phiMax; return add(O, add(mul(vorn, -R * Math.cos(phi)), mul(e, R * Math.sin(phi)))); };
+      const breite = t => k.curl ? bw * Math.pow(1 - t, 0.8) + 0.15 : bw * Math.pow(1 - t * t, 0.9) * (1 - 0.55 * t) + 0.2;
       const aussen = [], innen = [];
       for (let i = 0; i <= 10; i++) {
         const t = i / 10, c = mitte(t), c2_ = mitte(Math.min(1, t + 0.01)), c0 = mitte(Math.max(0, t - 0.01));
@@ -593,6 +594,15 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += `</g>`;
 
   if (opt.debug) g += [T, kehle1, kehle2, Cn].map((q, i) => `<circle cx="${f(q.x)}" cy="${f(q.y)}" r="1.2" fill="${["red","lime","blue","orange"][i]}"/>`).join("");
+  if (opt.nurBein) {
+    // nur das vordere Bein (für die Enzyklopädie)
+    let b = `<defs>${pts ? `<linearGradient id="lg-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-0.72 * Lg)}" x2="0" y2="${f(-0.32 * Lg)}"><stop offset=".15" stop-color="${body}"/><stop offset=".85" stop-color="${pts}"/></linearGradient>` : ""}<clipPath id="cb-${uid}"><path d="${glatt(vorderN)}"/></clipPath></defs>`;
+    b += umriss([[glatt(vorderN), beinFill]], INK);
+    const hoehe = { krone: 0.05, fessel: 0.12, halbefessel: 0.085, halbstrumpf: 0.33, strumpf: 0.55, hochweiss: 0.75 }[(opt.abzeichen || {}).beine] || 0;
+    if (hoehe) { const wl = [P(fx - 3 * w, 2)]; for (let x = fx - 3 * w; x <= fx + 3 * w; x += 1.5) wl.push(P(x, -hoehe * Lg - hh - 1 + Math.sin(x * 0.7) * 0.8)); wl.push(P(fx + 3 * w, 2)); b += `<g clip-path="url(#cb-${uid})"><path d="${eckig(wl)}" fill="#fbfaf6"/></g>`; }
+    b += `<path d="${eckig(huf(fx))}" fill="${hoof}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+    return { svg: `<g>${b}</g>`, box: { minX: fx - 1.6 * w, maxX: fx + 1.8 * w, minY: bottom - 8 } };
+  }
   return { svg: `<g transform="translate(0,${f(dLiegen)})">${g}</g>`, box: { minX, maxX, minY: minY + dLiegen } };
 }
 

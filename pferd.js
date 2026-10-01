@@ -625,7 +625,13 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     const clip = [L1, L2, add(L2, mul(u, weit)), add(L1, mul(u, weit))];
     const muschel = hexRgb(head).reduce((x, y) => x + y) / 3 < 70 ? mix(head, "#b59a9a", .5) : mix(head, "#2b2240", .35);
     g += `<clipPath id="ek-${uid}"><path d="${eckig(clip)}"/></clipPath>`;
-    g += `<g clip-path="url(#ek-${uid})"><g transform="matrix(${[a_, b_, -b_, a_, e_, f_].map(x => x.toFixed(5)).join(" ")})">${kopfteileSVG(eigenKopf, "ek" + uid, { fell: head, muschel, ink: INK, dueneLinie: true })}</g></g>`;
+    if (opt.schopfExport) {
+      // Schopf in Koordinaten der Krita-Zeichnung umrechnen (Umkehrung der Abbildung)
+      const det = a_ * a_ + b_ * b_, ia = a_ / det, ib = -b_ / det;
+      const ie = -(ia * e_ - ib * f_), iff = -(ib * e_ + ia * f_);
+      return { matrix: [ia, ib, -ib, ia, ie, iff], schopf: schopf ? glatt(schopf) : schopfBueschel(), fl };
+    }
+    g += `<g transform="matrix(${[a_, b_, -b_, a_, e_, f_].map(x => x.toFixed(5)).join(" ")})">${kopfteileSVG(eigenKopf, "ek" + uid, { fell: head, muschel, ink: INK, dueneLinie: true, statisch: opt.statisch })}</g>`;
   }
   // Mähne
   if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;

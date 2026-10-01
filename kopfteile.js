@@ -53,8 +53,12 @@ function kopfteileSVG(nase, uid = "kt" + Math.random().toString(36).slice(2, 7),
   const K = KOPFTEILE, n = K.nasen[nase] || K.nasen.gerade;
   const M = 'transform="matrix(0.232870974306239 -0.0580612549439202 0.0580612549439202 0.232870974306239';
   const augeForm = 'M0 25.595C19.6467 -6.39831 41.4733 -8.39831 65.48 19.595C45.8333 45.5884 24.0067 47.5884 0 25.595Z';
+  // Blinzeln: offenes Auge verschwindet kurz komplett, stattdessen geschlossenes Lid (kein Weiß mehr sichtbar)
+  const blinkAuf = farben.statisch ? "" : '<animate attributeName="opacity" values="1;0;1" keyTimes="0;.93;.97" calcMode="discrete" dur="4.5s" repeatCount="indefinite"/>';
+  const blinkZu = farben.statisch ? "" : '<animate attributeName="opacity" values="0;1;0" keyTimes="0;.93;.97" calcMode="discrete" dur="4.5s" repeatCount="indefinite"/>';
   const auge = `<g transform="translate(58.6982140479797, 68.4887847633624)">
-    <g ${M} 10.2513859520203 9.33601523663765)">${farben.statisch ? "" : '<animateTransform attributeName="transform" type="scale" additive="sum" values="1 1;1 1;1 .1;1 1" keyTimes="0;.93;.96;1" dur="4.5s" repeatCount="indefinite"/>'}
+   <g>${blinkAuf}
+    <g ${M} 10.2513859520203 9.33601523663765)">
       <path transform="translate(-32.74, -21.0950318371097)" fill="#fbf7f0" d="${augeForm}"/>
       <clipPath id="${uid}-auge"><path transform="translate(-32.74, -21.0950318371096)" d="${augeForm}"/></clipPath>
       <g clip-path="url(#${uid}-auge)">
@@ -66,6 +70,10 @@ function kopfteileSVG(nase, uid = "kt" + Math.random().toString(36).slice(2, 7),
     </g>
     <path ${M} 1.40238623168947 6.32452010657275)" fill="none" stroke="#261a14" stroke-width="8.87" stroke-linecap="round" d="M0 25.595C19.6467 -6.39831 41.4733 -8.39831 65.48 19.595"/>
     <path ${M} 11.0569016464194 1.19780368949311)" fill="none" stroke="#261a14" stroke-width="5.49" stroke-linecap="round" d="M0 13.5L5.89 0M11.46 21.59L20.63 11.09"/>
+   </g>
+   ${farben.statisch ? "" : `<g opacity="0">${blinkZu}
+    <path ${M} 1.40238623168947 6.32452010657275)" fill="none" stroke="#261a14" stroke-width="8.87" stroke-linecap="round" d="M0 25.595C20 36 44 36 65.48 19.595M30 33.5L28 46M44 32L46 44"/>
+   </g>`}
   </g>`;
   const fell = farben.fell || "#9a9a9a", muschel = farben.muschel || (farben.fell && typeof mix === "function" ? (hexRgb(fell).reduce((x, y) => x + y) / 3 < 70 ? mix(fell, "#b59a9a", .5) : mix(fell, "#2b2240", .35)) : "#fee11c"), ink = farben.ink || "#090609";
   const S = KT_S.replace("#090609", ink) + (farben.dueneLinie ? ' vector-effect="non-scaling-stroke"' : "");

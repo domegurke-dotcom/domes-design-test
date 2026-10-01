@@ -285,13 +285,35 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const ohr = (Eb, farbe, ohneMuschel = false) => {
     // Ohren hängen, wenn der Kopf unter der Waagerechten ist (tief / liegend)
     if (ohrenHaengen) ohneMuschel = true;
-    const e = ohrenHaengen ? norm(P(0.85, 0.3)) : ohrenGeknickt ? norm(P(0.6, -0.8)) : norm(P(-0.22, -1)), q = P(-e.y, e.x), bw = 0.28 * el;
+    const sichel = k.curl && !ohrenHaengen && !ohrenGeknickt;
+    const e = ohrenHaengen ? norm(P(0.85, 0.3)) : ohrenGeknickt ? norm(P(0.6, -0.8)) : sichel ? norm(P(0.25, -1)) : norm(P(-0.22, -1)), q = P(-e.y, e.x), bw = (sichel ? 0.2 : 0.28) * el;
     const b1 = add(Eb, mul(q, -bw)), b2 = add(Eb, mul(q, bw));
     let tip = add(Eb, mul(e, el));
     let c1 = add(add(b1, mul(e, el * 0.75)), mul(q, -bw * 0.2));
     let c2 = add(add(b2, mul(e, el * 0.55)), mul(q, bw * 0.5));
     if (ohrenGeknickt) { tip = add(add(Eb, mul(e, el * 0.6)), mul(norm(P(1, 0.15)), el * 0.42)); c1 = add(add(b1, mul(e, el * 0.62)), mul(q, -bw * 0.1)); c2 = add(add(b2, mul(e, el * 0.45)), mul(q, bw * 0.2)); }
-    if (k.curl && !ohrenHaengen && !ohrenGeknickt) { tip = add(tip, P(-0.42 * el, 0.08 * el)); c1 = add(c1, P(0.05 * el, -0.1 * el)); c2 = add(c2, P(0.25 * el, -0.35 * el)); }
+    // Marwari: schmale Mondsichel – beide Kanten biegen parallel nach hinten aus, die Spitze dreht nach innen
+    if (sichel) {
+      // Marwari: schmale Mondsichel entlang eines Bogens; die Spitze dreht nach vorn/innen
+      const R = el * 0.78, vorn = mul(q, -1), O = add(Eb, mul(vorn, R));
+      const mitte = t => { const phi = t * 1.5; return add(O, add(mul(vorn, -R * Math.cos(phi)), mul(e, R * Math.sin(phi)))); };
+      const breite = t => bw * Math.pow(1 - t, 0.8) + 0.15;
+      const aussen = [], innen = [];
+      for (let i = 0; i <= 10; i++) {
+        const t = i / 10, c = mitte(t), c2_ = mitte(Math.min(1, t + 0.01)), c0 = mitte(Math.max(0, t - 0.01));
+        const tan = norm(sub(c2_, c0)), nrm = P(-tan.y, tan.x);
+        aussen.push(add(c, mul(nrm, breite(t)))); innen.push(add(c, mul(nrm, -breite(t))));
+      }
+      const spitze = mitte(1.04);
+      merke([spitze]);
+      const pfad = glatt(aussen.concat([spitze], innen.reverse()), true, 0.9);
+      const dunkelOhr = hexRgb(farbe).reduce((x, y) => x + y) / 3 < 70;
+      const mus = [];
+      for (let i = 1; i <= 8; i++) { const t = i / 10, c = mitte(t), c0 = mitte(t - 0.01), c2_ = mitte(t + 0.01), tan = norm(sub(c2_, c0)), nrm = P(-tan.y, tan.x); mus.push(add(c, mul(nrm, -breite(t) * 0.75))); }
+      for (let i = 8; i >= 1; i--) { const t = i / 10, c = mitte(t); mus.push(c); }
+      return `<path d="${pfad}" fill="${farbe}" stroke="${INK}" stroke-width="1.9" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>` +
+        (ohneMuschel ? "" : `<path d="${glatt(mus, true, 0.8)}" fill="${dunkelOhr ? mix(farbe, "#b59a9a", .5) : mix(farbe, "#2b2240", .35)}"/>`);
+    }
     merke([tip]);
     // Ohrmuschel: füllt die vordere Ohrfläche von der Basis bis zur Spitze, nur hinten bleibt ein Rand
     const i1 = add(b1, mul(q, bw * 0.12)), i2 = add(b1, mul(q, bw * 1.45)), itip = add(tip, mul(sub(Eb, tip), 0.06));

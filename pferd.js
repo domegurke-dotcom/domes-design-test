@@ -455,7 +455,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     wl.push(P(maxX, 2));
     g += `<path d="${eckig(wl)}" fill="#f7f5f1"/></g>`;
   }
-  if (C.stripe) g += `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${C.stripe}" stroke-width="2.8" stroke-linecap="round" opacity=".85" filter="url(#wm-${uid})"/>`;
+  if (C.stripe) g += `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${C.stripe}" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>`;
   if (C.muzzle) g += `<ellipse cx="${f(hp(0.93, 0.12).x)}" cy="${f(hp(0.93, 0.12).y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.93, 0.12).x)} ${f(hp(0.93, 0.12).y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>`;
   // Abzeichen (weiß): Kopf und Beine
   const abz = opt.abzeichen || {};

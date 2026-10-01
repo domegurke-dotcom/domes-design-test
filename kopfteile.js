@@ -28,9 +28,22 @@ const KOPFTEILE = {
     rams:   { name: "Ramskopf",     profil: 1.8, d: 'M0 74.28C0.142119 73.4063 0.309502 72.5806 0.499553 71.7955C2.38446 37.4798 28.9207 13.0414 43.1043 1.12576C43.4581 0.676082 43.7713 0.298731 44.04 0' },
   },
   nasenTransform: 'translate(21.3601761233432, 51.6239009652544)',
+  // Fellflächen (grau = Fellfarbe, gelb = Ohrmuschel)
+  fell: ['translate(21.4975481856371, 26.88)', 'M145.062 63.36C121.258 46.9718 93.5214 22.9967 65.3825 15.84L60.3425 6.72L49.0625 0C49.2311 3.50036 52.7917 7.14205 56.7425 10.8L58.6625 17.04L53.6225 18C49.0074 9.58116 43.964 7.90864 39.7025 5.76C41.4147 8.17477 44.7747 12.6548 49.7825 19.2L40.6625 28.32C35.1657 40.3389 30.1367 52.2019 28.6625 62.88L11.1425 90.72C7.32087 91.858 3.84669 93.1029 1.06245 94.56C-0.0578941 99.4037 -0.805303 104.142 1.54245 108C3.45925 111.342 2.808 119.283 8.50245 118.08C11.8822 120.019 14.6027 119.461 16.6625 116.4C23.3858 116.821 25.7275 114.051 25.5425 109.44C31.1458 108.253 39.8786 98.1432 48.3425 88.8C59.359 87.5299 70.8411 84.608 77.6225 74.64C81.2646 74.3308 84.3003 75.8693 87.2225 78.72C90.6158 83.2335 95.1758 92.8335 100.902 107.52Z'],
+  ohrmuscheln: [
+    ['translate(67.0610380459458, 24.72)', 'M8.53896 20.16L12.859 19.92C12.2632 17.4814 11.7533 15.0715 10.699 12.48C6.94371 8.79288 3.19643 5.09379 0.378962 0C-1.48273 6.45574 3.87824 16.2814 8.53896 20.16Z'],
+    ['translate(59.0183732458496, 30.24)', 'M12.2616 15.84C11.5243 14.3189 7.44426 9.03891 0.0216268 0C-0.130881 4.11582 0.499802 8.08311 2.66163 11.76C4.27668 14.2515 6.01558 16.7058 8.42163 18.96C9.10162 18.72 10.3816 17.68 12.2616 15.84Z'],
+  ],
+  nasenFell: {
+    gerade: ['translate(21.84, 55.68)', 'M40.56 0C17.5599 36.2097 4.03989 58.5297 0 66.96C18.241 64.9903 31.761 42.6703 40.56 0Z'],
+    hecht:  ['translate(21.9223532538999, 55.56)', 'M40.56 0C36.6468 4.87473 32.6704 9.65865 30 16.32C24.1872 35.7923 12.1571 58.0356 5.43765 61.56C0.65804 63.4827 0.809398 65.3818 0 66.96C13.8947 66.9354 28.0127 42.5949 30.24 32.16C37.76 12.72 41.2 2 40.56 0Z'],
+    rams:   ['translate(21.4207819746662, 55.56)', 'M41.0616 0C38.83 0.450823 23.3854 14.1159 16.0192 26.28C5.42791 36.2657 -0.401952 66.3996 0.0215713 67.68C13.9163 67.6554 28.5143 42.5949 30.7416 32.16C38.2616 12.72 41.7016 2 41.0616 0Z'],
+  },
+  // Anschlusspunkte: Stirn (Anfang Nasenrücken) und Nase (Ende)
+  stirn: { x: 65.40, y: 51.62 }, nase: { x: 21.36, y: 125.90 }, genick: { x: 86.64, y: 42.96 },
 };
 // Setzt den Kopf zusammen: Basis + gewählter Nasenrücken + Auge
-function kopfteileSVG(nase, uid = "kt" + Math.random().toString(36).slice(2, 7)) {
+function kopfteileSVG(nase, uid = "kt" + Math.random().toString(36).slice(2, 7), farben = {}) {
   const K = KOPFTEILE, n = K.nasen[nase] || K.nasen.gerade;
   const M = 'transform="matrix(0.232870974306239 -0.0580612549439202 0.0580612549439202 0.232870974306239';
   const augeForm = 'M0 25.595C19.6467 -6.39831 41.4733 -8.39831 65.48 19.595C45.8333 45.5884 24.0067 47.5884 0 25.595Z';
@@ -48,6 +61,11 @@ function kopfteileSVG(nase, uid = "kt" + Math.random().toString(36).slice(2, 7))
     <path ${M} 1.40238623168947 6.32452010657275)" fill="none" stroke="#261a14" stroke-width="8.87" stroke-linecap="round" d="M0 25.595C19.6467 -6.39831 41.4733 -8.39831 65.48 19.595"/>
     <path ${M} 11.0569016464194 1.19780368949311)" fill="none" stroke="#261a14" stroke-width="5.49" stroke-linecap="round" d="M0 13.5L5.89 0M11.46 21.59L20.63 11.09"/>
   </g>`;
-  return K.basis.map(([t, d]) => `<path transform="${t}" ${KT_S} d="${d}"/>`).join("") +
-    `<path transform="${K.nasenTransform}" ${KT_S} d="${n.d}"/>` + auge;
+  const fell = farben.fell || "#9a9a9a", muschel = farben.muschel || (farben.fell && typeof mix === "function" ? (hexRgb(fell).reduce((x, y) => x + y) / 3 < 70 ? mix(fell, "#b59a9a", .5) : mix(fell, "#2b2240", .35)) : "#fee11c"), ink = farben.ink || "#090609";
+  const S = KT_S.replace("#090609", ink) + (farben.dueneLinie ? ' vector-effect="non-scaling-stroke"' : "");
+  const nf = K.nasenFell[nase] || K.nasenFell.gerade;
+  return `<path transform="${K.fell[0]}" fill="${fell}" d="${K.fell[1]}"/><path transform="${nf[0]}" fill="${fell}" d="${nf[1]}"/>` +
+    K.ohrmuscheln.map(([t, d]) => `<path transform="${t}" fill="${muschel}" d="${d}"/>`).join("") +
+    K.basis.map(([t, d]) => `<path transform="${t}" ${S} d="${d}"/>`).join("") +
+    `<path transform="${K.nasenTransform}" ${S} d="${n.d}"/>` + auge;
 }

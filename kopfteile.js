@@ -68,7 +68,9 @@ function kopfteileSVG(nase, uid = "kt" + Math.random().toString(36).slice(2, 7),
   const fell = farben.fell || "#9a9a9a", muschel = farben.muschel || (farben.fell && typeof mix === "function" ? (hexRgb(fell).reduce((x, y) => x + y) / 3 < 70 ? mix(fell, "#b59a9a", .5) : mix(fell, "#2b2240", .35)) : "#fee11c"), ink = farben.ink || "#090609";
   const S = KT_S.replace("#090609", ink) + (farben.dueneLinie ? ' vector-effect="non-scaling-stroke"' : "");
   const nf = K.nasenFell[nase] || K.nasenFell.gerade;
+  const fellPfade = `<path transform="${K.fell[0]}" d="${K.fell[1]}"/><path transform="${nf[0]}" d="${nf[1]}"/>`;
   return `<path transform="${K.fell[0]}" fill="${fell}" d="${K.fell[1]}"/><path transform="${nf[0]}" fill="${fell}" d="${nf[1]}"/>` +
+    (farben.schattierung ? `<clipPath id="${uid}-fell">${fellPfade}</clipPath><g clip-path="url(#${uid}-fell)">${farben.schattierung}</g>` : "") +
     K.ohrmuscheln.map(([t, d]) => `<path transform="${t}" fill="${muschel}" d="${d}"/>`).join("") +
     K.basis.map(([t, d]) => `<path transform="${t}" ${S} d="${d}"/>`).join("") +
     `<path transform="${K.nasenTransform}" ${S} d="${n.d}"/>` + auge;

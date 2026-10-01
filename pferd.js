@@ -136,7 +136,11 @@ let _uid = 0;
 // ---------- Zeichnen ----------
 // Liefert { svg: "<g>…</g>", box: {minX,maxX,minY} } in Pferde-Einheiten (Widerrist = 100)
 function zeichnePferd(rasseId, farbId, opt = {}) {
-  const R = rasseById(rasseId), k = opt.k ? { ...R.k, ...opt.k } : R.k, C = FARBEN[farbId] || FARBEN.schimmel;
+  // Körpertyp: duenn | sportlich | normal | dick
+  const typ = opt.typ || "normal";
+  const TYP = { duenn: { bauch: -1, hq: 0.88, crest: -0.03, legT: 0.94 }, sportlich: { bauch: -0.45, hq: 1.07, crest: 0.025, legT: 1 }, normal: { bauch: 0, hq: 1, crest: 0, legT: 1 }, dick: { bauch: 1, hq: 1.12, crest: 0.07, legT: 1.04 } }[typ] || { bauch: 0, hq: 1, crest: 0, legT: 1 };
+  const R = rasseById(rasseId), kBasis = opt.k ? { ...R.k, ...opt.k } : R.k;
+  const k = { ...kBasis, hq: (kBasis.hq || 1) * TYP.hq, crest: kBasis.crest + TYP.crest, legT: kBasis.legT * TYP.legT, nk: Math.max(kBasis.nk || 0, typ === "dick" ? 0.7 : 0) }, C = FARBEN[farbId] || FARBEN.schimmel;
   const uid = "p" + (++_uid);
   const rnd = zufall(opt.seed || rasseId + farbId);
   const hengst = opt.geschlecht === "Hengst";
@@ -176,9 +180,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     P(0.2 * L, -H), P(0.32 * L, top + 1.2 + 0.6 * (k.sag || 0)), P(0.48 * L, top + 2.6 + (k.sag || 0)), P(0.66 * L, top + 1.4 + 0.7 * (k.sag || 0)),
     P(0.8 * L, croupY - (hq - 1) * 8), P(L - 0.02 * H, croupY + 2.5 + k.croup * 3),
     P(L + 0.045 * H * hq, top + 0.3 * D), P(L + 0.04 * H * hq, top + 0.6 * D), P(L - 0.01 * H, bottom - 0.05 * D),
-    P(0.8 * L, bottom + 0.015 * H), P(0.71 * L, bottom - 0.1 * D), P(0.55 * L, bottom - 0.02 * D),
-    P(0.32 * L, bottom + 1.5), P(0.15 * L, bottom + 0.5), P(0.03 * L, bottom - 0.1 * D),
-    P(-0.055 * H, top + 0.68 * D), P(-0.075 * H, top + 0.45 * D), P(-0.03 * H, top + 0.18 * D), P(0.08 * L, top + 0.03 * D),
+    P(0.8 * L, bottom + 0.015 * H), P(0.71 * L, bottom - 0.1 * D + TYP.bauch * (TYP.bauch < 0 ? 0.16 : 0.09) * D), P(0.55 * L, bottom - 0.02 * D + TYP.bauch * (TYP.bauch < 0 ? 0.1 : 0.13) * D),
+    P(0.32 * L, bottom + 1.5 + TYP.bauch * (TYP.bauch < 0 ? 1 : 0.11 * D)), P(0.15 * L, bottom + 0.5 + Math.max(0, TYP.bauch) * 0.04 * D), P(0.03 * L, bottom - 0.1 * D),
+    P(-0.055 * H - Math.max(0, TYP.bauch) * 2.5, top + 0.68 * D), P(-0.075 * H, top + 0.45 * D), P(-0.03 * H, top + 0.18 * D), P(0.08 * L, top + 0.03 * D),
   ]);
 
   // --- Hals + Kopf ---
@@ -527,6 +531,36 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (!liegt) g += inkFein(`M${f(fx - 0.5 * w)},${f(-0.47 * Lg)}l${f(0.6 * w)},0`, 1.1, 'opacity=".55"');
   if (!liegt) g += inkFein(`M${f(hx + 0.3 * w)},${f(-0.54 * Lg)}l${f(0.6 * w)},${f(-1)}`, 1.1, 'opacity=".55"');
   g += inkFein(`M${f(hp(0.34, 0.2).x)},${f(hp(0.34, 0.2).y)}Q${f(hp(0.52, 0.4).x)},${f(hp(0.52, 0.4).y)} ${f(hp(0.3, 0.47 * hw * jw).x)},${f(hp(0.3, 0.47 * hw * jw).y)}`, 1.4, 'opacity=".75"');
+  // Körpertyp-Details
+  if (!liegt && typ === "duenn") {
+    for (let i = 0; i < 6; i++) {
+      const x = 0.36 * L + i * 0.052 * L, y0 = top + 0.3 * D, y1 = bottom - 0.12 * D + Math.abs(i - 2.5) * 1.2;
+      g += inkFein(`M${f(x)},${f(y0)}Q${f(x + 0.04 * L)},${f((y0 + y1) / 2)} ${f(x + 0.012 * L)},${f(y1)}`, 1.15, 'opacity=".55"');
+      g += `<path d="M${f(x + 1.2)},${f(y0 + 2)}Q${f(x + 0.04 * L + 1.2)},${f((y0 + y1) / 2)} ${f(x + 0.012 * L + 1.2)},${f(y1 - 2)}" fill="none" stroke="${licht}" stroke-width="1.4" stroke-linecap="round" opacity=".55" vector-effect="non-scaling-stroke"/>`;
+    }
+    g += inkFein(`M${f(0.76 * L)},${f(croupY + 6)}q${f(0.03 * L)},-5 ${f(0.07 * L)},-1`, 1.3, 'opacity=".65"');            // Hüfthöcker
+    g += inkFein(`M${f(0.28 * L)},${f(top + 3)}Q${f(0.5 * L)},${f(top + 5.5)} ${f(0.74 * L)},${f(top + 3)}`, 1, 'opacity=".45"'); // Wirbelsäule
+    g += inkFein(`M${f(0.08 * L)},${f(top + 0.12 * D)}q${f(-2)},${f(0.25 * D)} ${f(0.02 * L)},${f(0.45 * D)}`, 1, 'opacity=".5"'); // Schulterblatt
+  }
+  if (!liegt && typ === "sportlich") {
+    const m = (d, o = ".55") => inkFein(d, 1.2, `opacity="${o}"`);
+    g += m(`M${f(0.05 * L)},${f(top + 0.2 * D)}Q${f(0.2 * L)},${f(top + 0.45 * D)} ${f(0.16 * L)},${f(bottom - 0.12 * D)}`);          // Schultermuskel
+    g += m(`M${f(0.22 * L)},${f(top + 0.35 * D)}Q${f(0.26 * L)},${f(top + 0.7 * D)} ${f(0.19 * L)},${f(bottom - 0.02 * D)}`, ".45");   // Trizeps
+    g += m(`M${f(0.82 * L)},${f(croupY + 4)}Q${f(L + 0.02 * H)},${f(top + 0.5 * D)} ${f(0.9 * L)},${f(bottom + 0.06 * H)}`);         // Hinterbacke
+    g += m(`M${f(0.74 * L)},${f(top + 0.25 * D)}Q${f(0.86 * L)},${f(top + 0.7 * D)} ${f(0.8 * L)},${f(bottom + 0.02 * H)}`, ".45");  // Oberschenkel
+    g += m(`M${f(0.45 * L)},${f(bottom - 0.25 * D)}Q${f(0.58 * L)},${f(bottom - 0.32 * D)} ${f(0.68 * L)},${f(bottom - 0.2 * D)}`, ".35"); // Bauchmuskel
+    g += m(`M${f(Pn.x + 4)},${f(Pn.y + 6)}Q${f(mid(Pn, Wn).x + 2)},${f(mid(Pn, Wn).y + 10)} ${f(0.06 * L)},${f(top + 0.25 * D)}`, ".45"); // Halsmuskel
+    g += `<ellipse cx="${f(0.11 * L)}" cy="${f(top + 0.42 * D)}" rx="${f(0.06 * L)}" ry="${f(0.14 * D)}" fill="${licht}" opacity=".35"/>`;
+    g += `<ellipse cx="${f(0.88 * L)}" cy="${f(top + 0.35 * D)}" rx="${f(0.07 * L)}" ry="${f(0.16 * D)}" fill="${licht}" opacity=".35"/>`;
+  }
+  if (!liegt && typ === "dick") {
+    const fett = (d, o = ".45") => inkFein(d, 1.1, `opacity="${o}"`);
+    g += fett(`M${f(0.16 * L)},${f(top + 0.25 * D)}q${f(0.03 * L)},${f(0.2 * D)} ${f(0)},${f(0.45 * D)}`);                      // Polster hinter der Schulter
+    g += fett(`M${f(0.4 * L)},${f(bottom + 0.06 * D)}Q${f(0.55 * L)},${f(bottom + 0.16 * D)} ${f(0.7 * L)},${f(bottom - 0.02 * D)}`, ".35"); // Bauchrundung
+    g += fett(`M${f(0.62 * L)},${f(top + 6)}q${f(0.08 * L)},${f(-3)} ${f(0.16 * L)},${f(1)}`, ".4");                             // Fettpolster Kruppe
+    g += fett(`M${f(mid(Pn, Wn).x - 3)},${f(mid(Pn, Wn).y + 3)}q${f(6)},${f(-3)} ${f(12)},${f(2)}`, ".4");                   // Speckkamm
+    g += `<ellipse cx="${f(0.5 * L)}" cy="${f(bottom - 0.1 * D)}" rx="${f(0.2 * L)}" ry="${f(0.12 * D)}" fill="${licht}" opacity=".25"/>`;
+  }
   // kurze Fellstriche wie bei einer Tuschezeichnung
   const strich = (p, dx, dy) => inkFein(`M${f(p.x)},${f(p.y)}l${f(dx)},${f(dy)}`, 1, 'opacity=".45"');
   g += strich(P(-0.05 * H, top + 0.62 * D), 1.5, 2.5) + strich(P(-0.03 * H, top + 0.72 * D), 1.5, 2.2) + strich(P(-0.045 * H, top + 0.52 * D), 1.8, 2);

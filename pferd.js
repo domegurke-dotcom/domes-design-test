@@ -192,6 +192,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Waagerechte = Buggelenk (Brustspitze) und Maul auf gleicher Höhe
   const haltung = opt.haltung || "normal", liegt = haltung === "liegend";
   const eigenKopf = opt.eigenKopf && typeof KOPFTEILE !== "undefined" ? opt.eigenKopf : null;
+  let ekMatrix = null;
   const ohrenHaengen = haltung === "tief" || liegt;
   const ohrenGeknickt = !ohrenHaengen && opt.ohren === "geknickt";
   const gl = w * 1.5;                       // Höhe der untergeschlagenen Beine beim Liegen
@@ -631,7 +632,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       const ie = -(ia * e_ - ib * f_), iff = -(ib * e_ + ia * f_);
       return { matrix: [ia, ib, -ib, ia, ie, iff], schopf: schopf ? glatt(schopf) : schopfBueschel(), fl };
     }
-    g += `<g transform="matrix(${[a_, b_, -b_, a_, e_, f_].map(x => x.toFixed(5)).join(" ")})">${kopfteileSVG(eigenKopf, "ek" + uid, { fell: head, muschel, ink: INK, dueneLinie: true, statisch: opt.statisch })}</g>`;
+    ekMatrix = [a_, b_, -b_, a_, e_, f_].map(x => x.toFixed(5)).join(" ");
+    g += `<g transform="matrix(${ekMatrix})">${kopfteileSVG(eigenKopf, "ek" + uid, { fell: head, muschel, ink: INK, dueneLinie: true, statisch: opt.statisch })}</g>`;
   }
   // Mähne
   if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
@@ -650,7 +652,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Kopfdetails
   g += `<g>`;
   if (eigenKopf) {
-    // (handgezeichneter Kopf wurde schon vor der Mähne gezeichnet)
+    // (handgezeichneter Kopf wurde schon vor der Mähne gezeichnet) – hier kommt Domes Schopf obendrauf
+    const sv = k.fore < 0.25 ? null : ({ steh: "kurz", kurz: "kurz", mittel: "mittel", lang: "lang", extralang: "extralang" })[laenge];
+    if (sv && ekMatrix) g += `<g transform="matrix(${ekMatrix})">${schopfSVG(sv, mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane, INK, true)}</g>`;
   } else {
   if (fl >= 0.25) g += `<path d="${schopf ? glatt(schopf) : schopfBueschel()}" fill="${mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
   if (fl >= 0.25 && !schopf) g += schopfStraehnen();

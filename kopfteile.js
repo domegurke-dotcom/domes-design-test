@@ -50,13 +50,13 @@ const KOPFTEILE = {
 };
 // Setzt den Kopf zusammen: Basis + gewählter Nasenrücken + Auge
 function kopfteileSVG(nase, uid = "kt" + Math.random().toString(36).slice(2, 7), farben = {}) {
-  const K = KOPFTEILE, n = K.nasen[nase] || K.nasen.gerade;
+  const K = (farben.alter && typeof KOPFTEILE_ALTER !== "undefined" && KOPFTEILE_ALTER[farben.alter]) || KOPFTEILE, n = K.nasen[nase] || K.nasen.gerade;
   const M = 'transform="matrix(0.232870974306239 -0.0580612549439202 0.0580612549439202 0.232870974306239';
   const augeForm = 'M0 25.595C19.6467 -6.39831 41.4733 -8.39831 65.48 19.595C45.8333 45.5884 24.0067 47.5884 0 25.595Z';
   // Blinzeln: offenes Auge verschwindet kurz komplett, stattdessen geschlossenes Lid (kein Weiß mehr sichtbar)
   const blinkAuf = farben.statisch ? "" : '<animate attributeName="opacity" values="1;0;1" keyTimes="0;.93;.97" calcMode="discrete" dur="4.5s" repeatCount="indefinite"/>';
   const blinkZu = farben.statisch ? "" : '<animate attributeName="opacity" values="0;1;0" keyTimes="0;.93;.97" calcMode="discrete" dur="4.5s" repeatCount="indefinite"/>';
-  const auge = `<g transform="translate(58.6982140479797, 68.4887847633624)">
+  const auge = `<g transform="${K.augeT ? K.augeT + " " : ""}translate(58.6982140479797, 68.4887847633624)">
    <g>${blinkAuf}
     <g ${M} 10.2513859520203 9.33601523663765)">
       <path transform="translate(-32.74, -21.0950318371097)" fill="#fbf7f0" d="${augeForm}"/>
@@ -83,16 +83,18 @@ function kopfteileSVG(nase, uid = "kt" + Math.random().toString(36).slice(2, 7),
     (farben.schattierung ? `<clipPath id="${uid}-fell">${fellPfade}</clipPath><g clip-path="url(#${uid}-fell)">${farben.schattierung}</g>` : "") +
     K.ohrmuscheln.map(([t, d]) => `<path transform="${t}" fill="${muschel}" d="${d}"/>`).join("") +
     K.basis.map(([t, d]) => `<path transform="${t}" ${S} d="${d}"/>`).join("") +
-    `<path transform="${K.nasenTransform}" ${S} d="${n.d}"/>` + auge;
+    `<path transform="${K.nasenTransform}" ${S} d="${n.d}"/>` +
+    (K.extra ? `<clipPath id="${uid}-fellA">${fellPfade}</clipPath>` + K.extra.replaceAll("__UID__", uid) : "") + auge;
 }
 
 // kern: dunkle Mitte (Falben mit Aalstrich) – schmale Kopie des Schopfs, auf den Schopf beschnitten
 const SCHOPF_MITTE = { kurz: 10.3, mittel: 12.6, lang: 19, extralang: 21.6 };
-function schopfSVG(variante, farbe = "#d9d9d9", ink = "#090609", duenn = false, kern = null, uid = "sk") {
-  const s = KOPFTEILE.schoepfe[variante]; if (!s) return "";
+function schopfSVG(variante, farbe = "#d9d9d9", ink = "#090609", duenn = false, kern = null, uid = "sk", alter = null) {
+  const KA = (alter && typeof KOPFTEILE_ALTER !== "undefined" && KOPFTEILE_ALTER[alter]) || null;
+  const s = (KA || KOPFTEILE).schoepfe[variante]; if (!s) return "";
   const nsl = duenn ? ' vector-effect="non-scaling-stroke"' : "";
   if (!kern) return `<path transform="${s[0]}" fill="${farbe}" stroke="${ink}" stroke-width="2.16" stroke-linejoin="round"${nsl} d="${s[1]}"/>`;
-  const cx = SCHOPF_MITTE[variante] || 12;
+  const cx = KA ? KA.schopfMitte[variante] : (SCHOPF_MITTE[variante] || 12);
   return `<clipPath id="${uid}-schopf"><path transform="${s[0]}" d="${s[1]}"/></clipPath>` +
     `<path transform="${s[0]}" fill="${farbe}" d="${s[1]}"/>` +
     `<g clip-path="url(#${uid}-schopf)"><path transform="${s[0]} translate(${cx},0) scale(.42,1) translate(${-cx},0)" fill="${kern}" d="${s[1]}"/></g>` +

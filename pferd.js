@@ -219,6 +219,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (maulY(a0, th0) > normMinY) {
     const c0 = (Math.sin(th0) * 1.01 + Math.cos(th0) * 0.14 * k.muz) * hl;
     a0 = Math.asin(Math.min(0.97, (Wn.y + c0 - normMinY) / N));
+    // kurze Hälse (Shetty, Fohlen) nicht senkrecht aufstellen – sonst wirkt der Hals wie ein dünner Stiel
+    const aMax = (k.aMax != null ? k.aMax : k.nAng + 6) * Math.PI / 180;
+    if (a0 > aMax) a0 = Math.max((k.nAng - 20) * Math.PI / 180, aMax);
   }
   const normY = maulY(a0, th0);
   // „leicht“: mindestens ~18° tiefer als normal (wichtig für Pferde mit kurzem, tief angesetztem Hals),
@@ -829,11 +832,11 @@ function erzeugePflege(pferd, heute) {
 
 // Körperproportionen je Altersstufe (junge Pferde: lange Beine, kurzer flacher Rumpf, großer Kopf, kurzer Schweif)
 function ALTERS_K(stufe, k) {
-  if (stufe === "fohlen") return { len: k.len * 0.84, depth: k.depth * 0.8, legT: k.legT * 0.72, neck: k.neck * 0.8, head: k.head * 1.14, crest: 0, nk: 0,
+  if (stufe === "fohlen") return { len: k.len * 0.84, depth: k.depth * 0.8, legT: k.legT * 0.72, neck: k.neck * 0.92, head: k.head * 1.14, crest: 0.015, nk: 0, aMax: Math.min(k.nAng, 50),
     tail: k.tail * 0.5, tvol: Math.min(k.tvol, 0.7) * 0.8, feather: 0, croup: -0.6, hq: (k.hq || 1) * 0.94, fore: Math.min(k.fore, 0.5) };
-  if (stufe === "jaehrling") return { len: k.len * 0.92, depth: k.depth * 0.88, legT: k.legT * 0.85, neck: k.neck * 0.9, head: k.head * 1.06, crest: k.crest * 0.4, nk: (k.nk || 0) * 0.5,
+  if (stufe === "jaehrling") return { len: k.len * 0.92, depth: k.depth * 0.88, legT: k.legT * 0.85, neck: k.neck * 0.95, head: k.head * 1.06, crest: k.crest * 0.5, aMax: Math.min(k.nAng + 3, 56), nk: (k.nk || 0) * 0.5,
     tail: k.tail * 0.75, tvol: k.tvol * 0.8, feather: (k.feather || 0) * 0.5, croup: k.croup - 0.3 };
-  if (stufe === "jungpferd") return { depth: k.depth * 0.95, legT: k.legT * 0.94, neck: k.neck * 0.96, crest: k.crest * 0.7, tail: k.tail * 0.92 };
+  if (stufe === "jungpferd") return { depth: k.depth * 0.95, legT: k.legT * 0.94, neck: k.neck * 0.98, crest: k.crest * 0.75, aMax: Math.min(k.nAng + 5, 62), tail: k.tail * 0.92 };
   if (stufe === "reif") return { sag: 1 };
   if (stufe === "senior") return { sag: 2.6, crest: k.crest * 0.4, hq: (k.hq || 1) * 0.94 };
   return {};

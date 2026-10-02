@@ -173,7 +173,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   let maneOuter = mane, maneStripe = null;
   if (k.mane === "fjord") { maneOuter = "#efe6d2"; maneStripe = C.stripe || mane; }
   // Falben mit Aalstrich: Schopf und Schweif zweifarbig – dunkle Mitte, helle Seiten
-  const dunKern = C.stripe || null;
+  // realistisch: der deutlich zweifarbige Behang (helle Seiten, dunkle Mitte) ist typisch fürs Fjordpferd – andere Falben haben dunklen, einfarbigen Behang
+  const dunKern = k.mane === "fjord" ? (C.stripe || null) : null;
   const dunHell = dunKern ? (k.mane === "fjord" ? "#efe6d2" : mstil === "fjord" ? mix(C.body, "#efe6d2", 0.55) : mix(mane, C.body, 0.5)) : null;
   const tailCol = dunKern ? dunHell : (k.mane === "fjord" ? mix(maneOuter, maneStripe, 0.25) : mane);
   if (mstil === "fjord" && k.mane !== "fjord") { maneOuter = dunKern ? dunHell : mane; maneStripe = dunKern; }   // Stehmähne: mit Aalstrich zweifarbig wie beim Norweger

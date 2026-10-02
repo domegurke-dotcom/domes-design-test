@@ -191,7 +191,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Haltung je nach Gesundheit: normal | leicht | waagerecht | tief | liegend
   // Waagerechte = Buggelenk (Brustspitze) und Maul auf gleicher Höhe
   const haltung = opt.haltung || "normal", liegt = haltung === "liegend";
-  const eigenKopf = opt.eigenKopf && typeof KOPFTEILE !== "undefined" ? opt.eigenKopf : null;
+  const ekWahl = opt.eigenKopf === false ? null : (opt.eigenKopf || RASSE_KOPF[rasseId]);
+  const eigenKopf = ekWahl && typeof KOPFTEILE !== "undefined" ? ekWahl : null;
   let ekMatrix = null;
   const ohrenHaengen = haltung === "tief" || liegt;
   const ohrenGeknickt = !ohrenHaengen && opt.ohren === "geknickt";
@@ -242,7 +243,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const crestCtrl = add(mid(Wn, Pn), mul(nOut, crest * H + 4));
   // Handgezeichneter Kopf: Kehle setzt genau am Ende seiner Ganaschenlinie an
   let ekKehle = null;
-  if (opt.eigenKopf && typeof KOPFTEILE !== "undefined") {
+  if (eigenKopf) {
     const K = KOPFTEILE, A = add(Pn, mul(nOut, 1.2)), B = hp(0.97, 0.0);
     const ux = K.nase.x - K.genick.x, uy = K.nase.y - K.genick.y, vx = B.x - A.x, vy = B.y - A.y;
     const den = ux * ux + uy * uy, a_ = (vx * ux + vy * uy) / den, b_ = (vy * ux - vx * uy) / den;
@@ -809,6 +810,10 @@ function erzeugePflege(pferd, heute) {
     zahn: t - Math.floor(30 + r() * 300),
   };
 }
+
+// Gezeichnete Kopfform (Domes Zeichnungen) je Rasse – fehlt eine Rasse hier, bleibt der Spielkopf
+const RASSE_KOPF = { araber: "hecht", friese: "gerade", fjord: "gerade", haflinger: "gerade", shetty: "gerade", vollblut: "gerade",
+  quarter: "gerade", hannoveraner: "gerade", isi: "gerade", tekke: "gerade", shire: "rams", lipizzaner: "rams" };
 
 // Natürliche Mähnenlänge der Rasse
 function naturMaehne(rasseId) {

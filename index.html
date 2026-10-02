@@ -520,7 +520,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "89";
+  const SPIEL_VERSION = "90";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -528,8 +528,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=89"></script>
-<script src="kopfteile.js?v=89"></script>
+<script src="pferd.js?v=90"></script>
+<script src="kopfteile.js?v=90"></script>
+<script src="kopfalter.js?v=90"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -574,7 +575,14 @@
     [36, "🌱 Jungpferd", "körperliche Entwicklung, Ausbildung beginnt langsam"], [60, "🐎 Jungpferd", "Ausbildung und Einreiten"], [180, "🐎 Erwachsenes Pferd", "volle Leistungsphase"],
     [240, "🐎 Reifes Pferd", "weiterhin leistungsfähig, aber etwas älter"], [Infinity, "👴 Senior", "Alterserscheinungen nehmen langsam zu"]];
   const altersstufe = p => ALTERSSTUFEN.find(([m]) => alterJZ(p) * 3 < m);
-  const alterAktualisieren = () => spiel.boxen.forEach(b => { if (b.pferd) { sichereGeburt(b.pferd); b.pferd.alter = alterJahre(b.pferd); } });
+  // Schlüssel für Körper/Kopf je Alter
+  const stufeAusMonaten = m => m < 12 ? "fohlen" : m < 24 ? "jaehrling" : m < 60 ? "jungpferd" : m < 180 ? undefined : m < 240 ? "reif" : "senior";
+  const stufeKey = p => stufeAusMonaten(alterJZ(p) * 3);
+  // Wachstum: Anteil der Endgröße nach Alter in Monaten
+  const wuchs = m => m >= 48 ? 1 : m <= 0 ? 0.62 : [[0, .62], [6, .78], [12, .88], [24, .95], [36, .99], [48, 1]].reduce((r, [a, f], i, arr) => (m >= a && i < arr.length - 1 && m < arr[i + 1][0]) ? f + (arr[i + 1][1] - f) * (m - a) / (arr[i + 1][0] - a) : r, 1);
+  const datumLang = (d = datum()) => `${JZ[d.s][0]} ${d.j}`;
+  const alterAktualisieren = () => spiel.boxen.forEach(b => [b.pferd, b.fohlen].forEach(p => { if (!p) return; sichereGeburt(p); p.alter = alterJahre(p);
+    if (p.zielStockmass) p.stockmass = Math.round(p.zielStockmass * wuchs(alterJZ(p) * 3)); }));
   alterAktualisieren();
   const B = () => spiel.boxen[aktBox];
   const speichern = () => { try { localStorage.setItem(SPEICHER, JSON.stringify(spiel)); } catch (e) {} };
@@ -607,10 +615,19 @@
     $("waehlen").textContent = p ? "Pferd auswählen" : `Pferd für Box ${aktBox + 1} auswählen`;
     stallFormat();
     if (!p) { $("pferdPlatz").innerHTML = ""; zeigeAkte(); return; }
-    const z = zeichnePferd(p.rasse, p.farbe, { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, schopf: p.schopf, typ: p.typ, eigenKopf: p.nase === "spiel" ? false : (p.nase || undefined), haltung: haltungFuer(p), ohren: (p.pflege && p.pflege.gesundheit >= 45 && p.pflege.gesundheit < 65) ? "geknickt" : "" });
+    const z = zeichnePferd(p.rasse, p.farbe, { alterStufe: stufeKey(p), seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, schopf: p.schopf, typ: p.typ, eigenKopf: p.nase === "spiel" ? false : (p.nase || undefined), haltung: haltungFuer(p), ohren: (p.pflege && p.pflege.gesundheit >= 45 && p.pflege.gesundheit < 65) ? "geknickt" : "" });
     const s = p.stockmass * STALL.cmZuEinheit / 100;
     const cx = (z.box.minX + z.box.maxX) / 2;
-    $("pferdPlatz").innerHTML = `<g transform="translate(${(STALL.mitte - cx * s).toFixed(1)},${STALL.boden}) scale(${s.toFixed(4)})">${spiel.sparmodus ? z.svg.replace(/<animate[^>]*\/>/g, "") : z.svg}</g>`;
+    const anim = t => spiel.sparmodus ? t.replace(/<animate[^>]*\/>/g, "") : t;
+    let fohlenSVG = "";
+    const f = B().fohlen;
+    if (f) {
+      // Fohlen bei der Mutter: vor ihr, Blick nach rechts; in der Geburts-Jahreszeit liegt es noch
+      const fz = zeichnePferd(f.rasse, f.farbe, { alterStufe: stufeKey(f), seed: f.id, geschlecht: f.geschlecht, haltung: alterJZ(f) === 0 ? "liegend" : "normal", eigenKopf: undefined });
+      const fs = f.stockmass * STALL.cmZuEinheit / 100, fcx = (fz.box.minX + fz.box.maxX) / 2, fx = STALL.mitte - 34;
+      fohlenSVG = `<g transform="translate(${(fx + fcx * fs).toFixed(1)},${STALL.boden + 10}) scale(${(-fs).toFixed(4)},${fs.toFixed(4)})">${anim(fz.svg)}</g>`;
+    }
+    $("pferdPlatz").innerHTML = `<g transform="translate(${(STALL.mitte - cx * s).toFixed(1)},${STALL.boden}) scale(${s.toFixed(4)})">${anim(z.svg)}</g>` + fohlenSVG;
     zeigeAkte();
   }
 
@@ -632,6 +649,7 @@
           <dt>Geschlecht</dt><dd>${p.geschlecht}</dd>
           <dt>Alter</dt><dd>${alterText(p)} · ${altersstufe(p)[1]}</dd>
           <dt>Geboren</dt><dd>${JZ[p.geb.s][1]} ${JZ[p.geb.s][0]} ${p.geb.j}</dd>
+          ${box.fohlen ? `<dt>Fohlen</dt><dd>${esc(box.fohlen.name)} · ${box.fohlen.geschlecht} · ${alterText(box.fohlen)} (${altersstufe(box.fohlen)[1].replace(/^\S+ /, "")})${alterJZ(box.fohlen) >= 2 ? `<br><button class="knopf" id="absetzen" style="width:auto;padding:6px 12px;margin-top:6px;font-size:.85rem">In eigene Box umstellen</button>` : ""}</dd>` : ""}
           <dt>Stockmaß</dt><dd>${p.stockmass} cm</dd>
           <dt>Herkunft</dt><dd>${r.herkunft}</dd>
         </dl><p class="text">${r.text}</p>`;
@@ -808,6 +826,7 @@
         }).join("")}</div>
         <p class="text" style="margin:14px 0 4px">⏩ <b>Test: Zeit</b> · jeden Tag gefüttert und ausgemistet</p>
         <button class="knopf" id="sechsTage" style="width:100%">6 Tage vergehen lassen</button>
+        ${p.geschlecht === "Stute" && !box.fohlen ? `<button class="knopf" id="fohlenTest" style="width:100%;margin-top:8px">🍼 Fohlen bekommen (Test)</button>` : ""}
         <p class="text" style="margin:14px 0 4px">🐴 <b>Test: Nasenrücken</b> · deine Zeichnungen</p>
         <div class="kacheln klein">${(() => { const akt = p.nase || RASSE_KOPF[p.rasse] || "spiel"; return Object.entries(KOPFTEILE.nasen).map(([id, n]) => `<button class="kachel ${id === akt ? "aktuell" : "klickbar"}" data-nase="${id}">
             <svg class="mini" viewBox="15 15 120 125" style="background:#fff">${kopfteileSVG(id, undefined, { fell: FARBEN[p.farbe].head || FARBEN[p.farbe].body })}</svg>
@@ -837,6 +856,21 @@
       };
       inp.onkeydown = e => { if (e.key === "Enter") fertig(true); if (e.key === "Escape") fertig(false); };
       inp.onblur = () => fertig(true);
+    };
+    const ft = $("fohlenTest"); if (ft) ft.onclick = () => {
+      const r = rasseById(p.rasse), g = Math.random() < .5 ? "Stute" : "Hengst", d = datum();
+      box.fohlen = { id: "f" + Date.now().toString(36), name: zufallAus(NAMEN[g]), rasse: p.rasse, farbe: zufallAus(r.farben), geschlecht: g,
+        zielStockmass: Math.round(r.h[0] + Math.random() * (r.h[1] - r.h[0])), geb: { s: d.s, j: d.j }, mutter: p.name };
+      alterAktualisieren(); speichern(); zeigeStall();
+    };
+    const ab = $("absetzen"); if (ab) ab.onclick = () => {
+      const frei = spiel.boxen.findIndex(b => !b.pferd);
+      if (frei < 0) { alert("Es ist keine Box frei. In der Hofverwaltung kannst du mit + eine neue Box bauen."); return; }
+      const f = box.fohlen; delete box.fohlen;
+      spiel.boxen[frei].pferd = { ...f, werte: erzeugeWerte(f), pflege: erzeugePflege(f), maehneSeit: spiel.tag, schopfSeit: spiel.tag };
+      spiel.boxen[frei].pferd.ahnen = erzeugeAhnen(spiel.boxen[frei].pferd);
+      spiel.boxen[frei].krippeVoll = false; spiel.boxen[frei].mistig = false; spiel.boxen[frei].mistStufe = 0;
+      speichern(); zeigeStall(); zeigeTag();
     };
     const st6 = $("sechsTage"); if (st6) st6.onclick = () => {
       for (let i = 0; i < 6 && !spiel.boxen.some(b => b.tot); i++) { spiel.boxen.forEach(b => { b.krippeVoll = !!b.pferd; b.mistig = false; }); naechsteNacht(); }
@@ -1004,7 +1038,7 @@
     const wy = VB.boden - wahl.stockmass;
     lineal += `<line x1="30" x2="${VB.b - 8}" y1="${wy}" y2="${wy}" stroke="var(--akzent)" stroke-width="1.5"/><text x="${VB.b - 8}" y="${wy - 4}" font-size="11" text-anchor="end" font-weight="700" fill="var(--akzent)" stroke="#fff" stroke-width="3" paint-order="stroke">${wahl.stockmass} cm</text>`;
     // Breite anpassen, damit auch große Pferde ganz ins Bild passen
-    const z = zeichnePferd(wahl.rasse, wahl.farbe, { seed: wahl.id, geschlecht: wahl.geschlecht });
+    const z = zeichnePferd(wahl.rasse, wahl.farbe, { seed: wahl.id, geschlecht: wahl.geschlecht, alterStufe: stufeAusMonaten(wahl.alter * 12) });
     const sc = wahl.stockmass / 100, breite = (z.box.maxX - z.box.minX) * sc;
     // feste Bildbreite (passend für das breiteste Pferd), damit Bild und Pfeile nie springen
     if (!window.__vbMax) window.__vbMax = Math.max(VB.b, ...RASSEN.map(r => { const zz = zeichnePferd(r.id, r.farben[0], { seed: "max" }); return (zz.box.maxX - zz.box.minX) * r.h[1] / 100 * 1.04 + 190; }));
@@ -1095,7 +1129,7 @@
     const box = B();
     const dd = datum();
     $("tagAnzeige").innerHTML = `<b>${JZ[dd.s][1]} ${datumText(dd)}</b><small>Tag ${dd.t}/${tpj()} · beenden 🌙</small>`;
-    $("tagAnzeige").setAttribute("aria-label", `${datumText(dd)}, Tag ${dd.t} von ${tpj()} – antippen, um den Tag zu beenden`);
+    $("tagAnzeige").setAttribute("aria-label", `${datumLang(dd)}, Tag ${dd.t} von ${tpj()} – antippen, um den Tag zu beenden`);
     $("stall").classList.toggle("leer", !box.krippeVoll);
     $("stall").classList.toggle("mistig", !!box.mistig);
     $("stall").classList.toggle("ohneHinweise", (spiel.tag || 1) > 2 || !box.pferd);
@@ -1156,12 +1190,12 @@
     if (spiel.boxen.some(b => b.tot)) return;
     if (!box.krippeVoll) offen.push("die Krippe ist noch leer");
     if (box.mistig) offen.push("die Box ist noch nicht ausgemistet");
-    $("nachtSymbol").textContent = "🌙"; $("nachtText").textContent = `Ende von ${datumText()} · Tag ${datum().t}`;
+    $("nachtSymbol").textContent = "🌙"; $("nachtText").textContent = `Ende von ${datumLang()} · Tag ${datum().t}`;
     $("nacht").classList.add("an");
     setTimeout(() => {
       naechsteNacht();
       speichern(); zeigeStall(); zeigeTag();
-      const nd = datum(); $("nachtSymbol").textContent = JZ[nd.s][1]; $("nachtText").textContent = nd.t === 1 ? `Der ${JZ[nd.s][0]} ${nd.j} beginnt` : `${datumText(nd)} · Tag ${nd.t}`;
+      const nd = datum(); $("nachtSymbol").textContent = JZ[nd.s][1]; $("nachtText").textContent = nd.t === 1 ? `Der ${JZ[nd.s][0]} ${nd.j} beginnt` : `${datumLang(nd)} · Tag ${nd.t}`;
     }, 1100);
     setTimeout(() => $("nacht").classList.remove("an"), 2300);
   };
@@ -1323,7 +1357,7 @@
   function zeigeStart() {
     $("startMenue").innerHTML = `<div class="schirm-innen">
       <div class="logo">🐴</div><h1>Zuchtstall</h1><p class="unter">Züchte, pflege und trainiere deine eigenen Pferde</p>
-      <button class="sknopf haupt" id="smWeiter" ${hatSpielstand ? "" : "disabled"}><span class="i">▶</span><span>Weiterspielen<small>${hatSpielstand ? `${esc(hofName())} · ${datumText()}` : "noch kein Spielstand vorhanden"}</small></span></button>
+      <button class="sknopf haupt" id="smWeiter" ${hatSpielstand ? "" : "disabled"}><span class="i">▶</span><span>Weiterspielen<small>${hatSpielstand ? `${esc(hofName())} · ${datumLang()}` : "noch kein Spielstand vorhanden"}</small></span></button>
       <button class="sknopf" id="smNeu"><span class="i">✨</span><span>Neues Spiel<small>mit leerem Hof von vorn beginnen</small></span></button>
       <button class="sknopf" id="smVoll"><span class="i">⛶</span><span>Vollbildmodus ist ${istVoll() ? "an" : "aus"}<small>antippen zum Umschalten</small></span></button>
       <button class="sknopf" id="smEnde"><span class="i">🚪</span><span>Beenden<small>Spiel ist gespeichert</small></span></button>
@@ -1378,7 +1412,7 @@
   function zeigeHaupt() {
     const sp = spiel.spieler || { name: "", avatar: "🧑‍🌾" }, belegt = spiel.boxen.filter(b => b.pferd).length;
     $("hauptMenue").innerHTML = `<div class="schirm-innen">
-      <div class="hm-kopf"><span class="ava">${sp.avatar}</span><div><b>${esc(hofName())}</b><span>${sp.name ? esc(sp.name) + " · " : ""}${JZ[datum().s][1]} ${datumText()}</span></div></div>
+      <div class="hm-kopf"><span class="ava">${sp.avatar}</span><div><b>${esc(hofName())}</b><span>${sp.name ? esc(sp.name) + " · " : ""}${JZ[datum().s][1]} ${datumLang()}</span></div></div>
       <h1 style="margin-top:8px">Hauptmenü</h1>
       <div class="hm-kacheln">
         <button class="hm-kachel" id="hmStall"><span class="i">🏠</span>Stall<small>${belegt} von ${spiel.boxen.length} Boxen belegt</small></button>
@@ -1413,7 +1447,7 @@
     zeigeNeben("📋 Hofverwaltung", `<div class="panel"><dl>
         <dt>Hof</dt><dd class="hf-edit" id="hfHof" title="antippen zum Ändern">${esc(hofName())} <span class="stift">✏️</span></dd>
         <dt>Besitzer</dt><dd class="hf-edit" id="hfSpieler" title="antippen zum Ändern">${sp.avatar || ""} ${esc(sp.name || "–")} <span class="stift">✏️</span></dd>
-        <dt>Datum</dt><dd>${JZ[datum().s][1]} ${datumText()} · Tag ${datum().t}/${tpj()}</dd><dt>Spieltempo</dt><dd>${({3: "schnell", 4: "standard", 5: "langsam"})[tpj()]} (${tpj()} Tage pro Jahreszeit)</dd></dl></div>
+        <dt>Datum</dt><dd>${JZ[datum().s][1]} ${datumLang()} · Tag ${datum().t}/${tpj()}</dd><dt>Spieltempo</dt><dd>${({3: "schnell", 4: "standard", 5: "langsam"})[tpj()]} (${tpj()} Tage pro Jahreszeit)</dd></dl></div>
       <div class="panel"><div class="hf-kopf"><b>Boxen (${spiel.boxen.length})</b><button class="hf-plus" id="hfPlus" aria-label="Box hinzufügen">+</button></div>${boxen}</div>
       <button class="sknopf" id="hfSpar"><span class="i">🔋</span><span>Sparmodus ist ${spiel.sparmodus ? "an" : "aus"}<small>keine Animationen – schont den Akku</small></span></button>
       <button class="sknopf" id="hfVoll"><span class="i">⛶</span><span>Vollbildmodus ist ${istVoll() ? "an" : "aus"}<small>antippen zum Umschalten</small></span></button>`);

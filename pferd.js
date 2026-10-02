@@ -174,9 +174,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (k.mane === "fjord") { maneOuter = "#efe6d2"; maneStripe = C.stripe || mane; }
   // Falben mit Aalstrich: Schopf und Schweif zweifarbig – dunkle Mitte, helle Seiten
   const dunKern = C.stripe || null;
-  const dunHell = dunKern ? (k.mane === "fjord" ? "#efe6d2" : mix(mane, C.body, 0.5)) : null;
+  const dunHell = dunKern ? (k.mane === "fjord" ? "#efe6d2" : mstil === "fjord" ? mix(C.body, "#efe6d2", 0.55) : mix(mane, C.body, 0.5)) : null;
   const tailCol = dunKern ? dunHell : (k.mane === "fjord" ? mix(maneOuter, maneStripe, 0.25) : mane);
-  if (mstil === "fjord" && k.mane !== "fjord") { maneOuter = mane; maneStripe = null; }
+  if (mstil === "fjord" && k.mane !== "fjord") { maneOuter = dunKern ? dunHell : mane; maneStripe = dunKern; }   // Stehmähne: mit Aalstrich zweifarbig wie beim Norweger
   if (mstil !== "fjord" && k.mane === "fjord") { maneOuter = mix("#efe6d2", C.stripe || mane, 0.2); maneStripe = null; }
 
   // --- Rumpf ---

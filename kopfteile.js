@@ -86,7 +86,15 @@ function kopfteileSVG(nase, uid = "kt" + Math.random().toString(36).slice(2, 7),
     `<path transform="${K.nasenTransform}" ${S} d="${n.d}"/>` + auge;
 }
 
-function schopfSVG(variante, farbe = "#d9d9d9", ink = "#090609", duenn = false) {
+// kern: dunkle Mitte (Falben mit Aalstrich) – schmale Kopie des Schopfs, auf den Schopf beschnitten
+const SCHOPF_MITTE = { kurz: 10.3, mittel: 12.6, lang: 19, extralang: 21.6 };
+function schopfSVG(variante, farbe = "#d9d9d9", ink = "#090609", duenn = false, kern = null, uid = "sk") {
   const s = KOPFTEILE.schoepfe[variante]; if (!s) return "";
-  return `<path transform="${s[0]}" fill="${farbe}" stroke="${ink}" stroke-width="2.16" stroke-linejoin="round"${duenn ? ' vector-effect="non-scaling-stroke"' : ""} d="${s[1]}"/>`;
+  const nsl = duenn ? ' vector-effect="non-scaling-stroke"' : "";
+  if (!kern) return `<path transform="${s[0]}" fill="${farbe}" stroke="${ink}" stroke-width="2.16" stroke-linejoin="round"${nsl} d="${s[1]}"/>`;
+  const cx = SCHOPF_MITTE[variante] || 12;
+  return `<clipPath id="${uid}-schopf"><path transform="${s[0]}" d="${s[1]}"/></clipPath>` +
+    `<path transform="${s[0]}" fill="${farbe}" d="${s[1]}"/>` +
+    `<g clip-path="url(#${uid}-schopf)"><path transform="${s[0]} translate(${cx},0) scale(.42,1) translate(${-cx},0)" fill="${kern}" d="${s[1]}"/></g>` +
+    `<path transform="${s[0]}" fill="none" stroke="${ink}" stroke-width="2.16" stroke-linejoin="round"${nsl} d="${s[1]}"/>`;
 }

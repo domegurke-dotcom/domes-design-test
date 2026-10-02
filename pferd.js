@@ -172,7 +172,10 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const inkFein = (d, sw = 1.3, extra = "") => `<path d="${d}" fill="none" stroke="${INK}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" ${extra}/>`;
   let maneOuter = mane, maneStripe = null;
   if (k.mane === "fjord") { maneOuter = "#efe6d2"; maneStripe = C.stripe || mane; }
-  const tailCol = k.mane === "fjord" ? mix(maneOuter, maneStripe, 0.25) : mane;
+  // Falben mit Aalstrich: Schopf und Schweif zweifarbig – dunkle Mitte, helle Seiten
+  const dunKern = C.stripe || null;
+  const dunHell = dunKern ? (k.mane === "fjord" ? "#efe6d2" : mix(mane, C.body, 0.5)) : null;
+  const tailCol = dunKern ? dunHell : (k.mane === "fjord" ? mix(maneOuter, maneStripe, 0.25) : mane);
   if (mstil === "fjord" && k.mane !== "fjord") { maneOuter = mane; maneStripe = null; }
   if (mstil !== "fjord" && k.mane === "fjord") { maneOuter = mix("#efe6d2", C.stripe || mane, 0.2); maneStripe = null; }
 
@@ -627,6 +630,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const tailStr = (o, sc) => `M${f(X + 1 + 3 * s + o)},${f(Y + 8 - 10 * s)}C${f(X + 4 + 8 * s + tv * 2 + o)},${f(Y + 0.35 * tl)} ${f(X + 3 + 6 * s + tv * 3 + o)},${f(Y + 0.7 * tl)} ${f(X + 2 + 5 * s + tv * 2 + o * 0.6)},${f(Y + tl * sc)}`;
   g += `<g class="schweif"><animateTransform attributeName="transform" type="rotate" values="0 ${f(X)} ${f(Y)};5 ${f(X)} ${f(Y)};-2 ${f(X)} ${f(Y)};0 ${f(X)} ${f(Y)}" dur="3.4s" repeatCount="indefinite"/>` +
     `<path d="${schweifD}" fill="${tailCol}" stroke="${INK}" stroke-width="2.4" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>` +
+    (dunKern ? `<clipPath id="sw-${uid}"><path d="${schweifD}"/></clipPath><g clip-path="url(#sw-${uid})"><path d="${tailStr(-0.6 + 0.4 * tv, 1.05)}" fill="none" stroke="${dunKern}" stroke-width="${f(2.4 + 2.6 * tv)}" stroke-linecap="round"/></g>` +
+      `<path d="${schweifD}" fill="none" stroke="${INK}" stroke-width="2.4" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>` : "") +
     inkFein(tailStr(0, 0.88), 1.1, 'opacity=".55"') + inkFein(tailStr(2.5 + tv, 0.7), 1, 'opacity=".45"') +
     `<path d="${tailStr(-1.5, 0.6)}" fill="none" stroke="${mix(tailCol, "#ffffff", .45)}" stroke-width="1.6" stroke-linecap="round" opacity=".7" vector-effect="non-scaling-stroke"/></g>`;
 
@@ -678,7 +683,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (eigenKopf) {
     // (handgezeichneter Kopf wurde schon vor der Mähne gezeichnet) – hier kommt Domes Schopf obendrauf
     const sv = schopfL;
-    if (sv && ekMatrix) g += `<g transform="matrix(${ekMatrix})">${schopfSVG(sv, mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane, INK, false)}</g>`;
+    if (sv && ekMatrix) g += `<g transform="matrix(${ekMatrix})">${schopfSVG(sv, dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane), INK, false, dunKern, "sk" + uid)}</g>`;
   } else {
   if (fl >= 0.25) g += `<path d="${schopf ? glatt(schopf) : schopfBueschel()}" fill="${mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
   if (fl >= 0.25 && !schopf) g += schopfStraehnen();

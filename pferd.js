@@ -688,7 +688,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const iris = C.augen || "#2e1a0e";
   const lid = `M${f(-ex)},${f(ey * 0.15)}Q${f(-ex * 0.1)},${f(-ey * 1.45)} ${f(ex)},${f(-ey * 0.05)}`;
   g += `<g transform="translate(${f(auge.x)},${f(auge.y)}) rotate(-14)"><g>` +
-    `<animateTransform attributeName="transform" type="scale" values="1 1;1 1;1 .1;1 1" keyTimes="0;.93;.96;1" dur="4.5s" repeatCount="indefinite"/>` +
+    (opt.statisch ? "" : `<animate attributeName="opacity" values="1;0;1" keyTimes="0;.93;.97" calcMode="discrete" dur="4.5s" repeatCount="indefinite"/>`) +
     `<path d="${lid}Q${f(ex * 0.1)},${f(ey * 1.25)} ${f(-ex)},${f(ey * 0.15)}Z" fill="#fbf7f0"/>` +
     `<clipPath id="ea-${uid}"><path d="${lid}Q${f(ex * 0.1)},${f(ey * 1.25)} ${f(-ex)},${f(ey * 0.15)}Z"/></clipPath>` +
     `<g clip-path="url(#ea-${uid})"><circle cx="${f(-ex * 0.12)}" cy="${f(ey * 0.05)}" r="${f(ey * 1.08)}" fill="${iris}"/>` +
@@ -698,7 +698,12 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     `<path d="M${f(-ex * 0.75)},${f(ey * 0.55)}Q${f(ex * 0.1)},${f(ey * 1.25)} ${f(ex * 0.85)},${f(ey * 0.25)}" fill="none" stroke="${INK}" stroke-width="${f(er * 0.18)}" stroke-linecap="round" opacity=".6"/>` +
     `<path d="${lid}" fill="none" stroke="${INK}" stroke-width="${f(er * 0.42)}" stroke-linecap="round"/>` +
     `<path d="M${f(ex * 0.35)},${f(-ey * 0.62)}l${f(ex * 0.18)},${f(-ey * 0.45)}M${f(ex * 0.7)},${f(-ey * 0.35)}l${f(ex * 0.28)},${f(-ey * 0.35)}" fill="none" stroke="${INK}" stroke-width="${f(er * 0.26)}" stroke-linecap="round"/>` +
-    `</g></g>` +
+    `</g>` +
+    // geschlossenes Lid beim Blinzeln (kein Weiß sichtbar)
+    (opt.statisch ? "" : `<g opacity="0"><animate attributeName="opacity" values="0;1;0" keyTimes="0;.93;.97" calcMode="discrete" dur="4.5s" repeatCount="indefinite"/>` +
+      `<path d="M${f(-ex)},${f(ey * 0.15)}Q${f(-ex * 0.05)},${f(ey * 1.1)} ${f(ex)},${f(-ey * 0.05)}" fill="none" stroke="${INK}" stroke-width="${f(er * 0.42)}" stroke-linecap="round"/>` +
+      `<path d="M${f(-ex * 0.2)},${f(ey * 0.62)}l${f(-ex * 0.08)},${f(ey * 0.5)}M${f(ex * 0.35)},${f(ey * 0.45)}l${f(ex * 0.12)},${f(ey * 0.48)}" fill="none" stroke="${INK}" stroke-width="${f(er * 0.26)}" stroke-linecap="round"/></g>`) +
+    `</g>` +
     `<path d="M${f(-ex * 0.7)},${f(-ey * 1.85)}Q${f(ex * 0.1)},${f(-ey * 2.35)} ${f(ex * 0.95)},${f(-ey * 1.5)}" transform="translate(${f(auge.x)},${f(auge.y)}) rotate(-14)" fill="none" stroke="${INK}" stroke-width="${f(er * 0.2)}" stroke-linecap="round" opacity=".45"/>`;
   // Nüster (Comic-Kringel) + Maul
   const n1 = hp(0.86, 0.07), n2 = hp(0.96, 0.08), n3 = hp(0.91, 0.17);

@@ -279,6 +279,12 @@
   .avatare button.an { border-color: var(--akzent); background: #fff; }
   .panel { background: #f6ecdc; color: var(--text); border-radius: 16px; padding: 16px; }
   .panel dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; } .panel dt { color: var(--leise); } .panel dd { margin: 0; font-weight: 700; }
+  .hf-edit { cursor: pointer; } .hf-edit .stift { font-size: .75rem; opacity: .5; }
+  .hf-edit input { font: inherit; font-weight: 700; width: 100%; padding: 4px 8px; border: 2px solid var(--akzent); border-radius: 8px; background: #fff; color: var(--text); }
+  .hf-kopf { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .hf-box { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-top: 1px solid #e2d6c3; }
+  .hf-plus, .hf-minus { width: 38px; height: 38px; border: 0; border-radius: 10px; font-size: 1.4rem; font-weight: 700; line-height: 1; cursor: pointer; color: #fff; background: var(--akzent); }
+  .hf-minus { background: #8a5a3c; } .hf-minus[disabled] { opacity: .3; cursor: default; }
   .zurueck-s { align-self: flex-start; border: 0; background: rgba(255,255,255,.15); color: #fff; border-radius: 10px; padding: 8px 12px; font: inherit; cursor: pointer; }
 </style>
 </head>
@@ -490,7 +496,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "86";
+  const SPIEL_VERSION = "87";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -498,8 +504,8 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=86"></script>
-<script src="kopfteile.js?v=86"></script>
+<script src="pferd.js?v=87"></script>
+<script src="kopfteile.js?v=87"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -523,7 +529,7 @@
   spiel.boxen.forEach(b => { if (b.pferd && !b.pferd.werte) b.pferd.werte = erzeugeWerte(b.pferd); if (b.pferd && !b.pferd.pflege) b.pferd.pflege = erzeugePflege(b.pferd); if (b.pferd && b.pferd.maehneSeit == null) b.pferd.maehneSeit = spiel.tag || 1; if (b.pferd && b.pferd.schopfSeit == null) b.pferd.schopfSeit = b.pferd.maehneSeit; if (b.krippeVoll == null) b.krippeVoll = false; if (b.mistig == null) b.mistig = true; });
   if (!spiel.tag) spiel.tag = 1;
   // zweite Box (leer, sauber, Krippe voll)
-  while (spiel.boxen.length < 2) spiel.boxen.push({ nr: spiel.boxen.length + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0 });
+  while (spiel.boxen.length < 1) spiel.boxen.push({ nr: spiel.boxen.length + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0 });
   spiel.boxen.forEach(b => { if (!b.pferd) { b.mistig = false; b.krippeVoll = false; b.tot = false; } });
   let aktBox = Math.min(spiel.aktBox || 0, spiel.boxen.length - 1);
   const B = () => spiel.boxen[aktBox];
@@ -1143,18 +1149,23 @@
     const breite = Math.max(400, Math.min(900, 300 * w / h)), rand = (breite - 400) / 2;
     st.setAttribute("viewBox", `${(-rand).toFixed(1)} 0 ${breite.toFixed(1)} 300`);
     document.documentElement.style.setProperty("--boxBreite", (w * 400 / breite).toFixed(0) + "px");   // Breite der eigentlichen Box (ohne Nachbarfelder)
-    // Birkenholz-Pfeil: Box 1 → rechts (zeigt nach rechts), Box 2 → links (gespiegelt, zeigt nach links)
-    const pf = $("pfeilWeiter"), rechts = aktBox === 0;
-    const l = rechts ? 410 : -rand, r = rechts ? 400 + rand : -10, o = 154, u = 300, frei = r - l;
-    let pw, cx, cy;
-    if (frei >= 36) { pw = Math.min(frei * 0.62, 90); cx = (l + r) / 2; cy = (o + u) / 2; }
-    else { pw = 46; cx = rechts ? 400 - 32 : 32; cy = 278; }            // schmaler Bildschirm: unten in der Ecke der Box
-    const sc = pw / 100;
-    pf.style.display = "";
-    pf.setAttribute("transform", rechts
-      ? `translate(${(cx - pw / 2).toFixed(1)},${(cy - 30 * sc).toFixed(1)}) scale(${sc.toFixed(3)})`
-      : `translate(${(cx + pw / 2).toFixed(1)},${(cy - 30 * sc).toFixed(1)}) scale(${(-sc).toFixed(3)},${sc.toFixed(3)})`);
-    pf.querySelector("title").textContent = rechts ? "Weiter zu Box 2" : "Zurück zu Box 1";
+    // Birkenholz-Pfeile: rechts → nächste Box, links (gespiegelt) → vorherige Box
+    if (!$("pfeilZurueck")) { const k = $("pfeilWeiter").cloneNode(true); k.id = "pfeilZurueck"; k.querySelectorAll("[id]").forEach(e => e.removeAttribute("id")); $("pfeilWeiter").after(k); k.addEventListener("click", () => wechsleBox(-1)); }
+    const anz = spiel.boxen.length;
+    [["pfeilWeiter", true, aktBox < anz - 1], ["pfeilZurueck", false, aktBox > 0]].forEach(([id, rechts, sicht]) => {
+      const pf = $(id);
+      if (!sicht) { pf.style.display = "none"; return; }
+      const l = rechts ? 410 : -rand, r = rechts ? 400 + rand : -10, o = 154, u = 300, frei = r - l;
+      let pw, cx, cy;
+      if (frei >= 36) { pw = Math.min(frei * 0.62, 90); cx = (l + r) / 2; cy = (o + u) / 2; }
+      else { pw = 46; cx = rechts ? 400 - 32 : 32; cy = 278; }            // schmaler Bildschirm: unten in der Ecke der Box
+      const sc = pw / 100;
+      pf.style.display = "";
+      pf.setAttribute("transform", rechts
+        ? `translate(${(cx - pw / 2).toFixed(1)},${(cy - 30 * sc).toFixed(1)}) scale(${sc.toFixed(3)})`
+        : `translate(${(cx + pw / 2).toFixed(1)},${(cy - 30 * sc).toFixed(1)}) scale(${(-sc).toFixed(3)},${sc.toFixed(3)})`);
+      pf.querySelector("title").textContent = rechts ? `Weiter zu Box ${aktBox + 2}` : `Zurück zu Box ${aktBox}`;
+    });
   }
   stallFormat();
   addEventListener("resize", stallFormat);
@@ -1241,11 +1252,12 @@
 
 
   $("waehlen").onclick = zeigeRassen;
-  $("pfeilWeiter").addEventListener("click", () => {
-    aktBox = aktBox === 0 ? 1 : 0; spiel.aktBox = aktBox;
+  function wechsleBox(r) {
+    aktBox = Math.max(0, Math.min(spiel.boxen.length - 1, aktBox + r)); spiel.aktBox = aktBox;
     aktenReiter = "steckbrief"; aktenModus = "steckbrief"; scherModus = false; medModus = false; zaumModus = false; meldung = "";
     speichern(); zeigeStall(); zeigeTag();
-  });
+  }
+  $("pfeilWeiter").addEventListener("click", () => wechsleBox(1));
   $("pferdPlatz").addEventListener("click", zeigeRassen);
   zeigeStall();
   zeigeTag();
@@ -1349,14 +1361,34 @@
   }
   function zeigeHof() {
     const sp = spiel.spieler || {};
+    const boxen = spiel.boxen.map((b, i) => `<div class="hf-box"><span>Box ${i + 1}: <b>${b.pferd ? esc(b.pferd.name) : "leer"}</b></span>${i > 0 ? `<button class="hf-minus" data-weg="${i}" ${b.pferd ? "disabled title=\"Box ist belegt\"" : ""} aria-label="Box ${i + 1} entfernen">−</button>` : ""}</div>`).join("");
     zeigeNeben("📋 Hofverwaltung", `<div class="panel"><dl>
-        <dt>Hof</dt><dd>${esc(hofName())}</dd><dt>Besitzer</dt><dd>${sp.avatar || ""} ${esc(sp.name || "–")}</dd>
-        <dt>Spieltag</dt><dd>${spiel.tag}</dd><dt>Boxen</dt><dd>${spiel.boxen.map((b, i) => `Box ${i + 1}: ${b.pferd ? esc(b.pferd.name) : "leer"}`).join("<br>")}</dd></dl></div>
-      <div class="panel"><div class="feld-s"><label for="hfName">Hof umbenennen</label><input id="hfName" maxlength="30" value="${esc(hofName())}"></div>
-        <button class="sknopf haupt" id="hfSpeichern" style="margin-top:10px"><span class="i">✔</span><span>Speichern</span></button></div>
-      <button class="sknopf" id="hfSpar"><span class="i">🔋</span><span>Sparmodus: ${spiel.sparmodus ? "an" : "aus"}<small>keine Animationen – schont den Akku</small></span></button>`);
-    $("hfSpeichern").onclick = () => { spiel.spieler = { ...(spiel.spieler || { name: "", avatar: "🧑‍🌾" }), hof: $("hfName").value.trim() || hofName() }; speichern(); titelSetzen(); zeigeHof(); };
+        <dt>Hof</dt><dd class="hf-edit" id="hfHof" title="antippen zum Ändern">${esc(hofName())} <span class="stift">✏️</span></dd>
+        <dt>Besitzer</dt><dd class="hf-edit" id="hfSpieler" title="antippen zum Ändern">${sp.avatar || ""} ${esc(sp.name || "–")} <span class="stift">✏️</span></dd>
+        <dt>Spieltag</dt><dd>${spiel.tag}</dd></dl></div>
+      <div class="panel"><div class="hf-kopf"><b>Boxen (${spiel.boxen.length})</b><button class="hf-plus" id="hfPlus" aria-label="Box hinzufügen">+</button></div>${boxen}
+        <small style="color:var(--leise)">Box 1 bleibt immer. Eine Box kann nur entfernt werden, wenn kein Pferd darin steht.</small></div>
+      <button class="sknopf" id="hfSpar"><span class="i">🔋</span><span>Sparmodus: ${spiel.sparmodus ? "an" : "aus"}<small>keine Animationen – schont den Akku</small></span></button>
+      <button class="sknopf" id="hfVoll"><span class="i">⛶</span><span>Vollbildmodus: ${istVoll() ? "an" : "aus"}<small>antippen zum Umschalten</small></span></button>`);
+    const bearbeite = (id, wert, setzen) => {
+      const dd = $(id); dd.onclick = null;
+      dd.innerHTML = `<input maxlength="30" value="${esc(wert)}">`;
+      const inp = dd.querySelector("input"); inp.focus(); inp.select();
+      const fertig = () => { const v = inp.value.trim(); if (v) setzen(v); speichern(); titelSetzen(); zeigeHof(); };
+      inp.onblur = fertig; inp.onkeydown = e => { if (e.key === "Enter") inp.blur(); if (e.key === "Escape") { inp.value = wert; inp.blur(); } };
+    };
+    const sp2 = () => (spiel.spieler = spiel.spieler || { name: "", avatar: "🧑‍🌾" });
+    $("hfHof").onclick = () => bearbeite("hfHof", hofName(), v => sp2().hof = v);
+    $("hfSpieler").onclick = () => bearbeite("hfSpieler", sp.name || "", v => sp2().name = v);
+    $("hfPlus").onclick = () => { spiel.boxen.push({ nr: spiel.boxen.length + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false }); speichern(); zeigeHof(); };
+    $("nebenSchirm").querySelectorAll("[data-weg]").forEach(b => b.onclick = () => {
+      const i = +b.dataset.weg; if (i === 0 || spiel.boxen[i].pferd) return;
+      spiel.boxen.splice(i, 1); spiel.boxen.forEach((x, k) => x.nr = k + 1);
+      if (aktBox >= spiel.boxen.length) aktBox = spiel.boxen.length - 1; spiel.aktBox = aktBox;
+      speichern(); zeigeHof();
+    });
     $("hfSpar").onclick = () => { $("mSpar").click(); zeigeHof(); };
+    $("hfVoll").onclick = () => { vollbildUmschalten(); setTimeout(zeigeHof, 300); };
   }
   $("mHaupt").onclick = () => { menueZu(); zeigeHaupt(); };
   titelSetzen();

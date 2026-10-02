@@ -427,7 +427,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "72";
+  const SPIEL_VERSION = "73";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -435,8 +435,8 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=72"></script>
-<script src="kopfteile.js?v=72"></script>
+<script src="pferd.js?v=73"></script>
+<script src="kopfteile.js?v=73"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -680,6 +680,8 @@
             <svg class="mini" viewBox="${(z.box.minX - 3).toFixed(1)} ${(z.box.minY - 3).toFixed(1)} ${(z.box.maxX - z.box.minX + 6).toFixed(1)} ${(-z.box.minY + 6).toFixed(1)}">${svg}</svg>
             <b>${n}</b><small>${id === jetzt ? "aktuell" : info}</small></button>`;
         }).join("")}</div>
+        <p class="text" style="margin:14px 0 4px">⏩ <b>Test: Zeit</b> · jeden Tag gefüttert und ausgemistet</p>
+        <button class="knopf" id="sechsTage" style="width:100%">6 Tage vergehen lassen</button>
         <p class="text" style="margin:14px 0 4px">🐴 <b>Test: Nasenrücken</b> · deine Zeichnungen</p>
         <div class="kacheln">${(() => { const akt = p.nase || RASSE_KOPF[p.rasse] || "spiel"; return Object.entries(KOPFTEILE.nasen).map(([id, n]) => `<button class="kachel ${id === akt ? "aktuell" : "klickbar"}" data-nase="${id}">
             <svg class="mini" viewBox="15 15 120 125" style="background:#fff">${kopfteileSVG(id, undefined, { fell: FARBEN[p.farbe].head || FARBEN[p.farbe].body })}</svg>
@@ -709,6 +711,10 @@
       };
       inp.onkeydown = e => { if (e.key === "Enter") fertig(true); if (e.key === "Escape") fertig(false); };
       inp.onblur = () => fertig(true);
+    };
+    const st6 = $("sechsTage"); if (st6) st6.onclick = () => {
+      for (let i = 0; i < 6 && !spiel.boxen[0].tot; i++) { spiel.boxen.forEach(b => { b.krippeVoll = true; b.mistig = false; }); naechsteNacht(); }
+      meldung = ""; speichern(); zeigeStall(); zeigeTag();
     };
     $("info").querySelectorAll("[data-nase]").forEach(b => b.onclick = () => { p.nase = b.dataset.nase; speichern(); zeigeStall(); });
     $("info").querySelectorAll("[data-typ]").forEach(b => b.onclick = () => { p.typ = b.dataset.typ; speichern(); zeigeStall(); });
@@ -878,12 +884,12 @@
     $("gross").setAttribute("viewBox", `0 0 ${vb.toFixed(0)} ${VB.h}`);
     lineal = lineal.replaceAll(`x2="${VB.b}"`, `x2="${vb.toFixed(0)}"`).replaceAll(`x2="${VB.b - 8}"`, `x2="${(vb - 8).toFixed(0)}"`).replace(`x="${VB.b - 8}"`, `x="${(vb - 8).toFixed(0)}"`);
     const mx = 135 + breite / 2 + (vb - 165 - breite) / 2;
-    // Mensch (1,70 m) als Größenvergleich, links neben dem Pferd
+    // Mensch (1,75 m) als Größenvergleich, links neben dem Pferd
     const hx = 100, hy = VB.boden;
-    const mensch = `<g transform="translate(${hx.toFixed(1)},${hy})" fill="#8d9aa3" opacity=".75">
+    const mensch = `<g transform="translate(${hx.toFixed(1)},${hy}) scale(${(175 / 170).toFixed(4)})" fill="#8d9aa3" opacity=".75">
       <circle cx="0" cy="-158" r="11"/>
       <path d="M-8,-146 Q0,-143 8,-146 Q19,-144 21,-134 L19,-86 Q18,-81 15,-82 L13,-84 L13,-2 Q13,1 9,1 L4,1 Q2,1 2,-2 L1,-74 L-1,-74 L-2,-2 Q-2,1 -4,1 L-9,1 Q-13,1 -13,-2 L-13,-84 L-15,-82 Q-18,-81 -19,-86 L-21,-134 Q-19,-144 -8,-146 Z"/>
-      <title>Mensch, 1,70 m</title></g>`;
+      <title>Mensch, 1,75 m</title></g>`;
     $("gross").innerHTML = mensch + lineal + `<g transform="translate(${(mx - (z.box.minX + z.box.maxX) / 2 * sc).toFixed(1)},${VB.boden}) scale(${sc})">${z.svg.replace(/<animate[^>]*\/>/g, "")}</g>`;
   }
 
@@ -983,6 +989,37 @@
   };
   $("mist").addEventListener("click", ausmisten);
   $("boden").addEventListener("click", ausmisten);
+  // Eine Nacht vergeht: Gesundheit, Mist, Mähne und Schopf
+  function naechsteNacht() {
+    spiel.tag += 1;
+    spiel.boxen.forEach(b => {
+      const pf = b.pferd.pflege;
+      let g = pf.gesundheit;
+      if (!b.krippeVoll) g -= 19;      // hungrig ins Bett: −19 Punkte
+      if (b.mistig) g -= 9.5;          // Box nicht gemistet: −9,5 Punkte
+      if (b.krippeVoll && !b.mistig) g += 4;
+      if (spiel.tag - pf.huf > 56) g -= 2;
+      g = Math.round(g * 10) / 10;
+      // Rettungsnetz: wer über 1 % lag, fällt nur auf 1 %. Wer schon bei 1 % (oder weniger) war, stirbt bei 0.
+      if (g <= 0) { if (pf.gesundheit > 1) g = 1; else { g = 0; b.tot = true; } }
+      pf.gesundheit = Math.max(0, Math.min(100, g));
+      b.mistStufe = b.mistig ? Math.min(6, (b.mistStufe || 1) + 1) : 1;
+      b.krippeVoll = false; b.mistig = true;
+      // Mähne wächst alle 5 Tage eine Stufe (bis „extra lang“)
+      const pf2 = b.pferd, idx = MAEHNEN.findIndex(m => m[0] === (pf2.maehne || naturMaehne(pf2.rasse)));
+      if (spiel.tag - (pf2.maehneSeit || spiel.tag) >= MAEHNE_WACHSTUM) {
+        if (idx < MAEHNEN.length - 1) pf2.maehne = MAEHNEN[idx + 1][0];
+        pf2.maehneSeit = spiel.tag;
+      }
+      // Schopf wächst genauso (Rassen ohne Schopf bleiben ohne)
+      const ns2 = naturSchopf(pf2.rasse);
+      if (ns2 && spiel.tag - (pf2.schopfSeit || spiel.tag) >= MAEHNE_WACHSTUM) {
+        const si = SCHOEPFE.findIndex(m => m[0] === (pf2.schopf || ns2));
+        if (si < SCHOEPFE.length - 1) pf2.schopf = SCHOEPFE[si + 1][0];
+        pf2.schopfSeit = spiel.tag;
+      }
+    });
+  }
   $("tagAnzeige").onclick = () => {
     const box = spiel.boxen[0], offen = [];
     if (box.tot) return;
@@ -991,34 +1028,7 @@
     $("nachtSymbol").textContent = "🌙"; $("nachtText").textContent = `Ende von Tag ${spiel.tag}`;
     $("nacht").classList.add("an");
     setTimeout(() => {
-      spiel.tag += 1;
-      spiel.boxen.forEach(b => {
-        const pf = b.pferd.pflege;
-        let g = pf.gesundheit;
-        if (!b.krippeVoll) g -= 19;      // hungrig ins Bett: −19 Punkte
-        if (b.mistig) g -= 9.5;          // Box nicht gemistet: −9,5 Punkte
-        if (b.krippeVoll && !b.mistig) g += 4;
-        if (spiel.tag - pf.huf > 56) g -= 2;
-        g = Math.round(g * 10) / 10;
-        // Rettungsnetz: wer über 1 % lag, fällt nur auf 1 %. Wer schon bei 1 % (oder weniger) war, stirbt bei 0.
-        if (g <= 0) { if (pf.gesundheit > 1) g = 1; else { g = 0; b.tot = true; } }
-        pf.gesundheit = Math.max(0, Math.min(100, g));
-        b.mistStufe = b.mistig ? Math.min(6, (b.mistStufe || 1) + 1) : 1;
-        b.krippeVoll = false; b.mistig = true;
-        // Mähne wächst alle 5 Tage eine Stufe (bis „extra lang“)
-        const pf2 = b.pferd, idx = MAEHNEN.findIndex(m => m[0] === (pf2.maehne || naturMaehne(pf2.rasse)));
-        if (spiel.tag - (pf2.maehneSeit || spiel.tag) >= MAEHNE_WACHSTUM) {
-          if (idx < MAEHNEN.length - 1) pf2.maehne = MAEHNEN[idx + 1][0];
-          pf2.maehneSeit = spiel.tag;
-        }
-        // Schopf wächst genauso (Rassen ohne Schopf bleiben ohne)
-        const ns2 = naturSchopf(pf2.rasse);
-        if (ns2 && spiel.tag - (pf2.schopfSeit || spiel.tag) >= MAEHNE_WACHSTUM) {
-          const si = SCHOEPFE.findIndex(m => m[0] === (pf2.schopf || ns2));
-          if (si < SCHOEPFE.length - 1) pf2.schopf = SCHOEPFE[si + 1][0];
-          pf2.schopfSeit = spiel.tag;
-        }
-      });
+      naechsteNacht();
       speichern(); zeigeStall(); zeigeTag();
       $("nachtSymbol").textContent = "☀️"; $("nachtText").textContent = `Tag ${spiel.tag} beginnt`;
     }, 1100);

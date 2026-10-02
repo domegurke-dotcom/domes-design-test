@@ -107,6 +107,7 @@
   .paar:not(.gesperrt):active { transform: translateY(1px); }
   .paar:not(.gesperrt):hover .paar-bild { border-color: var(--akzent); }
   .paar.gesperrt { cursor: default; filter: grayscale(1); opacity: .6; }
+  .paar-titel { margin: 14px 0 0; font-size: .95rem; } .paar-titel small { font-weight: 400; color: var(--leise); font-size: .78rem; margin-left: 4px; }
   .schein-zwischen { margin: 18px 0 8px; font-size: 1rem; }
   #postIcon { position: fixed; top: max(14px, env(safe-area-inset-top)); right: 10px; z-index: 45; width: 40px; height: 40px; padding: 4px 2px; border: 0; background: none; cursor: pointer;
     filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); animation: briefWackeln 2.4s ease-in-out infinite; }
@@ -579,7 +580,6 @@
   </svg>
 
   <section class="akte" id="info" aria-label="Pferdeakte"></section>
-  <button class="knopf" id="waehlen">Pferd auswählen</button>
 </main>
 
 <div class="schirm" id="startMenue" role="dialog" aria-label="Startmenü"></div>
@@ -594,7 +594,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "96";
+  const SPIEL_VERSION = "97";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -602,9 +602,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=96"></script>
-<script src="kopfteile.js?v=96"></script>
-<script src="kopfalter.js?v=96"></script>
+<script src="pferd.js?v=97"></script>
+<script src="kopfteile.js?v=97"></script>
+<script src="kopfalter.js?v=97"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -865,7 +865,6 @@
   function zeigeStall() {
     const p = B().pferd;
     $("boxSchild").textContent = "Box " + (aktBox + 1);
-    $("waehlen").textContent = p ? "Pferd auswählen" : `Pferd für Box ${aktBox + 1} auswählen`;
     stallFormat();
     if (!p) { $("pferdPlatz").innerHTML = ""; zeigeAkte(); return; }
     const z = zeichnePferd(p.rasse, p.farbe, { alterStufe: stufeKey(p), seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, schopf: p.schopf, typ: p.typ, eigenKopf: p.nase === "spiel" ? false : (p.nase || undefined), haltung: haltungFuer(p), ohren: (p.pflege && p.pflege.gesundheit >= 45 && p.pflege.gesundheit < 65) ? "geknickt" : "" });
@@ -887,30 +886,19 @@
   // ---------- Pferdeakte ----------
   function zeigeAkte() {
     const p = B().pferd;
-    if (!p) { $("info").innerHTML = `<div class="karte" style="min-height:0"><h2>Box ${aktBox + 1}</h2><p class="text">Diese Box ist noch leer. Über „Pferd für Box ${aktBox + 1} auswählen“ kannst du ein Pferd einstellen.</p></div>`; return; }
+    if (!p) { $("info").innerHTML = `<div class="karte" style="min-height:0"><h2>Box ${aktBox + 1}</h2><p class="text">Diese Box ist noch leer. Im Hauptmenü unter „Rassenauswahl“ kannst du ein Pferd aussuchen und hier einstellen.</p></div>`; return; }
     const r = rasseById(p.rasse), w = p.werte;
     const reiter = aktenModus === "steckbrief"
       ? [["steckbrief", "Daten"], ["genetik", "Genetik"], ["gang", "Gangwerk"], ["charakter", "Charakter"], ["ausbildung", "Ausbildung"]]
       : [["gesundheit", "Gesundheit"], ["ausruestung", "Ausrüstung"], ["platz", "Platz"], ["test", "Test"]];
     const box = B(), pf = p.pflege;
     let inhalt = "";
-    if (aktenReiter === "steckbrief" && deckModus) {
-      const liste = [...eigeneHengste().map(({ b, i }) => ({ h: b.pferd, wo: `eigener Hengst · Box ${i + 1}` })), ...deckhengste(p).map(h => ({ h, wo: "Deckstation" }))];
-      window.__deckListe = liste;
-      inhalt = `<p class="text" style="margin:0 0 4px">💞 <b>Hengst für ${esc(p.name)} wählen</b> · Tragzeit 3 Jahreszeiten – das Fohlen kommt ${jzName(jzJetzt() + 3)}</p>
-        <div class="kacheln">${liste.map(({ h, wo }, i) => {
-          const z = zeichnePferd(h.rasse, h.farbe, { seed: h.id, geschlecht: "Hengst", maehne: h.maehne, schopf: h.schopf, statisch: 1, alterStufe: h.geb ? stufeKey(h) : undefined });
-          return `<button class="kachel klickbar" data-hengst="${i}">
-            <svg class="mini" viewBox="${(z.box.minX - 3).toFixed(1)} ${(z.box.minY - 3).toFixed(1)} ${(z.box.maxX - z.box.minX + 6).toFixed(1)} ${(-z.box.minY + 6).toFixed(1)}">${ohneAnim(z.svg)}</svg>
-            <b>${esc(h.name)}</b><small>${rasseById(h.rasse).name} · ${FARBEN[h.farbe].name.replace(/ \(.*\)/, "")} · ${h.zielStockmass || h.stockmass} cm</small><small>${wo}</small></button>`;
-        }).join("")}</div>
-        <button class="knopf zweit" id="deckZurueck" style="width:100%;margin-top:12px">‹ Zurück</button>`;
-    } else if (aktenReiter === "steckbrief") {
+    if (aktenReiter === "steckbrief") {
       const zucht = p.geschlecht === "Stute" ? (p.traechtig ? `🤰 tragend von <b>${esc(p.traechtig.vater.name)}</b> (${rasseById(p.traechtig.vater.rasse).name}) · Fohlen kommt ${jzName(p.traechtig.geburt)}`
         : box.fohlen ? "säugt ihr Fohlen – decken erst, wenn es ausgezogen ist"
         : alterJZ(p) < ZUCHTALTER ? "zu jung – Zucht erst ab 3 Jahren"
-        : `<button class="knopf zucht-knopf" id="deckKnopf">💞 Decken lassen</button>`)
-        : p.geschlecht === "Hengst" ? (alterJZ(p) < ZUCHTALTER ? "zu jung – Zucht erst ab 3 Jahren" : "kann Stuten decken") : "";
+        : "bereit zur Zucht – unter Genetik „Verpaaren mit …“")
+        : p.geschlecht === "Hengst" ? (alterJZ(p) < ZUCHTALTER ? "zu jung – Zucht erst ab 3 Jahren" : "bereit zur Zucht – unter Genetik „Verpaaren mit …“") : "";
       inhalt = `<dl class="werte">
           <dt>Name</dt><dd>${esc(p.name)}</dd>
           <dt>Rasse</dt><dd>${r.name} · ${String(w.reinrassig).replace(".", ",")} % reinrassig</dd>
@@ -925,16 +913,20 @@
         </dl><p class="text">${r.text}</p>
         <button class="entfernen" id="entfernen">🗑️ Pferd entfernen</button>`;
     } else if (aktenReiter === "genetik" && deckModus) {
-      const ziel = p.geschlecht === "Stute" ? "Hengst" : "Stute";
-      const liste = spiel.boxen.map((b, i) => ({ b, i })).filter(({ b, i }) => i !== aktBox && b.pferd && !b.tot && b.pferd.geschlecht === ziel);
-      inhalt = `<p class="text" style="margin:0 0 4px">💞 <b>${esc(p.name)} verpaaren mit …</b> · ${ziel === "Hengst" ? "Hengste" : "Stuten"} aus deinem Stall</p>
-        ${liste.length ? `<div class="paar-liste">${liste.map(({ b, i }) => {
-          const q = b.pferd, sperre = zuchtSperre(q, b);
-          return `<button class="paar ${sperre ? "gesperrt" : ""}" ${sperre ? "disabled" : `data-partner="${i}"`} title="${esc(q.name)}${sperre ? " – " + sperre : ""}">
-            <span class="paar-bild">${kopfBild(q)}</span>
-            <span class="paar-brett"><b>${esc(q.name)}</b><span>${rasseById(q.rasse).name}</span><span>${alterText(q)}${sperre ? ` · ${sperre}` : ""}</span></span></button>`;
-        }).join("")}</div>` : `<p class="text">Du hast keine ${ziel === "Hengst" ? "Hengste" : "Stuten"} in deinem Stall. Stuten kannst du unter Daten auch mit einem Hengst der Deckstation decken lassen.</p>`}
-        <button class="knopf zweit" id="deckZurueck" style="width:100%;margin-top:12px">‹ Zurück</button>`;
+      const ziel = p.geschlecht === "Stute" ? "Hengst" : "Stute", mz = ziel === "Hengst" ? "Hengste" : "Stuten";
+      const eigene = spiel.boxen.map((b, i) => ({ b, i })).filter(({ b, i }) => i !== aktBox && b.pferd && !b.tot && b.pferd.geschlecht === ziel);
+      const deck = p.geschlecht === "Stute" ? deckhengste(p) : [];
+      window.__deckListe = deck;
+      const kachel = (q, attr, sperre, alter) => `<button class="paar ${sperre ? "gesperrt" : ""}" ${sperre ? "disabled" : attr} title="${esc(q.name)}${sperre ? " – " + sperre : ""}">
+          <span class="paar-bild">${kopfBild(q)}</span>
+          <span class="paar-brett"><b>${esc(q.name)}</b><span>${rasseById(q.rasse).name}</span><span>${alter}${sperre ? ` · ${sperre}` : ""}</span></span></button>`;
+      inhalt = `<p class="text" style="margin:0 0 4px">💞 <b>${esc(p.name)} verpaaren mit …</b> · Tragzeit 3 Jahreszeiten</p>
+        <h3 class="paar-titel">🏠 Eigene Zucht <small>${mz} aus deinem Stall</small></h3>
+        ${eigene.length ? `<div class="paar-liste">${eigene.map(({ b, i }) => kachel(b.pferd, `data-partner="${i}"`, zuchtSperre(b.pferd, b), alterText(b.pferd))).join("")}</div>`
+          : `<p class="text" style="margin:4px 0">Du hast keine ${mz} in deinem Stall.</p>`}
+        ${deck.length ? `<h3 class="paar-titel">🏆 Deckstation <small>wechselt jede Jahreszeit</small></h3>
+        <div class="paar-liste">${deck.map((h, i) => kachel(h, `data-deck="${i}"`, "", `${h.alter} Jahre`)).join("")}</div>` : ""}
+        <button class="knopf zweit" id="deckZurueck" style="width:100%;margin-top:14px">‹ Zurück</button>`;
     } else if (aktenReiter === "genetik") {
       const rn = id => rasseById(id).name, pz = x => String(x).replace(".", ",") + " %";
       const ahn = (rolle, a, sym) => `<div class="ahn"><small>${sym} ${rolle}</small><b>${esc(a.name)}</b><span>${rn(a.rasse)} · ${pz(a.pct)}</span></div>`;
@@ -956,9 +948,9 @@
           <div class="anteil"><i style="width:${anteil}%"></i>${fremd > 0 ? `<i class="fremd" style="width:${fremd}%"></i>` : ""}</div>
           <div class="pole"><span>■ ${rP.name} ${pz(anteil)}</span>${fremd > 0 ? `<span class="fr">■ ${rn(A.fremdRasse)} ${pz(fremd)}</span>` : ""}</div></div>`; };
       const sperre = zuchtSperre(p, box);
-      const paar = sperre === "Wallach" ? "" : sperre ? `<p class="text" style="margin:0 0 10px">💞 Verpaaren nicht möglich: ${esc(p.name)} ${sperre === "zu jung" ? "ist zu jung (Zucht ab 3 Jahren)" : sperre}.</p>`
-        : `<button class="knopf" id="paarKnopf" style="width:100%;margin:0 0 12px">💞 Verpaaren mit …</button>`;
-      inhalt = paar + schein(p) + (box.fohlen ? `<h3 class="schein-zwischen">🍼 Fohlen ${esc(box.fohlen.name)}</h3>` + schein(box.fohlen) : "");
+      const paar = sperre === "Wallach" ? "" : sperre ? `<p class="text" style="margin:14px 0 0">💞 Verpaaren nicht möglich: ${esc(p.name)} ${sperre === "zu jung" ? "ist zu jung (Zucht ab 3 Jahren)" : sperre}.</p>`
+        : `<button class="knopf" id="paarKnopf" style="width:100%;margin:16px 0 0">💞 Verpaaren mit …</button>`;
+      inhalt = schein(p) + (box.fohlen ? `<h3 class="schein-zwischen">🍼 Fohlen ${esc(box.fohlen.name)}</h3>` + schein(box.fohlen) : "") + paar;
       speichern();
     } else if (aktenReiter === "gang") {
       const g = w.gang, pr = PROFIL[p.rasse] || {};
@@ -1142,9 +1134,8 @@
       fohlenUmstellen(box, frei);
       speichern(); zeigeStall(); zeigeTag();
     };
-    const dk = $("deckKnopf"); if (dk) dk.onclick = () => { deckModus = true; zeigeAkte(); };
     const dz = $("deckZurueck"); if (dz) dz.onclick = () => { deckModus = false; zeigeAkte(); };
-    $("info").querySelectorAll("[data-hengst]").forEach(b => b.onclick = () => verpaaren(p, window.__deckListe[+b.dataset.hengst].h));
+    $("info").querySelectorAll("[data-deck]").forEach(b => b.onclick = () => verpaaren(p, window.__deckListe[+b.dataset.deck]));
     $("info").querySelectorAll("[data-partner]").forEach(b => b.onclick = () => {
       const q = spiel.boxen[+b.dataset.partner].pferd;
       if (p.geschlecht === "Stute") verpaaren(p, q); else verpaaren(q, p);
@@ -1231,6 +1222,8 @@
   }
 
   let wahl = null;
+  // neues Pferd: in die aktuelle Box, wenn sie leer ist – sonst in die erste freie
+  const zielBox = () => !spiel.boxen[aktBox].pferd ? aktBox : freieBox();
   function zeigeDetail(id) {
     const r = rasseById(id);
     const g = zufallAus(["Stute", "Hengst", "Wallach"]);
@@ -1270,7 +1263,7 @@
           <div class="zeile"><input type="text" id="name" maxlength="24" autocomplete="off"><button class="wuerfel" id="wuerfel" aria-label="Zufallsname">🎲</button></div>
         </div>
 
-        <div class="fuss"><button class="knopf" id="einstellen">In Box ${aktBox + 1} stellen</button></div>
+        <div class="fuss"><button class="knopf ${zielBox() < 0 ? "aus" : ""}" id="einstellen">${zielBox() < 0 ? "Keine Box frei" : `In Box ${zielBox() + 1} stellen`}</button></div>
       </div>`;
     a.scrollTop = 0;
     a.style.setProperty("--leisteH", a.querySelector(".leiste").offsetHeight + "px");
@@ -1294,6 +1287,9 @@
     $("wuerfel").onclick = () => { wahl.name = zufallAus(NAMEN[wahl.geschlecht]); $("name").value = wahl.name; };
     $("einstellen").onclick = () => {
       wahl.name = (wahl.name || "").trim() || zufallAus(NAMEN[wahl.geschlecht]);
+      const zb = zielBox();
+      if (zb < 0) { dialog(`<h3>Keine Box frei</h3><p>Alle Boxen sind belegt. In der Hofverwaltung kannst du unter „Boxen“ mit + eine neue Box bauen.</p>`); return; }
+      aktBox = zb; spiel.aktBox = zb;
       const bx = B(), neu = !bx.pferd;
       bx.pferd = { ...wahl }; delete bx.pferd.geb; sichereGeburt(bx.pferd); alterAktualisieren();
       delete bx.pferd.maehne;
@@ -1325,16 +1321,17 @@
       lineal += `<line x1="0" x2="${VB.b}" y1="${y}" y2="${y}" stroke="#b9cfd9" stroke-dasharray="3 5"/><text x="4" y="${y - 3}" font-size="10" fill="#7a8f99">${cm / 100} m</text>`;
     }
     const wy = VB.boden - wahl.stockmass;
-    lineal += `<line x1="30" x2="${VB.b - 8}" y1="${wy}" y2="${wy}" stroke="var(--akzent)" stroke-width="1.5"/><text x="${VB.b - 8}" y="${wy - 4}" font-size="11" text-anchor="end" font-weight="700" fill="var(--akzent)" stroke="#fff" stroke-width="3" paint-order="stroke">${wahl.stockmass} cm${wahl.stockmass !== wahl.zielStockmass ? ` · erwachsen ${wahl.zielStockmass} cm` : ""}</text>`;
+    lineal += `<line x1="30" x2="${VB.b - 8}" y1="${wy}" y2="${wy}" stroke="var(--akzent)" stroke-width="1.5"/><text x="${VB.b - 8}" y="${wy - 4}" font-size="11" text-anchor="end" font-weight="700" fill="var(--akzent)" stroke="#fff" stroke-width="3" paint-order="stroke">${wahl.stockmass} cm</text>` +
+      (wahl.stockmass !== wahl.zielStockmass ? `<text x="${VB.b - 8}" y="${wy - 18}" font-size="9" text-anchor="end" font-weight="600" fill="var(--akzent)" stroke="#fff" stroke-width="3" paint-order="stroke">erwachsen ${wahl.zielStockmass} cm</text>` : "");
     // Breite anpassen, damit auch große Pferde ganz ins Bild passen
     const z = zeichnePferd(wahl.rasse, wahl.farbe, { seed: wahl.id, geschlecht: wahl.geschlecht, alterStufe: stufeAusMonaten(wahl.alter * 12) });
     const sc = wahl.stockmass / 100, breite = (z.box.maxX - z.box.minX) * sc;
     // feste Bildbreite (passend für das breiteste Pferd), damit Bild und Pfeile nie springen
-    if (!window.__vbMax) window.__vbMax = Math.max(VB.b, ...RASSEN.map(r => { const zz = zeichnePferd(r.id, r.farben[0], { seed: "max" }); return (zz.box.maxX - zz.box.minX) * r.h[1] / 100 * 1.04 + 190; }));
+    if (!window.__vbMax) window.__vbMax = Math.max(VB.b, ...RASSEN.map(r => { const zz = zeichnePferd(r.id, r.farben[0], { seed: "max" }); return 132 + (zz.box.maxX - zz.box.minX) * r.h[1] / 100 + 106; }));
     const vb = window.__vbMax;
     $("gross").setAttribute("viewBox", `0 0 ${vb.toFixed(0)} ${VB.h}`);
-    lineal = lineal.replaceAll(`x2="${VB.b}"`, `x2="${vb.toFixed(0)}"`).replaceAll(`x2="${VB.b - 8}"`, `x2="${(vb - 8).toFixed(0)}"`).replace(`x="${VB.b - 8}"`, `x="${(vb - 8).toFixed(0)}"`);
-    const mx = 135 + breite / 2 + (vb - 165 - breite) / 2;
+    lineal = lineal.replaceAll(`x2="${VB.b}"`, `x2="${vb.toFixed(0)}"`).replaceAll(`x2="${VB.b - 8}"`, `x2="${(vb - 8).toFixed(0)}"`).replaceAll(`x="${VB.b - 8}"`, `x="${(vb - 8).toFixed(0)}"`);
+    const mx = 132 + breite / 2;   // Pferd dicht neben dem Menschen – rechts bleibt Platz für die Größenangabe
     // Mensch (1,75 m) als Größenvergleich, links neben dem Pferd
     const hx = 100, hy = VB.boden;
     const mensch = `<g transform="translate(${hx.toFixed(1)},${hy}) scale(${(175 / 170).toFixed(4)})" fill="#8d9aa3" opacity=".75">
@@ -1621,7 +1618,7 @@
 
 
 
-  $("waehlen").onclick = zeigeRassen;
+
   function wechsleBox(r) {
     aktBox = Math.max(0, Math.min(spiel.boxen.length - 1, aktBox + r)); spiel.aktBox = aktBox;
     aktenReiter = "steckbrief"; aktenModus = "steckbrief"; scherModus = false; medModus = false; zaumModus = false; deckModus = false; meldung = "";

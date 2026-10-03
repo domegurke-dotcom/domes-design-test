@@ -119,6 +119,11 @@
   .paar:not(.gesperrt):hover .paar-bild { border-color: var(--akzent); }
   .paar.gesperrt { cursor: default; filter: grayscale(1); opacity: .6; }
   .paar-titel { margin: 14px 0 0; font-size: .95rem; } .paar-titel small { font-weight: 400; color: var(--leise); font-size: .78rem; margin-left: 4px; }
+  .dlg-karte.breit { max-width: 600px; }
+  .dlg-karte .dlg-knoepfe { position: sticky; bottom: -14px; background: #fffaf2; margin: 14px -18px -14px; padding: 10px 18px 14px; box-shadow: 0 -6px 10px -8px rgba(0,0,0,.25); }
+  .inzucht-warnung { background: #fdecea; border: 1.5px solid #e6a49b; color: #7a241a; border-radius: 10px; padding: 9px 11px; margin: 4px 0 12px; font-size: .9rem; line-height: 1.4; }
+  .inzucht-warnung ul { margin: 4px 0 6px; padding-left: 18px; }
+  .inzucht-mark { margin-top: 2px; font-weight: 600; color: #ffe08a; }
   .schein-zwischen { margin: 18px 0 8px; font-size: 1rem; }
   #postIcon { position: fixed; top: max(14px, env(safe-area-inset-top)); right: 10px; z-index: 45; width: 40px; height: 40px; padding: 4px 2px; border: 0; background: none; cursor: pointer;
     filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); animation: briefWackeln 2.4s ease-in-out infinite; }
@@ -361,6 +366,8 @@
   .hm-kopf b { display: block; font-size: 1.1rem; } .hm-kopf span { opacity: .8; font-size: .85rem; }
   .hm-kopf button { margin-left: auto; border: 0; background: rgba(255,255,255,.15); color: #fff; border-radius: 10px; padding: 8px 10px; font: inherit; cursor: pointer; }
   .feld-s label { display: block; font-weight: 700; margin: 6px 0 6px; }
+  .feld-s input.fehlt { border-color: #c0392b; background: #fff1ee; }
+  .fehler-text { display: block; color: #c0392b; font-weight: 700; font-size: .82rem; margin-top: 4px; } .fehler-text[hidden] { display: none; }
   .feld-s input { width: 100%; font: inherit; font-size: 1.05rem; padding: 12px 14px; border-radius: 12px; border: 2px solid #e2d6c3; background: #fffaf0; color: var(--text); }
   .avatare { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
   .avatare button { font-size: 1.8rem; padding: 8px 0; border-radius: 12px; border: 3px solid transparent; background: #f6ecdc; cursor: pointer; }
@@ -598,7 +605,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "100";
+  const SPIEL_VERSION = "101";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -606,9 +613,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=100"></script>
-<script src="kopfteile.js?v=100"></script>
-<script src="kopfalter.js?v=100"></script>
+<script src="pferd.js?v=101"></script>
+<script src="kopfteile.js?v=101"></script>
+<script src="kopfalter.js?v=101"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -674,9 +681,9 @@
     const o = { alterStufe: p.geb ? stufeKey(p) : undefined, seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, schopf: p.schopf, typ: p.typ,
       eigenKopf: p.nase === "spiel" ? false : (p.nase || undefined), statisch: 1 };
     const pk = zeichnePferd(p.rasse, p.farbe, { ...o, punkte: 1 }), z = zeichnePferd(p.rasse, p.farbe, o);
-    const L = Math.hypot(pk.genick.x - pk.nase.x, pk.genick.y - pk.nase.y);
-    const x0 = pk.nase.x - L * .12, x1 = pk.genick.x + L * .75, y0 = pk.genick.y - L * .42, w = x1 - x0, h = w;
-    return `<svg viewBox="${[x0, y0, w, h].map(x => x.toFixed(1)).join(" ")}" preserveAspectRatio="xMidYMid slice">${ohneAnim(z.svg)}</svg>`;
+    // Ausschnitt wie in der Enzyklopädie: Ohren bis kurz unter das Maul, Nase links
+    const y0 = pk.genick.y - 9, h = pk.nase.y + 15 - y0, w = h, x0 = pk.nase.x - 4;
+    return `<svg viewBox="${[x0, y0, w, h].map(x => x.toFixed(1)).join(" ")}" preserveAspectRatio="xMidYMid meet">${ohneAnim(z.svg)}</svg>`;
   }
   const ZUCHTALTER = 12;   // ab 3 Jahren (12 Jahreszeiten) für Stute und Hengst
   function nrVon(p) { if (!p.nr) { const rz = zufall("nr-" + p.id); p.nr = "0" + Array.from({ length: 10 }, () => Math.floor(rz() * 10)).join(""); } return p.nr; }
@@ -749,6 +756,43 @@
     alterAktualisieren();
     return f;
   }
+  // Abstammungsschein (Eltern + Großeltern) – auch für die Zuchtpartner-Vorschau
+    const rn = id => rasseById(id).name, pz = x => String(x).replace(".", ",") + " %";
+    const ahn = (rolle, a, sym) => `<div class="ahn"><small>${sym} ${rolle}</small><b>${esc(a.name)}</b><span>${rn(a.rasse)} · ${pz(a.pct)}</span></div>`;
+    const feld = (rolle, a, gross, geschl) => `<div class="sf ${gross ? "gross" : ""}">${rolle ? `<small>${rolle}</small>` : ""}<b>${esc(a.name)}</b><span class="nr">${geschl}</span>
+      <span>${rn(a.rasse)} / ${FARBEN[a.farbe] ? FARBEN[a.farbe].name.replace(/ \(.*\)/, "") : a.farbe} / ${a.sm} cm</span>${a.pct < 100 ? `<span class="pz">${pz(a.pct)} ${rn(a.rasse)}</span>` : ""}</div>`;
+    const abstammungsschein = P => { const A = ahnenFuellen(P), rP = rasseById(P.rasse), anteil = P.werte.reinrassig, fremd = Math.round((100 - anteil) * 100) / 100;
+      return `<div class="schein">
+        <div class="schein-kopf"><b>Abstammungsschein</b></div>
+        <dl class="schein-daten"><dt>Name</dt><dd>${esc(P.name)}</dd><dt>Rasse</dt><dd>${rP.name}</dd><dt>Farbe</dt><dd>${FARBEN[P.farbe].name}</dd>
+          <dt>Geschlecht</dt><dd>${P.geschlecht}</dd><dt>Stockmaß</dt><dd>${P.stockmass} cm</dd><dt>${P.geb ? "Geboren" : "Alter"}</dt><dd>${P.geb ? jzName(P.geb.j * 4 + P.geb.s) : (P.alter || "–") + " Jahre"}</dd></dl>
+        <div class="schein-titel"><span>Abstammung</span><span>Großeltern</span></div>
+        <div class="schein-tab">
+          ${feld("Vater", A.vater, true, "Hengst")}${feld("", A.vatersvater, false, "Hengst")}${feld("", A.vatersmutter, false, "Stute")}
+          ${feld("Mutter", A.mutter, true, "Stute")}${feld("", A.muttersvater, false, "Hengst")}${feld("", A.muttersmutter, false, "Stute")}
+        </div>
+        <div class="schein-fuss">Rasse / Farbe / Stockmaß</div>
+      </div>
+      <div class="zeile-wert" style="margin-top:14px"><div class="kopf"><b>Rassischer Anteil</b></div>
+        <div class="anteil"><i style="width:${anteil}%"></i>${fremd > 0 ? `<i class="fremd" style="width:${fremd}%"></i>` : ""}</div>
+        <div class="pole"><span>■ ${rP.name} ${pz(anteil)}</span>${fremd > 0 ? `<span class="fr">■ ${rn(A.fremdRasse)} ${pz(fremd)}</span>` : ""}</div></div>`; };
+  // Inzucht: haben die beiden Pferde gemeinsame Vorfahren (bis zu den Großeltern) oder ist eines Elternteil/Großelternteil des anderen?
+  const ROLLE = { vater: "der Vater", mutter: "die Mutter", vatersvater: "der Großvater", vatersmutter: "die Großmutter", muttersvater: "der Großvater", muttersmutter: "die Großmutter" };
+  function inzucht(a, b) {
+    const kreis = P => { const A = ahnenFuellen(P); return [[nrVon(P), P.name, "selbst"], ...Object.keys(ROLLE).map(k => [A[k] && A[k].nr, A[k] && A[k].name, k])]; };
+    const ka = kreis(a), kb = kreis(b), saetze = [], gesehen = new Set();
+    // ist ein Pferd selbst Vorfahre des anderen, sind seine eigenen Vorfahren dadurch schon erklärt
+    if (kb.some(y => y[0] === ka[0][0])) ka.slice(1).forEach(x => gesehen.add(x[0]));
+    if (ka.some(x => x[0] === kb[0][0])) kb.slice(1).forEach(y => gesehen.add(y[0]));
+    ka.forEach(x => kb.forEach(y => {
+      if (!x[0] || x[0] !== y[0] || gesehen.has(x[0])) return;
+      gesehen.add(x[0]);
+      if (x[2] === "selbst") saetze.push(`<b>${esc(a.name)}</b> ist ${ROLLE[y[2]]} von <b>${esc(b.name)}</b>.`);
+      else if (y[2] === "selbst") saetze.push(`<b>${esc(b.name)}</b> ist ${ROLLE[x[2]]} von <b>${esc(a.name)}</b>.`);
+      else saetze.push(`Gemeinsamer Vorfahre <b>${esc(x[1])}</b>: bei ${esc(a.name)} ${ROLLE[x[2]]}, bei ${esc(b.name)} ${ROLLE[y[2]]}.`);
+    }));
+    return saetze;
+  }
   // Warum kann dieses Pferd gerade nicht verpaart werden? ("" = es geht)
   function zuchtSperre(p, box) {
     if (p.geschlecht === "Wallach") return "Wallach";
@@ -789,14 +833,14 @@
   function jahreszeitBeginn() {
     const jetzt = jzJetzt();
     spiel.tierschutz = (spiel.tierschutz || []).filter(t => {
-      if (jetzt >= t.frist) { brief("Tierschutzverein", `${t.pferd.name} wurde vermittelt`, `Die Frist zum Zurückkaufen ist abgelaufen. <b>${esc(t.pferd.name)}</b> wurde an eine neue Familie vermittelt und hat dort ein gutes Zuhause gefunden.`); return false; }
+      if (jetzt >= t.frist) { brief("Tierschutzverein", `${t.pferd.name} wurde vermittelt`, `die Frist zum Zurückkaufen ist abgelaufen. <b>${esc(t.pferd.name)}</b> wurde an eine neue Familie vermittelt und hat dort ein gutes Zuhause gefunden.<br><br>Mit freundlichen Grüßen<br>Ihr Tierschutzverein`); return false; }
       return true;
     });
     spiel.boxen.forEach((b, i) => {
       const p = b.pferd;
       if (!p || !p.traechtig || b.tot || b.fohlen || jetzt < p.traechtig.geburt) return;
       const f = geburt(b);
-      brief("Tierarztpraxis", `${p.name} hat ein Fohlen bekommen!`, `Herzlichen Glückwunsch! <b>${esc(p.name)}</b> (Box ${i + 1}) hat zu Beginn von ${datumLang()} ein gesundes ${f.geschlecht === "Stute" ? "Stutfohlen" : "Hengstfohlen"} zur Welt gebracht: <b>${esc(f.name)}</b>.
+      brief("Tierarztpraxis", `${p.name} hat ein Fohlen bekommen!`, `herzlichen Glückwunsch! <b>${esc(p.name)}</b> (Box ${i + 1}) hat zu Beginn von ${datumLang()} ein gesundes ${f.geschlecht === "Stute" ? "Stutfohlen" : "Hengstfohlen"} zur Welt gebracht: <b>${esc(f.name)}</b>.
         <br><br>Vater: ${esc(f.ahnen.vater.name)} (${rasseById(f.ahnen.vater.rasse).name}) · Farbe: ${FARBEN[f.farbe].name} · Rasse: ${rasseById(f.rasse).name}` +
         (freieBox() < 0 ? `<br><br>⚠️ Bitte denk daran: Ab seiner dritten Jahreszeit braucht ${esc(f.name)} eine eigene Box. Zurzeit ist keine Box frei.` : ""));
     });
@@ -805,18 +849,27 @@
       const a = alterJZ(f); if (a < 2) return;
       const frei = freieBox();
       if (frei >= 0) { fohlenUmstellen(b, frei); brief("Hofverwaltung", `${f.name} ist umgezogen`, `<b>${esc(f.name)}</b> ist jetzt groß genug für eine eigene Box und ist automatisch in die freie Box ${frei + 1} umgezogen.`); return; }
-      if (a === 2) brief("Tierschutzverein", `Hinweis zu ${f.name}`, `Sehr geehrte Pferdehalterin, sehr geehrter Pferdehalter,<br><br>uns wurde mitgeteilt, dass das Fohlen <b>${esc(f.name)}</b> keine eigene Box hat. Bekommt es nicht in dieser oder der nächsten Jahreszeit eine eigene Box, werden wir es abholen.<br><br>Mit freundlichen Grüßen<br>Ihr Tierschutzverein`);
-      else if (a === 3) brief("Tierschutzverein", `Letzte Warnung: ${f.name}`, `Sehr geehrte Pferdehalterin, sehr geehrter Pferdehalter,<br><br><b>${esc(f.name)}</b> hat immer noch keine eigene Box. Bis zum Ende dieser Jahreszeit muss eine Box bereitstehen, sonst holen wir das Fohlen ab.<br><br>Mit freundlichen Grüßen<br>Ihr Tierschutzverein`);
+      if (a === 2 && !f.tsHinweis) { f.tsHinweis = true; brief("Tierschutzverein", `Hinweis zu ${f.name}`, `uns wurde mitgeteilt, dass das Fohlen <b>${esc(f.name)}</b> keine eigene Box hat. Bekommt es nicht in dieser oder der nächsten Jahreszeit eine eigene Box, werden wir es abholen.<br><br>Mit freundlichen Grüßen<br>Ihr Tierschutzverein`); }
+      else if (a === 2) brief("Tierschutzverein", `Erinnerung: ${f.name}`, `das Fohlen <b>${esc(f.name)}</b> ist jetzt alt genug für eine eigene Box, hat aber noch keine. Bekommt es nicht in dieser oder der nächsten Jahreszeit eine eigene Box, werden wir es abholen.<br><br>Mit freundlichen Grüßen<br>Ihr Tierschutzverein`);
+      else if (a === 3) brief("Tierschutzverein", `Letzte Warnung: ${f.name}`, `<b>${esc(f.name)}</b> hat immer noch keine eigene Box. Bis zum Ende dieser Jahreszeit muss eine Box bereitstehen, sonst holen wir das Fohlen ab.<br><br>Mit freundlichen Grüßen<br>Ihr Tierschutzverein`);
       else {
         delete b.fohlen;
         const pf = { ...f, werte: f.werte || erzeugeWerte(f), pflege: erzeugePflege(f) };
         spiel.tierschutz.push({ pferd: pf, frist: jetzt + 2, preis: TIERSCHUTZ_PREIS });
-        brief("Tierschutzverein", `${f.name} wurde abgeholt`, `Sehr geehrte Pferdehalterin, sehr geehrter Pferdehalter,<br><br>da <b>${esc(f.name)}</b> keine eigene Box bekommen hat, haben wir das Fohlen heute abgeholt.<br><br>Sie können es bis Ende ${jzName(jetzt + 1).replace(/^\S+ /, "")} für ${fmt(TIERSCHUTZ_PREIS)} zurückkaufen – Sie finden es im Pferdemarkt unter „Tierschutzpferde“. Dafür brauchen Sie eine freie Box.<br><br>Mit freundlichen Grüßen<br>Ihr Tierschutzverein`);
+        brief("Tierschutzverein", `${f.name} wurde abgeholt`, `da <b>${esc(f.name)}</b> keine eigene Box bekommen hat, haben wir das Fohlen heute abgeholt.<br><br>Sie können es bis Ende ${jzName(jetzt + 1).replace(/^\S+ /, "")} für ${fmt(TIERSCHUTZ_PREIS)} zurückkaufen – Sie finden es im Pferdemarkt unter „Tierschutzpferde“. Dafür brauchen Sie eine freie Box.<br><br>Mit freundlichen Grüßen<br>Ihr Tierschutzverein`);
       }
     });
+    // Frühwarnung: mehr Fohlen als freie Boxen – die ältesten bekommen zuerst eine Box, für die übrigen meldet sich der Tierschutz sofort
+    const freiAnzahl = spiel.boxen.filter(b => !b.pferd).length;
+    spiel.boxen.filter(b => b.fohlen).map(b => b.fohlen).sort((x, y) => alterJZ(y) - alterJZ(x)).forEach((f, i) => {
+      if (i < freiAnzahl || f.tsHinweis) return;
+      f.tsHinweis = true;
+      brief("Tierschutzverein", `Hinweis zu ${f.name}`, `uns wurde mitgeteilt, dass auf Ihrem Hof mehr Fohlen stehen als freie Boxen. Für <b>${esc(f.name)}</b> ist keine eigene Box frei.<br><br>Ab seiner dritten Jahreszeit braucht jedes Fohlen eine eigene Box. Bekommt <b>${esc(f.name)}</b> bis dahin keine, werden wir es nach einer letzten Frist abholen.<br><br>Mit freundlichen Grüßen<br>Ihr Tierschutzverein`);
+    });
   }
-  function dialog(html, knoepfe = [["OK"]]) {
+  function dialog(html, knoepfe = [["OK"]], art = "") {
     $("dlgInhalt").innerHTML = html;
+    document.querySelector(".dlg-karte").className = "dlg-karte " + art;
     $("dlgKnoepfe").innerHTML = knoepfe.map(([t, , k], i) => `<button class="knopf ${k || ""}" data-i="${i}">${t}</button>`).join("");
     $("dlg").hidden = false;
     $("dlgKnoepfe").querySelectorAll("button").forEach(b => b.onclick = () => { $("dlg").hidden = true; const fn = knoepfe[+b.dataset.i][1]; if (fn) fn(); });
@@ -832,9 +885,9 @@
     el.title = n === 1 ? "1 neuer Brief" : n + " neue Briefe";
     // ganz rechts oben – ist dort schon etwas (Knopf o. Ä.), rückt der Brief links daneben
     const B = 40, y = 34, rand = 10, iw = document.documentElement.clientWidth;
-    const belegt = x => document.elementsFromPoint(x, y).some(e => e !== el && !el.contains(e) && e.closest && e.closest("button, a, input, select, .hm-kopf, .menueliste") && getComputedStyle(e).visibility !== "hidden");
+    const belegt = x => document.elementsFromPoint(x, y).some(e => e !== el && !el.contains(e) && e.closest && e.closest("header, .leiste, .hm-kopf, .menueliste") && e.closest("button, a, input, select, .hm-kopf, .menueliste") && getComputedStyle(e).visibility !== "hidden");
     let rechts = iw - rand;
-    for (let tries = 0; tries < 60 && rechts - B > 0; tries++) {
+    for (let tries = 0; tries < 30 && rechts - B > 0; tries++) {
       let frei = true;
       for (let x = rechts - 2; x > rechts - B; x -= 6) if (belegt(x)) { frei = false; break; }
       if (frei) break;
@@ -913,7 +966,6 @@
           <dt>Geboren</dt><dd>${JZ[p.geb.s][1]} ${JZ[p.geb.s][0]} ${p.geb.j}</dd>
           ${box.fohlen ? `<dt>Fohlen</dt><dd>${esc(box.fohlen.name)} · ${box.fohlen.geschlecht} · ${alterText(box.fohlen)} (${altersstufe(box.fohlen)[1].replace(/^\S+ /, "")})${alterJZ(box.fohlen) >= 2 ? `<br><button class="knopf" id="absetzen" style="width:auto;padding:6px 12px;margin-top:6px;font-size:.85rem">In eigene Box umstellen</button>` : ""}</dd>` : ""}
           <dt>Stockmaß</dt><dd>${p.stockmass} cm</dd>
-          <dt>Herkunft</dt><dd>${r.herkunft}</dd>
           ${zucht ? `<dt>Zucht</dt><dd>${zucht}</dd>` : ""}
         </dl><p class="text">${r.text}</p>
         <button class="entfernen" id="entfernen">🗑️ Pferd entfernen</button>`;
@@ -924,7 +976,7 @@
       window.__deckListe = deck;
       const kachel = (q, attr, sperre, alter) => `<button class="paar ${sperre ? "gesperrt" : ""}" ${sperre ? "disabled" : attr} title="${esc(q.name)}${sperre ? " – " + sperre : ""}">
           <span class="paar-bild">${kopfBild(q)}</span>
-          <span class="paar-brett"><b>${esc(q.name)}</b><span>${rasseById(q.rasse).name}</span><span>${alter}${sperre ? ` · ${sperre}` : ""}</span></span></button>`;
+          <span class="paar-brett"><b>${esc(q.name)}</b><span>${rasseById(q.rasse).name}</span><span>${alter}${sperre ? ` · ${sperre}` : ""}</span>${!sperre && inzucht(p, q).length ? `<span class="inzucht-mark">⚠️ Inzucht</span>` : ""}</span></button>`;
       inhalt = `<p class="text" style="margin:0 0 4px">💞 <b>${esc(p.name)} verpaaren mit …</b> · Tragzeit 3 Jahreszeiten</p>
         <h3 class="paar-titel">🏠 Eigene Zucht <small>${mz} aus deinem Stall</small></h3>
         ${eigene.length ? `<div class="paar-liste">${eigene.map(({ b, i }) => kachel(b.pferd, `data-partner="${i}"`, zuchtSperre(b.pferd, b), alterText(b.pferd))).join("")}</div>`
@@ -933,29 +985,10 @@
         <div class="paar-liste">${deck.map((h, i) => kachel(h, `data-deck="${i}"`, "", `${h.alter} Jahre`)).join("")}</div>` : ""}
         <button class="knopf zweit" id="deckZurueck" style="width:100%;margin-top:14px">‹ Zurück</button>`;
     } else if (aktenReiter === "genetik") {
-      const rn = id => rasseById(id).name, pz = x => String(x).replace(".", ",") + " %";
-      const ahn = (rolle, a, sym) => `<div class="ahn"><small>${sym} ${rolle}</small><b>${esc(a.name)}</b><span>${rn(a.rasse)} · ${pz(a.pct)}</span></div>`;
-      const feld = (rolle, a, gross, geschl) => `<div class="sf ${gross ? "gross" : ""}">${rolle ? `<small>${rolle}</small>` : ""}<b>${esc(a.name)}</b><span class="nr">${geschl}</span>
-        <span>${rn(a.rasse)} / ${FARBEN[a.farbe] ? FARBEN[a.farbe].name.replace(/ \(.*\)/, "") : a.farbe} / ${a.sm} cm</span>${a.pct < 100 ? `<span class="pz">${pz(a.pct)} ${rn(a.rasse)}</span>` : ""}</div>`;
-      const schein = P => { const A = ahnenFuellen(P), rP = rasseById(P.rasse), anteil = P.werte.reinrassig, fremd = Math.round((100 - anteil) * 100) / 100;
-        return `<div class="schein">
-          <div class="schein-kopf"><b>Abstammungsschein</b></div>
-          <dl class="schein-daten"><dt>Name</dt><dd>${esc(P.name)}</dd><dt>Rasse</dt><dd>${rP.name}</dd><dt>Farbe</dt><dd>${FARBEN[P.farbe].name}</dd>
-            <dt>Geschlecht</dt><dd>${P.geschlecht}</dd><dt>Stockmaß</dt><dd>${P.stockmass} cm</dd><dt>Geboren</dt><dd>${jzName(P.geb.j * 4 + P.geb.s)}</dd></dl>
-          <div class="schein-titel"><span>Abstammung</span><span>Großeltern</span></div>
-          <div class="schein-tab">
-            ${feld("Vater", A.vater, true, "Hengst")}${feld("", A.vatersvater, false, "Hengst")}${feld("", A.vatersmutter, false, "Stute")}
-            ${feld("Mutter", A.mutter, true, "Stute")}${feld("", A.muttersvater, false, "Hengst")}${feld("", A.muttersmutter, false, "Stute")}
-          </div>
-          <div class="schein-fuss">Rasse / Farbe / Stockmaß</div>
-        </div>
-        <div class="zeile-wert" style="margin-top:14px"><div class="kopf"><b>Rassischer Anteil</b></div>
-          <div class="anteil"><i style="width:${anteil}%"></i>${fremd > 0 ? `<i class="fremd" style="width:${fremd}%"></i>` : ""}</div>
-          <div class="pole"><span>■ ${rP.name} ${pz(anteil)}</span>${fremd > 0 ? `<span class="fr">■ ${rn(A.fremdRasse)} ${pz(fremd)}</span>` : ""}</div></div>`; };
       const sperre = zuchtSperre(p, box);
       const paar = sperre === "Wallach" ? "" : sperre ? `<p class="text" style="margin:14px 0 0">💞 Verpaaren nicht möglich: ${esc(p.name)} ${sperre === "zu jung" ? "ist zu jung (Zucht ab 3 Jahren)" : sperre}.</p>`
         : `<button class="knopf" id="paarKnopf" style="width:100%;margin:16px 0 0">💞 Verpaaren mit …</button>`;
-      inhalt = schein(p) + (box.fohlen ? `<h3 class="schein-zwischen">🍼 Fohlen ${esc(box.fohlen.name)}</h3>` + schein(box.fohlen) : "") + paar;
+      inhalt = abstammungsschein(p) + (box.fohlen ? `<h3 class="schein-zwischen">🍼 Fohlen ${esc(box.fohlen.name)}</h3>` + abstammungsschein(box.fohlen) : "") + paar;
       speichern();
     } else if (aktenReiter === "gang") {
       const g = w.gang, pr = PROFIL[p.rasse] || {};
@@ -1141,11 +1174,15 @@
       speichern(); zeigeStall(); zeigeTag();
     };
     const dz = $("deckZurueck"); if (dz) dz.onclick = () => { deckModus = false; zeigeAkte(); };
-    $("info").querySelectorAll("[data-deck]").forEach(b => b.onclick = () => verpaaren(p, window.__deckListe[+b.dataset.deck]));
-    $("info").querySelectorAll("[data-partner]").forEach(b => b.onclick = () => {
-      const q = spiel.boxen[+b.dataset.partner].pferd;
-      if (p.geschlecht === "Stute") verpaaren(p, q); else verpaaren(q, p);
-    });
+    // Zuchtpartner antippen: erst seinen Abstammungsschein zeigen (mit Inzucht-Warnung), dann verpaaren
+    const partnerZeigen = (q, herkunft) => {
+      const tr = inzucht(p, q);
+      const warn = tr.length ? `<div class="inzucht-warnung"><b>⚠️ Achtung, Inzucht!</b><ul>${tr.map(t => `<li>${t}</li>`).join("")}</ul>Bei Inzucht steigt das Risiko für Krankheiten und Erbfehler beim Fohlen.</div>` : "";
+      dialog(`<h3>💞 ${esc(q.name)} <small style="font-weight:400;color:var(--leise)">· ${herkunft}</small></h3>${warn}${abstammungsschein(q)}`,
+        [[tr.length ? "Trotzdem verpaaren" : "💞 Verpaaren", () => p.geschlecht === "Stute" ? verpaaren(p, q) : verpaaren(q, p)], ["Abbrechen", null, "zweit"]], "breit");
+    };
+    $("info").querySelectorAll("[data-deck]").forEach(b => b.onclick = () => partnerZeigen(window.__deckListe[+b.dataset.deck], "Deckstation"));
+    $("info").querySelectorAll("[data-partner]").forEach(b => b.onclick = () => partnerZeigen(spiel.boxen[+b.dataset.partner].pferd, `eigene Zucht · Box ${+b.dataset.partner + 1}`));
     const pk = $("paarKnopf"); if (pk) pk.onclick = () => { deckModus = true; zeigeAkte(); };
     const ent = $("entfernen"); if (ent) ent.onclick = () => {
       const extra = (box.fohlen ? ` Auch das Fohlen <b>${esc(box.fohlen.name)}</b> wird entfernt.` : "") + (p.traechtig ? " Die Stute ist tragend – das ungeborene Fohlen geht mit." : "");
@@ -1741,8 +1778,8 @@
       <h1>Wer bist du?</h1><p class="unter">Erstelle deinen Charakter und gib deinem Hof einen Namen</p>
       <div class="panel">
         <div class="feld-s"><label>Wähle dein Aussehen</label><div class="avatare">${AVATARE.map((a, i) => `<button data-ava="${a}" class="${i ? "" : "an"}" aria-label="Aussehen ${i + 1}">${a}</button>`).join("")}</div></div>
-        <div class="feld-s"><label for="chName">Dein Name</label><input id="chName" maxlength="24" placeholder="z. B. Max Mustermann" autocomplete="off"></div>
-        <div class="feld-s"><label for="chHof">Name deines Hofes</label><input id="chHof" maxlength="30" placeholder="z. B. Gestüt Sonnenwiese" autocomplete="off"></div>
+        <div class="feld-s"><label for="chName">Dein Name</label><input id="chName" maxlength="24" placeholder="z. B. Max Mustermann" autocomplete="off" required><small class="fehler-text" id="chNameFehler" hidden>Bitte gib deinen Namen ein.</small></div>
+        <div class="feld-s"><label for="chHof">Name deines Hofes</label><input id="chHof" maxlength="30" placeholder="z. B. Gestüt Sonnenwiese" autocomplete="off" required><small class="fehler-text" id="chHofFehler" hidden>Bitte gib deinem Hof einen Namen.</small></div>
         <div class="feld-s"><label>Spieltempo</label><div class="tempo">${[[3, "Schnell", "3 Tage pro Jahreszeit"], [4, "Standard", "4 Tage pro Jahreszeit"], [5, "Langsam", "5 Tage pro Jahreszeit"]].map(([t, n, b]) => `<button data-tempo="${t}" class="${t === 4 ? "an" : ""}"><b>${n}</b><small>${b}</small></button>`).join("")}</div></div>
       </div>
       <button class="sknopf haupt" id="chLos"><span class="i">🏡</span><span>Hof gründen<small>danach geht es zum Hauptmenü</small></span></button>
@@ -1751,9 +1788,12 @@
     $("charakter").querySelectorAll("[data-ava]").forEach(b => b.onclick = () => { c.avatar = b.dataset.ava; $("charakter").querySelectorAll("[data-ava]").forEach(x => x.classList.toggle("an", x === b)); });
     $("charakter").querySelectorAll("[data-tempo]").forEach(b => b.onclick = () => { tempo = +b.dataset.tempo; $("charakter").querySelectorAll("[data-tempo]").forEach(x => x.classList.toggle("an", x === b)); });
     $("chZurueck").onclick = zeigeStart;
+    ["chName", "chHof"].forEach(id => $(id).oninput = () => { $(id).classList.remove("fehlt"); $(id + "Fehler").hidden = true; });
     $("chLos").onclick = () => {
-      c.name = $("chName").value.trim() || "Pferdefreund";
-      c.hof = $("chHof").value.trim() || `Hof ${c.name}`;
+      c.name = $("chName").value.trim(); c.hof = $("chHof").value.trim();
+      const leer = [["chName", c.name], ["chHof", c.hof]].filter(([, v]) => !v).map(([id]) => id);
+      leer.forEach(id => { $(id).classList.add("fehlt"); $(id + "Fehler").hidden = false; });
+      if (leer.length) { $(leer[0]).focus(); return; }
       // neues Spiel: alles zurücksetzen, beide Boxen leer
       spiel = { geld: 1000, spieler: c, tag: 1, tempo, aktBox: 0, sparmodus: spiel.sparmodus,
         boxen: [1].map(nr => ({ nr, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false })),
@@ -1850,8 +1890,11 @@
     } else {
       const br = offenerBrief && post.find(b => b.id === offenerBrief);
       if (br) {
-        inhalt = `<div class="brief-papier"><div class="kopf"><span>Von: <b>${esc(br.von)}</b></span><span>${briefDatum(br)}</span></div>
-          <h3>${esc(br.betreff)}</h3><div>${br.text}</div></div>
+        const spName = (spiel.spieler && spiel.spieler.name) || "Pferdefreund";
+        const anrede = br.von === "Tierschutzverein" ? `Guten Tag ${esc(spName)},` : `Hallo ${esc(spName)},`;
+        const text = br.von === "Tierschutzverein" || br.betreff === "Neuigkeit" ? br.text : br.text + `<br><br>Viele Grüße<br>${br.von === "Tierarztpraxis" ? "Deine Tierarztpraxis" : "Deine Hofverwaltung"}`;
+        inhalt = `<div class="brief-papier"><div class="kopf"><span>Von: <b>${esc(br.von)}</b><br>An: <b>${esc(spName)}</b>, ${esc(hofName())}</span><span>${briefDatum(br)}</span></div>
+          <h3>${esc(br.betreff)}</h3><p>${anrede}</p><div>${text}</div></div>
           <div class="brief-knoepfe"><button class="knopf zweit" id="briefZurueck">‹ Postfach</button><button class="knopf rot" id="briefWeg">🗑️ Löschen</button></div>`;
       } else if (!post.length) inhalt = `<div class="post-leer">${BRIEF_SVG(true).replace("<svg", '<svg width="60"')}<br>Dein Postfach ist leer.</div>`;
       else inhalt = `<div class="post-leiste"><span>${post.length} ${post.length === 1 ? "Brief" : "Briefe"}${n ? ` · ${n} ungelesen` : ""}</span>${n ? `<button id="alleGelesen">Alle gelesen</button>` : ""}</div>

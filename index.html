@@ -146,6 +146,9 @@
   .gentab { width: 100%; border-collapse: collapse; font-size: .82rem; margin: 6px 0; } .gentab th, .gentab td { text-align: left; padding: 4px 6px; border-bottom: 1px solid #e2d6c3; vertical-align: top; }
   .gentab td:nth-child(2) { white-space: nowrap; font-weight: 700; color: var(--akzent); } .gentab th { font-size: .75rem; color: var(--leise); }
   .hf-box .hf-hol { width: auto; padding: 7px 10px; font-size: .82rem; flex: none; }
+  .grab { background: #f6ecdc; color: var(--text); border-radius: 14px; overflow: hidden; }
+  .grab-bild { background: linear-gradient(#c9d6dd, #e9eef0 70%); padding: 10px 10px 0; } .grab-bild svg { width: 100%; height: 150px; display: block; }
+  #hmEnde { grid-column: 1 / -1; min-height: 70px; flex-direction: row; gap: 10px; }
   .schein-zwischen { margin: 18px 0 8px; font-size: 1rem; }
   #postIcon { position: fixed; top: max(14px, env(safe-area-inset-top)); right: 10px; z-index: 45; width: 40px; height: 40px; padding: 4px 2px; border: 0; background: none; cursor: pointer;
     filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); animation: briefWackeln 2.4s ease-in-out infinite; }
@@ -647,7 +650,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "103";
+  const SPIEL_VERSION = "104";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -655,9 +658,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=103"></script>
-<script src="kopfteile.js?v=103"></script>
-<script src="kopfalter.js?v=103"></script>
+<script src="pferd.js?v=104"></script>
+<script src="kopfteile.js?v=104"></script>
+<script src="kopfalter.js?v=104"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1051,12 +1054,16 @@
   }
   // ---------- Marktwert, Verkauf, Gnadenhof ----------
   const RASSE_WERT = { shetty: 1200, haflinger: 3500, fjord: 3500, isi: 4500, tinker: 4000, quarter: 5000, araber: 6000, marwari: 5500, tekke: 7000, friese: 6500, andalusier: 7000, lipizzaner: 6500, shire: 4500, vollblut: 7000, hannoveraner: 6500 };
+  // Marktwert aus Gangwerk, Ausbildungsstand, Alter und Gesundheit
   function marktwert(p) {
-    const w = p.werte || erzeugeWerte(p), g = w.gang, gn = [g.schritt, g.trab, g.galopp].reduce((a, b) => a + b, 0) / 3;
+    const w = p.werte || erzeugeWerte(p), g = w.gang;
+    const gn = [g.schritt, g.trab, g.galopp].reduce((a, b) => a + b, 0) / 3;           // 4 … 10
+    const gangF = Math.max(0, (gn - 4) / 6);                                               // 0 … 1
     const j = p.geb ? alterJZ(p) / 4 : (p.alter || 5);
-    const alterF = j < 1 ? 0.45 : j < 3 ? 0.65 : j < 12 ? 1 : j < 20 ? 1 - (j - 12) * 0.06 : 0.3;
-    const gesund = p.pflege ? 0.5 + 0.5 * p.pflege.gesundheit / 100 : 1;
-    const v = (RASSE_WERT[p.rasse] || 4000) * (0.6 + 0.4 * w.reinrassig / 100) * (gn / 7) * alterF * gesund;
+    const aw = ausbildungsWerte({ ...p, alter: Math.floor(j) }), ausb = aw.reduce((a, x) => a + x.wert, 0) / aw.length / 100;   // 0 … ~1
+    const alterF = j < 1 ? 0.6 : j < 3 ? 0.8 : j < 12 ? 1 : j < 20 ? 1 - (j - 12) * 0.06 : 0.3;
+    const gesund = p.pflege ? 0.4 + 0.6 * p.pflege.gesundheit / 100 : 1;
+    const v = (1500 + 4500 * gangF * gangF + 5000 * ausb) * alterF * gesund;
     return Math.max(100, Math.round(v / 50) * 50);
   }
   function abgabeSperre(p, box) {
@@ -1089,7 +1096,8 @@
       };
       if (a.art === "fest") {
         if (jetzt < a.ende) return true;
-        const v = a.preis / a.wert, chance = v <= 1 ? 0.9 : Math.max(0.05, 0.9 - (v - 1) * 1.1);
+        // bis Marktwert fast sicher verkauft, darüber immer seltener – ab 25 % zu viel kauft niemand
+        const v = a.preis / a.wert, chance = v <= 1 ? 0.9 : v <= 1.25 ? 0.9 - (v - 1) * 2.8 : 0;
         if (Math.random() < chance) return verkauft(a.preis);
         brief("Pferdemarkt", `Kein Käufer für ${p.name}`, `für <b>${esc(p.name)}</b> hat sich zum Preis von ${fmt(a.preis)} leider kein Käufer gefunden. Das Angebot ist abgelaufen – ${pron(p).er} bleibt bei dir.`);
         return false;
@@ -1127,6 +1135,7 @@
     });
     spiel.gnadenhof = (spiel.gnadenhof || []).filter(g => {
       if (Math.random() >= sterbeChance(g.pferd)) return true;
+      begraben(g.pferd, "Gnadenhof");
       brief("Gnadenhof", `Abschied von ${g.pferd.name}`, `<b>${esc(g.pferd.name)}</b> ist mit ${alterText(g.pferd)} auf dem Gnadenhof friedlich eingeschlafen. Wir haben gut für ${pron(g.pferd).ihn} gesorgt.`);
       return false;
     });
@@ -1274,7 +1283,7 @@
           <dt>Stockmaß</dt><dd>${p.stockmass} cm</dd>
           ${zucht ? `<dt>Zucht</dt><dd>${zucht}</dd>` : ""}
         </dl>
-        ${box.tot ? `<button class="entfernen" id="entfernen">🕊️ Verstorbenes Pferd aus der Box nehmen</button>` : ""}`;
+        ${box.tot ? `<p class="text">🕊️ ${esc(p.name)} ist verstorben und bekommt einen Grabstein auf dem Pferdefriedhof – spätestens nach dieser Nacht ist die Box wieder leer.</p><button class="entfernen" id="entfernen">🕊️ Verstorbenes Pferd aus der Box nehmen</button>` : `<button class="entfernen" id="abgebenLink">🚚 Pferd abgeben</button>`}`;
     } else if (aktenReiter === "genetik" && deckModus) {
       const ziel = p.geschlecht === "Stute" ? "Hengst" : "Stute", mz = ziel === "Hengst" ? "Hengste" : "Stuten";
       const eigene = spiel.boxen.map((b, i) => ({ b, i })).filter(({ b, i }) => i !== aktBox && b.pferd && !b.tot && b.pferd.geschlecht === ziel);
@@ -1441,8 +1450,8 @@
             <button class="knopf zweit" id="angebotWeg" style="width:100%">Angebot zurückziehen</button>` + zurueckOrt("‹ Zurück zum Abgeben");
         } else {
           inhalt = meld + `<p class="text" style="margin:0 0 4px">💰 <b>${esc(p.name)} verkaufen</b> · Marktwert etwa <b>${fmt(wert)}</b><br><small>Bis zum Verkauf bleibt ${esc(p.name)} bei dir und muss versorgt werden. Fällt die Gesundheit unter 75 %, platzt der Verkauf.</small></p>
-            <div class="verkauf-art"><b>🏷️ Festpreis</b><small>Läuft bis zu einer Jahreszeit. Je höher der Preis, desto seltener findet sich ein Käufer.</small>
-              <label class="fest-preis">Preis: <b id="festWert">${fmt(wert)}</b><input type="range" id="festPreis" min="${Math.round(wert * 0.5 / 50) * 50}" max="${Math.round(wert * 2 / 50) * 50}" step="50" value="${wert}"></label>
+            <div class="verkauf-art"><b>🏷️ Festpreis</b><small>Läuft bis zu einer Jahreszeit. Der Marktwert ergibt sich aus Gangwerk, Ausbildungsstand, Alter und Gesundheit. Verlangst du deutlich mehr, kauft niemand.</small>
+              <label class="fest-preis">Vorgeschlagener Preis (Marktwert): ${fmt(wert)}<br>Dein Preis: <b id="festWert">${fmt(wert)}</b> <small id="festHinweis"></small><input type="range" id="festPreis" min="${Math.round(wert * 0.5 / 50) * 50}" max="${Math.round(wert * 2 / 50) * 50}" step="50" value="${wert}"></label>
               <button class="knopf" id="festLos" style="width:100%">Zum Festpreis anbieten</button></div>
             <div class="verkauf-art"><b>🔨 Auktion</b><small>Startet bei ${fmt(Math.round(wert / 4 / 50) * 50)} (¼ des Marktwerts) und dauert 2 Jahreszeiten. Mit Glück bieten sich die Käufer weit über den Marktwert hoch.</small>
               <button class="knopf" id="auktionLos" style="width:100%">Zur Auktion geben</button></div>` + zurueckOrt("‹ Zurück zum Abgeben");
@@ -1478,7 +1487,6 @@
             <b>${n}</b><small>${id === jetzt ? "aktuell" : info}</small></button>`;
         }).join("")}</div>
         <p class="text" style="margin:14px 0 4px">⏩ <b>Test: Zeit</b> · jeden Tag gefüttert und ausgemistet</p>
-        <button class="knopf" id="sechsTage" style="width:100%">6 Tage vergehen lassen</button>
         <button class="knopf" id="naechsteJZ" style="width:100%;margin-top:8px">Bis zur nächsten Jahreszeit</button>
         ${p.geschlecht === "Stute" && !box.fohlen ? `<button class="knopf" id="fohlenTest" style="width:100%;margin-top:8px">🍼 Fohlen bekommen (Test)</button>` : ""}
         <p class="text" style="margin:14px 0 4px">🐴 <b>Test: Nasenrücken</b> · deine Zeichnungen</p>
@@ -1584,7 +1592,9 @@
       speichern(); zeigeStall(); zeigeTag();
     });
     const oz = $("ortZurueck"); if (oz) oz.onclick = () => { ortModus = ({ abgeben: "anhaenger", verkaufen: "abgeben", klinik: "anhaenger" })[ortModus] || null; meldung = ""; zeigeAkte(); };
-    const fp = $("festPreis"); if (fp) fp.oninput = () => { $("festWert").textContent = fmt(+fp.value); };
+    const fp = $("festPreis"); if (fp) fp.oninput = () => { const v = +fp.value / marktwert(p);
+      $("festWert").textContent = fmt(+fp.value);
+      $("festHinweis").textContent = v > 1.25 ? "– viel zu teuer, so kauft niemand" : v > 1.05 ? "– etwas teuer, weniger Käufer" : v < 0.95 ? "– günstig, schneller Verkauf" : "– fairer Preis"; };
     const fl = $("festLos"); if (fl) fl.onclick = () => {
       const preis = +$("festPreis").value, jetzt = jzJetzt();
       (spiel.angebote = spiel.angebote || []).push({ id: p.id, art: "fest", preis, wert: marktwert(p), start: jetzt, ende: jetzt + 1 });
@@ -1598,20 +1608,13 @@
     const aw = $("angebotWeg"); if (aw) aw.onclick = () => { spiel.angebote = spiel.angebote.filter(x => x.id !== p.id); meldung = `Das Angebot für ${esc(p.name)} wurde zurückgezogen.`; speichern(); zeigeAkte(); };
     const pk = $("paarKnopf"); if (pk) pk.onclick = () => { deckModus = true; zeigeAkte(); };
     const ent = $("entfernen"); if (ent) ent.onclick = () => {
-      const extra = (box.fohlen ? ` Auch das Fohlen <b>${esc(box.fohlen.name)}</b> wird entfernt.` : "") + (p.traechtig ? " Die Stute ist tragend – das ungeborene Fohlen geht mit." : "");
-      dialog(`<h3>🗑️ Pferd entfernen</h3><p>Willst du <b>${esc(p.name)}</b> wirklich aus Box ${aktBox + 1} entfernen? Das Pferd ist danach weg.${extra}</p>`,
-        [["Entfernen", () => {
-          spiel.angebote = (spiel.angebote || []).filter(x => x.id !== p.id);
-          box.pferd = null; delete box.fohlen; box.tot = false; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0;
-          aktenReiter = "steckbrief"; aktenModus = "steckbrief"; deckModus = false; ortModus = null;
-          speichern(); zeigeStall(); zeigeTag();
-        }, "rot"], ["Abbrechen", null, "zweit"]]);
+      dialog(`<h3>🕊️ Abschied von ${esc(p.name)}</h3><p>${esc(p.name)} wird aus Box ${aktBox + 1} genommen und bekommt einen Grabstein auf dem Pferdefriedhof.${box.fohlen ? ` Das Fohlen <b>${esc(box.fohlen.name)}</b> bleibt in der Box.` : ""}</p>`,
+        [["Aus der Box nehmen", () => { tote(); aktenReiter = "steckbrief"; aktenModus = "steckbrief"; deckModus = false; ortModus = null; speichern(); zeigeStall(); zeigeTag(); }], ["Abbrechen", null, "zweit"]]);
     };
     const tageTest = n => {
-      for (let i = 0; i < n && !spiel.boxen.some(b => b.tot); i++) { spiel.boxen.forEach(b => { b.krippeVoll = !!b.pferd; b.mistig = false; }); naechsteNacht(); }
+      for (let i = 0; i < n; i++) { spiel.boxen.forEach(b => { b.krippeVoll = !!b.pferd; b.mistig = false; }); naechsteNacht(); }
       meldung = ""; speichern(); zeigeStall(); zeigeTag(); postIconSetzen();
     };
-    const st6 = $("sechsTage"); if (st6) st6.onclick = () => tageTest(6);
     const njz = $("naechsteJZ"); if (njz) njz.onclick = () => tageTest(tpj() - datum().t + 1);
     $("info").querySelectorAll("[data-nase]").forEach(b => b.onclick = () => { p.nase = b.dataset.nase; speichern(); zeigeStall(); });
     $("info").querySelectorAll("[data-typ]").forEach(b => b.onclick = () => { p.typ = b.dataset.typ; speichern(); zeigeStall(); });
@@ -1941,7 +1944,23 @@
   $("mist").addEventListener("click", ausmisten);
   $("boden").addEventListener("click", ausmisten);
   // Eine Nacht vergeht: Gesundheit, Mist, Mähne und Schopf
+  // Verstorbene Pferde kommen auf den Pferdefriedhof – die Box ist danach wieder leer
+  function begraben(p, ort) {
+    (spiel.friedhof = spiel.friedhof || []).push({ name: p.name, rasse: p.rasse, geschlecht: p.geschlecht, farbe: fb(p), geb: p.geb ? { ...p.geb } : null, tod: jzJetzt(), alter: alterText(p), ort, nachkommen: p.nachkommen || 0 });
+  }
+  function tote() {
+    spiel.boxen.forEach((b, i) => {
+      if (!b.tot || !b.pferd) return;
+      begraben(b.pferd, `Box ${i + 1}`);
+      spiel.angebote = (spiel.angebote || []).filter(x => x.id !== b.pferd.id);
+      const f = b.fohlen; delete b.fohlen;
+      b.pferd = null; b.tot = false; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0;
+      // ein Fohlen bleibt in der Box und wird ab jetzt selbst versorgt
+      if (f) { b.pferd = { ...f, werte: f.werte || erzeugeWerte(f), pflege: erzeugePflege(f), maehneSeit: f.maehneSeit || spiel.tag, schopfSeit: f.schopfSeit || spiel.tag }; }
+    });
+  }
   function naechsteNacht() {
+    tote();
     spiel.tag += 1;
     alterAktualisieren();
     spiel.boxen.forEach(b => {
@@ -1981,7 +2000,6 @@
   }
   $("tagAnzeige").onclick = () => {
     const box = B(), offen = [];
-    if (spiel.boxen.some(b => b.tot)) return;
     if (!box.krippeVoll) offen.push("die Krippe ist noch leer");
     if (box.mistig) offen.push("die Box ist noch nicht ausgemistet");
     $("nachtSymbol").textContent = "🌙"; $("nachtText").textContent = `Ende von ${datumLang()} · Tag ${datum().t}`;
@@ -2227,12 +2245,14 @@
         <button class="hm-kachel" id="hmHof">${ungelesen() ? `<span class="bald" style="background:#c0392b">${ungelesen()} ✉</span>` : ""}<span class="i">📋</span>Hofverwaltung<small>Hof, Boxen, Einstellungen, Postfach</small></button>
         <button class="hm-kachel" id="hmEnzy"><span class="i">📖</span>Enzyklopädie<small>Rassen, Kopfformen, Abzeichen, Farben</small></button>
         <button class="hm-kachel" id="hmGnade"><span class="i">🌳</span>Gnadenhof<small>${(spiel.gnadenhof || []).length ? `${spiel.gnadenhof.length} ${spiel.gnadenhof.length === 1 ? "Pferd" : "Pferde"} im Ruhestand` : "Lebensabend für deine Pferde"}</small></button>
+        <button class="hm-kachel" id="hmFried"><span class="i">🪦</span>Pferdefriedhof<small>${(spiel.friedhof || []).length ? `${spiel.friedhof.length} ${spiel.friedhof.length === 1 ? "Grabstein" : "Grabsteine"}` : "in Erinnerung"}</small></button>
         <button class="hm-kachel" id="hmEnde"><span class="i">🚪</span>Beenden<small>zurück zum Startmenü</small></button>
       </div>
     </div>`;
     zeigeSchirm("hauptMenue");
     $("hmStall").onclick = () => zeigeSchirm(null);
     $("hmGnade").onclick = zeigeGnadenhof;
+    $("hmFried").onclick = zeigeFriedhof;
     $("hmMarkt").onclick = zeigeMarkt;
     $("hmHof").onclick = () => zeigeHof("hof");
     $("hmEnzy").onclick = () => { enzyKat = "rassen"; zeigeEnzy(); };
@@ -2244,6 +2264,29 @@
     const z = zeichnePferd(p.rasse, fb(p), { seed: p.id, geschlecht: p.geschlecht, alterStufe: p.geb ? stufeKey(p) : undefined, maehne: p.maehne, schopf: p.schopf, statisch: 1 });
     const w = z.box.maxX - z.box.minX, h = -z.box.minY, m = Math.max(w, h) * 0.08;
     return `<svg viewBox="${(z.box.minX - m).toFixed(1)} ${(z.box.minY - m).toFixed(1)} ${(w + 2 * m).toFixed(1)} ${(h + 2 * m).toFixed(1)}" preserveAspectRatio="xMidYMid meet">${ohneAnim(z.svg)}</svg>`;
+  }
+  function grabstein(g) {
+    const zeile = g.name.length > 11 ? 12 : 15;
+    return `<svg viewBox="0 0 160 150" aria-hidden="true">
+      <ellipse cx="80" cy="138" rx="72" ry="10" fill="#7dbb5a"/>
+      <path d="M38,136 V52 Q38,18 80,18 Q122,18 122,52 V136 Z" fill="#a9a59c" stroke="#4a463f" stroke-width="2.5"/>
+      <path d="M46,134 V54 Q46,27 80,27 Q114,27 114,54 V134" fill="none" stroke="#c6c2b9" stroke-width="2"/>
+      <path d="M66,46 a14,14 0 1 1 28,0 l-3,0 a11,11 0 1 0 -22,0 Z" fill="#6f6a61"/><circle cx="68.5" cy="47" r="1.6" fill="#a9a59c"/><circle cx="91.5" cy="47" r="1.6" fill="#a9a59c"/>
+      <text x="80" y="80" text-anchor="middle" font-size="${zeile}" font-weight="700" fill="#3c3832" font-family="Georgia, serif">${esc(g.name)}</text>
+      <text x="80" y="97" text-anchor="middle" font-size="9.5" fill="#4a463f" font-family="Georgia, serif">${g.geb ? `${g.geb.j}` : "?"} – ${Math.floor(g.tod / 4)}</text>
+      <text x="80" y="112" text-anchor="middle" font-size="8.5" fill="#4a463f" font-family="Georgia, serif">${rasseById(g.rasse).name.replace(/ \(.*\)/, "")}</text>
+      <g stroke="#4f8a37" stroke-width="2" stroke-linecap="round"><path d="M30,138 q-2,-8 2,-14"/><path d="M128,138 q2,-9 -1,-15"/><path d="M48,140 q0,-6 3,-9"/></g>
+      <circle cx="32" cy="123" r="4" fill="#f4d35e"/><circle cx="127" cy="122" r="4" fill="#e98fb3"/><circle cx="51" cy="130" r="3" fill="#fff"/>
+    </svg>`;
+  }
+  function zeigeFriedhof() {
+    const f = (spiel.friedhof || []).slice().reverse();
+    zeigeNeben("🪦 Pferdefriedhof", f.length ? `<div class="panel"><p style="margin:0">Hier erinnern Grabsteine an deine verstorbenen Pferde.</p></div>
+      <div class="gnade-liste">${f.map(g => `<div class="grab"><div class="grab-bild">${grabstein(g)}</div>
+        <div class="gnade-info"><b>${esc(g.name)}</b><small>${rasseById(g.rasse).name} · ${g.geschlecht} · ${FARBEN[g.farbe] ? FARBEN[g.farbe].name : ""}</small>
+        <small>${g.geb ? `geboren ${jzName(g.geb.j * 4 + g.geb.s).replace(/^\S+ /, "")} · ` : ""}verstorben ${jzName(g.tod).replace(/^\S+ /, "")}${g.alter ? ` mit ${g.alter}` : ""}</small>
+        ${g.nachkommen ? `<small>${g.nachkommen} ${g.nachkommen === 1 ? "Nachkomme" : "Nachkommen"}</small>` : ""}</div></div>`).join("")}</div>`
+      : `<div class="panel"><p style="margin:0">Hier ist noch kein Grabstein. Wenn ein Pferd stirbt, bekommt es hier einen Platz zur Erinnerung.</p></div>`);
   }
   function zeigeGnadenhof() {
     const g = spiel.gnadenhof || [];

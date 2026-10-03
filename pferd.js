@@ -816,9 +816,15 @@ function ausbildungsWerte(pferd) {
   // Tage im Ausbildungsstall bringen das Pferd schneller voran
   // Ausbildung entsteht nur durch Training (Ausbildungsstall) – ein unausgebildetes Pferd hat überall 0 %
   const basis = a < 3 ? 0 : Math.min(95, (pferd.training || 0) * 0.9) * w.talent;
+  // Skala der Ausbildung: jede Stufe baut auf der vorigen auf – sie beginnt erst zu steigen,
+  // wenn die vorige mindestens 20 % erreicht hat, und kann sie nicht überholen
+  let vorher = 100;
   return AUSBILDUNG.map((name, i) => {
     let v = basis * (1.12 - i * 0.13) * Math.pow(pr.dress, i / 4) + (basis > 0 ? w.streuung[i] : 0);
-    return { name, wert: Math.round(Math.max(0, Math.min(97, v))) };
+    v = Math.max(0, Math.min(97, v));
+    if (i > 0) v = Math.min(v, Math.max(0, (vorher - 20) / 80 * 100), vorher);
+    vorher = v;
+    return { name, wert: Math.round(v) };
   });
 }
 function ausbildungsKlasse(werte, alter) {

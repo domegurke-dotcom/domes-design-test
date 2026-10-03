@@ -153,6 +153,9 @@
   .tot-hinweis b { font-size: 1.08rem; } .tot-hinweis span { font-size: .9rem; opacity: .9; line-height: 1.4; }
   .tot-hinweis .knopf { width: 100%; background: #f6ecdc; color: #2b1d14; font-weight: 800; }
   @keyframes totPuls { 0%, 100% { box-shadow: 0 4px 14px rgba(0,0,0,.25); } 50% { box-shadow: 0 0 0 5px rgba(183,71,58,.45), 0 4px 14px rgba(0,0,0,.25); } }
+  [data-ansehen] { cursor: pointer; } .ts-pferd[data-ansehen]:hover, .gnade-pferd[data-ansehen]:hover, .grab[data-ansehen]:hover { box-shadow: 0 0 0 2px var(--akzent); }
+  .ansehen-link b { text-decoration: underline; text-underline-offset: 2px; }
+  .sb-bild { background: linear-gradient(#dff1fa, #f4fbff); border-radius: 12px; padding: 6px; } .sb-bild svg { width: 100%; height: 150px; display: block; }
   .schein-zwischen { margin: 18px 0 8px; font-size: 1rem; }
   #postIcon { position: fixed; top: max(14px, env(safe-area-inset-top)); right: 10px; z-index: 45; width: 40px; height: 40px; padding: 4px 2px; border: 0; background: none; cursor: pointer;
     filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); animation: briefWackeln 2.4s ease-in-out infinite; }
@@ -654,7 +657,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "106";
+  const SPIEL_VERSION = "107";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -662,9 +665,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=106"></script>
-<script src="kopfteile.js?v=106"></script>
-<script src="kopfalter.js?v=106"></script>
+<script src="pferd.js?v=107"></script>
+<script src="kopfteile.js?v=107"></script>
+<script src="kopfalter.js?v=107"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -934,6 +937,24 @@
       <div class="zeile-wert" style="margin-top:14px"><div class="kopf"><b>Rassischer Anteil</b></div>
         <div class="anteil"><i style="width:${anteil}%"></i>${fremd > 0 ? `<i class="fremd" style="width:${fremd}%"></i>` : ""}</div>
         <div class="pole"><span>■ ${rP.name} ${pz(anteil)}</span>${fremd > 0 ? `<span class="fr">■ ${rn(A.fremdRasse)} ${pz(fremd)}</span>` : ""}</div></div>`; };
+  // ---------- Steckbrief + Abstammungsschein für jedes Pferd (Markt, Gnadenhof, Tierschutz, Friedhof …) ----------
+  const ANSICHT = {}; let ansichtNr = 0;
+  function ansehen(p, ort, aktion, extra) { const k = "a" + (++ansichtNr); ANSICHT[k] = { p, ort, aktion, extra }; return `data-ansehen="${k}" role="button" tabindex="0" title="Steckbrief und Abstammung ansehen"`; }
+  function pferdAnsehen({ p, ort, aktion, extra }) {
+    const tot = extra && extra.tot;
+    const zeilen = [["Rasse", `${rasseById(p.rasse).name}${p.werte ? ` · ${String(p.werte.reinrassig).replace(".", ",")} % reinrassig` : ""}`], ["Farbe", farbText(p)], ["Geschlecht", p.geschlecht],
+      ["Alter", tot ? extra.alter : alterText(p)], ["Geboren", p.geb ? jzName(p.geb.j * 4 + p.geb.s) : "–"], ["Stockmaß", `${p.stockmass} cm`],
+      ...(p.pflege && !tot ? [["Gesundheit", `${p.pflege.gesundheit.toLocaleString("de-DE")} %`]] : []), ...(p.nachkommen ? [["Nachkommen", p.nachkommen]] : []),
+      ...(ort ? [["Ort", `📍 ${ort}`]] : []), ...((extra && extra.zeilen) || [])];
+    dialog(`<h3>📋 ${esc(p.name)}</h3><div class="sb-bild">${ganzBild(p)}</div>
+      <dl class="werte" style="margin:8px 0 12px">${zeilen.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("")}</dl>${abstammungsschein(p)}`,
+      [...(aktion ? [[aktion[0], aktion[1]]] : []), [aktion ? "Schließen" : "OK", null, aktion ? "zweit" : ""]], "breit");
+  }
+  document.addEventListener("click", e => {
+    const t = e.target.closest && e.target.closest("[data-ansehen]");
+    if (!t || e.target.closest("button.knopf, [data-ahn]")) return;
+    const a = ANSICHT[t.dataset.ansehen]; if (a) pferdAnsehen(a);
+  });
   // kleiner Steckbrief für einen Vorfahren, der noch im Spiel ist
   function zeigeMini(nr) {
     const x = alleEigenenPferde().find(e => nrVon(e.p) === nr); if (!x) return;
@@ -1950,7 +1971,7 @@
   // Eine Nacht vergeht: Gesundheit, Mist, Mähne und Schopf
   // Verstorbene Pferde kommen auf den Pferdefriedhof – die Box ist danach wieder leer
   function begraben(p, ort) {
-    (spiel.friedhof = spiel.friedhof || []).push({ name: p.name, rasse: p.rasse, geschlecht: p.geschlecht, farbe: fb(p), geb: p.geb ? { ...p.geb } : null, tod: jzJetzt(), alter: alterText(p), ort, nachkommen: p.nachkommen || 0 });
+    (spiel.friedhof = spiel.friedhof || []).push({ pferd: JSON.parse(JSON.stringify(p)), name: p.name, rasse: p.rasse, geschlecht: p.geschlecht, farbe: fb(p), geb: p.geb ? { ...p.geb } : null, tod: jzJetzt(), alter: alterText(p), ort, nachkommen: p.nachkommen || 0 });
   }
   function tote() {
     spiel.boxen.forEach((b, i) => {
@@ -2286,7 +2307,7 @@
   function zeigeFriedhof() {
     const f = (spiel.friedhof || []).slice().reverse();
     zeigeNeben("🪦 Pferdefriedhof", f.length ? `<div class="panel"><p style="margin:0">Hier erinnern Grabsteine an deine verstorbenen Pferde.</p></div>
-      <div class="gnade-liste">${f.map(g => `<div class="grab"><div class="grab-bild">${grabstein(g)}</div>
+      <div class="gnade-liste">${f.map(g => `<div class="grab" ${g.pferd ? ansehen(g.pferd, "Pferdefriedhof", null, { tot: true, alter: g.alter }) : ""}><div class="grab-bild">${grabstein(g)}</div>
         <div class="gnade-info"><b>${esc(g.name)}</b><small>${rasseById(g.rasse).name} · ${g.geschlecht} · ${FARBEN[g.farbe] ? FARBEN[g.farbe].name : ""}</small>
         <small>${g.geb ? `geboren ${jzName(g.geb.j * 4 + g.geb.s).replace(/^\S+ /, "")} · ` : ""}verstorben ${jzName(g.tod).replace(/^\S+ /, "")}${g.alter ? ` mit ${g.alter}` : ""}</small>
         ${g.nachkommen ? `<small>${g.nachkommen} ${g.nachkommen === 1 ? "Nachkomme" : "Nachkommen"}</small>` : ""}</div></div>`).join("")}</div>`
@@ -2295,7 +2316,7 @@
   function zeigeGnadenhof() {
     const g = spiel.gnadenhof || [];
     zeigeNeben("🌳 Gnadenhof", g.length ? `<div class="panel"><p style="margin:0">Hier verbringen deine Pferde ihren Lebensabend auf der Weide. Du kannst sie besuchen, aber nichts mehr mit ihnen machen.</p></div>
-      <div class="gnade-liste">${g.map(e => { const p = e.pferd; return `<div class="gnade-pferd"><div class="gnade-weide">${ganzBild(p)}</div>
+      <div class="gnade-liste">${g.map(e => { const p = e.pferd; return `<div class="gnade-pferd" ${ansehen(p, "Gnadenhof")}><div class="gnade-weide">${ganzBild(p)}</div>
         <div class="gnade-info"><b>${esc(p.name)}</b><small>${rasseById(p.rasse).name} · ${p.geschlecht} · ${alterText(p)}</small><small>auf dem Gnadenhof seit ${jzName(e.seit).replace(/^\S+ /, "")}</small></div></div>`; }).join("")}</div>`
       : `<div class="panel"><p style="margin:0">Auf dem Gnadenhof ist noch kein Pferd. Ein Pferd kannst du in der Pferdeakte unter Pflege → Ort → Pferdeanhänger → Abgeben → Gnadenhof hierher geben. Du bekommst dafür den halben Marktwert.</p></div>`);
   }
@@ -2318,18 +2339,18 @@
     const jetzt = jzJetzt(), ts = (spiel.tierschutz || []).filter(t => jetzt < t.frist);
     const liste = ts.length ? `<div class="ts-liste">${ts.map((t, i) => {
       const p = t.pferd;
-      return `<div class="ts-pferd">${ganzBild(p)}
+      return `<div class="ts-pferd" ${ansehen(p, "Tierschutz", [`Zurückkaufen · ${fmt(t.preis)}`, () => document.querySelector(`[data-ts="${i}"]`).click()])}>${ganzBild(p)}
         <div class="ts-info"><b>${esc(p.name)}</b><small>${p.geschlecht === "Stute" ? "Stutfohlen" : "Hengstfohlen"} · ${rasseById(p.rasse).name} · ${alterText(p)} · Mutter: ${esc(p.mutter || "–")}</small>
           <small>noch bis Ende ${jzName(t.frist - 1).replace(/^\S+ /, "")} zurückzukaufen</small></div>
         <button class="knopf" data-ts="${i}">Zurückkaufen<br>${fmt(t.preis)}</button></div>`;
     }).join("")}</div>` : `<p style="margin:6px 0 0">Zurzeit sind keine Pferde beim Tierschutz.</p>`;
     const eigene = (spiel.angebote || []).map(a => ({ a, x: spiel.boxen.findIndex(b => b.pferd && b.pferd.id === a.id) })).filter(e => e.x >= 0);
     const angebotListe = eigene.length ? `<div class="ts-liste">${eigene.map(({ a, x }) => { const p = spiel.boxen[x].pferd;
-      return `<div class="ts-pferd">${ganzBild(p)}<div class="ts-info"><b>${esc(p.name)}</b><small>${rasseById(p.rasse).name} · ${alterText(p)} · Box ${x + 1}</small>
+      return `<div class="ts-pferd" ${ansehen(p, `Box ${x + 1}`)}>${ganzBild(p)}<div class="ts-info"><b>${esc(p.name)}</b><small>${rasseById(p.rasse).name} · ${alterText(p)} · Box ${x + 1}</small>
         <small>${a.art === "auktion" ? `🔨 Auktion · Höchstgebot ${fmt(a.gebot)}` : `🏷️ Festpreis ${fmt(a.preis)}`} · bis Ende ${jzName(a.ende - 1).replace(/^\S+ /, "")}</small></div></div>`; }).join("")}</div>`
       : `<p style="margin:6px 0 0">Du bietest gerade kein Pferd an. Verkaufen kannst du in der Pferdeakte unter Pflege → Ort → Pferdeanhänger → Abgeben.</p>`;
     const angebotPferde = marktpferde();
-    const kaufListe = angebotPferde.length ? `<div class="ts-liste">${angebotPferde.map((h, i) => `<div class="ts-pferd">${ganzBild(h)}<div class="ts-info"><b>${esc(h.name)}</b><small>${rasseById(h.rasse).name} · ${h.geschlecht} · ${alterText(h)}</small><small>${farbText(h)} · ${h.stockmass} cm</small></div>
+    const kaufListe = angebotPferde.length ? `<div class="ts-liste">${angebotPferde.map((h, i) => `<div class="ts-pferd" ${ansehen(h, "Pferdemarkt", [`Kaufen · ${fmt(h.preis)}`, () => document.querySelector(`[data-kauf="${i}"]`).click()], { zeilen: [["Preis", fmt(h.preis)]] })}>${ganzBild(h)}<div class="ts-info"><b>${esc(h.name)}</b><small>${rasseById(h.rasse).name} · ${h.geschlecht} · ${alterText(h)}</small><small>${farbText(h)} · ${h.stockmass} cm</small></div>
       <button class="knopf" data-kauf="${i}">Kaufen<br>${fmt(h.preis)}</button></div>`).join("")}</div>` : `<p style="margin:6px 0 0">Für diese Jahreszeit ist alles verkauft. Zu Beginn der nächsten Jahreszeit gibt es neue Pferde.</p>`;
     zeigeNeben("🏷️ Pferdemarkt", `<div class="panel"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>🐴 Pferde zu verkaufen</b><span>Dein Geld: ${fmt(spiel.geld || 0)}</span></div><p style="margin:4px 0 0;font-size:.85rem;opacity:.75">Das Angebot wechselt jede Jahreszeit.</p>${kaufListe}</div>
       <div class="panel" style="margin-top:14px"><b>💰 Deine Angebote</b>${angebotListe}</div>
@@ -2391,7 +2412,7 @@
         spiel.boxen.map((b, i) => `<div class="hf-box"><span>Box ${i + 1}: <b>${b.pferd ? esc(b.pferd.name) : "leer"}</b>${b.fohlen ? ` <small>+ Fohlen ${esc(b.fohlen.name)}</small>` : ""}${b.pferd && b.pferd.klinik ? ` <small>🏥 in der Klinik</small>` : ""}</span>${i > 0 ? `<button class="hf-minus" data-weg="${i}" ${b.pferd ? "disabled title=\"Box ist belegt\"" : ""} aria-label="Box ${i + 1} entfernen">−</button>` : ""}</div>`).join("") +
         (() => { const ex = spiel.extern || [], kl = spiel.boxen.filter(b => b.pferd && b.pferd.klinik).length;
           const kosten = ex.reduce((a, e) => a + KOSTEN[e.ort], 0) + kl * KOSTEN.klinik;
-          return `<div class="hf-kopf" style="margin-top:16px"><b>Außer Haus (${ex.length})</b></div>` + (ex.length ? ex.map((e, i) => `<div class="hf-box"><span>${e.ort === "aufzucht" ? "🍼" : "🎓"} <b>${esc(e.pferd.name)}</b> <small>${ORT_NAME[e.ort]} · ${alterText(e.pferd)} · ${fmt(KOSTEN[e.ort])}/Tag</small></span><button class="knopf zweit hf-hol" data-hol="${i}">Zurückholen</button></div>`).join("")
+          return `<div class="hf-kopf" style="margin-top:16px"><b>Außer Haus (${ex.length})</b></div>` + (ex.length ? ex.map((e, i) => `<div class="hf-box"><span ${ansehen(e.pferd, ORT_NAME[e.ort])} class="ansehen-link">${e.ort === "aufzucht" ? "🍼" : "🎓"} <b>${esc(e.pferd.name)}</b> <small>${ORT_NAME[e.ort]} · ${alterText(e.pferd)} · ${fmt(KOSTEN[e.ort])}/Tag</small></span><button class="knopf zweit hf-hol" data-hol="${i}">Zurückholen</button></div>`).join("")
             : `<p class="text" style="margin:4px 0">Kein Pferd in Aufzuchtstation oder Ausbildungsstall.</p>`) +
             (kosten ? `<p class="text" style="margin:8px 0 0">Laufende Kosten: <b>${fmt(kosten)} pro Tag</b> · Hofkonto: <b>${fmt(spiel.geld || 0)}</b></p>` : ""); })();
     } else if (hofReiter === "einst") {

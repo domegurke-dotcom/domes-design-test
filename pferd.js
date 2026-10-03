@@ -814,21 +814,20 @@ function ausbildungsWerte(pferd) {
   const w = pferd.werte, pr = PROFIL[pferd.rasse] || PROFIL.hannoveraner;
   const a = pferd.alter;
   // Tage im Ausbildungsstall bringen das Pferd schneller voran
-  const basis = a < 3 ? 0 : Math.min(95, (a - 2.5) * 14 + Math.min(40, (pferd.training || 0) * 0.7)) * w.talent;
+  // Ausbildung entsteht nur durch Training (Ausbildungsstall) – ein unausgebildetes Pferd hat überall 0 %
+  const basis = a < 3 ? 0 : Math.min(95, (pferd.training || 0) * 0.9) * w.talent;
   return AUSBILDUNG.map((name, i) => {
     let v = basis * (1.12 - i * 0.13) * Math.pow(pr.dress, i / 4) + (basis > 0 ? w.streuung[i] : 0);
     return { name, wert: Math.round(Math.max(0, Math.min(97, v))) };
   });
 }
 function ausbildungsKlasse(werte, alter) {
-  if (alter < 3) return "Fohlen / Jungpferd – noch nicht angeritten";
   const m = werte.reduce((s, x) => s + x.wert, 0) / werte.length;
-  if (m < 10) return "roh – wird gerade angeritten";
-  if (m < 25) return "angeritten";
-  if (m < 40) return "Klasse E (Einsteiger)";
-  if (m < 55) return "Klasse A (Anfänger)";
-  if (m < 70) return "Klasse L (Leicht)";
-  if (m < 82) return "Klasse M (Mittel)";
+  if (m === 0) return alter < 3 ? "Klasse E – Fohlen / Jungpferd, noch nicht ausgebildet" : "Klasse E – noch nicht ausgebildet";
+  if (m < 30) return "Klasse E (Einsteiger)";
+  if (m < 45) return "Klasse A (Anfänger)";
+  if (m < 60) return "Klasse L (Leicht)";
+  if (m < 75) return "Klasse M (Mittel)";
   return "Klasse S (Schwer)";
 }
 const NOTENWORT = n => n >= 10 ? "ausgezeichnet" : n >= 9 ? "sehr gut" : n >= 8 ? "gut" : n >= 7 ? "ziemlich gut" : n >= 6 ? "befriedigend" : n >= 5 ? "genügend" : "mangelhaft";

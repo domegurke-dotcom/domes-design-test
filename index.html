@@ -657,7 +657,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "109";
+  const SPIEL_VERSION = "110";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -665,9 +665,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=109"></script>
-<script src="kopfteile.js?v=109"></script>
-<script src="kopfalter.js?v=109"></script>
+<script src="pferd.js?v=110"></script>
+<script src="kopfteile.js?v=110"></script>
+<script src="kopfalter.js?v=110"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -858,7 +858,9 @@
   }
   // Geburt eines Pferdes (Deckhengste haben nur ein Alter)
   function gebVon(P) { if (P.geb) return P.geb; if (P.alter == null) return null; const i = jzJetzt() - P.alter * 4 - Math.floor(zufall("gebalter-" + P.id)() * 4); return { s: ((i % 4) + 4) % 4, j: Math.floor(i / 4) }; }
-  const ahnEintrag = P => ({ name: P.name, rasse: P.rasse, pct: P.werte ? P.werte.reinrassig : 100, farbe: P.farbe, sm: P.zielStockmass || P.stockmass, nr: nrVon(P), geb: gebVon(P) ? { ...gebVon(P) } : undefined });
+  // versteckte Werte eines Vorfahren (für die Vererbung) – fehlen sie, werden sie aus der Rasse erzeugt
+  const ahnWerte = a => a.werte || (a.werte = (({ gang, charakter }) => ({ gang, charakter }))(erzeugeWerte({ id: "ahn" + a.nr, rasse: a.rasse })));
+  const ahnEintrag = P => ({ werte: P.werte ? { gang: { ...P.werte.gang }, charakter: { ...P.werte.charakter } } : undefined, name: P.name, rasse: P.rasse, pct: P.werte ? P.werte.reinrassig : 100, farbe: P.farbe, sm: P.zielStockmass || P.stockmass, nr: nrVon(P), geb: gebVon(P) ? { ...gebVon(P) } : undefined });
   // Hengste der Deckstation – wechseln jede Jahreszeit
   function deckhengste(stute) {
     const jetzt = jzJetzt(), r = zufall("deck-" + jetzt + stute.rasse), andere = RASSEN.filter(x => x.id !== stute.rasse);
@@ -902,9 +904,23 @@
       zielStockmass: ziel, geb: { s: d.s, j: d.j }, mutter: M.name, gen: fGen,
       maehne: "steh", maehneSeit: spiel.tag, schopf: naturSchopf(rasse) ? "ohne" : undefined, schopfSeit: spiel.tag };   // jedes Fohlen kommt mit Stehmähne und ohne Schopf zur Welt
     // Werte: Mischung aus Eltern und eigenem Zufall
-    const w = erzeugeWerte(f), mix = (a, b, own, halb) => { if (a == null || b == null) return own; const v = (a + b) / 2 * .6 + own * .4; return halb ? Math.round(v * 2) / 2 : Math.round(v); };
-    Object.keys(w.gang).forEach(k => w.gang[k] = mix(M.werte.gang && M.werte.gang[k], V.werte.gang && V.werte.gang[k], w.gang[k], true));
-    Object.keys(w.charakter).forEach(k => w.charakter[k] = mix(M.werte.charakter && M.werte.charakter[k], V.werte.charakter && V.werte.charakter[k], w.charakter[k]));
+    // Gangwerk und Charakter: je Wert 30 % Mutter, 30 % Vater, 20 % dazwischen, 15 % ein Großelternteil, 5 % Mutation
+    const w = erzeugeWerte(f);
+    const gpW = [V.ahnen.vater, V.ahnen.mutter, M.ahnen.vater, M.ahnen.mutter].map(ahnWerte);
+    const erbe = (bereich, k, halb, min, max, mut) => {
+      const vm = M.werte[bereich] && M.werte[bereich][k], vv = V.werte[bereich] && V.werte[bereich][k], r = Math.random();
+      const rund = x => halb ? Math.round(x * 2) / 2 : Math.round(x), klemm = x => Math.max(min, Math.min(max, rund(x)));
+      if (r < .30) return vm;
+      if (r < .60) return vv;
+      if (r < .80) return vm == null || vv == null ? (vm != null ? vm : vv) : klemm(Math.min(vm, vv) + Math.random() * Math.abs(vm - vv));
+      if (r < .95) { const g = zufallAus(gpW)[bereich]; return g ? g[k] : vm; }
+      const basisW = vm != null && vv != null ? (vm + vv) / 2 : (vm != null ? vm : vv);
+      return basisW == null ? undefined : klemm(basisW + (Math.random() < .5 ? -1 : 1) * mut * (0.6 + Math.random() * 0.8));
+    };
+    const gangKeys = [...new Set([...Object.keys(M.werte.gang || {}), ...Object.keys(V.werte.gang || {}), "schritt", "trab", "galopp"])];
+    w.gang = {}; gangKeys.forEach(k => { const v = erbe("gang", k, true, 4, 10, 1.5); if (v != null) w.gang[k] = v; });
+    ["schritt", "trab", "galopp"].forEach(k => { if (w.gang[k] == null) w.gang[k] = erzeugeWerte(f).gang[k]; });
+    Object.keys(w.charakter).forEach(k => { const v = erbe("charakter", k, false, 3, 97, 20); if (v != null) w.charakter[k] = v; });
     w.reinrassig = pct; f.werte = w;
     const kopie = a => ({ ...a });
     f.ahnen = { fremdRasse, vater: ahnEintrag(V), vatersvater: kopie(V.ahnen.vater), vatersmutter: kopie(V.ahnen.mutter),
@@ -2338,6 +2354,7 @@
         geb: { s: ((gi % 4) + 4) % 4, j: Math.floor(gi / 4) }, zielStockmass: ziel };
       h.stockmass = Math.round(ziel * wuchs(alterJZ(h) * 3)); h.alter = alterJahre(h);
       h.werte = erzeugeWerte(h); ahnenFuellen(h); genVon(h); nrVon(h);
+      if (jahre >= 4) h.training = Math.floor(r() * Math.min(110, (jahre - 3) * 22));   // ältere Verkaufspferde sind oft schon ausgebildet
       h.preis = Math.round(marktwert(h) * 1.1 / 50) * 50;
       return h;
     }).filter(h => !gek.includes(h.id));

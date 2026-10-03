@@ -594,7 +594,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "97";
+  const SPIEL_VERSION = "99";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -602,9 +602,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=97"></script>
-<script src="kopfteile.js?v=97"></script>
-<script src="kopfalter.js?v=97"></script>
+<script src="pferd.js?v=99"></script>
+<script src="kopfteile.js?v=99"></script>
+<script src="kopfalter.js?v=99"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -730,7 +730,8 @@
     const farbe = erbfarben.length && Math.random() < .85 ? zufallAus(erbfarben) : zufallAus(ra.farben);
     const ziel = Math.round(((M.zielStockmass || M.stockmass) + (V.zielStockmass || V.stockmass)) / 2 + (Math.random() * 8 - 4));
     const f = { id: "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: zufallAus(NAMEN[g].filter(n => n !== M.name && n !== V.name)), rasse, farbe, geschlecht: g,
-      zielStockmass: ziel, geb: { s: d.s, j: d.j }, mutter: M.name };
+      zielStockmass: ziel, geb: { s: d.s, j: d.j }, mutter: M.name,
+      maehne: "steh", maehneSeit: spiel.tag, schopf: naturSchopf(rasse) ? "ohne" : undefined, schopfSeit: spiel.tag };   // jedes Fohlen kommt mit Stehmähne und ohne Schopf zur Welt
     // Werte: Mischung aus Eltern und eigenem Zufall
     const w = erzeugeWerte(f), mix = (a, b, own, halb) => { if (a == null || b == null) return own; const v = (a + b) / 2 * .6 + own * .4; return halb ? Math.round(v * 2) / 2 : Math.round(v); };
     Object.keys(w.gang).forEach(k => w.gang[k] = mix(M.werte.gang && M.werte.gang[k], V.werte.gang && V.werte.gang[k], w.gang[k], true));
@@ -768,7 +769,7 @@
   function fohlenUmstellen(box, frei) {
     const f = box.fohlen; delete box.fohlen;
     const nb = spiel.boxen[frei];
-    nb.pferd = { ...f, werte: f.werte || erzeugeWerte(f), pflege: erzeugePflege(f), maehneSeit: spiel.tag, schopfSeit: spiel.tag };
+    nb.pferd = { ...f, werte: f.werte || erzeugeWerte(f), pflege: erzeugePflege(f), maehneSeit: f.maehneSeit || spiel.tag, schopfSeit: f.schopfSeit || spiel.tag };
     if (!nb.pferd.ahnen) nb.pferd.ahnen = erzeugeAhnen(nb.pferd);
     nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false;
   }
@@ -875,7 +876,7 @@
     const f = B().fohlen;
     if (f) {
       // Fohlen bei der Mutter: vor ihr, Blick nach rechts; in der Geburts-Jahreszeit liegt es noch
-      const fz = zeichnePferd(f.rasse, f.farbe, { alterStufe: stufeKey(f), seed: f.id, geschlecht: f.geschlecht, haltung: alterJZ(f) === 0 ? "liegend" : "normal", eigenKopf: undefined });
+      const fz = zeichnePferd(f.rasse, f.farbe, { alterStufe: stufeKey(f), seed: f.id, geschlecht: f.geschlecht, maehne: f.maehne, schopf: f.schopf, haltung: alterJZ(f) === 0 ? "liegend" : "normal", eigenKopf: undefined });
       const fs = f.stockmass * STALL.cmZuEinheit / 100, fcx = (fz.box.minX + fz.box.maxX) / 2, fx = STALL.mitte - 34;
       fohlenSVG = `<g transform="translate(${(fx + fcx * fs).toFixed(1)},${STALL.boden + 10}) scale(${(-fs).toFixed(4)},${fs.toFixed(4)})">${anim(fz.svg)}</g>`;
     }
@@ -1045,6 +1046,7 @@
             const ns = naturSchopf(p.rasse);
             if (!ns) return `<p class="text" style="margin:8px 0 4px">✂️ <b>Schopf</b> · ${esc(p.name)} hat von Natur aus keinen Schopf.</p>`;
             const sj = SCHOEPFE.findIndex(m => m[0] === (p.schopf || ns)), rest = Math.max(1, (2 * tpj()) - (spiel.tag - (p.schopfSeit || spiel.tag)));
+            if (sj < 0) return `<p class="text" style="margin:8px 0 4px">✂️ <b>Schopf</b> · ${esc(p.name)} hat noch keinen Schopf. Er wächst in ${rest} ${rest === 1 ? "Tag" : "Tagen"}.</p>`;
             const pk = zeichnePferd(p.rasse, p.farbe, { punkte: 1, seed: p.id }), vb = [pk.nase.x - 4, pk.genick.y - 16, 50, 52].map(x => x.toFixed(1)).join(" ");
             return `<p class="text" style="margin:8px 0 4px">✂️ <b>Schopf schneiden</b> · aktuell: ${SCHOEPFE[sj][1]}. ${sj === 0 ? "Kürzer geht es nicht mehr." : "Wähle die neue Länge:"}<br><small>${sj === SCHOEPFE.length - 1 ? "Der Schopf hat die maximale Länge erreicht." : `Wächst in ${rest} ${rest === 1 ? "Tag" : "Tagen"} eine Stufe länger.`}</small></p>
             <div class="kacheln">${SCHOEPFE.map(([id], i) => {
@@ -1456,8 +1458,9 @@
       pf.gesundheit = Math.max(0, Math.min(100, g));
       b.mistStufe = b.mistig ? Math.min(6, (b.mistStufe || 1) + 1) : 1;
       b.krippeVoll = false; b.mistig = true;
-      // Mähne wächst alle 5 Tage eine Stufe (bis „extra lang“)
-      const pf2 = b.pferd, idx = MAEHNEN.findIndex(m => m[0] === (pf2.maehne || naturMaehne(pf2.rasse)));
+      // Mähne und Schopf wachsen alle 2 Jahreszeiten eine Stufe – auch beim Fohlen bei der Mutter
+      [b.pferd, b.fohlen].forEach(pf2 => { if (!pf2) return;
+      const idx = MAEHNEN.findIndex(m => m[0] === (pf2.maehne || naturMaehne(pf2.rasse)));
       if (spiel.tag - (pf2.maehneSeit || spiel.tag) >= (2 * tpj())) {
         if (idx < MAEHNEN.length - 1) pf2.maehne = MAEHNEN[idx + 1][0];
         pf2.maehneSeit = spiel.tag;
@@ -1469,6 +1472,7 @@
         if (si < SCHOEPFE.length - 1) pf2.schopf = SCHOEPFE[si + 1][0];
         pf2.schopfSeit = spiel.tag;
       }
+      });
     });
     if (datum().t === 1) jahreszeitBeginn();   // Geburten, Umzüge, Tierschutz – nach der Nacht
   }
@@ -1727,7 +1731,7 @@
   function zeigeMarkt() {
     const jetzt = jzJetzt(), ts = (spiel.tierschutz || []).filter(t => jetzt < t.frist);
     const liste = ts.length ? `<div class="ts-liste">${ts.map((t, i) => {
-      const p = t.pferd, z = zeichnePferd(p.rasse, p.farbe, { seed: p.id, geschlecht: p.geschlecht, alterStufe: stufeKey(p), statisch: 1 });
+      const p = t.pferd, z = zeichnePferd(p.rasse, p.farbe, { seed: p.id, geschlecht: p.geschlecht, alterStufe: stufeKey(p), maehne: p.maehne, schopf: p.schopf, statisch: 1 });
       return `<div class="ts-pferd"><svg viewBox="${(z.box.minX - 3).toFixed(1)} ${(z.box.minY - 3).toFixed(1)} ${(z.box.maxX - z.box.minX + 6).toFixed(1)} ${(-z.box.minY + 6).toFixed(1)}">${ohneAnim(z.svg)}</svg>
         <div class="ts-info"><b>${esc(p.name)}</b><small>${p.geschlecht === "Stute" ? "Stutfohlen" : "Hengstfohlen"} · ${rasseById(p.rasse).name} · ${alterText(p)} · Mutter: ${esc(p.mutter || "–")}</small>
           <small>noch bis Ende ${jzName(t.frist - 1).replace(/^\S+ /, "")} zurückzukaufen</small></div>

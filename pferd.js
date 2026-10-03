@@ -813,7 +813,8 @@ function erzeugeWerte(pferd) {
 function ausbildungsWerte(pferd) {
   const w = pferd.werte, pr = PROFIL[pferd.rasse] || PROFIL.hannoveraner;
   const a = pferd.alter;
-  const basis = a < 3 ? 0 : Math.min(95, (a - 2.5) * 14) * w.talent;
+  // Tage im Ausbildungsstall bringen das Pferd schneller voran
+  const basis = a < 3 ? 0 : Math.min(95, (a - 2.5) * 14 + Math.min(40, (pferd.training || 0) * 0.7)) * w.talent;
   return AUSBILDUNG.map((name, i) => {
     let v = basis * (1.12 - i * 0.13) * Math.pow(pr.dress, i / 4) + (basis > 0 ? w.streuung[i] : 0);
     return { name, wert: Math.round(Math.max(0, Math.min(97, v))) };

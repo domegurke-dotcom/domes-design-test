@@ -6,6 +6,8 @@
 // ---------- Fellfarben ----------
 const FARBEN = {
   schimmel:      { name: "Schimmel (weiß)",        body: "#f3f1ed", mane: "#e2ddd3", muzzle: "#6f6a6a", hoof: "#8a8580" },
+  grauschimmel:  { name: "Grauschimmel (jung)",    body: "#6f6c6a", mane: "#2a2726", points: "#2f2c2b", head: "#4e4b49", muzzle: "#2f2b2b", pattern: "roan", hoof: "#2c2a29" },
+  fliegenschimmel: { name: "Fliegenschimmel",      body: "#eeebe5", mane: "#d6d0c6", muzzle: "#6f6a6a", hoof: "#8a8580", pattern: "fleck", fleck: "#8b5a3e" },
   apfelschimmel: { name: "Apfelschimmel",          body: "#b9b9b6", mane: "#626262", points: "#666666", head: "#aaaaa7", muzzle: "#4a4646", pattern: "dapple", dapple: "#e6e6e3", hoof: "#474442" },
   rappe:         { name: "Rappe (schwarz)",        body: "#211e1f", mane: "#121011", hoof: "#2c2a29" },
   brauner:       { name: "Brauner",                body: "#7c3f1d", mane: "#161212", points: "#1b1616", hoof: "#2c2a29" },
@@ -39,7 +41,7 @@ const FARBEN = {
 const RASSEN = [
   { id: "araber", name: "Araber", herkunft: "Arabische Halbinsel", h: [145, 155],
     text: "Edles Wüstenpferd mit Hechtkopf, großen Augen, flacher Kruppe und hoch getragenem Schweif.",
-    farben: ["schimmel", "fuchs", "brauner", "rappe"],
+    farben: ["schimmel", "fliegenschimmel", "fuchs", "brauner", "rappe"],
     k: { len: .96, depth: .42, legT: .072, neck: .56, nAng: 54, crest: .03, head: .35, hAng: 52, profile: -1, hw: .92, jw: 1.2, muz: .8, ear: .09, mane: "lang", maneLen: .13, vol: .6, fore: .5, tail: .62, tvol: .7, tset: 1, feather: 0, croup: 0, hq: 1, eye: 1.3 } },
   { id: "friese", name: "Friese", herkunft: "Niederlande", h: [158, 172],
     text: "Barockes Rappenpferd mit hoch aufgesetztem Hals, üppiger Mähne und langem Kötenbehang.",
@@ -67,11 +69,11 @@ const RASSEN = [
     k: { nk: 1, len: 1.08, depth: .5, legT: .125, neck: .55, nAng: 55, crest: .08, head: .48, hAng: 55, profile: .6, hw: 1.1, jw: 1, muz: 1.05, ear: .1, mane: "lang", maneLen: .15, vol: 1, fore: .6, tail: .6, tvol: 1, tset: .2, feather: 1, croup: .6, hq: 1.05, eye: .95 } },
   { id: "andalusier", name: "Andalusier (PRE)", herkunft: "Spanien", h: [152, 166],
     text: "Barockpferd mit leicht geramsnastem Kopf, kräftigem, hoch aufgesetztem Hals und welliger Langmähne.",
-    farben: ["schimmel", "apfelschimmel", "brauner", "rappe"],
+    farben: ["schimmel", "apfelschimmel", "fliegenschimmel", "brauner", "rappe"],
     k: { nk: 0.9, len: .98, depth: .46, legT: .085, neck: .57, nAng: 62, crest: .09, head: .42, hAng: 60, profile: .45, hw: 1, jw: 1, muz: 1, ear: .1, mane: "lang", maneLen: .3, vol: 1.1, fore: .9, tail: .85, tvol: 1.1, tset: .2, feather: .05, croup: .7, hq: 1, eye: 1 } },
   { id: "lipizzaner", name: "Lipizzaner", herkunft: "Slowenien / Österreich", h: [148, 158],
     text: "Die weißen Pferde der Spanischen Hofreitschule – kompakt, mit Ramskopf. Fohlen kommen dunkel zur Welt.",
-    farben: ["schimmel", "apfelschimmel", "brauner", "rappe"],
+    farben: ["schimmel", "apfelschimmel", "fliegenschimmel", "brauner", "rappe"],
     k: { nk: 0.8, len: .97, depth: .47, legT: .09, neck: .52, nAng: 58, crest: .08, head: .44, hAng: 58, profile: .6, hw: 1, jw: 1, muz: 1, ear: .1, mane: "lang", maneLen: .2, vol: .9, fore: .7, tail: .75, tvol: 1, tset: .3, feather: 0, croup: .6, hq: 1, eye: 1 } },
   { id: "vollblut", name: "Englisches Vollblut", herkunft: "England", h: [155, 172],
     text: "Das Rennpferd schlechthin: lange Beine, tiefe Brust, langer schräger Hals und feiner Kopf.",
@@ -264,13 +266,17 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     T = M(K.kehle.x, K.kehle.y);
     ekKehle = true;
   }
+  // Jungpferde mit Spielkopf: Kehle weiter vorn unter der Ganasche ansetzen – der Hals wird oben breiter
+  if (!eigenKopf && stufe && ["fohlen", "jaehrling", "jungpferd"].includes(stufe)) T = hp(0.36, 0.44 * hw * Math.min(jw, 1.1));
   const underCtrl = add(mid(T, Cn), mul(nOut, 1));
   // Kehle: weicher, offener Übergang von der Ganasche in die Halsunterseite
   // weicher Bogen am Kopfansatz: die Linie läuft erst ein Stück an der Ganasche entlang nach hinten und biegt dann nach unten
   const kehle1 = add(add(add(T, mul(sub(Cn, T), 0.3 * (1 - nk))), mul(nOut, 10 * (1 - nk))), P((0.22 + ((k.kb != null ? k.kb : 0.22) - 0.22) * kSp) * hl * nk, 0.14 * hl * nk));
   const kehle2 = add(add(Cn, mul(sub(T, Cn), 0.35 + 0.1 * nk)), mul(nOut, 1.5 - (4 + (k.kw || 0) * kSp) * nk));
   const kehleLen = Math.hypot(Cn.x - T.x, Cn.y - T.y);
-  const k1 = ekKehle ? add(add(T, mul(sub(Cn, T), 0.35)), mul(nOut, 0.06 * kehleLen)) : kehle1, k2 = ekKehle ? add(add(Cn, mul(sub(T, Cn), 0.35)), mul(nOut, 0.04 * kehleLen)) : kehle2;
+  // Jungpferde mit Spielkopf: weicher, gerader Kehlgang wie beim gezeichneten Kopf (sonst wirkt der Hals wie ein dünner Stiel)
+  const sanft = ekKehle || (stufe && ["fohlen", "jaehrling", "jungpferd"].includes(stufe));
+  const k1 = sanft ? add(add(T, mul(sub(Cn, T), 0.35)), mul(nOut, 0.06 * kehleLen)) : kehle1, k2 = sanft ? add(add(Cn, mul(sub(T, Cn), 0.35)), mul(nOut, 0.04 * kehleLen)) : kehle2;
   const halsD = `M${f(Wn.x)},${f(Wn.y)}Q${f(crestCtrl.x)},${f(crestCtrl.y)} ${f(Pn.x)},${f(Pn.y)}L${f(hp(0.06, 0.2).x)},${f(hp(0.06, 0.2).y)}L${f(T.x)},${f(T.y)}C${f(k1.x)},${f(k1.y)} ${f(k2.x)},${f(k2.y)} ${f(Cn.x)},${f(Cn.y)}L${f(0.35 * L)},${f(top + 0.6 * D)}Z`;
   const kamm = t => { const s = 1 - t; return P(s * s * Wn.x + 2 * s * t * crestCtrl.x + t * t * Pn.x, s * s * Wn.y + 2 * s * t * crestCtrl.y + t * t * Pn.y); };
 
@@ -470,12 +476,13 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Apfelschimmel / Roan: jeder Fleck mit kreisförmiger Blende (weicher Verlauf von innen nach außen)
   if (C.pattern === "dapple") defs += `<radialGradient id="dg-${uid}"><stop offset="0" stop-color="${C.dapple}" stop-opacity=".95"/><stop offset=".55" stop-color="${C.dapple}" stop-opacity=".7"/><stop offset="1" stop-color="${C.dapple}" stop-opacity="0"/></radialGradient>` +
     `<pattern id="dp-${uid}" patternUnits="userSpaceOnUse" width="8" height="7"><circle cx="4" cy="3.5" r="3" fill="url(#dg-${uid})"/><circle cx="0" cy="0" r="2.7" fill="url(#dg-${uid})"/><circle cx="8" cy="0" r="2.7" fill="url(#dg-${uid})"/><circle cx="0" cy="7" r="2.7" fill="url(#dg-${uid})"/><circle cx="8" cy="7" r="2.7" fill="url(#dg-${uid})"/></pattern>`;
+  if (C.pattern === "fleck") defs += `<pattern id="fk-${uid}" patternUnits="userSpaceOnUse" width="6" height="5.5"><circle cx="1" cy="1.2" r=".42" fill="${C.fleck}"/><circle cx="3.9" cy="2.6" r=".36" fill="${C.fleck}"/><circle cx="2.2" cy="4.3" r=".3" fill="${C.fleck}"/><circle cx="5.3" cy="4.9" r=".4" fill="${C.fleck}"/><circle cx="4.6" cy=".5" r=".28" fill="${C.fleck}"/></pattern>`;
   if (C.pattern === "roan") defs += `<radialGradient id="rg-${uid}"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>` +
     `<pattern id="rn-${uid}" patternUnits="userSpaceOnUse" width="3" height="3"><circle cx="1" cy="1" r=".85" fill="url(#rg-${uid})"/><circle cx="2.4" cy="2.2" r=".7" fill="url(#rg-${uid})"/></pattern>`;
   if (k.metallic) defs += `<linearGradient id="mt-${uid}" gradientUnits="userSpaceOnUse" x1="${f(-0.1 * L)}" y1="${f(-H * 1.3)}" x2="${f(L)}" y2="0"><stop offset=".15" stop-color="#fff" stop-opacity="0"/><stop offset=".35" stop-color="#fff" stop-opacity=".38"/><stop offset=".48" stop-color="#fff" stop-opacity="0"/><stop offset=".62" stop-color="#fff" stop-opacity=".22"/><stop offset=".75" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
 
   const bx = `x="${f(minX - 5)}" y="${f(minY - 5)}" width="${f(maxX - minX + 10)}" height="${f(-minY + 10)}"`;
-  if (C.pattern === "dapple" || C.pattern === "roan") defs += `<mask id="mk-${uid}" maskUnits="userSpaceOnUse" ${bx}><g filter="url(#wm6-${uid})"><path d="${halsD}" fill="#fff"/><path d="${glatt(rumpf)}" fill="#fff" transform="translate(0,-3)"/></g></mask><filter id="wm6-${uid}" filterUnits="userSpaceOnUse" ${bx}><feGaussianBlur stdDeviation="5"/></filter>`;
+  if (C.pattern === "dapple" || C.pattern === "roan" || C.pattern === "fleck") defs += `<mask id="mk-${uid}" maskUnits="userSpaceOnUse" ${bx}><g filter="url(#wm6-${uid})"><path d="${halsD}" fill="#fff"/><path d="${glatt(rumpf)}" fill="#fff" transform="translate(0,-3)"/></g></mask><filter id="wm6-${uid}" filterUnits="userSpaceOnUse" ${bx}><feGaussianBlur stdDeviation="5"/></filter>`;
   defs += `<filter id="wm-${uid}" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="1.3"/></filter>`;
   defs += `<filter id="wb-${uid}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.2"/></filter>`;
   let g = `<defs>${defs}</defs>`;
@@ -498,6 +505,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += `<g clip-path="url(#cl-${uid})">`;
   if (C.pattern === "dapple") g += `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#dp-${uid})" mask="url(#mk-${uid})"/></g>`;
   if (C.pattern === "roan") g += `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#rn-${uid})" mask="url(#mk-${uid})"/></g>`;
+  if (C.pattern === "fleck") g += `<g clip-path="url(#cl-${uid})"><rect ${bx} fill="url(#fk-${uid})" opacity=".8"/></g>`;
   if (C.pattern === "tobiano") {
     const flecken = [];
     const blob = (cx, cy, rx, ry, n = 13) => {
@@ -839,9 +847,9 @@ function erzeugePflege(pferd, heute) {
 
 // Körperproportionen je Altersstufe (junge Pferde: lange Beine, kurzer flacher Rumpf, großer Kopf, kurzer Schweif)
 function ALTERS_K(stufe, k) {
-  if (stufe === "fohlen") return { len: k.len * 0.84, depth: k.depth * 0.8, legT: k.legT * 0.72, neck: k.neck * 0.92, head: k.head * 1.14, crest: 0.015, nk: 0, aMax: Math.min(k.nAng, 50),
+  if (stufe === "fohlen") return { len: k.len * 0.84, depth: k.depth * 0.8, legT: k.legT * 0.72, neck: k.neck * 0.92, head: k.head * 1.14, crest: 0.015, nk: Math.max(0.5, (k.nk || 0) * 0.9), aMax: Math.min(k.nAng, 50),
     tail: k.tail * 0.5, tvol: Math.min(k.tvol, 0.7) * 0.8, feather: 0, croup: -0.6, hq: (k.hq || 1) * 0.94, fore: Math.min(k.fore, 0.5) };
-  if (stufe === "jaehrling") return { len: k.len * 0.92, depth: k.depth * 0.88, legT: k.legT * 0.85, neck: k.neck * 0.95, head: k.head * 1.06, crest: k.crest * 0.5, aMax: Math.min(k.nAng + 3, 56), nk: (k.nk || 0) * 0.5,
+  if (stufe === "jaehrling") return { len: k.len * 0.92, depth: k.depth * 0.88, legT: k.legT * 0.85, neck: k.neck * 0.95, head: k.head * 1.06, crest: k.crest * 0.5, aMax: Math.min(k.nAng + 3, 56), nk: Math.max(0.5, k.nk || 0),
     tail: k.tail * 0.75, tvol: k.tvol * 0.8, feather: (k.feather || 0) * 0.5, croup: k.croup - 0.3 };
   if (stufe === "jungpferd") return { depth: k.depth * 0.95, legT: k.legT * 0.94, neck: k.neck * 0.98, crest: k.crest * 0.75, aMax: Math.min(k.nAng + 5, 62), tail: k.tail * 0.92 };
   if (stufe === "reif") return { sag: 1 };
@@ -903,6 +911,8 @@ function erzeugeAhnen(pferd) {
 
 const FARBBESCHREIBUNG = {
   schimmel: "Weißes Fell – Schimmel werden dunkel geboren und hellen mit dem Alter auf.",
+  grauschimmel: "Junger Schimmel: dunkles Fell mit immer mehr weißen Haaren – so sieht ein Schimmel zwischen Fohlen und Apfelschimmel aus.",
+  fliegenschimmel: "Weißes Fell mit kleinen braunen Sprenkeln – die Sprenkel bleiben und werden im Alter eher mehr.",
   apfelschimmel: "Grauschimmel mit hellen, runden Flecken (Äpfeln) im Fell.",
   rappe: "Schwarzes Fell, schwarze Mähne und schwarzer Schweif.",
   brauner: "Braunes Fell mit schwarzer Mähne, schwarzem Schweif und dunklen Beinen.",

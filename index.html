@@ -45,6 +45,17 @@
   .menueliste button + button { border-top: 1px solid #efe4d2; }
   .menueliste button:active, .menueliste button:hover { background: #f6ecdc; }
   main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 0 0 16px; gap: 14px; }
+  /* Wetter vor der Stalltür */
+  #draussen .flocke { animation: flockeFallen 5s linear infinite; transform-box: fill-box; }
+  @keyframes flockeFallen { from { transform: translate(0, 0); } 50% { transform: translate(4px, 66px); } to { transform: translate(-2px, 132px); } }
+  #draussen .tropfen { animation: regenFallen .8s linear infinite; }
+  @keyframes regenFallen { from { transform: translate(0, 0); } to { transform: translate(-3px, 128px); } }
+  #draussen .blatt { animation: blattFallen 6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes blattFallen { 0% { transform: translate(0, 0) rotate(0); opacity: 0; } 10% { opacity: 1; } 50% { transform: translate(-6px, 40px) rotate(160deg); } 90% { opacity: 1; } 100% { transform: translate(4px, 86px) rotate(320deg); opacity: 0; } }
+  #draussen .nebelband { animation: nebelZiehen 9s ease-in-out infinite alternate; }
+  @keyframes nebelZiehen { from { transform: translate(-8px, 0); } to { transform: translate(8px, 0); } }
+  #draussen .wolken { animation: wolkenZiehen 14s ease-in-out infinite alternate; }
+  @keyframes wolkenZiehen { from { transform: translate(-3px, 0); } to { transform: translate(4px, 0); } }
   #stall { width: 100%; height: min(75vw, calc(100dvh - 64px)); display: block; }
   .karte { width: 100%; max-width: 520px; background: var(--karte); border-radius: 14px; padding: 14px 16px; box-shadow: 0 4px 14px rgba(0,0,0,.12); }
   .karte h2 { margin: 0; font-size: 1.2rem; }
@@ -433,15 +444,8 @@
     <g stroke-linejoin="round">
       <rect x="60" y="50" width="280" height="162" fill="url(#kalkstein)" stroke="#2b1d14" stroke-width="1.2"/>
       <!-- Paddockausgang -->
-      <rect x="152" y="88" width="96" height="124" fill="url(#himmel)"/>
-      <path d="M152,150 Q170,138 190,146 Q215,134 235,144 Q244,140 248,146 V160 H152 Z" fill="#8cc46a" stroke="#2b1d14" stroke-width=".8"/>
-      <g stroke="#2b1d14" stroke-width=".8"><circle cx="170" cy="138" r="8" fill="#5da548"/><circle cx="181" cy="134" r="10" fill="#6fb655"/><circle cx="232" cy="136" r="9" fill="#5a9f45"/>
-        <rect x="178" y="140" width="3" height="10" fill="#7a5232"/><rect x="230" y="141" width="3" height="9" fill="#7a5232"/></g>
-      <rect x="152" y="156" width="96" height="56" fill="url(#sand)"/>
-      <path d="M152,186 Q200,180 248,188" fill="none" stroke="#d2b67c" stroke-width="1.2"/>
-      <path d="M170,200 q8,-3 16,0 M210,196 q10,-3 18,1" fill="none" stroke="#cdae70" stroke-width="1"/>
-      <g stroke="#6b4a2e" stroke-width="2.2" stroke-linecap="round"><line x1="152" y1="160" x2="248" y2="157"/><line x1="152" y1="169" x2="248" y2="166"/>
-        <line x1="168" y1="154" x2="168" y2="176"/><line x1="200" y1="152" x2="200" y2="174"/><line x1="232" y1="151" x2="232" y2="173"/></g>
+      <clipPath id="tuerClip"><rect x="152" y="88" width="96" height="124"/></clipPath>
+      <g id="draussen" clip-path="url(#tuerClip)"></g>
       <!-- Türrahmen (Holz) -->
       <g fill="#a98357" stroke="#2b1d14" stroke-width="1.4">
         <rect x="144" y="84" width="9" height="128"/><rect x="247" y="84" width="9" height="128"/><rect x="140" y="76" width="120" height="10"/>
@@ -594,7 +598,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "99";
+  const SPIEL_VERSION = "100";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -602,9 +606,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=99"></script>
-<script src="kopfteile.js?v=99"></script>
-<script src="kopfalter.js?v=99"></script>
+<script src="pferd.js?v=100"></script>
+<script src="kopfteile.js?v=100"></script>
+<script src="kopfalter.js?v=100"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1413,7 +1417,66 @@
     el.innerHTML = g; $("stall").appendChild(el);
     setTimeout(() => el.remove(), 1600);
   }
+  // ---------- Wetter vor der Stalltür: passend zur Jahreszeit, jeden Tag etwas anders ----------
+  function wetterHeute(d = datum()) {
+    const r = zufall("wetter-" + (spiel.tag || 1))();
+    return [["sonnig", "wolkig", "regen"], ["sonnig", "sonnig", "wolkig"], ["wolkig", "regen", "nebel"], ["schnee", "klar", "schnee"]][d.s][Math.floor(r * 3)];
+  }
+  const WETTER_NAME = { sonnig: "sonnig", wolkig: "bewölkt", regen: "Regen", nebel: "Nebel", schnee: "Schneefall", klar: "klar und frostig" };
+  function draussenSVG(s, w) {
+    const R = zufall("draussen-" + (spiel.tag || 1)), I = '#2b1d14';
+    const himmel = { sonnig: ["#5fb8ec", "#d4f0fb"], wolkig: ["#9cc3dc", "#e2eef4"], regen: ["#8a9cab", "#c9d3da"], nebel: ["#c3ccd1", "#e7eaec"], schnee: ["#b9c7d3", "#eaf0f5"], klar: ["#9fd0f0", "#eef7fc"] }[w];
+    const hang = ["#9fd27a", "#7dbd57", "#b5b56a", "#f3f6f9"][s];
+    const krone = [["#8fd06c", "#7cc35d", "#86c965"], ["#5da548", "#6fb655", "#5a9f45"], ["#e08a2e", "#c8572b", "#e6b23a"], null][s];
+    let g = `<defs><linearGradient id="himmelJZ" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${himmel[0]}"/><stop offset="1" stop-color="${himmel[1]}"/></linearGradient></defs>
+      <rect x="152" y="88" width="96" height="124" fill="url(#himmelJZ)"/>`;
+    if (w === "sonnig" || w === "klar") g += `<g class="sonne"><circle cx="232" cy="104" r="${s === 3 ? 6 : 8}" fill="${s === 3 ? "#fff3c4" : "#ffd84a"}" stroke="#e0a82a" stroke-width=".6"/>` +
+      (s === 3 ? "" : Array.from({ length: 8 }, (_, i) => { const a = i * Math.PI / 4; return `<line x1="${(232 + Math.cos(a) * 11).toFixed(1)}" y1="${(104 + Math.sin(a) * 11).toFixed(1)}" x2="${(232 + Math.cos(a) * 14.5).toFixed(1)}" y2="${(104 + Math.sin(a) * 14.5).toFixed(1)}" stroke="#ffc93a" stroke-width="1.4" stroke-linecap="round"/>`; }).join("")) + `</g>`;
+    const wolke = (x, y, k, f) => `<g transform="translate(${x},${y}) scale(${k})" fill="${f}" stroke="${I}" stroke-width=".5"><path d="M-12,4 Q-14,-3 -7,-3 Q-5,-9 2,-7 Q7,-11 11,-5 Q17,-4 15,4 Z"/></g>`;
+    if (w === "wolkig") g += `<g class="wolken">${wolke(176, 104, 1, "#fff")}${wolke(222, 98, .8, "#f4f7fa")}</g>`;
+    if (w === "regen" || w === "schnee") g += `<g class="wolken">${wolke(170, 98, 1.3, w === "regen" ? "#c4ccd3" : "#e6ebf0")}${wolke(214, 96, 1.5, w === "regen" ? "#b3bcc4" : "#dde4ea")}${wolke(244, 102, 1.1, w === "regen" ? "#c4ccd3" : "#e6ebf0")}</g>`;
+    // Hügel
+    g += `<path d="M152,150 Q170,138 190,146 Q215,134 235,144 Q244,140 248,146 V160 H152 Z" fill="${hang}" stroke="${I}" stroke-width=".8"/>`;
+    if (s === 0) g += Array.from({ length: 9 }, () => `<circle cx="${(156 + R() * 88).toFixed(1)}" cy="${(147 + R() * 8).toFixed(1)}" r=".9" fill="${R() < .5 ? "#fff6a8" : "#ffffff"}"/>`).join("");
+    // Bäume
+    if (krone) {
+      g += `<g stroke="${I}" stroke-width=".8"><rect x="178" y="140" width="3" height="10" fill="#7a5232"/><rect x="230" y="141" width="3" height="9" fill="#7a5232"/>
+        <circle cx="170" cy="138" r="8" fill="${krone[0]}"/><circle cx="181" cy="134" r="10" fill="${krone[1]}"/><circle cx="232" cy="136" r="9" fill="${krone[2]}"/></g>`;
+      if (s === 0) g += Array.from({ length: 14 }, () => { const t = R(); const [cx, cy, rr] = t < .65 ? [177, 135, 11] : [232, 136, 8]; const a = R() * 6.28, d = R() * rr * .8;
+        return `<circle cx="${(cx + Math.cos(a) * d).toFixed(1)}" cy="${(cy + Math.sin(a) * d).toFixed(1)}" r="1.1" fill="${R() < .5 ? "#ffd1e3" : "#fff"}" stroke="#e78fb3" stroke-width=".3"/>`; }).join("");
+      if (s === 2) g += Array.from({ length: 7 }, (_, i) => { const x = 158 + R() * 84, dl = -(R() * 6).toFixed(1);
+        return `<path class="blatt" style="animation-delay:${dl}s;animation-duration:${(5 + R() * 3).toFixed(1)}s" d="M${x.toFixed(1)},120 q3,-3 6,0 q-3,3 -6,0 Z" stroke="#7a3e12" stroke-width=".3" fill="${["#e08a2e", "#c8572b", "#e6b23a"][i % 3]}"/>`; }).join("");
+    } else {
+      // kahle Winterbäume mit Schnee
+      const baum = (x, y, h) => `<g stroke="#5a3d26" stroke-linecap="round" fill="none"><path d="M${x},${y} v-${h}" stroke-width="2.4"/><path d="M${x},${y - h * .45} l-6,-6 M${x},${y - h * .6} l7,-7 M${x},${y - h * .8} l-5,-5 M${x - 3},${y - h * .55} l-2,-4 M${x + 4},${y - h * .72} l3,-3" stroke-width="1.1"/></g>
+        <g stroke="#fff" stroke-linecap="round" stroke-width="1"><path d="M${x - 5},${y - h * .45 - 5.5} l2,1.5 M${x + 5},${y - h * .6 - 5.5} l2,-1.5 M${x - 4},${y - h * .8 - 4.5} l1.5,1"/></g>`;
+      g += baum(180, 150, 22) + baum(232, 150, 18);
+    }
+    // Paddock-Boden
+    if (s === 3) g += `<rect x="152" y="156" width="96" height="56" fill="#f6f8fb"/><path d="M152,186 Q200,180 248,188" fill="none" stroke="#dfe6ee" stroke-width="1.2"/><path d="M170,200 q8,-3 16,0 M210,196 q10,-3 18,1" fill="none" stroke="#d5dee8" stroke-width="1"/>`;
+    else g += `<rect x="152" y="156" width="96" height="56" fill="url(#sand)"/><path d="M152,186 Q200,180 248,188" fill="none" stroke="#d2b67c" stroke-width="1.2"/><path d="M170,200 q8,-3 16,0 M210,196 q10,-3 18,1" fill="none" stroke="#cdae70" stroke-width="1"/>`;
+    if (w === "regen") g += `<g fill="#9fb0bd" opacity=".55"><ellipse cx="178" cy="192" rx="9" ry="2"/><ellipse cx="222" cy="203" rx="12" ry="2.3"/></g>`;
+    // Zaun
+    g += `<g stroke="#6b4a2e" stroke-width="2.2" stroke-linecap="round"><line x1="152" y1="160" x2="248" y2="157"/><line x1="152" y1="169" x2="248" y2="166"/>
+        <line x1="168" y1="154" x2="168" y2="176"/><line x1="200" y1="152" x2="200" y2="174"/><line x1="232" y1="151" x2="232" y2="173"/></g>`;
+    if (s === 3) g += `<g stroke="#fff" stroke-width="1.3" stroke-linecap="round"><line x1="152" y1="158.6" x2="248" y2="155.6"/><line x1="152" y1="167.6" x2="248" y2="164.6"/><line x1="166.8" y1="153" x2="169.2" y2="153"/><line x1="198.8" y1="151" x2="201.2" y2="151"/><line x1="230.8" y1="150" x2="233.2" y2="150"/></g>`;
+    // Niederschlag und Nebel
+    if (w === "regen") g += `<g stroke="#5f7a90" stroke-width=".8" stroke-linecap="round" opacity=".75">${Array.from({ length: 22 }, () => { const x = 150 + R() * 104, y = 84 + R() * 20;
+      return `<line class="tropfen" style="animation-delay:-${(R() * .8).toFixed(2)}s" x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x - 1.5).toFixed(1)}" y2="${(y + 6).toFixed(1)}"/>`; }).join("")}</g>`;
+    if (w === "schnee") g += `<g fill="#fff" stroke="#8fa3b5" stroke-width=".45">${Array.from({ length: 30 }, () => `<circle class="flocke" style="animation-delay:-${(R() * 6).toFixed(2)}s;animation-duration:${(4 + R() * 3).toFixed(1)}s" cx="${(150 + R() * 100).toFixed(1)}" cy="${(80 + R() * 10).toFixed(1)}" r="${(1.1 + R() * 1.1).toFixed(1)}"/>`).join("")}</g>`;
+    if (w === "nebel") g += `<rect x="152" y="88" width="96" height="124" fill="#eef1f3" opacity=".45"/><g fill="#fff" opacity=".55"><ellipse class="nebelband" cx="190" cy="146" rx="50" ry="5"/><ellipse class="nebelband" style="animation-delay:-4s" cx="215" cy="168" rx="45" ry="4"/></g>`;
+    return g;
+  }
+  function wetterSetzen() {
+    const d = datum(), w = wetterHeute(d), el = $("draussen");
+    if (!el) return;
+    const key = d.s + "-" + w + "-" + spiel.tag;
+    if (el.dataset.key === key) return;
+    el.dataset.key = key; el.innerHTML = draussenSVG(d.s, w);
+    $("stall").setAttribute("aria-label", `Pferdebox von innen mit Paddockausgang – draußen: ${JZ[d.s][0]}, ${WETTER_NAME[w]}`);
+  }
   function zeigeTag() {
+    wetterSetzen();
     const box = B();
     const dd = datum();
     $("tagAnzeige").innerHTML = `<b>${JZ[dd.s][1]} ${datumText(dd)}</b><small>Tag ${dd.t}/${tpj()} · beenden 🌙</small>`;

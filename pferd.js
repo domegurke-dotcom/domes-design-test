@@ -680,7 +680,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       (C.muzzle ? `<ellipse cx="${f(mz.x)}" cy="${f(mz.y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(mz.x)} ${f(mz.y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>` : "") +
       `<g filter="url(#wb-${uid})"><path d="${glatt([hp(0.1, 0.42 * hw), hp(0.3, 0.47 * hw * jw), hp(0.55, 0.36 * hw), hp(0.8, 0.28 * hw), hp(0.6, 0.3 * hw), hp(0.35, 0.37 * hw * jw)])}" fill="${schatten}" opacity=".45"/>` +
       `<ellipse cx="${f(hp(0.3, -0.1).x)}" cy="${f(hp(0.3, -0.1).y)}" rx="${f(0.22 * hl)}" ry="${f(0.07 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.3, -0.1).x)} ${f(hp(0.3, -0.1).y)})" fill="${licht}" opacity=".45"/></g></g>`;
-    g += `<g transform="matrix(${ekMatrix})">${kopfteileSVG(eigenKopf, "ek" + uid, { fell: head, muschel, ink: INK, statisch: opt.statisch, schattierung: schatt, alter: kopfAlter })}</g>`;
+    g += `<g transform="matrix(${ekMatrix})">${kopfteileSVG(eigenKopf, "ek" + uid, { fell: head, muschel, ink: INK, statisch: opt.statisch, augenZu: opt.augenZu, schattierung: schatt, alter: kopfAlter })}</g>`;
   }
   // Mähne
   if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
@@ -710,8 +710,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const ex = er * 1.55, ey = er * 1.42;
   const iris = C.augen || "#2e1a0e";
   const lid = `M${f(-ex)},${f(ey * 0.15)}Q${f(-ex * 0.1)},${f(-ey * 1.45)} ${f(ex)},${f(-ey * 0.05)}`;
-  g += `<g transform="translate(${f(auge.x)},${f(auge.y)}) rotate(-14)"><g>` +
-    (opt.statisch ? "" : `<animate attributeName="opacity" values="1;0;1" keyTimes="0;.93;.97" calcMode="discrete" dur="4.5s" repeatCount="indefinite"/>`) +
+  g += `<g transform="translate(${f(auge.x)},${f(auge.y)}) rotate(-14)"><g${opt.augenZu ? ' opacity="0"' : ""}>` +
+    (opt.statisch || opt.augenZu ? "" : `<animate attributeName="opacity" values="1;0;1" keyTimes="0;.93;.97" calcMode="discrete" dur="4.5s" repeatCount="indefinite"/>`) +
     `<path d="${lid}Q${f(ex * 0.1)},${f(ey * 1.25)} ${f(-ex)},${f(ey * 0.15)}Z" fill="#fbf7f0"/>` +
     `<clipPath id="ea-${uid}"><path d="${lid}Q${f(ex * 0.1)},${f(ey * 1.25)} ${f(-ex)},${f(ey * 0.15)}Z"/></clipPath>` +
     `<g clip-path="url(#ea-${uid})"><circle cx="${f(-ex * 0.12)}" cy="${f(ey * 0.05)}" r="${f(ey * 1.08)}" fill="${iris}"/>` +
@@ -723,7 +723,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     `<path d="M${f(ex * 0.35)},${f(-ey * 0.62)}l${f(ex * 0.18)},${f(-ey * 0.45)}M${f(ex * 0.7)},${f(-ey * 0.35)}l${f(ex * 0.28)},${f(-ey * 0.35)}" fill="none" stroke="${INK}" stroke-width="${f(er * 0.26)}" stroke-linecap="round"/>` +
     `</g>` +
     // geschlossenes Lid beim Blinzeln (kein Weiß sichtbar)
-    (opt.statisch ? "" : `<g opacity="0"><animate attributeName="opacity" values="0;1;0" keyTimes="0;.93;.97" calcMode="discrete" dur="4.5s" repeatCount="indefinite"/>` +
+    (opt.statisch && !opt.augenZu ? "" : `<g opacity="${opt.augenZu ? 1 : 0}">${opt.augenZu ? "" : `<animate attributeName="opacity" values="0;1;0" keyTimes="0;.93;.97" calcMode="discrete" dur="4.5s" repeatCount="indefinite"/>`}` +
       `<path d="M${f(-ex)},${f(ey * 0.15)}Q${f(-ex * 0.05)},${f(ey * 1.1)} ${f(ex)},${f(-ey * 0.05)}" fill="none" stroke="${INK}" stroke-width="${f(er * 0.42)}" stroke-linecap="round"/>` +
       `<path d="M${f(-ex * 0.2)},${f(ey * 0.62)}l${f(-ex * 0.08)},${f(ey * 0.5)}M${f(ex * 0.35)},${f(ey * 0.45)}l${f(ex * 0.12)},${f(ey * 0.48)}" fill="none" stroke="${INK}" stroke-width="${f(er * 0.26)}" stroke-linecap="round"/></g>`) +
     `</g>` +

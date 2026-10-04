@@ -433,7 +433,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Schopf: wächst am Genick zwischen den Ohren und fällt über die Stirn nach unten,
   // liegt dabei an der Stirnlinie an (Kopf-Koordinaten: s entlang des Gesichts, b quer dazu)
   const schopfBueschel = () => {
-    const l = 0.16 + 0.22 * fl;
+    const l = 0.08 + 0.42 * fl;   // Länge deutlich sichtbar: kurz – mittel – lang – extra lang
     const R0 = hp(-0.1, -0.03), R1 = hp(-0.07, 0.12);            // Ansatz zwischen den Ohren
     const o1 = hp(-0.01, -0.09), o2 = hp(0.06 + l * 0.35, -0.088);  // Vorderkante, liegt knapp vor der Stirn
     const t1 = hp(0.03 + l, -0.055), v1 = hp(0.01 + l * 0.72, -0.015);
@@ -446,7 +446,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       Q(c(t3, b1, 0.03, 0.01), b1) + Q(c(b1, R1, -0.02, 0), R1) + "Z";
   };
   const schopfStraehnen = () => {
-    const l = 0.16 + 0.22 * fl;
+    const l = 0.08 + 0.42 * fl;
     return [[hp(-0.05, -0.035), hp(0.0 + l * 0.8, -0.045)], [hp(-0.05, 0.04), hp(0.0 + l * 0.75, 0.015)], [hp(-0.05, 0.1), hp(-0.02 + l * 0.55, 0.075)]]
       .map(([a, b]) => { const m = mid(a, b), r = sub(hp(0, -0.015), hp(0, 0)); return inkFein(`M${f(a.x)},${f(a.y)}Q${f(m.x + r.x)},${f(m.y + r.y)} ${f(b.x)},${f(b.y)}`, 0.9, 'opacity=".45"'); }).join("");
   };

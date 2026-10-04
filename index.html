@@ -765,7 +765,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "128";
+  const SPIEL_VERSION = "129";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -773,9 +773,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=128"></script>
-<script src="kopfteile.js?v=128"></script>
-<script src="kopfalter.js?v=128"></script>
+<script src="pferd.js?v=129"></script>
+<script src="kopfteile.js?v=129"></script>
+<script src="kopfalter.js?v=129"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -812,12 +812,13 @@
   const datumText = (d = datum()) => `${JZ[d.s][0]} ${jj(d.j)}`;
   function sichereGeburt(p) {
     if (!p || p.geb) return;
-    const d = datum(), s = Math.floor(zufall("geb-" + p.id)() * 4), a = p.alter != null ? p.alter : 5;
+    const u = zufall("geb-" + p.id)(), s = u < .65 ? 0 : u < .82 ? 1 : u < .92 ? 3 : 2;   // die meisten Fohlen kommen im Frühling, wenige im Sommer/Winter, kaum im Herbst
+    const d = datum(), a = p.alter != null ? p.alter : 5;
     p.geb = { s, j: d.j - a - (s > d.s ? 1 : 0) };        // so passt das gewählte Alter genau
   }
   function alterJZ(p) { sichereGeburt(p); const d = datum(); return (d.j * 4 + d.s) - (p.geb.j * 4 + p.geb.s); }
   const alterJahre = p => Math.floor(alterJZ(p) / 4);
-  function alterText(p) { const z = alterJZ(p); if (z < 4) return `${z * 3} Monate`; const y = Math.floor(z / 4); return `${y} ${y === 1 ? "Jahr" : "Jahre"}`; }
+  function alterText(p) { const z = alterJZ(p); if (z <= 0) return "neugeboren"; if (z < 4) return `${z * 3} Monate`; const y = Math.floor(z / 4); return `${y} ${y === 1 ? "Jahr" : "Jahre"}`; }
   const ALTERSSTUFEN = [[6, "🍼 Fohlen", "wächst bei der Mutter auf"], [12, "🐴 Fohlen / Absetzer", "wird langsam selbstständiger"], [24, "🌱 Jährling", "Wachstum, noch kein Reitpferd"],
     [36, "🌱 Jungpferd", "körperliche Entwicklung, Ausbildung beginnt langsam"], [60, "🐎 Jungpferd", "Ausbildung und Einreiten"], [180, "🐎 Erwachsenes Pferd", "volle Leistungsphase"],
     [240, "🐎 Reifes Pferd", "weiterhin leistungsfähig, aber etwas älter"], [Infinity, "👴 Senior", "Alterserscheinungen nehmen langsam zu"]];
@@ -964,7 +965,9 @@
     // Langhaar läuft dem Fell voraus oder hinterher – wird aber am Ende immer auch weiß
     // kurve: 0 = gleichmäßig heller, 1 = bleibt lange dunkelgrau und wird erst spät weiß
     const roh = (j - 0.4) / W, t = klemm01(Math.pow(klemm01(roh), 1 + 1.5 * (ex.kurve || 0)));
-    return { t, tm: klemm01(roh + ex.maehne), j, ex };
+    // früheres Langhaar: wird schneller weiß (stufenweise), späteres: läuft dem Fell hinterher
+    const tm = ex.maehne > 0 ? klemm01(Math.max(0, roh) * (1 + ex.maehne * 8)) : klemm01(roh + ex.maehne);
+    return { t, tm, j, ex };
   }
   const SCHIMMEL_NAME = b => ({ rappe: "Rappschimmel", windfarben: "Rappschimmel", blueroan: "Rappschimmel", brauner: "Braunschimmel", dunkelbrauner: "Dunkelbraunschimmel",
     fuchs: "Fuchsschimmel", hellfuchs: "Fuchsschimmel", dunkelfuchs: "Fuchsschimmel", rotschimmel: "Fuchsschimmel", palomino: "Isabellschimmel", isabell: "Isabellschimmel",
@@ -993,7 +996,7 @@
   // sichtbare Farbe heute: Geburtsfarbe → Schimmel der Grundfarbe → (Apfelschimmel) → weiß (→ Fliegenschimmel)
   function fb(p, jahre) {
     const st = grauStand(p, jahre), basis = p.farbe;
-    if (!st || st.t < 0.04) return saisonFarbe(p, basis);
+    if (!st || (st.t < 0.02 && st.tm < 0.1)) return saisonFarbe(p, basis);
     const phase = st.t >= 1 ? (st.ex.fliegen > .5 && st.j >= st.ex.fliegenAb ? "fliegen" : "weiss") : st.ex.apfel > .45 && st.t >= .35 && st.t < .85 ? "apfel" : "grau";
     const k = Math.round(st.t * 20) / 20, km = Math.round(st.tm * 20) / 20, id = `gr_${basis}_${k}_${km}_${phase}`;
     if (!FARBEN[id]) {
@@ -1007,7 +1010,7 @@
       if (!["tobiano", "overo", "tovero", "leopard", "fewspot", "blanket", "snowcap"].includes(B.pattern)) {
         delete e.pattern;
         if (phase === "apfel") { e.pattern = "dapple"; e.dapple = mix(e.body, W8, .6); }
-        else if (phase === "grau") e.pattern = "roan";
+        else if (phase === "grau") { e.pattern = "roan"; e.roanDeck = Math.min(1, .2 + k * 4); }   // erste weiße Haare: anfangs nur wenige
         else if (phase === "fliegen") { e.pattern = "fleck"; e.fleck = istFuchsBasis(basis) ? "#9a5a38" : "#5b4b44"; }
       }
       e.name = phase === "apfel" ? "Apfelschimmel" : phase === "weiss" ? "Schimmel (weiß)" : phase === "fliegen" ? "Fliegenschimmel" : SCHIMMEL_NAME(basis.replace(/^(ov|tv|tg|fs|sb|sk)_/, ""));
@@ -1094,10 +1097,13 @@
   const pzT = x => String(Math.round(x * 100) / 100).replace(".", ",") + " %";
   const anteileText = a => Object.entries(normAnteile(a)).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${pzT(v)} ${rasseById(k).name}`).join(", ");
   // Daten-Karte: nur die Rasse und ihr Anteil (Einzelheiten stehen bei Genetik)
+  const abstUnvollst = P => !!(P && P.ahnenUnbekannt && P.ahnenUnbekannt.length);
   function rasseText(P) { const a = anteileVon(P), r = rasseById(P.rasse).name, eigen = a[P.rasse] != null ? a[P.rasse] : 0;
+    if (abstUnvollst(P)) return `${r} (Abstammung unvollständig)`;
     return eigen >= 100 ? r : `${r} – ${pzT(eigen)}`; }
   const ANTEIL_FARBEN = ["var(--akzent)", "#4a7fb0", "#7aa95c", "#c9a227", "#8a5a9e", "#5aa5a0"];
   function anteilBalken(P) {
+    if (abstUnvollst(P)) return `<div class="zeile-wert" style="margin-top:14px"><div class="kopf"><b>Rassischer Anteil</b><span>unbekannt</span></div><div class="pole"><span>Abstammung unvollständig – die genauen Anteile zeigt erst ein Abstammungsnachweis (Labor).</span></div></div>`;
     const e = Object.entries(anteileVon(P)).sort((x, y) => y[1] - x[1]);
     return `<div class="zeile-wert" style="margin-top:14px"><div class="kopf"><b>Rassischer Anteil</b><span>${veredelt(anteileVon(P), P.rasse) ? "veredelt" : reinAnteil(anteileVon(P), P.rasse) >= 100 ? "reinrassig" : "Mix"}</span></div>
       <div class="anteil">${e.map(([, v], i) => `<i style="width:${v}%;background:${ANTEIL_FARBEN[i % ANTEIL_FARBEN.length]}"></i>`).join("")}</div>
@@ -1650,8 +1656,8 @@
         <p class="text"><small>Weitere Erbkrankheiten werden später ergänzt.</small></p>`; }
     if (t === "gang") { const n = anzahl(genVon(p), "Dm");
       return `<div class="gentab">${zeile("Gangpferde-Gen (DMRT3)", n === 2 ? "A / A" : n ? "A / C" : "C / C", n === 2 ? "veranlagt für Tölt und Pass (Fünfgänger) – gibt das A-Allel an jedes Fohlen weiter" : n ? "veranlagt für Tölt (Viergänger) – gibt das A-Allel an die Hälfte der Fohlen weiter" : "keine Veranlagung für Tölt oder Pass")}</div>`; }
-    if (t === "abst") { const A = ahnenFuellen(p);
-      return `<div class="gentab">${zeile("Mutter", esc(A.mutter ? A.mutter.name : "–"), "✅ bestätigt – die DNA passt zur eingetragenen Mutter")}${zeile("Vater", esc(A.vater ? A.vater.name : "–"), "✅ bestätigt – die DNA passt zum eingetragenen Vater")}</div>`; }
+    if (t === "abst") { const A = ahnenFuellen(p), NAM = { vatersvater: "Vatersvater", vatersmutter: "Vatersmutter", muttersvater: "Muttersvater", muttersmutter: "Muttersmutter" };
+      return `<div class="gentab">${zeile("Mutter", esc(A.mutter ? A.mutter.name : "–"), "✅ bestätigt – die DNA passt zur eingetragenen Mutter")}${zeile("Vater", esc(A.vater ? A.vater.name : "–"), "✅ bestätigt – die DNA passt zum eingetragenen Vater")}${(p.ahnenErmittelt || p.ahnenUnbekannt || []).map(k => zeile(NAM[k], esc(A[k] ? A[k].name : "–"), "🔎 ermittelt – per Abgleich mit dem Zuchtbuch")).join("")}</div>`; }
     return "";
   }
   function laborBestellen(p, t, nachher) {
@@ -1667,9 +1673,11 @@
     spiel.labor = (spiel.labor || []).filter(x => {
       if (spiel.tag < x.fertig) return true;
       const e = alleEigenenPferde().find(e => e.p.id === x.id), T = LABOR_TESTS[x.test];
-      if (e) { e.p.tests = e.p.tests || {}; e.p.tests[x.test] = true; if (x.test === "farbe") e.p.gentest = true; }
+      if (e) { e.p.tests = e.p.tests || {}; e.p.tests[x.test] = true; if (x.test === "farbe") e.p.gentest = true;
+        if (x.test === "abst" && abstUnvollst(e.p)) { e.p.ahnenErmittelt = e.p.ahnenUnbekannt; } }
       brief("Labor", `Laborergebnis: ${x.name} – ${T.n}`, e ? `hier ist das Ergebnis des ${T.n}s für <b>${esc(x.name)}</b>:<br>${laborErgebnis(e.p, x.test)}<br>Du findest es auch in der Akte unter „Genetik“ → „Laborergebnisse“.`
         : `das Ergebnis des ${T.n}s für <b>${esc(x.name)}</b> liegt vor. Da ${esc(x.name)} nicht mehr bei dir ist, können wir es nicht in die Akte eintragen.`);
+      if (e && e.p.ahnenErmittelt) delete e.p.ahnenUnbekannt;   // unbekannte Großeltern sind jetzt bekannt
       return false;
     });
   }
@@ -3344,30 +3352,48 @@
     shetty: "Pony\u00adgestüt Nord\u00adwind", shire: "Gestüt Eichen\u00adgrund", andalusier: "Gestüt Sierra Blanca", lipizzaner: "Gestüt Karst\u00adblick", vollblut: "Gestüt Renn\u00adbahn\u00adwiese",
     quarter: "Silver Creek Ranch", hannoveraner: "Gestüt Linden\u00adhof", isi: "Gestüt Island\u00adwiese", tinker: "Gestüt Klee\u00adblatt", tekke: "Gestüt Karakum" };
   const AHNEN_LUECKE = ["vatersvater", "vatersmutter", "muttersvater", "muttersmutter"];
-  function mkPferd(id, rasse, fremdAnz, jahre, r) {
-    const g = ["Stute", "Hengst", "Wallach"][Math.floor(r() * 3)], andere = RASSEN.filter(x => x.id !== rasse && !(rasse === "hannoveraner" && false));
+  // Geburt bei Züchtern: fast immer im Frühling (selten früh im Winter oder im Sommer)
+  const zuechterGeb = (jahre, r) => { const u = r(), s = u < .85 ? 0 : u < .95 ? 3 : 1, d = datum(); return { s, j: d.j - jahre - (s > d.s ? 1 : 0) }; };
+  function mkPferd(id, rasse, fremdAnz, jahre, r, geschlecht, geb) {
+    const g = geschlecht || ["Stute", "Hengst", "Wallach"][Math.floor(r() * 3)], andere = RASSEN.filter(x => x.id !== rasse);
     const fremd = [andere[Math.floor(r() * andere.length)].id, andere[Math.floor(r() * andere.length)].id];
     const plaetze = Array.from({ length: 8 }, (_, k) => k < fremdAnz ? fremd[k % (r() < .5 ? 1 : 2)] : rasse);
-    return neuesPferd({ id, name: NAMEN[g][Math.floor(r() * NAMEN[g].length)], rasse, plaetze, geschlecht: g, alter: jahre });
+    return neuesPferd({ id, name: NAMEN[g][Math.floor(r() * NAMEN[g].length)], rasse, plaetze, geschlecht: g, alter: jahre, geb });
   }
+  // Stute mit Fohlen bei Fuß (Privat, Tierschutz): Fohlen ist höchstens ein paar Monate alt
+  function mitFohlen(h, r) {
+    const V = mkPferd(h.id + "-v", RASSEN[Math.floor(r() * RASSEN.length)].id === h.rasse || r() < .6 ? h.rasse : RASSEN[Math.floor(r() * RASSEN.length)].id, r() < .7 ? 0 : 1, 5 + Math.floor(r() * 10), r, "Hengst");
+    let f = null; for (let n = 0; n < 5 && (!f || f.lethalWhite); n++) { const box = { pferd: h }; f = geburt(box, V); }
+    if (!f || f.lethalWhite) return;
+    f.id = h.id + "-f"; delete f.kinder;
+    const d = datum(); if (d.s === 1 && r() < .7) f.geb = { s: 0, j: d.j };   // im Sommer meist schon ein Frühlingsfohlen (3 Monate)
+    const k = (h.kinder || []).slice(-1)[0]; h.kinder = k ? [{ ...k, id: f.id, geb: { ...f.geb } }] : []; h.nachkommen = 1;
+    h.fohlenBeiFuss = f;
+  }
+  // Chance auf Stute mit Fohlen je nach Jahreszeit (Fohlen kommen meist im Frühling)
+  const fohlenChance = () => [.45, .4, .08, .05][datum().s];
   function marktNeu() {
-    const jetzt = jzJetzt(); if (spiel.markt && spiel.markt.jz === jetzt) return spiel.markt;
-    const r = zufall("markt2-" + jetzt + (spiel.spieler ? spiel.spieler.name : "")), M = { jz: jetzt, gestuet: {} };
+    const jetzt = jzJetzt(), alt = spiel.markt; if (alt && alt.jz === jetzt && alt.v === 2) return alt;
+    const r = zufall("markt3-" + jetzt + (spiel.spieler ? spiel.spieler.name : "")), M = { jz: jetzt, gestuet: {}, v: 2 };
     // Privatanzeigen: wenige Pferde, oft älter und Mix, 70–100 % des Marktwerts, Gesundheit erst nach dem Kauf sichtbar
     M.privat = Array.from({ length: 2 + Math.floor(r() * 3) }, (_, i) => {
-      const w = r(), h = mkPferd("pv" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, w < .2 ? 0 : 1 + Math.floor(r() * 4), 5 + Math.floor(r() * 15), r);
+      const w = r(), fo = r() < fohlenChance(), h = mkPferd("pv" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, w < .2 ? 0 : 1 + Math.floor(r() * 4), fo ? 5 + Math.floor(r() * 12) : 5 + Math.floor(r() * 15), r, fo ? "Stute" : null);
       h.training = Math.floor(r() * 60); h.verdeckt = Math.round(45 + r() * 55);
       h.ahnenUnbekannt = AHNEN_LUECKE.filter(() => r() < .3);
-      h.preis = Math.round(marktwert(h) * (.7 + r() * .3) / 50) * 50; return h; });
+      if (fo) mitFohlen(h, r);
+      h.preis = Math.round((marktwert(h) + (h.fohlenBeiFuss ? marktwert(h.fohlenBeiFuss) : 0)) * (.7 + r() * .3) / 50) * 50; return h; });
     // Auktionshaus: ausgesuchte Jungpferde, Start beim halben Marktwert
     M.auktion = Array.from({ length: 3 + Math.floor(r() * 3) }, (_, i) => {
-      const h = mkPferd("au" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, r() < .7 ? 0 : 1, 1 + Math.floor(r() * 4), r), wert = marktwert(h);
+      const jahre = 1 + Math.floor(r() * 4), h = mkPferd("au" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, r() < .7 ? 0 : 1, jahre, r, null, zuechterGeb(jahre, r)), wert = marktwert(h);
       const start = Math.max(100, Math.round(wert / 2 / 50) * 50);
       return { pferd: h, wert, start, gebot: start, gebote: 0, fuehrt: null, max: Math.round(wert * (.7 + r() * .9) / 50) * 50 }; });
     // Notfallpferde beim Tierschutz: schlechter Zustand, für eine Schutzgebühr
     M.notfall = Array.from({ length: 1 + Math.floor(r() * 2) }, (_, i) => {
-      const h = mkPferd("nf" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, Math.floor(r() * 5), 8 + Math.floor(r() * 15), r);
-      h.notGesundheit = Math.round(25 + r() * 20); h.preis = Math.round((150 + r() * 150) / 10) * 10; h.notfall = true; return h; });
+      const fo = r() < fohlenChance() * .8, h = mkPferd("nf" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, Math.floor(r() * 5), fo ? 6 + Math.floor(r() * 12) : 8 + Math.floor(r() * 15), r, fo ? "Stute" : null);
+      if (fo) mitFohlen(h, r);
+      h.notGesundheit = Math.round(25 + r() * 20); h.preis = Math.round((150 + r() * 150 + (h.fohlenBeiFuss ? 100 : 0)) / 10) * 10; h.notfall = true; return h; });
+    // neue Marktversion mitten in der Jahreszeit: laufende Gebote im Auktionshaus bleiben
+    if (alt && alt.jz === jetzt && alt.auktion && alt.auktion.some(a => a.fuehrt === "du")) M.auktion = alt.auktion;
     spiel.markt = M; speichern(); return M;
   }
   function gestuetPferde(rasse) {
@@ -3375,7 +3401,7 @@
     const r = zufall("gest-" + M.jz + rasse), ver = VEREDELUNG[rasse] || [];
     M.gestuet[rasse] = Array.from({ length: 2 + Math.floor(r() * 2) }, (_, i) => {
       const g = ["Stute", "Hengst", "Wallach"][Math.floor(r() * 3)], plaetze = Array.from({ length: 8 }, (_, k) => k === 0 && ver.length && r() < .35 ? ver[0] : rasse);
-      const h = neuesPferd({ id: "gs" + M.jz + rasse + i, name: NAMEN[g][Math.floor(r() * NAMEN[g].length)], rasse, plaetze, geschlecht: g, alter: 1 + Math.floor(r() * 4) });
+      const jahre = 1 + Math.floor(r() * 4), h = neuesPferd({ id: "gs" + M.jz + rasse + i, name: NAMEN[g][Math.floor(r() * NAMEN[g].length)], rasse, plaetze, geschlecht: g, alter: jahre, geb: zuechterGeb(jahre, r) });
       ["schritt", "trab", "galopp"].forEach(k => h.werte.gang[k] = Math.min(10, h.werte.gang[k] + .5));   // gute Abstammung: bessere Gänge
       h.tests = { farbe: true }; h.gentest = true; h.gestuet = GESTUET_NAMEN[rasse];
       h.preis = Math.round(marktwert(h) * (1.2 + r() * .3) / 50) * 50; return h; });
@@ -3411,8 +3437,10 @@
     p.pflege = erzeugePflege(p); p.maehneSeit = spiel.tag; p.schopfSeit = spiel.tag;
     if (zusatz) zusatz(p);
     const nb = spiel.boxen[zb]; nb.pferd = p; nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false;
+    if (p.fohlenBeiFuss) { nb.fohlen = p.fohlenBeiFuss; delete p.fohlenBeiFuss; }
+    alterAktualisieren();
     aktBox = zb; spiel.aktBox = zb; speichern(); zeigeMarkt();
-    dialog(`<h3>🏠 Willkommen, ${esc(p.name)}!</h3><p>${esc(p.name)} steht jetzt in Box ${zb + 1}.</p>${p.verdecktGezeigt ? `<p>Beim Ankommen sieht der Tierarzt nach: Gesundheit <b>${p.pflege.gesundheit} %</b>.</p>` : ""}`);
+    dialog(`<h3>🏠 Willkommen, ${esc(p.name)}!</h3><p>${esc(p.name)} steht jetzt in Box ${zb + 1}${nb.fohlen ? ` – mit Fohlen ${esc(nb.fohlen.name)}` : ""}.</p>${p.verdecktGezeigt ? `<p>Beim Ankommen sieht der Tierarzt nach: Gesundheit <b>${p.pflege.gesundheit} %</b>.</p>` : ""}`);
   }
   const kaufPruefen = (h, preis) => { if (zielBox() < 0) { dialog(`<h3>Keine Box frei</h3><p>Für ${esc(h.name)} brauchst du eine freie Box. In der Hofverwaltung kannst du unter „Boxen“ mit + eine neue bauen.</p>`); return false; }
     if ((spiel.geld || 0) < preis) { dialog(`<h3>Nicht genug Geld</h3><p>${esc(h.name)} kostet ${fmt(preis)}, du hast ${fmt(spiel.geld || 0)}.</p>`); return false; } return true; };
@@ -3420,7 +3448,7 @@
   function privatKaufen(h) {
     const verdeckt = p => { p.pflege.gesundheit = h.verdeckt; p.verdecktGezeigt = true; delete p.verdeckt; };
     const kauf = preis => { if (kaufPruefen(h, preis)) pferdEinstellen(h, preis, "Privatkauf", verdeckt); };
-    dialog(`<h3>🏡 ${esc(h.name)} von privat</h3><p>${rasseById(h.rasse).name} · ${h.geschlecht} · ${alterText(h)} · verlangt werden <b>${fmt(h.preis)}</b>.</p><p><small>Privatverkauf: keine Ankaufsuntersuchung – wie gesund ${esc(h.name)} ist, siehst du erst nach dem Kauf.</small></p>
+    dialog(`<h3>🏡 ${esc(h.name)} von privat</h3><p>${rasseById(h.rasse).name} · ${h.geschlecht} · ${alterText(h)}${h.fohlenBeiFuss ? ` · mit Fohlen <b>${esc(h.fohlenBeiFuss.name)}</b> (${h.fohlenBeiFuss.geschlecht}, ${alterText(h.fohlenBeiFuss)})` : ""} · verlangt werden <b>${fmt(h.preis)}</b>.</p><p><small>Privatverkauf: keine Ankaufsuntersuchung – wie gesund ${esc(h.name)} ist, siehst du erst nach dem Kauf.</small></p>
       ${h.verhandelt ? `<p><small>Der Verkäufer hat deinen Preisvorschlag schon abgelehnt.</small></p>` : `<label class="fest-preis">Dein Preisvorschlag: <b id="pvWert">${fmt(Math.round(h.preis * .9 / 50) * 50)}</b><input type="range" id="pvPreis" min="${Math.round(h.preis * .5 / 50) * 50}" max="${h.preis}" step="50" value="${Math.round(h.preis * .9 / 50) * 50}"></label>`}`,
       [[`Kaufen · ${fmt(h.preis)}`, () => kauf(h.preis)], ...(h.verhandelt ? [] : [["Vorschlagen", () => {
         const v = h.vorschlag, q = v / h.preis, ok = Math.random() < (q >= .95 ? 1 : q >= .85 ? .6 : q >= .75 ? .3 : .05);
@@ -3505,7 +3533,7 @@
     else if (marktBereich === "angebote") html = kopf("🏷️ Meine Verkaufspferde", "Antippen für alle Infos oder um ein Angebot zurückzuziehen.") + angebotListe + `</div>`;
     else if (marktBereich === "haendler") html = kopf("🐴 Pferdehändler", "Das Angebot wechselt jede Jahreszeit. Antippen für alle Infos.") + kaufListe + `</div>`;
     else if (marktBereich === "privat") { const pv = marktNeu().privat.filter(h => !(spiel.marktGekauft || []).includes(h.id));
-      html = kopf("🏡 Privatanzeigen", "Pferde von Privatleuten – günstiger, aber ohne Ankaufsuntersuchung. Ein Preisvorschlag ist möglich.") + (pv.length ? `<div class="paar-liste">${pv.map(h => pferdKachel(h, { ort: "Privatanzeige", zeilen: [rasseById(h.rasse).name, `${h.geschlecht} · ${alterText(h)}`, `<b>${fmt(h.preis)}</b>`],
+      html = kopf("🏡 Privatanzeigen", "Pferde von Privatleuten – günstiger, aber ohne Ankaufsuntersuchung. Ein Preisvorschlag ist möglich.") + (pv.length ? `<div class="paar-liste">${pv.map(h => pferdKachel(h, { ort: "Privatanzeige", zeilen: [rasseById(h.rasse).name, `${h.geschlecht} · ${alterText(h)}`, ...(h.fohlenBeiFuss ? [`🍼 mit Fohlen (${alterText(h.fohlenBeiFuss)})`] : []), `<b>${fmt(h.preis)}</b>`],
         aktion: [`Kaufen · ${fmt(h.preis)}`, () => privatKaufen(h)], extra: { zeilen: [["Preis", `<b>${fmt(h.preis)}</b>`], ["Gesundheit", "unbekannt (keine Untersuchung)"]] } })).join("")}</div>` : `<p>Gerade keine Anzeigen.</p>`) + `</div>`; }
     else if (marktBereich === "auktion") { const au = marktNeu().auktion;
       html = kopf("🔨 Auktionshaus", "Ausgesuchte Jungpferde. Die Auktion endet mit der Jahreszeit – das Höchstgebot bekommt den Zuschlag.") + `<div class="paar-liste">${au.map(a => pferdKachel(a.pferd, { ort: "Auktionshaus",
@@ -3521,8 +3549,8 @@
     else if (marktBereich === "tierschutz") { const nf = marktNeu().notfall.filter(h => !(spiel.marktGekauft || []).includes(h.id));
       html = kopf("🐾 Tierschutz", "Deine abgeholten Pferde kannst du hier zurückkaufen.") + tsListe + `</div>
         <div class="panel voll"><b>🆘 Notfallpferde</b><p style="margin:4px 0 0;font-size:.85rem;opacity:.75">Pferde in schlechtem Zustand suchen ein Zuhause – für eine Schutzgebühr. Bedingung: gesund pflegen und mindestens ein Jahr behalten, sonst wird eine Strafe fällig.</p>
-        ${nf.length ? `<div class="paar-liste">${nf.map(h => pferdKachel(h, { ort: "Tierschutz (Notfall)", zeilen: [`${rasseById(h.rasse).name} · ${alterText(h)}`, `Gesundheit ${h.notGesundheit} %`, `<b>${fmt(h.preis)}</b>`],
-          aktion: [`Aufnehmen · ${fmt(h.preis)}`, () => { if (kaufPruefen(h, h.preis)) dialog(`<h3>🆘 ${esc(h.name)} aufnehmen?</h3><p>Schutzgebühr: <b>${fmt(h.preis)}</b>. ${esc(h.name)} ist in schlechtem Zustand (Gesundheit ${h.notGesundheit} %). Du verpflichtest dich, ${pron(h).ihn} gesund zu pflegen und mindestens ein Jahr zu behalten – wird ${pron(h).er} vorher verkauft, zahlst du ${fmt(NOTFALL_STRAFE)} Strafe.</p>`,
+        ${nf.length ? `<div class="paar-liste">${nf.map(h => pferdKachel(h, { ort: "Tierschutz (Notfall)", zeilen: [`${rasseById(h.rasse).name} · ${alterText(h)}`, ...(h.fohlenBeiFuss ? [`🍼 mit Fohlen (${alterText(h.fohlenBeiFuss)})`] : []), `Gesundheit ${h.notGesundheit} %`, `<b>${fmt(h.preis)}</b>`],
+          aktion: [`Aufnehmen · ${fmt(h.preis)}`, () => { if (kaufPruefen(h, h.preis)) dialog(`<h3>🆘 ${esc(h.name)} aufnehmen?</h3><p>${h.fohlenBeiFuss ? `Mit Fohlen <b>${esc(h.fohlenBeiFuss.name)}</b> (${alterText(h.fohlenBeiFuss)}). ` : ""}Schutzgebühr: <b>${fmt(h.preis)}</b>. ${esc(h.name)} ist in schlechtem Zustand (Gesundheit ${h.notGesundheit} %). Du verpflichtest dich, ${pron(h).ihn} gesund zu pflegen und mindestens ein Jahr zu behalten – wird ${pron(h).er} vorher verkauft, zahlst du ${fmt(NOTFALL_STRAFE)} Strafe.</p>`,
             [["Aufnehmen", () => pferdEinstellen(h, h.preis, "Schutzgebühr", p => { p.pflege.gesundheit = h.notGesundheit; p.schutzBis = jzJetzt() + 4; delete p.notGesundheit; })], ["Abbrechen", null, "zweit"]]); }],
           extra: { zeilen: [["Gesundheit", `${h.notGesundheit} %`], ["Schutzgebühr", `<b>${fmt(h.preis)}</b>`]] } })).join("")}</div>` : `<p style="margin:6px 0 0">Gerade keine Notfallpferde.</p>`}</div>`; }
     zeigeNeben("🏷️ Pferdemarkt", html);
@@ -3613,7 +3641,7 @@
       <h3>🛒 Herkunft der Pferde ohne Eltern im Spiel</h3>
       <p><b>Pferdemarkt:</b> reinrassige Pferde und Mischlinge. Für jedes Pferd werden die Rassen der 8 Urgroßeltern festgelegt (35 % alle gleich, sonst 1–4 Urgroßeltern aus 1–2 anderen Rassen). Die Urgroßeltern bekommen Gene nach ihrer Rasse, dann wird Generation für Generation normal vererbt – Farbe, Rasse (größter Anteil, bei Gleichstand nach Exterieur) und Stockmaß ergeben sich daraus. <b>Deckstation</b> und Admin-Rassenauswahl: reinrassig, Farbe vorgegeben, Stammbaum rückwärts passend erzeugt. Gestüte mit reinrassigen Pferden (Mix nur durch Veredelung) kommen später.</p>
       <h3>🐴 Schimmel (fortschreitende Schimmelung)</h3>
-      <p>Schimmel kommen in ihrer Grundfarbe zur Welt und hellen auf: Rappe → Rappschimmel, Brauner → Braunschimmel, Fuchs → Fuchsschimmel, Falben → Falbschimmel, Isabellen → Isabellschimmel, Schecken → Schimmelschecke. Manche werden dabei Apfelschimmel, am Ende weiß, einige im Alter Fliegenschimmel. Reinerbige Schimmel (GG) werden schneller weiß. Wie schnell, ob mit Apfelung, ob und ab wann Fliegenschimmel und ob das Langhaar früher oder später ausbleicht, ist erbliche Veranlagung (vererbt nach dem Schlüssel unten). Langhaar, das später ausbleicht, wird trotzdem am Ende weiß. Etwa 15 % der Schimmel bleiben lange dunkelgrau und werden erst spät weiß (Veranlagung „bleibt lange dunkelgrau“, vererbbar). Bei etwa 5 % der Pferde wird das Langhaar sehr früh weiß – so entstehen junge, noch dunkle Grauschimmel mit fast weißer Mähne; diese Veranlagung lässt sich weiterzüchten (und kann auch durch Mutation entstehen). Im Abstammungsschein steht immer die Geburtsfarbe, mit „(kann Schimmel werden)“, wenn das Pferd oder ein Elternteil das Schimmel-Gen hat.</p>
+      <p>Schimmel kommen in ihrer Grundfarbe zur Welt und hellen auf: Rappe → Rappschimmel, Brauner → Braunschimmel, Fuchs → Fuchsschimmel, Falben → Falbschimmel, Isabellen → Isabellschimmel, Schecken → Schimmelschecke. Manche werden dabei Apfelschimmel, am Ende weiß, einige im Alter Fliegenschimmel. Reinerbige Schimmel (GG) werden schneller weiß. Wie schnell, ob mit Apfelung, ob und ab wann Fliegenschimmel und ob das Langhaar früher oder später ausbleicht, ist erbliche Veranlagung (vererbt nach dem Schlüssel unten). Langhaar, das später ausbleicht, wird trotzdem am Ende weiß. Etwa 15 % der Schimmel bleiben lange dunkelgrau und werden erst spät weiß (Veranlagung „bleibt lange dunkelgrau“, vererbbar). Früheres Langhaar hellt stufenweise auf (bei „sehr früh weiß“ etwa 8-mal so schnell wie das Fell, bei „früher hell“ etwa 3-mal), die ersten weißen Haare im Fell sind anfangs nur leicht zu sehen. Bei etwa 5 % der Pferde wird das Langhaar sehr früh weiß – so entstehen junge, noch dunkle Grauschimmel mit fast weißer Mähne; diese Veranlagung lässt sich weiterzüchten (und kann auch durch Mutation entstehen). Im Abstammungsschein steht immer die Geburtsfarbe, mit „(kann Schimmel werden)“, wenn das Pferd oder ein Elternteil das Schimmel-Gen hat.</p>
       <p><b>Rotschimmel / Roan</b> ist etwas anderes: unveränderliche Schimmel, die schon mit weißen Stichelhaaren geboren werden und nicht aufhellen.</p>
       <h3>📏 Stockmaß, Gangwerk, Charakter, Schimmel-Veranlagung</h3>
       <p>Jeder Wert wird einzeln nach diesem Schlüssel vererbt:</p>${schluessel}
@@ -3642,11 +3670,12 @@
       <p>Marktwert aus Gangwerk, Ausbildungsstand, Alter und Gesundheit. Festpreis bis Marktwert: ~90 % Verkaufschance, darüber sinkend, ab 25 % über Marktwert kauft niemand. Auktion startet bei ¼ des Marktwerts und läuft 2 Jahreszeiten. Gnadenhof: halber Marktwert.</p>
       <h3>🏷️ Pferdemarkt (wechselt jede Jahreszeit)</h3>
       ${verTab(["Bereich", "Angebot", "Preis", "Besonderheit"], [
-        ["🏡 Privatanzeigen", "2–4 Pferde, 5–19 J., oft Mix", "70–100 %", "Preisvorschlag (1× je Pferd): ab 95 % sicher, 85–95 % 60 %, 75–85 % 30 %, sonst 5 %. Gesundheit erst nach Kauf, je Großelternteil 30 % „unbekannt“"],
+        ["🏡 Privatanzeigen", "2–4 Pferde, 5–19 J., oft Mix; Stuten auch mit Fohlen bei Fuß (Frühling 45 %, Sommer 40 %, Herbst 8 %, Winter 5 %)", "70–100 %", "Preisvorschlag (1× je Pferd): ab 95 % sicher, 85–95 % 60 %, 75–85 % 30 %, sonst 5 %. Gesundheit erst nach Kauf, je Großelternteil 30 % „unbekannt“ – dann Rasse „Abstammung unvollständig“ ohne Anteile, bis ein Abstammungsnachweis die Großeltern ermittelt"],
         ["🐴 Pferdehändler", "6 Pferde, 1–14 J.", "110–130 %", "Gesundheit mind. 75 %, Rückgabe 3 Tage gegen 20 % Abzug"],
-        ["🔨 Auktionshaus", "3–5 Pferde, 1–4 J.", "Start 50 %", "Schritt 5 % (mind. 50 €), andere Bieter nachts (Limit 70–160 %), Zuschlag zu Beginn der nächsten Jahreszeit – nur mit freier Box und genug Geld"],
-        ["🏰 Gestüte", "je Rasse 2–3 Pferde, 1–4 J.", "120–150 %", "reinrassig (35 % Veredler-Urgroßvater, wo erlaubt), Fellfarben-Test, Gänge +0,5"],
-        ["🐾 Notfallpferde", "1–2 Pferde, 8–22 J., ohne Ausbildung", "150–300 €", `Gesundheit 25–45 %; Verkauf innerhalb 1 Jahr: ${fmt(NOTFALL_STRAFE)} Strafe`]])}
+        ["🔨 Auktionshaus", "3–5 Pferde, 1–4 J., vom Züchter (Geburt 85 % Frühling, 10 % Winter, 5 % Sommer)", "Start 50 %", "Schritt 5 % (mind. 50 €), andere Bieter nachts (Limit 70–160 %), Zuschlag zu Beginn der nächsten Jahreszeit – nur mit freier Box und genug Geld"],
+        ["🏰 Gestüte", "je Rasse 2–3 Pferde, 1–4 J., Geburt wie im Auktionshaus", "120–150 %", "reinrassig (35 % Veredler-Urgroßvater, wo erlaubt), Fellfarben-Test, Gänge +0,5"],
+        ["🐾 Notfallpferde", "1–2 Pferde, 8–22 J., ohne Ausbildung; Stuten auch mit Fohlen (80 % der Privat-Chance)", "150–300 € (+100 € mit Fohlen)", `Gesundheit 25–45 %; Verkauf innerhalb 1 Jahr: ${fmt(NOTFALL_STRAFE)} Strafe`]])}
+      <p>Geburtszeit sonst: 65 % Frühling, 17 % Sommer, 10 % Winter, 8 % Herbst.</p>
       <p>Eigene Pferde: Auktion startet bei ¼ des Marktwerts und läuft 2 Jahreszeiten; Zwischenstand und Ergebnis kommen per Brief mit Anzahl der Gebote.</p>
       ${verTab(["Posten", "Kosten"], [["Aufzuchtstation", `${fmt(KOSTEN.aufzucht)} / Tag`], ["Ausbildungsstall", `${fmt(KOSTEN.ausbildung)} / Tag`], ["Klinik", `${fmt(KOSTEN.klinik)} / Tag`], ...Object.values(LABOR_TESTS).map(T => [`Labor: ${T.n}`, `${fmt(T.preis)} · Ergebnis nach ${T.tage} Tagen per Post`]), ["Tierschutz zurückkaufen", "½ Marktwert + offene Klinikkosten"], ["Strafe: Tod durch Vernachlässigung", fmt(STRAFE_VERNACHLAESSIGUNG)]])}
     </div>`;

@@ -532,7 +532,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Überlagerungen
   g += `<g clip-path="url(#cl-${uid})">`;
   if (C.pattern === "dapple") g += `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#dp-${uid})" mask="url(#mk-${uid})"/></g>`;
-  if (C.pattern === "roan") g += `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#rn-${uid})" mask="url(#mk-${uid})"/></g>`;
+  if (C.pattern === "roan") g += `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#rn-${uid})" mask="url(#mk-${uid})"${C.roanDeck != null && C.roanDeck < 1 ? ` opacity="${C.roanDeck.toFixed(2)}"` : ""}/></g>`;
   if (C.pattern === "fleck") g += `<g clip-path="url(#cl-${uid})"><rect ${bx} fill="url(#fk-${uid})" opacity=".8"/></g>`;
   if (C.pattern === "tobiano") {
     const flecken = [];

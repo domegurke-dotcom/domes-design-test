@@ -738,7 +738,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "139";
+  const SPIEL_VERSION = "140";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -746,9 +746,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=139"></script>
-<script src="kopfteile.js?v=139"></script>
-<script src="kopfalter.js?v=139"></script>
+<script src="pferd.js?v=140"></script>
+<script src="kopfteile.js?v=140"></script>
+<script src="kopfalter.js?v=140"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3503,12 +3503,12 @@
     M.auktion = Array.from({ length: 3 + Math.floor(r() * 3) }, (_, i) => {
       const jahre = 1 + Math.floor(r() * 4), h = mkPferd("au" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, r() < .7 ? 0 : 1, jahre, r, null, zuechterGeb(jahre, r)), wert = Math.round(marktwert(h) * saisonF());
       const start = Math.max(100, Math.round(wert / 2 / 50) * 50);
-      return { pferd: h, wert, start, gebot: start, gebote: 0, fuehrt: null, max: Math.round(wert * (.7 + r() * .9) / 50) * 50 }; });
+      return { pferd: h, wert, start, gebot: start, gebote: 0, fuehrt: null, max: npcLimit(wert, r) }; });
     // Fohlenauktion (Sommer, Herbst): Frühlingsfohlen vom Züchter, abgeholt nach dem Absetzen zu Beginn der nächsten Jahreszeit
     M.fohlen = !fohlenZeit() ? [] : Array.from({ length: 3 + Math.floor(r() * 3) }, (_, i) => {
       const h = mkPferd("fa" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, 0, 0, r, r() < .5 ? "Stute" : "Hengst", { s: 0, j: datum().j }), wert = Math.round(marktwert(h) * saisonF());
       const start = Math.max(100, Math.round(wert / 2 / 50) * 50);
-      return { pferd: h, wert, start, gebot: start, gebote: 0, fuehrt: null, fohlen: true, max: Math.round(wert * (.7 + r() * .9) / 50) * 50 }; });
+      return { pferd: h, wert, start, gebot: start, gebote: 0, fuehrt: null, fohlen: true, max: npcLimit(wert, r) }; });
     // Notfallpferde beim Tierschutz: schlechter Zustand, für eine Schutzgebühr
     M.notfall = Array.from({ length: 1 + Math.floor(r() * 2) }, (_, i) => {
       const fo = r() < fohlenChance() * .8, h = mkPferd("nf" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, Math.floor(r() * 5), fo ? 6 + Math.floor(r() * 12) : 8 + Math.floor(r() * 15), r, fo ? "Stute" : null);
@@ -3533,14 +3533,20 @@
       h.preis = Math.round(((marktwert(h) - tw) * saisonF() * (1.2 + r() * .3) + tw) / 50) * 50; return h; });
     speichern(); return M.gestuet[rasse];
   }
+  // Limit des stärksten anderen Bieters: meist um den Marktwert, manchmal ein Liebhaber, der richtig Druck macht
+  function npcLimit(wert, r = Math.random) { const u = r(), f = u < .65 ? .7 + r() * .6 : u < .87 ? 1.3 + r() * .7 : u < .96 ? 2 + r() * 1.5 : 3.5 + r() * 2.5; return Math.round(wert * f / 50) * 50; }
+  // Geld, das schon in deinen anderen Höchstgeboten steckt (führend), ist nicht mehr frei
+  const gebundenesGeld = ausser => { const M = spiel.markt || {}; return [...(M.auktion || []), ...(M.fohlen || [])].filter(a => a !== ausser && !a.vorbei && a.fuehrt === "du").reduce((s, a) => s + (a.duMax || a.gebot), 0); };
   const bietSchritt = a => Math.max(50, Math.round(a.wert * .05 / 50) * 50);
   const auktionFinden = id => { const M = spiel.markt || {}; return [...(M.auktion || []), ...(M.fohlen || [])].find(a => a.pferd.id === id); };
   // jede Nacht: andere Bieter im Auktionshaus
   function auktionsNacht() {
     const M = spiel.markt; if (!M || !M.auktion) return;
     [...M.auktion, ...(M.fohlen || [])].forEach(a => { if (a.vorbei) return;
+      if (a.maxV !== 2) { a.max = Math.max(a.max, npcLimit(a.wert)); a.maxV = 2; }
       if (a.gebot + bietSchritt(a) > a.max) return;
-      if (a.fuehrt === "du" ? Math.random() < .55 : Math.random() < .3) {
+      const druck = a.max > a.wert * 1.3;   // starker Bieter: bietet häufiger
+      if (a.fuehrt === "du" ? Math.random() < (druck ? .8 : .55) : Math.random() < (druck ? .5 : .3)) {
         const st = bietSchritt(a), warDu = a.fuehrt === "du";
         // dein Höchstgebot verteidigt automatisch – gezahlt wird nur ein Schritt über dem Gegenbieter
         if (warDu && (a.duMax || a.gebot) >= a.max) { a.gebot = Math.min(a.duMax || a.gebot, a.max + st); a.gebote += 2; return; }
@@ -3596,13 +3602,14 @@
     const zurueck = () => nachher ? nachher() : zeigeMarkt();
     const fuehrst = a.fuehrt === "du", neu = fuehrst ? (a.duMax || a.gebot) + bietSchritt(a) : a.fuehrt ? a.gebot + bietSchritt(a) : a.gebot;
     if (!a.fohlen && zielBox() < 0) { dialog(`<h3>Keine Box frei</h3><p>Zum Mitbieten brauchst du eine freie Box für ${esc(a.pferd.name)}.</p>`, [["OK", nachher || null]]); return; }
-    if ((spiel.geld || 0) < neu) { dialog(`<h3>Nicht genug Geld</h3><p>Das nächste Gebot wäre ${fmt(neu)}, du hast ${fmt(spiel.geld || 0)}.</p>`, [["OK", nachher || null]]); return; }
+    const gebunden = gebundenesGeld(a), frei = Math.max(0, (spiel.geld || 0) - gebunden);
+    if (frei < neu) { dialog(`<h3>Nicht genug Geld</h3><p>Das nächste Gebot wäre ${fmt(neu)}. Frei verfügbar hast du ${fmt(frei)}${gebunden ? ` (${fmt(gebunden)} stecken schon in deinen anderen Höchstgeboten)` : ""}.</p>`, [["OK", nachher || null]]); return; }
     // eigenes Gebot: mindestens das nächste Gebot, höchstens so viel Geld, wie du hast
-    const max = Math.max(neu, Math.min(Math.floor((spiel.geld || 0) / 50) * 50, Math.round(Math.max(neu * 3, a.wert * 2.5) / 50) * 50));
+    const max = Math.max(neu, Math.min(Math.floor(frei / 50) * 50, Math.round(Math.max(neu * 3, a.wert * 4) / 50) * 50));
     dialog(`<h3>🔨 Auf ${esc(a.pferd.name)} bieten</h3><p>${fuehrst ? `✅ Du führst mit <b>${fmt(a.gebot)}</b>, dein Höchstgebot ist <b>${fmt(a.duMax || a.gebot)}</b>. Du kannst es erhöhen.` : `Aktuelles Gebot: <b>${fmt(a.gebot)}</b> (${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"}). Mindestgebot: <b>${fmt(neu)}</b>.`}</p>
       <label class="fest-preis">Dein Höchstgebot: <b id="gebotWert">${fmt(neu)}</b><input type="range" id="gebotRegler" min="${neu}" max="${max}" step="50" value="${neu}"></label>
       <div class="gebot-schnell">${[0, 1, 3, 5].map(k => `<button class="knopf zweit" data-gplus="${k}">${k ? `+${fmt(k * bietSchritt(a))}` : "Mindestgebot"}</button>`).join("")}</div>
-      <p><small>Wie bei eBay: Du gibst an, wie viel du höchstens zahlen willst. Bezahlt wird nur so viel wie nötig – ein Schritt über dem nächsten Bieter. Die Auktion endet mit dieser Jahreszeit – wird dein Höchstgebot überboten, bekommst du einen Brief.${a.fohlen ? ` 🍼 ${esc(a.pferd.name)} bleibt bis zum Absetzen bei der Mutter und kommt zu Beginn der nächsten Jahreszeit zu dir – dann brauchst du eine freie Box und das Geld.` : ""}</small></p>`,
+      <p><small>Frei verfügbar: <b>${fmt(frei)}</b>${gebunden ? ` (${fmt(gebunden)} in anderen Höchstgeboten gebunden)` : ""}. Wie bei eBay: Du gibst an, wie viel du höchstens zahlen willst. Bezahlt wird nur so viel wie nötig – ein Schritt über dem nächsten Bieter. Vorsicht: Manchmal bietet ein Liebhaber mit – dann wird es teuer. Die Auktion endet mit dieser Jahreszeit – wird dein Höchstgebot überboten, bekommst du einen Brief.${a.fohlen ? ` 🍼 ${esc(a.pferd.name)} bleibt bis zum Absetzen bei der Mutter und kommt zu Beginn der nächsten Jahreszeit zu dir – dann brauchst du eine freie Box und das Geld.` : ""}</small></p>`,
       [[fuehrst ? "Erhöhen" : "Bieten", () => { const g = Math.max(neu, +$("gebotRegler").value);
         if (!fuehrst) { a.gebot = neu; a.gebote++; }   // aktuelles Gebot: nur das Nötigste, der Rest ist dein verdecktes Höchstgebot
         a.duMax = g; a.fuehrt = "du"; a.duGeboten = true; speichern(); zurueck(); }], ["Abbrechen", nachher || null, "zweit"]]);
@@ -3821,7 +3828,7 @@
       ${verTab(["Bereich", "Angebot", "Preis", "Besonderheit"], [
         ["🏡 Privatanzeigen", "2–4 Pferde, 5–19 J., oft Mix; Stuten auch mit Fohlen bei Fuß (Frühling 45 %, Sommer 40 %, Herbst 8 %, Winter 5 %)", "70–100 %", `Ankaufsuntersuchung ${fmt(AKU_PREIS)} zeigt die Gesundheit vorher. Preisvorschlag (1× je Pferd): ab 95 % sicher, 85–95 % 60 %, 75–85 % 30 %, sonst 5 %. Gesundheit erst nach Kauf (der Preis berücksichtigt sie zur Hälfte – Privatleute kennen ihr Pferd), je Großelternteil 30 % „unbekannt“ – dann Rasse „Abstammung unvollständig“ ohne Anteile, bis ein Abstammungsnachweis die Großeltern ermittelt`],
         ["🐴 Pferdehändler", "6 Pferde, 1–14 J.", "110–130 %", "Gesundheit mind. 75 %, Rückgabe 3 Tage gegen 20 % Abzug"],
-        ["🔨 Auktionshaus", "3–5 Pferde, 1–4 J., vom Züchter (Geburt 85 % Frühling, 10 % Winter, 5 % Sommer)", "Start 50 %", "Höchstgebot wie bei eBay: du legst dein Maximum fest, gezahlt wird nur ein Schritt über dem nächsten Bieter (Schritt 5 %, mind. 50 €); andere Bieter nachts (Limit 70–160 %), Zuschlag zu Beginn der nächsten Jahreszeit – nur mit freier Box und genug Geld. Grüner Rahmen: du führst, oranger: überboten (Brief mit „Erneut bieten“)"],
+        ["🔨 Auktionshaus", "3–5 Pferde, 1–4 J., vom Züchter (Geburt 85 % Frühling, 10 % Winter, 5 % Sommer)", "Start 50 %", "Höchstgebot wie bei eBay: du legst dein Maximum fest, gezahlt wird nur ein Schritt über dem nächsten Bieter (Schritt 5 %, mind. 50 €); andere Bieter nachts (Limit: 65 % der Auktionen 70–130 % des Marktwerts, 22 % 130–200 %, 9 % Liebhaber mit 200–350 %, 4 % Sammler mit 350–600 % – starke Bieter bieten auch öfter), Höchstgebote nur bis zum frei verfügbaren Geld (Geld in anderen führenden Höchstgeboten ist gebunden), Zuschlag zu Beginn der nächsten Jahreszeit – nur mit freier Box und genug Geld. Grüner Rahmen: du führst, oranger: überboten (Brief mit „Erneut bieten“)"],
         ["🍼 Fohlenauktion", "3–5 Frühlingsfohlen, nur Sommer und Herbst", "Start 50 %", "wie Auktionshaus; Zuschlag zu Beginn der nächsten Jahreszeit, dann wird das Fohlen abgesetzt geliefert (freie Box + Geld nötig, zum Bieten noch nicht)"],
         ["🏰 Gestüte", "je Rasse 2–3 Pferde, 1–4 J., Geburt wie im Auktionshaus", "120–150 %", "reinrassig (35 % Veredler-Urgroßvater, wo erlaubt), Gänge +0,5; Gentests: Fellfarben immer, Gangpferde-Test bei Islandpferd/Marwari, Erbkrankheiten-Test bei Rassen mit Overo/Leopard – Testkosten kommen auf den Preis"],
         ["🐾 Notfallpferde", "1–2 Pferde, 8–22 J., ohne Ausbildung; Stuten auch mit Fohlen (80 % der Privat-Chance)", "150–300 € (+100 € mit Fohlen)", "Gesundheit 25–45 %; im ersten Jahr kein Verkauf (auch kein Gnadenhof) – nur Rückgabe an den Tierschutz ohne Erstattung"]])}

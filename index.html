@@ -738,7 +738,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "137";
+  const SPIEL_VERSION = "138";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -746,9 +746,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=137"></script>
-<script src="kopfteile.js?v=137"></script>
-<script src="kopfalter.js?v=137"></script>
+<script src="pferd.js?v=138"></script>
+<script src="kopfteile.js?v=138"></script>
+<script src="kopfalter.js?v=138"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1775,6 +1775,9 @@
       <span><small>Bis zum Verkauf muss ${esc(p.name)} versorgt werden – fällt die Gesundheit unter 75 %, platzt der Verkauf.</small></span>
       <button class="knopf" id="angebotZurueck">Angebot zurückziehen</button></div>`;
   }
+  // Festpreis: Chance, dass sich zum Ende der Jahreszeit ein Käufer findet (v = Preis / Marktwert)
+  // fairer Preis fast sicher, darüber immer seltener – aber nie ganz ausgeschlossen (Liebhaber)
+  const festChance = v => v <= 0.9 ? 0.98 : v <= 1 ? 0.93 : Math.max(0.04, 0.93 * Math.exp(-(v - 1) * 4.5));
   // laufende Auktion abbrechen: Strafe = halbes letztes Gebot (nur wenn schon jemand geboten hat)
   const abbruchStrafe = a => a && a.art === "auktion" && (a.gebote || 0) > 0 ? Math.round(a.gebot / 2 / 10) * 10 : 0;
   function angebotZurueckziehen(p, nachher) {
@@ -1788,17 +1791,18 @@
     if (sperre) { dialog(`<h3>💰 ${esc(p.name)} verkaufen</h3><p>⚠️ ${sperre}</p>`); return; }
     const wert = verkaufsWert(p), start = Math.max(100, Math.round(wert / 2 / 50) * 50);
     dialog(`<h3>💰 ${esc(p.name)} verkaufen</h3><p style="margin:0">${fo ? `🍼 Mit Fohlen <b>${esc(fo.name)}</b> bei Fuß – es wird mit verkauft.<br>` : ""}Marktwert etwa <b>${fmt(wert)}</b><br><small>Bis zum Verkauf bleibt ${esc(p.name)} bei dir und muss versorgt werden. Fällt die Gesundheit unter 75 %, platzt der Verkauf.</small></p>
-      <div class="verkauf-art"><b>🏷️ Festpreis</b><small>Läuft eine Jahreszeit. Verlangst du deutlich mehr als den Marktwert, kauft niemand.</small>
-        <label class="fest-preis">Dein Preis: <b id="festWert">${fmt(wert)}</b> <small id="festHinweis">– fairer Preis</small><input type="range" id="festPreis" min="${Math.round(wert * 0.5 / 50) * 50}" max="${Math.round(wert * 2 / 50) * 50}" step="50" value="${wert}"></label>
+      <div class="verkauf-art"><b>🏷️ Festpreis</b><small>Läuft eine Jahreszeit. Je höher über dem Marktwert, desto seltener findet sich ein Käufer – dafür kommen eher Preisvorschläge.</small>
+        <label class="fest-preis">Dein Preis: <b id="festWert">${fmt(wert)}</b> <small id="festHinweis">– fairer Preis · Verkaufschance etwa 90 %</small><input type="range" id="festPreis" min="${Math.round(wert * 0.5 / 50) * 50}" max="${Math.round(wert * 1.6 / 50) * 50}" step="50" value="${wert}"></label>
         <button class="knopf" id="festLos" style="width:100%">Zum Festpreis anbieten</button></div>
       <div class="verkauf-art"><b>🔨 Auktion</b><small>Startet bei ${fmt(start)} (½ des Marktwerts) und dauert 2 Jahreszeiten. Mit Glück bieten sich die Käufer weit über den Marktwert hoch.</small>
         <button class="knopf" id="auktionLos" style="width:100%">Zur Auktion geben</button></div>`, [["Abbrechen", null, "zweit"]], "breit");
     const fp = $("festPreis");
     fp.oninput = () => { const v = +fp.value / wert; $("festWert").textContent = fmt(+fp.value);
-      $("festHinweis").textContent = v > 1.25 ? "– viel zu teuer, so kauft niemand" : v > 1.05 ? "– etwas teuer, weniger Käufer" : v < 0.95 ? "– günstig, schneller Verkauf" : "– fairer Preis"; };
+      const c = Math.round(festChance(+fp.value / (wert * saisonF())) * 100);
+      $("festHinweis").textContent = (v > 1.3 ? "– sehr teuer" : v > 1.05 ? "– teuer, weniger Käufer" : v < 0.95 ? "– günstig, schneller Verkauf" : "– fairer Preis") + ` · Verkaufschance etwa ${c} %`; };
     const fertig = txt => { $("dlg").hidden = true; speichern(); nachher(); dialog(`<h3>💰 Angebot steht</h3><p>${txt}</p>`); };
     $("festLos").onclick = () => { const preis = +fp.value, jetzt = jzJetzt();
-      (spiel.angebote = spiel.angebote || []).push({ id: p.id, art: "fest", preis, wert, start: jetzt, ende: jetzt + 1, fohlenId: fo ? fo.id : null }); fertig(`${esc(p.name)} wird jetzt für <b>${fmt(preis)}</b> angeboten.`); };
+      (spiel.angebote = spiel.angebote || []).push({ id: p.id, art: "fest", preis, wert, sf: saisonF(), start: jetzt, ende: jetzt + 1, fohlenId: fo ? fo.id : null }); fertig(`${esc(p.name)} wird jetzt für <b>${fmt(preis)}</b> angeboten.`); };
     $("auktionLos").onclick = () => { const jetzt = jzJetzt();
       (spiel.angebote = spiel.angebote || []).push({ id: p.id, art: "auktion", preis: start, gebot: start, gebote: 0, wert, start: jetzt, ende: jetzt + 2, fohlenId: fo ? fo.id : null }); fertig(`Die Auktion für ${esc(p.name)} läuft – Startgebot <b>${fmt(start)}</b>.`); };
   }
@@ -1843,7 +1847,7 @@
       const p = spiel.boxen[x].pferd;
       // Festpreis: Interessenten schicken Preisvorschläge (wie bei Privatanzeigen, nur andersherum)
       if (a.art === "fest" && !a.vorschlag && !spiel.boxen[x].tot && !(p.pflege && p.pflege.gesundheit < 75)) {
-        const ziel = a.wert * saisonF(), teuer = a.preis / ziel;
+        const ziel = a.wert * (a.sf || saisonF()), teuer = a.preis / ziel;
         if (Math.random() < (teuer > 1.05 ? .35 : .15)) {
           const betrag = Math.min(a.preis - 50, Math.round(ziel * (.75 + Math.random() * .3) / 50) * 50);
           if (betrag >= a.preis * .6) {
@@ -1885,8 +1889,7 @@
       if (a.art === "fest") {
         if (jetzt < a.ende) return true;
         // bis Marktwert fast sicher verkauft, darüber immer seltener – ab 25 % zu viel kauft niemand
-        const v = a.preis / (a.wert * saisonF()), chance = v <= 1 ? 0.9 : v <= 1.25 ? 0.9 - (v - 1) * 2.8 : 0;
-        if (Math.random() < chance) return verkauft(a.preis);
+        if (Math.random() < festChance(a.preis / (a.wert * (a.sf || saisonF())))) return verkauft(a.preis);   // sf: Saisonpreis beim Einstellen (wie im Dialog angezeigt)
         brief("Pferdemarkt", `Kein Käufer für ${p.name}`, `für <b>${esc(p.name)}</b> hat sich zum Preis von ${fmt(a.preis)} leider kein Käufer gefunden. Das Angebot ist abgelaufen – ${pron(p).er} bleibt bei {dir|Ihnen}.`);
         return false;
       }
@@ -3791,7 +3794,7 @@
       <p>Gut versorgt +8 % pro Tag, hungrig −19, Box nicht gemistet −9,5. Unter 40 % kommt ein Brief vom Tierarzt, unter 30 % erholt sich ein Pferd nur noch in der Klinik (+16 %/Tag, ${fmt(KOSTEN.klinik)}/Tag) und wird mit 75 % entlassen. Die Klinikkosten kommen als Rechnung, zahlbar innerhalb einer Jahreszeit – sonst holt der Tierschutz das Pferd. Ausnahme: Senioren mit altersbedingter Höchstgesundheit von 40 % oder weniger.</p>
       <p>Senioren ab 20 Jahren: höchstens 75 %, sinkt bis 35 Jahre auf 1 %. Sterbewahrscheinlichkeit je Jahreszeit steigt ab 20 Jahren und erreicht mit 35 Jahren 100 %.</p>
       <h3>💰 Geld und Marktwert</h3>
-      <p>Marktwert aus Gangwerk, Ausbildungsstand, Alter und Gesundheit, plus die Kosten aller gemachten Gentests (getestete Pferde verkaufen sich besser). Stute mit Fohlen bei Fuß: beide Marktwerte zusammen, das Fohlen wird mitverkauft (allein nicht). Festpreis bis Marktwert: ~90 % Verkaufschance, darüber sinkend, ab 25 % über Marktwert kauft niemand. Während das Angebot läuft, schicken Interessenten manchmal Preisvorschläge per Brief (jede Nacht 15 %, bei deutlich überhöhtem Preis 35 %; 75–105 % des Marktwerts, immer unter deinem Preis) – annehmen verkauft sofort, ablehnen lässt das Angebot weiterlaufen. Auktion startet bei ½ des Marktwerts und läuft 2 Jahreszeiten; Abbruch nach dem ersten Gebot kostet die Hälfte des letzten Gebots. Gnadenhof: halber Marktwert.</p>
+      <p>Marktwert aus Gangwerk, Ausbildungsstand, Alter und Gesundheit, plus die Kosten aller gemachten Gentests (getestete Pferde verkaufen sich besser). Stute mit Fohlen bei Fuß: beide Marktwerte zusammen, das Fohlen wird mitverkauft (allein nicht). Festpreis (Regler 50–160 % des Marktwerts, Chance wird angezeigt): bis 90 % des Marktwerts 98 % Verkaufschance, bis Marktwert 93 %, darüber sinkend (110 % ≈ 59 %, 120 % ≈ 38 %, 130 % ≈ 24 %, 150 % ≈ 10 %), aber nie unter 4 % (Liebhaber). Gerechnet mit dem Saisonpreis der Jahreszeit, in der du das Pferd einstellst. Während das Angebot läuft, schicken Interessenten manchmal Preisvorschläge per Brief (jede Nacht 15 %, bei deutlich überhöhtem Preis 35 %; 75–105 % des Marktwerts, immer unter deinem Preis) – annehmen verkauft sofort, ablehnen lässt das Angebot weiterlaufen. Auktion startet bei ½ des Marktwerts und läuft 2 Jahreszeiten; Abbruch nach dem ersten Gebot kostet die Hälfte des letzten Gebots. Gnadenhof: halber Marktwert.</p>
       <h3>🏷️ Pferdemarkt (wechselt jede Jahreszeit)</h3>
       ${verTab(["Bereich", "Angebot", "Preis", "Besonderheit"], [
         ["🏡 Privatanzeigen", "2–4 Pferde, 5–19 J., oft Mix; Stuten auch mit Fohlen bei Fuß (Frühling 45 %, Sommer 40 %, Herbst 8 %, Winter 5 %)", "70–100 %", `Ankaufsuntersuchung ${fmt(AKU_PREIS)} zeigt die Gesundheit vorher. Preisvorschlag (1× je Pferd): ab 95 % sicher, 85–95 % 60 %, 75–85 % 30 %, sonst 5 %. Gesundheit erst nach Kauf, je Großelternteil 30 % „unbekannt“ – dann Rasse „Abstammung unvollständig“ ohne Anteile, bis ein Abstammungsnachweis die Großeltern ermittelt`],

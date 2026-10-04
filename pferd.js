@@ -4,7 +4,7 @@
 // =====================================================================
 
 // ---------- Fellfarben ----------
-const FARBEN = {
+const FARBEN_BASIS = {
   schimmel:      { name: "Schimmel (weiß)",        body: "#f3f1ed", mane: "#e2ddd3", muzzle: "#6f6a6a", hoof: "#8a8580" },
   grauschimmel:  { name: "Rappschimmel",           body: "#6f6c6a", mane: "#2a2726", points: "#2f2c2b", head: "#4e4b49", muzzle: "#2f2b2b", pattern: "roan", hoof: "#2c2a29" },
   braunschimmel: { name: "Braunschimmel",          body: "#a2887a", mane: "#3a302c", points: "#4a3d36", head: "#b4a196", muzzle: "#3a302c", pattern: "roan", hoof: "#3a3230" },
@@ -31,7 +31,26 @@ const FARBEN = {
   fuchsschecke:  { name: "Fuchsschecke",           body: "#b65a29", mane: "#a64c22", hoof: "#4a3a30", pattern: "tobiano" },
   blueroan:      { name: "Blue Roan",              body: "#757c82", mane: "#1a1818", points: "#222021", head: "#2c2a2a", pattern: "roan", hoof: "#2c2a29" },
   rotschimmel:   { name: "Rotschimmel (Roan)",     body: "#c3947c", mane: "#8a4424", points: "#8f4a28", head: "#9a4e2a", pattern: "roan", hoof: "#4a3a30" },
+  hellbrauner:   { name: "Hellbrauner",            body: "#a8643a", mane: "#1d1716", points: "#2a201c", hoof: "#2c2a29" },
+  schwarzbrauner:{ name: "Schwarzbrauner",         body: "#2a1d18", mane: "#100d0d", points: "#141010", head: "#3a2a22", muzzle: "#8a5a3a", hoof: "#2c2a29" },
+  lethalwhite:   { name: "Weiß (Lethal White)",    body: "#f7f3ee", mane: "#f3eee6", muzzle: "#e3b5ae", hoof: "#cdbfa8" },
 };
+// Scheckungen, die auf jeder Grundfarbe vorkommen: Kürzel + "_" + Grundfarbe (z. B. "ov_brauner")
+//  ov Overo · tv Tovero · tg Tigerschecke · fs Wenigpunkt-Tiger · sb Schabrackentiger · sk Schabracke ohne Punkte (Snowcap)
+const MUSTER = {
+  ov: ["Overo", "overo"], tv: ["Tovero", "tovero"], tg: ["Tigerschecke", "leopard"], fs: ["Wenigpunkt-Tiger", "fewspot"], sb: ["Schabrackentiger", "blanket"], sk: ["Schabracke ohne Punkte", "snowcap"],
+};
+function musterFarbe(id, t) {
+  const m = /^(ov|tv|tg|fs|sb|sk)_(.+)$/.exec(id); if (!m || !t[m[2]]) return null;
+  const B = t[m[2]], [name, pattern] = MUSTER[m[1]], e = { ...B, pattern, name: `${name} (${B.name.replace(/ \(.*\)$/, "")})` };
+  delete e.stripe;
+  if (pattern === "tovero" || pattern === "fewspot") { e.head = mix(B.head || B.body, "#f7f5f1", pattern === "fewspot" ? .75 : .2); e.hoof = "#b8a88f"; }
+  if (pattern === "leopard") { e.head = mix(B.head || B.body, "#f7f5f1", .45); e.hoof = "#b8a88f"; }
+  if (pattern === "tovero" || pattern === "fewspot" || pattern === "leopard") e.muzzle = "#c9a49a";
+  return e;
+}
+const FARBEN = new Proxy(FARBEN_BASIS, { get(t, k) { if (typeof k === "string" && !(k in t)) { const e = musterFarbe(k, t); if (e) t[k] = e; } return t[k]; } });
+
 
 // ---------- Rassen ----------
 // Körperwerte relativ zur Widerristhöhe:
@@ -83,7 +102,8 @@ const RASSEN = [
     k: { len: 1.02, depth: .41, legT: .075, neck: .6, nAng: 45, crest: .02, head: .42, hAng: 50, profile: 0, hw: .92, jw: 1, muz: .9, ear: .1, mane: "kurz", maneLen: .05, vol: .6, fore: .3, tail: .6, tvol: .6, tset: .3, feather: 0, croup: .3, hq: 1, eye: 1.05 } },
   { id: "quarter", name: "Quarter Horse", herkunft: "USA", h: [142, 163],
     text: "Muskulöses Westernpferd mit kurzem Kopf, großen Ganaschen und extrem kräftiger Hinterhand.",
-    farben: ["fuchs", "brauner", "rappe", "palomino", "buckskin", "braunfalbe", "mausfalbe", "blueroan", "rotschimmel"],
+    farben: ["fuchs", "brauner", "rappe", "palomino", "buckskin", "braunfalbe", "mausfalbe", "blueroan", "rotschimmel", "ov_brauner"],
+    warnung: "In dieser Rasse kommt das Overo-Gen (Frame Overo) vor. Werden zwei Overo-Träger verpaart, ist jedes vierte Fohlen ein Lethal-White-Fohlen (O/O): Ihm fehlen Nervenzellen im Darm, es bekommt schwere Koliken und stirbt in den ersten Lebenstagen. Vor der Zucht mit einem Overo den Partner per Gentest prüfen!",
     k: { nk: 0.7, len: .96, depth: .47, legT: .09, neck: .5, nAng: 54, crest: .05, head: .42, hAng: 56, profile: 0, hw: 1.08, jw: 1.06, muz: .95, ear: .085, mane: "kurz", maneLen: .06, vol: .8, fore: .3, tail: .65, tvol: .8, tset: .1, feather: 0, croup: .5, hq: 1.2, eye: 1 } },
   { id: "hannoveraner", name: "Hannoveraner", herkunft: "Deutschland", h: [160, 175],
     text: "Großrahmiges Warmblut für Dressur und Springen – langer Hals, gerader Kopf, viel Rahmen.",
@@ -167,6 +187,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const body = C.body, mane = C.mane, head = C.head || body;
   const pts = C.points || null;
   const hoof = C.pattern === "tobiano" ? "#b8a88f" : (C.hoof || "#3b3531");
+  const SW = "#f7f5f1", spotFarbe = C.spot || mix(body, pts || body, .35);
   const dunkel = c => mix(c, "#1b1530", 0.25);
   const INK = "#261a14";
   const linie = INK, manLinie = INK;
@@ -492,6 +513,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Hintere Beine
   g += `<g>${umriss(fern, INK)}`;
   if (C.pattern === "tobiano") g += `<rect x="${f(minX)}" y="${f(-0.68 * Lg)}" width="${f(maxX - minX)}" height="${f(0.68 * Lg + 2)}" fill="#dedad3" clip-path="url(#cf-${uid})" filter="url(#wm-${uid})"/>`;
+  if (["tovero", "leopard", "fewspot"].includes(C.pattern)) {
+    g += `<g clip-path="url(#cf-${uid})"><rect x="${f(minX)}" y="${f(-Lg - 6)}" width="${f(maxX - minX)}" height="${f(Lg + 8)}" fill="#dedad3"/>`;
+    if (C.pattern === "leopard") for (let i = 0; i < 9; i++) g += `<ellipse cx="${f(minX + rnd() * (maxX - minX))}" cy="${f(-rnd() * Lg)}" rx="${f(1.6 + rnd() * 1.8)}" ry="${f(1.4 + rnd() * 1.5)}" fill="${dunkel(spotFarbe)}"/>`;
+    g += `</g>`;
+  }
   g += `<g stroke="${INK}" stroke-width="1.6" vector-effect="non-scaling-stroke">` +
     (liegt ? [] : [huf(fx2), huf(hx2)]).map(h => `<path d="${eckig(h)}" fill="${dunkel(hoof)}" vector-effect="non-scaling-stroke"/>`).join("") + "</g></g>";
 
@@ -523,6 +549,37 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     for (let x = minX; x <= maxX; x += 6) wl.push(P(x, -(0.66 + 0.1 * Math.sin(x * 0.21) + rnd() * 0.06) * Lg));
     wl.push(P(maxX, 2));
     g += `<path d="${eckig(wl)}" fill="#f7f5f1"/></g>`;
+  }
+  // Overo, Tovero, Tiger: Flecken / Punkte
+  if (["overo", "tovero", "leopard", "fewspot", "blanket", "snowcap"].includes(C.pattern)) {
+    const zack = (cx, cy, rx, ry, n = 20, var_ = .55) => { const ps = []; for (let i = 0; i < n; i++) { const an = i / n * Math.PI * 2, r = 0.7 + rnd() * var_; ps.push(P(cx + Math.cos(an) * rx * r, cy + Math.sin(an) * ry * r)); } return ps; };
+    const punkte = (x0, x1, y0, y1, n, r0, r1, farbe) => { let s = ""; for (let i = 0; i < n; i++) { const r = r0 + rnd() * (r1 - r0); s += `<ellipse cx="${f(x0 + rnd() * (x1 - x0))}" cy="${f(y0 + rnd() * (y1 - y0))}" rx="${f(r)}" ry="${f(r * (.75 + rnd() * .35))}" fill="${farbe}"/>`; } return s; };
+    if (C.pattern === "overo") {
+      // waagerecht gezackte weiße Flecken an Seite und Hals – kreuzen nie den Rücken, Beine bleiben farbig
+      const mx = 0.45 * L + (rnd() - .5) * 0.1 * L;
+      let w = `<path d="${eckig(zack(mx - 0.08 * L, top + 0.64 * D, 0.15 * L, 0.24 * D, 26, .6))}" fill="${SW}"/><path d="${eckig(zack(mx + 0.09 * L, top + 0.56 * D + (rnd() - .5) * 4, 0.14 * L, 0.2 * D, 24, .6))}" fill="${SW}"/>`;
+      w += `<path d="${eckig(zack(0.04 * L, top + 0.05 * D - 6, 0.09 * L, 0.3 * D, 16))}" fill="${SW}"/>`;
+      if (rnd() > .4) w += `<path d="${eckig(zack(0.74 * L, top + 0.62 * D, 0.1 * L, 0.2 * D, 16))}" fill="${SW}"/>`;
+      g += `<g filter="url(#wm-${uid})">${w}</g>`;
+    }
+    if (C.pattern === "tovero") {
+      // fast ganz weiß – Farbe bleibt an Kopf/Ohren („Medicine Hat“), Brust und Flanke
+      g += `<rect ${bx} fill="${SW}"/><g filter="url(#wm-${uid})"><path d="${glatt(zack(0.02 * L, top + 0.42 * D, 0.1 * L, 0.3 * D, 14, .4))}" fill="${body}"/>`;
+      g += `<path d="${glatt(zack(0.93 * L, top + 0.3 * D, 0.11 * L, 0.32 * D, 14, .4))}" fill="${body}"/>`;
+      if (rnd() > .5) g += `<path d="${glatt(zack(0.15 * L, -H - 4, 0.08 * L, 0.18 * D, 12, .4))}" fill="${body}"/>`;
+      g += `</g>`;
+    }
+    if (C.pattern === "leopard") g += `<rect ${bx} fill="${SW}"/>` + punkte(minX, maxX, minY, 0, 70, 2.2, 4.6, spotFarbe);
+    if (C.pattern === "fewspot") g += `<rect ${bx} fill="${SW}"/>` + punkte(0, L, top, bottom, 7, 1.4, 2.6, spotFarbe) + `<g filter="url(#wm-${uid})"><rect x="${f(minX)}" y="${f(-0.62 * Lg)}" width="${f(maxX - minX)}" height="${f(0.2 * Lg)}" fill="${mix(body, SW, .35)}" opacity=".7"/></g>`;
+    if (C.pattern === "blanket" || C.pattern === "snowcap") {
+      // weiße Decke über Kruppe und Hüfte
+      const x0 = (C.pattern === "snowcap" ? 0.38 : 0.5) * L + (rnd() - .5) * 0.08 * L, rand = [];
+      rand.push(P(L + 8, croupY - 8), P(x0, top - 6));
+      for (let i = 0; i <= 8; i++) { const t = i / 8; rand.push(P(x0 + (L + 6 - x0) * t + (rnd() - .5) * 4, top + (0.35 + 0.25 * Math.sin(t * Math.PI) + rnd() * .12) * D)); }
+      rand.push(P(L + 8, top + 0.75 * D));
+      g += `<clipPath id="bl-${uid}"><path d="${glatt(rand)}"/></clipPath><g filter="url(#wm-${uid})"><path d="${glatt(rand)}" fill="${SW}"/></g>`;
+      if (C.pattern === "blanket") g += `<g clip-path="url(#cr-${uid})"><g clip-path="url(#bl-${uid})">${punkte(x0, L + 8, top - 8, top + 0.75 * D, 26, 1.5, 3.1, spotFarbe)}</g></g>`;
+    }
   }
   if (C.stripe) g += `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${C.stripe}" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>`;
   if (C.muzzle && !eigenKopf) g += `<ellipse cx="${f(hp(0.93, 0.12).x)}" cy="${f(hp(0.93, 0.12).y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.93, 0.12).x)} ${f(hp(0.93, 0.12).y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>`;
@@ -943,5 +1000,16 @@ const FARBBESCHREIBUNG = {
   braunschecke: "Braun-weiß gescheckt.",
   fuchsschecke: "Fuchsfarben-weiß gescheckt.",
   blueroan: "Schwarzes Fell mit eingestreuten weißen Haaren, wirkt bläulich.",
+  hellbrauner: "Heller, rötlich-goldener Brauner mit schwarzen Beinen, Mähne und Schweif. Wie hell ein Brauner ist, wird über mehrere Gene vererbt.",
+  schwarzbrauner: "Fast schwarzer Brauner – erkennbar am helleren, rötlichen „Kupfermaul“ und an den Flanken (Agouti-Variante At).",
+  lethalwhite: "Fast ganz weißes Fohlen mit rosa Haut von zwei Overo-Eltern (O/O). Ihm fehlen Nervenzellen im Darm – es stirbt in den ersten Lebenstagen (Lethal-White-Overo-Syndrom).",
+  ov_brauner: "Overo (Frame): waagerecht gezackte weiße Flecken an Seite und Hals, die den Rücken nie kreuzen. Beine meist farbig, oft viel Weiß im Gesicht. Zwei Overo-Eltern können ein tödliches Lethal-White-Fohlen bekommen.",
+  tv_fuchs: "Tovero: Tobiano und Overo zusammen – fast ganz weiß, Farbe meist nur noch an Ohren und Kopf („Medicine Hat“), an der Brust und an der Flanke.",
+  tg_brauner: "Tigerschecke (Leopard): weißes Fell mit farbigen Punkten am ganzen Körper. Gen Lp mischerbig + Muster-Gen PATN1.",
+  fs_rappe: "Wenigpunkt-Tiger (Fewspot): fast ganz weiß mit nur wenigen Punkten – reinerbiger Tiger (Lp/Lp). Lp/Lp-Pferde sind nachtblind (CSNB).",
+  sb_rappe: "Schabrackentiger: weiße „Decke“ über Kruppe und Hüfte mit farbigen Punkten. Gen Lp ohne PATN1.",
+  sk_brauner: "Schabracke ohne Punkte (Snowcap): weiße Decke ohne Punkte – reinerbiger Tiger (Lp/Lp) ohne PATN1. Lp/Lp-Pferde sind nachtblind (CSNB).",
   rotschimmel: "Roan auf Fuchs: schon bei der Geburt weiße Stichelhaare im roten Fell – ein unveränderlicher Schimmel, hellt nicht auf.",
 };
+// Scheckungs-Beispiele für das Lexikon
+["ov_brauner", "tv_fuchs", "tg_brauner", "fs_rappe", "sb_rappe", "sk_brauner"].forEach(id => FARBEN[id]);

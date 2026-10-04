@@ -724,7 +724,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "117";
+  const SPIEL_VERSION = "118";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -732,9 +732,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=117"></script>
-<script src="kopfteile.js?v=117"></script>
-<script src="kopfalter.js?v=117"></script>
+<script src="pferd.js?v=118"></script>
+<script src="kopfteile.js?v=118"></script>
+<script src="kopfalter.js?v=118"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -909,10 +909,10 @@
   // grauTempo: Jahre bis weiß · apfel: Neigung zur Apfelung · fliegen: Neigung zum Fliegenschimmel · fliegenAb: ab welchem Alter
   // maehne: Langhaar bleicht früher (+) oder später (−) aus als das Fell
   const exZufall = r => ({ grauTempo: Math.round((4 + r() * 7) * 10) / 10, apfel: Math.round(r() * 100) / 100, fliegen: Math.round(r() * 100) / 100,
-    fliegenAb: Math.round((8 + r() * 7) * 10) / 10, maehne: Math.round((r() - .5) * 60) / 100, ton: Math.round(r() * 100) / 100, ow: Math.round(r() * 100) / 100 });
-  const EX_GRENZEN = { grauTempo: [2, 16, .1], apfel: [0, 1, .01], fliegen: [0, 1, .01], fliegenAb: [6, 20, .1], maehne: [-.4, .4, .01], ton: [0, 1, .01], ow: [0, 1, .01] };
-  const EX_NAME = { grauTempo: "Schimmel: Jahre bis weiß", apfel: "Schimmel: Apfelung", fliegen: "Schimmel: Fliegenschimmel", fliegenAb: "Schimmel: Fliegen ab Alter", maehne: "Schimmel: Langhaar", ton: "Farbton (Brauner)", ow: "Overo: Weißanteil" };
-  const exVon = p => { if (!p.ex) p.ex = exZufall(zufall("ex-" + (p.id || p.nr || p.name))); if (p.ex.ton == null) p.ex.ton = .5; if (p.ex.ow == null) p.ex.ow = .5; return p.ex; };
+    fliegenAb: Math.round((8 + r() * 7) * 10) / 10, maehne: Math.round((r() - .5) * 60) / 100, ton: Math.round(r() * 100) / 100, ow: Math.round(r() * 100) / 100, sonne: Math.round(r() * 100) / 100 });
+  const EX_GRENZEN = { grauTempo: [2, 16, .1], apfel: [0, 1, .01], fliegen: [0, 1, .01], fliegenAb: [6, 20, .1], maehne: [-.4, .4, .01], ton: [0, 1, .01], ow: [0, 1, .01], sonne: [0, 1, .01] };
+  const EX_NAME = { grauTempo: "Schimmel: Jahre bis weiß", apfel: "Schimmel: Apfelung", fliegen: "Schimmel: Fliegenschimmel", fliegenAb: "Schimmel: Fliegen ab Alter", maehne: "Schimmel: Langhaar", ton: "Farbton (Brauner)", ow: "Overo: Weißanteil", sonne: "Rappe: bleicht im Sommer aus" };
+  const exVon = p => { if (!p.ex) p.ex = exZufall(zufall("ex-" + (p.id || p.nr || p.name))); if (p.ex.ton == null) p.ex.ton = .5; if (p.ex.ow == null) p.ex.ow = .5; if (p.ex.sonne == null) p.ex.sonne = .3; return p.ex; };
   const alterInJahren = p => p.geb ? alterJZ(p) / 4 : (p.alter != null ? p.alter : 8);
   const klemm01 = x => Math.max(0, Math.min(1, x));
   function grauStand(p, jahre) {
@@ -928,10 +928,20 @@
     buckskin: "Falbschimmel", braunfalbe: "Falbschimmel", rotfalbe: "Falbschimmel", mausfalbe: "Falbschimmel", weissfalbe: "Falbschimmel", gelbfalbe: "Falbschimmel",
     rappschecke: "Schimmelschecke", braunschecke: "Schimmelschecke", fuchsschecke: "Schimmelschecke" })[b] || "Schimmel";
   const istFuchsBasis = b => /fuchs|palomino|isabell|rotfalbe|gelbfalbe|rotschimmel/.test(b);
+  // Sommer- und Winterrappen: Winterrappen sind nur im Winterfell tiefschwarz – im Sommer bleicht die Sonne das Fell rostbraun aus
+  const istRappe = b => b === "rappe";
+  const winterrappe = p => exVon(p).sonne > .5;
+  function saisonFarbe(p, basis) {
+    if (!istRappe(basis) || !winterrappe(p) || !spiel || !spiel.tag) return basis;
+    const s = datum().s, f = s === 1 ? 1 : s === 2 ? .5 : 0; if (!f) return basis;   // Sommer voll ausgeblichen, Herbst halb (Fellwechsel)
+    const id = `${basis}~sonne${f}`;
+    if (!FARBEN[id]) { const B = FARBEN[basis]; FARBEN[id] = { ...B, body: mix(B.body, "#5e3d27", .42 * f), mane: mix(B.mane, "#4d3121", .3 * f), head: mix(B.head || B.body, "#5e3d27", .3 * f) }; }
+    return id;
+  }
   // sichtbare Farbe heute: Geburtsfarbe → Schimmel der Grundfarbe → (Apfelschimmel) → weiß (→ Fliegenschimmel)
   function fb(p, jahre) {
     const st = grauStand(p, jahre), basis = p.farbe;
-    if (!st || st.t < 0.04) return basis;
+    if (!st || st.t < 0.04) return saisonFarbe(p, basis);
     const phase = st.t >= 1 ? (st.ex.fliegen > .5 && st.j >= st.ex.fliegenAb ? "fliegen" : "weiss") : st.ex.apfel > .45 && st.t >= .35 && st.t < .85 ? "apfel" : "grau";
     const k = Math.round(st.t * 20) / 20, km = Math.round(st.tm * 20) / 20, id = `gr_${basis}_${k}_${km}_${phase}`;
     if (!FARBEN[id]) {
@@ -956,14 +966,14 @@
   // Ohne Gentest weiß niemand, ob ein Pferd das Schimmel-Gen hat – man schließt es aus der Abstammung:
   // ist ein Elternteil Schimmel, steht „(kann Schimmel werden)“ dahinter
   const elternGrau = p => p.ahnen && p.ahnen.vater && p.ahnen.mutter ? hat(genNorm(p.ahnen.vater.gen || {}), "G") || hat(genNorm(p.ahnen.mutter.gen || {}), "G") : !!p.grauHinweis;
-  const GRAU_SICHER_AB = 4;   // spätestens dann sieht man bei einem Schimmel die ersten weißen Haare
   // Farbe als Text: heutige Farbe, solange ein Schimmel noch nicht weiß ist mit „(kann Schimmel werden)“
   function farbText(p, jahre) {
     const id = fb(p, jahre), st = grauStand(p, jahre), name = FARBEN[id].name;
-    if (id !== p.farbe) return name;   // sichtbar grau (z. B. Apfelschimmel): der Hinweis ist dann überflüssig
-    if (testGemacht(p, "farbe")) return hat(genVon(p), "G") ? `${name} (Schimmel-Gen – wird Schimmel)` : name;
-    if (elternGrau(p) && (jahre != null ? jahre : alterInJahren(p)) < GRAU_SICHER_AB) return `${name} (kann Schimmel werden)`;
-    return name;
+    if (/^gr_/.test(id)) return name;   // sichtbar grau (Name hat sich geändert, z. B. Apfelschimmel): Hinweis entfällt
+    const rn = istRappe(p.farbe) && (p.gen || p.ex) ? `${name.replace(/ \(schwarz\)$/, "")}, ${winterrappe(p) ? "Winterrappe" : "Sommerrappe"}` : name;
+    if (testGemacht(p, "farbe")) return hat(genVon(p), "G") ? `${rn} (Schimmel-Gen – wird Schimmel)` : rn;
+    if (elternGrau(p)) return `${rn} (kann Schimmel werden)`;
+    return rn;
   }
   // im Abstammungsschein steht immer die Geburtsfarbe
   const scheinFarbe = (a, kurz) => `${FARBEN[a.farbe] ? FARBEN[a.farbe].name : a.farbe}${a.grauHinweis ? (kurz ? " (k.S.w.)" : " (kann Schimmel werden)") : ""}`;
@@ -2494,6 +2504,7 @@
         <label><span>Schimmel: Mähne &amp; Schweif</span>${sel("maehne", [[.3, "früher hell"], [0, "wie das Fell"], [-.3, "länger dunkel"]], ex.maehne > .08 ? .3 : ex.maehne < -.08 ? -.3 : 0)}</label>
         <label><span>Fliegenschimmel</span>${sel("fliegen", [[.8, "ja (ab ca. 10 J.)"], [.2, "nein"]], ex.fliegen > .5 ? .8 : .2)}</label>
         <label><span>Farbton Brauner</span>${sel("ton", [[.6, "normal"], [.1, "hell"]], ex.ton < .25 ? .1 : .6)}</label>
+        <label><span>Rappe im Sommer</span>${sel("sonne", [[.2, "bleibt schwarz (Sommerrappe)"], [.8, "bleicht aus (Winterrappe)"]], ex.sonne > .5 ? .8 : .2)}</label>
         <label><span>Overo: Weiß sichtbar</span>${sel("ow", [[.7, "ja"], [.1, "kaum (versteckter Träger)"]], ex.ow < .2 ? .1 : .7)}</label></div>`;
       $("genWahlInhalt").querySelectorAll("[data-gen]").forEach(x => x.onchange = () => { wahl.gen[x.dataset.gen] = x.value.split("/"); genWahlNeu(); });
       $("genWahlInhalt").querySelectorAll("[data-ex]").forEach(x => x.onchange = () => { wahl.ex[x.dataset.ex] = +x.value; if (x.dataset.ex === "fliegen") wahl.ex.fliegenAb = 10; genWahlNeu(); });
@@ -3272,7 +3283,8 @@
       <p>C/C: kein Tölt, kein Pass · A/C: Tölt (Viergänger) · A/A: Tölt und Pass (Fünfgänger). Die Noten für Tölt und Pass werden wie alle Gangnoten vererbt – vorhanden sind sie aber nur mit dem passenden Gen. Häufigkeit des A-Allels: ${Object.entries(DMRT3).map(([r, f]) => `${rasseById(r).name} ${Math.round(f * 100)} %`).join(", ")}, sonst 0 %. Testbar im Labor (Gangpferde-Test).</p>
       <p>Jeder Todesfall bekommt eine Todesursache (Brief, Akte, Pferdefriedhof).</p>
       <h3>📜 „(kann Schimmel werden)“</h3>
-      <p>Ohne Gentest weiß niemand, ob ein Pferd das Schimmel-Gen hat. Der Hinweis richtet sich deshalb nach der Abstammung: Ist ein Elternteil Schimmel, steht er im Abstammungsschein (bleibt dort für immer) und in den Daten bis zum Alter von ${GRAU_SICHER_AB} Jahren – auch wenn das Pferd das Gen in Wahrheit nicht hat. Wird das Pferd sichtbar grau, steht dort die heutige Farbe. Nach einem Gentest steht das sichere Ergebnis da.</p>
+      <p>Ohne Gentest weiß niemand, ob ein Pferd das Schimmel-Gen hat. Der Hinweis richtet sich deshalb nach der Abstammung: Ist ein Elternteil Schimmel, steht er im Abstammungsschein (bleibt dort für immer) und in den Daten, solange das Pferd nicht sichtbar grau ist – auch wenn es das Gen in Wahrheit nicht hat. Sobald es sichtbar grau wird und sich der Farbname ändert (z. B. Rappschimmel), fällt der Hinweis weg.</p>
+      <p><b>Sommer- und Winterrappen:</b> Winterrappen sind nur im Winterfell tiefschwarz, im Sommer bleicht die Sonne das Fell rostbraun aus (Herbst: halb). Sommerrappen bleiben das ganze Jahr schwarz. Das ist ein versteckter, vererbbarer Wert („Rappe: bleicht im Sommer aus“); die Genetik dahinter ist in echt noch nicht geklärt, es gibt keinen Labortest. In den Daten steht „Rappe, Winterrappe“, im Abstammungsschein nur „Rappe“. Nach einem Gentest steht das sichere Ergebnis da.</p>
       <h3>🛒 Herkunft der Pferde ohne Eltern im Spiel</h3>
       <p><b>Pferdemarkt:</b> reinrassige Pferde und Mischlinge. Für jedes Pferd werden die Rassen der 8 Urgroßeltern festgelegt (35 % alle gleich, sonst 1–4 Urgroßeltern aus 1–2 anderen Rassen). Die Urgroßeltern bekommen Gene nach ihrer Rasse, dann wird Generation für Generation normal vererbt – Farbe, Rasse (größter Anteil, bei Gleichstand nach Exterieur) und Stockmaß ergeben sich daraus. <b>Deckstation</b> und Admin-Rassenauswahl: reinrassig, Farbe vorgegeben, Stammbaum rückwärts passend erzeugt. Gestüte mit reinrassigen Pferden (Mix nur durch Veredelung) kommen später.</p>
       <h3>🐴 Schimmel (fortschreitende Schimmelung)</h3>

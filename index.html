@@ -738,7 +738,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "138";
+  const SPIEL_VERSION = "139";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -746,9 +746,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=138"></script>
-<script src="kopfteile.js?v=138"></script>
-<script src="kopfalter.js?v=138"></script>
+<script src="pferd.js?v=139"></script>
+<script src="kopfteile.js?v=139"></script>
+<script src="kopfalter.js?v=139"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1754,8 +1754,10 @@
   }
   const testWert = p => Object.keys(LABOR_TESTS).filter(t => testGemacht(p, t)).reduce((s, t) => s + LABOR_TESTS[t].preis, 0);
   // verkauf: Stuten mit Fohlen bei Fuß dürfen verkauft werden – das Fohlen geht mit (allein darf es nicht weg)
+  const schutzLaeuft = p => p.schutzBis && jzJetzt() < p.schutzBis;
   function abgabeSperre(p, box, verkauf) {
     if (box && box.tot) return "Das Pferd ist verstorben.";
+    if (schutzLaeuft(p)) return `Notfallpferd: Vertrag mit dem Tierschutz – erst ab ${jzName(p.schutzBis)} verkaufbar.`;
     if (box && box.fohlen && !verkauf) return "Erst abgeben, wenn das Fohlen eine eigene Box hat.";
     return "";
   }
@@ -1830,6 +1832,15 @@
       [["Zurückgeben", () => { buchen(geld, `Rückgabe: ${p.name}`); box.pferd = null; box.tot = false; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0;
         aktenReiter = "steckbrief"; aktenModus = "steckbrief"; ortModus = null; speichern(); zeigeTag(); nachher(); }], ["Abbrechen", null, "zweit"]]);
   }
+  // Notfallpferd vor Ablauf des Vertrags abgeben: der Tierschutz holt es zurück, die Schutzgebühr wird nicht erstattet
+  function tierschutzRueckgabe(p, nachher) {
+    const box = boxVon(p); if (!box) return;
+    dialog(`<h3>🐾 ${esc(p.name)} zurückgeben?</h3><p>${esc(p.name)} ist ein Notfallpferd. Laut Vertrag darf ${pron(p).er} bis ${jzName(p.schutzBis)} nicht verkauft werden. Du kannst ${pron(p).ihn} aber an den Tierschutz zurückgeben – die Schutzgebühr wird nicht erstattet.</p>`,
+      [["Zurückgeben", () => { archivieren(p); if (box.fohlen) { archivieren(box.fohlen); delete box.fohlen; }
+        box.pferd = null; box.tot = false; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0;
+        brief("Tierschutzverein", `${p.name} ist zurück bei uns`, `{du hast|Sie haben} <b>${esc(p.name)}</b> an uns zurückgegeben. Wir kümmern uns jetzt wieder um ${pron(p).ihn}. Die Schutzgebühr wird laut Vertrag nicht erstattet.`, { pferde: [p] });
+        aktenReiter = "steckbrief"; aktenModus = "steckbrief"; ortModus = null; speichern(); zeigeTag(); nachher(); }], ["Abbrechen", null, "zweit"]]);
+  }
   function abgebenDialog(p, nachher) {
     const a = angebotVon(p), sperre = abgabeSperre(p, boxVon(p)), wert = marktwert(p);
     const k = (id, ico, n, kurz, an) => `<button class="kachel ${an ? "klickbar" : "fehlt"}" data-abg="${id}" ${an ? "" : "disabled"}><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></button>`;
@@ -1837,8 +1848,9 @@
       <div class="kacheln quadrat">${k("verschenken", "🎁", "Verschenken", "nur an Freunde – bald", false)}
         ${k("verkaufen", "💰", "Verkaufen", a ? (a.art === "auktion" ? "in der Auktion" : "wird angeboten") : boxVon(p) && boxVon(p).fohlen ? "mit Fohlen bei Fuß" : "Festpreis oder Auktion", !abgabeSperre(p, boxVon(p), true) || !!a)}
         ${k("gnadenhof", "🌳", "Gnaden\u00adhof", istSenior(p) ? `${fmt(Math.round(wert / 2))} sofort` : "nur Senioren (ab 20 J.)", !sperre && !a && istSenior(p))}
+        ${schutzLaeuft(p) ? k("tsrueck", "🐾", "Zurück an den Tierschutz", "ohne Erstattung", !a) : ""}
         ${p.rueckgabe && spiel.tag <= p.rueckgabe.bis ? k("rueckgabe", "↩️", "Zurück\u00adgeben", `an den Händler · ${fmt(Math.round(p.rueckgabe.preis * .8 / 10) * 10)}`, rueckgabeMoeglich(p)) : ""}</div>`, [["Schließen", null, "zweit"]], "breit");
-    document.querySelectorAll("[data-abg]").forEach(b => b.onclick = () => { $("dlg").hidden = true; ({ verkaufen: verkaufDialog, gnadenhof: gnadenhofDialog, rueckgabe: rueckgabeDialog })[b.dataset.abg](p, nachher); });
+    document.querySelectorAll("[data-abg]").forEach(b => b.onclick = () => { $("dlg").hidden = true; ({ verkaufen: verkaufDialog, gnadenhof: gnadenhofDialog, rueckgabe: rueckgabeDialog, tsrueck: tierschutzRueckgabe })[b.dataset.abg](p, nachher); });
   }
   // Verkäufe prüfen: platzt bei Gesundheit unter 75 %, Festpreis/Auktion werden zu Beginn einer Jahreszeit entschieden
   function angeboteNacht() {
@@ -3484,7 +3496,9 @@
       h.training = Math.floor(r() * 60); h.verdeckt = Math.round(45 + r() * 55);
       h.ahnenUnbekannt = AHNEN_LUECKE.filter(() => r() < .3);
       if (fo) mitFohlen(h, r);
-      h.preis = Math.round((marktwert(h) + (h.fohlenBeiFuss ? marktwert(h.fohlenBeiFuss) : 0)) * saisonF() * (.7 + r() * .3) / 50) * 50; return h; });
+      // Privatleute kennen ihr Pferd: der Preis berücksichtigt die (versteckte) Gesundheit zur Hälfte
+      const wGesund = marktwert(h), wEcht = marktwert({ ...h, pflege: { gesundheit: h.verdeckt } });
+      h.preis = Math.round(((wGesund + wEcht) / 2 + (h.fohlenBeiFuss ? marktwert(h.fohlenBeiFuss) : 0)) * saisonF() * (.7 + r() * .3) / 50) * 50; return h; });
     // Auktionshaus: ausgesuchte Jungpferde, Start beim halben Marktwert
     M.auktion = Array.from({ length: 3 + Math.floor(r() * 3) }, (_, i) => {
       const jahre = 1 + Math.floor(r() * 4), h = mkPferd("au" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, r() < .7 ? 0 : 1, jahre, r, null, zuechterGeb(jahre, r)), wert = Math.round(marktwert(h) * saisonF());
@@ -3527,7 +3541,12 @@
     [...M.auktion, ...(M.fohlen || [])].forEach(a => { if (a.vorbei) return;
       if (a.gebot + bietSchritt(a) > a.max) return;
       if (a.fuehrt === "du" ? Math.random() < .55 : Math.random() < .3) {
-        const warDu = a.fuehrt === "du"; if (a.fuehrt) a.gebot += bietSchritt(a) * (1 + Math.floor(Math.random() * 2)); a.gebote++; a.fuehrt = "npc";
+        const st = bietSchritt(a), warDu = a.fuehrt === "du";
+        // dein Höchstgebot verteidigt automatisch – gezahlt wird nur ein Schritt über dem Gegenbieter
+        if (warDu && (a.duMax || a.gebot) >= a.max) { a.gebot = Math.min(a.duMax || a.gebot, a.max + st); a.gebote += 2; return; }
+        if (warDu) { a.gebot = Math.min(a.max, (a.duMax || a.gebot) + st); a.gebote += 2; }
+        else { if (a.fuehrt) a.gebot = Math.min(a.max, a.gebot + st * (1 + Math.floor(Math.random() * 2))); a.gebote++; }
+        a.fuehrt = "npc";
         if (warDu) brief("Auktionshaus", `Überboten: ${a.pferd.name}`, `bei der Auktion für <b>${esc(a.pferd.name)}</b> {wurdest du|wurden Sie} überboten. Aktuelles Höchstgebot: <b>${fmt(a.gebot)}</b> (${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"}). Die Auktion endet mit dieser Jahreszeit.`, { aktion: { typ: "bieten", pferd: a.pferd.id }, pferde: [a.pferd] });
       } });
   }
@@ -3572,18 +3591,21 @@
         else { h.verhandelt = true; speichern(); dialog(`<h3>Abgelehnt</h3><p>Für ${fmt(v)} möchte der Verkäufer ${esc(h.name)} nicht abgeben. Der Preis bleibt bei ${fmt(h.preis)}.</p>`); } }, "zweit"]]), ["Abbrechen", null, "zweit"]]);
     const pv = $("pvPreis"); if (pv) { h.vorschlag = +pv.value; pv.oninput = () => { h.vorschlag = +pv.value; $("pvWert").textContent = fmt(+pv.value); }; }
   }
-  function bieten(a) {
-    const neu = a.fuehrt ? a.gebot + bietSchritt(a) : a.gebot;
-    if (a.fuehrt === "du") { dialog(`<h3>🔨 Du führst</h3><p>Du hast mit <b>${fmt(a.gebot)}</b> das Höchstgebot für ${esc(a.pferd.name)}.</p>`); return; }
-    if (!a.fohlen && zielBox() < 0) { dialog(`<h3>Keine Box frei</h3><p>Zum Mitbieten brauchst du eine freie Box für ${esc(a.pferd.name)}.</p>`); return; }
-    if ((spiel.geld || 0) < neu) { dialog(`<h3>Nicht genug Geld</h3><p>Das nächste Gebot wäre ${fmt(neu)}, du hast ${fmt(spiel.geld || 0)}.</p>`); return; }
+  // nachher: danach dorthin zurück, wo man herkam (z. B. zum Brief im Postfenster); sonst Auktionshaus neu zeichnen
+  function bieten(a, nachher) {
+    const zurueck = () => nachher ? nachher() : zeigeMarkt();
+    const fuehrst = a.fuehrt === "du", neu = fuehrst ? (a.duMax || a.gebot) + bietSchritt(a) : a.fuehrt ? a.gebot + bietSchritt(a) : a.gebot;
+    if (!a.fohlen && zielBox() < 0) { dialog(`<h3>Keine Box frei</h3><p>Zum Mitbieten brauchst du eine freie Box für ${esc(a.pferd.name)}.</p>`, [["OK", nachher || null]]); return; }
+    if ((spiel.geld || 0) < neu) { dialog(`<h3>Nicht genug Geld</h3><p>Das nächste Gebot wäre ${fmt(neu)}, du hast ${fmt(spiel.geld || 0)}.</p>`, [["OK", nachher || null]]); return; }
     // eigenes Gebot: mindestens das nächste Gebot, höchstens so viel Geld, wie du hast
     const max = Math.max(neu, Math.min(Math.floor((spiel.geld || 0) / 50) * 50, Math.round(Math.max(neu * 3, a.wert * 2.5) / 50) * 50));
-    dialog(`<h3>🔨 Auf ${esc(a.pferd.name)} bieten</h3><p>Höchstgebot bisher: <b>${fmt(a.gebot)}</b> (${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"}). Mindestgebot: <b>${fmt(neu)}</b>.</p>
-      <label class="fest-preis">Dein Gebot: <b id="gebotWert">${fmt(neu)}</b><input type="range" id="gebotRegler" min="${neu}" max="${max}" step="50" value="${neu}"></label>
+    dialog(`<h3>🔨 Auf ${esc(a.pferd.name)} bieten</h3><p>${fuehrst ? `✅ Du führst mit <b>${fmt(a.gebot)}</b>, dein Höchstgebot ist <b>${fmt(a.duMax || a.gebot)}</b>. Du kannst es erhöhen.` : `Aktuelles Gebot: <b>${fmt(a.gebot)}</b> (${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"}). Mindestgebot: <b>${fmt(neu)}</b>.`}</p>
+      <label class="fest-preis">Dein Höchstgebot: <b id="gebotWert">${fmt(neu)}</b><input type="range" id="gebotRegler" min="${neu}" max="${max}" step="50" value="${neu}"></label>
       <div class="gebot-schnell">${[0, 1, 3, 5].map(k => `<button class="knopf zweit" data-gplus="${k}">${k ? `+${fmt(k * bietSchritt(a))}` : "Mindestgebot"}</button>`).join("")}</div>
-      <p><small>Wer höher bietet, wird seltener überboten. Die Auktion endet mit dieser Jahreszeit – wirst du überboten, bekommst du einen Brief.${a.fohlen ? ` 🍼 ${esc(a.pferd.name)} bleibt bis zum Absetzen bei der Mutter und kommt zu Beginn der nächsten Jahreszeit zu dir – dann brauchst du eine freie Box und das Geld.` : ""}</small></p>`,
-      [["Bieten", () => { const g = Math.max(neu, +$("gebotRegler").value); a.gebot = g; a.gebote++; a.fuehrt = "du"; a.duGeboten = true; speichern(); zeigeMarkt(); }], ["Abbrechen", null, "zweit"]]);
+      <p><small>Wie bei eBay: Du gibst an, wie viel du höchstens zahlen willst. Bezahlt wird nur so viel wie nötig – ein Schritt über dem nächsten Bieter. Die Auktion endet mit dieser Jahreszeit – wird dein Höchstgebot überboten, bekommst du einen Brief.${a.fohlen ? ` 🍼 ${esc(a.pferd.name)} bleibt bis zum Absetzen bei der Mutter und kommt zu Beginn der nächsten Jahreszeit zu dir – dann brauchst du eine freie Box und das Geld.` : ""}</small></p>`,
+      [[fuehrst ? "Erhöhen" : "Bieten", () => { const g = Math.max(neu, +$("gebotRegler").value);
+        if (!fuehrst) { a.gebot = neu; a.gebote++; }   // aktuelles Gebot: nur das Nötigste, der Rest ist dein verdecktes Höchstgebot
+        a.duMax = g; a.fuehrt = "du"; a.duGeboten = true; speichern(); zurueck(); }], ["Abbrechen", nachher || null, "zweit"]]);
     const rg = $("gebotRegler"), zeig = () => $("gebotWert").textContent = fmt(+rg.value);
     rg.oninput = zeig;
     document.querySelectorAll("[data-gplus]").forEach(b => b.onclick = () => { rg.value = Math.min(max, neu + +b.dataset.gplus * bietSchritt(a)); zeig(); });
@@ -3662,8 +3684,8 @@
       html = (fo ? kopf("🍼 Fohlenauktion", "Frühlingsfohlen vom Züchter. Sie bleiben bis zum Absetzen bei der Mutter – mit dem Zuschlag zu Beginn der nächsten Jahreszeit kommen sie zu dir.") : kopf("🔨 Auktionshaus", "Ausgesuchte Jungpferde. Die Auktion endet mit der Jahreszeit – das Höchstgebot bekommt den Zuschlag."))
         + (au.length ? "" : `<p>Fohlenauktionen gibt es nur im Sommer und Herbst.</p>`) + `<div class="paar-liste">${au.map(a => pferdKachel(a.pferd, { ort: fo ? "Fohlenauktion" : "Auktionshaus",
         rahmen: a.fuehrt === "du" ? "gruen" : a.duGeboten && !a.vorbei ? "rot" : "",
-        zeilen: [rasseById(a.pferd.rasse).name, `${a.pferd.geschlecht} · ${alterText(a.pferd)}`, `<b>${fmt(a.gebot)}</b> · ${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"}`, a.fuehrt === "du" ? "✅ du führst" : a.vorbei ? "beendet" : a.duGeboten ? "⚠️ überboten" : ""],
-        aktion: a.vorbei ? null : [a.fuehrt === "du" ? "✅ Du führst" : `Bieten · ${fmt(a.fuehrt ? a.gebot + bietSchritt(a) : a.gebot)}`, () => bieten(a)], extra: { zeilen: [["Höchstgebot", `<b>${fmt(a.gebot)}</b>`], ["Gebote", a.gebote]] } })).join("")}</div></div>`; }
+        zeilen: [rasseById(a.pferd.rasse).name, `${a.pferd.geschlecht} · ${alterText(a.pferd)}`, `<b>${fmt(a.gebot)}</b> · ${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"}`, a.fuehrt === "du" ? `✅ du führst · max ${fmt(a.duMax || a.gebot)}` : a.vorbei ? "beendet" : a.duGeboten ? "⚠️ überboten" : ""],
+        aktion: a.vorbei ? null : [a.fuehrt === "du" ? "Höchstgebot erhöhen" : `Bieten · ab ${fmt(a.fuehrt ? a.gebot + bietSchritt(a) : a.gebot)}`, () => bieten(a)], extra: { zeilen: [["Höchstgebot", `<b>${fmt(a.gebot)}</b>`], ["Gebote", a.gebote]] } })).join("")}</div></div>`; }
     else if (marktBereich === "gestuet") {
       if (!gestuetWahl) html = kopf("🏰 Gestüte", "Reinrassige Pferde mit vollständigen Papieren und Fellfarben-Test. Wähle ein Gestüt.") + `<div class="kacheln quadrat markt-kacheln">${RASSEN.map(r => `<button class="kachel klickbar" data-gest="${r.id}"><span class="ico">🏰</span><b>${GESTUET_NAMEN[r.id]}</b><small>${r.name}</small></button>`).join("")}</div></div>`;
       else { const gp = gestuetPferde(gestuetWahl).filter(h => !(spiel.marktGekauft || []).includes(h.id));
@@ -3673,9 +3695,9 @@
             extra: { zeilen: [["Preis", `<b>${fmt(h.preis)}</b>`], ["Gestüt", GESTUET_NAMEN[gestuetWahl]]] } })).join("")}</div>` : `<p>Diese Jahreszeit ist alles verkauft.</p>`) + `</div>`; } }
     else if (marktBereich === "tierschutz") { const nf = marktNeu().notfall.filter(h => !(spiel.marktGekauft || []).includes(h.id));
       html = kopf("🐾 Tierschutz", "Deine abgeholten Pferde kannst du hier zurückkaufen.") + tsListe + `</div>
-        <div class="panel voll"><b>🆘 Notfallpferde</b><p style="margin:4px 0 0;font-size:.85rem;opacity:.75">Pferde in schlechtem Zustand suchen ein Zuhause – für eine Schutzgebühr. Bedingung: gesund pflegen und mindestens ein Jahr behalten, sonst wird eine Strafe fällig.</p>
+        <div class="panel voll"><b>🆘 Notfallpferde</b><p style="margin:4px 0 0;font-size:.85rem;opacity:.75">Pferde in schlechtem Zustand suchen ein Zuhause – für eine Schutzgebühr. Bedingung: gesund pflegen und mindestens ein Jahr behalten – vorher kein Verkauf, nur Rückgabe ohne Erstattung.</p>
         ${nf.length ? `<div class="paar-liste">${nf.map(h => pferdKachel(h, { ort: "Tierschutz (Notfall)", zeilen: [`${rasseById(h.rasse).name} · ${alterText(h)}`, ...(h.fohlenBeiFuss ? [`🍼 mit Fohlen (${alterText(h.fohlenBeiFuss)})`] : []), `Gesundheit ${h.notGesundheit} %`, `<b>${fmt(h.preis)}</b>`],
-          aktion: [`Aufnehmen · ${fmt(h.preis)}`, () => { if (kaufPruefen(h, h.preis)) dialog(`<h3>🆘 ${esc(h.name)} aufnehmen?</h3><p>${h.fohlenBeiFuss ? `Mit Fohlen <b>${esc(h.fohlenBeiFuss.name)}</b> (${alterText(h.fohlenBeiFuss)}). ` : ""}Schutzgebühr: <b>${fmt(h.preis)}</b>. ${esc(h.name)} ist in schlechtem Zustand (Gesundheit ${h.notGesundheit} %). Du verpflichtest dich, ${pron(h).ihn} gesund zu pflegen und mindestens ein Jahr zu behalten – wird ${pron(h).er} vorher verkauft, zahlst du ${fmt(NOTFALL_STRAFE)} Strafe.</p>`,
+          aktion: [`Aufnehmen · ${fmt(h.preis)}`, () => { if (kaufPruefen(h, h.preis)) dialog(`<h3>🆘 ${esc(h.name)} aufnehmen?</h3><p>${h.fohlenBeiFuss ? `Mit Fohlen <b>${esc(h.fohlenBeiFuss.name)}</b> (${alterText(h.fohlenBeiFuss)}). ` : ""}Schutzgebühr: <b>${fmt(h.preis)}</b>. ${esc(h.name)} ist in schlechtem Zustand (Gesundheit ${h.notGesundheit} %). Du verpflichtest dich, ${pron(h).ihn} gesund zu pflegen und mindestens ein Jahr zu behalten – vorher darfst du ${pron(h).ihn} nicht verkaufen, nur ohne Erstattung an den Tierschutz zurückgeben.</p>`,
             [["Aufnehmen", () => pferdEinstellen(h, h.preis, "Schutzgebühr", p => { p.pflege.gesundheit = h.notGesundheit; p.schutzBis = jzJetzt() + 4; delete p.notGesundheit; })], ["Abbrechen", null, "zweit"]]); }],
           extra: { zeilen: [["Gesundheit", `${h.notGesundheit} %`], ["Schutzgebühr", `<b>${fmt(h.preis)}</b>`]] } })).join("")}</div>` : `<p style="margin:6px 0 0">Gerade keine Notfallpferde.</p>`}</div>`; }
     zeigeNeben("🏷️ Pferdemarkt", html);
@@ -3797,12 +3819,12 @@
       <p>Marktwert aus Gangwerk, Ausbildungsstand, Alter und Gesundheit, plus die Kosten aller gemachten Gentests (getestete Pferde verkaufen sich besser). Stute mit Fohlen bei Fuß: beide Marktwerte zusammen, das Fohlen wird mitverkauft (allein nicht). Festpreis (Regler 50–160 % des Marktwerts, Chance wird angezeigt): bis 90 % des Marktwerts 98 % Verkaufschance, bis Marktwert 93 %, darüber sinkend (110 % ≈ 59 %, 120 % ≈ 38 %, 130 % ≈ 24 %, 150 % ≈ 10 %), aber nie unter 4 % (Liebhaber). Gerechnet mit dem Saisonpreis der Jahreszeit, in der du das Pferd einstellst. Während das Angebot läuft, schicken Interessenten manchmal Preisvorschläge per Brief (jede Nacht 15 %, bei deutlich überhöhtem Preis 35 %; 75–105 % des Marktwerts, immer unter deinem Preis) – annehmen verkauft sofort, ablehnen lässt das Angebot weiterlaufen. Auktion startet bei ½ des Marktwerts und läuft 2 Jahreszeiten; Abbruch nach dem ersten Gebot kostet die Hälfte des letzten Gebots. Gnadenhof: halber Marktwert.</p>
       <h3>🏷️ Pferdemarkt (wechselt jede Jahreszeit)</h3>
       ${verTab(["Bereich", "Angebot", "Preis", "Besonderheit"], [
-        ["🏡 Privatanzeigen", "2–4 Pferde, 5–19 J., oft Mix; Stuten auch mit Fohlen bei Fuß (Frühling 45 %, Sommer 40 %, Herbst 8 %, Winter 5 %)", "70–100 %", `Ankaufsuntersuchung ${fmt(AKU_PREIS)} zeigt die Gesundheit vorher. Preisvorschlag (1× je Pferd): ab 95 % sicher, 85–95 % 60 %, 75–85 % 30 %, sonst 5 %. Gesundheit erst nach Kauf, je Großelternteil 30 % „unbekannt“ – dann Rasse „Abstammung unvollständig“ ohne Anteile, bis ein Abstammungsnachweis die Großeltern ermittelt`],
+        ["🏡 Privatanzeigen", "2–4 Pferde, 5–19 J., oft Mix; Stuten auch mit Fohlen bei Fuß (Frühling 45 %, Sommer 40 %, Herbst 8 %, Winter 5 %)", "70–100 %", `Ankaufsuntersuchung ${fmt(AKU_PREIS)} zeigt die Gesundheit vorher. Preisvorschlag (1× je Pferd): ab 95 % sicher, 85–95 % 60 %, 75–85 % 30 %, sonst 5 %. Gesundheit erst nach Kauf (der Preis berücksichtigt sie zur Hälfte – Privatleute kennen ihr Pferd), je Großelternteil 30 % „unbekannt“ – dann Rasse „Abstammung unvollständig“ ohne Anteile, bis ein Abstammungsnachweis die Großeltern ermittelt`],
         ["🐴 Pferdehändler", "6 Pferde, 1–14 J.", "110–130 %", "Gesundheit mind. 75 %, Rückgabe 3 Tage gegen 20 % Abzug"],
-        ["🔨 Auktionshaus", "3–5 Pferde, 1–4 J., vom Züchter (Geburt 85 % Frühling, 10 % Winter, 5 % Sommer)", "Start 50 %", "eigenes Gebot ab Mindestgebot (Schritt 5 %, mind. 50 €), andere Bieter nachts (Limit 70–160 %), Zuschlag zu Beginn der nächsten Jahreszeit – nur mit freier Box und genug Geld. Grüner Rahmen: du führst, oranger: überboten (Brief mit „Erneut bieten“)"],
+        ["🔨 Auktionshaus", "3–5 Pferde, 1–4 J., vom Züchter (Geburt 85 % Frühling, 10 % Winter, 5 % Sommer)", "Start 50 %", "Höchstgebot wie bei eBay: du legst dein Maximum fest, gezahlt wird nur ein Schritt über dem nächsten Bieter (Schritt 5 %, mind. 50 €); andere Bieter nachts (Limit 70–160 %), Zuschlag zu Beginn der nächsten Jahreszeit – nur mit freier Box und genug Geld. Grüner Rahmen: du führst, oranger: überboten (Brief mit „Erneut bieten“)"],
         ["🍼 Fohlenauktion", "3–5 Frühlingsfohlen, nur Sommer und Herbst", "Start 50 %", "wie Auktionshaus; Zuschlag zu Beginn der nächsten Jahreszeit, dann wird das Fohlen abgesetzt geliefert (freie Box + Geld nötig, zum Bieten noch nicht)"],
         ["🏰 Gestüte", "je Rasse 2–3 Pferde, 1–4 J., Geburt wie im Auktionshaus", "120–150 %", "reinrassig (35 % Veredler-Urgroßvater, wo erlaubt), Gänge +0,5; Gentests: Fellfarben immer, Gangpferde-Test bei Islandpferd/Marwari, Erbkrankheiten-Test bei Rassen mit Overo/Leopard – Testkosten kommen auf den Preis"],
-        ["🐾 Notfallpferde", "1–2 Pferde, 8–22 J., ohne Ausbildung; Stuten auch mit Fohlen (80 % der Privat-Chance)", "150–300 € (+100 € mit Fohlen)", `Gesundheit 25–45 %; Verkauf innerhalb 1 Jahr: ${fmt(NOTFALL_STRAFE)} Strafe`]])}
+        ["🐾 Notfallpferde", "1–2 Pferde, 8–22 J., ohne Ausbildung; Stuten auch mit Fohlen (80 % der Privat-Chance)", "150–300 € (+100 € mit Fohlen)", "Gesundheit 25–45 %; im ersten Jahr kein Verkauf (auch kein Gnadenhof) – nur Rückgabe an den Tierschutz ohne Erstattung"]])}
       <p><b>Saisonpreise:</b> Frühling ×1,1 · Sommer ×1,05 · Herbst ×1 · Winter ×0,9 – gilt für alle Marktpreise und für deine eigenen Verkäufe (Festpreis-Chance und Auktionsgebote).</p>
       <p><b>Mitarbeiter (Hofverwaltung):</b> Stallbursche ${fmt(STALLBURSCHE.gehalt)} pro Jahreszeit (gezahlt am Ende der Jahreszeit), versorgt ${STALLBURSCHE.boxen} Boxen (Futter + Misten) zu jedem Tagesbeginn, nach Boxnummer. Beginnt immer zur nächsten Jahreszeit; gekündigt arbeitet er bis Ende der Jahreszeit. Reicht das Geld beim Gehalt nicht, nimmt er es trotzdem (Konto ins Minus) und kündigt. Im Adminmodus kosten Angestellte nichts. Stallmeister, Pferdepfleger, Futterexperte, Osteopath, Hufschmied und Bereiter folgen später.</p>
       <p><b>Decksaison:</b> Die Hengste der Deckstation (Gestüte) decken nur im Frühling und Sommer, eigene Hengste jederzeit.</p>
@@ -3967,7 +3989,8 @@
       if (A.antwort) return `<p class="brief-aktion-info">${A.antwort === "ja" ? "✅ Angenommen – verkauft." : "Abgelehnt."}</p>`;
       return a ? `<div class="brief-aktion"><button class="knopf" data-baktion="kauf-ja" data-bid="${br.id}">✅ Annehmen · ${fmt(A.betrag)}</button><button class="knopf zweit" data-baktion="kauf-nein" data-bid="${br.id}">Ablehnen</button></div>` : `<p class="brief-aktion-info">Dieser Vorschlag gilt nicht mehr.</p>`; }
     if (A.typ === "bieten") { const a = auktionFinden(A.pferd);
-      return a && !a.vorbei && spiel.markt.jz === jzJetzt() && a.fuehrt !== "du" ? `<div class="brief-aktion"><button class="knopf" data-baktion="bieten" data-bid="${br.id}">🔨 Erneut bieten</button></div>` : ""; }
+      if (a && !a.vorbei && spiel.markt.jz === jzJetzt() && a.fuehrt === "du") return `<p class="brief-aktion-info">✅ Du führst wieder – dein Höchstgebot: ${fmt(a.duMax || a.gebot)}.</p>`;
+      return a && !a.vorbei && spiel.markt.jz === jzJetzt() ? `<div class="brief-aktion"><button class="knopf" data-baktion="bieten" data-bid="${br.id}">🔨 Erneut bieten</button></div>` : ""; }
     return "";
   }
   function briefAktionenBinden(nachher) {
@@ -3978,7 +4001,7 @@
         const a = (spiel.angebote || []).find(y => y.id === A.pferd && y.vorschlag && y.vorschlag.id === A.vid); if (!a) { nachher(); return; }
         if (b.dataset.baktion === "kauf-ja") { A.antwort = "ja"; angebotVerkaufen(a, A.betrag); } else { A.antwort = "nein"; a.vorschlag = null; a.abgelehnt = (a.abgelehnt || 0) + 1; }
         speichern(); postIconSetzen(); nachher(); }
-      else if (b.dataset.baktion === "bieten") { const a = auktionFinden(A.pferd); if (a) { $("dlg").hidden = true; bieten(a); } }
+      else if (b.dataset.baktion === "bieten") { const a = auktionFinden(A.pferd); if (a) { $("dlg").hidden = true; bieten(a, nachher); } }
     });
   }
   // Brief als Papier (Postfach und Brief-Fenster)

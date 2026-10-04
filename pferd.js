@@ -426,8 +426,10 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const naturS = k.fore < 0.25 ? null : k.fore < 0.45 ? "kurz" : k.fore < 0.75 ? "mittel" : k.fore < 1 ? "lang" : "extralang";
   const ohneSchopf = opt.schopf === "ohne";   // Fohlen: Schopf muss erst wachsen
   const schopfL = naturS && !ohneSchopf ? (opt.schopf || naturS) : null;
-  const fl = ohneSchopf ? 0 : !schopfL ? k.fore : mstil === "fjord" ? Math.max(k.fore, 0.5) : schopfL === naturS ? k.fore : ({ kurz: 0.35, mittel: 0.6, lang: 0.85, extralang: 1.15 })[schopfL];
-  const schopf = mstil === "fjord"
+  // gestutzter Fjord-Schopf nur beim Fjordpferd mit natürlichem Schopf – sonst (auch bei Stehmähne) der normale Schopf in gewählter Länge
+  const fjordSchopf = k.mane === "fjord" && (!opt.schopf || opt.schopf === naturS);
+  const fl = ohneSchopf ? 0 : !schopfL ? k.fore : fjordSchopf ? Math.max(k.fore, 0.5) : schopfL === naturS ? k.fore : ({ kurz: 0.35, mittel: 0.6, lang: 0.85, extralang: 1.15 })[schopfL];
+  const schopf = fjordSchopf
     ? [hp(-0.04, -0.04), hp(-0.02, -0.16), hp(0.06, -0.12), hp(0.1, -0.02), hp(0.05, 0.05)]
     : null;
   // Schopf: wächst am Genick zwischen den Ohren und fällt über die Stirn nach unten,

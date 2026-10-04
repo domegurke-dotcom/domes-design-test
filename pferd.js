@@ -932,7 +932,6 @@ function ALTERS_K(stufe, k) {
   if (stufe === "senior") return { sag: 2.6, crest: k.crest * 0.4, hq: (k.hq || 1) * 0.94 };
   return {};
 }
-const KOPF_ALTER = { fohlen: "fohlen", jaehrling: "jaehrling", jungpferd: "jungpferd", reif: "reif", senior: "senior" };
 
 // Gezeichnete Kopfform (Domes Zeichnungen) je Rasse – fehlt eine Rasse hier, bleibt der Spielkopf
 const RASSE_KOPF = { araber: "hecht", friese: "gerade", fjord: "gerade", haflinger: "gerade", shetty: "gerade", vollblut: "gerade",
@@ -952,10 +951,9 @@ function naturSchopf(rasseId) {
   const f = rasseById(rasseId).k.fore;
   return f < 0.25 ? null : f < 0.45 ? "kurz" : f < 0.75 ? "mittel" : f < 1 ? "lang" : "extralang";
 }
-const MAEHNE_WACHSTUM = 5; // alle 5 Tage wächst die Mähne eine Stufe
 
 // =====================================================================
-//  Genetik: Abstammung (Mutter, Muttersvater, Vater, Vatersvater) und Rassenanteile
+//  Namen und Fremdblut (Stammbaum selbst entsteht in index.html)
 // =====================================================================
 const FREMDBLUT = {
   araber: "vollblut", friese: "andalusier", marwari: "araber", fjord: "haflinger", haflinger: "araber",
@@ -964,27 +962,6 @@ const FREMDBLUT = {
 };
 const NAMEN_STUTE = ["Bella", "Luna", "Fee", "Amira", "Freya", "Nala", "Zora", "Dana", "Aurora", "Wilma", "Rosalie", "Gräfin", "Melodie", "Primel", "Selma"];
 const NAMEN_HENGST = ["Donnerhall", "Sturmwind", "Apollo", "Merlin", "Farid", "Orkan", "Picasso", "Zeus", "Gandalf", "Samir", "Titan", "Odin", "Rubin", "Falko", "Kaiser"];
-function erzeugeAhnen(pferd) {
-  const r = zufall("ahnen-" + pferd.id);
-  const anteil = pferd.werte ? pferd.werte.reinrassig : 100;
-  const fremd = 100 - anteil;          // Fremdblut-Anteil des Pferdes
-  const fremdRasse = FREMDBLUT[pferd.rasse] || "vollblut";
-  const name = (liste) => liste[Math.floor(r() * liste.length)];
-  const vaterTraegt = r() < 0.5;       // welcher Elternteil bringt das Fremdblut mit
-  const elternMix = Math.max(0, 100 - 2 * fremd);
-  const vaterPct = vaterTraegt ? elternMix : 100, mutterPct = vaterTraegt ? 100 : elternMix;
-  // Großvater: wer selbst gemischt ist, hat entweder einen reinrassigen oder einen fremdrassigen Vater
-  const gv = (pct) => pct >= 100 ? { rasse: pferd.rasse, pct: 100 } : (pct >= 50 ? { rasse: pferd.rasse, pct: 100 } : { rasse: fremdRasse, pct: 100 });
-  const vv = gv(vaterPct), mv = gv(mutterPct);
-  return {
-    fremdRasse,
-    vater:   { name: name(NAMEN_HENGST), rasse: vaterPct > 0 ? pferd.rasse : fremdRasse, pct: vaterPct > 0 ? vaterPct : 100 },
-    vatersvater: { name: name(NAMEN_HENGST), rasse: vv.rasse, pct: vv.pct },
-    mutter:  { name: name(NAMEN_STUTE), rasse: mutterPct > 0 ? pferd.rasse : fremdRasse, pct: mutterPct > 0 ? mutterPct : 100 },
-    muttersvater: { name: name(NAMEN_HENGST), rasse: mv.rasse, pct: mv.pct },
-  };
-}
-
 const FARBBESCHREIBUNG = {
   schimmel: "Weißes Fell – Schimmel werden dunkel geboren und hellen mit dem Alter auf.",
   grauschimmel: "Rappe mit Schimmel-Gen auf dem Weg zum weißen Schimmel: immer mehr weiße Haare im schwarzen Fell.",

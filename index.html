@@ -86,6 +86,7 @@
   #stall .heu { transform-box: fill-box; transform-origin: 50% 100%; transition: transform .6s cubic-bezier(.3,1.5,.5,1), opacity .4s; }
   #stall.leer .heu { transform: scaleY(0); opacity: 0; }
   #krippenHinweis { display: none; animation: hopsen 1.2s ease-in-out infinite; }
+  .fellHinweis { animation: hopsen 1.2s ease-in-out infinite; }
   #stall.leer #krippenHinweis { display: inline; }
   #stall.klinikBox #krippenHinweis, #stall.klinikBox #mistHinweis { display: none !important; }
   @keyframes hopsen { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
@@ -768,7 +769,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "131";
+  const SPIEL_VERSION = "132";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -776,9 +777,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=131"></script>
-<script src="kopfteile.js?v=131"></script>
-<script src="kopfalter.js?v=131"></script>
+<script src="pferd.js?v=132"></script>
+<script src="kopfteile.js?v=132"></script>
+<script src="kopfalter.js?v=132"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2053,6 +2054,16 @@
     { id: "kuehl", ico: "🧊", name: "Kühl\u00adgel", kurz: "+2 Gesundheit", plus: 2, info: "Kühlt warme, geschwollene Beine" },
     { id: "huf", ico: "🪮", name: "Huföl", kurz: "+1 Gesundheit", plus: 1, info: "Pflegt Hufhorn und Kronrand" },
   ];
+  // merkt sich, wie das Fell zuletzt aussah – ändert es sich durch die Jahreszeit, zeigt der Stall an diesem Tag einen Hinweis
+  function fellwechsel(p) {
+    const id = fb(p), key = /^gr_/.test(id) ? "grau" : id;
+    if (p.fellKey == null) { p.fellKey = key; return ""; }        // erster Blick: nur merken
+    if (p.fellKey !== key) {
+      const vorher = p.fellKey; p.fellKey = key;
+      if (key !== "grau" && vorher !== "grau") { p.fellHinweis = { tag: spiel.tag, text: ["🌱 Frühlingsfell!", "☀️ Sommerfell!", "🍂 Fellwechsel!", "❄️ Winterfell!"][datum().s] }; speichern(); }
+    }
+    return p.fellHinweis && p.fellHinweis.tag === spiel.tag ? p.fellHinweis.text : "";
+  }
   function zeigeStall() {
     const p = B().pferd;
     $("boxSchild").textContent = "Box " + (aktBox + 1);
@@ -2071,7 +2082,13 @@
       const fs = f.stockmass * STALL.cmZuEinheit / 100, fcx = (fz.box.minX + fz.box.maxX) / 2, fx = STALL.mitte - 34;
       fohlenSVG = `<g transform="translate(${(fx + fcx * fs).toFixed(1)},${STALL.boden + 10}) scale(${(-fs).toFixed(4)},${fs.toFixed(4)})">${anim(fz.svg)}</g>`;
     }
-    $("pferdPlatz").innerHTML = `<g transform="translate(${(STALL.mitte - cx * s).toFixed(1)},${STALL.boden}) scale(${s.toFixed(4)})">${tot ? ohneAnim(z.svg) : anim(z.svg)}</g>` + fohlenSVG;
+    // Fellwechsel: beim ersten Anblick nach dem Wechsel (Sommerfell, Herbst, Winterfell) kurz eine Sprechblase
+    const fellText = tot ? "" : fellwechsel(p);
+    const blase = fellText ? (() => { const by = STALL.boden + z.box.minY * s - 30, bw = 96;
+      return `<g class="fellHinweis" pointer-events="none"><rect x="${STALL.mitte - bw / 2}" y="${by}" width="${bw}" height="20" rx="10" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4"/>
+        <path d="M${STALL.mitte - 5},${by + 19.5} l5,8 l5,-8" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4" stroke-linejoin="round"/><path d="M${STALL.mitte - 5.5},${by + 19} h11" stroke="#fffaf0" stroke-width="2"/>
+        <text x="${STALL.mitte}" y="${by + 14}" text-anchor="middle" font-size="10" font-weight="700" fill="#2b1d12" font-family="system-ui, sans-serif">${fellText}</text></g>`; })() : "";
+    $("pferdPlatz").innerHTML = `<g transform="translate(${(STALL.mitte - cx * s).toFixed(1)},${STALL.boden}) scale(${s.toFixed(4)})">${tot ? ohneAnim(z.svg) : anim(z.svg)}</g>` + fohlenSVG + blase;
     zeigeAkte();
   }
 
@@ -3660,6 +3677,7 @@
       <h3>📜 „(kann Schimmel werden)“</h3>
       <p>Ohne Gentest weiß niemand, ob ein Pferd das Schimmel-Gen hat. Der Hinweis richtet sich deshalb nach der Abstammung: Ist ein Elternteil Schimmel, steht er im Abstammungsschein (bleibt dort für immer) und in den Daten, solange das Pferd nicht sichtbar grau ist – auch wenn es das Gen in Wahrheit nicht hat. Sobald es sichtbar grau wird und sich der Farbname ändert (z. B. Rappschimmel), fällt der Hinweis weg.</p>
       <p><b>Sommer- und Winterrappen:</b> Winterrappen sind nur im Winterfell tiefschwarz, im Sommer bleicht die Sonne das Fell rostbraun aus (Herbst: halb). Sommerrappen bleiben das ganze Jahr schwarz. Das ist ein versteckter, vererbbarer Wert („Rappe: bleicht im Sommer aus“); die Genetik dahinter ist in echt noch nicht geklärt, es gibt keinen Labortest. In den Daten steht „Rappe, Winterrappe“, im Abstammungsschein nur „Rappe“. Nach einem Gentest steht das sichere Ergebnis da.</p>
+      <p><b>Fellwechsel-Hinweis:</b> Ändert sich das Fell eines Pferdes durch die Jahreszeit sichtbar (Sommerfell, Fellwechsel im Herbst, Winterfell), zeigt der Stall beim ersten Anblick an diesem Tag eine kleine Sprechblase über dem Pferd. Sommerrappen und Schimmel wechseln nicht sichtbar – bei ihnen kommt kein Hinweis.</p>
       <h3>🛒 Herkunft der Pferde ohne Eltern im Spiel</h3>
       <p><b>Pferdemarkt:</b> reinrassige Pferde und Mischlinge. Für jedes Pferd werden die Rassen der 8 Urgroßeltern festgelegt (35 % alle gleich, sonst 1–4 Urgroßeltern aus 1–2 anderen Rassen). Die Urgroßeltern bekommen Gene nach ihrer Rasse, dann wird Generation für Generation normal vererbt – Farbe, Rasse (größter Anteil, bei Gleichstand nach Exterieur) und Stockmaß ergeben sich daraus. <b>Deckstation</b> und Admin-Rassenauswahl: reinrassig, Farbe vorgegeben, Stammbaum rückwärts passend erzeugt. Gestüte mit reinrassigen Pferden (Mix nur durch Veredelung) kommen später.</p>
       <h3>🐴 Schimmel (fortschreitende Schimmelung)</h3>

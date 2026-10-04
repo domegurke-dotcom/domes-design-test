@@ -886,14 +886,25 @@ function ausbildungsWerte(pferd) {
     return { name, wert: Math.round(v) };
   });
 }
-function ausbildungsKlasse(werte, alter) {
-  const m = werte.reduce((s, x) => s + x.wert, 0) / werte.length;
-  if (m === 0) return alter < 3 ? "Klasse E – Fohlen / Jungpferd, noch nicht ausgebildet" : "Klasse E – noch nicht ausgebildet";
-  if (m < 30) return "Klasse E (Einsteiger)";
-  if (m < 45) return "Klasse A (Anfänger)";
-  if (m < 60) return "Klasse L (Leicht)";
-  if (m < 75) return "Klasse M (Mittel)";
-  return "Klasse S (Schwer)";
+// Klassen der Dressur (E, A, L, M, S): jede verlangt bestimmte Stufen der Ausbildungsskala – S zusätzlich Ausdruck (gutes Gangwerk)
+const KLASSEN = [
+  { k: "E", name: "Einsteiger", min: { Takt: 20, Losgelassenheit: 20 }, lekt: "Schritt, Trab, Galopp · Zirkel, Volte, Schlangenlinie", fokus: "Gleichmäßigkeit, Takt, Losgelassenheit" },
+  { k: "A", name: "Anfänger", min: { Takt: 45, Losgelassenheit: 40, Anlehnung: 30 }, lekt: "Mitteltrab, Mittelgalopp, einfache Galoppwechsel, Rückwärtsrichten", fokus: "Durchlässigkeit, Reaktion auf feine Hilfen" },
+  { k: "L", name: "Leicht", min: { Anlehnung: 45, Schwung: 40, Geraderichtung: 30, Versammlung: 10 }, lekt: "Schulterherein, Travers, Kurzkehrt, Außengalopp (auf Trense)", fokus: "Anlehnung, beginnende Versammlung, Geraderichtung" },
+  { k: "M", name: "Mittel", min: { Schwung: 60, Geraderichtung: 55, Versammlung: 40 }, lekt: "Traversalen, Schrittpirouetten, Serienwechsel (auf Kandare)", fokus: "stärkere Versammlung, Durchlässigkeit" },
+  { k: "S", name: "Schwer", min: { Geraderichtung: 70, Versammlung: 70 }, ausdruck: 7, lekt: "Piaffe, Passage, Galopppirouetten, Wechsel zu zwei und einem Sprung", fokus: "Ausdruck, absolute Versammlung, Exaktheit" },
+];
+// höchste Klasse, deren Anforderungen das Pferd erfüllt (-1 = noch nicht ausgebildet)
+function klasseIndex(werte, gang) {
+  const w = Object.fromEntries(werte.map(x => [x.name, x.wert])), g = gang || {}, ausdruck = ((g.schritt || 0) + (g.trab || 0) + (g.galopp || 0)) / 3;
+  let k = -1;
+  KLASSEN.forEach((c, i) => { if (i === k + 1 && Object.entries(c.min).every(([n, v]) => (w[n] || 0) >= v) && (!c.ausdruck || ausdruck >= c.ausdruck)) k = i; });
+  return k;
+}
+function ausbildungsKlasse(werte, alter, gang) {
+  const k = klasseIndex(werte, gang);
+  if (k < 0) return alter < 3 ? "Klasse E – Fohlen / Jungpferd, noch nicht ausgebildet" : "Klasse E – noch nicht ausgebildet";
+  return `Klasse ${KLASSEN[k].k} (${KLASSEN[k].name})`;
 }
 const NOTENWORT = n => n >= 10 ? "ausgezeichnet" : n >= 9 ? "sehr gut" : n >= 8 ? "gut" : n >= 7 ? "ziemlich gut" : n >= 6 ? "befriedigend" : n >= 5 ? "genügend" : "mangelhaft";
 

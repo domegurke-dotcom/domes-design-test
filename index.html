@@ -120,7 +120,8 @@
   .verkauf-art { background: #fff; border: 1.5px solid #e2d6c3; border-radius: 12px; padding: 10px 12px; margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
   .verkauf-art small { color: var(--leise); line-height: 1.35; }
   .fest-preis { display: flex; flex-direction: column; gap: 4px; font-size: .92rem; } .fest-preis input { width: 100%; accent-color: var(--akzent); }
-  .gnade-liste { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 14px; }
+  .gnade-liste { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+  @media (max-width: 560px) { .gnade-liste { gap: 6px; } .gnade-weide svg { height: 70px !important; } .gnade-weide { padding: 4px !important; } .gnade-info { padding: 5px 6px 7px !important; font-size: .78rem; } .gnade-info small { font-size: .66rem; } }
   .gnade-pferd { background: #f6ecdc; color: var(--text); border-radius: 14px; overflow: hidden; }
   .gnade-weide { background: linear-gradient(#bfe3f5, #e8f6fc 55%, #9fd27a 55%, #86c160); padding: 8px; } .gnade-weide svg { width: 100%; height: 130px; display: block; }
   .gnade-info { padding: 8px 12px 12px; display: flex; flex-direction: column; gap: 2px; } .gnade-info small { color: var(--leise); }
@@ -737,7 +738,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "136";
+  const SPIEL_VERSION = "137";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -745,9 +746,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=136"></script>
-<script src="kopfteile.js?v=136"></script>
-<script src="kopfalter.js?v=136"></script>
+<script src="pferd.js?v=137"></script>
+<script src="kopfteile.js?v=137"></script>
+<script src="kopfalter.js?v=137"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -995,8 +996,18 @@
   // ist ein Elternteil Schimmel, steht „(kann Schimmel werden)“ dahinter
   const elternGrau = p => p.ahnen && p.ahnen.vater && p.ahnen.mutter ? hat(genNorm(p.ahnen.vater.gen || {}), "G") || hat(genNorm(p.ahnen.mutter.gen || {}), "G") : !!p.grauHinweis;
   // Farbe als Text: heutige Farbe, solange ein Schimmel noch nicht weiß ist mit „(kann Schimmel werden)“
+  // Overo/Tovero: ohne Gentest sieht man nur eine Schecke – welches Gen dahintersteckt, zeigt erst der Test
+  const SCHECKE_NAME = b => ({ rappe: "Rappschecke", brauner: "Braunschecke", hellbrauner: "Braunschecke", dunkelbrauner: "Braunschecke", schwarzbrauner: "Braunschecke",
+    fuchs: "Fuchsschecke", hellfuchs: "Fuchsschecke", dunkelfuchs: "Fuchsschecke", braunfalbe: "Falbschecke", rotfalbe: "Falbschecke", mausfalbe: "Falbschecke", gelbfalbe: "Falbschecke",
+    palomino: "Isabellschecke", isabell: "Isabellschecke", buckskin: "Buckskin-Schecke", blueroan: "Roan-Schecke", rotschimmel: "Roan-Schecke", windfarben: "Windfarbene Schecke" })[b] || "Schecke";
+  const overoGetestet = p => testGemacht(p, "farbe") || testGemacht(p, "krank");
+  // Anzeigename einer Farbe für dieses Pferd (Overo nur mit Gentest)
+  function farbName(p, id) {
+    const m = String(id).match(/^(ov|tv)_([^~]+)/); if (!m) return FARBEN[id] ? FARBEN[id].name : id;
+    return SCHECKE_NAME(m[2]) + (p && overoGetestet(p) ? (m[1] === "tv" ? " (Tovero)" : " (Overo)") : "");
+  }
   function farbText(p, jahre) {
-    const id = fb(p, jahre), st = grauStand(p, jahre), name = FARBEN[id].name;
+    const id = fb(p, jahre), st = grauStand(p, jahre), name = farbName(p, id);
     if (/^gr_/.test(id)) return name;   // sichtbar grau (Name hat sich geändert, z. B. Apfelschimmel): Hinweis entfällt
     const rn = istRappe(p.farbe) && (p.gen || p.ex) ? `${name.replace(/ \(schwarz\)$/, "")}, ${winterrappe(p) ? "Winterrappe" : "Sommerrappe"}` : name;
     if (testGemacht(p, "farbe")) return hat(genVon(p), "G") ? `${rn} (Schimmel-Gen – wird Schimmel)` : rn;
@@ -1004,7 +1015,7 @@
     return rn;
   }
   // im Abstammungsschein steht immer die Geburtsfarbe
-  const scheinFarbe = (a, kurz) => `${FARBEN[a.farbe] ? FARBEN[a.farbe].name : a.farbe}${a.grauHinweis ? (kurz ? " (k.S.w.)" : " (kann Schimmel werden)") : ""}`;
+  const scheinFarbe = (a, kurz) => `${farbName(a, a.farbe)}${a.grauHinweis ? (kurz ? " (k.S.w.)" : " (kann Schimmel werden)") : ""}`;
   // Wachstum: Anteil der Endgröße nach Alter in Monaten
   const wuchs = m => m >= 48 ? 1 : m <= 0 ? 0.6 : [[0, .6], [6, .768], [12, .874], [24, .947], [36, .989], [48, 1]].reduce((r, [a, f], i, arr) => (m >= a && i < arr.length - 1 && m < arr[i + 1][0]) ? f + (arr[i + 1][1] - f) * (m - a) / (arr[i + 1][0] - a) : r, 1);
   const datumLang = (d = datum()) => `${JZ[d.s][0]} ${d.j}`;
@@ -1830,6 +1841,18 @@
     spiel.angebote = (spiel.angebote || []).filter(a => {
       const x = spiel.boxen.findIndex(b => b.pferd && b.pferd.id === a.id); if (x < 0) return false;
       const p = spiel.boxen[x].pferd;
+      // Festpreis: Interessenten schicken Preisvorschläge (wie bei Privatanzeigen, nur andersherum)
+      if (a.art === "fest" && !a.vorschlag && !spiel.boxen[x].tot && !(p.pflege && p.pflege.gesundheit < 75)) {
+        const ziel = a.wert * saisonF(), teuer = a.preis / ziel;
+        if (Math.random() < (teuer > 1.05 ? .35 : .15)) {
+          const betrag = Math.min(a.preis - 50, Math.round(ziel * (.75 + Math.random() * .3) / 50) * 50);
+          if (betrag >= a.preis * .6) {
+            a.vorschlag = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), betrag };
+            brief("Pferdemarkt", `Preisvorschlag für ${p.name}`, `ein Interessent möchte <b>${esc(p.name)}</b> kaufen und bietet <b>${fmt(betrag)}</b> ({dein|Ihr} Preis: ${fmt(a.preis)}). {Nimmst du|Nehmen Sie} an, ist ${esc(p.name)} sofort verkauft – {lehnst du|lehnen Sie} ab, bleibt das Angebot zum Festpreis bestehen.`,
+              { aktion: { typ: "kaufangebot", pferd: p.id, vid: a.vorschlag.id, betrag }, pferde: [p] });
+          }
+        }
+      }
       if (spiel.boxen[x].tot || (p.pflege && p.pflege.gesundheit < 75)) {
         brief(a.art === "auktion" ? "Auktionshaus" : "Pferdemarkt", `Verkauf von ${p.name} geplatzt`, `leider ist der Verkauf von <b>${esc(p.name)}</b> geplatzt: Die Gesundheit ist unter 75 % gefallen. ${pron(p).er === "sie" ? "Sie" : "Er"} bleibt bei {dir|Ihnen}.`);
         return false;
@@ -1837,12 +1860,10 @@
       return true;
     });
   }
-  function angeboteJahreszeit() {
-    const jetzt = jzJetzt();
-    spiel.angebote = (spiel.angebote || []).filter(a => {
-      const x = spiel.boxen.findIndex(b => b.pferd && b.pferd.id === a.id); if (x < 0) return false;
-      const b = spiel.boxen[x], p = b.pferd;
-      const verkauft = preis => {
+  // Angebot abschließen: Pferd (mit Fohlen bei Fuß) geht an den Käufer, Brief mit Preis
+  function angebotVerkaufen(a, preis) {
+    const jetzt = jzJetzt(), x = spiel.boxen.findIndex(b => b.pferd && b.pferd.id === a.id); if (x < 0) return false;
+    const b = spiel.boxen[x], p = b.pferd;
         const wertEnde = verkaufsWert(p);
         buchen(preis, `Verkauf: ${p.name}`); archivieren(p);
         // Fohlen bei Fuß geht mit der Mutter (auch wenn es inzwischen in eine eigene Box umgezogen ist)
@@ -1852,8 +1873,15 @@
         if (p.schutzBis && jetzt < p.schutzBis) { buchen(-NOTFALL_STRAFE, `Strafe Tierschutz: ${p.name}`); brief("Tierschutzverein", `Strafe: ${p.name} verkauft`, `<b>${esc(p.name)}</b> war ein Notfallpferd und hätte mindestens ein Jahr bei {dir|Ihnen} bleiben müssen. Für den vorzeitigen Verkauf wurden <b>${fmt(NOTFALL_STRAFE)}</b> Strafe abgebucht.`); }
         b.pferd = null; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; b.tot = false;
         brief(a.art === "auktion" ? "Auktionshaus" : "Pferdemarkt", `${p.name} wurde verkauft`, `<b>${esc(p.name)}</b> (Box ${x + 1}) hat für <b>${fmt(preis)}</b> ${a.art === "auktion" ? `in der Auktion (${a.gebote || 0} ${a.gebote === 1 ? "Gebot" : "Gebote"}) ` : ""}${pron(p).er === "sie" ? "eine neue Besitzerin bzw. einen neuen Besitzer" : "einen neuen Besitzer bzw. eine neue Besitzerin"} gefunden${fohlenName ? ` – zusammen mit ${pron(p).er === "sie" ? "ihrem" : "seinem"} Fohlen <b>${esc(fohlenName)}</b>` : ""}. Das Geld ist auf {deinem|Ihrem} Hofkonto.${a.art === "auktion" ? `<br><br>Marktwert zu Beginn der Auktion: <b>${fmt(a.wert)}</b><br>Marktwert am Ende der Auktion: <b>${fmt(wertEnde)}</b>` : ""}`, { pferde: [p] });
-        return false;
-      };
+    spiel.angebote = (spiel.angebote || []).filter(y => y !== a);
+    return false;
+  }
+  function angeboteJahreszeit() {
+    const jetzt = jzJetzt();
+    spiel.angebote = (spiel.angebote || []).filter(a => {
+      const x = spiel.boxen.findIndex(b => b.pferd && b.pferd.id === a.id); if (x < 0) return false;
+      const b = spiel.boxen[x], p = b.pferd;
+      const verkauft = preis => angebotVerkaufen(a, preis);
       if (a.art === "fest") {
         if (jetzt < a.ende) return true;
         // bis Marktwert fast sicher verkauft, darüber immer seltener – ab 25 % zu viel kauft niemand
@@ -1882,7 +1910,7 @@
     [/^Hinweis zu/, "ts-hinweis", "Tierschutz: Hinweis"], [/^Letzte Warnung/, "ts-warnung", "Tierschutz: letzte Warnung"], [/wurde abgeholt/, "ts-abholung", "Tierschutz holt Pferd ab"],
     [/wurde vermittelt/, "ts-vermittelt", "Tierschutz: Pferd vermittelt"], [/ist zurück$/, "aufzucht-zurueck", "Aufzucht: Pferd zurück"], [/abholen$/, "aufzucht-abholen", "Aufzucht: bitte abholen"],
     [/wieder fit/, "klinik", "Klinik: Entlassung und Rechnung"], [/muss behandelt werden/, "gesundheit", "Tierarzt: Behandlung nötig"],
-    [/^Kein Käufer|^Kein Gebot/, "kein-kaeufer", "Verkauf: kein Käufer"], [/^Zwischenstand/, "auktion", "Auktion: Zwischenstand"], [/wurde verkauft/, "verkauf", "Pferd verkauft"], [/geplatzt/, "geplatzt", "Verkauf geplatzt"],
+    [/^Kein Käufer|^Kein Gebot/, "kein-kaeufer", "Verkauf: kein Käufer"], [/^Preisvorschlag/, "preisvorschlag", "Verkauf: Preisvorschlag"], [/^Zwischenstand/, "auktion", "Auktion: Zwischenstand"], [/wurde verkauft/, "verkauf", "Pferd verkauft"], [/geplatzt/, "geplatzt", "Verkauf geplatzt"],
     [/ist 3 Jahre alt/, "drei-jahre", "Pferd wird 3 Jahre alt"], [/fängt heute an|hat aufgehört|hat gekündigt/, "mitarbeiter", "Mitarbeiter"], [/^Überboten/, "ueberboten", "Auktion: überboten"], [/^Zuschlag|^Auktion verloren/, "zuschlag", "Auktion: Ergebnis"], [/ist wieder gesund$/, "ts-gesund", "Tierschutz: Pferd wieder gesund"], [/^Ausbildungsbericht/, "ausbildungsbericht", "Ausbildungsbericht"], [/^Strafe/, "strafe", "Tierschutz: Strafe"], [/beschlagnahmt/, "ts-beschlagnahme", "Tierschutz: Beschlagnahme"],
     [/^Willkommen/, "gnadenhof", "Gnadenhof: Ankunft"], [/^Abschied/, "tod", "Pferd verstorben"], [/^Gentest|^Laborergebnis/, "gentest", "Laborergebnis"],
   ];
@@ -2108,10 +2136,12 @@
     }
     // Fellwechsel: beim ersten Anblick nach dem Wechsel (Sommerfell, Herbst, Winterfell) kurz eine Sprechblase
     const fellText = tot ? "" : fellwechsel(p);
-    const blase = fellText ? (() => { const by = STALL.boden + z.box.minY * s - 30, bw = 96;
-      return `<g class="fellHinweis" pointer-events="none"><rect x="${STALL.mitte - bw / 2}" y="${by}" width="${bw}" height="20" rx="10" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4"/>
-        <path d="M${STALL.mitte - 5},${by + 19.5} l5,8 l5,-8" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4" stroke-linejoin="round"/><path d="M${STALL.mitte - 5.5},${by + 19} h11" stroke="#fffaf0" stroke-width="2"/>
-        <text x="${STALL.mitte}" y="${by + 14}" text-anchor="middle" font-size="10" font-weight="700" fill="#2b1d12" font-family="system-ui, sans-serif">${fellText}</text></g>`; })() : "";
+    const blase = fellText ? (() => { let by = STALL.boden + z.box.minY * s - 30, bx = STALL.mitte, tx = bx; const bw = 96;
+      // nicht über das Boxschild (x 170–230, y 40–58): bei großen Pferden rechts daneben
+      if (by < 62) { by = 40; bx = 230 + 8 + bw / 2; tx = bx - bw / 2 + 16; }
+      return `<g class="fellHinweis" pointer-events="none"><rect x="${bx - bw / 2}" y="${by}" width="${bw}" height="20" rx="10" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4"/>
+        <path d="M${tx - 5},${by + 19.5} l5,8 l5,-8" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4" stroke-linejoin="round"/><path d="M${tx - 5.5},${by + 19} h11" stroke="#fffaf0" stroke-width="2"/>
+        <text x="${bx}" y="${by + 14}" text-anchor="middle" font-size="10" font-weight="700" fill="#2b1d12" font-family="system-ui, sans-serif">${fellText}</text></g>`; })() : "";
     $("pferdPlatz").innerHTML = `<g transform="translate(${(STALL.mitte - cx * s).toFixed(1)},${STALL.boden}) scale(${s.toFixed(4)})">${tot ? ohneAnim(z.svg) : anim(z.svg)}</g>` + fohlenSVG + blase;
     zeigeAkte();
   }
@@ -2672,7 +2702,8 @@
     if (anzahl(g, "O") === 2) return false;
     if (GRAU_WAHL[chip]) return hat(g, "G");
     if (hat(g, "G")) return false;
-    return ohneTon(phaenotyp(g, ex.ton, ex.ow)) === ohneTon(chip) && (chip !== "hellbrauner" || ex.ton < .25) && (chip !== "brauner" || ex.ton >= .25);
+    const ow = hat(g, "O") && !/^(ov|tv)_/.test(chip) ? .1 : ex.ow;   // einfarbig gewählt: Overo-Gen bleibt unsichtbar (versteckter Träger)
+    return ohneTon(phaenotyp(g, ex.ton, ow)) === ohneTon(chip) && (chip !== "hellbrauner" || ex.ton < .25) && (chip !== "brauner" || ex.ton >= .25);
   }
   function glFarbeSetzen(chip) {
     wahl.chip = chip;
@@ -2704,7 +2735,7 @@
     const info = (id, text) => `<button class="gl-info-k" data-info="${id}" aria-label="Erklärung">i</button><span class="gl-info" id="gli-${id}" hidden>${text}</span>`;
     const zeile = (id, name, text, opts) => `<div class="gl-zeile"><span class="gl-name">${name} ${info(id, text).split("<span")[0]}</span><span class="gl-opt">${opts}</span><span class="gl-info" id="gli-${id}" hidden>${text}</span></div>`;
     // Gen ohne sichtbare Wirkung (z. B. Flachs bei E/E): bleibt wählbar, weil es vererbt wird, ist aber markiert
-    const unsichtbar = k => { const f = new Set(GL_OPT(k).filter(o => anzahl({ ...g, [k]: o }, "O") < 2).map(o => phaenotyp({ ...g, [k]: o }, ex.ton, ex.ow))); return f.size <= 1 && !["G", "Dm"].includes(k); };
+    const unsichtbar = k => { if (k === "O" && !/^(ov|tv)_/.test(wahl.chip)) return true; const f = new Set(GL_OPT(k).filter(o => anzahl({ ...g, [k]: o }, "O") < 2).map(o => phaenotyp({ ...g, [k]: o }, ex.ton, ex.ow))); return f.size <= 1 && !["G", "Dm"].includes(k); };
     const genZeilen = GENE.filter(([k]) => glTypisch(wahl.rasse, k)).map(([k, n, , , txt]) => zeile(k, n + (unsichtbar(k) ? ` <small class="gl-unsicht">unsichtbar – wird vererbt</small>` : ""), txt, GL_OPT(k).map(o => {
       const test = { ...g, [k]: o }, an = gleich(g[k], o), ok = an || glPasst(test, ex, wahl.chip);
       return `<button data-gl="${k}" data-o="${o.join("/")}" class="${an ? "an" : ""}" ${ok ? "" : "disabled"}>${o.join("/")}</button>`; }).join(""))).join("");
@@ -2726,7 +2757,9 @@
       <p class="text"><small>Durchgestrichene Kombinationen passen nicht zur gewählten Fellfarbe.</small></p>`;
     const S = $("glSteuer");
     S.querySelectorAll("[data-glf]").forEach(b => b.onclick = () => { glFarbeSetzen(b.dataset.glf); glZeigen(); });
-    S.querySelectorAll("[data-gl]").forEach(b => b.onclick = () => { wahl.gen[b.dataset.gl] = b.dataset.o.split("/"); glZeigen(); });
+    S.querySelectorAll("[data-gl]").forEach(b => b.onclick = () => { wahl.gen[b.dataset.gl] = b.dataset.o.split("/");
+      if (b.dataset.gl === "O" && hat(wahl.gen, "O") && !/^(ov|tv)_/.test(wahl.chip)) wahl.ex.ow = Math.min(wahl.ex.ow, .1);   // versteckter Overo-Träger
+      glZeigen(); });
     S.querySelectorAll("[data-glex]").forEach(b => b.onclick = () => { wahl.ex[b.dataset.glex] = +b.dataset.v; if (b.dataset.glex === "fliegen") wahl.ex.fliegenAb = 10; glZeigen(); });
     S.querySelectorAll("[data-info]").forEach(b => b.onclick = () => { const el = $("gli-" + b.dataset.info); el.hidden = !el.hidden; });
   }
@@ -2892,7 +2925,7 @@
   // Eine Nacht vergeht: Gesundheit, Mist, Mähne und Schopf
   // Verstorbene Pferde kommen auf den Pferdefriedhof – die Box ist danach wieder leer
   function begraben(p, ort) {
-    (spiel.friedhof = spiel.friedhof || []).push({ pferd: JSON.parse(JSON.stringify(p)), name: p.name, rasse: p.rasse, geschlecht: p.geschlecht, farbe: fb(p), farbName: FARBEN[fb(p)].name, geb: p.geb ? { ...p.geb } : null, tod: jzJetzt(), alter: alterText(p), ort, nachkommen: p.nachkommen || 0, ursache: p.todesursache || "unbekannt" });
+    (spiel.friedhof = spiel.friedhof || []).push({ pferd: JSON.parse(JSON.stringify(p)), name: p.name, rasse: p.rasse, geschlecht: p.geschlecht, farbe: fb(p), farbName: farbName(p, fb(p)), geb: p.geb ? { ...p.geb } : null, tod: jzJetzt(), alter: alterText(p), ort, nachkommen: p.nachkommen || 0, ursache: p.todesursache || "unbekannt" });
   }
   function tote() {
     // Lethal-White-Fohlen (O/O) sterben in der ersten Nacht nach der Geburt (tote() läuft vor dem Tageswechsel)
@@ -3104,7 +3137,10 @@
     if (art === "rasse") { const r = rasseById(p.rasse), a = anteileVon(p);
       titel = `📖 ${r.name}`; html = bild(r.id, r.farben[0]) + `<p><b>${r.herkunft}</b> · ${r.h[0]}–${r.h[1]} cm Stockmaß</p><p>${r.text}</p>${r.warnung ? `<div class="rasse-warn"><b>⚠️ Achtung Erbkrankheit</b>${r.warnung}</div>` : ""}
         ${Object.keys(a).length > 1 ? `<p><small>Die Zahl hinter dem Rassenamen ist der Anteil dieser Rasse. Alle Anteile stehen bei Genetik unter „Rassischer Anteil“.</small></p>` : ""}`; }
-    if (art === "farbe") {
+    if (art === "farbe" && /^(ov|tv)_/.test(fb(p)) && !overoGetestet(p)) {
+      titel = `🎨 ${farbName(p, fb(p))}`;
+      html = bild(p.rasse, fb(p)) + `<p>Gescheckt: große weiße Flecken im farbigen Fell. Welches Scheckungs-Gen dahintersteckt (z. B. Tobiano oder Overo), zeigt erst ein Gentest – der Fellfarben- oder der Erbkrankheiten-Test.</p>`; }
+    else if (art === "farbe") {
       const id = fb(p); let lid = id.split("~")[0];
       if (/^gr_/.test(id)) { const ph = id.split("_").pop(), basis = id.slice(3).replace(/_[^_]+_[^_]+_[^_]+$/, ""); lid = ph === "apfel" ? "apfelschimmel" : ph === "weiss" ? "schimmel" : ph === "fliegen" ? "fliegenschimmel" : ({ rappe: "grauschimmel", brauner: "braunschimmel", fuchs: "fuchsschimmel" })[basis] || "grauschimmel"; }
       if (!FARBBESCHREIBUNG[lid]) { const pre = (lid.match(/^(ov|tv|tg|fs|sb|sk)_/) || [])[1]; lid = Object.keys(FARBBESCHREIBUNG).find(k => pre && k.startsWith(pre + "_")) || lid; }
@@ -3357,7 +3393,7 @@
     const f = (spiel.friedhof || []).slice().reverse();
     zeigeNeben("🪦 Pferdefriedhof", f.length ? `<div class="panel"><p style="margin:0">Hier erinnern Grabsteine an deine verstorbenen Pferde.</p></div>
       <div class="gnade-liste">${f.map(g => `<div class="grab" ${g.pferd ? ansehen(g.pferd, "Pferdefriedhof", null, { tot: true, alter: g.alter, zeilen: [["Todesursache", esc(g.ursache || "unbekannt")]] }) : ""}><div class="grab-bild">${grabstein(g)}</div>
-        <div class="gnade-info"><b>${esc(g.name)}</b><small>${rasseById(g.rasse).name} · ${g.geschlecht} · ${g.farbName || (FARBEN[g.farbe] ? FARBEN[g.farbe].name : "")}</small>
+        <div class="gnade-info"><b>${esc(g.name)}</b><small>${rasseById(g.rasse).name} · ${g.geschlecht} · ${g.pferd ? farbText(g.pferd) : g.farbName || (FARBEN[g.farbe] ? FARBEN[g.farbe].name : "")}</small>
         <small>${g.geb ? `geboren ${jzName(g.geb.j * 4 + g.geb.s).replace(/^\S+ /, "")} · ` : ""}verstorben ${jzName(g.tod).replace(/^\S+ /, "")}${g.alter ? ` mit ${g.alter}` : ""}</small>
         <small>Todesursache: ${esc(g.ursache || "unbekannt")}</small>
         ${g.nachkommen ? `<small>${g.nachkommen} ${g.nachkommen === 1 ? "Nachkomme" : "Nachkommen"}</small>` : ""}</div></div>`).join("")}</div>`
@@ -3755,7 +3791,7 @@
       <p>Gut versorgt +8 % pro Tag, hungrig −19, Box nicht gemistet −9,5. Unter 40 % kommt ein Brief vom Tierarzt, unter 30 % erholt sich ein Pferd nur noch in der Klinik (+16 %/Tag, ${fmt(KOSTEN.klinik)}/Tag) und wird mit 75 % entlassen. Die Klinikkosten kommen als Rechnung, zahlbar innerhalb einer Jahreszeit – sonst holt der Tierschutz das Pferd. Ausnahme: Senioren mit altersbedingter Höchstgesundheit von 40 % oder weniger.</p>
       <p>Senioren ab 20 Jahren: höchstens 75 %, sinkt bis 35 Jahre auf 1 %. Sterbewahrscheinlichkeit je Jahreszeit steigt ab 20 Jahren und erreicht mit 35 Jahren 100 %.</p>
       <h3>💰 Geld und Marktwert</h3>
-      <p>Marktwert aus Gangwerk, Ausbildungsstand, Alter und Gesundheit, plus die Kosten aller gemachten Gentests (getestete Pferde verkaufen sich besser). Stute mit Fohlen bei Fuß: beide Marktwerte zusammen, das Fohlen wird mitverkauft (allein nicht). Festpreis bis Marktwert: ~90 % Verkaufschance, darüber sinkend, ab 25 % über Marktwert kauft niemand. Auktion startet bei ½ des Marktwerts und läuft 2 Jahreszeiten; Abbruch nach dem ersten Gebot kostet die Hälfte des letzten Gebots. Gnadenhof: halber Marktwert.</p>
+      <p>Marktwert aus Gangwerk, Ausbildungsstand, Alter und Gesundheit, plus die Kosten aller gemachten Gentests (getestete Pferde verkaufen sich besser). Stute mit Fohlen bei Fuß: beide Marktwerte zusammen, das Fohlen wird mitverkauft (allein nicht). Festpreis bis Marktwert: ~90 % Verkaufschance, darüber sinkend, ab 25 % über Marktwert kauft niemand. Während das Angebot läuft, schicken Interessenten manchmal Preisvorschläge per Brief (jede Nacht 15 %, bei deutlich überhöhtem Preis 35 %; 75–105 % des Marktwerts, immer unter deinem Preis) – annehmen verkauft sofort, ablehnen lässt das Angebot weiterlaufen. Auktion startet bei ½ des Marktwerts und läuft 2 Jahreszeiten; Abbruch nach dem ersten Gebot kostet die Hälfte des letzten Gebots. Gnadenhof: halber Marktwert.</p>
       <h3>🏷️ Pferdemarkt (wechselt jede Jahreszeit)</h3>
       ${verTab(["Bereich", "Angebot", "Preis", "Besonderheit"], [
         ["🏡 Privatanzeigen", "2–4 Pferde, 5–19 J., oft Mix; Stuten auch mit Fohlen bei Fuß (Frühling 45 %, Sommer 40 %, Herbst 8 %, Winter 5 %)", "70–100 %", `Ankaufsuntersuchung ${fmt(AKU_PREIS)} zeigt die Gesundheit vorher. Preisvorschlag (1× je Pferd): ab 95 % sicher, 85–95 % 60 %, 75–85 % 30 %, sonst 5 %. Gesundheit erst nach Kauf, je Großelternteil 30 % „unbekannt“ – dann Rasse „Abstammung unvollständig“ ohne Anteile, bis ein Abstammungsnachweis die Großeltern ermittelt`],
@@ -3770,6 +3806,7 @@
       <p>Geburtszeit sonst: 65 % Frühling, 17 % Sommer, 10 % Winter, 8 % Herbst.</p>
       <p>Eigene Pferde: Auktion startet bei ½ des Marktwerts (wie im Auktionshaus) und läuft 2 Jahreszeiten; Zwischenstand und Ergebnis kommen per Brief mit Anzahl der Gebote, beim Verkauf auch mit dem Marktwert zu Beginn und am Ende. Bietet niemand das Startgebot, bleibt das Pferd.</p>
       <p><b>Briefe:</b> Absender schreiben zuerst mit „Sie“. Nach ${DU_ANGEBOT_NACH} Briefen bietet ein Absender in einem eigenen Brief das „Du“ an – annehmen oder beim „Sie“ bleiben. Pferdenamen in Briefen lassen sich antippen. Diagnosen kommen als eigener Brief (Ereignis „Tierarzt: Diagnose“).</p>
+      <p><b>Schecken-Namen:</b> Overo und Tovero heißen ohne Gentest nach dem Aussehen (z. B. „Braunschecke“) – welches Scheckungs-Gen dahintersteckt, sieht man erst nach dem Fellfarben- oder Erbkrankheiten-Test („Braunschecke (Overo)“). Overo-Träger können auch einfarbig aussehen (kaum Weiß); in der Admin-Genauswahl lässt sich O/n deshalb auch bei einfarbigen Farben einstellen.</p>
       <p><b>Warnung bei Erbkrankheiten</b> (Overo × Overo, Leopard × Leopard): erscheint nur, wenn mindestens eins der beiden Pferde einen positiven Gentest hat und das andere ebenfalls positiv getestet ist oder das Muster sichtbar zeigt.</p>
       ${verTab(["Posten", "Kosten"], [["Aufzuchtstation", `${fmt(KOSTEN.aufzucht)} / Tag`], ["Ausbildungsstall", `${fmt(KOSTEN.ausbildung)} / Tag`], ["Klinik", `${fmt(KOSTEN.klinik)} / Tag`], ...Object.values(LABOR_TESTS).map(T => [`Labor: ${T.n}`, `${fmt(T.preis)} · Ergebnis nach ${T.tage} Tagen per Post`]), ["Tierschutz zurückkaufen", "½ Marktwert + offene Klinikkosten"], ["Strafe: Tod durch Vernachlässigung", fmt(STRAFE_VERNACHLAESSIGUNG)]])}
     </div>`;
@@ -3923,6 +3960,9 @@
     const A = br.aktion;
     if (A.typ === "duzen") return A.antwort ? `<p class="brief-aktion-info">${A.antwort === "ja" ? "🤝 Du hast das „Du“ angenommen." : "Sie bleiben beim „Sie“."}</p>`
       : `<div class="brief-aktion"><button class="knopf" data-baktion="du-ja" data-bid="${br.id}">🤝 Gerne, Du</button><button class="knopf zweit" data-baktion="du-nein" data-bid="${br.id}">Lieber beim „Sie“ bleiben</button></div>`;
+    if (A.typ === "kaufangebot") { const a = (spiel.angebote || []).find(y => y.id === A.pferd && y.vorschlag && y.vorschlag.id === A.vid);
+      if (A.antwort) return `<p class="brief-aktion-info">${A.antwort === "ja" ? "✅ Angenommen – verkauft." : "Abgelehnt."}</p>`;
+      return a ? `<div class="brief-aktion"><button class="knopf" data-baktion="kauf-ja" data-bid="${br.id}">✅ Annehmen · ${fmt(A.betrag)}</button><button class="knopf zweit" data-baktion="kauf-nein" data-bid="${br.id}">Ablehnen</button></div>` : `<p class="brief-aktion-info">Dieser Vorschlag gilt nicht mehr.</p>`; }
     if (A.typ === "bieten") { const a = auktionFinden(A.pferd);
       return a && !a.vorbei && spiel.markt.jz === jzJetzt() && a.fuehrt !== "du" ? `<div class="brief-aktion"><button class="knopf" data-baktion="bieten" data-bid="${br.id}">🔨 Erneut bieten</button></div>` : ""; }
     return "";
@@ -3931,6 +3971,10 @@
     document.querySelectorAll("[data-baktion]").forEach(b => b.onclick = ev => { ev.stopPropagation();
       const br = (spiel.post || []).find(x => x.id === b.dataset.bid); if (!br) return; const A = br.aktion;
       if (b.dataset.baktion === "du-ja" || b.dataset.baktion === "du-nein") { (spiel.duzen = spiel.duzen || {})[br.von] = b.dataset.baktion === "du-ja"; A.antwort = b.dataset.baktion === "du-ja" ? "ja" : "nein"; speichern(); nachher(); }
+      else if (b.dataset.baktion === "kauf-ja" || b.dataset.baktion === "kauf-nein") {
+        const a = (spiel.angebote || []).find(y => y.id === A.pferd && y.vorschlag && y.vorschlag.id === A.vid); if (!a) { nachher(); return; }
+        if (b.dataset.baktion === "kauf-ja") { A.antwort = "ja"; angebotVerkaufen(a, A.betrag); } else { A.antwort = "nein"; a.vorschlag = null; a.abgelehnt = (a.abgelehnt || 0) + 1; }
+        speichern(); postIconSetzen(); nachher(); }
       else if (b.dataset.baktion === "bieten") { const a = auktionFinden(A.pferd); if (a) { $("dlg").hidden = true; bieten(a); } }
     });
   }

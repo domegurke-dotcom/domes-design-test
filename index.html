@@ -163,6 +163,8 @@
   .briefe .brief { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
   .brief-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; font-size: .85rem; color: var(--leise); }
   .brief-nav .knopf { width: 44px; padding: 6px 0; font-size: 1.2rem; } .brief-nav .knopf:disabled { opacity: .35; }
+  .lex { cursor: pointer; border-bottom: 1.5px dotted var(--akzent); } .lex:hover { color: var(--akzent); }
+  .lex-bild { background: linear-gradient(#dff1fa, #f4fbff); border-radius: 12px; padding: 6px; margin-bottom: 8px; } .lex-bild svg { width: 100%; height: 130px; display: block; }
   .verkauf-hinweis { margin-top: 14px; background: #2f5d3a; color: #fff; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.22); }
   .verkauf-hinweis b { font-size: 1.05rem; } .verkauf-hinweis span { font-size: .9rem; opacity: .92; line-height: 1.4; }
   .verkauf-hinweis .fortschritt { height: 10px; border-radius: 6px; background: rgba(255,255,255,.25); overflow: hidden; } .verkauf-hinweis .fortschritt i { display: block; height: 100%; background: #f4d35e; border-radius: 6px; }
@@ -393,7 +395,7 @@
   /* Auswahl-Overlay */
   #auswahl { position: fixed; inset: 0; background: #f6efe3; z-index: 40; overflow-y: auto; display: none; }
   #auswahl.offen { display: block; }
-  .leiste { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 12px 16px; padding-top: max(12px, env(safe-area-inset-top)); background: var(--holz-dunkel); color: #fff; }
+  .leiste { position: sticky; top: 0; z-index: 6; display: flex; align-items: center; gap: 8px; padding: 12px 16px; padding-top: max(12px, env(safe-area-inset-top)); background: var(--holz-dunkel); color: #fff; }
   .leiste h2 { margin: 0; font-size: 1.05rem; flex: 1; }
   .leiste button { background: rgba(255,255,255,.15); color: #fff; border: 0; border-radius: 8px; padding: 6px 12px; font-size: 1rem; cursor: pointer; }
   .inhalt { max-width: 720px; margin: 0 auto; padding: 16px; }
@@ -461,6 +463,9 @@
     .rg-wert { order: 3; width: 64px; font-size: .9rem; text-align: right; } .rg-wert br { display: none; }
   }
   .rg-name { font-size: .68rem; color: var(--leise); font-weight: 600; }
+  /* Fellfarben stehen schon im Bild (quer und PC) – unten nur hochkant */
+  .farb-feld { display: none; }
+  @media (orientation: portrait) and (max-width: 700px) { .farb-feld { display: block; } }
   .fuss { position: static; padding: 16px 0 max(16px, env(safe-area-inset-bottom)); }
   /* Handy quer im Vollbild: Stall füllt den ganzen Bildschirm, Tag- und Menüknopf schweben darüber */
   @media (orientation: landscape) and (max-height: 600px) {
@@ -745,7 +750,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "119";
+  const SPIEL_VERSION = "120";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -753,9 +758,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=119"></script>
-<script src="kopfteile.js?v=119"></script>
-<script src="kopfalter.js?v=119"></script>
+<script src="pferd.js?v=120"></script>
+<script src="kopfteile.js?v=120"></script>
+<script src="kopfalter.js?v=120"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -952,12 +957,21 @@
   // Sommer- und Winterrappen: Winterrappen sind nur im Winterfell tiefschwarz – im Sommer bleicht die Sonne das Fell rostbraun aus
   const istRappe = b => b === "rappe";
   const winterrappe = p => exVon(p).sonne > .5;
-  function saisonFarbe(p, basis) {
-    if (!istRappe(basis) || !winterrappe(p) || !spiel || !spiel.tag) return basis;
-    const s = datum().s, f = s === 1 ? 1 : s === 2 ? .5 : 0; if (!f) return basis;   // Sommer voll ausgeblichen, Herbst halb (Fellwechsel)
-    const id = `${basis}~sonne${f}`;
-    if (!FARBEN[id]) { const B = FARBEN[basis]; FARBEN[id] = { ...B, body: mix(B.body, "#5e3d27", .42 * f), mane: mix(B.mane, "#4d3121", .3 * f), head: mix(B.head || B.body, "#5e3d27", .3 * f) }; }
+  // Fuchs und Braune bleichen im Sommer ebenfalls aus (ohne eigenen Namen) – wie stark, hängt von derselben Veranlagung ab
+  const BLEICH = { fuchs: [["#e0a060", .28], ["#e6b07a", .3]], hellfuchs: [["#e8b878", .22], ["#fff4dc", .2]], dunkelfuchs: [["#c07a48", .25], ["#f2e2bc", .15]],
+    brauner: [["#c58a52", .25], ["#8a4a26", .45], ["#6b3a22", .3]], hellbrauner: [["#d39a62", .22], ["#8a4a26", .4], ["#6b3a22", .28]], dunkelbrauner: [["#8a5a3a", .22], ["#6a3a22", .35], ["#5a3222", .25]] };
+  function saisonEintrag(basis, k) {
+    const id = `${basis}~s${k}`; if (FARBEN[id]) return id; const B = FARBEN[basis];
+    if (istRappe(basis)) FARBEN[id] = { ...B, body: mix(B.body, "#5e3d27", .42 * k), mane: mix(B.mane, "#4d3121", .3 * k), head: mix(B.head || B.body, "#5e3d27", .3 * k) };
+    else { const [b, m, pt] = BLEICH[basis]; FARBEN[id] = { ...B, body: mix(B.body, b[0], b[1] * k), head: mix(B.head || B.body, b[0], b[1] * k * .8), mane: mix(B.mane, m[0], m[1] * k), ...(B.points && pt ? { points: mix(B.points, pt[0], pt[1] * k) } : {}) }; }
     return id;
+  }
+  function saisonFarbe(p, basis) {
+    if (!spiel || !spiel.tag || !(istRappe(basis) || BLEICH[basis])) return basis;
+    const s = datum().s, f = s === 1 ? 1 : s === 2 ? .5 : 0; if (!f) return basis;   // Sommer voll ausgeblichen, Herbst halb (Fellwechsel)
+    if (istRappe(basis)) return winterrappe(p) ? saisonEintrag(basis, f) : basis;
+    const k = Math.round(f * (.4 + .6 * exVon(p).sonne) * 10) / 10;
+    return k ? saisonEintrag(basis, k) : basis;
   }
   // sichtbare Farbe heute: Geburtsfarbe → Schimmel der Grundfarbe → (Apfelschimmel) → weiß (→ Fliegenschimmel)
   function fb(p, jahre) {
@@ -2047,10 +2061,10 @@
       const zucht = p.geschlecht === "Wallach" || box.tot || p.nurGrunddaten ? "" : `${nk} ${nk === 1 ? "Nachkomme" : "Nachkommen"}<br>${zstatus}`;
       inhalt = `<dl class="werte">
           <dt>Name</dt><dd>${esc(p.name)}</dd>
-          <dt>Rasse</dt><dd>${rasseText(p)}</dd>
-          <dt>Farbe</dt><dd>${farbText(p)}</dd>
-          <dt>Geschlecht</dt><dd>${p.geschlecht}</dd>
-          <dt>Alter</dt><dd>${alterText(p)} · ${altersstufe(p)[1]}</dd>
+          <dt>Rasse</dt><dd><span class="lex" data-lex="rasse">${rasseText(p)}</span></dd>
+          <dt>Farbe</dt><dd><span class="lex" data-lex="farbe">${farbText(p)}</span></dd>
+          <dt>Geschlecht</dt><dd><span class="lex" data-lex="geschlecht">${p.geschlecht}</span></dd>
+          <dt>Alter</dt><dd>${alterText(p)} · <span class="lex" data-lex="alter">${altersstufe(p)[1]}</span></dd>
           <dt>Geboren</dt><dd>${JZ[p.geb.s][1]} ${JZ[p.geb.s][0]} ${p.geb.j}</dd>
           ${box.fohlen ? `<dt>Fohlen</dt><dd>${esc(box.fohlen.name)} · ${box.fohlen.geschlecht} · ${alterText(box.fohlen)} (${altersstufe(box.fohlen)[1].replace(/^\S+ /, "")})${alterJZ(box.fohlen) >= 2 ? `<br><button class="knopf" id="absetzen" style="width:auto;padding:6px 12px;margin-top:6px;font-size:.85rem">In eigene Box umstellen</button> <button class="knopf zweit" id="fohlenAufzucht" style="width:auto;padding:6px 12px;margin-top:6px;font-size:.85rem">🍼 In die Aufzuchtstation</button>` : ""}</dd>` : ""}
           <dt>Stockmaß</dt><dd>${p.stockmass} cm</dd>
@@ -2304,6 +2318,7 @@
       </div>`;
     { const an = INFO.querySelector(".reiter.viele button.an"); if (an) an.parentElement.scrollLeft = Math.max(0, an.offsetLeft - 40); }
     INFO.querySelectorAll(".reiter button").forEach(b => b.onclick = () => { aktenReiter = b.dataset.r; aufschlTeil = null; deckModus = false; ortModus = null; scherModus = false; medModus = false; zaumModus = false; meldung = ""; zeigeAkte(); });
+    INFO.querySelectorAll("[data-lex]").forEach(x => x.onclick = () => lexFenster(x.dataset.lex, p));
     INFO.querySelectorAll("[data-aufschl]").forEach(b => b.onclick = () => { aufschlTeil = b.dataset.aufschl; zeigeAkte(); });
     const azr = $("aufschlZurueck"); if (azr) azr.onclick = () => { aufschlTeil = null; zeigeAkte(); };
     if (LS) {
@@ -2485,7 +2500,7 @@
           <button class="blaettern rechts" id="rasseWeiter" aria-label="Nächste Rasse">›</button></div>
         <p class="text"><b>${r.herkunft}</b> · ${r.h[0]}–${r.h[1]} cm Stockmaß<br>${r.text}</p>${r.warnung ? `<div class="rasse-warn"><b>⚠️ Achtung Erbkrankheit</b>${r.warnung}</div>` : ""}
 
-        <div class="feld"><span class="titel">Fellfarbe</span>
+        <div class="feld farb-feld"><span class="titel">Fellfarbe</span>
           <div class="chips" id="farben">${r.farben.map(fid => {
             const c = FARBEN[fid];
             return `<button class="chip" data-f="${fid}"><span class="swatch" style="background:linear-gradient(135deg, ${c.body} 55%, ${c.mane} 55%)"></span>${c.name}</button>`;
@@ -2941,6 +2956,35 @@
   addEventListener("resize", stallFormat);
   document.addEventListener("fullscreenchange", vollbildText); document.addEventListener("webkitfullscreenchange", vollbildText);
   // ---------- Enzyklopädie ----------
+  // kleines Erklärfenster aus dem Lexikon (von der Daten-Karte aus) – schließen führt zurück zur Karte
+  function lexFenster(art, p) {
+    const bild = (rasse, farbe) => { const z = zeichnePferd(rasse, farbe, { seed: "lex" + rasse, statisch: 1 }), m = 5;
+      return `<div class="lex-bild"><svg viewBox="${(z.box.minX - m).toFixed(1)} ${(z.box.minY - m).toFixed(1)} ${(z.box.maxX - z.box.minX + 2 * m).toFixed(1)} ${(-z.box.minY + 2 * m).toFixed(1)}">${ohneAnim(z.svg)}</svg></div>`; };
+    let titel = "", html = "";
+    if (art === "rasse") { const r = rasseById(p.rasse), a = anteileVon(p);
+      titel = `📖 ${r.name}`; html = bild(r.id, r.farben[0]) + `<p><b>${r.herkunft}</b> · ${r.h[0]}–${r.h[1]} cm Stockmaß</p><p>${r.text}</p>${r.warnung ? `<div class="rasse-warn"><b>⚠️ Achtung Erbkrankheit</b>${r.warnung}</div>` : ""}
+        ${Object.keys(a).length > 1 ? `<p><small>Die Zahl hinter dem Rassenamen ist der Anteil dieser Rasse. Alle Anteile stehen bei Genetik unter „Rassischer Anteil“.</small></p>` : ""}`; }
+    if (art === "farbe") {
+      const id = fb(p); let lid = id.split("~")[0];
+      if (/^gr_/.test(id)) { const ph = id.split("_").pop(), basis = id.slice(3).replace(/_[^_]+_[^_]+_[^_]+$/, ""); lid = ph === "apfel" ? "apfelschimmel" : ph === "weiss" ? "schimmel" : ph === "fliegen" ? "fliegenschimmel" : ({ rappe: "grauschimmel", brauner: "braunschimmel", fuchs: "fuchsschimmel" })[basis] || "grauschimmel"; }
+      if (!FARBBESCHREIBUNG[lid]) { const pre = (lid.match(/^(ov|tv|tg|fs|sb|sk)_/) || [])[1]; lid = Object.keys(FARBBESCHREIBUNG).find(k => pre && k.startsWith(pre + "_")) || lid; }
+      titel = `🎨 ${FARBEN[lid] ? FARBEN[lid].name : FARBEN[id].name}`;
+      const extra = [];
+      if (/~/.test(id)) extra.push(istRappe(p.farbe) ? "Gerade ist Sommer bzw. Herbst – deshalb ist das Fell ausgeblichen. Im Winterfell ist es wieder tiefschwarz." : "Gerade ist Sommer bzw. Herbst – das Fell ist von der Sonne etwas ausgeblichen. Im Winterfell ist es wieder dunkler.");
+      if (istRappe(p.farbe)) extra.push(winterrappe(p) ? "<b>Winterrappe:</b> nur im Winterfell tiefschwarz, im Sommer rostbraun ausgeblichen." : "<b>Sommerrappe:</b> bleibt das ganze Jahr tiefschwarz.");
+      if (/kann Schimmel werden/.test(farbText(p))) extra.push("<b>(kann Schimmel werden):</b> Ein Elternteil ist Schimmel. Ob das Pferd das Schimmel-Gen geerbt hat, zeigt erst ein Gentest – oder die Zeit: Schimmel werden mit den Jahren immer heller.");
+      html = bild(p.rasse, id) + `<p>${FARBBESCHREIBUNG[lid] || ""}</p>${extra.map(t => `<p><small>${t}</small></p>`).join("")}`; }
+    if (art === "geschlecht") { titel = `📖 ${p.geschlecht}`;
+      html = `<p>${({ Stute: "Weibliches Pferd. Stuten können ab 3 Jahren gedeckt werden – bis zum Alter von 20 Jahren. Die Tragzeit dauert 3 Jahreszeiten.", Hengst: "Männliches, nicht kastriertes Pferd. Hengste können ab 3 Jahren decken – bis zum Alter von 25 Jahren.", Wallach: "Kastriertes männliches Pferd. Wallache sind meist ruhiger und können nicht zur Zucht eingesetzt werden." })[p.geschlecht]}</p>`; }
+    if (art === "alter") { const st = altersstufe(p);
+      titel = `📖 ${st[1]}`; html = `<p>${st[2]}.</p><table class="ver-tab"><tr><th>Altersstufe</th><th>bis</th></tr>${ALTERSSTUFEN.map(([m, n]) => `<tr><td>${n === st[1] ? `<b>${n}</b>` : n}</td><td>${m === Infinity ? "–" : m < 12 ? `${m} Monate` : `${m / 12} Jahre`}</td></tr>`).join("")}</table>`; }
+    dialog(`<h3>${titel}</h3>${html}`, [["Schließen", null, "zweit"]]);
+  }
+  // Sommerfell-Beispiele für das Lexikon
+  [["fuchs", "Fuchs im Sommer (ausgeblichen)", "Im Sommer bleicht die Sonne das Fell von Füchsen auf – es wird heller und goldiger, die Mähne oft fast blond. Mit dem Fellwechsel im Herbst kommt das dunklere Winterfell. Wie stark ein Pferd ausbleicht, ist veranlagt und wird vererbt."],
+   ["brauner", "Brauner im Sommer (ausgeblichen)", "Auch Braune bleichen in der Sonne aus: das Fell wird heller, Mähne und Schweif werden rötlich-braun statt schwarz. Im Winterfell sind sie wieder satt braun mit schwarzem Langhaar."],
+   ["rappe", "Winterrappe im Sommer", "Winterrappen sind nur im Winterfell tiefschwarz. Im Sommer bleicht die Sonne sie rostbraun aus. Sommerrappen bleiben das ganze Jahr schwarz."]].forEach(([b, n, t]) => {
+    const id = `lex_${b}_sommer`; FARBEN[id] = { ...FARBEN[saisonEintrag(b, 1)], name: n }; FARBBESCHREIBUNG[id] = t; });
   const ENZY = {
     kopf: { titel: "Kopfformen", ansicht: "kopf", rasse: "hannoveraner", farbe: "brauner", eintraege: [
       ["Hechtkopf", "Nach innen gewölbtes (konkaves) Profil, typisch für den Araber.", { profile: -2.6, muz: 0.8 }, null, null, "hecht"],
@@ -2982,7 +3026,7 @@
       ["Strumpf", "Weiß bis knapp unter Knie bzw. Sprunggelenk.", null, { beine: "strumpf" }],
       ["Hochweiß", "Weiß reicht über Knie oder Sprunggelenk hinaus.", null, { beine: "hochweiss" }],
     ] },
-    farben: { titel: "Fellfarben", ansicht: "ganz", rasse: "quarter", farbe: null, eintraege: Object.entries(FARBEN).filter(([id]) => !/^gr_/.test(id) && (!/^(ov|tv|tg|fs|sb|sk)_/.test(id) || FARBBESCHREIBUNG[id])).map(([id, c]) => [c.name, FARBBESCHREIBUNG[id] || "", null, null, id]) },
+    farben: { titel: "Fellfarben", ansicht: "ganz", rasse: "quarter", farbe: null, eintraege: Object.entries(FARBEN).filter(([id]) => !/^gr_/.test(id) && (!/~/.test(id) || FARBBESCHREIBUNG[id]) && (!/^(ov|tv|tg|fs|sb|sk)_/.test(id) || FARBBESCHREIBUNG[id])).map(([id, c]) => [c.name, FARBBESCHREIBUNG[id] || "", null, null, id]) },
   };
   let enzyKat = "kopf";
   function enzyBild(kat, e) {

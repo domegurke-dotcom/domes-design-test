@@ -175,6 +175,7 @@
   .ver-tab { width: 100%; border-collapse: collapse; font-size: .82rem; margin: 6px 0; } .ver-tab th, .ver-tab td { text-align: left; padding: 4px 6px; border-bottom: 1px solid #e2d6c3; vertical-align: top; } .ver-tab th { color: var(--leise); font-size: .75rem; }
   body.tippt .schirm.offen > .schirm-innen { padding-bottom: 55vh; }
   .gentest-kachel { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; border: 2px solid var(--akzent); border-radius: 12px; padding: 10px 12px; margin: 0 0 12px; background: #fff; font: inherit; color: var(--text); cursor: pointer; box-shadow: 0 2px 0 #e7c4a3; }
+  .rasse-warn { margin: 8px 0 4px; padding: 9px 11px; border-radius: 10px; background: #fdecea; border: 1.5px solid #e0a39b; color: #7a2a20; font-size: .86rem; line-height: 1.4; } .rasse-warn b { display: block; margin-bottom: 2px; }
   .gt-kacheln { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 6px 0 4px; }
   .gt-k { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; aspect-ratio: 1; padding: 6px 4px; border: 2px solid var(--akzent); border-radius: 12px; background: #fff; font: inherit; color: var(--text); cursor: pointer; box-shadow: 0 2px 0 #e7c4a3; }
   .gt-k .ico { font-size: 1.9rem; line-height: 1.1; } .gt-k b { font-size: .9rem; overflow-wrap: anywhere; } .gt-k small { font-size: .72rem; color: var(--leise); }
@@ -692,7 +693,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "112";
+  const SPIEL_VERSION = "113";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -700,9 +701,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=112"></script>
-<script src="kopfteile.js?v=112"></script>
-<script src="kopfalter.js?v=112"></script>
+<script src="pferd.js?v=113"></script>
+<script src="kopfteile.js?v=113"></script>
+<script src="kopfalter.js?v=113"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -756,7 +757,7 @@
   // je Gen zwei Allele: [von der Mutter, vom Vater]; Großbuchstabe bzw. Name = dominant
   const GENE = [
     ["E", "Extension", "E", "e", "schwarzes Pigment – ohne E (ee) wird das Pferd ein Fuchs"],
-    ["A", "Agouti", "A", "a", "verteilt Schwarz auf Mähne, Schweif und Beine – macht aus einem Rappen einen Braunen"],
+    ["A", "Agouti", "A", "a", "verteilt Schwarz auf Mähne, Schweif und Beine – macht aus einem Rappen einen Braunen. Drittes Allel At: Schwarzbrauner mit Kupfermaul (A > At > a)"],
     ["F", "Flachs", "F", "f", "ff gibt Füchsen eine helle Flachsmähne"],
     ["Sty", "Sooty", "Sty", "n", "dunkelt das Fell ab (Dunkelbrauner, Dunkelfuchs)"],
     ["Cr", "Creme", "Cr", "n", "hellt auf: einfach Palomino/Buckskin, doppelt Cremello"],
@@ -764,31 +765,49 @@
     ["Z", "Silber", "Z", "n", "macht schwarze Haare silbrig (Windfarben)"],
     ["Rn", "Roan", "Rn", "n", "unveränderlicher Schimmel: weiße Stichelhaare von Geburt an"],
     ["To", "Tobiano", "To", "n", "große weiße Platten (Schecke)"],
+    ["O", "Overo (Frame)", "O", "n", "waagerecht gezackte weiße Flecken an Seite und Hals – reinerbig (O/O) tödlich: Lethal-White-Fohlen"],
+    ["Lp", "Leopard (Tiger)", "Lp", "n", "Tigerscheckung – mischerbig Punkte, reinerbig (Lp/Lp) kaum Punkte und Nachtblindheit"],
+    ["Patn", "Muster 1 (PATN1)", "PATN1", "n", "mit Leopard: ganzer Körper getigert – ohne PATN1 nur eine Schabracke"],
     ["G", "Grau", "G", "g", "fortschreitende Schimmelung: dunkel geboren, wird mit dem Alter weiß"],
   ];
   const GEN = Object.fromEntries(GENE.map(x => [x[0], x]));
-  const hat = (g, k) => g[k].includes(GEN[k][2]);
+  const hat = (g, k) => !!g[k] && g[k].includes(GEN[k][2]);
+  const anzahl = (g, k) => (g[k] || []).filter(x => x === GEN[k][2]).length;
+  // fehlende Gene (ältere Spielstände) rezessiv ergänzen
+  const genNorm = g => { if (g) GENE.forEach(([k, , , rez]) => { if (!g[k]) g[k] = [rez, rez]; }); return g; };
   // Häufigkeit des dominanten Allels je Rasse (alles nicht Genannte: kommt nicht vor)
   const RASSE_GENE = {
     araber: { E: .6, A: .55, F: .7, Sty: .1, G: .3 }, friese: { E: .98, A: .03, F: .9 }, marwari: { E: .5, A: .6, F: .7, Sty: .1, D: .1, To: .1, G: .15 },
     fjord: { E: .6, A: .75, F: .7, Sty: .05, Cr: .08, D: .97 }, haflinger: { E: 0, A: .5, F: 0, Sty: .3 }, shetty: { E: .6, A: .5, F: .6, Sty: .1, Z: .1, To: .15, G: .1, Cr: .05, D: .05 },
-    shire: { E: .7, A: .6, F: .8, Sty: .2, G: .1 }, andalusier: { E: .7, A: .5, F: .8, Sty: .1, G: .75 }, lipizzaner: { E: .98, A: .5, F: .9, Sty: .05, G: .9 },
-    vollblut: { E: .55, A: .6, F: .8, Sty: .2, G: .05 }, quarter: { E: .45, A: .5, F: .7, Sty: .1, Cr: .1, D: .08, Rn: .08 }, hannoveraner: { E: .55, A: .6, F: .8, Sty: .2, G: .05 },
+    shire: { E: .7, A: .6, At: .2, F: .8, Sty: .2, G: .1 }, andalusier: { E: .7, A: .5, F: .8, Sty: .1, G: .75 }, lipizzaner: { E: .98, A: .5, F: .9, Sty: .05, G: .9 },
+    vollblut: { E: .55, A: .6, At: .25, F: .8, Sty: .2, G: .05 }, quarter: { E: .45, A: .5, At: .1, F: .7, Sty: .1, Cr: .1, D: .08, Rn: .08, O: .02, To: .02 }, hannoveraner: { E: .55, A: .6, At: .3, F: .8, Sty: .2, G: .05 },
     isi: { E: .5, A: .5, F: .6, Sty: .1, Cr: .08, D: .08, Z: .08, To: .1, G: .1 }, tinker: { E: .7, A: .4, F: .7, To: .8 }, tekke: { E: .5, A: .5, F: .7, Sty: .1, Cr: .15, D: .05, G: .05 },
   };
   const genFreq = (rasse, k) => { const t = RASSE_GENE[rasse]; return t ? (t[k] || 0) : ({ E: .5, A: .5, F: .7, Sty: .1 })[k] || 0; };
-  const allel = (rasse, k, r) => r() < genFreq(rasse, k) ? GEN[k][2] : GEN[k][3];
+  const allel = (rasse, k, r) => r() < genFreq(rasse, k) ? GEN[k][2] : (k === "A" && r() < (genFreq(rasse, "At") || .05) ? "At" : GEN[k][3]);
   // sichtbare Geburtsfarbe aus den Genen (ohne Schimmelung – die kommt mit dem Alter)
-  function phaenotyp(g) {
-    const schwarz = hat(g, "E"), braun = schwarz && hat(g, "A"), cr = g.Cr.filter(x => x === "Cr").length;
+  // ton: Farbton-Veranlagung (mehrere Gene) – heller oder normaler Brauner
+  function phaenotyp(g, ton) {
+    genNorm(g);
+    const schwarz = hat(g, "E"), braun = schwarz && hat(g, "A");
+    if (anzahl(g, "O") === 2) return "lethalwhite";
+    const lp = anzahl(g, "Lp"), b = grundfarbe(g, ton);
+    if (lp) return (hat(g, "Patn") ? (lp === 2 ? "fs_" : "tg_") : (lp === 2 ? "sk_" : "sb_")) + b;
+    if (hat(g, "O")) return (hat(g, "To") ? "tv_" : "ov_") + b;
     if (hat(g, "To")) return !schwarz ? "fuchsschecke" : braun ? "braunschecke" : "rappschecke";
     if (hat(g, "Rn")) return schwarz && !braun ? "blueroan" : "rotschimmel";
+    return b;
+  }
+  // einfarbige Grundfarbe (ohne Scheckung, ohne Roan)
+  function grundfarbe(g, ton) {
+    const schwarz = hat(g, "E"), sbraun = schwarz && !hat(g, "A") && g.A.includes("At"), braun = schwarz && (hat(g, "A") || sbraun), cr = anzahl(g, "Cr");
     if (cr === 2) return "isabell";
     if (hat(g, "D")) return cr ? (schwarz ? "weissfalbe" : "gelbfalbe") : !schwarz ? "rotfalbe" : braun ? "braunfalbe" : "mausfalbe";
     if (cr) return !schwarz ? "palomino" : braun ? "buckskin" : "rappe";
     if (hat(g, "Z") && schwarz) return "windfarben";
     if (!schwarz) return g.F.join("") === "ff" ? (hat(g, "Sty") ? "dunkelfuchs" : "hellfuchs") : "fuchs";
-    return braun ? (hat(g, "Sty") ? "dunkelbrauner" : "brauner") : "rappe";
+    if (sbraun) return "schwarzbrauner";
+    return braun ? (hat(g, "Sty") ? "dunkelbrauner" : ton != null && ton < .25 ? "hellbrauner" : "brauner") : "rappe";
   }
   // gewählte Farben (Rassenauswahl), die „Schimmel“ bedeuten – gemeint ist der heutige Zustand
   const GRAU_WAHL = { schimmel: 1, apfelschimmel: 1, fliegenschimmel: 1, grauschimmel: 1 };
@@ -797,45 +816,56 @@
     palomino: { E: 0, Cr: 1 }, isabell: { Cr: 2 }, buckskin: { E: 1, A: 1, Cr: 1 }, braunfalbe: { E: 1, A: 1, D: 1 }, rotfalbe: { E: 0, D: 1 }, mausfalbe: { E: 1, A: 0, D: 1 },
     weissfalbe: { E: 1, D: 1, Cr: 1 }, gelbfalbe: { E: 0, D: 1, Cr: 1 }, windfarben: { E: 1, A: 0, Z: 1 }, rappschecke: { E: 1, A: 0, To: 1 }, braunschecke: { E: 1, A: 1, To: 1 },
     fuchsschecke: { E: 0, To: 1 }, blueroan: { E: 1, A: 0, Rn: 1 }, rotschimmel: { E: 0, Rn: 1 },
+    hellbrauner: { E: 1, A: 1, Sty: 0 }, schwarzbrauner: { E: 1, A: 0, Sty: 0 },
   };
+  const MUSTER_GENE = { ov: { O: 1, To: 0, Lp: 0 }, tv: { O: 1, To: 1, Lp: 0 }, tg: { Lp: 1, Patn: 1 }, fs: { Lp: 2, Patn: 1 }, sb: { Lp: 1, Patn: 0 }, sk: { Lp: 2, Patn: 0 } };
+  // Farbe → nötige Gene (auch für Scheckungen wie „ov_brauner“)
+  const farbGene = farbe => { const m = /^(ov|tv|tg|fs|sb|sk)_(.+)$/.exec(farbe); return m ? { ...(FARB_GENE[m[2]] || {}), ...MUSTER_GENE[m[1]] } : FARB_GENE[farbe]; };
+  const ohneTon = f => f.replace("hellbrauner", "brauner");
   // Genotyp passend zu einer gewählten Farbe – freie Gene nach den Häufigkeiten der Rasse
   function genAusFarbe(farbe, seed, rasse) {
     const r = zufall("gen-" + seed), grau = !!GRAU_WAHL[farbe];
     const roh = () => Object.fromEntries(GENE.map(([k]) => [k, [allel(rasse, k, r), allel(rasse, k, r)]]));
     const setze = (g, k, n) => { const [, , dom, rez] = GEN[k];
-      if (n === 0) g[k] = [rez, rez]; else if (n === 2) g[k] = [dom, dom]; else if (!g[k].includes(dom)) g[k] = r() < .5 ? [dom, g[k][1]] : [g[k][0], dom]; };
+      if (n === 0) g[k] = k === "A" ? g[k].map(x => x === "A" ? (r() < .5 ? "At" : "a") : x) : [rez, rez]; else if (n === 2) g[k] = [dom, dom];
+      else if (k === "O" || k === "Lp") g[k] = r() < .5 ? [dom, rez] : [rez, dom];   // genau ein Allel (O/O wäre tödlich)
+      else if (!g[k].includes(dom)) g[k] = r() < .5 ? [dom, g[k][1]] : [g[k][0], dom]; };
+    const nachFarbe = g => { if (farbe === "schwarzbrauner") g.A = r() < .5 ? ["At", r() < .4 ? "At" : "a"] : [r() < .4 ? "At" : "a", "At"];
+      if (farbe === "rappe") g.A = ["a", "a"]; };
     for (let versuch = 0; versuch < 120; versuch++) {
       const g = roh();
       if (grau) {
         if (!hat(g, "G")) setze(g, "G", 1);
         // Schimmel kommen meist dunkel zur Welt
-        if (["rappe", "brauner", "dunkelbrauner", "fuchs", "hellfuchs", "dunkelfuchs"].includes(phaenotyp(g)) || versuch > 60) return g;
+        if (["rappe", "brauner", "dunkelbrauner", "schwarzbrauner", "fuchs", "hellfuchs", "dunkelfuchs"].includes(phaenotyp(g)) || versuch > 60) return g;
         continue;
       }
-      Object.entries(FARB_GENE[farbe] || {}).forEach(([k, n]) => setze(g, k, n));
+      Object.entries(farbGene(farbe) || {}).forEach(([k, n]) => setze(g, k, n)); nachFarbe(g);
       g.G = ["g", "g"];
-      if (phaenotyp(g) === farbe) return g;
+      if (phaenotyp(g) === ohneTon(farbe)) return g;
     }
     const g = Object.fromEntries(GENE.map(([k, , , rez]) => [k, [rez, rez]]));
-    Object.entries(FARB_GENE[farbe] || FARB_GENE.brauner).forEach(([k, n]) => setze(g, k, n));
+    Object.entries(farbGene(farbe) || FARB_GENE.brauner).forEach(([k, n]) => setze(g, k, n)); nachFarbe(g);
     if (grau) setze(g, "G", 1);
     return g;
   }
   function genVon(p) {
-    if (!p.gen) { p.gen = genAusFarbe(p.farbe, p.id || p.name, p.rasse); if (!GRAU_WAHL[p.farbe] && phaenotyp(p.gen) !== p.farbe) p.farbe = phaenotyp(p.gen); }
-    if (GRAU_WAHL[p.farbe]) p.farbe = phaenotyp(p.gen);   // gespeichert wird immer die Geburtsfarbe
+    if (!p.gen) { p.gen = genAusFarbe(p.farbe, p.id || p.name, p.rasse); if (!GRAU_WAHL[p.farbe] && ohneTon(phaenotyp(p.gen)) !== ohneTon(p.farbe)) p.farbe = phaenotyp(p.gen, p.ex && p.ex.ton); }
+    genNorm(p.gen);
+    if (GRAU_WAHL[p.farbe]) p.farbe = phaenotyp(p.gen, p.ex && p.ex.ton);   // gespeichert wird immer die Geburtsfarbe
     return p.gen;
   }
   // Vererbung: von jedem Elternteil zufällig eines seiner beiden Allele
-  const genVererben = (gm, gv) => Object.fromEntries(GENE.map(([k]) => [k, [zufallAus(gm[k]), zufallAus(gv[k])]]));
+  const genVererben = (gm, gv) => { genNorm(gm); genNorm(gv); return Object.fromEntries(GENE.map(([k]) => [k, [zufallAus(gm[k]), zufallAus(gv[k])]])); };
 
   // ---------- Schimmelung: Veranlagung (Exterieur, versteckt) ----------
   // grauTempo: Jahre bis weiß · apfel: Neigung zur Apfelung · fliegen: Neigung zum Fliegenschimmel · fliegenAb: ab welchem Alter
   // maehne: Langhaar bleicht früher (+) oder später (−) aus als das Fell
   const exZufall = r => ({ grauTempo: Math.round((4 + r() * 7) * 10) / 10, apfel: Math.round(r() * 100) / 100, fliegen: Math.round(r() * 100) / 100,
-    fliegenAb: Math.round((8 + r() * 7) * 10) / 10, maehne: Math.round((r() - .5) * 60) / 100 });
-  const EX_GRENZEN = { grauTempo: [2, 16, .1], apfel: [0, 1, .01], fliegen: [0, 1, .01], fliegenAb: [6, 20, .1], maehne: [-.4, .4, .01] };
-  const exVon = p => p.ex || (p.ex = exZufall(zufall("ex-" + (p.id || p.nr || p.name))));
+    fliegenAb: Math.round((8 + r() * 7) * 10) / 10, maehne: Math.round((r() - .5) * 60) / 100, ton: Math.round(r() * 100) / 100 });
+  const EX_GRENZEN = { grauTempo: [2, 16, .1], apfel: [0, 1, .01], fliegen: [0, 1, .01], fliegenAb: [6, 20, .1], maehne: [-.4, .4, .01], ton: [0, 1, .01] };
+  const EX_NAME = { grauTempo: "Schimmel: Jahre bis weiß", apfel: "Schimmel: Apfelung", fliegen: "Schimmel: Fliegenschimmel", fliegenAb: "Schimmel: Fliegen ab Alter", maehne: "Schimmel: Langhaar", ton: "Farbton (Brauner)" };
+  const exVon = p => { if (!p.ex) p.ex = exZufall(zufall("ex-" + (p.id || p.nr || p.name))); if (p.ex.ton == null) p.ex.ton = .5; return p.ex; };
   const alterInJahren = p => p.geb ? alterJZ(p) / 4 : (p.alter != null ? p.alter : 8);
   const klemm01 = x => Math.max(0, Math.min(1, x));
   function grauStand(p, jahre) {
@@ -865,22 +895,27 @@
       e.head = mix(B.head || B.body, W8, Math.min(1, tb * 1.15));
       e.muzzle = mix(B.muzzle || "#3a302c", "#6f6a6a", tb);
       if (B.stripe) e.stripe = mix(B.stripe, W8, tb * .9);
-      if (B.pattern !== "tobiano") {
+      if (!["tobiano", "overo", "tovero", "leopard", "fewspot", "blanket", "snowcap"].includes(B.pattern)) {
         delete e.pattern;
         if (phase === "apfel") { e.pattern = "dapple"; e.dapple = mix(e.body, W8, .6); }
         else if (phase === "grau") e.pattern = "roan";
         else if (phase === "fliegen") { e.pattern = "fleck"; e.fleck = istFuchsBasis(basis) ? "#9a5a38" : "#5b4b44"; }
       }
-      e.name = phase === "apfel" ? "Apfelschimmel" : phase === "weiss" ? "Schimmel (weiß)" : phase === "fliegen" ? "Fliegenschimmel" : SCHIMMEL_NAME(basis);
+      e.name = phase === "apfel" ? "Apfelschimmel" : phase === "weiss" ? "Schimmel (weiß)" : phase === "fliegen" ? "Fliegenschimmel" : SCHIMMEL_NAME(basis.replace(/^(ov|tv|tg|fs|sb|sk)_/, ""));
       FARBEN[id] = e;
     }
     return id;
   }
+  // Ohne Gentest weiß niemand, ob ein Pferd das Schimmel-Gen hat – man schließt es aus der Abstammung:
+  // ist ein Elternteil Schimmel, steht „(kann Schimmel werden)“ dahinter
+  const elternGrau = p => p.ahnen && p.ahnen.vater && p.ahnen.mutter ? hat(genNorm(p.ahnen.vater.gen || {}), "G") || hat(genNorm(p.ahnen.mutter.gen || {}), "G") : !!p.grauHinweis;
+  const GRAU_SICHER_AB = 4;   // spätestens dann sieht man bei einem Schimmel die ersten weißen Haare
   // Farbe als Text: heutige Farbe, solange ein Schimmel noch nicht weiß ist mit „(kann Schimmel werden)“
   function farbText(p, jahre) {
     const id = fb(p, jahre), st = grauStand(p, jahre), name = FARBEN[id].name;
-    if (st && st.t < 1) return `${name} (kann Schimmel werden)`;
-    if (!st && p.elternGrau && alterInJahren(p) < 3) return `${name} (kann Schimmel werden)`;
+    if (id !== p.farbe) return st && st.t < 1 ? `${name} (kann Schimmel werden)` : name;   // wird schon sichtbar grau
+    if (p.gentest) return hat(genVon(p), "G") ? `${name} (Schimmel-Gen – wird Schimmel)` : name;
+    if (elternGrau(p) && (jahre != null ? jahre : alterInJahren(p)) < GRAU_SICHER_AB) return `${name} (kann Schimmel werden)`;
     return name;
   }
   // im Abstammungsschein steht immer die Geburtsfarbe
@@ -952,7 +987,7 @@
   const AHNEN_ALLE = ["vater", "mutter", ...AHNEN_GP, ...AHNEN_UGP];
   const AHN_GESCHLECHT = k => (k === "vater" || /vater$/.test(k) || (k.length === 3 && k[2] === "v")) ? "Hengst" : "Stute";
   // Vorfahren erfinden – rückwärts, damit sie genetisch zum Pferd passen (jedes Allel stammt von einem Elternteil)
-  function stammbaumErzeugen(p, plaetze) {
+  function stammbaumErzeugen(p, plaetze, vorwaerts) {
     const r = zufall("stamm-" + (p.id || p.nr || p.name)), gi = g => g.j * 4 + g.s, ig = i => ({ s: ((i % 4) + 4) % 4, j: Math.floor(i / 4) });
     if (!plaetze) {
       plaetze = []; Object.entries(anteileVon(p)).forEach(([ra, pct]) => { for (let i = 0; i < Math.round(pct / 12.5); i++) plaetze.push(ra); });
@@ -970,11 +1005,25 @@
       rasseVon[k] = top[Math.floor(r() * top.length)][0]; const h = rasseById(rasseVon[k]).h; sm[k] = Math.round(h[0] + r() * (h[1] - h[0])); });
     // Gene: [von der Mutter, vom Vater] – rückwärts aufteilen
     const teile = (kg, rM, rV) => { const m = {}, v = {}; GENE.forEach(([k]) => { m[k] = r() < .5 ? [kg[k][0], allel(rM, k, r)] : [allel(rM, k, r), kg[k][0]]; v[k] = r() < .5 ? [kg[k][1], allel(rV, k, r)] : [allel(rV, k, r), kg[k][1]]; }); return [m, v]; };
-    const gen = {};
-    [gen.mutter, gen.vater] = teile(genVon(p), rasseVon.mutter, rasseVon.vater);
-    [gen.vatersmutter, gen.vatersvater] = teile(gen.vater, rasseVon.vatersmutter, rasseVon.vatersvater);
-    [gen.muttersmutter, gen.muttersvater] = teile(gen.mutter, rasseVon.muttersmutter, rasseVon.muttersvater);
-    AHNEN_GP.forEach((k, i) => { [gen[AHNEN_UGP[2 * i + 1]], gen[AHNEN_UGP[2 * i]]] = teile(gen[k], rasseVon[AHNEN_UGP[2 * i + 1]], rasseVon[AHNEN_UGP[2 * i]]); });
+    const gen = {}, lebt = g => anzahl(g, "O") < 2;   // O/O-Pferde sterben als Fohlen – kein lebender Vorfahre ist O/O
+    if (vorwaerts) {
+      // Mischlinge vom Markt: Urgroßeltern nach den Genen ihrer Rasse, dann Generation für Generation vererbt
+      const erbe = (gm, gv) => { for (let i = 0; i < 40; i++) { const g = Object.fromEntries(GENE.map(([k]) => [k, [gm[k][r() < .5 ? 0 : 1], gv[k][r() < .5 ? 0 : 1]]])); if (lebt(g)) return g; } return genNorm({}); };
+      AHNEN_UGP.forEach(k => { do gen[k] = Object.fromEntries(GENE.map(([x]) => [x, [allel(rasseVon[k], x, r), allel(rasseVon[k], x, r)]])); while (!lebt(gen[k])); });
+      AHNEN_GP.forEach((k, i) => gen[k] = erbe(gen[AHNEN_UGP[2 * i + 1]], gen[AHNEN_UGP[2 * i]]));
+      gen.vater = erbe(gen.vatersmutter, gen.vatersvater); gen.mutter = erbe(gen.muttersmutter, gen.muttersvater);
+      p.gen = erbe(gen.mutter, gen.vater);
+    } else {
+      [gen.mutter, gen.vater] = teile(genVon(p), rasseVon.mutter, rasseVon.vater);
+      [gen.vatersmutter, gen.vatersvater] = teile(gen.vater, rasseVon.vatersmutter, rasseVon.vatersvater);
+      [gen.muttersmutter, gen.muttersvater] = teile(gen.mutter, rasseVon.muttersmutter, rasseVon.muttersvater);
+      AHNEN_GP.forEach((k, i) => { [gen[AHNEN_UGP[2 * i + 1]], gen[AHNEN_UGP[2 * i]]] = teile(gen[k], rasseVon[AHNEN_UGP[2 * i + 1]], rasseVon[AHNEN_UGP[2 * i]]); });
+      AHNEN_ALLE.forEach(k => { if (!lebt(gen[k])) gen[k].O = r() < .5 ? ["O", "n"] : ["n", "O"]; });
+    }
+    // „kann Schimmel werden“ im Schein: aus der Abstammung (ist ein Elternteil Schimmel?)
+    const elternVon = { vater: ["vatersvater", "vatersmutter"], mutter: ["muttersvater", "muttersmutter"] };
+    AHNEN_GP.forEach((k, i) => elternVon[k] = [AHNEN_UGP[2 * i], AHNEN_UGP[2 * i + 1]]);
+    const grauH = k => elternVon[k] ? elternVon[k].some(e => hat(gen[e], "G")) : hat(gen[k], "G") || r() < genFreq(rasseVon[k], "G");
     // Geburtsdaten: jede Generation 4–12 Jahre älter
     const geb = {}, eigen = gebVon(p) || datum();
     const alterVor = (kind) => ig(gi(kind) - 16 - Math.floor(r() * 33));
@@ -986,7 +1035,8 @@
     const A = {};
     AHNEN_ALLE.forEach(k => {
       const g = AHN_GESCHLECHT(k), nr = "0" + Array.from({ length: 10 }, () => Math.floor(r() * 10)).join(""), w = erzeugeWerte({ id: "ahn" + nr, rasse: rasseVon[k] });
-      A[k] = { name: name(g), nr, geschlecht: g, rasse: rasseVon[k], anteile: ant[k], farbe: phaenotyp(gen[k]), grauHinweis: hat(gen[k], "G"), gen: gen[k], ex: exZufall(r),
+      const ex = exZufall(r);
+      A[k] = { name: name(g), nr, geschlecht: g, rasse: rasseVon[k], anteile: ant[k], farbe: phaenotyp(gen[k], ex.ton), grauHinweis: grauH(k), gen: gen[k], ex,
         werte: { gang: w.gang, charakter: w.charakter }, sm: sm[k], geb: geb[k] };
     });
     p.ahnen = A;
@@ -1005,7 +1055,7 @@
   const ahnWerte = a => a.werte || (a.werte = (({ gang, charakter }) => ({ gang, charakter }))(erzeugeWerte({ id: "ahn" + a.nr, rasse: a.rasse })));
   // Eintrag eines Pferdes im Stammbaum seiner Nachkommen (feste Kopie)
   const ahnEintrag = P => { ahnenFuellen(P); return { name: P.name, nr: nrVon(P), geschlecht: P.geschlecht, rasse: P.rasse, anteile: { ...anteileVon(P) }, farbe: P.farbe,
-    grauHinweis: !!(P.grauHinweis || hat(genVon(P), "G")), gen: JSON.parse(JSON.stringify(genVon(P))), ex: { ...exVon(P) },
+    grauHinweis: elternGrau(P), gen: JSON.parse(JSON.stringify(genVon(P))), ex: { ...exVon(P) },
     werte: { gang: { ...P.werte.gang }, charakter: { ...P.werte.charakter } }, sm: P.zielStockmass || P.stockmass, geb: gebVon(P) ? { ...gebVon(P) } : undefined }; };
   const ahnKopie = a => a ? JSON.parse(JSON.stringify(a)) : a;
   function ahnenAus(M, V) {
@@ -1031,14 +1081,25 @@
     const p = { id, name: o.name, rasse: o.rasse, geschlecht: o.geschlecht, farbe: o.farbe || ra.farben[0], alter: o.alter, geb: o.geb,
       zielStockmass: o.zielStockmass || Math.round(ra.h[0] + r() * (ra.h[1] - ra.h[0])) };
     if (!p.geb) { delete p.geb; sichereGeburt(p); }
-    const wahl = p.farbe;
-    p.gen = genAusFarbe(wahl, id, p.rasse); p.farbe = phaenotyp(p.gen); p.genFuer = p.farbe;
     p.ex = exZufall(r);
-    if (GRAU_WAHL[wahl]) passeGrauAn(p, wahl);
-    p.grauHinweis = hat(p.gen, "G");
-    // Rasseanteile über die 8 Urgroßeltern: meist reinrassig, sonst 1–2 mit Fremdblut
-    const w = r(), k = o.rein ? 0 : w < .6 ? 0 : w < .85 ? 1 : 2, fremd = FREMDBLUT[p.rasse] || "vollblut";
-    stammbaumErzeugen(p, Array.from({ length: 8 }, (_, i) => i < k ? fremd : p.rasse));
+    if (o.plaetze) {
+      // Pferd vom Markt: Rassen der 8 Urgroßeltern vorgegeben – Gene und Farbe werden von ihnen her vererbt
+      stammbaumErzeugen(p, o.plaetze, true);
+      p.zielStockmass = Math.round(Object.entries(p.anteile).reduce((s, [ra, v]) => { const h = rasseById(ra).h; return s + v / 100 * (h[0] + r() * (h[1] - h[0])); }, 0));
+      p.rasse = rasseZuordnen(p.anteile, p.zielStockmass);
+      p.farbe = phaenotyp(p.gen, p.ex.ton);
+    } else {
+      const wahl = p.farbe;
+      p.gen = genAusFarbe(wahl, id, p.rasse);
+      if (wahl === "hellbrauner") p.ex.ton = Math.round(r() * 24) / 100; else if (wahl === "brauner" && p.ex.ton < .25) p.ex.ton = Math.round((25 + r() * 75)) / 100;
+      p.farbe = phaenotyp(p.gen, p.ex.ton);
+      if (GRAU_WAHL[wahl]) passeGrauAn(p, wahl);
+      // Rasseanteile über die 8 Urgroßeltern: reinrassig oder 1–2 mit Fremdblut
+      const w = r(), k = o.rein ? 0 : w < .6 ? 0 : w < .85 ? 1 : 2, fremd = FREMDBLUT[p.rasse] || "vollblut";
+      stammbaumErzeugen(p, Array.from({ length: 8 }, (_, i) => i < k ? fremd : p.rasse));
+    }
+    p.genFuer = p.farbe;
+    p.grauHinweis = elternGrau(p);
     p.werte = erzeugeWerte(p); p.werte.reinrassig = reinAnteil(p.anteile);
     nrVon(p);
     p.alter = alterJahre(p); p.stockmass = Math.round(p.zielStockmass * wuchs(alterJZ(p) * 3));
@@ -1051,7 +1112,7 @@
     if (D[key]) return D[key];
     const r = zufall("deck-" + key + (spiel.spieler ? spiel.spieler.name : "")), andere = RASSEN.filter(x => x.id !== stute.rasse);
     D[key] = [stute.rasse, stute.rasse, stute.rasse, andere[Math.floor(r() * andere.length)].id, andere[Math.floor(r() * andere.length)].id].map((rid, i) => {
-      const ra = rasseById(rid), h = neuesPferd({ id: "d" + jetzt + rid + i, name: NAMEN_HENGST[Math.floor(r() * NAMEN_HENGST.length)], rasse: rid, geschlecht: "Hengst",
+      const ra = rasseById(rid), h = neuesPferd({ id: "d" + jetzt + rid + i, name: NAMEN_HENGST[Math.floor(r() * NAMEN_HENGST.length)], rasse: rid, geschlecht: "Hengst", rein: true,
         farbe: ra.farben[Math.floor(r() * ra.farben.length)], alter: 5 + Math.floor(r() * 11) });
       h.training = 30 + Math.floor(r() * 80);
       return h;
@@ -1102,12 +1163,14 @@
     const ziel = Math.round(her.sm.wert), rasse = rasseZuordnen(anteile, ziel);
     const f = { id: "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: zufallAus(NAMEN[g].filter(n => n !== M.name && n !== V.name)), rasse, farbe: phaenotyp(fGen), geschlecht: g,
       zielStockmass: ziel, geb: { s: d.s, j: d.j }, mutter: M.name, gen: fGen, anteile,
-      elternGrau: hat(M.gen, "G") || hat(V.gen, "G"), grauHinweis: hat(fGen, "G") || hat(M.gen, "G") || hat(V.gen, "G"),
+      grauHinweis: hat(M.gen, "G") || hat(V.gen, "G"),
       maehne: "steh", maehneSeit: spiel.tag, schopf: naturSchopf(rasse) ? "ohne" : undefined, schopfSeit: spiel.tag };   // jedes Fohlen kommt mit Stehmähne und ohne Schopf zur Welt
     f.genFuer = f.farbe;
     // Schimmel-Veranlagung
     f.ex = {};
     Object.entries(EX_GRENZEN).forEach(([k, [min, max, schritt]]) => { her.ex[k] = erben(M, V, x => exVon(x)[k], { min, max, schritt, mut: (max - min) * .15 }); f.ex[k] = her.ex[k].wert; });
+    f.farbe = phaenotyp(fGen, f.ex.ton);
+    if (f.farbe === "lethalwhite") { f.lethalWhite = true; f.lwTag = spiel.tag; }   // O/O: stirbt in den ersten Lebenstagen
     // Gangwerk und Charakter
     const w = erzeugeWerte(f);
     const gangKeys = [...new Set([...Object.keys(M.werte.gang || {}), ...Object.keys(V.werte.gang || {}), "schritt", "trab", "galopp"])];
@@ -1136,7 +1199,7 @@
     const d = k => A[k] && zahl[A[k].nr] > 1, doppelte = [...new Set(AHNEN_ALLE.filter(d).map(k => A[k].name))];
     return `<div class="schein">
       <div class="schein-kopf"><b>Abstammungsschein</b></div>
-      <dl class="schein-daten"><dt>Name</dt><dd>${esc(P.name)}</dd><dt>Rasse</dt><dd>${reinAnteil(anteileVon(P)) >= 100 ? rP.name : `${rP.name}-Mix`}</dd><dt>Farbe</dt><dd>${scheinFarbe({ farbe: P.farbe, grauHinweis: P.grauHinweis || hat(genVon(P), "G") })}</dd>
+      <dl class="schein-daten"><dt>Name</dt><dd>${esc(P.name)}</dd><dt>Rasse</dt><dd>${reinAnteil(anteileVon(P)) >= 100 ? rP.name : `${rP.name}-Mix`}</dd><dt>Farbe</dt><dd>${scheinFarbe({ farbe: P.farbe, grauHinweis: elternGrau(P) })}</dd>
         <dt>Geschlecht</dt><dd>${P.geschlecht}</dd><dt>Stockmaß</dt><dd>${P.stockmass} cm</dd><dt>${P.geb ? "Geboren" : "Alter"}</dt><dd>${P.geb ? jzName(P.geb.j * 4 + P.geb.s) : (P.alter || "–") + " Jahre"}</dd></dl>
       <div class="schein-titel"><span>Abstammung</span><span>Großeltern</span></div>
       <div class="schein-tab">
@@ -1218,6 +1281,13 @@
       deckModus = false; speichern(); zeigeAkte();
       dialog(`<h3>💞 Verpaart!</h3><p><b>${esc(stute.name)}</b> wurde von <b>${esc(hengst.name)}</b> gedeckt. Das Fohlen kommt zu Beginn von ${jzName(jetzt + 3)} zur Welt.</p>`);
     };
+    // Overo × Overo: 25 % Lethal White – Züchter sehen es am Fell oder am Gentest
+    const overoBekannt = q => /^(ov|tv)_/.test(q.farbe) || (q.gentest && hat(genVon(q), "O"));
+    if (overoBekannt(stute) && overoBekannt(hengst) && !verpaaren.overoOk) {
+      dialog(`<h3>⚠️ Zwei Overo-Pferde</h3><p><b>${esc(stute.name)}</b> und <b>${esc(hengst.name)}</b> tragen beide das Overo-Gen. Jedes vierte Fohlen aus dieser Verpaarung wäre ein <b>Lethal-White-Fohlen</b> (O/O): Ihm fehlen Nervenzellen im Darm, es stirbt in den ersten Lebenstagen.</p><p>Verantwortungsvolle Züchter verpaaren zwei Overos nicht miteinander.</p>`,
+        [["Trotzdem verpaaren", () => { verpaaren.overoOk = true; verpaaren(stute, hengst); verpaaren.overoOk = false; }], ["Abbrechen", null, "zweit"]]);
+      return;
+    }
     // freie Boxen minus Boxen, die schon für Fohlen gebraucht werden (Fohlen bei der Mutter + tragende Stuten)
     const frei = spiel.boxen.filter(b => !b.pferd).length, belegt = spiel.boxen.filter(b => b.fohlen).length + spiel.boxen.filter(b => b.pferd && b.pferd.traechtig && b.pferd !== stute).length + (spiel.extern || []).filter(e => e.ort === "aufzucht").length;
     if (frei - belegt <= 0) dialog(`<h3>⚠️ Keine freie Box für das Fohlen</h3><p>Das Fohlen braucht ab seiner dritten Jahreszeit eine <b>eigene Box</b>. Du hast ${frei} freie ${frei === 1 ? "Box" : "Boxen"}${belegt ? `, aber ${belegt} ${belegt === 1 ? "davon ist" : "davon sind"} schon für ${belegt === 1 ? "ein anderes Fohlen" : "andere Fohlen"} eingeplant` : ""}.</p><p>Bau rechtzeitig in der Hofverwaltung eine neue – sonst holt der Tierschutz das Fohlen ab.</p>`,
@@ -1326,7 +1396,7 @@
     const g = genVon(p), z = (k, dom) => g[k].filter(x => x === dom).length;
     const deut = {
       E: n => n === 2 ? "reinerbig schwarzes Pigment – kann keine Füchse vererben" : n === 1 ? "schwarzes Pigment, trägt Fuchs verdeckt" : "Fuchs-Grundfarbe",
-      A: n => n === 2 ? "reinerbig braun-verteilend" : n === 1 ? "braun-verteilend, trägt Rappe verdeckt" : "ohne Agouti (bei schwarzem Pigment: Rappe)",
+      A: n => n === 2 ? "reinerbig braun-verteilend" : n === 1 ? (g.A.includes("At") ? "braun-verteilend, trägt Schwarzbraun (At) verdeckt" : "braun-verteilend, trägt Rappe verdeckt") : g.A.includes("At") ? "At: Schwarzbrauner mit Kupfermaul (bei schwarzem Pigment)" : "ohne Agouti (bei schwarzem Pigment: Rappe)",
       F: n => n === 2 ? "normale Mähnenfarbe, reinerbig" : n === 1 ? "trägt Flachs verdeckt" : "Flachsmähne (bei Füchsen sichtbar)",
       Sty: n => n ? "dunkelt das Fell ab" : "keine Abdunklung",
       Cr: n => n === 2 ? "doppelt Creme (Cremello / Perlino)" : n === 1 ? "einfach Creme" : "kein Creme",
@@ -1335,9 +1405,12 @@
       Rn: n => n ? "Roan – unveränderlicher Schimmel" : "kein Roan",
       To: n => n ? (n === 2 ? "Schecke, reinerbig" : "Schecke") : "kein Tobiano",
       G: n => n ? (n === 2 ? "Schimmel, reinerbig – alle Fohlen werden Schimmel" : "Schimmel, mischerbig") : "kein Schimmel",
+      O: n => n === 2 ? "O/O – Lethal White (nicht lebensfähig)" : n ? "Overo-Träger – ⚠️ nie mit einem anderen Overo verpaaren (25 % Lethal White)" : "kein Overo",
+      Lp: n => n === 2 ? "reinerbiger Tiger – kaum Punkte, nachtblind (CSNB)" : n ? "Tiger (Leopard-Komplex)" : "kein Tiger",
+      Patn: n => n ? "Muster-Gen: mit Lp ganzer Körper getigert" : "kein PATN1 – mit Lp nur Schabracke",
     };
     return `<p style="margin:6px 0"><b>${esc(p.name)}</b> · geboren als ${FARBEN[p.farbe].name} · heute: ${farbText(p)}</p>
-      <div class="gentab">${GENE.map(([k, n, dom]) => `<div class="gen-zeile"><b>${n}</b><span class="gen-ergebnis">${g[k].slice().sort((a, b) => (b === dom) - (a === dom)).join(" / ")}</span><small>${deut[k](z(k, dom))}</small></div>`).join("")}</div>`;
+      <div class="gentab">${GENE.map(([k, n, dom]) => `<div class="gen-zeile"><b>${n}</b><span class="gen-ergebnis">${g[k].slice().sort((a, b) => ((b === dom) * 2 + (b === "At")) - ((a === dom) * 2 + (a === "At"))).join(" / ")}</span><small>${deut[k](z(k, dom))}</small></div>`).join("")}</div>`;
   }
   function gentestBereich(p, art) {
     const H = p.herkunft || {}, zeile = (n, w, q) => `<div class="gen-zeile"><b>${n}</b><span class="gen-ergebnis">${w}</span>${q != null ? `<small>vererbt von: ${q}</small>` : ""}</div>`;
@@ -1349,7 +1422,8 @@
           zeile("Apfelung", ex.apfel > .45 ? "ja" : "nein", herkunftText(H.ex && H.ex.apfel)) +
           zeile("Fliegenschimmel", ex.fliegen > .5 ? `ja, ab ca. ${Math.round(ex.fliegenAb)} Jahren` : "nein", herkunftText(H.ex && H.ex.fliegen)) +
           zeile("Langhaar (Mähne, Schweif, Schopf)", ex.maehne > .08 ? "bleicht früher aus als das Fell" : ex.maehne < -.08 ? "bleibt länger dunkel als das Fell" : "bleicht wie das Fell aus", herkunftText(H.ex && H.ex.maehne))
-          : `<p class="text">Kein Schimmel – die Schimmel-Veranlagung spielt für die Farbe keine Rolle, wird aber weitervererbt.</p>`}</div>`;
+          : `<p class="text">Kein Schimmel – die Schimmel-Veranlagung spielt für die Farbe keine Rolle, wird aber weitervererbt.</p>`}
+        ${zeile("Farbton", ex.ton < .25 ? "hell (Hellbrauner)" : "normal", herkunftText(H.ex && H.ex.ton))}</div>`;
     }
     if (art === "abzeichen") return `<p class="text">Abzeichen werden noch nicht vererbt. Sobald sie über dominante und rezessive Gene vererbt werden, stehen die Ergebnisse hier.</p>`;
     if (art === "gang") { const pr = PROFIL[p.rasse] || {}, n = { schritt: "Schritt", trab: "Trab", galopp: "Galopp", toelt: "Tölt", pass: pr.passName || "Pass" };
@@ -1360,7 +1434,7 @@
       if (H.sm && H.sm.quelle === "Mutation") m.push(["Stockmaß", `${H.sm.wert} cm`]);
       Object.entries(H.gang || {}).forEach(([k, e]) => { if (e.quelle === "Mutation" && e.wert != null) m.push([`Gangwerk: ${k}`, `Note ${String(e.wert).replace(".", ",")}`]); });
       Object.entries(H.charakter || {}).forEach(([k, e]) => { if (e.quelle === "Mutation") m.push([`Charakter: ${(CHARAKTER.find(t => t.key === k) || {}).titel || k}`, e.wert]); });
-      Object.entries(H.ex || {}).forEach(([k, e]) => { if (e.quelle === "Mutation") m.push([`Schimmel-Veranlagung: ${k}`, e.wert]); });
+      Object.entries(H.ex || {}).forEach(([k, e]) => { if (e.quelle === "Mutation") m.push([EX_NAME[k] || k, e.wert]); });
       return m.length ? `<div class="gentab">${m.map(([a, b]) => zeile(a, b, null)).join("")}</div>` : `<p class="text">${p.herkunft ? "Bei diesem Pferd ist keine Mutation aufgetreten – alle Werte stammen von Vorfahren." : "Stammpferd ohne bekannte Eltern – Mutationen lassen sich nicht feststellen."}</p>`;
     }
     return "";
@@ -1377,7 +1451,7 @@
   function aufschluesselungHTML(p) {
     const H = p.herkunft, tab = (kopf, zeilen) => `<table class="ver-tab"><tr>${kopf.map(k => `<th>${k}</th>`).join("")}</tr>${zeilen.map(z => `<tr>${z.map(x => `<td>${x}</td>`).join("")}</tr>`).join("")}</table>`;
     if (!H) return `<p class="text">🛠️ <b>Stammpferd</b> – ${esc(p.name)} wurde nicht im Spiel geboren. Gene und Werte wurden beim Erstellen festgelegt, der Stammbaum (bis zu den Urgroßeltern) wurde passend dazu rückwärts erzeugt: jedes Allel stammt nachweislich von einem Elternteil.</p>
-      ${tab(["Gen", "eigene Allele", "Mutter hat", "Vater hat"], GENE.map(([k, n]) => [n, genVon(p)[k].join(" / "), p.ahnen.mutter.gen[k].join(" / "), p.ahnen.vater.gen[k].join(" / ")]))}`;
+      ${tab(["Gen", "eigene Allele", "Mutter hat", "Vater hat"], GENE.map(([k, n]) => [n, genVon(p)[k].join(" / "), genNorm(p.ahnen.mutter.gen)[k].join(" / "), genNorm(p.ahnen.vater.gen)[k].join(" / ")]))}`;
     const pr = PROFIL[p.rasse] || {}, gn = { schritt: "Schritt", trab: "Trab", galopp: "Galopp", toelt: "Tölt", pass: pr.passName || "Pass" };
     return `<p class="text">🛠️ Adminansicht: woher ${esc(p.name)} jedes Merkmal hat. Schlüssel für Werte: 30 % Mutter · 30 % Vater · 20 % zwischen den Eltern · 10 % Großelternteil · 7 % Urgroßelternteil · 3 % Mutation.</p>
       <h3 class="schein-zwischen">🎨 Fellfarbe (je ein Allel von jedem Elternteil)</h3>
@@ -1386,7 +1460,7 @@
       <h3 class="schein-zwischen">🧬 Rasseanteile</h3>
       ${tab(["", "Anteile"], [["Mutter", anteileText(H.anteile.mutter)], ["Vater", anteileText(H.anteile.vater)], ["Fohlen (Schnitt)", anteileText(H.anteile.ergebnis)], ["zugeordnet", rasseById(H.anteile.rasse).name + (Object.keys(H.anteile.ergebnis).length > 1 && Math.abs(Object.values(H.anteile.ergebnis)[0] - (Object.values(H.anteile.ergebnis)[1] || 0)) < .5 ? " (Gleichstand – nach Exterieur)" : "")]])}
       <h3 class="schein-zwischen">📏 Exterieur</h3>
-      ${tab(["Merkmal", "Wert", "Quelle"], [["Stockmaß", `${H.sm.wert} cm`, herkunftText(H.sm)], ...Object.entries(H.ex || {}).map(([k, e]) => [`Schimmel: ${k}`, e.wert, herkunftText(e)])])}
+      ${tab(["Merkmal", "Wert", "Quelle"], [["Stockmaß", `${H.sm.wert} cm`, herkunftText(H.sm)], ...Object.entries(H.ex || {}).map(([k, e]) => [EX_NAME[k] || k, e.wert, herkunftText(e)])])}
       <h3 class="schein-zwischen">🐎 Gangwerk</h3>
       ${tab(["Gangart", "Note", "Quelle"], Object.entries(H.gang).map(([k, e]) => [gn[k] || k, e.wert == null ? "– (nicht vererbt)" : String(e.wert).replace(".", ","), herkunftText(e)]))}
       <h3 class="schein-zwischen">💭 Charakter</h3>
@@ -1492,14 +1566,14 @@
       const p = b.pferd; if (!p || b.tot) return;
       if (p.pflege && p.pflege.gesundheit > gesundheitMax(p)) p.pflege.gesundheit = gesundheitMax(p);
       if (Math.random() < sterbeChance(p)) {
-        b.tot = true; if (p.pflege) p.pflege.gesundheit = 0;
-        brief("Tierarztpraxis", `Abschied von ${p.name}`, `es tut uns sehr leid: <b>${esc(p.name)}</b> (Box ${i + 1}) ist mit ${alterText(p)} an Altersschwäche friedlich eingeschlafen. ${pron(p).er === "sie" ? "Sie" : "Er"} hatte ein schönes, langes Pferdeleben bei dir.`);
+        b.tot = true; if (p.pflege) p.pflege.gesundheit = 0; p.todesursache = "Altersschwäche";
+        brief("Tierarztpraxis", `Abschied von ${p.name}`, `es tut uns sehr leid: <b>${esc(p.name)}</b> (Box ${i + 1}) ist mit ${alterText(p)} an Altersschwäche friedlich eingeschlafen.<br><br><b>Todesursache:</b> Altersschwäche. ${pron(p).er === "sie" ? "Sie" : "Er"} hatte ein schönes, langes Pferdeleben bei dir.`);
       }
     });
     spiel.gnadenhof = (spiel.gnadenhof || []).filter(g => {
       if (Math.random() >= sterbeChance(g.pferd)) return true;
-      begraben(g.pferd, "Gnadenhof");
-      brief("Gnadenhof", `Abschied von ${g.pferd.name}`, `<b>${esc(g.pferd.name)}</b> ist mit ${alterText(g.pferd)} auf dem Gnadenhof friedlich eingeschlafen. Wir haben gut für ${pron(g.pferd).ihn} gesorgt.`);
+      g.pferd.todesursache = "Altersschwäche"; begraben(g.pferd, "Gnadenhof");
+      brief("Gnadenhof", `Abschied von ${g.pferd.name}`, `<b>${esc(g.pferd.name)}</b> ist mit ${alterText(g.pferd)} auf dem Gnadenhof friedlich eingeschlafen. Wir haben gut für ${pron(g.pferd).ihn} gesorgt.<br><br><b>Todesursache:</b> Altersschwäche.`);
       return false;
     });
     spiel.tierschutz = (spiel.tierschutz || []).filter(t => {
@@ -1510,6 +1584,9 @@
       const p = b.pferd;
       if (!p || !p.traechtig || b.tot || b.fohlen || jetzt < p.traechtig.geburt) return;
       const f = geburt(b);
+      if (f.lethalWhite) { brief("Tierarztpraxis", `${p.name} hat ein Fohlen bekommen`, `<b>${esc(p.name)}</b> (Box ${i + 1}) hat zu Beginn von ${datumLang()} ein ${f.geschlecht === "Stute" ? "Stutfohlen" : "Hengstfohlen"} zur Welt gebracht: <b>${esc(f.name)}</b>.
+        <br><br>Leider müssen wir Ihnen eine schlechte Nachricht mitteilen: ${esc(f.name)} ist fast ganz weiß und hat rosa Haut. Beide Eltern tragen das Overo-Gen – wir befürchten das <b>Lethal-White-Overo-Syndrom</b>. Wir beobachten ${pron(f).ihn} genau.
+        <br><br>Vater: ${esc(f.ahnen.vater.name)} (${rasseById(f.ahnen.vater.rasse).name})`); return; }
       brief("Tierarztpraxis", `${p.name} hat ein Fohlen bekommen!`, `herzlichen Glückwunsch! <b>${esc(p.name)}</b> (Box ${i + 1}) hat zu Beginn von ${datumLang()} ein gesundes ${f.geschlecht === "Stute" ? "Stutfohlen" : "Hengstfohlen"} zur Welt gebracht: <b>${esc(f.name)}</b>.
         <br><br>Vater: ${esc(f.ahnen.vater.name)} (${rasseById(f.ahnen.vater.rasse).name}) · Farbe: ${farbText(f)} · Rasse: ${rasseById(f.rasse).name}`);
     });
@@ -1649,7 +1726,7 @@
           <dt>Stockmaß</dt><dd>${p.stockmass} cm</dd>
           ${zucht ? `<dt>Zucht</dt><dd>${zucht}</dd>` : ""}
         </dl>
-        ${box.tot ? `<div class="tot-hinweis"><b>🕊️ ${esc(p.name)} ist verstorben</b><span>${pron(p).er === "sie" ? "Sie" : "Er"} bekommt einen Grabstein auf dem Pferdefriedhof. Spätestens nach dieser Nacht ist die Box wieder leer.</span><button class="knopf" id="entfernen">🕊️ Verstorbenes Pferd aus der Box nehmen</button></div>` : ""}`;
+        ${box.tot ? `<div class="tot-hinweis"><b>🕊️ ${esc(p.name)} ist verstorben</b><span>Todesursache: ${esc(p.todesursache || "unbekannt")}.<br>${pron(p).er === "sie" ? "Sie" : "Er"} bekommt einen Grabstein auf dem Pferdefriedhof. Spätestens nach dieser Nacht ist die Box wieder leer.</span><button class="knopf" id="entfernen">🕊️ Verstorbenes Pferd aus der Box nehmen</button></div>` : ""}`;
     } else if (aktenReiter === "genetik" && deckModus) {
       const ziel = p.geschlecht === "Stute" ? "Hengst" : "Stute", mz = ziel === "Hengst" ? "Hengste" : "Stuten";
       const eigene = spiel.boxen.map((b, i) => ({ b, i })).filter(({ b, i }) => i !== aktBox && b.pferd && !b.tot && b.pferd.geschlecht === ziel);
@@ -2073,7 +2150,7 @@
           </div>
           <button class="blaettern links" id="rasseZurueck" aria-label="Vorherige Rasse">‹</button>
           <button class="blaettern rechts" id="rasseWeiter" aria-label="Nächste Rasse">›</button></div>
-        <p class="text"><b>${r.herkunft}</b> · ${r.h[0]}–${r.h[1]} cm Stockmaß<br>${r.text}</p>
+        <p class="text"><b>${r.herkunft}</b> · ${r.h[0]}–${r.h[1]} cm Stockmaß<br>${r.text}</p>${r.warnung ? `<div class="rasse-warn"><b>⚠️ Achtung Erbkrankheit</b>${r.warnung}</div>` : ""}
 
         <div class="feld"><span class="titel">Fellfarbe</span>
           <div class="chips" id="farben">${r.farben.map(fid => {
@@ -2120,7 +2197,7 @@
       aktBox = zb; spiel.aktBox = zb;
       const bx = B(), neu = !bx.pferd;
       // neues Pferd mit vollständiger, fester Akte (Gene, Stammbaum bis zu den Urgroßeltern)
-      bx.pferd = neuesPferd({ id: wahl.id, name: wahl.name, rasse: wahl.rasse, geschlecht: wahl.geschlecht, farbe: wahl.farbe, alter: wahl.alter, zielStockmass: wahl.zielStockmass });
+      bx.pferd = neuesPferd({ id: wahl.id, name: wahl.name, rasse: wahl.rasse, geschlecht: wahl.geschlecht, farbe: wahl.farbe, alter: wahl.alter, zielStockmass: wahl.zielStockmass, rein: true });
       alterAktualisieren();
       bx.pferd.maehneSeit = spiel.tag; bx.pferd.schopfSeit = spiel.tag;
       bx.pferd.pflege = erzeugePflege(bx.pferd);
@@ -2333,9 +2410,19 @@
   // Eine Nacht vergeht: Gesundheit, Mist, Mähne und Schopf
   // Verstorbene Pferde kommen auf den Pferdefriedhof – die Box ist danach wieder leer
   function begraben(p, ort) {
-    (spiel.friedhof = spiel.friedhof || []).push({ pferd: JSON.parse(JSON.stringify(p)), name: p.name, rasse: p.rasse, geschlecht: p.geschlecht, farbe: fb(p), geb: p.geb ? { ...p.geb } : null, tod: jzJetzt(), alter: alterText(p), ort, nachkommen: p.nachkommen || 0 });
+    (spiel.friedhof = spiel.friedhof || []).push({ pferd: JSON.parse(JSON.stringify(p)), name: p.name, rasse: p.rasse, geschlecht: p.geschlecht, farbe: fb(p), farbName: FARBEN[fb(p)].name, geb: p.geb ? { ...p.geb } : null, tod: jzJetzt(), alter: alterText(p), ort, nachkommen: p.nachkommen || 0, ursache: p.todesursache || "unbekannt" });
   }
   function tote() {
+    // Lethal-White-Fohlen (O/O) sterben in der ersten Nacht nach der Geburt (tote() läuft vor dem Tageswechsel)
+    spiel.boxen.forEach((b, i) => {
+      const f = b.fohlen; if (!f || !f.lethalWhite || spiel.tag < (f.lwTag || 0)) return;
+      f.todesursache = "Lethal-White-Overo-Syndrom (Erbkrankheit, O/O)";
+      begraben(f, `Box ${i + 1}`); spiel.friedhof[spiel.friedhof.length - 1].alter = "1 Tag"; delete b.fohlen;
+      const M = b.pferd, V = f.ahnen && f.ahnen.vater;
+      brief("Tierarztpraxis", `Abschied von ${f.name}`, `es tut uns sehr leid: Das Fohlen <b>${esc(f.name)}</b> (Box ${i + 1}) ist gestorben.
+        <br><br><b>Todesursache:</b> Lethal-White-Overo-Syndrom (LWOS). Beide Eltern${M && V ? ` (${esc(M.name)} und ${esc(V.name)})` : ""} tragen das Overo-Gen, ${esc(f.name)} hat es von beiden geerbt (O/O). Solchen Fohlen fehlen Nervenzellen im Darm – der Darm kann nicht arbeiten, es kommt zu schweren Koliken. Die Krankheit ist nicht heilbar; wir haben ${pron(f).ihn} erlöst, damit ${pron(f).er} nicht leiden musste.
+        <br><br><b>Tipp:</b> Zwei Overo-Pferde nie miteinander verpaaren. Im Zweifel vorher beim Tierarzt einen Gentest machen.`);
+    });
     spiel.boxen.forEach((b, i) => {
       if (!b.tot || !b.pferd) return;
       begraben(b.pferd, `Box ${i + 1}`);
@@ -2363,7 +2450,8 @@
       if (spiel.tag - pf.huf > 56) g -= 2;
       g = Math.round(g * 10) / 10;
       // Rettungsnetz: wer über 1 % lag, fällt nur auf 1 %. Wer schon bei 1 % (oder weniger) war, stirbt bei 0.
-      if (g <= 0) { if (pf.gesundheit > 1) g = 1; else { g = 0; b.tot = true; } }
+      if (g <= 0) { if (pf.gesundheit > 1) g = 1; else { g = 0; b.tot = true; const P = b.pferd; P.todesursache = "Entkräftung – zu wenig Futter und Pflege";
+        brief("Tierarztpraxis", `Abschied von ${P.name}`, `es tut uns sehr leid: <b>${esc(P.name)}</b> (Box ${spiel.boxen.indexOf(b) + 1}) ist heute Nacht gestorben.<br><br><b>Todesursache:</b> Entkräftung – ${pron(P).er} hat zu lange zu wenig Futter und Pflege bekommen.`); } }
       pf.gesundheit = Math.max(0, Math.min(gesundheitMax(b.pferd), g));
       b.mistStufe = b.mistig ? Math.min(6, (b.mistStufe || 1) + 1) : 1;
       b.krippeVoll = false; b.mistig = true;
@@ -2493,7 +2581,7 @@
       ["Strumpf", "Weiß bis knapp unter Knie bzw. Sprunggelenk.", null, { beine: "strumpf" }],
       ["Hochweiß", "Weiß reicht über Knie oder Sprunggelenk hinaus.", null, { beine: "hochweiss" }],
     ] },
-    farben: { titel: "Fellfarben", ansicht: "ganz", rasse: "quarter", farbe: null, eintraege: Object.entries(FARBEN).map(([id, c]) => [c.name, FARBBESCHREIBUNG[id] || "", null, null, id]) },
+    farben: { titel: "Fellfarben", ansicht: "ganz", rasse: "quarter", farbe: null, eintraege: Object.entries(FARBEN).filter(([id]) => !/^gr_/.test(id) && (!/^(ov|tv|tg|fs|sb|sk)_/.test(id) || FARBBESCHREIBUNG[id])).map(([id, c]) => [c.name, FARBBESCHREIBUNG[id] || "", null, null, id]) },
   };
   let enzyKat = "kopf";
   function enzyBild(kat, e) {
@@ -2527,7 +2615,7 @@
           ${RASSEN.map(r => `
             <button class="rasse" data-id="${r.id}">
               <svg viewBox="0 0 ${VB.b} ${VB.h}"><line x1="0" x2="${VB.b}" y1="${VB.boden}" y2="${VB.boden}" stroke="#d8cbb6" stroke-width="2"/>${pferdInRahmen(r.id, r.farben[0], (r.h[0] + r.h[1]) / 2)}</svg>
-              <b>${r.name}</b><span>${r.h[0]}–${r.h[1]} cm · ${r.herkunft}</span>
+              <b>${r.name}${r.warnung ? " ⚠️" : ""}</b><span>${r.h[0]}–${r.h[1]} cm · ${r.herkunft}</span>
             </button>`).join("")}
         </div>` : `<div class="enz-grid">${kat.eintraege.map(e => `<div class="enz-karte">${enzyBild(kat, e)}<b>${e[0]}</b><p>${e[1]}</p></div>`).join("")}</div>`}
       </div>`;
@@ -2672,9 +2760,10 @@
   function zeigeFriedhof() {
     const f = (spiel.friedhof || []).slice().reverse();
     zeigeNeben("🪦 Pferdefriedhof", f.length ? `<div class="panel"><p style="margin:0">Hier erinnern Grabsteine an deine verstorbenen Pferde.</p></div>
-      <div class="gnade-liste">${f.map(g => `<div class="grab" ${g.pferd ? ansehen(g.pferd, "Pferdefriedhof", null, { tot: true, alter: g.alter }) : ""}><div class="grab-bild">${grabstein(g)}</div>
-        <div class="gnade-info"><b>${esc(g.name)}</b><small>${rasseById(g.rasse).name} · ${g.geschlecht} · ${FARBEN[g.farbe] ? FARBEN[g.farbe].name : ""}</small>
+      <div class="gnade-liste">${f.map(g => `<div class="grab" ${g.pferd ? ansehen(g.pferd, "Pferdefriedhof", null, { tot: true, alter: g.alter, zeilen: [["Todesursache", esc(g.ursache || "unbekannt")]] }) : ""}><div class="grab-bild">${grabstein(g)}</div>
+        <div class="gnade-info"><b>${esc(g.name)}</b><small>${rasseById(g.rasse).name} · ${g.geschlecht} · ${g.farbName || (FARBEN[g.farbe] ? FARBEN[g.farbe].name : "")}</small>
         <small>${g.geb ? `geboren ${jzName(g.geb.j * 4 + g.geb.s).replace(/^\S+ /, "")} · ` : ""}verstorben ${jzName(g.tod).replace(/^\S+ /, "")}${g.alter ? ` mit ${g.alter}` : ""}</small>
+        <small>Todesursache: ${esc(g.ursache || "unbekannt")}</small>
         ${g.nachkommen ? `<small>${g.nachkommen} ${g.nachkommen === 1 ? "Nachkomme" : "Nachkommen"}</small>` : ""}</div></div>`).join("")}</div>`
       : `<div class="panel"><p style="margin:0">Hier ist noch kein Grabstein. Wenn ein Pferd stirbt, bekommt es hier einen Platz zur Erinnerung.</p></div>`);
   }
@@ -2693,9 +2782,11 @@
       const r = zufall("markt-" + jetzt + (spiel.spieler ? spiel.spieler.name : ""));
       spiel.marktStand = { jz: jetzt, liste: Array.from({ length: 6 }, (_, i) => {
         const ra = RASSEN[Math.floor(r() * RASSEN.length)], g = ["Stute", "Hengst", "Wallach"][Math.floor(r() * 3)], jahre = 1 + Math.floor(r() * 14);
-        let farbe = ra.farben[Math.floor(r() * ra.farben.length)];
-        if (GRAU_WAHL[farbe]) farbe = jahre < 3 ? "grauschimmel" : jahre < 7 && farbe !== "fliegenschimmel" ? "apfelschimmel" : farbe;
-        const h = neuesPferd({ id: "m" + jetzt + "-" + i, name: NAMEN[g][Math.floor(r() * NAMEN[g].length)], rasse: ra.id, farbe, geschlecht: g, alter: jahre });
+        // normaler Pferdemarkt: reinrassige Pferde und Mischlinge – Rassen der 8 Urgroßeltern
+        const w = r(), fremdAnz = w < .35 ? 0 : w < .6 ? 1 : w < .8 ? 2 : w < .92 ? 4 : 3, andere = RASSEN.filter(x => x.id !== ra.id);
+        const fremd = [andere[Math.floor(r() * andere.length)].id, andere[Math.floor(r() * andere.length)].id];
+        const plaetze = Array.from({ length: 8 }, (_, k) => k < fremdAnz ? fremd[k % (r() < .5 ? 1 : 2)] : ra.id);
+        const h = neuesPferd({ id: "m" + jetzt + "-" + i, name: NAMEN[g][Math.floor(r() * NAMEN[g].length)], rasse: ra.id, plaetze, geschlecht: g, alter: jahre });
         if (jahre >= 4) h.training = Math.floor(r() * Math.min(110, (jahre - 3) * 22));   // ältere Verkaufspferde sind oft schon ausgebildet
         h.preis = Math.round(marktwert(h) * 1.1 / 50) * 50;
         return h;
@@ -2821,7 +2912,16 @@
       <h3>🎨 Fellfarbe – dominant und rezessiv</h3>
       <p>Jedes Pferd trägt je Farbgen zwei Allele: eines von der Mutter, eines vom Vater. Ein Fohlen bekommt von jedem Elternteil zufällig eines der beiden. Die Gene sind versteckt und nur über den Gentest (Klinik, ${fmt(KOSTEN.gentest)}) sichtbar. Stammpferde bekommen ihre Gene nach den Häufigkeiten ihrer Rasse (z. B. haben Lipizzaner fast nie das Fuchs-Gen e), ihr Stammbaum wird passend rückwärts erzeugt.</p>
       ${verTab(["Gen", "dominant / rezessiv", "Wirkung"], GENE.map(([k, n, dom, rez, info]) => [n, `${dom} / ${rez}`, info]))}
-      <p>Auswertung der Geburtsfarbe: Tobiano → Roan → doppelt Creme → Falbe → Creme → Silber → Grundfarbe (Fuchs ee, sonst mit Agouti Brauner, ohne Rappe; Flachs und Sooty verfeinern). Das Schimmel-Gen wirkt erst mit dem Alter.</p>
+      <p>Auswertung der Geburtsfarbe: O/O → Lethal White · Leopard (Lp) → Tiger · Overo (mit Tobiano: Tovero) · Tobiano → Roan → doppelt Creme → Falbe → Creme → Silber → Grundfarbe (Fuchs ee; mit Agouti A Brauner, mit At Schwarzbrauner, ohne Rappe; Flachs und Sooty verfeinern). Das Schimmel-Gen wirkt erst mit dem Alter.</p>
+      <p><b>Agouti hat drei Allele:</b> A (Brauner) &gt; At (Schwarzbrauner mit Kupfermaul) &gt; a (Rappe). <b>Hellbrauner:</b> der Farbton eines Braunen hängt von mehreren Genen ab – im Spiel als versteckter, vererbbarer Wert „Farbton“ (unter 25 % = Hellbrauner).</p>
+      <h3>☠️ Erbkrankheiten durch Farbgene</h3>
+      ${verTab(["Gen", "Folge", "Rassen"], [["Overo O/O", "Lethal-White-Overo-Syndrom: fast weißes Fohlen, ohne Nervenzellen im Darm – stirbt in der ersten Nacht. Overo × Overo: 25 % Risiko. Beim Verpaaren zweier bekannter Overos kommt eine Warnung.", RASSEN.filter(r => (RASSE_GENE[r.id] || {}).O).map(r => r.name).join(", ") || "–"],
+        ["Leopard Lp/Lp", "Nachtblindheit (CSNB) – nicht tödlich, Folgen kommen später.", RASSEN.filter(r => (RASSE_GENE[r.id] || {}).Lp).map(r => r.name).join(", ") || "– (noch keine Tiger-Rasse im Spiel)"]])}
+      <p>Jeder Todesfall bekommt eine Todesursache (Brief, Akte, Pferdefriedhof).</p>
+      <h3>📜 „(kann Schimmel werden)“</h3>
+      <p>Ohne Gentest weiß niemand, ob ein Pferd das Schimmel-Gen hat. Der Hinweis richtet sich deshalb nach der Abstammung: Ist ein Elternteil Schimmel, steht er im Abstammungsschein (bleibt dort für immer) und in den Daten bis zum Alter von ${GRAU_SICHER_AB} Jahren – auch wenn das Pferd das Gen in Wahrheit nicht hat. Wird das Pferd sichtbar grau, steht dort die heutige Farbe. Nach einem Gentest steht das sichere Ergebnis da.</p>
+      <h3>🛒 Herkunft der Pferde ohne Eltern im Spiel</h3>
+      <p><b>Pferdemarkt:</b> reinrassige Pferde und Mischlinge. Für jedes Pferd werden die Rassen der 8 Urgroßeltern festgelegt (35 % alle gleich, sonst 1–4 Urgroßeltern aus 1–2 anderen Rassen). Die Urgroßeltern bekommen Gene nach ihrer Rasse, dann wird Generation für Generation normal vererbt – Farbe, Rasse (größter Anteil, bei Gleichstand nach Exterieur) und Stockmaß ergeben sich daraus. <b>Deckstation</b> und Admin-Rassenauswahl: reinrassig, Farbe vorgegeben, Stammbaum rückwärts passend erzeugt. Gestüte mit reinrassigen Pferden (Mix nur durch Veredelung) kommen später.</p>
       <h3>🐴 Schimmel (fortschreitende Schimmelung)</h3>
       <p>Schimmel kommen in ihrer Grundfarbe zur Welt und hellen auf: Rappe → Rappschimmel, Brauner → Braunschimmel, Fuchs → Fuchsschimmel, Falben → Falbschimmel, Isabellen → Isabellschimmel, Schecken → Schimmelschecke. Manche werden dabei Apfelschimmel, am Ende weiß, einige im Alter Fliegenschimmel. Reinerbige Schimmel (GG) werden schneller weiß. Wie schnell, ob mit Apfelung, ob und ab wann Fliegenschimmel und ob das Langhaar früher oder später ausbleicht, ist erbliche Veranlagung (vererbt nach dem Schlüssel unten). Im Abstammungsschein steht immer die Geburtsfarbe, mit „(kann Schimmel werden)“, wenn das Pferd oder ein Elternteil das Schimmel-Gen hat.</p>
       <p><b>Rotschimmel / Roan</b> ist etwas anderes: unveränderliche Schimmel, die schon mit weißen Stichelhaaren geboren werden und nicht aufhellen.</p>

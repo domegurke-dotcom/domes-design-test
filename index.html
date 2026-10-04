@@ -452,7 +452,11 @@
   .farbspalte::-webkit-scrollbar { display: none; }
   .fs-kachel { flex: none; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 3px; border: 2px solid #e2d6c3; border-radius: 10px; background: rgba(255,255,255,.88); font: inherit; font-size: .62rem; line-height: 1.15; color: var(--text); cursor: pointer; text-align: center; }
   .fs-kachel .swatch { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid #2b1d14; }
-  .fs-kachel.an { border-color: var(--akzent); background: #fff3e8; font-weight: 700; }
+  .fs-kachel.an { border-color: var(--akzent); background: #fff3e8; text-shadow: 0 0 .6px currentColor; }
+  /* Pfeile in der Farbspalte: zeigen, dass man weiterscrollen kann */
+  .fs-pfeil { position: absolute; right: calc(var(--pf) + 4px); width: calc(var(--fsB) - 12px); height: 34px; z-index: 3; border: 2px solid var(--akzent); border-radius: 10px; background: #fff3e8; color: var(--akzent); font-size: 1.2rem; font-weight: 800; line-height: 1; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+  .fs-pfeil.runter { bottom: 10px; } .fs-pfeil.hoch { top: 10px; } .fs-pfeil[hidden] { display: none; }
+  @media (orientation: portrait) and (max-width: 700px) { .fs-pfeil { display: none !important; } }
   .vorschau .blaettern.links { left: calc(var(--rgB) + 2px); } .vorschau .blaettern.rechts { right: 4px; } .vorschau .blaettern { width: 42px; }
   .regler { position: absolute; left: 6px; top: 8px; bottom: 8px; width: 84px; display: flex; gap: 2px; background: rgba(255,255,255,.75); border-radius: 12px; padding: 6px 2px; z-index: 2; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
   .rg { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 0; min-width: 0; }
@@ -769,7 +773,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "133";
+  const SPIEL_VERSION = "134";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -777,9 +781,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=133"></script>
-<script src="kopfteile.js?v=133"></script>
-<script src="kopfalter.js?v=133"></script>
+<script src="pferd.js?v=134"></script>
+<script src="kopfteile.js?v=134"></script>
+<script src="kopfalter.js?v=134"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2558,6 +2562,7 @@
       <div class="inhalt">
         <div class="vorschau"><svg id="gross" viewBox="0 0 ${VB.b} ${VB.h}"></svg>
           <div class="farbspalte" id="farbSpalte">${r.farben.map(fid => { const c = FARBEN[fid]; return `<button class="fs-kachel" data-f="${fid}"><span class="swatch" style="background:linear-gradient(135deg, ${c.body} 55%, ${c.mane} 55%)"></span>${c.name.replace(/ \(.*\)/, "")}</button>`; }).join("")}</div>
+          <button class="fs-pfeil hoch" id="fsHoch" hidden aria-label="Nach oben scrollen">▲</button><button class="fs-pfeil runter" id="fsRunter" hidden aria-label="Weitere Farben">▼</button>
           <div class="regler">
             <label class="rg" title="Größe als erwachsenes Pferd"><span class="rg-wert" id="groesseWert"></span><input type="range" id="groesse" min="${r.h[0]}" max="${r.h[1]}" step="1" aria-label="Größe (erwachsen)"><span class="rg-name">Größe</span></label>
             <label class="rg"><span class="rg-wert" id="alterWert"></span><input type="range" id="alter" min="1" max="25" step="1" aria-label="Alter"><span class="rg-name">Alter</span></label>
@@ -2592,6 +2597,15 @@
     const ri = RASSEN.findIndex(x => x.id === id);
     $("rasseZurueck").onclick = () => zeigeDetail(RASSEN[(ri - 1 + RASSEN.length) % RASSEN.length].id);
     $("rasseWeiter").onclick = () => zeigeDetail(RASSEN[(ri + 1) % RASSEN.length].id);
+    // Pfeile ein-/ausblenden je nachdem, ob oben oder unten noch Farben versteckt sind
+    const fsp = $("farbSpalte");
+    if (fsp) {
+      const pfeile = () => { const mehr = fsp.scrollHeight - fsp.clientHeight; $("fsRunter").hidden = !(mehr > 4 && fsp.scrollTop < mehr - 4); $("fsHoch").hidden = !(fsp.scrollTop > 4); };
+      fsp.addEventListener("scroll", pfeile, { passive: true });
+      $("fsRunter").onclick = () => fsp.scrollBy({ top: fsp.clientHeight * .7, behavior: "smooth" });
+      $("fsHoch").onclick = () => fsp.scrollBy({ top: -fsp.clientHeight * .7, behavior: "smooth" });
+      requestAnimationFrame(pfeile); window.addEventListener("resize", pfeile);
+    }
     a.querySelectorAll("#farben .chip, #farbSpalte .fs-kachel").forEach(b => b.onclick = () => { wahl.farbe = b.dataset.f; wahl.eigeneGene = false; wahl.gen = null; wahl.ex = null; aktualisiere(); });
     if ($("genLaborAuf")) $("genLaborAuf").onclick = genLabor;
     a.querySelectorAll("#geschlecht button").forEach(b => b.onclick = () => {

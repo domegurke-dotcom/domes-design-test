@@ -7,7 +7,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Feste Regeln von Dome (immer beachten)
 - **Bei Unstimmigkeiten, Unrealistischem oder falschen Infos erst nachfragen**, ob weitergemacht werden soll („mir ist xy aufgefallen …“). Nicht eigenmächtig Spielmechanik ändern, die nicht verlangt wurde – vorschlagen und fragen.
-- **Jede Änderung in allen Ansichten testen:** PC, Handy quer, Handy hochkant (z. B. 1366×768, 844×390, 390×844).
+- **Jede Änderung testen.** Screenshots in allen Ansichten (PC, Handy quer, Handy hochkant, z. B. 1366×768, 844×390, 390×844) nur bei Änderungen am Aussehen oder Layout – reine Logik-Änderungen per Test-Skript prüfen.
 - **Enzyklopädie immer aktuell halten** (Reiter „Vererbung“ und „Weitere Daten“ sind nur im Adminmodus sichtbar – dort Zahlen/Regeln eintragen).
 - Versteckte Genetik **nie** in Akte/Abstammungsschein zeigen – nur über Labortests.
 - Rassen einstellen (Pferde aus der Rassenliste) nur im Adminmodus.
@@ -48,3 +48,4 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 ## Zusammenarbeit
 - Dome testet im Browser auf dem Handy und am PC und schickt Screenshots mit Wünschen.
 - Änderungen klein und nachvollziehbar halten, alte Funktionen nicht kaputt machen, Speicherstände abwärtskompatibel lassen (fehlende Felder mit Standardwerten auffüllen).
+- Änderungen direkt auf den Branch `main` hochladen (kein extra Branch, kein Pull Request) – Dome möchte das so.

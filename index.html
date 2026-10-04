@@ -693,7 +693,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "113";
+  const SPIEL_VERSION = "114";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -701,9 +701,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=113"></script>
-<script src="kopfteile.js?v=113"></script>
-<script src="kopfalter.js?v=113"></script>
+<script src="pferd.js?v=114"></script>
+<script src="kopfteile.js?v=114"></script>
+<script src="kopfalter.js?v=114"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -961,24 +961,34 @@
   }
   const mischAnteile = (a, b) => { const m = {}; [normAnteile(a), normAnteile(b)].forEach(x => Object.entries(x).forEach(([k, v]) => m[k] = (m[k] || 0) + v / 2)); return normAnteile(m); };
   const anteileVon = P => normAnteile(P.anteile || { [P.rasse]: 100 });
-  const reinAnteil = a => Math.max(...Object.values(normAnteile(a)));
+  // Veredelung: Vollblut (Englisches Vollblut, Araber) zählt nur bei Rassen, deren Zuchtbuch das erlaubt, zur eigenen Rasse
+  const VEREDELUNG = { hannoveraner: ["vollblut", "araber"], quarter: ["vollblut"], marwari: ["vollblut"], haflinger: ["araber"] };
+  const veredler = (rasse, k) => (VEREDELUNG[rasse] || []).includes(k);
+  // Anteil der eigenen Rasse inkl. Veredelung (ab 50 % eigener Rasse) – über 98 % gilt als reinrassig
+  const reinAnteil = (a, rasse) => { const n = normAnteile(a); if (!rasse || n[rasse] == null) rasse = Object.entries(n).sort((x, y) => y[1] - x[1])[0][0];
+    let s = n[rasse]; if (s >= 50) Object.entries(n).forEach(([k, v]) => { if (veredler(rasse, k)) s += v; }); return s > 98 ? 100 : Math.round(s * 100) / 100; };
+  const veredelt = (a, rasse) => Object.keys(normAnteile(a)).some(k => veredler(rasse, k)) && reinAnteil(a, rasse) >= 100;
   // Rasse = größter Anteil; bei Gleichstand die Rasse, zu der das Exterieur (Stockmaß) am besten passt
   function rasseZuordnen(a, sm) {
     const e = Object.entries(normAnteile(a)).sort((x, y) => y[1] - x[1]), top = e.filter(([, v]) => e[0][1] - v < 0.5);
+    // Veredelung: bei Gleichstand mit dem Vollblut (z. B. 50 % Hannoveraner / 50 % Englisches Vollblut) bleibt es die veredelte Rasse
+    const ver = top.find(([k, v]) => v >= 50 && top.every(([k2]) => k2 === k || veredler(k, k2)));
+    if (ver && top.length > 1) return ver[0];
     if (top.length === 1 || !sm) return top[0][0];
     const abstand = k => { const h = rasseById(k).h; return (sm < h[0] ? h[0] - sm : sm > h[1] ? sm - h[1] : 0) + Math.abs(sm - (h[0] + h[1]) / 2) / 100; };
     return top.map(([k]) => [k, abstand(k)]).sort((x, y) => x[1] - y[1])[0][0];
   }
   const pzT = x => String(Math.round(x * 100) / 100).replace(".", ",") + " %";
   const anteileText = a => Object.entries(normAnteile(a)).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${pzT(v)} ${rasseById(k).name}`).join(", ");
-  function rasseText(P) { const a = anteileVon(P), r = rasseById(P.rasse).name;
-    return reinAnteil(a) >= 100 ? `${r} · reinrassig` : `${r}-Mix · ${anteileText(a)}`; }
+  // Daten-Karte: nur die Rasse und ihr Anteil (Einzelheiten stehen bei Genetik)
+  function rasseText(P) { const a = anteileVon(P), r = rasseById(P.rasse).name, eigen = a[P.rasse] != null ? a[P.rasse] : 0;
+    return eigen >= 100 ? r : `${r} – ${pzT(eigen)}`; }
   const ANTEIL_FARBEN = ["var(--akzent)", "#4a7fb0", "#7aa95c", "#c9a227", "#8a5a9e", "#5aa5a0"];
   function anteilBalken(P) {
     const e = Object.entries(anteileVon(P)).sort((x, y) => y[1] - x[1]);
-    return `<div class="zeile-wert" style="margin-top:14px"><div class="kopf"><b>Rassischer Anteil</b><span>${reinAnteil(P.anteile || { [P.rasse]: 100 }) >= 100 ? "reinrassig" : "Mix"}</span></div>
+    return `<div class="zeile-wert" style="margin-top:14px"><div class="kopf"><b>Rassischer Anteil</b><span>${veredelt(anteileVon(P), P.rasse) ? "veredelt" : reinAnteil(anteileVon(P), P.rasse) >= 100 ? "reinrassig" : ""}</span></div>
       <div class="anteil">${e.map(([, v], i) => `<i style="width:${v}%;background:${ANTEIL_FARBEN[i % ANTEIL_FARBEN.length]}"></i>`).join("")}</div>
-      <div class="pole" style="flex-wrap:wrap;gap:2px 12px">${e.map(([k, v], i) => `<span style="color:${ANTEIL_FARBEN[i % ANTEIL_FARBEN.length]}">■ ${rasseById(k).name} ${pzT(v)}</span>`).join("")}</div></div>`;
+      <div class="pole" style="flex-wrap:wrap;gap:2px 12px">${e.map(([k, v], i) => `<span style="color:${ANTEIL_FARBEN[i % ANTEIL_FARBEN.length]}">■ ${rasseById(k).name} ${pzT(v)}${veredler(P.rasse, k) && reinAnteil(anteileVon(P), P.rasse) >= 100 ? " (Veredelung)" : ""}</span>`).join("")}</div></div>`;
   }
 
   // ---------- Stammbaum: Eltern, Großeltern, Urgroßeltern (jeder Vorfahre mit eigener, fester Akte) ----------
@@ -1047,7 +1057,7 @@
     if (!p.werte) p.werte = erzeugeWerte(p);
     if (!p.ahnen || !p.ahnen.vvv) stammbaumErzeugen(p);
     if (!p.anteile) p.anteile = mischAnteile(p.ahnen.vater.anteile, p.ahnen.mutter.anteile);
-    p.werte.reinrassig = reinAnteil(p.anteile);
+    p.werte.reinrassig = reinAnteil(p.anteile, p.rasse);
     return p.ahnen;
   }
   // Geburt eines Pferdes (Pferde ohne Geburtsdatum haben nur ein Alter)
@@ -1100,7 +1110,7 @@
     }
     p.genFuer = p.farbe;
     p.grauHinweis = elternGrau(p);
-    p.werte = erzeugeWerte(p); p.werte.reinrassig = reinAnteil(p.anteile);
+    p.werte = erzeugeWerte(p); p.werte.reinrassig = reinAnteil(p.anteile, p.rasse);
     nrVon(p);
     p.alter = alterJahre(p); p.stockmass = Math.round(p.zielStockmass * wuchs(alterJZ(p) * 3));
     return p;
@@ -1177,7 +1187,7 @@
     w.gang = {}; gangKeys.forEach(k => { const e = erben(M, V, x => x.werte && x.werte.gang ? x.werte.gang[k] : undefined, { halb: true, min: 4, max: 10, mut: 1.5 }); her.gang[k] = e; if (e.wert != null) w.gang[k] = e.wert; });
     ["schritt", "trab", "galopp"].forEach(k => { if (w.gang[k] == null) w.gang[k] = erzeugeWerte(f).gang[k]; });
     Object.keys(w.charakter).forEach(k => { const e = erben(M, V, x => x.werte && x.werte.charakter ? x.werte.charakter[k] : undefined, { min: 3, max: 97, mut: 20 }); her.charakter[k] = e; if (e.wert != null) w.charakter[k] = e.wert; });
-    w.reinrassig = reinAnteil(anteile); f.werte = w;
+    w.reinrassig = reinAnteil(anteile, rasse); f.werte = w;
     her.anteile = { mutter: anteileVon(M), vater: anteileVon(V), ergebnis: anteile, rasse };
     f.herkunft = her;
     f.ahnen = ahnenAus(M, V);
@@ -1192,14 +1202,14 @@
   const rn = id => rasseById(id).name, pz = pzT;
   const feld = (rolle, a, gross, geschl, doppelt) => { const lebt = a.nr && alleEigenenPferde().find(x => nrVon(x.p) === a.nr);
     return `<div class="sf ${gross ? "gross" : ""} ${doppelt ? "inzucht" : ""}">${rolle ? `<small>${rolle}</small>` : ""}${lebt ? `<button class="ahn-link" data-ahn="${a.nr}" title="Steckbrief ansehen">${esc(a.name)}</button>` : `<b>${esc(a.name)}</b>`}<span class="nr">${geschl}${a.geb ? ` · geb. ${JZ[a.geb.s][0]} ${a.geb.j}` : ""}</span>
-    <span>${rn(a.rasse)} / ${scheinFarbe(a)} / ${a.sm} cm</span>${reinAnteil(a.anteile || { [a.rasse]: 100 }) < 100 ? `<span class="pz">${anteileText(a.anteile)}</span>` : ""}${doppelt ? `<span class="inzucht-tag">⚠️ Inzucht</span>` : ""}</div>`; };
+    <span>${rn(a.rasse)} / ${scheinFarbe(a)} / ${a.sm} cm</span>${Object.keys(normAnteile(a.anteile || { [a.rasse]: 100 })).length > 1 ? `<span class="pz">${anteileText(a.anteile)}</span>` : ""}${doppelt ? `<span class="inzucht-tag">⚠️ Inzucht</span>` : ""}</div>`; };
   const abstammungsschein = P => { const A = ahnenFuellen(P), rP = rasseById(P.rasse);
     // Inzucht: dieselbe Lebensnummer taucht mehrmals im Stammbaum (bis zu den Urgroßeltern) auf
     const zahl = {}; AHNEN_ALLE.forEach(k => { const n = A[k] && A[k].nr; if (n) zahl[n] = (zahl[n] || 0) + 1; });
     const d = k => A[k] && zahl[A[k].nr] > 1, doppelte = [...new Set(AHNEN_ALLE.filter(d).map(k => A[k].name))];
     return `<div class="schein">
       <div class="schein-kopf"><b>Abstammungsschein</b></div>
-      <dl class="schein-daten"><dt>Name</dt><dd>${esc(P.name)}</dd><dt>Rasse</dt><dd>${reinAnteil(anteileVon(P)) >= 100 ? rP.name : `${rP.name}-Mix`}</dd><dt>Farbe</dt><dd>${scheinFarbe({ farbe: P.farbe, grauHinweis: elternGrau(P) })}</dd>
+      <dl class="schein-daten"><dt>Name</dt><dd>${esc(P.name)}</dd><dt>Rasse</dt><dd>${rP.name}</dd><dt>Farbe</dt><dd>${scheinFarbe({ farbe: P.farbe, grauHinweis: elternGrau(P) })}</dd>
         <dt>Geschlecht</dt><dd>${P.geschlecht}</dd><dt>Stockmaß</dt><dd>${P.stockmass} cm</dd><dt>${P.geb ? "Geboren" : "Alter"}</dt><dd>${P.geb ? jzName(P.geb.j * 4 + P.geb.s) : (P.alter || "–") + " Jahre"}</dd></dl>
       <div class="schein-titel"><span>Abstammung</span><span>Großeltern</span></div>
       <div class="schein-tab">
@@ -2929,7 +2939,9 @@
       <p>Jeder Wert wird einzeln nach diesem Schlüssel vererbt:</p>${schluessel}
       <p>Mutation: Stockmaß ±6–16 cm vom Elternschnitt, Gangnote ±1–2, Charakter ±12–28 Punkte, Schimmel-Veranlagung ±10–20 % der Spanne. Tölt und Pass hat ein Fohlen nur, wenn der gezogene Vorfahre sie hat. Großeltern und Urgroßeltern haben feste, versteckte Werte.</p>
       <h3>🧬 Rasseanteile</h3>
-      <p>Anteile des Fohlens = Schnitt der Eltern (damit zählen die Großeltern je ¼ und die Urgroßeltern je ⅛). Unter 2 % fällt eine Rasse weg, über 98 % gilt als 100 % (reinrassig). Alles darunter ist ein Mix. Zugeordnet wird die Rasse mit dem größten Anteil; bei Gleichstand (z. B. 50/50) die Rasse, zu der das Exterieur (Stockmaß) am besten passt.</p>
+      <p>Anteile des Fohlens = Schnitt der Eltern (damit zählen die Großeltern je ¼ und die Urgroßeltern je ⅛). Unter 2 % fällt eine Rasse weg, über 98 % gilt als 100 % (reinrassig). Zugeordnet wird die Rasse mit dem größten Anteil; bei Gleichstand (z. B. 50/50) die Rasse, zu der das Exterieur (Stockmaß) am besten passt. In Daten und Abstammungsschein steht nur die Rasse (mit ihrem Anteil, z. B. „Hannoveraner – 87,5 %“), nie „Mix“; alle Anteile stehen bei Genetik.</p>
+      <p><b>Veredelung:</b> Vollblut (Englisches Vollblut, Araber) zählt nur bei Rassen, deren Zuchtbuch das erlaubt, zur eigenen Rasse – sofern die eigene Rasse mindestens 50 % hat. Bei 50/50 mit dem Veredler bleibt es die veredelte Rasse.</p>
+      ${verTab(["Rasse", "darf veredelt werden mit"], Object.entries(VEREDELUNG).map(([r, v]) => [rasseById(r).name, v.map(x => rasseById(x).name).join(", ")]))}
       <h3>⚠️ Inzucht</h3>
       <p>Geprüft werden Eltern, Großeltern und Urgroßeltern: taucht dieselbe Lebensnummer mehrfach auf oder ist ein Pferd Vorfahre des anderen, gibt es eine Warnung. Folgen für das Fohlen kommen später.</p>
       <h3>🐣 Fohlen</h3>

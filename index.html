@@ -219,6 +219,7 @@
   .gl-zeile { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 5px 0; border-bottom: 1px dashed #e2d6c3; }
   .gl-name { flex: 1 1 140px; font-size: .84rem; font-weight: 600; display: flex; align-items: center; gap: 5px; }
   .gl-info-k { all: unset; cursor: pointer; width: 18px; height: 18px; border-radius: 50%; background: #e2d6c3; color: #5a3b26; font-size: .72rem; font-weight: 800; text-align: center; line-height: 18px; flex: none; }
+  .gl-unsicht { font-weight: 400; font-size: .7rem; color: var(--leise); font-style: italic; }
   .gl-opt { display: flex; gap: 4px; flex-wrap: wrap; }
   .gl-info { flex-basis: 100%; font-size: .78rem; color: var(--leise); background: #fffaf2; border-radius: 8px; padding: 5px 8px; }
   @media (orientation: landscape) and (max-height: 600px), (min-width: 900px) {
@@ -750,7 +751,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "121";
+  const SPIEL_VERSION = "122";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -758,9 +759,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=121"></script>
-<script src="kopfteile.js?v=121"></script>
-<script src="kopfalter.js?v=121"></script>
+<script src="pferd.js?v=122"></script>
+<script src="kopfteile.js?v=122"></script>
+<script src="kopfalter.js?v=122"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -935,8 +936,8 @@
   // grauTempo: Jahre bis weiß · apfel: Neigung zur Apfelung · fliegen: Neigung zum Fliegenschimmel · fliegenAb: ab welchem Alter
   // maehne: Langhaar bleicht früher (+) oder später (−) aus als das Fell
   const exZufall = r => ({ grauTempo: Math.round((4 + r() * 7) * 10) / 10, apfel: Math.round(r() * 100) / 100, fliegen: Math.round(r() * 100) / 100,
-    fliegenAb: Math.round((8 + r() * 7) * 10) / 10, maehne: Math.round((r() - .5) * 60) / 100, ton: Math.round(r() * 100) / 100, ow: Math.round(r() * 100) / 100, sonne: Math.round(r() * 100) / 100 });
-  const EX_GRENZEN = { grauTempo: [2, 16, .1], apfel: [0, 1, .01], fliegen: [0, 1, .01], fliegenAb: [6, 20, .1], maehne: [-.4, .4, .01], ton: [0, 1, .01], ow: [0, 1, .01], sonne: [0, 1, .01] };
+    fliegenAb: Math.round((8 + r() * 7) * 10) / 10, maehne: r() < .05 ? Math.round((50 + r() * 30)) / 100 : Math.round((r() - .5) * 60) / 100, ton: Math.round(r() * 100) / 100, ow: Math.round(r() * 100) / 100, sonne: Math.round(r() * 100) / 100 });
+  const EX_GRENZEN = { grauTempo: [2, 16, .1], apfel: [0, 1, .01], fliegen: [0, 1, .01], fliegenAb: [6, 20, .1], maehne: [-.4, .8, .01], ton: [0, 1, .01], ow: [0, 1, .01], sonne: [0, 1, .01] };
   const EX_NAME = { grauTempo: "Schimmel: Jahre bis weiß", apfel: "Schimmel: Apfelung", fliegen: "Schimmel: Fliegenschimmel", fliegenAb: "Schimmel: Fliegen ab Alter", maehne: "Schimmel: Langhaar", ton: "Farbton (Brauner)", ow: "Overo: Weißanteil", sonne: "Rappe: bleicht im Sommer aus" };
   const exVon = p => { if (!p.ex) p.ex = exZufall(zufall("ex-" + (p.id || p.nr || p.name))); if (p.ex.ton == null) p.ex.ton = .5; if (p.ex.ow == null) p.ex.ow = .5; if (p.ex.sonne == null) p.ex.sonne = .3; return p.ex; };
   const alterInJahren = p => p.geb ? alterJZ(p) / 4 : (p.alter != null ? p.alter : 8);
@@ -946,8 +947,9 @@
     const g = genVon(p); if (!hat(g, "G")) return null;
     const ex = exVon(p), j = jahre != null ? jahre : alterInJahren(p);
     const W = ex.grauTempo * (g.G[0] === "G" && g.G[1] === "G" ? 0.75 : 1);   // reinerbige Schimmel werden schneller weiß
-    const t = klemm01((j - 0.4) / W);
-    return { t, tm: klemm01(t + ex.maehne), j, ex };
+    // Langhaar läuft dem Fell voraus oder hinterher – wird aber am Ende immer auch weiß
+    const roh = (j - 0.4) / W, t = klemm01(roh);
+    return { t, tm: klemm01(roh + ex.maehne), j, ex };
   }
   const SCHIMMEL_NAME = b => ({ rappe: "Rappschimmel", windfarben: "Rappschimmel", blueroan: "Rappschimmel", brauner: "Braunschimmel", dunkelbrauner: "Dunkelbraunschimmel",
     fuchs: "Fuchsschimmel", hellfuchs: "Fuchsschimmel", dunkelfuchs: "Fuchsschimmel", rotschimmel: "Fuchsschimmel", palomino: "Isabellschimmel", isabell: "Isabellschimmel",
@@ -2638,7 +2640,9 @@
     const gleich = (a, b) => a.slice().sort().join() === b.slice().sort().join();
     const info = (id, text) => `<button class="gl-info-k" data-info="${id}" aria-label="Erklärung">i</button><span class="gl-info" id="gli-${id}" hidden>${text}</span>`;
     const zeile = (id, name, text, opts) => `<div class="gl-zeile"><span class="gl-name">${name} ${info(id, text).split("<span")[0]}</span><span class="gl-opt">${opts}</span><span class="gl-info" id="gli-${id}" hidden>${text}</span></div>`;
-    const genZeilen = GENE.filter(([k]) => glTypisch(wahl.rasse, k)).map(([k, n, , , txt]) => zeile(k, n, txt, GL_OPT(k).map(o => {
+    // Gen ohne sichtbare Wirkung (z. B. Flachs bei E/E): bleibt wählbar, weil es vererbt wird, ist aber markiert
+    const unsichtbar = k => { const f = new Set(GL_OPT(k).filter(o => anzahl({ ...g, [k]: o }, "O") < 2).map(o => phaenotyp({ ...g, [k]: o }, ex.ton, ex.ow))); return f.size <= 1 && !["G", "Dm"].includes(k); };
+    const genZeilen = GENE.filter(([k]) => glTypisch(wahl.rasse, k)).map(([k, n, , , txt]) => zeile(k, n + (unsichtbar(k) ? ` <small class="gl-unsicht">unsichtbar – wird vererbt</small>` : ""), txt, GL_OPT(k).map(o => {
       const test = { ...g, [k]: o }, an = gleich(g[k], o), ok = an || glPasst(test, ex, wahl.chip);
       return `<button data-gl="${k}" data-o="${o.join("/")}" class="${an ? "an" : ""}" ${ok ? "" : "disabled"}>${o.join("/")}</button>`; }).join(""))).join("");
     const exOpt = (k, werte, akt) => werte.map(([v, t]) => `<button data-glex="${k}" data-v="${v}" class="${String(v) === String(akt) ? "an" : ""}">${t}</button>`).join("");
@@ -2646,7 +2650,7 @@
       ...(hat(g, "G") ? [
         zeile("x-tempo", "Schimmel: weiß nach", "Wie schnell der Schimmel aufhellt. Wird vererbt.", exOpt("grauTempo", [[3, "3 J."], [6, "6 J."], [9, "9 J."], [13, "13 J."]], [3, 6, 9, 13].reduce((b, v) => Math.abs(v - ex.grauTempo) < Math.abs(b - ex.grauTempo) ? v : b, 6))),
         zeile("x-apfel", "Schimmel: Apfelung", "Ob der Schimmel auf dem Weg zum Weiß Apfelschimmel wird.", exOpt("apfel", [[.8, "ja"], [.2, "nein"]], ex.apfel > .45 ? .8 : .2)),
-        zeile("x-maehne", "Schimmel: Mähne &amp; Schweif", "Ob das Langhaar früher, gleich oder später als das Fell weiß wird – z. B. Grauschimmel mit heller Mähne.", exOpt("maehne", [[.3, "früher hell"], [0, "wie das Fell"], [-.3, "länger dunkel"]], ex.maehne > .08 ? .3 : ex.maehne < -.08 ? -.3 : 0)),
+        zeile("x-maehne", "Schimmel: Mähne &amp; Schweif", "Ob das Langhaar früher, gleich oder später als das Fell weiß wird. Später heißt: es wird erst nach dem Fell weiß, aber am Ende immer. Selten wird es sehr früh weiß – dann gibt es junge, noch dunkle Schimmel mit fast weißer Mähne. Wird vererbt.", exOpt("maehne", [[.7, "sehr früh weiß (selten)"], [.3, "früher hell"], [0, "wie das Fell"], [-.3, "länger dunkel"]], ex.maehne > .45 ? .7 : ex.maehne > .08 ? .3 : ex.maehne < -.08 ? -.3 : 0)),
         zeile("x-fliegen", "Fliegenschimmel", "Manche Schimmel bekommen im Alter wieder kleine farbige Sprenkel.", exOpt("fliegen", [[.8, "ja (ab ca. 10 J.)"], [.2, "nein"]], ex.fliegen > .5 ? .8 : .2))] : []),
       ...(ohneTon(phaenotyp(g)) === "brauner" ? [zeile("x-ton", "Farbton Brauner", "Hell- oder normaler Brauner – hängt von mehreren Genen ab.", exOpt("ton", [[.6, "normal"], [.1, "hell"]], ex.ton < .25 ? .1 : .6))] : []),
       ...(istRappe(phaenotyp(g)) ? [zeile("x-sonne", "Rappe im Sommer", "Sommerrappen bleiben schwarz, Winterrappen bleichen im Sommer rostbraun aus.", exOpt("sonne", [[.2, "Sommerrappe"], [.8, "Winterrappe"]], ex.sonne > .5 ? .8 : .2))] : []),
@@ -3428,7 +3432,7 @@
       <h3>🛒 Herkunft der Pferde ohne Eltern im Spiel</h3>
       <p><b>Pferdemarkt:</b> reinrassige Pferde und Mischlinge. Für jedes Pferd werden die Rassen der 8 Urgroßeltern festgelegt (35 % alle gleich, sonst 1–4 Urgroßeltern aus 1–2 anderen Rassen). Die Urgroßeltern bekommen Gene nach ihrer Rasse, dann wird Generation für Generation normal vererbt – Farbe, Rasse (größter Anteil, bei Gleichstand nach Exterieur) und Stockmaß ergeben sich daraus. <b>Deckstation</b> und Admin-Rassenauswahl: reinrassig, Farbe vorgegeben, Stammbaum rückwärts passend erzeugt. Gestüte mit reinrassigen Pferden (Mix nur durch Veredelung) kommen später.</p>
       <h3>🐴 Schimmel (fortschreitende Schimmelung)</h3>
-      <p>Schimmel kommen in ihrer Grundfarbe zur Welt und hellen auf: Rappe → Rappschimmel, Brauner → Braunschimmel, Fuchs → Fuchsschimmel, Falben → Falbschimmel, Isabellen → Isabellschimmel, Schecken → Schimmelschecke. Manche werden dabei Apfelschimmel, am Ende weiß, einige im Alter Fliegenschimmel. Reinerbige Schimmel (GG) werden schneller weiß. Wie schnell, ob mit Apfelung, ob und ab wann Fliegenschimmel und ob das Langhaar früher oder später ausbleicht, ist erbliche Veranlagung (vererbt nach dem Schlüssel unten). Im Abstammungsschein steht immer die Geburtsfarbe, mit „(kann Schimmel werden)“, wenn das Pferd oder ein Elternteil das Schimmel-Gen hat.</p>
+      <p>Schimmel kommen in ihrer Grundfarbe zur Welt und hellen auf: Rappe → Rappschimmel, Brauner → Braunschimmel, Fuchs → Fuchsschimmel, Falben → Falbschimmel, Isabellen → Isabellschimmel, Schecken → Schimmelschecke. Manche werden dabei Apfelschimmel, am Ende weiß, einige im Alter Fliegenschimmel. Reinerbige Schimmel (GG) werden schneller weiß. Wie schnell, ob mit Apfelung, ob und ab wann Fliegenschimmel und ob das Langhaar früher oder später ausbleicht, ist erbliche Veranlagung (vererbt nach dem Schlüssel unten). Langhaar, das später ausbleicht, wird trotzdem am Ende weiß. Bei etwa 5 % der Pferde wird das Langhaar sehr früh weiß – so entstehen junge, noch dunkle Grauschimmel mit fast weißer Mähne; diese Veranlagung lässt sich weiterzüchten (und kann auch durch Mutation entstehen). Im Abstammungsschein steht immer die Geburtsfarbe, mit „(kann Schimmel werden)“, wenn das Pferd oder ein Elternteil das Schimmel-Gen hat.</p>
       <p><b>Rotschimmel / Roan</b> ist etwas anderes: unveränderliche Schimmel, die schon mit weißen Stichelhaaren geboren werden und nicht aufhellen.</p>
       <h3>📏 Stockmaß, Gangwerk, Charakter, Schimmel-Veranlagung</h3>
       <p>Jeder Wert wird einzeln nach diesem Schlüssel vererbt:</p>${schluessel}

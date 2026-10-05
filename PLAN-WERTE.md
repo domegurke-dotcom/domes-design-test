@@ -7,7 +7,7 @@ Ausführliche Gesprächsnotizen: `werte/plan.md` *(liegt noch im Planungsprojekt
 
 - [x] Etappe 1 – Werte-Grundlage (v161, Alter und Name „Eigenschaften“ in v162, von Dome getestet)
 - [x] Etappe 2 – Charakter → Wohlbefinden (v164, von Dome getestet; Admin „Charakter selbst wählen“ in v165)
-- [ ] Etappe 2b – Weide und Herde (Entscheidungen von Dome stehen, Zahlen = Vorschläge, warten auf Domes OK)
+- [~] Etappe 2b – Weide und Herde (umgesetzt in v166, Test durch Dome offen)
 - [ ] Etappe 3 – Vorlieben und Reaktionen
 - [ ] Etappe 4 – Training daheim
 - [ ] Etappe 5 – Disziplinen
@@ -85,7 +85,7 @@ Nur ausgeprägte Werte wirken (unter 30 oder über 70), je extremer desto stärk
 
 ## 2b. Weide und Herde (mit Dome besprochen, 6.10.2026)
 
-Von Dome entschieden („ja“), Zahlen sind Vorschläge von Claude, bis Dome sie bestätigt:
+Von Dome entschieden. **Endgültige Zahlen (von Dome bestätigt):** Heu nötig im Winter und am letzten Herbsttag · Weide-Wohlbefinden +15, Winter +8, allein +6 · Bedeckung 25 % pro Nacht je Stute, Warnung nur beim allerersten Mal · Sozialverhalten wie unten, pro Jahreszeit ausgeglichen (× 4 ÷ Tage pro Jahreszeit) · Bedeckung und Streit werden NICHT nach Tagen pro Jahreszeit umgerechnet · Streit höher: Paarwert 0–12 %, Sozialverhalten bis +8 %, temperamentvoll/eigensinnig bis +5 %, zwei Hengste +35 %, Streit −10 Wohlbefinden, 20 % Verletzung. Ursprüngliche Vorschläge:
 
 **A. Weide-Regeln überarbeiten**
 1. Winter (und letzter Herbst-Tag?) kaum Gras: auf der Weide muss Heu zugefüttert werden, sonst gilt das Pferd als hungrig (−19 Gesundheit, −8 Wohlbefinden wie in der Box). *Vorschlag:* Heu auf der Weide über einen Knopf „Heu auf die Weide“ in der Weide-Ansicht; der Stallbursche erledigt es für seine Boxen mit.

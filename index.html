@@ -746,7 +746,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "149";
+  const SPIEL_VERSION = "150";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -754,9 +754,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=149"></script>
-<script src="kopfteile.js?v=149"></script>
-<script src="kopfalter.js?v=149"></script>
+<script src="pferd.js?v=150"></script>
+<script src="kopfteile.js?v=150"></script>
+<script src="kopfalter.js?v=150"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1450,7 +1450,7 @@
   function fohlenUmstellen(box, frei) {
     const f = box.fohlen; delete box.fohlen;
     const nb = spiel.boxen[frei];
-    nb.pferd = { ...f, werte: f.werte || erzeugeWerte(f), pflege: erzeugePflege(f), maehneSeit: f.maehneSeit || spiel.tag, schopfSeit: f.schopfSeit || spiel.tag };
+    nb.pferd = { ...f, werte: f.werte || erzeugeWerte(f), pflege: f.pflege || erzeugePflege(f), maehneSeit: f.maehneSeit || spiel.tag, schopfSeit: f.schopfSeit || spiel.tag };
     ahnenFuellen(nb.pferd);
     nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false;
   }
@@ -2047,7 +2047,17 @@
       const f = b.fohlen; if (!f) return;
       const a = alterJZ(f); if (a < 2) return;
       const frei = freieBox();
-      if (frei >= 0) { fohlenUmstellen(b, frei); brief("Hofverwaltung", `${f.name} ist umgezogen`, `<b>${esc(f.name)}</b> ist jetzt groß genug für eine eigene Box und ist automatisch in die freie Box ${frei + 1} umgezogen.`); return; }
+      if (frei >= 0) {
+        fohlenUmstellen(b, frei);
+        // Mutter in der Klinik: gesunde Fohlen kommen vorzeitig heraus, kranke (unter 75 %) bleiben – ab jetzt mit eigener Box und eigener Rechnung
+        if (b.pferd && b.pferd.klinik) {
+          const np = spiel.boxen[frei].pferd;
+          if (np.pflege.gesundheit < Math.min(75, gesundheitMax(np))) { np.klinik = { seit: spiel.tag };
+            brief("Tierarztpraxis", `${f.name} bleibt in der Klinik`, `<b>${esc(f.name)}</b> ist jetzt groß genug für eine eigene Box, aber noch nicht wieder gesund (Gesundheit ${np.pflege.gesundheit.toLocaleString("de-DE")} %). ${pron(f).er[0].toUpperCase() + pron(f).er.slice(1)} bleibt deshalb bei uns in Behandlung – ab jetzt mit eigener Box (Box ${frei + 1}) und eigener Rechnung (${fmt(KOSTEN.klinik)} pro Tag).`); }
+          else brief("Tierarztpraxis", `${f.name} ist schon wieder zu Hause`, `<b>${esc(f.name)}</b> ist jetzt groß genug für eine eigene Box und gesund. Wir haben ${pron(f).ihn} deshalb schon vor ${pron(f).sein} Mutter <b>${esc(b.pferd.name)}</b> nach Hause gebracht – ${pron(f).er} steht jetzt in Box ${frei + 1}.`);
+          return;
+        }
+        brief("Hofverwaltung", `${f.name} ist umgezogen`, `<b>${esc(f.name)}</b> ist jetzt groß genug für eine eigene Box und ist automatisch in die freie Box ${frei + 1} umgezogen.`); return; }
       const pr = pron(f);
       // nur ein Hinweis-Brief: wer schon gewarnt wurde, bekommt mit 2 Jahreszeiten keinen zweiten
       if (a === 2 && !f.tsHinweis) { f.tsHinweis = true; brief("Tierschutzverein", `Hinweis zu ${f.name}`, `uns wurde mitgeteilt, dass das Fohlen <b>${esc(f.name)}</b> keine eigene Box hat. Bekommt ${pr.er} nicht in dieser oder der nächsten Jahreszeit eine eigene Box, werden wir ${pr.ihn} abholen.`); }

@@ -747,7 +747,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "153";
+  const SPIEL_VERSION = "154";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -755,9 +755,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=153"></script>
-<script src="kopfteile.js?v=153"></script>
-<script src="kopfalter.js?v=153"></script>
+<script src="pferd.js?v=154"></script>
+<script src="kopfteile.js?v=154"></script>
+<script src="kopfalter.js?v=154"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1345,7 +1345,7 @@
     return `<div class="schein">
       <div class="schein-kopf"><b>Abstammungsschein</b></div>
       <dl class="schein-daten"><dt>Name</dt><dd>${esc(P.name)}</dd><dt>Rasse</dt><dd>${rP.name}</dd><dt>Farbe</dt><dd>${scheinFarbe({ farbe: P.farbe, grauHinweis: elternGrau(P) })}</dd>
-        <dt>Geschlecht</dt><dd>${P.geschlecht}</dd><dt>Stockmaß</dt><dd>${P.stockmass} cm</dd><dt>${P.geb ? "Geboren" : "Alter"}</dt><dd>${P.geb ? jzName(P.geb.j * 4 + P.geb.s) : (P.alter || "–") + " Jahre"}</dd></dl>
+        <dt>Geschlecht</dt><dd>${P.geburtsGeschlecht || P.geschlecht}</dd><dt>Stockmaß</dt><dd>${P.stockmass} cm</dd><dt>${P.geb ? "Geboren" : "Alter"}</dt><dd>${P.geb ? jzName(P.geb.j * 4 + P.geb.s) : (P.alter || "–") + " Jahre"}</dd></dl>
       <div class="schein-titel"><span>Abstammung</span><span>Großeltern</span></div>
       <div class="schein-tab">
         ${feld("Vater", A.vater, true, "Hengst", d("vater"), P, "vater")}${feld("", A.vatersvater, false, "Hengst", d("vatersvater"), P, "vatersvater")}${feld("", A.vatersmutter, false, "Stute", d("vatersmutter"), P, "vatersmutter")}
@@ -1473,7 +1473,8 @@
     const es = (S[posten] = S[posten] || { ein: 0, aus: 0, n: 0 });
     if (betrag > 0) es.ein += betrag; else es.aus -= betrag; es.n++;
   }
-  const KOSTEN = { aufzucht: 15, ausbildung: 35, klinik: 60, gentest: 150 };
+  const KOSTEN = { aufzucht: 15, ausbildung: 35, klinik: 60, gentest: 150, kastration: 450 };
+  const KASTRATION_AB = 4;   // ab 1 Jahr (4 Jahreszeiten)
   const ORT_NAME = { aufzucht: "Aufzuchtstation", ausbildung: "Ausbildungsstall" };
   const AUSBILDUNGSALTER = 12;   // ab 3 Jahren (12 Jahreszeiten)
   function wegbringen(p, ort, box, istFohlen) {
@@ -1589,9 +1590,18 @@
     // Klinik: doppelt so schnelle Erholung, bleibt bis mindestens 75 % – die Kosten laufen als Rechnung auf
     spiel.boxen.forEach((b, i) => {
       const p = b.pferd; if (!p || !p.klinik || b.tot) return;
-      p.klinik.rechnung = (p.klinik.rechnung || 0) + KOSTEN.klinik;
+      const op = p.klinik.op === "kastration";
+      if (!op || spiel.tag > p.klinik.bis) p.klinik.rechnung = (p.klinik.rechnung || 0) + KOSTEN.klinik;   // Kastration: die ersten 2 Tage sind im Preis
       p.pflege.gesundheit = Math.min(gesundheitMax(p), Math.round((p.pflege.gesundheit + 16) * 10) / 10);
-      if (p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {
+      if (op && spiel.tag >= p.klinik.bis && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {
+        const extra = p.klinik.rechnung || 0, tage = Math.round(extra / KOSTEN.klinik);
+        delete p.klinik; delete p.dreck;
+        p.geburtsGeschlecht = p.geburtsGeschlecht || "Hengst"; p.geschlecht = "Wallach"; p.kastriert = jzJetzt();
+        rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: Kastration inkl. 2 Tage Klinik`, betrag: KOSTEN.kastration }, ...(extra ? [{ text: `${p.name}: ${tageTxt(tage)} zusätzliche Behandlung × ${fmt(KOSTEN.klinik)}`, betrag: extra }] : [])], [p.id], `${p.name} ist jetzt ein Wallach – Rechnung`,
+          `die Kastration von <b>${esc(p.name)}</b> ist gut verlaufen. Er ist jetzt ein Wallach und steht wieder in Box ${i + 1}. Im Abstammungsschein bleibt er als Hengst eingetragen.<br><br>`);
+        return;
+      }
+      if (!op && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {
         const betrag = p.klinik.rechnung, tage = spiel.tag - p.klinik.seit;
         delete p.klinik; delete p.dreck;   // in der Klinik wird geputzt
         rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: ${tage} ${tage === 1 ? "Tag" : "Tage"} stationäre Behandlung × ${fmt(KOSTEN.klinik)}`, betrag }], [p.id], `${p.name} ist wieder fit – Rechnung`,
@@ -2272,9 +2282,9 @@
     if (p && p.klinik && !LS) {
       const tage = spiel.tag - p.klinik.seit, g = p.pflege.gesundheit;
       INFO.innerHTML = `<div class="karte" style="min-height:0"><h2>🏥 ${esc(p.name)} ist in der Klinik</h2>
-        <p class="text">Box ${aktBox + 1} bleibt für ${pron(p).ihn} frei. ${pron(p).er === "sie" ? "Sie" : "Er"} kommt zurück, sobald die Gesundheit mindestens ${Math.min(75, gesundheitMax(p))} % beträgt.</p>
+        <p class="text">Box ${aktBox + 1} bleibt für ${pron(p).ihn} frei. ${p.klinik.op === "kastration" ? `${esc(p.name)} wird kastriert und kommt nach 2 Tagen zurück${g < Math.min(75, gesundheitMax(p)) ? `, sobald die Gesundheit mindestens ${Math.min(75, gesundheitMax(p))} % beträgt` : ""}. Kosten: ${fmt(KOSTEN.kastration)} inklusive 2 Tage Klinik.` : `${pron(p).er === "sie" ? "Sie" : "Er"} kommt zurück, sobald die Gesundheit mindestens ${Math.min(75, gesundheitMax(p))} % beträgt.`}</p>
         <div class="zeile-wert"><div class="kopf"><b>Gesundheit</b><span>${g.toLocaleString("de-DE")} %</span></div><div class="balken"><i style="width:${g}%"></i></div></div>
-        <p class="text">Seit ${tage} ${tage === 1 ? "Tag" : "Tagen"} in Behandlung · ${fmt(KOSTEN.klinik)} pro Tag · bisher ${fmt(p.klinik.rechnung || 0)} · erholt sich doppelt so schnell wie im Stall.</p></div>`;
+        ${p.klinik.op === "kastration" ? "" : `<p class="text">Seit ${tage} ${tage === 1 ? "Tag" : "Tagen"} in Behandlung · ${fmt(KOSTEN.klinik)} pro Tag · bisher ${fmt(p.klinik.rechnung || 0)} · erholt sich doppelt so schnell wie im Stall.</p>`}</div>`;
       return;
     }
     if (!p) { INFO.innerHTML = `<div class="karte" style="min-height:0"><h2>Box ${aktBox + 1}</h2><p class="text">${B().reserviert ? `🔒 Diese Box ist für <b>${esc(((spiel.extern || []).find(e => e.pferd.id === B().reserviert) || { pferd: { name: "eine Stute" } }).pferd.name)}</b> reserviert: Sie ist tragend im Ausbildungsstall und kommt eine Jahreszeit vor dem Abfohlen hierher zurück.` : "Diese Box ist noch leer. Auf dem Pferdemarkt findest du Pferde zum Kaufen."}</p>
@@ -2486,7 +2496,8 @@
       } else if (ortModus === "klinik") {
         const g = p.pflege.gesundheit, maxG = gesundheitMax(p);
         inhalt = meld + `<p class="text" style="margin:0 0 4px">🏥 <b>Tierklinik</b> · Gesundheit von ${esc(p.name)}: ${g.toLocaleString("de-DE")} %</p>
-          <div class="kacheln quadrat">${kOrt("stationaer", "🛏️", "Stationär behandeln", g < Math.min(75, maxG) ? `${fmt(KOSTEN.klinik)} / Tag` : "nicht nötig", "Bleibt in der Klinik, bis die Gesundheit mindestens 75 % beträgt – erholt sich doppelt so schnell", g < Math.min(75, maxG))}</div>
+          <div class="kacheln quadrat">${kOrt("stationaer", "🛏️", "Stationär behandeln", g < Math.min(75, maxG) ? `${fmt(KOSTEN.klinik)} / Tag` : "nicht nötig", "Bleibt in der Klinik, bis die Gesundheit mindestens 75 % beträgt – erholt sich doppelt so schnell", g < Math.min(75, maxG))}
+            ${p.geschlecht === "Hengst" ? kOrt("kastrieren", "✂️", "Hengst kastrieren", alterJZ(p) < KASTRATION_AB ? "ab 1 Jahr" : angebot ? "steht zum Verkauf" : fmt(KOSTEN.kastration), "Kastration: 2 Tage Klinik, danach ist er ein Wallach", alterJZ(p) >= KASTRATION_AB && !angebot) : ""}</div>
           <p class="text"><small>Bei 30 % Gesundheit oder weniger kann sich ein Pferd im Stall nicht mehr erholen (auch Medizin hilft nicht mehr), nur noch hier. Entlassen wird es erst mit 75 %. Die Kosten (${fmt(KOSTEN.klinik)} pro Tag) kommen nach der Behandlung als Rechnung, zahlbar innerhalb von 2 Tagen.</small></p>` + zurueckOrt("‹ Zurück zum Anhänger");
       } else if (ortModus === "labor") {
         inhalt = meld + `<p class="text" style="margin:0 0 4px">🔬 <b>Labor</b> · Der Tierarzt schickt eine Haarprobe von ${esc(p.name)} ein – dafür muss ${pron(p).er} nicht wegfahren.</p>
@@ -2607,6 +2618,11 @@
       if (id === "stationaer") {
         dialog(`<h3>🏥 ${esc(p.name)} in die Klinik?</h3><p>${esc(p.name)} bleibt in der Klinik, bis die Gesundheit wieder mindestens 75 % beträgt, und erholt sich dort doppelt so schnell. Die Behandlung kostet <b>${fmt(KOSTEN.klinik)} pro Tag</b> – du bekommst danach eine Rechnung, die du innerhalb von 2 Tagen bezahlen solltest – sonst kommt eine Mahnung mit Gebühr. Die Box bleibt für ${pron(p).ihn} frei.</p>`,
           [["In die Klinik", () => { p.klinik = { seit: spiel.tag }; spiel.angebote = (spiel.angebote || []).filter(x => x.id !== p.id); ortModus = null; aktenModus = "steckbrief"; aktenReiter = "steckbrief"; speichern(); zeigeStall(); zeigeTag(); }], ["Abbrechen", null, "zweit"]]);
+        return;
+      }
+      if (id === "kastrieren") {
+        dialog(`<h3>✂️ ${esc(p.name)} kastrieren?</h3><p>${esc(p.name)} bleibt dafür 2 Tage in der Klinik (länger, falls die Gesundheit unter 75 % liegt). Danach ist er ein <b>Wallach</b> und kann nicht mehr zur Zucht eingesetzt werden. Im Abstammungsschein bleibt er als Hengst eingetragen.</p><p>Kosten: <b>${fmt(KOSTEN.kastration)}</b> inklusive 2 Tage Klinik – du bekommst danach eine Rechnung. Das lässt sich nicht rückgängig machen.</p>`,
+          [["Kastrieren", () => { p.klinik = { seit: spiel.tag, op: "kastration", bis: spiel.tag + 2 }; spiel.angebote = (spiel.angebote || []).filter(x => x.id !== p.id); ortModus = null; aktenModus = "steckbrief"; aktenReiter = "steckbrief"; speichern(); zeigeStall(); zeigeTag(); }], ["Abbrechen", null, "zweit"]]);
         return;
       }
       if (id.startsWith("lt-")) { laborBestellen(p, id.slice(3), () => zeigeAkte()); return; }
@@ -4076,6 +4092,7 @@
       <h3>🎓 Ausbildung</h3>
       <p>Unausgebildete Pferde stehen auf Klasse E mit 0 %. Ausbildung entsteht nur im Ausbildungsstall (ab 3 Jahren, ${fmt(KOSTEN.ausbildung)}/Tag). Takt → Losgelassenheit → Anlehnung → Schwung → Geraderichtung → Versammlung: jede Stufe steigt erst, wenn die vorige 20 % erreicht hat, und kann sie nicht überholen.</p>
       <h3>❤️ Gesundheit</h3>
+      <p><b>Kastration</b> (Pferdeanhänger → Klinik, nur Hengste ab 1 Jahr): ${fmt(KOSTEN.kastration)} inklusive 2 Tage Klinik; liegt die Gesundheit unter 75 %, bleibt er länger (${fmt(KOSTEN.klinik)} je zusätzlichem Tag). Danach ist er im Steckbrief ein Wallach und kann nicht mehr decken. Der Abstammungsschein bleibt unverändert (Hengst).</p>
       <p><b>Rechnungen:</b> Klinik (bei der Entlassung), Aufzuchtstation und Ausbildungsstall (zu Beginn jeder Jahreszeit für die vergangene, mit Zwischenbericht; bei der Rückkehr ein kompletter Bericht mit Kostenübersicht und Rechnung über den Rest) schicken Rechnungen per Brief. Bezahlen geht direkt im Brief oder unter Finanzen. Zahlungsziel 2 Tage. Danach: Mahnung mit allen offenen Beträgen des Absenders + Mahngebühr (10 %, mind. 20 €), Frist 5 Tage – bei Aufzucht/Ausbildung wird der Aufenthalt sofort abgebrochen und die Pferde kommen zurück (ist keine Box frei, sobald eine frei wird). Wird auch die Mahnung nicht bezahlt, wird der Betrag + Versäumnisgebühr (20 %, mind. 50 €) abgebucht – das Konto darf dadurch ins Minus. Eine neue Rechnung desselben Absenders übernimmt alle offenen; die alten werden ungültig. Der Tierschutz holt wegen offener Rechnungen keine Pferde mehr.</p>
       <p><b>Schmutz:</b> Jede Nacht in der Box wird das Fell um 9–15 Punkte schmutziger (in einer nicht gemisteten Box +5 extra), Mähne und Schweif um 5–9 (+2). Stufen Fell: unter 20 sauber · ab 20 staubig · ab 50 schmutzig · ab 80 sehr dreckig; Mähne/Schweif: gekämmt · ab 20 zerzaust · ab 50 verfilzt. Man sieht es im Bild (Flecken, dreckige Beine, Stroh im Schweif). Putzen in der Putzkiste: Bürste macht das Fell sauber, Kamm Mähne und Schweif. Der Pferdepfleger putzt seine Boxen jeden Morgen; nach Klinik, Aufzucht oder Ausbildung kommt das Pferd geputzt zurück. Folgen: bis zu 15 % weniger Marktwert (Wert = max(Fell, 0,7 × Mähne)); ist das Fell länger als eine Jahreszeit ununterbrochen schmutzig (ab 50), verliert das Pferd zusätzlich 3 % Gesundheit pro Tag.</p>
       <p>Gut versorgt +8 % pro Tag, hungrig −19, Box nicht gemistet −9,5. Unter 40 % kommt ein Brief vom Tierarzt, bei 30 % oder weniger erholt sich ein Pferd nur noch in der Klinik – auch Medizin hilft dann nicht mehr (+16 %/Tag, ${fmt(KOSTEN.klinik)}/Tag) und wird mit 75 % entlassen. Die Klinikkosten kommen als Rechnung (siehe „Rechnungen“). Ausnahme: Senioren mit altersbedingter Höchstgesundheit von 40 % oder weniger.</p>

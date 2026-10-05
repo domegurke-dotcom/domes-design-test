@@ -747,7 +747,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "154";
+  const SPIEL_VERSION = "155";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -755,9 +755,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=154"></script>
-<script src="kopfteile.js?v=154"></script>
-<script src="kopfalter.js?v=154"></script>
+<script src="pferd.js?v=155"></script>
+<script src="kopfteile.js?v=155"></script>
+<script src="kopfalter.js?v=155"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1501,7 +1501,7 @@
   // Tod durch Vernachlässigung: Strafe, und schlecht versorgte Pferde (≤ 30 %, nicht altersschwach) werden beschlagnahmt
   function tierschutzEinsatz() {
     const tote = spiel.vernachlaessigt; if (!tote || !tote.length) return; delete spiel.vernachlaessigt; spiel.tierschutz = spiel.tierschutz || [];
-    buchen(-STRAFE_VERNACHLAESSIGUNG, "Strafe Tierschutz");
+    buchen(-STRAFE_VERNACHLAESSIGUNG, "Strafe Tierschutz"); ruf("Tierschutzverein", -5);
     const weg = [];
     spiel.boxen.forEach((b, i) => {
       const p = b.pferd; if (!p || b.tot || p.klinik || !p.pflege || altersschwach(p) || p.pflege.gesundheit > 30) return;
@@ -1521,9 +1521,9 @@
     if ((spiel.geld || 0) >= 0) return;
     (spiel.extern || []).slice().forEach(e => {
       const p = e.pferd, nr = zurueckholen(e);
-      if (nr >= 0) { brief(e.ort === "aufzucht" ? "Aufzuchtstation" : "Ausbildungsstall", `${p.name} ist zurück`, `{dein|Ihr} Hofkonto ist im Minus – wir können <b>${esc(p.name)}</b> deshalb nicht weiter betreuen und haben ${pron(p).ihn} in Box ${nr + 1} zurückgebracht.`); return; }
+      if (nr >= 0) { ruf(ORT_NAME[e.ort], -5); brief(e.ort === "aufzucht" ? "Aufzuchtstation" : "Ausbildungsstall", `${p.name} ist zurück`, `{dein|Ihr} Hofkonto ist im Minus – wir können <b>${esc(p.name)}</b> deshalb nicht weiter betreuen und haben ${pron(p).ihn} in Box ${nr + 1} zurückgebracht.`); return; }
       // keine Box frei: das Pferd kommt zurück, sobald eine Box frei ist
-      if (!e.abbruch) { e.abbruch = true; brief(ORT_NAME[e.ort], `Bitte Box für ${p.name} freimachen`, `{dein|Ihr} Hofkonto ist im Minus – wir können <b>${esc(p.name)}</b> deshalb nicht weiter betreuen. Leider ist auf {deinem|Ihrem} Hof gerade keine Box frei. Sobald eine frei ist, bringen wir ${pron(p).ihn} zurück.`); }
+      if (!e.abbruch) { e.abbruch = true; ruf(ORT_NAME[e.ort], -5); brief(ORT_NAME[e.ort], `Bitte Box für ${p.name} freimachen`, `{dein|Ihr} Hofkonto ist im Minus – wir können <b>${esc(p.name)}</b> deshalb nicht weiter betreuen. Leider ist auf {deinem|Ihrem} Hof gerade keine Box frei. Sobald eine frei ist, bringen wir ${pron(p).ihn} zurück.`); }
     });
   }
   // Fohlen beim Tierschutz: ist es alt genug für eine eigene Box, wird es einzeln zurückgekauft
@@ -1662,6 +1662,7 @@
     if ((spiel.geld || 0) < r.betrag) { dialog(`<h3>Nicht genug Geld</h3><p>Die ${r.stufe ? "Mahnung" : "Rechnung"} über ${fmt(r.betrag)} kannst du mit ${fmt(spiel.geld || 0)} noch nicht bezahlen.</p>`, [["OK", danach]]); return; }
     buchen(-r.betrag, ({ klinik: "Klinik", aufzucht: "Aufzuchtstation", ausbildung: "Ausbildungsstall" })[r.art] || r.von);
     rechnungSchliessen(r, "bezahlt");
+    if (!r.stufe) ruf(r.von, 5);   // pünktlich bezahlt
     speichern(); if (danach) danach();
   }
   // jeden Tag: abgelaufene Rechnungen → Mahnung (Aufzucht/Ausbildung: Abbruch), abgelaufene Mahnungen → Abbuchung
@@ -1676,13 +1677,13 @@
           if (rest) r.nachtrag = (r.nachtrag || []).concat([{ text: `${p.name}: ${tageTxt(Math.round(rest / KOSTEN[e.ort]))} × ${fmt(KOSTEN[e.ort])} (bis zum Abbruch)`, betrag: rest }]);
           posten.push(`${esc(p.name)} (jetzt wieder in Box ${nr + 1})`);
         });
-        const extra = r.nachtrag || []; delete r.nachtrag;
+        const extra = r.nachtrag || []; delete r.nachtrag; ruf(r.von, -5);
         rechnungStellen(r.von, r.art, [...extra, { text: "Mahngebühr", betrag: mahnGebuehr(r.betrag) }], [], `Mahnung`,
           `{deine|Ihre} Rechnung über ${fmt(r.betrag)} ist leider noch nicht bezahlt.${posten.length ? ` Deshalb haben wir den Aufenthalt abgebrochen: ${posten.join(", ")}.` : ""} Wir haben alle offenen Beträge zusammengefasst und eine Mahngebühr berechnet.<br><br>`, true);
       } else {
         const v = versaeumnisGebuehr(r.betrag), summe = r.betrag + v;
         buchen(-summe, `Abbuchung ${r.von}`);
-        rechnungSchliessen(r, "abgebucht");
+        rechnungSchliessen(r, "abgebucht"); ruf(r.von, -5);
         brief(r.von, "Abbuchung", `auch unsere Mahnung über ${fmt(r.betrag)} wurde nicht bezahlt. Wir haben den Betrag deshalb zusammen mit einer Versäumnisgebühr von ${fmt(v)} – insgesamt <b>${fmt(summe)}</b> – von {deinem|Ihrem} Konto abgebucht.${spiel.geld < 0 ? ` {Dein|Ihr} Konto steht jetzt bei ${fmt(spiel.geld)}.` : ""}`);
       }
     });
@@ -1885,7 +1886,7 @@
   function angebotZurueckziehen(p, nachher) {
     const a = angebotVon(p), strafe = abbruchStrafe(a);
     dialog(`<h3>Angebot zurückziehen?</h3><p>${esc(p.name)} wird dann nicht mehr ${a && a.art === "auktion" ? "versteigert" : "angeboten"}.</p>${strafe ? `<p>⚠️ Auf ${esc(p.name)} wurde schon geboten (letztes Gebot ${fmt(a.gebot)}). Für den Abbruch zahlst du eine <b>Abbruchstrafe von ${fmt(strafe)}</b> (die Hälfte des letzten Gebots).</p>` : ""}`,
-      [[strafe ? `Abbrechen · ${fmt(strafe)} Strafe` : "Zurückziehen", () => { if (strafe) buchen(-strafe, `Abbruchstrafe Auktion: ${p.name}`); spiel.angebote = (spiel.angebote || []).filter(x => x.id !== p.id); speichern(); nachher(); }], ["Behalten", null, "zweit"]]);
+      [[strafe ? `Abbrechen · ${fmt(strafe)} Strafe` : "Zurückziehen", () => { if (strafe) { buchen(-strafe, `Abbruchstrafe Auktion: ${p.name}`); ruf("Auktionshaus", -5); } spiel.angebote = (spiel.angebote || []).filter(x => x.id !== p.id); speichern(); nachher(); }], ["Behalten", null, "zweit"]]);
   }
   function verkaufDialog(p, nachher) {
     const a = angebotVon(p), box = boxVon(p), sperre = abgabeSperre(p, box, true), fo = box && box.fohlen;
@@ -1911,7 +1912,7 @@
   function aufGnadenhof(p, box) {
     const halb = Math.round(marktwert(p) / 2 / 50) * 50;
     (spiel.gnadenhof = spiel.gnadenhof || []).push({ pferd: p, seit: jzJetzt() });
-    buchen(halb, `Gnadenhof: ${p.name}`);
+    buchen(halb, `Gnadenhof: ${p.name}`); ruf("Gnadenhof", 5);
     box.pferd = null; box.tot = false; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0;
     brief("Gnadenhof", `Willkommen, ${p.name}!`, `<b>${esc(p.name)}</b> ist gut bei uns angekommen und grast schon zufrieden auf der Weide. {Du kannst|Sie können} ${pron(p).ihn} jederzeit im Hauptmenü unter „Gnadenhof“ besuchen.<br><br>${fmt(halb)} wurden {deinem|Ihrem} Hofkonto gutgeschrieben.`);
     return halb;
@@ -1943,6 +1944,7 @@
     dialog(`<h3>🐾 ${esc(p.name)} zurückgeben?</h3><p>${esc(p.name)} ist ein Notfallpferd. Laut Vertrag darf ${pron(p).er} bis ${jzName(p.schutzBis)} nicht verkauft werden. Du kannst ${pron(p).ihn} aber an den Tierschutz zurückgeben – die Schutzgebühr wird nicht erstattet.</p>`,
       [["Zurückgeben", () => { archivieren(p); if (box.fohlen) { archivieren(box.fohlen); delete box.fohlen; }
         box.pferd = null; box.tot = false; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0;
+        ruf("Tierschutzverein", -5);
         brief("Tierschutzverein", `${p.name} ist zurück bei uns`, `{du hast|Sie haben} <b>${esc(p.name)}</b> an uns zurückgegeben. Wir kümmern uns jetzt wieder um ${pron(p).ihn}. Die Schutzgebühr wird laut Vertrag nicht erstattet.`, { pferde: [p] });
         aktenReiter = "steckbrief"; aktenModus = "steckbrief"; ortModus = null; speichern(); zeigeTag(); nachher(); }], ["Abbrechen", null, "zweit"]]);
   }
@@ -1983,6 +1985,7 @@
   }
   // Angebot abschließen: Pferd (mit Fohlen bei Fuß) geht an den Käufer, Brief mit Preis
   function angebotVerkaufen(a, preis) {
+    ruf(a.art === "auktion" ? "Auktionshaus" : "Pferdemarkt", 5);
     const jetzt = jzJetzt(), x = spiel.boxen.findIndex(b => b.pferd && b.pferd.id === a.id); if (x < 0) return false;
     const b = spiel.boxen[x], p = b.pferd;
         const wertEnde = verkaufsWert(p);
@@ -1991,7 +1994,7 @@
         let fohlenName = "";
         if (b.fohlen) { fohlenName = b.fohlen.name; archivieren(b.fohlen); delete b.fohlen; }
         else if (a.fohlenId) { const fb2 = spiel.boxen.find(x => x.pferd && x.pferd.id === a.fohlenId); if (fb2) { fohlenName = fb2.pferd.name; archivieren(fb2.pferd); fb2.pferd = null; fb2.krippeVoll = false; fb2.mistig = false; fb2.mistStufe = 0; } }
-        if (p.schutzBis && jetzt < p.schutzBis) { buchen(-NOTFALL_STRAFE, `Strafe Tierschutz: ${p.name}`); brief("Tierschutzverein", `Strafe: ${p.name} verkauft`, `<b>${esc(p.name)}</b> war ein Notfallpferd und hätte mindestens ein Jahr bei {dir|Ihnen} bleiben müssen. Für den vorzeitigen Verkauf wurden <b>${fmt(NOTFALL_STRAFE)}</b> Strafe abgebucht.`); }
+        if (p.schutzBis && jetzt < p.schutzBis) { buchen(-NOTFALL_STRAFE, `Strafe Tierschutz: ${p.name}`); ruf("Tierschutzverein", -5); brief("Tierschutzverein", `Strafe: ${p.name} verkauft`, `<b>${esc(p.name)}</b> war ein Notfallpferd und hätte mindestens ein Jahr bei {dir|Ihnen} bleiben müssen. Für den vorzeitigen Verkauf wurden <b>${fmt(NOTFALL_STRAFE)}</b> Strafe abgebucht.`); }
         b.pferd = null; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; b.tot = false;
         brief(a.art === "auktion" ? "Auktionshaus" : "Pferdemarkt", `${p.name} wurde verkauft`, `<b>${esc(p.name)}</b> (Box ${x + 1}) hat für <b>${fmt(preis)}</b> ${a.art === "auktion" ? `in der Auktion (${a.gebote || 0} ${a.gebote === 1 ? "Gebot" : "Gebote"}) ` : ""}${pron(p).er === "sie" ? "eine neue Besitzerin bzw. einen neuen Besitzer" : "einen neuen Besitzer bzw. eine neue Besitzerin"} gefunden${fohlenName ? ` – zusammen mit ${pron(p).er === "sie" ? "ihrem" : "seinem"} Fohlen <b>${esc(fohlenName)}</b>` : ""}. Das Geld ist auf {deinem|Ihrem} Hofkonto.${a.art === "auktion" ? `<br><br>Marktwert zu Beginn der Auktion: <b>${fmt(a.wert)}</b><br>Marktwert am Ende der Auktion: <b>${fmt(wertEnde)}</b>` : ""}`, { pferde: [p] });
     spiel.angebote = (spiel.angebote || []).filter(y => y !== a);
@@ -2039,6 +2042,16 @@
   // Im Text steht {du-Form|Sie-Form}; beim Absenden wird die passende Form eingesetzt.
   const DU_ANGEBOT_NACH = 6;   // so viele Briefe von einem Absender, dann wird das „Du“ angeboten
   const duMit = von => !!(spiel.duzen && spiel.duzen[von] === true);
+  // Ansehen bei Absendern (geheim, nirgends angezeigt): Start 100, Skala 0–200, positiver Kontakt +5, negativer −5.
+  // Das „Du“ bieten sie nur bei mehr als 100 Punkten an; wer schon duzt und unter 100 fällt, zieht es beleidigt zurück.
+  const rufWert = von => { const R = spiel.ruf || {}; return R[von] == null ? 100 : R[von]; };
+  function ruf(von, d) {
+    const R = (spiel.ruf = spiel.ruf || {}); R[von] = Math.max(0, Math.min(200, rufWert(von) + d));
+    if (d < 0 && R[von] < 100 && spiel.duzen && spiel.duzen[von] === true) {
+      spiel.duzen[von] = false;
+      brief(von, "Zurück zum Sie", `nach den letzten Vorfällen möchten wir unsere Geschäftsbeziehung lieber wieder etwas förmlicher halten. Wir bleiben deshalb ab jetzt beim „Sie“.`);
+    }
+  }
   function brief(von, betreff, text, extra) {
     const du = duMit(von);
     text = String(text).replace(/\{([^{}|]*)\|([^{}|]*)\}/g, (m, a, b) => du ? a : b);
@@ -2048,7 +2061,7 @@
     if (spiel.post.length > 120) spiel.post.length = 120;
     if (betreff !== "Neuigkeit" && typ !== "duzen") {
       const K = (spiel.kontakt = spiel.kontakt || {}); K[von] = (K[von] || 0) + 1;
-      if (K[von] >= DU_ANGEBOT_NACH && !(spiel.duzen && von in spiel.duzen) && !(spiel.duAngeboten || []).includes(von)) {
+      if (K[von] >= DU_ANGEBOT_NACH && rufWert(von) > 100 && !(spiel.duzen && von in spiel.duzen) && !(spiel.duAngeboten || []).includes(von)) {
         (spiel.duAngeboten = spiel.duAngeboten || []).push(von);
         brief(von, "Wollen wir uns duzen?", `wir haben in letzter Zeit schon öfter miteinander zu tun gehabt. Wenn es Ihnen recht ist, würden wir Ihnen gern das „Du“ anbieten. Geben Sie uns einfach hier Bescheid.`, { aktion: { typ: "duzen" } });
       }
@@ -2159,6 +2172,7 @@
         delete b.fohlen;
         const pf = { ...f, werte: f.werte || erzeugeWerte(f), pflege: erzeugePflege(f) };
         spiel.tierschutz.push({ pferd: pf, frist: jetzt + 2, preis: tierschutzPreis(pf) });
+        ruf("Tierschutzverein", -5);
         brief("Tierschutzverein", `${f.name} wurde abgeholt`, `da <b>${esc(f.name)}</b> keine eigene Box bekommen hat, haben wir ${pr.ihn} heute abgeholt.<br><br>{Du kannst|Sie können} ${pr.ihn} bis Ende ${jzName(jetzt + 1).replace(/^\S+ /, "")} für ${fmt(tierschutzPreis(pf))} zurückkaufen – {du findest|Sie finden} es im Pferdemarkt unter „Tierschutz“. Dafür {brauchst du|brauchen Sie} eine freie Box.`);
       }
     });
@@ -3835,7 +3849,7 @@
       buchen(-a.gebot, `Auktion: ${a.pferd.name}`);
       const p = JSON.parse(JSON.stringify(a.pferd)); p.pflege = erzeugePflege(p); p.maehneSeit = spiel.tag; p.schopfSeit = spiel.tag;
       const nb = spiel.boxen[zb]; nb.pferd = p; nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false;
-      brief("Auktionshaus", `Zuschlag: ${p.name}`, `herzlichen Glückwunsch! ${a.fohlen ? `{Dein|Ihr} Fohlen aus der Fohlenauktion ist abgesetzt und abgeholt: ` : ""}{Du hast|Sie haben} <b>${esc(p.name)}</b> für <b>${fmt(a.gebot)}</b> ersteigert (${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"} insgesamt). ${pron(p).er === "sie" ? "Sie" : "Er"} steht jetzt in Box ${zb + 1}.`, { pferde: [p] }); });
+      ruf("Auktionshaus", 5); brief("Auktionshaus", `Zuschlag: ${p.name}`, `herzlichen Glückwunsch! ${a.fohlen ? `{Dein|Ihr} Fohlen aus der Fohlenauktion ist abgesetzt und abgeholt: ` : ""}{Du hast|Sie haben} <b>${esc(p.name)}</b> für <b>${fmt(a.gebot)}</b> ersteigert (${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"} insgesamt). ${pron(p).er === "sie" ? "Sie" : "Er"} steht jetzt in Box ${zb + 1}.`, { pferde: [p] }); });
   }
   // gekauftes Pferd in die Box stellen
   function pferdEinstellen(h, preis, posten, zusatz) {
@@ -3908,7 +3922,7 @@
       if (frei < 0) { dialog(`<h3>Keine Box frei</h3><p>Für ${esc(t.pferd.name)} brauchst du eine freie Box. Im Stall (Boxenübersicht) kannst du mit + eine neue bauen.</p>`); return; }
       if ((spiel.geld || 0) < t.preis) { dialog(`<h3>Nicht genug Geld</h3><p>Du brauchst ${fmt(t.preis)}, hast aber nur ${fmt(spiel.geld || 0)}.</p>`); return; }
       dialog(`<h3>🐾 Zurückkaufen</h3><p><b>${esc(t.pferd.name)}</b>${t.fohlen ? ` mit Fohlen <b>${esc(t.fohlen.name)}</b>` : ""} für ${fmt(t.preis)} vom Tierschutz zurückkaufen? ${pron(t.pferd).er === "sie" ? "Sie" : "Er"} kommt in Box ${frei + 1}.</p>`, [["Zurückkaufen", () => {
-        buchen(-t.preis, `Tierschutz: ${t.pferd.name}`);
+        buchen(-t.preis, `Tierschutz: ${t.pferd.name}`); ruf("Tierschutzverein", 5);
         spiel.tierschutz = spiel.tierschutz.filter(x => x !== t);
         const nb = spiel.boxen[frei];
         nb.pferd = { ...t.pferd, pflege: t.pferd.pflege || erzeugePflege(t.pferd), maehneSeit: spiel.tag, schopfSeit: spiel.tag };
@@ -4113,7 +4127,8 @@
       <p><b>Decksaison:</b> Die Hengste der Deckstation (Gestüte) decken nur im Frühling und Sommer, eigene Hengste jederzeit.</p>
       <p>Geburtszeit sonst: 65 % Frühling, 17 % Sommer, 10 % Winter, 8 % Herbst.</p>
       <p>Eigene Pferde: Auktion startet bei ½ des Marktwerts (wie im Auktionshaus) und läuft 2 Jahreszeiten; Zwischenstand und Ergebnis kommen per Brief mit Anzahl der Gebote, beim Verkauf auch mit dem Marktwert zu Beginn und am Ende. Bietet niemand das Startgebot, bleibt das Pferd.</p>
-      <p><b>Briefe:</b> Absender schreiben zuerst mit „Sie“. Nach ${DU_ANGEBOT_NACH} Briefen bietet ein Absender in einem eigenen Brief das „Du“ an – annehmen oder beim „Sie“ bleiben. Pferdenamen in Briefen lassen sich antippen. Diagnosen kommen als eigener Brief (Ereignis „Tierarzt: Diagnose“).</p>
+      <p><b>Ansehen (geheim, Spieler sieht es nie):</b> Jeder Absender startet bei 100 Punkten (Skala 0–200). Positiv +5: Rechnung pünktlich bezahlt, „Du“ angenommen, Verkauf über Pferdemarkt/Auktionshaus, Zuschlag im Auktionshaus, Pferd vom Tierschutz zurückgekauft, Pferd an den Gnadenhof gegeben. Negativ −5: Mahnung, Abbuchung, „Du“ abgelehnt, Preisvorschlag abgelehnt, eigene Auktion mit Strafe abgebrochen, Aufenthalt wegen Kontominus abgebrochen, Tierschutz: Strafe wegen Vernachlässigung, Notfallpferd verkauft oder zurückgegeben, Fohlen abgeholt. Das „Du“ wird nur bei mehr als 100 Punkten angeboten; fällt ein Absender, mit dem man sich duzt, unter 100, zieht er das „Du“ beleidigt zurück.</p>
+      <p><b>Briefe:</b> Absender schreiben zuerst mit „Sie“. Nach ${DU_ANGEBOT_NACH} Briefen (und bei mehr als 100 Punkten Ansehen) bietet ein Absender in einem eigenen Brief das „Du“ an – annehmen oder beim „Sie“ bleiben. Pferdenamen in Briefen lassen sich antippen. Diagnosen kommen als eigener Brief (Ereignis „Tierarzt: Diagnose“).</p>
       <p><b>Schecken-Namen:</b> Overo und Tovero heißen ohne Gentest nach dem Aussehen (z. B. „Braunschecke“) – welches Scheckungs-Gen dahintersteckt, sieht man erst nach dem Fellfarben- oder Erbkrankheiten-Test („Braunschecke (Overo)“). Overo-Träger können auch einfarbig aussehen (kaum Weiß); in der Admin-Genauswahl lässt sich O/n deshalb auch bei einfarbigen Farben einstellen.</p>
       <p><b>Warnung bei Erbkrankheiten</b> (Overo × Overo, Leopard × Leopard): erscheint nur, wenn mindestens eins der beiden Pferde einen positiven Gentest hat und das andere ebenfalls positiv getestet ist oder das Muster sichtbar zeigt.</p>
       ${verTab(["Posten", "Kosten"], [["Aufzuchtstation", `${fmt(KOSTEN.aufzucht)} / Tag`], ["Ausbildungsstall", `${fmt(KOSTEN.ausbildung)} / Tag`], ["Klinik", `${fmt(KOSTEN.klinik)} / Tag`], ...Object.values(LABOR_TESTS).map(T => [`Labor: ${T.n}`, `${fmt(T.preis)} · Ergebnis nach ${T.tage} Tagen per Post`]), ["Tierschutz zurückkaufen", "½ Marktwert + offene Klinikkosten"], ["Strafe: Tod durch Vernachlässigung", fmt(STRAFE_VERNACHLAESSIGUNG)]])}
@@ -4286,10 +4301,10 @@
   function briefAktionenBinden(nachher) {
     document.querySelectorAll("[data-baktion]").forEach(b => b.onclick = ev => { ev.stopPropagation();
       const br = (spiel.post || []).find(x => x.id === b.dataset.bid); if (!br) return; const A = br.aktion;
-      if (b.dataset.baktion === "du-ja" || b.dataset.baktion === "du-nein") { (spiel.duzen = spiel.duzen || {})[br.von] = b.dataset.baktion === "du-ja"; A.antwort = b.dataset.baktion === "du-ja" ? "ja" : "nein"; speichern(); nachher(); }
+      if (b.dataset.baktion === "du-ja" || b.dataset.baktion === "du-nein") { (spiel.duzen = spiel.duzen || {})[br.von] = b.dataset.baktion === "du-ja"; ruf(br.von, b.dataset.baktion === "du-ja" ? 5 : -5); A.antwort = b.dataset.baktion === "du-ja" ? "ja" : "nein"; speichern(); nachher(); }
       else if (b.dataset.baktion === "kauf-ja" || b.dataset.baktion === "kauf-nein") {
         const a = (spiel.angebote || []).find(y => y.id === A.pferd && y.vorschlag && y.vorschlag.id === A.vid); if (!a) { nachher(); return; }
-        if (b.dataset.baktion === "kauf-ja") { A.antwort = "ja"; angebotVerkaufen(a, A.betrag); } else { A.antwort = "nein"; a.vorschlag = null; a.abgelehnt = (a.abgelehnt || 0) + 1; }
+        if (b.dataset.baktion === "kauf-ja") { A.antwort = "ja"; angebotVerkaufen(a, A.betrag); } else { A.antwort = "nein"; ruf(br.von, -5); a.vorschlag = null; a.abgelehnt = (a.abgelehnt || 0) + 1; }
         speichern(); postIconSetzen(); nachher(); }
       else if (b.dataset.baktion === "zahlen") rechnungZahlen(A.rid, nachher);
       else if (b.dataset.baktion === "bieten") { const a = auktionFinden(A.pferd); if (a) { $("dlg").hidden = true; bieten(a, nachher); } }

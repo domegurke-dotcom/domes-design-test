@@ -11,7 +11,7 @@ Plan gespeichert bei Spielversion 173.
 - [x] Etappe B – Mitarbeiter (groß) – v175/176, von Dome getestet
   - [x] B1 (v175): Berufe Azubi/Stallbursche/Pferdepfleger/Pferdewirt/Bereiter/Stallmeister, Stallgröße, Bewerbungen je Jahreszeit, 7 Wissensbereiche + Spieler-Erfahrung, Eigenschaften, Nachtdienst bei Geburten. Dome: noch keine Stallart (Pferdewirt/Bereiter ab 9 Boxen); Nachtdienst = kleiner Vorteil (Fohlen gesund, ohne Aufsicht 15 % schwach); Azubi füttert/mistet 2 Boxen mit Fehlern; Bereiter bewegt 3 Pferde (Wohl +5, kein Boxentag). Hofhelfer, Futterexperte, Hufschmied, Osteopath noch „bald“.
   - [x] B2 (v176): versteckte Zufriedenheit, Urlaub (Dome: einmal im Jahr 1–3 Tage, Antrag per Brief), krank 1–3 Tage, Kündigung unter 25, Vertretung durch Kollegen (+1 Box, Überstunden). Stallqualität wirkt erst mit dem Hof-Ausbau.
-- [ ] Etappe C – Befunde, Anzeichen, Einschätzung (groß)
+- [~] Etappe C – Befunde, Anzeichen, Einschätzung (groß) – v177, Test durch Dome offen. Dome: Tierarzt behandelt bis Etappe D gleich mit (Hausbesuch 80 € + Behandlung, Kolik-OP 3.000 €); etwa 1–2 Befunde pro Pferd und Jahr; alte Stallapotheke bleibt bis D. Annahme (vertrauen/selbst einschätzen) wirkt erst mit eigenen Behandlungen (D). Lahmheit durch Überlastung und Bereiter-Früherkennung beim Training: Ankerpunkt `befundBremse` für Etappe 4.
 - [ ] Etappe D – Behandlung und Stallapotheke (mittel)
 - [ ] Etappe E – Hufe und Hufschmied (mittel)
 - [ ] Etappe F – Ansteckung, Quarantäne, Vorsorge (mittel)

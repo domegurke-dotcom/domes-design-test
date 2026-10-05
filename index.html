@@ -747,7 +747,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "151";
+  const SPIEL_VERSION = "152";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -755,9 +755,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=151"></script>
-<script src="kopfteile.js?v=151"></script>
-<script src="kopfalter.js?v=151"></script>
+<script src="pferd.js?v=152"></script>
+<script src="kopfteile.js?v=152"></script>
+<script src="kopfalter.js?v=152"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1490,7 +1490,7 @@
     const res = spiel.boxen.findIndex(b => b.reserviert === e.pferd.id), frei = res >= 0 ? res : freieBox(); if (frei < 0) return -1;
     const nb = spiel.boxen[frei]; delete nb.reserviert;
     if (e.ort === "ausbildung") ausbildungsBericht(e, frei);
-    nb.pferd = e.pferd; nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false;
+    nb.pferd = e.pferd; nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false; delete e.pferd.dreck;
     e.pferd.maehneSeit = e.pferd.maehneSeit || spiel.tag; e.pferd.schopfSeit = e.pferd.schopfSeit || spiel.tag;
     spiel.extern = spiel.extern.filter(x => x !== e);
     return frei;
@@ -1581,7 +1581,7 @@
       p.pflege.gesundheit = Math.min(gesundheitMax(p), Math.round((p.pflege.gesundheit + 16) * 10) / 10);
       if (p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {
         const betrag = p.klinik.rechnung, tage = spiel.tag - p.klinik.seit;
-        delete p.klinik;
+        delete p.klinik; delete p.dreck;   // in der Klinik wird geputzt
         (spiel.rechnungen = spiel.rechnungen || []).push({ id: "r" + spiel.tag + p.id, pferdId: p.id, name: p.name, betrag, frist: jzJetzt() + 1, tage });
         brief("Tierarztpraxis", `${p.name} ist wieder fit – Rechnung`, `<b>${esc(p.name)}</b> hat sich in der Klinik gut erholt (Gesundheit ${p.pflege.gesundheit.toLocaleString("de-DE")} %) und steht wieder in Box ${i + 1}.<br><br>Für ${tage} ${tage === 1 ? "Tag" : "Tage"} Behandlung berechnen wir <b>${fmt(betrag)}</b>. Bitte {bezahle|bezahlen Sie} die Rechnung bis Ende ${jzName(jzJetzt() + 1).replace(/^\S+ /, "")} in der Hofverwaltung unter „Finanzen“. Wird sie nicht bezahlt, müssen wir den Tierschutz informieren – dann wird ${esc(p.name)} abgeholt.`);
       }
@@ -1762,7 +1762,8 @@
     const gesund = p.pflege ? 0.4 + 0.6 * p.pflege.gesundheit / 100 : 1;
     // reinrassig ist mehr wert: je mehr Fremdblut (ohne Veredelung), desto weniger
     const rein = p.anteile ? reinAnteil(p.anteile, p.rasse) / 100 : 1, reinF = 0.5 + 0.5 * rein * rein;
-    const v = (1500 + 4500 * gangF * gangF + 5000 * ausb) * alterF * gesund * reinF;
+    const dreckF = 1 - 0.15 * dreckWert(p) / 100;   // ungeputzt: bis zu 15 % weniger wert
+    const v = (1500 + 4500 * gangF * gangF + 5000 * ausb) * alterF * gesund * reinF * dreckF;
     return Math.max(100, Math.round(v / 50) * 50) + testWert(p);   // gemachte Gentests: Käufer zahlen die Testkosten mit
   }
   const testWert = p => Object.keys(LABOR_TESTS).filter(t => testGemacht(p, t)).reduce((s, t) => s + LABOR_TESTS[t].preis, 0);
@@ -2112,7 +2113,7 @@
   }
   const speichern = () => { try { localStorage.setItem(SPEICHER, JSON.stringify(spiel)); } catch (e) {} };
 
-  let aktenReiter = "steckbrief", aktenModus = "steckbrief", scherModus = false, medModus = false, zaumModus = false, deckModus = false, ortModus = null, meldung = "";
+  let aktenReiter = "steckbrief", aktenModus = "steckbrief", scherModus = false, medModus = false, zaumModus = false, putzModus = false, deckModus = false, ortModus = null, meldung = "";
   // ---------- Ganzer Steckbrief nur zum Lesen (für jedes Pferd, auch fremde und Vorfahren) ----------
   let leseP = null, leseGemerkt = null, leseZurueck = null;   // leseZurueck: Infofenster, aus dem der Steckbrief geöffnet wurde
   function leseAkte(p) {
@@ -2165,7 +2166,7 @@
     stallFormat();
     if (!p || p.klinik) { $("pferdPlatz").innerHTML = ""; zeigeAkte(); return; }
     const tot = !!B().tot;   // verstorben: Augen zu, keine Bewegung mehr
-    const z = zeichnePferd(p.rasse, fb(p), { alterStufe: stufeKey(p), seed: p.id, geschlecht: p.geschlecht, augenZu: tot, statisch: tot, maehne: p.maehne, schopf: p.schopf, typ: p.typ, eigenKopf: p.nase === "spiel" ? false : (p.nase || undefined), haltung: haltungFuer(p), ohren: (p.pflege && p.pflege.gesundheit >= 45 && p.pflege.gesundheit < 65) ? "geknickt" : "" });
+    const z = zeichnePferd(p.rasse, fb(p), { dreck: p.dreck ? p.dreck.fell : 0, filz: p.dreck ? p.dreck.maehne : 0, alterStufe: stufeKey(p), seed: p.id, geschlecht: p.geschlecht, augenZu: tot, statisch: tot, maehne: p.maehne, schopf: p.schopf, typ: p.typ, eigenKopf: p.nase === "spiel" ? false : (p.nase || undefined), haltung: haltungFuer(p), ohren: (p.pflege && p.pflege.gesundheit >= 45 && p.pflege.gesundheit < 65) ? "geknickt" : "" });
     const s = p.stockmass * STALL.cmZuEinheit / 100;
     const cx = (z.box.minX + z.box.maxX) / 2;
     const anim = t => spiel.sparmodus ? ohneAnim(t) : t;
@@ -2308,6 +2309,9 @@
           <li><span class="ico">🌾</span><span class="txt">Fütterung heute<small>Heu in der Futterkrippe</small></span><span class="stat ${box.krippeVoll ? "ok" : "warn"}">${box.krippeVoll ? "gefüttert" : "noch nicht"}</span></li>
           <li><span class="ico">💧</span><span class="txt">Wasser<small>Selbsttränke</small></span><span class="stat ok">frisch</span></li>
           <li><span class="ico">🧹</span><span class="txt">Boxenhygiene<small>Einstreu aus Stroh</small></span><span class="stat ${box.mistig ? "warn" : "ok"}">${box.mistig ? "ausmisten" : "sauber"}</span></li>
+          ${(() => { const d = p.dreck || {}, sf = dreckStufe(d.fell), sm = dreckStufe(d.maehne);
+            return `<li><span class="ico">🧽</span><span class="txt">Fell<small>${zuLangeDreckig(p) ? "⚠️ schon länger als eine Jahreszeit verdreckt – schadet der Gesundheit" : "putzen mit der Bürste (Ausrüstung → Putzkiste)"}</small></span><span class="stat ${zuLangeDreckig(p) ? "bad" : sf[2]}">${sf[1]}</span></li>
+              <li><span class="ico">🪮</span><span class="txt">Mähne &amp; Schweif<small>kämmen mit dem Kamm (Ausrüstung → Putzkiste)</small></span><span class="stat ${sm[2]}">${sm[0] >= 50 ? "verfilzt" : sm[0] >= 20 ? "zerzaust" : "gekämmt"}</span></li>`; })()}
           ${termin("🔨", "Hufpflege (Hufschmied)", pf.huf, 42, "alle 6–8 Wochen")}
           ${termin("💉", "Impfung (Tierarzt)", pf.impf, 180, "Influenza & Herpes halbjährlich")}
           ${termin("💊", "Wurmkur", pf.wurm, 90, "etwa vierteljährlich")}
@@ -2328,16 +2332,23 @@
       const haupt = [
         ["futter", "🌾", "Futter", "Heu, Hafer und Mineralfutter", "Heu & Hafer"],
         ["zaumzeug", "🏇", "Zaum\u00adzeug", "Halfter, Sattel, Trense, Schabracke, Decke, Gamaschen – antippen", `${zaumHat} von ${zaumAnz}`],
-        ["putzkiste", "🧰", "Putz\u00adkiste", "Striegel, Kardätsche, Hufkratzer, Mähnenkamm", "komplett"],
+        ["putzkiste", "🧰", "Putz\u00adkiste", "Bürste und Kamm – antippen", "Bürste & Kamm"],
         ["schere", "✂️", "Schere", "zum Mähne und Schopf schneiden – antippen", "Mähne & Schopf"],
         ["medizin", "💊", "Medizin", "Stallapotheke – antippen", "Apotheke"],
       ];
-      const kachel = ([k, ico, n, info, kurz]) => { const da = k === "zaumzeug" || spiel.ausruestung[k], klick = da && (k === "schere" || k === "medizin" || k === "zaumzeug");
-        return `<div class="kachel ${da ? "" : "fehlt"} ${klick ? "klickbar" : ""}" ${klick ? `id="${({ schere: "scherKachel", medizin: "medKachel", zaumzeug: "zaumKachel" })[k]}" role="button" tabindex="0"` : ""} title="${n.replace(/\u00ad/g, "")}: ${info}${da ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></div>`; };
+      const kachel = ([k, ico, n, info, kurz]) => { const da = k === "zaumzeug" || spiel.ausruestung[k], klick = da && (k === "schere" || k === "medizin" || k === "zaumzeug" || k === "putzkiste");
+        return `<div class="kachel ${da ? "" : "fehlt"} ${klick ? "klickbar" : ""}" ${klick ? `id="${({ schere: "scherKachel", medizin: "medKachel", zaumzeug: "zaumKachel", putzkiste: "putzKachel" })[k]}" role="button" tabindex="0"` : ""} title="${n.replace(/\u00ad/g, "")}: ${info}${da ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></div>`; };
       if (zaumModus) {
         inhalt = `<p class="text" style="margin:0 0 4px">🏇 <b>Zaumzeug</b> · ${zaumHat} von ${zaumAnz} Teilen vorhanden<br><small>Größen passend für ${sm} cm Stockmaß</small></p>
           <div class="kacheln quadrat">${teile.map(kachel).join("")}</div>
           <button class="zurueck" id="zaumZurueck">‹ Zurück zur Ausrüstung</button>`;
+      } else if (putzModus) {
+        const d = p.dreck || {}, sf = dreckStufe(d.fell), sm = dreckStufe(d.maehne);
+        inhalt = (meldung ? `<div class="klasse">${meldung}</div>` : "") + `<p class="text" style="margin:0 0 4px">🧰 <b>Putzkiste</b> · Fell: ${sf[1]} · Mähne &amp; Schweif: ${sm[0] >= 50 ? "verfilzt" : sm[0] >= 20 ? "zerzaust" : "gekämmt"}<br><small>${maBoxen("pfleger").includes(aktBox) ? "Der Pferdepfleger putzt dieses Pferd jeden Morgen." : "Pferde werden jede Nacht in der Box schmutziger. Ein Pferdepfleger (Hofverwaltung → Mitarbeiter) putzt sie für dich."}</small></p>
+          <div class="kacheln quadrat">
+            <button class="kachel ${(d.fell || 0) > 0 ? "klickbar" : "fehlt"}" data-putz="buerste" ${(d.fell || 0) > 0 ? "" : "disabled"}><span class="ico">🧽</span><b>Bürste</b><small>${(d.fell || 0) > 0 ? "Fell putzen" : "Fell ist sauber"}</small></button>
+            <button class="kachel ${(d.maehne || 0) > 0 ? "klickbar" : "fehlt"}" data-putz="kamm" ${(d.maehne || 0) > 0 ? "" : "disabled"}><span class="ico">🪮</span><b>Kamm</b><small>${(d.maehne || 0) > 0 ? "Mähne & Schweif kämmen" : "schon gekämmt"}</small></button></div>
+          <button class="zurueck" id="putzZurueck">‹ Zurück zur Ausrüstung</button>`;
       } else if (medModus) {
         const heute = (p.medizin && p.medizin.tag === spiel.tag) ? p.medizin.gegeben : [], zuKrank = p.pflege.gesundheit <= 30;
         inhalt = (meldung ? `<div class="klasse">${meldung}</div>` : "") + `<p class="text" style="margin:0 0 4px">💊 <b>Stallapotheke</b> · Gesundheit: ${p.pflege.gesundheit.toLocaleString("de-DE", { maximumFractionDigits: 1 })} %<br><small>${zuKrank ? `⚠️ Bei 30 % oder weniger hilft keine Medizin mehr – ${esc(p.name)} kann sich nur noch in der Klinik erholen.` : "Jedes Mittel kann einmal am Tag gegeben werden."}</small></p>
@@ -2465,7 +2476,7 @@
         ${inhalt}
       </div>`;
     { const an = INFO.querySelector(".reiter.viele button.an"); if (an) an.parentElement.scrollLeft = Math.max(0, an.offsetLeft - 40); }
-    INFO.querySelectorAll(".reiter button").forEach(b => b.onclick = () => { aktenReiter = b.dataset.r; aufschlTeil = null; deckModus = false; ortModus = null; scherModus = false; medModus = false; zaumModus = false; meldung = ""; zeigeAkte(); });
+    INFO.querySelectorAll(".reiter button").forEach(b => b.onclick = () => { aktenReiter = b.dataset.r; aufschlTeil = null; deckModus = false; ortModus = null; scherModus = false; medModus = false; zaumModus = false; putzModus = false; meldung = ""; zeigeAkte(); });
     INFO.querySelectorAll("[data-lex]").forEach(x => x.onclick = () => lexFenster(x.dataset.lex, p));
     INFO.querySelectorAll("[data-kinder]").forEach(x => x.onclick = () => nachkommenFenster(p));
     INFO.querySelectorAll("[data-aufschl]").forEach(b => b.onclick = () => { aufschlTeil = b.dataset.aufschl; zeigeAkte(); });
@@ -2558,6 +2569,12 @@
     const sk = $("scherKachel"); if (sk) sk.onclick = () => { scherModus = true; meldung = ""; zeigeAkte(); };
     const zk = $("zaumKachel"); if (zk) zk.onclick = () => { zaumModus = true; meldung = ""; zeigeAkte(); };
     const zz = $("zaumZurueck"); if (zz) zz.onclick = () => { zaumModus = false; zeigeAkte(); };
+    const putzK = $("putzKachel"); if (putzK) putzK.onclick = () => { putzModus = true; meldung = ""; zeigeAkte(); };
+    const putzZ = $("putzZurueck"); if (putzZ) putzZ.onclick = () => { putzModus = false; meldung = ""; zeigeAkte(); };
+    INFO.querySelectorAll("[data-putz]").forEach(b => b.onclick = () => {
+      const womit = b.dataset.putz; putzen(p, womit);
+      meldung = womit === "buerste" ? `🧽 ${esc(p.name)} ist geputzt – das Fell glänzt wieder.` : `🪮 Mähne und Schweif von ${esc(p.name)} sind gekämmt.`;
+      speichern(); zeigeStall(); });
     const mk = $("medKachel"); if (mk) mk.onclick = () => { medModus = true; meldung = ""; zeigeAkte(); };
     const mz = $("medZurueck"); if (mz) mz.onclick = () => { medModus = false; meldung = ""; zeigeAkte(); };
     INFO.querySelectorAll("[data-med]").forEach(b => b.onclick = () => {
@@ -3010,7 +3027,7 @@
     ["bereiter", "🏇", "Bereiter", "trainiert deine Pferde", false]];
   const MA_TYP = {
     stallbursche: { name: "Stallbursche", mehr: "Stallburschen", ico: "🧹", gehalt: 300, boxen: 3, aufgabe: "füttert und mistet jeden Morgen", kurz: "füttert und mistet" },
-    pfleger: { name: "Pferdepfleger", mehr: "Pferdepfleger", ico: "🧽", gehalt: 300, boxen: 3, aufgabe: "hält jeden Morgen Mähne und Schopf auf der Wunschlänge in", kurz: "hält Mähne und Schopf in Form" } };
+    pfleger: { name: "Pferdepfleger", mehr: "Pferdepfleger", ico: "🧽", gehalt: 300, boxen: 3, aufgabe: "putzt jeden Morgen und hält Mähne und Schopf auf der Wunschlänge in", kurz: "putzt, hält Mähne und Schopf in Form" } };
   const STALLBURSCHE = MA_TYP.stallbursche;
   const MA_NAMEN = ["Jonas", "Lena", "Paul", "Mia", "Finn", "Hannah", "Luca", "Sophie", "Tom", "Lea", "Ben", "Clara", "Felix", "Ida", "Noah", "Greta"];
   const maAktiv = (m, jz = jzJetzt()) => m.ab <= jz && (m.bis == null || jz <= m.bis);
@@ -3040,7 +3057,24 @@
   // jeden Morgen: Stallburschen füttern und misten, Pferdepfleger kürzen Mähne und Schopf auf die Wunschlänge
   function mitarbeiterTag() {
     burschenBoxen().forEach(i => { const b = spiel.boxen[i]; b.krippeVoll = true; b.mistig = false; b.mistStufe = 0; });
-    maBoxen("pfleger").forEach(i => { const p = spiel.boxen[i].pferd; pflegerSchneiden(p); });
+    maBoxen("pfleger").forEach(i => { const p = spiel.boxen[i].pferd; pflegerSchneiden(p); putzen(p, "buerste"); putzen(p, "kamm"); });
+  }
+  // ---------- Schmutz: jede Nacht in der Box etwas dreckiger (Fell schneller als Mähne/Schweif, im Mist noch schneller) ----------
+  // p.dreck = { fell: 0–100, maehne: 0–100, seit: Tag, ab dem das Fell verdreckt ist (≥ 50) }
+  const DRECK_STUFEN = [[80, "sehr dreckig", "bad"], [50, "schmutzig", "warn"], [20, "staubig", "warn"], [0, "sauber", "ok"]];
+  const dreckStufe = w => DRECK_STUFEN.find(([ab]) => (w || 0) >= ab);
+  const dreckWert = p => p && p.dreck ? Math.max(p.dreck.fell || 0, (p.dreck.maehne || 0) * 0.7) : 0;
+  const zuLangeDreckig = p => !!(p && p.dreck && p.dreck.seit != null && spiel.tag - p.dreck.seit > tpj());
+  function schmutzen(p, mistig) {
+    if (!p) return; const d = (p.dreck = p.dreck || { fell: 0, maehne: 0, seit: null });
+    d.fell = Math.min(100, Math.round(d.fell + 9 + Math.random() * 6 + (mistig ? 5 : 0)));
+    d.maehne = Math.min(100, Math.round(d.maehne + 5 + Math.random() * 4 + (mistig ? 2 : 0)));
+    if (d.fell >= 50) { if (d.seit == null) d.seit = spiel.tag; } else d.seit = null;
+  }
+  function putzen(p, womit) {
+    if (!p || !p.dreck) return 0; const d = p.dreck, vorher = womit === "buerste" ? d.fell : d.maehne;
+    if (womit === "buerste") { d.fell = 0; d.seit = null; } else d.maehne = 0;
+    return vorher;
   }
   // Pferdepfleger: zu lang gewordene Mähne / zu langen Schopf zurück auf die Wunschlänge (länger wachsen lassen geht nur von selbst)
   function pflegerSchneiden(p) {
@@ -3065,6 +3099,7 @@
       // gut versorgt: +8 pro Tag – ab 30 % und darunter erholt sich ein Pferd nur noch in der Klinik (außer bei Altersschwäche)
       if (b.krippeVoll && !b.mistig && (pf.gesundheit > 30 || altersschwach(b.pferd))) g += 8;
       if (spiel.tag - pf.huf > 56) g -= 2;
+      if (zuLangeDreckig(b.pferd)) g -= 3;   // länger als eine Jahreszeit verdreckt: −3 pro Tag
       g = Math.round(g * 10) / 10;
       // Rettungsnetz: wer über 1 % lag, fällt nur auf 1 %. Wer schon bei 1 % (oder weniger) war, stirbt bei 0.
       if (g <= 0) { if (pf.gesundheit > 1) g = 1; else { g = 0; b.tot = true; const P = b.pferd; P.todesursache = "Entkräftung – zu wenig Futter und Pflege";
@@ -3072,6 +3107,7 @@
         (spiel.vernachlaessigt = spiel.vernachlaessigt || []).push(P.name); } }
       pf.gesundheit = Math.max(0, Math.min(gesundheitMax(b.pferd), g));
       b.mistStufe = b.mistig ? Math.min(6, (b.mistStufe || 1) + 1) : 1;
+      schmutzen(b.pferd, b.mistig);
       b.krippeVoll = false; b.mistig = true;
       // Mähne und Schopf wachsen alle 2 Jahreszeiten eine Stufe – auch beim Fohlen bei der Mutter
       [b.pferd, b.fohlen].forEach(pf2 => { if (!pf2) return;
@@ -3334,7 +3370,7 @@
 
   function wechsleBox(r) {
     aktBox = Math.max(0, Math.min(spiel.boxen.length - 1, aktBox + r)); spiel.aktBox = aktBox;
-    aktenReiter = "steckbrief"; aktenModus = "steckbrief"; scherModus = false; medModus = false; zaumModus = false; deckModus = false; ortModus = null; meldung = "";
+    aktenReiter = "steckbrief"; aktenModus = "steckbrief"; scherModus = false; medModus = false; zaumModus = false; putzModus = false; deckModus = false; ortModus = null; meldung = "";
     speichern(); zeigeStall(); zeigeTag();
   }
   $("pfeilWeiter").addEventListener("click", () => wechsleBox(1));
@@ -3409,7 +3445,7 @@
         boxen: [1].map(nr => ({ nr, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false })),
         anlage: spiel.anlage, ausruestung: spiel.ausruestung };
       aktBox = 0; hatSpielstand = true;
-      aktenReiter = "steckbrief"; aktenModus = "steckbrief"; scherModus = false; medModus = false; zaumModus = false; meldung = "";
+      aktenReiter = "steckbrief"; aktenModus = "steckbrief"; scherModus = false; medModus = false; zaumModus = false; putzModus = false; meldung = "";
       speichern(); titelSetzen(); zeigeHaupt();
     };
   }
@@ -3972,6 +4008,7 @@
       <h3>🎓 Ausbildung</h3>
       <p>Unausgebildete Pferde stehen auf Klasse E mit 0 %. Ausbildung entsteht nur im Ausbildungsstall (ab 3 Jahren, ${fmt(KOSTEN.ausbildung)}/Tag). Takt → Losgelassenheit → Anlehnung → Schwung → Geraderichtung → Versammlung: jede Stufe steigt erst, wenn die vorige 20 % erreicht hat, und kann sie nicht überholen.</p>
       <h3>❤️ Gesundheit</h3>
+      <p><b>Schmutz:</b> Jede Nacht in der Box wird das Fell um 9–15 Punkte schmutziger (in einer nicht gemisteten Box +5 extra), Mähne und Schweif um 5–9 (+2). Stufen Fell: unter 20 sauber · ab 20 staubig · ab 50 schmutzig · ab 80 sehr dreckig; Mähne/Schweif: gekämmt · ab 20 zerzaust · ab 50 verfilzt. Man sieht es im Bild (Flecken, dreckige Beine, Stroh im Schweif). Putzen in der Putzkiste: Bürste macht das Fell sauber, Kamm Mähne und Schweif. Der Pferdepfleger putzt seine Boxen jeden Morgen; nach Klinik, Aufzucht oder Ausbildung kommt das Pferd geputzt zurück. Folgen: bis zu 15 % weniger Marktwert (Wert = max(Fell, 0,7 × Mähne)); ist das Fell länger als eine Jahreszeit ununterbrochen schmutzig (ab 50), verliert das Pferd zusätzlich 3 % Gesundheit pro Tag.</p>
       <p>Gut versorgt +8 % pro Tag, hungrig −19, Box nicht gemistet −9,5. Unter 40 % kommt ein Brief vom Tierarzt, bei 30 % oder weniger erholt sich ein Pferd nur noch in der Klinik – auch Medizin hilft dann nicht mehr (+16 %/Tag, ${fmt(KOSTEN.klinik)}/Tag) und wird mit 75 % entlassen. Die Klinikkosten kommen als Rechnung, zahlbar innerhalb einer Jahreszeit – sonst holt der Tierschutz das Pferd. Ausnahme: Senioren mit altersbedingter Höchstgesundheit von 40 % oder weniger.</p>
       <p>Senioren ab 20 Jahren: höchstens 75 %, sinkt bis 35 Jahre auf 1 %. Sterbewahrscheinlichkeit je Jahreszeit steigt ab 20 Jahren und erreicht mit 35 Jahren 100 %.</p>
       <h3>💰 Geld und Marktwert</h3>
@@ -3985,7 +4022,7 @@
         ["🏰 Gestüte", "je Rasse 2–3 Pferde, 1–4 J., Geburt wie im Auktionshaus", "120–150 %", "reinrassig (35 % Veredler-Urgroßvater, wo erlaubt), Gänge +0,5; Gentests: Fellfarben immer, Gangpferde-Test bei Islandpferd/Marwari, Erbkrankheiten-Test bei Rassen mit Overo/Leopard – Testkosten kommen auf den Preis"],
         ["🐾 Notfallpferde", "1–2 Pferde, 8–22 J., ohne Ausbildung; Stuten auch mit Fohlen (80 % der Privat-Chance)", "150–300 € (+100 € mit Fohlen)", "Gesundheit 25–45 %; im ersten Jahr kein Verkauf (auch kein Gnadenhof) – nur Rückgabe an den Tierschutz ohne Erstattung"]])}
       <p><b>Saisonpreise:</b> Frühling ×1,1 · Sommer ×1,05 · Herbst ×1 · Winter ×0,9 – gilt für alle Marktpreise und für deine eigenen Verkäufe (Festpreis-Chance und Auktionsgebote).</p>
-      <p><b>Pferdepfleger:</b> ${fmt(MA_TYP.pfleger.gehalt)} pro Jahreszeit, sonst wie der Stallbursche (3 Boxen nach Boxnummer). Er kürzt jeden Morgen Mähne und Schopf auf die Wunschlänge (Häkchen beim Schneiden) – länger wachsen lassen geht nur von selbst.</p>
+      <p><b>Pferdepfleger:</b> ${fmt(MA_TYP.pfleger.gehalt)} pro Jahreszeit, sonst wie der Stallbursche (3 Boxen nach Boxnummer). Er putzt jeden Morgen Fell, Mähne und Schweif und kürzt Mähne und Schopf auf die Wunschlänge (Häkchen beim Schneiden) – länger wachsen lassen geht nur von selbst.</p>
       <p><b>Mitarbeiter (Hofverwaltung):</b> Stallbursche ${fmt(STALLBURSCHE.gehalt)} pro Jahreszeit (gezahlt am Ende der Jahreszeit), versorgt ${STALLBURSCHE.boxen} Boxen (Futter + Misten) zu jedem Tagesbeginn, nach Boxnummer. Beginnt immer zur nächsten Jahreszeit; gekündigt arbeitet er bis Ende der Jahreszeit. Reicht das Geld beim Gehalt nicht, nimmt er es trotzdem (Konto ins Minus) und kündigt. Im Adminmodus kosten Angestellte nichts. Stallmeister, Pferdepfleger, Futterexperte, Osteopath, Hufschmied und Bereiter folgen später.</p>
       <p><b>Decksaison:</b> Die Hengste der Deckstation (Gestüte) decken nur im Frühling und Sommer, eigene Hengste jederzeit.</p>
       <p>Geburtszeit sonst: 65 % Frühling, 17 % Sommer, 10 % Winter, 8 % Herbst.</p>
@@ -4045,7 +4082,7 @@
       const sb = stallburschen(), aktiv = sb.filter(m => maAktiv(m)), zuVersorgen = spiel.boxen.filter(b => b.pferd && !b.pferd.klinik && !b.tot).length, bb = burschenBoxen();
       inhalt = `<div class="kacheln quadrat markt-kacheln">${MITARBEITER.map(([id, ico, n, kurz, an]) => { const anz = an ? angestellte(id).length : 0; return `<button class="kachel ${an ? "klickbar" : "fehlt"}" data-ma="${id}" ${an ? "" : "disabled"}><span class="ico">${ico}</span><b>${n}</b><small>${!an ? "bald" : anz ? `${anz} angestellt` : kurz}</small></button>`; }).join("")}</div>
         <p class="text" style="margin:10px 0 0">${aktiv.length ? `🧹 Deine Stallburschen versorgen jeden Morgen <b>Box ${bb.map(i => i + 1).join(", ")}</b>.` : "Noch versorgst du alle Pferde selbst."}${zuVersorgen > bb.length ? ` ${bb.length ? "Die übrigen" : "Alle"} ${zuVersorgen - bb.length} ${zuVersorgen - bb.length === 1 ? "Pferd musst" : "Pferde musst"} du selbst füttern und misten.` : zuVersorgen ? " Alle Pferde sind versorgt." : ""}</p>
-        ${(() => { const pb = maBoxen("pfleger"); return pb.length ? `<p class="text" style="margin:6px 0 0">🧽 Deine Pferdepfleger halten Mähne und Schopf in <b>Box ${pb.map(i => i + 1).join(", ")}</b> auf der Wunschlänge.</p>` : ""; })()}`;
+        ${(() => { const pb = maBoxen("pfleger"); return pb.length ? `<p class="text" style="margin:6px 0 0">🧽 Deine Pferdepfleger putzen und halten Mähne und Schopf in <b>Box ${pb.map(i => i + 1).join(", ")}</b> auf der Wunschlänge.</p>` : ""; })()}`;
     } else if (hofReiter === "einst") {
       inhalt = `<button class="sknopf" id="hfSpar" style="margin-top:0"><span class="i">🔋</span><span>Sparmodus ist ${spiel.sparmodus ? "an" : "aus"}<small>keine Animationen – schont den Akku</small></span></button>
         <button class="sknopf" id="hfVoll"><span class="i">⛶</span><span>Vollbildmodus ist ${istVoll() ? "an" : "aus"}<small>antippen zum Umschalten</small></span></button>

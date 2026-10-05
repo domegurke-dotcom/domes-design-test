@@ -624,6 +624,26 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += `<ellipse cx="${f(0.1 * L)}" cy="${f(top + 0.3 * D)}" rx="${f(0.08 * L)}" ry="${f(0.2 * D)}" fill="${licht}" opacity=".35"/>`;
   g += `<ellipse cx="${f(0.84 * L)}" cy="${f(top + 0.28 * D)}" rx="${f(0.1 * L)}" ry="${f(0.22 * D)}" fill="${licht}" opacity=".35"/>`;
   g += `</g></g>`;
+  // Schmutz im Fell (opt.dreck 0–100): weiche Schlammflecken am ganzen Körper, dreckige Beine – immer an denselben Stellen.
+  // Auf dunklem Fell sieht man eher hellen, getrockneten Staub, auf hellem Fell braunen Schlamm.
+  if (opt.dreck > 0) {
+    const dr = Math.min(100, opt.dreck) / 100, rd = zufall((opt.seed || rasseId) + "-dreck"), dz = [];
+    const dunkelFell = dunkelWert < 110, farbe = () => dunkelFell ? (rd() < 0.5 ? "#a88a64" : "#9b7d58") : (rd() < 0.5 ? "#6a4b2c" : "#7d5c39");
+    const op = (dunkelFell ? 0.3 : 0.28) + dr * 0.35, n = Math.round(3 + dr * 13);
+    for (let i = 0; i < n; i++) {
+      if (i / n > dr + 0.1) break;
+      const cx = (-0.12 + rd() * 1.15) * L, cy = top + (0.15 + rd() * 0.95) * D, r = 2.2 + rd() * 4;
+      // jeder Fleck aus 2–4 überlappenden Klecksen, damit er unregelmäßig aussieht
+      for (let k2 = 0, m = 2 + Math.floor(rd() * 3); k2 < m; k2++) {
+        const x = cx + (rd() - 0.5) * r * 1.6, y = cy + (rd() - 0.5) * r, rr = r * (0.45 + rd() * 0.55);
+        dz.push(`<ellipse cx="${f(x)}" cy="${f(y)}" rx="${f(rr * (1 + rd() * 0.7))}" ry="${f(rr * (0.55 + rd() * 0.35))}" transform="rotate(${f(rd() * 60 - 30)} ${f(x)} ${f(y)})" fill="${farbe()}"/>`);
+      }
+    }
+    for (let i = 0; i < Math.round(dr * 22); i++) dz.push(`<circle cx="${f((-0.15 + rd() * 1.2) * L)}" cy="${f(top + rd() * (D + Lg))}" r="${f(0.5 + rd() * 0.9)}" fill="${farbe()}"/>`);
+    g += `<g clip-path="url(#cl-${uid})"><defs><linearGradient id="dm-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-Lg * 0.65)}" x2="0" y2="0"><stop offset="0" stop-color="${dunkelFell ? "#a88a64" : "#6a4b2c"}" stop-opacity="0"/><stop offset="1" stop-color="${dunkelFell ? "#9b7d58" : "#5a3d22"}" stop-opacity="${(0.2 + dr * 0.55).toFixed(2)}"/></linearGradient>` +
+      `<filter id="db-${uid}" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation=".7"/></filter></defs>` +
+      `<rect x="${f(minX - 5)}" y="${f(-Lg * 0.65)}" width="${f(maxX - minX + 10)}" height="${f(Lg * 0.65 + 2)}" fill="url(#dm-${uid})"/><g filter="url(#db-${uid})" opacity="${op.toFixed(2)}">${dz.join("")}</g></g>`;
+  }
   // Comic-Detaillinien (Schulter, Ellbogen, Hüfte, Knie, Sprunggelenk, Ganasche)
   g += inkFein(`M${f(0.2 * L)},${f(-H + 7)}Q${f(0.16 * L)},${f(top + 0.62 * D)} ${f(0.02 * L)},${f(top + 0.82 * D)}`, 1.3, 'opacity=".7"');
   g += inkFein(`M${f(fx + 1.4 * w)},${f(bottom - 7)}Q${f(fx + 1.8 * w)},${f(bottom - 1)} ${f(fx + 1.3 * w)},${f(bottom + 3)}`, 1.2, 'opacity=".6"');
@@ -712,7 +732,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     (dunKern ? `<clipPath id="sw-${uid}"><path d="${schweifD}"/></clipPath><g clip-path="url(#sw-${uid})"><path d="${tailStr(-0.6 + 0.4 * tv, 1.05)}" fill="none" stroke="${dunKern}" stroke-width="${f(2.4 + 2.6 * tv)}" stroke-linecap="round"/></g>` +
       `<path d="${schweifD}" fill="none" stroke="${INK}" stroke-width="2.4" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>` : "") +
     inkFein(tailStr(0, 0.88), 1.1, 'opacity=".55"') + inkFein(tailStr(2.5 + tv, 0.7), 1, 'opacity=".45"') +
-    `<path d="${tailStr(-1.5, 0.6)}" fill="none" stroke="${mix(tailCol, "#ffffff", .45)}" stroke-width="1.6" stroke-linecap="round" opacity=".7" vector-effect="non-scaling-stroke"/></g>`;
+    `<path d="${tailStr(-1.5, 0.6)}" fill="none" stroke="${mix(tailCol, "#ffffff", .45)}" stroke-width="1.6" stroke-linecap="round" opacity=".7" vector-effect="non-scaling-stroke"/>` +
+    (opt.filz > 0 ? (() => { const rf = zufall((opt.seed || rasseId) + "-filz"), m = Math.round(1 + Math.min(100, opt.filz) / 100 * 7); let h = "";
+      for (let i = 0; i < m; i++) { const t = 0.2 + rf() * 0.65, x = X + 2 + 6 * s + tv * 2.5 + (rf() - 0.5) * 6, y = Y + tl * t, a = rf() * 180;
+        h += `<path d="M${f(x - 2.2)},${f(y)}l4.4,0" transform="rotate(${f(a)} ${f(x)} ${f(y)})" stroke="#d9b45a" stroke-width="1.1" stroke-linecap="round"/>`; }
+      return h; })() : "") + `</g>`;
 
   if (eigenKopf) {
     // Handgezeichneter Kopf: Stirn- und Nasenpunkt der Zeichnung auf den Spielkopf abbilden

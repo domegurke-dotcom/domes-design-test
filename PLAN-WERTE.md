@@ -8,8 +8,8 @@ Ausführliche Gesprächsnotizen: `werte/plan.md` *(liegt noch im Planungsprojekt
 - [x] Etappe 1 – Werte-Grundlage (v161, Alter und Name „Eigenschaften“ in v162, von Dome getestet)
 - [x] Etappe 2 – Charakter → Wohlbefinden (v164, von Dome getestet; Admin „Charakter selbst wählen“ in v165)
 - [x] Etappe 2b – Weide und Herde (v166–168, von Dome getestet)
-- [~] Etappe 3 – Vorlieben und Reaktionen (umgesetzt in v169, Sprechblasen in v170, Test durch Dome offen)
-- [ ] Etappe 4 – Training daheim
+- [~] Etappe 3 – Vorlieben und Reaktionen (umgesetzt in v169, Sprechblasen in v170, seltener in v171, Test durch Dome offen)
+- [ ] Etappe 4 – Training daheim · **Vorher kommt erst `PLAN-KRANKHEITEN.md` (Etappen A–H, Spieltempo, Mitarbeiter, Krankheiten) – Dome, 5.10.2026.**
 - [ ] Etappe 5 – Disziplinen
 - [ ] Etappe 6 – Turniere
 

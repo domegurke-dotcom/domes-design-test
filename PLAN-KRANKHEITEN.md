@@ -10,7 +10,7 @@ Plan gespeichert bei Spielversion 173.
 - [~] Etappe A – Spieltempo (klein) – umgesetzt in v174, Test durch Dome offen. Kalender-Anker `spiel.kal` (Datum bleibt beim Umstellen), Hinweisbrief „Neues Spieltempo“. Dome: −2 % für überfällige Hufe (`HUF_STRAFE`) bleibt aus, bis es den Hufschmied gibt (Etappe E).
 - [~] Etappe B – Mitarbeiter (groß)
   - [~] B1 (v175, Test durch Dome offen): Berufe Azubi/Stallbursche/Pferdepfleger/Pferdewirt/Bereiter/Stallmeister, Stallgröße, Bewerbungen je Jahreszeit, 7 Wissensbereiche + Spieler-Erfahrung, Eigenschaften, Nachtdienst bei Geburten. Dome: noch keine Stallart (Pferdewirt/Bereiter ab 9 Boxen); Nachtdienst = kleiner Vorteil (Fohlen gesund, ohne Aufsicht 15 % schwach); Azubi füttert/mistet 2 Boxen mit Fehlern; Bereiter bewegt 3 Pferde (Wohl +5, kein Boxentag). Hofhelfer, Futterexperte, Hufschmied, Osteopath noch „bald“.
-  - [ ] B2: Zufriedenheit, Urlaub, Krankheit, Kündigung durch Mitarbeiter
+  - [~] B2 (v176, Test durch Dome offen): versteckte Zufriedenheit, Urlaub (Dome: einmal im Jahr 1–3 Tage, Antrag per Brief), krank 1–3 Tage, Kündigung unter 25, Vertretung durch Kollegen (+1 Box, Überstunden). Stallqualität wirkt erst mit dem Hof-Ausbau.
 - [ ] Etappe C – Befunde, Anzeichen, Einschätzung (groß)
 - [ ] Etappe D – Behandlung und Stallapotheke (mittel)
 - [ ] Etappe E – Hufe und Hufschmied (mittel)

@@ -7,10 +7,10 @@ Wie immer: in Etappen umsetzen, nach jeder Etappe testet Dome. Speicherstände a
 
 Plan gespeichert bei Spielversion 173.
 
-- [~] Etappe A – Spieltempo (klein) – umgesetzt in v174, Test durch Dome offen. Kalender-Anker `spiel.kal` (Datum bleibt beim Umstellen), Hinweisbrief „Neues Spieltempo“. Dome: −2 % für überfällige Hufe (`HUF_STRAFE`) bleibt aus, bis es den Hufschmied gibt (Etappe E).
-- [~] Etappe B – Mitarbeiter (groß)
-  - [~] B1 (v175, Test durch Dome offen): Berufe Azubi/Stallbursche/Pferdepfleger/Pferdewirt/Bereiter/Stallmeister, Stallgröße, Bewerbungen je Jahreszeit, 7 Wissensbereiche + Spieler-Erfahrung, Eigenschaften, Nachtdienst bei Geburten. Dome: noch keine Stallart (Pferdewirt/Bereiter ab 9 Boxen); Nachtdienst = kleiner Vorteil (Fohlen gesund, ohne Aufsicht 15 % schwach); Azubi füttert/mistet 2 Boxen mit Fehlern; Bereiter bewegt 3 Pferde (Wohl +5, kein Boxentag). Hofhelfer, Futterexperte, Hufschmied, Osteopath noch „bald“.
-  - [~] B2 (v176, Test durch Dome offen): versteckte Zufriedenheit, Urlaub (Dome: einmal im Jahr 1–3 Tage, Antrag per Brief), krank 1–3 Tage, Kündigung unter 25, Vertretung durch Kollegen (+1 Box, Überstunden). Stallqualität wirkt erst mit dem Hof-Ausbau.
+- [x] Etappe A – Spieltempo (klein) – v174, von Dome getestet. Kalender-Anker `spiel.kal` (Datum bleibt beim Umstellen), Hinweisbrief „Neues Spieltempo“. Dome: −2 % für überfällige Hufe (`HUF_STRAFE`) bleibt aus, bis es den Hufschmied gibt (Etappe E).
+- [x] Etappe B – Mitarbeiter (groß) – v175/176, von Dome getestet
+  - [x] B1 (v175): Berufe Azubi/Stallbursche/Pferdepfleger/Pferdewirt/Bereiter/Stallmeister, Stallgröße, Bewerbungen je Jahreszeit, 7 Wissensbereiche + Spieler-Erfahrung, Eigenschaften, Nachtdienst bei Geburten. Dome: noch keine Stallart (Pferdewirt/Bereiter ab 9 Boxen); Nachtdienst = kleiner Vorteil (Fohlen gesund, ohne Aufsicht 15 % schwach); Azubi füttert/mistet 2 Boxen mit Fehlern; Bereiter bewegt 3 Pferde (Wohl +5, kein Boxentag). Hofhelfer, Futterexperte, Hufschmied, Osteopath noch „bald“.
+  - [x] B2 (v176): versteckte Zufriedenheit, Urlaub (Dome: einmal im Jahr 1–3 Tage, Antrag per Brief), krank 1–3 Tage, Kündigung unter 25, Vertretung durch Kollegen (+1 Box, Überstunden). Stallqualität wirkt erst mit dem Hof-Ausbau.
 - [ ] Etappe C – Befunde, Anzeichen, Einschätzung (groß)
 - [ ] Etappe D – Behandlung und Stallapotheke (mittel)
 - [ ] Etappe E – Hufe und Hufschmied (mittel)
@@ -100,3 +100,4 @@ Plan gespeichert bei Spielversion 173.
 2. Hof-Ausbau: Quarantänestall, Stallarten, mehrere Ställe, Hofhelfer.
 3. Ausrüstung: Hufschuhe, Sattler/Sattelanpassung (Druckstellen, Rücken), Ekzemerdecke.
 4. Training daheim (Werte-Etappe 4): Überlastungs-Lahmheit, Bereiter.
+5. Pensionspferde / Pensionsstall (noch zu planen): wie Angestellte mit Pensionspferden umgehen (versorgen sie die mit, Extra-Aufwand, Verantwortung bei Krankheit/Verletzung) – Dome, 5.10.2026.

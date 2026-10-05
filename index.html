@@ -749,7 +749,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "161";
+  const SPIEL_VERSION = "162";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -757,9 +757,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=161"></script>
-<script src="kopfteile.js?v=161"></script>
-<script src="kopfalter.js?v=161"></script>
+<script src="pferd.js?v=162"></script>
+<script src="kopfteile.js?v=162"></script>
+<script src="kopfalter.js?v=162"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1279,7 +1279,7 @@
   const smVon = x => x.zielStockmass || x.sm || x.stockmass;
   // ---------- Körperliche und mentale Werte (seit v161) ----------
   // Fehlende Felder auffüllen (alte Speicherstände, Markt- und Stammpferde): Sensibilität, Anlagen, aktueller Stand.
-  // Startstand (bis Training daheim kommt): Anlage × Faktor nach Alter (Fohlen 25 %, 1 J. 35 %, 2 J. 45 %, ab 3 J. 55 % + bis zu 30 % durch Ausbildung).
+  // Startstand (bis Training daheim kommt): Altersgrenze × (60 % + ab 3 J. bis zu 30 % durch Ausbildung).
   function werteErgaenzen(p) {
     if (!p || !p.werte) return;
     const w = p.werte; let neu = null; const frisch = () => neu || (neu = erzeugeWerte(p));
@@ -1287,17 +1287,34 @@
     if (!w.anlage) { w.anlage = { ...frisch().anlage }; if (w.talent) w.anlage.lernfaehigkeit = Math.round(Math.max(5, Math.min(100, (w.talent - 0.6) / 0.006))); }
     w.talent = lernFaktor(w.anlage.lernfaehigkeit);
     if (!w.ist) {
-      const j = p.geb ? alterJZ(p) / 4 : (p.alter || 5), f = j < 1 ? 0.25 : j < 2 ? 0.35 : j < 3 ? 0.45 : 0.55;
+      const j = p.geb ? alterJZ(p) / 4 : (p.alter != null ? p.alter : 5);
       let ausb = 0; try { const aw = ausbildungsWerte({ ...p, alter: Math.floor(j) }); ausb = aw.reduce((a, x) => a + x.wert, 0) / aw.length; } catch (e) {}
-      const faktor = Math.min(0.85, f + (j >= 3 ? 0.3 * ausb / 100 : 0)), ist = {};
-      [...WERTE_KOERPER, ...WERTE_KOPF].forEach(x => { if (x.art === "training") ist[x.key] = Math.round(w.anlage[x.key] * faktor); });
+      const faktor = 0.6 + (j >= 3 ? 0.3 * ausb / 100 : 0), ist = {};
+      [...WERTE_KOERPER, ...WERTE_KOPF].forEach(x => { if (x.art === "training") ist[x.key] = Math.round(w.anlage[x.key] * altersFaktor(p, x.key) * faktor); });
       ist.vertrauen = Math.round(Math.max(5, Math.min(100, 30 + ((w.charakter.bezug || 50) - 50) * 0.3 + ausb * 0.3)));
       ist.gehorsam = Math.round(Math.max(0, Math.min(100, ausb * 0.8 + (j >= 3 ? 5 : 0))));
       w.ist = ist;
     }
   }
-  // angezeigter Wert: nur vererbte Werte = Anlage, sonst aktueller Stand
-  const wertVon = (p, x) => { werteErgaenzen(p); return x.art === "anlage" ? p.werte.anlage[x.key] : (p.werte.ist[x.key] || 0); };
+  // ---------- Alter: wie viel der Anlage ein Pferd in seinem Alter erreichen kann ----------
+  // Wachstum: unter 1 J. 40 % · 1 J. 55 % · 2 J. 70 % · 3 J. 80 % · 4 J. 90 % · ab 5 J. 100 % (Lernfähigkeit ohne Wachstumsgrenze).
+  // Abbau je Jahr (anteilig je Jahreszeit): die ersten 5 Jahre −3 %, danach −5 %, nie unter 20 %.
+  // Beginn: früh ab 12 (Geschwindigkeit, Beschleunigung, Regeneration) · normal ab 13 · spät ab 18 (Konstitution, Lernfähigkeit) · Vertrauen und Gehorsam altern nicht.
+  const ALTER_FRUEH = ["geschwindigkeit", "beschleunigung", "regeneration"], ALTER_SPAET = ["konstitution", "lernfaehigkeit"];
+  const alterBeginn = k => ALTER_FRUEH.includes(k) ? 12 : ALTER_SPAET.includes(k) ? 18 : 13;
+  function altersFaktor(p, k) {
+    if (k === "vertrauen" || k === "gehorsam") return 1;
+    const j = p.geb ? alterJZ(p) / 4 : (p.alter != null ? p.alter : 5);
+    const wachs = k === "lernfaehigkeit" ? 1 : j < 1 ? 0.4 : j < 2 ? 0.55 + 0.15 * (j - 1) : j < 3 ? 0.7 + 0.1 * (j - 2) : j < 4 ? 0.8 + 0.1 * (j - 3) : j < 5 ? 0.9 + 0.1 * (j - 4) : 1;
+    const d = Math.max(0, j - alterBeginn(k) + 1), abbau = Math.min(d, 5) * 0.03 + Math.max(0, d - 5) * 0.05;
+    return Math.max(0.2, Math.min(wachs, 1 - abbau));
+  }
+  // im Moment erreichbare Höhe (Anlage × Altersfaktor)
+  const wertGrenze = (p, k) => Math.round((p.werte.anlage[k] || 0) * altersFaktor(p, k));
+  // zu Beginn jeder Jahreszeit: Werte über der Altersgrenze sinken mit
+  function werteAltern(p) { if (!p || !p.werte) return; werteErgaenzen(p); Object.keys(p.werte.ist).forEach(k => { if (p.werte.anlage[k] != null) p.werte.ist[k] = Math.min(p.werte.ist[k], wertGrenze(p, k)); }); }
+  // angezeigter Wert: nur vererbte Werte = Anlage (mit Altersfaktor), sonst aktueller Stand (höchstens bis zur Altersgrenze)
+  const wertVon = (p, x) => { werteErgaenzen(p); return x.art === "anlage" ? wertGrenze(p, x.key) : x.art === "training" ? Math.min(p.werte.ist[x.key] || 0, wertGrenze(p, x.key)) : (p.werte.ist[x.key] || 0); };
   function geburt(box, vater) {
     const M = box.pferd, V = vater || M.traechtig.vater;
     ahnenFuellen(M); ahnenFuellen(V); nrVon(M); nrVon(V); exVon(V);
@@ -1882,7 +1899,7 @@
     const w = p.werte || erzeugeWerte(p), g = w.gang;
     const gn = [g.schritt, g.trab, g.galopp].reduce((a, b) => a + b, 0) / 3;           // 4 … 10
     const gangF = Math.max(0, Math.min(1, (gn - 2.5) / 6));                                // 0 … 1 (seit v161: Noten um 1,5 gesenkt – Preisniveau bleibt gleich)
-    const j = p.geb ? alterJZ(p) / 4 : (p.alter || 5);
+    const j = p.geb ? alterJZ(p) / 4 : (p.alter != null ? p.alter : 5);
     const aw = ausbildungsWerte({ ...p, alter: Math.floor(j) }), ausb = aw.reduce((a, x) => a + x.wert, 0) / aw.length / 100;   // 0 … ~1
     const alterF = j < 1 ? 0.6 : j < 3 ? 0.8 : j < 12 ? 1 : j < 20 ? 1 - (j - 12) * 0.06 : 0.3;
     const gesund = p.pflege ? 0.4 + 0.6 * p.pflege.gesundheit / 100 : 1;
@@ -2151,6 +2168,7 @@
   const sterbeChance = p => { const j = alterJZ(p) / 4; return j < 20 ? 0 : Math.min(1, Math.pow((j - 20) / 15, 2)); };
   // läuft zu Beginn jeder Jahreszeit
   function jahreszeitBeginn() {
+    alleEigenenPferde().forEach(x => werteAltern(x.p));   // Werte über der Altersgrenze sinken langsam mit
     const jetzt = jzJetzt();
     // tragende Stuten im Ausbildungsstall: eine Jahreszeit vor dem Abfohlen zurück in ihre (reservierte) Box
     (spiel.extern || []).slice().forEach(e => { const p = e.pferd; if (e.ort !== "ausbildung" || !p.traechtig || jetzt < p.traechtig.geburt - 1) return;
@@ -2355,9 +2373,9 @@
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="knopf" id="zuMarkt" style="width:auto;padding:9px 14px">🏷️ Zum Pferdemarkt</button>${spiel.admin ? `<button class="knopf zweit" id="zuRassen" style="width:auto;padding:9px 14px">🛠️ Rassen (Admin)</button>` : ""}</div></div>`;
       $("zuMarkt").onclick = () => zeigeMarkt(null); if ($("zuRassen")) $("zuRassen").onclick = zeigeRassen; return; }
     const r = rasseById(p.rasse), w = p.werte;
-    const reiter = LS ? [["steckbrief", "Daten"], ["genetik", "Genetik"], ...(spiel.admin ? [["aufschl", "Aufschlüsselung"]] : []), ["gang", "Gangwerk"], ["werte", "Werte"], ["charakter", "Charakter"], ...(LS.nurGrunddaten ? [] : [["ausbildung", "Ausbildung"]]), ]
+    const reiter = LS ? [["steckbrief", "Daten"], ["genetik", "Genetik"], ...(spiel.admin ? [["aufschl", "Aufschlüsselung"]] : []), ["gang", "Gangwerk"], ["werte", "Eigenschaften"], ["charakter", "Charakter"], ...(LS.nurGrunddaten ? [] : [["ausbildung", "Ausbildung"]]), ]
       : aktenModus === "steckbrief"
-      ? [["steckbrief", "Daten"], ["genetik", "Genetik"], ...(spiel.admin ? [["aufschl", "Aufschlüsselung"]] : []), ["gang", "Gangwerk"], ["werte", "Werte"], ["charakter", "Charakter"], ["ausbildung", "Ausbildung"]]
+      ? [["steckbrief", "Daten"], ["genetik", "Genetik"], ...(spiel.admin ? [["aufschl", "Aufschlüsselung"]] : []), ["gang", "Gangwerk"], ["werte", "Eigenschaften"], ["charakter", "Charakter"], ["ausbildung", "Ausbildung"]]
       : [["gesundheit", "Versorgung"], ["ausruestung", "Ausrüstung"], ["platz", "Ort"], ...(spiel.admin ? [["test", "Test"]] : [])];
     const box = LS ? { pferd: LS, lesen: true } : B(), pf = p.pflege;
     let inhalt = "";
@@ -2426,10 +2444,10 @@
       werteErgaenzen(p); const q = vergleichPferd(p); if (q) werteErgaenzen(q);
       const zeile = (x, art) => { const v = wertVon(p, x), an = p.werte.anlage[x.key], qv = q ? wertVon(q, x) : null;
         const zusatz = x.art === "anlage" ? "angeboren" : x.art === "erarbeitet" ? "erarbeitet" : "";
-        return `<div class="zeile-wert"><div class="kopf"><b class="lex" data-lex="wert:${x.key}">${x.titel}</b><span>${v}${zusatz ? ` <small>· ${zusatz}</small>` : ""}${spiel.admin && x.art === "training" ? ` <small>(Anlage ${an})</small>` : ""}${q ? ` <em class="vgl-b">${qv}</em>` : ""}</span></div>
-        <div class="balken${spiel.admin && x.art === "training" ? " mit-anlage" : ""}">${spiel.admin && x.art === "training" ? `<u style="width:${an}%"></u>` : ""}<i style="width:${v}%"></i></div>${q ? `<div class="balken vgl"><i style="width:${qv}%"></i></div>` : ""}</div>`; };
+        return `<div class="zeile-wert"><div class="kopf"><b class="lex" data-lex="wert:${x.key}">${x.titel}</b><span>${v}${zusatz ? ` <small>· ${zusatz}</small>` : ""}${spiel.admin && x.art !== "erarbeitet" ? ` <small>(Anlage ${an}${altersFaktor(p, x.key) < 1 ? ` → ${wertGrenze(p, x.key)}` : ""})</small>` : ""}${q ? ` <em class="vgl-b">${qv}</em>` : ""}</span></div>
+        <div class="balken${spiel.admin && x.art === "training" ? " mit-anlage" : ""}">${spiel.admin && x.art === "training" ? `<u style="width:${wertGrenze(p, x.key)}%"></u>` : ""}<i style="width:${v}%"></i></div>${q ? `<div class="balken vgl"><i style="width:${qv}%"></i></div>` : ""}</div>`; };
       inhalt = vglKopf(p) + `<h3 class="werte-titel">💪 Körper</h3>` + WERTE_KOERPER.map(zeile).join("") + `<h3 class="werte-titel">🧠 Kopf</h3>` + WERTE_KOPF.map(zeile).join("") +
-        `<p class="text"><small>Werte von 0 bis 100. Trainierbare Werte steigen später durch Training – jedes Pferd hat dabei eine vererbte Obergrenze. „Angeboren“ lässt sich nicht trainieren, „erarbeitet“ entsteht durch Pflege und Ausbildung.${spiel.admin ? " 🛠️ Admin: der helle Teil des Balkens zeigt die Anlage (Obergrenze)." : ""}</small></p>`;
+        `<p class="text"><small>Werte von 0 bis 100. Trainierbare Werte steigen später durch Training – jedes Pferd hat dabei eine vererbte Obergrenze. „Angeboren“ lässt sich nicht trainieren, „erarbeitet“ entsteht durch Pflege und Ausbildung. Junge Pferde erreichen ihre volle Leistung erst mit etwa 5 Jahren, im Alter lassen die Werte langsam nach.${spiel.admin ? " 🛠️ Admin: der helle Teil des Balkens zeigt die im jetzigen Alter erreichbare Höhe." : ""}</small></p>`;
     } else if (aktenReiter === "charakter") {
       werteErgaenzen(p); const c = w.charakter;
       const q = vergleichPferd(p);
@@ -4242,7 +4260,8 @@
       <p>Gut versorgt +8 % pro Tag, hungrig −19, Box nicht gemistet −9,5. Unter 40 % kommt ein Brief vom Tierarzt, bei 30 % oder weniger erholt sich ein Pferd nur noch in der Klinik – auch Medizin hilft dann nicht mehr (+16 %/Tag, ${fmt(KOSTEN.klinik)}/Tag) und wird mit 75 % entlassen. Die Klinikkosten kommen als Rechnung (siehe „Rechnungen“). Ausnahme: Senioren mit altersbedingter Höchstgesundheit von 40 % oder weniger.</p>
       <p>Senioren ab 20 Jahren: höchstens 75 %, sinkt bis 35 Jahre auf 1 %. Sterbewahrscheinlichkeit je Jahreszeit steigt ab 20 Jahren und erreicht mit 35 Jahren 100 %.</p>
       <h3>💰 Geld und Marktwert</h3>
-      <p><b>Startstand der trainierbaren Werte</b> (bis das Training daheim kommt): Anlage × Faktor – Fohlen 25 %, 1 Jahr 35 %, 2 Jahre 45 %, ab 3 Jahren 55 % plus bis zu 30 % je nach Ausbildungsstand (max. 85 %). Vertrauen: 30 ± Menschenbezug + 30 % des Ausbildungsstands. Gehorsam: 80 % des Ausbildungsstands (+5 ab 3 Jahren).</p>
+      <p><b>Alter</b> – erreichbar ist Anlage × Altersfaktor. Wachstum: unter 1 Jahr 40 %, 1 J. 55 %, 2 J. 70 %, 3 J. 80 %, 4 J. 90 %, ab 5 J. 100 % (dazwischen anteilig je Jahreszeit; Lernfähigkeit ohne Wachstumsgrenze). Abbau je Jahr (anteilig je Jahreszeit): die ersten 5 Jahre −3 %, danach −5 %, nie unter 20 %. Beginn: früh ab 12 Jahren (Geschwindigkeit, Beschleunigung, Regeneration), normal ab 13 (Kraft, Ausdauer, Wendigkeit, Beweglichkeit, Koordination, Zähigkeit, Konzentration, Reaktionsfähigkeit), spät ab 18 (Konstitution, Lernfähigkeit). Vertrauen und Gehorsam altern nicht. Zu Beginn jeder Jahreszeit sinken Werte, die über der Altersgrenze liegen, auf diese Grenze. Später (Training daheim) bremst regelmäßiges Training den Abbau.</p>
+      <p><b>Startstand der trainierbaren Werte</b> (bis das Training daheim kommt): Altersgrenze × (60 % + ab 3 Jahren bis zu 30 % je nach Ausbildungsstand). Vertrauen: 30 ± Menschenbezug + 30 % des Ausbildungsstands. Gehorsam: 80 % des Ausbildungsstands (+5 ab 3 Jahren).</p>
       <p>Marktwert aus Gangwerk (Notenschnitt − 2,5) / 6, Ausbildungsstand, Alter und Gesundheit, plus die Kosten aller gemachten Gentests (getestete Pferde verkaufen sich besser). Stute mit Fohlen bei Fuß: beide Marktwerte zusammen, das Fohlen wird mitverkauft (allein nicht). Festpreis (Regler 50–160 % des Marktwerts, Chance wird angezeigt): bis 90 % des Marktwerts 98 % Verkaufschance, bis Marktwert 93 %, darüber sinkend (110 % ≈ 59 %, 120 % ≈ 38 %, 130 % ≈ 24 %, 150 % ≈ 10 %), aber nie unter 4 % (Liebhaber). Gerechnet mit dem Saisonpreis der Jahreszeit, in der du das Pferd einstellst. Während das Angebot läuft, schicken Interessenten manchmal Preisvorschläge per Brief (jede Nacht 15 %, bei deutlich überhöhtem Preis 35 %; 75–105 % des Marktwerts, immer unter deinem Preis) – annehmen verkauft sofort, ablehnen lässt das Angebot weiterlaufen. Auktion startet bei ½ des Marktwerts und läuft 2 Jahreszeiten; Abbruch nach dem ersten Gebot kostet die Hälfte des letzten Gebots. Gnadenhof: halber Marktwert.</p>
       <h3>🏷️ Pferdemarkt (wechselt jede Jahreszeit)</h3>
       ${verTab(["Bereich", "Angebot", "Preis", "Besonderheit"], [

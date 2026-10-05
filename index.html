@@ -751,7 +751,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "167";
+  const SPIEL_VERSION = "168";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -759,9 +759,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=167"></script>
-<script src="kopfteile.js?v=167"></script>
-<script src="kopfalter.js?v=167"></script>
+<script src="pferd.js?v=168"></script>
+<script src="kopfteile.js?v=168"></script>
+<script src="kopfalter.js?v=168"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3310,15 +3310,17 @@
     let c = paarGrund(a, b) + 8 * (1 - sozSchnitt / 100) + 5 * Math.max(Ta.hoch, Tb.hoch, Wa.tief, Wb.tief);
     const ha = hengstig(a), hb = hengstig(b);
     if (ha && hb) c += 35 * ha * hb * (1 - 0.5 * sozSchnitt / 100);   // Rangkampf unter Hengsten – gut sozialisierte vertragen sich eher
+    if (ha && hb && stutenDabei) c += 20;                              // Stuten auf der Weide: Kampf um die Stuten
     return c / 100;
   }
+  let stutenDabei = false;
   // Befund (Ankerpunkt für Krankheiten/Lahmheit): jetzt nur Gesundheit und Anzeige, heilt nach 2 Jahreszeiten
   function befundSetzen(p, art, schwere) { p.befund = { art, seit: spiel.tag, schwere, heilt: spiel.tag + 2 * tpj() }; }
   // Herde einer Nacht: Sozialverhalten, ungeplante Bedeckung, Streit
   function herdeNacht(herde) {
     const jung = herde.filter(q => alterJZ(q) < 12);
     herde.forEach(q => { if (alterJZ(q) < 12) sozialPlus(q, jung.filter(x => x !== q).length >= 2 ? 1.5 : 0.5); });
-    const streite = [];
+    const streite = []; stutenDabei = herde.some(q => q.geschlecht === "Stute" && alterJZ(q) >= 8);
     for (let i = 0; i < herde.length; i++) for (let j = i + 1; j < herde.length; j++) {
       const a = herde[i], b = herde[j];
       // ungeplante Bedeckung: Hengst (ab 2 J.) und zuchtfähige Stute
@@ -3331,13 +3333,14 @@
       if (Math.random() < streitChance(a, b)) {
         wohlAendern(a, -10, `Streit mit ${b.name}`); wohlAendern(b, -10, `Streit mit ${a.name}`);
         let verletzt = null;
-        if (Math.random() < 0.2) { verletzt = Math.random() < 0.5 ? a : b; const minus = 10 + Math.round(Math.random() * 15);
+        const umStuten = stutenDabei && hengstig(a) && hengstig(b);
+        if (Math.random() < (umStuten ? 0.35 : 0.2)) { verletzt = Math.random() < 0.5 ? a : b; const minus = 10 + Math.round(Math.random() * 15);
           verletzt.pflege.gesundheit = Math.max(1, Math.round((verletzt.pflege.gesundheit - minus) * 10) / 10); befundSetzen(verletzt, "Verletzung (Biss/Tritt)", minus); }
-        streite.push({ a, b, verletzt });
+        streite.push({ a, b, verletzt, umStuten });
       }
     }
     if (streite.length) brief("Hofverwaltung", streite.length === 1 ? `Streit auf der Weide` : `${streite.length}× Streit auf der Weide`,
-      `heute Nacht hat es auf der Weide Ärger gegeben:<ul>${streite.map(x => `<li><b>${esc(x.a.name)}</b> und <b>${esc(x.b.name)}</b> haben sich gestritten${hengstig(x.a) && hengstig(x.b) ? " – zwei Hengste, es war ein Rangkampf" : ""}${x.verletzt ? ` – <b>${esc(x.verletzt.name)}</b> ist dabei verletzt worden` : ""}.</li>`).join("")}</ul>Wenn sich zwei Pferde nicht vertragen, sollte man sie trennen.${streite.some(x => hengstig(x.a) && hengstig(x.b)) ? " Erwachsene Hengste kommen meist nur allein oder mit Wallachen gut zurecht." : ""}`,
+      `heute Nacht hat es auf der Weide Ärger gegeben:<ul>${streite.map(x => `<li><b>${esc(x.a.name)}</b> und <b>${esc(x.b.name)}</b> haben sich gestritten${x.umStuten ? " – zwei Hengste, es war ein Rangkampf um die Stuten" : hengstig(x.a) && hengstig(x.b) ? " – zwei Hengste, es war ein Rangkampf" : ""}${x.verletzt ? ` – <b>${esc(x.verletzt.name)}</b> ist dabei verletzt worden` : ""}.</li>`).join("")}</ul>Wenn sich zwei Pferde nicht vertragen, sollte man sie trennen.${streite.some(x => hengstig(x.a) && hengstig(x.b)) ? " Erwachsene Hengste kommen meist nur allein oder mit Wallachen gut zurecht." : ""}`,
       { pferde: streite.flatMap(x => [x.a, x.b]) });
   }
   const ARBEIT_DAHEIM = false;     // Etappe 4 (Training daheim): dann vermissen leistungsbereite Pferde Arbeit an freien Tagen
@@ -3388,12 +3391,14 @@
   // Stress bei Fahrten mit dem Pferdeanhänger und Neuem (Klinik, fremde Herde): scheu und nervös leiden, gelassen bremst
   function fahrtStress(p, ziel) {
     if (!p || !p.werte) return;
-    const M = charE(p, "mut"), V = charE(p, "nerven"), angst = Math.max(M.tief, V.tief) * (1 - 0.5 * V.hoch);
-    if (!angst) return;
-    wohlAendern(p, -8 * angst, "Fahrt im Pferdeanhänger");
-    if (ziel === "klinik") wohlAendern(p, -5 * angst, "fremde Klinik");
-    if (ziel === "aufzucht") wohlAendern(p, -5 * angst, "fremde Herde");
+    // nervös: vor allem die Fahrt (Enge, Lärm, Schaukeln) · scheu: vor allem das Neue (fremde Klinik, fremde Herde) · beides zählt zusammen, gelassen bremst bis zur Hälfte
+    const M = charE(p, "mut"), V = charE(p, "nerven"), bremse = 1 - 0.5 * V.hoch;
+    const fahrt = (14 * V.tief + 6 * M.tief) * bremse, fremd = (6 * V.tief + 12 * M.tief) * bremse;
+    if (fahrt) wohlAendern(p, -fahrt, "Fahrt im Pferdeanhänger");
+    if (fremd && ziel === "klinik") wohlAendern(p, -fremd, "fremde Klinik");
+    if (fremd && ziel === "aufzucht") wohlAendern(p, -fremd, "fremde Herde");
   }
+
   // angezeigtes Wohlbefinden = Grundwert minus Schmutz (bis −40, sensible Pferde stört Schmutz mehr, robuste weniger) – Putzen hebt es sofort
   const wohlbefinden = p => { if (!p || !p.pflege) return 100; const S = charE(p, "sensibel");
     return Math.max(0, Math.min(100, Math.round((p.pflege.wohl == null ? 100 : p.pflege.wohl) - dreckWert(p) * 0.4 * (1 + 0.5 * S.hoch) * (1 - 0.5 * S.tief)))); };
@@ -4407,7 +4412,7 @@
         Temperament – Box-Abzug beginnt nach 2 + 2·e(ruhig) − e(temperamentvoll) Tagen (mind. 1), Abzug −6 × (1 + e temperamentvoll) × (1 − 0,5·e ruhig) × (1 + 0,5·e eigenständig); Weide +3·e temperamentvoll.
         Neugier – neugierig: in der Box zusätzlich −3·e Langeweile; verträumt: jeder Ortswechsel −3·e (mag Routine).
         Menschenbezug – verschmust: Putzen × (1 + e), mehr als einen Tag nicht geputzt −3·e pro Nacht; eigenständig: Putzen × (1 − 0,6·e), Weide +5·e.
-        Mut / Nervenstärke – Angst = max(e scheu, e nervös) × (1 − 0,5·e gelassen): Fahrt im Pferdeanhänger −8·Angst, dazu Klinik oder Aufzuchtstation (fremde Herde) −5·Angst; auf der Weide pro Nacht mit fremden Herdenmitgliedern −6·max(e scheu, e nervös) × (1 − 0,5·e gelassen).
+        Mut / Nervenstärke – Fahrt im Pferdeanhänger −(14·e nervös + 6·e scheu) × (1 − 0,5·e gelassen), dazu Klinik oder Aufzuchtstation (fremde Herde) −(6·e nervös + 12·e scheu) × (1 − 0,5·e gelassen); auf der Weide pro Nacht mit fremden Herdenmitgliedern −6·max(e scheu, e nervös) × (1 − 0,5·e gelassen).
         Sensibilität – sensibel: Mist −5 × (1 + 0,5·e), Schmutz zieht × (1 + 0,5·e) ab; robust: Schmutz × (1 − 0,5·e).
         Arbeitswille – leistungsbereit vermisst Arbeit (kommt mit dem Training daheim).</p>
       <p><b>Weide und Herde (Etappe 2b)</b> – Sozialverhalten pro Tag × 4 ÷ Tage pro Jahreszeit (gleich viel pro Jahreszeit, egal ob 3, 4 oder 5 Tage); Bedeckung und Streit sind feste Chancen pro Nacht:
@@ -4416,7 +4421,7 @@
         <b>Ungeplante Bedeckung:</b> Hengst (ab 2 J.) und zuchtfähige Stute (3–20 J., nicht tragend) zusammen auf der Weide: pro Nacht 25 % (jede Stute einzeln), tragend mit 40 % + 55 % × Wohlbefinden (Schnitt beider). Fällt nach einer Jahreszeit auf (Brief vom Tierarzt) oder beim nächsten geplanten Decken. Warnung nur beim allerersten Zusammenstellen.
         <b>Sozialverhalten</b> (versteckt, 0–100, Start 20; Stammpferde ab 3 J. 40): steigt bis 3 Jahre – Aufzuchtstation +2/Tag, Weide mit mind. 2 anderen Jungpferden +1,5, mit weniger +0,5, Fohlen bei der Mutter +0,3.
         <b>Hengstverhalten:</b> Hengst ab 3 J. voll; Wallach, der nach dem 2. Lebensjahr kastriert wurde, zur Hälfte; früh kastriert gar nicht.
-        <b>Streit</b> pro Nacht und Paar: fester Paarwert 0–12 % + 8 % × (1 − Sozialverhalten-Schnitt) + 5 % × max(temperamentvoll, eigensinnig) + 35 % × Hengstverhalten beider × (1 − 0,5 × Sozialverhalten) bei zwei Hengsten. Hengst und Stute streiten nicht. Streit: beide −10 Wohlbefinden, 20 % Verletzung (eines der beiden, Gesundheit −10 bis −25, Befund heilt nach 2 Jahreszeiten). Brief „Streit auf der Weide“.
+        <b>Streit</b> pro Nacht und Paar: fester Paarwert 0–12 % + 8 % × (1 − Sozialverhalten-Schnitt) + 5 % × max(temperamentvoll, eigensinnig) + 35 % × Hengstverhalten beider × (1 − 0,5 × Sozialverhalten) bei zwei Hengsten, +20 % wenn Stuten (ab 2 J.) auf der Weide sind (Kampf um die Stuten). Hengst und Stute streiten nicht. Streit: beide −10 Wohlbefinden, 20 % Verletzung (Hengstkampf um Stuten 35 %) (eines der beiden, Gesundheit −10 bis −25, Befund heilt nach 2 Jahreszeiten). Brief „Streit auf der Weide“.
         <b>Befund</b> (Ankerpunkt für Krankheiten/Lahmheit): steht unter Versorgung; Folgen außer Gesundheit kommen später.</p>
       <p><b>Herde:</b> Alle eigenen Pferde auf der Weide sind eine Herde. Nach ${HERDE_KENNEN} gemeinsamen Weidetagen kennen sich zwei Pferde (gilt dauerhaft). Bis dahin Eingewöhnung (siehe oben).</p>
       <p><b>Weide</b> (Ort → Weide, antippen = hin und zurück): Box bleibt frei und leer, kein Füttern und Misten nötig (Stallbursche lässt die Box aus, der Pferdepfleger putzt weiter). Gesundheit pro Tag: Frühling +10, Sommer +12, Herbst +7, Winter +5 (Box +8); bei 30 % oder weniger keine Erholung. Fohlen bei Fuß kommt mit. Schmutz wie in der Box (ohne Mist-Zuschlag).</p>

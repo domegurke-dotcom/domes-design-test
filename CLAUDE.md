@@ -8,7 +8,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 ## Feste Regeln von Dome (immer beachten)
 - **Bei Unstimmigkeiten, Unrealistischem oder falschen Infos erst nachfragen**, ob weitergemacht werden soll („mir ist xy aufgefallen …“). Nicht eigenmächtig Spielmechanik ändern, die nicht verlangt wurde – vorschlagen und fragen.
 - **Jede Änderung testen.** Screenshots in allen Ansichten (PC, Handy quer, Handy hochkant, z. B. 1366×768, 844×390, 390×844) nur bei Änderungen am Aussehen oder Layout – reine Logik-Änderungen per Test-Skript prüfen.
-- **Enzyklopädie immer aktuell halten** (Reiter „Vererbung“ und „Weitere Daten“ sind nur im Adminmodus sichtbar – dort Zahlen/Regeln eintragen).
+- **Enzyklopädie immer aktuell halten** (Reiter „Vererbung“ und „Berechnungen zum Nachschlagen“ sind nur im Adminmodus sichtbar – dort Zahlen/Regeln eintragen).
 - Versteckte Genetik **nie** in Akte/Abstammungsschein zeigen – nur über Labortests.
 - Rassen einstellen (Pferde aus der Rassenliste) nur im Adminmodus.
 - Kamera-Aussparung (safe-area) in allen Layouts beachten.
@@ -25,13 +25,13 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (3 Stellen in index.html) und `version.json` gemeinsam hochzählen.
-- Letzte Version bei Aktualisierung dieser Datei: **157**.
+- Letzte Version bei Aktualisierung dieser Datei: **160**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName`, `#chHof` ausfüllen → `#chLos`. Admin: `spiel.admin = true`.
 - Vor dem Ausliefern Syntax prüfen (jeden `<script>`-Block mit `new Function(...)`, `node --check pferd.js`) und Screenshots in den drei Ansichten ansehen.
 
-## Wichtige Spielsysteme (Stand v157)
+## Wichtige Spielsysteme (Stand v160)
 - **Zeit:** Jahreszeiten (Frühling, Sommer, Herbst, Winter), `tpj()` Tage pro Jahreszeit (3/4/5). `naechsteNacht()` ist der Tageswechsel; bei `datum().t === 1` laufen die Jahreszeit-Funktionen.
 - **Zucht:** Tragzeit 4 Jahreszeiten. Deckstation (Gestütshengste) nur Frühling/Sommer, eigene Hengste immer. Zuchtalter Stuten bis 20, Hengste bis 25.
 - **Genetik:** E, A (A>At>a), F, Sty, Cr, D, Z, Rn, To, O, Lp, Patn, G, Dm (DMRT3). Versteckte Veranlagungen `ex` (grauTempo, apfel, fliegen, fliegenAb, maehne, ton, ow, sonne, kurve). Gefährliche Gene in `GEFAHR_GENE` (O, Lp) – Warnung nur, wenn mind. ein Partner positiv getestet ist.
@@ -46,7 +46,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - **Klinik:** stationär bis 75 %; bei ≤ 30 % hilft weder Medizin noch Pflege in der Box. Fohlen bei Fuß wird mitbehandelt; braucht es seine eigene Box: gesund → nach Hause, unter 75 % → bleibt mit eigener Box und Rechnung. Kastration (Hengste ab 1 Jahr, 450 € inkl. 2 Tage) → Wallach, Abstammungsschein bleibt Hengst (`geburtsGeschlecht`).
 - **Pflege:** Schmutz (`p.dreck` fell/maehne, jede Nacht mehr, im Bild sichtbar), Putzkiste (Bürste/Kamm), Pferdepfleger putzt. Folgen: bis −15 % Marktwert, > 1 Jahreszeit verdreckt −3 % Gesundheit/Tag. Wohlbefinden (`pflege.wohl`, Anzeige minus Schmutz): Weide +15/Tag, Putzen +5, ab 3. Tag am Stück in der Box −6/Tag, hungrig −8, Mist −5. Wirkt auf Lerntempo (`wohlFaktor`) im Ausbildungsstall und später auch beim Training daheim, außerdem auf die Fruchtbarkeit (Trächtigkeitschance 40 % + 55 % × Wohlbefinden). Fohlen bei Fuß haben eigene Gesundheit (wie die Mutter versorgt, min. 1 %).
 - **Weide** (Ort → Weide, `p.weide`): Box bleibt leer (Anzeige wie Klinik), kein Füttern/Misten, Gesundheit/Tag Frühling +10, Sommer +12, Herbst +7, Winter +5 (Box +8).
-- **Pferdeanhänger im Hauptmenü:** mehrere Pferde auf einmal in Klinik (stationär oder Kastration), Aufzucht, Ausbildung, Gnadenhof; Verkaufen einzeln, danach zurück zum Anhänger.
+- **Pferdeanhänger** (beide aus einer Liste `ANHAENGER`/`ANH_ZIEL` – neue Ziele nur dort eintragen): Box-Anhänger für ein Pferd, Hauptmenü-Anhänger für mehrere Pferde auf einmal in Klinik (stationär oder Kastration), Aufzucht, Ausbildung, Gnadenhof; Verkaufen einzeln, danach zurück zum Anhänger.
 - **Mitarbeiter (Hofverwaltung):** Stallbursche (füttert/mistet 3 Boxen) und Pferdepfleger (putzt und hält Mähne/Schopf auf Wunschlänge, 3 Boxen), je 300 €/Jahreszeit, Beginn nächste Jahreszeit, Kündigung zum Ende der Jahreszeit, im Adminmodus kostenlos. Weitere Kacheln (Stallmeister, Futterexperte, Osteopath, Hufschmied, Bereiter) noch „bald“.
 - **Hofverwaltung-Reiter:** Hof, Finanzen (nach Jahreszeit gruppiert), Außer Haus, Mitarbeiter, Postfach, Einstellungen. Boxen bauen/entfernen mit + / − in der Boxenübersicht im Stall.
 
@@ -55,3 +55,15 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - Änderungen klein und nachvollziehbar halten, alte Funktionen nicht kaputt machen, Speicherstände abwärtskompatibel lassen (fehlende Felder mit Standardwerten auffüllen).
 - Änderungen direkt auf den Branch `main` hochladen (kein extra Branch, kein Pull Request) – Dome möchte das so.
 - Vor dem Start Aufwand jeder Aufgabe kurz einschätzen (klein/mittel/groß). Nennt Dome ihr Restvolumen, sagen, was davon reinpasst, und mit dem Wichtigsten anfangen. Nach jeder fertigen Teilaufgabe auf `main` hochladen, am Ende sagen, was offen ist.
+
+## Kürzel von Dome (Wege im Spiel)
+Dome schreibt Wege mit diesen Kürzeln; Unterbereiche schreibt sie aus (z. B. „pmk - Pferdehändler“, „asr - Putzkiste“).
+- **Hauptmenü/hm** · **Startmenü/start** · **Menü** = Hamburger-Menü ☰ oben rechts · **Brief-Popup** = Brief über den gelben Umschlag oben rechts
+- **Stall** = hm - stall (Boxenübersicht) · **Box** = hm - stall - box
+- **Steckbrief/stb** (Box): **Daten**, **Genetik**, **Aufschlüsselung/afs**, **Gangwerk/gw**, **Charakter**, **Ausbildung/asb** (≠ Ausbildungsstall, der wird ausgeschrieben)
+- **Pferdepflege/ppf** (Box): **Versorgung/vsg** (früher „Gesundheit“), **Ausrüstung/asr**, **Ort**, **Test** (nur Admin)
+- **Pferdeanhänger/pah** = BEIDE Anhänger (Box - ppf - Ort - Pferdeanhänger und hm - Pferdeanhänger), immer gleich halten; nur der im hm hat Mehrfachauswahl
+- **Pferdemarkt/pmk** · **Hofverwaltung/hvw**: **Hof**, **Finanzen**, **Außer Haus**, **Mitarbeiter/mab**, **Postfach/Post**, **Einstellungen/esg**
+- **Enzyklopädie/enz**: **Rassen**, **Rassenansicht/ras** (Rassen-Kachel, z. B. Araber, mit Stockmaßbild und Admin-Genwahl), **Vererbung/vrb** und **Berechnungen zum Nachschlagen/bzn** (beide nur Admin)
+- **Gnadenhof/gdh** · **Pferdefriedhof/pfh**
+- **Rücksprung** = nach Abschließen oder Abbrechen einer Aktion zurück in die Ansicht, in der sie gestartet wurde (wie beim Brief-Popup)

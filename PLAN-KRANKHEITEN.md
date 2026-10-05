@@ -7,7 +7,7 @@ Wie immer: in Etappen umsetzen, nach jeder Etappe testet Dome. Speicherstände a
 
 Plan gespeichert bei Spielversion 173.
 
-- [ ] Etappe A – Spieltempo (klein)
+- [~] Etappe A – Spieltempo (klein) – umgesetzt in v174, Test durch Dome offen. Kalender-Anker `spiel.kal` (Datum bleibt beim Umstellen), Hinweisbrief „Neues Spieltempo“. Dome: −2 % für überfällige Hufe (`HUF_STRAFE`) bleibt aus, bis es den Hufschmied gibt (Etappe E).
 - [ ] Etappe B – Mitarbeiter (groß)
 - [ ] Etappe C – Befunde, Anzeichen, Einschätzung (groß)
 - [ ] Etappe D – Behandlung und Stallapotheke (mittel)

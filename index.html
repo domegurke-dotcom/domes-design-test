@@ -753,7 +753,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "173";
+  const SPIEL_VERSION = "174";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -761,9 +761,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=173"></script>
-<script src="kopfteile.js?v=173"></script>
-<script src="kopfalter.js?v=173"></script>
+<script src="pferd.js?v=174"></script>
+<script src="kopfteile.js?v=174"></script>
+<script src="kopfalter.js?v=174"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -795,8 +795,16 @@
   let aktBox = Math.min(spiel.aktBox || 0, spiel.boxen.length - 1);
   // ---------- Kalender: Jahreszeiten statt Tage (Start: Frühling 2000) ----------
   const JZ = [["Frühling", "🌱"], ["Sommer", "☀️"], ["Herbst", "🍂"], ["Winter", "❄️"]];
-  const tpj = () => spiel.tempo || 4;                      // Tage pro Jahreszeit: 3 schnell, 4 standard, 5 langsam
-  function datum(tag = spiel.tag || 1) { const i = Math.floor((tag - 1) / tpj()); return { s: i % 4, j: 2000 + Math.floor(i / 4), t: (tag - 1) % tpj() + 1 }; }
+  const TEMPI = [[4, "Schnell"], [7, "Standard"], [10, "Langsam"]];
+  const tpj = () => spiel.tempo || 7;                      // Tage pro Jahreszeit: 4 schnell, 7 Standard, 10 langsam
+  // Kalender-Anker spiel.kal = { tag, i }: an Tag „tag“ begann Jahreszeit Nr. i (ab Frühling 2000) – so verschiebt ein Tempowechsel das Datum nicht
+  function datum(tag = spiel.tag || 1) { const a = spiel.kal || { tag: 1, i: 0 }, T = tpj(), k = tag - a.tag, i = a.i + Math.floor(k / T); return { s: ((i % 4) + 4) % 4, j: 2000 + Math.floor(i / 4), t: ((k % T) + T) % T + 1 }; }
+  // alte Spielstände (3/4/5 Tage pro Jahreszeit) auf Standard 7 umstellen – Datum und Tag in der Jahreszeit bleiben
+  if (hatSpielstand && !spiel.tempoNeu) {
+    const T0 = spiel.tempo || 4, tag = spiel.tag || 1, i = Math.floor((tag - 1) / T0), t = (tag - 1) % T0 + 1;
+    spiel.kal = { tag: tag - (t - 1), i }; spiel.tempoAlt = T0; spiel.tempo = 7; spiel.tempoBrief = true;
+  }
+  spiel.tempoNeu = true;
   const jj = j => String(((j % 100) + 100) % 100).padStart(2, "0");
   const datumText = (d = datum()) => `${JZ[d.s][0]} ${jj(d.j)}`;
   function sichereGeburt(p) {
@@ -2493,8 +2501,9 @@
       const g = pf.gesundheit;
       const zustand = box.tot ? ["verstorben", "bad"] : g >= 85 ? ["kerngesund", "ok"] : g >= 65 ? ["gesund", "ok"] : g >= 45 ? ["angeschlagen", "warn"] : ["krank", "bad"];
       const termin = (ico, name, tagZuletzt, intervall, info) => {
+        intervall = intervall * tpj();   // Intervall in Jahreszeiten
         const vor = spiel.tag - tagZuletzt, rest = intervall - vor;
-        const st = rest < 0 ? ["überfällig", "bad"] : rest <= 7 ? ["bald fällig", "warn"] : ["ok", "ok"];
+        const st = rest < 0 ? ["überfällig", "bad"] : rest <= Math.max(1, Math.round(tpj() / 4)) ? ["bald fällig", "warn"] : ["ok", "ok"];
         return `<li><span class="ico">${ico}</span><span class="txt">${name}<small>zuletzt vor ${vor} ${vor === 1 ? "Tag" : "Tagen"} · ${info}</small></span><span class="stat ${st[1]}">${st[0]}</span></li>`;
       };
       inhalt = `<div class="zeile-wert"><div class="kopf"><b>Gesundheitszustand</b><span>${g.toLocaleString("de-DE", { maximumFractionDigits: 1 })} % · ${zustand[0]}</span></div>
@@ -2511,10 +2520,10 @@
           ${(() => { const d = p.dreck || {}, sf = dreckStufe(d.fell), sm = dreckStufe(d.maehne);
             return `<li><span class="ico">🧽</span><span class="txt">Fell<small>${zuLangeDreckig(p) ? "⚠️ schon länger als eine Jahreszeit verdreckt – schadet der Gesundheit" : "putzen mit der Bürste (Ausrüstung → Putzkiste)"}</small></span><span class="stat ${zuLangeDreckig(p) ? "bad" : sf[2]}">${sf[1]}</span></li>
               <li><span class="ico">🪮</span><span class="txt">Mähne &amp; Schweif<small>kämmen mit dem Kamm (Ausrüstung → Putzkiste)</small></span><span class="stat ${sm[2]}">${sm[0] >= 50 ? "verfilzt" : sm[0] >= 20 ? "zerzaust" : "gekämmt"}</span></li>`; })()}
-          ${termin("🔨", "Hufpflege (Hufschmied)", pf.huf, 42, "alle 6–8 Wochen")}
-          ${termin("💉", "Impfung (Tierarzt)", pf.impf, 180, "Influenza & Herpes halbjährlich")}
-          ${termin("💊", "Wurmkur", pf.wurm, 90, "etwa vierteljährlich")}
-          ${termin("🦷", "Zahnkontrolle", pf.zahn, 365, "einmal im Jahr")}
+          ${termin("🔨", "Hufpflege (Hufschmied)", pf.huf, 1, "einmal pro Jahreszeit")}
+          ${termin("💉", "Impfung (Tierarzt)", pf.impf, 2, "Influenza & Herpes alle 2 Jahreszeiten")}
+          ${termin("💊", "Wurmkur", pf.wurm, 1, "einmal pro Jahreszeit")}
+          ${termin("🦷", "Zahnkontrolle", pf.zahn, 4, "einmal im Jahr")}
         </ul>`;
     } else if (aktenReiter === "ausruestung") {
       const sm = p.stockmass;
@@ -3303,7 +3312,8 @@
   const HERDE_KENNEN = 3;          // so viele gemeinsame Weidetage, dann kennen sich zwei Pferde
   // ---------- Etappe 2b: Weide und Herde ----------
   // Tageswerte (z. B. Sozialverhalten) pro Jahreszeit ausgeglichen: × 4 / Tage pro Jahreszeit. Bedeckung und Streit sind Chancen pro Nacht und werden nicht umgerechnet (Dome).
-  const proTag = x => x * 4 / tpj();
+  const HUF_STRAFE = false;   // Dome: −2 % für überfällige Hufe erst, wenn es den Hufschmied gibt (Etappe E)
+  const proTag = x => x * 7 / tpj();   // Bezug: Standardtempo 7 Tage pro Jahreszeit
   // Heu auf der Weide nötig: Winter und letzter Herbsttag (kaum Gras)
   const heuNoetig = (tag = spiel.tag) => { const d = datum(tag); return d.s === 3 || (d.s === 2 && d.t === tpj()); };
   const WEIDE_WOHL = { normal: 15, winter: 8, allein: 6 };
@@ -3564,7 +3574,7 @@
       if (b.mistig) g -= 9.5;          // Box nicht gemistet: −9,5 Punkte
       // gut versorgt: +8 pro Tag – ab 30 % und darunter erholt sich ein Pferd nur noch in der Klinik (außer bei Altersschwäche)
       if (b.krippeVoll && !b.mistig && (pf.gesundheit > 30 || altersschwach(b.pferd))) g += 8;
-      if (spiel.tag - pf.huf > 56) g -= 2;
+      if (HUF_STRAFE && spiel.tag - pf.huf > tpj() + Math.ceil(tpj() / 3)) g -= 2;   // Hufe überfällig (gut 1 Jahreszeit) – erst mit dem Hufschmied (Etappe E)
       if (zuLangeDreckig(b.pferd)) g -= 3;   // länger als eine Jahreszeit verdreckt: −3 pro Tag
       g = Math.round(g * 10) / 10;
       // Rettungsnetz: wer über 1 % lag, fällt nur auf 1 %. Wer schon bei 1 % (oder weniger) war, stirbt bei 0.
@@ -3881,7 +3891,7 @@
   }
 
   function zeigeCharakter() {
-    const c = { name: "", hof: "", avatar: AVATARE[0] }; let tempo = 4;
+    const c = { name: "", hof: "", avatar: AVATARE[0] }; let tempo = 7;
     $("charakter").innerHTML = `<div class="schirm-innen">
       <button class="zurueck-s" id="chZurueck">‹ Startmenü</button>
       <h1>Wer bist du?</h1><p class="unter">Erstelle deinen Charakter und gib deinem Hof einen Namen</p>
@@ -3889,7 +3899,7 @@
         <div class="feld-s"><label>Wähle dein Aussehen</label><div class="avatare">${AVATARE.map((a, i) => `<button data-ava="${a}" class="${i ? "" : "an"}" aria-label="Aussehen ${i + 1}">${a}</button>`).join("")}</div></div>
         <div class="feld-s"><label for="chName">Dein Name</label><input id="chName" maxlength="24" placeholder="z. B. Max Mustermann" autocomplete="off" required><small class="fehler-text" id="chNameFehler" hidden>Bitte gib deinen Namen ein.</small></div>
         <div class="feld-s"><label for="chHof">Name deines Hofes</label><input id="chHof" maxlength="30" placeholder="z. B. Gestüt Sonnenwiese" autocomplete="off" required><small class="fehler-text" id="chHofFehler" hidden>Bitte gib deinem Hof einen Namen.</small></div>
-        <div class="feld-s"><label>Spieltempo</label><div class="tempo">${[[3, "Schnell", "3 Tage pro Jahreszeit"], [4, "Standard", "4 Tage pro Jahreszeit"], [5, "Langsam", "5 Tage pro Jahreszeit"]].map(([t, n, b]) => `<button data-tempo="${t}" class="${t === 4 ? "an" : ""}"><b>${n}</b><small>${b}</small></button>`).join("")}</div></div>
+        <div class="feld-s"><label>Spieltempo</label><div class="tempo">${TEMPI.map(([t, n]) => [t, n, `${t} Tage pro Jahreszeit`]).map(([t, n, b]) => `<button data-tempo="${t}" class="${t === tempo ? "an" : ""}"><b>${n}</b><small>${b}</small></button>`).join("")}</div></div>
       </div>
       <button class="sknopf haupt" id="chLos"><span class="i">🏡</span><span>Hof gründen<small>danach geht es zum Hauptmenü</small></span></button>
     </div>`;
@@ -3904,7 +3914,7 @@
       leer.forEach(id => { $(id).classList.add("fehlt"); $(id + "Fehler").hidden = false; });
       if (leer.length) { $(leer[0]).focus(); return; }
       // neues Spiel: alles zurücksetzen, beide Boxen leer
-      spiel = { geld: 5000, spieler: c, tag: 1, tempo, aktBox: 0, sparmodus: spiel.sparmodus,
+      spiel = { geld: 5000, spieler: c, tag: 1, tempo, tempoNeu: true, aktBox: 0, sparmodus: spiel.sparmodus,
         boxen: [1].map(nr => ({ nr, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false })),
         anlage: spiel.anlage, ausruestung: spiel.ausruestung };
       aktBox = 0; hatSpielstand = true;
@@ -4403,7 +4413,7 @@
   const BRIEF_SVG = (offen) => offen
     ? `<svg viewBox="0 0 40 34"><path d="M2,14 L20,2 L38,14 V32 H2 Z" fill="#f3ead6" stroke="#8a7a66" stroke-width="2" stroke-linejoin="round"/><rect x="8" y="7" width="24" height="16" fill="#fff" stroke="#c9bba3"/><path d="M2,14 L20,26 L38,14" fill="none" stroke="#8a7a66" stroke-width="2"/></svg>`
     : `<svg viewBox="0 0 40 30"><rect x="1.5" y="3" width="37" height="25" rx="3" fill="#ffd84a" stroke="#8a6512" stroke-width="2"/><path d="M2.5,5 L20,18 L37.5,5" fill="none" stroke="#8a6512" stroke-width="2" stroke-linejoin="round"/></svg>`;
-  const briefDatum = b => `${jzName(b.jz).replace(/^\S+ /, "")} · Tag ${((b.tag - 1) % tpj()) + 1}`;
+  const briefDatum = b => `${jzName(b.jz).replace(/^\S+ /, "")} · Tag ${datum(b.tag).t}`;
   // Handy-Tastatur: Eingabefeld sichtbar halten (unten Platz schaffen und das Feld in die Mitte scrollen)
   document.addEventListener("focusin", e => {
     const el = e.target; if (!el.matches || !el.matches("input[type=text], input:not([type]), input[type=number], textarea")) return;
@@ -4509,7 +4519,8 @@
         Mut / Nervenstärke – Fahrt im Pferdeanhänger −(14·e nervös + 6·e scheu) × (1 − 0,5·e gelassen), dazu Klinik oder Aufzuchtstation (fremde Herde) −(6·e nervös + 12·e scheu) × (1 − 0,5·e gelassen); auf der Weide pro Nacht mit fremden Herdenmitgliedern −6·max(e scheu, e nervös) × (1 − 0,5·e gelassen).
         Sensibilität – sensibel: Mist −5 × (1 + 0,5·e), Schmutz zieht × (1 + 0,5·e) ab; robust: Schmutz × (1 − 0,5·e).
         Arbeitswille – leistungsbereit vermisst Arbeit (kommt mit dem Training daheim).</p>
-      <p><b>Weide und Herde (Etappe 2b)</b> – Sozialverhalten pro Tag × 4 ÷ Tage pro Jahreszeit (gleich viel pro Jahreszeit, egal ob 3, 4 oder 5 Tage); Bedeckung und Streit sind feste Chancen pro Nacht:
+      <p><b>Spieltempo</b> – Tage pro Jahreszeit: 4 schnell, 7 Standard, 10 langsam (alte Spielstände wurden auf 7 umgestellt, Datum bleibt, mit Hinweisbrief). Auf das Tempo umgerechnet wird nur das Sozialverhalten; alles andere (Futter, Mist, Gesundheit, Wohlbefinden, Schmutz …) gilt pro Tag bzw. Nacht. Was in Jahreszeiten zählt (Tragzeit, Alter, Aufzucht, Ausbildung, Rechnungen der Ställe), braucht bei mehr Tagen entsprechend länger. Vorsorge-Termine in Jahreszeiten: Hufschmied 1, Wurmkur 1, Impfung 2, Zahnkontrolle 4 („bald fällig“ ab ¼ Jahreszeit vorher). Überfällige Hufe kosten erst mit dem Hufschmied (Etappe E) Gesundheit.</p>
+      <p><b>Weide und Herde (Etappe 2b)</b> – Sozialverhalten pro Tag × 7 ÷ Tage pro Jahreszeit (gleich viel pro Jahreszeit, egal ob 4, 7 oder 10 Tage); Bedeckung und Streit sind feste Chancen pro Nacht:
         Heu auf der Weide nötig im Winter und am letzten Herbsttag (Knopf in der Weide-Ansicht, Stallbursche erledigt es mit) – sonst hungrig: Gesundheit −19 statt Weide-Plus, Wohlbefinden −8.
         Wohlbefinden auf der Weide: +15, im Winter +8, allein +6 (eigenständig bekommt bis +9 zurück; verschmust/scheu/nervös zusätzlich bis −4).
         <b>Ungeplante Bedeckung:</b> Hengst (ab 2 J.) und zuchtfähige Stute (3–20 J., nicht tragend) zusammen auf der Weide: pro Nacht 25 % (jede Stute einzeln), tragend mit 40 % + 55 % × Wohlbefinden (Schnitt beider). Fällt nach einer Jahreszeit auf (Brief vom Tierarzt) oder beim nächsten geplanten Decken. Warnung nur beim allerersten Zusammenstellen.
@@ -4577,7 +4588,7 @@
         <dt>Hof</dt><dd class="hf-edit" id="hfHof" title="antippen zum Ändern">${esc(hofName())} <span class="stift">✏️</span></dd>
         <dt>Besitzer</dt><dd class="hf-edit" id="hfSpieler" title="antippen zum Ändern">${sp.avatar || ""} ${esc(sp.name || "–")} <span class="stift">✏️</span></dd>
         <dt>Datum</dt><dd>${JZ[datum().s][1]} ${datumLang()} · Tag ${datum().t}/${tpj()}</dd>
-        <dt>Spieltempo</dt><dd>${({ 3: "schnell", 4: "standard", 5: "langsam" })[tpj()]} (${tpj()} Tage pro Jahreszeit)</dd>
+        <dt>Spieltempo</dt><dd>${((TEMPI.find(x => x[0] === tpj()) || [0, "eigenes"])[1])} (${tpj()} Tage pro Jahreszeit)</dd>
         <dt>Pferde</dt><dd>${spiel.boxen.filter(b => b.pferd).length} in ${spiel.boxen.length} ${spiel.boxen.length === 1 ? "Box" : "Boxen"}${spiel.boxen.some(b => b.fohlen) ? ` · ${spiel.boxen.filter(b => b.fohlen).length} Fohlen bei der Mutter` : ""}</dd>
         <dt>Mitarbeiter</dt><dd>${Object.entries(MA_TYP).map(([t, T]) => { const a = angestellte(t).filter(m => maAktiv(m)).length; return a ? `${a} ${a === 1 ? T.name : T.mehr}` : ""; }).filter(Boolean).join(", ") || "keine"}</dd>
         <dt>Geld</dt><dd ${spiel.admin ? 'class="hf-edit" id="hfGeld" title="antippen zum Ändern (Adminmodus)"' : ""}>${fmt(spiel.geld || 0)}${spiel.admin ? ' <span class="stift">✏️</span>' : ""}</dd></dl>`;
@@ -4771,6 +4782,9 @@
   $("mHaupt").onclick = () => { menueZu(); zeigeHaupt(); };
   $("mPost").onclick = () => { menueZu(); zeigeHof("post"); };
   titelSetzen();
+  if (spiel.tempoBrief) { delete spiel.tempoBrief;
+    brief("Hofverwaltung", "Neues Spieltempo", `das Spiel hat ein neues Tempo bekommen: Eine Jahreszeit dauert jetzt <b>7 Tage</b> (Standard, vorher ${spiel.tempoAlt}). Neue Spiele können zwischen 4 (schnell), 7 (Standard) und 10 Tagen (langsam) wählen.<br><br>Das Datum bleibt gleich. Pro Tag ändert sich nichts – Füttern, Misten, Gesundheit und Wohlbefinden laufen wie bisher. Weil die Jahreszeit jetzt mehr Tage hat, braucht alles, was nach Jahreszeiten geht (Tragzeit, Alter, Hufschmied, Wurmkur …), entsprechend mehr Tage.`);
+    speichern(); }
   zeigeStart();
 </script>
 </body>

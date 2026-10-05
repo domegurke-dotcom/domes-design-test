@@ -964,12 +964,13 @@ const NOTENWORT = n => n >= 10 ? "ausgezeichnet" : n >= 9 ? "sehr gut" : n >= 8 
 function erzeugePflege(pferd, heute) {
   const r = zufall("pflege-" + pferd.id);
   const t = heute || (typeof spiel !== "undefined" ? spiel.tag : 1) || 1;
+  const T = (typeof spiel !== "undefined" && spiel.tempo) || 7;   // Tage pro Jahreszeit – Termine zählen in Jahreszeiten
   return {
     gesundheit: 100,
-    huf: t - Math.floor(3 + r() * 30),
-    impf: t - Math.floor(20 + r() * 150),
-    wurm: t - Math.floor(5 + r() * 70),
-    zahn: t - Math.floor(30 + r() * 300),
+    huf: t - Math.floor(r() * 0.8 * T),
+    impf: t - Math.floor((0.2 + r() * 1.5) * T),
+    wurm: t - Math.floor(r() * 0.8 * T),
+    zahn: t - Math.floor((0.3 + r() * 3) * T),
   };
 }
 

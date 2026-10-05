@@ -5,7 +5,7 @@ Ausführliche Gesprächsnotizen: `werte/plan.md` *(liegt noch im Planungsprojekt
 
 ## Stand der Umsetzung
 
-- [ ] Etappe 1 – Werte-Grundlage
+- [~] Etappe 1 – Werte-Grundlage (umgesetzt in v161, Test durch Dome offen)
 - [ ] Etappe 2 – Charakter → Wohlbefinden
 - [ ] Etappe 3 – Vorlieben und Reaktionen
 - [ ] Etappe 4 – Training daheim

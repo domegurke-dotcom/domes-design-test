@@ -368,6 +368,8 @@
   .zeile-wert .kopf span { color: var(--leise); }
   .balken { height: 10px; border-radius: 99px; background: #eadfcd; overflow: hidden; }
   .balken i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #d88b4a, var(--akzent)); }
+  .balken.mit-anlage { position: relative; } .balken.mit-anlage u { position: absolute; left: 0; top: 0; height: 100%; border-radius: 99px; background: #d6c3a0; } .balken.mit-anlage i { position: relative; }
+  .werte-titel { margin: 14px 0 4px; font-size: 1rem; } .werte-titel:first-of-type { margin-top: 6px; }
   .skala { position: relative; height: 10px; border-radius: 99px; background: linear-gradient(90deg, #d9e7f2, #f1e7d6 50%, #f3d7c0); }
   .skala i { position: absolute; top: -3px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; background: var(--akzent); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
   .pole { display: flex; justify-content: space-between; font-size: .78rem; color: var(--leise); margin-top: 4px; }
@@ -747,7 +749,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "160";
+  const SPIEL_VERSION = "161";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -755,9 +757,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=160"></script>
-<script src="kopfteile.js?v=160"></script>
-<script src="kopfalter.js?v=160"></script>
+<script src="pferd.js?v=161"></script>
+<script src="kopfteile.js?v=161"></script>
+<script src="kopfalter.js?v=161"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1275,6 +1277,27 @@
     return { wert: basis == null ? undefined : klemm(basis + (Math.random() < .5 ? -1 : 1) * opt.mut * (.6 + Math.random() * .8)), quelle: "Mutation", von: "–" };
   }
   const smVon = x => x.zielStockmass || x.sm || x.stockmass;
+  // ---------- Körperliche und mentale Werte (seit v161) ----------
+  // Fehlende Felder auffüllen (alte Speicherstände, Markt- und Stammpferde): Sensibilität, Anlagen, aktueller Stand.
+  // Startstand (bis Training daheim kommt): Anlage × Faktor nach Alter (Fohlen 25 %, 1 J. 35 %, 2 J. 45 %, ab 3 J. 55 % + bis zu 30 % durch Ausbildung).
+  function werteErgaenzen(p) {
+    if (!p || !p.werte) return;
+    const w = p.werte; let neu = null; const frisch = () => neu || (neu = erzeugeWerte(p));
+    CHARAKTER.forEach(c => { if (w.charakter && w.charakter[c.key] == null) w.charakter[c.key] = frisch().charakter[c.key]; });
+    if (!w.anlage) { w.anlage = { ...frisch().anlage }; if (w.talent) w.anlage.lernfaehigkeit = Math.round(Math.max(5, Math.min(100, (w.talent - 0.6) / 0.006))); }
+    w.talent = lernFaktor(w.anlage.lernfaehigkeit);
+    if (!w.ist) {
+      const j = p.geb ? alterJZ(p) / 4 : (p.alter || 5), f = j < 1 ? 0.25 : j < 2 ? 0.35 : j < 3 ? 0.45 : 0.55;
+      let ausb = 0; try { const aw = ausbildungsWerte({ ...p, alter: Math.floor(j) }); ausb = aw.reduce((a, x) => a + x.wert, 0) / aw.length; } catch (e) {}
+      const faktor = Math.min(0.85, f + (j >= 3 ? 0.3 * ausb / 100 : 0)), ist = {};
+      [...WERTE_KOERPER, ...WERTE_KOPF].forEach(x => { if (x.art === "training") ist[x.key] = Math.round(w.anlage[x.key] * faktor); });
+      ist.vertrauen = Math.round(Math.max(5, Math.min(100, 30 + ((w.charakter.bezug || 50) - 50) * 0.3 + ausb * 0.3)));
+      ist.gehorsam = Math.round(Math.max(0, Math.min(100, ausb * 0.8 + (j >= 3 ? 5 : 0))));
+      w.ist = ist;
+    }
+  }
+  // angezeigter Wert: nur vererbte Werte = Anlage, sonst aktueller Stand
+  const wertVon = (p, x) => { werteErgaenzen(p); return x.art === "anlage" ? p.werte.anlage[x.key] : (p.werte.ist[x.key] || 0); };
   function geburt(box, vater) {
     const M = box.pferd, V = vater || M.traechtig.vater;
     ahnenFuellen(M); ahnenFuellen(V); nrVon(M); nrVon(V); exVon(V);
@@ -1303,7 +1326,10 @@
     ["schritt", "trab", "galopp"].forEach(k => { if (w.gang[k] == null) w.gang[k] = erzeugeWerte(f).gang[k]; });
     gangNachGen(w.gang, fGen);   // Tölt/Pass nur mit dem Gangpferde-Gen
     Object.keys(w.charakter).forEach(k => { const e = erben(M, V, x => x.werte && x.werte.charakter ? x.werte.charakter[k] : undefined, { min: 3, max: 97, mut: 20 }); her.charakter[k] = e; if (e.wert != null) w.charakter[k] = e.wert; });
-    w.reinrassig = reinAnteil(anteile, rasse); f.werte = w;
+    // Anlagen (körperliche und mentale Obergrenzen) nach demselben Schlüssel wie der Charakter
+    her.anlage = {}; Object.keys(w.anlage).forEach(k => { const e = erben(M, V, x => x.werte && x.werte.anlage ? x.werte.anlage[k] : undefined, { min: 5, max: 100, mut: 12 }); her.anlage[k] = e; if (e.wert != null) w.anlage[k] = e.wert; });
+    w.talent = lernFaktor(w.anlage.lernfaehigkeit); delete w.ist;
+    w.reinrassig = reinAnteil(anteile, rasse); f.werte = w; werteErgaenzen(f);
     her.anteile = { mutter: anteileVon(M), vater: anteileVon(V), ergebnis: anteile, rasse };
     f.herkunft = her;
     f.ahnen = ahnenAus(M, V);
@@ -1805,7 +1831,7 @@
   // Admin: genaue Aufschlüsselung, was von wem vererbt wurde
   // Admin: genaue Aufschlüsselung, was von wem vererbt wurde – Übersicht mit Kacheln, je Bereich eine Tabelle
   let aufschlTeil = null;
-  const AUFSCHL_TEILE = [["farbe", "🎨", "Fellfarbe"], ["rasse", "🧬", "Rasse"], ["exterieur", "📏", "Größe & Exterieur"], ["gang", "🐎", "Gangwerk"], ["charakter", "💭", "Charakter"], ["mutation", "✨", "Mutationen"]];
+  const AUFSCHL_TEILE = [["farbe", "🎨", "Fellfarbe"], ["rasse", "🧬", "Rasse"], ["exterieur", "📏", "Größe & Exterieur"], ["gang", "🐎", "Gangwerk"], ["charakter", "💭", "Charakter"], ["anlage", "💪", "Anlagen"], ["mutation", "✨", "Mutationen"]];
   function aufschluesselungHTML(p) {
     const H = p.herkunft, A = ahnenFuellen(p), M = A.mutter || {}, V = A.vater || {}, tab = (kopf, zeilen) => `<table class="ver-tab"><tr>${kopf.map(k => `<th>${k}</th>`).join("")}</tr>${zeilen.map(z => `<tr>${z.map(x => `<td>${x}</td>`).join("")}</tr>`).join("")}</table>`;
     const pr = PROFIL[p.rasse] || {}, gn = { schritt: "Schritt", trab: "Trab", galopp: "Galopp", toelt: "Tölt", pass: pr.passName || "Pass" };
@@ -1827,11 +1853,15 @@
         ...Object.keys(EX_GRENZEN).map(k => [EX_NAME[k] || k, zahl(wert(H && H.ex && H.ex[k], ex[k])), zahl((M.ex || {})[k]), zahl((V.ex || {})[k]), q(H && H.ex && H.ex[k])])]);
     if (aufschlTeil === "gang") html = tab(kopf, Object.keys({ ...p.werte.gang, ...(H ? H.gang : {}) }).map(k => { const e = H && H.gang[k]; return [gn[k] || k, e ? (e.wert == null ? "– (nicht vererbt)" : zahl(e.wert)) : zahl(p.werte.gang[k]), zahl(gw(M)[k]), zahl(gw(V)[k]), q(e)]; }));
     if (aufschlTeil === "charakter") html = tab(kopf, CHARAKTER.map(t => { const e = H && H.charakter[t.key]; return [t.titel, e ? e.wert : p.werte.charakter[t.key], zahl(cw(M)[t.key]), zahl(cw(V)[t.key]), q(e)]; }));
+    if (aufschlTeil === "anlage") { werteErgaenzen(p); const aw = a => (a.werte || {}).anlage || {};
+      html = tab(kopf, [...WERTE_KOERPER, ...WERTE_KOPF.slice(0, 3)].map(x => { const e = H && H.anlage && H.anlage[x.key]; return [x.titel, e ? e.wert : p.werte.anlage[x.key], zahl(aw(M)[x.key]), zahl(aw(V)[x.key]), H && H.anlage ? q(e) : "angeboren (Stammpferd)"]; }))
+        + `<p class="text"><small>Anlage = vererbte Obergrenze. Vertrauen und Gehorsam werden nicht vererbt.</small></p>`; }
     if (aufschlTeil === "mutation") { const m = [];
       if (H) { if (H.sm && H.sm.quelle === "Mutation") m.push(["Stockmaß", `${H.sm.wert} cm`]);
         Object.entries(H.gang || {}).forEach(([k, e]) => { if (e.quelle === "Mutation" && e.wert != null) m.push([`Gangwerk: ${gn[k] || k}`, `Note ${zahl(e.wert)}`]); });
         Object.entries(H.charakter || {}).forEach(([k, e]) => { if (e.quelle === "Mutation") m.push([`Charakter: ${(CHARAKTER.find(t => t.key === k) || {}).titel || k}`, e.wert]); });
-        Object.entries(H.ex || {}).forEach(([k, e]) => { if (e.quelle === "Mutation") m.push([EX_NAME[k] || k, zahl(e.wert)]); }); }
+        Object.entries(H.ex || {}).forEach(([k, e]) => { if (e.quelle === "Mutation") m.push([EX_NAME[k] || k, zahl(e.wert)]); });
+        Object.entries(H.anlage || {}).forEach(([k, e]) => { if (e.quelle === "Mutation") m.push([`Anlage: ${([...WERTE_KOERPER, ...WERTE_KOPF].find(x => x.key === k) || {}).titel || k}`, e.wert]); }); }
       html = m.length ? tab(["Merkmal", "Wert"], m) : `<p class="text">${H ? "Bei diesem Pferd ist keine Mutation aufgetreten – alle Werte stammen von Vorfahren." : "Stammpferd ohne bekannte Eltern – Mutationen lassen sich nicht feststellen."}</p>`; }
     return `<button class="knopf zweit frei" id="aufschlZurueck" style="width:auto;padding:6px 12px;margin-bottom:8px">‹ Übersicht</button><h3 class="schein-zwischen" style="margin-top:4px">${ico} ${titel}</h3>${html}`;
   }
@@ -1851,7 +1881,7 @@
   function marktwert(p) {
     const w = p.werte || erzeugeWerte(p), g = w.gang;
     const gn = [g.schritt, g.trab, g.galopp].reduce((a, b) => a + b, 0) / 3;           // 4 … 10
-    const gangF = Math.max(0, (gn - 4) / 6);                                               // 0 … 1
+    const gangF = Math.max(0, Math.min(1, (gn - 2.5) / 6));                                // 0 … 1 (seit v161: Noten um 1,5 gesenkt – Preisniveau bleibt gleich)
     const j = p.geb ? alterJZ(p) / 4 : (p.alter || 5);
     const aw = ausbildungsWerte({ ...p, alter: Math.floor(j) }), ausb = aw.reduce((a, x) => a + x.wert, 0) / aw.length / 100;   // 0 … ~1
     const alterF = j < 1 ? 0.6 : j < 3 ? 0.8 : j < 12 ? 1 : j < 20 ? 1 - (j - 12) * 0.06 : 0.3;
@@ -2325,9 +2355,9 @@
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="knopf" id="zuMarkt" style="width:auto;padding:9px 14px">🏷️ Zum Pferdemarkt</button>${spiel.admin ? `<button class="knopf zweit" id="zuRassen" style="width:auto;padding:9px 14px">🛠️ Rassen (Admin)</button>` : ""}</div></div>`;
       $("zuMarkt").onclick = () => zeigeMarkt(null); if ($("zuRassen")) $("zuRassen").onclick = zeigeRassen; return; }
     const r = rasseById(p.rasse), w = p.werte;
-    const reiter = LS ? [["steckbrief", "Daten"], ["genetik", "Genetik"], ...(spiel.admin ? [["aufschl", "Aufschlüsselung"]] : []), ["gang", "Gangwerk"], ["charakter", "Charakter"], ...(LS.nurGrunddaten ? [] : [["ausbildung", "Ausbildung"]]), ]
+    const reiter = LS ? [["steckbrief", "Daten"], ["genetik", "Genetik"], ...(spiel.admin ? [["aufschl", "Aufschlüsselung"]] : []), ["gang", "Gangwerk"], ["werte", "Werte"], ["charakter", "Charakter"], ...(LS.nurGrunddaten ? [] : [["ausbildung", "Ausbildung"]]), ]
       : aktenModus === "steckbrief"
-      ? [["steckbrief", "Daten"], ["genetik", "Genetik"], ...(spiel.admin ? [["aufschl", "Aufschlüsselung"]] : []), ["gang", "Gangwerk"], ["charakter", "Charakter"], ["ausbildung", "Ausbildung"]]
+      ? [["steckbrief", "Daten"], ["genetik", "Genetik"], ...(spiel.admin ? [["aufschl", "Aufschlüsselung"]] : []), ["gang", "Gangwerk"], ["werte", "Werte"], ["charakter", "Charakter"], ["ausbildung", "Ausbildung"]]
       : [["gesundheit", "Versorgung"], ["ausruestung", "Ausrüstung"], ["platz", "Ort"], ...(spiel.admin ? [["test", "Test"]] : [])];
     const box = LS ? { pferd: LS, lesen: true } : B(), pf = p.pflege;
     let inhalt = "";
@@ -2392,12 +2422,20 @@
       inhalt = vglKopf(p) + liste.map(([n, v]) => { const qv = q ? qg[key[n] || "pass"] : undefined;
         return `<div class="zeile-wert"><div class="kopf"><b class="lex" data-lex="gang:${key[n] || "pass"}">${n}</b><span>${v != null ? `${String(v).replace(".", ",")} · ${NOTENWORT(v)}` : "–"}${q ? ` <em class="vgl-b">${qv != null ? String(qv).replace(".", ",") : "–"}</em>` : ""}</span></div>
         <div class="balken"><i style="width:${(v || 0) * 10}%"></i></div>${q ? `<div class="balken vgl"><i style="width:${(qv || 0) * 10}%"></i></div>` : ""}</div>`; }).join("") + zusatz;
+    } else if (aktenReiter === "werte") {
+      werteErgaenzen(p); const q = vergleichPferd(p); if (q) werteErgaenzen(q);
+      const zeile = (x, art) => { const v = wertVon(p, x), an = p.werte.anlage[x.key], qv = q ? wertVon(q, x) : null;
+        const zusatz = x.art === "anlage" ? "angeboren" : x.art === "erarbeitet" ? "erarbeitet" : "";
+        return `<div class="zeile-wert"><div class="kopf"><b class="lex" data-lex="wert:${x.key}">${x.titel}</b><span>${v}${zusatz ? ` <small>· ${zusatz}</small>` : ""}${spiel.admin && x.art === "training" ? ` <small>(Anlage ${an})</small>` : ""}${q ? ` <em class="vgl-b">${qv}</em>` : ""}</span></div>
+        <div class="balken${spiel.admin && x.art === "training" ? " mit-anlage" : ""}">${spiel.admin && x.art === "training" ? `<u style="width:${an}%"></u>` : ""}<i style="width:${v}%"></i></div>${q ? `<div class="balken vgl"><i style="width:${qv}%"></i></div>` : ""}</div>`; };
+      inhalt = vglKopf(p) + `<h3 class="werte-titel">💪 Körper</h3>` + WERTE_KOERPER.map(zeile).join("") + `<h3 class="werte-titel">🧠 Kopf</h3>` + WERTE_KOPF.map(zeile).join("") +
+        `<p class="text"><small>Werte von 0 bis 100. Trainierbare Werte steigen später durch Training – jedes Pferd hat dabei eine vererbte Obergrenze. „Angeboren“ lässt sich nicht trainieren, „erarbeitet“ entsteht durch Pflege und Ausbildung.${spiel.admin ? " 🛠️ Admin: der helle Teil des Balkens zeigt die Anlage (Obergrenze)." : ""}</small></p>`;
     } else if (aktenReiter === "charakter") {
-      const c = w.charakter;
+      werteErgaenzen(p); const c = w.charakter;
       const q = vergleichPferd(p);
       inhalt = vglKopf(p) + CHARAKTER.map(t => `
         <div class="zeile-wert"><div class="kopf"><b class="lex" data-lex="char:${t.key}">${t.titel}</b></div>
-        <div class="skala"><i style="left:${c[t.key]}%"></i>${q ? `<i class="vgl" style="left:${q.werte.charakter[t.key]}%"></i>` : ""}</div>
+        <div class="skala"><i style="left:${c[t.key]}%"></i>${q ? `<i class="vgl" style="left:${(werteErgaenzen(q), q.werte.charakter[t.key])}%"></i>` : ""}</div>
         <div class="pole"><span>${t.links}</span><span>${t.rechts}</span></div></div>`).join("");
     } else if (aktenReiter === "ausbildung") {
       const aw = ausbildungsWerte(p);
@@ -3373,10 +3411,11 @@
   const LEX_CHAR = {
     temperament: "Wie lebhaft ein Pferd ist: ruhige Pferde sind gelassen und gemütlich, temperamentvolle eher feurig und vorwärtsdrängend.",
     mut: "Wie das Pferd auf Neues und Unbekanntes reagiert: scheue Pferde erschrecken leicht, mutige gehen neugierig auf Dinge zu.",
-    wachheit: "Wie aufmerksam das Pferd ist: verträumte Pferde sind oft in Gedanken, aufgeweckte bekommen alles mit.",
+    wachheit: "Wie sehr das Pferd Abwechslung sucht: verträumte Pferde mögen Routine und sind oft in Gedanken, neugierige wollen alles erkunden und langweilen sich schnell.",
     bezug: "Wie sehr das Pferd die Nähe zum Menschen sucht: eigenständige Pferde sind gern für sich, verschmuste suchen Kontakt und Streicheleinheiten.",
     wille: "Wie gern das Pferd mitarbeitet: eigensinnige Pferde haben ihren eigenen Kopf, leistungsbereite arbeiten gern und willig mit.",
     nerven: "Wie gelassen das Pferd in Stresssituationen bleibt: nervöse Pferde regen sich schnell auf, gelassene bleiben auch bei Trubel ruhig.",
+    sensibel: "Wie fein das Pferd auf Berührung, Ausrüstung und Hilfen reagiert: robuste Pferde stecken viel weg, sensible spüren jede Kleinigkeit – dafür sind sie in der Dressurarbeit besonders fein.",
   };
   const LEX_SKALA = {
     Takt: "Das gleichmäßige, regelmäßige Fußen in jeder Gangart – die Grundlage der Ausbildung.",
@@ -3412,6 +3451,8 @@
       titel = `🐎 ${k1 === "pass" ? (pr.passName || "Pass") : T[0]}`; html = `<p>${T[1]}</p><p><small><b>Noten:</b> 4 = mangelhaft · 5 = ausreichend · 6 = befriedigend · 7 = ziemlich gut · 8 = gut · 9 = sehr gut · 10 = ausgezeichnet. Gangnoten werden vererbt.</small></p>`; }
     if (art1 === "char") { const t = CHARAKTER.find(x => x.key === k1);
       titel = `💭 ${t.titel}`; html = `<p>${LEX_CHAR[k1]}</p><p><small>Skala von <b>${t.links}</b> bis <b>${t.rechts}</b>. Der Charakter wird vererbt.</small></p>`; }
+    if (art1 === "wert") { const x = [...WERTE_KOERPER, ...WERTE_KOPF].find(y => y.key === k1);
+      titel = `${WERTE_KOERPER.includes(x) ? "💪" : "🧠"} ${x.titel}`; html = `<p>${x.info}</p><p><small>${x.art === "anlage" ? "Angeboren: wird vererbt und lässt sich nicht trainieren." : x.art === "erarbeitet" ? "Erarbeitet: wird nicht vererbt, sondern entsteht durch Pflege, Zeit und Ausbildung." : "Trainierbar bis zu einer vererbten Obergrenze (Anlage)."}</small></p>`; }
     if (art1 === "skala") { const i = AUSBILDUNG.indexOf(k1);
       titel = `🎓 ${k1}`; html = `<p>${LEX_SKALA[k1]}</p><p><small>Stufe ${i + 1} von 6 der Ausbildungsskala. Jede Stufe beginnt erst zu steigen, wenn die vorige mindestens 20 % erreicht hat, und kann sie nicht überholen.</small></p>`; }
     if (art === "klassen") { titel = "🎓 Klassen der Dressur";
@@ -4166,9 +4207,15 @@
       <h3>🐴 Schimmel (fortschreitende Schimmelung)</h3>
       <p>Schimmel kommen in ihrer Grundfarbe zur Welt und hellen auf: Rappe → Rappschimmel, Brauner → Braunschimmel, Fuchs → Fuchsschimmel, Falben → Falbschimmel, Isabellen → Isabellschimmel, Schecken → Schimmelschecke. Manche werden dabei Apfelschimmel, am Ende weiß, einige im Alter Fliegenschimmel. Reinerbige Schimmel (GG) werden schneller weiß. Wie schnell, ob mit Apfelung, ob und ab wann Fliegenschimmel und ob das Langhaar früher oder später ausbleicht, ist erbliche Veranlagung (vererbt nach dem Schlüssel unten). Langhaar, das später ausbleicht, wird trotzdem am Ende weiß. Etwa 15 % der Schimmel bleiben lange dunkelgrau und werden erst spät weiß (Veranlagung „bleibt lange dunkelgrau“, vererbbar). Früheres Langhaar hellt stufenweise auf (bei „sehr früh weiß“ etwa 8-mal so schnell wie das Fell, bei „früher hell“ etwa 3-mal), die ersten weißen Haare im Fell sind anfangs nur leicht zu sehen. Bei etwa 5 % der Pferde wird das Langhaar sehr früh weiß – so entstehen junge, noch dunkle Grauschimmel mit fast weißer Mähne; diese Veranlagung lässt sich weiterzüchten (und kann auch durch Mutation entstehen). Im Abstammungsschein steht immer die Geburtsfarbe, mit „(kann Schimmel werden)“, wenn das Pferd oder ein Elternteil das Schimmel-Gen hat.</p>
       <p><b>Rotschimmel / Roan</b> ist etwas anderes: unveränderliche Schimmel, die schon mit weißen Stichelhaaren geboren werden und nicht aufhellen.</p>
-      <h3>📏 Stockmaß, Gangwerk, Charakter, Schimmel-Veranlagung</h3>
+      <h3>📏 Stockmaß, Gangwerk, Charakter, Anlagen, Schimmel-Veranlagung</h3>
       <p>Jeder Wert wird einzeln nach diesem Schlüssel vererbt:</p>${schluessel}
-      <p>Mutation: Stockmaß ±6–16 cm vom Elternschnitt, Gangnote ±1–2, Charakter ±12–28 Punkte, Schimmel-Veranlagung ±10–20 % der Spanne. Tölt und Pass hat ein Fohlen nur, wenn der gezogene Vorfahre sie hat. Großeltern und Urgroßeltern haben feste, versteckte Werte.</p>
+      <p>Mutation: Stockmaß ±6–16 cm vom Elternschnitt, Gangnote ±1–2, Charakter ±12–28 Punkte, Anlagen ±7–17 Punkte, Schimmel-Veranlagung ±10–20 % der Spanne. Tölt und Pass hat ein Fohlen nur, wenn der gezogene Vorfahre sie hat. Großeltern und Urgroßeltern haben feste, versteckte Werte.</p>
+      <h3>💪 Körperliche und mentale Werte</h3>
+      <p>Jedes Pferd hat eine vererbte <b>Anlage</b> (Obergrenze, 5–100) für Kraft, Ausdauer, Geschwindigkeit, Beschleunigung, Wendigkeit, Beweglichkeit, Koordination, Zähigkeit, Regeneration, Konstitution, Lernfähigkeit, Konzentration und Reaktionsfähigkeit. Neue Pferde: Rassen-Grundwert ± bis zu 14. Fohlen erben jede Anlage einzeln nach dem Schlüssel oben. <b>Nur angeboren</b> (Wert = Anlage): Geschwindigkeit, Konstitution, Lernfähigkeit. <b>Trainierbar</b> bis zur Anlage: alle anderen. <b>Erarbeitet</b> (nicht vererbt): Vertrauen, Gehorsam. Lernfähigkeit ersetzt das frühere versteckte Talent: Lerntempo ×(0,6 + 0,6 × Lernfähigkeit) – 33 → ×0,8, 67 → ×1,0, 100 → ×1,2.</p>
+<div style="overflow-x:auto">${verTab(["Rasse", ...WERTE_KOERPER.map(x => x.titel), ...WERTE_KOPF.slice(0, 3).map(x => x.titel)], Object.entries(PROFIL).map(([id, pr]) => [rasseById(id).name, ...(pr.koerper || []), ...(pr.kopf || [])]))}</div>
+      <p><b>Charakter</b> (7 Werte, 3–97, nur vererbt): Temperament, Mut, Neugier (früher „Wachheit“), Menschenbezug, Arbeitswille, Nervenstärke, Sensibilität (neu). Rassen-Grundwerte ± bis zu 22.</p>
+<div style="overflow-x:auto">${verTab(["Rasse", ...CHARAKTER.map(c => c.titel), "Gangwerk S/T/G"], Object.entries(PROFIL).map(([id, pr]) => [rasseById(id).name, ...pr.char, pr.gang.map(x => String(x).replace(".", ",")).join(" / ")]))}</div>
+      <p><b>Gangwerk</b> (seit v161 um 1,5 gesenkt): Rassen-Grundnote ± bis zu 2 (Halbnoten, 4–10), Tölt Grundnote 6, Pass 5. Ziel: meist 5,5–7, eine 8 hat etwa jedes 20. Pferd (Simulation: 4 %), ab 8,5 nur Ausnahmepferde (≈ 1 %).</p>
       <h3>🧬 Rasseanteile</h3>
       <p>Anteile des Fohlens = Schnitt der Eltern (damit zählen die Großeltern je ¼ und die Urgroßeltern je ⅛). Unter 2 % fällt eine Rasse weg, über 98 % gilt als 100 % (reinrassig). Zugeordnet wird die Rasse mit dem größten Anteil; bei Gleichstand (z. B. 50/50) die Rasse, zu der das Exterieur (Stockmaß) am besten passt. In Daten und Abstammungsschein steht nur die Rasse (mit ihrem Anteil, z. B. „Hannoveraner – 87,5 %“), nie „Mix“; alle Anteile stehen bei Genetik.</p>
       <p><b>Veredelung:</b> Vollblut (Englisches Vollblut, Araber) zählt nur bei Rassen, deren Zuchtbuch das erlaubt, zur eigenen Rasse – sofern die eigene Rasse mindestens 50 % hat. Bei 50/50 mit dem Veredler bleibt es die veredelte Rasse.</p>
@@ -4195,7 +4242,8 @@
       <p>Gut versorgt +8 % pro Tag, hungrig −19, Box nicht gemistet −9,5. Unter 40 % kommt ein Brief vom Tierarzt, bei 30 % oder weniger erholt sich ein Pferd nur noch in der Klinik – auch Medizin hilft dann nicht mehr (+16 %/Tag, ${fmt(KOSTEN.klinik)}/Tag) und wird mit 75 % entlassen. Die Klinikkosten kommen als Rechnung (siehe „Rechnungen“). Ausnahme: Senioren mit altersbedingter Höchstgesundheit von 40 % oder weniger.</p>
       <p>Senioren ab 20 Jahren: höchstens 75 %, sinkt bis 35 Jahre auf 1 %. Sterbewahrscheinlichkeit je Jahreszeit steigt ab 20 Jahren und erreicht mit 35 Jahren 100 %.</p>
       <h3>💰 Geld und Marktwert</h3>
-      <p>Marktwert aus Gangwerk, Ausbildungsstand, Alter und Gesundheit, plus die Kosten aller gemachten Gentests (getestete Pferde verkaufen sich besser). Stute mit Fohlen bei Fuß: beide Marktwerte zusammen, das Fohlen wird mitverkauft (allein nicht). Festpreis (Regler 50–160 % des Marktwerts, Chance wird angezeigt): bis 90 % des Marktwerts 98 % Verkaufschance, bis Marktwert 93 %, darüber sinkend (110 % ≈ 59 %, 120 % ≈ 38 %, 130 % ≈ 24 %, 150 % ≈ 10 %), aber nie unter 4 % (Liebhaber). Gerechnet mit dem Saisonpreis der Jahreszeit, in der du das Pferd einstellst. Während das Angebot läuft, schicken Interessenten manchmal Preisvorschläge per Brief (jede Nacht 15 %, bei deutlich überhöhtem Preis 35 %; 75–105 % des Marktwerts, immer unter deinem Preis) – annehmen verkauft sofort, ablehnen lässt das Angebot weiterlaufen. Auktion startet bei ½ des Marktwerts und läuft 2 Jahreszeiten; Abbruch nach dem ersten Gebot kostet die Hälfte des letzten Gebots. Gnadenhof: halber Marktwert.</p>
+      <p><b>Startstand der trainierbaren Werte</b> (bis das Training daheim kommt): Anlage × Faktor – Fohlen 25 %, 1 Jahr 35 %, 2 Jahre 45 %, ab 3 Jahren 55 % plus bis zu 30 % je nach Ausbildungsstand (max. 85 %). Vertrauen: 30 ± Menschenbezug + 30 % des Ausbildungsstands. Gehorsam: 80 % des Ausbildungsstands (+5 ab 3 Jahren).</p>
+      <p>Marktwert aus Gangwerk (Notenschnitt − 2,5) / 6, Ausbildungsstand, Alter und Gesundheit, plus die Kosten aller gemachten Gentests (getestete Pferde verkaufen sich besser). Stute mit Fohlen bei Fuß: beide Marktwerte zusammen, das Fohlen wird mitverkauft (allein nicht). Festpreis (Regler 50–160 % des Marktwerts, Chance wird angezeigt): bis 90 % des Marktwerts 98 % Verkaufschance, bis Marktwert 93 %, darüber sinkend (110 % ≈ 59 %, 120 % ≈ 38 %, 130 % ≈ 24 %, 150 % ≈ 10 %), aber nie unter 4 % (Liebhaber). Gerechnet mit dem Saisonpreis der Jahreszeit, in der du das Pferd einstellst. Während das Angebot läuft, schicken Interessenten manchmal Preisvorschläge per Brief (jede Nacht 15 %, bei deutlich überhöhtem Preis 35 %; 75–105 % des Marktwerts, immer unter deinem Preis) – annehmen verkauft sofort, ablehnen lässt das Angebot weiterlaufen. Auktion startet bei ½ des Marktwerts und läuft 2 Jahreszeiten; Abbruch nach dem ersten Gebot kostet die Hälfte des letzten Gebots. Gnadenhof: halber Marktwert.</p>
       <h3>🏷️ Pferdemarkt (wechselt jede Jahreszeit)</h3>
       ${verTab(["Bereich", "Angebot", "Preis", "Besonderheit"], [
         ["🏡 Privatanzeigen", "2–4 Pferde, 5–19 J., oft Mix; Stuten auch mit Fohlen bei Fuß (Frühling 45 %, Sommer 40 %, Herbst 8 %, Winter 5 %)", "70–100 %", `Ankaufsuntersuchung ${fmt(AKU_PREIS)} zeigt die Gesundheit vorher. Preisvorschlag (1× je Pferd): ab 95 % sicher, 85–95 % 60 %, 75–85 % 30 %, sonst 5 %. Gesundheit erst nach Kauf (der Preis berücksichtigt sie zur Hälfte – Privatleute kennen ihr Pferd), je Großelternteil 30 % „unbekannt“ – dann Rasse „Abstammung unvollständig“ ohne Anteile, bis ein Abstammungsnachweis die Großeltern ermittelt`],

@@ -747,7 +747,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "152";
+  const SPIEL_VERSION = "153";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -755,9 +755,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=152"></script>
-<script src="kopfteile.js?v=152"></script>
-<script src="kopfalter.js?v=152"></script>
+<script src="pferd.js?v=153"></script>
+<script src="kopfteile.js?v=153"></script>
+<script src="kopfalter.js?v=153"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -778,6 +778,7 @@
   spiel.anlage.anhaenger = true;
   if (!spiel.ausruestung) spiel.ausruestung = { halfter: true, strick: true, putzkiste: true, sattel: false, trense: false, schabracke: false, decke: false, gamaschen: false, schere: true, medizin: true };
   if (spiel.ausruestung.medizin == null) spiel.ausruestung.medizin = true;
+  spiel.rechnungen = (spiel.rechnungen || []).map(r => r.von ? r : { id: r.id, von: "Tierarztpraxis", art: "klinik", tag: spiel.tag || 1, stufe: 0, faellig: (spiel.tag || 1) + 2, posten: [{ text: `${r.name}: ${r.tage || "?"} Tage stationäre Behandlung`, betrag: r.betrag }], betrag: r.betrag, pferde: [r.pferdId] });
   if (spiel.ausruestung.schere == null) spiel.ausruestung.schere = true;
   if (spiel.ausruestung.futter == null) spiel.ausruestung.futter = true;
   spiel.boxen.forEach(b => { if (b.pferd && !b.pferd.werte) b.pferd.werte = erzeugeWerte(b.pferd); if (b.pferd && !b.pferd.pflege) b.pferd.pflege = erzeugePflege(b.pferd); if (b.pferd && b.pferd.maehneSeit == null) b.pferd.maehneSeit = spiel.tag || 1; if (b.pferd && b.pferd.schopfSeit == null) b.pferd.schopfSeit = b.pferd.maehneSeit; if (b.krippeVoll == null) b.krippeVoll = false; if (b.mistig == null) b.mistig = true; });
@@ -1486,10 +1487,11 @@
     if (!p.werte) p.werte = erzeugeWerte(p);
     spiel.angebote = (spiel.angebote || []).filter(x => x.id !== p.id);
   }
-  function zurueckholen(e) {
+  // mitRechnung = false: der Restbetrag wird nicht als eigene Rechnung gestellt, sondern zurückgegeben (z. B. für die Mahnung)
+  function zurueckholen(e, mitRechnung = true) {
     const res = spiel.boxen.findIndex(b => b.reserviert === e.pferd.id), frei = res >= 0 ? res : freieBox(); if (frei < 0) return -1;
     const nb = spiel.boxen[frei]; delete nb.reserviert;
-    if (e.ort === "ausbildung") ausbildungsBericht(e, frei);
+    zurueckholen.rest = externAbschluss(e, frei, mitRechnung);
     nb.pferd = e.pferd; nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false; delete e.pferd.dreck;
     e.pferd.maehneSeit = e.pferd.maehneSeit || spiel.tag; e.pferd.schopfSeit = e.pferd.schopfSeit || spiel.tag;
     spiel.extern = spiel.extern.filter(x => x !== e);
@@ -1519,10 +1521,8 @@
     (spiel.extern || []).slice().forEach(e => {
       const p = e.pferd, nr = zurueckholen(e);
       if (nr >= 0) { brief(e.ort === "aufzucht" ? "Aufzuchtstation" : "Ausbildungsstall", `${p.name} ist zurück`, `{dein|Ihr} Hofkonto ist im Minus – wir können <b>${esc(p.name)}</b> deshalb nicht weiter betreuen und haben ${pron(p).ihn} in Box ${nr + 1} zurückgebracht.`); return; }
-      // keine Box frei: der Tierschutz nimmt das Pferd auf
-      spiel.extern = spiel.extern.filter(x => x !== e);
-      (spiel.tierschutz = spiel.tierschutz || []).push({ pferd: p, frist: jzJetzt() + 2, preis: tierschutzPreis(p) });
-      brief("Tierschutzverein", `${p.name} wurde abgeholt`, `{dein|Ihr} Hofkonto ist im Minus und für <b>${esc(p.name)}</b> war keine Box frei. Wir haben ${pron(p).ihn} deshalb aus dem ${ORT_NAME[e.ort]} übernommen. {Du kannst|Sie können} ${pron(p).ihn} bis Ende ${jzName(jzJetzt() + 1).replace(/^\S+ /, "")} im Pferdemarkt zurückkaufen.`);
+      // keine Box frei: das Pferd kommt zurück, sobald eine Box frei ist
+      if (!e.abbruch) { e.abbruch = true; brief(ORT_NAME[e.ort], `Bitte Box für ${p.name} freimachen`, `{dein|Ihr} Hofkonto ist im Minus – wir können <b>${esc(p.name)}</b> deshalb nicht weiter betreuen. Leider ist auf {deinem|Ihrem} Hof gerade keine Box frei. Sobald eine frei ist, bringen wir ${pron(p).ihn} zurück.`); }
     });
   }
   // Fohlen beim Tierschutz: ist es alt genug für eine eigene Box, wird es einzeln zurückgekauft
@@ -1546,6 +1546,17 @@
     });
   }
   // Brief bei der Rückkehr aus dem Ausbildungsstall: was hat sich verändert, was ist als Nächstes sinnvoll
+  // Rückkehr aus Aufzuchtstation / Ausbildungsstall: kompletter Bericht über den ganzen Aufenthalt mit Kostenübersicht
+  function externAbschluss(e, boxNr, mitRechnung) {
+    const p = e.pferd, von = ORT_NAME[e.ort], rest = e.offen || 0, tage = spiel.tag - e.seit; e.offen = 0;
+    const verlauf = e.verlauf || [], gesamt = verlauf.reduce((a, x) => a + x.betrag, 0) + rest;
+    const kosten = gesamt ? `<br><br><b>Kostenübersicht für den ganzen Aufenthalt</b><table class="ver-tab"><tr><th>Zeitraum</th><th>Tage</th><th>Betrag</th></tr>${verlauf.map(x => `<tr><td>${jzName(x.jz).replace(/^\S+ /, "")}</td><td>${x.tage}</td><td>${fmt(x.betrag)}${x.status ? ` <small>(${x.status})</small>` : ""}</td></tr>`).join("")}${rest ? `<tr><td>bis heute</td><td>${Math.round(rest / KOSTEN[e.ort])}</td><td>${fmt(rest)}</td></tr>` : ""}<tr><td><b>gesamt</b></td><td>${tage}</td><td><b>${fmt(gesamt)}</b></td></tr></table>` : "";
+    const text = (e.ort === "ausbildung" ? ausbildungsBericht(e, boxNr) : `<b>${esc(p.name)}</b> war ${tage} ${tage === 1 ? "Tag" : "Tage"} bei uns in der Aufzuchtstation und steht jetzt wieder in Box ${boxNr + 1}. ${pron(p).er[0].toUpperCase() + pron(p).er.slice(1)} ist jetzt ${alterText(p)} alt und hat sich in der Herde gut entwickelt (Gesundheit ${p.pflege.gesundheit.toLocaleString("de-DE")} %).`) + kosten;
+    const betreff = e.ort === "ausbildung" ? `Ausbildungsbericht: ${p.name}` : `Abschlussbericht: ${p.name}`;
+    if (rest && mitRechnung) rechnungStellen(von, e.ort, [{ text: `${p.name}: ${tageTxt(Math.round(rest / KOSTEN[e.ort]))} × ${fmt(KOSTEN[e.ort])} (seit der letzten Rechnung)`, betrag: rest }], [p.id], betreff, text + "<br><br>");
+    else brief(von, betreff, text);
+    return mitRechnung ? 0 : rest;
+  }
   function ausbildungsBericht(e, boxNr) {
     const p = e.pferd, v = e.vorher || { training: 0, werte: AUSBILDUNG.map(name => ({ name, wert: 0 })) }, n = ausbStand(p), tage = spiel.tag - e.seit;
     const zeilen = n.map((x, i) => { const d = x.wert - (v.werte[i] ? v.werte[i].wert : 0); return `<tr><td>${x.name}</td><td>${v.werte[i] ? v.werte[i].wert : 0} %</td><td>${x.wert} %</td><td><b>${d > 0 ? "+" : ""}${d}</b></td></tr>`; }).join("");
@@ -1557,15 +1568,16 @@
     if (schwach) tipps.push(`Als Nächstes sollte an <b>${schwach.name}</b> gearbeitet werden – jede Stufe der Ausbildungsskala baut auf der vorigen auf.`);
     if (p.werte && p.werte.talent < .85) tipps.push(`${esc(p.name)} lernt eher langsam. Geduld zahlt sich aus.`);
     else if (p.werte && p.werte.talent > 1.1) tipps.push(`${esc(p.name)} ist sehr lernwillig und talentiert.`);
-    brief("Ausbildungsstall", `Ausbildungsbericht: ${p.name}`, `<b>${esc(p.name)}</b> war ${tage} ${tage === 1 ? "Tag" : "Tage"} bei uns im Training und steht jetzt wieder in Box ${boxNr + 1}.
+    return `<b>${esc(p.name)}</b> war ${tage} ${tage === 1 ? "Tag" : "Tage"} bei uns im Training und steht jetzt wieder in Box ${boxNr + 1}.
       <br><br><table class="ver-tab"><tr><th>Ausbildungsskala</th><th>vorher</th><th>jetzt</th><th>±</th></tr>${zeilen}</table>
-      <br>Ausbildungsstand: ${kVor === kNach ? kNach : `${kVor} → <b>${kNach}</b>`}<br><br><b>Unsere Empfehlungen:</b><ul>${tipps.map(t => `<li>${t}</li>`).join("")}</ul>`);
+      <br>Ausbildungsstand: ${kVor === kNach ? kNach : `${kVor} → <b>${kNach}</b>`}<br><br><b>Unsere Empfehlungen:</b><ul>${tipps.map(t => `<li>${t}</li>`).join("")}</ul>`;
   }
   // jeden Tag: Kosten, Pflege durch das Personal, Ausbildung, Rückkehr aus der Aufzucht
   function externNacht() {
     (spiel.extern || []).slice().forEach(e => {
       const p = e.pferd;
-      buchen(-KOSTEN[e.ort], ORT_NAME[e.ort]);
+      e.offen = (e.offen || 0) + KOSTEN[e.ort];   // wird zu Beginn der Jahreszeit (oder bei der Rückkehr) in Rechnung gestellt
+      if (e.abbruch) { const nr = zurueckholen(e); if (nr >= 0) brief(ORT_NAME[e.ort], `${p.name} ist zurück`, `wie angekündigt haben wir <b>${esc(p.name)}</b> zurückgebracht – ${pron(p).er} steht jetzt in Box ${nr + 1}.`); return; }
       p.pflege.gesundheit = Math.min(gesundheitMax(p), Math.round((p.pflege.gesundheit + 8) * 10) / 10);
       if (e.ort === "ausbildung") p.training = Math.round(((p.training || 0) + (p.traechtig ? 0.5 : 1)) * 10) / 10;   // tragend: halbes Tempo
       if (e.ort === "aufzucht" && alterJZ(p) >= AUSBILDUNGSALTER) {
@@ -1582,8 +1594,8 @@
       if (p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {
         const betrag = p.klinik.rechnung, tage = spiel.tag - p.klinik.seit;
         delete p.klinik; delete p.dreck;   // in der Klinik wird geputzt
-        (spiel.rechnungen = spiel.rechnungen || []).push({ id: "r" + spiel.tag + p.id, pferdId: p.id, name: p.name, betrag, frist: jzJetzt() + 1, tage });
-        brief("Tierarztpraxis", `${p.name} ist wieder fit – Rechnung`, `<b>${esc(p.name)}</b> hat sich in der Klinik gut erholt (Gesundheit ${p.pflege.gesundheit.toLocaleString("de-DE")} %) und steht wieder in Box ${i + 1}.<br><br>Für ${tage} ${tage === 1 ? "Tag" : "Tage"} Behandlung berechnen wir <b>${fmt(betrag)}</b>. Bitte {bezahle|bezahlen Sie} die Rechnung bis Ende ${jzName(jzJetzt() + 1).replace(/^\S+ /, "")} in der Hofverwaltung unter „Finanzen“. Wird sie nicht bezahlt, müssen wir den Tierschutz informieren – dann wird ${esc(p.name)} abgeholt.`);
+        rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: ${tage} ${tage === 1 ? "Tag" : "Tage"} stationäre Behandlung × ${fmt(KOSTEN.klinik)}`, betrag }], [p.id], `${p.name} ist wieder fit – Rechnung`,
+          `<b>${esc(p.name)}</b> hat sich in der Klinik gut erholt (Gesundheit ${p.pflege.gesundheit.toLocaleString("de-DE")} %) und steht wieder in Box ${i + 1}.<br><br>`);
       }
     });
     // Warnung unter 40 %: ab unter 30 % kann sich das Pferd im Stall nicht mehr erholen
@@ -1602,21 +1614,85 @@
   }
   // altersbedingt geringe Gesundheit (sehr alte Senioren): Klinik-Regeln gelten nicht
   const altersschwach = p => gesundheitMax(p) <= 40;
-  // offene Klinikrechnungen: nicht bezahlt bis zur Frist → Tierschutz holt das Pferd
-  function rechnungenPruefen() {
-    const jetzt = jzJetzt();
-    spiel.rechnungen = (spiel.rechnungen || []).filter(r => {
-      if (jetzt < r.frist + 1) return true;
-      const x = spiel.boxen.findIndex(b => b.pferd && b.pferd.id === r.pferdId);
-      if (x >= 0) {
-        const b = spiel.boxen[x], p = b.pferd;
-        b.pferd = null; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; b.tot = false;
-        if (b.fohlen) { b.pferd = { ...b.fohlen, werte: b.fohlen.werte || erzeugeWerte(b.fohlen), pflege: erzeugePflege(b.fohlen) }; delete b.fohlen; }
-        spiel.angebote = (spiel.angebote || []).filter(a => a.id !== p.id);
-        (spiel.tierschutz = spiel.tierschutz || []).push({ pferd: p, frist: jetzt + 2, preis: tierschutzPreis(p, r.betrag) });
-        brief("Tierschutzverein", `${p.name} wurde abgeholt`, `die Klinikrechnung für <b>${esc(p.name)}</b> über ${fmt(r.betrag)} wurde nicht bezahlt. Wir haben ${pron(p).ihn} deshalb abgeholt.<br><br>{Du kannst|Sie können} ${pron(p).ihn} bis Ende ${jzName(jetzt + 1).replace(/^\S+ /, "")} im Pferdemarkt unter „Tierschutz“ zurückkaufen.`);
+  // ---------- Rechnungen (Tierarztpraxis, Aufzuchtstation, Ausbildungsstall) ----------
+  // r = { id, von, art, tag, stufe (0 Rechnung · 1 Mahnung), faellig (Tag), posten: [{ text, betrag }], betrag, pferde: [ids] }
+  // Zahlungsziel 2 Tage → Mahnung mit allen offenen Beträgen + Mahngebühr, Frist 5 Tage → Abbuchung + Versäumnisgebühr (Konto darf ins Minus).
+  // Eine neue Rechnung desselben Absenders übernimmt alle offenen – die alten werden ungültig.
+  const ZAHLUNGSZIEL = 2, MAHN_FRIST = 5;
+  const mahnGebuehr = b => Math.max(20, Math.round(b * 0.1 / 5) * 5);
+  const versaeumnisGebuehr = b => Math.max(50, Math.round(b * 0.2 / 5) * 5);
+  const tageTxt = n => `${n} ${n === 1 ? "Tag" : "Tage"}`;
+  const tagText = t => { const d = datum(t); return `${JZ[d.s][0]} ${d.j}, Tag ${d.t}`; };
+  function rechnungSchliessen(r, status) {
+    spiel.rechnungen = (spiel.rechnungen || []).filter(x => x !== r);
+    (spiel.rechnungStatus = spiel.rechnungStatus || {})[r.id] = status;
+  }
+  function rechnungStellen(von, art, posten, pferde, betreff, text, mahnung) {
+    const alt = (spiel.rechnungen || []).filter(x => x.von === von);
+    const alteMahnung = alt.filter(x => x.stufe === 1);
+    const r = { id: "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), von, art, tag: spiel.tag,
+      stufe: mahnung || alteMahnung.length ? 1 : 0,
+      faellig: mahnung ? spiel.tag + MAHN_FRIST : alteMahnung.length ? Math.min(...alteMahnung.map(x => x.faellig)) : spiel.tag + ZAHLUNGSZIEL,
+      posten: [...alt.map(a => ({ text: `offen aus ${a.stufe ? "der Mahnung" : "der Rechnung"} vom ${tagText(a.tag)}`, betrag: a.betrag })), ...posten],
+      pferde: [...new Set([...alt.flatMap(a => a.pferde || []), ...pferde])] };
+    r.betrag = r.posten.reduce((a, x) => a + x.betrag, 0);
+    alt.forEach(a => rechnungSchliessen(a, "ersetzt"));
+    (spiel.rechnungen = spiel.rechnungen || []).push(r);
+    const tab = `<table class="ver-tab"><tr><th>${r.stufe ? "Mahnung" : "Rechnung"}</th><th>Betrag</th></tr>${r.posten.map(x => `<tr><td>${esc(x.text)}</td><td>${fmt(x.betrag)}</td></tr>`).join("")}<tr><td><b>zu zahlen</b></td><td><b>${fmt(r.betrag)}</b></td></tr></table>`;
+    const hinweis = `<br>Bitte {bezahle|bezahlen Sie} bis <b>${tagText(r.faellig)}</b> – gleich hier im Brief oder später in der Hofverwaltung unter „Finanzen“.` +
+      (r.stufe ? " Wird auch diese Mahnung nicht bezahlt, buchen wir den Betrag zuzüglich einer Versäumnisgebühr direkt von {deinem|Ihrem} Konto ab."
+        : art === "klinik" ? " Wird die Rechnung nicht rechtzeitig bezahlt, schicken wir eine Mahnung mit Mahngebühr."
+        : ` Wird die Rechnung nicht rechtzeitig bezahlt, müssen wir den Aufenthalt abbrechen und die Pferde sofort zurückbringen.`) +
+      (alt.length ? "<br><br><small>Ältere offene Rechnungen sind in dieser enthalten und damit ungültig.</small>" : "");
+    brief(von, betreff, text + tab + hinweis, { aktion: { typ: "rechnung", rid: r.id }, pferde: pferde.map(id => (alleEigenenPferde().find(x => x.p.id === id) || {}).p).filter(Boolean) });
+    return r;
+  }
+  function rechnungZahlen(id, danach) {
+    const r = (spiel.rechnungen || []).find(x => x.id === id); if (!r) { if (danach) danach(); return; }
+    if ((spiel.geld || 0) < r.betrag) { dialog(`<h3>Nicht genug Geld</h3><p>Die ${r.stufe ? "Mahnung" : "Rechnung"} über ${fmt(r.betrag)} kannst du mit ${fmt(spiel.geld || 0)} noch nicht bezahlen.</p>`, [["OK", danach]]); return; }
+    buchen(-r.betrag, ({ klinik: "Klinik", aufzucht: "Aufzuchtstation", ausbildung: "Ausbildungsstall" })[r.art] || r.von);
+    rechnungSchliessen(r, "bezahlt");
+    speichern(); if (danach) danach();
+  }
+  // jeden Tag: abgelaufene Rechnungen → Mahnung (Aufzucht/Ausbildung: Abbruch), abgelaufene Mahnungen → Abbuchung
+  function rechnungenTag() {
+    (spiel.rechnungen || []).slice().forEach(r => {
+      if (!(spiel.rechnungen || []).includes(r) || spiel.tag < r.faellig) return;
+      if (r.stufe === 0) {
+        const posten = [];
+        if (r.art !== "klinik") (spiel.extern || []).filter(e => e.ort === r.art).slice().forEach(e => {
+          const p = e.pferd, nr = zurueckholen(e, false), rest = zurueckholen.rest || 0; zurueckholen.rest = 0;
+          if (nr < 0) { e.abbruch = true; posten.push(`${esc(p.name)} (wir bringen ${pron(p).ihn} zurück, sobald eine Box frei ist)`); return; }
+          if (rest) r.nachtrag = (r.nachtrag || []).concat([{ text: `${p.name}: ${tageTxt(Math.round(rest / KOSTEN[e.ort]))} × ${fmt(KOSTEN[e.ort])} (bis zum Abbruch)`, betrag: rest }]);
+          posten.push(`${esc(p.name)} (jetzt wieder in Box ${nr + 1})`);
+        });
+        const extra = r.nachtrag || []; delete r.nachtrag;
+        rechnungStellen(r.von, r.art, [...extra, { text: "Mahngebühr", betrag: mahnGebuehr(r.betrag) }], [], `Mahnung`,
+          `{deine|Ihre} Rechnung über ${fmt(r.betrag)} ist leider noch nicht bezahlt.${posten.length ? ` Deshalb haben wir den Aufenthalt abgebrochen: ${posten.join(", ")}.` : ""} Wir haben alle offenen Beträge zusammengefasst und eine Mahngebühr berechnet.<br><br>`, true);
+      } else {
+        const v = versaeumnisGebuehr(r.betrag), summe = r.betrag + v;
+        buchen(-summe, `Abbuchung ${r.von}`);
+        rechnungSchliessen(r, "abgebucht");
+        brief(r.von, "Abbuchung", `auch unsere Mahnung über ${fmt(r.betrag)} wurde nicht bezahlt. Wir haben den Betrag deshalb zusammen mit einer Versäumnisgebühr von ${fmt(v)} – insgesamt <b>${fmt(summe)}</b> – von {deinem|Ihrem} Konto abgebucht.${spiel.geld < 0 ? ` {Dein|Ihr} Konto steht jetzt bei ${fmt(spiel.geld)}.` : ""}`);
       }
-      return false;
+    });
+  }
+  // zu Beginn jeder Jahreszeit: Aufzuchtstation und Ausbildungsstall schicken Rechnung + Zwischenbericht für die vergangene Jahreszeit
+  function externJahreszeit() {
+    ["aufzucht", "ausbildung"].forEach(ort => {
+      const liste = (spiel.extern || []).filter(e => e.ort === ort && e.offen > 0); if (!liste.length) return;
+      const posten = [], berichte = [];
+      liste.forEach(e => {
+        const p = e.pferd, tage = Math.round(e.offen / KOSTEN[ort]);
+        posten.push({ text: `${p.name}: ${tage} ${tage === 1 ? "Tag" : "Tage"} × ${fmt(KOSTEN[ort])}`, betrag: e.offen });
+        (e.verlauf = e.verlauf || []).push({ jz: jzJetzt() - 1, tage, betrag: e.offen }); e.offen = 0;
+        if (ort === "aufzucht") berichte.push(`<li><b>${esc(p.name)}</b> (${alterText(p)}): wächst gut in der Herde auf, Gesundheit ${p.pflege.gesundheit.toLocaleString("de-DE")} %.</li>`);
+        else { const aw = ausbildungsWerte(p), vor = e.zwischen != null ? e.zwischen : (e.vorher ? e.vorher.werte.reduce((a, x) => a + x.wert, 0) / e.vorher.werte.length : 0), jetzt = aw.reduce((a, x) => a + x.wert, 0) / aw.length;
+          e.zwischen = jetzt;
+          berichte.push(`<li><b>${esc(p.name)}</b>: Ausbildungsstand ${ausbildungsKlasse(aw, alterJahre(p), p.werte.gang)} · Fortschritt in der letzten Jahreszeit +${Math.max(0, Math.round(jetzt - vor))} %${p.traechtig ? " (tragend, trainiert nur leicht)" : ""}.</li>`); }
+      });
+      rechnungStellen(ORT_NAME[ort], ort, posten, liste.map(e => e.pferd.id), `Zwischenbericht und Rechnung ${jzName(jzJetzt() - 1).replace(/^\S+ /, "")}`,
+        `hier {kommt dein|kommt Ihr} Zwischenbericht für die vergangene Jahreszeit:<ul>${berichte.join("")}</ul>`);
     });
   }
   // Gentest: Ergebnis als Text (für den Brief und die Klinik)
@@ -2411,7 +2487,7 @@
         const g = p.pflege.gesundheit, maxG = gesundheitMax(p);
         inhalt = meld + `<p class="text" style="margin:0 0 4px">🏥 <b>Tierklinik</b> · Gesundheit von ${esc(p.name)}: ${g.toLocaleString("de-DE")} %</p>
           <div class="kacheln quadrat">${kOrt("stationaer", "🛏️", "Stationär behandeln", g < Math.min(75, maxG) ? `${fmt(KOSTEN.klinik)} / Tag` : "nicht nötig", "Bleibt in der Klinik, bis die Gesundheit mindestens 75 % beträgt – erholt sich doppelt so schnell", g < Math.min(75, maxG))}</div>
-          <p class="text"><small>Bei 30 % Gesundheit oder weniger kann sich ein Pferd im Stall nicht mehr erholen (auch Medizin hilft nicht mehr), nur noch hier. Entlassen wird es erst mit 75 %. Die Kosten (${fmt(KOSTEN.klinik)} pro Tag) kommen nach der Behandlung als Rechnung, zahlbar innerhalb einer Jahreszeit.</small></p>` + zurueckOrt("‹ Zurück zum Anhänger");
+          <p class="text"><small>Bei 30 % Gesundheit oder weniger kann sich ein Pferd im Stall nicht mehr erholen (auch Medizin hilft nicht mehr), nur noch hier. Entlassen wird es erst mit 75 %. Die Kosten (${fmt(KOSTEN.klinik)} pro Tag) kommen nach der Behandlung als Rechnung, zahlbar innerhalb von 2 Tagen.</small></p>` + zurueckOrt("‹ Zurück zum Anhänger");
       } else if (ortModus === "labor") {
         inhalt = meld + `<p class="text" style="margin:0 0 4px">🔬 <b>Labor</b> · Der Tierarzt schickt eine Haarprobe von ${esc(p.name)} ein – dafür muss ${pron(p).er} nicht wegfahren.</p>
           <div class="kacheln quadrat">${Object.entries(LABOR_TESTS).map(([id, T]) => kOrt("lt-" + id, T.ico, T.kurz, testGemacht(p, id) ? "schon gemacht" : testLaeuft(p, id) ? "im Labor …" : fmt(T.preis), T.info, !testGemacht(p, id) && !testLaeuft(p, id))).join("")}</div>
@@ -2529,7 +2605,7 @@
       if (id === "gnadenhof") { gnadenhofDialog(p, () => { zeigeStall(); }); return; }
       if (id === "verkaufen") { verkaufDialog(p, () => zeigeAkte()); return; }
       if (id === "stationaer") {
-        dialog(`<h3>🏥 ${esc(p.name)} in die Klinik?</h3><p>${esc(p.name)} bleibt in der Klinik, bis die Gesundheit wieder mindestens 75 % beträgt, und erholt sich dort doppelt so schnell. Die Behandlung kostet <b>${fmt(KOSTEN.klinik)} pro Tag</b> – du bekommst danach eine Rechnung, die du innerhalb einer Jahreszeit bezahlen musst, sonst holt der Tierschutz ${pron(p).ihn} ab. Die Box bleibt für ${pron(p).ihn} frei.</p>`,
+        dialog(`<h3>🏥 ${esc(p.name)} in die Klinik?</h3><p>${esc(p.name)} bleibt in der Klinik, bis die Gesundheit wieder mindestens 75 % beträgt, und erholt sich dort doppelt so schnell. Die Behandlung kostet <b>${fmt(KOSTEN.klinik)} pro Tag</b> – du bekommst danach eine Rechnung, die du innerhalb von 2 Tagen bezahlen solltest – sonst kommt eine Mahnung mit Gebühr. Die Box bleibt für ${pron(p).ihn} frei.</p>`,
           [["In die Klinik", () => { p.klinik = { seit: spiel.tag }; spiel.angebote = (spiel.angebote || []).filter(x => x.id !== p.id); ortModus = null; aktenModus = "steckbrief"; aktenReiter = "steckbrief"; speichern(); zeigeStall(); zeigeTag(); }], ["Abbrechen", null, "zweit"]]);
         return;
       }
@@ -3125,10 +3201,10 @@
       }
       });
     });
-    externNacht();
+    externNacht(); rechnungenTag();
     angeboteNacht();
     tierschutzEinsatz(); tierschutzKlinik(); tierschutzFohlen(); kontoMinus(); laborNacht(); auktionsNacht();
-    if (datum().t === 1) { auktionsEnde(); jahreszeitBeginn(); angeboteJahreszeit(); rechnungenPruefen(); spamAufraeumen(); mitarbeiterJahreszeit(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
+    if (datum().t === 1) { auktionsEnde(); jahreszeitBeginn(); angeboteJahreszeit(); externJahreszeit(); spamAufraeumen(); mitarbeiterJahreszeit(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
     mitarbeiterTag();   // Stallburschen versorgen ihre Boxen zum Tagesbeginn
   }
   $("tagAnzeige").onclick = () => {
@@ -3922,14 +3998,6 @@
   if (window.visualViewport) visualViewport.addEventListener("resize", () => { const el = document.activeElement; if (el && el.matches && el.matches("input, textarea")) el.scrollIntoView({ block: "center" }); });
   // ---------- Finanzen: eine Karte je Jahr, immer 5 Jahre sichtbar ----------
   let finanzJahr = null, finanzStart = null;
-  function rechnungZahlen(id, danach) {
-    const r = (spiel.rechnungen || []).find(x => x.id === id); if (!r) return;
-    if ((spiel.geld || 0) < r.betrag) { dialog(`<h3>Nicht genug Geld</h3><p>Die Rechnung über ${fmt(r.betrag)} kannst du mit ${fmt(spiel.geld || 0)} noch nicht bezahlen.</p>`); return; }
-    buchen(-r.betrag, `Klinik: ${r.name}`);
-    spiel.rechnungen = spiel.rechnungen.filter(x => x !== r);
-    speichern(); if (danach) danach();
-    dialog(`<h3>✅ Bezahlt</h3><p>Die Klinikrechnung für ${esc(r.name)} über ${fmt(r.betrag)} ist bezahlt.</p>`);
-  }
   function finanzenHTML() {
     const F = spiel.finanzen || {}, jetzt = String(datum().j);
     const jahre = [...new Set([...Object.keys(F), jetzt])].sort();
@@ -3941,7 +4009,7 @@
     const J = F[finanzJahr] || {}, posten = Object.entries(J).sort((a, b) => (b[1].ein + b[1].aus) - (a[1].ein + a[1].aus));
     const ein = posten.reduce((s, [, e]) => s + e.ein, 0), aus = posten.reduce((s, [, e]) => s + e.aus, 0);
     const offen = spiel.rechnungen || [];
-    return `${offen.length ? `<div class="rechnungen"><b>🧾 Offene Rechnungen</b>${offen.map(r => `<div class="hf-box"><span><b>Klinik: ${esc(r.name)}</b> <small>${fmt(r.betrag)} · zahlbar bis Ende ${jzName(r.frist).replace(/^\S+ /, "")}</small></span><button class="knopf hf-hol" data-zahle="${r.id}">Bezahlen</button></div>`).join("")}</div>` : ""}
+    return `${offen.length ? `<div class="rechnungen"><b>🧾 Offene Rechnungen</b>${offen.map(r => `<div class="hf-box"><span><b>${r.stufe ? "⚠️ Mahnung" : "Rechnung"}: ${esc(r.von)}</b> <small>${fmt(r.betrag)} · zahlbar bis ${tagText(r.faellig)}</small></span><button class="knopf hf-hol" data-zahle="${r.id}">Bezahlen</button></div>`).join("")}</div>` : ""}
       <div class="fin-kopf"><span>Hofkonto</span><b>${fmt(spiel.geld || 0)}</b></div>
       <div class="fin-jahre"><button data-fs="-1" ${finanzStart > 0 ? "" : "disabled"} aria-label="frühere Jahre">‹</button>
         ${sicht.map(j => `<button data-fj="${j}" class="${j === finanzJahr ? "an" : ""}">${j}</button>`).join("")}
@@ -4008,8 +4076,9 @@
       <h3>🎓 Ausbildung</h3>
       <p>Unausgebildete Pferde stehen auf Klasse E mit 0 %. Ausbildung entsteht nur im Ausbildungsstall (ab 3 Jahren, ${fmt(KOSTEN.ausbildung)}/Tag). Takt → Losgelassenheit → Anlehnung → Schwung → Geraderichtung → Versammlung: jede Stufe steigt erst, wenn die vorige 20 % erreicht hat, und kann sie nicht überholen.</p>
       <h3>❤️ Gesundheit</h3>
+      <p><b>Rechnungen:</b> Klinik (bei der Entlassung), Aufzuchtstation und Ausbildungsstall (zu Beginn jeder Jahreszeit für die vergangene, mit Zwischenbericht; bei der Rückkehr ein kompletter Bericht mit Kostenübersicht und Rechnung über den Rest) schicken Rechnungen per Brief. Bezahlen geht direkt im Brief oder unter Finanzen. Zahlungsziel 2 Tage. Danach: Mahnung mit allen offenen Beträgen des Absenders + Mahngebühr (10 %, mind. 20 €), Frist 5 Tage – bei Aufzucht/Ausbildung wird der Aufenthalt sofort abgebrochen und die Pferde kommen zurück (ist keine Box frei, sobald eine frei wird). Wird auch die Mahnung nicht bezahlt, wird der Betrag + Versäumnisgebühr (20 %, mind. 50 €) abgebucht – das Konto darf dadurch ins Minus. Eine neue Rechnung desselben Absenders übernimmt alle offenen; die alten werden ungültig. Der Tierschutz holt wegen offener Rechnungen keine Pferde mehr.</p>
       <p><b>Schmutz:</b> Jede Nacht in der Box wird das Fell um 9–15 Punkte schmutziger (in einer nicht gemisteten Box +5 extra), Mähne und Schweif um 5–9 (+2). Stufen Fell: unter 20 sauber · ab 20 staubig · ab 50 schmutzig · ab 80 sehr dreckig; Mähne/Schweif: gekämmt · ab 20 zerzaust · ab 50 verfilzt. Man sieht es im Bild (Flecken, dreckige Beine, Stroh im Schweif). Putzen in der Putzkiste: Bürste macht das Fell sauber, Kamm Mähne und Schweif. Der Pferdepfleger putzt seine Boxen jeden Morgen; nach Klinik, Aufzucht oder Ausbildung kommt das Pferd geputzt zurück. Folgen: bis zu 15 % weniger Marktwert (Wert = max(Fell, 0,7 × Mähne)); ist das Fell länger als eine Jahreszeit ununterbrochen schmutzig (ab 50), verliert das Pferd zusätzlich 3 % Gesundheit pro Tag.</p>
-      <p>Gut versorgt +8 % pro Tag, hungrig −19, Box nicht gemistet −9,5. Unter 40 % kommt ein Brief vom Tierarzt, bei 30 % oder weniger erholt sich ein Pferd nur noch in der Klinik – auch Medizin hilft dann nicht mehr (+16 %/Tag, ${fmt(KOSTEN.klinik)}/Tag) und wird mit 75 % entlassen. Die Klinikkosten kommen als Rechnung, zahlbar innerhalb einer Jahreszeit – sonst holt der Tierschutz das Pferd. Ausnahme: Senioren mit altersbedingter Höchstgesundheit von 40 % oder weniger.</p>
+      <p>Gut versorgt +8 % pro Tag, hungrig −19, Box nicht gemistet −9,5. Unter 40 % kommt ein Brief vom Tierarzt, bei 30 % oder weniger erholt sich ein Pferd nur noch in der Klinik – auch Medizin hilft dann nicht mehr (+16 %/Tag, ${fmt(KOSTEN.klinik)}/Tag) und wird mit 75 % entlassen. Die Klinikkosten kommen als Rechnung (siehe „Rechnungen“). Ausnahme: Senioren mit altersbedingter Höchstgesundheit von 40 % oder weniger.</p>
       <p>Senioren ab 20 Jahren: höchstens 75 %, sinkt bis 35 Jahre auf 1 %. Sterbewahrscheinlichkeit je Jahreszeit steigt ab 20 Jahren und erreicht mit 35 Jahren 100 %.</p>
       <h3>💰 Geld und Marktwert</h3>
       <p>Marktwert aus Gangwerk, Ausbildungsstand, Alter und Gesundheit, plus die Kosten aller gemachten Gentests (getestete Pferde verkaufen sich besser). Stute mit Fohlen bei Fuß: beide Marktwerte zusammen, das Fohlen wird mitverkauft (allein nicht). Festpreis (Regler 50–160 % des Marktwerts, Chance wird angezeigt): bis 90 % des Marktwerts 98 % Verkaufschance, bis Marktwert 93 %, darüber sinkend (110 % ≈ 59 %, 120 % ≈ 38 %, 130 % ≈ 24 %, 150 % ≈ 10 %), aber nie unter 4 % (Liebhaber). Gerechnet mit dem Saisonpreis der Jahreszeit, in der du das Pferd einstellst. Während das Angebot läuft, schicken Interessenten manchmal Preisvorschläge per Brief (jede Nacht 15 %, bei deutlich überhöhtem Preis 35 %; 75–105 % des Marktwerts, immer unter deinem Preis) – annehmen verkauft sofort, ablehnen lässt das Angebot weiterlaufen. Auktion startet bei ½ des Marktwerts und läuft 2 Jahreszeiten; Abbruch nach dem ersten Gebot kostet die Hälfte des letzten Gebots. Gnadenhof: halber Marktwert.</p>
@@ -4189,6 +4258,9 @@
     if (A.typ === "kaufangebot") { const a = (spiel.angebote || []).find(y => y.id === A.pferd && y.vorschlag && y.vorschlag.id === A.vid);
       if (A.antwort) return `<p class="brief-aktion-info">${A.antwort === "ja" ? "✅ Angenommen – verkauft." : "Abgelehnt."}</p>`;
       return a ? `<div class="brief-aktion"><button class="knopf" data-baktion="kauf-ja" data-bid="${br.id}">✅ Annehmen · ${fmt(A.betrag)}</button><button class="knopf zweit" data-baktion="kauf-nein" data-bid="${br.id}">Ablehnen</button></div>` : `<p class="brief-aktion-info">Dieser Vorschlag gilt nicht mehr.</p>`; }
+    if (A.typ === "rechnung") { const r = (spiel.rechnungen || []).find(x => x.id === A.rid), st = (spiel.rechnungStatus || {})[A.rid];
+      if (r) return `<div class="brief-aktion"><button class="knopf" data-baktion="zahlen" data-bid="${br.id}">💶 Jetzt bezahlen · ${fmt(r.betrag)}</button></div>`;
+      return `<p class="brief-aktion-info">${st === "bezahlt" ? "✅ Bezahlt." : st === "abgebucht" ? "🏦 Wurde vom Konto abgebucht." : "⚠️ Diese Rechnung ist ungültig – sie wurde durch eine neuere Rechnung ersetzt."}</p>`; }
     if (A.typ === "bieten") { const a = auktionFinden(A.pferd);
       if (a && !a.vorbei && spiel.markt.jz === jzJetzt() && a.fuehrt === "du") return `<p class="brief-aktion-info">✅ Du führst wieder – dein Höchstgebot: ${fmt(a.duMax || a.gebot)}.</p>`;
       return a && !a.vorbei && spiel.markt.jz === jzJetzt() ? `<div class="brief-aktion"><button class="knopf" data-baktion="bieten" data-bid="${br.id}">🔨 Erneut bieten</button></div>` : ""; }
@@ -4202,6 +4274,7 @@
         const a = (spiel.angebote || []).find(y => y.id === A.pferd && y.vorschlag && y.vorschlag.id === A.vid); if (!a) { nachher(); return; }
         if (b.dataset.baktion === "kauf-ja") { A.antwort = "ja"; angebotVerkaufen(a, A.betrag); } else { A.antwort = "nein"; a.vorschlag = null; a.abgelehnt = (a.abgelehnt || 0) + 1; }
         speichern(); postIconSetzen(); nachher(); }
+      else if (b.dataset.baktion === "zahlen") rechnungZahlen(A.rid, nachher);
       else if (b.dataset.baktion === "bieten") { const a = auktionFinden(A.pferd); if (a) { $("dlg").hidden = true; bieten(a, nachher); } }
     });
   }

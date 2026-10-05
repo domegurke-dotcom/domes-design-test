@@ -6,7 +6,8 @@ Ausführliche Gesprächsnotizen: `werte/plan.md` *(liegt noch im Planungsprojekt
 ## Stand der Umsetzung
 
 - [x] Etappe 1 – Werte-Grundlage (v161, Alter und Name „Eigenschaften“ in v162, von Dome getestet)
-- [~] Etappe 2 – Charakter → Wohlbefinden (umgesetzt in v164, Test durch Dome offen)
+- [x] Etappe 2 – Charakter → Wohlbefinden (v164, von Dome getestet; Admin „Charakter selbst wählen“ in v165)
+- [ ] Etappe 2b – Weide und Herde (Entscheidungen von Dome stehen, Zahlen = Vorschläge, warten auf Domes OK)
 - [ ] Etappe 3 – Vorlieben und Reaktionen
 - [ ] Etappe 4 – Training daheim
 - [ ] Etappe 5 – Disziplinen
@@ -81,6 +82,25 @@ Nur ausgeprägte Werte wirken (unter 30 oder über 70), je extremer desto stärk
 7. Sensibilität: steuert Reaktionen auf Ausrüstung, Decken, Putzen, Hilfen; sensible Pferde sind dafür besser in der Dressurarbeit.
 8. Weide = Herde: Alle eigenen Pferde auf der Weide sind eine Herde. Nach einigen gemeinsamen Weidetagen kennen sie sich; vorher Eingewöhnung, die bei scheuen und nervösen Pferden aufs Wohlbefinden drückt.
 9. Haltungsformen (künftig): Box (einzeln), Box mit Paddock (klein, Sand, kein Gras, Pferd geht selbst rein und raus), Weide (Herde).
+
+## 2b. Weide und Herde (mit Dome besprochen, 6.10.2026)
+
+Von Dome entschieden („ja“), Zahlen sind Vorschläge von Claude, bis Dome sie bestätigt:
+
+**A. Weide-Regeln überarbeiten**
+1. Winter (und letzter Herbst-Tag?) kaum Gras: auf der Weide muss Heu zugefüttert werden, sonst gilt das Pferd als hungrig (−19 Gesundheit, −8 Wohlbefinden wie in der Box). *Vorschlag:* Heu auf der Weide über einen Knopf „Heu auf die Weide“ in der Weide-Ansicht; der Stallbursche erledigt es für seine Boxen mit.
+2. Wohlbefinden auf der Weide nicht immer +15: Winter +8 (Kälte, Matsch).
+3. Gesundheit auf der Weide mit Risiko: Streit in der Herde kann verletzen (siehe C4).
+
+**B. Allein auf der Weide**
+- Allein nur +8 statt +15. Eigenständig (e) macht das nichts (+7·e zurück); verschmust, scheu, nervös zusätzlich −4·e (max. der drei).
+
+**C. Herde – wer passt zusammen**
+1. **Hengst + Stute zusammen:** ungeplante Bedeckung möglich. *Vorschlag:* pro gemeinsamer Nacht Chance 25 % (Hengst ab 2 Jahren, Stute im Zuchtalter 3–20, nicht tragend, Deckzeit egal). Ob sie dann tragend wird, entscheidet wie beim normalen Decken das **Wohlbefinden** (40 % + 55 % × Wohlbefinden; Durchschnitt beider). Warnung beim Rausstellen. Fohlen hat den Hengst als Vater, Brief „ungeplant gedeckt“ erst, wenn die Trächtigkeit auffällt (z. B. nach 1 Jahreszeit)?
+2. **Hengste ab 3 Jahren** nur allein oder mit Wallachen; mit anderen Hengsten Rangkämpfe (Streit-Chance stark erhöht), mit Stuten siehe C1.
+3. **Sozialverhalten** (neuer versteckter Wert 0–100, Admin sieht ihn): steigt bis 3 Jahre durch Herdenzeit. *Vorschlag:* pro Tag in der Aufzuchtstation +2 (beste Lösung: viele Fohlen/Jungpferde, wenige Erwachsene), pro Tag auf der eigenen Weide mit mind. 2 anderen Fohlen/Jungpferden +1,5, mit weniger Jungtieren +0,5, bei der Mutter +0,3. Start 20. **Kastration** beeinflusst das Verhalten: früh kastriert (bis 2 Jahre) → Hengstverhalten verschwindet ganz; später kastriert → bleibt zum Teil (Streit-Chance mit Hengsten/Wallachen ×1,5, „hengstiges Verhalten“ bei Stuten möglich, aber keine Bedeckung).
+4. **Unverträglichkeit:** Manche Paare mögen sich nicht (fester Zufallswert je Paar + Charakter + Sozialverhalten). *Vorschlag:* Streit-Chance pro Nacht = Grundwert je Paar (0–8 %) + schlechtes Sozialverhalten (bis +6 %) + temperamentvoll/eigensinnig (bis +3 %) + Hengst-Rangkampf (+20 %). Streit: beide −8 Wohlbefinden; 15 % der Streits → Verletzung (Gesundheit −10 bis −25). Meldung als Brief/Hinweis („Fee und Rocky haben sich gestritten“). Spieler muss die beiden trennen (eins in die Box holen).
+5. **Ankerpunkte für später (Krankheiten):** Verletzungen und Krankheiten bekommen einen eigenen Eintrag am Pferd (z. B. `p.befund = { art: "lahm" | "biss" | …, seit, schwere }`), der später Lahmheit, Behandlung beim Tierarzt, Trainingspause und Turniersperre auslösen kann. Jetzt nur anlegen und anzeigen, noch keine Folgen außer Gesundheit.
 
 ## 3. Vorlieben und Reaktionen
 
@@ -182,6 +202,7 @@ Disziplin-Wert = gewichtete Werte (Anteile in %) + Charakter-Zu-/Abschlag (max. 
 
 1. **Werte-Grundlage:** Charakter um Sensibilität ergänzen, Wachheit → Neugier, körperliche und mentale Werte mit Obergrenzen je Rasse anlegen und vererben, `talent` → Lernfähigkeit, Gangwerk-Noten senken. Anzeige im Steckbrief. Alte Speicherstände auffüllen.
 2. **Charakter → Wohlbefinden** inkl. Herde/Eingewöhnung auf der Weide.
+2b. **Weide und Herde** (Abschnitt 2b): Winterheu, Wohlbefinden je Jahreszeit, allein auf der Weide, ungeplante Bedeckung, Hengste, Sozialverhalten, Kastrationszeitpunkt, Unverträglichkeit/Streit/Verletzung, Ankerpunkt für Krankheiten.
 3. **Vorlieben und Reaktionen** (Texte) mit Knopf „Vorlieben“.
 4. **Training daheim:** Orte Roundpen, Reitplatz, Gelände (Reithalle über Ausbau), Energie, kombinierte Einheiten, Trainingsbericht, Ausbildungsskala mit Phasen und Kraft-Grenzen, Gangwerk-Bonus, Training bremst den Altersabbau, Wohlbefinden (`wohlFaktor`) wirkt aufs Lerntempo.
 5. **Disziplinen** mit Formeln, Anzeige in der Karte Ausbildung, neuer Marktwert.

@@ -844,54 +844,80 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
 // =====================================================================
 //  Pferdeakte: Gangwerk, Charakter, Ausbildung (rassetypisch)
 // =====================================================================
-// gang: Grundnoten Schritt/Trab/Galopp · toelt/pass: Wahrscheinlichkeit, dass die Gangart vorhanden ist
-// char: Temperament, Mut, Wachheit, Menschenbezug, Arbeitswille, Nervenstärke (0–100)
+// gang: Grundnoten Schritt/Trab/Galopp (seit v161 um 1,5 gesenkt: meist 5,5–7, eine 8 hat etwa jedes 20. Pferd) · toelt/pass: Wahrscheinlichkeit, dass die Gangart vorhanden ist
+// char: Temperament, Mut, Neugier, Menschenbezug, Arbeitswille, Nervenstärke, Sensibilität (0–100)
 // dress: Eignung für die Dressurausbildung (beeinflusst Schwung, Geraderichtung, Versammlung)
+// koerper: Rassen-Grundwerte der Anlagen (Reihenfolge wie WERTE_KOERPER) · kopf: Lernfähigkeit, Konzentration, Reaktionsfähigkeit
 const PROFIL = {
-  araber:       { gang: [7, 7, 7.5],   char: [80, 50, 85, 75, 70, 45], dress: .75 },
-  friese:       { gang: [7.5, 8, 7],   char: [45, 60, 60, 80, 75, 65], dress: .85 },
-  marwari:      { gang: [7, 6.5, 7.5], char: [70, 70, 80, 60, 70, 55], dress: .7, pass: .5, passName: "Pass (Revaal)" },
-  fjord:        { gang: [7, 6.5, 6.5], char: [30, 70, 55, 80, 70, 85], dress: .65 },
-  haflinger:    { gang: [7, 7, 6.5],   char: [45, 70, 65, 80, 70, 80], dress: .7 },
-  shetty:       { gang: [6, 6.5, 6],   char: [55, 70, 80, 60, 40, 75], dress: .55 },
-  shire:        { gang: [7, 6.5, 6],   char: [20, 75, 45, 85, 70, 90], dress: .5 },
-  andalusier:   { gang: [7.5, 7.5, 7.5], char: [60, 65, 75, 80, 80, 65], dress: .95 },
-  lipizzaner:   { gang: [7, 7.5, 7],   char: [55, 65, 75, 75, 85, 70], dress: 1 },
-  vollblut:     { gang: [7, 7, 9],     char: [90, 55, 85, 60, 80, 35], dress: .7 },
-  quarter:      { gang: [7, 6.5, 7.5], char: [35, 75, 65, 80, 80, 85], dress: .75 },
-  hannoveraner: { gang: [8, 8, 8],     char: [60, 60, 70, 70, 80, 60], dress: 1 },
-  isi:          { gang: [7, 6.5, 7],   char: [60, 70, 80, 75, 80, 75], dress: .7, toelt: 1, pass: .55 },
-  tinker:       { gang: [6.5, 6.5, 6], char: [30, 70, 55, 85, 60, 85], dress: .6 },
-  tekke:        { gang: [7.5, 7, 8.5], char: [85, 55, 85, 55, 75, 40], dress: .7 },
+  araber:       { gang: [5.5, 5.5, 6],   char: [80, 50, 85, 75, 70, 45, 80], dress: .75, koerper: [55, 90, 75, 70, 70, 75, 70, 85, 85, 80], kopf: [75, 55, 80] },
+  friese:       { gang: [6, 6.5, 5.5],   char: [45, 60, 60, 80, 75, 65, 60], dress: .85, koerper: [70, 55, 45, 45, 50, 65, 60, 60, 55, 55], kopf: [65, 70, 55] },
+  marwari:      { gang: [5.5, 5, 6],     char: [70, 70, 80, 60, 70, 55, 70], dress: .7, pass: .5, passName: "Pass (Revaal)", koerper: [60, 80, 70, 65, 70, 70, 65, 80, 75, 75], kopf: [65, 60, 75] },
+  fjord:        { gang: [5.5, 5, 5],     char: [30, 70, 55, 80, 70, 85, 30], dress: .65, koerper: [70, 75, 40, 45, 55, 55, 60, 85, 75, 85], kopf: [60, 65, 55] },
+  haflinger:    { gang: [5.5, 5.5, 5],   char: [45, 70, 65, 80, 70, 80, 35], dress: .7, koerper: [70, 70, 45, 50, 60, 60, 60, 80, 70, 80], kopf: [60, 60, 60] },
+  shetty:       { gang: [4.5, 5, 4.5],   char: [55, 70, 80, 60, 40, 75, 30], dress: .55, koerper: [75, 70, 30, 50, 70, 55, 60, 85, 70, 85], kopf: [55, 45, 65] },
+  shire:        { gang: [5.5, 5, 4.5],   char: [20, 75, 45, 85, 70, 90, 30], dress: .5, koerper: [85, 55, 30, 30, 30, 45, 50, 75, 55, 65], kopf: [55, 70, 40] },
+  andalusier:   { gang: [6, 6, 6],       char: [60, 65, 75, 80, 80, 65, 70], dress: .95, koerper: [75, 65, 55, 60, 75, 80, 75, 65, 65, 70], kopf: [75, 70, 70] },
+  lipizzaner:   { gang: [5.5, 6, 5.5],   char: [55, 65, 75, 75, 85, 70, 65], dress: 1, koerper: [80, 65, 50, 60, 70, 80, 75, 70, 65, 75], kopf: [80, 75, 65] },
+  vollblut:     { gang: [5.5, 5.5, 7.5], char: [90, 55, 85, 60, 80, 35, 85], dress: .7, koerper: [65, 80, 95, 90, 60, 70, 65, 60, 70, 55], kopf: [70, 55, 85] },
+  quarter:      { gang: [5.5, 5, 6],     char: [35, 75, 65, 80, 80, 85, 40], dress: .75, koerper: [80, 60, 75, 90, 90, 65, 75, 75, 70, 75], kopf: [65, 70, 85] },
+  hannoveraner: { gang: [6.5, 6.5, 6.5], char: [60, 60, 70, 70, 80, 60, 65], dress: 1, koerper: [75, 70, 65, 65, 65, 80, 75, 65, 65, 65], kopf: [75, 70, 70] },
+  isi:          { gang: [5.5, 5, 5.5],   char: [60, 70, 80, 75, 80, 75, 45], dress: .7, toelt: 1, pass: .55, koerper: [65, 80, 50, 55, 65, 60, 70, 90, 80, 90], kopf: [65, 60, 65] },
+  tinker:       { gang: [5, 5, 4.5],     char: [30, 70, 55, 85, 60, 85, 30], dress: .6, koerper: [75, 65, 40, 45, 50, 55, 55, 80, 65, 80], kopf: [55, 60, 50] },
+  tekke:        { gang: [6, 5.5, 7],     char: [85, 55, 85, 55, 75, 40, 80], dress: .7, koerper: [60, 90, 85, 80, 65, 70, 65, 85, 80, 75], kopf: [70, 55, 80] },
 };
 
 const CHARAKTER = [
   { key: "temperament", titel: "Temperament",    links: "ruhig",        rechts: "temperamentvoll" },
   { key: "mut",         titel: "Mut",            links: "scheu",        rechts: "mutig" },
-  { key: "wachheit",    titel: "Wachheit",       links: "verträumt",    rechts: "aufgeweckt" },
+  { key: "wachheit",    titel: "Neugier",        links: "verträumt",    rechts: "neugierig" },   // Schlüssel bleibt „wachheit“ (alte Speicherstände)
   { key: "bezug",       titel: "Menschenbezug",  links: "eigenständig", rechts: "verschmust" },
   { key: "wille",       titel: "Arbeitswille",   links: "eigensinnig",  rechts: "leistungsbereit" },
   { key: "nerven",      titel: "Nervenstärke",   links: "nervös",       rechts: "gelassen" },
+  { key: "sensibel",    titel: "Sensibilität",   links: "robust",       rechts: "sensibel" },
 ];
+// Körperliche und mentale Werte (0–100). anlage = vererbte Obergrenze; trainierbare Werte füllen sich durch Training bis dorthin auf.
+// art: "anlage" = nur vererbt (Wert = Anlage), "training" = trainierbar bis zur Anlage, "erarbeitet" = keine Anlage, nur durch Pflege/Ausbildung (bis 100)
+const WERTE_KOERPER = [
+  { key: "kraft",          titel: "Kraft",           art: "training", info: "Hinterhandkraft: Sprungkraft, Versammlung halten, im Western enge Wendungen und schnelle Starts. Relativ zur Größe – Ponys sind kräftig." },
+  { key: "ausdauer",       titel: "Ausdauer",        art: "training", info: "Wie lange das Pferd Leistung bringen kann, ohne zu ermüden." },
+  { key: "geschwindigkeit", titel: "Geschwindigkeit", art: "anlage",   info: "Höchsttempo. Wird vererbt und lässt sich kaum trainieren." },
+  { key: "beschleunigung", titel: "Beschleunigung",  art: "training", info: "Wie schnell das Pferd aus dem Stand oder langsamen Tempo antritt." },
+  { key: "wendigkeit",     titel: "Wendigkeit",      art: "training", info: "Enge Kurven und schnelle Richtungswechsel." },
+  { key: "beweglichkeit",  titel: "Beweglichkeit",   art: "training", info: "Bewegungsumfang und Geschmeidigkeit des ganzen Körpers." },
+  { key: "koordination",   titel: "Koordination",    art: "training", info: "Die eigenen Beine sortieren – z. B. ein Hindernis richtig anreiten oder Stangenarbeit." },
+  { key: "zaehigkeit",     titel: "Zähigkeit",       art: "training", info: "Wie gut das Pferd Belastung und schwierige Bedingungen wegsteckt." },
+  { key: "regeneration",   titel: "Regeneration",    art: "training", info: "Wie schnell sich das Pferd nach dem Training erholt." },
+  { key: "konstitution",   titel: "Konstitution",    art: "anlage",   info: "Robustheit des Körpers. Wird vererbt." },
+];
+const WERTE_KOPF = [
+  { key: "lernfaehigkeit", titel: "Lernfähigkeit",    art: "anlage",     info: "Wie schnell das Pferd Neues lernt. Wird vererbt." },
+  { key: "konzentration",  titel: "Konzentration",    art: "training",   info: "Lektionen fehlerfrei und aufmerksam durchziehen." },
+  { key: "reaktion",       titel: "Reaktionsfähigkeit", art: "training", info: "Schnelle Abfolgen meistern, z. B. Sprungkombinationen." },
+  { key: "vertrauen",      titel: "Vertrauen",        art: "erarbeitet", info: "Vertrauen zum Menschen – entsteht nur durch Pflege und gemeinsame Zeit, bei verschmusten Pferden schneller." },
+  { key: "gehorsam",       titel: "Gehorsam",         art: "erarbeitet", info: "Wie zuverlässig das Pferd auf Hilfen reagiert – entsteht durch Ausbildung." },
+];
+// Lernfähigkeit (0–100) → Lerntempo-Faktor wie das frühere „talent“: 33 → ×0,8 · 67 → ×1,0 · 100 → ×1,2
+const lernFaktor = lern => Math.round((0.6 + 0.6 * lern / 100) * 100) / 100;
 const AUSBILDUNG = ["Takt", "Losgelassenheit", "Anlehnung", "Schwung", "Geraderichtung", "Versammlung"];
 
 function erzeugeWerte(pferd) {
   const pr = PROFIL[pferd.rasse] || PROFIL.hannoveraner;
   const r = zufall("werte-" + pferd.id + pferd.rasse);
   const gauss = () => (r() + r() + r() - 1.5) / 1.5; // ungefähr -1 … 1
-  const note = b => Math.max(4, Math.min(10, Math.round((b + gauss() * 1.1) * 2) / 2));
+  const note = b => Math.max(4, Math.min(10, Math.round((b + gauss() * 2) * 2) / 2));
   const gang = { schritt: note(pr.gang[0]), trab: note(pr.gang[1]), galopp: note(pr.gang[2]) };
-  if (pr.toelt && r() < pr.toelt) gang.toelt = note(7.5);
-  if (pr.pass && r() < pr.pass) gang.pass = note(6.5);
+  if (pr.toelt && r() < pr.toelt) gang.toelt = note(6);
+  if (pr.pass && r() < pr.pass) gang.pass = note(5);
   const charakter = {};
   CHARAKTER.forEach((c, i) => charakter[c.key] = Math.round(Math.max(3, Math.min(97, pr.char[i] + gauss() * 22))));
   const reinOpt = [100, 100, 100, 100, 100, 93.75, 87.5, 75];
-  return {
-    reinrassig: reinOpt[Math.floor(r() * reinOpt.length)],
-    gang, charakter,
-    talent: Math.round((0.8 + r() * 0.4) * 100) / 100,
-    streuung: AUSBILDUNG.map(() => Math.round(gauss() * 8)),
-  };
+  const reinrassig = reinOpt[Math.floor(r() * reinOpt.length)], streuung = AUSBILDUNG.map(() => Math.round(gauss() * 8));
+  // Anlagen: Rassen-Grundwert ± Streuung (5–100)
+  const ra = zufall("anlage-" + pferd.id + pferd.rasse), ga = () => (ra() + ra() + ra() - 1.5) / 1.5, anlage = {};
+  const kb = pr.koerper || PROFIL.hannoveraner.koerper, kk = pr.kopf || PROFIL.hannoveraner.kopf;
+  WERTE_KOERPER.forEach((x, i) => anlage[x.key] = Math.round(Math.max(5, Math.min(100, kb[i] + ga() * 14))));
+  WERTE_KOPF.slice(0, 3).forEach((x, i) => anlage[x.key] = Math.round(Math.max(5, Math.min(100, kk[i] + ga() * 14))));
+  return { reinrassig, gang, charakter, anlage, talent: lernFaktor(anlage.lernfaehigkeit), streuung };
 }
 
 // Ausbildungsstand ergibt sich aus Alter, Talent und Rasseneignung (0–100 je Punkt der Skala)

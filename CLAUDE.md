@@ -49,3 +49,4 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - Dome testet im Browser auf dem Handy und am PC und schickt Screenshots mit Wünschen.
 - Änderungen klein und nachvollziehbar halten, alte Funktionen nicht kaputt machen, Speicherstände abwärtskompatibel lassen (fehlende Felder mit Standardwerten auffüllen).
 - Änderungen direkt auf den Branch `main` hochladen (kein extra Branch, kein Pull Request) – Dome möchte das so.
+- Vor dem Start Aufwand jeder Aufgabe kurz einschätzen (klein/mittel/groß). Nennt Dome ihr Restvolumen, sagen, was davon reinpasst, und mit dem Wichtigsten anfangen. Nach jeder fertigen Teilaufgabe auf `main` hochladen, am Ende sagen, was offen ist.

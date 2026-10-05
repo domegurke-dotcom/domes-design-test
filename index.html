@@ -181,6 +181,7 @@
   .fin-karte { background: #fff; border-radius: 0 0 12px 12px; padding: 10px 12px; border: 1px solid #ecdfca; }
   .fin-summe { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; } .fin-summe span { display: flex; flex-direction: column; font-size: .75rem; color: var(--leise); } .fin-summe b { font-size: .95rem; color: var(--text); }
   .fin-posten { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid #f0e6d6; font-size: .88rem; } .fin-posten small { color: var(--leise); }
+  .fin-saison { margin-top: 10px; padding: 4px 0 2px; font-weight: 700; font-size: .9rem; color: var(--leise); border-bottom: 2px solid #e6d6bc; }
   b.plus, .plus b { color: #3d8a3a !important; } b.minus, .minus b { color: #b4473a !important; } b.neg { color: #b4473a; }
   .rechnungen { background: #fdecea; border: 1.5px solid #e6a49b; border-radius: 10px; padding: 8px 10px; margin-bottom: 12px; }
   .vererbung h3 { margin: 16px 0 6px; font-size: 1rem; } .vererbung p { line-height: 1.45; margin: 6px 0; font-size: .9rem; }
@@ -742,7 +743,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "147";
+  const SPIEL_VERSION = "148";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -750,9 +751,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=147"></script>
-<script src="kopfteile.js?v=147"></script>
-<script src="kopfalter.js?v=147"></script>
+<script src="pferd.js?v=148"></script>
+<script src="kopfteile.js?v=148"></script>
+<script src="kopfalter.js?v=148"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1462,6 +1463,10 @@
     const j = String(datum().j), F = (spiel.finanzen = spiel.finanzen || {}), J = (F[j] = F[j] || {});
     const e = (J[posten] = J[posten] || { ein: 0, aus: 0, n: 0 });
     if (betrag > 0) e.ein += betrag; else e.aus -= betrag; e.n++;
+    // zusätzlich nach Jahreszeit (für die Anzeige in „Finanzen“)
+    const FS = (spiel.finanzSaison = spiel.finanzSaison || {}), S = ((FS[j] = FS[j] || {})[datum().s] = FS[j][datum().s] || {});
+    const es = (S[posten] = S[posten] || { ein: 0, aus: 0, n: 0 });
+    if (betrag > 0) es.ein += betrag; else es.aus -= betrag; es.n++;
   }
   const KOSTEN = { aufzucht: 15, ausbildung: 35, klinik: 60, gentest: 150 };
   const ORT_NAME = { aufzucht: "Aufzuchtstation", ausbildung: "Ausbildungsstall" };
@@ -2260,7 +2265,10 @@
       const ki = klasseIndex(aw, p.werte.gang), nx = KLASSEN[ki + 1];
       const fehlt = nx ? [...Object.entries(nx.min).filter(([n, v]) => (aw.find(x => x.name === n) || {}).wert < v).map(([n, v]) => `${n} ${v} %`),
         ...(nx.ausdruck && ((p.werte.gang.schritt + p.werte.gang.trab + p.werte.gang.galopp) / 3) < nx.ausdruck ? [`Ausdruck (Gangwerk Ø ${String(nx.ausdruck).replace(".", ",")})`] : [])] : [];
-      inhalt = vglKopf(p) + `<div class="klasse">Ausbildungsstand: <b class="lex" data-lex="klassen">${ausbildungsKlasse(aw, p.alter, p.werte.gang)}</b>${q ? `<br><span class="vgl-b">${esc(q.name)}: ${ausbildungsKlasse(qa, alterJahre(q), q.werte.gang)}</span>` : ""}</div>
+      // Knopf oben: je nach Alter direkt in die Aufzuchtstation oder den Ausbildungsstall
+      const jung = alterJZ(p) < AUSBILDUNGSALTER, wegId = jung ? "aufzucht" : "ausbildung", wegGeht = !box.lesen && !angebotVon(p) && spiel.geld >= 0 && !box.tot && !p.klinik;
+      const wegKnopf = `<button class="sknopf" ${wegGeht ? `data-ort="${wegId}"` : "disabled"} style="width:100%;margin:0 0 8px"><span class="i">${jung ? "🍼" : "🎓"}</span><span>${jung ? "In die Aufzuchtstation" : "In den Ausbildungsstall"}<small>${!wegGeht ? (angebotVon(p) ? "steht zum Verkauf" : spiel.geld < 0 ? "Konto im Minus" : "gerade nicht möglich") : `${fmt(KOSTEN[wegId])} pro Tag`}</small></span></button>`;
+      inhalt = (box.lesen ? "" : wegKnopf) + vglKopf(p) + `<div class="klasse">Ausbildungsstand: <b class="lex" data-lex="klassen">${ausbildungsKlasse(aw, p.alter, p.werte.gang)}</b>${q ? `<br><span class="vgl-b">${esc(q.name)}: ${ausbildungsKlasse(qa, alterJahre(q), q.werte.gang)}</span>` : ""}</div>
         ${ki >= 0 ? `<p class="text" style="margin:4px 0 2px"><small><b>Beherrscht:</b> ${KLASSEN.slice(0, ki + 1).map(c => c.lekt).join(" · ")}<br><b>Bewertet wird:</b> ${KLASSEN[ki].fokus}</small></p>` : ""}
         ${nx ? `<p class="text" style="margin:2px 0 8px"><small><b>Für Klasse ${nx.k}</b> (${nx.lekt}) fehlt noch: ${fehlt.join(", ")}</small></p>` : `<p class="text"><small>Höchste Klasse erreicht.</small></p>`}` + aw.map((x, i) => `
         <div class="zeile-wert"><div class="kopf"><b class="lex" data-lex="skala:${x.name}">${x.name}</b><span>${x.wert} %${q ? ` <em class="vgl-b">${qa[i].wert} %</em>` : ""}</span></div>
@@ -2312,12 +2320,12 @@
           <div class="kacheln quadrat">${teile.map(kachel).join("")}</div>
           <button class="zurueck" id="zaumZurueck">‹ Zurück zur Ausrüstung</button>`;
       } else if (medModus) {
-        const heute = (p.medizin && p.medizin.tag === spiel.tag) ? p.medizin.gegeben : [];
-        inhalt = (meldung ? `<div class="klasse">${meldung}</div>` : "") + `<p class="text" style="margin:0 0 4px">💊 <b>Stallapotheke</b> · Gesundheit: ${p.pflege.gesundheit.toLocaleString("de-DE", { maximumFractionDigits: 1 })} %<br><small>Jedes Mittel kann einmal am Tag gegeben werden.</small></p>
+        const heute = (p.medizin && p.medizin.tag === spiel.tag) ? p.medizin.gegeben : [], zuKrank = p.pflege.gesundheit <= 30;
+        inhalt = (meldung ? `<div class="klasse">${meldung}</div>` : "") + `<p class="text" style="margin:0 0 4px">💊 <b>Stallapotheke</b> · Gesundheit: ${p.pflege.gesundheit.toLocaleString("de-DE", { maximumFractionDigits: 1 })} %<br><small>${zuKrank ? `⚠️ Bei 30 % oder weniger hilft keine Medizin mehr – ${esc(p.name)} kann sich nur noch in der Klinik erholen.` : "Jedes Mittel kann einmal am Tag gegeben werden."}</small></p>
           <div class="kacheln quadrat">${MEDIZIN.map(m => {
-            const schon = heute.includes(m.id);
-            return `<button class="kachel ${schon ? "fehlt" : "klickbar"}" data-med="${m.id}" ${schon ? "disabled" : ""} title="${m.info}">
-              <span class="ico">${m.ico}</span><b>${m.name}</b><small>${schon ? "heute gegeben" : m.kurz}</small></button>`;
+            const schon = heute.includes(m.id), aus = schon || zuKrank;
+            return `<button class="kachel ${aus ? "fehlt" : "klickbar"}" data-med="${m.id}" ${aus ? "disabled" : ""} title="${m.info}">
+              <span class="ico">${m.ico}</span><b>${m.name}</b><small>${schon ? "heute gegeben" : zuKrank ? "wirkt nicht mehr" : m.kurz}</small></button>`;
           }).join("")}</div>
           <button class="zurueck" id="medZurueck">‹ Zurück zur Ausrüstung</button>`;
       } else if (scherModus) {
@@ -2373,7 +2381,7 @@
         const g = p.pflege.gesundheit, maxG = gesundheitMax(p);
         inhalt = meld + `<p class="text" style="margin:0 0 4px">🏥 <b>Tierklinik</b> · Gesundheit von ${esc(p.name)}: ${g.toLocaleString("de-DE")} %</p>
           <div class="kacheln quadrat">${kOrt("stationaer", "🛏️", "Stationär behandeln", g < Math.min(75, maxG) ? `${fmt(KOSTEN.klinik)} / Tag` : "nicht nötig", "Bleibt in der Klinik, bis die Gesundheit mindestens 75 % beträgt – erholt sich doppelt so schnell", g < Math.min(75, maxG))}</div>
-          <p class="text"><small>Unter 30 % Gesundheit kann sich ein Pferd im Stall nicht mehr erholen, nur noch hier. Entlassen wird es erst mit 75 %. Die Kosten (${fmt(KOSTEN.klinik)} pro Tag) kommen nach der Behandlung als Rechnung, zahlbar innerhalb einer Jahreszeit.</small></p>` + zurueckOrt("‹ Zurück zum Anhänger");
+          <p class="text"><small>Bei 30 % Gesundheit oder weniger kann sich ein Pferd im Stall nicht mehr erholen (auch Medizin hilft nicht mehr), nur noch hier. Entlassen wird es erst mit 75 %. Die Kosten (${fmt(KOSTEN.klinik)} pro Tag) kommen nach der Behandlung als Rechnung, zahlbar innerhalb einer Jahreszeit.</small></p>` + zurueckOrt("‹ Zurück zum Anhänger");
       } else if (ortModus === "labor") {
         inhalt = meld + `<p class="text" style="margin:0 0 4px">🔬 <b>Labor</b> · Der Tierarzt schickt eine Haarprobe von ${esc(p.name)} ein – dafür muss ${pron(p).er} nicht wegfahren.</p>
           <div class="kacheln quadrat">${Object.entries(LABOR_TESTS).map(([id, T]) => kOrt("lt-" + id, T.ico, T.kurz, testGemacht(p, id) ? "schon gemacht" : testLaeuft(p, id) ? "im Labor …" : fmt(T.preis), T.info, !testGemacht(p, id) && !testLaeuft(p, id))).join("")}</div>
@@ -2536,7 +2544,7 @@
     INFO.querySelectorAll("[data-med]").forEach(b => b.onclick = () => {
       const m = MEDIZIN.find(x => x.id === b.dataset.med);
       if (!p.medizin || p.medizin.tag !== spiel.tag) p.medizin = { tag: spiel.tag, gegeben: [] };
-      if (p.medizin.gegeben.includes(m.id)) return;
+      if (p.medizin.gegeben.includes(m.id) || p.pflege.gesundheit <= 30) return;
       p.medizin.gegeben.push(m.id);
       const vorher = p.pflege.gesundheit;
       p.pflege.gesundheit = Math.min(gesundheitMax(p), Math.round((vorher + m.plus) * 10) / 10);
@@ -3035,8 +3043,8 @@
       let g = pf.gesundheit;
       if (!b.krippeVoll) g -= 19;      // hungrig ins Bett: −19 Punkte
       if (b.mistig) g -= 9.5;          // Box nicht gemistet: −9,5 Punkte
-      // gut versorgt: +8 pro Tag – unter 30 % erholt sich ein Pferd nur noch in der Klinik (außer bei Altersschwäche)
-      if (b.krippeVoll && !b.mistig && (pf.gesundheit >= 30 || altersschwach(b.pferd))) g += 8;
+      // gut versorgt: +8 pro Tag – ab 30 % und darunter erholt sich ein Pferd nur noch in der Klinik (außer bei Altersschwäche)
+      if (b.krippeVoll && !b.mistig && (pf.gesundheit > 30 || altersschwach(b.pferd))) g += 8;
       if (spiel.tag - pf.huf > 56) g -= 2;
       g = Math.round(g * 10) / 10;
       // Rettungsnetz: wer über 1 % lag, fällt nur auf 1 %. Wer schon bei 1 % (oder weniger) war, stirbt bei 0.
@@ -3803,8 +3811,18 @@
         ${sicht.map(j => `<button data-fj="${j}" class="${j === finanzJahr ? "an" : ""}">${j}</button>`).join("")}
         <button data-fs="1" ${finanzStart < maxStart ? "" : "disabled"} aria-label="spätere Jahre">›</button></div>
       <div class="fin-karte"><div class="fin-summe"><span class="plus">Einnahmen<b>${fmt(ein)}</b></span><span class="minus">Ausgaben<b>${fmt(aus)}</b></span><span>Ergebnis<b class="${ein - aus < 0 ? "neg" : ""}">${fmt(ein - aus)}</b></span></div>
-        ${posten.length ? posten.map(([k, e]) => `<div class="fin-posten"><span>${esc(k)}${e.n > 1 ? ` <small>${e.n}×</small>` : ""}</span>${e.ein ? `<b class="plus">+${fmt(e.ein)}</b>` : ""}${e.aus ? `<b class="minus">−${fmt(e.aus)}</b>` : ""}</div>`).join("")
+        ${posten.length ? finanzSaisonGruppen(finanzJahr, J).map(([titel, P]) => `<div class="fin-saison">${titel}</div>` + Object.entries(P).sort((a, b) => (b[1].ein + b[1].aus) - (a[1].ein + a[1].aus)).map(([k, e]) => `<div class="fin-posten"><span>${esc(k)}${e.n > 1 ? ` <small>${e.n}×</small>` : ""}</span>${e.ein ? `<b class="plus">+${fmt(e.ein)}</b>` : ""}${e.aus ? `<b class="minus">−${fmt(e.aus)}</b>` : ""}</div>`).join("")).join("")
           : `<p class="text">In ${finanzJahr} gab es noch keine Einnahmen oder Ausgaben.</p>`}</div>`;
+  }
+  // Posten eines Jahres nach Jahreszeit gruppiert (neueste zuerst); alte Buchungen ohne Jahreszeit landen unter „früher“
+  function finanzSaisonGruppen(j, J) {
+    const FS = (spiel.finanzSaison || {})[j] || {}, gruppen = [], rest = {};
+    [3, 2, 1, 0].forEach(s => { const P = FS[s]; if (P && Object.keys(P).length) gruppen.push([`${JZ[s][1]} ${JZ[s][0]} ${j}`, P]); });
+    Object.entries(J).forEach(([k, e]) => { let ein = e.ein, aus = e.aus, n = e.n;
+      Object.values(FS).forEach(P => { if (P[k]) { ein -= P[k].ein; aus -= P[k].aus; n -= P[k].n; } });
+      if (ein > 0.005 || aus > 0.005) rest[k] = { ein: Math.max(0, ein), aus: Math.max(0, aus), n: Math.max(1, n) }; });
+    if (Object.keys(rest).length) gruppen.push([gruppen.length ? `📁 früher in ${j} (ohne Jahreszeit)` : `📁 ${j}`, rest]);
+    return gruppen;
   }
   // ---------- Enzyklopädie (Adminmodus): Vererbung ----------
   const verTab = (kopf, zeilen) => `<table class="ver-tab"><tr>${kopf.map(k => `<th>${k}</th>`).join("")}</tr>${zeilen.map(z => `<tr>${z.map(x => `<td>${x}</td>`).join("")}</tr>`).join("")}</table>`;
@@ -3854,7 +3872,7 @@
       <h3>🎓 Ausbildung</h3>
       <p>Unausgebildete Pferde stehen auf Klasse E mit 0 %. Ausbildung entsteht nur im Ausbildungsstall (ab 3 Jahren, ${fmt(KOSTEN.ausbildung)}/Tag). Takt → Losgelassenheit → Anlehnung → Schwung → Geraderichtung → Versammlung: jede Stufe steigt erst, wenn die vorige 20 % erreicht hat, und kann sie nicht überholen.</p>
       <h3>❤️ Gesundheit</h3>
-      <p>Gut versorgt +8 % pro Tag, hungrig −19, Box nicht gemistet −9,5. Unter 40 % kommt ein Brief vom Tierarzt, unter 30 % erholt sich ein Pferd nur noch in der Klinik (+16 %/Tag, ${fmt(KOSTEN.klinik)}/Tag) und wird mit 75 % entlassen. Die Klinikkosten kommen als Rechnung, zahlbar innerhalb einer Jahreszeit – sonst holt der Tierschutz das Pferd. Ausnahme: Senioren mit altersbedingter Höchstgesundheit von 40 % oder weniger.</p>
+      <p>Gut versorgt +8 % pro Tag, hungrig −19, Box nicht gemistet −9,5. Unter 40 % kommt ein Brief vom Tierarzt, bei 30 % oder weniger erholt sich ein Pferd nur noch in der Klinik – auch Medizin hilft dann nicht mehr (+16 %/Tag, ${fmt(KOSTEN.klinik)}/Tag) und wird mit 75 % entlassen. Die Klinikkosten kommen als Rechnung, zahlbar innerhalb einer Jahreszeit – sonst holt der Tierschutz das Pferd. Ausnahme: Senioren mit altersbedingter Höchstgesundheit von 40 % oder weniger.</p>
       <p>Senioren ab 20 Jahren: höchstens 75 %, sinkt bis 35 Jahre auf 1 %. Sterbewahrscheinlichkeit je Jahreszeit steigt ab 20 Jahren und erreicht mit 35 Jahren 100 %.</p>
       <h3>💰 Geld und Marktwert</h3>
       <p>Marktwert aus Gangwerk, Ausbildungsstand, Alter und Gesundheit, plus die Kosten aller gemachten Gentests (getestete Pferde verkaufen sich besser). Stute mit Fohlen bei Fuß: beide Marktwerte zusammen, das Fohlen wird mitverkauft (allein nicht). Festpreis (Regler 50–160 % des Marktwerts, Chance wird angezeigt): bis 90 % des Marktwerts 98 % Verkaufschance, bis Marktwert 93 %, darüber sinkend (110 % ≈ 59 %, 120 % ≈ 38 %, 130 % ≈ 24 %, 150 % ≈ 10 %), aber nie unter 4 % (Liebhaber). Gerechnet mit dem Saisonpreis der Jahreszeit, in der du das Pferd einstellst. Während das Angebot läuft, schicken Interessenten manchmal Preisvorschläge per Brief (jede Nacht 15 %, bei deutlich überhöhtem Preis 35 %; 75–105 % des Marktwerts, immer unter deinem Preis) – annehmen verkauft sofort, ablehnen lässt das Angebot weiterlaufen. Auktion startet bei ½ des Marktwerts und läuft 2 Jahreszeiten; Abbruch nach dem ersten Gebot kostet die Hälfte des letzten Gebots. Gnadenhof: halber Marktwert.</p>

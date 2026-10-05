@@ -25,13 +25,13 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (3 Stellen in index.html) und `version.json` gemeinsam hochzählen.
-- Letzte Version bei Erstellung dieser Datei: **146**.
+- Letzte Version bei Aktualisierung dieser Datei: **157**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName`, `#chHof` ausfüllen → `#chLos`. Admin: `spiel.admin = true`.
 - Vor dem Ausliefern Syntax prüfen (jeden `<script>`-Block mit `new Function(...)`, `node --check pferd.js`) und Screenshots in den drei Ansichten ansehen.
 
-## Wichtige Spielsysteme (Stand v146)
+## Wichtige Spielsysteme (Stand v157)
 - **Zeit:** Jahreszeiten (Frühling, Sommer, Herbst, Winter), `tpj()` Tage pro Jahreszeit (3/4/5). `naechsteNacht()` ist der Tageswechsel; bei `datum().t === 1` laufen die Jahreszeit-Funktionen.
 - **Zucht:** Tragzeit 4 Jahreszeiten. Deckstation (Gestütshengste) nur Frühling/Sommer, eigene Hengste immer. Zuchtalter Stuten bis 20, Hengste bis 25.
 - **Genetik:** E, A (A>At>a), F, Sty, Cr, D, Z, Rn, To, O, Lp, Patn, G, Dm (DMRT3). Versteckte Veranlagungen `ex` (grauTempo, apfel, fliegen, fliegenAb, maehne, ton, ow, sonne, kurve). Gefährliche Gene in `GEFAHR_GENE` (O, Lp) – Warnung nur, wenn mind. ein Partner positiv getestet ist.
@@ -41,9 +41,14 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
   - Auktionshaus: Höchstgebot wie eBay (`duMax`), Gegenbieter-Limits über `npcLimit` (65 % 0,7–1,3×, 22 % 1,3–2×, 9 % 2–3,5×, 4 % 3,5–6× Marktwert). Gebote nur bis zum frei verfügbaren Geld (`gebundenesGeld`).
   - Eigener Verkauf: Festpreis (`festChance`, Regler 50–160 %, nie unter 4 %, Preisvorschläge per Brief) oder Auktion (Start ½ Marktwert, 2 Jahreszeiten, Abbruchstrafe ½ letztes Gebot). Dome will die eigene Auktion so lassen (nicht an Auktionshaus angleichen).
   - Notfallpferde: im ersten Jahr kein Verkauf/Gnadenhof, nur Rückgabe an den Tierschutz ohne Erstattung.
-- **Briefe:** immer „Sie“; nach 6 Briefen eines Absenders Du-Angebot. Texte mit `{du-Form|Sie-Form}`. Pferdenamen in Briefen anklickbar (`briefLinks`, `pferdePool`, `archivieren`). Briefe können Aktions-Knöpfe haben (`aktion`: duzen, bieten, kaufangebot).
-- **Mitarbeiter (Hofverwaltung):** Stallbursche (füttert/mistet 3 Boxen) und Pferdepfleger (hält Mähne/Schopf auf Wunschlänge, 3 Boxen), je 300 €/Jahreszeit, Beginn nächste Jahreszeit, Kündigung zum Ende der Jahreszeit, im Adminmodus kostenlos. Weitere Kacheln (Stallmeister, Futterexperte, Osteopath, Hufschmied, Bereiter) noch „bald“.
-- **Hofverwaltung-Reiter:** Hof, Finanzen, Boxen, Außer Haus, Mitarbeiter, Postfach, Einstellungen.
+- **Briefe:** immer „Sie“; Du-Angebot nach 6 Briefen eines Absenders, aber nur ab 180 Punkten geheimem Ansehen (`ruf`, Start 100, Skala 0–200, ±5 je positivem/negativem Kontakt); fällt es bei Duz-Partnern auf 100 oder darunter, wird das „Du“ beleidigt zurückgezogen. Das Ansehen nie dem Spieler zeigen (nur Admin-Enzyklopädie). Wichtige Briefe mit Stern markierbar (Ordner „Wichtig“). Texte mit `{du-Form|Sie-Form}`. Pferdenamen in Briefen anklickbar (`briefLinks`, `pferdePool`, `archivieren`). Briefe können Aktions-Knöpfe haben (`aktion`: duzen, bieten, kaufangebot, rechnung).
+- **Rechnungen** (`rechnungStellen`, `rechnungenTag`, `externJahreszeit`): Klinik bei Entlassung, Aufzucht/Ausbildung zu Beginn jeder Jahreszeit (mit Zwischenbericht) und bei Rückkehr (Abschlussbericht mit Kostenübersicht). Bezahlen im Brief oder unter Finanzen. Zahlungsziel 2 Tage → Mahnung (alle offenen Beträge des Absenders + 10 %, mind. 20 €; Aufzucht/Ausbildung brechen ab) → nach 5 Tagen Abbuchung + 20 % (mind. 50 €), Konto darf ins Minus. Neue Rechnung ersetzt alte. Kein Tierschutz mehr wegen offener Rechnungen.
+- **Klinik:** stationär bis 75 %; bei ≤ 30 % hilft weder Medizin noch Pflege in der Box. Fohlen bei Fuß wird mitbehandelt; braucht es seine eigene Box: gesund → nach Hause, unter 75 % → bleibt mit eigener Box und Rechnung. Kastration (Hengste ab 1 Jahr, 450 € inkl. 2 Tage) → Wallach, Abstammungsschein bleibt Hengst (`geburtsGeschlecht`).
+- **Pflege:** Schmutz (`p.dreck` fell/maehne, jede Nacht mehr, im Bild sichtbar), Putzkiste (Bürste/Kamm), Pferdepfleger putzt. Folgen: bis −15 % Marktwert, > 1 Jahreszeit verdreckt −3 % Gesundheit/Tag. Wohlbefinden (`pflege.wohl`, Anzeige minus Schmutz): Weide +15/Tag, Putzen +5, ab 3. Tag am Stück in der Box −6/Tag, hungrig −8, Mist −5. Wirkt auf Lerntempo (`wohlFaktor`) im Ausbildungsstall und später auch beim Training daheim, außerdem auf die Fruchtbarkeit (Trächtigkeitschance 40 % + 55 % × Wohlbefinden). Fohlen bei Fuß haben eigene Gesundheit (wie die Mutter versorgt, min. 1 %).
+- **Weide** (Ort → Weide, `p.weide`): Box bleibt leer (Anzeige wie Klinik), kein Füttern/Misten, Gesundheit/Tag Frühling +10, Sommer +12, Herbst +7, Winter +5 (Box +8).
+- **Pferdeanhänger im Hauptmenü:** mehrere Pferde auf einmal in Klinik (stationär oder Kastration), Aufzucht, Ausbildung, Gnadenhof; Verkaufen einzeln, danach zurück zum Anhänger.
+- **Mitarbeiter (Hofverwaltung):** Stallbursche (füttert/mistet 3 Boxen) und Pferdepfleger (putzt und hält Mähne/Schopf auf Wunschlänge, 3 Boxen), je 300 €/Jahreszeit, Beginn nächste Jahreszeit, Kündigung zum Ende der Jahreszeit, im Adminmodus kostenlos. Weitere Kacheln (Stallmeister, Futterexperte, Osteopath, Hufschmied, Bereiter) noch „bald“.
+- **Hofverwaltung-Reiter:** Hof, Finanzen (nach Jahreszeit gruppiert), Außer Haus, Mitarbeiter, Postfach, Einstellungen. Boxen bauen/entfernen mit + / − in der Boxenübersicht im Stall.
 
 ## Zusammenarbeit
 - Dome testet im Browser auf dem Handy und am PC und schickt Screenshots mit Wünschen.

@@ -747,7 +747,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "157";
+  const SPIEL_VERSION = "158";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -755,9 +755,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=157"></script>
-<script src="kopfteile.js?v=157"></script>
-<script src="kopfalter.js?v=157"></script>
+<script src="pferd.js?v=158"></script>
+<script src="kopfteile.js?v=158"></script>
+<script src="kopfalter.js?v=158"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2406,8 +2406,8 @@
       const fehlt = nx ? [...Object.entries(nx.min).filter(([n, v]) => (aw.find(x => x.name === n) || {}).wert < v).map(([n, v]) => `${n} ${v} %`),
         ...(nx.ausdruck && ((p.werte.gang.schritt + p.werte.gang.trab + p.werte.gang.galopp) / 3) < nx.ausdruck ? [`Ausdruck (Gangwerk Ø ${String(nx.ausdruck).replace(".", ",")})`] : [])] : [];
       // Knopf oben: je nach Alter direkt in die Aufzuchtstation oder den Ausbildungsstall
-      const jung = alterJZ(p) < AUSBILDUNGSALTER, wegId = jung ? "aufzucht" : "ausbildung", wegGeht = !box.lesen && !angebotVon(p) && spiel.geld >= 0 && !box.tot && !p.klinik;
-      const wegKnopf = `<button class="sknopf" ${wegGeht ? `data-ort="${wegId}"` : "disabled"} style="width:100%;margin:0 0 8px"><span class="i">${jung ? "🍼" : "🎓"}</span><span>${jung ? "In die Aufzuchtstation" : "In den Ausbildungsstall"}<small>${!wegGeht ? (angebotVon(p) ? "steht zum Verkauf" : spiel.geld < 0 ? "Konto im Minus" : "gerade nicht möglich") : `${fmt(KOSTEN[wegId])} pro Tag`}</small></span></button>`;
+      const jung = alterJZ(p) < AUSBILDUNGSALTER, wegId = jung ? "aufzucht" : "ausbildung", wegSperre = box.lesen ? "–" : ANH_ZIEL[wegId].sperre(p, box), wegGeht = !wegSperre;
+      const wegKnopf = `<button class="sknopf" ${wegGeht ? `data-ort="${wegId}"` : "disabled"} style="width:100%;margin:0 0 8px"><span class="i">${jung ? "🍼" : "🎓"}</span><span>${jung ? "In die Aufzuchtstation" : "In den Ausbildungsstall"}<small>${wegGeht ? `${fmt(KOSTEN[wegId])} pro Tag` : wegSperre}</small></span></button>`;
       inhalt = (box.lesen ? "" : wegKnopf) + vglKopf(p) + `<div class="klasse">Ausbildungsstand: <b class="lex" data-lex="klassen">${ausbildungsKlasse(aw, p.alter, p.werte.gang)}</b>${q ? `<br><span class="vgl-b">${esc(q.name)}: ${ausbildungsKlasse(qa, alterJahre(q), q.werte.gang)}</span>` : ""}</div>
         ${ki >= 0 ? `<p class="text" style="margin:4px 0 2px"><small><b>Beherrscht:</b> ${KLASSEN.slice(0, ki + 1).map(c => c.lekt).join(" · ")}<br><b>Bewertet wird:</b> ${KLASSEN[ki].fokus}</small></p>` : ""}
         ${nx ? `<p class="text" style="margin:2px 0 8px"><small><b>Für Klasse ${nx.k}</b> (${nx.lekt}) fehlt noch: ${fehlt.join(", ")}</small></p>` : `<p class="text"><small>Höchste Klasse erreicht.</small></p>`}` + aw.map((x, i) => `
@@ -2525,27 +2525,20 @@
           ${freieBox() < 0 ? `<p class="text">Keine Box frei – im Stall (Boxenübersicht) kannst du mit + eine bauen.</p>` : ""}` + zurueckOrt();
       } else if (ortModus === "anhaenger") {
         inhalt = meld + `<p class="text" style="margin:0 0 4px">🚚 <b>Pferdeanhänger</b> · Wohin soll ${esc(p.name)}?</p>
-          <div class="kacheln quadrat">${kOrt("klinik", "🏥", "Klinik", "Behandlung", "Tierklinik: stationäre Behandlung")}
-            ${kOrt("aufzucht", "🍼", "Aufzucht\u00adstation", angebot ? "steht zum Verkauf" : spiel.geld < 0 ? "Konto im Minus" : alterJZ(p) < AUSBILDUNGSALTER ? `${fmt(KOSTEN.aufzucht)} / Tag` : "nur bis 3 Jahre", "Fohlen und Jungpferde wachsen bis zum Ausbildungsalter in der Herde auf", alterJZ(p) < AUSBILDUNGSALTER && !angebot && spiel.geld >= 0)}
-            ${kOrt("ausbildung", "🎓", "Ausbildungs\u00adstall", angebot ? "steht zum Verkauf" : spiel.geld < 0 ? "Konto im Minus" : alterJZ(p) >= AUSBILDUNGSALTER ? `${fmt(KOSTEN.ausbildung)} / Tag` : "ab 3 Jahren", "Profis bilden das Pferd aus – es kommt schneller voran", alterJZ(p) >= AUSBILDUNGSALTER && !angebot && spiel.geld >= 0)}
-            ${kOrt("turnier", "🏆", "Turnier", "bald", "Turniere und Wettbewerbe", false)}
-            ${kOrt("abgeben", "👋", "Abgeben", "verschenken, verkaufen, Gnadenhof", "Pferd abgeben")}</div>` + zurueckOrt();
+          <div class="kacheln quadrat">${anhKacheln("start", { p, box })}</div>` + zurueckOrt();
       } else if (ortModus === "klinik") {
-        const g = p.pflege.gesundheit, maxG = gesundheitMax(p);
+        const g = p.pflege.gesundheit;
         inhalt = meld + `<p class="text" style="margin:0 0 4px">🏥 <b>Tierklinik</b> · Gesundheit von ${esc(p.name)}: ${g.toLocaleString("de-DE")} %</p>
-          <div class="kacheln quadrat">${kOrt("stationaer", "🛏️", "Stationär behandeln", g < Math.min(75, maxG) ? `${fmt(KOSTEN.klinik)} / Tag` : "nicht nötig", "Bleibt in der Klinik, bis die Gesundheit mindestens 75 % beträgt – erholt sich doppelt so schnell", g < Math.min(75, maxG))}
-            ${p.geschlecht === "Hengst" ? kOrt("kastrieren", "✂️", "Hengst kastrieren", alterJZ(p) < KASTRATION_AB ? "ab 1 Jahr" : angebot ? "steht zum Verkauf" : fmt(KOSTEN.kastration), "Kastration: 2 Tage Klinik, danach ist er ein Wallach", alterJZ(p) >= KASTRATION_AB && !angebot) : ""}</div>
+          <div class="kacheln quadrat">${anhKacheln("klinik", { p, box })}</div>
           <p class="text"><small>Bei 30 % Gesundheit oder weniger kann sich ein Pferd im Stall nicht mehr erholen (auch Medizin hilft nicht mehr), nur noch hier. Entlassen wird es erst mit 75 %. Die Kosten (${fmt(KOSTEN.klinik)} pro Tag) kommen nach der Behandlung als Rechnung, zahlbar innerhalb von 2 Tagen.</small></p>` + zurueckOrt("‹ Zurück zum Anhänger");
       } else if (ortModus === "labor") {
         inhalt = meld + `<p class="text" style="margin:0 0 4px">🔬 <b>Labor</b> · Der Tierarzt schickt eine Haarprobe von ${esc(p.name)} ein – dafür muss ${pron(p).er} nicht wegfahren.</p>
           <div class="kacheln quadrat">${Object.entries(LABOR_TESTS).map(([id, T]) => kOrt("lt-" + id, T.ico, T.kurz, testGemacht(p, id) ? "schon gemacht" : testLaeuft(p, id) ? "im Labor …" : fmt(T.preis), T.info, !testGemacht(p, id) && !testLaeuft(p, id))).join("")}</div>
           <p class="text"><small>Das Ergebnis kommt nach ein paar Tagen per Post und steht dann in der Akte unter „Genetik“.</small></p>` + zurueckOrt();
       } else if (ortModus === "abgeben") {
-        const wert = marktwert(p), sperre = abgabeSperre(p, box);
-        inhalt = meld + `<p class="text" style="margin:0 0 4px">👋 <b>${esc(p.name)} abgeben</b> · Marktwert etwa <b>${fmt(wert)}</b>${sperre ? `<br><small>⚠️ ${sperre}</small>` : ""}</p>
-          <div class="kacheln quadrat">${kOrt("verschenken", "🎁", "Verschenken", "nur an Freunde – bald", "Verschenken geht nur an befreundete Mitspieler (derzeit nicht möglich)", false)}
-            ${kOrt("verkaufen", "💰", "Verkaufen", angebot ? (angebot.art === "auktion" ? "in der Auktion" : "wird angeboten") : box.fohlen ? "mit Fohlen bei Fuß" : "Festpreis oder Auktion", "Auf dem Pferdemarkt verkaufen", !abgabeSperre(p, box, true) || !!angebot)}
-            ${kOrt("gnadenhof", "🌳", "Gnaden\u00adhof", istSenior(p) ? `${fmt(Math.round(wert / 2))} sofort` : "nur Senioren (ab 20 J.)", "Senioren verbringen ihren Lebensabend auf dem Gnadenhof", !sperre && !angebot && istSenior(p))}</div>` + zurueckOrt("‹ Zurück zum Anhänger");
+        const sperre = abgabeSperre(p, box);
+        inhalt = meld + `<p class="text" style="margin:0 0 4px">👋 <b>${esc(p.name)} abgeben</b> · Marktwert etwa <b>${fmt(marktwert(p))}</b>${sperre ? `<br><small>⚠️ ${sperre}</small>` : ""}</p>
+          <div class="kacheln quadrat">${anhKacheln("abgeben", { p, box })}</div>` + zurueckOrt("‹ Zurück zum Anhänger");
       } else {
       const plaetze = [
         ["stall", "🏠", "Stall", `Box ${aktBox + 1} mit Paddockausgang`, `Box ${aktBox + 1}`],
@@ -2654,7 +2647,7 @@
       if (id === "verkaufen") { verkaufDialog(p, () => zeigeAkte()); return; }
       if (id === "stationaer") {
         dialog(`<h3>🏥 ${esc(p.name)} in die Klinik?</h3><p>${esc(p.name)} bleibt in der Klinik, bis die Gesundheit wieder mindestens 75 % beträgt, und erholt sich dort doppelt so schnell. Die Behandlung kostet <b>${fmt(KOSTEN.klinik)} pro Tag</b> – du bekommst danach eine Rechnung, die du innerhalb von 2 Tagen bezahlen solltest – sonst kommt eine Mahnung mit Gebühr. Die Box bleibt für ${pron(p).ihn} frei.</p>`,
-          [["In die Klinik", () => { p.klinik = { seit: spiel.tag }; spiel.angebote = (spiel.angebote || []).filter(x => x.id !== p.id); ortModus = null; aktenModus = "steckbrief"; aktenReiter = "steckbrief"; speichern(); zeigeStall(); zeigeTag(); }], ["Abbrechen", null, "zweit"]]);
+          [["In die Klinik", () => { ANH_ZIEL.stationaer.aus(p, box); ortModus = null; aktenModus = "steckbrief"; aktenReiter = "steckbrief"; speichern(); zeigeStall(); zeigeTag(); }], ["Abbrechen", null, "zweit"]]);
         return;
       }
       if (id === "weide") {
@@ -2662,16 +2655,16 @@
         else { p.weide = { seit: spiel.tag }; p.boxTage = 0; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0; meldung = ""; }
         ortModus = null; speichern(); zeigeStall(); zeigeTag(); return;
       }
-      if (id === "kastrieren") {
+      if (id === "kastration") {
         dialog(`<h3>✂️ ${esc(p.name)} kastrieren?</h3><p>${esc(p.name)} bleibt dafür 2 Tage in der Klinik (länger, falls die Gesundheit unter 75 % liegt). Danach ist er ein <b>Wallach</b> und kann nicht mehr zur Zucht eingesetzt werden. Im Abstammungsschein bleibt er als Hengst eingetragen.</p><p>Kosten: <b>${fmt(KOSTEN.kastration)}</b> inklusive 2 Tage Klinik – du bekommst danach eine Rechnung. Das lässt sich nicht rückgängig machen.</p>`,
-          [["Kastrieren", () => { p.klinik = { seit: spiel.tag, op: "kastration", bis: spiel.tag + 2 }; spiel.angebote = (spiel.angebote || []).filter(x => x.id !== p.id); ortModus = null; aktenModus = "steckbrief"; aktenReiter = "steckbrief"; speichern(); zeigeStall(); zeigeTag(); }], ["Abbrechen", null, "zweit"]]);
+          [["Kastrieren", () => { ANH_ZIEL.kastration.aus(p, box); ortModus = null; aktenModus = "steckbrief"; aktenReiter = "steckbrief"; speichern(); zeigeStall(); zeigeTag(); }], ["Abbrechen", null, "zweit"]]);
         return;
       }
       if (id.startsWith("lt-")) { laborBestellen(p, id.slice(3), () => zeigeAkte()); return; }
       if (id === "aufzucht" || id === "ausbildung") {
         const ziel = ORT_NAME[id];
         dialog(`<h3>${id === "aufzucht" ? "🍼" : "🎓"} ${esc(p.name)} ${id === "aufzucht" ? "in die" : "in den"} ${ziel}?</h3><p>${id === "aufzucht" ? `${esc(p.name)} wächst dort mit anderen Jungpferden in der Herde auf, bis ${pron(p).er} 3 Jahre alt ist. Dann bringen wir ${pron(p).ihn} zurück, sobald eine Box frei ist.` : `Profis bilden ${esc(p.name)} aus – ${pron(p).er} kommt dort schneller voran. Du kannst ${pron(p).ihn} jederzeit in der Hofverwaltung unter „Außer Haus“ zurückholen.`}</p><p>Kosten: <b>${fmt(KOSTEN[id])} pro Tag</b>. Box ${aktBox + 1} wird dadurch frei.</p>`,
-          [[id === "aufzucht" ? "In die Aufzucht" : "In den Ausbildungsstall", () => { wegbringen(p, id, box, false); aktenModus = "steckbrief"; aktenReiter = "steckbrief"; ortModus = null; speichern(); zeigeStall(); zeigeTag(); }], ["Abbrechen", null, "zweit"]]);
+          [[id === "aufzucht" ? "In die Aufzucht" : "In den Ausbildungsstall", () => { ANH_ZIEL[id].aus(p, box, false); aktenModus = "steckbrief"; aktenReiter = "steckbrief"; ortModus = null; speichern(); zeigeStall(); zeigeTag(); }], ["Abbrechen", null, "zweit"]]);
         return;
       }
       ortModus = id; zeigeAkte();
@@ -3685,31 +3678,65 @@
       if (aktBox >= spiel.boxen.length) aktBox = spiel.boxen.length - 1; spiel.aktBox = aktBox; speichern(); zeigeBoxen(); };
     document.querySelectorAll("[data-zubox]").forEach(k => k.onclick = () => { aktBox = +k.dataset.zubox; spiel.aktBox = aktBox; aktenReiter = "steckbrief"; aktenModus = "steckbrief"; deckModus = false; ortModus = null; meldung = ""; zeigeSchirm(null); window.scrollTo(0, 0); });
   }
-  // ---------- Pferdeanhänger im Hauptmenü: mehrere geeignete Pferde auswählen und gemeinsam wegbringen ----------
-  let anhZiel = null, anhAuswahl = new Set(), anhMeldung = "";
-  const ANH_ZIELE = {
-    klinik: ["🏥", "Klinik", "in die Klinik", "Pferde unter 75 % Gesundheit – bleiben bis 75 %, Rechnung danach"],
-    aufzucht: ["🍼", "Aufzuchtstation", "in die Aufzuchtstation", "Fohlen (ab der 3. Jahreszeit) und Jungpferde bis 3 Jahre"],
-    ausbildung: ["🎓", "Ausbildungsstall", "in den Ausbildungsstall", "Pferde ab 3 Jahren"],
-    gnadenhof: ["🌳", "Gnadenhof", "auf den Gnadenhof", "Senioren ab 20 Jahren – du bekommst den halben Marktwert"],
-    kastration: ["✂️", "Kastration", "zur Kastration in die Klinik", "Hengste ab 1 Jahr – 2 Tage Klinik, danach Wallach"] };
-  // geeignete Pferde je Ziel: { key, p, box, fohlen }
+  // ---------- Pferdeanhänger: EINE gemeinsame Liste für beide Anhänger ----------
+  // Box/Ort → Pferdeanhänger (ein Pferd) und Hauptmenü → Pferdeanhänger (Mehrfachauswahl) bauen ihre Kacheln aus ANHAENGER + ANH_ZIEL.
+  // Neue Ziele nur hier eintragen – dann erscheinen sie in beiden Anhängern.
+  // Je Ziel: ico, name, info (Tooltip), wohin (für Texte), kurz(p, box) = Kurztext, wenn erlaubt, sperre(p, box, istFohlen) = Grund oder "",
+  // aus(p, box, istFohlen) = ausführen (ohne Rückfrage), bald = noch nicht verfügbar, gruppe = führt zu einer Unterebene, einzeln = nur einzeln (Verkaufen)
+  const ANHAENGER = { start: ["klinik", "aufzucht", "ausbildung", "turnier", "abgeben"], klinik: ["stationaer", "kastration"], abgeben: ["verschenken", "verkaufen", "gnadenhof"] };
+  const anhGrund = (p, b, mitAngebot = true) => b.tot ? "verstorben" : p.klinik ? "in der Klinik" : mitAngebot && angebotVon(p) ? "steht zum Verkauf" : "";
+  const ANH_ZIEL = {
+    klinik: { ico: "🏥", name: "Klinik", info: "Tierklinik: stationäre Behandlung oder Kastration", gruppe: true, kurz: () => "Behandlung, Kastration" },
+    abgeben: { ico: "👋", name: "Abgeben", info: "Pferd abgeben", gruppe: true, kurz: () => "verkaufen, Gnadenhof" },
+    turnier: { ico: "🏆", name: "Turnier", info: "Turniere und Wettbewerbe", bald: "bald" },
+    verschenken: { ico: "🎁", name: "Verschenken", info: "Verschenken geht nur an befreundete Mitspieler (derzeit nicht möglich)", bald: "nur an Freunde – bald" },
+    aufzucht: { ico: "🍼", name: "Aufzucht\u00adstation", info: "Fohlen und Jungpferde wachsen bis zum Ausbildungsalter in der Herde auf", wohin: "in die Aufzuchtstation", wo: "in der Aufzuchtstation",
+      beschreibung: "Fohlen (ab der 3. Jahreszeit) und Jungpferde bis 3 Jahre", kosten: () => `${fmt(KOSTEN.aufzucht)} pro Tag und Pferd`,
+      sperre: (p, b, f) => anhGrund(p, b) || (spiel.geld < 0 ? "Konto im Minus" : "") || (f ? (alterJZ(p) < 2 ? "Fohlen noch zu jung" : "") : b.fohlen ? "mit Fohlen bei Fuß" : alterJZ(p) >= AUSBILDUNGSALTER ? "nur bis 3 Jahre" : ""),
+      kurz: () => `${fmt(KOSTEN.aufzucht)} / Tag`, aus: (p, b, f) => wegbringen(p, "aufzucht", b, !!f) },
+    ausbildung: { ico: "🎓", name: "Ausbildungs\u00adstall", info: "Profis bilden das Pferd aus – es kommt schneller voran", wohin: "in den Ausbildungsstall", wo: "im Ausbildungsstall",
+      beschreibung: "Pferde ab 3 Jahren", kosten: () => `${fmt(KOSTEN.ausbildung)} pro Tag und Pferd`,
+      sperre: (p, b) => anhGrund(p, b) || (spiel.geld < 0 ? "Konto im Minus" : "") || (b.fohlen ? "mit Fohlen bei Fuß" : alterJZ(p) < AUSBILDUNGSALTER ? "ab 3 Jahren" : ""),
+      kurz: () => `${fmt(KOSTEN.ausbildung)} / Tag`, aus: (p, b) => wegbringen(p, "ausbildung", b, false) },
+    stationaer: { ico: "🛏️", name: "Stationär behandeln", info: "Bleibt in der Klinik, bis die Gesundheit mindestens 75 % beträgt – erholt sich doppelt so schnell", wohin: "in die Klinik", wo: "in der Klinik",
+      beschreibung: "Pferde unter 75 % Gesundheit – bleiben bis 75 %, Rechnung danach", kosten: () => `${fmt(KOSTEN.klinik)} pro Tag und Pferd`,
+      sperre: (p, b) => anhGrund(p, b, false) || (p.pflege && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p)) ? "nicht nötig" : ""),
+      kurz: () => `${fmt(KOSTEN.klinik)} / Tag`, aus: p => { p.klinik = { seit: spiel.tag }; delete p.weide; spiel.angebote = (spiel.angebote || []).filter(a => a.id !== p.id); } },
+    kastration: { ico: "✂️", name: "Hengst kastrieren", info: "Kastration: 2 Tage Klinik, danach ist er ein Wallach", wohin: "zur Kastration in die Klinik", wo: "in der Klinik",
+      beschreibung: "Hengste ab 1 Jahr – 2 Tage Klinik, danach Wallach", kosten: () => `${fmt(KOSTEN.kastration)} je Hengst inklusive 2 Tage Klinik`,
+      sperre: (p, b) => p.geschlecht !== "Hengst" ? "nur Hengste" : anhGrund(p, b) || (alterJZ(p) < KASTRATION_AB ? "ab 1 Jahr" : ""),
+      kurz: () => fmt(KOSTEN.kastration), aus: p => { p.klinik = { seit: spiel.tag, op: "kastration", bis: spiel.tag + 2 }; delete p.weide; spiel.angebote = (spiel.angebote || []).filter(a => a.id !== p.id); } },
+    verkaufen: { ico: "💰", name: "Verkaufen", info: "Auf dem Pferdemarkt verkaufen", einzeln: true,
+      sperre: (p, b) => angebotVon(p) ? "" : (anhGrund(p, b) || abgabeSperre(p, b, true)),
+      kurz: (p, b) => { const a = angebotVon(p); return a ? (a.art === "auktion" ? "in der Auktion" : "wird angeboten") : b.fohlen ? "mit Fohlen bei Fuß" : "Festpreis oder Auktion"; } },
+    gnadenhof: { ico: "🌳", name: "Gnaden\u00adhof", info: "Senioren verbringen ihren Lebensabend auf dem Gnadenhof", wohin: "auf den Gnadenhof", wo: "auf dem Gnadenhof",
+      beschreibung: "Senioren ab 20 Jahren – du bekommst den halben Marktwert",
+      sperre: (p, b) => anhGrund(p, b) || abgabeSperre(p, b) || (istSenior(p) ? "" : "nur Senioren (ab 20 J.)"),
+      kurz: p => `${fmt(Math.round(marktwert(p) / 2 / 50) * 50)} sofort`, aus: (p, b) => aufGnadenhof(p, b) } };
+  // geeignete Pferde je Ziel (für die Mehrfachauswahl): { key, p, box, fohlen }
   function anhKandidaten(ziel) {
-    const out = [];
+    const Z = ANH_ZIEL[ziel], out = []; if (!Z || !Z.sperre) return out;
     spiel.boxen.forEach(b => {
-      const p = b.pferd;
-      if (p && !b.tot && !p.klinik) {
-        const frei = !angebotVon(p) && !b.fohlen;
-        if (ziel === "klinik" && p.pflege && p.pflege.gesundheit < Math.min(75, gesundheitMax(p))) out.push({ key: "p:" + p.id, p, box: b });
-        if (ziel === "aufzucht" && frei && spiel.geld >= 0 && alterJZ(p) < AUSBILDUNGSALTER) out.push({ key: "p:" + p.id, p, box: b });
-        if (ziel === "ausbildung" && frei && spiel.geld >= 0 && alterJZ(p) >= AUSBILDUNGSALTER) out.push({ key: "p:" + p.id, p, box: b });
-        if (ziel === "gnadenhof" && !angebotVon(p) && istSenior(p) && !abgabeSperre(p, b)) out.push({ key: "p:" + p.id, p, box: b });
-        if (ziel === "kastration" && !angebotVon(p) && p.geschlecht === "Hengst" && alterJZ(p) >= KASTRATION_AB) out.push({ key: "p:" + p.id, p, box: b });
-      }
-      if (ziel === "aufzucht" && b.fohlen && spiel.geld >= 0 && alterJZ(b.fohlen) >= 2) out.push({ key: "f:" + b.fohlen.id, p: b.fohlen, box: b, fohlen: true });
+      if (b.pferd && !Z.sperre(b.pferd, b)) out.push({ key: "p:" + b.pferd.id, p: b.pferd, box: b });
+      if (ziel === "aufzucht" && b.fohlen && !Z.sperre(b.fohlen, b, true)) out.push({ key: "f:" + b.fohlen.id, p: b.fohlen, box: b, fohlen: true });
     });
     return out;
   }
+  // Kacheln einer Ebene – einzel = { p, box } (Box-Anhänger) oder null (Hauptmenü-Anhänger)
+  function anhKacheln(ebene, einzel) {
+    const zaehlen = id => { const Z = ANH_ZIEL[id]; return Z.bald ? 0 : Z.gruppe ? ANHAENGER[id].reduce((a, z) => a + zaehlen(z), 0) : anhKandidaten(id).length; };
+    return ANHAENGER[ebene].map(id => {
+      const Z = ANH_ZIEL[id]; let an, kurz;
+      if (Z.bald) { an = false; kurz = Z.bald; }
+      else if (einzel) { const sp = Z.gruppe ? "" : Z.sperre(einzel.p, einzel.box); an = !sp; kurz = sp || Z.kurz(einzel.p, einzel.box); }
+      else { const n = zaehlen(id); an = n > 0;
+        kurz = !n ? ((id === "aufzucht" || id === "ausbildung") && spiel.geld < 0 ? "Konto im Minus" : "kein Pferd passt") : Z.gruppe || Z.einzeln ? Z.kurz ? (Z.gruppe ? Z.kurz() : "Festpreis oder Auktion") : "" : `${n} ${n === 1 ? "Pferd passt" : "Pferde passen"}`; }
+      const attr = an ? `${einzel ? "data-ort" : "data-anhziel"}="${id}" role="button" tabindex="0"` : "";
+      return `<div class="kachel ${an ? "klickbar" : "fehlt"}" ${attr} title="${Z.name.replace(/\u00ad/g, "")}: ${Z.info}"><span class="ico">${Z.ico}</span><b>${Z.name}</b><small>${kurz}</small></div>`;
+    }).join("");
+  }
+  // Hauptmenü-Anhänger: Zustand
+  let anhZiel = null, anhAuswahl = new Set(), anhMeldung = "";
   // Verkaufen aus dem Anhänger: Pferd auswählen, Verkauf einstellen – danach zurück zum Anhänger („Abgeben“)
   function anhVerkaufen() {
     const zurueck = () => { anhZiel = "abgeben"; zeigeAnhaenger(); };
@@ -3721,39 +3748,19 @@
     document.querySelectorAll("[data-vk]").forEach(k => k.onclick = () => { $("dlg").hidden = true; verkaufDialog(spiel.boxen[+k.dataset.vk].pferd, zurueck); });
   }
   function zeigeAnhaenger() {
-    const meld = anhMeldung ? `<div class="klasse">${anhMeldung}</div>` : "";
-    const kachel = (id, ico, n, kurz, an = true) => `<button class="kachel ${an ? "klickbar" : "fehlt"}" ${an ? `data-anhziel="${id}"` : "disabled"}><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></button>`;
+    const meld = anhMeldung ? `<div class="klasse">${anhMeldung}</div>` : "", zur = t => `<button class="zurueck" id="anhZurueck">${t}</button>`;
     let html;
-    if (!anhZiel) {
-      html = meld + `<p class="text" style="margin:0 0 4px">🚚 <b>Pferdeanhänger</b> · Wohin soll es gehen? Danach wählst du alle Pferde aus, die mitfahren sollen.</p>
-        <div class="kacheln quadrat">${["klinik", "aufzucht", "ausbildung"].map(id => { const n = anhKandidaten(id).length;
-          if (id === "klinik") { const nk = n + anhKandidaten("kastration").length; return kachel("klinikwahl", "🏥", "Klinik", nk ? "Behandlung, Kastration" : "kein Pferd passt", nk > 0); }
-          return kachel(id, ANH_ZIELE[id][0], ANH_ZIELE[id][1].replace("station", "\u00adstation").replace("Ausbildungs", "Ausbildungs\u00ad"), spiel.geld < 0 ? "Konto im Minus" : n ? `${n} ${n === 1 ? "Pferd passt" : "Pferde passen"}` : "kein Pferd passt", n > 0); }).join("")}
-          ${kachel("turnier", "🏆", "Turnier", "bald", false)}
-          ${kachel("abgeben", "👋", "Abgeben", "verkaufen, Gnadenhof")}</div>`;
-    } else if (anhZiel === "klinikwahl") {
-      const ns = anhKandidaten("klinik").length, nk = anhKandidaten("kastration").length;
-      html = meld + `<p class="text" style="margin:0 0 4px">🏥 <b>Tierklinik</b> · Welche Behandlung?</p>
-        <div class="kacheln quadrat">${kachel("klinik", "🛏️", "Stationär behandeln", ns ? `${ns} ${ns === 1 ? "Pferd" : "Pferde"} unter 75 %` : "kein Pferd unter 75 %", ns > 0)}
-          ${kachel("kastration", "✂️", "Hengste kastrieren", nk ? `${nk} ${nk === 1 ? "Hengst" : "Hengste"} · ${fmt(KOSTEN.kastration)}` : "kein Hengst ab 1 Jahr", nk > 0)}</div>
-        <button class="zurueck" id="anhZurueck">‹ Zurück zum Anhänger</button>`;
-    } else if (anhZiel === "abgeben") {
-      const n = anhKandidaten("gnadenhof").length;
-      html = meld + `<p class="text" style="margin:0 0 4px">👋 <b>Abgeben</b></p>
-        <div class="kacheln quadrat">${kachel("verschenken", "🎁", "Verschenken", "nur an Freunde – bald", false)}
-          ${kachel("verkaufen", "💰", "Verkaufen", "Festpreis oder Auktion")}
-          ${kachel("gnadenhof", "🌳", "Gnaden\u00adhof", n ? `${n} ${n === 1 ? "Senior" : "Senioren"}` : "nur Senioren (ab 20 J.)", n > 0)}</div>
-        <button class="zurueck" id="anhZurueck">‹ Zurück zum Anhänger</button>`;
-    } else {
-      const [ico, name, , info] = ANH_ZIELE[anhZiel], liste = anhKandidaten(anhZiel);
+    if (!anhZiel) html = meld + `<p class="text" style="margin:0 0 4px">🚚 <b>Pferdeanhänger</b> · Wohin soll es gehen? Danach wählst du alle Pferde aus, die mitfahren sollen.</p><div class="kacheln quadrat">${anhKacheln("start", null)}</div>`;
+    else if (anhZiel === "klinik") html = meld + `<p class="text" style="margin:0 0 4px">🏥 <b>Tierklinik</b> · Welche Behandlung?</p><div class="kacheln quadrat">${anhKacheln("klinik", null)}</div>` + zur("‹ Zurück zum Anhänger");
+    else if (anhZiel === "abgeben") html = meld + `<p class="text" style="margin:0 0 4px">👋 <b>Abgeben</b></p><div class="kacheln quadrat">${anhKacheln("abgeben", null)}</div>` + zur("‹ Zurück zum Anhänger");
+    else {
+      const Z = ANH_ZIEL[anhZiel], liste = anhKandidaten(anhZiel);
       anhAuswahl = new Set([...anhAuswahl].filter(k => liste.some(x => x.key === k)));
-      const kosten = anhZiel === "gnadenhof" ? "" : anhZiel === "kastration" ? `${fmt(KOSTEN.kastration)} je Hengst inklusive 2 Tage Klinik` : `${fmt(KOSTEN[anhZiel])} pro Tag und Pferd`;
-      html = meld + `<p class="text" style="margin:0 0 4px">${ico} <b>${name}</b> · ${info}${kosten ? `<br><small>Kosten: ${kosten}</small>` : ""}</p>` + (liste.length
+      html = meld + `<p class="text" style="margin:0 0 4px">${Z.ico} <b>${Z.name.replace(/\u00ad/g, "")}</b> · ${Z.beschreibung}${Z.kosten ? `<br><small>Kosten: ${Z.kosten()}</small>` : ""}</p>` + (liste.length
         ? `<div class="post-leiste"><span>${anhAuswahl.size} von ${liste.length} ausgewählt</span><span><button id="anhAlle">${anhAuswahl.size === liste.length ? "Keine" : "Alle"} auswählen</button></span></div>
-          <div class="paar-liste anh-liste">${liste.map(x => `<div class="anh-wahl ${anhAuswahl.has(x.key) ? "markiert" : ""}">${pferdKachel(x.p, { attr: `data-anhwahl="${x.key}"`, zeilen: [x.fohlen ? `Fohlen · Box ${spiel.boxen.indexOf(x.box) + 1}` : `Box ${spiel.boxen.indexOf(x.box) + 1}`, anhZiel === "klinik" ? `Gesundheit ${x.p.pflege.gesundheit.toLocaleString("de-DE")} %` : alterText(x.p)] })}<span class="haken">${anhAuswahl.has(x.key) ? "✓" : ""}</span></div>`).join("")}</div>
-          <button class="sknopf haupt ${anhAuswahl.size ? "" : "aus"}" id="anhLos" ${anhAuswahl.size ? "" : "disabled"}><span class="i">🚚</span><span>${anhAuswahl.size ? `${anhAuswahl.size} ${anhAuswahl.size === 1 ? "Pferd" : "Pferde"} ${ANH_ZIELE[anhZiel][2]} bringen` : "Erst Pferde auswählen"}</span></button>`
-        : `<div class="panel"><p style="margin:0">Gerade passt kein Pferd.</p></div>`) +
-        `<button class="zurueck" id="anhZurueck">‹ Zurück</button>`;
+          <div class="paar-liste anh-liste">${liste.map(x => `<div class="anh-wahl ${anhAuswahl.has(x.key) ? "markiert" : ""}">${pferdKachel(x.p, { attr: `data-anhwahl="${x.key}"`, zeilen: [x.fohlen ? `Fohlen · Box ${spiel.boxen.indexOf(x.box) + 1}` : `Box ${spiel.boxen.indexOf(x.box) + 1}`, anhZiel === "stationaer" ? `Gesundheit ${x.p.pflege.gesundheit.toLocaleString("de-DE")} %` : alterText(x.p)] })}<span class="haken">${anhAuswahl.has(x.key) ? "✓" : ""}</span></div>`).join("")}</div>
+          <button class="sknopf haupt ${anhAuswahl.size ? "" : "aus"}" id="anhLos" ${anhAuswahl.size ? "" : "disabled"}><span class="i">🚚</span><span>${anhAuswahl.size ? `${anhAuswahl.size} ${anhAuswahl.size === 1 ? "Pferd" : "Pferde"} ${Z.wohin} bringen` : "Erst Pferde auswählen"}</span></button>`
+        : `<div class="panel"><p style="margin:0">Gerade passt kein Pferd.</p></div>`) + zur("‹ Zurück");
     }
     anhMeldung = "";
     zeigeNeben("🚚 Pferdeanhänger", `<div class="panel anh-panel">${html}</div>`);
@@ -3764,24 +3771,19 @@
       anhZiel = id; anhAuswahl = new Set(); zeigeAnhaenger(); window.scrollTo(0, 0); });
     nb.querySelectorAll("[data-anhwahl]").forEach(k => k.onclick = () => { const key = k.dataset.anhwahl; anhAuswahl.has(key) ? anhAuswahl.delete(key) : anhAuswahl.add(key); zeigeAnhaenger(); });
     if ($("anhAlle")) $("anhAlle").onclick = () => { const liste = anhKandidaten(anhZiel); anhAuswahl = anhAuswahl.size === liste.length ? new Set() : new Set(liste.map(x => x.key)); zeigeAnhaenger(); };
-    if ($("anhZurueck")) $("anhZurueck").onclick = () => { anhZiel = anhZiel === "gnadenhof" ? "abgeben" : anhZiel === "klinik" || anhZiel === "kastration" ? "klinikwahl" : null; anhAuswahl = new Set(); zeigeAnhaenger(); };
+    if ($("anhZurueck")) $("anhZurueck").onclick = () => { anhZiel = ANHAENGER.klinik.includes(anhZiel) ? "klinik" : ANHAENGER.abgeben.includes(anhZiel) ? "abgeben" : null; anhAuswahl = new Set(); zeigeAnhaenger(); };
     if ($("anhLos")) $("anhLos").onclick = () => {
       const gew = anhKandidaten(anhZiel).filter(x => anhAuswahl.has(x.key)); if (!gew.length) return;
-      const ziel = anhZiel, [ico, name, wohin] = ANH_ZIELE[ziel], namen = gew.map(x => `<b>${esc(x.p.name)}</b>`).join(", ");
+      const ziel = anhZiel, Z = ANH_ZIEL[ziel], namen = gew.map(x => `<b>${esc(x.p.name)}</b>`).join(", ");
       const geld = ziel === "gnadenhof" ? gew.reduce((a, x) => a + Math.round(marktwert(x.p) / 2 / 50) * 50, 0) : 0;
       const text = ziel === "kastration" ? `Sie bleiben 2 Tage in der Klinik (länger, falls die Gesundheit unter 75 % liegt) und sind danach <b>Wallache</b> – keine Zucht mehr möglich. Im Abstammungsschein bleiben sie Hengste. Kosten: <b>${fmt(KOSTEN.kastration * gew.length)}</b> (${fmt(KOSTEN.kastration)} je Hengst), du bekommst danach je eine Rechnung. Das lässt sich nicht rückgängig machen.`
         : ziel === "gnadenhof" ? `Sie ziehen sofort auf den Gnadenhof. Du bekommst zusammen <b>${fmt(geld)}</b>. Das lässt sich nicht rückgängig machen.`
-        : ziel === "klinik" ? `Sie bleiben in der Klinik, bis ihre Gesundheit wieder mindestens 75 % beträgt. Kosten: <b>${fmt(KOSTEN.klinik)} pro Tag und Pferd</b> – du bekommst danach je eine Rechnung.`
+        : ziel === "stationaer" ? `Sie bleiben in der Klinik, bis ihre Gesundheit wieder mindestens 75 % beträgt. Kosten: <b>${fmt(KOSTEN.klinik)} pro Tag und Pferd</b> – du bekommst danach je eine Rechnung.`
         : `Kosten: <b>${fmt(KOSTEN[ziel] * gew.length)} pro Tag</b> (${fmt(KOSTEN[ziel])} je Pferd). Ihre Boxen werden dadurch frei.`;
-      dialog(`<h3>${ico} ${gew.length} ${gew.length === 1 ? "Pferd" : "Pferde"} ${wohin}?</h3><p>${namen}</p><p>${text}</p>`,
+      dialog(`<h3>${Z.ico} ${gew.length} ${gew.length === 1 ? "Pferd" : "Pferde"} ${Z.wohin}?</h3><p>${namen}</p><p>${text}</p>`,
         [["Losfahren", () => {
-          gew.forEach(x => {
-            if (ziel === "klinik") { x.p.klinik = { seit: spiel.tag }; delete x.p.weide; spiel.angebote = (spiel.angebote || []).filter(a => a.id !== x.p.id); }
-            else if (ziel === "kastration") { x.p.klinik = { seit: spiel.tag, op: "kastration", bis: spiel.tag + 2 }; delete x.p.weide; }
-            else if (ziel === "gnadenhof") aufGnadenhof(x.p, x.box);
-            else wegbringen(x.p, ziel, x.box, !!x.fohlen);
-          });
-          anhMeldung = `${ico} ${gew.length === 1 ? `${esc(gew[0].p.name)} ist` : `${gew.length} Pferde sind`} ${ziel === "klinik" || ziel === "kastration" ? "jetzt in der Klinik" : ziel === "gnadenhof" ? "jetzt auf dem Gnadenhof" : `jetzt ${ziel === "aufzucht" ? "in der Aufzuchtstation" : "im Ausbildungsstall"}`}.`;
+          gew.forEach(x => Z.aus(x.p, x.box, !!x.fohlen));
+          anhMeldung = `${Z.ico} ${gew.length === 1 ? `${esc(gew[0].p.name)} ist` : `${gew.length} Pferde sind`} jetzt ${Z.wo}.`;
           anhAuswahl = new Set(); speichern(); zeigeTag(); zeigeAnhaenger(); }], ["Abbrechen", null, "zweit"]]);
     };
   }

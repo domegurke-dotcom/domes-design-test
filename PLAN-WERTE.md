@@ -5,7 +5,7 @@ Ausführliche Gesprächsnotizen: `werte/plan.md` *(liegt noch im Planungsprojekt
 
 ## Stand der Umsetzung
 
-- [~] Etappe 1 – Werte-Grundlage (umgesetzt in v161, Test durch Dome offen)
+- [x] Etappe 1 – Werte-Grundlage (v161, Alter und Name „Eigenschaften“ in v162, von Dome getestet)
 - [ ] Etappe 2 – Charakter → Wohlbefinden
 - [ ] Etappe 3 – Vorlieben und Reaktionen
 - [ ] Etappe 4 – Training daheim
@@ -60,7 +60,14 @@ Dome arbeitet zum ersten Mal mit so einem großen Plan. Bitte führe Dome aktiv 
    5. Gehorsam (nur erarbeitet: durch Ausbildung)
 4. **Energie** ist kein Wert, sondern ein Tagesvorrat: Training leert ihn, über Nacht füllt er sich je nach Regeneration.
 5. Obergrenzen realistisch: Ein Shetty springt nie wie ein Vollblut, egal wie viel trainiert wird. Kraft relativ zur Größe (Ponys sind kräftig); absolute Sprunghöhe begrenzt durch Stockmaß.
-6. Anzeige: Box - Steckbrief bekommt eine Karte für körperliche und mentale Werte (Balken wie Gangwerk).
+6. Anzeige: Box - Steckbrief bekommt eine Karte für körperliche und mentale Werte (Balken wie Gangwerk). **Name: „Eigenschaften“ (Kürzel eig).** Spieler sehen nur den aktuellen Wert, die Obergrenze sieht nur der Admin.
+7. **Alter** (mit Dome abgestimmt): erreichbar ist Anlage × Altersfaktor.
+   - Wachstum: unter 1 Jahr 40 %, 1 J. 55 %, 2 J. 70 %, 3 J. 80 %, 4 J. 90 %, ab 5 J. 100 % (Lernfähigkeit ohne Wachstumsgrenze).
+   - Abbau je Jahr (anteilig je Jahreszeit): die ersten 5 Jahre −3 %, danach −5 %, nie unter 20 %.
+   - Beginn: früh ab 12 (Geschwindigkeit, Beschleunigung, Regeneration), normal ab 13 (Kraft, Ausdauer, Wendigkeit, Beweglichkeit, Koordination, Zähigkeit, Konzentration, Reaktionsfähigkeit), spät ab 18 (Konstitution, Lernfähigkeit). Vertrauen und Gehorsam altern nicht.
+   - Werte über der Altersgrenze sinken zu Beginn jeder Jahreszeit auf diese Grenze.
+   - Etappe 4: regelmäßiges Training bremst den Abbau im Alter etwas.
+8. Startstand der trainierbaren Werte (bis Training daheim kommt): Altersgrenze × (60 % + ab 3 Jahren bis zu 30 % je nach Ausbildungsstand). Bestehende Pferde behalten ihre alten Gangnoten (Dome beginnt einen neuen Spielstand).
 
 ## 2. Charakter → Wohlbefinden
 
@@ -176,6 +183,6 @@ Disziplin-Wert = gewichtete Werte (Anteile in %) + Charakter-Zu-/Abschlag (max. 
 1. **Werte-Grundlage:** Charakter um Sensibilität ergänzen, Wachheit → Neugier, körperliche und mentale Werte mit Obergrenzen je Rasse anlegen und vererben, `talent` → Lernfähigkeit, Gangwerk-Noten senken. Anzeige im Steckbrief. Alte Speicherstände auffüllen.
 2. **Charakter → Wohlbefinden** inkl. Herde/Eingewöhnung auf der Weide.
 3. **Vorlieben und Reaktionen** (Texte) mit Knopf „Vorlieben“.
-4. **Training daheim:** Orte Roundpen, Reitplatz, Gelände (Reithalle über Ausbau), Energie, kombinierte Einheiten, Trainingsbericht, Ausbildungsskala mit Phasen und Kraft-Grenzen, Gangwerk-Bonus.
+4. **Training daheim:** Orte Roundpen, Reitplatz, Gelände (Reithalle über Ausbau), Energie, kombinierte Einheiten, Trainingsbericht, Ausbildungsskala mit Phasen und Kraft-Grenzen, Gangwerk-Bonus, Training bremst den Altersabbau, Wohlbefinden (`wohlFaktor`) wirkt aufs Lerntempo.
 5. **Disziplinen** mit Formeln, Anzeige in der Karte Ausbildung, neuer Marktwert.
 6. **Turniere** mit Kalender, Stufen, Reiter-LK, Ergebnissen und Erfolgen in der Akte.

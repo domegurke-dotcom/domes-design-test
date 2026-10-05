@@ -93,6 +93,7 @@
   .paar-liste { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 8px; }
   @media (max-width: 420px) { .paar-liste { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } }
   .paar { display: flex; flex-direction: column; padding: 0; border: 0; background: none; font: inherit; cursor: pointer; text-align: center; min-width: 0; }
+  .anh-panel { grid-column: 1/-1; width: 100%; max-width: 760px; margin: 0 auto; } .anh-wahl { position: relative; border-radius: 12px; outline: 3px solid transparent; outline-offset: 2px; } .anh-wahl.markiert { outline-color: var(--akzent); } .anh-wahl .haken { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 2px solid var(--akzent); color: var(--akzent); font-weight: 800; display: flex; align-items: center; justify-content: center; pointer-events: none; } .anh-wahl.markiert .haken { background: var(--akzent); color: #fff; } .anh-liste { margin-bottom: 10px; }
   .paar-bild { display: block; aspect-ratio: 1; overflow: hidden; background: linear-gradient(#dff1fa, #f4fbff); border: 4px solid #6b4226; border-radius: 8px 8px 0 0;
     box-shadow: inset 0 0 0 1px #3d2414; }
   .paar-bild svg { display: block; width: 100%; height: 100%; }
@@ -746,7 +747,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "150";
+  const SPIEL_VERSION = "151";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -754,9 +755,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=150"></script>
-<script src="kopfteile.js?v=150"></script>
-<script src="kopfalter.js?v=150"></script>
+<script src="pferd.js?v=151"></script>
+<script src="kopfteile.js?v=151"></script>
+<script src="kopfalter.js?v=151"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1820,6 +1821,14 @@
     $("auktionLos").onclick = () => { const jetzt = jzJetzt();
       (spiel.angebote = spiel.angebote || []).push({ id: p.id, art: "auktion", preis: start, gebot: start, gebote: 0, wert, start: jetzt, ende: jetzt + 2, fohlenId: fo ? fo.id : null }); fertig(`Die Auktion für ${esc(p.name)} läuft – Startgebot <b>${fmt(start)}</b>.`); };
   }
+  function aufGnadenhof(p, box) {
+    const halb = Math.round(marktwert(p) / 2 / 50) * 50;
+    (spiel.gnadenhof = spiel.gnadenhof || []).push({ pferd: p, seit: jzJetzt() });
+    buchen(halb, `Gnadenhof: ${p.name}`);
+    box.pferd = null; box.tot = false; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0;
+    brief("Gnadenhof", `Willkommen, ${p.name}!`, `<b>${esc(p.name)}</b> ist gut bei uns angekommen und grast schon zufrieden auf der Weide. {Du kannst|Sie können} ${pron(p).ihn} jederzeit im Hauptmenü unter „Gnadenhof“ besuchen.<br><br>${fmt(halb)} wurden {deinem|Ihrem} Hofkonto gutgeschrieben.`);
+    return halb;
+  }
   function gnadenhofDialog(p, nachher) {
     const box = boxVon(p); if (!box) return;
     if (!istSenior(p)) { dialog(`<h3>🌳 Gnadenhof</h3><p>Auf den Gnadenhof dürfen nur Senioren ab 20 Jahren. ${esc(p.name)} ist ${alterText(p)}.</p>`); return; }
@@ -1827,10 +1836,7 @@
     const halb = Math.round(marktwert(p) / 2 / 50) * 50;
     dialog(`<h3>🌳 ${esc(p.name)} auf den Gnadenhof geben?</h3><p>${esc(p.name)} zieht sofort auf den Gnadenhof und verbringt dort ${pron(p).er === "sie" ? "ihren" : "seinen"} Lebensabend. Du bekommst <b>${fmt(halb)}</b>.</p><p>Du kannst ${pron(p).ihn} dort jederzeit besuchen, aber nichts mehr mit ${pron(p).er === "sie" ? "ihr" : "ihm"} machen. Das lässt sich nicht rückgängig machen.</p>`,
       [["Auf den Gnadenhof", () => {
-        (spiel.gnadenhof = spiel.gnadenhof || []).push({ pferd: p, seit: jzJetzt() });
-        buchen(halb, `Gnadenhof: ${p.name}`);
-        box.pferd = null; box.tot = false; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0;
-        brief("Gnadenhof", `Willkommen, ${p.name}!`, `<b>${esc(p.name)}</b> ist gut bei uns angekommen und grast schon zufrieden auf der Weide. {Du kannst|Sie können} ${pron(p).ihn} jederzeit im Hauptmenü unter „Gnadenhof“ besuchen.<br><br>${fmt(halb)} wurden {deinem|Ihrem} Hofkonto gutgeschrieben.`);
+        aufGnadenhof(p, box);
         aktenReiter = "steckbrief"; aktenModus = "steckbrief"; ortModus = null;
         speichern(); zeigeTag(); nachher();
       }], ["Abbrechen", null, "zweit"]]);
@@ -2486,7 +2492,7 @@
     };
     const ab = $("absetzen"); if (ab) ab.onclick = () => {
       const frei = freieBox();
-      if (frei < 0) { dialog(`<h3>Keine Box frei</h3><p>In der Hofverwaltung kannst du mit + eine neue Box bauen.</p>`); return; }
+      if (frei < 0) { dialog(`<h3>Keine Box frei</h3><p>Im Stall (Boxenübersicht) kannst du mit + eine neue Box bauen.</p>`); return; }
       fohlenUmstellen(box, frei);
       speichern(); zeigeStall(); zeigeTag();
     };
@@ -3418,6 +3424,7 @@
         <button class="hm-kachel" id="hmMarkt"><span class="i">🏷️</span>Pferdemarkt<small>Pferde kaufen und verkaufen</small></button>
         <button class="hm-kachel" id="hmHof">${ungelesen() ? `<span class="bald" style="background:#c0392b">${ungelesen()} ✉</span>` : ""}<span class="i">📋</span>Hofverwaltung<small>Hof, Finanzen, Mitarbeiter, Postfach</small></button>
         <button class="hm-kachel" id="hmEnzy"><span class="i">📖</span>Enzyklopädie<small>Rassen, Kopfformen, Abzeichen, Farben</small></button>
+        <button class="hm-kachel" id="hmAnh"><span class="i">🚚</span>Pferdeanhänger<small>mehrere Pferde auf einmal wegbringen</small></button>
         <button class="hm-kachel" id="hmGnade"><span class="i">🌳</span>Gnadenhof<small>${(spiel.gnadenhof || []).length ? `${spiel.gnadenhof.length} ${spiel.gnadenhof.length === 1 ? "Pferd" : "Pferde"} im Ruhestand` : "Lebensabend für deine Pferde"}</small></button>
         <button class="hm-kachel" id="hmFried"><span class="i">🪦</span>Pferdefriedhof<small>${(spiel.friedhof || []).length ? `${spiel.friedhof.length} ${spiel.friedhof.length === 1 ? "Grabstein" : "Grabsteine"}` : "in Erinnerung"}</small></button>
         <button class="hm-kachel" id="hmEnde"><span class="i">🚪</span>Beenden<small>zurück zum Startmenü</small></button>
@@ -3426,6 +3433,7 @@
     zeigeSchirm("hauptMenue");
     $("hmStall").onclick = zeigeBoxen;
     $("hmGnade").onclick = zeigeGnadenhof;
+    $("hmAnh").onclick = () => { anhZiel = null; anhAuswahl = new Set(); anhMeldung = ""; zeigeAnhaenger(); };
     $("hmFried").onclick = zeigeFriedhof;
     $("hmMarkt").onclick = () => zeigeMarkt(null);
     $("hmHof").onclick = () => zeigeHof("hof");
@@ -3476,6 +3484,85 @@
       spiel.boxen.splice(i, 1); spiel.boxen.forEach((x, k) => x.nr = k + 1);
       if (aktBox >= spiel.boxen.length) aktBox = spiel.boxen.length - 1; spiel.aktBox = aktBox; speichern(); zeigeBoxen(); };
     document.querySelectorAll("[data-zubox]").forEach(k => k.onclick = () => { aktBox = +k.dataset.zubox; spiel.aktBox = aktBox; aktenReiter = "steckbrief"; aktenModus = "steckbrief"; deckModus = false; ortModus = null; meldung = ""; zeigeSchirm(null); window.scrollTo(0, 0); });
+  }
+  // ---------- Pferdeanhänger im Hauptmenü: mehrere geeignete Pferde auswählen und gemeinsam wegbringen ----------
+  let anhZiel = null, anhAuswahl = new Set(), anhMeldung = "";
+  const ANH_ZIELE = {
+    klinik: ["🏥", "Klinik", "in die Klinik", "Pferde unter 75 % Gesundheit – bleiben bis 75 %, Rechnung danach"],
+    aufzucht: ["🍼", "Aufzuchtstation", "in die Aufzuchtstation", "Fohlen (ab der 3. Jahreszeit) und Jungpferde bis 3 Jahre"],
+    ausbildung: ["🎓", "Ausbildungsstall", "in den Ausbildungsstall", "Pferde ab 3 Jahren"],
+    gnadenhof: ["🌳", "Gnadenhof", "auf den Gnadenhof", "Senioren ab 20 Jahren – du bekommst den halben Marktwert"] };
+  // geeignete Pferde je Ziel: { key, p, box, fohlen }
+  function anhKandidaten(ziel) {
+    const out = [];
+    spiel.boxen.forEach(b => {
+      const p = b.pferd;
+      if (p && !b.tot && !p.klinik) {
+        const frei = !angebotVon(p) && !b.fohlen;
+        if (ziel === "klinik" && p.pflege && p.pflege.gesundheit < Math.min(75, gesundheitMax(p))) out.push({ key: "p:" + p.id, p, box: b });
+        if (ziel === "aufzucht" && frei && spiel.geld >= 0 && alterJZ(p) < AUSBILDUNGSALTER) out.push({ key: "p:" + p.id, p, box: b });
+        if (ziel === "ausbildung" && frei && spiel.geld >= 0 && alterJZ(p) >= AUSBILDUNGSALTER) out.push({ key: "p:" + p.id, p, box: b });
+        if (ziel === "gnadenhof" && !angebotVon(p) && istSenior(p) && !abgabeSperre(p, b)) out.push({ key: "p:" + p.id, p, box: b });
+      }
+      if (ziel === "aufzucht" && b.fohlen && spiel.geld >= 0 && alterJZ(b.fohlen) >= 2) out.push({ key: "f:" + b.fohlen.id, p: b.fohlen, box: b, fohlen: true });
+    });
+    return out;
+  }
+  function zeigeAnhaenger() {
+    const meld = anhMeldung ? `<div class="klasse">${anhMeldung}</div>` : "";
+    const kachel = (id, ico, n, kurz, an = true) => `<button class="kachel ${an ? "klickbar" : "fehlt"}" ${an ? `data-anhziel="${id}"` : "disabled"}><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></button>`;
+    let html;
+    if (!anhZiel) {
+      html = meld + `<p class="text" style="margin:0 0 4px">🚚 <b>Pferdeanhänger</b> · Wohin soll es gehen? Danach wählst du alle Pferde aus, die mitfahren sollen.</p>
+        <div class="kacheln quadrat">${["klinik", "aufzucht", "ausbildung"].map(id => { const n = anhKandidaten(id).length;
+          return kachel(id, ANH_ZIELE[id][0], ANH_ZIELE[id][1].replace("station", "\u00adstation").replace("Ausbildungs", "Ausbildungs\u00ad"), (id !== "klinik" && spiel.geld < 0) ? "Konto im Minus" : n ? `${n} ${n === 1 ? "Pferd passt" : "Pferde passen"}` : "kein Pferd passt", n > 0); }).join("")}
+          ${kachel("turnier", "🏆", "Turnier", "bald", false)}
+          ${kachel("abgeben", "👋", "Abgeben", "verkaufen, Gnadenhof")}</div>`;
+    } else if (anhZiel === "abgeben") {
+      const n = anhKandidaten("gnadenhof").length;
+      html = meld + `<p class="text" style="margin:0 0 4px">👋 <b>Abgeben</b></p>
+        <div class="kacheln quadrat">${kachel("verschenken", "🎁", "Verschenken", "nur an Freunde – bald", false)}
+          ${kachel("verkaufen", "💰", "Verkaufen", "einzeln im Pferdemarkt")}
+          ${kachel("gnadenhof", "🌳", "Gnaden\u00adhof", n ? `${n} ${n === 1 ? "Senior" : "Senioren"}` : "nur Senioren (ab 20 J.)", n > 0)}</div>
+        <button class="zurueck" id="anhZurueck">‹ Zurück zum Anhänger</button>`;
+    } else {
+      const [ico, name, , info] = ANH_ZIELE[anhZiel], liste = anhKandidaten(anhZiel);
+      anhAuswahl = new Set([...anhAuswahl].filter(k => liste.some(x => x.key === k)));
+      const kosten = anhZiel === "gnadenhof" ? "" : `${fmt(KOSTEN[anhZiel])} pro Tag und Pferd`;
+      html = meld + `<p class="text" style="margin:0 0 4px">${ico} <b>${name}</b> · ${info}${kosten ? `<br><small>Kosten: ${kosten}</small>` : ""}</p>` + (liste.length
+        ? `<div class="post-leiste"><span>${anhAuswahl.size} von ${liste.length} ausgewählt</span><span><button id="anhAlle">${anhAuswahl.size === liste.length ? "Keine" : "Alle"} auswählen</button></span></div>
+          <div class="paar-liste anh-liste">${liste.map(x => `<div class="anh-wahl ${anhAuswahl.has(x.key) ? "markiert" : ""}">${pferdKachel(x.p, { attr: `data-anhwahl="${x.key}"`, zeilen: [x.fohlen ? `Fohlen · Box ${spiel.boxen.indexOf(x.box) + 1}` : `Box ${spiel.boxen.indexOf(x.box) + 1}`, anhZiel === "klinik" ? `Gesundheit ${x.p.pflege.gesundheit.toLocaleString("de-DE")} %` : alterText(x.p)] })}<span class="haken">${anhAuswahl.has(x.key) ? "✓" : ""}</span></div>`).join("")}</div>
+          <button class="sknopf haupt ${anhAuswahl.size ? "" : "aus"}" id="anhLos" ${anhAuswahl.size ? "" : "disabled"}><span class="i">🚚</span><span>${anhAuswahl.size ? `${anhAuswahl.size} ${anhAuswahl.size === 1 ? "Pferd" : "Pferde"} ${ANH_ZIELE[anhZiel][2]} bringen` : "Erst Pferde auswählen"}</span></button>`
+        : `<div class="panel"><p style="margin:0">Gerade passt kein Pferd.</p></div>`) +
+        `<button class="zurueck" id="anhZurueck">‹ Zurück</button>`;
+    }
+    anhMeldung = "";
+    zeigeNeben("🚚 Pferdeanhänger", `<div class="panel anh-panel">${html}</div>`);
+    const nb = $("nebenSchirm");
+    nb.querySelectorAll("[data-anhziel]").forEach(k => k.onclick = () => {
+      const id = k.dataset.anhziel;
+      if (id === "verkaufen") { zeigeMarkt("verkaufen"); return; }
+      anhZiel = id; anhAuswahl = new Set(); zeigeAnhaenger(); window.scrollTo(0, 0); });
+    nb.querySelectorAll("[data-anhwahl]").forEach(k => k.onclick = () => { const key = k.dataset.anhwahl; anhAuswahl.has(key) ? anhAuswahl.delete(key) : anhAuswahl.add(key); zeigeAnhaenger(); });
+    if ($("anhAlle")) $("anhAlle").onclick = () => { const liste = anhKandidaten(anhZiel); anhAuswahl = anhAuswahl.size === liste.length ? new Set() : new Set(liste.map(x => x.key)); zeigeAnhaenger(); };
+    if ($("anhZurueck")) $("anhZurueck").onclick = () => { anhZiel = anhZiel === "gnadenhof" ? "abgeben" : null; anhAuswahl = new Set(); zeigeAnhaenger(); };
+    if ($("anhLos")) $("anhLos").onclick = () => {
+      const gew = anhKandidaten(anhZiel).filter(x => anhAuswahl.has(x.key)); if (!gew.length) return;
+      const ziel = anhZiel, [ico, name, wohin] = ANH_ZIELE[ziel], namen = gew.map(x => `<b>${esc(x.p.name)}</b>`).join(", ");
+      const geld = ziel === "gnadenhof" ? gew.reduce((a, x) => a + Math.round(marktwert(x.p) / 2 / 50) * 50, 0) : 0;
+      const text = ziel === "gnadenhof" ? `Sie ziehen sofort auf den Gnadenhof. Du bekommst zusammen <b>${fmt(geld)}</b>. Das lässt sich nicht rückgängig machen.`
+        : ziel === "klinik" ? `Sie bleiben in der Klinik, bis ihre Gesundheit wieder mindestens 75 % beträgt. Kosten: <b>${fmt(KOSTEN.klinik)} pro Tag und Pferd</b> – du bekommst danach je eine Rechnung.`
+        : `Kosten: <b>${fmt(KOSTEN[ziel] * gew.length)} pro Tag</b> (${fmt(KOSTEN[ziel])} je Pferd). Ihre Boxen werden dadurch frei.`;
+      dialog(`<h3>${ico} ${gew.length} ${gew.length === 1 ? "Pferd" : "Pferde"} ${wohin}?</h3><p>${namen}</p><p>${text}</p>`,
+        [["Losfahren", () => {
+          gew.forEach(x => {
+            if (ziel === "klinik") { x.p.klinik = { seit: spiel.tag }; spiel.angebote = (spiel.angebote || []).filter(a => a.id !== x.p.id); }
+            else if (ziel === "gnadenhof") aufGnadenhof(x.p, x.box);
+            else wegbringen(x.p, ziel, x.box, !!x.fohlen);
+          });
+          anhMeldung = `${ico} ${gew.length === 1 ? `${esc(gew[0].p.name)} ist` : `${gew.length} Pferde sind`} ${ziel === "klinik" ? "jetzt in der Klinik" : ziel === "gnadenhof" ? "jetzt auf dem Gnadenhof" : `jetzt ${ziel === "aufzucht" ? "in der Aufzuchtstation" : "im Ausbildungsstall"}`}.`;
+          anhAuswahl = new Set(); speichern(); zeigeTag(); zeigeAnhaenger(); }], ["Abbrechen", null, "zweit"]]);
+    };
   }
   function zeigeGnadenhof() {
     const g = spiel.gnadenhof || [];
@@ -3690,7 +3777,7 @@
     const jetzt = jzJetzt(), ts = (spiel.tierschutz || []).filter(t => t.klinik || jetzt < t.frist);
     const zurueckkaufen = t => {
       const frei = freieBox();
-      if (frei < 0) { dialog(`<h3>Keine Box frei</h3><p>Für ${esc(t.pferd.name)} brauchst du eine freie Box. In der Hofverwaltung kannst du mit + eine neue bauen.</p>`); return; }
+      if (frei < 0) { dialog(`<h3>Keine Box frei</h3><p>Für ${esc(t.pferd.name)} brauchst du eine freie Box. Im Stall (Boxenübersicht) kannst du mit + eine neue bauen.</p>`); return; }
       if ((spiel.geld || 0) < t.preis) { dialog(`<h3>Nicht genug Geld</h3><p>Du brauchst ${fmt(t.preis)}, hast aber nur ${fmt(spiel.geld || 0)}.</p>`); return; }
       dialog(`<h3>🐾 Zurückkaufen</h3><p><b>${esc(t.pferd.name)}</b>${t.fohlen ? ` mit Fohlen <b>${esc(t.fohlen.name)}</b>` : ""} für ${fmt(t.preis)} vom Tierschutz zurückkaufen? ${pron(t.pferd).er === "sie" ? "Sie" : "Er"} kommt in Box ${frei + 1}.</p>`, [["Zurückkaufen", () => {
         buchen(-t.preis, `Tierschutz: ${t.pferd.name}`);

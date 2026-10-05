@@ -747,7 +747,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "156";
+  const SPIEL_VERSION = "157";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -755,9 +755,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=156"></script>
-<script src="kopfteile.js?v=156"></script>
-<script src="kopfalter.js?v=156"></script>
+<script src="pferd.js?v=157"></script>
+<script src="kopfteile.js?v=157"></script>
+<script src="kopfalter.js?v=157"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -775,7 +775,7 @@
   let hatSpielstand = false;
   try { const s = JSON.parse(localStorage.getItem(SPEICHER)); if (s && s.boxen) { spiel = s; hatSpielstand = true; } } catch (e) {}
   if (!spiel.anlage) spiel.anlage = { stall: true, paddock: true, weide: false, waschplatz: false, roundpen: false, reitplatz: false, reithalle: false, gelaende: true, anhaenger: true };
-  spiel.anlage.anhaenger = true;
+  spiel.anlage.anhaenger = true; spiel.anlage.weide = true;
   if (!spiel.ausruestung) spiel.ausruestung = { halfter: true, strick: true, putzkiste: true, sattel: false, trense: false, schabracke: false, decke: false, gamaschen: false, schere: true, medizin: true };
   if (spiel.ausruestung.medizin == null) spiel.ausruestung.medizin = true;
   spiel.rechnungen = (spiel.rechnungen || []).map(r => r.von ? r : { id: r.id, von: "Tierarztpraxis", art: "klinik", tag: spiel.tag || 1, stufe: 0, faellig: (spiel.tag || 1) + 2, posten: [{ text: `${r.name}: ${r.tage || "?"} Tage stationäre Behandlung`, betrag: r.betrag }], betrag: r.betrag, pferde: [r.pferdId] });
@@ -1043,7 +1043,7 @@
   const ausbStand = p => ausbildungsWerte({ ...p, alter: alterJahre(p) });
   // alle Pferde, die dem Spieler gehören, mit ihrem Aufenthaltsort
   const alleEigenenPferde = () => [
-    ...spiel.boxen.flatMap((b, i) => [b.pferd && { p: b.pferd, ort: b.pferd.klinik ? `Klinik (Box ${i + 1})` : `Box ${i + 1}`, box: i }, b.fohlen && { p: b.fohlen, ort: `Box ${i + 1} (bei der Mutter)`, box: i }].filter(Boolean)),
+    ...spiel.boxen.flatMap((b, i) => [b.pferd && { p: b.pferd, ort: b.pferd.klinik ? `Klinik (Box ${i + 1})` : b.pferd.weide ? `Weide (Box ${i + 1})` : `Box ${i + 1}`, box: i }, b.fohlen && { p: b.fohlen, ort: `Box ${i + 1} (bei der Mutter)`, box: i }].filter(Boolean)),
     ...(spiel.extern || []).map(e => ({ p: e.pferd, ort: ORT_NAME[e.ort] })),
     ...(spiel.gnadenhof || []).map(g => ({ p: g.pferd, ort: "Gnadenhof" })),
   ];
@@ -1409,6 +1409,7 @@
   // Warum kann dieses Pferd gerade nicht verpaart werden? ("" = es geht)
   function zuchtSperre(p, box) {
     if (p.klinik) return "in der Klinik";
+    if (p.weide) return "auf der Weide";
     if (p.geschlecht === "Wallach") return "Wallach";
     if (alterJZ(p) < ZUCHTALTER) return "zu jung";
     if (alterJahre(p) > (p.geschlecht === "Stute" ? ZUCHT_MAX.Stute : ZUCHT_MAX.Hengst)) return "zu alt";
@@ -1430,6 +1431,10 @@
     const decken = () => {
       const jetzt = jzJetzt();
       if (taxe) buchen(-taxe, `Decktaxe: ${hengst.name}`);
+      // Fruchtbarkeit: Chance 40 % + 55 % × Wohlbefinden (eigener Hengst zählt zur Hälfte mit)
+      const w = istDeckstation(hengst) ? wohlbefinden(stute) : (wohlbefinden(stute) + wohlbefinden(hengst)) / 2, chance = 0.4 + 0.55 * w / 100;
+      if (Math.random() >= chance) { deckModus = false; speichern(); zeigeAkte();
+        dialog(`<h3>💔 Nicht aufgenommen</h3><p><b>${esc(stute.name)}</b> wurde von <b>${esc(hengst.name)}</b> gedeckt${taxe ? ` (Decktaxe ${fmt(taxe)})` : ""}, ist aber leider nicht tragend geworden. ${w < 70 ? `Ein besseres Wohlbefinden (Weide, Putzen, nicht zu lange in der Box) erhöht die Chance.` : "Das passiert manchmal – ein neuer Versuch ist möglich."}</p>`); return; }
       stute.traechtig = { vater: hengstKopie(hengst), seit: jetzt, geburt: jetzt + 4 };
       deckModus = false; speichern(); zeigeAkte();
       dialog(`<h3>💞 Verpaart!</h3><p><b>${esc(stute.name)}</b> wurde von <b>${esc(hengst.name)}</b> gedeckt${taxe ? ` (Decktaxe ${fmt(taxe)})` : ""}. Das Fohlen kommt zu Beginn von ${jzName(jetzt + 4)} zur Welt.</p>`);
@@ -1474,10 +1479,12 @@
     if (betrag > 0) es.ein += betrag; else es.aus -= betrag; es.n++;
   }
   const KOSTEN = { aufzucht: 15, ausbildung: 35, klinik: 60, gentest: 150, kastration: 450 };
-  const KASTRATION_AB = 4;   // ab 1 Jahr (4 Jahreszeiten)
+  const KASTRATION_AB = 4;
+  const WEIDE_PLUS = [10, 12, 7, 5];   // Gesundheit pro Tag auf der Weide: Frühling, Sommer, Herbst, Winter (Box: +8)   // ab 1 Jahr (4 Jahreszeiten)
   const ORT_NAME = { aufzucht: "Aufzuchtstation", ausbildung: "Ausbildungsstall" };
   const AUSBILDUNGSALTER = 12;   // ab 3 Jahren (12 Jahreszeiten)
   function wegbringen(p, ort, box, istFohlen) {
+    delete p.weide;
     const e = { pferd: p, ort, seit: spiel.tag };
     if (ort === "ausbildung") e.vorher = { training: p.training || 0, werte: ausbStand(p) };   // für den Ausbildungsbericht
     (spiel.extern = spiel.extern || []).push(e);
@@ -1580,7 +1587,8 @@
       e.offen = (e.offen || 0) + KOSTEN[e.ort];   // wird zu Beginn der Jahreszeit (oder bei der Rückkehr) in Rechnung gestellt
       if (e.abbruch) { const nr = zurueckholen(e); if (nr >= 0) brief(ORT_NAME[e.ort], `${p.name} ist zurück`, `wie angekündigt haben wir <b>${esc(p.name)}</b> zurückgebracht – ${pron(p).er} steht jetzt in Box ${nr + 1}.`); return; }
       p.pflege.gesundheit = Math.min(gesundheitMax(p), Math.round((p.pflege.gesundheit + 8) * 10) / 10);
-      if (e.ort === "ausbildung") p.training = Math.round(((p.training || 0) + (p.traechtig ? 0.5 : 1)) * 10) / 10;   // tragend: halbes Tempo
+      if (e.ort === "ausbildung") p.training = Math.round(((p.training || 0) + (p.traechtig ? 0.5 : 1) * wohlFaktor(p)) * 10) / 10;   // tragend: halbes Tempo; Wohlbefinden beschleunigt oder bremst
+      if (e.ort === "aufzucht") p.pflege.wohl = Math.min(100, (p.pflege.wohl == null ? 100 : p.pflege.wohl) + 10);   // Herde, viel draußen
       if (e.ort === "aufzucht" && alterJZ(p) >= AUSBILDUNGSALTER) {
         const box = zurueckholen(e);
         if (box >= 0) brief("Aufzuchtstation", `${p.name} ist zurück`, `<b>${esc(p.name)}</b> ist jetzt 3 Jahre alt und damit im Ausbildungsalter. Wir haben ${pron(p).ihn} zu {dir|Ihnen} zurückgebracht – ${pron(p).er} steht jetzt in Box ${box + 1}.`);
@@ -2266,7 +2274,7 @@
     const p = B().pferd;
     $("boxSchild").textContent = "Box " + (aktBox + 1);
     stallFormat();
-    if (!p || p.klinik) { $("pferdPlatz").innerHTML = ""; zeigeAkte(); return; }
+    if (!p || p.klinik || p.weide) { $("pferdPlatz").innerHTML = ""; zeigeAkte(); return; }
     const tot = !!B().tot;   // verstorben: Augen zu, keine Bewegung mehr
     const z = zeichnePferd(p.rasse, fb(p), { dreck: p.dreck ? p.dreck.fell : 0, filz: p.dreck ? p.dreck.maehne : 0, alterStufe: stufeKey(p), seed: p.id, geschlecht: p.geschlecht, augenZu: tot, statisch: tot, maehne: p.maehne, schopf: p.schopf, typ: p.typ, eigenKopf: p.nase === "spiel" ? false : (p.nase || undefined), haltung: haltungFuer(p), ohren: (p.pflege && p.pflege.gesundheit >= 45 && p.pflege.gesundheit < 65) ? "geknickt" : "" });
     const s = p.stockmass * STALL.cmZuEinheit / 100;
@@ -2295,6 +2303,16 @@
   // ---------- Pferdeakte ----------
   function zeigeAkte() {
     const LS = leseP, p = LS || B().pferd, INFO = LS ? $("leseInfo") : $("info");
+    if (p && p.weide && !p.klinik && !LS && !B().tot) { const box = B();
+      const tage = spiel.tag - p.weide.seit, g = p.pflege.gesundheit, w = wohlbefinden(p);
+      INFO.innerHTML = `<div class="karte" style="min-height:0"><h2>🌿 ${esc(p.name)} ist auf der Weide</h2>
+        <p class="text">Box ${aktBox + 1} bleibt für ${pron(p).ihn} frei. ${tage ? `Seit ${tage} ${tage === 1 ? "Tag" : "Tagen"} auf der Weide` : "Heute auf die Weide gekommen"}${box.fohlen ? ` – Fohlen ${esc(box.fohlen.name)} ist mit dabei` : ""}. Gras statt Heu, kein Misten nötig.</p>
+        <div class="zeile-wert"><div class="kopf"><b>Gesundheit</b><span>${g.toLocaleString("de-DE")} % · +${WEIDE_PLUS[datum().s]} % pro Tag im ${JZ[datum().s][0]}</span></div><div class="balken"><i style="width:${g}%"></i></div></div>
+        <div class="zeile-wert"><div class="kopf"><b>Wohlbefinden</b><span>${w} %</span></div><div class="balken"><i style="width:${w}%;background:#5a9a6a"></i></div></div>
+        <button class="knopf" id="vonWeide" style="width:auto;padding:9px 14px;margin-top:8px">🏠 Zurück in die Box</button></div>`;
+      $("vonWeide").onclick = () => { delete p.weide; speichern(); zeigeStall(); zeigeTag(); };
+      return;
+    }
     if (p && p.klinik && !LS) {
       const tage = spiel.tag - p.klinik.seit, g = p.pflege.gesundheit;
       INFO.innerHTML = `<div class="karte" style="min-height:0"><h2>🏥 ${esc(p.name)} ist in der Klinik</h2>
@@ -2451,8 +2469,8 @@
         const d = p.dreck || {}, sf = dreckStufe(d.fell), sm = dreckStufe(d.maehne);
         inhalt = (meldung ? `<div class="klasse">${meldung}</div>` : "") + `<p class="text" style="margin:0 0 4px">🧰 <b>Putzkiste</b> · Fell: ${sf[1]} · Mähne &amp; Schweif: ${sm[0] >= 50 ? "verfilzt" : sm[0] >= 20 ? "zerzaust" : "gekämmt"}<br><small>${maBoxen("pfleger").includes(aktBox) ? "Der Pferdepfleger putzt dieses Pferd jeden Morgen." : "Pferde werden jede Nacht in der Box schmutziger. Ein Pferdepfleger (Hofverwaltung → Mitarbeiter) putzt sie für dich."}</small></p>
           <div class="kacheln quadrat">
-            <button class="kachel ${(d.fell || 0) > 0 ? "klickbar" : "fehlt"}" data-putz="buerste" ${(d.fell || 0) > 0 ? "" : "disabled"}><span class="ico">🧽</span><b>Bürste</b><small>${(d.fell || 0) > 0 ? "Fell putzen" : "Fell ist sauber"}</small></button>
-            <button class="kachel ${(d.maehne || 0) > 0 ? "klickbar" : "fehlt"}" data-putz="kamm" ${(d.maehne || 0) > 0 ? "" : "disabled"}><span class="ico">🪮</span><b>Kamm</b><small>${(d.maehne || 0) > 0 ? "Mähne & Schweif kämmen" : "schon gekämmt"}</small></button></div>
+            ${[["buerste", "🧽", "Bürste", d.fell, "Fell putzen"], ["kamm", "🪮", "Kamm", d.maehne, "Mähne & Schweif kämmen"]].map(([id, ico, n, wert, txt]) => { const schon = p.geputzt && p.geputzt.tag === spiel.tag && p.geputzt.mit.includes(id) && !(wert > 0);
+              return `<button class="kachel ${schon ? "fehlt" : "klickbar"}" data-putz="${id}" ${schon ? "disabled" : ""}><span class="ico">${ico}</span><b>${n}</b><small>${schon ? "heute schon gemacht" : txt}</small></button>`; }).join("")}</div>
           <button class="zurueck" id="putzZurueck">‹ Zurück zur Ausrüstung</button>`;
       } else if (medModus) {
         const heute = (p.medizin && p.medizin.tag === spiel.tag) ? p.medizin.gegeben : [], zuKrank = p.pflege.gesundheit <= 30;
@@ -2543,7 +2561,7 @@
       inhalt = meld +
         `<p class="text" style="margin:0 0 4px">📍 ${esc(p.name)} steht in <b>Box ${aktBox + 1}</b> · ${da} von ${plaetze.length} Plätzen auf deiner Anlage</p>
         <div class="kacheln quadrat">${kOrt("box", "🔀", "Box wechseln", freieBox() < 0 ? "keine frei" : `${spiel.boxen.filter(boxFrei).length} frei`, "In eine andere Box umziehen")}
-          ${plaetze.map(([k, ico, n, info, kurz]) => `<div class="kachel ${spiel.anlage[k] ? "" : "fehlt"}" title="${n.replace(/\u00ad/g, "")}: ${info}${spiel.anlage[k] ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></div>`).join("")}
+          ${plaetze.map(([k, ico, n, info, kurz]) => k === "weide" ? kOrt("weide", ico, n, p.weide ? "zurück in die Box" : `Gesundheit +${WEIDE_PLUS[datum().s]} %/Tag`, p.weide ? "Pferd von der Weide zurück in die Box holen" : "Pferd auf die Weide bringen") : `<div class="kachel ${spiel.anlage[k] ? "" : "fehlt"}" title="${n.replace(/\u00ad/g, "")}: ${info}${spiel.anlage[k] ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></div>`).join("")}
           ${kOrt("labor", "🔬", "Labor", "Gentests", "Genetische Tests mit einer Haarprobe")}
           ${kOrt("anhaenger", "🚚", "Pferde\u00adanhänger", "Klinik, Turnier, Abgeben …", "Mit dem Anhänger wegfahren")}</div>`;
       }
@@ -2638,6 +2656,11 @@
         dialog(`<h3>🏥 ${esc(p.name)} in die Klinik?</h3><p>${esc(p.name)} bleibt in der Klinik, bis die Gesundheit wieder mindestens 75 % beträgt, und erholt sich dort doppelt so schnell. Die Behandlung kostet <b>${fmt(KOSTEN.klinik)} pro Tag</b> – du bekommst danach eine Rechnung, die du innerhalb von 2 Tagen bezahlen solltest – sonst kommt eine Mahnung mit Gebühr. Die Box bleibt für ${pron(p).ihn} frei.</p>`,
           [["In die Klinik", () => { p.klinik = { seit: spiel.tag }; spiel.angebote = (spiel.angebote || []).filter(x => x.id !== p.id); ortModus = null; aktenModus = "steckbrief"; aktenReiter = "steckbrief"; speichern(); zeigeStall(); zeigeTag(); }], ["Abbrechen", null, "zweit"]]);
         return;
+      }
+      if (id === "weide") {
+        if (p.weide) { delete p.weide; meldung = `🏠 ${esc(p.name)} ist zurück in Box ${aktBox + 1}.`; }
+        else { p.weide = { seit: spiel.tag }; p.boxTage = 0; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0; meldung = ""; }
+        ortModus = null; speichern(); zeigeStall(); zeigeTag(); return;
       }
       if (id === "kastrieren") {
         dialog(`<h3>✂️ ${esc(p.name)} kastrieren?</h3><p>${esc(p.name)} bleibt dafür 2 Tage in der Klinik (länger, falls die Gesundheit unter 75 % liegt). Danach ist er ein <b>Wallach</b> und kann nicht mehr zur Zucht eingesetzt werden. Im Abstammungsschein bleibt er als Hengst eingetragen.</p><p>Kosten: <b>${fmt(KOSTEN.kastration)}</b> inklusive 2 Tage Klinik – du bekommst danach eine Rechnung. Das lässt sich nicht rückgängig machen.</p>`,
@@ -3078,8 +3101,8 @@
     $("tagAnzeige").setAttribute("aria-label", `${datumLang(dd)}, Tag ${dd.t} von ${tpj()} – antippen, um den Tag zu beenden`);
     $("stall").classList.toggle("leer", !box.krippeVoll);
     $("stall").classList.toggle("mistig", !!box.mistig);
-    $("stall").classList.toggle("ohneHinweise", (spiel.tag || 1) > 2 || !box.pferd || !!box.pferd.klinik);
-    $("stall").classList.toggle("klinikBox", !!(box.pferd && box.pferd.klinik));
+    $("stall").classList.toggle("ohneHinweise", (spiel.tag || 1) > 2 || !box.pferd || !!box.pferd.klinik || !!box.pferd.weide);
+    $("stall").classList.toggle("klinikBox", !!(box.pferd && (box.pferd.klinik || box.pferd.weide)));
     if (box.mistig) { zeichneMist(); $("mist").classList.remove("weg"); } else $("mist").classList.add("weg");
     $("stall").classList.toggle("tot", !!box.tot);
     $("totText").style.display = box.tot ? "" : "none";
@@ -3087,13 +3110,13 @@
   }
   $("krippe").addEventListener("click", () => {
     const box = B();
-    if (!box.pferd || box.tot || box.pferd.klinik || box.krippeVoll) return;
+    if (!box.pferd || box.tot || box.pferd.klinik || box.pferd.weide || box.krippeVoll) return;
     box.krippeVoll = true;
     speichern(); zeigeTag();
   });
   const ausmisten = () => {
     const box = B();
-    if (!box.pferd || box.tot || box.pferd.klinik || !box.mistig) return;
+    if (!box.pferd || box.tot || box.pferd.klinik || box.pferd.weide || !box.mistig) return;
     box.mistig = false; box.mistStufe = 0;
     speichern(); zeigeTag(); funkeln();
   };
@@ -3147,7 +3170,7 @@
   // Boxen, die die Angestellten einer Art heute versorgen (nach Boxnummer, je Angestelltem 3 Boxen)
   function maBoxen(typ) {
     const n = angestellte(typ).filter(m => maAktiv(m)).length * MA_TYP[typ].boxen;
-    return spiel.boxen.map((b, i) => i).filter(i => { const b = spiel.boxen[i]; return b.pferd && !b.pferd.klinik && !b.tot; }).slice(0, n);
+    return spiel.boxen.map((b, i) => i).filter(i => { const b = spiel.boxen[i]; return b.pferd && !b.pferd.klinik && !b.tot && (typ !== "stallbursche" || !b.pferd.weide); }).slice(0, n);
   }
   const burschenBoxen = () => maBoxen("stallbursche");
   // zu Beginn jeder Jahreszeit: Gehalt für die letzte Jahreszeit, Abgänge, Neuanfänge
@@ -3175,7 +3198,11 @@
   const DRECK_STUFEN = [[80, "sehr dreckig", "bad"], [50, "schmutzig", "warn"], [20, "staubig", "warn"], [0, "sauber", "ok"]];
   const dreckStufe = w => DRECK_STUFEN.find(([ab]) => (w || 0) >= ab);
   const dreckWert = p => p && p.dreck ? Math.max(p.dreck.fell || 0, (p.dreck.maehne || 0) * 0.7) : 0;
-  // angezeigtes Wohlbefinden = Grundwert (Futter, Box) minus Schmutz (bis −40) – Putzen hebt es sofort
+  // Wohlbefinden pro Tag: Weide +15, ab dem 3. Tag am Stück in der Box −6, hungrig −8, Box nicht gemistet −5; Putzen +5 (Bürste und Kamm je einmal am Tag)
+  const WOHL = { weide: 15, box: 6, hunger: 8, mist: 5, putzen: 5 };
+  // Wirkung: Lern-/Ausbildungstempo ×0,5 (0 %) … ×1,2 (100 %), bei 70 % normal
+  const wohlFaktor = p => 0.5 + 0.7 * wohlbefinden(p) / 100;
+  // angezeigtes Wohlbefinden = Grundwert minus Schmutz (bis −40) – Putzen hebt es sofort
   const wohlbefinden = p => !p || !p.pflege ? 100 : Math.max(0, Math.min(100, Math.round((p.pflege.wohl == null ? 100 : p.pflege.wohl) - dreckWert(p) * 0.4)));
   const zuLangeDreckig = p => !!(p && p.dreck && p.dreck.seit != null && spiel.tag - p.dreck.seit > tpj());
   function schmutzen(p, mistig) {
@@ -3185,7 +3212,10 @@
     if (d.fell >= 50) { if (d.seit == null) d.seit = spiel.tag; } else d.seit = null;
   }
   function putzen(p, womit) {
-    if (!p || !p.dreck) return 0; const d = p.dreck, vorher = womit === "buerste" ? d.fell : d.maehne;
+    if (!p) return 0;
+    const heute = (p.geputzt && p.geputzt.tag === spiel.tag) ? p.geputzt : (p.geputzt = { tag: spiel.tag, mit: [] });
+    if (!heute.mit.includes(womit) && p.pflege) { heute.mit.push(womit); p.pflege.wohl = Math.min(100, (p.pflege.wohl == null ? 100 : p.pflege.wohl) + WOHL.putzen); }
+    if (!p.dreck) return 0; const d = p.dreck, vorher = womit === "buerste" ? d.fell : d.maehne;
     if (womit === "buerste") { d.fell = 0; d.seit = null; } else d.maehne = 0;
     return vorher;
   }
@@ -3197,13 +3227,41 @@
     const sz = SCHOEPFE.findIndex(m => m[0] === p.schopfZiel), si = SCHOEPFE.findIndex(m => m[0] === (p.schopf || naturSchopf(p.rasse)));
     if (sz >= 0 && si > sz) { p.schopf = p.schopfZiel; p.schopfSeit = spiel.tag; }
   }
+  // Mähne und Schopf wachsen alle 2 Jahreszeiten eine Stufe – auch beim Fohlen bei der Mutter
+  function wachsen(b) {
+      [b.pferd, b.fohlen].forEach(pf2 => { if (!pf2) return;
+      const idx = MAEHNEN.findIndex(m => m[0] === (pf2.maehne || naturMaehne(pf2.rasse)));
+      if (spiel.tag - (pf2.maehneSeit || spiel.tag) >= (2 * tpj())) {
+        if (idx < MAEHNEN.length - 1) pf2.maehne = MAEHNEN[idx + 1][0];
+        pf2.maehneSeit = spiel.tag;
+      }
+      // Schopf wächst genauso (Rassen ohne Schopf bleiben ohne)
+      const ns2 = naturSchopf(pf2.rasse);
+      if (ns2 && spiel.tag - (pf2.schopfSeit || spiel.tag) >= (2 * tpj())) {
+        const si = SCHOEPFE.findIndex(m => m[0] === (pf2.schopf || ns2));
+        if (si < SCHOEPFE.length - 1) pf2.schopf = SCHOEPFE[si + 1][0];
+        pf2.schopfSeit = spiel.tag;
+      }
+      });
+  }
   function naechsteNacht() {
     tote();
     spiel.tag += 1;
     alterAktualisieren();
     spiel.boxen.forEach(b => {
       if (!b.pferd) { b.krippeVoll = false; b.mistig = false; return; }   // leere Box: sauber, Krippe leer
-      if (b.pferd.klinik) { b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; return; }   // Pferd ist in der Klinik
+      if (b.pferd.klinik) { delete b.pferd.weide; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; return; }   // Pferd ist in der Klinik
+      if (b.pferd.weide && !b.tot) {   // Weide: Gras statt Heu, kein Mist – Gesundheit je nach Jahreszeit, Wohlbefinden steigt
+        b.krippeVoll = false; b.mistig = false; b.mistStufe = 0;
+        const W = b.pferd, plus = WEIDE_PLUS[datum().s];
+        [W, b.fohlen].forEach(q => { if (!q) return; const qp = (q.pflege = q.pflege || erzeugePflege(q));
+          if (qp.gesundheit > 30 || (q === W && altersschwach(W))) qp.gesundheit = Math.min(gesundheitMax(q), Math.round((qp.gesundheit + plus) * 10) / 10); });
+        if (zuLangeDreckig(W)) W.pflege.gesundheit = Math.max(1, Math.round((W.pflege.gesundheit - 3) * 10) / 10);
+        W.pflege.wohl = Math.min(100, (W.pflege.wohl == null ? 100 : W.pflege.wohl) + WOHL.weide); W.boxTage = 0;
+        schmutzen(W, false);
+        wachsen(b);
+        return;
+      }
       const pf = b.pferd.pflege;
       warnen(b, spiel.boxen.indexOf(b));   // Warnbrief schon beim Stand vor der Nacht
       let g = pf.gesundheit;
@@ -3224,25 +3282,12 @@
         if (!b.krippeVoll) fg -= 19; if (b.mistig) fg -= 9.5; if (b.krippeVoll && !b.mistig && fp.gesundheit > 30) fg += 8;
         fp.gesundheit = Math.max(1, Math.min(gesundheitMax(F), Math.round(fg * 10) / 10)); }
       b.mistStufe = b.mistig ? Math.min(6, (b.mistStufe || 1) + 1) : 1;
-      // Wohlbefinden (Grundwert): nähert sich jede Nacht zur Hälfte dem Ziel – hungrig −25, Box nicht gemistet −15
-      pf.wohl = Math.round(((pf.wohl == null ? 100 : pf.wohl) + ((100 - (b.krippeVoll ? 0 : 25) - (b.mistig ? 15 : 0)) - (pf.wohl == null ? 100 : pf.wohl)) * 0.5) * 10) / 10;
+      // Wohlbefinden: sinkt, wenn das Pferd länger als 2 Tage am Stück in der Box steht, hungrig ist oder im Mist steht
+      b.pferd.boxTage = (b.pferd.boxTage || 0) + 1;
+      pf.wohl = Math.max(0, (pf.wohl == null ? 100 : pf.wohl) - (b.pferd.boxTage > 2 ? WOHL.box : 0) - (b.krippeVoll ? 0 : WOHL.hunger) - (b.mistig ? WOHL.mist : 0));
       schmutzen(b.pferd, b.mistig);
       b.krippeVoll = false; b.mistig = true;
-      // Mähne und Schopf wachsen alle 2 Jahreszeiten eine Stufe – auch beim Fohlen bei der Mutter
-      [b.pferd, b.fohlen].forEach(pf2 => { if (!pf2) return;
-      const idx = MAEHNEN.findIndex(m => m[0] === (pf2.maehne || naturMaehne(pf2.rasse)));
-      if (spiel.tag - (pf2.maehneSeit || spiel.tag) >= (2 * tpj())) {
-        if (idx < MAEHNEN.length - 1) pf2.maehne = MAEHNEN[idx + 1][0];
-        pf2.maehneSeit = spiel.tag;
-      }
-      // Schopf wächst genauso (Rassen ohne Schopf bleiben ohne)
-      const ns2 = naturSchopf(pf2.rasse);
-      if (ns2 && spiel.tag - (pf2.schopfSeit || spiel.tag) >= (2 * tpj())) {
-        const si = SCHOEPFE.findIndex(m => m[0] === (pf2.schopf || ns2));
-        if (si < SCHOEPFE.length - 1) pf2.schopf = SCHOEPFE[si + 1][0];
-        pf2.schopfSeit = spiel.tag;
-      }
-      });
+      wachsen(b);
     });
     externNacht(); rechnungenTag();
     angeboteNacht();
@@ -3632,7 +3677,7 @@
   function zeigeBoxen() {
     const leer = (i, txt) => `<button class="paar leer" data-zubox="${i}"><span class="paar-bild leer-rahmen"></span><span class="paar-brett"><b>Box ${i + 1}</b><span>${txt}</span></span></button>`;
     zeigeNeben("🏠 Stall", `<div class="panel" style="grid-column:1/-1;width:100%;max-width:760px;margin:0 auto"><div class="hf-kopf"><b>${spiel.boxen.filter(b => b.pferd).length} von ${spiel.boxen.length} Boxen belegt</b><span style="display:flex;gap:6px"><button class="hf-minus" id="bxMinus" aria-label="Leere Box entfernen" ${letzteLeere() < 1 ? "disabled" : ""}>−</button><button class="hf-plus" id="bxPlus" aria-label="Box hinzufügen">+</button></span></div><p style="margin:0">Antippen, um in die Box zu gehen. Mit + baust du eine Box, mit − entfernst du die letzte leere.</p>
-      <div class="paar-liste boxen-liste">${spiel.boxen.map((b, i) => b.pferd ? pferdKachel(b.pferd, { attr: `data-zubox="${i}"`, zeilen: [`Box ${i + 1}`, b.tot ? "🕊️ verstorben" : b.pferd.klinik ? "🏥 in der Klinik" : `${rasseById(b.pferd.rasse).name}`, ...(b.fohlen ? [`🍼 + ${esc(b.fohlen.name)}`] : []), ...(angebotVon(b.pferd) ? ["💰 zum Verkauf"] : [])] })
+      <div class="paar-liste boxen-liste">${spiel.boxen.map((b, i) => b.pferd ? pferdKachel(b.pferd, { attr: `data-zubox="${i}"`, zeilen: [`Box ${i + 1}`, b.tot ? "🕊️ verstorben" : b.pferd.klinik ? "🏥 in der Klinik" : b.pferd.weide ? "🌿 auf der Weide" : `${rasseById(b.pferd.rasse).name}`, ...(b.fohlen ? [`🍼 + ${esc(b.fohlen.name)}`] : []), ...(angebotVon(b.pferd) ? ["💰 zum Verkauf"] : [])] })
         : leer(i, b.reserviert ? "🔒 reserviert" : "leer")).join("")}</div></div>`);
     $("bxPlus").onclick = () => { spiel.boxen.push({ nr: spiel.boxen.length + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false }); speichern(); zeigeBoxen(); };
     $("bxMinus").onclick = () => { const i = letzteLeere(); if (i < 1) return;
@@ -3646,7 +3691,8 @@
     klinik: ["🏥", "Klinik", "in die Klinik", "Pferde unter 75 % Gesundheit – bleiben bis 75 %, Rechnung danach"],
     aufzucht: ["🍼", "Aufzuchtstation", "in die Aufzuchtstation", "Fohlen (ab der 3. Jahreszeit) und Jungpferde bis 3 Jahre"],
     ausbildung: ["🎓", "Ausbildungsstall", "in den Ausbildungsstall", "Pferde ab 3 Jahren"],
-    gnadenhof: ["🌳", "Gnadenhof", "auf den Gnadenhof", "Senioren ab 20 Jahren – du bekommst den halben Marktwert"] };
+    gnadenhof: ["🌳", "Gnadenhof", "auf den Gnadenhof", "Senioren ab 20 Jahren – du bekommst den halben Marktwert"],
+    kastration: ["✂️", "Kastration", "zur Kastration in die Klinik", "Hengste ab 1 Jahr – 2 Tage Klinik, danach Wallach"] };
   // geeignete Pferde je Ziel: { key, p, box, fohlen }
   function anhKandidaten(ziel) {
     const out = [];
@@ -3658,6 +3704,7 @@
         if (ziel === "aufzucht" && frei && spiel.geld >= 0 && alterJZ(p) < AUSBILDUNGSALTER) out.push({ key: "p:" + p.id, p, box: b });
         if (ziel === "ausbildung" && frei && spiel.geld >= 0 && alterJZ(p) >= AUSBILDUNGSALTER) out.push({ key: "p:" + p.id, p, box: b });
         if (ziel === "gnadenhof" && !angebotVon(p) && istSenior(p) && !abgabeSperre(p, b)) out.push({ key: "p:" + p.id, p, box: b });
+        if (ziel === "kastration" && !angebotVon(p) && p.geschlecht === "Hengst" && alterJZ(p) >= KASTRATION_AB) out.push({ key: "p:" + p.id, p, box: b });
       }
       if (ziel === "aufzucht" && b.fohlen && spiel.geld >= 0 && alterJZ(b.fohlen) >= 2) out.push({ key: "f:" + b.fohlen.id, p: b.fohlen, box: b, fohlen: true });
     });
@@ -3680,9 +3727,16 @@
     if (!anhZiel) {
       html = meld + `<p class="text" style="margin:0 0 4px">🚚 <b>Pferdeanhänger</b> · Wohin soll es gehen? Danach wählst du alle Pferde aus, die mitfahren sollen.</p>
         <div class="kacheln quadrat">${["klinik", "aufzucht", "ausbildung"].map(id => { const n = anhKandidaten(id).length;
-          return kachel(id, ANH_ZIELE[id][0], ANH_ZIELE[id][1].replace("station", "\u00adstation").replace("Ausbildungs", "Ausbildungs\u00ad"), (id !== "klinik" && spiel.geld < 0) ? "Konto im Minus" : n ? `${n} ${n === 1 ? "Pferd passt" : "Pferde passen"}` : "kein Pferd passt", n > 0); }).join("")}
+          if (id === "klinik") { const nk = n + anhKandidaten("kastration").length; return kachel("klinikwahl", "🏥", "Klinik", nk ? "Behandlung, Kastration" : "kein Pferd passt", nk > 0); }
+          return kachel(id, ANH_ZIELE[id][0], ANH_ZIELE[id][1].replace("station", "\u00adstation").replace("Ausbildungs", "Ausbildungs\u00ad"), spiel.geld < 0 ? "Konto im Minus" : n ? `${n} ${n === 1 ? "Pferd passt" : "Pferde passen"}` : "kein Pferd passt", n > 0); }).join("")}
           ${kachel("turnier", "🏆", "Turnier", "bald", false)}
           ${kachel("abgeben", "👋", "Abgeben", "verkaufen, Gnadenhof")}</div>`;
+    } else if (anhZiel === "klinikwahl") {
+      const ns = anhKandidaten("klinik").length, nk = anhKandidaten("kastration").length;
+      html = meld + `<p class="text" style="margin:0 0 4px">🏥 <b>Tierklinik</b> · Welche Behandlung?</p>
+        <div class="kacheln quadrat">${kachel("klinik", "🛏️", "Stationär behandeln", ns ? `${ns} ${ns === 1 ? "Pferd" : "Pferde"} unter 75 %` : "kein Pferd unter 75 %", ns > 0)}
+          ${kachel("kastration", "✂️", "Hengste kastrieren", nk ? `${nk} ${nk === 1 ? "Hengst" : "Hengste"} · ${fmt(KOSTEN.kastration)}` : "kein Hengst ab 1 Jahr", nk > 0)}</div>
+        <button class="zurueck" id="anhZurueck">‹ Zurück zum Anhänger</button>`;
     } else if (anhZiel === "abgeben") {
       const n = anhKandidaten("gnadenhof").length;
       html = meld + `<p class="text" style="margin:0 0 4px">👋 <b>Abgeben</b></p>
@@ -3693,7 +3747,7 @@
     } else {
       const [ico, name, , info] = ANH_ZIELE[anhZiel], liste = anhKandidaten(anhZiel);
       anhAuswahl = new Set([...anhAuswahl].filter(k => liste.some(x => x.key === k)));
-      const kosten = anhZiel === "gnadenhof" ? "" : `${fmt(KOSTEN[anhZiel])} pro Tag und Pferd`;
+      const kosten = anhZiel === "gnadenhof" ? "" : anhZiel === "kastration" ? `${fmt(KOSTEN.kastration)} je Hengst inklusive 2 Tage Klinik` : `${fmt(KOSTEN[anhZiel])} pro Tag und Pferd`;
       html = meld + `<p class="text" style="margin:0 0 4px">${ico} <b>${name}</b> · ${info}${kosten ? `<br><small>Kosten: ${kosten}</small>` : ""}</p>` + (liste.length
         ? `<div class="post-leiste"><span>${anhAuswahl.size} von ${liste.length} ausgewählt</span><span><button id="anhAlle">${anhAuswahl.size === liste.length ? "Keine" : "Alle"} auswählen</button></span></div>
           <div class="paar-liste anh-liste">${liste.map(x => `<div class="anh-wahl ${anhAuswahl.has(x.key) ? "markiert" : ""}">${pferdKachel(x.p, { attr: `data-anhwahl="${x.key}"`, zeilen: [x.fohlen ? `Fohlen · Box ${spiel.boxen.indexOf(x.box) + 1}` : `Box ${spiel.boxen.indexOf(x.box) + 1}`, anhZiel === "klinik" ? `Gesundheit ${x.p.pflege.gesundheit.toLocaleString("de-DE")} %` : alterText(x.p)] })}<span class="haken">${anhAuswahl.has(x.key) ? "✓" : ""}</span></div>`).join("")}</div>
@@ -3710,22 +3764,24 @@
       anhZiel = id; anhAuswahl = new Set(); zeigeAnhaenger(); window.scrollTo(0, 0); });
     nb.querySelectorAll("[data-anhwahl]").forEach(k => k.onclick = () => { const key = k.dataset.anhwahl; anhAuswahl.has(key) ? anhAuswahl.delete(key) : anhAuswahl.add(key); zeigeAnhaenger(); });
     if ($("anhAlle")) $("anhAlle").onclick = () => { const liste = anhKandidaten(anhZiel); anhAuswahl = anhAuswahl.size === liste.length ? new Set() : new Set(liste.map(x => x.key)); zeigeAnhaenger(); };
-    if ($("anhZurueck")) $("anhZurueck").onclick = () => { anhZiel = anhZiel === "gnadenhof" ? "abgeben" : null; anhAuswahl = new Set(); zeigeAnhaenger(); };
+    if ($("anhZurueck")) $("anhZurueck").onclick = () => { anhZiel = anhZiel === "gnadenhof" ? "abgeben" : anhZiel === "klinik" || anhZiel === "kastration" ? "klinikwahl" : null; anhAuswahl = new Set(); zeigeAnhaenger(); };
     if ($("anhLos")) $("anhLos").onclick = () => {
       const gew = anhKandidaten(anhZiel).filter(x => anhAuswahl.has(x.key)); if (!gew.length) return;
       const ziel = anhZiel, [ico, name, wohin] = ANH_ZIELE[ziel], namen = gew.map(x => `<b>${esc(x.p.name)}</b>`).join(", ");
       const geld = ziel === "gnadenhof" ? gew.reduce((a, x) => a + Math.round(marktwert(x.p) / 2 / 50) * 50, 0) : 0;
-      const text = ziel === "gnadenhof" ? `Sie ziehen sofort auf den Gnadenhof. Du bekommst zusammen <b>${fmt(geld)}</b>. Das lässt sich nicht rückgängig machen.`
+      const text = ziel === "kastration" ? `Sie bleiben 2 Tage in der Klinik (länger, falls die Gesundheit unter 75 % liegt) und sind danach <b>Wallache</b> – keine Zucht mehr möglich. Im Abstammungsschein bleiben sie Hengste. Kosten: <b>${fmt(KOSTEN.kastration * gew.length)}</b> (${fmt(KOSTEN.kastration)} je Hengst), du bekommst danach je eine Rechnung. Das lässt sich nicht rückgängig machen.`
+        : ziel === "gnadenhof" ? `Sie ziehen sofort auf den Gnadenhof. Du bekommst zusammen <b>${fmt(geld)}</b>. Das lässt sich nicht rückgängig machen.`
         : ziel === "klinik" ? `Sie bleiben in der Klinik, bis ihre Gesundheit wieder mindestens 75 % beträgt. Kosten: <b>${fmt(KOSTEN.klinik)} pro Tag und Pferd</b> – du bekommst danach je eine Rechnung.`
         : `Kosten: <b>${fmt(KOSTEN[ziel] * gew.length)} pro Tag</b> (${fmt(KOSTEN[ziel])} je Pferd). Ihre Boxen werden dadurch frei.`;
       dialog(`<h3>${ico} ${gew.length} ${gew.length === 1 ? "Pferd" : "Pferde"} ${wohin}?</h3><p>${namen}</p><p>${text}</p>`,
         [["Losfahren", () => {
           gew.forEach(x => {
-            if (ziel === "klinik") { x.p.klinik = { seit: spiel.tag }; spiel.angebote = (spiel.angebote || []).filter(a => a.id !== x.p.id); }
+            if (ziel === "klinik") { x.p.klinik = { seit: spiel.tag }; delete x.p.weide; spiel.angebote = (spiel.angebote || []).filter(a => a.id !== x.p.id); }
+            else if (ziel === "kastration") { x.p.klinik = { seit: spiel.tag, op: "kastration", bis: spiel.tag + 2 }; delete x.p.weide; }
             else if (ziel === "gnadenhof") aufGnadenhof(x.p, x.box);
             else wegbringen(x.p, ziel, x.box, !!x.fohlen);
           });
-          anhMeldung = `${ico} ${gew.length === 1 ? `${esc(gew[0].p.name)} ist` : `${gew.length} Pferde sind`} ${ziel === "klinik" ? "jetzt in der Klinik" : ziel === "gnadenhof" ? "jetzt auf dem Gnadenhof" : `jetzt ${ziel === "aufzucht" ? "in der Aufzuchtstation" : "im Ausbildungsstall"}`}.`;
+          anhMeldung = `${ico} ${gew.length === 1 ? `${esc(gew[0].p.name)} ist` : `${gew.length} Pferde sind`} ${ziel === "klinik" || ziel === "kastration" ? "jetzt in der Klinik" : ziel === "gnadenhof" ? "jetzt auf dem Gnadenhof" : `jetzt ${ziel === "aufzucht" ? "in der Aufzuchtstation" : "im Ausbildungsstall"}`}.`;
           anhAuswahl = new Set(); speichern(); zeigeTag(); zeigeAnhaenger(); }], ["Abbrechen", null, "zweit"]]);
     };
   }
@@ -4131,7 +4187,8 @@
       <h3>❤️ Gesundheit</h3>
       <p><b>Kastration</b> (Pferdeanhänger → Klinik, nur Hengste ab 1 Jahr): ${fmt(KOSTEN.kastration)} inklusive 2 Tage Klinik; liegt die Gesundheit unter 75 %, bleibt er länger (${fmt(KOSTEN.klinik)} je zusätzlichem Tag). Danach ist er im Steckbrief ein Wallach und kann nicht mehr decken. Der Abstammungsschein bleibt unverändert (Hengst).</p>
       <p><b>Rechnungen:</b> Klinik (bei der Entlassung), Aufzuchtstation und Ausbildungsstall (zu Beginn jeder Jahreszeit für die vergangene, mit Zwischenbericht; bei der Rückkehr ein kompletter Bericht mit Kostenübersicht und Rechnung über den Rest) schicken Rechnungen per Brief. Bezahlen geht direkt im Brief oder unter Finanzen. Zahlungsziel 2 Tage. Danach: Mahnung mit allen offenen Beträgen des Absenders + Mahngebühr (10 %, mind. 20 €), Frist 5 Tage – bei Aufzucht/Ausbildung wird der Aufenthalt sofort abgebrochen und die Pferde kommen zurück (ist keine Box frei, sobald eine frei wird). Wird auch die Mahnung nicht bezahlt, wird der Betrag + Versäumnisgebühr (20 %, mind. 50 €) abgebucht – das Konto darf dadurch ins Minus. Eine neue Rechnung desselben Absenders übernimmt alle offenen; die alten werden ungültig. Der Tierschutz holt wegen offener Rechnungen keine Pferde mehr.</p>
-      <p><b>Wohlbefinden</b> (Gesundheit-Reiter): Grundwert startet bei 100 und nähert sich jede Nacht zur Hälfte dem Ziel 100 − 25 (hungrig) − 15 (Box nicht gemistet). Angezeigt wird Grundwert − 0,4 × Schmutz (also bis −40); Putzen hebt es sofort. Hat derzeit noch keine weiteren Auswirkungen.</p>
+      <p><b>Wohlbefinden</b> (Gesundheit-Reiter, 0–100): pro Tag Weide +15, Aufzuchtstation +10, Putzen +5 (Bürste und Kamm je einmal am Tag); ab dem 3. Tag am Stück in der Box −6, hungrig −8, Box nicht gemistet −5. Angezeigt wird der Wert minus 0,4 × Schmutz. <b>Wirkung:</b> Ausbildungs-/Lerntempo im Ausbildungsstall ×(0,5 + 0,7 × Wohlbefinden) – bei 70 % normal, bei 100 % ×1,2, bei 0 % ×0,5. Fruchtbarkeit: Chance, beim Decken tragend zu werden = 40 % + 55 % × Wohlbefinden (Stute; mit eigenem Hengst Durchschnitt beider) – bei 100 % 95 %, bei 50 % 67,5 %.</p>
+      <p><b>Weide</b> (Ort → Weide, antippen = hin und zurück): Box bleibt frei und leer, kein Füttern und Misten nötig (Stallbursche lässt die Box aus, der Pferdepfleger putzt weiter). Gesundheit pro Tag: Frühling +10, Sommer +12, Herbst +7, Winter +5 (Box +8); bei 30 % oder weniger keine Erholung. Fohlen bei Fuß kommt mit. Schmutz wie in der Box (ohne Mist-Zuschlag).</p>
       <p><b>Schmutz:</b> Jede Nacht in der Box wird das Fell um 9–15 Punkte schmutziger (in einer nicht gemisteten Box +5 extra), Mähne und Schweif um 5–9 (+2). Stufen Fell: unter 20 sauber · ab 20 staubig · ab 50 schmutzig · ab 80 sehr dreckig; Mähne/Schweif: gekämmt · ab 20 zerzaust · ab 50 verfilzt. Man sieht es im Bild (Flecken, dreckige Beine, Stroh im Schweif). Putzen in der Putzkiste: Bürste macht das Fell sauber, Kamm Mähne und Schweif. Der Pferdepfleger putzt seine Boxen jeden Morgen; nach Klinik, Aufzucht oder Ausbildung kommt das Pferd geputzt zurück. Folgen: bis zu 15 % weniger Marktwert (Wert = max(Fell, 0,7 × Mähne)); ist das Fell länger als eine Jahreszeit ununterbrochen schmutzig (ab 50), verliert das Pferd zusätzlich 3 % Gesundheit pro Tag.</p>
       <p>Gut versorgt +8 % pro Tag, hungrig −19, Box nicht gemistet −9,5. Unter 40 % kommt ein Brief vom Tierarzt, bei 30 % oder weniger erholt sich ein Pferd nur noch in der Klinik – auch Medizin hilft dann nicht mehr (+16 %/Tag, ${fmt(KOSTEN.klinik)}/Tag) und wird mit 75 % entlassen. Die Klinikkosten kommen als Rechnung (siehe „Rechnungen“). Ausnahme: Senioren mit altersbedingter Höchstgesundheit von 40 % oder weniger.</p>
       <p>Senioren ab 20 Jahren: höchstens 75 %, sinkt bis 35 Jahre auf 1 %. Sterbewahrscheinlichkeit je Jahreszeit steigt ab 20 Jahren und erreicht mit 35 Jahren 100 %.</p>

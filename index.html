@@ -751,7 +751,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "165";
+  const SPIEL_VERSION = "166";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -759,9 +759,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=165"></script>
-<script src="kopfteile.js?v=165"></script>
-<script src="kopfalter.js?v=165"></script>
+<script src="pferd.js?v=166"></script>
+<script src="kopfteile.js?v=166"></script>
+<script src="kopfalter.js?v=166"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1476,6 +1476,8 @@
     if (taxe && (spiel.geld || 0) < taxe) { dialog(`<h3>Nicht genug Geld</h3><p>Die Decktaxe für <b>${esc(hengst.name)}</b> beträgt ${fmt(taxe)}, du hast ${fmt(spiel.geld || 0)}.</p>`); return; }
     const decken = () => {
       const jetzt = jzJetzt();
+      if (stute.heimlich) { const hv = stute.heimlich.vater; stute.traechtig = stute.heimlich; delete stute.heimlich; deckModus = false; speichern(); zeigeAkte();
+        dialog(`<h3>🩺 Schon tragend!</h3><p>Beim Decken stellt sich heraus: <b>${esc(stute.name)}</b> ist bereits tragend – ungeplant von <b>${esc(hv.name)}</b> auf der Weide. Das Fohlen kommt zu Beginn von ${jzName(stute.traechtig.geburt)} zur Welt.</p>`); return; }
       if (taxe) buchen(-taxe, `Decktaxe: ${hengst.name}`);
       // Fruchtbarkeit: Chance 40 % + 55 % × Wohlbefinden (eigener Hengst zählt zur Hälfte mit)
       const w = istDeckstation(hengst) ? wohlbefinden(stute) : (wohlbefinden(stute) + wohlbefinden(hengst)) / 2, chance = 0.4 + 0.55 * w / 100;
@@ -1634,7 +1636,7 @@
       if (e.abbruch) { const nr = zurueckholen(e); if (nr >= 0) brief(ORT_NAME[e.ort], `${p.name} ist zurück`, `wie angekündigt haben wir <b>${esc(p.name)}</b> zurückgebracht – ${pron(p).er} steht jetzt in Box ${nr + 1}.`); return; }
       p.pflege.gesundheit = Math.min(gesundheitMax(p), Math.round((p.pflege.gesundheit + 8) * 10) / 10);
       if (e.ort === "ausbildung") p.training = Math.round(((p.training || 0) + (p.traechtig ? 0.5 : 1) * wohlFaktor(p)) * 10) / 10;   // tragend: halbes Tempo; Wohlbefinden beschleunigt oder bremst
-      if (e.ort === "aufzucht") p.pflege.wohl = Math.min(100, (p.pflege.wohl == null ? 100 : p.pflege.wohl) + 10);   // Herde, viel draußen
+      if (e.ort === "aufzucht") { p.pflege.wohl = Math.min(100, (p.pflege.wohl == null ? 100 : p.pflege.wohl) + 10); sozialPlus(p, 2); }   // Herde mit vielen Jungpferden, viel draußen
       if (e.ort === "aufzucht" && alterJZ(p) >= AUSBILDUNGSALTER) {
         const box = zurueckholen(e);
         if (box >= 0) brief("Aufzuchtstation", `${p.name} ist zurück`, `<b>${esc(p.name)}</b> ist jetzt 3 Jahre alt und damit im Ausbildungsalter. Wir haben ${pron(p).ihn} zu {dir|Ihnen} zurückgebracht – ${pron(p).er} steht jetzt in Box ${box + 1}.`);
@@ -1651,7 +1653,7 @@
       if (op && spiel.tag >= p.klinik.bis && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {
         const extra = p.klinik.rechnung || 0, tage = Math.round(extra / KOSTEN.klinik);
         delete p.klinik; delete p.dreck;
-        p.geburtsGeschlecht = p.geburtsGeschlecht || "Hengst"; p.geschlecht = "Wallach"; p.kastriert = jzJetzt();
+        p.geburtsGeschlecht = p.geburtsGeschlecht || "Hengst"; p.geschlecht = "Wallach"; p.kastriert = jzJetzt(); p.kastriertAlterJZ = alterJZ(p);
         rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: Kastration inkl. 2 Tage Klinik`, betrag: KOSTEN.kastration }, ...(extra ? [{ text: `${p.name}: ${tageTxt(tage)} zusätzliche Behandlung × ${fmt(KOSTEN.klinik)}`, betrag: extra }] : [])], [p.id], `${p.name} ist jetzt ein Wallach – Rechnung`,
           `die Kastration von <b>${esc(p.name)}</b> ist gut verlaufen. Er ist jetzt ein Wallach und steht wieder in Box ${i + 1}. Im Abstammungsschein bleibt er als Hengst eingetragen.<br><br>`);
         return;
@@ -2173,6 +2175,12 @@
   // läuft zu Beginn jeder Jahreszeit
   function jahreszeitBeginn() {
     alleEigenenPferde().forEach(x => werteAltern(x.p));   // Werte über der Altersgrenze sinken langsam mit
+    // ungeplante Bedeckung fällt nach einer Jahreszeit auf
+    alleEigenenPferde().forEach(({ p }) => { if (!p.heimlich || jzJetzt() < p.heimlich.seit + 1) return;
+      const hv = p.heimlich.vater; p.traechtig = p.heimlich; delete p.heimlich;
+      brief("Tierarztpraxis", `Überraschung: ${p.name} ist tragend`, `bei der Routinekontrolle haben wir festgestellt: <b>${esc(p.name)}</b> ist tragend! Das war wohl nicht geplant – Vater ist <b>${esc(hv.name)}</b>, die beiden standen zusammen auf der Weide. Das Fohlen kommt zu Beginn von ${jzName(p.traechtig.geburt)} zur Welt.`, { pferde: [p] }); });
+    // Befunde heilen
+    alleEigenenPferde().forEach(({ p }) => { if (p.befund && spiel.tag >= p.befund.heilt) delete p.befund; });
     const jetzt = jzJetzt();
     // tragende Stuten im Ausbildungsstall: eine Jahreszeit vor dem Abfohlen zurück in ihre (reservierte) Box
     (spiel.extern || []).slice().forEach(e => { const p = e.pferd; if (e.ort !== "ausbildung" || !p.traechtig || jetzt < p.traechtig.geburt - 1) return;
@@ -2361,9 +2369,11 @@
         <p class="text">Box ${aktBox + 1} bleibt für ${pron(p).ihn} frei. ${tage ? `Seit ${tage} ${tage === 1 ? "Tag" : "Tagen"} auf der Weide` : "Heute auf die Weide gekommen"}${box.fohlen ? ` – Fohlen ${esc(box.fohlen.name)} ist mit dabei` : ""}. Gras statt Heu, kein Misten nötig.</p>
         <div class="zeile-wert"><div class="kopf"><b>Gesundheit</b><span>${g.toLocaleString("de-DE")} % · +${WEIDE_PLUS[datum().s]} % pro Tag im ${JZ[datum().s][0]}</span></div><div class="balken"><i style="width:${g}%"></i></div></div>
         <div class="zeile-wert"><div class="kopf"><b>Wohlbefinden</b><span>${w} %</span></div><div class="balken"><i style="width:${w}%;background:#5a9a6a"></i></div>${wohlGruende(p)}</div>
+        ${heuNoetig() ? (box.krippeVoll ? `<p class="text">🌾 Heu liegt auf der Weide bereit.</p>` : `<p class="text">🌾 <b>Kaum Gras</b> – ${JZ[datum().s][0] === "Winter" ? "im Winter" : "am letzten Herbsttag"} muss Heu auf die Weide, sonst bleibt ${esc(p.name)} hungrig.</p><button class="knopf" id="weideHeu" style="width:auto;padding:9px 14px;margin:0 8px 8px 0">🌾 Heu auf die Weide</button>`) : ""}
         ${herdeText(p)}
         <button class="knopf" id="vonWeide" style="width:auto;padding:9px 14px;margin-top:8px">🏠 Zurück in die Box</button></div>`;
       $("vonWeide").onclick = () => { delete p.weide; speichern(); zeigeStall(); zeigeTag(); };
+      if ($("weideHeu")) $("weideHeu").onclick = () => { box.krippeVoll = true; speichern(); zeigeAkte(); zeigeTag(); };
       return;
     }
     if (p && p.klinik && !LS) {
@@ -2451,7 +2461,8 @@
         const zusatz = x.art === "anlage" ? "angeboren" : x.art === "erarbeitet" ? "erarbeitet" : "";
         return `<div class="zeile-wert"><div class="kopf"><b class="lex" data-lex="wert:${x.key}">${x.titel}</b><span>${v}${zusatz ? ` <small>· ${zusatz}</small>` : ""}${spiel.admin && x.art !== "erarbeitet" ? ` <small>(Anlage ${an}${altersFaktor(p, x.key) < 1 ? ` → ${wertGrenze(p, x.key)}` : ""})</small>` : ""}${q ? ` <em class="vgl-b">${qv}</em>` : ""}</span></div>
         <div class="balken${spiel.admin && x.art === "training" ? " mit-anlage" : ""}">${spiel.admin && x.art === "training" ? `<u style="width:${wertGrenze(p, x.key)}%"></u>` : ""}<i style="width:${v}%"></i></div>${q ? `<div class="balken vgl"><i style="width:${qv}%"></i></div>` : ""}</div>`; };
-      inhalt = vglKopf(p) + `<h3 class="werte-titel">💪 Körper</h3>` + WERTE_KOERPER.map(zeile).join("") + `<h3 class="werte-titel">🧠 Kopf</h3>` + WERTE_KOPF.map(zeile).join("") +
+      const sozZeile = spiel.admin ? `<div class="zeile-wert"><div class="kopf"><b>🛠️ Sozialverhalten</b><span>${Math.round(sozial(p))} <small>· versteckt${hengstig(p) ? ` · Hengstverhalten ${hengstig(p) === 1 ? "voll" : "teilweise"}` : ""}</small></span></div><div class="balken"><i style="width:${sozial(p)}%"></i></div></div>` : "";
+      inhalt = vglKopf(p) + `<h3 class="werte-titel">💪 Körper</h3>` + WERTE_KOERPER.map(zeile).join("") + `<h3 class="werte-titel">🧠 Kopf</h3>` + WERTE_KOPF.map(zeile).join("") + sozZeile +
         `<p class="text"><small>Werte von 0 bis 100. Trainierbare Werte steigen später durch Training – jedes Pferd hat dabei eine vererbte Obergrenze. „Angeboren“ lässt sich nicht trainieren, „erarbeitet“ entsteht durch Pflege und Ausbildung. Junge Pferde erreichen ihre volle Leistung erst mit etwa 5 Jahren, im Alter lassen die Werte langsam nach.${spiel.admin ? " 🛠️ Admin: der helle Teil des Balkens zeigt die im jetzigen Alter erreichbare Höhe." : ""}</small></p>`;
     } else if (aktenReiter === "charakter") {
       werteErgaenzen(p); const c = w.charakter;
@@ -2492,6 +2503,7 @@
           <li><span class="ico">🌾</span><span class="txt">Fütterung heute<small>Heu in der Futterkrippe</small></span><span class="stat ${box.krippeVoll ? "ok" : "warn"}">${box.krippeVoll ? "gefüttert" : "noch nicht"}</span></li>
           <li><span class="ico">💧</span><span class="txt">Wasser<small>Selbsttränke</small></span><span class="stat ok">frisch</span></li>
           ${box.fohlen ? (() => { const fg = box.fohlen.pflege ? box.fohlen.pflege.gesundheit : 100; return `<li><span class="ico">🍼</span><span class="txt">Fohlen ${esc(box.fohlen.name)}<small>wird mit der Mutter versorgt</small></span><span class="stat ${fg >= 65 ? "ok" : fg >= 45 ? "warn" : "bad"}">${fg.toLocaleString("de-DE", { maximumFractionDigits: 1 })} %</span></li>`; })() : ""}
+          ${p.befund ? `<li><span class="ico">🩹</span><span class="txt">Befund: ${esc(p.befund.art)}<small>seit ${spiel.tag - p.befund.seit} ${spiel.tag - p.befund.seit === 1 ? "Tag" : "Tagen"} · heilt in etwa ${Math.max(1, p.befund.heilt - spiel.tag)} Tagen</small></span><span class="stat warn">verletzt</span></li>` : ""}
           <li><span class="ico">🧹</span><span class="txt">Boxenhygiene<small>Einstreu aus Stroh</small></span><span class="stat ${box.mistig ? "warn" : "ok"}">${box.mistig ? "ausmisten" : "sauber"}</span></li>
           ${(() => { const d = p.dreck || {}, sf = dreckStufe(d.fell), sm = dreckStufe(d.maehne);
             return `<li><span class="ico">🧽</span><span class="txt">Fell<small>${zuLangeDreckig(p) ? "⚠️ schon länger als eine Jahreszeit verdreckt – schadet der Gesundheit" : "putzen mit der Bürste (Ausrüstung → Putzkiste)"}</small></span><span class="stat ${zuLangeDreckig(p) ? "bad" : sf[2]}">${sf[1]}</span></li>
@@ -2713,7 +2725,10 @@
       }
       if (id === "weide") {
         if (p.weide) { delete p.weide; meldung = `🏠 ${esc(p.name)} ist zurück in Box ${aktBox + 1}.`; }
-        else { p.weide = { seit: spiel.tag }; p.boxTage = 0; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0; meldung = ""; }
+        else { p.weide = { seit: spiel.tag }; p.boxTage = 0; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0; meldung = "";
+          const herde = spiel.boxen.filter(b => b.pferd && b.pferd.weide && !b.pferd.klinik && !b.tot).map(b => b.pferd);
+          if (!spiel.hinweisDecken && herde.some(deckfaehig) && herde.some(q => q.geschlecht === "Stute" && alterJZ(q) >= 12)) { spiel.hinweisDecken = true;
+            setTimeout(() => dialog(`<h3>⚠️ Hengst und Stute zusammen</h3><p>Auf der Weide stehen jetzt ein Hengst und eine Stute zusammen. Dabei kann es zu einer <b>ungeplanten Bedeckung</b> kommen – ob die Stute tragend ist, merkst du erst später.</p><p><small>Dieser Hinweis kommt nur einmal.</small></p>`), 0); } }
         ortModus = null; speichern(); zeigeStall(); zeigeTag(); return;
       }
       if (id === "kastration") {
@@ -3239,7 +3254,7 @@
   // Boxen, die die Angestellten einer Art heute versorgen (nach Boxnummer, je Angestelltem 3 Boxen)
   function maBoxen(typ) {
     const n = angestellte(typ).filter(m => maAktiv(m)).length * MA_TYP[typ].boxen;
-    return spiel.boxen.map((b, i) => i).filter(i => { const b = spiel.boxen[i]; return b.pferd && !b.pferd.klinik && !b.tot && (typ !== "stallbursche" || !b.pferd.weide); }).slice(0, n);
+    return spiel.boxen.map((b, i) => i).filter(i => { const b = spiel.boxen[i]; return b.pferd && !b.pferd.klinik && !b.tot && (typ !== "stallbursche" || !b.pferd.weide || heuNoetig()); }).slice(0, n);
   }
   const burschenBoxen = () => maBoxen("stallbursche");
   // zu Beginn jeder Jahreszeit: Gehalt für die letzte Jahreszeit, Abgänge, Neuanfänge
@@ -3275,6 +3290,56 @@
   // Nur ausgeprägte Charakterwerte wirken: über 70 → „hoch“, unter 30 → „tief“, je 0 … 1 (bei 97 bzw. 3 voll). Die Mitte ist neutral.
   const charE = (p, k) => { const v = p && p.werte && p.werte.charakter ? p.werte.charakter[k] : 50; return v == null ? { hoch: 0, tief: 0 } : { hoch: v > 70 ? Math.min(1, (v - 70) / 27) : 0, tief: v < 30 ? Math.min(1, (30 - v) / 27) : 0 }; };
   const HERDE_KENNEN = 3;          // so viele gemeinsame Weidetage, dann kennen sich zwei Pferde
+  // ---------- Etappe 2b: Weide und Herde ----------
+  // Tageswerte (z. B. Sozialverhalten) pro Jahreszeit ausgeglichen: × 4 / Tage pro Jahreszeit. Bedeckung und Streit sind Chancen pro Nacht und werden nicht umgerechnet (Dome).
+  const proTag = x => x * 4 / tpj();
+  // Heu auf der Weide nötig: Winter und letzter Herbsttag (kaum Gras)
+  const heuNoetig = (tag = spiel.tag) => { const d = datum(tag); return d.s === 3 || (d.s === 2 && d.t === tpj()); };
+  const WEIDE_WOHL = { normal: 15, winter: 8, allein: 6 };
+  // Hengstverhalten: Hengst ab 3 Jahren = 1 · später (ab 2 J.) kastrierter Wallach = 0,5 · sonst 0
+  const hengstig = p => p.geschlecht === "Hengst" ? (alterJZ(p) >= 12 ? 1 : 0) : p.geschlecht === "Wallach" && (p.kastriertAlterJZ || 0) > 8 ? 0.5 : 0;
+  const deckfaehig = p => p.geschlecht === "Hengst" && alterJZ(p) >= 8;
+  const stuteZucht = p => p.geschlecht === "Stute" && alterJZ(p) >= 12 && alterJahre(p) <= ZUCHT_MAX.Stute && !p.traechtig && !p.heimlich;
+  const sozial = p => { if (!p.werte) return 20; if (p.werte.sozial == null) p.werte.sozial = alterJZ(p) >= 12 ? 40 : 20; return p.werte.sozial; };
+  const sozialPlus = (p, x) => { if (!p || !p.werte || alterJZ(p) >= 12) return; p.werte.sozial = Math.min(100, Math.round((sozial(p) + proTag(x)) * 10) / 10); };
+  // fester Zufallswert je Paar: wie gut sich zwei Pferde grundsätzlich riechen können (0–12 % Streit-Chance)
+  const paarGrund = (a, b) => { const k = [a.id, b.id].sort().join("|"); let h = 0; for (const ch of k) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return (h % 1000) / 1000 * 12; };
+  function streitChance(a, b) {
+    const Ta = charE(a, "temperament"), Tb = charE(b, "temperament"), Wa = charE(a, "wille"), Wb = charE(b, "wille");
+    const sozSchnitt = (sozial(a) + sozial(b)) / 2;
+    let c = paarGrund(a, b) + 8 * (1 - sozSchnitt / 100) + 5 * Math.max(Ta.hoch, Tb.hoch, Wa.tief, Wb.tief);
+    const ha = hengstig(a), hb = hengstig(b);
+    if (ha && hb) c += 35 * ha * hb * (1 - 0.5 * sozSchnitt / 100);   // Rangkampf unter Hengsten – gut sozialisierte vertragen sich eher
+    return c / 100;
+  }
+  // Befund (Ankerpunkt für Krankheiten/Lahmheit): jetzt nur Gesundheit und Anzeige, heilt nach 2 Jahreszeiten
+  function befundSetzen(p, art, schwere) { p.befund = { art, seit: spiel.tag, schwere, heilt: spiel.tag + 2 * tpj() }; }
+  // Herde einer Nacht: Sozialverhalten, ungeplante Bedeckung, Streit
+  function herdeNacht(herde) {
+    const jung = herde.filter(q => alterJZ(q) < 12);
+    herde.forEach(q => { if (alterJZ(q) < 12) sozialPlus(q, jung.filter(x => x !== q).length >= 2 ? 1.5 : 0.5); });
+    const streite = [];
+    for (let i = 0; i < herde.length; i++) for (let j = i + 1; j < herde.length; j++) {
+      const a = herde[i], b = herde[j];
+      // ungeplante Bedeckung: Hengst (ab 2 J.) und zuchtfähige Stute
+      [[a, b], [b, a]].forEach(([H, S]) => {
+        if (!deckfaehig(H) || !stuteZucht(S) || Math.random() >= 0.25) return;
+        const w = (wohlbefinden(S) + wohlbefinden(H)) / 2;
+        if (Math.random() < 0.4 + 0.55 * w / 100) S.heimlich = { vater: hengstKopie(H), seit: jzJetzt(), geburt: jzJetzt() + 4 };
+      });
+      if ((deckfaehig(a) && b.geschlecht === "Stute") || (deckfaehig(b) && a.geschlecht === "Stute")) continue;   // Hengst und Stute streiten nicht
+      if (Math.random() < streitChance(a, b)) {
+        wohlAendern(a, -10, `Streit mit ${b.name}`); wohlAendern(b, -10, `Streit mit ${a.name}`);
+        let verletzt = null;
+        if (Math.random() < 0.2) { verletzt = Math.random() < 0.5 ? a : b; const minus = 10 + Math.round(Math.random() * 15);
+          verletzt.pflege.gesundheit = Math.max(1, Math.round((verletzt.pflege.gesundheit - minus) * 10) / 10); befundSetzen(verletzt, "Verletzung (Biss/Tritt)", minus); }
+        streite.push({ a, b, verletzt });
+      }
+    }
+    if (streite.length) brief("Hofverwaltung", streite.length === 1 ? `Streit auf der Weide` : `${streite.length}× Streit auf der Weide`,
+      `heute Nacht hat es auf der Weide Ärger gegeben:<ul>${streite.map(x => `<li><b>${esc(x.a.name)}</b> und <b>${esc(x.b.name)}</b> haben sich gestritten${x.verletzt ? ` – <b>${esc(x.verletzt.name)}</b> ist dabei verletzt worden` : ""}.</li>`).join("")}</ul>Wenn sich zwei Pferde nicht vertragen, sollte man sie trennen.`,
+      { pferde: streite.flatMap(x => [x.a, x.b]) });
+  }
   const ARBEIT_DAHEIM = false;     // Etappe 4 (Training daheim): dann vermissen leistungsbereite Pferde Arbeit an freien Tagen
   const wohlAendern = (p, d, grund) => { if (!p || !p.pflege || !d) return; d = Math.round(d * 10) / 10;
     p.pflege.wohl = Math.max(0, Math.min(100, Math.round(((p.pflege.wohl == null ? 100 : p.pflege.wohl) + d) * 10) / 10));
@@ -3295,7 +3360,11 @@
       if (mistig) wohlAendern(p, -WOHL.mist * (1 + 0.5 * S.hoch), "Box nicht gemistet");
     } else {
       p.boxTage = 0;
-      wohlAendern(p, WOHL.weide + 5 * B.tief + 3 * T.hoch, "Weide");
+      const allein = !(herde || []).some(q => q !== p), winter = datum(spiel.tag - 1).s === 3;
+      wohlAendern(p, (allein ? WEIDE_WOHL.allein : winter ? WEIDE_WOHL.winter : WEIDE_WOHL.normal) + 5 * B.tief + 3 * T.hoch, allein ? "Weide (allein)" : winter ? "Weide im Winter" : "Weide");
+      if (hungrig) wohlAendern(p, -WOHL.hunger, "hungrig (kein Heu auf der Weide)");
+      if (allein) { const ohne = Math.max(B.hoch, M.tief, V.tief); if (B.tief) wohlAendern(p, (WEIDE_WOHL.normal - WEIDE_WOHL.allein) * B.tief, "allein – stört ein eigenständiges Pferd nicht");
+        if (ohne) wohlAendern(p, -4 * ohne, "vermisst Gesellschaft"); }
       // Herde: Pferde kennen sich nach einigen gemeinsamen Weidetagen – vorher Eingewöhnung (drückt bei scheuen und nervösen Pferden)
       const H = (p.herde = p.herde || {}), andere = (herde || []).filter(q => q !== p);
       const fremd = andere.filter(q => (H[q.id] || 0) < HERDE_KENNEN);
@@ -3373,16 +3442,19 @@
     spiel.tag += 1;
     alterAktualisieren();
     const weideHerde = spiel.boxen.filter(b => b.pferd && b.pferd.weide && !b.pferd.klinik && !b.tot).map(b => b.pferd);
+    if (weideHerde.length > 1) herdeNacht(weideHerde);
     spiel.boxen.forEach(b => {
       if (!b.pferd) { b.krippeVoll = false; b.mistig = false; return; }   // leere Box: sauber, Krippe leer
       if (b.pferd.klinik) { delete b.pferd.weide; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; return; }   // Pferd ist in der Klinik
       if (b.pferd.weide && !b.tot) {   // Weide: Gras statt Heu, kein Mist – Gesundheit je nach Jahreszeit, Wohlbefinden steigt
+        const W = b.pferd, plus = WEIDE_PLUS[datum().s], hungrig = heuNoetig(spiel.tag - 1) && !b.krippeVoll;   // Winter / letzter Herbsttag: Heu nötig
         b.krippeVoll = false; b.mistig = false; b.mistStufe = 0;
-        const W = b.pferd, plus = WEIDE_PLUS[datum().s];
         [W, b.fohlen].forEach(q => { if (!q) return; const qp = (q.pflege = q.pflege || erzeugePflege(q));
-          if (qp.gesundheit > 30 || (q === W && altersschwach(W))) qp.gesundheit = Math.min(gesundheitMax(q), Math.round((qp.gesundheit + plus) * 10) / 10); });
+          if (hungrig) qp.gesundheit = Math.max(1, Math.round((qp.gesundheit - 19) * 10) / 10);
+          else if (qp.gesundheit > 30 || (q === W && altersschwach(W))) qp.gesundheit = Math.min(gesundheitMax(q), Math.round((qp.gesundheit + plus) * 10) / 10); });
+        if (b.fohlen) sozialPlus(b.fohlen, 0.3);
         if (zuLangeDreckig(W)) W.pflege.gesundheit = Math.max(1, Math.round((W.pflege.gesundheit - 3) * 10) / 10);
-        wohlNacht(W, "weide", { herde: weideHerde });
+        wohlNacht(W, "weide", { herde: weideHerde, hungrig });
         schmutzen(W, false);
         wachsen(b);
         return;
@@ -3407,6 +3479,7 @@
         if (!b.krippeVoll) fg -= 19; if (b.mistig) fg -= 9.5; if (b.krippeVoll && !b.mistig && fp.gesundheit > 30) fg += 8;
         fp.gesundheit = Math.max(1, Math.min(gesundheitMax(F), Math.round(fg * 10) / 10)); }
       b.mistStufe = b.mistig ? Math.min(6, (b.mistStufe || 1) + 1) : 1;
+      if (b.fohlen) sozialPlus(b.fohlen, 0.3);
       // Wohlbefinden: Box (zu lange am Stück, je nach Charakter), Hunger, Mist, Putzen vermisst …
       wohlNacht(b.pferd, "box", { hungrig: !b.krippeVoll, mistig: b.mistig });
       schmutzen(b.pferd, b.mistig);
@@ -4337,6 +4410,14 @@
         Mut / Nervenstärke – Angst = max(e scheu, e nervös) × (1 − 0,5·e gelassen): Fahrt im Pferdeanhänger −8·Angst, dazu Klinik oder Aufzuchtstation (fremde Herde) −5·Angst; auf der Weide pro Nacht mit fremden Herdenmitgliedern −6·max(e scheu, e nervös) × (1 − 0,5·e gelassen).
         Sensibilität – sensibel: Mist −5 × (1 + 0,5·e), Schmutz zieht × (1 + 0,5·e) ab; robust: Schmutz × (1 − 0,5·e).
         Arbeitswille – leistungsbereit vermisst Arbeit (kommt mit dem Training daheim).</p>
+      <p><b>Weide und Herde (Etappe 2b)</b> – Sozialverhalten pro Tag × 4 ÷ Tage pro Jahreszeit (gleich viel pro Jahreszeit, egal ob 3, 4 oder 5 Tage); Bedeckung und Streit sind feste Chancen pro Nacht:
+        Heu auf der Weide nötig im Winter und am letzten Herbsttag (Knopf in der Weide-Ansicht, Stallbursche erledigt es mit) – sonst hungrig: Gesundheit −19 statt Weide-Plus, Wohlbefinden −8.
+        Wohlbefinden auf der Weide: +15, im Winter +8, allein +6 (eigenständig bekommt bis +9 zurück; verschmust/scheu/nervös zusätzlich bis −4).
+        <b>Ungeplante Bedeckung:</b> Hengst (ab 2 J.) und zuchtfähige Stute (3–20 J., nicht tragend) zusammen auf der Weide: pro Nacht 25 % (jede Stute einzeln), tragend mit 40 % + 55 % × Wohlbefinden (Schnitt beider). Fällt nach einer Jahreszeit auf (Brief vom Tierarzt) oder beim nächsten geplanten Decken. Warnung nur beim allerersten Zusammenstellen.
+        <b>Sozialverhalten</b> (versteckt, 0–100, Start 20; Stammpferde ab 3 J. 40): steigt bis 3 Jahre – Aufzuchtstation +2/Tag, Weide mit mind. 2 anderen Jungpferden +1,5, mit weniger +0,5, Fohlen bei der Mutter +0,3.
+        <b>Hengstverhalten:</b> Hengst ab 3 J. voll; Wallach, der nach dem 2. Lebensjahr kastriert wurde, zur Hälfte; früh kastriert gar nicht.
+        <b>Streit</b> pro Nacht und Paar: fester Paarwert 0–12 % + 8 % × (1 − Sozialverhalten-Schnitt) + 5 % × max(temperamentvoll, eigensinnig) + 35 % × Hengstverhalten beider × (1 − 0,5 × Sozialverhalten) bei zwei Hengsten. Hengst und Stute streiten nicht. Streit: beide −10 Wohlbefinden, 20 % Verletzung (eines der beiden, Gesundheit −10 bis −25, Befund heilt nach 2 Jahreszeiten). Brief „Streit auf der Weide“.
+        <b>Befund</b> (Ankerpunkt für Krankheiten/Lahmheit): steht unter Versorgung; Folgen außer Gesundheit kommen später.</p>
       <p><b>Herde:</b> Alle eigenen Pferde auf der Weide sind eine Herde. Nach ${HERDE_KENNEN} gemeinsamen Weidetagen kennen sich zwei Pferde (gilt dauerhaft). Bis dahin Eingewöhnung (siehe oben).</p>
       <p><b>Weide</b> (Ort → Weide, antippen = hin und zurück): Box bleibt frei und leer, kein Füttern und Misten nötig (Stallbursche lässt die Box aus, der Pferdepfleger putzt weiter). Gesundheit pro Tag: Frühling +10, Sommer +12, Herbst +7, Winter +5 (Box +8); bei 30 % oder weniger keine Erholung. Fohlen bei Fuß kommt mit. Schmutz wie in der Box (ohne Mist-Zuschlag).</p>
       <p><b>Schmutz:</b> Jede Nacht in der Box wird das Fell um 9–15 Punkte schmutziger (in einer nicht gemisteten Box +5 extra), Mähne und Schweif um 5–9 (+2). Stufen Fell: unter 20 sauber · ab 20 staubig · ab 50 schmutzig · ab 80 sehr dreckig; Mähne/Schweif: gekämmt · ab 20 zerzaust · ab 50 verfilzt. Man sieht es im Bild (Flecken, dreckige Beine, Stroh im Schweif). Putzen in der Putzkiste: Bürste macht das Fell sauber, Kamm Mähne und Schweif. Der Pferdepfleger putzt seine Boxen jeden Morgen; nach Klinik, Aufzucht oder Ausbildung kommt das Pferd geputzt zurück. Folgen: bis zu 15 % weniger Marktwert (Wert = max(Fell, 0,7 × Mähne)); ist das Fell länger als eine Jahreszeit ununterbrochen schmutzig (ab 50), verliert das Pferd zusätzlich 3 % Gesundheit pro Tag.</p>

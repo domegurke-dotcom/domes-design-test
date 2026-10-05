@@ -747,7 +747,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "155";
+  const SPIEL_VERSION = "156";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -755,9 +755,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=155"></script>
-<script src="kopfteile.js?v=155"></script>
-<script src="kopfalter.js?v=155"></script>
+<script src="pferd.js?v=156"></script>
+<script src="kopfteile.js?v=156"></script>
+<script src="kopfalter.js?v=156"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1591,6 +1591,7 @@
     spiel.boxen.forEach((b, i) => {
       const p = b.pferd; if (!p || !p.klinik || b.tot) return;
       const op = p.klinik.op === "kastration";
+      if (b.fohlen) { const fp = (b.fohlen.pflege = b.fohlen.pflege || erzeugePflege(b.fohlen)); fp.gesundheit = Math.min(gesundheitMax(b.fohlen), Math.round((fp.gesundheit + 16) * 10) / 10); }   // Fohlen wird mitbehandelt
       if (!op || spiel.tag > p.klinik.bis) p.klinik.rechnung = (p.klinik.rechnung || 0) + KOSTEN.klinik;   // Kastration: die ersten 2 Tage sind im Preis
       p.pflege.gesundheit = Math.min(gesundheitMax(p), Math.round((p.pflege.gesundheit + 16) * 10) / 10);
       if (op && spiel.tag >= p.klinik.bis && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {
@@ -2043,11 +2044,12 @@
   const DU_ANGEBOT_NACH = 6;   // so viele Briefe von einem Absender, dann wird das „Du“ angeboten
   const duMit = von => !!(spiel.duzen && spiel.duzen[von] === true);
   // Ansehen bei Absendern (geheim, nirgends angezeigt): Start 100, Skala 0–200, positiver Kontakt +5, negativer −5.
-  // Das „Du“ bieten sie nur bei mehr als 100 Punkten an; wer schon duzt und unter 100 fällt, zieht es beleidigt zurück.
+  // Das „Du“ bieten sie erst ab 180 Punkten an; wer schon duzt und auf 100 oder darunter fällt, zieht es beleidigt zurück.
+  const DU_AB_RUF = 180, DU_WEG_RUF = 100;
   const rufWert = von => { const R = spiel.ruf || {}; return R[von] == null ? 100 : R[von]; };
   function ruf(von, d) {
     const R = (spiel.ruf = spiel.ruf || {}); R[von] = Math.max(0, Math.min(200, rufWert(von) + d));
-    if (d < 0 && R[von] < 100 && spiel.duzen && spiel.duzen[von] === true) {
+    if (d < 0 && R[von] <= DU_WEG_RUF && spiel.duzen && spiel.duzen[von] === true) {
       spiel.duzen[von] = false;
       brief(von, "Zurück zum Sie", `nach den letzten Vorfällen möchten wir unsere Geschäftsbeziehung lieber wieder etwas förmlicher halten. Wir bleiben deshalb ab jetzt beim „Sie“.`);
     }
@@ -2061,7 +2063,7 @@
     if (spiel.post.length > 120) spiel.post.length = 120;
     if (betreff !== "Neuigkeit" && typ !== "duzen") {
       const K = (spiel.kontakt = spiel.kontakt || {}); K[von] = (K[von] || 0) + 1;
-      if (K[von] >= DU_ANGEBOT_NACH && rufWert(von) > 100 && !(spiel.duzen && von in spiel.duzen) && !(spiel.duAngeboten || []).includes(von)) {
+      if (K[von] >= DU_ANGEBOT_NACH && rufWert(von) >= DU_AB_RUF && !(spiel.duzen && von in spiel.duzen) && !(spiel.duAngeboten || []).includes(von)) {
         (spiel.duAngeboten = spiel.duAngeboten || []).push(von);
         brief(von, "Wollen wir uns duzen?", `wir haben in letzter Zeit schon öfter miteinander zu tun gehabt. Wenn es Ihnen recht ist, würden wir Ihnen gern das „Du“ anbieten. Geben Sie uns einfach hier Bescheid.`, { aktion: { typ: "duzen" } });
       }
@@ -2404,10 +2406,13 @@
       };
       inhalt = `<div class="zeile-wert"><div class="kopf"><b>Gesundheitszustand</b><span>${g.toLocaleString("de-DE", { maximumFractionDigits: 1 })} % · ${zustand[0]}</span></div>
           <div class="balken"><i style="width:${g}%;${g < 45 ? "background:#c0503a" : ""}"></i></div>
+          ${box.tot ? "" : (() => { const w = wohlbefinden(p); return `<div class="kopf" style="margin-top:8px"><b>Wohlbefinden</b><span>${w} % · ${w >= 85 ? "rundum zufrieden" : w >= 65 ? "zufrieden" : w >= 45 ? "unzufrieden" : "fühlt sich unwohl"}</span></div>
+          <div class="balken"><i style="width:${w}%;background:${w < 45 ? "#c0503a" : "#5a9a6a"}"></i></div>`; })()}
           <p class="text" style="margin:6px 0 0">${box.tot ? `${esc(p.name)} ist verstorben. Über das Menü (☰) → Neustart oder „Pferd auswählen“ geht es weiter.` : `${esc(p.name)} ${HALTUNG_TEXT[haltungFuer(p)]}${g >= 45 && g < 65 ? " – die Ohren sind halb abgeknickt" : ""}.`}</p></div>
         <ul class="liste">
           <li><span class="ico">🌾</span><span class="txt">Fütterung heute<small>Heu in der Futterkrippe</small></span><span class="stat ${box.krippeVoll ? "ok" : "warn"}">${box.krippeVoll ? "gefüttert" : "noch nicht"}</span></li>
           <li><span class="ico">💧</span><span class="txt">Wasser<small>Selbsttränke</small></span><span class="stat ok">frisch</span></li>
+          ${box.fohlen ? (() => { const fg = box.fohlen.pflege ? box.fohlen.pflege.gesundheit : 100; return `<li><span class="ico">🍼</span><span class="txt">Fohlen ${esc(box.fohlen.name)}<small>wird mit der Mutter versorgt</small></span><span class="stat ${fg >= 65 ? "ok" : fg >= 45 ? "warn" : "bad"}">${fg.toLocaleString("de-DE", { maximumFractionDigits: 1 })} %</span></li>`; })() : ""}
           <li><span class="ico">🧹</span><span class="txt">Boxenhygiene<small>Einstreu aus Stroh</small></span><span class="stat ${box.mistig ? "warn" : "ok"}">${box.mistig ? "ausmisten" : "sauber"}</span></li>
           ${(() => { const d = p.dreck || {}, sf = dreckStufe(d.fell), sm = dreckStufe(d.maehne);
             return `<li><span class="ico">🧽</span><span class="txt">Fell<small>${zuLangeDreckig(p) ? "⚠️ schon länger als eine Jahreszeit verdreckt – schadet der Gesundheit" : "putzen mit der Bürste (Ausrüstung → Putzkiste)"}</small></span><span class="stat ${zuLangeDreckig(p) ? "bad" : sf[2]}">${sf[1]}</span></li>
@@ -3170,6 +3175,8 @@
   const DRECK_STUFEN = [[80, "sehr dreckig", "bad"], [50, "schmutzig", "warn"], [20, "staubig", "warn"], [0, "sauber", "ok"]];
   const dreckStufe = w => DRECK_STUFEN.find(([ab]) => (w || 0) >= ab);
   const dreckWert = p => p && p.dreck ? Math.max(p.dreck.fell || 0, (p.dreck.maehne || 0) * 0.7) : 0;
+  // angezeigtes Wohlbefinden = Grundwert (Futter, Box) minus Schmutz (bis −40) – Putzen hebt es sofort
+  const wohlbefinden = p => !p || !p.pflege ? 100 : Math.max(0, Math.min(100, Math.round((p.pflege.wohl == null ? 100 : p.pflege.wohl) - dreckWert(p) * 0.4)));
   const zuLangeDreckig = p => !!(p && p.dreck && p.dreck.seit != null && spiel.tag - p.dreck.seit > tpj());
   function schmutzen(p, mistig) {
     if (!p) return; const d = (p.dreck = p.dreck || { fell: 0, maehne: 0, seit: null });
@@ -3212,7 +3219,13 @@
         brief("Tierarztpraxis", `Abschied von ${P.name}`, `es tut uns sehr leid: <b>${esc(P.name)}</b> (Box ${spiel.boxen.indexOf(b) + 1}) ist heute Nacht gestorben.<br><br><b>Todesursache:</b> Entkräftung – ${pron(P).er} hat zu lange zu wenig Futter und Pflege bekommen.`);
         (spiel.vernachlaessigt = spiel.vernachlaessigt || []).push(P.name); } }
       pf.gesundheit = Math.max(0, Math.min(gesundheitMax(b.pferd), g));
+      // Fohlen bei Fuß: wird genauso versorgt oder vernachlässigt wie die Mutter (stirbt aber nicht, fällt höchstens auf 1 %)
+      if (b.fohlen) { const F = b.fohlen, fp = (F.pflege = F.pflege || erzeugePflege(F)); let fg = fp.gesundheit;
+        if (!b.krippeVoll) fg -= 19; if (b.mistig) fg -= 9.5; if (b.krippeVoll && !b.mistig && fp.gesundheit > 30) fg += 8;
+        fp.gesundheit = Math.max(1, Math.min(gesundheitMax(F), Math.round(fg * 10) / 10)); }
       b.mistStufe = b.mistig ? Math.min(6, (b.mistStufe || 1) + 1) : 1;
+      // Wohlbefinden (Grundwert): nähert sich jede Nacht zur Hälfte dem Ziel – hungrig −25, Box nicht gemistet −15
+      pf.wohl = Math.round(((pf.wohl == null ? 100 : pf.wohl) + ((100 - (b.krippeVoll ? 0 : 25) - (b.mistig ? 15 : 0)) - (pf.wohl == null ? 100 : pf.wohl)) * 0.5) * 10) / 10;
       schmutzen(b.pferd, b.mistig);
       b.krippeVoll = false; b.mistig = true;
       // Mähne und Schopf wachsen alle 2 Jahreszeiten eine Stufe – auch beim Fohlen bei der Mutter
@@ -3650,6 +3663,16 @@
     });
     return out;
   }
+  // Verkaufen aus dem Anhänger: Pferd auswählen, Verkauf einstellen – danach zurück zum Anhänger („Abgeben“)
+  function anhVerkaufen() {
+    const zurueck = () => { anhZiel = "abgeben"; zeigeAnhaenger(); };
+    const liste = spiel.boxen.map((b, i) => ({ b, i })).filter(({ b }) => b.pferd && !b.tot && !b.pferd.klinik);
+    if (!liste.length) { dialog(`<h3>💰 Pferd verkaufen</h3><p>Du hast kein Pferd im Stall, das du verkaufen kannst.</p>`); return; }
+    dialog(`<h3>💰 Welches Pferd verkaufen?</h3><div class="paar-liste">${liste.map(({ b, i }) => {
+      const sp = angebotVon(b.pferd) ? "steht zum Verkauf" : abgabeSperre(b.pferd, b, true);
+      return pferdKachel(b.pferd, { attr: sp ? "disabled" : `data-vk="${i}"`, sperre: sp, zeilen: [`Box ${i + 1}`, ...(b.fohlen ? [`🍼 mit ${esc(b.fohlen.name)}`] : []), fmt(verkaufsWert(b.pferd))] }); }).join("")}</div>`, [["Abbrechen", null, "zweit"]], "breit");
+    document.querySelectorAll("[data-vk]").forEach(k => k.onclick = () => { $("dlg").hidden = true; verkaufDialog(spiel.boxen[+k.dataset.vk].pferd, zurueck); });
+  }
   function zeigeAnhaenger() {
     const meld = anhMeldung ? `<div class="klasse">${anhMeldung}</div>` : "";
     const kachel = (id, ico, n, kurz, an = true) => `<button class="kachel ${an ? "klickbar" : "fehlt"}" ${an ? `data-anhziel="${id}"` : "disabled"}><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></button>`;
@@ -3664,7 +3687,7 @@
       const n = anhKandidaten("gnadenhof").length;
       html = meld + `<p class="text" style="margin:0 0 4px">👋 <b>Abgeben</b></p>
         <div class="kacheln quadrat">${kachel("verschenken", "🎁", "Verschenken", "nur an Freunde – bald", false)}
-          ${kachel("verkaufen", "💰", "Verkaufen", "einzeln im Pferdemarkt")}
+          ${kachel("verkaufen", "💰", "Verkaufen", "Festpreis oder Auktion")}
           ${kachel("gnadenhof", "🌳", "Gnaden\u00adhof", n ? `${n} ${n === 1 ? "Senior" : "Senioren"}` : "nur Senioren (ab 20 J.)", n > 0)}</div>
         <button class="zurueck" id="anhZurueck">‹ Zurück zum Anhänger</button>`;
     } else {
@@ -3683,7 +3706,7 @@
     const nb = $("nebenSchirm");
     nb.querySelectorAll("[data-anhziel]").forEach(k => k.onclick = () => {
       const id = k.dataset.anhziel;
-      if (id === "verkaufen") { zeigeMarkt("verkaufen"); return; }
+      if (id === "verkaufen") { anhVerkaufen(); return; }
       anhZiel = id; anhAuswahl = new Set(); zeigeAnhaenger(); window.scrollTo(0, 0); });
     nb.querySelectorAll("[data-anhwahl]").forEach(k => k.onclick = () => { const key = k.dataset.anhwahl; anhAuswahl.has(key) ? anhAuswahl.delete(key) : anhAuswahl.add(key); zeigeAnhaenger(); });
     if ($("anhAlle")) $("anhAlle").onclick = () => { const liste = anhKandidaten(anhZiel); anhAuswahl = anhAuswahl.size === liste.length ? new Set() : new Set(liste.map(x => x.key)); zeigeAnhaenger(); };
@@ -4108,6 +4131,7 @@
       <h3>❤️ Gesundheit</h3>
       <p><b>Kastration</b> (Pferdeanhänger → Klinik, nur Hengste ab 1 Jahr): ${fmt(KOSTEN.kastration)} inklusive 2 Tage Klinik; liegt die Gesundheit unter 75 %, bleibt er länger (${fmt(KOSTEN.klinik)} je zusätzlichem Tag). Danach ist er im Steckbrief ein Wallach und kann nicht mehr decken. Der Abstammungsschein bleibt unverändert (Hengst).</p>
       <p><b>Rechnungen:</b> Klinik (bei der Entlassung), Aufzuchtstation und Ausbildungsstall (zu Beginn jeder Jahreszeit für die vergangene, mit Zwischenbericht; bei der Rückkehr ein kompletter Bericht mit Kostenübersicht und Rechnung über den Rest) schicken Rechnungen per Brief. Bezahlen geht direkt im Brief oder unter Finanzen. Zahlungsziel 2 Tage. Danach: Mahnung mit allen offenen Beträgen des Absenders + Mahngebühr (10 %, mind. 20 €), Frist 5 Tage – bei Aufzucht/Ausbildung wird der Aufenthalt sofort abgebrochen und die Pferde kommen zurück (ist keine Box frei, sobald eine frei wird). Wird auch die Mahnung nicht bezahlt, wird der Betrag + Versäumnisgebühr (20 %, mind. 50 €) abgebucht – das Konto darf dadurch ins Minus. Eine neue Rechnung desselben Absenders übernimmt alle offenen; die alten werden ungültig. Der Tierschutz holt wegen offener Rechnungen keine Pferde mehr.</p>
+      <p><b>Wohlbefinden</b> (Gesundheit-Reiter): Grundwert startet bei 100 und nähert sich jede Nacht zur Hälfte dem Ziel 100 − 25 (hungrig) − 15 (Box nicht gemistet). Angezeigt wird Grundwert − 0,4 × Schmutz (also bis −40); Putzen hebt es sofort. Hat derzeit noch keine weiteren Auswirkungen.</p>
       <p><b>Schmutz:</b> Jede Nacht in der Box wird das Fell um 9–15 Punkte schmutziger (in einer nicht gemisteten Box +5 extra), Mähne und Schweif um 5–9 (+2). Stufen Fell: unter 20 sauber · ab 20 staubig · ab 50 schmutzig · ab 80 sehr dreckig; Mähne/Schweif: gekämmt · ab 20 zerzaust · ab 50 verfilzt. Man sieht es im Bild (Flecken, dreckige Beine, Stroh im Schweif). Putzen in der Putzkiste: Bürste macht das Fell sauber, Kamm Mähne und Schweif. Der Pferdepfleger putzt seine Boxen jeden Morgen; nach Klinik, Aufzucht oder Ausbildung kommt das Pferd geputzt zurück. Folgen: bis zu 15 % weniger Marktwert (Wert = max(Fell, 0,7 × Mähne)); ist das Fell länger als eine Jahreszeit ununterbrochen schmutzig (ab 50), verliert das Pferd zusätzlich 3 % Gesundheit pro Tag.</p>
       <p>Gut versorgt +8 % pro Tag, hungrig −19, Box nicht gemistet −9,5. Unter 40 % kommt ein Brief vom Tierarzt, bei 30 % oder weniger erholt sich ein Pferd nur noch in der Klinik – auch Medizin hilft dann nicht mehr (+16 %/Tag, ${fmt(KOSTEN.klinik)}/Tag) und wird mit 75 % entlassen. Die Klinikkosten kommen als Rechnung (siehe „Rechnungen“). Ausnahme: Senioren mit altersbedingter Höchstgesundheit von 40 % oder weniger.</p>
       <p>Senioren ab 20 Jahren: höchstens 75 %, sinkt bis 35 Jahre auf 1 %. Sterbewahrscheinlichkeit je Jahreszeit steigt ab 20 Jahren und erreicht mit 35 Jahren 100 %.</p>
@@ -4127,8 +4151,8 @@
       <p><b>Decksaison:</b> Die Hengste der Deckstation (Gestüte) decken nur im Frühling und Sommer, eigene Hengste jederzeit.</p>
       <p>Geburtszeit sonst: 65 % Frühling, 17 % Sommer, 10 % Winter, 8 % Herbst.</p>
       <p>Eigene Pferde: Auktion startet bei ½ des Marktwerts (wie im Auktionshaus) und läuft 2 Jahreszeiten; Zwischenstand und Ergebnis kommen per Brief mit Anzahl der Gebote, beim Verkauf auch mit dem Marktwert zu Beginn und am Ende. Bietet niemand das Startgebot, bleibt das Pferd.</p>
-      <p><b>Ansehen (geheim, Spieler sieht es nie):</b> Jeder Absender startet bei 100 Punkten (Skala 0–200). Positiv +5: Rechnung pünktlich bezahlt, „Du“ angenommen, Verkauf über Pferdemarkt/Auktionshaus, Zuschlag im Auktionshaus, Pferd vom Tierschutz zurückgekauft, Pferd an den Gnadenhof gegeben. Negativ −5: Mahnung, Abbuchung, „Du“ abgelehnt, Preisvorschlag abgelehnt, eigene Auktion mit Strafe abgebrochen, Aufenthalt wegen Kontominus abgebrochen, Tierschutz: Strafe wegen Vernachlässigung, Notfallpferd verkauft oder zurückgegeben, Fohlen abgeholt. Das „Du“ wird nur bei mehr als 100 Punkten angeboten; fällt ein Absender, mit dem man sich duzt, unter 100, zieht er das „Du“ beleidigt zurück.</p>
-      <p><b>Briefe:</b> Absender schreiben zuerst mit „Sie“. Nach ${DU_ANGEBOT_NACH} Briefen (und bei mehr als 100 Punkten Ansehen) bietet ein Absender in einem eigenen Brief das „Du“ an – annehmen oder beim „Sie“ bleiben. Pferdenamen in Briefen lassen sich antippen. Diagnosen kommen als eigener Brief (Ereignis „Tierarzt: Diagnose“).</p>
+      <p><b>Ansehen (geheim, Spieler sieht es nie):</b> Jeder Absender startet bei 100 Punkten (Skala 0–200). Positiv +5: Rechnung pünktlich bezahlt, „Du“ angenommen, Verkauf über Pferdemarkt/Auktionshaus, Zuschlag im Auktionshaus, Pferd vom Tierschutz zurückgekauft, Pferd an den Gnadenhof gegeben. Negativ −5: Mahnung, Abbuchung, „Du“ abgelehnt, Preisvorschlag abgelehnt, eigene Auktion mit Strafe abgebrochen, Aufenthalt wegen Kontominus abgebrochen, Tierschutz: Strafe wegen Vernachlässigung, Notfallpferd verkauft oder zurückgegeben, Fohlen abgeholt. Das „Du“ wird erst ab ${DU_AB_RUF} Punkten angeboten (also frühestens nach 16 positiven Kontakten mehr als negativen); fällt ein Absender, mit dem man sich duzt, auf ${DU_WEG_RUF} oder darunter, zieht er das „Du“ beleidigt zurück.</p>
+      <p><b>Briefe:</b> Absender schreiben zuerst mit „Sie“. Nach ${DU_ANGEBOT_NACH} Briefen (und ab ${DU_AB_RUF} Punkten Ansehen) bietet ein Absender in einem eigenen Brief das „Du“ an – annehmen oder beim „Sie“ bleiben. Pferdenamen in Briefen lassen sich antippen. Diagnosen kommen als eigener Brief (Ereignis „Tierarzt: Diagnose“).</p>
       <p><b>Schecken-Namen:</b> Overo und Tovero heißen ohne Gentest nach dem Aussehen (z. B. „Braunschecke“) – welches Scheckungs-Gen dahintersteckt, sieht man erst nach dem Fellfarben- oder Erbkrankheiten-Test („Braunschecke (Overo)“). Overo-Träger können auch einfarbig aussehen (kaum Weiß); in der Admin-Genauswahl lässt sich O/n deshalb auch bei einfarbigen Farben einstellen.</p>
       <p><b>Warnung bei Erbkrankheiten</b> (Overo × Overo, Leopard × Leopard): erscheint nur, wenn mindestens eins der beiden Pferde einen positiven Gentest hat und das andere ebenfalls positiv getestet ist oder das Muster sichtbar zeigt.</p>
       ${verTab(["Posten", "Kosten"], [["Aufzuchtstation", `${fmt(KOSTEN.aufzucht)} / Tag`], ["Ausbildungsstall", `${fmt(KOSTEN.ausbildung)} / Tag`], ["Klinik", `${fmt(KOSTEN.klinik)} / Tag`], ...Object.values(LABOR_TESTS).map(T => [`Labor: ${T.n}`, `${fmt(T.preis)} · Ergebnis nach ${T.tage} Tagen per Post`]), ["Tierschutz zurückkaufen", "½ Marktwert + offene Klinikkosten"], ["Strafe: Tod durch Vernachlässigung", fmt(STRAFE_VERNACHLAESSIGUNG)]])}

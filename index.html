@@ -227,6 +227,7 @@
   @media (orientation: landscape) and (max-height: 560px) { .gt-kacheln { grid-template-columns: repeat(6, 1fr); } .gt-k b { font-size: .74rem; overflow-wrap: normal; } }
   .gentest-kachel .ico { font-size: 1.8rem; } .gentest-kachel small { display: block; color: var(--leise); font-size: .78rem; }
   .vgl-kopf { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; margin: -4px 0 8px; }
+  .char-wahl input[type=range] { width: 100%; accent-color: var(--akzent); }
   .vgl-kopf.mit-links { justify-content: space-between; flex-wrap: nowrap; } .vgl-kopf.mit-links .vgl-knopf { white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; } .vgl-knopf.weg-knopf[disabled] { border-color: #c9b9a3; color: #a8987f; cursor: default; }
   .vgl-knopf { border: 1.5px solid var(--akzent); background: #fff; color: var(--akzent); border-radius: 99px; padding: 4px 10px; font: inherit; font-size: .78rem; font-weight: 700; cursor: pointer; }
   .vgl-legende { font-size: .78rem; display: flex; align-items: center; gap: 4px; margin-right: auto; } .vgl-legende i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-left: 4px; }
@@ -750,7 +751,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "164";
+  const SPIEL_VERSION = "165";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -758,9 +759,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=164"></script>
-<script src="kopfteile.js?v=164"></script>
-<script src="kopfalter.js?v=164"></script>
+<script src="pferd.js?v=165"></script>
+<script src="kopfteile.js?v=165"></script>
+<script src="kopfalter.js?v=165"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1229,6 +1230,7 @@
     p.genFuer = p.farbe;
     p.grauHinweis = elternGrau(p);
     p.werte = erzeugeWerte(p); p.werte.reinrassig = reinAnteil(p.anteile, p.rasse); gangNachGen(p.werte.gang, p.gen, r);
+    if (o.charakter) Object.assign(p.werte.charakter, o.charakter);   // Admin: Charakter selbst gewählt
     nrVon(p);
     p.alter = alterJahre(p); p.stockmass = Math.round(p.zielStockmass * wuchs(alterJZ(p) * 3));
     return p;
@@ -2842,7 +2844,8 @@
           }).join("")}</div>
         </div>
 
-        ${spiel.admin ? `<div class="feld"><button class="knopf zweit" id="genLaborAuf" style="width:100%">🛠️ Gene selbst wählen</button></div>` : ""}
+        ${spiel.admin ? `<div class="feld"><button class="knopf zweit" id="genLaborAuf" style="width:100%">🛠️ Gene selbst wählen</button></div>
+        <div class="feld"><button class="knopf zweit" id="charWahlAuf" style="width:100%">🛠️ Charakter selbst wählen${wahl.charakter ? " · gewählt ✓" : ""}</button></div>` : ""}
         <div class="feld"><span class="titel">Geschlecht</span>
           <div class="segment" id="geschlecht">${["Stute", "Hengst", "Wallach"].map(x => `<button data-g="${x}">${x}</button>`).join("")}</div>
         </div>
@@ -2872,6 +2875,7 @@
     }
     a.querySelectorAll("#farben .chip, #farbSpalte .fs-kachel").forEach(b => b.onclick = () => { wahl.farbe = b.dataset.f; wahl.eigeneGene = false; wahl.gen = null; wahl.ex = null; aktualisiere(); });
     if ($("genLaborAuf")) $("genLaborAuf").onclick = genLabor;
+    if ($("charWahlAuf")) $("charWahlAuf").onclick = charakterWaehlen;
     a.querySelectorAll("#geschlecht button").forEach(b => b.onclick = () => {
       const alt = wahl.geschlecht; wahl.geschlecht = b.dataset.g;
       if (NAMEN[alt].includes(wahl.name)) { wahl.name = zufallAus(NAMEN[wahl.geschlecht]); $("name").value = wahl.name; }
@@ -2891,7 +2895,7 @@
       aktBox = zb; spiel.aktBox = zb;
       const bx = B(), neu = !bx.pferd;
       // neues Pferd mit vollständiger, fester Akte (Gene, Stammbaum bis zu den Urgroßeltern)
-      bx.pferd = neuesPferd({ id: wahl.id, name: wahl.name, rasse: wahl.rasse, geschlecht: wahl.geschlecht, farbe: wahl.farbe, alter: wahl.alter, zielStockmass: wahl.zielStockmass, rein: true, ...(wahl.eigeneGene ? { gen: wahl.gen, ex: wahl.ex } : {}) });
+      bx.pferd = neuesPferd({ id: wahl.id, name: wahl.name, rasse: wahl.rasse, geschlecht: wahl.geschlecht, farbe: wahl.farbe, alter: wahl.alter, zielStockmass: wahl.zielStockmass, rein: true, ...(wahl.eigeneGene ? { gen: wahl.gen, ex: wahl.ex } : {}), ...(wahl.charakter ? { charakter: wahl.charakter } : {}) });
       alterAktualisieren();
       bx.pferd.maehneSeit = spiel.tag; bx.pferd.schopfSeit = spiel.tag;
       bx.pferd.pflege = erzeugePflege(bx.pferd);
@@ -2946,6 +2950,19 @@
 
   function schliessen() { $("auswahl").classList.remove("offen"); $("auswahl").innerHTML = ""; }
 
+  // ---------- Admin: Charakter selbst wählen (Rassenansicht) – Regler je Charakterwert, Zufall = wieder rassetypisch ----------
+  function charakterWaehlen() {
+    const pr = PROFIL[wahl.rasse] || PROFIL.hannoveraner, c = wahl.charakter || Object.fromEntries(CHARAKTER.map((t, i) => [t.key, pr.char[i]]));
+    dialog(`<h3>🛠️ Charakter selbst wählen</h3><p class="text"><small>Startwerte = Rassen-Durchschnitt. Ab unter 30 oder über 70 wirkt der Charakter aufs Wohlbefinden.</small></p>
+      ${CHARAKTER.map(t => `<div class="zeile-wert char-wahl"><div class="kopf"><b>${t.titel}</b><span id="cw-${t.key}">${c[t.key]}</span></div>
+        <input type="range" min="3" max="97" step="1" value="${c[t.key]}" data-cw="${t.key}" aria-label="${t.titel}"><div class="pole"><span>${t.links}</span><span>${t.rechts}</span></div></div>`).join("")}`,
+      [["Übernehmen", () => { wahl.charakter = werteAusReglern; charKnopf(); }],
+       ["🎲 Zufall", () => { delete wahl.charakter; charKnopf(); }, "zweit"], ["Abbrechen", null, "zweit"]], "breit");
+    // Werte vor dem Schließen des Dialogs merken (der Dialog wird beim Klick geleert)
+    let werteAusReglern = { ...c };
+    const charKnopf = () => { const k = $("charWahlAuf"); if (k) k.textContent = `🛠️ Charakter selbst wählen${wahl.charakter ? " · gewählt ✓" : ""}`; };
+    document.querySelectorAll("[data-cw]").forEach(x => x.oninput = () => { $("cw-" + x.dataset.cw).textContent = x.value; werteAusReglern[x.dataset.cw] = +x.value; });
+  }
   // ---------- Admin: Gene selbst wählen – Bild, Farben und Gene auf einem Bildschirm ----------
   // nur Gene, die in der Rasse vorkommen; nur Kombinationen, die zur gewählten Farbe passen
   const GL_OPT = k => { const [, , d, r] = GEN[k]; return k === "A" ? [["A", "A"], ["A", "At"], ["A", "a"], ["At", "At"], ["At", "a"], ["a", "a"]] : k === "O" ? [[r, r], [d, r]] : [[d, d], [d, r], [r, r]]; };

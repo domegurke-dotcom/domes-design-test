@@ -750,7 +750,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "163";
+  const SPIEL_VERSION = "164";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -758,9 +758,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=163"></script>
-<script src="kopfteile.js?v=163"></script>
-<script src="kopfalter.js?v=163"></script>
+<script src="pferd.js?v=164"></script>
+<script src="kopfteile.js?v=164"></script>
+<script src="kopfalter.js?v=164"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2358,7 +2358,8 @@
       INFO.innerHTML = `<div class="karte" style="min-height:0"><h2>🌿 ${esc(p.name)} ist auf der Weide</h2>
         <p class="text">Box ${aktBox + 1} bleibt für ${pron(p).ihn} frei. ${tage ? `Seit ${tage} ${tage === 1 ? "Tag" : "Tagen"} auf der Weide` : "Heute auf die Weide gekommen"}${box.fohlen ? ` – Fohlen ${esc(box.fohlen.name)} ist mit dabei` : ""}. Gras statt Heu, kein Misten nötig.</p>
         <div class="zeile-wert"><div class="kopf"><b>Gesundheit</b><span>${g.toLocaleString("de-DE")} % · +${WEIDE_PLUS[datum().s]} % pro Tag im ${JZ[datum().s][0]}</span></div><div class="balken"><i style="width:${g}%"></i></div></div>
-        <div class="zeile-wert"><div class="kopf"><b>Wohlbefinden</b><span>${w} %</span></div><div class="balken"><i style="width:${w}%;background:#5a9a6a"></i></div></div>
+        <div class="zeile-wert"><div class="kopf"><b>Wohlbefinden</b><span>${w} %</span></div><div class="balken"><i style="width:${w}%;background:#5a9a6a"></i></div>${wohlGruende(p)}</div>
+        ${herdeText(p)}
         <button class="knopf" id="vonWeide" style="width:auto;padding:9px 14px;margin-top:8px">🏠 Zurück in die Box</button></div>`;
       $("vonWeide").onclick = () => { delete p.weide; speichern(); zeigeStall(); zeigeTag(); };
       return;
@@ -2483,7 +2484,7 @@
       inhalt = `<div class="zeile-wert"><div class="kopf"><b>Gesundheitszustand</b><span>${g.toLocaleString("de-DE", { maximumFractionDigits: 1 })} % · ${zustand[0]}</span></div>
           <div class="balken"><i style="width:${g}%;${g < 45 ? "background:#c0503a" : ""}"></i></div>
           ${box.tot ? "" : (() => { const w = wohlbefinden(p); return `<div class="kopf" style="margin-top:8px"><b>Wohlbefinden</b><span>${w} % · ${w >= 85 ? "rundum zufrieden" : w >= 65 ? "zufrieden" : w >= 45 ? "unzufrieden" : "fühlt sich unwohl"}</span></div>
-          <div class="balken"><i style="width:${w}%;background:${w < 45 ? "#c0503a" : "#5a9a6a"}"></i></div>`; })()}
+          <div class="balken"><i style="width:${w}%;background:${w < 45 ? "#c0503a" : "#5a9a6a"}"></i></div>${wohlGruende(p)}`; })()}
           <p class="text" style="margin:6px 0 0">${box.tot ? `${esc(p.name)} ist verstorben. Über das Menü (☰) → Neustart oder „Pferd auswählen“ geht es weiter.` : `${esc(p.name)} ${HALTUNG_TEXT[haltungFuer(p)]}${g >= 45 && g < 65 ? " – die Ohren sind halb abgeknickt" : ""}.`}</p></div>
         <ul class="liste">
           <li><span class="ico">🌾</span><span class="txt">Fütterung heute<small>Heu in der Futterkrippe</small></span><span class="stat ${box.krippeVoll ? "ok" : "warn"}">${box.krippeVoll ? "gefüttert" : "noch nicht"}</span></li>
@@ -2684,7 +2685,7 @@
     };
     const fa = $("fohlenAufzucht"); if (fa) fa.onclick = () => { const f = box.fohlen;
       dialog(`<h3>🍼 ${esc(f.name)} in die Aufzuchtstation?</h3><p>${esc(f.name)} wächst dort mit anderen Jungpferden auf, bis ${pron(f).er} 3 Jahre alt ist, und kommt dann zurück, sobald eine Box frei ist. Kosten: <b>${fmt(KOSTEN.aufzucht)} pro Tag</b>.</p>`,
-        [["In die Aufzucht", () => { wegbringen(f, "aufzucht", box, true); speichern(); zeigeStall(); zeigeTag(); }], ["Abbrechen", null, "zweit"]]); };
+        [["In die Aufzucht", () => { ANH_ZIEL.aufzucht.aus(f, box, true); speichern(); zeigeStall(); zeigeTag(); }], ["Abbrechen", null, "zweit"]]); };
     const dz = $("deckZurueck"); if (dz) dz.onclick = () => { deckModus = false; zeigeAkte(); };
     // Zuchtpartner antippen: erst seinen Abstammungsschein zeigen (mit Inzucht-Warnung), dann verpaaren
     const partnerZeigen = (q, herkunft) => {
@@ -3253,8 +3254,63 @@
   const WOHL = { weide: 15, box: 6, hunger: 8, mist: 5, putzen: 5 };
   // Wirkung: Lern-/Ausbildungstempo ×0,5 (0 %) … ×1,2 (100 %), bei 70 % normal
   const wohlFaktor = p => 0.5 + 0.7 * wohlbefinden(p) / 100;
-  // angezeigtes Wohlbefinden = Grundwert minus Schmutz (bis −40) – Putzen hebt es sofort
-  const wohlbefinden = p => !p || !p.pflege ? 100 : Math.max(0, Math.min(100, Math.round((p.pflege.wohl == null ? 100 : p.pflege.wohl) - dreckWert(p) * 0.4)));
+  // ---------- Charakter → Wohlbefinden (Werte-Plan, Etappe 2) ----------
+  // Nur ausgeprägte Charakterwerte wirken: über 70 → „hoch“, unter 30 → „tief“, je 0 … 1 (bei 97 bzw. 3 voll). Die Mitte ist neutral.
+  const charE = (p, k) => { const v = p && p.werte && p.werte.charakter ? p.werte.charakter[k] : 50; return v == null ? { hoch: 0, tief: 0 } : { hoch: v > 70 ? Math.min(1, (v - 70) / 27) : 0, tief: v < 30 ? Math.min(1, (30 - v) / 27) : 0 }; };
+  const HERDE_KENNEN = 3;          // so viele gemeinsame Weidetage, dann kennen sich zwei Pferde
+  const ARBEIT_DAHEIM = false;     // Etappe 4 (Training daheim): dann vermissen leistungsbereite Pferde Arbeit an freien Tagen
+  const wohlAendern = (p, d, grund) => { if (!p || !p.pflege || !d) return; d = Math.round(d * 10) / 10;
+    p.pflege.wohl = Math.max(0, Math.min(100, Math.round(((p.pflege.wohl == null ? 100 : p.pflege.wohl) + d) * 10) / 10));
+    if (grund) { const L = (p.wohlLog = p.wohlLog && p.wohlLog.tag === spiel.tag ? p.wohlLog : { tag: spiel.tag, g: [] }); L.g.push(`${grund} ${d > 0 ? "+" : ""}${String(d).replace(".", ",")}`); } };
+  // eine Nacht: ort = "box" | "weide" · herde = alle eigenen Pferde auf der Weide
+  function wohlNacht(p, ort, { hungrig, mistig, herde } = {}) {
+    const T = charE(p, "temperament"), N = charE(p, "wachheit"), B = charE(p, "bezug"), M = charE(p, "mut"), V = charE(p, "nerven"), S = charE(p, "sensibel"), A = charE(p, "wille");
+    p.wohlLog = { tag: spiel.tag, g: [] };
+    // Ortswechsel: verträumte Pferde mögen Routine
+    if (p.ortGestern && p.ortGestern !== ort && N.tief) wohlAendern(p, -3 * N.tief, "Ortswechsel (mag Routine)");
+    p.ortGestern = ort;
+    if (ort === "box") {
+      p.boxTage = (p.boxTage || 0) + 1;
+      const ab = Math.max(1, 2 + Math.round(2 * T.tief) - Math.round(T.hoch));   // ruhig: bis 4 Tage ok · temperamentvoll: schon ab dem 2. Tag
+      if (p.boxTage > ab) wohlAendern(p, -WOHL.box * (1 + T.hoch) * (1 - 0.5 * T.tief) * (1 + 0.5 * B.tief), `${p.boxTage}. Tag in der Box`);
+      if (p.boxTage > ab && N.hoch) wohlAendern(p, -3 * N.hoch, "Langeweile (neugierig)");
+      if (hungrig) wohlAendern(p, -WOHL.hunger, "hungrig");
+      if (mistig) wohlAendern(p, -WOHL.mist * (1 + 0.5 * S.hoch), "Box nicht gemistet");
+    } else {
+      p.boxTage = 0;
+      wohlAendern(p, WOHL.weide + 5 * B.tief + 3 * T.hoch, "Weide");
+      // Herde: Pferde kennen sich nach einigen gemeinsamen Weidetagen – vorher Eingewöhnung (drückt bei scheuen und nervösen Pferden)
+      const H = (p.herde = p.herde || {}), andere = (herde || []).filter(q => q !== p);
+      const fremd = andere.filter(q => (H[q.id] || 0) < HERDE_KENNEN);
+      if (fremd.length && (M.tief || V.tief)) wohlAendern(p, -6 * Math.max(M.tief, V.tief) * (1 - 0.5 * V.hoch), `Eingewöhnung in die Herde (${fremd.length} ${fremd.length === 1 ? "fremdes Pferd" : "fremde Pferde"})`);
+      andere.forEach(q => H[q.id] = (H[q.id] || 0) + 1);
+    }
+    // verschmuste Pferde vermissen das Putzen (mehr als einen Tag nicht geputzt)
+    if (B.hoch && !(p.geputzt && p.geputzt.tag >= spiel.tag - 2)) wohlAendern(p, -3 * B.hoch, "vermisst das Putzen");
+    // leistungsbereite Pferde vermissen Arbeit (kommt mit dem Training daheim)
+    if (ARBEIT_DAHEIM && A.hoch && !(p.arbeitTag >= spiel.tag - 2)) wohlAendern(p, -2 * A.hoch, "vermisst Arbeit");
+  }
+  // Adminmodus: woher sich das Wohlbefinden seit der letzten Nacht geändert hat
+  const wohlGruende = p => spiel.admin && p.wohlLog && p.wohlLog.tag === spiel.tag && p.wohlLog.g.length ? `<p class="text" style="margin:4px 0 0"><small>🛠️ Seit letzter Nacht: ${p.wohlLog.g.map(esc).join(" · ")}</small></p>` : "";
+  // Weide-Herde: wer ist mit draußen, wen kennt das Pferd schon
+  function herdeText(p) {
+    const andere = spiel.boxen.filter(b => b.pferd && b.pferd.weide && !b.pferd.klinik && !b.tot && b.pferd !== p).map(b => b.pferd);
+    if (!andere.length) return `<p class="text">🐴 Gerade ist kein anderes eigenes Pferd auf der Weide.</p>`;
+    const H = p.herde || {}, kennt = andere.filter(q => (H[q.id] || 0) >= HERDE_KENNEN), neu = andere.filter(q => (H[q.id] || 0) < HERDE_KENNEN);
+    return `<p class="text">🐴 <b>Herde:</b> ${andere.map(q => esc(q.name)).join(", ")}${neu.length ? `<br><small>Noch in der Eingewöhnung mit ${neu.map(q => esc(q.name)).join(", ")} – nach ${HERDE_KENNEN} gemeinsamen Weidetagen kennen sie sich.</small>` : `<br><small>Alle kennen sich schon.</small>`}</p>`;
+  }
+  // Stress bei Fahrten mit dem Pferdeanhänger und Neuem (Klinik, fremde Herde): scheu und nervös leiden, gelassen bremst
+  function fahrtStress(p, ziel) {
+    if (!p || !p.werte) return;
+    const M = charE(p, "mut"), V = charE(p, "nerven"), angst = Math.max(M.tief, V.tief) * (1 - 0.5 * V.hoch);
+    if (!angst) return;
+    wohlAendern(p, -8 * angst, "Fahrt im Pferdeanhänger");
+    if (ziel === "klinik") wohlAendern(p, -5 * angst, "fremde Klinik");
+    if (ziel === "aufzucht") wohlAendern(p, -5 * angst, "fremde Herde");
+  }
+  // angezeigtes Wohlbefinden = Grundwert minus Schmutz (bis −40, sensible Pferde stört Schmutz mehr, robuste weniger) – Putzen hebt es sofort
+  const wohlbefinden = p => { if (!p || !p.pflege) return 100; const S = charE(p, "sensibel");
+    return Math.max(0, Math.min(100, Math.round((p.pflege.wohl == null ? 100 : p.pflege.wohl) - dreckWert(p) * 0.4 * (1 + 0.5 * S.hoch) * (1 - 0.5 * S.tief)))); };
   const zuLangeDreckig = p => !!(p && p.dreck && p.dreck.seit != null && spiel.tag - p.dreck.seit > tpj());
   function schmutzen(p, mistig) {
     if (!p) return; const d = (p.dreck = p.dreck || { fell: 0, maehne: 0, seit: null });
@@ -3265,7 +3321,7 @@
   function putzen(p, womit) {
     if (!p) return 0;
     const heute = (p.geputzt && p.geputzt.tag === spiel.tag) ? p.geputzt : (p.geputzt = { tag: spiel.tag, mit: [] });
-    if (!heute.mit.includes(womit) && p.pflege) { heute.mit.push(womit); p.pflege.wohl = Math.min(100, (p.pflege.wohl == null ? 100 : p.pflege.wohl) + WOHL.putzen); }
+    if (!heute.mit.includes(womit) && p.pflege) { heute.mit.push(womit); const B = charE(p, "bezug"); wohlAendern(p, WOHL.putzen * (1 + B.hoch) * (1 - 0.6 * B.tief), womit === "buerste" ? "geputzt" : "gekämmt"); }
     if (!p.dreck) return 0; const d = p.dreck, vorher = womit === "buerste" ? d.fell : d.maehne;
     if (womit === "buerste") { d.fell = 0; d.seit = null; } else d.maehne = 0;
     return vorher;
@@ -3299,6 +3355,7 @@
     tote();
     spiel.tag += 1;
     alterAktualisieren();
+    const weideHerde = spiel.boxen.filter(b => b.pferd && b.pferd.weide && !b.pferd.klinik && !b.tot).map(b => b.pferd);
     spiel.boxen.forEach(b => {
       if (!b.pferd) { b.krippeVoll = false; b.mistig = false; return; }   // leere Box: sauber, Krippe leer
       if (b.pferd.klinik) { delete b.pferd.weide; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; return; }   // Pferd ist in der Klinik
@@ -3308,7 +3365,7 @@
         [W, b.fohlen].forEach(q => { if (!q) return; const qp = (q.pflege = q.pflege || erzeugePflege(q));
           if (qp.gesundheit > 30 || (q === W && altersschwach(W))) qp.gesundheit = Math.min(gesundheitMax(q), Math.round((qp.gesundheit + plus) * 10) / 10); });
         if (zuLangeDreckig(W)) W.pflege.gesundheit = Math.max(1, Math.round((W.pflege.gesundheit - 3) * 10) / 10);
-        W.pflege.wohl = Math.min(100, (W.pflege.wohl == null ? 100 : W.pflege.wohl) + WOHL.weide); W.boxTage = 0;
+        wohlNacht(W, "weide", { herde: weideHerde });
         schmutzen(W, false);
         wachsen(b);
         return;
@@ -3333,9 +3390,8 @@
         if (!b.krippeVoll) fg -= 19; if (b.mistig) fg -= 9.5; if (b.krippeVoll && !b.mistig && fp.gesundheit > 30) fg += 8;
         fp.gesundheit = Math.max(1, Math.min(gesundheitMax(F), Math.round(fg * 10) / 10)); }
       b.mistStufe = b.mistig ? Math.min(6, (b.mistStufe || 1) + 1) : 1;
-      // Wohlbefinden: sinkt, wenn das Pferd länger als 2 Tage am Stück in der Box steht, hungrig ist oder im Mist steht
-      b.pferd.boxTage = (b.pferd.boxTage || 0) + 1;
-      pf.wohl = Math.max(0, (pf.wohl == null ? 100 : pf.wohl) - (b.pferd.boxTage > 2 ? WOHL.box : 0) - (b.krippeVoll ? 0 : WOHL.hunger) - (b.mistig ? WOHL.mist : 0));
+      // Wohlbefinden: Box (zu lange am Stück, je nach Charakter), Hunger, Mist, Putzen vermisst …
+      wohlNacht(b.pferd, "box", { hungrig: !b.krippeVoll, mistig: b.mistig });
       schmutzen(b.pferd, b.mistig);
       b.krippeVoll = false; b.mistig = true;
       wachsen(b);
@@ -3754,19 +3810,19 @@
     aufzucht: { ico: "🍼", name: "Aufzucht\u00adstation", info: "Fohlen und Jungpferde wachsen bis zum Ausbildungsalter in der Herde auf", wohin: "in die Aufzuchtstation", wo: "in der Aufzuchtstation",
       beschreibung: "Fohlen (ab der 3. Jahreszeit) und Jungpferde bis 3 Jahre", kosten: () => `${fmt(KOSTEN.aufzucht)} pro Tag und Pferd`,
       sperre: (p, b, f) => anhGrund(p, b) || (spiel.geld < 0 ? "Konto im Minus" : "") || (f ? (alterJZ(p) < 2 ? "Fohlen noch zu jung" : "") : b.fohlen ? "mit Fohlen bei Fuß" : alterJZ(p) >= AUSBILDUNGSALTER ? "nur bis 3 Jahre" : ""),
-      kurz: () => `${fmt(KOSTEN.aufzucht)} / Tag`, aus: (p, b, f) => wegbringen(p, "aufzucht", b, !!f) },
+      kurz: () => `${fmt(KOSTEN.aufzucht)} / Tag`, aus: (p, b, f) => { fahrtStress(p, "aufzucht"); wegbringen(p, "aufzucht", b, !!f); } },
     ausbildung: { ico: "🎓", name: "Ausbildungs\u00adstall", info: "Profis bilden das Pferd aus – es kommt schneller voran", wohin: "in den Ausbildungsstall", wo: "im Ausbildungsstall",
       beschreibung: "Pferde ab 3 Jahren", kosten: () => `${fmt(KOSTEN.ausbildung)} pro Tag und Pferd`,
       sperre: (p, b) => anhGrund(p, b) || (spiel.geld < 0 ? "Konto im Minus" : "") || (b.fohlen ? "mit Fohlen bei Fuß" : alterJZ(p) < AUSBILDUNGSALTER ? "ab 3 Jahren" : ""),
-      kurz: () => `${fmt(KOSTEN.ausbildung)} / Tag`, aus: (p, b) => wegbringen(p, "ausbildung", b, false) },
+      kurz: () => `${fmt(KOSTEN.ausbildung)} / Tag`, aus: (p, b) => { fahrtStress(p, "ausbildung"); wegbringen(p, "ausbildung", b, false); } },
     stationaer: { ico: "🛏️", name: "Stationär behandeln", info: "Bleibt in der Klinik, bis die Gesundheit mindestens 75 % beträgt – erholt sich doppelt so schnell", wohin: "in die Klinik", wo: "in der Klinik",
       beschreibung: "Pferde unter 75 % Gesundheit – bleiben bis 75 %, Rechnung danach", kosten: () => `${fmt(KOSTEN.klinik)} pro Tag und Pferd`,
       sperre: (p, b) => anhGrund(p, b, false) || (p.pflege && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p)) ? "nicht nötig" : ""),
-      kurz: () => `${fmt(KOSTEN.klinik)} / Tag`, aus: p => { p.klinik = { seit: spiel.tag }; delete p.weide; spiel.angebote = (spiel.angebote || []).filter(a => a.id !== p.id); } },
+      kurz: () => `${fmt(KOSTEN.klinik)} / Tag`, aus: p => { fahrtStress(p, "klinik"); p.klinik = { seit: spiel.tag }; delete p.weide; spiel.angebote = (spiel.angebote || []).filter(a => a.id !== p.id); } },
     kastration: { ico: "✂️", name: "Hengst kastrieren", info: "Kastration: 2 Tage Klinik, danach ist er ein Wallach", wohin: "zur Kastration in die Klinik", wo: "in der Klinik",
       beschreibung: "Hengste ab 1 Jahr – 2 Tage Klinik, danach Wallach", kosten: () => `${fmt(KOSTEN.kastration)} je Hengst inklusive 2 Tage Klinik`,
       sperre: (p, b) => p.geschlecht !== "Hengst" ? "nur Hengste" : anhGrund(p, b) || (alterJZ(p) < KASTRATION_AB ? "ab 1 Jahr" : ""),
-      kurz: () => fmt(KOSTEN.kastration), aus: p => { p.klinik = { seit: spiel.tag, op: "kastration", bis: spiel.tag + 2 }; delete p.weide; spiel.angebote = (spiel.angebote || []).filter(a => a.id !== p.id); } },
+      kurz: () => fmt(KOSTEN.kastration), aus: p => { fahrtStress(p, "klinik"); p.klinik = { seit: spiel.tag, op: "kastration", bis: spiel.tag + 2 }; delete p.weide; spiel.angebote = (spiel.angebote || []).filter(a => a.id !== p.id); } },
     verkaufen: { ico: "💰", name: "Verkaufen", info: "Auf dem Pferdemarkt verkaufen", einzeln: true,
       sperre: (p, b) => angebotVon(p) ? "" : (anhGrund(p, b) || abgabeSperre(p, b, true)),
       kurz: (p, b) => { const a = angebotVon(p); return a ? (a.art === "auktion" ? "in der Auktion" : "wird angeboten") : b.fohlen ? "mit Fohlen bei Fuß" : "Festpreis oder Auktion"; } },
@@ -4256,7 +4312,15 @@
       <h3>❤️ Gesundheit</h3>
       <p><b>Kastration</b> (Pferdeanhänger → Klinik, nur Hengste ab 1 Jahr): ${fmt(KOSTEN.kastration)} inklusive 2 Tage Klinik; liegt die Gesundheit unter 75 %, bleibt er länger (${fmt(KOSTEN.klinik)} je zusätzlichem Tag). Danach ist er im Steckbrief ein Wallach und kann nicht mehr decken. Der Abstammungsschein bleibt unverändert (Hengst).</p>
       <p><b>Rechnungen:</b> Klinik (bei der Entlassung), Aufzuchtstation und Ausbildungsstall (zu Beginn jeder Jahreszeit für die vergangene, mit Zwischenbericht; bei der Rückkehr ein kompletter Bericht mit Kostenübersicht und Rechnung über den Rest) schicken Rechnungen per Brief. Bezahlen geht direkt im Brief oder unter Finanzen. Zahlungsziel 2 Tage. Danach: Mahnung mit allen offenen Beträgen des Absenders + Mahngebühr (10 %, mind. 20 €), Frist 5 Tage – bei Aufzucht/Ausbildung wird der Aufenthalt sofort abgebrochen und die Pferde kommen zurück (ist keine Box frei, sobald eine frei wird). Wird auch die Mahnung nicht bezahlt, wird der Betrag + Versäumnisgebühr (20 %, mind. 50 €) abgebucht – das Konto darf dadurch ins Minus. Eine neue Rechnung desselben Absenders übernimmt alle offenen; die alten werden ungültig. Der Tierschutz holt wegen offener Rechnungen keine Pferde mehr.</p>
-      <p><b>Wohlbefinden</b> (Reiter „Versorgung“, 0–100): pro Tag Weide +15, Aufzuchtstation +10, Putzen +5 (Bürste und Kamm je einmal am Tag); ab dem 3. Tag am Stück in der Box −6, hungrig −8, Box nicht gemistet −5. Angezeigt wird der Wert minus 0,4 × Schmutz. <b>Wirkung:</b> Ausbildungs-/Lerntempo im Ausbildungsstall ×(0,5 + 0,7 × Wohlbefinden) – bei 70 % normal, bei 100 % ×1,2, bei 0 % ×0,5. Fruchtbarkeit: Chance, beim Decken tragend zu werden = 40 % + 55 % × Wohlbefinden (Stute; mit eigenem Hengst Durchschnitt beider) – bei 100 % 95 %, bei 50 % 67,5 %.</p>
+      <p><b>Wohlbefinden</b> (Reiter „Versorgung“, 0–100): Grundwerte pro Tag – Weide +15, Aufzuchtstation +10, Putzen +5 (Bürste und Kamm je einmal am Tag); ab dem 3. Tag am Stück in der Box −6, hungrig −8, Box nicht gemistet −5. Angezeigt wird der Wert minus 0,4 × Schmutz. <b>Wirkung:</b> Ausbildungs-/Lerntempo im Ausbildungsstall ×(0,5 + 0,7 × Wohlbefinden) – bei 70 % normal, bei 100 % ×1,2, bei 0 % ×0,5. Fruchtbarkeit: Chance, beim Decken tragend zu werden = 40 % + 55 % × Wohlbefinden (Stute; mit eigenem Hengst Durchschnitt beider) – bei 100 % 95 %, bei 50 % 67,5 %.</p>
+      <p><b>Charakter → Wohlbefinden</b> (nur ausgeprägte Werte: über 70 „hoch“, unter 30 „tief“, Stärke e = 0 … 1, voll bei 97 bzw. 3):
+        Temperament – Box-Abzug beginnt nach 2 + 2·e(ruhig) − e(temperamentvoll) Tagen (mind. 1), Abzug −6 × (1 + e temperamentvoll) × (1 − 0,5·e ruhig) × (1 + 0,5·e eigenständig); Weide +3·e temperamentvoll.
+        Neugier – neugierig: in der Box zusätzlich −3·e Langeweile; verträumt: jeder Ortswechsel −3·e (mag Routine).
+        Menschenbezug – verschmust: Putzen × (1 + e), mehr als einen Tag nicht geputzt −3·e pro Nacht; eigenständig: Putzen × (1 − 0,6·e), Weide +5·e.
+        Mut / Nervenstärke – Angst = max(e scheu, e nervös) × (1 − 0,5·e gelassen): Fahrt im Pferdeanhänger −8·Angst, dazu Klinik oder Aufzuchtstation (fremde Herde) −5·Angst; auf der Weide pro Nacht mit fremden Herdenmitgliedern −6·max(e scheu, e nervös) × (1 − 0,5·e gelassen).
+        Sensibilität – sensibel: Mist −5 × (1 + 0,5·e), Schmutz zieht × (1 + 0,5·e) ab; robust: Schmutz × (1 − 0,5·e).
+        Arbeitswille – leistungsbereit vermisst Arbeit (kommt mit dem Training daheim).</p>
+      <p><b>Herde:</b> Alle eigenen Pferde auf der Weide sind eine Herde. Nach ${HERDE_KENNEN} gemeinsamen Weidetagen kennen sich zwei Pferde (gilt dauerhaft). Bis dahin Eingewöhnung (siehe oben).</p>
       <p><b>Weide</b> (Ort → Weide, antippen = hin und zurück): Box bleibt frei und leer, kein Füttern und Misten nötig (Stallbursche lässt die Box aus, der Pferdepfleger putzt weiter). Gesundheit pro Tag: Frühling +10, Sommer +12, Herbst +7, Winter +5 (Box +8); bei 30 % oder weniger keine Erholung. Fohlen bei Fuß kommt mit. Schmutz wie in der Box (ohne Mist-Zuschlag).</p>
       <p><b>Schmutz:</b> Jede Nacht in der Box wird das Fell um 9–15 Punkte schmutziger (in einer nicht gemisteten Box +5 extra), Mähne und Schweif um 5–9 (+2). Stufen Fell: unter 20 sauber · ab 20 staubig · ab 50 schmutzig · ab 80 sehr dreckig; Mähne/Schweif: gekämmt · ab 20 zerzaust · ab 50 verfilzt. Man sieht es im Bild (Flecken, dreckige Beine, Stroh im Schweif). Putzen in der Putzkiste: Bürste macht das Fell sauber, Kamm Mähne und Schweif. Der Pferdepfleger putzt seine Boxen jeden Morgen; nach Klinik, Aufzucht oder Ausbildung kommt das Pferd geputzt zurück. Folgen: bis zu 15 % weniger Marktwert (Wert = max(Fell, 0,7 × Mähne)); ist das Fell länger als eine Jahreszeit ununterbrochen schmutzig (ab 50), verliert das Pferd zusätzlich 3 % Gesundheit pro Tag.</p>
       <p>Gut versorgt +8 % pro Tag, hungrig −19, Box nicht gemistet −9,5. Unter 40 % kommt ein Brief vom Tierarzt, bei 30 % oder weniger erholt sich ein Pferd nur noch in der Klinik – auch Medizin hilft dann nicht mehr (+16 %/Tag, ${fmt(KOSTEN.klinik)}/Tag) und wird mit 75 % entlassen. Die Klinikkosten kommen als Rechnung (siehe „Rechnungen“). Ausnahme: Senioren mit altersbedingter Höchstgesundheit von 40 % oder weniger.</p>

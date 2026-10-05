@@ -227,6 +227,8 @@
   @media (orientation: landscape) and (max-height: 560px) { .gt-kacheln { grid-template-columns: repeat(6, 1fr); } .gt-k b { font-size: .74rem; overflow-wrap: normal; } }
   .gentest-kachel .ico { font-size: 1.8rem; } .gentest-kachel small { display: block; color: var(--leise); font-size: .78rem; }
   .vgl-kopf { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; margin: -4px 0 8px; }
+  #reaktionsText { position: fixed; left: 50%; top: calc(max(14px, env(safe-area-inset-top)) + 52px); transform: translate(-50%, -12px); z-index: 44; max-width: min(92vw, 520px); padding: 9px 14px; border-radius: 12px; background: #fffaf0; border: 1.5px solid #c9a87a; box-shadow: 0 6px 20px rgba(0,0,0,.25); font-size: .9rem; font-weight: 600; color: #3a2a1c; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; text-align: center; }
+  #reaktionsText.an { opacity: 1; transform: translate(-50%, 0); }
   .char-wahl input[type=range] { width: 100%; accent-color: var(--akzent); }
   .vgl-kopf.mit-links { justify-content: space-between; flex-wrap: nowrap; } .vgl-kopf.mit-links .vgl-knopf { white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; } .vgl-knopf.weg-knopf[disabled] { border-color: #c9b9a3; color: #a8987f; cursor: default; }
   .vgl-knopf { border: 1.5px solid var(--akzent); background: #fff; color: var(--akzent); border-radius: 99px; padding: 4px 10px; font: inherit; font-size: .78rem; font-weight: 700; cursor: pointer; }
@@ -751,7 +753,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "168";
+  const SPIEL_VERSION = "169";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -759,9 +761,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=168"></script>
-<script src="kopfteile.js?v=168"></script>
-<script src="kopfalter.js?v=168"></script>
+<script src="pferd.js?v=169"></script>
+<script src="kopfteile.js?v=169"></script>
+<script src="kopfalter.js?v=169"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2255,6 +2257,7 @@
     });
   }
   function dialog(html, knoepfe = [["OK"]], art = "") {
+    const rt = document.getElementById("reaktionsText"); if (rt) rt.classList.remove("an");
     $("dlgInhalt").innerHTML = html;
     document.querySelector(".dlg-karte").className = "dlg-karte " + art;
     $("dlgKnoepfe").innerHTML = knoepfe.map(([t, , k], i) => `<button class="knopf ${k || ""}" data-i="${i}">${t}</button>`).join("");
@@ -2372,8 +2375,8 @@
         ${heuNoetig() ? (box.krippeVoll ? `<p class="text">🌾 Heu liegt auf der Weide bereit.</p>` : `<p class="text">🌾 <b>Kaum Gras</b> – ${JZ[datum().s][0] === "Winter" ? "im Winter" : "am letzten Herbsttag"} muss Heu auf die Weide, sonst bleibt ${esc(p.name)} hungrig.</p><button class="knopf" id="weideHeu" style="width:auto;padding:9px 14px;margin:0 8px 8px 0">🌾 Heu auf die Weide</button>`) : ""}
         ${herdeText(p)}
         <button class="knopf" id="vonWeide" style="width:auto;padding:9px 14px;margin-top:8px">🏠 Zurück in die Box</button></div>`;
-      $("vonWeide").onclick = () => { delete p.weide; speichern(); zeigeStall(); zeigeTag(); };
-      if ($("weideHeu")) $("weideHeu").onclick = () => { box.krippeVoll = true; speichern(); zeigeAkte(); zeigeTag(); };
+      $("vonWeide").onclick = () => { delete p.weide; reaktionZeigen(reaktion(p, "box")); speichern(); zeigeStall(); zeigeTag(); };
+      if ($("weideHeu")) $("weideHeu").onclick = () => { box.krippeVoll = true; reaktionZeigen(reaktion(p, "fuettern")); speichern(); zeigeAkte(); zeigeTag(); };
       return;
     }
     if (p && p.klinik && !LS) {
@@ -2467,7 +2470,7 @@
     } else if (aktenReiter === "charakter") {
       werteErgaenzen(p); const c = w.charakter;
       const q = vergleichPferd(p);
-      inhalt = vglKopf(p) + CHARAKTER.map(t => `
+      inhalt = vglKopf(p, box.lesen ? "" : `<button class="vgl-knopf" id="vorliebenKnopf">💭 Vorlieben${Object.keys(p.entdeckt || {}).length ? ` (${Object.keys(p.entdeckt).length})` : ""}</button>`) + CHARAKTER.map(t => `
         <div class="zeile-wert"><div class="kopf"><b class="lex" data-lex="char:${t.key}">${t.titel}</b></div>
         <div class="skala"><i style="left:${c[t.key]}%"></i>${q ? `<i class="vgl" style="left:${(werteErgaenzen(q), q.werte.charakter[t.key])}%"></i>` : ""}</div>
         <div class="pole"><span>${t.links}</span><span>${t.rechts}</span></div></div>`).join("");
@@ -2724,8 +2727,8 @@
         return;
       }
       if (id === "weide") {
-        if (p.weide) { delete p.weide; meldung = `🏠 ${esc(p.name)} ist zurück in Box ${aktBox + 1}.`; }
-        else { p.weide = { seit: spiel.tag }; p.boxTage = 0; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0; meldung = "";
+        if (p.weide) { delete p.weide; meldung = `🏠 ${esc(p.name)} ist zurück in Box ${aktBox + 1}. ${reaktion(p, "box")}`; }
+        else { reaktionZeigen(reaktion(p, "weide")); p.weide = { seit: spiel.tag }; p.boxTage = 0; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0; meldung = "";
           const herde = spiel.boxen.filter(b => b.pferd && b.pferd.weide && !b.pferd.klinik && !b.tot).map(b => b.pferd);
           if (!spiel.hinweisDecken && herde.some(deckfaehig) && herde.some(q => q.geschlecht === "Stute" && alterJZ(q) >= 12)) { spiel.hinweisDecken = true;
             setTimeout(() => dialog(`<h3>⚠️ Hengst und Stute zusammen</h3><p>Auf der Weide stehen jetzt ein Hengst und eine Stute zusammen. Dabei kann es zu einer <b>ungeplanten Bedeckung</b> kommen – ob die Stute tragend ist, merkst du erst später.</p>`), 0); } }
@@ -2772,11 +2775,13 @@
     const sk = $("scherKachel"); if (sk) sk.onclick = () => { scherModus = true; meldung = ""; zeigeAkte(); };
     const zk = $("zaumKachel"); if (zk) zk.onclick = () => { zaumModus = true; meldung = ""; zeigeAkte(); };
     const zz = $("zaumZurueck"); if (zz) zz.onclick = () => { zaumModus = false; zeigeAkte(); };
+    const vk3 = $("vorliebenKnopf"); if (vk3) vk3.onclick = () => vorliebenZeigen(p);
     const putzK = $("putzKachel"); if (putzK) putzK.onclick = () => { putzModus = true; meldung = ""; zeigeAkte(); };
     const putzZ = $("putzZurueck"); if (putzZ) putzZ.onclick = () => { putzModus = false; meldung = ""; zeigeAkte(); };
     INFO.querySelectorAll("[data-putz]").forEach(b => b.onclick = () => {
-      const womit = b.dataset.putz; putzen(p, womit);
-      meldung = womit === "buerste" ? `🧽 ${esc(p.name)} ist geputzt – das Fell glänzt wieder.` : `🪮 Mähne und Schweif von ${esc(p.name)} sind gekämmt.`;
+      const womit = b.dataset.putz, schonHeute = p.geputzt && p.geputzt.tag === spiel.tag && p.geputzt.mit.includes(womit); putzen(p, womit);
+      const re = schonHeute ? "" : reaktion(p, womit === "buerste" ? "putzen" : "kaemmen");
+      meldung = (womit === "buerste" ? `🧽 ${esc(p.name)} ist geputzt – das Fell glänzt wieder.` : `🪮 Mähne und Schweif von ${esc(p.name)} sind gekämmt.`) + (re ? `<br>🐴 ${re}` : "");
       speichern(); zeigeStall(); });
     const mk = $("medKachel"); if (mk) mk.onclick = () => { medModus = true; meldung = ""; zeigeAkte(); };
     const mz = $("medZurueck"); if (mz) mz.onclick = () => { medModus = false; meldung = ""; zeigeAkte(); };
@@ -2789,7 +2794,7 @@
       p.pflege.gesundheit = Math.min(gesundheitMax(p), Math.round((vorher + m.plus) * 10) / 10);
       if (m.id === "wurmkur") p.pflege.wurm = spiel.tag;
       const diff = Math.round((p.pflege.gesundheit - vorher) * 10) / 10;
-      meldung = `${m.ico} ${esc(p.name)} hat ${m.name} bekommen${diff > 0 ? ` – Gesundheit +${String(diff).replace(".", ",")}` : ""}.`;
+      meldung = `${m.ico} ${esc(p.name)} hat ${m.name} bekommen${diff > 0 ? ` – Gesundheit +${String(diff).replace(".", ",")}` : ""}.<br>🐴 ${reaktion(p, "medizin")}`;
       speichern(); zeigeAkte();
     });
     const sz = $("scherZurueck"); if (sz) sz.onclick = () => { scherModus = false; meldung = ""; zeigeAkte(); };
@@ -2797,12 +2802,12 @@
     INFO.querySelectorAll("[data-sziel]").forEach(c => c.onchange = () => { p.schopfZiel = c.checked ? c.dataset.sziel : null; speichern(); zeigeAkte(); });
     INFO.querySelectorAll("[data-schnitt]").forEach(b => { if (b.dataset.schnitt) b.onclick = () => {
       p.maehne = b.dataset.schnitt; p.maehneSeit = spiel.tag;   // in der Schere-Ansicht bleiben
-      meldung = `✂️ Die Mähne von ${esc(p.name)} ist jetzt: <b>${MAEHNEN.find(m => m[0] === p.maehne)[1]}</b>`;
+      meldung = `✂️ Die Mähne von ${esc(p.name)} ist jetzt: <b>${MAEHNEN.find(m => m[0] === p.maehne)[1]}</b><br>🐴 ${reaktion(p, "schere")}`;
       speichern(); zeigeStall();
     }; });
     INFO.querySelectorAll("[data-schopf]").forEach(b => { if (b.dataset.schopf) b.onclick = () => {
       p.schopf = b.dataset.schopf; p.schopfSeit = spiel.tag;
-      meldung = `✂️ Der Schopf von ${esc(p.name)} ist jetzt: <b>${SCHOEPFE.find(m => m[0] === p.schopf)[1]}</b>`;
+      meldung = `✂️ Der Schopf von ${esc(p.name)} ist jetzt: <b>${SCHOEPFE.find(m => m[0] === p.schopf)[1]}</b><br>🐴 ${reaktion(p, "schere")}`;
       speichern(); zeigeStall();
     }; });
     INFO.querySelectorAll(".modus button").forEach(b => b.onclick = () => {
@@ -3195,7 +3200,7 @@
   $("krippe").addEventListener("click", () => {
     const box = B();
     if (!box.pferd || box.tot || box.pferd.klinik || box.pferd.weide || box.krippeVoll) return;
-    box.krippeVoll = true;
+    box.krippeVoll = true; reaktionZeigen(reaktion(box.pferd, "fuettern"));
     speichern(); zeigeTag();
   });
   const ausmisten = () => {
@@ -3275,7 +3280,7 @@
   // jeden Morgen: Stallburschen füttern und misten, Pferdepfleger kürzen Mähne und Schopf auf die Wunschlänge
   function mitarbeiterTag() {
     burschenBoxen().forEach(i => { const b = spiel.boxen[i]; b.krippeVoll = true; b.mistig = false; b.mistStufe = 0; });
-    maBoxen("pfleger").forEach(i => { const p = spiel.boxen[i].pferd; pflegerSchneiden(p); putzen(p, "buerste"); putzen(p, "kamm"); });
+    maBoxen("pfleger").forEach(i => { const p = spiel.boxen[i].pferd; pflegerSchneiden(p); putzen(p, "buerste"); putzen(p, "kamm"); reaktion(p, "putzen", false); reaktion(p, "kaemmen", false); });
   }
   // ---------- Schmutz: jede Nacht in der Box etwas dreckiger (Fell schneller als Mähne/Schweif, im Mist noch schneller) ----------
   // p.dreck = { fell: 0–100, maehne: 0–100, seit: Tag, ab dem das Fell verdreckt ist (≥ 50) }
@@ -3391,6 +3396,7 @@
   // Stress bei Fahrten mit dem Pferdeanhänger und Neuem (Klinik, fremde Herde): scheu und nervös leiden, gelassen bremst
   function fahrtStress(p, ziel) {
     if (!p || !p.werte) return;
+    reaktionZeigen(reaktion(p, "verladen"));
     // nervös: vor allem die Fahrt (Enge, Lärm, Schaukeln) · scheu: vor allem das Neue (fremde Klinik, fremde Herde) · beides zählt zusammen, gelassen bremst bis zur Hälfte
     const M = charE(p, "mut"), V = charE(p, "nerven"), bremse = 1 - 0.5 * V.hoch;
     const fahrt = (14 * V.tief + 6 * M.tief) * bremse, fremd = (6 * V.tief + 12 * M.tief) * bremse;
@@ -3399,6 +3405,69 @@
     if (fremd && ziel === "aufzucht") wohlAendern(p, -fremd, "fremde Herde");
   }
 
+  // ---------- Vorlieben und Reaktionen (Werte-Plan, Etappe 3) ----------
+  // Jedes Pferd hat versteckte Vorlieben (−1 … +1) zu jedem Ziel: größtenteils aus dem Charakter, ein Teil Zufall (fest je Pferd).
+  // Neue Ziele (Training, Ausrüstung …) einfach hier eintragen. basis(c) bekommt charE-Werte: c.temperament.hoch usw.
+  // Reaktion: ab +0,35 „mag“, ab −0,35 „mag nicht“, sonst egal · Wohlbefinden ± bis 4 · Training (später) ×(1 + 0,25 × Vorliebe).
+  const VORLIEBEN = {
+    putzen:   { titel: "Putzen mit der Bürste", ico: "🧽", basis: c => 0.6 * c.bezug.hoch - 0.4 * c.bezug.tief - 0.5 * c.sensibel.hoch + 0.2,
+      mag: ["schließt genießerisch die Augen", "lehnt sich in die Bürste", "schnaubt zufrieden und lässt die Unterlippe hängen"],
+      egal: ["lässt sich ruhig putzen", "döst beim Putzen vor sich hin"],
+      nicht: ["legt die Ohren an und weicht zurück", "zuckt bei jedem Bürstenstrich mit der Haut", "schlägt unruhig mit dem Schweif"] },
+    kaemmen:  { titel: "Mähne und Schweif kämmen", ico: "🪮", basis: c => 0.3 * c.bezug.hoch - 0.6 * c.sensibel.hoch - 0.3 * c.temperament.hoch + 0.1,
+      mag: ["hält ganz still und genießt es", "brummelt leise"], egal: ["lässt sich geduldig kämmen", "steht ruhig da"],
+      nicht: ["zieht den Kopf weg", "tritt unruhig hin und her", "schlägt genervt mit dem Schweif"] },
+    fuettern: { titel: "Füttern", ico: "🌾", basis: c => 0.5 + 0.2 * c.temperament.hoch - 0.2 * c.sensibel.hoch,
+      mag: ["wiehert freudig und stürzt sich aufs Heu", "scharrt ungeduldig mit dem Vorderhuf", "steckt sofort die Nase ins Heu"],
+      egal: ["frisst in Ruhe", "beginnt gemächlich zu fressen"], nicht: ["schnuppert wählerisch am Heu", "frisst nur zögerlich"] },
+    weide:    { titel: "Weide", ico: "🌿", basis: c => 0.4 + 0.4 * c.temperament.hoch + 0.3 * c.bezug.tief + 0.2 * c.wachheit.hoch - 0.4 * c.mut.tief - 0.3 * c.nerven.tief,
+      mag: ["buckelt vor Freude und galoppiert los", "wälzt sich ausgiebig im Gras", "trabt mit erhobenem Schweif davon"],
+      egal: ["schlendert gemütlich hinaus", "senkt gleich den Kopf zum Grasen"], nicht: ["bleibt zögernd am Tor stehen", "schaut sich unsicher um"] },
+    box:      { titel: "Zurück in die Box", ico: "🏠", basis: c => 0.3 * c.temperament.tief - 0.5 * c.temperament.hoch - 0.3 * c.wachheit.hoch + 0.3 * c.bezug.hoch,
+      mag: ["geht zufrieden in die Box und schnuppert am Heu", "brummelt erleichtert"], egal: ["geht ruhig mit", "folgt brav am Strick"],
+      nicht: ["stemmt die Hufe in den Boden", "dreht sich noch einmal sehnsüchtig zur Weide um", "lässt sich nur mühsam hineinführen"] },
+    verladen: { titel: "Verladen in den Pferdeanhänger", ico: "🚚", basis: c => 0.5 * c.mut.hoch + 0.4 * c.nerven.hoch - 0.8 * c.nerven.tief - 0.6 * c.mut.tief,
+      mag: ["marschiert ohne Zögern in den Anhänger", "steigt neugierig ein"], egal: ["lässt sich nach kurzem Zögern verladen", "geht ruhig hinein"],
+      nicht: ["steigt und will nicht hinein", "lässt sich nur mit viel Geduld verladen", "zittert und schwitzt beim Verladen"] },
+    medizin:  { titel: "Medizin", ico: "💊", basis: c => -0.2 - 0.4 * c.sensibel.hoch - 0.3 * c.nerven.tief + 0.3 * c.bezug.hoch,
+      mag: ["nimmt die Medizin brav, als wäre es ein Leckerli"], egal: ["lässt es über sich ergehen", "schluckt die Medizin ohne Theater"],
+      nicht: ["dreht den Kopf weg und spuckt", "wirft den Kopf hoch", "versucht auszuweichen"] },
+    schere:   { titel: "Mähne schneiden", ico: "✂️", basis: c => -0.1 - 0.5 * c.sensibel.hoch - 0.4 * c.nerven.tief + 0.3 * c.nerven.hoch,
+      mag: ["hält ganz still, ganz entspannt"], egal: ["lässt sich geduldig frisieren", "döst beim Schneiden"],
+      nicht: ["zuckt beim Klappern der Schere zusammen", "zieht den Hals weg", "tänzelt unruhig"] },
+  };
+  function vorliebe(p, k) {
+    const V = (p.vorlieben = p.vorlieben || {});
+    if (V[k] == null) { const c = Object.fromEntries(CHARAKTER.map(t => [t.key, charE(p, t.key)])), rz = zufall("vorliebe-" + p.id + k);
+      V[k] = Math.round(Math.max(-1, Math.min(1, VORLIEBEN[k].basis(c) + (rz() - 0.5))) * 100) / 100; }
+    return V[k];
+  }
+  const vorliebeStufe = v => v >= 0.35 ? "mag" : v <= -0.35 ? "nicht" : "egal";
+  const vorliebeFaktor = (p, k) => 1 + 0.25 * vorliebe(p, k);   // für Training (Etappe 4)
+  // Reaktion auf eine Aktion: Wohlbefinden ±, Vorliebe gilt danach als entdeckt; gibt den Reaktionstext zurück. selbst = false: z. B. Pfleger/Stallbursche (wirkt, wird aber nicht entdeckt)
+  function reaktion(p, k, selbst = true) {
+    if (!p || !p.werte || !VORLIEBEN[k]) return "";
+    const v = vorliebe(p, k), st = vorliebeStufe(v), Z = VORLIEBEN[k];
+    if (st !== "egal") wohlAendern(p, 4 * v, `${st === "mag" ? "mag" : "mag nicht"}: ${Z.titel}`);
+    if (!selbst) return "";
+    (p.entdeckt = p.entdeckt || {})[k] = st;
+    const liste = Z[st]; return `${esc(p.name)} ${liste[Math.floor(Math.random() * liste.length)]}.`;
+  }
+  // Knopf „Vorlieben“ (Box - Steckbrief - Charakter): nur, was man schon erlebt hat
+  function vorliebenZeigen(p) {
+    const E = p.entdeckt || {}, alle = Object.keys(VORLIEBEN), bekannt = alle.filter(k => E[k]);
+    const gruppe = (st, titel) => { const l = bekannt.filter(k => E[k] === st); return l.length ? `<p><b>${titel}</b><br>${l.map(k => `${VORLIEBEN[k].ico} ${VORLIEBEN[k].titel}`).join("<br>")}</p>` : ""; };
+    dialog(`<h3>💭 Vorlieben von ${esc(p.name)}</h3>${bekannt.length ? gruppe("mag", "😊 mag") + gruppe("egal", "😐 ist egal") + gruppe("nicht", "😣 mag nicht") : `<p>Noch nichts entdeckt. Was ${esc(p.name)} mag oder nicht mag, merkst du erst, wenn du es ausprobierst – beim Putzen, Füttern, auf der Weide …</p>`}
+      ${bekannt.length < alle.length ? `<p class="text"><small>Noch ${alle.length - bekannt.length} ${alle.length - bekannt.length === 1 ? "Sache" : "Sachen"} unentdeckt.</small></p>` : ""}
+      ${spiel.admin ? `<p class="text"><small>🛠️ Admin: ${alle.map(k => `${VORLIEBEN[k].titel} ${String(vorliebe(p, k)).replace(".", ",")}`).join(" · ")}</small></p>` : ""}`);
+  }
+  // kurze Reaktions-Einblendung oben (für Aktionen ohne eigene Meldungszeile)
+  function reaktionZeigen(text) {
+    if (!text) return; let el = $("reaktionsText");
+    if (!el) { el = document.createElement("div"); el.id = "reaktionsText"; el.setAttribute("role", "status"); document.body.appendChild(el); }
+    el.textContent = "🐴 " + text.replace(/<[^>]+>/g, ""); el.classList.add("an"); clearTimeout(reaktionZeigen.t);
+    reaktionZeigen.t = setTimeout(() => el.classList.remove("an"), 3500);
+  }
   // angezeigtes Wohlbefinden = Grundwert minus Schmutz (bis −40, sensible Pferde stört Schmutz mehr, robuste weniger) – Putzen hebt es sofort
   const wohlbefinden = p => { if (!p || !p.pflege) return 100; const S = charE(p, "sensibel");
     return Math.max(0, Math.min(100, Math.round((p.pflege.wohl == null ? 100 : p.pflege.wohl) - dreckWert(p) * 0.4 * (1 + 0.5 * S.hoch) * (1 - 0.5 * S.tief)))); };
@@ -4423,6 +4492,8 @@
         <b>Hengstverhalten:</b> Hengst ab 3 J. voll; Wallach, der nach dem 2. Lebensjahr kastriert wurde, zur Hälfte; früh kastriert gar nicht.
         <b>Streit</b> pro Nacht und Paar: fester Paarwert 0–12 % + 8 % × (1 − Sozialverhalten-Schnitt) + 5 % × max(temperamentvoll, eigensinnig) + 35 % × Hengstverhalten beider × (1 − 0,5 × Sozialverhalten) bei zwei Hengsten, +20 % wenn Stuten (ab 2 J.) auf der Weide sind (Kampf um die Stuten). Hengst und Stute streiten nicht. Streit: beide −10 Wohlbefinden, 20 % Verletzung (Hengstkampf um Stuten 35 %) (eines der beiden, Gesundheit −10 bis −25, Befund heilt nach 2 Jahreszeiten). Brief „Streit auf der Weide“.
         <b>Befund</b> (Ankerpunkt für Krankheiten/Lahmheit): steht unter Versorgung; Folgen außer Gesundheit kommen später.</p>
+      <p><b>Vorlieben und Reaktionen (Etappe 3):</b> Jedes Pferd hat zu jedem Ziel eine versteckte Vorliebe −1 … +1 = Charakter-Anteil + Zufall (±0,5, fest je Pferd). Ab +0,35 „mag“, ab −0,35 „mag nicht“, sonst „egal“. Bei der Aktion: kurzer Reaktionstext, Wohlbefinden ±4 × Vorliebe (nur bei mag/mag nicht), danach gilt die Vorliebe als entdeckt (Knopf „Vorlieben“ unter Charakter). Pfleger und Stallbursche lösen die Wirkung aus, entdecken aber nichts. Später: Training ×(1 + 0,25 × Vorliebe).
+        Ziele und Charakter-Anteil: ${Object.values(VORLIEBEN).map(z => z.titel).join(", ")}. Putzen: verschmust +, eigenständig −, sensibel − · Kämmen: sensibel −, temperamentvoll − · Füttern: fast alle mögen es · Weide: temperamentvoll +, eigenständig +, neugierig +, scheu −, nervös − · Zurück in die Box: ruhig +, verschmust +, temperamentvoll −, neugierig − · Verladen: mutig +, gelassen +, nervös −−, scheu − · Medizin: meist unbeliebt, sensibel −, nervös −, verschmust + · Mähne schneiden: sensibel −, nervös −, gelassen +.</p>
       <p><b>Herde:</b> Alle eigenen Pferde auf der Weide sind eine Herde. Nach ${HERDE_KENNEN} gemeinsamen Weidetagen kennen sich zwei Pferde (gilt dauerhaft). Bis dahin Eingewöhnung (siehe oben).</p>
       <p><b>Weide</b> (Ort → Weide, antippen = hin und zurück): Box bleibt frei und leer, kein Füttern und Misten nötig (Stallbursche lässt die Box aus, der Pferdepfleger putzt weiter). Gesundheit pro Tag: Frühling +10, Sommer +12, Herbst +7, Winter +5 (Box +8); bei 30 % oder weniger keine Erholung. Fohlen bei Fuß kommt mit. Schmutz wie in der Box (ohne Mist-Zuschlag).</p>
       <p><b>Schmutz:</b> Jede Nacht in der Box wird das Fell um 9–15 Punkte schmutziger (in einer nicht gemisteten Box +5 extra), Mähne und Schweif um 5–9 (+2). Stufen Fell: unter 20 sauber · ab 20 staubig · ab 50 schmutzig · ab 80 sehr dreckig; Mähne/Schweif: gekämmt · ab 20 zerzaust · ab 50 verfilzt. Man sieht es im Bild (Flecken, dreckige Beine, Stroh im Schweif). Putzen in der Putzkiste: Bürste macht das Fell sauber, Kamm Mähne und Schweif. Der Pferdepfleger putzt seine Boxen jeden Morgen; nach Klinik, Aufzucht oder Ausbildung kommt das Pferd geputzt zurück. Folgen: bis zu 15 % weniger Marktwert (Wert = max(Fell, 0,7 × Mähne)); ist das Fell länger als eine Jahreszeit ununterbrochen schmutzig (ab 50), verliert das Pferd zusätzlich 3 % Gesundheit pro Tag.</p>

@@ -8,7 +8,7 @@ Ausführliche Gesprächsnotizen: `werte/plan.md` *(liegt noch im Planungsprojekt
 - [x] Etappe 1 – Werte-Grundlage (v161, Alter und Name „Eigenschaften“ in v162, von Dome getestet)
 - [x] Etappe 2 – Charakter → Wohlbefinden (v164, von Dome getestet; Admin „Charakter selbst wählen“ in v165)
 - [x] Etappe 2b – Weide und Herde (v166–168, von Dome getestet)
-- [~] Etappe 3 – Vorlieben und Reaktionen (umgesetzt in v169, Test durch Dome offen)
+- [~] Etappe 3 – Vorlieben und Reaktionen (umgesetzt in v169, Sprechblasen in v170, Test durch Dome offen)
 - [ ] Etappe 4 – Training daheim
 - [ ] Etappe 5 – Disziplinen
 - [ ] Etappe 6 – Turniere
@@ -106,6 +106,7 @@ Von Dome entschieden. **Endgültige Zahlen (von Dome bestätigt):** Heu nötig i
 
 1. Jedes Pferd hat versteckte Vorlieben und Abneigungen, größtenteils aus dem Charakter, ein kleiner Teil zufällig.
 2. Jede Spieleraktion (Putzen, Füttern, Ort, Training, später Ausrüstung) löst eine passende Reaktion aus: zunächst kurzer Text (z. B. „legt die Ohren an und weicht zurück“), dazu Wohlbefinden ±, ggf. gebremstes Training. Später ersetzen Animationen die Texte (Kopf wegziehen, in der Paddockbox weggehen, Ohren anlegen, Schweifschlagen, mit dem Vorderhuf betteln, wütend aufstampfen).
+2a. **Bis die Animationen kommen, erscheinen die Reaktionen als Sprechblase am Pferd im Stallbild** (z. B. „*schließt genießerisch die Augen*“); ist das Pferd nicht in der Box (Weide, Anhänger), an der Boxentür. Wohlbefinden ändert sich je Aktion nur einmal am Tag. (Dome, v170)
 3. Dem Spieler wird vorher NICHT gesagt, was das Pferd mag. Entdeckte Vorlieben erscheinen erst, wenn man sie erlebt hat: Knopf „Vorlieben“ in Box - Steckbrief - Charakter.
 4. Ausrüstung (Trense, Reithalfter, Sattel, Decken …) kommt später als eigener Schritt. Das Vorlieben-System so bauen, dass neue Gegenstände einfach als Vorlieben-Ziel dazukommen. Beispiel für später: Sensible Pferde mögen keine Trense mit kombiniertem Reithalfter, lieber einfache Trense ohne Reithalfter, und keine Regen-/Winterdecke.
 

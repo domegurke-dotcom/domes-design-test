@@ -437,6 +437,13 @@
   .kachel-halten .halten { position: absolute; top: 4px; right: 4px; z-index: 2; background: #fffaf0; border: 1.5px solid #c9b896; border-radius: 6px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
   .kachel-halten .halten input { width: 16px; height: 16px; margin: 0; accent-color: var(--akzent); cursor: pointer; }
   .ma-titel { margin: 12px 0 4px; font-size: .95rem; }
+  .bf-karte { border: 1.5px solid #e0b98a; background: #fff8ec; border-radius: 10px; padding: 8px 10px; margin-top: 8px; display: flex; flex-direction: column; gap: 4px; font-size: .9rem; }
+  .bf-karte.ernst { border-color: #c0503a; background: #fdeeea; }
+  .bf-karte small { color: var(--leise); } .bf-karte ul { margin: 2px 0; padding-left: 18px; } .bf-karte li { margin: 2px 0; }
+  .bf-knoepfe, .bf-wahl { display: flex; flex-wrap: wrap; gap: 6px; } .bf-annahme { margin: 2px 0; font-size: .85rem; }
+  .mini-knopf { border: 1.5px solid #c9b392; background: #fff; border-radius: 8px; padding: 3px 9px; font: inherit; font-size: .8rem; cursor: pointer; color: var(--text); }
+  .mini-knopf:hover { background: #f3ead9; }
+  .bf-liste small { color: var(--leise); }
   .ma-karte { border: 1.5px solid #e2d6c3; border-radius: 10px; background: #fff; padding: 2px 0 8px; }
   .ma-karte .ma-zeile { border: 0; background: none; }
   .ma-eig { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 10px 6px; font-size: .78rem; }
@@ -764,7 +771,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "176";
+  const SPIEL_VERSION = "177";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -772,9 +779,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=176"></script>
-<script src="kopfteile.js?v=176"></script>
-<script src="kopfalter.js?v=176"></script>
+<script src="pferd.js?v=177"></script>
+<script src="kopfteile.js?v=177"></script>
+<script src="kopfalter.js?v=177"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1481,6 +1488,7 @@
     if (alterJZ(p) < ZUCHTALTER) return "zu jung";
     if (alterJahre(p) > (p.geschlecht === "Stute" ? ZUCHT_MAX.Stute : ZUCHT_MAX.Hengst)) return "zu alt";
     if (p.pflege && p.pflege.gesundheit < 50) return "zu schwach";
+    if (befundListe(p).some(b => (b.diagnose || b.bemerkt) && !(b.beh && KRANK[b.art].chronisch) && (b.grad >= 3 || ["kolik", "druse", "hufrehe"].includes(b.art)))) return "krank";
     if (p.geschlecht === "Stute") {
       if (box && box.fohlen) return "hat ein Fohlen";
       if (p.traechtig) return "ist tragend";
@@ -1667,10 +1675,18 @@
     // Klinik: doppelt so schnelle Erholung, bleibt bis mindestens 75 % – die Kosten laufen als Rechnung auf
     spiel.boxen.forEach((b, i) => {
       const p = b.pferd; if (!p || !p.klinik || b.tot) return;
-      const op = p.klinik.op === "kastration";
+      const op = p.klinik.op === "kastration" || p.klinik.op === "kolik";
       if (b.fohlen) { const fp = (b.fohlen.pflege = b.fohlen.pflege || erzeugePflege(b.fohlen)); fp.gesundheit = Math.min(gesundheitMax(b.fohlen), Math.round((fp.gesundheit + 16) * 10) / 10); }   // Fohlen wird mitbehandelt
       if (!op || spiel.tag > p.klinik.bis) p.klinik.rechnung = (p.klinik.rechnung || 0) + KOSTEN.klinik;   // Kastration: die ersten 2 Tage sind im Preis
       p.pflege.gesundheit = Math.min(gesundheitMax(p), Math.round((p.pflege.gesundheit + 16) * 10) / 10);
+      if (p.klinik.op === "kolik" && spiel.tag >= p.klinik.bis && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {
+        const extra = p.klinik.rechnung || 0, tage = Math.round(extra / KOSTEN.klinik);
+        delete p.klinik; delete p.dreck;
+        befundListe(p).filter(b => b.art === "kolik").forEach(b => befundAbschliessen(p, b, "operiert"));
+        rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: Kolik-OP inkl. ${KOLIK_OP_TAGE} Tage Klinik`, betrag: KOLIK_OP }, ...(extra ? [{ text: `${p.name}: ${tageTxt(tage)} zusätzliche Behandlung × ${fmt(KOSTEN.klinik)}`, betrag: extra }] : [])], [p.id], `${p.name} hat die Kolik-OP überstanden – Rechnung`,
+          `die Operation von <b>${esc(p.name)}</b> ist gut verlaufen. ${pron(p).er[0].toUpperCase() + pron(p).er.slice(1)} steht wieder in Box ${i + 1}.<br><br>`);
+        return;
+      }
       if (op && spiel.tag >= p.klinik.bis && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {
         const extra = p.klinik.rechnung || 0, tage = Math.round(extra / KOSTEN.klinik);
         delete p.klinik; delete p.dreck;
@@ -1933,7 +1949,8 @@
     // reinrassig ist mehr wert: je mehr Fremdblut (ohne Veredelung), desto weniger
     const rein = p.anteile ? reinAnteil(p.anteile, p.rasse) / 100 : 1, reinF = 0.5 + 0.5 * rein * rein;
     const dreckF = 1 - 0.15 * dreckWert(p) / 100;   // ungeputzt: bis zu 15 % weniger wert
-    const v = (1500 + 4500 * gangF * gangF + 5000 * ausb) * alterF * gesund * reinF * dreckF;
+    const bl = befundListe(p).filter(b => b.diagnose), befundF = Math.max(0.4, 1 - bl.reduce((a, b) => a + (KRANK[b.art].chronisch ? 0.1 : 0) + (b.beh ? 0.02 : 0.06) * b.grad, 0));   // bekannte Befunde senken den Preis, chronische dauerhaft
+    const v = (1500 + 4500 * gangF * gangF + 5000 * ausb) * alterF * gesund * reinF * dreckF * befundF;
     return Math.max(100, Math.round(v / 50) * 50) + testWert(p);   // gemachte Gentests: Käufer zahlen die Testkosten mit
   }
   const testWert = p => Object.keys(LABOR_TESTS).filter(t => testGemacht(p, t)).reduce((s, t) => s + LABOR_TESTS[t].preis, 0);
@@ -2117,7 +2134,7 @@
     [/wurde vermittelt/, "ts-vermittelt", "Tierschutz: Pferd vermittelt"], [/ist zurück$/, "aufzucht-zurueck", "Aufzucht: Pferd zurück"], [/abholen$/, "aufzucht-abholen", "Aufzucht: bitte abholen"],
     [/wieder fit/, "klinik", "Klinik: Entlassung und Rechnung"], [/muss behandelt werden/, "gesundheit", "Tierarzt: Behandlung nötig"],
     [/^Kein Käufer|^Kein Gebot/, "kein-kaeufer", "Verkauf: kein Käufer"], [/^Preisvorschlag/, "preisvorschlag", "Verkauf: Preisvorschlag"], [/^Zwischenstand/, "auktion", "Auktion: Zwischenstand"], [/wurde verkauft/, "verkauf", "Pferd verkauft"], [/geplatzt/, "geplatzt", "Verkauf geplatzt"],
-    [/ist 3 Jahre alt/, "drei-jahre", "Pferd wird 3 Jahre alt"], [/fängt heute an|hat aufgehört|hat gekündigt| kündigt$|ist krank$|^Urlaubsantrag/, "mitarbeiter", "Mitarbeiter"], [/^Überboten/, "ueberboten", "Auktion: überboten"], [/^Zuschlag|^Auktion verloren/, "zuschlag", "Auktion: Ergebnis"], [/ist wieder gesund$/, "ts-gesund", "Tierschutz: Pferd wieder gesund"], [/^Ausbildungsbericht/, "ausbildungsbericht", "Ausbildungsbericht"], [/^Strafe/, "strafe", "Tierschutz: Strafe"], [/beschlagnahmt/, "ts-beschlagnahme", "Tierschutz: Beschlagnahme"],
+    [/ist 3 Jahre alt/, "drei-jahre", "Pferd wird 3 Jahre alt"], [/fängt heute an|hat aufgehört|hat gekündigt| kündigt$|ist krank$|^Urlaubsantrag/, "mitarbeiter", "Mitarbeiter"], [/ist auffällig$/, "auffaellig", "Mitarbeiter: Auffälligkeit"], [/^Sorge um/, "sorge", "Tierarzt: Warnung"], [/^Überboten/, "ueberboten", "Auktion: überboten"], [/^Zuschlag|^Auktion verloren/, "zuschlag", "Auktion: Ergebnis"], [/ist wieder gesund$/, "ts-gesund", "Tierschutz: Pferd wieder gesund"], [/^Ausbildungsbericht/, "ausbildungsbericht", "Ausbildungsbericht"], [/^Strafe/, "strafe", "Tierschutz: Strafe"], [/beschlagnahmt/, "ts-beschlagnahme", "Tierschutz: Beschlagnahme"],
     [/^Willkommen/, "gnadenhof", "Gnadenhof: Ankunft"], [/^Abschied/, "tod", "Pferd verstorben"], [/^Gentest|^Laborergebnis/, "gentest", "Laborergebnis"],
   ];
   const briefTyp = betreff => (BRIEF_TYPEN.find(([re]) => re.test(betreff)) || [, "sonstiges", "Sonstige Nachricht"]);
@@ -2200,8 +2217,6 @@
     alleEigenenPferde().forEach(({ p }) => { if (!p.heimlich || jzJetzt() < p.heimlich.seit + 1) return;
       const hv = p.heimlich.vater; p.traechtig = p.heimlich; delete p.heimlich;
       brief("Tierarztpraxis", `Überraschung: ${p.name} ist tragend`, `bei der Routinekontrolle haben wir festgestellt: <b>${esc(p.name)}</b> ist tragend! Das war wohl nicht geplant – Vater ist <b>${esc(hv.name)}</b>, die beiden standen zusammen auf der Weide. Das Fohlen kommt zu Beginn von ${jzName(p.traechtig.geburt)} zur Welt.`, { pferde: [p] }); });
-    // Befunde heilen
-    alleEigenenPferde().forEach(({ p }) => { if (p.befund && spiel.tag >= p.befund.heilt) delete p.befund; });
     const jetzt = jzJetzt();
     // tragende Stuten im Ausbildungsstall: eine Jahreszeit vor dem Abfohlen zurück in ihre (reservierte) Box
     (spiel.extern || []).slice().forEach(e => { const p = e.pferd; if (e.ort !== "ausbildung" || !p.traechtig || jetzt < p.traechtig.geburt - 1) return;
@@ -2353,8 +2368,10 @@
     }
     return p.fellHinweis && p.fellHinweis.tag === spiel.tag ? p.fellHinweis.text : "";
   }
+  let letzterBesuch = "";
   function zeigeStall() {
     const p = B().pferd;
+    if (letzterBesuch !== aktBox + ":" + spiel.tag) { letzterBesuch = aktBox + ":" + spiel.tag; anzeichenBeimBesuch(B()); }
     $("boxSchild").textContent = "Box " + (aktBox + 1);
     stallFormat();
     if (!p || p.klinik || p.weide) { $("pferdPlatz").innerHTML = ""; zeigeAkte(); return; }
@@ -2394,7 +2411,9 @@
         <div class="zeile-wert"><div class="kopf"><b>Wohlbefinden</b><span>${w} %</span></div><div class="balken"><i style="width:${w}%;background:#5a9a6a"></i></div>${wohlGruende(p)}</div>
         ${heuNoetig() ? (box.krippeVoll ? `<p class="text">🌾 Heu liegt auf der Weide bereit.</p>` : `<p class="text">🌾 <b>Kaum Gras</b> – ${JZ[datum().s][0] === "Winter" ? "im Winter" : "am letzten Herbsttag"} muss Heu auf die Weide, sonst bleibt ${esc(p.name)} hungrig.</p><button class="knopf" id="weideHeu" style="width:auto;padding:9px 14px;margin:0 8px 8px 0">🌾 Heu auf die Weide</button>`) : ""}
         ${herdeText(p)}
+        ${befundZeilen(p) ? `<ul class="liste">${befundZeilen(p)}</ul>` : ""}${befundKarten(p, box)}
         <button class="knopf" id="vonWeide" style="width:auto;padding:9px 14px;margin-top:8px">🏠 Zurück in die Box</button></div>`;
+      befundBinden(p, box);
       $("vonWeide").onclick = () => { vonWeideHolen(box); reaktionZeigen(reaktion(p, "box")); speichern(); zeigeStall(); zeigeTag(); };
       if ($("weideHeu")) $("weideHeu").onclick = () => { box.krippeVoll = true; reaktionZeigen(reaktion(p, "fuettern")); speichern(); zeigeAkte(); zeigeTag(); };
       return;
@@ -2436,6 +2455,8 @@
           ${box.fohlen ? `<dt>Fohlen</dt><dd>${esc(box.fohlen.name)} · ${box.fohlen.geschlecht} · ${alterText(box.fohlen)} (${altersstufe(box.fohlen)[1].replace(/^\S+ /, "")})${alterJZ(box.fohlen) >= 2 ? `<br><button class="knopf" id="absetzen" style="width:auto;padding:6px 12px;margin-top:6px;font-size:.85rem">In eigene Box umstellen</button> <button class="knopf zweit" id="fohlenAufzucht" style="width:auto;padding:6px 12px;margin-top:6px;font-size:.85rem">🍼 In die Aufzuchtstation</button>` : ""}</dd>` : ""}
           <dt>Stockmaß</dt><dd>${p.stockmass} cm</dd>
           ${zucht ? `<dt>Zucht</dt><dd>${zucht}</dd>` : ""}
+          ${(() => { const akt = befundListe(p).filter(b => b.diagnose), alt = p.befundAlt || []; if (!akt.length && !alt.length) return "";
+            return `<dt>Befunde</dt><dd class="bf-liste">${[...akt.map(b => `${KRANK[b.art].ico} ${KRANK[b.art].n} (${GRAD_TEXT[b.grad]}) – ${KRANK[b.art].chronisch ? "chronisch" : b.beh ? "in Behandlung" : "unbehandelt"}`), ...alt.slice(0, 6).map(a => `<small>${KRANK[a.art].ico} ${KRANK[a.art].n} (${GRAD_TEXT[a.grad]}) · ${datumText(datum(a.seit))} · ${a.wie}</small>`)].join("<br>")}</dd>`; })()}
           ${box.tot || box.lesen ? "" : `<dt>Marktwert</dt><dd><span class="wert-zeile"><b>${fmt(marktwert(p))}</b><button class="knopf zweit" id="abgebenKnopf">👋 Abgeben</button></span></dd>`}
         </dl>
         ${box.lesen ? "" : verkaufHinweis(p)}
@@ -2527,7 +2548,7 @@
           <li><span class="ico">🌾</span><span class="txt">Fütterung heute<small>Heu in der Futterkrippe</small></span><span class="stat ${box.krippeVoll ? "ok" : "warn"}">${box.krippeVoll ? "gefüttert" : "noch nicht"}</span></li>
           <li><span class="ico">💧</span><span class="txt">Wasser<small>Selbsttränke</small></span><span class="stat ok">frisch</span></li>
           ${box.fohlen ? (() => { const fg = box.fohlen.pflege ? box.fohlen.pflege.gesundheit : 100; return `<li><span class="ico">🍼</span><span class="txt">Fohlen ${esc(box.fohlen.name)}<small>wird mit der Mutter versorgt</small></span><span class="stat ${fg >= 65 ? "ok" : fg >= 45 ? "warn" : "bad"}">${fg.toLocaleString("de-DE", { maximumFractionDigits: 1 })} %</span></li>`; })() : ""}
-          ${p.befund ? `<li><span class="ico">🩹</span><span class="txt">Befund: ${esc(p.befund.art)}<small>seit ${spiel.tag - p.befund.seit} ${spiel.tag - p.befund.seit === 1 ? "Tag" : "Tagen"} · heilt in etwa ${Math.max(1, p.befund.heilt - spiel.tag)} Tagen</small></span><span class="stat warn">verletzt</span></li>` : ""}
+          ${befundZeilen(p)}
           <li><span class="ico">🧹</span><span class="txt">Boxenhygiene<small>Einstreu aus Stroh</small></span><span class="stat ${box.mistig ? "warn" : "ok"}">${box.mistig ? "ausmisten" : "sauber"}</span></li>
           ${(() => { const d = p.dreck || {}, sf = dreckStufe(d.fell), sm = dreckStufe(d.maehne);
             return `<li><span class="ico">🧽</span><span class="txt">Fell<small>${zuLangeDreckig(p) ? "⚠️ schon länger als eine Jahreszeit verdreckt – schadet der Gesundheit" : "putzen mit der Bürste (Ausrüstung → Putzkiste)"}</small></span><span class="stat ${zuLangeDreckig(p) ? "bad" : sf[2]}">${sf[1]}</span></li>
@@ -2536,7 +2557,7 @@
           ${termin("💉", "Impfung (Tierarzt)", pf.impf, 2, "Influenza & Herpes alle 2 Jahreszeiten")}
           ${termin("💊", "Wurmkur", pf.wurm, 1, "einmal pro Jahreszeit")}
           ${termin("🦷", "Zahnkontrolle", pf.zahn, 4, "einmal im Jahr")}
-        </ul>`;
+        </ul>${box.tot ? "" : befundKarten(p, box)}`;
     } else if (aktenReiter === "ausruestung") {
       const sm = p.stockmass;
       const gr = sm < 100 ? "Shetty" : sm < 125 ? "Pony" : sm < 148 ? "Cob" : sm < 168 ? "Warmblut (Full)" : "Extra Full (XF)";
@@ -2804,6 +2825,7 @@
       reaktionZeigen(reaktion(p, womit === "buerste" ? "putzen" : "kaemmen"));
       meldung = womit === "buerste" ? `🧽 ${esc(p.name)} ist geputzt – das Fell glänzt wieder.` : `🪮 Mähne und Schweif von ${esc(p.name)} sind gekämmt.`;
       speichern(); zeigeStall(); });
+    if (!LS && p) befundBinden(p, B());
     const mk = $("medKachel"); if (mk) mk.onclick = () => { medModus = true; meldung = ""; zeigeAkte(); };
     const mz = $("medZurueck"); if (mz) mz.onclick = () => { medModus = false; meldung = ""; zeigeAkte(); };
     INFO.querySelectorAll("[data-med]").forEach(b => b.onclick = () => {
@@ -3264,6 +3286,231 @@
       if (f) { b.pferd = { ...f, werte: f.werte || erzeugeWerte(f), pflege: erzeugePflege(f), maehneSeit: f.maehneSeit || spiel.tag, schopfSeit: f.schopfSeit || spiel.tag }; }
     });
   }
+  // ---------- Befunde: Krankheiten und Verletzungen (Etappe C) ----------
+  // p.befunde = [{ id, art, grad 1–5, seit, ursache, bemerkt: { von, tag } | null, meldungen: [{ von, mid, tipp, sicher, tag }], vermutung, diagnose: Tag | null, beh: Tag | null, heilt, tierarzt, gewarnt }]
+  // p.befundAlt = geheilte bzw. geklärte Befunde (bleiben im Steckbrief)
+  // gew = Anteil am Grundrisiko · selbst/schlimmer = Chance pro Nacht ohne Behandlung · g = Gesundheit pro Nacht je Grad · tod = Nächte auf Grad 5 ohne Behandlung bis zum Tod
+  const KRANK = {
+    verletzung: { n: "Verletzung", ico: "🩹", bereich: "haut", gew: .25, start: [1, 2], selbst: .25, schlimmer: .10, g: 1.2, kosten: 60, heil: 3,
+      anz: ["hat eine Schramme am Bein", "leckt an einer Stelle am Bein", "hat eine kleine Wunde"], schwer: "die Wunde ist dick, warm und eitert" },
+    lahmheit: { n: "Lahmheit", ico: "🦶", bereich: "huf", gew: .15, start: [1, 2], selbst: .08, schlimmer: .08, g: 1, kosten: 90, heil: 4,
+      anz: ["geht nicht ganz taktrein", "lahmt leicht", "schont ein Bein"], schwer: "belastet ein Bein kaum noch" },
+    kolik: { n: "Kolik", ico: "🌀", bereich: "futter", gew: .05, start: [1, 2], selbst: .30, schlimmer: .45, g: 4, tod: 1, kosten: 120, heil: 1, op: 4,
+      anz: ["scharrt und schaut sich zum Bauch um", "frisst nicht richtig", "legt sich auffällig oft hin"], schwer: "wälzt sich und schwitzt stark" },
+    husten: { n: "Husten", ico: "😮‍💨", bereich: "klima", gew: .15, start: [1, 2], selbst: .15, schlimmer: .10, g: 1, kosten: 70, heil: 3,
+      anz: ["hustet beim Fressen", "hustet ab und zu"], schwer: "hustet stark und atmet schwer" },
+    erkaeltung: { n: "Erkältung", ico: "🤧", bereich: "klima", gew: .15, start: [1, 2], selbst: .20, schlimmer: .10, g: 1.3, kosten: 60, heil: 2,
+      anz: ["hat etwas Nasenausfluss", "wirkt matt und müde"], schwer: "hat hohes Fieber und frisst kaum" },
+    hufrehe: { n: "Hufrehe", ico: "⚠️", bereich: "huf", gew: .04, start: [2, 3], selbst: 0, schlimmer: .30, g: 3, tod: 3, kosten: 200, heil: 6,
+      anz: ["steht wie auf Eiern", "will sich kaum bewegen", "verlagert das Gewicht nach hinten"], schwer: "liegt viel und steht nur unter Schmerzen auf" },
+    mauke: { n: "Mauke", ico: "🟤", bereich: "haut", gew: .08, start: [1, 1], selbst: .10, schlimmer: .10, g: .8, kosten: 50, heil: 3,
+      anz: ["hat Krusten in der Fesselbeuge", "knabbert an den Fesseln"], schwer: "die Fesseln sind geschwollen und nässen" },
+    druse: { n: "Druse", ico: "🦠", bereich: "klima", gew: .02, start: [2, 2], selbst: 0, schlimmer: .25, g: 3, tod: 3, kosten: 250, heil: 6,
+      anz: ["hat dicke Knubbel am Kehlgang", "hat Fieber und Nasenausfluss"], schwer: "bekommt kaum Luft – die Lymphknoten sind riesig" },
+    arthrose: { n: "Arthrose", ico: "🦴", bereich: "huf", chronisch: true, gew: .04, start: [1, 2], selbst: 0, schlimmer: .04, g: .6, kosten: 150,
+      anz: ["läuft sich morgens steif ein", "ist nach dem Aufstehen steif"], schwer: "geht deutlich steif und klamm" },
+    sommerekzem: { n: "Sommerekzem", ico: "🦟", bereich: "haut", chronisch: true, gew: .03, start: [1, 2], selbst: 0, schlimmer: .06, g: .5, kosten: 120,
+      anz: ["scheuert sich an Mähne und Schweif", "hat kahle Stellen am Mähnenkamm"], schwer: "hat sich Mähne und Schweifrübe blutig gescheuert" },
+    cushing: { n: "Cushing", ico: "🧬", bereich: "futter", chronisch: true, gew: .015, start: [1, 2], selbst: 0, schlimmer: .04, g: .5, kosten: 180,
+      anz: ["hat ein langes, lockiges Fell", "trinkt auffällig viel"], schwer: "wirkt abgemagert und matt" } };
+  const GRAD_TEXT = ["", "leicht", "mittel", "deutlich", "schwer", "lebensbedrohlich"];
+  const BEFUND_RISIKO = 0.04;            // Grundrisiko pro Nacht (× Anteil) – bei guter Haltung etwa 1–2 Befunde pro Spieljahr
+  const TIERARZT_BESUCH = 80, KOLIK_OP = 3000, KOLIK_OP_TAGE = 3;
+  const EKZEM_RASSEN = ["isi", "tinker", "haflinger"];
+  const futterFaktor = () => 1;          // kommt mit der Fütterung (Kolik/Hufrehe)
+  const befundBremse = p => { const l = aktiveBefunde(p).filter(b => b.diagnose || b.bemerkt); return Math.max(0.2, 1 - l.reduce((a, b) => a + b.grad * 0.12, 0)); };   // für Training (Etappe 4)
+  // alte Speicherstände: ein einzelner Befund (Streit) → Liste
+  function befundListe(p) {
+    if (!p) return [];
+    if (!p.befunde) p.befunde = [];
+    if (p.befund) { const o = p.befund; delete p.befund;
+      p.befunde.push({ id: "bf" + Math.random().toString(36).slice(2, 7), art: "verletzung", grad: Math.max(1, Math.min(3, Math.round((o.schwere || 15) / 9))), seit: o.seit || spiel.tag, ursache: "Biss/Tritt beim Streit",
+        bemerkt: { von: "Hofverwaltung", tag: o.seit || spiel.tag }, meldungen: [], vermutung: null, diagnose: o.seit || spiel.tag, beh: o.seit || spiel.tag, heilt: o.heilt || spiel.tag + 1 }); }
+    return p.befunde;
+  }
+  const aktiveBefunde = p => befundListe(p);
+  const bekannteBefunde = p => befundListe(p).filter(b => b.bemerkt || b.diagnose);
+  function befundNeu(p, art, grad, ursache, bemerktVon) {
+    const K = KRANK[art], b = { id: "bf" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), art, grad: Math.max(1, Math.min(5, grad || K.start[0])), seit: spiel.tag, ursache: ursache || "",
+      bemerkt: bemerktVon ? { von: bemerktVon, tag: spiel.tag } : null, meldungen: [], vermutung: null, diagnose: null, beh: null };
+    if (b.grad === 5) b.grad5 = spiel.tag;
+    befundListe(p).push(b); return b;
+  }
+  // bisheriger Aufruf (Streit auf der Weide): Verletzung, die im Brief schon gemeldet wird
+  function befundSetzen(p, art, schwere) { befundNeu(p, "verletzung", Math.max(1, Math.min(4, Math.round(schwere / 8))), "Biss/Tritt beim Streit auf der Weide", "Hofverwaltung"); }
+  function befundAbschliessen(p, b, wie) {
+    p.befunde = befundListe(p).filter(x => x !== b);
+    if (b.diagnose) (p.befundAlt = p.befundAlt || []).unshift({ art: b.art, grad: b.gradMax || b.grad, seit: b.seit, bis: spiel.tag, ursache: b.ursache, wie });
+    if (p.befundAlt && p.befundAlt.length > 20) p.befundAlt.length = 20;
+  }
+  // Risiko einer neuen Erkrankung pro Nacht
+  function befundRisiko(p, box, ort) {
+    const s = datum(spiel.tag - 1).s, j = alterJZ(p) / 4, w = p.werte || {}, an = w.anlage || {}, ist = w.ist || {};
+    const konst = 1.5 - (an.konstitution != null ? an.konstitution : 50) / 100;
+    const wohl = wohlbefinden(p), wohlF = wohl < 30 ? 2.2 : wohl < 50 ? 1.5 : 1;
+    const altF = j >= 20 ? 1.6 : j >= 15 ? 1.3 : 1, dreck = dreckWert(p) >= 50, mist = ort === "box" && box.mistig, hungrig = !box.krippeVoll && (ort === "box" || heuNoetig(spiel.tag - 1));
+    const zaeh = 1.3 - (ist.zaehigkeit != null ? ist.zaehigkeit : 50) / 100 * 0.6;
+    const f = {
+      verletzung: ort === "weide" ? 1.5 : 1,
+      lahmheit: zaeh * (j >= 15 ? 1.5 : 1) * (befundListe(p).some(b => b.art === "verletzung") ? 1.5 : 1),
+      kolik: futterFaktor() * (hungrig ? 2 : 1) * (s === 3 ? 1.3 : 1),
+      husten: (mist ? 1.5 : 1) * (dreck ? 1.2 : 1) * (s === 3 ? 2 : s === 2 ? 1.5 : 1) * (ort === "weide" ? 0.5 : 1),
+      erkaeltung: (mist ? 1.3 : 1) * (s === 3 ? 2 : s === 2 ? 1.5 : 1) * (ort === "weide" ? 0.7 : 1),
+      hufrehe: futterFaktor() * (ort === "weide" && s === 0 ? 3 : 1),
+      mauke: (dreck ? 1.5 : 1) * (mist ? 1.5 : 1) * (ort === "weide" && s >= 2 ? 2 : 1),
+      druse: (mist ? 1.3 : 1),
+      arthrose: j >= 15 ? (j - 14) / 3 : 0,
+      sommerekzem: s === 1 ? (EKZEM_RASSEN.includes(p.rasse) ? 3 : 0.3) : 0,
+      cushing: j >= 18 ? 1 : 0 };
+    return Object.keys(KRANK).map(k => [k, BEFUND_RISIKO * KRANK[k].gew * konst * wohlF * (k === "arthrose" || k === "cushing" ? 1 : altF) * f[k]]);
+  }
+  const URSACHE = {
+    verletzung: (p, ort) => ort === "weide" ? "beim Toben auf der Weide" : "in der Box angeschlagen",
+    lahmheit: p => alterJZ(p) >= 60 ? "Abnutzung im Alter" : befundListe(p).some(b => b.art === "verletzung") ? "Folge einer Verletzung" : "Überlastung oder Hufe",
+    kolik: (p, ort, box) => !box.krippeVoll ? "unregelmäßiges Futter" : "Verdauungsstörung", husten: (p, ort, box) => box.mistig ? "staubige, verschmutzte Box" : "Stallluft",
+    erkaeltung: () => "Wetterwechsel", hufrehe: (p, ort) => ort === "weide" ? "junges Frühlingsgras" : "Stoffwechsel", mauke: () => "Nässe und Schmutz an den Beinen",
+    druse: () => "Ansteckung", arthrose: () => "Alter", sommerekzem: () => "Mückenstiche (Veranlagung)", cushing: () => "Alter (Hormone)" };
+  // jede Nacht: neue Befunde, Verlauf ohne Behandlung, Wirkung auf Gesundheit und Wohlbefinden, Tod nach Warnung
+  function befundeNacht() {
+    spiel.boxen.forEach((box, i) => {
+      const p = box.pferd; if (!p || p.klinik || box.tot || !p.pflege) return;
+      const ort = p.weide ? "weide" : "box";
+      // neue Befunde (je Art höchstens einer gleichzeitig)
+      befundRisiko(p, box, ort).forEach(([k, ch]) => { if (befundListe(p).some(b => b.art === k)) return;
+        if (Math.random() < ch) { const K = KRANK[k]; befundNeu(p, k, K.start[0] + Math.floor(Math.random() * (K.start[1] - K.start[0] + 1)), URSACHE[k](p, ort, box)); } });
+      befundListe(p).slice().forEach(b => {
+        const K = KRANK[b.art];
+        if (b.art === "sommerekzem" && datum().s !== 1 && !b.bemerkt) { befundAbschliessen(p, b, "nach dem Sommer abgeklungen"); return; }
+        if (b.beh && !K.chronisch) { if (spiel.tag >= b.heilt) { befundAbschliessen(p, b, "geheilt"); return; } }
+        else if (!b.beh) {
+          if (b.grad <= 2 && Math.random() < K.selbst) { b.grad--; if (b.grad <= 0) { befundAbschliessen(p, b, "von selbst verheilt"); return; } }
+          else if (Math.random() < K.schlimmer * (K.chronisch && b.diagnose ? 0.5 : 1) && b.grad < 5) { b.grad++; if (b.grad === 5) b.grad5 = spiel.tag; }
+        } else if (Math.random() < K.schlimmer * 0.3 && b.grad < 3) b.grad++;   // chronisch, behandelt: flammt manchmal wieder auf
+        b.gradMax = Math.max(b.gradMax || 0, b.grad);
+        const wirk = b.beh ? 0.3 : 1;
+        p.pflege.gesundheit = Math.max(1, Math.round((p.pflege.gesundheit - K.g * b.grad * wirk) * 10) / 10);
+        wohlAendern(p, -1.5 * b.grad * wirk, `${b.diagnose ? K.n : "fühlt sich nicht gut"}`);
+        // Tierarzt kennt den Fall und es wird ernst: Warnbrief
+        if (b.tierarzt && !b.beh && b.grad >= 4 && b.warnBrief !== b.grad) { b.warnBrief = b.grad; b.gewarnt = true;
+          brief("Tierarztpraxis", `Sorge um ${p.name}`, `wir machen uns große Sorgen um <b>${esc(p.name)}</b> (Box ${i + 1}): Die ${K.n} ist jetzt <b>${GRAD_TEXT[b.grad]}</b>. Bitte {ruf|rufen Sie} uns sofort wieder an – ohne Behandlung kann es lebensgefährlich werden.`, { pferde: [p] }); }
+        // Tod: nur nach mindestens einer deutlichen Warnung
+        if (K.tod && !b.beh && b.grad === 5 && b.gewarnt && spiel.tag - (b.grad5 || spiel.tag) >= K.tod) {
+          box.tot = true; p.todesursache = `${K.n} (unbehandelt)`;
+          brief("Tierarztpraxis", `Abschied von ${p.name}`, `es tut uns sehr leid: <b>${esc(p.name)}</b> (Box ${i + 1}) ist heute Nacht gestorben.<br><br><b>Todesursache:</b> ${K.n} – zu lange ohne Behandlung.`, { pferde: [p] });
+        }
+      });
+    });
+  }
+  // Einschätzung eines Mitarbeiters (oder des Spielers): Trefferquote und Sicherheit nach Erfahrung im passenden Bereich
+  function einschaetzen(art, wissen, aufmerksam) {
+    const w = wissen || 0, K = KRANK[art], richtig = Math.random() < 0.2 + w / 100 * 0.75 + (aufmerksam ? 0.05 : 0);
+    const sicherWert = w / 100 + Math.random() * 0.35 - 0.15, sicher = sicherWert >= 0.55 ? "sicher" : sicherWert >= 0.2 ? "vermute" : "keine Ahnung";
+    if (sicher === "keine Ahnung") return { tipp: null, sicher };
+    const andere = Object.keys(KRANK).filter(k => k !== art), aehnlich = andere.filter(k => KRANK[k].bereich === K.bereich);
+    return { tipp: richtig ? art : zufallAus(aehnlich.length && Math.random() < 0.7 ? aehnlich : andere), sicher };
+  }
+  const anzeichenText = b => { const K = KRANK[b.art]; return b.grad >= 4 ? K.schwer : K.anz[(b.seit + b.grad) % K.anz.length]; };
+  const sicherText = { sicher: "ist sich sicher", vermute: "vermutet", "keine Ahnung": "hat keine Ahnung, was es ist" };
+  // morgens: wer heute bei einem Pferd gearbeitet hat, bemerkt vielleicht etwas – Pferdewirt und Stallmeister sehen alle Pferde
+  function befundeMorgen() {
+    const bei = {};   // Box → Mitarbeiter
+    ["stall", "pfleger", "bereiter"].forEach(art => maZuteilung(art).forEach(({ i, m }) => (bei[i] = bei[i] || []).push(m)));
+    const alle = [...aktive("pferdewirt"), ...aktive("stallmeister")];
+    spiel.boxen.forEach((box, i) => {
+      const p = box.pferd; if (!p || p.klinik || box.tot) return;
+      befundListe(p).filter(b => !b.bemerkt && !b.diagnose).forEach(b => {
+        const K = KRANK[b.art];
+        const wer = [...new Set([...(bei[i] || []), ...alle])].find(m => Math.random() < 0.25 + 0.1 * b.grad + (m.wissen[K.bereich] || 0) / 250 + (hatEig(m, "aufmerksam") ? 0.2 : 0));
+        if (!wer) return;
+        const e = einschaetzen(b.art, wer.wissen[K.bereich], hatEig(wer, "aufmerksam"));
+        b.bemerkt = { von: wer.name, mid: wer.id, tag: spiel.tag }; b.meldungen.push({ von: wer.name, mid: wer.id, titel: maTitel(wer), tipp: e.tipp, sicher: e.sicher, tag: spiel.tag });
+        if (b.grad >= 4) b.gewarnt = true;
+        brief("Hofverwaltung", `${wer.name}: ${p.name} ist auffällig`, `${maTitel(wer)} <b>${esc(wer.name)}</b> hat bei <b>${esc(p.name)}</b> (Box ${i + 1}) bemerkt: ${esc(p.name)} ${anzeichenText(b)}.${b.grad >= 4 ? " <b>Es sieht ernst aus!</b>" : ""}<br><br>Einschätzung: ${e.tipp ? `${maPron(wer).Er} ${sicherText[e.sicher]}: <b>${KRANK[e.tipp].n}</b>.` : `${maPron(wer).Er} ${sicherText[e.sicher]}.`}<br><br>Was {du tun willst, entscheidest du|Sie tun wollen, entscheiden Sie} unter Box → Pferdepflege → Versorgung.`, { pferde: [p] });
+      });
+    });
+  }
+  // beim Besuch in der Box: Anzeichen als Sprechblase – der Spieler bemerkt selbst vielleicht etwas (einmal am Tag je Befund)
+  function anzeichenBeimBesuch(box) {
+    const p = box && box.pferd; if (!p || p.klinik || box.tot) return;
+    const l = befundListe(p).filter(b => !(b.beh && !KRANK[b.art].chronisch));
+    let gezeigt = false;
+    l.forEach(b => {
+      if (b.angeschaut === spiel.tag) return; b.angeschaut = spiel.tag;
+      const K = KRANK[b.art], W = spiel.wissen || {};
+      if (!b.bemerkt && !b.diagnose && Math.random() >= 0.35 + 0.15 * b.grad + (W[K.bereich] || 10) / 300) return;
+      if (!b.bemerkt && !b.diagnose) { b.bemerkt = { von: "du", tag: spiel.tag }; spielerLernt(K.bereich, 0.2); }
+      if (b.grad >= 4) b.gewarnt = true;
+      if (!gezeigt && !p.weide) { gezeigt = true; reaktionZeigen(`${b.grad >= 4 ? "⚠️ " : ""}${anzeichenText(b)}`); }
+    });
+  }
+  // Erfahrung, sobald die echte Ursache klar ist (Diagnose durch den Tierarzt)
+  function befundAufklaeren(p, b) {
+    const K = KRANK[b.art];
+    b.meldungen.forEach((x, n) => {
+      const richtig = x.tipp === b.art, erster = n === 0 && b.bemerkt && b.bemerkt.von === x.von;
+      if (x.von === "du") { const W = (spiel.wissen = spiel.wissen || wissenStart(10, {})); W[K.bereich] = Math.min(100, Math.round(((W[K.bereich] || 10) + (richtig ? 3 : 1.5)) * 100) / 100); return; }
+      const m = (spiel.mitarbeiter || []).find(y => y.id === x.mid); if (m) maLernt(m, K.bereich, (richtig ? 3 : 1) + (erster ? 2 : 0));
+    });
+    const W = (spiel.wissen = spiel.wissen || wissenStart(10, {})); W[K.bereich] = Math.min(100, Math.round(((W[K.bereich] || 10) + 1) * 100) / 100);
+  }
+  const behandlungsPreis = b => Math.round(KRANK[b.art].kosten * (1 + (b.grad - 1) * 0.25) / 5) * 5;
+  // Hausbesuch: sichere Diagnose aller Befunde, Behandlung gleich mit (Dome: bis Etappe D) – Kolik ab Grad 4 nur mit OP in der Klinik
+  function tierarztBesuch(p, box, danach) {
+    const i = spiel.boxen.indexOf(box), l = befundListe(p).filter(b => !(b.beh && !KRANK[b.art].chronisch)), posten = [{ text: `${p.name}: Hausbesuch und Untersuchung`, betrag: TIERARZT_BESUCH }], zeilen = [];
+    let opNoetig = null;
+    l.forEach(b => {
+      const K = KRANK[b.art], neu = !b.diagnose;
+      if (neu) { b.diagnose = spiel.tag; befundAufklaeren(p, b); }
+      b.tierarzt = true; if (!b.bemerkt) b.bemerkt = { von: "Tierarzt", tag: spiel.tag };
+      if (K.op && b.grad >= K.op) { opNoetig = b; zeilen.push(`<li>${K.ico} <b>${K.n}</b> (${GRAD_TEXT[b.grad]}) – muss operiert werden!</li>`); return; }
+      const preis = behandlungsPreis(b); posten.push({ text: `${p.name}: Behandlung ${K.n} (${GRAD_TEXT[b.grad]})`, betrag: preis });
+      b.beh = spiel.tag;
+      if (K.chronisch) { b.grad = 1; zeilen.push(`<li>${K.ico} <b>${K.n}</b> – chronisch: behandelt und eingestellt, ganz weg geht es nicht (${fmt(preis)}).</li>`); }
+      else { b.heilt = spiel.tag + Math.max(1, Math.round(K.heil * (0.6 + 0.4 * b.grad) * (1.3 - ((p.werte && p.werte.ist && p.werte.ist.regeneration) || 50) / 100 * 0.6)));
+        zeilen.push(`<li>${K.ico} <b>${K.n}</b> (${GRAD_TEXT[b.grad]}) – behandelt, heilt in etwa ${b.heilt - spiel.tag} ${b.heilt - spiel.tag === 1 ? "Tag" : "Tagen"} (${fmt(preis)}).</li>`); }
+    });
+    const text = `<b>${esc(p.name)}</b> (Box ${i + 1}) – unser Befund: ${zeilen.length ? `<ul>${zeilen.join("")}</ul>` : " gesund, wir haben nichts gefunden.<br><br>"}`;
+    rechnungStellen("Tierarztpraxis", "klinik", posten, [p.id], `Hausbesuch bei ${p.name} – Rechnung`, text);
+    speichern();
+    const fertig = () => { if (danach) danach(); };
+    if (opNoetig) dialog(`<h3>🌀 ${esc(p.name)} muss operiert werden</h3><p>Die Kolik ist ${GRAD_TEXT[opNoetig.grad]}. Ohne Operation in der Klinik stirbt ${pron(p).er} wahrscheinlich.</p><p>Kolik-OP: <b>${fmt(KOLIK_OP)}</b> inklusive ${KOLIK_OP_TAGE} Tage Klinik, danach ${fmt(KOSTEN.klinik)} pro Tag, bis ${pron(p).er} wieder bei 75 % ist. Du bekommst die Rechnung bei der Entlassung.</p>`,
+      [["In die Klinik", () => { fahrtStress(p, "klinik"); delete p.weide; opNoetig.beh = spiel.tag; opNoetig.heilt = spiel.tag + KOLIK_OP_TAGE; p.klinik = { seit: spiel.tag, op: "kolik", bis: spiel.tag + KOLIK_OP_TAGE }; speichern(); fertig(); }, ""], ["Nicht operieren", () => { opNoetig.gewarnt = true; fertig(); }, "rot"]]);
+    else dialog(`<h3>🩺 Tierarzt war da</h3><p>${zeilen.length ? `<ul>${zeilen.join("")}</ul>` : `${esc(p.name)} ist gesund – der Tierarzt hat nichts gefunden.`}</p><p><small>Die Rechnung kommt per Brief.</small></p>`, [["OK", fertig]]);
+  }
+  // Versorgung: Befunde, Auffälligkeiten mit Einschätzungen und der Tierarzt-Knopf
+  let bfWahl = null;   // Befund, für den gerade „selbst einschätzen“ offen ist
+  const tageTxt2 = n => `${n} ${n === 1 ? "Tag" : "Tagen"}`;
+  function befundZeilen(p) {
+    return bekannteBefunde(p).filter(b => b.diagnose).map(b => { const K = KRANK[b.art], seit = spiel.tag - b.seit;
+      const info = b.beh ? (K.chronisch ? "chronisch – behandelt und eingestellt" : `behandelt · heilt in etwa ${tageTxt2(Math.max(1, b.heilt - spiel.tag))}`) : "⚠️ unbehandelt";
+      return `<li><span class="ico">${K.ico}</span><span class="txt">Befund: ${K.n}<small>seit ${tageTxt2(seit)} · ${GRAD_TEXT[b.grad]} · ${esc(b.ursache || "Ursache unklar")} · ${info}</small></span><span class="stat ${b.beh ? "warn" : "bad"}">${b.beh ? "in Behandlung" : GRAD_TEXT[b.grad]}</span></li>`; }).join("");
+  }
+  function befundKarten(p, box) {
+    const offen = bekannteBefunde(p).filter(b => !b.diagnose);
+    const karten = offen.map(b => {
+      const gefragt = new Set(b.meldungen.map(x => x.mid || x.von)), frag = (spiel.mitarbeiter || []).map(maErgaenzen).filter(m => maDa(m) && !gefragt.has(m.id));
+      return `<div class="bf-karte ${b.grad >= 4 ? "ernst" : ""}"><b>🤒 ${esc(p.name)} ${anzeichenText(b)}</b><small>${spiel.tag === b.bemerkt.tag ? "heute" : `seit ${tageTxt2(spiel.tag - b.bemerkt.tag)}`} bemerkt (${b.bemerkt.von === "du" ? "von dir" : `von ${esc(b.bemerkt.von)}`})${b.grad >= 4 ? " · <b>sieht ernst aus!</b>" : ""}</small>
+        ${b.meldungen.length ? `<ul>${b.meldungen.map((x, n) => `<li>${x.von === "du" ? "Du" : `${esc(x.von)} <small>(${x.titel || "Mitarbeiter"})</small>:`} ${x.tipp ? `${x.von === "du" ? "tippst auf" : sicherText[x.sicher]}: <b>${KRANK[x.tipp].n}</b>` : x.von === "du" ? "weißt es nicht" : sicherText[x.sicher]}${x.tipp && x.von !== "du" && !(b.vermutung && b.vermutung.von === x.von) ? ` <button class="mini-knopf" data-bfvertrau="${b.id}:${n}">👍 vertrauen</button>` : ""}</li>`).join("")}</ul>` : ""}
+        ${b.vermutung ? `<p class="bf-annahme">Deine Annahme: <b>${KRANK[b.vermutung.art].n}</b>${b.vermutung.von !== "du" ? ` (du vertraust ${esc(b.vermutung.von)})` : ""} – sicher weiß es nur der Tierarzt. Eigene Behandlungen kommen bald.</p>` : ""}
+        <div class="bf-knoepfe">${frag.length ? frag.map(m => `<button class="mini-knopf" data-bffrag="${b.id}:${m.id}">🗣️ ${esc(m.name)} fragen</button>`).join("") : ""}<button class="mini-knopf" data-bfselbst="${b.id}">🤔 selbst einschätzen</button></div>
+        ${bfWahl === b.id ? `<div class="bf-wahl">${Object.entries(KRANK).map(([k, K]) => `<button class="mini-knopf" data-bfwahl="${b.id}:${k}">${K.ico} ${K.n}</button>`).join("")}</div>` : ""}
+      </div>`; }).join("");
+    return `${karten}<button class="knopf" id="tierarztKnopf" style="width:auto;padding:9px 14px;margin-top:8px">🩺 Tierarzt rufen · Hausbesuch ${fmt(TIERARZT_BESUCH)} + Behandlung</button>`;
+  }
+  function befundBinden(p, box) {
+    const finde = id => befundListe(p).find(b => b.id === id);
+    document.querySelectorAll("[data-bfvertrau]").forEach(el => el.onclick = () => { const [id, n] = el.dataset.bfvertrau.split(":"), b = finde(id); if (!b) return; const x = b.meldungen[+n]; b.vermutung = { art: x.tipp, von: x.von }; speichern(); zeigeAkte(); });
+    document.querySelectorAll("[data-bffrag]").forEach(el => el.onclick = () => { const [id, mid] = el.dataset.bffrag.split(":"), b = finde(id), m = (spiel.mitarbeiter || []).find(y => y.id === mid); if (!b || !m) return;
+      const K = KRANK[b.art], e = einschaetzen(b.art, m.wissen[K.bereich], hatEig(m, "aufmerksam")); b.meldungen.push({ von: m.name, mid: m.id, titel: maTitel(m), tipp: e.tipp, sicher: e.sicher, tag: spiel.tag }); speichern(); zeigeAkte(); });
+    document.querySelectorAll("[data-bfselbst]").forEach(el => el.onclick = () => { bfWahl = bfWahl === el.dataset.bfselbst ? null : el.dataset.bfselbst; zeigeAkte(); });
+    document.querySelectorAll("[data-bfwahl]").forEach(el => el.onclick = () => { const [id, k] = el.dataset.bfwahl.split(":"), b = finde(id); if (!b) return;
+      b.meldungen = b.meldungen.filter(x => x.von !== "du"); b.meldungen.push({ von: "du", tipp: k, sicher: "vermute", tag: spiel.tag }); b.vermutung = { art: k, von: "du" }; bfWahl = null; speichern(); zeigeAkte(); });
+    const tk = $("tierarztKnopf"); if (tk) tk.onclick = () => {
+      const l = befundListe(p).filter(b => !(b.beh && !KRANK[b.art].chronisch));
+      dialog(`<h3>🩺 Tierarzt rufen?</h3><p>Der Tierarzt kommt heute noch vorbei, untersucht <b>${esc(p.name)}</b> gründlich und behandelt gleich, was er findet.</p><p>Hausbesuch: <b>${fmt(TIERARZT_BESUCH)}</b>, dazu die Behandlung je nach Befund (etwa 50–300 €). ${l.some(b => b.bemerkt) ? "" : "Findet er nichts, zahlst du nur den Hausbesuch."}<br><small>Die Rechnung kommt per Brief.</small></p>`,
+        [["Tierarzt rufen", () => tierarztBesuch(p, box, () => { zeigeStall(); zeigeTag(); })], ["Abbrechen", null, "zweit"]]);
+    };
+  }
   // ---------- Mitarbeiter ----------
   // Alle Angestellten: beginnen immer mit einer neuen Jahreszeit, Gehalt am Ende jeder gearbeiteten Jahreszeit,
   // gekündigt arbeiten sie bis Ende der Jahreszeit; kein Geld → sie kündigen selbst (letztes Gehalt nehmen sie trotzdem)
@@ -3519,7 +3766,6 @@
   }
   let stutenDabei = false;
   // Befund (Ankerpunkt für Krankheiten/Lahmheit): jetzt nur Gesundheit und Anzeige, heilt nach 2 Jahreszeiten
-  function befundSetzen(p, art, schwere) { p.befund = { art, seit: spiel.tag, schwere, heilt: spiel.tag + 2 * tpj() }; }
   // Herde einer Nacht: Sozialverhalten, ungeplante Bedeckung, Streit
   function herdeNacht(herde) {
     const jung = herde.filter(q => alterJZ(q) < 12);
@@ -3777,11 +4023,13 @@
       b.krippeVoll = false; b.mistig = true;
       wachsen(b);
     });
+    befundeNacht();   // Krankheiten und Verletzungen: neu, Verlauf, Wirkung
     externNacht(); rechnungenTag();
     angeboteNacht();
     tierschutzEinsatz(); tierschutzKlinik(); tierschutzFohlen(); kontoMinus(); laborNacht(); auktionsNacht();
     if (datum().t === 1) { auktionsEnde(); jahreszeitBeginn(); angeboteJahreszeit(); externJahreszeit(); spamAufraeumen(); mitarbeiterJahreszeit(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
     mitarbeiterTag();   // Stallburschen versorgen ihre Boxen zum Tagesbeginn
+    befundeMorgen();    // wer heute bei den Pferden war, bemerkt vielleicht etwas
   }
   $("tagAnzeige").onclick = () => {
     const box = B(), offen = [];
@@ -4732,6 +4980,11 @@
         ["🐾 Notfallpferde", "1–2 Pferde, 8–22 J., ohne Ausbildung; Stuten auch mit Fohlen (80 % der Privat-Chance)", "150–300 € (+100 € mit Fohlen)", "Gesundheit 25–45 %; im ersten Jahr kein Verkauf (auch kein Gnadenhof) – nur Rückgabe an den Tierschutz ohne Erstattung"]])}
       <p><b>Saisonpreise:</b> Frühling ×1,1 · Sommer ×1,05 · Herbst ×1 · Winter ×0,9 – gilt für alle Marktpreise und für deine eigenen Verkäufe (Festpreis-Chance und Auktionsgebote).</p>
       <p><b>Pferdepfleger:</b> ${fmt(MA_TYP.pfleger.gehalt)} pro Jahreszeit, sonst wie der Stallbursche (3 Boxen nach Boxnummer). Er putzt jeden Morgen Fell, Mähne und Schweif und kürzt Mähne und Schopf auf die Wunschlänge (Häkchen beim Schneiden) – länger wachsen lassen geht nur von selbst.</p>
+      <p><b>Befunde (Krankheiten und Verletzungen)</b> – Liste je Pferd mit Art, Grad 1–5 (${GRAD_TEXT.slice(1).join(", ")}), Ursache, Verlauf. Grundrisiko ${String(BEFUND_RISIKO).replace(".", ",")} pro Nacht × Anteil der Krankheit (bei guter Haltung etwa 1,5 Befunde pro Pferd und Jahr) × Konstitution (1,5 − Anlage ÷ 100) × Wohlbefinden (unter 50 ×1,5, unter 30 ×2,2) × Alter (ab 15 J. ×1,3, ab 20 ×1,6) × Art: Verletzung Weide ×1,5 · Lahmheit Zähigkeit (1,3 − Wert ÷ 100 × 0,6), ab 15 J. ×1,5, nach Verletzung ×1,5 · Kolik hungrig ×2, Winter ×1,3, Futter-Faktor (kommt mit der Fütterung) · Husten/Erkältung Mist ×1,5/1,3, Schmutz ×1,2, Winter ×2, Herbst ×1,5, Weide ×0,5/0,7 · Hufrehe Frühlingsweide ×3 · Mauke Schmutz ×1,5, Mist ×1,5, Herbst-/Winterweide ×2 · Arthrose erst ab 15 J. · Sommerekzem nur im Sommer (Isi, Tinker, Haflinger ×3, sonst ×0,3) · Cushing ab 18 J.</p>
+      ${verTab(["Krankheit", "Anteil", "Bereich", "Gesundheit/Nacht je Grad", "ohne Behandlung", "Behandlung", "Heilung"], Object.values(KRANK).map(K => [`${K.ico} ${K.n}${K.chronisch ? " (chronisch)" : ""}`, String(K.gew).replace(".", ","), (WISSEN.find(w => w[0] === K.bereich) || [])[3], String(K.g).replace(".", ","), `${K.selbst ? `bis Grad 2: ${Math.round(K.selbst * 100)} % besser · ` : ""}${Math.round(K.schlimmer * 100)} % schlimmer${K.tod ? ` · Tod nach ${K.tod} ${K.tod === 1 ? "Nacht" : "Nächten"} auf Grad 5 (nur nach Warnung)` : ""}`, `${fmt(K.kosten)} (+25 % je Grad über 1)${K.op ? ` · ab Grad ${K.op} OP ${fmt(KOLIK_OP)}` : ""}`, K.chronisch ? "bleibt, behandelt Grad 1" : `${K.heil} × (0,6 + 0,4 × Grad) Tage`]))}
+      <p>Unbehandelt: Gesundheit − Wert × Grad pro Nacht (nicht unter 1 %), Wohlbefinden −1,5 × Grad; behandelt nur 30 % davon. Heilung × (1,3 − Regeneration ÷ 100 × 0,6). Tödlich nur Kolik, Hufrehe und Druse auf Grad 5 ohne Behandlung – und nur, wenn vorher deutlich gewarnt wurde (Anzeichen beim Besuch gesehen, Meldung eines Mitarbeiters ab Grad 4 oder Tierarzt kannte den Fall). Kennt der Tierarzt den Fall, schreibt er ab Grad 4 einen Warnbrief. Bekannte Befunde sperren die Zucht (ab Grad 3 oder Kolik/Druse/Hufrehe) und senken den Marktwert (unbehandelt 6 % je Grad, behandelt 2 %, chronisch dauerhaft 10 %, höchstens −60 %). Für Training (Etappe 4) vorbereitet: <code>befundBremse</code>.</p>
+      <p><b>Bemerken und Einschätzen:</b> Jeden Morgen kann bemerken, wer bei dem Pferd gearbeitet hat (Stallbursche/Azubi, Pfleger, Bereiter) sowie Pferdewirt und Stallmeister: Chance 25 % + 10 % je Grad + Erfahrung im Bereich ÷ 250 (+20 % aufmerksam) → Brief mit Einschätzung. Trefferquote 20 % + Erfahrung × 0,75 % (+5 % aufmerksam); Sicherheit aus Erfahrung ÷ 100 ± Zufall (ab 0,55 „sicher“, ab 0,2 „vermutet“, sonst „keine Ahnung“) – auch Unerfahrene sind manchmal fälschlich sicher. Falsche Tipps meist aus demselben Bereich. Spieler beim ersten Besuch am Tag: 35 % + 15 % je Grad + eigene Erfahrung ÷ 300, Anzeichen als Sprechblase. In Box → Pflege → Versorgung: Mitarbeiter vertrauen, anderen fragen, selbst einschätzen (Annahme – eigene Behandlungen ab Etappe D) oder Tierarzt. Erfahrung erst mit der Diagnose: richtige Einschätzung +3, falsche +1, wer es bemerkt hat +2; Spieler immer +1, eigene Einschätzung richtig +3, falsch +1,5.</p>
+      <p><b>Tierarzt-Hausbesuch:</b> ${fmt(TIERARZT_BESUCH)} – sichere Diagnose aller Befunde (auch unbemerkter) und Behandlung gleich mit (Rechnung per Brief). Kolik ab Grad 4: OP in der Klinik ${fmt(KOLIK_OP)} inkl. ${KOLIK_OP_TAGE} Tage, danach ${fmt(KOSTEN.klinik)} pro Tag bis 75 %.</p>
       <p><b>Mitarbeiter (Hofverwaltung → Mitarbeiter):</b> Stallgröße klein bis 8 Boxen, mittel 9–19, groß ab 20. Gehalt pro Jahreszeit (am Ende gezahlt, im Adminmodus kostenlos), erfahrene Bewerber wollen bis +25 %: ${Object.values(MA_TYP).map(T => `${T.name} ${fmt(T.gehalt)}${T.boxen ? ` (${T.boxen} Boxen)` : ""}${T.ab !== "klein" ? ` – bewirbt sich ${abText(T.ab)}` : ""}`).join(" · ")}. Nachtzuschlag ${fmt(NACHTZUSCHLAG)} pro Nacht. Zu jeder Jahreszeit 2–3 neue Bewerber je Stelle (Erfahrung um die Startwerte ×0,6–1,5, 0–2 Eigenschaften ohne Gegensätze). Beginn immer zur nächsten Jahreszeit; gekündigt arbeiten sie bis Ende der Jahreszeit; reicht das Geld nicht, nehmen sie das Gehalt trotzdem und kündigen.</p>
       <p><b>Arbeit jeden Morgen</b> (nach Boxnummer): Stallburschen und Azubis füttern und misten (Weide nur, wenn Heu nötig ist), mit Stallmeister schafft ein Stallbursche 5 statt 3 Boxen, fleißig +1 Box. Pfleger putzen (Bürste + Kamm) und schneiden Mähne/Schopf auf Wunschlänge. Bereiter bewegen Pferde ab 3 Jahren mit über 50 % Gesundheit im Roundpen: Wohlbefinden +5, Boxentage zurück auf 0. Fehler (vergisst eine Box): Azubi 25 % × (1 − Erfahrung Fütterung/Stallklima ÷ 50), mindestens 3 %; schusselig +8 %; zuverlässig nie. Ruhige Hand: Vertrauen der versorgten Pferde +0,2 pro Tag; ungeduldig −0,1 (nicht unter 20).</p>
       <p><b>Erfahrung</b> (7 Bereiche, 0–100): ${WISSEN.map(w => w[1]).join(", ")}. Startwerte: ${Object.values(MA_TYP).map(T => `${T.name} ${WISSEN.map(([k]) => T.start[k]).join("/")}`).join(" · ")} (Reihenfolge wie oben). Pro Arbeitstag +0,25 in den Hauptbereichen (Bereiter Hufe +0,12) × (1 − Erfahrung ÷ 110), lernbegierig ×1,5; Azubis lernen nur, wenn ein Pferdewirt oder Stallmeister da ist. Pferdewirt: Zucht +0,25 (mit tragender Stute oder Fohlen, sonst +0,08), Pflegebereiche +0,05; Stallmeister überall +0,06. Spieler startet überall mit 10 und lernt einmal am Tag +0,3 beim Füttern (Fütterung), Misten (Stallklima) und Putzen (Haut).</p>

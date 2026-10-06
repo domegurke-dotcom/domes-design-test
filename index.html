@@ -774,7 +774,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "193";
+  const SPIEL_VERSION = "194";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -782,9 +782,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=193"></script>
-<script src="kopfteile.js?v=193"></script>
-<script src="kopfalter.js?v=193"></script>
+<script src="pferd.js?v=194"></script>
+<script src="kopfteile.js?v=194"></script>
+<script src="kopfalter.js?v=194"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3593,7 +3593,7 @@
     erkaeltung: { hustensaft: .4, boxenruhe: .4 },
     hufrehe: { boxenruhe: .4, kuehlen: .4, schmerzmittel: .4 },
     mauke: { wundsalbe: .5, verband: .3, antibiotika: .3 },
-    druse: { antibiotika: .6, boxenruhe: .3 },
+    druse: { boxenruhe: .4, schmerzmittel: .3, antibiotika: .2 },
     arthrose: { schritt: .4, schmerzmittel: .4, kortison: .2 },
     sommerekzem: { kortison: .6, wundsalbe: .3 },
     cushing: { pergolid: .8 },
@@ -3601,9 +3601,9 @@
   const SCHADET = { verletzung: { schritt: .15 }, hufrehe: { schritt: .2, kortison: .25 }, arthrose: { boxenruhe: .05 }, cushing: { kortison: .2 }, lahmheit: { schritt: .1 } };
   // Tierarzt-Plan: was er empfiehlt (Rezeptmittel bringt er mit)
   const PLAN = { verletzung: ["verband", "wundsalbe"], lahmheit: ["boxenruhe", "kuehlen", "schmerzmittel"], kolik: ["schritt", "schmerzmittel"], husten: ["hustensaft"], erkaeltung: ["boxenruhe", "hustensaft"],
-    hufrehe: ["boxenruhe", "kuehlen", "schmerzmittel"], mauke: ["wundsalbe", "verband"], druse: ["antibiotika", "boxenruhe"], arthrose: ["schritt", "schmerzmittel"], sommerekzem: ["kortison", "wundsalbe"], cushing: ["pergolid"], vergiftung: ["boxenruhe"] };
+    hufrehe: ["boxenruhe", "kuehlen", "schmerzmittel"], mauke: ["wundsalbe", "verband"], druse: ["boxenruhe", "schmerzmittel"], arthrose: ["schritt", "schmerzmittel"], sommerekzem: ["kortison", "wundsalbe"], cushing: ["pergolid"], vergiftung: ["boxenruhe"] };
   const REZEPT_DOSEN = 4;
-  const behName = k => AKTION[k] ? `${AKTION[k].ico} ${AKTION[k].n}` : APO[k] ? `${APO[k].ico} ${APO[k].n}` : k;
+  const behName = k => k === "beschlag" ? "🔨 Beschlag (Hufschmied)" : AKTION[k] ? `${AKTION[k].ico} ${AKTION[k].n}` : APO[k] ? `${APO[k].ico} ${APO[k].n}` : k;
   const apotheke = () => (spiel.apotheke = spiel.apotheke || { wundsalbe: 1, kuehlgel: 1, verband: 2, hustensaft: 0, wurmkur: 1 });
   const rezeptVon = p => (p.rezept = p.rezept || {});
   const behHeute = p => (p.behHeute && p.behHeute.tag === spiel.tag ? p.behHeute : (p.behHeute = { tag: spiel.tag, a: {} }));
@@ -3616,7 +3616,7 @@
   // wie gut ein Befund gestern behandelt wurde (0–1) und wie sehr etwas geschadet hat
   function behandlungsWert(p, b) {
     const g = p.behHeute && p.behHeute.tag === spiel.tag - 1 ? p.behHeute.a : {}, ruhe = !!p.boxenruhe;
-    const H = HILFT[b.art] || {}, S = SCHADET[b.art] || {}, hat = k => k === "boxenruhe" ? ruhe : !!g[k];
+    const H = HILFT[b.art] || {}, S = SCHADET[b.art] || {}, hat = k => k === "boxenruhe" ? ruhe : k === "beschlag" ? !!p.beschlag : !!g[k];
     if (g.tierarzt) return { wert: 1, schaden: 0 };
     let w = 0, s = 0; Object.entries(H).forEach(([k, x]) => { if (hat(k)) w += x; }); Object.entries(S).forEach(([k, x]) => { if (hat(k)) s += x; });
     return { wert: Math.min(1, w) * (0.5 + 0.5 * mitwirkung(p)), schaden: s };
@@ -3678,7 +3678,7 @@
     const nimm = a => Object.keys(a).filter(k => (AKTION[k] || APO[k]) && k !== "boxenruhe" && k !== "wurmkur").map(k => ({ k, stufe: APO[k] && APO[k].dosis ? a[k] : 0 }));
     const H = behHeute(p).a, heute = nimm(H); if (heute.length) return { akt: heute, quelle: "heutige Behandlung" };
     if (p.behLetzt && nimm(p.behLetzt.a).length) return { akt: nimm(p.behLetzt.a), quelle: "letzte Behandlung" };
-    const ta = [...new Set(befundListe(p).filter(b => b.tierarzt || b.hufschmied).flatMap(b => b.tierarzt ? PLAN[b.art] || [] : hufschmiedRat(b.art)))].filter(k => k !== "boxenruhe");
+    const ta = [...new Set(befundListe(p).filter(b => b.tierarzt || b.hufschmied).flatMap(b => b.tierarzt ? PLAN[b.art] || [] : hufschmiedRat(b.art)))].filter(k => k !== "boxenruhe" && k !== "beschlag");
     if (ta.length) return { akt: ta.map(k => ({ k, stufe: APO[k] && APO[k].dosis ? dosisKlasse(gewicht(p)) : 0 })), quelle: befundListe(p).some(b => b.tierarzt) ? "Tierarzt-Plan" : "Rat vom Hufschmied" };
     return null;
   }
@@ -3769,9 +3769,9 @@
       anz: ["lahmt plötzlich stark auf einem Bein", "der Huf ist warm, die Pulsader pocht"], schwer: "stellt das Bein gar nicht mehr auf" },
     hornspalt: { n: "Hornspalt", ico: "⚡", bereich: "huf", gew: .03, start: [1, 2], selbst: .02, schlimmer: .08, g: .8, kosten: 80, heil: 5,
       anz: ["hat einen Riss in der Hufwand", "der Tragrand bröckelt"], schwer: "der Riss reicht bis zum Kronrand und blutet" } });
-  Object.assign(HILFT, { strahlfaeule: { auskratzen: .3, hufdesinfekt: .5, verband: .2 }, hufabszess: { hufbad: .5, verband: .3, schmerzmittel: .3, boxenruhe: .2 }, hornspalt: { boxenruhe: .3, hufoel: .3 } });
+  Object.assign(HILFT, { strahlfaeule: { auskratzen: .3, hufdesinfekt: .5, verband: .2 }, hufabszess: { hufbad: .5, verband: .3, schmerzmittel: .3, boxenruhe: .2 }, hornspalt: { boxenruhe: .3, beschlag: .5, hufoel: .1 } });
   Object.assign(SCHADET, { strahlfaeule: {}, hornspalt: { schritt: .05 } });
-  Object.assign(PLAN, { strahlfaeule: ["auskratzen", "hufdesinfekt"], hufabszess: ["hufbad", "verband", "schmerzmittel"], hornspalt: ["boxenruhe", "hufoel"] });
+  Object.assign(PLAN, { strahlfaeule: ["auskratzen", "hufdesinfekt"], hufabszess: ["hufbad", "verband", "boxenruhe", "schmerzmittel"], hornspalt: ["boxenruhe", "beschlag"] });
   Object.assign(AKTION, { auskratzen: { n: "Hufe auskratzen", ico: HUFKR_ICO, info: "Hufe auskratzen – gegen Strahlfäule (auch in der Putzkiste)" }, hufbad: { n: "Hufbad", ico: "🪣", info: "Huf in warmem Bittersalzwasser baden – zieht Entzündungen heraus" } });
   Object.assign(APO, { hufdesinfekt: { n: "Strahlpflege", ico: "🧪", preis: 14, frei: true, info: "desinfiziert den Strahl gegen Strahlfäule" },
     hufoel: { n: "Huföl", ico: "🫗", preis: 10, frei: true, info: "pflegt Hufhorn und Kronrand" } });

@@ -252,7 +252,10 @@
   .schein-zwischen { margin: 18px 0 8px; font-size: 1rem; }
   #postIcon { position: fixed; top: max(14px, env(safe-area-inset-top)); right: 10px; z-index: 45; width: 40px; height: 40px; padding: 4px 2px; border: 0; background: none; cursor: pointer;
     filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); animation: briefWackeln 2.4s ease-in-out infinite; }
-  #postIcon[hidden] { display: none; }
+  #postIcon[hidden], #postIconRot[hidden] { display: none; }
+  #postIconRot { position: fixed; top: max(14px, env(safe-area-inset-top)); right: 56px; z-index: 45; width: 40px; height: 40px; padding: 4px 2px; border: 0; background: none; cursor: pointer; }
+  #postIconRot svg { width: 100%; height: 100%; display: block; }
+  #postIconRot .anz { position: absolute; top: -2px; right: -4px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #7a1d18; color: #fff; font-size: .68rem; font-weight: 700; line-height: 17px; text-align: center; } #postIconRot .anz:empty { display: none; }
   #postIcon svg { width: 100%; height: 100%; display: block; }
   #postIcon .anz { position: absolute; top: -2px; right: -4px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #c0392b; color: #fff; font-size: .68rem; font-weight: 700; line-height: 17px; text-align: center; }
   #postIcon .anz:empty { display: none; }
@@ -572,6 +575,8 @@
   .immo-schirm { max-width: 860px; }
   .hm-wechsel { align-self: center; border: 0; border-radius: 99px; padding: 7px 16px; font: inherit; font-weight: 700; font-size: .9rem; background: rgba(255,255,255,.18); color: #fff; cursor: pointer; } .hm-wechsel small { opacity: .8; font-weight: 500; }
   #hauptMenue .hm-wechsel { grid-column: 1 / -1; }
+  .immo-verw { grid-column: 1 / -1; } .verw-anz { background: #c0392b; color: #fff; border-radius: 99px; padding: 1px 8px; font-size: .75rem; vertical-align: 2px; }
+  #nebenSchirm .panel.verw { grid-column: auto; }
   .immo-titel { margin: 6px 0 0; font-size: 1.05rem; color: #fff; }
   #nebenSchirm .immo-titel { grid-column: 1 / -1; }
   .hof-tabs { flex-wrap: wrap; } .hof-tabs button { flex: 1 1 auto; font-size: .8rem; padding: 7px 6px; }
@@ -823,6 +828,7 @@
 <div class="schirm" id="hauptMenue" role="dialog" aria-label="Hauptmenü"></div>
 <div class="schirm" id="charakter" role="dialog" aria-label="Charaktererstellung"></div>
 <div class="schirm" id="nebenSchirm" role="dialog"></div>
+<button id="postIconRot" hidden aria-label="Neue Briefe von deinen anderen Höfen"><svg viewBox="0 0 40 30" aria-hidden="true"><rect x="1.5" y="3" width="37" height="25" rx="3" fill="#e0524a" stroke="#7a1d18" stroke-width="2"/><path d="M2.5,5 L20,18 L37.5,5" fill="none" stroke="#7a1d18" stroke-width="2" stroke-linejoin="round"/><path d="M2.5,27 L15,15 M37.5,27 L25,15" stroke="#a8322b" stroke-width="1.5"/></svg><span class="anz"></span></button>
 <button id="postIcon" hidden aria-label="Neue Briefe im Postfach"><svg viewBox="0 0 40 30" aria-hidden="true"><rect x="1.5" y="3" width="37" height="25" rx="3" fill="#ffd84a" stroke="#8a6512" stroke-width="2"/><path d="M2.5,5 L20,18 L37.5,5" fill="none" stroke="#8a6512" stroke-width="2" stroke-linejoin="round"/><path d="M2.5,27 L15,15 M37.5,27 L25,15" stroke="#c49a2a" stroke-width="1.5"/></svg><span class="anz"></span></button>
 <div id="genLabor" hidden role="dialog" aria-modal="true"><div class="gl-kopf"><b id="glTitel">🛠️ Gene selbst wählen</b><span><button class="knopf zweit" id="glZufall">🎲 Zufall</button> <button class="knopf" id="glFertig">Fertig</button></span></div><div class="gl-bild"><div id="glBild"></div><p class="gl-ergebnis" id="glErgebnis"></p><label class="gl-alter">Alter <input type="range" id="glAlter" min="1" max="25"> <span id="glAlterW"></span></label><div class="gl-saison" id="glSaison"></div></div><div class="gl-steuer" id="glSteuer"></div></div>
 <div id="lese" hidden role="dialog" aria-modal="true"><div class="lese-innen"><div class="lese-kopf"><b id="leseTitel"></b><button class="knopf zweit" id="leseZu">✕ Schließen</button></div><div class="lese-bild" id="leseBild"></div><div id="leseInfo"></div></div></div>
@@ -2393,11 +2399,14 @@
     $("dlgKnoepfe").querySelectorAll("button").forEach(b => b.onclick = () => { $("dlg").hidden = true; const fn = knoepfe[+b.dataset.i][1]; if (fn) fn(); });
   }
   // kleiner gelber Brief oben rechts, solange ungelesene Post da ist
-  const ungelesen = () => (spiel.post || []).filter(b => !b.gelesen && !b.spam).length;
+  const fremderBrief = b => !!(b.hid && spiel.hofReihe && spiel.hofReihe.length > 1 && b.hid !== aktivHid() && hofVon(b.hid));   // Brief eines anderen eigenen Hofs (roter Umschlag)
+  const ungelesen = () => (spiel.post || []).filter(b => !b.gelesen && !b.spam && !fremderBrief(b)).length;
+  const ungelesenFremd = () => (spiel.post || []).filter(b => !b.gelesen && !b.spam && fremderBrief(b));
   function postIconSetzen() {
     const el = $("postIcon"); if (!el) return;
     const n = ungelesen();
     el.hidden = !n;
+    setTimeout(postIconRotSetzen, 0);
     if (!n) return;
     el.querySelector(".anz").textContent = n > 1 ? n : "";
     el.title = n === 1 ? "1 neuer Brief" : n + " neue Briefe";
@@ -2412,7 +2421,17 @@
       el.style.top = Math.max(4, r.top + (r.height - 40) / 2) + "px";
     } else { el.style.right = "10px"; el.style.top = ""; }
   }
-  var hofTiefe = 0, hofSpeichern = false;   // während imHof() (anderer Hof kurz aktiv) wird erst danach gespeichert
+  // roter Umschlag: ungelesene Briefe der anderen eigenen Höfe – links neben dem gelben
+  function postIconRotSetzen() {
+    const el = $("postIconRot"), gelb = $("postIcon"); if (!el) return;
+    const n = spiel.hofReihe && spiel.hofReihe.length > 1 && !$("startMenue").classList.contains("offen") && !$("charakter").classList.contains("offen") ? ungelesenFremd().length : 0;
+    el.hidden = !n; if (!n) return;
+    el.querySelector(".anz").textContent = n > 1 ? n : "";
+    el.title = `${n} ${n === 1 ? "neuer Brief" : "neue Briefe"} von deinen anderen Höfen`;
+    const iw = document.documentElement.clientWidth, r = gelb.hidden ? null : gelb.getBoundingClientRect();
+    el.style.right = (r ? iw - r.left + 6 : parseFloat(gelb.style.right) || 10) + "px"; el.style.top = r ? r.top + "px" : (gelb.style.top || "");
+  }
+  var hofTiefe = 0, hofSpeichern = false, nebenlauf = false;   // während imHof() (anderer Hof kurz aktiv) wird erst danach gespeichert
   const speichern = () => { if (spiel.verloren) return; if (hofTiefe) { hofSpeichern = true; return; } try { localStorage.setItem(SPEICHER, JSON.stringify(spiel)); } catch (e) {} };
 
   let aktenReiter = "steckbrief", aktenModus = "steckbrief", scherModus = false, medModus = false, zaumModus = false, putzModus = false, deckModus = false, ortModus = null, meldung = "";
@@ -6100,6 +6119,10 @@
     blutbilderTag();     // Laborergebnisse
   }
   function hofNacht() {
+    if (nebenlauf) {   // Hof, auf dem du gerade nicht bist: Warnbrief, wenn Pferde hungrig oder im Mist stehen
+      const l = spiel.boxen.filter(b => b.pferd && !b.tot && !b.pferd.klinik && !b.pferd.weide && (!b.krippeVoll || b.mistig));
+      if (l.length) brief("Hofverwaltung", `${hofName()}: Pferde nicht versorgt`, `auf <b>${esc(hofName())}</b> wurden heute nicht alle Pferde versorgt: ${l.map(b => `<b>${esc(b.pferd.name)}</b> (${!b.krippeVoll ? "nicht gefüttert" : ""}${!b.krippeVoll && b.mistig ? ", " : ""}${b.mistig ? "nicht gemistet" : ""})`).join(", ")}. Ohne Futter und Pflege werden sie krank. Stell dort einen Stallburschen ein oder wechsle zu diesem Hof.`, { pferde: l.map(b => b.pferd) });
+    }
     alterAktualisieren();
     const weideHerde = spiel.boxen.filter(b => b.pferd && b.pferd.weide && !b.pferd.klinik && !b.tot).map(b => b.pferd);
     if (weideHerde.length > 1) herdeNacht(weideHerde);
@@ -7277,14 +7300,14 @@
     const alt = {}, akt = aktBox, gh = spiel.gnadenhof;
     HOF_FELDER.forEach(k => { alt[k] = spiel[k]; spiel[k] = H[k]; });
     aktBox = Math.min(spiel.aktBox || 0, Math.max(0, (spiel.boxen || []).length - 1));
-    if (nacht) spiel.gnadenhof = [];   // der externe Gnadenhof gehört allen – nachts nur einmal (beim aktiven Hof) rechnen
+    if (nacht) { spiel.gnadenhof = []; nebenlauf = true; }   // der externe Gnadenhof gehört allen – nachts nur einmal (beim aktiven Hof) rechnen
     hofTiefe++;
     try { return fn(); }
     finally {
       if (nacht) { const neu = spiel.gnadenhof || []; if (gh || neu.length) spiel.gnadenhof = (gh || []).concat(neu); else delete spiel.gnadenhof; }
       spiel.aktBox = aktBox;
       HOF_FELDER.forEach(k => { H[k] = spiel[k]; if (alt[k] === undefined) delete spiel[k]; else spiel[k] = alt[k]; });
-      aktBox = akt; hofTiefe--;
+      aktBox = akt; hofTiefe--; if (nacht) nebenlauf = false;
       if (!hofTiefe && hofSpeichern) { hofSpeichern = false; speichern(); }
     }
   }
@@ -7359,9 +7382,9 @@
   function immoSperre2(A) {
     if (hofAnzahl() >= MAX_HOEFE) return `Du hast schon ${MAX_HOEFE} Höfe – mehr geht nicht.`;
     if ((spiel.makler.gekauft || []).includes(A.mid)) return "verkauft";
-    const k = ersterKredit(), haelfte = !k || k.getilgt >= k.summe / 2, eigen = (spiel.geld || 0) >= Math.ceil(A.preis / 2);
+    const k = ersterKredit(), haelfte = !k || k.getilgt >= k.summe / 2, eigen = zentral().geld >= Math.ceil(A.preis / 2);
     if (!haelfte) return `Wird frei, wenn dein erster Kredit zur Hälfte abbezahlt ist (jetzt ${prozent(k.getilgt / k.summe)}).`;
-    if (!eigen) return `Dir fehlt der Eigenanteil: die Hälfte des Preises (${fmt(Math.ceil(A.preis / 2))}) aus der Kasse von ${esc(hofName())}.`;
+    if (!eigen) return `Dir fehlt der Eigenanteil: die Hälfte des Preises (${fmt(Math.ceil(A.preis / 2))}) muss auf dem zentralen Konto liegen (jetzt ${fmt(zentral().geld)}).`;
     return "";
   }
   function eigeneHoefeHTML() {
@@ -7379,9 +7402,12 @@
   }
   function zeigeImmobilien() {
     hofErgaenzen();
-    zeigeNeben("🏘️ Immobilien", `<h4 class="immo-titel">🏡 Deine Höfe (${hofAnzahl()} von ${MAX_HOEFE})</h4>${eigeneHoefeHTML()}
-      <h4 class="immo-titel">📰 Angebote vom Makler ${datum().j}</h4><p class="text immo-info">Das Angebot wechselt einmal im Jahr. Kaufen kannst du, wenn dein erster Kredit zur Hälfte abbezahlt ist und die Hälfte des Preises in der Kasse von <b>${esc(hofName())}</b> liegt. Jeder Hof hat seine eigene Kasse, eigene Boxen, Mitarbeiter und Futter – alle Höfe laufen gleichzeitig weiter.</p>${maklerHTML()}`);
+    const nf = ungelesenFremd().length;
+    zeigeNeben("🏘️ Immobilien", `<button class="sknopf immo-verw" id="imVerw"><span class="i">🗂️</span><span>Verwaltung${nf ? ` <span class="verw-anz">${nf} ✉</span>` : ""}<small>zentrales Konto ${fmt(zentral().geld)} · Post aller Höfe</small></span></button>
+      <h4 class="immo-titel">🏡 Deine Höfe (${hofAnzahl()} von ${MAX_HOEFE})</h4>${eigeneHoefeHTML()}
+      <h4 class="immo-titel">📰 Angebote vom Makler ${datum().j}</h4><p class="text immo-info">Das Angebot wechselt einmal im Jahr. Kaufen kannst du, wenn dein erster Kredit zur Hälfte abbezahlt ist und die Hälfte des Preises auf dem zentralen Konto liegt (Verwaltung). Jeder Hof hat seine eigene Kasse, eigene Boxen, Mitarbeiter und Futter – alle Höfe laufen gleichzeitig weiter.</p>${maklerHTML()}`);
     const nb = $("nebenSchirm");
+    $("imVerw").onclick = () => zeigeVerwaltung();
     nb.querySelectorAll("[data-hofwahl]").forEach(b => b.onclick = () => { const hid = b.dataset.hofwahl;
       if (hid === aktivHid()) { zeigeHof("hof"); return; }
       hofWechseln(hid); speichern(); zeigeHaupt(); });
@@ -7389,20 +7415,43 @@
       if (sp) { if (sp !== "verkauft") dialog(`<h3>🔒 ${A.n}</h3><p>${sp}</p>`); return; }
       hofKaufDialog2(A); });
   }
-  function hofKaufDialog2(A, name = "", start = null, fehler = false) {
-    const eigen = Math.ceil(A.preis / 2), kredit = A.preis - eigen, frei = Math.max(0, Math.floor(((spiel.geld || 0) - eigen) / 500) * 500);
-    if (start == null) start = Math.min(frei, 3000);
+  // ---------- Verwaltung: zentrales Konto (Höfe überweisen hierher, Hofkauf und Sparen) und Post aller Höfe ----------
+  const zentral = () => (spiel.zentral = spiel.zentral || { geld: 0, log: [] });
+  function zentralBuchen(b, text) { const Z = zentral(); Z.geld = runde2(Z.geld + b); Z.log.unshift({ tag: spiel.tag, b, text }); if (Z.log.length > 40) Z.log.length = 40; }
+  let verwMeld = "";
+  function zeigeVerwaltung() {
+    const Z = zentral(), post = (spiel.post || []).filter(b => !b.spam).slice(0, 60);
+    zeigeNeben("🗂️ Verwaltung", `<div class="panel verw">${verwMeld ? `<div class="klasse">${verwMeld}</div>` : ""}
+        <div class="fin-kopf"><span>🏦 Zentrales Konto</span><b>${fmt(Z.geld)}</b></div>
+        <p class="text" style="margin:0 0 8px">Hierher überweist du Geld von deinen Höfen. Vom zentralen Konto bezahlst du den Eigenanteil neuer Höfe – oder du sparst es.</p>
+        <div class="kr-wahl"><label>von Hof <select id="vwHof">${hofReihe().map(h => `<option value="${h}" ${h === aktivHid() ? "selected" : ""}>${esc(hofNameVon(h))} (${fmt(imHof(h, () => spiel.geld || 0))})</option>`).join("")}</select></label>
+          <label>Betrag <input id="vwBetrag" type="number" min="1" step="100" value="1000" style="width:120px;font:inherit;padding:7px 10px;border-radius:10px;border:2px solid #e2d6c3"></label></div>
+        <button class="knopf" id="vwUeber" style="width:auto;padding:8px 14px;margin-top:8px">➡️ Überweisen</button>
+        ${Z.log.length ? `<h4 class="ma-titel">Kontoauszug</h4>${Z.log.slice(0, 8).map(x => `<div class="fin-posten"><span>${esc(x.text)} <small>${tagText(x.tag)}</small></span><b class="${x.b < 0 ? "minus" : "plus"}">${x.b < 0 ? "−" : "+"}${fmt(Math.abs(x.b))}</b></div>`).join("")}` : ""}</div>
+      <div class="panel verw"><h4 class="ma-titel" style="margin-top:0">✉️ Post aller Höfe</h4>${post.length ? `<div class="briefe">${post.map(b => `<button class="brief ${b.gelesen ? "" : "neu"}" data-vwbrief="${b.id}"><span class="ico">${BRIEF_SVG(b.gelesen)}</span>
+          <span class="txt"><b>${esc(b.betreff)}</b><small>${esc(b.hid && hofVon(b.hid) ? hofNameVon(b.hid) : b.hofName || "")} · ${esc(b.von)} · ${briefDatum(b)}</small></span></button>`).join("")}</div>` : `<p class="text">Noch keine Briefe.</p>`}</div>`);
+    verwMeld = "";
+    $("nbZurueck").textContent = "‹ Immobilien"; $("nbZurueck").onclick = zeigeImmobilien;
+    $("vwUeber").onclick = () => { const hid = $("vwHof").value, b = Math.round(+$("vwBetrag").value * 100) / 100, kasse = imHof(hid, () => spiel.geld || 0);
+      if (!(b > 0)) return;
+      if (b > kasse) { dialog(`<h3>Zu wenig Geld</h3><p>In der Kasse von ${esc(hofNameVon(hid))} sind nur ${fmt(kasse)}.</p>`); return; }
+      imHof(hid, () => buchen(-b, "Überweisung an das zentrale Konto")); zentralBuchen(b, `von ${hofNameVon(hid)}`);
+      verwMeld = `✅ ${fmt(b)} von ${esc(hofNameVon(hid))} überwiesen.`; speichern(); zeigeVerwaltung(); };
+    $("nebenSchirm").querySelectorAll("[data-vwbrief]").forEach(x => x.onclick = () => { briefFenster(x.dataset.vwbrief, post.map(b => b.id)); });
+  }
+  function hofKaufDialog2(A, name = "", fehler = false) {
+    const eigen = Math.ceil(A.preis / 2), kredit = A.preis - eigen;
     dialog(`<h3>🏡 ${A.n} kaufen</h3><p style="margin-top:0">${A.text}. Der neue Hof startet als <b>Pensionsstall</b> und hat seine eigene Kasse.</p>
       <div class="feld-s"><label for="kaufName">Name des neuen Hofes</label><input id="kaufName" maxlength="30" placeholder="z. B. Gut Lindenhof" autocomplete="off" value="${esc(name)}" class="${fehler ? "fehlt" : ""}">${fehler ? `<small class="fehler-text">Bitte gib dem Hof einen Namen.</small>` : ""}</div>
-      <div class="kr-wahl"><label>Startgeld aus der Kasse von ${esc(hofName())} <select id="kaufStart">${[...Array(frei / 500 + 1)].map((_, i) => `<option value="${i * 500}" ${i * 500 === start ? "selected" : ""}>${fmt(i * 500)}</option>`).join("")}</select></label></div>
-      <table class="ver-tab"><tr><th>Finanzierung</th><th>Betrag</th></tr><tr><td>Kaufpreis</td><td class="nw">${fmt(A.preis)}</td></tr><tr><td>Eigenanteil (aus ${esc(hofName())})</td><td class="nw">${fmt(eigen)}</td></tr>
-        ${kredit ? `<tr><td>Kredit der Hausbank für den neuen Hof (${prozent(KREDIT.zins)}, ${KREDIT.jz / 4} Jahre)</td><td class="nw">${fmt(kredit)}</td></tr><tr><td>Rate je Jahreszeit (zahlt der neue Hof)</td><td class="nw">${fmt(kreditRate(kredit, KREDIT.zins, KREDIT.jz))}</td></tr>` : ""}</table>
-      <p style="margin-bottom:0"><small>Das Startgeld ist die einzige Möglichkeit, Geld direkt mitzugeben – danach hat jeder Hof seine eigene Kasse (später: Spenden an den eigenen Gnadenhof, interne Rechnungen).</small></p>`,
-      [["🏡 Kaufen", () => { const n = ($("kaufName").value || "").trim(), st = +($("kaufStart") || {}).value || 0; if (!n) { hofKaufDialog2(A, "", st, true); return; } neuerHof(A, n, st); }], ["Abbrechen", null, "zweit"]], "breit");
+      <table class="ver-tab"><tr><th>Finanzierung</th><th>Betrag</th></tr><tr><td>Kaufpreis</td><td class="nw">${fmt(A.preis)}</td></tr><tr><td>Eigenanteil (vom zentralen Konto, dort ${fmt(zentral().geld)})</td><td class="nw">${fmt(eigen)}</td></tr>
+        ${kredit ? `<tr><td>Kredit der Hausbank für den neuen Hof (${prozent(KREDIT.zins)}, ${KREDIT.jz / 4} Jahre)</td><td class="nw">${fmt(kredit)}</td></tr><tr><td>Rate je Jahreszeit (zahlt der neue Hof)</td><td class="nw">${fmt(kreditRate(kredit, KREDIT.zins, KREDIT.jz))}</td></tr>` : ""}
+        <tr><td><b>Kasse des neuen Hofs</b></td><td class="nw"><b>0 €</b></td></tr></table>
+      <p style="margin-bottom:0"><small>Der neue Hof startet ohne Geld. Plane Futter, Gehälter und die erste Kreditrate (zu Beginn der nächsten Jahreszeit) ein.</small></p>`,
+      [["🏡 Kaufen", () => { const n = ($("kaufName").value || "").trim(); if (!n) { hofKaufDialog2(A, "", true); return; } neuerHof(A, n); }], ["Abbrechen", null, "zweit"]], "breit");
   }
-  function neuerHof(A, name, start) {
-    const eigen = Math.ceil(A.preis / 2), kredit = A.preis - eigen, von = hofName(), hid = "h" + (Math.max(...hofReihe().map(h => +h.slice(1) || 1)) + 1);
-    buchen(-eigen, `Eigenanteil Hofkauf: ${name}`); if (start) buchen(-start, `Startgeld für ${name}`);
+  function neuerHof(A, name) {
+    const eigen = Math.ceil(A.preis / 2), kredit = A.preis - eigen, hid = "h" + (Math.max(...hofReihe().map(h => +h.slice(1) || 1)) + 1);
+    zentralBuchen(-eigen, `Eigenanteil Hofkauf: ${name}`);
     (spiel.makler.gekauft = spiel.makler.gekauft || []).push(A.mid);
     const H = { geld: 0, boxen: Array.from({ length: A.boxen }, (_, i) => ({ nr: i + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false, stufe: A.stufe })),
       anlage: { stall: A.boxen > 0, paddock: false, weide: A.weide > 0, waschplatz: false, roundpen: false, reitplatz: A.anlagen.includes("reitplatz"), reithalle: A.anlagen.includes("reithalle"), gelaende: true, anhaenger: true },
@@ -7410,12 +7459,12 @@
       hof: { hid, name, id: A.typ, art: "pension", ha: A.ha, weideHa: A.weide, stufe: A.stufe, wert: A.preis, kauf: { tag: spiel.tag, preis: A.preis, eigen }, pacht: 0 } };
     (spiel.hoefe = spiel.hoefe || {})[hid] = H; hofReihe().push(hid);
     imHof(hid, () => {
-      buchen(-A.preis, "Hofkauf"); buchen(eigen, `Eigenanteil von ${von}`); if (start) buchen(start, `Startgeld von ${von}`);
+      buchen(-A.preis, "Hofkauf"); buchen(eigen, "Eigenanteil vom zentralen Konto");
       if (kredit) { const k = kreditNeu(kredit, KREDIT.jz, "Hofkredit");
         brief(KREDIT.bank, `Hofkredit ${name}`, `herzlichen Glückwunsch zu {deinem|Ihrem} neuen Hof <b>${esc(name)}</b>! Der Kredit über ${fmt(k.summe)} läuft über die Kasse dieses Hofs: Rate je Jahreszeit <b>${fmt(k.rate)}</b>, ${k.raten} Raten, erste Rate zu Beginn ${jzName(jzJetzt() + 1)}.`); }
     });
     speichern();
-    dialog(`<h3>🏡 ${esc(name)} gehört dir!</h3><p>Der neue Hof hat ${A.boxen ? `${A.boxen} Boxen` : "noch keinen Stall"} und ${fmt(start)} in der Kasse. Pferde bringst du mit dem Pferdeanhänger („Eigener Hof“) hin. Wechseln kannst du im Immobilien-Menü oder oben im Hauptmenü.</p>`,
+    dialog(`<h3>🏡 ${esc(name)} gehört dir!</h3><p>Der neue Hof hat ${A.boxen ? `${A.boxen} Boxen` : "noch keinen Stall"} und startet mit leerer Kasse. Pferde bringst du mit dem Pferdeanhänger („Eigener Hof“) hin. Wechseln kannst du im Immobilien-Menü oder oben im Hauptmenü.</p>`,
       [["Zum neuen Hof", () => { hofWechseln(hid); speichern(); zeigeHaupt(); }], ["Hierbleiben", () => zeigeImmobilien(), "zweit"]]);
   }
   // ---------- Hofverwaltung → Hof: Bereiche Übersicht, Hofplan, Bauen, Land, Futterkammer ----------
@@ -7768,7 +7817,7 @@
     if (reiter) { hofReiter = reiter; fkMeld = ""; }
     if (hofReiter !== "post") { offenerBrief = null; postAuswahl = null; }
     const sp = spiel.spieler || {}, allePost = spiel.post || (spiel.post = []), n = ungelesen();
-    const post = allePost.filter(b => postOrdner === "spam" ? b.spam : postOrdner === "stern" ? b.stern && !b.spam : !b.spam), spamAnz = allePost.filter(b => b.spam).length, sternAnz = allePost.filter(b => b.stern && !b.spam).length;
+    const post = allePost.filter(b => !fremderBrief(b)).filter(b => postOrdner === "spam" ? b.spam : postOrdner === "stern" ? b.stern && !b.spam : !b.spam), spamAnz = allePost.filter(b => b.spam).length, sternAnz = allePost.filter(b => b.stern && !b.spam).length;
     const ordnerLeiste = `<div class="post-ordner"><button data-ordner="eingang" class="${postOrdner === "eingang" ? "an" : ""}">📥 Posteingang${n ? ` (${n})` : ""}</button><button data-ordner="stern" class="${postOrdner === "stern" ? "an" : ""}">⭐ Wichtig${sternAnz ? ` (${sternAnz})` : ""}</button><button data-ordner="spam" class="${postOrdner === "spam" ? "an" : ""}">🚫 Spam${spamAnz ? ` (${spamAnz})` : ""}</button></div>`;
     const reiterListe = [["hof", "Hof"], ["reiter", "Reiter"], ["finanzen", "Finanzen"], ["aussen", "Außer Haus"], ["mitarbeiter", "Mitarbeiter"], ["post", "Postfach"], ["einst", "Einstellungen"]];
     let inhalt = "";
@@ -8028,7 +8077,8 @@
     $("bfVor").onclick = () => briefFenster(liste[i - 1].id, nur);
     $("bfNach").onclick = () => briefFenster(liste[i + 1].id, nur);
   }
-  $("postIcon").onclick = () => { menueZu(); const neu = (spiel.post || []).filter(b => !b.spam && !b.gelesen).map(b => b.id); briefFenster(null, neu.length ? neu : null); };
+  $("postIcon").onclick = () => { menueZu(); const neu = (spiel.post || []).filter(b => !b.spam && !b.gelesen && !fremderBrief(b)).map(b => b.id); briefFenster(null, neu.length ? neu : null); };
+  $("postIconRot").onclick = () => { menueZu(); const neu = ungelesenFremd().map(b => b.id); if (neu.length) briefFenster(null, neu); };
   // Boxschild im Stall antippen: zurück zur Boxenübersicht
   $("boxSchildKnopf").onclick = e => { e.stopPropagation(); zeigeBoxen(); };
   // alte Neuigkeiten-Meldungen in Briefe umwandeln

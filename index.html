@@ -772,7 +772,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "187";
+  const SPIEL_VERSION = "188";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -780,9 +780,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=187"></script>
-<script src="kopfteile.js?v=187"></script>
-<script src="kopfalter.js?v=187"></script>
+<script src="pferd.js?v=188"></script>
+<script src="kopfteile.js?v=188"></script>
+<script src="kopfalter.js?v=188"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1967,7 +1967,10 @@
     return "";
   }
   // Wert beim Verkauf: Stute mit Fohlen bei Fuß zählt beides
-  const verkaufsWert = p => { const b = boxVon(p); return marktwert(p) + (b && b.fohlen ? marktwert(b.fohlen) : 0); };
+  const verkaufsWert = p => { const b = boxVon(p); return marktwert(p) + (b && b.fohlen ? marktwert(b.fohlen) : 0) + (p.zubehoerMit ? zubehoerWert(p) : 0); };
+  // Zubehör beim Verkauf mitgeben: gebrauchtes Putzzeug 20 €, Hufschuhe 60 % vom Neupreis × Zustand – sonst bleibt es im Lager
+  const zubehoerTeile = p => { const H = p.hufschuhe ? hufschuheVon(p) : {}; return [...(p.putzzeug ? [["🧰 Putzzeug", 20]] : []), ...["vorne", "hinten"].filter(x => H[x] && H[x].zustand > 0).map(x => [`👟 Hufschuhe ${x}`, Math.round(HUFSCHUH_PREIS * 0.6 * H[x].zustand / 100 / 5) * 5])]; };
+  const zubehoerWert = p => zubehoerTeile(p).reduce((a, x) => a + x[1], 0);
   // ---------- Abgeben als Fenster (von der Daten-Karte, dem Pferdemarkt oder der Karte Ort) – danach bleibt man, wo man war ----------
   const boxVon = p => spiel.boxen.find(b => b.pferd === p);
   const angebotVon = p => (spiel.angebote || []).find(x => x.id === p.id);
@@ -1990,19 +1993,20 @@
   function angebotZurueckziehen(p, nachher) {
     const a = angebotVon(p), strafe = abbruchStrafe(a);
     dialog(`<h3>Angebot zurückziehen?</h3><p>${esc(p.name)} wird dann nicht mehr ${a && a.art === "auktion" ? "versteigert" : "angeboten"}.</p>${strafe ? `<p>⚠️ Auf ${esc(p.name)} wurde schon geboten (letztes Gebot ${fmt(a.gebot)}). Für den Abbruch zahlst du eine <b>Abbruchstrafe von ${fmt(strafe)}</b> (die Hälfte des letzten Gebots).</p>` : ""}`,
-      [[strafe ? `Abbrechen · ${fmt(strafe)} Strafe` : "Zurückziehen", () => { if (strafe) { buchen(-strafe, `Abbruchstrafe Auktion: ${p.name}`); ruf("Auktionshaus", -5); } spiel.angebote = (spiel.angebote || []).filter(x => x.id !== p.id); speichern(); nachher(); }], ["Behalten", null, "zweit"]]);
+      [[strafe ? `Abbrechen · ${fmt(strafe)} Strafe` : "Zurückziehen", () => { delete p.zubehoerMit; if (strafe) { buchen(-strafe, `Abbruchstrafe Auktion: ${p.name}`); ruf("Auktionshaus", -5); } spiel.angebote = (spiel.angebote || []).filter(x => x.id !== p.id); speichern(); nachher(); }], ["Behalten", null, "zweit"]]);
   }
   function verkaufDialog(p, nachher) {
     const a = angebotVon(p), box = boxVon(p), sperre = abgabeSperre(p, box, true), fo = box && box.fohlen;
     if (a) { angebotZurueckziehen(p, nachher); return; }
     if (sperre) { dialog(`<h3>💰 ${esc(p.name)} verkaufen</h3><p>⚠️ ${sperre}</p>`); return; }
-    const wert = verkaufsWert(p), start = Math.max(100, Math.round(wert / 2 / 50) * 50);
-    dialog(`<h3>💰 ${esc(p.name)} verkaufen</h3><p style="margin:0">${fo ? `🍼 Mit Fohlen <b>${esc(fo.name)}</b> bei Fuß – es wird mit verkauft.<br>` : ""}Marktwert etwa <b>${fmt(wert)}</b><br><small>Bis zum Verkauf bleibt ${esc(p.name)} bei dir und muss versorgt werden. Fällt die Gesundheit unter 75 %, platzt der Verkauf.</small></p>
+    const wert = verkaufsWert(p), start = Math.max(100, Math.round(wert / 2 / 50) * 50), zt = zubehoerTeile(p);
+    dialog(`<h3>💰 ${esc(p.name)} verkaufen</h3>${zt.length ? `<label class="mini-knopf" style="display:inline-block;margin:0 0 6px"><input type="checkbox" id="zubehoerMit" ${p.zubehoerMit ? "checked" : ""}> 🎁 Zubehör mitgeben (${zt.map(x => x[0]).join(", ")}) – Preis +${fmt(zubehoerWert(p))} (Gebrauchtwert: ${zt.map(x => `${x[0].replace(/^\S+ /, "")} ${fmt(x[1])}`).join(", ")})</label><br><small>${p.zubehoerMit ? "Das Zubehör geht mit dem Pferd an den Käufer." : "Ohne Häkchen bleibt das Zubehör nach dem Verkauf im Lager."}</small>` : ""}<p style="margin:0">${fo ? `🍼 Mit Fohlen <b>${esc(fo.name)}</b> bei Fuß – es wird mit verkauft.<br>` : ""}Marktwert etwa <b>${fmt(wert)}</b><br><small>Bis zum Verkauf bleibt ${esc(p.name)} bei dir und muss versorgt werden. Fällt die Gesundheit unter 75 %, platzt der Verkauf.</small></p>
       <div class="verkauf-art"><b>🏷️ Festpreis</b><small>Läuft eine Jahreszeit. Je höher über dem Marktwert, desto seltener findet sich ein Käufer – dafür kommen eher Preisvorschläge.</small>
         <label class="fest-preis">Dein Preis: <b id="festWert">${fmt(wert)}</b> <small id="festHinweis">– fairer Preis · Verkaufschance etwa 90 %</small><input type="range" id="festPreis" min="${Math.round(wert * 0.5 / 50) * 50}" max="${Math.round(wert * 1.6 / 50) * 50}" step="50" value="${wert}"></label>
         <button class="knopf" id="festLos" style="width:100%">Zum Festpreis anbieten</button></div>
       <div class="verkauf-art"><b>🔨 Auktion</b><small>Startet bei ${fmt(start)} (½ des Marktwerts) und dauert 2 Jahreszeiten. Mit Glück bieten sich die Käufer weit über den Marktwert hoch.</small>
         <button class="knopf" id="auktionLos" style="width:100%">Zur Auktion geben</button></div>`, [["Abbrechen", null, "zweit"]], "breit");
+    const zm = $("zubehoerMit"); if (zm) zm.onchange = () => { p.zubehoerMit = zm.checked; verkaufDialog(p, nachher); };
     const fp = $("festPreis");
     fp.oninput = () => { const v = +fp.value / wert; $("festWert").textContent = fmt(+fp.value);
       const c = Math.round(festChance(+fp.value / (wert * saisonF())) * 100);
@@ -2186,7 +2190,8 @@
   }
   // Pferd verlässt den Hof (Verkauf, Rückgabe …): Kopie aufheben, damit Briefe es noch zeigen können
   function archivieren(p) {
-    if (alleEigenenPferde().some(e => e.p === p) || spiel.boxen.some(b => b.pferd === p)) zubehoerInsLager(p);
+    if (p.zubehoerMit) delete p.zubehoerMit;   // mitverkauft: geht mit dem Pferd
+    else if (alleEigenenPferde().some(e => e.p === p) || spiel.boxen.some(b => b.pferd === p)) zubehoerInsLager(p);
     const A = (spiel.archiv = spiel.archiv || {}); A[p.id] = JSON.parse(JSON.stringify(p));
     const ks = Object.keys(A); if (ks.length > 40) delete A[ks[0]];
   }
@@ -5505,7 +5510,7 @@
       <p><b>Tierarzt-Hausbesuch:</b> ${fmt(TIERARZT_BESUCH)} – sichere Diagnose aller Befunde (auch unbemerkter), Erstbehandlung (eine Stufe besser, chronisch auf Grad 1; zählt als voll behandelter Tag) und Behandlungsplan; Rezeptmittel bringt er mit (${REZEPT_DOSEN} Dosen, Preis je Dosis), Boxenruhe trägt er ein. Kolik ab Grad 4: OP in der Klinik ${fmt(KOLIK_OP)} inkl. ${KOLIK_OP_TAGE} Tage, danach ${fmt(KOSTEN.klinik)} pro Tag bis 75 %.</p>
       <p><b>Hufe (Etappe E):</b> Hufqualität 5–100 (nur Admin): Rasse (${Object.entries(HUF_RASSE).map(([r, q]) => `${rasseById(r) ? rasseById(r).name : r} ${q}`).join(", ")}) ± 20, vererbt wie eine Anlage; instabil unter 35, stabil ab 65. Hufwachstum (vererbt, 20 % langsam / 60 % normal / 20 % schnell, beim Fohlen 15 % anders als das Elternteil): Hufschmied alle ${Object.entries(HUF_WACHS).map(([k, v]) => `${k} ${String(v).replace(".", ",")}`).join(" / ")} Jahreszeiten. Preise: Barhuf ${fmt(HUF_PREIS.barhuf)}, Beschlag ${fmt(HUF_PREIS.beschlag)}, Anfahrt ${fmt(HUF_PREIS.anfahrt)} je Besuch. Dauerauftrag mit wählbarem Rhythmus je Pferd: wie der Hufschmied empfiehlt (eigenes Hufwachstum – kennt er erst nach ${HUF_KENNT_AB} Besuchen, vorher 1 Jahreszeit) oder alle ½ / 1 / 2 Jahreszeiten – seltener spart Geld, aber zu lange Hufe erhöhen das Risiko. Mit Stallmeister werden die Termine zusammengelegt (wer in ⅓ Jahreszeit fällig wäre, kommt mit, nur eine Anfahrt). Ohne Dauerauftrag ein Erinnerungsbrief. Zu lange Hufe (Länge = Tage seit Hufschmied ÷ eigener Rhythmus): Risiko-Faktor 1 + (Länge − 1) × 1,5 (höchstens 4) für Lahmheit, Hufabszess und Hornspalt; ab 1,3 Sprechblase „stolpert“. Eisen verlieren (beschlagen): 1 % pro Nacht × instabil 3 / stabil 0,5 × Weide 1,5 × Länge-Faktor; ohne Eisen Lahmheit ×1,5, Abszess ×2. Hufkrankheiten: Strahlfäule (nicht ausgekratzt ×1, ausgekratzt ×0,3; Mist ×2; Herbst-/Winterweide ×2), Hufabszess, Hornspalt (instabil ×3, stabil ×0,5, Beschlag ×0,5, barhuf auf der Weide ×1,3). Der Hufschmied findet und versorgt sie (eine Stufe besser) und gibt einen Plan. Hufe auskratzen: Putzkiste (Hufkratzer), Pfleger jeden Morgen oder als Behandlung. Hufgröße misst der Hufschmied nur auf Anfrage für ${fmt(HUF_MESSEN)} (nach Gewichtsklasse, hinten in 30 % eine Nummer kleiner; steht danach im Steckbrief). Anfahrt nur einmal am Tag. Hufschuhe (Ausrüstung → Hufschuhe): je Pferd ein Paar vorne und/oder hinten, ${fmt(HUFSCHUH_PREIS)} pro Paar, Zustand 100 %; falsche Größe scheuert – eingesetzt und abgenutzt werden sie mit dem Training im Gelände.</p>
       <p><b>Ansteckung (Etappe F):</b> ansteckend sind ${Object.keys(ANSTECKEND).map(k => KRANK[k].n).join(", ")}. Nach der Ansteckung erst Inkubation (Influenza 2, Druse/Herpes/Pilz 3, Würmer 4 Tage): schon ansteckend, aber ohne Anzeichen – nur das große Blutbild findet sie. Chance pro Nacht je krankem Pferd: ${Object.entries(ANSTECKEND).map(([k, A]) => `${KRANK[k].n} ${Object.entries(A).map(([w, x]) => `${w} ${String(x).replace(".", ",")}`).join("/")}`).join(" · ")}. Wege: Weide (beide auf der Weide), Luft (im Stall ÷ (1 + Boxabstand)), Kontakt (Nachbarbox), Tränke (alle im Stall), Putzzeug (vom selben geputzt, nicht beide mit eigenem Putzzeug), Träger (vom selben Mitarbeiter oder dir gestern versorgt; zuverlässige oder erfahrene ab 50 machen das bemerkte kranke Pferd zuletzt ×0,3). Quarantäne (1 Jahreszeit): kein Weidegang, eigenes Putzzeug, Luft ×0,5, Kontakt ×0,2, Träger ×0,3, keine Tränke. Ein Mitarbeiter „nur für dieses Pferd“ versorgt nur dieses und trägt nichts weiter. Geimpft (Influenza/Herpes, 2 Jahreszeiten) ×0,3 und Start eine Stufe leichter; Wurmkur in der letzten Jahreszeit: Würmer ×0,2. × Konstitution (1,5 − Anlage ÷ 100). Herpes bei tragenden Stuten: Verfohlen 5 % je Grad pro Nacht. Neuzugänge bringen etwas mit: ${Object.entries(NEUZUGANG_RISIKO).map(([q, x]) => `${q} ${Math.round(x * 100)} %`).join(", ")} (Influenza 30 %, Druse 15 %, Herpes 10 %, Pilz 20 %, Würmer 25 %).</p>
-      <p><b>Lager (Hofverwaltung → Hof):</b> Verlässt ein Pferd den Hof (Verkauf, Rückgabe, Abgabe, Gnadenhof, Tod), kommen sein eigenes Putzzeug und seine Hufschuhe (mit Größe und Zustand) ins Lager. Von dort an ein anderes Pferd geben (Putzzeug desinfiziert und kostenlos; Putzzeug von einem Pferd mit Hautpilz in der letzten Jahreszeit: 30 % Ansteckung – besser wegwerfen), an Gnadenhof oder Tierschutzverein spenden (Sympathie +${SPENDE_RUF} je Teil, Dankesbrief) oder wegwerfen.</p>
+      <p><b>Lager (Hofverwaltung → Hof):</b> Verlässt ein Pferd den Hof (Verkauf, Rückgabe, Abgabe, Gnadenhof, Tod), kommen sein eigenes Putzzeug und seine Hufschuhe (mit Größe und Zustand) ins Lager. Von dort an ein anderes Pferd geben (Putzzeug desinfiziert und kostenlos; Putzzeug von einem Pferd mit Hautpilz in der letzten Jahreszeit: 30 % Ansteckung – besser wegwerfen), an Gnadenhof oder Tierschutzverein spenden (Sympathie +${SPENDE_RUF} je Teil, Dankesbrief) oder wegwerfen. Beim Verkauf (Festpreis/Auktion) kann man das Zubehör mitgeben: Preis + gebrauchtes Putzzeug 20 €, Hufschuhe 60 % vom Neupreis × Zustand je Paar.</p>
       <p><b>Vorsorge und Labor:</b> Impfung ${fmt(VORSORGE.impfung)}, Zahnkontrolle ${fmt(VORSORGE.zahn)} (über 1 Jahr überfällig: Kolik ×1,5), Wurmkur aus der Stallapotheke (überfällig über 2 Jahreszeiten: Würmer ×3), kleines Blutbild ${fmt(VORSORGE.blutKlein)} (Entzündung ja/nein), großes ${fmt(VORSORGE.blutGross)} (konkrete Krankheit, auch in der Inkubation) – Ergebnis nach 2 Tagen per Brief. Eigenes Putzzeug ${fmt(VORSORGE.putzzeug)} (Putzkiste). Ein Quarantänestall (kein Risiko) kommt mit dem Hof-Ausbau.</p>
       <p><b>Behandlung (Etappe D)</b> unter Pflege → Versorgung, jede Aktion einmal am Tag: ${Object.values(AKTION).map(A => `${A.ico} ${A.n}`).join(", ")}, Medikament mit Dosis. Wirkung in der Nacht danach: Behandlungswert = Summe der passenden Anteile (höchstens 1) × (0,5 + 0,5 × Mitwirkung). Besserung pro Nacht: Wert ÷ (Heilungszahl × 0,5) ÷ (1,3 − Regeneration ÷ 100 × 0,6), höchstens 80 % (chronisch nur bis Grad 1); Verschlechterung × (1 − Wert) + Schaden; Wirkung auf Gesundheit/Wohlbefinden × (1 − 0,6 × Wert). Heilt ein Befund unter Behandlung, gilt die Ursache als geklärt (Erfahrung). Tod und Warnbrief nur bei Wert unter 0,3.</p>
       ${verTab(["Befund", "hilft", "schadet", "Tierarzt-Plan"], Object.keys(HILFT).map(k => [`${KRANK[k].ico} ${KRANK[k].n}`, Object.entries(HILFT[k]).map(([a, x]) => `${behName(a)} ${String(x).replace(".", ",")}`).join(", "), Object.entries(SCHADET[k] || {}).map(([a, x]) => `${behName(a)} +${String(x).replace(".", ",")}`).join(", ") || "–", (PLAN[k] || []).map(behName).join(", ")]))}

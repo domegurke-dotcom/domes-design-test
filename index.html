@@ -799,7 +799,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "218";
+  const SPIEL_VERSION = "219";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -807,9 +807,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=218"></script>
-<script src="kopfteile.js?v=218"></script>
-<script src="kopfalter.js?v=218"></script>
+<script src="pferd.js?v=219"></script>
+<script src="kopfteile.js?v=219"></script>
+<script src="kopfalter.js?v=219"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -5172,7 +5172,10 @@
   // Arbeit: Schnitt der verbrauchten Trainings-/Turnierenergie der letzten Tage (p.arbeitSchnitt, nachts aktualisiert)
   const arbeitStufe = p => { const a = p.arbeitSchnitt || 0; return a >= 60 ? ["schwer", 1] : a >= 35 ? ["mittel", 0.5] : a >= 10 ? ["leicht", 0.25] : ["keine", 0]; };
   function arbeitNacht(p) { const T = p.trainHeute && p.trainHeute.tag === spiel.tag - 1 ? p.trainHeute.verbraucht || 0 : 0, tur = p.turnierGestern ? 50 : 0;
-    p.arbeitSchnitt = Math.round(((p.arbeitSchnitt || 0) * 0.6 + (T + tur) * 0.4) * 10) / 10; delete p.turnierGestern; }
+    p.arbeitSchnitt = Math.round(((p.arbeitSchnitt || 0) * 0.6 + (T + tur) * 0.4) * 10) / 10;
+    // Regelmäßigkeit (Dome): wird ein Pferd gut und regelmäßig trainiert, bekommt es den sportlichen Körper – Halbwert nach 0,7 Jahreszeiten
+    const a = 1 - Math.pow(0.5, 1 / (0.7 * tpj())), gut = T >= 15 || tur > 0;
+    p.trainRegel = Math.round(((p.trainRegel || 0) * (1 - a) + (gut ? a : 0)) * 1000) / 1000; delete p.turnierGestern; }
   // Bedarf am Tag: Energie (MJ), Eiweiß-Anteil (%), Raufutter-Minimum (kg), Stärke je Mahlzeit (g), Kraftfutter je Mahlzeit (kg), Öl (kg)
   // individuelle Futterverwertung (versteckt, vererbt): 0,85–1,15 – „guter“ oder „schlechter Futterverwerter“; merkt man nur am Futterzustand
   const stoffwechsel = p => { if (p.stoffw == null) p.stoffw = Math.round((0.88 + zufall("sw-" + (p.id || p.name))() * 0.24) * 100) / 100; return p.stoffw; };
@@ -5295,7 +5298,7 @@
     const mangel = S.eiweissWenig || S.mineral === false;
     [p, box && box.fohlen].forEach(q => { if (q && mangel && alterJZ(q) < 12) q.mangelJung = (q.mangelJung || 0) + 1; });
     // Körperbild aus dem Futterzustand (Admin kann im Test-Reiter einen Typ fest einstellen)
-    p.typ = f2 <= 3 ? "duenn" : f2 >= 7 ? "dick" : (p.arbeitSchnitt || 0) >= 35 && p.werte && p.werte.ist && (p.werte.ist.kraft || 0) >= 0.75 * wertGrenze(p, "kraft") ? "sportlich" : "normal";
+    p.typ = f2 <= 3 ? "duenn" : f2 >= 7 ? "dick" : (p.trainRegel || 0) >= 0.4 ? "sportlich" : "normal";   // sportlich: regelmäßig trainiert (etwa jeden 2. Tag oder öfter über längere Zeit)
   }
   // Futter-Faktor für Krankheitsrisiken (befundRisiko): wirkt je Krankheit
   function futterFaktor(p, art) {
@@ -7113,7 +7116,7 @@
       <h3>📋 Fütterung (F2: Futterplan und Bedarf)</h3>
       <p><b>Futterplan</b> je Pferd (Box → Pferdepflege → Versorgung → Futterplan, oder Ausrüstung → Futter): Menge je Sorte am Tag, gleichmäßig auf 2 oder 3 Mahlzeiten verteilt (Schritte: Raufutter 0,5 kg, Kraftfutter 0,25 kg, Öl/Mineral 50 g). Ohne eigenen Plan: Standardplan (Heu nach Energiebedarf, 1,5–2,5 kg je 100 kg, Mineralfutter 100 g). Ein Klick auf die Krippe (bzw. der Stallbursche) füttert den ganzen Tagesplan aus der Futterkammer.</p>
       <p><b>Bedarf:</b> Energie Erhaltung = 0,52 MJ × Gewicht^0,75 (600 kg ≈ 63 MJ). Zuschläge: Arbeit leicht +25 % / mittel +50 % / schwer +100 % (Schnitt der Trainings- und Turnierenergie der letzten Tage: ab 10 / 35 / 60; Turniertag zählt 50), tragend in der letzten Jahreszeit +20 %, säugend +70 %, Jungpferd unter 3 J. +30 %, Winter auf der Weide +10 %; leichtfuttrig −15 % (${LEICHTFUTTRIG.map(r => rasseById(r).name).join(", ")}), schwerfuttrig +15 % (${SCHWERFUTTRIG.map(r => rasseById(r).name).join(", ")}). Eiweiß Ziel 10 % der Ration (Fohlen/Jungpferde unter 1 J. und säugende Stuten 14 %): zu wenig unter Ziel − 2, zu viel über Ziel + 4. Raufutter mindestens 1,5 kg je 100 kg. Stärke aus dem Kraftfutter höchstens 1 g je kg Gewicht pro Mahlzeit (Zucker im Heu zählt dabei nicht), Kraftfutter höchstens 0,3 kg je 100 kg pro Mahlzeit, Öl höchstens 1 g je kg am Tag. Mineralien gedeckt mit mind. 50 g Mineralfutter oder Salzleckstein + genug gutes Heu/Heulage. Energie: zu wenig unter 90 %, zu viel über 110 %. Weide (außer Winter/letzter Herbsttag): Gras ersetzt das Raufutter.</p>
-      <p><b>Futterzustand (F3)</b>, versteckt 1–9 (1 abgemagert … 5 gut im Futter … 9 fettleibig), sichtbar über das Körperbild: 1–3 dünn, 4–6 normal (sportlich bei Arbeit ab „mittel“ und Kraft ≥ 75 % der Grenze), 7–9 dick. Täglich: gefütterte Energie &gt; 110 % des Bedarfs → +1 Tag, &lt; 90 % → −1 Tag, hungrig −2; eine Stufe nach ${fzSchwelle()} Tagen (je nach Spieltempo: 4 Tage/Jz → 4, 7 → 5, 10 → 6); Richtungswechsel zählt neu, passende Ration lässt den Zähler zurücklaufen. Weide deckt Frühling 115 % (junges Gras), Sommer 100 %, Herbst 90 %; im Winter und am letzten Herbsttag kein Gras – nur das zugefütterte Heu zählt. Gewicht ±3 % je Stufe von 5. Gewicht ist ein Zusammenspiel: Futter, Bewegung (Arbeit erhöht den Bedarf, Boxenruhe −10 %) und Veranlagung (versteckte Futterverwertung 0,85–1,15, vererbt als Mittel der Eltern ± 0,04 – der angezeigte Bedarf ist nur die Schätzung ohne diese Veranlagung). Standardplan: Heu nach Energiebedarf (6 MJ/kg), mind. 1,5 und höchstens 2,5 kg je 100 kg.<br>
+      <p><b>Futterzustand (F3)</b>, versteckt 1–9 (1 abgemagert … 5 gut im Futter … 9 fettleibig), sichtbar über das Körperbild: 1–3 dünn, 4–6 normal (sportlich, wenn gut und regelmäßig trainiert: Regelmäßigkeit ≥ 0,4 – gleitender Schnitt der Trainingstage mit mind. 15 Energie oder Turnier, Halbwert 0,7 Jahreszeiten; etwa jeden 2. Tag Training über längere Zeit, baut sich ohne Training wieder ab), 7–9 dick. Täglich: gefütterte Energie &gt; 110 % des Bedarfs → +1 Tag, &lt; 90 % → −1 Tag, hungrig −2; eine Stufe nach ${fzSchwelle()} Tagen (je nach Spieltempo: 4 Tage/Jz → 4, 7 → 5, 10 → 6); Richtungswechsel zählt neu, passende Ration lässt den Zähler zurücklaufen. Weide deckt Frühling 115 % (junges Gras), Sommer 100 %, Herbst 90 %; im Winter und am letzten Herbsttag kein Gras – nur das zugefütterte Heu zählt. Gewicht ±3 % je Stufe von 5. Gewicht ist ein Zusammenspiel: Futter, Bewegung (Arbeit erhöht den Bedarf, Boxenruhe −10 %) und Veranlagung (versteckte Futterverwertung 0,85–1,15, vererbt als Mittel der Eltern ± 0,04 – der angezeigte Bedarf ist nur die Schätzung ohne diese Veranlagung). Standardplan: Heu nach Energiebedarf (6 MJ/kg), mind. 1,5 und höchstens 2,5 kg je 100 kg.<br>
       <b>Folgen:</b> Stufe 1–2: Gesundheit −1 und Wohlbefinden −2 je Nacht, Energie-Max ×0,8, Lernen ×0,85, Turnier ×0,9, Infekte (Erkältung, Husten, Influenza, Druse, Herpes, Hautpilz, Würmer) ×1,5. Stufe 8–9: Wohlbefinden −1, Energie-Max ×0,9, Lernen ×0,9, Turnier ×0,9, Arthrose ×1,5. Hufrehe ×1,5 (Stufe 7) bzw. ×2,5 (ab 8); Frühlingsweide bei leichtfuttrigen oder dicken Pferden ×2. Zu wenig Raufutter (&lt; 90 % des Minimums): Wohlbefinden −3 (Langeweile), Kolik ×2, Magengeschwür ×3 (sonst ×0,4). Zu viel Stärke/Kraftfutter je Mahlzeit: Kolik ×2, Hufrehe ×1,5, Magengeschwür ×2, „Hafer sticht“ am Folgetag (Lernen ×0,85, Turnier ×0,95). Eiweiß 3 Punkte unter Bedarf: Kraft −0,2 je Tag (über 5); 6 Punkte drüber: Gesundheit −0,5 (Leber/Nieren). Mineralien fehlen ab 5 Tagen: Wohlbefinden −1 (stumpfes Fell), Hornspalt ×1,5. Unter 3 Jahren (auch Fohlen bei Fuß über die Mutter): ab 10 Mangeltagen (Eiweiß/Mineralien) OCD-Risiko ×2.<br>
       <b>Magengeschwür:</b> Befund (Bereich Futter), Grundrisiko klein, Wohlbefinden unter 50 ×1,5; Behandlung Magenschutz (Omeprazol, Rezept, 35 €).</p>
       <p><b>Atemwege, Leckerli, Umstellung (F4):</b> Versteckte Veranlagung „Empfindliche Atemwege“ (0–1, vererbt wie die anderen Veranlagungen; empfindlich ab 0,2). Nur empfindliche Pferde reagieren auf staubiges Heu (ab 1 kg am Tag, nicht gewässert): Husten-Risiko ×4; Vorzeichen beim Besuch (ab 3 Staubtagen „prustet“, ab 1 Jahreszeit „hustet beim Heufressen“, ab 2 Jahreszeiten schwerer Atem); nach mehr als ${STAUB_ASTHMA_JZ} Jahreszeiten Staub (ohne Staub zählt der Zähler um ½ je Tag zurück) jeden Tag 5 % Chance auf <b>Pferdeasthma</b> (chronisch, mit weiterem Staub 5 % je Tag eine Stufe schlimmer bis „schwer“; Behandlung Kortison, Hustensaft). Heu wässern (Haken im Futterplan; kostet Zeit – zählt beim Stallburschen wie 1½ Boxen, mit Heudampfer aus dem Hof-Ausbau nicht) oder Heulage beseitigt den Staub.<br>

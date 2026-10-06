@@ -843,7 +843,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "224";
+  const SPIEL_VERSION = "225";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -851,9 +851,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=224"></script>
-<script src="kopfteile.js?v=224"></script>
-<script src="kopfalter.js?v=224"></script>
+<script src="pferd.js?v=225"></script>
+<script src="kopfteile.js?v=225"></script>
+<script src="kopfalter.js?v=225"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1144,7 +1144,7 @@
   const ohneAnim = s => s.replace(/<animate(Transform|Motion)?\b[^>]*\/>/g, "");
   // frei = kein Pferd drin und nicht für eine tragende Stute im Ausbildungsstall reserviert
   const boxFrei = b => !b.pferd && !b.reserviert && !b.gesperrt;
-  const freieBox = () => spiel.boxen.findIndex(boxFrei);
+  const freieBox = () => { const i = spiel.boxen.findIndex(b => boxFrei(b) && !b.quar); return i >= 0 ? i : spiel.boxen.findIndex(boxFrei); };   // Quarantänestall nur, wenn sonst nichts frei ist
   const ausbStand = p => ausbildungsWerte({ ...p, alter: alterJahre(p) });
   // alle Pferde, die dem Spieler gehören, mit ihrem Aufenthaltsort
   const alleEigenenPferde = () => [
@@ -2913,6 +2913,9 @@
       if (id === "weide") {
         if (!p.weide && inQuarantaene(p)) { dialog(`<h3>🚧 Quarantäne</h3><p>${esc(p.name)} steht unter Quarantäne und darf nicht auf die Weide (noch ${tageTxt2(tpj() - (spiel.tag - p.quarantaene))}).</p>`); return; }
         if (!p.weide && p.boxenruhe) { dialog(`<h3>🛏️ Boxenruhe</h3><p>${esc(p.name)} hat Boxenruhe und darf nicht auf die Weide. Du kannst sie unter Pflege → Versorgung beenden.</p>`); return; }
+        if (!p.weide && datum().s === 0 && reheGefaehrdet(p) && p.reheOk !== spiel.tag) {
+          dialog(`<h3>⚠️ Hufrehe-Gefahr</h3><p>${esc(p.name)} ${reheGrund(p)}. Das junge Frühlingsgras ist sehr zuckerreich – auf der Weide droht jetzt <b>Hufrehe</b>. Besser ${spiel.anlage && spiel.anlage.paddock ? "Sandpaddock oder " : ""}Box, höchstens stundenweise Weide.</p>`,
+            [["Trotzdem auf die Weide", () => { p.reheOk = spiel.tag; k.onclick(); }], ["Lieber nicht", null, "zweit"]]); return; }
         if (p.weide) { vonWeideHolen(box); meldung = `🏠 ${esc(p.name)} ist zurück in Box ${aktBox + 1}.`; reaktionZeigen(reaktion(p, "box")); }
         else { reaktionZeigen(reaktion(p, "weide")); p.weide = { seit: spiel.tag };
           if (!heuNoetig() && spiel.tag - (p.weideZuletzt != null ? p.weideZuletzt : -999) > tpj()) p.anweiden = spiel.tag; else delete p.anweiden;   // lange keine Weide → anweiden p.boxTage = 0; box.vorWeide = { tag: spiel.tag, krippe: box.krippeVoll, mist: box.mistig, stufe: box.mistStufe || 0 }; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0; meldung = "";
@@ -6119,7 +6122,7 @@
     spiel.tag += 1;
     jedenHof(hofNacht, true);
     tierschutzKlinik(); tierschutzFohlen(); laborNacht(); auktionsNacht();
-    if (datum().t === 1) { jedenHof(() => { kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); auktionsEnde(); jahreszeitBeginn(); angeboteJahreszeit(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); }, true); spamAufraeumen(); hoefeVersteigern(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
+    if (datum().t === 1) { jedenHof(() => { kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); auktionsEnde(); jahreszeitBeginn(); angeboteJahreszeit(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); }, true); spamAufraeumen(); hoefeVersteigern(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
     turnierKalender();
     jedenHof(hofMorgen, true);
     blutbilderTag();     // Laborergebnisse
@@ -6129,7 +6132,7 @@
       const l = spiel.boxen.filter(b => b.pferd && !b.tot && !b.pferd.klinik && !b.pferd.weide && (!b.krippeVoll || b.mistig));
       if (l.length) brief("Hofverwaltung", `${hofName()}: Pferde nicht versorgt`, `auf <b>${esc(hofName())}</b> wurden heute nicht alle Pferde versorgt: ${l.map(b => `<b>${esc(b.pferd.name)}</b> (${!b.krippeVoll ? "nicht gefüttert" : ""}${!b.krippeVoll && b.mistig ? ", " : ""}${b.mistig ? "nicht gemistet" : ""})`).join(", ")}. Ohne Futter und Pflege werden sie krank. Stell dort einen Stallburschen ein oder wechsle zu diesem Hof.`, { pferde: l.map(b => b.pferd) });
     }
-    alterAktualisieren(); bauNacht();
+    alterAktualisieren(); bauNacht(); quarantaeneUmzug();
     const weideHerde = spiel.boxen.filter(b => b.pferd && b.pferd.weide && !b.pferd.klinik && !b.tot).map(b => b.pferd);
     if (weideHerde.length > 1) herdeNacht(weideHerde);
     spiel.boxen.forEach(b => {
@@ -6924,16 +6927,16 @@
   function auktionsEnde() {
     const M = spiel.markt; if (!M || !M.auktion || M.jz === jzJetzt()) return;
     [...M.auktion, ...(M.fohlen || [])].forEach(a => { if (a.vorbei || a.fuehrt !== "du" || (a.hid && hofVon(a.hid) ? a.hid : hofReihe()[0]) !== aktivHid()) return; a.vorbei = true;   // Zuschlag an den Hof, von dem aus geboten wurde
-      const zb = freieBox();
+      const zb = neuzugangBox();
       if (zb < 0 || (spiel.geld || 0) < a.gebot) { brief("Auktionshaus", `Auktion verloren: ${a.pferd.name}`, `{du hattest|Sie hatten} das Höchstgebot für <b>${esc(a.pferd.name)}</b> (${fmt(a.gebot)}), aber ${zb < 0 ? "keine freie Box" : "nicht genug Geld"}. Das Pferd ging an den Nächstbietenden.`, { pferde: [a.pferd] }); return; }
       buchen(-a.gebot, `Auktion: ${a.pferd.name}`);
       const p = JSON.parse(JSON.stringify(a.pferd)); p.pflege = erzeugePflege(p); p.maehneSeit = spiel.tag; p.schopfSeit = spiel.tag; akuUebernehmen(p, a.pferd, "Auktion");
-      const nb = spiel.boxen[zb]; nb.pferd = p; nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false;
+      const nb = spiel.boxen[zb]; nb.pferd = p; nb.pferd.quarantaene = nb.quar ? spiel.tag : nb.pferd.quarantaene; nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false;
       ruf("Auktionshaus", 5); brief("Auktionshaus", `Zuschlag: ${p.name}`, `herzlichen Glückwunsch! ${a.fohlen ? `{Dein|Ihr} Fohlen aus der Fohlenauktion ist abgesetzt und abgeholt: ` : ""}{Du hast|Sie haben} <b>${esc(p.name)}</b> für <b>${fmt(a.gebot)}</b> ersteigert (${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"} insgesamt). ${pron(p).er === "sie" ? "Sie" : "Er"} steht jetzt in Box ${zb + 1}.`, { pferde: [p] }); });
   }
   // gekauftes Pferd in die Box stellen
   function pferdEinstellen(h, preis, posten, zusatz) {
-    const zb = zielBox();
+    const zb = neuzugangBox();   // freie Box im Quarantänestall zuerst
     buchen(-preis, `${posten}: ${h.name}`); (spiel.marktGekauft = spiel.marktGekauft || []).push(h.id);
     const p = JSON.parse(JSON.stringify(h)); delete p.preis;
     p.pflege = erzeugePflege(p); p.maehneSeit = spiel.tag; p.schopfSeit = spiel.tag;
@@ -6941,6 +6944,7 @@
     akuUebernehmen(p, h, posten === "Schutzgebühr" ? "Tierschutz" : posten === "Privatkauf" ? "Privat" : posten);
     const nb = spiel.boxen[zb]; nb.pferd = p; nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false;
     if (p.fohlenBeiFuss) { nb.fohlen = p.fohlenBeiFuss; delete p.fohlenBeiFuss; }
+    quarantaeneNeu(nb);
     alterAktualisieren();
     aktBox = zb; spiel.aktBox = zb; speichern(); zeigeMarkt();
     dialog(`<h3>🏠 Willkommen, ${esc(p.name)}!</h3><p>${esc(p.name)} steht jetzt in Box ${zb + 1}${nb.fohlen ? ` – mit Fohlen ${esc(nb.fohlen.name)}` : ""}.</p>${p.verdecktGezeigt ? `<p>Beim Ankommen sieht der Tierarzt nach: Gesundheit <b>${p.pflege.gesundheit} %</b>.</p>` : ""}`);
@@ -7278,7 +7282,7 @@
     spiel = { geld: START_KAPITAL, spieler: c, tag: 1, tempo, tempoNeu: true, aktBox: 0, sparmodus: spiel.sparmodus, hofAusbau: HOF_AUSBAU,
       boxen: Array.from({ length: I.boxen }, (_, i) => ({ nr: i + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false, stufe: I.stufe })),
       anlage: spiel.anlage, ausruestung: spiel.ausruestung, stallarten: ["pension"],
-      hof: { hid: "h1", name, id: I.id, art: "pension", ha: I.ha, weideHa: I.weide, stufe: I.stufe, wert: I.preis, kauf: { tag: 1, preis: I.preis, eigen: I.eigen }, pacht: 0 }, hofReihe: ["h1"], hoefe: {} };
+      hof: { hid: "h1", name, id: I.id, art: "pension", ha: I.ha, weideHa: I.weide, bauHa: 1, stufe: I.stufe, wert: I.preis, kauf: { tag: 1, preis: I.preis, eigen: I.eigen }, pacht: 0 }, hofReihe: ["h1"], hoefe: {} };
     buchen(-I.preis, "Hofkauf");
     const k = kreditNeu(I.preis - I.eigen, KREDIT.jz, "Hofkredit");
     brief(KREDIT.bank, "Ihr Hofkredit", `herzlichen Glückwunsch zu {deinem|Ihrem} neuen Hof <b>${esc(name)}</b>! Hier die Eckdaten {deines|Ihres} Kredits:` +
@@ -7358,8 +7362,9 @@
       const stufe = V.boxen[1] ? (r() < .5 ? 1 : r() < .7 ? 2 : 3) : 0, boxen = V.boxen[1] ? ri(V.boxen[0] / 2, V.boxen[1] / 2) * 2 : 0, ha = ri(V.ha[0], V.ha[1]), weide = Math.round(ha * V.weide);
       let preis = ha * LAND_PREIS + (boxen ? MAKLER_PREIS.hofstelle + boxen * MAKLER_PREIS.box[stufe] : 0) + V.anlagen.reduce((a, k) => a + (MAKLER_PREIS[k] ? MAKLER_PREIS[k][stufe || 1] : 0), 0);
       preis = Math.round(preis * (0.9 + r() * 0.2) / 500) * 500;
-      return { mid: `m${j}-${i}`, typ: V.typ, n: V.n, bild: V.bild, boxen, stufe, ha, weide, anlagen: V.anlagen, preis,
-        text: boxen ? `${boxen} ${STUFE_ADJ[stufe]} Boxen · ${V.anlagen.map(k => ANLAGE_NAME[k]).concat(["Gelände"]).join(" · ")} · ${ha} ha, davon ${weide} ha Weide` : `${ha} ha Grünland – Stall, Reitplatz und Weiden baust du selbst` };
+      const bauha = Math.max(1, Math.ceil((0.2 + boxen * 0.1 / 6 + V.anlagen.reduce((a, k) => a + ({ reitplatz: .1, reithalle: .15 })[k], 0) + 0.1) * 2) / 2);
+      return { mid: `m${j}-${i}`, typ: V.typ, n: V.n, bild: V.bild, boxen, stufe, ha, weide, bauha, anlagen: V.anlagen, preis,
+        text: boxen ? `${boxen} ${STUFE_ADJ[stufe]} Boxen · ${V.anlagen.map(k => ANLAGE_NAME[k]).concat(["Gelände"]).join(" · ")} · ${ha} ha: ${haTxt(bauha)} Bauland, ${weide} ha Weide` : `${ha} ha, davon 1 ha Bauland – Stall, Reitplatz und Weiden baust du selbst` };
     });
     spiel.makler = { j, liste, gekauft: [] };
     return liste;
@@ -7463,7 +7468,7 @@
     const H = { geld: 0, boxen: Array.from({ length: A.boxen }, (_, i) => ({ nr: i + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false, stufe: A.stufe })),
       anlage: { stall: A.boxen > 0, paddock: false, weide: A.weide > 0, waschplatz: false, roundpen: false, reitplatz: A.anlagen.includes("reitplatz"), reithalle: A.anlagen.includes("reithalle"), gelaende: true, anhaenger: true },
       stallarten: ["pension"], mitarbeiter: [], futter: { lager: {}, warn: {} }, aktBox: 0,
-      hof: { hid, name, id: A.typ, art: "pension", ha: A.ha, weideHa: A.weide, stufe: A.stufe, wert: A.preis, kauf: { tag: spiel.tag, preis: A.preis, eigen }, pacht: 0 } };
+      hof: { hid, name, id: A.typ, art: "pension", ha: A.ha, weideHa: A.weide, bauHa: A.bauha || 1, stufe: A.stufe, wert: A.preis, kauf: { tag: spiel.tag, preis: A.preis, eigen }, pacht: 0 } };
     (spiel.hoefe = spiel.hoefe || {})[hid] = H; hofReihe().push(hid);
     imHof(hid, () => {
       buchen(-A.preis, "Hofkauf"); buchen(eigen, "Eigenanteil vom zentralen Konto");
@@ -7477,36 +7482,37 @@
   // ---------- Hofverwaltung → Hof: Bereiche Übersicht, Hofplan, Bauen, Land, Futterkammer ----------
   let hofBereich = "uebersicht";
   function hofplanSVG() {
-    const H = spiel.hof || {}, A = spiel.anlage || {}, ha = H.ha || 1, weide = H.weideHa || 0, frei = Math.max(0, ha - weide - 1), pacht = H.pacht || 0;
+    const H = spiel.hof || {}, A = spiel.anlage || {}, weide = H.weideHa || 0, frei = freiesLand(), pacht = H.pacht || 0, bh = bauHa();
     const n = spiel.boxen.length, belegt = spiel.boxen.filter(b => b.pferd).length;
     // Fläche als Kacheln: 1 Kachel = 1 ha (Hofstelle 1 ha, Weide, freies Land, Pachtland)
-    const kacheln = [["hof", 1], ["weide", weide], ["frei", frei], ["pacht", pacht]].flatMap(([t, x]) => Array.from({ length: Math.ceil(x) }, () => t));
+    const kacheln = [["hof", 1], ["bau", bh - 1], ["weide", weide], ["frei", frei], ["pacht", pacht]].flatMap(([t, x]) => Array.from({ length: Math.ceil(x - 1e-9) }, () => t));
     const sp = Math.min(6, Math.max(3, Math.ceil(Math.sqrt(kacheln.length * 1.6)))), zeilen = Math.ceil(kacheln.length / sp), K = 52;
-    const farbe = { hof: "#e9dcc3", weide: "#a9cf8a", frei: "#d9e8c4", pacht: "#cfe0b6" };
+    const farbe = { hof: "#e9dcc3", bau: "#efe6d4", weide: "#a9cf8a", frei: "#d9e8c4", pacht: "#cfe0b6" };
     const inhalt = (t, x, y) => t === "hof" ? `<rect x="${x + 4}" y="${y + 6}" width="${n ? 26 : 0}" height="16" fill="${(H.stufe || 1) === 1 ? "#c9a782" : "#e3c9a6"}" stroke="#8a6a4a"/>${n ? `<text x="${x + 17}" y="${y + 18}" font-size="8" text-anchor="middle" fill="#4a3426">${n}</text>` : ""}
         ${A.reitplatz ? `<rect x="${x + 4}" y="${y + 26}" width="20" height="14" rx="2" fill="#ecdcb8" stroke="#fff"/>` : ""}${A.reithalle ? `<rect x="${x + 26}" y="${y + 26}" width="22" height="20" fill="#dcd6cc" stroke="#9aa4ab"/>` : ""}${A.roundpen ? `<circle cx="${x + 40}" cy="${y + 14}" r="8" fill="#ecdcb8" stroke="#fff"/>` : ""}`
       : t === "weide" ? `<g stroke="#fffaf0" stroke-width="1.5" fill="none"><rect x="${x + 3}" y="${y + 3}" width="${K - 6}" height="${K - 6}" stroke-dasharray="4 3"/></g><text x="${x + K / 2}" y="${y + K / 2 + 4}" font-size="16" text-anchor="middle">🌿</text>`
-      : t === "pacht" ? `<text x="${x + K / 2}" y="${y + K / 2 + 3}" font-size="8" text-anchor="middle" fill="#5b6b45">Pacht</text>` : `<text x="${x + K / 2}" y="${y + K / 2 + 3}" font-size="8" text-anchor="middle" fill="#7b8a63">frei</text>`;
+      : t === "bau" ? `<text x="${x + K / 2}" y="${y + K / 2 + 3}" font-size="8" text-anchor="middle" fill="#8a6a4a">Bauland</text>` : t === "pacht" ? `<text x="${x + K / 2}" y="${y + K / 2 + 3}" font-size="8" text-anchor="middle" fill="#5b6b45">Pacht</text>` : `<text x="${x + K / 2}" y="${y + K / 2 + 3}" font-size="8" text-anchor="middle" fill="#7b8a63">frei</text>`;
     const svg = `<svg class="hofplan" viewBox="-4 -4 ${sp * K + 8} ${zeilen * K + 8}" role="img" aria-label="Hofplan">${kacheln.map((t, i) => { const x = (i % sp) * K, y = Math.floor(i / sp) * K;
       return `<rect x="${x}" y="${y}" width="${K - 2}" height="${K - 2}" rx="6" fill="${farbe[t]}" ${t === "pacht" ? 'stroke="#9fb37f" stroke-dasharray="3 2"' : ""}/>${inhalt(t, x, y)}`; }).join("")}</svg>`;
-    return `${svg}<div class="hofplan-legende"><span><i style="background:${farbe.hof}"></i>Hofstelle (1 ha): ${n ? `Stall mit ${n} Boxen (${belegt} belegt, Stufe ${H.stufe || 1})` : "noch kein Stall"}${A.reitplatz ? ", Reitplatz" : ""}${A.reithalle ? ", Reithalle" : ""}${A.roundpen ? ", Roundpen" : ""}</span>
-      <span><i style="background:${farbe.weide}"></i>Weide: ${String(weide).replace(".", ",")} ha (reicht für etwa ${Math.floor(weide / 0.5)} Großpferde)</span><span><i style="background:${farbe.frei}"></i>freies Land: ${String(frei).replace(".", ",")} ha</span>${pacht ? `<span><i style="background:${farbe.pacht}"></i>Pachtland: ${pacht} ha</span>` : ""}<span>🌲 Gelände zum Ausreiten rund um den Hof</span>${gebaeude().length ? `<span>🏗️ ${gebaeude().map(g => `${gebName(g)}${g.bau ? " (im Bau)" : g.stufe ? ` (Stufe ${g.stufe})` : ""}`).join(", ")}</span>` : ""}</div>`;
+    return `${svg}<div class="hofplan-legende"><span><i style="background:${farbe.hof}"></i>Bauland ${haTxt(bh)} (belegt ${haTxt(baulandBelegt())}, frei ${haTxt(baulandFrei())}): ${n ? `Stall mit ${n} Boxen (${belegt} belegt, Stufe ${H.stufe || 1})` : "noch kein Stall"}${A.reitplatz ? ", Reitplatz" : ""}${A.reithalle ? ", Reithalle" : ""}${A.roundpen ? ", Roundpen" : ""}</span>
+      <span><i style="background:${farbe.weide}"></i>Weide: ${String(weide).replace(".", ",")} ha (reicht für etwa ${Math.floor(weide / 0.5)} Großpferde)</span><span><i style="background:${farbe.frei}"></i>freies Weideland: ${haTxt(frei)}</span>${pacht ? `<span><i style="background:${farbe.pacht}"></i>Pachtland: ${pacht} ha</span>` : ""}<span>🌲 Gelände zum Ausreiten rund um den Hof</span>${gebaeude().length ? `<span>🏗️ ${gebaeude().map(g => `${gebName(g)}${g.bau ? " (im Bau)" : g.stufe ? ` (Stufe ${g.stufe})` : ""}`).join(", ")}</span>` : ""}</div>`;
   }
   function landHTML() {
     const H = spiel.hof || {};
-    return `<dl class="werte"><dt>Eigenes Land</dt><dd>${String(H.ha).replace(".", ",")} ha (Hofstelle 1 ha, Weide ${String(H.weideHa).replace(".", ",")} ha, frei ${String(Math.max(0, H.ha - H.weideHa - 1)).replace(".", ",")} ha)</dd>
-        <dt>Pachtland</dt><dd>${H.pacht || 0} ha${H.pacht ? ` · ${fmt(H.pacht * PACHT_PREIS)} je Jahreszeit` : ""}</dd><dt>Kasse</dt><dd>${fmt(spiel.geld || 0)}</dd></dl>
-      <p class="text" style="margin:8px 0 6px">Land kaufen kostet <b>${fmt(LAND_PREIS)} je ha</b> (erhöht den Hofwert und damit den Kreditrahmen). Pachten kostet <b>${fmt(PACHT_PREIS)} je ha und Jahreszeit</b> (zu Beginn jeder Jahreszeit). Neues Land ist erst einmal freies Grünland – zur Weide wird es durch Einzäunen (kommt mit dem Bauen, Etappe H3).</p>
-      <div class="kr-wahl"><label>Fläche <select id="landHa">${[1, 2, 3, 4, 5].map(x => `<option value="${x}">${x} ha</option>`).join("")}</select></label></div>
-      <div class="land-knoepfe"><button class="knopf" id="landKauf">🏷️ Kaufen</button><button class="knopf zweit" id="landPacht">📝 Pachten</button>${H.pacht ? `<button class="knopf zweit" id="landPachtWeg">Pacht kündigen</button>` : ""}</div>`;
+    return `<dl class="werte"><dt>Bauland</dt><dd>${haTxt(bauHa())} (belegt ${haTxt(baulandBelegt())}, frei ${haTxt(baulandFrei())})</dd>
+        <dt>Weideland</dt><dd>${haTxt(weideland())} (Weide eingezäunt ${haTxt(H.weideHa || 0)}, frei ${haTxt(freiesLand())})</dd>
+        <dt>Pachtland</dt><dd>${H.pacht || 0} ha Weideland${H.pacht ? ` · ${fmt(H.pacht * PACHT_PREIS)} je Jahreszeit` : ""}</dd><dt>Kasse</dt><dd>${fmt(spiel.geld || 0)}</dd></dl>
+      <p class="text" style="margin:8px 0 6px"><b>Bauland</b> (für Gebäude, Reitplätze, Hofplatz) kostet <b>${fmt(BAULAND_PREIS)} je ha</b>. <b>Weideland</b> kostet <b>${fmt(LAND_PREIS)} je ha</b> oder <b>${fmt(PACHT_PREIS)} je ha und Jahreszeit</b> Pacht. Gekauftes Land erhöht den Hofwert (Kreditrahmen). Weideland wird zur Weide durch Einzäunen (Hof → Bauen).</p>
+      <div class="kr-wahl"><label>Landart <select id="landArt"><option value="weide">Weideland</option><option value="bau">Bauland</option></select></label><label>Fläche <select id="landHa">${[0.5, 1, 2, 3, 4, 5].map(x => `<option value="${x}" ${x === 1 ? "selected" : ""}>${haTxt(x)}</option>`).join("")}</select></label></div>
+      <div class="land-knoepfe"><button class="knopf" id="landKauf">🏷️ Kaufen</button><button class="knopf zweit" id="landPacht">📝 Weideland pachten</button>${H.pacht ? `<button class="knopf zweit" id="landPachtWeg">Pacht kündigen</button>` : ""}</div>`;
   }
   function landBinden(danach) {
-    const H = spiel.hof, ha = () => +$("landHa").value;
-    if ($("landKauf")) $("landKauf").onclick = () => { const x = ha(), b = x * LAND_PREIS;
-      if ((spiel.geld || 0) < b) { dialog(`<h3>Zu wenig Geld</h3><p>${x} ha kosten ${fmt(b)} – in der Kasse sind ${fmt(spiel.geld || 0)}.</p>`); return; }
-      dialog(`<h3>🏷️ ${x} ha Land kaufen?</h3><p>Kosten: <b>${fmt(b)}</b>. Der Hofwert steigt um ${fmt(b)}.</p>`, [["Kaufen", () => { buchen(-b, "Land kaufen"); H.ha += x; H.wert += b; speichern(); danach(); }], ["Abbrechen", null, "zweit"]]); };
+    const H = spiel.hof, ha = () => +$("landHa").value, bau = () => $("landArt").value === "bau";
+    if ($("landKauf")) $("landKauf").onclick = () => { const x = ha(), b = x * (bau() ? BAULAND_PREIS : LAND_PREIS), art = bau() ? "Bauland" : "Weideland";
+      if ((spiel.geld || 0) < b) { dialog(`<h3>Zu wenig Geld</h3><p>${haTxt(x)} ${art} kosten ${fmt(b)} – in der Kasse sind ${fmt(spiel.geld || 0)}.</p>`); return; }
+      dialog(`<h3>🏷️ ${haTxt(x)} ${art} kaufen?</h3><p>Kosten: <b>${fmt(b)}</b>. Der Hofwert steigt um ${fmt(b)}.</p>`, [["Kaufen", () => { const w = bau(); buchen(-b, `Land kaufen (${art})`); bauHa(); H.ha = runde2(H.ha + x); if (w) H.bauHa = runde2(H.bauHa + x); H.wert += b; speichern(); danach(); }], ["Abbrechen", null, "zweit"]]); };
     if ($("landPacht")) $("landPacht").onclick = () => { const x = ha();
-      dialog(`<h3>📝 ${x} ha Land pachten?</h3><p>Die Pacht kostet <b>${fmt(x * PACHT_PREIS)} je Jahreszeit</b> und wird zu Beginn jeder Jahreszeit abgebucht.</p>`, [["Pachten", () => { H.pacht = (H.pacht || 0) + x; speichern(); danach(); }], ["Abbrechen", null, "zweit"]]); };
+      dialog(`<h3>📝 ${haTxt(x)} Weideland pachten?</h3><p>Die Pacht kostet <b>${fmt(x * PACHT_PREIS)} je Jahreszeit</b> und wird zu Beginn jeder Jahreszeit abgebucht.</p>`, [["Pachten", () => { H.pacht = runde2((H.pacht || 0) + x); speichern(); danach(); }], ["Abbrechen", null, "zweit"]]); };
     if ($("landPachtWeg")) $("landPachtWeg").onclick = () => dialog(`<h3>Pacht kündigen?</h3><p>Die ganze Pacht (${H.pacht} ha) endet sofort.</p>`, [["Kündigen", () => { H.pacht = 0; speichern(); danach(); }], ["Abbrechen", null, "zweit"]]);
   }
   // ---------- Pferdeanhänger → Eigener Hof (Umzug zwischen eigenen Höfen) ----------
@@ -7576,7 +7582,7 @@
   const bauTage = z => z === "kurz" ? Math.max(1, Math.round(tpj() * 0.3)) + (Math.random() < .5 ? 1 : 0) : z === "halle" ? Math.round((2 + Math.random()) * tpj()) : Math.max(1, Math.round(z * tpj()));
   const gebName = g => `${BAUTEN[g.typ].n}${g.anbau ? " (Anbau)" : ""}${g.ha ? ` ${g.ha} ha` : ""}`;
   const imBau = () => gebaeude().filter(g => g.bau);
-  const freiesLand = () => { const H = spiel.hof || {}; return Math.max(0, (H.ha || 0) - (H.weideHa || 0) - 1 - imBau().filter(g => g.typ === "weide").reduce((a, g) => a + g.ha, 0)); };
+  const freiesLand = () => { const H = spiel.hof || {}; return Math.max(0, weideland() - (H.weideHa || 0) - imBau().filter(g => g.typ === "weide").reduce((a, g) => a + g.ha, 0)); };
   const boxenStufe = b => b.stufe || (spiel.hof && spiel.hof.stufe) || 1;
   const gebZustand = b => { const g = b.geb && gebaeude().find(x => x.gid === b.geb); return g ? g.zustand : 80; };
   // Stall-Stufe des Hofs: Durchschnitt der Boxen
@@ -7591,11 +7597,13 @@
     const B = BAUTEN[typ]; if (B.nur) return `nur ${B.nur}`;
     if (B.einmal && gebaeude().some(g => g.typ === typ)) return typ === "heudampfer" ? "schon vorhanden" : "schon gebaut";
     if (typ === "heudampfer" && !gebaeude().some(g => g.typ === "lager" && !g.bau)) return "braucht das Futter- und Strohlager";
-    if (typ === "weide" && freiesLand() < 1) return "kein freies Land (Hof → Land)";
+    if (typ === "weide" && freiesLand() < 1) return "kein freies Weideland (Hof → Land)";
+    if (platzVon(typ) > baulandFrei() + 1e-9) return "zu wenig Bauland (Hof → Land)";
     return "";
   }
   function bauStarten(typ, stufe, opt = {}) {
     const B = BAUTEN[typ], preis = bauPreis(typ, stufe, opt);
+    if (platzVon(typ, opt.boxen) > baulandFrei() + 1e-9) { dialog(`<h3>Zu wenig Bauland</h3><p>${B.n.replace(/\u00ad/g, "")} braucht ${haTxt(platzVon(typ, opt.boxen))} Bauland, frei sind nur ${haTxt(baulandFrei())}. Bauland kaufst du unter Hof → Land.</p>`); return false; }
     if (!spiel.admin && (spiel.geld || 0) < preis) { dialog(`<h3>Zu wenig Geld</h3><p>Der Bau kostet ${fmt(preis)} – in der Kasse sind ${fmt(spiel.geld || 0)}.</p>`); return false; }
     if (!spiel.admin) buchen(-preis, `Bau: ${B.n}`);
     if (typ === "heudampfer") { gebaeude().push({ gid: "g" + Math.random().toString(36).slice(2, 8), typ, stufe: 0, zustand: 100, preis }); (spiel.anlage = spiel.anlage || {}).heudampfer = true; return true; }
@@ -7677,7 +7685,7 @@
     const G = gebaeude(), stufenKn = g => "";
     const bar = z => `<div class="kr-balken geb-balken"><i style="width:${Math.round(z)}%;background:${z < 40 ? "#c0503a" : z < 70 ? "#d9a441" : "#6aa84f"}"></i></div>`;
     const steht = G.filter(g => !g.bau), bau = G.filter(g => g.bau);
-    return `<p class="text" style="margin:0 0 6px">Kasse: <b>${fmt(spiel.geld || 0)}</b> · Unterhalt: ${prozent(UNTERHALT)} des Baupreises je Jahreszeit (${fmt(Math.round(G.filter(g => g.typ !== "heudampfer").reduce((a, g) => a + (g.preis || 0), 0) * UNTERHALT))}) · Stufe 1 verfällt schneller.</p>
+    return `<p class="text" style="margin:0 0 6px">Kasse: <b>${fmt(spiel.geld || 0)}</b> · Bauland frei: <b>${haTxt(baulandFrei())}</b> von ${haTxt(bauHa())} · Unterhalt: ${prozent(UNTERHALT)} des Baupreises je Jahreszeit (${fmt(Math.round(G.filter(g => g.typ !== "heudampfer").reduce((a, g) => a + (g.preis || 0), 0) * UNTERHALT))}) · Stufe 1 verfällt schneller.</p>
       ${bau.length ? `<h4 class="ma-titel">🏗️ Im Bau</h4>${bau.map(g => `<div class="geb"><span class="geb-ico">${BAUTEN[g.typ].ico}</span><span class="geb-txt"><b>${gebName(g)}</b><small>${g.bau.art === "umbau" ? `Umbau auf Stufe ${g.stufe + 1}` : `Stufe ${g.stufe} – ${STUFE_NAME[g.stufe]}`} · noch ${tageTxt2(g.bau.rest)}${BAUTEN[g.typ].aussen && datum().s === 3 ? " · ❄️ ruht im Winter" : ""}</small></span></div>`).join("")}` : ""}
       <h4 class="ma-titel">🏠 Gebäude und Anlagen</h4>${steht.length ? steht.map(g => { const B = BAUTEN[g.typ], us = g.typ === "heudampfer" ? "" : umbauSperre(g), rp = reparaturPreis(g);
         return `<div class="geb"><span class="geb-ico">${B.ico}</span><span class="geb-txt"><b>${gebName(g)}</b><small>${g.typ === "heudampfer" ? "fertig" : `Stufe ${g.stufe} – ${STUFE_NAME[g.stufe]}${g.boxen ? ` · ${g.boxen} ${g.boxen === 1 ? "Box" : "Boxen"}` : ""} · Zustand ${Math.round(g.zustand)} %`}</small>${g.typ === "heudampfer" ? "" : bar(g.zustand)}
@@ -7694,7 +7702,7 @@
     dialog(`<h3>${B.ico} ${von ? `Anbau: ${B.n}` : B.n}</h3><p style="margin-top:0">${B.info}.</p>
       ${mengen ? `<div class="kr-wahl"><label>${B.jeHa ? "Fläche" : "Boxen"} <select id="bauMenge">${mengen.map(x => `<option value="${x}" ${x === menge ? "selected" : ""}>${x}${B.jeHa ? " ha" : ""}</option>`).join("")}</select></label></div>` : ""}
       <div class="bau-stufen">${[1, 2, 3].map(s => `<button class="bau-stufe ${s === stufe ? "an" : ""}" data-bst="${s}"><b>Stufe ${s}</b><small>${STUFE_NAME[s]}</small><span>${fmt(bauPreis(typ, s, opt))}</span></button>`).join("")}</div>
-      <p style="margin-bottom:0"><small>Bauzeit (Standardtempo): ${tage(B.zeit)}${B.aussen ? " · Außenarbeit: ruht im Winter" : ""} · Höhere Stufe: mehr Wohlbefinden, weniger Verletzungen, zufriedenere Mitarbeiter, später höherer Pensionspreis, langsamerer Verfall.</small></p>`,
+      <p style="margin-bottom:0"><small>${platzVon(typ, opt.boxen) ? `Platz: ${haTxt(platzVon(typ, opt.boxen))} Bauland (frei ${haTxt(baulandFrei())}) · ` : ""}Bauzeit (Standardtempo): ${tage(B.zeit)}${B.aussen ? " · Außenarbeit: ruht im Winter" : ""} · Höhere Stufe: mehr Wohlbefinden, weniger Verletzungen, zufriedenere Mitarbeiter, später höherer Pensionspreis, langsamerer Verfall.</small></p>`,
       [["🏗️ Bauen", () => { if (bauStarten(typ, stufe, opt)) { speichern(); zeigeHof(); } }], ["Abbrechen", null, "zweit"]], "breit");
     document.querySelectorAll("[data-bst]").forEach(b => b.onclick = () => bauDialog(typ, anbauVon, +b.dataset.bst, menge));
     if ($("bauMenge")) $("bauMenge").onchange = () => bauDialog(typ, anbauVon, stufe, +$("bauMenge").value);
@@ -7709,6 +7717,38 @@
     nb.querySelectorAll("[data-rep]").forEach(b => b.onclick = () => { const g = G.find(x => x.gid === b.dataset.rep), k = reparaturPreis(g);
       dialog(`<h3>🔧 ${gebName(g)} reparieren</h3><p>Ein Handwerker bringt den Zustand von ${Math.round(g.zustand)} % auf 100 %. Kosten: <b>${fmt(k)}</b> (je 10 Punkte 2 % des Baupreises).</p>`,
         [["Handwerker bestellen", () => { if (!spiel.admin && (spiel.geld || 0) < k) { dialog(`<h3>Zu wenig Geld</h3><p>In der Kasse sind ${fmt(spiel.geld || 0)}.</p>`); return; } if (!spiel.admin) buchen(-k, "Handwerker"); g.zustand = 100; speichern(); zeigeHof(); }], ["Abbrechen", null, "zweit"]]); });
+  }
+  // ---------- Bauland und Weideland (Dome, v225): Gebäude brauchen Bauland, Weiden nur Weideland ----------
+  const BAULAND_PREIS = 3000, HOFPLATZ = 0.2;   // Wohnhaus und Hofplatz
+  const PLATZ = { stall: 0.1 / 6, paddock: 0.15 / 6, reitplatz: 0.1, reithalle: 0.15, roundpen: 0.05, trail: 0.05, sandpaddock: 0.05, waschplatz: 0.05, lager: 0.05, sattelkammer: 0.05, quarantaene: 0.05, abfohlbox: 0.05 };
+  const platzVon = (typ, boxen) => typ === "stall" || typ === "paddock" ? PLATZ[typ] * (boxen || BAUTEN[typ].boxen) : PLATZ[typ] || 0;
+  const bauHa = () => !spiel.hof ? 1 : spiel.hof.bauHa != null ? spiel.hof.bauHa : (spiel.hof.bauHa = 1);
+  const baulandBelegt = () => runde2(HOFPLATZ + gebaeude().reduce((a, g) => a + platzVon(g.typ, g.boxen), 0));
+  const baulandFrei = () => Math.max(0, runde2(bauHa() - baulandBelegt()));
+  const weideland = () => Math.max(0, ((spiel.hof && spiel.hof.ha) || 0) - bauHa());
+  const haTxt = x => `${String(Math.round(x * 100) / 100).replace(".", ",")} ha`;
+  // ---------- Neuzugänge in den Quarantänestall (v225) ----------
+  function neuzugangBox() { const q = spiel.boxen.findIndex(b => b.quar && boxFrei(b)); return q >= 0 ? q : zielBox(); }
+  function quarantaeneNeu(nb) { if (nb && nb.quar && nb.pferd) nb.pferd.quarantaene = spiel.tag; }
+  // nach der Quarantäne (1 Jahreszeit, ohne bekannte ansteckende Krankheit) zieht das Pferd in eine normale freie Box
+  function quarantaeneUmzug() {
+    spiel.boxen.forEach((b, i) => { const p = b.pferd;
+      if (!b.quar || !p || b.tot || p.klinik || p.weide || p.turnier || inQuarantaene(p) || bekannteBefunde(p).some(x => ANSTECKEND[x.art])) return;
+      const z = spiel.boxen.findIndex(x => !x.quar && boxFrei(x)); if (z < 0) return;
+      const nb = spiel.boxen[z]; nb.pferd = p; if (b.fohlen) nb.fohlen = b.fohlen; nb.krippeVoll = b.krippeVoll; nb.mistig = false; nb.mistStufe = 0; nb.tot = false;
+      b.pferd = null; delete b.fohlen; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0;
+      brief("Hofverwaltung", `${p.name} hat die Quarantäne verlassen`, `<b>${esc(p.name)}</b> hat die Quarantäne gesund überstanden und ist vom Quarantänestall (Box ${i + 1}) in Box ${z + 1} umgezogen.`, { pferde: [p] });
+    });
+  }
+  // ---------- Hufrehe-Warnung im Frühling (v225, aus H6) ----------
+  const reheGefaehrdet = p => LEICHTFUTTRIG.includes(p.rasse) || (p.fz || 5) >= 7 || (p.befundAlt || []).some(b => b.art === "hufrehe" || b.art === "cushing")
+    || befundListe(p).some(b => (b.art === "hufrehe" || b.art === "cushing") && (b.diagnose || b.bemerkt));
+  const reheGrund = p => (p.befundAlt || []).some(b => b.art === "hufrehe") || befundListe(p).some(b => b.art === "hufrehe" && (b.diagnose || b.bemerkt)) ? "hatte schon Hufrehe"
+    : befundListe(p).concat(p.befundAlt || []).some(b => b.art === "cushing") ? "hat Cushing" : (p.fz || 5) >= 7 ? "ist zu dick" : `ist als ${rasseById(p.rasse).name.replace(/ \(.*\)/, "")} leichtfuttrig`;
+  function reheJahreszeit() {
+    if (datum().s !== 0) return;
+    const l = spiel.boxen.filter(b => b.pferd && !b.tot && b.pferd.weide && reheGefaehrdet(b.pferd)).map(b => b.pferd); if (!l.length) return;
+    brief("Tierarztpraxis", "Hufrehe-Gefahr im Frühling", `das junge Frühlingsgras ist sehr zucker- und eiweißreich. Für ${l.map(p => `<b>${esc(p.name)}</b> (${reheGrund(p)})`).join(", ")} ist die Weide jetzt gefährlich – Hufrehe droht. {Stell sie|Stellen Sie sie} lieber ${spiel.anlage && spiel.anlage.paddock ? "auf den Sandpaddock oder " : ""}in die Box oder nur stundenweise auf die Weide.`, { pferde: l });
   }
   // Finanzen → Bank
   let finanzTab = "konto";
@@ -7850,6 +7890,9 @@
       <p><b>Bauzeit</b> (Standardtempo, je nach Tempo anteilig): kurz 2–3 Tage (Roundpen, Trail, Weide einzäunen, Sandpaddock, Waschplatz), ½ Jahreszeit (Paddockboxen, Sattelkammer, Abfohlbox), 1 Jahreszeit (Stall und Anbau, Reitplatz, Lager, Quarantänestall), Reithalle 2–3 Jahreszeiten. Außenarbeiten (Reitplatz, Roundpen, Trail, Weide, Sandpaddock) ruhen im Winter. Bezahlt wird beim Auftrag; der Hofwert steigt um den Baupreis. Heudampfer nur mit Futterlager, sofort. Lager: Futterkammer ${LAGER_START.toLocaleString("de-DE")} kg + ${BAUTEN.lager.platz.map(x => x.toLocaleString("de-DE")).join(" / ")} kg.</p>
       <p><b>Umbau</b> eine Stufe höher: Preisunterschied + ${prozent(UMBAU_AUFSCHLAG)}, halbe Bauzeit, je Abschnitt (Erstbau und jeder Anbau einzeln); die Boxen müssen leer sein und sind gesperrt. <b>Unterhalt</b> ${prozent(UNTERHALT)} des Baupreises je Jahreszeit. <b>Verfall</b> je Jahreszeit Stufe 1/2/3: −${VERFALL.slice(1).join(" / −")} Zustand; Warnbrief unter 40 %. <b>Reparatur:</b> Handwerker sofort auf 100 %, je 10 Punkte 2 % des Baupreises; Hofhelfer (${fmt(MA_TYP.hofhelfer.gehalt)}/Jz) +${HOFHELFER_REPARATUR} Punkte je Arbeitstag am schlechtesten Gebäude.</p>
       <p><b>Wirkung der Stufe:</b> Wohlbefinden je Nacht in der Box: Stufe 1 −0,5, Stufe 3 +0,5, Zustand unter 40 % −0,5, Paddockbox +0,5. Verletzungsrisiko in der Box × 1,3 / 1 / 0,8, Zustand unter 70 % × 1,1, unter 40 % × 1,3. Mitarbeiter-Zufriedenheit je Jahreszeit: Ø Stufe unter 1,5 −3, ab 2,5 +3, Ø Zustand unter 50 % −3. Quarantänestall: Pferde dort stecken niemanden an und werden nicht angesteckt. Pensionspreis nach Stufe kommt mit H5.</p>
+      <p><b>Bauland und Weideland</b> (Dome, v225): Bauland ${fmt(BAULAND_PREIS)}/ha (nur kaufen), Weideland ${fmt(LAND_PREIS)}/ha oder Pacht ${fmt(PACHT_PREIS)}/ha je Jahreszeit. Platzbedarf auf dem Bauland: Wohnhaus/Hofplatz ${haTxt(HOFPLATZ)}, Stall ${haTxt(0.1)} je 6 Boxen, Paddockboxen ${haTxt(0.15)} je 6, Reitplatz ${haTxt(0.1)}, Reithalle ${haTxt(0.15)}, Roundpen/Trail/Sandpaddock/Waschplatz/Lager/Sattelkammer/Quarantänestall/Abfohlbox je ${haTxt(0.05)}. Weide einzäunen nur auf Weideland. Start-Pensionsstall: 1 ha Bauland + 1 ha Weideland. Makler-Höfe: Bauland nach Bestand + 0,1 ha, auf ½ ha aufgerundet; Grundstück 1 ha Bauland.
+        <b>Quarantänestall:</b> gekaufte Pferde (Markt, Auktion, Tierschutz) kommen zuerst in eine freie Quarantänebox und stehen 1 Jahreszeit unter Quarantäne; danach ziehen sie – ohne bekannte ansteckende Krankheit – automatisch in eine freie normale Box (Brief). Normale Umzüge nutzen den Quarantänestall nur, wenn sonst nichts frei ist.
+        <b>Hufrehe-Warnung</b> im Frühling für gefährdete Pferde (leichtfuttrige Rassen ${LEICHTFUTTRIG.join(", ")}, Futterzustand ab 7, Hufrehe oder Cushing bekannt): Hinweis beim Weidegang und Brief zu Frühlingsbeginn für alle gefährdeten Pferde auf der Weide.</p>
       <p><b>Zentrales Konto</b> (Immobilien → Verwaltung): Überweisungen von jedem Hof und an jeden Hof (Dome, v224), Eigenanteil neuer Höfe kommt von dort (neue Höfe starten mit 0 €). Briefe anderer Höfe: roter Umschlag links neben dem gelben, Post aller Höfe in der Verwaltung. Warnbrief, wenn auf einem anderen Hof Pferde nicht gefüttert oder gemistet wurden.</p>
       <h3>🌾 Fütterung (F1: Futterkammer)</h3>
       <p>Futterkammer: Hofverwaltung → Hof → Futterkammer und Futterhandel (Dome: Lieferung am nächsten Morgen; Warnbrief bei leerer Kammer nur, wenn ein Mitarbeiter oder das Turnier füttert – wer selbst füttert, sieht es sofort). Platz ${LAGER_START.toLocaleString("de-DE")} kg (Salzlecksteine zählen nicht), wird mit dem Hof-Ausbau größer. Startvorrat (neues Spiel und alte Spielstände): Heu für 14 Tage (10 kg je Pferd), 3 kg Mineralfutter, 1 Leckstein je Pferd. Gekauft wird sofort, bezahlt wird sofort (Finanzen: „Futter“).</p>
@@ -7884,7 +7927,7 @@
       <p><b>Marktpferde und Deckhengste</b> mit Ausbildung (ab 4 J., Training über 20) haben schon Turniere hinter sich: (Alter − 3) × 1–3,5 Starts (höchstens 20) in ihrer besten Disziplin (Dressur, Springen, Reining, Trail), Klasse nach Disziplin-Wert, platziert mit 25 % + 3 % je Punkt über dem Feld (5–85 %), davon 35 % Siege. Die Erfolge stehen in der Akte („beim Vorbesitzer“) und heben Preis und Decktaxe (10 % des Marktwerts).</p>
       <p><b>Erfolge</b> (Akte → Ausbildung) erhöhen den Marktwert: Sieg ${ERFOLG_WERT.join("/")} € (E–S), Platzierung die Hälfte, Großes Turnier ×1,3, höchstens 15.000 €.</p>
       <h3>🏋️ Training daheim</h3>
-      <p><b>Orte:</b> Spieler: Reitplatz und Gelände (Bodenarbeit, Freiarbeit, Longieren, Stangen auch auf dem Reitplatz). Roundpen und Reithalle kommen mit dem Hof-Ausbau (🛠️ Admin: alle offen). Reitplatz/Roundpen bei Regen, Schnee oder im Winter ×0,7. Reithalle wetterunabhängig, bei Regen/Schnee wählt der Bereiter sie automatisch; scheue/nervöse Pferde mögen sie oft nicht (×0,85).</p>
+      <p><b>Orte:</b> Spieler: Reitplatz und Gelände (Bodenarbeit, Freiarbeit, Longieren, Stangen auch auf dem Reitplatz). Roundpen und Reithalle baust du unter Hofverwaltung → Hof → Bauen (🛠️ Admin: alle offen). Reitplatz/Roundpen bei Regen, Schnee oder im Winter ×0,7. Reithalle wetterunabhängig, bei Regen/Schnee wählt der Bereiter sie automatisch; scheue/nervöse Pferde mögen sie oft nicht (×0,85).</p>
       ${verTab(["Übung", "Ort", "ab", "⚡", "Ausbildungsskala", "Werte"], Object.values(UEBUNG).map(U => [U.ico + " " + U.n.replace(/\u00ad/g, ""), ({ boden: "Roundpen/Platz/Halle", platz: "Platz/Halle", gelaende: "Gelände" })[U.wo], jzAlterTxt(U.ab).replace("Monaten", "Mon.").replace("Jahren", "J.").replace("Jahr", "J."), U.e,
         Object.entries(U.sk || {}).map(([i, x]) => AUSBILDUNG[i] + " " + String(x).replace(".", ",")).join(", ") || "–", Object.entries(U.w).map(([k, x]) => ((WERTE_KOERPER.concat(WERTE_KOPF).find(w => w.key === k) || {}).titel || k) + " " + String(x).replace(".", ",")).join(", ") + (U.gang ? ", Gangwerk +0,02" : "")]))}
       <p><b>Tempo (v208):</b> Skala × 2,2 (vorher 2,5), Ausbildungsstall × 2,2, Werte × 1,5, eigener Disziplin-Stand × 1, alles × 7 / Tage pro Jahreszeit. <b>Töltarbeit</b> (ab 4 J., nur mit Tölt) und <b>Passtraining</b> (ab 5 J., nur mit Pass) heben die gezeigte Tölt- bzw. Passnote um bis zu +1 (0,02 × Faktor je Einheit, in halben Noten).</p>
@@ -8014,7 +8057,7 @@
       else inhalt += `<dl class="werte">
         <dt>Hof</dt><dd class="hf-edit" id="hfHof" title="antippen zum Ändern">${esc(hofName())} <span class="stift">✏️</span></dd>
         ${spiel.hof ? `<dt>Immobilie</dt><dd>${esc((immobilie(spiel.hof.id) || {}).n || "")} · ${STALLART_NAME[spiel.hof.art] || ""}</dd>
-        <dt>Fläche</dt><dd>${String(spiel.hof.ha).replace(".", ",")} ha (davon ${String(spiel.hof.weideHa).replace(".", ",")} ha Weide)</dd>
+        <dt>Fläche</dt><dd>${haTxt(spiel.hof.ha)} (Bauland ${haTxt(bauHa())}, Weideland ${haTxt(weideland())}, davon Weide ${haTxt(spiel.hof.weideHa || 0)})</dd>
         <dt>Zustand</dt><dd>Stufe ${spiel.hof.stufe} – ${STUFE_NAME[spiel.hof.stufe]}</dd>
         <dt>Anlagen</dt><dd>${anlagenText()}</dd>
         ${kredite().some(kreditLaeuft) ? `<dt>Kredit</dt><dd>Restschuld ${fmt(restschuld())}${kredite().some(k => (k.offen || []).length) ? " · ⚠️ Rate offen" : ""}</dd>` : ""}` : ""}

@@ -929,9 +929,11 @@ function ausbildungsWerte(pferd) {
   const basis = a < 3 ? 0 : Math.min(95, (pferd.training || 0) * 0.9) * w.talent;
   // Skala der Ausbildung: jede Stufe baut auf der vorigen auf – sie beginnt erst zu steigen,
   // wenn die vorige mindestens 20 % erreicht hat, und kann sie nicht überholen
+  // seit Training daheim (Etappe 4): jede Stufe einzeln gespeichert in pferd.skala (sonst wie bisher aus den Tagen im Ausbildungsstall)
+  const sk = Array.isArray(pferd.skala) ? pferd.skala : null;
   let vorher = 100;
   return AUSBILDUNG.map((name, i) => {
-    let v = basis * (1.12 - i * 0.13) * Math.pow(pr.dress, i / 4) + (basis > 0 ? w.streuung[i] : 0);
+    let v = sk ? (sk[i] || 0) : basis * (1.12 - i * 0.13) * Math.pow(pr.dress, i / 4) + (basis > 0 ? w.streuung[i] : 0);
     v = Math.max(0, Math.min(97, v));
     if (i > 0) v = Math.min(v, Math.max(0, (vorher - 20) / 80 * 100), vorher);
     vorher = v;

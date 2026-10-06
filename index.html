@@ -378,6 +378,10 @@
   details.disz { margin: 4px 0; } details.disz summary { list-style: none; cursor: pointer; padding: 4px 0; } details.disz summary::-webkit-details-marker { display: none; }
   .disz-kopf { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; margin-bottom: 4px; } .disz-kopf span { color: var(--leise); white-space: nowrap; }
   details.disz[open] summary .disz-kopf b::after { content: " ▾"; color: var(--leise); } details.disz:not([open]) summary .disz-kopf b::after { content: " ▸"; color: var(--leise); }
+  details.t-karte { border: 1.5px solid #e2d3b5; border-radius: 10px; padding: 6px 10px; margin: 6px 0; background: #fffaf0; } details.t-karte summary { cursor: pointer; display: flex; flex-direction: column; }
+  details.t-karte summary small { color: var(--leise); } .tp-liste { list-style: none; padding: 0; margin: 6px 0 0; }
+  .tp-zeile { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 5px 0; border-top: 1px solid #efe4cf; } .tp-zeile > span:first-child { display: flex; flex-direction: column; min-width: 0; } .tp-zeile small { color: var(--leise); font-size: 11px; }
+  .tp-zeile .stat { font-size: 11px; text-align: right; white-space: nowrap; } .turnier-dlg .dlg-inhalt, .dlg-karte.turnier-dlg { max-width: 560px; }
   .disz-gruppe { margin: 12px 0 2px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--holz); font-weight: 700; }
   .zeile-wert .kopf { display: flex; justify-content: space-between; font-size: .92rem; margin-bottom: 4px; }
   .zeile-wert .kopf b { font-weight: 700; }
@@ -785,7 +789,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "201";
+  const SPIEL_VERSION = "202";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -793,9 +797,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=201"></script>
-<script src="kopfteile.js?v=201"></script>
-<script src="kopfalter.js?v=201"></script>
+<script src="pferd.js?v=202"></script>
+<script src="kopfteile.js?v=202"></script>
+<script src="kopfalter.js?v=202"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1503,6 +1507,7 @@
   function zuchtSperre(p, box) {
     if (p.klinik) return "in der Klinik";
     if (p.weide) return "auf der Weide";
+    if (p.turnier) return "auf dem Turnier";
     if (p.geschlecht === "Wallach") return "Wallach";
     if (alterJZ(p) < ZUCHTALTER) return "zu jung";
     if (alterJahre(p) > (p.geschlecht === "Stute" ? ZUCHT_MAX.Stute : ZUCHT_MAX.Hengst)) return "zu alt";
@@ -1979,7 +1984,7 @@
     const bl = befundListe(p).filter(b => b.diagnose), befundF = Math.max(0.4, 1 - bl.reduce((a, b) => a + (KRANK[b.art].chronisch ? 0.1 : 0) + (b.beh ? 0.02 : 0.06) * b.grad, 0));   // bekannte Befunde senken den Preis, chronische dauerhaft
     const erbF = testGemacht(p, "krank") ? Object.keys(ERBKRANK).reduce((a, k) => a * (erbKrank(p, k) ? 0.75 : (erbVon(p)[k] || 0) ? 0.92 : 1), 1) : 1;   // getestete Träger sind für die Zucht weniger wert
     const v = (1500 + 4500 * gangF * gangF + 5000 * ausb) * alterF * gesund * reinF * dreckF * befundF * erbF;
-    return Math.max(100, Math.round(v / 50) * 50) + testWert(p);   // gemachte Gentests: Käufer zahlen die Testkosten mit
+    return Math.max(100, Math.round(v / 50) * 50) + testWert(p) + erfolgWert(p);   // Turniererfolge steigern den Wert   // gemachte Gentests: Käufer zahlen die Testkosten mit
   }
   const testWert = p => Object.keys(LABOR_TESTS).filter(t => testGemacht(p, t)).reduce((s, t) => s + laborPreis(p, t), 0);
   // verkauf: Stuten mit Fohlen bei Fuß dürfen verkauft werden – das Fohlen geht mit (allein darf es nicht weg)
@@ -2408,7 +2413,7 @@
     if (letzterBesuch !== aktBox + ":" + spiel.tag) { letzterBesuch = aktBox + ":" + spiel.tag; anzeichenBeimBesuch(B()); }
     $("boxSchild").textContent = "Box " + (aktBox + 1);
     stallFormat();
-    if (!p || p.klinik || p.weide) { $("pferdPlatz").innerHTML = ""; zeigeAkte(); return; }
+    if (!p || p.klinik || p.weide || p.turnier) { $("pferdPlatz").innerHTML = ""; zeigeAkte(); return; }
     const tot = !!B().tot;   // verstorben: Augen zu, keine Bewegung mehr
     const z = zeichnePferd(p.rasse, fb(p), { dreck: p.dreck ? p.dreck.fell : 0, filz: p.dreck ? p.dreck.maehne : 0, alterStufe: stufeKey(p), seed: p.id, geschlecht: p.geschlecht, augenZu: tot, statisch: tot, maehne: p.maehne, schopf: p.schopf, typ: p.typ, eigenKopf: p.nase === "spiel" ? false : (p.nase || undefined), haltung: haltungFuer(p), ohren: (p.pflege && p.pflege.gesundheit >= 45 && p.pflege.gesundheit < 65) ? "geknickt" : "" });
     const s = p.stockmass * STALL.cmZuEinheit / 100;
@@ -2450,6 +2455,12 @@
       befundBinden(p, box);
       $("vonWeide").onclick = () => { vonWeideHolen(box); reaktionZeigen(reaktion(p, "box")); speichern(); zeigeStall(); zeigeTag(); };
       if ($("weideHeu")) $("weideHeu").onclick = () => { box.krippeVoll = true; reaktionZeigen(reaktion(p, "fuettern")); speichern(); zeigeAkte(); zeigeTag(); };
+      return;
+    }
+    if (p && p.turnier && !LS) { const t = (spiel.turniere || []).find(x => x.id === p.turnier.tid);
+      const starts = t ? t.nennung.filter(n => n.pid === p.id).map(n => (t.pruef.find(x => x.id === n.prid) || {}).name).filter(Boolean) : [];
+      INFO.innerHTML = `<div class="karte" style="min-height:0"><h2>🏆 ${esc(p.name)} ist auf dem Turnier</h2>
+        <p class="text">${t ? `<b>${esc(t.name)}</b>${starts.length ? ` · startet in: ${starts.map(esc).join(", ")}` : ""}.` : ""} ${esc(p.name)} ist den ganzen Tag unterwegs und morgen früh wieder in Box ${aktBox + 1}. Das Ergebnis kommt morgen per Brief.</p></div>`;
       return;
     }
     if (p && p.klinik && !LS) {
@@ -2565,7 +2576,7 @@
         <div class="zeile-wert" style="grid-row:${i + 1}"><div class="kopf"><b class="lex" data-lex="skala:${x.name}">${x.name}</b><span>${x.wert} %${q ? ` <em class="vgl-b">${qa[i].wert} %</em>` : ""}</span></div>
         <div class="balken"><i style="width:${x.wert}%"></i></div>${q ? `<div class="balken vgl"><i style="width:${qa[i].wert}%"></i></div>` : ""}</div>`).join("") +
         SKALA_PHASEN.map(([n, a, b], c) => `<div class="sp-k" style="grid-column:${c + 2};grid-row:${a + 1} / ${b + 2}" title="Phase: ${n}"><span>${n}</span></div>`).join("") + `</div>` +
-        (box.lesen || box.tot ? "" : `<p class="text" style="margin:6px 0 0"><small>💪 Schubkraft ${schubkraft(p)} · Tragkraft ${tragkraft(p)} – Schwung kann höchstens bis ${Math.min(97, schubkraft(p) + 10)} %, Geraderichtung und Versammlung bis ${Math.min(97, tragkraft(p) + 10)} % steigen. Mehr Kraft (z. B. Springgymnastik, Konditionstraining) hebt die Grenze.<br>⚡ Energie heute: ${Math.max(0, energie(p))} / ${energieMax(p)} · Training daheim: Pflege → Ort → Reitplatz oder Gelände.</small></p>`) + (p.werte ? diszHTML(p) : "");
+        (box.lesen || box.tot ? "" : `<p class="text" style="margin:6px 0 0"><small>💪 Schubkraft ${schubkraft(p)} · Tragkraft ${tragkraft(p)} – Schwung kann höchstens bis ${Math.min(97, schubkraft(p) + 10)} %, Geraderichtung und Versammlung bis ${Math.min(97, tragkraft(p) + 10)} % steigen. Mehr Kraft (z. B. Springgymnastik, Konditionstraining) hebt die Grenze.<br>⚡ Energie heute: ${Math.max(0, energie(p))} / ${energieMax(p)} · Training daheim: Pflege → Ort → Reitplatz oder Gelände.</small></p>`) + erfolgeHTML(p) + (p.werte ? diszHTML(p) : "");
     }
     else if (aktenReiter === "gesundheit") {
       const g = pf.gesundheit;
@@ -2818,6 +2829,7 @@
       const id = k.dataset.ort; meldung = "";
       if (id === "gnadenhof") { gnadenhofDialog(p, () => { zeigeStall(); }); return; }
       if (id === "verkaufen") { verkaufDialog(p, () => zeigeAkte()); return; }
+      if (id === "turnier") { turnierDialog(p, () => zeigeAkte()); return; }
       if (id === "stationaer") {
         dialog(`<h3>🏥 ${esc(p.name)} in die Klinik?</h3><p>${esc(p.name)} bleibt in der Klinik, bis die Gesundheit wieder mindestens 75 % beträgt, und erholt sich dort doppelt so schnell. Die Behandlung kostet <b>${fmt(KOSTEN.klinik)} pro Tag</b> – du bekommst danach eine Rechnung, die du innerhalb von 2 Tagen bezahlen solltest – sonst kommt eine Mahnung mit Gebühr. Die Box bleibt für ${pron(p).ihn} frei.</p>`,
           [["In die Klinik", () => { ANH_ZIEL.stationaer.aus(p, box); ortModus = null; aktenModus = "steckbrief"; aktenReiter = "steckbrief"; speichern(); zeigeStall(); zeigeTag(); }], ["Abbrechen", null, "zweit"]]);
@@ -4368,6 +4380,7 @@
     if (!p || (box && box.tot)) return "–";
     if (p.klinik) return "ist in der Klinik";
     if (p.weide) return `steht auf der Weide – erst zurück in die Box holen`;
+    if (p.turnier) return "ist heute auf dem Turnier";
     if (p.boxenruhe) return "hat Boxenruhe";
     if (p.pflege && p.pflege.gesundheit < 50) return "ist zu schwach (Gesundheit unter 50 %)";
     const b = bekannteBefunde(p).find(x => !x.beh && x.grad >= 3);
@@ -4569,6 +4582,175 @@
         ${D.stufen ? `<br><b>Nächste Stufe:</b> ${d.stufe >= 4 ? "höchste erreicht" : `${STUFEN[D.stufen][d.stufe + 1]} braucht Ausbildungsstand ${STUFE_STAND[d.stufe + 1]} % und Wert ${STUFE_WERT[d.stufe + 1]}`}` : ""}${alterJZ(p) < 12 ? "<br>Turnierreif erst ab 3 Jahren." : ""}</small></p></details>`; }).join("") +
       `<p class="text"><small>Wert = 0,65 × Werte + 0,35 × Ausbildungsstand, Charakter höchstens ±10 %. Antippen zeigt, was zählt.</small></p>`;
   }
+  // ---------- Turniere (Werte-Plan, Etappe 6a) ----------
+  // Ablauf (Dome): im Turnierkalender bis spätestens am Tag vorher nennen (Nenngeld) · am Turniertag ist das Pferd unterwegs · das Ergebnis kommt am nächsten Tag per Brief und steht in der Akte.
+  // Stufen: Hofturnier (Breitensport/WBO: Wettbewerbe, nur Schleifen) · Regionales Turnier (E–L, Western Einsteiger–Novice) · Großes Turnier (A–S, Western Novice–Open)
+  const TURNIER_ORTE = ["Lindenhof", "Birkenhain", "Eichenau", "Sonnental", "Waldheide", "Mühlbach", "Rosenfeld", "Kastanienhof", "Weidenbrück", "Hohenwiese", "Seeblick", "Falkenried"];
+  const NENNGELD = { "-1": 10, 0: 15, 1: 20, 2: 25, 3: 35, 4: 50 };
+  const PREISGELD = { "-1": 0, 0: 0, 1: 120, 2: 250, 3: 500, 4: 1200 };   // Gesamtpreisgeld regional (Klasse E ohne Geldpreise) · Großes Turnier ×2
+  const PREIS_ANTEIL = [0.25, 0.18, 0.14, 0.11, 0.09, 0.08, 0.08, 0.07];
+  const START_ENERGIE = { dressur: 30, springen: 35, vielseitigkeit: 45, reining: 32, pleasure: 25, trail: 25, gelassenheit: 12 };
+  const LK_GRUPPE = { dressur: "dressur", springen: "springen", vielseitigkeit: "vielseitigkeit", reining: "western", pleasure: "western", trail: "western" };
+  const LK_NAME = { dressur: "Dressur", springen: "Springen", vielseitigkeit: "Vielseitigkeit", western: "Western" };
+  // Startrechte des Spielers (vereinfacht nach FN): LK 7 → E · 6 → E, A · 5 → A, L · 4 → A–M · 3, 2, 1 → A–S (Western: Einsteiger … Open entsprechend)
+  const LK_STUFEN = { 7: [0], 6: [0, 1], 5: [1, 2], 4: [1, 2, 3], 3: [1, 2, 3, 4], 2: [1, 2, 3, 4], 1: [1, 2, 3, 4] };
+  const lkVon = g => { const L = (spiel.lk = spiel.lk || {}); if (L[g] == null) L[g] = 7; return L[g]; };
+  const prName = (disz, s) => { const D = DISZ[disz]; if (s < 0) return ""; return D.stufen === "western" ? STUFEN.western[s] : `Kl. ${STUFEN.englisch[s]}`; };
+  function turniereErzeugen(start, D, key) {
+    const rz = zufall("turniere-" + key), tage = Array.from({ length: tpj() }, (_, i) => start + i).filter(t => t > spiel.tag);
+    if (!tage.length) return;
+    const tagW = () => tage[Math.floor(rz() * tage.length)], ortW = () => TURNIER_ORTE[Math.floor(rz() * TURNIER_ORTE.length)], halle = D.s === 3, n = () => 8 + Math.floor(rz() * 15);
+    const pr = (disz, s, extra = {}) => ({ id: "p" + Math.floor(rz() * 1e9).toString(36), disz, stufe: s, starter: n(), name: extra.name || `${DISZ[disz].n} ${prName(disz, s)}`, ...extra });
+    const neu = (art, typ, name, pruef) => spiel.turniere.push({ id: "t" + key + "-" + spiel.turniere.length + Math.floor(rz() * 1e6).toString(36), tag: tagW(), art, typ, name, halle, pruef, nennung: [] });
+    let o = ortW();
+    neu("hof", "hof", `Hofturnier Reitverein ${o}`, [pr("dressur", -1, { name: "Dressurwettbewerb" }), pr("springen", -1, { name: "Stilspringwettbewerb" }), pr("pleasure", -1, { name: "Westernreiter-Wettbewerb" }), pr("gelassenheit", -1, { name: "Gelassenheitsprüfung" })]);
+    o = ortW();
+    neu("regional", "englisch", `${halle ? "Hallenturnier" : "Reitturnier"} ${o}`, [pr("dressur", 0), pr("dressur", 1), pr("dressur", 2), pr("springen", 0), pr("springen", 1), pr("springen", 2), ...(halle ? [] : [pr("vielseitigkeit", 0), pr("vielseitigkeit", 1)]),
+      pr("dressur", 1, { name: "Dressurpferdeprüfung Kl. A (4–6 J.)", jung: [16, 27] }), pr("springen", 1, { name: "Springpferdeprüfung Kl. A (4–6 J.)", jung: [16, 27] })]);
+    o = ortW();
+    neu("regional", "western", `Westernturnier ${o}`, ["reining", "pleasure", "trail"].flatMap(d => [0, 1, 2].map(s => pr(d, s))));
+    o = ortW();
+    neu("gross", "englisch", `Großes ${halle ? "Hallenturnier" : "Reitturnier"} ${o}`, [1, 2, 3, 4].flatMap(s => [pr("dressur", s), pr("springen", s)]).concat(halle ? [] : [1, 2, 3].map(s => pr("vielseitigkeit", s)),
+      [pr("dressur", 2, { name: "Dressurpferdeprüfung Kl. L (5–6 J.)", jung: [20, 27] }), pr("springen", 2, { name: "Springpferdeprüfung Kl. L (5–6 J.)", jung: [20, 27] })]));
+    if (rz() < 0.5) { o = ortW(); neu("gross", "western", `Großes Westernturnier ${o}`, ["reining", "pleasure", "trail"].flatMap(d => [2, 3, 4].map(s => pr(d, s)))); }
+  }
+  // Kalender: Turniere dieser und der nächsten Jahreszeit (fest, sobald erzeugt)
+  function turnierKalender() {
+    spiel.turniere = (spiel.turniere || []).filter(t => t.tag >= spiel.tag - 1);
+    const fertig = (spiel.turnierJZ = spiel.turnierJZ || []);
+    for (let d = spiel.tag; d <= spiel.tag + tpj() + 1; d++) {
+      const D = datum(d); if (D.t !== 1 && d !== spiel.tag) continue;
+      const key = D.j * 4 + D.s; if (fertig.includes(key)) continue;
+      fertig.push(key); turniereErzeugen(d - (D.t - 1), D, key);
+    }
+    if (fertig.length > 8) fertig.splice(0, fertig.length - 8);
+    spiel.turniere.sort((a, b) => a.tag - b.tag);
+    return spiel.turniere;
+  }
+  const istGross = t => t.art === "gross";
+  const nenngeld = (t, P) => Math.round(NENNGELD[P.stufe] * (istGross(t) ? 1.5 : 1));
+  const preisgeld = (t, P) => P.jung ? Math.round(PREISGELD[P.stufe] * 0.8) : PREISGELD[P.stufe] * (istGross(t) ? 2 : 1);
+  // Niveau der Konkurrenz (Schnitt des Starterfelds)
+  const feldNiveau = (t, P) => P.disz === "gelassenheit" ? 48 : P.stufe < 0 ? 32 : (P.jung ? STUFE_WERT[P.stufe] + 2 : STUFE_WERT[P.stufe] + (istGross(t) ? 6 : 3));
+  function gelassenheitWert(p) {
+    werteErgaenzen(p); const V = charE(p, "nerven"), M = charE(p, "mut");
+    return Math.max(0, Math.min(100, 0.35 * (p.werte.ist.vertrauen || 0) + 0.2 * (p.werte.ist.gehorsam || 0) + 0.45 * (50 + 40 * (V.hoch + M.hoch - V.tief - M.tief)) + 5 * Math.min(1, (p.turnierStarts || 0) / 6)));
+  }
+  const startWert = (p, disz) => disz === "gelassenheit" ? gelassenheitWert(p) : diszWert(p, disz).wert;
+  // Darf dieses Pferd in dieser Prüfung genannt werden? "" = ja
+  function nennSperre(p, t, P) {
+    if (spiel.tag >= t.tag) return "Nennschluss vorbei";
+    if (alterJZ(p) < 16) return "erst ab 4 Jahren";
+    if (P.jung && (alterJZ(p) < P.jung[0] || alterJZ(p) > P.jung[1])) return "Altersgrenze";
+    if (P.disz === "toelt" || (DISZ[P.disz] && DISZ[P.disz].nur && !DISZ[P.disz].nur(p))) return "kann diese Gangart nicht";
+    const g = LK_GRUPPE[P.disz];
+    if (g && P.stufe >= 0 && !P.jung && !LK_STUFEN[lkVon(g)].includes(P.stufe)) return `nicht mit LK ${lkVon(g)}`;
+    if (DISZ[P.disz] && DISZ[P.disz].hoehe && P.stufe > hoeheStufe(p)) return "zu hoch fürs Stockmaß";
+    const meine = t.nennung.filter(n => n.pid === p.id);
+    if (meine.some(n => n.prid === P.id)) return "";
+    if (meine.length >= 2) return "schon 2 Prüfungen";
+    const st = meine.map(n => t.pruef.find(x => x.id === n.prid)).filter(x => x && x.stufe >= 0).map(x => x.stufe);
+    if (P.stufe >= 0 && st.some(s => Math.abs(s - P.stufe) > 1)) return "nur benachbarte Klassen";
+    if (spiel.turniere.some(x => x !== t && x.tag === t.tag && x.nennung.some(n => n.pid === p.id))) return "am selben Tag schon genannt";
+    if (spiel.geld < nenngeld(t, P)) return "zu wenig Geld";
+    return "";
+  }
+  // Einschätzung für den Spieler (keine genauen Zahlen)
+  function chance(p, t, P) { const d = startWert(p, P.disz) - feldNiveau(t, P); return d >= 6 ? ["🟢", "gute Chancen"] : d >= -3 ? ["🟡", "machbar"] : ["🔴", "sehr schwer"]; }
+  function turnierDialog(p, zurueck) {
+    const L = turnierKalender().filter(t => t.tag > spiel.tag - 1);
+    const lkZeile = Object.keys(LK_NAME).map(g => `${LK_NAME[g]} LK ${lkVon(g)}`).join(" · ");
+    const datumTxt = t => { const d = datum(t.tag), n = t.tag - spiel.tag; return `${JZ[d.s][1]} ${JZ[d.s][0]}, Tag ${d.t} · ${n === 0 ? "heute" : n === 1 ? "morgen" : `in ${n} Tagen`}`; };
+    const artTxt = { hof: "Hofturnier · Schleifen", regional: "Regionales Turnier", gross: "Großes Turnier" };
+    const html = L.map(t => { const meine = t.nennung.filter(n => n.pid === p.id);
+      const zeilen = t.pruef.map(P => { const drin = meine.some(n => n.prid === P.id), sp = drin ? "" : nennSperre(p, t, P), ng = nenngeld(t, P), pg = preisgeld(t, P), [c, ct] = chance(p, t, P);
+        return `<li class="tp-zeile"><span><b>${esc(P.name)}</b><small>${P.starter} Starter · Nenngeld ${fmt(ng)}${pg ? ` · Preisgeld ${fmt(pg)}` : " · Schleifen"}${sp ? "" : ` · ${c} ${ct}`}</small></span>
+          ${drin ? (spiel.tag < t.tag ? `<button class="mini-knopf an" data-tzurueck="${t.id}:${P.id}">✓ genannt</button>` : `<span class="stat ok">genannt</span>`) : sp ? `<span class="stat">${sp}</span>` : `<button class="mini-knopf" data-tnennen="${t.id}:${P.id}">Nennen</button>`}</li>`; }).join("");
+      return `<details class="t-karte" ${meine.length ? "open" : ""}><summary><b>${t.art === "hof" ? "🎀" : t.typ === "western" ? "🤠" : "🏆"} ${esc(t.name)}</b><small>${datumTxt(t)} · ${artTxt[t.art]}${t.halle ? " · Halle" : " · Freiluft"}${meine.length ? ` · <b>${meine.length}× genannt</b>` : ""}</small></summary><ul class="tp-liste">${zeilen}</ul></details>`; }).join("");
+    dialog(`<h3>🏆 Turniere für ${esc(p.name)}</h3><p class="text" style="margin:0 0 6px"><small>Deine Reiter-LK: ${lkZeile}. Nennen bis spätestens am Tag vorher. Am Turniertag ist ${esc(p.name)} unterwegs, das Ergebnis kommt am nächsten Tag per Brief. Höchstens 2 Prüfungen pro Turnier in benachbarten Klassen.</small></p>
+      ${alterJZ(p) < 16 ? `<p class="text">⚠️ ${esc(p.name)} ist noch zu jung – Turniere erst ab 4 Jahren.</p>` : ""}${html || "<p>Gerade sind keine Turniere ausgeschrieben.</p>"}`, [["Schließen", zurueck, "zweit"]], "turnier-dlg");
+    document.querySelectorAll("[data-tnennen]").forEach(b => b.onclick = () => { const [tid, prid] = b.dataset.tnennen.split(":"), t = spiel.turniere.find(x => x.id === tid), P = t.pruef.find(x => x.id === prid);
+      if (nennSperre(p, t, P)) return; t.nennung.push({ pid: p.id, prid, geld: nenngeld(t, P) }); buchen(-nenngeld(t, P), `Nenngeld ${t.name}: ${p.name}`); speichern(); zeigeTag(); turnierDialog(p, zurueck); });
+    document.querySelectorAll("[data-tzurueck]").forEach(b => b.onclick = () => { const [tid, prid] = b.dataset.tzurueck.split(":"), t = spiel.turniere.find(x => x.id === tid);
+      t.nennung = t.nennung.filter(n => !(n.pid === p.id && n.prid === prid)); speichern(); turnierDialog(p, zurueck); });
+  }
+  const genanntBei = p => (spiel.turniere || []).filter(t => t.tag >= spiel.tag && t.nennung.some(n => n.pid === p.id));
+  // Turniertag morgens: genannte Pferde fahren los (Weide → vorher reingeholt) – krank/schwach/Klinik: nicht gestartet
+  function turnierMorgen() {
+    (spiel.turniere || []).filter(t => t.tag === spiel.tag && t.nennung.length).forEach(t => {
+      [...new Set(t.nennung.map(n => n.pid))].forEach(pid => {
+        const box = spiel.boxen.find(b => b.pferd && b.pferd.id === pid && !b.tot), p = box && box.pferd;
+        if (!p) { t.nennung = t.nennung.filter(n => n.pid !== pid); return; }
+        if (p.weide && !p.boxenruhe) vonWeideHolen(box);
+        const sp = trainSperre(p, box);
+        if (sp) { brief("Turnierbüro", `${p.name}: nicht gestartet`, `{du|Sie} hatte{st|n} <b>${esc(p.name)}</b> beim <b>${esc(t.name)}</b> genannt. ${esc(p.name)} konnte heute nicht starten: ${esc(p.name)} ${sp}. Das Nenngeld wird nicht erstattet.`, { pferde: [p] });
+          t.nennung = t.nennung.filter(n => n.pid !== pid); return; }
+        p.turnier = { tid: t.id, tag: spiel.tag }; fahrtStress(p, "turnier");
+      });
+    });
+  }
+  function ergebnisText(disz, wert, niveau, rz, stufe) {
+    const d = wert - niveau;
+    if (disz === "springen") { const fehler = d >= 4 ? (rz() < 0.15 ? 4 : 0) : d >= -4 ? (rz() < 0.5 ? 0 : 4) : d >= -12 ? (rz() < 0.5 ? 4 : 8) : 8 + 4 * Math.floor(rz() * 3);
+      const zeit = Math.round((62 - d * 0.25 + rz() * 5) * 100) / 100; return { sort: -fehler * 100 - zeit, txt: stufe < 0 ? `Wertnote ${String(Math.max(4, Math.min(9.5, Math.round((6.5 + d / 8 - fehler / 8) * 10) / 10))).replace(".", ",")}` : `${fehler} Fehler · ${String(zeit.toFixed(2)).replace(".", ",")} s` }; }
+    if (disz === "vielseitigkeit") { const fehler = d >= 0 ? (rz() < 0.2 ? 4 : 0) : (rz() < 0.6 ? 4 : 8) + (d < -10 ? 20 : 0); const mp = Math.round((38 - d * 0.8 + fehler + rz() * 4) * 10) / 10; return { sort: -mp, txt: `${String(mp).replace(".", ",")} Minuspunkte` }; }
+    if (["reining", "pleasure", "trail"].includes(disz) && stufe >= 0) { const sc = Math.round((70 + d * 0.45 + (rz() - 0.5) * 2) * 2) / 2; return { sort: sc, txt: `Score ${String(sc).replace(".", ",")}` }; }
+    if (disz === "dressur" && stufe >= 2) { const pz = Math.round((64 + d * 0.9 + (rz() - 0.5) * 2) * 100) / 100; return { sort: pz, txt: `${String(pz.toFixed(2)).replace(".", ",")} %` }; }
+    const note = Math.max(4, Math.min(9.8, Math.round((6.8 + d / 7 + (rz() - 0.5) * 0.3) * 10) / 10)); return { sort: note, txt: `Wertnote ${String(note).replace(".", ",")}` };
+  }
+  // Nacht nach dem Turniertag: Ergebnisse berechnen, Brief, Preisgeld, Erfolge, LK – Pferd ist am nächsten Morgen wieder da
+  function turnierNacht() {
+    spiel.boxen.forEach(box => { const p = box.pferd; if (!p || !p.turnier || p.turnier.tag !== spiel.tag) return;
+      const t = (spiel.turniere || []).find(x => x.id === p.turnier.tid); delete p.turnier;
+      box.krippeVoll = true; box.mistig = false; box.mistStufe = 0;   // war den ganzen Tag weg: unterwegs gefüttert, Box sauber
+      if (!t) return;
+      const rz = zufall("turnier-erg-" + t.id + p.id), starts = t.nennung.filter(n => n.pid === p.id).map(n => t.pruef.find(x => x.id === n.prid)).filter(Boolean);
+      const reakt = reaktion(p, "turnier");
+      const erfahrung = Math.min(1, (p.turnierStarts || 0) / 8), V = charE(p, "nerven"), M = charE(p, "mut");
+      const stress = 1 - 0.08 * Math.max(V.tief, M.tief) * (1 - erfahrung) + 0.03 * vorliebe(p, "turnier");
+      const zeilen = [], lkMeld = []; let geldSumme = 0;
+      starts.forEach(P => {
+        const kost = START_ENERGIE[P.disz] || 30, E = energie(p), muede = kost > E; p.energie = Math.max(-30, E - kost);
+        const g = p.pflege.gesundheit, form = (0.85 + 0.15 * wohlbefinden(p) / 100) * (0.8 + 0.2 * Math.min(1, g / 85)) * (muede ? 0.85 : 1);
+        const grp = LK_GRUPPE[P.disz], reiterF = grp ? 0.95 + 0.015 * (7 - lkVon(grp)) : 1;
+        const wert = startWert(p, P.disz) * form * stress * reiterF * (1 + (rz() + rz() + rz() - 1.5) * 0.16), niveau = feldNiveau(t, P);
+        const ich = ergebnisText(P.disz, wert, niveau, rz, P.stufe), andere = Array.from({ length: P.starter - 1 }, () => ergebnisText(P.disz, niveau + (rz() + rz() + rz() - 1.5) * 14, niveau, rz, P.stufe).sort);
+        const platz = 1 + andere.filter(s => s > ich.sort).length, plaziert = platz <= Math.max(3, Math.ceil(P.starter / 4));
+        let geld = 0; if (plaziert && preisgeld(t, P)) { const anteil = PREIS_ANTEIL.slice(0, Math.max(3, Math.ceil(P.starter / 4))), summe = anteil.reduce((a, b) => a + b, 0); geld = Math.round(preisgeld(t, P) * (anteil[platz - 1] || 0.05) / summe / 5) * 5; }
+        geldSumme += geld;
+        (p.erfolge = p.erfolge || []).unshift({ tag: spiel.tag, turnier: t.name, art: t.art, disz: P.disz, stufe: P.stufe, pruef: P.name, platz, von: P.starter, erg: ich.txt, geld, plaziert, jung: !!P.jung });
+        if (p.erfolge.length > 60) p.erfolge.length = 60;
+        if (muede) { wohlAendern(p, -8, "Turnier: übermüdet gestartet"); p.pflege.gesundheit = Math.max(1, r2(p.pflege.gesundheit - 3)); if (rz() < 0.15 * (1.5 - (p.werte.ist.zaehigkeit || 50) / 100)) befundNeu(p, "lahmheit", 1, "Überlastung auf dem Turnier", "du"); }
+        if (grp && plaziert && P.stufe >= 0) { const m = lkErfolg(grp, P.stufe, platz); if (m) lkMeld.push(m); }
+        zeilen.push(`<li><b>${esc(P.name)}</b>: ${platz === 1 ? "🥇 Sieg" : platz === 2 ? "🥈 2. Platz" : platz === 3 ? "🥉 3. Platz" : `${platz}. Platz`} von ${P.starter} · ${ich.txt}${plaziert ? (geld ? ` · ${fmt(geld)} Preisgeld` : " · Schleife 🎀") : ""}${muede ? " <small>(war schon müde)</small>" : ""}</li>`);
+      });
+      p.turnierStarts = (p.turnierStarts || 0) + starts.length; p.arbeitTag = spiel.tag; p.boxTage = 0;
+      if (geldSumme) buchen(geldSumme, `Preisgeld ${t.name}: ${p.name}`);
+      brief("Turnierbüro", `Ergebnis: ${p.name} beim ${t.name}`, `hier {sind deine|sind Ihre} Ergebnisse vom <b>${esc(t.name)}</b> mit <b>${esc(p.name)}</b>:<ul>${zeilen.join("")}</ul>${reakt ? `<p>Auf dem Turnierplatz: ${esc(p.name)} ${esc(reakt)}.</p>` : ""}${geldSumme ? `<p>Das Preisgeld (${fmt(geldSumme)}) ist überwiesen.</p>` : ""}${lkMeld.map(m => `<p>🎉 ${m}</p>`).join("")}<p><small>Nach dem Turnier braucht ${esc(p.name)} Erholung – die Energie ist heute niedrig.</small></p>`, { pferde: [p] });
+    });
+  }
+  // Reiter-LK: Aufstieg nur in der Disziplin mit Erfolgen · 7→6: 1 Platzierung ab E · 6→5: 3 ab A · 5→4: 3 ab L · 4→3: 3 ab M · 3→2: 3 Siege ab M · 2→1: 3 Siege in S
+  const LK_REGEL = { 7: [0, 1, false], 6: [1, 3, false], 5: [2, 3, false], 4: [3, 3, false], 3: [3, 3, true], 2: [4, 3, true] };
+  function lkErfolg(g, stufe, platz) {
+    const E = ((spiel.lkErfolge = spiel.lkErfolge || {})[g] = spiel.lkErfolge[g] || { plaz: [0, 0, 0, 0, 0], sieg: [0, 0, 0, 0, 0] });
+    E.plaz[stufe]++; if (platz === 1) E.sieg[stufe]++;
+    const lk = lkVon(g), R = LK_REGEL[lk]; if (!R) return "";
+    const [ab, n, sieg] = R, zahl = (sieg ? E.sieg : E.plaz).slice(ab).reduce((a, b) => a + b, 0);
+    if (zahl < n) return "";
+    spiel.lk[g] = lk - 1; E.plaz = [0, 0, 0, 0, 0]; E.sieg = [0, 0, 0, 0, 0];
+    return `Aufstieg! {Du bist|Sie sind} jetzt in ${LK_NAME[g]} <b>LK ${lk - 1}</b> und {darfst|dürfen} in ${LK_STUFEN[lk - 1].map(s => g === "western" ? STUFEN.western[s] : STUFEN.englisch[s]).join(", ")} starten.`;
+  }
+  // Erfolge in der Akte und im Marktwert: Sieg voll, Platzierung halb · Wert je Klasse (WB 0, E 40, A 120, L 300, M 700, S 1.500 €), Großes Turnier ×1,3, höchstens 15.000 €
+  const ERFOLG_WERT = [40, 120, 300, 700, 1500];
+  const erfolgWert = p => Math.min(15000, Math.round((p.erfolge || []).filter(e => e.plaziert && e.stufe >= 0).reduce((a, e) => a + ERFOLG_WERT[e.stufe] * (e.platz === 1 ? 1 : 0.5) * (e.art === "gross" ? 1.3 : 1), 0) / 50) * 50);
+  function erfolgeHTML(p) {
+    const E = p.erfolge || [], gen = genanntBei(p);
+    if (!E.length && !gen.length) return "";
+    const siege = E.filter(e => e.platz === 1).length, plaz = E.filter(e => e.plaziert).length;
+    const genTxt = gen.length ? `<p class="text" style="margin:2px 0"><small>📅 Genannt: ${gen.map(t => `${esc(t.name)} (${t.tag === spiel.tag ? "heute" : `in ${t.tag - spiel.tag} ${t.tag - spiel.tag === 1 ? "Tag" : "Tagen"}`})`).join(", ")}</small></p>` : "";
+    return `<h3 class="werte-titel">🏆 Turniere</h3>${genTxt}${E.length ? `<details class="disz"><summary><span class="disz-kopf"><b>${E.length} ${E.length === 1 ? "Start" : "Starts"} · ${siege} ${siege === 1 ? "Sieg" : "Siege"} · ${plaz} platziert</b><span>${fmt(E.reduce((a, e) => a + e.geld, 0))}</span></span></summary>
+      <ul class="liste erfolge">${E.slice(0, 15).map(e => { const d = datum(e.tag); return `<li><span class="txt">${e.platz === 1 ? "🥇" : e.platz === 2 ? "🥈" : e.platz === 3 ? "🥉" : e.plaziert ? "🎀" : "▫️"} <b>${esc(e.pruef)}</b> – ${e.platz}. von ${e.von}<small>${esc(e.turnier)} · ${JZ[d.s][0]} ${d.j} · ${e.erg}${e.geld ? ` · ${fmt(e.geld)}` : ""}</small></span></li>`; }).join("")}</ul></details>` : ""}`;
+  }
   // ---------- Mitarbeiter ----------
   // Alle Angestellten: beginnen immer mit einer neuen Jahreszeit, Gehalt am Ende jeder gearbeiteten Jahreszeit,
   // gekündigt arbeiten sie bis Ende der Jahreszeit; kein Geld → sie kündigen selbst (letztes Gehalt nehmen sie trotzdem)
@@ -4640,6 +4822,7 @@
   function maZuteilung(art) {
     const kand = spiel.boxen.map((b, i) => i).filter(i => { const b = spiel.boxen[i], p = b.pferd; if (!p || p.klinik || b.tot) return false;
       if (art === "stall") return !p.weide || heuNoetig();
+      if (art !== "stall" && p.turnier) return false;   // heute auf dem Turnier
       if (art === "bereiter") return !p.weide && !p.boxenruhe && alterJZ(p) >= 12 && (p.pflege ? p.pflege.gesundheit : 100) > 50;
       return true; });
     const out = []; let k = 0;
@@ -4974,6 +5157,7 @@
     if (fahrt) wohlAendern(p, -fahrt, "Fahrt im Pferdeanhänger");
     if (fremd && ziel === "klinik") wohlAendern(p, -fremd, "fremde Klinik");
     if (fremd && ziel === "aufzucht") wohlAendern(p, -fremd, "fremde Herde");
+    if (fremd && ziel === "turnier") wohlAendern(p, -fremd, "Turniertrubel");
   }
 
   // ---------- Vorlieben und Reaktionen (Werte-Plan, Etappe 3) ----------
@@ -5028,6 +5212,9 @@
     gelaende: { titel: "Gelände", ico: "🌲", basis: c => 0.5 * c.mut.hoch + 0.4 * c.wachheit.hoch - 0.6 * c.mut.tief - 0.4 * c.nerven.tief,
       mag: ["schaut neugierig in jede Ecke und marschiert fröhlich los", "schnaubt zufrieden durch den Wald"], egal: ["geht entspannt mit", "läuft ruhig den Weg entlang"],
       nicht: ["scheut vor jedem Busch", "tänzelt nervös und will nach Hause", "erschrickt vor einem Traktor"] },
+    turnier: { titel: "Turnier", ico: "🏆", basis: c => 0.4 * c.mut.hoch + 0.3 * c.temperament.hoch + 0.2 * c.nerven.hoch - 0.6 * c.nerven.tief - 0.4 * c.mut.tief,
+      mag: ["war ganz in seinem Element und genoss den Trubel", "lief stolz und aufmerksam über den Platz"], egal: ["blieb ruhig und konzentriert", "nahm den Trubel gelassen"],
+      nicht: ["war aufgeregt und schwitzte stark", "tänzelte nervös auf dem Abreiteplatz", "erschrak vor dem Lautsprecher"] },
     reithalle: { titel: "Reithalle", ico: "🏛️", basis: c => 0.2 * c.nerven.hoch - 0.6 * c.mut.tief - 0.3 * c.nerven.tief,
       mag: ["fühlt sich in der Halle sichtlich wohl"], egal: ["geht ruhig in die Halle"], nicht: ["drückt sich ängstlich an die Bande", "erschrickt vor dem Echo in der Halle"] },
   };
@@ -5126,6 +5313,7 @@
   }
   function naechsteNacht() {
     tote();
+    turnierNacht();   // Turnierpferde von heute: Ergebnis (Brief kommt am nächsten Tag)
     spiel.tag += 1;
     alterAktualisieren();
     const weideHerde = spiel.boxen.filter(b => b.pferd && b.pferd.weide && !b.pferd.klinik && !b.tot).map(b => b.pferd);
@@ -5180,6 +5368,7 @@
     angeboteNacht();
     tierschutzEinsatz(); tierschutzKlinik(); tierschutzFohlen(); kontoMinus(); laborNacht(); auktionsNacht();
     if (datum().t === 1) { auktionsEnde(); jahreszeitBeginn(); angeboteJahreszeit(); externJahreszeit(); spamAufraeumen(); mitarbeiterJahreszeit(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
+    turnierKalender(); turnierMorgen();   // Turniertag: genannte Pferde fahren los
     mitarbeiterTag();   // Stallburschen versorgen ihre Boxen zum Tagesbeginn
     befundeMorgen();    // wer heute bei den Pferden war, bemerkt vielleicht etwas
     behandlungsPlaene(); // Pfleger/Pferdewirt behandeln nach Plan
@@ -5658,11 +5847,13 @@
   // Je Ziel: ico, name, info (Tooltip), wohin (für Texte), kurz(p, box) = Kurztext, wenn erlaubt, sperre(p, box, istFohlen) = Grund oder "",
   // aus(p, box, istFohlen) = ausführen (ohne Rückfrage), bald = noch nicht verfügbar, gruppe = führt zu einer Unterebene, einzeln = nur einzeln (Verkaufen)
   const ANHAENGER = { start: ["klinik", "aufzucht", "ausbildung", "turnier", "abgeben"], klinik: ["stationaer", "kastration"], abgeben: ["verschenken", "verkaufen", "gnadenhof"] };
-  const anhGrund = (p, b, mitAngebot = true) => b.tot ? "verstorben" : p.klinik ? "in der Klinik" : mitAngebot && angebotVon(p) ? "steht zum Verkauf" : "";
+  const anhGrund = (p, b, mitAngebot = true) => b.tot ? "verstorben" : p.klinik ? "in der Klinik" : p.turnier ? "auf dem Turnier" : mitAngebot && angebotVon(p) ? "steht zum Verkauf" : "";
   const ANH_ZIEL = {
     klinik: { ico: "🏥", name: "Klinik", info: "Tierklinik: stationäre Behandlung oder Kastration", gruppe: true, kurz: () => "Behandlung, Kastration" },
     abgeben: { ico: "👋", name: "Abgeben", info: "Pferd abgeben", gruppe: true, kurz: () => "verkaufen, Gnadenhof" },
-    turnier: { ico: "🏆", name: "Turnier", info: "Turniere und Wettbewerbe", bald: "bald" },
+    turnier: { ico: "🏆", name: "Turnier", info: "Turnierkalender: Pferde für Turniere nennen", einzeln: true, hmKurz: "Kalender, Nennen",
+      sperre: (p, b) => anhGrund(p, b, false) || (p.turnier ? "auf dem Turnier" : "") || (alterJZ(p) < 16 ? "ab 4 Jahren" : ""),
+      kurz: p => { const n = genanntBei(p).length; return n ? `${n}× genannt` : "Kalender, Nennen"; } },
     verschenken: { ico: "🎁", name: "Verschenken", info: "Verschenken geht nur an befreundete Mitspieler (derzeit nicht möglich)", bald: "nur an Freunde – bald" },
     aufzucht: { ico: "🍼", name: "Aufzucht\u00adstation", info: "Fohlen und Jungpferde wachsen bis zum Ausbildungsalter in der Herde auf", wohin: "in die Aufzuchtstation", wo: "in der Aufzuchtstation",
       beschreibung: "Fohlen (ab der 3. Jahreszeit) und Jungpferde bis 3 Jahre", kosten: () => `${fmt(KOSTEN.aufzucht)} pro Tag und Pferd`,
@@ -5704,7 +5895,7 @@
       if (Z.bald) { an = false; kurz = Z.bald; }
       else if (einzel) { const sp = Z.gruppe ? "" : Z.sperre(einzel.p, einzel.box); an = !sp; kurz = sp || Z.kurz(einzel.p, einzel.box); }
       else { const n = zaehlen(id); an = n > 0;
-        kurz = !n ? ((id === "aufzucht" || id === "ausbildung") && spiel.geld < 0 ? "Konto im Minus" : "kein Pferd passt") : Z.gruppe || Z.einzeln ? Z.kurz ? (Z.gruppe ? Z.kurz() : "Festpreis oder Auktion") : "" : `${n} ${n === 1 ? "Pferd passt" : "Pferde passen"}`; }
+        kurz = !n ? ((id === "aufzucht" || id === "ausbildung") && spiel.geld < 0 ? "Konto im Minus" : "kein Pferd passt") : Z.gruppe || Z.einzeln ? Z.kurz ? (Z.gruppe ? Z.kurz() : Z.hmKurz || "Festpreis oder Auktion") : "" : `${n} ${n === 1 ? "Pferd passt" : "Pferde passen"}`; }
       const attr = an ? `${einzel ? "data-ort" : "data-anhziel"}="${id}" role="button" tabindex="0"` : "";
       return `<div class="kachel ${an ? "klickbar" : "fehlt"}" ${attr} title="${Z.name.replace(/\u00ad/g, "")}: ${Z.info}"><span class="ico">${Z.ico}</span><b>${Z.name}</b><small>${kurz}</small></div>`;
     }).join("");
@@ -5720,6 +5911,15 @@
       const sp = angebotVon(b.pferd) ? "steht zum Verkauf" : abgabeSperre(b.pferd, b, true);
       return pferdKachel(b.pferd, { attr: sp ? "disabled" : `data-vk="${i}"`, sperre: sp, zeilen: [`Box ${i + 1}`, ...(b.fohlen ? [`🍼 mit ${esc(b.fohlen.name)}`] : []), fmt(verkaufsWert(b.pferd))] }); }).join("")}</div>`, [["Abbrechen", null, "zweit"]], "breit");
     document.querySelectorAll("[data-vk]").forEach(k => k.onclick = () => { $("dlg").hidden = true; verkaufDialog(spiel.boxen[+k.dataset.vk].pferd, zurueck); });
+  }
+  // Turnier aus dem Hauptmenü-Anhänger: Pferd wählen, dann Turnierkalender – danach zurück zum Anhänger
+  function anhTurnier() {
+    const zurueck = () => { anhZiel = null; zeigeAnhaenger(); };
+    const liste = spiel.boxen.map((b, i) => ({ b, i })).filter(({ b }) => b.pferd && !b.tot);
+    if (!liste.length) { dialog(`<h3>🏆 Turnier</h3><p>Du hast kein Pferd im Stall.</p>`); return; }
+    dialog(`<h3>🏆 Welches Pferd soll aufs Turnier?</h3><div class="paar-liste">${liste.map(({ b, i }) => { const sp = ANH_ZIEL.turnier.sperre(b.pferd, b), n = genanntBei(b.pferd).length;
+      return pferdKachel(b.pferd, { attr: sp ? "disabled" : `data-tw="${i}"`, sperre: sp, zeilen: [`Box ${i + 1}`, n ? `${n}× genannt` : "noch nicht genannt"] }); }).join("")}</div>`, [["Abbrechen", null, "zweit"]]);
+    document.querySelectorAll("[data-tw]").forEach(k => k.onclick = () => { $("dlg").hidden = true; turnierDialog(spiel.boxen[+k.dataset.tw].pferd, zurueck); });
   }
   function zeigeAnhaenger() {
     const meld = anhMeldung ? `<div class="klasse">${anhMeldung}</div>` : "", zur = t => `<button class="zurueck" id="anhZurueck">${t}</button>`;
@@ -5742,6 +5942,7 @@
     nb.querySelectorAll("[data-anhziel]").forEach(k => k.onclick = () => {
       const id = k.dataset.anhziel;
       if (id === "verkaufen") { anhVerkaufen(); return; }
+      if (id === "turnier") { anhTurnier(); return; }
       anhZiel = id; anhAuswahl = new Set(); zeigeAnhaenger(); window.scrollTo(0, 0); });
     nb.querySelectorAll("[data-anhwahl]").forEach(k => k.onclick = () => { const key = k.dataset.anhwahl; anhAuswahl.has(key) ? anhAuswahl.delete(key) : anhAuswahl.add(key); zeigeAnhaenger(); });
     if ($("anhAlle")) $("anhAlle").onclick = () => { const liste = anhKandidaten(anhZiel); anhAuswahl = anhAuswahl.size === liste.length ? new Set() : new Set(liste.map(x => x.key)); zeigeAnhaenger(); };
@@ -6173,6 +6374,13 @@
       <p><b>Eigener Stand</b> (0–97, wie Skala: voll bis 60 %, dann langsamer): Springen ← Springgymnastik 1, Geländesprünge 0,4, Stangen 0,2 · Western ← Westernarbeit 1 · Gelände/Kondition ← Konditionstraining 0,8, Geländesprünge 0,8, Ausritt 0,4 (je × Lernfaktor, Wohlbefinden, Vorliebe … wie beim Training, aber ohne den Skala-Faktor 2,5 – Ziel bei täglichem Training: nach 1 Jahr E/A, 2 Jahren L, 3 Jahren M, etwa 5 Jahren S bzw. Open). Ausbildungsstall je Tag: Springen 0,4 × f, Gelände 0,15 × f. Alte und gekaufte Pferde starten mit Springen 0,4 × und Gelände 0,3 × Schnitt der Ausbildungsskala, Western 0.</p>
       <p><b>Stufen:</b> Dressur wie bisher (Klassen E–S aus der Ausbildungsskala). Springen und Vielseitigkeit E/A/L/M/S, Western (Reining, Pleasure, Trail) Einsteiger/Rookie/Novice/Intermediate/Open: Stufe braucht Ausbildungsstand ${STUFE_STAND.join("/")} % und Disziplin-Wert ${STUFE_WERT.join("/")}. Springhöhe ≈ 0,95 × Stockmaß, Klassen-Mindesthöhe ${SPRUNG_HOEHE.join("/")} cm. Rennsport, Tölt und Distanz: nach Leistung (${LEISTUNG.map(([a, n]) => n + " ab " + a).join(", ")}).</p>
       <p><b>Marktwert:</b> Leistungsanteil = 5.000 € × max(0, (beste Disziplin − 35) / 30) – unausgebildet ≈ 0, gut ausgebildet (65) = 1, Spitzenpferd (80) = 1,5. Ein Spezialist ist damit mehr wert als ein Allrounder.</p>
+      <h3>🏆 Turniere</h3>
+      <p><b>Ablauf:</b> Pferdeanhänger (Box oder Hauptmenü) → Turnier → Turnierkalender. Nennen bis spätestens am Tag vorher (Nenngeld sofort, beim Zurückziehen keine Erstattung). Am Turniertag morgens fährt das Pferd los (von der Weide wird es vorher geholt; krank/schwach → nicht gestartet, Nenngeld verfällt), ist den ganzen Tag weg (kein Training, Box sauber, unterwegs gefüttert). In der Nacht wird gerechnet, der Brief kommt am nächsten Tag. Ab 4 Jahren, höchstens 2 Prüfungen je Turnier in benachbarten Klassen, nur ein Turnier pro Tag.</p>
+      <p><b>Kalender</b> je Jahreszeit (im Winter Hallenturniere ohne Vielseitigkeit): Hofturnier (Wettbewerbe nach WBO: Dressur, Stilspringen, Westernreiter, Gelassenheitsprüfung – nur Schleifen) · Regionales Turnier (Dressur und Springen E–L, Vielseitigkeit E–A, Aufbauprüfung Kl. A 4–6 J.) · Westernturnier (Reining, Pleasure, Trail Einsteiger–Novice) · Großes Turnier (A–S, Vielseitigkeit A–M, Aufbauprüfung Kl. L 5–6 J.) · zu 50 % Großes Westernturnier (Novice–Open). 8–22 Starter je Prüfung.</p>
+      <p><b>Geld:</b> Nenngeld WB 10, E 15, A 20, L 25, M 35, S 50 € (Großes Turnier ×1,5). Preisgeld gesamt E 0, A 120, L 250, M 500, S 1.200 € (Großes Turnier ×2, Aufbauprüfung ×0,8), verteilt auf die Platzierten (25/18/14/11/9/8/8/7 %). Platziert ist das beste Viertel (mind. 3).</p>
+      <p><b>Ergebnis:</b> Leistung = Disziplin-Wert × Tagesform × Turnierstress × Reiter × Zufall (Streuung etwa ±8 %). Tagesform = (0,85 + 0,15 × Wohlbefinden) × (0,8 + 0,2 × Gesundheit/85) × 0,85, falls die Energie nicht reicht (Energie je Start: Dressur 30, Springen 35, Vielseitigkeit 45, Reining 32, Pleasure/Trail 25, Gelassenheit 12; dann auch Übertraining wie beim Training). Turnierstress = 1 − 0,08 × e(nervös oder scheu) × (1 − Erfahrung, voll nach 8 Starts) + 0,03 × Vorliebe „Turnier“. Reiter = 0,95 + 0,015 × (7 − LK). Konkurrenz: Feldniveau = Stufen-Wert (${STUFE_WERT.join("/")}) + 3 regional / + 6 groß, Wettbewerbe 32, Gelassenheit 48, Streuung der Konkurrenz etwa ±7. Anzeige: Dressur Wertnote (ab L Prozent), Springen Fehler und Zeit, Vielseitigkeit Minuspunkte, Western Score (70 = Durchschnitt). Gelassenheitsprüfung = 0,35 × Vertrauen + 0,2 × Gehorsam + 0,45 × (50 + 40 × (e gelassen + e mutig − e nervös − e scheu)) + bis 5 Erfahrung.</p>
+      <p><b>Reiter-LK</b> je Disziplin (Dressur, Springen, Vielseitigkeit, Western), Start LK 7: LK 7 → E · 6 → E, A · 5 → A, L · 4 → A–M · 3 bis 1 → A–S. Aufstieg: 7→6 eine Platzierung ab E · 6→5 drei ab A · 5→4 drei ab L · 4→3 drei ab M · 3→2 drei Siege ab M · 2→1 drei Siege in S (danach zählt es neu). Wettbewerbe, Gelassenheit und Aufbauprüfungen sind für jede LK offen.</p>
+      <p><b>Erfolge</b> (Akte → Ausbildung) erhöhen den Marktwert: Sieg ${ERFOLG_WERT.join("/")} € (E–S), Platzierung die Hälfte, Großes Turnier ×1,3, höchstens 15.000 €.</p>
       <h3>🏋️ Training daheim</h3>
       <p><b>Orte:</b> Spieler: Reitplatz und Gelände (Bodenarbeit, Freiarbeit, Longieren, Stangen auch auf dem Reitplatz). Roundpen und Reithalle kommen mit dem Hof-Ausbau (🛠️ Admin: alle offen). Reitplatz/Roundpen bei Regen, Schnee oder im Winter ×0,7. Reithalle wetterunabhängig, bei Regen/Schnee wählt der Bereiter sie automatisch; scheue/nervöse Pferde mögen sie oft nicht (×0,85).</p>
       ${verTab(["Übung", "Ort", "ab", "⚡", "Ausbildungsskala", "Werte"], Object.values(UEBUNG).map(U => [U.ico + " " + U.n.replace(/\u00ad/g, ""), ({ boden: "Roundpen/Platz/Halle", platz: "Platz/Halle", gelaende: "Gelände" })[U.wo], jzAlterTxt(U.ab).replace("Monaten", "Mon.").replace("Jahren", "J.").replace("Jahr", "J."), U.e,

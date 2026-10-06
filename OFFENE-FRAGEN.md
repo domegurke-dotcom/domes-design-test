@@ -81,3 +81,5 @@ Jede neue Rasse kommt komplett: `RASSEN` (Größe, Farben, Profil, Charakter), F
 
 **Reihenfolge-Vorschlag:** 1. Trakehner (meist genutzter Veredler, einfach), 2. Welsh Cob, 3. Clydesdale, 4. Fell + Dales zusammen (gemeinsame Erbkrankheit FIS), optional Anglo-Araber. Gesamt Kern (5 Rassen) ca. 24–27 %.
 **Fragen:** (a) Welche Rassen genau? (b) Sollen neue Rassen auch auf dem Pferdemarkt/bei Gestüten erscheinen oder nur über die Deckstation? *Empfehlung: beides, wie die anderen Rassen.* (c) Kopf: zeichnest du die neuen Köpfe, oder erst Spielkopf? *Empfehlung: erst Spielkopf, Köpfe nach und nach.*
+
+**✅ Domes Antworten Rassen (6.10.2026):** (a) **alle genannten** (Trakehner, Welsh Cob, Clydesdale, Fell-Pony, Dales-Pony, Anglo-Araber, Shagya-Araber) – genauso umfangreich wie die bestehenden: Zucht, Eigenschaften, Genetik, Reinrassigkeit/Zuchtbuch, Erbkrankheiten, Anfälligkeiten/Veranlagungen, Hufqualität, Gewicht, Futtertyp usw. (b) wie die bestehenden Rassen behandeln (Markt, Gestüte, Deckstation …). (c) erst Spielkopf, Domes Köpfe nach und nach. Start erst nach H8.

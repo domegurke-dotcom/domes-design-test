@@ -129,6 +129,8 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 7. Haltung je Pferd: Box, Paddockbox (Sand, rein/raus nach Lust), Weide (Herde), Sandpaddock.
 8. Einstreu: Stroh (günstig, staubt, wird angeknabbert), Späne (staubarm, mittel), Pellets (sehr saugfähig, staubarm, teurer), Leinstroh/Hanf (staubarm, teuer). Staub → Husten (besonders „empfindliche Atemwege“ aus F4), nass/schlecht gemistet → Strahlfäule. Lager im Strohlager, täglicher Verbrauch beim Misten, Kauf beim Bauern oder in der Futterkammer; leer → ohne Einstreu, Wohlbefinden sinkt.
 
+**✅ Domes Antworten H5 (6.10.2026):** 1 ja (Vollpension aus eigener Futterkammer) · 2 nein (nur über „Bewegen“ durch Bereiter) · 3 ja (Hengste selten, nur mit freier Paddockbox) · 4 ja (10 % verspätet, Mahnung wie Rechnungen) · 5 ja (Kündigung zum Jz-Ende, Ansehen −5) · 6 ja (Spieler bietet selbst an, Aufgabenliste, Vergessen → Zufriedenheit −).
+
 ### H6 – Feinplanung (Claude, 6.10.2026 abends)
 **Schon da (nicht neu bauen):** `weideHa`, Weide einzäunen (H3), Weide-zu-klein-Warnung (0,5 / 0,25 ha), Hufrehe-Warnung, Anweiden, Weide-Energie je Jahreszeit (`WEIDE_ENERGIE`), staubiges Heu (`staubNacht`), Futterverderb, Herde (`herdeNacht`).
 **Datenmodell:** je Hof `spiel.weiden = [{ wid, name, ha, gras 0–100, matsch 0–100, gesperrt, nachgesaet }]`; `p.weide = { seit, wid }`; `weideHa` = Summe (abwärtskompatibel: alte Höfe bekommen eine Weide mit ganzem `weideHa`). Herdenregeln je Weide (`herdeNacht` je `wid`).
@@ -143,6 +145,8 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 2. Pferde auf Pachtland: darf gepachtetes Weideland eingezäunt werden? *Empfehlung: ja (in echt üblich), Zaun bleibt beim Ende der Pacht nicht erhalten.*
 3. Einstreu-Wahl je Box oder je Hof? *Empfehlung: je Hof mit Ausnahme je Box (z. B. Späne für Pferde mit empfindlichen Atemwegen).*
 4. Heu von der Futterwiese: Qualität zufällig (bei Regen staubiges Heu)? *Empfehlung: ja, 20 % Regen-Schnitt → „staubig“.*
+
+**✅ Domes Antworten H6 (6.10.2026):** 1 wie empfohlen (beim Einzäunen wählen: neue Weide / Weide X vergrößern) · 2 ja (Pachtland darf eingezäunt werden, Zaun endet mit der Pacht) · 3 **je Box**: erst wenn ein Pferd in die Box kommt, wird neu eingestreut – dann Frage, welche Einstreu; ist nur eine Sorte im Lager, wird sie automatisch genommen · 4 ja (20 % Regen-Schnitt → staubiges Heu).
 
 ## Etappe H7 – Stallarten: Bedingungen, Vorteile, Strafe (groß)
 1. Stallart je Hof frei wählbar (auch mehrmals dieselbe): Pensionsstall, Zuchtstall, Ausbildungsstall, Gnadenhof, Rennstall, Westernstall (Gangpferdestall später). Ersetzt das vorbereitete Stallart-Feld aus dem Azubi-Nachtrag (Fachrichtungen, Bewerber je Stallart).

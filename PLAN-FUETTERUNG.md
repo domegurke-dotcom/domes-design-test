@@ -15,7 +15,7 @@ Plan gespeichert bei Spielversion 185. **Noch nicht starten:** erst wenn Werte-E
 - [x] Etappe F2 – Futterplan, Bedarf, Nährwerte (groß) · v211, von Claude per Skript getestet
 - [x] Etappe F3 – Futterzustand und Auswirkungen (groß) · v212, von Claude per Skript getestet (Futterzustand 1–9, Folgen, Magengeschwür, Standardplan nach Bedarf)
 - [x] Etappe F4 – Atemwege, Leckerli, Futterumstellung (klein) · v213, von Claude per Skript getestet
-- [ ] Etappe F5 – Futterexperte und Spezialfutter (mittel)
+- [x] Etappe F5 – Futterexperte und Spezialfutter (mittel) · v214, von Claude per Skript getestet
 
 **Jetzt nur speichern, noch nicht umsetzen:** Mit F1 erst starten, wenn Werte-Etappe 6 fertig ist. Eine Werte-Etappe 7 gibt es nicht: Nach Etappe 6 ist der nächste Schritt F1 aus `PLAN-FUETTERUNG.md`. Dann Dome fragen „Mit Fütterung F1 weitermachen?“ und auf Domes Ja warten.
 

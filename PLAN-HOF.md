@@ -7,7 +7,7 @@ Plan gespeichert bei Spielversion 208. **Noch nicht starten:** erst nach Fütter
 **Domes Ja liegt vor (7.10.2026, Spielversion 220):** Fütterung F1–F5 und alle offenen Fragen dazu sind fertig. In einer neuen Sitzung mit **H1** starten. Nach jeder Etappe testen, hochladen, Testlink erneuern, Dome eine Test-Anleitung geben. Volumen-Schätzung: H1–H4 sicher, H5 vielleicht, H6–H8 eher im nächsten Volumen. **Danach** (nach H8) kommen die fehlenden Veredler-Rassen (Notiz unten in `OFFENE-FRAGEN.md`).
 
 - [x] Etappe H1 – Neuer Spielstart, Immobilien-Menü, Kredit (groß) – v221, von Claude per Skript getestet, Domes Test steht noch aus
-- [ ] Etappe H2 – Hof-Struktur, Land, Hofplan (groß)
+- [x] Etappe H2 – Hof-Struktur, Land, Hofplan (groß) – v222, von Claude per Skript getestet, Domes Test steht noch aus
 - [ ] Etappe H3 – Bauen, Stufen, Verfall (groß)
 - [ ] Etappe H4 – Umbau-Folgen (mittel)
 - [ ] Etappe H5 – Pension und Einsteller (groß)
@@ -46,6 +46,8 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 4. Land: kaufen 1.000 €/ha oder pachten 20 € je ha und Jahreszeit.
 5. Geld zwischen Höfen nur über Spenden an den eigenen Gnadenhof und interne Rechnungen (eigener Ausbildungsstall berechnet nur den Selbstkostenpreis: Futter, Einstreu, Lohnanteil, ohne Gewinn).
 6. Pferde ziehen per Pferdeanhänger zwischen eigenen Höfen um (neues Ziel „eigener Hof“ in `ANHAENGER`/`ANH_ZIEL`, beide Anhänger). Mitarbeiter gehören immer zu einem Hof.
+
+**Umsetzung H2 (v222):** Bis zu 5 Höfe, jeder mit eigener Kasse, Boxen, Anlagen, Mitarbeitern, Futterkammer, Lager, Rechnungen, Krediten und Verkaufsanzeigen; alle laufen jede Nacht. Immobilien-Menü: eigene Höfe (antippen = wechseln) + Makler (1 Grundstück + 3 Höfe, wechselt jährlich). Hofverwaltung – Hof: Übersicht, Hofplan, Bauen (Hinweis auf H3), Land, Futterkammer. Land kaufen 1.000 €/ha, pachten 20 €/ha je Jahreszeit. Pferdeanhänger – Eigener Hof. Sondertilgung (Domes Wunsch nach H1). + / − in der Boxenübersicht bleibt bis H3 (Dome). Offene Punkte dazu in `OFFENE-FRAGEN.md` (Abschnitt Hof-Ausbau).
 
 ## Etappe H3 – Bauen, Stufen, Verfall (groß)
 1. Neubau nur als ganzes Gebäude oder Abschnitt, keine einzelnen Boxen (das + / − in der Boxenübersicht entfällt). Stallgebäude: Erstbau 6 Boxen, Anbau 4, mehr in 2er-Schritten wählbar. Paddockboxen ebenso (Erstbau 6, Anbau 4).

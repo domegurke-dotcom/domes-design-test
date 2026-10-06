@@ -570,6 +570,15 @@
   .immo-text .immo-sperre { color: #6b5440; font-style: italic; }
   .immo.grau { cursor: default; } .immo.grau .immo-bild svg { filter: grayscale(.9); opacity: .55; } .immo.grau .immo-text { opacity: .7; } .immo.grau:active { transform: none; box-shadow: 0 4px 0 #2b1d14, 0 6px 14px rgba(0,0,0,.25); }
   .immo-schirm { max-width: 860px; }
+  .hm-wechsel { align-self: center; border: 0; border-radius: 99px; padding: 7px 16px; font: inherit; font-weight: 700; font-size: .9rem; background: rgba(255,255,255,.18); color: #fff; cursor: pointer; } .hm-wechsel small { opacity: .8; font-weight: 500; }
+  #hauptMenue .hm-wechsel { grid-column: 1 / -1; }
+  .immo-titel { margin: 6px 0 0; font-size: 1.05rem; color: #fff; }
+  #nebenSchirm .immo-titel { grid-column: 1 / -1; }
+  .hof-tabs { flex-wrap: wrap; } .hof-tabs button { flex: 1 1 auto; font-size: .8rem; padding: 7px 6px; }
+  .hofplan { display: block; width: 100%; max-width: 420px; margin: 0 auto 8px; height: auto; }
+  .hofplan-legende { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--text); } .hofplan-legende i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; border: 1px solid #c9b99f; }
+  .land-knoepfe { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; } .land-knoepfe .knopf { width: auto; flex: 1 1 120px; }
+  .kredit .kr-st { display: block; width: auto; margin-top: 8px; padding: 7px 14px; }
   .immo-info { color: #f3e6d3; margin: 0; }
   #nebenSchirm .immo-liste, #nebenSchirm .immo-info { grid-column: 1 / -1; }
   .hm-kopf { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,.18); border-radius: 14px; padding: 10px 14px; }
@@ -824,7 +833,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "221";
+  const SPIEL_VERSION = "222";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -832,9 +841,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=221"></script>
-<script src="kopfteile.js?v=221"></script>
-<script src="kopfalter.js?v=221"></script>
+<script src="pferd.js?v=222"></script>
+<script src="kopfteile.js?v=222"></script>
+<script src="kopfalter.js?v=222"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -852,7 +861,7 @@
   let hatSpielstand = false, altStand = null;   // altStand: Spielstand von vor dem Hof-Ausbau – lässt sich nicht weiterspielen (Dome: alte Spielstände werden gelöscht)
   try { const s = JSON.parse(localStorage.getItem(SPEICHER)); if (s && s.boxen) { if (s.hofAusbau && !s.verloren) { spiel = s; hatSpielstand = true; } else if (!s.verloren) { altStand = { hof: (s.spieler && s.spieler.hof) || "" }; spiel.sparmodus = s.sparmodus; } } } catch (e) {}
   if (!spiel.anlage) spiel.anlage = { stall: true, paddock: true, weide: false, waschplatz: false, roundpen: false, reitplatz: false, reithalle: false, gelaende: true, anhaenger: true };
-  spiel.anlage.anhaenger = true; spiel.anlage.weide = true; spiel.anlage.reitplatz = true; spiel.anlage.gelaende = true;   // Start: Reitplatz und Gelände (Training daheim)
+  spiel.anlage.anhaenger = true; if (!spiel.hof) { spiel.anlage.weide = true; spiel.anlage.reitplatz = true; spiel.anlage.gelaende = true; }   // Start: Reitplatz und Gelände (Training daheim) – ab H2 je Hof
   if (!spiel.ausruestung) spiel.ausruestung = { halfter: true, strick: true, putzkiste: true, sattel: false, trense: false, schabracke: false, decke: false, gamaschen: false, schere: true, medizin: true };
   if (spiel.ausruestung.medizin == null) spiel.ausruestung.medizin = true;
   spiel.rechnungen = (spiel.rechnungen || []).map(r => r.von ? r : { id: r.id, von: "Tierarztpraxis", art: "klinik", tag: spiel.tag || 1, stufe: 0, faellig: (spiel.tag || 1) + 2, posten: [{ text: `${r.name}: ${r.tage || "?"} Tage stationäre Behandlung`, betrag: r.betrag }], betrag: r.betrag, pferde: [r.pferdId] });
@@ -860,6 +869,7 @@
   if (spiel.ausruestung.futter == null) spiel.ausruestung.futter = true;
   spiel.boxen.forEach(b => { if (b.pferd && !b.pferd.werte) b.pferd.werte = erzeugeWerte(b.pferd); if (b.pferd && !b.pferd.pflege) b.pferd.pflege = erzeugePflege(b.pferd); if (b.pferd && b.pferd.maehneSeit == null) b.pferd.maehneSeit = spiel.tag || 1; if (b.pferd && b.pferd.schopfSeit == null) b.pferd.schopfSeit = b.pferd.maehneSeit; if (b.krippeVoll == null) b.krippeVoll = false; if (b.mistig == null) b.mistig = true; });
   if (!spiel.tag) spiel.tag = 1;
+  if (spiel.hof) { if (!spiel.hof.hid) spiel.hof.hid = "h1"; if (!spiel.hof.name) spiel.hof.name = (spiel.spieler && spiel.spieler.hof) || "Mein Hof"; if (spiel.hof.pacht == null) spiel.hof.pacht = 0; if (!spiel.hofReihe) spiel.hofReihe = [spiel.hof.hid]; if (!spiel.hoefe) spiel.hoefe = {}; }   // H2: mehrere Höfe
   // zweite Box (leer, sauber, Krippe voll)
   while (spiel.boxen.length < 1) spiel.boxen.push({ nr: spiel.boxen.length + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0 });
   spiel.boxen.forEach(b => { if (!b.pferd) { b.mistig = false; b.krippeVoll = false; b.tot = false; } });
@@ -1914,7 +1924,7 @@
   function laborNacht() {
     spiel.labor = (spiel.labor || []).filter(x => {
       if (spiel.tag < x.fertig) return true;
-      const e = alleEigenenPferde().find(e => e.p.id === x.id), T = LABOR_TESTS[x.test];
+      const e = alleHoefePferde().find(e => e.p.id === x.id), T = LABOR_TESTS[x.test];
       if (e) { e.p.tests = e.p.tests || {}; e.p.tests[x.test] = true; if (x.test === "farbe") e.p.gentest = true;
         if (x.test === "abst" && abstUnvollst(e.p)) { e.p.ahnenErmittelt = e.p.ahnenUnbekannt; } }
       brief("Labor", `Laborergebnis: ${x.name} – ${T.n}`, e ? `hier ist das Ergebnis des ${T.n}s für <b>${esc(x.name)}</b>:<br>${laborErgebnis(e.p, x.test)}<br>{Du findest|Sie finden} es auch in der Akte unter „Genetik“ → „Laborergebnisse“.`
@@ -2231,7 +2241,7 @@
     text = String(text).replace(/\{([^{}|]*)\|([^{}|]*)\}/g, (m, a, b) => du ? a : b);
     const [, typ] = briefTyp(betreff), spam = (spiel.spam || []).includes(typ);
     const { pferde, ...rest } = extra || {};   // pferde: diese Pferde sind gemeint (bei gleichen Namen)
-    (spiel.post = spiel.post || []).unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), jz: jzJetzt(), tag: spiel.tag, von, betreff, text, typ, gelesen: spam, spam, du, links: briefLinks(text, pferde), ...rest });
+    (spiel.post = spiel.post || []).unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), jz: jzJetzt(), tag: spiel.tag, von, betreff, text, typ, gelesen: spam, spam, du, links: briefLinks(text, pferde), hid: aktivHid(), hofName: hofName(), ...rest });
     if (spiel.post.length > 120) spiel.post.length = 120;
     if (betreff !== "Neuigkeit" && typ !== "duzen") {
       const K = (spiel.kontakt = spiel.kontakt || {}); K[von] = (K[von] || 0) + 1;
@@ -2244,7 +2254,7 @@
   }
   // Pferde, die in Briefen vorkommen: beim Absenden über den Namen gefunden, beim Lesen anklickbar
   function pferdePool() {
-    const M = spiel.markt || {}, l = [...alleEigenenPferde()];
+    const M = spiel.markt || {}, l = [...alleHoefePferde()];
     (spiel.tierschutz || []).forEach(t => { l.push({ p: t.pferd, ort: "Tierschutz" }); if (t.fohlen) l.push({ p: t.fohlen, ort: "Tierschutz" }); });
     (spiel.friedhof || []).forEach(g => g.pferd && l.push({ p: g.pferd, ort: "Pferdefriedhof", tot: g }));
     [...(M.auktion || []), ...(M.fohlen || [])].forEach(a => l.push({ p: a.pferd, ort: a.fohlen ? "Fohlenauktion" : "Auktionshaus" }));
@@ -2402,7 +2412,8 @@
       el.style.top = Math.max(4, r.top + (r.height - 40) / 2) + "px";
     } else { el.style.right = "10px"; el.style.top = ""; }
   }
-  const speichern = () => { if (spiel.verloren) return; try { localStorage.setItem(SPEICHER, JSON.stringify(spiel)); } catch (e) {} };
+  var hofTiefe = 0, hofSpeichern = false;   // während imHof() (anderer Hof kurz aktiv) wird erst danach gespeichert
+  const speichern = () => { if (spiel.verloren) return; if (hofTiefe) { hofSpeichern = true; return; } try { localStorage.setItem(SPEICHER, JSON.stringify(spiel)); } catch (e) {} };
 
   let aktenReiter = "steckbrief", aktenModus = "steckbrief", scherModus = false, medModus = false, zaumModus = false, putzModus = false, deckModus = false, ortModus = null, meldung = "";
   // ---------- Ganzer Steckbrief nur zum Lesen (für jedes Pferd, auch fremde und Vorfahren) ----------
@@ -2867,6 +2878,10 @@
       if (id === "gnadenhof") { gnadenhofDialog(p, () => { zeigeStall(); }); return; }
       if (id === "verkaufen") { verkaufDialog(p, () => zeigeAkte()); return; }
       if (id === "turnier") { turnierDialog(p, () => zeigeAkte()); return; }
+      if (id === "umzug") { umzugWahl(hid => { const frei = freieBoxIn(hid);
+        if (frei < 1) { dialog(`<h3>Kein Platz</h3><p>Auf ${esc(hofNameVon(hid))} ist keine Box frei.</p>`); return; }
+        dialog(`<h3>🏡 ${esc(p.name)} umziehen?</h3><p>${esc(p.name)}${box.fohlen ? ` und das Fohlen ${esc(box.fohlen.name)}` : ""} ziehen nach <b>${esc(hofNameVon(hid))}</b> (${frei} ${frei === 1 ? "Box" : "Boxen"} frei). Die Box hier wird frei.</p>`,
+          [["Losfahren", () => { umzugHof = hid; ANH_ZIEL.umzug.aus(p, box, false); umzugHof = null; ortModus = null; aktenModus = "steckbrief"; aktenReiter = "steckbrief"; meldung = `🏡 ${esc(p.name)} ist nach ${esc(hofNameVon(hid))} umgezogen.`; speichern(); zeigeStall(); zeigeTag(); }], ["Abbrechen", null, "zweit"]]); }); return; }
       if (id === "stationaer") {
         dialog(`<h3>🏥 ${esc(p.name)} in die Klinik?</h3><p>${esc(p.name)} bleibt in der Klinik, bis die Gesundheit wieder mindestens 75 % beträgt, und erholt sich dort doppelt so schnell. Die Behandlung kostet <b>${fmt(KOSTEN.klinik)} pro Tag</b> – du bekommst danach eine Rechnung, die du innerhalb von 2 Tagen bezahlen solltest – sonst kommt eine Mahnung mit Gebühr. Die Box bleibt für ${pron(p).ihn} frei.</p>`,
           [["In die Klinik", () => { ANH_ZIEL.stationaer.aus(p, box); ortModus = null; aktenModus = "steckbrief"; aktenReiter = "steckbrief"; speichern(); zeigeStall(); zeigeTag(); }], ["Abbrechen", null, "zweit"]]);
@@ -3367,10 +3382,10 @@
   $("krippe").addEventListener("click", () => {
     const box = B();
     if (!box.pferd || box.tot || box.pferd.klinik || box.pferd.weide || box.krippeVoll) return;
-    if (!fuetternAusLager(box, "du")) { dialog(`<h3>🌾 Kein Heu mehr</h3><p>In der Futterkammer ist nicht genug Heu (oder anderes Raufutter) für ${esc(box.pferd.name)}. Im Futterhandel nachkaufen: Hofverwaltung → Hof → Futterkammer.</p>`, [["Zur Futterkammer", () => zeigeHof("hof")], ["Schließen", null, "zweit"]]); return; }
+    if (!fuetternAusLager(box, "du")) { dialog(`<h3>🌾 Kein Heu mehr</h3><p>In der Futterkammer ist nicht genug Heu (oder anderes Raufutter) für ${esc(box.pferd.name)}. Im Futterhandel nachkaufen: Hofverwaltung → Hof → Futterkammer.</p>`, [["Zur Futterkammer", () => { hofBereich = "futter"; zeigeHof("hof"); }], ["Schließen", null, "zweit"]]); return; }
     box.krippeVoll = true; reaktionZeigen(reaktion(box.pferd, "fuettern")); spielerLernt("futter"); beruehrt(box.pferd, "du", "stall");
     const fehlt = (box.pferd.futterHeute || {}).fehlt || [];
-    if (fehlt.length) dialog(`<h3>🌾 Nicht alles da</h3><p>In der Futterkammer ${fehlt.length === 1 ? "ist" : "sind"} <b>${fehlt.map(k => FUTTER[k].n).join(", ")}</b> alle – ${esc(box.pferd.name)} hat heute ohne ${fehlt.length === 1 ? "diese Sorte" : "diese Sorten"} gefressen. Nachkaufen: Hofverwaltung → Hof → Futterkammer (Lieferung am nächsten Morgen).</p>`, [["Zur Futterkammer", () => zeigeHof("hof")], ["OK", null, "zweit"]]);
+    if (fehlt.length) dialog(`<h3>🌾 Nicht alles da</h3><p>In der Futterkammer ${fehlt.length === 1 ? "ist" : "sind"} <b>${fehlt.map(k => FUTTER[k].n).join(", ")}</b> alle – ${esc(box.pferd.name)} hat heute ohne ${fehlt.length === 1 ? "diese Sorte" : "diese Sorten"} gefressen. Nachkaufen: Hofverwaltung → Hof → Futterkammer (Lieferung am nächsten Morgen).</p>`, [["Zur Futterkammer", () => { hofBereich = "futter"; zeigeHof("hof"); }], ["OK", null, "zweit"]]);
     speichern(); zeigeTag();
   });
   const ausmisten = () => {
@@ -4064,7 +4079,7 @@
   }
   function blutbilderTag() {
     spiel.blutbilder = (spiel.blutbilder || []).filter(x => { if (spiel.tag < x.fertig) return true;
-      const e = alleEigenenPferde().find(y => y.p.id === x.pid);
+      const e = alleHoefePferde().find(y => y.p.id === x.pid);
       if (!e) { const g = x.gefunden || [];
         brief("Tierarztpraxis", `Blutbild ${x.name}: Ergebnis`, `das ${x.gross ? "große" : "kleine"} Blutbild von <b>${esc(x.name)}</b> ist da – ${x.name} ist allerdings nicht mehr bei {dir|Ihnen}. ${!x.gross ? (g.length ? "Die Entzündungswerte waren erhöht." : "Die Entzündungswerte waren unauffällig.") : g.length ? `Gefunden hatten wir: ${g.map(a => KRANK[a].n).join(", ")}.` : "Wir hatten nichts Auffälliges gefunden."}`); return false; }
       const p = e.p, l = befundListe(p);
@@ -4764,7 +4779,7 @@
     (spiel.turniere || []).filter(t => t.tag === spiel.tag && t.nennung.length).forEach(t => {
       [...new Set(t.nennung.map(n => n.pid))].forEach(pid => {
         const box = spiel.boxen.find(b => b.pferd && b.pferd.id === pid && !b.tot), p = box && box.pferd;
-        if (!p) { t.nennung = t.nennung.filter(n => n.pid !== pid); return; }
+        if (!p) { if (!alleHoefePferde().some(x => x.p.id === pid)) t.nennung = t.nennung.filter(n => n.pid !== pid); return; }   // steht auf einem anderen eigenen Hof
         if (p.weide && !p.boxenruhe) vonWeideHolen(box);
         const fs = t.nennung.some(n => n.pid === pid && (t.pruef.find(x => x.id === n.prid) || {}).fohlenschau);
         const sp = fs ? (trainSperre(p, box) || (!box.fohlen ? "hat kein Fohlen mehr bei Fuß" : box.fohlen.pflege && box.fohlen.pflege.gesundheit < 50 ? "hat ein zu schwaches Fohlen" : ""))
@@ -5185,7 +5200,7 @@
       <ul class="liste">${Object.entries(R.kg).map(([k, x]) => `<li><span class="txt">${FUTTER[k].ico} ${FUTTER[k].n} ${fmtKg(x)}</span></li>`).join("")}</ul>
       <p class="text"><small>${box && box.fohlen ? `Inkl. ${esc(box.fohlen.name)} (frisst mit). ` : ""}${p.weide && !heuNoetigP(p) ? "Heute auf der Weide: Gras statt Heu. " : p.weide && anweidenAktiv(p) ? "Wird angeweidet: Gras und Heu. " : ""}${box && box.leckstein === jzJetzt() ? "🧊 Salzleckstein in der Box." : "Kein Salzleckstein in der Box."}</small></p>
       ${H ? `<p class="text"><small>Heute gefüttert: ${Object.entries(H.genutzt).map(([k, x]) => `${FUTTER[k].n} ${fmtKg(x)}`).join(", ") || "Gras"}.</small></p>` : `<p class="text"><small>Heute noch nicht gefüttert.</small></p>`}`,
-      [["📋 Futterplan", () => futterplanDialog(p, box, () => zeigeAkte())], ["Zur Futterkammer", () => { zeigeHof("hof"); }, "zweit"], ["Schließen", null, "zweit"]]);
+      [["📋 Futterplan", () => futterplanDialog(p, box, () => zeigeAkte())], ["Zur Futterkammer", () => { hofBereich = "futter"; zeigeHof("hof"); }, "zweit"], ["Schließen", null, "zweit"]]);
   }
 
   // ---------- Fütterung F2: Futterplan, Bedarf, Nährwerte ----------
@@ -5917,6 +5932,7 @@
     if (fremd && ziel === "klinik") wohlAendern(p, -fremd, "fremde Klinik");
     if (fremd && ziel === "aufzucht") wohlAendern(p, -fremd, "fremde Herde");
     if (fremd && ziel === "turnier") wohlAendern(p, -fremd, "Turniertrubel");
+    if (fremd && ziel === "umzug") wohlAendern(p, -fremd, "neuer Stall");
   }
 
   // ---------- Vorlieben und Reaktionen (Werte-Plan, Etappe 3) ----------
@@ -6072,10 +6088,18 @@
       }
       });
   }
+  // Tageswechsel: jeder Hof läuft für sich (H2), Markt, Labor, Tierschutz und Turnierkalender nur einmal
   function naechsteNacht() {
-    tote();
-    turnierNacht();   // Turnierpferde von heute: Ergebnis (Brief kommt am nächsten Tag)
+    jedenHof(() => { tote(); turnierNacht(); }, true);   // Turnierpferde von heute: Ergebnis (Brief kommt am nächsten Tag)
     spiel.tag += 1;
+    jedenHof(hofNacht, true);
+    tierschutzKlinik(); tierschutzFohlen(); laborNacht(); auktionsNacht();
+    if (datum().t === 1) { jedenHof(() => { kreditJahreszeit(); landJahreszeit(); auktionsEnde(); jahreszeitBeginn(); angeboteJahreszeit(); externJahreszeit(); mitarbeiterJahreszeit(); }, true); spamAufraeumen(); hoefeVersteigern(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
+    turnierKalender();
+    jedenHof(hofMorgen, true);
+    blutbilderTag();     // Laborergebnisse
+  }
+  function hofNacht() {
     alterAktualisieren();
     const weideHerde = spiel.boxen.filter(b => b.pferd && b.pferd.weide && !b.pferd.klinik && !b.tot).map(b => b.pferd);
     if (weideHerde.length > 1) herdeNacht(weideHerde);
@@ -6127,16 +6151,16 @@
     befundeNacht();   // Krankheiten und Verletzungen: neu, Verlauf, Wirkung
     externNacht(); rechnungenTag();
     angeboteNacht();
-    tierschutzEinsatz(); tierschutzKlinik(); tierschutzFohlen(); kontoMinus(); laborNacht(); auktionsNacht();
-    if (datum().t === 1) { kreditJahreszeit(); auktionsEnde(); jahreszeitBeginn(); angeboteJahreszeit(); externJahreszeit(); spamAufraeumen(); mitarbeiterJahreszeit(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
-    turnierKalender(); turnierMorgen();   // Turniertag: genannte Pferde fahren los
+    tierschutzEinsatz(); kontoMinus();
+  }
+  function hofMorgen() {
+    turnierMorgen();   // Turniertag: genannte Pferde fahren los
     futterLieferung();  // bestelltes Futter kommt an
     mitarbeiterTag();   // Stallburschen versorgen ihre Boxen zum Tagesbeginn
     befundeMorgen();    // wer heute bei den Pferden war, bemerkt vielleicht etwas
     behandlungsPlaene(); // Pfleger/Pferdewirt behandeln nach Plan
     hufschmiedTag();     // Daueraufträge und Erinnerungen
     futterexperteTag();  // Termin beim Futterexperten
-    blutbilderTag();     // Laborergebnisse
   }
   $("tagAnzeige").onclick = () => {
     const box = B(), offen = [];
@@ -6470,7 +6494,7 @@
     if (!id) { stallFormat(); zeigeStall(); zeigeTag(); }
     setTimeout(postIconSetzen, 30);
   }
-  const hofName = () => (spiel.spieler && spiel.spieler.hof) || "Mein Hof";
+  const hofName = () => (spiel.hof && spiel.hof.name) || (spiel.spieler && spiel.spieler.hof) || "Mein Hof";
   function titelSetzen() { document.querySelector("header h1").innerHTML = `<span class="emoji">🐴 </span>${esc(hofName())}`; document.title = hofName(); }
   const istVoll = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
 
@@ -6531,11 +6555,11 @@
   function zeigeHaupt() {
     const sp = spiel.spieler || { name: "", avatar: "🧑‍🌾" }, belegt = spiel.boxen.filter(b => b.pferd).length;
     $("hauptMenue").innerHTML = `<div class="schirm-innen">
-      <div class="hm-kopf"><span class="ava">${sp.avatar}</span><div><b>${esc(hofName())}</b><span>${sp.name ? esc(sp.name) + " · " : ""}${JZ[datum().s][1]} ${datumLang()}</span></div></div>
+      <div class="hm-kopf"><span class="ava">${sp.avatar}</span><div><b>${esc(hofName())}</b><span>${sp.name ? esc(sp.name) + " · " : ""}${JZ[datum().s][1]} ${datumLang()}</span></div></div>${hofAnzahl() > 1 ? `<button class="hm-wechsel" id="hmWechsel" title="Zu einem anderen eigenen Hof wechseln">🏘️ Hof wechseln <small>(${hofAnzahl()} Höfe)</small></button>` : ""}
       <h1 style="margin-top:8px">Hauptmenü</h1>
       <div class="hm-kacheln">
-        <button class="hm-kachel" id="hmImmo">${kredite().some(k => (k.offen || []).length) ? `<span class="bald" style="background:#c0392b">⚠️ Rate</span>` : ""}<span class="i">🏘️</span>Immobilien<small>${spiel.hof ? `${esc((immobilie(spiel.hof.id) || {}).n || "")}${restschuld() ? ` · Kredit ${fmt(restschuld())}` : ""}` : "deine Höfe"}</small></button>
-        <button class="hm-kachel" id="hmStall"><span class="i">🏠</span>Stall<small>${belegt} von ${spiel.boxen.length} Boxen belegt</small></button>
+        <button class="hm-kachel" id="hmImmo">${kredite().some(k => (k.offen || []).length) ? `<span class="bald" style="background:#c0392b">⚠️ Rate</span>` : ""}<span class="i">🏘️</span>Immobilien<small>${hofAnzahl() > 1 ? `${hofAnzahl()} Höfe · Makler` : spiel.hof ? `${esc((immobilie(spiel.hof.id) || {}).n || "")}${restschuld() ? ` · Kredit ${fmt(restschuld())}` : ""}` : "deine Höfe"}</small></button>
+        <button class="hm-kachel" id="hmStall"><span class="i">🏠</span>Stall<small>${spiel.boxen.length ? `${belegt} von ${spiel.boxen.length} Boxen belegt` : "noch kein Stall"}</small></button>
         <button class="hm-kachel" id="hmMarkt"><span class="i">🏷️</span>Pferdemarkt<small>Pferde kaufen und verkaufen</small></button>
         <button class="hm-kachel" id="hmHof">${ungelesen() ? `<span class="bald" style="background:#c0392b">${ungelesen()} ✉</span>` : ""}<span class="i">📋</span>Hofverwaltung<small>Hof, Finanzen, Mitarbeiter, Postfach</small></button>
         <button class="hm-kachel" id="hmEnzy"><span class="i">📖</span>Enzyklopädie<small>Rassen, Kopfformen, Abzeichen, Farben</small></button>
@@ -6548,6 +6572,8 @@
     zeigeSchirm("hauptMenue");
     $("hmStall").onclick = zeigeBoxen;
     $("hmImmo").onclick = zeigeImmobilien;
+    if ($("hmWechsel")) $("hmWechsel").onclick = () => { dialog(`<h3>🏘️ Hof wechseln</h3><div class="paar-liste">${hofReihe().map(h => `<button class="knopf ${h === aktivHid() ? "" : "zweit"}" data-hw="${h}" style="margin:4px 0">${h === aktivHid() ? "✅ " : ""}${esc(hofNameVon(h))}</button>`).join("")}</div>`, [["Schließen", null, "zweit"]]);
+      document.querySelectorAll("[data-hw]").forEach(b => b.onclick = () => { $("dlg").hidden = true; hofWechseln(b.dataset.hw); speichern(); zeigeHaupt(); }); };
     $("hmGnade").onclick = zeigeGnadenhof;
     $("hmAnh").onclick = () => { anhZiel = null; anhAuswahl = new Set(); anhMeldung = ""; zeigeAnhaenger(); };
     $("hmFried").onclick = zeigeFriedhof;
@@ -6606,9 +6632,14 @@
   // Neue Ziele nur hier eintragen – dann erscheinen sie in beiden Anhängern.
   // Je Ziel: ico, name, info (Tooltip), wohin (für Texte), kurz(p, box) = Kurztext, wenn erlaubt, sperre(p, box, istFohlen) = Grund oder "",
   // aus(p, box, istFohlen) = ausführen (ohne Rückfrage), bald = noch nicht verfügbar, gruppe = führt zu einer Unterebene, einzeln = nur einzeln (Verkaufen)
-  const ANHAENGER = { start: ["klinik", "aufzucht", "ausbildung", "turnier", "abgeben"], klinik: ["stationaer", "kastration"], abgeben: ["verschenken", "verkaufen", "gnadenhof"] };
+  const ANHAENGER = { start: ["klinik", "aufzucht", "ausbildung", "turnier", "umzug", "abgeben"], klinik: ["stationaer", "kastration"], abgeben: ["verschenken", "verkaufen", "gnadenhof"] };
   const anhGrund = (p, b, mitAngebot = true) => b.tot ? "verstorben" : p.klinik ? "in der Klinik" : p.turnier ? "auf dem Turnier" : mitAngebot && angebotVon(p) ? "steht zum Verkauf" : "";
   const ANH_ZIEL = {
+    umzug: { ico: "🏡", name: "Eigener Hof", info: "Umzug auf einen anderen eigenen Hof – Fohlen bei Fuß ziehen mit der Mutter um", wohin: "auf einen anderen Hof", wo: "umgezogen",
+      beschreibung: "Pferde ziehen auf einen anderen eigenen Hof (Fohlen bei Fuß mit der Mutter)", kosten: () => "keine – du fährst selbst",
+      sperre: (p, b, f) => !andereHoefe().length ? "erst mit einem 2. Hof" : anhGrund(p, b) || (f ? "nur mit der Mutter" : "") || (inQuarantaene(p) ? "in Quarantäne" : "") || (!andereHoefe().some(h => freieBoxIn(h) > 0) ? "kein Platz auf dem anderen Hof" : ""),
+      kurz: () => andereHoefe().length === 1 ? esc(hofNameVon(andereHoefe()[0])) : "Hof wählen", hmKurz: "Umzug",
+      aus: (p, b, f) => umziehen(p, b, umzugHof || andereHoefe()[0], f) },
     klinik: { ico: "🏥", name: "Klinik", info: "Tierklinik: stationäre Behandlung oder Kastration", gruppe: true, kurz: () => "Behandlung, Kastration" },
     abgeben: { ico: "👋", name: "Abgeben", info: "Pferd abgeben", gruppe: true, kurz: () => "verkaufen, Gnadenhof" },
     turnier: { ico: "🏆", name: "Turnier", info: "Turnierkalender: Pferde für Turniere nennen", einzeln: true, hmKurz: "Kalender, Nennen",
@@ -6690,7 +6721,7 @@
     else {
       const Z = ANH_ZIEL[anhZiel], liste = anhKandidaten(anhZiel);
       anhAuswahl = new Set([...anhAuswahl].filter(k => liste.some(x => x.key === k)));
-      html = meld + `<p class="text" style="margin:0 0 4px">${Z.ico} <b>${Z.name.replace(/\u00ad/g, "")}</b> · ${Z.beschreibung}${Z.kosten ? `<br><small>Kosten: ${Z.kosten()}</small>` : ""}</p>` + (liste.length
+      html = meld + `<p class="text" style="margin:0 0 4px">${Z.ico} <b>${Z.name.replace(/\u00ad/g, "")}</b> · ${Z.beschreibung}${anhZiel === "umzug" ? ` – nach <b>${esc(hofNameVon(umzugHof || andereHoefe()[0]))}</b> (${freieBoxIn(umzugHof || andereHoefe()[0])} Boxen frei)` : ""}${Z.kosten ? `<br><small>Kosten: ${Z.kosten()}</small>` : ""}</p>` + (liste.length
         ? `<div class="post-leiste"><span>${anhAuswahl.size} von ${liste.length} ausgewählt</span><span><button id="anhAlle">${anhAuswahl.size === liste.length ? "Keine" : "Alle"} auswählen</button></span></div>
           <div class="paar-liste anh-liste">${liste.map(x => `<div class="anh-wahl ${anhAuswahl.has(x.key) ? "markiert" : ""}">${pferdKachel(x.p, { attr: `data-anhwahl="${x.key}"`, zeilen: [x.fohlen ? `Fohlen · Box ${spiel.boxen.indexOf(x.box) + 1}` : `Box ${spiel.boxen.indexOf(x.box) + 1}`, anhZiel === "stationaer" ? `Gesundheit ${x.p.pflege.gesundheit.toLocaleString("de-DE")} %` : alterText(x.p)] })}<span class="haken">${anhAuswahl.has(x.key) ? "✓" : ""}</span></div>`).join("")}</div>
           <button class="sknopf haupt ${anhAuswahl.size ? "" : "aus"}" id="anhLos" ${anhAuswahl.size ? "" : "disabled"}><span class="i">🚚</span><span>${anhAuswahl.size ? `${anhAuswahl.size} ${anhAuswahl.size === 1 ? "Pferd" : "Pferde"} ${Z.wohin} bringen` : "Erst Pferde auswählen"}</span></button>`
@@ -6703,6 +6734,7 @@
       const id = k.dataset.anhziel;
       if (id === "verkaufen") { anhVerkaufen(); return; }
       if (id === "turnier") { anhTurnier(); return; }
+      if (id === "umzug") { umzugWahl(hid => { umzugHof = hid; anhZiel = "umzug"; anhAuswahl = new Set(); zeigeAnhaenger(); }); return; }
       anhZiel = id; anhAuswahl = new Set(); zeigeAnhaenger(); window.scrollTo(0, 0); });
     nb.querySelectorAll("[data-anhwahl]").forEach(k => k.onclick = () => { const key = k.dataset.anhwahl; anhAuswahl.has(key) ? anhAuswahl.delete(key) : anhAuswahl.add(key); zeigeAnhaenger(); });
     if ($("anhAlle")) $("anhAlle").onclick = () => { const liste = anhKandidaten(anhZiel); anhAuswahl = anhAuswahl.size === liste.length ? new Set() : new Set(liste.map(x => x.key)); zeigeAnhaenger(); };
@@ -6711,6 +6743,11 @@
       const gew = anhKandidaten(anhZiel).filter(x => anhAuswahl.has(x.key)); if (!gew.length) return;
       const ziel = anhZiel, Z = ANH_ZIEL[ziel], namen = gew.map(x => `<b>${esc(x.p.name)}</b>`).join(", ");
       const geld = ziel === "gnadenhof" ? gew.reduce((a, x) => a + Math.round(marktwert(x.p) / 2 / 50) * 50, 0) : 0;
+      if (ziel === "umzug") { const hid = umzugHof || andereHoefe()[0], frei = freieBoxIn(hid);
+        if (gew.length > frei) { dialog(`<h3>Zu wenig Platz</h3><p>Auf ${esc(hofNameVon(hid))} ${frei === 1 ? "ist nur 1 Box" : `sind nur ${frei} Boxen`} frei – du hast ${gew.length} Pferde ausgewählt.</p>`); return; }
+        dialog(`<h3>🏡 ${gew.length} ${gew.length === 1 ? "Pferd" : "Pferde"} nach ${esc(hofNameVon(hid))}?</h3><p>${namen}</p><p>Fohlen bei Fuß ziehen mit. Die Boxen hier werden frei.</p>`,
+          [["Losfahren", () => { gew.forEach(x => umziehen(x.p, x.box, hid, false)); anhMeldung = `🏡 ${gew.length === 1 ? `${esc(gew[0].p.name)} ist` : `${gew.length} Pferde sind`} nach ${esc(hofNameVon(hid))} umgezogen.`;
+            anhAuswahl = new Set(); speichern(); zeigeTag(); zeigeAnhaenger(); }], ["Abbrechen", null, "zweit"]]); return; }
       const text = ziel === "kastration" ? `Sie bleiben 2 Tage in der Klinik (länger, falls die Gesundheit unter 75 % liegt) und sind danach <b>Wallache</b> – keine Zucht mehr möglich. Im Abstammungsschein bleiben sie Hengste. Kosten: <b>${fmt(KOSTEN.kastration * gew.length)}</b> (${fmt(KOSTEN.kastration)} je Hengst), du bekommst danach je eine Rechnung. Das lässt sich nicht rückgängig machen.`
         : ziel === "gnadenhof" ? `Sie ziehen sofort auf den Gnadenhof. Du bekommst zusammen <b>${fmt(geld)}</b>. Das lässt sich nicht rückgängig machen.`
         : ziel === "stationaer" ? `Sie bleiben in der Klinik, bis ihre Gesundheit wieder mindestens 75 % beträgt. Kosten: <b>${fmt(KOSTEN.klinik)} pro Tag und Pferd</b> – du bekommst danach je eine Rechnung.`
@@ -6860,7 +6897,7 @@
   // zu Beginn jeder Jahreszeit: Auktionen der letzten Jahreszeit entscheiden
   function auktionsEnde() {
     const M = spiel.markt; if (!M || !M.auktion || M.jz === jzJetzt()) return;
-    [...M.auktion, ...(M.fohlen || [])].forEach(a => { if (a.vorbei || a.fuehrt !== "du") return; a.vorbei = true;
+    [...M.auktion, ...(M.fohlen || [])].forEach(a => { if (a.vorbei || a.fuehrt !== "du" || (a.hid && hofVon(a.hid) ? a.hid : hofReihe()[0]) !== aktivHid()) return; a.vorbei = true;   // Zuschlag an den Hof, von dem aus geboten wurde
       const zb = freieBox();
       if (zb < 0 || (spiel.geld || 0) < a.gebot) { brief("Auktionshaus", `Auktion verloren: ${a.pferd.name}`, `{du hattest|Sie hatten} das Höchstgebot für <b>${esc(a.pferd.name)}</b> (${fmt(a.gebot)}), aber ${zb < 0 ? "keine freie Box" : "nicht genug Geld"}. Das Pferd ging an den Nächstbietenden.`, { pferde: [a.pferd] }); return; }
       buchen(-a.gebot, `Auktion: ${a.pferd.name}`);
@@ -6912,7 +6949,7 @@
       <p><small>Frei verfügbar: <b>${fmt(frei)}</b>${gebunden ? ` (${fmt(gebunden)} in anderen Höchstgeboten gebunden)` : ""}. Wie bei eBay: Du gibst an, wie viel du höchstens zahlen willst. Bezahlt wird nur so viel wie nötig – ein Schritt über dem nächsten Bieter. Vorsicht: Manchmal bietet ein Liebhaber mit – dann wird es teuer. Die Auktion endet mit dieser Jahreszeit – wird dein Höchstgebot überboten, bekommst du einen Brief.${a.fohlen ? ` 🍼 ${esc(a.pferd.name)} bleibt bis zum Absetzen bei der Mutter und kommt zu Beginn der nächsten Jahreszeit zu dir – dann brauchst du eine freie Box und das Geld.` : ""}</small></p>`,
       [[fuehrst ? "Erhöhen" : "Bieten", () => { const g = Math.max(neu, +$("gebotRegler").value);
         if (!fuehrst) { a.gebot = neu; a.gebote++; }   // aktuelles Gebot: nur das Nötigste, der Rest ist dein verdecktes Höchstgebot
-        a.duMax = g; a.fuehrt = "du"; a.duGeboten = true; speichern(); zurueck(); }], [`🩺 ${a.pferd.akuErg ? "AKU-Ergebnis" : "Ankaufsuntersuchung"}`, () => akuDialog(a.pferd, "Auktion", null, () => bieten(a, nachher)), "zweit"], ["Abbrechen", nachher || null, "zweit"]]);
+        a.duMax = g; a.fuehrt = "du"; a.duGeboten = true; a.hid = aktivHid(); speichern(); zurueck(); }], [`🩺 ${a.pferd.akuErg ? "AKU-Ergebnis" : "Ankaufsuntersuchung"}`, () => akuDialog(a.pferd, "Auktion", null, () => bieten(a, nachher)), "zweit"], ["Abbrechen", nachher || null, "zweit"]]);
     const rg = $("gebotRegler"), zeig = () => $("gebotWert").textContent = fmt(+rg.value);
     rg.oninput = zeig;
     document.querySelectorAll("[data-gplus]").forEach(b => b.onclick = () => { rg.value = Math.min(max, neu + +b.dataset.gplus * bietSchritt(a)); zeig(); });
@@ -7116,6 +7153,9 @@
     speichern(); if (danach) danach();
   }
   function zwangsversteigerung(k) {
+    const weg = (spiel.hofWeg = spiel.hofWeg || []);
+    if (hofReihe().some(h => h !== aktivHid() && !weg.includes(h))) { weg.push(aktivHid()); return; }   // weitere Höfe: nur dieser wird versteigert
+    delete spiel.hofWeg;
     spiel.verloren = { tag: spiel.tag, jz: jzJetzt(), kredit: k.name, offen: k.offen.length, schuld: runde2(k.rest + k.offen.reduce((a, r) => a + r.zins + (r.gebuehr || 0), 0)),
       pferde: alleEigenenPferde().length };
   }
@@ -7212,7 +7252,7 @@
     spiel = { geld: START_KAPITAL, spieler: c, tag: 1, tempo, tempoNeu: true, aktBox: 0, sparmodus: spiel.sparmodus, hofAusbau: HOF_AUSBAU,
       boxen: Array.from({ length: I.boxen }, (_, i) => ({ nr: i + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false, stufe: I.stufe })),
       anlage: spiel.anlage, ausruestung: spiel.ausruestung, stallarten: ["pension"],
-      hof: { id: I.id, art: "pension", ha: I.ha, weideHa: I.weide, stufe: I.stufe, wert: I.preis, kauf: { tag: 1, preis: I.preis, eigen: I.eigen } } };
+      hof: { hid: "h1", name, id: I.id, art: "pension", ha: I.ha, weideHa: I.weide, stufe: I.stufe, wert: I.preis, kauf: { tag: 1, preis: I.preis, eigen: I.eigen }, pacht: 0 }, hofReihe: ["h1"], hoefe: {} };
     buchen(-I.preis, "Hofkauf");
     const k = kreditNeu(I.preis - I.eigen, KREDIT.jz, "Hofkredit");
     brief(KREDIT.bank, "Ihr Hofkredit", `herzlichen Glückwunsch zu {deinem|Ihrem} neuen Hof <b>${esc(name)}</b>! Hier die Eckdaten {deines|Ihres} Kredits:` +
@@ -7222,9 +7262,227 @@
     aktenReiter = "steckbrief"; aktenModus = "steckbrief"; scherModus = false; medModus = false; zaumModus = false; putzModus = false; meldung = "";
     speichern(); titelSetzen(); zeigeHaupt();
   }
+  // ---------- Hof-Ausbau H2: mehrere Höfe, jeder mit eigener Kasse, eigenen Boxen, Mitarbeitern, Futter ----------
+  // Der aktive Hof liegt wie bisher direkt in „spiel“, die anderen in spiel.hoefe[hid]. imHof() tauscht für eine Aktion kurz um.
+  const HOF_FELDER = ["boxen", "geld", "mitarbeiter", "hof", "extern", "anlage", "rechnungen", "rechnungStatus", "aktBox", "bewerber", "futterTermin", "maVergessen", "stallarten",
+    "finanzen", "finanzSaison", "lager", "kredite", "futter", "apotheke", "hufschmiedHeute", "angebote", "vernachlaessigt"];
+  const STUFE_ADJ = ["", "baufällige", "ordentliche", "komfortable"];
+  const MAX_HOEFE = 5, LAND_PREIS = 1000, PACHT_PREIS = 20;   // Land: kaufen je ha, pachten je ha und Jahreszeit
+  const aktivHid = () => (spiel.hof && spiel.hof.hid) || "h1";
+  const hofReihe = () => (spiel.hofReihe = spiel.hofReihe || [aktivHid()]);
+  const hofAnzahl = () => hofReihe().length;
+  function imHof(hid, fn, nacht) {
+    if (!hid || hid === aktivHid()) return fn();
+    const H = (spiel.hoefe || {})[hid]; if (!H) return undefined;
+    const alt = {}, akt = aktBox, gh = spiel.gnadenhof;
+    HOF_FELDER.forEach(k => { alt[k] = spiel[k]; spiel[k] = H[k]; });
+    aktBox = Math.min(spiel.aktBox || 0, Math.max(0, (spiel.boxen || []).length - 1));
+    if (nacht) spiel.gnadenhof = [];   // der externe Gnadenhof gehört allen – nachts nur einmal (beim aktiven Hof) rechnen
+    hofTiefe++;
+    try { return fn(); }
+    finally {
+      if (nacht) { const neu = spiel.gnadenhof || []; if (gh || neu.length) spiel.gnadenhof = (gh || []).concat(neu); else delete spiel.gnadenhof; }
+      spiel.aktBox = aktBox;
+      HOF_FELDER.forEach(k => { H[k] = spiel[k]; if (alt[k] === undefined) delete spiel[k]; else spiel[k] = alt[k]; });
+      aktBox = akt; hofTiefe--;
+      if (!hofTiefe && hofSpeichern) { hofSpeichern = false; speichern(); }
+    }
+  }
+  // fn läuft für jeden Hof (aktiver zuerst) – nachts mit nacht = true
+  function jedenHof(fn, nacht) { const a = aktivHid(); fn(); hofReihe().filter(h => h !== a && (spiel.hoefe || {})[h]).forEach(h => imHof(h, fn, nacht)); }
+  function hofSammeln(fn) { const out = []; jedenHof(() => out.push(...fn())); return out; }
+  // alle eigenen Pferde auf allen Höfen (Labor, Blutbild, Briefe)
+  const alleHoefePferde = () => { const ids = new Set(); return hofSammeln(() => alleEigenenPferde().map(x => ({ ...x, hid: aktivHid(), hofName: hofName() }))).filter(x => !ids.has(x.p.id) && ids.add(x.p.id)); };
+  const hofVon = hid => hid === aktivHid() ? spiel.hof : ((spiel.hoefe || {})[hid] || {}).hof;
+  const hofNameVon = hid => { const h = hofVon(hid); return (h && h.name) || "?"; };
+  function hofWechseln(hid) {
+    if (!hid || hid === aktivHid() || !(spiel.hoefe || {})[hid]) return;
+    const alt = aktivHid(), H = spiel.hoefe[hid], A = {};
+    spiel.aktBox = aktBox;
+    HOF_FELDER.forEach(k => { A[k] = spiel[k]; spiel[k] = H[k]; if (spiel[k] === undefined) delete spiel[k]; });
+    spiel.hoefe[alt] = A; delete spiel.hoefe[hid];
+    aktBox = Math.min(spiel.aktBox || 0, Math.max(0, spiel.boxen.length - 1));
+    aktenReiter = "steckbrief"; aktenModus = "steckbrief"; deckModus = false; ortModus = null; scherModus = false; medModus = false; zaumModus = false; putzModus = false; meldung = "";
+    titelSetzen();
+  }
+  // Spielstände aus H1: Hof bekommt Kennung und Namen
+  function hofErgaenzen() {
+    if (!spiel.hof) return;
+    if (!spiel.hof.hid) spiel.hof.hid = "h1";
+    if (!spiel.hof.name) spiel.hof.name = (spiel.spieler && spiel.spieler.hof) || "Mein Hof";
+    if (spiel.hof.pacht == null) spiel.hof.pacht = 0;
+    hofReihe();
+  }
+  const ANLAGE_NAME = { reitplatz: "Reitplatz", roundpen: "Roundpen", reithalle: "Reithalle", gelaende: "Gelände", waschplatz: "Waschplatz" };
+  const anlagenText = (A = spiel.anlage || {}) => Object.keys(ANLAGE_NAME).filter(k => A[k]).map(k => ANLAGE_NAME[k]).join(", ") || "keine";
+  // Makler: Angebot wechselt einmal im Jahr (Zustand zufällig)
+  const MAKLER_VORLAGEN = [
+    { typ: "grund", n: "Leeres Grundstück", bild: "grund", boxen: [0, 0], ha: [3, 8], weide: 0, anlagen: [] },
+    { typ: "pension", n: "Kleiner Pensionsstall", bild: "pension", boxen: [6, 10], ha: [2, 4], weide: .5, anlagen: ["reitplatz"] },
+    { typ: "resthof", n: "Resthof mit Scheune", bild: "resthof", boxen: [6, 10], ha: [3, 6], weide: .5, anlagen: [] },
+    { typ: "gestuet", n: "Kleines Gestüt", bild: "gestuet", boxen: [8, 12], ha: [6, 10], weide: .6, anlagen: ["reitplatz"] },
+    { typ: "reitanlage", n: "Reitanlage mit Halle", bild: "reitanlage", boxen: [12, 18], ha: [4, 8], weide: .4, anlagen: ["reitplatz", "reithalle"] },
+  ];
+  const MAKLER_PREIS = { hofstelle: 8000, box: [0, 1000, 1600, 2500], reitplatz: [0, 2000, 3000, 4500], reithalle: [0, 10000, 15000, 22000] };
+  function maklerAngebote() {
+    const j = datum().j; if (spiel.makler && spiel.makler.j === j) return spiel.makler.liste;
+    const r = zufall("makler-" + j + "-" + (spiel.spieler && spiel.spieler.name)), ri = (a, b) => a + Math.floor(r() * (b - a + 1));
+    const vorl = [MAKLER_VORLAGEN[0], ...MAKLER_VORLAGEN.slice(1).sort(() => r() - 0.5).slice(0, 3)];
+    const liste = vorl.map((V, i) => {
+      const stufe = V.boxen[1] ? (r() < .5 ? 1 : r() < .7 ? 2 : 3) : 0, boxen = V.boxen[1] ? ri(V.boxen[0] / 2, V.boxen[1] / 2) * 2 : 0, ha = ri(V.ha[0], V.ha[1]), weide = Math.round(ha * V.weide);
+      let preis = ha * LAND_PREIS + (boxen ? MAKLER_PREIS.hofstelle + boxen * MAKLER_PREIS.box[stufe] : 0) + V.anlagen.reduce((a, k) => a + (MAKLER_PREIS[k] ? MAKLER_PREIS[k][stufe || 1] : 0), 0);
+      preis = Math.round(preis * (0.9 + r() * 0.2) / 500) * 500;
+      return { mid: `m${j}-${i}`, typ: V.typ, n: V.n, bild: V.bild, boxen, stufe, ha, weide, anlagen: V.anlagen, preis,
+        text: boxen ? `${boxen} ${STUFE_ADJ[stufe]} Boxen · ${V.anlagen.map(k => ANLAGE_NAME[k]).concat(["Gelände"]).join(" · ")} · ${ha} ha, davon ${weide} ha Weide` : `${ha} ha Grünland – Stall, Reitplatz und Weiden baust du selbst` };
+    });
+    spiel.makler = { j, liste, gekauft: [] };
+    return liste;
+  }
+  // Land: kaufen (1.000 €/ha, erhöht den Hofwert) oder pachten (20 € je ha und Jahreszeit)
+  function landJahreszeit() {
+    const H = spiel.hof; if (!H || !H.pacht) return;
+    const b = H.pacht * PACHT_PREIS; buchen(-b, "Pacht");
+  }
+  // Zwangsversteigerung eines von mehreren Höfen: Hof, Pferde und Mitarbeiter sind weg, das Spiel geht weiter
+  function hoefeVersteigern() {
+    const weg = spiel.hofWeg || []; delete spiel.hofWeg; if (!weg.length) return;
+    weg.forEach(hid => {
+      if (hofAnzahl() <= 1) return;
+      if (hid === aktivHid()) hofWechseln(hofReihe().find(h => h !== hid));
+      const H = spiel.hoefe[hid], name = H.hof.name, pferde = (H.boxen || []).filter(b => b.pferd).length;
+      delete spiel.hoefe[hid]; spiel.hofReihe = hofReihe().filter(h => h !== hid);
+      brief(KREDIT.bank, `Zwangsversteigerung: ${name}`, `leider {hast du|haben Sie} drei Kreditraten für <b>${esc(name)}</b> nicht bezahlt. Wir haben den Kredit gekündigt und den Hof zwangsversteigern lassen. ${pferde ? `Die ${pferde} ${pferde === 1 ? "Pferd" : "Pferde"}, ` : ""}Mitarbeiter, Futter und Ausrüstung dieses Hofs gehören jetzt anderen. {Deine|Ihre} anderen Höfe sind davon nicht betroffen.`);
+    });
+  }
+  // ---------- Immobilien-Menü (H2): eigene Höfe wechseln, Makler-Angebote ----------
+  function ersterKredit() { return imHof(hofReihe()[0], () => kredite()[0]); }
+  function immoSperre2(A) {
+    if (hofAnzahl() >= MAX_HOEFE) return `Du hast schon ${MAX_HOEFE} Höfe – mehr geht nicht.`;
+    if ((spiel.makler.gekauft || []).includes(A.mid)) return "verkauft";
+    const k = ersterKredit(), haelfte = !k || k.getilgt >= k.summe / 2, eigen = (spiel.geld || 0) >= Math.ceil(A.preis / 2);
+    if (!haelfte) return `Wird frei, wenn dein erster Kredit zur Hälfte abbezahlt ist (jetzt ${prozent(k.getilgt / k.summe)}).`;
+    if (!eigen) return `Dir fehlt der Eigenanteil: die Hälfte des Preises (${fmt(Math.ceil(A.preis / 2))}) aus der Kasse von ${esc(hofName())}.`;
+    return "";
+  }
+  function eigeneHoefeHTML() {
+    return `<div class="immo-liste">${hofReihe().map(hid => { const H = hofVon(hid), aktiv = hid === aktivHid(), I = immobilie(H.id) || MAKLER_VORLAGEN.find(V => V.typ === H.id) || {},
+        info = imHof(hid, () => ({ boxen: spiel.boxen.length, pferde: spiel.boxen.filter(b => b.pferd).length, geld: spiel.geld || 0, schuld: restschuld(), offen: kredite().some(k => (k.offen || []).length) }));
+      return `<button class="immo" data-hofwahl="${hid}"><span class="immo-bild">${hofBild(I.bild || "pension")}<span class="immo-marke">${aktiv ? "✅ du bist hier" : "🏡 dein Hof"}</span></span>
+        <span class="immo-text"><b>${esc(H.name)}</b><small>${esc(I.n || "")} · ${STALLART_NAME[H.art] || ""} · ${info.pferde} ${info.pferde === 1 ? "Pferd" : "Pferde"} in ${info.boxen} ${info.boxen === 1 ? "Box" : "Boxen"} · ${String(H.ha).replace(".", ",")} ha</small>
+          <span class="immo-preis">Kasse ${fmt(info.geld)}${info.schuld ? ` · Kredit ${fmt(info.schuld)}` : ""}${info.offen ? " · ⚠️ Rate offen" : ""}</span><small>${aktiv ? "antippen: zur Hofverwaltung" : "antippen: zu diesem Hof wechseln"}</small></span></button>`; }).join("")}</div>`;
+  }
+  function maklerHTML() {
+    const L = maklerAngebote();
+    return `<div class="immo-liste">${L.map(A => { const sp = immoSperre2(A), weg = sp === "verkauft";
+      return `<button class="immo ${sp ? "grau" : ""}" data-makler="${A.mid}" ${sp ? 'aria-disabled="true"' : ""}><span class="immo-bild">${hofBild(A.bild)}${sp ? `<span class="immo-marke grau">${weg ? "verkauft" : "🔒"}</span>` : ""}</span>
+        <span class="immo-text"><b>${A.n}</b><small>${A.text}</small><span class="immo-preis">${fmt(A.preis)}</span>${sp && !weg ? `<small class="immo-sperre">${sp}</small>` : ""}</span></button>`; }).join("")}</div>`;
+  }
   function zeigeImmobilien() {
-    zeigeNeben("🏘️ Immobilien", `<p class="text immo-info">Hier verwaltest du deine Höfe. Weitere Immobilien werden frei, wenn dein erster Kredit zur Hälfte abbezahlt ist und du die Hälfte des Kaufpreises als Eigenanteil hast.</p>${immobilienHTML(false)}`);
-    immobilienBinden($("nebenSchirm"), false);
+    hofErgaenzen();
+    zeigeNeben("🏘️ Immobilien", `<h4 class="immo-titel">🏡 Deine Höfe (${hofAnzahl()} von ${MAX_HOEFE})</h4>${eigeneHoefeHTML()}
+      <h4 class="immo-titel">📰 Angebote vom Makler ${datum().j}</h4><p class="text immo-info">Das Angebot wechselt einmal im Jahr. Kaufen kannst du, wenn dein erster Kredit zur Hälfte abbezahlt ist und die Hälfte des Preises in der Kasse von <b>${esc(hofName())}</b> liegt. Jeder Hof hat seine eigene Kasse, eigene Boxen, Mitarbeiter und Futter – alle Höfe laufen gleichzeitig weiter.</p>${maklerHTML()}`);
+    const nb = $("nebenSchirm");
+    nb.querySelectorAll("[data-hofwahl]").forEach(b => b.onclick = () => { const hid = b.dataset.hofwahl;
+      if (hid === aktivHid()) { zeigeHof("hof"); return; }
+      hofWechseln(hid); speichern(); zeigeHaupt(); });
+    nb.querySelectorAll("[data-makler]").forEach(b => b.onclick = () => { const A = maklerAngebote().find(x => x.mid === b.dataset.makler), sp = immoSperre2(A);
+      if (sp) { if (sp !== "verkauft") dialog(`<h3>🔒 ${A.n}</h3><p>${sp}</p>`); return; }
+      hofKaufDialog2(A); });
+  }
+  function hofKaufDialog2(A, name = "", start = null, fehler = false) {
+    const eigen = Math.ceil(A.preis / 2), kredit = A.preis - eigen, frei = Math.max(0, Math.floor(((spiel.geld || 0) - eigen) / 500) * 500);
+    if (start == null) start = Math.min(frei, 3000);
+    dialog(`<h3>🏡 ${A.n} kaufen</h3><p style="margin-top:0">${A.text}. Der neue Hof startet als <b>Pensionsstall</b> und hat seine eigene Kasse.</p>
+      <div class="feld-s"><label for="kaufName">Name des neuen Hofes</label><input id="kaufName" maxlength="30" placeholder="z. B. Gut Lindenhof" autocomplete="off" value="${esc(name)}" class="${fehler ? "fehlt" : ""}">${fehler ? `<small class="fehler-text">Bitte gib dem Hof einen Namen.</small>` : ""}</div>
+      <div class="kr-wahl"><label>Startgeld aus der Kasse von ${esc(hofName())} <select id="kaufStart">${[...Array(frei / 500 + 1)].map((_, i) => `<option value="${i * 500}" ${i * 500 === start ? "selected" : ""}>${fmt(i * 500)}</option>`).join("")}</select></label></div>
+      <table class="ver-tab"><tr><th>Finanzierung</th><th>Betrag</th></tr><tr><td>Kaufpreis</td><td class="nw">${fmt(A.preis)}</td></tr><tr><td>Eigenanteil (aus ${esc(hofName())})</td><td class="nw">${fmt(eigen)}</td></tr>
+        ${kredit ? `<tr><td>Kredit der Hausbank für den neuen Hof (${prozent(KREDIT.zins)}, ${KREDIT.jz / 4} Jahre)</td><td class="nw">${fmt(kredit)}</td></tr><tr><td>Rate je Jahreszeit (zahlt der neue Hof)</td><td class="nw">${fmt(kreditRate(kredit, KREDIT.zins, KREDIT.jz))}</td></tr>` : ""}</table>
+      <p style="margin-bottom:0"><small>Das Startgeld ist die einzige Möglichkeit, Geld direkt mitzugeben – danach hat jeder Hof seine eigene Kasse (später: Spenden an den eigenen Gnadenhof, interne Rechnungen).</small></p>`,
+      [["🏡 Kaufen", () => { const n = ($("kaufName").value || "").trim(), st = +($("kaufStart") || {}).value || 0; if (!n) { hofKaufDialog2(A, "", st, true); return; } neuerHof(A, n, st); }], ["Abbrechen", null, "zweit"]], "breit");
+  }
+  function neuerHof(A, name, start) {
+    const eigen = Math.ceil(A.preis / 2), kredit = A.preis - eigen, von = hofName(), hid = "h" + (Math.max(...hofReihe().map(h => +h.slice(1) || 1)) + 1);
+    buchen(-eigen, `Eigenanteil Hofkauf: ${name}`); if (start) buchen(-start, `Startgeld für ${name}`);
+    (spiel.makler.gekauft = spiel.makler.gekauft || []).push(A.mid);
+    const H = { geld: 0, boxen: Array.from({ length: A.boxen }, (_, i) => ({ nr: i + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false, stufe: A.stufe })),
+      anlage: { stall: A.boxen > 0, paddock: false, weide: A.weide > 0, waschplatz: false, roundpen: false, reitplatz: A.anlagen.includes("reitplatz"), reithalle: A.anlagen.includes("reithalle"), gelaende: true, anhaenger: true },
+      stallarten: ["pension"], mitarbeiter: [], futter: { lager: {}, warn: {} }, aktBox: 0,
+      hof: { hid, name, id: A.typ, art: "pension", ha: A.ha, weideHa: A.weide, stufe: A.stufe, wert: A.preis, kauf: { tag: spiel.tag, preis: A.preis, eigen }, pacht: 0 } };
+    (spiel.hoefe = spiel.hoefe || {})[hid] = H; hofReihe().push(hid);
+    imHof(hid, () => {
+      buchen(-A.preis, "Hofkauf"); buchen(eigen, `Eigenanteil von ${von}`); if (start) buchen(start, `Startgeld von ${von}`);
+      if (kredit) { const k = kreditNeu(kredit, KREDIT.jz, "Hofkredit");
+        brief(KREDIT.bank, `Hofkredit ${name}`, `herzlichen Glückwunsch zu {deinem|Ihrem} neuen Hof <b>${esc(name)}</b>! Der Kredit über ${fmt(k.summe)} läuft über die Kasse dieses Hofs: Rate je Jahreszeit <b>${fmt(k.rate)}</b>, ${k.raten} Raten, erste Rate zu Beginn ${jzName(jzJetzt() + 1)}.`); }
+    });
+    speichern();
+    dialog(`<h3>🏡 ${esc(name)} gehört dir!</h3><p>Der neue Hof hat ${A.boxen ? `${A.boxen} Boxen` : "noch keinen Stall"} und ${fmt(start)} in der Kasse. Pferde bringst du mit dem Pferdeanhänger („Eigener Hof“) hin. Wechseln kannst du im Immobilien-Menü oder oben im Hauptmenü.</p>`,
+      [["Zum neuen Hof", () => { hofWechseln(hid); speichern(); zeigeHaupt(); }], ["Hierbleiben", () => zeigeImmobilien(), "zweit"]]);
+  }
+  // ---------- Hofverwaltung → Hof: Bereiche Übersicht, Hofplan, Bauen, Land, Futterkammer ----------
+  let hofBereich = "uebersicht";
+  function hofplanSVG() {
+    const H = spiel.hof || {}, A = spiel.anlage || {}, ha = H.ha || 1, weide = H.weideHa || 0, frei = Math.max(0, ha - weide - 1), pacht = H.pacht || 0;
+    const n = spiel.boxen.length, belegt = spiel.boxen.filter(b => b.pferd).length;
+    // Fläche als Kacheln: 1 Kachel = 1 ha (Hofstelle 1 ha, Weide, freies Land, Pachtland)
+    const kacheln = [["hof", 1], ["weide", weide], ["frei", frei], ["pacht", pacht]].flatMap(([t, x]) => Array.from({ length: Math.ceil(x) }, () => t));
+    const sp = Math.min(6, Math.max(3, Math.ceil(Math.sqrt(kacheln.length * 1.6)))), zeilen = Math.ceil(kacheln.length / sp), K = 52;
+    const farbe = { hof: "#e9dcc3", weide: "#a9cf8a", frei: "#d9e8c4", pacht: "#cfe0b6" };
+    const inhalt = (t, x, y) => t === "hof" ? `<rect x="${x + 4}" y="${y + 6}" width="${n ? 26 : 0}" height="16" fill="${(H.stufe || 1) === 1 ? "#c9a782" : "#e3c9a6"}" stroke="#8a6a4a"/>${n ? `<text x="${x + 17}" y="${y + 18}" font-size="8" text-anchor="middle" fill="#4a3426">${n}</text>` : ""}
+        ${A.reitplatz ? `<rect x="${x + 4}" y="${y + 26}" width="20" height="14" rx="2" fill="#ecdcb8" stroke="#fff"/>` : ""}${A.reithalle ? `<rect x="${x + 26}" y="${y + 26}" width="22" height="20" fill="#dcd6cc" stroke="#9aa4ab"/>` : ""}${A.roundpen ? `<circle cx="${x + 40}" cy="${y + 14}" r="8" fill="#ecdcb8" stroke="#fff"/>` : ""}`
+      : t === "weide" ? `<g stroke="#fffaf0" stroke-width="1.5" fill="none"><rect x="${x + 3}" y="${y + 3}" width="${K - 6}" height="${K - 6}" stroke-dasharray="4 3"/></g><text x="${x + K / 2}" y="${y + K / 2 + 4}" font-size="16" text-anchor="middle">🌿</text>`
+      : t === "pacht" ? `<text x="${x + K / 2}" y="${y + K / 2 + 3}" font-size="8" text-anchor="middle" fill="#5b6b45">Pacht</text>` : `<text x="${x + K / 2}" y="${y + K / 2 + 3}" font-size="8" text-anchor="middle" fill="#7b8a63">frei</text>`;
+    const svg = `<svg class="hofplan" viewBox="-4 -4 ${sp * K + 8} ${zeilen * K + 8}" role="img" aria-label="Hofplan">${kacheln.map((t, i) => { const x = (i % sp) * K, y = Math.floor(i / sp) * K;
+      return `<rect x="${x}" y="${y}" width="${K - 2}" height="${K - 2}" rx="6" fill="${farbe[t]}" ${t === "pacht" ? 'stroke="#9fb37f" stroke-dasharray="3 2"' : ""}/>${inhalt(t, x, y)}`; }).join("")}</svg>`;
+    return `${svg}<div class="hofplan-legende"><span><i style="background:${farbe.hof}"></i>Hofstelle (1 ha): ${n ? `Stall mit ${n} Boxen (${belegt} belegt, Stufe ${H.stufe || 1})` : "noch kein Stall"}${A.reitplatz ? ", Reitplatz" : ""}${A.reithalle ? ", Reithalle" : ""}${A.roundpen ? ", Roundpen" : ""}</span>
+      <span><i style="background:${farbe.weide}"></i>Weide: ${String(weide).replace(".", ",")} ha (reicht für etwa ${Math.floor(weide / 0.5)} Großpferde)</span><span><i style="background:${farbe.frei}"></i>freies Land: ${String(frei).replace(".", ",")} ha</span>${pacht ? `<span><i style="background:${farbe.pacht}"></i>Pachtland: ${pacht} ha</span>` : ""}<span>🌲 Gelände zum Ausreiten rund um den Hof</span></div>`;
+  }
+  function landHTML() {
+    const H = spiel.hof || {};
+    return `<dl class="werte"><dt>Eigenes Land</dt><dd>${String(H.ha).replace(".", ",")} ha (Hofstelle 1 ha, Weide ${String(H.weideHa).replace(".", ",")} ha, frei ${String(Math.max(0, H.ha - H.weideHa - 1)).replace(".", ",")} ha)</dd>
+        <dt>Pachtland</dt><dd>${H.pacht || 0} ha${H.pacht ? ` · ${fmt(H.pacht * PACHT_PREIS)} je Jahreszeit` : ""}</dd><dt>Kasse</dt><dd>${fmt(spiel.geld || 0)}</dd></dl>
+      <p class="text" style="margin:8px 0 6px">Land kaufen kostet <b>${fmt(LAND_PREIS)} je ha</b> (erhöht den Hofwert und damit den Kreditrahmen). Pachten kostet <b>${fmt(PACHT_PREIS)} je ha und Jahreszeit</b> (zu Beginn jeder Jahreszeit). Neues Land ist erst einmal freies Grünland – zur Weide wird es durch Einzäunen (kommt mit dem Bauen, Etappe H3).</p>
+      <div class="kr-wahl"><label>Fläche <select id="landHa">${[1, 2, 3, 4, 5].map(x => `<option value="${x}">${x} ha</option>`).join("")}</select></label></div>
+      <div class="land-knoepfe"><button class="knopf" id="landKauf">🏷️ Kaufen</button><button class="knopf zweit" id="landPacht">📝 Pachten</button>${H.pacht ? `<button class="knopf zweit" id="landPachtWeg">Pacht kündigen</button>` : ""}</div>`;
+  }
+  function landBinden(danach) {
+    const H = spiel.hof, ha = () => +$("landHa").value;
+    if ($("landKauf")) $("landKauf").onclick = () => { const x = ha(), b = x * LAND_PREIS;
+      if ((spiel.geld || 0) < b) { dialog(`<h3>Zu wenig Geld</h3><p>${x} ha kosten ${fmt(b)} – in der Kasse sind ${fmt(spiel.geld || 0)}.</p>`); return; }
+      dialog(`<h3>🏷️ ${x} ha Land kaufen?</h3><p>Kosten: <b>${fmt(b)}</b>. Der Hofwert steigt um ${fmt(b)}.</p>`, [["Kaufen", () => { buchen(-b, "Land kaufen"); H.ha += x; H.wert += b; speichern(); danach(); }], ["Abbrechen", null, "zweit"]]); };
+    if ($("landPacht")) $("landPacht").onclick = () => { const x = ha();
+      dialog(`<h3>📝 ${x} ha Land pachten?</h3><p>Die Pacht kostet <b>${fmt(x * PACHT_PREIS)} je Jahreszeit</b> und wird zu Beginn jeder Jahreszeit abgebucht.</p>`, [["Pachten", () => { H.pacht = (H.pacht || 0) + x; speichern(); danach(); }], ["Abbrechen", null, "zweit"]]); };
+    if ($("landPachtWeg")) $("landPachtWeg").onclick = () => dialog(`<h3>Pacht kündigen?</h3><p>Die ganze Pacht (${H.pacht} ha) endet sofort.</p>`, [["Kündigen", () => { H.pacht = 0; speichern(); danach(); }], ["Abbrechen", null, "zweit"]]);
+  }
+  // ---------- Pferdeanhänger → Eigener Hof (Umzug zwischen eigenen Höfen) ----------
+  const andereHoefe = () => hofReihe().filter(h => h !== aktivHid() && (spiel.hoefe || {})[h]);
+  const freieBoxIn = hid => imHof(hid, () => spiel.boxen.filter(boxFrei).length);
+  function umziehen(p, box, hid, istFohlen) {
+    const mit = !istFohlen && box.fohlen ? box.fohlen : null;
+    if (istFohlen) delete box.fohlen;
+    else { box.pferd = null; delete box.fohlen; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0; box.tot = false; }
+    spiel.angebote = (spiel.angebote || []).filter(a => a.id !== p.id); delete p.weide;
+    (spiel.mitarbeiter || []).forEach(m => { if (m.nurFuer === p.id) delete m.nurFuer; });
+    fahrtStress(p, "umzug"); if (mit) fahrtStress(mit, "umzug");
+    imHof(hid, () => { const i = freieBox(); if (i < 0) return; const nb = spiel.boxen[i]; nb.pferd = p; if (mit) nb.fohlen = mit; nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false; });
+  }
+  let umzugHof = null;   // Zielhof im Anhänger
+  function umzugWahl(weiter) {
+    const L = andereHoefe(); if (L.length === 1) { weiter(L[0]); return; }
+    dialog(`<h3>🏡 Auf welchen Hof?</h3><div class="paar-liste">${L.map(h => `<button class="knopf zweit" data-uz="${h}" style="margin:4px 0" ${freieBoxIn(h) ? "" : "disabled"}>${esc(hofNameVon(h))} · ${freieBoxIn(h)} Boxen frei</button>`).join("")}</div>`, [["Abbrechen", null, "zweit"]]);
+    document.querySelectorAll("[data-uz]").forEach(b => b.onclick = () => { $("dlg").hidden = true; weiter(b.dataset.uz); });
+  }
+  // Sondertilgung: Geld aus der Kasse direkt gegen die Restschuld – die Rate bleibt, die Laufzeit wird kürzer
+  const restRaten = k => { const q = k.zins / 4, rest = k.rest - (k.offen || []).reduce((a, r) => a + r.tilgung, 0); if (rest <= 0.005) return 0; const x = 1 - rest * q / k.rate; return x <= 0 ? Infinity : Math.ceil(-Math.log(x) / Math.log(1 + q) - 1e-9); };
+  function sondertilgung(kid, danach) {
+    const k = kredite().find(x => x.id === kid); if (!k) return;
+    const rest = runde2(k.rest - (k.offen || []).reduce((a, r) => a + r.tilgung, 0)), max = Math.min(rest, Math.floor((spiel.geld || 0) * 100) / 100);
+    if ((k.offen || []).length) { dialog(`<h3>Erst offene Raten bezahlen</h3><p>Solange eine Rate offen ist, nimmt die Bank keine Sondertilgung an.</p>`); return; }
+    if (max < 100) { dialog(`<h3>Zu wenig Geld</h3><p>Für eine Sondertilgung brauchst du mindestens 100 € in der Kasse.</p>`); return; }
+    const stufen = [...new Set([...[500, 1000, 2000, 3000, 5000, 10000, 20000].filter(x => x < max), max])];
+    dialog(`<h3>💶 Sondertilgung: ${esc(k.name)}</h3><p>Restschuld ${fmt(rest)} · jetzt noch etwa ${restRaten(k)} Raten. Die Rate bleibt gleich (${fmt(k.rate)}), die Laufzeit wird kürzer. Die Hausbank berechnet keine Gebühr.</p>
+      <div class="kr-wahl"><label>Betrag <select id="stBetrag">${stufen.map(x => `<option value="${x}">${x === rest ? `alles (${fmt(x)})` : fmt(x)}</option>`).join("")}</select></label></div>`,
+      [["Zurückzahlen", () => { const b = Math.min(max, +$("stBetrag").value); buchen(-b, "Kredit: Sondertilgung"); k.rest = runde2(k.rest - b); k.getilgt = runde2(k.getilgt + b);
+        if (!kreditLaeuft(k)) kreditFertigBrief(k); speichern(); danach(); }], ["Abbrechen", null, "zweit"]]);
   }
   // Finanzen → Bank
   let finanzTab = "konto";
@@ -7235,8 +7493,8 @@
       ${lauf.map(k => { const ant = k.getilgt / k.summe;
         return `<div class="kredit"><div class="kr-kopf"><b>🏦 ${esc(k.name)}</b><small>${fmt(k.summe)} · ${prozent(k.zins)} Zinsen · ${k.raten / 4} Jahre</small></div>
           <div class="kr-balken" title="${prozent(ant)} abbezahlt"><i style="width:${Math.round(ant * 100)}%"></i></div><small>${prozent(ant)} abbezahlt</small>
-          <dl class="werte">${zeile("Restschuld", fmt(k.rest))}${zeile("Rate je Jahreszeit", fmt(k.rate))}${zeile("Raten bezahlt", `${k.bezahlt} von ${k.raten}`)}${zeile("Zinsen bisher", fmt(k.zinsen))}${k.rest - (k.offen || []).reduce((a, r) => a + r.tilgung, 0) > 0.005 ? zeile("Nächste Rate", `Beginn ${jzName(jzJetzt() + 1)} (wird automatisch abgebucht)`) : ""}</dl>
-          ${(k.offen || []).length ? `<div class="kr-offen">⚠️ <b>${k.offen.length} ${k.offen.length === 1 ? "Rate" : "Raten"} offen: ${fmt(offenSumme(k))}</b> (inkl. Mahngebühr)${k.offen.length >= KREDIT.verpasst - 1 ? " – bei der nächsten verpassten Rate wird der Hof zwangsversteigert!" : ""}<button class="knopf" data-krzahl="${k.id}">💶 Jetzt bezahlen</button></div>` : ""}</div>`; }).join("")}
+          <dl class="werte">${zeile("Restschuld", fmt(k.rest))}${zeile("Rate je Jahreszeit", fmt(k.rate))}${zeile("Raten bezahlt", `${k.bezahlt}${k.getilgt > 0 && restRaten(k) + k.bezahlt + (k.offen || []).length < k.raten ? ` · noch etwa ${restRaten(k)} (Sondertilgung)` : ` von ${k.raten}`}`)}${zeile("Zinsen bisher", fmt(k.zinsen))}${k.rest - (k.offen || []).reduce((a, r) => a + r.tilgung, 0) > 0.005 ? zeile("Nächste Rate", `Beginn ${jzName(jzJetzt() + 1)} (wird automatisch abgebucht)`) : ""}</dl>
+          ${(k.offen || []).length ? `<div class="kr-offen">⚠️ <b>${k.offen.length} ${k.offen.length === 1 ? "Rate" : "Raten"} offen: ${fmt(offenSumme(k))}</b> (inkl. Mahngebühr)${k.offen.length >= KREDIT.verpasst - 1 ? " – bei der nächsten verpassten Rate wird der Hof zwangsversteigert!" : ""}<button class="knopf" data-krzahl="${k.id}">💶 Jetzt bezahlen</button></div>` : `<button class="knopf zweit kr-st" data-krst="${k.id}">💶 Sondertilgung</button>`}</div>`; }).join("")}
       ${fertig.length ? `<p class="text" style="margin:6px 0">${fertig.map(k => `✅ ${esc(k.name)} über ${fmt(k.summe)} – abbezahlt`).join("<br>")}</p>` : ""}
       ${!L.length ? `<p class="text">Du hast keinen Kredit.</p>` : ""}
       <h4 class="ma-titel">➕ Neuer Kredit</h4>
@@ -7248,6 +7506,7 @@
   }
   function bankBinden(nb, danach) {
     nb.querySelectorAll("[data-krzahl]").forEach(b => b.onclick = () => kreditOffenZahlen(b.dataset.krzahl, danach));
+    nb.querySelectorAll("[data-krst]").forEach(b => b.onclick = () => sondertilgung(b.dataset.krst, danach));
     const bt = $("krBetrag"), lz = $("krLauf"); if (!bt) return;
     const rate = () => { $("krRate").innerHTML = `Rate je Jahreszeit: <b>${fmt(kreditRate(+bt.value, KREDIT.zins, +lz.value))}</b> (${+lz.value} Raten)`; };
     bt.onchange = lz.onchange = rate; rate();
@@ -7355,6 +7614,11 @@
       <p><b>Weitere Immobilien</b> (ausgegraut, Kauf ab H2): ${IMMOBILIEN.filter(I => !I.start).map(I => `${I.n} ${fmt(I.preis)}`).join(" · ")}. Frei, wenn der erste Kredit zur Hälfte getilgt ist und die Hälfte des Kaufpreises auf dem Hofkonto liegt.</p>
       <p><b>Kredit</b> (Hausbank): ${prozent(KREDIT.zins)} Zinsen im Jahr, Rate jede Jahreszeit (Annuität): Rate = Summe × q ÷ (1 − (1 + q)<sup>−n</sup>) mit q = Zins ÷ 4, n = Anzahl Raten. Hofkredit ${fmt(10000)}, ${KREDIT.jz} Raten → ${fmt(kreditRate(10000, KREDIT.zins, KREDIT.jz))}. Je Rate: Zinsen = Restschuld × q, Rest tilgt. Abbuchung automatisch zu Beginn jeder Jahreszeit (erste Rate in der Jahreszeit nach der Aufnahme), offene Raten zuerst. Reicht das Geld nicht: Mahnung + Mahngebühr (10 %, mind. 20 €) je verpasster Rate, bezahlen im Brief oder Finanzen → Bank. ${KREDIT.verpasst} offene Raten → Zwangsversteigerung, Spiel verloren, Spielstand gelöscht.</p>
       <p><b>Weitere Kredite</b> (Finanzen → Bank): bis ${prozent(KREDIT.beleihung)} des Immobilienwerts minus Restschuld (Start: 16.000 € − 10.000 € = 6.000 €), in 1.000-€-Schritten, Laufzeit ${KREDIT.laufzeiten.map(n => n / 4).join(" / ")} Jahre, gleicher Zins. Nicht, solange eine Rate offen ist. Finanzen-Posten: Hofkauf, Kredit (Auszahlung), Kredit: Zinsen, Kredit: Tilgung, Kredit: Mahngebühr.</p>
+      <h3>🏘️ Hof-Ausbau (H2: mehrere Höfe, Land, Hofplan)</h3>
+      <p><b>Bis zu ${MAX_HOEFE} Höfe</b>, jeder mit eigener Kasse, eigenen Boxen, Anlagen, Mitarbeitern, Futterkammer, Lager, Rechnungen, Krediten und Verkaufsanzeigen (<code>HOF_FELDER</code>). Der aktive Hof liegt in <code>spiel</code>, die anderen in <code>spiel.hoefe</code>; Reihenfolge <code>spiel.hofReihe</code>. Jede Nacht laufen alle Höfe (<code>jedenHof</code>): Versorgung, Training, Hufe, Ansteckung, Befunde, Rechnungen, Kredit, Pacht, Geburten, Gehälter, Mitarbeiter, Turnierpferde. Nur einmal: Markt/Auktion, Labor, Blutbild, Tierschutz-Klinik, externer Gnadenhof, Turnierkalender. Wer einen Hof nicht versorgt (selbst oder Mitarbeiter), hat dort hungrige Pferde.</p>
+      <p><b>Makler</b> (Immobilien-Menü, wechselt einmal im Jahr): 1 leeres Grundstück + 3 fertige Höfe mit zufälliger Stufe (50 % Stufe 1, 35 % Stufe 2, 15 % Stufe 3). Preis = Land ${fmt(LAND_PREIS)}/ha + Hofstelle ${fmt(MAKLER_PREIS.hofstelle)} + Boxen je ${MAKLER_PREIS.box.slice(1).map(fmt).join(" / ")} (Stufe 1/2/3) + Reitplatz ${MAKLER_PREIS.reitplatz.slice(1).map(fmt).join(" / ")} + Reithalle ${MAKLER_PREIS.reithalle.slice(1).map(fmt).join(" / ")}, ±10 %. Kaufbar, wenn der erste Kredit zur Hälfte getilgt ist und die Hälfte des Preises in der Kasse des aktiven Hofs liegt. Eigenanteil ½ aus dem aktiven Hof, Rest Kredit des neuen Hofs (${prozent(KREDIT.zins)}, ${KREDIT.jz / 4} Jahre). Startgeld für den neuen Hof frei wählbar (500-€-Schritte) – sonst fließt kein Geld zwischen den Höfen. Neue Höfe starten als Pensionsstall (Stallart wählbar ab H7).</p>
+      <p><b>Land:</b> kaufen ${fmt(LAND_PREIS)}/ha (Hofwert steigt), pachten ${fmt(PACHT_PREIS)} je ha und Jahreszeit (Abbuchung zu Beginn der Jahreszeit, „Pacht“), Pacht jederzeit kündbar. Neues Land = freies Grünland (Weide erst durch Einzäunen, H3). Hofplan: 1 Kachel = 1 ha (Hofstelle, Weide, frei, Pacht).</p>
+      <p><b>Umzug:</b> Pferdeanhänger → Eigener Hof (beide Anhänger), Fohlen bei Fuß ziehen mit, nicht in Quarantäne, Zielhof braucht freie Boxen. Stress wie beim Fremden („neuer Stall“). <b>Zwangsversteigerung</b> eines von mehreren Höfen: nur dieser Hof ist weg, das Spiel geht weiter; beim letzten Hof ist das Spiel verloren. <b>Sondertilgung</b> (Finanzen → Bank): ab 100 €, ohne Gebühr, Rate bleibt, Laufzeit wird kürzer; nicht bei offener Rate.</p>
       <h3>🌾 Fütterung (F1: Futterkammer)</h3>
       <p>Futterkammer: Hofverwaltung → Hof → Futterkammer und Futterhandel (Dome: Lieferung am nächsten Morgen; Warnbrief bei leerer Kammer nur, wenn ein Mitarbeiter oder das Turnier füttert – wer selbst füttert, sieht es sofort). Platz ${LAGER_START.toLocaleString("de-DE")} kg (Salzlecksteine zählen nicht), wird mit dem Hof-Ausbau größer. Startvorrat (neues Spiel und alte Spielstände): Heu für 14 Tage (10 kg je Pferd), 3 kg Mineralfutter, 1 Leckstein je Pferd. Gekauft wird sofort, bezahlt wird sofort (Finanzen: „Futter“).</p>
       ${verTab(["Sorte", "Energie MJ/kg", "Eiweiß %", "Rohfaser %", "Zucker/Stärke %", "Preis"], Object.values(FUTTER).map(Z => [Z.n, Z.e, Z.ei, Z.rf, Z.zs, Z.preis.toLocaleString("de-DE", { minimumFractionDigits: 2 }) + (Z.stueck ? " €/Stück" : " €/kg")]))}
@@ -7509,12 +7773,18 @@
     const reiterListe = [["hof", "Hof"], ["reiter", "Reiter"], ["finanzen", "Finanzen"], ["aussen", "Außer Haus"], ["mitarbeiter", "Mitarbeiter"], ["post", "Postfach"], ["einst", "Einstellungen"]];
     let inhalt = "";
     if (hofReiter === "hof") {
-      inhalt = `<dl class="werte">
+      const bereiche = [["uebersicht", "Übersicht"], ["plan", "Hofplan"], ["bauen", "Bauen"], ["land", "Land"], ["futter", "Futterkammer"]];
+      inhalt = `<div class="fin-tabs hof-tabs">${bereiche.map(([id, t]) => `<button data-hbereich="${id}" class="${hofBereich === id ? "an" : ""}">${t}</button>`).join("")}</div>`;
+      if (hofBereich === "plan") inhalt += hofplanSVG();
+      else if (hofBereich === "bauen") inhalt += `<p class="text">🏗️ <b>Bauen kommt mit Etappe H3:</b> Stallgebäude und Anbauten, Paddockboxen, Reitplatz, Roundpen, Trail-Parcours, Reithalle, Weide einzäunen, Sandpaddock, Waschplatz, Sattelkammer, Futter- und Strohlager, Quarantänestall, Abfohlbox – jeweils in 3 Stufen.</p><p class="text">Bis dahin kannst du neue Boxen wie bisher mit + in der Boxenübersicht (Hauptmenü → Stall) anlegen.</p>`;
+      else if (hofBereich === "land") inhalt += landHTML();
+      else if (hofBereich === "futter") inhalt += `<h4 class="ma-titel" id="fkTitel" style="margin-top:0">🌾 Futterkammer und Futterhandel</h4>${futterkammerHTML(fkMeld)}`;
+      else inhalt += `<dl class="werte">
         <dt>Hof</dt><dd class="hf-edit" id="hfHof" title="antippen zum Ändern">${esc(hofName())} <span class="stift">✏️</span></dd>
         ${spiel.hof ? `<dt>Immobilie</dt><dd>${esc((immobilie(spiel.hof.id) || {}).n || "")} · ${STALLART_NAME[spiel.hof.art] || ""}</dd>
         <dt>Fläche</dt><dd>${String(spiel.hof.ha).replace(".", ",")} ha (davon ${String(spiel.hof.weideHa).replace(".", ",")} ha Weide)</dd>
         <dt>Zustand</dt><dd>Stufe ${spiel.hof.stufe} – ${STUFE_NAME[spiel.hof.stufe]}</dd>
-        <dt>Anlagen</dt><dd>Reitplatz, Gelände</dd>
+        <dt>Anlagen</dt><dd>${anlagenText()}</dd>
         ${kredite().some(kreditLaeuft) ? `<dt>Kredit</dt><dd>Restschuld ${fmt(restschuld())}${kredite().some(k => (k.offen || []).length) ? " · ⚠️ Rate offen" : ""}</dd>` : ""}` : ""}
         <dt>Besitzer</dt><dd class="hf-edit" id="hfSpieler" title="antippen zum Ändern">${sp.avatar || ""} ${esc(sp.name || "–")} <span class="stift">✏️</span></dd>
         <dt>Datum</dt><dd>${JZ[datum().s][1]} ${datumLang()} · Tag ${datum().t}/${tpj()}</dd>
@@ -7522,8 +7792,7 @@
         <dt>Pferde</dt><dd>${spiel.boxen.filter(b => b.pferd).length} in ${spiel.boxen.length} ${spiel.boxen.length === 1 ? "Box" : "Boxen"}${spiel.boxen.some(b => b.fohlen) ? ` · ${spiel.boxen.filter(b => b.fohlen).length} Fohlen bei der Mutter` : ""}</dd>
         <dt>Mitarbeiter</dt><dd>${Object.entries(MA_TYP).map(([t, T]) => { const a = aktive(t).length; return a ? `${a} ${a === 1 ? T.name : T.mehr}` : ""; }).filter(Boolean).join(", ") || "keine"}</dd>
         <dt>Lager</dt><dd>${(() => { const L = lager(), n = L.putzzeug.length + L.hufschuhe.length; return n ? `${L.putzzeug.length ? `${L.putzzeug.length}× Putzzeug` : ""}${L.putzzeug.length && L.hufschuhe.length ? ", " : ""}${L.hufschuhe.length ? `${L.hufschuhe.length}× Hufschuhe` : ""}` : "leer"; })()}</dd>
-        <dt>Geld</dt><dd ${spiel.admin ? 'class="hf-edit" id="hfGeld" title="antippen zum Ändern (Adminmodus)"' : ""}>${fmt(spiel.geld || 0)}${spiel.admin ? ' <span class="stift">✏️</span>' : ""}</dd></dl>`;
-      inhalt += `<h4 class="ma-titel">📦 Lager</h4>${lagerHTML()}<h4 class="ma-titel" id="fkTitel">🌾 Futterkammer und Futterhandel</h4>${futterkammerHTML(fkMeld)}`;
+        <dt>Geld</dt><dd ${spiel.admin ? 'class="hf-edit" id="hfGeld" title="antippen zum Ändern (Adminmodus)"' : ""}>${fmt(spiel.geld || 0)}${spiel.admin ? ' <span class="stift">✏️</span>' : ""}</dd></dl>` + `<h4 class="ma-titel">📦 Lager</h4>${lagerHTML()}`;
     } else if (hofReiter === "reiter") {
       inhalt = reiterHTML();
     } else if (hofReiter === "finanzen") {
@@ -7584,6 +7853,8 @@
     nb.querySelectorAll("[data-hr]").forEach(b => b.onclick = () => { offenerBrief = null; zeigeHof(b.dataset.hr); });
     nb.querySelectorAll("[data-rava]").forEach(b => b.onclick = () => { (spiel.spieler = spiel.spieler || {}).avatar = b.dataset.rava; speichern(); zeigeHof(); });
     lagerBinden(() => zeigeHof());
+    nb.querySelectorAll("[data-hbereich]").forEach(b => b.onclick = () => { hofBereich = b.dataset.hbereich; fkMeld = ""; zeigeHof(); });
+    if (hofReiter === "hof" && hofBereich === "land") landBinden(() => zeigeHof());
     futterkammerBinden(m => { fkMeld = m; zeigeHof(); const t = $("fkTitel"); if (t) t.scrollIntoView({ block: "start" }); });
     const bearbeite = (id, wert, setzen) => {
       const dd = $(id); dd.onclick = null;
@@ -7593,7 +7864,7 @@
       inp.onblur = fertig; inp.onkeydown = e => { if (e.key === "Enter") inp.blur(); if (e.key === "Escape") { inp.value = wert; inp.blur(); } };
     };
     const sp2 = () => (spiel.spieler = spiel.spieler || { name: "", avatar: "🧑‍🌾" });
-    if ($("hfHof")) $("hfHof").onclick = () => bearbeite("hfHof", hofName(), v => sp2().hof = v);
+    if ($("hfHof")) $("hfHof").onclick = () => bearbeite("hfHof", hofName(), v => { if (spiel.hof) spiel.hof.name = v; else sp2().hof = v; });
     if ($("hfSpieler")) $("hfSpieler").onclick = () => bearbeite("hfSpieler", sp.name || "", v => sp2().name = v);
     nb.querySelectorAll("[data-ma]").forEach(b => b.onclick = () => mitarbeiterDialog(b.dataset.ma));
     if ($("futterberatungAlle")) $("futterberatungAlle").onclick = () => futterexperteDialog(spiel.boxen.map(b => b.pferd).filter(q => q && q.pflege && !q.klinik), () => zeigeHof("mitarbeiter"));
@@ -7696,6 +7967,13 @@
   function briefAktionenBinden(nachher) {
     document.querySelectorAll("[data-baktion]").forEach(b => b.onclick = ev => { ev.stopPropagation();
       const br = (spiel.post || []).find(x => x.id === b.dataset.bid); if (!br) return; const A = br.aktion;
+      const hid = br.hid && br.hid !== aktivHid() && hofVon(br.hid) ? br.hid : null;
+      if (hid && ["bf-box", "bf-ta"].includes(b.dataset.baktion)) hofWechseln(hid);   // zum Pferd: auf dessen Hof wechseln
+      if (hid && hid !== aktivHid()) { imHof(hid, () => briefAktionAus(b, br, A, nachher)); return; }
+      briefAktionAus(b, br, A, nachher);
+    });
+  }
+  function briefAktionAus(b, br, A, nachher) {
       if (b.dataset.baktion === "du-ja" || b.dataset.baktion === "du-nein") { (spiel.duzen = spiel.duzen || {})[br.von] = b.dataset.baktion === "du-ja"; ruf(br.von, b.dataset.baktion === "du-ja" ? 5 : -5); A.antwort = b.dataset.baktion === "du-ja" ? "ja" : "nein"; speichern(); nachher(); }
       else if (b.dataset.baktion === "kauf-ja" || b.dataset.baktion === "kauf-nein") {
         const a = (spiel.angebote || []).find(y => y.id === A.pferd && y.vorschlag && y.vorschlag.id === A.vid); if (!a) { nachher(); return; }
@@ -7713,7 +7991,6 @@
       else if (b.dataset.baktion === "urlaub-ja" || b.dataset.baktion === "urlaub-nein") { const m = (spiel.mitarbeiter || []).find(x => x.id === A.ma), ja = b.dataset.baktion === "urlaub-ja";
         A.antwort = ja ? "ja" : "nein"; if (m && m.urlaub && m.urlaub.ok == null) { m.urlaub.ok = ja; zufrAendern(m, ja ? 5 : -15); } speichern(); nachher(); }
       else if (b.dataset.baktion === "bieten") { const a = auktionFinden(A.pferd); if (a) { $("dlg").hidden = true; bieten(a, nachher); } }
-    });
   }
   // Brief als Papier (Postfach und Brief-Fenster)
   // Stern: wichtige Briefe markieren (in der Liste als span im Brief-Knopf, auf dem Briefpapier als Knopf)
@@ -7729,8 +8006,8 @@
     const anrede = du ? `Hallo ${esc(spName)},` : `Guten Tag ${esc(spName)},`;
     const weiblich = ["Tierarztpraxis", "Hofverwaltung", "Aufzuchtstation"].includes(br.von);
     const gruss = br.betreff === "Neuigkeit" || (alt && br.von === "Tierschutzverein") ? "" : du ? `<br><br>Viele Grüße<br>${weiblich ? "Deine" : "Dein"} ${br.von}` : `<br><br>Mit freundlichen Grüßen<br>${weiblich ? "Ihre" : "Ihr"} ${br.von}`;
-    const akt = br.aktion ? briefAktionHTML(br) : "";
-    return `<div class="brief-papier"><div class="kopf"><span>Von: <b>${esc(br.von)}</b><br>An: <b>${esc(spName)}</b>, ${esc(hofName())}</span><span>${briefDatum(br)}</span></div>
+    const akt = br.aktion ? (br.hid && br.hid !== aktivHid() && hofVon(br.hid) ? imHof(br.hid, () => briefAktionHTML(br)) : briefAktionHTML(br)) : "";   // Brief eines anderen Hofs: dessen Rechnungen, Pferde, Mitarbeiter
+    return `<div class="brief-papier"><div class="kopf"><span>Von: <b>${esc(br.von)}</b><br>An: <b>${esc(spName)}</b>, ${esc(br.hid && hofVon(br.hid) ? hofNameVon(br.hid) : br.hofName || hofName())}</span><span>${briefDatum(br)}</span></div>
           <h3>${br.spam ? "" : sternKnopf(br, "button")}${esc(br.betreff)}</h3><p>${anrede}</p><div>${briefMitLinks(br, br.text)}${gruss}</div>${akt}</div>`;
   }
   // gelber Brief oben rechts: öffnet nur den Brief – danach ist man wieder dort, wo man war; mit Pfeilen zum nächsten Brief

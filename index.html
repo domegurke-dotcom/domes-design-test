@@ -789,7 +789,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "202";
+  const SPIEL_VERSION = "203";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -797,9 +797,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=202"></script>
-<script src="kopfteile.js?v=202"></script>
-<script src="kopfalter.js?v=202"></script>
+<script src="pferd.js?v=203"></script>
+<script src="kopfteile.js?v=203"></script>
+<script src="kopfalter.js?v=203"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -4641,6 +4641,7 @@
   function nennSperre(p, t, P) {
     if (spiel.tag >= t.tag) return "Nennschluss vorbei";
     if (alterJZ(p) < 16) return "erst ab 4 Jahren";
+    const tr = traechtigSperre(p, P); if (tr) return tr;
     if (P.jung && (alterJZ(p) < P.jung[0] || alterJZ(p) > P.jung[1])) return "Altersgrenze";
     if (P.disz === "toelt" || (DISZ[P.disz] && DISZ[P.disz].nur && !DISZ[P.disz].nur(p))) return "kann diese Gangart nicht";
     const g = LK_GRUPPE[P.disz];
@@ -4653,6 +4654,14 @@
     if (P.stufe >= 0 && st.some(s => Math.abs(s - P.stufe) > 1)) return "nur benachbarte Klassen";
     if (spiel.turniere.some(x => x !== t && x.tag === t.tag && x.nennung.some(n => n.pid === p.id))) return "am selben Tag schon genannt";
     if (spiel.geld < nenngeld(t, P)) return "zu wenig Geld";
+    return "";
+  }
+  // Stuten: mit Fohlen bei Fuß kein Turnier · tragend keine Sprünge · in der letzten Jahreszeit vor der Geburt gar nicht
+  function traechtigSperre(p, P) {
+    const box = spiel.boxen.find(b => b.pferd === p); if (box && box.fohlen) return "mit Fohlen bei Fuß";
+    if (!p.traechtig) return "";
+    if (p.traechtig.geburt - jzJetzt() <= 1) return "hochtragend";
+    if (P && (P.disz === "springen" || P.disz === "vielseitigkeit")) return "tragend – keine Sprünge";
     return "";
   }
   // Einschätzung für den Spieler (keine genauen Zahlen)
@@ -4670,7 +4679,7 @@
     dialog(`<h3>🏆 Turniere für ${esc(p.name)}</h3><p class="text" style="margin:0 0 6px"><small>Deine Reiter-LK: ${lkZeile}. Nennen bis spätestens am Tag vorher. Am Turniertag ist ${esc(p.name)} unterwegs, das Ergebnis kommt am nächsten Tag per Brief. Höchstens 2 Prüfungen pro Turnier in benachbarten Klassen.</small></p>
       ${alterJZ(p) < 16 ? `<p class="text">⚠️ ${esc(p.name)} ist noch zu jung – Turniere erst ab 4 Jahren.</p>` : ""}${html || "<p>Gerade sind keine Turniere ausgeschrieben.</p>"}`, [["Schließen", zurueck, "zweit"]], "turnier-dlg");
     document.querySelectorAll("[data-tnennen]").forEach(b => b.onclick = () => { const [tid, prid] = b.dataset.tnennen.split(":"), t = spiel.turniere.find(x => x.id === tid), P = t.pruef.find(x => x.id === prid);
-      if (nennSperre(p, t, P)) return; t.nennung.push({ pid: p.id, prid, geld: nenngeld(t, P) }); buchen(-nenngeld(t, P), `Nenngeld ${t.name}: ${p.name}`); speichern(); zeigeTag(); turnierDialog(p, zurueck); });
+      if (nennSperre(p, t, P)) return; t.nennung.push({ pid: p.id, prid, geld: nenngeld(t, P) }); buchen(-nenngeld(t, P), "Turniere: Nenngeld"); speichern(); zeigeTag(); turnierDialog(p, zurueck); });
     document.querySelectorAll("[data-tzurueck]").forEach(b => b.onclick = () => { const [tid, prid] = b.dataset.tzurueck.split(":"), t = spiel.turniere.find(x => x.id === tid);
       t.nennung = t.nennung.filter(n => !(n.pid === p.id && n.prid === prid)); speichern(); turnierDialog(p, zurueck); });
   }
@@ -4682,7 +4691,7 @@
         const box = spiel.boxen.find(b => b.pferd && b.pferd.id === pid && !b.tot), p = box && box.pferd;
         if (!p) { t.nennung = t.nennung.filter(n => n.pid !== pid); return; }
         if (p.weide && !p.boxenruhe) vonWeideHolen(box);
-        const sp = trainSperre(p, box);
+        const sp = trainSperre(p, box) || (box.fohlen ? "hat ein Fohlen bei Fuß" : p.traechtig && p.traechtig.geburt - jzJetzt() <= 1 ? "ist hochtragend" : "");
         if (sp) { brief("Turnierbüro", `${p.name}: nicht gestartet`, `{du|Sie} hatte{st|n} <b>${esc(p.name)}</b> beim <b>${esc(t.name)}</b> genannt. ${esc(p.name)} konnte heute nicht starten: ${esc(p.name)} ${sp}. Das Nenngeld wird nicht erstattet.`, { pferde: [p] });
           t.nennung = t.nennung.filter(n => n.pid !== pid); return; }
         p.turnier = { tid: t.id, tag: spiel.tag }; fahrtStress(p, "turnier");
@@ -4725,7 +4734,7 @@
         zeilen.push(`<li><b>${esc(P.name)}</b>: ${platz === 1 ? "🥇 Sieg" : platz === 2 ? "🥈 2. Platz" : platz === 3 ? "🥉 3. Platz" : `${platz}. Platz`} von ${P.starter} · ${ich.txt}${plaziert ? (geld ? ` · ${fmt(geld)} Preisgeld` : " · Schleife 🎀") : ""}${muede ? " <small>(war schon müde)</small>" : ""}</li>`);
       });
       p.turnierStarts = (p.turnierStarts || 0) + starts.length; p.arbeitTag = spiel.tag; p.boxTage = 0;
-      if (geldSumme) buchen(geldSumme, `Preisgeld ${t.name}: ${p.name}`);
+      if (geldSumme) buchen(geldSumme, "Turniere: Preisgeld");
       brief("Turnierbüro", `Ergebnis: ${p.name} beim ${t.name}`, `hier {sind deine|sind Ihre} Ergebnisse vom <b>${esc(t.name)}</b> mit <b>${esc(p.name)}</b>:<ul>${zeilen.join("")}</ul>${reakt ? `<p>Auf dem Turnierplatz: ${esc(p.name)} ${esc(reakt)}.</p>` : ""}${geldSumme ? `<p>Das Preisgeld (${fmt(geldSumme)}) ist überwiesen.</p>` : ""}${lkMeld.map(m => `<p>🎉 ${m}</p>`).join("")}<p><small>Nach dem Turnier braucht ${esc(p.name)} Erholung – die Energie ist heute niedrig.</small></p>`, { pferde: [p] });
     });
   }
@@ -5852,7 +5861,7 @@
     klinik: { ico: "🏥", name: "Klinik", info: "Tierklinik: stationäre Behandlung oder Kastration", gruppe: true, kurz: () => "Behandlung, Kastration" },
     abgeben: { ico: "👋", name: "Abgeben", info: "Pferd abgeben", gruppe: true, kurz: () => "verkaufen, Gnadenhof" },
     turnier: { ico: "🏆", name: "Turnier", info: "Turnierkalender: Pferde für Turniere nennen", einzeln: true, hmKurz: "Kalender, Nennen",
-      sperre: (p, b) => anhGrund(p, b, false) || (p.turnier ? "auf dem Turnier" : "") || (alterJZ(p) < 16 ? "ab 4 Jahren" : ""),
+      sperre: (p, b) => anhGrund(p, b, false) || (p.turnier ? "auf dem Turnier" : "") || (alterJZ(p) < 16 ? "ab 4 Jahren" : "") || (b.fohlen ? "mit Fohlen bei Fuß" : ""),
       kurz: p => { const n = genanntBei(p).length; return n ? `${n}× genannt` : "Kalender, Nennen"; } },
     verschenken: { ico: "🎁", name: "Verschenken", info: "Verschenken geht nur an befreundete Mitspieler (derzeit nicht möglich)", bald: "nur an Freunde – bald" },
     aufzucht: { ico: "🍼", name: "Aufzucht\u00adstation", info: "Fohlen und Jungpferde wachsen bis zum Ausbildungsalter in der Herde auf", wohin: "in die Aufzuchtstation", wo: "in der Aufzuchtstation",
@@ -6375,7 +6384,7 @@
       <p><b>Stufen:</b> Dressur wie bisher (Klassen E–S aus der Ausbildungsskala). Springen und Vielseitigkeit E/A/L/M/S, Western (Reining, Pleasure, Trail) Einsteiger/Rookie/Novice/Intermediate/Open: Stufe braucht Ausbildungsstand ${STUFE_STAND.join("/")} % und Disziplin-Wert ${STUFE_WERT.join("/")}. Springhöhe ≈ 0,95 × Stockmaß, Klassen-Mindesthöhe ${SPRUNG_HOEHE.join("/")} cm. Rennsport, Tölt und Distanz: nach Leistung (${LEISTUNG.map(([a, n]) => n + " ab " + a).join(", ")}).</p>
       <p><b>Marktwert:</b> Leistungsanteil = 5.000 € × max(0, (beste Disziplin − 35) / 30) – unausgebildet ≈ 0, gut ausgebildet (65) = 1, Spitzenpferd (80) = 1,5. Ein Spezialist ist damit mehr wert als ein Allrounder.</p>
       <h3>🏆 Turniere</h3>
-      <p><b>Ablauf:</b> Pferdeanhänger (Box oder Hauptmenü) → Turnier → Turnierkalender. Nennen bis spätestens am Tag vorher (Nenngeld sofort, beim Zurückziehen keine Erstattung). Am Turniertag morgens fährt das Pferd los (von der Weide wird es vorher geholt; krank/schwach → nicht gestartet, Nenngeld verfällt), ist den ganzen Tag weg (kein Training, Box sauber, unterwegs gefüttert). In der Nacht wird gerechnet, der Brief kommt am nächsten Tag. Ab 4 Jahren, höchstens 2 Prüfungen je Turnier in benachbarten Klassen, nur ein Turnier pro Tag.</p>
+      <p><b>Ablauf:</b> Pferdeanhänger (Box oder Hauptmenü) → Turnier → Turnierkalender. Nennen bis spätestens am Tag vorher (Nenngeld sofort, beim Zurückziehen keine Erstattung). Am Turniertag morgens fährt das Pferd los (von der Weide wird es vorher geholt; krank/schwach → nicht gestartet, Nenngeld verfällt), ist den ganzen Tag weg (kein Training, Box sauber, unterwegs gefüttert). In der Nacht wird gerechnet, der Brief kommt am nächsten Tag. Ab 4 Jahren, nicht mit Fohlen bei Fuß, tragend keine Sprünge und in der letzten Jahreszeit vor der Geburt gar nicht; höchstens 2 Prüfungen je Turnier in benachbarten Klassen, nur ein Turnier pro Tag.</p>
       <p><b>Kalender</b> je Jahreszeit (im Winter Hallenturniere ohne Vielseitigkeit): Hofturnier (Wettbewerbe nach WBO: Dressur, Stilspringen, Westernreiter, Gelassenheitsprüfung – nur Schleifen) · Regionales Turnier (Dressur und Springen E–L, Vielseitigkeit E–A, Aufbauprüfung Kl. A 4–6 J.) · Westernturnier (Reining, Pleasure, Trail Einsteiger–Novice) · Großes Turnier (A–S, Vielseitigkeit A–M, Aufbauprüfung Kl. L 5–6 J.) · zu 50 % Großes Westernturnier (Novice–Open). 8–22 Starter je Prüfung.</p>
       <p><b>Geld:</b> Nenngeld WB 10, E 15, A 20, L 25, M 35, S 50 € (Großes Turnier ×1,5). Preisgeld gesamt E 0, A 120, L 250, M 500, S 1.200 € (Großes Turnier ×2, Aufbauprüfung ×0,8), verteilt auf die Platzierten (25/18/14/11/9/8/8/7 %). Platziert ist das beste Viertel (mind. 3).</p>
       <p><b>Ergebnis:</b> Leistung = Disziplin-Wert × Tagesform × Turnierstress × Reiter × Zufall (Streuung etwa ±8 %). Tagesform = (0,85 + 0,15 × Wohlbefinden) × (0,8 + 0,2 × Gesundheit/85) × 0,85, falls die Energie nicht reicht (Energie je Start: Dressur 30, Springen 35, Vielseitigkeit 45, Reining 32, Pleasure/Trail 25, Gelassenheit 12; dann auch Übertraining wie beim Training). Turnierstress = 1 − 0,08 × e(nervös oder scheu) × (1 − Erfahrung, voll nach 8 Starts) + 0,03 × Vorliebe „Turnier“. Reiter = 0,95 + 0,015 × (7 − LK). Konkurrenz: Feldniveau = Stufen-Wert (${STUFE_WERT.join("/")}) + 3 regional / + 6 groß, Wettbewerbe 32, Gelassenheit 48, Streuung der Konkurrenz etwa ±7. Anzeige: Dressur Wertnote (ab L Prozent), Springen Fehler und Zeit, Vielseitigkeit Minuspunkte, Western Score (70 = Durchschnitt). Gelassenheitsprüfung = 0,35 × Vertrauen + 0,2 × Gehorsam + 0,45 × (50 + 40 × (e gelassen + e mutig − e nervös − e scheu)) + bis 5 Erfahrung.</p>

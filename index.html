@@ -843,7 +843,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "228";
+  const SPIEL_VERSION = "229";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -851,9 +851,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=228"></script>
-<script src="kopfteile.js?v=228"></script>
-<script src="kopfalter.js?v=228"></script>
+<script src="pferd.js?v=229"></script>
+<script src="kopfteile.js?v=229"></script>
+<script src="kopfalter.js?v=229"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -6182,6 +6182,7 @@
       b.krippeVoll = false; b.mistig = true;
       wachsen(b);
     });
+    baulaerm();
     spiel.boxen.forEach(b => { if (b.pferd && !b.tot) { trainingNacht(b.pferd); arbeitNacht(b.pferd); } });   // Energie füllt sich über Nacht · Arbeitsstufe für den Futterbedarf
     hufNacht();       // Eisen verlieren
     ansteckungNacht(); // ansteckende Krankheiten verbreiten sich
@@ -6191,7 +6192,7 @@
     tierschutzEinsatz(); kontoMinus();
   }
   function hofMorgen() {
-    turnierMorgen(); hofhelferTag();   // Turniertag: genannte Pferde fahren los
+    turnierMorgen(); hofhelferTag(); rateVorwarnung();   // Turniertag: genannte Pferde fahren los
     futterLieferung();  // bestelltes Futter kommt an
     mitarbeiterTag();   // Stallburschen versorgen ihre Boxen zum Tagesbeginn
     befundeMorgen();    // wer heute bei den Pferden war, bemerkt vielleicht etwas
@@ -7623,7 +7624,9 @@
   // Umbau: eine Stufe höher – Preisunterschied + 20 %, halbe Bauzeit, Boxen gesperrt (müssen leer sein)
   const umbauPreis = g => Math.round((bauPreis(g.typ, g.stufe + 1, { boxen: g.boxen, anbau: g.anbau, ha: g.ha }) - bauPreis(g.typ, g.stufe, { boxen: g.boxen, anbau: g.anbau, ha: g.ha })) * (1 + UMBAU_AUFSCHLAG));
   function umbauSperre(g) {
-    if (g.bau) return "im Bau"; if (!BAUTEN[g.typ].preis || g.stufe >= 3) return g.stufe >= 3 ? "höchste Stufe" : "nicht möglich";
+    if (g.bau) return "im Bau";
+    if (g.typ === "abfohlbox" && hochtragendAufHof()) return "eine Stute fohlt bald – erst nach der Geburt";
+    if (!BAUTEN[g.typ].preis || g.stufe >= 3) return g.stufe >= 3 ? "höchste Stufe" : "nicht möglich";
     const voll = spiel.boxen.filter(b => b.geb === g.gid && (b.pferd || b.fohlen || b.reserviert));
     return voll.length ? `erst die Boxen leeren (${voll.length} belegt – Umzug-Lösungen kommen mit H4)` : "";
   }
@@ -7790,6 +7793,23 @@
     const F = futterkammer(), x = Math.round(F.verdorben || 0); F.verdorben = 0; if (x < 25) return;
     brief("Hofverwaltung", "Futter verdorben", `in der letzten Jahreszeit sind auf <b>${esc(hofName())}</b> etwa <b>${x} kg</b> Futter verdorben (feucht, schimmelig) und mussten weggeworfen werden. ${lagerStufe() ? `{Dein|Ihr} Futter- und Strohlager (Stufe ${lagerStufe()}) hält den Verderb bei ${prozent(VERDERB[lagerStufe()])} je Jahreszeit.` : `Ohne Futter- und Strohlager verderben etwa ${prozent(VERDERB[0])} je Jahreszeit – mit Lager ${VERDERB.slice(1).map(prozent).join(" / ")} (Stufe 1/2/3).`}`);
   }
+  // ---------- Vorwarnung Kreditrate (v229): 2 Tage vor Ende der Jahreszeit, wenn die Kasse nicht reicht ----------
+  function rateVorwarnung() {
+    if (datum().t !== Math.max(1, tpj() - 1)) return;
+    const L = kredite().filter(kreditLaeuft); if (!L.length) return;
+    const faellig = runde2(L.reduce((a, k) => a + offenSumme(k) + (k.rest - (k.offen || []).reduce((x, r) => x + r.tilgung, 0) > 0.005 ? rateBerechnen(k).betrag : 0), 0));
+    if ((spiel.geld || 0) >= faellig) return;
+    brief(KREDIT.bank, "Hinweis: Kreditrate", `zu Beginn der nächsten Jahreszeit buchen wir für <b>${esc(hofName())}</b> <b>${fmt(faellig)}</b> ab${L.some(k => (k.offen || []).length) ? " (inklusive offener Raten)" : ""}. Auf {deinem|Ihrem} Hofkonto sind aber nur ${fmt(spiel.geld || 0)}. Bitte {sorge|sorgen Sie} rechtzeitig für Geld – zum Beispiel per Überweisung vom zentralen Konto (Immobilien → Verwaltung) –, sonst kommt eine Mahnung.`);
+  }
+  // ---------- Baulärm (v229, aus H4): während gebaut wird, leiden nervöse und alte Pferde auf dem ganzen Hof ----------
+  const bauLaeuft = () => gebaeude().some(g => g.bau && !(BAUTEN[g.typ].aussen && datum().s === 3));
+  function baulaerm() {
+    if (!bauLaeuft()) return;
+    spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot || p.klinik || p.turnier || !p.pflege) return;
+      const d = -(1.5 * charE(p, "nerven").tief + (istSenior(p) ? 1 : 0)); if (d < -0.05) wohlAendern(p, d, "Baulärm"); });
+  }
+  // Abfohlbox (v229, aus H4): kein Umbau, solange eine Stute in der letzten Jahreszeit vor der Geburt ist
+  const hochtragendAufHof = () => spiel.boxen.some(b => b.pferd && !b.tot && b.pferd.traechtig && b.pferd.traechtig.geburt - jzJetzt() <= 1);
   // Finanzen → Bank
   let finanzTab = "konto";
   function bankHTML() {
@@ -7933,6 +7953,7 @@
       <p><b>Bauland und Weideland</b> (Dome, v225): Bauland ${fmt(BAULAND_PREIS)}/ha (nur kaufen), Weideland ${fmt(LAND_PREIS)}/ha oder Pacht ${fmt(PACHT_PREIS)}/ha je Jahreszeit. Platzbedarf auf dem Bauland: Wohnhaus/Hofplatz ${haTxt(HOFPLATZ)}, Stall ${haTxt(0.1)} je 6 Boxen, Paddockboxen ${haTxt(0.15)} je 6, Reitplatz ${haTxt(0.1)}, Reithalle ${haTxt(0.15)}, Roundpen/Trail/Sandpaddock/Waschplatz/Lager/Sattelkammer/Quarantänestall/Abfohlbox je ${haTxt(0.05)}. Weide einzäunen nur auf Weideland. Start-Pensionsstall: 1 ha Bauland + 1 ha Weideland. Makler-Höfe: Bauland nach Bestand + 0,1 ha, auf ½ ha aufgerundet; Grundstück 1 ha Bauland.
         <b>Quarantänestall:</b> gekaufte Pferde (Markt, Auktion, Tierschutz) kommen zuerst in eine freie Quarantänebox und stehen 1 Jahreszeit unter Quarantäne; danach ziehen sie – ohne bekannte ansteckende Krankheit – automatisch in eine freie normale Box (Brief). Normale Umzüge nutzen den Quarantänestall nur, wenn sonst nichts frei ist.
         <b>Hufrehe-Warnung</b> im Frühling für gefährdete Pferde (leichtfuttrige Rassen ${LEICHTFUTTRIG.join(", ")}, Futterzustand ab 7, Hufrehe oder Cushing bekannt): Hinweis beim Weidegang und Brief zu Frühlingsbeginn für alle gefährdeten Pferde auf der Weide.</p>
+      <p><b>Vorwarnung Kreditrate</b> (v229): 2 Tage vor Ende der Jahreszeit Brief der Hausbank, wenn die Kasse die fällige Rate (inklusive offener Raten) nicht deckt. <b>Baulärm:</b> solange gebaut wird (Außenarbeiten ruhen im Winter), je Nacht Wohlbefinden −1,5 × Nervosität (Charakter Nerven unter 30) und −1 für Senioren ab 20 Jahren. <b>Abfohlbox:</b> kein Umbau, solange eine Stute auf dem Hof in der letzten Jahreszeit vor der Geburt ist.</p>
       <p><b>Allein:</b> Ist ein Pferd das einzige auf dem Hof und sonst gut versorgt, fällt sein Wohlbefinden durch das Alleinsein höchstens auf ${ALLEIN_MIN} % (Dome, v228).</p>
       <p><b>Weide zu klein</b> (v226): Bedarf ${haTxt(WEIDE_BEDARF[0])} je Großpferd, ${haTxt(WEIDE_BEDARF[1])} je Pony/Kleinpferd (unter ${PONY_BIS} cm Stockmaß), Fohlen bei Fuß zählen nicht extra. Mehr als die eingezäunte Weide: Hinweis beim Weidegang und Brief zu Beginn jeder Jahreszeit (Folgen wie abgefressenes Gras kommen mit H6).
         <b>Abfohlbox:</b> Geburt dort – ohne Nachtdienst nur ${prozent(ABFOHL_SCHWACH)} statt ${prozent(OHNE_SCHWACH)} schwache Fohlen; eine Jahreszeit vor der Geburt Hinweisbrief, wenn eine Abfohlbox frei ist (umstellen über Box wechseln).

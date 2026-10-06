@@ -23,7 +23,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - `PLAN-WERTE.md` – Werte, Charakter, Training, Disziplinen, Turniere, Fohlenschau. **Alle Etappen 1–6 fertig** (6a Turniere, 6b Rennen/Distanz/Gangpferde/Championate/Reiterprofil, 6c Fohlenschau; Stand v211).
 - `PLAN-KRANKHEITEN.md` – Spieltempo, Mitarbeiter (inkl. Nachtrag B3 Azubi/Ausbilder), Befunde, Behandlung, Hufe, Ansteckung, AKU, Erbkrankheiten. **Alle Etappen A–H fertig.**
 - `PLAN-FUETTERUNG.md` – F1–F5. **Alle Etappen fertig** (v210–v214, von Claude per Skript getestet, Domes Test steht noch aus). Offene Detailfragen in `OFFENE-FRAGEN.md`.
-- `PLAN-HOF.md` – Hof-Ausbau H1–H8. **Als Nächstes – Domes Ja liegt vor (7.10.2026): mit H1 starten.** Danach die Veredler-Rassen.
+- `PLAN-HOF.md` – Hof-Ausbau H1–H8. **H1–H3 fertig** (v221–v223), dazu vorgezogen v224–v231 (siehe unten). **Als Nächstes H5 (Pension), dann H4** – Domes Auftrag: selbständig starten, Fragen sammeln und am Ende von H4 gesammelt stellen. Testspieler (3 Spielertypen) erst nach H7 wieder starten, vorher Dome fragen. H8 ist die letzte Hof-Etappe, danach die Veredler-Rassen.
 - `OFFENE-FRAGEN.md` – Fragen, die Claude in Domes Abwesenheit mit der empfohlenen Lösung entschieden hat; mit Dome durchgehen und danach anpassen.
 - Nach jeder Etappe: testen, hochladen, Dome eine Test-Anleitung mit ausgeschriebenen Wegen geben, auf Rückmeldung warten, Etappe im Plan abhaken.
 
@@ -37,14 +37,15 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (3 Stellen in index.html) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **220**.
+- Letzte Version bei Aktualisierung dieser Datei: **231**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName`, `#chHof` ausfüllen → `#chLos`. Admin: `spiel.admin = true`.
 - Vor dem Ausliefern Syntax prüfen (jeden `<script>`-Block mit `new Function(...)`, `node --check pferd.js`) und Screenshots in den drei Ansichten ansehen.
 - Kein Testlink mehr (Dome, 7.10.2026): Dome testet über GitHub Pages – das Artifact „Zuchtstall Testversion“ nicht mehr aktualisieren.
+- Gesamttest Hof-Ausbau: `NODE_PATH=/opt/node22/lib/node_modules node tests/hof-gesamttest.js` (Anleitung `tests/README.md`) – nach jeder Hof-Etappe laufen lassen und um die neue Etappe ergänzen. Testspieler nie mit Angestellten testen, solange ein Stall unter 5 Pferde hat (selbst versorgen, Futter aus der Futterkammer).
 
-## Wichtige Spielsysteme (Stand v220)
+## Wichtige Spielsysteme (Stand v231)
 - **Zeit:** Jahreszeiten (Frühling, Sommer, Herbst, Winter), `tpj()` Tage pro Jahreszeit 4/7/10 (Standard 7, alte Spielstände auf 7 umgestellt). Kalender-Anker `spiel.kal` = {tag, i}, damit ein Tempowechsel das Datum nicht verschiebt. Nur das Sozialverhalten wird umgerechnet (`proTag`, Bezug 7); alles andere gilt pro Tag/Nacht. `naechsteNacht()` ist der Tageswechsel; bei `datum().t === 1` laufen die Jahreszeit-Funktionen.
 - **Zucht:** Tragzeit 4 Jahreszeiten. Deckstation (Gestütshengste) nur Frühling/Sommer, eigene Hengste immer. Zuchtalter Stuten bis 20, Hengste bis 25. Befunde sperren die Zucht (`zuchtSperre`).
 - **Genetik:** E, A (A>At>a), F, Sty, Cr, D, Z, Rn, To, O, Lp, Patn, G, Dm (DMRT3). Versteckte Veranlagungen `ex` (grauTempo, apfel, fliegen, fliegenAb, maehne, ton, ow, sonne, kurve). Gefährliche Gene in `GEFAHR_GENE` (O, Lp) – Warnung nur, wenn mind. ein Partner positiv getestet ist.
@@ -86,6 +87,11 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
   - Futter: 1 Tag Lieferzeit (`F.liefer`, `futterLieferung` morgens). Warnbrief bei leerer Kammer nur, wenn Mitarbeiter/Turnier füttern (`wer !== "du"`); Spieler bekommt sofort einen Hinweis (`p.futterHeute.fehlt`). Futterzustand-Schwelle nach Tempo (`fzSchwelle` 4/5/6 Tage), kein Brief bei Zustandswechsel. Weide `WEIDE_ENERGIE` Frühling 1,15 / Sommer 1 / Herbst 0,9, Winter nur Heu. Anweiden nach > 1 Jahreszeit ohne Weide (`p.anweiden`, `anweidenTage`, `heuNoetigP`). Asthma erst nach > 3 Jahreszeiten Staub (`STAUB_ASTHMA_JZ`), vorher Anzeichen (`staubAnzeichen`). Heu wässern kostet Zeit (`boxAufwand` 1,5 Boxen beim Stallburschen), Heudampfer `spiel.anlage.heudampfer` (kommt mit H3). Gewicht = Futter + Bewegung (Boxenruhe −10 %) + Veranlagung (versteckte, vererbte Futterverwertung `p.stoffw` 0,85–1,15; `futterBedarf(p, box, echt)`). Körpertyp-Test im Admin-Test-Reiter entfernt (SVGs in `werte/koerpertypen/`).
   - Sportlicher Körper: Muskel-Punkte `p.muskel` (+1 je Trainingstag, Ruhetage im Rhythmus ±0, längere Pause −2), max `muskelMax` = 4 × tpj, sichtbar ab ¾ (`sportlichSichtbar`) – bei 5 Trainingstagen pro Woche etwa 1 Jahr.
   - Turniere: keine Altersgrenze nach oben (wie in echt), Leistung sinkt über die Altersfaktoren.
+- **Hof-Ausbau H1 (v221):** Neues Spiel → Charakter (ohne Hofname) → Immobilien-Menü, Startkapital 15.000 €, Alter Pensionsstall 20.000 € (10.000 € Kredit, Rate 554,15 €/Jz, 20 Raten, 4 %). `spiel.hof` {hid, name, id, art, ha, bauHa, weideHa, stufe, wert, kauf, pacht}. Alte Spielstände ohne `spiel.hofAusbau` werden nicht geladen. Kredit `spiel.kredite` (`KREDIT`, `kreditJahreszeit`, Mahnung + Mahngebühr, 3 offene Raten → Zwangsversteigerung `spielVerloren`), hvw – Finanzen – Bank (weitere Kredite bis 80 % Hofwert − Restschuld, Sondertilgung ohne Gebühr), Vorwarnung 2 Tage vor Jz-Ende (`rateVorwarnung`).
+- **H2 (v222):** Bis zu 5 Höfe, je Hof eigene Felder (`HOF_FELDER`), aktiver Hof in `spiel`, andere in `spiel.hoefe`, `imHof`/`jedenHof`/`hofWechseln`, alle Höfe laufen jede Nacht (`hofNacht`, `hofMorgen`). Makler jährlich (`maklerAngebote`), Kauf: Eigenanteil ½ vom zentralen Konto, Rest Kredit des neuen Hofs, neuer Hof startet mit 0 € und leerer Futterkammer. Zentrales Konto `spiel.zentral` (Immobilien – Verwaltung, Überweisung in beide Richtungen, Übersicht je Hof mit Kasse/Kredit/Rate/Heuvorrat). Briefe anderer Höfe: roter Umschlag `#postIconRot`, Post aller Höfe in der Verwaltung, Warnbrief bei unversorgten Pferden. Zwangsversteigerung nur des betroffenen Hofs. pah – Eigener Hof (`ANH_ZIEL.umzug`).
+- **H3 (v223):** hvw – Hof – Bauen (`BAUTEN`, `spiel.gebaeude`, 3 Stufen, Bauzeiten, Außenarbeiten ruhen im Winter, Umbau +20 %/halbe Zeit/Boxen leer und gesperrt, Unterhalt 1 %/Jz, Verfall `VERFALL` 4/2,5/1,5, Handwerker, Hofhelfer +3/Arbeitstag). + / − in der Boxenübersicht entfernt. Wirkung: `boxWohl`, `boxVerletzung`, `maGebaeudeZufr`. Start-Stall 85 % Zustand.
+- **Vorgezogen v224–v231:** Bauland 3.000 €/ha / Weideland 1.000 €/ha bzw. Pacht 20 €/ha je Jz (`bauHa`, `PLATZ`, Hofplatz 0,2 ha). Neuzugänge in den Quarantänestall (`neuzugangBox`, Umzug nach 1 Jz). Hufrehe-Warnung im Frühling (`reheGefaehrdet`). Weide zu klein 0,5 ha Großpferd / 0,25 ha Pony (`weideBelegt`). Abfohlbox 5 % statt 15 % schwache Fohlen, kein Umbau bei hochtragender Stute. Futterverderb nach Lagerstufe (`VERDERB`, Brief ab 25 kg). Pferd allein höchstens auf 30 % Wohlbefinden (`wohlAllein`). Baulärm (`baulaerm`). Hofplan mit Gebäude-Zeichnungen.
+- **Erkenntnis Testspieler (v227):** Ohne Pension (H5) gehen alle Spielertypen nach 1–1,5 Jahren pleite (nach dem Hofkauf reicht das Geld nur für 1 Pferd).
 
 ## Zusammenarbeit
 - Dome testet im Browser auf dem Handy und am PC und schickt Screenshots mit Wünschen.

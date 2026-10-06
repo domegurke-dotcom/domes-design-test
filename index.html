@@ -774,7 +774,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "195";
+  const SPIEL_VERSION = "196";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -782,9 +782,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=195"></script>
-<script src="kopfteile.js?v=195"></script>
-<script src="kopfalter.js?v=195"></script>
+<script src="pferd.js?v=196"></script>
+<script src="kopfteile.js?v=196"></script>
+<script src="kopfalter.js?v=196"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1393,6 +1393,8 @@
     const kind = { id: f.id, nr: nrVon(f), name: f.name, geschlecht: f.geschlecht, rasse: f.rasse, farbe: f.farbe, gen: f.gen, ex: f.ex, geb: { ...f.geb }, maehne: f.maehne };
     (M.kinder = M.kinder || []).push(kind);
     const vEigen = alleEigenenPferde().find(x => x.p.id === V.id); if (vEigen) { vEigen.p.nachkommen = (vEigen.p.nachkommen || 0) + 1; (vEigen.p.kinder = vEigen.p.kinder || []).push({ ...kind }); }
+    erbVererben(f, M, V);
+    const eg = erbGeburt(f, M); if (eg) { f.erbTot = eg; }
     alterAktualisieren();
     return f;
   }
@@ -1526,6 +1528,12 @@
     // und das andere ebenfalls positiv getestet ist oder das Muster sichtbar zeigt
     const gefahr = GEFAHR_GENE.find(G => { const pos = q => (testGemacht(q, "farbe") || testGemacht(q, "krank")) && hat(genVon(q), G.gen), bekannt = q => pos(q) || G.sichtbar(q);
       return (pos(stute) || pos(hengst)) && bekannt(stute) && bekannt(hengst); });
+    const eg = !gefahr && erbGefahr(stute, hengst);
+    if (eg && !verpaaren.overoOk) {
+      dialog(`<h3>⚠️ Erbkrankheit</h3><p>${eg.text}</p><p>${ERBKRANK[eg.k].folge === "tod" || ERBKRANK[eg.k].folge === "tot" ? "Betroffene Fohlen sind nicht lebensfähig." : "Betroffene Pferde sind ein Leben lang krank."} Verantwortungsvolle Züchter verpaaren keine zwei Träger miteinander.</p>`,
+        [["Trotzdem verpaaren", () => { verpaaren.overoOk = true; verpaaren(stute, hengst); verpaaren.overoOk = false; }], ["Abbrechen", null, "zweit"]]);
+      return;
+    }
     if (gefahr && !verpaaren.overoOk) {
       dialog(`<h3>⚠️ ${gefahr.titel}</h3><p><b>${esc(stute.name)}</b> und <b>${esc(hengst.name)}</b> tragen beide ${gefahr.gentext}. ${gefahr.folge}</p><p>${gefahr.rat}</p>`,
         [["Trotzdem verpaaren", () => { verpaaren.overoOk = true; verpaaren(stute, hengst); verpaaren.overoOk = false; }], ["Abbrechen", null, "zweit"]]);
@@ -1814,7 +1822,7 @@
   // ---------- Labor: nur Tests, die es auch in echt gibt. Bezahlen, Haarprobe einschicken, Ergebnis kommt per Post ----------
   const LABOR_TESTS = {
     farbe: { ico: "🎨", n: "Fellfarben-Test", kurz: "Fell\u00adfarben", preis: 120, tage: 2, info: "Farbgene: Extension, Agouti, Creme, Falbe, Silber, Roan, Tobiano, Overo, Leopard, PATN1 und Schimmel" },
-    krank: { ico: "🩺", n: "Erbkrankheiten-Test", kurz: "Erb\u00adkrank\u00adheiten", preis: 60, tage: 2, info: "Lethal White (Overo-Gen O) und Nachtblindheit (CSNB, Leopard Lp/Lp)" },
+    krank: { ico: "🩺", n: "Erbkrankheiten-Test", kurz: "Erb\u00adkrank\u00adheiten", preis: 60, tage: 2, info: "Lethal White (Overo), Nachtblindheit (Leopard) und die Erbkrankheiten der Rasse(n): Hannoveraner WFFS · Araber SCID, CA · Friese Zwergwuchs, Wasserkopf · Quarter Horse HYPP, HERDA, PSSM1 · Shire/Tinker PSSM1 · Shetty Zwergwuchs (ACAN) · Achal-Tekkiner NFS. Mischlinge: +30 € je weitere Rasse" },
     gang: { ico: "🐎", n: "Gangpferde-Test (DMRT3)", kurz: "Gang\u00adpferde-Gen", preis: 50, tage: 2, info: "Gangpferde-Gen DMRT3: zeigt, ob das Pferd Tölt und Pass veranlagt hat und vererben kann" },
     abst: { ico: "🧾", n: "Abstammungsnachweis", kurz: "Abstam\u00admung", preis: 80, tage: 3, info: "DNA-Vergleich mit den eingetragenen Eltern" },
   };
@@ -1834,8 +1842,8 @@
     if (t === "farbe") return gentestHTML(p);
     if (t === "krank") { const g = genVon(p), o = anzahl(g, "O"), lp = anzahl(g, "Lp");
       return `<div class="gentab">${zeile("Lethal White (LWOS) – Overo-Gen", o ? "O / n" : "n / n", o ? "⚠️ Träger – nie mit einem anderen Overo-Träger verpaaren: 25 % der Fohlen sterben an Lethal White" : "frei – kein Träger")}
-        ${zeile("Nachtblindheit (CSNB) – Leopard", lp === 2 ? "Lp / Lp" : lp ? "Lp / n" : "n / n", lp === 2 ? "⚠️ betroffen – nachtblind" : lp ? "Träger – selbst nicht betroffen" : "frei")}</div>
-        <p class="text"><small>Weitere Erbkrankheiten werden später ergänzt.</small></p>`; }
+        ${zeile("Nachtblindheit (CSNB) – Leopard", lp === 2 ? "Lp / Lp" : lp ? "Lp / n" : "n / n", lp === 2 ? "⚠️ betroffen – nachtblind" : lp ? "Träger – selbst nicht betroffen" : "frei")}${erbErgebnisHTML(p)}</div>
+        <p class="text"><small>Geprüft wurden die Erbkrankheiten der Rassen in ${esc(p.name)} (${erbRassen(p).map(r => rasseById(r) ? rasseById(r).name : r).join(", ")}). Veranlagungen wie Sommerekzem, Kehlkopfpfeifen oder OCD lassen sich nicht testen.</small></p>`; }
     if (t === "gang") { const n = anzahl(genVon(p), "Dm");
       return `<div class="gentab">${zeile("Gangpferde-Gen (DMRT3)", n === 2 ? "A / A" : n ? "A / C" : "C / C", n === 2 ? "veranlagt für Tölt und Pass (Fünfgänger) – gibt das A-Allel an jedes Fohlen weiter" : n ? "veranlagt für Tölt (Viergänger) – gibt das A-Allel an die Hälfte der Fohlen weiter" : "keine Veranlagung für Tölt oder Pass")}</div>`; }
     if (t === "abst") { const A = ahnenFuellen(p), NAM = { vatersvater: "Vatersvater", vatersmutter: "Vatersmutter", muttersvater: "Muttersvater", muttersmutter: "Muttersmutter" };
@@ -1846,9 +1854,10 @@
     const T = LABOR_TESTS[t];
     if (testGemacht(p, t)) { laborAnzeigen(p, t); return; }
     if (testLaeuft(p, t)) { dialog(`<h3>${T.ico} ${T.n}</h3><p>Die Probe von ${esc(p.name)} ist schon im Labor. Das Ergebnis kommt per Post.</p>`); return; }
-    if ((spiel.geld || 0) < T.preis) { dialog(`<h3>Nicht genug Geld</h3><p>Der ${T.n} kostet ${fmt(T.preis)}, du hast ${fmt(spiel.geld || 0)}.</p>`); return; }
-    dialog(`<h3>${T.ico} ${T.n} für ${esc(p.name)}?</h3><p>${T.info}.</p><p>Der Tierarzt schickt eine Haarprobe ein. Kosten: <b>${fmt(T.preis)}</b>. Das Ergebnis kommt in etwa ${T.tage} Tagen per Post.</p>`,
-      [["Bestellen", () => { buchen(-T.preis, `Labor: ${T.n}`); (spiel.labor = spiel.labor || []).push({ id: p.id, name: p.name, test: t, fertig: spiel.tag + T.tage }); speichern(); zeigeTag(); nachher(); }], ["Abbrechen", null, "zweit"]]);
+    const preis = laborPreis(p, t);
+    if ((spiel.geld || 0) < preis) { dialog(`<h3>Nicht genug Geld</h3><p>Der ${T.n} kostet ${fmt(preis)}, du hast ${fmt(spiel.geld || 0)}.</p>`); return; }
+    dialog(`<h3>${T.ico} ${T.n} für ${esc(p.name)}?</h3><p>${T.info}.</p><p>Der Tierarzt schickt eine Haarprobe ein. Kosten: <b>${fmt(preis)}</b>${preis > T.preis ? ` (${erbRassen(p).length} Rassen)` : ""}. Das Ergebnis kommt in etwa ${T.tage} Tagen per Post.</p>`,
+      [["Bestellen", () => { buchen(-preis, `Labor: ${T.n}`); (spiel.labor = spiel.labor || []).push({ id: p.id, name: p.name, test: t, fertig: spiel.tag + T.tage }); speichern(); zeigeTag(); nachher(); }], ["Abbrechen", null, "zweit"]]);
   }
   // jede Nacht: fertige Laborergebnisse kommen per Post
   function laborNacht() {
@@ -1956,10 +1965,11 @@
     const rein = p.anteile ? reinAnteil(p.anteile, p.rasse) / 100 : 1, reinF = 0.5 + 0.5 * rein * rein;
     const dreckF = 1 - 0.15 * dreckWert(p) / 100;   // ungeputzt: bis zu 15 % weniger wert
     const bl = befundListe(p).filter(b => b.diagnose), befundF = Math.max(0.4, 1 - bl.reduce((a, b) => a + (KRANK[b.art].chronisch ? 0.1 : 0) + (b.beh ? 0.02 : 0.06) * b.grad, 0));   // bekannte Befunde senken den Preis, chronische dauerhaft
-    const v = (1500 + 4500 * gangF * gangF + 5000 * ausb) * alterF * gesund * reinF * dreckF * befundF;
+    const erbF = testGemacht(p, "krank") ? Object.keys(ERBKRANK).reduce((a, k) => a * (erbKrank(p, k) ? 0.75 : (erbVon(p)[k] || 0) ? 0.92 : 1), 1) : 1;   // getestete Träger sind für die Zucht weniger wert
+    const v = (1500 + 4500 * gangF * gangF + 5000 * ausb) * alterF * gesund * reinF * dreckF * befundF * erbF;
     return Math.max(100, Math.round(v / 50) * 50) + testWert(p);   // gemachte Gentests: Käufer zahlen die Testkosten mit
   }
-  const testWert = p => Object.keys(LABOR_TESTS).filter(t => testGemacht(p, t)).reduce((s, t) => s + LABOR_TESTS[t].preis, 0);
+  const testWert = p => Object.keys(LABOR_TESTS).filter(t => testGemacht(p, t)).reduce((s, t) => s + laborPreis(p, t), 0);
   // verkauf: Stuten mit Fohlen bei Fuß dürfen verkauft werden – das Fohlen geht mit (allein darf es nicht weg)
   const schutzLaeuft = p => p.schutzBis && jzJetzt() < p.schutzBis;
   function abgabeSperre(p, box, verkauf) {
@@ -2145,7 +2155,7 @@
     [/wurde vermittelt/, "ts-vermittelt", "Tierschutz: Pferd vermittelt"], [/ist zurück$/, "aufzucht-zurueck", "Aufzucht: Pferd zurück"], [/abholen$/, "aufzucht-abholen", "Aufzucht: bitte abholen"],
     [/wieder fit/, "klinik", "Klinik: Entlassung und Rechnung"], [/muss behandelt werden/, "gesundheit", "Tierarzt: Behandlung nötig"],
     [/^Kein Käufer|^Kein Gebot/, "kein-kaeufer", "Verkauf: kein Käufer"], [/^Preisvorschlag/, "preisvorschlag", "Verkauf: Preisvorschlag"], [/^Zwischenstand/, "auktion", "Auktion: Zwischenstand"], [/wurde verkauft/, "verkauf", "Pferd verkauft"], [/geplatzt/, "geplatzt", "Verkauf geplatzt"],
-    [/ist 3 Jahre alt/, "drei-jahre", "Pferd wird 3 Jahre alt"], [/fängt heute an|hat aufgehört|hat gekündigt| kündigt$|ist krank$|^Urlaubsantrag|Abschlussprüfung|Ausbilder|Ausbildung ab/, "mitarbeiter", "Mitarbeiter"], [/ist auffällig$/, "auffaellig", "Mitarbeiter: Auffälligkeit"], [/^Huftermin/, "huftermin", "Hufschmied: Erinnerung"], [/^Blutbild .*Ergebnis$/, "blutbild", "Tierarzt: Blutbild"], [/^AKU-Protokoll/, "aku", "Tierarzt: AKU-Protokoll"], [/^Ankaufsuntersuchung:/, "kaeuferaku", "Verkauf: AKU des Käufers"], [/^Blutprobe /, "probe", "Tierarzt: Blutprobe"], [/hat verfohlt$/, "verfohlt", "Tierarzt: Verfohlen"], [/^Sorge um/, "sorge", "Tierarzt: Warnung"], [/^Überboten/, "ueberboten", "Auktion: überboten"], [/^Zuschlag|^Auktion verloren/, "zuschlag", "Auktion: Ergebnis"], [/ist wieder gesund$/, "ts-gesund", "Tierschutz: Pferd wieder gesund"], [/^Ausbildungsbericht/, "ausbildungsbericht", "Ausbildungsbericht"], [/^Strafe/, "strafe", "Tierschutz: Strafe"], [/beschlagnahmt/, "ts-beschlagnahme", "Tierschutz: Beschlagnahme"],
+    [/ist 3 Jahre alt/, "drei-jahre", "Pferd wird 3 Jahre alt"], [/fängt heute an|hat aufgehört|hat gekündigt| kündigt$|ist krank$|^Urlaubsantrag|Abschlussprüfung|Ausbilder|Ausbildung ab/, "mitarbeiter", "Mitarbeiter"], [/ist auffällig$/, "auffaellig", "Mitarbeiter: Auffälligkeit"], [/^Huftermin/, "huftermin", "Hufschmied: Erinnerung"], [/^Blutbild .*Ergebnis$/, "blutbild", "Tierarzt: Blutbild"], [/^AKU-Protokoll/, "aku", "Tierarzt: AKU-Protokoll"], [/: Totgeburt$/, "totgeburt", "Tierarzt: Totgeburt"], [/^Ankaufsuntersuchung:/, "kaeuferaku", "Verkauf: AKU des Käufers"], [/^Blutprobe /, "probe", "Tierarzt: Blutprobe"], [/hat verfohlt$/, "verfohlt", "Tierarzt: Verfohlen"], [/^Sorge um/, "sorge", "Tierarzt: Warnung"], [/^Überboten/, "ueberboten", "Auktion: überboten"], [/^Zuschlag|^Auktion verloren/, "zuschlag", "Auktion: Ergebnis"], [/ist wieder gesund$/, "ts-gesund", "Tierschutz: Pferd wieder gesund"], [/^Ausbildungsbericht/, "ausbildungsbericht", "Ausbildungsbericht"], [/^Strafe/, "strafe", "Tierschutz: Strafe"], [/beschlagnahmt/, "ts-beschlagnahme", "Tierschutz: Beschlagnahme"],
     [/^Willkommen/, "gnadenhof", "Gnadenhof: Ankunft"], [/^Abschied/, "tod", "Pferd verstorben"], [/^Gentest|^Laborergebnis/, "gentest", "Laborergebnis"],
   ];
   const briefTyp = betreff => (BRIEF_TYPEN.find(([re]) => re.test(betreff)) || [, "sonstiges", "Sonstige Nachricht"]);
@@ -2226,6 +2236,7 @@
   // läuft zu Beginn jeder Jahreszeit
   function jahreszeitBeginn() {
     alleEigenenPferde().forEach(x => werteAltern(x.p));   // Werte über der Altersgrenze sinken langsam mit
+    erbJahreszeit();   // Erbkrankheiten und Veranlagungen zeigen sich mit dem Alter
     // ungeplante Bedeckung fällt nach einer Jahreszeit auf
     alleEigenenPferde().forEach(({ p }) => { if (!p.heimlich || jzJetzt() < p.heimlich.seit + 1) return;
       const hv = p.heimlich.vater; p.traechtig = p.heimlich; delete p.heimlich;
@@ -2262,10 +2273,15 @@
       const p = b.pferd;
       if (!p || !p.traechtig || b.tot || b.fohlen || jetzt < p.traechtig.geburt) return;
       const f = geburt(b);
+      if (f.erbTot) { const E = f.erbTot; delete b.fohlen; f.todesursache = `${ERBKRANK[E.tot].n} (Erbkrankheit)`; begraben(f, `Box ${i + 1}`); spiel.friedhof[spiel.friedhof.length - 1].alter = "tot geboren";
+        p.pflege.gesundheit = Math.max(30, Math.round((p.pflege.gesundheit - 20) * 10) / 10); wohlAendern(p, -15, "schwere Geburt");
+        brief("Tierarztpraxis", `${p.name}: Totgeburt`, `es tut uns sehr leid: <b>${esc(p.name)}</b> (Box ${i + 1}) hat ihr Fohlen tot zur Welt gebracht – ${E.text}.<br><br>Das ist eine <b>Erbkrankheit</b>: Beide Eltern tragen die Anlage, das Fohlen hat sie von beiden geerbt. Ein Gentest (Erbkrankheiten) vor der Verpaarung hätte das gezeigt.`, { pferde: [p] });
+        return; }
       if (f.lethalWhite) { brief("Tierarztpraxis", `${p.name} hat ein Fohlen bekommen`, `<b>${esc(p.name)}</b> (Box ${i + 1}) hat zu Beginn von ${datumLang()} ein ${f.geschlecht === "Stute" ? "Stutfohlen" : "Hengstfohlen"} zur Welt gebracht: <b>${esc(f.name)}</b>.
         <br><br>Vater: <b>${esc(f.ahnen.vater.name)}</b> (${rasseById(f.ahnen.vater.rasse).name})<br><br>Zur Gesundheit des Fohlens {bekommst du|bekommen Sie} von uns einen eigenen Brief.`);
         brief("Tierarztpraxis", `Diagnose: ${f.name}`, `leider {müssen wir dir|müssen wir Ihnen} eine schlechte Nachricht mitteilen: Das neugeborene Fohlen <b>${esc(f.name)}</b> (Box ${i + 1}, Mutter <b>${esc(p.name)}</b>) ist fast ganz weiß und hat rosa Haut. Beide Eltern tragen das Overo-Gen – wir befürchten das <b>Lethal-White-Overo-Syndrom</b> (O/O). Solchen Fohlen fehlen Nervenzellen im Darm; die Krankheit ist nicht heilbar. Wir beobachten ${pron(f).ihn} genau.`); return; }
       const nd = nachtdienstGeburt(b, f);
+      if (f.erbTod && ["wffs", "nfs"].includes(f.erbTod.k)) { nd.schwach = true; nd.text += `<br><br>⚠️ <b>Mit dem Fohlen stimmt etwas nicht:</b> ${ERBKRANK[f.erbTod.k].text}.`; }
       brief("Tierarztpraxis", `${p.name} hat ein Fohlen bekommen!`, `herzlichen Glückwunsch! <b>${esc(p.name)}</b> (Box ${i + 1}) hat zu Beginn von ${datumLang()} ein ${nd.schwach ? "" : "gesundes "}${f.geschlecht === "Stute" ? "Stutfohlen" : "Hengstfohlen"} zur Welt gebracht: <b>${esc(f.name)}</b>.
         <br><br>Vater: <b>${esc(f.ahnen.vater.name)}</b> (${rasseById(f.ahnen.vater.rasse).name}) · Farbe: ${farbText(f)} · Rasse: ${rasseById(f.rasse).name}${nd.text}`);
     });
@@ -2459,7 +2475,7 @@
           <dt>Alter</dt><dd>${alterText(p)} · <span class="lex" data-lex="alter">${altersstufe(p)[1]}</span></dd>
           <dt>Geboren</dt><dd>${JZ[p.geb.s][1]} ${JZ[p.geb.s][0]} ${p.geb.j}</dd>
           ${box.fohlen ? `<dt>Fohlen</dt><dd>${esc(box.fohlen.name)} · ${box.fohlen.geschlecht} · ${alterText(box.fohlen)} (${altersstufe(box.fohlen)[1].replace(/^\S+ /, "")})${alterJZ(box.fohlen) >= 2 ? `<br><button class="knopf" id="absetzen" style="width:auto;padding:6px 12px;margin-top:6px;font-size:.85rem">In eigene Box umstellen</button> <button class="knopf zweit" id="fohlenAufzucht" style="width:auto;padding:6px 12px;margin-top:6px;font-size:.85rem">🍼 In die Aufzuchtstation</button>` : ""}</dd>` : ""}
-          <dt>Stockmaß</dt><dd>${p.stockmass} cm</dd><dt>Gewicht</dt><dd>ca. ${gewichtAnzeige(p)} kg</dd>${p.hufGr ? `<dt>Hufgröße</dt><dd>vorne ${HUFSCHUH_GR[p.hufGr.vorne]} · hinten ${HUFSCHUH_GR[p.hufGr.hinten]}</dd>` : ""}${spiel.admin && !box.lesen ? `<dt>Hufe 🛠️</dt><dd>${hufStufe(p)} (${hufQ(p)}) · wächst ${hufW(p)}</dd>` : ""}
+          <dt>Stockmaß</dt><dd>${p.stockmass} cm</dd><dt>Gewicht</dt><dd>ca. ${gewichtAnzeige(p)} kg</dd>${p.zwerg ? `<dt>Besonderheit</dt><dd>Zwergwuchs – bleibt deutlich kleiner</dd>` : ""}${p.hufGr ? `<dt>Hufgröße</dt><dd>vorne ${HUFSCHUH_GR[p.hufGr.vorne]} · hinten ${HUFSCHUH_GR[p.hufGr.hinten]}</dd>` : ""}${spiel.admin && !box.lesen ? `<dt>Hufe 🛠️</dt><dd>${hufStufe(p)} (${hufQ(p)}) · wächst ${hufW(p)}</dd>` : ""}
           ${zucht ? `<dt>Zucht</dt><dd>${zucht}</dd>` : ""}
           ${(() => { const akt = befundListe(p).filter(b => b.diagnose), alt = p.befundAlt || []; if (!akt.length && !alt.length) return "";
             return `<dt>Befunde</dt><dd class="bf-liste">${[...akt.map(b => `${KRANK[b.art].ico} ${KRANK[b.art].n} (${GRAD_TEXT[b.grad]}) – ${KRANK[b.art].chronisch ? "chronisch" : b.beh ? "in Behandlung" : "unbehandelt"}`), ...alt.slice(0, 6).map(a => `<small>${KRANK[a.art].ico} ${KRANK[a.art].n} (${GRAD_TEXT[a.grad]}) · ${datumText(datum(a.seit))} · ${a.wie}</small>`)].join("<br>")}</dd>`; })()}
@@ -2657,7 +2673,7 @@
           <p class="text"><small>Bei 30 % Gesundheit oder weniger kann sich ein Pferd im Stall nicht mehr erholen, nur noch hier. Entlassen wird es erst mit 75 %. Die Kosten (${fmt(KOSTEN.klinik)} pro Tag) kommen nach der Behandlung als Rechnung, zahlbar innerhalb von 2 Tagen.</small></p>` + zurueckOrt("‹ Zurück zum Anhänger");
       } else if (ortModus === "labor") {
         inhalt = meld + `<p class="text" style="margin:0 0 4px">🔬 <b>Labor</b> · Der Tierarzt schickt eine Haarprobe von ${esc(p.name)} ein – dafür muss ${pron(p).er} nicht wegfahren.</p>
-          <div class="kacheln quadrat">${Object.entries(LABOR_TESTS).map(([id, T]) => kOrt("lt-" + id, T.ico, T.kurz, testGemacht(p, id) ? "schon gemacht" : testLaeuft(p, id) ? "im Labor …" : fmt(T.preis), T.info, !testGemacht(p, id) && !testLaeuft(p, id))).join("")}</div>
+          <div class="kacheln quadrat">${Object.entries(LABOR_TESTS).map(([id, T]) => kOrt("lt-" + id, T.ico, T.kurz, testGemacht(p, id) ? "schon gemacht" : testLaeuft(p, id) ? "im Labor …" : fmt(laborPreis(p, id)), T.info, !testGemacht(p, id) && !testLaeuft(p, id))).join("")}</div>
           <p class="text"><small>Das Ergebnis kommt nach ein paar Tagen per Post und steht dann in der Akte unter „Genetik“.</small></p>` + zurueckOrt();
       } else if (ortModus === "abgeben") {
         const sperre = abgabeSperre(p, box);
@@ -3273,7 +3289,14 @@
     zubehoerInsLager(p);
     (spiel.friedhof = spiel.friedhof || []).push({ pferd: JSON.parse(JSON.stringify(p)), name: p.name, rasse: p.rasse, geschlecht: p.geschlecht, farbe: fb(p), farbName: farbName(p, fb(p)), geb: p.geb ? { ...p.geb } : null, tod: jzJetzt(), alter: alterText(p), ort, nachkommen: p.nachkommen || 0, ursache: p.todesursache || "unbekannt" });
   }
+  function erbTodPruefen() {
+    const pruefe = (q, wo, weg) => { const T = q && q.erbTod; if (!T) return; if (spiel.tag < T.tag || (T.jz && jzJetzt() < T.jz)) return;
+      const K = ERBKRANK[T.k]; q.todesursache = `${K.n} (Erbkrankheit)`; begraben(q, wo); weg();
+      brief("Tierarztpraxis", `Abschied von ${q.name}`, `es tut uns sehr leid: <b>${esc(q.name)}</b> ist gestorben – ${T.text || K.text}.<br><br><b>Todesursache:</b> ${K.n}. Das ist eine <b>Erbkrankheit</b>: Beide Eltern tragen die Anlage, ${esc(q.name)} hat sie von beiden geerbt. Ein Gentest (Erbkrankheiten) vor der Verpaarung hätte das gezeigt.`); };
+    spiel.boxen.forEach((b, i) => { pruefe(b.fohlen, `Box ${i + 1}`, () => delete b.fohlen); pruefe(b.pferd, `Box ${i + 1}`, () => { b.pferd = null; b.tot = false; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; }); });
+  }
   function tote() {
+    erbTodPruefen();
     // Lethal-White-Fohlen (O/O) sterben in der ersten Nacht nach der Geburt (tote() läuft vor dem Tageswechsel)
     spiel.boxen.forEach((b, i) => {
       const f = b.fohlen; if (!f || !f.lethalWhite || spiel.tag < (f.lwTag || 0)) return;
@@ -3370,7 +3393,7 @@
       mauke: (dreck ? 1.5 : 1) * (mist ? 1.5 : 1) * (ort === "weide" && s >= 2 ? 2 : 1),
       druse: (mist ? 1.3 : 1),
       arthrose: j >= 15 ? (j - 14) / 3 : 0,
-      sommerekzem: s === 1 ? (EKZEM_RASSEN.includes(p.rasse) ? 3 : 0.3) : 0,
+      sommerekzem: s === 1 ? veranlagungVon(p).ekzem * 5 : 0,
       cushing: j >= 18 ? 1 : 0, vergiftung: 0,
       strahlfaeule: (ausgekratztGestern(p) ? 0.3 : 1) * (mist ? 2 : 1) * (ort === "weide" && s >= 2 ? 2 : 1),
       hufabszess: hufZuLang(p) * (p.eisenWeg ? 2 : 1),
@@ -3378,7 +3401,7 @@
       influenza: (geimpft(p) ? 0.3 : 1) * (s === 3 || s === 2 ? 1.5 : 1), herpes: geimpft(p) ? 0.3 : 1, hautpilz: dreck ? 2 : 1,
       wuermer: (wurmFrisch(p) ? 0.2 : spiel.tag - (p.pflege.wurm || 0) > 2 * tpj() ? 3 : 1) * (ort === "weide" ? 1.5 : 1) };
     f.kolik *= zahnUeber(p) ? 1.5 : 1;
-    f.lahmheit *= hufZuLang(p) * (p.eisenWeg ? 1.5 : 1);
+    f.lahmheit *= hufZuLang(p) * (p.eisenWeg ? 1.5 : 1) * (p.ocd ? 1.3 : 1);
     return Object.keys(KRANK).filter(k => f[k] != null).map(k => [k, BEFUND_RISIKO * KRANK[k].gew * konst * wohlF * (k === "arthrose" || k === "cushing" ? 1 : altF) * f[k]]);
   }
   const URSACHE = {
@@ -3998,6 +4021,8 @@
     if (r() < risk * 0.15) F.push({ check: "herz", text: "Herzgeräusch – vermutlich harmlos", minus: 0.03 });
     if (r() < risk * 0.12) F.push({ check: "augen", text: "leichte Linsentrübung", minus: 0.04 });
     if (r() < risk * 0.15) F.push({ check: "longe", text: "Taktunreinheit an der Longe", minus: 0.05 });
+    if (h.ocd == null) { h.ocd = j >= 2 && r() < veranlagungVon(h).ocd * 0.6; h.ocdGeprueft = j >= 2; }
+    if (h.ocd) F.push({ check: "roentgen", text: "OCD/Chip in einem Gelenk (Röntgen)", minus: 0.1 });
     const arth = j >= 10 && r() < risk * 0.5;
     if (arth) F.push({ art: "arthrose", grad: 1, check: r() < 0.5 ? "beuge" : "roentgen", text: "Gelenkveränderungen (beginnende Arthrose)", minus: 0.12 });
     h.akuKlasse = arth ? (r() < 0.3 ? 4 : 3) : r() < 0.65 ? 1 : 2;
@@ -4056,6 +4081,7 @@
       if (f.gefunden) { b.diagnose = spiel.tag; b.bemerkt = { von: "AKU", tag: spiel.tag }; b.tierarzt = true; }
       if (f.maskiert) b.inkub = spiel.tag + 2;   // Schmerzmittel wirkt noch 2 Tage – erst dann sieht man die Lahmheit
     });
+    if (h.ocd != null) { p.ocd = h.ocd; p.ocdGeprueft = true; }
     if (h.probe) p.blutprobe = { tag: spiel.tag, quelle, maskiert: F.some(f => f.maskiert), preis: h.preis };
     ["akuF", "akuErg", "akuKlasse", "akuVerhandelt", "probe"].forEach(k => delete p[k]);
   }
@@ -4076,6 +4102,119 @@
     if (!minus) return { preis, text: `Der Käufer hat eine Ankaufsuntersuchung machen lassen – ohne Befund. ` };
     const neu = Math.round(preis * (1 - minus) / 50) * 50;
     return { preis: neu, text: `Der Käufer hat eine Ankaufsuntersuchung machen lassen und dabei gefunden: ${funde.map(f => f[0]).join(", ")}. Deshalb zahlt er nur <b>${fmt(neu)}</b> statt ${fmt(preis)}. ` };
+  }
+  // ---------- Erbkrankheiten mit Gentest (Etappe H) ----------
+  // p.erb[key] = Anzahl Krankheits-Allele (0, 1, 2) – versteckt, nur der Labortest „Erbkrankheiten“ zeigt sie
+  // traeger = Anteil Träger in der Rasse (echte Größenordnung); dominant: schon 1 Allel macht krank
+  const ERBKRANK = {
+    wffs: { n: "WFFS (Warmblood Fragile Foal Syndrome)", kurz: "WFFS", rassen: { hannoveraner: 0.10 }, folge: "tod", tage: 1,
+      text: "die Haut des Fohlens ist extrem empfindlich und reißt bei jeder Berührung ein. Solche Fohlen können nicht überleben" },
+    scid: { n: "SCID (schwerer kombinierter Immundefekt)", kurz: "SCID", rassen: { araber: 0.02 }, folge: "tod", jz: 2,
+      text: "dem Fohlen fehlt die körpereigene Abwehr. Sobald der Schutz aus der Muttermilch nachlässt, übersteht es keine Infektion mehr" },
+    ca: { n: "CA (Kleinhirn-Abiotrophie)", kurz: "CA", rassen: { araber: 0.15 }, folge: "befund", art: "ataxie", ab: 1 },
+    zwerg_f: { n: "Zwergwuchs (Friese)", kurz: "Zwergwuchs", rassen: { friese: 0.12 }, folge: "zwerg" },
+    wasserkopf: { n: "Hydrocephalus (Wasserkopf)", kurz: "Wasserkopf", rassen: { friese: 0.12 }, folge: "tot", text: "das Fohlen hatte einen stark vergrößerten Schädel (Wasserkopf) und kam tot zur Welt. Die Geburt war für die Stute schwer" },
+    hypp: { n: "HYPP (Hyperkaliämische periodische Paralyse)", kurz: "HYPP", rassen: { quarter: 0.02 }, dominant: true, folge: "befund", art: "hypp", ab: 4 },
+    herda: { n: "HERDA (Hautkrankheit)", kurz: "HERDA", rassen: { quarter: 0.035 }, folge: "befund", art: "herda", ab: 6 },
+    pssm: { n: "PSSM1 (Muskelerkrankung)", kurz: "PSSM1", rassen: { quarter: 0.08, shire: 0.3, tinker: 0.12 }, dominant: true, folge: "befund", art: "pssm", ab: 8 },
+    zwerg_s: { n: "Zwergwuchs (ACAN, Shetlandpony)", kurz: "ACAN", rassen: { shetty: 0.15 }, folge: "acan" },
+    nfs: { n: "Naked Foal Syndrome (NFS)", kurz: "NFS", rassen: { tekke: 0.05 }, folge: "tod", jz: 1,
+      text: "das Fohlen kam ohne Fell zur Welt (Naked Foal Syndrome). Die Haut ist schuppig und empfindlich, die meisten dieser Fohlen sterben in den ersten Monaten" } };
+  // Folge-Befunde (chronisch, nur mit Behandlung zu lindern)
+  Object.assign(KRANK, {
+    ataxie: { n: "Ataxie (CA)", ico: "🧠", bereich: "verhalten", chronisch: true, gew: 0, start: [2, 2], selbst: 0, schlimmer: .02, g: .3, kosten: 90,
+      anz: ["stolpert und schwankt, als wüsste es nicht, wo seine Beine sind", "nickt mit dem Kopf, wenn es etwas fixiert"], schwer: "kann sich kaum noch sicher bewegen" },
+    hypp: { n: "HYPP-Anfall", ico: "⚡", bereich: "ruecken", chronisch: true, gew: 0, start: [1, 2], selbst: 0, schlimmer: .06, g: .8, kosten: 120,
+      anz: ["hat Muskelzittern an Hals und Flanken", "wirkt plötzlich steif und schwach"], schwer: "bricht fast zusammen – die Muskeln versagen" },
+    herda: { n: "HERDA (Hautablösung)", ico: "🩹", bereich: "haut", chronisch: true, gew: 0, start: [2, 2], selbst: 0, schlimmer: .04, g: .6, kosten: 90,
+      anz: ["hat offene Hautstellen am Rücken", "die Haut am Rücken löst sich bei Druck ab"], schwer: "hat große offene Wunden am Rücken" },
+    pssm: { n: "PSSM (Kreuzverschlag)", ico: "💪", bereich: "ruecken", chronisch: true, gew: 0, start: [1, 2], selbst: 0, schlimmer: .05, g: .7, kosten: 110,
+      anz: ["ist hinten steif und will nicht vorwärts", "die Kruppenmuskeln sind hart und schmerzen"], schwer: "kann sich kaum bewegen, der Urin ist dunkel" },
+    kehlkopf: { n: "Kehlkopfpfeifen", ico: "🎐", bereich: "klima", chronisch: true, gew: 0, start: [1, 1], selbst: 0, schlimmer: .02, g: .1, kosten: 80,
+      anz: ["macht bei Anstrengung ein pfeifendes Atemgeräusch"], schwer: "bekommt bei Arbeit kaum noch Luft" },
+    melanom: { n: "Melanom (Schimmel)", ico: "⚫", bereich: "haut", chronisch: true, gew: 0, start: [1, 1], selbst: 0, schlimmer: .02, g: .15, kosten: 100,
+      anz: ["hat kleine schwarze Knötchen unter dem Schweif", "hat dunkle Knoten am After"], schwer: "die Knoten sind groß geworden und stören" },
+    ocd: { n: "OCD/Chip im Gelenk", ico: "🦴", bereich: "huf", chronisch: true, gew: 0, start: [1, 1], selbst: 0, schlimmer: .01, g: .1, kosten: 150,
+      anz: ["hat ein leicht vermehrt gefülltes Gelenk"], schwer: "lahmt an dem betroffenen Bein" } });
+  Object.assign(HILFT, { ataxie: { boxenruhe: .2 }, hypp: { boxenruhe: .4, schritt: .3 }, herda: { wundsalbe: .4, verband: .3 }, pssm: { schritt: .4, schmerzmittel: .3 }, kehlkopf: {}, melanom: {}, ocd: { boxenruhe: .3, schmerzmittel: .3 } });
+  Object.assign(SCHADET, { pssm: { boxenruhe: .1 } });
+  Object.assign(PLAN, { ataxie: ["boxenruhe"], hypp: ["schritt"], herda: ["wundsalbe", "verband"], pssm: ["schritt", "schmerzmittel"], kehlkopf: [], melanom: [], ocd: ["boxenruhe", "schmerzmittel"] });
+  Object.assign(URSACHE, { ataxie: () => "Erbkrankheit (CA)", hypp: () => "Erbkrankheit (HYPP)", herda: () => "Erbkrankheit (HERDA)", pssm: () => "Erbkrankheit (PSSM1)", kehlkopf: () => "Veranlagung", melanom: () => "Schimmel-Veranlagung", ocd: () => "Veranlagung (Wachstum)" });
+  // Veranlagungen ohne Gentest (vererbt, 0–1): erhöhen nur das Risiko
+  const VERANLAGUNG = {
+    ekzem: { n: "Sommerekzem", rassen: { isi: 0.6, tinker: 0.5, haflinger: 0.45 }, sonst: 0.08 },
+    pfeifen: { n: "Kehlkopfpfeifen", rassen: { vollblut: 0.35, hannoveraner: 0.3 }, sonst: 0.05 },
+    ocd: { n: "OCD/Chips", rassen: { hannoveraner: 0.3, vollblut: 0.25, quarter: 0.2 }, sonst: 0.08 } };
+  // Anteil einer Rasse am Pferd (Mischlinge erben anteilig)
+  const rassenMix = p => { try { return anteileVon(p); } catch (e) { return { [p.rasse]: 100 }; } };
+  const erbFreq = (p, R) => Object.entries(rassenMix(p)).reduce((a, [r, pr]) => a + (R[r] || 0) * pr / 100, 0);
+  function erbVon(p) {
+    if (!p) return {};
+    if (p.erb) return p.erb;
+    const r = zufall("erb-" + (p.id || p.name)), e = {};
+    Object.entries(ERBKRANK).forEach(([k, K]) => { const q = erbFreq(p, K.rassen) / 2; e[k] = (r() < q ? 1 : 0) + (r() < q ? 1 : 0); if (!K.dominant && e[k] === 2) e[k] = 1; });   // lebende Pferde tragen rezessive Krankheiten höchstens einmal
+    return (p.erb = e);
+  }
+  function veranlagungVon(p) {
+    if (p.vl) return p.vl; const r = zufall("vl-" + (p.id || p.name)), v = {};
+    Object.entries(VERANLAGUNG).forEach(([k, V]) => { const b = Math.max(V.sonst, erbFreq(p, V.rassen)); v[k] = Math.round(Math.max(0, Math.min(1, b + (r() - 0.5) * 0.3)) * 100) / 100; });
+    return (p.vl = v);
+  }
+  // Vererbung bei der Geburt: von jedem Elternteil ein Allel; Veranlagungen als Mittel mit Streuung
+  function erbVererben(f, M, V) {
+    const em = erbVon(M), ev = erbVon(V), e = {};
+    const allel = n => n === 2 ? 1 : n === 1 ? (Math.random() < 0.5 ? 1 : 0) : 0;
+    Object.keys(ERBKRANK).forEach(k => e[k] = allel(em[k] || 0) + allel(ev[k] || 0));
+    f.erb = e;
+    const vm = veranlagungVon(M), vv = veranlagungVon(V), vl = {};
+    Object.keys(VERANLAGUNG).forEach(k => vl[k] = Math.round(Math.max(0, Math.min(1, (vm[k] + vv[k]) / 2 + (Math.random() - 0.5) * 0.2)) * 100) / 100);
+    f.vl = vl;
+  }
+  const erbKrank = (p, k) => { const n = erbVon(p)[k] || 0; return ERBKRANK[k].dominant ? n >= 1 : n >= 2; };
+  // Folgen direkt bei der Geburt (Fohlen f bei Mutter M)
+  function erbGeburt(f, M) {
+    const tot = Object.keys(ERBKRANK).find(k => erbKrank(f, k) && ERBKRANK[k].folge === "tot");
+    if (tot) return { tot, text: ERBKRANK[tot].text };
+    Object.keys(ERBKRANK).forEach(k => { if (!erbKrank(f, k)) return; const K = ERBKRANK[k];
+      if (K.folge === "tod") f.erbTod = { k, tag: spiel.tag + (K.tage || 0), jz: K.jz ? jzJetzt() + K.jz : null };
+      if (K.folge === "zwerg" || (K.folge === "acan" && Math.random() < 0.5)) { f.zielStockmass = Math.round((f.zielStockmass || 150) * 0.78); f.zwerg = k; }
+      if (K.folge === "acan" && !f.zwerg) f.erbTod = { k, tag: spiel.tag, jz: null, text: "das Fohlen hatte schwere Fehlbildungen der Knochen (ACAN-Zwergwuchs, doppelt vererbt) und war nicht lebensfähig" };
+    });
+    return null;
+  }
+  // zu Beginn jeder Jahreszeit: Erbkrankheiten und Veranlagungen zeigen sich mit dem Alter
+  function erbJahreszeit() {
+    alleEigenenPferde().forEach(({ p }) => {
+      if (!p.pflege || p.klinik) return; const jz = alterJZ(p), e = erbVon(p), v = veranlagungVon(p), da = k => befundListe(p).some(b => b.art === k) || (p.befundAlt || []).some(a => a.art === k);
+      Object.entries(ERBKRANK).forEach(([k, K]) => { if (K.folge === "befund" && erbKrank(p, k) && jz >= K.ab && !da(K.art) && Math.random() < 0.5) befundNeu(p, K.art, KRANK[K.art].start[0], URSACHE[K.art](p)); });
+      if (jz >= 8 && !da("kehlkopf") && Math.random() < v.pfeifen * 0.08) befundNeu(p, "kehlkopf", 1, URSACHE.kehlkopf(p));
+      if (jz >= 2 && jz <= 8 && !p.ocdGeprueft) { p.ocdGeprueft = true; if (Math.random() < v.ocd * 0.6) p.ocd = true; }   // OCD entsteht im Wachstum – unsichtbar, nur Röntgen
+      if (p.ocd && jz >= 12 && !da("ocd") && Math.random() < 0.04) befundNeu(p, "ocd", 1, URSACHE.ocd(p));
+      // Melanome: an das Schimmel-Gen gekoppelt, häufiger mit dem Alter (in echt hat die Mehrheit der alten Schimmel welche)
+      if (hat(genVon(p), "G") && jz >= 24 && !da("melanom") && Math.random() < Math.min(0.15, (jz - 20) / 400)) befundNeu(p, "melanom", 1, URSACHE.melanom(p));
+    });
+  }
+  // Labortest Erbkrankheiten: prüft die Krankheiten aller Rassen im Pferd – Mischlinge zahlen je weiterer Rasse mehr
+  const erbRassen = p => Object.entries(rassenMix(p)).filter(([, pr]) => pr >= 12.5).map(([r]) => r);
+  const erbTestKrankheiten = p => Object.keys(ERBKRANK).filter(k => erbRassen(p).some(r => ERBKRANK[k].rassen[r]));
+  const laborPreis = (p, t) => t === "krank" ? LABOR_TESTS.krank.preis + 30 * Math.max(0, erbRassen(p).length - 1) : LABOR_TESTS[t].preis;
+  function erbErgebnisHTML(p) {
+    const ks = erbTestKrankheiten(p), e = erbVon(p);
+    if (!ks.length) return "";
+    const zeile = (n, w, info) => `<div class="gen-zeile"><b>${n}</b><span class="gen-ergebnis">${w}</span><small>${info}</small></div>`;
+    return ks.map(k => { const K = ERBKRANK[k], n = e[k] || 0;
+      return zeile(K.n, n === 2 ? "N / N" : n ? "N / n" : "n / n", K.dominant ? (n ? `⚠️ betroffen (dominant) – vererbt es an ${n === 2 ? "alle" : "die Hälfte der"} Fohlen` : "frei") : n === 2 ? "⚠️ betroffen" : n ? "⚠️ Träger – selbst gesund. Nie mit einem anderen Träger verpaaren: 25 % der Fohlen wären betroffen" : "frei – kein Träger"); }).join("");
+  }
+  // Warnung bei der Verpaarung: wenn mindestens ein Partner getestet ist und das Risiko erkennbar
+  function erbGefahr(stute, hengst) {
+    const t = q => testGemacht(q, "krank");
+    for (const k of Object.keys(ERBKRANK)) { const K = ERBKRANK[k], a = t(stute) ? erbVon(stute)[k] || 0 : null, b = t(hengst) ? erbVon(hengst)[k] || 0 : null;
+      if (K.dominant) { if (a || b) return { k, text: `${a ? esc(stute.name) : esc(hengst.name)} trägt <b>${K.kurz}</b> (dominant): etwa ${Math.max(a || 0, b || 0) === 2 ? "alle" : "die Hälfte der"} Fohlen wären betroffen.` }; continue; }
+      if (a && b) return { k, text: `Beide tragen <b>${K.kurz}</b>: jedes vierte Fohlen wäre betroffen.` };
+      if ((a && b === null) || (b && a === null)) { const g = a ? stute : hengst, o = a ? hengst : stute; if (!ERBKRANK[k].rassen[o.rasse] && !erbRassen(o).some(r => K.rassen[r])) continue;
+        return { k, text: `${esc(g.name)} ist <b>${K.kurz}</b>-Träger. ${esc(o.name)} ist nicht getestet – wäre ${pron(o).er} ebenfalls Träger, wäre jedes vierte Fohlen betroffen. Am besten vorher testen lassen.` }; }
+    }
+    return null;
   }
   // ---------- Mitarbeiter ----------
   // Alle Angestellten: beginnen immer mit einer neuen Jahreszeit, Gehalt am Ende jeder gearbeiteten Jahreszeit,
@@ -5300,8 +5439,8 @@
   // Stute mit Fohlen bei Fuß (Privat, Tierschutz): Fohlen ist höchstens ein paar Monate alt
   function mitFohlen(h, r) {
     const V = mkPferd(h.id + "-v", RASSEN[Math.floor(r() * RASSEN.length)].id === h.rasse || r() < .6 ? h.rasse : RASSEN[Math.floor(r() * RASSEN.length)].id, r() < .7 ? 0 : 1, 5 + Math.floor(r() * 10), r, "Hengst");
-    let f = null; for (let n = 0; n < 5 && (!f || f.lethalWhite); n++) { const box = { pferd: h }; f = geburt(box, V); }
-    if (!f || f.lethalWhite) return;
+    let f = null; for (let n = 0; n < 5 && (!f || f.lethalWhite || f.erbTot || f.erbTod); n++) { const box = { pferd: h }; f = geburt(box, V); }
+    if (!f || f.lethalWhite || f.erbTot || f.erbTod) return;
     f.id = h.id + "-f"; delete f.kinder;
     const d = datum(); if (d.s === 1 && r() < .7) f.geb = { s: 0, j: d.j };   // im Sommer meist schon ein Frühlingsfohlen (3 Monate)
     const k = (h.kinder || []).slice(-1)[0]; h.kinder = k ? [{ ...k, id: f.id, geb: { ...f.geb } }] : []; h.nachkommen = 1;
@@ -5350,7 +5489,7 @@
       ["schritt", "trab", "galopp"].forEach(k => h.werte.gang[k] = Math.min(10, h.werte.gang[k] + .5));   // gute Abstammung: bessere Gänge
       h.tests = { farbe: true }; h.gentest = true; h.gestuet = GESTUET_NAMEN[rasse];
       if ((DMRT3[rasse] || 0) >= .3) h.tests.gang = true;                                   // Gangpferde: DMRT3-Test
-      if (GEFAHR_GENE.some(G => genFreq(rasse, G.gen) > 0)) h.tests.krank = true;           // Rassen mit Erbkrankheit: Erbkrankheiten-Test
+      if (GEFAHR_GENE.some(G => genFreq(rasse, G.gen) > 0) || Object.values(ERBKRANK).some(K => K.rassen[rasse])) h.tests.krank = true;           // Rassen mit Erbkrankheit: Erbkrankheiten-Test
       const tw = testWert(h);   // Testkosten kommen oben drauf (nicht mit dem Gestüts-Aufschlag multipliziert)
       h.preis = Math.round(((marktwert(h) - tw) * saisonF() * (1.2 + r() * .3) + tw) / 50) * 50; return h; });
     speichern(); return M.gestuet[rasse];
@@ -5698,6 +5837,7 @@
       <p><b>Ansteckung (Etappe F):</b> ansteckend sind ${Object.keys(ANSTECKEND).map(k => KRANK[k].n).join(", ")}. Nach der Ansteckung erst Inkubation (Influenza 2, Druse/Herpes/Pilz 3, Würmer 4 Tage): schon ansteckend, aber ohne Anzeichen – nur das große Blutbild findet sie. Chance pro Nacht je krankem Pferd: ${Object.entries(ANSTECKEND).map(([k, A]) => `${KRANK[k].n} ${Object.entries(A).map(([w, x]) => `${w} ${String(x).replace(".", ",")}`).join("/")}`).join(" · ")}. Wege: Weide (beide auf der Weide), Luft (im Stall ÷ (1 + Boxabstand)), Kontakt (Nachbarbox), Tränke (alle im Stall), Putzzeug (vom selben geputzt, nicht beide mit eigenem Putzzeug), Träger (vom selben Mitarbeiter oder dir gestern versorgt; zuverlässige oder erfahrene ab 50 machen das bemerkte kranke Pferd zuletzt ×0,3). Quarantäne (1 Jahreszeit): kein Weidegang, eigenes Putzzeug, Luft ×0,5, Kontakt ×0,2, Träger ×0,3, keine Tränke. Ein Mitarbeiter „nur für dieses Pferd“ versorgt nur dieses und trägt nichts weiter. Geimpft (Influenza/Herpes, 2 Jahreszeiten) ×0,3 und Start eine Stufe leichter; Wurmkur in der letzten Jahreszeit: Würmer ×0,2. × Konstitution (1,5 − Anlage ÷ 100). Herpes bei tragenden Stuten: Verfohlen 5 % je Grad pro Nacht. Neuzugänge bringen etwas mit: ${Object.entries(NEUZUGANG_RISIKO).map(([q, x]) => `${q} ${Math.round(x * 100)} %`).join(", ")} (Influenza 30 %, Druse 15 %, Herpes 10 %, Pilz 20 %, Würmer 25 %).</p>
       <p><b>Ankaufsuntersuchung (Etappe G)</b> – in jedem Kauf-/Bieten-Fenster am Pferdemarkt: ${Object.values(AKU).map(S => `${S.n} ${fmt(S.preis)}`).join(", ")}; dazu Labortest Erbkrankheiten +${fmt(AKU_LABOR)}, Blutprobe einlagern +${fmt(AKU_PROBE)} (später prüfen ${fmt(PROBE_PRUEFEN)}). Ergebnis sofort und als Protokoll per Brief. Versteckte Befunde je Pferd nach Herkunft (Grundrisiko ${Object.entries(AKU_RISIKO).map(([q, x]) => `${q} ${Math.round(x * 100)} %`).join(", ")}): Lahmheit (Risiko × 0,7; Grad 2 sieht man im Gangbild, Grad 1 erst bei der Beugeprobe; beim Händler in 50 % mit Schmerzmittel verschleiert – nur das große Blutbild findet es, nach dem Kauf zeigt sich die Lahmheit nach 2 Tagen), Husten (× 0,35, Lunge), Herzgeräusch (× 0,15), Linsentrübung (× 0,12), Taktunreinheit an der Longe (× 0,15), Arthrose ab 10 Jahren (× 0,5, Beugeprobe oder Röntgen), Röntgenklasse I–IV (mit Arthrose III/IV), ansteckende Krankheit in der Inkubation wie bei Neuzugängen (kleines Blutbild: Entzündung, großes: welche). Jeder Befund mindert den Wert (z. B. Lahmheit 8/15 %, Arthrose 12 %, Röntgen III 15 %/IV 30 %, höchstens 50 %). Danach: kaufen, Preis um diesen Anteil verhandeln (einmal; Erfolg privat ${Math.round(AKU_VERHANDELN.Privat * 100)} %, Händler ${Math.round(AKU_VERHANDELN["Händler"] * 100)} %, Gestüt ${Math.round(AKU_VERHANDELN["Gestüt"] * 100)} %) oder ablehnen. Beim Kauf kommen alle versteckten Befunde mit (gefundene schon diagnostiziert). Eingelagerte Probe mit Schmerzmittel (Händler): der Händler erstattet die Hälfte des Kaufpreises. Eigener Verkauf ab ${fmt(1500)}: 40 % der Käufer machen eine AKU – jeder bekannte oder unbekannte Befund senkt den Preis (5 % je Grad, chronisch +10 %, frühere chronische 8 %, höchstens 40 %).</p>
       <p><b>Putzen durch Wischen</b> (Ausrüstung → Putzkiste): Werkzeug antippen, dann im Stallbild über das Pferd wischen (Finger oder gedrückte linke Maustaste). Bürste: überall auf dem Pferd; Kamm: nur oben (Mähne) und hinten/vorne (Schweif, Schopf). Nötige Wischstrecke 350 + 6 × Schmutz (Bildpunkte im Stall, 400 breit) – der Schmutz geht dabei anteilig weg, das Bild wird alle 25 % neu gezeichnet. Hufkratzer: 4 Hufunterseiten mit je 6 Dreckklumpen nacheinander wegwischen. Pfleger putzen weiter automatisch.</p>
+      <p><b>Erbkrankheiten (Etappe H)</b> – versteckt je Pferd (<code>p.erb</code>: 0/1/2 Krankheits-Allele), von jedem Elternteil ein Allel; Mischlinge nach Rassenanteil. Träger-Anteil je Rasse: ${Object.values(ERBKRANK).map(K => `${K.kurz} ${Object.entries(K.rassen).map(([r, q]) => `${rasseById(r) ? rasseById(r).name : r} ${Math.round(q * 100)} %`).join("/")}${K.dominant ? " (dominant)" : ""}`).join(" · ")}. Rezessiv: Träger gesund, Träger × Träger → ¼ betroffen; dominant (HYPP, PSSM1): schon ein Allel macht krank. Folgen: WFFS Tod nach 1 Tag, SCID nach 2 Jahreszeiten, NFS nach 1 Jahreszeit, Wasserkopf Totgeburt (Stute −20 % Gesundheit), Friesen-Zwergwuchs und ACAN (halb Totgeburt, halb Zwerg) 78 % der Größe, CA/HERDA/HYPP/PSSM als chronischer Befund ab ¼/1½/1/2 Jahren (50 % je Jahreszeit). Labortest Erbkrankheiten prüft die Krankheiten aller Rassen ab 12,5 % Anteil: ${fmt(LABOR_TESTS.krank.preis)} + 30 € je weitere Rasse. Warnung beim Verpaaren nur, wenn ein Partner positiv getestet ist (dominant immer; rezessiv, wenn beide getestete Träger sind oder der Partner ungetestet und aus einer betroffenen Rasse ist). Getestete Träger sind für die Zucht 8 % weniger wert, Betroffene 25 %. Veranlagungen ohne Gentest (0–1, vererbt als Mittel der Eltern ± 10 %): ${Object.values(VERANLAGUNG).map(V => `${V.n} (${Object.entries(V.rassen).map(([r, q]) => `${rasseById(r) ? rasseById(r).name : r} ${Math.round(q * 100)} %`).join(", ")}, sonst ${Math.round(V.sonst * 100)} %)`).join(" · ")}. Sommerekzem: Risiko × Veranlagung × 5 im Sommer. Kehlkopfpfeifen ab 2 Jahren. OCD entsteht im Wachstum (unsichtbar, nur Röntgen bei der großen AKU, Lahmheit ×1,3, ab 3 Jahren manchmal als Befund). Melanome nur bei Schimmeln (Gen G) ab 6 Jahren, steigend mit dem Alter. Ekzemerdecke und Weidezeiten kommen mit Ausrüstung bzw. Fütterung.</p>
       <p><b>Lager (Hofverwaltung → Hof):</b> Verlässt ein Pferd den Hof (Verkauf, Rückgabe, Abgabe, Gnadenhof, Tod), kommen sein eigenes Putzzeug und seine Hufschuhe (mit Größe und Zustand) ins Lager. Von dort an ein anderes Pferd geben (Putzzeug desinfiziert und kostenlos; Putzzeug von einem Pferd mit Hautpilz in der letzten Jahreszeit: 30 % Ansteckung – besser wegwerfen), an Gnadenhof oder Tierschutzverein spenden (Sympathie +${SPENDE_RUF} je Teil, Dankesbrief) oder wegwerfen. Beim Verkauf (Festpreis/Auktion) kann man das Zubehör mitgeben: Preis + gebrauchtes Putzzeug 20 €, Hufschuhe 60 % vom Neupreis × Zustand je Paar.</p>
       <p><b>Vorsorge und Labor:</b> Impfung ${fmt(VORSORGE.impfung)}, Zahnkontrolle ${fmt(VORSORGE.zahn)} (über 1 Jahr überfällig: Kolik ×1,5), Wurmkur aus der Stallapotheke (überfällig über 2 Jahreszeiten: Würmer ×3), kleines Blutbild ${fmt(VORSORGE.blutKlein)} (Entzündung ja/nein), großes ${fmt(VORSORGE.blutGross)} (konkrete Krankheit, auch in der Inkubation) – Ergebnis nach 2 Tagen per Brief. Eigenes Putzzeug ${fmt(VORSORGE.putzzeug)} (Putzkiste). Ein Quarantänestall (kein Risiko) kommt mit dem Hof-Ausbau.</p>
       <p><b>Behandlung (Etappe D)</b> unter Pflege → Versorgung, jede Aktion einmal am Tag: ${Object.values(AKTION).map(A => `${A.ico} ${A.n}`).join(", ")}, Medikament mit Dosis. Wirkung in der Nacht danach: Behandlungswert = Summe der passenden Anteile (höchstens 1) × (0,5 + 0,5 × Mitwirkung). Besserung pro Nacht: Wert ÷ (Heilungszahl × 0,5) ÷ (1,3 − Regeneration ÷ 100 × 0,6), höchstens 80 % (chronisch nur bis Grad 1); Verschlechterung × (1 − Wert) + Schaden; Wirkung auf Gesundheit/Wohlbefinden × (1 − 0,6 × Wert). Heilt ein Befund unter Behandlung, gilt die Ursache als geklärt (Erfahrung). Tod und Warnbrief nur bei Wert unter 0,3.</p>

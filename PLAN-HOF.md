@@ -40,7 +40,7 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 - [ ] T8 Charakter – Vorlieben: Grundbedürfnisse (Putzen, Füttern …) bei Abneigung nur sehr geringer Malus, nie schlechter als vorher; Vorlieben bedienen wirkt aufs Vertrauen; hohes Vertrauen schwächt Abneigungen (mittel, ca. 4 %)
 - [ ] T9 asr – Putzkiste: „Streicheln“ wie Bürste/Kamm (Wischen) und als Vorliebe im Charakter (mittel, ca. 4 %)
 - [x] T11 Futterplan: Info-Knopf ℹ️ zu den Mahlzeiten (was bewirken 2 oder 3) (klein)
-- [ ] T10 Krippe gefüllt, dann Weide: Futter darf nicht verloren gehen (Vorschlag siehe Chat, Domes Antwort abwarten) (klein, ca. 2–3 %)
+- [x] T10 Krippe gefüllt, dann Weide: Futter darf nicht verloren gehen (Vorschlag siehe Chat, Domes Antwort abwarten) (klein, ca. 2–3 %)
 
 ## Etappe H1 – Neuer Spielstart, Immobilien-Menü, Kredit (groß)
 1. Startmenü - Neustart → Charakterauswahl (ohne Hofname) → Immobilien-Menü statt Hauptmenü.

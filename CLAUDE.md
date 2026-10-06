@@ -16,14 +16,14 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - Anzeige-/Interaktionsboxen dürfen sich nicht überdecken.
 - Nach Aktionen nicht aus der Ansicht werfen (z. B. Schere bleibt offen, Bieten aus Brief → zurück zum Brief).
 - Emojis, die es erst seit Kurzem gibt (z. B. 🪮, 🪝), auf älteren Handys nicht verwenden – lieber kleine SVG-Zeichnung (`KAMM_ICO`, `HUFKR_ICO`).
-- **Noch warten, bis Dome es sagt:** weitere Rassen (Knabstrupper, Appaloosa, Noriker, Paint Horse), Inzucht-Auswirkungen, Vererbung von Abzeichen/Kopfform/Kopfgröße.
+- **Noch warten, bis Dome es sagt:** weitere Rassen (Knabstrupper, Appaloosa, Noriker, Paint Horse), Inzucht-Auswirkungen, Vererbung von Abzeichen/Kopfform/Kopfgröße. **Ausnahme (Dome 7.10.2026):** die für die Veredelung bestehender Rassen nötigen Rassen (z. B. Clydesdale, Fell-, Dales-Pony, Welsh Cob, Trakehner) kommen **nach dem Hof-Ausbau** – Notiz in `OFFENE-FRAGEN.md`.
 - Grundsatz: Kommen neue Rassen dazu, bekommen sie ihre Erbkrankheiten, Eigenheiten, Hufqualität, Körperbau (Gewicht) und Futtertyp gleich mit.
 
 ## Pläne (in dieser Reihenfolge)
 - `PLAN-WERTE.md` – Werte, Charakter, Training, Disziplinen, Turniere, Fohlenschau. **Alle Etappen 1–6 fertig** (6a Turniere, 6b Rennen/Distanz/Gangpferde/Championate/Reiterprofil, 6c Fohlenschau; Stand v211).
 - `PLAN-KRANKHEITEN.md` – Spieltempo, Mitarbeiter (inkl. Nachtrag B3 Azubi/Ausbilder), Befunde, Behandlung, Hufe, Ansteckung, AKU, Erbkrankheiten. **Alle Etappen A–H fertig.**
 - `PLAN-FUETTERUNG.md` – F1–F5. **Alle Etappen fertig** (v210–v214, von Claude per Skript getestet, Domes Test steht noch aus). Offene Detailfragen in `OFFENE-FRAGEN.md`.
-- `PLAN-HOF.md` – Hof-Ausbau H1–H8. **Als Nächstes**, aber erst Dome fragen „Mit Hof-Ausbau H1 weitermachen?“ und auf Domes Ja warten.
+- `PLAN-HOF.md` – Hof-Ausbau H1–H8. **Als Nächstes – Domes Ja liegt vor (7.10.2026): mit H1 starten.** Danach die Veredler-Rassen.
 - `OFFENE-FRAGEN.md` – Fragen, die Claude in Domes Abwesenheit mit der empfohlenen Lösung entschieden hat; mit Dome durchgehen und danach anpassen.
 - Nach jeder Etappe: testen, hochladen, Dome eine Test-Anleitung mit ausgeschriebenen Wegen geben, auf Rückmeldung warten, Etappe im Plan abhaken.
 
@@ -37,14 +37,14 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (3 Stellen in index.html) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **214**.
+- Letzte Version bei Aktualisierung dieser Datei: **220**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName`, `#chHof` ausfüllen → `#chLos`. Admin: `spiel.admin = true`.
 - Vor dem Ausliefern Syntax prüfen (jeden `<script>`-Block mit `new Function(...)`, `node --check pferd.js`) und Screenshots in den drei Ansichten ansehen.
 - Testlink für Dome (falls GitHub Pages hängt): Artifact „Zuchtstall Testversion“ (index.html mit eigenem `<title>` + pferd.js, kopfteile.js, kopfalter.js, version.json), bei jeder Version neu veröffentlichen.
 
-## Wichtige Spielsysteme (Stand v214)
+## Wichtige Spielsysteme (Stand v220)
 - **Zeit:** Jahreszeiten (Frühling, Sommer, Herbst, Winter), `tpj()` Tage pro Jahreszeit 4/7/10 (Standard 7, alte Spielstände auf 7 umgestellt). Kalender-Anker `spiel.kal` = {tag, i}, damit ein Tempowechsel das Datum nicht verschiebt. Nur das Sozialverhalten wird umgerechnet (`proTag`, Bezug 7); alles andere gilt pro Tag/Nacht. `naechsteNacht()` ist der Tageswechsel; bei `datum().t === 1` laufen die Jahreszeit-Funktionen.
 - **Zucht:** Tragzeit 4 Jahreszeiten. Deckstation (Gestütshengste) nur Frühling/Sommer, eigene Hengste immer. Zuchtalter Stuten bis 20, Hengste bis 25. Befunde sperren die Zucht (`zuchtSperre`).
 - **Genetik:** E, A (A>At>a), F, Sty, Cr, D, Z, Rn, To, O, Lp, Patn, G, Dm (DMRT3). Versteckte Veranlagungen `ex` (grauTempo, apfel, fliegen, fliegenAb, maehne, ton, ow, sonne, kurve). Gefährliche Gene in `GEFAHR_GENE` (O, Lp) – Warnung nur, wenn mind. ein Partner positiv getestet ist.
@@ -80,7 +80,12 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - **F2 Futterplan:** `p.futterplan` {mahl 2/3, kg, vom}, Standardplan `standardPlan`/`tagesRationStandard` (Heu nach Energiebedarf 1,5–2,5 kg je 100 kg + Mineral). Bedarf `futterBedarf` (0,52 MJ × kg^0,75, Zuschläge Arbeit `arbeitStufe`/`p.arbeitSchnitt`, tragend, säugend, Wachstum, Winterweide, `LEICHTFUTTRIG`/`SCHWERFUTTRIG`; Raufutter-Minimum vom Idealgewicht). `planWerte`, `bedarfCheck`, Dialog `futterplanDialog` (Box – ppf – vsg – Futterplan).
 - **F3 Futterzustand:** `p.fz` 1–9 (`futterZustand`, `FZ_NAME`), nachts `futterNacht` (Energie > 110 % / < 90 % → Zähler `p.fzTage`, ±5 = 1 Stufe; Weide `WEIDE_ENERGIE`), Körperbild `p.typ` daraus (Admin-Test: `p.typFest`), Gewicht ±3 % je Stufe, `p.futterStatus` (rauWenig, staerkeViel, eiweissWenig/Viel, mineral, staub, spezial). Folgen: `futterFaktor(p, art)` in `befundRisiko`, `fzEnergie`, `fzLeistung`, „Hafer sticht“ `p.haferSticht`, `p.mineralMangel`, Jungpferde `p.mangelJung` (OCD ×2). Neuer Befund Magengeschwür (Omeprazol auf Rezept). Hinweisbrief bei Stufe 3/1/7/9.
 - **F4:** Veranlagung „Empfindliche Atemwege“ `atem` in `VERANLAGUNG` (alte Spielstände bekommen fehlende Veranlagungen nachgetragen), `staubNacht` (staubiges Heu ≥ 1 kg ohne `p.heuWaessern`) → Husten ×4, ab `STAUB_ASTHMA` 14 Tagen Befund Pferdeasthma (chronisch). Leckerli (vsg, `leckerliGeben`, `LECK_STUECK`, `p.leckHeute`): bis 3/Tag Vertrauen +0,3, sonst `p.bettelt` (`leckerliNacht`). Futterumstellung über 3 Tage `p.umstellung` (`aktuellerPlan`, `planAendernStart/Ende`), „Sofort umstellen“ → `p.umstellungSofort` Kolik ×2.
-- **F5 Futterexperte:** extern auf Termin `spiel.futterTermin` (`futterexperteTag`, 80 € je Pferd `FUTTER_BERATUNG`, Absender „Futterberatung“), fest angestellt `MA_TYP.futterexperte` ab großem Stall (450 €, kostenlos, `futterexperteJahreszeit`). Plan `expertenPlan` / `futterBeratung`. Spezialfutter `SPEZIAL` (als `FUTTER.sp_*`, freigeschaltet über `spiel.futter.frei`, Vorrat `SPEZIAL_VORRAT` 14 Tage): Schonkost, Rehe/Cushing, PSSM, Magen, Senior (`SENIOR_AB` 20 J.), Aufbau – Auswahl `spezialFuer`.
+- **F5 Futterexperte:** extern auf Termin `spiel.futterTermin` (`futterexperteTag`, 80 € je Pferd `FUTTER_BERATUNG`, Absender „Futterberatung“), fest angestellt `MA_TYP.futterexperte` ab großem Stall (450 €, kostenlos, `futterexperteJahreszeit`). Plan `expertenPlan` / `futterBeratung`. Spezialfutter `SPEZIAL` (als `FUTTER.sp_*`, freigeschaltet über `spiel.futter.frei`, Vorrat `SPEZIAL_VORRAT` 14 Tage): Schonkost, Rehe/Cushing, PSSM, Magen, Senior (`SENIOR_AB` 20 J.), Aufbau – Auswahl `spezialFuer`. Anfahrt `FUTTER_ANFAHRT` 30 €. Haken „berechnet den Plan jede Jahreszeit neu“ `p.expertBetreut`.
+- **Nachträge v215–v220 (Domes Antworten auf OFFENE-FRAGEN.md):**
+  - Fohlenschau: reinrassig nach Zuchtbuch (`FS_REIN` 100 inkl. `VEREDELUNG`: Hannoveraner – Vollblut/Araber, Haflinger – Araber, Quarter – Vollblut, Tinker – Shire), Prämie ab 7,5. Mutter zeigt „X Nachkommen, davon Y prämiert“ (`p.praemienFohlen`). Fohlenchampionat am letzten Tag von Sommer/Herbst nur für Prämienfohlen (`fsChampionatErgebnis`, `FSC_NENNGELD` 60, `FSC_PREIS` 1.500 je Klasse, `p.championat`). Stallplaketten neben dem Boxschild (`plakettenVon`, `plakettenSVG`, `#plaketten`) – hängen am Pferd, wandern mit. Neugeborene liegen 1/2/2–3 Tage (`fohlenLiegt`, `f.gebTag`).
+  - Futter: 1 Tag Lieferzeit (`F.liefer`, `futterLieferung` morgens). Warnbrief bei leerer Kammer nur, wenn Mitarbeiter/Turnier füttern (`wer !== "du"`); Spieler bekommt sofort einen Hinweis (`p.futterHeute.fehlt`). Futterzustand-Schwelle nach Tempo (`fzSchwelle` 4/5/6 Tage), kein Brief bei Zustandswechsel. Weide `WEIDE_ENERGIE` Frühling 1,15 / Sommer 1 / Herbst 0,9, Winter nur Heu. Anweiden nach > 1 Jahreszeit ohne Weide (`p.anweiden`, `anweidenTage`, `heuNoetigP`). Asthma erst nach > 3 Jahreszeiten Staub (`STAUB_ASTHMA_JZ`), vorher Anzeichen (`staubAnzeichen`). Heu wässern kostet Zeit (`boxAufwand` 1,5 Boxen beim Stallburschen), Heudampfer `spiel.anlage.heudampfer` (kommt mit H3). Gewicht = Futter + Bewegung (Boxenruhe −10 %) + Veranlagung (versteckte, vererbte Futterverwertung `p.stoffw` 0,85–1,15; `futterBedarf(p, box, echt)`). Körpertyp-Test im Admin-Test-Reiter entfernt (SVGs in `werte/koerpertypen/`).
+  - Sportlicher Körper: Muskel-Punkte `p.muskel` (+1 je Trainingstag, Ruhetage im Rhythmus ±0, längere Pause −2), max `muskelMax` = 4 × tpj, sichtbar ab ¾ (`sportlichSichtbar`) – bei 5 Trainingstagen pro Woche etwa 1 Jahr.
+  - Turniere: keine Altersgrenze nach oben (wie in echt), Leistung sinkt über die Altersfaktoren.
 
 ## Zusammenarbeit
 - Dome testet im Browser auf dem Handy und am PC und schickt Screenshots mit Wünschen.

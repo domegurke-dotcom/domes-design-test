@@ -575,7 +575,7 @@
   .immo-schirm { max-width: 860px; }
   .hm-wechsel { align-self: center; border: 0; border-radius: 99px; padding: 7px 16px; font: inherit; font-weight: 700; font-size: .9rem; background: rgba(255,255,255,.18); color: #fff; cursor: pointer; } .hm-wechsel small { opacity: .8; font-weight: 500; }
   #hauptMenue .hm-wechsel { grid-column: 1 / -1; }
-  .immo-verw { grid-column: 1 / -1; } .verw-anz { background: #c0392b; color: #fff; border-radius: 99px; padding: 1px 8px; font-size: .75rem; vertical-align: 2px; }
+  .immo-verw { grid-column: 1 / -1; } #nebenSchirm .hof-uebersicht { grid-column: 1 / -1; } .hu-zeile { padding: 7px 8px; border-top: 1px solid #e2d6c3; display: flex; flex-direction: column; gap: 2px; } .hu-zeile.knapp { background: #fdecea; border-radius: 8px; } .hu-kopf { display: flex; justify-content: space-between; gap: 8px; } .hu-zeile small { color: var(--leise); } .hu-warn { color: #c0392b; font-weight: 700; } .hof-uebersicht .plus { color: #2f7a3b; } .hof-uebersicht .minus { color: #a8322b; } .verw-anz { background: #c0392b; color: #fff; border-radius: 99px; padding: 1px 8px; font-size: .75rem; vertical-align: 2px; }
   #nebenSchirm .panel.verw { grid-column: auto; }
   .immo-titel { margin: 6px 0 0; font-size: 1.05rem; color: #fff; }
   #nebenSchirm .immo-titel { grid-column: 1 / -1; }
@@ -843,7 +843,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "229";
+  const SPIEL_VERSION = "230";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -851,9 +851,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=229"></script>
-<script src="kopfteile.js?v=229"></script>
-<script src="kopfalter.js?v=229"></script>
+<script src="pferd.js?v=230"></script>
+<script src="kopfteile.js?v=230"></script>
+<script src="kopfalter.js?v=230"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -7433,15 +7433,25 @@
   const zentral = () => (spiel.zentral = spiel.zentral || { geld: 0, log: [] });
   function zentralBuchen(b, text) { const Z = zentral(); Z.geld = runde2(Z.geld + b); Z.log.unshift({ tag: spiel.tag, b, text }); if (Z.log.length > 40) Z.log.length = 40; }
   let verwMeld = "";
+  // je Hof: Kasse, Restkredit, nächste Rate, Einnahmen/Ausgaben der letzten Jahreszeit (v230)
+  function hofUebersicht(hid) { return imHof(hid, () => {
+    const L = kredite().filter(kreditLaeuft), rate = runde2(L.reduce((a, k) => a + offenSumme(k) + (k.rest - (k.offen || []).reduce((x, r) => x + r.tilgung, 0) > 0.005 ? rateBerechnen(k).betrag : 0), 0));
+    const v = jzJetzt() - 1, P = ((spiel.finanzSaison || {})[String(Math.floor(v / 4))] || {})[((v % 4) + 4) % 4] || {};
+    const ein = Object.values(P).reduce((a, e) => a + e.ein, 0), aus = Object.values(P).reduce((a, e) => a + e.aus, 0);
+    return { name: hofName(), geld: spiel.geld || 0, rest: restschuld(), rate, ein, aus, knapp: (spiel.geld || 0) < rate, offen: L.some(k => (k.offen || []).length) }; }); }
   function zeigeVerwaltung() {
-    const Z = zentral(), post = (spiel.post || []).filter(b => !b.spam).slice(0, 60);
-    zeigeNeben("🗂️ Verwaltung", `<div class="panel verw">${verwMeld ? `<div class="klasse">${verwMeld}</div>` : ""}
+    const Z = zentral(), post = (spiel.post || []).filter(b => !b.spam).slice(0, 60), U = hofReihe().map(hofUebersicht);
+    zeigeNeben("🗂️ Verwaltung", `<div class="panel verw hof-uebersicht"><h4 class="ma-titel" style="margin-top:0">🏘️ Deine Höfe</h4>
+        ${U.map(u => `<div class="hu-zeile ${u.knapp ? "knapp" : ""}"><div class="hu-kopf"><b>${esc(u.name)}${u.offen ? " ⚠️" : ""}</b><b class="nw">${fmt(u.geld)}</b></div>
+          <small>Kredit ${u.rest ? fmt(u.rest) : "–"} · nächste Rate ${u.rate ? fmt(u.rate) : "–"}${u.knapp ? " · <span class=\"hu-warn\">Kasse reicht nicht!</span>" : ""}</small>
+          <small>letzte Jahreszeit: <span class="plus">+${fmt(Math.round(u.ein))}</span> / <span class="minus">−${fmt(Math.round(u.aus))}</span></small></div>`).join("")}</div>
+      <div class="panel verw">${verwMeld ? `<div class="klasse">${verwMeld}</div>` : ""}
         <div class="fin-kopf"><span>🏦 Zentrales Konto</span><b>${fmt(Z.geld)}</b></div>
         <p class="text" style="margin:0 0 8px">Hierher überweist du Geld von deinen Höfen. Vom zentralen Konto bezahlst du den Eigenanteil neuer Höfe, gibst einem Hof Geld – oder du sparst es.</p>
         <div class="kr-wahl"><label>Richtung <select id="vwRicht"><option value="ein">Hof → zentrales Konto</option><option value="aus">zentrales Konto → Hof</option></select></label><label>Hof <select id="vwHof">${hofReihe().map(h => `<option value="${h}" ${h === aktivHid() ? "selected" : ""}>${esc(hofNameVon(h))} (${fmt(imHof(h, () => spiel.geld || 0))})</option>`).join("")}</select></label>
           <label>Betrag <input id="vwBetrag" type="number" min="1" step="100" value="1000" style="width:120px;font:inherit;padding:7px 10px;border-radius:10px;border:2px solid #e2d6c3"></label></div>
         <button class="knopf" id="vwUeber" style="width:auto;padding:8px 14px;margin-top:8px">➡️ Überweisen</button>
-        ${Z.log.length ? `<h4 class="ma-titel">Kontoauszug</h4>${Z.log.slice(0, 8).map(x => `<div class="fin-posten"><span>${esc(x.text)} <small>${tagText(x.tag)}</small></span><b class="${x.b < 0 ? "minus" : "plus"}">${x.b < 0 ? "−" : "+"}${fmt(Math.abs(x.b))}</b></div>`).join("")}` : ""}</div>
+        ${Z.log.length ? `<h4 class="ma-titel">Kontoauszug</h4>${Z.log.slice(0, 8).map(x => `<div class="fin-posten"><span>${esc(x.text)} <small>${tagText(x.tag)}</small></span><b class="nw ${x.b < 0 ? "minus" : "plus"}">${x.b < 0 ? "−" : "+"}${fmt(Math.abs(x.b))}</b></div>`).join("")}` : ""}</div>
       <div class="panel verw"><h4 class="ma-titel" style="margin-top:0">✉️ Post aller Höfe</h4>${post.length ? `<div class="briefe">${post.map(b => `<button class="brief ${b.gelesen ? "" : "neu"}" data-vwbrief="${b.id}"><span class="ico">${BRIEF_SVG(b.gelesen)}</span>
           <span class="txt"><b>${esc(b.betreff)}</b><small>${esc(b.hid && hofVon(b.hid) ? hofNameVon(b.hid) : b.hofName || "")} · ${esc(b.von)} · ${briefDatum(b)}</small></span></button>`).join("")}</div>` : `<p class="text">Noch keine Briefe.</p>`}</div>`);
     verwMeld = "";
@@ -7494,14 +7504,27 @@
     const kacheln = [["hof", 1], ["bau", bh - 1], ["weide", weide], ["frei", frei], ["pacht", pacht]].flatMap(([t, x]) => Array.from({ length: Math.ceil(x - 1e-9) }, () => t));
     const sp = Math.min(6, Math.max(3, Math.ceil(Math.sqrt(kacheln.length * 1.6)))), zeilen = Math.ceil(kacheln.length / sp), K = 52;
     const farbe = { hof: "#e9dcc3", bau: "#efe6d4", weide: "#a9cf8a", frei: "#d9e8c4", pacht: "#cfe0b6" };
-    const inhalt = (t, x, y) => t === "hof" ? `<rect x="${x + 4}" y="${y + 6}" width="${n ? 26 : 0}" height="16" fill="${(H.stufe || 1) === 1 ? "#c9a782" : "#e3c9a6"}" stroke="#8a6a4a"/>${n ? `<text x="${x + 17}" y="${y + 18}" font-size="8" text-anchor="middle" fill="#4a3426">${n}</text>` : ""}
-        ${A.reitplatz ? `<rect x="${x + 4}" y="${y + 26}" width="20" height="14" rx="2" fill="#ecdcb8" stroke="#fff"/>` : ""}${A.reithalle ? `<rect x="${x + 26}" y="${y + 26}" width="22" height="20" fill="#dcd6cc" stroke="#9aa4ab"/>` : ""}${A.roundpen ? `<circle cx="${x + 40}" cy="${y + 14}" r="8" fill="#ecdcb8" stroke="#fff"/>` : ""}`
+    // kleine Zeichnungen der Gebäude auf dem Bauland (je Kachel 3 × 3), Baustellen orange gestrichelt (v230)
+    const ICONS = gebaeude().filter(g => !["weide", "heudampfer"].includes(g.typ));
+    const ic = (g, x, y) => { const t = g.typ; let d;
+      if (["stall", "paddock", "quarantaene", "abfohlbox", "sattelkammer", "lager"].includes(t)) { const f = { stall: "#c9a782", paddock: "#d9b48f", quarantaene: "#e8d07a", abfohlbox: "#e9b7c6", sattelkammer: "#a98a6a", lager: "#e6c86a" }[t];
+        d = `<rect x="${x + 1}" y="${y + 6}" width="12" height="8" fill="${f}" stroke="#7a5a3a" stroke-width=".7"/><path d="M${x},${y + 6.5} L${x + 7},${y + 1} L${x + 14},${y + 6.5}Z" fill="${(g.stufe || 1) === 3 ? "#8f5446" : "#b97a62"}"/>${t === "paddock" ? `<rect x="${x + 9}" y="${y + 10}" width="5" height="4" fill="#ecdcb8" stroke="#fff" stroke-width=".5"/>` : ""}${g.boxen ? `<text x="${x + 7}" y="${y + 12.6}" font-size="5" text-anchor="middle" fill="#3c2a1e">${g.boxen}</text>` : ""}`; }
+      else if (t === "reitplatz" || t === "sandpaddock") d = `<rect x="${x + 1}" y="${y + 3}" width="12" height="9" rx="1" fill="#ecdcb8" stroke="#fff"/>`;
+      else if (t === "reithalle") d = `<rect x="${x}" y="${y + 4}" width="14" height="10" fill="#dcd6cc" stroke="#9aa4ab" stroke-width=".7"/><path d="M${x},${y + 4.2} Q${x + 7},${y - 1} ${x + 14},${y + 4.2}Z" fill="#a9b4bb"/>`;
+      else if (t === "roundpen") d = `<circle cx="${x + 7}" cy="${y + 8}" r="6" fill="#ecdcb8" stroke="#fff"/>`;
+      else if (t === "waschplatz") d = `<rect x="${x + 2}" y="${y + 3}" width="10" height="10" rx="2" fill="#bfe0f0" stroke="#7aaabb" stroke-width=".7"/>`;
+      else if (t === "trail") d = `<g stroke="#8a6a4a" stroke-width="2" stroke-linecap="round"><path d="M${x + 1},${y + 12} H${x + 13} M${x + 3},${y + 7} H${x + 11}"/></g>`;
+      else d = `<circle cx="${x + 7}" cy="${y + 8}" r="4" fill="#ccc"/>`;
+      if (g.bau) d += `<rect x="${x - .5}" y="${y}" width="15" height="15" fill="none" stroke="#e08a1e" stroke-dasharray="2 1.5" stroke-width="1.2"/>`;
+      return `<g><title>${gebName(g).replace(/\u00ad/g, "")}${g.bau ? " (im Bau)" : g.stufe ? ` (Stufe ${g.stufe})` : ""}</title>${d}</g>`; };
+    const bauIcons = (bi, x, y) => ICONS.slice(bi * 9, bi * 9 + 9).map((g, k) => ic(g, x + 2 + (k % 3) * 16, y + 2 + Math.floor(k / 3) * 16)).join("") + (bi === 0 && ICONS.length > 9 * Math.ceil(bh - 1e-9) ? `<text x="${x + 44}" y="${y + 48}" font-size="7" text-anchor="end" fill="#4a3426">+${ICONS.length - 9 * Math.ceil(bh - 1e-9)}</text>` : "");
+    const inhalt = (t, x, y, i) => t === "hof" || t === "bau" ? (ICONS.slice(i * 9, i * 9 + 9).length ? bauIcons(i, x, y) : `<text x="${x + K / 2}" y="${y + K / 2 + 3}" font-size="8" text-anchor="middle" fill="#8a6a4a">Bauland</text>`)
       : t === "weide" ? `<g stroke="#fffaf0" stroke-width="1.5" fill="none"><rect x="${x + 3}" y="${y + 3}" width="${K - 6}" height="${K - 6}" stroke-dasharray="4 3"/></g><text x="${x + K / 2}" y="${y + K / 2 + 4}" font-size="16" text-anchor="middle">🌿</text>`
-      : t === "bau" ? `<text x="${x + K / 2}" y="${y + K / 2 + 3}" font-size="8" text-anchor="middle" fill="#8a6a4a">Bauland</text>` : t === "pacht" ? `<text x="${x + K / 2}" y="${y + K / 2 + 3}" font-size="8" text-anchor="middle" fill="#5b6b45">Pacht</text>` : `<text x="${x + K / 2}" y="${y + K / 2 + 3}" font-size="8" text-anchor="middle" fill="#7b8a63">frei</text>`;
+      : t === "pacht" ? `<text x="${x + K / 2}" y="${y + K / 2 + 3}" font-size="8" text-anchor="middle" fill="#5b6b45">Pacht</text>` : `<text x="${x + K / 2}" y="${y + K / 2 + 3}" font-size="8" text-anchor="middle" fill="#7b8a63">frei</text>`;
     const svg = `<svg class="hofplan" viewBox="-4 -4 ${sp * K + 8} ${zeilen * K + 8}" role="img" aria-label="Hofplan">${kacheln.map((t, i) => { const x = (i % sp) * K, y = Math.floor(i / sp) * K;
-      return `<rect x="${x}" y="${y}" width="${K - 2}" height="${K - 2}" rx="6" fill="${farbe[t]}" ${t === "pacht" ? 'stroke="#9fb37f" stroke-dasharray="3 2"' : ""}/>${inhalt(t, x, y)}`; }).join("")}</svg>`;
+      return `<rect x="${x}" y="${y}" width="${K - 2}" height="${K - 2}" rx="6" fill="${farbe[t]}" ${t === "pacht" ? 'stroke="#9fb37f" stroke-dasharray="3 2"' : ""}/>${inhalt(t, x, y, i)}`; }).join("")}</svg>`;
     return `${svg}<div class="hofplan-legende"><span><i style="background:${farbe.hof}"></i>Bauland ${haTxt(bh)} (belegt ${haTxt(baulandBelegt())}, frei ${haTxt(baulandFrei())}): ${n ? `Stall mit ${n} Boxen (${belegt} belegt, Stufe ${H.stufe || 1})` : "noch kein Stall"}${A.reitplatz ? ", Reitplatz" : ""}${A.reithalle ? ", Reithalle" : ""}${A.roundpen ? ", Roundpen" : ""}</span>
-      <span><i style="background:${farbe.weide}"></i>Weide: ${String(weide).replace(".", ",")} ha (reicht für etwa ${Math.floor(weide / 0.5)} Großpferde)</span><span><i style="background:${farbe.frei}"></i>freies Weideland: ${haTxt(frei)}</span>${pacht ? `<span><i style="background:${farbe.pacht}"></i>Pachtland: ${pacht} ha</span>` : ""}<span>🌲 Gelände zum Ausreiten rund um den Hof</span>${gebaeude().length ? `<span>🏗️ ${gebaeude().map(g => `${gebName(g)}${g.bau ? " (im Bau)" : g.stufe ? ` (Stufe ${g.stufe})` : ""}`).join(", ")}</span>` : ""}</div>`;
+      <span><i style="background:${farbe.weide}"></i>Weide: ${String(weide).replace(".", ",")} ha (reicht für etwa ${Math.floor(weide / 0.5)} Großpferde)</span><span><i style="background:${farbe.frei}"></i>freies Weideland: ${haTxt(frei)}</span>${pacht ? `<span><i style="background:${farbe.pacht}"></i>Pachtland: ${pacht} ha</span>` : ""}<span>🌲 Gelände zum Ausreiten rund um den Hof</span><span><i style="background:none;border:1.5px dashed #e08a1e"></i>im Bau · Zahl im Gebäude = Boxen</span>${gebaeude().length ? `<span>🏗️ ${gebaeude().map(g => `${gebName(g)}${g.bau ? " (im Bau)" : g.stufe ? ` (Stufe ${g.stufe})` : ""}`).join(", ")}</span>` : ""}</div>`;
   }
   function landHTML() {
     const H = spiel.hof || {};
@@ -7953,6 +7976,7 @@
       <p><b>Bauland und Weideland</b> (Dome, v225): Bauland ${fmt(BAULAND_PREIS)}/ha (nur kaufen), Weideland ${fmt(LAND_PREIS)}/ha oder Pacht ${fmt(PACHT_PREIS)}/ha je Jahreszeit. Platzbedarf auf dem Bauland: Wohnhaus/Hofplatz ${haTxt(HOFPLATZ)}, Stall ${haTxt(0.1)} je 6 Boxen, Paddockboxen ${haTxt(0.15)} je 6, Reitplatz ${haTxt(0.1)}, Reithalle ${haTxt(0.15)}, Roundpen/Trail/Sandpaddock/Waschplatz/Lager/Sattelkammer/Quarantänestall/Abfohlbox je ${haTxt(0.05)}. Weide einzäunen nur auf Weideland. Start-Pensionsstall: 1 ha Bauland + 1 ha Weideland. Makler-Höfe: Bauland nach Bestand + 0,1 ha, auf ½ ha aufgerundet; Grundstück 1 ha Bauland.
         <b>Quarantänestall:</b> gekaufte Pferde (Markt, Auktion, Tierschutz) kommen zuerst in eine freie Quarantänebox und stehen 1 Jahreszeit unter Quarantäne; danach ziehen sie – ohne bekannte ansteckende Krankheit – automatisch in eine freie normale Box (Brief). Normale Umzüge nutzen den Quarantänestall nur, wenn sonst nichts frei ist.
         <b>Hufrehe-Warnung</b> im Frühling für gefährdete Pferde (leichtfuttrige Rassen ${LEICHTFUTTRIG.join(", ")}, Futterzustand ab 7, Hufrehe oder Cushing bekannt): Hinweis beim Weidegang und Brief zu Frühlingsbeginn für alle gefährdeten Pferde auf der Weide.</p>
+      <p><b>Übersicht je Hof</b> (v230, Immobilien → Verwaltung): Kasse, Restkredit, nächste Rate (inklusive offener Raten), Einnahmen/Ausgaben der letzten Jahreszeit; rot, wenn die Kasse die nächste Rate nicht deckt. Hofplan: Gebäude als kleine Zeichnungen auf dem Bauland (je ha-Kachel bis 9), Baustellen orange gestrichelt, Zahl = Boxen.</p>
       <p><b>Vorwarnung Kreditrate</b> (v229): 2 Tage vor Ende der Jahreszeit Brief der Hausbank, wenn die Kasse die fällige Rate (inklusive offener Raten) nicht deckt. <b>Baulärm:</b> solange gebaut wird (Außenarbeiten ruhen im Winter), je Nacht Wohlbefinden −1,5 × Nervosität (Charakter Nerven unter 30) und −1 für Senioren ab 20 Jahren. <b>Abfohlbox:</b> kein Umbau, solange eine Stute auf dem Hof in der letzten Jahreszeit vor der Geburt ist.</p>
       <p><b>Allein:</b> Ist ein Pferd das einzige auf dem Hof und sonst gut versorgt, fällt sein Wohlbefinden durch das Alleinsein höchstens auf ${ALLEIN_MIN} % (Dome, v228).</p>
       <p><b>Weide zu klein</b> (v226): Bedarf ${haTxt(WEIDE_BEDARF[0])} je Großpferd, ${haTxt(WEIDE_BEDARF[1])} je Pony/Kleinpferd (unter ${PONY_BIS} cm Stockmaß), Fohlen bei Fuß zählen nicht extra. Mehr als die eingezäunte Weide: Hinweis beim Weidegang und Brief zu Beginn jeder Jahreszeit (Folgen wie abgefressenes Gras kommen mit H6).

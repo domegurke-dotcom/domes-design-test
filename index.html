@@ -791,7 +791,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "204";
+  const SPIEL_VERSION = "205";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -799,9 +799,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=204"></script>
-<script src="kopfteile.js?v=204"></script>
-<script src="kopfalter.js?v=204"></script>
+<script src="pferd.js?v=205"></script>
+<script src="kopfteile.js?v=205"></script>
+<script src="kopfalter.js?v=205"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -4591,7 +4591,7 @@
   const NENNGELD = { "-1": 10, 0: 15, 1: 20, 2: 25, 3: 35, 4: 50 };
   const PREISGELD = { "-1": 0, 0: 0, 1: 120, 2: 250, 3: 500, 4: 1200 };   // Gesamtpreisgeld regional (Klasse E ohne Geldpreise) · Großes Turnier ×2
   const PREIS_ANTEIL = [0.25, 0.18, 0.14, 0.11, 0.09, 0.08, 0.08, 0.07];
-  const START_ENERGIE = { dressur: 30, springen: 35, vielseitigkeit: 45, reining: 32, pleasure: 25, trail: 25, gelassenheit: 12 };
+  const START_ENERGIE = { dressur: 30, springen: 35, vielseitigkeit: 45, reining: 32, pleasure: 25, trail: 25, gelassenheit: 12, galopprennen: 45, toelt: 28, passrennen: 30 };   // Distanz: 25 + 0,6 je km
   const LK_GRUPPE = { dressur: "dressur", springen: "springen", vielseitigkeit: "vielseitigkeit", reining: "western", pleasure: "western", trail: "western" };
   const LK_NAME = { dressur: "Dressur", springen: "Springen", vielseitigkeit: "Vielseitigkeit", western: "Western" };
   // Startrechte des Spielers (vereinfacht nach FN): LK 7 → E · 6 → E, A · 5 → A, L · 4 → A–M · 3, 2, 1 → A–S (Western: Einsteiger … Open entsprechend)
@@ -4615,6 +4615,7 @@
     neu("gross", "englisch", `Großes ${halle ? "Hallenturnier" : "Reitturnier"} ${o}`, [1, 2, 3, 4].flatMap(s => [pr("dressur", s), pr("springen", s)]).concat(halle ? [] : [1, 2, 3].map(s => pr("vielseitigkeit", s)),
       [pr("dressur", 2, { name: "Dressurpferdeprüfung Kl. L (5–6 J.)", jung: [20, 27] }), pr("springen", 2, { name: "Springpferdeprüfung Kl. L (5–6 J.)", jung: [20, 27] })]));
     if (rz() < 0.5) { o = ortW(); neu("gross", "western", `Großes Westernturnier ${o}`, ["reining", "pleasure", "trail"].flatMap(d => [2, 3, 4].map(s => pr(d, s)))); }
+    sonderTurniere(start, D, key, rz, tage, neu, ortW);   // Rennen, Distanz, Gangpferde
   }
   // Kalender: Turniere dieser und der nächsten Jahreszeit (fest, sobald erzeugt)
   function turnierKalender() {
@@ -4630,10 +4631,10 @@
     return spiel.turniere;
   }
   const istGross = t => t.art === "gross";
-  const nenngeld = (t, P) => Math.round(NENNGELD[P.stufe] * (istGross(t) ? 1.5 : 1));
-  const preisgeld = (t, P) => P.jung ? Math.round(PREISGELD[P.stufe] * 0.8) : PREISGELD[P.stufe] * (istGross(t) ? 2 : 1);
+  const nenngeld = (t, P) => P.nenn != null ? P.nenn + (P.jockey ? REITGELD : 0) : Math.round(NENNGELD[P.stufe] * (istGross(t) ? 1.5 : 1));
+  const preisgeld = (t, P) => P.preis != null ? P.preis : P.jung ? Math.round(PREISGELD[P.stufe] * 0.8) : PREISGELD[P.stufe] * (istGross(t) ? 2 : 1);
   // Niveau der Konkurrenz (Schnitt des Starterfelds)
-  const feldNiveau = (t, P) => P.disz === "gelassenheit" ? 48 : P.stufe < 0 ? 32 : (P.jung ? STUFE_WERT[P.stufe] + 2 : STUFE_WERT[P.stufe] + (istGross(t) ? 6 : 3));
+  const feldNiveau = (t, P) => P.niveau != null ? P.niveau : P.disz === "gelassenheit" ? 48 : P.stufe < 0 ? 32 : (P.jung ? STUFE_WERT[P.stufe] + 2 : STUFE_WERT[P.stufe] + (istGross(t) ? 6 : 3));
   function gelassenheitWert(p) {
     werteErgaenzen(p); const V = charE(p, "nerven"), M = charE(p, "mut");
     return Math.max(0, Math.min(100, 0.35 * (p.werte.ist.vertrauen || 0) + 0.2 * (p.werte.ist.gehorsam || 0) + 0.45 * (50 + 40 * (V.hoch + M.hoch - V.tief - M.tief)) + 5 * Math.min(1, (p.turnierStarts || 0) / 6)));
@@ -4642,10 +4643,11 @@
   // Darf dieses Pferd in dieser Prüfung genannt werden? "" = ja
   function nennSperre(p, t, P) {
     if (spiel.tag >= t.tag) return "Nennschluss vorbei";
-    if (alterJZ(p) < 16) return "erst ab 4 Jahren";
+    if (P.rassen && !reinRasse(p, P.rassen)) return `nur reinrassige ${P.rassen.map(r => rasseById(r).name).join(" / ")}`;
+    if (alterJZ(p) < (P.ab || 16)) return `erst ab ${jzAlterTxt(P.ab || 16)}`;
     const tr = traechtigSperre(p, P); if (tr) return tr;
     if (P.jung && (alterJZ(p) < P.jung[0] || alterJZ(p) > P.jung[1])) return "Altersgrenze";
-    if (P.disz === "toelt" || (DISZ[P.disz] && DISZ[P.disz].nur && !DISZ[P.disz].nur(p))) return "kann diese Gangart nicht";
+    if (DISZ[P.disz] && DISZ[P.disz].nur && !DISZ[P.disz].nur(p)) return "kann diese Gangart nicht";
     const g = LK_GRUPPE[P.disz];
     if (g && P.stufe >= 0 && !P.jung && !LK_STUFEN[lkVon(g)].includes(P.stufe)) return `nicht mit LK ${lkVon(g)}`;
     if (DISZ[P.disz] && DISZ[P.disz].hoehe && P.stufe > hoeheStufe(p)) return "zu hoch fürs Stockmaß";
@@ -4669,17 +4671,17 @@
   // Einschätzung für den Spieler (keine genauen Zahlen)
   function chance(p, t, P) { const d = startWert(p, P.disz) - feldNiveau(t, P); return d >= 6 ? ["🟢", "gute Chancen"] : d >= -3 ? ["🟡", "machbar"] : ["🔴", "sehr schwer"]; }
   function turnierDialog(p, zurueck) {
-    const L = turnierKalender().filter(t => t.tag > spiel.tag - 1);
+    const L = turnierKalender().filter(t => t.tag > spiel.tag - 1 && t.pruef.some(P => passtGrundsaetzlich(p, P)));   // nur Turniere, bei denen das Pferd grundsätzlich starten kann
     const lkZeile = Object.keys(LK_NAME).map(g => `${LK_NAME[g]} LK ${lkVon(g)}`).join(" · ");
     const datumTxt = t => { const d = datum(t.tag), n = t.tag - spiel.tag; return `${JZ[d.s][1]} ${JZ[d.s][0]}, Tag ${d.t} · ${n === 0 ? "heute" : n === 1 ? "morgen" : `in ${n} Tagen`}`; };
-    const artTxt = { hof: "Hofturnier · Schleifen", regional: "Regionales Turnier", gross: "Großes Turnier" };
+    const artTxt = { hof: "Hofturnier · Schleifen", regional: "Regionales Turnier", gross: "Großes Turnier", renntag: "Renntag · mit Jockey", distanz: "Distanzritt · Tierarztkontrolle", gangpferde: "Gangpferdeturnier" };
     const html = L.map(t => { const meine = t.nennung.filter(n => n.pid === p.id);
-      const zeilen = t.pruef.map(P => { const drin = meine.some(n => n.prid === P.id), sp = drin ? "" : nennSperre(p, t, P), ng = nenngeld(t, P), pg = preisgeld(t, P), [c, ct] = chance(p, t, P);
-        return `<li class="tp-zeile"><span><b>${esc(P.name)}</b><small>${P.starter} Starter · Nenngeld ${fmt(ng)}${pg ? ` · Preisgeld ${fmt(pg)}` : " · Schleifen"}${sp ? "" : ` · ${c} ${ct}`}</small></span>
+      const zeilen = t.pruef.filter(P => passtGrundsaetzlich(p, P)).map(P => { const drin = meine.some(n => n.prid === P.id), sp = drin ? "" : nennSperre(p, t, P), ng = nenngeld(t, P), pg = preisgeld(t, P), [c, ct] = chance(p, t, P);
+        return `<li class="tp-zeile"><span><b>${esc(P.name)}</b><small>${P.starter} Starter · ${P.jockey ? `Nenngeld + Jockey ${fmt(ng)}` : `Nenngeld ${fmt(ng)}`}${pg ? ` · Preisgeld ${fmt(pg)}` : " · Schleifen"}${sp ? "" : ` · ${c} ${ct}`}</small></span>
           ${drin ? (spiel.tag < t.tag ? `<button class="mini-knopf an" data-tzurueck="${t.id}:${P.id}">✓ genannt</button>` : `<span class="stat ok">genannt</span>`) : sp ? `<span class="stat">${sp}</span>` : `<button class="mini-knopf" data-tnennen="${t.id}:${P.id}">Nennen</button>`}</li>`; }).join("");
-      return `<details class="t-karte" ${meine.length ? "open" : ""}><summary><b>${t.art === "hof" ? "🎀" : t.typ === "western" ? "🤠" : "🏆"} ${esc(t.name)}</b><small>${datumTxt(t)} · ${artTxt[t.art]}${t.halle ? " · Halle" : " · Freiluft"}${meine.length ? ` · <b>${meine.length}× genannt</b>` : ""}</small></summary><ul class="tp-liste">${zeilen}</ul></details>`; }).join("");
+      return `<details class="t-karte" ${meine.length ? "open" : ""}><summary><b>${({ hof: "🎀", renntag: "🏇", distanz: "🗺️", gangpferde: "✨" })[t.art] || (t.typ === "western" ? "🤠" : "🏆")} ${esc(t.name)}</b><small>${datumTxt(t)} · ${artTxt[t.art]}${t.halle ? " · Halle" : " · Freiluft"}${meine.length ? ` · <b>${meine.length}× genannt</b>` : ""}</small></summary><ul class="tp-liste">${zeilen}</ul></details>`; }).join("");
     dialog(`<h3>🏆 Turniere für ${esc(p.name)}</h3><p class="text" style="margin:0 0 6px"><small>Deine Reiter-LK: ${lkZeile}. Nennen bis spätestens am Tag vorher. Am Turniertag ist ${esc(p.name)} unterwegs, das Ergebnis kommt am nächsten Tag per Brief. Höchstens 2 Prüfungen pro Turnier in benachbarten Klassen.</small></p>
-      ${alterJZ(p) < 16 ? `<p class="text">⚠️ ${esc(p.name)} ist noch zu jung – Turniere erst ab 4 Jahren.</p>` : ""}${html || "<p>Gerade sind keine Turniere ausgeschrieben.</p>"}`, [["Schließen", zurueck, "zweit"]], "turnier-dlg");
+      ${alterJZ(p) < 16 ? `<p class="text">⚠️ ${esc(p.name)} ist noch jung – Turniere gibt es erst ab 4 Jahren, nur Rennen für Vollblüter schon ab 2 (Araber ab 3).</p>` : ""}${html || "<p>Gerade sind keine Turniere ausgeschrieben.</p>"}`, [["Schließen", zurueck, "zweit"]], "turnier-dlg");
     document.querySelectorAll("[data-tnennen]").forEach(b => b.onclick = () => { const [tid, prid] = b.dataset.tnennen.split(":"), t = spiel.turniere.find(x => x.id === tid), P = t.pruef.find(x => x.id === prid);
       if (nennSperre(p, t, P)) return; t.nennung.push({ pid: p.id, prid, geld: nenngeld(t, P) }); buchen(-nenngeld(t, P), "Turniere: Nenngeld"); speichern(); zeigeTag(); turnierDialog(p, zurueck); });
     document.querySelectorAll("[data-tzurueck]").forEach(b => b.onclick = () => { const [tid, prid] = b.dataset.tzurueck.split(":"), t = spiel.turniere.find(x => x.id === tid);
@@ -4701,7 +4703,11 @@
     });
   }
   function ergebnisText(disz, wert, niveau, rz, stufe) {
-    const d = wert - niveau;
+    const d = wert - niveau, zeitTxt = s => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, "0").replace(".", ",")}`;
+    if (disz === "galopprennen") { const z = Math.round((99 - d * 0.25 + rz() * 2) * 10) / 10; return { sort: -z, txt: `${zeitTxt(z)} min` }; }
+    if (disz === "passrennen") { if (d < -8 && rz() < 0.3) return { sort: -999, txt: "Galoppsprung – ungültig" }; const z = Math.round((23.5 - d * 0.06 + rz() * 0.8) * 100) / 100; return { sort: -z, txt: `${String(z.toFixed(2)).replace(".", ",")} s` }; }
+    if (disz === "distanz") { const v = Math.max(8, 12.5 + d * 0.12 + (rz() - 0.5)); return { sort: v, txt: `Ø ${String(v.toFixed(1)).replace(".", ",")} km/h` }; }
+    if (disz === "toelt") { const n = Math.max(3, Math.min(9.5, 6 + d / 12 + (rz() - 0.5) * 0.6)); return { sort: n, txt: `Note ${n.toFixed(2).replace(".", ",")}` }; }
     if (disz === "springen") { const fehler = d >= 4 ? (rz() < 0.15 ? 4 : 0) : d >= -4 ? (rz() < 0.5 ? 0 : 4) : d >= -12 ? (rz() < 0.5 ? 4 : 8) : 8 + 4 * Math.floor(rz() * 3);
       const zeit = Math.round((62 - d * 0.25 + rz() * 5) * 100) / 100; return { sort: -fehler * 100 - zeit, txt: stufe < 0 ? `Wertnote ${String(Math.max(4, Math.min(9.5, Math.round((6.5 + d / 8 - fehler / 8) * 10) / 10))).replace(".", ",")}` : `${fehler} Fehler · ${String(zeit.toFixed(2)).replace(".", ",")} s` }; }
     if (disz === "vielseitigkeit") { const fehler = d >= 0 ? (rz() < 0.2 ? 4 : 0) : (rz() < 0.6 ? 4 : 8) + (d < -10 ? 20 : 0); const mp = Math.round((38 - d * 0.8 + fehler + rz() * 4) * 10) / 10; return { sort: -mp, txt: `${String(mp).replace(".", ",")} Minuspunkte` }; }
@@ -4721,10 +4727,14 @@
       const stress = 1 - 0.08 * Math.max(V.tief, M.tief) * (1 - erfahrung) + 0.03 * vorliebe(p, "turnier");
       const zeilen = [], lkMeld = []; let geldSumme = 0;
       starts.forEach(P => {
-        const kost = START_ENERGIE[P.disz] || 30, E = energie(p), muede = kost > E; p.energie = Math.max(-30, E - kost);
+        const kost = P.disz === "distanz" ? Math.round(25 + 0.6 * P.km) : START_ENERGIE[P.disz] || 30, E = energie(p), muede = kost > E; p.energie = Math.max(-30, E - kost);
         const g = p.pflege.gesundheit, form = (0.85 + 0.15 * wohlbefinden(p) / 100) * (0.8 + 0.2 * Math.min(1, g / 85)) * (muede ? 0.85 : 1);
         const grp = LK_GRUPPE[P.disz], reiterF = grp ? 0.95 + 0.015 * (7 - lkVon(grp)) : 1;
         const wert = startWert(p, P.disz) * form * stress * reiterF * (1 + (rz() + rz() + rz() - 1.5) * 0.16), niveau = feldNiveau(t, P);
+        const vet = P.disz === "distanz" ? distanzVet(p, P, muede, rz) : null;
+        if (vet && vet.aus) { if (vet.lahm) befundNeu(p, "lahmheit", 1, "Distanzritt", "Tierarzt beim Distanzritt");
+          (p.erfolge = p.erfolge || []).unshift({ tag: spiel.tag, turnier: t.name, art: t.art, disz: P.disz, stufe: P.stufe, pruef: P.name, platz: P.starter, von: P.starter, erg: vet.aus, geld: 0, plaziert: false, aus: true });
+          zeilen.push(`<li><b>${esc(P.name)}</b>: ❌ ${vet.aus}</li>`); return; }
         const ich = ergebnisText(P.disz, wert, niveau, rz, P.stufe), andere = Array.from({ length: P.starter - 1 }, () => ergebnisText(P.disz, niveau + (rz() + rz() + rz() - 1.5) * 14, niveau, rz, P.stufe).sort);
         const platz = 1 + andere.filter(s => s > ich.sort).length, plaziert = platz <= Math.max(3, Math.ceil(P.starter / 4));
         let geld = 0; if (plaziert && preisgeld(t, P)) { const anteil = PREIS_ANTEIL.slice(0, Math.max(3, Math.ceil(P.starter / 4))), summe = anteil.reduce((a, b) => a + b, 0); geld = Math.round(preisgeld(t, P) * (anteil[platz - 1] || 0.05) / summe / 5) * 5; }
@@ -4733,7 +4743,7 @@
         if (p.erfolge.length > 60) p.erfolge.length = 60;
         if (muede) { wohlAendern(p, -8, "Turnier: übermüdet gestartet"); p.pflege.gesundheit = Math.max(1, r2(p.pflege.gesundheit - 3)); if (rz() < 0.15 * (1.5 - (p.werte.ist.zaehigkeit || 50) / 100)) befundNeu(p, "lahmheit", 1, "Überlastung auf dem Turnier", "du"); }
         if (grp && plaziert && P.stufe >= 0) { const m = lkErfolg(grp, P.stufe, platz); if (m) lkMeld.push(m); }
-        zeilen.push(`<li><b>${esc(P.name)}</b>: ${platz === 1 ? "🥇 Sieg" : platz === 2 ? "🥈 2. Platz" : platz === 3 ? "🥉 3. Platz" : `${platz}. Platz`} von ${P.starter} · ${ich.txt}${plaziert ? (geld ? ` · ${fmt(geld)} Preisgeld` : " · Schleife 🎀") : ""}${muede ? " <small>(war schon müde)</small>" : ""}</li>`);
+        zeilen.push(`<li><b>${esc(P.name)}</b>: ${platz === 1 ? "🥇 Sieg" : platz === 2 ? "🥈 2. Platz" : platz === 3 ? "🥉 3. Platz" : `${platz}. Platz`} von ${P.starter} · ${ich.txt}${vet ? ` · Puls ${vet.puls}` : ""}${plaziert ? (geld ? ` · ${fmt(geld)} Preisgeld` : " · Schleife 🎀") : ""}${muede ? " <small>(war schon müde)</small>" : ""}</li>`);
       });
       p.turnierStarts = (p.turnierStarts || 0) + starts.length; p.arbeitTag = spiel.tag; p.boxTage = 0;
       if (geldSumme) buchen(geldSumme, "Turniere: Preisgeld");
@@ -4760,7 +4770,7 @@
     const siege = E.filter(e => e.platz === 1).length, plaz = E.filter(e => e.plaziert).length;
     const genTxt = gen.length ? `<p class="text" style="margin:2px 0"><small>📅 Genannt: ${gen.map(t => `${esc(t.name)} (${t.tag === spiel.tag ? "heute" : `in ${t.tag - spiel.tag} ${t.tag - spiel.tag === 1 ? "Tag" : "Tagen"}`})`).join(", ")}</small></p>` : "";
     return `<h3 class="werte-titel">🏆 Turniere</h3>${genTxt}${E.length ? `<details class="disz"><summary><span class="disz-kopf"><b>${E.length} ${E.length === 1 ? "Start" : "Starts"} · ${siege} ${siege === 1 ? "Sieg" : "Siege"} · ${plaz} platziert</b><span>${fmt(E.reduce((a, e) => a + e.geld, 0))}</span></span></summary>
-      <ul class="liste erfolge">${E.slice(0, 15).map(e => { const d = e.frueher ? null : datum(e.tag); return `<li><span class="txt">${e.platz === 1 ? "🥇" : e.platz === 2 ? "🥈" : e.platz === 3 ? "🥉" : e.plaziert ? "🎀" : "▫️"} <b>${esc(e.pruef)}</b> – ${e.platz}. von ${e.von}<small>${esc(e.turnier)} · ${e.frueher ? "beim Vorbesitzer" : `${JZ[d.s][0]} ${d.j}`} · ${e.erg}${e.geld ? ` · ${fmt(e.geld)}` : ""}</small></span></li>`; }).join("")}</ul></details>` : ""}`;
+      <ul class="liste erfolge">${E.slice(0, 15).map(e => { const d = e.frueher ? null : datum(e.tag); return `<li><span class="txt">${e.aus ? "❌" : e.platz === 1 ? "🥇" : e.platz === 2 ? "🥈" : e.platz === 3 ? "🥉" : e.plaziert ? "🎀" : "▫️"} <b>${esc(e.pruef)}</b> – ${e.aus ? "ausgeschieden" : `${e.platz}. von ${e.von}`}<small>${esc(e.turnier)} · ${e.frueher ? "beim Vorbesitzer" : `${JZ[d.s][0]} ${d.j}`} · ${e.erg}${e.geld ? ` · ${fmt(e.geld)}` : ""}</small></span></li>`; }).join("")}</ul></details>` : ""}`;
   }
   // ---------- Etappe 6b: Erfolge auf dem Markt, Reiter-LK im Training, Reiterprofil ----------
   // Pferde vom Markt und Deckhengste: ausgebildete Pferde ab 4 J. sind meist schon Turniere gegangen (fest je Pferd) – Erfolge stehen in der Akte und heben Preis und Decktaxe
@@ -4797,6 +4807,36 @@
       <table class="ver-tab lk-tab"><tr><th>Disziplin</th><th>LK</th><th>darf starten</th><th>Training</th></tr>${Object.keys(LK_NAME).map(g => `<tr><td>${LK_NAME[g]}</td><td><b>${lkVon(g)}</b></td><td>${LK_STUFEN[lkVon(g)].map(s => g === "western" ? STUFEN.western[s] : STUFEN.englisch[s]).join(", ")}<br><small>${naechste(g)}</small></td><td>${lkVon(g) < 7 ? `+${(7 - lkVon(g)) * 4} %` : "–"}</td></tr>`).join("")}</table>
       <p class="text"><small>Die Leistungsklasse (LK) gilt je Disziplin und steigt mit Erfolgen auf Turnieren. Je besser deine LK, desto mehr lernen die Pferde, wenn du selbst trainierst (Bereiter zählen ihr eigenes Wissen). Wettbewerbe, Gelassenheits- und Aufbauprüfungen sind für jede LK offen.</small></p>
       <h4 class="ma-titel">🏆 Deine Turnierbilanz</h4><p class="text">${eigene.length ? `${eigene.length} ${eigene.length === 1 ? "Start" : "Starts"} · ${(n => `${n} ${n === 1 ? "Sieg" : "Siege"}`)(eigene.filter(e => e.platz === 1).length)} · ${(n => `${n} ${n === 1 ? "Platzierung" : "Platzierungen"}`)(eigene.filter(e => e.plaziert).length)} · ${fmt(eigene.reduce((a, e) => a + (e.geld || 0), 0))} Preisgeld` : "Noch keine Turniere geritten – Pferdeanhänger → Turnier."}</p>`;
+  }
+  // ---------- Etappe 6b Teil 2: Rennen, Distanz, Tölt und Pass (Dome: wie in echt) ----------
+  // Galopprennen nur reinrassige Vollblüter (ab 2 J., Jockey-Reitgeld), Araberrennen für Araber und Achal-Tekkiner (ab 3 J.), Trabrennen erst mit der Rasse Traber.
+  // Gangpferdeturnier: Tölt (Einsteiger, D, C, B, A) für alle mit Tölt, Passrennen 250 m für alle mit Pass. Distanzritte mit Tierarztkontrolle (Puls, Lahmheit).
+  const REITGELD = 80;
+  const reinRasse = (p, l) => l.includes(p.rasse) && (!p.anteile || reinAnteil(p.anteile, p.rasse) >= 99);
+  function sonderTurniere(start, D, key, rz, tage, neu, ortW) {
+    const n = (a, b) => a + Math.floor(rz() * (b - a + 1));
+    const pr = (disz, s, name, x = {}) => ({ id: "p" + Math.floor(rz() * 1e9).toString(36), disz, stufe: s, starter: x.starter || n(8, 22), name, ...x });
+    if (D.s !== 3) {
+      const gal = ["Ausgleich IV", "Ausgleich III", "Ausgleich II", "Ausgleich I", "Listenrennen"];
+      neu("renntag", "rennen", `Renntag Galopprennbahn ${ortW()}`, [
+        ...gal.map((g, i) => pr("galopprennen", i, `${g} (Vollblut)`, { starter: n(6, 14), rassen: ["vollblut"], ab: 8, nenn: [50, 80, 100, 150, 300][i], preis: [2000, 3500, 5000, 8000, 15000][i], niveau: [46, 53, 59, 65, 72][i], jockey: true })),
+        ...["C", "B", "A"].map((k, i) => pr("galopprennen", i, `Araberrennen Kl. ${k}`, { starter: n(6, 12), rassen: ["araber", "tekke"], ab: 12, nenn: [40, 60, 90][i], preis: [800, 1500, 3000][i], niveau: [42, 49, 56][i], jockey: true }))]);
+      neu("distanz", "distanz", `Distanzritt ${ortW()}`, [["Einführungsritt (30 km)", 20, 30, 40], ["Kurze Distanz (50 km)", 20, 50, 60], ["Mittlere Distanz (70 km)", 24, 70, 80], ["Lange Distanz (100 km)", 28, 100, 120]]
+        .map(([nm, ab, km, ng], i) => pr("distanz", i, nm, { starter: n(10, 30), ab, km, nenn: ng, preis: [0, 0, 150, 400][i], niveau: [36, 45, 54, 61][i] })));
+    }
+    neu("gangpferde", "gangpferde", `${D.s === 3 ? "Tölt auf Eis" : "Islandpferde- und Gangpferdeturnier"} ${ortW()}`, [
+      ...["Einsteiger", "D", "C", "B", "A"].map((k, i) => pr("toelt", i, `Tölt ${k}`, { ab: 16, nenn: [15, 20, 25, 30, 40][i], preis: [0, 0, 0, 150, 300][i], niveau: STUFE_WERT[i] + 3 })),
+      ...(D.s === 3 ? [] : [pr("passrennen", 0, "Passrennen 250 m", { starter: n(6, 14), ab: 20, nenn: 25, preis: 200, niveau: 50 })])]);
+  }
+  // kann das Pferd hier überhaupt je starten? (Rasse, Gangart) – sonst taucht das Turnier im Kalender nicht auf
+  const passtGrundsaetzlich = (p, P) => (!P.rassen || reinRasse(p, P.rassen)) && !(P.disz === "toelt" && p.werte && p.werte.gang.toelt == null) && !(P.disz === "passrennen" && p.werte && p.werte.gang.pass == null);
+  // Tierarztkontrolle beim Distanzritt: vorher Lahmheit, nachher Puls (höchstens 64)
+  function distanzVet(p, P, muede, rz) {
+    if (aktiveBefunde(p).some(b => !imInkub(b) && ["lahmheit", "hufabszess", "hufrehe", "arthrose"].includes(b.art))) return { aus: "beim Tierarzt-Check vor dem Start lahm – nicht zugelassen" };
+    const ist = p.werte.ist, puls = Math.round(48 + (100 - (ist.ausdauer || 50)) * 0.12 + (100 - (ist.regeneration || 50)) * 0.06 + P.km / 100 * (1 - (ist.ausdauer || 50) / 100) * 12 + (muede ? 8 : 0) + rz() * 5);
+    if (puls > 64) return { aus: `nach dem Ritt Puls ${puls} – zu hoch, ausgeschieden`, puls };
+    if (rz() < (muede ? 0.12 : 0.03) * (1.5 - (ist.zaehigkeit || 50) / 100)) return { aus: "beim Tierarzt-Check nach dem Ritt nicht taktrein – ausgeschieden", puls, lahm: true };
+    return { puls };
   }
   // ---------- Mitarbeiter ----------
   // Alle Angestellten: beginnen immer mit einer neuen Jahreszeit, Gehalt am Ende jeder gearbeiteten Jahreszeit,
@@ -5899,7 +5939,7 @@
     klinik: { ico: "🏥", name: "Klinik", info: "Tierklinik: stationäre Behandlung oder Kastration", gruppe: true, kurz: () => "Behandlung, Kastration" },
     abgeben: { ico: "👋", name: "Abgeben", info: "Pferd abgeben", gruppe: true, kurz: () => "verkaufen, Gnadenhof" },
     turnier: { ico: "🏆", name: "Turnier", info: "Turnierkalender: Pferde für Turniere nennen", einzeln: true, hmKurz: "Kalender, Nennen",
-      sperre: (p, b) => anhGrund(p, b, false) || (p.turnier ? "auf dem Turnier" : "") || (alterJZ(p) < 16 ? "ab 4 Jahren" : "") || (b.fohlen ? "mit Fohlen bei Fuß" : ""),
+      sperre: (p, b) => anhGrund(p, b, false) || (p.turnier ? "auf dem Turnier" : "") || (alterJZ(p) < 8 ? "ab 2 Jahren" : "") || (b.fohlen ? "mit Fohlen bei Fuß" : ""),
       kurz: p => { const n = genanntBei(p).length; return n ? `${n}× genannt` : "Kalender, Nennen"; } },
     verschenken: { ico: "🎁", name: "Verschenken", info: "Verschenken geht nur an befreundete Mitspieler (derzeit nicht möglich)", bald: "nur an Freunde – bald" },
     aufzucht: { ico: "🍼", name: "Aufzucht\u00adstation", info: "Fohlen und Jungpferde wachsen bis zum Ausbildungsalter in der Herde auf", wohin: "in die Aufzuchtstation", wo: "in der Aufzuchtstation",
@@ -6426,6 +6466,7 @@
       <p><b>Kalender</b> je Jahreszeit (im Winter Hallenturniere ohne Vielseitigkeit): Hofturnier (Wettbewerbe nach WBO: Dressur, Stilspringen, Westernreiter, Gelassenheitsprüfung – nur Schleifen) · Regionales Turnier (Dressur und Springen E–L, Vielseitigkeit E–A, Aufbauprüfung Kl. A 4–6 J.) · Westernturnier (Reining, Pleasure, Trail Einsteiger–Novice) · Großes Turnier (A–S, Vielseitigkeit A–M, Aufbauprüfung Kl. L 5–6 J.) · zu 50 % Großes Westernturnier (Novice–Open). 8–22 Starter je Prüfung.</p>
       <p><b>Geld:</b> Nenngeld WB 10, E 15, A 20, L 25, M 35, S 50 € (Großes Turnier ×1,5). Preisgeld gesamt E 0, A 120, L 250, M 500, S 1.200 € (Großes Turnier ×2, Aufbauprüfung ×0,8), verteilt auf die Platzierten (25/18/14/11/9/8/8/7 %). Platziert ist das beste Viertel (mind. 3).</p>
       <p><b>Ergebnis:</b> Leistung = Disziplin-Wert × Tagesform × Turnierstress × Reiter × Zufall (Streuung etwa ±8 %). Tagesform = (0,85 + 0,15 × Wohlbefinden) × (0,8 + 0,2 × Gesundheit/85) × 0,85, falls die Energie nicht reicht (Energie je Start: Dressur 30, Springen 35, Vielseitigkeit 45, Reining 32, Pleasure/Trail 25, Gelassenheit 12; dann auch Übertraining wie beim Training). Turnierstress = 1 − 0,08 × e(nervös oder scheu) × (1 − Erfahrung, voll nach 8 Starts) + 0,03 × Vorliebe „Turnier“. Reiter = 0,95 + 0,015 × (7 − LK). Konkurrenz: Feldniveau = Stufen-Wert (${STUFE_WERT.join("/")}) + 3 regional / + 6 groß, Wettbewerbe 32, Gelassenheit 48, Streuung der Konkurrenz etwa ±7. Anzeige: Dressur Wertnote (ab L Prozent), Springen Fehler und Zeit, Vielseitigkeit Minuspunkte, Western Score (70 = Durchschnitt). Gelassenheitsprüfung = 0,35 × Vertrauen + 0,2 × Gehorsam + 0,45 × (50 + 40 × (e gelassen + e mutig − e nervös − e scheu)) + bis 5 Erfahrung.</p>
+      <p><b>Rennen, Distanz, Gangpferde</b> (Dome: wie in echt): Renntag (nicht im Winter) – Galopprennen nur reinrassige Vollblüter ab 2 J. (Ausgleich IV–I, Listenrennen; Nenngeld 50/80/100/150/300 € + Jockey-Reitgeld ${fmt(REITGELD)}, Preisgeld 2.000/3.500/5.000/8.000/15.000 €, Feld 46/53/59/65/72), Araberrennen Kl. C–A für reinrassige Araber und Achal-Tekkiner ab 3 J. (40/60/90 € + Jockey, Preisgeld 800/1.500/3.000 €, Feld 42/49/56). Trabrennen erst mit der Rasse Traber. Distanzritt (nicht im Winter): Einführungsritt 30 km ab 5 J., Kurze 50 km ab 5 J., Mittlere 70 km ab 6 J., Lange 100 km ab 7 J. (Nenngeld 40/60/80/120 €, Preis nur Mittel 150, Lang 400 €, Feld 36/45/54/61, Energie 25 + 0,6 je km). Tierarzt: lahm (Lahmheit, Hufabszess, Hufrehe, Arthrose) → nicht zugelassen; Puls = 48 + 0,12 × (100 − Ausdauer) + 0,06 × (100 − Regeneration) + km/100 × (1 − Ausdauer/100) × 12 + 8 (müde) + 0–5, über 64 → ausgeschieden; danach 3 % (müde 12 %) × (1,5 − Zähigkeit/100) nicht taktrein → ausgeschieden und Lahmheit Grad 1. Gangpferdeturnier (im Winter „Tölt auf Eis“ ohne Pass): Tölt Einsteiger/D/C/B/A für alle mit Tölt ab 4 J. (Preis B 150, A 300 €), Passrennen 250 m für alle mit Pass ab 5 J. (200 €; deutlich zu schwache Pferde springen manchmal in den Galopp – ungültig). Keine LK für Rennen, Distanz und Gangpferde. Im Kalender erscheinen nur Turniere, bei denen das Pferd grundsätzlich starten kann.</p>
       <p><b>Reiter-LK</b> je Disziplin (Dressur, Springen, Vielseitigkeit, Western), Start LK 7: LK 7 → E · 6 → E, A · 5 → A, L · 4 → A–M · 3 bis 1 → A–S. Aufstieg: 7→6 eine Platzierung ab E · 6→5 drei ab A · 5→4 drei ab L · 4→3 drei ab M · 3→2 drei Siege ab M · 2→1 drei Siege in S (danach zählt es neu). Wettbewerbe, Gelassenheit und Aufbauprüfungen sind für jede LK offen.</p>
       <p><b>Reiter-LK im Training:</b> Trainierst du selbst, lernt das Pferd je LK-Stufe über 7 um 4 % mehr (LK 1: +24 %) – Longieren, Doppellonge, Dressurarbeit → Dressur-LK · Stangen, Springgymnastik → Springen · Geländesprünge, Konditionstraining → Vielseitigkeit · Westernarbeit → Western. Bereiter zählen ihr eigenes Wissen. Reiterprofil: Hofverwaltung → Reiter.</p>
       <p><b>Marktpferde und Deckhengste</b> mit Ausbildung (ab 4 J., Training über 20) haben schon Turniere hinter sich: (Alter − 3) × 1–3,5 Starts (höchstens 20) in ihrer besten Disziplin (Dressur, Springen, Reining, Trail), Klasse nach Disziplin-Wert, platziert mit 25 % + 3 % je Punkt über dem Feld (5–85 %), davon 35 % Siege. Die Erfolge stehen in der Akte („beim Vorbesitzer“) und heben Preis und Decktaxe (10 % des Marktwerts).</p>

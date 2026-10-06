@@ -843,7 +843,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "225";
+  const SPIEL_VERSION = "226";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -851,9 +851,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=225"></script>
-<script src="kopfteile.js?v=225"></script>
-<script src="kopfalter.js?v=225"></script>
+<script src="pferd.js?v=226"></script>
+<script src="kopfteile.js?v=226"></script>
+<script src="kopfalter.js?v=226"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2916,6 +2916,9 @@
         if (!p.weide && datum().s === 0 && reheGefaehrdet(p) && p.reheOk !== spiel.tag) {
           dialog(`<h3>⚠️ Hufrehe-Gefahr</h3><p>${esc(p.name)} ${reheGrund(p)}. Das junge Frühlingsgras ist sehr zuckerreich – auf der Weide droht jetzt <b>Hufrehe</b>. Besser ${spiel.anlage && spiel.anlage.paddock ? "Sandpaddock oder " : ""}Box, höchstens stundenweise Weide.</p>`,
             [["Trotzdem auf die Weide", () => { p.reheOk = spiel.tag; k.onclick(); }], ["Lieber nicht", null, "zweit"]]); return; }
+        if (!p.weide && spiel.hof && weideBelegt(p) > (spiel.hof.weideHa || 0) + 1e-9 && p.weideOk !== spiel.tag) {
+          dialog(`<h3>🌿 Weide zu klein</h3><p>Mit ${esc(p.name)} brauchen die Pferde auf der Weide etwa <b>${haTxt(weideBelegt(p))}</b> – eingezäunt sind nur <b>${haTxt(spiel.hof.weideHa || 0)}</b> (Faustregel: ${haTxt(WEIDE_BEDARF[0])} je Großpferd, ${haTxt(WEIDE_BEDARF[1])} je Pony unter ${PONY_BIS} cm). Die Weide wird schnell abgefressen und zertreten.</p>`,
+            [["Trotzdem auf die Weide", () => { p.weideOk = spiel.tag; k.onclick(); }], ["Lieber nicht", null, "zweit"]]); return; }
         if (p.weide) { vonWeideHolen(box); meldung = `🏠 ${esc(p.name)} ist zurück in Box ${aktBox + 1}.`; reaktionZeigen(reaktion(p, "box")); }
         else { reaktionZeigen(reaktion(p, "weide")); p.weide = { seit: spiel.tag };
           if (!heuNoetig() && spiel.tag - (p.weideZuletzt != null ? p.weideZuletzt : -999) > tpj()) p.anweiden = spiel.tag; else delete p.anweiden;   // lange keine Weide → anweiden p.boxTage = 0; box.vorWeide = { tag: spiel.tag, krippe: box.krippeVoll, mist: box.mistig, stufe: box.mistStufe || 0 }; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0; meldung = "";
@@ -5208,6 +5211,7 @@
     return `${meld ? `<div class="klasse">${meld}</div>` : ""}
       ${(F.liefer || []).length ? `<div class="klasse">🚚 Lieferung morgen früh: ${F.liefer.map(x => `${FUTTER[x.k] && FUTTER[x.k].stueck ? `${x.menge} Stück` : fmtKg(x.menge)} ${FUTTER[x.k] ? FUTTER[x.k].n : x.k}`).join(", ")}</div>` : ""}
       <div class="zeile-wert"><div class="kopf"><b>📦 Platz in der Futterkammer</b><span>${fmtKg(belegt)} von ${fmtKg(F.lagerMax)}</span></div><div class="balken"><i style="width:${Math.min(100, belegt / F.lagerMax * 100)}%"></i></div></div>
+      <p class="text" style="margin:4px 0 0"><small>🍂 Verderb (Heu, Heulage, Stroh): ${prozent(VERDERB[lagerStufe()])} je Jahreszeit${lagerStufe() ? ` – Futter- und Strohlager Stufe ${lagerStufe()}` : " – ohne Futter- und Strohlager (Hof → Bauen)"}, Kraftfutter halb so viel.</small></p>
       <p class="text" style="margin:4px 0 8px"><small>Verbrauch am Tag (alle Pferde nach ihren Futterplänen): Raufutter ${fmtKg(V.raufutter)} · reicht ${reicht(rauVorrat, V.raufutter)} · Mineralfutter ${fmtKg(V.mineral)} · reicht ${reicht(F.lager.mineral, V.mineral)} · etwa ${fmt(Math.round(kosten * 100) / 100)} am Tag</small></p>
       <div class="fk-liste"><p class="fk-gruppe">Raufutter</p>${Object.keys(FUTTER).filter(k => FUTTER[k].art === "raufutter").map(zeile).join("")}
         <p class="fk-gruppe">Kraftfutter</p>${Object.keys(FUTTER).filter(k => FUTTER[k].art === "kraftfutter").map(zeile).join("")}
@@ -5830,7 +5834,8 @@
       f.pflege.gesundheit = 100; wohlAendern(box.pferd, 5, "Geburt gut betreut");
       return { text: `<br><br>${maTitel(m)} <b>${esc(m.name)}</b> hatte Nachtdienst und war bei der Geburt dabei (Nachtzuschlag ${fmt(NACHTZUSCHLAG)}).`, schwach: false };
     }
-    if (Math.random() < 0.15) { f.pflege.gesundheit = 70 + Math.round(Math.random() * 15);
+    if (box.abfohl && Math.random() >= ABFOHL_SCHWACH) return { text: `<br><br>Die Geburt war in der Abfohlbox – über die Kamera war alles gut zu sehen, Mutter und Fohlen hatten viel Platz.`, schwach: false };
+    if (Math.random() < (box.abfohl ? 1 : OHNE_SCHWACH)) { f.pflege.gesundheit = 70 + Math.round(Math.random() * 15);
       return { text: `<br><br>Bei der Geburt war niemand im Stall. Das Fohlen ist etwas schwach (Gesundheit ${f.pflege.gesundheit} %) – gut versorgen, dann erholt es sich.`, schwach: true }; }
     return { text: "", schwach: false };
   }
@@ -6122,7 +6127,7 @@
     spiel.tag += 1;
     jedenHof(hofNacht, true);
     tierschutzKlinik(); tierschutzFohlen(); laborNacht(); auktionsNacht();
-    if (datum().t === 1) { jedenHof(() => { kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); auktionsEnde(); jahreszeitBeginn(); angeboteJahreszeit(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); }, true); spamAufraeumen(); hoefeVersteigern(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
+    if (datum().t === 1) { jedenHof(() => { kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); auktionsEnde(); jahreszeitBeginn(); angeboteJahreszeit(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); }, true); spamAufraeumen(); hoefeVersteigern(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
     turnierKalender();
     jedenHof(hofMorgen, true);
     blutbilderTag();     // Laborergebnisse
@@ -6132,7 +6137,7 @@
       const l = spiel.boxen.filter(b => b.pferd && !b.tot && !b.pferd.klinik && !b.pferd.weide && (!b.krippeVoll || b.mistig));
       if (l.length) brief("Hofverwaltung", `${hofName()}: Pferde nicht versorgt`, `auf <b>${esc(hofName())}</b> wurden heute nicht alle Pferde versorgt: ${l.map(b => `<b>${esc(b.pferd.name)}</b> (${!b.krippeVoll ? "nicht gefüttert" : ""}${!b.krippeVoll && b.mistig ? ", " : ""}${b.mistig ? "nicht gemistet" : ""})`).join(", ")}. Ohne Futter und Pflege werden sie krank. Stell dort einen Stallburschen ein oder wechsle zu diesem Hof.`, { pferde: l.map(b => b.pferd) });
     }
-    alterAktualisieren(); bauNacht(); quarantaeneUmzug();
+    alterAktualisieren(); bauNacht(); quarantaeneUmzug(); verderbNacht();
     const weideHerde = spiel.boxen.filter(b => b.pferd && b.pferd.weide && !b.pferd.klinik && !b.tot).map(b => b.pferd);
     if (weideHerde.length > 1) herdeNacht(weideHerde);
     spiel.boxen.forEach(b => {
@@ -7750,6 +7755,34 @@
     const l = spiel.boxen.filter(b => b.pferd && !b.tot && b.pferd.weide && reheGefaehrdet(b.pferd)).map(b => b.pferd); if (!l.length) return;
     brief("Tierarztpraxis", "Hufrehe-Gefahr im Frühling", `das junge Frühlingsgras ist sehr zucker- und eiweißreich. Für ${l.map(p => `<b>${esc(p.name)}</b> (${reheGrund(p)})`).join(", ")} ist die Weide jetzt gefährlich – Hufrehe droht. {Stell sie|Stellen Sie sie} lieber ${spiel.anlage && spiel.anlage.paddock ? "auf den Sandpaddock oder " : ""}in die Box oder nur stundenweise auf die Weide.`, { pferde: l });
   }
+  // ---------- Weide zu klein (v226, aus H6): 0,5 ha je Großpferd, 0,25 ha je Pony/Kleinpferd (unter 148 cm) ----------
+  const WEIDE_BEDARF = [0.5, 0.25], PONY_BIS = 148;
+  const weideBedarf = p => (p.stockmass || 150) < PONY_BIS ? WEIDE_BEDARF[1] : WEIDE_BEDARF[0];
+  const weideBelegt = (mit) => spiel.boxen.filter(b => b.pferd && !b.tot && (b.pferd.weide || b.pferd === mit)).reduce((a, b) => a + weideBedarf(b.pferd), 0);
+  function weideJahreszeit() {
+    const H = spiel.hof; if (!H) return; const bedarf = weideBelegt(), da = H.weideHa || 0;
+    if (bedarf > da + 1e-9) brief("Hofverwaltung", "Weide zu klein", `auf <b>${esc(hofName())}</b> stehen gerade Pferde für ${haTxt(bedarf)} Weide auf ${haTxt(da)} eingezäunter Weide (Faustregel: ${haTxt(WEIDE_BEDARF[0])} je Großpferd, ${haTxt(WEIDE_BEDARF[1])} je Pony). Die Weide wird schnell abgefressen und zertreten. Mehr Weide: Hofverwaltung → Hof → Land (Weideland) und Bauen (Weide einzäunen).`);
+  }
+  // ---------- Abfohlbox (v226): mit Kamera und viel Platz – seltener schwache Fohlen, auch ohne Nachtdienst ----------
+  const ABFOHL_SCHWACH = 0.05, OHNE_SCHWACH = 0.15;
+  function abfohlHinweis() {   // eine Jahreszeit vor der Geburt: Hinweis, wenn eine Abfohlbox frei ist
+    const frei = spiel.boxen.some(b => b.abfohl && boxFrei(b)); if (!frei) return;
+    spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot || b.abfohl || !p.traechtig || p.traechtig.geburt - jzJetzt() !== 1) return;
+      brief("Hofverwaltung", `${p.name}: Abfohlbox ist frei`, `<b>${esc(p.name)}</b> bekommt nächste Jahreszeit ihr Fohlen. Die Abfohlbox ist frei – dort ist mehr Platz, und mit der Kamera siehst du die Geburt rechtzeitig. Umstellen: Box → Pferdepflege → Ort → Box wechseln.`, { pferde: [p] }); });
+  }
+  // ---------- Futterlager: Verderb je Jahreszeit (v226) ----------
+  const VERDERB = [0.06, 0.03, 0.015, 0.005], VERDERB_SORTEN = ["heu", "heuStaub", "heulage", "stroh"];   // ohne Lager, Stufe 1/2/3 – Kraftfutter in Säcken halb so viel
+  const lagerStufe = () => { const g = gebaeude().find(x => x.typ === "lager" && !x.bau); return g ? g.stufe : 0; };
+  function verderbNacht() {
+    const F = futterkammer(), r = VERDERB[lagerStufe()] / tpj(); let weg = 0;
+    Object.keys(F.lager).forEach(k => { const Z = FUTTER[k]; if (!Z || Z.stueck || !(F.lager[k] > 0) || !(VERDERB_SORTEN.includes(k) || Z.art === "kraftfutter")) return;
+      const x = F.lager[k] * r * (Z.art === "kraftfutter" ? 0.5 : 1); F.lager[k] = Math.round((F.lager[k] - x) * 1000) / 1000; weg += x; });
+    F.verdorben = (F.verdorben || 0) + weg;
+  }
+  function verderbJahreszeit() {
+    const F = futterkammer(), x = Math.round(F.verdorben || 0); F.verdorben = 0; if (x < 5) return;
+    brief("Hofverwaltung", "Futter verdorben", `in der letzten Jahreszeit sind auf <b>${esc(hofName())}</b> etwa <b>${x} kg</b> Futter verdorben (feucht, schimmelig) und mussten weggeworfen werden. ${lagerStufe() ? `{Dein|Ihr} Futter- und Strohlager (Stufe ${lagerStufe()}) hält den Verderb bei ${prozent(VERDERB[lagerStufe()])} je Jahreszeit.` : `Ohne Futter- und Strohlager verderben etwa ${prozent(VERDERB[0])} je Jahreszeit – mit Lager ${VERDERB.slice(1).map(prozent).join(" / ")} (Stufe 1/2/3).`}`);
+  }
   // Finanzen → Bank
   let finanzTab = "konto";
   function bankHTML() {
@@ -7893,6 +7926,9 @@
       <p><b>Bauland und Weideland</b> (Dome, v225): Bauland ${fmt(BAULAND_PREIS)}/ha (nur kaufen), Weideland ${fmt(LAND_PREIS)}/ha oder Pacht ${fmt(PACHT_PREIS)}/ha je Jahreszeit. Platzbedarf auf dem Bauland: Wohnhaus/Hofplatz ${haTxt(HOFPLATZ)}, Stall ${haTxt(0.1)} je 6 Boxen, Paddockboxen ${haTxt(0.15)} je 6, Reitplatz ${haTxt(0.1)}, Reithalle ${haTxt(0.15)}, Roundpen/Trail/Sandpaddock/Waschplatz/Lager/Sattelkammer/Quarantänestall/Abfohlbox je ${haTxt(0.05)}. Weide einzäunen nur auf Weideland. Start-Pensionsstall: 1 ha Bauland + 1 ha Weideland. Makler-Höfe: Bauland nach Bestand + 0,1 ha, auf ½ ha aufgerundet; Grundstück 1 ha Bauland.
         <b>Quarantänestall:</b> gekaufte Pferde (Markt, Auktion, Tierschutz) kommen zuerst in eine freie Quarantänebox und stehen 1 Jahreszeit unter Quarantäne; danach ziehen sie – ohne bekannte ansteckende Krankheit – automatisch in eine freie normale Box (Brief). Normale Umzüge nutzen den Quarantänestall nur, wenn sonst nichts frei ist.
         <b>Hufrehe-Warnung</b> im Frühling für gefährdete Pferde (leichtfuttrige Rassen ${LEICHTFUTTRIG.join(", ")}, Futterzustand ab 7, Hufrehe oder Cushing bekannt): Hinweis beim Weidegang und Brief zu Frühlingsbeginn für alle gefährdeten Pferde auf der Weide.</p>
+      <p><b>Weide zu klein</b> (v226): Bedarf ${haTxt(WEIDE_BEDARF[0])} je Großpferd, ${haTxt(WEIDE_BEDARF[1])} je Pony/Kleinpferd (unter ${PONY_BIS} cm Stockmaß), Fohlen bei Fuß zählen nicht extra. Mehr als die eingezäunte Weide: Hinweis beim Weidegang und Brief zu Beginn jeder Jahreszeit (Folgen wie abgefressenes Gras kommen mit H6).
+        <b>Abfohlbox:</b> Geburt dort – ohne Nachtdienst nur ${prozent(ABFOHL_SCHWACH)} statt ${prozent(OHNE_SCHWACH)} schwache Fohlen; eine Jahreszeit vor der Geburt Hinweisbrief, wenn eine Abfohlbox frei ist (umstellen über Box wechseln).
+        <b>Futterverderb</b> je Jahreszeit (Heu, staubiges Heu, Heulage, Stroh; Kraftfutter halb so viel, Heucobs/Mineral nicht): ohne Lager ${prozent(VERDERB[0])}, Lager Stufe 1/2/3 ${VERDERB.slice(1).map(prozent).join(" / ")}; Brief zu Beginn der Jahreszeit ab 5 kg.</p>
       <p><b>Zentrales Konto</b> (Immobilien → Verwaltung): Überweisungen von jedem Hof und an jeden Hof (Dome, v224), Eigenanteil neuer Höfe kommt von dort (neue Höfe starten mit 0 €). Briefe anderer Höfe: roter Umschlag links neben dem gelben, Post aller Höfe in der Verwaltung. Warnbrief, wenn auf einem anderen Hof Pferde nicht gefüttert oder gemistet wurden.</p>
       <h3>🌾 Fütterung (F1: Futterkammer)</h3>
       <p>Futterkammer: Hofverwaltung → Hof → Futterkammer und Futterhandel (Dome: Lieferung am nächsten Morgen; Warnbrief bei leerer Kammer nur, wenn ein Mitarbeiter oder das Turnier füttert – wer selbst füttert, sieht es sofort). Platz ${LAGER_START.toLocaleString("de-DE")} kg (Salzlecksteine zählen nicht), wird mit dem Hof-Ausbau größer. Startvorrat (neues Spiel und alte Spielstände): Heu für 14 Tage (10 kg je Pferd), 3 kg Mineralfutter, 1 Leckstein je Pferd. Gekauft wird sofort, bezahlt wird sofort (Finanzen: „Futter“).</p>

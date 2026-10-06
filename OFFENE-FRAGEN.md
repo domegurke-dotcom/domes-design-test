@@ -15,7 +15,7 @@ Zu jeder Frage steht die Lösung, die Claude vorerst gewählt hat. Dome beantwor
 2. **F1 – Lieferung:** Gekauftes Futter ist sofort in der Futterkammer (kein Liefertag). Lieber 1 Tag Lieferzeit? ✅ Dome: 1 Tag Lieferzeit – umgesetzt v217.
 3. **F1 – Staubiges Heu:** Als eigene, günstigere Sorte im Futterhandel (0,15 €/kg statt 0,20 €/kg). Ohne eigenen Futterplan wird zuerst gutes Heu verfüttert. Die Folgen (Husten bei empfindlichen Atemwegen) kommen in F4. ✅ Dome: ja.
 4. **F1 – Platz:** Die Futterkammer fasst am Anfang 2.000 kg (Salzlecksteine zählen nicht). Später größer über das Futter- und Strohlager (Hof-Ausbau H3). ✅ Dome: ja.
-5. **F1 – Leeres Heu:** Reicht das Raufutter nicht für die ganze Tagesration, bleibt die Krippe leer (das Pferd hungert wie bisher) und es kommt ein Warnbrief. Teilweise füttern habe ich nicht eingebaut. ✅ Dome: Warnbrief nur, wenn ein Mitarbeiter (oder unterwegs beim Turnier) nicht füttern konnte; füttert der Spieler selbst, kein Brief, sondern gleich ein Hinweis – v217.
+5. **F1 – Leeres Heu:** Reicht das Raufutter nicht für die ganze Tagesration, bleibt die Krippe leer (das Pferd hungert wie bisher) und es kommt ein Warnbrief. Teilweise füttern habe ich nicht eingebaut. ✅ Dome: Warnbrief nur, wenn ein Mitarbeiter (oder unterwegs beim Turnier) nicht füttern konnte; füttert der Spieler selbst, kein Brief, sondern gleich ein Hinweis – v217. Vorwarnung „reicht nur noch 1–2 Tage“ und Salzleckstein-Brief bleiben (Dome: passt so).
 6. **F2 – Mahlzeiten:** Im Futterplan stellt man die Menge je Sorte am Tag ein und wählt 2 oder 3 Mahlzeiten; alles wird gleichmäßig verteilt (keine unterschiedlichen Mahlzeiten). Reicht das, oder sollen die Mahlzeiten einzeln einstellbar sein? ✅ Dome: reicht so.
 7. **F2 – Stärke-Grenze:** „Max. 1 g Stärke je kg Gewicht pro Mahlzeit“ zählt nur die Stärke aus dem Kraftfutter (Hafer, Pellets, Müsli …), nicht den Zucker im Heu – sonst wäre schon das Beispiel aus dem Plan (10 kg Heu + 1 kg Hafer) „zu viel“.
 8. **F2 – Weide:** Auf der Weide (außer Winter/letzter Herbsttag) ersetzt Gras das Raufutter; Kraftfutter und Mineral aus dem Plan werden an Weidetagen nicht gegeben (es gibt dort keinen Fütter-Klick). Später bei H6 (Weiden, Gras) feiner?
@@ -35,3 +35,11 @@ Zu jeder Frage steht die Lösung, die Claude vorerst gewählt hat. Dome beantwor
 22. **F5 – Senioren:** Neu: Pferde ab 20 Jahren verwerten ohne Seniorenfutter oder Heucobs nur 90 % der Energie (schlechtere Zähne) und nehmen mit dem Standardplan langsam ab. Das ist eine neue Spielregel – soll sie bleiben?
 23. **F5 – Fest angestellt:** Futterexperte/-expertin ab großem Stall (20 Boxen), Gehalt 450 € je Jahreszeit (selbst festgelegt). Berät kostenlos sofort und prüft zu Beginn jeder Jahreszeit alle Pferde ohne eigenen Plan. Ändert man einen Experten-Plan selbst, gilt er als eigener Plan und wird nicht mehr automatisch angepasst.
 24. **F5 – Diät:** Zum Abnehmen rechnet der Experte das Raufutter vom Idealgewicht aus (1,5 kg je 100 kg) und streckt es zu 25 % mit Stroh. Dafür zählt das Raufutter-Minimum jetzt überall vom Idealgewicht (Futterzustand 5) aus. Eiweißmangel gilt erst ab 3 Prozentpunkten unter Bedarf (vorher 2), damit eine Stroh-Diät keine Muskeln kostet.
+
+## 📌 Notiz von Dome (7.10.2026) – Info geben, sobald die Fütterungsfragen durch sind
+Wenn alle Fütterungsfragen beantwortet sind, Dome Bescheid geben: **Alle fehlenden Rassen ergänzen, die für die Veredelung bestehender Rassen im Spiel wichtig sind** – jeweils komplett mit Fell- und Farbmustern, Erbkrankheiten, Eigenheiten/Veranlagungen, Hufqualität, Körperbau (Gewicht), Futtertyp usw. (Grundsatz aus CLAUDE.md).
+Kandidaten (vor dem Start mit Dome abstimmen, Aufwand je Rasse nennen):
+- Tinker: Clydesdale, Fell-Pony, Dales-Pony, Welsh Cob (bisher nur Shire im Spiel)
+- Hannoveraner: Trakehner (und andere Warmblüter, die im Zuchtprogramm erlaubt sind)
+- weitere Veredler bestehender Rassen bei der Planung prüfen (z. B. Shagya-Araber, Anglo-Araber)
+

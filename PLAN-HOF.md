@@ -32,13 +32,14 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 ## Domes Testanmerkungen (6.10.2026 abends) – vor bzw. mit H5 abarbeiten
 - [x] T1 Fehler: Stute mit Fohlen bei Fuß kaufen (Markt, Tierschutz …): vor dem Kauf zeigt Nachkommen/Abstammungsschein des Fohlens eine andere Mutter und andere Genetik; erst nach dem Kauf passt es. Fohlen muss immer das echte Fohlen der Stute sein (klein–mittel, ca. 3 %)
 - [ ] T2 Stall → Bauen als eigenes Fenster mit Rücksprung zum Stall (klein, ca. 2 %)
-- [ ] T3 stb – Eigenschaften: Hinweise „angeboren“/„erarbeitet“ nur im Adminmodus (klein, ca. 1 %)
-- [ ] T4 stb – asb – Disziplinen: Charakter-Zeile verständlicher („temperamentvoll +, nervös −“ = Regel, „+5 %“ = Wirkung bei diesem Pferd) (klein, ca. 1 %)
+- [x] T3 stb – Eigenschaften: Hinweise „angeboren“/„erarbeitet“ nur im Adminmodus (klein, ca. 1 %)
+- [x] T4 stb – asb – Disziplinen: Charakter-Zeile verständlicher („temperamentvoll +, nervös −“ = Regel, „+5 %“ = Wirkung bei diesem Pferd) (klein, ca. 1 %)
 - [ ] T5 hvw – Hof – Futterkammer: Einkaufskorb mit Gesamtsumme; Korb öffnen → Liste mit Preisen, einzeln entfernen, Summe, Kauf bestätigen/abbrechen, Rücksprung zur Futterkammer (mittel, ca. 4 %)
-- [ ] T6 Futterkammer: nach Klick auf +kg nicht nach oben springen (klein, ca. 1 %)
-- [ ] T7 Box – Menü ☰: unter „Hauptmenü“ „Hofverwaltung“ einfügen, „Postfach“ entfernen (klein, ca. 1 %)
+- [x] T6 Futterkammer: nach Klick auf +kg nicht nach oben springen (klein, ca. 1 %)
+- [x] T7 Box – Menü ☰: unter „Hauptmenü“ „Hofverwaltung“ einfügen, „Postfach“ entfernen (klein, ca. 1 %)
 - [ ] T8 Charakter – Vorlieben: Grundbedürfnisse (Putzen, Füttern …) bei Abneigung nur sehr geringer Malus, nie schlechter als vorher; Vorlieben bedienen wirkt aufs Vertrauen; hohes Vertrauen schwächt Abneigungen (mittel, ca. 4 %)
 - [ ] T9 asr – Putzkiste: „Streicheln“ wie Bürste/Kamm (Wischen) und als Vorliebe im Charakter (mittel, ca. 4 %)
+- [x] T11 Futterplan: Info-Knopf ℹ️ zu den Mahlzeiten (was bewirken 2 oder 3) (klein)
 - [ ] T10 Krippe gefüllt, dann Weide: Futter darf nicht verloren gehen (Vorschlag siehe Chat, Domes Antwort abwarten) (klein, ca. 2–3 %)
 
 ## Etappe H1 – Neuer Spielstart, Immobilien-Menü, Kredit (groß)

@@ -8,7 +8,7 @@ Plan gespeichert bei Spielversion 208. **Noch nicht starten:** erst nach Fütter
 
 - [x] Etappe H1 – Neuer Spielstart, Immobilien-Menü, Kredit (groß) – v221, von Claude per Skript getestet, Domes Test steht noch aus
 - [x] Etappe H2 – Hof-Struktur, Land, Hofplan (groß) – v222, von Claude per Skript getestet, Domes Test steht noch aus
-- [ ] Etappe H3 – Bauen, Stufen, Verfall (groß)
+- [x] Etappe H3 – Bauen, Stufen, Verfall (groß) – v223, von Claude per Skript getestet, Domes Test steht noch aus
 - [ ] Etappe H4 – Umbau-Folgen (mittel)
 - [ ] Etappe H5 – Pension und Einsteller (groß)
 - [ ] Etappe H6 – Weiden, Gras, Futterwiese, Einstreu (mittel)
@@ -68,6 +68,10 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 5. Stufe erhöhen (Umbau): Preisunterschied + 20 %, immer abschnittsweise, halbe Neubauzeit, Boxen solange gesperrt.
 6. Unterhalt 1 % des Baupreises je Jahreszeit. Verfall: Zustand sinkt jede Jahreszeit (Stufe 1 schneller); Reparatur durch Hofhelfer (Mitarbeiter-Plan) oder Handwerker (ca. 10 % des Baupreises).
 7. Start-Hof: Reitplatz und Gelände. Longieren auf dem Reitplatz möglich (kein Roundpen), stört aber andere Reiter, z. B. Einsteller (Zufriedenheit sinkt). Roundpen und Reithalle müssen gebaut werden.
+
+**Nachtrag H2 (Dome, v223):** kein Startgeld mehr – zentrales Konto (Immobilien → Verwaltung), jeder Hof kann dorthin überweisen, Eigenanteil neuer Höfe kommt von dort. Briefe anderer Höfe: roter Umschlag links neben dem gelben, Post aller Höfe in der Verwaltung; Warnbrief, wenn auf einem anderen Hof nicht versorgt wurde. Zwangsversteigerung nur des betroffenen Hofs (Dome: ja).
+
+**Umsetzung H3 (v223):** Bauen unter Hofverwaltung → Hof → Bauen (Katalog wie oben, Rennbahn/Aufzucht-Offenstall/5 Abfohlboxen erst mit H7), + / − in der Boxenübersicht entfernt (Knopf „Bauen“). Gebäude je Hof in `spiel.gebaeude` (Abschnitte: Erstbau und jeder Anbau einzeln). Umbau nur mit leeren Boxen – die Lösungen für belegte Boxen kommen mit H4. Hofhelfer als Mitarbeiter. Selbst festgelegte Zahlen in `OFFENE-FRAGEN.md`.
 
 ## Etappe H4 – Umbau-Folgen (mittel)
 1. Einsteller bekommen 1 Jahreszeit vorher einen Brief. Umzug in freie Boxen/Paddockboxen; sonst wählt der Spieler je Einsteller: 30 % Nachlass (Pferd übergangsweise auf Weide/Sandpaddock) oder Vertrag ruht (keine Einnahme). Ohne Lösung sinkt die Zufriedenheit stark, manche kündigen.

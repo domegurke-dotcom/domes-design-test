@@ -190,11 +190,12 @@ Disziplin-Wert = gewichtete Werte (Anteile in %) + Charakter-Zu-/Abschlag (max. 
 
 Ziel: Fohlen werden **rassetypisch** bewertet (am Zuchtziel ihrer Rasse gemessen, ein Haflinger nicht wie ein Hannoveraner). Die Wertnote steigert den Fohlenpreis stark.
 1. **Wann:** Fohlen sind im Spiel nur bis zum Absetzen bei Fuß (2 Jahreszeiten, also bis etwa 6 Monate) – vorgestellt wird nur ein Fohlen bei Fuß. Darum: Hauptschau im **Sommer** (Frühlingsfohlen sind dann etwa 3–6 Monate), Nachschau im **Herbst** für späte Fohlen (aus dem Sommer). Fohlen müssen mindestens etwa 1 Monat alt sein (nicht am Tag der Geburt).
-2. **Ablauf wie bei den Turnieren** (gleiche Technik): Termin im Kalender, bis zum Vortag anmelden (Anmeldegebühr), Mutter und Fohlen fahren mit dem Pferdeanhänger hin (Fahrtstress, beide den Tag unterwegs), Ergebnis am nächsten Tag per Brief. Nur für Fohlen, deren Mutter eine eingetragene Rasse hat (Zuchtverband); Mischlinge evtl. eigene „offene“ Klasse (Dome fragen).
+2. **Ablauf wie bei den Turnieren** (gleiche Technik): Termin im Kalender, bis zum Vortag anmelden (Anmeldegebühr), Mutter und Fohlen fahren mit dem Pferdeanhänger hin (Fahrtstress, beide den Tag unterwegs), Ergebnis am nächsten Tag per Brief. Nur für Fohlen, deren Mutter eine eingetragene Rasse hat (Zuchtverband); Mischlinge starten in einer eigenen **offenen Klasse** (Dome, 6.10.2026).
 3. **Bewertung** (Noten 1–10, halbe Noten): Typ/Rassetyp, Körperbau (Fundament), Schritt, Trab, Gesamteindruck. Grundlage: vererbte Gangnoten (Veranlagung), Anlagen der Körperwerte, Rasseanteil (reinrassig = typischer), Abweichung vom Rassenprofil `PROFIL`; ein Teil Zufall (Tagesform, wie das Fohlen sich zeigt – scheue/nervöse Fohlen zeigen sich schlechter).
 4. **Auszeichnung:** Prämienfohlen (z. B. Gesamtnote ab 8), Fohlenchampion der Schau (bestes Fohlen), Platzierung im Feld.
 5. **Folgen:** Wertnote steht in der Akte und im Abstammungsschein, steigert den Fohlen-/Jungpferdepreis deutlich (Marktwert, Fohlenauktion), Mütter mit Prämienfohlen gewinnen ebenfalls an Wert.
-6. Größe: mittel (etwa 10–15 % Volumen).
+6. **Pferdemarkt** (Dome, 6.10.2026): Auch auf dem Pferdemarkt gibt es platzierte Fohlen (Fohlenschau-Note, Prämienfohlen) und platzierte Pferde (Turniererfolge) zu kaufen – teurer, mit Erfolgen in der Akte. Turniererfolge für Marktpferde gleich in 6b mit einbauen.
+7. Größe: mittel (etwa 10–15 % Volumen).
 
 ## 8a. Ankerpunkte für später (jetzt schon mitdenken, nicht ausbauen)
 

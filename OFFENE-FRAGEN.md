@@ -57,6 +57,8 @@ Zu jeder Frage steht die Lösung, die Claude vorerst gewählt hat. Dome beantwor
 
 16. ✅ **Testspieler-Ergebnis (Dome, v228):** Ein Pferd allein fällt durch das Alleinsein höchstens auf 30 % Wohlbefinden (Schmutz kann es weiter senken). Start-Stall beginnt bei 85 % Zustand, Verfall halbiert (Stufe 1/2/3: −4 / −2,5 / −1,5 je Jahreszeit), Hofhelfer entsprechend +3 je Arbeitstag. Brief „Futter verdorben“ erst ab 25 kg. Ohne Einnahmen (Pension H5) gehen alle Testspieler nach 1–1,5 Jahren pleite – H5 wartet aufs nächste Volumen. Testspieler erst nach H7 wieder starten, vorher Dome fragen.
 
+17. ✅ **Kreditlaufzeit (Dome, v232):** Hofkredit 10 statt 5 Jahre (40 Raten) → Rate für 10.000 € nur noch 304,56 € statt 554,15 € je Jahreszeit (Zinsen gesamt ca. 2.180 € statt 1.080 €). Weitere Kredite wählbar 2 / 3 / 5 / 10 Jahre (Standard 5). Laufende Kredite behalten ihre Laufzeit.
+
 ## 📌 Notiz von Dome (7.10.2026) – Veredler-Rassen: erst NACH dem Hof-Ausbau (H1–H8) starten (Dome, 7.10.2026)
 Wenn alle Fütterungsfragen beantwortet sind, Dome Bescheid geben: **Alle fehlenden Rassen ergänzen, die für die Veredelung bestehender Rassen im Spiel wichtig sind** – jeweils komplett mit Fell- und Farbmustern, Erbkrankheiten, Eigenheiten/Veranlagungen, Hufqualität, Körperbau (Gewicht), Futtertyp usw. (Grundsatz aus CLAUDE.md).
 Kandidaten (vor dem Start mit Dome abstimmen, Aufwand je Rasse nennen):

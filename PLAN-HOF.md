@@ -90,6 +90,35 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 7. Krankes Pensionspferd: Brief an den Besitzer, der zahlt den Tierarzt. Hofregel Bluttest: vorher einreichen / nachreichen / nicht nötig – strenger = weniger Anfragen, weniger Ansteckungsrisiko.
 8. Bezahlung automatisch zu Beginn jeder Jahreszeit, manchmal verspätet (Mahnung wie bei Rechnungen). Finanzen: eigene Zeile „Pension“.
 
+### H5 – Feinplanung (Claude, 6.10.2026 abends – Fragen unten bis Sonntag beantworten)
+**Datenmodell (je Hof, in `HOF_FELDER`):**
+- `spiel.einsteller` = Liste `{ eid, name, w (Frau/Mann), pid (Pferd), box (Box-Nr.), preis (je Jz), leistungen {putzen, pfleger, bewegen, decke, medizin, paddockbox, einstreu}, zufr 0–100 (versteckt, Admin sieht Zahl), seit (Jz), haltung "weide"/"sandpaddock", bluttest, kuendigt (Jz) }`.
+- Pensionspferd = echtes Pferd in der Box mit `p.einsteller = eid` (`p.fremd`): Steckbrief ja; Verkaufen, Decken, Training, Anhänger, Gnadenhof gesperrt (über die vorhandenen Sperren `abgabeSperre`, `trainSperre`, Deckdialog). Box zählt als belegt.
+- Hofregeln je Hof `spiel.hof.regeln = { bluttest: "vorher" | "nachreichen" | "keiner", preis: {1,2,3} }` (Pensionspreis je Box-Stufe, frei einstellbar).
+
+**Ablauf:**
+- *Täglich* (`hofNacht`): Anfrage-Chance je freier Box ≈ 3 % × Stufe (1/1,4/2) × (+30 % Reithalle, +10 % Roundpen) × Ansehen-Faktor × Preisfaktor (Richtwert = 1; 25 % teurer → halb so viele) × Bluttest (vorher 0,7 / nachreichen 0,9 / keiner 1). Anfrage kommt als Brief mit „Annehmen / Ablehnen“ (Aktion `einsteller`), Pferd kommt am nächsten Tag (Quarantänebox, wenn vorhanden; „vorher“: Bluttest liegt bei, keine eingeschleppte Krankheit).
+- *Versorgung*: Spieler oder Mitarbeiter füttert, tränkt, mistet wie bei eigenen Pferden (Futter aus der eigenen Futterkammer – im Pensionspreis enthalten), Weidegang/Sandpaddock nach Wunsch des Besitzers.
+- *Besitzer-Besuch*: an ~60 % der Tage, putzt (Dreck weg) und reitet → Reitplatz an dem Tag belegt; longiert der Spieler am selben Tag auf dem Reitplatz → Zufriedenheit −2.
+- *Jahreszeit*: Bezahlung zu Beginn (Finanzen „Pension“), 10 % zahlen verspätet (Mahnung wie bei Rechnungen, nach 2 Mahnungen Kündigung + Zufriedenheit egal). Zufriedenheit < 35 → Beschwerdebrief, < 20 → Kündigung zum Ende der Jahreszeit.
+- *Krank*: Befund beim Pensionspferd → Brief an den Besitzer (kein Brief an Spieler nötig, nur Hinweis), Tierarzt rechnet direkt mit dem Besitzer ab (keine Buchung beim Hof). Ansteckung von/zu eigenen Pferden wie gehabt.
+
+**Zahlen (Richtwerte, in echt ca. 250–600 € im Monat, im Spiel verkleinert wie Gehälter):**
+- Pensionspreis je Box und Jahreszeit: Stufe 1 **150 €**, Stufe 2 **250 €**, Stufe 3 **400 €** (aus dem Plan). Paddockbox +50 €.
+- Zusatzleistungen je Jahreszeit: Putzen 40 €, Pferdepfleger (Mähne, Hufe auskratzen) 60 €, Bewegen durch Bereiter 120 €, Decke wechseln 20 €, Medikamente geben 20 €, bessere Einstreu 30 € – nur buchbar, wenn angeboten (Pfleger/Bereiter angestellt bzw. Spieler macht es selbst).
+- Zufriedenheit: Start 70. Je Tag: hungrig −5, Box nicht gemistet −3, verdreckt (> ½ Jz) −1, Verletzung/Ansteckung −10 einmalig, Reitplatz belegt −2; +0,2 je Tag gut versorgt, Stufe 3 +0,2, Reithalle +0,1, gebuchte Leistung erledigt +0,3. Hausturnier (H8) +5.
+- Wirkung auf Einnahmen: 6 Boxen Stufe 1 voll = 900 € je Jahreszeit (deckt Rate 304,56 € + Futter).
+
+**Anbindung:** `HOF_FELDER` + `einsteller`; `hofNacht` → `pensionTag()`, Jahreszeit → `pensionJahreszeit()`; Briefe mit `hid`; Finanzen-Posten „Pension“, „Pension: Zusatzleistungen“; Pensionsstall-Bedingung H7 = Hälfte der Boxen an Einsteller; Pferdewirt Haltung und Service versorgt Einsteller besonders gut (+Zufriedenheit). Gesamttest: Einsteller-Boxen nie doppelt, Pension-Buchungen in der Kasse.
+
+**Offene Fragen H5 (mit Empfehlung):**
+1. Füttert der Hof das Pensionspferd aus der eigenen Futterkammer (im Preis enthalten)? *Empfehlung: ja, wie in echt (Vollpension).*
+2. Darf der Spieler das Pensionspferd reiten/trainieren? *Empfehlung: nein, nur über die gebuchte Leistung „Bewegen“ (Bereiter).*
+3. Sollen Einsteller-Pferde auch Hengste sein können (nur Paddockbox/Sandpaddock mit Wallach, laut Plan)? *Empfehlung: ja, selten (10 %), Anfrage nur, wenn eine Paddockbox frei ist.*
+4. Zahlungsverzug: 10 % zahlen verspätet. *Empfehlung: ja, 2 Tage Ziel wie Rechnungen.*
+5. Kündigungsfrist des Spielers: Kann der Spieler einem Einsteller kündigen? *Empfehlung: ja, zum Ende der Jahreszeit, Ansehen −5.*
+6. Zusatzleistungen ohne Mitarbeiter: Darf der Spieler selbst „Putzen“ anbieten (dann muss er täglich putzen)? *Empfehlung: ja, mit Aufgabenliste im Stall (vergessen → Zufriedenheit −).*
+
 ## Etappe H6 – Weiden, Gras, Futterwiese, Einstreu (mittel)
 1. Weidebedarf 0,5 ha je Großpferd, 0,25 ha je Pony/Kleinpferd. Mehrere Weiden je Hof, jede mit eigener Gruppe; Spieler teilt zu; Herdenregeln (Etappe 2b) gelten je Weide.
 2. Grasstand je Weide 0–100 % als Balken. Nachwachsen: Frühling stark, Sommer mittel, Herbst wenig, Winter nicht.
@@ -99,6 +128,21 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 6. Hufrehe-gefährdete Pferde: Warnung im Frühling, wenn sie auf der Weide statt im Sandpaddock stehen.
 7. Haltung je Pferd: Box, Paddockbox (Sand, rein/raus nach Lust), Weide (Herde), Sandpaddock.
 8. Einstreu: Stroh (günstig, staubt, wird angeknabbert), Späne (staubarm, mittel), Pellets (sehr saugfähig, staubarm, teurer), Leinstroh/Hanf (staubarm, teuer). Staub → Husten (besonders „empfindliche Atemwege“ aus F4), nass/schlecht gemistet → Strahlfäule. Lager im Strohlager, täglicher Verbrauch beim Misten, Kauf beim Bauern oder in der Futterkammer; leer → ohne Einstreu, Wohlbefinden sinkt.
+
+### H6 – Feinplanung (Claude, 6.10.2026 abends)
+**Schon da (nicht neu bauen):** `weideHa`, Weide einzäunen (H3), Weide-zu-klein-Warnung (0,5 / 0,25 ha), Hufrehe-Warnung, Anweiden, Weide-Energie je Jahreszeit (`WEIDE_ENERGIE`), staubiges Heu (`staubNacht`), Futterverderb, Herde (`herdeNacht`).
+**Datenmodell:** je Hof `spiel.weiden = [{ wid, name, ha, gras 0–100, matsch 0–100, gesperrt, nachgesaet }]`; `p.weide = { seit, wid }`; `weideHa` = Summe (abwärtskompatibel: alte Höfe bekommen eine Weide mit ganzem `weideHa`). Herdenregeln je Weide (`herdeNacht` je `wid`).
+**Gras (Standardtempo, je Tag):** Nachwachsen je ha Frühling +8, Sommer +5, Herbst +2, Winter 0 Punkte; Verbrauch je Großpferd 4 Punkte / ha, Pony 2 (also 0,5 ha je Großpferd im Sommer ≈ ausgeglichen). Gras < 20 → Gras zählt nur noch halb als Futter (Heu zufüttern, sonst hungrig wie bisher). Überbesetzt (Bedarf > ha) → Matsch +5/Tag (Herbst/Winter ×2): Mauke/Strahlfäule ×1,5, Würmer ×1,3, Streit ×1,3, Nachwachsen −50 %.
+**Weidepflege:** Abäppeln (Spieler oder Pferdepfleger, 1 Weide/Tag) → Würmer ×0,6 für 1 Jz; Weide sperren (wächst ohne Verbrauch, Matsch −5/Tag); Nachsäen im Frühling 30 €/ha → Gras +30, Nachwachsen +25 % für 1 Jahr.
+**Futterwiese:** eingezäuntes Weideland als „Futterwiese“ markieren; Bauer mäht im Sommer (1. Schnitt Tag 1, 2. Schnitt Tag 5 bei gutem Gras), Ertrag **150 kg Heu je ha und Schnitt** (im Spieltempo verkleinert: 1 Pferd frisst im Spiel ca. 280 kg Heu im Jahr), Lohn **15 € je ha und Schnitt**; ins Heulager so viel passt, Rest an den Bauern zu 0,12 €/kg. Ohne Futterwiese: Heu im Futterhandel (wie bisher).
+**Einstreu** (Lager `futter.lager`, Verbrauch beim Misten je Box und Tag): Stroh 7 kg à 0,10 € (staubt: Husten ×1,3, wird angeknabbert), Späne 3 kg à 0,35 € (staubarm), Pellets 2 kg à 0,40 € (sehr saugfähig: Strahlfäule ×0,7), Leinstroh/Hanf 3 kg à 0,60 € (staubarm, saugfähig). Ohne Einstreu: Wohlbefinden −3/Nacht, Strahlfäule ×2. „Empfindliche Atemwege“ (F4): Stroh ×2 statt ×1,3. Startvorrat 100 kg Stroh. Mitarbeiter streuen mit ein (Stallbursche).
+**Haltung je Pferd:** Box, Paddockbox (H3, rein/raus nach Lust), Weide (Herde), Sandpaddock (H3) – Auswahl unter ppf – Ort.
+
+**Offene Fragen H6 (mit Empfehlung):**
+1. Mehrere Weiden: neue Weide beim Einzäunen als eigene Weide anlegen oder vergrößern? *Empfehlung: beim Einzäunen wählen („neue Weide“ / „Weide X vergrößern“).*
+2. Pferde auf Pachtland: darf gepachtetes Weideland eingezäunt werden? *Empfehlung: ja (in echt üblich), Zaun bleibt beim Ende der Pacht nicht erhalten.*
+3. Einstreu-Wahl je Box oder je Hof? *Empfehlung: je Hof mit Ausnahme je Box (z. B. Späne für Pferde mit empfindlichen Atemwegen).*
+4. Heu von der Futterwiese: Qualität zufällig (bei Regen staubiges Heu)? *Empfehlung: ja, 20 % Regen-Schnitt → „staubig“.*
 
 ## Etappe H7 – Stallarten: Bedingungen, Vorteile, Strafe (groß)
 1. Stallart je Hof frei wählbar (auch mehrmals dieselbe): Pensionsstall, Zuchtstall, Ausbildungsstall, Gnadenhof, Rennstall, Westernstall (Gangpferdestall später). Ersetzt das vorbereitete Stallart-Feld aus dem Azubi-Nachtrag (Fachrichtungen, Bewerber je Stallart).

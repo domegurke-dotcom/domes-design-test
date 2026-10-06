@@ -66,3 +66,18 @@ Kandidaten (vor dem Start mit Dome abstimmen, Aufwand je Rasse nennen):
 - Hannoveraner: Trakehner (und andere Warmblüter, die im Zuchtprogramm erlaubt sind)
 - weitere Veredler bestehender Rassen bei der Planung prüfen (z. B. Shagya-Araber, Anglo-Araber)
 
+### Vorplanung Veredler-Rassen (Claude, 6.10.2026 abends – noch nichts umsetzen)
+Jede neue Rasse kommt komplett: `RASSEN` (Größe, Farben, Profil, Charakter), Farbgene `RASSE_GENE`, Erbkrankheiten `ERBKRANK`, Veranlagungen, Hufqualität `HUF_RASSE`, Körperbau/Gewicht `BAU`, Futtertyp (`LEICHTFUTTRIG`/`SCHWERFUTTRIG`), Gangwerk, Disziplin-Eignung, Marktpreise, `VEREDELUNG`-Eintrag, Enzyklopädie. Kopf: Spielkopf, bis Dome einen zeichnet.
+
+| Rasse | veredelt | Besonderheiten | Aufwand |
+|---|---|---|---|
+| **Trakehner** | Hannoveraner (im Zuchtprogramm erlaubt) | 160–170 cm, alle Grundfarben + Schimmel, edel, Springen/Dressur; Erbkrankheit: keine rassetypische (WFFS-Träger möglich) | ca. 4–5 % |
+| **Clydesdale** | Tinker | 163–183 cm, Braun/Rappe/Fuchs mit viel Weiß (Sabino), Roan; Erbkrankheiten CPL (Chronisch progressives Lymphödem, Fesselbehang), PSSM1 selten; Hufe groß, Futter leichtfuttrig | ca. 6–7 % (Sabino-Muster neu) |
+| **Welsh Cob (Sektion D)** | Tinker | ab 137 cm, alle Farben inkl. Palomino/Creme, Falbe; robust, leichtfuttrig, Hufrehe-gefährdet; Trab mit viel Aktion | ca. 5 % |
+| **Fell-Pony** | Tinker | 132–142 cm, meist Rappe, Braun, Grau; sehr robust, leichtfuttrig, Erbkrankheit Fell-Pony-Syndrom (FIS, tödlich bei Fohlen, rezessiv) | ca. 5–6 % |
+| **Dales-Pony** | Tinker | 140–148 cm, meist Rappe/Braun, weiße Abzeichen erlaubt; Erbkrankheit FIS wie Fell (Herkunft verwandt) | ca. 4 % (teilt FIS mit Fell) |
+| *Anglo-Araber* (optional) | Hannoveraner (erlaubt) | Kreuzung Vollblut × Araber, beide schon im Spiel → nur Rasse-Eintrag + Zuchtbuchregel | ca. 2–3 % |
+| *Shagya-Araber* (optional) | Haflinger/Hannoveraner (teils erlaubt) | 150–160 cm, viele Schimmel, Araber-Erbkrankheiten | ca. 4 % |
+
+**Reihenfolge-Vorschlag:** 1. Trakehner (meist genutzter Veredler, einfach), 2. Welsh Cob, 3. Clydesdale, 4. Fell + Dales zusammen (gemeinsame Erbkrankheit FIS), optional Anglo-Araber. Gesamt Kern (5 Rassen) ca. 24–27 %.
+**Fragen:** (a) Welche Rassen genau? (b) Sollen neue Rassen auch auf dem Pferdemarkt/bei Gestüten erscheinen oder nur über die Deckstation? *Empfehlung: beides, wie die anderen Rassen.* (c) Kopf: zeichnest du die neuen Köpfe, oder erst Spielkopf? *Empfehlung: erst Spielkopf, Köpfe nach und nach.*

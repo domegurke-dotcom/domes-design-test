@@ -4,19 +4,19 @@ Fragen aus der Fohlenschau (6c) und der Fütterung (F1–F5), die später beantw
 Zu jeder Frage steht die Lösung, die Claude vorerst gewählt hat. Dome beantwortet alles am Ende der Fütterung.
 
 ## Fohlenschau (6c)
-1. ✅ **Reinrassig (Dome, v216):** wie in echt nach Zuchtbuch der Rasse – nur die eigene Rasse plus erlaubte Veredler (Hannoveraner: Vollblut, Araber · Haflinger: Araber · Quarter: Vollblut), alle anderen geschlossen. **Noch offen: Tinker** (entstanden aus Shire, Clydesdale, Fell- und Dales-Pony, Welsh Cob) – Shire als Veredler zulassen?
+1. ✅ **Reinrassig (Dome, v216):** wie in echt nach Zuchtbuch der Rasse – nur die eigene Rasse plus erlaubte Veredler (Hannoveraner: Vollblut, Araber · Haflinger: Araber · Quarter: Vollblut), alle anderen geschlossen. Tinker: Shire zählt als Veredler (Ursprungsrasse), v217.
 2. ✅ **Prämie (Dome, v216):** ab Gesamtnote 7,5 wie in echt (im Spiel etwa ein Viertel der Fohlen).
 3. ✅ **Geld (Dome, v216):** Prämienfohlen bekommen kein Geld, dafür Stallplakette (neben dem Boxschild, wandert mit dem Pferd) und Fohlenchampionat am letzten Tag von Sommer/Herbst nur für Prämienfohlen (Nenngeld 60 €, 1.500 € Preisgeld je Klasse, Plakette für Platz 1–3, Marktwert Sieger +25 %, platziert +10 %) – Zahlen selbst festgelegt.
 4. ✅ **Dome: ja** – bei der Mutter steht jetzt „4 Nachkommen, davon 2 prämiert“ (v215). **Marktwert:** Note über 6,8 → +35 % je Notenpunkt, Prämie +15 %, Champion +30 % (ab 4 Jahren nur ein Drittel davon); Mutter +5 % je Prämienfohlen (höchstens +25 %). Ein Prämienfohlen mit 7,8 ist so etwa 1,5× so viel wert.
 5. **Mindestalter:** Fohlen aus der laufenden Jahreszeit dürfen erst nach einem Drittel der Tage (≈ 1 Monat) vorgestellt werden. ✅ Dome: dazu liegen Neugeborene jetzt nur noch 1 Tag (4 Tage je Jahreszeit), 2 Tage (7) bzw. 2–3 Tage (10, nach Kraft) – v216.
 
 ## Fütterung (F1–F5)
-1. **F1 – Startvorrat:** Neue und alte Spielstände bekommen einmal kostenlos Heu für 14 Tage (10 kg je Pferd), 3 kg Mineralfutter und 1 Salzleckstein je Pferd, damit niemand plötzlich ohne Futter dasteht. Passt das?
-2. **F1 – Lieferung:** Gekauftes Futter ist sofort in der Futterkammer (kein Liefertag). Lieber 1 Tag Lieferzeit?
-3. **F1 – Staubiges Heu:** Als eigene, günstigere Sorte im Futterhandel (0,15 €/kg statt 0,20 €/kg). Ohne eigenen Futterplan wird zuerst gutes Heu verfüttert. Die Folgen (Husten bei empfindlichen Atemwegen) kommen in F4.
-4. **F1 – Platz:** Die Futterkammer fasst am Anfang 2.000 kg (Salzlecksteine zählen nicht). Später größer über das Futter- und Strohlager (Hof-Ausbau H3).
-5. **F1 – Leeres Heu:** Reicht das Raufutter nicht für die ganze Tagesration, bleibt die Krippe leer (das Pferd hungert wie bisher) und es kommt ein Warnbrief. Teilweise füttern habe ich nicht eingebaut.
-6. **F2 – Mahlzeiten:** Im Futterplan stellt man die Menge je Sorte am Tag ein und wählt 2 oder 3 Mahlzeiten; alles wird gleichmäßig verteilt (keine unterschiedlichen Mahlzeiten). Reicht das, oder sollen die Mahlzeiten einzeln einstellbar sein?
+1. **F1 – Startvorrat:** Neue und alte Spielstände bekommen einmal kostenlos Heu für 14 Tage (10 kg je Pferd), 3 kg Mineralfutter und 1 Salzleckstein je Pferd, damit niemand plötzlich ohne Futter dasteht. Passt das? ✅ Dome: ja (alte Spielstände werden ohnehin gelöscht).
+2. **F1 – Lieferung:** Gekauftes Futter ist sofort in der Futterkammer (kein Liefertag). Lieber 1 Tag Lieferzeit? ✅ Dome: 1 Tag Lieferzeit – umgesetzt v217.
+3. **F1 – Staubiges Heu:** Als eigene, günstigere Sorte im Futterhandel (0,15 €/kg statt 0,20 €/kg). Ohne eigenen Futterplan wird zuerst gutes Heu verfüttert. Die Folgen (Husten bei empfindlichen Atemwegen) kommen in F4. ✅ Dome: ja.
+4. **F1 – Platz:** Die Futterkammer fasst am Anfang 2.000 kg (Salzlecksteine zählen nicht). Später größer über das Futter- und Strohlager (Hof-Ausbau H3). ✅ Dome: ja.
+5. **F1 – Leeres Heu:** Reicht das Raufutter nicht für die ganze Tagesration, bleibt die Krippe leer (das Pferd hungert wie bisher) und es kommt ein Warnbrief. Teilweise füttern habe ich nicht eingebaut. ✅ Dome: Warnbrief nur, wenn ein Mitarbeiter (oder unterwegs beim Turnier) nicht füttern konnte; füttert der Spieler selbst, kein Brief, sondern gleich ein Hinweis – v217.
+6. **F2 – Mahlzeiten:** Im Futterplan stellt man die Menge je Sorte am Tag ein und wählt 2 oder 3 Mahlzeiten; alles wird gleichmäßig verteilt (keine unterschiedlichen Mahlzeiten). Reicht das, oder sollen die Mahlzeiten einzeln einstellbar sein? ✅ Dome: reicht so.
 7. **F2 – Stärke-Grenze:** „Max. 1 g Stärke je kg Gewicht pro Mahlzeit“ zählt nur die Stärke aus dem Kraftfutter (Hafer, Pellets, Müsli …), nicht den Zucker im Heu – sonst wäre schon das Beispiel aus dem Plan (10 kg Heu + 1 kg Hafer) „zu viel“.
 8. **F2 – Weide:** Auf der Weide (außer Winter/letzter Herbsttag) ersetzt Gras das Raufutter; Kraftfutter und Mineral aus dem Plan werden an Weidetagen nicht gegeben (es gibt dort keinen Fütter-Klick). Später bei H6 (Weiden, Gras) feiner?
 9. **F2 – Arbeit:** Die Arbeitsstufe für den Bedarf ergibt sich aus der Trainings- und Turnierenergie der letzten Tage (leicht ab 10, mittel ab 35, schwer ab 60 Energie im Schnitt).

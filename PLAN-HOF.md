@@ -34,7 +34,7 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 - [x] T2 Stall → Bauen als eigenes Fenster mit Rücksprung zum Stall (klein, ca. 2 %)
 - [x] T3 stb – Eigenschaften: Hinweise „angeboren“/„erarbeitet“ nur im Adminmodus (klein, ca. 1 %)
 - [x] T4 stb – asb – Disziplinen: Charakter-Zeile verständlicher („temperamentvoll +, nervös −“ = Regel, „+5 %“ = Wirkung bei diesem Pferd) (klein, ca. 1 %)
-- [ ] T5 hvw – Hof – Futterkammer: Einkaufskorb mit Gesamtsumme; Korb öffnen → Liste mit Preisen, einzeln entfernen, Summe, Kauf bestätigen/abbrechen, Rücksprung zur Futterkammer (mittel, ca. 4 %)
+- [x] T5 hvw – Hof – Futterkammer: Einkaufskorb mit Gesamtsumme; Korb öffnen → Liste mit Preisen, einzeln entfernen, Summe, Kauf bestätigen/abbrechen, Rücksprung zur Futterkammer (mittel, ca. 4 %)
 - [x] T6 Futterkammer: nach Klick auf +kg nicht nach oben springen (klein, ca. 1 %)
 - [x] T7 Box – Menü ☰: unter „Hauptmenü“ „Hofverwaltung“ einfügen, „Postfach“ entfernen (klein, ca. 1 %)
 - [ ] T8 Charakter – Vorlieben: Grundbedürfnisse (Putzen, Füttern …) bei Abneigung nur sehr geringer Malus, nie schlechter als vorher; Vorlieben bedienen wirkt aufs Vertrauen; hohes Vertrauen schwächt Abneigungen (mittel, ca. 4 %)

@@ -579,6 +579,8 @@
   #nebenSchirm .panel.verw { grid-column: auto; }
   .immo-titel { margin: 6px 0 0; font-size: 1.05rem; color: #fff; }
   #nebenSchirm .immo-titel { grid-column: 1 / -1; }
+  .fk-korb { position: sticky; bottom: max(10px, env(safe-area-inset-bottom)); z-index: 3; width: 100%; margin: 8px 0; box-shadow: 0 4px 12px rgba(0,0,0,.25); } .fk-korb.leer { opacity: .75; }
+  .korb-tab td { vertical-align: middle; }
   .hof-tabs { flex-wrap: wrap; } .hof-tabs button { flex: 1 1 auto; font-size: .8rem; padding: 7px 6px; }
   .geb { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid #e2d6c3; } .geb-ico { font-size: 1.5rem; width: 2rem; text-align: center; } .geb-txt { flex: 1; display: flex; flex-direction: column; gap: 3px; } .geb-txt small { color: var(--leise); }
   .geb-balken { height: 7px; max-width: 220px; } .geb-kn { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; } .geb-sperre { font-style: italic; }
@@ -844,7 +846,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "236";
+  const SPIEL_VERSION = "237";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -852,9 +854,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=236"></script>
-<script src="kopfteile.js?v=236"></script>
-<script src="kopfalter.js?v=236"></script>
+<script src="pferd.js?v=237"></script>
+<script src="kopfteile.js?v=237"></script>
+<script src="kopfalter.js?v=237"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -5219,11 +5221,33 @@
         <p class="fk-gruppe">Kraftfutter</p>${Object.keys(FUTTER).filter(k => FUTTER[k].art === "kraftfutter").map(zeile).join("")}
         <p class="fk-gruppe">Zusätze und Leckerli</p>${Object.keys(FUTTER).filter(k => FUTTER[k].art === "zusatz" || FUTTER[k].art === "leckerli").map(zeile).join("")}
         ${(() => { const sp = Object.keys(FUTTER).filter(k => FUTTER[k].art === "spezial" && (spezialFrei(FUTTER[k].spezial) || F.lager[k] > 0)); return sp.length ? `<p class="fk-gruppe">Spezialfutter (vom Futterexperten)</p>${sp.map(zeile).join("")}` : ""; })()}</div>
+      ${korbLeiste()}
       <p class="text"><small>Gefüttert wird nach dem Futterplan jedes Pferdes (Box → Pferdepflege → Versorgung → Futterplan). Ohne eigenen Plan gilt der Standardplan: Raufutter nach Energiebedarf (1,5–2,5 kg je 100 kg Körpergewicht) (erst gutes Heu, dann Heulage, staubiges Heu, Heucobs, Stroh) und 100 g Mineralfutter am Tag. Fohlen bei Fuß fressen bei der Mutter mit. Auf der Weide (außer im Winter und am letzten Herbsttag) frisst das Pferd Gras statt Heu. Jede Box braucht pro Jahreszeit einen Salzleckstein. Fehlt geplantes Raufutter, wird anderes Raufutter genommen; fehlt Kraftfutter oder ein Zusatz, bekommt das Pferd diese Sorte nicht (Warnbrief, wenn ein Mitarbeiter füttert). Bestelltes Futter kommt am nächsten Morgen.</small></p>`;
   }
+  // Einkaufskorb (Dome, v237): +kg legt in den Korb, gekauft wird erst nach Bestätigung
+  const korb = () => { const F = futterkammer(); return (F.korb = F.korb || {}); };
+  const korbSumme = () => runde2(Object.entries(korb()).reduce((a, [k, m]) => a + (FUTTER[k] ? FUTTER[k].preis * m : 0), 0));
+  const korbMenge = k => { const Z = FUTTER[k], m = korb()[k]; return Z.stueck ? `${m} Stück` : fmtKg(m); };
+  function korbLeiste() { const n = Object.keys(korb()).length;
+    return `<button class="knopf fk-korb ${n ? "" : "leer"}" id="fkKorb">🛒 Einkaufskorb${n ? ` · ${n} ${n === 1 ? "Sorte" : "Sorten"} · <b>${fmt(korbSumme())}</b>` : " ist leer"}</button>`; }
+  function korbDialog(neu) {
+    const K = korb(), L = Object.keys(K).filter(k => FUTTER[k]), F = futterkammer();
+    const kg = L.reduce((a, k) => a + (FUTTER[k].stueck ? 0 : K[k]), 0), platz = F.lagerMax - lagerBelegt() - (F.liefer || []).reduce((a, x) => a + (FUTTER[x.k] && !FUTTER[x.k].stueck ? x.menge : 0), 0);
+    dialog(`<h3>🛒 Einkaufskorb</h3>${L.length ? `<table class="ver-tab korb-tab"><tr><th>Futter</th><th>Menge</th><th>Preis</th><th></th></tr>${L.map(k => `<tr><td>${FUTTER[k].ico} ${FUTTER[k].n}</td><td class="nw">${korbMenge(k)}</td><td class="nw">${fmt(runde2(FUTTER[k].preis * K[k]))}</td><td><button class="mini-knopf" data-korbweg="${k}" aria-label="entfernen">✕</button></td></tr>`).join("")}
+        <tr><td colspan="2"><b>Summe</b></td><td class="nw"><b>${fmt(korbSumme())}</b></td><td></td></tr></table>
+        <p class="text"><small>Kasse: ${fmt(spiel.geld || 0)} · Platz frei: ${fmtKg(Math.max(0, platz))}${kg > platz ? " – ⚠️ nicht genug Platz für alles!" : ""} · Lieferung morgen früh.</small></p>` : `<p>Der Korb ist leer. Mit den +-Knöpfen legst du Futter hinein.</p>`}`,
+      [...(L.length ? [["✅ Kauf bestätigen", () => {
+        if ((spiel.geld || 0) < korbSumme()) { dialog(`<h3>Nicht genug Geld</h3><p>Der Einkauf kostet ${fmt(korbSumme())}, in der Kasse sind ${fmt(spiel.geld || 0)}.</p>`, [["‹ Zurück zum Korb", () => korbDialog(neu)]]); return; }
+        if (kg > platz + 1e-9) { dialog(`<h3>Nicht genug Platz</h3><p>Im Korb sind ${fmtKg(kg)}, frei sind nur ${fmtKg(Math.max(0, platz))}.</p>`, [["‹ Zurück zum Korb", () => korbDialog(neu)]]); return; }
+        const summe = korbSumme(), fehler = []; L.forEach(k => { const f = futterKaufen(k, K[k]); if (f) fehler.push(`${FUTTER[k].n}: ${f}`); else delete K[k]; });
+        speichern(); zeigeTag(); neu(fehler.length ? `⚠️ ${fehler.join(" · ")}` : `🛒 Einkauf für ${fmt(summe)} bestellt – wird morgen früh geliefert.`); }]] : []),
+       [L.length ? "Abbrechen" : "‹ Zurück", () => neu(""), "zweit"]], "breit");
+    document.querySelectorAll("[data-korbweg]").forEach(b => b.onclick = () => { delete K[b.dataset.korbweg]; speichern(); korbDialog(neu); });
+  }
   function futterkammerBinden(neu) {
-    document.querySelectorAll("[data-fkauf]").forEach(b => b.onclick = () => { const [k, m] = b.dataset.fkauf.split(":"), f = futterKaufen(k, +m);
-      speichern(); zeigeTag(); neu(f ? `⚠️ ${f}` : `🛒 ${FUTTER[k].stueck ? `${m} Stück` : `${m} kg`} ${FUTTER[k].n} bestellt (${fmt(Math.round(FUTTER[k].preis * m * 100) / 100)}) – wird morgen früh geliefert.`); });
+    document.querySelectorAll("[data-fkauf]").forEach(b => b.onclick = () => { const [k, m] = b.dataset.fkauf.split(":"), K = korb();
+      K[k] = Math.round(((K[k] || 0) + +m) * 1000) / 1000; speichern(); neu(""); });
+    if ($("fkKorb")) $("fkKorb").onclick = () => korbDialog(neu);
   }
   // Ausrüstung → Futter: was bekommt dieses Pferd?
   function futterDialog(p, box) {
@@ -8014,7 +8038,7 @@
         <b>Futterverderb</b> je Jahreszeit (Heu, staubiges Heu, Heulage, Stroh; Kraftfutter halb so viel, Heucobs/Mineral nicht): ohne Lager ${prozent(VERDERB[0])}, Lager Stufe 1/2/3 ${VERDERB.slice(1).map(prozent).join(" / ")}; Brief zu Beginn der Jahreszeit ab 25 kg.</p>
       <p><b>Zentrales Konto</b> (Immobilien → Verwaltung): Überweisungen von jedem Hof und an jeden Hof (Dome, v224), Eigenanteil neuer Höfe kommt von dort (neue Höfe starten mit 0 €). Briefe anderer Höfe: roter Umschlag links neben dem gelben, Post aller Höfe in der Verwaltung. Warnbrief, wenn auf einem anderen Hof Pferde nicht gefüttert oder gemistet wurden.</p>
       <h3>🌾 Fütterung (F1: Futterkammer)</h3>
-      <p>Futterkammer: Hofverwaltung → Hof → Futterkammer und Futterhandel (Dome: Lieferung am nächsten Morgen; Warnbrief bei leerer Kammer nur, wenn ein Mitarbeiter oder das Turnier füttert – wer selbst füttert, sieht es sofort). Platz ${LAGER_START.toLocaleString("de-DE")} kg (Salzlecksteine zählen nicht), wird mit dem Hof-Ausbau größer. Startvorrat (neues Spiel und alte Spielstände): Heu für 14 Tage (10 kg je Pferd), 3 kg Mineralfutter, 1 Leckstein je Pferd. Gekauft wird sofort, bezahlt wird sofort (Finanzen: „Futter“).</p>
+      <p>Futterkammer: Hofverwaltung → Hof → Futterkammer und Futterhandel (Dome: Lieferung am nächsten Morgen; Warnbrief bei leerer Kammer nur, wenn ein Mitarbeiter oder das Turnier füttert – wer selbst füttert, sieht es sofort). Platz ${LAGER_START.toLocaleString("de-DE")} kg (Salzlecksteine zählen nicht), wird mit dem Hof-Ausbau größer. Startvorrat (neues Spiel und alte Spielstände): Heu für 14 Tage (10 kg je Pferd), 3 kg Mineralfutter, 1 Leckstein je Pferd. Die +-Knöpfe legen Futter in den Einkaufskorb (Dome, v237); erst „Kauf bestätigen“ bezahlt alles auf einmal (Finanzen: „Futter“), Lieferung am nächsten Morgen.</p>
       ${verTab(["Sorte", "Energie MJ/kg", "Eiweiß %", "Rohfaser %", "Zucker/Stärke %", "Preis"], Object.values(FUTTER).map(Z => [Z.n, Z.e, Z.ei, Z.rf, Z.zs, Z.preis.toLocaleString("de-DE", { minimumFractionDigits: 2 }) + (Z.stueck ? " €/Stück" : " €/kg")]))}
       <p><b>Standardplan</b> (bis zu den eigenen Futterplänen in F2): Raufutter nach Energiebedarf (seit F3: 1,5–2,5 kg je 100 kg Körpergewicht) in dieser Reihenfolge: Heu, Heulage, staubiges Heu, Heucobs, Futterstroh; Mineralfutter 100 g (unter 300 kg 50 g); Fohlen bei Fuß + 1 kg Heu je 100 kg. Reicht das Raufutter nicht für die ganze Ration, bleibt die Krippe leer (Pferd hungrig) und es kommt ein Warnbrief; fehlt Mineralfutter, bekommt das Pferd keins. Weide: Gras statt Heu (außer Winter und letzter Herbsttag), dann kein Mineralfutter aus der Kammer. Stallbursche und Turniertag nehmen das Futter ebenfalls aus der Kammer. Salzleckstein: zu Beginn jeder Jahreszeit 1 je Box mit Pferd. Warnbrief, wenn Heu oder Mineralfutter nur noch 1–2 Tage reichen oder leer sind (einmal, bis nachgekauft).</p>
       <h3>📋 Fütterung (F2: Futterplan und Bedarf)</h3>

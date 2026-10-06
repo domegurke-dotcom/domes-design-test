@@ -646,7 +646,8 @@
   header { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
   #postIcon { right: max(10px, env(safe-area-inset-right)); }
   #startMenue .version { grid-column: 1 / -1; margin: 14px 0 0; font-size: 12px; opacity: .55; text-align: center; }
-</style>
+.t-gruppe{border-bottom:1px solid var(--linie,#e6dccb);margin:0 0 6px}.t-gruppe>summary{cursor:pointer;padding:8px 2px;font-size:1.02em;list-style-position:inside}.t-gruppe>summary small{color:var(--leise)}.t-gruppe[open]>summary{margin-bottom:4px}
+</style></style>
 </head>
 <body>
 <header>
@@ -848,7 +849,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "246";
+  const SPIEL_VERSION = "247";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -856,9 +857,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=246"></script>
-<script src="kopfteile.js?v=246"></script>
-<script src="kopfalter.js?v=246"></script>
+<script src="pferd.js?v=247"></script>
+<script src="kopfteile.js?v=247"></script>
+<script src="kopfalter.js?v=247"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -4815,18 +4816,30 @@
   }
   // Einschätzung für den Spieler (keine genauen Zahlen)
   function chance(p, t, P) { const d = startWert(p, P.disz) * stufenMalus(p, P) - feldNiveau(t, P); return d >= 6 ? ["🟢", "gute Chancen"] : d >= -3 ? ["🟡", "machbar"] : ["🔴", "sehr schwer"]; }
+  let turnierSortierung = (() => { try { return localStorage.getItem("zuchtstall-tsort") || "datum"; } catch (e) { return "datum"; } })();
+  const offenDisz = new Set();   // aufgeklappte Disziplinen bleiben nach dem Nennen offen
   function turnierDialog(p, zurueck) {
     const L = turnierKalender().filter(t => t.tag > spiel.tag - 1 && t.pruef.some(P => passtGrundsaetzlich(p, P)));   // nur Turniere, bei denen das Pferd grundsätzlich starten kann
     const lkZeile = Object.keys(LK_NAME).map(g => `${LK_NAME[g]} LK ${lkVon(g)}`).join(" · ");
     const datumTxt = t => { const d = datum(t.tag), n = t.tag - spiel.tag; return `${JZ[d.s][1]} ${JZ[d.s][0]}, Tag ${d.t} · ${n === 0 ? "heute" : n === 1 ? "morgen" : `in ${n} Tagen`}`; };
     const artTxt = { hof: "Hofturnier · Schleifen", regional: "Regionales Turnier", gross: "Großes Turnier", renntag: "Renntag · mit Jockey", distanz: "Distanzritt · Tierarztkontrolle", gangpferde: "Gangpferdeturnier", fohlenschau: "Fohlenschau · Zuchtverband", championat: "Championat · nur mit Qualifikation", international: "International · nur mit Qualifikation" };
-    const html = L.map(t => { const meine = t.nennung.filter(n => n.pid === p.id);
-      const zeilen = t.pruef.filter(P => passtGrundsaetzlich(p, P)).map(P => { const drin = meine.some(n => n.prid === P.id), sp = drin ? "" : nennSperre(p, t, P), ng = nenngeld(t, P), pg = preisgeld(t, P), [c, ct] = P.fohlenschau ? fsChance(fsBox(p).fohlen) : chance(p, t, P);
+    // Dome (v247): nach Datum oder nach Disziplin (Überschrift je Disziplin, darunter nur deren Prüfungen)
+    const dk = P => P.fohlenschau ? "fohlenschau" : P.disz, dName = k => DISZ[k] ? `${DISZ[k].ico} ${DISZ[k].n}` : k === "fohlenschau" ? "🍼 Fohlenschau" : k === "gelassenheit" ? "🕊️ Gelassenheit" : k;
+    const nachDisz = turnierSortierung === "disz";
+    const karte = (t, nurD) => { const meine = t.nennung.filter(n => n.pid === p.id);
+      const zeilen = t.pruef.filter(P => passtGrundsaetzlich(p, P) && (!nurD || dk(P) === nurD)).map(P => { const drin = meine.some(n => n.prid === P.id), sp = drin ? "" : nennSperre(p, t, P), ng = nenngeld(t, P), pg = preisgeld(t, P), [c, ct] = P.fohlenschau ? fsChance(fsBox(p).fohlen) : chance(p, t, P);
         return `<li class="tp-zeile"><span><b>${esc(P.name)}${P.fohlenschau ? ` – ${esc(fsBox(p).fohlen.name)}` : ""}</b><small>${P.starter} ${P.fohlenschau ? "Fohlen" : "Starter"} · ${P.jockey ? `Nenngeld + Jockey ${fmt(ng)}` : `Nenngeld ${fmt(ng)}`}${pg ? ` · Preisgeld ${fmt(pg)}` : P.fohlenschau ? " · Prämie, Champion" : " · Schleifen"}${sp ? "" : ` · ${c} ${ct}`}${P.q ? `<br>${qualiStand(p, P).txt}` : ""}</small></span>
           ${drin ? (spiel.tag < t.tag ? `<button class="mini-knopf an" data-tzurueck="${t.id}:${P.id}">✓ genannt</button>` : `<span class="stat ok">genannt</span>`) : sp ? `<span class="stat">${sp}</span>` : `<button class="mini-knopf" data-tnennen="${t.id}:${P.id}">Nennen</button>`}</li>`; }).join("");
-      return `<details class="t-karte" ${meine.length ? "open" : ""}><summary><b>${({ hof: "🎀", renntag: "🏇", distanz: "🗺️", gangpferde: "✨", fohlenschau: "🍼", championat: "🏅", international: "🌍" })[t.art] || (t.typ === "western" ? "🤠" : "🏆")} ${esc(t.name)}</b><small>${datumTxt(t)} · ${artTxt[t.art]}${t.halle ? " · Halle" : " · Freiluft"}${meine.length ? ` · <b>${meine.length}× genannt</b>` : ""}</small></summary><ul class="tp-liste">${zeilen}</ul></details>`; }).join("");
-    dialog(`<h3>🏆 Turniere für ${esc(p.name)}</h3><p class="text" style="margin:0 0 6px"><small>Deine Reiter-LK: ${lkZeile}. Nennen bis spätestens am Tag vorher. Am Turniertag ist ${esc(p.name)} unterwegs, das Ergebnis kommt am nächsten Tag per Brief. Höchstens 2 Prüfungen pro Turnier in benachbarten Klassen.</small></p>
+      return `<details class="t-karte" ${meine.length ? "open" : ""}><summary><b>${({ hof: "🎀", renntag: "🏇", distanz: "🗺️", gangpferde: "✨", fohlenschau: "🍼", championat: "🏅", international: "🌍" })[t.art] || (t.typ === "western" ? "🤠" : "🏆")} ${esc(t.name)}</b><small>${datumTxt(t)} · ${artTxt[t.art]}${t.halle ? " · Halle" : " · Freiluft"}${meine.length ? ` · <b>${meine.length}× genannt</b>` : ""}</small></summary><ul class="tp-liste">${zeilen}</ul></details>`; };
+    const diszListe = [...new Set(L.flatMap(t => t.pruef.filter(P => passtGrundsaetzlich(p, P)).map(dk)))].sort((a, b) => { const i = k => DISZ[k] ? Object.keys(DISZ).indexOf(k) : 99; return i(a) - i(b); });
+    const html = !nachDisz ? L.map(t => karte(t)).join("")
+      : diszListe.map(k => { const T = L.filter(t => t.pruef.some(P => passtGrundsaetzlich(p, P) && dk(P) === k)), genannt = T.some(t => t.nennung.some(n => n.pid === p.id && dk(t.pruef.find(P => P.id === n.prid) || {}) === k));
+        return `<details class="t-gruppe" ${genannt || offenDisz.has(k) ? "open" : ""} data-tgruppe="${k}"><summary><b>${dName(k)}</b> <small>${T.length} ${T.length === 1 ? "Turnier" : "Turniere"}${genannt ? " · <b>genannt</b>" : ""}</small></summary>${T.map(t => karte(t, k)).join("")}</details>`; }).join("");
+    const sortKnoepfe = L.length ? `<div class="bf-knoepfe" style="margin:0 0 8px"><small>Sortieren:</small><button class="mini-knopf ${nachDisz ? "" : "an"}" data-tsort="datum">📅 Nach Datum</button><button class="mini-knopf ${nachDisz ? "an" : ""}" data-tsort="disz">🗂️ Nach Disziplin</button></div>` : "";
+    dialog(`<h3>🏆 Turniere für ${esc(p.name)}</h3><p class="text" style="margin:0 0 6px"><small>Deine Reiter-LK: ${lkZeile}. Nennen bis spätestens am Tag vorher. Am Turniertag ist ${esc(p.name)} unterwegs, das Ergebnis kommt am nächsten Tag per Brief. Höchstens 2 Prüfungen pro Turnier in benachbarten Klassen.</small></p>${sortKnoepfe}
       ${alterJZ(p) < 16 ? `<p class="text">⚠️ ${esc(p.name)} ist noch jung – Turniere gibt es erst ab 4 Jahren, nur Rennen für Vollblüter schon ab 2 (Araber ab 3).</p>` : ""}${html || "<p>Gerade sind keine Turniere ausgeschrieben.</p>"}`, [["Schließen", zurueck, "zweit"]], "turnier-dlg");
+    document.querySelectorAll("[data-tgruppe]").forEach(d => d.ontoggle = () => { if (d.open) offenDisz.add(d.dataset.tgruppe); else offenDisz.delete(d.dataset.tgruppe); });
+    document.querySelectorAll("[data-tsort]").forEach(b => b.onclick = () => { turnierSortierung = b.dataset.tsort; try { localStorage.setItem("zuchtstall-tsort", turnierSortierung); } catch (e) {} turnierDialog(p, zurueck); });
     document.querySelectorAll("[data-tnennen]").forEach(b => b.onclick = () => { const [tid, prid] = b.dataset.tnennen.split(":"), t = spiel.turniere.find(x => x.id === tid), P = t.pruef.find(x => x.id === prid);
       if (nennSperre(p, t, P)) return; t.nennung.push({ pid: p.id, prid, geld: nenngeld(t, P) }); buchen(-nenngeld(t, P), "Turniere: Nenngeld"); speichern(); zeigeTag(); turnierDialog(p, zurueck); });
     document.querySelectorAll("[data-tzurueck]").forEach(b => b.onclick = () => { const [tid, prid] = b.dataset.tzurueck.split(":"), t = spiel.turniere.find(x => x.id === tid);

@@ -9,7 +9,7 @@ Ausführliche Gesprächsnotizen: `werte/plan.md` *(liegt noch im Planungsprojekt
 - [x] Etappe 2 – Charakter → Wohlbefinden (v164, von Dome getestet; Admin „Charakter selbst wählen“ in v165)
 - [x] Etappe 2b – Weide und Herde (v166–168, von Dome getestet)
 - [x] Etappe 3 – Vorlieben und Reaktionen (v169–171, Sprechblasen und seltenere Vorlieben; von Dome getestet)
-- [~] Etappe 4 – Training daheim (v198, Test durch Dome offen) · Krankheiten-Plan A–H ist erledigt. Mit Dome abgestimmt: Spieler hat erstmal nur Reitplatz und Gelände (Admin: alle Orte), jede Stufe der Ausbildungsskala einzeln gespeichert, Bereiter nach Plan **oder** „entscheidet selbst“.
+- [x] Etappe 4 – Training daheim (v198, von Claude per Skript getestet – 54 Prüfungen; Dome macht später einen Gesamttest) · Krankheiten-Plan A–H ist erledigt. Mit Dome abgestimmt: Spieler hat erstmal nur Reitplatz und Gelände (Admin: alle Orte), jede Stufe der Ausbildungsskala einzeln gespeichert, Bereiter nach Plan **oder** „entscheidet selbst“.
 - [ ] Etappe 5 – Disziplinen
 - [ ] Etappe 6 – Turniere · **Danach kommt `PLAN-FUETTERUNG.md` (Etappen F1–F5) – eine Werte-Etappe 7 gibt es nicht. Vorher Dome fragen: „Mit Fütterung F1 weitermachen?“ (Dome, 5.10.2026).**
 
@@ -108,7 +108,7 @@ Von Dome entschieden. **Endgültige Zahlen (von Dome bestätigt):** Heu nötig i
 2. Jede Spieleraktion (Putzen, Füttern, Ort, Training, später Ausrüstung) löst eine passende Reaktion aus: zunächst kurzer Text (z. B. „legt die Ohren an und weicht zurück“), dazu Wohlbefinden ±, ggf. gebremstes Training. Später ersetzen Animationen die Texte (Kopf wegziehen, in der Paddockbox weggehen, Ohren anlegen, Schweifschlagen, mit dem Vorderhuf betteln, wütend aufstampfen).
 2a. **Bis die Animationen kommen, erscheinen die Reaktionen als Sprechblase am Pferd im Stallbild** (z. B. „*schließt genießerisch die Augen*“); ist das Pferd nicht in der Box (Weide, Anhänger), an der Boxentür. Wohlbefinden ändert sich je Aktion nur einmal am Tag. (Dome, v170)
 3. Dem Spieler wird vorher NICHT gesagt, was das Pferd mag. Entdeckte Vorlieben erscheinen erst, wenn man sie erlebt hat: Knopf „Vorlieben“ in Box - Steckbrief - Charakter.
-4. Ausrüstung (Trense, Reithalfter, Sattel, Decken …) kommt später als eigener Schritt. Das Vorlieben-System so bauen, dass neue Gegenstände einfach als Vorlieben-Ziel dazukommen. Beispiel für später: Sensible Pferde mögen keine Trense mit kombiniertem Reithalfter, lieber einfache Trense ohne Reithalfter, und keine Regen-/Winterdecke.
+4. Ausrüstung (Trense, Reithalfter, Sattel, Decken …) kommt später als eigener Schritt. **Dome, 6.10.2026: Sobald die Ausrüstung kommt, sind Sattel und Trense Pflicht zum Reiten (bis dahin geht Reiten ohne).** Das Vorlieben-System so bauen, dass neue Gegenstände einfach als Vorlieben-Ziel dazukommen. Beispiel für später: Sensible Pferde mögen keine Trense mit kombiniertem Reithalfter, lieber einfache Trense ohne Reithalfter, und keine Regen-/Winterdecke.
 
 ## 4. Lerntempo
 

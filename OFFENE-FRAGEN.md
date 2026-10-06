@@ -53,6 +53,8 @@ Zu jeder Frage steht die Lösung, die Claude vorerst gewählt hat. Dome beantwor
 
 14. **Vorgezogen (v226, selbst festgelegt):** Weide zu klein ab mehr als 0,5 ha je Großpferd / 0,25 ha je Pony unter 148 cm (Fohlen bei Fuß zählen nicht) – Hinweis beim Weidegang und Brief je Jahreszeit, Folgen erst mit H6. Abfohlbox: ohne Nachtdienst 5 % statt 15 % schwache Fohlen, Hinweisbrief eine Jahreszeit vor der Geburt. Futterverderb je Jahreszeit (Heu, Heulage, Stroh; Kraftfutter halb so viel): ohne Lager 6 %, Lager Stufe 1/2/3: 3 / 1,5 / 0,5 %, Brief ab 5 kg.
 
+15. **Gesamttest Hof-Ausbau (v227):** Kassen, Kredite, Boxen/Gebäude, Bauland, zentrales Konto stimmen über 2 Jahre mit 2 Höfen. Angepasst: Hofhelfer +6 statt +2 Zustand je Arbeitstag (sonst verfällt ein Hof mit 8 Gebäuden trotz Hofhelfer). Neuer Hof: Hinweis auf leere Futterkammer beim Kauf und beim Umzug.
+
 ## 📌 Notiz von Dome (7.10.2026) – Veredler-Rassen: erst NACH dem Hof-Ausbau (H1–H8) starten (Dome, 7.10.2026)
 Wenn alle Fütterungsfragen beantwortet sind, Dome Bescheid geben: **Alle fehlenden Rassen ergänzen, die für die Veredelung bestehender Rassen im Spiel wichtig sind** – jeweils komplett mit Fell- und Farbmustern, Erbkrankheiten, Eigenheiten/Veranlagungen, Hufqualität, Körperbau (Gewicht), Futtertyp usw. (Grundsatz aus CLAUDE.md).
 Kandidaten (vor dem Start mit Dome abstimmen, Aufwand je Rasse nennen):

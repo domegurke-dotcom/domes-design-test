@@ -56,6 +56,8 @@
   @keyframes nebelZiehen { from { transform: translate(-8px, 0); } to { transform: translate(8px, 0); } }
   #draussen .wolken { animation: wolkenZiehen 14s ease-in-out infinite alternate; }
   @keyframes wolkenZiehen { from { transform: translate(-3px, 0); } to { transform: translate(4px, 0); } }
+  #stall.wischen { touch-action: none; cursor: crosshair; } #stall .staub { animation: staubWeg .5s ease-out forwards; } @keyframes staubWeg { to { opacity: 0; transform: translateY(6px); } }
+  .kachel.aktiv-wisch { outline: 3px solid #5a9a6a; outline-offset: 1px; }
   #stall { width: 100%; height: min(75vw, calc(100dvh - 64px)); display: block; }
   .karte { width: 100%; max-width: 520px; background: var(--karte); border-radius: 14px; padding: 14px 16px; box-shadow: 0 4px 14px rgba(0,0,0,.12); }
   .karte h2 { margin: 0; font-size: 1.2rem; }
@@ -772,7 +774,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "189";
+  const SPIEL_VERSION = "190";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -780,9 +782,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=189"></script>
-<script src="kopfteile.js?v=189"></script>
-<script src="kopfalter.js?v=189"></script>
+<script src="pferd.js?v=190"></script>
+<script src="kopfteile.js?v=190"></script>
+<script src="kopfalter.js?v=190"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2350,6 +2352,9 @@
   const fmt = n => n.toLocaleString("de-DE") + " €";
   const $ = id => document.getElementById(id);
 
+  // Symbole als kleine Zeichnungen (das Kamm-Emoji fehlt auf älteren Handys)
+  const KAMM_ICO = `<svg viewBox="0 0 24 24" width="1em" height="1em" style="vertical-align:-0.15em" aria-hidden="true"><rect x="2" y="4" width="20" height="6" rx="2.5" fill="#a0683a"/>${[0, 1, 2, 3, 4, 5, 6, 7].map(i => `<rect x="${3 + i * 2.4}" y="9" width="1.3" height="11" rx=".6" fill="#a0683a"/>`).join("")}</svg>`;
+  const HUFKR_ICO = `<svg viewBox="0 0 24 24" width="1em" height="1em" style="vertical-align:-0.15em" aria-hidden="true"><rect x="10.5" y="2" width="4" height="12" rx="2" fill="#c0392b"/><path d="M12.5 13 v5 q0 3 -3 3 h-2.5" fill="none" stroke="#7f8c8d" stroke-width="2.2" stroke-linecap="round"/></svg>`;
   // ---------- Stall ----------
   const STALL = { mitte: 205, boden: 278, cmZuEinheit: 0.86 };
   // Körperhaltung nach Gesundheitszustand (wird am Tagesbeginn neu gezeichnet)
@@ -2553,7 +2558,7 @@
           <li><span class="ico">🧹</span><span class="txt">Boxenhygiene<small>Einstreu aus Stroh</small></span><span class="stat ${box.mistig ? "warn" : "ok"}">${box.mistig ? "ausmisten" : "sauber"}</span></li>
           ${(() => { const d = p.dreck || {}, sf = dreckStufe(d.fell), sm = dreckStufe(d.maehne);
             return `<li><span class="ico">🧽</span><span class="txt">Fell<small>${zuLangeDreckig(p) ? "⚠️ schon länger als eine Jahreszeit verdreckt – schadet der Gesundheit" : "putzen mit der Bürste (Ausrüstung → Putzkiste)"}</small></span><span class="stat ${zuLangeDreckig(p) ? "bad" : sf[2]}">${sf[1]}</span></li>
-              <li><span class="ico">🪮</span><span class="txt">Mähne &amp; Schweif<small>kämmen mit dem Kamm (Ausrüstung → Putzkiste)</small></span><span class="stat ${sm[2]}">${sm[0] >= 50 ? "verfilzt" : sm[0] >= 20 ? "zerzaust" : "gekämmt"}</span></li>`; })()}
+              <li><span class="ico">${KAMM_ICO}</span><span class="txt">Mähne &amp; Schweif<small>kämmen mit dem Kamm (Ausrüstung → Putzkiste)</small></span><span class="stat ${sm[2]}">${sm[0] >= 50 ? "verfilzt" : sm[0] >= 20 ? "zerzaust" : "gekämmt"}</span></li>`; })()}
           ${(() => { const r = hufLaenge(p), st = r >= 1.3 ? ["zu lang", "bad"] : r >= 1 ? ["fällig", "warn"] : r >= 0.8 ? ["bald fällig", "warn"] : ["ok", "ok"];
             return `<li><span class="ico">🔨</span><span class="txt">Hufe (Hufschmied)<small>${p.beschlag ? "beschlagen" : "barhuf"}${p.eisenWeg ? " · ⚠️ ein Eisen fehlt" : ""} · zuletzt vor ${tageTxt2(spiel.tag - pf.huf)}${p.hufAuftrag ? " · Dauerauftrag" : ""} · ${p.ausgekratzt === spiel.tag ? "heute ausgekratzt" : "heute noch nicht ausgekratzt"} <button class="mini-knopf" id="hufschmiedKnopf">🔨 Hufschmied</button></small></span><span class="stat ${st[1]}">${st[0]}</span></li>`; })()}
           ${termin("💉", "Impfung (Tierarzt)", pf.impf, 2, `Influenza & Herpes alle 2 Jahreszeiten <button class="mini-knopf" data-vorsorge="impfung">💉 impfen ${fmt(VORSORGE.impfung)}</button>`)}
@@ -2590,9 +2595,10 @@
         const d = p.dreck || {}, sf = dreckStufe(d.fell), sm = dreckStufe(d.maehne);
         inhalt = (meldung ? `<div class="klasse">${meldung}</div>` : "") + `<p class="text" style="margin:0 0 4px">🧰 <b>Putzkiste</b> · Fell: ${sf[1]} · Mähne &amp; Schweif: ${sm[0] >= 50 ? "verfilzt" : sm[0] >= 20 ? "zerzaust" : "gekämmt"}<br><small>${maBoxen("pfleger").includes(aktBox) ? "Der Pferdepfleger putzt dieses Pferd jeden Morgen." : "Pferde werden jede Nacht in der Box schmutziger. Ein Pferdepfleger (Hofverwaltung → Mitarbeiter) putzt sie für dich."}</small></p>
           <div class="kacheln quadrat">
-            ${[["buerste", "🧽", "Bürste", d.fell, "Fell putzen"], ["kamm", "🪮", "Kamm", d.maehne, "Mähne & Schweif kämmen"], ["huf", "🪝", "Hufkratzer", 0, "Hufe auskratzen"]].map(([id, ico, n, wert, txt]) => { const schon = id === "huf" ? p.ausgekratzt === spiel.tag : p.geputzt && p.geputzt.tag === spiel.tag && p.geputzt.mit.includes(id);
-              return `<button class="kachel klickbar" data-putz="${id}"><span class="ico">${ico}</span><b>${n}</b><small>${schon ? "heute schon gemacht" : txt}</small></button>`; }).join("")}</div>
+            ${[["buerste", "🧽", "Bürste", d.fell, "Fell putzen"], ["kamm", KAMM_ICO, "Kamm", d.maehne, "Mähne & Schweif"], ["huf", HUFKR_ICO, "Huf\u00adkratzer", 0, "Hufe auskratzen"]].map(([id, ico, n, wert, txt]) => { const schon = id === "huf" ? p.ausgekratzt === spiel.tag : p.geputzt && p.geputzt.tag === spiel.tag && p.geputzt.mit.includes(id);
+              return `<button class="kachel klickbar ${wisch && wisch.tool === id ? "aktiv-wisch" : ""}" data-putz="${id}"><span class="ico">${ico}</span><b>${n}</b><small>${schon ? "heute schon gemacht" : txt}</small></button>`; }).join("")}</div>
           <p class="text" style="margin:8px 0 4px"><small>${p.putzzeug ? `🧰 ${esc(p.name)} hat eigenes Putzzeug – über Bürste und Kamm wird nichts übertragen.` : `Alle Pferde teilen sich die Putzkiste – darüber kann sich z. B. Hautpilz verbreiten.`}</small>${p.putzzeug ? "" : ` <button class="mini-knopf" id="eigenesPutzzeug">🧰 eigenes Putzzeug kaufen ${fmt(VORSORGE.putzzeug)}</button>${lager().putzzeug.some(x => !x.pilz) ? ` <button class="mini-knopf" id="putzzeugLager">📦 aus dem Lager (desinfiziert, kostenlos)</button>` : ""}`}</p>
+          ${wisch ? `<p class="text" style="margin:8px 0 4px">👆 <b>${WISCH_TEXT[wisch.tool]}</b> – mit dem Finger über das Pferd wischen (am PC mit gedrückter linker Maustaste). <button class="mini-knopf" id="wischAus">✋ aufhören</button></p>` : `<p class="text" style="margin:8px 0 4px"><small>Werkzeug antippen, dann im Bild über das Pferd wischen.</small></p>`}
           <button class="zurueck" id="putzZurueck">‹ Zurück zur Ausrüstung</button>`;
       } else if (medModus) {
         inhalt = (meldung ? `<div class="klasse">${meldung}</div>` : "") + apothekeHTML(p);
@@ -2821,13 +2827,15 @@
     const putzK = $("putzKachel"); if (putzK) putzK.onclick = () => { putzModus = true; meldung = ""; zeigeAkte(); };
     const pzl = $("putzzeugLager"); if (pzl) pzl.onclick = () => { const L = lager(), x = L.putzzeug.find(y => !y.pilz); if (!x) return; L.putzzeug = L.putzzeug.filter(y => y !== x); p.putzzeug = true; meldung = `🧰 ${esc(p.name)} hat jetzt das Putzzeug von ${esc(x.von)} (desinfiziert).`; speichern(); zeigeAkte(); };
     const epz = $("eigenesPutzzeug"); if (epz) epz.onclick = () => { if (!spiel.admin && (spiel.geld || 0) < VORSORGE.putzzeug) { meldung = "Dafür reicht das Geld nicht."; zeigeAkte(); return; } if (!spiel.admin) buchen(-VORSORGE.putzzeug, `Eigenes Putzzeug: ${p.name}`); p.putzzeug = true; meldung = `🧰 ${esc(p.name)} hat jetzt eigenes Putzzeug.`; speichern(); zeigeAkte(); };
-    const putzZ = $("putzZurueck"); if (putzZ) putzZ.onclick = () => { putzModus = false; meldung = ""; zeigeAkte(); };
+    const putzZ = $("putzZurueck"); if (putzZ) putzZ.onclick = () => { if (wisch) wischEnde(false); putzModus = false; meldung = ""; zeigeAkte(); };
+    const wa = $("wischAus"); if (wa) wa.onclick = () => wischEnde(false);
     INFO.querySelectorAll("[data-putz]").forEach(b => b.onclick = () => {
       const womit = b.dataset.putz;
-      if (womit === "huf") { auskratzen(p); spielerLernt("huf"); beruehrt(p, "du", "putz"); meldung = `🪝 Die Hufe von ${esc(p.name)} sind ausgekratzt.`; speichern(); zeigeAkte(); return; }
+      if (!(womit === "huf" ? p.ausgekratzt === spiel.tag : false)) { meldung = ""; wischStart(womit); zeigeAkte(); return; }
+      if (womit === "huf") { auskratzen(p); spielerLernt("huf"); beruehrt(p, "du", "putz"); meldung = `${HUFKR_ICO} Die Hufe von ${esc(p.name)} sind ausgekratzt.`; speichern(); zeigeAkte(); return; }
       putzen(p, womit); spielerLernt("haut"); beruehrt(p, "du", "putz");
       reaktionZeigen(reaktion(p, womit === "buerste" ? "putzen" : "kaemmen"));
-      meldung = womit === "buerste" ? `🧽 ${esc(p.name)} ist geputzt – das Fell glänzt wieder.` : `🪮 Mähne und Schweif von ${esc(p.name)} sind gekämmt.`;
+      meldung = womit === "buerste" ? `🧽 ${esc(p.name)} ist geputzt – das Fell glänzt wieder.` : `${KAMM_ICO} Mähne und Schweif von ${esc(p.name)} sind gekämmt.`;
       speichern(); zeigeStall(); });
     if (!LS && p) befundBinden(p, B());
     if ($("hufschmiedKnopf")) $("hufschmiedKnopf").onclick = () => hufschmiedDialog([p], () => { zeigeAkte(); zeigeTag(); });
@@ -3761,7 +3769,7 @@
   Object.assign(HILFT, { strahlfaeule: { auskratzen: .3, hufdesinfekt: .5, verband: .2 }, hufabszess: { hufbad: .5, verband: .3, schmerzmittel: .3, boxenruhe: .2 }, hornspalt: { boxenruhe: .3, hufoel: .3 } });
   Object.assign(SCHADET, { strahlfaeule: {}, hornspalt: { schritt: .05 } });
   Object.assign(PLAN, { strahlfaeule: ["auskratzen", "hufdesinfekt"], hufabszess: ["hufbad", "verband", "schmerzmittel"], hornspalt: ["boxenruhe", "hufoel"] });
-  Object.assign(AKTION, { auskratzen: { n: "Hufe auskratzen", ico: "🪝", info: "Hufe auskratzen – gegen Strahlfäule (auch in der Putzkiste)" }, hufbad: { n: "Hufbad", ico: "🪣", info: "Huf in warmem Bittersalzwasser baden – zieht Entzündungen heraus" } });
+  Object.assign(AKTION, { auskratzen: { n: "Hufe auskratzen", ico: HUFKR_ICO, info: "Hufe auskratzen – gegen Strahlfäule (auch in der Putzkiste)" }, hufbad: { n: "Hufbad", ico: "🪣", info: "Huf in warmem Bittersalzwasser baden – zieht Entzündungen heraus" } });
   Object.assign(APO, { hufdesinfekt: { n: "Strahlpflege", ico: "🧪", preis: 14, frei: true, info: "desinfiziert den Strahl gegen Strahlfäule" },
     hufoel: { n: "Huföl", ico: "🫗", preis: 10, frei: true, info: "pflegt Hufhorn und Kronrand" } });
   Object.assign(URSACHE, { strahlfaeule: () => "nasse Einstreu, Hufe nicht ausgekratzt", hufabszess: p => hufLaenge(p) > 1 ? "zu lange Hufe" : "Steinchen eingetreten", hornspalt: p => hufStufe(p) === "instabil" ? "brüchiges Hufhorn" : hufLaenge(p) > 1 ? "zu lange Hufe" : "Belastung" });
@@ -4478,7 +4486,7 @@
       mag: ["schließt genießerisch die Augen", "lehnt sich in die Bürste", "schnaubt zufrieden und lässt die Unterlippe hängen"],
       egal: ["lässt sich ruhig putzen", "döst beim Putzen vor sich hin"],
       nicht: ["legt die Ohren an und weicht zurück", "zuckt bei jedem Bürstenstrich mit der Haut", "schlägt unruhig mit dem Schweif"] },
-    kaemmen:  { titel: "Mähne und Schweif kämmen", ico: "🪮", basis: c => 0.3 * c.bezug.hoch - 0.6 * c.sensibel.hoch - 0.3 * c.temperament.hoch,
+    kaemmen:  { titel: "Mähne und Schweif kämmen", ico: KAMM_ICO, basis: c => 0.3 * c.bezug.hoch - 0.6 * c.sensibel.hoch - 0.3 * c.temperament.hoch,
       mag: ["hält ganz still und genießt es", "brummelt leise"], egal: ["lässt sich geduldig kämmen", "steht ruhig da"],
       nicht: ["zieht den Kopf weg", "tritt unruhig hin und her", "schlägt genervt mit dem Schweif"] },
     fuettern: { titel: "Füttern", ico: "🌾", basis: c => 0.1 + 0.3 * c.temperament.hoch - 0.3 * c.sensibel.hoch,
@@ -4717,6 +4725,76 @@
   }
   stallFormat();
   addEventListener("resize", stallFormat);
+  // ---------- Putzen durch Wischen (Bürste, Kamm, Hufkratzer) ----------
+  let wisch = null;   // { tool, p, fort 0–1, start: Dreck am Anfang, letzte: Punkt, huf: Nr., klumpen: [...] }
+  const WISCH_TEXT = { buerste: "Mit der Bürste übers Fell wischen", kamm: "Mit dem Kamm durch Mähne und Schweif wischen", huf: "Den Dreck aus dem Huf kratzen" };
+  function wischStart(tool) {
+    const p = B().pferd; if (!p || p.klinik || p.weide || B().tot) return;
+    const d = p.dreck || {};
+    wisch = { tool, p, fort: 0, start: { fell: d.fell || 0, maehne: d.maehne || 0 }, huf: 0, schritte: 0 };
+    if (tool === "huf") wisch.klumpen = hufKlumpen();
+    $("stall").classList.add("wischen");
+    wischZeichnen();
+    const st = $("stall"); if (st && st.getBoundingClientRect().top < 0) window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  function wischEnde(fertig) {
+    const w = wisch; wisch = null; $("stall").classList.remove("wischen"); const g = $("wischLayer"); if (g) g.remove();
+    if (!w) return;
+    const p = w.p;
+    if (fertig) {
+      if (w.tool === "huf") { auskratzen(p); spielerLernt("huf"); beruehrt(p, "du", "putz"); meldung = `${HUFKR_ICO} Alle vier Hufe von ${esc(p.name)} sind ausgekratzt.`; }
+      else { putzen(p, w.tool); spielerLernt("haut"); beruehrt(p, "du", "putz"); reaktionZeigen(reaktion(p, w.tool === "buerste" ? "putzen" : "kaemmen"));
+        meldung = w.tool === "buerste" ? `🧽 ${esc(p.name)} ist geputzt – das Fell glänzt wieder.` : `${KAMM_ICO} Mähne und Schweif von ${esc(p.name)} sind gekämmt.`; }
+    } else if (w.tool !== "huf" && p.dreck) { meldung = "Putzen abgebrochen – ein Teil ist schon sauber."; }
+    speichern(); zeigeStall(); zeigeTag();
+  }
+  // Hufunterseite: 6 Dreckklumpen pro Huf
+  function hufKlumpen() { return Array.from({ length: 6 }, () => { const a = Math.random() * Math.PI * 2, r = 8 + Math.random() * 30; return { x: 200 + Math.cos(a) * r * 0.85, y: 150 + Math.sin(a) * r, r: 6 + Math.random() * 5, weg: false }; }); }
+  function wischZeichnen() {
+    const st = $("stall"); let g = $("wischLayer"); if (g) g.remove(); if (!wisch) return;
+    const w = wisch, prozent = Math.round((w.tool === "huf" ? (w.huf + w.klumpen.filter(k => k.weg).length / w.klumpen.length) / 4 : w.fort) * 100);
+    const huf = w.tool === "huf" ? `<g pointer-events="none"><circle cx="200" cy="150" r="78" fill="rgba(43,29,20,.35)"/>
+      <path d="M200 92 C 150 92 138 140 146 178 C 152 204 170 212 182 206 L 200 168 L 218 206 C 230 212 248 204 254 178 C 262 140 250 92 200 92 Z" fill="#5c4a3a" stroke="#2b1d14" stroke-width="2"/>
+      <path d="M200 98 C 156 98 146 140 153 175 C 158 196 170 202 179 198 L 200 160 L 221 198 C 230 202 242 196 247 175 C 254 140 244 98 200 98 Z" fill="#cdbba0"/>
+      <path d="M200 112 L 186 182 Q 200 192 214 182 Z" fill="#a8896a" stroke="#7a5f45" stroke-width="1.2"/>
+      ${w.klumpen.filter(k => !k.weg).map(k => `<g><circle cx="${k.x.toFixed(1)}" cy="${k.y.toFixed(1)}" r="${k.r.toFixed(1)}" fill="#5b3a1e"/><circle cx="${(k.x - k.r * .3).toFixed(1)}" cy="${(k.y - k.r * .3).toFixed(1)}" r="${(k.r * .35).toFixed(1)}" fill="#7a5130"/></g>`).join("")}
+      <text x="200" y="244" text-anchor="middle" font-size="11" font-weight="700" fill="#fffaf0" stroke="#2b1d14" stroke-width="2.5" paint-order="stroke">Huf ${w.huf + 1} von 4</text></g>` : "";
+    st.insertAdjacentHTML("beforeend", `<g id="wischLayer">${huf}
+      <g pointer-events="none"><rect x="70" y="270" width="260" height="22" rx="11" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4"/>
+      <rect x="74" y="274" width="${(252 * prozent / 100).toFixed(1)}" height="14" rx="7" fill="#5a9a6a"/>
+      <text x="200" y="285" text-anchor="middle" font-size="9.5" font-weight="700" fill="#2b1d14">${WISCH_TEXT[w.tool]} · ${prozent} %</text></g></g>`);
+  }
+  // Punkt im SVG
+  function svgPunkt(ev) { const st = $("stall"), m = st.getScreenCTM(); if (!m) return null; const pt = st.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; return pt.matrixTransform(m.inverse()); }
+  function wischBewegen(ev) {
+    if (!wisch || !wisch.druck) return; if (B().pferd !== wisch.p) { wischEnde(false); return; } const w = wisch, q = svgPunkt(ev); if (!q) return;
+    const l = w.letzte; w.letzte = q; if (!l) return;
+    const weg = Math.hypot(q.x - l.x, q.y - l.y); if (weg > 60) return;   // Sprünge zählen nicht
+    if (w.tool === "huf") {
+      let neu = false; w.klumpen.forEach(k => { if (!k.weg && Math.hypot(q.x - k.x, q.y - k.y) < k.r + 7) { k.weg = true; neu = true; } });
+      if (neu) { if (w.klumpen.every(k => k.weg)) { w.huf++; if (w.huf >= 4) { wischEnde(true); return; } w.klumpen = hufKlumpen(); } wischZeichnen(); }
+      return;
+    }
+    // Bürste/Kamm: nur Bewegung über dem Pferd zählt; Kamm nur oben (Mähne) und hinten (Schweif)
+    let bb; try { bb = $("pferdPlatz").getBBox(); } catch (e) { return; }
+    const drin = q.x >= bb.x && q.x <= bb.x + bb.width && q.y >= bb.y && q.y <= bb.y + bb.height;
+    if (!drin) return;
+    if (w.tool === "kamm") { const oben = q.y < bb.y + bb.height * 0.45, hinten = q.x < bb.x + bb.width * 0.25 || q.x > bb.x + bb.width * 0.75; if (!oben && !hinten) return; }
+    const noetig = 350 + 6 * (w.tool === "buerste" ? w.start.fell : w.start.maehne);
+    const vorher = w.fort; w.fort = Math.min(1, w.fort + weg / noetig);
+    if (Math.random() < 0.25) $("stall").insertAdjacentHTML("beforeend", `<circle class="staub" cx="${(q.x + (Math.random() - .5) * 14).toFixed(1)}" cy="${(q.y + (Math.random() - .5) * 10).toFixed(1)}" r="${(1.5 + Math.random() * 2).toFixed(1)}" fill="${w.tool === "buerste" ? "#b89a6e" : "#d8c7a6"}" pointer-events="none"/>`);
+    const p = w.p, d = (p.dreck = p.dreck || { fell: 0, maehne: 0, seit: null });
+    if (w.tool === "buerste") d.fell = Math.round(w.start.fell * (1 - w.fort)); else d.maehne = Math.round(w.start.maehne * (1 - w.fort));
+    if (w.fort >= 1) { wischEnde(true); return; }
+    if (Math.floor(vorher * 4) !== Math.floor(w.fort * 4)) { zeigeStall(); }   // Dreck sichtbar weniger (alle 25 %)
+    wischZeichnen();
+  }
+  (() => { const st = $("stall"); if (!st) return;
+    st.addEventListener("pointerdown", ev => { if (!wisch) return; ev.preventDefault(); ev.stopPropagation(); wisch.druck = true; wisch.letzte = svgPunkt(ev); try { st.setPointerCapture(ev.pointerId); } catch (e) {} }, true);
+    st.addEventListener("pointermove", ev => { if (wisch) { ev.preventDefault(); wischBewegen(ev); } }, true);
+    ["pointerup", "pointercancel"].forEach(t => st.addEventListener(t, () => { if (wisch) { wisch.druck = false; wisch.letzte = null; setTimeout(() => document.querySelectorAll("#stall .staub").forEach(c => c.remove()), 400); } }, true));
+    st.addEventListener("click", ev => { if (wisch) { ev.preventDefault(); ev.stopPropagation(); } }, true);
+  })();
   document.addEventListener("fullscreenchange", vollbildText); document.addEventListener("webkitfullscreenchange", vollbildText);
   // ---------- Enzyklopädie ----------
   // Nachkommen eines Pferdes: Kacheln im Holzrahmen – lebt das Fohlen noch bei dir, öffnet sich sein Steckbrief
@@ -5610,6 +5688,7 @@
       <p><b>Hufe (Etappe E):</b> Hufqualität 5–100 (nur Admin): Rasse (${Object.entries(HUF_RASSE).map(([r, q]) => `${rasseById(r) ? rasseById(r).name : r} ${q}`).join(", ")}) ± 20, vererbt wie eine Anlage; instabil unter 35, stabil ab 65. Hufwachstum (vererbt, 20 % langsam / 60 % normal / 20 % schnell, beim Fohlen 15 % anders als das Elternteil): Hufschmied alle ${Object.entries(HUF_WACHS).map(([k, v]) => `${k} ${String(v).replace(".", ",")}`).join(" / ")} Jahreszeiten. Preise: Barhuf ${fmt(HUF_PREIS.barhuf)}, Beschlag ${fmt(HUF_PREIS.beschlag)}, Anfahrt ${fmt(HUF_PREIS.anfahrt)} je Besuch. Dauerauftrag mit wählbarem Rhythmus je Pferd: wie der Hufschmied empfiehlt (eigenes Hufwachstum – kennt er erst nach ${HUF_KENNT_AB} Besuchen, vorher 1 Jahreszeit) oder alle ½ / 1 / 2 Jahreszeiten – seltener spart Geld, aber zu lange Hufe erhöhen das Risiko. Mit Stallmeister werden die Termine zusammengelegt (wer in ⅓ Jahreszeit fällig wäre, kommt mit, nur eine Anfahrt). Ohne Dauerauftrag ein Erinnerungsbrief. Zu lange Hufe (Länge = Tage seit Hufschmied ÷ eigener Rhythmus): Risiko-Faktor 1 + (Länge − 1) × 1,5 (höchstens 4) für Lahmheit, Hufabszess und Hornspalt; ab 1,3 Sprechblase „stolpert“. Eisen verlieren (beschlagen): 1 % pro Nacht × instabil 3 / stabil 0,5 × Weide 1,5 × Länge-Faktor; ohne Eisen Lahmheit ×1,5, Abszess ×2. Hufkrankheiten: Strahlfäule (nicht ausgekratzt ×1, ausgekratzt ×0,3; Mist ×2; Herbst-/Winterweide ×2), Hufabszess, Hornspalt (instabil ×3, stabil ×0,5, Beschlag ×0,5, barhuf auf der Weide ×1,3). Der Hufschmied findet und versorgt sie (eine Stufe besser) und gibt einen Plan. Hufe auskratzen: Putzkiste (Hufkratzer), Pfleger jeden Morgen oder als Behandlung. Hufgröße misst der Hufschmied nur auf Anfrage für ${fmt(HUF_MESSEN)} (nach Gewichtsklasse, hinten in 30 % eine Nummer kleiner; steht danach im Steckbrief). Anfahrt nur einmal am Tag. Hufschuhe (Ausrüstung → Hufschuhe): je Pferd ein Paar vorne und/oder hinten, ${fmt(HUFSCHUH_PREIS)} pro Paar, Zustand 100 %; falsche Größe scheuert – eingesetzt und abgenutzt werden sie mit dem Training im Gelände.</p>
       <p><b>Ansteckung (Etappe F):</b> ansteckend sind ${Object.keys(ANSTECKEND).map(k => KRANK[k].n).join(", ")}. Nach der Ansteckung erst Inkubation (Influenza 2, Druse/Herpes/Pilz 3, Würmer 4 Tage): schon ansteckend, aber ohne Anzeichen – nur das große Blutbild findet sie. Chance pro Nacht je krankem Pferd: ${Object.entries(ANSTECKEND).map(([k, A]) => `${KRANK[k].n} ${Object.entries(A).map(([w, x]) => `${w} ${String(x).replace(".", ",")}`).join("/")}`).join(" · ")}. Wege: Weide (beide auf der Weide), Luft (im Stall ÷ (1 + Boxabstand)), Kontakt (Nachbarbox), Tränke (alle im Stall), Putzzeug (vom selben geputzt, nicht beide mit eigenem Putzzeug), Träger (vom selben Mitarbeiter oder dir gestern versorgt; zuverlässige oder erfahrene ab 50 machen das bemerkte kranke Pferd zuletzt ×0,3). Quarantäne (1 Jahreszeit): kein Weidegang, eigenes Putzzeug, Luft ×0,5, Kontakt ×0,2, Träger ×0,3, keine Tränke. Ein Mitarbeiter „nur für dieses Pferd“ versorgt nur dieses und trägt nichts weiter. Geimpft (Influenza/Herpes, 2 Jahreszeiten) ×0,3 und Start eine Stufe leichter; Wurmkur in der letzten Jahreszeit: Würmer ×0,2. × Konstitution (1,5 − Anlage ÷ 100). Herpes bei tragenden Stuten: Verfohlen 5 % je Grad pro Nacht. Neuzugänge bringen etwas mit: ${Object.entries(NEUZUGANG_RISIKO).map(([q, x]) => `${q} ${Math.round(x * 100)} %`).join(", ")} (Influenza 30 %, Druse 15 %, Herpes 10 %, Pilz 20 %, Würmer 25 %).</p>
       <p><b>Ankaufsuntersuchung (Etappe G)</b> – in jedem Kauf-/Bieten-Fenster am Pferdemarkt: ${Object.values(AKU).map(S => `${S.n} ${fmt(S.preis)}`).join(", ")}; dazu Labortest Erbkrankheiten +${fmt(AKU_LABOR)}, Blutprobe einlagern +${fmt(AKU_PROBE)} (später prüfen ${fmt(PROBE_PRUEFEN)}). Ergebnis sofort und als Protokoll per Brief. Versteckte Befunde je Pferd nach Herkunft (Grundrisiko ${Object.entries(AKU_RISIKO).map(([q, x]) => `${q} ${Math.round(x * 100)} %`).join(", ")}): Lahmheit (Risiko × 0,7; Grad 2 sieht man im Gangbild, Grad 1 erst bei der Beugeprobe; beim Händler in 50 % mit Schmerzmittel verschleiert – nur das große Blutbild findet es, nach dem Kauf zeigt sich die Lahmheit nach 2 Tagen), Husten (× 0,35, Lunge), Herzgeräusch (× 0,15), Linsentrübung (× 0,12), Taktunreinheit an der Longe (× 0,15), Arthrose ab 10 Jahren (× 0,5, Beugeprobe oder Röntgen), Röntgenklasse I–IV (mit Arthrose III/IV), ansteckende Krankheit in der Inkubation wie bei Neuzugängen (kleines Blutbild: Entzündung, großes: welche). Jeder Befund mindert den Wert (z. B. Lahmheit 8/15 %, Arthrose 12 %, Röntgen III 15 %/IV 30 %, höchstens 50 %). Danach: kaufen, Preis um diesen Anteil verhandeln (einmal; Erfolg privat ${Math.round(AKU_VERHANDELN.Privat * 100)} %, Händler ${Math.round(AKU_VERHANDELN["Händler"] * 100)} %, Gestüt ${Math.round(AKU_VERHANDELN["Gestüt"] * 100)} %) oder ablehnen. Beim Kauf kommen alle versteckten Befunde mit (gefundene schon diagnostiziert). Eingelagerte Probe mit Schmerzmittel (Händler): der Händler erstattet die Hälfte des Kaufpreises. Eigener Verkauf ab ${fmt(1500)}: 40 % der Käufer machen eine AKU – jeder bekannte oder unbekannte Befund senkt den Preis (5 % je Grad, chronisch +10 %, frühere chronische 8 %, höchstens 40 %).</p>
+      <p><b>Putzen durch Wischen</b> (Ausrüstung → Putzkiste): Werkzeug antippen, dann im Stallbild über das Pferd wischen (Finger oder gedrückte linke Maustaste). Bürste: überall auf dem Pferd; Kamm: nur oben (Mähne) und hinten/vorne (Schweif, Schopf). Nötige Wischstrecke 350 + 6 × Schmutz (Bildpunkte im Stall, 400 breit) – der Schmutz geht dabei anteilig weg, das Bild wird alle 25 % neu gezeichnet. Hufkratzer: 4 Hufunterseiten mit je 6 Dreckklumpen nacheinander wegwischen. Pfleger putzen weiter automatisch.</p>
       <p><b>Lager (Hofverwaltung → Hof):</b> Verlässt ein Pferd den Hof (Verkauf, Rückgabe, Abgabe, Gnadenhof, Tod), kommen sein eigenes Putzzeug und seine Hufschuhe (mit Größe und Zustand) ins Lager. Von dort an ein anderes Pferd geben (Putzzeug desinfiziert und kostenlos; Putzzeug von einem Pferd mit Hautpilz in der letzten Jahreszeit: 30 % Ansteckung – besser wegwerfen), an Gnadenhof oder Tierschutzverein spenden (Sympathie +${SPENDE_RUF} je Teil, Dankesbrief) oder wegwerfen. Beim Verkauf (Festpreis/Auktion) kann man das Zubehör mitgeben: Preis + gebrauchtes Putzzeug 20 €, Hufschuhe 60 % vom Neupreis × Zustand je Paar.</p>
       <p><b>Vorsorge und Labor:</b> Impfung ${fmt(VORSORGE.impfung)}, Zahnkontrolle ${fmt(VORSORGE.zahn)} (über 1 Jahr überfällig: Kolik ×1,5), Wurmkur aus der Stallapotheke (überfällig über 2 Jahreszeiten: Würmer ×3), kleines Blutbild ${fmt(VORSORGE.blutKlein)} (Entzündung ja/nein), großes ${fmt(VORSORGE.blutGross)} (konkrete Krankheit, auch in der Inkubation) – Ergebnis nach 2 Tagen per Brief. Eigenes Putzzeug ${fmt(VORSORGE.putzzeug)} (Putzkiste). Ein Quarantänestall (kein Risiko) kommt mit dem Hof-Ausbau.</p>
       <p><b>Behandlung (Etappe D)</b> unter Pflege → Versorgung, jede Aktion einmal am Tag: ${Object.values(AKTION).map(A => `${A.ico} ${A.n}`).join(", ")}, Medikament mit Dosis. Wirkung in der Nacht danach: Behandlungswert = Summe der passenden Anteile (höchstens 1) × (0,5 + 0,5 × Mitwirkung). Besserung pro Nacht: Wert ÷ (Heilungszahl × 0,5) ÷ (1,3 − Regeneration ÷ 100 × 0,6), höchstens 80 % (chronisch nur bis Grad 1); Verschlechterung × (1 − Wert) + Schaden; Wirkung auf Gesundheit/Wohlbefinden × (1 − 0,6 × Wert). Heilt ein Befund unter Behandlung, gilt die Ursache als geklärt (Erfahrung). Tod und Warnbrief nur bei Wert unter 0,3.</p>

@@ -382,6 +382,8 @@
   details.t-karte summary small { color: var(--leise); } .tp-liste { list-style: none; padding: 0; margin: 6px 0 0; }
   .tp-zeile { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 5px 0; border-top: 1px solid #efe4cf; } .tp-zeile > span:first-child { display: flex; flex-direction: column; min-width: 0; } .tp-zeile small { color: var(--leise); font-size: 11px; }
   .tp-zeile .stat { font-size: 11px; text-align: right; white-space: nowrap; } .turnier-dlg .dlg-inhalt, .dlg-karte.turnier-dlg { max-width: 560px; }
+  .reiter-kopf { display: flex; gap: 12px; align-items: center; } .reiter-ava { font-size: 40px; line-height: 1; } .reiter-kopf small { display: block; color: var(--leise); }
+  .lk-tab td, .lk-tab th { vertical-align: top; } .lk-tab small { color: var(--leise); }
   .disz-gruppe { margin: 12px 0 2px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--holz); font-weight: 700; }
   .zeile-wert .kopf { display: flex; justify-content: space-between; font-size: .92rem; margin-bottom: 4px; }
   .zeile-wert .kopf b { font-weight: 700; }
@@ -789,7 +791,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "203";
+  const SPIEL_VERSION = "204";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -797,9 +799,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=203"></script>
-<script src="kopfteile.js?v=203"></script>
-<script src="kopfalter.js?v=203"></script>
+<script src="pferd.js?v=204"></script>
+<script src="kopfteile.js?v=204"></script>
+<script src="kopfalter.js?v=204"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1290,7 +1292,7 @@
     D[key] = [stute.rasse, stute.rasse, stute.rasse, andere[Math.floor(r() * andere.length)].id, andere[Math.floor(r() * andere.length)].id].map((rid, i) => {
       const ra = rasseById(rid), h = neuesPferd({ id: "d" + jetzt + rid + i, name: NAMEN_HENGST[Math.floor(r() * NAMEN_HENGST.length)], rasse: rid, geschlecht: "Hengst", rein: true,
         farbe: ra.farben[Math.floor(r() * ra.farben.length)], alter: 5 + Math.floor(r() * 11) });
-      h.training = 30 + Math.floor(r() * 80);
+      h.training = 30 + Math.floor(r() * 80); marktErfolge(h, r);   // Turniererfolge heben die Decktaxe
       return h;
     });
     speichern();
@@ -4411,7 +4413,7 @@
     const vorher = energie(p), ueber = kosten > vorher;
     p.energie = Math.max(-30, Math.round(vorher - kosten)); T.verbraucht += kosten;
     const c = k2 => charE(p, k2), A = c("wille"), B = c("bezug"), V = c("nerven"), Te = c("temperament"), S = c("sensibel"), M = c("mut");
-    let F = p.werte.talent * wohlFaktor(p) * vorliebeFaktor(p, U.vl) * befundBremse(p) * trainerFaktor(m);
+    let F = p.werte.talent * wohlFaktor(p) * vorliebeFaktor(p, U.vl) * befundBremse(p) * (m ? trainerFaktor(m) : reiterFaktor(k));   // du: deine LK in dieser Disziplin
     const hinweise = [];
     if ((ort === "reitplatz" || ort === "roundpen") && (wetter === "regen" || wetter === "schnee" || d.s === 3)) { F *= 0.7; hinweise.push(d.s === 3 ? "Winter – schwerer Boden" : "Regen – tiefer Boden"); }
     if (ort === "reithalle" && vorliebeStufe(vorliebe(p, "reithalle")) === "nicht") F *= 0.85;
@@ -4758,7 +4760,43 @@
     const siege = E.filter(e => e.platz === 1).length, plaz = E.filter(e => e.plaziert).length;
     const genTxt = gen.length ? `<p class="text" style="margin:2px 0"><small>📅 Genannt: ${gen.map(t => `${esc(t.name)} (${t.tag === spiel.tag ? "heute" : `in ${t.tag - spiel.tag} ${t.tag - spiel.tag === 1 ? "Tag" : "Tagen"}`})`).join(", ")}</small></p>` : "";
     return `<h3 class="werte-titel">🏆 Turniere</h3>${genTxt}${E.length ? `<details class="disz"><summary><span class="disz-kopf"><b>${E.length} ${E.length === 1 ? "Start" : "Starts"} · ${siege} ${siege === 1 ? "Sieg" : "Siege"} · ${plaz} platziert</b><span>${fmt(E.reduce((a, e) => a + e.geld, 0))}</span></span></summary>
-      <ul class="liste erfolge">${E.slice(0, 15).map(e => { const d = datum(e.tag); return `<li><span class="txt">${e.platz === 1 ? "🥇" : e.platz === 2 ? "🥈" : e.platz === 3 ? "🥉" : e.plaziert ? "🎀" : "▫️"} <b>${esc(e.pruef)}</b> – ${e.platz}. von ${e.von}<small>${esc(e.turnier)} · ${JZ[d.s][0]} ${d.j} · ${e.erg}${e.geld ? ` · ${fmt(e.geld)}` : ""}</small></span></li>`; }).join("")}</ul></details>` : ""}`;
+      <ul class="liste erfolge">${E.slice(0, 15).map(e => { const d = e.frueher ? null : datum(e.tag); return `<li><span class="txt">${e.platz === 1 ? "🥇" : e.platz === 2 ? "🥈" : e.platz === 3 ? "🥉" : e.plaziert ? "🎀" : "▫️"} <b>${esc(e.pruef)}</b> – ${e.platz}. von ${e.von}<small>${esc(e.turnier)} · ${e.frueher ? "beim Vorbesitzer" : `${JZ[d.s][0]} ${d.j}`} · ${e.erg}${e.geld ? ` · ${fmt(e.geld)}` : ""}</small></span></li>`; }).join("")}</ul></details>` : ""}`;
+  }
+  // ---------- Etappe 6b: Erfolge auf dem Markt, Reiter-LK im Training, Reiterprofil ----------
+  // Pferde vom Markt und Deckhengste: ausgebildete Pferde ab 4 J. sind meist schon Turniere gegangen (fest je Pferd) – Erfolge stehen in der Akte und heben Preis und Decktaxe
+  function marktErfolge(h, r) {
+    const j = h.alter != null ? h.alter : 5; if (j < 4 || !((h.training || 0) > 20)) return;
+    h.werte = h.werte || erzeugeWerte(h); werteErgaenzen(h);
+    const kand = ["dressur", "springen", "reining", "trail"].filter(k => !DISZ[k].nur || DISZ[k].nur(h)).map(k => diszWert(h, k)).sort((a, b) => b.wert - a.wert);
+    const d = kand[0]; if (!d || d.wert < 30) return;
+    const maxSt = STUFE_WERT.filter(x => d.wert >= x).length - 1; if (maxSt < 0) return;
+    const n = Math.min(20, Math.round((j - 3) * (1 + r() * 2.5))), E = [];
+    for (let i = 0; i < n; i++) {
+      const st = Math.max(0, maxSt - (r() < 0.6 ? 0 : 1)), von = 8 + Math.floor(r() * 15), niveau = STUFE_WERT[st] + 3, diff = d.wert - niveau;
+      const pPlatz = Math.max(0.05, Math.min(0.85, 0.25 + diff * 0.03)), plaziert = r() < pPlatz, sieg = plaziert && r() < 0.35, grenze = Math.max(3, Math.ceil(von / 4));
+      const platz = sieg ? 1 : plaziert ? 2 + Math.floor(r() * (grenze - 1)) : grenze + 1 + Math.floor(r() * (von - grenze));
+      const P = { disz: d.k, stufe: st }, art = st >= 3 ? "gross" : "regional";
+      E.push({ tag: spiel.tag - 1 - Math.floor(r() * (j - 3) * 4 * tpj()), turnier: `${art === "gross" ? "Großes Reitturnier" : d.k === "dressur" || d.k === "springen" ? "Reitturnier" : "Westernturnier"} ${TURNIER_ORTE[Math.floor(r() * TURNIER_ORTE.length)]}`, art, disz: d.k,
+        stufe: st, pruef: `${DISZ[d.k].n} ${prName(d.k, st)}`, platz, von, erg: ergebnisText(d.k, niveau + diff + (r() - 0.5) * 6, niveau, r, st).txt, geld: 0, plaziert, frueher: true });
+    }
+    h.erfolge = E.sort((a, b) => b.tag - a.tag);
+  }
+  // Reiter-LK verbessert das eigene Training in dieser Disziplin: je LK-Stufe über 7 +4 % (LK 1: +24 %)
+  const UEB_LK = { longieren: "dressur", doppellonge: "dressur", dressur: "dressur", stangen: "springen", springen: "springen", gelaendesprung: "vielseitigkeit", kondition: "vielseitigkeit", western: "western" };
+  const reiterFaktor = k => UEB_LK[k] ? 1 + 0.04 * (7 - lkVon(UEB_LK[k])) : 1;
+  // Reiterprofil (Hofverwaltung → Reiter)
+  function reiterHTML() {
+    const sp = spiel.spieler || {}, E = (spiel.lkErfolge = spiel.lkErfolge || {});
+    const alle = [...new Map([...Object.values(spiel.archiv || {}), ...(spiel.friedhof || []).map(g => g.pferd), ...alleEigenenPferde().map(x => x.p)].filter(p => p && p.erfolge).map(p => [p.id, p])).values()];
+    const eigene = alle.flatMap(p => p.erfolge.filter(e => !e.frueher));
+    const naechste = g => { const lk = lkVon(g), R = LK_REGEL[lk]; if (!R) return "höchste LK erreicht"; const [ab, n, sieg] = R, e = E[g] || { plaz: [0, 0, 0, 0, 0], sieg: [0, 0, 0, 0, 0] };
+      const hat = (sieg ? e.sieg : e.plaz).slice(ab).reduce((a, b) => a + b, 0), st = g === "western" ? STUFEN.western : STUFEN.englisch;
+      return `nächste LK: ${hat}/${n} ${sieg ? (n === 1 ? "Sieg" : "Siege") : (n === 1 ? "Platzierung" : "Platzierungen")} ab ${st[ab]}`; };
+    return `<div class="reiter-kopf"><span class="reiter-ava">${sp.avatar || "🏇"}</span><div><b>${esc(sp.name || "–")}</b><small>Reiterin/Reiter auf ${esc(hofName())}</small></div></div>
+      <div class="bf-knoepfe" style="margin:6px 0 10px"><small>Bild:</small>${AVATARE.map(a => `<button class="mini-knopf ${a === sp.avatar ? "an" : ""}" data-rava="${a}">${a}</button>`).join("")}</div>
+      <table class="ver-tab lk-tab"><tr><th>Disziplin</th><th>LK</th><th>darf starten</th><th>Training</th></tr>${Object.keys(LK_NAME).map(g => `<tr><td>${LK_NAME[g]}</td><td><b>${lkVon(g)}</b></td><td>${LK_STUFEN[lkVon(g)].map(s => g === "western" ? STUFEN.western[s] : STUFEN.englisch[s]).join(", ")}<br><small>${naechste(g)}</small></td><td>${lkVon(g) < 7 ? `+${(7 - lkVon(g)) * 4} %` : "–"}</td></tr>`).join("")}</table>
+      <p class="text"><small>Die Leistungsklasse (LK) gilt je Disziplin und steigt mit Erfolgen auf Turnieren. Je besser deine LK, desto mehr lernen die Pferde, wenn du selbst trainierst (Bereiter zählen ihr eigenes Wissen). Wettbewerbe, Gelassenheits- und Aufbauprüfungen sind für jede LK offen.</small></p>
+      <h4 class="ma-titel">🏆 Deine Turnierbilanz</h4><p class="text">${eigene.length ? `${eigene.length} ${eigene.length === 1 ? "Start" : "Starts"} · ${(n => `${n} ${n === 1 ? "Sieg" : "Siege"}`)(eigene.filter(e => e.platz === 1).length)} · ${(n => `${n} ${n === 1 ? "Platzierung" : "Platzierungen"}`)(eigene.filter(e => e.plaziert).length)} · ${fmt(eigene.reduce((a, e) => a + (e.geld || 0), 0))} Preisgeld` : "Noch keine Turniere geritten – Pferdeanhänger → Turnier."}</p>`;
   }
   // ---------- Mitarbeiter ----------
   // Alle Angestellten: beginnen immer mit einer neuen Jahreszeit, Gehalt am Ende jeder gearbeiteten Jahreszeit,
@@ -6000,7 +6038,7 @@
         const fremd = [andere[Math.floor(r() * andere.length)].id, andere[Math.floor(r() * andere.length)].id];
         const plaetze = Array.from({ length: 8 }, (_, k) => k < fremdAnz ? fremd[k % (r() < .5 ? 1 : 2)] : ra.id);
         const h = neuesPferd({ id: "m" + jetzt + "-" + i, name: NAMEN[g][Math.floor(r() * NAMEN[g].length)], rasse: ra.id, plaetze, geschlecht: g, alter: jahre });
-        if (jahre >= 4) h.training = Math.floor(r() * Math.min(110, (jahre - 3) * 22));   // ältere Verkaufspferde sind oft schon ausgebildet
+        if (jahre >= 4) { h.training = Math.floor(r() * Math.min(110, (jahre - 3) * 22)); marktErfolge(h, r); }   // ältere Verkaufspferde sind oft schon ausgebildet und Turniere gegangen
         h.preis = Math.round(marktwert(h) * SAISON_PREIS[datum().s] * (1.1 + r() * .2) / 50) * 50;   // Händler: 110–130 % des Marktwerts
         return h;
       }) };
@@ -6042,7 +6080,7 @@
     // Privatanzeigen: wenige Pferde, oft älter und Mix, 70–100 % des Marktwerts, Gesundheit erst nach dem Kauf sichtbar
     M.privat = Array.from({ length: 2 + Math.floor(r() * 3) }, (_, i) => {
       const w = r(), fo = r() < fohlenChance(), h = mkPferd("pv" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, w < .2 ? 0 : 1 + Math.floor(r() * 4), fo ? 5 + Math.floor(r() * 12) : 5 + Math.floor(r() * 15), r, fo ? "Stute" : null);
-      h.training = Math.floor(r() * 60); h.verdeckt = Math.round(45 + r() * 55);
+      h.training = Math.floor(r() * 60); h.verdeckt = Math.round(45 + r() * 55); marktErfolge(h, r);
       h.ahnenUnbekannt = AHNEN_LUECKE.filter(() => r() < .3);
       if (fo) mitFohlen(h, r);
       // Privatleute kennen ihr Pferd: der Preis berücksichtigt die (versteckte) Gesundheit zur Hälfte
@@ -6389,6 +6427,8 @@
       <p><b>Geld:</b> Nenngeld WB 10, E 15, A 20, L 25, M 35, S 50 € (Großes Turnier ×1,5). Preisgeld gesamt E 0, A 120, L 250, M 500, S 1.200 € (Großes Turnier ×2, Aufbauprüfung ×0,8), verteilt auf die Platzierten (25/18/14/11/9/8/8/7 %). Platziert ist das beste Viertel (mind. 3).</p>
       <p><b>Ergebnis:</b> Leistung = Disziplin-Wert × Tagesform × Turnierstress × Reiter × Zufall (Streuung etwa ±8 %). Tagesform = (0,85 + 0,15 × Wohlbefinden) × (0,8 + 0,2 × Gesundheit/85) × 0,85, falls die Energie nicht reicht (Energie je Start: Dressur 30, Springen 35, Vielseitigkeit 45, Reining 32, Pleasure/Trail 25, Gelassenheit 12; dann auch Übertraining wie beim Training). Turnierstress = 1 − 0,08 × e(nervös oder scheu) × (1 − Erfahrung, voll nach 8 Starts) + 0,03 × Vorliebe „Turnier“. Reiter = 0,95 + 0,015 × (7 − LK). Konkurrenz: Feldniveau = Stufen-Wert (${STUFE_WERT.join("/")}) + 3 regional / + 6 groß, Wettbewerbe 32, Gelassenheit 48, Streuung der Konkurrenz etwa ±7. Anzeige: Dressur Wertnote (ab L Prozent), Springen Fehler und Zeit, Vielseitigkeit Minuspunkte, Western Score (70 = Durchschnitt). Gelassenheitsprüfung = 0,35 × Vertrauen + 0,2 × Gehorsam + 0,45 × (50 + 40 × (e gelassen + e mutig − e nervös − e scheu)) + bis 5 Erfahrung.</p>
       <p><b>Reiter-LK</b> je Disziplin (Dressur, Springen, Vielseitigkeit, Western), Start LK 7: LK 7 → E · 6 → E, A · 5 → A, L · 4 → A–M · 3 bis 1 → A–S. Aufstieg: 7→6 eine Platzierung ab E · 6→5 drei ab A · 5→4 drei ab L · 4→3 drei ab M · 3→2 drei Siege ab M · 2→1 drei Siege in S (danach zählt es neu). Wettbewerbe, Gelassenheit und Aufbauprüfungen sind für jede LK offen.</p>
+      <p><b>Reiter-LK im Training:</b> Trainierst du selbst, lernt das Pferd je LK-Stufe über 7 um 4 % mehr (LK 1: +24 %) – Longieren, Doppellonge, Dressurarbeit → Dressur-LK · Stangen, Springgymnastik → Springen · Geländesprünge, Konditionstraining → Vielseitigkeit · Westernarbeit → Western. Bereiter zählen ihr eigenes Wissen. Reiterprofil: Hofverwaltung → Reiter.</p>
+      <p><b>Marktpferde und Deckhengste</b> mit Ausbildung (ab 4 J., Training über 20) haben schon Turniere hinter sich: (Alter − 3) × 1–3,5 Starts (höchstens 20) in ihrer besten Disziplin (Dressur, Springen, Reining, Trail), Klasse nach Disziplin-Wert, platziert mit 25 % + 3 % je Punkt über dem Feld (5–85 %), davon 35 % Siege. Die Erfolge stehen in der Akte („beim Vorbesitzer“) und heben Preis und Decktaxe (10 % des Marktwerts).</p>
       <p><b>Erfolge</b> (Akte → Ausbildung) erhöhen den Marktwert: Sieg ${ERFOLG_WERT.join("/")} € (E–S), Platzierung die Hälfte, Großes Turnier ×1,3, höchstens 15.000 €.</p>
       <h3>🏋️ Training daheim</h3>
       <p><b>Orte:</b> Spieler: Reitplatz und Gelände (Bodenarbeit, Freiarbeit, Longieren, Stangen auch auf dem Reitplatz). Roundpen und Reithalle kommen mit dem Hof-Ausbau (🛠️ Admin: alle offen). Reitplatz/Roundpen bei Regen, Schnee oder im Winter ×0,7. Reithalle wetterunabhängig, bei Regen/Schnee wählt der Bereiter sie automatisch; scheue/nervöse Pferde mögen sie oft nicht (×0,85).</p>
@@ -6508,7 +6548,7 @@
     const sp = spiel.spieler || {}, allePost = spiel.post || (spiel.post = []), n = ungelesen();
     const post = allePost.filter(b => postOrdner === "spam" ? b.spam : postOrdner === "stern" ? b.stern && !b.spam : !b.spam), spamAnz = allePost.filter(b => b.spam).length, sternAnz = allePost.filter(b => b.stern && !b.spam).length;
     const ordnerLeiste = `<div class="post-ordner"><button data-ordner="eingang" class="${postOrdner === "eingang" ? "an" : ""}">📥 Posteingang${n ? ` (${n})` : ""}</button><button data-ordner="stern" class="${postOrdner === "stern" ? "an" : ""}">⭐ Wichtig${sternAnz ? ` (${sternAnz})` : ""}</button><button data-ordner="spam" class="${postOrdner === "spam" ? "an" : ""}">🚫 Spam${spamAnz ? ` (${spamAnz})` : ""}</button></div>`;
-    const reiterListe = [["hof", "Hof"], ["finanzen", "Finanzen"], ["aussen", "Außer Haus"], ["mitarbeiter", "Mitarbeiter"], ["post", "Postfach"], ["einst", "Einstellungen"]];
+    const reiterListe = [["hof", "Hof"], ["reiter", "Reiter"], ["finanzen", "Finanzen"], ["aussen", "Außer Haus"], ["mitarbeiter", "Mitarbeiter"], ["post", "Postfach"], ["einst", "Einstellungen"]];
     let inhalt = "";
     if (hofReiter === "hof") {
       inhalt = `<dl class="werte">
@@ -6521,6 +6561,8 @@
         <dt>Lager</dt><dd>${(() => { const L = lager(), n = L.putzzeug.length + L.hufschuhe.length; return n ? `${L.putzzeug.length ? `${L.putzzeug.length}× Putzzeug` : ""}${L.putzzeug.length && L.hufschuhe.length ? ", " : ""}${L.hufschuhe.length ? `${L.hufschuhe.length}× Hufschuhe` : ""}` : "leer"; })()}</dd>
         <dt>Geld</dt><dd ${spiel.admin ? 'class="hf-edit" id="hfGeld" title="antippen zum Ändern (Adminmodus)"' : ""}>${fmt(spiel.geld || 0)}${spiel.admin ? ' <span class="stift">✏️</span>' : ""}</dd></dl>`;
       inhalt += `<h4 class="ma-titel">📦 Lager</h4>${lagerHTML()}`;
+    } else if (hofReiter === "reiter") {
+      inhalt = reiterHTML();
     } else if (hofReiter === "finanzen") {
       inhalt = finanzenHTML();
     } else if (hofReiter === "boxen") {
@@ -6571,10 +6613,11 @@
           <span class="txt"><b>${esc(b.betreff)}</b><small>${esc(b.von)} · ${briefDatum(b)}</small></span>${b.spam ? "" : sternKnopf(b, "span")}</button>`).join("")}</div>`;
     }
     zeigeNeben("📋 Hofverwaltung", `<div class="akte hof-akte">
-      <div class="reiter" role="tablist">${reiterListe.map(([id, t]) => `<button role="tab" data-hr="${id}" class="${hofReiter === id ? "an" : ""}" aria-selected="${hofReiter === id}">${t}${id === "post" && n ? `<span class="anz">${n}</span>` : ""}</button>`).join("")}</div>
+      <div class="reiter${reiterListe.length > 6 ? " viele" : ""}" role="tablist">${reiterListe.map(([id, t]) => `<button role="tab" data-hr="${id}" class="${hofReiter === id ? "an" : ""}" aria-selected="${hofReiter === id}">${t}${id === "post" && n ? `<span class="anz">${n}</span>` : ""}</button>`).join("")}</div>
       <div class="karte" role="tabpanel">${inhalt}</div></div>`);
     const nb = $("nebenSchirm");
     nb.querySelectorAll("[data-hr]").forEach(b => b.onclick = () => { offenerBrief = null; zeigeHof(b.dataset.hr); });
+    nb.querySelectorAll("[data-rava]").forEach(b => b.onclick = () => { (spiel.spieler = spiel.spieler || {}).avatar = b.dataset.rava; speichern(); zeigeHof(); });
     lagerBinden(() => zeigeHof());
     const bearbeite = (id, wert, setzen) => {
       const dd = $(id); dd.onclick = null;

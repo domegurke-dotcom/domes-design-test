@@ -585,6 +585,7 @@
   .geb { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid #e2d6c3; } .geb-ico { font-size: 1.5rem; width: 2rem; text-align: center; } .geb-txt { flex: 1; display: flex; flex-direction: column; gap: 3px; } .geb-txt small { color: var(--leise); }
   .geb-balken { height: 7px; max-width: 220px; } .geb-kn { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; } .geb-sperre { font-style: italic; }
   #nebenSchirm .bau-fenster { grid-column: 1 / -1; width: 100%; max-width: 760px; justify-self: center; }
+  .fp-vergleich .re { text-align: right; } .fp-vergleich td.abw { color: #a8322b; font-weight: 700; }
   .vl-knoepfe { display: inline-flex; gap: 6px; flex-wrap: nowrap; } .vl-knoepfe .vgl-knopf { white-space: nowrap; }
   .bau-kacheln .kachel small { font-size: .7rem; }
   .bau-stufen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0; } .bau-stufe { border: 3px solid #e2d6c3; background: #fff; border-radius: 12px; padding: 8px 4px; font: inherit; cursor: pointer; color: var(--text); display: flex; flex-direction: column; gap: 2px; align-items: center; } .bau-stufe.an { border-color: var(--akzent); } .bau-stufe small { color: var(--leise); font-size: .75rem; } .bau-stufe span { font-weight: 700; color: var(--akzent); }
@@ -847,7 +848,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "242";
+  const SPIEL_VERSION = "243";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -855,9 +856,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=242"></script>
-<script src="kopfteile.js?v=242"></script>
-<script src="kopfalter.js?v=242"></script>
+<script src="pferd.js?v=243"></script>
+<script src="kopfteile.js?v=243"></script>
+<script src="kopfalter.js?v=243"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3417,10 +3418,10 @@
   $("krippe").addEventListener("click", () => {
     const box = B();
     if (!box.pferd || box.tot || box.pferd.klinik || box.pferd.weide || box.krippeVoll) return;
-    if (!fuetternAusLager(box, "du")) { dialog(`<h3>🌾 Kein Heu mehr</h3><p>In der Futterkammer ist nicht genug Heu (oder anderes Raufutter) für ${esc(box.pferd.name)}. Im Futterhandel nachkaufen: Hofverwaltung → Hof → Futterkammer.</p>`, [["Zur Futterkammer", () => { hofBereich = "futter"; zeigeHof("hof"); }], ["Schließen", null, "zweit"]]); return; }
+    if (!fuetternAusLager(box, "du")) { dialog(`<h3>🌾 Kein Heu mehr</h3><p>In der Futterkammer ist nicht genug Heu (oder anderes Raufutter) für ${esc(box.pferd.name)}. Im Futterhandel nachkaufen: Hofverwaltung → Hof → Futterkammer.</p>`, [["Zur Futterkammer", () => zeigeFutterkammerFenster(() => zeigeSchirm(null))], ["Schließen", null, "zweit"]]); return; }
     box.krippeVoll = true; reaktionZeigen(reaktion(box.pferd, "fuettern")); spielerLernt("futter"); beruehrt(box.pferd, "du", "stall");
     const fehlt = (box.pferd.futterHeute || {}).fehlt || [];
-    if (fehlt.length) dialog(`<h3>🌾 Nicht alles da</h3><p>In der Futterkammer ${fehlt.length === 1 ? "ist" : "sind"} <b>${fehlt.map(k => FUTTER[k].n).join(", ")}</b> alle – ${esc(box.pferd.name)} hat heute ohne ${fehlt.length === 1 ? "diese Sorte" : "diese Sorten"} gefressen. Nachkaufen: Hofverwaltung → Hof → Futterkammer (Lieferung am nächsten Morgen).</p>`, [["Zur Futterkammer", () => { hofBereich = "futter"; zeigeHof("hof"); }], ["OK", null, "zweit"]]);
+    if (fehlt.length) dialog(`<h3>🌾 Nicht alles da</h3><p>In der Futterkammer ${fehlt.length === 1 ? "ist" : "sind"} <b>${fehlt.map(k => FUTTER[k].n).join(", ")}</b> alle – ${esc(box.pferd.name)} hat heute ohne ${fehlt.length === 1 ? "diese Sorte" : "diese Sorten"} gefressen. Nachkaufen: Hofverwaltung → Hof → Futterkammer (Lieferung am nächsten Morgen).</p>`, [["Zur Futterkammer", () => zeigeFutterkammerFenster(() => zeigeSchirm(null))], ["OK", null, "zweit"]]);
     speichern(); zeigeTag();
   });
   const ausmisten = () => {
@@ -5254,11 +5255,32 @@
   // Ausrüstung → Futter: was bekommt dieses Pferd?
   function futterDialog(p, box) {
     const R = tagesRation(p, box), H = p.futterHeute && p.futterHeute.tag === spiel.tag ? p.futterHeute : null, eigen = !!(p.futterplan && p.futterplan.kg);
-    dialog(`<h3>🌾 Futter für ${esc(p.name)}</h3><p>Gewicht ca. ${gewicht(p)} kg · ${eigen ? "eigener Futterplan" : "Standardplan"} am Tag (${futterplanVon(p, box).mahl} Mahlzeiten):</p>
-      <ul class="liste">${Object.entries(R.kg).map(([k, x]) => `<li><span class="txt">${FUTTER[k].ico} ${FUTTER[k].n} ${fmtKg(x)}</span></li>`).join("")}</ul>
-      <p class="text"><small>${box && box.fohlen ? `Inkl. ${esc(box.fohlen.name)} (frisst mit). ` : ""}${p.weide && !heuNoetigP(p) ? "Heute auf der Weide: Gras statt Heu. " : p.weide && anweidenAktiv(p) ? "Wird angeweidet: Gras und Heu. " : ""}${box && box.leckstein === jzJetzt() ? "🧊 Salzleckstein in der Box." : "Kein Salzleckstein in der Box."}</small></p>
-      ${H ? `<p class="text"><small>Heute gefüttert: ${Object.entries(H.genutzt).map(([k, x]) => `${FUTTER[k].n} ${fmtKg(x)}`).join(", ") || "Gras"}.</small></p>` : `<p class="text"><small>Heute noch nicht gefüttert.</small></p>`}`,
-      [["📋 Futterplan", () => futterplanDialog(p, box, () => zeigeAkte())], ["Zur Futterkammer", () => { hofBereich = "futter"; zeigeHof("hof"); }, "zweit"], ["Schließen", null, "zweit"]]);
+    const E = p.expertEmpf, an = futterAnlass(p, box), alt = (p.expertArchiv || {})[an.k];
+    const sorten = [...new Set([...Object.keys(R.kg), ...(E ? Object.keys(E.kg) : [])])].filter(k => FUTTER[k]);
+    const tab = `<table class="ver-tab fp-vergleich"><tr><th>Futter am Tag</th><th class="re">jetzt</th>${E ? `<th class="re">Experte</th>` : ""}</tr>${sorten.map(k => { const a = R.kg[k] || 0, e = E ? E.kg[k] || 0 : null;
+      return `<tr><td>${FUTTER[k].ico} ${FUTTER[k].n}</td><td class="re nw">${a ? fmtKg(a) : "–"}</td>${E ? `<td class="re nw ${Math.abs(a - e) > 0.01 ? "abw" : ""}">${e ? fmtKg(e) : "–"}</td>` : ""}</tr>`; }).join("")}</table>`;
+    const umst = E ? `<p class="text"><small>🧑‍🔬 Empfehlung vom ${tagText(E.tag)} für: <b>${esc(E.umst)}</b>${E.anlass !== an.k ? `<br>⚠️ <b>Die Umstände haben sich geändert</b> – jetzt: ${esc(an.text)}. Die Empfehlung passt vielleicht nicht mehr, den Futterexperten neu fragen.` : ""}</small></p>` : "";
+    const altKnopf = alt && (!E || E.anlass !== alt.anlass) ? [[`📋 Empfehlung „${an.k}“ (${jzName(datum(alt.tag).j * 4 + datum(alt.tag).s).replace(/^\S+ /, "")}) übernehmen`, () => { planAendernStart(p, box); p.futterplan = { mahl: alt.mahl, kg: { ...alt.kg }, vom: "experte" }; planAendernEnde(p, box); p.expertEmpf = alt; speichern(); futterDialog(p, box); }]] : [];
+    dialog(`<h3>🌾 Futter für ${esc(p.name)}</h3><p>Gewicht ca. ${gewicht(p)} kg · ${eigen ? (p.futterplan.vom === "experte" ? "Plan vom Futterexperten" : "eigener Futterplan") : "Standardplan"} (${futterplanVon(p, box).mahl} Mahlzeiten) · ${esc(an.text)}</p>
+      ${tab}${umst}
+      <p class="text"><small>${box && box.fohlen ? `Inkl. ${esc(box.fohlen.name)} (frisst mit). ` : ""}${p.weide && !heuNoetigP(p) ? "Heute auf der Weide: Gras statt Heu. " : p.weide && anweidenAktiv(p) ? "Wird angeweidet: Gras und Heu. " : ""}${box && box.leckstein === jzJetzt() ? "🧊 Salzleckstein hängt in der Box." : ""}</small></p>
+      ${H ? `<p class="text"><small>Heute gefüttert: ${Object.entries(H.genutzt).map(([k, x]) => `${FUTTER[k].n} ${fmtKg(x)}`).join(", ") || "Gras"}.</small></p>` : `<p class="text"><small>Heute noch nicht gefüttert.</small></p>`}
+      ${alt && (!E || E.anlass !== alt.anlass) ? `<p class="text"><small>💾 Für „${an.k}“ gibt es eine gespeicherte Empfehlung vom Futterexperten (${tagText(alt.tag)}).</small></p>` : ""}`,
+      [["📋 Futterplan", () => futterplanDialog(p, box, () => futterDialog(p, box))], ...altKnopf, ["Zur Futterkammer", () => zeigeFutterkammerFenster(() => { zeigeSchirm(null); futterDialog(p, box); }), "zweit"], ["Schließen", null, "zweit"]], "breit");
+  }
+  // Anlass für Futterempfehlungen (Dome, v243): tragend, säugend, Arbeit … – Empfehlungen werden je Anlass gespeichert (z. B. für die nächste Trächtigkeit)
+  function futterAnlass(p, box) {
+    const t = p.traechtig, jz = jzJetzt(), f = box && box.fohlen && alterJZ(box.fohlen) < 2, a = arbeitStufe(p)[0], j = alterJZ(p);
+    const k = t && t.geburt - jz <= 1 ? "hochtragend" : t ? "tragend" : f ? "säugend" : j < 12 ? "Jungpferd" : a !== "keine" ? `Arbeit ${a}` : istSenior(p) ? "Senior" : "Erhaltung";
+    const teile = [k, `Futterzustand: ${FZ_NAME[futterZustand(p)] || futterZustand(p)}`]; const sp = spezialFuer(p); if (sp) teile.push(`Spezialfutter ${FUTTER["sp_" + sp].n}`);
+    return { k, text: teile.join(" · ") };
+  }
+  // Futterkammer als eigenes Fenster mit Rücksprung (Dome, v243)
+  function zeigeFutterkammerFenster(zurueck, meld = "") {
+    const y = $("nebenSchirm").classList.contains("offen") ? $("nebenSchirm").scrollTop : 0;
+    zeigeNeben("🌾 Futterkammer", `<div class="panel bau-fenster">${futterkammerHTML(meld)}</div>`);
+    $("nbZurueck").textContent = "‹ Zurück"; $("nbZurueck").onclick = zurueck;
+    futterkammerBinden(m => zeigeFutterkammerFenster(zurueck, m)); $("nebenSchirm").scrollTop = y;
   }
 
   // ---------- Fütterung F2: Futterplan, Bedarf, Nährwerte ----------
@@ -5548,6 +5570,7 @@
     pferde.forEach(p => { const box = spiel.boxen.find(b => b.pferd === p); if (!box || !p.pflege) return;
       const { P, g, sp } = expertenPlan(p, box), B = futterBedarf(p, box);
       planAendernStart(p, box); p.futterplan = P; planAendernEnde(p, box); p.futterBeraten = spiel.tag; p.expertBetreut = true;
+      { const an = futterAnlass(p, box), E = { kg: { ...P.kg }, mahl: P.mahl, tag: spiel.tag, anlass: an.k, umst: an.text }; p.expertEmpf = E; (p.expertArchiv = p.expertArchiv || {})[an.k] = E; }   // Dome (v243): Umstände merken
       if (!kostenlos) posten.push({ text: `${p.name}: Futterberatung`, betrag: FUTTER_BERATUNG });
       if (sp) { const k = "sp_" + sp, menge = Math.round(P.kg[k] * SPEZIAL_VORRAT); F.frei[sp] = true;
         if (F.lager[k] < menge) { const dazu = Math.round((menge - F.lager[k]) * 10) / 10; F.lager[k] = Math.round((F.lager[k] + dazu) * 1000) / 1000; posten.push({ text: `${FUTTER[k].n}, ${fmtKg(dazu)} (Vorrat für ${SPEZIAL_VORRAT} Tage)`, betrag: Math.round(dazu * FUTTER[k].preis * 100) / 100 }); } }
@@ -8054,6 +8077,7 @@
       <p><b>Bauland und Weideland</b> (Dome, v225): Bauland ${fmt(BAULAND_PREIS)}/ha (nur kaufen), Weideland ${fmt(LAND_PREIS)}/ha oder Pacht ${fmt(PACHT_PREIS)}/ha je Jahreszeit. Platzbedarf auf dem Bauland: Wohnhaus/Hofplatz ${haTxt(HOFPLATZ)}, Stall ${haTxt(0.1)} je 6 Boxen, Paddockboxen ${haTxt(0.15)} je 6, Reitplatz ${haTxt(0.1)}, Reithalle ${haTxt(0.15)}, Roundpen/Trail/Sandpaddock/Waschplatz/Lager/Sattelkammer/Quarantänestall/Abfohlbox je ${haTxt(0.05)}. Weide einzäunen nur auf Weideland. Start-Pensionsstall: 1 ha Bauland + 1 ha Weideland. Makler-Höfe: Bauland nach Bestand + 0,1 ha, auf ½ ha aufgerundet; Grundstück 1 ha Bauland.
         <b>Quarantänestall:</b> gekaufte Pferde (Markt, Auktion, Tierschutz) kommen zuerst in eine freie Quarantänebox und stehen 1 Jahreszeit unter Quarantäne; danach ziehen sie – ohne bekannte ansteckende Krankheit – automatisch in eine freie normale Box (Brief). Normale Umzüge nutzen den Quarantänestall nur, wenn sonst nichts frei ist.
         <b>Hufrehe-Warnung</b> im Frühling für gefährdete Pferde (leichtfuttrige Rassen ${LEICHTFUTTRIG.join(", ")}, Futterzustand ab 7, Hufrehe oder Cushing bekannt): Hinweis beim Weidegang und Brief zu Frühlingsbeginn für alle gefährdeten Pferde auf der Weide.</p>
+      <p><b>Futterexperte</b> (Dome, v243): jede Empfehlung wird mit Datum und Umständen gespeichert (Anlass: hochtragend, tragend, säugend, Jungpferd, Arbeit leicht/mittel/schwer, Senior, Erhaltung + Futterzustand, Spezialfutter). asr – Futter stellt jetzigen Plan und Experten-Empfehlung gegenüber (Abweichungen rot); passen die Umstände nicht mehr, kommt ein Hinweis. Je Anlass bleibt die letzte Empfehlung gespeichert und kann später (z. B. bei der nächsten Trächtigkeit) mit einem Knopf übernommen werden. Futterkammer aus asr – Futter als eigenes Fenster mit Rücksprung.</p>
       <p><b>Vorlieben/Abneigungen</b> (Dome, v240): zwei Knöpfe unter stb – Charakter; ein Eintrag erscheint erst, wenn der Spieler die Sache an mindestens ${VL_SICHTBAR_AB} verschiedenen Tagen selbst erlebt hat (Admin: sofort, mit Zähler). <b>Streicheln</b> (Dome, v239, asr – Putzkiste): wischen wie Bürste/Kamm, einmal am Tag Wohlbefinden +1 und Vertrauen +0,2, eigene Vorliebe (Grundbedürfnis). <b>Vorlieben</b> (Dome, v238): Reaktion einmal am Tag je Aktion. „Mag“: Wohlbefinden +4 × Vorliebe, Vertrauen +0,2. „Mag nicht“: Wohlbefinden −4 × Abneigung, Vertrauen −0,1 – bei Grundbedürfnissen (Putzen, Kämmen, Füttern, Medizin, Streicheln) nur 15 % davon und kein Vertrauensverlust. Hohes Vertrauen schwächt Abneigungen: ab Vertrauen 50 linear bis auf 40 % bei Vertrauen 100 (auch im Training).</p>
       <p><b>Krippe und Weide</b> (Dome, v236): Wurde vor dem Weidegang gefüttert, geht nichts verloren – Kraftfutter frisst das Pferd vorher in der Box (zählt zusätzlich zur Weide-Energie), Heu danach (ersetzt Gras). Box – ppf – Versorgung bzw. das Weide-Feld zeigt „Heute gefressen“ mit allen Sorten und Mengen.</p>
       <p><b>Übersicht je Hof</b> (v230, Immobilien → Verwaltung): Kasse, Restkredit, nächste Rate (inklusive offener Raten), Einnahmen/Ausgaben der letzten Jahreszeit, Heuvorrat in Tagen (mit bestellter Lieferung); rot, wenn die Kasse die nächste Rate nicht deckt oder das Heu nur noch weniger als 3 Tage reicht. Hofplan: Gebäude als kleine Zeichnungen auf dem Bauland (je ha-Kachel bis 9), Baustellen orange gestrichelt, Zahl = Boxen.</p>

@@ -16,3 +16,7 @@ Zu jeder Frage steht die Lösung, die Claude vorerst gewählt hat. Dome beantwor
 3. **F1 – Staubiges Heu:** Als eigene, günstigere Sorte im Futterhandel (0,15 €/kg statt 0,20 €/kg). Ohne eigenen Futterplan wird zuerst gutes Heu verfüttert. Die Folgen (Husten bei empfindlichen Atemwegen) kommen in F4.
 4. **F1 – Platz:** Die Futterkammer fasst am Anfang 2.000 kg (Salzlecksteine zählen nicht). Später größer über das Futter- und Strohlager (Hof-Ausbau H3).
 5. **F1 – Leeres Heu:** Reicht das Raufutter nicht für die ganze Tagesration, bleibt die Krippe leer (das Pferd hungert wie bisher) und es kommt ein Warnbrief. Teilweise füttern habe ich nicht eingebaut.
+6. **F2 – Mahlzeiten:** Im Futterplan stellt man die Menge je Sorte am Tag ein und wählt 2 oder 3 Mahlzeiten; alles wird gleichmäßig verteilt (keine unterschiedlichen Mahlzeiten). Reicht das, oder sollen die Mahlzeiten einzeln einstellbar sein?
+7. **F2 – Stärke-Grenze:** „Max. 1 g Stärke je kg Gewicht pro Mahlzeit“ zählt nur die Stärke aus dem Kraftfutter (Hafer, Pellets, Müsli …), nicht den Zucker im Heu – sonst wäre schon das Beispiel aus dem Plan (10 kg Heu + 1 kg Hafer) „zu viel“.
+8. **F2 – Weide:** Auf der Weide (außer Winter/letzter Herbsttag) ersetzt Gras das Raufutter; Kraftfutter und Mineral aus dem Plan werden an Weidetagen nicht gegeben (es gibt dort keinen Fütter-Klick). Später bei H6 (Weiden, Gras) feiner?
+9. **F2 – Arbeit:** Die Arbeitsstufe für den Bedarf ergibt sich aus der Trainings- und Turnierenergie der letzten Tage (leicht ab 10, mittel ab 35, schwer ab 60 Energie im Schnitt).

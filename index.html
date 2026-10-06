@@ -848,7 +848,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "243";
+  const SPIEL_VERSION = "244";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -856,9 +856,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=243"></script>
-<script src="kopfteile.js?v=243"></script>
-<script src="kopfalter.js?v=243"></script>
+<script src="pferd.js?v=244"></script>
+<script src="kopfteile.js?v=244"></script>
+<script src="kopfalter.js?v=244"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2823,7 +2823,7 @@
       const da = plaetze.filter(x => spiel.anlage[x[0]]).length;
       inhalt = meld +
         `<p class="text" style="margin:0 0 4px">📍 ${esc(p.name)} steht in <b>Box ${aktBox + 1}</b> · ${da} von ${plaetze.length} Plätzen auf deiner Anlage</p>
-        <div class="kacheln quadrat">${kOrt("box", "🔀", "Box wechseln", freieBox() < 0 ? "keine frei" : `${spiel.boxen.filter(boxFrei).length} frei`, "In eine andere Box umziehen")}
+        <div class="kacheln quadrat">${kOrt("box", "🔀", "Box wechseln", freieBox() < 0 ? "keine frei" : `${spiel.boxen.filter(boxFrei).length} frei`, "In eine andere Box umziehen")}${box.fohlen && alterJZ(box.fohlen) < 2 ? kOrt("fohlenabc", "🍼", "Fohlen-ABC", box.fohlen.abcTag === spiel.tag ? "heute geübt" : `${box.fohlen.fohlenABC || 0}/${FOHLEN_ABC_MAX}`, "Halfter, Führen, Hufe geben – mit dem Fohlen üben") : ""}
           ${plaetze.map(([k, ico, n, info, kurz]) => k === "weide" ? kOrt("weide", ico, n, p.weide ? "zurück in die Box" : `Gesundheit +${WEIDE_PLUS[datum().s]} %/Tag`, p.weide ? "Pferd von der Weide zurück in die Box holen" : "Pferd auf die Weide bringen") : TRAIN_ORTE[k] && ortOffen(k) ? kOrt("tr-" + k, ico, n, spiel.anlage[k] ? "Training" : "🛠️ Training", `${info} – Training`) : `<div class="kachel ${spiel.anlage[k] ? "" : "fehlt"}" title="${n.replace(/\u00ad/g, "")}: ${info}${spiel.anlage[k] ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></div>`).join("")}
           ${kOrt("labor", "🔬", "Labor", "Gentests", "Genetische Tests mit einer Haarprobe")}
           ${kOrt("anhaenger", "🚚", "Pferde\u00adanhänger", "Klinik, Turnier, Abgeben …", "Mit dem Anhänger wegfahren")}</div>`;
@@ -2907,6 +2907,7 @@
       if (id === "gnadenhof") { gnadenhofDialog(p, () => { zeigeStall(); }); return; }
       if (id === "verkaufen") { verkaufDialog(p, () => zeigeAkte()); return; }
       if (id === "turnier") { turnierDialog(p, () => zeigeAkte()); return; }
+      if (id === "fohlenabc") { meldung = fohlenABC(box.fohlen); zeigeAkte(); return; }
       if (id === "umzug") { umzugWahl(hid => { const frei = freieBoxIn(hid);
         if (frei < 1) { dialog(`<h3>Kein Platz</h3><p>Auf ${esc(hofNameVon(hid))} ist keine Box frei.</p>`); return; }
         dialog(`<h3>🏡 ${esc(p.name)} umziehen?</h3><p>${esc(p.name)}${box.fohlen ? ` und das Fohlen ${esc(box.fohlen.name)}` : ""} ziehen nach <b>${esc(hofNameVon(hid))}</b> (${frei} ${frei === 1 ? "Box" : "Boxen"} frei). Die Box hier wird frei.</p>${heuLeerIn(hid) ? `<p>⚠️ <b>In der Futterkammer von ${esc(hofNameVon(hid))} ist kein Heu!</b> Dort zuerst Raufutter kaufen, sonst hungert ${esc(p.name)}.</p>` : ""}`,
@@ -4504,8 +4505,25 @@
     if (p.traechtig && U.sprung) return "nicht tragend";
     if (p.traechtig && U.reiten && p.traechtig.geburt - jzJetzt() <= 1) return "hochtragend";
     if (ort === "gelaende" && inQuarantaene(p)) return "Quarantäne";
+    const fo = fohlenBeiFussVon(p);   // Dome (v244): Stute mit Fohlen bei Fuß – erst Ruhe, dann nur leichte Arbeit bis zum Absetzen
+    if (fo && fo.gebTag != null && spiel.tag - fo.gebTag < Math.round(0.6 * tpj())) return "braucht nach der Geburt noch Ruhe";
+    if (fo && !FOHLEN_LEICHT.includes(k)) return "nur leichte Arbeit mit Fohlen bei Fuß";
     if (ort && !UEB_WO[U.wo].includes(ort)) return "nicht hier";
     return "";
+  }
+  const FOHLEN_LEICHT = ["bodenarbeit", "freiarbeit", "spazieren", "ausritt"], FOHLEN_ABC_MAX = 10;
+  const fohlenBeiFussVon = p => { const b = spiel.boxen.find(x => x.pferd === p); return b && b.fohlen && alterJZ(b.fohlen) < 2 ? b.fohlen : null; };
+  // Fohlen läuft bei leichter Arbeit der Mutter mit: Sozialverhalten und Vertrauen steigen etwas
+  function fohlenLaeuftMit(p, k) { const f = fohlenBeiFussVon(p); if (!f || !FOHLEN_LEICHT.includes(k)) return ""; werteErgaenzen(f); sozialPlus(f, 0.5); wertPlus(f, "vertrauen", 0.3); return f.name; }
+  // Fohlen-ABC (ab etwa 1 Monat, einmal am Tag): Halfter, Führen, Hufe geben – Vertrauen und Gehorsam
+  function fohlenABC(f) {
+    if (!f) return "";
+    if (f.gebTag != null && spiel.tag - f.gebTag < Math.max(1, Math.round(tpj() / 3))) return `${esc(f.name)} ist noch zu jung – das Fohlen-ABC beginnt mit etwa 1 Monat.`;
+    if (f.abcTag === spiel.tag) return `Mit ${esc(f.name)} hast du heute schon geübt.`;
+    werteErgaenzen(f); f.abcTag = spiel.tag; f.fohlenABC = Math.min(FOHLEN_ABC_MAX, (f.fohlenABC || 0) + 1);
+    wertPlus(f, "vertrauen", 0.8); wertPlus(f, "gehorsam", 0.5); beruehrt(f, "du", "kontakt"); speichern();
+    const n = f.fohlenABC, was = n <= 2 ? "Halfter anlegen und streicheln" : n <= 5 ? "ein paar Schritte am Strick führen" : n < FOHLEN_ABC_MAX ? "Hufe geben und überall anfassen lassen" : "Halfter, Führen und Hufe geben klappen schon prima";
+    return `🍼 Fohlen-ABC mit ${esc(f.name)}: ${was} (${n}/${FOHLEN_ABC_MAX}).`;
   }
   // Energie: Ungeliebtes ×1,2 · Geliebtes ×0,85 · die ersten 3 Male ×1,2 (neu, noch nicht gekonnt) · tragend ×1,2
   function uebKosten(p, k) {
@@ -4550,6 +4568,7 @@
     if (p.trainTag !== spiel.tag) { p.trainTag = spiel.tag; p.trainTage = (p.trainTage || 0) + 1; wohlAendern(p, 3 + 2 * Te.hoch, "bewegt (Training)"); }
     p.arbeitTag = spiel.tag; p.boxTage = 0;
     const text = reaktion(p, U.vl, !m);
+    const mit = fohlenLaeuftMit(p, k); if (mit) hinweise.push(`${mit} lief mit`);
     if (ort === "reithalle") reaktion(p, "reithalle", !m);
     // eigensinnige Pferde mögen zu viel Training nicht (mehr als 60 Energie am Tag)
     if (A.tief && T.verbraucht > 60 && !T.eigensinn) { T.eigensinn = true; wohlAendern(p, -3 * A.tief, "zu viel Training (eigensinnig)"); }
@@ -5979,7 +5998,7 @@
     p.pflege.wohl = Math.max(0, Math.min(100, Math.round(((p.pflege.wohl == null ? 100 : p.pflege.wohl) + d) * 10) / 10));
     if (grund) { const L = (p.wohlLog = p.wohlLog && p.wohlLog.tag === spiel.tag ? p.wohlLog : { tag: spiel.tag, g: [] }); L.g.push(`${grund} ${d > 0 ? "+" : ""}${String(d).replace(".", ",")}`); } };
   // eine Nacht: ort = "box" | "weide" · herde = alle eigenen Pferde auf der Weide
-  function wohlNacht(p, ort, { hungrig, mistig, herde } = {}) {
+  function wohlNacht(p, ort, { hungrig, mistig, herde, fohlen } = {}) {
     const T = charE(p, "temperament"), N = charE(p, "wachheit"), B = charE(p, "bezug"), M = charE(p, "mut"), V = charE(p, "nerven"), S = charE(p, "sensibel"), A = charE(p, "wille");
     p.wohlLog = { tag: spiel.tag, g: [] };
     // Ortswechsel: verträumte Pferde mögen Routine
@@ -5994,7 +6013,7 @@
       if (mistig) wohlAendern(p, -WOHL.mist * (1 + 0.5 * S.hoch), "Box nicht gemistet");
     } else {
       p.boxTage = 0;
-      const allein = !(herde || []).some(q => q !== p), winter = datum(spiel.tag - 1).s === 3;
+      const allein = !(herde || []).some(q => q !== p) && !fohlen, winter = datum(spiel.tag - 1).s === 3;
       wohlAendern(p, (allein ? WEIDE_WOHL.allein : winter ? WEIDE_WOHL.winter : WEIDE_WOHL.normal) + 5 * B.tief + 3 * T.hoch, allein ? "Weide (allein)" : winter ? "Weide im Winter" : "Weide");
       if (hungrig) wohlAendern(p, -WOHL.hunger, "hungrig (kein Heu auf der Weide)");
       if (allein) { const ohne = Math.max(B.hoch, M.tief, V.tief); if (B.tief) wohlAendern(p, (WEIDE_WOHL.normal - WEIDE_WOHL.allein) * B.tief, "allein – stört ein eigenständiges Pferd nicht");
@@ -6015,9 +6034,10 @@
   // Weide-Herde: wer ist mit draußen, wen kennt das Pferd schon
   function herdeText(p) {
     const andere = spiel.boxen.filter(b => b.pferd && b.pferd.weide && !b.pferd.klinik && !b.tot && b.pferd !== p).map(b => b.pferd);
-    if (!andere.length) return `<p class="text">🐴 Gerade ist kein anderes eigenes Pferd auf der Weide.</p>`;
+    const fo = (spiel.boxen.find(b => b.pferd === p) || {}).fohlen, foTxt = fo ? `<p class="text">🍼 ${esc(fo.name)} ist bei ihr auf der Weide.</p>` : "";
+    if (!andere.length) return fo ? foTxt : `<p class="text">🐴 Gerade ist kein anderes eigenes Pferd auf der Weide.</p>`;
     const H = p.herde || {}, kennt = andere.filter(q => (H[q.id] || 0) >= HERDE_KENNEN), neu = andere.filter(q => (H[q.id] || 0) < HERDE_KENNEN);
-    return `<p class="text">🐴 <b>Herde:</b> ${andere.map(q => esc(q.name)).join(", ")}${neu.length ? `<br><small>Noch in der Eingewöhnung mit ${neu.map(q => esc(q.name)).join(", ")} – nach ${HERDE_KENNEN} gemeinsamen Weidetagen kennen sie sich.</small>` : `<br><small>Alle kennen sich schon.</small>`}</p>`;
+    return foTxt + `<p class="text">🐴 <b>Herde:</b> ${andere.map(q => esc(q.name)).join(", ")}${neu.length ? `<br><small>Noch in der Eingewöhnung mit ${neu.map(q => esc(q.name)).join(", ")} – nach ${HERDE_KENNEN} gemeinsamen Weidetagen kennen sie sich.</small>` : `<br><small>Alle kennen sich schon.</small>`}</p>`;
   }
   // Stress bei Fahrten mit dem Pferdeanhänger und Neuem (Klinik, fremde Herde): scheu und nervös leiden, gelassen bremst
   function fahrtStress(p, ziel) {
@@ -6232,7 +6252,7 @@
           else if (qp.gesundheit > 30 || (q === W && altersschwach(W))) qp.gesundheit = Math.min(gesundheitMax(q), Math.round((qp.gesundheit + plus) * 10) / 10); });
         if (b.fohlen) sozialPlus(b.fohlen, 0.3);
         if (zuLangeDreckig(W)) W.pflege.gesundheit = Math.max(1, Math.round((W.pflege.gesundheit - 3) * 10) / 10);
-        wohlNacht(W, "weide", { herde: weideHerde, hungrig }); wohlAllein(W, !hungrig); futterNacht(W, b, "weide", hungrig);
+        wohlNacht(W, "weide", { herde: weideHerde, hungrig, fohlen: !!b.fohlen }); wohlAllein(W, !hungrig);   // Fohlen bei Fuß: Stute ist nicht allein futterNacht(W, b, "weide", hungrig);
         schmutzen(W, false);
         wachsen(b);
         return;
@@ -8077,6 +8097,7 @@
       <p><b>Bauland und Weideland</b> (Dome, v225): Bauland ${fmt(BAULAND_PREIS)}/ha (nur kaufen), Weideland ${fmt(LAND_PREIS)}/ha oder Pacht ${fmt(PACHT_PREIS)}/ha je Jahreszeit. Platzbedarf auf dem Bauland: Wohnhaus/Hofplatz ${haTxt(HOFPLATZ)}, Stall ${haTxt(0.1)} je 6 Boxen, Paddockboxen ${haTxt(0.15)} je 6, Reitplatz ${haTxt(0.1)}, Reithalle ${haTxt(0.15)}, Roundpen/Trail/Sandpaddock/Waschplatz/Lager/Sattelkammer/Quarantänestall/Abfohlbox je ${haTxt(0.05)}. Weide einzäunen nur auf Weideland. Start-Pensionsstall: 1 ha Bauland + 1 ha Weideland. Makler-Höfe: Bauland nach Bestand + 0,1 ha, auf ½ ha aufgerundet; Grundstück 1 ha Bauland.
         <b>Quarantänestall:</b> gekaufte Pferde (Markt, Auktion, Tierschutz) kommen zuerst in eine freie Quarantänebox und stehen 1 Jahreszeit unter Quarantäne; danach ziehen sie – ohne bekannte ansteckende Krankheit – automatisch in eine freie normale Box (Brief). Normale Umzüge nutzen den Quarantänestall nur, wenn sonst nichts frei ist.
         <b>Hufrehe-Warnung</b> im Frühling für gefährdete Pferde (leichtfuttrige Rassen ${LEICHTFUTTRIG.join(", ")}, Futterzustand ab 7, Hufrehe oder Cushing bekannt): Hinweis beim Weidegang und Brief zu Frühlingsbeginn für alle gefährdeten Pferde auf der Weide.</p>
+      <p><b>Stute mit Fohlen bei Fuß</b> (Dome, v244): die ersten ~6 Wochen nach der Geburt (0,6 Jahreszeiten) kein Training, danach bis zum Absetzen nur leichte Arbeit (${FOHLEN_LEICHT.map(k => UEBUNG[k].n.replace(/\u00ad/g, "")).join(", ")}). Dabei läuft das Fohlen mit: Sozialverhalten +0,5, Vertrauen +0,3. <b>Fohlen-ABC</b> (Box – ppf – Ort, ab ~1 Monat, einmal am Tag, bis ${FOHLEN_ABC_MAX}×): Vertrauen +0,8, Gehorsam +0,5 – Halfter, Führen, Hufe geben.</p>
       <p><b>Futterexperte</b> (Dome, v243): jede Empfehlung wird mit Datum und Umständen gespeichert (Anlass: hochtragend, tragend, säugend, Jungpferd, Arbeit leicht/mittel/schwer, Senior, Erhaltung + Futterzustand, Spezialfutter). asr – Futter stellt jetzigen Plan und Experten-Empfehlung gegenüber (Abweichungen rot); passen die Umstände nicht mehr, kommt ein Hinweis. Je Anlass bleibt die letzte Empfehlung gespeichert und kann später (z. B. bei der nächsten Trächtigkeit) mit einem Knopf übernommen werden. Futterkammer aus asr – Futter als eigenes Fenster mit Rücksprung.</p>
       <p><b>Vorlieben/Abneigungen</b> (Dome, v240): zwei Knöpfe unter stb – Charakter; ein Eintrag erscheint erst, wenn der Spieler die Sache an mindestens ${VL_SICHTBAR_AB} verschiedenen Tagen selbst erlebt hat (Admin: sofort, mit Zähler). <b>Streicheln</b> (Dome, v239, asr – Putzkiste): wischen wie Bürste/Kamm, einmal am Tag Wohlbefinden +1 und Vertrauen +0,2, eigene Vorliebe (Grundbedürfnis). <b>Vorlieben</b> (Dome, v238): Reaktion einmal am Tag je Aktion. „Mag“: Wohlbefinden +4 × Vorliebe, Vertrauen +0,2. „Mag nicht“: Wohlbefinden −4 × Abneigung, Vertrauen −0,1 – bei Grundbedürfnissen (Putzen, Kämmen, Füttern, Medizin, Streicheln) nur 15 % davon und kein Vertrauensverlust. Hohes Vertrauen schwächt Abneigungen: ab Vertrauen 50 linear bis auf 40 % bei Vertrauen 100 (auch im Training).</p>
       <p><b>Krippe und Weide</b> (Dome, v236): Wurde vor dem Weidegang gefüttert, geht nichts verloren – Kraftfutter frisst das Pferd vorher in der Box (zählt zusätzlich zur Weide-Energie), Heu danach (ersetzt Gras). Box – ppf – Versorgung bzw. das Weide-Feld zeigt „Heute gefressen“ mit allen Sorten und Mengen.</p>

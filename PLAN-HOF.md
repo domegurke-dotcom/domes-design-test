@@ -31,7 +31,7 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 
 ## Domes Testanmerkungen (6.10.2026 abends) – vor bzw. mit H5 abarbeiten
 - [x] T1 Fehler: Stute mit Fohlen bei Fuß kaufen (Markt, Tierschutz …): vor dem Kauf zeigt Nachkommen/Abstammungsschein des Fohlens eine andere Mutter und andere Genetik; erst nach dem Kauf passt es. Fohlen muss immer das echte Fohlen der Stute sein (klein–mittel, ca. 3 %)
-- [ ] T2 Stall → Bauen als eigenes Fenster mit Rücksprung zum Stall (klein, ca. 2 %)
+- [x] T2 Stall → Bauen als eigenes Fenster mit Rücksprung zum Stall (klein, ca. 2 %)
 - [x] T3 stb – Eigenschaften: Hinweise „angeboren“/„erarbeitet“ nur im Adminmodus (klein, ca. 1 %)
 - [x] T4 stb – asb – Disziplinen: Charakter-Zeile verständlicher („temperamentvoll +, nervös −“ = Regel, „+5 %“ = Wirkung bei diesem Pferd) (klein, ca. 1 %)
 - [ ] T5 hvw – Hof – Futterkammer: Einkaufskorb mit Gesamtsumme; Korb öffnen → Liste mit Preisen, einzeln entfernen, Summe, Kauf bestätigen/abbrechen, Rücksprung zur Futterkammer (mittel, ca. 4 %)

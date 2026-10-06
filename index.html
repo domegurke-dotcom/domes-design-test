@@ -582,6 +582,7 @@
   .hof-tabs { flex-wrap: wrap; } .hof-tabs button { flex: 1 1 auto; font-size: .8rem; padding: 7px 6px; }
   .geb { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid #e2d6c3; } .geb-ico { font-size: 1.5rem; width: 2rem; text-align: center; } .geb-txt { flex: 1; display: flex; flex-direction: column; gap: 3px; } .geb-txt small { color: var(--leise); }
   .geb-balken { height: 7px; max-width: 220px; } .geb-kn { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; } .geb-sperre { font-style: italic; }
+  #nebenSchirm .bau-fenster { grid-column: 1 / -1; width: 100%; max-width: 760px; justify-self: center; }
   .bau-kacheln .kachel small { font-size: .7rem; }
   .bau-stufen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0; } .bau-stufe { border: 3px solid #e2d6c3; background: #fff; border-radius: 12px; padding: 8px 4px; font: inherit; cursor: pointer; color: var(--text); display: flex; flex-direction: column; gap: 2px; align-items: center; } .bau-stufe.an { border-color: var(--akzent); } .bau-stufe small { color: var(--leise); font-size: .75rem; } .bau-stufe span { font-weight: 700; color: var(--akzent); }
   .hofplan { display: block; width: 100%; max-width: 420px; margin: 0 auto 8px; height: auto; }
@@ -843,7 +844,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "234";
+  const SPIEL_VERSION = "235";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -851,9 +852,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=234"></script>
-<script src="kopfteile.js?v=234"></script>
-<script src="kopfalter.js?v=234"></script>
+<script src="pferd.js?v=235"></script>
+<script src="kopfteile.js?v=235"></script>
+<script src="kopfalter.js?v=235"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -6661,7 +6662,7 @@
     zeigeNeben("🏠 Stall", `<div class="panel" style="grid-column:1/-1;width:100%;max-width:760px;margin:0 auto"><div class="hf-kopf"><b>${spiel.boxen.filter(b => b.pferd).length} von ${spiel.boxen.length} Boxen belegt</b><button class="mini-knopf" id="bxBauen">🏗️ Bauen</button></div><p style="margin:0">Antippen, um in die Box zu gehen. Neue Boxen baust du unter Hofverwaltung → Hof → Bauen.</p>
       <div class="paar-liste boxen-liste">${spiel.boxen.map((b, i) => b.pferd ? pferdKachel(b.pferd, { attr: `data-zubox="${i}"`, zeilen: [`Box ${i + 1}`, b.tot ? "🕊️ verstorben" : b.pferd.klinik ? "🏥 in der Klinik" : b.pferd.weide ? "🌿 auf der Weide" : `${rasseById(b.pferd.rasse).name}`, ...(b.fohlen ? [`🍼 + ${esc(b.fohlen.name)}`] : []), ...(angebotVon(b.pferd) ? ["💰 zum Verkauf"] : [])] })
         : leer(i, b.gesperrt ? "🚧 Umbau" : b.reserviert ? "🔒 reserviert" : `leer · ${b.quar ? "Quarantäne" : b.abfohl ? "Abfohlbox" : b.paddock ? "Paddockbox" : "Box"}, Stufe ${boxenStufe(b)}`)).join("")}</div></div>`);
-    $("bxBauen").onclick = () => { hofBereich = "bauen"; zeigeHof("hof"); };
+    $("bxBauen").onclick = () => zeigeBauenFenster();
     document.querySelectorAll("[data-zubox]").forEach(k => k.onclick = () => { aktBox = +k.dataset.zubox; spiel.aktBox = aktBox; aktenReiter = "steckbrief"; aktenModus = "steckbrief"; deckModus = false; ortModus = null; meldung = ""; zeigeSchirm(null); window.scrollTo(0, 0); });
   }
   // ---------- Pferdeanhänger: EINE gemeinsame Liste für beide Anhänger ----------
@@ -7736,9 +7737,18 @@
       <h4 class="ma-titel">➕ Neu bauen</h4><div class="kacheln quadrat bau-kacheln">${BAU_REIHE.map(k => { const B = BAUTEN[k], sp = bauSperre(k);
         return `<button class="kachel ${sp ? "fehlt" : "klickbar"}" ${sp ? "disabled" : `data-bau="${k}"`} title="${B.n}: ${B.info}"><span class="ico">${B.ico}</span><b>${B.n}</b><small>${sp || (B.fest ? fmt(B.fest) : `ab ${fmt(B.preis[0])}${B.jeHa ? "/ha" : ""}`)}</small></button>`; }).join("")}</div>`;
   }
+  // Dome: Stall → Bauen als eigenes Fenster mit Rücksprung zum Stall
+  let bauFenster = false;
+  const bauNeuZeigen = () => bauFenster ? zeigeBauenFenster() : zeigeHof();
+  function zeigeBauenFenster() {
+    bauFenster = true; const y = $("nebenSchirm").classList.contains("offen") ? $("nebenSchirm").scrollTop : 0;
+    zeigeNeben("🏗️ Bauen", `<div class="panel bau-fenster">${bauenHTML()}</div>`);
+    $("nbZurueck").textContent = "‹ Stall"; $("nbZurueck").onclick = () => { bauFenster = false; zeigeBoxen(); };
+    bauenBinden(); $("nebenSchirm").scrollTop = y;
+  }
   function bauDialog(typ, anbauVon, stufe = 1, menge) {
     const B = BAUTEN[typ], von = anbauVon && gebaeude().find(g => g.gid === anbauVon);
-    if (B.fest) { dialog(`<h3>${B.ico} ${B.n}</h3><p>${B.info}. Preis: <b>${fmt(B.fest)}</b>, wird sofort geliefert und aufgebaut.</p>`, [["Kaufen", () => { if (bauStarten(typ, 0)) { speichern(); zeigeHof(); } }], ["Abbrechen", null, "zweit"]]); return; }
+    if (B.fest) { dialog(`<h3>${B.ico} ${B.n}</h3><p>${B.info}. Preis: <b>${fmt(B.fest)}</b>, wird sofort geliefert und aufgebaut.</p>`, [["Kaufen", () => { if (bauStarten(typ, 0)) { speichern(); bauNeuZeigen(); } }], ["Abbrechen", null, "zweit"]]); return; }
     const opt = von ? { anbau: von.gid } : {}, mengen = B.boxen && B.paar ? [0, 1, 2, 3].map(i => (von ? B.anbauBoxen : B.boxen) + 2 * i) : B.jeHa ? Array.from({ length: Math.min(10, Math.floor(freiesLand())) }, (_, i) => i + 1) : null;
     if (mengen) { menge = menge || mengen[0]; if (B.jeHa) opt.ha = menge; else opt.boxen = menge; }
     const tage = z => z === "kurz" ? "2–3 Tage" : z === "halle" ? "2–3 Jahreszeiten" : z === 1 ? "1 Jahreszeit" : "½ Jahreszeit";
@@ -7746,7 +7756,7 @@
       ${mengen ? `<div class="kr-wahl"><label>${B.jeHa ? "Fläche" : "Boxen"} <select id="bauMenge">${mengen.map(x => `<option value="${x}" ${x === menge ? "selected" : ""}>${x}${B.jeHa ? " ha" : ""}</option>`).join("")}</select></label></div>` : ""}
       <div class="bau-stufen">${[1, 2, 3].map(s => `<button class="bau-stufe ${s === stufe ? "an" : ""}" data-bst="${s}"><b>Stufe ${s}</b><small>${STUFE_NAME[s]}</small><span>${fmt(bauPreis(typ, s, opt))}</span></button>`).join("")}</div>
       <p style="margin-bottom:0"><small>${platzVon(typ, opt.boxen) ? `Platz: ${haTxt(platzVon(typ, opt.boxen))} Bauland (frei ${haTxt(baulandFrei())}) · ` : ""}Bauzeit (Standardtempo): ${tage(B.zeit)}${B.aussen ? " · Außenarbeit: ruht im Winter" : ""} · Höhere Stufe: mehr Wohlbefinden, weniger Verletzungen, zufriedenere Mitarbeiter, später höherer Pensionspreis, langsamerer Verfall.</small></p>`,
-      [["🏗️ Bauen", () => { if (bauStarten(typ, stufe, opt)) { speichern(); zeigeHof(); } }], ["Abbrechen", null, "zweit"]], "breit");
+      [["🏗️ Bauen", () => { if (bauStarten(typ, stufe, opt)) { speichern(); bauNeuZeigen(); } }], ["Abbrechen", null, "zweit"]], "breit");
     document.querySelectorAll("[data-bst]").forEach(b => b.onclick = () => bauDialog(typ, anbauVon, +b.dataset.bst, menge));
     if ($("bauMenge")) $("bauMenge").onchange = () => bauDialog(typ, anbauVon, stufe, +$("bauMenge").value);
   }
@@ -7756,10 +7766,10 @@
     nb.querySelectorAll("[data-anbau]").forEach(b => b.onclick = () => { const g = G.find(x => x.gid === b.dataset.anbau); bauDialog(g.typ, g.gid, g.stufe); });
     nb.querySelectorAll("[data-umbau]").forEach(b => b.onclick = () => { const g = G.find(x => x.gid === b.dataset.umbau);
       dialog(`<h3>⬆️ ${gebName(g)}: Stufe ${g.stufe + 1}</h3><p>Umbau auf <b>${STUFE_NAME[g.stufe + 1]}</b> für <b>${fmt(umbauPreis(g))}</b> (Preisunterschied + 20 %). Dauert die halbe Bauzeit${g.boxen ? ", die Boxen sind so lange gesperrt" : ""}.</p>`,
-        [["Umbauen", () => { if (umbauStarten(g)) { speichern(); zeigeHof(); } }], ["Abbrechen", null, "zweit"]]); });
+        [["Umbauen", () => { if (umbauStarten(g)) { speichern(); bauNeuZeigen(); } }], ["Abbrechen", null, "zweit"]]); });
     nb.querySelectorAll("[data-rep]").forEach(b => b.onclick = () => { const g = G.find(x => x.gid === b.dataset.rep), k = reparaturPreis(g);
       dialog(`<h3>🔧 ${gebName(g)} reparieren</h3><p>Ein Handwerker bringt den Zustand von ${Math.round(g.zustand)} % auf 100 %. Kosten: <b>${fmt(k)}</b> (je 10 Punkte 2 % des Baupreises).</p>`,
-        [["Handwerker bestellen", () => { if (!spiel.admin && (spiel.geld || 0) < k) { dialog(`<h3>Zu wenig Geld</h3><p>In der Kasse sind ${fmt(spiel.geld || 0)}.</p>`); return; } if (!spiel.admin) buchen(-k, "Handwerker"); g.zustand = 100; speichern(); zeigeHof(); }], ["Abbrechen", null, "zweit"]]); });
+        [["Handwerker bestellen", () => { if (!spiel.admin && (spiel.geld || 0) < k) { dialog(`<h3>Zu wenig Geld</h3><p>In der Kasse sind ${fmt(spiel.geld || 0)}.</p>`); return; } if (!spiel.admin) buchen(-k, "Handwerker"); g.zustand = 100; speichern(); bauNeuZeigen(); }], ["Abbrechen", null, "zweit"]]); });
   }
   // ---------- Bauland und Weideland (Dome, v225): Gebäude brauchen Bauland, Weiden nur Weideland ----------
   const BAULAND_PREIS = 3000, HOFPLATZ = 0.2;   // Wohnhaus und Hofplatz
@@ -8134,6 +8144,7 @@
       speichern(); zeigeHof(); mitarbeiterDialog(typ); });
   }
   function zeigeHof(reiter) {
+    bauFenster = false;
     if (reiter) { hofReiter = reiter; fkMeld = ""; }
     if (hofReiter !== "post") { offenerBrief = null; postAuswahl = null; }
     const sp = spiel.spieler || {}, allePost = spiel.post || (spiel.post = []), n = ungelesen();

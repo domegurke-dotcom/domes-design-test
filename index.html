@@ -758,6 +758,7 @@
       <!-- Schild -->
       <g id="boxSchildKnopf" role="button" aria-label="Zur Boxenübersicht" style="cursor:pointer"><rect x="170" y="40" width="60" height="18" rx="3" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.6"/>
       <text x="200" y="53.5" text-anchor="middle" font-size="11" font-weight="700" fill="#2b1d12" font-family="system-ui, sans-serif" id="boxSchild">Box 1</text></g>
+      <g id="plaketten"></g>
     </g>
     <defs>
         <linearGradient id="birke" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6ecd2"/><stop offset=".55" stop-color="#ead8b0"/><stop offset="1" stop-color="#d8c191"/></linearGradient>
@@ -798,7 +799,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "215";
+  const SPIEL_VERSION = "216";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -806,9 +807,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=215"></script>
-<script src="kopfteile.js?v=215"></script>
-<script src="kopfalter.js?v=215"></script>
+<script src="pferd.js?v=216"></script>
+<script src="kopfteile.js?v=216"></script>
+<script src="kopfalter.js?v=216"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1385,7 +1386,7 @@
     her.sm = erben(M, V, smVon, { min: 70, max: 195, mut: 11 });
     const ziel = Math.round(her.sm.wert), rasse = rasseZuordnen(anteile, ziel);
     const f = { id: "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: zufallAus(NAMEN[g].filter(n => n !== M.name && n !== V.name)), rasse, farbe: phaenotyp(fGen), geschlecht: g,
-      zielStockmass: ziel, geb: { s: d.s, j: d.j }, mutter: M.name, gen: fGen, anteile,
+      zielStockmass: ziel, geb: { s: d.s, j: d.j }, gebTag: spiel.tag, mutter: M.name, gen: fGen, anteile,
       grauHinweis: hat(M.gen, "G") || hat(V.gen, "G"),
       maehne: "steh", maehneSeit: spiel.tag, schopf: naturSchopf(rasse) ? "ohne" : undefined, schopfSeit: spiel.tag };   // jedes Fohlen kommt mit Stehmähne und ohne Schopf zur Welt
     f.genFuer = f.farbe;
@@ -2418,11 +2419,15 @@
     }
     return p.fellHinweis && p.fellHinweis.tag === spiel.tag ? p.fellHinweis.text : "";
   }
+  // Neugeborenes liegt (Dome): bei 4 Tagen je Jahreszeit 1 Tag, bei 7 Tagen 2 Tage, bei 10 Tagen 2–3 Tage (kräftige Fohlen 2, schwächere 3)
+  const fohlenLiegeTage = f => tpj() <= 4 ? 1 : tpj() <= 7 ? 2 : ((f.werte && f.werte.anlage && f.werte.anlage.kraft) || 50) >= 50 ? 2 : 3;
+  const fohlenLiegt = f => f.gebTag != null && spiel.tag - f.gebTag < fohlenLiegeTage(f);
   let letzterBesuch = "";
   function zeigeStall() {
     const p = B().pferd;
     if (letzterBesuch !== aktBox + ":" + spiel.tag) { letzterBesuch = aktBox + ":" + spiel.tag; anzeichenBeimBesuch(B()); }
     $("boxSchild").textContent = "Box " + (aktBox + 1);
+    $("plaketten").innerHTML = B().tot ? "" : plakettenSVG([p, B().fohlen]);   // Stallplaketten hängen an der Box des Pferdes
     stallFormat();
     if (!p || p.klinik || p.weide || p.turnier) { $("pferdPlatz").innerHTML = ""; zeigeAkte(); return; }
     const tot = !!B().tot;   // verstorben: Augen zu, keine Bewegung mehr
@@ -2433,8 +2438,8 @@
     let fohlenSVG = "";
     const f = B().fohlen;
     if (f) {
-      // Fohlen bei der Mutter: vor ihr, Blick nach rechts; in der Geburts-Jahreszeit liegt es noch
-      const fz = zeichnePferd(f.rasse, fb(f), { alterStufe: stufeKey(f), seed: f.id, geschlecht: f.geschlecht, maehne: f.maehne, schopf: f.schopf, haltung: alterJZ(f) === 0 ? "liegend" : "normal", eigenKopf: undefined });
+      // Fohlen bei der Mutter: vor ihr, Blick nach rechts; in den ersten Tagen liegt es noch (fohlenLiegt)
+      const fz = zeichnePferd(f.rasse, fb(f), { alterStufe: stufeKey(f), seed: f.id, geschlecht: f.geschlecht, maehne: f.maehne, schopf: f.schopf, haltung: fohlenLiegt(f) ? "liegend" : "normal", eigenKopf: undefined });
       const fs = f.stockmass * STALL.cmZuEinheit / 100, fcx = (fz.box.minX + fz.box.maxX) / 2, fx = STALL.mitte - 34;
       fohlenSVG = `<g transform="translate(${(fx + fcx * fs).toFixed(1)},${STALL.boden + 10}) scale(${(-fs).toFixed(4)},${fs.toFixed(4)})">${anim(fz.svg)}</g>`;
     }
@@ -2442,7 +2447,8 @@
     const fellText = tot ? "" : fellwechsel(p);
     const blase = fellText ? (() => { let by = STALL.boden + z.box.minY * s - 30, bx = STALL.mitte, tx = bx; const bw = 96;
       // nicht über das Boxschild (x 170–230, y 40–58): bei großen Pferden rechts daneben
-      if (by < 62) { by = 40; bx = 230 + 8 + bw / 2; tx = bx - bw / 2 + 16; }
+      if (by < 62) { by = 40; bx = 230 + 8 + plakettenBreite() + bw / 2; tx = bx - bw / 2 + 16; }   // auch nicht über die Stallplaketten
+      if (bx + bw / 2 > 396) { bx = 396 - bw / 2; by = 62; tx = bx - bw / 2 + 16; }   // zu viele Plaketten: darunter
       return `<g class="fellHinweis" pointer-events="none"><rect x="${bx - bw / 2}" y="${by}" width="${bw}" height="20" rx="10" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4"/>
         <path d="M${tx - 5},${by + 19.5} l5,8 l5,-8" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4" stroke-linejoin="round"/><path d="M${tx - 5.5},${by + 19} h11" stroke="#fffaf0" stroke-width="2"/>
         <text x="${bx}" y="${by + 14}" text-anchor="middle" font-size="10" font-weight="700" fill="#2b1d12" font-family="system-ui, sans-serif">${fellText}</text></g>`; })() : "";
@@ -2508,7 +2514,7 @@
           <dt>Geschlecht</dt><dd><span class="lex" data-lex="geschlecht">${p.geschlecht}</span></dd>
           <dt>Alter</dt><dd>${alterText(p)} · <span class="lex" data-lex="alter">${altersstufe(p)[1]}</span></dd>
           <dt>Geboren</dt><dd>${JZ[p.geb.s][1]} ${JZ[p.geb.s][0]} ${p.geb.j}</dd>
-          ${p.fohlenschau ? `<dt>Fohlenschau</dt><dd>${fsText(p)}</dd>` : ""}
+          ${p.fohlenschau ? `<dt>Fohlenschau</dt><dd>${fsText(p)}${p.championat ? `<br>Championat: ${p.championat.platz}. von ${p.championat.von} (${esc(p.championat.name)})` : ""}</dd>` : ""}${plakettenVon(p).length ? `<dt>Plaketten</dt><dd>${plakettenText(p)}</dd>` : ""}
           ${box.fohlen ? `<dt>Fohlen</dt><dd>${esc(box.fohlen.name)} · ${box.fohlen.geschlecht} · ${alterText(box.fohlen)} (${altersstufe(box.fohlen)[1].replace(/^\S+ /, "")})${box.fohlen.fohlenschau ? `<br><small>${fsText(box.fohlen)}</small>` : ""}${alterJZ(box.fohlen) >= 2 ? `<br><button class="knopf" id="absetzen" style="width:auto;padding:6px 12px;margin-top:6px;font-size:.85rem">In eigene Box umstellen</button> <button class="knopf zweit" id="fohlenAufzucht" style="width:auto;padding:6px 12px;margin-top:6px;font-size:.85rem">🍼 In die Aufzuchtstation</button>` : ""}</dd>` : ""}
           <dt>Stockmaß</dt><dd>${p.stockmass} cm</dd><dt>Gewicht</dt><dd>ca. ${gewichtAnzeige(p)} kg</dd>${p.zwerg ? `<dt>Besonderheit</dt><dd>Zwergwuchs – bleibt deutlich kleiner</dd>` : ""}${p.hufGr ? `<dt>Hufgröße</dt><dd>vorne ${HUFSCHUH_GR[p.hufGr.vorne]} · hinten ${HUFSCHUH_GR[p.hufGr.hinten]}</dd>` : ""}${spiel.admin && !box.lesen ? `<dt>Hufe 🛠️</dt><dd>${hufStufe(p)} (${hufQ(p)}) · wächst ${hufW(p)}</dd>` : ""}
           ${zucht ? `<dt>Zucht</dt><dd>${zucht}</dd>` : ""}
@@ -4913,9 +4919,10 @@
   }
   // ---------- Fohlenschau (Werte-Plan, Etappe 6c) ----------
   // Sommer (Hauptschau) und Herbst (Nachschau) beim Zuchtverband · nur Fohlen bei Fuß (mind. etwa 1 Monat alt, vor dem Absetzen) · Mutter und Fohlen fahren hin
-  // Klassen: Stutfohlen, Hengstfohlen (reinrassig, ab 87,5 % einer Rasse – rassetypisch bewertet) · offene Klasse für Mischlinge
+  // Klassen: Stutfohlen, Hengstfohlen (reinrassig nach Zuchtbuch der Rasse: nur die Rasse selbst plus erlaubte Veredler aus VEREDELUNG – rassetypisch bewertet) · offene Klasse für Mischlinge
   // Noten 1–10 in halben Noten: Typ (Rassetyp), Körperbau (Fundament), Schritt, Trab, Gesamteindruck · Gesamtnote = Schnitt (eine Kommastelle)
-  const FS_NENNGELD = 35, FS_PRAEMIE = 7.8, FS_CHAMPION_GELD = 200, FS_REIN = 87.5;
+  const FS_NENNGELD = 35, FS_PRAEMIE = 7.5, FS_CHAMPION_GELD = 200, FS_REIN = 100;   // Dome: Prämie wie in echt ab 7,5; reinrassig = 100 % inkl. Veredler (Zuchtbuch)
+  const FSC_NENNGELD = 60, FSC_PREIS = 1500;   // Fohlenchampionat: nur Prämienfohlen, Preisgeld je Klasse (verteilt auf die Platzierten)
   const fsRund = x => Math.max(1, Math.min(10, Math.round(x * 2) / 2));
   const fsKlasse = f => !f.anteile || reinAnteil(f.anteile, f.rasse) >= FS_REIN ? (f.geschlecht === "Stute" ? "stut" : "hengst") : "offen";
   // Bewertung eines Fohlens – erwartet: ohne Zufall (für die Einschätzung beim Nennen)
@@ -4939,26 +4946,35 @@
   function fohlenschauSperre(p, t, P) {
     if (spiel.tag >= t.tag) return "Nennschluss vorbei";
     const box = fsBox(p), f = box && box.fohlen; if (!f) return "kein Fohlen bei Fuß";
-    if (f.fohlenschau) return "Fohlen schon vorgestellt";
+    if (P.championat) { if (!f.fohlenschau || !f.fohlenschau.praemie) return "nur für Prämienfohlen"; if (f.championat) return "war schon beim Championat"; }
+    else if (f.fohlenschau) return "Fohlen schon vorgestellt";
     const alterDann = alterJZ(f) + (jzVon(t.tag) - jzVon(spiel.tag));
     if (alterDann >= 2) return "dann schon abgesetzt";
     if (alterDann < 0 || (alterDann === 0 && datum(t.tag).t <= Math.ceil(tpj() / 3))) return "Fohlen dann noch zu jung";
     if (fsKlasse(f) !== P.klasse) return fsKlasse(f) === "offen" ? "Mischling – offene Klasse" : P.klasse === "offen" ? "nur für Mischlinge" : P.klasse === "stut" ? "nur Stutfohlen" : "nur Hengstfohlen";
     if (t.nennung.some(n => n.pid === p.id && n.prid !== P.id)) return "schon in einer Klasse genannt";
     if (spiel.turniere.some(x => x !== t && x.tag === t.tag && x.nennung.some(n => n.pid === p.id))) return "am selben Tag schon genannt";
-    if (!t.nennung.some(n => n.pid === p.id && n.prid === P.id) && spiel.geld < FS_NENNGELD) return "zu wenig Geld";
+    if (!t.nennung.some(n => n.pid === p.id && n.prid === P.id) && spiel.geld < (P.nenn || FS_NENNGELD)) return "zu wenig Geld";
     return "";
   }
   function fohlenschauErzeugen(D, rz, neu, ortW) {
     if (D.s !== 1 && D.s !== 2) return;
     const pr = (klasse, name) => ({ id: "p" + Math.floor(rz() * 1e9).toString(36), disz: "fohlenschau", fohlenschau: true, klasse, stufe: -1, starter: 8 + Math.floor(rz() * 13), name, nenn: FS_NENNGELD, preis: 0 });
     neu("fohlenschau", "zucht", `${D.s === 1 ? "Fohlenschau" : "Fohlen-Nachschau"} des Zuchtverbands in ${ortW()}`, [pr("stut", "Stutfohlen"), pr("hengst", "Hengstfohlen"), pr("offen", "Offene Klasse (Mischlinge)")]);
+    // Fohlenchampionat am letzten Tag der Jahreszeit – nur für Prämienfohlen; die Schau liegt mindestens 2 Tage davor (Ergebnis kommt am Tag danach, Nennschluss am Vortag)
+    const S = spiel.turniere[spiel.turniere.length - 1], start = S.tag - datum(S.tag).t + 1, letzter = start + tpj() - 1;
+    if (S.tag > letzter - 2 && letzter - 2 > spiel.tag) S.tag = Math.max(spiel.tag + 1, letzter - 2 - Math.floor(rz() * Math.max(1, Math.min(3, tpj() - 3))));
+    if (letzter <= spiel.tag) return;
+    const cp = (klasse, name) => ({ ...pr(klasse, name), championat: true, starter: 10 + Math.floor(rz() * 11), nenn: FSC_NENNGELD });
+    neu("fohlenschau", "zucht", `Fohlenchampionat des Zuchtverbands in ${ortW()}`, [cp("stut", "Championat Stutfohlen"), cp("hengst", "Championat Hengstfohlen"), cp("offen", "Championat Offene Klasse")]);
+    spiel.turniere[spiel.turniere.length - 1].tag = letzter;
   }
   // Einschätzung beim Nennen (ohne Zufall): erwartete Gesamtnote gegen das Feld (Schnitt 7,0)
   function fsChance(f) { const n = fohlenNoten(f, null, true).gesamt; return n >= FS_PRAEMIE ? ["🟢", "Prämie möglich"] : n >= 7 ? ["🟡", "ordentlich"] : ["🔴", "eher schwach"]; }
   // Ergebnis in der Nacht nach der Schau
   function fohlenschauErgebnis(p, box, t, P, rz) {
     const f = box.fohlen; if (!f) return `<li><b>${esc(P.name)}</b>: ❌ das Fohlen war nicht mehr bei Fuß</li>`;
+    if (P.championat) return fsChampionatErgebnis(f, P, rz);
     const N = fohlenNoten(f, rz), andere = Array.from({ length: P.starter - 1 }, () => Math.round((7 + (rz() + rz() + rz() - 1.5) * 1.2) * 10) / 10);
     const platz = 1 + andere.filter(x => x > N.gesamt).length, praemie = N.gesamt >= FS_PRAEMIE;
     // Fohlenchampion: Sieger der eigenen Klasse und besser als die Sieger der anderen Klassen
@@ -4970,6 +4986,30 @@
     const n = x => String(x).replace(".", ",");
     return `<li><b>${esc(f.name)}</b> (${esc(P.name)}): ${champion ? "🏆 <b>Fohlenchampion!</b> " : ""}${platz}. Platz von ${P.starter} · Gesamtnote <b>${n(N.gesamt)}</b>${praemie ? " · 🎗️ <b>Prämienfohlen</b>" : ""}<br><small>Typ ${n(N.typ)} · Körperbau ${n(N.koerper)} · Schritt ${n(N.schritt)} · Trab ${n(N.trab)} · Gesamteindruck ${n(N.eindruck)}${champion ? ` · Ehrenpreis ${fmt(FS_CHAMPION_GELD)}` : ""}</small></li>`;
   }
+  // Fohlenchampionat: alle Starter sind Prämienfohlen (Feld Schnitt 7,9) – neu gerichtet; Preisgeld für das beste Viertel (mind. 3)
+  function fsChampionatErgebnis(f, P, rz) {
+    const N = fohlenNoten(f, rz), andere = Array.from({ length: P.starter - 1 }, () => Math.round((7.9 + (rz() + rz() + rz() - 1.5) * 0.7) * 10) / 10);
+    const platz = 1 + andere.filter(x => x > N.gesamt).length, anz = Math.max(3, Math.ceil(P.starter / 4)), plaziert = platz <= anz;
+    const anteil = PREIS_ANTEIL.slice(0, anz), geld = plaziert ? Math.round(FSC_PREIS * (anteil[platz - 1] || 0.05) / anteil.reduce((a, b) => a + b, 0) / 5) * 5 : 0;
+    f.championat = { tag: spiel.tag, name: P.name, gesamt: N.gesamt, platz, von: P.starter, plaziert, geld };
+    if (geld) buchen(geld, "Turniere: Preisgeld");
+    const n = x => String(x).replace(".", ",");
+    return `<li><b>${esc(f.name)}</b> (${esc(P.name)}): ${platz === 1 ? "🏆 <b>Champion!</b> " : plaziert ? "🎀 platziert · " : ""}${platz}. Platz von ${P.starter} · Gesamtnote <b>${n(N.gesamt)}</b>${geld ? ` · Preisgeld ${fmt(geld)}` : ""}${platz <= 3 ? " · 🏅 Stallplakette" : ""}</li>`;
+  }
+  // Stallplaketten (hängen am Pferd, wandern also mit – bei Boxwechsel, Absetzen und Kauf): Prämienfohlen, Fohlenchampion, Championat Platz 1–3
+  function plakettenVon(p) {
+    const L = [], S = p && p.fohlenschau, C = p && p.championat, j = t => t != null ? datum(t).j : "";
+    if (S && S.praemie) L.push({ farbe: "#d8b343", zeichen: "P", text: `Prämienfohlen${S.schau ? ` – ${S.schau}` : ""} ${j(S.tag)}` });
+    if (S && S.champion) L.push({ farbe: "#f0c419", zeichen: "★", text: `Fohlenchampion – ${S.schau} ${j(S.tag)}` });
+    if (C && C.platz <= 3) L.push({ farbe: C.platz === 1 ? "#f0c419" : C.platz === 2 ? "#c9d0d6" : "#c8874a", zeichen: C.platz === 1 ? "C" : String(C.platz), text: `${C.platz === 1 ? "Champion" : `${C.platz}. Platz`} – ${C.name} ${j(C.tag)}` });
+    return L;
+  }
+  const plakettenBreite = () => { const b = B(); return b && !b.tot ? Math.min(6, [b.pferd, b.fohlen].filter(Boolean).reduce((a, q) => a + plakettenVon(q).length, 0)) * 15 : 0; };
+  const plakettenText = p => plakettenVon(p).map(x => `🏅 ${x.text}`).join("<br>");
+  function plakettenSVG(pferde) {
+    const L = pferde.filter(Boolean).flatMap(q => plakettenVon(q).map(x => ({ ...x, name: q.name })));
+    return L.slice(0, 6).map((x, i) => `<g transform="translate(${236 + i * 15},41)"><title>${esc(x.name)}: ${esc(x.text)}</title><rect width="13" height="16" rx="2.5" fill="${x.farbe}" stroke="#2b1d14" stroke-width="1.1"/><rect x="2" y="2" width="9" height="12" rx="1.5" fill="none" stroke="#fff6d8" stroke-width=".7" opacity=".8"/><text x="6.5" y="11.5" text-anchor="middle" font-size="8" font-weight="800" fill="#2b1d12" font-family="system-ui, sans-serif">${x.zeichen}</text></g>`).join("");
+  }
   const fsText = f => { const S = f && f.fohlenschau; if (!S) return ""; const n = x => String(x).replace(".", ",");
     return `${S.champion ? "🏆 Fohlenchampion · " : S.praemie ? "🎗️ Prämienfohlen · " : ""}Gesamtnote ${n(S.gesamt)} (Typ ${n(S.noten.typ)}, Körperbau ${n(S.noten.koerper)}, Schritt ${n(S.noten.schritt)}, Trab ${n(S.noten.trab)}, Eindruck ${n(S.noten.eindruck)})${S.markt ? "" : ` · ${S.platz}. von ${S.von}`}`; };
   // Marktwert: Fohlen und Jungpferde deutlich mehr (Note über 6,8: +35 % je Notenpunkt, Prämie +15 %, Champion +30 %), ab 4 Jahren nur noch ein Drittel davon · Mütter +5 % je Prämienfohlen (höchstens +25 %)
@@ -4977,6 +5017,7 @@
     let f = 1; const S = p.fohlenschau;
     if (S) { const j = p.geb ? alterJZ(p) / 4 : (p.alter || 0), b = Math.max(0, S.gesamt - 6.8) * 0.35 + (S.praemie ? 0.15 : 0) + (S.champion ? 0.3 : 0); f *= 1 + b * (j >= 4 ? 1 / 3 : 1); }
     if (p.praemienFohlen) f *= 1 + 0.05 * Math.min(5, p.praemienFohlen);
+    if (p.championat && p.championat.plaziert) f *= 1 + (p.championat.platz === 1 ? 0.25 : 0.1) * ((p.geb ? alterJZ(p) / 4 : (p.alter || 0)) >= 4 ? 1 / 3 : 1);   // Fohlenchampionat
     return f;
   }
   // Pferdemarkt: Fohlen und junge Pferde (bis 3 J.) vom Züchter sind oft schon vorgestellt worden (reinrassig, 45 %)
@@ -5922,7 +5963,7 @@
       const fs = 10, lh = 12, breite = Math.max(...zeilen.map(z => z.length)) * 5.9 + 20, hoehe = zeilen.length * lh + 10;
       let x = Math.max(4, Math.min(396 - breite, ax - 24)), y = Math.max(4, ay - hoehe - 12);
       // nicht über das Boxschild (x 166–234, y 38–60): erst nach links ausweichen, sonst darunter
-      if (x < 236 && x + breite > 164 && y < 62 && y + hoehe > 36) { if (162 - breite >= 4) x = 162 - breite; else y = 62; }
+      if (x < 236 + plakettenBreite() && x + breite > 164 && y < 62 && y + hoehe > 36) { if (162 - breite >= 4) x = 162 - breite; else y = 62; }
       const spitze = Math.max(x + 10, Math.min(x + breite - 18, ax));
       svg.insertAdjacentHTML("beforeend", `<g id="sprechblase" pointer-events="none" class="sb-an">
         <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${breite.toFixed(1)}" height="${hoehe}" rx="9" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4"/>
@@ -7062,9 +7103,11 @@
       <p><b>Ergebnis:</b> Leistung = Disziplin-Wert × Tagesform × Turnierstress × Reiter × Zufall (Streuung etwa ±8 %). Tagesform = (0,85 + 0,15 × Wohlbefinden) × (0,8 + 0,2 × Gesundheit/85) × 0,85, falls die Energie nicht reicht (Energie je Start: Dressur 30, Springen 35, Vielseitigkeit 45, Reining 32, Pleasure/Trail 25, Gelassenheit 12; dann auch Übertraining wie beim Training). Turnierstress = 1 − 0,08 × e(nervös oder scheu) × (1 − Erfahrung, voll nach 8 Starts) + 0,03 × Vorliebe „Turnier“. Reiter = 0,95 + 0,015 × (7 − LK). Start über dem eigenen Ausbildungsstand (Klasse in der Akte) in Dressur, Springen, Vielseitigkeit, Western: × 0,85 je fehlender Klasse (kennt die Lektionen noch nicht). Konkurrenz: Feldniveau = Stufen-Wert (${STUFE_WERT.join("/")}) + 3 regional / + 6 groß (Western zusätzlich + 8, weil Western-Werte fast nur aus trainierbaren Werten bestehen), Wettbewerbe 32, Gelassenheit 48, Streuung der Konkurrenz etwa ±7. Anzeige: Dressur Wertnote (ab L Prozent), Springen Fehler und Zeit, Vielseitigkeit Minuspunkte, Western Score (70 = Durchschnitt). Gelassenheitsprüfung = 0,35 × Vertrauen + 0,2 × Gehorsam + 0,45 × (50 + 40 × (e gelassen + e mutig − e nervös − e scheu)) + bis 5 Erfahrung.</p>
       <p><b>Rennen, Distanz, Gangpferde</b> (Dome: wie in echt): Renntag (nicht im Winter) – Galopprennen nur reinrassige Vollblüter ab 2 J. (Ausgleich IV–I, Listenrennen; Nenngeld 50/80/100/150/300 € + Jockey-Reitgeld ${fmt(REITGELD)}, Preisgeld 2.000/3.500/5.000/8.000/15.000 €, Feld 50/58/66/73/82), Araberrennen Kl. C–A für reinrassige Araber und Achal-Tekkiner ab 3 J. (40/60/90 € + Jockey, Preisgeld 800/1.500/3.000 €, Feld 46/55/64). Trabrennen erst mit der Rasse Traber. Distanzritt (nicht im Winter): Einführungsritt 30 km ab 5 J., Kurze 50 km ab 5 J., Mittlere 70 km ab 6 J., Lange 100 km ab 7 J. (Nenngeld 40/60/80/120 €, Preis nur Mittel 150, Lang 400 €, Feld 40/56/70/80, Energie 25 + 0,6 je km). Tierarzt: lahm (Lahmheit, Hufabszess, Hufrehe, Arthrose) → nicht zugelassen; Puls = 48 + 0,12 × (100 − Ausdauer) + 0,06 × (100 − Regeneration) + km/100 × (1 − Ausdauer/100) × 12 + 8 (müde) + 0–5, über 64 → ausgeschieden; danach 3 % (müde 12 %) × (1,5 − Zähigkeit/100) nicht taktrein → ausgeschieden und Lahmheit Grad 1. Gangpferdeturnier (im Winter „Tölt auf Eis“ ohne Pass): Tölt Einsteiger/D/C/B/A für alle mit Tölt ab 4 J. (Preis B 150, A 300 €), Passrennen 250 m für alle mit Pass ab 5 J. (200 €, Feld 56; deutlich zu schwache Pferde springen manchmal in den Galopp – ungültig). Keine LK für Rennen, Distanz und Gangpferde. Im Kalender erscheinen nur Turniere, bei denen das Pferd grundsätzlich starten kann.</p>
       <p><b>Championate und International</b> (nur mit Qualifikation = Erfolge dieses Pferdes im letzten Jahr, also 4 Jahreszeiten): Landesmeisterschaft im Sommer (Dressur/Springen/Vielseitigkeit L und M, je 2 Platzierungen ab dieser Klasse, Preisgeld 1.000/2.000 €, Feld + 9) · Bundeschampionat im Herbst (Dressur- und Springpferde 5–6 J., 1× Platz 1–3 in einer Aufbauprüfung, 3.000 €) · Deutsche Meisterschaft im Herbst (Dressur und Springen S: 3 Platzierungen in S, 10.000 €, Feld + 12; Western Open: 3 Platzierungen ab Intermediate, 5.000 €) · Internationales Turnier im Frühling und Herbst (CDI Grand Prix, CSI Großer Preis: 1 Sieg in S, 25.000 €, Feld + 15, 20–40 Starter). Startrechte nach LK gelten weiter (außer Bundeschampionat). Sieger bekommen einen Titel (Landesmeister, Bundeschampion, Deutscher Meister) in der Akte. Erfolge zählen im Marktwert: Championat ×2,5, International ×4 (höchstens 40.000 €).</p>
-      <p><b>Fohlenschau</b> (Etappe 6c): im Sommer (Hauptschau) und Herbst (Nachschau) beim Zuchtverband. Anmelden über die Mutter (Pferdeanhänger → Turnier; eine Stute mit Fohlen bei Fuß sieht nur die Fohlenschau), Nenngeld ${fmt(FS_NENNGELD)}, bis zum Vortag. Nur Fohlen bei Fuß, am Schautag noch nicht abgesetzt (jünger als 2 Jahreszeiten) und mindestens etwa 1 Monat alt (in der Geburts-Jahreszeit erst nach einem Drittel der Tage); jedes Fohlen nur einmal. Klassen: Stutfohlen und Hengstfohlen (ab ${FS_REIN} % einer Rasse), offene Klasse für Mischlinge. Mutter und Fohlen fahren hin (Fahrtstress), Ergebnis am nächsten Tag per Brief.
+      <p><b>Fohlenschau</b> (Etappe 6c): im Sommer (Hauptschau) und Herbst (Nachschau) beim Zuchtverband. Anmelden über die Mutter (Pferdeanhänger → Turnier; eine Stute mit Fohlen bei Fuß sieht nur die Fohlenschau), Nenngeld ${fmt(FS_NENNGELD)}, bis zum Vortag. Nur Fohlen bei Fuß, am Schautag noch nicht abgesetzt (jünger als 2 Jahreszeiten) und mindestens etwa 1 Monat alt (in der Geburts-Jahreszeit erst nach einem Drittel der Tage); jedes Fohlen nur einmal. Klassen: Stutfohlen und Hengstfohlen (reinrassig nach Zuchtbuch: nur die eigene Rasse plus erlaubte Veredler – Hannoveraner: Vollblut, Araber · Haflinger: Araber · Quarter: Vollblut; alle anderen Rassen geschlossen), offene Klasse für Mischlinge. Mutter und Fohlen fahren hin (Fahrtstress), Ergebnis am nächsten Tag per Brief.
         Noten in halben Noten, alle rassetypisch (am Zuchtziel der eigenen Rasse gemessen): Typ = 8,6 − (Ø Abweichung der Körper-Anlagen vom Rassenprofil)/5 − (100 − Rasseanteil)/25 · Körperbau = 7 + (Ø Konstitution/Kraft − Rassenschnitt)/6 · Schritt/Trab = 7 + 1,1 × (Note − Rassenschnitt) · Gesamteindruck = Ø der vier + 0,3 × (e mutig + ½ e temperamentvoll) − 0,5 × e nervös/scheu; jede Note ± 0,4 Zufall. Gesamtnote = Schnitt der fünf (eine Kommastelle). Feld: Schnitt 7,0, Streuung etwa ± 0,6. Prämienfohlen ab ${String(FS_PRAEMIE).replace(".", ",")}; Fohlenchampion = Klassensieger mit Prämie, besser als die Sieger der anderen Klassen (Ehrenpreis ${fmt(FS_CHAMPION_GELD)}).
-        Marktwert × (1 + 0,35 × (Gesamtnote − 6,8) + 0,15 Prämie + 0,3 Champion), ab 4 Jahren nur ein Drittel davon; Mütter × (1 + 0,05 je Prämienfohlen, höchstens 5). Pferdemarkt: Fohlen der Fohlenauktion und Händlerpferde bis 3 J. sind zu 45 % schon vorgestellt (Mischlinge seltener). Note steht in der Akte (Daten) und im Abstammungsschein.</p>
+        Marktwert × (1 + 0,35 × (Gesamtnote − 6,8) + 0,15 Prämie + 0,3 Champion), ab 4 Jahren nur ein Drittel davon; Mütter × (1 + 0,05 je Prämienfohlen, höchstens 5). Pferdemarkt: Fohlen der Fohlenauktion und Händlerpferde bis 3 J. sind zu 45 % schon vorgestellt (Mischlinge seltener). Note steht in der Akte (Daten) und im Abstammungsschein.<br>
+        <b>Fohlenchampionat</b> am letzten Tag von Sommer und Herbst (die Schau liegt mind. 2 Tage davor): nur Prämienfohlen, jedes einmal, Nenngeld ${fmt(FSC_NENNGELD)}, 10–20 Starter je Klasse (Feld Schnitt 7,9 ± 0,35), Preisgeld ${fmt(FSC_PREIS)} je Klasse für das beste Viertel (mind. 3). Marktwert Sieger +25 %, platziert +10 % (ab 4 Jahren ein Drittel).<br>
+        <b>Stallplaketten</b> (neben dem Boxschild, mit dem Pferd verbunden – wandern bei Boxwechsel, Absetzen und Kauf mit): P = Prämienfohlen, ★ = Fohlenchampion, Championat Platz 1 (Gold, C), 2 (Silber), 3 (Bronze). Neugeborene liegen 1 Tag (4 Tage je Jahreszeit), 2 Tage (7) bzw. 2–3 Tage (10; Kraft-Anlage ab 50 → 2).</p>
       <p><b>Reiter-LK</b> je Disziplin (Dressur, Springen, Vielseitigkeit, Western), Start LK 7: LK 7 → E · 6 → E, A · 5 → A, L · 4 → A–M · 3 bis 1 → A–S. Aufstieg: 7→6 eine Platzierung ab E · 6→5 drei ab A · 5→4 drei ab L · 4→3 drei ab M · 3→2 drei Siege ab M · 2→1 drei Siege in S (danach zählt es neu). Wettbewerbe, Gelassenheit und Aufbauprüfungen sind für jede LK offen.</p>
       <p><b>Reiter-LK im Training:</b> Trainierst du selbst, lernt das Pferd je LK-Stufe über 7 um 4 % mehr (LK 1: +24 %) – Longieren, Doppellonge, Dressurarbeit → Dressur-LK · Stangen, Springgymnastik → Springen · Geländesprünge, Konditionstraining → Vielseitigkeit · Westernarbeit → Western. Bereiter zählen ihr eigenes Wissen. Reiterprofil: Hofverwaltung → Reiter.</p>
       <p><b>Marktpferde und Deckhengste</b> mit Ausbildung (ab 4 J., Training über 20) haben schon Turniere hinter sich: (Alter − 3) × 1–3,5 Starts (höchstens 20) in ihrer besten Disziplin (Dressur, Springen, Reining, Trail), Klasse nach Disziplin-Wert, platziert mit 25 % + 3 % je Punkt über dem Feld (5–85 %), davon 35 % Siege. Die Erfolge stehen in der Akte („beim Vorbesitzer“) und heben Preis und Decktaxe (10 % des Marktwerts).</p>

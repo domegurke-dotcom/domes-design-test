@@ -848,7 +848,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "244";
+  const SPIEL_VERSION = "245";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -856,9 +856,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=244"></script>
-<script src="kopfteile.js?v=244"></script>
-<script src="kopfalter.js?v=244"></script>
+<script src="pferd.js?v=245"></script>
+<script src="kopfteile.js?v=245"></script>
+<script src="kopfalter.js?v=245"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -5126,8 +5126,8 @@
     heulage:    { n: "Heulage", ico: "🫙", e: 7, ei: 10, rf: 28, zs: 8, preis: 0.25, art: "raufutter", pack: [25, 100, 500], info: "staubarm, leicht angesäuert" },
     stroh:      { n: "Futterstroh", ico: "🟨", e: 5, ei: 3, rf: 40, zs: 2, preis: 0.15, art: "raufutter", pack: [25, 100, 500], info: "wenig Energie – für leichtfuttrige Pferde zum Strecken" },
     heucobs:    { n: "Heucobs", ico: "🟫", e: 7, ei: 9, rf: 28, zs: 8, preis: 0.60, art: "raufutter", pack: [10, 25, 100], info: "eingeweicht – für Senioren und Pferde mit Zahnproblemen" },
-    luzerne:    { n: "Luzerne", ico: "🍀", e: 8, ei: 16, rf: 25, zs: 5, preis: 0.70, art: "kraftfutter", pack: [10, 25, 100], info: "viel Eiweiß – für Zuchtstuten, Fohlen, Muskelaufbau" },
-    ruebe:      { n: "Rübenschnitzel", ico: "🥣", e: 10, ei: 9, rf: 18, zs: 5, preis: 0.90, art: "kraftfutter", pack: [10, 25, 100], info: "eingeweicht – Energie ohne viel Stärke" },
+    luzerne:    { n: "Luzerne", ico: "🍀", e: 8, ei: 16, rf: 25, zs: 5, preis: 0.70, art: "kraftfutter", struktur: true, pack: [10, 25, 100], info: "viel Eiweiß – für Zuchtstuten, Fohlen, Muskelaufbau" },
+    ruebe:      { n: "Rübenschnitzel", ico: "🥣", e: 10, ei: 9, rf: 18, zs: 5, preis: 0.90, art: "kraftfutter", struktur: true, pack: [10, 25, 100], info: "eingeweicht – Energie ohne viel Stärke" },
     hafer:      { n: "Hafer", ico: "🌾", e: 11, ei: 11, rf: 11, zs: 45, preis: 0.50, art: "kraftfutter", pack: [10, 25, 100], info: "klassisches Kraftfutter, viel Stärke" },
     pellets:    { n: "Pellets", ico: "⚪", e: 11, ei: 13, rf: 12, zs: 25, preis: 0.80, art: "kraftfutter", pack: [10, 25, 100], info: "Fertigfutter" },
     muesli:     { n: "Müsli", ico: "🥣", e: 12, ei: 12, rf: 8, zs: 35, preis: 1.20, art: "kraftfutter", pack: [10, 25, 100], info: "Fertigfutter, viel Zucker/Stärke" },
@@ -5274,10 +5274,13 @@
   // Ausrüstung → Futter: was bekommt dieses Pferd?
   function futterDialog(p, box) {
     const R = tagesRation(p, box), H = p.futterHeute && p.futterHeute.tag === spiel.tag ? p.futterHeute : null, eigen = !!(p.futterplan && p.futterplan.kg);
-    const E = p.expertEmpf, an = futterAnlass(p, box), alt = (p.expertArchiv || {})[an.k];
+    // Empfehlungen vor v245 waren falsch gerechnet (Grenzen je Mahlzeit, Eiweiß) – die werden nicht mehr gezeigt
+    const E = p.expertEmpf && p.expertEmpf.v >= 2 ? p.expertEmpf : null, an = futterAnlass(p, box), alt0 = (p.expertArchiv || {})[an.k], alt = alt0 && alt0.v >= 2 ? alt0 : null;
+    const planJetzt = futterplanVon(p, box), gleich = E && planJetzt.mahl === E.mahl && [...new Set([...Object.keys(planJetzt.kg), ...Object.keys(E.kg)])].every(k => Math.abs((planJetzt.kg[k] || 0) - (E.kg[k] || 0)) < 0.01);
     const sorten = [...new Set([...Object.keys(R.kg), ...(E ? Object.keys(E.kg) : [])])].filter(k => FUTTER[k]);
     const tab = `<table class="ver-tab fp-vergleich"><tr><th>Futter am Tag</th><th class="re">jetzt</th>${E ? `<th class="re">Experte</th>` : ""}</tr>${sorten.map(k => { const a = R.kg[k] || 0, e = E ? E.kg[k] || 0 : null;
-      return `<tr><td>${FUTTER[k].ico} ${FUTTER[k].n}</td><td class="re nw">${a ? fmtKg(a) : "–"}</td>${E ? `<td class="re nw ${Math.abs(a - e) > 0.01 ? "abw" : ""}">${e ? fmtKg(e) : "–"}</td>` : ""}</tr>`; }).join("")}</table>`;
+      return `<tr><td>${FUTTER[k].ico} ${FUTTER[k].n}</td><td class="re nw">${a ? fmtKg(a) : "–"}</td>${E ? `<td class="re nw ${Math.abs(a - e) > 0.01 ? "abw" : ""}">${e ? fmtKg(e) : "–"}</td>` : ""}</tr>`; }).join("")}
+      <tr><td>🕐 Mahlzeiten am Tag</td><td class="re nw">${planJetzt.mahl}</td>${E ? `<td class="re nw ${planJetzt.mahl !== E.mahl ? "abw" : ""}">${E.mahl}</td>` : ""}</tr></table>`;
     const umst = E ? `<p class="text"><small>🧑‍🔬 Empfehlung vom ${tagText(E.tag)} für: <b>${esc(E.umst)}</b>${E.anlass !== an.k ? `<br>⚠️ <b>Die Umstände haben sich geändert</b> – jetzt: ${esc(an.text)}. Die Empfehlung passt vielleicht nicht mehr, den Futterexperten neu fragen.` : ""}</small></p>` : "";
     const altKnopf = alt && (!E || E.anlass !== alt.anlass) ? [[`📋 Empfehlung „${an.k}“ (${jzName(datum(alt.tag).j * 4 + datum(alt.tag).s).replace(/^\S+ /, "")}) übernehmen`, () => { planAendernStart(p, box); p.futterplan = { mahl: alt.mahl, kg: { ...alt.kg }, vom: "experte" }; planAendernEnde(p, box); p.expertEmpf = alt; speichern(); futterDialog(p, box); }]] : [];
     dialog(`<h3>🌾 Futter für ${esc(p.name)}</h3><p>Gewicht ca. ${gewicht(p)} kg · ${eigen ? (p.futterplan.vom === "experte" ? "Plan vom Futterexperten" : "eigener Futterplan") : "Standardplan"} (${futterplanVon(p, box).mahl} Mahlzeiten) · ${esc(an.text)}</p>
@@ -5285,7 +5288,8 @@
       <p class="text"><small>${box && box.fohlen ? `Inkl. ${esc(box.fohlen.name)} (frisst mit). ` : ""}${p.weide && !heuNoetigP(p) ? "Heute auf der Weide: Gras statt Heu. " : p.weide && anweidenAktiv(p) ? "Wird angeweidet: Gras und Heu. " : ""}${box && box.leckstein === jzJetzt() ? "🧊 Salzleckstein hängt in der Box." : ""}</small></p>
       ${H ? `<p class="text"><small>Heute gefüttert: ${Object.entries(H.genutzt).map(([k, x]) => `${FUTTER[k].n} ${fmtKg(x)}`).join(", ") || "Gras"}.</small></p>` : `<p class="text"><small>Heute noch nicht gefüttert.</small></p>`}
       ${alt && (!E || E.anlass !== alt.anlass) ? `<p class="text"><small>💾 Für „${an.k}“ gibt es eine gespeicherte Empfehlung vom Futterexperten (${tagText(alt.tag)}).</small></p>` : ""}`,
-      [["📋 Futterplan", () => futterplanDialog(p, box, () => futterDialog(p, box))], ...altKnopf, ["Zur Futterkammer", () => zeigeFutterkammerFenster(() => { zeigeSchirm(null); futterDialog(p, box); }), "zweit"], ["Schließen", null, "zweit"]], "breit");
+      [["📋 Futterplan", () => futterplanDialog(p, box, () => futterDialog(p, box))], ...altKnopf,
+        ...(E && !gleich && E.anlass === an.k ? [["✅ Empfehlung übernehmen", () => { planAendernStart(p, box); p.futterplan = { mahl: E.mahl, kg: { ...E.kg }, vom: "experte" }; planAendernEnde(p, box); speichern(); futterDialog(p, box); }]] : []), ["Zur Futterkammer", () => zeigeFutterkammerFenster(() => { zeigeSchirm(null); futterDialog(p, box); }), "zweit"], ["Schließen", null, "zweit"]], "breit");
   }
   // Anlass für Futterempfehlungen (Dome, v243): tragend, säugend, Arbeit … – Empfehlungen werden je Anlass gespeichert (z. B. für die nächste Trächtigkeit)
   function futterAnlass(p, box) {
@@ -5325,7 +5329,8 @@
   function futterBedarf(p, box, echt) {
     const kg = gewicht(p), gruende = [];
     let e = 0.52 * Math.pow(kg, 0.75), f = 1;
-    const [an, az] = arbeitStufe(p); if (az) { f += az; gruende.push(`Arbeit ${an} +${az * 100} %`); }
+    let [an, az] = arbeitStufe(p); if (box && box.fohlen && az > 0.25) [an, az] = ["leicht", 0.25];   // mit Fohlen bei Fuß nur leichte Arbeit (Bodenarbeit, Spaziergang, Ausritt)
+    if (az) { f += az; gruende.push(`Arbeit ${an} +${az * 100} %`); }
     if (p.traechtig && p.traechtig.geburt - jzJetzt() <= 1) { f += 0.2; gruende.push("tragend (letzte Jahreszeit) +20 %"); }
     if (box && box.fohlen) { f += 0.7; gruende.push("säugend +70 %"); }
     if (alterJZ(p) < 12) { f += 0.3; gruende.push("im Wachstum +30 %"); }
@@ -5334,14 +5339,14 @@
     if (SCHWERFUTTRIG.includes(p.rasse)) { f += 0.15; gruende.push("schwerfuttrig +15 %"); }
     if (p.boxenruhe) { f -= 0.1; gruende.push("Boxenruhe −10 %"); }   // Bewegung: Boxenruhe braucht weniger, Training (Arbeit) mehr
     if (echt) f *= 2 - stoffwechsel(p);   // tatsächlicher Bedarf mit Veranlagung (guter Futterverwerter braucht weniger) – die Anzeige zeigt nur die Schätzung
-    return { kg, energie: Math.round(e * f * 10) / 10, energieGrund: Math.round(e * 10) / 10, gruende, eiweiss: (box && box.fohlen) || alterJZ(p) < 4 ? 14 : 10,
-      rauMin: Math.round(kg / (1 + 0.03 * ((p.fz || 5) - 5)) * 0.015 * 10) / 10,  staerkeMahl: kg * 1, kraftMahl: kg * 0.003, oelMax: kg * 0.001 };   // Raufutter-Minimum vom Idealgewicht (Futterzustand 5) aus
+    return { kg, fz: futterZustand(p), energie: Math.round(e * f * 10) / 10, energieGrund: Math.round(e * 10) / 10, gruende, eiweiss: alterJZ(p) < 4 ? 13 : box && box.fohlen ? 12 : 10,
+      rauMin: Math.round(kg / (1 + 0.03 * ((p.fz || 5) - 5)) * 0.015 * 10) / 10,  staerkeMahl: kg * 1, kraftMahl: kg * 0.005, oelMax: kg * 0.001 };   // Raufutter-Minimum vom Idealgewicht (Futterzustand 5) aus
   }
   // Was ein Plan liefert (Nährwerte) – plan.kg je Sorte am Tag
   function planWerte(p, box, plan) {
     const P = plan || futterplanVon(p, box), kg = P.kg, mahl = P.mahl || 2; let e = 0, ei = 0, masse = 0, rau = 0, zs = 0, kraft = 0;
     Object.entries(kg).forEach(([k, x]) => { const Z = FUTTER[k]; if (!Z || !x) return; e += x * Z.e; if (k !== "mineral" && k !== "oel") { ei += x * Z.ei; masse += x; }
-      if (Z.art === "raufutter") rau += x; if (Z.art === "kraftfutter" || Z.art === "spezial") { kraft += x; zs += x * Z.zs * 10; } if (Z.art === "leckerli") zs += x * Z.zs * 10; });   // Stärke aus dem Kraftfutter in g (kg × % × 10) – Zucker im Heu zählt hier nicht
+      if (Z.art === "raufutter") rau += x; if (Z.art === "kraftfutter" || Z.art === "spezial") { if (!Z.struktur) kraft += x; zs += x * Z.zs * 10; } if (Z.art === "leckerli") zs += x * Z.zs * 10; });   // Stärke aus dem Kraftfutter in g (kg × % × 10) – Zucker im Heu zählt hier nicht
     const B = futterBedarf(p, box), leck = box && box.leckstein === jzJetzt(), heuGut = (kg.heu || 0) + (kg.heulage || 0) >= B.rauMin;
     return { energie: Math.round(e * 10) / 10, eiweiss: masse ? Math.round(ei / masse * 10) / 10 : 0, rau: Math.round(rau * 10) / 10, staerkeMahl: Math.round(zs / mahl), kraftMahl: Math.round(kraft / mahl * 100) / 100,
       oel: kg.oel || 0, mineral: (kg.mineral || 0) >= 0.05 || (leck && heuGut), kosten: Math.round(Object.entries(kg).reduce((a, [k, x]) => a + (FUTTER[k] ? FUTTER[k].preis * x : 0), 0) * 100) / 100, B };
@@ -5349,9 +5354,9 @@
   const futterplanVon = (p, box) => p.futterplan && p.futterplan.kg ? p.futterplan : standardPlan(p, box);
   // Bewertung je Nährwert: "wenig" | "passt" | "viel" (+ Text)
   function bedarfCheck(W) {
-    const B = W.B, q = W.energie / B.energie;
+    const B = W.B, zf = B.fz >= 7 ? 0.85 : B.fz <= 3 ? 1.15 : 1, ziel = Math.round(B.energie * zf * 10) / 10, q = W.energie / ziel;
     return [
-      ["Energie", `${W.energie.toLocaleString("de-DE")} von ${B.energie.toLocaleString("de-DE")} MJ`, q < 0.9 ? "wenig" : q > 1.1 ? "viel" : "passt", Math.min(150, q * 100)],
+      ["Energie", `${W.energie.toLocaleString("de-DE")} von ${ziel.toLocaleString("de-DE")} MJ${zf > 1 ? " (zum Zunehmen +15 %)" : zf < 1 ? " (zum Abnehmen −15 %)" : ""}`, q < 0.9 ? "wenig" : q > 1.1 ? "viel" : "passt", Math.min(150, q * 100)],
       ["Eiweiß", `${String(W.eiweiss).replace(".", ",")} % (Ziel ${B.eiweiss} %)`, W.eiweiss < B.eiweiss - 2 ? "wenig" : W.eiweiss > B.eiweiss + 4 ? "viel" : "passt", Math.min(150, W.eiweiss / B.eiweiss * 100)],
       ["Rohfaser (Raufutter)", `${fmtKg(W.rau)} (mind. ${fmtKg(B.rauMin)})`, W.rau < B.rauMin ? "wenig" : "passt", Math.min(150, W.rau / B.rauMin * 100)],
       ["Stärke je Mahlzeit (Kraftfutter)", `${W.staerkeMahl} g (höchstens ${Math.round(B.staerkeMahl)} g)${W.kraftMahl > B.kraftMahl ? ` · Kraftfutter ${fmtKg(W.kraftMahl)} je Mahlzeit, höchstens ${fmtKg(B.kraftMahl)}` : ""}${W.oel > B.oelMax ? ` · Öl über ${fmtKg(B.oelMax)}` : ""}`, W.staerkeMahl > B.staerkeMahl || W.kraftMahl > B.kraftMahl || W.oel > B.oelMax ? "viel" : "passt", Math.min(150, W.staerkeMahl / B.staerkeMahl * 100)],
@@ -5560,26 +5565,55 @@
     if (alterJZ(p) >= SENIOR_AB) return "senior";
     return null;
   }
-  // Der Experte rechnet einen Plan aus: Raufutter nach Energie (1,5–2 % des Gewichts), Spezialfutter, Kraftfutter/Öl für den Rest, Luzerne bei Eiweißmangel, Mineral
+  // Der Experte rechnet einen Plan aus – und hält dabei dieselben Grenzen ein wie „Bedarf gedeckt?“ (bedarfCheck):
+  // Raufutter nach Energie (1,5–2,5 % des Gewichts), Spezialfutter, Hafer nur bis zur Stärke-/Kraftfutter-Grenze je Mahlzeit (sonst 3 Mahlzeiten),
+  // dann Rübenschnitzel und Öl (Energie ohne Stärke), Luzerne bis das Eiweiß passt, Mineral
   function expertenPlan(p, box) {
-    const B = futterBedarf(p, box), kg = B.kg, fz = futterZustand(p), sp = spezialFuer(p), r = (x, s) => Math.max(0, Math.round(x / s) * s);
+    const B = futterBedarf(p, box), kg = B.kg, fz = futterZustand(p), sp = spezialFuer(p), r = (x, s) => Math.max(0, Math.round(x / s) * s), ab = (x, s) => Math.max(0, Math.floor(x / s + 1e-9) * s);
     const ziel = B.energie * (fz >= 7 ? 0.85 : fz <= 3 ? 1.15 : 1), P = { mahl: 2, kg: {}, vom: "experte", spezial: sp || undefined }, g = [];
     const husten = befundListe(p).some(b => (b.art === "asthma" || b.art === "husten") && (b.diagnose || b.bemerkt));
     const rauArt = husten ? "heulage" : "heu"; if (husten) g.push("Heulage statt Heu – staubarm für die Atemwege");
-    let rau = r(Math.min(kg * 0.02, Math.max(kg * 0.015, ziel / FUTTER[rauArt].e)), 0.5);
-    if (fz >= 7) { rau = r(B.rauMin, 0.5); const st = r(rau * 0.25, 0.5); P.kg.stroh = st; rau -= st; g.push("Raufutter knapp (1,5 kg je 100 kg Idealgewicht) und mit Futterstroh gestreckt – zum Abnehmen, dazu viel Bewegung"); }
-    P.kg[rauArt] = rau;
-    const energie = () => Object.entries(P.kg).reduce((a, [k, x]) => a + x * FUTTER[k].e, 0);
-    if (sp) { const S = FUTTER["sp_" + sp]; P.kg["sp_" + sp] = Math.min(r(B.kraftMahl * 2, 0.25), Math.max(0.5, r((ziel - energie()) / S.e, 0.25))); g.push(`${S.n}: ${S.info}`); }
-    let rest = ziel - energie();
+    const rauMax = kg * 0.025, rauUnten = Math.max(B.rauMin, kg * 0.015);
+    let rau = r(Math.min(rauMax, Math.max(kg * 0.015, ziel / FUTTER[rauArt].e)), 0.5);
+    if (fz >= 7) { rau = Math.max(Math.ceil(B.rauMin * 2 - 1e-9) / 2, Math.min(r(rauMax, 0.5), r(ziel / FUTTER[rauArt].e, 0.5)));
+      if (rau * FUTTER[rauArt].e > ziel * 1.05) { const st = r(rau * 0.15, 0.5); P.kg.stroh = st; rau -= st; } }
+    P.kg[rauArt] = Math.max(rau, Math.ceil(B.rauMin * 2 - 1e-9) / 2 - (P.kg.stroh || 0));
+    const W = () => planWerte(p, box, P), energie = () => W().energie;
+    // freier Platz je Tag bis zur Grenze (Kraftfutter in kg, Stärke in g) bei der aktuellen Zahl der Mahlzeiten
+    const platzKraft = () => B.kraftMahl * P.mahl - W().kraftMahl * P.mahl, platzStaerke = () => B.staerkeMahl * P.mahl - W().staerkeMahl * P.mahl;
+    const passt = k => ab(Math.min(FUTTER[k].struktur ? 99 : platzKraft(), platzStaerke() / Math.max(1, FUTTER[k].zs * 10)), 0.25);
+    if (sp) { const S = FUTTER["sp_" + sp], min = kg < 250 ? 0.25 : 0.5; P.kg["sp_" + sp] = Math.min(Math.max(min, passt("sp_" + sp)), Math.max(min, r((ziel - energie()) / S.e, 0.25))); g.push(`${S.n}: ${S.info}`); }
+    // zu viel Energie: erst Hafer, Rübenschnitzel, Öl, Spezialfutter zurück, dann Heu bis zum Minimum, zuletzt (zum Abnehmen) mehr Stroh statt Heu
+    const weniger = () => { const minus = (k, s, min) => { if ((P.kg[k] || 0) - s >= min - 1e-9) { P.kg[k] = Math.round((P.kg[k] - s) * 100) / 100; return true; } return false; };
+      return minus("hafer", 0.25, 0) || minus("ruebe", 0.25, 0) || minus("oel", 0.05, 0) || (sp && minus("sp_" + sp, 0.25, 0.25)) || minus(rauArt, 0.5, rauUnten)
+        || (fz >= 7 && W().eiweiss > B.eiweiss - 1.6 && (P.kg.stroh || 0) + 0.5 <= (P.kg[rauArt] + (P.kg.stroh || 0)) * 0.35 && minus(rauArt, 0.5, 0) && (P.kg.stroh = (P.kg.stroh || 0) + 0.5)); };
     const ohneStaerke = ["rehe", "pssm", "magen", "schonkost"].includes(sp) || fz >= 7;
-    if (rest > 3) {
-      if (ohneStaerke) { const oel = Math.min(r(B.oelMax, 0.05), r(rest / FUTTER.oel.e, 0.05)); if (oel) { P.kg.oel = oel; g.push("Öl für Energie ohne Stärke"); } rest = ziel - energie(); if (rest > 3) { P.kg.luzerne = r(Math.min(3, rest / FUTTER.luzerne.e), 0.25); g.push("Luzerne – Energie und Eiweiß ohne viel Stärke"); } }
-      else { const h = Math.min(r(B.kraftMahl * 3, 0.25), r(rest / FUTTER.hafer.e, 0.25)); if (h) { P.kg.hafer = h; if (h > B.kraftMahl * 2) P.mahl = 3; g.push(`Hafer für die Arbeit${P.mahl === 3 ? ", auf 3 Mahlzeiten verteilt" : ""}`); } }
+    const dazu = (k, max, grund) => { const rest = ziel - energie(); if (rest <= 3) return 0; const x = Math.min(max, rest / FUTTER[k].e), s = PLAN_SCHRITT(k), m = ab(x, s) || (max >= s && rest > FUTTER[k].e * s * 0.6 ? s : 0);
+      if (m) { P.kg[k] = Math.round(((P.kg[k] || 0) + m) * 100) / 100; if (grund) g.push(grund); } return m; };
+    if (!ohneStaerke && ziel - energie() > 3) {
+      if (passt("hafer") * FUTTER.hafer.e < ziel - energie()) P.mahl = 3;   // reicht die Grenze bei 2 Mahlzeiten nicht, auf 3 verteilen
+      dazu("hafer", passt("hafer"));
     }
-    if (planWerte(p, box, P).eiweiss < B.eiweiss - 1 && !P.kg.luzerne && fz < 7) { P.kg.luzerne = r(Math.max(0.5, kg * 0.002), 0.25); g.push("etwas Luzerne für mehr Eiweiß"); }
+    dazu("ruebe", Math.min(r(kg * 0.003, 0.25), passt("ruebe")));
+    dazu("oel", ab(B.oelMax, 0.05));
+    dazu("luzerne", Math.min(r(kg * (fz >= 7 && !(box && box.fohlen) ? 0.003 : 0.01), 0.25), passt("luzerne")));
+    // Eiweiß: Luzerne dazu (höchstens 1 kg je 100 kg), dafür Hafer bzw. Heu zurück, damit die Energie nicht über das Ziel geht
+    { let n = 0; const lMax = r(kg * (fz >= 7 && !(box && box.fohlen) ? 0.003 : 0.01), 0.25);   // zum Abnehmen nur wenig Luzerne
+      while (W().eiweiss < B.eiweiss - (fz >= 7 ? 1.9 : 1.5) && (P.kg.luzerne || 0) < lMax && n++ < 40) {
+        P.kg.luzerne = Math.round(((P.kg.luzerne || 0) + 0.25) * 100) / 100;
+        if (energie() > ziel * 1.05) weniger(); } }
+    { let n = 0; while (energie() > ziel * 1.08 && n++ < 40 && weniger()); }
+    { let n = 0; const hart = () => W().staerkeMahl > B.staerkeMahl || W().kraftMahl > B.kraftMahl;   // Sicherheitsnetz: Grenzen je Mahlzeit nie überschreiten
+      while (hart() && n++ < 40) { const k = ["hafer", "ruebe", "luzerne"].find(x => P.kg[x] >= 0.25); if (!k) break; P.kg[k] = Math.round((P.kg[k] - 0.25) * 100) / 100; } }
     P.kg.mineral = kg < 300 ? 0.05 : 0.1;
     Object.keys(P.kg).forEach(k => { if (!P.kg[k]) delete P.kg[k]; });
+    if (P.mahl === 3 && W().kraftMahl * 3 <= B.kraftMahl * 2 && W().staerkeMahl * 3 <= B.staerkeMahl * 2) P.mahl = 2;   // 3 Mahlzeiten nur, wenn nötig
+    if (fz >= 7) g.push(P.kg.stroh ? "Raufutter knapp und mit Futterstroh gestreckt – zum Abnehmen, dazu viel Bewegung" : "zum Abnehmen etwas weniger Energie und kein Getreide – dazu viel Bewegung");
+    if (P.kg.hafer) g.push(`Hafer für ${box && box.fohlen ? "die Milch" : alterJZ(p) < 12 ? "das Wachstum" : "die Arbeit"}${P.mahl === 3 ? ", auf 3 Mahlzeiten verteilt" : ""} – höchstens ${fmtKg(B.kraftMahl)} Kraftfutter und ${Math.round(B.staerkeMahl)} g Stärke je Mahlzeit`);
+    if (P.kg.ruebe) g.push("Rübenschnitzel (eingeweicht) – Energie ohne viel Stärke");
+    if (P.kg.oel) g.push("Öl – Energie ohne Stärke");
+    if (P.kg.luzerne) g.push(`Luzerne – Eiweiß${box && box.fohlen ? " für die Milch" : alterJZ(p) < 12 ? " für das Wachstum" : ""} und Energie ohne viel Stärke`);
+    if (energie() < ziel * 0.9) g.push(`Der Bedarf (${Math.round(ziel)} MJ) ist so hoch, dass er sich ohne Kolik- und Reherisiko nicht ganz decken lässt – ${box && box.fohlen ? "die Stute nur leicht arbeiten lassen, Weidegang hilft" : "weniger Arbeit oder Weidegang hilft"}`);
     return { P, g, sp };
   }
   const futterexperteAngestellt = () => aktive("futterexperte").length > 0;
@@ -5589,7 +5623,7 @@
     pferde.forEach(p => { const box = spiel.boxen.find(b => b.pferd === p); if (!box || !p.pflege) return;
       const { P, g, sp } = expertenPlan(p, box), B = futterBedarf(p, box);
       planAendernStart(p, box); p.futterplan = P; planAendernEnde(p, box); p.futterBeraten = spiel.tag; p.expertBetreut = true;
-      { const an = futterAnlass(p, box), E = { kg: { ...P.kg }, mahl: P.mahl, tag: spiel.tag, anlass: an.k, umst: an.text }; p.expertEmpf = E; (p.expertArchiv = p.expertArchiv || {})[an.k] = E; }   // Dome (v243): Umstände merken
+      { const an = futterAnlass(p, box), E = { kg: { ...P.kg }, mahl: P.mahl, tag: spiel.tag, anlass: an.k, umst: an.text, v: 2 }; p.expertEmpf = E; (p.expertArchiv = p.expertArchiv || {})[an.k] = E; }   // Dome (v243): Umstände merken
       if (!kostenlos) posten.push({ text: `${p.name}: Futterberatung`, betrag: FUTTER_BERATUNG });
       if (sp) { const k = "sp_" + sp, menge = Math.round(P.kg[k] * SPEZIAL_VORRAT); F.frei[sp] = true;
         if (F.lager[k] < menge) { const dazu = Math.round((menge - F.lager[k]) * 10) / 10; F.lager[k] = Math.round((F.lager[k] + dazu) * 1000) / 1000; posten.push({ text: `${FUTTER[k].n}, ${fmtKg(dazu)} (Vorrat für ${SPEZIAL_VORRAT} Tage)`, betrag: Math.round(dazu * FUTTER[k].preis * 100) / 100 }); } }
@@ -8114,7 +8148,7 @@
       <p><b>Standardplan</b> (bis zu den eigenen Futterplänen in F2): Raufutter nach Energiebedarf (seit F3: 1,5–2,5 kg je 100 kg Körpergewicht) in dieser Reihenfolge: Heu, Heulage, staubiges Heu, Heucobs, Futterstroh; Mineralfutter 100 g (unter 300 kg 50 g); Fohlen bei Fuß + 1 kg Heu je 100 kg. Reicht das Raufutter nicht für die ganze Ration, bleibt die Krippe leer (Pferd hungrig) und es kommt ein Warnbrief; fehlt Mineralfutter, bekommt das Pferd keins. Weide: Gras statt Heu (außer Winter und letzter Herbsttag), dann kein Mineralfutter aus der Kammer. Stallbursche und Turniertag nehmen das Futter ebenfalls aus der Kammer. Salzleckstein: zu Beginn jeder Jahreszeit 1 je Box mit Pferd. Warnbrief, wenn Heu oder Mineralfutter nur noch 1–2 Tage reichen oder leer sind (einmal, bis nachgekauft).</p>
       <h3>📋 Fütterung (F2: Futterplan und Bedarf)</h3>
       <p><b>Futterplan</b> je Pferd (Box → Pferdepflege → Versorgung → Futterplan, oder Ausrüstung → Futter): Menge je Sorte am Tag, gleichmäßig auf 2 oder 3 Mahlzeiten verteilt (Schritte: Raufutter 0,5 kg, Kraftfutter 0,25 kg, Öl/Mineral 50 g). Ohne eigenen Plan: Standardplan (Heu nach Energiebedarf, 1,5–2,5 kg je 100 kg, Mineralfutter 100 g). Ein Klick auf die Krippe (bzw. der Stallbursche) füttert den ganzen Tagesplan aus der Futterkammer.</p>
-      <p><b>Bedarf:</b> Energie Erhaltung = 0,52 MJ × Gewicht^0,75 (600 kg ≈ 63 MJ). Zuschläge: Arbeit leicht +25 % / mittel +50 % / schwer +100 % (Schnitt der Trainings- und Turnierenergie der letzten Tage: ab 10 / 35 / 60; Turniertag zählt 50), tragend in der letzten Jahreszeit +20 %, säugend +70 %, Jungpferd unter 3 J. +30 %, Winter auf der Weide +10 %; leichtfuttrig −15 % (${LEICHTFUTTRIG.map(r => rasseById(r).name).join(", ")}), schwerfuttrig +15 % (${SCHWERFUTTRIG.map(r => rasseById(r).name).join(", ")}). Eiweiß Ziel 10 % der Ration (Fohlen/Jungpferde unter 1 J. und säugende Stuten 14 %): zu wenig unter Ziel − 2, zu viel über Ziel + 4. Raufutter mindestens 1,5 kg je 100 kg. Stärke aus dem Kraftfutter höchstens 1 g je kg Gewicht pro Mahlzeit (Zucker im Heu zählt dabei nicht), Kraftfutter höchstens 0,3 kg je 100 kg pro Mahlzeit, Öl höchstens 1 g je kg am Tag. Mineralien gedeckt mit mind. 50 g Mineralfutter oder Salzleckstein + genug gutes Heu/Heulage. Energie: zu wenig unter 90 %, zu viel über 110 %. Weide (außer Winter/letzter Herbsttag): Gras ersetzt das Raufutter.</p>
+      <p><b>Bedarf:</b> Energie Erhaltung = 0,52 MJ × Gewicht^0,75 (600 kg ≈ 63 MJ). Zuschläge: Arbeit leicht +25 % / mittel +50 % / schwer +100 % (Schnitt der Trainings- und Turnierenergie der letzten Tage: ab 10 / 35 / 60; Turniertag zählt 50; Stute mit Fohlen bei Fuß höchstens „leicht“), tragend in der letzten Jahreszeit +20 %, säugend +70 %, Jungpferd unter 3 J. +30 %, Winter auf der Weide +10 %; leichtfuttrig −15 % (${LEICHTFUTTRIG.map(r => rasseById(r).name).join(", ")}), schwerfuttrig +15 % (${SCHWERFUTTRIG.map(r => rasseById(r).name).join(", ")}). Eiweiß Ziel 10 % der Ration (säugende Stuten 12 %, Fohlen/Jungpferde unter 1 J. 13 %): zu wenig unter Ziel − 2, zu viel über Ziel + 4. Raufutter mindestens 1,5 kg je 100 kg. Stärke aus dem Kraftfutter höchstens 1 g je kg Gewicht pro Mahlzeit (Zucker im Heu zählt dabei nicht), Kraftfutter höchstens 0,5 kg je 100 kg pro Mahlzeit (Luzerne und Rübenschnitzel zählen hier nicht mit, ihre Stärke schon), Öl höchstens 1 g je kg am Tag. Mineralien gedeckt mit mind. 50 g Mineralfutter oder Salzleckstein + genug gutes Heu/Heulage. Energie: zu wenig unter 90 %, zu viel über 110 % – gemessen am Ziel (Futterzustand 1–3 Bedarf +15 % zum Zunehmen, 7–9 −15 % zum Abnehmen). Weide (außer Winter/letzter Herbsttag): Gras ersetzt das Raufutter.</p>
       <p><b>Futterzustand (F3)</b>, versteckt 1–9 (1 abgemagert … 5 gut im Futter … 9 fettleibig), sichtbar über das Körperbild: 1–3 dünn, 4–6 normal (sportlich nach etwa 1 Jahr gutem, regelmäßigem Training: Muskel-Punkte je Trainingstag (mind. 15 Energie oder Turnier) +1, Ruhetage im Rhythmus (bis 2 Tage nach dem letzten Training) ±0, längere Pause −2 je Tag (Abbau doppelt so schnell); höchstens 4 × Tage je Jahreszeit, sichtbar ab ¾ davon), 7–9 dick. Täglich: gefütterte Energie &gt; 110 % des Bedarfs → +1 Tag, &lt; 90 % → −1 Tag, hungrig −2; eine Stufe nach ${fzSchwelle()} Tagen (je nach Spieltempo: 4 Tage/Jz → 4, 7 → 5, 10 → 6); Richtungswechsel zählt neu, passende Ration lässt den Zähler zurücklaufen. Weide deckt Frühling 115 % (junges Gras), Sommer 100 %, Herbst 90 %; im Winter und am letzten Herbsttag kein Gras – nur das zugefütterte Heu zählt. Gewicht ±3 % je Stufe von 5. Gewicht ist ein Zusammenspiel: Futter, Bewegung (Arbeit erhöht den Bedarf, Boxenruhe −10 %) und Veranlagung (versteckte Futterverwertung 0,85–1,15, vererbt als Mittel der Eltern ± 0,04 – der angezeigte Bedarf ist nur die Schätzung ohne diese Veranlagung). Standardplan: Heu nach Energiebedarf (6 MJ/kg), mind. 1,5 und höchstens 2,5 kg je 100 kg.<br>
       <b>Folgen:</b> Stufe 1–2: Gesundheit −1 und Wohlbefinden −2 je Nacht, Energie-Max ×0,8, Lernen ×0,85, Turnier ×0,9, Infekte (Erkältung, Husten, Influenza, Druse, Herpes, Hautpilz, Würmer) ×1,5. Stufe 8–9: Wohlbefinden −1, Energie-Max ×0,9, Lernen ×0,9, Turnier ×0,9, Arthrose ×1,5. Hufrehe ×1,5 (Stufe 7) bzw. ×2,5 (ab 8); Frühlingsweide bei leichtfuttrigen oder dicken Pferden ×2. Zu wenig Raufutter (&lt; 90 % des Minimums): Wohlbefinden −3 (Langeweile), Kolik ×2, Magengeschwür ×3 (sonst ×0,4). Zu viel Stärke/Kraftfutter je Mahlzeit: Kolik ×2, Hufrehe ×1,5, Magengeschwür ×2, „Hafer sticht“ am Folgetag (Lernen ×0,85, Turnier ×0,95). Eiweiß 3 Punkte unter Bedarf: Kraft −0,2 je Tag (über 5); 6 Punkte drüber: Gesundheit −0,5 (Leber/Nieren). Mineralien fehlen ab 5 Tagen: Wohlbefinden −1 (stumpfes Fell), Hornspalt ×1,5. Unter 3 Jahren (auch Fohlen bei Fuß über die Mutter): ab 10 Mangeltagen (Eiweiß/Mineralien) OCD-Risiko ×2.<br>
       <b>Magengeschwür:</b> Befund (Bereich Futter), Grundrisiko klein, Wohlbefinden unter 50 ×1,5; Behandlung Magenschutz (Omeprazol, Rezept, 35 €).</p>
@@ -8122,7 +8156,7 @@
       <b>Anweiden:</b> Kommt ein Pferd nach mehr als einer Jahreszeit ohne Weide wieder raus (nicht im Winter), wird es ${anweidenTage()} Tage angeweidet: stundenweise draußen, dazu Heu (wie im Winter); Kolik und Hufrehe ×1,3 in dieser Zeit.<br>
       <b>Leckerli</b> (Box → Pferdepflege → Versorgung): Möhre/Apfel 100 g, Leckerli 10 g aus der Futterkammer; bis 3 am Tag je Vertrauen +0,3 und Wohlbefinden +0,5. An 5 Tagen mehr als 3 → „bettelt und schnappt“ (Brief), dann gibt es kein Vertrauen mehr dafür; nach 14 Tagen ohne zu viele Leckerli legt es sich. Zucker und Energie der Leckerli zählen im Futterzustand mit.<br>
       <b>Futterumstellung:</b> Ein geänderter Futterplan (ab 1 kg Raufutter oder 250 g Kraftfutter Unterschied) wird über 3 Tage eingeführt: Tag 1 ⅓, Tag 2 ⅔, Tag 3 ganz neu. „Sofort umstellen“ (mit Warnung) → Kolik ×2 für 2 Tage.</p>
-      <p><b>Futterexperte (F5):</b> extern auf Termin (Hofverwaltung → Mitarbeiter → Futterberatung oder Futterplan → Futterexperte): kommt am nächsten Morgen, ${fmt(FUTTER_BERATUNG)} je Pferd plus ${fmt(FUTTER_ANFAHRT)} Anfahrt, Rechnung per Brief (gebucht unter „Futter“). Fest angestellt erst im großen Stall (ab 20 Boxen), Gehalt ${fmt(MA_TYP.futterexperte.gehalt)} je Jahreszeit: berät kostenlos sofort und prüft zu Beginn jeder Jahreszeit alle Pferde ohne eigenen Plan und alle mit Haken „berechnet den Plan jede Jahreszeit neu“ (wird bei eigener Änderung abgehakt, kann wieder gesetzt werden). Er rechnet: Ziel-Energie = Bedarf (Stufe 7–9 ×0,85, Stufe 1–3 ×1,15); Raufutter nach Energie 1,5–2 kg je 100 kg (Heulage bei Husten/Asthma); zum Abnehmen 1,5 kg je 100 kg Idealgewicht, davon 25 % Stroh; Rest über Hafer (bis 0,3 kg je 100 kg und Mahlzeit, sonst 3 Mahlzeiten) bzw. ohne Stärke über Öl und Luzerne (Rehe, PSSM, Magen, Schonkost, dick); Luzerne bei Eiweißmangel; Mineral 100 g (50 g unter 300 kg). Der neue Plan wird über 3 Tage eingeführt. Der Spieler lernt mit (Wissen Fütterung +0,5 je Pferd).<br>
+      <p><b>Futterexperte (F5):</b> extern auf Termin (Hofverwaltung → Mitarbeiter → Futterberatung oder Futterplan → Futterexperte): kommt am nächsten Morgen, ${fmt(FUTTER_BERATUNG)} je Pferd plus ${fmt(FUTTER_ANFAHRT)} Anfahrt, Rechnung per Brief (gebucht unter „Futter“). Fest angestellt erst im großen Stall (ab 20 Boxen), Gehalt ${fmt(MA_TYP.futterexperte.gehalt)} je Jahreszeit: berät kostenlos sofort und prüft zu Beginn jeder Jahreszeit alle Pferde ohne eigenen Plan und alle mit Haken „berechnet den Plan jede Jahreszeit neu“ (wird bei eigener Änderung abgehakt, kann wieder gesetzt werden). Er rechnet: Ziel-Energie = Bedarf (Stufe 7–9 ×0,85, Stufe 1–3 ×1,15); Raufutter nach Energie 1,5–2,5 kg je 100 kg (Heulage bei Husten/Asthma); zum Abnehmen mind. 1,5 kg je 100 kg Idealgewicht, bei Energieüberschuss 15–35 % davon Stroh; Rest über Hafer bis zur Grenze je Mahlzeit (Stärke 1 g je kg, Kraftfutter 0,5 kg je 100 kg; reicht das nicht, 3 Mahlzeiten), dann Rübenschnitzel (bis 0,3 kg je 100 kg), Öl (bis 1 g je kg) und Luzerne (bis 1 kg je 100 kg, zum Abnehmen 0,3) – ohne Hafer bei Rehe, PSSM, Magen, Schonkost, dick; Luzerne, bis das Eiweiß passt (dafür Hafer bzw. Heu zurück); zu viel Energie: Hafer, Rübenschnitzel, Öl, Spezialfutter, Heu bis zum Minimum zurück. Der Plan hält immer die Grenzen von „Bedarf gedeckt?“ ein; ist der Bedarf so nicht zu decken, steht ein Hinweis im Brief; Mineral 100 g (50 g unter 300 kg). Der neue Plan wird über 3 Tage eingeführt. Der Spieler lernt mit (Wissen Fütterung +0,5 je Pferd).<br>
       <b>Spezialfutter</b> (nur über den Experten; er bringt einen Vorrat für ${SPEZIAL_VORRAT} Tage mit, danach im Futterhandel): ${Object.values(SPEZIAL).map(S => `${S.n} (${S.e} MJ, ${S.ei} % Eiweiß, ${S.zs} % Zucker/Stärke, ${S.preis.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/kg)`).join(" · ")}. Wahl: Kolik in den letzten 7 Tagen → Schonkost; Hufrehe/Cushing → Strukturfutter; PSSM → Muskelfutter; Magengeschwür → Magenschonfutter; Stufe 1–2 oder ≥ 2 Befunde → Aufbaufutter; ab 20 Jahren → Seniorenfutter. Wirkung ab 250 g am Tag: Kolik ×0,6 (Schonkost) bzw. ×0,8 (Senior), Hufrehe/Cushing ×0,5, Magengeschwür ×0,4, Infekte ×0,7 (Aufbau); passende Befunde werden mit 10 % je Tag eine Stufe besser. Senioren ab 20 Jahren verwerten ohne Seniorenfutter oder Heucobs (ab 1 kg) nur 90 % der Energie.</p>
       <h3>🏆 Turniere</h3>
       <p><b>Ablauf:</b> Pferdeanhänger (Box oder Hauptmenü) → Turnier → Turnierkalender. Nennen bis spätestens am Tag vorher (Nenngeld sofort, beim Zurückziehen keine Erstattung). Am Turniertag morgens fährt das Pferd los (von der Weide wird es vorher geholt; krank/schwach → nicht gestartet, Nenngeld verfällt), ist den ganzen Tag weg (kein Training, Box sauber, unterwegs gefüttert). In der Nacht wird gerechnet, der Brief kommt am nächsten Tag. Ab 4 Jahren, nicht mit Fohlen bei Fuß, tragend keine Sprünge und in der letzten Jahreszeit vor der Geburt gar nicht; höchstens 2 Prüfungen je Turnier in benachbarten Klassen, nur ein Turnier pro Tag.</p>

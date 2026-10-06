@@ -935,7 +935,7 @@ function ausbildungsWerte(pferd) {
   return AUSBILDUNG.map((name, i) => {
     let v = sk ? (sk[i] || 0) : basis * (1.12 - i * 0.13) * Math.pow(pr.dress, i / 4) + (basis > 0 ? w.streuung[i] : 0);
     v = Math.max(0, Math.min(97, v));
-    if (i > 0) v = Math.min(v, Math.max(0, (vorher - 20) / 80 * 100), vorher);
+    if (i > 0 && !sk) v = Math.min(v, Math.max(0, (vorher - 20) / 80 * 100), vorher);   // gespeicherte Stufen halten die Regel schon beim Training ein (skalaGrenze)
     vorher = v;
     return { name, wert: Math.round(v) };
   });

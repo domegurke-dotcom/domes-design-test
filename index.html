@@ -781,7 +781,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "198";
+  const SPIEL_VERSION = "199";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -789,9 +789,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=198"></script>
-<script src="kopfteile.js?v=198"></script>
-<script src="kopfalter.js?v=198"></script>
+<script src="pferd.js?v=199"></script>
+<script src="kopfteile.js?v=199"></script>
+<script src="kopfalter.js?v=199"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2560,7 +2560,7 @@
         <div class="zeile-wert" style="grid-row:${i + 1}"><div class="kopf"><b class="lex" data-lex="skala:${x.name}">${x.name}</b><span>${x.wert} %${q ? ` <em class="vgl-b">${qa[i].wert} %</em>` : ""}</span></div>
         <div class="balken"><i style="width:${x.wert}%"></i></div>${q ? `<div class="balken vgl"><i style="width:${qa[i].wert}%"></i></div>` : ""}</div>`).join("") +
         SKALA_PHASEN.map(([n, a, b], c) => `<div class="sp-k" style="grid-column:${c + 2};grid-row:${a + 1} / ${b + 2}" title="Phase: ${n}"><span>${n}</span></div>`).join("") + `</div>` +
-        (box.lesen || box.tot ? "" : `<p class="text" style="margin:6px 0 0"><small>💪 Schubkraft ${schubkraft(p)} · Tragkraft ${tragkraft(p)} – Schwung kann höchstens bis ${Math.min(97, schubkraft(p) + 10)} %, Geraderichtung und Versammlung bis ${Math.min(97, tragkraft(p) + 10)} % steigen. Mehr Kraft (z. B. Springgymnastik, Konditionstraining) hebt die Grenze.<br>⚡ Energie heute: ${Math.max(0, energie(p))} / ${ENERGIE_MAX} · Training daheim: Pflege → Ort → Reitplatz oder Gelände.</small></p>`);
+        (box.lesen || box.tot ? "" : `<p class="text" style="margin:6px 0 0"><small>💪 Schubkraft ${schubkraft(p)} · Tragkraft ${tragkraft(p)} – Schwung kann höchstens bis ${Math.min(97, schubkraft(p) + 10)} %, Geraderichtung und Versammlung bis ${Math.min(97, tragkraft(p) + 10)} % steigen. Mehr Kraft (z. B. Springgymnastik, Konditionstraining) hebt die Grenze.<br>⚡ Energie heute: ${Math.max(0, energie(p))} / ${energieMax(p)} · Training daheim: Pflege → Ort → Reitplatz oder Gelände.</small></p>`);
     }
     else if (aktenReiter === "gesundheit") {
       const g = pf.gesundheit;
@@ -2695,7 +2695,7 @@
             : `<button class="kachel klickbar" data-ueb="${k}" title="${U.n.replace(/\u00ad/g, "")}: ${U.info}"><span class="ico">${U.ico}</span><b>${U.n}</b><small>⚡ ${ko}${ko > E ? " · zu müde" : ""}</small></button>`;
           return mitB ? `<div class="kachel-halten"><label class="halten" title="in den Trainingsplan für den Bereiter"><input type="checkbox" data-uplan="${k}" ${drin ? "checked" : ""}></label>${knopf}</div>` : knopf; };
         inhalt = meld + `<p class="text" style="margin:0 0 4px">${O.ico} <b>${O.n}</b>${wetterTxt}${!spiel.anlage[ort] ? " · 🛠️ nur Admin" : ""}</p>
-          <div class="zeile-wert"><div class="kopf"><b>⚡ Energie</b><span>${Math.max(0, E)} / ${ENERGIE_MAX}${E < 0 ? " <small>· überanstrengt</small>" : ""}</span></div><div class="balken"><i style="width:${Math.max(0, E)}%"></i></div></div>
+          <div class="zeile-wert"><div class="kopf"><b>⚡ Energie</b><span>${Math.max(0, E)} / ${energieMax(p)}${E < 0 ? " <small>· überanstrengt</small>" : ""}</span></div><div class="balken mit-anlage"><u style="width:${energieMax(p)}%"></u><i style="width:${Math.max(0, E)}%"></i></div>${energieMax(p) < ENERGIE_MAX ? `<p class="text" style="margin:2px 0 0"><small>Weniger Kraft als sonst: ${energieGruende(p).join(", ")}.</small></p>` : ""}</div>
           ${sp ? `<p class="text">🚫 ${esc(p.name)} ${sp}.</p>` : ""}
           <div class="kacheln quadrat">${liste.map(kachel).join("")}</div>
           ${T && T.liste.length ? `<div class="train-bericht"><b>📋 Trainingsbericht heute</b><ul>${T.liste.map(trainBerichtZeile).join("")}</ul></div>` : `<p class="text"><small>Jede Übung kostet Energie (⚡) – über Nacht füllt sie sich wieder auf. Mehrere Übungen lassen sich kombinieren, z. B. erst Longieren zum Aufwärmen (im Winter wichtig), dann Arbeit und zum Schluss ein Ausritt als Belohnung.</small></p>`}
@@ -4283,13 +4283,29 @@
   // Tempo: Grundwerte × TRAIN_SK (Skala) bzw. × TRAIN_W (Werte), umgerechnet auf Tage pro Jahreszeit (× 7 / Tage) – Ziel: regelmäßig trainiert etwa nach 1 Jahr Klasse A, nach 2–3 Jahren L
   let TRAIN_SK = 2.5, TRAIN_W = 1.5, AUSB_X = 2.5;
   const r2 = x => Math.round(x * 100) / 100;
-  const energie = p => (p.energie == null ? (p.energie = ENERGIE_MAX) : p.energie);
+  // Höchste Energie hängt an Gesundheit, Wohlbefinden und Krankheiten (auch unbemerkten – das Pferd wirkt dann matt):
+  // Gesundheit ab 85 % voll, darunter weniger (50 % → 0,4) · Wohlbefinden 0,6 + 0,4 × Wohl/100 · je Befund-Grad −10 % (höchstens −60 %)
+  function energieMax(p) {
+    if (!p || !p.pflege) return ENERGIE_MAX;
+    const g = p.pflege.gesundheit, gF = Math.max(0.4, Math.min(1, 0.4 + 0.6 * (g - 50) / 35)), wF = 0.6 + 0.4 * wohlbefinden(p) / 100;
+    const bF = Math.max(0.4, 1 - aktiveBefunde(p).filter(b => !imInkub(b)).reduce((a, b) => a + 0.1 * b.grad, 0));
+    return Math.round(ENERGIE_MAX * gF * wF * bF);
+  }
+  function energieGruende(p) {
+    if (!p || !p.pflege) return [];
+    const l = [], g = p.pflege.gesundheit, w = wohlbefinden(p);
+    if (g < 85) l.push(`Gesundheit ${Math.round(g)} %`);
+    if (w < 90) l.push(`Wohlbefinden ${Math.round(w)} %`);
+    if (aktiveBefunde(p).some(b => !imInkub(b))) l.push(bekannteBefunde(p).length ? "krank" : "wirkt matt");
+    return l;
+  }
+  const energie = p => { if (p.energie == null) p.energie = energieMax(p); return Math.min(p.energie, energieMax(p)); };
   const jzAlterTxt = jz => jz < 4 ? `${jz * 3} Monaten` : `${String(jz / 4).replace(".5", "½").replace(".25", "¼").replace(".75", "¾")} ${jz === 4 ? "Jahr" : "Jahren"}`;
-  // über Nacht: Energie füllt sich je nach Regeneration (45 + 0,45 × Regeneration), bei schwacher Gesundheit (unter 50 %) nur 60 % davon
+  // über Nacht: Energie füllt sich je nach Regeneration (45 + 0,45 × Regeneration) bis zur Höchstgrenze (Gesundheit, Wohlbefinden, Krankheit)
   function trainingNacht(p) {
     if (!p || !p.werte) return; werteErgaenzen(p);
-    const reg = p.werte.ist.regeneration || 50, g = p.pflege ? p.pflege.gesundheit : 100;
-    p.energie = Math.min(ENERGIE_MAX, Math.round(energie(p) + (45 + 0.45 * reg) * (g < 50 ? 0.6 : 1)));
+    const reg = p.werte.ist.regeneration || 50;
+    p.energie = Math.min(energieMax(p), Math.round(energie(p) + 45 + 0.45 * reg));
   }
   // Ausbildungsskala je Stufe gespeichert (p.skala) – alte Pferde übernehmen ihren bisherigen Stand
   function skalaErgaenzen(p) {
@@ -6064,7 +6080,7 @@
         Object.entries(U.sk || {}).map(([i, x]) => AUSBILDUNG[i] + " " + String(x).replace(".", ",")).join(", ") || "–", Object.entries(U.w).map(([k, x]) => ((WERTE_KOERPER.concat(WERTE_KOPF).find(w => w.key === k) || {}).titel || k) + " " + String(x).replace(".", ",")).join(", ") + (U.gang ? ", Gangwerk +0,02" : "")]))}
       <p><b>Zuwachs</b> je Übung = Grundwert × Lernfaktor (0,6–1,2) × Wohlbefinden-Faktor (0,5–1,2) × Vorliebe (1 + 0,25 × Vorliebe, 0,75–1,25) × Befund-Bremse × Trainer (du 1 · Bereiter 0,8 + 0,4 × Wissen Rücken/100) × Ort/Wetter. Müde (Energie reicht nicht) ×0,6 · Winter ohne Aufwärmen (erste Übung des Tages ist Reiten) ×0,8 · Dressurarbeit × (1 + 0,2·e sensibel) · Gelände und Sprünge × (1 + 0,15·e mutig − 0,25·e scheu). Charakter: Gehorsam/Konzentration × (1 + 0,4·e leistungsbereit − 0,3·e eigensinnig), Vertrauen × (1 + 0,5·e verschmust), Reaktionsfähigkeit × (1 − 0,4·e nervös). Gewöhnungsphase (Takt, Losgelassenheit, Anlehnung) × (0,8 + 0,2 × Vertrauen/100 + 0,2 × Gehorsam/100 + 0,15·(e ruhig + e gelassen) − 0,15·(e temperamentvoll + e nervös)).</p>
       <p><b>Sättigung:</b> voller Zuwachs bis 60 % der Grenze, darüber linear weniger bis 0 an der Grenze (× 2,5 × (1 − Wert/Grenze)). Grenze: Anlage × Altersfaktor (Vertrauen/Gehorsam 100, Skala siehe oben).</p>
-      <p><b>Energie</b> (0–100): über Nacht + (45 + 0,45 × Regeneration), bei Gesundheit unter 50 % nur 60 % davon. Kosten: Grundwert × 0,85 (mag) / 1,2 (mag nicht) × 1,2 (die ersten 3 Male) × 1,2 (tragend). <b>Übertraining</b> (Energie reicht nicht, nach Rückfrage): Wohlbefinden −8, Gesundheit −3, 15 % × (1,5 − Zähigkeit/100) Lahmheit Grad 1. Winter ohne Aufwärmen: 4 % × (1,5 − Zähigkeit/100) Lahmheit. Eigensinnig: mehr als 60 Energie am Tag → Wohlbefinden −3·e. Jeder Trainingstag: Wohlbefinden +3 (+2·e temperamentvoll), zählt nicht als Boxtag; leistungsbereite Pferde vermissen Arbeit nach 2 freien Tagen (−2·e).</p>
+      <p><b>Energie</b> (0–100): über Nacht + (45 + 0,45 × Regeneration) bis zur Höchstgrenze = 100 × Gesundheit-Faktor (ab 85 % 1, darunter linear bis 0,4 bei 50 %) × (0,6 + 0,4 × Wohlbefinden/100) × Krankheit (−0,1 je Befund-Grad, auch unbemerkte – „wirkt matt“, mind. 0,4). Sinkt die Grenze, sinkt die Energie sofort mit. Kosten: Grundwert × 0,85 (mag) / 1,2 (mag nicht) × 1,2 (die ersten 3 Male) × 1,2 (tragend). <b>Übertraining</b> (Energie reicht nicht, nach Rückfrage): Wohlbefinden −8, Gesundheit −3, 15 % × (1,5 − Zähigkeit/100) Lahmheit Grad 1. Winter ohne Aufwärmen: 4 % × (1,5 − Zähigkeit/100) Lahmheit. Eigensinnig: mehr als 60 Energie am Tag → Wohlbefinden −3·e. Jeder Trainingstag: Wohlbefinden +3 (+2·e temperamentvoll), zählt nicht als Boxtag; leistungsbereite Pferde vermissen Arbeit nach 2 freien Tagen (−2·e).</p>
       <p><b>Sperren:</b> Weide, Boxenruhe, Klinik, Gesundheit unter 50 %, bekannter unbehandelter Befund ab Grad 3, bekannte Lahmheit/Hufabszess/Hufrehe. Tragend: keine Sprünge, in der letzten Jahreszeit vor der Geburt kein Reiten. Quarantäne: nicht ins Gelände. Unbemerkte Huf-/Rückenprobleme fallen beim Training mit 50 % + 10 % × Grad auf.</p>
       <p><b>Hufschuhe im Gelände</b> (barhuf): Verschleiß 2 % je Übung; zu klein → 30 % Scheuerstelle (Verletzung Grad 1); zu groß → 12 % Stolpern, davon 25 % Lahmheit Grad 1.</p>
       <p><b>Gangwerk:</b> gezeigte Note = Veranlagung + Bonus in halben Noten: min(0,5; Stangenbonus + Skala-Schnitt/120) + 0,5 ab Skala-Schnitt 85 %. Stangenbonus +0,02 × Faktor je Stangenarbeit, höchstens 0,5. Marktwert und Ausdruck (Klassen) nutzen die gezeigte Note, vererbt wird die Veranlagung.</p>

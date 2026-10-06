@@ -4,11 +4,11 @@ Fragen aus der Fohlenschau (6c) und der Fütterung (F1–F5), die später beantw
 Zu jeder Frage steht die Lösung, die Claude vorerst gewählt hat. Dome beantwortet alles am Ende der Fütterung.
 
 ## Fohlenschau (6c)
-1. **Ab wann zählt ein Fohlen als reinrassig (Stut-/Hengstfohlenklasse)?** Gewählt: ab 87,5 % einer Rasse, Veredler zählen wie im übrigen Spiel mit (z. B. Haflinger mit Araber-Anteil gilt als Haflinger). Darunter: offene Klasse.
-2. **Prämienfohlen ab welcher Note?** Gewählt: Gesamtnote ab 7,8 (im Plan „z. B. ab 8“) – damit werden etwa 5–10 % der Fohlen Prämienfohlen. Mit 8,0 wären es nur 1–2 %.
-3. **Geld:** Nenngeld 35 €, Fohlenchampion bekommt 200 € Ehrenpreis, Prämienfohlen kein Geld (nur Ehre und Marktwert). Passt das?
+1. ✅ **Reinrassig (Dome, v216):** wie in echt nach Zuchtbuch der Rasse – nur die eigene Rasse plus erlaubte Veredler (Hannoveraner: Vollblut, Araber · Haflinger: Araber · Quarter: Vollblut), alle anderen geschlossen. **Noch offen: Tinker** (entstanden aus Shire, Clydesdale, Fell- und Dales-Pony, Welsh Cob) – Shire als Veredler zulassen?
+2. ✅ **Prämie (Dome, v216):** ab Gesamtnote 7,5 wie in echt (im Spiel etwa ein Viertel der Fohlen).
+3. ✅ **Geld (Dome, v216):** Prämienfohlen bekommen kein Geld, dafür Stallplakette (neben dem Boxschild, wandert mit dem Pferd) und Fohlenchampionat am letzten Tag von Sommer/Herbst nur für Prämienfohlen (Nenngeld 60 €, 1.500 € Preisgeld je Klasse, Plakette für Platz 1–3, Marktwert Sieger +25 %, platziert +10 %) – Zahlen selbst festgelegt.
 4. ✅ **Dome: ja** – bei der Mutter steht jetzt „4 Nachkommen, davon 2 prämiert“ (v215). **Marktwert:** Note über 6,8 → +35 % je Notenpunkt, Prämie +15 %, Champion +30 % (ab 4 Jahren nur ein Drittel davon); Mutter +5 % je Prämienfohlen (höchstens +25 %). Ein Prämienfohlen mit 7,8 ist so etwa 1,5× so viel wert.
-5. **Mindestalter:** Fohlen aus der laufenden Jahreszeit dürfen erst nach einem Drittel der Tage (≈ 1 Monat) vorgestellt werden.
+5. **Mindestalter:** Fohlen aus der laufenden Jahreszeit dürfen erst nach einem Drittel der Tage (≈ 1 Monat) vorgestellt werden. ✅ Dome: dazu liegen Neugeborene jetzt nur noch 1 Tag (4 Tage je Jahreszeit), 2 Tage (7) bzw. 2–3 Tage (10, nach Kraft) – v216.
 
 ## Fütterung (F1–F5)
 1. **F1 – Startvorrat:** Neue und alte Spielstände bekommen einmal kostenlos Heu für 14 Tage (10 kg je Pferd), 3 kg Mineralfutter und 1 Salzleckstein je Pferd, damit niemand plötzlich ohne Futter dasteht. Passt das?

@@ -42,7 +42,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName`, `#chHof` ausfüllen → `#chLos`. Admin: `spiel.admin = true`.
 - Vor dem Ausliefern Syntax prüfen (jeden `<script>`-Block mit `new Function(...)`, `node --check pferd.js`) und Screenshots in den drei Ansichten ansehen.
-- Testlink für Dome (falls GitHub Pages hängt): Artifact „Zuchtstall Testversion“ (index.html mit eigenem `<title>` + pferd.js, kopfteile.js, kopfalter.js, version.json), bei jeder Version neu veröffentlichen.
+- Kein Testlink mehr (Dome, 7.10.2026): Dome testet über GitHub Pages – das Artifact „Zuchtstall Testversion“ nicht mehr aktualisieren.
 
 ## Wichtige Spielsysteme (Stand v220)
 - **Zeit:** Jahreszeiten (Frühling, Sommer, Herbst, Winter), `tpj()` Tage pro Jahreszeit 4/7/10 (Standard 7, alte Spielstände auf 7 umgestellt). Kalender-Anker `spiel.kal` = {tag, i}, damit ein Tempowechsel das Datum nicht verschiebt. Nur das Sozialverhalten wird umgerechnet (`proTag`, Bezug 7); alles andere gilt pro Tag/Nacht. `naechsteNacht()` ist der Tageswechsel; bei `datum().t === 1` laufen die Jahreszeit-Funktionen.

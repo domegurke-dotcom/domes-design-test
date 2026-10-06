@@ -384,6 +384,9 @@
   .tp-zeile .stat { font-size: 11px; text-align: right; white-space: nowrap; } .turnier-dlg .dlg-inhalt, .dlg-karte.turnier-dlg { max-width: 560px; }
   .reiter-kopf { display: flex; gap: 12px; align-items: center; } .reiter-ava { font-size: 40px; line-height: 1; } .reiter-kopf small { display: block; color: var(--leise); }
   .lk-tab td, .lk-tab th { vertical-align: top; } .lk-tab small { color: var(--leise); }
+  .fk-zeile { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 6px 0; border-top: 1px solid #efe4cf; font-size: 13px; }
+  .fk-info { flex: 1 1 200px; min-width: 0; } .fk-info small { color: var(--leise); font-size: 11px; } .fk-werte { flex: 0 0 auto; } .fk-kauf { flex: 0 0 auto; display: flex; gap: 4px; flex-wrap: wrap; }
+  .fk-gruppe { margin: 10px 0 0; font-weight: 700; color: var(--holz); text-transform: uppercase; font-size: 11px; letter-spacing: .05em; }
   .disz-gruppe { margin: 12px 0 2px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--holz); font-weight: 700; }
   .zeile-wert .kopf { display: flex; justify-content: space-between; font-size: .92rem; margin-bottom: 4px; }
   .zeile-wert .kopf b { font-weight: 700; }
@@ -791,7 +794,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "209";
+  const SPIEL_VERSION = "210";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -799,9 +802,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=209"></script>
-<script src="kopfteile.js?v=209"></script>
-<script src="kopfalter.js?v=209"></script>
+<script src="pferd.js?v=210"></script>
+<script src="kopfteile.js?v=210"></script>
+<script src="kopfalter.js?v=210"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2256,6 +2259,7 @@
   function jahreszeitBeginn() {
     alleEigenenPferde().forEach(x => { fitJahreszeit(x.p); werteAltern(x.p); });   // Werte über der Altersgrenze sinken langsam mit
     erbJahreszeit();   // Erbkrankheiten und Veranlagungen zeigen sich mit dem Alter
+    lecksteinJahreszeit();   // jede Box bekommt einen neuen Salzleckstein aus der Futterkammer
     // ungeplante Bedeckung fällt nach einer Jahreszeit auf
     alleEigenenPferde().forEach(({ p }) => { if (!p.heimlich || jzJetzt() < p.heimlich.seit + 1) return;
       const hv = p.heimlich.vater; p.traechtig = p.heimlich; delete p.heimlich;
@@ -2456,7 +2460,7 @@
         <button class="knopf" id="vonWeide" style="width:auto;padding:9px 14px;margin-top:8px">🏠 Zurück in die Box</button></div>`;
       befundBinden(p, box);
       $("vonWeide").onclick = () => { vonWeideHolen(box); reaktionZeigen(reaktion(p, "box")); speichern(); zeigeStall(); zeigeTag(); };
-      if ($("weideHeu")) $("weideHeu").onclick = () => { box.krippeVoll = true; reaktionZeigen(reaktion(p, "fuettern")); speichern(); zeigeAkte(); zeigeTag(); };
+      if ($("weideHeu")) $("weideHeu").onclick = () => { if (!fuetternAusLager(box, "du")) { dialog(`<h3>🌾 Kein Heu mehr</h3><p>In der Futterkammer ist nicht genug Heu. Nachkaufen: Hofverwaltung → Hof → Futterkammer.</p>`); return; } box.krippeVoll = true; reaktionZeigen(reaktion(p, "fuettern")); speichern(); zeigeAkte(); zeigeTag(); };
       return;
     }
     if (p && p.turnier && !LS) { const t = (spiel.turniere || []).find(x => x.id === p.turnier.tid);
@@ -2626,15 +2630,15 @@
       ];
       const zaumHat = teile.filter(t => spiel.ausruestung[t[0]]).length, zaumAnz = teile.length;
       const haupt = [
-        ["futter", "🌾", "Futter", "Heu, Hafer und Mineralfutter", "Heu & Hafer"],
+        ["futter", "🌾", "Futter", "was bekommt dieses Pferd? – antippen", `${fmtKg(tagesRation(p, box).raufutter)} Heu`],
         ["zaumzeug", "🏇", "Zaum\u00adzeug", "Halfter, Sattel, Trense, Schabracke, Decke, Gamaschen – antippen", `${zaumHat} von ${zaumAnz}`],
         ["putzkiste", "🧰", "Putz\u00adkiste", "Bürste, Kamm und Hufkratzer – antippen", "Bürste, Kamm, Hufkratzer"],
         ["schere", "✂️", "Schere", "zum Mähne und Schopf schneiden – antippen", "Mähne & Schopf"],
         ["hufschuhe", "👟", "Huf\u00adschuhe", "eigene Hufschuhe – antippen", (() => { const H = hufschuheVon(p); return H.vorne || H.hinten ? [H.vorne && "vorne", H.hinten && "hinten"].filter(Boolean).join(" + ") : "keine"; })()],
         ["medizin", "💊", "Medizin", "Stallapotheke – kaufen", "Apotheke"],
       ];
-      const kachel = ([k, ico, n, info, kurz]) => { const da = k === "zaumzeug" || k === "hufschuhe" || spiel.ausruestung[k], klick = da && (k === "schere" || k === "medizin" || k === "zaumzeug" || k === "putzkiste" || k === "hufschuhe");
-        return `<div class="kachel ${da ? "" : "fehlt"} ${klick ? "klickbar" : ""}" ${klick ? `id="${({ schere: "scherKachel", medizin: "medKachel", zaumzeug: "zaumKachel", putzkiste: "putzKachel", hufschuhe: "hufschuhKachel" })[k]}" role="button" tabindex="0"` : ""} title="${n.replace(/\u00ad/g, "")}: ${info}${da ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></div>`; };
+      const kachel = ([k, ico, n, info, kurz]) => { const da = k === "zaumzeug" || k === "hufschuhe" || k === "futter" || spiel.ausruestung[k], klick = da && (k === "futter" || k === "schere" || k === "medizin" || k === "zaumzeug" || k === "putzkiste" || k === "hufschuhe");
+        return `<div class="kachel ${da ? "" : "fehlt"} ${klick ? "klickbar" : ""}" ${klick ? `id="${({ futter: "futterKachel", schere: "scherKachel", medizin: "medKachel", zaumzeug: "zaumKachel", putzkiste: "putzKachel", hufschuhe: "hufschuhKachel" })[k]}" role="button" tabindex="0"` : ""} title="${n.replace(/\u00ad/g, "")}: ${info}${da ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></div>`; };
       if (zaumModus) {
         inhalt = `<p class="text" style="margin:0 0 4px">🏇 <b>Zaumzeug</b> · ${zaumHat} von ${zaumAnz} Teilen vorhanden<br><small>Größen passend für ${sm} cm Stockmaß</small></p>
           <div class="kacheln quadrat">${teile.map(kachel).join("")}</div>
@@ -2901,6 +2905,7 @@
     const zz = $("zaumZurueck"); if (zz) zz.onclick = () => { zaumModus = false; zeigeAkte(); };
     const vk3 = $("vorliebenKnopf"); if (vk3) vk3.onclick = () => vorliebenZeigen(p);
     const hsK = $("hufschuhKachel"); if (hsK) hsK.onclick = () => hufschuhDialog(p, () => zeigeAkte());
+    const fuK = $("futterKachel"); if (fuK) fuK.onclick = () => futterDialog(p, box);
     const putzK = $("putzKachel"); if (putzK) putzK.onclick = () => { putzModus = true; meldung = ""; zeigeAkte(); };
     const pzl = $("putzzeugLager"); if (pzl) pzl.onclick = () => { const L = lager(), x = L.putzzeug.find(y => !y.pilz); if (!x) return; L.putzzeug = L.putzzeug.filter(y => y !== x); p.putzzeug = true; meldung = `🧰 ${esc(p.name)} hat jetzt das Putzzeug von ${esc(x.von)} (desinfiziert).`; speichern(); zeigeAkte(); };
     const epz = $("eigenesPutzzeug"); if (epz) epz.onclick = () => { if (!spiel.admin && (spiel.geld || 0) < VORSORGE.putzzeug) { meldung = "Dafür reicht das Geld nicht."; zeigeAkte(); return; } if (!spiel.admin) buchen(-VORSORGE.putzzeug, `Eigenes Putzzeug: ${p.name}`); p.putzzeug = true; meldung = `🧰 ${esc(p.name)} hat jetzt eigenes Putzzeug.`; speichern(); zeigeAkte(); };
@@ -3330,6 +3335,7 @@
   $("krippe").addEventListener("click", () => {
     const box = B();
     if (!box.pferd || box.tot || box.pferd.klinik || box.pferd.weide || box.krippeVoll) return;
+    if (!fuetternAusLager(box, "du")) { dialog(`<h3>🌾 Kein Heu mehr</h3><p>In der Futterkammer ist nicht genug Heu (oder anderes Raufutter) für ${esc(box.pferd.name)}. Im Futterhandel nachkaufen: Hofverwaltung → Hof → Futterkammer.</p>`, [["Zur Futterkammer", () => zeigeHof("hof")], ["Schließen", null, "zweit"]]); return; }
     box.krippeVoll = true; reaktionZeigen(reaktion(box.pferd, "fuettern")); spielerLernt("futter"); beruehrt(box.pferd, "du", "stall");
     speichern(); zeigeTag();
   });
@@ -4740,7 +4746,7 @@
   function turnierNacht() {
     spiel.boxen.forEach(box => { const p = box.pferd; if (!p || !p.turnier || p.turnier.tag !== spiel.tag) return;
       const t = (spiel.turniere || []).find(x => x.id === p.turnier.tid); delete p.turnier;
-      box.krippeVoll = true; box.mistig = false; box.mistStufe = 0;   // war den ganzen Tag weg: unterwegs gefüttert, Box sauber
+      box.krippeVoll = fuetternAusLager(box, "du"); box.mistig = false; box.mistStufe = 0;   // war den ganzen Tag weg: unterwegs aus der eigenen Futterkammer gefüttert, Box sauber
       if (!t) return;
       const rz = zufall("turnier-erg-" + t.id + p.id), starts = t.nennung.filter(n => n.pid === p.id).map(n => t.pruef.find(x => x.id === n.prid)).filter(Boolean);
       const reakt = reaktion(p, "turnier");
@@ -4961,6 +4967,124 @@
     const N = fohlenNoten(h, r);
     h.fohlenschau = { tag: spiel.tag, schau: "Fohlenschau beim Züchter", klasse: fsKlasse(h) === "offen" ? "Offene Klasse" : h.geschlecht === "Stute" ? "Stutfohlen" : "Hengstfohlen", noten: N, gesamt: N.gesamt, praemie: N.gesamt >= FS_PRAEMIE, champion: false, markt: true };
   }
+  // ---------- Fütterung F1: Futterkammer und Futterhandel ----------
+  // Werte je kg: e = Energie MJ, ei = Eiweiß %, rf = Rohfaser %, zs = Zucker/Stärke %, preis €/kg · art: raufutter | kraftfutter | zusatz | leckerli · pack = Kaufmengen
+  const FUTTER = {
+    heu:        { n: "Heu", ico: "🌾", e: 6, ei: 9, rf: 30, zs: 10, preis: 0.20, art: "raufutter", pack: [25, 100, 500], info: "gute Qualität" },
+    heuStaub:   { n: "Heu (staubig)", ico: "🌾", e: 6, ei: 9, rf: 30, zs: 10, preis: 0.15, art: "raufutter", pack: [25, 100, 500], info: "günstiger, staubt – nicht gut für die Atemwege" },
+    heulage:    { n: "Heulage", ico: "🫙", e: 7, ei: 10, rf: 28, zs: 8, preis: 0.25, art: "raufutter", pack: [25, 100, 500], info: "staubarm, leicht angesäuert" },
+    stroh:      { n: "Futterstroh", ico: "🟨", e: 5, ei: 3, rf: 40, zs: 2, preis: 0.15, art: "raufutter", pack: [25, 100, 500], info: "wenig Energie – für leichtfuttrige Pferde zum Strecken" },
+    heucobs:    { n: "Heucobs", ico: "🟫", e: 7, ei: 9, rf: 28, zs: 8, preis: 0.60, art: "raufutter", pack: [10, 25, 100], info: "eingeweicht – für Senioren und Pferde mit Zahnproblemen" },
+    luzerne:    { n: "Luzerne", ico: "🍀", e: 8, ei: 16, rf: 25, zs: 5, preis: 0.70, art: "kraftfutter", pack: [10, 25, 100], info: "viel Eiweiß – für Zuchtstuten, Fohlen, Muskelaufbau" },
+    ruebe:      { n: "Rübenschnitzel", ico: "🥣", e: 10, ei: 9, rf: 18, zs: 5, preis: 0.90, art: "kraftfutter", pack: [10, 25, 100], info: "eingeweicht – Energie ohne viel Stärke" },
+    hafer:      { n: "Hafer", ico: "🌾", e: 11, ei: 11, rf: 11, zs: 45, preis: 0.50, art: "kraftfutter", pack: [10, 25, 100], info: "klassisches Kraftfutter, viel Stärke" },
+    pellets:    { n: "Pellets", ico: "⚪", e: 11, ei: 13, rf: 12, zs: 25, preis: 0.80, art: "kraftfutter", pack: [10, 25, 100], info: "Fertigfutter" },
+    muesli:     { n: "Müsli", ico: "🥣", e: 12, ei: 12, rf: 8, zs: 35, preis: 1.20, art: "kraftfutter", pack: [10, 25, 100], info: "Fertigfutter, viel Zucker/Stärke" },
+    oel:        { n: "Öl", ico: "🫗", e: 30, ei: 0, rf: 0, zs: 0, preis: 3.00, art: "zusatz", pack: [1, 5, 10], info: "höchstens 1 g je kg Körpergewicht am Tag" },
+    mineral:    { n: "Mineralfutter", ico: "🧂", e: 0, ei: 0, rf: 0, zs: 0, preis: 4.00, art: "zusatz", pack: [1, 5, 25], info: "50–100 g am Tag – Mineralien und Vitamine" },
+    leckstein:  { n: "Salzleckstein", ico: "🧊", e: 0, ei: 0, rf: 0, zs: 0, preis: 2.00, art: "zusatz", stueck: true, pack: [1, 5], info: "je Box, hält etwa 1 Jahreszeit" },
+    moehren:    { n: "Möhren/Äpfel", ico: "🥕", e: 2, ei: 1, rf: 10, zs: 70, preis: 0.50, art: "leckerli", pack: [5, 10, 25], info: "Leckerli" },
+    leckerli:   { n: "Leckerli", ico: "🍬", e: 12, ei: 8, rf: 5, zs: 50, preis: 5.00, art: "leckerli", pack: [1, 5], info: "gekauftes Leckerli" } };
+  // 🫙 und 🫗 sind neuere Emojis – für ältere Handys durch ältere ersetzen
+  FUTTER.heulage.ico = "🥫"; FUTTER.oel.ico = "🛢️";
+  const RAUFUTTER_REIHE = ["heu", "heulage", "heuStaub", "heucobs", "stroh"];   // ohne eigenen Futterplan (F2): erst gutes Heu, dann Ersatz
+  const LAGER_START = 2000;   // kg Platz in der Futterkammer (Heuboden) – wird mit dem Hof-Ausbau (Futter- und Strohlager) größer
+  function futterkammer() {
+    const F = (spiel.futter = spiel.futter || {});
+    if (!F.lager) { F.lager = {}; F.warn = {};
+      // Startvorrat (auch für alte Spielstände): Heu für etwa 2 Wochen und etwas Mineralfutter, kostenlos
+      const n = Math.max(1, spiel.boxen.filter(b => b.pferd).length);
+      F.lager.heu = Math.round(n * 10 * 14); F.lager.mineral = 3; F.lager.leckstein = n; }
+    if (F.lagerMax == null) F.lagerMax = LAGER_START;   // Feld für die Lagergröße (Hof-Ausbau H3)
+    F.warn = F.warn || {};
+    Object.keys(FUTTER).forEach(k => { if (F.lager[k] == null) F.lager[k] = 0; });
+    return F;
+  }
+  const lagerBelegt = () => Object.entries(futterkammer().lager).reduce((a, [k, v]) => a + (FUTTER[k] && !FUTTER[k].stueck ? v : 0), 0);
+  // Standardplan (bis zu den eigenen Futterplänen in F2): Raufutter 1,7 kg je 100 kg Gewicht, 100 g Mineralfutter (50 g bei Ponys unter 300 kg) · Fohlen bei Fuß frisst bei der Mutter mit (1 kg Heu je 100 kg)
+  function tagesRation(p, box, nurRaufutter) {
+    const kg = gewicht(p), r = { raufutter: Math.round(kg * 0.017 * 10) / 10, mineral: nurRaufutter ? 0 : kg < 300 ? 0.05 : 0.1 };
+    if (box && box.fohlen) r.raufutter = Math.round((r.raufutter + gewicht(box.fohlen) * 0.01) * 10) / 10;
+    return r;
+  }
+  // Füttern aus der Futterkammer: true = Krippe gefüllt · false = zu wenig Raufutter (Krippe bleibt leer)
+  function fuetternAusLager(box, wer) {
+    const F = futterkammer(), p = box.pferd; if (!p) return false;
+    const R = tagesRation(p, box, p.weide && !heuNoetig());
+    let rest = R.raufutter;
+    const vorrat = RAUFUTTER_REIHE.reduce((a, k) => a + F.lager[k], 0);
+    if (vorrat + 1e-9 < rest) { futterWarnung("raufutter"); return false; }
+    const genutzt = {};
+    for (const k of RAUFUTTER_REIHE) { if (rest <= 0) break; const x = Math.min(rest, F.lager[k]); if (x > 0) { F.lager[k] = Math.round((F.lager[k] - x) * 100) / 100; rest -= x; genutzt[k] = x; } }
+    if (R.mineral) { if (F.lager.mineral >= R.mineral) { F.lager.mineral = Math.round((F.lager.mineral - R.mineral) * 1000) / 1000; p.mineralTag = spiel.tag; } else futterWarnung("mineral"); }
+    p.futterHeute = { tag: spiel.tag, genutzt, mineral: !!(R.mineral && p.mineralTag === spiel.tag) };
+    futterVorratPruefen();
+    return true;
+  }
+  // Salzleckstein: jede Box mit Pferd braucht zu Beginn jeder Jahreszeit einen neuen (sonst fehlen Mineralien, wenn auch kein Mineralfutter gegeben wird)
+  function lecksteinJahreszeit() {
+    const F = futterkammer();
+    spiel.boxen.forEach(b => { if (!b.pferd || b.tot) return; if (F.lager.leckstein >= 1) { F.lager.leckstein -= 1; b.leckstein = jzJetzt(); } else { b.leckstein = null; futterWarnung("leckstein"); } });
+  }
+  // Verbrauch pro Tag (alle Pferde in den Boxen) für die Reichweite
+  function futterVerbrauchTag() {
+    let rau = 0, min = 0;
+    spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot || p.klinik) return; const R = tagesRation(p, b, p.weide && !heuNoetig()); rau += R.raufutter; min += R.mineral; });
+    return { raufutter: Math.round(rau * 10) / 10, mineral: Math.round(min * 100) / 100 };
+  }
+  // Warnbrief, wenn eine Sorte leer ist oder bald leer wird (einmal, bis wieder nachgekauft wurde)
+  function futterWarnung(k, bald) {
+    const F = futterkammer(); if (F.warn[k]) return; F.warn[k] = spiel.tag;
+    const name = k === "raufutter" ? "Heu" : FUTTER[k].n;
+    brief("Hofverwaltung", bald ? `Futterkammer: ${name} wird knapp` : `Futterkammer: kein ${name} mehr`, bald
+      ? `in der Futterkammer reicht das ${name} nur noch für etwa ${bald} ${bald === 1 ? "Tag" : "Tage"}. Bitte rechtzeitig im Futterhandel nachkaufen (Hofverwaltung → Hof → Futterkammer).`
+      : `in der Futterkammer ist ${k === "raufutter" ? "kein Heu (und kein anderes Raufutter)" : `kein ${name}`} mehr. ${k === "raufutter" ? "Ohne Raufutter bleiben die Krippen leer – die Pferde hungern!" : k === "mineral" ? "Ohne Mineralfutter fehlen den Pferden auf Dauer Mineralien und Vitamine." : "Die Boxen bekommen keinen neuen Leckstein."} Nachkaufen: Hofverwaltung → Hof → Futterkammer.`);
+  }
+  function futterVorratPruefen() {
+    const F = futterkammer(), V = futterVerbrauchTag();
+    const rau = RAUFUTTER_REIHE.reduce((a, k) => a + F.lager[k], 0);
+    if (V.raufutter > 0) { const t = Math.floor(rau / V.raufutter); if (t < 3 && t >= 1) futterWarnung("raufutter", t); }
+    if (V.mineral > 0) { const t = Math.floor(F.lager.mineral / V.mineral); if (t < 3 && t >= 1) futterWarnung("mineral", t); }
+  }
+  function futterKaufen(k, menge) {
+    const F = futterkammer(), Z = FUTTER[k], kosten = Math.round(Z.preis * menge * 100) / 100;
+    if (!Z.stueck && lagerBelegt() + menge > F.lagerMax) return `Kein Platz mehr in der Futterkammer (${fmtKg(F.lagerMax)} Platz).`;
+    if ((spiel.geld || 0) < kosten) return "Nicht genug Geld.";
+    F.lager[k] = Math.round((F.lager[k] + menge) * 1000) / 1000; buchen(-kosten, "Futter");
+    delete F.warn[k]; if (Z.art === "raufutter") delete F.warn.raufutter;
+    return "";
+  }
+  const fmtKg = x => x >= 1 || x === 0 ? `${(Math.round(x * 10) / 10).toLocaleString("de-DE")} kg` : `${Math.round(x * 1000)} g`;
+  function futterkammerHTML(meld) {
+    const F = futterkammer(), V = futterVerbrauchTag(), belegt = lagerBelegt();
+    const rauVorrat = RAUFUTTER_REIHE.reduce((a, k) => a + F.lager[k], 0);
+    const reicht = (vorrat, tag) => tag > 0 ? (vorrat >= tag ? `${Math.floor(vorrat / tag)} ${Math.floor(vorrat / tag) === 1 ? "Tag" : "Tage"}` : "<b>leer</b>") : "–";
+    const kosten = V.raufutter * FUTTER.heu.preis + V.mineral * FUTTER.mineral.preis;
+    const zeile = k => { const Z = FUTTER[k], v = F.lager[k];
+      return `<div class="fk-zeile"><div class="fk-info"><b>${Z.ico} ${Z.n}</b> <small>${Z.info}</small></div><div class="fk-werte"><b>${Z.stueck ? `${v} Stück` : fmtKg(v)}</b> · ${(Z.preis).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €${Z.stueck ? "/Stück" : "/kg"}</div><div class="fk-kauf">${Z.pack.map(m => `<button class="mini-knopf" data-fkauf="${k}:${m}">+${m}${Z.stueck ? "" : " kg"}</button>`).join("")}</div></div>`; };
+    return `${meld ? `<div class="klasse">${meld}</div>` : ""}
+      <div class="zeile-wert"><div class="kopf"><b>📦 Platz in der Futterkammer</b><span>${fmtKg(belegt)} von ${fmtKg(F.lagerMax)}</span></div><div class="balken"><i style="width:${Math.min(100, belegt / F.lagerMax * 100)}%"></i></div></div>
+      <p class="text" style="margin:4px 0 8px"><small>Verbrauch am Tag (alle Pferde, Standardplan): Raufutter ${fmtKg(V.raufutter)} · reicht ${reicht(rauVorrat, V.raufutter)} · Mineralfutter ${fmtKg(V.mineral)} · reicht ${reicht(F.lager.mineral, V.mineral)} · etwa ${fmt(Math.round(kosten * 100) / 100)} am Tag</small></p>
+      <div class="fk-liste"><p class="fk-gruppe">Raufutter</p>${Object.keys(FUTTER).filter(k => FUTTER[k].art === "raufutter").map(zeile).join("")}
+        <p class="fk-gruppe">Kraftfutter</p>${Object.keys(FUTTER).filter(k => FUTTER[k].art === "kraftfutter").map(zeile).join("")}
+        <p class="fk-gruppe">Zusätze und Leckerli</p>${Object.keys(FUTTER).filter(k => FUTTER[k].art === "zusatz" || FUTTER[k].art === "leckerli").map(zeile).join("")}</div>
+      <p class="text"><small>Gefüttert wird bis zu den eigenen Futterplänen nach einem Standardplan: Raufutter 1,7 kg je 100 kg Körpergewicht (erst gutes Heu, dann Heulage, staubiges Heu, Heucobs, Stroh) und 100 g Mineralfutter am Tag. Fohlen bei Fuß fressen bei der Mutter mit. Auf der Weide (außer im Winter und am letzten Herbsttag) frisst das Pferd Gras statt Heu. Jede Box braucht pro Jahreszeit einen Salzleckstein. Kraftfutter, Öl und Leckerli kommen mit den Futterplänen zum Einsatz.</small></p>`;
+  }
+  function futterkammerBinden(neu) {
+    document.querySelectorAll("[data-fkauf]").forEach(b => b.onclick = () => { const [k, m] = b.dataset.fkauf.split(":"), f = futterKaufen(k, +m);
+      speichern(); zeigeTag(); neu(f ? `⚠️ ${f}` : `🛒 ${FUTTER[k].stueck ? `${m} Stück` : `${m} kg`} ${FUTTER[k].n} gekauft (${fmt(Math.round(FUTTER[k].preis * m * 100) / 100)}).`); });
+  }
+  // Ausrüstung → Futter: was bekommt dieses Pferd?
+  function futterDialog(p, box) {
+    const R = tagesRation(p, box), F = futterkammer(), H = p.futterHeute && p.futterHeute.tag === spiel.tag ? p.futterHeute : null;
+    dialog(`<h3>🌾 Futter für ${esc(p.name)}</h3><p>Gewicht ca. ${gewicht(p)} kg · Standardplan am Tag:</p>
+      <ul class="liste"><li><span class="txt">🌾 Raufutter ${fmtKg(R.raufutter)}<small>${box && box.fohlen ? `inkl. ${esc(box.fohlen.name)} (frisst mit) · ` : ""}${p.weide && !heuNoetig() ? "heute auf der Weide: Gras statt Heu" : "erst gutes Heu, dann Ersatz"}</small></span></li>
+        <li><span class="txt">🧂 Mineralfutter ${fmtKg(R.mineral)}<small>${box && box.leckstein === jzJetzt() ? "🧊 Salzleckstein in der Box" : "kein Salzleckstein in der Box"}</small></span></li></ul>
+      ${H ? `<p class="text"><small>Heute gefüttert: ${Object.entries(H.genutzt).map(([k, x]) => `${FUTTER[k].n} ${fmtKg(x)}`).join(", ") || "Gras"}${H.mineral ? ", Mineralfutter" : ""}.</small></p>` : `<p class="text"><small>Heute noch nicht gefüttert.</small></p>`}
+      <p class="text"><small>Eigene Futterpläne (Kraftfutter, Mahlzeiten, Bedarf) kommen als Nächstes. Vorrat und Futterhandel: Hofverwaltung → Hof → Futterkammer.</small></p>`,
+      [["Zur Futterkammer", () => { zeigeHof("hof"); }], ["Schließen", null, "zweit"]]);
+  }
+  let fkMeld = "";
   // ---------- Mitarbeiter ----------
   // Alle Angestellten: beginnen immer mit einer neuen Jahreszeit, Gehalt am Ende jeder gearbeiteten Jahreszeit,
   // gekündigt arbeiten sie bis Ende der Jahreszeit; kein Geld → sie kündigen selbst (letztes Gehalt nehmen sie trotzdem)
@@ -5213,7 +5337,8 @@
     const vergessen = [], gearbeitet = new Set();
     maZuteilung("stall").forEach(({ i, m }) => { const b = spiel.boxen[i];
       if (Math.random() < maFehler(m)) { vergessen.push({ i, name: m.name }); return; }
-      b.krippeVoll = true; if (!b.pferd.weide) { b.mistig = false; b.mistStufe = 0; } maVertrauen(m, b.pferd); gearbeitet.add(m); beruehrt(b.pferd, m.id, "stall"); });
+      // Futter aus der Futterkammer (leer → Krippe bleibt leer, Warnbrief)
+      if (fuetternAusLager(b, m)) b.krippeVoll = true; if (!b.pferd.weide) { b.mistig = false; b.mistStufe = 0; } maVertrauen(m, b.pferd); gearbeitet.add(m); beruehrt(b.pferd, m.id, "stall"); });
     maZuteilung("pfleger").forEach(({ i, m }) => { const p = spiel.boxen[i].pferd;
       if (Math.random() < maFehler(m)) { vergessen.push({ i, name: m.name }); return; }
       pflegerSchneiden(p); putzen(p, "buerste"); putzen(p, "kamm"); auskratzen(p); beruehrt(p, m.id, "putz"); reaktion(p, "putzen", false); reaktion(p, "kaemmen", false); maVertrauen(m, p); gearbeitet.add(m); });
@@ -6587,6 +6712,10 @@
       <p><b>Eigener Stand</b> (0–97, wie Skala: voll bis 60 %, dann langsamer): Springen ← Springgymnastik 1, Geländesprünge 0,4, Stangen 0,2 · Western ← Westernarbeit 1 · Gelände/Kondition ← Konditionstraining 0,6, Geländesprünge 0,8, Ausritt 0,3 (je × Lernfaktor, Wohlbefinden, Vorliebe … wie beim Training, aber ohne den Skala-Faktor 2,2 – Ziel bei täglichem Training: nach 1 Jahr E/A, 2 Jahren L, 3 Jahren M, etwa 5 Jahren S bzw. Open). Ausbildungsstall je Tag: Springen 0,4 × f, Gelände 0,15 × f. Alte und gekaufte Pferde starten mit Springen 0,4 × und Gelände 0,3 × Schnitt der Ausbildungsskala, Western 0.</p>
       <p><b>Stufen:</b> Dressur wie bisher (Klassen E–S aus der Ausbildungsskala). Springen und Vielseitigkeit E/A/L/M/S, Western (Reining, Pleasure, Trail) Einsteiger/Rookie/Novice/Intermediate/Open: Stufe braucht Ausbildungsstand ${STUFE_STAND.join("/")} % und Disziplin-Wert ${STUFE_WERT.join("/")}. Springhöhe ≈ 0,95 × Stockmaß, Klassen-Mindesthöhe ${SPRUNG_HOEHE.join("/")} cm. Rennsport, Tölt und Distanz: nach Leistung (${LEISTUNG.map(([a, n]) => n + " ab " + a).join(", ")}).</p>
       <p><b>Marktwert:</b> Leistungsanteil = 5.000 € × max(0, (beste Disziplin − 35) / 30) – unausgebildet ≈ 0, gut ausgebildet (65) = 1, Spitzenpferd (80) = 1,5. Ein Spezialist ist damit mehr wert als ein Allrounder.</p>
+      <h3>🌾 Fütterung (F1: Futterkammer)</h3>
+      <p>Futterkammer: Hofverwaltung → Hof → Futterkammer und Futterhandel. Platz ${LAGER_START.toLocaleString("de-DE")} kg (Salzlecksteine zählen nicht), wird mit dem Hof-Ausbau größer. Startvorrat (neues Spiel und alte Spielstände): Heu für 14 Tage (10 kg je Pferd), 3 kg Mineralfutter, 1 Leckstein je Pferd. Gekauft wird sofort, bezahlt wird sofort (Finanzen: „Futter“).</p>
+      ${verTab(["Sorte", "Energie MJ/kg", "Eiweiß %", "Rohfaser %", "Zucker/Stärke %", "Preis"], Object.values(FUTTER).map(Z => [Z.n, Z.e, Z.ei, Z.rf, Z.zs, Z.preis.toLocaleString("de-DE", { minimumFractionDigits: 2 }) + (Z.stueck ? " €/Stück" : " €/kg")]))}
+      <p><b>Standardplan</b> (bis zu den eigenen Futterplänen in F2): Raufutter 1,7 kg je 100 kg Körpergewicht in dieser Reihenfolge: Heu, Heulage, staubiges Heu, Heucobs, Futterstroh; Mineralfutter 100 g (unter 300 kg 50 g); Fohlen bei Fuß + 1 kg Heu je 100 kg. Reicht das Raufutter nicht für die ganze Ration, bleibt die Krippe leer (Pferd hungrig) und es kommt ein Warnbrief; fehlt Mineralfutter, bekommt das Pferd keins. Weide: Gras statt Heu (außer Winter und letzter Herbsttag), dann kein Mineralfutter aus der Kammer. Stallbursche und Turniertag nehmen das Futter ebenfalls aus der Kammer. Salzleckstein: zu Beginn jeder Jahreszeit 1 je Box mit Pferd. Warnbrief, wenn Heu oder Mineralfutter nur noch 1–2 Tage reichen oder leer sind (einmal, bis nachgekauft).</p>
       <h3>🏆 Turniere</h3>
       <p><b>Ablauf:</b> Pferdeanhänger (Box oder Hauptmenü) → Turnier → Turnierkalender. Nennen bis spätestens am Tag vorher (Nenngeld sofort, beim Zurückziehen keine Erstattung). Am Turniertag morgens fährt das Pferd los (von der Weide wird es vorher geholt; krank/schwach → nicht gestartet, Nenngeld verfällt), ist den ganzen Tag weg (kein Training, Box sauber, unterwegs gefüttert). In der Nacht wird gerechnet, der Brief kommt am nächsten Tag. Ab 4 Jahren, nicht mit Fohlen bei Fuß, tragend keine Sprünge und in der letzten Jahreszeit vor der Geburt gar nicht; höchstens 2 Prüfungen je Turnier in benachbarten Klassen, nur ein Turnier pro Tag.</p>
       <p><b>Kalender</b> je Jahreszeit (im Winter Hallenturniere ohne Vielseitigkeit): Hofturnier (Wettbewerbe nach WBO: Dressur, Stilspringen, Westernreiter, Gelassenheitsprüfung – nur Schleifen) · Regionales Turnier (Dressur und Springen E–L, Vielseitigkeit E–A, Aufbauprüfung Kl. A 4–6 J.) · Westernturnier (Reining, Pleasure, Trail Einsteiger–Novice) · Großes Turnier (A–S, Vielseitigkeit A–M, Aufbauprüfung Kl. L 5–6 J.) · zu 50 % Großes Westernturnier (Novice–Open). 8–22 Starter je Prüfung.</p>
@@ -6715,7 +6844,7 @@
       speichern(); zeigeHof(); mitarbeiterDialog(typ); });
   }
   function zeigeHof(reiter) {
-    if (reiter) hofReiter = reiter;
+    if (reiter) { hofReiter = reiter; fkMeld = ""; }
     if (hofReiter !== "post") { offenerBrief = null; postAuswahl = null; }
     const sp = spiel.spieler || {}, allePost = spiel.post || (spiel.post = []), n = ungelesen();
     const post = allePost.filter(b => postOrdner === "spam" ? b.spam : postOrdner === "stern" ? b.stern && !b.spam : !b.spam), spamAnz = allePost.filter(b => b.spam).length, sternAnz = allePost.filter(b => b.stern && !b.spam).length;
@@ -6732,7 +6861,7 @@
         <dt>Mitarbeiter</dt><dd>${Object.entries(MA_TYP).map(([t, T]) => { const a = aktive(t).length; return a ? `${a} ${a === 1 ? T.name : T.mehr}` : ""; }).filter(Boolean).join(", ") || "keine"}</dd>
         <dt>Lager</dt><dd>${(() => { const L = lager(), n = L.putzzeug.length + L.hufschuhe.length; return n ? `${L.putzzeug.length ? `${L.putzzeug.length}× Putzzeug` : ""}${L.putzzeug.length && L.hufschuhe.length ? ", " : ""}${L.hufschuhe.length ? `${L.hufschuhe.length}× Hufschuhe` : ""}` : "leer"; })()}</dd>
         <dt>Geld</dt><dd ${spiel.admin ? 'class="hf-edit" id="hfGeld" title="antippen zum Ändern (Adminmodus)"' : ""}>${fmt(spiel.geld || 0)}${spiel.admin ? ' <span class="stift">✏️</span>' : ""}</dd></dl>`;
-      inhalt += `<h4 class="ma-titel">📦 Lager</h4>${lagerHTML()}`;
+      inhalt += `<h4 class="ma-titel">📦 Lager</h4>${lagerHTML()}<h4 class="ma-titel" id="fkTitel">🌾 Futterkammer und Futterhandel</h4>${futterkammerHTML(fkMeld)}`;
     } else if (hofReiter === "reiter") {
       inhalt = reiterHTML();
     } else if (hofReiter === "finanzen") {
@@ -6791,6 +6920,7 @@
     nb.querySelectorAll("[data-hr]").forEach(b => b.onclick = () => { offenerBrief = null; zeigeHof(b.dataset.hr); });
     nb.querySelectorAll("[data-rava]").forEach(b => b.onclick = () => { (spiel.spieler = spiel.spieler || {}).avatar = b.dataset.rava; speichern(); zeigeHof(); });
     lagerBinden(() => zeigeHof());
+    futterkammerBinden(m => { fkMeld = m; zeigeHof(); const t = $("fkTitel"); if (t) t.scrollIntoView({ block: "start" }); });
     const bearbeite = (id, wert, setzen) => {
       const dd = $(id); dd.onclick = null;
       dd.innerHTML = `<input maxlength="30" value="${esc(wert)}">`;

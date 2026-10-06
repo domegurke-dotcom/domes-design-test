@@ -11,3 +11,8 @@ Zu jeder Frage steht die Lösung, die Claude vorerst gewählt hat. Dome beantwor
 5. **Mindestalter:** Fohlen aus der laufenden Jahreszeit dürfen erst nach einem Drittel der Tage (≈ 1 Monat) vorgestellt werden.
 
 ## Fütterung (F1–F5)
+1. **F1 – Startvorrat:** Neue und alte Spielstände bekommen einmal kostenlos Heu für 14 Tage (10 kg je Pferd), 3 kg Mineralfutter und 1 Salzleckstein je Pferd, damit niemand plötzlich ohne Futter dasteht. Passt das?
+2. **F1 – Lieferung:** Gekauftes Futter ist sofort in der Futterkammer (kein Liefertag). Lieber 1 Tag Lieferzeit?
+3. **F1 – Staubiges Heu:** Als eigene, günstigere Sorte im Futterhandel (0,15 €/kg statt 0,20 €/kg). Ohne eigenen Futterplan wird zuerst gutes Heu verfüttert. Die Folgen (Husten bei empfindlichen Atemwegen) kommen in F4.
+4. **F1 – Platz:** Die Futterkammer fasst am Anfang 2.000 kg (Salzlecksteine zählen nicht). Später größer über das Futter- und Strohlager (Hof-Ausbau H3).
+5. **F1 – Leeres Heu:** Reicht das Raufutter nicht für die ganze Tagesration, bleibt die Krippe leer (das Pferd hungert wie bisher) und es kommt ein Warnbrief. Teilweise füttern habe ich nicht eingebaut.

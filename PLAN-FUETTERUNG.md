@@ -12,7 +12,7 @@ Plan gespeichert bei Spielversion 185. **Noch nicht starten:** erst wenn Werte-E
 **Danach (Dome, 6.10.2026):** Nach Etappe F5 kommt `PLAN-HOF.md` (Hof-Ausbau, Etappen H1–H8). Vorher Dome fragen „Mit Hof-Ausbau H1 weitermachen?“ und auf Domes Ja warten. Hinweis für F1: die Futterkammer bekommt ein Feld für die Lagergröße – das nutzt später das Futter- und Strohlager aus H3.
 
 - [x] Etappe F1 – Futterkammer und Futterhandel (mittel) · v210, von Claude per Skript getestet; offene Detailfragen in OFFENE-FRAGEN.md
-- [ ] Etappe F2 – Futterplan, Bedarf, Nährwerte (groß)
+- [x] Etappe F2 – Futterplan, Bedarf, Nährwerte (groß) · v211, von Claude per Skript getestet
 - [ ] Etappe F3 – Futterzustand und Auswirkungen (groß)
 - [ ] Etappe F4 – Atemwege, Leckerli, Futterumstellung (klein)
 - [ ] Etappe F5 – Futterexperte und Spezialfutter (mittel)

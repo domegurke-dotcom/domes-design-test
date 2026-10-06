@@ -368,6 +368,13 @@
   .akte-kopf .stift { font-size: .75rem; opacity: .45; }
   .akte-kopf input { font: inherit; font-size: 1.15rem; font-weight: 700; padding: 4px 8px; border: 2px solid var(--akzent); border-radius: 8px; width: 100%; max-width: 280px; background: #fff; color: var(--text); }
   .zeile-wert { margin: 10px 0; }
+  .skala-phasen { display: grid; grid-template-columns: minmax(0, 1fr) 16px 16px 16px; column-gap: 3px; }
+  .skala-phasen .zeile-wert { grid-column: 1; margin: 6px 0; }
+  .skala-phasen .sp-k { border: 2px solid var(--holz-hell); border-left: none; border-radius: 0 7px 7px 0; margin: 8px 0; display: flex; align-items: center; justify-content: center; min-width: 0; }
+  .skala-phasen .sp-k span { writing-mode: vertical-rl; font-size: 10px; line-height: 1; white-space: nowrap; color: var(--leise); }
+  .train-bericht, .train-bereiter { background: #f6ecd8; border-radius: 10px; padding: 8px 10px; margin: 10px 0 0; font-size: 13px; }
+  .train-bericht ul { margin: 4px 0 0; padding-left: 4px; list-style: none; } .train-bericht li { margin: 6px 0 0; }
+  .train-bereiter .bf-knoepfe { margin: 6px 0; }
   .zeile-wert .kopf { display: flex; justify-content: space-between; font-size: .92rem; margin-bottom: 4px; }
   .zeile-wert .kopf b { font-weight: 700; }
   .zeile-wert .kopf span { color: var(--leise); }
@@ -774,7 +781,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "197";
+  const SPIEL_VERSION = "198";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -782,9 +789,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=197"></script>
-<script src="kopfteile.js?v=197"></script>
-<script src="kopfalter.js?v=197"></script>
+<script src="pferd.js?v=198"></script>
+<script src="kopfteile.js?v=198"></script>
+<script src="kopfalter.js?v=198"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -802,7 +809,7 @@
   let hatSpielstand = false;
   try { const s = JSON.parse(localStorage.getItem(SPEICHER)); if (s && s.boxen) { spiel = s; hatSpielstand = true; } } catch (e) {}
   if (!spiel.anlage) spiel.anlage = { stall: true, paddock: true, weide: false, waschplatz: false, roundpen: false, reitplatz: false, reithalle: false, gelaende: true, anhaenger: true };
-  spiel.anlage.anhaenger = true; spiel.anlage.weide = true;
+  spiel.anlage.anhaenger = true; spiel.anlage.weide = true; spiel.anlage.reitplatz = true; spiel.anlage.gelaende = true;   // Start: Reitplatz und Gelände (Training daheim)
   if (!spiel.ausruestung) spiel.ausruestung = { halfter: true, strick: true, putzkiste: true, sattel: false, trense: false, schabracke: false, decke: false, gamaschen: false, schere: true, medizin: true };
   if (spiel.ausruestung.medizin == null) spiel.ausruestung.medizin = true;
   spiel.rechnungen = (spiel.rechnungen || []).map(r => r.von ? r : { id: r.id, von: "Tierarztpraxis", art: "klinik", tag: spiel.tag || 1, stufe: 0, faellig: (spiel.tag || 1) + 2, posten: [{ text: `${r.name}: ${r.tage || "?"} Tage stationäre Behandlung`, betrag: r.betrag }], betrag: r.betrag, pferde: [r.pferdId] });
@@ -1340,7 +1347,7 @@
     if (k === "vertrauen" || k === "gehorsam") return 1;
     const j = p.geb ? alterJZ(p) / 4 : (p.alter != null ? p.alter : 5);
     const wachs = k === "lernfaehigkeit" ? 1 : j < 1 ? 0.4 : j < 2 ? 0.55 + 0.15 * (j - 1) : j < 3 ? 0.7 + 0.1 * (j - 2) : j < 4 ? 0.8 + 0.1 * (j - 3) : j < 5 ? 0.9 + 0.1 * (j - 4) : 1;
-    const d = Math.max(0, j - alterBeginn(k) + 1), abbau = Math.min(d, 5) * 0.03 + Math.max(0, d - 5) * 0.05;
+    const d = Math.max(0, j - alterBeginn(k) + 1), abbau = (Math.min(d, 5) * 0.03 + Math.max(0, d - 5) * 0.05) * (1 - 0.3 * (p.fit || 0));   // regelmäßiges Training bremst den Abbau (bis ×0,7)
     return Math.max(0.2, Math.min(wachs, 1 - abbau));
   }
   // im Moment erreichbare Höhe (Anlage × Altersfaktor)
@@ -1678,7 +1685,7 @@
       e.offen = (e.offen || 0) + KOSTEN[e.ort];   // wird zu Beginn der Jahreszeit (oder bei der Rückkehr) in Rechnung gestellt
       if (e.abbruch) { const nr = zurueckholen(e); if (nr >= 0) brief(ORT_NAME[e.ort], `${p.name} ist zurück`, `wie angekündigt haben wir <b>${esc(p.name)}</b> zurückgebracht – ${pron(p).er} steht jetzt in Box ${nr + 1}.`); return; }
       p.pflege.gesundheit = Math.min(gesundheitMax(p), Math.round((p.pflege.gesundheit + 8) * 10) / 10);
-      if (e.ort === "ausbildung") p.training = Math.round(((p.training || 0) + (p.traechtig ? 0.5 : 1) * wohlFaktor(p)) * 10) / 10;   // tragend: halbes Tempo; Wohlbefinden beschleunigt oder bremst
+      if (e.ort === "ausbildung") { p.training = Math.round(((p.training || 0) + (p.traechtig ? 0.5 : 1) * wohlFaktor(p)) * 10) / 10; ausbildungsstallTag(p); }   // tragend: halbes Tempo; Wohlbefinden beschleunigt oder bremst
       if (e.ort === "aufzucht") { p.pflege.wohl = Math.min(100, (p.pflege.wohl == null ? 100 : p.pflege.wohl) + 10); sozialPlus(p, 2); }   // Herde mit vielen Jungpferden, viel draußen
       if (e.ort === "aufzucht" && alterJZ(p) >= AUSBILDUNGSALTER) {
         const box = zurueckholen(e);
@@ -1954,7 +1961,7 @@
   // ---------- Marktwert, Verkauf, Gnadenhof ----------
   // Marktwert aus Gangwerk, Ausbildungsstand, Alter und Gesundheit
   function marktwert(p) {
-    const w = p.werte || erzeugeWerte(p), g = w.gang;
+    const w = p.werte || erzeugeWerte(p), g = p.werte ? gangGezeigt(p) : w.gang;   // gezeigte Note (Veranlagung + Ausbildung)
     const gn = [g.schritt, g.trab, g.galopp].reduce((a, b) => a + b, 0) / 3;           // 4 … 10
     const gangF = Math.max(0, Math.min(1, (gn - 2.5) / 6));                                // 0 … 1 (seit v161: Noten um 1,5 gesenkt – Preisniveau bleibt gleich)
     const j = p.geb ? alterJZ(p) / 4 : (p.alter != null ? p.alter : 5);
@@ -2235,7 +2242,7 @@
   const sterbeChance = p => { const j = alterJZ(p) / 4; return j < 20 ? 0 : Math.min(1, Math.pow((j - 20) / 15, 2)); };
   // läuft zu Beginn jeder Jahreszeit
   function jahreszeitBeginn() {
-    alleEigenenPferde().forEach(x => werteAltern(x.p));   // Werte über der Altersgrenze sinken langsam mit
+    alleEigenenPferde().forEach(x => { fitJahreszeit(x.p); werteAltern(x.p); });   // Werte über der Altersgrenze sinken langsam mit
     erbJahreszeit();   // Erbkrankheiten und Veranlagungen zeigen sich mit dem Alter
     // ungeplante Bedeckung fällt nach einer Jahreszeit auf
     alleEigenenPferde().forEach(({ p }) => { if (!p.heimlich || jzJetzt() < p.heimlich.seit + 1) return;
@@ -2511,25 +2518,26 @@
       inhalt = aufschluesselungHTML(p);
       speichern();
     } else if (aktenReiter === "gang") {
-      const g = w.gang, pr = PROFIL[p.rasse] || {};
+      const g = gangGezeigt(p), gv = w.gang, pr = PROFIL[p.rasse] || {};
       const liste = [["Schritt", g.schritt], ["Trab", g.trab], ["Galopp", g.galopp]];
       if (g.toelt != null) liste.push(["Tölt", g.toelt]);
       if (g.pass != null) liste.push([pr.passName || "Pass", g.pass]);
-      const zusatz = p.rasse === "isi" ? `<p class="text">${g.pass != null ? "Fünfgänger" : "Viergänger"}: ${g.pass != null ? "beherrscht Tölt und Rennpass" : "beherrscht Tölt, aber keinen Pass"}.</p>` : "";
+      const zusatz0 = gangBonus(p) ? `<p class="text"><small>Durch Ausbildung${p.gangStangen ? " und Stangenarbeit" : ""} zeigt sich ${esc(p.name)} besser, als ${pron(p).er} veranlagt ist. Vererbt wird nur die Veranlagung.</small></p>` : "";
+      const zusatz = zusatz0 + (p.rasse === "isi" ? `<p class="text">${g.pass != null ? "Fünfgänger" : "Viergänger"}: ${g.pass != null ? "beherrscht Tölt und Rennpass" : "beherrscht Tölt, aber keinen Pass"}.</p>` : "");
       const q = vergleichPferd(p), qg = q ? q.werte.gang : {}, key = { Schritt: "schritt", Trab: "trab", Galopp: "galopp", "Tölt": "toelt" };
       if (q) { if (qg.toelt != null && g.toelt == null) liste.push(["Tölt", undefined]); if (qg.pass != null && g.pass == null) liste.push([pr.passName || "Pass", undefined]); }
-      inhalt = vglKopf(p) + liste.map(([n, v]) => { const qv = q ? qg[key[n] || "pass"] : undefined;
-        return `<div class="zeile-wert"><div class="kopf"><b class="lex" data-lex="gang:${key[n] || "pass"}">${n}</b><span>${v != null ? `${String(v).replace(".", ",")} · ${NOTENWORT(v)}` : "–"}${q ? ` <em class="vgl-b">${qv != null ? String(qv).replace(".", ",") : "–"}</em>` : ""}</span></div>
+      inhalt = vglKopf(p) + liste.map(([n, v]) => { const qv = q ? qg[key[n] || "pass"] : undefined, ve = gv[key[n] || "pass"];
+        return `<div class="zeile-wert"><div class="kopf"><b class="lex" data-lex="gang:${key[n] || "pass"}">${n}</b><span>${v != null ? `${String(v).replace(".", ",")} · ${NOTENWORT(v)}${ve != null && ve !== v ? ` <small>(Veranlagung ${String(ve).replace(".", ",")})</small>` : ""}` : "–"}${q ? ` <em class="vgl-b">${qv != null ? String(qv).replace(".", ",") : "–"}</em>` : ""}</span></div>
         <div class="balken"><i style="width:${(v || 0) * 10}%"></i></div>${q ? `<div class="balken vgl"><i style="width:${(qv || 0) * 10}%"></i></div>` : ""}</div>`; }).join("") + zusatz;
     } else if (aktenReiter === "werte") {
       werteErgaenzen(p); const q = vergleichPferd(p); if (q) werteErgaenzen(q);
-      const zeile = (x, art) => { const v = wertVon(p, x), an = p.werte.anlage[x.key], qv = q ? wertVon(q, x) : null;
+      const zeile = (x, art) => { const v = Math.round(wertVon(p, x)), an = p.werte.anlage[x.key], qv = q ? Math.round(wertVon(q, x)) : null;
         const zusatz = x.art === "anlage" ? "angeboren" : x.art === "erarbeitet" ? "erarbeitet" : "";
         return `<div class="zeile-wert"><div class="kopf"><b class="lex" data-lex="wert:${x.key}">${x.titel}</b><span>${v}${zusatz ? ` <small>· ${zusatz}</small>` : ""}${spiel.admin && x.art !== "erarbeitet" ? ` <small>(Anlage ${an}${altersFaktor(p, x.key) < 1 ? ` → ${wertGrenze(p, x.key)}` : ""})</small>` : ""}${q ? ` <em class="vgl-b">${qv}</em>` : ""}</span></div>
         <div class="balken${spiel.admin && x.art === "training" ? " mit-anlage" : ""}">${spiel.admin && x.art === "training" ? `<u style="width:${wertGrenze(p, x.key)}%"></u>` : ""}<i style="width:${v}%"></i></div>${q ? `<div class="balken vgl"><i style="width:${qv}%"></i></div>` : ""}</div>`; };
       const sozZeile = spiel.admin ? `<div class="zeile-wert"><div class="kopf"><b>🛠️ Sozialverhalten</b><span>${Math.round(sozial(p))} <small>· versteckt${hengstig(p) ? ` · Hengstverhalten ${hengstig(p) === 1 ? "voll" : "teilweise"}` : ""}</small></span></div><div class="balken"><i style="width:${sozial(p)}%"></i></div></div>` : "";
       inhalt = vglKopf(p) + `<h3 class="werte-titel">💪 Körper</h3>` + WERTE_KOERPER.map(zeile).join("") + `<h3 class="werte-titel">🧠 Kopf</h3>` + WERTE_KOPF.map(zeile).join("") + sozZeile +
-        `<p class="text"><small>Werte von 0 bis 100. Trainierbare Werte steigen später durch Training – jedes Pferd hat dabei eine vererbte Obergrenze. „Angeboren“ lässt sich nicht trainieren, „erarbeitet“ entsteht durch Pflege und Ausbildung. Junge Pferde erreichen ihre volle Leistung erst mit etwa 5 Jahren, im Alter lassen die Werte langsam nach.${spiel.admin ? " 🛠️ Admin: der helle Teil des Balkens zeigt die im jetzigen Alter erreichbare Höhe." : ""}</small></p>`;
+        `<p class="text"><small>Werte von 0 bis 100. Trainierbare Werte steigen durch Training (Pflege → Ort → Reitplatz oder Gelände) – jedes Pferd hat dabei eine vererbte Obergrenze. „Angeboren“ lässt sich nicht trainieren, „erarbeitet“ entsteht durch Pflege und Ausbildung. Junge Pferde erreichen ihre volle Leistung erst mit etwa 5 Jahren, im Alter lassen die Werte langsam nach.${spiel.admin ? " 🛠️ Admin: der helle Teil des Balkens zeigt die im jetzigen Alter erreichbare Höhe." : ""}</small></p>`;
     } else if (aktenReiter === "charakter") {
       werteErgaenzen(p); const c = w.charakter;
       const q = vergleichPferd(p);
@@ -2540,17 +2548,19 @@
     } else if (aktenReiter === "ausbildung") {
       const aw = ausbildungsWerte(p);
       const q = vergleichPferd(p), qa = q ? ausbildungsWerte({ ...q, alter: alterJahre(q) }) : null;
-      const ki = klasseIndex(aw, p.werte.gang), nx = KLASSEN[ki + 1];
+      const gg = gangGezeigt(p), ki = klasseIndex(aw, gg), nx = KLASSEN[ki + 1];
       const fehlt = nx ? [...Object.entries(nx.min).filter(([n, v]) => (aw.find(x => x.name === n) || {}).wert < v).map(([n, v]) => `${n} ${v} %`),
-        ...(nx.ausdruck && ((p.werte.gang.schritt + p.werte.gang.trab + p.werte.gang.galopp) / 3) < nx.ausdruck ? [`Ausdruck (Gangwerk Ø ${String(nx.ausdruck).replace(".", ",")})`] : [])] : [];
+        ...(nx.ausdruck && ((gg.schritt + gg.trab + gg.galopp) / 3) < nx.ausdruck ? [`Ausdruck (Gangwerk Ø ${String(nx.ausdruck).replace(".", ",")})`] : [])] : [];
       // Knopf oben: je nach Alter direkt in die Aufzuchtstation oder den Ausbildungsstall
       const jung = alterJZ(p) < AUSBILDUNGSALTER, wegId = jung ? "aufzucht" : "ausbildung", wegSperre = box.lesen ? "–" : ANH_ZIEL[wegId].sperre(p, box), wegGeht = !wegSperre;
       const wegKnopf = `<button class="vgl-knopf weg-knopf" ${wegGeht ? `data-ort="${wegId}"` : "disabled"} title="${wegGeht ? `${jung ? "In die Aufzuchtstation" : "In den Ausbildungsstall"} · ${fmt(KOSTEN[wegId])} pro Tag` : wegSperre}">${jung ? "🍼" : "🎓"} ${wegGeht ? (jung ? "Aufzuchtstation" : "Ausbildungsstall") : wegSperre}</button>`;
-      inhalt = vglKopf(p, box.lesen || box.tot ? "" : wegKnopf) + `<div class="klasse">Ausbildungsstand: <b class="lex" data-lex="klassen">${ausbildungsKlasse(aw, p.alter, p.werte.gang)}</b>${q ? `<br><span class="vgl-b">${esc(q.name)}: ${ausbildungsKlasse(qa, alterJahre(q), q.werte.gang)}</span>` : ""}</div>
+      inhalt = vglKopf(p, box.lesen || box.tot ? "" : wegKnopf) + `<div class="klasse">Ausbildungsstand: <b class="lex" data-lex="klassen">${ausbildungsKlasse(aw, p.alter, gg)}</b>${q ? `<br><span class="vgl-b">${esc(q.name)}: ${ausbildungsKlasse(qa, alterJahre(q), q.werte.gang)}</span>` : ""}</div>
         ${ki >= 0 ? `<p class="text" style="margin:4px 0 2px"><small><b>Beherrscht:</b> ${KLASSEN.slice(0, ki + 1).map(c => c.lekt).join(" · ")}<br><b>Bewertet wird:</b> ${KLASSEN[ki].fokus}</small></p>` : ""}
-        ${nx ? `<p class="text" style="margin:2px 0 8px"><small><b>Für Klasse ${nx.k}</b> (${nx.lekt}) fehlt noch: ${fehlt.join(", ")}</small></p>` : `<p class="text"><small>Höchste Klasse erreicht.</small></p>`}` + aw.map((x, i) => `
-        <div class="zeile-wert"><div class="kopf"><b class="lex" data-lex="skala:${x.name}">${x.name}</b><span>${x.wert} %${q ? ` <em class="vgl-b">${qa[i].wert} %</em>` : ""}</span></div>
-        <div class="balken"><i style="width:${x.wert}%"></i></div>${q ? `<div class="balken vgl"><i style="width:${qa[i].wert}%"></i></div>` : ""}</div>`).join("");
+        ${nx ? `<p class="text" style="margin:2px 0 8px"><small><b>Für Klasse ${nx.k}</b> (${nx.lekt}) fehlt noch: ${fehlt.join(", ")}</small></p>` : `<p class="text"><small>Höchste Klasse erreicht.</small></p>`}` + `<div class="skala-phasen">` + aw.map((x, i) => `
+        <div class="zeile-wert" style="grid-row:${i + 1}"><div class="kopf"><b class="lex" data-lex="skala:${x.name}">${x.name}</b><span>${x.wert} %${q ? ` <em class="vgl-b">${qa[i].wert} %</em>` : ""}</span></div>
+        <div class="balken"><i style="width:${x.wert}%"></i></div>${q ? `<div class="balken vgl"><i style="width:${qa[i].wert}%"></i></div>` : ""}</div>`).join("") +
+        SKALA_PHASEN.map(([n, a, b], c) => `<div class="sp-k" style="grid-column:${c + 2};grid-row:${a + 1} / ${b + 2}" title="Phase: ${n}"><span>${n}</span></div>`).join("") + `</div>` +
+        (box.lesen || box.tot ? "" : `<p class="text" style="margin:6px 0 0"><small>💪 Schubkraft ${schubkraft(p)} · Tragkraft ${tragkraft(p)} – Schwung kann höchstens bis ${Math.min(97, schubkraft(p) + 10)} %, Geraderichtung und Versammlung bis ${Math.min(97, tragkraft(p) + 10)} % steigen. Mehr Kraft (z. B. Springgymnastik, Konditionstraining) hebt die Grenze.<br>⚡ Energie heute: ${Math.max(0, energie(p))} / ${ENERGIE_MAX} · Training daheim: Pflege → Ort → Reitplatz oder Gelände.</small></p>`);
     }
     else if (aktenReiter === "gesundheit") {
       const g = pf.gesundheit;
@@ -2675,6 +2685,24 @@
         inhalt = meld + `<p class="text" style="margin:0 0 4px">🔬 <b>Labor</b> · Der Tierarzt schickt eine Haarprobe von ${esc(p.name)} ein – dafür muss ${pron(p).er} nicht wegfahren.</p>
           <div class="kacheln quadrat">${Object.entries(LABOR_TESTS).map(([id, T]) => kOrt("lt-" + id, T.ico, T.kurz, testGemacht(p, id) ? "schon gemacht" : testLaeuft(p, id) ? "im Labor …" : fmt(laborPreis(p, id)), T.info, !testGemacht(p, id) && !testLaeuft(p, id))).join("")}</div>
           <p class="text"><small>Das Ergebnis kommt nach ein paar Tagen per Post und steht dann in der Akte unter „Genetik“.</small></p>` + zurueckOrt();
+      } else if (ortModus && ortModus.startsWith("tr-")) {
+        const ort = ortModus.slice(3), O = TRAIN_ORTE[ort], wt = wetterHeute(), E = energie(p), sp = trainSperre(p, box);
+        const T = p.trainHeute && p.trainHeute.tag === spiel.tag ? p.trainHeute : null, P = trainPlan(p), mitB = aktive("bereiter").length > 0, beimB = maBoxen("bereiter").includes(aktBox);
+        const liste = Object.keys(UEBUNG).filter(k => UEB_WO[UEBUNG[k].wo].includes(ort));
+        const wetterTxt = (ort === "reitplatz" || ort === "roundpen") && (wt === "regen" || wt === "schnee" || datum().s === 3) ? ` · ${WETTER_NAME[wt]} – ${datum().s === 3 ? "Winterboden" : "tiefer Boden"}, Training wirkt schwächer` : ort === "reithalle" ? " · wetterunabhängig" : ` · ${WETTER_NAME[wt]}`;
+        const kachel = k => { const U = UEBUNG[k], us = sp || uebSperre(p, k, ort), ko = uebKosten(p, k), drin = P.liste.includes(k);
+          const knopf = us ? `<div class="kachel fehlt" title="${U.n.replace(/\u00ad/g, "")}: ${U.info}"><span class="ico">${U.ico}</span><b>${U.n}</b><small>${sp ? "–" : us}</small></div>`
+            : `<button class="kachel klickbar" data-ueb="${k}" title="${U.n.replace(/\u00ad/g, "")}: ${U.info}"><span class="ico">${U.ico}</span><b>${U.n}</b><small>⚡ ${ko}${ko > E ? " · zu müde" : ""}</small></button>`;
+          return mitB ? `<div class="kachel-halten"><label class="halten" title="in den Trainingsplan für den Bereiter"><input type="checkbox" data-uplan="${k}" ${drin ? "checked" : ""}></label>${knopf}</div>` : knopf; };
+        inhalt = meld + `<p class="text" style="margin:0 0 4px">${O.ico} <b>${O.n}</b>${wetterTxt}${!spiel.anlage[ort] ? " · 🛠️ nur Admin" : ""}</p>
+          <div class="zeile-wert"><div class="kopf"><b>⚡ Energie</b><span>${Math.max(0, E)} / ${ENERGIE_MAX}${E < 0 ? " <small>· überanstrengt</small>" : ""}</span></div><div class="balken"><i style="width:${Math.max(0, E)}%"></i></div></div>
+          ${sp ? `<p class="text">🚫 ${esc(p.name)} ${sp}.</p>` : ""}
+          <div class="kacheln quadrat">${liste.map(kachel).join("")}</div>
+          ${T && T.liste.length ? `<div class="train-bericht"><b>📋 Trainingsbericht heute</b><ul>${T.liste.map(trainBerichtZeile).join("")}</ul></div>` : `<p class="text"><small>Jede Übung kostet Energie (⚡) – über Nacht füllt sie sich wieder auf. Mehrere Übungen lassen sich kombinieren, z. B. erst Longieren zum Aufwärmen (im Winter wichtig), dann Arbeit und zum Schluss ein Ausritt als Belohnung.</small></p>`}
+          ${mitB ? `<div class="train-bereiter"><b>🏇 Bereiter</b> ${beimB ? `trainiert ${esc(p.name)} jeden Morgen.` : `<small>– für Box ${aktBox + 1} ist gerade keiner zuständig (Hofverwaltung → Mitarbeiter).</small>`}
+            <div class="bf-knoepfe"><button class="mini-knopf ${P.selbst ? "an" : ""}" data-bmodus="selbst">entscheidet selbst</button><button class="mini-knopf ${P.selbst ? "" : "an"}" data-bmodus="plan">nach meinem Plan (${P.liste.length})</button></div>
+            <small>${P.selbst ? "Er wählt passend zu Alter und Ausbildungsstand – erst aufwärmen, dann arbeiten, zum Schluss ins Gelände." : P.liste.length ? `Plan: ${P.liste.map(k => UEBUNG[k].n.replace(/\u00ad/g, "")).join(" → ")}.` : "Noch nichts im Plan – setze Häkchen an die Übungen (Reitplatz und Gelände)."} Er hört auf, wenn die Energie nicht mehr reicht.</small></div>` : ""}
+          ` + zurueckOrt();
       } else if (ortModus === "abgeben") {
         const sperre = abgabeSperre(p, box);
         inhalt = meld + `<p class="text" style="margin:0 0 4px">👋 <b>${esc(p.name)} abgeben</b> · Marktwert etwa <b>${fmt(marktwert(p))}</b>${sperre ? `<br><small>⚠️ ${sperre}</small>` : ""}</p>
@@ -2694,7 +2722,7 @@
       inhalt = meld +
         `<p class="text" style="margin:0 0 4px">📍 ${esc(p.name)} steht in <b>Box ${aktBox + 1}</b> · ${da} von ${plaetze.length} Plätzen auf deiner Anlage</p>
         <div class="kacheln quadrat">${kOrt("box", "🔀", "Box wechseln", freieBox() < 0 ? "keine frei" : `${spiel.boxen.filter(boxFrei).length} frei`, "In eine andere Box umziehen")}
-          ${plaetze.map(([k, ico, n, info, kurz]) => k === "weide" ? kOrt("weide", ico, n, p.weide ? "zurück in die Box" : `Gesundheit +${WEIDE_PLUS[datum().s]} %/Tag`, p.weide ? "Pferd von der Weide zurück in die Box holen" : "Pferd auf die Weide bringen") : `<div class="kachel ${spiel.anlage[k] ? "" : "fehlt"}" title="${n.replace(/\u00ad/g, "")}: ${info}${spiel.anlage[k] ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></div>`).join("")}
+          ${plaetze.map(([k, ico, n, info, kurz]) => k === "weide" ? kOrt("weide", ico, n, p.weide ? "zurück in die Box" : `Gesundheit +${WEIDE_PLUS[datum().s]} %/Tag`, p.weide ? "Pferd von der Weide zurück in die Box holen" : "Pferd auf die Weide bringen") : TRAIN_ORTE[k] && ortOffen(k) ? kOrt("tr-" + k, ico, n, spiel.anlage[k] ? "Training" : "🛠️ Training", `${info} – Training`) : `<div class="kachel ${spiel.anlage[k] ? "" : "fehlt"}" title="${n.replace(/\u00ad/g, "")}: ${info}${spiel.anlage[k] ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></div>`).join("")}
           ${kOrt("labor", "🔬", "Labor", "Gentests", "Genetische Tests mit einer Haarprobe")}
           ${kOrt("anhaenger", "🚚", "Pferde\u00adanhänger", "Klinik, Turnier, Abgeben …", "Mit dem Anhänger wegfahren")}</div>`;
       }
@@ -2822,6 +2850,16 @@
       aktBox = z; spiel.aktBox = z; ortModus = null; meldung = `🔀 ${esc(p.name)} steht jetzt in Box ${z + 1}.`;
       speichern(); zeigeStall(); zeigeTag();
     });
+    INFO.querySelectorAll("[data-ueb]").forEach(b => b.onclick = () => {
+      const k = b.dataset.ueb, ort = ortModus.slice(3), ko = uebKosten(p, k), E = energie(p);
+      const los = () => { const e = trainieren(p, k, ort, null); meldung = ""; reaktionZeigen(e.text); speichern(); zeigeStall(); zeigeTag(); };
+      if (ko > E) dialog(`<h3>⚡ ${esc(p.name)} ist müde</h3><p>Noch ${Math.max(0, E)} Energie – ${UEBUNG[k].n.replace(/\u00ad/g, "")} braucht etwa ${ko}. Übermüdet lernt ${pron(p).er} kaum noch etwas, und <b>Übertraining</b> kostet Wohlbefinden und Gesundheit – ${pron(p).er} kann sich dabei sogar überlasten und lahmen.</p>`,
+        [["Trotzdem trainieren", los], ["Lieber Pause", null, "zweit"]]);
+      else los();
+    });
+    INFO.querySelectorAll("[data-uplan]").forEach(c => c.onchange = () => { const P = trainPlan(p), k = c.dataset.uplan;
+      P.liste = c.checked ? [...P.liste.filter(x => x !== k), k] : P.liste.filter(x => x !== k); if (c.checked) P.selbst = false; speichern(); zeigeAkte(); });
+    INFO.querySelectorAll("[data-bmodus]").forEach(b => b.onclick = () => { trainPlan(p).selbst = b.dataset.bmodus === "selbst"; speichern(); zeigeAkte(); });
     const oz = $("ortZurueck"); if (oz) oz.onclick = () => { ortModus = ({ abgeben: "anhaenger", klinik: "anhaenger", labor: null })[ortModus] || null; meldung = ""; zeigeAkte(); };
     const gtk = $("gentestKachel"); if (gtk) gtk.onclick = () => gentestUebersicht(p);
     const va = $("vglAus"); if (va) va.onclick = () => { vergleichId = null; zeigeAkte(); };
@@ -3466,7 +3504,7 @@
       const p = box.pferd; if (!p || p.klinik || box.tot) return;
       befundListe(p).filter(b => !b.bemerkt && !b.diagnose && !imInkub(b)).forEach(b => {
         const K = KRANK[b.art];
-        const wer = [...new Set([...(bei[i] || []), ...alle])].find(m => Math.random() < 0.25 + 0.1 * b.grad + (m.wissen[K.bereich] || 0) / 250 + (hatEig(m, "aufmerksam") ? 0.2 : 0));
+        const wer = [...new Set([...(bei[i] || []), ...alle])].find(m => Math.random() < 0.25 + 0.1 * b.grad + (m.wissen[K.bereich] || 0) / 250 + (hatEig(m, "aufmerksam") ? 0.2 : 0) + (m.typ === "bereiter" && (K.bereich === "huf" || K.bereich === "ruecken") ? 0.25 : 0));
         if (!wer) return;
         const e = einschaetzen(b.art, wer.wissen[K.bereich], hatEig(wer, "aufmerksam"));
         b.bemerkt = { von: wer.name, mid: wer.id, tag: spiel.tag }; b.meldungen.push({ von: wer.name, mid: wer.id, titel: maTitel(wer), tipp: e.tipp, sicher: e.sicher, tag: spiel.tag });
@@ -4220,6 +4258,209 @@
     }
     return null;
   }
+  // ---------- Training daheim (Werte-Plan, Etappe 4) ----------
+  // Orte: der Spieler hat erstmal Reitplatz und Gelände (Bodenarbeit, Longieren, Stangen auch auf dem Reitplatz) · Admin: alle Orte offen (zum Testen)
+  const TRAIN_ORTE = { roundpen: { n: "Roundpen", ico: "⭕" }, reitplatz: { n: "Reitplatz", ico: "🏟️" }, reithalle: { n: "Reithalle", ico: "🏛️" }, gelaende: { n: "Gelände", ico: "🌲" } };
+  const ortOffen = o => !!(spiel.admin || (spiel.anlage && spiel.anlage[o]));
+  // Übungen: e = Energie · ab = Mindestalter (Jahreszeiten) · sk = Ausbildungsskala (Stufe → Grundzuwachs je Einheit) · w = Werte (Grundzuwachs) · vl = Vorliebe
+  // wo: boden = Roundpen, Reitplatz, Reithalle · platz = Reitplatz, Reithalle · gelaende = Gelände
+  const UEBUNG = {
+    bodenarbeit: { n: "Boden­arbeit", ico: "🤝", wo: "boden", ab: 2, e: 12, vl: "bodenarbeit", w: { vertrauen: 1.2, gehorsam: 1, konzentration: .4 }, info: "Führen, Weichen, Stillstehen – Vertrauen und Gehorsam, schon für Fohlen" },
+    freiarbeit: { n: "Frei­arbeit", ico: "🦋", wo: "boden", ab: 4, e: 15, vl: "bodenarbeit", w: { vertrauen: 1, gehorsam: .5, reaktion: .5, beweglichkeit: .4 }, info: "ohne Strick, nur mit Körpersprache" },
+    longieren: { n: "Longieren", ico: "🌀", wo: "boden", ab: 10, e: 18, vl: "longieren", sk: { 0: 1, 1: .8 }, w: { gehorsam: .4, ausdauer: .4, beweglichkeit: .3 }, info: "Takt und Losgelassenheit – gut zum Aufwärmen" },
+    stangen: { n: "Stangen­arbeit", ico: "🪵", wo: "boden", ab: 10, e: 18, vl: "stangen", sk: { 0: .5 }, w: { koordination: .9, konzentration: .6, beweglichkeit: .3 }, gang: .02, info: "Trab- und Galoppstangen – Koordination und Gangwerk" },
+    doppellonge: { n: "Doppel­longe", ico: "🎗️", wo: "platz", ab: 12, e: 24, vl: "longieren", sk: { 2: .6, 3: .6, 4: .5, 5: .5 }, w: { kraft: .4, gehorsam: .3 }, info: "Anlehnung bis Versammlung, ohne Reitergewicht" },
+    dressur: { n: "Dressur­arbeit", ico: "🎩", wo: "platz", ab: 12, e: 28, vl: "dressur", reiten: true, sk: { 0: .4, 1: .6, 2: .8, 3: .8, 4: .7, 5: .6 }, w: { gehorsam: .5, konzentration: .5, beweglichkeit: .4, kraft: .3 }, info: "die ganze Ausbildungsskala unter dem Reiter" },
+    springen: { n: "Spring­gymnastik", ico: "🚧", wo: "platz", ab: 14, e: 32, vl: "springen", reiten: true, sk: { 1: .3, 3: .4 }, w: { kraft: .8, koordination: .7, reaktion: .6, beschleunigung: .4, konzentration: .3 }, info: "Reihen und Kombinationen – Kraft, Koordination, Reaktion" },
+    western: { n: "Western­arbeit", ico: "🤠", wo: "platz", ab: 12, e: 28, vl: "western", reiten: true, sk: { 1: .3, 4: .3 }, w: { wendigkeit: .8, beschleunigung: .5, gehorsam: .5, kraft: .4, reaktion: .4, konzentration: .3 }, info: "Wendungen, Stopps, Rückwärts – Wendigkeit und Gehorsam" },
+    spazieren: { n: "Spazier­gang", ico: "🚶", wo: "gelaende", ab: 2, e: 10, vl: "gelaende", w: { vertrauen: .7, ausdauer: .3, zaehigkeit: .2, konzentration: .2 }, info: "an der Hand Neues kennenlernen – gut für junge und scheue Pferde" },
+    ausritt: { n: "Ausritt", ico: "🌳", wo: "gelaende", ab: 12, e: 22, vl: "gelaende", reiten: true, sk: { 1: .3 }, w: { ausdauer: .8, zaehigkeit: .6, koordination: .4, vertrauen: .4, kraft: .3 }, info: "entspannt durch Wald und Feld – auch als Belohnung nach der Arbeit" },
+    kondition: { n: "Konditions­training", ico: "⛰️", wo: "gelaende", ab: 14, e: 38, vl: "gelaende", reiten: true, w: { ausdauer: 1.1, kraft: .7, zaehigkeit: .7, regeneration: .4, beschleunigung: .3 }, info: "bergauf, lange Trab- und Galoppstrecken" },
+    gelaendesprung: { n: "Gelände­sprünge", ico: "🪨", wo: "gelaende", ab: 16, e: 36, vl: "springen", reiten: true, sprung: true, w: { kraft: .7, koordination: .8, reaktion: .6, zaehigkeit: .4 }, info: "Baumstämme, Gräben, Wasser – braucht Mut" } };
+  UEBUNG.springen.sprung = true;
+  const UEB_WO = { boden: ["roundpen", "reitplatz", "reithalle"], platz: ["reitplatz", "reithalle"], gelaende: ["gelaende"] };
+  const ENERGIE_MAX = 100;
+  // Tempo: Grundwerte × TRAIN_SK (Skala) bzw. × TRAIN_W (Werte), umgerechnet auf Tage pro Jahreszeit (× 7 / Tage) – Ziel: regelmäßig trainiert etwa nach 1 Jahr Klasse A, nach 2–3 Jahren L
+  let TRAIN_SK = 2.5, TRAIN_W = 1.5, AUSB_X = 2.5;
+  const r2 = x => Math.round(x * 100) / 100;
+  const energie = p => (p.energie == null ? (p.energie = ENERGIE_MAX) : p.energie);
+  const jzAlterTxt = jz => jz < 4 ? `${jz * 3} Monaten` : `${String(jz / 4).replace(".5", "½").replace(".25", "¼").replace(".75", "¾")} ${jz === 4 ? "Jahr" : "Jahren"}`;
+  // über Nacht: Energie füllt sich je nach Regeneration (45 + 0,45 × Regeneration), bei schwacher Gesundheit (unter 50 %) nur 60 % davon
+  function trainingNacht(p) {
+    if (!p || !p.werte) return; werteErgaenzen(p);
+    const reg = p.werte.ist.regeneration || 50, g = p.pflege ? p.pflege.gesundheit : 100;
+    p.energie = Math.min(ENERGIE_MAX, Math.round(energie(p) + (45 + 0.45 * reg) * (g < 50 ? 0.6 : 1)));
+  }
+  // Ausbildungsskala je Stufe gespeichert (p.skala) – alte Pferde übernehmen ihren bisherigen Stand
+  function skalaErgaenzen(p) {
+    if (Array.isArray(p.skala)) return p.skala;
+    let aw = []; try { aw = ausbildungsWerte({ ...p, alter: alterJahre(p), skala: undefined }); } catch (e) {}
+    return (p.skala = AUSBILDUNG.map((n, i) => (aw[i] && aw[i].wert) || 0));
+  }
+  // Schubkraft = Kraft + Gangwerk · Tragkraft = Kraft + Körperbau (Rassenfaktor dress)
+  const gangSchnitt = p => { const g = p.werte.gang; return (g.schritt + g.trab + g.galopp) / 3; };
+  const schubkraft = p => { werteErgaenzen(p); return Math.round(((p.werte.ist.kraft || 0) + gangSchnitt(p) * 10) / 2); };
+  const tragkraft = p => { werteErgaenzen(p); const pr = PROFIL[p.rasse] || PROFIL.hannoveraner; return Math.round((p.werte.ist.kraft || 0) * (0.55 + 0.5 * (pr.dress || 0.8))); };
+  // so hoch kann eine Stufe gerade steigen: 20-%-Regel (Stufe davor), Schwung bis Schubkraft + 10, Geraderichtung/Versammlung bis Tragkraft + 10, höchstens 97
+  function skalaGrenze(p, i) {
+    const s = skalaErgaenzen(p); let g = 97;
+    if (i > 0) g = Math.min(g, s[i - 1], Math.max(0, (s[i - 1] - 20) / 80 * 100));
+    if (i === 3) g = Math.min(g, schubkraft(p) + 10);
+    if (i >= 4) g = Math.min(g, tragkraft(p) + 10);
+    return Math.max(0, g);
+  }
+  const SKALA_PHASEN = [["Gewöhnung", 0, 2], ["Schubkraft", 1, 4], ["Tragkraft", 3, 5]];
+  // ein Wert steigt: voll bis 60 % der Grenze, darüber immer langsamer bis zur Grenze
+  function wertPlus(p, key, x) {
+    const ist = p.werte.ist[key] || 0, grenze = key === "vertrauen" || key === "gehorsam" ? 100 : wertGrenze(p, key);
+    const d = Math.min(Math.max(0, grenze - ist), x * Math.max(0, Math.min(1, 2.5 * (1 - ist / Math.max(1, grenze)))));
+    if (d < 0.005) return 0;
+    p.werte.ist[key] = r2(ist + d); return d;
+  }
+  function skalaPlus(p, i, x) {
+    const s = skalaErgaenzen(p), ist = s[i] || 0, cap = skalaGrenze(p, i);
+    const d = Math.min(Math.max(0, cap - ist), x * Math.max(0, Math.min(1, 2.5 * (1 - ist / 97))));
+    if (d < 0.005) return 0;
+    s[i] = r2(ist + d); return d;
+  }
+  // Gangwerk: gezeigte Note = Veranlagung + Bonus (Ausbildung und Stangenarbeit bis +0,5, erst bei sehr hoher Ausbildung – Schnitt ab 85 % – bis +1), in halben Noten
+  function gangBonus(p) {
+    if (!p || !p.werte) return 0;
+    let aw = []; try { aw = ausbildungsWerte({ ...p, alter: alterJahre(p) }); } catch (e) { return 0; }
+    const avg = aw.reduce((a, x) => a + x.wert, 0) / aw.length;
+    const b = Math.min(0.5, (p.gangStangen || 0) + avg / 120) + (avg >= 85 ? 0.5 : 0);
+    return Math.floor(b * 2 + 1e-9) / 2;
+  }
+  function gangGezeigt(p) {
+    const g = { ...p.werte.gang }, b = gangBonus(p);
+    if (b) ["schritt", "trab", "galopp"].forEach(k => { if (g[k] != null) g[k] = Math.min(10, g[k] + b); });
+    return g;
+  }
+  // Wo findet eine Übung heute statt? (Roundpen vor Reitplatz; bei Regen/Schnee die Reithalle, wenn vorhanden)
+  function uebOrt(k) {
+    const l = UEB_WO[UEBUNG[k].wo].filter(ortOffen), w = wetterHeute();
+    if ((w === "regen" || w === "schnee") && l.includes("reithalle")) return "reithalle";
+    return l[0] || null;
+  }
+  // Was spricht gegen Training heute? (für alle Übungen) – "" = geht
+  function trainSperre(p, box) {
+    if (!p || (box && box.tot)) return "–";
+    if (p.klinik) return "ist in der Klinik";
+    if (p.weide) return `steht auf der Weide – erst zurück in die Box holen`;
+    if (p.boxenruhe) return "hat Boxenruhe";
+    if (p.pflege && p.pflege.gesundheit < 50) return "ist zu schwach (Gesundheit unter 50 %)";
+    const b = bekannteBefunde(p).find(x => !x.beh && x.grad >= 3);
+    if (b) return `ist krank (${KRANK[b.art] ? KRANK[b.art].n : b.art}) – erst behandeln`;
+    if (bekannteBefunde(p).some(x => ["lahmheit", "hufabszess", "hufrehe"].includes(x.art))) return "lahmt – Trainingspause, bis es ausgeheilt ist";
+    return "";
+  }
+  function uebSperre(p, k, ort) {
+    const U = UEBUNG[k];
+    if (alterJZ(p) < U.ab) return `ab ${jzAlterTxt(U.ab)}`;
+    if (p.traechtig && U.sprung) return "nicht tragend";
+    if (p.traechtig && U.reiten && p.traechtig.geburt - jzJetzt() <= 1) return "hochtragend";
+    if (ort === "gelaende" && inQuarantaene(p)) return "Quarantäne";
+    if (ort && !UEB_WO[U.wo].includes(ort)) return "nicht hier";
+    return "";
+  }
+  // Energie: Ungeliebtes ×1,2 · Geliebtes ×0,85 · die ersten 3 Male ×1,2 (neu, noch nicht gekonnt) · tragend ×1,2
+  function uebKosten(p, k) {
+    const U = UEBUNG[k], st = vorliebeStufe(vorliebe(p, U.vl)), neu = ((p.uebKann || {})[k] || 0) < 3;
+    return Math.round(U.e * (st === "mag" ? 0.85 : st === "nicht" ? 1.2 : 1) * (neu ? 1.2 : 1) * (p.traechtig ? 1.2 : 1));
+  }
+  // Lerntempo = Lernfähigkeit × Wohlbefinden × Vorliebe × Charakter × Befunde × Trainer (du 1 · Bereiter 0,8–1,2 je nach Fachwissen Rücken/Reiten)
+  const trainerFaktor = m => m ? 0.8 + 0.4 * ((m.wissen && m.wissen.ruecken) || 0) / 100 : 1;
+  function trainieren(p, k, ort, m) {
+    werteErgaenzen(p); skalaErgaenzen(p);
+    const U = UEBUNG[k], d = datum(), wetter = wetterHeute(d), kosten = uebKosten(p, k), wer = m ? m.name : null;
+    const T = (p.trainHeute = p.trainHeute && p.trainHeute.tag === spiel.tag ? p.trainHeute : { tag: spiel.tag, liste: [], verbraucht: 0 });
+    const vorher = energie(p), ueber = kosten > vorher;
+    p.energie = Math.max(-30, Math.round(vorher - kosten)); T.verbraucht += kosten;
+    const c = k2 => charE(p, k2), A = c("wille"), B = c("bezug"), V = c("nerven"), Te = c("temperament"), S = c("sensibel"), M = c("mut");
+    let F = p.werte.talent * wohlFaktor(p) * vorliebeFaktor(p, U.vl) * befundBremse(p) * trainerFaktor(m);
+    const hinweise = [];
+    if ((ort === "reitplatz" || ort === "roundpen") && (wetter === "regen" || wetter === "schnee" || d.s === 3)) { F *= 0.7; hinweise.push(d.s === 3 ? "Winter – schwerer Boden" : "Regen – tiefer Boden"); }
+    if (ort === "reithalle" && vorliebeStufe(vorliebe(p, "reithalle")) === "nicht") F *= 0.85;
+    const kalt = d.s === 3 && U.reiten && !T.liste.length;   // Winter: ohne Aufwärmen
+    if (kalt) { F *= 0.8; hinweise.push("ohne Aufwärmen in der Kälte"); }
+    if (ueber) { F *= 0.6; hinweise.push("müde – lernt kaum noch"); }
+    if (k === "dressur") F *= 1 + 0.2 * S.hoch;                         // sensible Pferde: feiner an den Hilfen
+    if (ort === "gelaende" || U.sprung) F *= 1 + 0.15 * M.hoch - 0.25 * M.tief;   // mutig mag Gelände und Sprünge, scheu ist gehemmt
+    const plus = {}, skPlus = {};
+    Object.entries(U.w || {}).forEach(([key, g]) => {
+      let f = F;
+      if (key === "gehorsam" || key === "konzentration") f *= 1 + 0.4 * A.hoch - 0.3 * A.tief;
+      if (key === "vertrauen") f *= 1 + 0.5 * B.hoch;
+      if (key === "reaktion") f *= 1 - 0.4 * V.tief;
+      const x = wertPlus(p, key, g * f * TRAIN_W * proTag(1)); if (x) plus[key] = x;
+    });
+    // Gewöhnungsphase (Takt, Losgelassenheit, Anlehnung): schneller mit Vertrauen, Gehorsam, ruhigem und nervenstarkem Charakter
+    const gew = 0.8 + 0.2 * (p.werte.ist.vertrauen || 0) / 100 + 0.2 * (p.werte.ist.gehorsam || 0) / 100 + 0.15 * (Te.tief + V.hoch) - 0.15 * (Te.hoch + V.tief);
+    Object.entries(U.sk || {}).forEach(([i, g]) => { i = +i; const x = skalaPlus(p, i, g * F * (i <= 2 ? gew : 1) * TRAIN_SK * proTag(1)); if (x) skPlus[i] = x; });
+    if (U.gang) p.gangStangen = r2(Math.min(0.5, (p.gangStangen || 0) + U.gang * F));
+    (p.uebKann = p.uebKann || {})[k] = (p.uebKann[k] || 0) + 1;
+    if (p.trainTag !== spiel.tag) { p.trainTag = spiel.tag; p.trainTage = (p.trainTage || 0) + 1; wohlAendern(p, 3 + 2 * Te.hoch, "bewegt (Training)"); }
+    p.arbeitTag = spiel.tag; p.boxTage = 0;
+    const text = reaktion(p, U.vl, !m);
+    if (ort === "reithalle") reaktion(p, "reithalle", !m);
+    // eigensinnige Pferde mögen zu viel Training nicht (mehr als 60 Energie am Tag)
+    if (A.tief && T.verbraucht > 60 && !T.eigensinn) { T.eigensinn = true; wohlAendern(p, -3 * A.tief, "zu viel Training (eigensinnig)"); }
+    // Übertraining: Wohlbefinden −8, Gesundheit −3, Lahmheit möglich (Zähigkeit schützt) · kalt geritten: kleines Risiko
+    const zaeh = 1.5 - (p.werte.ist.zaehigkeit || 50) / 100, folgen = [];
+    if (ueber) { wohlAendern(p, -8, "Übertraining"); p.pflege.gesundheit = Math.max(1, r2(p.pflege.gesundheit - 3)); folgen.push("überanstrengt: Wohlbefinden −8, Gesundheit −3");
+      if (Math.random() < 0.15 * zaeh) { befundNeu(p, "lahmheit", 1, "Überlastung beim Training", m ? m.name : "du"); folgen.push(`⚠️ ${esc(p.name)} geht danach nicht mehr taktrein – lahmt leicht`); } }
+    if (kalt && Math.random() < 0.04 * zaeh) { befundNeu(p, "lahmheit", 1, "ohne Aufwärmen bei Kälte geritten", m ? m.name : "du"); folgen.push(`⚠️ ${esc(p.name)} lahmt leicht – im Winter besser erst aufwärmen (Longieren, Bodenarbeit)`); }
+    // Hufschuhe im Gelände (barhuf): zu klein → Scheuerstelle · zu groß → stolpert, kleines Lahmheitsrisiko · Verschleiß 2 % je Ausritt
+    if (ort === "gelaende" && !p.beschlag && p.hufschuhe) { const H = hufschuheVon(p), echt = hufGroesseEcht(p);
+      ["vorne", "hinten"].forEach(s => { const h = H[s]; if (!h || !(h.zustand > 0)) return; h.zustand = Math.max(0, h.zustand - 2);
+        if (h.gr < echt[s] && Math.random() < 0.3 && !aktiveBefunde(p).some(b => b.art === "verletzung" && /Hufschuh/.test(b.ursache))) { befundNeu(p, "verletzung", 1, `Scheuerstelle – Hufschuhe ${s} zu klein`, m ? m.name : "du"); folgen.push(`⚠️ Die Hufschuhe ${s} sind zu klein – Scheuerstelle am Ballen`); }
+        if (h.gr > echt[s] && Math.random() < 0.12) { folgen.push(`${esc(p.name)} stolpert – die Hufschuhe ${s} sitzen zu locker`);
+          if (Math.random() < 0.25) { befundNeu(p, "lahmheit", 1, `gestolpert – Hufschuhe ${s} zu groß`, m ? m.name : "du"); folgen.push("⚠️ danach lahmt " + esc(p.name) + " leicht"); } } }); }
+    // unbemerkte Huf- und Rückenprobleme fallen beim Training auf (der Reiter spürt es)
+    befundListe(p).filter(b => !b.bemerkt && !b.diagnose && !imInkub(b) && KRANK[b.art] && (KRANK[b.art].bereich === "huf" || KRANK[b.art].bereich === "ruecken")).forEach(b => {
+      if (Math.random() < 0.5 + 0.1 * b.grad) { b.bemerkt = { von: m ? m.name : "du", mid: m ? m.id : undefined, tag: spiel.tag }; if (!m) spielerLernt(KRANK[b.art].bereich, 0.2);
+        folgen.push(`🔎 ${m ? esc(m.name) + " merkt" : "Du merkst"} beim Training: ${esc(p.name)} ${anzeichenText(b)}`); } });
+    const e = { k, ort, wer, plus, skPlus, text, hinweise, folgen, kosten, ueber };
+    T.liste.push(e); return e;
+  }
+  const zahlPlus = x => "+" + (Math.round(x * 10) / 10).toLocaleString("de-DE");
+  function trainBerichtZeile(e) {
+    const U = UEBUNG[e.k], alle = [...Object.entries(e.skPlus).map(([i, x]) => `${AUSBILDUNG[i]} ${zahlPlus(x)}`), ...Object.entries(e.plus).map(([k, x]) => `${(WERTE_KOERPER.concat(WERTE_KOPF).find(w => w.key === k) || { titel: k }).titel} ${zahlPlus(x)}`)];
+    return `<li>${U.ico} <b>${U.n.replace(/­/g, "")}</b> <small>(${TRAIN_ORTE[e.ort] ? TRAIN_ORTE[e.ort].n : e.ort}${e.wer ? `, ${esc(e.wer)}` : ""} · ⚡ ${e.kosten})</small><br>${alle.length ? alle.join(" · ") : "<small>kaum Fortschritt</small>"}${e.hinweise.length ? `<br><small>${e.hinweise.join(" · ")}</small>` : ""}${e.folgen.length ? `<br><small>${e.folgen.join("<br>")}</small>` : ""}</li>`;
+  }
+  // Bereiter: nach deinem Plan oder er entscheidet selbst – trainiert nur, solange die Energie reicht (kein Übertraining)
+  const trainPlan = p => (p.trainPlan = p.trainPlan || { selbst: true, liste: [] });
+  function bereiterWahl(p, m) {
+    const j = alterJZ(p), kennt = ((m.wissen && m.wissen.verhalten) || 0) >= 30;
+    const geht = k => !uebSperre(p, k) && uebOrt(k) && !(kennt && vorliebeStufe(vorliebe(p, UEBUNG[k].vl)) === "nicht" && Math.random() < 0.7);
+    if (j < 12) return ["longieren", "bodenarbeit", "spazieren"].filter(geht).slice(0, 2);
+    const l = [];
+    if (datum().s === 3 || Math.random() < 0.5) l.push(geht("longieren") ? "longieren" : "bodenarbeit");   // Aufwärmen (im Winter immer)
+    const haupt = ["dressur", "springen", "western", "doppellonge", "stangen"].filter(geht);
+    if (haupt.length) l.push(Math.random() < 0.6 ? haupt[0] : haupt[Math.floor(Math.random() * haupt.length)]);
+    if (geht("ausritt")) l.push("ausritt");   // Ausritt als Belohnung
+    return l.filter(geht);
+  }
+  function bereiterTrainiert(p, m) {
+    if (trainSperre(p)) return [];
+    const P = trainPlan(p), liste = P.selbst || !P.liste.length ? bereiterWahl(p, m) : P.liste.filter(k => UEBUNG[k] && !uebSperre(p, k) && uebOrt(k));
+    const out = [];
+    liste.forEach(k => { if (energie(p) >= uebKosten(p, k)) out.push(trainieren(p, k, uebOrt(k), m)); });
+    return out;
+  }
+  // Zu Beginn jeder Jahreszeit: wer regelmäßig trainiert wurde (mind. an der Hälfte der Tage), altert langsamer (Abbau bis ×0,7)
+  function fitJahreszeit(p) {
+    if (!p) return;
+    p.fit = r2(0.5 * (p.fit || 0) + 0.5 * Math.min(1, (p.trainTage || 0) / Math.max(1, tpj() / 2))); p.trainTage = 0;
+  }
+  // Ausbildungsstall: jeden Tag alle Stufen gleichmäßig (Profis) – wie bisher 0,9 × Lernfähigkeit × Wohlbefinden, tragend halb so schnell
+  function ausbildungsstallTag(p) {
+    if (alterJZ(p) < 12) return; werteErgaenzen(p); skalaErgaenzen(p);
+    const pr = PROFIL[p.rasse] || PROFIL.hannoveraner, f = 0.9 * p.werte.talent * wohlFaktor(p) * (p.traechtig ? 0.5 : 1) * AUSB_X * proTag(1);
+    for (let i = 0; i < 6; i++) skalaPlus(p, i, f * (1.12 - i * 0.13) * Math.pow(pr.dress, i / 4));
+    [["gehorsam", .5], ["konzentration", .2], ["kraft", .25], ["ausdauer", .2], ["koordination", .2], ["beweglichkeit", .2]].forEach(([k, x]) => wertPlus(p, k, x * f));
+    p.trainTag = spiel.tag; p.trainTage = (p.trainTage || 0) + 1;
+  }
   // ---------- Mitarbeiter ----------
   // Alle Angestellten: beginnen immer mit einer neuen Jahreszeit, Gehalt am Ende jeder gearbeiteten Jahreszeit,
   // gekündigt arbeiten sie bis Ende der Jahreszeit; kein Geld → sie kündigen selbst (letztes Gehalt nehmen sie trotzdem)
@@ -4243,7 +4484,7 @@
     pferdewirtHS: { name: "Pferdewirt Haltung und Service", w: "Pferdewirtin Haltung und Service", mehr: "Pferdewirte (Haltung)", ico: "🏡", gehalt: 340, boxen: 3, ab: "klein", staelle: ["pension", "gnadenhof"], start: wissenStart(35, { zucht: 20, ruecken: 15 }), lernt: ["haut", "verhalten", "futter"],
       aufgabe: "versorgt, pflegt und kümmert sich um die Einsteller in", kurz: "Haltung und Service", info: "Bewirbt sich nur in Pensionsställen und auf dem Gnadenhof (kommt mit dem Hof-Ausbau). Darf Azubis ausbilden." },
     bereiter: { name: "Bereiter", w: "Bereiterin", mehr: "Bereiter", ico: "🏇", gehalt: 420, boxen: 3, ab: "mittel", start: wissenStart(20, { ruecken: 50, huf: 40, verhalten: 35 }), lernt: ["ruecken", "verhalten", "huf"],
-      aufgabe: "bewegt jeden Morgen im Roundpen die Pferde aus", kurz: "bewegt die Pferde", info: "Bewegt Pferde ab 3 Jahren (Wohlbefinden +5, der Tag zählt nicht als Tag in der Box). Das Training selbst kommt mit „Training daheim“." },
+      aufgabe: "trainiert jeden Morgen die Pferde aus", kurz: "trainiert die Pferde", info: "Trainiert Pferde ab 3 Jahren – nach deinem Trainingsplan oder er entscheidet selbst (Box → Pflege → Ort → Reitplatz). Je mehr er über Rücken und Reiten weiß, desto mehr lernen die Pferde. Bemerkt Huf- und Rückenprobleme früher." },
     stallmeister: { name: "Stallmeister", w: "Stallmeisterin", mehr: "Stallmeister", ico: "📋", gehalt: 500, boxen: 0, ab: "groß", start: wissenStart(40, {}), lernt: WISSEN.map(([k]) => k),
       aufgabe: "koordiniert den ganzen Stall", kurz: "koordiniert", info: "Stallburschen schaffen mit ihm 5 statt 3 Boxen, Azubis lernen bei ihm. Hufschmied-Termine zusammenlegen kommt mit dem Hufschmied (Etappe E)." } };
   // Kacheln in Hofverwaltung → Mitarbeiter (ohne Typ = kommt später)
@@ -4476,7 +4717,7 @@
       if (Math.random() < maFehler(m)) { vergessen.push({ i, name: m.name }); return; }
       pflegerSchneiden(p); putzen(p, "buerste"); putzen(p, "kamm"); auskratzen(p); beruehrt(p, m.id, "putz"); reaktion(p, "putzen", false); reaktion(p, "kaemmen", false); maVertrauen(m, p); gearbeitet.add(m); });
     maZuteilung("bereiter").forEach(({ i, m }) => { const p = spiel.boxen[i].pferd;
-      wohlAendern(p, 5, `vom Bereiter bewegt (${m.name})`); p.boxTage = 0; beruehrt(p, m.id, "bewegen"); maVertrauen(m, p); gearbeitet.add(m); });
+      const l = bereiterTrainiert(p, m); if (!l.length) return; beruehrt(p, m.id, "bewegen"); maVertrauen(m, p); gearbeitet.add(m); });
     spiel.maVergessen = vergessen.length ? { tag: spiel.tag, liste: vergessen } : null;
     // Erfahrung: wer gearbeitet hat, lernt in seinen Bereichen – Azubis nur mit Anleitung
     const zucht = spiel.boxen.some(b => b.fohlen || (b.pferd && b.pferd.traechtig));
@@ -4570,7 +4811,7 @@
       `heute Nacht hat es auf der Weide Ärger gegeben:<ul>${streite.map(x => `<li><b>${esc(x.a.name)}</b> und <b>${esc(x.b.name)}</b> haben sich gestritten${x.umStuten ? " – zwei Hengste, es war ein Rangkampf um die Stuten" : hengstig(x.a) && hengstig(x.b) ? " – zwei Hengste, es war ein Rangkampf" : ""}${x.verletzt ? ` – <b>${esc(x.verletzt.name)}</b> ist dabei verletzt worden` : ""}.</li>`).join("")}</ul>Wenn sich zwei Pferde nicht vertragen, sollte man sie trennen.${streite.some(x => hengstig(x.a) && hengstig(x.b)) ? " Erwachsene Hengste kommen meist nur allein oder mit Wallachen gut zurecht." : ""}`,
       { pferde: streite.flatMap(x => [x.a, x.b]) });
   }
-  const ARBEIT_DAHEIM = false;     // Etappe 4 (Training daheim): dann vermissen leistungsbereite Pferde Arbeit an freien Tagen
+  const ARBEIT_DAHEIM = true;      // Etappe 4 (Training daheim): dann vermissen leistungsbereite Pferde Arbeit an freien Tagen
   const wohlAendern = (p, d, grund) => { if (!p || !p.pflege || !d) return; d = Math.round(d * 10) / 10;
     p.pflege.wohl = Math.max(0, Math.min(100, Math.round(((p.pflege.wohl == null ? 100 : p.pflege.wohl) + d) * 10) / 10));
     if (grund) { const L = (p.wohlLog = p.wohlLog && p.wohlLog.tag === spiel.tag ? p.wohlLog : { tag: spiel.tag, g: [] }); L.g.push(`${grund} ${d > 0 ? "+" : ""}${String(d).replace(".", ",")}`); } };
@@ -4657,6 +4898,30 @@
     schere:   { titel: "Mähne schneiden", ico: "✂️", basis: c => -0.5 * c.sensibel.hoch - 0.4 * c.nerven.tief + 0.3 * c.nerven.hoch,
       mag: ["hält ganz still, ganz entspannt"], egal: ["lässt sich geduldig frisieren", "döst beim Schneiden"],
       nicht: ["zuckt beim Klappern der Schere zusammen", "zieht den Hals weg", "tänzelt unruhig"] },
+    // Training daheim (Etappe 4)
+    bodenarbeit: { titel: "Bodenarbeit", ico: "🤝", basis: c => 0.4 * c.bezug.hoch + 0.2 * c.mut.tief - 0.3 * c.wille.tief - 0.3 * c.temperament.hoch,
+      mag: ["folgt dir aufmerksam auf Schritt und Tritt", "spitzt die Ohren und macht eifrig mit"], egal: ["macht brav mit", "folgt ruhig am Strick"],
+      nicht: ["drängelt und will lieber weg", "schaut gelangweilt in die Ferne", "stellt sich stur hin"] },
+    longieren: { titel: "Longieren und Doppellonge", ico: "🌀", basis: c => 0.3 * c.temperament.hoch + 0.2 * c.wachheit.tief - 0.4 * c.wachheit.hoch - 0.2 * c.wille.tief,
+      mag: ["trabt locker und schnaubt zufrieden ab", "läuft fleißig und gleichmäßig"], egal: ["dreht brav die Runden", "läuft ruhig an der Longe"],
+      nicht: ["zieht nach außen und will nicht im Kreis laufen", "bleibt ständig stehen", "buckelt genervt"] },
+    stangen: { titel: "Stangenarbeit", ico: "🪵", basis: c => 0.4 * c.wachheit.hoch + 0.2 * c.wille.hoch - 0.3 * c.nerven.tief - 0.2 * c.temperament.hoch,
+      mag: ["schaut sich die Stangen genau an und tritt sauber darüber", "hebt die Beine schön und wirkt stolz"], egal: ["geht ruhig über die Stangen", "tickt ab und zu eine Stange an"],
+      nicht: ["stolpert genervt über die Stangen", "springt hektisch über die Stangen"] },
+    dressur: { titel: "Dressurarbeit", ico: "🎩", basis: c => 0.4 * c.sensibel.hoch + 0.3 * c.wille.hoch - 0.4 * c.temperament.hoch - 0.3 * c.wille.tief,
+      mag: ["kaut zufrieden ab und wird ganz weich", "reagiert auf feinste Hilfen"], egal: ["arbeitet ordentlich mit", "geht brav die Bahnfiguren"],
+      nicht: ["macht sich fest und wehrt sich gegen die Hand", "schlägt mit dem Schweif und knirscht mit den Zähnen", "wird hektisch und eilig"] },
+    springen: { titel: "Springen", ico: "🚧", basis: c => 0.5 * c.mut.hoch + 0.3 * c.temperament.hoch - 0.6 * c.mut.tief - 0.3 * c.nerven.tief,
+      mag: ["zieht freudig zu jedem Sprung", "buckelt vor Freude nach dem Sprung"], egal: ["springt ordentlich", "nimmt die Sprünge gelassen"],
+      nicht: ["verweigert immer wieder", "bleibt vor dem Sprung stehen und schaut", "springt verkrampft und viel zu hoch"] },
+    western: { titel: "Westernarbeit", ico: "🤠", basis: c => 0.4 * c.temperament.tief + 0.3 * c.nerven.hoch + 0.2 * c.wille.hoch - 0.3 * c.nerven.tief - 0.2 * c.temperament.hoch,
+      mag: ["dreht sich flink auf der Hinterhand", "wartet aufmerksam auf das nächste Signal"], egal: ["macht die Übungen ruhig mit", "stoppt ordentlich"],
+      nicht: ["wird hektisch bei den schnellen Wendungen", "will nicht rückwärts"] },
+    gelaende: { titel: "Gelände", ico: "🌲", basis: c => 0.5 * c.mut.hoch + 0.4 * c.wachheit.hoch - 0.6 * c.mut.tief - 0.4 * c.nerven.tief,
+      mag: ["schaut neugierig in jede Ecke und marschiert fröhlich los", "schnaubt zufrieden durch den Wald"], egal: ["geht entspannt mit", "läuft ruhig den Weg entlang"],
+      nicht: ["scheut vor jedem Busch", "tänzelt nervös und will nach Hause", "erschrickt vor einem Traktor"] },
+    reithalle: { titel: "Reithalle", ico: "🏛️", basis: c => 0.2 * c.nerven.hoch - 0.6 * c.mut.tief - 0.3 * c.nerven.tief,
+      mag: ["fühlt sich in der Halle sichtlich wohl"], egal: ["geht ruhig in die Halle"], nicht: ["drückt sich ängstlich an die Bande", "erschrickt vor dem Echo in der Halle"] },
   };
   function vorliebe(p, k) {
     const V = (p.vorlieben = p.vorlieben || {});
@@ -4799,6 +5064,7 @@
       b.krippeVoll = false; b.mistig = true;
       wachsen(b);
     });
+    spiel.boxen.forEach(b => { if (b.pferd && !b.tot) trainingNacht(b.pferd); });   // Energie füllt sich über Nacht
     hufNacht();       // Eisen verlieren
     ansteckungNacht(); // ansteckende Krankheiten verbreiten sich
     befundeNacht();   // Krankheiten und Verletzungen: neu, Verlauf, Wirkung
@@ -5790,7 +6056,20 @@
       <h3>🌱 Wachstum</h3>
       ${verTab(["Alter", "Größe (vom Endmaß)"], [["Geburt", "60 %"], ["6 Monate", "76,8 %"], ["1 Jahr", "87,4 %"], ["2 Jahre", "94,7 %"], ["3 Jahre", "98,9 %"], ["ab 4 Jahren", "100 %"]])}
       <h3>🎓 Ausbildung</h3>
-      <p>Unausgebildete Pferde stehen auf Klasse E mit 0 %. Ausbildung entsteht nur im Ausbildungsstall (ab 3 Jahren, ${fmt(KOSTEN.ausbildung)}/Tag). Takt → Losgelassenheit → Anlehnung → Schwung → Geraderichtung → Versammlung: jede Stufe steigt erst, wenn die vorige 20 % erreicht hat, und kann sie nicht überholen.</p>
+      <p>Unausgebildete Pferde stehen auf Klasse E mit 0 %. Ausbildung entsteht im Ausbildungsstall (ab 3 Jahren, ${fmt(KOSTEN.ausbildung)}/Tag) oder durch Training daheim. Takt → Losgelassenheit → Anlehnung → Schwung → Geraderichtung → Versammlung: jede Stufe wird einzeln gespeichert, steigt erst, wenn die vorige 20 % erreicht hat, und kann sie nicht überholen (Grenze = (Stufe davor − 20) / 80 × 100). <b>Schubkraft</b> = (Kraft + Gangwerk-Schnitt × 10) / 2 → Schwung höchstens Schubkraft + 10. <b>Tragkraft</b> = Kraft × (0,55 + 0,5 × Rassenfaktor Dressur) → Geraderichtung und Versammlung höchstens Tragkraft + 10. Alles höchstens 97 %. Phasen: Gewöhnung (Stufe 1–3), Schubkraft (2–5), Tragkraft (4–6).</p>
+      <p><b>Ausbildungsstall</b> je Tag und Stufe i (0–5): 0,9 × Lernfaktor × Wohlbefinden-Faktor × (1,12 − 0,13·i) × Dressurfaktor^(i/4), tragend ×0,5; dazu Gehorsam +0,5, Konzentration +0,2, Kraft +0,25, Ausdauer/Koordination/Beweglichkeit +0,2 (× derselbe Faktor).</p>
+      <h3>🏋️ Training daheim</h3>
+      <p><b>Orte:</b> Spieler: Reitplatz und Gelände (Bodenarbeit, Freiarbeit, Longieren, Stangen auch auf dem Reitplatz). Roundpen und Reithalle kommen mit dem Hof-Ausbau (🛠️ Admin: alle offen). Reitplatz/Roundpen bei Regen, Schnee oder im Winter ×0,7. Reithalle wetterunabhängig, bei Regen/Schnee wählt der Bereiter sie automatisch; scheue/nervöse Pferde mögen sie oft nicht (×0,85).</p>
+      ${verTab(["Übung", "Ort", "ab", "⚡", "Ausbildungsskala", "Werte"], Object.values(UEBUNG).map(U => [U.ico + " " + U.n.replace(/\u00ad/g, ""), ({ boden: "Roundpen/Platz/Halle", platz: "Platz/Halle", gelaende: "Gelände" })[U.wo], jzAlterTxt(U.ab).replace("Monaten", "Mon.").replace("Jahren", "J.").replace("Jahr", "J."), U.e,
+        Object.entries(U.sk || {}).map(([i, x]) => AUSBILDUNG[i] + " " + String(x).replace(".", ",")).join(", ") || "–", Object.entries(U.w).map(([k, x]) => ((WERTE_KOERPER.concat(WERTE_KOPF).find(w => w.key === k) || {}).titel || k) + " " + String(x).replace(".", ",")).join(", ") + (U.gang ? ", Gangwerk +0,02" : "")]))}
+      <p><b>Zuwachs</b> je Übung = Grundwert × Lernfaktor (0,6–1,2) × Wohlbefinden-Faktor (0,5–1,2) × Vorliebe (1 + 0,25 × Vorliebe, 0,75–1,25) × Befund-Bremse × Trainer (du 1 · Bereiter 0,8 + 0,4 × Wissen Rücken/100) × Ort/Wetter. Müde (Energie reicht nicht) ×0,6 · Winter ohne Aufwärmen (erste Übung des Tages ist Reiten) ×0,8 · Dressurarbeit × (1 + 0,2·e sensibel) · Gelände und Sprünge × (1 + 0,15·e mutig − 0,25·e scheu). Charakter: Gehorsam/Konzentration × (1 + 0,4·e leistungsbereit − 0,3·e eigensinnig), Vertrauen × (1 + 0,5·e verschmust), Reaktionsfähigkeit × (1 − 0,4·e nervös). Gewöhnungsphase (Takt, Losgelassenheit, Anlehnung) × (0,8 + 0,2 × Vertrauen/100 + 0,2 × Gehorsam/100 + 0,15·(e ruhig + e gelassen) − 0,15·(e temperamentvoll + e nervös)).</p>
+      <p><b>Sättigung:</b> voller Zuwachs bis 60 % der Grenze, darüber linear weniger bis 0 an der Grenze (× 2,5 × (1 − Wert/Grenze)). Grenze: Anlage × Altersfaktor (Vertrauen/Gehorsam 100, Skala siehe oben).</p>
+      <p><b>Energie</b> (0–100): über Nacht + (45 + 0,45 × Regeneration), bei Gesundheit unter 50 % nur 60 % davon. Kosten: Grundwert × 0,85 (mag) / 1,2 (mag nicht) × 1,2 (die ersten 3 Male) × 1,2 (tragend). <b>Übertraining</b> (Energie reicht nicht, nach Rückfrage): Wohlbefinden −8, Gesundheit −3, 15 % × (1,5 − Zähigkeit/100) Lahmheit Grad 1. Winter ohne Aufwärmen: 4 % × (1,5 − Zähigkeit/100) Lahmheit. Eigensinnig: mehr als 60 Energie am Tag → Wohlbefinden −3·e. Jeder Trainingstag: Wohlbefinden +3 (+2·e temperamentvoll), zählt nicht als Boxtag; leistungsbereite Pferde vermissen Arbeit nach 2 freien Tagen (−2·e).</p>
+      <p><b>Sperren:</b> Weide, Boxenruhe, Klinik, Gesundheit unter 50 %, bekannter unbehandelter Befund ab Grad 3, bekannte Lahmheit/Hufabszess/Hufrehe. Tragend: keine Sprünge, in der letzten Jahreszeit vor der Geburt kein Reiten. Quarantäne: nicht ins Gelände. Unbemerkte Huf-/Rückenprobleme fallen beim Training mit 50 % + 10 % × Grad auf.</p>
+      <p><b>Hufschuhe im Gelände</b> (barhuf): Verschleiß 2 % je Übung; zu klein → 30 % Scheuerstelle (Verletzung Grad 1); zu groß → 12 % Stolpern, davon 25 % Lahmheit Grad 1.</p>
+      <p><b>Gangwerk:</b> gezeigte Note = Veranlagung + Bonus in halben Noten: min(0,5; Stangenbonus + Skala-Schnitt/120) + 0,5 ab Skala-Schnitt 85 %. Stangenbonus +0,02 × Faktor je Stangenarbeit, höchstens 0,5. Marktwert und Ausdruck (Klassen) nutzen die gezeigte Note, vererbt wird die Veranlagung.</p>
+      <p><b>Alter:</b> Wer in einer Jahreszeit an mindestens der Hälfte der Tage trainiert wurde, bekommt Fitness: fit = ½ × fit_alt + ½ × min(1, Trainingstage / (Tage pro Jahreszeit / 2)). Altersabbau × (1 − 0,3 × fit).</p>
+      <p><b>Bereiter</b> (3 Pferde ab 3 Jahren, morgens): nach deinem Plan (Häkchen an den Übungen) oder „entscheidet selbst“: unter 3 Jahren Longieren/Bodenarbeit/Spaziergang; sonst Aufwärmen (Winter immer, sonst 50 %), eine Hauptübung (60 % Dressurarbeit, sonst zufällig Springen/Western/Doppellonge/Stangen), Ausritt als Belohnung. Ab Wissen Verhalten 30 lässt er Ungeliebtes meist weg (70 %). Er übertrainiert nie. Bemerkt Huf-/Rückenbefunde +25 % häufiger.</p>
       <h3>❤️ Gesundheit</h3>
       <p><b>Kastration</b> (Pferdeanhänger → Klinik, nur Hengste ab 1 Jahr): ${fmt(KOSTEN.kastration)} inklusive 2 Tage Klinik; liegt die Gesundheit unter 75 %, bleibt er länger (${fmt(KOSTEN.klinik)} je zusätzlichem Tag). Danach ist er im Steckbrief ein Wallach und kann nicht mehr decken. Der Abstammungsschein bleibt unverändert (Hengst).</p>
       <p><b>Rechnungen:</b> Klinik (bei der Entlassung), Aufzuchtstation und Ausbildungsstall (zu Beginn jeder Jahreszeit für die vergangene, mit Zwischenbericht; bei der Rückkehr ein kompletter Bericht mit Kostenübersicht und Rechnung über den Rest) schicken Rechnungen per Brief. Bezahlen geht direkt im Brief oder unter Finanzen. Zahlungsziel 2 Tage. Danach: Mahnung mit allen offenen Beträgen des Absenders + Mahngebühr (10 %, mind. 20 €), Frist 5 Tage – bei Aufzucht/Ausbildung wird der Aufenthalt sofort abgebrochen und die Pferde kommen zurück (ist keine Box frei, sobald eine frei wird). Wird auch die Mahnung nicht bezahlt, wird der Betrag + Versäumnisgebühr (20 %, mind. 50 €) abgebucht – das Konto darf dadurch ins Minus. Eine neue Rechnung desselben Absenders übernimmt alle offenen; die alten werden ungültig. Der Tierschutz holt wegen offener Rechnungen keine Pferde mehr.</p>
@@ -5851,7 +6130,7 @@
 
       <p><b>Mitarbeiter (Hofverwaltung → Mitarbeiter):</b> Stallgröße klein bis 8 Boxen, mittel 9–19, groß ab 20. Gehalt pro Jahreszeit (am Ende gezahlt, im Adminmodus kostenlos), erfahrene Bewerber wollen bis +25 %: ${Object.values(MA_TYP).map(T => `${T.name} ${fmt(T.gehalt)}${T.boxen ? ` (${T.boxen} Boxen)` : ""}${T.ab !== "klein" ? ` – bewirbt sich ${abText(T.ab)}` : ""}`).join(" · ")}. Nachtzuschlag ${fmt(NACHTZUSCHLAG)} pro Nacht. Zu jeder Jahreszeit 2–3 neue Bewerber je Stelle (Erfahrung um die Startwerte ×0,6–1,5, 0–2 Eigenschaften ohne Gegensätze). Beginn immer zur nächsten Jahreszeit; gekündigt arbeiten sie bis Ende der Jahreszeit; reicht das Geld nicht, nehmen sie das Gehalt trotzdem und kündigen.</p>
       <p><b>Azubi und Ausbilder:</b> Einen Azubi gibt es nur mit freiem Ausbilderplatz: Pferdewirt (beide Fachrichtungen) und Stallmeister je 2 Azubis, Bereiter nur im Ausbildungsstall, der Spieler mit Ausbilderschein (einmalig ${fmt(AUSBILDERSCHEIN)}) 1 Azubi; Pferdepfleger nicht. Ausbilder krank/im Urlaub: Azubi arbeitet, lernt nichts, Fehler +10 %. Ausbilder weg: neuer wird automatisch gesucht, sonst Warnbrief und nach 1 Jahreszeit Abbruch. Ausbildung ${AUSBILDUNG_JZ / 4} Jahre, Gehalt ${AZUBI_GEHALT.map(fmt).join(" / ")} pro Jahreszeit. Lernt je Arbeitstag mit Ausbilder +0,4 in den ersten beiden und +0,25 in den anderen Bereichen der Fachrichtung (${Object.values(FACH).map(F => `${F.n}: ${F.lernt.map(k => (WISSEN.find(w => w[0] === k) || [])[3]).join(", ")}`).join(" · ")}). Abschlussprüfung: Chance (Schnitt der 4 Bereiche − 8) ÷ 22, zwischen 10 und 95 %; bestanden → Brief mit Übernehmen (Gehalt der Fachkraft, Erfahrung/Eigenschaften bleiben, fehlendes Grundwissen bis zur Hälfte der Startwerte) oder Gehen lassen (sonst geht er zum Ende der Jahreszeit); durchgefallen → ${VERLAENGERUNG_JZ} Jahreszeiten Verlängerung. Fachrichtung nach Stallart (Zuchtstall → Pferdezucht → Pferdewirt Zucht und Haltung; Ausbildungsstall → Klassische Reitausbildung → Bereiter; Pension/Gnadenhof → Haltung und Service; Rennstall → Pferderennen; Westernstall → Spezialreitweisen). Stallarten kommen mit dem Hof-Ausbau – bis dahin gilt der Hof als Zuchtstall (<code>spiel.stallarten</code>). Pferdewirt Haltung und Service ${fmt(MA_TYP.pferdewirtHS.gehalt)}: nur mit Pensionsstall/Gnadenhof.</p>
-      <p><b>Arbeit jeden Morgen</b> (nach Boxnummer): Stallburschen und Azubis füttern und misten (Weide nur, wenn Heu nötig ist), mit Stallmeister schafft ein Stallbursche 5 statt 3 Boxen, fleißig +1 Box. Pfleger putzen (Bürste + Kamm) und schneiden Mähne/Schopf auf Wunschlänge. Bereiter bewegen Pferde ab 3 Jahren mit über 50 % Gesundheit im Roundpen: Wohlbefinden +5, Boxentage zurück auf 0. Fehler (vergisst eine Box): Azubi 25 % × (1 − Erfahrung Fütterung/Stallklima ÷ 50), mindestens 3 %; schusselig +8 %; zuverlässig nie. Ruhige Hand: Vertrauen der versorgten Pferde +0,2 pro Tag; ungeduldig −0,1 (nicht unter 20).</p>
+      <p><b>Arbeit jeden Morgen</b> (nach Boxnummer): Stallburschen und Azubis füttern und misten (Weide nur, wenn Heu nötig ist), mit Stallmeister schafft ein Stallbursche 5 statt 3 Boxen, fleißig +1 Box. Pfleger putzen (Bürste + Kamm) und schneiden Mähne/Schopf auf Wunschlänge. Bereiter trainieren Pferde ab 3 Jahren mit über 50 % Gesundheit (nicht auf der Weide, ohne Boxenruhe) – siehe „Training daheim“. Fehler (vergisst eine Box): Azubi 25 % × (1 − Erfahrung Fütterung/Stallklima ÷ 50), mindestens 3 %; schusselig +8 %; zuverlässig nie. Ruhige Hand: Vertrauen der versorgten Pferde +0,2 pro Tag; ungeduldig −0,1 (nicht unter 20).</p>
       <p><b>Erfahrung</b> (7 Bereiche, 0–100): ${WISSEN.map(w => w[1]).join(", ")}. Startwerte: ${Object.values(MA_TYP).map(T => `${T.name} ${WISSEN.map(([k]) => T.start[k]).join("/")}`).join(" · ")} (Reihenfolge wie oben). Pro Arbeitstag +0,25 in den Hauptbereichen (Bereiter Hufe +0,12) × (1 − Erfahrung ÷ 110), lernbegierig ×1,5; Azubis lernen nur, wenn ein Pferdewirt oder Stallmeister da ist. Pferdewirt: Zucht +0,25 (mit tragender Stute oder Fohlen, sonst +0,08), Pflegebereiche +0,05; Stallmeister überall +0,06. Spieler startet überall mit 10 und lernt einmal am Tag +0,3 beim Füttern (Fütterung), Misten (Stallklima) und Putzen (Haut).</p>
       <p><b>Zufriedenheit</b> (versteckt, 0–100, Start ${ZUFR_START}; Spieler sieht nur „wirkt zufrieden“ ab 65 / „ganz okay“ ab 40 / „unzufrieden“): normaler Arbeitstag +0,2 (bis 80), Überstunden −1, weniger Gehalt als heute üblich −0,2 pro Tag, Nachtdienst −5 (Nachteule +1), Urlaub genehmigt +5 (ohne Antwort +2), abgelehnt −15, im Urlaub +0,5 pro Tag. Unter ${KUENDIGEN_AB}: jeden Tag 10 % Chance auf Kündigung zum Ende der Jahreszeit (Brief). <b>Urlaub</b> (Dome: einmal im Jahr 1–3 Tage, da ein Spieljahr nur 4 Jahreszeiten hat): Chance ${Math.round(URLAUB_CHANCE * 100)} % pro Tag, bis es im Jahr einmal geklappt hat; Antrag per Brief 2 Tage vorher (Genehmigen/Ablehnen, ohne Antwort genehmigt). <b>Krank</b> 1–3 Tage: ${(KRANK_CHANCE * 100).toLocaleString("de-DE")} % pro Tag, ×2,5 bei Überstunden, ×2 unter 40 Zufriedenheit. Fehlt jemand, übernehmen Kollegen aus demselben Beruf je 1 Box mehr (Überstunden), der Rest bleibt liegen.</p>
       <p><b>Nachtdienst bei Geburten:</b> Pferdewirt (immer) oder Pferdepfleger (kleiner/mittlerer Stall), Nachteulen zuerst. Mit Aufsicht: Nachtzuschlag, Fohlen 100 % Gesundheit, Stute Wohlbefinden +5, Zucht-Erfahrung +1,5. Ohne Aufsicht: 15 % Chance, dass das Fohlen schwach ist (Gesundheit 70–85 %).</p>
@@ -5936,7 +6215,7 @@
         ${(() => { const weg = (spiel.mitarbeiter || []).map(maErgaenzen).filter(m => maAktiv(m) && !maDa(m)); return weg.length ? `<p class="text" style="margin:6px 0 0">${weg.map(m => `${maUrlaub(m) ? "🏖️" : "🤒"} <b>${esc(m.name)}</b> ${maUrlaub(m) ? `hat Urlaub bis Tag ${datum(m.urlaub.bis).t}` : `ist krank bis Tag ${datum(m.krankBis).t}`}`).join(" · ")}.</p>` : ""; })()}
         ${vg.length ? `<p class="text" style="margin:6px 0 0">⚠️ Heute vergessen: ${vg.map(x => `Box ${x.i + 1} (${esc(x.name)})`).join(", ")} – bitte selbst nachschauen.</p>` : ""}
         ${(() => { const pb = maBoxen("pfleger"); return pb.length ? `<p class="text" style="margin:6px 0 0">🧽 Geputzt und geschnitten wird in <b>Box ${pb.map(i => i + 1).join(", ")}</b>.</p>` : ""; })()}
-        ${(() => { const rb = maBoxen("bereiter"); return rb.length ? `<p class="text" style="margin:6px 0 0">🏇 Im Roundpen bewegt werden die Pferde aus <b>Box ${rb.map(i => i + 1).join(", ")}</b>.</p>` : ""; })()}
+        ${(() => { const rb = maBoxen("bereiter"); return rb.length ? `<p class="text" style="margin:6px 0 0">🏇 Vom Bereiter trainiert werden die Pferde aus <b>Box ${rb.map(i => i + 1).join(", ")}</b>.</p>` : ""; })()}
         <h4 class="ma-titel">🎓 Ausbilderschein</h4><p class="text" style="margin:0 0 4px">${spiel.ausbilderschein ? `✅ Du hast den Ausbilderschein und darfst selbst einen Azubi ausbilden${angestellte("azubi").some(z => z.ausbilder === "du" && z.bis == null) ? " (Platz belegt)" : " (Platz frei)"}.` : `Mit dem Ausbilderschein darfst du selbst einen Azubi ausbilden – im kleinen Stall die einzige Möglichkeit. Einmaliger Kurs: <b>${fmt(AUSBILDERSCHEIN)}</b>.`}</p>${spiel.ausbilderschein ? "" : `<button class="knopf" id="ausbilderschein" style="width:auto;padding:8px 14px">🎓 Ausbilderschein machen · ${fmt(AUSBILDERSCHEIN)}</button>`}
         <h4 class="ma-titel">Deine eigene Erfahrung</h4><p class="text" style="margin:0 0 4px"><small>Wächst, wenn du selbst fütterst, mistest und putzt.</small></p>${wissenHTML(spiel.wissen || wissenStart(10, {}))}`;
     } else if (hofReiter === "einst") {

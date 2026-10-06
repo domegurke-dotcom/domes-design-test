@@ -30,7 +30,7 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 **Bestand heute:** Startgeld 5.000 €, Boxen per + / − in der Boxenübersicht, Hofverwaltung mit Hof, Finanzen, Außer Haus (externe Aufzucht/Ausbildung), Mitarbeiter, Postfach, Einstellungen; externer Gnadenhof (`spiel.gnadenhof`); Turniere für alle offen.
 
 ## Domes Testanmerkungen (6.10.2026 abends) – vor bzw. mit H5 abarbeiten
-- [ ] T1 Fehler: Stute mit Fohlen bei Fuß kaufen (Markt, Tierschutz …): vor dem Kauf zeigt Nachkommen/Abstammungsschein des Fohlens eine andere Mutter und andere Genetik; erst nach dem Kauf passt es. Fohlen muss immer das echte Fohlen der Stute sein (klein–mittel, ca. 3 %)
+- [x] T1 Fehler: Stute mit Fohlen bei Fuß kaufen (Markt, Tierschutz …): vor dem Kauf zeigt Nachkommen/Abstammungsschein des Fohlens eine andere Mutter und andere Genetik; erst nach dem Kauf passt es. Fohlen muss immer das echte Fohlen der Stute sein (klein–mittel, ca. 3 %)
 - [ ] T2 Stall → Bauen als eigenes Fenster mit Rücksprung zum Stall (klein, ca. 2 %)
 - [ ] T3 stb – Eigenschaften: Hinweise „angeboren“/„erarbeitet“ nur im Adminmodus (klein, ca. 1 %)
 - [ ] T4 stb – asb – Disziplinen: Charakter-Zeile verständlicher („temperamentvoll +, nervös −“ = Regel, „+5 %“ = Wirkung bei diesem Pferd) (klein, ca. 1 %)

@@ -799,7 +799,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "216";
+  const SPIEL_VERSION = "217";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -807,9 +807,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=216"></script>
-<script src="kopfteile.js?v=216"></script>
-<script src="kopfalter.js?v=216"></script>
+<script src="pferd.js?v=217"></script>
+<script src="kopfteile.js?v=217"></script>
+<script src="kopfalter.js?v=217"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1131,7 +1131,7 @@
   const mischAnteile = (a, b) => { const m = {}; [normAnteile(a), normAnteile(b)].forEach(x => Object.entries(x).forEach(([k, v]) => m[k] = (m[k] || 0) + v / 2)); return normAnteile(m); };
   const anteileVon = P => normAnteile(P.anteile || { [P.rasse]: 100 });
   // Veredelung: Vollblut (Englisches Vollblut, Araber) zählt nur bei Rassen, deren Zuchtbuch das erlaubt, zur eigenen Rasse
-  const VEREDELUNG = { hannoveraner: ["vollblut", "araber"], quarter: ["vollblut"], haflinger: ["araber"] };
+  const VEREDELUNG = { hannoveraner: ["vollblut", "araber"], quarter: ["vollblut"], haflinger: ["araber"], tinker: ["shire"] };   // Tinker: Ursprungsrasse Shire (Clydesdale, Fell, Dales, Welsh Cob gibt es im Spiel nicht)
   const veredler = (rasse, k) => (VEREDELUNG[rasse] || []).includes(k);
   // Anteil der eigenen Rasse inkl. Veredelung (ab 50 % eigener Rasse) – über 98 % gilt als reinrassig
   const reinAnteil = (a, rasse) => { const n = normAnteile(a); if (!rasse || n[rasse] == null) rasse = Object.entries(n).sort((x, y) => y[1] - x[1])[0][0];
@@ -3352,6 +3352,8 @@
     if (!box.pferd || box.tot || box.pferd.klinik || box.pferd.weide || box.krippeVoll) return;
     if (!fuetternAusLager(box, "du")) { dialog(`<h3>🌾 Kein Heu mehr</h3><p>In der Futterkammer ist nicht genug Heu (oder anderes Raufutter) für ${esc(box.pferd.name)}. Im Futterhandel nachkaufen: Hofverwaltung → Hof → Futterkammer.</p>`, [["Zur Futterkammer", () => zeigeHof("hof")], ["Schließen", null, "zweit"]]); return; }
     box.krippeVoll = true; reaktionZeigen(reaktion(box.pferd, "fuettern")); spielerLernt("futter"); beruehrt(box.pferd, "du", "stall");
+    const fehlt = (box.pferd.futterHeute || {}).fehlt || [];
+    if (fehlt.length) dialog(`<h3>🌾 Nicht alles da</h3><p>In der Futterkammer ${fehlt.length === 1 ? "ist" : "sind"} <b>${fehlt.map(k => FUTTER[k].n).join(", ")}</b> alle – ${esc(box.pferd.name)} hat heute ohne ${fehlt.length === 1 ? "diese Sorte" : "diese Sorten"} gefressen. Nachkaufen: Hofverwaltung → Hof → Futterkammer (Lieferung am nächsten Morgen).</p>`, [["Zur Futterkammer", () => zeigeHof("hof")], ["OK", null, "zweit"]]);
     speichern(); zeigeTag();
   });
   const ausmisten = () => {
@@ -4771,7 +4773,7 @@
   function turnierNacht() {
     spiel.boxen.forEach(box => { const p = box.pferd; if (!p || !p.turnier || p.turnier.tag !== spiel.tag) return;
       const t = (spiel.turniere || []).find(x => x.id === p.turnier.tid); delete p.turnier;
-      box.krippeVoll = fuetternAusLager(box, "du"); box.mistig = false; box.mistStufe = 0;   // war den ganzen Tag weg: unterwegs aus der eigenen Futterkammer gefüttert, Box sauber
+      box.krippeVoll = fuetternAusLager(box, "turnier"); box.mistig = false; box.mistStufe = 0;   // war den ganzen Tag weg: unterwegs aus der eigenen Futterkammer gefüttert, Box sauber
       if (!t) return;
       const rz = zufall("turnier-erg-" + t.id + p.id), starts = t.nennung.filter(n => n.pid === p.id).map(n => t.pruef.find(x => x.id === n.prid)).filter(Boolean);
       const reakt = reaktion(p, "turnier");
@@ -5081,14 +5083,15 @@
     const F = futterkammer(), p = box.pferd; if (!p) return false;
     const R = tagesRation(p, box, p.weide && !heuNoetig());
     const vorrat = RAUFUTTER_REIHE.reduce((a, k) => a + F.lager[k], 0);
-    if (vorrat + 1e-9 < R.raufutter) { futterWarnung("raufutter"); return false; }
+    const perBrief = wer !== "du";   // Dome: Warnbrief nur, wenn ein Mitarbeiter (oder unterwegs beim Turnier) nicht füttern konnte – der Spieler sieht es selbst
+    if (vorrat + 1e-9 < R.raufutter) { if (perBrief) futterWarnung("raufutter"); return false; }
     const genutzt = {}, nimm = (k, x) => { x = Math.min(x, F.lager[k]); if (x <= 0) return 0; F.lager[k] = Math.round((F.lager[k] - x) * 1000) / 1000; genutzt[k] = Math.round(((genutzt[k] || 0) + x) * 1000) / 1000; return x; };
-    let rest = R.raufutter;
+    let rest = R.raufutter; const fehlt = [];
     Object.entries(R.kg).forEach(([k, x]) => { if (FUTTER[k] && FUTTER[k].art === "raufutter") rest -= nimm(k, x); });
     for (const k of RAUFUTTER_REIHE) { if (rest <= 1e-9) break; rest -= nimm(k, rest); }
-    Object.entries(R.kg).forEach(([k, x]) => { if (!FUTTER[k] || FUTTER[k].art === "raufutter") return; const g = nimm(k, x); if (g + 1e-9 < x) futterWarnung(k); });
+    Object.entries(R.kg).forEach(([k, x]) => { if (!FUTTER[k] || FUTTER[k].art === "raufutter") return; const g = nimm(k, x); if (g + 1e-9 < x) { fehlt.push(k); if (perBrief) futterWarnung(k); } });
     if (genutzt.mineral) p.mineralTag = spiel.tag;
-    p.futterHeute = { tag: spiel.tag, genutzt, mineral: !!genutzt.mineral };
+    p.futterHeute = { tag: spiel.tag, genutzt, mineral: !!genutzt.mineral, fehlt };
     futterVorratPruefen();
     return true;
   }
@@ -5120,11 +5123,19 @@
   }
   function futterKaufen(k, menge) {
     const F = futterkammer(), Z = FUTTER[k], kosten = Math.round(Z.preis * menge * 100) / 100;
-    if (!Z.stueck && lagerBelegt() + menge > F.lagerMax) return `Kein Platz mehr in der Futterkammer (${fmtKg(F.lagerMax)} Platz).`;
+    const unterwegs = (F.liefer || []).reduce((a, x) => a + (FUTTER[x.k] && !FUTTER[x.k].stueck ? x.menge : 0), 0);
+    if (!Z.stueck && lagerBelegt() + unterwegs + menge > F.lagerMax) return `Kein Platz mehr in der Futterkammer (${fmtKg(F.lagerMax)} Platz, bestellte Lieferungen zählen mit).`;
     if ((spiel.geld || 0) < kosten) return "Nicht genug Geld.";
-    F.lager[k] = Math.round((F.lager[k] + menge) * 1000) / 1000; buchen(-kosten, "Futter");
-    delete F.warn[k]; if (Z.art === "raufutter") delete F.warn.raufutter;
+    // Dome: 1 Tag Lieferzeit – bestellt wird heute, geliefert morgen früh
+    const L = (F.liefer = F.liefer || []), x = L.find(y => y.k === k && y.tag === spiel.tag + 1);
+    if (x) x.menge = Math.round((x.menge + menge) * 1000) / 1000; else L.push({ k, menge, tag: spiel.tag + 1 });
+    buchen(-kosten, "Futter");
     return "";
+  }
+  // morgens: bestellte Lieferungen kommen an (vor dem Füttern)
+  function futterLieferung() {
+    const F = futterkammer(); if (!(F.liefer || []).length) return;
+    F.liefer = F.liefer.filter(x => { if (x.tag > spiel.tag) return true; if (FUTTER[x.k]) { F.lager[x.k] = Math.round(((F.lager[x.k] || 0) + x.menge) * 1000) / 1000; delete F.warn[x.k]; if (FUTTER[x.k].art === "raufutter") delete F.warn.raufutter; } return false; });
   }
   const fmtKg = x => x >= 1 || x === 0 ? `${(Math.round(x * 10) / 10).toLocaleString("de-DE")} kg` : `${Math.round(x * 1000)} g`;
   function futterkammerHTML(meld) {
@@ -5135,17 +5146,18 @@
     const zeile = k => { const Z = FUTTER[k], v = F.lager[k], tag = V.je[k] || 0;
       return `<div class="fk-zeile"><div class="fk-info"><b>${Z.ico} ${Z.n}</b> <small>${Z.info}${tag ? ` · Verbrauch ${fmtKg(Math.round(tag * 100) / 100)}/Tag, reicht ${reicht(v, tag)}` : ""}</small></div><div class="fk-werte"><b>${Z.stueck ? `${v} Stück` : fmtKg(v)}</b> · ${(Z.preis).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €${Z.stueck ? "/Stück" : "/kg"}</div><div class="fk-kauf">${Z.pack.map(m => `<button class="mini-knopf" data-fkauf="${k}:${m}">+${m}${Z.stueck ? "" : " kg"}</button>`).join("")}</div></div>`; };
     return `${meld ? `<div class="klasse">${meld}</div>` : ""}
+      ${(F.liefer || []).length ? `<div class="klasse">🚚 Lieferung morgen früh: ${F.liefer.map(x => `${FUTTER[x.k] && FUTTER[x.k].stueck ? `${x.menge} Stück` : fmtKg(x.menge)} ${FUTTER[x.k] ? FUTTER[x.k].n : x.k}`).join(", ")}</div>` : ""}
       <div class="zeile-wert"><div class="kopf"><b>📦 Platz in der Futterkammer</b><span>${fmtKg(belegt)} von ${fmtKg(F.lagerMax)}</span></div><div class="balken"><i style="width:${Math.min(100, belegt / F.lagerMax * 100)}%"></i></div></div>
       <p class="text" style="margin:4px 0 8px"><small>Verbrauch am Tag (alle Pferde nach ihren Futterplänen): Raufutter ${fmtKg(V.raufutter)} · reicht ${reicht(rauVorrat, V.raufutter)} · Mineralfutter ${fmtKg(V.mineral)} · reicht ${reicht(F.lager.mineral, V.mineral)} · etwa ${fmt(Math.round(kosten * 100) / 100)} am Tag</small></p>
       <div class="fk-liste"><p class="fk-gruppe">Raufutter</p>${Object.keys(FUTTER).filter(k => FUTTER[k].art === "raufutter").map(zeile).join("")}
         <p class="fk-gruppe">Kraftfutter</p>${Object.keys(FUTTER).filter(k => FUTTER[k].art === "kraftfutter").map(zeile).join("")}
         <p class="fk-gruppe">Zusätze und Leckerli</p>${Object.keys(FUTTER).filter(k => FUTTER[k].art === "zusatz" || FUTTER[k].art === "leckerli").map(zeile).join("")}
         ${(() => { const sp = Object.keys(FUTTER).filter(k => FUTTER[k].art === "spezial" && (spezialFrei(FUTTER[k].spezial) || F.lager[k] > 0)); return sp.length ? `<p class="fk-gruppe">Spezialfutter (vom Futterexperten)</p>${sp.map(zeile).join("")}` : ""; })()}</div>
-      <p class="text"><small>Gefüttert wird nach dem Futterplan jedes Pferdes (Box → Pferdepflege → Versorgung → Futterplan). Ohne eigenen Plan gilt der Standardplan: Raufutter nach Energiebedarf (1,5–2,5 kg je 100 kg Körpergewicht) (erst gutes Heu, dann Heulage, staubiges Heu, Heucobs, Stroh) und 100 g Mineralfutter am Tag. Fohlen bei Fuß fressen bei der Mutter mit. Auf der Weide (außer im Winter und am letzten Herbsttag) frisst das Pferd Gras statt Heu. Jede Box braucht pro Jahreszeit einen Salzleckstein. Fehlt geplantes Raufutter, wird anderes Raufutter genommen; fehlt Kraftfutter oder ein Zusatz, bekommt das Pferd diese Sorte nicht (Warnbrief).</small></p>`;
+      <p class="text"><small>Gefüttert wird nach dem Futterplan jedes Pferdes (Box → Pferdepflege → Versorgung → Futterplan). Ohne eigenen Plan gilt der Standardplan: Raufutter nach Energiebedarf (1,5–2,5 kg je 100 kg Körpergewicht) (erst gutes Heu, dann Heulage, staubiges Heu, Heucobs, Stroh) und 100 g Mineralfutter am Tag. Fohlen bei Fuß fressen bei der Mutter mit. Auf der Weide (außer im Winter und am letzten Herbsttag) frisst das Pferd Gras statt Heu. Jede Box braucht pro Jahreszeit einen Salzleckstein. Fehlt geplantes Raufutter, wird anderes Raufutter genommen; fehlt Kraftfutter oder ein Zusatz, bekommt das Pferd diese Sorte nicht (Warnbrief, wenn ein Mitarbeiter füttert). Bestelltes Futter kommt am nächsten Morgen.</small></p>`;
   }
   function futterkammerBinden(neu) {
     document.querySelectorAll("[data-fkauf]").forEach(b => b.onclick = () => { const [k, m] = b.dataset.fkauf.split(":"), f = futterKaufen(k, +m);
-      speichern(); zeigeTag(); neu(f ? `⚠️ ${f}` : `🛒 ${FUTTER[k].stueck ? `${m} Stück` : `${m} kg`} ${FUTTER[k].n} gekauft (${fmt(Math.round(FUTTER[k].preis * m * 100) / 100)}).`); });
+      speichern(); zeigeTag(); neu(f ? `⚠️ ${f}` : `🛒 ${FUTTER[k].stueck ? `${m} Stück` : `${m} kg`} ${FUTTER[k].n} bestellt (${fmt(Math.round(FUTTER[k].preis * m * 100) / 100)}) – wird morgen früh geliefert.`); });
   }
   // Ausrüstung → Futter: was bekommt dieses Pferd?
   function futterDialog(p, box) {
@@ -6074,6 +6086,7 @@
     tierschutzEinsatz(); tierschutzKlinik(); tierschutzFohlen(); kontoMinus(); laborNacht(); auktionsNacht();
     if (datum().t === 1) { auktionsEnde(); jahreszeitBeginn(); angeboteJahreszeit(); externJahreszeit(); spamAufraeumen(); mitarbeiterJahreszeit(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
     turnierKalender(); turnierMorgen();   // Turniertag: genannte Pferde fahren los
+    futterLieferung();  // bestelltes Futter kommt an
     mitarbeiterTag();   // Stallburschen versorgen ihre Boxen zum Tagesbeginn
     befundeMorgen();    // wer heute bei den Pferden war, bemerkt vielleicht etwas
     behandlungsPlaene(); // Pfleger/Pferdewirt behandeln nach Plan
@@ -7082,7 +7095,7 @@
       <p><b>Stufen:</b> Dressur wie bisher (Klassen E–S aus der Ausbildungsskala). Springen und Vielseitigkeit E/A/L/M/S, Western (Reining, Pleasure, Trail) Einsteiger/Rookie/Novice/Intermediate/Open: Stufe braucht Ausbildungsstand ${STUFE_STAND.join("/")} % und Disziplin-Wert ${STUFE_WERT.join("/")}. Springhöhe ≈ 0,95 × Stockmaß, Klassen-Mindesthöhe ${SPRUNG_HOEHE.join("/")} cm. Rennsport, Tölt und Distanz: nach Leistung (${LEISTUNG.map(([a, n]) => n + " ab " + a).join(", ")}).</p>
       <p><b>Marktwert:</b> Leistungsanteil = 5.000 € × max(0, (beste Disziplin − 35) / 30) – unausgebildet ≈ 0, gut ausgebildet (65) = 1, Spitzenpferd (80) = 1,5. Ein Spezialist ist damit mehr wert als ein Allrounder.</p>
       <h3>🌾 Fütterung (F1: Futterkammer)</h3>
-      <p>Futterkammer: Hofverwaltung → Hof → Futterkammer und Futterhandel. Platz ${LAGER_START.toLocaleString("de-DE")} kg (Salzlecksteine zählen nicht), wird mit dem Hof-Ausbau größer. Startvorrat (neues Spiel und alte Spielstände): Heu für 14 Tage (10 kg je Pferd), 3 kg Mineralfutter, 1 Leckstein je Pferd. Gekauft wird sofort, bezahlt wird sofort (Finanzen: „Futter“).</p>
+      <p>Futterkammer: Hofverwaltung → Hof → Futterkammer und Futterhandel (Dome: Lieferung am nächsten Morgen; Warnbrief bei leerer Kammer nur, wenn ein Mitarbeiter oder das Turnier füttert – wer selbst füttert, sieht es sofort). Platz ${LAGER_START.toLocaleString("de-DE")} kg (Salzlecksteine zählen nicht), wird mit dem Hof-Ausbau größer. Startvorrat (neues Spiel und alte Spielstände): Heu für 14 Tage (10 kg je Pferd), 3 kg Mineralfutter, 1 Leckstein je Pferd. Gekauft wird sofort, bezahlt wird sofort (Finanzen: „Futter“).</p>
       ${verTab(["Sorte", "Energie MJ/kg", "Eiweiß %", "Rohfaser %", "Zucker/Stärke %", "Preis"], Object.values(FUTTER).map(Z => [Z.n, Z.e, Z.ei, Z.rf, Z.zs, Z.preis.toLocaleString("de-DE", { minimumFractionDigits: 2 }) + (Z.stueck ? " €/Stück" : " €/kg")]))}
       <p><b>Standardplan</b> (bis zu den eigenen Futterplänen in F2): Raufutter nach Energiebedarf (seit F3: 1,5–2,5 kg je 100 kg Körpergewicht) in dieser Reihenfolge: Heu, Heulage, staubiges Heu, Heucobs, Futterstroh; Mineralfutter 100 g (unter 300 kg 50 g); Fohlen bei Fuß + 1 kg Heu je 100 kg. Reicht das Raufutter nicht für die ganze Ration, bleibt die Krippe leer (Pferd hungrig) und es kommt ein Warnbrief; fehlt Mineralfutter, bekommt das Pferd keins. Weide: Gras statt Heu (außer Winter und letzter Herbsttag), dann kein Mineralfutter aus der Kammer. Stallbursche und Turniertag nehmen das Futter ebenfalls aus der Kammer. Salzleckstein: zu Beginn jeder Jahreszeit 1 je Box mit Pferd. Warnbrief, wenn Heu oder Mineralfutter nur noch 1–2 Tage reichen oder leer sind (einmal, bis nachgekauft).</p>
       <h3>📋 Fütterung (F2: Futterplan und Bedarf)</h3>

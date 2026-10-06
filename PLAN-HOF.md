@@ -37,7 +37,7 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 - [x] T5 hvw – Hof – Futterkammer: Einkaufskorb mit Gesamtsumme; Korb öffnen → Liste mit Preisen, einzeln entfernen, Summe, Kauf bestätigen/abbrechen, Rücksprung zur Futterkammer (mittel, ca. 4 %)
 - [x] T6 Futterkammer: nach Klick auf +kg nicht nach oben springen (klein, ca. 1 %)
 - [x] T7 Box – Menü ☰: unter „Hauptmenü“ „Hofverwaltung“ einfügen, „Postfach“ entfernen (klein, ca. 1 %)
-- [ ] T8 Charakter – Vorlieben: Grundbedürfnisse (Putzen, Füttern …) bei Abneigung nur sehr geringer Malus, nie schlechter als vorher; Vorlieben bedienen wirkt aufs Vertrauen; hohes Vertrauen schwächt Abneigungen (mittel, ca. 4 %)
+- [x] T8 Charakter – Vorlieben: Grundbedürfnisse (Putzen, Füttern …) bei Abneigung nur sehr geringer Malus, nie schlechter als vorher; Vorlieben bedienen wirkt aufs Vertrauen; hohes Vertrauen schwächt Abneigungen (mittel, ca. 4 %)
 - [ ] T9 asr – Putzkiste: „Streicheln“ wie Bürste/Kamm (Wischen) und als Vorliebe im Charakter (mittel, ca. 4 %)
 - [x] T11 Futterplan: Info-Knopf ℹ️ zu den Mahlzeiten (was bewirken 2 oder 3) (klein)
 - [x] T10 Krippe gefüllt, dann Weide: Futter darf nicht verloren gehen (Vorschlag siehe Chat, Domes Antwort abwarten) (klein, ca. 2–3 %)

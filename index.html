@@ -846,7 +846,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "237";
+  const SPIEL_VERSION = "238";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -854,9 +854,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=237"></script>
-<script src="kopfteile.js?v=237"></script>
-<script src="kopfalter.js?v=237"></script>
+<script src="pferd.js?v=238"></script>
+<script src="kopfteile.js?v=238"></script>
+<script src="kopfalter.js?v=238"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -6076,13 +6076,20 @@
   }
   const VL_ZUFALL = 1.1, VL_GRENZE = 0.4;   // Zufallsanteil (Spannweite) und Grenze für „mag“ / „mag nicht“
   const vorliebeStufe = v => v >= VL_GRENZE ? "mag" : v <= -VL_GRENZE ? "nicht" : "egal";
-  const vorliebeFaktor = (p, k) => 1 + 0.25 * vorliebe(p, k);   // für Training (Etappe 4)
+  // Dome (v238): Grundbedürfnisse (Putzen, Kämmen, Füttern, Medizin) bei Abneigung nur sehr kleiner Malus; hohes Vertrauen schwächt Abneigungen
+  const VL_GRUND = ["putzen", "kaemmen", "fuettern", "medizin", "streicheln"];
+  const vertrauenVon = p => (p.werte && p.werte.ist && p.werte.ist.vertrauen) || 0;
+  const vorliebeEff = (p, k) => { const v = vorliebe(p, k); return v >= 0 ? v : Math.round(v * (1 - 0.6 * Math.max(0, (vertrauenVon(p) - 50) / 50)) * 100) / 100; };   // Vertrauen 100 → Abneigung nur noch 40 %
+  const vorliebeFaktor = (p, k) => 1 + 0.25 * vorliebeEff(p, k);   // für Training (Etappe 4)
   // Reaktion auf eine Aktion: Wohlbefinden ±, Vorliebe gilt danach als entdeckt; gibt den Reaktionstext zurück. selbst = false: z. B. Pfleger/Stallbursche (wirkt, wird aber nicht entdeckt)
   function reaktion(p, k, selbst = true) {
     if (!p || !p.werte || !VORLIEBEN[k]) return "";
-    const v = vorliebe(p, k), st = vorliebeStufe(v), Z = VORLIEBEN[k];
+    const v = vorliebeEff(p, k), st = vorliebeStufe(v), Z = VORLIEBEN[k], grund = VL_GRUND.includes(k);
     const H = (p.reagiert = p.reagiert && p.reagiert.tag === spiel.tag ? p.reagiert : { tag: spiel.tag, k: [] });
-    if (st !== "egal" && !H.k.includes(k)) { H.k.push(k); wohlAendern(p, 4 * v, `${st === "mag" ? "mag" : "mag nicht"}: ${Z.titel}`); }   // Wohlbefinden nur einmal am Tag je Aktion
+    if (st !== "egal" && !H.k.includes(k)) { H.k.push(k);   // Wohlbefinden und Vertrauen nur einmal am Tag je Aktion
+      wohlAendern(p, 4 * v * (v < 0 && grund ? 0.15 : 1), `${st === "mag" ? "mag" : "mag nicht"}: ${Z.titel}`);
+      const vt = st === "mag" ? 0.2 : grund ? 0 : -0.1;   // Vorlieben bedienen stärkt das Vertrauen, Ungeliebtes (außer Grundbedürfnissen) kostet etwas
+      if (vt && p.werte && p.werte.ist) p.werte.ist.vertrauen = Math.max(0, Math.min(100, r2(vertrauenVon(p) + vt))); }
     if (!selbst) return "";
     (p.entdeckt = p.entdeckt || {})[k] = st;
     const liste = Z[st]; return liste[Math.floor(Math.random() * liste.length)];
@@ -8029,6 +8036,7 @@
       <p><b>Bauland und Weideland</b> (Dome, v225): Bauland ${fmt(BAULAND_PREIS)}/ha (nur kaufen), Weideland ${fmt(LAND_PREIS)}/ha oder Pacht ${fmt(PACHT_PREIS)}/ha je Jahreszeit. Platzbedarf auf dem Bauland: Wohnhaus/Hofplatz ${haTxt(HOFPLATZ)}, Stall ${haTxt(0.1)} je 6 Boxen, Paddockboxen ${haTxt(0.15)} je 6, Reitplatz ${haTxt(0.1)}, Reithalle ${haTxt(0.15)}, Roundpen/Trail/Sandpaddock/Waschplatz/Lager/Sattelkammer/Quarantänestall/Abfohlbox je ${haTxt(0.05)}. Weide einzäunen nur auf Weideland. Start-Pensionsstall: 1 ha Bauland + 1 ha Weideland. Makler-Höfe: Bauland nach Bestand + 0,1 ha, auf ½ ha aufgerundet; Grundstück 1 ha Bauland.
         <b>Quarantänestall:</b> gekaufte Pferde (Markt, Auktion, Tierschutz) kommen zuerst in eine freie Quarantänebox und stehen 1 Jahreszeit unter Quarantäne; danach ziehen sie – ohne bekannte ansteckende Krankheit – automatisch in eine freie normale Box (Brief). Normale Umzüge nutzen den Quarantänestall nur, wenn sonst nichts frei ist.
         <b>Hufrehe-Warnung</b> im Frühling für gefährdete Pferde (leichtfuttrige Rassen ${LEICHTFUTTRIG.join(", ")}, Futterzustand ab 7, Hufrehe oder Cushing bekannt): Hinweis beim Weidegang und Brief zu Frühlingsbeginn für alle gefährdeten Pferde auf der Weide.</p>
+      <p><b>Vorlieben</b> (Dome, v238): Reaktion einmal am Tag je Aktion. „Mag“: Wohlbefinden +4 × Vorliebe, Vertrauen +0,2. „Mag nicht“: Wohlbefinden −4 × Abneigung, Vertrauen −0,1 – bei Grundbedürfnissen (Putzen, Kämmen, Füttern, Medizin, Streicheln) nur 15 % davon und kein Vertrauensverlust. Hohes Vertrauen schwächt Abneigungen: ab Vertrauen 50 linear bis auf 40 % bei Vertrauen 100 (auch im Training).</p>
       <p><b>Krippe und Weide</b> (Dome, v236): Wurde vor dem Weidegang gefüttert, geht nichts verloren – Kraftfutter frisst das Pferd vorher in der Box (zählt zusätzlich zur Weide-Energie), Heu danach (ersetzt Gras). Box – ppf – Versorgung bzw. das Weide-Feld zeigt „Heute gefressen“ mit allen Sorten und Mengen.</p>
       <p><b>Übersicht je Hof</b> (v230, Immobilien → Verwaltung): Kasse, Restkredit, nächste Rate (inklusive offener Raten), Einnahmen/Ausgaben der letzten Jahreszeit, Heuvorrat in Tagen (mit bestellter Lieferung); rot, wenn die Kasse die nächste Rate nicht deckt oder das Heu nur noch weniger als 3 Tage reicht. Hofplan: Gebäude als kleine Zeichnungen auf dem Bauland (je ha-Kachel bis 9), Baustellen orange gestrichelt, Zahl = Boxen.</p>
       <p><b>Vorwarnung Kreditrate</b> (v229): 2 Tage vor Ende der Jahreszeit Brief der Hausbank, wenn die Kasse die fällige Rate (inklusive offener Raten) nicht deckt. <b>Baulärm:</b> solange gebaut wird (Außenarbeiten ruhen im Winter), je Nacht Wohlbefinden −1,5 × Nervosität (Charakter Nerven unter 30) und −1 für Senioren ab 20 Jahren. <b>Abfohlbox:</b> kein Umbau, solange eine Stute auf dem Hof in der letzten Jahreszeit vor der Geburt ist.</p>

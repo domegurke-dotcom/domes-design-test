@@ -7,6 +7,8 @@ Wie immer: in Etappen umsetzen, nach jeder Etappe testet Dome (Handy und PC). Sp
 
 Plan gespeichert bei Spielversion 185. **Noch nicht starten:** erst wenn Werte-Etappe 6 fertig ist. Dann Dome fragen „Mit Fütterung F1 weitermachen?“ und auf Domes Ja warten.
 
+**Domes Ja liegt vor (6.10.2026, 06:05):** Nach Etappe 6c (Fohlenschau) direkt mit F1 weitermachen. Nach F1 testet Dome, bevor F2 beginnt.
+
 **Danach (Dome, 6.10.2026):** Nach Etappe F5 kommt `PLAN-HOF.md` (Hof-Ausbau, Etappen H1–H8). Vorher Dome fragen „Mit Hof-Ausbau H1 weitermachen?“ und auf Domes Ja warten. Hinweis für F1: die Futterkammer bekommt ein Feld für die Lagergröße – das nutzt später das Futter- und Strohlager aus H3.
 
 - [ ] Etappe F1 – Futterkammer und Futterhandel (mittel)

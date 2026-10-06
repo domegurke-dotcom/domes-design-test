@@ -36,7 +36,7 @@ Zu jeder Frage steht die Lösung, die Claude vorerst gewählt hat. Dome beantwor
 23. **F5 – Fest angestellt:** Futterexperte/-expertin ab großem Stall (20 Boxen), Gehalt 450 € je Jahreszeit (selbst festgelegt). Berät kostenlos sofort und prüft zu Beginn jeder Jahreszeit alle Pferde ohne eigenen Plan. Ändert man einen Experten-Plan selbst, gilt er als eigener Plan und wird nicht mehr automatisch angepasst. ✅ Dome: ja, plus Haken „Futterexperte berechnet den Plan jede Jahreszeit neu“ (v218).
 24. **F5 – Diät:** Zum Abnehmen rechnet der Experte das Raufutter vom Idealgewicht aus (1,5 kg je 100 kg) und streckt es zu 25 % mit Stroh. Dafür zählt das Raufutter-Minimum jetzt überall vom Idealgewicht (Futterzustand 5) aus. Eiweißmangel gilt erst ab 3 Prozentpunkten unter Bedarf (vorher 2), damit eine Stroh-Diät keine Muskeln kostet. ✅ Dome: Gewicht = Futter + Bewegung + Veranlagung → versteckte vererbte Futterverwertung (0,85–1,15), Boxenruhe −10 %, Arbeit erhöht den Bedarf (v218).
 
-## 📌 Notiz von Dome (7.10.2026) – Info geben, sobald die Fütterungsfragen durch sind
+## 📌 Notiz von Dome (7.10.2026) – Veredler-Rassen: erst NACH dem Hof-Ausbau (H1–H8) starten (Dome, 7.10.2026)
 Wenn alle Fütterungsfragen beantwortet sind, Dome Bescheid geben: **Alle fehlenden Rassen ergänzen, die für die Veredelung bestehender Rassen im Spiel wichtig sind** – jeweils komplett mit Fell- und Farbmustern, Erbkrankheiten, Eigenheiten/Veranlagungen, Hufqualität, Körperbau (Gewicht), Futtertyp usw. (Grundsatz aus CLAUDE.md).
 Kandidaten (vor dem Start mit Dome abstimmen, Aufwand je Rasse nennen):
 - Tinker: Clydesdale, Fell-Pony, Dales-Pony, Welsh Cob (bisher nur Shire im Spiel)

@@ -4,6 +4,8 @@
 
 Plan gespeichert bei Spielversion 208. **Noch nicht starten:** erst nach Fütterung F5. Dann Dome fragen „Mit Hof-Ausbau H1 weitermachen?“ und auf Domes Ja warten.
 
+**Domes Ja liegt vor (7.10.2026, Spielversion 220):** Fütterung F1–F5 und alle offenen Fragen dazu sind fertig. In einer neuen Sitzung mit **H1** starten. Nach jeder Etappe testen, hochladen, Testlink erneuern, Dome eine Test-Anleitung geben. Volumen-Schätzung: H1–H4 sicher, H5 vielleicht, H6–H8 eher im nächsten Volumen. **Danach** (nach H8) kommen die fehlenden Veredler-Rassen (Notiz unten in `OFFENE-FRAGEN.md`).
+
 - [ ] Etappe H1 – Neuer Spielstart, Immobilien-Menü, Kredit (groß)
 - [ ] Etappe H2 – Hof-Struktur, Land, Hofplan (groß)
 - [ ] Etappe H3 – Bauen, Stufen, Verfall (groß)

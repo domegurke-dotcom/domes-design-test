@@ -11,7 +11,8 @@ Ausführliche Gesprächsnotizen: `werte/plan.md` *(liegt noch im Planungsprojekt
 - [x] Etappe 3 – Vorlieben und Reaktionen (v169–171, Sprechblasen und seltenere Vorlieben; von Dome getestet)
 - [x] Etappe 4 – Training daheim (v198, von Claude per Skript getestet – 54 Prüfungen; Dome macht später einen Gesamttest) · Krankheiten-Plan A–H ist erledigt. Mit Dome abgestimmt: Spieler hat erstmal nur Reitplatz und Gelände (Admin: alle Orte), jede Stufe der Ausbildungsskala einzeln gespeichert, Bereiter nach Plan **oder** „entscheidet selbst“.
 - [x] Etappe 5 – Disziplinen (v200, von Claude per Skript getestet). Mit Dome abgestimmt: eigener Stand je Disziplin (Springen, Western, Gelände/Kondition), Western-Stufen Einsteiger/Rookie/Novice/Intermediate/Open, Springhöhe ≈ 0,95 × Stockmaß.
-- [~] Etappe 6 – Turniere · **6a fertig (v202–203, von Claude per Skript getestet, inkl. 3 Jahre Langzeit-Simulation):** Turnierkalender (Hofturnier, Regional, Groß; Freiluft/Halle), Nennen über beide Pferdeanhänger bis zum Vortag, Turniertag unterwegs, Ergebnis am nächsten Tag per Brief (Dome), Dressur/Springen/Vielseitigkeit/Western/Gelassenheit, Reiter-LK je Disziplin mit Startrechten und Aufstieg, Tagesform und Turnierstress, Preisgeld/Schleifen, Erfolge in Akte und Marktwert. **Offen 6b:** Rennen (mit Jockey), Distanz (Tierarztkontrolle), Tölt, Championate/International, Reiterprofil in der Hofverwaltung, LK verbessert das eigene Training, Decktaxe durch Erfolge – · **Danach kommt `PLAN-FUETTERUNG.md` (Etappen F1–F5) – eine Werte-Etappe 7 gibt es nicht. Vorher Dome fragen: „Mit Fütterung F1 weitermachen?“ (Dome, 5.10.2026).**
+- [~] Etappe 6 – Turniere · **6a fertig (v202–203, von Claude per Skript getestet, inkl. 3 Jahre Langzeit-Simulation):** Turnierkalender (Hofturnier, Regional, Groß; Freiluft/Halle), Nennen über beide Pferdeanhänger bis zum Vortag, Turniertag unterwegs, Ergebnis am nächsten Tag per Brief (Dome), Dressur/Springen/Vielseitigkeit/Western/Gelassenheit, Reiter-LK je Disziplin mit Startrechten und Aufstieg, Tagesform und Turnierstress, Preisgeld/Schleifen, Erfolge in Akte und Marktwert. **Offen 6b:** Rennen (mit Jockey), Distanz (Tierarztkontrolle), Tölt, Championate/International, Reiterprofil in der Hofverwaltung, LK verbessert das eigene Training, Decktaxe durch Erfolge.
+- [ ] Etappe 6c – Fohlenschau (Dome, 6.10.2026; siehe Abschnitt 8b) · **Danach kommt `PLAN-FUETTERUNG.md` (Etappen F1–F5) – eine Werte-Etappe 7 gibt es nicht. Vorher Dome fragen: „Mit Fütterung F1 weitermachen?“ (Dome, 5.10.2026).**
 
 **Ziel:** Alles greift ineinander. Charakter, körperliche und mentale Werte, Versorgung (Wohlbefinden), Training, Ausbildung, Gangwerk, Disziplinen und Turniere beeinflussen sich gegenseitig. Jedes Pferd soll ein echtes Spezialtalent haben statt überall gut zu sein.
 
@@ -185,6 +186,16 @@ Disziplin-Wert = gewichtete Werte (Anteile in %) + Charakter-Zu-/Abschlag (max. 
 8. Turnier kostet viel Energie; Anhängerfahrt und Trubel stressen nervöse/scheue Pferde. Danach Erholung nach Vorlieben: leichtes Training, Weide, entspannter Ausritt, Boxenruhe oder Roundpen.
 9. Später: selbst reiten/steuern mit Animationen (z. B. Gelände im Jump'n'Run-Stil: Pferd läuft, Klick zum Springen; auch Ausreiten daheim) oder bessere realistische 2D-Darstellung.
 
+## 8b. Fohlenschau (Etappe 6c, mit Dome besprochen am 6.10.2026)
+
+Ziel: Fohlen werden **rassetypisch** bewertet (am Zuchtziel ihrer Rasse gemessen, ein Haflinger nicht wie ein Hannoveraner). Die Wertnote steigert den Fohlenpreis stark.
+1. **Wann:** Fohlen sind im Spiel nur bis zum Absetzen bei Fuß (2 Jahreszeiten, also bis etwa 6 Monate) – vorgestellt wird nur ein Fohlen bei Fuß. Darum: Hauptschau im **Sommer** (Frühlingsfohlen sind dann etwa 3–6 Monate), Nachschau im **Herbst** für späte Fohlen (aus dem Sommer). Fohlen müssen mindestens etwa 1 Monat alt sein (nicht am Tag der Geburt).
+2. **Ablauf wie bei den Turnieren** (gleiche Technik): Termin im Kalender, bis zum Vortag anmelden (Anmeldegebühr), Mutter und Fohlen fahren mit dem Pferdeanhänger hin (Fahrtstress, beide den Tag unterwegs), Ergebnis am nächsten Tag per Brief. Nur für Fohlen, deren Mutter eine eingetragene Rasse hat (Zuchtverband); Mischlinge evtl. eigene „offene“ Klasse (Dome fragen).
+3. **Bewertung** (Noten 1–10, halbe Noten): Typ/Rassetyp, Körperbau (Fundament), Schritt, Trab, Gesamteindruck. Grundlage: vererbte Gangnoten (Veranlagung), Anlagen der Körperwerte, Rasseanteil (reinrassig = typischer), Abweichung vom Rassenprofil `PROFIL`; ein Teil Zufall (Tagesform, wie das Fohlen sich zeigt – scheue/nervöse Fohlen zeigen sich schlechter).
+4. **Auszeichnung:** Prämienfohlen (z. B. Gesamtnote ab 8), Fohlenchampion der Schau (bestes Fohlen), Platzierung im Feld.
+5. **Folgen:** Wertnote steht in der Akte und im Abstammungsschein, steigert den Fohlen-/Jungpferdepreis deutlich (Marktwert, Fohlenauktion), Mütter mit Prämienfohlen gewinnen ebenfalls an Wert.
+6. Größe: mittel (etwa 10–15 % Volumen).
+
 ## 8a. Ankerpunkte für später (jetzt schon mitdenken, nicht ausbauen)
 
 1. **Ausrüstung:** Jedes Pferd bekommt Ausrüstungs-Plätze (Zäumung/Trense und Reithalfter, Sattel, Gamaschen/Bandagen, Decke). Jeder Gegenstand kann später (a) Vorlieben/Abneigungen auslösen, (b) Training und Disziplin-Werte beeinflussen (z. B. Gamaschen schützen im Gelände, Westernsattel nur für Western), (c) zum Wohlbefinden beitragen. Training und Turnier sollen den Platz „Ausrüstung“ schon abfragen können, auch wenn er noch leer ist.
@@ -197,7 +208,7 @@ Disziplin-Wert = gewichtete Werte (Anteile in %) + Charakter-Zu-/Abschlag (max. 
 2. Animationen statt Reaktionstexte, Körperhaltung im Training, selbst reiten.
 3. Hof-Ausbau, Pensionsstall, mehrere Ställe, Paddockboxen, Gebäudestufen, Weide-/Futterwirtschaft, Einstreu, Krankheiten (siehe `werte/hof-ausbau-ideen.md`).
 4. Weitere Rassen (z. B. Traber) – erst wenn Dome es sagt.
-5. Fohlenschau – steht weiter auf „warten, bis Dome es sagt“.
+5. ~~Fohlenschau~~ – jetzt eingeplant als Etappe 6c (Abschnitt 8b).
 
 ## 10. Vorgeschlagene Etappen
 
@@ -208,3 +219,4 @@ Disziplin-Wert = gewichtete Werte (Anteile in %) + Charakter-Zu-/Abschlag (max. 
 4. **Training daheim:** Orte Roundpen, Reitplatz, Gelände (Reithalle über Ausbau), Energie, kombinierte Einheiten, Trainingsbericht, Ausbildungsskala mit Phasen und Kraft-Grenzen, Gangwerk-Bonus, Training bremst den Altersabbau, Wohlbefinden (`wohlFaktor`) wirkt aufs Lerntempo.
 5. **Disziplinen** mit Formeln, Anzeige in der Karte Ausbildung, neuer Marktwert.
 6. **Turniere** mit Kalender, Stufen, Reiter-LK, Ergebnissen und Erfolgen in der Akte.
+6c. **Fohlenschau** (Abschnitt 8b).

@@ -585,6 +585,7 @@
   .geb { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid #e2d6c3; } .geb-ico { font-size: 1.5rem; width: 2rem; text-align: center; } .geb-txt { flex: 1; display: flex; flex-direction: column; gap: 3px; } .geb-txt small { color: var(--leise); }
   .geb-balken { height: 7px; max-width: 220px; } .geb-kn { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; } .geb-sperre { font-style: italic; }
   #nebenSchirm .bau-fenster { grid-column: 1 / -1; width: 100%; max-width: 760px; justify-self: center; }
+  .vl-knoepfe { display: inline-flex; gap: 6px; flex-wrap: nowrap; } .vl-knoepfe .vgl-knopf { white-space: nowrap; }
   .bau-kacheln .kachel small { font-size: .7rem; }
   .bau-stufen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0; } .bau-stufe { border: 3px solid #e2d6c3; background: #fff; border-radius: 12px; padding: 8px 4px; font: inherit; cursor: pointer; color: var(--text); display: flex; flex-direction: column; gap: 2px; align-items: center; } .bau-stufe.an { border-color: var(--akzent); } .bau-stufe small { color: var(--leise); font-size: .75rem; } .bau-stufe span { font-weight: 700; color: var(--akzent); }
   .hofplan { display: block; width: 100%; max-width: 420px; margin: 0 auto 8px; height: auto; }
@@ -846,7 +847,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "239";
+  const SPIEL_VERSION = "240";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -854,9 +855,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=239"></script>
-<script src="kopfteile.js?v=239"></script>
-<script src="kopfalter.js?v=239"></script>
+<script src="pferd.js?v=240"></script>
+<script src="kopfteile.js?v=240"></script>
+<script src="kopfalter.js?v=240"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2639,7 +2640,7 @@
     } else if (aktenReiter === "charakter") {
       werteErgaenzen(p); const c = w.charakter;
       const q = vergleichPferd(p);
-      inhalt = vglKopf(p, box.lesen ? "" : `<button class="vgl-knopf" id="vorliebenKnopf">💭 Vorlieben${Object.keys(p.entdeckt || {}).length ? ` (${Object.keys(p.entdeckt).length})` : ""}</button>`) + CHARAKTER.map(t => `
+      inhalt = vglKopf(p, box.lesen ? "" : `<span class="vl-knoepfe"><button class="vgl-knopf" id="vorliebenKnopf">😊 Vorlieben${vlSichtbar(p, "mag").length ? ` (${vlSichtbar(p, "mag").length})` : ""}</button><button class="vgl-knopf" id="abneigungenKnopf">😣 Abneigungen${vlSichtbar(p, "nicht").length ? ` (${vlSichtbar(p, "nicht").length})` : ""}</button></span>`) + CHARAKTER.map(t => `
         <div class="zeile-wert"><div class="kopf"><b class="lex" data-lex="char:${t.key}">${t.titel}</b></div>
         <div class="skala"><i style="left:${c[t.key]}%"></i>${q ? `<i class="vgl" style="left:${(werteErgaenzen(q), q.werte.charakter[t.key])}%"></i>` : ""}</div>
         <div class="pole"><span>${t.links}</span><span>${t.rechts}</span></div></div>`).join("");
@@ -2981,7 +2982,8 @@
     const sk = $("scherKachel"); if (sk) sk.onclick = () => { scherModus = true; meldung = ""; zeigeAkte(); };
     const zk = $("zaumKachel"); if (zk) zk.onclick = () => { zaumModus = true; meldung = ""; zeigeAkte(); };
     const zz = $("zaumZurueck"); if (zz) zz.onclick = () => { zaumModus = false; zeigeAkte(); };
-    const vk3 = $("vorliebenKnopf"); if (vk3) vk3.onclick = () => vorliebenZeigen(p);
+    const vk3 = $("vorliebenKnopf"); if (vk3) vk3.onclick = () => vorliebenZeigen(p, "mag");
+    const ab3 = $("abneigungenKnopf"); if (ab3) ab3.onclick = () => vorliebenZeigen(p, "nicht");
     const hsK = $("hufschuhKachel"); if (hsK) hsK.onclick = () => hufschuhDialog(p, () => zeigeAkte());
     const fuK = $("futterKachel"); if (fuK) fuK.onclick = () => futterDialog(p, box);
     const fpK = $("futterplanKnopf"); if (fpK) fpK.onclick = () => futterplanDialog(p, box, () => zeigeAkte());
@@ -6095,15 +6097,22 @@
       if (vt && p.werte && p.werte.ist) p.werte.ist.vertrauen = Math.max(0, Math.min(100, r2(vertrauenVon(p) + vt))); }
     if (!selbst) return "";
     (p.entdeckt = p.entdeckt || {})[k] = st;
+    const Zl = (p.vlZaehl = p.vlZaehl || {}), Zt = (p.vlTag = p.vlTag || {}); if (Zt[k] !== spiel.tag) { Zt[k] = spiel.tag; Zl[k] = (Zl[k] || 0) + 1; }   // Dome (v240): erst nach 5 Erlebnissen (je Tag einmal) sichtbar
     const liste = Z[st]; return liste[Math.floor(Math.random() * liste.length)];
   }
   // Knopf „Vorlieben“ (Box - Steckbrief - Charakter): nur, was man schon erlebt hat
-  function vorliebenZeigen(p) {
-    const E = p.entdeckt || {}, alle = Object.keys(VORLIEBEN), bekannt = alle.filter(k => E[k]);
-    const gruppe = (st, titel) => { const l = bekannt.filter(k => E[k] === st); return l.length ? `<p><b>${titel}</b><br>${l.map(k => `${VORLIEBEN[k].ico} ${VORLIEBEN[k].titel}`).join("<br>")}</p>` : ""; };
-    dialog(`<h3>💭 Vorlieben von ${esc(p.name)}</h3>${bekannt.length ? gruppe("mag", "😊 mag") + gruppe("egal", "😐 ist egal") + gruppe("nicht", "😣 mag nicht") : `<p>Noch nichts entdeckt. Was ${esc(p.name)} mag oder nicht mag, merkst du erst, wenn du es ausprobierst – beim Putzen, Füttern, auf der Weide …</p>`}
-      ${bekannt.length < alle.length ? `<p class="text"><small>Noch ${alle.length - bekannt.length} ${alle.length - bekannt.length === 1 ? "Sache" : "Sachen"} unentdeckt.</small></p>` : ""}
-      ${spiel.admin ? `<p class="text"><small>🛠️ Admin: ${alle.map(k => `${VORLIEBEN[k].titel} ${String(vorliebe(p, k)).replace(".", ",")}`).join(" · ")}</small></p>` : ""}`);
+  const VL_SICHTBAR_AB = 5;
+  // entdeckte Vorlieben (mag/egal) bzw. Abneigungen (nicht) – für den Spieler erst nach 5 Erlebnissen, im Adminmodus sofort
+  const vlSichtbar = (p, art) => { const E = p.entdeckt || {}, Z = p.vlZaehl || {}; return Object.keys(VORLIEBEN).filter(k => E[k] && (art === "nicht" ? E[k] === "nicht" : E[k] !== "nicht") && (spiel.admin || (Z[k] || 0) >= VL_SICHTBAR_AB)); };
+  function vorliebenZeigen(p, art = "mag") {
+    const E = p.entdeckt || {}, Z = p.vlZaehl || {}, l = vlSichtbar(p, art), zahl = k => spiel.admin ? ` <small>(${Z[k] || 0}×)</small>` : "";
+    const zeile = k => `${VORLIEBEN[k].ico} ${VORLIEBEN[k].titel}${zahl(k)}`;
+    const inhalt = art === "nicht"
+      ? (l.length ? `<p>${l.map(zeile).join("<br>")}</p>` : `<p>Du hast noch keine Abneigung entdeckt.</p>`)
+      : (l.length ? `${l.some(k => E[k] === "mag") ? `<p><b>😊 mag</b><br>${l.filter(k => E[k] === "mag").map(zeile).join("<br>")}</p>` : ""}${l.some(k => E[k] === "egal") ? `<p><b>😐 ist egal</b><br>${l.filter(k => E[k] === "egal").map(zeile).join("<br>")}</p>` : ""}${l.some(k => E[k] === "mag") ? "" : "<p>Du hast noch keine Vorliebe entdeckt.</p>"}` : `<p>Du hast noch keine Vorliebe entdeckt.</p>`);
+    dialog(`<h3>${art === "nicht" ? "😣 Abneigungen" : "😊 Vorlieben"} von ${esc(p.name)}</h3>${inhalt}
+      <p class="text"><small>Was ${esc(p.name)} ${art === "nicht" ? "nicht mag" : "mag"}, erkennst du sicher erst, wenn du es mindestens ${VL_SICHTBAR_AB}-mal (an verschiedenen Tagen) erlebt hast.</small></p>
+      ${spiel.admin ? `<p class="text"><small>🛠️ Admin: ${Object.keys(VORLIEBEN).map(k => `${VORLIEBEN[k].titel} ${String(vorliebe(p, k)).replace(".", ",")}${vorliebeEff(p, k) !== vorliebe(p, k) ? ` (wirkt ${String(vorliebeEff(p, k)).replace(".", ",")})` : ""} · ${Z[k] || 0}×`).join(" · ")}</small></p>` : ""}`);
   }
   // Sprechblase am Pferd im Stallbild (bis die Animationen kommen). Ist das Pferd nicht in der Box (Weide, Anhänger), erscheint sie an der Boxentür.
   function reaktionZeigen(text) {
@@ -8046,7 +8055,7 @@
       <p><b>Bauland und Weideland</b> (Dome, v225): Bauland ${fmt(BAULAND_PREIS)}/ha (nur kaufen), Weideland ${fmt(LAND_PREIS)}/ha oder Pacht ${fmt(PACHT_PREIS)}/ha je Jahreszeit. Platzbedarf auf dem Bauland: Wohnhaus/Hofplatz ${haTxt(HOFPLATZ)}, Stall ${haTxt(0.1)} je 6 Boxen, Paddockboxen ${haTxt(0.15)} je 6, Reitplatz ${haTxt(0.1)}, Reithalle ${haTxt(0.15)}, Roundpen/Trail/Sandpaddock/Waschplatz/Lager/Sattelkammer/Quarantänestall/Abfohlbox je ${haTxt(0.05)}. Weide einzäunen nur auf Weideland. Start-Pensionsstall: 1 ha Bauland + 1 ha Weideland. Makler-Höfe: Bauland nach Bestand + 0,1 ha, auf ½ ha aufgerundet; Grundstück 1 ha Bauland.
         <b>Quarantänestall:</b> gekaufte Pferde (Markt, Auktion, Tierschutz) kommen zuerst in eine freie Quarantänebox und stehen 1 Jahreszeit unter Quarantäne; danach ziehen sie – ohne bekannte ansteckende Krankheit – automatisch in eine freie normale Box (Brief). Normale Umzüge nutzen den Quarantänestall nur, wenn sonst nichts frei ist.
         <b>Hufrehe-Warnung</b> im Frühling für gefährdete Pferde (leichtfuttrige Rassen ${LEICHTFUTTRIG.join(", ")}, Futterzustand ab 7, Hufrehe oder Cushing bekannt): Hinweis beim Weidegang und Brief zu Frühlingsbeginn für alle gefährdeten Pferde auf der Weide.</p>
-      <p><b>Streicheln</b> (Dome, v239, asr – Putzkiste): wischen wie Bürste/Kamm, einmal am Tag Wohlbefinden +1 und Vertrauen +0,2, eigene Vorliebe (Grundbedürfnis). <b>Vorlieben</b> (Dome, v238): Reaktion einmal am Tag je Aktion. „Mag“: Wohlbefinden +4 × Vorliebe, Vertrauen +0,2. „Mag nicht“: Wohlbefinden −4 × Abneigung, Vertrauen −0,1 – bei Grundbedürfnissen (Putzen, Kämmen, Füttern, Medizin, Streicheln) nur 15 % davon und kein Vertrauensverlust. Hohes Vertrauen schwächt Abneigungen: ab Vertrauen 50 linear bis auf 40 % bei Vertrauen 100 (auch im Training).</p>
+      <p><b>Vorlieben/Abneigungen</b> (Dome, v240): zwei Knöpfe unter stb – Charakter; ein Eintrag erscheint erst, wenn der Spieler die Sache an mindestens ${VL_SICHTBAR_AB} verschiedenen Tagen selbst erlebt hat (Admin: sofort, mit Zähler). <b>Streicheln</b> (Dome, v239, asr – Putzkiste): wischen wie Bürste/Kamm, einmal am Tag Wohlbefinden +1 und Vertrauen +0,2, eigene Vorliebe (Grundbedürfnis). <b>Vorlieben</b> (Dome, v238): Reaktion einmal am Tag je Aktion. „Mag“: Wohlbefinden +4 × Vorliebe, Vertrauen +0,2. „Mag nicht“: Wohlbefinden −4 × Abneigung, Vertrauen −0,1 – bei Grundbedürfnissen (Putzen, Kämmen, Füttern, Medizin, Streicheln) nur 15 % davon und kein Vertrauensverlust. Hohes Vertrauen schwächt Abneigungen: ab Vertrauen 50 linear bis auf 40 % bei Vertrauen 100 (auch im Training).</p>
       <p><b>Krippe und Weide</b> (Dome, v236): Wurde vor dem Weidegang gefüttert, geht nichts verloren – Kraftfutter frisst das Pferd vorher in der Box (zählt zusätzlich zur Weide-Energie), Heu danach (ersetzt Gras). Box – ppf – Versorgung bzw. das Weide-Feld zeigt „Heute gefressen“ mit allen Sorten und Mengen.</p>
       <p><b>Übersicht je Hof</b> (v230, Immobilien → Verwaltung): Kasse, Restkredit, nächste Rate (inklusive offener Raten), Einnahmen/Ausgaben der letzten Jahreszeit, Heuvorrat in Tagen (mit bestellter Lieferung); rot, wenn die Kasse die nächste Rate nicht deckt oder das Heu nur noch weniger als 3 Tage reicht. Hofplan: Gebäude als kleine Zeichnungen auf dem Bauland (je ha-Kachel bis 9), Baustellen orange gestrichelt, Zahl = Boxen.</p>
       <p><b>Vorwarnung Kreditrate</b> (v229): 2 Tage vor Ende der Jahreszeit Brief der Hausbank, wenn die Kasse die fällige Rate (inklusive offener Raten) nicht deckt. <b>Baulärm:</b> solange gebaut wird (Außenarbeiten ruhen im Winter), je Nacht Wohlbefinden −1,5 × Nervosität (Charakter Nerven unter 30) und −1 für Senioren ab 20 Jahren. <b>Abfohlbox:</b> kein Umbau, solange eine Stute auf dem Hof in der letzten Jahreszeit vor der Geburt ist.</p>

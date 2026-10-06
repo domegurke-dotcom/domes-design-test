@@ -6,7 +6,7 @@ Plan gespeichert bei Spielversion 208. **Noch nicht starten:** erst nach Fütter
 
 **Domes Ja liegt vor (7.10.2026, Spielversion 220):** Fütterung F1–F5 und alle offenen Fragen dazu sind fertig. In einer neuen Sitzung mit **H1** starten. Nach jeder Etappe testen, hochladen, Testlink erneuern, Dome eine Test-Anleitung geben. Volumen-Schätzung: H1–H4 sicher, H5 vielleicht, H6–H8 eher im nächsten Volumen. **Danach** (nach H8) kommen die fehlenden Veredler-Rassen (Notiz unten in `OFFENE-FRAGEN.md`).
 
-- [ ] Etappe H1 – Neuer Spielstart, Immobilien-Menü, Kredit (groß)
+- [x] Etappe H1 – Neuer Spielstart, Immobilien-Menü, Kredit (groß) – v221, von Claude per Skript getestet, Domes Test steht noch aus
 - [ ] Etappe H2 – Hof-Struktur, Land, Hofplan (groß)
 - [ ] Etappe H3 – Bauen, Stufen, Verfall (groß)
 - [ ] Etappe H4 – Umbau-Folgen (mittel)
@@ -36,6 +36,8 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 4. Kredit: ca. 4 % Zinsen, Rate jede Jahreszeit über 5 Jahre (ca. 550 €). Nicht bezahlt → Mahnung wie bei Rechnungen; nach 3 verpassten Raten Zwangsversteigerung des Hofs (Spiel verloren). Weitere Kredite unter Hauptmenü - Hofverwaltung - Finanzen - Bank.
 5. Ausgegraute Immobilien werden frei, wenn der erste Kredit zur Hälfte abbezahlt und genug Eigenanteil da ist.
 6. Start immer als Pensionsstall.
+
+**Umsetzung H1 (v221) – selbst festgelegte Zahlen:** Ausgegraute Immobilien: Leeres Grundstück 5 ha 5.000 €, Resthof mit Scheune (8 Boxen, 4 ha) 35.000 €, Kleines Gestüt (10 Boxen, 8 ha) 55.000 €, Reitanlage mit Halle (16 Boxen, 6 ha) 80.000 € – Kauf erst ab H2. „Genug Eigenanteil“ = die Hälfte des Kaufpreises auf dem Hofkonto. Hofkredit-Rate genau 554,15 € (20 Raten, 1.083,07 € Zinsen gesamt). Rate wird zu Beginn jeder Jahreszeit automatisch abgebucht (erste Rate in der Jahreszeit nach dem Kauf), Mahngebühr wie bei Rechnungen (10 %, mind. 20 €) je verpasster Rate. Weitere Kredite: bis 80 % des Immobilienwerts minus Restschuld (am Anfang 6.000 €), 1.000-€-Schritte, 2/3/5 Jahre, ebenfalls 4 %, nicht bei offener Rate. Hauptmenü hat die neue Kachel „Immobilien“. Die 6 Start-Boxen tragen `stufe: 1`; + / − in der Boxenübersicht bleibt bis H3.
 
 ## Etappe H2 – Hof-Struktur, Land, Hofplan (groß)
 1. Bis zu 5 Ställe, jeder ein eigener Standort mit eigenen Anlagen (nichts wird geteilt) und eigener Kasse. Alle laufen real parallel und werden im Immobilien-Menü gemeinsam verwaltet (Wechsel zwischen den Höfen).

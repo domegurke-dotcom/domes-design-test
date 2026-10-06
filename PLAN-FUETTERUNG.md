@@ -13,7 +13,7 @@ Plan gespeichert bei Spielversion 185. **Noch nicht starten:** erst wenn Werte-E
 
 - [x] Etappe F1 – Futterkammer und Futterhandel (mittel) · v210, von Claude per Skript getestet; offene Detailfragen in OFFENE-FRAGEN.md
 - [x] Etappe F2 – Futterplan, Bedarf, Nährwerte (groß) · v211, von Claude per Skript getestet
-- [ ] Etappe F3 – Futterzustand und Auswirkungen (groß)
+- [x] Etappe F3 – Futterzustand und Auswirkungen (groß) · v212, von Claude per Skript getestet (Futterzustand 1–9, Folgen, Magengeschwür, Standardplan nach Bedarf)
 - [ ] Etappe F4 – Atemwege, Leckerli, Futterumstellung (klein)
 - [ ] Etappe F5 – Futterexperte und Spezialfutter (mittel)
 

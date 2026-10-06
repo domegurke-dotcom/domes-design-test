@@ -29,6 +29,18 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 
 **Bestand heute:** Startgeld 5.000 €, Boxen per + / − in der Boxenübersicht, Hofverwaltung mit Hof, Finanzen, Außer Haus (externe Aufzucht/Ausbildung), Mitarbeiter, Postfach, Einstellungen; externer Gnadenhof (`spiel.gnadenhof`); Turniere für alle offen.
 
+## Domes Testanmerkungen (6.10.2026 abends) – vor bzw. mit H5 abarbeiten
+- [ ] T1 Fehler: Stute mit Fohlen bei Fuß kaufen (Markt, Tierschutz …): vor dem Kauf zeigt Nachkommen/Abstammungsschein des Fohlens eine andere Mutter und andere Genetik; erst nach dem Kauf passt es. Fohlen muss immer das echte Fohlen der Stute sein (klein–mittel, ca. 3 %)
+- [ ] T2 Stall → Bauen als eigenes Fenster mit Rücksprung zum Stall (klein, ca. 2 %)
+- [ ] T3 stb – Eigenschaften: Hinweise „angeboren“/„erarbeitet“ nur im Adminmodus (klein, ca. 1 %)
+- [ ] T4 stb – asb – Disziplinen: Charakter-Zeile verständlicher („temperamentvoll +, nervös −“ = Regel, „+5 %“ = Wirkung bei diesem Pferd) (klein, ca. 1 %)
+- [ ] T5 hvw – Hof – Futterkammer: Einkaufskorb mit Gesamtsumme; Korb öffnen → Liste mit Preisen, einzeln entfernen, Summe, Kauf bestätigen/abbrechen, Rücksprung zur Futterkammer (mittel, ca. 4 %)
+- [ ] T6 Futterkammer: nach Klick auf +kg nicht nach oben springen (klein, ca. 1 %)
+- [ ] T7 Box – Menü ☰: unter „Hauptmenü“ „Hofverwaltung“ einfügen, „Postfach“ entfernen (klein, ca. 1 %)
+- [ ] T8 Charakter – Vorlieben: Grundbedürfnisse (Putzen, Füttern …) bei Abneigung nur sehr geringer Malus, nie schlechter als vorher; Vorlieben bedienen wirkt aufs Vertrauen; hohes Vertrauen schwächt Abneigungen (mittel, ca. 4 %)
+- [ ] T9 asr – Putzkiste: „Streicheln“ wie Bürste/Kamm (Wischen) und als Vorliebe im Charakter (mittel, ca. 4 %)
+- [ ] T10 Krippe gefüllt, dann Weide: Futter darf nicht verloren gehen (Vorschlag siehe Chat, Domes Antwort abwarten) (klein, ca. 2–3 %)
+
 ## Etappe H1 – Neuer Spielstart, Immobilien-Menü, Kredit (groß)
 1. Startmenü - Neustart → Charakterauswahl (ohne Hofname) → Immobilien-Menü statt Hauptmenü.
 2. Immobilien als große, schöne Kacheln (blasses Bild eines Reiterhofs). Am Anfang nur kaufbar: „Alter Pensionsstall“ (6 baufällige Boxen = Stufe 1, Reitplatz, Gelände, ca. 2 ha: Hofstelle mit Reitplatz + 1 ha Weide). Alle anderen ausgegraut.

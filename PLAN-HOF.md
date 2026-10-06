@@ -6,6 +6,8 @@ Plan gespeichert bei Spielversion 208. **Noch nicht starten:** erst nach Fütter
 
 **Domes Ja liegt vor (7.10.2026, Spielversion 220):** Fütterung F1–F5 und alle offenen Fragen dazu sind fertig. In einer neuen Sitzung mit **H1** starten. Nach jeder Etappe testen, hochladen, Testlink erneuern, Dome eine Test-Anleitung geben. Volumen-Schätzung: H1–H4 sicher, H5 vielleicht, H6–H8 eher im nächsten Volumen. **Danach** (nach H8) kommen die fehlenden Veredler-Rassen (Notiz unten in `OFFENE-FRAGEN.md`).
 
+**Testspieler (Dome, 6.10.2026 abends): nicht mehr starten** – auch nicht nach H7 und nicht anbieten. Geprüft wird weiter mit `tests/hof-gesamttest.js`.
+
 - [x] Etappe H1 – Neuer Spielstart, Immobilien-Menü, Kredit (groß) – v221, von Claude per Skript getestet, Domes Test steht noch aus
 - [x] Etappe H2 – Hof-Struktur, Land, Hofplan (groß) – v222, von Claude per Skript getestet, Domes Test steht noch aus
 - [x] Etappe H3 – Bauen, Stufen, Verfall (groß) – v223, von Claude per Skript getestet, Domes Test steht noch aus

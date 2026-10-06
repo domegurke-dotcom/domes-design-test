@@ -843,7 +843,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "230";
+  const SPIEL_VERSION = "231";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -851,9 +851,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=230"></script>
-<script src="kopfteile.js?v=230"></script>
-<script src="kopfalter.js?v=230"></script>
+<script src="pferd.js?v=231"></script>
+<script src="kopfteile.js?v=231"></script>
+<script src="kopfalter.js?v=231"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -7438,12 +7438,15 @@
     const L = kredite().filter(kreditLaeuft), rate = runde2(L.reduce((a, k) => a + offenSumme(k) + (k.rest - (k.offen || []).reduce((x, r) => x + r.tilgung, 0) > 0.005 ? rateBerechnen(k).betrag : 0), 0));
     const v = jzJetzt() - 1, P = ((spiel.finanzSaison || {})[String(Math.floor(v / 4))] || {})[((v % 4) + 4) % 4] || {};
     const ein = Object.values(P).reduce((a, e) => a + e.ein, 0), aus = Object.values(P).reduce((a, e) => a + e.aus, 0);
-    return { name: hofName(), geld: spiel.geld || 0, rest: restschuld(), rate, ein, aus, knapp: (spiel.geld || 0) < rate, offen: L.some(k => (k.offen || []).length) }; }); }
+    const V = futterVerbrauchTag(), F = futterkammer(), rau = RAUFUTTER_REIHE.reduce((a, k) => a + (F.lager[k] || 0), 0) + (F.liefer || []).filter(x => RAUFUTTER_REIHE.includes(x.k)).reduce((a, x) => a + x.menge, 0);
+    const heuTage = V.raufutter > 0 ? Math.floor(rau / V.raufutter) : null;
+    return { name: hofName(), geld: spiel.geld || 0, rest: restschuld(), rate, ein, aus, knapp: (spiel.geld || 0) < rate, offen: L.some(k => (k.offen || []).length), heuTage }; }); }
   function zeigeVerwaltung() {
     const Z = zentral(), post = (spiel.post || []).filter(b => !b.spam).slice(0, 60), U = hofReihe().map(hofUebersicht);
     zeigeNeben("🗂️ Verwaltung", `<div class="panel verw hof-uebersicht"><h4 class="ma-titel" style="margin-top:0">🏘️ Deine Höfe</h4>
-        ${U.map(u => `<div class="hu-zeile ${u.knapp ? "knapp" : ""}"><div class="hu-kopf"><b>${esc(u.name)}${u.offen ? " ⚠️" : ""}</b><b class="nw">${fmt(u.geld)}</b></div>
+        ${U.map(u => `<div class="hu-zeile ${u.knapp || (u.heuTage != null && u.heuTage < 3) ? "knapp" : ""}"><div class="hu-kopf"><b>${esc(u.name)}${u.offen ? " ⚠️" : ""}</b><b class="nw">${fmt(u.geld)}</b></div>
           <small>Kredit ${u.rest ? fmt(u.rest) : "–"} · nächste Rate ${u.rate ? fmt(u.rate) : "–"}${u.knapp ? " · <span class=\"hu-warn\">Kasse reicht nicht!</span>" : ""}</small>
+          <small>${u.heuTage == null ? "🌾 keine Pferde zu füttern" : `🌾 Heu reicht noch <span class="${u.heuTage < 3 ? "hu-warn" : ""}">${u.heuTage} ${u.heuTage === 1 ? "Tag" : "Tage"}</span>`}</small>
           <small>letzte Jahreszeit: <span class="plus">+${fmt(Math.round(u.ein))}</span> / <span class="minus">−${fmt(Math.round(u.aus))}</span></small></div>`).join("")}</div>
       <div class="panel verw">${verwMeld ? `<div class="klasse">${verwMeld}</div>` : ""}
         <div class="fin-kopf"><span>🏦 Zentrales Konto</span><b>${fmt(Z.geld)}</b></div>
@@ -7976,7 +7979,7 @@
       <p><b>Bauland und Weideland</b> (Dome, v225): Bauland ${fmt(BAULAND_PREIS)}/ha (nur kaufen), Weideland ${fmt(LAND_PREIS)}/ha oder Pacht ${fmt(PACHT_PREIS)}/ha je Jahreszeit. Platzbedarf auf dem Bauland: Wohnhaus/Hofplatz ${haTxt(HOFPLATZ)}, Stall ${haTxt(0.1)} je 6 Boxen, Paddockboxen ${haTxt(0.15)} je 6, Reitplatz ${haTxt(0.1)}, Reithalle ${haTxt(0.15)}, Roundpen/Trail/Sandpaddock/Waschplatz/Lager/Sattelkammer/Quarantänestall/Abfohlbox je ${haTxt(0.05)}. Weide einzäunen nur auf Weideland. Start-Pensionsstall: 1 ha Bauland + 1 ha Weideland. Makler-Höfe: Bauland nach Bestand + 0,1 ha, auf ½ ha aufgerundet; Grundstück 1 ha Bauland.
         <b>Quarantänestall:</b> gekaufte Pferde (Markt, Auktion, Tierschutz) kommen zuerst in eine freie Quarantänebox und stehen 1 Jahreszeit unter Quarantäne; danach ziehen sie – ohne bekannte ansteckende Krankheit – automatisch in eine freie normale Box (Brief). Normale Umzüge nutzen den Quarantänestall nur, wenn sonst nichts frei ist.
         <b>Hufrehe-Warnung</b> im Frühling für gefährdete Pferde (leichtfuttrige Rassen ${LEICHTFUTTRIG.join(", ")}, Futterzustand ab 7, Hufrehe oder Cushing bekannt): Hinweis beim Weidegang und Brief zu Frühlingsbeginn für alle gefährdeten Pferde auf der Weide.</p>
-      <p><b>Übersicht je Hof</b> (v230, Immobilien → Verwaltung): Kasse, Restkredit, nächste Rate (inklusive offener Raten), Einnahmen/Ausgaben der letzten Jahreszeit; rot, wenn die Kasse die nächste Rate nicht deckt. Hofplan: Gebäude als kleine Zeichnungen auf dem Bauland (je ha-Kachel bis 9), Baustellen orange gestrichelt, Zahl = Boxen.</p>
+      <p><b>Übersicht je Hof</b> (v230, Immobilien → Verwaltung): Kasse, Restkredit, nächste Rate (inklusive offener Raten), Einnahmen/Ausgaben der letzten Jahreszeit, Heuvorrat in Tagen (mit bestellter Lieferung); rot, wenn die Kasse die nächste Rate nicht deckt oder das Heu nur noch weniger als 3 Tage reicht. Hofplan: Gebäude als kleine Zeichnungen auf dem Bauland (je ha-Kachel bis 9), Baustellen orange gestrichelt, Zahl = Boxen.</p>
       <p><b>Vorwarnung Kreditrate</b> (v229): 2 Tage vor Ende der Jahreszeit Brief der Hausbank, wenn die Kasse die fällige Rate (inklusive offener Raten) nicht deckt. <b>Baulärm:</b> solange gebaut wird (Außenarbeiten ruhen im Winter), je Nacht Wohlbefinden −1,5 × Nervosität (Charakter Nerven unter 30) und −1 für Senioren ab 20 Jahren. <b>Abfohlbox:</b> kein Umbau, solange eine Stute auf dem Hof in der letzten Jahreszeit vor der Geburt ist.</p>
       <p><b>Allein:</b> Ist ein Pferd das einzige auf dem Hof und sonst gut versorgt, fällt sein Wohlbefinden durch das Alleinsein höchstens auf ${ALLEIN_MIN} % (Dome, v228).</p>
       <p><b>Weide zu klein</b> (v226): Bedarf ${haTxt(WEIDE_BEDARF[0])} je Großpferd, ${haTxt(WEIDE_BEDARF[1])} je Pony/Kleinpferd (unter ${PONY_BIS} cm Stockmaß), Fohlen bei Fuß zählen nicht extra. Mehr als die eingezäunte Weide: Hinweis beim Weidegang und Brief zu Beginn jeder Jahreszeit (Folgen wie abgefressenes Gras kommen mit H6).

@@ -844,7 +844,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "235";
+  const SPIEL_VERSION = "236";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -852,9 +852,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=235"></script>
-<script src="kopfteile.js?v=235"></script>
-<script src="kopfalter.js?v=235"></script>
+<script src="pferd.js?v=236"></script>
+<script src="kopfteile.js?v=236"></script>
+<script src="kopfalter.js?v=236"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2528,6 +2528,7 @@
         ${anweidenAktiv(p) ? `<p class="text">🌱 <b>Anweiden</b>: Tag ${spiel.tag - p.anweiden + 1} von ${anweidenTage()} – ${esc(p.name)} steht erst stundenweise draußen, damit sich der Darm ans Gras gewöhnt, und braucht dazu Heu.</p>` : ""}
         ${heuNoetigP(p) ? (box.krippeVoll ? `<p class="text">🌾 Heu liegt auf der Weide bereit.</p>` : `<p class="text">🌾 <b>${anweidenAktiv(p) && !heuNoetig() ? "Heu dazu" : "Kaum Gras"}</b> – ${anweidenAktiv(p) && !heuNoetig() ? "beim Anweiden" : JZ[datum().s][0] === "Winter" ? "im Winter" : "am letzten Herbsttag"} muss Heu auf die Weide, sonst bleibt ${esc(p.name)} hungrig.</p><button class="knopf" id="weideHeu" style="width:auto;padding:9px 14px;margin:0 8px 8px 0">🌾 Heu auf die Weide</button>`) : ""}
         ${herdeText(p)}
+        ${heuteGefressenHTML(p, box) ? `<ul class="liste">${heuteGefressenHTML(p, box)}</ul>` : ""}
         ${befundZeilen(p) ? `<ul class="liste">${befundZeilen(p)}</ul>` : ""}${befundKarten(p, box)}
         <button class="knopf" id="vonWeide" style="width:auto;padding:9px 14px;margin-top:8px">🏠 Zurück in die Box</button></div>`;
       befundBinden(p, box);
@@ -2675,7 +2676,7 @@
           <div class="balken"><i style="width:${w}%;background:${w < 45 ? "#c0503a" : "#5a9a6a"}"></i></div>${wohlGruende(p)}`; })()}
           <p class="text" style="margin:6px 0 0">${box.tot ? `${esc(p.name)} ist verstorben. Über das Menü (☰) → Neustart oder „Pferd auswählen“ geht es weiter.` : `${esc(p.name)} ${HALTUNG_TEXT[haltungFuer(p)]}${g >= 45 && g < 65 ? " – die Ohren sind halb abgeknickt" : ""}.`}</p></div>
         <ul class="liste">
-          <li><span class="ico">🌾</span><span class="txt">Fütterung heute<small>${p.futterplan && p.futterplan.kg ? "eigener Futterplan" : "Standardplan"} <button class="mini-knopf" id="futterplanKnopf">📋 Futterplan</button></small></span><span class="stat ${box.krippeVoll ? "ok" : "warn"}">${box.krippeVoll ? "gefüttert" : "noch nicht"}</span></li>
+          <li><span class="ico">🌾</span><span class="txt">Fütterung heute<small>${p.futterplan && p.futterplan.kg ? "eigener Futterplan" : "Standardplan"} <button class="mini-knopf" id="futterplanKnopf">📋 Futterplan</button></small></span><span class="stat ${box.krippeVoll ? "ok" : "warn"}">${box.krippeVoll ? "gefüttert" : "noch nicht"}</span></li>${heuteGefressenHTML(p, box)}
           ${box.tot ? "" : (() => { const L = p.leckHeute && p.leckHeute.tag === spiel.tag ? p.leckHeute.n : 0, F = futterkammer();
             return `<li><span class="ico">🥕</span><span class="txt">Leckerli<small>${p.bettelt ? "⚠️ bettelt und schnappt – ein paar Tage höchstens 3" : "bis 3 am Tag stärken das Vertrauen"} ${["moehren", "leckerli"].map(k => `<button class="mini-knopf" data-leck="${k}" ${(F.lager[k] || 0) + 1e-9 < LECK_STUECK[k] ? "disabled" : ""}>${FUTTER[k].ico} ${k === "moehren" ? "Möhre" : "Leckerli"}</button>`).join(" ")}${(F.lager.moehren || 0) < 0.1 && (F.lager.leckerli || 0) < 0.01 ? " <i>(Futterkammer: keine vorrätig)</i>" : ""}</small></span><span class="stat ${L > 3 ? "warn" : "ok"}">heute ${L}</span></li>`; })()}
           <li><span class="ico">💧</span><span class="txt">Wasser<small>Selbsttränke</small></span><span class="stat ok">frisch</span></li>
@@ -5297,6 +5298,16 @@
       `<p class="text" style="margin:4px 0 0"><small>Bedarf: Erhaltung ${W.B.energieGrund.toLocaleString("de-DE")} MJ (0,52 × Gewicht^0,75, ${W.B.kg} kg)${W.B.gruende.length ? " · " + W.B.gruende.join(" · ") : ""} · Kosten etwa ${fmt(W.kosten)} am Tag${p.weide && !heuNoetig() ? " · heute auf der Weide: Gras ersetzt das Raufutter" : ""}</small></p>`;
   }
   // Futterplan-Fenster (Box → Pferdepflege → Versorgung → Futterplan, auch aus Ausrüstung → Futter)
+  // Box – ppf – Versorgung: was das Pferd heute bekommen hat (Krippe und Weide)
+  function heuteGefressenHTML(p, box) {
+    const F = p.futterHeute && p.futterHeute.tag === spiel.tag ? p.futterHeute.genutzt : null, teile = [];
+    if (F) Object.entries(F).filter(([k, x]) => FUTTER[k] && x > 0).forEach(([k, x]) => teile.push(`${FUTTER[k].n} ${fmtKg(x)}`));
+    if (p.leckHeute && p.leckHeute.tag === spiel.tag) Object.entries(p.leckHeute.kg || {}).forEach(([k, x]) => { if (FUTTER[k] && x > 0) teile.push(`${FUTTER[k].n} ${fmtKg(x)}`); });
+    const weide = p.weide && !heuNoetigP(p);
+    if (!teile.length && !weide) return "";
+    const w = weide ? `🌿 Weide: frisst Gras – deckt etwa ${Math.round(WEIDE_ENERGIE[datum().s] * 100)} % des Energiebedarfs${F && Object.keys(F).some(k => FUTTER[k] && FUTTER[k].art !== "raufutter" && k !== "mineral" && F[k] > 0) ? "; das Kraftfutter aus der Krippe hat es vorher gefressen" : ""}${F && RAUFUTTER_REIHE.some(k => F[k] > 0) ? "; das Heu aus der Krippe frisst es danach (ersetzt einen Teil des Grases)" : ""}` : "";
+    return `<li><span class="ico">🍽️</span><span class="txt">Heute gefressen<small>${teile.length ? `Krippe: ${teile.join(", ")}` : ""}${teile.length && w ? "<br>" : ""}${w}</small></span></li>`;
+  }
   function futterplanDialog(p, box, zurueck) {
     const eigener = !!(p.futterplan && p.futterplan.kg), P = eigener ? p.futterplan : standardPlan(p, box), F = futterkammer();
     const zeile = k => { const x = P.kg[k] || 0, Z = FUTTER[k];
@@ -5339,7 +5350,10 @@
     if (H && box && box.fohlen) { const k = RAUFUTTER_REIHE.find(x => H[x] > 0); if (k) H[k] = Math.max(0, H[k] - gewicht(box.fohlen) * 0.01); }   // Anteil des Fohlens bei Fuß
     const L = p.leckHeute && p.leckHeute.tag === spiel.tag - 1 ? p.leckHeute.kg : null;
     if (H && L) Object.entries(L).forEach(([k, x]) => H[k] = (H[k] || 0) + x);   // Leckerli zählen mit (Energie, Zucker)
-    if (ort === "weide" && !heuNoetigP(p, spiel.tag - 1)) { ratio = WEIDE_ENERGIE[sGestern]; S.weide = true; S.mineral = true; }   // Gras liefert Mineralien mit
+    if (ort === "weide" && !heuNoetigP(p, spiel.tag - 1)) { ratio = WEIDE_ENERGIE[sGestern]; S.weide = true; S.mineral = true;   // Gras liefert Mineralien mit
+      // Dome (v236): vorher in der Box gefüttert → Kraftfutter frisst das Pferd vor dem Weidegang (zählt zusätzlich), Heu aus der Krippe ersetzt einen Teil des Grases
+      if (H) { const kraft = Object.fromEntries(Object.entries(H).filter(([k]) => FUTTER[k] && FUTTER[k].art !== "raufutter"));
+        if (Object.keys(kraft).length) ratio += planWerte(p, box, { mahl: futterplanVon(p, box).mahl, kg: kraft }).energie / B.energie; S.krippe = true; } }
     else if (hungrig) { ratio = 0; S.hunger = true; }
     else if (!H) ratio = 1;   // ohne Aufzeichnung (z. B. Test): wie Standardplan
     else {
@@ -7991,6 +8005,7 @@
       <p><b>Bauland und Weideland</b> (Dome, v225): Bauland ${fmt(BAULAND_PREIS)}/ha (nur kaufen), Weideland ${fmt(LAND_PREIS)}/ha oder Pacht ${fmt(PACHT_PREIS)}/ha je Jahreszeit. Platzbedarf auf dem Bauland: Wohnhaus/Hofplatz ${haTxt(HOFPLATZ)}, Stall ${haTxt(0.1)} je 6 Boxen, Paddockboxen ${haTxt(0.15)} je 6, Reitplatz ${haTxt(0.1)}, Reithalle ${haTxt(0.15)}, Roundpen/Trail/Sandpaddock/Waschplatz/Lager/Sattelkammer/Quarantänestall/Abfohlbox je ${haTxt(0.05)}. Weide einzäunen nur auf Weideland. Start-Pensionsstall: 1 ha Bauland + 1 ha Weideland. Makler-Höfe: Bauland nach Bestand + 0,1 ha, auf ½ ha aufgerundet; Grundstück 1 ha Bauland.
         <b>Quarantänestall:</b> gekaufte Pferde (Markt, Auktion, Tierschutz) kommen zuerst in eine freie Quarantänebox und stehen 1 Jahreszeit unter Quarantäne; danach ziehen sie – ohne bekannte ansteckende Krankheit – automatisch in eine freie normale Box (Brief). Normale Umzüge nutzen den Quarantänestall nur, wenn sonst nichts frei ist.
         <b>Hufrehe-Warnung</b> im Frühling für gefährdete Pferde (leichtfuttrige Rassen ${LEICHTFUTTRIG.join(", ")}, Futterzustand ab 7, Hufrehe oder Cushing bekannt): Hinweis beim Weidegang und Brief zu Frühlingsbeginn für alle gefährdeten Pferde auf der Weide.</p>
+      <p><b>Krippe und Weide</b> (Dome, v236): Wurde vor dem Weidegang gefüttert, geht nichts verloren – Kraftfutter frisst das Pferd vorher in der Box (zählt zusätzlich zur Weide-Energie), Heu danach (ersetzt Gras). Box – ppf – Versorgung bzw. das Weide-Feld zeigt „Heute gefressen“ mit allen Sorten und Mengen.</p>
       <p><b>Übersicht je Hof</b> (v230, Immobilien → Verwaltung): Kasse, Restkredit, nächste Rate (inklusive offener Raten), Einnahmen/Ausgaben der letzten Jahreszeit, Heuvorrat in Tagen (mit bestellter Lieferung); rot, wenn die Kasse die nächste Rate nicht deckt oder das Heu nur noch weniger als 3 Tage reicht. Hofplan: Gebäude als kleine Zeichnungen auf dem Bauland (je ha-Kachel bis 9), Baustellen orange gestrichelt, Zahl = Boxen.</p>
       <p><b>Vorwarnung Kreditrate</b> (v229): 2 Tage vor Ende der Jahreszeit Brief der Hausbank, wenn die Kasse die fällige Rate (inklusive offener Raten) nicht deckt. <b>Baulärm:</b> solange gebaut wird (Außenarbeiten ruhen im Winter), je Nacht Wohlbefinden −1,5 × Nervosität (Charakter Nerven unter 30) und −1 für Senioren ab 20 Jahren. <b>Abfohlbox:</b> kein Umbau, solange eine Stute auf dem Hof in der letzten Jahreszeit vor der Geburt ist.</p>
       <p><b>Allein:</b> Ist ein Pferd das einzige auf dem Hof und sonst gut versorgt, fällt sein Wohlbefinden durch das Alleinsein höchstens auf ${ALLEIN_MIN} % (Dome, v228).</p>

@@ -10,7 +10,7 @@ Ausführliche Gesprächsnotizen: `werte/plan.md` *(liegt noch im Planungsprojekt
 - [x] Etappe 2b – Weide und Herde (v166–168, von Dome getestet)
 - [x] Etappe 3 – Vorlieben und Reaktionen (v169–171, Sprechblasen und seltenere Vorlieben; von Dome getestet)
 - [x] Etappe 4 – Training daheim (v198, von Claude per Skript getestet – 54 Prüfungen; Dome macht später einen Gesamttest) · Krankheiten-Plan A–H ist erledigt. Mit Dome abgestimmt: Spieler hat erstmal nur Reitplatz und Gelände (Admin: alle Orte), jede Stufe der Ausbildungsskala einzeln gespeichert, Bereiter nach Plan **oder** „entscheidet selbst“.
-- [ ] Etappe 5 – Disziplinen
+- [x] Etappe 5 – Disziplinen (v200, von Claude per Skript getestet). Mit Dome abgestimmt: eigener Stand je Disziplin (Springen, Western, Gelände/Kondition), Western-Stufen Einsteiger/Rookie/Novice/Intermediate/Open, Springhöhe ≈ 0,95 × Stockmaß.
 - [ ] Etappe 6 – Turniere · **Danach kommt `PLAN-FUETTERUNG.md` (Etappen F1–F5) – eine Werte-Etappe 7 gibt es nicht. Vorher Dome fragen: „Mit Fütterung F1 weitermachen?“ (Dome, 5.10.2026).**
 
 **Ziel:** Alles greift ineinander. Charakter, körperliche und mentale Werte, Versorgung (Wohlbefinden), Training, Ausbildung, Gangwerk, Disziplinen und Turniere beeinflussen sich gegenseitig. Jedes Pferd soll ein echtes Spezialtalent haben statt überall gut zu sein.

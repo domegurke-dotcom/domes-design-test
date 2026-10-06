@@ -774,7 +774,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "190";
+  const SPIEL_VERSION = "191";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -782,9 +782,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=190"></script>
-<script src="kopfteile.js?v=190"></script>
-<script src="kopfalter.js?v=190"></script>
+<script src="pferd.js?v=191"></script>
+<script src="kopfteile.js?v=191"></script>
+<script src="kopfalter.js?v=191"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3403,7 +3403,7 @@
         const besser = BW.wert > 0 ? Math.min(0.8, BW.wert / ((K.heil || 4) * 0.5) / regF) : (b.grad <= 2 ? K.selbst : 0);
         if ((!K.chronisch || b.grad > 1) && Math.random() < besser) { b.grad--;
           if (b.grad <= 0) { if (BW.wert > 0 && !b.diagnose) { b.diagnose = spiel.tag; befundAufklaeren(p, b); }
-            befundAbschliessen(p, b, BW.wert > 0 ? (b.tierarzt ? "geheilt (Tierarzt-Plan)" : "geheilt (selbst behandelt)") : "von selbst verheilt"); return; } }
+            befundAbschliessen(p, b, BW.wert > 0 ? (b.tierarzt ? "geheilt (Tierarzt-Plan)" : b.hufschmied ? "geheilt (Rat vom Hufschmied)" : "geheilt (selbst behandelt)") : "von selbst verheilt"); return; } }
         else if (Math.random() < K.schlimmer * (1 - BW.wert) * (K.chronisch && b.diagnose ? 0.5 : 1) + BW.schaden && b.grad < 5) { b.grad++; if (b.grad === 5) b.grad5 = spiel.tag; }
         b.gradMax = Math.max(b.gradMax || 0, b.grad);
         b.behGestern = BW.wert;
@@ -3511,7 +3511,7 @@
   const tageTxt2 = n => `${n} ${n === 1 ? "Tag" : "Tagen"}`;
   function befundZeilen(p) {
     return bekannteBefunde(p).filter(b => b.diagnose).map(b => { const K = KRANK[b.art], seit = spiel.tag - b.seit;
-      const gut = b.behGestern || 0, info = `${b.tierarzt ? `Tierarzt-Plan: ${(PLAN[b.art] || []).map(behName).join(", ")}` : "noch kein Tierarzt"} · gestern ${gut >= 0.6 ? "gut behandelt" : gut > 0 ? "etwas behandelt" : "nicht behandelt"}`;
+      const gut = b.behGestern || 0, info = `${b.tierarzt ? `Tierarzt-Plan: ${(PLAN[b.art] || []).map(behName).join(", ")}` : b.hufschmied ? `Rat vom Hufschmied: ${hufschmiedRat(b.art).map(behName).join(", ")} · noch kein Tierarzt` : "noch kein Tierarzt"} · gestern ${gut >= 0.6 ? "gut behandelt" : gut > 0 ? "etwas behandelt" : "nicht behandelt"}`;
       return `<li><span class="ico">${K.ico}</span><span class="txt">Befund: ${K.n}<small>seit ${tageTxt2(seit)} · ${esc(b.ursache || "Ursache unklar")} · ${info}</small></span><span class="stat ${b.grad <= 1 ? "warn" : "bad"}">${GRAD_TEXT[b.grad]}</span></li>`; }).join("");
   }
   function befundKarten(p, box) {
@@ -3675,8 +3675,8 @@
     const nimm = a => Object.keys(a).filter(k => (AKTION[k] || APO[k]) && k !== "boxenruhe" && k !== "wurmkur").map(k => ({ k, stufe: APO[k] && APO[k].dosis ? a[k] : 0 }));
     const H = behHeute(p).a, heute = nimm(H); if (heute.length) return { akt: heute, quelle: "heutige Behandlung" };
     if (p.behLetzt && nimm(p.behLetzt.a).length) return { akt: nimm(p.behLetzt.a), quelle: "letzte Behandlung" };
-    const ta = [...new Set(befundListe(p).filter(b => b.tierarzt).flatMap(b => PLAN[b.art] || []))].filter(k => k !== "boxenruhe");
-    if (ta.length) return { akt: ta.map(k => ({ k, stufe: APO[k] && APO[k].dosis ? dosisKlasse(gewicht(p)) : 0 })), quelle: "Tierarzt-Plan" };
+    const ta = [...new Set(befundListe(p).filter(b => b.tierarzt || b.hufschmied).flatMap(b => b.tierarzt ? PLAN[b.art] || [] : hufschmiedRat(b.art)))].filter(k => k !== "boxenruhe");
+    if (ta.length) return { akt: ta.map(k => ({ k, stufe: APO[k] && APO[k].dosis ? dosisKlasse(gewicht(p)) : 0 })), quelle: befundListe(p).some(b => b.tierarzt) ? "Tierarzt-Plan" : "Rat vom Hufschmied" };
     return null;
   }
   function behandlungHTML(p, box) {
@@ -3793,10 +3793,14 @@
     if (p.eisenWeg) { delete p.eisenWeg; if (art === "beschlag") z.push("verlorenes Eisen ersetzt"); }
     l.filter(b => ["strahlfaeule", "hufabszess", "hornspalt"].includes(b.art)).forEach(b => { const K = KRANK[b.art];
       if (!b.diagnose) { b.diagnose = spiel.tag; befundAufklaeren(p, b); } if (!b.bemerkt) b.bemerkt = { von: "Hufschmied", tag: spiel.tag };
-      b.grad = Math.max(1, b.grad - 1); b.tierarzt = true; z.push(`${K.ico} ${K.n} gefunden und versorgt (jetzt ${GRAD_TEXT[b.grad]}) – weiter: ${(PLAN[b.art] || []).map(behName).join(", ")}`); });
+      b.grad = Math.max(1, b.grad - 1); b.hufschmied = true;
+      const rat = hufschmiedRat(b.art), braucht = (PLAN[b.art] || []).filter(k => APO[k] && !APO[k].frei);
+      z.push(`${K.ico} ${K.n} gefunden und versorgt (jetzt ${GRAD_TEXT[b.grad]}) – mein Rat: ${rat.map(behName).join(", ")}${braucht.length ? `. Gegen die Schmerzen ${braucht.length === 1 ? "hilft" : "helfen"} ${braucht.map(k => APO[k].n).join(", ")} – das verschreibt nur der Tierarzt` : ""}`); });
     if (l.some(b => ["strahlfaeule", "hufabszess", "hornspalt"].includes(b.art))) behHeute(p).a.tierarzt = 1;
     return { posten, z };
   }
+  // was der Hufschmied rät: nur, was man ohne Rezept selbst machen kann
+  const hufschmiedRat = art => (PLAN[art] || []).filter(k => !(APO[k] && !APO[k].frei));
   function hufschmiedKommt(pferde, art, grund) {
     if (!pferde.length) return;
     const anfahrt = spiel.hufschmiedHeute !== spiel.tag; spiel.hufschmiedHeute = spiel.tag;   // war er heute schon da: keine zweite Anfahrt

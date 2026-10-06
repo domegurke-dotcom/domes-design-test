@@ -54,6 +54,7 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
    5. Rennbahn (nur Rennstall, Sand oder Gras wählbar): Sand 6.000 / 9.000 / 13.000 €, Gras 4.500 / 7.000 / 10.000 €
    6. Weide einzäunen je ha 200 / 300 / 450 €, Sandpaddock 300 / 500 / 700 €, Waschplatz 300 / 500 / 800 €, Sattelkammer 500 / 800 / 1.200 €
    7. Futter- und Strohlager 1.500 / 2.500 / 4.000 € (höhere Stufe = mehr Platz, weniger Verderb; nutzt das Lagergrößen-Feld aus F1)
+   7a. *(Nachtrag Claude v218, Dome 7.10.2026)* **Heudampfer** fürs Futterlager (Preis noch festlegen): setzt `spiel.anlage.heudampfer = true` – Heu wässern/bedampfen kostet dann keine Arbeitszeit mehr (beim Stallburschen sonst 1½ Boxen).
    8. Quarantänestall 2 Boxen 1.500 / 2.400 / 3.600 € (Neuzugänge dort: kein Ansteckungsrisiko)
    9. Abfohlbox einzeln 600 / 900 / 1.400 €; im Zuchtstall 5 Abfohlboxen 2.500 / 4.000 / 6.000 €; Aufzucht-Offenstall mit Fohlenweide 3.000 / 4.500 / 7.000 € + Land
    10. Futterwiese = Land + Weide einzäunen

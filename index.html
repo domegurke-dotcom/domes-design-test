@@ -799,7 +799,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "217";
+  const SPIEL_VERSION = "218";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -807,9 +807,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=217"></script>
-<script src="kopfteile.js?v=217"></script>
-<script src="kopfalter.js?v=217"></script>
+<script src="pferd.js?v=218"></script>
+<script src="kopfteile.js?v=218"></script>
+<script src="kopfalter.js?v=218"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2465,7 +2465,8 @@
         <p class="text">Box ${aktBox + 1} bleibt für ${pron(p).ihn} frei. ${tage ? `Seit ${tage} ${tage === 1 ? "Tag" : "Tagen"} auf der Weide` : "Heute auf die Weide gekommen"}${box.fohlen ? ` – Fohlen ${esc(box.fohlen.name)} ist mit dabei` : ""}. Gras statt Heu, kein Misten nötig.</p>
         <div class="zeile-wert"><div class="kopf"><b>Gesundheit</b><span>${g.toLocaleString("de-DE")} % · +${WEIDE_PLUS[datum().s]} % pro Tag im ${JZ[datum().s][0]}</span></div><div class="balken"><i style="width:${g}%"></i></div></div>
         <div class="zeile-wert"><div class="kopf"><b>Wohlbefinden</b><span>${w} %</span></div><div class="balken"><i style="width:${w}%;background:#5a9a6a"></i></div>${wohlGruende(p)}</div>
-        ${heuNoetig() ? (box.krippeVoll ? `<p class="text">🌾 Heu liegt auf der Weide bereit.</p>` : `<p class="text">🌾 <b>Kaum Gras</b> – ${JZ[datum().s][0] === "Winter" ? "im Winter" : "am letzten Herbsttag"} muss Heu auf die Weide, sonst bleibt ${esc(p.name)} hungrig.</p><button class="knopf" id="weideHeu" style="width:auto;padding:9px 14px;margin:0 8px 8px 0">🌾 Heu auf die Weide</button>`) : ""}
+        ${anweidenAktiv(p) ? `<p class="text">🌱 <b>Anweiden</b>: Tag ${spiel.tag - p.anweiden + 1} von ${anweidenTage()} – ${esc(p.name)} steht erst stundenweise draußen, damit sich der Darm ans Gras gewöhnt, und braucht dazu Heu.</p>` : ""}
+        ${heuNoetigP(p) ? (box.krippeVoll ? `<p class="text">🌾 Heu liegt auf der Weide bereit.</p>` : `<p class="text">🌾 <b>${anweidenAktiv(p) && !heuNoetig() ? "Heu dazu" : "Kaum Gras"}</b> – ${anweidenAktiv(p) && !heuNoetig() ? "beim Anweiden" : JZ[datum().s][0] === "Winter" ? "im Winter" : "am letzten Herbsttag"} muss Heu auf die Weide, sonst bleibt ${esc(p.name)} hungrig.</p><button class="knopf" id="weideHeu" style="width:auto;padding:9px 14px;margin:0 8px 8px 0">🌾 Heu auf die Weide</button>`) : ""}
         ${herdeText(p)}
         ${befundZeilen(p) ? `<ul class="liste">${befundZeilen(p)}</ul>` : ""}${befundKarten(p, box)}
         <button class="knopf" id="vonWeide" style="width:auto;padding:9px 14px;margin-top:8px">🏠 Zurück in die Box</button></div>`;
@@ -2764,16 +2765,7 @@
       }
     }
     else if (aktenReiter === "test") {
-      const typen = [["duenn", "Dünn", "Rippen sichtbar, hager"], ["sportlich", "Sportlich", "Muskeln, schlank"], ["normal", "Normal", "Wohlgenährt"], ["dick", "Dick", "Fettpolster"]];
-      const jetzt = p.typ || "normal";
-      inhalt = `<p class="text" style="margin:0 0 4px">🧪 <b>Test: Körpertyp</b> · antippen zum Umschalten</p>
-        <div class="kacheln klein">${typen.map(([id, n, info]) => {
-          const z = zeichnePferd(p.rasse, fb(p), { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, schopf: p.schopf, typ: id });
-          const svg = ohneAnim(z.svg);
-          return `<button class="kachel ${id === jetzt ? "aktuell" : "klickbar"}" data-typ="${id}">
-            <svg class="mini" viewBox="${(z.box.minX - 3).toFixed(1)} ${(z.box.minY - 3).toFixed(1)} ${(z.box.maxX - z.box.minX + 6).toFixed(1)} ${(-z.box.minY + 6).toFixed(1)}">${svg}</svg>
-            <b>${n}</b><small>${id === jetzt ? "aktuell" : info}</small></button>`;
-        }).join("")}</div>
+      inhalt = `
         <p class="text" style="margin:14px 0 4px">⏩ <b>Test: Zeit</b> · jeden Tag gefüttert und ausgemistet</p>
         <button class="knopf" id="naechsteJZ" style="width:100%;margin-top:8px">Bis zur nächsten Jahreszeit</button>
         
@@ -2859,7 +2851,8 @@
         if (!p.weide && inQuarantaene(p)) { dialog(`<h3>🚧 Quarantäne</h3><p>${esc(p.name)} steht unter Quarantäne und darf nicht auf die Weide (noch ${tageTxt2(tpj() - (spiel.tag - p.quarantaene))}).</p>`); return; }
         if (!p.weide && p.boxenruhe) { dialog(`<h3>🛏️ Boxenruhe</h3><p>${esc(p.name)} hat Boxenruhe und darf nicht auf die Weide. Du kannst sie unter Pflege → Versorgung beenden.</p>`); return; }
         if (p.weide) { vonWeideHolen(box); meldung = `🏠 ${esc(p.name)} ist zurück in Box ${aktBox + 1}.`; reaktionZeigen(reaktion(p, "box")); }
-        else { reaktionZeigen(reaktion(p, "weide")); p.weide = { seit: spiel.tag }; p.boxTage = 0; box.vorWeide = { tag: spiel.tag, krippe: box.krippeVoll, mist: box.mistig, stufe: box.mistStufe || 0 }; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0; meldung = "";
+        else { reaktionZeigen(reaktion(p, "weide")); p.weide = { seit: spiel.tag };
+          if (!heuNoetig() && spiel.tag - (p.weideZuletzt != null ? p.weideZuletzt : -999) > tpj()) p.anweiden = spiel.tag; else delete p.anweiden;   // lange keine Weide → anweiden p.boxTage = 0; box.vorWeide = { tag: spiel.tag, krippe: box.krippeVoll, mist: box.mistig, stufe: box.mistStufe || 0 }; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0; meldung = "";
           const herde = spiel.boxen.filter(b => b.pferd && b.pferd.weide && !b.pferd.klinik && !b.tot).map(b => b.pferd);
           if (!spiel.hinweisDecken && herde.some(deckfaehig) && herde.some(q => q.geschlecht === "Stute" && alterJZ(q) >= 12)) { spiel.hinweisDecken = true;
             setTimeout(() => dialog(`<h3>⚠️ Hengst und Stute zusammen</h3><p>Auf der Weide stehen jetzt ein Hengst und eine Stute zusammen. Dabei kann es zu einer <b>ungeplanten Bedeckung</b> kommen – ob die Stute tragend ist, merkst du erst später.</p>`), 0); } }
@@ -2912,7 +2905,6 @@
     };
     const njz = $("naechsteJZ"); if (njz) njz.onclick = () => tageTest(tpj() - datum().t + 1);
     INFO.querySelectorAll("[data-nase]").forEach(b => b.onclick = () => { p.nase = b.dataset.nase; speichern(); zeigeStall(); });
-    INFO.querySelectorAll("[data-typ]").forEach(b => b.onclick = () => { p.typ = b.dataset.typ; p.fz = ({ duenn: 2, dick: 8 })[p.typ] || 5; p.fzTage = 0; p.typFest = true; speichern(); zeigeStall(); });
     const sk = $("scherKachel"); if (sk) sk.onclick = () => { scherModus = true; meldung = ""; zeigeAkte(); };
     const zk = $("zaumKachel"); if (zk) zk.onclick = () => { zaumModus = true; meldung = ""; zeigeAkte(); };
     const zz = $("zaumZurueck"); if (zz) zz.onclick = () => { zaumModus = false; zeigeAkte(); };
@@ -3465,7 +3457,7 @@
     const s = datum(spiel.tag - 1).s, j = alterJZ(p) / 4, w = p.werte || {}, an = w.anlage || {}, ist = w.ist || {};
     const konst = 1.5 - (an.konstitution != null ? an.konstitution : 50) / 100;
     const wohl = wohlbefinden(p), wohlF = wohl < 30 ? 2.2 : wohl < 50 ? 1.5 : 1;
-    const altF = j >= 20 ? 1.6 : j >= 15 ? 1.3 : 1, dreck = dreckWert(p) >= 50, mist = ort === "box" && box.mistig, hungrig = !box.krippeVoll && (ort === "box" || heuNoetig(spiel.tag - 1));
+    const altF = j >= 20 ? 1.6 : j >= 15 ? 1.3 : 1, dreck = dreckWert(p) >= 50, mist = ort === "box" && box.mistig, hungrig = !box.krippeVoll && (ort === "box" || heuNoetigP(p, spiel.tag - 1));
     const zaeh = 1.3 - (ist.zaehigkeit != null ? ist.zaehigkeit : 50) / 100 * 0.6;
     const f = {
       verletzung: ort === "weide" ? 1.5 : 1,
@@ -3577,6 +3569,7 @@
       if (b.grad >= 4) b.gewarnt = true;
       if (!gezeigt && !p.weide) { gezeigt = true; reaktionZeigen(`${b.grad >= 4 ? "⚠️ " : ""}${anzeichenText(b)}`); }
     });
+    if (!gezeigt && !p.weide && p.staubAngeschaut !== spiel.tag) { p.staubAngeschaut = spiel.tag; const t = staubAnzeichen(p); if (t && Math.random() < 0.6) reaktionZeigen(t); }   // F4: Vorzeichen bei staubigem Heu
   }
   // Erfahrung, sobald die echte Ursache klar ist (Diagnose durch den Tierarzt)
   function befundAufklaeren(p, b) {
@@ -4262,6 +4255,7 @@
     const vm = veranlagungVon(M), vv = veranlagungVon(V), vl = {};
     Object.keys(VERANLAGUNG).forEach(k => vl[k] = Math.round(Math.max(0, Math.min(1, ((vm[k] || 0) + (vv[k] || 0)) / 2 + (Math.random() - 0.5) * 0.2)) * 100) / 100);
     f.vl = vl;
+    f.stoffw = Math.round(Math.max(0.85, Math.min(1.15, (stoffwechsel(M) + stoffwechsel(V)) / 2 + (Math.random() - 0.5) * 0.08)) * 100) / 100;   // Futterverwertung vererbt
   }
   const erbKrank = (p, k) => { const n = erbVon(p)[k] || 0; return ERBKRANK[k].dominant ? n >= 1 : n >= 2; };
   // Folgen direkt bei der Geburt (Fohlen f bei Mutter M)
@@ -5081,7 +5075,7 @@
   // Raufutter laut Plan; fehlt eine geplante Sorte, nimmt man anderes Raufutter (Heu, Heulage, staubiges Heu, Heucobs, Stroh). Kraftfutter und Zusätze: fehlt die Sorte, bekommt das Pferd sie nicht (Warnbrief).
   function fuetternAusLager(box, wer) {
     const F = futterkammer(), p = box.pferd; if (!p) return false;
-    const R = tagesRation(p, box, p.weide && !heuNoetig());
+    const R = tagesRation(p, box, p.weide && !heuNoetigP(p));
     const vorrat = RAUFUTTER_REIHE.reduce((a, k) => a + F.lager[k], 0);
     const perBrief = wer !== "du";   // Dome: Warnbrief nur, wenn ein Mitarbeiter (oder unterwegs beim Turnier) nicht füttern konnte – der Spieler sieht es selbst
     if (vorrat + 1e-9 < R.raufutter) { if (perBrief) futterWarnung("raufutter"); return false; }
@@ -5103,7 +5097,7 @@
   // Verbrauch pro Tag (alle Pferde in den Boxen) für die Reichweite
   function futterVerbrauchTag() {
     let rau = 0, min = 0, kosten = 0; const je = {};
-    spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot || p.klinik || (p.weide && !heuNoetig())) return; const R = tagesRation(p, b, false); rau += R.raufutter; min += R.mineral;
+    spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot || p.klinik || (p.weide && !heuNoetigP(p))) return; const R = tagesRation(p, b, false); rau += R.raufutter; min += R.mineral;
       Object.entries(R.kg).forEach(([k, x]) => { je[k] = (je[k] || 0) + x; kosten += FUTTER[k] ? FUTTER[k].preis * x : 0; }); });
     return { raufutter: Math.round(rau * 10) / 10, mineral: Math.round(min * 100) / 100, je, kosten: Math.round(kosten * 100) / 100 };
   }
@@ -5164,7 +5158,7 @@
     const R = tagesRation(p, box), H = p.futterHeute && p.futterHeute.tag === spiel.tag ? p.futterHeute : null, eigen = !!(p.futterplan && p.futterplan.kg);
     dialog(`<h3>🌾 Futter für ${esc(p.name)}</h3><p>Gewicht ca. ${gewicht(p)} kg · ${eigen ? "eigener Futterplan" : "Standardplan"} am Tag (${futterplanVon(p, box).mahl} Mahlzeiten):</p>
       <ul class="liste">${Object.entries(R.kg).map(([k, x]) => `<li><span class="txt">${FUTTER[k].ico} ${FUTTER[k].n} ${fmtKg(x)}</span></li>`).join("")}</ul>
-      <p class="text"><small>${box && box.fohlen ? `Inkl. ${esc(box.fohlen.name)} (frisst mit). ` : ""}${p.weide && !heuNoetig() ? "Heute auf der Weide: Gras statt Heu. " : ""}${box && box.leckstein === jzJetzt() ? "🧊 Salzleckstein in der Box." : "Kein Salzleckstein in der Box."}</small></p>
+      <p class="text"><small>${box && box.fohlen ? `Inkl. ${esc(box.fohlen.name)} (frisst mit). ` : ""}${p.weide && !heuNoetigP(p) ? "Heute auf der Weide: Gras statt Heu. " : p.weide && anweidenAktiv(p) ? "Wird angeweidet: Gras und Heu. " : ""}${box && box.leckstein === jzJetzt() ? "🧊 Salzleckstein in der Box." : "Kein Salzleckstein in der Box."}</small></p>
       ${H ? `<p class="text"><small>Heute gefüttert: ${Object.entries(H.genutzt).map(([k, x]) => `${FUTTER[k].n} ${fmtKg(x)}`).join(", ") || "Gras"}.</small></p>` : `<p class="text"><small>Heute noch nicht gefüttert.</small></p>`}`,
       [["📋 Futterplan", () => futterplanDialog(p, box, () => zeigeAkte())], ["Zur Futterkammer", () => { zeigeHof("hof"); }, "zweit"], ["Schließen", null, "zweit"]]);
   }
@@ -5180,7 +5174,9 @@
   function arbeitNacht(p) { const T = p.trainHeute && p.trainHeute.tag === spiel.tag - 1 ? p.trainHeute.verbraucht || 0 : 0, tur = p.turnierGestern ? 50 : 0;
     p.arbeitSchnitt = Math.round(((p.arbeitSchnitt || 0) * 0.6 + (T + tur) * 0.4) * 10) / 10; delete p.turnierGestern; }
   // Bedarf am Tag: Energie (MJ), Eiweiß-Anteil (%), Raufutter-Minimum (kg), Stärke je Mahlzeit (g), Kraftfutter je Mahlzeit (kg), Öl (kg)
-  function futterBedarf(p, box) {
+  // individuelle Futterverwertung (versteckt, vererbt): 0,85–1,15 – „guter“ oder „schlechter Futterverwerter“; merkt man nur am Futterzustand
+  const stoffwechsel = p => { if (p.stoffw == null) p.stoffw = Math.round((0.88 + zufall("sw-" + (p.id || p.name))() * 0.24) * 100) / 100; return p.stoffw; };
+  function futterBedarf(p, box, echt) {
     const kg = gewicht(p), gruende = [];
     let e = 0.52 * Math.pow(kg, 0.75), f = 1;
     const [an, az] = arbeitStufe(p); if (az) { f += az; gruende.push(`Arbeit ${an} +${az * 100} %`); }
@@ -5190,6 +5186,8 @@
     if (p.weide && datum().s === 3) { f += 0.1; gruende.push("Winter auf der Weide +10 %"); }
     if (LEICHTFUTTRIG.includes(p.rasse)) { f -= 0.15; gruende.push("leichtfuttrig −15 %"); }
     if (SCHWERFUTTRIG.includes(p.rasse)) { f += 0.15; gruende.push("schwerfuttrig +15 %"); }
+    if (p.boxenruhe) { f -= 0.1; gruende.push("Boxenruhe −10 %"); }   // Bewegung: Boxenruhe braucht weniger, Training (Arbeit) mehr
+    if (echt) f *= 2 - stoffwechsel(p);   // tatsächlicher Bedarf mit Veranlagung (guter Futterverwerter braucht weniger) – die Anzeige zeigt nur die Schätzung
     return { kg, energie: Math.round(e * f * 10) / 10, energieGrund: Math.round(e * 10) / 10, gruende, eiweiss: (box && box.fohlen) || alterJZ(p) < 4 ? 14 : 10,
       rauMin: Math.round(kg / (1 + 0.03 * ((p.fz || 5) - 5)) * 0.015 * 10) / 10,  staerkeMahl: kg * 1, kraftMahl: kg * 0.003, oelMax: kg * 0.001 };   // Raufutter-Minimum vom Idealgewicht (Futterzustand 5) aus
   }
@@ -5233,15 +5231,17 @@
         <p class="fk-gruppe">Zusätze</p>${PLAN_SORTEN.filter(k => FUTTER[k].art === "zusatz").map(zeile).join("")}
         ${(() => { const sp = PLAN_SORTEN.filter(k => FUTTER[k].art === "spezial" && (P.kg[k] || spezialFrei(FUTTER[k].spezial))); return sp.length ? `<p class="fk-gruppe">Spezialfutter</p>${sp.map(zeile).join("")}` : ""; })()}</div>
       ${p.umstellung ? `<p class="text fp-umst"><small>🔄 <b>Futterumstellung: Tag ${umstellungTag(p)} von 3</b> – der neue Plan wird langsam eingeführt (heute ${umstellungTag(p) === 1 ? "⅓" : umstellungTag(p) === 2 ? "⅔" : "ganz"} neu), damit der Darm sich gewöhnen kann.</small></p>` : ""}
-      <p class="text" style="margin:6px 0"><label class="fp-check"><input type="checkbox" id="fpWaessern" ${p.heuWaessern ? "checked" : ""}> 💧 Heu vor dem Füttern wässern <small>(bindet den Staub – gut bei Husten)</small></label></p>
-      <h4 class="ma-titel">Bedarf gedeckt?</h4><p class="text" style="margin:0 0 6px"><small>Aussehen: <b>${FZ_NAME[futterZustand(p)]}</b> · ca. ${gewicht(p)} kg${spiel.admin ? ` · <i>Admin: Futterzustand ${p.fz}, Zähler ${p.fzTage || 0}${p.typFest ? ", Körpertyp fest" : ""}, Atemwege ${atemEmpfindlich(p) ? `empfindlich (${p.staubTage || 0} Staubtage)` : "robust"}${p.bettelt ? ", bettelt" : ""}</i>` : ""}</small></p>${bedarfHTML(p, box, P)}`,
+      ${futterexperteAngestellt() ? `<p class="text" style="margin:6px 0"><label class="fp-check"><input type="checkbox" id="fpBetreut" ${p.expertBetreut || !eigener ? "checked" : ""} ${eigener ? "" : "disabled"}> 🌾 Futterexperte berechnet den Plan jede Jahreszeit neu</label></p>` : ""}
+      <p class="text" style="margin:6px 0"><label class="fp-check"><input type="checkbox" id="fpWaessern" ${p.heuWaessern ? "checked" : ""}> 💧 Heu vor dem Füttern wässern <small>(bindet den Staub – gut bei Husten · ${heudampfer() ? "mit dem Heudampfer ohne Mehraufwand" : "kostet Zeit: zählt beim Stallburschen wie 1½ Boxen"})</small></label></p>
+      <h4 class="ma-titel">Bedarf gedeckt?</h4><p class="text" style="margin:0 0 6px"><small>Aussehen: <b>${FZ_NAME[futterZustand(p)]}</b> · ca. ${gewicht(p)} kg${spiel.admin ? ` · <i>Admin: Futterzustand ${p.fz}, Zähler ${p.fzTage || 0}, Futterverwertung ${stoffwechsel(p)}, Atemwege ${atemEmpfindlich(p) ? `empfindlich (${p.staubTage || 0} Staubtage)` : "robust"}${p.bettelt ? ", bettelt" : ""}</i>` : ""}</small></p>${bedarfHTML(p, box, P)}`,
       [...(eigener ? [["Standardplan", () => { planAendernStart(p, box); delete p.futterplan; planAendernEnde(p, box); speichern(); futterplanDialog(p, box, zurueck); }, "zweit"]] : []),
         ...(p.umstellung ? [["Sofort umstellen", () => dialog(`<h3>⚠️ Sofort umstellen?</h3><p class="text">Eine plötzliche Futterumstellung belastet den Darm: In den nächsten 2 Tagen ist das <b>Kolikrisiko doppelt so hoch</b>. In echt stellt man Futter über mehrere Tage um.</p>`,
           [["Abbrechen", () => futterplanDialog(p, box, zurueck), "zweit"], ["Trotzdem sofort", () => { delete p.umstellung; p.umstellungSofort = spiel.tag; speichern(); futterplanDialog(p, box, zurueck); }]]), "zweit"]] : []),
         ["🌾 Futterexperte", () => futterexperteDialog([p], () => futterplanDialog(p, box, zurueck)), "zweit"], ["Fertig", zurueck]], "turnier-dlg");
+    const fb2 = $("fpBetreut"); if (fb2) fb2.onchange = () => { p.expertBetreut = fb2.checked; speichern(); if (fb2.checked) { futterBeratung([p], true); speichern(); } futterplanDialog(p, box, zurueck); };
     const fw = $("fpWaessern"); if (fw) fw.onchange = () => { p.heuWaessern = fw.checked || undefined; speichern(); };
     const setze = (k, d) => { planAendernStart(p, box); const plan = p.futterplan && p.futterplan.kg ? p.futterplan : (p.futterplan = JSON.parse(JSON.stringify(standardPlan(p, box))));
-      plan.kg[k] = Math.max(0, Math.round(((plan.kg[k] || 0) + d * PLAN_SCHRITT(k)) * 100) / 100); if (!plan.kg[k]) delete plan.kg[k]; delete plan.vom; planAendernEnde(p, box); speichern(); futterplanDialog(p, box, zurueck); };
+      plan.kg[k] = Math.max(0, Math.round(((plan.kg[k] || 0) + d * PLAN_SCHRITT(k)) * 100) / 100); if (!plan.kg[k]) delete plan.kg[k]; delete plan.vom; p.expertBetreut = false; planAendernEnde(p, box); speichern(); futterplanDialog(p, box, zurueck); };
     document.querySelectorAll("[data-fp]").forEach(b => b.onclick = () => { const [k, d] = b.dataset.fp.split(":"); setze(k, +d); });
     document.querySelectorAll("[data-fpmahl]").forEach(b => b.onclick = () => { const plan = p.futterplan && p.futterplan.kg ? p.futterplan : (p.futterplan = JSON.parse(JSON.stringify(standardPlan(p, box)))); plan.mahl = +b.dataset.fpmahl; speichern(); futterplanDialog(p, box, zurueck); });
   }
@@ -5249,17 +5249,18 @@
   // Futterzustand 1–9 (p.fz, versteckt): 1–3 dünn, 4–6 normal (sportlich mit viel Training und Kraft), 7–9 dick – angezeigt über die Körperbilder
   // Täglich: gefütterte Energie über 110 % des Bedarfs → +1 Tag, unter 90 % → −1 Tag (hungrig −2); nach 5 Tagen eine Stufe rauf/runter
   const futterZustand = p => { if (p.fz == null) p.fz = ({ duenn: 2, dick: 8 })[p.typ] || 5; return p.fz; };
+  const fzSchwelle = () => Math.round(5 * Math.sqrt(tpj() / 7));   // Dome: leicht nach Spieltempo – 4 Tage/Jz → 4, 7 → 5, 10 → 6 Tage je Stufe
   const FZ_NAME = ["", "abgemagert", "sehr dünn", "dünn", "etwas mager", "gut im Futter", "etwas rund", "dick", "sehr dick", "fettleibig"];
-  const WEIDE_ENERGIE = [1.05, 1, 0.95, 0.85];   // wie gut Gras den Bedarf deckt: Frühling, Sommer, Herbst, Winter
+  const WEIDE_ENERGIE = [1.15, 1, 0.9, 0];   // wie gut Gras den Bedarf deckt: Frühling (junges, energiereiches Gras), Sommer, Herbst (Gras wird weniger) · Winter: kein Gras – nur zugefüttertes Heu zählt
   function futterNacht(p, box, ort, hungrig = !box.krippeVoll) {
     if (!p || !p.pflege) return;
-    const fz = futterZustand(p), B = futterBedarf(p, box), sGestern = datum(spiel.tag - 1).s, S = { tag: spiel.tag };
+    const fz = futterZustand(p), B = futterBedarf(p, box, true), sGestern = datum(spiel.tag - 1).s, S = { tag: spiel.tag };
     let ratio;
     let H = p.futterHeute && p.futterHeute.tag === spiel.tag - 1 ? { ...p.futterHeute.genutzt } : null;
     if (H && box && box.fohlen) { const k = RAUFUTTER_REIHE.find(x => H[x] > 0); if (k) H[k] = Math.max(0, H[k] - gewicht(box.fohlen) * 0.01); }   // Anteil des Fohlens bei Fuß
     const L = p.leckHeute && p.leckHeute.tag === spiel.tag - 1 ? p.leckHeute.kg : null;
     if (H && L) Object.entries(L).forEach(([k, x]) => H[k] = (H[k] || 0) + x);   // Leckerli zählen mit (Energie, Zucker)
-    if (ort === "weide" && !heuNoetig(spiel.tag - 1)) { ratio = WEIDE_ENERGIE[sGestern]; S.weide = true; S.mineral = true; }   // Gras liefert Mineralien mit
+    if (ort === "weide" && !heuNoetigP(p, spiel.tag - 1)) { ratio = WEIDE_ENERGIE[sGestern]; S.weide = true; S.mineral = true; }   // Gras liefert Mineralien mit
     else if (hungrig) { ratio = 0; S.hunger = true; }
     else if (!H) ratio = 1;   // ohne Aufzeichnung (z. B. Test): wie Standardplan
     else {
@@ -5274,13 +5275,12 @@
     let t = p.fzTage || 0; const d = ratio > 1.1 ? 1 : ratio === 0 ? -2 : ratio < 0.9 ? -1 : 0;
     if (d && Math.sign(d) !== Math.sign(t)) t = 0;   // Richtung gewechselt → neu zählen
     p.fzTage = d ? t + d : t > 0 ? t - 0.5 : t < 0 ? t + 0.5 : 0;   // passende Ration: Zähler läuft langsam zurück
-    if (p.fzTage >= 5) { p.fz = Math.min(9, fz + 1); p.fzTage = 0; } else if (p.fzTage <= -5) { p.fz = Math.max(1, fz - 1); p.fzTage = 0; }
-    if ((p.fz === 3 && fz === 4) || (p.fz === 7 && fz === 6) || p.fz === 1 && fz === 2 || p.fz === 9 && fz === 8)   // sichtbar dünner/dicker geworden
-      brief("Hofverwaltung", `${p.name} ist ${p.fz < fz ? "dünner" : "dicker"} geworden`, `<b>${esc(p.name)}</b> ist jetzt <b>${FZ_NAME[p.fz]}</b>. ${p.fz < fz ? "Die Rippen sind deutlich zu sehen – mehr Energie füttern (mehr Heu, Kraftfutter oder Öl)." : "Die Fettpolster werden größer – weniger Kraftfutter, Heu eher strecken (Stroh) und mehr Bewegung."} Den Futterplan {findest du|finden Sie} unter Box → Pferdepflege → Versorgung → Futterplan.`, { pferde: [p] });
+    const SW = fzSchwelle();
+    if (p.fzTage >= SW) { p.fz = Math.min(9, fz + 1); p.fzTage = 0; } else if (p.fzTage <= -SW) { p.fz = Math.max(1, fz - 1); p.fzTage = 0; }
     p.mineralMangel = S.mineral === false ? (p.mineralMangel || 0) + 1 : 0;
     p.futterStatus = S;
     if (p.umstellung && spiel.tag >= p.umstellung.ab + 3) delete p.umstellung;
-    staubNacht(p, ort === "weide" && !heuNoetig(spiel.tag - 1) ? null : H); leckerliNacht(p);
+    staubNacht(p, ort === "weide" && !heuNoetigP(p, spiel.tag - 1) ? null : H); leckerliNacht(p);
     // Folgen
     const pf = p.pflege, f2 = futterZustand(p);
     if (f2 <= 2) { pf.gesundheit = Math.max(1, r2(pf.gesundheit - 1)); wohlAendern(p, -2, "zu dünn – friert und ist schlapp"); }
@@ -5295,7 +5295,7 @@
     const mangel = S.eiweissWenig || S.mineral === false;
     [p, box && box.fohlen].forEach(q => { if (q && mangel && alterJZ(q) < 12) q.mangelJung = (q.mangelJung || 0) + 1; });
     // Körperbild aus dem Futterzustand (Admin kann im Test-Reiter einen Typ fest einstellen)
-    if (!p.typFest) p.typ = f2 <= 3 ? "duenn" : f2 >= 7 ? "dick" : (p.arbeitSchnitt || 0) >= 35 && p.werte && p.werte.ist && (p.werte.ist.kraft || 0) >= 0.75 * wertGrenze(p, "kraft") ? "sportlich" : "normal";
+    p.typ = f2 <= 3 ? "duenn" : f2 >= 7 ? "dick" : (p.arbeitSchnitt || 0) >= 35 && p.werte && p.werte.ist && (p.werte.ist.kraft || 0) >= 0.75 * wertGrenze(p, "kraft") ? "sportlich" : "normal";
   }
   // Futter-Faktor für Krankheitsrisiken (befundRisiko): wirkt je Krankheit
   function futterFaktor(p, art) {
@@ -5303,6 +5303,7 @@
     let f = 1;
     if (art === "kolik") f *= (S.rauWenig ? 2 : 1) * (S.staerkeViel ? 2 : 1) * (p.umstellungSofort >= spiel.tag - 2 ? 2 : 1);
     if (art === "hufrehe") f *= (fz >= 8 ? 2.5 : fz >= 7 ? 1.5 : 1) * (S.staerkeViel ? 1.5 : 1) * (p.weide && s === 0 && (LEICHTFUTTRIG.includes(p.rasse) || fz >= 7) ? 2 : 1);
+    if ((art === "kolik" || art === "hufrehe") && p.weide && anweidenAktiv(p, spiel.tag - 1)) f *= 1.3;   // Anweiden
     if (art === "magengeschwuer") f *= (S.rauWenig ? 3 : 0.4) * (S.staerkeViel ? 2 : 1);
     if (["erkaeltung", "husten", "influenza", "druse", "herpes", "hautpilz", "wuermer"].includes(art) && fz <= 2) f *= 1.5;   // Immunschwäche
     if (art === "arthrose" && fz >= 8) f *= 1.5;   // Gelenke belastet
@@ -5322,14 +5323,16 @@
   // ---------- Fütterung F4: Atemwege, Leckerli, Futterumstellung ----------
   // Empfindliche Atemwege (versteckte Veranlagung „atem“ ab 0,2): nur diese Pferde husten von staubigem Heu; dauerhaft staubig (ab 14 Tagen) → Pferdeasthma (chronisch)
   const atemEmpfindlich = p => (veranlagungVon(p).atem || 0) >= 0.2;
-  const STAUB_ASTHMA = 14;
+  const STAUB_ASTHMA_JZ = 3;   // Dome: Pferdeasthma erst nach mehr als 3 Jahreszeiten Staub – vorher Anzeichen (Husten beim Fressen, schwerer Atem)
+  const staubAnzeichen = p => { if (!atemEmpfindlich(p) || !p.futterStatus || !p.futterStatus.staub) return ""; const jz = (p.staubTage || 0) / tpj();
+    return jz >= 2 ? (Math.random() < 0.5 ? "hustet beim Heufressen und atmet nach Bewegung schwer" : "hustet immer wieder, die Nüstern sind weit") : jz >= 1 ? "hustet beim Heufressen" : (p.staubTage || 0) >= 3 ? "prustet und hustet kurz beim Heu" : ""; };
   function staubNacht(p, H) {
     const staub = !!H && (H.heuStaub || 0) >= 1 && !p.heuWaessern;
     if (p.futterStatus) p.futterStatus.staub = staub;
     if (!atemEmpfindlich(p)) { p.staubTage = 0; return; }
     p.staubTage = staub ? (p.staubTage || 0) + 1 : Math.max(0, (p.staubTage || 0) - 0.5);
     const hat = befundListe(p).find(b => b.art === "asthma");
-    if (staub && !hat && p.staubTage >= STAUB_ASTHMA && Math.random() < 0.05) befundNeu(p, "asthma", 1, URSACHE.asthma(p));
+    if (staub && !hat && p.staubTage > STAUB_ASTHMA_JZ * tpj() && Math.random() < 0.05) befundNeu(p, "asthma", 1, URSACHE.asthma(p));
     if (staub && hat && hat.grad < 4 && Math.random() < 0.05) hat.grad++;   // Staub verschlimmert es weiter
   }
   // Leckerli: bis 3 am Tag stärken das Vertrauen (+0,3 je Stück) – mehr → bettelt und schnappt (nach 5 solchen Tagen; verschwindet nach 14 Tagen ohne)
@@ -5373,7 +5376,7 @@
   // ---------- Fütterung F5: Futterexperte und Spezialfutter ----------
   // Futterexperte: extern auf Termin (kommt am nächsten Morgen, 80 € je Pferd, Rechnung per Brief) – fest angestellt erst im großen Stall (ab 20 Boxen): berät kostenlos sofort
   // Spezialfutter gibt es nur über ihn: er stellt es zusammen, bringt einen Vorrat für 14 Tage mit und schaltet es im Futterhandel frei
-  const FUTTER_BERATUNG = 80, SPEZIAL_VORRAT = 14;
+  const FUTTER_BERATUNG = 80, FUTTER_ANFAHRT = 30, SPEZIAL_VORRAT = 14;   // Dome: mit Anfahrtskosten (einmal je Besuch)
   const SPEZIAL = {
     schonkost: { n: "Schonkost (Mash)", ico: "🥣", e: 9, ei: 10, rf: 15, zs: 8, preis: 1.60, fuer: ["kolik"], info: "nach Kolik oder Kolik-OP – leicht verdaulich" },
     rehe: { n: "Strukturfutter Rehe/Cushing", ico: "🌿", e: 8, ei: 9, rf: 30, zs: 4, preis: 1.40, fuer: ["hufrehe", "cushing"], info: "zucker- und stärkearm – bei Hufrehe, Cushing, Übergewicht" },
@@ -5425,7 +5428,7 @@
     const F = futterkammer(); F.frei = F.frei || {}; const posten = [], zeilen = [];
     pferde.forEach(p => { const box = spiel.boxen.find(b => b.pferd === p); if (!box || !p.pflege) return;
       const { P, g, sp } = expertenPlan(p, box), B = futterBedarf(p, box);
-      planAendernStart(p, box); p.futterplan = P; planAendernEnde(p, box); p.futterBeraten = spiel.tag;
+      planAendernStart(p, box); p.futterplan = P; planAendernEnde(p, box); p.futterBeraten = spiel.tag; p.expertBetreut = true;
       if (!kostenlos) posten.push({ text: `${p.name}: Futterberatung`, betrag: FUTTER_BERATUNG });
       if (sp) { const k = "sp_" + sp, menge = Math.round(P.kg[k] * SPEZIAL_VORRAT); F.frei[sp] = true;
         if (F.lager[k] < menge) { const dazu = Math.round((menge - F.lager[k]) * 10) / 10; F.lager[k] = Math.round((F.lager[k] + dazu) * 1000) / 1000; posten.push({ text: `${FUTTER[k].n}, ${fmtKg(dazu)} (Vorrat für ${SPEZIAL_VORRAT} Tage)`, betrag: Math.round(dazu * FUTTER[k].preis * 100) / 100 }); } }
@@ -5433,6 +5436,7 @@
       zeilen.push(`<li><b>${esc(p.name)}</b> (${FZ_NAME[futterZustand(p)]}, ca. ${B.kg} kg, Bedarf ${B.energie} MJ${futterZustand(p) >= 7 ? " – soll abnehmen" : futterZustand(p) <= 3 ? " – soll zunehmen" : ""}): ${Object.entries(P.kg).map(([k, x]) => `${FUTTER[k].n} ${fmtKg(x)}`).join(", ")} · ${P.mahl} Mahlzeiten${g.length ? `<br><small>${g.join(" · ")}</small>` : ""}</li>`); });
     if (!zeilen.length) return;
     const text = `ich habe mir {deine|Ihre} Pferde angesehen und die Futterpläne neu zusammengestellt (Mengen am Tag). Die neuen Pläne werden über 3 Tage eingeführt:<ul>${zeilen.join("")}</ul>${Object.keys(F.frei).length ? "Spezialfutter {kannst du|können Sie} ab jetzt im Futterhandel nachkaufen (Hofverwaltung → Hof → Futterkammer). " : ""}{Du kannst|Sie können} die Pläne jederzeit selbst anpassen (Box → Pferdepflege → Versorgung → Futterplan).`;
+    if (!kostenlos && posten.length) posten.unshift({ text: "Anfahrt Futterexperte", betrag: FUTTER_ANFAHRT });
     if (posten.length) rechnungStellen("Futterberatung", "klinik", posten, pferde.map(p => p.id), `Futterberatung – Rechnung`, text);
     else brief("Futterberatung", "Neue Futterpläne", text, { pferde });
   }
@@ -5445,17 +5449,17 @@
   // Angestellter Experte: schaut zu Beginn jeder Jahreszeit alle Pferde durch, die er schon betreut oder die noch keinen eigenen Plan haben
   function futterexperteJahreszeit() {
     if (!futterexperteAngestellt()) return;
-    const pferde = spiel.boxen.map(b => b.pferd).filter(p => p && p.pflege && !p.klinik && (!p.futterplan || p.futterplan.vom === "experte"));
+    const pferde = spiel.boxen.map(b => b.pferd).filter(p => p && p.pflege && !p.klinik && (!p.futterplan || p.expertBetreut));
     futterBeratung(pferde, true);
   }
   function futterexperteDialog(pferde, danach) {
     const fest = futterexperteAngestellt(), T = spiel.futterTermin, wahl = new Set(pferde.length === 1 ? [pferde[0].id] : pferde.filter(p => futterZustand(p) <= 3 || futterZustand(p) >= 7 || spezialFuer(p)).map(p => p.id));
     const zeichnen = () => {
-      dialog(`<h3>🌾 Futterexperte</h3><p class="text">${fest ? "Dein angestellter Futterexperte berät kostenlos und sofort." : `Der Futterexperte kommt auf Termin am <b>nächsten Morgen</b>: Beratung ${fmt(FUTTER_BERATUNG)} je Pferd, Rechnung per Brief.`} Er sieht sich jedes Pferd an, rechnet den Bedarf aus und legt einen neuen Futterplan an. Nur er kann <b>Spezialfutter</b> zusammenstellen (nach Kolik, bei Hufrehe/Cushing, PSSM, Magengeschwür, für Senioren und schwache Pferde).</p>
+      dialog(`<h3>🌾 Futterexperte</h3><p class="text">${fest ? "Dein angestellter Futterexperte berät kostenlos und sofort." : `Der Futterexperte kommt auf Termin am <b>nächsten Morgen</b>: Beratung ${fmt(FUTTER_BERATUNG)} je Pferd plus ${fmt(FUTTER_ANFAHRT)} Anfahrt, Rechnung per Brief.`} Er sieht sich jedes Pferd an, rechnet den Bedarf aus und legt einen neuen Futterplan an. Nur er kann <b>Spezialfutter</b> zusammenstellen (nach Kolik, bei Hufrehe/Cushing, PSSM, Magengeschwür, für Senioren und schwache Pferde).</p>
         ${T ? `<p class="text">📅 Termin morgen für ${T.pferde.map(id => { const q = (alleEigenenPferde().find(x => x.p.id === id) || {}).p; return q ? `<b>${esc(q.name)}</b>` : ""; }).filter(Boolean).join(", ")}.</p>` : ""}
         <div class="ma-liste">${pferde.map((p, i) => { const sp = spezialFuer(p); return `<label class="ma-karte fp-check" style="padding:6px 10px"><input type="checkbox" data-fxw="${i}" ${wahl.has(p.id) ? "checked" : ""}> <b>${esc(p.name)}</b> <small>${FZ_NAME[futterZustand(p)]}${p.futterplan && p.futterplan.vom === "experte" ? " · Plan vom Experten" : p.futterplan && p.futterplan.kg ? " · eigener Plan" : " · Standardplan"}${sp ? ` · braucht wohl ${FUTTER["sp_" + sp].n}` : ""}</small></label>`; }).join("")}</div>`,
         [["Abbrechen", danach, "zweit"], ...(T && !fest ? [["Termin absagen", () => { delete spiel.futterTermin; speichern(); danach(); }, "zweit"]] : []),
-          [fest ? "Jetzt beraten" : `Termin machen (${fmt(FUTTER_BERATUNG * wahl.size)})`, () => { const l = pferde.filter(p => wahl.has(p.id)); if (!l.length) return zeichnen();
+          [fest ? "Jetzt beraten" : `Termin machen (${fmt(FUTTER_BERATUNG * wahl.size + FUTTER_ANFAHRT)})`, () => { const l = pferde.filter(p => wahl.has(p.id)); if (!l.length) return zeichnen();
             if (fest) { futterBeratung(l, true); speichern(); dialog(`<h3>🌾 Erledigt</h3><p class="text">Die neuen Futterpläne stehen – Details im Brief.</p>`, [["OK", danach]]); }
             else { spiel.futterTermin = { tag: spiel.tag + 1, pferde: [...new Set([...(T ? T.pferde : []), ...l.map(p => p.id)])] }; speichern(); dialog(`<h3>📅 Termin steht</h3><p class="text">Der Futterexperte kommt morgen früh zu ${l.map(p => `<b>${esc(p.name)}</b>`).join(", ")}.</p>`, [["OK", danach]]); } }]], "breit");
       document.querySelectorAll("[data-fxw]").forEach(c => c.onchange = () => { const p = pferde[+c.dataset.fxw]; if (c.checked) wahl.add(p.id); else wahl.delete(p.id); zeichnen(); });
@@ -5535,7 +5539,7 @@
   const MA_ART = { stall: ["stallbursche", "azubi"], pfleger: ["pfleger", "pferdewirtHS"], bereiter: ["bereiter"] };
   function maZuteilung(art) {
     const kand = spiel.boxen.map((b, i) => i).filter(i => { const b = spiel.boxen[i], p = b.pferd; if (!p || p.klinik || b.tot) return false;
-      if (art === "stall") return !p.weide || heuNoetig();
+      if (art === "stall") return !p.weide || heuNoetigP(p);
       if (art !== "stall" && p.turnier) return false;   // heute auf dem Turnier
       if (art === "bereiter") return !p.weide && !p.boxenruhe && alterJZ(p) >= 12 && (p.pflege ? p.pflege.gesundheit : 100) > 50;
       return true; });
@@ -5546,10 +5550,13 @@
     // fehlt ein Kollege aus demselben Beruf (Urlaub/krank), übernimmt jeder andere 1 Box mehr (Überstunden)
     const fehlt = MA_ART[art].some(typ => angestellte(typ).some(m => maAktiv(m) && !maDa(m)));
     MA_ART[art].forEach(typ => aktive(typ).filter(m => !m.nurFuer || !alleEigenenPferde().some(x => x.p.id === m.nurFuer)).forEach(m => { const extra = fehlt ? 1 : 0, start = k;
-      for (let n = maKapazitaet(m) + extra; n > 0 && k < kand.length; n--) out.push({ i: kand[k++], m });
+      for (let n = maKapazitaet(m) + extra; n > 0 && k < kand.length;) { const i2 = kand[k++]; out.push({ i: i2, m }); n -= art === "stall" ? boxAufwand(spiel.boxen[i2]) : 1; }
       if (extra && k - start > maKapazitaet(m)) m.ueberstunden = spiel.tag; }));
     return out;
   }
+  // Heu wässern kostet Zeit: zählt beim Füttern wie 1½ Boxen – mit Heudampfer (Hof-Ausbau) nicht mehr
+  const heudampfer = () => !!(spiel.anlage && spiel.anlage.heudampfer);
+  const boxAufwand = b => b && b.pferd && b.pferd.heuWaessern && !heudampfer() ? 1.5 : 1;
   function maBoxen(typ) { const art = typ === "pfleger" ? "pfleger" : typ === "bereiter" ? "bereiter" : "stall"; return maZuteilung(art).map(x => x.i); }
   const burschenBoxen = () => maBoxen("stallbursche");
   // Erfahrung sammeln: mehr am Anfang, weniger, je mehr man schon weiß; lernbegierig ×1,5
@@ -5770,6 +5777,11 @@
   const proTag = x => x * 7 / tpj();   // Bezug: Standardtempo 7 Tage pro Jahreszeit
   // Heu auf der Weide nötig: Winter und letzter Herbsttag (kaum Gras)
   const heuNoetig = (tag = spiel.tag) => { const d = datum(tag); return d.s === 3 || (d.s === 2 && d.t === tpj()); };
+  // Anweiden (Dome, F4): kommt ein Pferd nach mehr als einer Jahreszeit ohne Weide wieder raus, wird es ein paar Tage langsam angeweidet –
+  // es steht nur stundenweise draußen und braucht dazu Heu (4 Tage/Jz: 2 Tage, 7: 2, 10: 3); Kolik- und Hufrehe-Risiko ×1,3 in dieser Zeit
+  const anweidenTage = () => Math.max(2, Math.round(tpj() / 3));
+  const anweidenAktiv = (p, tag = spiel.tag) => !!(p && p.anweiden && tag >= p.anweiden && tag < p.anweiden + anweidenTage());
+  const heuNoetigP = (p, tag = spiel.tag) => heuNoetig(tag) || anweidenAktiv(p, tag);
   const WEIDE_WOHL = { normal: 15, winter: 8, allein: 6 };
   // Hengstverhalten: Hengst ab 3 Jahren = 1 · später (ab 2 J.) kastrierter Wallach = 0,5 · sonst 0
   const hengstig = p => p.geschlecht === "Hengst" ? (alterJZ(p) >= 12 ? 1 : 0) : p.geschlecht === "Wallach" && (p.kastriertAlterJZ || 0) > 8 ? 0.5 : 0;
@@ -6039,7 +6051,7 @@
       if (!b.pferd) { b.krippeVoll = false; b.mistig = false; return; }   // leere Box: sauber, Krippe leer
       if (b.pferd.klinik) { delete b.pferd.weide; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; return; }   // Pferd ist in der Klinik
       if (b.pferd.weide && !b.tot) {   // Weide: Gras statt Heu, kein Mist – Gesundheit je nach Jahreszeit, Wohlbefinden steigt
-        const W = b.pferd, plus = WEIDE_PLUS[datum().s], hungrig = heuNoetig(spiel.tag - 1) && !b.krippeVoll;   // Winter / letzter Herbsttag: Heu nötig
+        const W = b.pferd, plus = WEIDE_PLUS[datum().s], hungrig = heuNoetigP(W, spiel.tag - 1) && !b.krippeVoll; W.weideZuletzt = spiel.tag - 1; if (W.anweiden && !anweidenAktiv(W)) delete W.anweiden;   // Winter / letzter Herbsttag: Heu nötig
         b.krippeVoll = false; b.mistig = false; b.mistStufe = 0;
         [W, b.fohlen].forEach(q => { if (!q) return; const qp = (q.pflege = q.pflege || erzeugePflege(q));
           if (hungrig) qp.gesundheit = Math.max(1, Math.round((qp.gesundheit - 19) * 10) / 10);
@@ -7101,13 +7113,14 @@
       <h3>📋 Fütterung (F2: Futterplan und Bedarf)</h3>
       <p><b>Futterplan</b> je Pferd (Box → Pferdepflege → Versorgung → Futterplan, oder Ausrüstung → Futter): Menge je Sorte am Tag, gleichmäßig auf 2 oder 3 Mahlzeiten verteilt (Schritte: Raufutter 0,5 kg, Kraftfutter 0,25 kg, Öl/Mineral 50 g). Ohne eigenen Plan: Standardplan (Heu nach Energiebedarf, 1,5–2,5 kg je 100 kg, Mineralfutter 100 g). Ein Klick auf die Krippe (bzw. der Stallbursche) füttert den ganzen Tagesplan aus der Futterkammer.</p>
       <p><b>Bedarf:</b> Energie Erhaltung = 0,52 MJ × Gewicht^0,75 (600 kg ≈ 63 MJ). Zuschläge: Arbeit leicht +25 % / mittel +50 % / schwer +100 % (Schnitt der Trainings- und Turnierenergie der letzten Tage: ab 10 / 35 / 60; Turniertag zählt 50), tragend in der letzten Jahreszeit +20 %, säugend +70 %, Jungpferd unter 3 J. +30 %, Winter auf der Weide +10 %; leichtfuttrig −15 % (${LEICHTFUTTRIG.map(r => rasseById(r).name).join(", ")}), schwerfuttrig +15 % (${SCHWERFUTTRIG.map(r => rasseById(r).name).join(", ")}). Eiweiß Ziel 10 % der Ration (Fohlen/Jungpferde unter 1 J. und säugende Stuten 14 %): zu wenig unter Ziel − 2, zu viel über Ziel + 4. Raufutter mindestens 1,5 kg je 100 kg. Stärke aus dem Kraftfutter höchstens 1 g je kg Gewicht pro Mahlzeit (Zucker im Heu zählt dabei nicht), Kraftfutter höchstens 0,3 kg je 100 kg pro Mahlzeit, Öl höchstens 1 g je kg am Tag. Mineralien gedeckt mit mind. 50 g Mineralfutter oder Salzleckstein + genug gutes Heu/Heulage. Energie: zu wenig unter 90 %, zu viel über 110 %. Weide (außer Winter/letzter Herbsttag): Gras ersetzt das Raufutter.</p>
-      <p><b>Futterzustand (F3)</b>, versteckt 1–9 (1 abgemagert … 5 gut im Futter … 9 fettleibig), sichtbar über das Körperbild: 1–3 dünn, 4–6 normal (sportlich bei Arbeit ab „mittel“ und Kraft ≥ 75 % der Grenze), 7–9 dick. Täglich: gefütterte Energie &gt; 110 % des Bedarfs → +1 Tag, &lt; 90 % → −1 Tag, hungrig −2; bei ±5 Tagen eine Stufe; Richtungswechsel zählt neu, passende Ration lässt den Zähler zurücklaufen. Weide deckt Frühling 105 %, Sommer 100 %, Herbst 95 %, Winter 85 %. Gewicht ±3 % je Stufe von 5. Standardplan: Heu nach Energiebedarf (6 MJ/kg), mind. 1,5 und höchstens 2,5 kg je 100 kg. Brief der Hofverwaltung bei Stufe 3, 1, 7 und 9.<br>
+      <p><b>Futterzustand (F3)</b>, versteckt 1–9 (1 abgemagert … 5 gut im Futter … 9 fettleibig), sichtbar über das Körperbild: 1–3 dünn, 4–6 normal (sportlich bei Arbeit ab „mittel“ und Kraft ≥ 75 % der Grenze), 7–9 dick. Täglich: gefütterte Energie &gt; 110 % des Bedarfs → +1 Tag, &lt; 90 % → −1 Tag, hungrig −2; eine Stufe nach ${fzSchwelle()} Tagen (je nach Spieltempo: 4 Tage/Jz → 4, 7 → 5, 10 → 6); Richtungswechsel zählt neu, passende Ration lässt den Zähler zurücklaufen. Weide deckt Frühling 115 % (junges Gras), Sommer 100 %, Herbst 90 %; im Winter und am letzten Herbsttag kein Gras – nur das zugefütterte Heu zählt. Gewicht ±3 % je Stufe von 5. Gewicht ist ein Zusammenspiel: Futter, Bewegung (Arbeit erhöht den Bedarf, Boxenruhe −10 %) und Veranlagung (versteckte Futterverwertung 0,85–1,15, vererbt als Mittel der Eltern ± 0,04 – der angezeigte Bedarf ist nur die Schätzung ohne diese Veranlagung). Standardplan: Heu nach Energiebedarf (6 MJ/kg), mind. 1,5 und höchstens 2,5 kg je 100 kg.<br>
       <b>Folgen:</b> Stufe 1–2: Gesundheit −1 und Wohlbefinden −2 je Nacht, Energie-Max ×0,8, Lernen ×0,85, Turnier ×0,9, Infekte (Erkältung, Husten, Influenza, Druse, Herpes, Hautpilz, Würmer) ×1,5. Stufe 8–9: Wohlbefinden −1, Energie-Max ×0,9, Lernen ×0,9, Turnier ×0,9, Arthrose ×1,5. Hufrehe ×1,5 (Stufe 7) bzw. ×2,5 (ab 8); Frühlingsweide bei leichtfuttrigen oder dicken Pferden ×2. Zu wenig Raufutter (&lt; 90 % des Minimums): Wohlbefinden −3 (Langeweile), Kolik ×2, Magengeschwür ×3 (sonst ×0,4). Zu viel Stärke/Kraftfutter je Mahlzeit: Kolik ×2, Hufrehe ×1,5, Magengeschwür ×2, „Hafer sticht“ am Folgetag (Lernen ×0,85, Turnier ×0,95). Eiweiß 3 Punkte unter Bedarf: Kraft −0,2 je Tag (über 5); 6 Punkte drüber: Gesundheit −0,5 (Leber/Nieren). Mineralien fehlen ab 5 Tagen: Wohlbefinden −1 (stumpfes Fell), Hornspalt ×1,5. Unter 3 Jahren (auch Fohlen bei Fuß über die Mutter): ab 10 Mangeltagen (Eiweiß/Mineralien) OCD-Risiko ×2.<br>
-      <b>Magengeschwür:</b> Befund (Bereich Futter), Grundrisiko klein, Wohlbefinden unter 50 ×1,5; Behandlung Magenschutz (Omeprazol, Rezept, 35 €). Admin: Körpertyp im Test-Reiter legt den Zustand fest (dünn 2, normal/sportlich 5, dick 8) und schaltet die Automatik für dieses Pferd ab.</p>
-      <p><b>Atemwege, Leckerli, Umstellung (F4):</b> Versteckte Veranlagung „Empfindliche Atemwege“ (0–1, vererbt wie die anderen Veranlagungen; empfindlich ab 0,2). Nur empfindliche Pferde reagieren auf staubiges Heu (ab 1 kg am Tag, nicht gewässert): Husten-Risiko ×4; ab ${STAUB_ASTHMA} Staubtagen in Folge (ohne Staub zählt der Zähler um ½ je Tag zurück) jeden Tag 5 % Chance auf <b>Pferdeasthma</b> (chronisch, mit weiterem Staub 5 % je Tag eine Stufe schlimmer bis „schwer“; Behandlung Kortison, Hustensaft). Heu wässern (Haken im Futterplan) oder Heulage beseitigt den Staub.<br>
+      <b>Magengeschwür:</b> Befund (Bereich Futter), Grundrisiko klein, Wohlbefinden unter 50 ×1,5; Behandlung Magenschutz (Omeprazol, Rezept, 35 €).</p>
+      <p><b>Atemwege, Leckerli, Umstellung (F4):</b> Versteckte Veranlagung „Empfindliche Atemwege“ (0–1, vererbt wie die anderen Veranlagungen; empfindlich ab 0,2). Nur empfindliche Pferde reagieren auf staubiges Heu (ab 1 kg am Tag, nicht gewässert): Husten-Risiko ×4; Vorzeichen beim Besuch (ab 3 Staubtagen „prustet“, ab 1 Jahreszeit „hustet beim Heufressen“, ab 2 Jahreszeiten schwerer Atem); nach mehr als ${STAUB_ASTHMA_JZ} Jahreszeiten Staub (ohne Staub zählt der Zähler um ½ je Tag zurück) jeden Tag 5 % Chance auf <b>Pferdeasthma</b> (chronisch, mit weiterem Staub 5 % je Tag eine Stufe schlimmer bis „schwer“; Behandlung Kortison, Hustensaft). Heu wässern (Haken im Futterplan; kostet Zeit – zählt beim Stallburschen wie 1½ Boxen, mit Heudampfer aus dem Hof-Ausbau nicht) oder Heulage beseitigt den Staub.<br>
+      <b>Anweiden:</b> Kommt ein Pferd nach mehr als einer Jahreszeit ohne Weide wieder raus (nicht im Winter), wird es ${anweidenTage()} Tage angeweidet: stundenweise draußen, dazu Heu (wie im Winter); Kolik und Hufrehe ×1,3 in dieser Zeit.<br>
       <b>Leckerli</b> (Box → Pferdepflege → Versorgung): Möhre/Apfel 100 g, Leckerli 10 g aus der Futterkammer; bis 3 am Tag je Vertrauen +0,3 und Wohlbefinden +0,5. An 5 Tagen mehr als 3 → „bettelt und schnappt“ (Brief), dann gibt es kein Vertrauen mehr dafür; nach 14 Tagen ohne zu viele Leckerli legt es sich. Zucker und Energie der Leckerli zählen im Futterzustand mit.<br>
       <b>Futterumstellung:</b> Ein geänderter Futterplan (ab 1 kg Raufutter oder 250 g Kraftfutter Unterschied) wird über 3 Tage eingeführt: Tag 1 ⅓, Tag 2 ⅔, Tag 3 ganz neu. „Sofort umstellen“ (mit Warnung) → Kolik ×2 für 2 Tage.</p>
-      <p><b>Futterexperte (F5):</b> extern auf Termin (Hofverwaltung → Mitarbeiter → Futterberatung oder Futterplan → Futterexperte): kommt am nächsten Morgen, ${fmt(FUTTER_BERATUNG)} je Pferd, Rechnung per Brief (gebucht unter „Futter“). Fest angestellt erst im großen Stall (ab 20 Boxen), Gehalt ${fmt(MA_TYP.futterexperte.gehalt)} je Jahreszeit: berät kostenlos sofort und prüft zu Beginn jeder Jahreszeit alle Pferde ohne eigenen Plan bzw. mit seinem Plan. Er rechnet: Ziel-Energie = Bedarf (Stufe 7–9 ×0,85, Stufe 1–3 ×1,15); Raufutter nach Energie 1,5–2 kg je 100 kg (Heulage bei Husten/Asthma); zum Abnehmen 1,5 kg je 100 kg Idealgewicht, davon 25 % Stroh; Rest über Hafer (bis 0,3 kg je 100 kg und Mahlzeit, sonst 3 Mahlzeiten) bzw. ohne Stärke über Öl und Luzerne (Rehe, PSSM, Magen, Schonkost, dick); Luzerne bei Eiweißmangel; Mineral 100 g (50 g unter 300 kg). Der neue Plan wird über 3 Tage eingeführt. Der Spieler lernt mit (Wissen Fütterung +0,5 je Pferd).<br>
+      <p><b>Futterexperte (F5):</b> extern auf Termin (Hofverwaltung → Mitarbeiter → Futterberatung oder Futterplan → Futterexperte): kommt am nächsten Morgen, ${fmt(FUTTER_BERATUNG)} je Pferd plus ${fmt(FUTTER_ANFAHRT)} Anfahrt, Rechnung per Brief (gebucht unter „Futter“). Fest angestellt erst im großen Stall (ab 20 Boxen), Gehalt ${fmt(MA_TYP.futterexperte.gehalt)} je Jahreszeit: berät kostenlos sofort und prüft zu Beginn jeder Jahreszeit alle Pferde ohne eigenen Plan und alle mit Haken „berechnet den Plan jede Jahreszeit neu“ (wird bei eigener Änderung abgehakt, kann wieder gesetzt werden). Er rechnet: Ziel-Energie = Bedarf (Stufe 7–9 ×0,85, Stufe 1–3 ×1,15); Raufutter nach Energie 1,5–2 kg je 100 kg (Heulage bei Husten/Asthma); zum Abnehmen 1,5 kg je 100 kg Idealgewicht, davon 25 % Stroh; Rest über Hafer (bis 0,3 kg je 100 kg und Mahlzeit, sonst 3 Mahlzeiten) bzw. ohne Stärke über Öl und Luzerne (Rehe, PSSM, Magen, Schonkost, dick); Luzerne bei Eiweißmangel; Mineral 100 g (50 g unter 300 kg). Der neue Plan wird über 3 Tage eingeführt. Der Spieler lernt mit (Wissen Fütterung +0,5 je Pferd).<br>
       <b>Spezialfutter</b> (nur über den Experten; er bringt einen Vorrat für ${SPEZIAL_VORRAT} Tage mit, danach im Futterhandel): ${Object.values(SPEZIAL).map(S => `${S.n} (${S.e} MJ, ${S.ei} % Eiweiß, ${S.zs} % Zucker/Stärke, ${S.preis.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/kg)`).join(" · ")}. Wahl: Kolik in den letzten 7 Tagen → Schonkost; Hufrehe/Cushing → Strukturfutter; PSSM → Muskelfutter; Magengeschwür → Magenschonfutter; Stufe 1–2 oder ≥ 2 Befunde → Aufbaufutter; ab 20 Jahren → Seniorenfutter. Wirkung ab 250 g am Tag: Kolik ×0,6 (Schonkost) bzw. ×0,8 (Senior), Hufrehe/Cushing ×0,5, Magengeschwür ×0,4, Infekte ×0,7 (Aufbau); passende Befunde werden mit 10 % je Tag eine Stufe besser. Senioren ab 20 Jahren verwerten ohne Seniorenfutter oder Heucobs (ab 1 kg) nur 90 % der Energie.</p>
       <h3>🏆 Turniere</h3>
       <p><b>Ablauf:</b> Pferdeanhänger (Box oder Hauptmenü) → Turnier → Turnierkalender. Nennen bis spätestens am Tag vorher (Nenngeld sofort, beim Zurückziehen keine Erstattung). Am Turniertag morgens fährt das Pferd los (von der Weide wird es vorher geholt; krank/schwach → nicht gestartet, Nenngeld verfällt), ist den ganzen Tag weg (kein Training, Box sauber, unterwegs gefüttert). In der Nacht wird gerechnet, der Brief kommt am nächsten Tag. Ab 4 Jahren, nicht mit Fohlen bei Fuß, tragend keine Sprünge und in der letzten Jahreszeit vor der Geburt gar nicht; höchstens 2 Prüfungen je Turnier in benachbarten Klassen, nur ein Turnier pro Tag.</p>
@@ -7277,7 +7290,7 @@
       const vg = spiel.maVergessen && spiel.maVergessen.tag === spiel.tag ? spiel.maVergessen.liste : [];
       inhalt = `<p class="text" style="margin:0 0 8px">Dein Stall: <b>${stallGroesse()}</b> (${spiel.boxen.length} ${spiel.boxen.length === 1 ? "Box" : "Boxen"} · klein bis 8, mittel 9–19, groß ab 20). Je größer der Stall, desto mehr Berufe bewerben sich.</p>
         <div class="kacheln quadrat markt-kacheln">${MITARBEITER.map(([id, ico, n, kurz]) => { const T = MA_TYP[id];
-          if (id === "futterberatung") return `<button class="kachel klickbar" id="futterberatungAlle"><span class="ico">${ico}</span><b>${n}</b><small>${spiel.futterTermin ? "Termin morgen" : futterexperteAngestellt() ? "angestellt – kostenlos" : `auf Termin · ${fmt(FUTTER_BERATUNG)}/Pferd`}</small></button>`;
+          if (id === "futterberatung") return `<button class="kachel klickbar" id="futterberatungAlle"><span class="ico">${ico}</span><b>${n}</b><small>${spiel.futterTermin ? "Termin morgen" : futterexperteAngestellt() ? "angestellt – kostenlos" : `auf Termin · ${fmt(FUTTER_BERATUNG)}/Pferd + Anfahrt`}</small></button>`;
           if (id === "hufschmied") return `<button class="kachel klickbar" id="hufschmiedAlle"><span class="ico">${ico}</span><b>${n}</b><small>${spiel.boxen.filter(b => b.pferd && b.pferd.pflege && !b.pferd.klinik && hufLaenge(b.pferd) >= 1).length || "keine"} fällig</small></button>`;
           if (!T) return `<button class="kachel fehlt" disabled><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></button>`;
           const anz = angestellte(id).length, ok = maVerfuegbar(id);

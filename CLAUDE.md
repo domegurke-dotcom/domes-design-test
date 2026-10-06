@@ -16,11 +16,11 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - Anzeige-/Interaktionsboxen dürfen sich nicht überdecken.
 - Nach Aktionen nicht aus der Ansicht werfen (z. B. Schere bleibt offen, Bieten aus Brief → zurück zum Brief).
 - Emojis, die es erst seit Kurzem gibt (z. B. 🪮, 🪝), auf älteren Handys nicht verwenden – lieber kleine SVG-Zeichnung (`KAMM_ICO`, `HUFKR_ICO`).
-- **Noch warten, bis Dome es sagt:** weitere Rassen (Knabstrupper, Appaloosa, Noriker, Paint Horse), Inzucht-Auswirkungen, Vererbung von Abzeichen/Kopfform/Kopfgröße, Fohlenschau (Wertnote steigert Fohlenpreis stark).
+- **Noch warten, bis Dome es sagt:** weitere Rassen (Knabstrupper, Appaloosa, Noriker, Paint Horse), Inzucht-Auswirkungen, Vererbung von Abzeichen/Kopfform/Kopfgröße.
 - Grundsatz: Kommen neue Rassen dazu, bekommen sie ihre Erbkrankheiten, Eigenheiten, Hufqualität, Körperbau (Gewicht) und Futtertyp gleich mit.
 
 ## Pläne (in dieser Reihenfolge)
-- `PLAN-WERTE.md` – Werte, Charakter, Training, Disziplinen, Turniere. Etappen 1–3 fertig. **Als Nächstes Etappe 4 (Training daheim)**, dann 5, 6.
+- `PLAN-WERTE.md` – Werte, Charakter, Training, Disziplinen, Turniere, Fohlenschau. Etappen 1–5 und 6a fertig. **Als Nächstes 6b** (Rennen mit Jockey, Distanz mit Tierarztkontrolle, Tölt, Championate/International, Reiterprofil, LK verbessert das eigene Training, Decktaxe, Turniererfolge bei Marktpferden), **dann 6c Fohlenschau** (Abschnitt 8b: nur Fohlen bei Fuß, Sommer/Herbst, rassetypisch, Mischlinge in offener Klasse, platzierte Fohlen auch auf dem Pferdemarkt).
 - `PLAN-KRANKHEITEN.md` – Spieltempo, Mitarbeiter (inkl. Nachtrag B3 Azubi/Ausbilder), Befunde, Behandlung, Hufe, Ansteckung, AKU, Erbkrankheiten. **Alle Etappen A–H fertig.**
 - `PLAN-FUETTERUNG.md` – F1–F5. **Erst nach Werte-Etappe 6**, vorher Dome fragen „Mit Fütterung F1 weitermachen?“.
 - Nach jeder Etappe: testen, hochladen, Dome eine Test-Anleitung mit ausgeschriebenen Wegen geben, auf Rückmeldung warten, Etappe im Plan abhaken.
@@ -35,14 +35,14 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (3 Stellen in index.html) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **197**.
+- Letzte Version bei Aktualisierung dieser Datei: **203**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName`, `#chHof` ausfüllen → `#chLos`. Admin: `spiel.admin = true`.
 - Vor dem Ausliefern Syntax prüfen (jeden `<script>`-Block mit `new Function(...)`, `node --check pferd.js`) und Screenshots in den drei Ansichten ansehen.
 - Testlink für Dome (falls GitHub Pages hängt): Artifact „Zuchtstall Testversion“ (index.html mit eigenem `<title>` + pferd.js, kopfteile.js, kopfalter.js, version.json), bei jeder Version neu veröffentlichen.
 
-## Wichtige Spielsysteme (Stand v197)
+## Wichtige Spielsysteme (Stand v203)
 - **Zeit:** Jahreszeiten (Frühling, Sommer, Herbst, Winter), `tpj()` Tage pro Jahreszeit 4/7/10 (Standard 7, alte Spielstände auf 7 umgestellt). Kalender-Anker `spiel.kal` = {tag, i}, damit ein Tempowechsel das Datum nicht verschiebt. Nur das Sozialverhalten wird umgerechnet (`proTag`, Bezug 7); alles andere gilt pro Tag/Nacht. `naechsteNacht()` ist der Tageswechsel; bei `datum().t === 1` laufen die Jahreszeit-Funktionen.
 - **Zucht:** Tragzeit 4 Jahreszeiten. Deckstation (Gestütshengste) nur Frühling/Sommer, eigene Hengste immer. Zuchtalter Stuten bis 20, Hengste bis 25. Befunde sperren die Zucht (`zuchtSperre`).
 - **Genetik:** E, A (A>At>a), F, Sty, Cr, D, Z, Rn, To, O, Lp, Patn, G, Dm (DMRT3). Versteckte Veranlagungen `ex` (grauTempo, apfel, fliegen, fliegenAb, maehne, ton, ow, sonne, kurve). Gefährliche Gene in `GEFAHR_GENE` (O, Lp) – Warnung nur, wenn mind. ein Partner positiv getestet ist.
@@ -69,7 +69,10 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - **Mitarbeiter (hvw – mab):** Stallgröße klein ≤ 8, mittel 9–19, groß ≥ 20 Boxen (`stallGroesse`). Berufe in `MA_TYP`: Azubi (100/120/135 €, braucht Ausbilder), Stallbursche 300 € (3 Boxen, mit Stallmeister 5), Pferdepfleger 330 €, Pferdewirt Zucht und Haltung 360 € (ab mittel), Pferdewirt Haltung und Service 340 € (nur Pension/Gnadenhof), Bereiter 420 € (ab mittel, bewegt Pferde), Stallmeister 500 € (ab groß). Bewerber je Jahreszeit (`bewerber`), 7 Wissensbereiche (`WISSEN`, Spieler `spiel.wissen`), Eigenschaften `MA_EIGEN`. Versteckte Zufriedenheit `zufr`, Urlaub einmal im Jahr 1–3 Tage, krank 1–3 Tage, Kündigung unter 25. Nachtdienst bei Geburten 30 €.
 - **Azubi (B3):** nur mit freiem Ausbilderplatz (`freierAusbilder`: Pferdewirt/Stallmeister je 2, Bereiter nur im Ausbildungsstall, Spieler mit `spiel.ausbilderschein` 500 € je 1). Ausbildung 3 Jahre, Abschlussprüfung (`azubisJahreszeit`), Übernahme per Brief. Fachrichtungen `FACH` nach `spiel.stallarten` (bis zum Hof-Ausbau `["zucht"]`).
 - **Hofverwaltung-Reiter:** Hof (mit Lager), Finanzen (nach Jahreszeit gruppiert), Außer Haus, Mitarbeiter (mit Hufschmied-Kachel und Ausbilderschein), Postfach, Einstellungen. Boxen bauen/entfernen mit + / − in der Boxenübersicht im Stall.
-- **Vorbereitet für Werte-Etappe 4:** `befundBremse(p)` (Befunde bremsen Training), `vorliebeFaktor`, `ARBEIT_DAHEIM`, Lahmheit durch Überlastung (`zaehigkeit` im Risiko), Bereiter beim Training, Hufschuhe im Gelände (zu klein → Scheuerstelle, zu groß → Stolpern), `futterFaktor()` (bis zur Fütterung 1).
+- **Training daheim (Werte-Etappe 4):** ppf – Ort – Reitplatz/Gelände (Spieler; Roundpen/Reithalle nur Admin bis zum Hof-Ausbau). Übungen `UEBUNG` (Ort, Mindestalter, Energie, Zuwachs für Skala `sk`, Werte `w`, Disziplin-Stand `d`), `trainieren(p, k, ort, m)` mit Trainingsbericht `p.trainHeute`. Energie `energie(p)`/`energieMax(p)` (an Gesundheit, Wohlbefinden und Krankheit gekoppelt, auch unbemerkt „wirkt matt“), Nacht `trainingNacht`. Ausbildungsskala je Stufe in `p.skala` (`skalaGrenze`: 20-%-Regel, Schub-/Tragkraft), Phasen-Klammern in stb – asb. Gangwerk-Bonus `gangGezeigt`/`gangBonus` (`p.gangStangen`). Übertraining, Winter ohne Aufwärmen, Hufschuhe im Gelände, Altersbremse `p.fit`. Bereiter: Plan `p.trainPlan` (Häkchen) oder „entscheidet selbst“ (`bereiterWahl`). Ausbildungsstall `ausbildungsstallTag`. Tempo-Regler `TRAIN_SK`, `TRAIN_W`, `TRAIN_D`, `AUSB_X`. Reiten geht noch ohne Sattel/Trense – wird Pflicht, sobald die Ausrüstung kommt (Dome).
+- **Disziplinen (Werte-Etappe 5):** `DISZ` (11 Disziplinen mit Anteilen, Charakter ±10 %, Ausbildungsstand), `diszWert(p, k)` = (0,65 × Werte + 0,35 × Stand) × Charakter, eigener Stand `p.disz` (springen, western, gelaende), Stufen E–S bzw. Einsteiger–Open (`STUFE_STAND`, `STUFE_WERT`), Springhöhe ≈ 0,95 × Stockmaß. Marktwert nach bester Disziplin (`besteDisz`).
+- **Turniere (Werte-Etappe 6a):** Kalender `spiel.turniere` (`turnierKalender`, Hofturnier/Regional/Groß, Winter Halle), Nennen über beide Pferdeanhänger (`turnierDialog`, `nennSperre`) bis zum Vortag; Turniertag `turnierMorgen` (Pferd unterwegs `p.turnier`), Ergebnis `turnierNacht` → Brief am nächsten Tag. Reiter-LK je Disziplin `spiel.lk` (`LK_STUFEN`, Aufstieg `lkErfolg`). Erfolge `p.erfolge` in stb – asb und im Marktwert (`erfolgWert`). Stuten mit Fohlen bei Fuß und hochtragende nicht, tragend keine Sprünge.
+- **Noch offen aus der Vorbereitung:** `futterFaktor()` (bis zur Fütterung 1).
 
 ## Zusammenarbeit
 - Dome testet im Browser auf dem Handy und am PC und schickt Screenshots mit Wünschen.

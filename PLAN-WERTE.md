@@ -11,7 +11,7 @@ Ausführliche Gesprächsnotizen: `werte/plan.md` *(liegt noch im Planungsprojekt
 - [~] Etappe 3 – Vorlieben und Reaktionen (umgesetzt in v169, Sprechblasen in v170, seltener in v171, Test durch Dome offen)
 - [ ] Etappe 4 – Training daheim · **Vorher kommt erst `PLAN-KRANKHEITEN.md` (Etappen A–H, Spieltempo, Mitarbeiter, Krankheiten) – Dome, 5.10.2026.**
 - [ ] Etappe 5 – Disziplinen
-- [ ] Etappe 6 – Turniere
+- [ ] Etappe 6 – Turniere · **Danach kommt `PLAN-FUETTERUNG.md` (Etappen F1–F5) – eine Werte-Etappe 7 gibt es nicht. Vorher Dome fragen: „Mit Fütterung F1 weitermachen?“ (Dome, 5.10.2026).**
 
 **Ziel:** Alles greift ineinander. Charakter, körperliche und mentale Werte, Versorgung (Wohlbefinden), Training, Ausbildung, Gangwerk, Disziplinen und Turniere beeinflussen sich gegenseitig. Jedes Pferd soll ein echtes Spezialtalent haben statt überall gut zu sein.
 

@@ -72,6 +72,15 @@ Zu jeder Frage steht die Lösung, die Claude vorerst gewählt hat. Dome beantwor
 10. **Zahlen** (bitte prüfen): Besuchsrate der Besitzer 60 % der Tage, 75 % Einstellerinnen, Anfrage-Chance 3 % je freier Box und Tag (Pensionsstall Stufe 1 mit 6 freien Boxen ≈ 15 % am Tag, also etwa jede Woche eine Anfrage), Zufriedenheit Start 70, Beschwerde unter 35, Kündigung unter 20.
 11. **Pensionspferd stirbt** oder wird vom Tierschutz beschlagnahmt: Vertrag endet sofort, Ansehen −15, das Pferd kommt nicht auf den eigenen Pferdefriedhof.
 
+**✅ Domes Antworten H5 (11.10.2026) – noch umzusetzen:**
+1. Stallbursche und Azubi bringen Pferde auf die Weide (eigene und Pensionspferde), nicht der Pferdepfleger. Besitzer und Spieler legen fest, wie oft der Bereiter ihre Pferde je Jahreszeit trainiert, bezahlt wird danach. Der Bereiter ist in allen Ställen außer dem Ausbildungsstall nur nach Bedarf da.
+2. Ja (mit H6). Alle Pferde können in Paddockboxen, Hengste auch in normale Boxen – Hengste können aber je nach Temperament und Hengstigkeit Ärger machen, wenn Stuten im Stall stehen (wie auf der Weide).
+3. Ja – bessere Einstreu mit H6.
+4. Rückfrage von Dome: „Wie ist das gemeint?“ (Erklärung im Chat).
+5. Ungeplante Bedeckung kann passieren: Ansehen beim Besitzer sinkt stark (auch bei Tod des Pensionspferds), er kann kündigen, der Spieler zahlt eine Entschädigung in Höhe des Schadens (auch bei Tod); der Besitzer entscheidet, ob er das Fohlen behält oder vom Tierarzt abtreiben lässt (zahlt der Spieler).
+6. Medikamente kauft und bezahlt der Besitzer selbst, sie kommen nicht in die Stallapotheke.
+7. Neueinsteller ohne Bluttest: 3 % Risiko (statt 8 %). Tod −15 Ansehen nur bei Vernachlässigung durch Spieler/Angestellte. Besitzer schicken ab und zu Feedback (was gefällt, was nicht). Mahnungen nach Tempo: 4 Tage/Jz → Kündigung nach 1 Mahnung, 7 → nach 2, 10 → nach 3. Rückfragen: Anfragen je Jahreszeit je Tempo, Reitplatz-Belegung erkennen, Ansehen (Start, Min/Max, Wirkung). Sonst passen die Zahlen erstmal.
+
 ## 📌 Notiz von Dome (7.10.2026) – Veredler-Rassen: erst NACH dem Hof-Ausbau (H1–H8) starten (Dome, 7.10.2026)
 Wenn alle Fütterungsfragen beantwortet sind, Dome Bescheid geben: **Alle fehlenden Rassen ergänzen, die für die Veredelung bestehender Rassen im Spiel wichtig sind** – jeweils komplett mit Fell- und Farbmustern, Erbkrankheiten, Eigenheiten/Veranlagungen, Hufqualität, Körperbau (Gewicht), Futtertyp usw. (Grundsatz aus CLAUDE.md).
 Kandidaten (vor dem Start mit Dome abstimmen, Aufwand je Rasse nennen):

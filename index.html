@@ -880,7 +880,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "300";
+  const SPIEL_VERSION = "301";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -888,9 +888,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=300"></script>
-<script src="kopfteile.js?v=300"></script>
-<script src="kopfalter.js?v=300"></script>
+<script src="pferd.js?v=301"></script>
+<script src="kopfteile.js?v=301"></script>
+<script src="kopfalter.js?v=301"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -8202,7 +8202,10 @@
     const H = spiel.hof || {}, A = spiel.anlage || {}, weide = H.weideHa || 0, frei = freiesLand(), pacht = H.pacht || 0, bh = bauHa();
     const n = spiel.boxen.length, belegt = spiel.boxen.filter(b => b.pferd).length;
     // Fläche als Kacheln: 1 Kachel = 1 ha (Hofstelle 1 ha, Weide, freies Land, Pachtland)
-    const kacheln = [["hof", 1], ["bau", bh - 1], ["weide", weide], ["frei", frei]].flatMap(([t, x]) => Array.from({ length: Math.ceil(x - 1e-9) }, () => t));
+    const wName = [];   // v301 (Dome): jede Weide-Kachel trägt den Namen ihrer Weide – eine Weide über mehrere Kacheln ist so erkennbar eine Weide
+    const kacheln = [["hof", 1], ["bau", bh - 1]].flatMap(([t, x]) => Array.from({ length: Math.ceil(x - 1e-9) }, () => t));
+    weiden().forEach(w => { for (let i = 0; i < Math.ceil(w.ha - 1e-9); i++) { kacheln.push("weide"); wName[kacheln.length - 1] = w; } });
+    for (let i = 0; i < Math.ceil(frei - 1e-9); i++) kacheln.push("frei");
     const sp = Math.min(6, Math.max(3, Math.ceil(Math.sqrt(kacheln.length * 1.6)))), zeilen = Math.ceil(kacheln.length / sp), K = 52;
     const farbe = { hof: "#e9dcc3", bau: "#efe6d4", weide: "#a9cf8a", frei: "#d9e8c4", pacht: "#cfe0b6" };
     // kleine Zeichnungen der Gebäude auf dem Bauland (je Kachel 3 × 3), Baustellen orange gestrichelt (v230)
@@ -8220,13 +8223,13 @@
       return `<g><title>${gebName(g).replace(/\u00ad/g, "")}${g.bau ? " (im Bau)" : g.stufe ? ` (Stufe ${g.stufe})` : ""}</title>${d}</g>`; };
     const bauIcons = (bi, x, y) => ICONS.slice(bi * 9, bi * 9 + 9).map((g, k) => ic(g, x + 2 + (k % 3) * 16, y + 2 + Math.floor(k / 3) * 16)).join("") + (bi === 0 && ICONS.length > 9 * Math.ceil(bh - 1e-9) ? `<text x="${x + 44}" y="${y + 48}" font-size="7" text-anchor="end" fill="#4a3426">+${ICONS.length - 9 * Math.ceil(bh - 1e-9)}</text>` : "");
     const inhalt = (t, x, y, i) => t === "hof" || t === "bau" ? (ICONS.slice(i * 9, i * 9 + 9).length ? bauIcons(i, x, y) : `<text x="${x + K / 2}" y="${y + K / 2 + 3}" font-size="8" text-anchor="middle" fill="#8a6a4a">Bauland</text>`)
-      : t === "weide" ? `<g stroke="#fffaf0" stroke-width="1.5" fill="none"><rect x="${x + 3}" y="${y + 3}" width="${K - 6}" height="${K - 6}" stroke-dasharray="4 3"/></g><text x="${x + K / 2}" y="${y + K / 2 + 4}" font-size="16" text-anchor="middle">🌿</text>`
+      : t === "weide" ? `<g stroke="#fffaf0" stroke-width="1.5" fill="none"><rect x="${x + 3}" y="${y + 3}" width="${K - 6}" height="${K - 6}" stroke-dasharray="4 3"/></g><text x="${x + K / 2}" y="${y + K / 2 + 1}" font-size="14" text-anchor="middle">${wName[i] && wName[i].wiese ? "🌾" : "🌿"}</text><text x="${x + K / 2}" y="${y + K - 13}" font-size="6.5" text-anchor="middle" fill="#2f4a1f" font-weight="700">${esc(wName[i] ? wName[i].name : "Weide")}</text>${i >= pachtAb ? `<text x="${x + K / 2}" y="${y + K - 6}" font-size="5.5" text-anchor="middle" fill="#2f4a1f">Pacht</text>` : ""}`
       : t === "pacht" ? `<text x="${x + K / 2}" y="${y + K / 2 + 3}" font-size="8" text-anchor="middle" fill="#5b6b45">Pacht</text>` : `<text x="${x + K / 2}" y="${y + K / 2 + 3}" font-size="8" text-anchor="middle" fill="#7b8a63">frei</text>`;
     const pachtAb = kacheln.length - Math.ceil(pacht - 1e-9);   // v297: Pachtland steckt in Weide/frei – gestrichelter Rand
     const svg = `<svg class="hofplan" viewBox="-4 -4 ${sp * K + 8} ${zeilen * K + 8}" role="img" aria-label="Hofplan">${kacheln.map((t, i) => { const x = (i % sp) * K, y = Math.floor(i / sp) * K;
       return `<rect x="${x}" y="${y}" width="${K - 2}" height="${K - 2}" rx="6" fill="${farbe[t]}" ${i >= pachtAb && (t === "weide" || t === "frei") ? 'stroke="#6f8a4a" stroke-width="2" stroke-dasharray="4 3"' : ""}/>${inhalt(t, x, y, i)}`; }).join("")}</svg>`;
     return `${svg}<div class="hofplan-legende"><span><i style="background:${farbe.hof}"></i>Bauland ${haTxt(bh)} (belegt ${haTxt(baulandBelegt())}, frei ${haTxt(baulandFrei())}): ${n ? `Stall mit ${n} Boxen (${belegt} belegt, Stufe ${H.stufe || 1})` : "noch kein Stall"}${A.reitplatz ? ", Reitplatz" : ""}${A.reithalle ? ", Reithalle" : ""}${A.roundpen ? ", Roundpen" : ""}</span>
-      <span><i style="background:${farbe.weide}"></i>Weide: ${String(weide).replace(".", ",")} ha (reicht für etwa ${Math.floor(weide / 0.5)} Großpferde)</span><span><i style="background:${farbe.frei}"></i>freies Weideland: ${haTxt(frei)}</span>${pacht ? `<span><i style="background:${farbe.frei};border:2px dashed #6f8a4a"></i>gepachtet (gestrichelt): ${haTxt(pacht)}</span>` : ""}<span>🌲 Gelände zum Ausreiten rund um den Hof</span><span><i style="background:none;border:1.5px dashed #e08a1e"></i>im Bau · Zahl im Gebäude = Boxen</span>${gebaeude().length ? `<span>🏗️ ${gebaeude().map(g => `${gebName(g)}${g.bau ? " (im Bau)" : g.stufe ? ` (Stufe ${g.stufe})` : ""}`).join(", ")}</span>` : ""}</div>`;
+      ${weiden().map(w => `<span><i style="background:${farbe.weide}"></i>${esc(w.name)}: ${haTxt(w.ha)}${w.wiese ? " (Futterwiese)" : ` (reicht für etwa ${Math.floor(w.ha / 0.5)} Großpferde)`}</span>`).join("") || `<span><i style="background:${farbe.weide}"></i>noch keine Weide</span>`}<span><i style="background:${farbe.frei}"></i>freies Weideland: ${haTxt(frei)}</span>${pacht ? `<span><i style="background:${farbe.frei};border:2px dashed #6f8a4a"></i>gepachtet (gestrichelt): ${haTxt(pacht)}</span>` : ""}<span>🌲 Gelände zum Ausreiten rund um den Hof</span><span><i style="background:none;border:1.5px dashed #e08a1e"></i>im Bau · Zahl im Gebäude = Boxen</span>${gebaeude().length ? `<span>🏗️ ${gebaeude().map(g => `${gebName(g)}${g.bau ? " (im Bau)" : g.stufe ? ` (Stufe ${g.stufe})` : ""}`).join(", ")}</span>` : ""}</div>`;
   }
   function landHTML() {
     const H = spiel.hof || {};

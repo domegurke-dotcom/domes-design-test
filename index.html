@@ -871,7 +871,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "286";
+  const SPIEL_VERSION = "287";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -879,9 +879,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=286"></script>
-<script src="kopfteile.js?v=286"></script>
-<script src="kopfalter.js?v=286"></script>
+<script src="pferd.js?v=287"></script>
+<script src="kopfteile.js?v=287"></script>
+<script src="kopfalter.js?v=287"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -891,6 +891,7 @@
   const WEIDE_BEDARF = [0.5, 0.25], PONY_BIS = 148;
   let herdeFaktor = 1, bauWeideZiel = "neu";
   const PADDOCK_PLATZ = [0, 2, 3, 4];
+  const WIESE = { ertrag: 150, lohn: 15, verkauf: 0.12, regen: 0.2, schnitt2Gras: 60, grasWeg: 60 };   // H6 Futterwiese: kg Heu und Lohn je ha und Schnitt, Rest an den Bauern €/kg, Regen-Schnitt → staubig
   // H6 Einstreu: Verbrauch je Box und Tag (kg), staubt → Husten, Saugkraft → Strahlfäule
   const EINSTREU = { streuStroh: { n: "Stroh", kg: 7, staub: true, strahl: 1 }, spaene: { n: "Späne", kg: 3, strahl: 1 }, pellets: { n: "Pellets", kg: 2, strahl: 0.7 }, leinstroh: { n: "Leinstroh/Hanf", kg: 3, strahl: 0.8 } };
   const EINSTREU_OHNE = { wohl: 3, strahl: 2 }, EINSTREU_START = 100;   // H6: Pferde je Sandpaddock nach Stufe (selbst festgelegt)
@@ -3020,7 +3021,7 @@
         if (!p.weide && datum().s === 0 && reheGefaehrdet(p) && p.reheOk !== spiel.tag) {
           dialog(`<h3>⚠️ Hufrehe-Gefahr</h3><p>${esc(p.name)} ${reheGrund(p)}. Das junge Frühlingsgras ist sehr zuckerreich – auf der Weide droht jetzt <b>Hufrehe</b>. Besser ${spiel.anlage && spiel.anlage.paddock ? "Sandpaddock oder " : ""}Box, höchstens stundenweise Weide.</p>`,
             [["Trotzdem auf die Weide", () => { p.reheOk = spiel.tag; k.onclick(); }], ...(paddocks().length ? [["🟫 Lieber Sandpaddock", () => { $("dlg").hidden = true; const pk = document.querySelector('[data-ort="paddock"]'); if (pk) pk.click(); }]] : []), ["Lieber nicht", null, "zweit"]]); return; }
-        if (!p.weide && spiel.hof) { const offen = weiden().filter(w => !w.gesperrt && w.ha > 0);   // H6: mehrere Weiden – welche?
+        if (!p.weide && spiel.hof) { const offen = weiden().filter(w => !w.gesperrt && !w.wiese && w.ha > 0);   // H6: mehrere Weiden – welche?
           if (!offen.length && weiden().length) { dialog(`<h3>🚫 Alle Weiden gesperrt</h3><p>Gib unter Hofverwaltung → Hof → Weiden eine Weide frei.</p>`); return; }
           if (offen.length && p.weideZielTag !== spiel.tag) {   // Dome: immer fragen und zeigen, wer schon draußen steht
             dialog(`<h3>🌿 Auf welche Weide?</h3><div class="weide-wahl">${offen.map(w => `<button data-wziel="${w.wid}"><b>🌿 ${esc(w.name)}</b><small>${haTxt(w.ha)} · Gras ${Math.round(w.gras)} %${w.matsch >= GRAS.matschAb ? " · matschig" : ""} · Platz für ${haTxt(Math.max(0, w.ha - weideBelegtW(w)))}</small><small>${weidePferde(w).length ? `🐴 dort: ${weidePferde(w).map(q => esc(q.name)).join(", ")}` : "noch keine Pferde dort"}</small></button>`).join("")}</div>`, [["Abbrechen", null, "zweit"]]);
@@ -6764,7 +6765,7 @@
     pensionAnfragenTag();   // H5: neue Anfragen von Einstellern
   }
   function hofMorgen() {
-    turnierMorgen(); hofhelferTag(); reparaturTag(); umbauPlanTag(); rateVorwarnung();   // Turniertag: genannte Pferde fahren los
+    turnierMorgen(); hofhelferTag(); reparaturTag(); umbauPlanTag(); futterwieseTag(); rateVorwarnung();   // Turniertag: genannte Pferde fahren los
     futterLieferung();  // bestelltes Futter kommt an
     bedarfTag();   // Dome: Bedarf vorher gedeckt, jetzt nicht mehr → Meldung beim nächsten Besuch der Box
     expertKorrektur265();    // v265: fehlerhafte Expertenpläne einmal kostenlos neu rechnen
@@ -8932,7 +8933,7 @@
   function grasWenig(p) { const w = weideVon(p); return !!(w && w.gras < GRAS.wenig); }
   // Standard-Weide für ein Pferd: die letzte, sonst die freie mit dem meisten Gras je Platz
   function weideWahl(p) {
-    const offen = weiden().filter(w => !w.gesperrt && w.ha > 0); if (!offen.length) return null;
+    const offen = weiden().filter(w => !w.gesperrt && !w.wiese && w.ha > 0); if (!offen.length) return null;
     const alt = offen.find(w => w.wid === p.weideWid); if (alt) return alt;
     return offen.slice().sort((a, b) => (b.gras * (1 + b.ha - weideBelegtW(b))) - (a.gras * (1 + a.ha - weideBelegtW(a))))[0];
   }
@@ -8942,15 +8943,16 @@
     if (!W.length) return `<p class="text">Noch keine Weide eingezäunt. Freies Weideland zäunst du unter Hof → Bauen → „Weide einzäunen“ ein (Weideland kaufen oder pachten unter Hof → Land).</p>`;
     return `<p class="text" style="margin:0 0 6px">Faustregel: ${haTxt(WEIDE_BEDARF[0])} je Großpferd, ${haTxt(WEIDE_BEDARF[1])} je Pony. Gras wächst im Frühling stark, im Sommer mittel, im Herbst wenig, im Winter nicht. Ist es abgefressen (unter ${GRAS.wenig} %), brauchen die Pferde Heu. Überbesetzte Weiden werden matschig: mehr Mauke, Strahlfäule, Würmer und Streit, das Gras wächst langsamer.</p>
       ${W.map(w => { const P = weidePferde(w), bel = weideBelegtW(w), apf = w.aepfel != null && spiel.tag - w.aepfel < tpj(), nach = w.nachgesaet != null && w.nachgesaet >= jzJetzt();
-        return `<div class="geb"><span class="geb-ico">🌿</span><span class="geb-txt"><b>${esc(w.name)}</b><small>${haTxt(w.ha)} · ${P.length ? `${P.map(q => esc(q.name)).join(", ")} (braucht ${haTxt(bel)}${bel > w.ha + 1e-9 ? " – ⚠️ überbesetzt" : ""})` : w.ruhtBis != null ? `🌱 frisch nachgesät – ruht noch ${tageTxt2(Math.max(1, w.ruhtBis - spiel.tag))}` : w.gesperrt ? "🚫 gesperrt – erholt sich" : "keine Pferde"}${apf ? " · ✅ abgeäppelt" : ""}${nach ? " · 🌱 nachgesät" : ""}</small>
+        return `<div class="geb"><span class="geb-ico">🌿</span><span class="geb-txt"><b>${esc(w.name)}</b><small>${haTxt(w.ha)} · ${w.wiese ? `🌾 Futterwiese – der Bauer mäht im Sommer${w.schnitte ? ` (dieses Jahr ${w.schnitte}× gemäht)` : ""}` : P.length ? `${P.map(q => esc(q.name)).join(", ")} (braucht ${haTxt(bel)}${bel > w.ha + 1e-9 ? " – ⚠️ überbesetzt" : ""})` : w.ruhtBis != null ? `🌱 frisch nachgesät – ruht noch ${tageTxt2(Math.max(1, w.ruhtBis - spiel.tag))}` : w.gesperrt ? "🚫 gesperrt – erholt sich" : "keine Pferde"}${apf ? " · ✅ abgeäppelt" : ""}${nach ? " · 🌱 nachgesät" : ""}</small>
           <small>Gras ${Math.round(w.gras)} %</small>${bar(w.gras, true)}<small>Matsch ${Math.round(w.matsch)} %</small>${bar(w.matsch, false)}
-          <span class="geb-kn">${P.length && !apf ? `<button class="mini-knopf" data-waepfeln="${w.wid}">💩 Abäppeln</button>` : ""}${!P.length && w.ruhtBis == null ? `<button class="mini-knopf" data-wsperren="${w.wid}">${w.gesperrt ? "✅ Freigeben" : "🚫 Sperren (ruhen lassen)"}</button>` : ""}${saatZeit && w.saatJz !== jzJetzt() && w.ruhtBis == null ? (P.length ? `<button class="mini-knopf" disabled title="Erst die Pferde von dieser Weide holen">🌱 Nachsäen – erst Pferde runterholen</button>` : `<button class="mini-knopf" data-wsaeen="${w.wid}">🌱 Nachsäen · ${fmt(Math.round(GRAS.nachsaeen * w.ha))}</button>`) : ""}</span></span></div>`; }).join("")}
-      <p class="text"><small>Abäppeln (du oder der Pferdepfleger, 1 Weide am Tag) senkt das Wurmrisiko für eine Jahreszeit. Gesperrte Weiden wachsen ohne Verbrauch nach und trocknen ab. Nachsäen geht im Frühling und im Herbst, einmal je Jahreszeit und Weide (${fmt(GRAS.nachsaeen)} je ha, die Weide muss leer sein): Danach ruht sie ${tageTxt2(saatRuheTage())}, damit die jungen Gräser anwachsen, dann gibt es Gras +${GRAS.nachsaeenPlus}, und ein Jahr lang wächst es ${prozent(GRAS.nachsaeenWachs - 1)} schneller. Neue Weiden oder mehr Fläche: Hof → Bauen → „Weide einzäunen“.</small></p>`;
+          <span class="geb-kn">${P.length && !apf ? `<button class="mini-knopf" data-waepfeln="${w.wid}">💩 Abäppeln</button>` : ""}${!P.length && w.ruhtBis == null ? `<button class="mini-knopf" data-wwiese="${w.wid}">${w.wiese ? "🐴 Wieder als Weide" : "🌾 Als Futterwiese nutzen"}</button>` : ""}${!P.length && w.ruhtBis == null && !w.wiese ? `<button class="mini-knopf" data-wsperren="${w.wid}">${w.gesperrt ? "✅ Freigeben" : "🚫 Sperren (ruhen lassen)"}</button>` : ""}${saatZeit && w.saatJz !== jzJetzt() && w.ruhtBis == null ? (P.length ? `<button class="mini-knopf" disabled title="Erst die Pferde von dieser Weide holen">🌱 Nachsäen – erst Pferde runterholen</button>` : `<button class="mini-knopf" data-wsaeen="${w.wid}">🌱 Nachsäen · ${fmt(Math.round(GRAS.nachsaeen * w.ha))}</button>`) : ""}</span></span></div>`; }).join("")}
+      <p class="text"><small>Abäppeln (du oder der Pferdepfleger, 1 Weide am Tag) senkt das Wurmrisiko für eine Jahreszeit. Gesperrte Weiden wachsen ohne Verbrauch nach und trocknen ab. Nachsäen geht im Frühling und im Herbst, einmal je Jahreszeit und Weide (${fmt(GRAS.nachsaeen)} je ha, die Weide muss leer sein): Danach ruht sie ${tageTxt2(saatRuheTage())}, damit die jungen Gräser anwachsen, dann gibt es Gras +${GRAS.nachsaeenPlus}, und ein Jahr lang wächst es ${prozent(GRAS.nachsaeenWachs - 1)} schneller. Futterwiese: keine Pferde darauf, der Bauer mäht im Sommer (1. Schnitt am ersten Sommertag, 2. Schnitt später bei gutem Gras) gegen ${fmt(WIESE.lohn)} je ha und Schnitt; etwa ${WIESE.ertrag} kg Heu je ha und Schnitt kommen in die Futterkammer, was nicht hineinpasst, kauft der Bauer für ${String(WIESE.verkauf.toFixed(2)).replace(".", ",")} €/kg. Bei Regen wird das Heu staubig. Neue Weiden oder mehr Fläche: Hof → Bauen → „Weide einzäunen“.</small></p>`;
   }
   function weidenBinden() {
     const nb = $("nebenSchirm"), neu = () => { const y = nb.scrollTop; speichern(); zeigeHof(); nb.scrollTop = y; };
     nb.querySelectorAll("[data-waepfeln]").forEach(b => b.onclick = () => { const w = weideById(b.dataset.waepfeln); if (w) w.aepfel = spiel.tag; neu(); });
     nb.querySelectorAll("[data-wsperren]").forEach(b => b.onclick = () => { const w = weideById(b.dataset.wsperren); if (w && !weidePferde(w).length) { if (w.gesperrt) delete w.gesperrt; else w.gesperrt = true; } neu(); });
+    nb.querySelectorAll("[data-wwiese]").forEach(b => b.onclick = () => { const w = weideById(b.dataset.wwiese); if (w && !weidePferde(w).length) { if (w.wiese) delete w.wiese; else { w.wiese = true; delete w.gesperrt; } } neu(); });
     nb.querySelectorAll("[data-wsaeen]").forEach(b => b.onclick = () => { const w = weideById(b.dataset.wsaeen); if (!w) return; const f = weideNachsaeen(w); if (f) { dialog(`<h3>🌱 Nachsäen</h3><p>${f}</p>`); return; } neu(); });
   }
   // Dome (v283): Nachsäen im Frühling und Herbst, einmal je Jahreszeit, Weide muss leer sein, danach ruht sie ⅓ Jahreszeit
@@ -8989,6 +8991,21 @@
     document.querySelectorAll("[data-estreu]").forEach(x => x.onclick = () => { box.einstreu = x.dataset.estreu; delete box.einstreuFrage; $("dlg").hidden = true; speichern(); if (danach) danach(); });
   }
   const einstreuVsgHTML = box => box && box.pferd && !box.pferd.weide ? `<div class="wn-hinweis">🛏️ Einstreu: <b>${EINSTREU[box.einstreu] ? FUTTER[box.einstreu].n : "noch keine"}</b>${box.ohneEinstreu ? " – ⚠️ leer!" : ""} <button class="mini-knopf" id="einstreuAendern">ändern</button></div>` : "";
+  // H6: Futterwiese – der Bauer mäht im Sommer (1. Schnitt Tag 1, 2. Schnitt bei gutem Gras gegen Ende), Heu ins Lager, Rest verkaufen
+  function futterwieseTag() {
+    const d = datum(); if (d.s === 0 && d.t === 1) weiden().forEach(w => { delete w.schnitte; });
+    if (d.s !== 1) return;
+    const tag2 = Math.max(2, Math.ceil(tpj() * 0.7));
+    weiden().filter(w => w.wiese && w.ha > 0).forEach(w => {
+      const n = w.schnitte || 0, jetzt = (d.t === 1 && n === 0) || (d.t === tag2 && n === 1 && w.gras >= WIESE.schnitt2Gras); if (!jetzt) return;
+      const F = futterkammer(), kg = Math.round(WIESE.ertrag * w.ha * Math.min(1, w.gras / 70)), regen = Math.random() < WIESE.regen, sorte = regen ? "heuStaub" : "heu";
+      const unterwegs = (F.liefer || []).reduce((a, x) => a + (FUTTER[x.k] && !FUTTER[x.k].stueck ? x.menge : 0), 0), platz = Math.max(0, F.lagerMax - lagerBelegt() - unterwegs), rein = Math.min(kg, Math.floor(platz)), rest = kg - rein;
+      F.lager[sorte] = Math.round(((F.lager[sorte] || 0) + rein) * 1000) / 1000; delete F.warn.raufutter; delete F.warn[sorte];
+      const lohn = Math.round(WIESE.lohn * w.ha); buchen(-lohn, `Bauer: Mähen ${w.name}`); if (rest) buchen(Math.round(rest * WIESE.verkauf), `Heu an den Bauern: ${w.name}`);
+      w.schnitte = n + 1; w.gras = Math.max(5, w.gras - WIESE.grasWeg);
+      brief("Bauer Lindner", `${w.name} gemäht (${n + 1}. Schnitt)`, `ich habe heute {deine|Ihre} Futterwiese <b>${esc(w.name)}</b> (${haTxt(w.ha)}) gemäht. ${regen ? "Leider hat es beim Trocknen geregnet – das Heu ist <b>staubig</b>. " : ""}<b>${fmtKg(rein)}</b> ${regen ? "staubiges " : ""}Heu liegen jetzt in {deiner|Ihrer} Futterkammer${rest ? `, ${fmtKg(rest)} haben nicht mehr hineingepasst – die habe ich {dir|Ihnen} für ${fmt(Math.round(rest * WIESE.verkauf))} abgekauft` : ""}. Für das Mähen berechne ich ${fmt(lohn)}.`);
+    });
+  }
   function saatRuheTage() { return Math.max(1, Math.round(tpj() / 3)); }   // nach dem Nachsäen ca. ⅓ Jahreszeit (≈ 4 Wochen) Ruhe: 4 Tage/Jz → 1, 7 → 2, 10 → 3
   function grasNacht() {
     const s = datum(spiel.tag - 1).s;
@@ -9169,7 +9186,7 @@
   const BZN_THEMEN = [["pferd", "🐴 Pferd: Wachstum, Werte, Charakter"], ["zucht", "🐣 Zucht und Fohlen"], ["vererbung", "🧬 Vererbung und Gene"], ["gesund", "❤️ Gesundheit, Pflege und Hufe"], ["futter", "🌾 Fütterung"],
     ["weide", "🌿 Weide und Herde"], ["training", "🎓 Training, Ausbildung und Disziplinen"], ["turnier", "🏆 Turniere und Fohlenschau"], ["markt", "🏷️ Pferdemarkt, Geld und Marktwert"],
     ["mitarbeiter", "👥 Mitarbeiter"], ["hof", "🏘️ Hof, Bauen, Land und Kredit"], ["pension", "🏡 Pension und Einsteller"], ["briefe", "✉️ Briefe und Ansehen"], ["sonst", "⏱️ Spieltempo und Allgemeines"]];
-  const BZN_STARK = [[/todesursache|senioren/i, "gesund"], [/verkauf|auktion/i, "markt"], [/bauland/i, "hof"], [/rechnung/i, "markt"], [/wohlbefinden|vorlieben|charakter|startstand/i, "pferd"], [/pension|einsteller/i, "pension"], [/ansehen|briefe|schecken-namen/i, "briefe"], [/einstreu/i, "gesund"], [/futter|fütter|bedarf|leckerli|atemwege|standardplan|krippe/i, "futter"],
+  const BZN_STARK = [[/todesursache|senioren/i, "gesund"], [/verkauf|auktion/i, "markt"], [/bauland/i, "hof"], [/rechnung/i, "markt"], [/wohlbefinden|vorlieben|charakter|startstand/i, "pferd"], [/pension|einsteller/i, "pension"], [/ansehen|briefe|schecken-namen/i, "briefe"], [/einstreu/i, "gesund"], [/futterwiese/i, "weide"], [/futter|fütter|bedarf|leckerli|atemwege|standardplan|krippe/i, "futter"],
     [/weide|herde|allein|sandpaddock/i, "weide"], [/mitarbeiter|azubi|arbeit jeden|erfahrung|zufriedenheit|nachtdienst|pferdepfleger/i, "mitarbeiter"],
     [/erbkrank|decksaison|waise|stute|zucht|abfohl/i, "zucht"], [/befund|tierarzt|behandlung|mitwirkung|apotheke|^hufe|ansteckung|ankauf|untersuchung|vorsorge|kastration|schmutz|putzen|gesundheit|klinik|bemerken/i, "gesund"],
     [/kredit|zentrales konto|immobilie|neues spiel|makler|land|umzug|bauen|bauzeit|umbau|wirkung der stufe|übersicht je hof|vorwarnung|lager|höfe/i, "hof"], [/spieltempo/i, "sonst"]];
@@ -9256,6 +9273,7 @@
       <p><b>Weiden (H6):</b> je Hof mehrere Weiden mit Grasstand und Matsch (Hof → Weiden). Gras je Tag (Standardtempo, wird nach Spieltempo umgerechnet): wächst Frühling/Sommer/Herbst/Winter +${GRAS.wachsen.join(" / +")} (matschig nur halb, nachgesät ×${String(GRAS.nachsaeenWachs).replace(".", ",")} für 1 Jahr), Verbrauch ${GRAS.verbrauch} × belegte ha (${haTxt(WEIDE_BEDARF[0])} je Großpferd, ${haTxt(WEIDE_BEDARF[1])} je Pony) ÷ Weidefläche. Gras unter ${GRAS.wenig} % → Heu nötig wie im Winter. Überbesetzt: Matsch +${GRAS.matschPlus}/Tag (Herbst/Winter ×2), sonst −${GRAS.matschMinus} (leer −${GRAS.matschLeer}); ab ${GRAS.matschAb} % matschig: Mauke und Strahlfäule ×1,5, Würmer ×1,3, Streit ×1,3. Abäppeln (Spieler oder Pferdepfleger, 1 Weide/Tag): Würmer ×0,6 für 1 Jahreszeit. Sperren: wächst ohne Verbrauch, trocknet ab. Nachsäen im Frühling und Herbst (einmal je Jahreszeit und Weide, Weide muss leer sein) ${fmt(GRAS.nachsaeen)}/ha: danach ruht die Weide ⅓ Jahreszeit (4/7/10 Tage je Jz → 1/2/3 Tage), dann Gras +${GRAS.nachsaeenPlus}. Neue Weide oder vergrößern beim Einzäunen; Pachtende: Weiden schrumpfen aufs vorhandene Weideland.</p>
       <p><b>Sandpaddocks (H6):</b> jeder gebaute Sandpaddock (Hof → Bauen, auch mehrere) ist ein eigener Auslauf mit eigener Gruppe; Platz je Stufe 1/2/3: ${PADDOCK_PLATZ.slice(1).join(" / ")} Pferde. Zuteilen über Box → Pflege → Ort → Sandpaddock (Auswahl zeigt, wer dort steht und wie viel Platz frei ist), zurück über dieselbe Kachel. Das Pferd bleibt sonst wie in der Box versorgt (Futter, Mist), bekommt aber keinen Box-Abzug: Wohlbefinden +3 mit Gesellschaft (+1 allein) + 2 × temperamentvoll je Nacht; Herdenregeln (Streit, ungeplante Bedeckung) je Sandpaddock. Hengst mit Stute: Warnung (besser mit Wallach). Gesperrt bei Quarantäne und Boxenruhe. Hufrehe-Warnung im Frühling bietet „Lieber Sandpaddock“ an.</p>
       <p><b>Einstreu (H6):</b> Sorten in der Futterkammer (Gruppe Einstreu): ${Object.keys(EINSTREU).map(k => `${FUTTER[k].n} ${EINSTREU[k].kg} kg je Box und Tag à ${String(FUTTER[k].preis.toFixed(2)).replace(".", ",")} €`).join(" · ")}. Wirkung: Stroh staubt – Husten ×1,3 (empfindliche Atemwege ×2); Strahlfäule Pellets ×0,7, Leinstroh/Hanf ×0,8; ohne Einstreu Wohlbefinden −${EINSTREU_OHNE.wohl} je Nacht und Strahlfäule ×${EINSTREU_OHNE.strahl} (Brief „Keine Einstreu mehr“). Wahl je Box: zieht ein Pferd ein, fragt das Spiel, welche Einstreu (nur eine Sorte im Lager → automatisch); ändern in Box → Pflege → Versorgung. Verbrauch jede Nacht je Box mit Pferd (nicht auf der Weide, nicht in der Klinik), zählt in den Platz der Futterkammer. Startvorrat einmal ${EINSTREU_START} kg Einstreu-Stroh. Wird die Box leer, wird beim nächsten Pferd neu eingestreut. <b>Pension:</b> Zusatzleistung „Bessere Einstreu“ ${fmt(PENSION_LEISTUNG.einstreu.preis)} je Jahreszeit – die Box bekommt automatisch staubarme Einstreu aus dem Lager (Späne, Pellets oder Leinstroh/Hanf); gibt es nur Stroh, Zufriedenheit −2 je Nacht.</p>
+      <p><b>Futterwiese (H6):</b> eine Weide ohne Pferde lässt sich unter Hof → Weiden „als Futterwiese nutzen“ (keine Pferde darauf, wächst ohne Verbrauch). Der Bauer mäht im Sommer: 1. Schnitt am ersten Sommertag, 2. Schnitt am Tag ⌈0,7 × Tage je Jz⌉, wenn das Gras mindestens ${WIESE.schnitt2Gras} % hat. Ertrag ${WIESE.ertrag} kg Heu je ha und Schnitt × Gras/70 (höchstens ×1), danach Gras −${WIESE.grasWeg}. Lohn ${fmt(WIESE.lohn)} je ha und Schnitt. Heu kommt in die Futterkammer, so viel Platz ist; der Rest geht für ${String(WIESE.verkauf.toFixed(2)).replace(".", ",")} €/kg an den Bauern. ${prozent(WIESE.regen)} Regen-Schnitt → staubiges Heu. Ohne Futterwiese: Heu im Futterhandel.</p>
       <p><b>Wirkung der Stufe:</b> Wohlbefinden je Nacht in der Box: Stufe 1 −0,5, Stufe 3 +0,5, Zustand unter 40 % −0,5, Paddockbox +0,5. Verletzungsrisiko in der Box × 1,3 / 1 / 0,8, Zustand unter 70 % × 1,1, unter 40 % × 1,3. Mitarbeiter-Zufriedenheit je Jahreszeit: Ø Stufe unter 1,5 −3, ab 2,5 +3, Ø Zustand unter 50 % −3. Quarantänestall: Pferde dort stecken niemanden an und werden nicht angesteckt. Pensionspreis nach Stufe kommt mit H5.</p>
       <p><b>Bauland und Weideland</b> (Dome, v225): Bauland ${fmt(BAULAND_PREIS)}/ha (nur kaufen), Weideland ${fmt(LAND_PREIS)}/ha oder Pacht ${fmt(PACHT_PREIS)}/ha je Jahreszeit. Platzbedarf auf dem Bauland: Wohnhaus/Hofplatz ${haTxt(HOFPLATZ)}, Stall ${haTxt(0.1)} je 6 Boxen, Paddockboxen ${haTxt(0.15)} je 6, Reitplatz ${haTxt(0.1)}, Reithalle ${haTxt(0.15)}, Roundpen/Trail/Sandpaddock/Waschplatz/Lager/Sattelkammer/Quarantänestall/Abfohlbox je ${haTxt(0.05)}. Weide einzäunen nur auf Weideland. Start-Pensionsstall: 1 ha Bauland + 1 ha Weideland. Makler-Höfe: Bauland nach Bestand + 0,1 ha, auf ½ ha aufgerundet; Grundstück 1 ha Bauland.
         <b>Quarantänestall:</b> gekaufte Pferde (Markt, Auktion, Tierschutz) kommen zuerst in eine freie Quarantänebox und stehen 1 Jahreszeit unter Quarantäne; danach ziehen sie – ohne bekannte ansteckende Krankheit – automatisch in eine freie normale Box (Brief). Normale Umzüge nutzen den Quarantänestall nur, wenn sonst nichts frei ist.

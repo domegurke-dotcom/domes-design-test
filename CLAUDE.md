@@ -22,8 +22,8 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 ## Pläne (in dieser Reihenfolge)
 - `PLAN-WERTE.md` – Werte, Charakter, Training, Disziplinen, Turniere, Fohlenschau. **Alle Etappen 1–6 fertig** (6a Turniere, 6b Rennen/Distanz/Gangpferde/Championate/Reiterprofil, 6c Fohlenschau; Stand v211).
 - `PLAN-KRANKHEITEN.md` – Spieltempo, Mitarbeiter (inkl. Nachtrag B3 Azubi/Ausbilder), Befunde, Behandlung, Hufe, Ansteckung, AKU, Erbkrankheiten. **Alle Etappen A–H fertig.**
-- `PLAN-FUETTERUNG.md` – F1–F5. **Alle Etappen fertig** (v210–v214, von Claude per Skript getestet, Domes Test steht noch aus). Offene Detailfragen in `OFFENE-FRAGEN.md`.
-- `PLAN-HOF.md` – Hof-Ausbau H1–H8. **H1–H3 fertig** (v221–v223), vorgezogen v224–v231, **H5 Pension fertig** (v251, Nachträge v252–v258). **Als Nächstes H4**, dann H6 (mit Paddock/Sandpaddock, Pferde auf der Weide sichtbar, bessere Einstreu), H7, H8; danach die Veredler-Rassen. **Testspieler nicht mehr starten** (Dome).
+- `PLAN-FUETTERUNG.md` – F1–F5. **Alle Etappen fertig** (v210–v214, Abnahmetest von Claude erledigt, `tests/etappen-test.js`). Offene Detailfragen in `OFFENE-FRAGEN.md`.
+- `PLAN-HOF.md` – Hof-Ausbau H1–H8. **H1–H3 fertig** (v221–v223), vorgezogen v224–v231, **H5 Pension fertig** (v251, Nachträge v252–v258); Abnahmetest H1–H3 und H5 von Claude erledigt (`tests/etappen-test.js`). **Als Nächstes H4**, dann H6 (mit Paddock/Sandpaddock, Pferde auf der Weide sichtbar, bessere Einstreu), H7, H8; danach die Veredler-Rassen. **Testspieler nicht mehr starten** (Dome).
 - `PROJEKT-CHAT-THEMEN.md` – große Themen, die Dome im Projekt-Chat plant (Ausbildungsstall je Disziplin, Deckhengst, Merkmale-Karte, Reiter-Erfahrung, zwei Fohlen je Box/Zwillinge …) – nicht eigenmächtig umsetzen.
 - `OFFENE-FRAGEN.md` – Fragen, die Claude in Domes Abwesenheit mit der empfohlenen Lösung entschieden hat; mit Dome durchgehen und danach anpassen.
 - Nach jeder Etappe: testen, hochladen, Dome eine Test-Anleitung mit ausgeschriebenen Wegen geben, auf Rückmeldung warten, Etappe im Plan abhaken.
@@ -38,7 +38,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (3 Stellen in index.html) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **267**.
+- Letzte Version bei Aktualisierung dieser Datei: **271**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName` ausfüllen → `#chLos` → Kreditbrief schließen (`#dlgKnoepfe button`) → `[data-immo="pension"]` → `#kaufName` → `#dlgKnoepfe button:first-child`. Admin: `spiel.admin = true`.
@@ -46,8 +46,9 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - Vor dem Ausliefern Syntax prüfen (jeden `<script>`-Block mit `new Function(...)`, `node --check pferd.js`) und Screenshots in den drei Ansichten ansehen.
 - Kein Testlink mehr (Dome, 7.10.2026): Dome testet über GitHub Pages – das Artifact „Zuchtstall Testversion“ nicht mehr aktualisieren.
 - Gesamttest Hof-Ausbau: `NODE_PATH=/opt/node22/lib/node_modules node tests/hof-gesamttest.js` (Anleitung `tests/README.md`) – nach jeder Hof-Etappe laufen lassen und um die neue Etappe ergänzen. Testspieler nie mit Angestellten testen, solange ein Stall unter 5 Pferde hat (selbst versorgen, Futter aus der Futterkammer).
+- Abnahmetest (statt Domes eigenem Test, Dome 11.10.2026): `NODE_PATH=/opt/node22/lib/node_modules node tests/etappen-test.js` spielt die Test-Anleitungen (F1–F5, H1–H3, H5) in allen drei Ansichten nach – nach jeder Etappe laufen lassen, um die neue Etappe ergänzen und die Etappe im Plan als „Abnahmetest erledigt“ abhaken.
 
-## Wichtige Spielsysteme (Stand v267)
+## Wichtige Spielsysteme (Stand v271)
 - **Zeit:** Jahreszeiten (Frühling, Sommer, Herbst, Winter), `tpj()` Tage pro Jahreszeit 4/7/10 (Standard 7, alte Spielstände auf 7 umgestellt). Kalender-Anker `spiel.kal` = {tag, i}, damit ein Tempowechsel das Datum nicht verschiebt. Nur das Sozialverhalten wird umgerechnet (`proTag`, Bezug 7); alles andere gilt pro Tag/Nacht. `naechsteNacht()` ist der Tageswechsel; bei `datum().t === 1` laufen die Jahreszeit-Funktionen.
 - **Zucht:** Tragzeit 4 Jahreszeiten. Deckstation (Gestütshengste) nur Frühling/Sommer, eigene Hengste immer. Zuchtalter Stuten bis 20, Hengste bis 25. Befunde sperren die Zucht (`zuchtSperre`).
 - **Genetik:** E, A (A>At>a), F, Sty, Cr, D, Z, Rn, To, O, Lp, Patn, G, Dm (DMRT3). Versteckte Veranlagungen `ex` (grauTempo, apfel, fliegen, fliegenAb, maehne, ton, ow, sonne, kurve). Gefährliche Gene in `GEFAHR_GENE` (O, Lp) – Warnung nur, wenn mind. ein Partner positiv getestet ist.
@@ -104,6 +105,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
   - Futter: Futterzustand-Folgen je Stufe (`FZ_FOLGEN`: Gesundheit/Decke/Wohl/Infekte `IMMUN_KRANK`/Leistung 1 und 9 ×0,25). Eiweiß-Ziel Erhaltung 9 %, 1–3 J 11 %, unter 1 J 13 %; Aufzuchtfutter (`FUTTER.aufzucht`); Luzerne zählt als Raufutter; Jungpferde ohne Stroh/Abnehm-Ration. Futterplan mit „Abbrechen“ und „3-Tage-Umstellung“. Nur ein Empfehlungsknopf, veraltete Empfehlung wird gelöscht. Stallapotheke in der Futterkammer (`apothekeKammerHTML`), Schere in der Putzkiste.
   - Weide: Gewöhnung – Streit-Chance halbiert nach 1 Jz zusammen (`gewoehnung`, `spiel.herdePaare`). Pferd allein: Wohlbefinden sinkt.
   - Oberfläche: „Tag beenden“ im Stall (Boxenübersicht, `tagBeenden`), kein Hofname oben in der Box. Turniere zeigen nur nennbare Prüfungen.
+- **Nachträge v268–v271 (Adminmodus):** Rassenansicht (enz – Rassen): Alter-Regler ab 0 = „1 Tag“ (auch „Gene selbst wählen“); eingestelltes 1-Tag-Fohlen ist heute geboren (`gebTag`) und ein Waisenfohlen (`p.waise`, Auswahl in vsg). Gemietete Ammenstute steht sichtbar in der Box (gleiche Rasse, Fohlen davor wie bei Fuß; nur Zeichnung in `zeigeStall`). Leihmutter bleibt vorerst in ihrer eigenen Box (Dome: noch nicht, siehe `PROJEKT-CHAT-THEMEN.md` Punkt 11). stb – Daten: Knopf „🛠️ Pferd entfernen“ neben „Abgeben“ (nur Admin, ohne Rückfrage – Dome so gewollt; nimmt Pferd samt Fohlen bei Fuß ohne Geld/Brief aus der Box).
 
 ## Zusammenarbeit
 - Dome testet im Browser auf dem Handy und am PC und schickt Screenshots mit Wünschen.

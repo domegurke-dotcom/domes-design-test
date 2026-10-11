@@ -167,6 +167,17 @@ const path = require('path');
           ok('H6 Matsch → mehr Mauke und Strahlfäule', r1.mauke > r2.mauke && r1.strahlfaeule > r2.strahlfaeule);
           vonWeideHolen(bx); w2.ha = 1; w2.gras = 60; }
         w1.gesperrt = true; ok('H6 Gesperrte Weide wird nicht gewählt', !weideWahl({}) || weideWahl({}).wid !== w1.wid); delete w1.gesperrt;
+        // Nachsäen (v283): Frühling/Herbst, Weide leer, danach Ruhe ⅓ Jahreszeit
+        { const w = weiden()[0], s = datum().s, P = weidePferde(w);
+          if (s === 0 || s === 2) { delete w.saatJz; delete w.ruhtBis; delete w.gesperrt;
+            if (P.length) ok('H6 Nachsäen gesperrt, solange Pferde draufstehen', weideNachsaeen(w) !== '');
+            P.forEach(q => { const b = spiel.boxen.find(x => x.pferd === q); if (b) vonWeideHolen(b); });
+            w.gras = 30; const g0 = w.gras; ok('H6 Nachsäen (leere Weide)', weideNachsaeen(w) === '' && w.gesperrt && w.ruhtBis === spiel.tag + Math.max(1, Math.round(tpj() / 3)), 'ruht ' + (w.ruhtBis - spiel.tag) + ' Tage');
+            ok('H6 Nachsäen nur einmal je Jahreszeit', weideNachsaeen(w) !== '');
+            ok('H6 Ruhende Weide wird nicht gewählt', !weideWahl({}) || weideWahl({}).wid !== w.wid);
+            nacht(w.ruhtBis - spiel.tag);
+            ok('H6 Nach der Ruhe wieder offen, Gras gewachsen', !w.gesperrt && w.ruhtBis == null && w.gras > g0, `Gras ${g0} → ${w.gras} %`); }
+          else ok('H6 Nachsäen außerhalb Frühling/Herbst gesperrt', weideNachsaeen(w) !== ''); }
         ansehen('H6 hvw – Hof – Weiden', () => weidenHTML()); }
 
       // ---------- H1 Kreditrate ----------

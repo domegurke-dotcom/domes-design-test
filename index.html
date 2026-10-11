@@ -853,7 +853,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "253";
+  const SPIEL_VERSION = "254";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -861,9 +861,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=253"></script>
-<script src="kopfteile.js?v=253"></script>
-<script src="kopfalter.js?v=253"></script>
+<script src="pferd.js?v=254"></script>
+<script src="kopfteile.js?v=254"></script>
+<script src="kopfalter.js?v=254"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1469,6 +1469,7 @@
     f.ahnen = ahnenAus(M, V);
     nrVon(f);
     box.fohlen = f; delete M.traechtig;
+    if (M.einsteller) f.einsteller = M.einsteller;   // H5: Fohlen einer Pensionsstute gehört dem Besitzer
     M.nachkommen = (M.nachkommen || 0) + 1;
     const kind = { id: f.id, nr: nrVon(f), name: f.name, geschlecht: f.geschlecht, rasse: f.rasse, farbe: f.farbe, gen: f.gen, ex: f.ex, geb: { ...f.geb }, maehne: f.maehne };
     (M.kinder = M.kinder || []).push(kind);
@@ -2337,6 +2338,7 @@
     // ungeplante Bedeckung fällt nach einer Jahreszeit auf
     alleEigenenPferde().forEach(({ p }) => { if (!p.heimlich || jzJetzt() < p.heimlich.seit + 1) return;
       const hv = p.heimlich.vater; p.traechtig = p.heimlich; delete p.heimlich;
+      if (fremd(p)) { pensionBedeckt(p, hv); return; }   // H5: Pensionsstute – der Besitzer entscheidet
       brief("Tierarztpraxis", `Überraschung: ${p.name} ist tragend`, `bei der Routinekontrolle haben wir festgestellt: <b>${esc(p.name)}</b> ist tragend! Das war wohl nicht geplant – Vater ist <b>${esc(hv.name)}</b>, die beiden standen zusammen auf der Weide. Das Fohlen kommt zu Beginn von ${jzName(p.traechtig.geburt)} zur Welt.`, { pferde: [p] }); });
     const jetzt = jzJetzt();
     // tragende Stuten im Ausbildungsstall: eine Jahreszeit vor dem Abfohlen zurück in ihre (reservierte) Box
@@ -2385,6 +2387,7 @@
     spiel.boxen.forEach(b => {
       const f = b.fohlen; if (!f) return;
       const a = alterJZ(f); if (a < 2) return;
+      if (fremd(f)) { pensionFohlenAbholen(b); return; }
       const frei = freieBox();
       if (frei >= 0) {
         fohlenUmstellen(b, frei);
@@ -2898,6 +2901,7 @@
       inp.onblur = () => fertig(true);
     };
     const ab = $("absetzen"); if (ab) ab.onclick = () => {
+      if (fremd(box.fohlen)) { pensionFohlenAbholen(box); speichern(); zeigeStall(); zeigeTag(); return; }
       const frei = freieBox();
       if (frei < 0) { dialog(`<h3>Keine Box frei</h3><p>Im Stall (Boxenübersicht) kannst du mit + eine neue Box bauen.</p>`); return; }
       fohlenUmstellen(box, frei);
@@ -2936,7 +2940,6 @@
         return;
       }
       if (id === "weide") {
-        if (!p.weide && fremd(p) && p.geschlecht === "Hengst") { dialog(`<h3>🏡 Pensionshengst</h3><p>${esc(p.name)} ist ein Hengst – er steht laut Vertrag nur in der Paddockbox und kommt nicht auf die Gemeinschaftsweide.</p>`); return; }
         if (!p.weide && inQuarantaene(p)) { dialog(`<h3>🚧 Quarantäne</h3><p>${esc(p.name)} steht unter Quarantäne und darf nicht auf die Weide (noch ${tageTxt2(tpj() - (spiel.tag - p.quarantaene))}).</p>`); return; }
         if (!p.weide && p.boxenruhe) { dialog(`<h3>🛏️ Boxenruhe</h3><p>${esc(p.name)} hat Boxenruhe und darf nicht auf die Weide. Du kannst sie unter Pflege → Versorgung beenden.</p>`); return; }
         if (!p.weide && datum().s === 0 && reheGefaehrdet(p) && p.reheOk !== spiel.tag) {
@@ -2969,7 +2972,7 @@
     });
     INFO.querySelectorAll("[data-zielbox]").forEach(k => k.onclick = () => {
       const z = +k.dataset.zielbox, ziel = spiel.boxen[z]; if (ziel.pferd) return;
-      { const e = einstellerVon(p); if (e && e.leistungen.paddockbox && !ziel.paddock) { dialog(`<h3>🏡 Paddockbox gebucht</h3><p>${esc(eName(e))} hat für ${esc(p.name)} eine Paddockbox gebucht${p.geschlecht === "Hengst" ? " – Hengste stehen nur in der Paddockbox" : ""}. Bitte eine freie Paddockbox wählen.</p>`); return; } }
+      { const e = einstellerVon(p); if (e && e.leistungen.paddockbox && !ziel.paddock) { dialog(`<h3>🏡 Paddockbox gebucht</h3><p>${esc(eName(e))} hat für ${esc(p.name)} eine Paddockbox gebucht. Bitte eine freie Paddockbox wählen.</p>`); return; } }
       ziel.pferd = p; if (box.fohlen) { ziel.fohlen = box.fohlen; delete box.fohlen; }
       ziel.krippeVoll = false; ziel.mistig = false; ziel.mistStufe = 0; ziel.tot = false;
       box.pferd = null; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0;
@@ -6081,7 +6084,7 @@
       const a = herde[i], b = herde[j];
       // ungeplante Bedeckung: Hengst (ab 2 J.) und zuchtfähige Stute
       [[a, b], [b, a]].forEach(([H, S]) => {
-        if (fremd(H) || fremd(S) || !deckfaehig(H) || !stuteZucht(S) || Math.random() >= 0.25) return;   // Pensionspferde: Hengste stehen nur in der Paddockbox, Stuten werden nicht mit eigenen Hengsten zusammengestellt
+        if (!deckfaehig(H) || !stuteZucht(S) || Math.random() >= 0.25) return;   // auch bei Pensionspferden (Dome: kann passieren – Folgen in pensionBedeckt)
         const w = (wohlbefinden(S) + wohlbefinden(H)) / 2;
         if (Math.random() < 0.4 + 0.55 * w / 100) S.heimlich = { vater: hengstKopie(H), seit: jzJetzt(), geburt: jzJetzt() + 4 };
       });
@@ -6390,7 +6393,7 @@
       b.krippeVoll = false; b.mistig = true;
       wachsen(b);
     });
-    baulaerm();
+    baulaerm(); hengstStallNacht();
     spiel.boxen.forEach(b => { if (b.pferd && !b.tot) { trainingNacht(b.pferd); arbeitNacht(b.pferd); } });   // Energie füllt sich über Nacht · Arbeitsstufe für den Futterbedarf
     hufNacht();       // Eisen verlieren
     ansteckungNacht(); // ansteckende Krankheiten verbreiten sich
@@ -8075,13 +8078,13 @@
     const R = pensionRegeln(), r = Math.random, pick = l => l[Math.floor(r() * l.length)];
     const w = r() < 0.75, vn = pick(w ? MA_NAMEN_W : MA_NAMEN_M), nn = pick(PENSION_NN);   // in echt sind die meisten Einsteller Frauen
     const paddockFrei = spiel.boxen.some(b => b.paddock && pensionBoxFrei(b));
-    const g = paddockFrei && r() < PENSION.hengst ? "Hengst" : r() < 0.5 ? "Stute" : "Wallach", jahre = 4 + Math.floor(r() * 15);
+    const g = r() < PENSION.hengst ? "Hengst" : r() < 0.5 ? "Stute" : "Wallach", jahre = 4 + Math.floor(r() * 15);
     const p = mkPferd("e" + spiel.tag + Math.random().toString(36).slice(2, 7), pick(RASSEN).id, r() < 0.55 ? 0 : 1 + Math.floor(r() * 3), jahre, r, g);
     p.training = Math.floor(r() * Math.min(110, (jahre - 3) * 22));
     const bf = Math.max(0.5, Math.min(1.5, R.ansehen / 100)), L = {}; PL_REIHE.forEach(k => { if (leistungAngeboten(k) && (k !== "paddockbox" || paddockFrei) && r() < PENSION_LEISTUNG[k].chance * bf) L[k] = true; });
-    if (g === "Hengst") L.paddockbox = true;   // Hengste nur in die Paddockbox
+    if (g === "Hengst" && paddockFrei && leistungAngeboten("paddockbox") && r() < 0.6) L.paddockbox = true;   // Hengste oft lieber in die Paddockbox (Dome: dürfen aber auch in normale Boxen)
     const weide = spiel.hof && (spiel.hof.weideHa || 0) > 0, sand = spiel.anlage && spiel.anlage.paddock;
-    const haltung = g === "Hengst" ? "paddockbox" : weide && r() < 0.75 ? "weide" : sand ? "sandpaddock" : weide ? "weide" : "box";
+    const haltung = g === "Hengst" ? (L.paddockbox ? "paddockbox" : sand ? "sandpaddock" : "box") : weide && r() < 0.75 ? "weide" : sand ? "sandpaddock" : weide ? "weide" : "box";
     const a = { aid: "a" + Math.random().toString(36).slice(2, 8), vn, nn, w, pferd: p, leistungen: L, haltung, tag: spiel.tag, bis: spiel.tag + PENSION.anfrageTage, bluttest: R.bluttest };
     (spiel.pensionAnfragen = spiel.pensionAnfragen || []).push(a); R.letzteAnfrage = jzJetzt();
     const lt = PL_REIHE.filter(k => L[k]).map(k => PENSION_LEISTUNG[k].n);
@@ -8108,7 +8111,7 @@
       A.splice(A.indexOf(a), 1);
       let i = spiel.boxen.findIndex(b => b.reserviert === a.pferd.id); if (i >= 0) delete spiel.boxen[i].reserviert; else i = pensionZielBox(a);
       if (i < 0) { brief(eName(a), `${a.pferd.name} kommt doch nicht`, `leider ist bei {euch|Ihnen} keine passende Box mehr frei – ich suche weiter.`, { w: a.w }); return; }
-      const q = a.bluttest !== "vorher" && a.pferd.geschlecht !== "Hengst" ? spiel.boxen.findIndex(b => b.quar && boxFrei(b)) : -1;
+      const q = a.bluttest !== "vorher" ? spiel.boxen.findIndex(b => b.quar && boxFrei(b)) : -1;
       const nb = spiel.boxen[q >= 0 ? q : i], p = a.pferd, R = pensionRegeln();
       p.pflege = erzeugePflege(p); p.maehneSeit = spiel.tag; p.schopfSeit = spiel.tag;
       const e = { eid: "e" + Math.random().toString(36).slice(2, 8), vn: a.vn, nn: a.nn, w: a.w, pid: p.id, stufe: boxenStufe(spiel.boxen[i]), leistungen: { ...a.leistungen }, haltung: a.haltung,
@@ -8258,6 +8261,38 @@
     if (b) { b.pferd = null; delete b.fohlen; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; b.tot = false; }
     L.splice(L.indexOf(e), 1);
     if (p) brief("Hofverwaltung", `${p.name} ist ausgezogen`, `${eName(e)} hat <b>${esc(p.name)}</b> abgeholt (${grund}). Box ${spiel.boxen.indexOf(b) + 1} ist wieder frei.`);
+  }
+  // Ungeplante Bedeckung einer Pensionsstute (Dome): Ansehen stark runter, Besitzer kündigt vielleicht, entscheidet über das Fohlen; Spieler zahlt Abbruch bzw. Entschädigung
+  const BEDECKT = { abbruch: 250, behalten: 500, ansehen: -15, zufr: -40, kuendigt: 0.5 };
+  function pensionBedeckt(p, hv) {
+    const e = einstellerVon(p); if (!e) return;
+    pensionAnsehen(BEDECKT.ansehen); eZufr(e, BEDECKT.zufr, `${p.name} wurde ungewollt gedeckt`);
+    const behalten = Math.random() < 0.5, kuendigt = e.kuendigt == null && Math.random() < BEDECKT.kuendigt;
+    if (behalten) buchen(-BEDECKT.behalten, "Pension: Entschädigung"); else { delete p.traechtig; buchen(-BEDECKT.abbruch, "Pension: Tierarzt (Trächtigkeitsabbruch)"); }
+    if (kuendigt) { e.kuendigt = jzJetzt(); e.kuendGrund = "einsteller"; }
+    brief(eName(e), `${p.name} ist tragend!`, `der Tierarzt hat mir gerade gesagt, dass <b>${esc(p.name)}</b> tragend ist – von <b>${esc(hv.name)}</b>, die beiden standen bei {euch|Ihnen} zusammen auf der Weide. Ich bin wirklich verärgert!
+      <br><br>${behalten ? `Ich habe entschieden, das Fohlen zu behalten. Dafür verlange ich eine Entschädigung von <b>${fmt(BEDECKT.behalten)}</b> – ${esc(p.name)} kann monatelang kaum geritten werden. Das Fohlen gehört mir.` : `Ich habe den Tierarzt gebeten, die Trächtigkeit abzubrechen. Die Kosten von <b>${fmt(BEDECKT.abbruch)}</b> {trägst du|tragen Sie}.`} Das Geld ist bereits abgebucht.
+      ${kuendigt ? `<br><br>Außerdem kündige ich den Pensionsvertrag zum Ende dieser Jahreszeit.` : ""}`, { w: e.w, pferde: [p] });
+  }
+  // Fohlen einer Pensionsstute: beim Absetzen holt der Besitzer es ab
+  function pensionFohlenAbholen(b) {
+    const f = b.fohlen, e = einstellerVon(b.pferd) || einstellerListe().find(x => x.eid === f.einsteller); delete b.fohlen;
+    brief(e ? eName(e) : "Hofverwaltung", `${f.name} ist abgeholt`, `${e ? "ich habe" : "der Besitzer hat"} das Fohlen <b>${esc(f.name)}</b> zum Absetzen abgeholt – danke, dass es bei {euch|Ihnen} so gut aufwachsen konnte.`, { w: e ? e.w : undefined });
+  }
+  // Hengst im Stall mit Stuten (Dome): je nach Temperament und Hengstigkeit wird er unruhig – Wohlbefinden, Nachbarstuten, manchmal Verletzung
+  const hengstigkeit = p => { if (p.hengstig == null) p.hengstig = Math.round(zufall("hg2-" + (p.id || p.name))() * 100) / 100; return p.hengstig; };
+  function hengstStallNacht() {
+    spiel.boxen.forEach((b, i) => { const H = b.pferd; if (!H || b.tot || H.klinik || H.weide || !deckfaehig(H)) return;
+      const stuten = spiel.boxen.map((x, j) => ({ x, j })).filter(({ x }) => x.geb === b.geb && x.pferd && !x.tot && !x.pferd.weide && !x.pferd.klinik && x.pferd.geschlecht === "Stute" && alterJZ(x.pferd) >= 8);
+      if (!stuten.length) return;
+      const nachbar = stuten.filter(({ j }) => Math.abs(j - i) === 1), T = (H.werte && H.werte.charakter ? H.werte.charakter.temperament : 50) / 100;
+      const chance = (0.02 + 0.2 * hengstigkeit(H) * (0.3 + T)) * (nachbar.length ? 1.5 : 1) * (b.paddock ? 0.7 : 1);
+      if (Math.random() >= chance) return;
+      wohlAendern(H, -5, "unruhig – Stuten im Stall"); nachbar.forEach(({ x }) => wohlAendern(x.pferd, -3, `${H.name} ist unruhig`));
+      [H, ...nachbar.map(({ x }) => x.pferd)].forEach(q => { const e = einstellerVon(q); if (e) eZufr(e, -2, "ein unruhiger Hengst im Stall"); });
+      if (Math.random() < 0.08 && !befundListe(H).some(x => x.art === "verletzung")) befundNeu(H, "verletzung", 1, "tritt gegen die Boxenwand – Stuten im Stall");
+      if (H.hengstWarn !== jzJetzt()) { H.hengstWarn = jzJetzt(); brief("Hofverwaltung", `${H.name} ist unruhig`, `<b>${esc(H.name)}</b> (Box ${i + 1}) ist nachts unruhig, wiehert und schlägt gegen die Boxenwand – es stehen Stuten im selben Stall${nachbar.length ? ", sogar direkt nebenan" : ""}. Hengste mit viel Temperament vertragen das schlecht. Abhilfe: Stuten in einen anderen Stall stellen, eine Box Abstand lassen oder ${esc(H.name)} in eine Paddockbox.`, { pferde: [H] }); }
+    });
   }
   // Spieler kündigt (zum Ende der Jahreszeit) – Ansehen −5
   function pensionKuendigen(e) {
@@ -8555,12 +8590,14 @@
         <b>Quarantänestall:</b> gekaufte Pferde (Markt, Auktion, Tierschutz) kommen zuerst in eine freie Quarantänebox und stehen 1 Jahreszeit unter Quarantäne; danach ziehen sie – ohne bekannte ansteckende Krankheit – automatisch in eine freie normale Box (Brief). Normale Umzüge nutzen den Quarantänestall nur, wenn sonst nichts frei ist.
         <b>Hufrehe-Warnung</b> im Frühling für gefährdete Pferde (leichtfuttrige Rassen ${LEICHTFUTTRIG.join(", ")}, Futterzustand ab 7, Hufrehe oder Cushing bekannt): Hinweis beim Weidegang und Brief zu Frühlingsbeginn für alle gefährdeten Pferde auf der Weide.</p>
       <p><b>Pension und Einsteller (H5)</b> (Hofverwaltung → Hof → Pension): Pensionsplätze anbieten (Pensionsstall von Anfang an), höchstens N Plätze, Preis je Box und Jahreszeit nach Box-Stufe (Richtwert ${[1, 2, 3].map(st => `Stufe ${st} ${fmt(PENSION_PREIS[st])}`).join(", ")}; gilt für neue Verträge), Bluttest-Regel (vorher einreichen ×${String(PENSION.blut.vorher).replace(".", ",")} Anfragen, kein Ansteckungsrisiko · nachreichen ×${String(PENSION.blut.nachreichen).replace(".", ",")}, Risiko ${prozent(PENSION.risiko.nachreichen)}, Ergebnis nach 2 Tagen · keiner ×1, Risiko ${prozent(PENSION.risiko.keiner)}).
-        <b>Anfragen</b> per Brief (Zusagen/Absagen, ${PENSION.anfrageTage} Tage Zeit, höchstens ${PENSION.maxAnfragen} offen): je freier Box und Jahreszeit ${String(PENSION.anfrage).replace(".", ",")} Anfragen (Chance je Tag = das ÷ Tage pro Jahreszeit – bei jedem Tempo gleich viele je Jahreszeit, 6 freie Boxen ≈ 2; mindestens 1 je Jahreszeit garantiert, wenn Plätze frei, Preis höchstens 25 % über dem Richtwert und Ansehen ab 60) × Stufe (1 / 1,4 / 2) × (1 + ${prozent(PENSION.halle)} Reithalle + ${prozent(PENSION.roundpen)} Roundpen) × Ansehen/100 (0,3–1,5) × Preisfaktor (Richtwert ÷ Preis)³ (0,1–2; Richtwert mit dem Ansehen ±25 %) × Bluttest-Regel. ${prozent(PENSION.hengst)} Hengste (nur wenn eine Paddockbox frei ist, stehen nur dort, nicht auf der Weide). Zusage reserviert die Box, das Pferd kommt am nächsten Morgen (Quarantänestall zuerst, außer Bluttest liegt vor oder Hengst) und zahlt gleich anteilig für den Rest der Jahreszeit.
+        <b>Anfragen</b> per Brief (Zusagen/Absagen, ${PENSION.anfrageTage} Tage Zeit, höchstens ${PENSION.maxAnfragen} offen): je freier Box und Jahreszeit ${String(PENSION.anfrage).replace(".", ",")} Anfragen (Chance je Tag = das ÷ Tage pro Jahreszeit – bei jedem Tempo gleich viele je Jahreszeit, 6 freie Boxen ≈ 2; mindestens 1 je Jahreszeit garantiert, wenn Plätze frei, Preis höchstens 25 % über dem Richtwert und Ansehen ab 60) × Stufe (1 / 1,4 / 2) × (1 + ${prozent(PENSION.halle)} Reithalle + ${prozent(PENSION.roundpen)} Roundpen) × Ansehen/100 (0,3–1,5) × Preisfaktor (Richtwert ÷ Preis)³ (0,1–2; Richtwert mit dem Ansehen ±25 %) × Bluttest-Regel. ${prozent(PENSION.hengst)} Hengste (wenn Paddockboxen angeboten werden, wünschen 60 % eine, sonst normale Box). Zusage reserviert die Box, das Pferd kommt am nächsten Morgen (Quarantänestall zuerst, außer Bluttest liegt vor oder Hengst) und zahlt gleich anteilig für den Rest der Jahreszeit.
         <b>Pensionspferd:</b> eigener Steckbrief, gehört dem Einsteller – kein Verkauf, keine Zucht, kein Anhänger/Turnier/Labor, kein Training (nur der Bereiter mit gebuchter Leistung „Bewegen“, nicht an Tagen, an denen der Besitzer reitet). Füttern, Misten, Weidegang macht der Hof (Vollpension, Futter aus der eigenen Futterkammer). Tierarzt-, Hufschmied- und Klinikkosten zahlt der Besitzer (Bericht statt Rechnung), Mittel wie Wundsalbe oder Wurmkur bringt er selbst mit (nicht aus der Stallapotheke); bemerkt jemand eine Krankheit, ruft der Besitzer am nächsten Tag selbst den Tierarzt.
         <b>Besitzer-Besuch:</b> an ${prozent(PENSION.besuch)} der Tage (Winter ×0,8): putzt, bemerkt Krankheiten ab Grad 2 zur Hälfte, reitet (25 Energie) auf Reitplatz bzw. bei Regen/Winter in der Halle. Ab ${PENSION.voll} Reitern gleichzeitig: Zufriedenheit −1; trainierst du auf demselben Platz: −1 (Longieren −2), einmal am Tag je Einsteller.
         <b>Zusatzleistungen</b> je Jahreszeit (anbieten unter Pension, jeder Einsteller bucht mit eigener Chance): ${PL_REIHE.map(k => `${PENSION_LEISTUNG[k].n} ${fmt(PENSION_LEISTUNG[k].preis)} (${prozent(PENSION_LEISTUNG[k].chance)})`).join(", ")}. Decke nur Herbst/Winter (berechnet und fällig); Pfleger/Pferdewirt/Stallmeister erledigen das Decke-Wechseln von selbst. Bewegen nur mit Bereiter, Paddockbox nur mit Paddockboxen.
         <b>Zufriedenheit</b> (versteckt, Start ${PENSION.start}, 0–100, Admin sieht sie): je Nacht hungrig −5, Box nicht gemistet −3, über 1 Jahreszeit verdreckt −1, gut versorgt +0,2; Box Stufe 3 +0,2 / Stufe 1 −0,1; Reithalle +0,1; Stall unter 40 % Zustand −0,3; Pferdewirt Haltung und Service +0,2; Weidegang-Wunsch (außer Winter) mindestens jeden 2. Tag +0,1, sonst −0,3; gebuchte Leistung erledigt +0,3, vergessen −1 (Medikamente −2, Bewegen −1 ab dem 2. Tag ohne); neue Verletzung/Ansteckung −10, andere Krankheit −3. Unter ${PENSION.beschwerde}: Beschwerdebrief (einmal je Jahreszeit), unter ${PENSION.kuendigung}: Kündigung zum Ende der Jahreszeit (Ansehen −5).
         <b>Bezahlung</b> zu Beginn jeder Jahreszeit (Finanzen „Pension“ und „Pension: Zusatzleistungen“), ${prozent(PENSION.verspaetet)} verspätet: nach 2 Tagen zahlen 60 %, sonst Mahnung (+${prozent(PENSION.mahnZins)} Gebühr, „Pension: Mahngebühr“); nach 1 / 2 / 3 erfolglosen Mahnungen (Tempo 4 / 7 / 10 Tage) kündigt der Hof, das Geld ist verloren. Kündigen kannst du jederzeit zum Ende der Jahreszeit (Ansehen −5). Stirbt ein Pensionspferd, endet der Vertrag (kommt nicht auf den eigenen Pferdefriedhof); nur bei Vernachlässigung (Entkräftung, unbehandelte Krankheit) Ansehen −15 und Schadenersatz in Höhe des Marktwerts („Pension: Entschädigung“); beschlagnahmt der Tierschutz es, geht es zurück an den Besitzer (Ansehen −15).
+        <b>Ungeplante Bedeckung einer Pensionsstute</b> (Weide mit Hengst): fällt nach 1 Jahreszeit auf; Ansehen ${BEDECKT.ansehen}, Zufriedenheit ${BEDECKT.zufr}, Besitzer kündigt zu ${prozent(BEDECKT.kuendigt)}; er entscheidet (50 : 50): Fohlen behalten → Entschädigung ${fmt(BEDECKT.behalten)}, das Fohlen gehört ihm und wird beim Absetzen abgeholt · Abbruch durch den Tierarzt → ${fmt(BEDECKT.abbruch)} zahlt der Hof.
+        <b>Hengst mit Stuten im Stall</b> (alle Hengste ab 2 J., gleiches Stallgebäude): Unruhe je Nacht (2 % + 20 % × Hengstigkeit × (0,3 + Temperament)) × 1,5 bei Stute in der Nachbarbox × 0,7 in der Paddockbox; dann Wohlbefinden −5 (Nachbarstuten −3), Einsteller betroffener Pferde −2, zu 8 % Verletzung; Hinweisbrief einmal je Jahreszeit. Hengstigkeit ist versteckt (0–1, je Hengst).
         <b>Ansehen bei Einstellern</b> je Hof (versteckt, Start 100, 0–200): Durchschnitt aller Einsteller zu Beginn jeder Jahreszeit ≥ 70 → +2, unter 40 → −2. Wirkung: Anfragen ×Ansehen/100 (0,3–1,5), akzeptierter Preis Richtwert × (1 + (Ansehen − 100)/400), Buchungschance der Leistungen ×Ansehen/100 (0,5–1,5), unter 100 werden Einsteller ungeduldiger (Beschwerde und Kündigung je 1 Punkt früher je 5 Punkte unter 100). Hinweise auf den Ruf stehen in den Rückmeldungen.
         <b>Rückmeldungen:</b> etwa einmal je Jahreszeit schreibt jeder Einsteller, was gefällt und was nicht (nicht bei Beschwerde oder Kündigung). <b>Reitplatz heute:</b> bei Ort → Reitplatz/Reithalle steht, welche Einsteller heute dort reiten; im Stall unter „Heute da“.</p>
       <p><b>Stute mit Fohlen bei Fuß</b> (Dome, v244): die ersten ~6 Wochen nach der Geburt (0,6 Jahreszeiten) kein Training, danach bis zum Absetzen nur leichte Arbeit (${FOHLEN_LEICHT.map(k => UEBUNG[k].n.replace(/\u00ad/g, "")).join(", ")}). Dabei läuft das Fohlen mit: Sozialverhalten +0,5, Vertrauen +0,3. <b>Fohlen-ABC</b> (Box – ppf – Ort, ab ~1 Monat, einmal am Tag, bis ${FOHLEN_ABC_MAX}×): Vertrauen +0,8, Gehorsam +0,5 – Halfter, Führen, Hufe geben.</p>

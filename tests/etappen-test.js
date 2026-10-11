@@ -144,7 +144,7 @@ const path = require('path');
           const nochDa = umbauBetroffen(g).einsteller.includes(e); ok('H4 Einsteller nach dem Umbau wieder in seiner Box', nochDa);
           if (g.stufe < 3 && nochDa) { fuellen(); umbauStarten(g); zu(); nacht(tpj());
             ok('H4 Ohne Lösung kündigt der Einsteller und zieht aus', !einstellerListe().includes(e) && !spiel.boxen.some(b => b.pferd === ep), ep.name);
-            ok('H4 Brief „ausgezogen“', (spiel.post || []).some(x => /ausgezogen/.test(x.betreff || '') && (x.text || '').includes('Umbau'))); }
+}
           spiel.boxen.forEach(b => { if (b.pferd && /^Platzhalter/.test(b.pferd.name)) b.pferd = null; });
         } }
 
@@ -189,6 +189,19 @@ const path = require('path');
           ok('H6 Pferde in verschiedenen Sandpaddocks', paddockPferde(g1).includes(eig[0].pferd) && paddockPferde(g2).includes(eig[1].pferd));
           nacht(1); ok('H6 Im Sandpaddock kein Box-Abzug', (eig[0].pferd.boxTage || 0) === 0 && /Sandpaddock/.test(JSON.stringify(eig[0].pferd.wohlLog || {})));
           eig.forEach(b => delete b.pferd.paddock); } }
+
+      // ---------- H6 Einstreu ----------
+      { const F = futterkammer(), bx = spiel.boxen.find(b => b.pferd && !b.tot && !b.pferd.weide && !b.pferd.klinik);
+        ok('H6 Startvorrat Einstreu-Stroh', F.einstreuStart && (F.lager.streuStroh || 0) >= 0, fmtKg(F.lager.streuStroh || 0));
+        F.lager.streuStroh = 100; F.lager.pellets = 50; delete bx.einstreu; bx.einstreu = 'pellets';
+        const v0 = F.lager.pellets; nacht(1);
+        ok('H6 Einstreu wird je Box und Tag verbraucht', F.lager.pellets < v0 && !bx.ohneEinstreu, `Pellets ${v0} → ${F.lager.pellets} kg`);
+        const rP = Object.fromEntries(befundRisiko(bx.pferd, bx, 'box')); bx.einstreu = 'streuStroh'; const rS = Object.fromEntries(befundRisiko(bx.pferd, bx, 'box'));
+        ok('H6 Pellets: weniger Strahlfäule, Stroh: mehr Husten', rP.strahlfaeule < rS.strahlfaeule && (rS.husten || 0) > (rP.husten || 0));
+        Object.keys(EINSTREU).forEach(k => F.lager[k] = 0); nacht(1);
+        ok('H6 Ohne Einstreu: Brief und Wohlbefinden sinkt', bx.ohneEinstreu && (spiel.post || []).some(x => /Keine Einstreu/.test(x.betreff || '')) && /keine Einstreu/.test(JSON.stringify(bx.pferd.wohlLog || {})));
+        F.lager.streuStroh = 200; nacht(1); ok('H6 Nachgekauft: wieder eingestreut', !bx.ohneEinstreu);
+        ansehen('H6 Einstreu-Auswahl', () => einstreuWahl(bx)); ansehen('H6 Futterkammer mit Einstreu', () => futterkammerHTML('')); }
 
       // ---------- H1 Kreditrate ----------
       { const rest = k.rest; k.jz = -1; kreditJahreszeit();

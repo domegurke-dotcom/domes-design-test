@@ -871,7 +871,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "284";
+  const SPIEL_VERSION = "285";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -879,9 +879,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=284"></script>
-<script src="kopfteile.js?v=284"></script>
-<script src="kopfalter.js?v=284"></script>
+<script src="pferd.js?v=285"></script>
+<script src="kopfteile.js?v=285"></script>
+<script src="kopfalter.js?v=285"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -890,7 +890,10 @@
   const UMBAU = { nachlass: 0.3, zufrUmzug: -5, zufrNachlass: -5, ansehenOhne: -5 };
   const WEIDE_BEDARF = [0.5, 0.25], PONY_BIS = 148;
   let herdeFaktor = 1, bauWeideZiel = "neu";
-  const PADDOCK_PLATZ = [0, 2, 3, 4];   // H6: Pferde je Sandpaddock nach Stufe (selbst festgelegt)
+  const PADDOCK_PLATZ = [0, 2, 3, 4];
+  // H6 Einstreu: Verbrauch je Box und Tag (kg), staubt → Husten, Saugkraft → Strahlfäule
+  const EINSTREU = { streuStroh: { n: "Stroh", kg: 7, staub: true, strahl: 1 }, spaene: { n: "Späne", kg: 3, strahl: 1 }, pellets: { n: "Pellets", kg: 2, strahl: 0.7 }, leinstroh: { n: "Leinstroh/Hanf", kg: 3, strahl: 0.8 } };
+  const EINSTREU_OHNE = { wohl: 3, strahl: 2 }, EINSTREU_START = 100;   // H6: Pferde je Sandpaddock nach Stufe (selbst festgelegt)
   const NAMEN = {
     Stute: ["Schneeflocke", "Luna", "Bella", "Stella", "Fee", "Amira", "Freya", "Nala", "Kira", "Zora", "Dana", "Leonie", "Paula", "Sina", "Aurora", "Jasmin", "Wilma", "Elfe"],
     Hengst: ["Donnerhall", "Sturmwind", "Apollo", "Merlin", "Farid", "Orkan", "Balou", "Rocky", "Picasso", "Zeus", "Blitz", "Gandalf", "Samir", "Titan", "Odin"],
@@ -2553,6 +2556,8 @@
       setTimeout(() => dialog(`<h3>${nochKrank ? "✅ Besser!" : "✅ Wieder gesund!"}</h3><p><b>${esc(p.name)}</b>: ${l.map(x => esc(x)).join("; ")}.</p><p><small>${nochKrank ? "Andere Befunde sind noch offen – siehe Versorgung." : "Behandlungen und Boxenruhe sind nicht mehr nötig."}</small></p>`, [["OK", null]]), 300); }
     else if (p && p.bedarfMeldung && $("dlg").hidden) { const l = p.bedarfMeldung; delete p.bedarfMeldung; speichern();
       setTimeout(() => dialog(`<h3>🌾 Futter passt nicht mehr</h3><p>Bei <b>${esc(p.name)}</b> ist der Bedarf nicht mehr gedeckt: ${l.map(x => `<b>${x}</b>`).join(", ")}.</p><p><small>Der Bedarf ändert sich z. B. mit Gewicht, Arbeit, Trächtigkeit, Fohlen oder Jahreszeit. Nachsehen: Box – Pferdepflege – Versorgung – Fütterung heute – Futterplan („Bedarf gedeckt?“).</small></p>`, [["Später", null, "zweit"], ["📋 Futterplan", () => futterplanDialog(p, B(), () => { $("dlg").hidden = true; })]]), 300); }
+    else if (p && !B().tot && !p.weide && !p.klinik && !B().einstreu && $("dlg").hidden) { const da = einstreuDa();   // H6 (Dome): neues Pferd in der Box → welche Einstreu? Nur eine Sorte da → automatisch
+      if (da.length === 1) { B().einstreu = da[0]; speichern(); } else if (da.length > 1) setTimeout(() => { if ($("dlg").hidden) einstreuWahl(B(), () => zeigeAkte()); }, 300); }
     $("boxSchild").textContent = "Box " + (aktBox + 1);
     $("plaketten").innerHTML = B().tot ? "" : plakettenSVG([p, B().fohlen]);   // Stallplaketten hängen an der Box des Pferdes
     stallFormat();
@@ -2747,7 +2752,7 @@
         const st = rest < 0 ? ["überfällig", "bad"] : rest <= Math.max(1, Math.round(tpj() / 4)) ? ["bald fällig", "warn"] : ["ok", "ok"];
         return `<li><span class="ico">${ico}</span><span class="txt">${name}<small>zuletzt vor ${vor} ${vor === 1 ? "Tag" : "Tagen"} · ${info}</small></span><span class="stat ${st[1]}">${st[0]}</span></li>`;
       };
-      inhalt = pensionVsgHTML(p, box) + waiseVsgHTML(p) + weideNachmHTML(p) + `<div class="zeile-wert"><div class="kopf"><b>Gesundheitszustand</b><span>${g.toLocaleString("de-DE", { maximumFractionDigits: 1 })} % · ${zustand[0]}</span></div>
+      inhalt = pensionVsgHTML(p, box) + waiseVsgHTML(p) + weideNachmHTML(p) + einstreuVsgHTML(box) + `<div class="zeile-wert"><div class="kopf"><b>Gesundheitszustand</b><span>${g.toLocaleString("de-DE", { maximumFractionDigits: 1 })} % · ${zustand[0]}</span></div>
           <div class="balken"><i style="width:${g}%;${g < 45 ? "background:#c0503a" : ""}"></i></div>
           ${box.tot ? "" : (() => { const w = wohlbefinden(p); return `<div class="kopf" style="margin-top:8px"><b>Wohlbefinden</b><span>${w} % · ${w >= 85 ? "rundum zufrieden" : w >= 65 ? "zufrieden" : w >= 45 ? "unzufrieden" : "fühlt sich unwohl"}</span></div>
           <div class="balken"><i style="width:${w}%;background:${w < 45 ? "#c0503a" : "#5a9a6a"}"></i></div>${wohlGruende(p)}`; })()}
@@ -2759,7 +2764,7 @@
           <li><span class="ico">💧</span><span class="txt">Wasser<small>Selbsttränke</small></span><span class="stat ok">frisch</span></li>
           ${box.fohlen ? (() => { const fg = box.fohlen.pflege ? box.fohlen.pflege.gesundheit : 100; return `<li><span class="ico">🍼</span><span class="txt">Fohlen ${esc(box.fohlen.name)}<small>wird mit der Mutter versorgt</small></span><span class="stat ${fg >= 65 ? "ok" : fg >= 45 ? "warn" : "bad"}">${fg.toLocaleString("de-DE", { maximumFractionDigits: 1 })} %</span></li>`; })() : ""}
           ${befundZeilen(p)}
-          <li><span class="ico">🧹</span><span class="txt">Boxenhygiene<small>Einstreu aus Stroh</small></span><span class="stat ${box.mistig ? "warn" : "ok"}">${box.mistig ? "ausmisten" : "sauber"}</span></li>
+          <li><span class="ico">🧹</span><span class="txt">Boxenhygiene<small>${box.ohneEinstreu ? "⚠️ keine Einstreu" : EINSTREU[box.einstreu] ? `Einstreu: ${FUTTER[box.einstreu].n}` : "noch nicht eingestreut"}</small></span><span class="stat ${box.mistig ? "warn" : "ok"}">${box.mistig ? "ausmisten" : "sauber"}</span></li>
           ${(() => { const d = p.dreck || {}, sf = dreckStufe(d.fell), sm = dreckStufe(d.maehne);
             return `<li><span class="ico">🧽</span><span class="txt">Fell<small>${!pensionDarf(p, "putzen") ? `putzt der Besitzer (${eiferText(einstellerVon(p))})${zuLangeDreckig(p) ? " – ⚠️ schon länger verdreckt" : ""}` : zuLangeDreckig(p) ? "⚠️ schon länger als eine Jahreszeit verdreckt – schadet der Gesundheit" : "putzen mit der Bürste (Ausrüstung → Putzkiste)"}</small></span><span class="stat ${zuLangeDreckig(p) ? "bad" : sf[2]}">${sf[1]}</span></li>
               <li><span class="ico">${KAMM_ICO}</span><span class="txt">Mähne &amp; Schweif<small>${!pensionDarf(p, "pfleger") ? `macht der Besitzer (${eiferText(einstellerVon(p))})` : "kämmen mit dem Kamm (Ausrüstung → Putzkiste)"}</small></span><span class="stat ${sm[2]}">${sm[0] >= 50 ? "verfilzt" : sm[0] >= 20 ? "zerzaust" : "gekämmt"}</span></li>`; })()}
@@ -3596,6 +3601,7 @@
     return `<div class="pn-kasten"><b>🍼 ${esc(p.name)} braucht Milch!</b><small>Ohne Mutter wird ein Fohlen schnell schwach (Gesundheit −${WAISE.hunger} am Tag).</small>
       <div class="brief-aktion"><button class="knopf" data-waise="flasche">🍼 Mit der Flasche aufziehen · ${fmt(WAISE.flasche)}/Tag</button><button class="knopf zweit" data-waise="aufzucht">🏡 Aufzuchtstation · ${fmt(KOSTEN.aufzucht)}/Tag</button><button class="knopf zweit" data-waise="amme">🤱 Ammenstute mieten · ${fmt(WAISE.amme)}</button>${lm.map(M => `<button class="knopf zweit" data-waise="lm:${M.id}">🐴 Leihmutter: ${esc(M.name)}</button>`).join("")}</div>${lm.length ? "" : `<small>Leihmutter: eine eigene Stute, die gerade selbst ein Fohlen bei Fuß hat – im Moment gibt es keine.</small>`}</div>`;
   }
+  document.addEventListener("click", e => { if (e.target && e.target.id === "einstreuAendern") einstreuWahl(B(), () => zeigeAkte()); });   // H6: Einstreu in der Versorgung ändern
   document.addEventListener("click", e => { const k = e.target.closest && e.target.closest("[data-waise]"); if (!k) return; const box = B(), p = box && box.pferd; if (!p || !p.waise) return;
     const w = k.dataset.waise;
     if (w === "flasche") p.waise.art = "flasche";
@@ -3722,6 +3728,7 @@
       influenza: (geimpft(p) ? 0.3 : 1) * (s === 3 || s === 2 ? 1.5 : 1), herpes: geimpft(p) ? 0.3 : 1, hautpilz: dreck ? 2 : 1,
       wuermer: (wurmFrisch(p) ? 0.2 : spiel.tag - (p.pflege.wurm || 0) > 2.5 * tpj() ? 3 : 1) * (ort === "weide" ? 1.5 * (matschig(p) ? 1.3 : 1) * (abgeaeppelt(p) ? 0.6 : 1) : 1) };   // Dome (v242): Wurmkur im Frühjahr und Herbst
     f.kolik *= zahnUeber(p) ? 1.5 : 1;
+    if (ort === "box" && box) { const E = EINSTREU[box.einstreu]; if (box.ohneEinstreu) f.strahlfaeule *= EINSTREU_OHNE.strahl; else if (E) { if (f.husten != null && E.staub) f.husten *= atemEmpfindlich(p) ? 2 : 1.3; f.strahlfaeule *= E.strahl; } }   // H6: Einstreu
     Object.keys(f).forEach(k => { f[k] *= futterFaktor(p, k); });   // Fütterung (F3): Futterzustand, Raufutter, Stärke, Mineralien
     f.lahmheit *= hufZuLang(p) * (p.eisenWeg ? 1.5 : 1) * (p.ocd ? 1.3 : 1);
     return Object.keys(KRANK).filter(k => f[k] != null).map(k => [k, BEFUND_RISIKO * KRANK[k].gew * konst * wohlF * (k === "arthrose" || k === "cushing" ? 1 : altF) * f[k]]);
@@ -5442,6 +5449,11 @@
     leckerli:   { n: "Leckerli", ico: "🍬", e: 12, ei: 8, rf: 5, zs: 50, preis: 5.00, art: "leckerli", pack: [1, 5], info: "gekauftes Leckerli" } };
   // 🫙 und 🫗 sind neuere Emojis – für ältere Handys durch ältere ersetzen
   FUTTER.heulage.ico = "🥫"; FUTTER.oel.ico = "🛢️";
+  Object.assign(FUTTER, {   // H6: Einstreu (kein Futter – Lager in der Futterkammer/im Strohlager)
+    streuStroh: { n: "Einstreu-Stroh", ico: "🟨", e: 0, ei: 0, rf: 0, zs: 0, preis: 0.10, art: "einstreu", pack: [25, 100, 500], info: "günstig, staubt (Husten), wird angeknabbert – 7 kg je Box und Tag" },
+    spaene: { n: "Späne", ico: "🌲", e: 0, ei: 0, rf: 0, zs: 0, preis: 0.35, art: "einstreu", pack: [20, 60, 200], info: "staubarm – 3 kg je Box und Tag" },
+    pellets: { n: "Strohpellets", ico: "🟤", e: 0, ei: 0, rf: 0, zs: 0, preis: 0.40, art: "einstreu", pack: [20, 60, 200], info: "sehr saugfähig, staubarm (weniger Strahlfäule) – 2 kg je Box und Tag" },
+    leinstroh: { n: "Leinstroh/Hanf", ico: "🌿", e: 0, ei: 0, rf: 0, zs: 0, preis: 0.60, art: "einstreu", pack: [20, 60, 200], info: "staubarm, saugfähig – 3 kg je Box und Tag" } });
   const RAUFUTTER_REIHE = ["heu", "heulage", "heuStaub", "heucobs", "stroh"];   // ohne eigenen Futterplan (F2): erst gutes Heu, dann Ersatz
   const LAGER_START = 2000;   // kg Platz in der Futterkammer (Heuboden) – wird mit dem Hof-Ausbau (Futter- und Strohlager) größer
   function futterkammer() {
@@ -5453,6 +5465,7 @@
     if (F.lagerMax == null) F.lagerMax = LAGER_START;   // Feld für die Lagergröße (Hof-Ausbau H3)
     F.warn = F.warn || {};
     Object.keys(FUTTER).forEach(k => { if (F.lager[k] == null) F.lager[k] = 0; });
+    if (!F.einstreuStart) { F.einstreuStart = true; F.lager.streuStroh = (F.lager.streuStroh || 0) + EINSTREU_START; }   // H6: einmal 100 kg Einstreu-Stroh
     return F;
   }
   const lagerBelegt = () => Object.entries(futterkammer().lager).reduce((a, [k, v]) => a + (FUTTER[k] && !FUTTER[k].stueck ? v : 0), 0);
@@ -5498,6 +5511,7 @@
     let rau = 0, min = 0, kosten = 0; const je = {};
     spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot || p.klinik || (p.weide && !heuNoetigP(p))) return; const R = tagesRation(p, b, false); rau += R.raufutter; min += R.mineral;
       Object.entries(R.kg).forEach(([k, x]) => { je[k] = (je[k] || 0) + x; kosten += FUTTER[k] ? FUTTER[k].preis * x : 0; }); });
+    spiel.boxen.forEach(b => { const E = b.pferd && !b.tot && !b.pferd.klinik && !b.pferd.weide && EINSTREU[b.einstreu]; if (E) { je[b.einstreu] = (je[b.einstreu] || 0) + E.kg; kosten += FUTTER[b.einstreu].preis * E.kg; } });   // H6: Einstreu
     return { raufutter: Math.round(rau * 10) / 10, mineral: Math.round(min * 100) / 100, je, kosten: Math.round(kosten * 100) / 100 };
   }
   // Warnbrief, wenn eine Sorte leer ist oder bald leer wird (einmal, bis wieder nachgekauft wurde)
@@ -5547,6 +5561,7 @@
         <p class="fk-gruppe">Kraftfutter</p>${Object.keys(FUTTER).filter(k => FUTTER[k].art === "kraftfutter").map(zeile).join("")}
         <p class="fk-gruppe">Zusätze</p>${Object.keys(FUTTER).filter(k => FUTTER[k].art === "zusatz").map(zeile).join("")}
         <p class="fk-gruppe">Leckerli</p>${Object.keys(FUTTER).filter(k => FUTTER[k].art === "leckerli").map(zeile).join("")}
+        <p class="fk-gruppe">Einstreu</p>${Object.keys(FUTTER).filter(k => FUTTER[k].art === "einstreu").map(zeile).join("")}
         <p class="fk-gruppe">Spezialfutter</p>${(() => { const sp = Object.keys(FUTTER).filter(k => FUTTER[k].art === "spezial" && (spezialFrei(FUTTER[k].spezial) || F.lager[k] > 0)); return sp.length ? sp.map(zeile).join("") : `<p class="text" style="margin:4px 0"><small>Noch keins freigeschaltet – Spezialfutter stellt der Futterexperte zusammen.</small></p>`; })()}</div>
       ${korbLeiste()}
       ${apothekeKammerHTML()}
@@ -5638,7 +5653,7 @@
   // ---------- Fütterung F2: Futterplan, Bedarf, Nährwerte ----------
   // Futterplan je Pferd: p.futterplan = { mahl: 2|3, kg: { sorte: kg am Tag } } – Mengen werden gleichmäßig auf die Mahlzeiten verteilt. Ohne Plan: Standardplan.
   const LEICHTFUTTRIG = ["haflinger", "fjord", "shetty", "isi", "tinker"], SCHWERFUTTRIG = ["vollblut", "araber", "tekke"];   // neue Rassen hier eintragen
-  const PLAN_SORTEN = Object.keys(FUTTER).filter(k => !FUTTER[k].stueck && FUTTER[k].art !== "leckerli");
+  const PLAN_SORTEN = Object.keys(FUTTER).filter(k => !FUTTER[k].stueck && FUTTER[k].art !== "leckerli" && FUTTER[k].art !== "einstreu");
   const PLAN_SCHRITT = k => FUTTER[k].art === "raufutter" ? 0.5 : k === "oel" || k === "mineral" ? 0.05 : 0.25;
   function standardPlan(p, box) { const R = tagesRationStandard(p, box); return { mahl: 2, kg: { heu: R.raufutter, mineral: R.mineral } }; }
   // Arbeit: Schnitt der verbrauchten Trainings-/Turnierenergie der letzten Tage (p.arbeitSchnitt, nachts aktualisiert)
@@ -6694,7 +6709,7 @@
     paddocks().forEach(g => { const h = paddockPferde(g); if (h.length > 1) herdeNacht(h); });   // H6: Herdenregeln auch je Sandpaddock   // H6: Herdenregeln je Weide, Matsch → mehr Streit
     grasNacht();
     spiel.boxen.forEach(b => {
-      if (!b.pferd) { b.krippeVoll = false; b.mistig = false; return; }   // leere Box: sauber, Krippe leer
+      if (!b.pferd) { b.krippeVoll = false; b.mistig = false; delete b.einstreu; delete b.ohneEinstreu; return; }   // leere Box: sauber, Krippe leer – das nächste Pferd bekommt neu eingestreut
       if (b.pferd.klinik) { delete b.pferd.weide; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; return; }   // Pferd ist in der Klinik
       if (b.pferd.weide && !b.tot) {   // Weide: Gras statt Heu, kein Mist – Gesundheit je nach Jahreszeit, Wohlbefinden steigt
         const W = b.pferd, plus = WEIDE_PLUS[datum().s], hungrig = heuNoetigP(W, spiel.tag - 1) && !b.krippeVoll; W.weideZuletzt = spiel.tag - 1; if (W.anweiden && !anweidenAktiv(W)) delete W.anweiden;   // Winter / letzter Herbsttag: Heu nötig
@@ -6731,7 +6746,7 @@
       if (b.fohlen) sozialPlus(b.fohlen, 0.3);
       // Wohlbefinden: Box (zu lange am Stück, je nach Charakter), Hunger, Mist, Putzen vermisst …
       const pd = paddockVon(b.pferd); if (b.pferd.paddock && !pd) delete b.pferd.paddock;   // Sandpaddock abgerissen/umgebaut → zurück in die Box
-      wohlNacht(b.pferd, pd ? "paddock" : "box", { hungrig: !b.krippeVoll, mistig: b.mistig, fohlen: !!b.fohlen, herde: pd ? paddockPferde(pd) : null }); boxWohl(b.pferd, b); wohlAllein(b.pferd, b.krippeVoll && !b.mistig); futterNacht(b.pferd, b, "box");
+      wohlNacht(b.pferd, pd ? "paddock" : "box", { hungrig: !b.krippeVoll, mistig: b.mistig, fohlen: !!b.fohlen, herde: pd ? paddockPferde(pd) : null }); einstreuNacht(b); boxWohl(b.pferd, b); wohlAllein(b.pferd, b.krippeVoll && !b.mistig); futterNacht(b.pferd, b, "box");
       schmutzen(b.pferd, b.mistig);
       b.krippeVoll = false; b.mistig = true;
       wachsen(b);
@@ -8953,6 +8968,23 @@
   function paddockVon(p) { return p && p.paddock ? (paddocks().find(g => g.gid === p.paddock.pid) || null) : null; }
   function paddockPferde(g) { return spiel.boxen.filter(b => b.pferd && !b.tot && !b.pferd.klinik && b.pferd.paddock && b.pferd.paddock.pid === g.gid).map(b => b.pferd); }
   function paddockPlatz(g) { return PADDOCK_PLATZ[g.stufe || 1] || 2; }
+  // ---------- H6: Einstreu je Box · b.einstreu = Sorte · Wahl, wenn ein Pferd einzieht (eine Sorte im Lager → automatisch) ----------
+  function einstreuDa() { const F = futterkammer(); return Object.keys(EINSTREU).filter(k => (F.lager[k] || 0) >= EINSTREU[k].kg); }
+  function einstreuNacht(b) {   // jede Nacht je Box mit Pferd (nicht auf der Weide): Einstreu verbrauchen
+    if (!b.pferd || b.tot) { delete b.einstreu; delete b.ohneEinstreu; return; }
+    if (b.pferd.klinik || b.pferd.weide) return;
+    const F = futterkammer(); if (!b.einstreu) { const da = einstreuDa(); if (da.length) b.einstreu = da[0]; }   // noch nicht gewählt: was da ist
+    const E = EINSTREU[b.einstreu];
+    if (E && (F.lager[b.einstreu] || 0) >= E.kg) { F.lager[b.einstreu] = Math.round((F.lager[b.einstreu] - E.kg) * 1000) / 1000; delete b.ohneEinstreu; }
+    else { b.ohneEinstreu = true; wohlAendern(b.pferd, -EINSTREU_OHNE.wohl, "keine Einstreu"); if (!F.warn.einstreu) { F.warn.einstreu = "leer"; brief("Hofverwaltung", "Keine Einstreu mehr", `in der Futterkammer ist ${E ? `kein ${esc(E.n)}` : "keine Einstreu"} mehr. Ohne Einstreu stehen die Pferde auf dem nackten Boden – das Wohlbefinden sinkt und Strahlfäule wird häufiger. Nachkaufen: Hofverwaltung → Hof → Futterkammer → Einstreu.`); } }
+    if (!b.ohneEinstreu && F.warn.einstreu) delete F.warn.einstreu;
+  }
+  function einstreuWahl(box, danach) {   // Fenster: welche Einstreu für diese Box?
+    const F = futterkammer();
+    dialog(`<h3>🛏️ Einstreu für Box ${spiel.boxen.indexOf(box) + 1}</h3><div class="weide-wahl">${Object.keys(EINSTREU).map(k => `<button data-estreu="${k}" ${(F.lager[k] || 0) < EINSTREU[k].kg ? "disabled" : ""}><b>${FUTTER[k].ico} ${FUTTER[k].n}${box.einstreu === k ? " ✓" : ""}</b><small>${FUTTER[k].info}</small><small>im Lager: ${fmtKg(F.lager[k] || 0)}</small></button>`).join("")}</div><p class="text"><small>Kaufen: Hofverwaltung → Hof → Futterkammer → Einstreu.</small></p>`, [["Abbrechen", danach || null, "zweit"]]);
+    document.querySelectorAll("[data-estreu]").forEach(x => x.onclick = () => { box.einstreu = x.dataset.estreu; delete box.einstreuFrage; $("dlg").hidden = true; speichern(); if (danach) danach(); });
+  }
+  const einstreuVsgHTML = box => box && box.pferd && !box.pferd.weide ? `<div class="wn-hinweis">🛏️ Einstreu: <b>${EINSTREU[box.einstreu] ? FUTTER[box.einstreu].n : "noch keine"}</b>${box.ohneEinstreu ? " – ⚠️ leer!" : ""} <button class="mini-knopf" id="einstreuAendern">ändern</button></div>` : "";
   function saatRuheTage() { return Math.max(1, Math.round(tpj() / 3)); }   // nach dem Nachsäen ca. ⅓ Jahreszeit (≈ 4 Wochen) Ruhe: 4 Tage/Jz → 1, 7 → 2, 10 → 3
   function grasNacht() {
     const s = datum(spiel.tag - 1).s;
@@ -9133,7 +9165,7 @@
   const BZN_THEMEN = [["pferd", "🐴 Pferd: Wachstum, Werte, Charakter"], ["zucht", "🐣 Zucht und Fohlen"], ["vererbung", "🧬 Vererbung und Gene"], ["gesund", "❤️ Gesundheit, Pflege und Hufe"], ["futter", "🌾 Fütterung"],
     ["weide", "🌿 Weide und Herde"], ["training", "🎓 Training, Ausbildung und Disziplinen"], ["turnier", "🏆 Turniere und Fohlenschau"], ["markt", "🏷️ Pferdemarkt, Geld und Marktwert"],
     ["mitarbeiter", "👥 Mitarbeiter"], ["hof", "🏘️ Hof, Bauen, Land und Kredit"], ["pension", "🏡 Pension und Einsteller"], ["briefe", "✉️ Briefe und Ansehen"], ["sonst", "⏱️ Spieltempo und Allgemeines"]];
-  const BZN_STARK = [[/todesursache|senioren/i, "gesund"], [/verkauf|auktion/i, "markt"], [/bauland/i, "hof"], [/rechnung/i, "markt"], [/wohlbefinden|vorlieben|charakter|startstand/i, "pferd"], [/pension|einsteller/i, "pension"], [/ansehen|briefe|schecken-namen/i, "briefe"], [/futter|fütter|bedarf|leckerli|atemwege|standardplan|krippe/i, "futter"],
+  const BZN_STARK = [[/todesursache|senioren/i, "gesund"], [/verkauf|auktion/i, "markt"], [/bauland/i, "hof"], [/rechnung/i, "markt"], [/wohlbefinden|vorlieben|charakter|startstand/i, "pferd"], [/pension|einsteller/i, "pension"], [/ansehen|briefe|schecken-namen/i, "briefe"], [/einstreu/i, "gesund"], [/futter|fütter|bedarf|leckerli|atemwege|standardplan|krippe/i, "futter"],
     [/weide|herde|allein|sandpaddock/i, "weide"], [/mitarbeiter|azubi|arbeit jeden|erfahrung|zufriedenheit|nachtdienst|pferdepfleger/i, "mitarbeiter"],
     [/erbkrank|decksaison|waise|stute|zucht|abfohl/i, "zucht"], [/befund|tierarzt|behandlung|mitwirkung|apotheke|^hufe|ansteckung|ankauf|untersuchung|vorsorge|kastration|schmutz|putzen|gesundheit|klinik|bemerken/i, "gesund"],
     [/kredit|zentrales konto|immobilie|neues spiel|makler|land|umzug|bauen|bauzeit|umbau|wirkung der stufe|übersicht je hof|vorwarnung|lager|höfe/i, "hof"], [/spieltempo/i, "sonst"]];
@@ -9219,6 +9251,7 @@
       <p><b>Umbau</b> eine Stufe höher: Preisunterschied + ${prozent(UMBAU_AUFSCHLAG)}, halbe Bauzeit, je Abschnitt (Erstbau und jeder Anbau einzeln); die Boxen sind gesperrt. <b>Umbau-Folgen (H4):</b> Pferde ziehen beim Start in freie Boxen (normale vor Paddockboxen, nicht Quarantäne/Abfohlbox); eigene ohne Box kommen auf die Weide (ohne Weide und ohne freie Box kein Umbau – vorher per Anhänger zu einem anderen Hof). Sind Einsteller betroffen, beginnt der Umbau erst 1 Jahreszeit nach dem Auftrag (Brief); ohne freie Box braucht jeder Einsteller eine Lösung: Weide mit ${prozent(UMBAU.nachlass)} Nachlass aufs Boxengeld oder der Spieler kündigt; ohne Lösung kündigt der Einsteller selbst und zieht zum Umbau-Beginn aus (Ansehen ${UMBAU.ansehenOhne}). Zufriedenheit: Umzug ${UMBAU.zufrUmzug}, Nachlass ${UMBAU.zufrNachlass}. Keine neuen Einsteller in Boxen mit geplantem Umbau. Absagen vor dem Start: volle Erstattung. Reitplatz/Reithalle/Roundpen im Umbau: dort kein Training. Nach dem Umbau kommen die Weide-Pferde zurück in ihre Box. <b>Unterhalt</b> ${prozent(UNTERHALT)} des Baupreises je Jahreszeit. <b>Verfall</b> je Jahreszeit Stufe 1/2/3: −${VERFALL.slice(1).map(x => String(x).replace(".", ",")).join(" / −")} Zustand (Start-Stall beginnt bei 85 %); Warnbrief unter 40 %. <b>Reparatur:</b> Handwerker kommt am nächsten Tag, braucht 1 Tag (ab 50 % Zustand) bzw. 2 Tage (darunter), danach 100 %; je 10 Punkte 2 % des Baupreises; Hofhelfer (${fmt(MA_TYP.hofhelfer.gehalt)}/Jz) +${HOFHELFER_REPARATUR} Punkte je Arbeitstag am schlechtesten Gebäude.</p>
       <p><b>Weiden (H6):</b> je Hof mehrere Weiden mit Grasstand und Matsch (Hof → Weiden). Gras je Tag (Standardtempo, wird nach Spieltempo umgerechnet): wächst Frühling/Sommer/Herbst/Winter +${GRAS.wachsen.join(" / +")} (matschig nur halb, nachgesät ×${String(GRAS.nachsaeenWachs).replace(".", ",")} für 1 Jahr), Verbrauch ${GRAS.verbrauch} × belegte ha (${haTxt(WEIDE_BEDARF[0])} je Großpferd, ${haTxt(WEIDE_BEDARF[1])} je Pony) ÷ Weidefläche. Gras unter ${GRAS.wenig} % → Heu nötig wie im Winter. Überbesetzt: Matsch +${GRAS.matschPlus}/Tag (Herbst/Winter ×2), sonst −${GRAS.matschMinus} (leer −${GRAS.matschLeer}); ab ${GRAS.matschAb} % matschig: Mauke und Strahlfäule ×1,5, Würmer ×1,3, Streit ×1,3. Abäppeln (Spieler oder Pferdepfleger, 1 Weide/Tag): Würmer ×0,6 für 1 Jahreszeit. Sperren: wächst ohne Verbrauch, trocknet ab. Nachsäen im Frühling und Herbst (einmal je Jahreszeit und Weide, Weide muss leer sein) ${fmt(GRAS.nachsaeen)}/ha: danach ruht die Weide ⅓ Jahreszeit (4/7/10 Tage je Jz → 1/2/3 Tage), dann Gras +${GRAS.nachsaeenPlus}. Neue Weide oder vergrößern beim Einzäunen; Pachtende: Weiden schrumpfen aufs vorhandene Weideland.</p>
       <p><b>Sandpaddocks (H6):</b> jeder gebaute Sandpaddock (Hof → Bauen, auch mehrere) ist ein eigener Auslauf mit eigener Gruppe; Platz je Stufe 1/2/3: ${PADDOCK_PLATZ.slice(1).join(" / ")} Pferde. Zuteilen über Box → Pflege → Ort → Sandpaddock (Auswahl zeigt, wer dort steht und wie viel Platz frei ist), zurück über dieselbe Kachel. Das Pferd bleibt sonst wie in der Box versorgt (Futter, Mist), bekommt aber keinen Box-Abzug: Wohlbefinden +3 mit Gesellschaft (+1 allein) + 2 × temperamentvoll je Nacht; Herdenregeln (Streit, ungeplante Bedeckung) je Sandpaddock. Hengst mit Stute: Warnung (besser mit Wallach). Gesperrt bei Quarantäne und Boxenruhe. Hufrehe-Warnung im Frühling bietet „Lieber Sandpaddock“ an.</p>
+      <p><b>Einstreu (H6):</b> Sorten in der Futterkammer (Gruppe Einstreu): ${Object.keys(EINSTREU).map(k => `${FUTTER[k].n} ${EINSTREU[k].kg} kg je Box und Tag à ${String(FUTTER[k].preis.toFixed(2)).replace(".", ",")} €`).join(" · ")}. Wirkung: Stroh staubt – Husten ×1,3 (empfindliche Atemwege ×2); Strahlfäule Pellets ×0,7, Leinstroh/Hanf ×0,8; ohne Einstreu Wohlbefinden −${EINSTREU_OHNE.wohl} je Nacht und Strahlfäule ×${EINSTREU_OHNE.strahl} (Brief „Keine Einstreu mehr“). Wahl je Box: zieht ein Pferd ein, fragt das Spiel, welche Einstreu (nur eine Sorte im Lager → automatisch); ändern in Box → Pflege → Versorgung. Verbrauch jede Nacht je Box mit Pferd (nicht auf der Weide, nicht in der Klinik), zählt in den Platz der Futterkammer. Startvorrat einmal ${EINSTREU_START} kg Einstreu-Stroh. Wird die Box leer, wird beim nächsten Pferd neu eingestreut.</p>
       <p><b>Wirkung der Stufe:</b> Wohlbefinden je Nacht in der Box: Stufe 1 −0,5, Stufe 3 +0,5, Zustand unter 40 % −0,5, Paddockbox +0,5. Verletzungsrisiko in der Box × 1,3 / 1 / 0,8, Zustand unter 70 % × 1,1, unter 40 % × 1,3. Mitarbeiter-Zufriedenheit je Jahreszeit: Ø Stufe unter 1,5 −3, ab 2,5 +3, Ø Zustand unter 50 % −3. Quarantänestall: Pferde dort stecken niemanden an und werden nicht angesteckt. Pensionspreis nach Stufe kommt mit H5.</p>
       <p><b>Bauland und Weideland</b> (Dome, v225): Bauland ${fmt(BAULAND_PREIS)}/ha (nur kaufen), Weideland ${fmt(LAND_PREIS)}/ha oder Pacht ${fmt(PACHT_PREIS)}/ha je Jahreszeit. Platzbedarf auf dem Bauland: Wohnhaus/Hofplatz ${haTxt(HOFPLATZ)}, Stall ${haTxt(0.1)} je 6 Boxen, Paddockboxen ${haTxt(0.15)} je 6, Reitplatz ${haTxt(0.1)}, Reithalle ${haTxt(0.15)}, Roundpen/Trail/Sandpaddock/Waschplatz/Lager/Sattelkammer/Quarantänestall/Abfohlbox je ${haTxt(0.05)}. Weide einzäunen nur auf Weideland. Start-Pensionsstall: 1 ha Bauland + 1 ha Weideland. Makler-Höfe: Bauland nach Bestand + 0,1 ha, auf ½ ha aufgerundet; Grundstück 1 ha Bauland.
         <b>Quarantänestall:</b> gekaufte Pferde (Markt, Auktion, Tierschutz) kommen zuerst in eine freie Quarantänebox und stehen 1 Jahreszeit unter Quarantäne; danach ziehen sie – ohne bekannte ansteckende Krankheit – automatisch in eine freie normale Box (Brief). Normale Umzüge nutzen den Quarantänestall nur, wenn sonst nichts frei ist.

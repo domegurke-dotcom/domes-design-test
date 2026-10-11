@@ -236,8 +236,10 @@ const path = require('path');
         const frei = () => spiel.boxen.find(b => boxFrei(b) && !b.quar), neu = (g, n) => { const b = frei(); if (b) { b.pferd = neuesPferd({ rasse: 'araber', geschlecht: g, alter: 6, name: n }); b.pferd.pflege = erzeugePflege(b.pferd); } };
         H.art = 'zucht'; spiel.stallarten = ['zucht']; neu('Hengst', 'Zuchthengst'); neu('Stute', 'Zuchtstute1'); neu('Stute', 'Zuchtstute2'); spiel.boxen[spiel.boxen.length - 1].abfohl = true; delete H.artCache;
         const g1 = spiel.geld; stallartJahreszeit();
-        ok('H7 Bedingungen erfüllt → Status zurück, Förderung, Vorteil', !H.artVerloren && vorteil('zucht') && Math.round(spiel.geld - g1) === STALLART_FOERDERUNG, stallartBed('zucht').map(x => (x[1] ? '✓' : '✗') + x[0]).join(' | '));
-        ansehen('H7 hvw – Hof – Stallart', () => stallartHTML());
+        ok('H7 Bedingungen erfüllt → Status zurück, Förderung, Vorteil', !H.artVerloren && vorteil('zucht') && Math.round(spiel.geld - g1) === foerderBetrag(), stallartBed('zucht').map(x => (x[1] ? '✓' : '✗') + x[0]).join(' | '));
+        ansehen('H7 hvw – Hof – Übersicht (Stallart)', () => stallartHTML());
+        { const g2 = spiel.geld, n = gebaeude().length; spiel.geld += 200000; const g3 = spiel.geld; spiel.hof.bauHa += 2; bauStarten('reitplatz', 3); const B = BAUTEN.reitplatz, pr = bauPreis('reitplatz', 3);
+          ok('H7 Bauzuschuss 20 % bei Stufe 3', Math.round(g3 - spiel.geld) === Math.round(pr - pr * BAUZUSCHUSS), `${g3 - spiel.geld} / ${pr}`); spiel.hof.wert -= pr; spiel.gebaeude = gebaeude().slice(0, n); spiel.hof.bauHa -= 2; spiel.geld = g2; }
         spiel.boxen.forEach(b => { if (b.pferd && /^Zucht/.test(b.pferd.name)) b.pferd = null; }); H.art = 'pension'; spiel.stallarten = ['pension']; delete H.artCache; }
 
       // ---------- H1 Kreditrate ----------
@@ -249,7 +251,7 @@ const path = require('path');
     ergebnisse.push(...r);
     // Hofverwaltung über die Oberfläche öffnen (alle Bereiche)
     for (const reiter of ['hof', 'finanzen', 'mitarbeiter', 'post']) await pg.evaluate(rt => { zeigeHof(rt); }, reiter);
-    for (const ber of ['uebersicht', 'plan', 'bauen', 'land', 'stallart', 'weiden', 'pension', 'futter']) await pg.evaluate(bb => { hofBereich = bb; zeigeHof('hof'); }, ber);
+    for (const ber of ['uebersicht', 'plan', 'bauen', 'land', 'pension', 'futter']) await pg.evaluate(bb => { hofBereich = bb; zeigeHof('hof'); }, ber);
     await pg.reload(); await pg.waitForTimeout(300);
     ergebnisse.push([await pg.evaluate(() => typeof hatSpielstand !== 'undefined' && hatSpielstand) ? '✓' : '✗', ansicht, 'Speichern und Neuladen', '']);
     await pg.close();

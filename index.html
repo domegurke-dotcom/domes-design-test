@@ -880,7 +880,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "294";
+  const SPIEL_VERSION = "295";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -888,9 +888,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=294"></script>
-<script src="kopfteile.js?v=294"></script>
-<script src="kopfalter.js?v=294"></script>
+<script src="pferd.js?v=295"></script>
+<script src="kopfteile.js?v=295"></script>
+<script src="kopfalter.js?v=295"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -900,7 +900,9 @@
   const WEIDE_BEDARF = [0.5, 0.25], PONY_BIS = 148;
   let herdeFaktor = 1, bauWeideZiel = "neu";
   const PADDOCK_PLATZ = [0, 2, 3, 4];
-  const STALLART_FOERDERUNG = 300, STALLART_SCHON = 4;   // H7: Förderung je Jahreszeit bei erfüllter Bedingung (selbst festgelegt) · Schonfrist 1 Jahr nach Kauf/Wechsel
+  const STALLART_SCHON = 4, FOERDER_HA = 50, BAUZUSCHUSS = 0.2;   // Dome (v295): Flächenprämie je ha und Jahreszeit (in echt ≈ 150–250 €/ha im Jahr) · 20 % Zuschuss für Stufe-3-Gebäude
+  function foerderBetrag() { return Math.round(FOERDER_HA * ((spiel.hof && spiel.hof.ha) || 0)); }
+  function bauZuschuss(preis) { return !spiel.admin && spiel.hof && spiel.hof.art && !spiel.hof.artVerloren && stallartOk() ? Math.round(preis * BAUZUSCHUSS) : 0; }   // H7: Förderung je Jahreszeit bei erfüllter Bedingung (selbst festgelegt) · Schonfrist 1 Jahr nach Kauf/Wechsel
   const WIESE = { ertrag: [270, 195, 115], lohn: 15, verkauf: 0.12, regen: 0.2, schnitt2Gras: 60, grasWeg: 60 };   // Dome (v291): wie in echt 3,5 / 2,5 / 1,5 t Heu je ha (1. Schnitt Anfang Juni, 2. Ende Juli, 3. im September), im Spiel-Maßstab (1 Pferd ≈ 280 statt 3.600 kg im Jahr)   // H6 Futterwiese: kg Heu und Lohn je ha und Schnitt, Rest an den Bauern €/kg, Regen-Schnitt → staubig
   // H6 Einstreu: Verbrauch je Box und Tag (kg), staubt → Husten, Saugkraft → Strahlfäule
   const EINSTREU = { streuStroh: { n: "Stroh", kg: 7, staub: true, strahl: 1 }, spaene: { n: "Späne", kg: 3, strahl: 1 }, pellets: { n: "Pellets", kg: 2, strahl: 0.7 }, leinstroh: { n: "Leinstroh/Hanf", kg: 3, strahl: 0.8 } };
@@ -3039,7 +3041,7 @@
           dialog(`<h3>⚠️ Hufrehe-Gefahr</h3><p>${esc(p.name)} ${reheGrund(p)}. Das junge Frühlingsgras ist sehr zuckerreich – auf der Weide droht jetzt <b>Hufrehe</b>. Besser ${spiel.anlage && spiel.anlage.paddock ? "Sandpaddock oder " : ""}Box, höchstens stundenweise Weide.</p>`,
             [["Trotzdem auf die Weide", () => { p.reheOk = spiel.tag; k.onclick(); }], ...(paddocks().length ? [["🟫 Lieber Sandpaddock", () => { $("dlg").hidden = true; const pk = document.querySelector('[data-ort="paddock"]'); if (pk) pk.click(); }]] : []), ["Lieber nicht", null, "zweit"]]); return; }
         if (!p.weide && spiel.hof) { const offen = weiden().filter(w => !w.gesperrt && !w.wiese && w.ha > 0);   // H6: mehrere Weiden – welche?
-          if (!offen.length && weiden().length) { dialog(`<h3>🚫 Alle Weiden gesperrt</h3><p>Gib unter Hofverwaltung → Hof → Weiden eine Weide frei.</p>`); return; }
+          if (!offen.length && weiden().length) { dialog(`<h3>🚫 Alle Weiden gesperrt</h3><p>Gib unter Hofverwaltung → Hof → Land und Weiden eine Weide frei.</p>`); return; }
           if (offen.length && p.weideZielTag !== spiel.tag) {   // Dome: immer fragen und zeigen, wer schon draußen steht
             dialog(`<h3>🌿 Auf welche Weide?</h3><div class="weide-wahl">${offen.map(w => `<button data-wziel="${w.wid}"><b>🌿 ${esc(w.name)}</b><small>${haTxt(w.ha)} · Gras ${Math.round(w.gras)} %${w.matsch >= GRAS.matschAb ? " · matschig" : ""} · Platz für ${haTxt(Math.max(0, w.ha - weideBelegtW(w)))}</small><small>${weidePferde(w).length ? `🐴 dort: ${weidePferde(w).map(q => esc(q.name)).join(", ")}` : "noch keine Pferde dort"}</small></button>`).join("")}</div>`, [["Abbrechen", null, "zweit"]]);
             document.querySelectorAll("[data-wziel]").forEach(x => x.onclick = () => { p.weideZiel = x.dataset.wziel; p.weideZielTag = spiel.tag; $("dlg").hidden = true; k.onclick(); }); return; }
@@ -3553,8 +3555,13 @@
     const vw = box.vorWeide; if (vw && vw.tag === spiel.tag) { box.krippeVoll = box.krippeVoll || vw.krippe; box.mistig = vw.mist; box.mistStufe = vw.stufe; }
     delete box.vorWeide;
   }
+  function weideFreiFenster() {   // Dome (v295): Fenster, sobald eine nachgesäte Weide wieder nutzbar ist
+    if (!(spiel.weideFreiMeldung || []).length || !$("dlg").hidden) return; const l = spiel.weideFreiMeldung; delete spiel.weideFreiMeldung; speichern();
+    setTimeout(() => dialog(`<h3>🌱 Weide wieder nutzbar</h3><p>Die neue Saat ist angewachsen: <b>${l.map(esc).join(", ")}</b> ${l.length === 1 ? "kann" : "können"} wieder beweidet werden.</p>`), 200);
+  }
   function zeigeTag() {
     wetterSetzen();
+    weideFreiFenster();
     const box = B();
     const dd = datum();
     $("tagAnzeige").innerHTML = `<b>${JZ[dd.s][1]} ${datumText(dd)}</b><small>Tag ${dd.t} von ${tpj()}</small>`;
@@ -7221,6 +7228,7 @@
   }
 
   function zeigeHaupt() {
+    weideFreiFenster();
     const sp = spiel.spieler || { name: "", avatar: "🧑‍🌾" }, belegt = spiel.boxen.filter(b => b.pferd).length;
     $("hauptMenue").innerHTML = `<div class="schirm-innen">
       <div class="hm-kopf"><span class="ava">${sp.avatar}</span><div><b>${esc(hofName())}</b><span>${sp.name ? esc(sp.name) + " · " : ""}${JZ[datum().s][1]} ${datumLang()}</span></div></div>${hofAnzahl() > 1 ? `<button class="hm-wechsel" id="hmWechsel" title="Zu einem anderen eigenen Hof wechseln">🏘️ Hof wechseln <small>(${hofAnzahl()} Höfe)</small></button>` : ""}
@@ -8069,12 +8077,28 @@
     if (!eigen) return `Dir fehlt der Eigenanteil: die Hälfte des Preises (${fmt(Math.ceil(A.preis / 2))}) muss auf dem zentralen Konto liegen (jetzt ${fmt(zentral().geld)}).`;
     return "";
   }
+  // Dome (v295): ganzen Hof verkaufen – nur wenn leer (keine Pferde, Einsteller, Pferde außer Haus); Erlös 90 % des Hofwerts, Kredit wird abgelöst, Rest + Hofkasse aufs zentrale Konto
+  const HOF_VERKAUF = 0.9;
+  function hofVerkaufInfo(hid) { return imHof(hid, () => { const H = spiel.hof, pferde = spiel.boxen.filter(b => b.pferd || b.fohlen).length + (spiel.extern || []).length, eins = einstellerListe().length;
+    const erloes = Math.round((H.wert || 0) * HOF_VERKAUF), schuld = restschuld(), kasse = runde2(spiel.geld || 0);
+    return { name: H.name, pferde, eins, erloes, schuld, kasse, netto: runde2(erloes + kasse - schuld) }; }); }
+  function hofVerkaufDialog(hid) {
+    if (hofAnzahl() <= 1) { dialog(`<h3>🏷️ Hof verkaufen</h3><p>Deinen einzigen Hof kannst du nicht verkaufen.</p>`); return; }
+    const V = hofVerkaufInfo(hid);
+    if (V.pferde || V.eins) { dialog(`<h3>🏷️ ${esc(V.name)} verkaufen</h3><p>Erst muss der Hof leer sein: ${V.pferde ? `${V.pferde} eigene ${V.pferde === 1 ? "Pferd" : "Pferde"} (auch außer Haus) – per Pferdeanhänger zu einem anderen Hof bringen, verkaufen oder abgeben` : ""}${V.pferde && V.eins ? " und " : ""}${V.eins ? `${V.eins} Einsteller – kündigen` : ""}.</p>`); return; }
+    if (V.netto < 0) { dialog(`<h3>🏷️ ${esc(V.name)} verkaufen</h3><p>Der Erlös (${fmt(V.erloes)}) und die Hofkasse (${fmt(V.kasse)}) reichen nicht, um den Kredit (${fmt(V.schuld)}) abzulösen.</p>`); return; }
+    dialog(`<h3>🏷️ ${esc(V.name)} verkaufen?</h3><p>Ein Käufer zahlt <b>${fmt(V.erloes)}</b> (90 % des Hofwerts).${V.schuld ? ` Davon wird der Kredit (${fmt(V.schuld)}) abgelöst.` : ""} Zusammen mit der Hofkasse (${fmt(V.kasse)}) gehen <b>${fmt(V.netto)}</b> auf das zentrale Konto. Mitarbeiter werden entlassen, Futter und Lager bleiben beim Hof. Das lässt sich nicht rückgängig machen.</p>`,
+      [["Verkaufen", () => { if (hid === aktivHid()) hofWechseln(hofReihe().find(h => h !== hid));
+        zentralBuchen(V.netto, `Verkauf ${V.name}`); delete spiel.hoefe[hid]; spiel.hofReihe = hofReihe().filter(h => h !== hid);
+        brief("Makler", `${V.name} verkauft`, `der Verkauf von <b>${esc(V.name)}</b> ist abgeschlossen: Erlös ${fmt(V.erloes)}${V.schuld ? `, davon Kredit abgelöst ${fmt(V.schuld)}` : ""}, Hofkasse ${fmt(V.kasse)}. <b>${fmt(V.netto)}</b> sind auf {deinem|Ihrem} zentralen Konto.`);
+        speichern(); zeigeImmobilien(); }], ["Abbrechen", null, "zweit"]]);
+  }
   function eigeneHoefeHTML() {
     return `<div class="immo-liste">${hofReihe().map(hid => { const H = hofVon(hid), aktiv = hid === aktivHid(), I = immobilie(H.id) || MAKLER_VORLAGEN.find(V => V.typ === H.id) || {},
         info = imHof(hid, () => ({ boxen: spiel.boxen.length, pferde: spiel.boxen.filter(b => b.pferd).length, geld: spiel.geld || 0, schuld: restschuld(), offen: kredite().some(k => (k.offen || []).length) }));
       return `<button class="immo" data-hofwahl="${hid}"><span class="immo-bild">${hofBild(I.bild || "pension")}<span class="immo-marke">${aktiv ? "✅ du bist hier" : "🏡 dein Hof"}</span></span>
         <span class="immo-text"><b>${esc(H.name)}</b><small>${esc(I.n || "")} · ${STALLART_NAME[H.art] || ""} · ${info.pferde} ${info.pferde === 1 ? "Pferd" : "Pferde"} in ${info.boxen} ${info.boxen === 1 ? "Box" : "Boxen"} · ${String(H.ha).replace(".", ",")} ha</small>
-          <span class="immo-preis">Kasse ${fmt(info.geld)}${info.schuld ? ` · Kredit ${fmt(info.schuld)}` : ""}${info.offen ? " · ⚠️ Rate offen" : ""}</span><small>${aktiv ? "antippen: zur Hofverwaltung" : "antippen: zu diesem Hof wechseln"}</small></span></button>`; }).join("")}</div>`;
+          <span class="immo-preis">Kasse ${fmt(info.geld)}${info.schuld ? ` · Kredit ${fmt(info.schuld)}` : ""}${info.offen ? " · ⚠️ Rate offen" : ""}</span><small>${aktiv ? "antippen: zur Hofverwaltung" : "antippen: zu diesem Hof wechseln"}</small>${hofAnzahl() > 1 ? `<span class="mini-knopf" role="button" data-hofverkauf="${hid}" style="align-self:flex-start;margin-top:4px">🏷️ Hof verkaufen</span>` : ""}</span></button>`; }).join("")}</div>`;
   }
   function maklerHTML() {
     const L = maklerAngebote();
@@ -8093,6 +8117,7 @@
     nb.querySelectorAll("[data-hofwahl]").forEach(b => b.onclick = () => { const hid = b.dataset.hofwahl;
       if (hid === aktivHid()) { zeigeHof("hof"); return; }
       hofWechseln(hid); speichern(); zeigeHaupt(); });
+    nb.querySelectorAll("[data-hofverkauf]").forEach(b => b.onclick = e => { e.stopPropagation(); hofVerkaufDialog(b.dataset.hofverkauf); });
     nb.querySelectorAll("[data-makler]").forEach(b => b.onclick = () => { const A = maklerAngebote().find(x => x.mid === b.dataset.makler), sp = immoSperre2(A);
       if (sp) { if (sp !== "verkauft") dialog(`<h3>🔒 ${A.n}</h3><p>${sp}</p>`); return; }
       hofKaufDialog2(A); });
@@ -8203,15 +8228,17 @@
     return `<dl class="werte"><dt>Bauland</dt><dd>${haTxt(bauHa())} (belegt ${haTxt(baulandBelegt())}, frei ${haTxt(baulandFrei())})</dd>
         <dt>Weideland</dt><dd>${haTxt(weideland())} (Weide eingezäunt ${haTxt(H.weideHa || 0)}, frei ${haTxt(freiesLand())})</dd>
         <dt>Pachtland</dt><dd>${H.pacht || 0} ha Weideland${H.pacht ? ` · ${fmt(H.pacht * PACHT_PREIS)} je Jahreszeit` : ""}</dd><dt>Kasse</dt><dd>${fmt(spiel.geld || 0)}</dd></dl>
-      <p class="text" style="margin:8px 0 6px"><b>Bauland</b> (für Gebäude, Reitplätze, Hofplatz) kostet <b>${fmt(BAULAND_PREIS)} je ha</b>. <b>Weideland</b> kostet <b>${fmt(LAND_PREIS)} je ha</b> oder <b>${fmt(PACHT_PREIS)} je ha und Jahreszeit</b> Pacht. Gekauftes Land erhöht den Hofwert (Kreditrahmen). Weideland wird zur Weide durch Einzäunen (Hof → Bauen).</p>
-      <div class="kr-wahl"><label>Landart <select id="landArt"><option value="weide">Weideland</option><option value="bau">Bauland</option></select></label><label>Fläche <select id="landHa">${[0.5, 1, 2, 3, 4, 5].map(x => `<option value="${x}" ${x === 1 ? "selected" : ""}>${haTxt(x)}</option>`).join("")}</select></label></div>
+      <p class="text" style="margin:8px 0 6px"><b>Bauland</b> (für Gebäude, Reitplätze, Hofplatz) kostet <b>${fmt(BAULAND_PREIS)} je ha</b>. <b>Weideland</b> kostet <b>${fmt(LAND_PREIS)} je ha</b> oder <b>${fmt(PACHT_PREIS)} je ha und Jahreszeit</b> Pacht. Gekauftes Land erhöht den Hofwert (Kreditrahmen). Beim Kauf von Weideland wählst du, ob daraus eine neue Weide wird oder eine bestehende größer wird – der Zaun wird dann gleich mitgebaut.</p>
+      <div class="kr-wahl"><label>Landart <select id="landArt"><option value="weide">Weideland</option><option value="bau">Bauland</option></select></label><label id="landZielL">Weide <select id="landZiel"><option value="neu">neue Weide</option>${weiden().map(w => `<option value="${w.wid}">${esc(w.name)} vergrößern</option>`).join("")}<option value="">nur Land, später einzäunen</option></select></label><label>Fläche <select id="landHa">${[0.5, 1, 2, 3, 4, 5].map(x => `<option value="${x}" ${x === 1 ? "selected" : ""}>${haTxt(x)}</option>`).join("")}</select></label></div>
       <div class="land-knoepfe"><button class="knopf" id="landKauf">🏷️ Kaufen</button><button class="knopf zweit" id="landPacht">📝 Weideland pachten</button>${H.pacht ? `<button class="knopf zweit" id="landPachtWeg">Pacht kündigen</button>` : ""}</div>`;
   }
   function landBinden(danach) {
     const H = spiel.hof, ha = () => +$("landHa").value, bau = () => $("landArt").value === "bau";
-    if ($("landKauf")) $("landKauf").onclick = () => { const x = ha(), b = x * (bau() ? BAULAND_PREIS : LAND_PREIS), art = bau() ? "Bauland" : "Weideland";
+    if ($("landArt") && $("landZielL")) { const z = () => $("landZielL").style.display = bau() ? "none" : ""; $("landArt").onchange = z; z(); }   // Dome (v295): neue Weide oder bestehende vergrößern
+    if ($("landKauf")) $("landKauf").onclick = () => { const x = ha(), ziel = !bau() && $("landZiel") ? $("landZiel").value : "", zaun = ziel ? bauPreis("weide", 1, { ha: x }) : 0, land = x * (bau() ? BAULAND_PREIS : LAND_PREIS), b = land + zaun,
+        art = bau() ? "Bauland" : ziel === "neu" ? "Weideland für eine neue Weide" : ziel ? `Weideland, um ${esc((weideById(ziel) || {}).name || "die Weide")} zu vergrößern` : "Weideland";
       if ((spiel.geld || 0) < b) { dialog(`<h3>Zu wenig Geld</h3><p>${haTxt(x)} ${art} kosten ${fmt(b)} – in der Kasse sind ${fmt(spiel.geld || 0)}.</p>`); return; }
-      dialog(`<h3>🏷️ ${haTxt(x)} ${art} kaufen?</h3><p>Kosten: <b>${fmt(b)}</b>. Der Hofwert steigt um ${fmt(b)}.</p>`, [["Kaufen", () => { const w = bau(); buchen(-b, `Land kaufen (${art})`); bauHa(); H.ha = runde2(H.ha + x); if (w) H.bauHa = runde2(H.bauHa + x); H.wert += b; speichern(); danach(); }], ["Abbrechen", null, "zweit"]]); };
+      dialog(`<h3>🏷️ ${haTxt(x)} ${art} kaufen?</h3><p>Kosten: <b>${fmt(b)}</b>${zaun ? ` (Land ${fmt(land)} + Zaun ${fmt(zaun)} – der Zaun wird gebaut, siehe Hof → Bauen)` : ""}. Der Hofwert steigt um ${fmt(b)}.</p>`, [["Kaufen", () => { const w = bau(); buchen(-land, `Land kaufen (${w ? "Bauland" : "Weideland"})`); bauHa(); H.ha = runde2(H.ha + x); if (w) H.bauHa = runde2(H.bauHa + x); H.wert += land; if (ziel) bauStarten("weide", 1, { ha: x, ziel }); speichern(); danach(); }], ["Abbrechen", null, "zweit"]]); };
     if ($("landPacht")) $("landPacht").onclick = () => { const x = ha();
       dialog(`<h3>📝 ${haTxt(x)} Weideland pachten?</h3><p>Die Pacht kostet <b>${fmt(x * PACHT_PREIS)} je Jahreszeit</b> und wird zu Beginn jeder Jahreszeit abgebucht.</p>`, [["Pachten", () => { H.pacht = runde2((H.pacht || 0) + x); speichern(); danach(); }], ["Abbrechen", null, "zweit"]]); };
     if ($("landPachtWeg")) $("landPachtWeg").onclick = () => dialog(`<h3>Pacht kündigen?</h3><p>Die ganze Pacht (${H.pacht} ha) endet sofort.</p>`, [["Kündigen", () => { H.pacht = 0; speichern(); danach(); }], ["Abbrechen", null, "zweit"]]);
@@ -8308,6 +8335,7 @@
     if (platzVon(typ, opt.boxen) > baulandFrei() + 1e-9) { dialog(`<h3>Zu wenig Bauland</h3><p>${B.n.replace(/\u00ad/g, "")} braucht ${haTxt(platzVon(typ, opt.boxen))} Bauland, frei sind nur ${haTxt(baulandFrei())}. Bauland kaufst du unter Hof → Land.</p>`); return false; }
     if (!spiel.admin && (spiel.geld || 0) < preis) { dialog(`<h3>Zu wenig Geld</h3><p>Der Bau kostet ${fmt(preis)} – in der Kasse sind ${fmt(spiel.geld || 0)}.</p>`); return false; }
     if (!spiel.admin) buchen(-preis, `Bau: ${B.n}`);
+    if (stufe === 3) { const z = bauZuschuss(preis); if (z) buchen(z, `Bauzuschuss Stufe 3: ${B.n.replace(/\u00ad/g, "")}`); }   // Dome (v295)
     if (typ === "heudampfer") { gebaeude().push({ gid: "g" + Math.random().toString(36).slice(2, 8), typ, stufe: 0, zustand: 100, preis }); (spiel.anlage = spiel.anlage || {}).heudampfer = true; return true; }
     const g = { gid: "g" + Math.random().toString(36).slice(2, 8), typ, stufe, zustand: 100, preis, bau: { rest: bauTage(B.zeit), art: "neu" } };
     if (opt.anbau) g.anbau = opt.anbau;
@@ -8345,9 +8373,10 @@
     const preis = umbauPreis(g);
     if (!spiel.admin && (spiel.geld || 0) < preis) { dialog(`<h3>Zu wenig Geld</h3><p>Der Umbau kostet ${fmt(preis)}.</p>`); return false; }
     if (!spiel.admin) buchen(-preis, `Umbau: ${BAUTEN[g.typ].n}`);
+    const zus = g.stufe + 1 === 3 ? bauZuschuss(preis) : 0; if (zus) buchen(zus, `Bauzuschuss Stufe 3: ${BAUTEN[g.typ].n.replace(/\u00ad/g, "")}`);   // Dome (v295)
     const E = umbauBetroffen(g).einsteller;
     if (E.length) {   // Einsteller brauchen 1 Jahreszeit Vorlauf
-      g.plan = { ab: spiel.tag + tpj(), kosten: preis, wahl: {} };
+      g.plan = { ab: spiel.tag + tpj(), kosten: preis, zuschuss: zus, wahl: {} };
       brief("Hofverwaltung", `Umbau angekündigt: ${gebName(g)}`, `der Umbau von <b>${gebName(g)}</b> auf Stufe ${g.stufe + 1} beginnt am <b>${datumText(datum(g.plan.ab))}</b>. Diese Einsteller wurden informiert: ${E.map(e => `${esc(eName(e))} (${esc(((pensionBox(e) || {}).pferd || {}).name || "–")})`).join(", ")}.<br><br>Ist beim Start eine andere Box frei, ziehen ihre Pferde dorthin um. Sonst braucht jeder Einsteller eine Lösung (Hofverwaltung → Hof → Bauen): <b>Weide mit ${prozent(UMBAU.nachlass)} Nachlass</b> aufs Boxengeld – oder {du kündigst|Sie kündigen} den Vertrag. Ohne Lösung kündigt der Einsteller selbst und holt sein Pferd zum Umbau-Beginn ab.`);
       return true;
     }
@@ -8509,8 +8538,8 @@
       dialog(`<h3>✉️ ${esc(eName(e))} kündigen?</h3><p>Der Vertrag für <b>${esc(p ? p.name : "")}</b> endet zum Ende dieser Jahreszeit, dann holt ${ePron(e).sie} das Pferd ab. Das spricht sich herum – andere Einsteller fragen etwas seltener an.</p>`,
         [["Kündigen", () => { pensionKuendigen(e); speichern(); bauNeuZeigen(); }], ["Abbrechen", null, "zweit"]]); });
     nb.querySelectorAll("[data-uabsage]").forEach(b => b.onclick = () => { const g = G.find(x => x.gid === b.dataset.uabsage); if (!g || !g.plan) return;
-      dialog(`<h3>✖️ Umbau absagen?</h3><p>Der geplante Umbau von <b>${gebName(g)}</b> fällt aus. Du bekommst ${fmt(g.plan.kosten)} zurück.</p>`,
-        [["Absagen", () => { if (!spiel.admin) buchen(g.plan.kosten, `Umbau abgesagt: ${BAUTEN[g.typ].n}`); delete g.plan; speichern(); bauNeuZeigen(); }], ["Doch nicht", null, "zweit"]]); });
+      dialog(`<h3>✖️ Umbau absagen?</h3><p>Der geplante Umbau von <b>${gebName(g)}</b> fällt aus. Du bekommst ${fmt(g.plan.kosten - (g.plan.zuschuss || 0))} zurück${g.plan.zuschuss ? " (Kosten ohne den Bauzuschuss)" : ""}.</p>`,
+        [["Absagen", () => { if (!spiel.admin) buchen(g.plan.kosten - (g.plan.zuschuss || 0), `Umbau abgesagt: ${BAUTEN[g.typ].n}`); delete g.plan; speichern(); bauNeuZeigen(); }], ["Doch nicht", null, "zweit"]]); });
     nb.querySelectorAll("[data-rep]").forEach(b => b.onclick = () => { const g = G.find(x => x.gid === b.dataset.rep), k = reparaturPreis(g);
       dialog(`<h3>🔧 ${gebName(g)} reparieren</h3><p>Ein Handwerker bringt den Zustand von ${Math.round(g.zustand)} % auf 100 %. Kosten: <b>${fmt(k)}</b> (je 10 Punkte 2 % des Baupreises).</p>`,
         [["Handwerker bestellen", () => { if (!spiel.admin && (spiel.geld || 0) < k) { dialog(`<h3>Zu wenig Geld</h3><p>In der Kasse sind ${fmt(spiel.geld || 0)}.</p>`); return; } if (!spiel.admin) buchen(-k, "Handwerker");
@@ -8980,7 +9009,7 @@
     const alt = offen.find(w => w.wid === p.weideWid); if (alt) return alt;
     return offen.slice().sort((a, b) => (b.gras * (1 + b.ha - weideBelegtW(b))) - (a.gras * (1 + a.ha - weideBelegtW(a))))[0];
   }
-  // Hofverwaltung → Hof → Weiden
+  // Hofverwaltung → Hof → Land und Weiden
   function weidenHTML() {
     const W = weiden(), saatZeit = datum().s === 0 || datum().s === 2, bar = (z, gut) => `<div class="kr-balken geb-balken"><i style="width:${Math.round(z)}%;background:${gut ? (z < GRAS.wenig ? "#c0503a" : z < 50 ? "#d9a441" : "#6aa84f") : (z >= GRAS.matschAb ? "#8a5a33" : z >= 25 ? "#b98a5e" : "#d8c3a5")}"></i></div>`;
     if (!W.length) return `<p class="text">Noch keine Weide eingezäunt. Freies Weideland zäunst du unter Hof → Bauen → „Weide einzäunen“ ein (Weideland kaufen oder pachten unter Hof → Land).</p>`;
@@ -9078,7 +9107,7 @@
     if (n && !I.aepfel) hinweise += blase(aepfelPos[0][0], aepfelPos[0][1] - 28, "Abäppeln");
     const zaun = sand ? `<g stroke="#7a5a3a" stroke-width="3">${[10, 70, 130, 190, 250, 310, 370].map(x => `<line x1="${x}" y1="150" x2="${x}" y2="190"/>`).join("")}<line x1="0" y1="160" x2="400" y2="158"/><line x1="0" y1="176" x2="400" y2="174"/></g>` : `<g stroke="#7a5a3a" stroke-width="3">${[20, 80, 140, 200, 260, 320, 380].map(x => `<line x1="${x}" y1="128" x2="${x}" y2="160"/>`).join("")}<line x1="0" y1="136" x2="400" y2="132"/><line x1="0" y1="150" x2="400" y2="146"/></g>`;
     return `<rect x="0" y="0" width="400" height="300" fill="${s === 3 ? "#cfdbe6" : "#bfe3f5"}"/><path d="M0,120 Q90,92 190,112 T400,104 V300 H0 Z" fill="${sand ? (["#6fb24c", "#5fa33f", "#8c9a45", "#cfd8de"][s]) : boden2}"/><path d="M0,${sand ? 172 : 150} Q120,${sand ? 166 : 128} 240,${sand ? 172 : 146} T400,${sand ? 168 : 140} V300 H0 Z" fill="${boden}"/>${sand ? `<g fill="${boden2}">${[[40, 210], [120, 240], [260, 220], [330, 270], [190, 275], [80, 285]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="14" ry="3"/>`).join("")}</g>` : ""}
-      ${zaun}${raufe}${eimer}${hinten}${vorne}${aepfel}${hinweise}<g data-wbschild="1" role="button" aria-label="Zur Boxenübersicht" style="cursor:pointer"><rect x="${200 - bw / 2}" y="6" width="${bw}" height="22" rx="11" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4"/><text x="200" y="21" text-anchor="middle" font-size="12" font-weight="700" fill="#2b1d12" font-family="system-ui, sans-serif">${esc(txt)}</text></g>`;
+      ${zaun}${hinten}${raufe}${eimer}${vorne}${aepfel}${hinweise}<g data-wbschild="1" role="button" aria-label="Zur Boxenübersicht" style="cursor:pointer"><rect x="${200 - bw / 2}" y="6" width="${bw}" height="22" rx="11" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4"/><text x="200" y="21" text-anchor="middle" font-size="12" font-weight="700" fill="#2b1d12" font-family="system-ui, sans-serif">${esc(txt)}</text></g>`;
   }
   // ---------- H7: Stallarten – Bedingungen, Schonfrist, Frist, Strafe, Vorteile ----------
   function eigenePferdeHof() { return spiel.boxen.filter(b => b.pferd && !b.tot && !fremd(b.pferd)).map(b => b.pferd); }
@@ -9101,8 +9130,8 @@
   function stallartJahreszeit() {   // zu Beginn jeder Jahreszeit
     const H = spiel.hof; if (!H || !H.art) return; delete H.artCache; stallartSchonBis(); const jetzt = jzJetzt(), name = STALLART_NAME[H.art];
     if (stallartOk()) { delete H.artFrist; if (H.artVerloren) { delete H.artVerloren; brief("Landwirtschaftsamt", `${name}: Status zurück`, `{dein|Ihr} Hof <b>${esc(hofName())}</b> erfüllt wieder alle Bedingungen als ${name}. Die Vorteile gelten wieder, die Förderung läuft ab jetzt wieder.`); }
-      buchen(STALLART_FOERDERUNG, `Förderung ${name}`);
-      if (H.art === "gnadenhof") { const n = eigenePferdeHof().length; if (n) { buchen(30 * n, "Spenden Gnadenhof"); brief("Freundeskreis Gnadenhof", "Spenden für die alten Pferde", `für {deine|Ihre} ${n} Schützlinge auf <b>${esc(hofName())}</b> sind diese Jahreszeit <b>${fmt(30 * n)}</b> an Spenden zusammengekommen. Danke für {deine|Ihre} Arbeit!`); } } (H.foerderLog = H.foerderLog || []).push({ jz: jetzt, b: STALLART_FOERDERUNG }); H.foerderLog = H.foerderLog.filter(x => x.jz > jetzt - 4); return; }
+      const fb = foerderBetrag(); buchen(fb, `Förderung ${name} (Fläche ${haTxt(H.ha)})`);
+      if (H.art === "gnadenhof") { const n = eigenePferdeHof().length; if (n) { buchen(30 * n, "Spenden Gnadenhof"); brief("Freundeskreis Gnadenhof", "Spenden für die alten Pferde", `für {deine|Ihre} ${n} Schützlinge auf <b>${esc(hofName())}</b> sind diese Jahreszeit <b>${fmt(30 * n)}</b> an Spenden zusammengekommen. Danke für {deine|Ihre} Arbeit!`); } } (H.foerderLog = H.foerderLog || []).push({ jz: jetzt, b: fb }); H.foerderLog = H.foerderLog.filter(x => x.jz > jetzt - 4); return; }
     if (H.artVerloren || jetzt < stallartSchonBis()) return;   // Schonfrist: keine Strafe (aber auch keine Förderung/Vorteile)
     const fehlt = stallartBed(H.art).filter(x => !x[1]).map(x => x[0]);
     if (H.artFrist == null) { H.artFrist = jetzt + 1; brief("Landwirtschaftsamt", `${name}: Bedingungen nicht erfüllt`, `{dein|Ihr} Hof <b>${esc(hofName())}</b> erfüllt die Bedingungen als ${name} nicht mehr: <b>${fehlt.join(", ")}</b>. {Du hast|Sie haben} bis zum Ende dieser Jahreszeit Zeit, das zu ändern. Sonst verliert der Hof den Status, und die Förderung des letzten Jahres muss zurückgezahlt werden.`); return; }
@@ -9113,18 +9142,17 @@
   const STALLART_VORTEILE = { pension: ["30 % mehr Anfragen von Einstellern", "Pferdewirt Haltung und Service einstellbar"], zucht: ["25 % Rabatt im Labor", "eigene Hengste für fremde Stuten, Aufzucht-Offenstall – kommen später"],
     ausbildung: ["eigene Pferde lernen 20 % schneller", "fremde Pferde in Beritt – kommt später"], gnadenhof: ["Spenden: 30 € je Pferd und Jahreszeit", "Patenschaften, Tierarztrabatt – kommen später"],
     renn: ["halbes Jockey-Reitgeld", "Verkaufsrennen, Trainer – kommen später"], western: ["halbes Nenngeld bei Westernprüfungen", "schnelleres Westerntraining, Trainer – kommen später"] };
-  function stallartHTML() {
+  function stallartHTML() {   // Dome (v295): oben in Hof → Übersicht – Stallart, Verpflichtungen und Vorteile in kurzen Stichpunkten
     const H = spiel.hof || {}, art = H.art, B = art ? stallartBed(art) : [], ok = stallartOk(), schon = jzJetzt() < stallartSchonBis();
-    const status = !art ? "keine Stallart" : H.artVerloren ? "⛔ Status verloren – Bedingungen erfüllen, dann kommt er zurück" : ok ? "✅ Bedingungen erfüllt – Förderung und Vorteile laufen" : H.artFrist != null ? `⚠️ Bedingungen nicht erfüllt – Frist bis Ende ${jzName(H.artFrist - 1).replace(/^\S+ /, "")}` : schon ? `🕊️ Schonfrist bis ${jzName(stallartSchonBis()).replace(/^\S+ /, "")} – noch keine Strafe, Vorteile erst mit erfüllten Bedingungen` : "⚠️ Bedingungen nicht erfüllt";
-    return `<p class="text" style="margin:0 0 6px">Jeder Hof hat eine Stallart. Sind ihre Bedingungen erfüllt, gibt es <b>${fmt(STALLART_FOERDERUNG)} Förderung je Jahreszeit</b> und Vorteile. Nach Kauf oder Wechsel gilt 1 Jahr Schonfrist. Danach: fehlt eine Bedingung, kommt ein Warnbrief mit Frist bis Ende der Jahreszeit, sonst Statusverlust und Rückzahlung der Förderung des letzten Jahres. Turniere bleiben für alle offen.</p>
-      <div class="ma-karte"><div class="ma-zeile"><span><b>${STALLART_NAME[art] || "–"}</b><small>${status}</small></span></div>
-        <ul class="liste">${B.map(([t, o, sp]) => `<li><span class="ico">${sp ? "⏳" : o ? "✅" : "❌"}</span><span class="txt">${t}${sp ? "<small>kommt später – zählt noch nicht</small>" : ""}</span></li>`).join("")}</ul>
-        <p class="text" style="padding:0 10px"><small><b>Vorteile:</b> ${(STALLART_VORTEILE[art] || []).join(" · ")}</small></p></div>
-      <h4 class="ma-titel">🔁 Stallart wechseln</h4><div class="bf-knoepfe">${Object.keys(STALLART_NAME).filter(k => k !== art).map(k => `<button class="mini-knopf" data-stallart="${k}">${STALLART_NAME[k]}</button>`).join("")}</div>`;
+    const status = !art ? "keine Stallart" : H.artVerloren ? "⛔ Status verloren – Bedingungen erfüllen, dann kommt er zurück" : ok ? `✅ alles erfüllt – ${fmt(foerderBetrag())} Förderung je Jahreszeit` : H.artFrist != null ? `⚠️ nicht erfüllt – Frist bis Ende ${jzName(H.artFrist - 1).replace(/^\S+ /, "")}` : schon ? `🕊️ Schonfrist bis ${jzName(stallartSchonBis()).replace(/^\S+ /, "")}` : "⚠️ nicht erfüllt";
+    return `<div class="ma-karte" style="margin-bottom:10px"><div class="ma-zeile"><span><b>🏷️ ${STALLART_NAME[art] || "–"}</b><small>${status}</small></span></div>
+      <div style="padding:0 10px 8px"><small><b>Verpflichtungen:</b></small><ul class="liste">${B.map(([t, o, sp]) => `<li><span class="ico">${sp ? "⏳" : o ? "✅" : "❌"}</span><span class="txt">${t}${sp ? "<small>kommt später</small>" : ""}</span></li>`).join("")}</ul>
+      <small><b>Vorteile:</b></small><ul class="liste">${[...(STALLART_VORTEILE[art] || []), `Förderung ${fmt(FOERDER_HA)} je ha und Jahreszeit`, "20 % Bauzuschuss für Stufe-3-Gebäude"].map(v => `<li><span class="ico">⭐</span><span class="txt">${v}</span></li>`).join("")}</ul>
+      <details class="bzn-e" style="margin-top:6px"><summary>🔁 Stallart wechseln</summary><div class="bf-knoepfe" style="padding:6px 0">${Object.keys(STALLART_NAME).filter(k => k !== art).map(k => `<button class="mini-knopf" data-stallart="${k}">${STALLART_NAME[k]}</button>`).join("")}</div><small>Nach dem Wechsel 1 Jahr Schonfrist. Fehlt danach etwas: Warnbrief, Frist bis Ende der Jahreszeit, sonst Statusverlust und Rückzahlung der Förderung des letzten Jahres.</small></details></div></div>`;
   }
   function stallartBrief(art) {   // Dome: bei Hofkauf und Wechsel über die Vorteile informieren
     const name = STALLART_NAME[art], B = stallartBed(art);
-    brief("Landwirtschaftsamt", `${hofName()}: willkommen als ${name}`, `{dein|Ihr} Hof <b>${esc(hofName())}</b> ist jetzt als <b>${name}</b> eingetragen. Das bringt {dir|Ihnen}:<ul>${(STALLART_VORTEILE[art] || []).map(v => `<li>${v}</li>`).join("")}<li>${fmt(STALLART_FOERDERUNG)} Förderung je Jahreszeit</li></ul>Voraussetzung sind diese Bedingungen: ${B.filter(x => !x[2]).map(x => x[0].replace(/\s*\(.*\)$/, "")).join(", ")}. Für das erste Jahr gilt eine Schonfrist – Förderung und Vorteile gibt es, sobald alle Bedingungen erfüllt sind. Alles Weitere: Hofverwaltung → Hof → Stallart.`);
+    brief("Landwirtschaftsamt", `${hofName()}: willkommen als ${name}`, `{dein|Ihr} Hof <b>${esc(hofName())}</b> ist jetzt als <b>${name}</b> eingetragen. Das bringt {dir|Ihnen}:<ul>${(STALLART_VORTEILE[art] || []).map(v => `<li>${v}</li>`).join("")}<li>Förderung ${fmt(FOERDER_HA)} je ha und Jahreszeit (jetzt ${fmt(foerderBetrag())})</li><li>20 % Bauzuschuss für Stufe-3-Gebäude</li></ul>Voraussetzung sind diese Bedingungen: ${B.filter(x => !x[2]).map(x => x[0].replace(/\s*\(.*\)$/, "")).join(", ")}. Für das erste Jahr gilt eine Schonfrist – Förderung und Vorteile gibt es, sobald alle Bedingungen erfüllt sind. Alles Weitere: Hofverwaltung → Hof → Übersicht.`);
   }
   function stallartBinden() {
     document.querySelectorAll("[data-stallart]").forEach(b => b.onclick = () => { const k = b.dataset.stallart, H = spiel.hof;
@@ -9134,7 +9162,7 @@
   function saatRuheTage() { return Math.max(1, Math.round(tpj() / 3)); }   // nach dem Nachsäen ca. ⅓ Jahreszeit (≈ 4 Wochen) Ruhe: 4 Tage/Jz → 1, 7 → 2, 10 → 3
   function grasNacht() {
     const s = datum(spiel.tag - 1).s;
-    weiden().forEach(w => { if (w.ruhtBis != null && spiel.tag >= w.ruhtBis) { delete w.ruhtBis; delete w.gesperrt; w.gras = Math.min(100, w.gras + GRAS.nachsaeenPlus); } });   // Ruhe nach dem Nachsäen vorbei
+    weiden().forEach(w => { if (w.ruhtBis != null && spiel.tag >= w.ruhtBis) { delete w.ruhtBis; delete w.gesperrt; w.gras = Math.min(100, w.gras + GRAS.nachsaeenPlus); (spiel.weideFreiMeldung = spiel.weideFreiMeldung || []).push(`${w.name} (${hofName()})`); } });   // Ruhe nach dem Nachsäen vorbei
     weiden().forEach(w => { if (!(w.ha > 0)) return;
       const bel = weideBelegtW(w), ueber = bel > w.ha + 1e-9, nach = w.nachgesaet != null && w.nachgesaet >= jzJetzt();
       const wachs = GRAS.wachsen[s] * (w.matsch >= GRAS.matschAb ? 0.5 : 1) * (nach ? GRAS.nachsaeenWachs : 1), fress = GRAS.verbrauch * bel / w.ha;
@@ -9146,7 +9174,7 @@
   }
   function weideJahreszeit() {
     const H = spiel.hof; if (!H) return; weidenSync();
-    weiden().filter(w => weideBelegtW(w) > w.ha + 1e-9).forEach(w => brief("Hofverwaltung", `${w.name} überbesetzt`, `auf <b>${esc(w.name)}</b> (${esc(hofName())}) stehen Pferde für ${haTxt(weideBelegtW(w))} auf nur ${haTxt(w.ha)} (Faustregel: ${haTxt(WEIDE_BEDARF[0])} je Großpferd, ${haTxt(WEIDE_BEDARF[1])} je Pony). Das Gras ist schnell weg, die Weide wird matschig (mehr Mauke, Strahlfäule, Würmer und Streit). Abhilfe: Pferde auf andere Weiden verteilen oder Weide vergrößern (Hofverwaltung → Hof → Weiden).`));
+    weiden().filter(w => weideBelegtW(w) > w.ha + 1e-9).forEach(w => brief("Hofverwaltung", `${w.name} überbesetzt`, `auf <b>${esc(w.name)}</b> (${esc(hofName())}) stehen Pferde für ${haTxt(weideBelegtW(w))} auf nur ${haTxt(w.ha)} (Faustregel: ${haTxt(WEIDE_BEDARF[0])} je Großpferd, ${haTxt(WEIDE_BEDARF[1])} je Pony). Das Gras ist schnell weg, die Weide wird matschig (mehr Mauke, Strahlfäule, Würmer und Streit). Abhilfe: Pferde auf andere Weiden verteilen oder Weide vergrößern (Hofverwaltung → Hof → Land und Weiden).`));
     const bedarf = 0, da = 1;
     if (bedarf > da + 1e-9) brief("Hofverwaltung", "Weide zu klein", `auf <b>${esc(hofName())}</b> stehen gerade Pferde für ${haTxt(bedarf)} Weide auf ${haTxt(da)} eingezäunter Weide (Faustregel: ${haTxt(WEIDE_BEDARF[0])} je Großpferd, ${haTxt(WEIDE_BEDARF[1])} je Pony). Die Weide wird schnell abgefressen und zertreten. Mehr Weide: Hofverwaltung → Hof → Land (Weideland) und Bauen (Weide einzäunen).`);
   }
@@ -9395,11 +9423,11 @@
       <p><b>Bauen</b> (Hofverwaltung → Hof → Bauen, Stufe 1 / 2 / 3): ${BAU_REIHE.filter(k => !BAUTEN[k].nur).map(k => { const B = BAUTEN[k]; return `${B.n.replace(/\u00ad/g, "")} ${B.fest ? fmt(B.fest) : B.preis.map(fmt).join(" / ")}${B.jeHa ? " je ha" : ""}${B.anbau ? ` (Anbau ${B.anbauBoxen} Boxen ${B.anbau.map(fmt).join(" / ")}, je 2 Boxen mehr ${B.paar.map(fmt).join(" / ")})` : ""}`; }).join(" · ")}. Rennbahn und Aufzucht-Offenstall kommen mit den Stallarten (H7). + / − in der Boxenübersicht gibt es nicht mehr.</p>
       <p><b>Bauzeit</b> (Standardtempo, je nach Tempo anteilig): kurz 2–3 Tage (Roundpen, Trail, Weide einzäunen, Sandpaddock, Waschplatz), ½ Jahreszeit (Paddockboxen, Sattelkammer, Abfohlbox), 1 Jahreszeit (Stall und Anbau, Reitplatz, Lager, Quarantänestall), Reithalle 2–3 Jahreszeiten. Außenarbeiten (Reitplatz, Roundpen, Trail, Weide, Sandpaddock) ruhen im Winter. Bezahlt wird beim Auftrag; der Hofwert steigt um den Baupreis. Heudampfer nur mit Futterlager, sofort. Lager: Futterkammer ${LAGER_START.toLocaleString("de-DE")} kg + ${BAUTEN.lager.platz.map(x => x.toLocaleString("de-DE")).join(" / ")} kg.</p>
       <p><b>Umbau</b> eine Stufe höher: Preisunterschied + ${prozent(UMBAU_AUFSCHLAG)}, halbe Bauzeit, je Abschnitt (Erstbau und jeder Anbau einzeln); die Boxen sind gesperrt. <b>Umbau-Folgen (H4):</b> Pferde ziehen beim Start in freie Boxen (normale vor Paddockboxen, nicht Quarantäne/Abfohlbox); eigene ohne Box kommen auf die Weide (ohne Weide und ohne freie Box kein Umbau – vorher per Anhänger zu einem anderen Hof). Sind Einsteller betroffen, beginnt der Umbau erst 1 Jahreszeit nach dem Auftrag (Brief); ohne freie Box braucht jeder Einsteller eine Lösung: Weide mit ${prozent(UMBAU.nachlass)} Nachlass aufs Boxengeld oder der Spieler kündigt; ohne Lösung kündigt der Einsteller selbst und zieht zum Umbau-Beginn aus (Ansehen ${UMBAU.ansehenOhne}). Zufriedenheit: Umzug ${UMBAU.zufrUmzug}, Nachlass ${UMBAU.zufrNachlass}. Keine neuen Einsteller in Boxen mit geplantem Umbau. Absagen vor dem Start: volle Erstattung. Reitplatz/Reithalle/Roundpen im Umbau: dort kein Training. Nach dem Umbau kommen die Weide-Pferde zurück in ihre Box. <b>Unterhalt</b> ${prozent(UNTERHALT)} des Baupreises je Jahreszeit. <b>Verfall</b> je Jahreszeit Stufe 1/2/3: −${VERFALL.slice(1).map(x => String(x).replace(".", ",")).join(" / −")} Zustand (Start-Stall beginnt bei 85 %); Warnbrief unter 40 %. <b>Reparatur:</b> Handwerker kommt am nächsten Tag, braucht 1 Tag (ab 50 % Zustand) bzw. 2 Tage (darunter), danach 100 %; je 10 Punkte 2 % des Baupreises; Hofhelfer (${fmt(MA_TYP.hofhelfer.gehalt)}/Jz) +${HOFHELFER_REPARATUR} Punkte je Arbeitstag am schlechtesten Gebäude.</p>
-      <p><b>Weiden (H6):</b> je Hof mehrere Weiden mit Grasstand und Matsch (Hof → Weiden). Gras je Tag (Standardtempo, wird nach Spieltempo umgerechnet): wächst Frühling/Sommer/Herbst/Winter +${GRAS.wachsen.join(" / +")} (matschig nur halb, nachgesät ×${String(GRAS.nachsaeenWachs).replace(".", ",")} für 1 Jahr), Verbrauch ${GRAS.verbrauch} × belegte ha (${haTxt(WEIDE_BEDARF[0])} je Großpferd, ${haTxt(WEIDE_BEDARF[1])} je Pony) ÷ Weidefläche. Gras unter ${GRAS.wenig} % → Heu nötig wie im Winter. Überbesetzt: Matsch +${GRAS.matschPlus}/Tag (Herbst/Winter ×2), sonst −${GRAS.matschMinus} (leer −${GRAS.matschLeer}); ab ${GRAS.matschAb} % matschig: Mauke und Strahlfäule ×1,5, Würmer ×1,3, Streit ×1,3. Abäppeln (Spieler oder Pferdepfleger, 1 Weide/Tag): Würmer ×0,6 für 1 Jahreszeit. Sperren: wächst ohne Verbrauch, trocknet ab. Nachsäen im Frühling und Herbst (einmal je Jahreszeit und Weide, Weide muss leer sein) ${fmt(GRAS.nachsaeen)}/ha: danach ruht die Weide ⅓ Jahreszeit (4/7/10 Tage je Jz → 1/2/3 Tage), dann Gras +${GRAS.nachsaeenPlus}. Neue Weide oder vergrößern beim Einzäunen; Pachtende: Weiden schrumpfen aufs vorhandene Weideland.</p>
+      <p><b>Weiden (H6):</b> je Hof mehrere Weiden mit Grasstand und Matsch (Hof → Land und Weiden; Land kaufen mit Wahl „neue Weide“ oder „Weide X vergrößern“, Zaun wird dann gleich gebaut; nach dem Nachsäen kommt ein Fenster „Weide wieder nutzbar“). Gras je Tag (Standardtempo, wird nach Spieltempo umgerechnet): wächst Frühling/Sommer/Herbst/Winter +${GRAS.wachsen.join(" / +")} (matschig nur halb, nachgesät ×${String(GRAS.nachsaeenWachs).replace(".", ",")} für 1 Jahr), Verbrauch ${GRAS.verbrauch} × belegte ha (${haTxt(WEIDE_BEDARF[0])} je Großpferd, ${haTxt(WEIDE_BEDARF[1])} je Pony) ÷ Weidefläche. Gras unter ${GRAS.wenig} % → Heu nötig wie im Winter. Überbesetzt: Matsch +${GRAS.matschPlus}/Tag (Herbst/Winter ×2), sonst −${GRAS.matschMinus} (leer −${GRAS.matschLeer}); ab ${GRAS.matschAb} % matschig: Mauke und Strahlfäule ×1,5, Würmer ×1,3, Streit ×1,3. Abäppeln (Spieler oder Pferdepfleger, 1 Weide/Tag): Würmer ×0,6 für 1 Jahreszeit. Sperren: wächst ohne Verbrauch, trocknet ab. Nachsäen im Frühling und Herbst (einmal je Jahreszeit und Weide, Weide muss leer sein) ${fmt(GRAS.nachsaeen)}/ha: danach ruht die Weide ⅓ Jahreszeit (4/7/10 Tage je Jz → 1/2/3 Tage), dann Gras +${GRAS.nachsaeenPlus}. Neue Weide oder vergrößern beim Einzäunen; Pachtende: Weiden schrumpfen aufs vorhandene Weideland.</p>
       <p><b>Sandpaddocks (H6):</b> jeder gebaute Sandpaddock (Hof → Bauen, auch mehrere) ist ein eigener Auslauf mit eigener Gruppe; Platz je Stufe 1/2/3: ${PADDOCK_PLATZ.slice(1).join(" / ")} Pferde. Zuteilen über Box → Pflege → Ort → Sandpaddock (Auswahl zeigt, wer dort steht und wie viel Platz frei ist), zurück über dieselbe Kachel. Das Pferd bleibt sonst wie in der Box versorgt (Futter, Mist), bekommt aber keinen Box-Abzug: Wohlbefinden +3 mit Gesellschaft (+1 allein) + 2 × temperamentvoll je Nacht; Herdenregeln (Streit, ungeplante Bedeckung) je Sandpaddock. Hengst mit Stute: Warnung (besser mit Wallach). Gesperrt bei Quarantäne und Boxenruhe. Hufrehe-Warnung im Frühling bietet „Lieber Sandpaddock“ an.</p>
       <p><b>Einstreu (H6):</b> Sorten in der Futterkammer (Gruppe Einstreu): ${Object.keys(EINSTREU).map(k => `${FUTTER[k].n} ${EINSTREU[k].kg} kg je Box und Tag à ${String(FUTTER[k].preis.toFixed(2)).replace(".", ",")} €`).join(" · ")}. Wirkung: Stroh staubt – Husten ×1,3 (empfindliche Atemwege ×2); Strahlfäule Pellets ×0,7, Leinstroh/Hanf ×0,8; ohne Einstreu Wohlbefinden −${EINSTREU_OHNE.wohl} je Nacht und Strahlfäule ×${EINSTREU_OHNE.strahl} (Brief „Keine Einstreu mehr“). Wahl je Box: zieht ein Pferd ein, fragt das Spiel, welche Einstreu (nur eine Sorte im Lager → automatisch); ändern in Box → Pflege → Versorgung. Verbrauch jede Nacht je Box mit Pferd (nicht auf der Weide, nicht in der Klinik), zählt in den Platz der Futterkammer. Startvorrat einmal ${EINSTREU_START} kg Einstreu-Stroh. Wird die Box leer, wird beim nächsten Pferd neu eingestreut. <b>Pension:</b> Zusatzleistung „Bessere Einstreu“ ${fmt(PENSION_LEISTUNG.einstreu.preis)} je Jahreszeit – die Box bekommt automatisch staubarme Einstreu aus dem Lager (Späne, Pellets oder Leinstroh/Hanf); gibt es nur Stroh, Zufriedenheit −2 je Nacht.</p>
-      <p><b>Futterwiese (H6):</b> eine Weide ohne Pferde lässt sich unter Hof → Weiden „als Futterwiese nutzen“ (keine Pferde darauf, wächst ohne Verbrauch). Der Bauer mäht wie in echt: 1. Schnitt am ersten Sommertag (Anfang Juni), 2. Schnitt am Sommertag ⌈0,7 × Tage je Jz⌉ (Ende Juli), 3. Schnitt am ersten Herbsttag (September) – 2. und 3. nur bei Gras ≥ ${WIESE.schnitt2Gras} %. Ertrag ${WIESE.ertrag.join(" / ")} kg Heu je ha (in echt 3,5 / 2,5 / 1,5 t, Spiel-Maßstab: 1 Pferd frisst ≈ 280 statt 3.600 kg im Jahr) × Gras/70 (höchstens ×1), danach Gras −${WIESE.grasWeg}. Lohn ${fmt(WIESE.lohn)} je ha und Schnitt. Heu kommt in die Futterkammer, so viel Platz ist; der Rest geht für ${String(WIESE.verkauf.toFixed(2)).replace(".", ",")} €/kg an den Bauern. ${prozent(WIESE.regen)} Regen-Schnitt → staubiges Heu. Ohne Futterwiese: Heu im Futterhandel.</p>
-      <p><b>Stallarten (H7):</b> je Hof eine Stallart (Hof → Stallart, Wechsel jederzeit). Bedingungen: Pensionsstall ≥ ½ der Boxen an Einsteller · Zuchtstall ≥ 1 Deckhengst (ab 3 J.), ≥ 2 Zuchtstuten (3–20 J.), Abfohlbox (Aufzucht-Offenstall kommt später) · Ausbildungsstall Reitplatz + Roundpen oder Halle + ≥ 1 Bereiter · Gnadenhof nur alte/kranke/Notfallpferde, keine Zucht, kein Verkauf · Rennstall ≥ 2 Rennpferde (Vollblut ab 2 J., Araber/Achal-Tekkiner ab 3 J.; Rennbahn und Trainer kommen später) · Westernstall Reitplatz + Trail-Parcours + ≥ 2 Westernpferde (Quarter oder mit Western-Ausbildung; Trainer kommt später). Erfüllt: ${fmt(STALLART_FOERDERUNG)} Förderung je Jahreszeit + Vorteile (Pension Anfragen ×1,3 · Zucht Labor −25 % · Ausbildung Lernen ×1,2 · Gnadenhof 30 € Spenden je Pferd und Jz · Renn halbes Jockey-Reitgeld · Western halbes Nenngeld bei Westernprüfungen). Schonfrist ${STALLART_SCHON} Jahreszeiten nach Kauf/Wechsel (keine Strafe, Förderung/Vorteile nur bei erfüllten Bedingungen). Danach fehlt etwas → Warnbrief, Frist bis Ende der Jahreszeit → Statusverlust (Vorteile weg) und Rückzahlung der Förderung der letzten 4 Jahreszeiten; erfüllt man die Bedingungen wieder, kommt der Status zurück.</p>
+      <p><b>Futterwiese (H6):</b> eine Weide ohne Pferde lässt sich unter Hof → Land und Weiden „als Futterwiese nutzen“ (keine Pferde darauf, wächst ohne Verbrauch). Der Bauer mäht wie in echt: 1. Schnitt am ersten Sommertag (Anfang Juni), 2. Schnitt am Sommertag ⌈0,7 × Tage je Jz⌉ (Ende Juli), 3. Schnitt am ersten Herbsttag (September) – 2. und 3. nur bei Gras ≥ ${WIESE.schnitt2Gras} %. Ertrag ${WIESE.ertrag.join(" / ")} kg Heu je ha (in echt 3,5 / 2,5 / 1,5 t, Spiel-Maßstab: 1 Pferd frisst ≈ 280 statt 3.600 kg im Jahr) × Gras/70 (höchstens ×1), danach Gras −${WIESE.grasWeg}. Lohn ${fmt(WIESE.lohn)} je ha und Schnitt. Heu kommt in die Futterkammer, so viel Platz ist; der Rest geht für ${String(WIESE.verkauf.toFixed(2)).replace(".", ",")} €/kg an den Bauern. ${prozent(WIESE.regen)} Regen-Schnitt → staubiges Heu. Ohne Futterwiese: Heu im Futterhandel.</p>
+      <p><b>Stallarten (H7):</b> je Hof eine Stallart (Hof → Übersicht, Wechsel jederzeit). Bedingungen: Pensionsstall ≥ ½ der Boxen an Einsteller · Zuchtstall ≥ 1 Deckhengst (ab 3 J.), ≥ 2 Zuchtstuten (3–20 J.), Abfohlbox (Aufzucht-Offenstall kommt später) · Ausbildungsstall Reitplatz + Roundpen oder Halle + ≥ 1 Bereiter · Gnadenhof nur alte/kranke/Notfallpferde, keine Zucht, kein Verkauf · Rennstall ≥ 2 Rennpferde (Vollblut ab 2 J., Araber/Achal-Tekkiner ab 3 J.; Rennbahn und Trainer kommen später) · Westernstall Reitplatz + Trail-Parcours + ≥ 2 Westernpferde (Quarter oder mit Western-Ausbildung; Trainer kommt später). Erfüllt: Förderung ${fmt(FOERDER_HA)} je ha und Jahreszeit (Flächenprämie) + 20 % Bauzuschuss für Stufe-3-Gebäude (Neubau und Umbau) + Vorteile (Pension Anfragen ×1,3 · Zucht Labor −25 % · Ausbildung Lernen ×1,2 · Gnadenhof 30 € Spenden je Pferd und Jz · Renn halbes Jockey-Reitgeld · Western halbes Nenngeld bei Westernprüfungen). Schonfrist ${STALLART_SCHON} Jahreszeiten nach Kauf/Wechsel (keine Strafe, Förderung/Vorteile nur bei erfüllten Bedingungen). Danach fehlt etwas → Warnbrief, Frist bis Ende der Jahreszeit → Statusverlust (Vorteile weg) und Rückzahlung der Förderung der letzten 4 Jahreszeiten; erfüllt man die Bedingungen wieder, kommt der Status zurück.</p>
       <p><b>Koppel, Heu und Futter (v293):</b> Ort → Koppel → Weide oder Sandpaddock. Im Sandpaddock steht das Pferd draußen (Bild wie die Weide), kein Gras – Heu muss immer in die Heuraufe. Weide- und Sandpaddock-Bild: Heuraufe antippen = Heu/Raufutter aus dem Lager, Futtereimer antippen = alles außer Heu laut Futterplan (steht nur Heu im Plan, bleibt der Eimer leer), Pferdeäpfel antippen = abäppeln (Weide: wie „Abäppeln“, Sandpaddock: Mist je Pferd und Nacht, ab 3 drückt er aufs Wohlbefinden). Box: Heuhaufen hinten links = Heu (ohne Heu hungrig wie bisher), Krippe = Futter außer Heu (Haferkörner). Mitarbeiter und Turnier füttern beides. Einstreu als Boden sichtbar (Stroh, Späne, Pellets, Leinstroh/Hanf; ohne Einstreu Pflaster), leere Boxen behalten Einstreu und Futterreste bis „Box leeren“. Neue Futterstellen zeigen eine Info-Sprechblase, bis man sie einmal angetippt hat.</p>
       <p><b>Weide-Bild (H6):</b> steht ein Pferd auf der Weide, zeigt die Box statt der leeren Box die Weide mit bis zu 6 Pferden dieser Weide (das gewählte vorne in der Mitte), Gras-Farbe je Jahreszeit, oben Name und Grasstand.</p>
       <p><b>Wirkung der Stufe:</b> Wohlbefinden je Nacht in der Box: Stufe 1 −0,5, Stufe 3 +0,5, Zustand unter 40 % −0,5, Paddockbox +0,5. Verletzungsrisiko in der Box × 1,3 / 1 / 0,8, Zustand unter 70 % × 1,1, unter 40 % × 1,3. Mitarbeiter-Zufriedenheit je Jahreszeit: Ø Stufe unter 1,5 −3, ab 2,5 +3, Ø Zustand unter 50 % −3. Quarantänestall: Pferde dort stecken niemanden an und werden nicht angesteckt. Pensionspreis nach Stufe kommt mit H5.</p>
@@ -9602,16 +9630,15 @@
     const reiterListe = [["hof", "Hof"], ["reiter", "Reiter"], ["finanzen", "Finanzen"], ["aussen", "Außer Haus"], ["mitarbeiter", "Mitarbeiter"], ["post", "Postfach"], ["einst", "Einstellungen"]];
     let inhalt = "";
     if (hofReiter === "hof") {
-      const bereiche = [["uebersicht", "Übersicht"], ["plan", "Hofplan"], ["bauen", "Bauen"], ["land", "Land"], ["stallart", "Stallart"], ["weiden", "Weiden"], ["pension", "Pension"], ["futter", "Futterkammer"]];
+      if (hofBereich === "stallart") hofBereich = "uebersicht"; if (hofBereich === "weiden") hofBereich = "land";   // Dome (v295): Stallart in der Übersicht, Weiden unter Land
+      const bereiche = [["uebersicht", "Übersicht"], ["plan", "Hofplan"], ["bauen", "Bauen"], ["land", "Land und Weiden"], ["pension", "Pension"], ["futter", "Futterkammer"]];
       inhalt = `<div class="fin-tabs hof-tabs">${bereiche.map(([id, t]) => `<button data-hbereich="${id}" class="${hofBereich === id ? "an" : ""}">${t}</button>`).join("")}</div>`;
       if (hofBereich === "plan") inhalt += hofplanSVG();
       else if (hofBereich === "bauen") inhalt += bauenHTML();
-      else if (hofBereich === "land") inhalt += landHTML();
-      else if (hofBereich === "weiden") inhalt += weidenHTML();
-      else if (hofBereich === "stallart") inhalt += stallartHTML();
+      else if (hofBereich === "land") inhalt += landHTML() + `<h4 class="ma-titel">🌿 Weiden</h4>` + weidenHTML();
       else if (hofBereich === "pension") inhalt += pensionHTML(pnMeld);
       else if (hofBereich === "futter") inhalt += `<h4 class="ma-titel" id="fkTitel" style="margin-top:0">🌾 Futterkammer und Futterhandel</h4>${futterkammerHTML(fkMeld)}`;
-      else inhalt += `<dl class="werte">
+      else inhalt += (spiel.hof && spiel.hof.art ? stallartHTML() : "") + `<dl class="werte">
         <dt>Hof</dt><dd class="hf-edit" id="hfHof" title="antippen zum Ändern">${esc(hofName())} <span class="stift">✏️</span></dd>
         ${spiel.hof ? `<dt>Immobilie</dt><dd>${esc((immobilie(spiel.hof.id) || {}).n || "")} · ${STALLART_NAME[spiel.hof.art] || ""}</dd>
         <dt>Fläche</dt><dd>${haTxt(spiel.hof.ha)} (Bauland ${haTxt(bauHa())}, Weideland ${haTxt(weideland())}, davon Weide ${haTxt(spiel.hof.weideHa || 0)})</dd>
@@ -9686,9 +9713,8 @@
     nb.querySelectorAll("[data-rava]").forEach(b => b.onclick = () => { (spiel.spieler = spiel.spieler || {}).avatar = b.dataset.rava; speichern(); zeigeHof(); });
     lagerBinden(() => zeigeHof());
     nb.querySelectorAll("[data-hbereich]").forEach(b => b.onclick = () => { hofBereich = b.dataset.hbereich; fkMeld = ""; zeigeHof(); });
-    if (hofReiter === "hof" && hofBereich === "land") landBinden(() => zeigeHof());
-    if (hofReiter === "hof" && hofBereich === "weiden") weidenBinden();
-    if (hofReiter === "hof" && hofBereich === "stallart") stallartBinden();
+    if (hofReiter === "hof" && hofBereich === "land") { landBinden(() => zeigeHof()); weidenBinden(); }
+    if (hofReiter === "hof" && hofBereich === "uebersicht") stallartBinden();
     if (hofReiter === "hof" && hofBereich === "pension") { pnMeld = ""; pensionBinden(m => { const y = $("nebenSchirm").scrollTop; pnMeld = m || ""; zeigeHof(); $("nebenSchirm").scrollTop = y; }); }
     if (hofReiter === "hof" && hofBereich === "bauen") bauenBinden();
     futterkammerBinden(m => { const nbS = $("nebenSchirm"), y = nbS.scrollTop; fkMeld = m; zeigeHof(); nbS.scrollTop = y; });   // Dome: nach dem Kauf nicht nach oben springen

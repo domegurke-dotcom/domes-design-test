@@ -19,3 +19,6 @@ Diese Punkte sind zu groß oder brauchen erst eine Planung. Darum hat Claude sie
    - Offen: Preise, Turniergeld, Kreditgrenzen insgesamt prüfen.
 9. **Spielstand zwischen PC und Handy übertragen:** Ein QR-Code reicht nicht, weil der Spielstand zu groß ist. Vorschlag: Datei exportieren und importieren (oder später ein Konto).
 10. **Paddock und Sandpaddock** als nutzbarer Ort (kommt mit H6).
+11. **Zwei Fohlen in einer Box und Zwillingsgeburten:** Bisher hat eine Box nur Platz für ein Fohlen bei Fuß. Eine Leihmutter säugt das Waisenfohlen zwar (v265), es steht im Spiel aber in seiner eigenen Box. Geplant:
+    - ein echtes zweites Fohlen in derselben Box (Anzeige, Versorgung, Absetzen, Verkauf mit der Mutter …)
+    - dazu Zwillingsgeburten (selten, mit erhöhtem Risiko wie in echt)

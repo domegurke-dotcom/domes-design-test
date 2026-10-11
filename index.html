@@ -880,7 +880,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "298";
+  const SPIEL_VERSION = "299";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -888,9 +888,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=298"></script>
-<script src="kopfteile.js?v=298"></script>
-<script src="kopfalter.js?v=298"></script>
+<script src="pferd.js?v=299"></script>
+<script src="kopfteile.js?v=299"></script>
+<script src="kopfalter.js?v=299"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2680,7 +2680,7 @@
           <dt>Stockmaß</dt><dd>${p.stockmass} cm</dd><dt>Gewicht</dt><dd>ca. ${gewichtAnzeige(p)} kg</dd>${p.zwerg ? `<dt>Besonderheit</dt><dd>Zwergwuchs – bleibt deutlich kleiner</dd>` : ""}${p.hufGr ? `<dt>Hufgröße</dt><dd>vorne ${HUFSCHUH_GR[p.hufGr.vorne]} · hinten ${HUFSCHUH_GR[p.hufGr.hinten]}</dd>` : ""}${spiel.admin && !box.lesen ? `<dt>Hufe 🛠️</dt><dd>${hufStufe(p)} (${hufQ(p)}) · wächst ${hufW(p)}</dd>` : ""}
           ${zucht ? `<dt>Zucht</dt><dd>${zucht}</dd>` : ""}
           ${(() => { const akt = befundListe(p).filter(b => b.diagnose), alt = p.befundAlt || []; if (!akt.length && !alt.length) return "";
-            return `<dt>Befunde</dt><dd class="bf-liste">${[...akt.map(b => `${KRANK[b.art].ico} ${KRANK[b.art].n} (${GRAD_TEXT[b.grad]}) – ${KRANK[b.art].chronisch ? "chronisch" : b.beh ? "in Behandlung" : "unbehandelt"}`), ...alt.slice(0, 6).map(a => `<small>${KRANK[a.art].ico} ${KRANK[a.art].n} (${GRAD_TEXT[a.grad]}) · ${datumText(datum(a.seit))} · ${a.wie}</small>`)].join("<br>")}</dd>`; })()}
+            return `<dt>Befunde</dt><dd class="bf-liste">${[...akt.map(b => `${KRANK[b.art].ico} ${KRANK[b.art].n} (${GRAD_TEXT[b.grad]}) – ${KRANK[b.art].chronisch ? "chronisch" : b.beh ? "in Behandlung" : "unbehandelt"}`), ...alt.slice(0, 6).map(a => `<small>${KRANK[a.art].ico} ${KRANK[a.art].n}${GRAD_TEXT[a.grad] ? ` (${GRAD_TEXT[a.grad]})` : ""} · ${datumText(datum(a.seit))} · ${a.wie}</small>`)].join("<br>")}</dd>`; })()}
           ${fremd(p) ? `<dt>Besitzer</dt><dd>🏡 ${esc(eName(einstellerVon(p) || { vn: "", nn: "Einsteller" }))} (Pensionspferd)</dd>` : box.tot || box.lesen ? "" : `<dt>Marktwert</dt><dd><span class="wert-zeile"><b>${fmt(marktwert(p))}</b><button class="knopf zweit" id="abgebenKnopf">👋 Abgeben</button>${spiel.admin ? `<button class="knopf zweit" id="entfernenKnopf">🛠️ Pferd entfernen</button>` : ""}</span></dd>`}
         </dl>
         ${box.lesen ? "" : verkaufHinweis(p)}
@@ -3739,14 +3739,14 @@
   function befundNeu(p, art, grad, ursache, bemerktVon) {
     const K = KRANK[art], b = { id: "bf" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), art, grad: Math.max(1, Math.min(5, grad || K.start[0])), seit: spiel.tag, ursache: ursache || "",
       bemerkt: bemerktVon ? { von: bemerktVon, tag: spiel.tag } : null, meldungen: [], vermutung: null, diagnose: null, beh: null };
-    if (b.grad === 5) b.grad5 = spiel.tag;
+    if (b.grad === 5) b.grad5 = spiel.tag; b.gradMax = b.grad;   // v299: Anfangsstufe zählt für „geheilt (…)“
     befundListe(p).push(b); return b;
   }
   // bisheriger Aufruf (Streit auf der Weide): Verletzung, die im Brief schon gemeldet wird
   function befundSetzen(p, art, schwere) { befundNeu(p, "verletzung", Math.max(1, Math.min(4, Math.round(schwere / 8))), "Biss/Tritt beim Streit auf der Weide", "Hofverwaltung"); }
   function befundAbschliessen(p, b, wie) {
     p.befunde = befundListe(p).filter(x => x !== b);
-    if (b.diagnose) (p.befundAlt = p.befundAlt || []).unshift({ art: b.art, grad: b.gradMax || b.grad, seit: b.seit, bis: spiel.tag, ursache: b.ursache, wie });
+    if (b.diagnose) (p.befundAlt = p.befundAlt || []).unshift({ art: b.art, grad: Math.max(1, b.gradMax || 0, b.grad || 0), seit: b.seit, bis: spiel.tag, ursache: b.ursache, wie });
     if (p.befundAlt && p.befundAlt.length > 20) p.befundAlt.length = 20;
     if ((b.diagnose || b.bemerkt) && /geheilt|verheilt/.test(wie || "")) (p.gesundMeldung = p.gesundMeldung || []).push(`${KRANK[b.art] ? KRANK[b.art].n : b.art} – ${wie}`);   // Dome (v267): Meldung beim nächsten Besuch der Box
   }
@@ -4075,7 +4075,7 @@
       const soll = dosisKlasse(gewichtAnzeige(p));
       if (stufe < soll) { H.a[k + "Zuwenig"] = 1; return `${behName(k)} gegeben – Dosis zu niedrig, wirkt nicht.`; }
       if (stufe > soll) { H.a[k + "Zuviel"] = 1; const zu = stufe - soll, grad = zu === 1 ? 1 : zu === 2 ? 3 : zu === 3 ? 4 : 5, alt = befundListe(p).find(b => b.art === "vergiftung");
-        if (alt) { alt.grad = Math.min(5, Math.max(alt.grad, grad) + 1); if (alt.grad >= 4) alt.gewarnt = true; } else { const b = befundNeu(p, "vergiftung", grad, `zu hohe Dosis ${M.n}`, wer || "du"); if (grad >= 4) b.gewarnt = true; } }
+        if (alt) { alt.grad = Math.min(5, Math.max(alt.grad, grad) + 1); alt.gradMax = Math.max(alt.gradMax || 0, alt.grad); if (alt.grad >= 4) alt.gewarnt = true; } else { const b = befundNeu(p, "vergiftung", grad, `zu hohe Dosis ${M.n}`, wer || "du"); if (grad >= 4) b.gewarnt = true; } }
     }
     H.a[k] = stufe || 1;
     if (k === "auskratzen") p.ausgekratzt = spiel.tag;

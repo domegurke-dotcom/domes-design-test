@@ -14,7 +14,7 @@ const { chromium } = require('playwright');
   log('Start: Weiden', await pg.evaluate(() => JSON.stringify(weiden().map(w => [w.name, w.ha])) + ' freiesLand ' + freiesLand()));
   // 1. Weideland kaufen über hvw – Hof – Land
   await pg.evaluate(() => { hofBereich = 'land'; zeigeHof('hof'); });
-  await pg.selectOption('#landArt', 'weide'); await pg.selectOption('#landHa', '2'); await klick('#landKauf'); await klick('#dlgKnoepfe button:first-child');
+  await pg.selectOption('#landArt', 'weide'); await pg.selectOption('#landHa', '2'); await pg.selectOption('#landZiel', ''); await klick('#landKauf'); await klick('#dlgKnoepfe button:first-child');
   log('Nach Landkauf: freies Weideland', await pg.evaluate(() => freiesLand()));
   // 2. Einzäunen als neue Weide über Bauen
   const zaun = async (ziel) => { await pg.evaluate(() => { hofBereich = 'bauen'; zeigeHof('hof'); }); await klick('[data-bau="weide"]');
@@ -40,7 +40,7 @@ const { chromium } = require('playwright');
   const boxen = await pg.evaluate(() => spiel.boxen.map((b, i) => b.pferd ? i : -1).filter(i => i >= 0));
   await aufWeideUI(boxen[0], 0); await aufWeideUI(boxen[1], 1);
   log('Pferde auf Weiden:', await pg.evaluate(() => JSON.stringify(spiel.boxen.filter(b => b.pferd).map(b => [b.pferd.name, b.pferd.weide ? weideVon(b.pferd).name : 'Box']))));
-  await pg.evaluate(() => { hofBereich = 'weiden'; zeigeHof('hof'); });
+  await pg.evaluate(() => { hofBereich = 'land'; zeigeHof('hof'); });
   
   log('Sandpaddock bauen (2×):', await pg.evaluate(() => { const a = bauStarten('sandpaddock', 1); const c = bauStarten('sandpaddock', 1); $('dlg').hidden = true; return [a, c, gebaeude().filter(g => g.typ === 'sandpaddock').length, BAUTEN.sandpaddock.einmal ? 'nur einmal' : 'mehrfach'].join(' '); }));
   log('Fehler', errs);

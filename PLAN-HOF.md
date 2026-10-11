@@ -14,7 +14,7 @@ Plan gespeichert bei Spielversion 208. **Noch nicht starten:** erst nach Fütter
 - [x] Etappe H4 – Umbau-Folgen (mittel) – v272, Abnahmetest von Claude erledigt (`tests/etappen-test.js`) ✅ · Teile, die erst mit den Stallarten kommen (Fristen ruhen, Aufzucht-Offenstall, Ausbildungs-/Western-/Rennstall, Gnadenhof-Spendenaufruf, Baulärm auf dem Gnadenhof), werden in H7 ergänzt
 - [x] Etappe H5 – Pension und Einsteller (groß) – v251, von Claude per Skript getestet · Abnahmetest für Dome von Claude erledigt (v271, `tests/etappen-test.js`, Dome 11.10.2026) ✅
 - [x] Etappe H6 – Weiden, Gras, Futterwiese, Einstreu (mittel) – **fertig v283–v288, Abnahmetest von Claude erledigt (`tests/etappen-test.js`) ✅** · **Weide-Bild (v288):** Box zeigt die Weide mit den Pferden · **Nachsäen (v283, Dome):** Frühling und Herbst, einmal je Jz und Weide, Weide muss leer sein, danach ruht sie ⅓ Jz (4/7/10 Tage → 1/2/3), Gras +30 erst nach der Ruhe · **Sandpaddocks (v284):** jeder gebaute Sandpaddock = eigener Auslauf (Platz 2/3/4 je Stufe, selbst festgelegt), Zuteilen über Ort mit Auswahl (wer dort steht, Platz), kein Box-Abzug, Wohlbefinden +3/+1, Herdenregeln je Paddock, Hengst+Stute-Warnung, Hufrehe-Warnung bietet Sandpaddock an · **Einstreu (v285):** 4 Sorten (Stroh 7 kg/0,10 €, Späne 3 kg/0,35 €, Pellets 2 kg/0,40 €, Leinstroh/Hanf 3 kg/0,60 €), Wahl je Box beim Einziehen, Verbrauch je Nacht, Husten/Strahlfäule-Wirkung, ohne Einstreu −3 Wohl + Brief, Startvorrat 100 kg · **Pension „Bessere Einstreu“ (v286):** 30 €/Jz (selbst festgelegt), staubarme Sorte automatisch, sonst Zufriedenheit −2/Nacht · **Futterwiese (v287):** Weide als Futterwiese markieren, Bauer mäht im Sommer (Tag 1 und gegen Ende bei Gras ≥ 60 %), 150 kg Heu/ha/Schnitt, 15 €/ha Lohn, Rest 0,12 €/kg an den Bauern, 20 % Regen → staubig · **Teil H6a fertig (v275):** mehrere Weiden mit Gras/Matsch, Weidepflege (abäppeln, sperren, nachsäen), Weide wählen, Einzäunen neu/vergrößern, Herde je Weide; offen: Einstreu, Sandpaddock/Haltung, Futterwiese, Weide-Bild mit Pferden, bessere Einstreu (Pension)
-- [ ] Etappe H7 – Stallarten: Bedingungen, Vorteile, Strafe (groß) – **Teil 1 fertig (v289):** Stallart je Hof wählen (Hof → Stallart), Bedingungen mit ✓/❌, Schonfrist 1 Jahr, Warnbrief + Frist 1 Jz, Statusverlust + Rückzahlung, Förderung 300 €/Jz, erste Vorteile; offen siehe OFFENE-FRAGEN.md (H6/H7) Punkt 12
+- [ ] Etappe H7 – Stallarten: Bedingungen, Vorteile, Strafe (groß) – **Teil 1 fertig (v289):** Stallart je Hof wählen (Hof → Übersicht), Bedingungen mit ✓/❌, Schonfrist 1 Jahr, Warnbrief + Frist 1 Jz, Statusverlust + Rückzahlung, Förderung 300 €/Jz, erste Vorteile; offen siehe OFFENE-FRAGEN.md (H6/H7) Punkt 12
 - [ ] Etappe H8 – Hausturnier und Verkaufsrennen (mittel)
 
 ---
@@ -205,13 +205,14 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 - [x] Einstreu, „Bessere Einstreu“ – so lassen (Dome: ja).
 
 **H7 nacharbeiten:**
-- [ ] Förderung vorerst 300 €/Jz (Rückfrage Flächenprämie in OFFENE-FRAGEN.md).
-- [ ] Hof verkaufen (Rückfrage in OFFENE-FRAGEN.md).
+- [x] (v295) Förderung als Flächenprämie: 50 € je ha und Jahreszeit; dazu 20 % Bauzuschuss für Stufe-3-Gebäude (Neubau und Umbau), wenn die Stallart-Bedingungen erfüllt sind.
+- [x] (v295) Ganzen Hof verkaufen (Immobilien → Hof-Karte): nur leer (keine Pferde, Einsteller, Pferde außer Haus), nicht den letzten Hof; Erlös 90 % des Hofwerts, Kredit wird abgelöst, Rest + Hofkasse aufs zentrale Konto.
+- [x] (v295) Stallart mit Verpflichtungen und Vorteilen in Hof → Übersicht (eigener Reiter „Stallart“ entfernt); Weiden unter Hof → „Land und Weiden“, beim Landkauf Wahl „neue Weide“ / „Weide X vergrößern“ (Zaun wird gleich gebaut); Fenster „Weide wieder nutzbar“ nach dem Nachsäen; Pferd im Koppel-Bild hinter der Heuraufe.
 - [x] Deckhengst ab 3 Jahren; Rennpferde: Vollblut ab 2, Araber/Achal-Tekkiner ab 3 Jahren (v290).
 - [x] Brief bei Hofkauf und Stallart-Wechsel mit den Vorteilen (v290).
 - [ ] (a) Aufzucht-Offenstall: bis 10 Fohlen + mindestens 1 reife oder ältere Stute (mehr Stuten bei mehr Fohlen von Vorteil), eigene Ansicht, ersetzt die externe Aufzucht, kostet nur Futter, Sozialverhalten steigt.
 - [ ] (b) Rennbahn bauen + Berufe Rennpferdetrainer und Westerntrainer.
-- [ ] (c) Fremde Pferde in Beritt (Ausbildungsstall) und Pensionsfohlen/-jungpferde zur Aufzucht (nur Zuchtstall, stehen im Aufzucht-Offenstall, gehen, wenn sie keine Jungpferde mehr sind).
+- [ ] (c) Fremde Pferde in Beritt (Ausbildungsstall) und Pensionsfohlen/-jungpferde zur Aufzucht (nur Zuchtstall, stehen im Aufzucht-Offenstall; Dome 12.10.: Aufnahme ab Absetzer bis unter 3 Jahre, mit 3 holt der Besitzer ab; **auch Waisenfohlen** können aufgenommen werden).
 - [ ] (d) Eigene Hengste als Deckhengst für fremde Stuten.
 - [ ] (e) Gnadenhof: Patenschaften und Tierarztrabatt.
 - [ ] (f) Fest angestellte Bereiter nur im Ausbildungsstall, sonst nur auf Abruf (wie jetzt). Bereits angestellte Bereiter auf anderen Höfen dürfen bleiben, neue gibt es dort nicht.

@@ -215,6 +215,15 @@ const path = require('path');
         else ok('H6 Pension „bessere Einstreu“ (kein Einsteller zum Testen)', true);
         ansehen('H6 Pension mit „bessere Einstreu“', () => pensionHTML('')); }
 
+      // ---------- H6 Futterwiese ----------
+      { const w = { wid: 'wtest', name: 'Testwiese', ha: 2, gras: 80, matsch: 0, wiese: true }; weiden().push(w); spiel.hof.ha += 2; spiel.hof.weideHa = weidenSumme(); buchen(5000, 'Testgeld');
+        ok('H6 Futterwiese wird nicht als Weide angeboten', !weideWahl({}) || weideWahl({}).wid !== 'wtest');
+        const F = futterkammer(); let z = 0; const vor = (F.lager.heu || 0) + (F.lager.heuStaub || 0);
+        while (!(w.schnitte >= 1) && z++ < 5 * tpj()) nacht(1);
+        const nach = (F.lager.heu || 0) + (F.lager.heuStaub || 0);
+        ok('H6 Bauer mäht im Sommer: Heu im Lager, Brief, Lohn', w.schnitte >= 1 && (spiel.post || []).some(x => /gemäht/.test(x.betreff || '')), `${datumText(datum())}: Heu ${Math.round(vor)} → ${Math.round(nach)} kg (inkl. Verbrauch)`);
+        spiel.weiden = weiden().filter(x => x !== w); spiel.hof.weideHa = weidenSumme(); }
+
       // ---------- H1 Kreditrate ----------
       { const rest = k.rest; k.jz = -1; kreditJahreszeit();
         ok('H1 Kreditrate wird abgebucht', k.rest < rest, `Rest ${rest} → ${k.rest} €`); }

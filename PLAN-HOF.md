@@ -177,6 +177,7 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
    5. Rennstall: Rennbahn, mind. 2 Rennpferde, Rennpferdetrainer. Vorteile: keine Trainergebühr (ohne Rennstall ca. 100 € je Rennen), halbes Jockey-Reitgeld, Verkaufsrennen, Jockeys.
    6. Westernstall: Reitplatz mit Trail-Parcours, mind. 2 Westernpferde, Westerntrainer. Vorteile: schnelleres Westerntraining, halbes Nenngeld bei Westernturnieren, später Westernunterricht.
 4. Turniere bleiben für alle offen; die Stallart bringt nur Vorteile, keine Sperre.
+5. **Nachtrag (Dome, 11.10.2026):** Zusatzleistungen gibt es nicht nur im Pensionsstall – jede Stallart bietet Fremden ihre Dienste an: z. B. Zuchtstall nimmt fremde Fohlen zur Aufzucht, Ausbildungsstall nimmt fremde Pferde in Beritt. Fester Bereiter nur im Ausbildungsstall (sonst Bereiter nach Bedarf, v255).
 
 ## Etappe H8 – Hausturnier und Verkaufsrennen (mittel)
 1. Hausturnier (Pensions- und Ausbildungsstall): 1× je Jahreszeit auf dem eigenen Hof, Termin im Turnierkalender. Prüfungen vom Hofturnier (Wettbewerbe, Gelassenheit), Ausbildungsstall zusätzlich E und A. Bedingung: Reitplatz, im Winter Reithalle. Kosten 300–600 € (Richter, Parcours). Einnahmen: Nenngelder der Gaststarter (Starterfeld wie bei Turnieren). Folgen: mehr Ansehen, neue Einsteller-/Beritt-Anfragen; eigene Pferde und Pferde der Einsteller starten mit (Einsteller zufriedener).

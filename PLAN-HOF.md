@@ -190,3 +190,29 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 ## Später / nicht in diesem Plan
 1. Gangpferdestall (wenn es mehr Gangpferderassen gibt), Trabrennbahn (mit Rasse Traber).
 2. Ausrüstung (eigener Plan), Sattelkammer dann mit Funktion.
+
+
+## ✅ Domes Antworten H6/H7 (12.10.2026) – Aufgaben
+**H6 nacharbeiten:**
+- [ ] Sandpaddock wie Weide behandeln: Pferd steht draußen (Box leer), kein Gras → immer Heu; eigene Ansicht wie das Weide-Bild; mehrere Sandpaddocks wie bei der Weide.
+- [ ] Ort: neue Kachel **„Koppel“**, darin Weide und Sandpaddock.
+- [ ] Weide- und Sandpaddock-Bild: **Heuraufe** (antippen = Heu füttern) und **Futtereimer** (antippen = alles außer Heu laut Futterplan); leer/gefüllt sichtbar; nur Heu im Plan → Eimer bleibt leer. **Pferdeäpfel** auf Weide/Sandpaddock, antippen = abäppeln.
+- [ ] Box: Krippe bekommt kein Heu mehr, sondern Kraftfutter usw. (wie der Futtereimer); **Heuhaufen hinten links** (leer → Heureste, antippen = füllen); **Einstreu-Bilder** je Material, ohne Einstreu Pflastersteinboden; Knopf **„Box leeren“** (Einstreu und Restfutter raus), wenn kein Pferd in der Box ist.
+- [ ] Neue Futtergegenstände: beim ersten Sehen **Info-Sprechblase**.
+- [ ] Weide-Bild: gewähltes Pferd wirklich mittig; Schild oben mittig und antippbar → zurück zur Boxenansicht.
+- [ ] Futterwiese realistisch: Ertrag und 1./2. Schnitt wie in echt.
+- [x] Nachsäen nach Spieltempo (Wachstum je Tag über `proTag`, Ruhe ⅓ Jahreszeit) – war schon berücksichtigt.
+- [x] Einstreu, „Bessere Einstreu“ – so lassen (Dome: ja).
+
+**H7 nacharbeiten:**
+- [ ] Förderung vorerst 300 €/Jz (Rückfrage Flächenprämie in OFFENE-FRAGEN.md).
+- [ ] Hof verkaufen (Rückfrage in OFFENE-FRAGEN.md).
+- [ ] Deckhengst ab 3 Jahren; Rennpferde: Vollblut ab 2 Jahren (laufen in echt zweijährig Rennen), Araber/Achal-Tekkiner ab 3 Jahren.
+- [ ] Brief bei Hofkauf und Stallart-Wechsel mit den Vorteilen der Stallart.
+- [ ] (a) Aufzucht-Offenstall: bis 10 Fohlen + mindestens 1 reife oder ältere Stute (mehr Stuten bei mehr Fohlen von Vorteil), eigene Ansicht, ersetzt die externe Aufzucht, kostet nur Futter, Sozialverhalten steigt.
+- [ ] (b) Rennbahn bauen + Berufe Rennpferdetrainer und Westerntrainer.
+- [ ] (c) Fremde Pferde in Beritt (Ausbildungsstall) und Pensionsfohlen/-jungpferde zur Aufzucht (nur Zuchtstall, stehen im Aufzucht-Offenstall, gehen, wenn sie keine Jungpferde mehr sind).
+- [ ] (d) Eigene Hengste als Deckhengst für fremde Stuten.
+- [ ] (e) Gnadenhof: Patenschaften und Tierarztrabatt.
+- [ ] (f) Fest angestellte Bereiter nur im Ausbildungsstall, sonst nur auf Abruf (wie jetzt). Bereits angestellte Bereiter auf anderen Höfen dürfen bleiben, neue gibt es dort nicht.
+- [x] Statusverlust: Hof behält die Stallart (Dome: ja). Bedingungen „kommt später“ zählen vorerst als erfüllt (Dome: ok).

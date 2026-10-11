@@ -853,7 +853,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "252";
+  const SPIEL_VERSION = "253";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -861,9 +861,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=252"></script>
-<script src="kopfteile.js?v=252"></script>
-<script src="kopfalter.js?v=252"></script>
+<script src="pferd.js?v=253"></script>
+<script src="kopfteile.js?v=253"></script>
+<script src="kopfalter.js?v=253"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3837,10 +3837,11 @@
     if (k === "boxenruhe") { p.boxenruhe = !p.boxenruhe; return p.boxenruhe ? `🛏️ ${esc(p.name)} hat jetzt Boxenruhe.` : `🛏️ Boxenruhe für ${esc(p.name)} beendet.`; }
     if (H.a[k]) return `${behName(k)} – heute schon gemacht.`;
     const mittel = A ? A.mittel : k;
-    if (mittel) { const frei = APO[mittel].frei; if (frei ? !(ap[mittel] > 0) : !(rz[mittel] > 0)) return `${behName(k)} – ${frei ? "nichts mehr in der Stallapotheke" : "kein Rezept dafür"}.`; }
+    const vomBesitzer = fremd(p);   // H5 (Dome): Mittel für Pensionspferde kauft und bezahlt der Besitzer – nicht aus der Stallapotheke
+    if (mittel) { const frei = APO[mittel].frei; if (frei ? !(vomBesitzer || ap[mittel] > 0) : !(rz[mittel] > 0)) return `${behName(k)} – ${frei ? "nichts mehr in der Stallapotheke" : "kein Rezept dafür"}.`; }
     // wehrt sich: Pferde mit wenig Vertrauen, scheue und nervöse
     if (Math.random() < (1 - mitwirkung(p)) * 0.4) { H.a[k + "Versuch"] = 1; return `😤 ${esc(p.name)} wehrt sich – ${behName(k)} hat heute nicht geklappt.`; }
-    if (mittel) { if (APO[mittel].frei) ap[mittel]--; else rz[mittel]--; }
+    if (mittel) { if (APO[mittel].frei) { if (!vomBesitzer) ap[mittel]--; } else rz[mittel]--; }
     if (M && M.dosis) {
       const soll = dosisKlasse(gewicht(p));
       if (stufe < soll) { H.a[k + "Zuwenig"] = 1; return `${behName(k)} gegeben – Dosis zu niedrig, wirkt nicht.`; }
@@ -3897,16 +3898,16 @@
     if (behMeldungTag !== spiel.tag + ":" + p.id) { behMeldungTag = spiel.tag + ":" + p.id; behMeldung = ""; }
     const H = behHeute(p).a, ap = apotheke(), rz = rezeptVon(p), kg = gewichtAnzeige(p);
     const knopf = (k, txt, an, aus) => `<button class="mini-knopf ${an ? "an" : ""}" data-beh="${k}" ${aus ? "disabled" : ""}>${txt}</button>`;
-    const vorrat = m => APO[m].frei ? (ap[m] || 0) : (rz[m] || 0);
+    const vorrat = m => APO[m].frei ? (fremd(p) ? 99 : ap[m] || 0) : (rz[m] || 0), vTxt = m => APO[m].frei && fremd(p) ? "vom Besitzer" : vorrat(m);
     const meds = Object.keys(APO).filter(m => APO[m].dosis && vorrat(m) > 0);
     const planM = (spiel.mitarbeiter || []).map(maErgaenzen).filter(m => maAktiv(m) && (m.typ === "pfleger" || m.typ === "pferdewirt"));
     const heute = Object.keys(H).filter(k => (AKTION[k] || APO[k]) && !k.endsWith("Versuch"));
     return `<div class="bf-karte beh-karte"><b>💉 Behandlung heute</b><small>${esc(p.name)} wiegt etwa <b>${kg} kg</b> · Mitwirkung: ${mitwirkung(p) >= 0.75 ? "lässt sich gut behandeln" : mitwirkung(p) >= 0.5 ? "macht meistens mit" : "wehrt sich oft"}</small>${H.tierarzt ? `<p class="bf-annahme">✅ <b>Heute ist nichts mehr nötig</b> – ${befundListe(p).some(b => b.tierarzt) ? "der Tierarzt" : "der Hufschmied"} hat heute schon behandelt. Ab morgen den ${befundListe(p).some(b => b.tierarzt) ? "Plan" : "Rat"} jeden Tag umsetzen (oder einem Mitarbeiter geben).</p>` : ""}
       ${behMeldung ? `<p class="bf-annahme">${behMeldung}</p>` : ""}
       <div class="bf-knoepfe">${knopf("boxenruhe", `${AKTION.boxenruhe.ico} Boxenruhe ${p.boxenruhe ? "beenden" : "an"}`, p.boxenruhe, p.weide)}
-        ${[...new Set(["schritt", "kuehlen", "verband", "wundsalbe", ...bekannteBefunde(p).flatMap(b => PLAN[b.art] || []).filter(k => (AKTION[k] && k !== "boxenruhe") || (APO[k] && APO[k].frei && !APO[k].dosis))])].map(k => { const A = AKTION[k] || { ...APO[k], mittel: k }, n = A.mittel ? vorrat(A.mittel) : null; return knopf(k, `${A.ico} ${A.n}${n != null ? ` (${n})` : ""}${H[k] ? " ✓" : ""}`, H[k], H[k] || (n != null && n <= 0) || p.weide); }).join("")}
+        ${[...new Set(["schritt", "kuehlen", "verband", "wundsalbe", ...bekannteBefunde(p).flatMap(b => PLAN[b.art] || []).filter(k => (AKTION[k] && k !== "boxenruhe") || (APO[k] && APO[k].frei && !APO[k].dosis))])].map(k => { const A = AKTION[k] || { ...APO[k], mittel: k }, n = A.mittel ? vorrat(A.mittel) : null; return knopf(k, `${A.ico} ${A.n}${n != null ? ` (${vTxt(A.mittel)})` : ""}${H[k] ? " ✓" : ""}`, H[k], H[k] || (n != null && n <= 0) || p.weide); }).join("")}
         <button class="mini-knopf" data-behmed="1" ${p.weide ? "disabled" : ""}>💊 Medikament…</button></div>
-      ${behMed ? `<div class="bf-wahl">${meds.length ? meds.map(m => `<button class="mini-knopf ${behMed === m ? "an" : ""}" data-behwahl="${m}">${APO[m].ico} ${APO[m].n} (${vorrat(m)})${H[m] ? " ✓" : ""}</button>`).join("") : "<small>Keine Medikamente da – frei kaufbare unter Ausrüstung → Medizin, starke nur mit Rezept vom Tierarzt.</small>"}</div>
+      ${behMed ? `<div class="bf-wahl">${meds.length ? meds.map(m => `<button class="mini-knopf ${behMed === m ? "an" : ""}" data-behwahl="${m}">${APO[m].ico} ${APO[m].n} (${vTxt(m)})${H[m] ? " ✓" : ""}</button>`).join("") : "<small>Keine Medikamente da – frei kaufbare unter Ausrüstung → Medizin, starke nur mit Rezept vom Tierarzt.</small>"}</div>
         ${APO[behMed] ? `<div class="bf-wahl"><small>Dosis für ${APO[behMed].n}:</small>${DOSIS.map(([, t], i) => `<button class="mini-knopf" data-behdosis="${i + 1}">Stufe ${i + 1} · ${t}</button>`).join("")}</div>` : ""}` : ""}
       ${heute.length ? `<small>Heute erledigt: ${heute.map(behName).join(", ")}</small>` : ""}
       ${p.behPlan ? `<small>📋 Plan: ${esc(((spiel.mitarbeiter || []).find(m => m.id === p.behPlan.mid) || {}).name || "?")} macht jeden Morgen ${p.behPlan.akt.map(x => behName(x.k) + (x.stufe ? ` (Stufe ${x.stufe})` : "")).join(", ")} <button class="mini-knopf" data-behplan="weg">beenden</button></small>`
@@ -8555,7 +8556,7 @@
         <b>Hufrehe-Warnung</b> im Frühling für gefährdete Pferde (leichtfuttrige Rassen ${LEICHTFUTTRIG.join(", ")}, Futterzustand ab 7, Hufrehe oder Cushing bekannt): Hinweis beim Weidegang und Brief zu Frühlingsbeginn für alle gefährdeten Pferde auf der Weide.</p>
       <p><b>Pension und Einsteller (H5)</b> (Hofverwaltung → Hof → Pension): Pensionsplätze anbieten (Pensionsstall von Anfang an), höchstens N Plätze, Preis je Box und Jahreszeit nach Box-Stufe (Richtwert ${[1, 2, 3].map(st => `Stufe ${st} ${fmt(PENSION_PREIS[st])}`).join(", ")}; gilt für neue Verträge), Bluttest-Regel (vorher einreichen ×${String(PENSION.blut.vorher).replace(".", ",")} Anfragen, kein Ansteckungsrisiko · nachreichen ×${String(PENSION.blut.nachreichen).replace(".", ",")}, Risiko ${prozent(PENSION.risiko.nachreichen)}, Ergebnis nach 2 Tagen · keiner ×1, Risiko ${prozent(PENSION.risiko.keiner)}).
         <b>Anfragen</b> per Brief (Zusagen/Absagen, ${PENSION.anfrageTage} Tage Zeit, höchstens ${PENSION.maxAnfragen} offen): je freier Box und Jahreszeit ${String(PENSION.anfrage).replace(".", ",")} Anfragen (Chance je Tag = das ÷ Tage pro Jahreszeit – bei jedem Tempo gleich viele je Jahreszeit, 6 freie Boxen ≈ 2; mindestens 1 je Jahreszeit garantiert, wenn Plätze frei, Preis höchstens 25 % über dem Richtwert und Ansehen ab 60) × Stufe (1 / 1,4 / 2) × (1 + ${prozent(PENSION.halle)} Reithalle + ${prozent(PENSION.roundpen)} Roundpen) × Ansehen/100 (0,3–1,5) × Preisfaktor (Richtwert ÷ Preis)³ (0,1–2; Richtwert mit dem Ansehen ±25 %) × Bluttest-Regel. ${prozent(PENSION.hengst)} Hengste (nur wenn eine Paddockbox frei ist, stehen nur dort, nicht auf der Weide). Zusage reserviert die Box, das Pferd kommt am nächsten Morgen (Quarantänestall zuerst, außer Bluttest liegt vor oder Hengst) und zahlt gleich anteilig für den Rest der Jahreszeit.
-        <b>Pensionspferd:</b> eigener Steckbrief, gehört dem Einsteller – kein Verkauf, keine Zucht, kein Anhänger/Turnier/Labor, kein Training (nur der Bereiter mit gebuchter Leistung „Bewegen“, nicht an Tagen, an denen der Besitzer reitet). Füttern, Misten, Weidegang macht der Hof (Vollpension, Futter aus der eigenen Futterkammer). Tierarzt-, Hufschmied- und Klinikkosten zahlt der Besitzer (Bericht statt Rechnung); bemerkt jemand eine Krankheit, ruft der Besitzer am nächsten Tag selbst den Tierarzt.
+        <b>Pensionspferd:</b> eigener Steckbrief, gehört dem Einsteller – kein Verkauf, keine Zucht, kein Anhänger/Turnier/Labor, kein Training (nur der Bereiter mit gebuchter Leistung „Bewegen“, nicht an Tagen, an denen der Besitzer reitet). Füttern, Misten, Weidegang macht der Hof (Vollpension, Futter aus der eigenen Futterkammer). Tierarzt-, Hufschmied- und Klinikkosten zahlt der Besitzer (Bericht statt Rechnung), Mittel wie Wundsalbe oder Wurmkur bringt er selbst mit (nicht aus der Stallapotheke); bemerkt jemand eine Krankheit, ruft der Besitzer am nächsten Tag selbst den Tierarzt.
         <b>Besitzer-Besuch:</b> an ${prozent(PENSION.besuch)} der Tage (Winter ×0,8): putzt, bemerkt Krankheiten ab Grad 2 zur Hälfte, reitet (25 Energie) auf Reitplatz bzw. bei Regen/Winter in der Halle. Ab ${PENSION.voll} Reitern gleichzeitig: Zufriedenheit −1; trainierst du auf demselben Platz: −1 (Longieren −2), einmal am Tag je Einsteller.
         <b>Zusatzleistungen</b> je Jahreszeit (anbieten unter Pension, jeder Einsteller bucht mit eigener Chance): ${PL_REIHE.map(k => `${PENSION_LEISTUNG[k].n} ${fmt(PENSION_LEISTUNG[k].preis)} (${prozent(PENSION_LEISTUNG[k].chance)})`).join(", ")}. Decke nur Herbst/Winter (berechnet und fällig); Pfleger/Pferdewirt/Stallmeister erledigen das Decke-Wechseln von selbst. Bewegen nur mit Bereiter, Paddockbox nur mit Paddockboxen.
         <b>Zufriedenheit</b> (versteckt, Start ${PENSION.start}, 0–100, Admin sieht sie): je Nacht hungrig −5, Box nicht gemistet −3, über 1 Jahreszeit verdreckt −1, gut versorgt +0,2; Box Stufe 3 +0,2 / Stufe 1 −0,1; Reithalle +0,1; Stall unter 40 % Zustand −0,3; Pferdewirt Haltung und Service +0,2; Weidegang-Wunsch (außer Winter) mindestens jeden 2. Tag +0,1, sonst −0,3; gebuchte Leistung erledigt +0,3, vergessen −1 (Medikamente −2, Bewegen −1 ab dem 2. Tag ohne); neue Verletzung/Ansteckung −10, andere Krankheit −3. Unter ${PENSION.beschwerde}: Beschwerdebrief (einmal je Jahreszeit), unter ${PENSION.kuendigung}: Kündigung zum Ende der Jahreszeit (Ansehen −5).

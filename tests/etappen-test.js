@@ -203,6 +203,18 @@ const path = require('path');
         F.lager.streuStroh = 200; nacht(1); ok('H6 Nachgekauft: wieder eingestreut', !bx.ohneEinstreu);
         ansehen('H6 Einstreu-Auswahl', () => einstreuWahl(bx)); ansehen('H6 Futterkammer mit Einstreu', () => futterkammerHTML('')); }
 
+      // ---------- H6 Pension: bessere Einstreu ----------
+      { const R = pensionRegeln(); R.leistungen.einstreu = true; R.offen = true; R.max = 9;
+        if (!einstellerListe().some(x => pensionBox(x))) { const fb = spiel.boxen.find(b => pensionBoxFrei(b)); if (!fb) { const x = spiel.boxen.find(b => b.pferd && /^Paddi/.test(b.pferd.name)); if (x) x.pferd = null; }
+          pensionAnfrageNeu(); const a = spiel.pensionAnfragen.slice(-1)[0]; a.bluttest = 'vorher'; pensionAnnehmen(a); nacht(1); }
+        const e = einstellerListe().find(x => pensionBox(x) && !pensionBox(x).pferd.weide), b = e && pensionBox(e);
+        if (b && b.pferd && !b.pferd.weide) { const F = futterkammer(); e.leistungen.einstreu = true; b.einstreu = 'streuStroh'; F.lager.spaene = 50; F.lager.streuStroh = 100; nacht(1);
+          ok('H6 Pension „bessere Einstreu“: staubarme Sorte statt Stroh', b.einstreu === 'spaene', FUTTER[b.einstreu].n);
+          Object.keys(EINSTREU).filter(k => !EINSTREU[k].staub).forEach(k => F.lager[k] = 0); b.einstreu = 'streuStroh'; nacht(1);
+          ok('H6 Nur Stroh trotz Buchung → Einsteller unzufrieden', (e.log || []).some(x => /bessere Einstreu/.test(x.grund || '')), (e.log || []).slice(0, 2).map(x => x.grund).join(', ')); }
+        else ok('H6 Pension „bessere Einstreu“ (kein Einsteller zum Testen)', true);
+        ansehen('H6 Pension mit „bessere Einstreu“', () => pensionHTML('')); }
+
       // ---------- H1 Kreditrate ----------
       { const rest = k.rest; k.jz = -1; kreditJahreszeit();
         ok('H1 Kreditrate wird abgebucht', k.rest < rest, `Rest ${rest} → ${k.rest} €`); }

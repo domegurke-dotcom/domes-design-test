@@ -860,7 +860,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "263";
+  const SPIEL_VERSION = "264";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -868,9 +868,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=263"></script>
-<script src="kopfteile.js?v=263"></script>
-<script src="kopfalter.js?v=263"></script>
+<script src="pferd.js?v=264"></script>
+<script src="kopfteile.js?v=264"></script>
+<script src="kopfalter.js?v=264"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -4689,7 +4689,7 @@
     const vorher = energie(p), ueber = kosten > vorher;
     p.energie = Math.max(-30, Math.round(vorher - kosten)); T.verbraucht += kosten;
     const c = k2 => charE(p, k2), A = c("wille"), B = c("bezug"), V = c("nerven"), Te = c("temperament"), S = c("sensibel"), M = c("mut");
-    let F = p.werte.talent * wohlFaktor(p) * vorliebeFaktor(p, U.vl) * befundBremse(p) * (m ? trainerFaktor(m) : reiterFaktor(k));   // du: deine LK in dieser Disziplin
+    let F = p.werte.talent * wohlFaktor(p) * fzLeistung(p) * vorliebeFaktor(p, U.vl) * befundBremse(p) * (m ? trainerFaktor(m) : reiterFaktor(k));   // du: deine LK in dieser Disziplin
     const hinweise = [];
     if (ort === "reitplatz" || ort === "reithalle") { const n = pensionPlatzStoert(ort, k); if (n) hinweise.push(`${n} ${n === 1 ? "Einsteller reitet" : "Einsteller reiten"} heute auch hier`); }   // H5
     if ((ort === "reitplatz" || ort === "roundpen") && (wetter === "regen" || wetter === "schnee" || d.s === 3)) { F *= 0.7; hinweise.push(d.s === 3 ? "Winter: gefrorener, schwerer Boden – lernt 30 % weniger" : "Regen: tiefer, nasser Boden – lernt 30 % weniger"); }
@@ -5688,9 +5688,11 @@
     if (p.umstellung && spiel.tag >= p.umstellung.ab + 3) delete p.umstellung;
     staubNacht(p, ort === "weide" && !heuNoetigP(p, spiel.tag - 1) ? null : H); leckerliNacht(p);
     // Folgen
-    const pf = p.pflege, f2 = futterZustand(p);
-    if (f2 <= 2) { pf.gesundheit = Math.max(1, r2(pf.gesundheit - 1)); wohlAendern(p, -2, "zu dünn – friert und ist schlapp"); }
-    if (f2 >= 8) wohlAendern(p, -1, "zu dick – träge");
+    const pf = p.pflege, f2 = futterZustand(p), FF = FZ_FOLGEN[f2];
+    // Dome (v264): Stufe 1–3 Gesundheit und Wohlbefinden sinken (je dünner, desto mehr), Gesundheit gedeckelt; 7–9 nur Wohlbefinden
+    if (FF.g) pf.gesundheit = Math.max(1, r2(pf.gesundheit - FF.g));
+    if (FF.decke && pf.gesundheit > FF.decke) pf.gesundheit = FF.decke;
+    if (FF.w) wohlAendern(p, -FF.w, f2 <= 3 ? (f2 === 1 ? "abgemagert – friert und ist schwach" : "zu dünn – friert und ist schlapp") : (f2 === 9 ? "fettleibig – träge und kurzatmig" : "zu dick – träge"));
     if (S.rauWenig) wohlAendern(p, -3, "zu wenig Raufutter – Langeweile");
     if (S.staerkeViel) p.haferSticht = spiel.tag;
     if (S.eiweissWenig && p.werte && p.werte.ist && (p.werte.ist.kraft || 0) > 5) p.werte.ist.kraft = r2(p.werte.ist.kraft - 0.2);
@@ -5711,7 +5713,7 @@
     if (art === "hufrehe") f *= (fz >= 8 ? 2.5 : fz >= 7 ? 1.5 : 1) * (S.staerkeViel ? 1.5 : 1) * (p.weide && s === 0 && (LEICHTFUTTRIG.includes(p.rasse) || fz >= 7) ? 2 : 1);
     if ((art === "kolik" || art === "hufrehe") && p.weide && anweidenAktiv(p, spiel.tag - 1)) f *= 1.3;   // Anweiden
     if (art === "magengeschwuer") f *= (S.rauWenig ? 3 : 0.4) * (S.staerkeViel ? 2 : 1);
-    if (["erkaeltung", "husten", "influenza", "druse", "herpes", "hautpilz", "wuermer"].includes(art) && fz <= 2) f *= 1.5;   // Immunschwäche
+    if (IMMUN_KRANK.includes(art)) f *= FZ_FOLGEN[fz].immun;   // Dome (v264): Immunsystem nach Futterzustand (5 sehr selten, 4/6 selten, 1–3 und 7–9 immer häufiger)
     if (art === "arthrose" && fz >= 8) f *= 1.5;   // Gelenke belastet
     if (art === "husten" && S.staub && atemEmpfindlich(p)) f *= 4;
     // F5: Spezialfutter senkt passende Risiken
@@ -5724,8 +5726,13 @@
     return f;
   }
   // Leistung: abgemagert oder fettleibig → Energie ×0,8 bzw. ×0,9, Turnierleistung ×0,9 · „Hafer sticht“ (zu viel Stärke) → Training und Turnier unruhiger
-  const fzEnergie = p => { const fz = futterZustand(p); return fz <= 2 ? 0.8 : fz >= 8 ? 0.9 : 1; };
-  const fzLeistung = p => { const fz = futterZustand(p); return (fz <= 2 || fz >= 8 ? 0.9 : 1) * (p.haferSticht >= spiel.tag ? 0.95 : 1); };
+  // Dome (v264): Folgen je Futterzustand – g Gesundheit/Tag, decke Höchst-Gesundheit, w Wohlbefinden/Tag, immun Krankheitsrisiko (Infekte), leist Leistung, energie Trainings-Energie
+  const FZ_FOLGEN = { 1: { g: 3, decke: 50, w: 3, immun: 2.2, leist: 0.75, energie: 0.7 }, 2: { g: 2, decke: 70, w: 2, immun: 1.7, leist: 0.85, energie: 0.8 }, 3: { g: 1, decke: 85, w: 1, immun: 1.3, leist: 0.92, energie: 0.9 },
+    4: { immun: 1.05, leist: 0.97, energie: 1 }, 5: { immun: 0.8, leist: 1, energie: 1 }, 6: { immun: 1.05, leist: 0.97, energie: 1 },
+    7: { w: 0.5, immun: 1.3, leist: 0.92, energie: 0.95 }, 8: { w: 1, immun: 1.7, leist: 0.85, energie: 0.9 }, 9: { w: 2, immun: 2.2, leist: 0.75, energie: 0.8 } };
+  const IMMUN_KRANK = ["erkaeltung", "husten", "influenza", "druse", "herpes", "hautpilz", "wuermer", "mauke"];   // Infekte – hängen am Immunsystem
+  const fzEnergie = p => FZ_FOLGEN[futterZustand(p)].energie;
+  const fzLeistung = p => FZ_FOLGEN[futterZustand(p)].leist * (p.haferSticht >= spiel.tag ? 0.95 : 1);
   // ---------- Fütterung F4: Atemwege, Leckerli, Futterumstellung ----------
   // Empfindliche Atemwege (versteckte Veranlagung „atem“ ab 0,2): nur diese Pferde husten von staubigem Heu; dauerhaft staubig (ab 14 Tagen) → Pferdeasthma (chronisch)
   const atemEmpfindlich = p => (veranlagungVon(p).atem || 0) >= 0.2;
@@ -6562,7 +6569,7 @@
           else if (qp.gesundheit > 30 || (q === W && altersschwach(W))) qp.gesundheit = Math.min(gesundheitMax(q), Math.round((qp.gesundheit + plus) * 10) / 10); });
         if (b.fohlen) sozialPlus(b.fohlen, 0.3);
         if (zuLangeDreckig(W)) W.pflege.gesundheit = Math.max(1, Math.round((W.pflege.gesundheit - 3) * 10) / 10);
-        wohlNacht(W, "weide", { herde: weideHerde, hungrig, fohlen: !!b.fohlen }); wohlAllein(W, !hungrig);   // Fohlen bei Fuß: Stute ist nicht allein futterNacht(W, b, "weide", hungrig);
+        wohlNacht(W, "weide", { herde: weideHerde, hungrig, fohlen: !!b.fohlen }); wohlAllein(W, !hungrig); futterNacht(W, b, "weide", hungrig);   // Fohlen bei Fuß: Stute ist nicht allein
         schmutzen(W, false);
         wachsen(b);
         return;
@@ -8899,7 +8906,7 @@
       <p><b>Futterplan</b> je Pferd (Box → Pferdepflege → Versorgung → Fütterung heute → Futterplan): Menge je Sorte am Tag, gleichmäßig auf 2 oder 3 Mahlzeiten verteilt (Schritte: Raufutter 0,5 kg, Kraftfutter 0,25 kg, Öl/Mineral 50 g). Ohne eigenen Plan: Standardplan (Heu nach Energiebedarf, 1,5–2,5 kg je 100 kg, Mineralfutter 100 g). Ein Klick auf die Krippe (bzw. der Stallbursche) füttert den ganzen Tagesplan aus der Futterkammer.</p>
       <p><b>Bedarf:</b> Energie Erhaltung = 0,52 MJ × Gewicht^0,75 (600 kg ≈ 63 MJ). Zuschläge: Arbeit leicht +25 % / mittel +50 % / schwer +100 % (Schnitt der Trainings- und Turnierenergie der letzten Tage: ab 10 / 35 / 60; Turniertag zählt 50; Stute mit Fohlen bei Fuß höchstens „leicht“), tragend in der letzten Jahreszeit +20 %, säugend +70 %, Jungpferd unter 3 J. +30 %, Winter auf der Weide +10 %; leichtfuttrig −15 % (${LEICHTFUTTRIG.map(r => rasseById(r).name).join(", ")}), schwerfuttrig +15 % (${SCHWERFUTTRIG.map(r => rasseById(r).name).join(", ")}). Eiweiß Ziel 10 % der Ration (säugende Stuten 12 %, Fohlen/Jungpferde unter 1 J. 13 %): zu wenig unter Ziel − 2, zu viel über Ziel + 4. Raufutter mindestens 1,5 kg je 100 kg. Stärke aus dem Kraftfutter höchstens 1 g je kg Gewicht pro Mahlzeit (Zucker im Heu zählt dabei nicht), Kraftfutter höchstens 0,5 kg je 100 kg pro Mahlzeit (Luzerne und Rübenschnitzel zählen hier nicht mit, ihre Stärke schon), Öl höchstens 1 g je kg am Tag. Mineralien gedeckt mit mind. 50 g Mineralfutter oder Salzleckstein + genug gutes Heu/Heulage. Energie: zu wenig unter 90 %, zu viel über 110 % – gemessen am Ziel (Futterzustand 1–3 Bedarf +15 % zum Zunehmen, 7–9 −15 % zum Abnehmen). Weide (außer Winter/letzter Herbsttag): Gras ersetzt das Raufutter.</p>
       <p><b>Futterzustand (F3)</b>, versteckt 1–9 (1 abgemagert … 5 gut im Futter … 9 fettleibig), sichtbar über das Körperbild: 1–3 dünn, 4–6 normal (sportlich nach etwa 1 Jahr gutem, regelmäßigem Training: Muskel-Punkte je Trainingstag (mind. 15 Energie oder Turnier) +1, Ruhetage im Rhythmus (bis 2 Tage nach dem letzten Training) ±0, längere Pause −2 je Tag (Abbau doppelt so schnell); höchstens 4 × Tage je Jahreszeit, sichtbar ab ¾ davon), 7–9 dick. Täglich: gefütterte Energie &gt; 110 % des Bedarfs → +1 Tag, &lt; 90 % → −1 Tag, hungrig −2; eine Stufe nach ${fzSchwelle()} Tagen (je nach Spieltempo: 4 Tage/Jz → 4, 7 → 5, 10 → 6); Richtungswechsel zählt neu, passende Ration lässt den Zähler zurücklaufen. Weide deckt Frühling 115 % (junges Gras), Sommer 100 %, Herbst 90 %; im Winter und am letzten Herbsttag kein Gras – nur das zugefütterte Heu zählt. Gewicht ±3 % je Stufe von 5. Gewicht ist ein Zusammenspiel: Futter, Bewegung (Arbeit erhöht den Bedarf, Boxenruhe −10 %) und Veranlagung (versteckte Futterverwertung 0,85–1,15, vererbt als Mittel der Eltern ± 0,04 – der angezeigte Bedarf ist nur die Schätzung ohne diese Veranlagung). Standardplan: Heu nach Energiebedarf (6 MJ/kg), mind. 1,5 und höchstens 2,5 kg je 100 kg.<br>
-      <b>Folgen:</b> Stufe 1–2: Gesundheit −1 und Wohlbefinden −2 je Nacht, Energie-Max ×0,8, Lernen ×0,85, Turnier ×0,9, Infekte (Erkältung, Husten, Influenza, Druse, Herpes, Hautpilz, Würmer) ×1,5. Stufe 8–9: Wohlbefinden −1, Energie-Max ×0,9, Lernen ×0,9, Turnier ×0,9, Arthrose ×1,5. Hufrehe ×1,5 (Stufe 7) bzw. ×2,5 (ab 8); Frühlingsweide bei leichtfuttrigen oder dicken Pferden ×2. Zu wenig Raufutter (&lt; 90 % des Minimums): Wohlbefinden −3 (Langeweile), Kolik ×2, Magengeschwür ×3 (sonst ×0,4). Zu viel Stärke/Kraftfutter je Mahlzeit: Kolik ×2, Hufrehe ×1,5, Magengeschwür ×2, „Hafer sticht“ am Folgetag (Lernen ×0,85, Turnier ×0,95). Eiweiß 3 Punkte unter Bedarf: Kraft −0,2 je Tag (über 5); 6 Punkte drüber: Gesundheit −0,5 (Leber/Nieren). Mineralien fehlen ab 5 Tagen: Wohlbefinden −1 (stumpfes Fell), Hornspalt ×1,5. Unter 3 Jahren (auch Fohlen bei Fuß über die Mutter): ab 10 Mangeltagen (Eiweiß/Mineralien) OCD-Risiko ×2.<br>
+      <b>Folgen</b> (Dome, v264) je Stufe 1–9: ${[1,2,3,4,5,6,7,8,9].map(z => { const F = FZ_FOLGEN[z]; return `${z}: ${F.g ? `Gesundheit −${F.g}/Tag (höchstens ${F.decke} %), ` : ""}${F.w ? `Wohlbefinden −${String(F.w).replace(".", ",")}/Tag, ` : ""}Infekte ×${String(F.immun).replace(".", ",")}, Leistung (Training und Turnier) ×${String(F.leist).replace(".", ",")}, Energie ×${String(F.energie).replace(".", ",")}`; }).join(" · ")}. Infekte = ${IMMUN_KRANK.map(k => KRANK[k] ? KRANK[k].n : k).join(", ")}; Krankheiten durch Vernachlässigung, Fehler oder Erbanlagen hängen nicht daran. Ab 8: Arthrose ×1,5. Hufrehe ×1,5 (Stufe 7) bzw. ×2,5 (ab 8); Frühlingsweide bei leichtfuttrigen oder dicken Pferden ×2. Zu wenig Raufutter (&lt; 90 % des Minimums): Wohlbefinden −3 (Langeweile), Kolik ×2, Magengeschwür ×3 (sonst ×0,4). Zu viel Stärke/Kraftfutter je Mahlzeit: Kolik ×2, Hufrehe ×1,5, Magengeschwür ×2, „Hafer sticht“ am Folgetag (Lernen ×0,85, Turnier ×0,95). Eiweiß 3 Punkte unter Bedarf: Kraft −0,2 je Tag (über 5); 6 Punkte drüber: Gesundheit −0,5 (Leber/Nieren). Mineralien fehlen ab 5 Tagen: Wohlbefinden −1 (stumpfes Fell), Hornspalt ×1,5. Unter 3 Jahren (auch Fohlen bei Fuß über die Mutter): ab 10 Mangeltagen (Eiweiß/Mineralien) OCD-Risiko ×2.<br>
       <b>Magengeschwür:</b> Befund (Bereich Futter), Grundrisiko klein, Wohlbefinden unter 50 ×1,5; Behandlung Magenschutz (Omeprazol, Rezept, 35 €).</p>
       <p><b>Atemwege, Leckerli, Umstellung (F4):</b> Versteckte Veranlagung „Empfindliche Atemwege“ (0–1, vererbt wie die anderen Veranlagungen; empfindlich ab 0,2). Nur empfindliche Pferde reagieren auf staubiges Heu (ab 1 kg am Tag, nicht gewässert): Husten-Risiko ×4; Vorzeichen beim Besuch (ab 3 Staubtagen „prustet“, ab 1 Jahreszeit „hustet beim Heufressen“, ab 2 Jahreszeiten schwerer Atem); nach mehr als ${STAUB_ASTHMA_JZ} Jahreszeiten Staub (ohne Staub zählt der Zähler um ½ je Tag zurück) jeden Tag 5 % Chance auf <b>Pferdeasthma</b> (chronisch, mit weiterem Staub 5 % je Tag eine Stufe schlimmer bis „schwer“; Behandlung Kortison, Hustensaft). Heu wässern (Haken im Futterplan; kostet Zeit – zählt beim Stallburschen wie 1½ Boxen, mit Heudampfer aus dem Hof-Ausbau nicht) oder Heulage beseitigt den Staub.<br>
       <b>Anweiden:</b> Kommt ein Pferd nach mehr als einer Jahreszeit ohne Weide wieder raus (nicht im Winter), wird es ${anweidenTage()} Tage angeweidet: stundenweise draußen, dazu Heu (wie im Winter); Kolik und Hufrehe ×1,3 in dieser Zeit.<br>

@@ -79,6 +79,7 @@ Zu jeder Frage steht die Lösung, die Claude vorerst gewählt hat. Dome beantwor
 4. Rückfrage von Dome: „Wie ist das gemeint?“ (Erklärung im Chat).
 5. Ungeplante Bedeckung kann passieren: Ansehen beim Besitzer sinkt stark (auch bei Tod des Pensionspferds), er kann kündigen, der Spieler zahlt eine Entschädigung in Höhe des Schadens (auch bei Tod); der Besitzer entscheidet, ob er das Fohlen behält oder vom Tierarzt abtreiben lässt (zahlt der Spieler).
 6. Medikamente kauft und bezahlt der Besitzer selbst, sie kommen nicht in die Stallapotheke.
+   → Umgesetzt in v252–v255 (außer Punkt 2 Sandpaddock-Zustand und Punkt 3 Einstreu: kommen mit H6). Zu 4 (Dome, 11.10.): Auch andere Stallarten bieten Zusatzleistungen an – z. B. fremde Fohlen zur Aufzucht im Zuchtstall, fremde Pferde in Beritt im Ausbildungsstall (mit H7).
 7. Neueinsteller ohne Bluttest: 3 % Risiko (statt 8 %). Tod −15 Ansehen nur bei Vernachlässigung durch Spieler/Angestellte. Besitzer schicken ab und zu Feedback (was gefällt, was nicht). Mahnungen nach Tempo: 4 Tage/Jz → Kündigung nach 1 Mahnung, 7 → nach 2, 10 → nach 3. Rückfragen: Anfragen je Jahreszeit je Tempo, Reitplatz-Belegung erkennen, Ansehen (Start, Min/Max, Wirkung). Sonst passen die Zahlen erstmal.
 
 ## 📌 Notiz von Dome (7.10.2026) – Veredler-Rassen: erst NACH dem Hof-Ausbau (H1–H8) starten (Dome, 7.10.2026)

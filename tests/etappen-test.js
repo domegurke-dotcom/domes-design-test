@@ -148,6 +148,27 @@ const path = require('path');
           spiel.boxen.forEach(b => { if (b.pferd && /^Platzhalter/.test(b.pferd.name)) b.pferd = null; });
         } }
 
+      // ---------- H6a Weiden, Gras, Matsch, Weidepflege ----------
+      { if (!weiden().length) { spiel.hof.weideHa = 1; delete spiel.weiden; }
+        ok('H6 Weide aus dem eingezäunten Land angelegt', weiden().length >= 1 && Math.abs(weidenSumme() - spiel.hof.weideHa) < 0.01, weiden().map(w => `${w.name} ${w.ha} ha, Gras ${w.gras} %`).join(' | '));
+        const n0 = weiden().length; spiel.hof.ha += 1; bauWeideZiel = 'neu'; bauStarten('weide', 1, { ha: 1, ziel: 'neu' }); zu();
+        nacht(4);
+        ok('H6 Einzäunen als neue Weide', weiden().length === n0 + 1, weiden().map(w => w.name).join(', '));
+        const w1 = weiden()[0], w2 = weiden()[weiden().length - 1];
+        const bx = spiel.boxen.find(b => b.pferd && !b.tot && !fremd(b.pferd) && !b.pferd.weide && !b.pferd.klinik), q = bx && bx.pferd;
+        if (q) { aufWeide(q, bx, null, w2.wid);
+          ok('H6 Pferd auf die gewählte Weide', q.weide && q.weide.wid === w2.wid && weidePferde(w2).includes(q), q.name + ' → ' + w2.name);
+          w2.ha = 0.1; const g0 = w2.gras, m0 = w2.matsch; nacht(3);
+          ok('H6 Überbesetzt: Gras sinkt, Matsch steigt', w2.gras < g0 && w2.matsch > m0, `Gras ${g0} → ${w2.gras} %, Matsch ${m0} → ${w2.matsch} %`);
+          w2.gras = 10; ok('H6 Abgefressen → Heu nötig', heuNoetigP(q));
+          w2.matsch = 80; const r0 = Object.fromEntries(befundRisiko(q, bx, 'weide')); w2.aepfel = spiel.tag; const r1 = Object.fromEntries(befundRisiko(q, bx, 'weide'));
+          ok('H6 Abäppeln senkt das Wurmrisiko', r1.wuermer < r0.wuermer, `${r0.wuermer.toExponential(2)} → ${r1.wuermer.toExponential(2)}`);
+          w2.matsch = 0; const r2 = Object.fromEntries(befundRisiko(q, bx, 'weide'));
+          ok('H6 Matsch → mehr Mauke und Strahlfäule', r1.mauke > r2.mauke && r1.strahlfaeule > r2.strahlfaeule);
+          vonWeideHolen(bx); w2.ha = 1; w2.gras = 60; }
+        w1.gesperrt = true; ok('H6 Gesperrte Weide wird nicht gewählt', !weideWahl({}) || weideWahl({}).wid !== w1.wid); delete w1.gesperrt;
+        ansehen('H6 hvw – Hof – Weiden', () => weidenHTML()); }
+
       // ---------- H1 Kreditrate ----------
       { const rest = k.rest; k.jz = -1; kreditJahreszeit();
         ok('H1 Kreditrate wird abgebucht', k.rest < rest, `Rest ${rest} → ${k.rest} €`); }
@@ -157,7 +178,7 @@ const path = require('path');
     ergebnisse.push(...r);
     // Hofverwaltung über die Oberfläche öffnen (alle Bereiche)
     for (const reiter of ['hof', 'finanzen', 'mitarbeiter', 'post']) await pg.evaluate(rt => { zeigeHof(rt); }, reiter);
-    for (const ber of ['uebersicht', 'plan', 'bauen', 'land', 'pension', 'futter']) await pg.evaluate(bb => { hofBereich = bb; zeigeHof('hof'); }, ber);
+    for (const ber of ['uebersicht', 'plan', 'bauen', 'land', 'weiden', 'pension', 'futter']) await pg.evaluate(bb => { hofBereich = bb; zeigeHof('hof'); }, ber);
     await pg.reload(); await pg.waitForTimeout(300);
     ergebnisse.push([await pg.evaluate(() => typeof hatSpielstand !== 'undefined' && hatSpielstand) ? '✓' : '✗', ansicht, 'Speichern und Neuladen', '']);
     await pg.close();

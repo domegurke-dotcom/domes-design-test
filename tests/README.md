@@ -17,7 +17,7 @@ NODE_PATH=/opt/node22/lib/node_modules node tests/hof-gesamttest.js
 Erwartet: jede Zeile im Protokoll endet mit `"ok"`, am Ende `Fehler []`. Bei neuen Etappen (H5, H4 …) die Prüfungen und den Ablauf ergänzen.
 
 ## Etappen-Test (`etappen-test.js`) – Abnahmetest für Dome
-Spielt Domes Test-Anleitungen für Fütterung F1–F5 und Hof-Ausbau H1–H5 nach, in allen drei Ansichten (PC 1366×768, Handy quer 844×390, Handy hochkant 390×844): Spielstart über die Oberfläche, Kredit und Rate, Futter kaufen/Lieferung/Füttern/leeres Heu, Futterplan und Bedarf, Futterzustand, Leckerli, Futterumstellung, Futterexperte, zweiter Hof (erst nach halber Tilgung), Hof wechseln, Bauen mit neuen Boxen, Verfall/Unterhalt, Pensionsanfrage bis Einzug und Pensionsgeld, Umbau-Folgen H4 (Vorlauf 1 Jahreszeit, Weide/Nachlass, Kündigung ohne Lösung, Reitplatz im Umbau, Rückkehr nach dem Umbau); dazu werden alle Bereiche der Hofverwaltung geöffnet und der Spielstand neu geladen.
+Spielt Domes Test-Anleitungen für Fütterung F1–F5 und Hof-Ausbau H1–H5 nach, in allen drei Ansichten (PC 1366×768, Handy quer 844×390, Handy hochkant 390×844): Spielstart über die Oberfläche, Kredit und Rate, Futter kaufen/Lieferung/Füttern/leeres Heu, Futterplan und Bedarf, Futterzustand, Leckerli, Futterumstellung, Futterexperte, zweiter Hof (erst nach halber Tilgung), Hof wechseln, Bauen mit neuen Boxen, Verfall/Unterhalt, Pensionsanfrage bis Einzug und Pensionsgeld, Umbau-Folgen H4 (Vorlauf 1 Jahreszeit, Weide/Nachlass, Kündigung ohne Lösung, Reitplatz im Umbau, Rückkehr nach dem Umbau), Weiden H6a (neue Weide, Gras, Matsch, Heu bei wenig Gras, Abäppeln, Sperren); dazu werden alle Bereiche der Hofverwaltung geöffnet und der Spielstand neu geladen.
 
 Starten (im Repo-Ordner):
 ```

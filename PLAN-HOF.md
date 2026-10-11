@@ -13,7 +13,7 @@ Plan gespeichert bei Spielversion 208. **Noch nicht starten:** erst nach Fütter
 - [x] Etappe H3 – Bauen, Stufen, Verfall (groß) – v223, von Claude per Skript getestet · Abnahmetest für Dome von Claude erledigt (v271, `tests/etappen-test.js`, Dome 11.10.2026) ✅
 - [x] Etappe H4 – Umbau-Folgen (mittel) – v272, Abnahmetest von Claude erledigt (`tests/etappen-test.js`) ✅ · Teile, die erst mit den Stallarten kommen (Fristen ruhen, Aufzucht-Offenstall, Ausbildungs-/Western-/Rennstall, Gnadenhof-Spendenaufruf, Baulärm auf dem Gnadenhof), werden in H7 ergänzt
 - [x] Etappe H5 – Pension und Einsteller (groß) – v251, von Claude per Skript getestet · Abnahmetest für Dome von Claude erledigt (v271, `tests/etappen-test.js`, Dome 11.10.2026) ✅
-- [ ] Etappe H6 – Weiden, Gras, Futterwiese, Einstreu (mittel)
+- [ ] Etappe H6 – Weiden, Gras, Futterwiese, Einstreu (mittel) – **Teil H6a fertig (v275):** mehrere Weiden mit Gras/Matsch, Weidepflege (abäppeln, sperren, nachsäen), Weide wählen, Einzäunen neu/vergrößern, Herde je Weide; offen: Einstreu, Sandpaddock/Haltung, Futterwiese, Weide-Bild mit Pferden, bessere Einstreu (Pension)
 - [ ] Etappe H7 – Stallarten: Bedingungen, Vorteile, Strafe (groß)
 - [ ] Etappe H8 – Hausturnier und Verkaufsrennen (mittel)
 

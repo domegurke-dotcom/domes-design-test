@@ -163,6 +163,7 @@
   .verkauf-hinweis b { font-size: 1.05rem; } .verkauf-hinweis span { font-size: .9rem; opacity: .92; line-height: 1.4; }
   .verkauf-hinweis .fortschritt { height: 10px; border-radius: 6px; background: rgba(255,255,255,.25); overflow: hidden; } .verkauf-hinweis .fortschritt i { display: block; height: 100%; background: #f4d35e; border-radius: 6px; }
   .verkauf-hinweis .knopf { width: 100%; background: #f6ecdc; color: #2b1d14; font-weight: 800; }
+  .umbau-wahl { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 4px; } .umbau-wahl .mini-knopf.an { background: var(--akzent); color: #fff; }
   .wert-zeile { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .wert-zeile .knopf { width: auto; padding: 5px 12px; font-size: .85rem; }
   @keyframes totPuls { 0%, 100% { box-shadow: 0 4px 14px rgba(0,0,0,.25); } 50% { box-shadow: 0 0 0 5px rgba(183,71,58,.45), 0 4px 14px rgba(0,0,0,.25); } }
   [data-ansehen] { cursor: pointer; } .gnade-pferd[data-ansehen]:hover, .grab[data-ansehen]:hover { box-shadow: 0 0 0 2px var(--akzent); }
@@ -860,7 +861,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "271";
+  const SPIEL_VERSION = "272";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -868,9 +869,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=271"></script>
-<script src="kopfteile.js?v=271"></script>
-<script src="kopfalter.js?v=271"></script>
+<script src="pferd.js?v=272"></script>
+<script src="kopfteile.js?v=272"></script>
+<script src="kopfalter.js?v=272"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2588,9 +2589,9 @@
         ${herdeText(p)}
         ${heuteGefressenHTML(p, box) ? `<ul class="liste">${heuteGefressenHTML(p, box)}</ul>` : ""}
         ${befundZeilen(p) ? `<ul class="liste">${befundZeilen(p)}</ul>` : ""}${befundKarten(p, box)}
-        <button class="knopf" id="vonWeide" style="width:auto;padding:9px 14px;margin-top:8px">🏠 Zurück in die Box</button></div>`;
+        ${p.umbauWeide ? `<p class="text"><small>🚧 Die Box wird gerade umgebaut – ${esc(p.name)} bleibt auf der Weide, bis der Umbau fertig ist.</small></p>` : `<button class="knopf" id="vonWeide" style="width:auto;padding:9px 14px;margin-top:8px">🏠 Zurück in die Box</button>`}</div>`;
       befundBinden(p, box);
-      $("vonWeide").onclick = () => { vonWeideHolen(box); reaktionZeigen(reaktion(p, "box")); speichern(); zeigeStall(); zeigeTag(); };
+      if ($("vonWeide")) $("vonWeide").onclick = () => { vonWeideHolen(box); reaktionZeigen(reaktion(p, "box")); speichern(); zeigeStall(); zeigeTag(); };
       if ($("pnDecke")) $("pnDecke").onclick = () => { const e = einstellerVon(p); if (e) e.decke = spiel.tag; speichern(); zeigeAkte(); };
       if ($("weideHeu")) $("weideHeu").onclick = () => { if (!fuetternAusLager(box, "du")) { dialog(`<h3>🌾 Kein Heu mehr</h3><p>In der Futterkammer ist nicht genug Heu. Nachkaufen: Hofverwaltung → Hof → Futterkammer.</p>`); return; } box.krippeVoll = true; reaktionZeigen(reaktion(p, "fuettern")); speichern(); zeigeAkte(); zeigeTag(); };
       return;
@@ -2988,6 +2989,7 @@
         if (!p.weide && spiel.hof && weideBelegt(p) > (spiel.hof.weideHa || 0) + 1e-9 && p.weideOk !== spiel.tag) {
           dialog(`<h3>🌿 Weide zu klein</h3><p>Mit ${esc(p.name)} brauchen die Pferde auf der Weide etwa <b>${haTxt(weideBelegt(p))}</b> – eingezäunt sind nur <b>${haTxt(spiel.hof.weideHa || 0)}</b> (Faustregel: ${haTxt(WEIDE_BEDARF[0])} je Großpferd, ${haTxt(WEIDE_BEDARF[1])} je Pony unter ${PONY_BIS} cm). Die Weide wird schnell abgefressen und zertreten.</p>`,
             [["Trotzdem auf die Weide", () => { p.weideOk = spiel.tag; k.onclick(); }], ["Lieber nicht", null, "zweit"]]); return; }
+        if (p.weide && p.umbauWeide) { dialog(`<h3>🚧 Box im Umbau</h3><p>${esc(p.name)} bleibt auf der Weide, bis der Umbau fertig ist.</p>`); return; }
         if (p.weide) { vonWeideHolen(box); meldung = `🏠 ${esc(p.name)} ist zurück in Box ${aktBox + 1}.`; reaktionZeigen(reaktion(p, "box")); }
         else { reaktionZeigen(reaktion(p, "weide")); aufWeide(p, box); meldung = "";
           const herde = spiel.boxen.filter(b => b.pferd && b.pferd.weide && !b.pferd.klinik && !b.tot).map(b => b.pferd);
@@ -4583,7 +4585,7 @@
   // ---------- Training daheim (Werte-Plan, Etappe 4) ----------
   // Orte: der Spieler hat erstmal Reitplatz und Gelände (Bodenarbeit, Longieren, Stangen auch auf dem Reitplatz) · Admin: alle Orte offen (zum Testen)
   const TRAIN_ORTE = { roundpen: { n: "Roundpen", ico: "⭕" }, reitplatz: { n: "Reitplatz", ico: "🏟️" }, reithalle: { n: "Reithalle", ico: "🏛️" }, gelaende: { n: "Gelände", ico: "🌲" } };
-  const ortOffen = o => !!(spiel.admin || (spiel.anlage && spiel.anlage[o]));
+  const ortOffen = o => !!(spiel.admin || (spiel.anlage && spiel.anlage[o] && !anlageImUmbau(o)));   // H4: im Umbau gesperrt
   // Übungen: e = Energie · ab = Mindestalter (Jahreszeiten) · sk = Ausbildungsskala (Stufe → Grundzuwachs je Einheit) · w = Werte (Grundzuwachs) · vl = Vorliebe
   // wo: boden = Roundpen, Reitplatz, Reithalle · platz = Reitplatz, Reithalle · gelaende = Gelände
   const UEBUNG = {
@@ -5098,7 +5100,7 @@
       [...new Set(t.nennung.map(n => n.pid))].forEach(pid => {
         const box = spiel.boxen.find(b => b.pferd && b.pferd.id === pid && !b.tot), p = box && box.pferd;
         if (!p) { if (!alleHoefePferde().some(x => x.p.id === pid)) t.nennung = t.nennung.filter(n => n.pid !== pid); return; }   // steht auf einem anderen eigenen Hof
-        if (p.weide && !p.boxenruhe) vonWeideHolen(box);
+        if (p.weide && !p.boxenruhe && !p.umbauWeide) vonWeideHolen(box);
         const fs = t.nennung.some(n => n.pid === pid && (t.pruef.find(x => x.id === n.prid) || {}).fohlenschau);
         const sp = fs ? (trainSperre(p, box) || (!box.fohlen ? "hat kein Fohlen mehr bei Fuß" : box.fohlen.pflege && box.fohlen.pflege.gesundheit < 50 ? "hat ein zu schwaches Fohlen" : ""))
           : trainSperre(p, box) || (box.fohlen ? "hat ein Fohlen bei Fuß" : p.traechtig && p.traechtig.geburt - jzJetzt() <= 1 ? "ist hochtragend" : "");
@@ -6688,7 +6690,7 @@
       b.krippeVoll = false; b.mistig = true;
       wachsen(b);
     });
-    spiel.boxen.forEach(b => { if (b.pferd && b.pferd.weide && b.pferd.weide.ma && !b.tot) { delete b.pferd.weide; delete b.vorWeide; } });   // vom Stallbursche abends wieder reingeholt
+    spiel.boxen.forEach(b => { if (b.pferd && b.pferd.weide && b.pferd.weide.ma && !b.pferd.umbauWeide && !b.tot) { delete b.pferd.weide; delete b.vorWeide; } });   // vom Stallbursche abends wieder reingeholt
     baulaerm(); hengstStallNacht();
     spiel.boxen.forEach(b => { if (b.pferd && !b.tot) { trainingNacht(b.pferd); arbeitNacht(b.pferd); } });   // Energie füllt sich über Nacht · Arbeitsstufe für den Futterbedarf
     hufNacht();       // Eisen verlieren
@@ -6701,7 +6703,7 @@
     pensionAnfragenTag();   // H5: neue Anfragen von Einstellern
   }
   function hofMorgen() {
-    turnierMorgen(); hofhelferTag(); reparaturTag(); rateVorwarnung();   // Turniertag: genannte Pferde fahren los
+    turnierMorgen(); hofhelferTag(); reparaturTag(); umbauPlanTag(); rateVorwarnung();   // Turniertag: genannte Pferde fahren los
     futterLieferung();  // bestelltes Futter kommt an
     bedarfTag();   // Dome: Bedarf vorher gedeckt, jetzt nicht mehr → Meldung beim nächsten Besuch der Box
     expertKorrektur265();    // v265: fehlerhafte Expertenpläne einmal kostenlos neu rechnen
@@ -8213,17 +8215,77 @@
     if (g.bau) return "im Bau";
     if (g.typ === "abfohlbox" && hochtragendAufHof()) return "eine Stute fohlt bald – erst nach der Geburt";
     if (!BAUTEN[g.typ].preis || g.stufe >= 3) return g.stufe >= 3 ? "höchste Stufe" : "nicht möglich";
-    const voll = spiel.boxen.filter(b => b.geb === g.gid && (b.pferd || b.fohlen || b.reserviert));
-    return voll.length ? `erst die Boxen leeren (${voll.length} belegt – Umzug-Lösungen kommen mit H4)` : "";
+    if (g.plan) return `geplant ab ${datumText(datum(g.plan.ab))}`;
+    const B = umbauBoxen(g);
+    if (B.some(b => b.tot)) return "erst das verstorbene Pferd abholen lassen";
+    if (B.some(b => b.reserviert)) return "ein neuer Einsteller zieht gerade ein – danach";
+    const eigen = B.filter(b => b.pferd && !fremd(b.pferd)).length, frei = ersatzBoxen(g).length;
+    if (eigen > frei && !weideDa()) return `für ${eigen - frei} eigene ${eigen - frei === 1 ? "Pferd" : "Pferde"} gibt es keine freie Box und keine Weide – vorher per Pferdeanhänger zum anderen eigenen Hof bringen oder eine Weide einzäunen`;
+    return "";
   }
+  // ---------- H4: Umbau-Folgen ----------
+  // Boxen im Umbau: Pferde ziehen in freie Boxen um; eigene ohne Box kommen solange auf die Weide.
+  // Einsteller bekommen 1 Jahreszeit vorher Bescheid – ohne freie Box wählt der Spieler je Einsteller: 30 % Nachlass (Pferd auf der Weide) oder Vertrag ruht (Pferd beim Besitzer, keine Einnahme).
+  const UMBAU = { nachlass: 0.3, zufrUmzug: -5, zufrNachlass: -5, zufrRuht: -10, zufrOhne: -30, kuendigt: 0.4 };
+  const umbauBoxen = g => spiel.boxen.filter(b => b.geb === g.gid);
+  const umbauGeplant = b => !!b.geb && gebaeude().some(g => g.plan && g.gid === b.geb);
+  const ersatzBoxen = g => spiel.boxen.filter(b => b.geb !== g.gid && boxFrei(b) && !b.quar && !b.abfohl && !umbauGeplant(b)).sort((a, b) => (a.paddock ? 1 : 0) - (b.paddock ? 1 : 0));
+  function umbauBetroffen(g) { const B = umbauBoxen(g).filter(b => b.pferd && !b.tot);
+    return { eigen: B.filter(b => !fremd(b.pferd)).map(b => b.pferd), einsteller: B.filter(b => fremd(b.pferd)).map(b => einstellerVon(b.pferd)).filter(Boolean) }; }
+  // Reitplatz/Reithalle/Roundpen im Umbau: dort wird nicht trainiert (nur die anderen Plätze und das Gelände)
+  const anlageImUmbau = o => gebaeude().some(g => g.bau && g.bau.art === "umbau" && BAUTEN[g.typ].anlage === o);
   function umbauStarten(g) {
     const preis = umbauPreis(g);
     if (!spiel.admin && (spiel.geld || 0) < preis) { dialog(`<h3>Zu wenig Geld</h3><p>Der Umbau kostet ${fmt(preis)}.</p>`); return false; }
     if (!spiel.admin) buchen(-preis, `Umbau: ${BAUTEN[g.typ].n}`);
-    g.bau = { rest: Math.max(1, Math.round(bauTage(BAUTEN[g.typ].zeit) / 2)), art: "umbau", ziel: g.stufe + 1, kosten: preis };
-    spiel.boxen.forEach(b => { if (b.geb === g.gid) b.gesperrt = true; });
-    if (spiel.hof) spiel.hof.wert = (spiel.hof.wert || 0) + preis;
-    return true;
+    const E = umbauBetroffen(g).einsteller;
+    if (E.length) {   // Einsteller brauchen 1 Jahreszeit Vorlauf
+      g.plan = { ab: spiel.tag + tpj(), kosten: preis, wahl: {} };
+      brief("Hofverwaltung", `Umbau angekündigt: ${gebName(g)}`, `der Umbau von <b>${gebName(g)}</b> auf Stufe ${g.stufe + 1} beginnt am <b>${datumText(datum(g.plan.ab))}</b>. Diese Einsteller wurden informiert: ${E.map(e => `${esc(eName(e))} (${esc(((pensionBox(e) || {}).pferd || {}).name || "–")})`).join(", ")}.<br><br>Ist beim Start eine andere Box frei, ziehen ihre Pferde dorthin um. Sonst {wähle|wählen Sie} je Einsteller unter Hofverwaltung → Hof → Bauen: <b>${prozent(UMBAU.nachlass)} Nachlass</b> (das Pferd steht so lange auf der Weide) oder <b>Vertrag ruht</b> (das Pferd ist beim Besitzer, keine Einnahme). Ohne Lösung sind die Einsteller sehr verärgert – manche kündigen.`);
+      return true;
+    }
+    umbauBeginnen(g, preis); return true;
+  }
+  function umbauUmzug(b, nb) {
+    nb.pferd = b.pferd; if (b.fohlen) nb.fohlen = b.fohlen; nb.krippeVoll = b.krippeVoll; nb.mistig = false; nb.mistStufe = 0; nb.tot = false; if (b.leckstein) nb.leckstein = b.leckstein;
+    b.pferd = null; delete b.fohlen; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; delete b.vorWeide;
+  }
+  function umbauBeginnen(g, kosten) {
+    const frei = ersatzBoxen(g), wahl = (g.plan && g.plan.wahl) || {}, zeilen = [];
+    umbauBoxen(g).filter(b => b.pferd && !b.tot && !fremd(b.pferd)).forEach(b => { const p = b.pferd;
+      if (frei.length) { const nb = frei.shift(); umbauUmzug(b, nb); zeilen.push(`${esc(p.name)} → Box ${spiel.boxen.indexOf(nb) + 1}`); }
+      else { if (!p.weide) aufWeide(p, b); else delete p.weide.ma; p.umbauWeide = g.gid; zeilen.push(`${esc(p.name)} → Weide`); } });
+    umbauBoxen(g).filter(b => b.pferd && !b.tot && fremd(b.pferd)).forEach(b => { const p = b.pferd, e = einstellerVon(p); if (!e) return;
+      const w = wahl[e.eid];
+      if (frei.length) { const nb = frei.shift(); umbauUmzug(b, nb); eZufr(e, UMBAU.zufrUmzug, "Umzug wegen Umbau"); zeilen.push(`${esc(p.name)} (${esc(eName(e))}) → Box ${spiel.boxen.indexOf(nb) + 1}`); }
+      else if (w === "nachlass" && weideDa()) { if (!p.weide) aufWeide(p, b); else delete p.weide.ma; p.umbauWeide = g.gid; e.nachlass = g.gid; eZufr(e, UMBAU.zufrNachlass, "Umbau – Pferd auf der Weide"); zeilen.push(`${esc(p.name)} (${esc(eName(e))}) → Weide, ${prozent(UMBAU.nachlass)} Nachlass`); }
+      else if (w === "ruht") { umbauRuhen(e, b, g); eZufr(e, UMBAU.zufrRuht, "Vertrag ruht wegen Umbau"); zeilen.push(`${esc(p.name)} (${esc(eName(e))}) → beim Besitzer, Vertrag ruht`); }
+      else { eZufr(e, UMBAU.zufrOhne, "Umbau ohne Ersatzplatz");
+        if (Math.random() < UMBAU.kuendigt) { pensionAuszug(e, "gekündigt – Umbau ohne Ersatzplatz"); zeilen.push(`${esc(p.name)} (${esc(eName(e))}) → <b>gekündigt</b>, ausgezogen`); }
+        else { umbauRuhen(e, b, g); zeilen.push(`${esc(p.name)} (${esc(eName(e))}) → vom Besitzer abgeholt (verärgert), Vertrag ruht`); } } });
+    g.bau = { rest: Math.max(1, Math.round(bauTage(BAUTEN[g.typ].zeit) / 2)), art: "umbau", ziel: g.stufe + 1, kosten };
+    umbauBoxen(g).forEach(b => b.gesperrt = true);
+    if (spiel.hof) spiel.hof.wert = (spiel.hof.wert || 0) + kosten;
+    const warGeplant = !!g.plan; delete g.plan;
+    if (warGeplant || zeilen.length) brief("Baufirma", `Umbau beginnt: ${gebName(g)}`, `heute beginnt der Umbau von <b>${gebName(g)}</b> auf Stufe ${g.stufe + 1} (noch ${tageTxt2(g.bau.rest)}).${zeilen.length ? `<br><br>Die Pferde aus den Boxen:<ul>${zeilen.map(z => `<li>${z}</li>`).join("")}</ul>` : ""}`);
+  }
+  function umbauRuhen(e, b, g) {
+    e.ruht = { pferd: b.pferd, fohlen: b.fohlen || null, gid: g.gid };
+    b.pferd = null; delete b.fohlen; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; delete b.vorWeide;
+  }
+  // morgens: geplanter Umbau beginnt
+  function umbauPlanTag() { gebaeude().forEach(g => { if (g.plan && spiel.tag >= g.plan.ab) umbauBeginnen(g, g.plan.kosten); });
+    spiel.boxen.forEach(b => { const p = b.pferd; if (p && p.umbauWeide && !p.weide && !p.klinik && !p.turnier && !b.tot) aufWeide(p, b); }); }   // zurück aus Klinik/Turnier: wieder auf die Weide, solange umgebaut wird
+  // Umbau fertig: Pferde von der Weide zurück in ihre Box, ruhende Verträge laufen weiter
+  function umbauFertig(g) {
+    umbauBoxen(g).forEach(b => { if (b.pferd && b.pferd.umbauWeide === g.gid) { delete b.pferd.umbauWeide; if (b.pferd.weide) vonWeideHolen(b); } });
+    einstellerListe().forEach(e => {
+      if (e.nachlass === g.gid) delete e.nachlass;
+      if (e.ruht && e.ruht.gid === g.gid) { const nb = umbauBoxen(g).find(boxFrei) || spiel.boxen.find(x => pensionBoxFrei(x));
+        if (!nb) return;   // keine Box frei – bleibt beim Besitzer, bis eine frei wird (nächster Umbau-Abschluss oder Auszug)
+        nb.pferd = e.ruht.pferd; if (e.ruht.fohlen) nb.fohlen = e.ruht.fohlen; nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false;
+        brief(eName(e), `${nb.pferd.name} ist zurück`, `der Umbau ist fertig – ich habe <b>${esc(nb.pferd.name)}</b> heute wieder zu {euch|Ihnen} gebracht (Box ${spiel.boxen.indexOf(nb) + 1}). Ab jetzt zahle ich wieder das Pensionsgeld.`, { w: e.w });
+        delete e.ruht; } });
   }
   // jede Nacht: Baufortschritt (Außenarbeiten ruhen im Winter)
   function bauNacht() {
@@ -8236,7 +8298,7 @@
   }
   function bauFertig(g, art) {
     const B = BAUTEN[g.typ];
-    if (art === "umbau") { g.stufe = Math.min(3, g.stufe + 1); spiel.boxen.forEach(b => { if (b.geb === g.gid) { b.stufe = g.stufe; delete b.gesperrt; } }); }
+    if (art === "umbau") { g.stufe = Math.min(3, g.stufe + 1); spiel.boxen.forEach(b => { if (b.geb === g.gid) { b.stufe = g.stufe; delete b.gesperrt; } }); umbauFertig(g); }
     else {
       if (B.boxen) for (let i = 0; i < g.boxen; i++) spiel.boxen.push({ nr: spiel.boxen.length + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false, geb: g.gid, stufe: g.stufe,
         ...(g.typ === "paddock" ? { paddock: true } : g.typ === "quarantaene" ? { quar: true } : g.typ === "abfohlbox" ? { abfohl: true } : {}) });
@@ -8293,8 +8355,15 @@
   function bauenHTML() {
     const G = gebaeude(), stufenKn = g => "";
     const bar = z => `<div class="kr-balken geb-balken"><i style="width:${Math.round(z)}%;background:${z < 40 ? "#c0503a" : z < 70 ? "#d9a441" : "#6aa84f"}"></i></div>`;
-    const steht = G.filter(g => !g.bau), bau = G.filter(g => g.bau);
+    const steht = G.filter(g => !g.bau), bau = G.filter(g => g.bau), plan = G.filter(g => g.plan);
+    const planHTML = g => { const U = umbauBetroffen(g), frei = ersatzBoxen(g).length, W = g.plan.wahl, rest = g.plan.ab - spiel.tag;
+      return `<div class="geb geb-plan"><span class="geb-ico">🚧</span><span class="geb-txt"><b>${gebName(g)}</b><small>Umbau auf Stufe ${g.stufe + 1} geplant · beginnt ${rest <= 0 ? "morgen früh" : `in ${tageTxt2(rest)} (${datumText(datum(g.plan.ab))})`} · freie Boxen zum Umziehen: ${frei}${U.eigen.length ? ` · eigene Pferde: ${U.eigen.map(p => esc(p.name)).join(", ")}` : ""}</small>
+        ${U.einsteller.map((e, i) => { const p = (pensionBox(e) || {}).pferd, w = W[e.eid], hatBox = i + U.eigen.length < frei;
+          return `<div class="umbau-wahl"><small><b>${esc(p ? p.name : "–")}</b> (${esc(eName(e))}): ${hatBox ? "zieht in eine freie Box um" : w === "nachlass" ? `auf die Weide, ${prozent(UMBAU.nachlass)} Nachlass` : w === "ruht" ? "Vertrag ruht" : "⚠️ noch keine Lösung"}</small>
+            <span class="geb-kn">${weideDa() ? `<button class="mini-knopf ${w === "nachlass" ? "an" : ""}" data-uwahl="${g.gid}|${e.eid}|nachlass">🌿 Weide, −${prozent(UMBAU.nachlass)}</button>` : ""}<button class="mini-knopf ${w === "ruht" ? "an" : ""}" data-uwahl="${g.gid}|${e.eid}|ruht">⏸️ Vertrag ruht</button></span></div>`; }).join("")}
+        <span class="geb-kn"><button class="mini-knopf" data-uabsage="${g.gid}">✖️ Umbau absagen</button></span></span></div>`; };
     return `<p class="text" style="margin:0 0 6px">Kasse: <b>${fmt(spiel.geld || 0)}</b> · Bauland frei: <b>${haTxt(baulandFrei())}</b> von ${haTxt(bauHa())} · Unterhalt: ${prozent(UNTERHALT)} des Baupreises je Jahreszeit (${fmt(Math.round(G.filter(g => g.typ !== "heudampfer").reduce((a, g) => a + (g.preis || 0), 0) * UNTERHALT))}) · Stufe 1 verfällt schneller.</p>
+      ${plan.length ? `<h4 class="ma-titel">🚧 Umbau geplant</h4>${plan.map(planHTML).join("")}` : ""}
       ${bau.length ? `<h4 class="ma-titel">🏗️ Im Bau</h4>${bau.map(g => `<div class="geb"><span class="geb-ico">${BAUTEN[g.typ].ico}</span><span class="geb-txt"><b>${gebName(g)}</b><small>${g.bau.art === "umbau" ? `Umbau auf Stufe ${g.stufe + 1}` : `Stufe ${g.stufe} – ${STUFE_NAME[g.stufe]}`} · noch ${tageTxt2(g.bau.rest)}${BAUTEN[g.typ].aussen && datum().s === 3 ? " · ❄️ ruht im Winter" : ""}</small></span></div>`).join("")}` : ""}
       <h4 class="ma-titel">🏠 Gebäude und Anlagen</h4>${steht.length ? steht.map(g => { const B = BAUTEN[g.typ], us = g.typ === "heudampfer" ? "" : umbauSperre(g), rp = reparaturPreis(g);
         return `<div class="geb"><span class="geb-ico">${B.ico}</span><span class="geb-txt"><b>${gebName(g)}</b><small>${g.typ === "heudampfer" ? "fertig" : `Stufe ${g.stufe} – ${STUFE_NAME[g.stufe]}${g.boxen ? ` · ${g.boxen} ${g.boxen === 1 ? "Box" : "Boxen"}` : ""} · Zustand ${Math.round(g.zustand)} %`}</small>${g.typ === "heudampfer" ? "" : bar(g.zustand)}
@@ -8330,8 +8399,16 @@
     nb.querySelectorAll("[data-bau]").forEach(b => b.onclick = () => bauDialog(b.dataset.bau));
     nb.querySelectorAll("[data-anbau]").forEach(b => b.onclick = () => { const g = G.find(x => x.gid === b.dataset.anbau); bauDialog(g.typ, g.gid, g.stufe); });
     nb.querySelectorAll("[data-umbau]").forEach(b => b.onclick = () => { const g = G.find(x => x.gid === b.dataset.umbau);
-      dialog(`<h3>⬆️ ${gebName(g)}: Stufe ${g.stufe + 1}</h3><p>Umbau auf <b>${STUFE_NAME[g.stufe + 1]}</b> für <b>${fmt(umbauPreis(g))}</b> (Preisunterschied + 20 %). Dauert die halbe Bauzeit${g.boxen ? ", die Boxen sind so lange gesperrt" : ""}.</p>`,
+      const U = umbauBetroffen(g), frei = ersatzBoxen(g).length, n = U.eigen.length + U.einsteller.length;
+      const wer = n ? `<p><b>Betroffen:</b> ${[...U.eigen.map(p => esc(p.name)), ...U.einsteller.map(e => `${esc(((pensionBox(e) || {}).pferd || {}).name || "–")} (Einsteller ${esc(eName(e))})`)].join(", ")}.<br>Beim Start ziehen die Pferde in freie Boxen um (frei: ${frei}).${U.eigen.length > frei ? " Eigene Pferde ohne Box kommen so lange auf die Weide – oder du bringst sie vorher per Pferdeanhänger zu einem anderen eigenen Hof." : ""}</p>
+        ${U.einsteller.length ? `<p>📨 Einsteller bekommen <b>1 Jahreszeit vorher</b> Bescheid – der Umbau beginnt erst am <b>${datumText(datum(spiel.tag + tpj()))}</b>. Ist dann keine Box frei, wählst du je Einsteller unter Hof → Bauen: ${prozent(UMBAU.nachlass)} Nachlass (Pferd auf der Weide) oder Vertrag ruht (keine Einnahme).</p>` : ""}` : "";
+      dialog(`<h3>⬆️ ${gebName(g)}: Stufe ${g.stufe + 1}</h3><p>Umbau auf <b>${STUFE_NAME[g.stufe + 1]}</b> für <b>${fmt(umbauPreis(g))}</b> (Preisunterschied + 20 %). Dauert die halbe Bauzeit${g.boxen ? ", die Boxen sind so lange gesperrt" : ""}${BAUTEN[g.typ].anlage && ["reitplatz", "reithalle", "roundpen"].includes(BAUTEN[g.typ].anlage) ? " – so lange wird dort nicht trainiert (die anderen Plätze und das Gelände gehen)" : ""}.</p>${wer}`,
         [["Umbauen", () => { if (umbauStarten(g)) { speichern(); bauNeuZeigen(); } }], ["Abbrechen", null, "zweit"]]); });
+    nb.querySelectorAll("[data-uwahl]").forEach(b => b.onclick = () => { const [gid, eid, w] = b.dataset.uwahl.split("|"), g = G.find(x => x.gid === gid); if (!g || !g.plan) return;
+      if (g.plan.wahl[eid] === w) delete g.plan.wahl[eid]; else g.plan.wahl[eid] = w; speichern(); bauNeuZeigen(); });
+    nb.querySelectorAll("[data-uabsage]").forEach(b => b.onclick = () => { const g = G.find(x => x.gid === b.dataset.uabsage); if (!g || !g.plan) return;
+      dialog(`<h3>✖️ Umbau absagen?</h3><p>Der geplante Umbau von <b>${gebName(g)}</b> fällt aus. Du bekommst ${fmt(g.plan.kosten)} zurück.</p>`,
+        [["Absagen", () => { if (!spiel.admin) buchen(g.plan.kosten, `Umbau abgesagt: ${BAUTEN[g.typ].n}`); delete g.plan; speichern(); bauNeuZeigen(); }], ["Doch nicht", null, "zweit"]]); });
     nb.querySelectorAll("[data-rep]").forEach(b => b.onclick = () => { const g = G.find(x => x.gid === b.dataset.rep), k = reparaturPreis(g);
       dialog(`<h3>🔧 ${gebName(g)} reparieren</h3><p>Ein Handwerker bringt den Zustand von ${Math.round(g.zustand)} % auf 100 %. Kosten: <b>${fmt(k)}</b> (je 10 Punkte 2 % des Baupreises).</p>`,
         [["Handwerker bestellen", () => { if (!spiel.admin && (spiel.geld || 0) < k) { dialog(`<h3>Zu wenig Geld</h3><p>In der Kasse sind ${fmt(spiel.geld || 0)}.</p>`); return; } if (!spiel.admin) buchen(-k, "Handwerker");
@@ -8406,7 +8483,7 @@
   const leistungFaellig = (e, k) => e.leistungen[k] && leistungMoeglich(k) && (!PENSION_LEISTUNG[k].saison || PENSION_LEISTUNG[k].saison.includes(datum().s));
   // erledigen Mitarbeiter die Leistung automatisch?
   const pflegeTeam = () => ["pfleger", "pferdewirt", "pferdewirtHS", "stallmeister"].some(t => aktive(t).some(m => maDarf(m, "decke")));
-  const pensionBoxFrei = b => boxFrei(b) && !b.quar && !b.abfohl;
+  const pensionBoxFrei = b => boxFrei(b) && !b.quar && !b.abfohl && !umbauGeplant(b);   // H4: keine neuen Einsteller in Boxen, die bald umgebaut werden
   const pensionPlaetze = () => { const R = pensionRegeln(); return Math.max(0, R.max - einstellerListe().length - (spiel.pensionAnfragen || []).filter(a => a.angenommen).length); };
   // Betrag je Jahreszeit (Box + gebuchte Leistungen dieser Jahreszeit)
   const bewegenTage = e => Math.round((e.bewegenAnteil || 0) * tpj());
@@ -8564,8 +8641,8 @@
       if (!p.weide && !trainSperre(p, b, true) && energie(p) >= 30) {   // reitet (Reitplatz bzw. bei Regen/Winter Halle, sonst Gelände)
         const T = (p.trainHeute = p.trainHeute && p.trainHeute.tag === spiel.tag ? p.trainHeute : { tag: spiel.tag, liste: [], verbraucht: 0 });
         p.energie = Math.round(energie(p) - 25); T.verbraucht += 25; T.besitzer = true;
-        const wt = wetterHeute(), halle = A.reithalle && (wt === "regen" || wt === "schnee" || datum().s === 3 || Math.random() < 0.3);
-        H.reiter.push({ eid: e.eid, ort: halle ? "reithalle" : A.reitplatz ? "reitplatz" : "gelaende" });
+        const wt = wetterHeute(), halle = A.reithalle && !anlageImUmbau("reithalle") && (wt === "regen" || wt === "schnee" || datum().s === 3 || Math.random() < 0.3);
+        H.reiter.push({ eid: e.eid, ort: halle ? "reithalle" : A.reitplatz && !anlageImUmbau("reitplatz") ? "reitplatz" : "gelaende" });
       }
     });
     // voller Reitplatz: ab 4 Reitern gleichzeitig sind alle etwas unzufrieden
@@ -8588,7 +8665,8 @@
     L.filter(e => e.kuendigt != null && e.kuendigt < jetzt).forEach(e => pensionAuszug(e, e.kuendGrund === "du" ? "Vertrag gekündigt" : e.kuendGrund === "zahlung" ? "Zahlungsverzug" : "unzufrieden"));
     const zeilen = [];
     einstellerListe().forEach(e => {
-      const p = (pensionBox(e) || {}).pferd, box = e.preis, leist = pensionLeistBetrag(e, s);
+      if (e.ruht) { zeilen.push(`<li>${esc(eName(e))} (${esc(e.ruht.pferd.name)}): Vertrag ruht (Umbau)</li>`); return; }   // H4
+      const p = (pensionBox(e) || {}).pferd, box = e.nachlass ? Math.round(e.preis * (1 - UMBAU.nachlass)) : e.preis, leist = pensionLeistBetrag(e, s);
       if (Math.random() < PENSION.verspaetet && !e.offen) { e.offen = { box, leist, faellig: spiel.tag + 2, mahn: 0 }; zeilen.push(`<li>${esc(eName(e))} (${p ? esc(p.name) : "–"}): ${fmt(box + leist)} – <b>noch offen</b></li>`); return; }
       buchen(box, "Pension"); if (leist) buchen(leist, "Pension: Zusatzleistungen");
       zeilen.push(`<li>${esc(eName(e))} (${p ? esc(p.name) : "–"}): ${fmt(box + leist)}</li>`);
@@ -8671,7 +8749,7 @@
     const summe = L.reduce((a, e) => a + e.preis + pensionLeistBetrag(e, s), 0);
     const karte = e => { const b = pensionBox(e), p = b && b.pferd, i = b ? spiel.boxen.indexOf(b) : -1, gb = PL_REIHE.filter(k => e.leistungen[k] && leistungMoeglich(k));
       const zf = e.zufr >= 70 ? "😊 zufrieden" : e.zufr >= 45 ? "🙂 geht so" : e.zufr >= PENSION.beschwerde ? "😐 unzufrieden" : "😠 sehr unzufrieden";
-      return `<div class="ma-karte"><div class="ma-zeile"><span><b>${p ? esc(p.name) : "–"} · ${esc(eName(e))}</b><small>${p ? `${p.geschlecht} · ${rasseById(p.rasse).name.replace(/ \(.*\)/, "")} · Box ${i + 1}${b.paddock ? " (Paddockbox)" : b.quar ? " (Quarantäne)" : ""}` : ""} · seit ${jzName(e.seit).replace(/^\S+ /, "")}
+      return `<div class="ma-karte"><div class="ma-zeile"><span><b>${p ? esc(p.name) : e.ruht ? esc(e.ruht.pferd.name) : "–"} · ${esc(eName(e))}</b><small>${p ? `${p.geschlecht} · ${rasseById(p.rasse).name.replace(/ \(.*\)/, "")} · Box ${i + 1}${b.paddock ? " (Paddockbox)" : b.quar ? " (Quarantäne)" : ""}${p.umbauWeide ? " · 🚧 auf der Weide (Umbau)" : ""}` : e.ruht ? "🚧 Vertrag ruht – das Pferd ist beim Besitzer, bis der Umbau fertig ist" : ""}${e.nachlass ? ` · ${prozent(UMBAU.nachlass)} Nachlass (Umbau)` : ""} · seit ${jzName(e.seit).replace(/^\S+ /, "")}
         <br>${HALTUNG_TXT[e.haltung]}${gb.length ? ` · gebucht: ${gb.map(k => `${PENSION_LEISTUNG[k].ico} ${PENSION_LEISTUNG[k].n}${k === "bewegen" ? ` (${bewegenTage(e)} Tage)` : ""}`).join(", ")}` : ""}
         <br>${fmt(e.preis + pensionLeistBetrag(e, s))} je Jahreszeit${e.offen ? ` · ⚠️ <b>${fmt(e.offen.box + e.offen.leist + (e.offen.gebuehr || 0))} offen</b>` : ""} · ${(e.log || []).some(x => spiel.tag - x.tag <= 2) || e.zufr < 45 ? zf : "😊 alles in Ordnung"}${spiel.admin ? ` · <i>Admin: Zufriedenheit ${e.zufr}${(e.log || []).length ? ` (${e.log.slice(0, 3).map(x => x.grund).join(", ")})` : ""}</i>` : ""}
         ${e.kuendigt != null ? `<br>📦 ${e.kuendGrund === "du" ? "von dir gekündigt" : e.kuendGrund === "zahlung" ? "gekündigt wegen Zahlungsausfall" : "hat gekündigt"} – zieht zum Ende der Jahreszeit aus` : ""}</small></span></div>
@@ -8963,7 +9041,7 @@
       <h3>🏗️ Hof-Ausbau (H3: Bauen, Stufen, Verfall)</h3>
       <p><b>Bauen</b> (Hofverwaltung → Hof → Bauen, Stufe 1 / 2 / 3): ${BAU_REIHE.filter(k => !BAUTEN[k].nur).map(k => { const B = BAUTEN[k]; return `${B.n.replace(/\u00ad/g, "")} ${B.fest ? fmt(B.fest) : B.preis.map(fmt).join(" / ")}${B.jeHa ? " je ha" : ""}${B.anbau ? ` (Anbau ${B.anbauBoxen} Boxen ${B.anbau.map(fmt).join(" / ")}, je 2 Boxen mehr ${B.paar.map(fmt).join(" / ")})` : ""}`; }).join(" · ")}. Rennbahn und Aufzucht-Offenstall kommen mit den Stallarten (H7). + / − in der Boxenübersicht gibt es nicht mehr.</p>
       <p><b>Bauzeit</b> (Standardtempo, je nach Tempo anteilig): kurz 2–3 Tage (Roundpen, Trail, Weide einzäunen, Sandpaddock, Waschplatz), ½ Jahreszeit (Paddockboxen, Sattelkammer, Abfohlbox), 1 Jahreszeit (Stall und Anbau, Reitplatz, Lager, Quarantänestall), Reithalle 2–3 Jahreszeiten. Außenarbeiten (Reitplatz, Roundpen, Trail, Weide, Sandpaddock) ruhen im Winter. Bezahlt wird beim Auftrag; der Hofwert steigt um den Baupreis. Heudampfer nur mit Futterlager, sofort. Lager: Futterkammer ${LAGER_START.toLocaleString("de-DE")} kg + ${BAUTEN.lager.platz.map(x => x.toLocaleString("de-DE")).join(" / ")} kg.</p>
-      <p><b>Umbau</b> eine Stufe höher: Preisunterschied + ${prozent(UMBAU_AUFSCHLAG)}, halbe Bauzeit, je Abschnitt (Erstbau und jeder Anbau einzeln); die Boxen müssen leer sein und sind gesperrt. <b>Unterhalt</b> ${prozent(UNTERHALT)} des Baupreises je Jahreszeit. <b>Verfall</b> je Jahreszeit Stufe 1/2/3: −${VERFALL.slice(1).map(x => String(x).replace(".", ",")).join(" / −")} Zustand (Start-Stall beginnt bei 85 %); Warnbrief unter 40 %. <b>Reparatur:</b> Handwerker kommt am nächsten Tag, braucht 1 Tag (ab 50 % Zustand) bzw. 2 Tage (darunter), danach 100 %; je 10 Punkte 2 % des Baupreises; Hofhelfer (${fmt(MA_TYP.hofhelfer.gehalt)}/Jz) +${HOFHELFER_REPARATUR} Punkte je Arbeitstag am schlechtesten Gebäude.</p>
+      <p><b>Umbau</b> eine Stufe höher: Preisunterschied + ${prozent(UMBAU_AUFSCHLAG)}, halbe Bauzeit, je Abschnitt (Erstbau und jeder Anbau einzeln); die Boxen sind gesperrt. <b>Umbau-Folgen (H4):</b> Pferde ziehen beim Start in freie Boxen (normale vor Paddockboxen, nicht Quarantäne/Abfohlbox); eigene ohne Box kommen auf die Weide (ohne Weide und ohne freie Box kein Umbau – vorher per Anhänger zu einem anderen Hof). Sind Einsteller betroffen, beginnt der Umbau erst 1 Jahreszeit nach dem Auftrag (Brief); ohne freie Box wählt der Spieler je Einsteller: Weide mit ${prozent(UMBAU.nachlass)} Nachlass aufs Boxengeld oder Vertrag ruht (Pferd beim Besitzer, keine Zahlung). Zufriedenheit: Umzug ${UMBAU.zufrUmzug}, Nachlass ${UMBAU.zufrNachlass}, ruht ${UMBAU.zufrRuht}, ohne Lösung ${UMBAU.zufrOhne} und ${prozent(UMBAU.kuendigt)} Kündigung (sonst holt der Besitzer das Pferd, Vertrag ruht). Keine neuen Einsteller in Boxen mit geplantem Umbau. Absagen vor dem Start: volle Erstattung. Reitplatz/Reithalle/Roundpen im Umbau: dort kein Training. Nach dem Umbau kommen die Weide-Pferde zurück in ihre Box, ruhende Verträge laufen weiter. <b>Unterhalt</b> ${prozent(UNTERHALT)} des Baupreises je Jahreszeit. <b>Verfall</b> je Jahreszeit Stufe 1/2/3: −${VERFALL.slice(1).map(x => String(x).replace(".", ",")).join(" / −")} Zustand (Start-Stall beginnt bei 85 %); Warnbrief unter 40 %. <b>Reparatur:</b> Handwerker kommt am nächsten Tag, braucht 1 Tag (ab 50 % Zustand) bzw. 2 Tage (darunter), danach 100 %; je 10 Punkte 2 % des Baupreises; Hofhelfer (${fmt(MA_TYP.hofhelfer.gehalt)}/Jz) +${HOFHELFER_REPARATUR} Punkte je Arbeitstag am schlechtesten Gebäude.</p>
       <p><b>Wirkung der Stufe:</b> Wohlbefinden je Nacht in der Box: Stufe 1 −0,5, Stufe 3 +0,5, Zustand unter 40 % −0,5, Paddockbox +0,5. Verletzungsrisiko in der Box × 1,3 / 1 / 0,8, Zustand unter 70 % × 1,1, unter 40 % × 1,3. Mitarbeiter-Zufriedenheit je Jahreszeit: Ø Stufe unter 1,5 −3, ab 2,5 +3, Ø Zustand unter 50 % −3. Quarantänestall: Pferde dort stecken niemanden an und werden nicht angesteckt. Pensionspreis nach Stufe kommt mit H5.</p>
       <p><b>Bauland und Weideland</b> (Dome, v225): Bauland ${fmt(BAULAND_PREIS)}/ha (nur kaufen), Weideland ${fmt(LAND_PREIS)}/ha oder Pacht ${fmt(PACHT_PREIS)}/ha je Jahreszeit. Platzbedarf auf dem Bauland: Wohnhaus/Hofplatz ${haTxt(HOFPLATZ)}, Stall ${haTxt(0.1)} je 6 Boxen, Paddockboxen ${haTxt(0.15)} je 6, Reitplatz ${haTxt(0.1)}, Reithalle ${haTxt(0.15)}, Roundpen/Trail/Sandpaddock/Waschplatz/Lager/Sattelkammer/Quarantänestall/Abfohlbox je ${haTxt(0.05)}. Weide einzäunen nur auf Weideland. Start-Pensionsstall: 1 ha Bauland + 1 ha Weideland. Makler-Höfe: Bauland nach Bestand + 0,1 ha, auf ½ ha aufgerundet; Grundstück 1 ha Bauland.
         <b>Quarantänestall:</b> gekaufte Pferde (Markt, Auktion, Tierschutz) kommen zuerst in eine freie Quarantänebox und stehen 1 Jahreszeit unter Quarantäne; danach ziehen sie – ohne bekannte ansteckende Krankheit – automatisch in eine freie normale Box (Brief). Normale Umzüge nutzen den Quarantänestall nur, wenn sonst nichts frei ist.

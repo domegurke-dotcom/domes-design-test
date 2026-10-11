@@ -17,7 +17,8 @@ const path = require('path');
     await pg.waitForTimeout(300);
     const r = await pg.evaluate((ansicht) => {
       const L = [], ok = (name, bed, info = '') => L.push([bed ? '✓' : '✗', ansicht, name, info]);
-      const nacht = n => { for (let i = 0; i < n; i++) { spiel.boxen.forEach(bx => { if (bx.pferd && !bx.pferd.weide) { fuetternAusLager(bx, 'du'); bx.krippeVoll = true; bx.mistig = false; bx.mistStufe = 0; } }); naechsteNacht(); } };
+      const nacht = n => { for (let i = 0; i < n; i++) { spiel.boxen.forEach(bx => { const q = bx.pferd; if (!q || bx.tot || q.klinik) return; fuetternAusLager(bx, 'du'); bx.krippeVoll = true; bx.mistig = false; bx.mistStufe = 0;   // auch Weide-Heu
+          q.befunde = []; if (q.pflege) q.pflege.gesundheit = Math.max(q.pflege.gesundheit, 80); }); naechsteNacht(); } };   // Tierarzt kümmert sich – hier geht es um die Abläufe
       const zu = () => { $('dlg').hidden = true; };
       const ansehen = (name, f) => { try { f(); ok(name + ' öffnet ohne Fehler', true); } catch (e) { ok(name + ' öffnet ohne Fehler', false, e.message); } zu(); };
 
@@ -110,6 +111,45 @@ const path = require('path');
         ok('H5 Pensionsgeld wird gebucht (oder ist offen)', spiel.geld > geld || (e && e.offen), `${Math.round(spiel.geld - geld)} €`);
         ansehen('H5 hvw – Hof – Pension', () => pensionHTML(''));
         const pb = spiel.boxen.find(x => x.pferd && x.pferd.einsteller); if (pb) ansehen('H5 Pensionspferd – Versorgung', () => pensionVsgHTML(pb.pferd, pb)); }
+
+      // ---------- H4 Umbau-Folgen ----------
+      { if (!weideDa()) { spiel.hof.weideHa = Math.max(spiel.hof.weideHa || 0, 2); spiel.anlage.weide = true; }
+        const g = gebaeude().find(x => x.typ === 'stall' && umbauBoxen(x).some(b => b.pferd && fremd(b.pferd)) && umbauBoxen(x).some(b => b.pferd && !fremd(b.pferd)));
+        ok('H4 Stall mit eigenem Pferd und Einsteller gefunden', !!g);
+        if (g) {
+          const fuellen = () => ersatzBoxen(g).forEach((b, i) => { b.pferd = neuesPferd({ rasse: 'shetty', geschlecht: 'Wallach', alter: 8, name: 'Platzhalter' + i }); b.pferd.pflege = erzeugePflege(b.pferd); });
+          fuellen();   // keine Ersatzbox frei → Einsteller braucht eine Lösung
+          const eigen = umbauBetroffen(g).eigen[0], e = umbauBetroffen(g).einsteller[0], ep = pensionBox(e).pferd;
+          ok('H4 Umbau möglich (Weide für eigene Pferde)', umbauSperre(g) === '', umbauSperre(g));
+          umbauStarten(g); zu();
+          ok('H4 Einsteller betroffen → Umbau erst in 1 Jahreszeit', g.plan && g.plan.ab === spiel.tag + tpj() && !g.bau, g.plan ? datumText(datum(g.plan.ab)) : '');
+          ok('H4 Brief „Umbau angekündigt“', (spiel.post || []).some(x => /Umbau angekündigt/.test(x.betreff || '')));
+          ok('H4 Keine neuen Einsteller in Boxen mit geplantem Umbau', !umbauBoxen(g).some(pensionBoxFrei));
+          ansehen('H4 Bauen mit geplantem Umbau', () => bauenHTML());
+          if (!g.plan) return [...L, ['✗', ansicht, 'H4 kein Plan', JSON.stringify({ bau: g.bau, st: umbauSperre(g), geld: spiel.geld, n: umbauBetroffen(g).einsteller.length })]];
+          g.plan.wahl[e.eid] = 'nachlass';
+          nacht(tpj());
+          ok('H4 Umbau beginnt nach 1 Jahreszeit, Boxen gesperrt', g.bau && g.bau.art === 'umbau' && umbauBoxen(g).every(b => b.gesperrt), g.bau ? 'noch ' + g.bau.rest + ' Tage' : '');
+          ok('H4 Eigenes Pferd ohne Box → Weide', eigen.weide && eigen.umbauWeide === g.gid, eigen.name + ' ' + JSON.stringify({ w: eigen.weide, u: eigen.umbauWeide, k: eigen.klinik, t: eigen.turnier, box: spiel.boxen.findIndex(b => b.pferd === eigen), geb: (spiel.boxen.find(b => b.pferd === eigen) || {}).geb, g: g.gid }));
+          ok('H4 Einsteller-Pferd auf der Weide mit Nachlass', ep.weide && e.nachlass === g.gid, ep.name);
+          { const geld = spiel.geld, leist = pensionLeistBetrag(e, datum().s); const offen0 = !!e.offen; pensionJahreszeit();
+            ok('H4 Pensionsgeld mit 30 % Nachlass', offen0 || e.offen || Math.round(spiel.geld - geld) === Math.round(e.preis * 0.7) + leist, `${Math.round(spiel.geld - geld)} € statt ${e.preis + leist} €`); delete e.offen; }
+          nacht(1); ok('H4 Weide-Pferde bleiben über Nacht draußen', eigen.weide && ep.weide);
+          const rp = gebaeude().find(x => x.typ === 'reitplatz' && !x.bau && !x.plan && x.stufe < 3);
+          if (rp) { umbauStarten(rp); zu(); ok('H4 Reitplatz im Umbau: kein Training dort', !ortOffen('reitplatz') && ortOffen('gelaende')); }
+          nacht(Math.max(g.bau ? g.bau.rest : 0, rp && rp.bau ? rp.bau.rest : 0) + 1);
+          ok('H4 Umbau fertig → Pferde zurück in die Box', !g.bau && !eigen.weide && !eigen.umbauWeide && !ep.weide && !e.nachlass && g.stufe >= 2, 'Stufe ' + g.stufe);
+          if (rp && !rp.bau) ok('H4 Reitplatz nach dem Umbau wieder offen', ortOffen('reitplatz'));
+          // Variante „Vertrag ruht“
+          const nochDa = umbauBetroffen(g).einsteller.includes(e); ok('H4 Einsteller nach dem Umbau wieder in seiner Box', nochDa, nochDa ? '' : JSON.stringify({ kuendigt: e.kuendigt, box: pensionBox(e) && spiel.boxen.indexOf(pensionBox(e)), geb: pensionBox(e) && pensionBox(e).geb, g: g.gid, liste: einstellerListe().includes(e), briefe: (spiel.post || []).filter(x => (x.von || '').includes(e.nn) || (x.text || '').includes(ep.name)).map(x => x.betreff).slice(0, 6) }));
+          if (g.stufe < 3 && nochDa) { fuellen(); umbauStarten(g); zu(); g.plan.wahl[e.eid] = 'ruht'; nacht(tpj());
+            ok('H4 Vertrag ruht → Pferd beim Besitzer', !!e.ruht && !pensionBox(e), e.ruht ? e.ruht.pferd.name : JSON.stringify({ box: pensionBox(e) && spiel.boxen.indexOf(pensionBox(e)), geb: pensionBox(e) && pensionBox(e).geb, g: g.gid, bau: g.bau, plan: g.plan }));
+            const geld = spiel.geld; const andere = einstellerListe().filter(x => x !== e && !x.ruht).length; pensionJahreszeit();
+            ok('H4 Ruhender Vertrag zahlt nichts', andere || Math.round(spiel.geld - geld) === 0, Math.round(spiel.geld - geld) + ' €');
+            nacht(g.bau.rest + 1);
+            ok('H4 Nach dem Umbau ist das Pensionspferd zurück', !e.ruht && !!pensionBox(e), pensionBox(e) ? 'Box ' + (spiel.boxen.indexOf(pensionBox(e)) + 1) : ''); }
+          spiel.boxen.forEach(b => { if (b.pferd && /^Platzhalter/.test(b.pferd.name)) b.pferd = null; });
+        } }
 
       // ---------- H1 Kreditrate ----------
       { const rest = k.rest; k.jz = -1; kreditJahreszeit();

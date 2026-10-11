@@ -179,6 +179,16 @@ const path = require('path');
             ok('H6 Nach der Ruhe wieder offen, Gras gewachsen', !w.gesperrt && w.ruhtBis == null && w.gras > g0, `Gras ${g0} → ${w.gras} %`); }
           else ok('H6 Nachsäen außerhalb Frühling/Herbst gesperrt', weideNachsaeen(w) !== ''); }
         ansehen('H6 hvw – Hof – Weiden', () => weidenHTML()); }
+      // ---------- H6 Sandpaddocks ----------
+      { spiel.hof.ha += 1; spiel.hof.bauHa += 1; const n0 = paddocks().length; const b1 = bauStarten('sandpaddock', 1), b2 = bauStarten('sandpaddock', 2); zu(); let z = 0; while (gebaeude().some(g => g.typ === 'sandpaddock' && g.bau) && z++ < 3 * tpj()) nacht(1);
+        ok('H6 Zwei Sandpaddocks gebaut', paddocks().length === n0 + 2, paddocks().map(g => paddockName(g) + ' (Platz ' + paddockPlatz(g) + ')').join(', ') + ' gebaut: ' + b1 + '/' + b2);
+        const eigene = () => spiel.boxen.filter(b => b.pferd && !b.tot && !fremd(b.pferd) && !b.pferd.klinik && !inQuarantaene(b.pferd));
+        for (let i = eigene().length; i < 2; i++) { const fb = spiel.boxen.find(b => boxFrei(b) && !b.quar); if (fb) { fb.pferd = neuesPferd({ rasse: 'araber', geschlecht: 'Wallach', alter: 9, name: 'Paddi' + i }); fb.pferd.pflege = erzeugePflege(fb.pferd); } }
+        const eig = eigene().slice(0, 2), g1 = paddocks()[n0], g2 = paddocks()[n0 + 1];
+        if (eig.length === 2 && g1 && g2) { eig.forEach(b => { if (b.pferd.weide) vonWeideHolen(b); }); eig[0].pferd.paddock = { seit: spiel.tag, pid: g1.gid }; eig[1].pferd.paddock = { seit: spiel.tag, pid: g2.gid };
+          ok('H6 Pferde in verschiedenen Sandpaddocks', paddockPferde(g1).includes(eig[0].pferd) && paddockPferde(g2).includes(eig[1].pferd));
+          nacht(1); ok('H6 Im Sandpaddock kein Box-Abzug', (eig[0].pferd.boxTage || 0) === 0 && /Sandpaddock/.test(JSON.stringify(eig[0].pferd.wohlLog || {})));
+          eig.forEach(b => delete b.pferd.paddock); } }
 
       // ---------- H1 Kreditrate ----------
       { const rest = k.rest; k.jz = -1; kreditJahreszeit();

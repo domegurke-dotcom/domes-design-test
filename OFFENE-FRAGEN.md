@@ -59,6 +59,19 @@ Zu jeder Frage steht die Lösung, die Claude vorerst gewählt hat. Dome beantwor
 
 17. ✅ **Kreditlaufzeit (Dome, v232):** Hofkredit 10 statt 5 Jahre (40 Raten) → Rate für 10.000 € nur noch 304,56 € statt 554,15 € je Jahreszeit (Zinsen gesamt ca. 2.180 € statt 1.080 €). Weitere Kredite wählbar 2 / 3 / 5 / 10 Jahre (Standard 5). Laufende Kredite behalten ihre Laufzeit.
 
+## Hof-Ausbau H5 (Pension) – von Claude vorerst so entschieden (11.10.2026, v251)
+1. **Weidegang der Pensionspferde** macht der Hof – im Spiel bringst du sie selbst auf die Weide (Box – ppf – Ort – Weide; sie bleiben draußen, bis du sie holst). Mitarbeiter bringen Pferde noch nicht auf die Weide. *Empfehlung: so lassen; mit H6 (Weiden) könnte der Stallbursche den Weidegang übernehmen.*
+2. **Sandpaddock-Wunsch** gilt als erfüllt, sobald der Hof einen Sandpaddock hat (einen eigenen „Pferd steht im Sandpaddock“-Zustand gibt es noch nicht). **Hengste** stehen nur in der Paddockbox – „Sandpaddock mit Wallach“ aus dem Plan ist noch nicht umgesetzt. *Empfehlung: mit H6 nachziehen.*
+3. **„Bessere Einstreu“** als Zusatzleistung fehlt noch – Einstreu kommt erst mit H6. *Empfehlung: dort ergänzen (30 €/Jz).*
+4. **Zusatzleistungen auf jedem Hof:** Laut H7 sind Zusatzleistungen ein Vorteil des Pensionsstalls. Jetzt kann jeder Hof sie anbieten. *Empfehlung: in H7 auf den Pensionsstall beschränken (andere Höfe: nur Box).*
+5. **Pensionsplätze ab Start:** Beim „Alten Pensionsstall“ sind Plätze von Anfang an angeboten, auf anderen Höfen muss man „Pensionsplätze anbieten“ anhaken.
+6. **Keine ungeplante Bedeckung** zwischen Pensionspferden und eigenen Pferden auf der Weide (wäre in echt ein großer Ärger – im Spiel ausgeschlossen).
+7. **Kosten:** Tierarzt, Hufschmied, Klinik und Futterberatung für Pensionspferde zahlt der Besitzer (Bericht statt Rechnung). Kommt der Hufschmied am selben Tag auch zu eigenen Pferden, zahlt der Hof die Anfahrt. Mittel aus der eigenen Stallapotheke zahlt der Hof (dafür gibt es die Leistung „Medikamente geben“).
+8. **Besitzer ruft selbst den Tierarzt**, sobald eine Krankheit bemerkt wurde (am nächsten Tag) – Kolik mit OP: Besitzer bringt das Pferd in die Klinik.
+9. **Neuer Einsteller ohne Bluttest:** 8 % Risiko, dass er eine ansteckende Krankheit mitbringt (wie Privatkauf); „nachreichen“: Ergebnis nach 2 Tagen, bei positiv Quarantäne.
+10. **Zahlen** (bitte prüfen): Besuchsrate der Besitzer 60 % der Tage, 75 % Einstellerinnen, Anfrage-Chance 3 % je freier Box und Tag (Pensionsstall Stufe 1 mit 6 freien Boxen ≈ 15 % am Tag, also etwa jede Woche eine Anfrage), Zufriedenheit Start 70, Beschwerde unter 35, Kündigung unter 20.
+11. **Pensionspferd stirbt** oder wird vom Tierschutz beschlagnahmt: Vertrag endet sofort, Ansehen −15, das Pferd kommt nicht auf den eigenen Pferdefriedhof.
+
 ## 📌 Notiz von Dome (7.10.2026) – Veredler-Rassen: erst NACH dem Hof-Ausbau (H1–H8) starten (Dome, 7.10.2026)
 Wenn alle Fütterungsfragen beantwortet sind, Dome Bescheid geben: **Alle fehlenden Rassen ergänzen, die für die Veredelung bestehender Rassen im Spiel wichtig sind** – jeweils komplett mit Fell- und Farbmustern, Erbkrankheiten, Eigenheiten/Veranlagungen, Hufqualität, Körperbau (Gewicht), Futtertyp usw. (Grundsatz aus CLAUDE.md).
 Kandidaten (vor dem Start mit Dome abstimmen, Aufwand je Rasse nennen):

@@ -12,7 +12,7 @@ Plan gespeichert bei Spielversion 208. **Noch nicht starten:** erst nach Fütter
 - [x] Etappe H2 – Hof-Struktur, Land, Hofplan (groß) – v222, von Claude per Skript getestet, Domes Test steht noch aus
 - [x] Etappe H3 – Bauen, Stufen, Verfall (groß) – v223, von Claude per Skript getestet, Domes Test steht noch aus
 - [ ] Etappe H4 – Umbau-Folgen (mittel)
-- [ ] Etappe H5 – Pension und Einsteller (groß)
+- [x] Etappe H5 – Pension und Einsteller (groß) – v251, von Claude per Skript getestet, Domes Test steht noch aus
 - [ ] Etappe H6 – Weiden, Gras, Futterwiese, Einstreu (mittel)
 - [ ] Etappe H7 – Stallarten: Bedingungen, Vorteile, Strafe (groß)
 - [ ] Etappe H8 – Hausturnier und Verkaufsrennen (mittel)
@@ -104,6 +104,8 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 6. Versteckte Zufriedenheit je Einsteller (wie Ansehen, nur Admin sieht Zahl): sinkt durch Hunger, Mist, Verletzung, Ansteckung, vollen Reitplatz/Longieren, Umbau ohne Lösung; steigt durch Stufe, Halle, Service, Hausturniere. Niedrig → Beschwerdebrief → Kündigung zum Ende der Jahreszeit.
 7. Krankes Pensionspferd: Brief an den Besitzer, der zahlt den Tierarzt. Hofregel Bluttest: vorher einreichen / nachreichen / nicht nötig – strenger = weniger Anfragen, weniger Ansteckungsrisiko.
 8. Bezahlung automatisch zu Beginn jeder Jahreszeit, manchmal verspätet (Mahnung wie bei Rechnungen). Finanzen: eigene Zeile „Pension“.
+
+**Umgesetzt (v251, 11.10.2026):** hvw – Hof – Pension (anbieten, Plätze, Preis je Stufe, Bluttest-Regel, Zusatzleistungen, Einsteller-Liste mit Kündigen, offene Anfragen); Anfragen per Brief (Pferd ansehen / Zusagen / Absagen); Einzug am nächsten Morgen (Quarantäne zuerst); Pensionspferd mit Steckbrief, Besitzer im Steckbrief, Sperren für Zucht/Verkauf/Training/Anhänger/Labor; Kasten „Pensionspferd von …“ mit heutigen Aufgaben in der Versorgung, „Pension heute“ im Stall; Besitzer-Besuche (putzen, reiten, Reitplatz belegt); Zufriedenheit, Beschwerde, Kündigung; Bezahlung je Jahreszeit mit Verzug/Mahnung; Kosten für Tierarzt/Hufschmied/Klinik beim Besitzer; Übersicht je Hof mit Einstellern; Gesamttest um H5 ergänzt. Offene Punkte (Weidegang durch Mitarbeiter, Sandpaddock, Einstreu, Zusatzleistungen nur Pensionsstall) in `OFFENE-FRAGEN.md`.
 
 ### H5 – Feinplanung (Claude, 6.10.2026 abends – Fragen unten bis Sonntag beantworten)
 **Datenmodell (je Hof, in `HOF_FELDER`):**

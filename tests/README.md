@@ -1,7 +1,7 @@
 # Tests
 
 ## Gesamttest Hof-Ausbau (`hof-gesamttest.js`)
-Spielt mit Playwright (Chromium) ein neues Spiel über gut 2 Spieljahre durch: Pensionsstall kaufen, 4 Pferde, Stallbursche und Hofhelfer, Bauaufträge, Land, Sondertilgung, zentrales Konto, zweiten Hof beim Makler kaufen, Umzug per Anhänger, auf beiden Höfen spielen, Speichern und Neuladen.
+Spielt mit Playwright (Chromium) ein neues Spiel über gut 2 Spieljahre durch: Pensionsstall kaufen, 4 Pferde, Stallbursche und Hofhelfer, Bauaufträge, Land, Sondertilgung, zentrales Konto, zweiten Hof beim Makler kaufen, Umzug per Anhänger, auf beiden Höfen spielen, Speichern und Neuladen. Ab H5: Pension auf Hof 1 (bis 4 Einsteller, Anfragen werden wie vom Spieler zugesagt, Pensionspferde täglich geputzt/ausgekratzt) – geprüft wird: jeder Einsteller hat genau ein Pferd im Stall, jedes Pensionspferd einen Einsteller, Reservierungen nur für zugesagte Anfragen, kein Pensionspferd auf dem eigenen Friedhof. Die Zeile „Pension“ im Protokoll zeigt Einsteller, Zufriedenheit und Ansehen.
 
 In jedem Prüfschritt (`pruefe`) wird kontrolliert:
 - Kasse jedes Hofs = Startgeld + alle Buchungen in den Finanzen

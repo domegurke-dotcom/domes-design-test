@@ -860,7 +860,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "265";
+  const SPIEL_VERSION = "266";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -868,9 +868,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=265"></script>
-<script src="kopfteile.js?v=265"></script>
-<script src="kopfalter.js?v=265"></script>
+<script src="pferd.js?v=266"></script>
+<script src="kopfteile.js?v=266"></script>
+<script src="kopfalter.js?v=266"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -8432,10 +8432,11 @@
       const e = { eid: "e" + Math.random().toString(36).slice(2, 8), vn: a.vn, nn: a.nn, w: a.w, pid: p.id, stufe: boxenStufe(spiel.boxen[i]), leistungen: { ...a.leistungen }, haltung: a.haltung, bewegenAnteil: a.bewegenAnteil,
         zufr: PENSION.start, seit: jzJetzt(), einzug: spiel.tag, bluttest: a.bluttest, kuendigt: null, log: [], befSeen: [] };
       e.preis = R.preis[e.stufe] || PENSION_PREIS[e.stufe];
-      p.einsteller = e.eid; p.putzzeug = "besitzer"; einstellerListe().push(e);   // Dome: Pensionspferde haben immer eigenes Putzzeug vom Besitzer if (e.haltung === "weide") p.weidegang = "taeglich";
+      p.einsteller = e.eid; p.putzzeug = "besitzer"; einstellerListe().push(e); if (e.haltung === "weide") p.weidegang = "taeglich";   // Dome: Pensionspferde haben immer eigenes Putzzeug vom Besitzer
       nb.pferd = p; nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false;
       quarantaeneNeu(nb);
-      if (Math.random() < PENSION.risiko[a.bluttest]) { neuzugang(p, "Einsteller"); if (a.bluttest === "nachreichen") e.blutTag = spiel.tag + 2; }   // nachreichen: Ergebnis nach 2 Tagen
+      if (Math.random() < PENSION.risiko[a.bluttest]) neuzugang(p, "Einsteller");
+      if (a.bluttest === "nachreichen") e.blutTag = spiel.tag + 2;   // Dome (v266): der nachgereichte Bluttest kommt immer – Ergebnis nach 2 Tagen
       e.befSeen = befundListe(p).map(b => b.id);
       // erste Zahlung: anteilig für den Rest der Jahreszeit
       const rest = (tpj() - datum().t + 1) / tpj(), box = Math.round(e.preis * rest), leist = Math.round(pensionLeistBetrag(e) * rest);
@@ -8516,7 +8517,9 @@
     const A = spiel.anlage || {}, H = (spiel.pensionHeute = { tag: spiel.tag, reiter: [] });
     einstellerListe().forEach(e => {
       const b = pensionBox(e); if (!b || b.tot) return; const p = b.pferd;
-      if (e.blutTag === spiel.tag) { delete e.blutTag; const l = befundListe(p).filter(x => ANSTECKEND[x.art]);
+      if (e.bluttest === "nachreichen" && !e.blutDa && e.blutTag == null) e.blutTag = spiel.tag;   // ältere Einsteller: Bluttest fehlte noch
+      if (e.blutTag != null && e.blutTag <= spiel.tag) { delete e.blutTag; e.blutDa = true; const l = befundListe(p).filter(x => ANSTECKEND[x.art]);
+        if (!l.length) brief(eName(e), `Bluttest von ${p.name}`, `wie versprochen hier der Bluttest von <b>${esc(p.name)}</b>: alles in Ordnung, keine ansteckende Krankheit.`, { w: e.w, pferde: [p] });
         if (l.length) { l.forEach(x => { if (!x.diagnose) { x.diagnose = spiel.tag; x.bemerkt = x.bemerkt || { von: "Labor", tag: spiel.tag }; } }); p.quarantaene = spiel.tag;
           brief("Tierarztpraxis", `Bluttest von ${p.name}: positiv`, `der nachgereichte Bluttest von <b>${esc(p.name)}</b> zeigt: ${l.map(x => KRANK[x.art].n).join(", ")}. ${esc(p.name)} sollte sofort in Quarantäne – die Behandlung zahlt ${eName(e)}.`, { pferde: [p] }); } }
       // Besitzer ruft den Tierarzt, sobald eine Krankheit bemerkt wurde (zahlt selbst)
@@ -8713,7 +8716,7 @@
     const A = pensionAufgaben(e, box), gb = PL_REIHE.filter(k => e.leistungen[k] && leistungMoeglich(k));
     return `<div class="pn-kasten"><b>🏡 Pensionspferd von ${esc(eName(e))}</b><small>${HALTUNG_TXT[e.haltung]} ist ${ePron(e).ihr === "ihr" ? "ihr" : "ihm"} wichtig${gb.length ? ` · gebucht: ${gb.map(k => PENSION_LEISTUNG[k].n).join(", ")}` : ""}${e.besuchTag === spiel.tag ? ` · ${esc(e.vn)} war heute da${(spiel.pensionHeute || {}).tag === spiel.tag && spiel.pensionHeute.reiter.some(x => x.eid === e.eid) ? ", hat geputzt und ist geritten" : " und hat geputzt"}` : ""}${e.kuendigt != null ? " · 📦 zieht zum Ende der Jahreszeit aus" : ""}</small>
       ${A.length ? `<div class="pn-aufgaben">Heute: ${A.map(a => `<span class="stat ${a.ok ? "ok" : "warn"}">${a.ok ? "✓" : "○"} ${a.txt}</span>`).join(" ")}${A.some(a => a.k === "decke" && !a.ok) ? ` <button class="mini-knopf" id="pnDecke">🧣 Decke gewechselt</button>` : ""}</div>` : ""}
-      <small>Zucht, Verkauf, Training und Anhänger: nur der Besitzer. Tierarztkosten zahlt ${ePron(e).sie}.</small></div>`;
+      <small>Zucht, Verkauf, Training und Anhänger: nur der Besitzer. Tierarztkosten zahlt ${ePron(e).sie}.</small>${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTag <= spiel.tag ? "heute" : e.blutTag - spiel.tag === 1 ? "morgen" : `in ${e.blutTag - spiel.tag} Tagen`}.</small>` : ""}</div>`;
   }
   // Stall (Boxenübersicht): offene Pensionsaufgaben von heute
   function pensionStallHTML() {

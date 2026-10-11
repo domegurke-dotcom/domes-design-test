@@ -45,10 +45,15 @@ z. B. „pmk - Pferdehändler“ oder „asr - Putzkiste“.
 | **Enzyklopädie** oder **enz** | hm - Enzyklopädie |
 | **Rassen** | enz - Rassen |
 | **Rassenansicht** oder **ras** | enz - Rassen - eine Rasse antippen (z. B. Araber: Stockmaßbild, Gene im Admin wählen) |
-| **Vererbung** oder **vrb** | enz - Vererbung (nur im Adminmodus) |
 | **Berechnungen zum Nachschlagen** oder **bzn** | enz - Berechnungen zum Nachschlagen (nur im Adminmodus) |
+| **Vererbung** oder **vrb** | bzn - Thema „Vererbung und Gene“ (seit v280 kein eigener Reiter mehr) |
 | **Gnadenhof** oder **gdh** | hm - Gnadenhof |
 | **Pferdefriedhof** oder **pfh** | hm - Pferdefriedhof |
+
+## Begriffe für Bedienelemente
+| Begriff | Was ist gemeint |
+|---|---|
+| **Aufklapp-Bereich** (auch **Akkordeon**) | eine Zeile mit kleinem schwarzem Pfeil ▶ davor – antippen, dann klappt der Inhalt nach unten auf (Pfeil zeigt dann ▼), nochmal antippen klappt ihn wieder zu. Beispiel: bzn – die Themen und ihre Einträge |
 
 ## Beispiele
 - „**asr - Putzkiste**: Der Kamm soll …“

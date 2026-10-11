@@ -871,7 +871,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "285";
+  const SPIEL_VERSION = "286";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -879,9 +879,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=285"></script>
-<script src="kopfteile.js?v=285"></script>
-<script src="kopfalter.js?v=285"></script>
+<script src="pferd.js?v=286"></script>
+<script src="kopfteile.js?v=286"></script>
+<script src="kopfalter.js?v=286"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -8505,8 +8505,9 @@
     bewegen: { n: "Bewegen", ico: "🏇", preis: 30, jeTag: true, chance: .25, info: "der Bereiter trainiert an so vielen Tagen, wie der Besitzer bucht (30 € je Tag: 25 € Bereiter + 20 % Vermittlung)" },
     decke: { n: "Decke wechseln", ico: "🧣", preis: 20, chance: .4, saison: [2, 3], info: "Herbst und Winter: jeden Tag Decke wechseln (Pfleger/Pferdewirt oder du)" },
     medizin: { n: "Medikamente geben", ico: "💊", preis: 20, chance: .2, info: "bei Krankheit den Behandlungsplan des Tierarztes umsetzen" },
-    paddockbox: { n: "Paddockbox", ico: "🏡", preis: 50, chance: .35, info: "Paddockbox statt normaler Box (nur mit Paddockboxen)" } };
-  const PL_REIHE = ["putzen", "pfleger", "bewegen", "decke", "medizin", "paddockbox"];
+    paddockbox: { n: "Paddockbox", ico: "🏡", preis: 50, chance: .35, info: "Paddockbox statt normaler Box (nur mit Paddockboxen)" },
+    einstreu: { n: "Bessere Einstreu", ico: "🛏️", preis: 30, chance: .25, info: "staubarme Einstreu (Späne, Pellets oder Leinstroh/Hanf) statt Stroh – aus deinem Lager" } };   // H6 (v286)
+  const PL_REIHE = ["putzen", "pfleger", "bewegen", "decke", "medizin", "paddockbox", "einstreu"];
   const PENSION = { anfrage: 0.33, stufe: [0, 1, 1.4, 2], halle: 0.3, roundpen: 0.1, blut: { vorher: 0.7, nachreichen: 0.9, keiner: 1 }, risiko: { vorher: 0, nachreichen: 0.03, keiner: 0.03 },
     besuch: 0.6, verspaetet: 0.1, start: 70, beschwerde: 35, kuendigung: 20, hengst: 0.1, maxAnfragen: 2, anfrageTage: 3, mahnZins: 0.1, voll: 4, entsch: 1, feedback: 0.5 };
   // Tempo-unabhängig (Dome, v252): 0,33 Anfragen je freier Box und Jahreszeit (6 freie Boxen ≈ 2 je Jahreszeit), mindestens 1 garantiert
@@ -8875,6 +8876,7 @@
     if (leistungFaellig(e, "pfleger")) l.push({ k: "pfleger", txt: `${HUFKR_ICO} Hufe auskratzen`, ok: p.ausgekratzt === t });
     if (leistungFaellig(e, "decke")) l.push({ k: "decke", txt: "🧣 Decke wechseln", ok: e.decke === t || pflegeTeam() });
     if (leistungFaellig(e, "bewegen")) l.push({ k: "bewegen", txt: `🏇 Bereiter ${bereiterStand(p)}/${bewegenTage(e)}`, ok: bereiterStand(p) >= bereiterSoll(p) });
+    if (e.leistungen.einstreu) l.push({ k: "einstreu", txt: "🛏️ bessere Einstreu", ok: !!EINSTREU[b.einstreu] && !EINSTREU[b.einstreu].staub && !b.ohneEinstreu });   // H6
     if (e.leistungen.medizin && befundListe(p).some(x => x.diagnose && x.beh && !(KRANK[x.art] || {}).chronisch)) l.push({ k: "medizin", txt: "💊 behandeln", ok: !!(p.behHeute && p.behHeute.tag === t && Object.keys(p.behHeute.a || {}).length) });
     return l;
   }
@@ -8973,11 +8975,13 @@
   function einstreuNacht(b) {   // jede Nacht je Box mit Pferd (nicht auf der Weide): Einstreu verbrauchen
     if (!b.pferd || b.tot) { delete b.einstreu; delete b.ohneEinstreu; return; }
     if (b.pferd.klinik || b.pferd.weide) return;
-    const F = futterkammer(); if (!b.einstreu) { const da = einstreuDa(); if (da.length) b.einstreu = da[0]; }   // noch nicht gewählt: was da ist
+    const F = futterkammer(), E0 = fremd(b.pferd) && einstellerVon(b.pferd), besser = !!(E0 && E0.leistungen && E0.leistungen.einstreu);
+    if (!b.einstreu || (besser && EINSTREU[b.einstreu] && EINSTREU[b.einstreu].staub)) { const da = einstreuDa(), ds = da.filter(k => !EINSTREU[k].staub); if (besser && ds.length) b.einstreu = ds[0]; else if (!b.einstreu && da.length) b.einstreu = da[0]; }   // noch nicht gewählt: was da ist · Pension „bessere Einstreu“: staubarm, wenn vorhanden
     const E = EINSTREU[b.einstreu];
     if (E && (F.lager[b.einstreu] || 0) >= E.kg) { F.lager[b.einstreu] = Math.round((F.lager[b.einstreu] - E.kg) * 1000) / 1000; delete b.ohneEinstreu; }
     else { b.ohneEinstreu = true; wohlAendern(b.pferd, -EINSTREU_OHNE.wohl, "keine Einstreu"); if (!F.warn.einstreu) { F.warn.einstreu = "leer"; brief("Hofverwaltung", "Keine Einstreu mehr", `in der Futterkammer ist ${E ? `kein ${esc(E.n)}` : "keine Einstreu"} mehr. Ohne Einstreu stehen die Pferde auf dem nackten Boden – das Wohlbefinden sinkt und Strahlfäule wird häufiger. Nachkaufen: Hofverwaltung → Hof → Futterkammer → Einstreu.`); } }
     if (!b.ohneEinstreu && F.warn.einstreu) delete F.warn.einstreu;
+    if (besser && (b.ohneEinstreu || !EINSTREU[b.einstreu] || EINSTREU[b.einstreu].staub)) eZufr(E0, -2, "bessere Einstreu gebucht, aber nur Stroh");   // H6: Zusatzleistung nicht erfüllt
   }
   function einstreuWahl(box, danach) {   // Fenster: welche Einstreu für diese Box?
     const F = futterkammer();
@@ -9251,7 +9255,7 @@
       <p><b>Umbau</b> eine Stufe höher: Preisunterschied + ${prozent(UMBAU_AUFSCHLAG)}, halbe Bauzeit, je Abschnitt (Erstbau und jeder Anbau einzeln); die Boxen sind gesperrt. <b>Umbau-Folgen (H4):</b> Pferde ziehen beim Start in freie Boxen (normale vor Paddockboxen, nicht Quarantäne/Abfohlbox); eigene ohne Box kommen auf die Weide (ohne Weide und ohne freie Box kein Umbau – vorher per Anhänger zu einem anderen Hof). Sind Einsteller betroffen, beginnt der Umbau erst 1 Jahreszeit nach dem Auftrag (Brief); ohne freie Box braucht jeder Einsteller eine Lösung: Weide mit ${prozent(UMBAU.nachlass)} Nachlass aufs Boxengeld oder der Spieler kündigt; ohne Lösung kündigt der Einsteller selbst und zieht zum Umbau-Beginn aus (Ansehen ${UMBAU.ansehenOhne}). Zufriedenheit: Umzug ${UMBAU.zufrUmzug}, Nachlass ${UMBAU.zufrNachlass}. Keine neuen Einsteller in Boxen mit geplantem Umbau. Absagen vor dem Start: volle Erstattung. Reitplatz/Reithalle/Roundpen im Umbau: dort kein Training. Nach dem Umbau kommen die Weide-Pferde zurück in ihre Box. <b>Unterhalt</b> ${prozent(UNTERHALT)} des Baupreises je Jahreszeit. <b>Verfall</b> je Jahreszeit Stufe 1/2/3: −${VERFALL.slice(1).map(x => String(x).replace(".", ",")).join(" / −")} Zustand (Start-Stall beginnt bei 85 %); Warnbrief unter 40 %. <b>Reparatur:</b> Handwerker kommt am nächsten Tag, braucht 1 Tag (ab 50 % Zustand) bzw. 2 Tage (darunter), danach 100 %; je 10 Punkte 2 % des Baupreises; Hofhelfer (${fmt(MA_TYP.hofhelfer.gehalt)}/Jz) +${HOFHELFER_REPARATUR} Punkte je Arbeitstag am schlechtesten Gebäude.</p>
       <p><b>Weiden (H6):</b> je Hof mehrere Weiden mit Grasstand und Matsch (Hof → Weiden). Gras je Tag (Standardtempo, wird nach Spieltempo umgerechnet): wächst Frühling/Sommer/Herbst/Winter +${GRAS.wachsen.join(" / +")} (matschig nur halb, nachgesät ×${String(GRAS.nachsaeenWachs).replace(".", ",")} für 1 Jahr), Verbrauch ${GRAS.verbrauch} × belegte ha (${haTxt(WEIDE_BEDARF[0])} je Großpferd, ${haTxt(WEIDE_BEDARF[1])} je Pony) ÷ Weidefläche. Gras unter ${GRAS.wenig} % → Heu nötig wie im Winter. Überbesetzt: Matsch +${GRAS.matschPlus}/Tag (Herbst/Winter ×2), sonst −${GRAS.matschMinus} (leer −${GRAS.matschLeer}); ab ${GRAS.matschAb} % matschig: Mauke und Strahlfäule ×1,5, Würmer ×1,3, Streit ×1,3. Abäppeln (Spieler oder Pferdepfleger, 1 Weide/Tag): Würmer ×0,6 für 1 Jahreszeit. Sperren: wächst ohne Verbrauch, trocknet ab. Nachsäen im Frühling und Herbst (einmal je Jahreszeit und Weide, Weide muss leer sein) ${fmt(GRAS.nachsaeen)}/ha: danach ruht die Weide ⅓ Jahreszeit (4/7/10 Tage je Jz → 1/2/3 Tage), dann Gras +${GRAS.nachsaeenPlus}. Neue Weide oder vergrößern beim Einzäunen; Pachtende: Weiden schrumpfen aufs vorhandene Weideland.</p>
       <p><b>Sandpaddocks (H6):</b> jeder gebaute Sandpaddock (Hof → Bauen, auch mehrere) ist ein eigener Auslauf mit eigener Gruppe; Platz je Stufe 1/2/3: ${PADDOCK_PLATZ.slice(1).join(" / ")} Pferde. Zuteilen über Box → Pflege → Ort → Sandpaddock (Auswahl zeigt, wer dort steht und wie viel Platz frei ist), zurück über dieselbe Kachel. Das Pferd bleibt sonst wie in der Box versorgt (Futter, Mist), bekommt aber keinen Box-Abzug: Wohlbefinden +3 mit Gesellschaft (+1 allein) + 2 × temperamentvoll je Nacht; Herdenregeln (Streit, ungeplante Bedeckung) je Sandpaddock. Hengst mit Stute: Warnung (besser mit Wallach). Gesperrt bei Quarantäne und Boxenruhe. Hufrehe-Warnung im Frühling bietet „Lieber Sandpaddock“ an.</p>
-      <p><b>Einstreu (H6):</b> Sorten in der Futterkammer (Gruppe Einstreu): ${Object.keys(EINSTREU).map(k => `${FUTTER[k].n} ${EINSTREU[k].kg} kg je Box und Tag à ${String(FUTTER[k].preis.toFixed(2)).replace(".", ",")} €`).join(" · ")}. Wirkung: Stroh staubt – Husten ×1,3 (empfindliche Atemwege ×2); Strahlfäule Pellets ×0,7, Leinstroh/Hanf ×0,8; ohne Einstreu Wohlbefinden −${EINSTREU_OHNE.wohl} je Nacht und Strahlfäule ×${EINSTREU_OHNE.strahl} (Brief „Keine Einstreu mehr“). Wahl je Box: zieht ein Pferd ein, fragt das Spiel, welche Einstreu (nur eine Sorte im Lager → automatisch); ändern in Box → Pflege → Versorgung. Verbrauch jede Nacht je Box mit Pferd (nicht auf der Weide, nicht in der Klinik), zählt in den Platz der Futterkammer. Startvorrat einmal ${EINSTREU_START} kg Einstreu-Stroh. Wird die Box leer, wird beim nächsten Pferd neu eingestreut.</p>
+      <p><b>Einstreu (H6):</b> Sorten in der Futterkammer (Gruppe Einstreu): ${Object.keys(EINSTREU).map(k => `${FUTTER[k].n} ${EINSTREU[k].kg} kg je Box und Tag à ${String(FUTTER[k].preis.toFixed(2)).replace(".", ",")} €`).join(" · ")}. Wirkung: Stroh staubt – Husten ×1,3 (empfindliche Atemwege ×2); Strahlfäule Pellets ×0,7, Leinstroh/Hanf ×0,8; ohne Einstreu Wohlbefinden −${EINSTREU_OHNE.wohl} je Nacht und Strahlfäule ×${EINSTREU_OHNE.strahl} (Brief „Keine Einstreu mehr“). Wahl je Box: zieht ein Pferd ein, fragt das Spiel, welche Einstreu (nur eine Sorte im Lager → automatisch); ändern in Box → Pflege → Versorgung. Verbrauch jede Nacht je Box mit Pferd (nicht auf der Weide, nicht in der Klinik), zählt in den Platz der Futterkammer. Startvorrat einmal ${EINSTREU_START} kg Einstreu-Stroh. Wird die Box leer, wird beim nächsten Pferd neu eingestreut. <b>Pension:</b> Zusatzleistung „Bessere Einstreu“ ${fmt(PENSION_LEISTUNG.einstreu.preis)} je Jahreszeit – die Box bekommt automatisch staubarme Einstreu aus dem Lager (Späne, Pellets oder Leinstroh/Hanf); gibt es nur Stroh, Zufriedenheit −2 je Nacht.</p>
       <p><b>Wirkung der Stufe:</b> Wohlbefinden je Nacht in der Box: Stufe 1 −0,5, Stufe 3 +0,5, Zustand unter 40 % −0,5, Paddockbox +0,5. Verletzungsrisiko in der Box × 1,3 / 1 / 0,8, Zustand unter 70 % × 1,1, unter 40 % × 1,3. Mitarbeiter-Zufriedenheit je Jahreszeit: Ø Stufe unter 1,5 −3, ab 2,5 +3, Ø Zustand unter 50 % −3. Quarantänestall: Pferde dort stecken niemanden an und werden nicht angesteckt. Pensionspreis nach Stufe kommt mit H5.</p>
       <p><b>Bauland und Weideland</b> (Dome, v225): Bauland ${fmt(BAULAND_PREIS)}/ha (nur kaufen), Weideland ${fmt(LAND_PREIS)}/ha oder Pacht ${fmt(PACHT_PREIS)}/ha je Jahreszeit. Platzbedarf auf dem Bauland: Wohnhaus/Hofplatz ${haTxt(HOFPLATZ)}, Stall ${haTxt(0.1)} je 6 Boxen, Paddockboxen ${haTxt(0.15)} je 6, Reitplatz ${haTxt(0.1)}, Reithalle ${haTxt(0.15)}, Roundpen/Trail/Sandpaddock/Waschplatz/Lager/Sattelkammer/Quarantänestall/Abfohlbox je ${haTxt(0.05)}. Weide einzäunen nur auf Weideland. Start-Pensionsstall: 1 ha Bauland + 1 ha Weideland. Makler-Höfe: Bauland nach Bestand + 0,1 ha, auf ½ ha aufgerundet; Grundstück 1 ha Bauland.
         <b>Quarantänestall:</b> gekaufte Pferde (Markt, Auktion, Tierschutz) kommen zuerst in eine freie Quarantänebox und stehen 1 Jahreszeit unter Quarantäne; danach ziehen sie – ohne bekannte ansteckende Krankheit – automatisch in eine freie normale Box (Brief). Normale Umzüge nutzen den Quarantänestall nur, wenn sonst nichts frei ist.

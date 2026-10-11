@@ -8,11 +8,11 @@ Plan gespeichert bei Spielversion 208. **Noch nicht starten:** erst nach Fütter
 
 **Testspieler (Dome, 6.10.2026 abends): nicht mehr starten** – auch nicht nach H7 und nicht anbieten. Geprüft wird weiter mit `tests/hof-gesamttest.js`.
 
-- [x] Etappe H1 – Neuer Spielstart, Immobilien-Menü, Kredit (groß) – v221, von Claude per Skript getestet, Domes Test steht noch aus
-- [x] Etappe H2 – Hof-Struktur, Land, Hofplan (groß) – v222, von Claude per Skript getestet, Domes Test steht noch aus
-- [x] Etappe H3 – Bauen, Stufen, Verfall (groß) – v223, von Claude per Skript getestet, Domes Test steht noch aus
+- [x] Etappe H1 – Neuer Spielstart, Immobilien-Menü, Kredit (groß) – v221, von Claude per Skript getestet · Abnahmetest für Dome von Claude erledigt (v271, `tests/etappen-test.js`, Dome 11.10.2026) ✅
+- [x] Etappe H2 – Hof-Struktur, Land, Hofplan (groß) – v222, von Claude per Skript getestet · Abnahmetest für Dome von Claude erledigt (v271, `tests/etappen-test.js`, Dome 11.10.2026) ✅
+- [x] Etappe H3 – Bauen, Stufen, Verfall (groß) – v223, von Claude per Skript getestet · Abnahmetest für Dome von Claude erledigt (v271, `tests/etappen-test.js`, Dome 11.10.2026) ✅
 - [ ] Etappe H4 – Umbau-Folgen (mittel)
-- [x] Etappe H5 – Pension und Einsteller (groß) – v251, von Claude per Skript getestet, Domes Test steht noch aus
+- [x] Etappe H5 – Pension und Einsteller (groß) – v251, von Claude per Skript getestet · Abnahmetest für Dome von Claude erledigt (v271, `tests/etappen-test.js`, Dome 11.10.2026) ✅
 - [ ] Etappe H6 – Weiden, Gras, Futterwiese, Einstreu (mittel)
 - [ ] Etappe H7 – Stallarten: Bedingungen, Vorteile, Strafe (groß)
 - [ ] Etappe H8 – Hausturnier und Verkaufsrennen (mittel)

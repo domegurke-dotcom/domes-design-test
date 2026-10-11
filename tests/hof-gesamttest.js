@@ -2,7 +2,7 @@ const { chromium } = require('playwright');
 (async () => { const b = await chromium.launch();
  const pg = await b.newPage({ viewport: { width: 390, height: 844 } }); const errs=[]; pg.on('pageerror', e => errs.push(e.message + ' @ ' + (e.stack||'').split('\n')[1]));
  await pg.goto('file://' + require('path').resolve(__dirname, '..', 'index.html')); await pg.evaluate(()=>localStorage.clear()); await pg.reload();
- await pg.click('#smNeu'); await pg.fill('#chName','Dome'); await pg.click('#chLos'); await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName','Sonnenhof'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(200);
+ await pg.click('#smNeu'); await pg.fill('#chName','Dome'); await pg.click('#chLos'); await pg.click('#dlgKnoepfe button'); await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName','Sonnenhof'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(200);
  // Prüffunktionen im Spiel definieren
  await pg.evaluate(() => {
    window.START = { h1: 15000 }; window.PROT = [];

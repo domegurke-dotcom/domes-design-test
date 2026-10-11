@@ -106,3 +106,20 @@ Jede neue Rasse kommt komplett: `RASSEN` (Größe, Farben, Profil, Charakter), F
 **Fragen:** (a) Welche Rassen genau? (b) Sollen neue Rassen auch auf dem Pferdemarkt/bei Gestüten erscheinen oder nur über die Deckstation? *Empfehlung: beides, wie die anderen Rassen.* (c) Kopf: zeichnest du die neuen Köpfe, oder erst Spielkopf? *Empfehlung: erst Spielkopf, Köpfe nach und nach.*
 
 **✅ Domes Antworten Rassen (6.10.2026):** (a) **alle genannten** (Trakehner, Welsh Cob, Clydesdale, Fell-Pony, Dales-Pony, Anglo-Araber, Shagya-Araber) – genauso umfangreich wie die bestehenden: Zucht, Eigenschaften, Genetik, Reinrassigkeit/Zuchtbuch, Erbkrankheiten, Anfälligkeiten/Veranlagungen, Hufqualität, Gewicht, Futtertyp usw. (b) wie die bestehenden Rassen behandeln (Markt, Gestüte, Deckstation …). (c) erst Spielkopf, Domes Köpfe nach und nach. Start erst nach H8.
+
+## Hof-Ausbau H6/H7 – von Claude vorerst so entschieden (11.10.2026 abends, v283–v289, Dome nicht da)
+**H6 (fertig):**
+1. **Nachsäen:** Gras +30 kommt erst nach der Ruhezeit (frische Saat muss erst anwachsen), Wachstum +25 % für 1 Jahr wie bisher.
+2. **Sandpaddock-Platz:** Stufe 1/2/3 = 2/3/4 Pferde. Das Pferd im Sandpaddock wird weiter wie in der Box versorgt (Futter aus der Krippe, Mist in der Box), bekommt aber keinen Box-Abzug: Wohlbefinden +3 mit Gesellschaft, +1 allein. Herdenregeln (Streit, Bedeckung) je Sandpaddock. *Empfehlung: so lassen.*
+3. **Einstreu:** zählt in den Platz der Futterkammer (Strohlager); Brief „Keine Einstreu mehr“ einmal, bis wieder etwas da ist. Pferde auf der Weide verbrauchen keine Einstreu.
+4. **„Bessere Einstreu“ (Pension):** 30 € je Jahreszeit; nur Stroh da → Zufriedenheit −2 je Nacht.
+5. **Futterwiese:** Bauer „Lindner“ mäht am 1. Sommertag und am Tag ⌈0,7 × Tage je Jz⌉ (2. Schnitt nur bei Gras ≥ 60 %); Ertrag 150 kg/ha × Gras/70; Gras −60 je Schnitt.
+6. **Weide-Bild:** bis zu 6 Pferde der Weide, das gewählte vorne in der Mitte; das Boxschild ist in der Weide-Ansicht verdeckt (Boxenübersicht über ☰ oder den Pfeil).
+
+**H7 (Teil 1, v289):**
+7. **Förderung:** Im Plan steht „Rückzahlung der Förderung des letzten Jahres“, aber keine Höhe. *Gewählt: 300 € je Jahreszeit bei erfüllten Bedingungen; beim Statusverlust werden die letzten 4 Jahreszeiten zurückgebucht.* Passt die Höhe?
+8. **Bedingungen, die es noch nicht gibt** (Aufzucht-Offenstall, Rennbahn, Rennpferdetrainer, Westerntrainer) zählen vorerst als erfüllt („kommt später“). *Empfehlung: so lassen, bis sie gebaut werden.*
+9. **Zuchtstuten** = eigene Stuten 3–20 Jahre; **Deckhengst** = eigener Hengst ab 2 Jahren; **Rennpferde** = Vollblut, Araber, Achal-Tekkiner ab 2 Jahren; **Westernpferde** = Quarter Horse oder Pferd mit Western-Ausbildung.
+10. **Statusverlust:** Der Hof bleibt bei seiner Stallart, nur Vorteile und Förderung entfallen, bis die Bedingungen wieder erfüllt sind (dann Brief „Status zurück“). *Alternative: Hof wird „ohne Stallart“ und muss neu wählen.*
+11. **Vorteile, die schon gehen:** Pension Anfragen ×1,3 · Zucht Laborrabatt 25 % · Ausbildung eigene Pferde lernen 20 % schneller · Gnadenhof 30 € Spenden je Pferd und Jahreszeit · Renn halbes Jockey-Reitgeld · Western halbes Nenngeld bei Westernprüfungen (Zahlen selbst festgelegt).
+12. **Noch offen in H7 – bitte vorher entscheiden:** (a) Aufzucht-Offenstall (bis 10 Fohlen + ältere Stute, eigene Ansicht) – groß. (b) Rennbahn bauen + neue Berufe Rennpferdetrainer und Westerntrainer – mittel. (c) Fremde Pferde in Beritt (Ausbildungsstall) und fremde Fohlen zur Aufzucht (Zuchtstall) wie Einsteller – mittel bis groß. (d) Eigene Hengste als Deckhengst für fremde Stuten – steht in PROJEKT-CHAT-THEMEN.md („Deckhengst“), darum nicht eigenmächtig. (e) Gnadenhof: Patenschaften und Tierarztrabatt. (f) Fester Bereiter nur im Ausbildungsstall (Dome, 11.10.) – heißt das, bestehende Bereiter in anderen Stallarten werden entlassen oder dürfen bleiben? *Empfehlung: bleiben, nur keine neuen einstellen.*

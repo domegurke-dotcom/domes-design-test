@@ -137,6 +137,7 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 6. Zusatzleistungen ohne Mitarbeiter: Darf der Spieler selbst „Putzen“ anbieten (dann muss er täglich putzen)? *Empfehlung: ja, mit Aufgabenliste im Stall (vergessen → Zufriedenheit −).*
 
 ## Etappe H6 – Weiden, Gras, Futterwiese, Einstreu (mittel)
+**Nachtrag (Dome, 11.10.2026):** Pferde auf der Weide sichtbar machen – Weide-Bild mit den Pferden (Herde) statt leerer Box. Dazu aus H5: Sandpaddock als eigener Aufenthaltsort, Hengst im Sandpaddock mit Wallach, bessere Einstreu als Zusatzleistung.
 1. Weidebedarf 0,5 ha je Großpferd, 0,25 ha je Pony/Kleinpferd. Mehrere Weiden je Hof, jede mit eigener Gruppe; Spieler teilt zu; Herdenregeln (Etappe 2b) gelten je Weide.
 2. Grasstand je Weide 0–100 % als Balken. Nachwachsen: Frühling stark, Sommer mittel, Herbst wenig, Winter nicht.
 3. Überbesetzt: Gras schneller weg; leer → Heu zufüttern, sonst hungrig. Trittschäden/Matsch → mehr Mauke und Strahlfäule, mehr Wurmdruck und Streit; Weide erholt sich langsamer.

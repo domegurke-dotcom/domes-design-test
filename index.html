@@ -857,7 +857,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "261";
+  const SPIEL_VERSION = "262";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -865,9 +865,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=261"></script>
-<script src="kopfteile.js?v=261"></script>
-<script src="kopfalter.js?v=261"></script>
+<script src="pferd.js?v=262"></script>
+<script src="kopfteile.js?v=262"></script>
+<script src="kopfalter.js?v=262"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2714,7 +2714,7 @@
         const st = rest < 0 ? ["überfällig", "bad"] : rest <= Math.max(1, Math.round(tpj() / 4)) ? ["bald fällig", "warn"] : ["ok", "ok"];
         return `<li><span class="ico">${ico}</span><span class="txt">${name}<small>zuletzt vor ${vor} ${vor === 1 ? "Tag" : "Tagen"} · ${info}</small></span><span class="stat ${st[1]}">${st[0]}</span></li>`;
       };
-      inhalt = pensionVsgHTML(p, box) + weideNachmHTML(p) + `<div class="zeile-wert"><div class="kopf"><b>Gesundheitszustand</b><span>${g.toLocaleString("de-DE", { maximumFractionDigits: 1 })} % · ${zustand[0]}</span></div>
+      inhalt = pensionVsgHTML(p, box) + waiseVsgHTML(p) + weideNachmHTML(p) + `<div class="zeile-wert"><div class="kopf"><b>Gesundheitszustand</b><span>${g.toLocaleString("de-DE", { maximumFractionDigits: 1 })} % · ${zustand[0]}</span></div>
           <div class="balken"><i style="width:${g}%;${g < 45 ? "background:#c0503a" : ""}"></i></div>
           ${box.tot ? "" : (() => { const w = wohlbefinden(p); return `<div class="kopf" style="margin-top:8px"><b>Wohlbefinden</b><span>${w} % · ${w >= 85 ? "rundum zufrieden" : w >= 65 ? "zufrieden" : w >= 45 ? "unzufrieden" : "fühlt sich unwohl"}</span></div>
           <div class="balken"><i style="width:${w}%;background:${w < 45 ? "#c0503a" : "#5a9a6a"}"></i></div>${wohlGruende(p)}`; })()}
@@ -3512,6 +3512,26 @@
       brief("Tierarztpraxis", `Abschied von ${q.name}`, `es tut uns sehr leid: <b>${esc(q.name)}</b> ist gestorben – ${T.text || K.text}.<br><br><b>Todesursache:</b> ${K.n}. Das ist eine <b>Erbkrankheit</b>: Beide Eltern tragen die Anlage, ${esc(q.name)} hat sie von beiden geerbt. Ein Gentest (Erbkrankheiten) vor der Verpaarung hätte das gezeigt.`); };
     spiel.boxen.forEach((b, i) => { pruefe(b.fohlen, `Box ${i + 1}`, () => delete b.fohlen); pruefe(b.pferd, `Box ${i + 1}`, () => { b.pferd = null; b.tot = false; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; }); });
   }
+  // Waisenfohlen (Dome): Flasche, Aufzuchtstation – Leihmutter folgt (eine Box hat nur Platz für ein Fohlen bei Fuß)
+  const WAISE = { flasche: 6, hunger: 15, wohl: 10 };
+  function waiseNacht() {
+    spiel.boxen.forEach(b => { const p = b.pferd; if (!p || !p.waise || b.tot) return;
+      if (alterJZ(p) >= 2) { delete p.waise; return; }   // im Absetzalter: frisst jetzt allein
+      if (p.waise.art === "flasche") { buchen(-WAISE.flasche, "Futter"); werteErgaenzen(p); wertPlus(p, "vertrauen", 0.3); return; }   // Flaschenfohlen hängen sehr am Menschen
+      if (spiel.tag <= p.waise.tag) return;
+      p.pflege.gesundheit = Math.max(1, Math.round((p.pflege.gesundheit - WAISE.hunger) * 10) / 10); wohlAendern(p, -WAISE.wohl, "hungrig – keine Milch");
+    });
+  }
+  function waiseVsgHTML(p) {
+    if (!p.waise) return "";
+    if (p.waise.art === "flasche") return `<div class="pn-kasten"><b>🍼 Flaschenaufzucht</b><small>Milchaustauscher ${fmt(WAISE.flasche)} am Tag (unter „Futter“), bis ${esc(p.name)} abgesetzt werden kann.</small></div>`;
+    return `<div class="pn-kasten"><b>🍼 ${esc(p.name)} braucht Milch!</b><small>Ohne Mutter wird ein Fohlen schnell schwach (Gesundheit −${WAISE.hunger} am Tag).</small>
+      <div class="brief-aktion"><button class="knopf" data-waise="flasche">🍼 Mit der Flasche aufziehen · ${fmt(WAISE.flasche)}/Tag</button><button class="knopf zweit" data-waise="aufzucht">🏡 Aufzuchtstation · ${fmt(KOSTEN.aufzucht)}/Tag</button></div></div>`;
+  }
+  document.addEventListener("click", e => { const k = e.target.closest && e.target.closest("[data-waise]"); if (!k) return; const box = B(), p = box && box.pferd; if (!p || !p.waise) return;
+    if (k.dataset.waise === "flasche") p.waise.art = "flasche";
+    else { delete p.waise; ANH_ZIEL.aufzucht.aus(p, box, false); }
+    speichern(); zeigeStall(); zeigeTag(); });
   function tote() {
     erbTodPruefen();
     spiel.boxen.forEach(b => { if (b.tot && fremd(b.pferd)) pensionTod(b); });   // Pensionspferd: kommt nicht auf den eigenen Pferdefriedhof
@@ -3529,10 +3549,16 @@
       if (!b.tot || !b.pferd) return;
       begraben(b.pferd, `Box ${i + 1}`);
       spiel.angebote = (spiel.angebote || []).filter(x => x.id !== b.pferd.id);
-      const f = b.fohlen; delete b.fohlen;
+      const f = b.fohlen, M = b.pferd, vernachl = /Entkräftung|unbehandelt/.test(M.todesursache || ""); delete b.fohlen;
       b.pferd = null; b.tot = false; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0;
-      // ein Fohlen bleibt in der Box und wird ab jetzt selbst versorgt
-      if (f) { b.pferd = { ...f, werte: f.werte || erzeugeWerte(f), pflege: erzeugePflege(f), maehneSeit: f.maehneSeit || spiel.tag, schopfSeit: f.schopfSeit || spiel.tag }; }
+      if (!f) return;
+      // Dome: Tod durch Vernachlässigung → der Tierschutz nimmt das Fohlen mit
+      if (vernachl) { f.pflege = f.pflege || erzeugePflege(f); (spiel.tierschutz = spiel.tierschutz || []).push({ pferd: f, frist: jzJetzt() + 2, preis: tierschutzPreis(f) });
+        brief("Tierschutzverein", `${f.name} in unserer Obhut`, `nach dem Tod von <b>${esc(M.name)}</b> haben wir {dein|Ihr} Fohlen <b>${esc(f.name)}</b> mitgenommen – bei {dir|Ihnen} war es nicht gut versorgt. Es wird bei uns aufgepäppelt.`); return; }
+      // sonst bleibt das Fohlen in der Box und wird ab jetzt selbst versorgt – noch nicht abgesetzt braucht es Milch (Flasche oder Aufzuchtstation)
+      b.pferd = { ...f, werte: f.werte || erzeugeWerte(f), pflege: f.pflege || erzeugePflege(f), maehneSeit: f.maehneSeit || spiel.tag, schopfSeit: f.schopfSeit || spiel.tag };
+      if (alterJZ(f) < 2) { b.pferd.waise = { tag: spiel.tag };
+        brief("Tierarztpraxis", `${f.name} braucht Milch`, `{dein|Ihr} Fohlen <b>${esc(f.name)}</b> (Box ${i + 1}) hat seine Mutter verloren und ist noch nicht abgesetzt. Heute haben wir ihm Milch gegeben – ab morgen braucht es {deine|Ihre} Hilfe, sonst wird es schnell schwach.<br><br>{Du kannst|Sie können} es <b>mit der Flasche aufziehen</b> (Milchaustauscher, etwa ${fmt(WAISE.flasche)} am Tag, bis zum Absetzen) oder in die <b>Aufzuchtstation</b> geben. Entscheiden: Box – Pferdepflege – Versorgung.`, { pferde: [b.pferd] }); }
     });
   }
   // ---------- Befunde: Krankheiten und Verletzungen (Etappe C) ----------
@@ -5441,13 +5467,13 @@
     const E = p.expertEmpf && p.expertEmpf.v >= 2 ? p.expertEmpf : null, an = futterAnlass(p, box), alt0 = (p.expertArchiv || {})[an.k], alt = alt0 && alt0.v >= 2 ? alt0 : null;
     const planJetzt = futterplanVon(p, box), gleich = E && planJetzt.mahl === E.mahl && [...new Set([...Object.keys(planJetzt.kg), ...Object.keys(E.kg)])].every(k => Math.abs((planJetzt.kg[k] || 0) - (E.kg[k] || 0)) < 0.01);
     const sorten = [...new Set([...Object.keys(R.kg), ...(E ? Object.keys(E.kg) : [])])].filter(k => FUTTER[k]);
-    const tab = `<table class="ver-tab fp-vergleich"><tr><th>Futter am Tag</th><th class="re">jetzt</th>${E ? `<th class="re">Experte</th>` : ""}</tr>${sorten.map(k => { const a = R.kg[k] || 0, e = E ? E.kg[k] || 0 : null;
+    const tab = `<table class="ver-tab fp-vergleich"><tr><th>Futter am Tag</th><th class="re">${p.umstellung ? `heute 🔄 ${umstellungTag(p)}/3` : "jetzt"}</th>${E ? `<th class="re">Experte</th>` : ""}</tr>${sorten.map(k => { const a = R.kg[k] || 0, e = E ? E.kg[k] || 0 : null;
       return `<tr><td>${FUTTER[k].ico} ${FUTTER[k].n}</td><td class="re nw">${a ? fmtKg(a) : "–"}</td>${E ? `<td class="re nw ${Math.abs(a - e) > 0.01 ? "abw" : ""}">${e ? fmtKg(e) : "–"}</td>` : ""}</tr>`; }).join("")}
       <tr><td>🕐 Mahlzeiten am Tag</td><td class="re nw">${planJetzt.mahl}</td>${E ? `<td class="re nw ${planJetzt.mahl !== E.mahl ? "abw" : ""}">${E.mahl}</td>` : ""}</tr></table>`;
     const umst = E ? `<p class="text"><small>🧑‍🔬 Empfehlung vom ${tagText(E.tag)} für: <b>${esc(E.umst)}</b>${E.anlass !== an.k ? `<br>⚠️ <b>Die Umstände haben sich geändert</b> – jetzt: ${esc(an.text)}. Die Empfehlung passt vielleicht nicht mehr, den Futterexperten neu fragen.` : ""}</small></p>` : "";
     const altKnopf = alt && (!E || E.anlass !== alt.anlass) ? [[`📋 Empfehlung „${an.k}“ (${jzName(datum(alt.tag).j * 4 + datum(alt.tag).s).replace(/^\S+ /, "")}) übernehmen`, () => { planAendernStart(p, box); p.futterplan = { mahl: alt.mahl, kg: { ...alt.kg }, vom: "experte" }; planAendernEnde(p, box); p.expertEmpf = alt; speichern(); futterDialog(p, box); }]] : [];
     dialog(`<h3>🌾 Futter für ${esc(p.name)}</h3><p>Gewicht ca. ${gewicht(p)} kg · ${eigen ? (p.futterplan.vom === "experte" ? "Plan vom Futterexperten" : "eigener Futterplan") : "Standardplan"} (${futterplanVon(p, box).mahl} Mahlzeiten) · ${esc(an.text)}</p>
-      ${tab}${umst}
+      ${tab}${p.umstellung ? `<p class="text"><small>🔄 Futterumstellung Tag ${umstellungTag(p)} von 3: gefüttert (und aus der Futterkammer genommen) wird heute die Mischung aus altem und neuem Plan.</small></p>` : ""}${umst}
       <p class="text"><small>${box && box.fohlen ? `Inkl. ${esc(box.fohlen.name)} (frisst mit). ` : ""}${p.weide && !heuNoetigP(p) ? "Heute auf der Weide: Gras statt Heu. " : p.weide && anweidenAktiv(p) ? "Wird angeweidet: Gras und Heu. " : ""}${box && box.leckstein === jzJetzt() ? "🧊 Salzleckstein hängt in der Box." : ""}</small></p>
       ${H ? `<p class="text"><small>Heute gefüttert: ${Object.entries(H.genutzt).map(([k, x]) => `${FUTTER[k].n} ${fmtKg(x)}`).join(", ") || "Gras"}.</small></p>` : `<p class="text"><small>Heute noch nicht gefüttert.</small></p>`}
       ${alt && (!E || E.anlass !== alt.anlass) ? `<p class="text"><small>💾 Für „${an.k}“ gibt es eine gespeicherte Empfehlung vom Futterexperten (${tagText(alt.tag)}).</small></p>` : ""}
@@ -5551,10 +5577,14 @@
     const w = weide ? `🌿 Weide: frisst Gras – deckt etwa ${Math.round(WEIDE_ENERGIE[datum().s] * 100)} % des Energiebedarfs${F && Object.keys(F).some(k => FUTTER[k] && FUTTER[k].art !== "raufutter" && k !== "mineral" && F[k] > 0) ? "; das Kraftfutter aus der Krippe hat es vorher gefressen" : ""}${F && RAUFUTTER_REIHE.some(k => F[k] > 0) ? "; das Heu aus der Krippe frisst es danach (ersetzt einen Teil des Grases)" : ""}` : "";
     return `<li><span class="ico">🍽️</span><span class="txt">Heute gefressen<small>${teile.length ? `Krippe: ${teile.join(", ")}` : ""}${teile.length && w ? "<br>" : ""}${w}</small></span></li>`;
   }
-  function futterplanDialog(p, box, zurueck) {
+  // S: Stand beim Öffnen – „Abbrechen“ setzt alle Änderungen aus diesem Fenster zurück (Dome)
+  function futterplanDialog(p, box, zurueck, S) {
+    if (!S) S = JSON.parse(JSON.stringify({ futterplan: p.futterplan || null, umstellung: p.umstellung || null, umstellungSofort: p.umstellungSofort || null, expertBetreut: p.expertBetreut || null, expertAuto: p.expertAuto || null, heuWaessern: p.heuWaessern || null }));
+    const abbrechen = () => { Object.entries(S).forEach(([k, v]) => { if (v == null) delete p[k]; else p[k] = JSON.parse(JSON.stringify(v)); }); speichern(); zurueck(); };
     const eigener = !!(p.futterplan && p.futterplan.kg), P = eigener ? p.futterplan : standardPlan(p, box), F = futterkammer();
-    const zeile = k => { const x = P.kg[k] || 0, Z = FUTTER[k];
-      return `<div class="fp-zeile${x ? " an" : ""}"><span>${Z.ico} ${Z.n}<small>${F.lager[k] > 0 ? `Vorrat ${fmtKg(F.lager[k])}` : "nicht vorrätig"}</small></span>
+    const heute = p.umstellung ? aktuellerPlan(p, box).kg : null;
+    const zeile = k => { const x = P.kg[k] || 0, Z = FUTTER[k], hx = heute ? heute[k] || 0 : null;
+      return `<div class="fp-zeile${x ? " an" : ""}"><span>${Z.ico} ${Z.n}<small>${F.lager[k] > 0 ? `Vorrat ${fmtKg(F.lager[k])}` : "nicht vorrätig"}${heute && Math.abs(hx - x) > 0.004 ? ` · <b>heute ${fmtKg(hx)}</b>` : ""}</small></span>
         <span class="fp-menge"><button class="mini-knopf" data-fp="${k}:-1" ${x ? "" : "disabled"}>−</button><b>${fmtKg(x)}</b><button class="mini-knopf" data-fp="${k}:1">+</button></span></div>`; };
     dialog(`<h3>📋 Futterplan für ${esc(p.name)}</h3><p class="text" style="margin:0 0 6px"><small>${eigener ? (P.vom === "experte" ? "Plan vom Futterexperten." : "Eigener Plan.") : "Noch kein eigener Plan – das ist der Standardplan. Mit + und − änderst du ihn."} Mengen am Tag, verteilt auf
         <button class="mini-knopf ${P.mahl === 2 ? "an" : ""}" data-fpmahl="2">2</button> <button class="mini-knopf ${P.mahl === 3 ? "an" : ""}" data-fpmahl="3">3</button> Mahlzeiten <button class="mini-knopf" id="fpMahlInfo" aria-label="Was bewirken die Mahlzeiten?">ℹ️</button>.</small></p>
@@ -5562,21 +5592,21 @@
         <p class="fk-gruppe">Kraftfutter</p>${PLAN_SORTEN.filter(k => FUTTER[k].art === "kraftfutter").map(zeile).join("")}
         <p class="fk-gruppe">Zusätze</p>${PLAN_SORTEN.filter(k => FUTTER[k].art === "zusatz").map(zeile).join("")}
         ${(() => { const sp = PLAN_SORTEN.filter(k => FUTTER[k].art === "spezial" && (P.kg[k] || spezialFrei(FUTTER[k].spezial))); return sp.length ? `<p class="fk-gruppe">Spezialfutter</p>${sp.map(zeile).join("")}` : ""; })()}</div>
-      ${p.umstellung ? `<p class="text fp-umst"><small>🔄 <b>Futterumstellung: Tag ${umstellungTag(p)} von 3</b> – der neue Plan wird langsam eingeführt (heute ${umstellungTag(p) === 1 ? "⅓" : umstellungTag(p) === 2 ? "⅔" : "ganz"} neu), damit der Darm sich gewöhnen kann.</small></p>` : ""}
+      ${p.umstellung ? `<p class="text fp-umst"><small>🔄 <b>Futterumstellung: Tag ${umstellungTag(p)} von 3</b> – der neue Plan wird langsam eingeführt (heute ${umstellungTag(p) === 1 ? "⅓" : umstellungTag(p) === 2 ? "⅔" : "ganz"} neu), damit der Darm sich gewöhnen kann. Gefüttert und aus der Futterkammer genommen werden die Mengen „heute“.</small></p>` : ""}
       ${futterexperteAngestellt() ? `<p class="text" style="margin:6px 0"><label class="fp-check"><input type="checkbox" id="fpBetreut" ${p.expertBetreut || !eigener ? "checked" : ""} ${eigener ? "" : "disabled"}> 🌾 Futterexperte berechnet den Plan jede Jahreszeit neu</label></p>` : ""}
       <p class="text" style="margin:6px 0"><label class="fp-check"><input type="checkbox" id="fpWaessern" ${p.heuWaessern ? "checked" : ""}> 💧 Heu vor dem Füttern wässern <small>(bindet den Staub – gut bei Husten · ${heudampfer() ? "mit dem Heudampfer ohne Mehraufwand" : "kostet Zeit: zählt beim Stallburschen wie 1½ Boxen"})</small></label></p>
       <h4 class="ma-titel">Bedarf gedeckt?</h4><p class="text" style="margin:0 0 6px"><small>Aussehen: <b>${FZ_NAME[futterZustand(p)]}</b> · ca. ${gewicht(p)} kg${spiel.admin ? ` · <i>Admin: Futterzustand ${p.fz}, Zähler ${p.fzTage || 0}, Futterverwertung ${stoffwechsel(p)}, Atemwege ${atemEmpfindlich(p) ? `empfindlich (${p.staubTage || 0} Staubtage)` : "robust"}${p.bettelt ? ", bettelt" : ""}</i>` : ""}</small></p>${bedarfHTML(p, box, P)}`,
-      [...(eigener ? [["Standardplan", () => { planAendernStart(p, box); delete p.futterplan; planAendernEnde(p, box); speichern(); futterplanDialog(p, box, zurueck); }, "zweit"]] : []),
+      [...(eigener ? [["Standardplan", () => { planAendernStart(p, box); delete p.futterplan; planAendernEnde(p, box); speichern(); futterplanDialog(p, box, zurueck, S); }, "zweit"]] : []),
         ...(p.umstellung ? [["Sofort umstellen", () => dialog(`<h3>⚠️ Sofort umstellen?</h3><p class="text">Eine plötzliche Futterumstellung belastet den Darm: In den nächsten 2 Tagen ist das <b>Kolikrisiko doppelt so hoch</b>. In echt stellt man Futter über mehrere Tage um.</p>`,
-          [["Abbrechen", () => futterplanDialog(p, box, zurueck), "zweit"], ["Trotzdem sofort", () => { delete p.umstellung; p.umstellungSofort = spiel.tag; speichern(); futterplanDialog(p, box, zurueck); }]]), "zweit"]] : []),
-        ["🌾 Futterexperte", () => futterexperteDialog([p], () => futterplanDialog(p, box, zurueck)), "zweit"], ["Fertig", zurueck]], "turnier-dlg");
-    const fb2 = $("fpBetreut"); if (fb2) fb2.onchange = () => { p.expertBetreut = fb2.checked; speichern(); if (fb2.checked) { futterBeratung([p], true); speichern(); } futterplanDialog(p, box, zurueck); };
+          [["Abbrechen", () => futterplanDialog(p, box, zurueck, S), "zweit"], ["Trotzdem sofort", () => { delete p.umstellung; p.umstellungSofort = spiel.tag; speichern(); futterplanDialog(p, box, zurueck, S); }]]), "zweit"]] : []),
+        ["🌾 Futterexperte", () => futterexperteDialog([p], () => futterplanDialog(p, box, zurueck, S)), "zweit"], ["Abbrechen", abbrechen, "zweit"], [p.umstellung ? "🔄 3-Tage-Umstellung" : "Fertig", zurueck]], "turnier-dlg");
+    const fb2 = $("fpBetreut"); if (fb2) fb2.onchange = () => { p.expertBetreut = fb2.checked; speichern(); if (fb2.checked) { futterBeratung([p], true); speichern(); } futterplanDialog(p, box, zurueck, S); };
     const fw = $("fpWaessern"); if (fw) fw.onchange = () => { p.heuWaessern = fw.checked || undefined; speichern(); };
     const setze = (k, d) => { planAendernStart(p, box); const plan = p.futterplan && p.futterplan.kg ? p.futterplan : (p.futterplan = JSON.parse(JSON.stringify(standardPlan(p, box))));
-      plan.kg[k] = Math.max(0, Math.round(((plan.kg[k] || 0) + d * PLAN_SCHRITT(k)) * 100) / 100); if (!plan.kg[k]) delete plan.kg[k]; delete plan.vom; p.expertBetreut = false; delete p.expertAuto; planAendernEnde(p, box); speichern(); futterplanDialog(p, box, zurueck); };
+      plan.kg[k] = Math.max(0, Math.round(((plan.kg[k] || 0) + d * PLAN_SCHRITT(k)) * 100) / 100); if (!plan.kg[k]) delete plan.kg[k]; delete plan.vom; p.expertBetreut = false; delete p.expertAuto; planAendernEnde(p, box); speichern(); futterplanDialog(p, box, zurueck, S); };
     document.querySelectorAll("[data-fp]").forEach(b => b.onclick = () => { const [k, d] = b.dataset.fp.split(":"); setze(k, +d); });
-    if ($("fpMahlInfo")) $("fpMahlInfo").onclick = () => dialog(`<h3>ℹ️ Mahlzeiten</h3><p>Die Tagesmenge wird gleichmäßig auf 2 oder 3 Mahlzeiten verteilt.</p><p>Wichtig ist das beim <b>Kraftfutter</b>: Ein Pferd verträgt pro Mahlzeit höchstens etwa <b>1 g Stärke je kg Körpergewicht</b>. Mehr Stärke auf einmal überlastet den Dünndarm – das Risiko für <b>Kolik</b>, <b>Hufrehe</b> und <b>Magengeschwür</b> steigt. Mit 3 Mahlzeiten sind die Portionen kleiner, so kann ein Arbeitspferd mehr Kraftfutter am Tag gefahrlos bekommen.</p><p>Bei reinem Heu und Mineralfutter macht die Zahl der Mahlzeiten kaum einen Unterschied – Raufutter sollte ohnehin über den Tag verteilt sein (lange Fresspausen fördern Magengeschwüre).</p>`, [["‹ Zurück zum Futterplan", () => futterplanDialog(p, box, zurueck)]]);
-    document.querySelectorAll("[data-fpmahl]").forEach(b => b.onclick = () => { const plan = p.futterplan && p.futterplan.kg ? p.futterplan : (p.futterplan = JSON.parse(JSON.stringify(standardPlan(p, box)))); plan.mahl = +b.dataset.fpmahl; speichern(); futterplanDialog(p, box, zurueck); });
+    if ($("fpMahlInfo")) $("fpMahlInfo").onclick = () => dialog(`<h3>ℹ️ Mahlzeiten</h3><p>Die Tagesmenge wird gleichmäßig auf 2 oder 3 Mahlzeiten verteilt.</p><p>Wichtig ist das beim <b>Kraftfutter</b>: Ein Pferd verträgt pro Mahlzeit höchstens etwa <b>1 g Stärke je kg Körpergewicht</b>. Mehr Stärke auf einmal überlastet den Dünndarm – das Risiko für <b>Kolik</b>, <b>Hufrehe</b> und <b>Magengeschwür</b> steigt. Mit 3 Mahlzeiten sind die Portionen kleiner, so kann ein Arbeitspferd mehr Kraftfutter am Tag gefahrlos bekommen.</p><p>Bei reinem Heu und Mineralfutter macht die Zahl der Mahlzeiten kaum einen Unterschied – Raufutter sollte ohnehin über den Tag verteilt sein (lange Fresspausen fördern Magengeschwüre).</p>`, [["‹ Zurück zum Futterplan", () => futterplanDialog(p, box, zurueck, S)]]);
+    document.querySelectorAll("[data-fpmahl]").forEach(b => b.onclick = () => { const plan = p.futterplan && p.futterplan.kg ? p.futterplan : (p.futterplan = JSON.parse(JSON.stringify(standardPlan(p, box)))); plan.mahl = +b.dataset.fpmahl; speichern(); futterplanDialog(p, box, zurueck, S); });
   }
   // ---------- Fütterung F3: Futterzustand und Auswirkungen ----------
   // Futterzustand 1–9 (p.fz, versteckt): 1–3 dünn, 4–6 normal (sportlich mit viel Training und Kraft), 7–9 dick – angezeigt über die Körperbilder
@@ -6521,6 +6551,7 @@
     spiel.boxen.forEach(b => { if (b.pferd && !b.tot) { trainingNacht(b.pferd); arbeitNacht(b.pferd); } });   // Energie füllt sich über Nacht · Arbeitsstufe für den Futterbedarf
     hufNacht();       // Eisen verlieren
     ansteckungNacht(); // ansteckende Krankheiten verbreiten sich
+    waiseNacht();     // Waisenfohlen: Flasche oder Hunger
     befundeNacht();   // Krankheiten und Verletzungen: neu, Verlauf, Wirkung
     externNacht(); rechnungenTag();
     angeboteNacht(); angeboteTag();   // Verkauf: Laufzeit ab Starttag
@@ -6528,7 +6559,7 @@
     pensionAnfragenTag();   // H5: neue Anfragen von Einstellern
   }
   function hofMorgen() {
-    turnierMorgen(); hofhelferTag(); rateVorwarnung();   // Turniertag: genannte Pferde fahren los
+    turnierMorgen(); hofhelferTag(); reparaturTag(); rateVorwarnung();   // Turniertag: genannte Pferde fahren los
     futterLieferung();  // bestelltes Futter kommt an
     ersteFutterberatung();   // allererstes Pferd (z. B. aus dem Auktionshaus geliefert)
     expertAutoTag();    // Empfehlung des Futterexperten automatisch übernehmen (wenn angehakt)
@@ -6549,7 +6580,7 @@
     setTimeout(() => {
       naechsteNacht();
       if (spiel.verloren) { spielVerloren(); return; }   // Zwangsversteigerung
-      speichern(); zeigeStall(); zeigeTag();
+      speichern(); zeigeStall(); zeigeTag(); zwangsWarnungZeigen();
       const nd = datum(); $("nachtSymbol").textContent = JZ[nd.s][1]; $("nachtText").textContent = nd.t === 1 ? `Der ${JZ[nd.s][0]} ${nd.j} beginnt` : `${datumLang(nd)} · Tag ${nd.t}`;
     }, 1100);
     setTimeout(() => { $("nacht").classList.remove("an"); postIconSetzen(); }, 2300);
@@ -7526,12 +7557,13 @@
       if (!k.offen.length) { if (k.rest <= 0.005) kreditFertigBrief(k); return; }
       const n = k.offen.length, letzte = k.offen[n - 1];
       if (letzte.gebuehr == null) letzte.gebuehr = mahnGebuehr(letzte.betrag);
+      if (n >= KREDIT.verpasst && pfaendung(k)) return;   // Dome: zuerst die Pferde – reicht der Erlös, bleibt der Hof
       if (n >= KREDIT.verpasst) { zwangsversteigerung(k); return; }
       ruf(KREDIT.bank, -5);
       brief(KREDIT.bank, n === KREDIT.verpasst - 1 ? "Letzte Mahnung: Kreditrate" : "Mahnung: Kreditrate",
         `die Rate für {deinen|Ihren} <b>${esc(k.name)}</b> über ${fmt(letzte.betrag)} konnte zu Beginn der Jahreszeit nicht abgebucht werden – auf {deinem|Ihrem} Hofkonto war nicht genug Geld (${fmt(spiel.geld || 0)}). Wir berechnen eine Mahngebühr von ${fmt(letzte.gebuehr)}.<br><br>` +
         `Offen sind jetzt <b>${n} ${n === 1 ? "Rate" : "Raten"}</b>, zusammen <b>${fmt(offenSumme(k))}</b>. Bitte {zahle|zahlen Sie} hier im Brief oder in der Hofverwaltung unter Finanzen → Bank.` +
-        (n === KREDIT.verpasst - 1 ? `<br><br><b>⚠️ Wichtig:</b> Wird auch die nächste Rate nicht bezahlt (${KREDIT.verpasst} offene Raten), müssen wir den Kredit kündigen und {deinen|Ihren} Hof zwangsversteigern lassen.` : " Offene Raten versuchen wir zu Beginn der nächsten Jahreszeit noch einmal abzubuchen."),
+        (n === KREDIT.verpasst - 1 ? `<br><br><b>⚠️ Wichtig:</b> Wird auch die nächste Rate nicht bezahlt (${KREDIT.verpasst} offene Raten), pfänden wir {deine|Ihre} Pferde (Zwangsverkauf zu ¾ ihres Werts). Reicht der Erlös nicht für die offenen Raten, wird {dein|Ihr} Hof zwangsversteigert.` : " Offene Raten versuchen wir zu Beginn der nächsten Jahreszeit noch einmal abzubuchen."),
         { aktion: { typ: "kredit", kid: k.id } });
     });
   }
@@ -7544,6 +7576,22 @@
     if (!k.offen.length) ruf(KREDIT.bank, 5);
     if (!kreditLaeuft(k)) kreditFertigBrief(k);
     speichern(); if (danach) danach();
+  }
+  // Pfändung (Dome): die eigenen Pferde dieses Hofs werden beschlagnahmt und zu ¾ ihres Werts zwangsverkauft (Fohlen bei Fuß mit der Mutter).
+  // Reicht der Erlös mit dem Kontostand für alle offenen Raten, bleibt der Hof – sonst wird er zwangsversteigert. true = Hof gerettet
+  const PFAENDUNG = 0.75;
+  function pfaendung(k) {
+    const liste = [];
+    spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot || fremd(p)) return; const w = Math.round(verkaufsWert(p) * PFAENDUNG / 10) * 10; liste.push({ name: p.name, fohlen: b.fohlen ? b.fohlen.name : "", w });
+      archivieren(p); if (b.fohlen) { archivieren(b.fohlen); delete b.fohlen; } b.pferd = null; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; });
+    (spiel.extern || []).forEach(e => { const w = Math.round(marktwert(e.pferd) * PFAENDUNG / 10) * 10; liste.push({ name: e.pferd.name, fohlen: "", w }); archivieren(e.pferd); });
+    spiel.extern = []; spiel.angebote = [];
+    const erloes = liste.reduce((a, x) => a + x.w, 0); if (erloes) buchen(erloes, "Pfändung: Zwangsverkauf der Pferde");
+    const reicht = (spiel.geld || 0) >= offenSumme(k) - 0.005;
+    if (reicht) { while (k.offen.length && (spiel.geld || 0) >= k.offen[0].betrag + (k.offen[0].gebuehr || 0) - 0.005) rateZahlen(k, k.offen.shift()); }
+    if (liste.length || reicht) brief(KREDIT.bank, `Pfändung: ${hofName()}`, `weil drei Kreditraten für <b>${esc(k.name)}</b> offen waren, haben wir {deine|Ihre} Pferde beschlagnahmt und zu ¾ ihres Werts zwangsverkauft:<ul>${liste.map(x => `<li>${esc(x.name)}${x.fohlen ? ` (mit Fohlen ${esc(x.fohlen)})` : ""}: ${fmt(x.w)}</li>`).join("") || "<li>keine Pferde</li>"}</ul>Erlös zusammen <b>${fmt(erloes)}</b>. ` +
+      (reicht ? `Damit sind die offenen Raten bezahlt – {dein|Ihr} Hof bleibt {dir|Ihnen}. Der Kredit läuft normal weiter.` : `Leider reicht das nicht, um die offenen Raten (${fmt(offenSumme(k))}) zu begleichen. Der Hof wird zwangsversteigert.`));
+    return reicht;
   }
   function zwangsversteigerung(k) {
     const weg = (spiel.hofWeg = spiel.hofWeg || []);
@@ -7629,6 +7677,16 @@
     zeigeSchirm("charakter"); $("charakter").scrollTop = 0;
     $("imZurueck").onclick = () => zeigeCharakter(c, tempo);
     immobilienBinden($("charakter"), true, c, tempo);
+    kreditZusageZeigen(c);
+  }
+  // Dome: gleich nach der Charakterwahl kommt die Kreditzusage der Bank als Brief über dem Immobilien-Menü (OK → zurück ins Menü)
+  function kreditZusageZeigen(c) {
+    const I = IMMOBILIEN.find(x => x.start), kredit = I.preis - I.eigen, rate = kreditRate(kredit, KREDIT.zins, KREDIT.jz);
+    dialog(`<div class="brief-papier"><div class="kopf"><span>Von: <b>${KREDIT.bank}</b><br>An: <b>${esc(c.name || "Pferdefreund")}</b></span><span>Kreditzusage</span></div>
+      <h3>Ihre Kreditanfrage</h3><p>Guten Tag ${esc(c.name || "")},</p>
+      <div>wir freuen uns, Ihnen mitzuteilen, dass wir Ihrer Bitte um einen <b>Kredit über ${fmt(kredit)}</b> zustimmen. Ihren <b>Eigenanteil von ${fmt(I.eigen)}</b> bringen Sie aus Ihrem Startkapital von ${fmt(START_KAPITAL)} ein – damit ist der Kauf von <b>„${I.n}“</b> für ${fmt(I.preis)} gesichert.<br><br>
+        Zinsen ${prozent(KREDIT.zins)} · ${KREDIT.jz} Raten zu je ${fmt(rate)}, abgebucht zu Beginn jeder Jahreszeit. Ihnen bleiben zum Start ${fmt(START_KAPITAL - I.eigen)}.<br><br>
+        Im Immobilien-Menü ist „${I.n}“ jetzt für Sie freigeschaltet.<br><br>Mit freundlichen Grüßen<br>Ihre ${KREDIT.bank}</div></div>`, [["Zu den Immobilien", null]], "breit");
   }
   function hofKaufDialog(I, c, tempo, name = "", fehler = false) {
     const kredit = I.preis - I.eigen, rate = kreditRate(kredit, KREDIT.zins, KREDIT.jz);
@@ -7637,7 +7695,7 @@
       <table class="ver-tab"><tr><th>Finanzierung</th><th>Betrag</th></tr><tr><td>Kaufpreis</td><td class="nw">${fmt(I.preis)}</td></tr><tr><td>dein Eigenanteil</td><td class="nw">${fmt(I.eigen)}</td></tr>
         <tr><td>Kredit der Hausbank (${prozent(KREDIT.zins)} Zinsen, ${KREDIT.jz / 4} Jahre)</td><td class="nw">${fmt(kredit)}</td></tr><tr><td>Rate je Jahreszeit (${KREDIT.jz} Raten)</td><td class="nw">${fmt(rate)}</td></tr>
         <tr><td><b>bleibt dir zum Start</b></td><td class="nw"><b>${fmt(START_KAPITAL - I.eigen)}</b></td></tr></table>
-      <p style="margin-bottom:0"><small>Die Rate wird zu Beginn jeder Jahreszeit automatisch abgebucht. Reicht das Geld nicht, kommt eine Mahnung – nach ${KREDIT.verpasst} offenen Raten wird der Hof zwangsversteigert.</small></p>`,
+      <p style="margin-bottom:0"><small>Die Rate wird zu Beginn jeder Jahreszeit automatisch abgebucht. Reicht das Geld nicht, kommt eine Mahnung – nach ${KREDIT.verpasst} offenen Raten werden deine Pferde gepfändet (Zwangsverkauf zu ¾ ihres Werts), und reicht das nicht, wird der Hof zwangsversteigert.</small></p>`,
       [["🏡 Kaufen", () => { const n = ($("kaufName").value || "").trim(); if (!n) { hofKaufDialog(I, c, tempo, "", true); return; } neuesSpielAnlegen(c, tempo, I, n); }], ["Abbrechen", null, "zweit"]], "breit");
   }
   function neuesSpielAnlegen(c, tempo, I, name) {
@@ -8055,7 +8113,13 @@
     const wirkt = schlecht.filter(g => BAUTEN[g.typ].boxen), sonst = schlecht.filter(g => !BAUTEN[g.typ].boxen), liste = l => l.map(g => `<b>${gebName(g)}</b> (Zustand ${Math.round(g.zustand)} %)`).join(", ");
     if (schlecht.length) brief("Hofverwaltung", "Gebäude müssen repariert werden", `auf <b>${esc(hofName())}</b> ${wirkt.length ? `${wirkt.length === 1 ? "ist" : "sind"} ${liste(wirkt)} in schlechtem Zustand. Das stört die Pferde in den Boxen, erhöht die Verletzungsgefahr und ärgert Mitarbeiter und Einsteller.` : ""}${sonst.length ? `${wirkt.length ? "<br><br>Außerdem " : ""}${sonst.length === 1 ? "ist" : "sind"} ${liste(sonst)} in schlechtem Zustand – das hat im Moment noch keine Auswirkung, wird aber mit der Zeit teurer zu reparieren.` : ""} Reparieren: Hofverwaltung → Hof → Bauen (Handwerker) oder einen Hofhelfer einstellen.`);
   }
-  const reparaturPreis = g => Math.round((g.preis || 0) * 0.02 * Math.ceil((100 - g.zustand) / 10));   // je 10 Punkte 2 % des Baupreises
+  // Reparatur (Dome): der Handwerker kommt am nächsten Tag und braucht 1 Tag (ab 50 % Zustand) oder 2 Tage (darunter)
+  const reparaturDauer = g => (g.zustand >= 50 ? 1 : 2);
+  function reparaturTag() {
+    gebaeude().forEach(g => { if (!g.rep || spiel.tag <= g.rep.bis) return; delete g.rep; g.zustand = 100;
+      brief("Hofverwaltung", `${gebName(g)} repariert`, `der Handwerker ist fertig: <b>${gebName(g)}</b> ist wieder in gutem Zustand (100 %).`); });
+  }
+  const reparaturPreis = g => g.rep ? 0 : Math.round((g.preis || 0) * 0.02 * Math.ceil((100 - g.zustand) / 10));   // je 10 Punkte 2 % des Baupreises
   // Hofhelfer: repariert jeden Arbeitstag das schlechteste Gebäude
   function hofhelferTag() {
     const H = (spiel.mitarbeiter || []).filter(m => m.typ === "hofhelfer" && maAktiv(m) && maDa(m) && maDarf(m, "reparieren")); if (!H.length) return;
@@ -8090,7 +8154,7 @@
       ${bau.length ? `<h4 class="ma-titel">🏗️ Im Bau</h4>${bau.map(g => `<div class="geb"><span class="geb-ico">${BAUTEN[g.typ].ico}</span><span class="geb-txt"><b>${gebName(g)}</b><small>${g.bau.art === "umbau" ? `Umbau auf Stufe ${g.stufe + 1}` : `Stufe ${g.stufe} – ${STUFE_NAME[g.stufe]}`} · noch ${tageTxt2(g.bau.rest)}${BAUTEN[g.typ].aussen && datum().s === 3 ? " · ❄️ ruht im Winter" : ""}</small></span></div>`).join("")}` : ""}
       <h4 class="ma-titel">🏠 Gebäude und Anlagen</h4>${steht.length ? steht.map(g => { const B = BAUTEN[g.typ], us = g.typ === "heudampfer" ? "" : umbauSperre(g), rp = reparaturPreis(g);
         return `<div class="geb"><span class="geb-ico">${B.ico}</span><span class="geb-txt"><b>${gebName(g)}</b><small>${g.typ === "heudampfer" ? "fertig" : `Stufe ${g.stufe} – ${STUFE_NAME[g.stufe]}${g.boxen ? ` · ${g.boxen} ${g.boxen === 1 ? "Box" : "Boxen"}` : ""} · Zustand ${Math.round(g.zustand)} %`}</small>${g.typ === "heudampfer" ? "" : bar(g.zustand)}
-          ${g.typ === "heudampfer" ? "" : `<span class="geb-kn">${rp ? `<button class="mini-knopf" data-rep="${g.gid}">🔧 Reparieren · ${fmt(rp)}</button>` : ""}${!us ? `<button class="mini-knopf" data-umbau="${g.gid}">⬆️ Stufe ${g.stufe + 1} · ${fmt(umbauPreis(g))}</button>` : g.stufe < 3 && BAUTEN[g.typ].preis ? `<small class="geb-sperre">Umbau: ${us}</small>` : ""}${(g.typ === "stall" || g.typ === "paddock") && !g.anbau ? `<button class="mini-knopf" data-anbau="${g.gid}">➕ Anbau</button>` : ""}</span>`}</span></div>`; }).join("") : `<p class="text">Noch keine Gebäude.</p>`}
+          ${g.typ === "heudampfer" ? "" : `<span class="geb-kn">${g.rep ? `<small class="geb-rep">🔧 ${spiel.tag < g.rep.ab ? "Handwerker kommt morgen" : `Handwerker arbeitet${g.rep.bis > spiel.tag ? " (noch 2 Tage)" : " (heute fertig)"}`}</small>` : rp ? `<button class="mini-knopf" data-rep="${g.gid}">🔧 Reparieren · ${fmt(rp)}</button>` : ""}${!us ? `<button class="mini-knopf" data-umbau="${g.gid}">⬆️ Stufe ${g.stufe + 1} · ${fmt(umbauPreis(g))}</button>` : g.stufe < 3 && BAUTEN[g.typ].preis ? `<small class="geb-sperre">Umbau: ${us}</small>` : ""}${(g.typ === "stall" || g.typ === "paddock") && !g.anbau ? `<button class="mini-knopf" data-anbau="${g.gid}">➕ Anbau</button>` : ""}</span>`}</span></div>`; }).join("") : `<p class="text">Noch keine Gebäude.</p>`}
       <h4 class="ma-titel">➕ Neu bauen</h4><div class="kacheln quadrat bau-kacheln">${BAU_REIHE.map(k => { const B = BAUTEN[k], sp = bauSperre(k);
         return `<button class="kachel ${sp ? "fehlt" : "klickbar"}" ${sp ? "disabled" : `data-bau="${k}"`} title="${B.n}: ${B.info}"><span class="ico">${B.ico}</span><b>${B.n}</b><small>${sp || (B.fest ? fmt(B.fest) : `ab ${fmt(B.preis[0])}${B.jeHa ? "/ha" : ""}`)}</small></button>`; }).join("")}</div>`;
   }
@@ -8126,7 +8190,9 @@
         [["Umbauen", () => { if (umbauStarten(g)) { speichern(); bauNeuZeigen(); } }], ["Abbrechen", null, "zweit"]]); });
     nb.querySelectorAll("[data-rep]").forEach(b => b.onclick = () => { const g = G.find(x => x.gid === b.dataset.rep), k = reparaturPreis(g);
       dialog(`<h3>🔧 ${gebName(g)} reparieren</h3><p>Ein Handwerker bringt den Zustand von ${Math.round(g.zustand)} % auf 100 %. Kosten: <b>${fmt(k)}</b> (je 10 Punkte 2 % des Baupreises).</p>`,
-        [["Handwerker bestellen", () => { if (!spiel.admin && (spiel.geld || 0) < k) { dialog(`<h3>Zu wenig Geld</h3><p>In der Kasse sind ${fmt(spiel.geld || 0)}.</p>`); return; } if (!spiel.admin) buchen(-k, "Handwerker"); g.zustand = 100; speichern(); bauNeuZeigen(); }], ["Abbrechen", null, "zweit"]]); });
+        [["Handwerker bestellen", () => { if (!spiel.admin && (spiel.geld || 0) < k) { dialog(`<h3>Zu wenig Geld</h3><p>In der Kasse sind ${fmt(spiel.geld || 0)}.</p>`); return; } if (!spiel.admin) buchen(-k, "Handwerker");
+          const t = reparaturDauer(g); g.rep = { ab: spiel.tag + 1, bis: spiel.tag + t }; speichern(); bauNeuZeigen();
+          dialog(`<h3>🔧 Handwerker bestellt</h3><p>Der Handwerker kommt <b>morgen</b> und braucht ${t === 1 ? "einen Tag" : "2 Tage"}. Danach ist ${gebName(g)} wieder in Ordnung.</p>`); }], ["Abbrechen", null, "zweit"]]); });
   }
   // ---------- Bauland und Weideland (Dome, v225): Gebäude brauchen Bauland, Weiden nur Weideland ----------
   const BAULAND_PREIS = 3000, HOFPLATZ = 0.2;   // Wohnhaus und Hofplatz
@@ -8570,11 +8636,18 @@
     brief("Hofverwaltung", "Futter verdorben", `in der letzten Jahreszeit sind auf <b>${esc(hofName())}</b> etwa <b>${x} kg</b> Futter verdorben (feucht, schimmelig) und mussten weggeworfen werden. ${lagerStufe() ? (lagerStufe() < 3 ? `Ein besseres Futter- und Strohlager (höhere Stufe) hält das Futter noch länger frisch.` : "") : `Mit einem Futter- und Strohlager (Hofverwaltung → Hof → Bauen) verdirbt deutlich weniger – je höher die Stufe, desto weniger.`}`);
   }
   // ---------- Vorwarnung Kreditrate (v229): 2 Tage vor Ende der Jahreszeit, wenn die Kasse nicht reicht ----------
+  // 2 Tage vor der Pfändung: Warnung als Fenster (nicht nur als Brief)
+  function zwangsWarnungZeigen() {
+    const W = spiel.zwangsWarnung; if (!W || !W.length) return; delete spiel.zwangsWarnung; speichern();
+    dialog(`<h3>⚠️ Letzte Warnung der Bank</h3>${W.map(w => `<p><b>${esc(w.hof)}</b>: In 2 Tagen (zu Beginn der nächsten Jahreszeit) werden <b>${fmt(w.faellig)}</b> fällig, auf dem Hofkonto sind nur ${fmt(w.geld)}. Das wäre die dritte offene Rate.</p>`).join("")}
+      <p>Dann <b>pfändet die Bank</b>: Alle eigenen Pferde dieses Hofs werden beschlagnahmt und zu ¾ ihres Werts zwangsverkauft. Reicht der Erlös nicht, wird der Hof zwangsversteigert.</p><p><small>Abwenden: Geld einzahlen (Immobilien → Verwaltung → Überweisung), Pferde selbst verkaufen oder offene Raten in Hofverwaltung → Finanzen → Bank bezahlen.</small></p>`, [["Verstanden", null]]);
+  }
   function rateVorwarnung() {
     if (datum().t !== Math.max(1, tpj() - 1)) return;
     const L = kredite().filter(kreditLaeuft); if (!L.length) return;
     const faellig = runde2(L.reduce((a, k) => a + offenSumme(k) + (k.rest - (k.offen || []).reduce((x, r) => x + r.tilgung, 0) > 0.005 ? rateBerechnen(k).betrag : 0), 0));
     if ((spiel.geld || 0) >= faellig) return;
+    if (L.some(k => (k.offen || []).length >= KREDIT.verpasst - 1)) (spiel.zwangsWarnung = spiel.zwangsWarnung || []).push({ hof: hofName(), faellig, geld: spiel.geld || 0 });   // Dome: Warnung auf dem Bildschirm
     brief(KREDIT.bank, "Hinweis: Kreditrate", `zu Beginn der nächsten Jahreszeit buchen wir für <b>${esc(hofName())}</b> <b>${fmt(faellig)}</b> ab${L.some(k => (k.offen || []).length) ? " (inklusive offener Raten)" : ""}. Auf {deinem|Ihrem} Hofkonto sind aber nur ${fmt(spiel.geld || 0)}. Bitte {sorge|sorgen Sie} rechtzeitig für Geld – zum Beispiel per Überweisung vom zentralen Konto (Immobilien → Verwaltung) –, sonst kommt eine Mahnung.`);
   }
   // ---------- Baulärm (v229, aus H4): während gebaut wird, leiden nervöse und alte Pferde auf dem ganzen Hof ----------
@@ -8596,7 +8669,7 @@
         return `<div class="kredit"><div class="kr-kopf"><b>🏦 ${esc(k.name)}</b><small>${fmt(k.summe)} · ${prozent(k.zins)} Zinsen · ${k.raten / 4} Jahre</small></div>
           <div class="kr-balken" title="${prozent(ant)} abbezahlt"><i style="width:${Math.round(ant * 100)}%"></i></div><small>${prozent(ant)} abbezahlt</small>
           <dl class="werte">${zeile("Restschuld", fmt(k.rest))}${zeile("Rate je Jahreszeit", fmt(k.rate))}${zeile("Raten bezahlt", `${k.bezahlt}${k.getilgt > 0 && restRaten(k) + k.bezahlt + (k.offen || []).length < k.raten ? ` · noch etwa ${restRaten(k)} (Sondertilgung)` : ` von ${k.raten}`}`)}${zeile("Zinsen bisher", fmt(k.zinsen))}${k.rest - (k.offen || []).reduce((a, r) => a + r.tilgung, 0) > 0.005 ? zeile("Nächste Rate", `Beginn ${jzName(jzJetzt() + 1)} (wird automatisch abgebucht)`) : ""}</dl>
-          ${(k.offen || []).length ? `<div class="kr-offen">⚠️ <b>${k.offen.length} ${k.offen.length === 1 ? "Rate" : "Raten"} offen: ${fmt(offenSumme(k))}</b> (inkl. Mahngebühr)${k.offen.length >= KREDIT.verpasst - 1 ? " – bei der nächsten verpassten Rate wird der Hof zwangsversteigert!" : ""}<button class="knopf" data-krzahl="${k.id}">💶 Jetzt bezahlen</button></div>` : `<button class="knopf zweit kr-st" data-krst="${k.id}">💶 Sondertilgung</button>`}</div>`; }).join("")}
+          ${(k.offen || []).length ? `<div class="kr-offen">⚠️ <b>${k.offen.length} ${k.offen.length === 1 ? "Rate" : "Raten"} offen: ${fmt(offenSumme(k))}</b> (inkl. Mahngebühr)${k.offen.length >= KREDIT.verpasst - 1 ? " – bei der nächsten verpassten Rate pfändet die Bank deine Pferde, reicht das nicht, wird der Hof zwangsversteigert!" : ""}<button class="knopf" data-krzahl="${k.id}">💶 Jetzt bezahlen</button></div>` : `<button class="knopf zweit kr-st" data-krst="${k.id}">💶 Sondertilgung</button>`}</div>`; }).join("")}
 
       ${!L.length ? `<p class="text">Du hast keinen Kredit.</p>` : ""}
       <h4 class="ma-titel">➕ Neuer Kredit</h4>
@@ -8714,7 +8787,7 @@
       <h3>🏘️ Hof-Ausbau (H1: Hofkauf und Kredit)</h3>
       <p><b>Neues Spiel:</b> Startmenü → Neues Spiel → Charakter (ohne Hofname) → Immobilien-Menü. Startkapital ${fmt(START_KAPITAL)}. Am Anfang nur kaufbar: Alter Pensionsstall ${fmt(20000)} (6 baufällige Boxen = Stufe 1, Reitplatz, Gelände, 2 ha: Hofstelle mit Reitplatz + 1 ha Weide). Eigenanteil ${fmt(10000)}, Kredit ${fmt(10000)} → ${fmt(5000)} bleiben. Hofname wird beim Kauf eingegeben. Start immer als Pensionsstall (<code>spiel.stallarten = ["pension"]</code>, <code>spiel.hof</code>). Alte Spielstände (ohne <code>spiel.hofAusbau</code>) lassen sich nicht weiterspielen.</p>
       <p><b>Weitere Immobilien</b> (ausgegraut, Kauf ab H2): ${IMMOBILIEN.filter(I => !I.start).map(I => `${I.n} ${fmt(I.preis)}`).join(" · ")}. Frei, wenn der erste Kredit zur Hälfte getilgt ist und die Hälfte des Kaufpreises auf dem Hofkonto liegt.</p>
-      <p><b>Kredit</b> (Hausbank): ${prozent(KREDIT.zins)} Zinsen im Jahr, Rate jede Jahreszeit (Annuität): Rate = Summe × q ÷ (1 − (1 + q)<sup>−n</sup>) mit q = Zins ÷ 4, n = Anzahl Raten. Hofkredit ${fmt(10000)}, ${KREDIT.jz} Raten → ${fmt(kreditRate(10000, KREDIT.zins, KREDIT.jz))}. Je Rate: Zinsen = Restschuld × q, Rest tilgt. Abbuchung automatisch zu Beginn jeder Jahreszeit (erste Rate in der Jahreszeit nach der Aufnahme), offene Raten zuerst. Reicht das Geld nicht: Mahnung + Mahngebühr (10 %, mind. 20 €) je verpasster Rate, bezahlen im Brief oder Finanzen → Bank. ${KREDIT.verpasst} offene Raten → Zwangsversteigerung, Spiel verloren, Spielstand gelöscht.</p>
+      <p><b>Kredit</b> (Hausbank): ${prozent(KREDIT.zins)} Zinsen im Jahr, Rate jede Jahreszeit (Annuität): Rate = Summe × q ÷ (1 − (1 + q)<sup>−n</sup>) mit q = Zins ÷ 4, n = Anzahl Raten. Hofkredit ${fmt(10000)}, ${KREDIT.jz} Raten → ${fmt(kreditRate(10000, KREDIT.zins, KREDIT.jz))}. Je Rate: Zinsen = Restschuld × q, Rest tilgt. Abbuchung automatisch zu Beginn jeder Jahreszeit (erste Rate in der Jahreszeit nach der Aufnahme), offene Raten zuerst. Reicht das Geld nicht: Mahnung + Mahngebühr (10 %, mind. 20 €) je verpasster Rate, bezahlen im Brief oder Finanzen → Bank. 2 Tage vor der dritten Rate Warnfenster (zwangsWarnungZeigen). ${KREDIT.verpasst} offene Raten → Pfändung: alle eigenen Pferde des Hofs (auch extern, Fohlen bei Fuß mit) zu ¾ des Werts zwangsverkauft; reicht Erlös + Kasse für die offenen Raten, bleibt der Hof – sonst Zwangsversteigerung (beim letzten Hof: Spiel verloren, Spielstand gelöscht).</p>
       <p><b>Weitere Kredite</b> (Finanzen → Bank): bis ${prozent(KREDIT.beleihung)} des Immobilienwerts minus Restschuld (Start: 16.000 € − 10.000 € = 6.000 €), in 1.000-€-Schritten, Laufzeit ${KREDIT.laufzeiten.map(n => n / 4).join(" / ")} Jahre, gleicher Zins. Nicht, solange eine Rate offen ist. Finanzen-Posten: Hofkauf, Kredit (Auszahlung), Kredit: Zinsen, Kredit: Tilgung, Kredit: Mahngebühr.</p>
       <h3>🏘️ Hof-Ausbau (H2: mehrere Höfe, Land, Hofplan)</h3>
       <p><b>Bis zu ${MAX_HOEFE} Höfe</b>, jeder mit eigener Kasse, eigenen Boxen, Anlagen, Mitarbeitern, Futterkammer, Lager, Rechnungen, Krediten und Verkaufsanzeigen (<code>HOF_FELDER</code>). Der aktive Hof liegt in <code>spiel</code>, die anderen in <code>spiel.hoefe</code>; Reihenfolge <code>spiel.hofReihe</code>. Jede Nacht laufen alle Höfe (<code>jedenHof</code>): Versorgung, Training, Hufe, Ansteckung, Befunde, Rechnungen, Kredit, Pacht, Geburten, Gehälter, Mitarbeiter, Turnierpferde. Nur einmal: Markt/Auktion, Labor, Blutbild, Tierschutz-Klinik, externer Gnadenhof, Turnierkalender. Wer einen Hof nicht versorgt (selbst oder Mitarbeiter), hat dort hungrige Pferde.</p>
@@ -8724,7 +8797,7 @@
       <h3>🏗️ Hof-Ausbau (H3: Bauen, Stufen, Verfall)</h3>
       <p><b>Bauen</b> (Hofverwaltung → Hof → Bauen, Stufe 1 / 2 / 3): ${BAU_REIHE.filter(k => !BAUTEN[k].nur).map(k => { const B = BAUTEN[k]; return `${B.n.replace(/\u00ad/g, "")} ${B.fest ? fmt(B.fest) : B.preis.map(fmt).join(" / ")}${B.jeHa ? " je ha" : ""}${B.anbau ? ` (Anbau ${B.anbauBoxen} Boxen ${B.anbau.map(fmt).join(" / ")}, je 2 Boxen mehr ${B.paar.map(fmt).join(" / ")})` : ""}`; }).join(" · ")}. Rennbahn und Aufzucht-Offenstall kommen mit den Stallarten (H7). + / − in der Boxenübersicht gibt es nicht mehr.</p>
       <p><b>Bauzeit</b> (Standardtempo, je nach Tempo anteilig): kurz 2–3 Tage (Roundpen, Trail, Weide einzäunen, Sandpaddock, Waschplatz), ½ Jahreszeit (Paddockboxen, Sattelkammer, Abfohlbox), 1 Jahreszeit (Stall und Anbau, Reitplatz, Lager, Quarantänestall), Reithalle 2–3 Jahreszeiten. Außenarbeiten (Reitplatz, Roundpen, Trail, Weide, Sandpaddock) ruhen im Winter. Bezahlt wird beim Auftrag; der Hofwert steigt um den Baupreis. Heudampfer nur mit Futterlager, sofort. Lager: Futterkammer ${LAGER_START.toLocaleString("de-DE")} kg + ${BAUTEN.lager.platz.map(x => x.toLocaleString("de-DE")).join(" / ")} kg.</p>
-      <p><b>Umbau</b> eine Stufe höher: Preisunterschied + ${prozent(UMBAU_AUFSCHLAG)}, halbe Bauzeit, je Abschnitt (Erstbau und jeder Anbau einzeln); die Boxen müssen leer sein und sind gesperrt. <b>Unterhalt</b> ${prozent(UNTERHALT)} des Baupreises je Jahreszeit. <b>Verfall</b> je Jahreszeit Stufe 1/2/3: −${VERFALL.slice(1).map(x => String(x).replace(".", ",")).join(" / −")} Zustand (Start-Stall beginnt bei 85 %); Warnbrief unter 40 %. <b>Reparatur:</b> Handwerker sofort auf 100 %, je 10 Punkte 2 % des Baupreises; Hofhelfer (${fmt(MA_TYP.hofhelfer.gehalt)}/Jz) +${HOFHELFER_REPARATUR} Punkte je Arbeitstag am schlechtesten Gebäude.</p>
+      <p><b>Umbau</b> eine Stufe höher: Preisunterschied + ${prozent(UMBAU_AUFSCHLAG)}, halbe Bauzeit, je Abschnitt (Erstbau und jeder Anbau einzeln); die Boxen müssen leer sein und sind gesperrt. <b>Unterhalt</b> ${prozent(UNTERHALT)} des Baupreises je Jahreszeit. <b>Verfall</b> je Jahreszeit Stufe 1/2/3: −${VERFALL.slice(1).map(x => String(x).replace(".", ",")).join(" / −")} Zustand (Start-Stall beginnt bei 85 %); Warnbrief unter 40 %. <b>Reparatur:</b> Handwerker kommt am nächsten Tag, braucht 1 Tag (ab 50 % Zustand) bzw. 2 Tage (darunter), danach 100 %; je 10 Punkte 2 % des Baupreises; Hofhelfer (${fmt(MA_TYP.hofhelfer.gehalt)}/Jz) +${HOFHELFER_REPARATUR} Punkte je Arbeitstag am schlechtesten Gebäude.</p>
       <p><b>Wirkung der Stufe:</b> Wohlbefinden je Nacht in der Box: Stufe 1 −0,5, Stufe 3 +0,5, Zustand unter 40 % −0,5, Paddockbox +0,5. Verletzungsrisiko in der Box × 1,3 / 1 / 0,8, Zustand unter 70 % × 1,1, unter 40 % × 1,3. Mitarbeiter-Zufriedenheit je Jahreszeit: Ø Stufe unter 1,5 −3, ab 2,5 +3, Ø Zustand unter 50 % −3. Quarantänestall: Pferde dort stecken niemanden an und werden nicht angesteckt. Pensionspreis nach Stufe kommt mit H5.</p>
       <p><b>Bauland und Weideland</b> (Dome, v225): Bauland ${fmt(BAULAND_PREIS)}/ha (nur kaufen), Weideland ${fmt(LAND_PREIS)}/ha oder Pacht ${fmt(PACHT_PREIS)}/ha je Jahreszeit. Platzbedarf auf dem Bauland: Wohnhaus/Hofplatz ${haTxt(HOFPLATZ)}, Stall ${haTxt(0.1)} je 6 Boxen, Paddockboxen ${haTxt(0.15)} je 6, Reitplatz ${haTxt(0.1)}, Reithalle ${haTxt(0.15)}, Roundpen/Trail/Sandpaddock/Waschplatz/Lager/Sattelkammer/Quarantänestall/Abfohlbox je ${haTxt(0.05)}. Weide einzäunen nur auf Weideland. Start-Pensionsstall: 1 ha Bauland + 1 ha Weideland. Makler-Höfe: Bauland nach Bestand + 0,1 ha, auf ½ ha aufgerundet; Grundstück 1 ha Bauland.
         <b>Quarantänestall:</b> gekaufte Pferde (Markt, Auktion, Tierschutz) kommen zuerst in eine freie Quarantänebox und stehen 1 Jahreszeit unter Quarantäne; danach ziehen sie – ohne bekannte ansteckende Krankheit – automatisch in eine freie normale Box (Brief). Normale Umzüge nutzen den Quarantänestall nur, wenn sonst nichts frei ist.
@@ -8742,6 +8815,7 @@
         <b>Weidegang durch Stallbursche/Azubi</b> (Dome, v255/v258): je Pferd nie / täglich / jeden 2. Tag (Box → Pflege → Ort); am Nachmittag – tagsüber steht das Pferd sichtbar in der Box (Hinweis mit „heute drinlassen“), der Tag zählt beim Tagesende als Weidetag (Gras, Gesundheit, Herde), abends ist es wieder drin; nicht bei Quarantäne, Boxenruhe, Klinik, Turnier und im Frühling bei Hufrehe-Gefahr. Einsteller mit Weidewunsch: täglich. <b>Pferdepfleger</b> macht die leichte Arbeit aus dem Trainingsplan (Bodenarbeit, Freiarbeit, Spaziergang, nicht bei Pensionspferden) – der Bereiter dann nur Reiten und intensives Training. <b>Aufgaben</b> jedes Angestellten lassen sich unter Hofverwaltung → Mitarbeiter abwählen.
         <b>Ansehen bei Einstellern</b> je Hof (versteckt, Start 100, 0–200): Durchschnitt aller Einsteller zu Beginn jeder Jahreszeit ≥ 70 → +2, unter 40 → −2. Wirkung: Anfragen ×Ansehen/100 (0,3–1,5), akzeptierter Preis Richtwert × (1 + (Ansehen − 100)/400), Buchungschance der Leistungen ×Ansehen/100 (0,5–1,5), unter 100 werden Einsteller ungeduldiger (Beschwerde und Kündigung je 1 Punkt früher je 5 Punkte unter 100). Hinweise auf den Ruf stehen in den Rückmeldungen.
         <b>Rückmeldungen:</b> je Jahreszeit schreibt etwa die Hälfte der Einsteller (${prozent(PENSION.feedback)}), was gefällt und was nicht (nicht bei Beschwerde oder Kündigung – Beschwerden kommen immer). <b>Reitplatz heute:</b> bei Ort → Reitplatz/Reithalle steht, welche Einsteller heute dort reiten; im Stall unter „Heute da“.</p>
+      <p><b>Stute stirbt mit Fohlen bei Fuß</b> (Dome, v262): Tod durch Vernachlässigung (Entkräftung oder unbehandelte Krankheit) → der Tierschutz nimmt das Fohlen mit (kann wie andere beschlagnahmte Pferde zurückgekauft werden). Sonst bleibt das Fohlen in der Box; noch nicht abgesetzt (unter 6 Monaten) braucht es Milch: am Todestag gibt der Tierarzt Milch, danach ohne Entscheidung Gesundheit −${WAISE.hunger} und Wohlbefinden −${WAISE.wohl} je Tag. Wahl in der Versorgung: Flasche (Milchaustauscher ${fmt(WAISE.flasche)}/Tag, Vertrauen +0,3/Tag) oder Aufzuchtstation. Leihmutter: offen (Frage an Dome).</p>
       <p><b>Stute mit Fohlen bei Fuß</b> (Dome, v244): die ersten ~6 Wochen nach der Geburt (0,6 Jahreszeiten) kein Training, danach bis zum Absetzen nur leichte Arbeit (${FOHLEN_LEICHT.map(k => UEBUNG[k].n.replace(/\u00ad/g, "")).join(", ")}). Dabei läuft das Fohlen mit: Sozialverhalten +0,5, Vertrauen +0,3. <b>Fohlen-ABC</b> (Box – ppf – Ort, ab ~1 Monat, einmal am Tag, Stufen bis ${FOHLEN_ABC_MAX}): Vertrauen +0,8, Gehorsam +0,5 je Übung – bei 4 bzw. 10 Tagen je Jahreszeit × 7 ÷ Tage (6 bzw. 14 Übungen bis zum Ziel), also je Jahreszeit gleich viel – Halfter, Führen, Hufe geben.</p>
       <p><b>Futterexperte</b> (Dome, v243): jede Empfehlung wird mit Datum und Umständen gespeichert (Anlass: hochtragend, tragend, säugend, Jungpferd, Arbeit leicht/mittel/schwer, Senior, Erhaltung + Futterzustand, Spezialfutter). asr – Futter stellt jetzigen Plan und Experten-Empfehlung gegenüber (Abweichungen rot); passen die Umstände nicht mehr, kommt ein Hinweis. Je Anlass bleibt die letzte Empfehlung gespeichert und kann später (z. B. bei der nächsten Trächtigkeit) mit einem Knopf übernommen werden. Futterkammer aus asr – Futter als eigenes Fenster mit Rücksprung.</p>
       <p><b>Vorlieben/Abneigungen</b> (Dome, v240): zwei Knöpfe unter stb – Charakter; ein Eintrag erscheint erst, wenn der Spieler die Sache an mindestens ${VL_SICHTBAR_AB} verschiedenen Tagen selbst erlebt hat (Admin: sofort, mit Zähler). <b>Streicheln</b> (Dome, v239, asr – Putzkiste): wischen wie Bürste/Kamm, einmal am Tag Wohlbefinden +1 und Vertrauen +0,2, eigene Vorliebe (Grundbedürfnis). <b>Vorlieben</b> (Dome, v238): Reaktion einmal am Tag je Aktion. „Mag“: Wohlbefinden +4 × Vorliebe, Vertrauen +0,2. „Mag nicht“: Wohlbefinden −4 × Abneigung, Vertrauen −0,1 – bei Grundbedürfnissen (Putzen, Kämmen, Füttern, Medizin, Streicheln) nur 15 % davon und kein Vertrauensverlust. Hohes Vertrauen schwächt Abneigungen: ab Vertrauen 50 linear bis auf 40 % bei Vertrauen 100 (auch im Training).</p>
@@ -8769,7 +8843,7 @@
       <p><b>Atemwege, Leckerli, Umstellung (F4):</b> Versteckte Veranlagung „Empfindliche Atemwege“ (0–1, vererbt wie die anderen Veranlagungen; empfindlich ab 0,2). Nur empfindliche Pferde reagieren auf staubiges Heu (ab 1 kg am Tag, nicht gewässert): Husten-Risiko ×4; Vorzeichen beim Besuch (ab 3 Staubtagen „prustet“, ab 1 Jahreszeit „hustet beim Heufressen“, ab 2 Jahreszeiten schwerer Atem); nach mehr als ${STAUB_ASTHMA_JZ} Jahreszeiten Staub (ohne Staub zählt der Zähler um ½ je Tag zurück) jeden Tag 5 % Chance auf <b>Pferdeasthma</b> (chronisch, mit weiterem Staub 5 % je Tag eine Stufe schlimmer bis „schwer“; Behandlung Kortison, Hustensaft). Heu wässern (Haken im Futterplan; kostet Zeit – zählt beim Stallburschen wie 1½ Boxen, mit Heudampfer aus dem Hof-Ausbau nicht) oder Heulage beseitigt den Staub.<br>
       <b>Anweiden:</b> Kommt ein Pferd nach mehr als einer Jahreszeit ohne Weide wieder raus (nicht im Winter), wird es ${anweidenTage()} Tage angeweidet: stundenweise draußen, dazu Heu (wie im Winter); Kolik und Hufrehe ×1,3 in dieser Zeit.<br>
       <b>Leckerli</b> (Box → Pferdepflege → Versorgung): Möhre/Apfel 100 g, Leckerli 10 g aus der Futterkammer; bis 3 am Tag je Vertrauen +0,3 und Wohlbefinden +0,5. An 5 Tagen mehr als 3 → „bettelt und schnappt“ (Brief), dann gibt es kein Vertrauen mehr dafür; nach 14 Tagen ohne zu viele Leckerli legt es sich. Zucker und Energie der Leckerli zählen im Futterzustand mit.<br>
-      <b>Futterumstellung:</b> Ein geänderter Futterplan (ab 1 kg Raufutter oder 250 g Kraftfutter Unterschied) wird über 3 Tage eingeführt: Tag 1 ⅓, Tag 2 ⅔, Tag 3 ganz neu. „Sofort umstellen“ (mit Warnung) → Kolik ×2 für 2 Tage.</p>
+      <b>Futterumstellung:</b> Ein geänderter Futterplan (ab 1 kg Raufutter oder 250 g Kraftfutter Unterschied) wird über 3 Tage eingeführt: Tag 1 ⅓, Tag 2 ⅔, Tag 3 ganz neu. „Sofort umstellen“ (mit Warnung) → Kolik ×2 für 2 Tage. Während der Umstellung zeigen Futterplan („heute …“) und Fütterung die Mischmengen – genau diese werden gefüttert und aus der Futterkammer genommen. Knöpfe im Futterplan: „Abbrechen“ (alle Änderungen aus diesem Fenster zurück) und „🔄 3-Tage-Umstellung“ (übernehmen).</p>
       <p><b>Futterexperte (F5):</b> extern auf Termin (Hofverwaltung → Mitarbeiter → Futterberatung oder Futterplan → Futterexperte): kommt am nächsten Morgen, ${fmt(FUTTER_BERATUNG)} je Pferd plus ${fmt(FUTTER_ANFAHRT)} Anfahrt, Rechnung per Brief (gebucht unter „Futter“). Fest angestellt erst im großen Stall (ab 20 Boxen), Gehalt ${fmt(MA_TYP.futterexperte.gehalt)} je Jahreszeit: berät kostenlos sofort und prüft zu Beginn jeder Jahreszeit alle Pferde ohne eigenen Plan und alle mit Haken „berechnet den Plan jede Jahreszeit neu“ (wird bei eigener Änderung abgehakt, kann wieder gesetzt werden). Er rechnet: Ziel-Energie = Bedarf (Stufe 7–9 ×0,85, Stufe 1–3 ×1,15); Raufutter nach Energie 1,5–2,5 kg je 100 kg (Heulage bei Husten/Asthma); zum Abnehmen mind. 1,5 kg je 100 kg Idealgewicht, bei Energieüberschuss 15–35 % davon Stroh; Rest über Hafer bis zur Grenze je Mahlzeit (Stärke 1 g je kg, Kraftfutter 0,5 kg je 100 kg; reicht das nicht, 3 Mahlzeiten), dann Rübenschnitzel (bis 0,3 kg je 100 kg), Öl (bis 1 g je kg) und Luzerne (bis 1 kg je 100 kg, zum Abnehmen 0,3) – ohne Hafer bei Rehe, PSSM, Magen, Schonkost, dick; Luzerne, bis das Eiweiß passt (dafür Hafer bzw. Heu zurück); zu viel Energie: Hafer, Rübenschnitzel, Öl, Spezialfutter, Heu bis zum Minimum zurück. Der Plan hält immer die Grenzen von „Bedarf gedeckt?“ ein; ist der Bedarf so nicht zu decken, steht ein Hinweis im Brief; Mineral 100 g (50 g unter 300 kg). Der neue Plan wird über 3 Tage eingeführt. Der Spieler lernt mit (Wissen Fütterung +0,5 je Pferd). Beim allerersten Pferd im Spiel kommt er einmal kostenlos und ohne Termin am ersten Tag (ersteFutterberatung).<br>
       <b>Spezialfutter</b> (nur über den Experten; er bringt einen Vorrat für ${SPEZIAL_VORRAT} Tage mit, danach im Futterhandel): ${Object.values(SPEZIAL).map(S => `${S.n} (${S.e} MJ, ${S.ei} % Eiweiß, ${S.zs} % Zucker/Stärke, ${S.preis.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/kg)`).join(" · ")}. Wahl: Kolik in den letzten 7 Tagen → Schonkost; Hufrehe/Cushing → Strukturfutter; PSSM → Muskelfutter; Magengeschwür → Magenschonfutter; Stufe 1–2 oder ≥ 2 Befunde → Aufbaufutter; ab 20 Jahren → Seniorenfutter. Wirkung ab 250 g am Tag: Kolik ×0,6 (Schonkost) bzw. ×0,8 (Senior), Hufrehe/Cushing ×0,5, Magengeschwür ×0,4, Infekte ×0,7 (Aufbau); passende Befunde werden mit 10 % je Tag eine Stufe besser. Senioren ab 20 Jahren verwerten ohne Seniorenfutter oder Heucobs (ab 1 kg) nur 90 % der Energie.</p>
       <h3>🏆 Turniere</h3>

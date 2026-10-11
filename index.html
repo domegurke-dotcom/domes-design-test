@@ -863,7 +863,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "276";
+  const SPIEL_VERSION = "277";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -871,12 +871,17 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=276"></script>
-<script src="kopfteile.js?v=276"></script>
-<script src="kopfalter.js?v=276"></script>
+<script src="pferd.js?v=277"></script>
+<script src="kopfteile.js?v=277"></script>
+<script src="kopfalter.js?v=277"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
+  // H4/H6: Zahlen und Merker ganz oben, damit sie schon beim Laden eines Spielstands bereitstehen (sonst hängt der Start)
+  const GRAS = { wachsen: [8, 5, 2, 0], verbrauch: 4, wenig: 20, matschPlus: 5, matschMinus: 2, matschLeer: 5, matschAb: 50, nachsaeen: 30, nachsaeenPlus: 30, nachsaeenWachs: 1.25 };
+  const UMBAU = { nachlass: 0.3, zufrUmzug: -5, zufrNachlass: -5, ansehenOhne: -3 };
+  const WEIDE_BEDARF = [0.5, 0.25], PONY_BIS = 148;
+  let herdeFaktor = 1, bauWeideZiel = "neu";
   const NAMEN = {
     Stute: ["Schneeflocke", "Luna", "Bella", "Stella", "Fee", "Amira", "Freya", "Nala", "Kira", "Zora", "Dana", "Leonie", "Paula", "Sina", "Aurora", "Jasmin", "Wilma", "Elfe"],
     Hengst: ["Donnerhall", "Sturmwind", "Apollo", "Merlin", "Farid", "Orkan", "Balou", "Rocky", "Picasso", "Zeus", "Blitz", "Gandalf", "Samir", "Titan", "Odin"],
@@ -6371,7 +6376,6 @@
   let stutenDabei = false;
   // Befund (Ankerpunkt für Krankheiten/Lahmheit): jetzt nur Gesundheit und Anzeige, heilt nach 2 Jahreszeiten
   // Herde einer Nacht: Sozialverhalten, ungeplante Bedeckung, Streit
-  let herdeFaktor = 1;
   function herdeNacht(herde) {
     const jung = herde.filter(q => alterJZ(q) < 12);
     herde.forEach(q => { if (alterJZ(q) < 12) sozialPlus(q, jung.filter(x => x !== q).length >= 2 ? 1.5 : 0.5); });
@@ -8238,14 +8242,13 @@
   // ---------- H4: Umbau-Folgen ----------
   // Boxen im Umbau: Pferde ziehen in freie Boxen um; eigene ohne Box kommen solange auf die Weide.
   // Einsteller bekommen 1 Jahreszeit vorher Bescheid – ohne freie Box: 30 % Nachlass (Pferd auf der Weide) oder kündigen; ohne Lösung kündigt der Einsteller selbst (Dome: wie in echt, kein „Vertrag ruht“).
-  const UMBAU = { nachlass: 0.3, zufrUmzug: -5, zufrNachlass: -5, ansehenOhne: -3 };
-  const umbauBoxen = g => spiel.boxen.filter(b => b.geb === g.gid);
-  const umbauGeplant = b => !!b.geb && gebaeude().some(g => g.plan && g.gid === b.geb);
-  const ersatzBoxen = g => spiel.boxen.filter(b => b.geb !== g.gid && boxFrei(b) && !b.quar && !b.abfohl && !umbauGeplant(b)).sort((a, b) => (a.paddock ? 1 : 0) - (b.paddock ? 1 : 0));
+  function umbauBoxen(g) { return spiel.boxen.filter(b => b.geb === g.gid); }
+  function umbauGeplant(b) { return !!b.geb && gebaeude().some(g => g.plan && g.gid === b.geb); }
+  function ersatzBoxen(g) { return spiel.boxen.filter(b => b.geb !== g.gid && boxFrei(b) && !b.quar && !b.abfohl && !umbauGeplant(b)).sort((a, b) => (a.paddock ? 1 : 0) - (b.paddock ? 1 : 0)); }
   function umbauBetroffen(g) { const B = umbauBoxen(g).filter(b => b.pferd && !b.tot);
     return { eigen: B.filter(b => !fremd(b.pferd)).map(b => b.pferd), einsteller: B.filter(b => fremd(b.pferd)).map(b => einstellerVon(b.pferd)).filter(Boolean) }; }
   // Reitplatz/Reithalle/Roundpen im Umbau: dort wird nicht trainiert (nur die anderen Plätze und das Gelände)
-  const anlageImUmbau = o => gebaeude().some(g => g.bau && g.bau.art === "umbau" && BAUTEN[g.typ].anlage === o);
+  function anlageImUmbau(o) { return gebaeude().some(g => g.bau && g.bau.art === "umbau" && BAUTEN[g.typ].anlage === o); }
   function umbauStarten(g) {
     const preis = umbauPreis(g);
     if (!spiel.admin && (spiel.geld || 0) < preis) { dialog(`<h3>Zu wenig Geld</h3><p>Der Umbau kostet ${fmt(preis)}.</p>`); return false; }
@@ -8381,7 +8384,6 @@
     $("nbZurueck").textContent = "‹ Stall"; $("nbZurueck").onclick = () => { bauFenster = false; zeigeBoxen(); };
     bauenBinden(); $("nebenSchirm").scrollTop = y;
   }
-  let bauWeideZiel = "neu";
   function bauDialog(typ, anbauVon, stufe = 1, menge) {
     const B = BAUTEN[typ], von = anbauVon && gebaeude().find(g => g.gid === anbauVon);
     if (B.fest) { dialog(`<h3>${B.ico} ${B.n}</h3><p>${B.info}. Preis: <b>${fmt(B.fest)}</b>, wird sofort geliefert und aufgebaut.</p>`, [["Kaufen", () => { if (bauStarten(typ, 0)) { speichern(); bauNeuZeigen(); } }], ["Abbrechen", null, "zweit"]]); return; }
@@ -8856,30 +8858,28 @@
     brief("Tierarztpraxis", "Hufrehe-Gefahr im Frühling", `das junge Frühlingsgras ist sehr zucker- und eiweißreich. Für ${l.map(p => `<b>${esc(p.name)}</b> (${reheGrund(p)})`).join(", ")} ist die Weide jetzt gefährlich – Hufrehe droht. {Stell sie|Stellen Sie sie} lieber ${spiel.anlage && spiel.anlage.paddock ? "auf den Sandpaddock oder " : ""}in die Box oder nur stundenweise auf die Weide.`, { pferde: l });
   }
   // ---------- Weide zu klein (v226, aus H6): 0,5 ha je Großpferd, 0,25 ha je Pony/Kleinpferd (unter 148 cm) ----------
-  const WEIDE_BEDARF = [0.5, 0.25], PONY_BIS = 148;
-  const weideBedarf = p => (p.stockmass || 150) < PONY_BIS ? WEIDE_BEDARF[1] : WEIDE_BEDARF[0];
+  function weideBedarf(p) { return (p.stockmass || 150) < PONY_BIS ? WEIDE_BEDARF[1] : WEIDE_BEDARF[0]; }
   const weideBelegt = (mit) => spiel.boxen.filter(b => b.pferd && !b.tot && (b.pferd.weide || b.pferd === mit)).reduce((a, b) => a + weideBedarf(b.pferd), 0);
   // ---------- H6: mehrere Weiden, Grasstand, Matsch, Weidepflege ----------
   // je Hof spiel.weiden = [{ wid, name, ha, gras 0–100, matsch 0–100, gesperrt, nachgesaet (bis Jz), aepfel (Tag) }] · p.weide.wid · hof.weideHa = Summe
-  const GRAS = { wachsen: [8, 5, 2, 0], verbrauch: 4, wenig: 20, matschPlus: 5, matschMinus: 2, matschLeer: 5, matschAb: 50, nachsaeen: 30, nachsaeenPlus: 30, nachsaeenWachs: 1.25 };
   function weiden() {
     if (!spiel.weiden) { const ha = (spiel.hof && spiel.hof.weideHa) || 0; spiel.weiden = ha > 0 ? [{ wid: "w1", name: "Weide 1", ha, gras: 70, matsch: 0 }] : []; }
     return spiel.weiden;
   }
-  const weidenSumme = () => Math.round(weiden().reduce((a, w) => a + w.ha, 0) * 100) / 100;
+  function weidenSumme() { return Math.round(weiden().reduce((a, w) => a + w.ha, 0) * 100) / 100; }
   function weidenSync() {   // Pachtende: Zaun endet mit der Pacht – Weiden schrumpfen auf das vorhandene Weideland
     let zuViel = weidenSumme() - weideland();
     for (let i = weiden().length - 1; i >= 0 && zuViel > 1e-9; i--) { const w = weiden()[i], weg = Math.min(w.ha, zuViel); w.ha = Math.round((w.ha - weg) * 100) / 100; zuViel -= weg; }
     spiel.weiden = weiden().filter(w => w.ha > 1e-9 || spiel.boxen.some(b => b.pferd && b.pferd.weide && b.pferd.weide.wid === w.wid));
     if (spiel.hof) spiel.hof.weideHa = weidenSumme();
   }
-  const weideById = wid => weiden().find(w => w.wid === wid);
-  const weideVon = p => p && p.weide ? (weideById(p.weide.wid) || weiden()[0]) : null;
-  const weidePferde = w => spiel.boxen.filter(b => b.pferd && !b.tot && !b.pferd.klinik && b.pferd.weide && (weideVon(b.pferd) || {}).wid === w.wid).map(b => b.pferd);
-  const weideBelegtW = (w, mit) => weidePferde(w).concat(mit && !weidePferde(w).includes(mit) ? [mit] : []).reduce((a, q) => a + weideBedarf(q), 0);
-  const matschig = p => { const w = weideVon(p); return !!(w && w.matsch >= GRAS.matschAb); };
-  const abgeaeppelt = p => { const w = weideVon(p); return !!(w && w.aepfel != null && spiel.tag - w.aepfel < tpj()); };
-  const grasWenig = p => { const w = weideVon(p); return !!(w && w.gras < GRAS.wenig); };
+  function weideById(wid) { return weiden().find(w => w.wid === wid); }
+  function weideVon(p) { return p && p.weide ? (weideById(p.weide.wid) || weiden()[0]) : null; }
+  function weidePferde(w) { return spiel.boxen.filter(b => b.pferd && !b.tot && !b.pferd.klinik && b.pferd.weide && (weideVon(b.pferd) || {}).wid === w.wid).map(b => b.pferd); }
+  function weideBelegtW(w, mit) { return weidePferde(w).concat(mit && !weidePferde(w).includes(mit) ? [mit] : []).reduce((a, q) => a + weideBedarf(q), 0); }
+  function matschig(p) { const w = weideVon(p); return !!(w && w.matsch >= GRAS.matschAb); }
+  function abgeaeppelt(p) { const w = weideVon(p); return !!(w && w.aepfel != null && spiel.tag - w.aepfel < tpj()); }
+  function grasWenig(p) { const w = weideVon(p); return !!(w && w.gras < GRAS.wenig); }
   // Standard-Weide für ein Pferd: die letzte, sonst die freie mit dem meisten Gras je Platz
   function weideWahl(p) {
     const offen = weiden().filter(w => !w.gesperrt && w.ha > 0); if (!offen.length) return null;

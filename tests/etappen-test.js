@@ -173,6 +173,7 @@ const path = require('path');
       { const rest = k.rest; k.jz = -1; kreditJahreszeit();
         ok('H1 Kreditrate wird abgebucht', k.rest < rest, `Rest ${rest} → ${k.rest} €`); }
 
+      { const bx = spiel.boxen.find(b => b.pferd && !b.tot && !b.pferd.weide && !b.pferd.klinik); if (bx) aufWeide(bx.pferd, bx); }   // Neuladen mit Pferd auf der Weide (v276 hing dabei)
       speichern(); return L;
     }, ansicht);
     ergebnisse.push(...r);
@@ -181,6 +182,7 @@ const path = require('path');
     for (const ber of ['uebersicht', 'plan', 'bauen', 'land', 'weiden', 'pension', 'futter']) await pg.evaluate(bb => { hofBereich = bb; zeigeHof('hof'); }, ber);
     await pg.reload(); await pg.waitForTimeout(300);
     ergebnisse.push([await pg.evaluate(() => typeof hatSpielstand !== 'undefined' && hatSpielstand) ? '✓' : '✗', ansicht, 'Speichern und Neuladen', '']);
+    ergebnisse.push([await pg.$eval('#smNeu', e => !!e.offsetParent).catch(() => false) ? '✓' : '✗', ansicht, 'Startmenü nach Neuladen (Pferd auf der Weide)', '']);
     await pg.close();
   }
   ergebnisse.forEach(z => console.log(z.join('  ')));

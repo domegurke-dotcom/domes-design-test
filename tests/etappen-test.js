@@ -224,6 +224,22 @@ const path = require('path');
         ok('H6 Bauer mäht im Sommer: Heu im Lager, Brief, Lohn', w.schnitte >= 1 && (spiel.post || []).some(x => /gemäht/.test(x.betreff || '')), `${datumText(datum())}: Heu ${Math.round(vor)} → ${Math.round(nach)} kg (inkl. Verbrauch)`);
         spiel.weiden = weiden().filter(x => x !== w); spiel.hof.weideHa = weidenSumme(); }
 
+      // ---------- H7 Stallarten ----------
+      { const H = spiel.hof; ok('H7 Start-Hof ist Pensionsstall', H.art === 'pension');
+        H.art = 'western'; spiel.stallarten = ['western']; spiel.anlage.trail = false; H.artSeit = jzJetzt(); delete H.artCache; delete H.artVerloren; delete H.artFrist; H.foerderLog = [];
+        const vorher = (spiel.post || []).length; stallartJahreszeit();
+        ok('H7 Schonfrist: keine Strafe, keine Förderung', !H.artFrist && !H.artVerloren && (spiel.post || []).length === vorher, JSON.stringify({ f: H.artFrist, v: H.artVerloren, p: [vorher, (spiel.post || []).length], b: stallartBed('western').map(x => x[1]), ok: stallartOk(), art: spiel.hof.art, gleich: spiel.hof === H, top: (spiel.post || [])[0] && spiel.post[0].betreff }));
+        H.artSeit = jzJetzt() - 5; H.foerderLog = [{ jz: jzJetzt() - 1, b: 300 }]; delete H.artCache; stallartJahreszeit();
+        ok('H7 Bedingung fehlt → Warnbrief mit Frist', H.artFrist === jzJetzt() + 1 && (spiel.post || []).some(x => /Bedingungen nicht erfüllt/.test(x.betreff || '')));
+        H.artFrist = jzJetzt(); const g0 = spiel.geld; stallartJahreszeit();
+        ok('H7 Frist vorbei → Statusverlust und Rückzahlung', H.artVerloren && Math.round(g0 - spiel.geld) === 300, `${Math.round(g0 - spiel.geld)} € zurück`);
+        const frei = () => spiel.boxen.find(b => boxFrei(b) && !b.quar), neu = (g, n) => { const b = frei(); if (b) { b.pferd = neuesPferd({ rasse: 'araber', geschlecht: g, alter: 6, name: n }); b.pferd.pflege = erzeugePflege(b.pferd); } };
+        H.art = 'zucht'; spiel.stallarten = ['zucht']; neu('Hengst', 'Zuchthengst'); neu('Stute', 'Zuchtstute1'); neu('Stute', 'Zuchtstute2'); spiel.boxen[spiel.boxen.length - 1].abfohl = true; delete H.artCache;
+        const g1 = spiel.geld; stallartJahreszeit();
+        ok('H7 Bedingungen erfüllt → Status zurück, Förderung, Vorteil', !H.artVerloren && vorteil('zucht') && Math.round(spiel.geld - g1) === STALLART_FOERDERUNG, stallartBed('zucht').map(x => (x[1] ? '✓' : '✗') + x[0]).join(' | '));
+        ansehen('H7 hvw – Hof – Stallart', () => stallartHTML());
+        spiel.boxen.forEach(b => { if (b.pferd && /^Zucht/.test(b.pferd.name)) b.pferd = null; }); H.art = 'pension'; spiel.stallarten = ['pension']; delete H.artCache; }
+
       // ---------- H1 Kreditrate ----------
       { const rest = k.rest; k.jz = -1; kreditJahreszeit();
         ok('H1 Kreditrate wird abgebucht', k.rest < rest, `Rest ${rest} → ${k.rest} €`); }
@@ -233,7 +249,7 @@ const path = require('path');
     ergebnisse.push(...r);
     // Hofverwaltung über die Oberfläche öffnen (alle Bereiche)
     for (const reiter of ['hof', 'finanzen', 'mitarbeiter', 'post']) await pg.evaluate(rt => { zeigeHof(rt); }, reiter);
-    for (const ber of ['uebersicht', 'plan', 'bauen', 'land', 'weiden', 'pension', 'futter']) await pg.evaluate(bb => { hofBereich = bb; zeigeHof('hof'); }, ber);
+    for (const ber of ['uebersicht', 'plan', 'bauen', 'land', 'stallart', 'weiden', 'pension', 'futter']) await pg.evaluate(bb => { hofBereich = bb; zeigeHof('hof'); }, ber);
     await pg.reload(); await pg.waitForTimeout(300);
     ergebnisse.push([await pg.evaluate(() => typeof hatSpielstand !== 'undefined' && hatSpielstand) ? '✓' : '✗', ansicht, 'Speichern und Neuladen', '']);
     await pg.close();

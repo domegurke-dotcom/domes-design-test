@@ -19,6 +19,3 @@ Diese Punkte sind zu groß oder brauchen erst eine Planung. Darum hat Claude sie
    - Offen: Preise, Turniergeld, Kreditgrenzen insgesamt prüfen.
 9. **Spielstand zwischen PC und Handy übertragen:** Ein QR-Code reicht nicht, weil der Spielstand zu groß ist. Vorschlag: Datei exportieren und importieren (oder später ein Konto).
 10. **Paddock und Sandpaddock** als nutzbarer Ort (kommt mit H6).
-11. **Leihmutter für Waisenfohlen:** Eine Box hat bisher nur Platz für ein Fohlen bei Fuß. Möglichkeiten:
-    - (a) Umbau auf zwei Fohlen je Box
-    - (b) eine Ammenstute über eine Vermittlung mieten

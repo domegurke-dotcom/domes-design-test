@@ -872,7 +872,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "289";
+  const SPIEL_VERSION = "290";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -880,9 +880,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=289"></script>
-<script src="kopfteile.js?v=289"></script>
-<script src="kopfalter.js?v=289"></script>
+<script src="pferd.js?v=290"></script>
+<script src="kopfteile.js?v=290"></script>
+<script src="kopfalter.js?v=290"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -7918,6 +7918,7 @@
       anlage: spiel.anlage, ausruestung: spiel.ausruestung, stallarten: ["pension"],
       hof: { hid: "h1", name, id: I.id, art: "pension", ha: I.ha, weideHa: I.weide, bauHa: 1, stufe: I.stufe, wert: I.preis, kauf: { tag: 1, preis: I.preis, eigen: I.eigen }, pacht: 0 }, hofReihe: ["h1"], hoefe: {} };
     buchen(-I.preis, "Hofkauf");
+    stallartBrief("pension");
     const k = kreditNeu(I.preis - I.eigen, KREDIT.jz, "Hofkredit");
     brief(KREDIT.bank, "Ihr Hofkredit", `herzlichen Glückwunsch zu {deinem|Ihrem} neuen Hof <b>${esc(name)}</b>! Hier die Eckdaten {deines|Ihres} Kredits:` +
       verTab(["Hofkredit", ""], [["Kreditsumme", fmt(k.summe)], ["Zinsen", `${prozent(k.zins)} im Jahr`], ["Laufzeit", `${k.raten / 4} Jahre (${k.raten} Raten)`], ["Rate je Jahreszeit", fmt(k.rate)], ["erste Rate", `Beginn ${jzName(jzJetzt() + 1)}`]]) +
@@ -8119,7 +8120,7 @@
       hof: { hid, name, id: A.typ, art: "pension", ha: A.ha, weideHa: A.weide, bauHa: A.bauha || 1, stufe: A.stufe, wert: A.preis, kauf: { tag: spiel.tag, preis: A.preis, eigen }, pacht: 0 } };
     (spiel.hoefe = spiel.hoefe || {})[hid] = H; hofReihe().push(hid);
     imHof(hid, () => {
-      buchen(-A.preis, "Hofkauf"); buchen(eigen, "Eigenanteil vom zentralen Konto");
+      buchen(-A.preis, "Hofkauf"); buchen(eigen, "Eigenanteil vom zentralen Konto"); stallartBrief("pension");
       if (kredit) { const k = kreditNeu(kredit, KREDIT.jz, "Hofkredit");
         brief(KREDIT.bank, `Hofkredit ${name}`, `herzlichen Glückwunsch zu {deinem|Ihrem} neuen Hof <b>${esc(name)}</b>! Der Kredit über ${fmt(k.summe)} läuft über die Kasse dieses Hofs: Rate je Jahreszeit <b>${fmt(k.rate)}</b>, ${k.raten} Raten, erste Rate zu Beginn ${jzName(jzJetzt() + 1)}.`); }
     });
@@ -9012,26 +9013,27 @@
   // H6 (Dome): Weide-Bild statt leerer Box – alle Pferde dieser Weide, das gewählte vorne in der Mitte
   function weideBildSVG(p) {
     const w = weideVon(p), s = datum().s, gras = ["#8fcf6a", "#7cbf55", "#a8b85a", "#e9eef2"][s], gras2 = ["#6fb24c", "#5fa33f", "#8c9a45", "#cfd8de"][s];
-    const herde = (w ? weidePferde(w) : [p]).filter(q => q !== p).slice(0, 5); herde.splice(Math.floor(herde.length / 2), 0, p);
-    const n = herde.length, pl = herde.map((q, i) => { const z = zeichnePferd(q.rasse, fb(q), { alterStufe: stufeKey(q), seed: q.id, geschlecht: q.geschlecht, maehne: q.maehne, schopf: q.schopf, typ: q.typ, eigenKopf: q.nase === "spiel" ? false : (q.nase || undefined), haltung: "normal", statisch: 1 });
-      const vorne = q === p, sc = (q.stockmass || 150) * STALL.cmZuEinheit / 100 * (vorne ? 0.62 : 0.46), cx = (z.box.minX + z.box.maxX) / 2;
-      const x = n === 1 ? 200 : 75 + i * (250 / (n - 1)), y = vorne ? 288 : 236 + (i % 2) * 10, spiegel = i % 2 ? -1 : 1;
-      return { y, svg: `<g transform="translate(${(x - spiegel * cx * sc).toFixed(1)},${y}) scale(${(spiegel * sc).toFixed(4)},${sc.toFixed(4)})">${z.svg}</g>` }; }).sort((a, b) => a.y - b.y).map(o => o.svg).join("");
+    const andere = (w ? weidePferde(w) : []).filter(q => q !== p).slice(0, 5);
+    const malen = (q, x, y, sc, spiegel) => { const z = zeichnePferd(q.rasse, fb(q), { alterStufe: stufeKey(q), seed: q.id, geschlecht: q.geschlecht, maehne: q.maehne, schopf: q.schopf, typ: q.typ, eigenKopf: q.nase === "spiel" ? false : (q.nase || undefined), haltung: "normal", statisch: 1 });
+      const cx = (z.box.minX + z.box.maxX) / 2; return `<g transform="translate(${(x - spiegel * cx * sc).toFixed(1)},${y}) scale(${(spiegel * sc).toFixed(4)},${sc.toFixed(4)})">${z.svg}</g>`; };
+    const hinten = andere.map((q, i) => malen(q, [80, 320, 135, 265, 35, 365][i], 232 + (i % 2) * 8, (q.stockmass || 150) * STALL.cmZuEinheit / 100 * 0.44, i % 2 ? -1 : 1)).join("");
+    const vorne = malen(p, 200, 290, (p.stockmass || 150) * STALL.cmZuEinheit / 100 * 0.62, 1);   // Dome: das gewählte Pferd vorne in der Mitte
+    const txt = `🌿 ${w ? w.name : "Weide"} · Gras ${w ? Math.round(w.gras) : 0} %`, bw = Math.round(30 + 7.2 * txt.length);
     return `<rect x="0" y="0" width="400" height="300" fill="${s === 3 ? "#cfdbe6" : "#bfe3f5"}"/><path d="M0,120 Q90,92 190,112 T400,104 V300 H0 Z" fill="${gras2}"/><path d="M0,150 Q120,128 240,146 T400,140 V300 H0 Z" fill="${gras}"/>
       <g stroke="#7a5a3a" stroke-width="3">${[20, 80, 140, 200, 260, 320, 380].map(x => `<line x1="${x}" y1="128" x2="${x}" y2="160"/>`).join("")}<line x1="0" y1="136" x2="400" y2="132"/><line x1="0" y1="150" x2="400" y2="146"/></g>
-      ${pl}<g><rect x="8" y="8" width="${Math.round(40 + 7.4 * ((w ? w.name : "Weide").length + 12))}" height="22" rx="11" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4"/><text x="18" y="23" font-size="12" font-weight="700" fill="#2b1d12" font-family="system-ui, sans-serif">🌿 ${esc(w ? w.name : "Weide")} · Gras ${w ? Math.round(w.gras) : 0} %</text></g>`;
+      ${hinten}${vorne}<g data-wbschild="1" role="button" aria-label="Zur Boxenübersicht" style="cursor:pointer"><rect x="${200 - bw / 2}" y="38" width="${bw}" height="22" rx="11" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4"/><text x="200" y="53" text-anchor="middle" font-size="12" font-weight="700" fill="#2b1d12" font-family="system-ui, sans-serif">${esc(txt)}</text></g>`;
   }
   // ---------- H7: Stallarten – Bedingungen, Schonfrist, Frist, Strafe, Vorteile ----------
   function eigenePferdeHof() { return spiel.boxen.filter(b => b.pferd && !b.tot && !fremd(b.pferd)).map(b => b.pferd); }
   function stallartBed(art) {   // [Text, erfüllt, kommt später (zählt noch nicht)]
     const P = eigenePferdeHof(), A = spiel.anlage || {};
     if (art === "pension") { const n = Math.ceil(spiel.boxen.length / 2), e = einstellerListe().filter(x => pensionBox(x)).length; return [[`mindestens die Hälfte der Boxen an Einsteller (${e} von ${n})`, e >= n]]; }
-    if (art === "zucht") { const h = P.filter(deckfaehig).length, st = P.filter(q => q.geschlecht === "Stute" && alterJZ(q) >= 12 && alterJZ(q) < 84).length;
-      return [[`mindestens 1 Deckhengst (${h})`, h >= 1], [`mindestens 2 Zuchtstuten (${st})`, st >= 2], ["Abfohlbox", spiel.boxen.some(b => b.abfohl)], ["Aufzucht-Offenstall", true, true]]; }
+    if (art === "zucht") { const h = P.filter(q => q.geschlecht === "Hengst" && alterJZ(q) >= 12).length, st = P.filter(q => q.geschlecht === "Stute" && alterJZ(q) >= 12 && alterJZ(q) < 84).length;
+      return [[`mindestens 1 Deckhengst ab 3 Jahren (${h})`, h >= 1], [`mindestens 2 Zuchtstuten (${st})`, st >= 2], ["Abfohlbox", spiel.boxen.some(b => b.abfohl)], ["Aufzucht-Offenstall", true, true]]; }
     if (art === "ausbildung") { const ber = angestellte("bereiter").length; return [["Reitplatz", !!A.reitplatz], ["Roundpen oder Reithalle", !!(A.roundpen || A.reithalle)], [`mindestens 1 Bereiter (${ber})`, ber >= 1]]; }
     if (art === "gnadenhof") { const falsch = P.filter(q => !(istSenior(q) || befundListe(q).length || q.schutzBis || altersschwach(q))), zucht = P.some(q => q.traechtig) || spiel.boxen.some(b => b.fohlen), verk = (spiel.angebote || []).length;
       return [[`nur alte, kranke oder Notfallpferde${falsch.length ? ` (nicht: ${falsch.map(q => esc(q.name)).join(", ")})` : ""}`, !falsch.length], ["keine Zucht", !zucht], ["kein Verkauf", !verk]]; }
-    if (art === "renn") { const r = P.filter(q => ["vollblut", "araber", "tekke"].includes(q.rasse) && alterJZ(q) >= 8).length; return [["Rennbahn", true, true], [`mindestens 2 Rennpferde (${r})`, r >= 2], ["Rennpferdetrainer", true, true]]; }
+    if (art === "renn") { const r = P.filter(q => (q.rasse === "vollblut" && alterJZ(q) >= 8) || (["araber", "tekke"].includes(q.rasse) && alterJZ(q) >= 12)).length; return [["Rennbahn", true, true], [`mindestens 2 Rennpferde (${r})`, r >= 2], ["Rennpferdetrainer", true, true]]; }   // Dome: Vollblüter laufen schon zweijährig, Araber/Achal-Tekkiner ab 3
     if (art === "western") { const w = P.filter(q => q.rasse === "quarter" || ((q.disz || {}).western || 0) > 0).length; return [["Reitplatz", !!A.reitplatz], ["Trail-Parcours", !!A.trail], [`mindestens 2 Westernpferde (${w})`, w >= 2], ["Westerntrainer", true, true]]; }
     return [];
   }
@@ -9063,10 +9065,14 @@
         <p class="text" style="padding:0 10px"><small><b>Vorteile:</b> ${(STALLART_VORTEILE[art] || []).join(" · ")}</small></p></div>
       <h4 class="ma-titel">🔁 Stallart wechseln</h4><div class="bf-knoepfe">${Object.keys(STALLART_NAME).filter(k => k !== art).map(k => `<button class="mini-knopf" data-stallart="${k}">${STALLART_NAME[k]}</button>`).join("")}</div>`;
   }
+  function stallartBrief(art) {   // Dome: bei Hofkauf und Wechsel über die Vorteile informieren
+    const name = STALLART_NAME[art], B = stallartBed(art);
+    brief("Landwirtschaftsamt", `${hofName()}: willkommen als ${name}`, `{dein|Ihr} Hof <b>${esc(hofName())}</b> ist jetzt als <b>${name}</b> eingetragen. Das bringt {dir|Ihnen}:<ul>${(STALLART_VORTEILE[art] || []).map(v => `<li>${v}</li>`).join("")}<li>${fmt(STALLART_FOERDERUNG)} Förderung je Jahreszeit</li></ul>Voraussetzung sind diese Bedingungen: ${B.filter(x => !x[2]).map(x => x[0].replace(/\s*\(.*\)$/, "")).join(", ")}. Für das erste Jahr gilt eine Schonfrist – Förderung und Vorteile gibt es, sobald alle Bedingungen erfüllt sind. Alles Weitere: Hofverwaltung → Hof → Stallart.`);
+  }
   function stallartBinden() {
     document.querySelectorAll("[data-stallart]").forEach(b => b.onclick = () => { const k = b.dataset.stallart, H = spiel.hof;
       dialog(`<h3>🔁 ${STALLART_NAME[k]} werden?</h3><p>${esc(hofName())} wird ab sofort als <b>${STALLART_NAME[k]}</b> geführt. Bedingungen: ${stallartBed(k).filter(x => !x[2]).map(x => x[0].replace(/\s*\(.*\)$/, "")).join(", ")}.</p><p>1 Jahr Schonfrist, Förderung und Vorteile erst mit erfüllten Bedingungen. Die Förderung der alten Stallart endet.</p>`,
-        [["Wechseln", () => { H.art = k; spiel.stallarten = [k]; H.artSeit = jzJetzt(); delete H.artFrist; delete H.artVerloren; delete H.artCache; H.foerderLog = []; speichern(); zeigeHof(); }], ["Abbrechen", null, "zweit"]]); });
+        [["Wechseln", () => { H.art = k; spiel.stallarten = [k]; H.artSeit = jzJetzt(); delete H.artFrist; delete H.artVerloren; delete H.artCache; H.foerderLog = []; stallartBrief(k); speichern(); zeigeHof(); }], ["Abbrechen", null, "zweit"]]); });
   }
   function saatRuheTage() { return Math.max(1, Math.round(tpj() / 3)); }   // nach dem Nachsäen ca. ⅓ Jahreszeit (≈ 4 Wochen) Ruhe: 4 Tage/Jz → 1, 7 → 2, 10 → 3
   function grasNacht() {
@@ -9336,7 +9342,7 @@
       <p><b>Sandpaddocks (H6):</b> jeder gebaute Sandpaddock (Hof → Bauen, auch mehrere) ist ein eigener Auslauf mit eigener Gruppe; Platz je Stufe 1/2/3: ${PADDOCK_PLATZ.slice(1).join(" / ")} Pferde. Zuteilen über Box → Pflege → Ort → Sandpaddock (Auswahl zeigt, wer dort steht und wie viel Platz frei ist), zurück über dieselbe Kachel. Das Pferd bleibt sonst wie in der Box versorgt (Futter, Mist), bekommt aber keinen Box-Abzug: Wohlbefinden +3 mit Gesellschaft (+1 allein) + 2 × temperamentvoll je Nacht; Herdenregeln (Streit, ungeplante Bedeckung) je Sandpaddock. Hengst mit Stute: Warnung (besser mit Wallach). Gesperrt bei Quarantäne und Boxenruhe. Hufrehe-Warnung im Frühling bietet „Lieber Sandpaddock“ an.</p>
       <p><b>Einstreu (H6):</b> Sorten in der Futterkammer (Gruppe Einstreu): ${Object.keys(EINSTREU).map(k => `${FUTTER[k].n} ${EINSTREU[k].kg} kg je Box und Tag à ${String(FUTTER[k].preis.toFixed(2)).replace(".", ",")} €`).join(" · ")}. Wirkung: Stroh staubt – Husten ×1,3 (empfindliche Atemwege ×2); Strahlfäule Pellets ×0,7, Leinstroh/Hanf ×0,8; ohne Einstreu Wohlbefinden −${EINSTREU_OHNE.wohl} je Nacht und Strahlfäule ×${EINSTREU_OHNE.strahl} (Brief „Keine Einstreu mehr“). Wahl je Box: zieht ein Pferd ein, fragt das Spiel, welche Einstreu (nur eine Sorte im Lager → automatisch); ändern in Box → Pflege → Versorgung. Verbrauch jede Nacht je Box mit Pferd (nicht auf der Weide, nicht in der Klinik), zählt in den Platz der Futterkammer. Startvorrat einmal ${EINSTREU_START} kg Einstreu-Stroh. Wird die Box leer, wird beim nächsten Pferd neu eingestreut. <b>Pension:</b> Zusatzleistung „Bessere Einstreu“ ${fmt(PENSION_LEISTUNG.einstreu.preis)} je Jahreszeit – die Box bekommt automatisch staubarme Einstreu aus dem Lager (Späne, Pellets oder Leinstroh/Hanf); gibt es nur Stroh, Zufriedenheit −2 je Nacht.</p>
       <p><b>Futterwiese (H6):</b> eine Weide ohne Pferde lässt sich unter Hof → Weiden „als Futterwiese nutzen“ (keine Pferde darauf, wächst ohne Verbrauch). Der Bauer mäht im Sommer: 1. Schnitt am ersten Sommertag, 2. Schnitt am Tag ⌈0,7 × Tage je Jz⌉, wenn das Gras mindestens ${WIESE.schnitt2Gras} % hat. Ertrag ${WIESE.ertrag} kg Heu je ha und Schnitt × Gras/70 (höchstens ×1), danach Gras −${WIESE.grasWeg}. Lohn ${fmt(WIESE.lohn)} je ha und Schnitt. Heu kommt in die Futterkammer, so viel Platz ist; der Rest geht für ${String(WIESE.verkauf.toFixed(2)).replace(".", ",")} €/kg an den Bauern. ${prozent(WIESE.regen)} Regen-Schnitt → staubiges Heu. Ohne Futterwiese: Heu im Futterhandel.</p>
-      <p><b>Stallarten (H7):</b> je Hof eine Stallart (Hof → Stallart, Wechsel jederzeit). Bedingungen: Pensionsstall ≥ ½ der Boxen an Einsteller · Zuchtstall ≥ 1 Deckhengst (ab 2 J.), ≥ 2 Zuchtstuten (3–20 J.), Abfohlbox (Aufzucht-Offenstall kommt später) · Ausbildungsstall Reitplatz + Roundpen oder Halle + ≥ 1 Bereiter · Gnadenhof nur alte/kranke/Notfallpferde, keine Zucht, kein Verkauf · Rennstall ≥ 2 Rennpferde (Vollblut/Araber/Achal-Tekkiner ab 2 J.; Rennbahn und Trainer kommen später) · Westernstall Reitplatz + Trail-Parcours + ≥ 2 Westernpferde (Quarter oder mit Western-Ausbildung; Trainer kommt später). Erfüllt: ${fmt(STALLART_FOERDERUNG)} Förderung je Jahreszeit + Vorteile (Pension Anfragen ×1,3 · Zucht Labor −25 % · Ausbildung Lernen ×1,2 · Gnadenhof 30 € Spenden je Pferd und Jz · Renn halbes Jockey-Reitgeld · Western halbes Nenngeld bei Westernprüfungen). Schonfrist ${STALLART_SCHON} Jahreszeiten nach Kauf/Wechsel (keine Strafe, Förderung/Vorteile nur bei erfüllten Bedingungen). Danach fehlt etwas → Warnbrief, Frist bis Ende der Jahreszeit → Statusverlust (Vorteile weg) und Rückzahlung der Förderung der letzten 4 Jahreszeiten; erfüllt man die Bedingungen wieder, kommt der Status zurück.</p>
+      <p><b>Stallarten (H7):</b> je Hof eine Stallart (Hof → Stallart, Wechsel jederzeit). Bedingungen: Pensionsstall ≥ ½ der Boxen an Einsteller · Zuchtstall ≥ 1 Deckhengst (ab 3 J.), ≥ 2 Zuchtstuten (3–20 J.), Abfohlbox (Aufzucht-Offenstall kommt später) · Ausbildungsstall Reitplatz + Roundpen oder Halle + ≥ 1 Bereiter · Gnadenhof nur alte/kranke/Notfallpferde, keine Zucht, kein Verkauf · Rennstall ≥ 2 Rennpferde (Vollblut ab 2 J., Araber/Achal-Tekkiner ab 3 J.; Rennbahn und Trainer kommen später) · Westernstall Reitplatz + Trail-Parcours + ≥ 2 Westernpferde (Quarter oder mit Western-Ausbildung; Trainer kommt später). Erfüllt: ${fmt(STALLART_FOERDERUNG)} Förderung je Jahreszeit + Vorteile (Pension Anfragen ×1,3 · Zucht Labor −25 % · Ausbildung Lernen ×1,2 · Gnadenhof 30 € Spenden je Pferd und Jz · Renn halbes Jockey-Reitgeld · Western halbes Nenngeld bei Westernprüfungen). Schonfrist ${STALLART_SCHON} Jahreszeiten nach Kauf/Wechsel (keine Strafe, Förderung/Vorteile nur bei erfüllten Bedingungen). Danach fehlt etwas → Warnbrief, Frist bis Ende der Jahreszeit → Statusverlust (Vorteile weg) und Rückzahlung der Förderung der letzten 4 Jahreszeiten; erfüllt man die Bedingungen wieder, kommt der Status zurück.</p>
       <p><b>Weide-Bild (H6):</b> steht ein Pferd auf der Weide, zeigt die Box statt der leeren Box die Weide mit bis zu 6 Pferden dieser Weide (das gewählte vorne in der Mitte), Gras-Farbe je Jahreszeit, oben Name und Grasstand.</p>
       <p><b>Wirkung der Stufe:</b> Wohlbefinden je Nacht in der Box: Stufe 1 −0,5, Stufe 3 +0,5, Zustand unter 40 % −0,5, Paddockbox +0,5. Verletzungsrisiko in der Box × 1,3 / 1 / 0,8, Zustand unter 70 % × 1,1, unter 40 % × 1,3. Mitarbeiter-Zufriedenheit je Jahreszeit: Ø Stufe unter 1,5 −3, ab 2,5 +3, Ø Zustand unter 50 % −3. Quarantänestall: Pferde dort stecken niemanden an und werden nicht angesteckt. Pensionspreis nach Stufe kommt mit H5.</p>
       <p><b>Bauland und Weideland</b> (Dome, v225): Bauland ${fmt(BAULAND_PREIS)}/ha (nur kaufen), Weideland ${fmt(LAND_PREIS)}/ha oder Pacht ${fmt(PACHT_PREIS)}/ha je Jahreszeit. Platzbedarf auf dem Bauland: Wohnhaus/Hofplatz ${haTxt(HOFPLATZ)}, Stall ${haTxt(0.1)} je 6 Boxen, Paddockboxen ${haTxt(0.15)} je 6, Reitplatz ${haTxt(0.1)}, Reithalle ${haTxt(0.15)}, Roundpen/Trail/Sandpaddock/Waschplatz/Lager/Sattelkammer/Quarantänestall/Abfohlbox je ${haTxt(0.05)}. Weide einzäunen nur auf Weideland. Start-Pensionsstall: 1 ha Bauland + 1 ha Weideland. Makler-Höfe: Bauland nach Bestand + 0,1 ha, auf ½ ha aufgerundet; Grundstück 1 ha Bauland.
@@ -9814,6 +9820,7 @@
   $("postIconRot").onclick = () => { menueZu(); const neu = ungelesenFremd().map(b => b.id); if (neu.length) briefFenster(null, neu); };
   // Boxschild im Stall antippen: zurück zur Boxenübersicht
   $("boxSchildKnopf").onclick = e => { e.stopPropagation(); zeigeBoxen(); };
+  $("weideBild").addEventListener("click", e => { if (e.target.closest && e.target.closest("[data-wbschild]")) { e.stopPropagation(); zeigeBoxen(); } });   // Dome: Weide-Schild → Boxenübersicht
   // alte Neuigkeiten-Meldungen in Briefe umwandeln
   if (spiel.meldungen && spiel.meldungen.length) { spiel.meldungen.reverse().forEach(m => brief("Hofverwaltung", "Neuigkeit", m)); delete spiel.meldungen; speichern(); }
   setInterval(postIconSetzen, 600);

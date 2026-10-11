@@ -194,11 +194,11 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 
 ## ✅ Domes Antworten H6/H7 (12.10.2026) – Aufgaben
 **H6 nacharbeiten:**
-- [ ] Sandpaddock wie Weide behandeln: Pferd steht draußen (Box leer), kein Gras → immer Heu; eigene Ansicht wie das Weide-Bild; mehrere Sandpaddocks wie bei der Weide.
-- [ ] Ort: neue Kachel **„Koppel“**, darin Weide und Sandpaddock.
-- [ ] Weide- und Sandpaddock-Bild: **Heuraufe** (antippen = Heu füttern) und **Futtereimer** (antippen = alles außer Heu laut Futterplan); leer/gefüllt sichtbar; nur Heu im Plan → Eimer bleibt leer. **Pferdeäpfel** auf Weide/Sandpaddock, antippen = abäppeln.
-- [ ] Box: Krippe bekommt kein Heu mehr, sondern Kraftfutter usw. (wie der Futtereimer); **Heuhaufen hinten links** (leer → Heureste, antippen = füllen); **Einstreu-Bilder** je Material, ohne Einstreu Pflastersteinboden; Knopf **„Box leeren“** (Einstreu und Restfutter raus), wenn kein Pferd in der Box ist.
-- [ ] Neue Futtergegenstände: beim ersten Sehen **Info-Sprechblase**.
+- [x] (v293) Sandpaddock wie Weide behandeln: Pferd steht draußen (Box leer), kein Gras → immer Heu; eigene Ansicht wie das Weide-Bild; mehrere Sandpaddocks wie bei der Weide.
+- [x] (v293) Ort: neue Kachel **„Koppel“**, darin Weide und Sandpaddock.
+- [x] (v293) Weide- und Sandpaddock-Bild: **Heuraufe** (antippen = Heu füttern) und **Futtereimer** (antippen = alles außer Heu laut Futterplan); leer/gefüllt sichtbar; nur Heu im Plan → Eimer bleibt leer. **Pferdeäpfel** auf Weide/Sandpaddock, antippen = abäppeln.
+- [x] (v292/v293, Krippe mit Haferkörnern) Box: Krippe bekommt kein Heu mehr, sondern Kraftfutter usw. (wie der Futtereimer); **Heuhaufen hinten links** (leer → Heureste, antippen = füllen); **Einstreu-Bilder** je Material, ohne Einstreu Pflastersteinboden; Knopf **„Box leeren“** (Einstreu und Restfutter raus), wenn kein Pferd in der Box ist.
+- [x] (v293) Neue Futtergegenstände: Info-Sprechblase, bis einmal angetippt.
 - [x] Weide-Bild: gewähltes Pferd mittig, Schild oben mittig und antippbar → Boxenübersicht (v290).
 - [x] Futterwiese wie in echt: 1. Schnitt Anfang Juni, 2. Ende Juli, 3. im September; 270/195/115 kg je ha im Spiel-Maßstab (v291).
 - [x] Nachsäen nach Spieltempo (Wachstum je Tag über `proTag`, Ruhe ⅓ Jahreszeit) – war schon berücksichtigt.

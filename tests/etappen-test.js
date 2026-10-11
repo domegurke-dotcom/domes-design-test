@@ -140,14 +140,11 @@ const path = require('path');
           nacht(Math.max(g.bau ? g.bau.rest : 0, rp && rp.bau ? rp.bau.rest : 0) + 1);
           ok('H4 Umbau fertig → Pferde zurück in die Box', !g.bau && !eigen.weide && !eigen.umbauWeide && !ep.weide && !e.nachlass && g.stufe >= 2, 'Stufe ' + g.stufe);
           if (rp && !rp.bau) ok('H4 Reitplatz nach dem Umbau wieder offen', ortOffen('reitplatz'));
-          // Variante „Vertrag ruht“
-          const nochDa = umbauBetroffen(g).einsteller.includes(e); ok('H4 Einsteller nach dem Umbau wieder in seiner Box', nochDa, nochDa ? '' : JSON.stringify({ kuendigt: e.kuendigt, box: pensionBox(e) && spiel.boxen.indexOf(pensionBox(e)), geb: pensionBox(e) && pensionBox(e).geb, g: g.gid, liste: einstellerListe().includes(e), briefe: (spiel.post || []).filter(x => (x.von || '').includes(e.nn) || (x.text || '').includes(ep.name)).map(x => x.betreff).slice(0, 6) }));
-          if (g.stufe < 3 && nochDa) { fuellen(); umbauStarten(g); zu(); g.plan.wahl[e.eid] = 'ruht'; nacht(tpj());
-            ok('H4 Vertrag ruht → Pferd beim Besitzer', !!e.ruht && !pensionBox(e), e.ruht ? e.ruht.pferd.name : JSON.stringify({ box: pensionBox(e) && spiel.boxen.indexOf(pensionBox(e)), geb: pensionBox(e) && pensionBox(e).geb, g: g.gid, bau: g.bau, plan: g.plan }));
-            const geld = spiel.geld; const andere = einstellerListe().filter(x => x !== e && !x.ruht).length; pensionJahreszeit();
-            ok('H4 Ruhender Vertrag zahlt nichts', andere || Math.round(spiel.geld - geld) === 0, Math.round(spiel.geld - geld) + ' €');
-            nacht(g.bau.rest + 1);
-            ok('H4 Nach dem Umbau ist das Pensionspferd zurück', !e.ruht && !!pensionBox(e), pensionBox(e) ? 'Box ' + (spiel.boxen.indexOf(pensionBox(e)) + 1) : ''); }
+          // Variante ohne Lösung: Einsteller kündigt selbst (Dome: kein „Vertrag ruht“)
+          const nochDa = umbauBetroffen(g).einsteller.includes(e); ok('H4 Einsteller nach dem Umbau wieder in seiner Box', nochDa);
+          if (g.stufe < 3 && nochDa) { fuellen(); umbauStarten(g); zu(); nacht(tpj());
+            ok('H4 Ohne Lösung kündigt der Einsteller und zieht aus', !einstellerListe().includes(e) && !spiel.boxen.some(b => b.pferd === ep), ep.name);
+            ok('H4 Brief „ausgezogen“', (spiel.post || []).some(x => /ausgezogen/.test(x.betreff || '') && (x.text || '').includes('Umbau'))); }
           spiel.boxen.forEach(b => { if (b.pferd && /^Platzhalter/.test(b.pferd.name)) b.pferd = null; });
         } }
 

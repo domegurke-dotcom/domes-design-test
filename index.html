@@ -880,7 +880,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "297";
+  const SPIEL_VERSION = "298";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -888,9 +888,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=297"></script>
-<script src="kopfteile.js?v=297"></script>
-<script src="kopfalter.js?v=297"></script>
+<script src="pferd.js?v=298"></script>
+<script src="kopfteile.js?v=298"></script>
+<script src="kopfalter.js?v=298"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -8230,7 +8230,7 @@
   function landHTML() {
     const H = spiel.hof || {};
     return `<dl class="werte"><dt>Bauland</dt><dd>${haTxt(bauHa())} (belegt ${haTxt(baulandBelegt())}, frei ${haTxt(baulandFrei())})</dd>
-        <dt>Weideland</dt><dd>${haTxt(weideland())}${H.pacht ? ` (davon Pacht ${haTxt(H.pacht)})` : ""} (Weide eingezäunt ${haTxt(H.weideHa || 0)}, frei ${haTxt(freiesLand())})</dd>
+        <dt>Weideland</dt><dd>${haTxt(weideland())}${H.pacht ? ` (davon Pacht ${haTxt(H.pacht)})` : ""} (Weide eingezäunt ${haTxt(H.weideHa || 0)}${imBau().some(g => g.typ === "weide") ? `, Zaun im Bau ${haTxt(imBau().filter(g => g.typ === "weide").reduce((a, g) => a + g.ha, 0))}` : ""}, frei ${haTxt(freiesLand())})</dd>
         <dt>Pachtland</dt><dd>${H.pacht || 0} ha Weideland${H.pacht ? ` · ${fmt(H.pacht * PACHT_PREIS)} je Jahreszeit` : ""}</dd><dt>Kasse</dt><dd>${fmt(spiel.geld || 0)}</dd></dl>
       <p class="text" style="margin:8px 0 6px"><b>Bauland</b> (für Gebäude, Reitplätze, Hofplatz) kostet <b>${fmt(BAULAND_PREIS)} je ha</b>. <b>Weideland</b> kostet <b>${fmt(LAND_PREIS)} je ha</b> oder <b>${fmt(PACHT_PREIS)} je ha und Jahreszeit</b> Pacht. Gekauftes Land erhöht den Hofwert (Kreditrahmen). Beim Kauf von Weideland wählst du, ob daraus eine neue Weide wird oder eine bestehende größer wird – der Zaun wird dann gleich mitgebaut.</p>
       <div class="kr-wahl"><label>Landart <select id="landArt"><option value="weide">Weideland</option><option value="bau">Bauland</option></select></label><label id="landZielL">Daraus wird <select id="landZiel"><option value="neu">neue Weide (für Pferde)</option><option value="wiese">neue Futterwiese (keine Pferde, Heu)</option>${weiden().map(w => `<option value="${w.wid}">${esc(w.name)} vergrößern</option>`).join("")}<option value="">nur Land, später einzäunen</option></select></label><label>Fläche <select id="landHa">${[0.5, 1, 2, 3, 4, 5].map(x => `<option value="${x}" ${x === 1 ? "selected" : ""}>${haTxt(x)}</option>`).join("")}</select></label></div>
@@ -8316,6 +8316,7 @@
   const bauTage = z => z === "kurz" ? Math.max(1, Math.round(tpj() * 0.3)) + (Math.random() < .5 ? 1 : 0) : z === "halle" ? Math.round((2 + Math.random()) * tpj()) : Math.max(1, Math.round(z * tpj()));
   const gebName = g => `${BAUTEN[g.typ].n}${g.anbau ? " (Anbau)" : ""}${g.ha ? ` ${g.ha} ha` : ""}`;
   const imBau = () => gebaeude().filter(g => g.bau);
+  const zaunText = g => `${haTxt(g.ha)} Zaun im Bau – noch ${g.bau.rest} ${g.bau.rest === 1 ? "Tag" : "Tage"}${datum().s === 3 ? " · ❄️ ruht im Winter" : ""}`;   // v298: Zaun im Bau bei Land/Weiden zeigen
   const freiesLand = () => { const H = spiel.hof || {}; return Math.max(0, weideland() - (H.weideHa || 0) - imBau().filter(g => g.typ === "weide").reduce((a, g) => a + g.ha, 0)); };
   const boxenStufe = b => b.stufe || (spiel.hof && spiel.hof.stufe) || 1;
   const gebZustand = b => { const g = b.geb && gebaeude().find(x => x.gid === b.geb); return g ? g.zustand : 80; };
@@ -9017,12 +9018,14 @@
   // Hofverwaltung → Hof → Land
   function weidenHTML() {
     const W = weiden(), saatZeit = datum().s === 0 || datum().s === 2, bar = (z, gut) => `<div class="kr-balken geb-balken"><i style="width:${Math.round(z)}%;background:${gut ? (z < GRAS.wenig ? "#c0503a" : z < 50 ? "#d9a441" : "#6aa84f") : (z >= GRAS.matschAb ? "#8a5a33" : z >= 25 ? "#b98a5e" : "#d8c3a5")}"></i></div>`;
+    const neuBau = imBau().filter(g => g.typ === "weide" && !(g.ziel && weideById(g.ziel))).map(g => `<div class="geb"><span class="geb-ico">🏗️</span><span class="geb-txt"><b>${g.ziel === "wiese" ? "Neue Futterwiese" : "Neue Weide"}</b><small>${zaunText(g)}</small></span></div>`).join("");
+    if (!W.length && neuBau) return neuBau;
     if (!W.length) return `<p class="text">Noch keine Weide eingezäunt. Freies Weideland zäunst du unter Hof → Bauen → „Weide einzäunen“ ein (Weideland kaufen oder pachten unter Hof → Land).</p>`;
     return `
       ${W.map(w => { const P = weidePferde(w), bel = weideBelegtW(w), apf = w.aepfel != null && spiel.tag - w.aepfel < tpj(), nach = w.nachgesaet != null && w.nachgesaet >= jzJetzt();
-        return `<div class="geb"><span class="geb-ico">${w.wiese ? "🌾" : "🌿"}</span><span class="geb-txt"><b>${esc(w.name)}</b><small>${haTxt(w.ha)} · ${w.wiese ? `🌾 Futterwiese – der Bauer mäht im Sommer und Herbst${w.schnitte ? ` (dieses Jahr ${w.schnitte}× gemäht)` : ""}` : P.length ? `${P.map(q => esc(q.name)).join(", ")} (braucht ${haTxt(bel)}${bel > w.ha + 1e-9 ? " – ⚠️ überbesetzt" : ""})` : w.ruhtBis != null ? `🌱 frisch nachgesät – ruht noch ${tageTxt2(Math.max(1, w.ruhtBis - spiel.tag))}` : w.gesperrt ? "🚫 gesperrt – erholt sich" : "keine Pferde"}${apf ? " · ✅ abgeäppelt" : ""}${nach ? " · 🌱 nachgesät" : ""}</small>
+        return `<div class="geb"><span class="geb-ico">${w.wiese ? "🌾" : "🌿"}</span><span class="geb-txt"><b>${esc(w.name)}</b><small>${haTxt(w.ha)} · ${w.wiese ? `🌾 Futterwiese – der Bauer mäht im Sommer und Herbst${w.schnitte ? ` (dieses Jahr ${w.schnitte}× gemäht)` : ""}` : P.length ? `${P.map(q => esc(q.name)).join(", ")} (braucht ${haTxt(bel)}${bel > w.ha + 1e-9 ? " – ⚠️ überbesetzt" : ""})` : w.ruhtBis != null ? `🌱 frisch nachgesät – ruht noch ${tageTxt2(Math.max(1, w.ruhtBis - spiel.tag))}` : w.gesperrt ? "🚫 gesperrt – erholt sich" : "keine Pferde"}${apf ? " · ✅ abgeäppelt" : ""}${nach ? " · 🌱 nachgesät" : ""}</small>${imBau().filter(g => g.typ === "weide" && g.ziel === w.wid).map(g => `<small>🏗️ + ${zaunText(g)}</small>`).join("")}
           <small>Gras ${Math.round(w.gras)} %</small>${bar(w.gras, true)}<small>Matsch ${Math.round(w.matsch)} %</small>${bar(w.matsch, false)}
-          <span class="geb-kn">${P.length && !apf ? `<button class="mini-knopf" data-waepfeln="${w.wid}">💩 Abäppeln</button>` : ""}${P.length && !w.wiese ? `<button class="mini-knopf" disabled title="Erst die Pferde von dieser Weide holen">🌾 Futterwiese – erst Pferde runterholen</button>` : ""}${!P.length && w.ruhtBis == null ? `<button class="mini-knopf" data-wwiese="${w.wid}">${w.wiese ? "🐴 Wieder als Weide" : "🌾 Als Futterwiese nutzen"}</button>` : ""}${!P.length && w.ruhtBis == null && !w.wiese ? `<button class="mini-knopf" data-wsperren="${w.wid}">${w.gesperrt ? "✅ Freigeben" : "🚫 Sperren (ruhen lassen)"}</button>` : ""}${saatZeit && w.saatJz !== jzJetzt() && w.ruhtBis == null ? (P.length ? `<button class="mini-knopf" disabled title="Erst die Pferde von dieser Weide holen">🌱 Nachsäen – erst Pferde runterholen</button>` : `<button class="mini-knopf" data-wsaeen="${w.wid}">🌱 Nachsäen · ${fmt(Math.round(GRAS.nachsaeen * w.ha))}</button>`) : ""}</span></span></div>`; }).join("")}`;
+          <span class="geb-kn">${P.length && !apf ? `<button class="mini-knopf" data-waepfeln="${w.wid}">💩 Abäppeln</button>` : ""}${P.length && !w.wiese ? `<button class="mini-knopf" disabled title="Erst die Pferde von dieser Weide holen">🌾 Futterwiese – erst Pferde runterholen</button>` : ""}${!P.length && w.ruhtBis == null ? `<button class="mini-knopf" data-wwiese="${w.wid}">${w.wiese ? "🐴 Wieder als Weide" : "🌾 Als Futterwiese nutzen"}</button>` : ""}${!P.length && w.ruhtBis == null && !w.wiese ? `<button class="mini-knopf" data-wsperren="${w.wid}">${w.gesperrt ? "✅ Freigeben" : "🚫 Sperren (ruhen lassen)"}</button>` : ""}${saatZeit && w.saatJz !== jzJetzt() && w.ruhtBis == null ? (P.length ? `<button class="mini-knopf" disabled title="Erst die Pferde von dieser Weide holen">🌱 Nachsäen – erst Pferde runterholen</button>` : `<button class="mini-knopf" data-wsaeen="${w.wid}">🌱 Nachsäen · ${fmt(Math.round(GRAS.nachsaeen * w.ha))}</button>`) : ""}</span></span></div>`; }).join("")}${neuBau}`;
   }
   function weidenBinden() {
     const nb = $("nebenSchirm"), neu = () => { const y = nb.scrollTop; speichern(); zeigeHof(); nb.scrollTop = y; };

@@ -857,7 +857,7 @@
 
 <script>
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "260";
+  const SPIEL_VERSION = "261";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -865,9 +865,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=260"></script>
-<script src="kopfteile.js?v=260"></script>
-<script src="kopfalter.js?v=260"></script>
+<script src="pferd.js?v=261"></script>
+<script src="kopfteile.js?v=261"></script>
+<script src="kopfalter.js?v=261"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -893,6 +893,8 @@
   if (spiel.ausruestung.futter == null) spiel.ausruestung.futter = true;
   spiel.boxen.forEach(b => { if (b.pferd && !b.pferd.werte) b.pferd.werte = erzeugeWerte(b.pferd); if (b.pferd && !b.pferd.pflege) b.pferd.pflege = erzeugePflege(b.pferd); if (b.pferd && b.pferd.maehneSeit == null) b.pferd.maehneSeit = spiel.tag || 1; if (b.pferd && b.pferd.schopfSeit == null) b.pferd.schopfSeit = b.pferd.maehneSeit; if (b.krippeVoll == null) b.krippeVoll = false; if (b.mistig == null) b.mistig = true; });
   if (!spiel.tag) spiel.tag = 1;
+  // Willkommens-Futterberatung nur beim allerersten Pferd – alte Spielstände mit Pferden haben sie schon „gehabt“
+  if (spiel.ersteBeratung == null) spiel.ersteBeratung = spiel.boxen.some(b => b.pferd) || Object.values(spiel.hoefe || {}).some(H => (H.boxen || []).some(b => b.pferd)) || !!(spiel.friedhof || []).length;
   if (spiel.hof) { if (!spiel.hof.hid) spiel.hof.hid = "h1"; if (!spiel.hof.name) spiel.hof.name = (spiel.spieler && spiel.spieler.hof) || "Mein Hof"; if (spiel.hof.pacht == null) spiel.hof.pacht = 0; if (!spiel.hofReihe) spiel.hofReihe = [spiel.hof.hid]; if (!spiel.hoefe) spiel.hoefe = {}; }   // H2: mehrere Höfe
   // zweite Box (leer, sauber, Krippe voll)
   while (spiel.boxen.length < 1) spiel.boxen.push({ nr: spiel.boxen.length + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0 });
@@ -2087,17 +2089,24 @@
   const boxVon = p => spiel.boxen.find(b => b.pferd === p);
   const angebotVon = p => (spiel.angebote || []).find(x => x.id === p.id);
   // Fortschritt eines Angebots (0 … 1) nach Tagen
-  const angebotFortschritt = a => Math.max(0, Math.min(1, ((jzJetzt() - a.start) * tpj() + datum().t - 1) / ((a.ende - a.start) * tpj())));
+  // Laufzeit ab dem Starttag (Dome): Auktion 1 Jahreszeit, Festpreis 2 Jahreszeiten – alte Angebote (in Jahreszeiten) werden umgerechnet
+  const ANGEBOT_JZ = { auktion: 1, fest: 2 };
+  function angebotTage(a) {
+    if (a.endeTag == null) { const T = tpj(), heute = spiel.tag || 1, d = datum(); a.endeTag = heute + (a.ende - jzJetzt()) * T - (d.t - 1); a.startTag = a.endeTag - (a.ende - a.start) * T; }
+    return a;
+  }
+  const angebotFortschritt = a => { angebotTage(a); return Math.max(0, Math.min(1, ((spiel.tag || 1) - a.startTag) / Math.max(1, a.endeTag - a.startTag))); };
+  const angebotEndeText = a => { angebotTage(a); const d = datum(a.endeTag - 1); return `${JZ[d.s][0]} ${jj(d.j)}, Tag ${d.t}`; };
   function verkaufHinweis(p) {
     const a = angebotVon(p); if (!a) return "";
     const pz = Math.round(angebotFortschritt(a) * 100), auk = a.art === "auktion";
     return `<div class="verkauf-hinweis"><b>${auk ? "🔨" : "🏷️"} ${esc(p.name)} steht zum Verkauf</b>
-      <span>${auk ? `Auktion · aktuelles Höchstgebot <b>${fmt(a.gebot)}</b> · ${a.gebote || 0} ${a.gebote === 1 ? "Gebot" : "Gebote"} · Startgebot ${fmt(a.preis)}` : `Festpreis <b>${fmt(a.preis)}</b> · Marktwert ${fmt(a.wert)}`}<br>Läuft bis Ende ${jzName(a.ende - 1).replace(/^\S+ /, "")} · ${pz} % der Laufzeit vorbei</span>
+      <span>${auk ? `Auktion · aktuelles Höchstgebot <b>${fmt(a.gebot)}</b> · ${a.gebote || 0} ${a.gebote === 1 ? "Gebot" : "Gebote"} · Startgebot ${fmt(a.preis)}` : `Festpreis <b>${fmt(a.preis)}</b> · Marktwert ${fmt(a.wert)}`}<br>Läuft bis ${angebotEndeText(a)} · ${pz} % der Laufzeit vorbei</span>
       <div class="fortschritt"><i style="width:${pz}%"></i></div>
       <span><small>Bis zum Verkauf muss ${esc(p.name)} versorgt werden – fällt die Gesundheit unter 75 %, platzt der Verkauf.</small></span>
       <button class="knopf" id="angebotZurueck">Angebot zurückziehen</button></div>`;
   }
-  // Festpreis: Chance, dass sich zum Ende der Jahreszeit ein Käufer findet (v = Preis / Marktwert)
+  // Festpreis: Chance je Jahreszeit, dass sich ein Käufer findet (auf die Tage verteilt) (v = Preis / Marktwert)
   // fairer Preis fast sicher, darüber immer seltener – aber nie ganz ausgeschlossen (Liebhaber)
   const festChance = v => v <= 0.9 ? 0.98 : v <= 1 ? 0.93 : Math.max(0.04, 0.93 * Math.exp(-(v - 1) * 4.5));
   // laufende Auktion abbrechen: Strafe = halbes letztes Gebot (nur wenn schon jemand geboten hat)
@@ -2113,10 +2122,10 @@
     if (sperre) { dialog(`<h3>💰 ${esc(p.name)} verkaufen</h3><p>⚠️ ${sperre}</p>`); return; }
     const wert = verkaufsWert(p), start = Math.max(100, Math.round(wert / 2 / 50) * 50), zt = zubehoerTeile(p);
     dialog(`<h3>💰 ${esc(p.name)} verkaufen</h3>${zt.length ? `<label class="mini-knopf" style="display:inline-block;margin:0 0 6px"><input type="checkbox" id="zubehoerMit" ${p.zubehoerMit ? "checked" : ""}> 🎁 Zubehör mitgeben (${zt.map(x => x[0]).join(", ")}) – Preis +${fmt(zubehoerWert(p))} (Gebrauchtwert: ${zt.map(x => `${x[0].replace(/^\S+ /, "")} ${fmt(x[1])}`).join(", ")})</label><br><small>${p.zubehoerMit ? "Das Zubehör geht mit dem Pferd an den Käufer." : "Ohne Häkchen bleibt das Zubehör nach dem Verkauf im Lager."}</small>` : ""}<p style="margin:0">${fo ? `🍼 Mit Fohlen <b>${esc(fo.name)}</b> bei Fuß – es wird mit verkauft.<br>` : ""}Marktwert etwa <b>${fmt(wert)}</b><br><small>Bis zum Verkauf bleibt ${esc(p.name)} bei dir und muss versorgt werden. Fällt die Gesundheit unter 75 %, platzt der Verkauf.</small></p>
-      <div class="verkauf-art"><b>🏷️ Festpreis</b><small>Läuft eine Jahreszeit. Je höher über dem Marktwert, desto seltener findet sich ein Käufer – dafür kommen eher Preisvorschläge.</small>
+      <div class="verkauf-art"><b>🏷️ Festpreis</b><small>Läuft 2 Jahreszeiten ab heute. Je höher über dem Marktwert, desto seltener findet sich ein Käufer – dafür kommen eher Preisvorschläge.</small>
         <label class="fest-preis">Dein Preis: <b id="festWert">${fmt(wert)}</b> <small id="festHinweis">– fairer Preis · Verkaufschance etwa 90 %</small><input type="range" id="festPreis" min="${Math.round(wert * 0.5 / 50) * 50}" max="${Math.round(wert * 1.6 / 50) * 50}" step="50" value="${wert}"></label>
         <button class="knopf" id="festLos" style="width:100%">Zum Festpreis anbieten</button></div>
-      <div class="verkauf-art"><b>🔨 Auktion</b><small>Startet bei ${fmt(start)} (½ des Marktwerts) und dauert 2 Jahreszeiten. Mit Glück bieten sich die Käufer weit über den Marktwert hoch.</small>
+      <div class="verkauf-art"><b>🔨 Auktion</b><small>Startet bei ${fmt(start)} (½ des Marktwerts) und dauert 1 Jahreszeit ab heute. Mit Glück bieten sich die Käufer weit über den Marktwert hoch.</small>
         <button class="knopf" id="auktionLos" style="width:100%">Zur Auktion geben</button></div>`, [["Abbrechen", null, "zweit"]], "breit");
     const zm = $("zubehoerMit"); if (zm) zm.onchange = () => { p.zubehoerMit = zm.checked; verkaufDialog(p, nachher); };
     const fp = $("festPreis");
@@ -2125,9 +2134,9 @@
       $("festHinweis").textContent = (v > 1.3 ? "– sehr teuer" : v > 1.05 ? "– teuer, weniger Käufer" : v < 0.95 ? "– günstig, schneller Verkauf" : "– fairer Preis") + ` · Verkaufschance etwa ${c} %`; };
     const fertig = txt => { $("dlg").hidden = true; speichern(); nachher(); dialog(`<h3>💰 Angebot steht</h3><p>${txt}</p>`); };
     $("festLos").onclick = () => { const preis = +fp.value, jetzt = jzJetzt();
-      (spiel.angebote = spiel.angebote || []).push({ id: p.id, art: "fest", preis, wert, sf: saisonF(), start: jetzt, ende: jetzt + 1, fohlenId: fo ? fo.id : null }); fertig(`${esc(p.name)} wird jetzt für <b>${fmt(preis)}</b> angeboten.`); };
+      (spiel.angebote = spiel.angebote || []).push({ id: p.id, art: "fest", preis, wert, sf: saisonF(), start: jetzt, ende: jetzt + ANGEBOT_JZ.fest, startTag: spiel.tag || 1, endeTag: (spiel.tag || 1) + ANGEBOT_JZ.fest * tpj(), fohlenId: fo ? fo.id : null }); fertig(`${esc(p.name)} wird jetzt für <b>${fmt(preis)}</b> angeboten.`); };
     $("auktionLos").onclick = () => { const jetzt = jzJetzt();
-      (spiel.angebote = spiel.angebote || []).push({ id: p.id, art: "auktion", preis: start, gebot: start, gebote: 0, wert, start: jetzt, ende: jetzt + 2, fohlenId: fo ? fo.id : null }); fertig(`Die Auktion für ${esc(p.name)} läuft – Startgebot <b>${fmt(start)}</b>.`); };
+      (spiel.angebote = spiel.angebote || []).push({ id: p.id, art: "auktion", preis: start, gebot: start, gebote: 0, wert, start: jetzt, ende: jetzt + ANGEBOT_JZ.auktion, startTag: spiel.tag || 1, endeTag: (spiel.tag || 1) + ANGEBOT_JZ.auktion * tpj(), fohlenId: fo ? fo.id : null }); fertig(`Die Auktion für ${esc(p.name)} läuft – Startgebot <b>${fmt(start)}</b>.`); };
   }
   function aufGnadenhof(p, box) {
     const halb = Math.round(marktwert(p) / 2 / 50) * 50;
@@ -2179,7 +2188,7 @@
         ${p.rueckgabe && spiel.tag <= p.rueckgabe.bis ? k("rueckgabe", "↩️", "Zurück\u00adgeben", `an den Händler · ${fmt(Math.round(p.rueckgabe.preis * .8 / 10) * 10)}`, rueckgabeMoeglich(p)) : ""}</div>`, [["Schließen", null, "zweit"]], "breit");
     document.querySelectorAll("[data-abg]").forEach(b => b.onclick = () => { $("dlg").hidden = true; ({ verkaufen: verkaufDialog, gnadenhof: gnadenhofDialog, rueckgabe: rueckgabeDialog, tsrueck: tierschutzRueckgabe })[b.dataset.abg](p, nachher); });
   }
-  // Verkäufe prüfen: platzt bei Gesundheit unter 75 %, Festpreis/Auktion werden zu Beginn einer Jahreszeit entschieden
+  // Verkäufe prüfen: platzt bei Gesundheit unter 75 %, Festpreis/Auktion laufen ab dem Starttag (angeboteTag)
   function angeboteNacht() {
     spiel.angebote = (spiel.angebote || []).filter(a => {
       const x = spiel.boxen.findIndex(b => b.pferd && b.pferd.id === a.id); if (x < 0) return false;
@@ -2221,26 +2230,30 @@
     spiel.angebote = (spiel.angebote || []).filter(y => y !== a);
     return false;
   }
-  function angeboteJahreszeit() {
-    const jetzt = jzJetzt();
+  // täglich: Festpreis-Käufer und Auktionsverlauf (Laufzeit ab dem Starttag)
+  function angeboteTag() {
+    const heute = spiel.tag || 1;
     spiel.angebote = (spiel.angebote || []).filter(a => {
       const x = spiel.boxen.findIndex(b => b.pferd && b.pferd.id === a.id); if (x < 0) return false;
-      const b = spiel.boxen[x], p = b.pferd;
-      const verkauft = preis => angebotVerkaufen(a, preis);
+      const b = spiel.boxen[x], p = b.pferd; angebotTage(a);
+      const verkauft = preis => angebotVerkaufen(a, preis), ende = heute >= a.endeTag;
       if (a.art === "fest") {
-        if (jetzt < a.ende) return true;
-        // bis Marktwert fast sicher verkauft, darüber immer seltener – ab 25 % zu viel kauft niemand
-        if (Math.random() < festChance(a.preis / (a.wert * (a.sf || saisonF())))) return verkauft(a.preis);   // sf: Saisonpreis beim Einstellen (wie im Dialog angezeigt)
+        // festChance gilt je Jahreszeit – auf die Tage verteilt (bis Marktwert fast sicher verkauft, ab 25 % zu viel kauft niemand)
+        const c = festChance(a.preis / (a.wert * (a.sf || saisonF())));   // sf: Saisonpreis beim Einstellen (wie im Dialog angezeigt)
+        if (!b.tot && Math.random() < 1 - Math.pow(1 - c, 1 / tpj())) return verkauft(a.preis);
+        if (!ende) return true;
         brief("Pferdemarkt", `Kein Käufer für ${p.name}`, `für <b>${esc(p.name)}</b> hat sich zum Preis von ${fmt(a.preis)} leider kein Käufer gefunden. Das Angebot ist abgelaufen – ${pron(p).er} bleibt bei {dir|Ihnen}.`);
         return false;
       }
-      // Auktion: Gebote steigen, manchmal liefern sich Bieter ein Wettrennen
+      // Auktion: Zwischenstand zur Halbzeit, Ende nach einer Jahreszeit – manchmal liefern sich Bieter ein Wettrennen
+      const halb = a.startTag + Math.floor((a.endeTag - a.startTag) / 2);
+      if (!ende && (a.halbOk || heute < halb)) return true;
       const r = Math.random(), schub = r < 0.15 ? 1.2 + Math.random() * 1.3 : 0.35 + Math.random() * 0.75;
       const vorher = a.gebot;
-      a.gebot = Math.max(a.gebot, Math.round(a.wert * saisonF() * (jetzt >= a.ende ? schub : schub * 0.6) / 50) * 50);
+      a.gebot = Math.max(a.gebot, Math.round(a.wert * saisonF() * (ende ? schub : schub * 0.6) / 50) * 50);
       a.gebote = (a.gebote || 0) + (a.gebot > vorher ? 1 + Math.floor(Math.random() * (r < 0.15 ? 9 : 5)) : 0);
       if (!a.gebote && Math.random() < .85) a.gebote = 1;   // meist bietet mindestens jemand das Startgebot
-      if (jetzt < a.ende) { brief("Auktionshaus", `Zwischenstand: ${p.name}`, `die Auktion für <b>${esc(p.name)}</b> läuft noch eine Jahreszeit. Aktuelles Höchstgebot: <b>${fmt(a.gebot)}</b> · bisher ${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"}.`); return true; }
+      if (!ende) { a.halbOk = true; brief("Auktionshaus", `Zwischenstand: ${p.name}`, `die Auktion für <b>${esc(p.name)}</b> ist zur Hälfte gelaufen (bis ${angebotEndeText(a)}). Aktuelles Höchstgebot: <b>${fmt(a.gebot)}</b> · bisher ${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"}.`); return true; }
       if (!a.gebote) { brief("Auktionshaus", `Kein Gebot für ${p.name}`, `für <b>${esc(p.name)}</b> hat leider niemand das Startgebot von ${fmt(a.preis)} geboten. Die Auktion ist beendet – ${pron(p).er} bleibt bei {dir|Ihnen}.`); return false; }
       return verkauft(a.gebot);
     });
@@ -2851,7 +2864,7 @@
       const da = plaetze.filter(x => spiel.anlage[x[0]]).length;
       inhalt = meld +
         `<p class="text" style="margin:0 0 4px">📍 ${esc(p.name)} steht in <b>Box ${aktBox + 1}</b>. Wohin soll ${pron(p).er}? Graue Kacheln hat dein Hof noch nicht (bauen unter Hofverwaltung → Hof → Bauen).</p>
-        <div class="kacheln quadrat">${kOrt("box", "🔀", "Box wechseln", freieBox() < 0 ? "keine frei" : `${spiel.boxen.filter(boxFrei).length} frei`, "In eine andere Box umziehen")}${box.fohlen && alterJZ(box.fohlen) < 2 ? kOrt("fohlenabc", "🍼", "Fohlen-ABC", box.fohlen.abcTag === spiel.tag ? "heute geübt" : `${box.fohlen.fohlenABC || 0}/${FOHLEN_ABC_MAX}`, "Halfter, Führen, Hufe geben – mit dem Fohlen üben") : ""}
+        <div class="kacheln quadrat">${kOrt("box", "🔀", "Box wechseln", freieBox() < 0 ? "keine frei" : `${spiel.boxen.filter(boxFrei).length} frei`, "In eine andere Box umziehen")}${box.fohlen && alterJZ(box.fohlen) < 2 ? kOrt("fohlenabc", "🍼", "Fohlen-ABC", box.fohlen.abcTag === spiel.tag ? "heute geübt" : abcStand(box.fohlen), "Halfter, Führen, Hufe geben – mit dem Fohlen üben") : ""}
           ${plaetze.map(([k, ico, n, info, kurz]) => k === "weide" ? kOrt("weide", ico, n, p.weide ? "zurück in die Box" : "Weidegang", p.weide ? "Pferd von der Weide zurück in die Box holen" : "Pferd auf die Weide bringen") : TRAIN_ORTE[k] && ortOffen(k) && fremd(p) ? kOrt("tr-" + k, ico, n, "nur der Besitzer", `${info} – Pensionspferd: reiten nur der Besitzer und der Bereiter`, false) : TRAIN_ORTE[k] && ortOffen(k) ? kOrt("tr-" + k, ico, n, spiel.anlage[k] ? (pensionReiterHeute(k).length ? `Training · 🐴 ${pensionReiterHeute(k).length}` : "Training") : "🛠️ Training", `${info} – Training`) : `<div class="kachel ${spiel.anlage[k] ? "" : "fehlt"}" title="${n.replace(/\u00ad/g, "")}: ${info}${spiel.anlage[k] ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></div>`).join("")}
           ${kOrt("labor", "🔬", "Labor", fremd(p) ? "nur der Besitzer" : "Gentests", "Genetische Tests mit einer Haarprobe", !fremd(p))}
           ${kOrt("anhaenger", "🚚", "Pferde\u00adanhänger", fremd(p) ? "nur der Besitzer" : "Klinik, Turnier, Abgeben …", "Mit dem Anhänger wegfahren", !fremd(p))}</div>
@@ -4597,14 +4610,18 @@
   // Fohlen läuft bei leichter Arbeit der Mutter mit: Sozialverhalten und Vertrauen steigen etwas
   function fohlenLaeuftMit(p, k) { const f = fohlenBeiFussVon(p); if (!f || !FOHLEN_LEICHT.includes(k)) return ""; werteErgaenzen(f); sozialPlus(f, 0.5); wertPlus(f, "vertrauen", 0.3); return f.name; }
   // Fohlen-ABC (ab etwa 1 Monat, einmal am Tag): Halfter, Führen, Hufe geben – Vertrauen und Gehorsam
+  // Anzeige in Übungen des aktuellen Tempos (4 Tage: 6, 7 Tage: 10, 10 Tage: 14)
+  const abcStand = f => { const m = Math.round(FOHLEN_ABC_MAX * tpj() / 7); return `${Math.min(m, Math.round((f.fohlenABC || 0) / FOHLEN_ABC_MAX * m))}/${m}`; };
   function fohlenABC(f) {
     if (!f) return "";
     if (f.gebTag != null && spiel.tag - f.gebTag < Math.max(1, Math.round(tpj() / 3))) return `${esc(f.name)} ist noch zu jung – das Fohlen-ABC beginnt mit etwa 1 Monat.`;
     if (f.abcTag === spiel.tag) return `Mit ${esc(f.name)} hast du heute schon geübt.`;
-    werteErgaenzen(f); f.abcTag = spiel.tag; f.fohlenABC = Math.min(FOHLEN_ABC_MAX, (f.fohlenABC || 0) + 1);
-    wertPlus(f, "vertrauen", 0.8); wertPlus(f, "gehorsam", 0.5); beruehrt(f, "du", "kontakt"); speichern();
+    // Tempo (Dome): je Jahreszeit gleich viel Fortschritt und Zuwachs – bei 4 Tagen zählt eine Übung mehr, bei 10 weniger (Bezug 7)
+    const x = 7 / tpj();
+    werteErgaenzen(f); f.abcTag = spiel.tag; f.fohlenABC = Math.min(FOHLEN_ABC_MAX, Math.round(((f.fohlenABC || 0) + x) * 100) / 100);
+    wertPlus(f, "vertrauen", 0.8 * x); wertPlus(f, "gehorsam", 0.5 * x); beruehrt(f, "du", "kontakt"); speichern();
     const n = f.fohlenABC, was = n <= 2 ? "Halfter anlegen und streicheln" : n <= 5 ? "ein paar Schritte am Strick führen" : n < FOHLEN_ABC_MAX ? "Hufe geben und überall anfassen lassen" : "Halfter, Führen und Hufe geben klappen schon prima";
-    return `🍼 Fohlen-ABC mit ${esc(f.name)}: ${was} (${n}/${FOHLEN_ABC_MAX}).`;
+    return `🍼 Fohlen-ABC mit ${esc(f.name)}: ${was} (${abcStand(f)}).`;
   }
   // Energie: Ungeliebtes ×1,2 · Geliebtes ×0,85 · die ersten 3 Male ×1,2 (neu, noch nicht gekonnt) · tragend ×1,2
   function uebKosten(p, k) {
@@ -4898,7 +4915,7 @@
     if (spiel.tag >= t.tag) return "Nennschluss vorbei";
     if (P.rassen && !reinRasse(p, P.rassen)) return `nur reinrassige ${P.rassen.map(r => rasseById(r).name).join(" / ")}`;
     if (alterJZ(p) < (P.ab || 16)) return `erst ab ${jzAlterTxt(P.ab || 16)}`;
-    const tr = traechtigSperre(p, P); if (tr) return tr;
+    const tr = traechtigSperre(p, P, t.tag); if (tr) return tr;
     if (P.jung && (alterJZ(p) < P.jung[0] || alterJZ(p) > P.jung[1])) return "Altersgrenze";
     if (DISZ[P.disz] && DISZ[P.disz].nur && !DISZ[P.disz].nur(p)) return "kann diese Gangart nicht";
     const g = LK_GRUPPE[P.disz];
@@ -4915,10 +4932,13 @@
     return "";
   }
   // Stuten: mit Fohlen bei Fuß kein Turnier · tragend keine Sprünge · in der letzten Jahreszeit vor der Geburt gar nicht
-  function traechtigSperre(p, P) {
+  // tag: Turniertag – zählt, ob die Stute AM TURNIER hochtragend ist (oder dann schon ein Fohlen hat), nicht beim Nennen
+  function traechtigSperre(p, P, tag) {
     const box = spiel.boxen.find(b => b.pferd === p); if (box && box.fohlen) return "mit Fohlen bei Fuß";
     if (!p.traechtig) return "";
-    if (p.traechtig.geburt - jzJetzt() <= 1) return "hochtragend";
+    const d = datum(tag || spiel.tag || 1), jz = d.j * 4 + d.s;
+    if (p.traechtig.geburt - jz <= 0) return "fohlt bis dahin";
+    if (p.traechtig.geburt - jz <= 1) return tag && p.traechtig.geburt - jzJetzt() > 1 ? "bis zum Turnier hochtragend" : "hochtragend";
     if (P && (P.disz === "springen" || P.disz === "vielseitigkeit")) return "tragend – keine Sprünge";
     return "";
   }
@@ -5769,7 +5789,7 @@
   }
   const futterexperteAngestellt = () => aktive("futterexperte").length > 0;
   // Beratung: Plan anlegen (Umstellung über 3 Tage), Spezialfutter freischalten und Vorrat mitbringen, Brief mit Begründung
-  function futterBeratung(pferde, kostenlos) {
+  function futterBeratung(pferde, kostenlos, gruss = "") {
     const F = futterkammer(); F.frei = F.frei || {}; const posten = [], zeilen = [];
     pferde.forEach(p => { const box = spiel.boxen.find(b => b.pferd === p); if (!box || !p.pflege) return;
       const { P, g, sp } = expertenPlan(p, box), B = futterBedarf(p, box);
@@ -5781,12 +5801,18 @@
       const W = (spiel.wissen = spiel.wissen || wissenStart(10, {})); W.futter = Math.min(100, Math.round(((W.futter || 10) + 0.5) * 100) / 100);   // man lernt beim Zuschauen mit
       zeilen.push(`<li><b>${esc(p.name)}</b> (${FZ_NAME[futterZustand(p)]}, ca. ${B.kg} kg, Bedarf ${B.energie} MJ${futterZustand(p) >= 7 ? " – soll abnehmen" : futterZustand(p) <= 3 ? " – soll zunehmen" : ""}): ${Object.entries(P.kg).map(([k, x]) => `${FUTTER[k].n} ${fmtKg(x)}`).join(", ")} · ${P.mahl} Mahlzeiten${g.length ? `<br><small>${g.join(" · ")}</small>` : ""}</li>`); });
     if (!zeilen.length) return;
-    const text = `ich habe mir {deine|Ihre} Pferde angesehen und die Futterpläne neu zusammengestellt (Mengen am Tag). Die neuen Pläne werden über 3 Tage eingeführt:<ul>${zeilen.join("")}</ul>${Object.keys(F.frei).length ? "Spezialfutter {kannst du|können Sie} ab jetzt im Futterhandel nachkaufen (Hofverwaltung → Hof → Futterkammer). " : ""}{Du kannst|Sie können} die Pläne jederzeit selbst anpassen (Box → Pferdepflege → Versorgung → Fütterung heute → Futterplan).`;
+    const text = `${gruss}ich habe mir {deine|Ihre} Pferde angesehen und die Futterpläne neu zusammengestellt (Mengen am Tag). Die neuen Pläne werden über 3 Tage eingeführt:<ul>${zeilen.join("")}</ul>${Object.keys(F.frei).length ? "Spezialfutter {kannst du|können Sie} ab jetzt im Futterhandel nachkaufen (Hofverwaltung → Hof → Futterkammer). " : ""}{Du kannst|Sie können} die Pläne jederzeit selbst anpassen (Box → Pferdepflege → Versorgung → Fütterung heute → Futterplan).`;
     if (!kostenlos && posten.length) posten.unshift({ text: "Anfahrt Futterexperte", betrag: FUTTER_ANFAHRT });
     if (posten.length) rechnungStellen("Futterberatung", "klinik", posten, pferde.map(p => p.id), `Futterberatung – Rechnung`, text);
     else brief("Futterberatung", "Neue Futterpläne", text, { pferde });
   }
   // Termin: externer Experte kommt am nächsten Morgen
+  // Dome: beim allerersten Pferd im Spiel kommt der Futterexperte kostenlos und ohne Anfrage am ersten Tag
+  function ersteFutterberatung() {
+    if (spiel.ersteBeratung) return;
+    const p = spiel.boxen.map(b => b.pferd).find(q => q && q.pflege && !fremd(q)); if (!p) return;
+    spiel.ersteBeratung = true; futterBeratung([p], true, `herzlichen Glückwunsch zu {deinem|Ihrem} ersten Pferd! Als kleines Willkommensgeschenk komme ich heute kostenlos vorbei und stelle den ersten Futterplan zusammen. `);
+  }
   function futterexperteTag() {
     const T = spiel.futterTermin; if (!T || T.tag > spiel.tag) return; delete spiel.futterTermin;
     const pferde = T.pferde.map(id => (alleEigenenPferde().find(x => x.p.id === id) || {}).p).filter(p => p && !p.klinik && spiel.boxen.some(b => b.pferd === p));
@@ -6175,7 +6201,7 @@
       const a = herde[i], b = herde[j];
       // ungeplante Bedeckung: Hengst (ab 2 J.) und zuchtfähige Stute
       [[a, b], [b, a]].forEach(([H, S]) => {
-        if (!deckfaehig(H) || !stuteZucht(S) || Math.random() >= 0.25) return;   // auch bei Pensionspferden (Dome: kann passieren – Folgen in pensionBedeckt)
+        if (!deckfaehig(H) || !stuteZucht(S) || groessenSperre(H, S) || spiel.boxen.some(x => x.pferd === S && x.fohlen) || Math.random() >= 0.25) return;   // Dome: gleiche Größenregel wie beim Decken, nicht mit Fohlen bei Fuß   // auch bei Pensionspferden (Dome: kann passieren – Folgen in pensionBedeckt)
         const w = (wohlbefinden(S) + wohlbefinden(H)) / 2;
         if (Math.random() < 0.4 + 0.55 * w / 100) S.heimlich = { vater: hengstKopie(H), seit: jzJetzt(), geburt: jzJetzt() + 4 };
       });
@@ -6430,7 +6456,7 @@
     spiel.tag += 1;
     jedenHof(hofNacht, true);
     tierschutzKlinik(); tierschutzFohlen(); laborNacht(); auktionsNacht();
-    if (datum().t === 1) { jedenHof(() => { kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); auktionsEnde(); jahreszeitBeginn(); angeboteJahreszeit(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); pensionJahreszeit(); bereiterAbrechnung(); }, true); spamAufraeumen(); hoefeVersteigern(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
+    if (datum().t === 1) { jedenHof(() => { kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); auktionsEnde(); jahreszeitBeginn(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); pensionJahreszeit(); bereiterAbrechnung(); }, true); spamAufraeumen(); hoefeVersteigern(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
     turnierKalender();
     jedenHof(hofMorgen, true);
     blutbilderTag();     // Laborergebnisse
@@ -6497,13 +6523,14 @@
     ansteckungNacht(); // ansteckende Krankheiten verbreiten sich
     befundeNacht();   // Krankheiten und Verletzungen: neu, Verlauf, Wirkung
     externNacht(); rechnungenTag();
-    angeboteNacht();
+    angeboteNacht(); angeboteTag();   // Verkauf: Laufzeit ab Starttag
     tierschutzEinsatz(); kontoMinus();
     pensionAnfragenTag();   // H5: neue Anfragen von Einstellern
   }
   function hofMorgen() {
     turnierMorgen(); hofhelferTag(); rateVorwarnung();   // Turniertag: genannte Pferde fahren los
     futterLieferung();  // bestelltes Futter kommt an
+    ersteFutterberatung();   // allererstes Pferd (z. B. aus dem Auktionshaus geliefert)
     expertAutoTag();    // Empfehlung des Futterexperten automatisch übernehmen (wenn angehakt)
     pensionMorgen();    // H5: Einzug, Besitzer-Besuche (vor den Mitarbeitern: wer heute vom Besitzer geritten wird, braucht keinen Bereiter), Tierarzt auf Kosten der Besitzer, verspätete Zahlungen
     mitarbeiterTag();   // Stallburschen versorgen ihre Boxen zum Tagesbeginn
@@ -7181,6 +7208,12 @@
   }
   // Chance auf Stute mit Fohlen je nach Jahreszeit (Fohlen kommen meist im Frühling)
   const fohlenChance = () => [.45, .4, .08, .05][datum().s];
+  // Körperform der Marktpferde (Futterzustand 1–9): Tierschutz oft zu dünn, privat auch mal zu dick, Züchter meist gut im Futter
+  const MARKT_FZ = { notfall: [[1, 5], [2, 20], [3, 25], [4, 20], [5, 20], [7, 5], [8, 5]], privat: [[3, 5], [4, 15], [5, 45], [6, 15], [7, 12], [8, 8]], zuechter: [[4, 10], [5, 70], [6, 20]] };
+  function marktKoerper(h, r, art) {
+    let x = r() * 100; const l = MARKT_FZ[art]; let fz = 5; for (const [z, w] of l) { if ((x -= w) < 0) { fz = z; break; } }
+    h.fz = fz; h.typ = fz <= 3 ? "duenn" : fz >= 7 ? "dick" : "normal"; return h;
+  }
   function marktNeu() {
     const jetzt = jzJetzt(), alt = spiel.markt; if (alt && alt.jz === jetzt && alt.v === 3) return alt;
     const r = zufall("markt3-" + jetzt + (spiel.spieler ? spiel.spieler.name : "")), M = { jz: jetzt, gestuet: {}, v: 3 };
@@ -7190,13 +7223,14 @@
       h.training = Math.floor(r() * 60); h.verdeckt = Math.round(45 + r() * 55); marktErfolge(h, r);
       h.ahnenUnbekannt = AHNEN_LUECKE.filter(() => r() < .3);
       if (fo) mitFohlen(h, r);
+      marktKoerper(h, r, "privat");
       // Privatleute kennen ihr Pferd: der Preis berücksichtigt die (versteckte) Gesundheit zur Hälfte
       const wGesund = marktwert(h), wEcht = marktwert({ ...h, pflege: { gesundheit: h.verdeckt } });
       h.preis = Math.round(((wGesund + wEcht) / 2 + (h.fohlenBeiFuss ? marktwert(h.fohlenBeiFuss) : 0)) * saisonF() * (.7 + r() * .3) / 50) * 50; return h; });
     // Auktionshaus: ausgesuchte Jungpferde, Start beim halben Marktwert
     M.auktion = Array.from({ length: 3 + Math.floor(r() * 3) }, (_, i) => {
       const jahre = 1 + Math.floor(r() * 4), h = mkPferd("au" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, r() < .7 ? 0 : 1, jahre, r, null, zuechterGeb(jahre, r)), wert = Math.round(marktwert(h) * saisonF());
-      const start = Math.max(100, Math.round(wert / 2 / 50) * 50);
+      const start = Math.max(100, Math.round(wert / 2 / 50) * 50); marktKoerper(h, r, "zuechter");
       return { pferd: h, wert, start, gebot: start, gebote: 0, fuehrt: null, max: npcLimit(wert, r) }; });
     // Fohlenauktion (Sommer, Herbst): Frühlingsfohlen vom Züchter, abgeholt nach dem Absetzen zu Beginn der nächsten Jahreszeit
     M.fohlen = !fohlenZeit() ? [] : Array.from({ length: 3 + Math.floor(r() * 3) }, (_, i) => {
@@ -7206,8 +7240,9 @@
       return { pferd: h, wert, start, gebot: start, gebote: 0, fuehrt: null, fohlen: true, max: npcLimit(wert, r) }; });
     // Notfallpferde beim Tierschutz: schlechter Zustand, für eine Schutzgebühr
     M.notfall = Array.from({ length: 1 + Math.floor(r() * 2) }, (_, i) => {
-      const fo = r() < fohlenChance() * .8, h = mkPferd("nf" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, Math.floor(r() * 5), fo ? 6 + Math.floor(r() * 12) : 8 + Math.floor(r() * 15), r, fo ? "Stute" : null);
+      const fo = r() < fohlenChance() * .35, h = mkPferd("nf" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, Math.floor(r() * 5), fo ? 6 + Math.floor(r() * 12) : 8 + Math.floor(r() * 15), r, fo ? "Stute" : null);
       if (fo) mitFohlen(h, r);
+      marktKoerper(h, r, "notfall");
       h.notGesundheit = Math.round(25 + r() * 20); h.preis = Math.round((150 + r() * 150 + (h.fohlenBeiFuss ? 100 : 0)) / 10) * 10; h.notfall = true; return h; });
     // neue Marktversion mitten in der Jahreszeit: laufende Gebote im Auktionshaus bleiben
     if (alt && alt.jz === jetzt && alt.auktion && alt.auktion.some(a => a.fuehrt === "du")) M.auktion = alt.auktion;
@@ -7273,7 +7308,7 @@
     const nb = spiel.boxen[zb]; nb.pferd = p; nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false;
     if (p.fohlenBeiFuss) { nb.fohlen = p.fohlenBeiFuss; delete p.fohlenBeiFuss; }
     quarantaeneNeu(nb);
-    alterAktualisieren();
+    alterAktualisieren(); ersteFutterberatung();
     aktBox = zb; spiel.aktBox = zb; speichern(); zeigeMarkt();
     dialog(`<h3>🏠 Willkommen, ${esc(p.name)}!</h3><p>${esc(p.name)} steht jetzt in Box ${zb + 1}${nb.fohlen ? ` – mit Fohlen ${esc(nb.fohlen.name)}` : ""}.</p>${p.verdecktGezeigt ? `<p>Beim Ankommen sieht der Tierarzt nach: Gesundheit <b>${p.pflege.gesundheit} %</b>.</p>` : ""}`);
   }
@@ -7364,7 +7399,7 @@
       : `<p style="margin:6px 0 0">Für diese Jahreszeit ist alles verkauft. Zu Beginn der nächsten Jahreszeit gibt es neue Pferde.</p>`;
     const eigene = (spiel.angebote || []).map(a => ({ a, x: spiel.boxen.findIndex(b => b.pferd && b.pferd.id === a.id) })).filter(e => e.x >= 0);
     const angebotListe = eigene.length ? `<div class="paar-liste">${eigene.map(({ a, x }) => { const p = spiel.boxen[x].pferd;
-      return pferdKachel(p, { ort: `Box ${x + 1}`, zeilen: [a.art === "auktion" ? `🔨 Gebot ${fmt(a.gebot)}` : `🏷️ ${fmt(a.preis)}`, `bis Ende ${jzName(a.ende - 1).replace(/^\S+ /, "")}`],
+      return pferdKachel(p, { ort: `Box ${x + 1}`, zeilen: [a.art === "auktion" ? `🔨 Gebot ${fmt(a.gebot)}` : `🏷️ ${fmt(a.preis)}`, `bis ${angebotEndeText(a)}`],
         aktion: ["Angebot zurückziehen", () => angebotZurueckziehen(p, zeigeMarkt)], extra: { zeilen: [["Angebot", a.art === "auktion" ? `Auktion · Höchstgebot ${fmt(a.gebot)}` : `Festpreis ${fmt(a.preis)}`]] } }); }).join("")}</div>`
       : `<p style="margin:6px 0 0">Du bietest gerade kein Pferd an.</p>`;
     const tsListe = ts.length ? `<div class="paar-liste">${ts.map(t => { const p = t.pferd;
@@ -7400,7 +7435,7 @@
         <div class="panel voll"><b>🆘 Notfallpferde</b><p style="margin:4px 0 0;font-size:.85rem;opacity:.75">Pferde in schlechtem Zustand suchen ein Zuhause – für eine Schutzgebühr. Bedingung: gesund pflegen und mindestens ein Jahr behalten – vorher kein Verkauf, nur Rückgabe ohne Erstattung.</p>
         ${nf.length ? `<div class="paar-liste">${nf.map(h => pferdKachel(h, { ort: "Tierschutz (Notfall)", zeilen: [`${rasseById(h.rasse).name} · ${alterText(h)}`, ...(h.fohlenBeiFuss ? [`🍼 mit Fohlen (${alterText(h.fohlenBeiFuss)})`] : []), `Gesundheit ${h.notGesundheit} %`, `<b>${fmt(h.preis)}</b>`],
           aktion: [`Aufnehmen · ${fmt(h.preis)}`, () => { if (kaufPruefen(h, h.preis)) dialog(`<h3>🆘 ${esc(h.name)} aufnehmen?</h3><p>${h.fohlenBeiFuss ? `Mit Fohlen <b>${esc(h.fohlenBeiFuss.name)}</b> (${alterText(h.fohlenBeiFuss)}). ` : ""}Schutzgebühr: <b>${fmt(h.preis)}</b>. ${esc(h.name)} ist in schlechtem Zustand (Gesundheit ${h.notGesundheit} %). Du verpflichtest dich, ${pron(h).ihn} gesund zu pflegen und mindestens ein Jahr zu behalten – vorher darfst du ${pron(h).ihn} nicht verkaufen, nur ohne Erstattung an den Tierschutz zurückgeben.</p>`,
-            [[`🩺 ${h.akuErg ? "AKU-Ergebnis" : "Ankaufsuntersuchung"}`, () => akuDialog(h, "Tierschutz", null, () => zeigeMarkt()), "zweit"], ["Aufnehmen", () => pferdEinstellen(h, h.preis, "Schutzgebühr", p => { p.pflege.gesundheit = h.notGesundheit; p.schutzBis = jzJetzt() + 4; delete p.notGesundheit; })], ["Abbrechen", null, "zweit"]]); }],
+            [[`🩺 ${h.akuErg ? "AKU-Ergebnis" : "Ankaufsuntersuchung"}`, () => akuDialog(h, "Tierschutz", null, () => zeigeMarkt()), "zweit"], ["Aufnehmen", () => pferdEinstellen(h, h.preis, "Schutzgebühr", p => { p.pflege.gesundheit = h.notGesundheit; p.schutzBis = jzJetzt() + 4; if (p.fohlenBeiFuss) p.fohlenBeiFuss.schutzBis = p.schutzBis; delete p.notGesundheit; })], ["Abbrechen", null, "zweit"]]); }],
           extra: { zeilen: [["Gesundheit", `${h.notGesundheit} %`], ["Schutzgebühr", `<b>${fmt(h.preis)}</b>`]] } })).join("")}</div>` : `<p style="margin:6px 0 0">Gerade keine Notfallpferde.</p>`}</div>`; }
     zeigeNeben("🏷️ Pferdemarkt", html);
     $("nebenSchirm").querySelectorAll("[data-mb]").forEach(b => b.onclick = () => { marktBereich = b.dataset.mb; zeigeMarkt(); $("nebenSchirm").scrollTop = 0; });
@@ -8707,7 +8742,7 @@
         <b>Weidegang durch Stallbursche/Azubi</b> (Dome, v255/v258): je Pferd nie / täglich / jeden 2. Tag (Box → Pflege → Ort); am Nachmittag – tagsüber steht das Pferd sichtbar in der Box (Hinweis mit „heute drinlassen“), der Tag zählt beim Tagesende als Weidetag (Gras, Gesundheit, Herde), abends ist es wieder drin; nicht bei Quarantäne, Boxenruhe, Klinik, Turnier und im Frühling bei Hufrehe-Gefahr. Einsteller mit Weidewunsch: täglich. <b>Pferdepfleger</b> macht die leichte Arbeit aus dem Trainingsplan (Bodenarbeit, Freiarbeit, Spaziergang, nicht bei Pensionspferden) – der Bereiter dann nur Reiten und intensives Training. <b>Aufgaben</b> jedes Angestellten lassen sich unter Hofverwaltung → Mitarbeiter abwählen.
         <b>Ansehen bei Einstellern</b> je Hof (versteckt, Start 100, 0–200): Durchschnitt aller Einsteller zu Beginn jeder Jahreszeit ≥ 70 → +2, unter 40 → −2. Wirkung: Anfragen ×Ansehen/100 (0,3–1,5), akzeptierter Preis Richtwert × (1 + (Ansehen − 100)/400), Buchungschance der Leistungen ×Ansehen/100 (0,5–1,5), unter 100 werden Einsteller ungeduldiger (Beschwerde und Kündigung je 1 Punkt früher je 5 Punkte unter 100). Hinweise auf den Ruf stehen in den Rückmeldungen.
         <b>Rückmeldungen:</b> je Jahreszeit schreibt etwa die Hälfte der Einsteller (${prozent(PENSION.feedback)}), was gefällt und was nicht (nicht bei Beschwerde oder Kündigung – Beschwerden kommen immer). <b>Reitplatz heute:</b> bei Ort → Reitplatz/Reithalle steht, welche Einsteller heute dort reiten; im Stall unter „Heute da“.</p>
-      <p><b>Stute mit Fohlen bei Fuß</b> (Dome, v244): die ersten ~6 Wochen nach der Geburt (0,6 Jahreszeiten) kein Training, danach bis zum Absetzen nur leichte Arbeit (${FOHLEN_LEICHT.map(k => UEBUNG[k].n.replace(/\u00ad/g, "")).join(", ")}). Dabei läuft das Fohlen mit: Sozialverhalten +0,5, Vertrauen +0,3. <b>Fohlen-ABC</b> (Box – ppf – Ort, ab ~1 Monat, einmal am Tag, bis ${FOHLEN_ABC_MAX}×): Vertrauen +0,8, Gehorsam +0,5 – Halfter, Führen, Hufe geben.</p>
+      <p><b>Stute mit Fohlen bei Fuß</b> (Dome, v244): die ersten ~6 Wochen nach der Geburt (0,6 Jahreszeiten) kein Training, danach bis zum Absetzen nur leichte Arbeit (${FOHLEN_LEICHT.map(k => UEBUNG[k].n.replace(/\u00ad/g, "")).join(", ")}). Dabei läuft das Fohlen mit: Sozialverhalten +0,5, Vertrauen +0,3. <b>Fohlen-ABC</b> (Box – ppf – Ort, ab ~1 Monat, einmal am Tag, Stufen bis ${FOHLEN_ABC_MAX}): Vertrauen +0,8, Gehorsam +0,5 je Übung – bei 4 bzw. 10 Tagen je Jahreszeit × 7 ÷ Tage (6 bzw. 14 Übungen bis zum Ziel), also je Jahreszeit gleich viel – Halfter, Führen, Hufe geben.</p>
       <p><b>Futterexperte</b> (Dome, v243): jede Empfehlung wird mit Datum und Umständen gespeichert (Anlass: hochtragend, tragend, säugend, Jungpferd, Arbeit leicht/mittel/schwer, Senior, Erhaltung + Futterzustand, Spezialfutter). asr – Futter stellt jetzigen Plan und Experten-Empfehlung gegenüber (Abweichungen rot); passen die Umstände nicht mehr, kommt ein Hinweis. Je Anlass bleibt die letzte Empfehlung gespeichert und kann später (z. B. bei der nächsten Trächtigkeit) mit einem Knopf übernommen werden. Futterkammer aus asr – Futter als eigenes Fenster mit Rücksprung.</p>
       <p><b>Vorlieben/Abneigungen</b> (Dome, v240): zwei Knöpfe unter stb – Charakter; ein Eintrag erscheint erst, wenn der Spieler die Sache an mindestens ${VL_SICHTBAR_AB} verschiedenen Tagen selbst erlebt hat (Admin: sofort, mit Zähler). <b>Streicheln</b> (Dome, v239, asr – Putzkiste): wischen wie Bürste/Kamm, einmal am Tag Wohlbefinden +1 und Vertrauen +0,2, eigene Vorliebe (Grundbedürfnis). <b>Vorlieben</b> (Dome, v238): Reaktion einmal am Tag je Aktion. „Mag“: Wohlbefinden +4 × Vorliebe, Vertrauen +0,2. „Mag nicht“: Wohlbefinden −4 × Abneigung, Vertrauen −0,1 – bei Grundbedürfnissen (Putzen, Kämmen, Füttern, Medizin, Streicheln) nur 15 % davon und kein Vertrauensverlust. Hohes Vertrauen schwächt Abneigungen: ab Vertrauen 50 linear bis auf 40 % bei Vertrauen 100 (auch im Training).</p>
       <p><b>Krippe und Weide</b> (Dome, v236): Wurde vor dem Weidegang gefüttert, geht nichts verloren – Kraftfutter frisst das Pferd vorher in der Box (zählt zusätzlich zur Weide-Energie), Heu danach (ersetzt Gras). Box – ppf – Versorgung bzw. das Weide-Feld zeigt „Heute gefressen“ mit allen Sorten und Mengen.</p>
@@ -8735,7 +8770,7 @@
       <b>Anweiden:</b> Kommt ein Pferd nach mehr als einer Jahreszeit ohne Weide wieder raus (nicht im Winter), wird es ${anweidenTage()} Tage angeweidet: stundenweise draußen, dazu Heu (wie im Winter); Kolik und Hufrehe ×1,3 in dieser Zeit.<br>
       <b>Leckerli</b> (Box → Pferdepflege → Versorgung): Möhre/Apfel 100 g, Leckerli 10 g aus der Futterkammer; bis 3 am Tag je Vertrauen +0,3 und Wohlbefinden +0,5. An 5 Tagen mehr als 3 → „bettelt und schnappt“ (Brief), dann gibt es kein Vertrauen mehr dafür; nach 14 Tagen ohne zu viele Leckerli legt es sich. Zucker und Energie der Leckerli zählen im Futterzustand mit.<br>
       <b>Futterumstellung:</b> Ein geänderter Futterplan (ab 1 kg Raufutter oder 250 g Kraftfutter Unterschied) wird über 3 Tage eingeführt: Tag 1 ⅓, Tag 2 ⅔, Tag 3 ganz neu. „Sofort umstellen“ (mit Warnung) → Kolik ×2 für 2 Tage.</p>
-      <p><b>Futterexperte (F5):</b> extern auf Termin (Hofverwaltung → Mitarbeiter → Futterberatung oder Futterplan → Futterexperte): kommt am nächsten Morgen, ${fmt(FUTTER_BERATUNG)} je Pferd plus ${fmt(FUTTER_ANFAHRT)} Anfahrt, Rechnung per Brief (gebucht unter „Futter“). Fest angestellt erst im großen Stall (ab 20 Boxen), Gehalt ${fmt(MA_TYP.futterexperte.gehalt)} je Jahreszeit: berät kostenlos sofort und prüft zu Beginn jeder Jahreszeit alle Pferde ohne eigenen Plan und alle mit Haken „berechnet den Plan jede Jahreszeit neu“ (wird bei eigener Änderung abgehakt, kann wieder gesetzt werden). Er rechnet: Ziel-Energie = Bedarf (Stufe 7–9 ×0,85, Stufe 1–3 ×1,15); Raufutter nach Energie 1,5–2,5 kg je 100 kg (Heulage bei Husten/Asthma); zum Abnehmen mind. 1,5 kg je 100 kg Idealgewicht, bei Energieüberschuss 15–35 % davon Stroh; Rest über Hafer bis zur Grenze je Mahlzeit (Stärke 1 g je kg, Kraftfutter 0,5 kg je 100 kg; reicht das nicht, 3 Mahlzeiten), dann Rübenschnitzel (bis 0,3 kg je 100 kg), Öl (bis 1 g je kg) und Luzerne (bis 1 kg je 100 kg, zum Abnehmen 0,3) – ohne Hafer bei Rehe, PSSM, Magen, Schonkost, dick; Luzerne, bis das Eiweiß passt (dafür Hafer bzw. Heu zurück); zu viel Energie: Hafer, Rübenschnitzel, Öl, Spezialfutter, Heu bis zum Minimum zurück. Der Plan hält immer die Grenzen von „Bedarf gedeckt?“ ein; ist der Bedarf so nicht zu decken, steht ein Hinweis im Brief; Mineral 100 g (50 g unter 300 kg). Der neue Plan wird über 3 Tage eingeführt. Der Spieler lernt mit (Wissen Fütterung +0,5 je Pferd).<br>
+      <p><b>Futterexperte (F5):</b> extern auf Termin (Hofverwaltung → Mitarbeiter → Futterberatung oder Futterplan → Futterexperte): kommt am nächsten Morgen, ${fmt(FUTTER_BERATUNG)} je Pferd plus ${fmt(FUTTER_ANFAHRT)} Anfahrt, Rechnung per Brief (gebucht unter „Futter“). Fest angestellt erst im großen Stall (ab 20 Boxen), Gehalt ${fmt(MA_TYP.futterexperte.gehalt)} je Jahreszeit: berät kostenlos sofort und prüft zu Beginn jeder Jahreszeit alle Pferde ohne eigenen Plan und alle mit Haken „berechnet den Plan jede Jahreszeit neu“ (wird bei eigener Änderung abgehakt, kann wieder gesetzt werden). Er rechnet: Ziel-Energie = Bedarf (Stufe 7–9 ×0,85, Stufe 1–3 ×1,15); Raufutter nach Energie 1,5–2,5 kg je 100 kg (Heulage bei Husten/Asthma); zum Abnehmen mind. 1,5 kg je 100 kg Idealgewicht, bei Energieüberschuss 15–35 % davon Stroh; Rest über Hafer bis zur Grenze je Mahlzeit (Stärke 1 g je kg, Kraftfutter 0,5 kg je 100 kg; reicht das nicht, 3 Mahlzeiten), dann Rübenschnitzel (bis 0,3 kg je 100 kg), Öl (bis 1 g je kg) und Luzerne (bis 1 kg je 100 kg, zum Abnehmen 0,3) – ohne Hafer bei Rehe, PSSM, Magen, Schonkost, dick; Luzerne, bis das Eiweiß passt (dafür Hafer bzw. Heu zurück); zu viel Energie: Hafer, Rübenschnitzel, Öl, Spezialfutter, Heu bis zum Minimum zurück. Der Plan hält immer die Grenzen von „Bedarf gedeckt?“ ein; ist der Bedarf so nicht zu decken, steht ein Hinweis im Brief; Mineral 100 g (50 g unter 300 kg). Der neue Plan wird über 3 Tage eingeführt. Der Spieler lernt mit (Wissen Fütterung +0,5 je Pferd). Beim allerersten Pferd im Spiel kommt er einmal kostenlos und ohne Termin am ersten Tag (ersteFutterberatung).<br>
       <b>Spezialfutter</b> (nur über den Experten; er bringt einen Vorrat für ${SPEZIAL_VORRAT} Tage mit, danach im Futterhandel): ${Object.values(SPEZIAL).map(S => `${S.n} (${S.e} MJ, ${S.ei} % Eiweiß, ${S.zs} % Zucker/Stärke, ${S.preis.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/kg)`).join(" · ")}. Wahl: Kolik in den letzten 7 Tagen → Schonkost; Hufrehe/Cushing → Strukturfutter; PSSM → Muskelfutter; Magengeschwür → Magenschonfutter; Stufe 1–2 oder ≥ 2 Befunde → Aufbaufutter; ab 20 Jahren → Seniorenfutter. Wirkung ab 250 g am Tag: Kolik ×0,6 (Schonkost) bzw. ×0,8 (Senior), Hufrehe/Cushing ×0,5, Magengeschwür ×0,4, Infekte ×0,7 (Aufbau); passende Befunde werden mit 10 % je Tag eine Stufe besser. Senioren ab 20 Jahren verwerten ohne Seniorenfutter oder Heucobs (ab 1 kg) nur 90 % der Energie.</p>
       <h3>🏆 Turniere</h3>
       <p><b>Ablauf:</b> Pferdeanhänger (Box oder Hauptmenü) → Turnier → Turnierkalender. Nennen bis spätestens am Tag vorher (Nenngeld sofort, beim Zurückziehen keine Erstattung). Am Turniertag morgens fährt das Pferd los (von der Weide wird es vorher geholt; krank/schwach → nicht gestartet, Nenngeld verfällt), ist den ganzen Tag weg (kein Training, Box sauber, unterwegs gefüttert). In der Nacht wird gerechnet, der Brief kommt am nächsten Tag. Ab 4 Jahren, nicht mit Fohlen bei Fuß, tragend keine Sprünge und in der letzten Jahreszeit vor der Geburt gar nicht; höchstens 2 Prüfungen je Turnier in benachbarten Klassen, nur ein Turnier pro Tag.</p>
@@ -8782,7 +8817,7 @@
       <p><b>Weide und Herde (Etappe 2b)</b> – Sozialverhalten pro Tag × 7 ÷ Tage pro Jahreszeit (gleich viel pro Jahreszeit, egal ob 4, 7 oder 10 Tage); Bedeckung und Streit sind feste Chancen pro Nacht:
         Heu auf der Weide nötig im Winter und am letzten Herbsttag (Knopf in der Weide-Ansicht, Stallbursche erledigt es mit) – sonst hungrig: Gesundheit −19 statt Weide-Plus, Wohlbefinden −8.
         Wohlbefinden auf der Weide: +15, im Winter +8, allein +2 (v260) (eigenständig bekommt bis +9 zurück; verschmust/scheu/nervös zusätzlich bis −4).
-        <b>Ungeplante Bedeckung:</b> Hengst (ab 2 J.) und zuchtfähige Stute (3–20 J., nicht tragend) zusammen auf der Weide: pro Nacht 25 % (jede Stute einzeln), tragend mit 40 % + 55 % × Wohlbefinden (Schnitt beider). Fällt nach einer Jahreszeit auf (Brief vom Tierarzt) oder beim nächsten geplanten Decken. Warnung nur beim allerersten Zusammenstellen.
+        <b>Ungeplante Bedeckung:</b> Hengst (ab 2 J.) und zuchtfähige Stute (3–20 J., nicht tragend, ohne Fohlen bei Fuß, höchstens 25 cm Größenunterschied wie beim Decken) zusammen auf der Weide: pro Nacht 25 % (jede Stute einzeln), tragend mit 40 % + 55 % × Wohlbefinden (Schnitt beider). Fällt nach einer Jahreszeit auf (Brief vom Tierarzt) oder beim nächsten geplanten Decken. Warnung nur beim allerersten Zusammenstellen.
         <b>Sozialverhalten</b> (versteckt, 0–100, Start 20; Stammpferde ab 3 J. 40): steigt bis 3 Jahre – Aufzuchtstation +2/Tag, Weide mit mind. 2 anderen Jungpferden +1,5, mit weniger +0,5, Fohlen bei der Mutter +0,3.
         <b>Hengstverhalten:</b> Hengst ab 3 J. voll; Wallach, der nach dem 2. Lebensjahr kastriert wurde, zur Hälfte; früh kastriert gar nicht.
         <b>Streit</b> pro Nacht und Paar: fester Paarwert 0–12 % + 8 % × (1 − Sozialverhalten-Schnitt) + 5 % × max(temperamentvoll, eigensinnig) + 35 % × Hengstverhalten beider × (1 − 0,5 × Sozialverhalten) bei zwei Hengsten, +20 % wenn Stuten (ab 2 J.) auf der Weide sind (Kampf um die Stuten). Hengst und Stute streiten nicht. Streit: beide −10 Wohlbefinden, 20 % Verletzung (Hengstkampf um Stuten 35 %) (eines der beiden, Gesundheit −10 bis −25, Befund heilt nach 2 Jahreszeiten). Brief „Streit auf der Weide“.
@@ -8800,12 +8835,12 @@
       <p>Marktwert aus Gangwerk (Notenschnitt − 2,5) / 6, Ausbildungsstand, Alter und Gesundheit, plus die Kosten aller gemachten Gentests (getestete Pferde verkaufen sich besser). Stute mit Fohlen bei Fuß: beide Marktwerte zusammen, das Fohlen wird mitverkauft (allein nicht). Festpreis (Regler 50–160 % des Marktwerts, Chance wird angezeigt): bis 90 % des Marktwerts 98 % Verkaufschance, bis Marktwert 93 %, darüber sinkend (110 % ≈ 59 %, 120 % ≈ 38 %, 130 % ≈ 24 %, 150 % ≈ 10 %), aber nie unter 4 % (Liebhaber). Gerechnet mit dem Saisonpreis der Jahreszeit, in der du das Pferd einstellst. Während das Angebot läuft, schicken Interessenten manchmal Preisvorschläge per Brief (jede Nacht 15 %, bei deutlich überhöhtem Preis 35 %; 75–105 % des Marktwerts, immer unter deinem Preis) – annehmen verkauft sofort, ablehnen lässt das Angebot weiterlaufen. Auktion startet bei ½ des Marktwerts und läuft 2 Jahreszeiten; Abbruch nach dem ersten Gebot kostet die Hälfte des letzten Gebots. Gnadenhof: halber Marktwert.</p>
       <h3>🏷️ Pferdemarkt (wechselt jede Jahreszeit)</h3>
       ${verTab(["Bereich", "Angebot", "Preis", "Besonderheit"], [
-        ["🏡 Privatanzeigen", "2–4 Pferde, 5–19 J., oft Mix; Stuten auch mit Fohlen bei Fuß (Frühling 45 %, Sommer 40 %, Herbst 8 %, Winter 5 %)", "70–100 %", `Ankaufsuntersuchung ${fmt(AKU_PREIS)} zeigt die Gesundheit vorher. Preisvorschlag (1× je Pferd): ab 95 % sicher, 85–95 % 60 %, 75–85 % 30 %, sonst 5 %. Gesundheit erst nach Kauf (der Preis berücksichtigt sie zur Hälfte – Privatleute kennen ihr Pferd), je Großelternteil 30 % „unbekannt“ – dann Rasse „Abstammung unvollständig“ ohne Anteile, bis ein Abstammungsnachweis die Großeltern ermittelt`],
+        ["🏡 Privatanzeigen", "2–4 Pferde, 5–19 J., oft Mix; Stuten auch mit Fohlen bei Fuß (Frühling 45 %, Sommer 40 %, Herbst 8 %, Winter 5 %); Körperform meist normal, etwa 20 % zu dick, 5 % zu dünn", "70–100 %", `Ankaufsuntersuchung ${fmt(AKU_PREIS)} zeigt die Gesundheit vorher. Preisvorschlag (1× je Pferd): ab 95 % sicher, 85–95 % 60 %, 75–85 % 30 %, sonst 5 %. Gesundheit erst nach Kauf (der Preis berücksichtigt sie zur Hälfte – Privatleute kennen ihr Pferd), je Großelternteil 30 % „unbekannt“ – dann Rasse „Abstammung unvollständig“ ohne Anteile, bis ein Abstammungsnachweis die Großeltern ermittelt`],
         ["🐴 Pferdehändler", "6 Pferde, 1–14 J.", "110–130 %", "Gesundheit mind. 75 %, Rückgabe 3 Tage gegen 20 % Abzug"],
         ["🔨 Auktionshaus", "3–5 Pferde, 1–4 J., vom Züchter (Geburt 85 % Frühling, 10 % Winter, 5 % Sommer)", "Start 50 %", "Höchstgebot wie bei eBay: du legst dein Maximum fest, gezahlt wird nur ein Schritt über dem nächsten Bieter (Schritt 5 %, mind. 50 €); andere Bieter nachts (Limit: 65 % der Auktionen 70–130 % des Marktwerts, 22 % 130–200 %, 9 % Liebhaber mit 200–350 %, 4 % Sammler mit 350–600 % – starke Bieter bieten auch öfter), Höchstgebote nur bis zum frei verfügbaren Geld (Geld in anderen führenden Höchstgeboten ist gebunden), Zuschlag zu Beginn der nächsten Jahreszeit – nur mit freier Box und genug Geld. Grüner Rahmen: du führst, oranger: überboten (Brief mit „Erneut bieten“)"],
         ["🍼 Fohlenauktion", "3–5 Frühlingsfohlen, nur Sommer und Herbst", "Start 50 %", "wie Auktionshaus; Zuschlag zu Beginn der nächsten Jahreszeit, dann wird das Fohlen abgesetzt geliefert (freie Box + Geld nötig, zum Bieten noch nicht)"],
         ["🏰 Gestüte", "je Rasse 2–3 Pferde, 1–4 J., Geburt wie im Auktionshaus", "120–150 %", "reinrassig (35 % Veredler-Urgroßvater, wo erlaubt), Gänge +0,5; Gentests: Fellfarben immer, Gangpferde-Test bei Islandpferd/Marwari, Erbkrankheiten-Test bei Rassen mit Overo/Leopard – Testkosten kommen auf den Preis"],
-        ["🐾 Notfallpferde", "1–2 Pferde, 8–22 J., ohne Ausbildung; Stuten auch mit Fohlen (80 % der Privat-Chance)", "150–300 € (+100 € mit Fohlen)", "Gesundheit 25–45 %; im ersten Jahr kein Verkauf (auch kein Gnadenhof) – nur Rückgabe an den Tierschutz ohne Erstattung"]])}
+        ["🐾 Notfallpferde", "1–2 Pferde, 8–22 J., ohne Ausbildung; Stuten seltener mit Fohlen (35 % der Privat-Chance); Körperform oft zu dünn (Futterzustand 1–3 etwa 50 %, 4–5 40 %, 7–8 10 %)", "150–300 € (+100 € mit Fohlen)", "Gesundheit 25–45 %; im ersten Jahr kein Verkauf (auch kein Gnadenhof) – nur Rückgabe an den Tierschutz ohne Erstattung"]])}
       <p><b>Saisonpreise:</b> Frühling ×1,1 · Sommer ×1,05 · Herbst ×1 · Winter ×0,9 – gilt für alle Marktpreise und für deine eigenen Verkäufe (Festpreis-Chance und Auktionsgebote).</p>
       <p><b>Pferdepfleger:</b> ${fmt(MA_TYP.pfleger.gehalt)} pro Jahreszeit, sonst wie der Stallbursche (3 Boxen nach Boxnummer). Er putzt jeden Morgen Fell, Mähne und Schweif und kürzt Mähne und Schopf auf die Wunschlänge (Häkchen beim Schneiden) – länger wachsen lassen geht nur von selbst.</p>
       <p><b>Befunde (Krankheiten und Verletzungen)</b> – Liste je Pferd mit Art, Grad 1–5 (${GRAD_TEXT.slice(1).join(", ")}), Ursache, Verlauf. Grundrisiko ${String(BEFUND_RISIKO).replace(".", ",")} pro Nacht × Anteil der Krankheit (bei guter Haltung etwa 1,5 Befunde pro Pferd und Jahr) × Konstitution (1,5 − Anlage ÷ 100) × Wohlbefinden (unter 50 ×1,5, unter 30 ×2,2) × Alter (ab 15 J. ×1,3, ab 20 ×1,6) × Art: Verletzung Weide ×1,5 · Lahmheit Zähigkeit (1,3 − Wert ÷ 100 × 0,6), ab 15 J. ×1,5, nach Verletzung ×1,5 · Kolik hungrig ×2, Winter ×1,3, Futter-Faktor (kommt mit der Fütterung) · Husten/Erkältung Mist ×1,5/1,3, Schmutz ×1,2, Winter ×2, Herbst ×1,5, Weide ×0,5/0,7 · Hufrehe Frühlingsweide ×3 · Mauke Schmutz ×1,5, Mist ×1,5, Herbst-/Winterweide ×2 · Arthrose erst ab 15 J. · Sommerekzem nur im Sommer (Isi, Tinker, Haflinger ×3, sonst ×0,3) · Cushing ab 18 J.</p>
@@ -8833,7 +8868,7 @@
       <p><b>Nachtdienst bei Geburten:</b> Pferdewirt (immer) oder Pferdepfleger (kleiner/mittlerer Stall), Nachteulen zuerst. Mit Aufsicht: Nachtzuschlag, Fohlen 100 % Gesundheit, Stute Wohlbefinden +5, Zucht-Erfahrung +1,5. Ohne Aufsicht: 15 % Chance, dass das Fohlen schwach ist (Gesundheit 70–85 %).</p>
       <p><b>Decksaison:</b> Die Hengste der Deckstation (Gestüte) decken nur im Frühling und Sommer, eigene Hengste jederzeit.</p>
       <p>Geburtszeit sonst: 65 % Frühling, 17 % Sommer, 10 % Winter, 8 % Herbst.</p>
-      <p>Eigene Pferde: Auktion startet bei ½ des Marktwerts (wie im Auktionshaus) und läuft 2 Jahreszeiten; Zwischenstand und Ergebnis kommen per Brief mit Anzahl der Gebote, beim Verkauf auch mit dem Marktwert zu Beginn und am Ende. Bietet niemand das Startgebot, bleibt das Pferd.</p>
+      <p>Eigene Pferde: Auktion startet bei ½ des Marktwerts (wie im Auktionshaus) und läuft 1 Jahreszeit ab dem Starttag (Festpreis 2 Jahreszeiten, Käufer können jeden Tag kommen: Tageschance = 1 − (1 − Jahreszeit-Chance)^(1/Tage je Jz)); Zwischenstand zur Halbzeit und Ergebnis kommen per Brief mit Anzahl der Gebote, beim Verkauf auch mit dem Marktwert zu Beginn und am Ende. Bietet niemand das Startgebot, bleibt das Pferd.</p>
       <p><b>Ansehen (geheim, Spieler sieht es nie):</b> Jeder Absender startet bei 100 Punkten (Skala 0–200). Positiv +5: Rechnung pünktlich bezahlt, „Du“ angenommen, Verkauf über Pferdemarkt/Auktionshaus, Zuschlag im Auktionshaus, Pferd vom Tierschutz zurückgekauft, Pferd an den Gnadenhof gegeben. Negativ −5: Mahnung, Abbuchung, „Du“ abgelehnt, Preisvorschlag abgelehnt, eigene Auktion mit Strafe abgebrochen, Aufenthalt wegen Kontominus abgebrochen, Tierschutz: Strafe wegen Vernachlässigung, Notfallpferd verkauft oder zurückgegeben, Fohlen abgeholt. Das „Du“ wird erst ab ${DU_AB_RUF} Punkten angeboten (also frühestens nach 16 positiven Kontakten mehr als negativen); fällt ein Absender, mit dem man sich duzt, auf ${DU_WEG_RUF} oder darunter, zieht er das „Du“ beleidigt zurück.</p>
       <p><b>Briefe:</b> Absender schreiben zuerst mit „Sie“. Nach ${DU_ANGEBOT_NACH} Briefen (und ab ${DU_AB_RUF} Punkten Ansehen) bietet ein Absender in einem eigenen Brief das „Du“ an – annehmen oder beim „Sie“ bleiben. Pferdenamen in Briefen lassen sich antippen. Diagnosen kommen als eigener Brief (Ereignis „Tierarzt: Diagnose“).</p>
       <p><b>Schecken-Namen:</b> Overo und Tovero heißen ohne Gentest nach dem Aussehen (z. B. „Braunschecke“) – welches Scheckungs-Gen dahintersteckt, sieht man erst nach dem Fellfarben- oder Erbkrankheiten-Test („Braunschecke (Overo)“). Overo-Träger können auch einfarbig aussehen (kaum Weiß); in der Admin-Genauswahl lässt sich O/n deshalb auch bei einfarbigen Farben einstellen.</p>

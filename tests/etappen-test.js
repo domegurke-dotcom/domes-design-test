@@ -158,7 +158,8 @@ const path = require('path');
         const bx = spiel.boxen.find(b => b.pferd && !b.tot && !fremd(b.pferd) && !b.pferd.weide && !b.pferd.klinik), q = bx && bx.pferd;
         if (q) { aufWeide(q, bx, null, w2.wid);
           ok('H6 Pferd auf die gewählte Weide', q.weide && q.weide.wid === w2.wid && weidePferde(w2).includes(q), q.name + ' → ' + w2.name);
-          w2.ha = 0.1; const g0 = w2.gras, m0 = w2.matsch; nacht(3);
+          w2.ha = 0.1; const g0 = w2.gras, m0 = w2.matsch; for (let i = 0; i < 3; i++) { if (!q.weide) aufWeide(q, bx, null, w2.wid); nacht(1); }   // v296: abends wieder in der Box
+          ok('H6 Abends wieder in der Box, Box muss gemistet werden', !q.weide && bx.mistig); aufWeide(q, bx, null, w2.wid);
           ok('H6 Überbesetzt: Gras sinkt, Matsch steigt', w2.gras < g0 && w2.matsch > m0, `Gras ${g0} → ${w2.gras} %, Matsch ${m0} → ${w2.matsch} %`);
           w2.gras = 10; ok('H6 Abgefressen → Heu nötig', heuNoetigP(q));
           w2.matsch = 80; const r0 = Object.fromEntries(befundRisiko(q, bx, 'weide')); w2.aepfel = spiel.tag; const r1 = Object.fromEntries(befundRisiko(q, bx, 'weide'));

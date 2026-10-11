@@ -11,7 +11,7 @@ Plan gespeichert bei Spielversion 208. **Noch nicht starten:** erst nach Fütter
 - [x] Etappe H1 – Neuer Spielstart, Immobilien-Menü, Kredit (groß) – v221, von Claude per Skript getestet · Abnahmetest für Dome von Claude erledigt (v271, `tests/etappen-test.js`, Dome 11.10.2026) ✅
 - [x] Etappe H2 – Hof-Struktur, Land, Hofplan (groß) – v222, von Claude per Skript getestet · Abnahmetest für Dome von Claude erledigt (v271, `tests/etappen-test.js`, Dome 11.10.2026) ✅
 - [x] Etappe H3 – Bauen, Stufen, Verfall (groß) – v223, von Claude per Skript getestet · Abnahmetest für Dome von Claude erledigt (v271, `tests/etappen-test.js`, Dome 11.10.2026) ✅
-- [ ] Etappe H4 – Umbau-Folgen (mittel)
+- [x] Etappe H4 – Umbau-Folgen (mittel) – v272, Abnahmetest von Claude erledigt (`tests/etappen-test.js`) ✅ · Teile, die erst mit den Stallarten kommen (Fristen ruhen, Aufzucht-Offenstall, Ausbildungs-/Western-/Rennstall, Gnadenhof-Spendenaufruf, Baulärm auf dem Gnadenhof), werden in H7 ergänzt
 - [x] Etappe H5 – Pension und Einsteller (groß) – v251, von Claude per Skript getestet · Abnahmetest für Dome von Claude erledigt (v271, `tests/etappen-test.js`, Dome 11.10.2026) ✅
 - [ ] Etappe H6 – Weiden, Gras, Futterwiese, Einstreu (mittel)
 - [ ] Etappe H7 – Stallarten: Bedingungen, Vorteile, Strafe (groß)
@@ -94,6 +94,9 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 3. Eigene Pferde ohne freie Box → Weide/Sandpaddock oder per Anhänger zum anderen eigenen Hof. Fehlt eine Stallart-Bedingung nur wegen des Umbaus, ruht die Frist.
 4. Zuchtstall: Abfohlboxen nicht umbaubar, solange eine Stute in der letzten Jahreszeit vor der Geburt ist (Warnung). Umbau Aufzucht-Offenstall → Fohlen auf Fohlenweide oder gegen Geld in externe Aufzucht.
 5. Ausbildungs-/Westernstall: Kundenpferde wie Einsteller. Umbau Reitplatz/Halle → Training nur Roundpen/Gelände, langsamer lernen. Rennstall: Umbau Rennbahn → nur Gelände, Rennform sinkt etwas. Gnadenhof: Spendenaufruf für den Umbau bringt einmalig mehr Spenden.
+
+**Umsetzung H4 (v272):** Umbau einer Stufe höher: Pferde ziehen beim Start in freie Boxen (normale vor Paddockboxen, nicht Quarantäne/Abfohlbox); eigene ohne Box kommen auf die Weide (bleiben dort, bis der Umbau fertig ist; ohne Weide und ohne freie Box kein Umbau – vorher per Anhänger zu einem anderen Hof). Sind Einsteller betroffen, beginnt der Umbau 1 Jahreszeit nach dem Auftrag (Brief „Umbau angekündigt“); unter Hof → Bauen → „Umbau geplant“ je Einsteller wählen: Weide mit 30 % Nachlass aufs Boxengeld oder Vertrag ruht (Pferd beim Besitzer, keine Zahlung). Ohne Lösung: Zufriedenheit −30, 40 % kündigen sofort, sonst holt der Besitzer das Pferd (Vertrag ruht). Zufriedenheit sonst: Umzug −5, Nachlass −5, ruht −10. Keine neuen Einsteller in Boxen mit geplantem Umbau, Umbau absagen vor dem Start mit voller Erstattung. Reitplatz/Reithalle/Roundpen im Umbau: dort kein Training (auch nicht für Pensionsreiter). Nach dem Umbau kommen die Weide-Pferde zurück in ihre Box, ruhende Verträge laufen weiter (Brief des Besitzers). Baulärm (v229) und Abfohlbox-Sperre (v229) gab es schon.
+**Selbst festgelegt (bitte prüfen):** Zufriedenheit −5/−5/−10/−30, 40 % Kündigung ohne Lösung, Umbau absagen mit voller Erstattung.
 
 ## Etappe H5 – Pension und Einsteller (groß)
 1. Einsteller fragen per Brief an, wenn Boxen frei sind; Häufigkeit nach Stufe, Anlagen (Halle, Roundpen), Ansehen, Preis und Hofregeln.

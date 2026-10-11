@@ -11,11 +11,11 @@ Plan gespeichert bei Spielversion 185. **Noch nicht starten:** erst wenn Werte-E
 
 **Danach (Dome, 6.10.2026):** Nach Etappe F5 kommt `PLAN-HOF.md` (Hof-Ausbau, Etappen H1–H8). Vorher Dome fragen „Mit Hof-Ausbau H1 weitermachen?“ und auf Domes Ja warten. Hinweis für F1: die Futterkammer bekommt ein Feld für die Lagergröße – das nutzt später das Futter- und Strohlager aus H3.
 
-- [x] Etappe F1 – Futterkammer und Futterhandel (mittel) · v210, von Claude per Skript getestet; offene Detailfragen in OFFENE-FRAGEN.md
-- [x] Etappe F2 – Futterplan, Bedarf, Nährwerte (groß) · v211, von Claude per Skript getestet
-- [x] Etappe F3 – Futterzustand und Auswirkungen (groß) · v212, von Claude per Skript getestet (Futterzustand 1–9, Folgen, Magengeschwür, Standardplan nach Bedarf)
-- [x] Etappe F4 – Atemwege, Leckerli, Futterumstellung (klein) · v213, von Claude per Skript getestet
-- [x] Etappe F5 – Futterexperte und Spezialfutter (mittel) · v214, von Claude per Skript getestet
+- [x] Etappe F1 – Futterkammer und Futterhandel (mittel) · v210, von Claude per Skript getestet; offene Detailfragen in OFFENE-FRAGEN.md · Abnahmetest für Dome von Claude erledigt (v271, `tests/etappen-test.js`, Dome 11.10.2026) ✅
+- [x] Etappe F2 – Futterplan, Bedarf, Nährwerte (groß) · v211, von Claude per Skript getestet · Abnahmetest für Dome von Claude erledigt (v271, `tests/etappen-test.js`, Dome 11.10.2026) ✅
+- [x] Etappe F3 – Futterzustand und Auswirkungen (groß) · v212, von Claude per Skript getestet (Futterzustand 1–9, Folgen, Magengeschwür, Standardplan nach Bedarf) · Abnahmetest für Dome von Claude erledigt (v271, `tests/etappen-test.js`, Dome 11.10.2026) ✅
+- [x] Etappe F4 – Atemwege, Leckerli, Futterumstellung (klein) · v213, von Claude per Skript getestet · Abnahmetest für Dome von Claude erledigt (v271, `tests/etappen-test.js`, Dome 11.10.2026) ✅
+- [x] Etappe F5 – Futterexperte und Spezialfutter (mittel) · v214, von Claude per Skript getestet · Abnahmetest für Dome von Claude erledigt (v271, `tests/etappen-test.js`, Dome 11.10.2026) ✅
 
 **Jetzt nur speichern, noch nicht umsetzen:** Mit F1 erst starten, wenn Werte-Etappe 6 fertig ist. Eine Werte-Etappe 7 gibt es nicht: Nach Etappe 6 ist der nächste Schritt F1 aus `PLAN-FUETTERUNG.md`. Dann Dome fragen „Mit Fütterung F1 weitermachen?“ und auf Domes Ja warten.
 

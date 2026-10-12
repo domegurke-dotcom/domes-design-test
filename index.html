@@ -917,7 +917,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "372";
+  const SPIEL_VERSION = "373";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -925,10 +925,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=372"></script>
-<script src="boxstufen.js?v=372"></script>
-<script src="kopfteile.js?v=372"></script>
-<script src="kopfalter.js?v=372"></script>
+<script src="pferd.js?v=373"></script>
+<script src="boxstufen.js?v=373"></script>
+<script src="kopfteile.js?v=373"></script>
+<script src="kopfalter.js?v=373"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3826,8 +3826,9 @@
   // ---------- Dome (v355): Boxenansicht je Stufe (boxstufen.js) ----------
   let stufeGezeichnet = null;
   function boxStufeZeichnen(box) {
-    const S = window.BOXSTUFE; if (!S) return; const st = Math.min(3, Math.max(1, boxenStufe(box) || 2)), V = S[st], stall = $("stall"), tuer = !!box.paddock && !!V.wandTuer, gross = V.gross && !tuer, key = st + (tuer ? "t" : "");   // v367 (Dome): Paddockbox mit Tür statt Fenster
+    const S = window.BOXSTUFE; if (!S) return; const st = Math.min(3, Math.max(1, boxenStufe(box) || 2)), V = S[st], stall = $("stall"), tuer = !!box.paddock && !!V.wandTuer, gross = V.gross && !tuer, abf = !!box.abfohl, key = st + (tuer ? "t" : "") + (abf ? "a" : "");   // v367 (Dome): Paddockbox mit Tür statt Fenster
     if (stufeGezeichnet !== key) { stufeGezeichnet = key;
+      abfohlAufheben();
       stall.querySelectorAll(".stufeEl").forEach(e => e.remove());
       const mk = (html, kl = "") => { const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); g.setAttribute("class", "stufeEl " + kl); g.innerHTML = html || ""; return g; };
       const nach = (el, ref) => ref.parentNode.insertBefore(el, ref.nextSibling), vor = (el, ref) => ref.parentNode.insertBefore(el, ref);
@@ -3846,6 +3847,7 @@
       stall.querySelectorAll(".stufeEl .sKrippe").forEach(g => g.addEventListener("click", e => { e.stopPropagation(); $("krippe").dispatchEvent(new MouseEvent("click", { bubbles: true })); }));
       stall.querySelectorAll(".stufeEl .sHeunetz").forEach(g => g.addEventListener("click", e => { e.stopPropagation(); $("heuhaufen").dispatchEvent(new MouseEvent("click", { bubbles: true })); }));
       stall.querySelectorAll(".stufeEl .sWasser").forEach(g => g.addEventListener("click", e => { e.stopPropagation(); wasserEimerFuellen(); }));
+      if (abf) abfohlAnwenden(st, wand);
     }
     // je Tag/Pferd: Untergrund, Name, Leckstein, Wasser, Heunetz
     const ohne = box.ohneEinstreu || !box.einstreu, BD = S.boden;
@@ -3854,6 +3856,58 @@
     stall.querySelectorAll(".stufeEl .sLeck").forEach(g => g.style.display = box.leckstein === jzJetzt() ? "" : "none");
     stall.querySelectorAll(".stufeEl .sWasserVoll").forEach(g => g.style.display = box.pferd && box.wasserTag === spiel.tag ? "" : "none");
     if (st === 3) { const R = raufutterBild(box.pferd, box); stall.querySelectorAll(".stufeEl .sHeu").forEach(p => p.setAttribute("fill", box.krippeVoll ? R.farbe : "#cdbf9a")); }
+  }
+  // v373 (Dome): Abfohlbox – tiefer (Rückwand weiter hinten, Wände/Decke neu), tiefes Stroh, Rotlichtlampe; ab Stufe 2 Fohlenfuttereimer und Abfohlset, Stufe 3 Polster
+  const ABF_S = 0.8, ABF_VP = [200, 86];
+  function abfohlAufheben() {
+    const W = $("abfRaum"); if (W) { const H = W.querySelector(".abfHinten"); [...H.children].forEach(c => W.parentNode.insertBefore(c, W)); W.remove(); }
+    document.querySelectorAll(".abfohlEl").forEach(e => e.remove()); document.querySelectorAll("[data-abfv]").forEach(e => { e.style.display = ""; e.removeAttribute("data-abfv"); });
+  }
+  function abfohlAnwenden(st, wand) {
+    const NS = "http://www.w3.org/2000/svg", R = $("boden").parentNode, G2 = $("krippe").parentNode, S = ABF_S, [cx, cy] = ABF_VP, M = (x, y) => [cx + (x - cx) * S, cy + (y - cy) * S];
+    const mk = (html, kl = "") => { const g = document.createElementNS(NS, "g"); g.setAttribute("class", "abfohlEl " + kl); g.innerHTML = html; return g; };
+    const hinten = [R.children[0], $("draussen"), $("tuerRahmen"), wand].filter(Boolean);
+    const W = mk(""); W.id = "abfRaum"; const H = document.createElementNS(NS, "g"); H.setAttribute("class", "abfHinten"); H.setAttribute("transform", `translate(${cx},${cy}) scale(${S}) translate(${-cx},${-cy})`);
+    R.insertBefore(W, R.children[0]);
+    [...R.children].forEach(c => { if (c !== W && !hinten.includes(c) && c.tagName !== "clipPath" && c.tagName !== "defs") { c.setAttribute("data-abfv", "1"); c.style.display = "none"; } });
+    hinten.forEach(c => H.appendChild(c));
+    const seiten = [...G2.children].find(e => e.classList && e.classList.contains("stufeEl") && !e.classList.contains("stufeVorn") && !e.classList.contains("abfohlEl"));
+    if (seiten) { const kids = [...seiten.children], k0 = kids.findIndex(e => e.classList && e.classList.contains("sKrippe")); kids.forEach((e, k) => { if (k0 < 0 || k < k0) { e.setAttribute("data-abfv", "1"); e.style.display = "none"; } }); }
+    const [tlx, tly] = M(60, 50), [blx, bly] = M(60, 212), [, rly] = M(60, 152);
+    const seite = sd => { const f = x => sd === "L" ? x : 400 - x, pts = a => a.map(([x, y]) => `${f(x).toFixed(1)},${y.toFixed(1)}`).join(" ");
+      const oben = pts([[0, 50], [tlx, tly], [tlx, rly], [0, 158]]), unten = pts([[0, 158], [tlx, rly], [blx, bly], [0, 266]]), id = "abfSw" + sd;
+      const yy = (x, t) => { const a = 158 + (rly - 158) * x / tlx, b = 266 + (bly - 266) * x / tlx; return a + (b - a) * t; };
+      let o = "", u = "";
+      if (st === 1) { for (let i = 0; i < 9; i++) o += `<rect x="${f(i * 10) - (sd === "L" ? 0 : 10)}" y="40" width="10" height="130" fill="${["#8b6239", "#9a7046", "#7f5934"][i % 3]}" stroke="#3a2614" stroke-width=".8"/>`;
+        o = `<polygon points="${oben}" fill="#2a1d12"/>${o}<polygon points="${oben}" fill="#1a0f05" opacity=".55"/>`;
+        for (let k = 0; k < 7; k++) u += `<polygon points="${pts([[0, yy(0, k / 7)], [tlx, yy(tlx, k / 7)], [tlx, yy(tlx, (k + 1) / 7)], [0, yy(0, (k + 1) / 7)]])}" fill="${["#8b6239", "#9a7046", "#7f5934", "#a57a4c"][k % 4]}" stroke="#3a2614" stroke-width=".9"/>`;
+        u += `<polygon points="${unten}" fill="#2b1a0c" opacity=".15"/>`; }
+      else if (st === 2) { o = `<polygon points="${oben}" fill="url(#kalkstein)"/><polygon points="${oben}" fill="#3a2614" opacity=".12"/>`;
+        u = `<polygon points="${unten}" fill="#c99a66"/>`; for (let i = 1; i < 14; i++) { const x = i * tlx / 14; u += `<line x1="${f(x)}" y1="${yy(x, 0)}" x2="${f(x)}" y2="${yy(x, 1)}" stroke="#7a5536" stroke-width="1"/>`; } u += `<polygon points="${unten}" fill="#4a2e16" opacity=".18"/>`; }
+      else { o = `<polygon points="${oben}" fill="#f2ede4"/>`; for (let i = 0; i < 8; i++) { const y0 = 66 + i * 12; o += `<line x1="${f(0)}" y1="${y0}" x2="${f(tlx)}" y2="${cy + (y0 - cy) * S}" stroke="#e0d8ca" stroke-width=".8"/>`; }
+        u = `<polygon points="${unten}" fill="url(#lack)"/>`; for (let i = 1; i < 8; i++) { const x = i * tlx / 8; u += `<line x1="${f(x)}" y1="${yy(x, 0)}" x2="${f(x)}" y2="${yy(x, 1)}" stroke="#3f2818" stroke-width=".8"/>`; } }
+      const kante = `<line x1="${f(0)}" y1="158" x2="${f(tlx)}" y2="${rly}" stroke="${st === 3 ? "#c9a24a" : "#6b4a2c"}" stroke-width="${st === 3 ? 2.5 : 4}" stroke-linecap="round"/>${st === 3 ? "" : `<line x1="${f(0)}" y1="158" x2="${f(tlx)}" y2="${rly}" stroke="#9a7046" stroke-width="1.5"/>`}`;
+      return `<clipPath id="${id}o"><polygon points="${oben}"/></clipPath><clipPath id="${id}u"><polygon points="${unten}"/></clipPath><g clip-path="url(#${id}o)">${o}</g><g clip-path="url(#${id}u)">${u}</g>${kante}<line x1="${f(tlx)}" y1="${tly}" x2="${f(blx)}" y2="${bly}" stroke="#2b1d14" stroke-width="1.2"/>`; };
+    const decke = `<polygon points="0,0 400,0 400,50 ${400 - tlx},${tly} ${tlx},${tly} 0,50" fill="${st === 1 ? "#a57a4c" : "#c99a66"}" stroke="#2b1d14" stroke-width="1.2"/>${Array.from({ length: 15 }, (_, i) => { const x = i * 400 / 14; return `<line x1="${x}" y1="0" x2="${cx + (x - cx) * S}" y2="${tly}" stroke="#7a5536" stroke-width="1"/>`; }).join("")}
+      <rect x="0" y="0" width="400" height="8" fill="#8f6a45" stroke="#2b1d14" stroke-width="1.2"/><polygon points="${tlx - 2},${tly - 4} ${402 - tlx},${tly - 4} ${402 - tlx},${tly + 3} ${tlx - 2},${tly + 3}" fill="#9c7650" stroke="#2b1d14" stroke-width="1.1"/>`;
+    W.innerHTML = `<polygon points="0,300 0,266 ${blx},${bly} ${400 - blx},${bly} 400,266 400,300" fill="#d9c08a"/>`; W.appendChild(H);
+    W.insertAdjacentHTML("beforeend", seite("L") + seite("R") + decke);
+    // Stroh, Polster, Lampe, Eimer, Abfohlset
+    const by = bly, floor = `0,300 0,266 ${blx},${by} ${400 - blx},${by} 400,266 400,300`;
+    let halme = ""; for (let i = 0; i < 160; i++) { const x = (i * 97) % 400, y = by + ((i * 53) % (300 - by)), w = 3 + (i % 4) * 1.5, a = ((i * 37) % 60) - 30; halme += `<path d="M${x},${y} l${(w * Math.cos(a / 57)).toFixed(1)},${(w * Math.sin(a / 57)).toFixed(1)}" stroke="${["#b08a2a", "#f2dc8a", "#c9a23e"][i % 3]}" stroke-width="1"/>`; }
+    const L = (x1, y1, x2, y2, n) => Array.from({ length: n + 1 }, (_, k) => [x1 + (x2 - x1) * k / n, y1 + (y2 - y1) * k / n]);
+    const welle = pts => pts.slice(1).map((p, k) => `Q${((pts[k][0] + p[0]) / 2).toFixed(1)},${(Math.min(pts[k][1], p[1]) - 8).toFixed(1)} ${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+    const bank = [...L(0, 252, blx, by - 6, 4), ...L(blx, by - 6, 400 - blx, by - 6, 6).slice(1), ...L(400 - blx, by - 6, 400, 252, 4).slice(1)];
+    let x = `<clipPath id="abfBoden"><polygon points="${floor}"/></clipPath><g clip-path="url(#abfBoden)" pointer-events="none"><polygon points="${floor}" fill="url(#stroh)"/><polygon points="${floor}" fill="#e9c860" opacity=".35"/>${halme}</g>
+      <path pointer-events="none" d="M0,272 L0,252 ${welle(bank)} L400,272 L${400 - blx},${by + 3} L${blx},${by + 3} Z" fill="#e3c35a" stroke="#9c7a2a" stroke-width="1"/>`;
+    if (st === 3) x += `<g pointer-events="none"><polygon points="0,266 0,224 ${M(60, 172).join(",")} ${M(60, 212).join(",")}" fill="#4f6b7e" stroke="#2b1d14" stroke-width="1"/><polygon points="400,266 400,224 ${M(340, 172).join(",")} ${M(340, 212).join(",")}" fill="#4f6b7e" stroke="#2b1d14" stroke-width="1"/>
+      <polygon points="${[[60, 172], [340, 172], [340, 212], [60, 212]].map(([a, b]) => M(a, b).join(",")).join(" ")}" fill="#5a7890" stroke="#2b1d14" stroke-width="1"/>${[1, 2, 3, 4, 5, 6].map(i => { const xx = 60 + i * 40; return `<line x1="${M(xx, 172)[0]}" y1="${M(xx, 172)[1]}" x2="${M(xx, 212)[0]}" y2="${M(xx, 212)[1]}" stroke="#3a5060" stroke-width=".8"/>`; }).join("")}${[0, 1, 2, 3, 4, 5, 6].map(i => `<circle cx="${M(80 + i * 40, 192)[0]}" cy="${M(80 + i * 40, 192)[1]}" r="1.3" fill="#3a5060"/>`).join("")}</g>`;
+    x += `<g pointer-events="none"><defs><radialGradient id="abfRot" cx=".5" cy=".15" r=".85"><stop offset="0" stop-color="#ff5a2a" stop-opacity=".5"/><stop offset="1" stop-color="#ff5a2a" stop-opacity="0"/></radialGradient></defs><path d="M318,96 L262,252 L380,252 Z" fill="url(#abfRot)" opacity=".7"/><ellipse cx="320" cy="250" rx="56" ry="11" fill="#ff6a2a" opacity=".2"/>
+      <path d="M318,0 V82" stroke="#2b1d14" stroke-width="1.4"/><g transform="translate(318,82) scale(1.35)"><path d="M-11,11 Q-11,0 0,0 Q11,0 11,11 Z" fill="${st === 3 ? "#d9dde2" : "#8a8f94"}" stroke="#2b1d14" stroke-width="1"/><ellipse cx="0" cy="12" rx="6.5" ry="2.8" fill="#ff3a1a"/><ellipse cx="0" cy="12" rx="3.6" ry="1.5" fill="#ffd0a0"/></g></g>`;
+    if (st >= 2) { const [ax, ay] = M(286, 186);
+      x += `<g pointer-events="none" transform="translate(52,213)"><path d="M-11,0 h22 l-3,17 h-16 z" fill="${st === 3 ? "url(#edel)" : "#4f8fc0"}" stroke="#2b1d14" stroke-width="1.2"/><ellipse cx="0" cy="0" rx="11" ry="2.6" fill="#d4b062" stroke="#2b1d14" stroke-width=".8"/><g fill="#efd796" stroke="#9c7a3a" stroke-width=".4">${[[-5, -.3], [-1, .4], [3, -.4], [6, .3]].map(([a, b]) => `<ellipse cx="${a}" cy="${b}" rx="1.6" ry=".8"/>`).join("")}</g><path d="M-10,3 Q0,-12 10,3" fill="none" stroke="#555" stroke-width=".9"/></g>
+      <g pointer-events="none" transform="translate(${ax},${ay}) scale(.8)"><path d="M0,0 h44 l4,26 h-52 z" fill="${st === 3 ? "#5a3a24" : "#9a7046"}" stroke="#2b1d14" stroke-width="1.3"/><rect x="2" y="-9" width="18" height="9" rx="2" fill="#f4f4f4" stroke="#999" stroke-width=".8"/><rect x="4" y="-15" width="15" height="7" rx="2" fill="#7fb3d9" stroke="#5a8ab0" stroke-width=".8"/><rect x="26" y="-17" width="7" height="17" rx="1.5" fill="#7a3a12" stroke="#3a1a08" stroke-width=".8"/><rect x="27.5" y="-21" width="4" height="4" fill="#ddd"/><path d="M36,-8 l8,0 l-1.5,8 h-5 z" fill="#c0c4c8" stroke="#555" stroke-width=".7"/><text x="22" y="16" text-anchor="middle" font-size="6.5" fill="#f4e7c9" font-family="system-ui,sans-serif">Abfohlset</text></g>`; }
+    G2.insertBefore(mk(x), $("krippe"));
   }
   // Stufe 1: Wassereimer statt Selbsttränke – muss jeden Tag gefüllt werden (Spieler oder Stallbursche)
   function wasserEimerFuellen() { const box = B(); if (!box.pferd || box.tot) return; if (box.wasserTag === spiel.tag) { reaktionZeigen("trinkt"); return; } box.wasserTag = spiel.tag; reaktionZeigen("trinkt gierig"); speichern(); zeigeTag(); }

@@ -210,7 +210,7 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 - [x] (v295) Stallart mit Verpflichtungen und Vorteilen in Hof → Übersicht (eigener Reiter „Stallart“ entfernt); Weiden unter Hof → „Land und Weiden“, beim Landkauf Wahl „neue Weide“ / „Weide X vergrößern“ (Zaun wird gleich gebaut); Fenster „Weide wieder nutzbar“ nach dem Nachsäen; Pferd im Koppel-Bild hinter der Heuraufe.
 - [x] Deckhengst ab 3 Jahren; Rennpferde: Vollblut ab 2, Araber/Achal-Tekkiner ab 3 Jahren (v290).
 - [x] Brief bei Hofkauf und Stallart-Wechsel mit den Vorteilen (v290).
-- [ ] (a) Aufzucht-Offenstall: bis 10 Fohlen + mindestens 1 reife oder ältere Stute (mehr Stuten bei mehr Fohlen von Vorteil), eigene Ansicht, ersetzt die externe Aufzucht, kostet nur Futter, Sozialverhalten steigt.
+- [x] (a) (v313) Aufzucht-Offenstall: bis 10 Fohlen + mindestens 1 reife oder ältere Stute (mehr Stuten bei mehr Fohlen von Vorteil), eigene Ansicht, ersetzt die externe Aufzucht, kostet nur Futter, Sozialverhalten steigt.
 - [x] (b) Rennbahn bauen + Berufe Rennpferdetrainer und Westerntrainer (v311: Rennbahn 6.000/9.000/14.000 €, 1 ha Bauland, Galopptraining; Trainer je 4 Pferde am Morgen; Trainergebühr 100 € je Galopprennen ohne Rennstall).
 - [ ] (c) Fremde Pferde in Beritt (Ausbildungsstall) und Pensionsfohlen/-jungpferde zur Aufzucht (nur Zuchtstall, stehen im Aufzucht-Offenstall; Dome 12.10.: Aufnahme ab Absetzer bis unter 3 Jahre, mit 3 holt der Besitzer ab; **auch Waisenfohlen** können aufgenommen werden).
 - [x] (d) Eigene Hengste als Deckhengst für fremde Stuten (v312: Genetik → „anbieten“, Decksaison, Decktaxe 10 % Marktwert, 75 % tragend, Fohlen-Brief nach 4 Jz).

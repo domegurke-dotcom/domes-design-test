@@ -913,7 +913,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "364";
+  const SPIEL_VERSION = "365";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -921,10 +921,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=364"></script>
-<script src="boxstufen.js?v=364"></script>
-<script src="kopfteile.js?v=364"></script>
-<script src="kopfalter.js?v=364"></script>
+<script src="pferd.js?v=365"></script>
+<script src="boxstufen.js?v=365"></script>
+<script src="kopfteile.js?v=365"></script>
+<script src="kopfalter.js?v=365"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3780,6 +3780,7 @@
     return { farbe: `rgb(${c.join(",")})`, extra, cobs: (kg.heucobs || 0) > 0 };
   }
   const heucobsEimer = (x, y) => `<g aria-label="Heucobs im Eimer"><path d="M${x - 9},${y} L${x + 9},${y} L${x + 7},${y + 13} L${x - 7},${y + 13} Z" fill="#4f8fc0" stroke="#2b1d14" stroke-width="1.1"/><ellipse cx="${x}" cy="${y}" rx="9" ry="2.6" fill="#9a7a3e" stroke="#2b1d14" stroke-width=".9"/><g fill="#7a5c2a"><circle cx="${x - 4}" cy="${y - .4}" r="1.1"/><circle cx="${x + 1}" cy="${y - .8}" r="1.1"/><circle cx="${x + 5}" cy="${y}" r="1"/></g><path d="M${x - 8},${y + 1} Q${x},${y - 9} ${x + 8},${y + 1}" fill="none" stroke="#2b1d14" stroke-width=".9"/></g>`;
+  function boxDreckig(b) { const vw = b.vorWeide; if (vw) return vw.tag === spiel.tag - 1 && !!vw.mist; return !!b.mistig; }   // v365: war die Box ungemistet, als das Pferd heute rausging? (nachts, spiel.tag ist schon der neue Tag)
   function rausAusBox(box) { box.vorWeide = { tag: spiel.tag, krippe: false, kraft: false, mist: box.mistig, stufe: box.mistStufe || 0 }; box.mistig = false; box.mistStufe = 0; }   // Dome (v341): Heu geht mit raus in die Heuraufe (wie das Kraftfutter in den Eimer)   // Dome (v317): Kraftfutter aus der Krippe wandert mit in den Futtereimer auf der Koppel (box.kraftVoll bleibt), Heu bleibt in der Box
   function zurueckInBox(box) { const vw = box.vorWeide; if (vw && vw.tag === spiel.tag) { box.krippeVoll = box.krippeVoll || vw.krippe; box.kraftVoll = box.kraftVoll || vw.kraft; box.mistig = vw.mist; box.mistStufe = vw.stufe; } delete box.vorWeide; }
   function aufWeide(p, box, ma, wid) {
@@ -4049,7 +4050,7 @@
     const s = datum(spiel.tag - 1).s, j = alterJZ(p) / 4, w = p.werte || {}, an = w.anlage || {}, ist = w.ist || {};
     const konst = 1.5 - (an.konstitution != null ? an.konstitution : 50) / 100;
     const wohl = wohlbefinden(p), wohlF = wohl < 30 ? 2.2 : wohl < 50 ? 1.5 : 1;
-    const altF = j >= 20 ? 1.6 : j >= 15 ? 1.3 : 1, dreck = dreckWert(p) >= 50, mist = ort === "box" && box.mistig, hungrig = !box.krippeVoll && (ort === "box" || heuNoetigP(p, spiel.tag - 1));
+    const altF = j >= 20 ? 1.6 : j >= 15 ? 1.3 : 1, dreck = dreckWert(p) >= 50, mist = ort === "box" && (box.nachtMist != null ? box.nachtMist > 0 : box.mistig), hungrig = !box.krippeVoll && (ort === "box" || heuNoetigP(p, spiel.tag - 1));
     const zaeh = 1.3 - (ist.zaehigkeit != null ? ist.zaehigkeit : 50) / 100 * 0.6;
     const f = {
       verletzung: ort === "weide" ? 1.5 : ort === "box" && box ? boxVerletzung(box) : 1,   // H3: Stufe und Zustand der Box
@@ -7448,19 +7449,23 @@
     spiel.boxen.forEach(b => {
       if (!b.pferd) { b.mistig = false; delete b.ohneEinstreu; return; }   // leere Box: Einstreu und Futterreste bleiben, bis man „Box leeren“ drückt (Dome)
       if (b.pferd.klinik) { delete b.pferd.weide; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; return; }   // Pferd ist in der Klinik
+      const draussen = !b.tot && (b.pferd.weide || b.pferd.paddock) && !b.pferd.umbauWeide, dreck = draussen ? boxDreckig(b) : false;   // v365 (Dome): abends geht es zurück in die Box – ungemistet zählt wie ein Tag in der Box
+      if (draussen) b.nachtMist = dreck ? Math.max(1, b.vorWeide ? b.vorWeide.stufe || 0 : b.mistStufe || 0) : 0;
       if (b.pferd.weide && !b.tot) {   // Weide: Gras statt Heu, kein Mist – Gesundheit je nach Jahreszeit, Wohlbefinden steigt
         const W = b.pferd, plus = WEIDE_PLUS[datum().s], hungrig = heuNoetigP(W, spiel.tag - 1) && !b.krippeVoll; W.weideZuletzt = spiel.tag - 1; if (W.anweiden && !anweidenAktiv(W)) delete W.anweiden;   // Winter / letzter Herbsttag: Heu nötig
         b.krippeVoll = false; b.kraftVoll = false; b.mistig = false; b.mistStufe = 0;
         [W, b.fohlen].forEach(q => { if (!q) return; const qp = (q.pflege = q.pflege || erzeugePflege(q));
           if (hungrig) qp.gesundheit = Math.max(1, Math.round((qp.gesundheit - 19) * 10) / 10);
+          if (dreck) qp.gesundheit = Math.max(1, Math.round((qp.gesundheit - 9.5) * 10) / 10);   // v365: Nacht in der ungemisteten Box
           else if (qp.gesundheit > 30 || (q === W && altersschwach(W))) qp.gesundheit = Math.min(gesundheitMax(q), Math.round((qp.gesundheit + plus) * 10) / 10); });
         if (b.fohlen) sozialPlus(b.fohlen, 0.3);
         if (zuLangeDreckig(W)) W.pflege.gesundheit = Math.max(1, Math.round((W.pflege.gesundheit - 3) * 10) / 10);
-        wohlNacht(W, "weide", { herde: weidePferde(weideVon(W) || {}), hungrig, fohlen: !!b.fohlen }); wohlAllein(W, !hungrig); futterNacht(W, b, "weide", hungrig);   // Fohlen bei Fuß: Stute ist nicht allein
-        schmutzen(W, false); wanneDurst(W);   // v360
+        wohlNacht(W, "weide", { herde: weidePferde(weideVon(W) || {}), hungrig, fohlen: !!b.fohlen }); wohlAllein(W, !hungrig); futterNacht(W, b, "weide", hungrig); if (dreck) wohlAendern(W, -WOHL.mist * (1 + 0.5 * charE(W, "sensibel").hoch), "Box nicht gemistet (abends wieder drin)");   // Fohlen bei Fuß: Stute ist nicht allein
+        schmutzen(W, dreck); wanneDurst(W);   // v360
         wachsen(b);
         return;
       }
+      if (dreck) b.mistig = true;   // v365: Sandpaddock tagsüber, Box ungemistet → zählt für die Nacht wie Mist in der Box
       const pf = b.pferd.pflege;
       warnen(b, spiel.boxen.indexOf(b));   // Warnbrief schon beim Stand vor der Nacht
       let g = pf.gesundheit;
@@ -7483,7 +7488,7 @@
       if (b.fohlen) sozialPlus(b.fohlen, 0.3);
       // Wohlbefinden: Box (zu lange am Stück, je nach Charakter), Hunger, Mist, Putzen vermisst …
       const pd = paddockVon(b.pferd); if (b.pferd.paddock && !pd) delete b.pferd.paddock;   // Sandpaddock abgerissen/umgebaut → zurück in die Box
-      wohlNacht(b.pferd, pd ? "paddock" : "box", { hungrig: !b.krippeVoll, mistig: pd ? (pd.mist || 0) >= 3 : b.mistig, fohlen: !!b.fohlen, herde: pd ? paddockPferde(pd) : null }); einstreuNacht(b); boxWohl(b.pferd, b); wohlAllein(b.pferd, b.krippeVoll && !b.mistig); futterNacht(b.pferd, b, "box");
+      wohlNacht(b.pferd, pd ? "paddock" : "box", { hungrig: !b.krippeVoll, mistig: pd ? (pd.mist || 0) >= 3 : b.mistig, fohlen: !!b.fohlen, herde: pd ? paddockPferde(pd) : null }); einstreuNacht(b); boxWohl(b.pferd, b); if (pd && dreck) wohlAendern(b.pferd, -WOHL.mist * (1 + 0.5 * charE(b.pferd, "sensibel").hoch), "Box nicht gemistet (abends wieder drin)"); wohlAllein(b.pferd, b.krippeVoll && !b.mistig); futterNacht(b.pferd, b, "box");
       if (boxenStufe(b) === 1 && !b.pferd.weide && !b.pferd.paddock && !b.pferd.klinik && b.wasserTag !== spiel.tag - 1) { wohlAendern(b.pferd, -6, "der Wassereimer war leer – Durst"); b.pferd.pflege.gesundheit = Math.max(1, Math.round((b.pferd.pflege.gesundheit - 3) * 100) / 100); }
       if (b.pferd.paddock && !b.pferd.weide) wanneDurst(b.pferd);   // v360: Badewanne im Sandpaddock   // v355: Stufe 1 ohne Selbsttränke
       schmutzen(b.pferd, b.mistig);
@@ -7492,13 +7497,14 @@
       wachsen(b);
     });
     spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot || p.umbauWeide || !(p.weide || p.paddock)) return;   // Dome (v296): abends holt man die Pferde wieder rein (Spieler wie Stallbursche) – die Nacht verbringen sie in der Box
-      delete p.weide; delete p.paddock; delete b.vorWeide; b.mistig = true; b.mistStufe = Math.max(1, b.mistStufe || 0); });
+      delete p.weide; delete p.paddock; delete b.vorWeide; b.mistig = true; b.mistStufe = b.nachtMist ? Math.min(6, b.nachtMist + 1) : Math.max(1, b.mistStufe || 0); });   // v365: ungemistet → Mist sammelt sich weiter an
     baulaerm(); hengstStallNacht();
     spiel.boxen.forEach(b => { if (b.pferd && !b.tot) { trainingNacht(b.pferd); arbeitNacht(b.pferd); } });   // Energie füllt sich über Nacht · Arbeitsstufe für den Futterbedarf
     hufNacht();       // Eisen verlieren
     ansteckungNacht(); // ansteckende Krankheiten verbreiten sich
     waiseNacht();     // Waisenfohlen: Flasche oder Hunger
     befundeNacht();   // Krankheiten und Verletzungen: neu, Verlauf, Wirkung
+    spiel.boxen.forEach(b => { delete b.nachtMist; });   // v365
     externNacht(); rechnungenTag();
     angeboteNacht(); angeboteTag();   // Verkauf: Laufzeit ab Starttag
     tierschutzEinsatz(); kontoMinus();
@@ -10379,6 +10385,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Gnadenhof (H7 e, v310):</b> Tierarzt-Rechnungen ${Math.round(GNADEN_RABATT * 100)} % günstiger (eigener Posten „Gnadenhof-Rabatt“). Patenschaften: zu Beginn jeder Jahreszeit bekommt jedes eigene Pferd ohne Paten mit ${Math.round(PATE.chance * 100)} % einen Paten, der ${fmt(PATE.betrag[0])}–${fmt(PATE.betrag[1])} je Jahreszeit zahlt (erste Zahlung sofort) und manchmal schreibt (${Math.round(PATE.brief * 100)} %). Nur solange der Status erfüllt ist; stirbt das Patenpferd, verabschiedet sich der Pate. Übersicht in Hof → Übersicht.</p>
       <p><b>Rennstall und Westernstall (H7 b, v311):</b> <i>Rennbahn</i> (Hof → Bauen, ${BAUTEN.rennbahn.preis.map(fmt).join(" / ")}, 1 Jahreszeit Bauzeit, ${haTxt(PLATZ.rennbahn)} Bauland) – neuer Trainingsort mit <i>Galopptraining</i> (ab 2 Jahren, ⚡ ${UEBUNG.galopptraining.e}, Beschleunigung, Ausdauer, Kraft). <i>Rennpferdetrainer</i> (${fmt(MA_TYP.renntrainer.gehalt)} je Jahreszeit, nur im Rennstall) trainiert jeden Morgen bis zu 4 eigene Rennpferde (Vollblut ab 2, Araber/Achal-Tekkiner ab 3 Jahren): Galopptraining auf der Rennbahn (sonst Konditionstraining), danach Ausritt. <i>Westerntrainer</i> (${fmt(MA_TYP.westerntrainer.gehalt)}, nur im Westernstall) trainiert bis zu 4 Westernpferde (Quarter Horses oder mit Western-Ausbildung): Bodenarbeit/Longieren, Westernarbeit, mit Trail-Parcours Stangenarbeit. Pferde, die heute schon trainiert wurden, lassen sie aus. Ohne Rennstall kostet jedes Galopprennen ${fmt(TRAINER_GEBUEHR)} Trainergebühr zusätzlich (fremder Trainer bereitet das Pferd vor). Westernstall: Westernarbeit 20 % schneller.</p>
       <p><b>Deckhengst für fremde Stuten (H7 d, v312):</b> nur im Zuchtstall mit erfüllten Bedingungen: Box → Steckbrief → Genetik → „anbieten“ (Hengst ab 3 Jahren, ohne Zuchtsperre). In der Decksaison (Frühling, Sommer) kommen je Jahreszeit etwa 1 + Qualität Stuten (Qualität = Turniererfolge/3.000 € + 0,5 je prämiertem Fohlen + (Marktwert − 4.000)/6.000, höchstens +4), höchstens eine am Tag. Decktaxe wie bei der Deckstation (10 % des Marktwerts, mind. 150 €), sofort gebucht; der Hengst verliert ${DECK_FREMD.energie} Energie. ${Math.round(DECK_FREMD.tragend * 100)} % werden tragend – 4 Jahreszeiten später schreibt die Besitzerin, das Fohlen zählt als Nachkomme.</p>
+      <p><b>Ungemistete Box beim Weidegang (v365):</b> Pferde auf Weide oder Sandpaddock kommen abends wieder in ihre Box. War die Box beim Rausbringen nicht gemistet, zählt die Nacht wie in der ungemisteten Box: Gesundheit −9,5, Wohlbefinden „Box nicht gemistet“, Mist-Stufe +1, Erkrankungsrisiko wie Mist in der Box, das Pferd wird schmutziger.</p>
       <p><b>Badewanne auf Weide und Sandpaddock (v360):</b> Hinten vor dem Zaun steht eine alte Badewanne als Tränke. Einmal je Jahreszeit füllen (antippen oder Stallbursche/Azubi mit der Aufgabe „Füttern“ füllen alle Wannen des Hofs). Leer: Pferde auf dieser Weide/diesem Paddock bekommen nachts Wohlbefinden −6 und Gesundheit −3 (Durst). Offenstall hat eine eigene Tränke.</p>
       <p><b>Boxenstufen (v355/v356):</b> Stufe 1 Holzbox mit Sandboden, Futtereimer und Wassereimer (täglich füllen, sonst Wohlbefinden −6, Gesundheit −3; Stallbursche füllt mit) – Einstreu ×1,2, Strahlfäule/Mauke ×1,3, Husten ×1,1. Stufe 2 Kopfsteinpflaster – ohne Einstreu Verletzung ×1,2. Stufe 3 Beton, Heunetz, Kamera – Einstreu ×0,9, Strahlfäule/Magengeschwür/Kolik ×0,8, ohne Einstreu Lahmheit ×1,2, schwache Fohlen 10 % statt 15 %. Heunetz: 10 % weniger Heu; Kamera: unbemerkte Krankheiten ab Grad 2 fallen morgens zu 50 % auf (v357). Einsteller: Gummimatten +0,1, Beton +0,05, Sandboden −0,1 Zufriedenheit je Nacht; Ansehen je Jahreszeit +1, wenn mind. die Hälfte der Boxen Gummimatten hat, −1, wenn mind. die Hälfte Stufe 1 ist (v359). Gummimatten (ab Stufe 2, Einstreu-Fenster, ${fmt(BODEN_WIRKUNG.GUMMI_PREIS)} je Box, halten dauerhaft, bleiben beim Umbau): Einstreu ×0,7, Lahmheit/Arthrose ×0,8, Verletzung ×0,9, Wohlbefinden +0,5 je Nacht.</p><p><b>Mehrere Plätze (v344):</b> Reitplätze und Roundpens kann man mehrfach bauen. Einsteller longieren manchmal im Roundpen (ein Pferd je Roundpen) – sind alle belegt, kannst du ihn an dem Tag nicht nutzen, Bodenarbeit geht dann auf dem Reitplatz. Reitplatz/Reithalle „zu voll“ ab 4 Reitern je Platz.</p><p><b>Junghengste (v336):</b> Hengste ab 1½ Jahren dürfen nicht mehr zu Stuten in den Offenstall (und umgekehrt), Hinweisbrief je Jahreszeit, solange gemischt; ein erwachsener Wallach zählt als „Onkel“ wie eine Tante. Bleibt die Gruppe gemischt, kann ein Hengst ab 2 Jahren eine Stute ab 3 Jahren decken (je Nacht 7,5 % × Erfolg wie auf der Weide).</p><p><b>Aufzucht-Offenstall (H7 a, v313):</b> nur im Zuchtstall baubar (Hof → Bauen, ${BAUTEN.aufzucht.preis.map(fmt).join(" / ")}, 1 Jahreszeit, ${haTxt(PLATZ.aufzucht)} Bauland), Bedingung des Zuchtstalls. 10 Plätze, die im Stall wie Boxen durchgeschaltet werden, aber ein gemeinsames Offenstall-Bild zeigen (Heuraufe, Futtereimer, Pferdeäpfel = Platz misten). Hinein dürfen Jungpferde von ½ bis 3 Jahren und erwachsene Stuten ab 5 Jahren ohne Fohlen bei Fuß (nicht hochtragend) als „Tanten“ – über Ort → Offenstall, Box wechseln oder beim Absetzen. Normale Pferde kommen nie automatisch auf einen Offenstall-Platz. Kostet nur Futter und Einstreu, halb so viel Arbeit für die Mitarbeiter. Jede Nacht: Jungpferde Sozialverhalten +${OFFEN.sozial} (Standardtempo, wie in der Aufzuchtstation; ohne Tante nur halb so viel, volle Wirkung ab 1 Tante je 5 Jungpferde), alle Wohlbefinden +${OFFEN.wohl} (ohne Tante +${OFFEN.wohl / 2}), sobald mindestens 2 Pferde dort leben. Wird ein Jungpferd 3 Jahre alt, zieht es zu Beginn der Jahreszeit in eine freie Box (sonst Brief).</p>
       <p><b>Beritt und Pensionsfohlen (H7 c, v314):</b> laufen über die Pension (Anfrage per Brief, Zusage, Einzug am nächsten Morgen, Zahlung zu Beginn jeder Jahreszeit, alles inklusive). <i>Beritt</i> (nur Ausbildungsstall mit erfüllten Bedingungen): je fest angestelltem Bereiter ${BERITT.jeBereiter} Beritt-Pferde (und eine freie Box), Pferde 3–7 Jahre, ${BERITT.dauer.join(" oder ")} Jahreszeiten, ${fmt(BERITT.preis)} je Jahreszeit inkl. Box, täglichem Bereiter, Putzen, Hufe/Mähne (Putzen und Hufe macht der Hof – Pfleger oder du). Am Ende holt der Besitzer ab; zufrieden, wenn die Zufriedenheit ≥ 60 ist und die Ausbildungsskala im Schnitt mindestens 2 Punkte je Jahreszeit gestiegen ist (Ansehen +3, sonst −3). <i>Aufzucht</i> (nur Zuchtstall, freier Platz im Aufzucht-Offenstall): Jungpferde ½–2 Jahre oder (${Math.round(AUFZ_FREMD.waiseAnteil * 100)} %) Waisenfohlen mit Flasche, ${fmt(AUFZ_FREMD.preis)} je Jahreszeit (Waise +${fmt(AUFZ_FREMD.waise)}), mit 3 Jahren holt der Besitzer ab. Anfragen: je Art höchstens eine offene, Chance je Tag ${BERITT.chance} × freie Plätze ÷ Tage je Jahreszeit (höchstens 50 %). Seit v314 zählt auch das Training durch den fest angestellten Bereiter als gebuchtes „Bewegen“.</p>

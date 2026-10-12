@@ -40,3 +40,8 @@ Zu jeder Frage steht die Lösung, die Claude vorerst gewählt hat. Die Veredler-
 3. **Neue Erbkrankheit FIS** (Fell 10 %, Dales 15 % Träger, rezessiv, tödlich im 1. Halbjahr, Gentest). **Neue Veranlagung CPL/Lymphödem** (Clydesdale 45 %, Shire 40 %, Tinker 25 %, Friese 15 %) → mehr Mauke – *gilt damit auch für bestehende Shire/Tinker/Friesen (wird beim Laden nachgetragen). Ok so?*
 4. **Zuchtbuch/Veredelung:** Hannoveraner + Trakehner, Anglo-Araber · Haflinger + Shagya · Tinker + Clydesdale, Fell, Dales, Welsh Cob · Trakehner + Vollblut, Araber, Shagya, Anglo-Araber · Anglo-Araber + Vollblut, Araber · Shagya + Araber. **Anglo-Araber-Regel:** Fohlen nur aus Vollblut/Araber/Anglo-Araber mit ≥ 25 % Araber und ≥ 25 % Vollblut = Anglo-Araber (dadurch werden auch Markt-Vollblüter mit ≥ 25 % Araberblut zu Anglo-Arabern).
 5. Anglo-Araber und Shagya dürfen (noch) nicht in den Araberrennen starten (in Deutschland nur Vollblutaraber). *Soll es AA-Rennen geben (wie in Frankreich)?*
+
+## Domes Wünsche „Danach“ (v317) – so umgesetzt
+1. Pensionsanfragen: 15 % der Stuten (4–16 J.) sind tragend (Fohlen in 1–3 Jahreszeiten) – steht im Brief und beim „Ansehen“.
+2. Bereiter bei „Bewegen“: Erklärung in der Versorgung (extern nach Bedarf / angestellt nur im Ausbildungsstall). **Du darfst ab LK 5** (beste Reitdisziplin) Pensionspferde mit „Bewegen“ selbst reiten – einmal am Tag zählt als Bereiter-Tag. *Frage: Passt LK 5 als Grenze?*
+3. Kraftfutter aus der Krippe geht beim Rausbringen mit in den Futtereimer (Heu bleibt in der Box).

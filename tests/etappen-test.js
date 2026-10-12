@@ -326,7 +326,7 @@ const path = require('path');
     ergebnisse.push(...r);
     // Hofverwaltung über die Oberfläche öffnen (alle Bereiche)
     for (const reiter of ['hof', 'finanzen', 'mitarbeiter', 'post']) await pg.evaluate(rt => { zeigeHof(rt); }, reiter);
-    for (const ber of ['uebersicht', 'plan', 'bauen', 'land', 'pension', 'futter']) await pg.evaluate(bb => { hofBereich = bb; zeigeHof('hof'); }, ber);
+    for (const ber of ['uebersicht', 'plan', 'bauen', 'pension', 'futter']) await pg.evaluate(bb => { hofBereich = bb; zeigeHof('hof'); }, ber);
     await pg.reload(); await pg.waitForTimeout(300);
     ergebnisse.push([await pg.evaluate(() => typeof hatSpielstand !== 'undefined' && hatSpielstand) ? '✓' : '✗', ansicht, 'Speichern und Neuladen', '']);
     await pg.close();

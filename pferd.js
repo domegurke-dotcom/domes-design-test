@@ -36,17 +36,18 @@ const FARBEN_BASIS = {
   lethalwhite:   { name: "Weiß (Lethal White)",    body: "#f7f3ee", mane: "#f3eee6", muzzle: "#e3b5ae", hoof: "#cdbfa8" },
 };
 // Scheckungen, die auf jeder Grundfarbe vorkommen: Kürzel + "_" + Grundfarbe (z. B. "ov_brauner")
-//  ov Overo · tv Tovero · tg Tigerschecke · fs Wenigpunkt-Tiger · sb Schabrackentiger · sk Schabracke ohne Punkte (Snowcap)
+//  ov Overo · tv Tovero · tg Tigerschecke · fs Wenigpunkt-Tiger · sb Schabrackentiger · sk Schabracke ohne Punkte (Snowcap) · sa Sabino (v316)
 const MUSTER = {
-  ov: ["Overo", "overo"], tv: ["Tovero", "tovero"], tg: ["Tigerschecke", "leopard"], fs: ["Wenigpunkt-Tiger", "fewspot"], sb: ["Schabrackentiger", "blanket"], sk: ["Schabracke ohne Punkte", "snowcap"],
+  ov: ["Overo", "overo"], tv: ["Tovero", "tovero"], tg: ["Tigerschecke", "leopard"], fs: ["Wenigpunkt-Tiger", "fewspot"], sb: ["Schabrackentiger", "blanket"], sk: ["Schabracke ohne Punkte", "snowcap"], sa: ["Sabino", "sabino"],
 };
 function musterFarbe(id, t) {
-  const m = /^(ov|tv|tg|fs|sb|sk)_(.+)$/.exec(id); if (!m || !t[m[2]]) return null;
+  const m = /^(ov|tv|tg|fs|sb|sk|sa)_(.+)$/.exec(id); if (!m || !t[m[2]]) return null;
   const B = t[m[2]], [name, pattern] = MUSTER[m[1]], e = { ...B, pattern, name: `${name} (${B.name.replace(/ \(.*\)$/, "")})` };
   delete e.stripe;
   if (pattern === "tovero" || pattern === "fewspot") { e.head = mix(B.head || B.body, "#f7f5f1", pattern === "fewspot" ? .75 : .2); e.hoof = "#b8a88f"; }
   if (pattern === "leopard") { e.head = mix(B.head || B.body, "#f7f5f1", .45); e.hoof = "#b8a88f"; }
   if (pattern === "tovero" || pattern === "fewspot" || pattern === "leopard") e.muzzle = "#c9a49a";
+  if (pattern === "sabino") { e.hoof = "#b8a88f"; e.muzzle = "#c9a49a"; }   // weiße Beine → helle Hufe, Blesse → rosa Maul
   return e;
 }
 const FARBEN = new Proxy(FARBEN_BASIS, { get(t, k) { if (typeof k === "string" && !(k in t)) { const e = musterFarbe(k, t); if (e) t[k] = e; } return t[k]; } });
@@ -121,6 +122,35 @@ const RASSEN = [
     text: "Schlankes Wüstenpferd mit langem Hals, feiner, kurzer Mähne und einzigartigem metallischem Fellglanz.",
     farben: ["isabell", "palomino", "buckskin", "brauner", "fuchs", "rappe", "schimmel"],
     k: { len: 1.06, depth: .41, legT: .07, neck: .56, nAng: 56, crest: .02, head: .41, hAng: 54, profile: -.1, hw: .92, jw: 1, muz: .92, ear: .11, earDx: -1.6, mane: "kurz", maneLen: .03, vol: .4, fore: .15, tail: .55, tvol: .45, tset: .4, feather: 0, croup: .3, hq: .95, eye: 1.1, metallic: true } },
+  // ---------- Veredler-Rassen (v316) – Spielkopf, bis Dome eigene Köpfe zeichnet ----------
+  { id: "trakehner", name: "Trakehner", herkunft: "Ostpreußen / Deutschland", h: [160, 170],
+    text: "Edles Reitpferd mit feinem Kopf, langem Hals und viel Ausdruck – ältestes deutsches Warmblut, darf auch andere Warmblutrassen veredeln.",
+    farben: ["brauner", "dunkelbrauner", "fuchs", "rappe", "schimmel"],
+    k: { nk: 0.3, len: 1.01, depth: .43, legT: .084, neck: .61, nAng: 53, crest: .04, head: .41, hAng: 54, profile: -.15, hw: .96, jw: 1.05, muz: .94, ear: .1, mane: "kurz", maneLen: .05, vol: .65, fore: .3, tail: .65, tvol: .75, tset: .4, feather: 0, croup: .35, hq: 1, eye: 1.08 } },
+  { id: "welshcob", name: "Welsh Cob (Sektion D)", herkunft: "Wales", h: [137, 155],
+    text: "Kraftvoller, temperamentvoller Cob aus Wales mit spektakulärem Trab, dichter Mähne und leichtem Fesselbehang – robust und genügsam.",
+    farben: ["fuchs", "brauner", "rappe", "dunkelbrauner", "palomino", "buckskin", "schimmel"],
+    k: { nk: 0.9, len: .98, depth: .5, legT: .1, neck: .52, nAng: 58, crest: .09, head: .42, hAng: 55, profile: -.1, hw: 1.04, jw: 1.1, muz: .95, ear: .085, mane: "lang", maneLen: .22, vol: 1.1, fore: .8, tail: .8, tvol: 1.1, tset: .35, feather: .35, croup: .5, hq: 1.05, eye: 1.1 } },
+  { id: "clydesdale", name: "Clydesdale", herkunft: "Schottland", h: [163, 183],
+    text: "Schottischer Kaltblüter mit viel Weiß (Sabino), hohem Gang und langem, seidigem Fesselbehang – etwas leichter und höherbeiniger als das Shire.",
+    farben: ["sa_brauner", "sa_rappe", "sa_brauner", "brauner", "sa_fuchs", "rappe"],
+    k: { nk: 1, len: 1.05, depth: .49, legT: .118, neck: .57, nAng: 57, crest: .08, head: .47, hAng: 56, profile: .45, hw: 1.08, jw: 1, muz: 1.05, ear: .1, mane: "lang", maneLen: .14, vol: .95, fore: .6, tail: .6, tvol: .95, tset: .2, feather: 1, croup: .55, hq: 1.05, eye: .95 } },
+  { id: "fell", name: "Fell-Pony", herkunft: "England (Cumbria)", h: [132, 142],
+    text: "Robustes Bergpony aus Nordengland, meist schwarz, mit üppiger Mähne und Fesselbehang – trittsicher, ausdauernd und sehr genügsam.",
+    farben: ["rappe", "rappe", "brauner", "dunkelbrauner", "schimmel"],
+    k: { nk: 1, len: 1.0, depth: .52, legT: .11, neck: .47, nAng: 52, crest: .08, head: .44, hAng: 53, profile: 0, hw: 1.08, jw: 1.05, muz: 1, ear: .085, mane: "lang", maneLen: .3, vol: 1.3, fore: 1, tail: .9, tvol: 1.3, tset: .2, feather: .7, croup: .6, hq: 1.05, eye: 1 } },
+  { id: "dales", name: "Dales-Pony", herkunft: "England (Pennines)", h: [140, 148],
+    text: "Größter der englischen Bergponys: kräftig, mit starken Hufen, kräftigem Trab, viel Mähne und Fesselbehang – früher Packpony in den Bleiminen.",
+    farben: ["rappe", "brauner", "dunkelbrauner", "schimmel", "blueroan"],
+    k: { nk: 1, len: 1.01, depth: .53, legT: .115, neck: .49, nAng: 54, crest: .09, head: .45, hAng: 54, profile: .05, hw: 1.1, jw: 1.05, muz: 1, ear: .085, mane: "lang", maneLen: .3, vol: 1.3, fore: 1, tail: .9, tvol: 1.3, tset: .2, feather: .8, croup: .6, hq: 1.08, eye: 1 } },
+  { id: "angloaraber", name: "Anglo-Araber", herkunft: "Frankreich / Polen", h: [155, 165],
+    text: "Kreuzung aus Englischem Vollblut und Araber (mindestens 25 % Araber) – leistungsstark, ausdauernd und edel, für Vielseitigkeit, Springen und Rennen.",
+    farben: ["fuchs", "brauner", "dunkelbrauner", "schimmel", "rappe"],
+    k: { len: .99, depth: .42, legT: .076, neck: .58, nAng: 50, crest: .03, head: .39, hAng: 52, profile: -.4, hw: .92, jw: 1.1, muz: .86, ear: .095, mane: "kurz", maneLen: .06, vol: .6, fore: .35, tail: .62, tvol: .65, tset: .6, feather: 0, croup: .2, hq: 1, eye: 1.15 } },
+  { id: "shagya", name: "Shagya-Araber", herkunft: "Ungarn (Bábolna)", h: [150, 160],
+    text: "Großrahmiger Araber aus der ungarischen Militärzucht: edel wie ein Araber, aber kräftiger – sehr oft Schimmel, robust und leistungsbereit.",
+    farben: ["schimmel", "schimmel", "apfelschimmel", "fliegenschimmel", "brauner", "fuchs", "rappe"],
+    k: { len: .98, depth: .43, legT: .075, neck: .57, nAng: 54, crest: .03, head: .37, hAng: 52, profile: -.6, hw: .93, jw: 1.15, muz: .84, ear: .09, mane: "lang", maneLen: .12, vol: .6, fore: .45, tail: .62, tvol: .7, tset: .85, feather: 0, croup: .1, hq: 1, eye: 1.25 } },
 ];
 
 const rasseById = id => RASSEN.find(r => r.id === id);
@@ -553,7 +583,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     g += `<path d="${eckig(wl)}" fill="#f7f5f1"/></g>`;
   }
   // Overo, Tovero, Tiger: Flecken / Punkte
-  if (["overo", "tovero", "leopard", "fewspot", "blanket", "snowcap"].includes(C.pattern)) {
+  if (["overo", "tovero", "leopard", "fewspot", "blanket", "snowcap", "sabino"].includes(C.pattern)) {
     const zack = (cx, cy, rx, ry, n = 20, var_ = .55) => { const ps = []; for (let i = 0; i < n; i++) { const an = i / n * Math.PI * 2, r = 0.7 + rnd() * var_; ps.push(P(cx + Math.cos(an) * rx * r, cy + Math.sin(an) * ry * r)); } return ps; };
     const punkte = (x0, x1, y0, y1, n, r0, r1, farbe) => { let s = ""; for (let i = 0; i < n; i++) { const r = r0 + rnd() * (r1 - r0); s += `<ellipse cx="${f(x0 + rnd() * (x1 - x0))}" cy="${f(y0 + rnd() * (y1 - y0))}" rx="${f(r)}" ry="${f(r * (.75 + rnd() * .35))}" fill="${farbe}"/>`; } return s; };
     if (C.pattern === "overo") {
@@ -571,6 +601,13 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       if (rnd() > .5) g += `<path d="${glatt(zack(0.15 * L, -H - 4, 0.08 * L, 0.18 * D, 12, .4))}" fill="${body}"/>`;
       g += `</g>`;
     }
+    if (C.pattern === "sabino") {
+      // Sabino (v316): weißer Bauchfleck mit unruhigem, gesprenkeltem Rand, oft ein zweiter an Brust/Flanke – dazu Blesse und hohe weiße Beine (unten bei den Abzeichen)
+      const mx = 0.5 * L + (rnd() - .5) * 0.12 * L;
+      let w = `<path d="${eckig(zack(mx, bottom - 0.08 * D, 0.2 * L + rnd() * 0.06 * L, 0.24 * D, 28, .75))}" fill="${SW}"/>`;
+      if (rnd() > .45) w += `<path d="${eckig(zack(0.12 * L, bottom - 0.12 * D, 0.08 * L, 0.18 * D, 18, .7))}" fill="${SW}"/>`;
+      g += `<g filter="url(#wm-${uid})">${w}</g>` + punkte(mx - 0.3 * L, mx + 0.3 * L, bottom - 0.45 * D, bottom - 0.12 * D, 22, 0.6, 1.4, SW);
+    }
     if (C.pattern === "leopard") g += `<rect ${bx} fill="${SW}"/>` + punkte(minX, maxX, minY, 0, 70, 2.2, 4.6, spotFarbe);
     if (C.pattern === "fewspot") g += `<rect ${bx} fill="${SW}"/>` + punkte(0, L, top, bottom, 7, 1.4, 2.6, spotFarbe) + `<g filter="url(#wm-${uid})"><rect x="${f(minX)}" y="${f(-0.62 * Lg)}" width="${f(maxX - minX)}" height="${f(0.2 * Lg)}" fill="${mix(body, SW, .35)}" opacity=".7"/></g>`;
     if (C.pattern === "blanket" || C.pattern === "snowcap") {
@@ -586,7 +623,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (C.stripe) g += `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${C.stripe}" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>`;
   if (C.muzzle && !eigenKopf) g += `<ellipse cx="${f(hp(0.93, 0.12).x)}" cy="${f(hp(0.93, 0.12).y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.93, 0.12).x)} ${f(hp(0.93, 0.12).y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>`;
   // Abzeichen (weiß): Kopf und Beine
-  const abz = opt.abzeichen || {};
+  const abz = opt.abzeichen || (C.pattern === "sabino" ? { kopf: rnd() < .6 ? "blesse" : "laterne", beine: rnd() < .55 ? "hochweiss" : "strumpf" } : {});   // Sabino: Blesse/Laterne und hohes Weiß an den Beinen
   const WEISS = "#fbfaf6";
   if (abz.kopf && !eigenKopf) {
     const band = (s1, s2, b1, b2, rund) => {
@@ -864,6 +901,13 @@ const PROFIL = {
   isi:          { gang: [5.5, 5, 5.5],   char: [60, 70, 80, 75, 80, 75, 45], dress: .7, toelt: 1, pass: .55, koerper: [65, 80, 50, 55, 65, 60, 70, 90, 80, 90], kopf: [65, 60, 65] },
   tinker:       { gang: [5, 5, 4.5],     char: [30, 70, 55, 85, 60, 85, 30], dress: .6, koerper: [75, 65, 40, 45, 50, 55, 55, 80, 65, 80], kopf: [55, 60, 50] },
   tekke:        { gang: [6, 5.5, 7],     char: [85, 55, 85, 55, 75, 40, 80], dress: .7, koerper: [60, 90, 85, 80, 65, 70, 65, 85, 80, 75], kopf: [70, 55, 80] },
+  trakehner:    { gang: [6.5, 6.5, 6.5], char: [70, 60, 75, 70, 80, 55, 75], dress: .95, koerper: [70, 78, 70, 70, 65, 80, 75, 68, 70, 68], kopf: [75, 70, 75] },
+  welshcob:     { gang: [5.5, 7, 5.5],   char: [65, 70, 75, 75, 75, 70, 50], dress: .75, koerper: [75, 75, 50, 60, 60, 65, 65, 82, 72, 82], kopf: [65, 60, 65] },
+  clydesdale:   { gang: [6, 5.5, 4.5],   char: [30, 75, 55, 85, 75, 85, 35], dress: .55, koerper: [85, 60, 30, 35, 35, 50, 55, 75, 60, 70], kopf: [55, 65, 45] },
+  fell:         { gang: [5.5, 6, 5],     char: [40, 75, 65, 80, 75, 80, 35], dress: .65, koerper: [75, 80, 45, 50, 60, 60, 62, 88, 75, 90], kopf: [60, 60, 60] },
+  dales:        { gang: [5.5, 6, 5],     char: [40, 75, 60, 80, 80, 80, 35], dress: .6, koerper: [80, 80, 45, 50, 55, 55, 60, 86, 75, 88], kopf: [60, 62, 55] },
+  angloaraber:  { gang: [6, 6, 7],       char: [80, 62, 80, 65, 80, 45, 80], dress: .85, koerper: [62, 86, 85, 80, 65, 75, 70, 78, 80, 72], kopf: [75, 60, 80] },
+  shagya:       { gang: [6, 6, 6],       char: [70, 62, 80, 80, 80, 55, 70], dress: .85, koerper: [65, 86, 75, 70, 70, 75, 70, 86, 80, 82], kopf: [75, 65, 75] },
 };
 
 const CHARAKTER = [
@@ -1014,6 +1058,7 @@ const FREMDBLUT = {
   araber: "vollblut", friese: "andalusier", marwari: "araber", fjord: "haflinger", haflinger: "araber",
   shetty: "isi", shire: "tinker", andalusier: "araber", lipizzaner: "andalusier", vollblut: "araber",
   quarter: "vollblut", hannoveraner: "vollblut", isi: "fjord", tinker: "shire", tekke: "araber",
+  trakehner: "vollblut", welshcob: "araber", clydesdale: "shire", fell: "dales", dales: "fell", angloaraber: "vollblut", shagya: "araber",
 };
 const NAMEN_STUTE = ["Bella", "Luna", "Fee", "Amira", "Freya", "Nala", "Zora", "Dana", "Aurora", "Wilma", "Rosalie", "Gräfin", "Melodie", "Primel", "Selma"];
 const NAMEN_HENGST = ["Donnerhall", "Sturmwind", "Apollo", "Merlin", "Farid", "Orkan", "Picasso", "Zeus", "Gandalf", "Samir", "Titan", "Odin", "Rubin", "Falko", "Kaiser"];
@@ -1046,6 +1091,7 @@ const FARBBESCHREIBUNG = {
   hellbrauner: "Heller, rötlich-goldener Brauner mit schwarzen Beinen, Mähne und Schweif. Wie hell ein Brauner ist, wird über mehrere Gene vererbt.",
   schwarzbrauner: "Fast schwarzer Brauner – erkennbar am helleren, rötlichen „Kupfermaul“ und an den Flanken (Agouti-Variante At).",
   lethalwhite: "Fast ganz weißes Fohlen mit rosa Haut von zwei Overo-Eltern (O/O). Ihm fehlen Nervenzellen im Darm – es stirbt in den ersten Lebenstagen (Lethal-White-Overo-Syndrom).",
+  sa_brauner: "Sabino: viel unregelmäßiges Weiß – breite Blesse, hohe weiße Beine, weiße Flecken am Bauch mit gesprenkeltem Rand. Typisch für Clydesdales (Gen Sb).",
   ov_brauner: "Overo (Frame): waagerecht gezackte weiße Flecken an Seite und Hals, die den Rücken nie kreuzen. Beine meist farbig, oft viel Weiß im Gesicht. Zwei Overo-Eltern können ein tödliches Lethal-White-Fohlen bekommen.",
   tv_fuchs: "Tovero: Tobiano und Overo zusammen – fast ganz weiß, Farbe meist nur noch an Ohren und Kopf („Medicine Hat“), an der Brust und an der Flanke.",
   tg_brauner: "Tigerschecke (Leopard): weißes Fell mit farbigen Punkten am ganzen Körper. Gen Lp mischerbig + Muster-Gen PATN1.",
@@ -1055,4 +1101,4 @@ const FARBBESCHREIBUNG = {
   rotschimmel: "Roan auf Fuchs: schon bei der Geburt weiße Stichelhaare im roten Fell – ein unveränderlicher Schimmel, hellt nicht auf.",
 };
 // Scheckungs-Beispiele für das Lexikon
-["ov_brauner", "tv_fuchs", "tg_brauner", "fs_rappe", "sb_rappe", "sk_brauner"].forEach(id => FARBEN[id]);
+["ov_brauner", "tv_fuchs", "tg_brauner", "fs_rappe", "sb_rappe", "sk_brauner", "sa_brauner"].forEach(id => FARBEN[id]);

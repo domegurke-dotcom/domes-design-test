@@ -703,6 +703,7 @@
     .immo-liste { grid-template-columns: repeat(3, 1fr); }
     #nebenSchirm .bau-fenster, #nebenSchirm .friedhof-text, #nebenSchirm .friedhof-liste, #nebenSchirm .panel[style*="max-width:760px"] { max-width: none !important; }
   }
+  @media (orientation: portrait) and (max-width: 600px) { .kacheln.quadrat.bau-kacheln { grid-template-columns: repeat(3, minmax(0, 1fr)); } }   /* Dome (v352) */
 </style></style>
 </head>
 <body>
@@ -909,7 +910,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "351";
+  const SPIEL_VERSION = "352";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -917,9 +918,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=351"></script>
-<script src="kopfteile.js?v=351"></script>
-<script src="kopfalter.js?v=351"></script>
+<script src="pferd.js?v=352"></script>
+<script src="kopfteile.js?v=352"></script>
+<script src="kopfalter.js?v=352"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -6037,7 +6038,7 @@
     let rau = 0, min = 0, kosten = 0; const je = {};
     spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot || p.klinik || (p.weide && !heuNoetigP(p))) return; const R = tagesRation(p, b, false); rau += R.raufutter; min += R.mineral;
       Object.entries(R.kg).forEach(([k, x]) => { je[k] = (je[k] || 0) + x; kosten += FUTTER[k] ? FUTTER[k].preis * x : 0; }); });
-    spiel.boxen.forEach(b => { const E = b.pferd && !b.tot && !b.pferd.klinik && !b.pferd.weide && EINSTREU[b.einstreu]; if (E) { je[b.einstreu] = (je[b.einstreu] || 0) + E.kg; kosten += FUTTER[b.einstreu].preis * E.kg; } });   // H6: Einstreu
+    spiel.boxen.forEach(b => { if (!b.pferd || b.tot || b.pferd.klinik || b.pferd.weide) return; const k = b.einstreu || einstreuDa()[0], E = EINSTREU[k]; if (E) { je[k] = (je[k] || 0) + E.kg; kosten += FUTTER[k].preis * E.kg; } });   // H6: Einstreu (v352: auch wenn die Box noch keine gewählt hat – dann die, die sie nachts bekommt)
     return { raufutter: Math.round(rau * 10) / 10, mineral: Math.round(min * 100) / 100, je, kosten: Math.round(kosten * 100) / 100 };
   }
   // Warnbrief, wenn eine Sorte leer ist oder bald leer wird (einmal, bis wieder nachgekauft wurde)
@@ -6081,7 +6082,10 @@
     return `${meld ? `<div class="klasse">${meld}</div>` : ""}
       ${(F.liefer || []).length ? `<div class="klasse">🚚 Lieferung morgen früh: ${F.liefer.map(x => `${FUTTER[x.k] && FUTTER[x.k].stueck ? `${x.menge} Stück` : fmtKg(x.menge)} ${FUTTER[x.k] ? FUTTER[x.k].n : x.k}`).join(", ")}</div>` : ""}
       <div class="zeile-wert"><div class="kopf"><b>📦 Platz in der Futterkammer</b><span>${fmtKg(belegt)} von ${fmtKg(F.lagerMax)}</span></div><div class="balken"><i style="width:${Math.min(100, belegt / F.lagerMax * 100)}%"></i></div></div>
-      <p class="text" style="margin:4px 0 8px"><small>Verbrauch am Tag (alle Pferde nach ihren Futterplänen): Raufutter ${fmtKg(V.raufutter)} · reicht ${reicht(rauVorrat, V.raufutter)} · Mineralfutter ${fmtKg(V.mineral)} · reicht ${reicht(F.lager.mineral, V.mineral)} · etwa ${fmt(Math.round(kosten * 100) / 100)} am Tag</small></p>
+      ${(() => { const ein = Object.keys(EINSTREU).reduce((a, k) => a + (V.je[k] || 0), 0), einV = Object.keys(EINSTREU).reduce((a, k) => a + (V.je[k] ? F.lager[k] || 0 : 0), 0);
+        const knapp = Object.entries(V.je).filter(([k, t]) => t > 0 && FUTTER[k] && !RAUFUTTER_REIHE.includes(k)).map(([k, t]) => [k, Math.floor((F.lager[k] || 0) / t)]).concat(V.raufutter > 0 ? [["raufutter", Math.floor(rauVorrat / V.raufutter)]] : []).filter(([, d]) => d < 4).sort((a, b) => a[1] - b[1]);   // Dome (v352): oben alles, was bald alle ist
+        return `${knapp.length ? `<div class="klasse">⚠️ Bald alle: ${knapp.map(([k, d]) => `<b>${k === "raufutter" ? "Raufutter" : FUTTER[k].n}</b> ${d ? `(noch ${d} ${d === 1 ? "Tag" : "Tage"})` : "(leer)"}`).join(" · ")}</div>` : ""}
+        <p class="text" style="margin:4px 0 8px"><small>Verbrauch am Tag (alle Pferde nach ihren Futterplänen): Raufutter ${fmtKg(V.raufutter)} · reicht ${reicht(rauVorrat, V.raufutter)} · Mineralfutter ${fmtKg(V.mineral)} · reicht ${reicht(F.lager.mineral, V.mineral)}${ein ? ` · Einstreu ${fmtKg(ein)} · reicht ${reicht(einV, ein)}` : ""} · etwa ${fmt(Math.round(kosten * 100) / 100)} am Tag</small></p>`; })()}
       <div class="fk-liste">${(() => { const nachPreis = l => l.sort((x, y) => FUTTER[x].preis - FUTTER[y].preis), block = (kl, titel, l, leer = "", abc = false) => `<div class="fk-block ${kl}"><p class="fk-gruppe">${titel}</p>${l.length ? (abc ? l.sort((x, y) => FUTTER[x].n.localeCompare(FUTTER[y].n, "de")) : nachPreis(l)).map(zeile).join("") : leer}</div>`, alle = Object.keys(FUTTER);   // Dome (v324): je Rubrik nach Preis aufsteigend
         return block("fk-rau", "Raufutter", alle.filter(k => FUTTER[k].art === "raufutter"))
           + block("fk-kraft", "Kraftfutter", alle.filter(k => FUTTER[k].art === "kraftfutter"))

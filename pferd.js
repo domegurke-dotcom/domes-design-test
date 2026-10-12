@@ -133,11 +133,11 @@ const RASSEN = [
     k: { nk: 0.9, len: .98, depth: .5, legT: .1, neck: .52, nAng: 58, crest: .09, head: .42, hAng: 55, profile: -.1, hw: 1.04, jw: 1.1, muz: .95, ear: .085, mane: "lang", maneLen: .22, vol: 1.1, fore: .8, tail: .8, tvol: 1.1, tset: .35, feather: .35, croup: .5, hq: 1.05, eye: 1.1 } },
   { id: "clydesdale", name: "Clydesdale", herkunft: "Schottland", h: [163, 183],
     text: "Schottischer Kaltblüter mit viel Weiß (Sabino), hohem Gang und langem, seidigem Fesselbehang – etwas leichter und höherbeiniger als das Shire.",
-    farben: ["sa_brauner", "sa_rappe", "sa_brauner", "brauner", "sa_fuchs", "rappe"],
+    farben: ["sa_brauner", "sa_rappe", "brauner", "sa_fuchs", "rappe"],
     k: { nk: 1, len: 1.05, depth: .49, legT: .118, neck: .57, nAng: 57, crest: .08, head: .47, hAng: 56, profile: .45, hw: 1.08, jw: 1, muz: 1.05, ear: .1, mane: "lang", maneLen: .14, vol: .95, fore: .6, tail: .6, tvol: .95, tset: .2, feather: 1, croup: .55, hq: 1.05, eye: .95 } },
   { id: "fell", name: "Fell-Pony", herkunft: "England (Cumbria)", h: [132, 142],
     text: "Robustes Bergpony aus Nordengland, meist schwarz, mit üppiger Mähne und Fesselbehang – trittsicher, ausdauernd und sehr genügsam.",
-    farben: ["rappe", "rappe", "brauner", "dunkelbrauner", "schimmel"],
+    farben: ["rappe", "brauner", "dunkelbrauner", "schimmel"],
     k: { nk: 1, len: 1.0, depth: .52, legT: .11, neck: .47, nAng: 52, crest: .08, head: .44, hAng: 53, profile: 0, hw: 1.08, jw: 1.05, muz: 1, ear: .085, mane: "lang", maneLen: .3, vol: 1.3, fore: 1, tail: .9, tvol: 1.3, tset: .2, feather: .7, croup: .6, hq: 1.05, eye: 1 } },
   { id: "dales", name: "Dales-Pony", herkunft: "England (Pennines)", h: [140, 148],
     text: "Größter der englischen Bergponys: kräftig, mit starken Hufen, kräftigem Trab, viel Mähne und Fesselbehang – früher Packpony in den Bleiminen.",
@@ -149,7 +149,7 @@ const RASSEN = [
     k: { len: .99, depth: .42, legT: .076, neck: .58, nAng: 50, crest: .03, head: .39, hAng: 52, profile: -.4, hw: .92, jw: 1.1, muz: .86, ear: .095, mane: "kurz", maneLen: .06, vol: .6, fore: .35, tail: .62, tvol: .65, tset: .6, feather: 0, croup: .2, hq: 1, eye: 1.15 } },
   { id: "shagya", name: "Shagya-Araber", herkunft: "Ungarn (Bábolna)", h: [150, 160],
     text: "Großrahmiger Araber aus der ungarischen Militärzucht: edel wie ein Araber, aber kräftiger – sehr oft Schimmel, robust und leistungsbereit.",
-    farben: ["schimmel", "schimmel", "apfelschimmel", "fliegenschimmel", "brauner", "fuchs", "rappe"],
+    farben: ["schimmel", "apfelschimmel", "fliegenschimmel", "brauner", "fuchs", "rappe"],
     k: { len: .98, depth: .43, legT: .075, neck: .57, nAng: 54, crest: .03, head: .37, hAng: 52, profile: -.6, hw: .93, jw: 1.15, muz: .84, ear: .09, mane: "lang", maneLen: .12, vol: .6, fore: .45, tail: .62, tvol: .7, tset: .85, feather: 0, croup: .1, hq: 1, eye: 1.25 } },
 ];
 

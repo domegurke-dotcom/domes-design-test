@@ -29,6 +29,7 @@
   header h1 { font-size: 1.1rem; margin: 0; flex: 1; padding-left: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   header h1 { visibility: hidden; }   /* Dome (v263): kein Hofname in der Box */
   #tagAnzeige { pointer-events: none; cursor: default; }   /* Dome (v274): nur Anzeige Jahreszeit und Tag – beendet wird der Tag im Stall */
+  .kw-zeile select { max-width: 48%; flex-shrink: 0; }   /* v320: Admin – Krankheiten selbst wählen */
   .tag-beenden { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 0 0 10px; } .tag-beenden span { font-size: .85rem; font-weight: 600; opacity: .9; }
   .tagknopf { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.1; border: 0; cursor: pointer; font: inherit;
     background: #f3c64d; color: #3a2610; border-radius: 10px; padding: 5px 10px; box-shadow: 0 2px 0 #b58a1f; }
@@ -881,7 +882,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "319";
+  const SPIEL_VERSION = "320";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -889,9 +890,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=319"></script>
-<script src="kopfteile.js?v=319"></script>
-<script src="kopfalter.js?v=319"></script>
+<script src="pferd.js?v=320"></script>
+<script src="kopfteile.js?v=320"></script>
+<script src="kopfalter.js?v=320"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3259,7 +3260,8 @@
         </div>
 
         ${spiel.admin ? `<div class="feld"><button class="knopf zweit" id="genLaborAuf" style="width:100%">🛠️ Gene selbst wählen</button></div>
-        <div class="feld"><button class="knopf zweit" id="charWahlAuf" style="width:100%">🛠️ Charakter selbst wählen${wahl.charakter ? " · gewählt ✓" : ""}</button></div>` : ""}
+        <div class="feld"><button class="knopf zweit" id="charWahlAuf" style="width:100%">🛠️ Charakter selbst wählen${wahl.charakter ? " · gewählt ✓" : ""}</button></div>
+        <div class="feld"><button class="knopf zweit" id="krankWahlAuf" style="width:100%">${krankKnopfText()}</button></div>` : ""}
         <div class="feld"><span class="titel">Geschlecht</span>
           <div class="segment" id="geschlecht">${["Stute", "Hengst", "Wallach"].map(x => `<button data-g="${x}">${x}</button>`).join("")}</div>
         </div>
@@ -3290,6 +3292,7 @@
     a.querySelectorAll("#farben .chip, #farbSpalte .fs-kachel").forEach(b => b.onclick = () => { wahl.farbe = b.dataset.f; wahl.eigeneGene = false; wahl.gen = null; wahl.ex = null; aktualisiere(); });
     if ($("genLaborAuf")) $("genLaborAuf").onclick = genLabor;
     if ($("charWahlAuf")) $("charWahlAuf").onclick = charakterWaehlen;
+    if ($("krankWahlAuf")) $("krankWahlAuf").onclick = krankWaehlen;
     a.querySelectorAll("#geschlecht button").forEach(b => b.onclick = () => {
       const alt = wahl.geschlecht; wahl.geschlecht = b.dataset.g;
       if (NAMEN[alt].includes(wahl.name)) { wahl.name = zufallAus(NAMEN[wahl.geschlecht]); $("name").value = wahl.name; }
@@ -3314,6 +3317,7 @@
       alterAktualisieren();
       bx.pferd.maehneSeit = spiel.tag; bx.pferd.schopfSeit = spiel.tag;
       bx.pferd.pflege = erzeugePflege(bx.pferd);
+      if (wahl.krank) krankAnwenden(bx.pferd, wahl.krank);   // Dome (v320): Admin – Krankheiten selbst gewählt
       bx.tot = false;
       if (neu) { bx.krippeVoll = false; bx.mistig = false; bx.mistStufe = 0; }
       aktenReiter = "steckbrief";
@@ -3377,6 +3381,46 @@
     let werteAusReglern = { ...c };
     const charKnopf = () => { const k = $("charWahlAuf"); if (k) k.textContent = `🛠️ Charakter selbst wählen${wahl.charakter ? " · gewählt ✓" : ""}`; };
     document.querySelectorAll("[data-cw]").forEach(x => x.oninput = () => { $("cw-" + x.dataset.cw).textContent = x.value; werteAusReglern[x.dataset.cw] = +x.value; });
+  }
+  // ---------- Admin (Dome, v320): Krankheiten selbst wählen – erblich (Gene, Veranlagungen, erblich bedingte Befunde) und nicht erblich ----------
+  const ERB_BEFUND = ["ataxie", "hypp", "herda", "pssm", "melanom", "kehlkopf", "ocd", "sommerekzem", "asthma", "lymphoedem"];   // Befunde mit erblicher Ursache (Gen oder Veranlagung)
+  const ERB_LETAL = k => ["tod", "tot", "zwerg", "acan"].includes(ERBKRANK[k].folge);   // erwachsenes Pferd kann nur Träger sein
+  const KRANK_STATUS = { unbemerkt: "noch unbemerkt", bemerkt: "bemerkt (Tierarzt war noch nicht da)", diagnose: "vom Tierarzt diagnostiziert" };
+  const krankKnopfText = () => { const K = wahl && wahl.krank; const n = K ? Object.keys(K.befunde || {}).length + Object.keys(K.erb || {}).length + Object.keys(K.vl || {}).length : 0;
+    return `🛠️ Krankheiten selbst wählen${n ? ` · ${n} gewählt ✓` : ""}`; };
+  function krankWaehlen() {
+    const K = wahl.krank || { befunde: {}, erb: {}, vl: {}, status: "bemerkt" }, gradSel = (k, v) => `<select data-kb="${k}"><option value="">–</option>${[1, 2, 3, 4, 5].map(g => `<option value="${g}" ${v === g ? "selected" : ""}>${GRAD_TEXT[g]}</option>`).join("")}</select>`;
+    const zeile = (ico, n, sel, info = "") => `<label class="kw-zeile" style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:3px 0;border-bottom:1px solid #eadfcc"><span>${ico} ${n}${info ? `<br><small>${info}</small>` : ""}</span>${sel}</label>`;
+    const nichtErb = Object.keys(KRANK).filter(k => KRANK[k].n && !ERB_BEFUND.includes(k));
+    dialog(`<h3>🛠️ Krankheiten selbst wählen</h3><p class="text"><small>Das Pferd kommt mit diesen Krankheiten in den Stall. Erbkrankheiten und Veranlagungen bleiben versteckt (nur Labortest/Admin).</small></p>
+      <p class="text" style="margin:6px 0"><b>Zustand der Befunde:</b> <select id="kwStatus">${Object.entries(KRANK_STATUS).map(([k, t]) => `<option value="${k}" ${K.status === k ? "selected" : ""}>${t}</option>`).join("")}</select></p>
+      <details open><summary><b>🧬 Erblich</b></summary>
+        <p class="text" style="margin:6px 0 2px"><small><b>Erbkrankheiten (Gen)</b> – „betroffen“ bei Krankheiten mit Befund zeigt ihn sofort.</small></p>
+        ${Object.entries(ERBKRANK).map(([k, E]) => zeile("🧬", E.kurz || E.n, `<select data-ke="${k}"><option value="" ${K.erb[k] == null ? "selected" : ""}>nach Rasse</option>${[[0, "frei"], [1, E.dominant ? "betroffen (1 Allel, dominant)" : "Träger"], ...(ERB_LETAL(k) || E.dominant ? [] : [[2, "betroffen"]])].map(([v, t]) => `<option value="${v}" ${K.erb[k] === v ? "selected" : ""}>${t}</option>`).join("")}</select>`, E.n + (ERB_LETAL(k) ? " · betroffen nur bei Fohlen" : ""))).join("")}
+        <p class="text" style="margin:8px 0 2px"><small><b>Veranlagungen</b> (vererbt, 0 = keine, 1 = sehr stark)</small></p>
+        ${Object.entries(VERANLAGUNG).map(([k, V]) => zeile("🧩", V.n, `<select data-kv="${k}"><option value="">nach Rasse</option>${[0, 0.25, 0.5, 0.75, 1].map(v => `<option value="${v}" ${K.vl[k] === v ? "selected" : ""}>${String(v).replace(".", ",")}</option>`).join("")}</select>`)).join("")}
+        <p class="text" style="margin:8px 0 2px"><small><b>Erblich bedingte Befunde</b> (jetzt schon da)</small></p>
+        ${ERB_BEFUND.filter(k => KRANK[k]).map(k => zeile(KRANK[k].ico, KRANK[k].n, gradSel(k, K.befunde[k]), KRANK[k].chronisch ? "chronisch" : "")).join("")}
+      </details>
+      <details open><summary><b>🩺 Nicht erblich</b></summary>
+        ${nichtErb.map(k => zeile(KRANK[k].ico, KRANK[k].n, gradSel(k, K.befunde[k]), [KRANK[k].chronisch ? "chronisch" : "", ANSTECKEND[k] ? "ansteckend" : ""].filter(Boolean).join(" · "))).join("")}
+      </details>`,
+      [["Übernehmen", () => { wahl.krank = neuK; knopf(); }], ["Alles gesund", () => { delete wahl.krank; knopf(); }, "zweit"], ["Abbrechen", null, "zweit"]], "breit");
+    const neuK = JSON.parse(JSON.stringify(K)), knopf = () => { const b = $("krankWahlAuf"); if (b) b.textContent = krankKnopfText(); };
+    $("kwStatus").onchange = e => { neuK.status = e.target.value; };
+    document.querySelectorAll("[data-kb]").forEach(x => x.onchange = () => { if (x.value) neuK.befunde[x.dataset.kb] = +x.value; else delete neuK.befunde[x.dataset.kb]; });
+    document.querySelectorAll("[data-ke]").forEach(x => x.onchange = () => { if (x.value !== "") neuK.erb[x.dataset.ke] = +x.value; else delete neuK.erb[x.dataset.ke]; });
+    document.querySelectorAll("[data-kv]").forEach(x => x.onchange = () => { if (x.value !== "") neuK.vl[x.dataset.kv] = +x.value; else delete neuK.vl[x.dataset.kv]; });
+  }
+  function krankAnwenden(p, K) {
+    const e = erbVon(p); Object.entries(K.erb || {}).forEach(([k, n]) => { e[k] = n; });
+    const v = veranlagungVon(p); Object.entries(K.vl || {}).forEach(([k, x]) => { v[k] = x; });
+    const bef = { ...(K.befunde || {}) };
+    Object.entries(K.erb || {}).forEach(([k, n]) => { const E = ERBKRANK[k]; if (E.folge === "befund" && (E.dominant ? n >= 1 : n >= 2) && !bef[E.art]) bef[E.art] = 2; });   // betroffen → Befund sofort
+    Object.entries(bef).forEach(([art, grad]) => { if (!KRANK[art]) return; const b = befundNeu(p, art, grad, URSACHE[art] ? URSACHE[art](p, "box", { krippeVoll: true, mistig: false }) : "");
+      const bb = b || befundListe(p).find(x => x.art === art); if (!bb) return; delete bb.inkub;
+      if (K.status !== "unbemerkt") bb.bemerkt = { von: "du", tag: spiel.tag };
+      if (K.status === "diagnose") { bb.diagnose = spiel.tag; bb.tierarzt = true; } });
   }
   // ---------- Admin: Gene selbst wählen – Bild, Farben und Gene auf einem Bildschirm ----------
   // nur Gene, die in der Rasse vorkommen; nur Kombinationen, die zur gewählten Farbe passen
@@ -9863,6 +9907,7 @@
       <p><b>Beritt und Pensionsfohlen (H7 c, v314):</b> laufen über die Pension (Anfrage per Brief, Zusage, Einzug am nächsten Morgen, Zahlung zu Beginn jeder Jahreszeit, alles inklusive). <i>Beritt</i> (nur Ausbildungsstall mit erfüllten Bedingungen): je fest angestelltem Bereiter ${BERITT.jeBereiter} Beritt-Pferde (und eine freie Box), Pferde 3–7 Jahre, ${BERITT.dauer.join(" oder ")} Jahreszeiten, ${fmt(BERITT.preis)} je Jahreszeit inkl. Box, täglichem Bereiter, Putzen, Hufe/Mähne (Putzen und Hufe macht der Hof – Pfleger oder du). Am Ende holt der Besitzer ab; zufrieden, wenn die Zufriedenheit ≥ 60 ist und die Ausbildungsskala im Schnitt mindestens 2 Punkte je Jahreszeit gestiegen ist (Ansehen +3, sonst −3). <i>Aufzucht</i> (nur Zuchtstall, freier Platz im Aufzucht-Offenstall): Jungpferde ½–2 Jahre oder (${Math.round(AUFZ_FREMD.waiseAnteil * 100)} %) Waisenfohlen mit Flasche, ${fmt(AUFZ_FREMD.preis)} je Jahreszeit (Waise +${fmt(AUFZ_FREMD.waise)}), mit 3 Jahren holt der Besitzer ab. Anfragen: je Art höchstens eine offene, Chance je Tag ${BERITT.chance} × freie Plätze ÷ Tage je Jahreszeit (höchstens 50 %). Seit v314 zählt auch das Training durch den fest angestellten Bereiter als gebuchtes „Bewegen“.</p>
       <p><b>Verdacht bei verdeckten Ursachen (v318):</b> Der Tierarzt kennt die versteckte Genetik nicht. Bei ${Object.keys(VERDACHT).map(k => KRANK[k].n).join(", ")} nennt er beim 1. Mal nur das Krankheitsbild und mögliche Ursachen; ab dem 2. Mal (gleicher oder verwandter Befund, zählt auch wiederholte Tierarztbesuche bei chronischen Befunden) äußert er den Verdacht, nennt die anderen Möglichkeiten und wie man es klärt (Gentest im Labor, Allergietest bzw. Hautprobe/Ultraschall). Nach dem Gentest „Erbkrankheiten“ ist eine Erbkrankheit eindeutig. Mauke weckt den CPL-Verdacht nur bei Pferden mit hoher Veranlagung (ab 0,4). <b>Chronisches Lymphödem (CPL)</b>: eigener chronischer Befund ab 8 Jahren (Risiko ∝ Veranlagung², Mauke ×1,5), Behandlung Schritt führen, Bandagen (Verband), Wundsalbe; Boxenruhe schadet. Einen Gentest gibt es (wie in echt) nicht.</p>
       <p><b>Tests zum Verdacht (v319):</b> Der Tierarzt schlägt zu jedem Verdacht den passenden Test vor (Knopf beim Befund in der Versorgung, Rechnung per Post). Vor Ort nicht zu unterscheiden – gleich beim 1. Mal mit allen Möglichkeiten und Test: ${Object.entries(VERDACHT).filter(([, V]) => V.sofort).map(([k, V]) => `${V.bild} (${V.diff.join("/")}) → ${V.test.n} ${fmt(V.test.preis)}${V.test.tage ? `, ${V.test.tage} Tage` : ", sofort"}`).join(" · ")}. Verdeckt (Verdacht ab dem 2. Mal): Erbkrankheiten → Labortest Erbkrankheiten · Sommerekzem → Allergietest 150 € · Lymphödem/Mauke (CPL) → Hautprobe 120 €. Bis zum Ergebnis zeigen Tierarzt, Versorgung, Steckbrief und Rechnung nur das Krankheitsbild. Eindeutig (kein Test nötig): Melanom am Schimmel und alle übrigen Befunde.</p>
+      <p><b>Admin: Krankheiten selbst wählen (v320):</b> Enzyklopädie → Rassen → Rasse → „🛠️ Krankheiten selbst wählen“. Erblich: Erbkrankheiten als Gen (nach Rasse / frei / Träger / betroffen – bei Fohlen-tödlichen Krankheiten nur Träger; „betroffen“ mit Befund zeigt ihn sofort), Veranlagungen (0–1) und erblich bedingte Befunde. Nicht erblich: alle übrigen Befunde mit Stufe. Zustand: unbemerkt / bemerkt / vom Tierarzt diagnostiziert. Beim „In Box stellen“ bekommt das Pferd alles mit.</p>
       <p><b>Domes Wünsche (v317):</b> Pensionsanfragen kommen zu ${Math.round(PENSION.tragend * 100)} % (Stuten 4–16 J.) für tragende Stuten – das steht im Anfrage-Brief und beim „Ansehen“ (Fohlen in 1–3 Jahreszeiten, kommt auf dem Hof zur Welt). Pensionspferde mit gebuchtem „Bewegen“ darfst du ab LK ${SPIELER_BEREITER_LK} (beste Reitdisziplin) selbst reiten – einmal am Tag zählt das als Bereiter-Tag; die Versorgung erklärt, woher der Bereiter kommt. Kraftfutter aus der Krippe wandert beim Rausbringen mit in den Futtereimer auf der Koppel (Heu bleibt in der Box).</p>
       <p><b>Hausturnier (H8, v315):</b> Pensions- und Ausbildungsstall mit erfüllten Bedingungen, einmal je Jahreszeit (Hof → Übersicht → „Hausturnier ausrichten“, Tag frühestens übermorgen). Bedingung Reitplatz, im Winter Reithalle. Kosten Pension ${fmt(HAUS.kosten.pension)}, Ausbildungsstall ${fmt(HAUS.kosten.ausbildung)} (+${fmt(HAUS.halle)} im Winter). Prüfungen: Dressur-, Stilspring-, Westernreiter-Wettbewerb, Gelassenheit, Ausbildungsstall zusätzlich Dressur und Springen Kl. E und A. Eigene Pferde nennen wie bei jedem Turnier (keine Fahrt, kein Fahrstress). 4–10 Starter je Prüfung. Am Turniertag: Nenngelder aller Gaststarter (Starter − eigene) als Einnahme (deckt etwa die Kosten, beim Ausbildungsstall etwas Gewinn), 60 % der Pensionspferde ab 4 Jahren starten mit (Zufriedenheit +${HAUS.zufr}), Ansehen +${HAUS.ansehen}, Anfragen (Pension, Beritt, Aufzucht) ×${String(HAUS.anfrage).replace(".", ",")} in dieser und der nächsten Jahreszeit.</p>
       <p><b>Verkaufsrennen (H8, v315):</b> an jedem Renntag eine Prüfung „Verkaufsrennen (Vollblut)“ (60 € + Jockey, 1.500 € Preisgeld, Feld schwach), nur für Rennställe. Verkaufspreis = Marktwert beim Nennen. Nach dem Rennen wird das eigene Pferd mit ${Math.round(VERKAUFSRENNEN.chance * 100)} % (Platz 1–3: ${Math.round((VERKAUFSRENNEN.chance + VERKAUFSRENNEN.platzPlus) * 100)} %) gekauft und am nächsten Morgen abgeholt (Geld aufs Konto). Dazu bietet der Rennverein ${VERKAUFSRENNEN.fremd} fremde Starter per Brief zum Verkaufspreis an (2 Tage gültig, „Kaufen“ im Brief).</p>

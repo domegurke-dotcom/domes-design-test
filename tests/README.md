@@ -30,3 +30,7 @@ Klickt wie eine Spielerin: hvw – Hof – Land → 2 ha Weideland kaufen, Bauen
 
 ## Neuladen-Test (v307)
 `NODE_PATH=/opt/node22/lib/node_modules node tests/neuladen-test.js` – speichert Spielstände mit Pferden draußen (Weide, Sandpaddock, Pensionspferde, nachmittags draußen, gelöschte Weide/Paddock), lädt neu und spielt weiter. Nach Änderungen am Start oder an Weide/Paddock/Pension laufen lassen.
+
+## Testspieler (v377) – nur auf Domes Anweisung starten
+`NODE_PATH=/opt/node22/lib/node_modules node tests/testspieler.js [1|2|3]` – drei Spielertypen spielen je 2 Jahre ab einem neuen Spiel:
+Nr. 1 Anfänger (viele Fehler), Nr. 2 etwas Erfahrung (einige Fehler), Nr. 3 Profi (wenige Fehler). Fehlerquoten oben im Skript (`SPIELER`).

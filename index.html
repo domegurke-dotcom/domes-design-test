@@ -164,6 +164,8 @@
   .tot-hinweis .knopf { width: 100%; background: #f6ecdc; color: #2b1d14; font-weight: 800; }
   .dlg-knoepfe:has(> :nth-child(3)) .knopf { padding-left: 6px; padding-right: 6px; }
   .paar.rahmen-gruen { box-shadow: 0 0 0 3px #3f9a4a, 0 2px 6px rgba(0,0,0,.25); }
+  .boxen-liste [data-zubox] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; } .boxen-liste [data-zubox] img, .boxen-liste [data-zubox] svg { -webkit-user-drag: none; }
+  .kachel.ziel-gruen, .paar.ziel-gruen { box-shadow: 0 0 0 3px #3f9a4a, 0 2px 6px rgba(0,0,0,.25) !important; } .ziel-drueber { box-shadow: 0 0 0 5px #2f8a3a, 0 0 14px rgba(63,154,74,.7) !important; } body.box-zieht { cursor: grabbing; }
   .paar.rahmen-rot { box-shadow: 0 0 0 3px #e0782a, 0 2px 6px rgba(0,0,0,.25); }
   .gebot-schnell { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; } .gebot-schnell .knopf { width: auto; flex: 1 1 90px; padding: 6px 8px; font-size: .85rem; }
   .brief-aktion { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; } .brief-aktion .knopf { width: auto; flex: 1 1 140px; }
@@ -915,7 +917,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "368";
+  const SPIEL_VERSION = "369";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -923,10 +925,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=368"></script>
-<script src="boxstufen.js?v=368"></script>
-<script src="kopfteile.js?v=368"></script>
-<script src="kopfalter.js?v=368"></script>
+<script src="pferd.js?v=369"></script>
+<script src="boxstufen.js?v=369"></script>
+<script src="kopfteile.js?v=369"></script>
+<script src="kopfalter.js?v=369"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -8005,19 +8007,56 @@
   const BOX_GRUPPEN = [["stall", "🏠", "Boxen\u00adstall"], ["paddock", "🏡", "Paddock\u00adboxen\u00adstall"], ["quar", "🚧", "Quarantäne\u00adstall"], ["abfohl", "🍼", "Abfohl\u00adstall"], ["offen", "🐎", "Aufzucht-Offen\u00adstall"]];
   const boxGruppe = b => b.offen ? "offen" : b.quar ? "quar" : b.abfohl ? "abfohl" : b.paddock ? "paddock" : "stall";
   let boxenGruppe = null;
+  // v369 (Dome): Pferd in der Boxenübersicht gedrückt halten und in eine freie Box ziehen (Maus und Handy) – freie Ziele grün umrandet
+  let boxGezogenAm = 0, boxZiehenAn = false;
+  function boxZiehbar(b) { const p = b && b.pferd; return !!p && !b.tot && !b.offen && !b.gesperrt && !p.klinik && !p.turnier && !p.weide && !paddockVon(p); }
+  function boxZielOk(von, nach) { const p = von.pferd; if (!boxZiehbar(von) || nach === von || !boxFrei(nach)) return false;
+    if (von.quar && !nach.quar && inQuarantaene(p)) return false;   // Quarantäne läuft noch
+    if (fremd(p) && boxGruppe(von) !== boxGruppe(nach)) return false;   // Einsteller: gebuchte Boxart bleibt
+    return true; }
+  function boxZiehenInit() {
+    if (boxZiehenAn) return; boxZiehenAn = true;
+    let d = null;
+    const ziele = () => [...document.querySelectorAll(".boxen-liste [data-zubox]")].filter(el => boxZielOk(spiel.boxen[d.i], spiel.boxen[+el.dataset.zubox]));
+    const kachelZiel = k => spiel.boxen.findIndex(b => boxGruppe(b) === k && boxZielOk(spiel.boxen[d.i], b));
+    const ende = () => { if (!d) return; clearTimeout(d.t); if (d.geist) d.geist.remove(); d.el.style.opacity = ""; document.querySelectorAll(".ziel-gruen,.ziel-drueber").forEach(x => x.classList.remove("ziel-gruen", "ziel-drueber")); document.body.classList.remove("box-zieht"); d = null; };
+    const starten = () => { if (!d) return; d.aktiv = true; const r = d.el.getBoundingClientRect(), g = d.el.cloneNode(true);
+      g.removeAttribute("data-zubox"); Object.assign(g.style, { position: "fixed", left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px", margin: 0, opacity: .9, pointerEvents: "none", zIndex: 9999, transform: "scale(1.06) rotate(-2deg)", boxShadow: "0 8px 22px rgba(0,0,0,.35)" });
+      document.body.appendChild(g); d.geist = g; d.dx = d.sx - r.left; d.dy = d.sy - r.top; d.el.style.opacity = ".35"; document.body.classList.add("box-zieht");
+      ziele().forEach(el => el.classList.add("ziel-gruen")); document.querySelectorAll("[data-bgruppe]").forEach(k => { if (k.dataset.bgruppe !== boxenGruppe && kachelZiel(k.dataset.bgruppe) >= 0) k.classList.add("ziel-gruen"); });
+      if (navigator.vibrate && d.touch) try { navigator.vibrate(25); } catch (x) {} };
+    const unter = (x, y) => { const e = document.elementFromPoint(x, y); return e && (e.closest(".ziel-gruen[data-zubox]") || e.closest(".ziel-gruen[data-bgruppe]")); };
+    document.addEventListener("pointerdown", e => { const el = e.target.closest && e.target.closest(".boxen-liste [data-zubox]"); if (!el || (e.pointerType === "mouse" && e.button !== 0)) return;
+      const i = +el.dataset.zubox; if (!boxZiehbar(spiel.boxen[i])) return; ende();
+      d = { i, el, sx: e.clientX, sy: e.clientY, touch: e.pointerType !== "mouse", aktiv: false }; d.t = setTimeout(starten, d.touch ? 380 : 180); });
+    document.addEventListener("pointermove", e => { if (!d) return;
+      if (!d.aktiv) { if (Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 8) { if (d.touch) ende(); else { clearTimeout(d.t); starten(); } } if (!d || !d.aktiv) return; }
+      d.geist.style.left = e.clientX - d.dx + "px"; d.geist.style.top = e.clientY - d.dy + "px";
+      document.querySelectorAll(".ziel-drueber").forEach(x => x.classList.remove("ziel-drueber")); const z = unter(e.clientX, e.clientY); if (z) z.classList.add("ziel-drueber"); });
+    document.addEventListener("touchmove", e => { if (d && d.aktiv) e.preventDefault(); }, { passive: false });
+    document.addEventListener("contextmenu", e => { if (d || (e.target.closest && e.target.closest(".boxen-liste [data-zubox]"))) e.preventDefault(); });
+    document.addEventListener("pointerup", e => { if (!d) return; if (!d.aktiv) { ende(); return; }
+      const z = unter(e.clientX, e.clientY), von = spiel.boxen[d.i]; boxGezogenAm = Date.now();
+      let ziel = -1; if (z && z.dataset.zubox != null) ziel = +z.dataset.zubox; else if (z && z.dataset.bgruppe) { ziel = kachelZiel(z.dataset.bgruppe); boxenGruppe = z.dataset.bgruppe; }
+      ende();
+      if (ziel >= 0) { const nb = spiel.boxen[ziel]; inBoxUmziehen(von, ziel); if (nb.quar) quarantaeneNeu(nb); if (spiel.boxen[aktBox] === von) { aktBox = ziel; spiel.aktBox = ziel; } speichern(); }
+      zeigeBoxen(); });
+    document.addEventListener("pointercancel", () => { if (d && !d.aktiv) ende(); });
+  }
   function zeigeBoxen() {
     const da = BOX_GRUPPEN.filter(([k]) => spiel.boxen.some(b => boxGruppe(b) === k));
     if (!da.some(([k]) => k === boxenGruppe)) boxenGruppe = (spiel.boxen[aktBox] && da.some(([k]) => k === boxGruppe(spiel.boxen[aktBox]))) ? boxGruppe(spiel.boxen[aktBox]) : da.length ? da[0][0] : null;
     const gk = da.length > 1 ? `<div class="kacheln stall-kacheln">${da.map(([k, ico, n]) => { const L = spiel.boxen.filter(b => boxGruppe(b) === k); return `<button class="kachel klickbar ${k === boxenGruppe ? "an" : ""}" data-bgruppe="${k}"><span class="ico">${ico}</span><b>${n}</b><small>${L.filter(b => b.pferd).length} von ${L.length} belegt</small></button>`; }).join("")}</div>` : "";
     const leer = (i, txt) => `<button class="paar leer" data-zubox="${i}"><span class="paar-bild leer-rahmen"></span><span class="paar-brett"><b>Box ${i + 1}</b><span>${txt}</span></span></button>`;
-    zeigeNeben("🏠 Stall", `<div class="panel" style="grid-column:1/-1;width:100%;max-width:760px;margin:0 auto">${(() => { const dd = datum(); return `<button class="knopf tag-beenden" id="bxTag"><span>${JZ[dd.s][1]} ${datumText(dd)} · Tag ${dd.t}/${tpj()}</span><b>🌙 Tag beenden</b></button>`; })()}<div class="hf-kopf"><b>${spiel.boxen.filter(b => b.pferd).length} von ${spiel.boxen.length} Boxen belegt</b><button class="mini-knopf" id="bxBauen">🏗️ Bauen</button></div><p style="margin:0">Antippen, um in die Box zu gehen. Neue Boxen baust du unter Hofverwaltung → Hof → Bauen.</p>${pensionStallHTML()}
+    zeigeNeben("🏠 Stall", `<div class="panel" style="grid-column:1/-1;width:100%;max-width:760px;margin:0 auto">${(() => { const dd = datum(); return `<button class="knopf tag-beenden" id="bxTag"><span>${JZ[dd.s][1]} ${datumText(dd)} · Tag ${dd.t}/${tpj()}</span><b>🌙 Tag beenden</b></button>`; })()}<div class="hf-kopf"><b>${spiel.boxen.filter(b => b.pferd).length} von ${spiel.boxen.length} Boxen belegt</b><button class="mini-knopf" id="bxBauen">🏗️ Bauen</button></div><p style="margin:0">Antippen, um in die Box zu gehen. Gedrückt halten und ziehen, um ein Pferd in eine freie Box umzustellen. Neue Boxen baust du unter Hofverwaltung → Hof → Bauen.</p>${pensionStallHTML()}
       ${gk}<div class="paar-liste boxen-liste">${spiel.boxen.map((b, i) => boxenGruppe && boxGruppe(b) !== boxenGruppe ? "" : b.pferd ? pferdKachel(b.pferd, { attr: `data-zubox="${i}"`, zeilen: [`Box ${i + 1}`, b.tot ? "🕊️ verstorben" : b.pferd.klinik ? "🏥 in der Klinik" : b.pferd.weide ? "🌿 auf der Weide" : b.pferd.weideNachm && b.pferd.weideNachm.tag === spiel.tag && !b.pferd.weideNachm.aus ? (b.pferd.weideNachm.paddock ? "🟫 nachmittags Sandpaddock" : "🌿 nachmittags Weide") : `${rasseById(b.pferd.rasse).name}`, ...(b.fohlen ? [`🍼 + ${esc(b.fohlen.name)}`] : []), ...(angebotVon(b.pferd) ? ["💰 zum Verkauf"] : []), ...(fremd(b.pferd) ? [`🏡 ${esc((einstellerVon(b.pferd) || { nn: "Pension" }).nn)}`] : [])] })
         : leer(i, b.gesperrt ? "🚧 Umbau" : b.reserviert ? "🔒 reserviert" : `leer · ${b.offen ? "Offenstall" : b.quar ? "Quarantäne" : b.abfohl ? "Abfohlbox" : b.paddock ? "Paddockbox" : "Box"}, Stufe ${boxenStufe(b)}`)).join("")}</div></div>`);
     $("bxBauen").onclick = () => zeigeBauenFenster();
     document.querySelectorAll("[data-bgruppe]").forEach(k => k.onclick = () => { boxenGruppe = k.dataset.bgruppe; zeigeBoxen(); });
     $("bxTag").onclick = () => tagBeenden(() => zeigeBoxen());
     if ($("pnZurPension")) $("pnZurPension").onclick = () => { hofBereich = "pension"; zeigeHof("hof"); };
-    document.querySelectorAll("[data-zubox]").forEach(k => k.onclick = () => { aktBox = +k.dataset.zubox; spiel.aktBox = aktBox; aktenReiter = "steckbrief"; aktenModus = "steckbrief"; deckModus = false; ortModus = null; meldung = ""; zeigeSchirm(null); window.scrollTo(0, 0); });
+    boxZiehenInit();
+    document.querySelectorAll("[data-zubox]").forEach(k => k.onclick = () => { if (Date.now() - boxGezogenAm < 400) return; aktBox = +k.dataset.zubox; spiel.aktBox = aktBox; aktenReiter = "steckbrief"; aktenModus = "steckbrief"; deckModus = false; ortModus = null; meldung = ""; zeigeSchirm(null); window.scrollTo(0, 0); });
   }
   // ---------- Pferdeanhänger: EINE gemeinsame Liste für beide Anhänger ----------
   // Box/Ort → Pferdeanhänger (ein Pferd) und Hauptmenü → Pferdeanhänger (Mehrfachauswahl) bauen ihre Kacheln aus ANHAENGER + ANH_ZIEL.

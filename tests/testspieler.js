@@ -9,13 +9,13 @@ const path = require("path");
 const SPIELER = {
   1: { name: "Nr. 1 – Anfänger (kennt Spiel und Pferde nicht, viele Fehler)",
        fuettern: 0.35, wasser: 0.4, misten: 0.5, putzen: 0.8, postSpaet: 0.6, anfrageAnnehmen: 0.5, futterErstWennLeer: true,
-       pferdKauf: "teuer", aku: false, mitarbeiterFrueh: true, bauenFrueh: true, tierarzt: 0.3 },
+       pferdKauf: "teuer", aku: false, mitarbeiterFrueh: true, bauenFrueh: true, tierarzt: 0.3, tippsBefolgen: 0.9 },
   2: { name: "Nr. 2 – etwas Erfahrung (Spiel ein paar Mal gespielt, etwas Pferdeahnung, einige Fehler)",
        fuettern: 0.12, wasser: 0.15, misten: 0.15, putzen: 0.5, postSpaet: 0.2, anfrageAnnehmen: 0.85, futterErstWennLeer: false,
-       pferdKauf: "mittel", aku: true, mitarbeiterFrueh: false, bauenFrueh: false, tierarzt: 0.7 },
+       pferdKauf: "mittel", aku: true, mitarbeiterFrueh: false, bauenFrueh: false, tierarzt: 0.7, tippsBefolgen: 0.5 },
   3: { name: "Nr. 3 – Profi (Spiel oft gespielt, kennt sich mit Pferden aus, wenige Fehler)",
        fuettern: 0.02, wasser: 0.02, misten: 0.03, putzen: 0.05, postSpaet: 0.02, anfrageAnnehmen: 1, futterErstWennLeer: false,
-       pferdKauf: "tierschutz", aku: true, mitarbeiterFrueh: false, bauenFrueh: false, tierarzt: 0.95 },
+       pferdKauf: "tierschutz", aku: true, mitarbeiterFrueh: false, bauenFrueh: false, tierarzt: 0.95, tippsBefolgen: 0.1 },
 };
 
 async function spiele(nr) {
@@ -32,10 +32,19 @@ async function spiele(nr) {
     const zuf = () => Math.random(), log = [], geldLog = [], tippsGesehen = [];
     let mahnungen = 0, pleite = false, gekauft = null;
     const zu = () => { $("dlg").hidden = true; };   // Fenster (Tipps, Meldungen) wegklicken
-    const tippsMerken = () => { const t = $("dlg").hidden ? "" : $("dlgInhalt").innerText.split("\n")[0]; if (t.startsWith("💡") && !tippsGesehen.includes(t)) tippsGesehen.push(t); };
+    const befolgt = [];
+    const tippsMerken = () => { const t = $("dlg").hidden ? "" : $("dlgInhalt").innerText.split("\n")[0]; if (!t.startsWith("💡") || tippsGesehen.includes(t)) return; tippsGesehen.push(t);
+      if (zuf() > S.tippsBefolgen) return; befolgt.push(t);   // Tipp befolgen: weniger Fehler im passenden Bereich
+      const halb = k => { S[k] = S[k] / 2; };
+      if (t.includes("2 Jahre")) { S.anfrageAnnehmen = Math.max(S.anfrageAnnehmen, 0.95); S.futterErstWennLeer = false; S.mitarbeiterFrueh = false; S.bauenFrueh = false; if (S.pferdKauf === "teuer") S.pferdKauf = "tierschutz"; }
+      if (t.includes("Box")) { halb("fuettern"); halb("wasser"); halb("misten"); } if (t.includes("Putzen")) halb("putzen");
+      if (t.includes("Post") || t.includes("Postfach")) halb("postSpaet"); if (t.includes("krank") || t.includes("Tierarzt")) S.tierarzt = Math.min(1, S.tierarzt + 0.3);
+      if (t.includes("Pferdemarkt")) S.aku = true; if (t.includes("Futterkammer")) S.futterErstWennLeer = false; };
     const tage = 8 * tpj();
     for (let d = 0; d < tage && !pleite; d++) {
-      try { tippPruefen(); } catch (e) { } tippsMerken(); zu();
+      const ansichten = [() => zeigeSchirm(null), () => zeigeMarkt(), () => zeigeHof("hof"), () => zeigeHof("post"), () => zeigeHof("mitarbeiter"), () => { aktenModus = "pflege"; zeigeSchirm(null); }, () => { aktenModus = "steckbrief"; zeigeSchirm(null); }];
+      for (const a of ansichten) { try { a(); for (let k = 0; k < 3; k++) { tippPruefen(); tippsMerken(); zu(); } } catch (e) { } }
+      zeigeSchirm(null);
       // Post: Rechnungen, Kreditraten, Pensionsanfragen
       if (zuf() > S.postSpaet) {
         (spiel.rechnungen || []).slice().forEach(r => { if ((spiel.geld || 0) >= r.betrag) { if (r.stufe) mahnungen++; rechnungZahlen(r.id); zu(); } });
@@ -70,7 +79,7 @@ async function spiele(nr) {
     }
     const pferde = spiel.boxen.filter(b => b.pferd).map(b => { const p = b.pferd; return `${p.name}${fremd(p) ? " (Einsteller)" : ""}: Gesundheit ${Math.round(p.pflege.gesundheit)} %, Wohl ${Math.round(p.pflege.wohl || 0)} %, Befunde ${(p.befunde || []).length}`; });
     const einsteller = einstellerListe().map(e => `${eName(e)}: Zufriedenheit ${Math.round(e.zufr || 0)}`);
-    return { gekauft, pleite, geld: fmt(spiel.geld || 0), geldLog, pferde, einsteller, mahnungen, tippsGesehen, log };
+    return { gekauft, pleite, befolgt, kredit: fmt(kredite().reduce((a, k) => a + (k.rest || 0), 0)), boxen: spiel.boxen.length, hoefe: (spiel.hofReihe || []).length, eigene: eigenePferdeHof().length, geld: fmt(spiel.geld || 0), geldLog, pferde, einsteller, mahnungen, tippsGesehen, log };
   }, S);
 
   console.log(`\n===== ${S.name} =====`);

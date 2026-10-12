@@ -254,6 +254,16 @@ const path = require('path');
         ok('H7e Tierarztrabatt 20 %', re && re.posten.some(x => /Gnadenhof-Rabatt/.test(x.text) && x.betrag === -20), re ? re.posten.map(x => x.text + ' ' + x.betrag).join(', ') : '');
         if (re) rechnungSchliessen(re, 'Test');
         spiel.boxen.forEach((b, i) => { b.pferd = merk[i]; }); H.art = 'pension'; spiel.stallarten = ['pension']; delete H.artCache; }
+      // ---------- H7 (d) Deckhengst für fremde Stuten (v312) ----------
+      { const H = spiel.hof, merk = spiel.boxen.map(b => b.pferd), abf = spiel.boxen.map(b => b.abfohl); spiel.boxen.forEach(b => { if (b.pferd && !fremd(b.pferd)) b.pferd = null; });
+        const frei = spiel.boxen.filter(b => !b.pferd).slice(0, 3), [hg, s1, s2] = frei.map((b, i) => { const q = neuesPferd({ rasse: 'hannoveraner', geschlecht: i ? 'Stute' : 'Hengst', alter: 8, name: 'Zuchttest' + i }); b.pferd = q; q.pflege = erzeugePflege(q); q.pflege.gesundheit = 100; q.befunde = []; return q; });
+        spiel.boxen[spiel.boxen.length - 1].abfohl = true; H.art = 'zucht'; spiel.stallarten = ['zucht']; delete H.artCache;
+        hg.deckFremd = { an: true }; const R = Math.random, g0 = spiel.geld, s0 = datum().s; Math.random = () => 0.01; deckhengstTag(); Math.random = R;
+        if (s0 <= 1) { ok('H7d Fremde Stute gedeckt, Decktaxe gebucht', hg.deckFremd.n === 1 && Math.round(spiel.geld - g0) === decktaxe(hg), `${hg.deckFremd.n || 0} × ${decktaxe(hg)} €`);
+          const f = (spiel.fremdFohlen || []).find(x => x.hid === hg.id); if (f) { f.geburt = jzJetzt(); fremdFohlenJahreszeit(); }
+          ok('H7d Fohlen der fremden Stute zählt als Nachkomme', !f || hg.nachkommen === 1, String(hg.nachkommen || 0)); }
+        else ok('H7d außerhalb der Decksaison keine fremden Stuten', !hg.deckFremd.n);
+        spiel.boxen.forEach((b, i) => { b.pferd = merk[i]; b.abfohl = abf[i]; }); H.art = 'pension'; spiel.stallarten = ['pension']; delete H.artCache; }
       // ---------- H7 (b) Rennbahn, Rennpferdetrainer (v311) ----------
       { const H = spiel.hof, merk = spiel.boxen.map(b => b.pferd), mMerk = (spiel.mitarbeiter || []).slice(); spiel.boxen.forEach(b => { if (b.pferd && !fremd(b.pferd)) b.pferd = null; });
         const frei = spiel.boxen.filter(b => !b.pferd).slice(0, 2), rp = frei.map((b, i) => { const q = neuesPferd({ rasse: 'vollblut', geschlecht: 'Stute', alter: 4, name: 'Renner' + i }); b.pferd = q; q.pflege = erzeugePflege(q); q.pflege.gesundheit = 100; q.befunde = []; werteErgaenzen(q); return q; });

@@ -898,7 +898,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "339";
+  const SPIEL_VERSION = "340";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -906,9 +906,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=339"></script>
-<script src="kopfteile.js?v=339"></script>
-<script src="kopfalter.js?v=339"></script>
+<script src="pferd.js?v=340"></script>
+<script src="kopfteile.js?v=340"></script>
+<script src="kopfalter.js?v=340"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -5486,7 +5486,6 @@
     if (P.fohlenschau) return fohlenschauSperre(p, t, P);
     if (spiel.tag >= t.tag) return "Nennschluss vorbei";
     if (t.haus && t.haus !== aktivHid()) return "Hausturnier eines anderen Hofs";
-    if (P.verkauf && !vorteil("renn")) return "Verkaufsrennen nur für Rennställe";
     if (P.rassen && !reinRasse(p, P.rassen)) return `nur reinrassige ${P.rassen.map(r => rasseById(r).name).join(" / ")}`;
     if (alterJZ(p) < (P.ab || 16)) return `erst ab ${jzAlterTxt(P.ab || 16)}`;
     const tr = traechtigSperre(p, P, t.tag); if (tr) return tr;
@@ -5554,7 +5553,10 @@
     if ($("tAlleLK")) $("tAlleLK").onclick = () => { turnierAlleLK = !turnierAlleLK; turnierDialog(p, zurueck); };
     document.querySelectorAll("[data-tsort]").forEach(b => b.onclick = () => { turnierSortierung = b.dataset.tsort; try { localStorage.setItem("zuchtstall-tsort", turnierSortierung); } catch (e) {} turnierDialog(p, zurueck); });
     document.querySelectorAll("[data-tnennen]").forEach(b => b.onclick = () => { const [tid, prid] = b.dataset.tnennen.split(":"), t = spiel.turniere.find(x => x.id === tid), P = t.pruef.find(x => x.id === prid);
-      if (nennSperre(p, t, P)) return; t.nennung.push({ pid: p.id, prid, geld: nenngeld(t, P), ...(P.verkauf ? { verkauf: Math.round(marktwert(p) / 50) * 50 } : {}) }); buchen(-nenngeld(t, P), "Turniere: Nenngeld"); speichern(); zeigeTag(); turnierDialog(p, zurueck); });
+      if (nennSperre(p, t, P)) return;
+      const nennen = preis => { t.nennung.push({ pid: p.id, prid, geld: nenngeld(t, P), ...(P.verkauf ? { verkauf: preis } : {}) }); buchen(-nenngeld(t, P), "Turniere: Nenngeld"); speichern(); zeigeTag(); turnierDialog(p, zurueck); };
+      if (!P.verkauf) { nennen(); return; }
+      verkaufspreisDialog(p, nennen, () => turnierDialog(p, zurueck)); });
     document.querySelectorAll("[data-tzurueck]").forEach(b => b.onclick = () => { const [tid, prid] = b.dataset.tzurueck.split(":"), t = spiel.turniere.find(x => x.id === tid);
       t.nennung = t.nennung.filter(n => !(n.pid === p.id && n.prid === prid)); speichern(); turnierDialog(p, zurueck); });
   }
@@ -5627,15 +5629,38 @@
     });
   }
   // ---------- H8: Verkaufsrennen (Rennstall) – Verkaufspreis = Marktwert beim Nennen; nach dem Rennen kann jeder das Pferd zu diesem Preis kaufen ----------
-  const VERKAUFSRENNEN = { chance: 0.3, platzPlus: 0.25, fremd: 2 };
+  const VERKAUFSRENNEN = { chance: 0.3, platzPlus: 0.25, fremd: 2, min: 0.5, max: 2 };
+  // Dome (v340): Verkaufspreis beim Nennen selbst festlegen (50–200 % des Marktwerts) – je höher, desto seltener kauft jemand; auch ohne Rennstall (mit Trainergebühr)
+  function verkaufspreisDialog(p, ok, abbrechen) {
+    const mw = Math.round(marktwert(p) / 50) * 50;
+    dialog(`<h3>🏇 Verkaufsrennen: Preis für ${esc(p.name)}</h3><p class="text">Nach dem Rennen kann jeder ${esc(p.name)} zu diesem Preis kaufen – {du|Sie} {kannst|können} dann nicht mehr ablehnen. Marktwert etwa <b>${fmt(mw)}</b>. Je höher der Preis, desto seltener wird ${pron(p).er} gekauft.</p>
+      <p><label>Verkaufspreis <input type="number" id="vrPreis" min="${Math.round(mw * VERKAUFSRENNEN.min / 50) * 50}" max="${Math.round(mw * VERKAUFSRENNEN.max / 50) * 50}" step="50" value="${mw}" style="width:130px;font:inherit;padding:6px 10px;border-radius:10px;border:2px solid #e2d6c3"> €</label></p>
+      <p class="text"><small>Erlaubt: ${fmt(Math.round(mw * VERKAUFSRENNEN.min / 50) * 50)} bis ${fmt(Math.round(mw * VERKAUFSRENNEN.max / 50) * 50)}.${vorteil("renn") ? "" : ` Ohne Rennstall kommt die Trainergebühr (${fmt(TRAINER_GEBUEHR)}) zum Nenngeld dazu.`}</small></p>`.replace(/\{([^{}|]*)\|([^{}|]*)\}/g, (m, a) => a),
+      [["🏇 Nennen", () => { const v = Math.round(+$("vrPreis").value / 50) * 50; ok(Math.max(Math.round(mw * VERKAUFSRENNEN.min / 50) * 50, Math.min(Math.round(mw * VERKAUFSRENNEN.max / 50) * 50, v || mw))); }], ["Abbrechen", abbrechen, "zweit"]]);
+  }
+  // fremde Starter eines Verkaufsrennens: 2 Tage zu haben (Pferdemarkt → Verkaufsrennen; Brief nur, wenn du selbst gestartet bist)
+  function verkaufsrennenFremde(t, P, rz, mitBrief) {
+    if (P.angebotDa) return; P.angebotDa = true;
+    const L = (spiel.rennKauf = (spiel.rennKauf || []).filter(x => x.bis >= spiel.tag));
+    for (let i = 0; i < VERKAUFSRENNEN.fremd; i++) { const h = mkPferd("vr" + spiel.tag + Math.random().toString(36).slice(2, 6), "vollblut", 0, 2 + Math.floor(rz() * 4), rz); h.training = 20 + Math.floor(rz() * 60); werteErgaenzen(h); const pr = Math.round(marktwert(h) * (0.8 + rz() * 0.4) / 50) * 50;
+      const rid = "rk" + Math.random().toString(36).slice(2, 7); L.push({ rid, pferd: h, preis: pr, bis: spiel.tag + 2, rennen: t.name });
+      if (mitBrief) brief("Rennverein", `Verkaufsrennen: ${h.name} zu haben`, `im Verkaufsrennen beim <b>${esc(t.name)}</b> ist auch <b>${esc(h.name)}</b> gelaufen (Vollblut, ${h.geschlecht}, ${alterJahre(h)} Jahre). Zum Verkaufspreis von <b>${fmt(pr)}</b> gehört ${pron(h).er} {dir|Ihnen} – das Angebot gilt 2 Tage (auch im Pferdemarkt unter „Verkaufsrennen“).`, { aktion: { typ: "rennkauf", rid } }); }
+  }
+  // morgens: Verkaufsrennen von gestern, bei denen du nicht gestartet bist → Starter erscheinen im Pferdemarkt
+  function verkaufsrennenMarkt() {
+    (spiel.turniere || []).filter(t => t.tag === spiel.tag - 1).forEach(t => t.pruef.filter(P => P.verkauf).forEach(P => verkaufsrennenFremde(t, P, zufall("vrm-" + t.id + P.id), false)));
+  }
+  function rennKaufen(k, nachher) {
+    if (neuzugangBox() < 0) { dialog(`<h3>Keine Box frei</h3><p>Für ${esc(k.pferd.name)} ist keine Box frei.</p>`, [["OK", nachher]]); return false; }
+    if (spiel.geld < k.preis) { dialog(`<h3>Zu wenig Geld</h3><p>${esc(k.pferd.name)} kostet ${fmt(k.preis)}, auf dem Konto sind ${fmt(spiel.geld)}.</p>`, [["OK", nachher]]); return false; }
+    spiel.rennKauf = spiel.rennKauf.filter(x => x !== k); (spiel.post || []).forEach(br => { if (br.aktion && br.aktion.typ === "rennkauf" && br.aktion.rid === k.rid) br.aktion.antwort = "ja"; });
+    pferdEinstellen(k.pferd, k.preis, "Verkaufsrennen"); speichern(); return true;
+  }
   function verkaufsrennenNach(p, t, P, platz, rz) {
     const n = t.nennung.find(x => x.pid === p.id && x.prid === P.id), preis = (n && n.verkauf) || Math.round(marktwert(p) / 50) * 50;
-    if (!P.angebotDa) { P.angebotDa = true;   // fremde Starter: 2 Pferde zum Kauf (Brief mit Knopf, 2 Tage gültig)
-      const L = (spiel.rennKauf = (spiel.rennKauf || []).filter(x => x.bis >= spiel.tag));
-      for (let i = 0; i < VERKAUFSRENNEN.fremd; i++) { const h = mkPferd("vr" + spiel.tag + Math.random().toString(36).slice(2, 6), "vollblut", 0, 2 + Math.floor(rz() * 4), rz); h.training = 20 + Math.floor(rz() * 60); werteErgaenzen(h); const pr = Math.round(marktwert(h) * (0.8 + rz() * 0.4) / 50) * 50;
-        const rid = "rk" + Math.random().toString(36).slice(2, 7); L.push({ rid, pferd: h, preis: pr, bis: spiel.tag + 2 });
-        brief("Rennverein", `Verkaufsrennen: ${h.name} zu haben`, `im Verkaufsrennen beim <b>${esc(t.name)}</b> ist auch <b>${esc(h.name)}</b> gelaufen (Vollblut, ${h.geschlecht}, ${alterJahre(h)} Jahre). Zum Verkaufspreis von <b>${fmt(pr)}</b> gehört ${pron(h).er} {dir|Ihnen} – das Angebot gilt 2 Tage.`, { aktion: { typ: "rennkauf", rid } }); } }
-    if (Math.random() >= VERKAUFSRENNEN.chance + (platz <= 3 ? VERKAUFSRENNEN.platzPlus : 0)) return;
+    verkaufsrennenFremde(t, P, rz, true);
+    const mw = Math.max(50, marktwert(p)), preisF = Math.max(0.1, Math.min(2, Math.pow(mw / preis, 2)));   // v340: teurer → seltener gekauft
+    if (Math.random() >= (VERKAUFSRENNEN.chance + (platz <= 3 ? VERKAUFSRENNEN.platzPlus : 0)) * preisF) return;
     if (spiel.boxen.some(x => x.pferd === p)) p.verkauftImRennen = { preis, tag: spiel.tag };   // wird am nächsten Morgen abgeholt
   }
   function verkaufsrennenAbgang() {
@@ -7361,7 +7386,7 @@
     deckhengstTag();   // H7 (d): fremde Stuten zum eigenen Deckhengst
   }
   function hofMorgen() {
-    turnierMorgen(); hausturnierMorgen(); verkaufsrennenAbgang(); befundTestTag(); hofhelferTag(); reparaturTag(); umbauPlanTag(); futterwieseTag(); rateVorwarnung();   // Turniertag: genannte Pferde fahren los
+    turnierMorgen(); hausturnierMorgen(); verkaufsrennenAbgang(); verkaufsrennenMarkt(); befundTestTag(); hofhelferTag(); reparaturTag(); umbauPlanTag(); futterwieseTag(); rateVorwarnung();   // Turniertag: genannte Pferde fahren los
     futterLieferung();  // bestelltes Futter kommt an
     bedarfTag();   // Dome: Bedarf vorher gedeckt, jetzt nicht mehr → Meldung beim nächsten Besuch der Box
     expertKorrektur265();    // v265: fehlerhafte Expertenpläne einmal kostenlos neu rechnen
@@ -8198,7 +8223,7 @@
   // Pferdemarkt: Übersicht mit Kacheln – [id, Symbol, Name, Kurztext, schon verfügbar]
   let marktBereich = null;
   const MARKT_BEREICHE = [["verkaufen", "💰", "Pferd verkaufen", "Festpreis oder Auktion", true], ["angebote", "🏷️", "Meine Verkaufs\u00adpferde", "laufende Angebote", true], ["privat", "🏡", "Privat\u00adanzeigen", "Pferde von Privatleuten", true],
-    ["haendler", "🐴", "Pferde\u00adhändler", "große Auswahl", true], ["auktion", "🔨", "Auktions\u00adhaus", "mitbieten", true], ["fohlen", "🍼", "Fohlen\u00adauktion", "Sommer und Herbst", true], ["gestuet", "🏰", "Gestüte", "reinrassig mit Papieren", true],
+    ["haendler", "🐴", "Pferde\u00adhändler", "große Auswahl", true], ["auktion", "🔨", "Auktions\u00adhaus", "mitbieten", true], ["fohlen", "🍼", "Fohlen\u00adauktion", "Sommer und Herbst", true], ["gestuet", "🏰", "Gestüte", "reinrassig mit Papieren", true], ["rennen", "🏇", "Verkaufs\u00adrennen", "Vollblüter nach dem Rennen", true],
     ["tierschutz", "🐾", "Tierschutz", "Pferde in Not", true]];
   function zeigeMarkt(bereich) {
     if (bereich === null || typeof bereich === "string") marktBereich = bereich;
@@ -8270,6 +8295,12 @@
           + (gp.length ? `<div class="paar-liste">${gp.map(h => pferdKachel(h, { ort: GESTUET_NAMEN[gestuetWahl], zeilen: [`${h.geschlecht} · ${alterText(h)}`, `<b>${fmt(h.preis)}</b>`],
             aktion: [`Kaufen · ${fmt(h.preis)}`, () => { if (kaufPruefen(h, h.preis)) dialog(`<h3>🏰 ${esc(h.name)} kaufen?</h3><p>${rasseById(h.rasse).name} · ${h.geschlecht} · ${alterText(h)} vom ${GESTUET_NAMEN[gestuetWahl]} für <b>${fmt(h.preis)}</b>.</p>`, [["Kaufen", () => pferdEinstellen(h, h.preis, "Gestüt")], [`🩺 ${h.akuErg ? "AKU-Ergebnis" : "Ankaufsuntersuchung"}`, () => akuDialog(h, "Gestüt", () => { if (kaufPruefen(h, h.preis)) pferdEinstellen(h, h.preis, "Gestüt"); }, () => zeigeMarkt()), "zweit"], ["Abbrechen", null, "zweit"]]); }],
             extra: { zeilen: [["Preis", `<b>${fmt(h.preis)}</b>`], ["Gestüt", GESTUET_NAMEN[gestuetWahl]]] } })).join("")}</div>` : `<p>Diese Jahreszeit ist alles verkauft.</p>`) + `</div>`; } }
+    else if (marktBereich === "rennen") {   // Dome (v340): Verkaufsrennen auch als Käufer ohne Rennstall
+      const L = (spiel.rennKauf || []).filter(x => x.bis >= spiel.tag), next = (spiel.turniere || []).filter(t => t.tag >= spiel.tag && t.pruef.some(P => P.verkauf)).sort((a, b) => a.tag - b.tag)[0];
+      html = kopf("🏇 Verkaufsrennen", "Nach jedem Verkaufsrennen kann jeder die Starter zum ausgeschriebenen Preis kaufen – 2 Tage lang. Eigene Vollblüter nennst du über Pferdeanhänger → Turnier, den Preis legst du beim Nennen fest.")
+        + `<p class="text voll" style="margin:4px 0"><small>${next ? `Nächstes Verkaufsrennen: <b>${esc(next.name)}</b> am ${tagText(next.tag)}.` : "Gerade ist kein Verkaufsrennen ausgeschrieben (nur von Frühling bis Herbst)."}</small></p>`
+        + (L.length ? `<div class="paar-liste">${L.map(k => pferdKachel(k.pferd, { ort: "Verkaufsrennen", zeilen: [`${k.pferd.geschlecht} · ${alterText(k.pferd)}`, `<b>${fmt(k.preis)}</b> · bis ${tagText(k.bis)}`],
+            aktion: [`Kaufen · ${fmt(k.preis)}`, () => { if (rennKaufen(k, () => zeigeMarkt())) zeigeMarkt(); }], extra: { zeilen: [["Preis", `<b>${fmt(k.preis)}</b>`], ["Rennen", esc(k.rennen || "Verkaufsrennen")]] } })).join("")}</div>` : `<p class="voll">Gerade ist kein Pferd aus einem Verkaufsrennen zu haben.</p>`) + `</div>`; }
     else if (marktBereich === "tierschutz") { const nf = marktNeu().notfall.filter(h => !(spiel.marktGekauft || []).includes(h.id));
       html = kopf("🐾 Tierschutz", "Deine abgeholten Pferde kannst du hier zurückkaufen.") + tsListe + `</div>
         <div class="panel voll"><b>🆘 Notfallpferde</b><p style="margin:4px 0 0;font-size:.85rem;opacity:.75">Pferde in schlechtem Zustand suchen ein Zuhause – für eine Schutzgebühr. Bedingung: gesund pflegen und mindestens ein Jahr behalten – vorher kein Verkauf, nur Rückgabe ohne Erstattung.</p>
@@ -9832,7 +9863,7 @@
   }
   const STALLART_VORTEILE = { pension: ["30 % mehr Anfragen von Einstellern", "Pferdewirt Haltung und Service einstellbar", "Hausturnier einmal je Jahreszeit"], zucht: ["25 % Rabatt im Labor", "eigene Hengste als Deckhengst für fremde Stuten (Decktaxe)", "Aufzucht-Offenstall: Fohlen wachsen in der Herde auf, kostet nur Futter", "fremde Fohlen zur Aufzucht (120 € je Jahreszeit)"],
     ausbildung: ["eigene Pferde lernen 20 % schneller", "fremde Pferde in Beritt (450 € je Jahreszeit)", "Hausturnier mit Kl. E und A"], gnadenhof: ["Spenden: 30 € je Pferd und Jahreszeit", "Patenschaften: 60–120 € je Patenpferd und Jahreszeit", "20 % Rabatt beim Tierarzt"],
-    renn: ["halbes Jockey-Reitgeld", "keine Trainergebühr bei Galopprennen (sonst 100 € je Start)", "Rennpferdetrainer einstellbar", "Verkaufsrennen auf den Renntagen"], western: ["halbes Nenngeld bei Westernprüfungen", "Westerntraining 20 % schneller", "Westerntrainer einstellbar"] };
+    renn: ["halbes Jockey-Reitgeld", "keine Trainergebühr bei Galopprennen (sonst 100 € je Start)", "Rennpferdetrainer einstellbar"], western: ["halbes Nenngeld bei Westernprüfungen", "Westerntraining 20 % schneller", "Westerntrainer einstellbar"] };
   function stallartHTML() { return stallartKarteHTML() + hausturnierHTML(); }
   function stallartKarteHTML() {   // Dome (v295): oben in Hof → Übersicht – Stallart, Verpflichtungen und Vorteile in kurzen Stichpunkten
     const H = spiel.hof || {}, art = H.art, B = art ? stallartBed(art) : [], ok = stallartOk(), schon = jzJetzt() < stallartSchonBis();
@@ -10406,7 +10437,6 @@
       else inhalt += `<dl class="werte">
         <dt>Hof</dt><dd class="hf-edit" id="hfHof" title="antippen zum Ändern">${esc(hofName())} <span class="stift">✏️</span></dd>
         ${spiel.hof ? `<dt>Immobilie</dt><dd>${esc((immobilie(spiel.hof.id) || {}).n || "")} · ${STALLART_NAME[spiel.hof.art] || ""}</dd>
-        <dt>Fläche</dt><dd>${haTxt(spiel.hof.ha + (spiel.hof.pacht || 0))} (Bauland ${haTxt(bauHa())}, Weideland ${haTxt(weideland())}${spiel.hof.pacht ? `, davon gepachtet ${haTxt(spiel.hof.pacht)}` : ""}, eingezäunt ${haTxt(spiel.hof.weideHa || 0)})</dd>
         <dt>Zustand</dt><dd>Stufe ${spiel.hof.stufe} – ${STUFE_NAME[spiel.hof.stufe]}</dd>
         <dt>Anlagen</dt><dd>${anlagenText()}</dd>
         ${kredite().some(kreditLaeuft) ? `<dt>Kredit</dt><dd>Restschuld ${fmt(restschuld())}${kredite().some(k => (k.offen || []).length) ? " · ⚠️ Rate offen" : ""}</dd>` : ""}` : ""}
@@ -10621,9 +10651,7 @@
         A.antwort = ja ? "ja" : "nein"; if (m && m.urlaub && m.urlaub.ok == null) { m.urlaub.ok = ja; zufrAendern(m, ja ? 5 : -15); } speichern(); nachher(); }
       else if (b.dataset.baktion === "bieten") { const a = auktionFinden(A.pferd); if (a) { $("dlg").hidden = true; bieten(a, nachher); } }
       else if (b.dataset.baktion === "rk-sehen" || b.dataset.baktion === "rk-kauf") { const k = (spiel.rennKauf || []).find(x => x.rid === A.rid && x.bis >= spiel.tag); if (!k) { nachher(); return; }   // H8: Verkaufsrennen
-        const kaufen = () => { if (neuzugangBox() < 0) { dialog(`<h3>Keine Box frei</h3><p>Für ${esc(k.pferd.name)} ist keine Box frei.</p>`, [["OK", nachher]]); return; }
-          if (spiel.geld < k.preis) { dialog(`<h3>Zu wenig Geld</h3><p>${esc(k.pferd.name)} kostet ${fmt(k.preis)}, auf dem Konto sind ${fmt(spiel.geld)}.</p>`, [["OK", nachher]]); return; }
-          A.antwort = "ja"; spiel.rennKauf = spiel.rennKauf.filter(x => x !== k); pferdEinstellen(k.pferd, k.preis, "Verkaufsrennen"); speichern(); nachher(); };
+        const kaufen = () => { if (rennKaufen(k, nachher)) { A.antwort = "ja"; nachher(); } };
         if (b.dataset.baktion === "rk-kauf") kaufen(); else pferdAnsehen({ p: k.pferd, ort: "Verkaufsrennen", aktion: [`🏇 Kaufen · ${fmt(k.preis)}`, kaufen] }); }
       else if (b.dataset.baktion.startsWith("e-")) { const a = (spiel.pensionAnfragen || []).find(x => x.aid === A.aid); if (!a) { nachher(); return; }
         if (b.dataset.baktion === "e-sehen") { pferdAnsehen({ p: a.pferd, ort: `Anfrage von ${eName(a)}`, aktion: ["‹ Zurück zum Brief", nachher], extra: { zeilen: [["Wunsch", HALTUNG_TXT[a.haltung]], ["Leistungen", PL_REIHE.filter(k => a.leistungen[k]).map(k => PENSION_LEISTUNG[k].n).join(", ") || "keine"], ...(a.pferd.traechtig ? [["Tragend", `ja – Fohlen zu Beginn von ${jzName(a.pferd.traechtig.geburt)}`]] : [])] } }); return; }

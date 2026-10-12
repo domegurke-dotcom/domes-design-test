@@ -242,6 +242,18 @@ const path = require('path');
         { const g2 = spiel.geld, n = gebaeude().length; spiel.geld += 200000; const g3 = spiel.geld; spiel.hof.bauHa += 2; bauStarten('reitplatz', 3); const B = BAUTEN.reitplatz, pr = bauPreis('reitplatz', 3);
           ok('H7 Bauzuschuss 20 % bei Stufe 3', Math.round(g3 - spiel.geld) === Math.round(pr - pr * BAUZUSCHUSS), `${g3 - spiel.geld} / ${pr}`); spiel.hof.wert -= pr; spiel.gebaeude = gebaeude().slice(0, n); spiel.hof.bauHa -= 2; spiel.geld = g2; }
         spiel.boxen.forEach(b => { if (b.pferd && /^Zucht/.test(b.pferd.name)) b.pferd = null; }); H.art = 'pension'; spiel.stallarten = ['pension']; delete H.artCache; }
+      // ---------- H7 (e) Gnadenhof: Patenschaften, Tierarztrabatt (v310) ----------
+      { const H = spiel.hof, merk = spiel.boxen.map(b => b.pferd); spiel.boxen.forEach(b => { if (b.pferd && !fremd(b.pferd)) b.pferd = null; });
+        const fb = spiel.boxen.find(b => !b.pferd); const alt = neuesPferd({ rasse: 'haflinger', geschlecht: 'Stute', alter: 25, name: 'Gnadenoma' }); fb.pferd = alt; alt.pflege = erzeugePflege(alt);
+        H.art = 'gnadenhof'; spiel.stallarten = ['gnadenhof']; delete H.artCache; delete H.artVerloren;
+        ok('H7e Gnadenhof-Bedingungen erfüllt', vorteil('gnadenhof'), stallartBed('gnadenhof').map(x => (x[1] ? '✓' : '✗') + x[0]).join(', '));
+        const R = Math.random, g0 = spiel.geld; Math.random = () => 0.1; patenJahreszeit(); Math.random = R;
+        ok('H7e Patenschaft mit erster Zahlung', !!alt.pate && Math.round(spiel.geld - g0) === alt.pate.betrag, alt.pate ? `${alt.pate.vn} ${alt.pate.nn}, ${alt.pate.betrag} €` : 'kein Pate');
+        rechnungStellen('Tierarztpraxis', 'klinik', [{ text: 'Gnadenoma: Test', betrag: 100 }], [alt.id], 'Test – Rechnung', 'Test'); zu();
+        const re = (spiel.rechnungen || []).filter(x => x.von === 'Tierarztpraxis').pop();
+        ok('H7e Tierarztrabatt 20 %', re && re.posten.some(x => /Gnadenhof-Rabatt/.test(x.text) && x.betrag === -20), re ? re.posten.map(x => x.text + ' ' + x.betrag).join(', ') : '');
+        if (re) rechnungSchliessen(re, 'Test');
+        spiel.boxen.forEach((b, i) => { b.pferd = merk[i]; }); H.art = 'pension'; spiel.stallarten = ['pension']; delete H.artCache; }
 
       // ---------- H1 Kreditrate ----------
       { const rest = k.rest; k.jz = -1; kreditJahreszeit();

@@ -837,9 +837,9 @@
       <!-- H6 (Dome): Heuhaufen hinten links – voll oder nur Reste, antippen = Heu füttern -->
       <g id="heuhaufen" role="button" aria-label="Heuhaufen – Heu füttern" style="cursor:pointer">
         <g class="heuRest"><path d="M68,217 q6,-5 14,-2 q5,-4 11,-1 q6,-3 12,1 q5,-1 8,2 Z" fill="#d6bb57" stroke="#2b1d14" stroke-width="1"/><g stroke="#a88b2e" stroke-width=".9" stroke-linecap="round"><path d="M74,215 l6,-3"/><path d="M90,214 l5,-3"/><path d="M100,215 l7,-2"/><path d="M84,217 l-5,-2"/></g></g>
-        <g class="heuVoll"><path d="M62,218 Q64,200 78,193 Q92,186 106,192 Q122,199 124,218 Z" fill="#e3c95e" stroke="#2b1d14" stroke-width="1.3"/><path d="M70,206 Q86,196 104,200" fill="none" stroke="#f3e08e" stroke-width="2"/>
+        <g class="heuVoll"><path id="heuFuell" d="M62,218 Q64,200 78,193 Q92,186 106,192 Q122,199 124,218 Z" fill="#e3c95e" stroke="#2b1d14" stroke-width="1.3"/><path d="M70,206 Q86,196 104,200" fill="none" stroke="#f3e08e" stroke-width="2"/>
           <g stroke="#a88b2e" stroke-width="1" stroke-linecap="round"><path d="M72,212 l7,-4"/><path d="M84,203 l8,-3"/><path d="M98,207 l8,2"/><path d="M110,212 l6,-4"/><path d="M90,213 l-6,-3"/><path d="M78,198 l5,-4"/></g>
-          <g stroke="#7f9a3a" stroke-width=".9" stroke-linecap="round"><path d="M88,195 q3,-4 6,-3"/><path d="M104,201 q3,-3 6,-2"/></g></g>
+          <g stroke="#7f9a3a" stroke-width=".9" stroke-linecap="round"><path d="M88,195 q3,-4 6,-3"/><path d="M104,201 q3,-3 6,-2"/></g><g id="heuExtra"></g></g>
       </g>
       <!-- Pferd (vor der Krippe, damit der Kopf im Vordergrund ist) -->
       <g id="pferdPlatz"></g>
@@ -898,7 +898,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "340";
+  const SPIEL_VERSION = "341";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -906,9 +906,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=340"></script>
-<script src="kopfteile.js?v=340"></script>
-<script src="kopfalter.js?v=340"></script>
+<script src="pferd.js?v=341"></script>
+<script src="kopfteile.js?v=341"></script>
+<script src="kopfalter.js?v=341"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3715,7 +3715,19 @@
   // Pferd von der Weide zurück in die Box – am selben Tag sind Krippe und Mist wie vor dem Rausbringen (kein zweites Füttern)
   // Pferd auf die Weide bringen (Spieler oder Stallbursche/Azubi): lange keine Weide → anweiden; Box-Zustand merken (am selben Tag zurück: wie vorher)
   // v300 (Dome): Futter und Mist bleiben in der Box, wenn das Pferd rausgeht (Weide oder Sandpaddock) – kommt es am selben Tag zurück, ist alles wieder wie vorher
-  function rausAusBox(box) { box.vorWeide = { tag: spiel.tag, krippe: box.krippeVoll, kraft: false, mist: box.mistig, stufe: box.mistStufe || 0 }; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0; }   // Dome (v317): Kraftfutter aus der Krippe wandert mit in den Futtereimer auf der Koppel (box.kraftVoll bleibt), Heu bleibt in der Box
+  // Dome (v341): Heuhaufen/Heuraufe zeigen das Raufutter aus dem Futterplan (ohne Heucobs) – Farbe nach Anteil, Stroh lange Halme, Luzerne Blättchen, Heulage dunkler; Heucobs als Eimer davor
+  const RAU_FARBE = { heu: [227, 201, 94], heuStaub: [212, 196, 138], heulage: [170, 176, 84], stroh: [240, 218, 140], luzerne: [140, 176, 74] };
+  function raufutterBild(p, box) {
+    let kg = {}; try { kg = p && box ? aktuellerPlan(p, box).kg || {} : {}; } catch (e) {}
+    const teile = Object.entries(kg).filter(([k, x]) => x > 0 && FUTTER[k] && FUTTER[k].art === "raufutter" && k !== "heucobs").map(([k, x]) => [RAU_FARBE[k] ? k : "heu", x]).concat(kg.luzerne > 0 ? [["luzerne", kg.luzerne]] : []);
+    const summe = teile.reduce((a, [, x]) => a + x, 0) || 1, anteil = k => teile.filter(([x]) => x === k).reduce((a, [, x]) => a + x, 0) / summe;
+    const c = teile.length ? [0, 1, 2].map(i => Math.round(teile.reduce((a, [k, x]) => a + RAU_FARBE[k][i] * x, 0) / summe)) : RAU_FARBE.heu;
+    const stroh = anteil("stroh"), luz = anteil("luzerne"), lage = anteil("heulage");
+    const extra = (dx, dy) => `${stroh >= 0.3 ? `<g stroke="#c9a54a" stroke-width="1.1" stroke-linecap="round"><path d="M${66 + dx},${210 + dy} l14,-8"/><path d="M${92 + dx},${200 + dy} l16,3"/><path d="M${100 + dx},${214 + dy} l14,-6"/></g>` : ""}${luz >= 0.25 ? `<g fill="#5f8a2c"><circle cx="${80 + dx}" cy="${204 + dy}" r="1.6"/><circle cx="${96 + dx}" cy="${198 + dy}" r="1.6"/><circle cx="${108 + dx}" cy="${208 + dy}" r="1.6"/><circle cx="${88 + dx}" cy="${211 + dy}" r="1.4"/></g>` : ""}${lage >= 0.4 ? `<path d="M${70 + dx},${214 + dy} Q${92 + dx},${206 + dy} ${116 + dx},${214 + dy}" fill="none" stroke="#6f7a33" stroke-width="1.4" opacity=".7"/>` : ""}`;
+    return { farbe: `rgb(${c.join(",")})`, extra, cobs: (kg.heucobs || 0) > 0 };
+  }
+  const heucobsEimer = (x, y) => `<g aria-label="Heucobs im Eimer"><path d="M${x - 9},${y} L${x + 9},${y} L${x + 7},${y + 13} L${x - 7},${y + 13} Z" fill="#4f8fc0" stroke="#2b1d14" stroke-width="1.1"/><ellipse cx="${x}" cy="${y}" rx="9" ry="2.6" fill="#9a7a3e" stroke="#2b1d14" stroke-width=".9"/><g fill="#7a5c2a"><circle cx="${x - 4}" cy="${y - .4}" r="1.1"/><circle cx="${x + 1}" cy="${y - .8}" r="1.1"/><circle cx="${x + 5}" cy="${y}" r="1"/></g><path d="M${x - 8},${y + 1} Q${x},${y - 9} ${x + 8},${y + 1}" fill="none" stroke="#2b1d14" stroke-width=".9"/></g>`;
+  function rausAusBox(box) { box.vorWeide = { tag: spiel.tag, krippe: false, kraft: false, mist: box.mistig, stufe: box.mistStufe || 0 }; box.mistig = false; box.mistStufe = 0; }   // Dome (v341): Heu geht mit raus in die Heuraufe (wie das Kraftfutter in den Eimer)   // Dome (v317): Kraftfutter aus der Krippe wandert mit in den Futtereimer auf der Koppel (box.kraftVoll bleibt), Heu bleibt in der Box
   function zurueckInBox(box) { const vw = box.vorWeide; if (vw && vw.tag === spiel.tag) { box.krippeVoll = box.krippeVoll || vw.krippe; box.kraftVoll = box.kraftVoll || vw.kraft; box.mistig = vw.mist; box.mistStufe = vw.stufe; } delete box.vorWeide; }
   function aufWeide(p, box, ma, wid) {
     if (p.paddock) { delete p.paddock; zurueckInBox(box); }
@@ -3761,6 +3773,7 @@
     $("tagAnzeige").innerHTML = `<b>${JZ[dd.s][1]} ${datumText(dd)}</b><small>Tag ${dd.t} von ${tpj()}</small>`;
     $("tagAnzeige").setAttribute("aria-label", `${datumLang(dd)}, Tag ${dd.t} von ${tpj()} `);
     $("stall").classList.toggle("leer", !box.krippeVoll);
+    { const R = raufutterBild(box.pferd, box); $("heuFuell").setAttribute("fill", R.farbe); $("heuExtra").innerHTML = R.extra(0, 0) + (R.cobs ? heucobsEimer(112, 206) : ""); }   // v341: Heu sieht aus wie die Raufutter-Mischung, Heucobs im Eimer davor
     { const I = (spiel.infoGesehen = spiel.infoGesehen || {}), drin = !!(box.pferd && !box.pferd.weide && !box.pferd.paddock && !box.pferd.klinik && !box.tot);   // Info-Sprechblasen beim ersten Sehen (bis angetippt)
       const txt = (id, t, cx) => { const g = $(id), tx = g.querySelector("text"), r = g.querySelector("rect"); tx.textContent = t; const w = Math.round(14 + 5.9 * t.length); cx = Math.max(cx, w / 2 + 3); r.setAttribute("width", w); r.setAttribute("x", cx - w / 2); tx.setAttribute("x", cx); };
       txt("krippenHinweis", "Füttern", 93); txt("kraftHinweis", "Füttern", 46);   // Dome: Futter-Sprechblasen nur „Füttern“
@@ -9795,8 +9808,9 @@
     const vorne = malen(p, 200, 290, (p.stockmass || 150) * STALL.cmZuEinheit / 100 * 0.62, 1);   // Dome: das gewählte Pferd vorne in der Mitte
     const txt = os ? `🐎 Offenstall · ${offenPferde().length} von ${offenBoxen().length}` : sand ? `🟫 ${paddockName(g)}` : `🌿 ${w ? w.name : "Weide"} · Gras ${w ? Math.round(w.gras) : 0} %`, bw = Math.round(30 + 7.2 * txt.length);
     const heuJa = sand || heuNoetigP(p), raufeVoll = !!box.krippeVoll, eimerJa = kraftNoetig(p, box), eimerVoll = !!box.kraftVoll, n = os ? (box.mistig ? Math.min(6, 2 + (box.mistStufe || 0)) : 0) : koppelAepfel(p);
+    const RB = raufutterBild(p, box);   // v341
     const raufe = `<g data-kraufe="1" role="button" aria-label="Heuraufe" style="cursor:pointer"><rect x="18" y="196" width="62" height="40" rx="3" fill="#8f6a45" stroke="#2b1d14" stroke-width="1.4"/>
-      ${raufeVoll ? `<path d="M21,200 Q30,186 49,188 Q68,186 77,200 Z" fill="#e3c95e" stroke="#2b1d14" stroke-width="1"/><g stroke="#a88b2e" stroke-width=".9"><path d="M30,197 l6,-5"/><path d="M48,196 l5,-6"/><path d="M62,197 l6,-4"/></g>` : `<path d="M24,232 q8,-3 14,0 q6,-2 10,1" fill="none" stroke="#c9ae55" stroke-width="1.4"/>`}
+      ${raufeVoll ? `<path d="M21,200 Q30,186 49,188 Q68,186 77,200 Z" fill="${RB.farbe}" stroke="#2b1d14" stroke-width="1"/>${RB.cobs ? heucobsEimer(88, 222) : ""}<g stroke="#a88b2e" stroke-width=".9"><path d="M30,197 l6,-5"/><path d="M48,196 l5,-6"/><path d="M62,197 l6,-4"/></g>` : `<path d="M24,232 q8,-3 14,0 q6,-2 10,1" fill="none" stroke="#c9ae55" stroke-width="1.4"/>`}
       <g stroke="#5a3d24" stroke-width="2.2">${[26, 36, 46, 56, 66, 74].map(x => `<line x1="${x}" y1="198" x2="${x}" y2="234"/>`).join("")}</g><line x1="22" y1="236" x2="22" y2="262" stroke="#5a3d24" stroke-width="3"/><line x1="76" y1="236" x2="76" y2="262" stroke="#5a3d24" stroke-width="3"/></g>`;
     const eimer = `<g data-keimer="1" role="button" aria-label="Futtereimer" style="cursor:pointer;${eimerJa ? "" : "opacity:.7"}"><path d="M284,240 L326,240 L320,272 L290,272 Z" fill="#2f2f33" stroke="#111" stroke-width="1.3"/><ellipse cx="305" cy="240" rx="21" ry="5" fill="${eimerVoll ? "#c49a5a" : "#1c1c1f"}" stroke="#111" stroke-width="1.2"/>${eimerVoll ? `<g fill="#a87b3e"><circle cx="298" cy="239" r="1.6"/><circle cx="306" cy="241" r="1.5"/><circle cx="313" cy="239" r="1.4"/></g>` : ""}<path d="M286,242 Q305,226 324,242" fill="none" stroke="#555" stroke-width="1.6"/></g>`;
     const aepfelPos = [[110, 274], [292, 280], [60, 290], [130, 294], [270, 296], [250, 262]];
@@ -10437,8 +10451,6 @@
       else inhalt += `<dl class="werte">
         <dt>Hof</dt><dd class="hf-edit" id="hfHof" title="antippen zum Ändern">${esc(hofName())} <span class="stift">✏️</span></dd>
         ${spiel.hof ? `<dt>Immobilie</dt><dd>${esc((immobilie(spiel.hof.id) || {}).n || "")} · ${STALLART_NAME[spiel.hof.art] || ""}</dd>
-        <dt>Zustand</dt><dd>Stufe ${spiel.hof.stufe} – ${STUFE_NAME[spiel.hof.stufe]}</dd>
-        <dt>Anlagen</dt><dd>${anlagenText()}</dd>
         ${kredite().some(kreditLaeuft) ? `<dt>Kredit</dt><dd>Restschuld ${fmt(restschuld())}${kredite().some(k => (k.offen || []).length) ? " · ⚠️ Rate offen" : ""}</dd>` : ""}` : ""}
         <dt>Besitzer</dt><dd class="hf-edit" id="hfSpieler" title="antippen zum Ändern">${sp.avatar || ""} ${esc(sp.name || "–")} <span class="stift">✏️</span></dd>
         <dt>Datum</dt><dd>${JZ[datum().s][1]} ${datumLang()} · Tag ${datum().t}/${tpj()}</dd>

@@ -881,7 +881,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "308";
+  const SPIEL_VERSION = "309";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -889,9 +889,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=308"></script>
-<script src="kopfteile.js?v=308"></script>
-<script src="kopfalter.js?v=308"></script>
+<script src="pferd.js?v=309"></script>
+<script src="kopfteile.js?v=309"></script>
+<script src="kopfalter.js?v=309"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2102,7 +2102,7 @@
     const gesund = p.pflege ? 0.4 + 0.6 * p.pflege.gesundheit / 100 : 1;
     // reinrassig ist mehr wert: je mehr Fremdblut (ohne Veredelung), desto weniger
     const rein = p.anteile ? reinAnteil(p.anteile, p.rasse) / 100 : 1, reinF = 0.5 + 0.5 * rein * rein;
-    const dreckF = 1 - 0.15 * dreckWert(p) / 100;   // ungeputzt: bis zu 15 % weniger wert
+    const dreckF = (1 - 0.15 * dreckWert(p) / 100) * (p.fellGlanz >= (spiel.tag || 1) - 1 ? 1.02 : 1);   // ungeputzt: bis zu 15 % weniger wert · Öl: glänzendes Fell +2 %
     const bl = befundListe(p).filter(b => b.diagnose), befundF = Math.max(0.4, 1 - bl.reduce((a, b) => a + (KRANK[b.art].chronisch ? 0.1 : 0) + (b.beh ? 0.02 : 0.06) * b.grad, 0));   // bekannte Befunde senken den Preis, chronische dauerhaft
     const erbF = testGemacht(p, "krank") ? Object.keys(ERBKRANK).reduce((a, k) => a * (erbKrank(p, k) ? 0.75 : (erbVon(p)[k] || 0) ? 0.92 : 1), 1) : 1;   // getestete Träger sind für die Zucht weniger wert
     const v = (1500 + 4500 * gangF * gangF + 5000 * ausb) * alterF * gesund * reinF * dreckF * befundF * erbF * fohlenschauFaktor(p);   // Fohlenschau-Note und Prämienfohlen
@@ -3770,7 +3770,7 @@
       druse: (mist ? 1.3 : 1),
       arthrose: j >= 15 ? (j - 14) / 3 : 0,
       sommerekzem: s === 1 ? veranlagungVon(p).ekzem * 5 : 0,
-      cushing: j >= 18 ? 1 : 0, vergiftung: 0,
+      cushing: j >= 18 ? 1 : 0, vergiftung: 0, schlund: zahnUeber(p) || j >= 20 ? 1.5 : 1,
       strahlfaeule: (ausgekratztGestern(p) ? 0.3 : 1) * (mist ? 2 : 1) * (ort === "weide" && s >= 2 ? 2 : 1) * (ort === "weide" && matschig(p) ? 1.5 : 1),
       hufabszess: hufZuLang(p) * (p.eisenWeg ? 2 : 1),
       hornspalt: (hufStufe(p) === "instabil" ? 3 : hufStufe(p) === "stabil" ? 0.5 : 1) * hufZuLang(p) * (p.beschlag ? 0.5 : ort === "weide" ? 1.3 : 1),
@@ -3785,7 +3785,7 @@
   const URSACHE = {
     verletzung: (p, ort) => ort === "weide" ? "beim Toben auf der Weide" : "in der Box angeschlagen",
     lahmheit: p => alterJZ(p) >= 60 ? "Abnutzung im Alter" : befundListe(p).some(b => b.art === "verletzung") ? "Folge einer Verletzung" : "Überlastung oder Hufe",
-    kolik: (p, ort, box) => !box.krippeVoll ? "unregelmäßiges Futter" : p.futterStatus && p.futterStatus.staerkeViel ? "zu viel Kraftfutter auf einmal" : p.futterStatus && p.futterStatus.rauWenig ? "zu wenig Raufutter" : "Verdauungsstörung",
+    kolik: (p, ort, box) => !box.krippeVoll ? "unregelmäßiges Futter" : p.futterStatus && p.futterStatus.strohViel ? "zu viel Futterstroh – Verstopfung" : p.futterStatus && p.futterStatus.staerkeViel ? "zu viel Kraftfutter auf einmal" : p.futterStatus && p.futterStatus.rauWenig ? "zu wenig Raufutter" : "Verdauungsstörung",
     asthma: () => "staubiges Heu bei empfindlichen Atemwegen",
     magengeschwuer: p => p.futterStatus && p.futterStatus.rauWenig ? "zu wenig Raufutter, lange Fresspausen" : "Stress und Kraftfutter", husten: (p, ort, box) => box.mistig ? "staubige, verschmutzte Box" : "Stallluft",
     erkaeltung: () => "Wetterwechsel", hufrehe: (p, ort) => ort === "weide" ? "junges Frühlingsgras" : "Stoffwechsel", mauke: () => "Nässe und Schmutz an den Beinen",
@@ -3825,7 +3825,7 @@
         else if ((!K.chronisch || b.grad > 1) && Math.random() < besser) { b.grad--; b.besserTag = spiel.tag; rueck("besser");
           if (b.grad <= 0) { if (BW.wert > 0 && !b.diagnose) { b.diagnose = spiel.tag; befundAufklaeren(p, b); }
             befundAbschliessen(p, b, BW.wert > 0 ? (b.tierarzt ? "geheilt (Tierarzt-Plan)" : b.hufschmied ? "geheilt (Rat vom Hufschmied)" : "geheilt (selbst behandelt)") : "von selbst verheilt"); return; } }
-        else if (Math.random() < K.schlimmer * (1 - BW.wert) * (K.chronisch && b.diagnose ? 0.5 : 1) + BW.schaden && b.grad < 5) { b.grad++; if (b.grad === 5) b.grad5 = spiel.tag; rueck("schlimmer"); }
+        else if (Math.random() < K.schlimmer * (1 - BW.wert) * (K.chronisch && b.diagnose ? 0.5 : 1) * (b.art === "pssm" && p.futterStatus && p.futterStatus.oel >= 0.2 ? 0.5 : 1) + BW.schaden && b.grad < 5) { b.grad++; if (b.grad === 5) b.grad5 = spiel.tag; rueck("schlimmer"); }
         else rueck("gleich");
         b.gradMax = Math.max(b.gradMax || 0, b.grad);
         b.behGestern = BW.wert;
@@ -4599,6 +4599,13 @@
   KRANK.kehlkopf.rat = "Kehlkopfpfeifen lässt sich mit Medikamenten nicht behandeln. Im Alltag stört es meist wenig; für Sport kann eine Operation helfen. Staubarm füttern und nicht überfordern.";
   Object.assign(PLAN, { ataxie: ["boxenruhe"], hypp: ["schritt"], herda: ["wundsalbe", "verband"], pssm: ["schritt", "schmerzmittel"], kehlkopf: [], melanom: [], ocd: ["boxenruhe", "schmerzmittel"] });
   Object.assign(URSACHE, { ataxie: () => "Erbkrankheit (CA)", hypp: () => "Erbkrankheit (HYPP)", herda: () => "Erbkrankheit (HERDA)", pssm: () => "Erbkrankheit (PSSM1)", kehlkopf: () => "Veranlagung", melanom: () => "Schimmel-Veranlagung", ocd: () => "Veranlagung (Wachstum)" });
+  // Futter-Etappe Teil 2: Schlundverstopfung – Heucobs oder Rübenschnitzel zu gierig geschlungen (Risiko nur, wenn sie gefüttert werden; verfressen ×3, über 1,5 kg je Mahlzeit ×2, schlechte Zähne/Senior ×1,5)
+  Object.assign(KRANK, { schlund: { n: "Schlundverstopfung", ico: "😖", bereich: "futter", gew: .03, start: [1, 3], selbst: .5, schlimmer: .08, g: 1.5, kosten: 130, heil: 2,
+    anz: ["hustet beim Fressen und würgt", "hat Futterbrei an den Nüstern", "speichelt und streckt den Hals"], schwer: "würgt ständig, Futterbrei läuft aus den Nüstern" } });
+  Object.assign(HILFT, { schlund: { schmerzmittel: .4, boxenruhe: .3 } });   // krampflösend, Futter wegnehmen (Boxenruhe = nichts fressen lassen) – den Rest macht der Tierarzt mit der Nasenschlundsonde
+  Object.assign(PLAN, { schlund: ["boxenruhe", "schmerzmittel"] });
+  Object.assign(URSACHE, { schlund: p => appetit(p) === "verfressen" ? "Heucobs/Rübenschnitzel zu gierig geschlungen" : "Heucobs/Rübenschnitzel nicht lange genug eingeweicht" });
+  UCHECK.schlund = "klinisch";
   // Veranlagungen ohne Gentest (vererbt, 0–1): erhöhen nur das Risiko
   const VERANLAGUNG = {
     ekzem: { n: "Sommerekzem", rassen: { isi: 0.6, tinker: 0.5, haflinger: 0.45 }, sonst: 0.08 },
@@ -5483,16 +5490,16 @@
   const FUTTER = {
     heu:        { n: "Heu", ico: "🌾", e: 6, ei: 9, rf: 30, zs: 10, preis: 0.20, art: "raufutter", pack: [25, 100, 500], info: "gute Qualität" },
     heuStaub:   { n: "Heu (staubig)", ico: "🌾", e: 6, ei: 9, rf: 30, zs: 10, preis: 0.15, art: "raufutter", pack: [25, 100, 500], info: "günstiger, staubt – nicht gut für die Atemwege" },
-    heulage:    { n: "Heulage", ico: "🫙", e: 7, ei: 10, rf: 28, zs: 8, preis: 0.25, art: "raufutter", pack: [25, 100, 500], info: "staubarm, leicht angesäuert" },
-    stroh:      { n: "Futterstroh", ico: "🟨", e: 5, ei: 3, rf: 40, zs: 2, preis: 0.15, art: "raufutter", pack: [25, 100, 500], info: "wenig Energie – für leichtfuttrige Pferde zum Strecken" },
-    heucobs:    { n: "Heucobs", ico: "🟫", e: 7, ei: 9, rf: 28, zs: 8, preis: 0.60, art: "raufutter", pack: [10, 25, 100], info: "eingeweicht – für Senioren und Pferde mit Zahnproblemen" },
+    heulage:    { n: "Heulage", ico: "🫙", e: 7, ei: 10, rf: 28, zs: 8, preis: 0.25, art: "raufutter", pack: [25, 100, 500], info: "staubarm, mehr Energie – ein angebrochener Ballen verdirbt nach wenigen Tagen (im Sommer schneller)" },
+    stroh:      { n: "Futterstroh", ico: "🟨", e: 5, ei: 3, rf: 40, zs: 2, preis: 0.15, art: "raufutter", pack: [25, 100, 500], info: "wenig Energie – streckt das Heu für leichtfuttrige Pferde, langes Kauen schont den Magen; mehr als ⅓ des Raufutters → Verstopfungskolik" },
+    heucobs:    { n: "Heucobs", ico: "🟫", e: 7, ei: 9, rf: 28, zs: 8, preis: 0.60, art: "raufutter", pack: [10, 25, 100], info: "eingeweicht – für Senioren und Pferde mit Zahnproblemen, lange haltbar, aber teuer; gierige Fresser können sich verschlucken (Schlundverstopfung)" },
     luzerne:    { n: "Luzerne", ico: "🍀", e: 8, ei: 16, rf: 25, zs: 5, preis: 0.70, art: "kraftfutter", struktur: true, pack: [10, 25, 100], info: "viel Eiweiß – für Zuchtstuten, Fohlen, Muskelaufbau" },
-    ruebe:      { n: "Rübenschnitzel", ico: "🥣", e: 10, ei: 9, rf: 18, zs: 5, preis: 0.90, art: "kraftfutter", struktur: true, pack: [10, 25, 100], info: "eingeweicht – Energie ohne viel Stärke" },
+    ruebe:      { n: "Rübenschnitzel", ico: "🥣", e: 10, ei: 9, rf: 18, zs: 5, preis: 0.90, art: "kraftfutter", struktur: true, pack: [10, 25, 100], info: "eingeweicht – Energie ohne viel Stärke, gut zum Zunehmen; gierige Fresser können sich verschlucken (Schlundverstopfung)" },
     hafer:      { n: "Hafer", ico: "🌾", e: 11, ei: 11, rf: 11, zs: 45, preis: 0.50, art: "kraftfutter", pack: [10, 25, 100], info: "klassisches Kraftfutter, viel Stärke" },
     pellets:    { n: "Pellets", ico: "⚪", e: 11, ei: 13, rf: 12, zs: 25, preis: 0.80, art: "kraftfutter", pack: [10, 25, 100], info: "Fertigfutter" },
     aufzucht:   { n: "Aufzuchtfutter", ico: "🍼", e: 11, ei: 19, rf: 8, zs: 22, preis: 1.10, art: "kraftfutter", pack: [10, 25, 100], info: "eiweißreich – für Fohlen und Jungpferde im Wachstum" },
-    muesli:     { n: "Müsli", ico: "🥣", e: 12, ei: 12, rf: 8, zs: 35, preis: 1.20, art: "kraftfutter", pack: [10, 25, 100], info: "Fertigfutter, viel Zucker/Stärke" },
-    oel:        { n: "Öl", ico: "🫗", e: 30, ei: 0, rf: 0, zs: 0, preis: 3.00, art: "zusatz", pack: [1, 5, 10], info: "höchstens 1 g je kg Körpergewicht am Tag" },
+    muesli:     { n: "Müsli", ico: "🥣", e: 12, ei: 12, rf: 8, zs: 35, preis: 1.20, art: "kraftfutter", pack: [10, 25, 100], info: "Fertigfutter, sehr schmackhaft (auch für mäkelige Pferde) – aber viel Zucker/Stärke: Hufrehe-Gefahr bei leichtfuttrigen und dicken Pferden" },
+    oel:        { n: "Öl", ico: "🫗", e: 30, ei: 0, rf: 0, zs: 0, preis: 3.00, art: "zusatz", pack: [1, 5, 10], info: "höchstens 1 g je kg Körpergewicht am Tag – viel Energie zum Zunehmen, glänzendes Fell, gut für Distanzpferde und bei PSSM; zu viel → Kotwasser/Kolik" },
     mineral:    { n: "Mineralfutter", ico: "🧂", e: 0, ei: 0, rf: 0, zs: 0, preis: 4.00, art: "zusatz", pack: [1, 5, 25], info: "50–100 g am Tag – Mineralien und Vitamine" },
     leckstein:  { n: "Salzleckstein", ico: "🧊", e: 0, ei: 0, rf: 0, zs: 0, preis: 2.00, art: "zusatz", stueck: true, pack: [1, 5], info: "je Box, hält etwa 1 Jahreszeit" },
     moehren:    { n: "Möhren/Äpfel", ico: "🥕", e: 2, ei: 1, rf: 10, zs: 70, preis: 0.50, art: "leckerli", pack: [5, 10, 25], info: "Leckerli" },
@@ -5545,7 +5552,7 @@
     if (rauJa && vorrat + 1e-9 < R.raufutter) { if (perBrief) futterWarnung("raufutter"); return false; }
     const alt = p.futterHeute && p.futterHeute.tag === spiel.tag ? p.futterHeute : null;
     const genutzt = alt ? { ...alt.genutzt } : {}, fehlt = alt ? alt.fehlt.slice() : [];
-    const nimm = (k, x) => { x = Math.min(x, F.lager[k]); if (x <= 0) return 0; F.lager[k] = Math.round((F.lager[k] - x) * 1000) / 1000; genutzt[k] = Math.round(((genutzt[k] || 0) + x) * 1000) / 1000; return x; };
+    const nimm = (k, x) => { x = Math.min(x, F.lager[k]); if (x <= 0) return 0; F.lager[k] = Math.round((F.lager[k] - x) * 1000) / 1000; genutzt[k] = Math.round(((genutzt[k] || 0) + x) * 1000) / 1000; if (k === "heulage") heulageNimm(F, x); return x; };
     if (rauJa) { let rest = R.raufutter;
       Object.entries(R.kg).forEach(([k, x]) => { if (FUTTER[k] && FUTTER[k].art === "raufutter") rest -= nimm(k, x); });
       for (const k of RAUFUTTER_REIHE) { if (rest <= 1e-9) break; rest -= nimm(k, rest); } }
@@ -5752,7 +5759,7 @@
       if (Z.art === "raufutter" || k === "luzerne") rau += x;   /* v265: Luzerne (Luzerneheu/-cobs) zählt als Raufutter */ if (Z.art === "kraftfutter" || Z.art === "spezial") { if (!Z.struktur) kraft += x; zs += x * Z.zs * 10; } if (Z.art === "leckerli") zs += x * Z.zs * 10; });   // Stärke aus dem Kraftfutter in g (kg × % × 10) – Zucker im Heu zählt hier nicht
     const B = futterBedarf(p, box), leck = box && box.leckstein === jzJetzt(), heuGut = (kg.heu || 0) + (kg.heulage || 0) >= B.rauMin;
     return { energie: Math.round(e * 10) / 10, eiweiss: masse ? Math.round(ei / masse * 10) / 10 : 0, rau: Math.round(rau * 10) / 10, staerkeMahl: Math.round(zs / mahl), kraftMahl: Math.round(kraft / mahl * 100) / 100,
-      oel: kg.oel || 0, mineral: (kg.mineral || 0) >= 0.05 || (leck && heuGut), kosten: Math.round(Object.entries(kg).reduce((a, [k, x]) => a + (FUTTER[k] ? FUTTER[k].preis * x : 0), 0) * 100) / 100, B };
+      oel: kg.oel || 0, stroh: kg.stroh || 0, mineral: (kg.mineral || 0) >= 0.05 || (leck && heuGut), kosten: Math.round(Object.entries(kg).reduce((a, [k, x]) => a + (FUTTER[k] ? FUTTER[k].preis * x : 0), 0) * 100) / 100, B };
   }
   const futterplanVon = (p, box) => p.futterplan && p.futterplan.kg ? p.futterplan : standardPlan(p, box);
   // Bewertung je Nährwert: "wenig" | "passt" | "viel" (+ Text)
@@ -5761,7 +5768,7 @@
     return [
       ["Energie", `${W.energie.toLocaleString("de-DE")} von ${ziel.toLocaleString("de-DE")} MJ${zf > 1 ? " (zum Zunehmen +15 %)" : zf < 1 ? " (zum Abnehmen −15 %)" : ""}`, q < 0.9 ? "wenig" : q > 1.1 ? "viel" : "passt", Math.min(150, q * 100)],
       ["Eiweiß", `${String(W.eiweiss).replace(".", ",")} % (Ziel ${B.eiweiss} %)`, W.eiweiss < B.eiweiss - 2 ? "wenig" : W.eiweiss > B.eiweiss + 4 ? "viel" : "passt", Math.min(150, W.eiweiss / B.eiweiss * 100)],
-      ["Rohfaser (Raufutter)", `${fmtKg(W.rau)} (mind. ${fmtKg(B.rauMin)})`, W.rau < B.rauMin ? "wenig" : "passt", Math.min(150, W.rau / B.rauMin * 100)],
+      ["Rohfaser (Raufutter)", `${fmtKg(W.rau)} (mind. ${fmtKg(B.rauMin)})${W.stroh > W.rau / 3 ? ` · Futterstroh ${fmtKg(W.stroh)} ist mehr als ⅓ – Verstopfungsgefahr` : ""}`, W.rau < B.rauMin ? "wenig" : W.stroh > W.rau / 3 ? "viel" : "passt", Math.min(150, W.rau / B.rauMin * 100)],
       ["Stärke je Mahlzeit (Kraftfutter)", `${W.staerkeMahl} g (höchstens ${Math.round(B.staerkeMahl)} g)${W.kraftMahl > B.kraftMahl ? ` · Kraftfutter ${fmtKg(W.kraftMahl)} je Mahlzeit, höchstens ${fmtKg(B.kraftMahl)}` : ""}${W.oel > B.oelMax ? ` · Öl über ${fmtKg(B.oelMax)}` : ""}`, W.staerkeMahl > B.staerkeMahl || W.kraftMahl > B.kraftMahl || W.oel > B.oelMax ? "viel" : "passt", Math.min(150, W.staerkeMahl / B.staerkeMahl * 100)],
       ["Mineralien/Vitamine", W.mineral ? "gedeckt" : "fehlen – Mineralfutter oder Salzleckstein mit gutem Heu", W.mineral ? "passt" : "wenig", W.mineral ? 100 : 30]];
   }
@@ -5850,6 +5857,9 @@
       S.spezial = (Object.keys(H).find(k => FUTTER[k] && FUTTER[k].art === "spezial" && H[k] >= 0.25) || "").slice(3) || undefined;
       if (alterJZ(p) >= SENIOR_AB && S.spezial !== "senior" && !(H.heucobs >= 1)) ratio *= 0.9;   // Senioren verwerten Heu schlechter (Zähne) – Seniorenfutter oder Heucobs helfen
       S.rauWenig = W.rau < B.rauMin * 0.9; S.staerkeViel = W.staerkeMahl > B.staerkeMahl || W.kraftMahl > B.kraftMahl;
+      // Futter-Etappe Teil 2: Futterstroh-Anteil, Einweichfutter je Mahlzeit, Müsli, Öl
+      S.stroh = H.stroh || 0; S.strohViel = W.rau > 0 && S.stroh > W.rau / 3; S.einweich = Math.round(((H.heucobs || 0) + (H.ruebe || 0)) / (futterplanVon(p, box).mahl || 2) * 100) / 100;
+      S.muesli = H.muesli || 0; S.oel = H.oel || 0; S.oelViel = (H.oel || 0) > B.oelMax + 1e-9;
       S.eiweissWenig = W.eiweiss < B.eiweiss - 3; S.eiweissViel = W.eiweiss > B.eiweiss + 6; S.mineral = W.mineral;
     }
     S.ratio = Math.round(ratio * 100) / 100;
@@ -5873,6 +5883,7 @@
     if (S.eiweissWenig && p.werte && p.werte.ist && (p.werte.ist.kraft || 0) > 5) p.werte.ist.kraft = r2(p.werte.ist.kraft - 0.2);
     if (S.eiweissViel) pf.gesundheit = Math.max(1, r2(pf.gesundheit - 0.5));
     if (p.mineralMangel >= 5) wohlAendern(p, -1, "Mineralmangel – stumpfes Fell");
+    p.oelTage = S.oel >= 0.05 ? (p.oelTage || 0) + 1 : Math.max(0, (p.oelTage || 0) - 2); if (p.oelTage >= tpj()) p.fellGlanz = spiel.tag;   // Öl: nach etwa einer Jahreszeit glänzendes Fell
     if (S.spezial) befundListe(p).forEach(b => { if (SPEZIAL[S.spezial].fuer.includes(b.art) && (!KRANK[b.art].chronisch || b.grad > 1) && b.grad > 1 && Math.random() < 0.1) b.grad--; });   // F5: Spezialfutter hilft beim Heilen
     // im Wachstum (unter 3 Jahren, auch das Fohlen bei Fuß über die Mutter): Eiweiß- oder Mineralmangel → Entwicklungsstörungen (OCD-Risiko ×2 ab 10 Mangeltagen)
     const mangel = S.eiweissWenig || S.mineral === false;
@@ -5887,7 +5898,10 @@
     if (art === "kolik") f *= (S.rauWenig ? 2 : 1) * (S.staerkeViel ? 2 : 1) * (p.umstellungSofort >= spiel.tag - 2 ? 2 : 1);
     if (art === "hufrehe") f *= (fz >= 8 ? 2.5 : fz >= 7 ? 1.5 : 1) * (S.staerkeViel ? 1.5 : 1) * (p.weide && s === 0 && (LEICHTFUTTRIG.includes(p.rasse) || fz >= 7) ? 2 : 1);
     if ((art === "kolik" || art === "hufrehe") && p.weide && anweidenAktiv(p, spiel.tag - 1)) f *= 1.3;   // Anweiden
-    if (art === "magengeschwuer") f *= (S.rauWenig ? 3 : 0.4) * (S.staerkeViel ? 2 : 1);
+    if (art === "magengeschwuer") f *= (S.rauWenig ? 3 : 0.4) * (S.staerkeViel ? 2 : 1) * (S.stroh >= 0.5 ? 0.8 : 1);   // Futterstroh: langes Kauen puffert die Magensäure
+    if (art === "kolik") f *= (S.strohViel ? 2 : 1) * (S.oelViel ? 1.3 : 1);   // Futter-Etappe: zu viel Futterstroh → Verstopfung · zu viel Öl → Kotwasser
+    if (art === "hufrehe" && S.muesli >= 0.5 && (LEICHTFUTTRIG.includes(p.rasse) || fz >= 7)) f *= 1.5;   // Müsli: viel Zucker
+    if (art === "schlund") f *= (S.einweich > 0 ? 1 : 0) * (S.einweich > 1.5 ? 2 : 1) * (appetit(p) === "verfressen" ? 3 : 1);   // Heucobs/Rübenschnitzel: gierig geschlungen
     if (IMMUN_KRANK.includes(art)) f *= FZ_FOLGEN[fz].immun;   // Dome (v264): Immunsystem nach Futterzustand (5 sehr selten, 4/6 selten, 1–3 und 7–9 immer häufiger)
     if (art === "arthrose" && fz >= 8) f *= 1.5;   // Gelenke belastet
     if (art === "husten" && S.staub && atemEmpfindlich(p)) f *= 4;
@@ -6030,7 +6044,11 @@
     const B = futterBedarf(p, box), kg = B.kg, fz = futterZustand(p), dick = fz >= 7 && alterJZ(p) >= 12, sp = spezialFuer(p), r = (x, s) => Math.max(0, Math.round(x / s) * s), ab = (x, s) => Math.max(0, Math.floor(x / s + 1e-9) * s);
     const ziel = B.energie * (dick ? 0.85 : fz <= 3 ? 1.15 : 1), P = { mahl: 2, kg: {}, vom: "experte", spezial: sp || undefined }, g = [];
     const husten = befundListe(p).some(b => (b.art === "asthma" || b.art === "husten") && (b.diagnose || b.bemerkt));
-    const rauArt = husten ? "heulage" : "heu"; if (husten) g.push("Heulage statt Heu – staubarm für die Atemwege");
+    // Futter-Etappe Teil 2: Heulage nur, wenn auf dem Hof genug davon gefressen wird (angebrochener Ballen hält im Sommer nur 2 Tage) – sonst gewässertes Heu
+    const heulageAndere = spiel.boxen.reduce((a, b) => a + (b !== box && b.pferd && !b.tot && b.pferd.futterplan && b.pferd.futterplan.kg ? b.pferd.futterplan.kg.heulage || 0 : 0), 0);
+    const heulageLohnt = (heulageAndere + kg * 0.015) * Math.min(...HEULAGE.haltbar) >= HEULAGE.ballen;
+    const rauArt = husten && heulageLohnt ? "heulage" : "heu", waessern = husten && !heulageLohnt;
+    if (husten) g.push(heulageLohnt ? "Heulage statt Heu – staubarm für die Atemwege" : `Heu vor dem Füttern wässern – bindet den Staub (Heulage lohnt sich bei einem Pferd nicht: ein angebrochener Ballen verdirbt nach ${Math.min(...HEULAGE.haltbar)}–${Math.max(...HEULAGE.haltbar)} Tagen)`);
     const rauMax = kg * 0.025, rauUnten = Math.max(B.rauMin, kg * 0.015);
     let rau = r(Math.min(rauMax, Math.max(kg * 0.015, ziel / FUTTER[rauArt].e)), 0.5);
     if (dick) { rau = Math.max(Math.ceil(B.rauMin * 2 - 1e-9) / 2, Math.min(r(rauMax, 0.5), r(ziel / FUTTER[rauArt].e, 0.5)));
@@ -6044,7 +6062,7 @@
     // zu viel Energie: erst Hafer, Rübenschnitzel, Öl, Spezialfutter zurück, dann Heu bis zum Minimum, zuletzt (zum Abnehmen) mehr Stroh statt Heu
     const weniger = () => { const minus = (k, s, min) => { if ((P.kg[k] || 0) - s >= min - 1e-9) { P.kg[k] = Math.round((P.kg[k] - s) * 100) / 100; return true; } return false; };
       return minus("hafer", 0.25, 0) || minus("ruebe", 0.25, 0) || minus("oel", 0.05, 0) || (sp && minus("sp_" + sp, 0.25, 0.25)) || minus(rauArt, 0.5, Math.max(kg * 0.01, rauUnten - (P.kg.luzerne || 0)))
-        || (dick && W().eiweiss > B.eiweiss - 1.6 && (P.kg.stroh || 0) + 0.5 <= (P.kg[rauArt] + (P.kg.stroh || 0)) * 0.5 && minus(rauArt, 0.5, 0) && (P.kg.stroh = (P.kg.stroh || 0) + 0.5)); };
+        || (dick && W().eiweiss > B.eiweiss - 1.6 && (P.kg.stroh || 0) + 0.5 <= (P.kg[rauArt] + (P.kg.stroh || 0)) / 3 && minus(rauArt, 0.5, 0) && (P.kg.stroh = (P.kg.stroh || 0) + 0.5)); };
     const heiss = charE(p, "temperament").hoch > 0.3 || charE(p, "nerven").tief > 0.3, gemuetlich = !heiss && (charE(p, "temperament").tief > 0.3 || charE(p, "wille").tief > 0.3);   // Futter-Etappe: Charakter
     const dz = futterDisz(p), dzArt = dz ? DISZ_FUTTER[dz] : null;
     const ohneStaerke = ["rehe", "pssm", "magen", "schonkost"].includes(sp) || dick || heiss;
@@ -6101,14 +6119,14 @@
       : `${esc(p.name)} ist beim Fressen mäkelig – ein paar Möhren oder eingeweichte Rübenschnitzel im Futter helfen, dass alles aufgefressen wird`); }
     if (ap === "verfressen") { p.appetitBekannt = true; g.push(zufallAus([`${esc(p.name)} ist verfressen und frisst jeden Halm – Futterzustand im Auge behalten, ${dick ? "Futterstroh hilft gegen Langeweile" : "Heu am besten aus einem engmaschigen Heunetz"}`, `ein echter Vielfraß – das Heu lieber in mehreren kleinen Portionen`])); }
     if (energie() < ziel * 0.9) g.push(`Der Bedarf (${Math.round(ziel)} MJ) ist so hoch, dass er sich ohne Kolik- und Reherisiko nicht ganz decken lässt – ${saeugt(box) ? "die Stute nur leicht arbeiten lassen, Weidegang hilft" : "weniger Arbeit oder Weidegang hilft"}`);
-    return { P, g, sp };
+    return { P, g, sp, waessern };
   }
   const futterexperteAngestellt = () => aktive("futterexperte").length > 0;
   // Beratung: Plan anlegen (Umstellung über 3 Tage), Spezialfutter freischalten und Vorrat mitbringen, Brief mit Begründung
   function futterBeratung(pferde, kostenlos, gruss = "") {
     const F = futterkammer(); F.frei = F.frei || {}; const posten = [], zeilen = [];
     pferde.forEach(p => { const box = spiel.boxen.find(b => b.pferd === p); if (!box || !p.pflege) return;
-      const { P, g, sp } = expertenPlan(p, box), B = futterBedarf(p, box);
+      const { P, g, sp, waessern } = expertenPlan(p, box), B = futterBedarf(p, box); if (waessern) p.heuWaessern = true;
       { const b = befundListe(p).find(x => x.diagnose && EINSTREU_RAT[x.art]) || (p.befundAlt || []).find(x => EINSTREU_RAT[x.art] && x.bis >= spiel.tag - 7);   // Futter-Etappe: Einstreu nach Krankheit
         if (b) { einstreuEmpfehlen(p, b.art, "Futterexperte"); g.push(einstreuPasst(box, b.art) ? `die Einstreu (${FUTTER[box.einstreu].n}) passt gut zu ${KRANK[b.art].n === "Kolik" ? "der Kolik" : KRANK[b.art].n}` : `🛏️ wegen ${KRANK[b.art].n}: als Einstreu besser ${einstreuRatText(b.art)}`); } }
       planAendernStart(p, box); p.futterplan = P; planAendernEnde(p, box); p.futterBeraten = spiel.tag; p.expertBetreut = true;
@@ -6814,7 +6832,7 @@
       const l = spiel.boxen.filter(b => b.pferd && !b.tot && !b.pferd.klinik && !b.pferd.weide && (!b.krippeVoll || b.mistig));
       if (l.length) brief("Hofverwaltung", `${hofName()}: Pferde nicht versorgt`, `auf <b>${esc(hofName())}</b> wurden heute nicht alle Pferde versorgt: ${l.map(b => `<b>${esc(b.pferd.name)}</b> (${!b.krippeVoll ? "nicht gefüttert" : ""}${!b.krippeVoll && b.mistig ? ", " : ""}${b.mistig ? "nicht gemistet" : ""})`).join(", ")}. Ohne Futter und Pflege werden sie krank. Stell dort einen Stallburschen ein oder wechsle zu diesem Hof.`, { pferde: l.map(b => b.pferd) });
     }
-    alterAktualisieren(); bauNacht(); quarantaeneUmzug(); verderbNacht();
+    alterAktualisieren(); bauNacht(); quarantaeneUmzug(); verderbNacht(); heulageNacht();
     // Weidegang am Nachmittag (Stallbursche/Azubi): der vergangene Tag zählt als Weidetag, abends ist das Pferd wieder drin (siehe unten)
     spiel.boxen.forEach(b => { const p = b.pferd, W = p && p.weideNachm; if (!W) return; delete p.weideNachm;
       if (W.tag !== spiel.tag - 1 || W.aus || b.tot || p.weide || p.klinik || p.boxenruhe || inQuarantaene(p) || !weideDa()) return;
@@ -9260,7 +9278,19 @@
       brief("Hofverwaltung", `${p.name}: Abfohlbox ist frei`, `<b>${esc(p.name)}</b> bekommt nächste Jahreszeit ihr Fohlen. Die Abfohlbox ist frei – dort ist mehr Platz, und mit der Kamera siehst du die Geburt rechtzeitig. Umstellen: Box → Pferdepflege → Ort → Box wechseln.`, { pferde: [p] }); });
   }
   // ---------- Futterlager: Verderb je Jahreszeit (v226) ----------
-  const VERDERB = [0.06, 0.03, 0.015, 0.005], VERDERB_SORTEN = ["heu", "heuStaub", "heulage", "stroh"];   // ohne Lager, Stufe 1/2/3 – Kraftfutter in Säcken halb so viel
+  const VERDERB = [0.06, 0.03, 0.015, 0.005], VERDERB_SORTEN = ["heu", "heuStaub", "heulage", "stroh"];
+  // Futter-Etappe Teil 2: Heulage kommt in Ballen (Spiel-Maßstab 25 kg) – angebrochen hält sie Frühling 3 / Sommer 2 / Herbst 3 / Winter 5 Tage, dann verdirbt der Rest
+  const HEULAGE = { ballen: 25, haltbar: [3, 2, 3, 5] };
+  function heulageNimm(F, x) { if (!(x > 0)) return; let A = F.anbruch; if (!A || A.rest <= 1e-9) A = F.anbruch = { tag: spiel.tag, rest: HEULAGE.ballen }; A.rest = Math.round((A.rest - x) * 1000) / 1000; while (A.rest < -1e-9) { A.rest = Math.round((A.rest + HEULAGE.ballen) * 1000) / 1000; A.tag = spiel.tag; } }
+  function heulageNacht() {
+    const F = futterkammer(), A = F.anbruch; if (!A) return;
+    if (!(F.lager.heulage > 0)) { delete F.anbruch; return; }
+    if (spiel.tag - A.tag < HEULAGE.haltbar[datum().s]) return;
+    const x = Math.round(Math.min(A.rest, F.lager.heulage) * 10) / 10; delete F.anbruch; if (x <= 0) return;
+    F.lager.heulage = Math.round((F.lager.heulage - x) * 1000) / 1000; F.verdorben = (F.verdorben || 0) + x;
+    if (!F.heulageWarn || F.heulageWarn !== jzJetzt()) { F.heulageWarn = jzJetzt();
+      brief("Hofverwaltung", "Heulage verdorben", `ein angebrochener Heulageballen (${fmtKg(HEULAGE.ballen)}) wurde nicht rechtzeitig aufgefressen – <b>${fmtKg(x)}</b> sind schimmelig geworden und mussten weg. Angebrochene Heulage hält jetzt nur ${HEULAGE.haltbar[datum().s]} Tage. Heulage lohnt sich, wenn genug Pferde davon fressen; sonst lieber Heu (oder gewässertes Heu).`); }
+  }   // ohne Lager, Stufe 1/2/3 – Kraftfutter in Säcken halb so viel
   const lagerStufe = () => { const g = gebaeude().find(x => x.typ === "lager" && !x.bau); return g ? g.stufe : 0; };
   function verderbNacht() {
     const F = futterkammer(), r = VERDERB[lagerStufe()] / tpj(); let weg = 0;
@@ -9558,6 +9588,7 @@
       <b>Spezialfutter</b> (nur über den Experten; er bringt einen Vorrat für ${SPEZIAL_VORRAT} Tage mit, danach im Futterhandel): ${Object.values(SPEZIAL).map(S => `${S.n} (${S.e} MJ, ${S.ei} % Eiweiß, ${S.zs} % Zucker/Stärke, ${S.preis.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/kg)`).join(" · ")}. Wahl: Kolik in den letzten 7 Tagen → Schonkost; Hufrehe/Cushing → Strukturfutter; PSSM → Muskelfutter; Magengeschwür → Magenschonfutter; Stufe 1–2 oder ≥ 2 Befunde → Aufbaufutter; ab 20 Jahren → Seniorenfutter. Wirkung ab 250 g am Tag: Kolik ×0,6 (Schonkost) bzw. ×0,8 (Senior), Hufrehe/Cushing ×0,5, Magengeschwür ×0,4, Infekte ×0,7 (Aufbau); passende Befunde werden mit 10 % je Tag eine Stufe besser. Senioren ab 20 Jahren verwerten ohne Seniorenfutter oder Heucobs (ab 1 kg) nur 90 % der Energie.</p>
       <p><b>Futterexperte – was er beachtet (Futter-Etappe Teil 1, v308):</b> <i>Charakter</i>: temperamentvoll oder nervös (Charakterwert über 70 bzw. Nerven unter 30) → kein Hafer, Energie aus Rübenschnitzeln und Öl; gemütlich oder eigensinnig mit Arbeit → Hafer gibt Schwung. <i>Disziplin</i> (die des letzten Turnierstarts, nur wenn das Pferd arbeitet): Distanz → zuerst Öl (Ausdauer-Energie), Rennen/Springen/Vielseitigkeit/Reining → Hafer für den Antritt, Dressur/Pleasure/Trail/Tölt → ohne Hafer „ruhige“ Energie. <i>Zähne</i>: ab ${SENIOR_AB / 4} Jahren 30 % des Heus als Heucobs (ab ${SENIOR_AB / 4 + 5} Jahren 50 %), Zahnkontrolle überfällig (über 1 Jahr) → 20 % Heucobs und Hinweis. <i>Appetit</i> (versteckt, fest je Pferd, Rasse-abhängig; schwerfuttrig 25 % mäkelig, leichtfuttrig 30 % verfressen, sonst je 12 %): mäkelig lässt ohne Müsli, Rübenschnitzel oder Möhren ${Math.round((1 - APPETIT_REST) * 100)} % des Kraftfutters liegen → der Experte mischt 250 g Müsli unter; verfressen frisst jeden Halm (+${Math.round((APPETIT_VERFRESSEN - 1) * 100)} % Energie). Sichtbar, sobald der Experte es erwähnt hat (Fütterung heute). <i>Vorrat</i>: Was im Plan steht und keine 7 Tage mehr reicht (inkl. Lieferung), schreibt er als „Bitte nachkaufen“ in den Brief. Begründungen und Briefanfang wechseln.</p>
       <p><b>Einstreu nach Krankheit (v308):</b> Tierarzt (beim Hausbesuch) und Futterexperte empfehlen eine Einstreu, Anzeige in Versorgung und in der Einstreu-Wahl („empfohlen“), gilt bis 7 Tage nach der Genesung. ${Object.entries(EINSTREU_RAT).map(([k, R]) => `${KRANK[k].n}: ${R[0].map(x => FUTTER[x].n).join("/")}`).join(" · ")}. Passt die Einstreu, heilt der Befund etwas schneller (Heilchance ×${String(EINSTREU_HEIL).replace(".", ",")}).</p>
+      <p><b>Futtersorten – Vor- und Nachteile (Futter-Etappe Teil 2, v309):</b> <i>Heulage</i>: staubarm, etwas mehr Energie; kommt in Ballen zu ${HEULAGE.ballen} kg (Spiel-Maßstab) – ein angebrochener Ballen hält Frühling/Sommer/Herbst/Winter ${HEULAGE.haltbar.join("/")} Tage, dann verdirbt der Rest (Brief einmal je Jahreszeit, zählt zum Futterverderb). Der Futterexperte nimmt bei Husten nur Heulage, wenn auf dem Hof genug davon gefressen wird (Ballen in ${Math.min(...HEULAGE.haltbar)} Tagen leer), sonst gewässertes Heu. <i>Futterstroh</i>: streckt das Heu, ab 0,5 kg am Tag Magengeschwür ×0,8 (langes Kauen); mehr als ⅓ des Raufutters → Kolik ×2 (Verstopfung), „Bedarf gedeckt?“ zeigt es rot, der Experte gibt höchstens ⅓. <i>Heucobs</i>: eingeweicht für Senioren/Zähne, verderben nicht, 0,60 €/kg. <i>Heucobs und Rübenschnitzel</i>: neuer Befund <b>Schlundverstopfung</b> (nur wenn gefüttert; verfressen ×3, über 1,5 kg je Mahlzeit ×2, Zahnkontrolle überfällig oder ab 20 Jahren ×1,5; heilt oft von selbst, Tierarzt: Futter weg + krampflösend). <i>Müsli</i>: schmackhaft (mäkelige Pferde fressen alles auf), ab 0,5 kg am Tag bei leichtfuttrigen oder dicken Pferden Hufrehe ×1,5. <i>Öl</i>: viel Energie zum Zunehmen; ab 50 g am Tag über eine Jahreszeit → glänzendes Fell (Marktwert +2 %); ab 200 g bei PSSM verschlechtert sich der Befund nur halb so oft; über ${"1 g je kg"} Körpergewicht → Kolik ×1,3 (Kotwasser).</p>
       <h3>🏆 Turniere</h3>
       <p><b>Ablauf:</b> Pferdeanhänger (Box oder Hauptmenü) → Turnier → Turnierkalender. Nennen bis spätestens am Tag vorher (Nenngeld sofort, beim Zurückziehen keine Erstattung). Am Turniertag morgens fährt das Pferd los (von der Weide wird es vorher geholt; krank/schwach → nicht gestartet, Nenngeld verfällt), ist den ganzen Tag weg (kein Training, Box sauber, unterwegs gefüttert). In der Nacht wird gerechnet, der Brief kommt am nächsten Tag. Ab 4 Jahren, nicht mit Fohlen bei Fuß, tragend keine Sprünge und in der letzten Jahreszeit vor der Geburt gar nicht; höchstens 2 Prüfungen je Turnier in benachbarten Klassen, nur ein Turnier pro Tag.</p>
       <p><b>Kalender</b> je Jahreszeit (im Winter Hallenturniere ohne Vielseitigkeit): Hofturnier (Wettbewerbe nach WBO: Dressur, Stilspringen, Westernreiter, Gelassenheitsprüfung – nur Schleifen) · Regionales Turnier (Dressur und Springen E–L, Vielseitigkeit E–A, Aufbauprüfung Kl. A 4–6 J.) · Westernturnier (Reining, Pleasure, Trail Einsteiger–Novice) · Großes Turnier (A–S, Vielseitigkeit A–M, Aufbauprüfung Kl. L 5–6 J.) · zu 50 % Großes Westernturnier (Novice–Open). 8–22 Starter je Prüfung.</p>

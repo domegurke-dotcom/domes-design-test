@@ -146,8 +146,16 @@
   table.gentab td:nth-child(3), table.gentab th:nth-child(3) { display: none; }
   .brief-papier { overflow-wrap: anywhere; max-width: 100%; box-sizing: border-box; }
   .hf-box .hf-hol { width: auto; padding: 7px 10px; font-size: .82rem; flex: none; }
-  .grab { background: #f6ecdc; color: var(--text); border-radius: 14px; overflow: hidden; }
-  .grab-bild { background: linear-gradient(#c9d6dd, #e9eef0 70%); padding: 10px 10px 0; } .grab-bild svg { width: 100%; height: 150px; display: block; }
+  .grab { background: #f6ecdc; color: var(--text); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+  .grab-bild { background: linear-gradient(#c9d6dd, #e9eef0 70%); padding: 8px 8px 0; } .grab-bild svg { width: 100%; height: 140px; display: block; }
+  /* Pferdefriedhof: eigene Liste über die ganze Breite (Handy quer sonst neben dem Text gequetscht), hochkant 2, quer/PC 4 Grabsteine je Reihe */
+  #nebenSchirm .friedhof-text, #nebenSchirm .friedhof-liste { grid-column: 1 / -1; width: 100%; max-width: 860px; justify-self: center; margin-left: auto; margin-right: auto; }
+  .friedhof-liste { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+  .grab-info { padding: 8px 10px 10px; text-align: center; display: flex; flex-direction: column; gap: 3px; line-height: 1.25; }
+  .grab-info b { font-size: .98rem; overflow-wrap: break-word; hyphens: auto; } .grab-info small { color: var(--leise); font-size: .78rem; overflow-wrap: break-word; }
+  .grab-info .grab-ursache { margin-top: 3px; padding-top: 5px; border-top: 1px solid #e2d6c3; color: var(--text); }
+  @media (orientation: portrait) and (max-width: 700px) { .friedhof-liste { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .grab-bild svg { height: 120px; } }
+  @media (orientation: landscape) and (max-height: 600px) { .friedhof-liste { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 10px; } .grab-bild svg { height: 105px; } .grab-info { padding: 6px 8px 8px; } .grab-info b { font-size: .9rem; } .grab-info small { font-size: .72rem; } }
   #hmEnde { grid-column: 1 / -1; min-height: 70px; flex-direction: row; gap: 10px; }
   .tot-hinweis { margin-top: 14px; background: #3a3a3f; color: #fff; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.25); animation: totPuls 2.4s ease-in-out infinite; }
   .tot-hinweis b { font-size: 1.08rem; } .tot-hinweis span { font-size: .9rem; opacity: .9; line-height: 1.4; }
@@ -882,7 +890,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "321";
+  const SPIEL_VERSION = "322";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -890,9 +898,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=321"></script>
-<script src="kopfteile.js?v=321"></script>
-<script src="kopfalter.js?v=321"></script>
+<script src="pferd.js?v=322"></script>
+<script src="kopfteile.js?v=322"></script>
+<script src="kopfalter.js?v=322"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3454,15 +3462,19 @@
     const K = wahl.krank || { befunde: {}, erb: {}, vl: {}, status: "bemerkt" }, gradSel = (k, v) => `<select data-kb="${k}"><option value="">–</option>${[1, 2, 3, 4, 5].map(g => `<option value="${g}" ${v === g ? "selected" : ""}>${GRAD_TEXT[g]}</option>`).join("")}</select>`;
     let iz = 0; const zeile = (ico, n, sel, info = "", erkl = "") => { const id = "kw" + (iz++); return `<div class="kw-zeile" style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 8px;align-items:center;padding:3px 0;border-bottom:1px solid #eadfcc"><span>${ico} ${n}${erkl ? ` <button class="gl-info-k" data-kwi="${id}" aria-label="Erklärung">i</button>` : ""}${info ? `<br><small>${info}</small>` : ""}</span>${sel}${erkl ? `<span class="gl-info" id="kwi-${id}" hidden>${erkl}</span>` : ""}</div>`; };
     const nichtErb = Object.keys(KRANK).filter(k => KRANK[k].n && !ERB_BEFUND.includes(k));
+    // Dome (v322): nur, was die gewählte Rasse betreffen kann – Erbkrankheiten mit Trägeranteil in der Rasse, deren Folge-Befunde, Melanom nur bei Rassen mit Schimmel-Gen
+    const R = wahl.rasse, erbHier = Object.keys(ERBKRANK).filter(k => (ERBKRANK[k].rassen[R] || 0) > 0);
+    const erbBef = ERB_BEFUND.filter(k => KRANK[k] && (k === "melanom" ? genFreq(R, "G") > 0 : !Object.values(ERBKRANK).some(E => E.art === k) || erbHier.some(e => ERBKRANK[e].art === k)));
     dialog(`<h3>🛠️ Krankheiten selbst wählen</h3><p class="text"><small>Das Pferd kommt mit diesen Krankheiten in den Stall. Erbkrankheiten und Veranlagungen bleiben versteckt (nur Labortest/Admin).</small></p>
       <p class="text" style="margin:6px 0"><b>Zustand der Befunde:</b> <select id="kwStatus">${Object.entries(KRANK_STATUS).map(([k, t]) => `<option value="${k}" ${K.status === k ? "selected" : ""}>${t}</option>`).join("")}</select></p>
       <details open><summary><b>🧬 Erblich</b></summary>
         <p class="text" style="margin:6px 0 2px"><small><b>Erbkrankheiten (Gen)</b> – „betroffen“ bei Krankheiten mit Befund zeigt ihn sofort.</small></p>
-        ${Object.entries(ERBKRANK).map(([k, E]) => zeile("🧬", E.kurz || E.n, `<select data-ke="${k}"><option value="" ${K.erb[k] == null ? "selected" : ""}>nach Rasse</option>${[[0, "frei"], [1, E.dominant ? "betroffen (1 Allel, dominant)" : "Träger"], ...(ERB_LETAL(k) || E.dominant ? [] : [[2, "betroffen"]])].map(([v, t]) => `<option value="${v}" ${K.erb[k] === v ? "selected" : ""}>${t}</option>`).join("")}</select>`, E.n + (ERB_LETAL(k) ? " · betroffen nur bei Fohlen" : ""), ERB_INFO[k] || "")).join("")}
+        ${erbHier.length ? "" : `<p class="text" style="margin:2px 0"><small>Für ${rasseById(R).name} sind keine Erbkrankheiten bekannt.</small></p>`}
+        ${erbHier.map(k => [k, ERBKRANK[k]]).map(([k, E]) => zeile("🧬", E.kurz || E.n, `<select data-ke="${k}"><option value="" ${K.erb[k] == null ? "selected" : ""}>nach Rasse</option>${[[0, "frei"], [1, E.dominant ? "betroffen (1 Allel, dominant)" : "Träger"], ...(ERB_LETAL(k) || E.dominant ? [] : [[2, "betroffen"]])].map(([v, t]) => `<option value="${v}" ${K.erb[k] === v ? "selected" : ""}>${t}</option>`).join("")}</select>`, E.n + (ERB_LETAL(k) ? " · betroffen nur bei Fohlen" : ""), ERB_INFO[k] || "")).join("")}
         <p class="text" style="margin:8px 0 2px"><small><b>Veranlagungen</b> (vererbt, 0 = keine, 1 = sehr stark)</small></p>
         ${Object.entries(VERANLAGUNG).map(([k, V]) => zeile("🧩", V.n, `<select data-kv="${k}"><option value="">nach Rasse</option>${[0, 0.25, 0.5, 0.75, 1].map(v => `<option value="${v}" ${K.vl[k] === v ? "selected" : ""}>${String(v).replace(".", ",")}</option>`).join("")}</select>`, "", VL_INFO[k] || "")).join("")}
         <p class="text" style="margin:8px 0 2px"><small><b>Erblich bedingte Befunde</b> (jetzt schon da)</small></p>
-        ${ERB_BEFUND.filter(k => KRANK[k]).map(k => zeile(KRANK[k].ico, KRANK[k].n, gradSel(k, K.befunde[k]), KRANK[k].chronisch ? "chronisch" : "", KRANK_INFO[k] || "")).join("")}
+        ${erbBef.map(k => zeile(KRANK[k].ico, KRANK[k].n, gradSel(k, K.befunde[k]), KRANK[k].chronisch ? "chronisch" : "", KRANK_INFO[k] || "")).join("")}
       </details>
       <details open><summary><b>🩺 Nicht erblich</b></summary>
         ${nichtErb.map(k => zeile(KRANK[k].ico, KRANK[k].n, gradSel(k, K.befunde[k]), [KRANK[k].chronisch ? "chronisch" : "", ANSTECKEND[k] ? "ansteckend" : ""].filter(Boolean).join(" · "), KRANK_INFO[k] || "")).join("")}
@@ -7667,13 +7679,15 @@
     return `<svg viewBox="${(z.box.minX - m).toFixed(1)} ${(z.box.minY - m).toFixed(1)} ${(w + 2 * m).toFixed(1)} ${(h + 2 * m).toFixed(1)}" preserveAspectRatio="xMidYMid meet">${ohneAnim(z.svg)}</svg>`;
   }
   function grabstein(g) {
-    const zeile = g.name.length > 11 ? 12 : 15;
+    let z = [g.name];   // lange Namen auf zwei Zeilen (am Leerzeichen nahe der Mitte)
+    if (g.name.length > 11) { const sp = [...g.name.matchAll(/ /g)].map(m => m.index); if (sp.length) { const i = sp.reduce((a, b) => Math.abs(b - g.name.length / 2) < Math.abs(a - g.name.length / 2) ? b : a); z = [g.name.slice(0, i), g.name.slice(i + 1)]; } }
+    const lang = Math.max(...z.map(t => t.length)), zeile = lang > 13 ? 10.5 : lang > 10 ? 12.5 : 15;
     return `<svg viewBox="0 0 160 150" aria-hidden="true">
       <ellipse cx="80" cy="138" rx="72" ry="10" fill="#7dbb5a"/>
       <path d="M38,136 V52 Q38,18 80,18 Q122,18 122,52 V136 Z" fill="#a9a59c" stroke="#4a463f" stroke-width="2.5"/>
       <path d="M46,134 V54 Q46,27 80,27 Q114,27 114,54 V134" fill="none" stroke="#c6c2b9" stroke-width="2"/>
       <path d="M66,46 a14,14 0 1 1 28,0 l-3,0 a11,11 0 1 0 -22,0 Z" fill="#6f6a61"/><circle cx="68.5" cy="47" r="1.6" fill="#a9a59c"/><circle cx="91.5" cy="47" r="1.6" fill="#a9a59c"/>
-      <text x="80" y="80" text-anchor="middle" font-size="${zeile}" font-weight="700" fill="#3c3832" font-family="Georgia, serif">${esc(g.name)}</text>
+      ${z.map((t, i) => `<text x="80" y="${(z.length > 1 ? 67 : 80) + i * (zeile + 1)}" text-anchor="middle" font-size="${zeile}" font-weight="700" fill="#3c3832" font-family="Georgia, serif"${t.length * zeile * .52 > 66 ? ' textLength="66" lengthAdjust="spacingAndGlyphs"' : ""}>${esc(t)}</text>`).join("")}
       <text x="80" y="97" text-anchor="middle" font-size="9.5" fill="#4a463f" font-family="Georgia, serif">${g.geb ? `${g.geb.j}` : "?"} – ${Math.floor(g.tod / 4)}</text>
       <text x="80" y="112" text-anchor="middle" font-size="8.5" fill="#4a463f" font-family="Georgia, serif">${rasseById(g.rasse).name.replace(/ \(.*\)/, "")}</text>
       <g stroke="#4f8a37" stroke-width="2" stroke-linecap="round"><path d="M30,138 q-2,-8 2,-14"/><path d="M128,138 q2,-9 -1,-15"/><path d="M48,140 q0,-6 3,-9"/></g>
@@ -7682,13 +7696,13 @@
   }
   function zeigeFriedhof() {
     const f = (spiel.friedhof || []).slice().reverse();
-    zeigeNeben("🕯️ Pferdefriedhof", f.length ? `<div class="panel"><p style="margin:0">Hier erinnern Grabsteine an deine verstorbenen Pferde.</p></div>
-      <div class="gnade-liste">${f.map(g => `<div class="grab" ${g.pferd ? ansehen(g.pferd, "Pferdefriedhof", null, { tot: true, alter: g.alter, zeilen: [["Todesursache", esc(g.ursache || "unbekannt")]] }) : ""}><div class="grab-bild">${grabstein(g)}</div>
-        <div class="gnade-info"><b>${esc(g.name)}</b><small>${rasseById(g.rasse).name} · ${g.geschlecht} · ${g.pferd ? farbText(g.pferd) : g.farbName || (FARBEN[g.farbe] ? FARBEN[g.farbe].name : "")}</small>
-        <small>${g.geb ? `geboren ${jzName(g.geb.j * 4 + g.geb.s).replace(/^\S+ /, "")} · ` : ""}verstorben ${jzName(g.tod).replace(/^\S+ /, "")}${g.alter ? ` mit ${g.alter}` : ""}</small>
-        <small>Todesursache: ${esc(g.ursache || "unbekannt")}</small>
-        ${g.nachkommen ? `<small>${g.nachkommen} ${g.nachkommen === 1 ? "Nachkomme" : "Nachkommen"}</small>` : ""}</div></div>`).join("")}</div>`
-      : `<div class="panel"><p style="margin:0">Hier ist noch kein Grabstein. Wenn ein Pferd stirbt, bekommt es hier einen Platz zur Erinnerung.</p></div>`);
+    zeigeNeben("🕯️ Pferdefriedhof", f.length ? `<div class="panel friedhof-text"><p style="margin:0">Hier erinnern Grabsteine an deine verstorbenen Pferde. Antippen zeigt den Steckbrief.</p></div>
+      <div class="friedhof-liste">${f.map(g => `<div class="grab" ${g.pferd ? ansehen(g.pferd, "Pferdefriedhof", null, { tot: true, alter: g.alter, zeilen: [["Todesursache", esc(g.ursache || "unbekannt")]] }) : ""}><div class="grab-bild">${grabstein(g)}</div>
+        <div class="grab-info"><b>${esc(g.name)}</b><small>${rasseById(g.rasse).name} · ${g.geschlecht}</small><small>${g.pferd ? farbText(g.pferd) : g.farbName || (FARBEN[g.farbe] ? FARBEN[g.farbe].name : "")}</small>
+        <small>† ${jzName(g.tod).replace(/^\S+ /, "")}${g.alter ? ` · ${g.alter.replace(/ /g, "\u00a0")}` : ""}</small>
+        ${g.nachkommen ? `<small>${g.nachkommen} ${g.nachkommen === 1 ? "Nachkomme" : "Nachkommen"}</small>` : ""}
+        <small class="grab-ursache">${esc(g.ursache || "unbekannt")}</small></div></div>`).join("")}</div>`
+      : `<div class="panel friedhof-text"><p style="margin:0">Hier ist noch kein Grabstein. Wenn ein Pferd stirbt, bekommt es hier einen Platz zur Erinnerung.</p></div>`);
   }
   // Stallübersicht: alle Boxen als Bilderrahmen – antippen führt in die Box
   // letzte leere, nicht reservierte Box (Box 1 bleibt immer) – -1 wenn keine
@@ -9970,7 +9984,7 @@
       <p><b>Beritt und Pensionsfohlen (H7 c, v314):</b> laufen über die Pension (Anfrage per Brief, Zusage, Einzug am nächsten Morgen, Zahlung zu Beginn jeder Jahreszeit, alles inklusive). <i>Beritt</i> (nur Ausbildungsstall mit erfüllten Bedingungen): je fest angestelltem Bereiter ${BERITT.jeBereiter} Beritt-Pferde (und eine freie Box), Pferde 3–7 Jahre, ${BERITT.dauer.join(" oder ")} Jahreszeiten, ${fmt(BERITT.preis)} je Jahreszeit inkl. Box, täglichem Bereiter, Putzen, Hufe/Mähne (Putzen und Hufe macht der Hof – Pfleger oder du). Am Ende holt der Besitzer ab; zufrieden, wenn die Zufriedenheit ≥ 60 ist und die Ausbildungsskala im Schnitt mindestens 2 Punkte je Jahreszeit gestiegen ist (Ansehen +3, sonst −3). <i>Aufzucht</i> (nur Zuchtstall, freier Platz im Aufzucht-Offenstall): Jungpferde ½–2 Jahre oder (${Math.round(AUFZ_FREMD.waiseAnteil * 100)} %) Waisenfohlen mit Flasche, ${fmt(AUFZ_FREMD.preis)} je Jahreszeit (Waise +${fmt(AUFZ_FREMD.waise)}), mit 3 Jahren holt der Besitzer ab. Anfragen: je Art höchstens eine offene, Chance je Tag ${BERITT.chance} × freie Plätze ÷ Tage je Jahreszeit (höchstens 50 %). Seit v314 zählt auch das Training durch den fest angestellten Bereiter als gebuchtes „Bewegen“.</p>
       <p><b>Verdacht bei verdeckten Ursachen (v318):</b> Der Tierarzt kennt die versteckte Genetik nicht. Bei ${Object.keys(VERDACHT).map(k => KRANK[k].n).join(", ")} nennt er beim 1. Mal nur das Krankheitsbild und mögliche Ursachen; ab dem 2. Mal (gleicher oder verwandter Befund, zählt auch wiederholte Tierarztbesuche bei chronischen Befunden) äußert er den Verdacht, nennt die anderen Möglichkeiten und wie man es klärt (Gentest im Labor, Allergietest bzw. Hautprobe/Ultraschall). Nach dem Gentest „Erbkrankheiten“ ist eine Erbkrankheit eindeutig. Mauke weckt den CPL-Verdacht nur bei Pferden mit hoher Veranlagung (ab 0,4). <b>Chronisches Lymphödem (CPL)</b>: eigener chronischer Befund ab 8 Jahren (Risiko ∝ Veranlagung², Mauke ×1,5), Behandlung Schritt führen, Bandagen (Verband), Wundsalbe; Boxenruhe schadet. Einen Gentest gibt es (wie in echt) nicht.</p>
       <p><b>Tests zum Verdacht (v319):</b> Der Tierarzt schlägt zu jedem Verdacht den passenden Test vor (Knopf beim Befund in der Versorgung, Rechnung per Post). Vor Ort nicht zu unterscheiden – gleich beim 1. Mal mit allen Möglichkeiten und Test: ${Object.entries(VERDACHT).filter(([, V]) => V.sofort).map(([k, V]) => `${V.bild} (${V.diff.join("/")}) → ${V.test.n} ${fmt(V.test.preis)}${V.test.tage ? `, ${V.test.tage} Tage` : ", sofort"}`).join(" · ")}. Verdeckt (Verdacht ab dem 2. Mal): Erbkrankheiten → Labortest Erbkrankheiten · Sommerekzem → Allergietest 150 € · Lymphödem/Mauke (CPL) → Hautprobe 120 €. Bis zum Ergebnis zeigen Tierarzt, Versorgung, Steckbrief und Rechnung nur das Krankheitsbild. Eindeutig (kein Test nötig): Melanom am Schimmel und alle übrigen Befunde.</p>
-      <p><b>Admin: Krankheiten selbst wählen (v320):</b> Enzyklopädie → Rassen → Rasse → „🛠️ Krankheiten selbst wählen“. Erblich: Erbkrankheiten als Gen (nach Rasse / frei / Träger / betroffen – bei Fohlen-tödlichen Krankheiten nur Träger; „betroffen“ mit Befund zeigt ihn sofort), Veranlagungen (0–1) und erblich bedingte Befunde. Nicht erblich: alle übrigen Befunde mit Stufe. Zustand: unbemerkt / bemerkt / vom Tierarzt diagnostiziert. Beim „In Box stellen“ bekommt das Pferd alles mit.</p>
+      <p><b>Admin: Krankheiten selbst wählen (v320):</b> Enzyklopädie → Rassen → Rasse → „🛠️ Krankheiten selbst wählen“. Erblich: Erbkrankheiten als Gen (nach Rasse / frei / Träger / betroffen – bei Fohlen-tödlichen Krankheiten nur Träger; „betroffen“ mit Befund zeigt ihn sofort), Veranlagungen (0–1) und erblich bedingte Befunde. Nicht erblich: alle übrigen Befunde mit Stufe. Zustand: unbemerkt / bemerkt / vom Tierarzt diagnostiziert. Beim „In Box stellen“ bekommt das Pferd alles mit. <b>Seit v322</b> stehen dort nur Erbkrankheiten, die in der Rasse vorkommen (Trägeranteil &gt; 0), deren Folge-Befunde (z. B. Ataxie nur bei CA-Rassen) und Melanom nur bei Rassen mit Schimmel-Gen; Veranlagungen gibt es bei allen Rassen (Grundrisiko „sonst“).</p>
       <p><b>Domes Wünsche (v317):</b> Pensionsanfragen kommen zu ${Math.round(PENSION.tragend * 100)} % (Stuten 4–16 J.) für tragende Stuten – das steht im Anfrage-Brief und beim „Ansehen“ (Fohlen in 1–3 Jahreszeiten, kommt auf dem Hof zur Welt). Pensionspferde mit gebuchtem „Bewegen“ darfst du ab LK ${SPIELER_BEREITER_LK} (beste Reitdisziplin) selbst reiten – einmal am Tag zählt das als Bereiter-Tag; die Versorgung erklärt, woher der Bereiter kommt. Kraftfutter aus der Krippe wandert beim Rausbringen mit in den Futtereimer auf der Koppel (Heu bleibt in der Box).</p>
       <p><b>Hausturnier (H8, v315):</b> Pensions- und Ausbildungsstall mit erfüllten Bedingungen, einmal je Jahreszeit (Hof → Übersicht → „Hausturnier ausrichten“, Tag frühestens übermorgen). Bedingung Reitplatz, im Winter Reithalle. Kosten Pension ${fmt(HAUS.kosten.pension)}, Ausbildungsstall ${fmt(HAUS.kosten.ausbildung)} (+${fmt(HAUS.halle)} im Winter). Prüfungen: Dressur-, Stilspring-, Westernreiter-Wettbewerb, Gelassenheit, Ausbildungsstall zusätzlich Dressur und Springen Kl. E und A. Eigene Pferde nennen wie bei jedem Turnier (keine Fahrt, kein Fahrstress). 4–10 Starter je Prüfung. Am Turniertag: Nenngelder aller Gaststarter (Starter − eigene) als Einnahme (deckt etwa die Kosten, beim Ausbildungsstall etwas Gewinn), 60 % der Pensionspferde ab 4 Jahren starten mit (Zufriedenheit +${HAUS.zufr}), Ansehen +${HAUS.ansehen}, Anfragen (Pension, Beritt, Aufzucht) ×${String(HAUS.anfrage).replace(".", ",")} in dieser und der nächsten Jahreszeit.</p>
       <p><b>Verkaufsrennen (H8, v315):</b> an jedem Renntag eine Prüfung „Verkaufsrennen (Vollblut)“ (60 € + Jockey, 1.500 € Preisgeld, Feld schwach), nur für Rennställe. Verkaufspreis = Marktwert beim Nennen. Nach dem Rennen wird das eigene Pferd mit ${Math.round(VERKAUFSRENNEN.chance * 100)} % (Platz 1–3: ${Math.round((VERKAUFSRENNEN.chance + VERKAUFSRENNEN.platzPlus) * 100)} %) gekauft und am nächsten Morgen abgeholt (Geld aufs Konto). Dazu bietet der Rennverein ${VERKAUFSRENNEN.fremd} fremde Starter per Brief zum Verkaufspreis an (2 Tage gültig, „Kaufen“ im Brief).</p>

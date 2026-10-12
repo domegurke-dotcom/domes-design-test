@@ -303,6 +303,20 @@ const path = require('path');
         spiel.gebaeude = gebaeude().filter(x => x !== g); spiel.anlage.rennbahn = false; H.bauHa -= 1; H.wert -= g.preis; spiel.geld = g0; spiel.mitarbeiter = mMerk;
         spiel.boxen.forEach((b, i) => { b.pferd = merk[i]; }); H.art = 'pension'; spiel.stallarten = ['pension']; delete H.artCache; }
 
+      // ---------- H8 Hausturnier (v315) ----------
+      { const H = spiel.hof, mMerk = (spiel.mitarbeiter || []).slice(), A0 = { ...spiel.anlage }, g0 = spiel.geld;
+        H.art = 'ausbildung'; spiel.stallarten = ['ausbildung']; spiel.anlage.reitplatz = true; spiel.anlage.roundpen = true;
+        spiel.mitarbeiter = [...mMerk, { id: 'maBH', typ: 'bereiter', name: 'Testbereiter', w: true, wissen: wissenStart(30, {}), eig: [], gehalt: 420, ab: jzJetzt(), bis: null }]; delete H.artCache;
+        const sp = hausturnierSperre(); if (sp) ok('H8 Hausturnier (zu spät in der Jahreszeit)', /zu spät/.test(sp), sp);
+        else { spiel.geld += 1000; ok('H8 Hausturnier anlegen', hausturnierAnlegen(spiel.tag + 2) === '');
+          const t = spiel.turniere.find(x => x.haus === aktivHid()); ok('H8 Hausturnier im Kalender mit E/A', !!t && t.pruef.some(P => P.stufe === 1), t ? t.pruef.length + ' Prüfungen' : '');
+          ok('H8 nur einmal je Jahreszeit', hausturnierSperre() !== '');
+          if (t) { const ans = pensionRegeln().ansehen, gg = spiel.geld; const tg = spiel.tag; spiel.tag = t.tag; hausturnierMorgen(); spiel.tag = tg;
+            ok('H8 Nenngelder der Gäste + Ansehen', spiel.geld > gg && pensionRegeln().ansehen > ans, `+${Math.round(spiel.geld - gg)} €, Ansehen ${ans} → ${pensionRegeln().ansehen}`); }
+          spiel.turniere = spiel.turniere.filter(x => !x.haus); }
+        ansehen('H8 Hof – Übersicht mit Hausturnier', () => stallartHTML());
+        spiel.geld = g0; spiel.mitarbeiter = mMerk; spiel.anlage = { ...spiel.anlage, ...A0 }; H.art = 'pension'; spiel.stallarten = ['pension']; delete H.artCache; }
+
       // ---------- H1 Kreditrate ----------
       { const rest = k.rest; k.jz = -1; kreditJahreszeit();
         ok('H1 Kreditrate wird abgebucht', k.rest < rest, `Rest ${rest} → ${k.rest} €`); }

@@ -882,7 +882,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "320";
+  const SPIEL_VERSION = "321";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -890,9 +890,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=320"></script>
-<script src="kopfteile.js?v=320"></script>
-<script src="kopfalter.js?v=320"></script>
+<script src="pferd.js?v=321"></script>
+<script src="kopfteile.js?v=321"></script>
+<script src="kopfalter.js?v=321"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3370,44 +3370,107 @@
   function schliessen() { $("auswahl").classList.remove("offen"); $("auswahl").innerHTML = ""; }
 
   // ---------- Admin: Charakter selbst wählen (Rassenansicht) – Regler je Charakterwert, Zufall = wieder rassetypisch ----------
+  const CHAR_INFO = {
+    temperament: "Wie lebhaft das Pferd ist. Ruhige Pferde sind gelassen und leicht zu händeln; temperamentvolle haben viel Vorwärtsdrang, brauchen mehr Bewegung und vertragen Boxenruhe schlecht. Hafer macht sie noch heißer.",
+    mut: "Wie das Pferd auf Neues reagiert. Scheue Pferde erschrecken leicht (Gelände, Turnier, Hindernisse); mutige gehen unbekannte Dinge gelassen an – wichtig für Gelände und Springen.",
+    wachheit: "Neugier: neugierige Pferde erkunden alles und lernen gern Neues; verträumte sind weniger aufmerksam, lassen sich aber auch weniger ablenken.",
+    bezug: "Menschenbezug: verschmuste Pferde suchen Kontakt, freuen sich über Putzen und Streicheln und vertrauen schneller; eigenständige brauchen weniger Zuwendung, bauen aber langsamer Vertrauen auf.",
+    wille: "Arbeitswille: leistungsbereite Pferde arbeiten gern mit und lernen im Training schneller; eigensinnige verweigern öfter und brauchen Geduld.",
+    nerven: "Nervenstärke: gelassene Pferde bleiben auf Turnieren und bei Stress ruhig; nervöse regen sich schnell auf, schwitzen, sind bei Fahrten und Turnieren gestresst.",
+    sensibel: "Sensibilität: sensible Pferde reagieren auf feine Hilfen (gut für Dressur), aber auch empfindlich auf grobe Behandlung, Lärm und Veränderungen; robuste stecken mehr weg." };
   function charakterWaehlen() {
     const pr = PROFIL[wahl.rasse] || PROFIL.hannoveraner, c = wahl.charakter || Object.fromEntries(CHARAKTER.map((t, i) => [t.key, pr.char[i]]));
     dialog(`<h3>🛠️ Charakter selbst wählen</h3><p class="text"><small>Startwerte = Rassen-Durchschnitt. Ab unter 30 oder über 70 wirkt der Charakter aufs Wohlbefinden.</small></p>
-      ${CHARAKTER.map(t => `<div class="zeile-wert char-wahl"><div class="kopf"><b>${t.titel}</b><span id="cw-${t.key}">${c[t.key]}</span></div>
+      <p style="margin:4px 0 8px"><button class="knopf zweit" id="cwZufall" style="width:auto;padding:6px 12px">🎲 Zufall (nach Rasse)</button></p>
+      ${CHARAKTER.map(t => `<div class="zeile-wert char-wahl"><div class="kopf"><b>${t.titel} <button class="gl-info-k" data-cwi="${t.key}" aria-label="Erklärung">i</button></b><span id="cw-${t.key}">${c[t.key]}</span></div>
+        <span class="gl-info" id="cwi-${t.key}" hidden>${CHAR_INFO[t.key] || ""}</span>
         <input type="range" min="3" max="97" step="1" value="${c[t.key]}" data-cw="${t.key}" aria-label="${t.titel}"><div class="pole"><span>${t.links}</span><span>${t.rechts}</span></div></div>`).join("")}`,
-      [["Übernehmen", () => { wahl.charakter = werteAusReglern; charKnopf(); }],
-       ["🎲 Zufall", () => { delete wahl.charakter; charKnopf(); }, "zweit"], ["Abbrechen", null, "zweit"]], "breit");
+      [["Übernehmen", () => { wahl.charakter = werteAusReglern; charKnopf(); }], ["Abbrechen", null, "zweit"]], "breit");   // Dome (v321): Zufall würfelt die Regler neu, ohne das Fenster zu schließen
     // Werte vor dem Schließen des Dialogs merken (der Dialog wird beim Klick geleert)
     let werteAusReglern = { ...c };
     const charKnopf = () => { const k = $("charWahlAuf"); if (k) k.textContent = `🛠️ Charakter selbst wählen${wahl.charakter ? " · gewählt ✓" : ""}`; };
     document.querySelectorAll("[data-cw]").forEach(x => x.oninput = () => { $("cw-" + x.dataset.cw).textContent = x.value; werteAusReglern[x.dataset.cw] = +x.value; });
+    document.querySelectorAll("[data-cwi]").forEach(x => x.onclick = ev => { ev.preventDefault(); const el = $("cwi-" + x.dataset.cwi); el.hidden = !el.hidden; });
+    $("cwZufall").onclick = () => CHARAKTER.forEach((t, i) => { const v = Math.max(3, Math.min(97, Math.round(pr.char[i] + (Math.random() + Math.random() - 1) * 25))), x = document.querySelector(`[data-cw="${t.key}"]`);
+      x.value = v; $("cw-" + t.key).textContent = v; werteAusReglern[t.key] = v; });
   }
   // ---------- Admin (Dome, v320): Krankheiten selbst wählen – erblich (Gene, Veranlagungen, erblich bedingte Befunde) und nicht erblich ----------
   const ERB_BEFUND = ["ataxie", "hypp", "herda", "pssm", "melanom", "kehlkopf", "ocd", "sommerekzem", "asthma", "lymphoedem"];   // Befunde mit erblicher Ursache (Gen oder Veranlagung)
   const ERB_LETAL = k => ["tod", "tot", "zwerg", "acan"].includes(ERBKRANK[k].folge);   // erwachsenes Pferd kann nur Träger sein
+  // Erklärungen für das ⓘ (Dome, v321)
+  const KRANK_INFO = {
+    verletzung: "Wunde oder Schramme, meist an den Beinen – beim Toben auf der Weide oder in der Box. Kleine Wunden heilen mit Wundsalbe und Verband; tiefe, warme, eitrige Wunden brauchen den Tierarzt (Antibiotikum).",
+    lahmheit: "Das Pferd geht unregelmäßig und schont ein Bein. Ursachen: Überlastung, Prellung, Hufprobleme, Folge einer Verletzung. Boxenruhe, Kühlen und Schmerzmittel helfen; zu lange Hufe erhöhen das Risiko.",
+    kolik: "Bauchschmerzen – Notfall! Das Pferd scharrt, schaut zum Bauch, wälzt sich. Ursachen: unregelmäßiges Futter, zu viel Kraftfutter, zu wenig Raufutter, Verstopfung, Futterumstellung. Führen und Schmerzmittel; schwere Koliken brauchen eine OP.",
+    husten: "Reizung der Atemwege durch Staub (Heu, Stroh, schmutzige Box) oder kalte Luft. Staubarm füttern und einstreuen, Hustensaft. Hält er lange an, kann es Pferdeasthma werden.",
+    erkaeltung: "Leichter Infekt der oberen Atemwege mit Nasenausfluss und Husten, oft bei Wetterwechsel im Herbst und Winter. Schonung und Hustensaft; heilt meist in einigen Tagen.",
+    hufrehe: "Entzündung der Huflederhaut – sehr schmerzhaft, das Pferd steht „wie auf Eiern“. Ursachen: junges Frühlingsgras, zu viel Zucker/Stärke, Übergewicht, Cushing. Sofort Boxenruhe, Kühlen, Schmerzmittel; leichtfuttrige und dicke Pferde sind besonders gefährdet.",
+    mauke: "Entzündung der Haut in der Fesselbeuge durch Nässe, Schmutz oder Milben – oft bei Pferden mit viel Fesselbehang. Beine sauber und trocken halten, Wundsalbe, Verband. Kommt sie immer wieder, kann ein Lymphödem dahinterstecken.",
+    druse: "Ansteckende bakterielle Infektion (Streptokokken) mit Fieber und dicken, eitrigen Lymphknoten am Kehlgang. Sehr ansteckend – Quarantäne! Boxenruhe, Schmerzmittel, Antibiotikum nur nach Tierarzt.",
+    arthrose: "Gelenkverschleiß im Alter oder nach Überlastung: steifer Gang, besonders nach dem Stehen. Nicht heilbar, aber mit regelmäßiger leichter Bewegung und Schmerzmitteln gut zu lindern.",
+    sommerekzem: "Allergie gegen Stiche der Kriebelmücke – starker Juckreiz, Scheuerstellen an Mähne und Schweifrübe, nur im Sommer. Ekzemerdecke, Weidegang nicht in der Dämmerung, Kortison bei starkem Juckreiz. Erbliche Veranlagung (z. B. Isländer, Tinker).",
+    cushing: "Hormonstörung der Hirnanhangdrüse (PPID) bei älteren Pferden: langes, lockiges Fell, verzögerter Fellwechsel, Muskelabbau, Hufrehe-Gefahr. Nicht heilbar, mit Cushing-Tabletten gut einstellbar.",
+    asthma: "Chronische Erkrankung der unteren Atemwege (früher COB/RAO): Husten, Atemnot, Leistungsabfall. Ausgelöst durch Staub bei empfindlichen Atemwegen. Staubfreie Haltung (Heulage, gewässertes Heu, Späne), Kortison und Hustensaft.",
+    magengeschwuer: "Wunde Stellen in der Magenschleimhaut durch Säure – bei langen Fresspausen, viel Kraftfutter und Stress. Das Pferd frisst schlechter, ist gurtempfindlich. Omeprazol vom Tierarzt, viel Raufutter, Magenschonfutter.",
+    vergiftung: "Durch giftige Pflanzen (z. B. Jakobskreuzkraut, Eibe) oder eine Überdosis Medikamente. Zittern, Speicheln, Taumeln. Sofort Tierarzt, Boxenruhe.",
+    strahlfaeule: "Fäulnis im Strahl des Hufes durch Nässe und schlechte Hygiene – schwarzer, stinkender Belag. Hufe täglich auskratzen, trocken einstreuen, Strahlpflege.",
+    hufabszess: "Eitertasche im Huf (Steinchen eingetreten, zu lange Hufe) – plötzlich hochgradig lahm. Hufbad, Verband, Schmerzmittel; der Hufschmied/Tierarzt öffnet den Abszess.",
+    hornspalt: "Riss in der Hufwand, oft bei brüchigen, zu langen Hufen. Regelmäßig ausschneiden, Beschlag stabilisiert, Huföl pflegt.",
+    influenza: "Pferdegrippe – Virus mit hohem Fieber, trockenem Husten und Mattigkeit. Sehr ansteckend über die Luft. Impfung schützt. Strikte Boxenruhe (danach lange schonen!), Hustensaft.",
+    herpes: "Equines Herpesvirus (EHV-1/4): Fieber, Nasenausfluss, kann Stuten verfohlen lassen und selten Lähmungen auslösen. Das Virus schlummert im Körper. Impfung, Boxenruhe, Quarantäne.",
+    hautpilz: "Ansteckende Pilzinfektion der Haut: runde, haarlose, schuppige Stellen. Überträgt sich über Putzzeug und Kontakt. Pilzwaschung, eigenes Putzzeug je Pferd.",
+    wuermer: "Befall mit Magen-Darm-Würmern: struppiges Fell, Abmagerung, Koliken. Wurmkur im Frühjahr und Herbst, Weide abäppeln.",
+    ataxie: "Bewegungsstörung: das Pferd stolpert, schwankt, setzt die Beine unkoordiniert. Erblich bei Arabern (CA – Kleinhirn-Abiotrophie), sonst nach Verletzungen an Hals/Rücken oder Herpes. Nicht heilbar.",
+    hypp: "Erbliche Muskelerkrankung der Quarter Horses: Anfälle mit Muskelzittern und Schwäche, ausgelöst durch kaliumreiches Futter (Luzerne). Kaliumarm füttern, regelmäßig bewegen.",
+    herda: "Erbliche Bindegewebsschwäche der Quarter Horses: die Haut am Rücken löst sich bei Druck (Sattel) ab und heilt schlecht. Nicht reitbar, nicht heilbar – Wundpflege.",
+    pssm: "Erbliche Muskelerkrankung (Speicherkrankheit): Kreuzverschlag mit harten, schmerzhaften Muskeln und dunklem Urin nach Arbeit. Stärkearm und ölreich füttern, täglich gleichmäßig bewegen.",
+    kehlkopf: "Lähmung eines Stimmbandnervs: pfeifendes Atemgeräusch bei Belastung, weniger Leistung. Erbliche Veranlagung bei großen Pferden. Im Alltag meist unproblematisch, für Sport hilft eine OP.",
+    melanom: "Schwarze Hautknoten bei Schimmeln (meist unter dem Schweif, am After) – fast jeder ältere Schimmel bekommt welche. Meist gutartig und langsam wachsend; nur behandeln, wenn sie stören.",
+    ocd: "Knorpel-Knochen-Störung im Gelenk junger Pferde (Chips): Gelenkfüllung, Lahmheit. Erbliche Veranlagung plus Fütterungsfehler im Wachstum. Im Röntgen sichtbar, Chips werden operativ entfernt.",
+    schlund: "Futter bleibt in der Speiseröhre stecken (gierig geschlungene Heucobs oder Rübenschnitzel): Würgen, Futterbrei aus den Nüstern. Futter sofort weg; löst sich oft von selbst, sonst spült der Tierarzt mit der Nasenschlundsonde.",
+    lymphoedem: "Chronisch progressives Lymphödem der Kaltblüter mit Fesselbehang (Clydesdale, Shire, Tinker, Friese): dicke Beine, Knoten und Falten in den Fesselbeugen, immer wieder Mauke. Nicht heilbar; Bewegung, Bandagen und Hautpflege bremsen es." };
+  const ERB_INFO = {
+    wffs: "Warmblood Fragile Foal Syndrome (Warmblüter, rezessiv): die Haut betroffener Fohlen reißt bei jeder Berührung – sie überleben nicht. Träger sind gesund.",
+    scid: "Schwerer kombinierter Immundefekt (Araber, rezessiv): betroffene Fohlen haben keine Abwehr und sterben an Infekten, sobald der Schutz der Muttermilch nachlässt.",
+    ca: "Kleinhirn-Abiotrophie (Araber, rezessiv): betroffene Fohlen entwickeln in den ersten Monaten eine Bewegungsstörung (Ataxie).",
+    zwerg_f: "Zwergwuchs beim Friesen (rezessiv): betroffene Fohlen bleiben klein mit verkürzten Beinen und haben Sehnen-/Gelenkprobleme.",
+    wasserkopf: "Hydrocephalus beim Friesen (rezessiv): das Fohlen hat einen stark vergrößerten Schädel und kommt tot zur Welt – die Geburt ist für die Stute schwer.",
+    hypp: "Hyperkaliämische periodische Paralyse (Quarter, dominant): schon ein Gen macht krank – Muskelanfälle ab etwa 1 Jahr.",
+    herda: "Hereditäre Asthenie der Haut (Quarter, rezessiv): betroffene Pferde zeigen ab etwa 1,5 Jahren Hautablösungen am Rücken.",
+    pssm: "PSSM1 – Speicherkrankheit der Muskeln (Quarter, Kaltblüter, dominant): Kreuzverschlag nach Arbeit, ab etwa 2 Jahren.",
+    zwerg_s: "ACAN-Zwergwuchs beim Shetlandpony: reinerbig betroffene Fohlen sterben meist vor der Geburt, Träger sind klein, aber gesund.",
+    nfs: "Naked Foal Syndrome (Achal-Tekkiner, rezessiv): Fohlen kommen ohne Fell zur Welt, die meisten sterben in den ersten Monaten.",
+    fis: "Foal Immunodeficiency Syndrome (Fell- und Dales-Pony, rezessiv): betroffene Fohlen haben kaum Abwehrkräfte und Blutarmut und sterben im ersten Halbjahr." };
+  const VL_INFO = {
+    ekzem: "Neigung zum Sommerekzem (Allergie gegen Kriebelmücken) – hoch bei Isländern, Tinkern, Haflingern, Welsh Cobs und englischen Bergponys.",
+    pfeifen: "Neigung zum Kehlkopfpfeifen – vor allem bei großen Pferden (Vollblut, Hannoveraner, Clydesdale).",
+    ocd: "Neigung zu OCD/Chips im Wachstum – vor allem bei Warmblütern und Vollblütern, stärker bei Mineral-/Eiweißmangel im Jungpferdealter.",
+    atem: "Empfindliche Atemwege – solche Pferde husten von staubigem Heu und können Pferdeasthma bekommen.",
+    lymph: "Neigung zum chronischen Lymphödem (CPL) – Kaltblüter mit Fesselbehang; mehr Mauke, ab 8 Jahren dicke Beine." };
   const KRANK_STATUS = { unbemerkt: "noch unbemerkt", bemerkt: "bemerkt (Tierarzt war noch nicht da)", diagnose: "vom Tierarzt diagnostiziert" };
   const krankKnopfText = () => { const K = wahl && wahl.krank; const n = K ? Object.keys(K.befunde || {}).length + Object.keys(K.erb || {}).length + Object.keys(K.vl || {}).length : 0;
     return `🛠️ Krankheiten selbst wählen${n ? ` · ${n} gewählt ✓` : ""}`; };
   function krankWaehlen() {
     const K = wahl.krank || { befunde: {}, erb: {}, vl: {}, status: "bemerkt" }, gradSel = (k, v) => `<select data-kb="${k}"><option value="">–</option>${[1, 2, 3, 4, 5].map(g => `<option value="${g}" ${v === g ? "selected" : ""}>${GRAD_TEXT[g]}</option>`).join("")}</select>`;
-    const zeile = (ico, n, sel, info = "") => `<label class="kw-zeile" style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:3px 0;border-bottom:1px solid #eadfcc"><span>${ico} ${n}${info ? `<br><small>${info}</small>` : ""}</span>${sel}</label>`;
+    let iz = 0; const zeile = (ico, n, sel, info = "", erkl = "") => { const id = "kw" + (iz++); return `<div class="kw-zeile" style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 8px;align-items:center;padding:3px 0;border-bottom:1px solid #eadfcc"><span>${ico} ${n}${erkl ? ` <button class="gl-info-k" data-kwi="${id}" aria-label="Erklärung">i</button>` : ""}${info ? `<br><small>${info}</small>` : ""}</span>${sel}${erkl ? `<span class="gl-info" id="kwi-${id}" hidden>${erkl}</span>` : ""}</div>`; };
     const nichtErb = Object.keys(KRANK).filter(k => KRANK[k].n && !ERB_BEFUND.includes(k));
     dialog(`<h3>🛠️ Krankheiten selbst wählen</h3><p class="text"><small>Das Pferd kommt mit diesen Krankheiten in den Stall. Erbkrankheiten und Veranlagungen bleiben versteckt (nur Labortest/Admin).</small></p>
       <p class="text" style="margin:6px 0"><b>Zustand der Befunde:</b> <select id="kwStatus">${Object.entries(KRANK_STATUS).map(([k, t]) => `<option value="${k}" ${K.status === k ? "selected" : ""}>${t}</option>`).join("")}</select></p>
       <details open><summary><b>🧬 Erblich</b></summary>
         <p class="text" style="margin:6px 0 2px"><small><b>Erbkrankheiten (Gen)</b> – „betroffen“ bei Krankheiten mit Befund zeigt ihn sofort.</small></p>
-        ${Object.entries(ERBKRANK).map(([k, E]) => zeile("🧬", E.kurz || E.n, `<select data-ke="${k}"><option value="" ${K.erb[k] == null ? "selected" : ""}>nach Rasse</option>${[[0, "frei"], [1, E.dominant ? "betroffen (1 Allel, dominant)" : "Träger"], ...(ERB_LETAL(k) || E.dominant ? [] : [[2, "betroffen"]])].map(([v, t]) => `<option value="${v}" ${K.erb[k] === v ? "selected" : ""}>${t}</option>`).join("")}</select>`, E.n + (ERB_LETAL(k) ? " · betroffen nur bei Fohlen" : ""))).join("")}
+        ${Object.entries(ERBKRANK).map(([k, E]) => zeile("🧬", E.kurz || E.n, `<select data-ke="${k}"><option value="" ${K.erb[k] == null ? "selected" : ""}>nach Rasse</option>${[[0, "frei"], [1, E.dominant ? "betroffen (1 Allel, dominant)" : "Träger"], ...(ERB_LETAL(k) || E.dominant ? [] : [[2, "betroffen"]])].map(([v, t]) => `<option value="${v}" ${K.erb[k] === v ? "selected" : ""}>${t}</option>`).join("")}</select>`, E.n + (ERB_LETAL(k) ? " · betroffen nur bei Fohlen" : ""), ERB_INFO[k] || "")).join("")}
         <p class="text" style="margin:8px 0 2px"><small><b>Veranlagungen</b> (vererbt, 0 = keine, 1 = sehr stark)</small></p>
-        ${Object.entries(VERANLAGUNG).map(([k, V]) => zeile("🧩", V.n, `<select data-kv="${k}"><option value="">nach Rasse</option>${[0, 0.25, 0.5, 0.75, 1].map(v => `<option value="${v}" ${K.vl[k] === v ? "selected" : ""}>${String(v).replace(".", ",")}</option>`).join("")}</select>`)).join("")}
+        ${Object.entries(VERANLAGUNG).map(([k, V]) => zeile("🧩", V.n, `<select data-kv="${k}"><option value="">nach Rasse</option>${[0, 0.25, 0.5, 0.75, 1].map(v => `<option value="${v}" ${K.vl[k] === v ? "selected" : ""}>${String(v).replace(".", ",")}</option>`).join("")}</select>`, "", VL_INFO[k] || "")).join("")}
         <p class="text" style="margin:8px 0 2px"><small><b>Erblich bedingte Befunde</b> (jetzt schon da)</small></p>
-        ${ERB_BEFUND.filter(k => KRANK[k]).map(k => zeile(KRANK[k].ico, KRANK[k].n, gradSel(k, K.befunde[k]), KRANK[k].chronisch ? "chronisch" : "")).join("")}
+        ${ERB_BEFUND.filter(k => KRANK[k]).map(k => zeile(KRANK[k].ico, KRANK[k].n, gradSel(k, K.befunde[k]), KRANK[k].chronisch ? "chronisch" : "", KRANK_INFO[k] || "")).join("")}
       </details>
       <details open><summary><b>🩺 Nicht erblich</b></summary>
-        ${nichtErb.map(k => zeile(KRANK[k].ico, KRANK[k].n, gradSel(k, K.befunde[k]), [KRANK[k].chronisch ? "chronisch" : "", ANSTECKEND[k] ? "ansteckend" : ""].filter(Boolean).join(" · "))).join("")}
+        ${nichtErb.map(k => zeile(KRANK[k].ico, KRANK[k].n, gradSel(k, K.befunde[k]), [KRANK[k].chronisch ? "chronisch" : "", ANSTECKEND[k] ? "ansteckend" : ""].filter(Boolean).join(" · "), KRANK_INFO[k] || "")).join("")}
       </details>`,
       [["Übernehmen", () => { wahl.krank = neuK; knopf(); }], ["Alles gesund", () => { delete wahl.krank; knopf(); }, "zweit"], ["Abbrechen", null, "zweit"]], "breit");
     const neuK = JSON.parse(JSON.stringify(K)), knopf = () => { const b = $("krankWahlAuf"); if (b) b.textContent = krankKnopfText(); };
     $("kwStatus").onchange = e => { neuK.status = e.target.value; };
+    document.querySelectorAll("[data-kwi]").forEach(x => x.onclick = ev => { ev.preventDefault(); const el = $("kwi-" + x.dataset.kwi); el.hidden = !el.hidden; });
     document.querySelectorAll("[data-kb]").forEach(x => x.onchange = () => { if (x.value) neuK.befunde[x.dataset.kb] = +x.value; else delete neuK.befunde[x.dataset.kb]; });
     document.querySelectorAll("[data-ke]").forEach(x => x.onchange = () => { if (x.value !== "") neuK.erb[x.dataset.ke] = +x.value; else delete neuK.erb[x.dataset.ke]; });
     document.querySelectorAll("[data-kv]").forEach(x => x.onchange = () => { if (x.value !== "") neuK.vl[x.dataset.kv] = +x.value; else delete neuK.vl[x.dataset.kv]; });

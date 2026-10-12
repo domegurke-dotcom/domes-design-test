@@ -235,13 +235,13 @@ const path = require('path');
         H.artFrist = jzJetzt(); const g0 = spiel.geld; stallartJahreszeit();
         ok('H7 Frist vorbei → Statusverlust und Rückzahlung', H.artVerloren && Math.round(g0 - spiel.geld) === 300, `${Math.round(g0 - spiel.geld)} € zurück`);
         const frei = () => spiel.boxen.find(b => boxFrei(b) && !b.quar), neu = (g, n) => { const b = frei(); if (b) { b.pferd = neuesPferd({ rasse: 'araber', geschlecht: g, alter: 6, name: n }); b.pferd.pflege = erzeugePflege(b.pferd); } };
-        H.art = 'zucht'; spiel.stallarten = ['zucht']; neu('Hengst', 'Zuchthengst'); neu('Stute', 'Zuchtstute1'); neu('Stute', 'Zuchtstute2'); spiel.boxen[spiel.boxen.length - 1].abfohl = true; delete H.artCache;
+        H.art = 'zucht'; spiel.stallarten = ['zucht']; neu('Hengst', 'Zuchthengst'); neu('Stute', 'Zuchtstute1'); neu('Stute', 'Zuchtstute2'); spiel.boxen[spiel.boxen.length - 1].abfohl = true; gebaeude().push({ gid: 'gAufTest', typ: 'aufzucht', stufe: 1, zustand: 100 }); delete H.artCache;   // v313: Offenstall ist jetzt Bedingung
         const g1 = spiel.geld; stallartJahreszeit();
         ok('H7 Bedingungen erfüllt → Status zurück, Förderung, Vorteil', !H.artVerloren && vorteil('zucht') && Math.round(spiel.geld - g1) === foerderBetrag(), stallartBed('zucht').map(x => (x[1] ? '✓' : '✗') + x[0]).join(' | '));
         ansehen('H7 hvw – Hof – Übersicht (Stallart)', () => stallartHTML());
         { const g2 = spiel.geld, n = gebaeude().length; spiel.geld += 200000; const g3 = spiel.geld; spiel.hof.bauHa += 2; bauStarten('reitplatz', 3); const B = BAUTEN.reitplatz, pr = bauPreis('reitplatz', 3);
           ok('H7 Bauzuschuss 20 % bei Stufe 3', Math.round(g3 - spiel.geld) === Math.round(pr - pr * BAUZUSCHUSS), `${g3 - spiel.geld} / ${pr}`); spiel.hof.wert -= pr; spiel.gebaeude = gebaeude().slice(0, n); spiel.hof.bauHa -= 2; spiel.geld = g2; }
-        spiel.boxen.forEach(b => { if (b.pferd && /^Zucht/.test(b.pferd.name)) b.pferd = null; }); H.art = 'pension'; spiel.stallarten = ['pension']; delete H.artCache; }
+        spiel.boxen.forEach(b => { if (b.pferd && /^Zucht/.test(b.pferd.name)) b.pferd = null; }); spiel.gebaeude = gebaeude().filter(x => x.gid !== 'gAufTest'); H.art = 'pension'; spiel.stallarten = ['pension']; delete H.artCache; }
       // ---------- H7 (e) Gnadenhof: Patenschaften, Tierarztrabatt (v310) ----------
       { const H = spiel.hof, merk = spiel.boxen.map(b => b.pferd); spiel.boxen.forEach(b => { if (b.pferd && !fremd(b.pferd)) b.pferd = null; });
         const fb = spiel.boxen.find(b => !b.pferd); const alt = neuesPferd({ rasse: 'haflinger', geschlecht: 'Stute', alter: 25, name: 'Gnadenoma' }); fb.pferd = alt; alt.pflege = erzeugePflege(alt);
@@ -257,13 +257,26 @@ const path = require('path');
       // ---------- H7 (d) Deckhengst für fremde Stuten (v312) ----------
       { const H = spiel.hof, merk = spiel.boxen.map(b => b.pferd), abf = spiel.boxen.map(b => b.abfohl); spiel.boxen.forEach(b => { if (b.pferd && !fremd(b.pferd)) b.pferd = null; });
         const frei = spiel.boxen.filter(b => !b.pferd).slice(0, 3), [hg, s1, s2] = frei.map((b, i) => { const q = neuesPferd({ rasse: 'hannoveraner', geschlecht: i ? 'Stute' : 'Hengst', alter: 8, name: 'Zuchttest' + i }); b.pferd = q; q.pflege = erzeugePflege(q); q.pflege.gesundheit = 100; q.befunde = []; return q; });
-        spiel.boxen[spiel.boxen.length - 1].abfohl = true; H.art = 'zucht'; spiel.stallarten = ['zucht']; delete H.artCache;
+        spiel.boxen[spiel.boxen.length - 1].abfohl = true; H.art = 'zucht'; spiel.stallarten = ['zucht']; gebaeude().push({ gid: 'gAufTest', typ: 'aufzucht', stufe: 1, zustand: 100 }); delete H.artCache;
         hg.deckFremd = { an: true }; const R = Math.random, g0 = spiel.geld, s0 = datum().s; Math.random = () => 0.01; deckhengstTag(); Math.random = R;
         if (s0 <= 1) { ok('H7d Fremde Stute gedeckt, Decktaxe gebucht', hg.deckFremd.n === 1 && Math.round(spiel.geld - g0) === decktaxe(hg), `${hg.deckFremd.n || 0} × ${decktaxe(hg)} €`);
           const f = (spiel.fremdFohlen || []).find(x => x.hid === hg.id); if (f) { f.geburt = jzJetzt(); fremdFohlenJahreszeit(); }
           ok('H7d Fohlen der fremden Stute zählt als Nachkomme', !f || hg.nachkommen === 1, String(hg.nachkommen || 0)); }
         else ok('H7d außerhalb der Decksaison keine fremden Stuten', !hg.deckFremd.n);
-        spiel.boxen.forEach((b, i) => { b.pferd = merk[i]; b.abfohl = abf[i]; }); H.art = 'pension'; spiel.stallarten = ['pension']; delete H.artCache; }
+        spiel.boxen.forEach((b, i) => { b.pferd = merk[i]; b.abfohl = abf[i]; }); spiel.gebaeude = gebaeude().filter(x => x.gid !== 'gAufTest'); H.art = 'pension'; spiel.stallarten = ['pension']; delete H.artCache; }
+      // ---------- H7 (a) Aufzucht-Offenstall (v313) ----------
+      { const H = spiel.hof, merk = spiel.boxen.slice(), mBox = spiel.boxen.map(b => b.pferd), g0 = spiel.geld, gl = gebaeude().length; spiel.boxen.forEach(b => { if (b.pferd && !fremd(b.pferd)) b.pferd = null; });
+        H.art = 'pension'; ok('H7a Offenstall nur im Zuchtstall', bauSperre('aufzucht') !== '');
+        H.art = 'zucht'; spiel.stallarten = ['zucht']; spiel.geld += 50000; H.bauHa += 1; bauStarten('aufzucht', 1); const g = gebaeude().find(x => x.typ === 'aufzucht'); g.bau.rest = 0; bauFertig(g, 'neu'); delete g.bau;
+        ok('H7a 10 Offenstall-Plätze, keine normalen freien Boxen', offenBoxen().length === 10 && !(spiel.boxen[freieBox()] || {}).offen);
+        const jb = spiel.boxen.find(b => boxFrei(b)), jq = neuesPferd({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 1, name: 'Offenjung' }); jb.pferd = jq; jq.pflege = erzeugePflege(jq); werteErgaenzen(jq);
+        const tb = spiel.boxen.find(b => boxFrei(b)), tq = neuesPferd({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 10, name: 'Offentante' }); tb.pferd = tq; tq.pflege = erzeugePflege(tq);
+        ok('H7a Jungpferd und Tante dürfen hinein', !offenSperre(jq, jb) && !offenSperre(tq, tb), offenSperre(jq, jb) + ' / ' + offenSperre(tq, tb));
+        inBoxUmziehen(jb, offenPlatz()); inBoxUmziehen(tb, offenPlatz()); const s0 = sozial(jq); offenstallNacht();
+        ok('H7a Sozialverhalten steigt im Offenstall', sozial(jq) > s0, `${s0} → ${sozial(jq)}`);
+        delete H.artCache; ok('H7a Zuchtstall-Bedingung Offenstall erfüllt', stallartBed('zucht').some(x => /Offenstall/.test(x[0]) && x[1]));
+        ansehen('H7a Offenstall-Bild', () => { aktBox = spiel.boxen.findIndex(b => b.pferd === jq); zeigeStall(); });
+        spiel.gebaeude = gebaeude().slice(0, gl); spiel.boxen = merk; spiel.boxen.forEach((b, i) => { b.pferd = mBox[i]; }); aktBox = 0; H.bauHa -= 1; H.wert -= g.preis; spiel.geld = g0; H.art = 'pension'; spiel.stallarten = ['pension']; delete H.artCache; }
       // ---------- H7 (b) Rennbahn, Rennpferdetrainer (v311) ----------
       { const H = spiel.hof, merk = spiel.boxen.map(b => b.pferd), mMerk = (spiel.mitarbeiter || []).slice(); spiel.boxen.forEach(b => { if (b.pferd && !fremd(b.pferd)) b.pferd = null; });
         const frei = spiel.boxen.filter(b => !b.pferd).slice(0, 2), rp = frei.map((b, i) => { const q = neuesPferd({ rasse: 'vollblut', geschlecht: 'Stute', alter: 4, name: 'Renner' + i }); b.pferd = q; q.pflege = erzeugePflege(q); q.pflege.gesundheit = 100; q.befunde = []; werteErgaenzen(q); return q; });

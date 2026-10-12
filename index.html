@@ -881,7 +881,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "312";
+  const SPIEL_VERSION = "313";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -889,9 +889,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=312"></script>
-<script src="kopfteile.js?v=312"></script>
-<script src="kopfalter.js?v=312"></script>
+<script src="pferd.js?v=313"></script>
+<script src="kopfteile.js?v=313"></script>
+<script src="kopfalter.js?v=313"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1197,7 +1197,8 @@
   const jzName = i => `${JZ[i % 4][1]} ${JZ[i % 4][0]} ${Math.floor(i / 4)}`;
   const ohneAnim = s => s.replace(/<animate(Transform|Motion)?\b[^>]*\/>/g, "");
   // frei = kein Pferd drin und nicht für eine tragende Stute im Ausbildungsstall reserviert
-  const boxFrei = b => !b.pferd && !b.reserviert && !b.gesperrt;
+  const boxFrei = b => !b.pferd && !b.reserviert && !b.gesperrt && !b.offen;   // H7 (a): Plätze im Aufzucht-Offenstall nur über offenFrei
+  const offenFrei = b => !!b.offen && !b.pferd && !b.reserviert && !b.gesperrt;
   const freieBox = () => { const i = spiel.boxen.findIndex(b => boxFrei(b) && !b.quar); return i >= 0 ? i : spiel.boxen.findIndex(boxFrei); };   // Quarantänestall nur, wenn sonst nichts frei ist
   const ausbStand = p => ausbildungsWerte({ ...p, alter: alterJahre(p) });
   // alle Pferde, die dem Spieler gehören, mit ihrem Aufenthaltsort
@@ -2602,7 +2603,7 @@
     $("boxSchild").textContent = "Box " + (aktBox + 1);
     $("plaketten").innerHTML = B().tot ? "" : plakettenSVG([p, B().fohlen]);   // Stallplaketten hängen an der Box des Pferdes
     stallFormat();
-    $("weideBild").innerHTML = p && (p.weide || paddockVon(p)) && !p.klinik && !p.turnier && !B().tot ? weideBildSVG(p) : "";   // H6 (Dome): Pferde auf der Weide sichtbar
+    $("weideBild").innerHTML = p && (p.weide || paddockVon(p) || B().offen) && !p.klinik && !p.turnier && !B().tot ? weideBildSVG(p) : "";   // H7 (a): Offenstall-Bild   // H6 (Dome): Pferde auf der Weide sichtbar
     if (!p || p.klinik || p.weide || p.turnier) { $("pferdPlatz").innerHTML = ""; zeigeAkte(); return; }
     const tot = !!B().tot;   // verstorben: Augen zu, keine Bewegung mehr
     const z = zeichnePferd(p.rasse, fb(p), { dreck: p.dreck ? p.dreck.fell : 0, filz: p.dreck ? p.dreck.maehne : 0, alterStufe: stufeKey(p), seed: p.id, geschlecht: p.geschlecht, augenZu: tot, statisch: tot, maehne: p.maehne, schopf: p.schopf, typ: p.typ, eigenKopf: p.nase === "spiel" ? false : (p.nase || undefined), haltung: haltungFuer(p), ohren: (p.pflege && p.pflege.gesundheit >= 45 && p.pflege.gesundheit < 65) ? "geknickt" : "" });
@@ -2897,7 +2898,8 @@
           <div class="kacheln quadrat">${spiel.boxen.map((b, i) => i === aktBox ? `<div class="kachel aktuell"><span class="ico">🏠</span><b>Box ${i + 1}</b><small>hier steht ${esc(p.name)}</small></div>`
             : b.pferd ? `<div class="kachel fehlt"><span class="ico">🐴</span><b>Box ${i + 1}</b><small>${esc(b.pferd.name)}</small></div>`
             : b.reserviert ? `<div class="kachel fehlt"><span class="ico">🔒</span><b>Box ${i + 1}</b><small>reserviert</small></div>`
-            : `<button class="kachel klickbar" data-zielbox="${i}"><span class="ico">🟩</span><b>Box ${i + 1}</b><small>frei</small></button>`).join("")}</div>
+            : b.offen && offenSperre(p, box) ? `<div class="kachel fehlt"><span class="ico">🐎</span><b>Offenstall</b><small>${esc(offenSperre(p, box))}</small></div>`
+            : `<button class="kachel klickbar" data-zielbox="${i}"><span class="ico">${b.offen ? "🐎" : "🟩"}</span><b>${b.offen ? "Offenstall" : `Box ${i + 1}`}</b><small>frei</small></button>`).join("")}</div>
           ${freieBox() < 0 ? `<p class="text">Keine Box frei – im Stall (Boxenübersicht) kannst du mit + eine bauen.</p>` : ""}` + zurueckOrt();
       } else if (ortModus === "anhaenger") {
         inhalt = meld + `<p class="text" style="margin:0 0 4px">🚚 <b>Pferdeanhänger</b> · Wohin soll ${esc(p.name)}?</p>
@@ -2952,8 +2954,8 @@
       ];
       const da = plaetze.filter(x => spiel.anlage[x[0]]).length;
       inhalt = meld +
-        `<p class="text" style="margin:0 0 4px">📍 ${esc(p.name)} steht in <b>Box ${aktBox + 1}</b>${paddockVon(p) ? ` – gerade im <b>${paddockName(paddockVon(p))}</b>${paddockPferde(paddockVon(p)).length > 1 ? ` mit ${paddockPferde(paddockVon(p)).filter(q => q !== p).map(q => esc(q.name)).join(", ")}` : " (allein)"}` : ""}. Wohin soll ${pron(p).er}? Graue Kacheln hat dein Hof noch nicht (bauen unter Hofverwaltung → Hof → Bauen).</p>
-        <div class="kacheln quadrat">${kOrt("box", "🔀", "Box wechseln", freieBox() < 0 ? "keine frei" : `${spiel.boxen.filter(boxFrei).length} frei`, "In eine andere Box umziehen")}${box.fohlen && alterJZ(box.fohlen) < 2 ? kOrt("fohlenabc", "🍼", "Fohlen-ABC", box.fohlen.abcTag === spiel.tag ? "heute geübt" : abcStand(box.fohlen), "Halfter, Führen, Hufe geben – mit dem Fohlen üben") : ""}
+        `<p class="text" style="margin:0 0 4px">📍 ${esc(p.name)} ${box.offen ? "lebt im <b>Aufzucht-Offenstall</b>" : `steht in <b>Box ${aktBox + 1}</b>`}${paddockVon(p) ? ` – gerade im <b>${paddockName(paddockVon(p))}</b>${paddockPferde(paddockVon(p)).length > 1 ? ` mit ${paddockPferde(paddockVon(p)).filter(q => q !== p).map(q => esc(q.name)).join(", ")}` : " (allein)"}` : ""}. Wohin soll ${pron(p).er}? Graue Kacheln hat dein Hof noch nicht (bauen unter Hofverwaltung → Hof → Bauen).</p>
+        <div class="kacheln quadrat">${kOrt("box", "🔀", "Box wechseln", freieBox() < 0 ? "keine frei" : `${spiel.boxen.filter(boxFrei).length} frei`, "In eine andere Box umziehen")}${offenBoxen().length ? kOrt("offenstall", "🐎", "Offen\u00adstall", box.offen ? "zurück in eine Box" : offenSperre(p, box) ? "passt nicht" : offenPlatz() < 0 ? "voll" : `${offenBoxen().filter(offenFrei).length} frei`, box.offen ? "Aus dem Aufzucht-Offenstall in eine normale Box" : "In den Aufzucht-Offenstall (Jungpferde ½–3 Jahre, Stuten als Tanten)") : ""}${box.fohlen && alterJZ(box.fohlen) < 2 ? kOrt("fohlenabc", "🍼", "Fohlen-ABC", box.fohlen.abcTag === spiel.tag ? "heute geübt" : abcStand(box.fohlen), "Halfter, Führen, Hufe geben – mit dem Fohlen üben") : ""}
           ${plaetze.map(([k, ico, n, info, kurz]) => k === "koppel" ? kOrt("koppel", ico, n, p.weide ? "auf der Weide" : p.paddock ? "im Sandpaddock" : "Weide · Sandpaddock", "Weide oder Sandpaddock") : k === "paddock" ? kOrt("paddock", ico, "Sand\u00adpaddock", p.paddock ? "zurück in die Box" : paddocks().length ? "Auslauf" : "nicht gebaut", p.paddock ? "Pferd aus dem Sandpaddock zurück in die Box holen" : "Pferd in einen Sandpaddock bringen", !!p.paddock || paddocks().length > 0) : k === "weide" ? kOrt("weide", ico, n, p.weide ? "zurück in die Box" : "Weidegang", p.weide ? "Pferd von der Weide zurück in die Box holen" : "Pferd auf die Weide bringen") : TRAIN_ORTE[k] && ortOffen(k) && fremd(p) ? kOrt("tr-" + k, ico, n, "nur der Besitzer", `${info} – Pensionspferd: reiten nur der Besitzer und der Bereiter`, false) : TRAIN_ORTE[k] && ortOffen(k) ? kOrt("tr-" + k, ico, n, spiel.anlage[k] ? (pensionReiterHeute(k).length ? `Training · 🐴 ${pensionReiterHeute(k).length}` : "Training") : "🛠️ Training", `${info} – Training`) : `<div class="kachel ${spiel.anlage[k] ? "" : "fehlt"}" title="${n.replace(/\u00ad/g, "")}: ${info}${spiel.anlage[k] ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></div>`).join("")}
           ${kOrt("labor", "🔬", "Labor", fremd(p) ? "nur der Besitzer" : "Gentests", "Genetische Tests mit einer Haarprobe", !fremd(p))}
           ${kOrt("anhaenger", "🚚", "Pferde\u00adanhänger", fremd(p) ? "nur der Besitzer" : "Klinik, Turnier, Abgeben …", "Mit dem Anhänger wegfahren", !fremd(p))}</div>
@@ -3012,7 +3014,9 @@
     };
     const ab = $("absetzen"); if (ab) ab.onclick = () => {
       if (fremd(box.fohlen)) { pensionFohlenAbholen(box); speichern(); zeigeStall(); zeigeTag(); return; }
-      const frei = freieBox();
+      const frei = freieBox(), os = offenPlatz(), f = box.fohlen;
+      if (os >= 0) { dialog(`<h3>🍼 ${esc(f.name)} absetzen</h3><p>Wohin soll ${esc(f.name)}?</p><p><small>Im Aufzucht-Offenstall wächst ${pron(f).er} mit anderen Jungpferden auf und lernt Sozialverhalten – das kostet nur Futter.</small></p>`,
+        [["🐎 In den Offenstall", () => { fohlenUmstellen(box, os); speichern(); zeigeStall(); zeigeTag(); }], ...(frei >= 0 ? [[`🏠 In Box ${frei + 1}`, () => { fohlenUmstellen(box, frei); speichern(); zeigeStall(); zeigeTag(); }, "zweit"]] : []), ["Abbrechen", null, "zweit"]]); return; }   // H7 (a)
       if (frei < 0) { dialog(`<h3>Keine Box frei</h3><p>Im Stall (Boxenübersicht) kannst du mit + eine neue Box bauen.</p>`); return; }
       fohlenUmstellen(box, frei);
       speichern(); zeigeStall(); zeigeTag();
@@ -3044,6 +3048,13 @@
       if (id === "verkaufen") { verkaufDialog(p, () => zeigeAkte()); return; }
       if (id === "turnier") { turnierDialog(p, () => zeigeAkte()); return; }
       if (id === "fohlenabc") { meldung = fohlenABC(box.fohlen); zeigeAkte(); return; }
+      if (id === "offenstall") {   // H7 (a): in den Aufzucht-Offenstall oder zurück in eine Box
+        if (p.weide || paddockVon(p)) { dialog(`<h3>🐎 Offenstall</h3><p>${esc(p.name)} ist gerade draußen – erst zurück in die Box holen.</p>`); return; }
+        if (box.offen) { const z = freieBox(); if (z < 0) { dialog(`<h3>Keine Box frei</h3><p>Für ${esc(p.name)} ist keine normale Box frei.</p>`); return; }
+          inBoxUmziehen(box, z); aktBox = z; spiel.aktBox = z; ortModus = null; meldung = `🏠 ${esc(p.name)} steht jetzt in Box ${z + 1}.`; speichern(); zeigeStall(); zeigeTag(); return; }
+        const sp = offenSperre(p, box), z = offenPlatz();
+        if (sp || z < 0) { dialog(`<h3>🐎 Aufzucht-Offenstall</h3><p>${sp ? `${esc(p.name)}: ${esc(sp)}.` : "Der Offenstall ist voll (10 Plätze)."}</p><p><small>In den Offenstall dürfen Jungpferde von ½ bis 3 Jahren und erwachsene Stuten (ab 5 Jahren, ohne Fohlen bei Fuß) als „Tanten“.</small></p>`); return; }
+        inBoxUmziehen(box, z); aktBox = z; spiel.aktBox = z; ortModus = null; meldung = `🐎 ${esc(p.name)} lebt jetzt im Aufzucht-Offenstall.`; speichern(); zeigeStall(); zeigeTag(); return; }
       if (id === "umzug") { umzugWahl(hid => { const frei = freieBoxIn(hid);
         if (frei < 1) { dialog(`<h3>Kein Platz</h3><p>Auf ${esc(hofNameVon(hid))} ist keine Box frei.</p>`); return; }
         dialog(`<h3>🏡 ${esc(p.name)} umziehen?</h3><p>${esc(p.name)}${box.fohlen ? ` und das Fohlen ${esc(box.fohlen.name)}` : ""} ziehen nach <b>${esc(hofNameVon(hid))}</b> (${frei} ${frei === 1 ? "Box" : "Boxen"} frei). Die Box hier wird frei.</p>${heuLeerIn(hid) ? `<p>⚠️ <b>In der Futterkammer von ${esc(hofNameVon(hid))} ist kein Heu!</b> Dort zuerst Raufutter kaufen, sonst hungert ${esc(p.name)}.</p>` : ""}`,
@@ -3105,7 +3116,7 @@
       ortModus = id; zeigeAkte();
     });
     INFO.querySelectorAll("[data-zielbox]").forEach(k => k.onclick = () => {
-      const z = +k.dataset.zielbox, ziel = spiel.boxen[z]; if (ziel.pferd) return;
+      const z = +k.dataset.zielbox, ziel = spiel.boxen[z]; if (ziel.pferd) return; if (ziel.offen && offenSperre(p, box)) return;
       { const e = einstellerVon(p); if (e && e.leistungen.paddockbox && !ziel.paddock) { dialog(`<h3>🏡 Paddockbox gebucht</h3><p>${esc(eName(e))} hat für ${esc(p.name)} eine Paddockbox gebucht. Bitte eine freie Paddockbox wählen.</p>`); return; } }
       ziel.pferd = p; if (box.fohlen) { ziel.fohlen = box.fohlen; delete box.fohlen; }
       ziel.krippeVoll = false; ziel.mistig = false; ziel.mistStufe = 0; ziel.tot = false;
@@ -6345,7 +6356,7 @@
   }
   // Heu wässern kostet Zeit: zählt beim Füttern wie 1½ Boxen – mit Heudampfer (Hof-Ausbau) nicht mehr
   const heudampfer = () => !!(spiel.anlage && spiel.anlage.heudampfer);
-  const boxAufwand = b => b && b.pferd && b.pferd.heuWaessern && !heudampfer() ? 1.5 : 1;
+  const boxAufwand = b => (b && b.pferd && b.pferd.heuWaessern && !heudampfer() ? 1.5 : 1) * (b && b.offen ? 0.5 : 1);   // H7 (a): im Offenstall halb so viel Arbeit
   function maBoxen(typ) { const art = typ === "pfleger" ? "pfleger" : typ === "bereiter" ? "bereiter" : "stall"; return maZuteilung(art).map(x => x.i); }
   const burschenBoxen = () => maBoxen("stallbursche");
   // Erfahrung sammeln: mehr am Anfang, weniger, je mehr man schon weiß; lernbegierig ×1,5
@@ -6879,7 +6890,7 @@
     spiel.tag += 1;
     jedenHof(hofNacht, true);
     tierschutzKlinik(); tierschutzFohlen(); laborNacht(); auktionsNacht();
-    if (datum().t === 1) { jedenHof(() => { stallartJahreszeit(); patenJahreszeit(); fremdFohlenJahreszeit(); kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); auktionsEnde(); jahreszeitBeginn(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); pensionJahreszeit(); bereiterAbrechnung(); }, true); spamAufraeumen(); hoefeVersteigern(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
+    if (datum().t === 1) { jedenHof(() => { stallartJahreszeit(); patenJahreszeit(); fremdFohlenJahreszeit(); offenstallJahreszeit(); kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); auktionsEnde(); jahreszeitBeginn(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); pensionJahreszeit(); bereiterAbrechnung(); }, true); spamAufraeumen(); hoefeVersteigern(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
     turnierKalender();
     jedenHof(hofMorgen, true);
     blutbilderTag();     // Laborergebnisse
@@ -6889,7 +6900,7 @@
       const l = spiel.boxen.filter(b => b.pferd && !b.tot && !b.pferd.klinik && !b.pferd.weide && (!b.krippeVoll || b.mistig));
       if (l.length) brief("Hofverwaltung", `${hofName()}: Pferde nicht versorgt`, `auf <b>${esc(hofName())}</b> wurden heute nicht alle Pferde versorgt: ${l.map(b => `<b>${esc(b.pferd.name)}</b> (${!b.krippeVoll ? "nicht gefüttert" : ""}${!b.krippeVoll && b.mistig ? ", " : ""}${b.mistig ? "nicht gemistet" : ""})`).join(", ")}. Ohne Futter und Pflege werden sie krank. Stell dort einen Stallburschen ein oder wechsle zu diesem Hof.`, { pferde: l.map(b => b.pferd) });
     }
-    alterAktualisieren(); bauNacht(); quarantaeneUmzug(); verderbNacht(); heulageNacht();
+    alterAktualisieren(); bauNacht(); quarantaeneUmzug(); verderbNacht(); heulageNacht(); offenstallNacht();
     // Weidegang am Nachmittag (Stallbursche/Azubi): der vergangene Tag zählt als Weidetag, abends ist das Pferd wieder drin (siehe unten)
     spiel.boxen.forEach(b => { const p = b.pferd, W = p && p.weideNachm; if (!W) return; delete p.weideNachm;
       if (W.tag !== spiel.tag - 1 || W.aus || b.tot || p.weide || p.klinik || p.boxenruhe || inQuarantaene(p) || !weideDa()) return;
@@ -7438,7 +7449,7 @@
     const leer = (i, txt) => `<button class="paar leer" data-zubox="${i}"><span class="paar-bild leer-rahmen"></span><span class="paar-brett"><b>Box ${i + 1}</b><span>${txt}</span></span></button>`;
     zeigeNeben("🏠 Stall", `<div class="panel" style="grid-column:1/-1;width:100%;max-width:760px;margin:0 auto">${(() => { const dd = datum(); return `<button class="knopf tag-beenden" id="bxTag"><span>${JZ[dd.s][1]} ${datumText(dd)} · Tag ${dd.t}/${tpj()}</span><b>🌙 Tag beenden</b></button>`; })()}<div class="hf-kopf"><b>${spiel.boxen.filter(b => b.pferd).length} von ${spiel.boxen.length} Boxen belegt</b><button class="mini-knopf" id="bxBauen">🏗️ Bauen</button></div><p style="margin:0">Antippen, um in die Box zu gehen. Neue Boxen baust du unter Hofverwaltung → Hof → Bauen.</p>${pensionStallHTML()}
       <div class="paar-liste boxen-liste">${spiel.boxen.map((b, i) => b.pferd ? pferdKachel(b.pferd, { attr: `data-zubox="${i}"`, zeilen: [`Box ${i + 1}`, b.tot ? "🕊️ verstorben" : b.pferd.klinik ? "🏥 in der Klinik" : b.pferd.weide ? "🌿 auf der Weide" : b.pferd.weideNachm && b.pferd.weideNachm.tag === spiel.tag && !b.pferd.weideNachm.aus ? "🌿 nachmittags Weide" : `${rasseById(b.pferd.rasse).name}`, ...(b.fohlen ? [`🍼 + ${esc(b.fohlen.name)}`] : []), ...(angebotVon(b.pferd) ? ["💰 zum Verkauf"] : []), ...(fremd(b.pferd) ? [`🏡 ${esc((einstellerVon(b.pferd) || { nn: "Pension" }).nn)}`] : [])] })
-        : leer(i, b.gesperrt ? "🚧 Umbau" : b.reserviert ? "🔒 reserviert" : `leer · ${b.quar ? "Quarantäne" : b.abfohl ? "Abfohlbox" : b.paddock ? "Paddockbox" : "Box"}, Stufe ${boxenStufe(b)}`)).join("")}</div></div>`);
+        : leer(i, b.gesperrt ? "🚧 Umbau" : b.reserviert ? "🔒 reserviert" : `leer · ${b.offen ? "Offenstall" : b.quar ? "Quarantäne" : b.abfohl ? "Abfohlbox" : b.paddock ? "Paddockbox" : "Box"}, Stufe ${boxenStufe(b)}`)).join("")}</div></div>`);
     $("bxBauen").onclick = () => zeigeBauenFenster();
     $("bxTag").onclick = () => tagBeenden(() => zeigeBoxen());
     if ($("pnZurPension")) $("pnZurPension").onclick = () => { hofBereich = "pension"; zeigeHof("hof"); };
@@ -8438,7 +8449,7 @@
     heudampfer: { n: "Heu\u00addampfer", ico: "♨️", fest: 800, einmal: true, info: "Heu bedampfen statt wässern – kostet keine Arbeitszeit mehr" },
     quarantaene: { n: "Quarantäne\u00adstall", ico: "🚧", preis: [1500, 2400, 3600], zeit: 1, boxen: 2, einmal: true, info: "2 Boxen abseits – Pferde dort stecken niemanden an" },
     abfohlbox: { n: "Abfohlbox", ico: "🍼", preis: [600, 900, 1400], zeit: .5, boxen: 1, einmal: true, info: "große Box mit Kamera für die Geburt (im Zuchtstall bis zu 5, H7)" },
-    aufzucht: { n: "Aufzucht-Offen\u00adstall", ico: "🐎", nur: "Zuchtstall (kommt mit Etappe H7)", info: "bis zu 10 Fohlen mit Fohlenweide" },
+    aufzucht: { n: "Aufzucht-Offen\u00adstall", ico: "🐎", preis: [5000, 8000, 12000], zeit: 1, boxen: 10, einmal: true, info: "Offenstall mit Liegehalle und Auslauf: bis zu 10 Fohlen und Jungpferde (½–3 Jahre) wachsen zusammen auf, erwachsene Stuten als „Tanten“ – nur im Zuchtstall" },
   };
   const BAU_REIHE = ["stall", "paddock", "reitplatz", "roundpen", "reithalle", "trail", "weide", "sandpaddock", "waschplatz", "sattelkammer", "lager", "heudampfer", "quarantaene", "abfohlbox", "rennbahn", "aufzucht"];
   const VERFALL = [0, 4, 2.5, 1.5];          // Zustand-Punkte je Jahreszeit nach Stufe
@@ -8470,6 +8481,7 @@
   }
   function bauSperre(typ) {
     const B = BAUTEN[typ]; if (B.nur) return `nur ${B.nur}`;
+    if (typ === "aufzucht" && (!spiel.hof || spiel.hof.art !== "zucht")) return "nur im Zuchtstall (Hof → Übersicht → Stallart)";   // H7 (a)
     if (B.einmal && gebaeude().some(g => g.typ === typ)) return typ === "heudampfer" ? "schon vorhanden" : "schon gebaut";
     if (typ === "heudampfer" && !gebaeude().some(g => g.typ === "lager" && !g.bau)) return "braucht das Futter- und Strohlager";
     if (typ === "weide" && freiesLand() < 1) return "kein freies Weideland (Hof → Land)";
@@ -8570,7 +8582,7 @@
     if (art === "umbau") { g.stufe = Math.min(3, g.stufe + 1); spiel.boxen.forEach(b => { if (b.geb === g.gid) { b.stufe = g.stufe; delete b.gesperrt; } }); umbauFertig(g); }
     else {
       if (B.boxen) for (let i = 0; i < g.boxen; i++) spiel.boxen.push({ nr: spiel.boxen.length + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false, geb: g.gid, stufe: g.stufe,
-        ...(g.typ === "paddock" ? { paddock: true } : g.typ === "quarantaene" ? { quar: true } : g.typ === "abfohlbox" ? { abfohl: true } : {}) });
+        ...(g.typ === "paddock" ? { paddock: true } : g.typ === "quarantaene" ? { quar: true } : g.typ === "abfohlbox" ? { abfohl: true } : g.typ === "aufzucht" ? { offen: true } : {}) });
       if (B.anlage) (spiel.anlage = spiel.anlage || {})[B.anlage] = true;
       if (g.typ === "weide" && spiel.hof) { const z = g.ziel && weideById(g.ziel);   // H6: neue Weide oder vorhandene vergrößern
         if (z) z.ha = Math.round((z.ha + g.ha) * 100) / 100; else { const wi = g.ziel === "wiese", n = weiden().filter(w => !!w.wiese === wi).length + 1; weiden().push({ wid: "w" + Math.random().toString(36).slice(2, 7), name: `${wi ? "Futterwiese" : "Weide"} ${n}`, ha: g.ha, gras: 60, matsch: 0, ...(wi ? { wiese: true } : {}) }); }
@@ -8694,7 +8706,7 @@
   }
   // ---------- Bauland und Weideland (Dome, v225): Gebäude brauchen Bauland, Weiden nur Weideland ----------
   const BAULAND_PREIS = 3000, HOFPLATZ = 0.2;   // Wohnhaus und Hofplatz
-  const PLATZ = { stall: 0.1 / 6, paddock: 0.15 / 6, reitplatz: 0.1, reithalle: 0.15, rennbahn: 1, roundpen: 0.05, trail: 0.05, sandpaddock: 0.05, waschplatz: 0.05, lager: 0.05, sattelkammer: 0.05, quarantaene: 0.05, abfohlbox: 0.05 };
+  const PLATZ = { stall: 0.1 / 6, paddock: 0.15 / 6, reitplatz: 0.1, reithalle: 0.15, rennbahn: 1, aufzucht: 0.3, roundpen: 0.05, trail: 0.05, sandpaddock: 0.05, waschplatz: 0.05, lager: 0.05, sattelkammer: 0.05, quarantaene: 0.05, abfohlbox: 0.05 };
   const platzVon = (typ, boxen) => typ === "stall" || typ === "paddock" ? PLATZ[typ] * (boxen || BAUTEN[typ].boxen) : PLATZ[typ] || 0;
   const bauHa = () => !spiel.hof ? 1 : spiel.hof.bauHa != null ? spiel.hof.bauHa : (spiel.hof.bauHa = 1);
   const baulandBelegt = () => runde2(HOFPLATZ + gebaeude().reduce((a, g) => a + platzVon(g.typ, g.boxen), 0));
@@ -9234,16 +9246,51 @@
   function koppelAepfel(p) { const w = weideVon(p), g = paddockVon(p);
     if (g) return Math.min(6, Math.round(g.mist || 0));
     if (w) return w.aepfel === spiel.tag ? 0 : Math.min(6, Math.ceil(weidePferde(w).length * Math.min(3, spiel.tag - (w.aepfel != null ? w.aepfel : spiel.tag - 1)) / 2)); return 0; }
+  // ---------- H7 (a): Aufzucht-Offenstall – bis 10 Fohlen/Jungpferde (½–3 Jahre) + erwachsene Stuten als „Tanten“, kostet nur Futter ----------
+  const OFFEN = { jungAb: 2, jungBis: 12, tanteAb: 20, sozial: 2, wohl: 2 };   // Jahreszeiten · Sozialverhalten/Wohlbefinden je Nacht wie in der Aufzuchtstation
+  const offenBoxen = () => spiel.boxen.filter(b => b.offen);
+  const offenPferde = () => offenBoxen().filter(b => b.pferd && !b.tot).map(b => b.pferd);
+  const offenJung = q => alterJZ(q) >= OFFEN.jungAb && alterJZ(q) < OFFEN.jungBis;
+  const offenTante = q => q.geschlecht === "Stute" && alterJZ(q) >= OFFEN.tanteAb;
+  function offenSperre(p, box) {   // darf p in den Offenstall? "" = ja
+    if (!offenBoxen().length) return "kein Aufzucht-Offenstall";
+    if (fremd(p)) return "Pensionspferd";
+    if (box && box.fohlen) return "hat ein Fohlen bei Fuß";
+    if (!offenJung(p) && !offenTante(p)) return alterJZ(p) < OFFEN.jungAb ? "noch zu jung (erst nach dem Absetzen)" : "nur Jungpferde bis 3 Jahre und erwachsene Stuten";
+    if (p.traechtig && p.traechtig.geburt - jzJetzt() <= 1) return "hochtragend – lieber in die Abfohlbox";
+    return "";
+  }
+  const offenPlatz = () => spiel.boxen.findIndex(offenFrei);
+  function inBoxUmziehen(box, z) {   // Pferd (samt Fohlen) von box in Box z umziehen
+    const ziel = spiel.boxen[z], p = box.pferd; ziel.pferd = p; if (box.fohlen) { ziel.fohlen = box.fohlen; delete box.fohlen; }
+    ziel.krippeVoll = false; ziel.mistig = false; ziel.mistStufe = 0; ziel.tot = false;
+    box.pferd = null; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0;
+  }
+  // jede Nacht: Herde im Offenstall – Jungpferde lernen Sozialverhalten (mit Tante doppelt so gut), alle fühlen sich in der Gruppe wohl
+  function offenstallNacht() {
+    const P = offenPferde().filter(q => !q.weide && !q.klinik && !q.turnier); if (!P.length) return;
+    const jung = P.filter(offenJung), tanten = P.filter(q => !offenJung(q) && offenTante(q)), tf = tanten.length ? Math.min(1, tanten.length * 5 / Math.max(1, jung.length)) : 0;
+    jung.forEach(q => { sozialPlus(q, OFFEN.sozial * (0.5 + 0.5 * tf)); });
+    if (P.length >= 2) P.forEach(q => wohlAendern(q, OFFEN.wohl * (jung.length && !tanten.length ? 0.5 : 1), "Offenstall mit Artgenossen"));
+  }
+  // zu Beginn jeder Jahreszeit: wer nicht mehr in den Offenstall gehört (3 Jahre alt), zieht in eine freie Box – sonst Hinweis
+  function offenstallJahreszeit() {
+    offenBoxen().forEach(b => { const q = b.pferd; if (!q || b.tot || q.klinik || q.turnier || !offenJung(q) && offenTante(q) || offenJung(q)) return;
+      const z = freieBox(); if (q.weide) vonWeideHolen(b);
+      if (z >= 0) { inBoxUmziehen(b, z); brief("Hofverwaltung", `${q.name} ist aus dem Offenstall gezogen`, `<b>${esc(q.name)}</b> ist jetzt ${alterJahre(q)} Jahre alt und damit zu alt für den Aufzucht-Offenstall – ${pron(q).er} steht jetzt in Box ${z + 1}.`, { pferde: [q] }); }
+      else if (q.offenHinweis !== jzJetzt()) { q.offenHinweis = jzJetzt(); brief("Hofverwaltung", `Box für ${q.name} gesucht`, `<b>${esc(q.name)}</b> ist zu alt für den Aufzucht-Offenstall, aber es ist keine Box frei. Bitte eine Box frei machen oder bauen (Hofverwaltung → Hof → Bauen).`, { pferde: [q] }); } });
+  }
   function weideBildSVG(p) {
-    const sand = !!paddockVon(p) && !p.weide, w = sand ? null : weideVon(p), g = sand ? paddockVon(p) : null, s = datum().s, box = boxVon(p) || B();
+    const box0 = boxVon(p) || B(), os = !p.weide && !paddockVon(p) && !!(box0 && box0.offen);   // H7 (a): Aufzucht-Offenstall
+    const sand = os || (!!paddockVon(p) && !p.weide), w = sand ? null : weideVon(p), g = sand && !os ? paddockVon(p) : null, s = datum().s, box = box0;
     const boden = sand ? "#dcc38e" : ["#8fcf6a", "#7cbf55", "#a8b85a", "#e9eef2"][s], boden2 = sand ? "#c9ad74" : ["#6fb24c", "#5fa33f", "#8c9a45", "#cfd8de"][s];
-    const andere = (sand ? paddockPferde(g) : w ? weidePferde(w) : []).filter(q => q !== p).slice(0, 5);
+    const andere = (os ? offenPferde() : sand ? paddockPferde(g) : w ? weidePferde(w) : []).filter(q => q !== p).slice(0, 5);
     const malen = (q, x, y, sc, spiegel) => { const z = zeichnePferd(q.rasse, fb(q), { alterStufe: stufeKey(q), seed: q.id, geschlecht: q.geschlecht, maehne: q.maehne, schopf: q.schopf, typ: q.typ, eigenKopf: q.nase === "spiel" ? false : (q.nase || undefined), haltung: "normal", statisch: 1 });
       const cx = (z.box.minX + z.box.maxX) / 2; return `<g pointer-events="none" transform="translate(${(x - spiegel * cx * sc).toFixed(1)},${y}) scale(${(spiegel * sc).toFixed(4)},${sc.toFixed(4)})">${z.svg}</g>`; };
     const hinten = andere.map((q, i) => malen(q, [80, 320, 135, 265, 35, 365][i], 232 + (i % 2) * 8, (q.stockmass || 150) * STALL.cmZuEinheit / 100 * 0.44, i % 2 ? -1 : 1)).join("");
     const vorne = malen(p, 200, 290, (p.stockmass || 150) * STALL.cmZuEinheit / 100 * 0.62, 1);   // Dome: das gewählte Pferd vorne in der Mitte
-    const txt = sand ? `🟫 ${paddockName(g)}` : `🌿 ${w ? w.name : "Weide"} · Gras ${w ? Math.round(w.gras) : 0} %`, bw = Math.round(30 + 7.2 * txt.length);
-    const heuJa = sand || heuNoetigP(p), raufeVoll = !!box.krippeVoll, eimerJa = kraftNoetig(p, box), eimerVoll = !!box.kraftVoll, n = koppelAepfel(p);
+    const txt = os ? `🐎 Offenstall · ${offenPferde().length} von ${offenBoxen().length}` : sand ? `🟫 ${paddockName(g)}` : `🌿 ${w ? w.name : "Weide"} · Gras ${w ? Math.round(w.gras) : 0} %`, bw = Math.round(30 + 7.2 * txt.length);
+    const heuJa = sand || heuNoetigP(p), raufeVoll = !!box.krippeVoll, eimerJa = kraftNoetig(p, box), eimerVoll = !!box.kraftVoll, n = os ? (box.mistig ? Math.min(6, 2 + (box.mistStufe || 0)) : 0) : koppelAepfel(p);
     const raufe = `<g data-kraufe="1" role="button" aria-label="Heuraufe" style="cursor:pointer"><rect x="18" y="196" width="62" height="40" rx="3" fill="#8f6a45" stroke="#2b1d14" stroke-width="1.4"/>
       ${raufeVoll ? `<path d="M21,200 Q30,186 49,188 Q68,186 77,200 Z" fill="#e3c95e" stroke="#2b1d14" stroke-width="1"/><g stroke="#a88b2e" stroke-width=".9"><path d="M30,197 l6,-5"/><path d="M48,196 l5,-6"/><path d="M62,197 l6,-4"/></g>` : `<path d="M24,232 q8,-3 14,0 q6,-2 10,1" fill="none" stroke="#c9ae55" stroke-width="1.4"/>`}
       <g stroke="#5a3d24" stroke-width="2.2">${[26, 36, 46, 56, 66, 74].map(x => `<line x1="${x}" y1="198" x2="${x}" y2="234"/>`).join("")}</g><line x1="22" y1="236" x2="22" y2="262" stroke="#5a3d24" stroke-width="3"/><line x1="76" y1="236" x2="76" y2="262" stroke="#5a3d24" stroke-width="3"/></g>`;
@@ -9256,7 +9303,8 @@
     if (heuJa && !raufeVoll) hinweise += blase(49, 172, "Füttern");   // v300: genug Gras → keine Füttern-Blase   // Dome: Futter-Sprechblasen nur „Füttern“
     if (!I.eimer || (eimerJa && !eimerVoll)) hinweise += blase(305, 216, "Füttern");
     if (n && !I.aepfel) hinweise += blase(aepfelPos[0][0], aepfelPos[0][1] - 28, "Abäppeln");
-    const zaun = sand ? `<g stroke="#7a5a3a" stroke-width="3">${[10, 70, 130, 190, 250, 310, 370].map(x => `<line x1="${x}" y1="150" x2="${x}" y2="190"/>`).join("")}<line x1="0" y1="160" x2="400" y2="158"/><line x1="0" y1="176" x2="400" y2="174"/></g>` : `<g stroke="#7a5a3a" stroke-width="3">${[20, 80, 140, 200, 260, 320, 380].map(x => `<line x1="${x}" y1="128" x2="${x}" y2="160"/>`).join("")}<line x1="0" y1="136" x2="400" y2="132"/><line x1="0" y1="150" x2="400" y2="146"/></g>`;
+    const halle = os ? `<g><path d="M30,104 L200,64 L370,104 Z" fill="#6b4a2e" stroke="#2b1d14" stroke-width="1.4"/><rect x="48" y="104" width="304" height="72" fill="#9c6b45" stroke="#2b1d14" stroke-width="1.2"/><g stroke="#7a5333" stroke-width="1">${[70, 95, 120, 145, 170, 195, 220, 245, 270, 295, 320].map(x => `<line x1="${x}" y1="106" x2="${x}" y2="174"/>`).join("")}</g><rect x="48" y="160" width="304" height="18" fill="#e3c95e"/><g fill="#c9a83e">${[70, 130, 190, 250, 310].map(x => `<ellipse cx="${x}" cy="168" rx="16" ry="3"/>`).join("")}</g><g stroke="#5a3d24" stroke-width="5">${[50, 200, 350].map(x => `<line x1="${x}" y1="104" x2="${x}" y2="180"/>`).join("")}</g></g>` : "";   // Liegehalle mit Stroh
+    const zaun = os ? `${halle}<g stroke="#7a5a3a" stroke-width="3">${[0, 400].map(x => `<line x1="${x}" y1="176" x2="${x}" y2="212"/>`).join("")}</g>` : sand ? `<g stroke="#7a5a3a" stroke-width="3">${[10, 70, 130, 190, 250, 310, 370].map(x => `<line x1="${x}" y1="150" x2="${x}" y2="190"/>`).join("")}<line x1="0" y1="160" x2="400" y2="158"/><line x1="0" y1="176" x2="400" y2="174"/></g>` : `<g stroke="#7a5a3a" stroke-width="3">${[20, 80, 140, 200, 260, 320, 380].map(x => `<line x1="${x}" y1="128" x2="${x}" y2="160"/>`).join("")}<line x1="0" y1="136" x2="400" y2="132"/><line x1="0" y1="150" x2="400" y2="146"/></g>`;
     return `<rect x="0" y="0" width="400" height="300" fill="${s === 3 ? "#cfdbe6" : "#bfe3f5"}"/><path d="M0,120 Q90,92 190,112 T400,104 V300 H0 Z" fill="${sand ? (["#6fb24c", "#5fa33f", "#8c9a45", "#cfd8de"][s]) : boden2}"/><path d="M0,${sand ? 172 : 150} Q120,${sand ? 166 : 128} 240,${sand ? 172 : 146} T400,${sand ? 168 : 140} V300 H0 Z" fill="${boden}"/>${sand ? `<g fill="${boden2}">${[[40, 210], [120, 240], [260, 220], [330, 270], [190, 275], [80, 285]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="14" ry="3"/>`).join("")}</g>` : ""}
       ${zaun}${hinten}${raufe}${eimer}${vorne}${aepfel}${hinweise}<g data-wbschild="1" role="button" aria-label="Zur Boxenübersicht" style="cursor:pointer"><rect x="${200 - bw / 2}" y="6" width="${bw}" height="22" rx="11" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4"/><text x="200" y="21" text-anchor="middle" font-size="12" font-weight="700" fill="#2b1d12" font-family="system-ui, sans-serif">${esc(txt)}</text></g>`;
   }
@@ -9266,7 +9314,7 @@
     const P = eigenePferdeHof(), A = spiel.anlage || {};
     if (art === "pension") { const n = Math.ceil(spiel.boxen.length / 2), e = einstellerListe().filter(x => pensionBox(x)).length; return [[`mindestens die Hälfte der Boxen an Einsteller (${e} von ${n})`, e >= n]]; }
     if (art === "zucht") { const h = P.filter(q => q.geschlecht === "Hengst" && alterJZ(q) >= 12).length, st = P.filter(q => q.geschlecht === "Stute" && alterJZ(q) >= 12 && alterJZ(q) < 84).length;
-      return [[`mindestens 1 Deckhengst ab 3 Jahren (${h})`, h >= 1], [`mindestens 2 Zuchtstuten (${st})`, st >= 2], ["Abfohlbox", spiel.boxen.some(b => b.abfohl)], ["Aufzucht-Offenstall", true, true]]; }
+      return [[`mindestens 1 Deckhengst ab 3 Jahren (${h})`, h >= 1], [`mindestens 2 Zuchtstuten (${st})`, st >= 2], ["Abfohlbox", spiel.boxen.some(b => b.abfohl)], ["Aufzucht-Offenstall", gebaeude().some(g => g.typ === "aufzucht" && !g.bau)]]; }
     if (art === "ausbildung") { const ber = angestellte("bereiter").length; return [["Reitplatz", !!A.reitplatz], ["Roundpen oder Reithalle", !!(A.roundpen || A.reithalle)], [`mindestens 1 Bereiter (${ber})`, ber >= 1]]; }
     if (art === "gnadenhof") { const falsch = P.filter(q => !(istSenior(q) || befundListe(q).length || q.schutzBis || altersschwach(q))), zucht = P.some(q => q.traechtig) || spiel.boxen.some(b => b.fohlen), verk = (spiel.angebote || []).length;
       return [[`nur alte, kranke oder Notfallpferde${falsch.length ? ` (nicht: ${falsch.map(q => esc(q.name)).join(", ")})` : ""}`, !falsch.length], ["keine Zucht", !zucht], ["kein Verkauf", !verk]]; }
@@ -9309,7 +9357,7 @@
       H.artVerloren = true; delete H.artFrist; H.foerderLog = [];
       brief("Landwirtschaftsamt", `${name}: Status verloren`, `{dein|Ihr} Hof <b>${esc(hofName())}</b> hat die Bedingungen als ${name} auch nach der Frist nicht erfüllt (${fehlt.join(", ")}). Der Hof verliert den Status – die Vorteile entfallen${zurueck ? `, und die Förderung des letzten Jahres (<b>${fmt(zurueck)}</b>) wurde zurückgebucht` : ""}. Sobald die Bedingungen wieder erfüllt sind, bekommt der Hof den Status zurück.`); }
   }
-  const STALLART_VORTEILE = { pension: ["30 % mehr Anfragen von Einstellern", "Pferdewirt Haltung und Service einstellbar"], zucht: ["25 % Rabatt im Labor", "eigene Hengste als Deckhengst für fremde Stuten (Decktaxe)", "Aufzucht-Offenstall – kommt später"],
+  const STALLART_VORTEILE = { pension: ["30 % mehr Anfragen von Einstellern", "Pferdewirt Haltung und Service einstellbar"], zucht: ["25 % Rabatt im Labor", "eigene Hengste als Deckhengst für fremde Stuten (Decktaxe)", "Aufzucht-Offenstall: Fohlen wachsen in der Herde auf, kostet nur Futter"],
     ausbildung: ["eigene Pferde lernen 20 % schneller", "fremde Pferde in Beritt – kommt später"], gnadenhof: ["Spenden: 30 € je Pferd und Jahreszeit", "Patenschaften: 60–120 € je Patenpferd und Jahreszeit", "20 % Rabatt beim Tierarzt"],
     renn: ["halbes Jockey-Reitgeld", "keine Trainergebühr bei Galopprennen (sonst 100 € je Start)", "Rennpferdetrainer einstellbar", "Verkaufsrennen – kommt später"], western: ["halbes Nenngeld bei Westernprüfungen", "Westerntraining 20 % schneller", "Westerntrainer einstellbar"] };
   function stallartHTML() {   // Dome (v295): oben in Hof → Übersicht – Stallart, Verpflichtungen und Vorteile in kurzen Stichpunkten
@@ -9615,6 +9663,7 @@
       <p><b>Gnadenhof (H7 e, v310):</b> Tierarzt-Rechnungen ${Math.round(GNADEN_RABATT * 100)} % günstiger (eigener Posten „Gnadenhof-Rabatt“). Patenschaften: zu Beginn jeder Jahreszeit bekommt jedes eigene Pferd ohne Paten mit ${Math.round(PATE.chance * 100)} % einen Paten, der ${fmt(PATE.betrag[0])}–${fmt(PATE.betrag[1])} je Jahreszeit zahlt (erste Zahlung sofort) und manchmal schreibt (${Math.round(PATE.brief * 100)} %). Nur solange der Status erfüllt ist; stirbt das Patenpferd, verabschiedet sich der Pate. Übersicht in Hof → Übersicht.</p>
       <p><b>Rennstall und Westernstall (H7 b, v311):</b> <i>Rennbahn</i> (Hof → Bauen, ${BAUTEN.rennbahn.preis.map(fmt).join(" / ")}, 1 Jahreszeit Bauzeit, 1 ha Bauland) – neuer Trainingsort mit <i>Galopptraining</i> (ab 2 Jahren, ⚡ ${UEBUNG.galopptraining.e}, Beschleunigung, Ausdauer, Kraft). <i>Rennpferdetrainer</i> (${fmt(MA_TYP.renntrainer.gehalt)} je Jahreszeit, nur im Rennstall) trainiert jeden Morgen bis zu 4 eigene Rennpferde (Vollblut ab 2, Araber/Achal-Tekkiner ab 3 Jahren): Galopptraining auf der Rennbahn (sonst Konditionstraining), danach Ausritt. <i>Westerntrainer</i> (${fmt(MA_TYP.westerntrainer.gehalt)}, nur im Westernstall) trainiert bis zu 4 Westernpferde (Quarter Horses oder mit Western-Ausbildung): Bodenarbeit/Longieren, Westernarbeit, mit Trail-Parcours Stangenarbeit. Pferde, die heute schon trainiert wurden, lassen sie aus. Ohne Rennstall kostet jedes Galopprennen ${fmt(TRAINER_GEBUEHR)} Trainergebühr zusätzlich (fremder Trainer bereitet das Pferd vor). Westernstall: Westernarbeit 20 % schneller.</p>
       <p><b>Deckhengst für fremde Stuten (H7 d, v312):</b> nur im Zuchtstall mit erfüllten Bedingungen: Box → Steckbrief → Genetik → „anbieten“ (Hengst ab 3 Jahren, ohne Zuchtsperre). In der Decksaison (Frühling, Sommer) kommen je Jahreszeit etwa 1 + Qualität Stuten (Qualität = Turniererfolge/3.000 € + 0,5 je prämiertem Fohlen + (Marktwert − 4.000)/6.000, höchstens +4), höchstens eine am Tag. Decktaxe wie bei der Deckstation (10 % des Marktwerts, mind. 150 €), sofort gebucht; der Hengst verliert ${DECK_FREMD.energie} Energie. ${Math.round(DECK_FREMD.tragend * 100)} % werden tragend – 4 Jahreszeiten später schreibt die Besitzerin, das Fohlen zählt als Nachkomme.</p>
+      <p><b>Aufzucht-Offenstall (H7 a, v313):</b> nur im Zuchtstall baubar (Hof → Bauen, ${BAUTEN.aufzucht.preis.map(fmt).join(" / ")}, 1 Jahreszeit, ${haTxt(PLATZ.aufzucht)} Bauland), Bedingung des Zuchtstalls. 10 Plätze, die im Stall wie Boxen durchgeschaltet werden, aber ein gemeinsames Offenstall-Bild zeigen (Heuraufe, Futtereimer, Pferdeäpfel = Platz misten). Hinein dürfen Jungpferde von ½ bis 3 Jahren und erwachsene Stuten ab 5 Jahren ohne Fohlen bei Fuß (nicht hochtragend) als „Tanten“ – über Ort → Offenstall, Box wechseln oder beim Absetzen. Normale Pferde kommen nie automatisch auf einen Offenstall-Platz. Kostet nur Futter und Einstreu, halb so viel Arbeit für die Mitarbeiter. Jede Nacht: Jungpferde Sozialverhalten +${OFFEN.sozial} (Standardtempo, wie in der Aufzuchtstation; ohne Tante nur halb so viel, volle Wirkung ab 1 Tante je 5 Jungpferde), alle Wohlbefinden +${OFFEN.wohl} (ohne Tante +${OFFEN.wohl / 2}), sobald mindestens 2 Pferde dort leben. Wird ein Jungpferd 3 Jahre alt, zieht es zu Beginn der Jahreszeit in eine freie Box (sonst Brief).</p>
       <p><b>Koppel, Heu und Futter (v293):</b> Ort → Koppel → Weide oder Sandpaddock. Im Sandpaddock steht das Pferd draußen (Bild wie die Weide), kein Gras – Heu muss immer in die Heuraufe. Weide- und Sandpaddock-Bild: Heuraufe antippen = Heu/Raufutter aus dem Lager, Futtereimer antippen = alles außer Heu laut Futterplan (steht nur Heu im Plan, bleibt der Eimer leer), Pferdeäpfel antippen = abäppeln (Weide: wie „Abäppeln“, Sandpaddock: Mist je Pferd und Nacht, ab 3 drückt er aufs Wohlbefinden). Box: Heuhaufen hinten links = Heu (ohne Heu hungrig wie bisher), Krippe = Futter außer Heu (Haferkörner). Mitarbeiter und Turnier füttern beides. Einstreu als Boden sichtbar (Stroh, Späne, Pellets, Leinstroh/Hanf; ohne Einstreu Pflaster), leere Boxen behalten Einstreu und Futterreste bis „Box leeren“. Neue Futterstellen zeigen eine Info-Sprechblase, bis man sie einmal angetippt hat.</p>
       <p><b>Weide-Bild (H6):</b> steht ein Pferd auf der Weide, zeigt die Box statt der leeren Box die Weide mit bis zu 6 Pferden dieser Weide (das gewählte vorne in der Mitte), Gras-Farbe je Jahreszeit, oben Name und Grasstand.</p>
       <p><b>Wirkung der Stufe:</b> Wohlbefinden je Nacht in der Box: Stufe 1 −0,5, Stufe 3 +0,5, Zustand unter 40 % −0,5, Paddockbox +0,5. Verletzungsrisiko in der Box × 1,3 / 1 / 0,8, Zustand unter 70 % × 1,1, unter 40 % × 1,3. Mitarbeiter-Zufriedenheit je Jahreszeit: Ø Stufe unter 1,5 −3, ab 2,5 +3, Ø Zustand unter 50 % −3. Quarantänestall: Pferde dort stecken niemanden an und werden nicht angesteckt. Pensionspreis nach Stufe kommt mit H5.</p>
@@ -10102,7 +10151,7 @@
       if (p.weide && !heuNoetigP(p)) { reaktionZeigen("🌿 Genug Gras – heute kein Heu nötig."); speichern(); zeigeStall(); return; }   // v300 (Dome): Weide hat genug Gras
       if (!fuetternAusLager(box, "du", "rau")) { dialog(`<h3>🌾 Kein Heu mehr</h3><p>In der Futterkammer ist nicht genug Heu. Nachkaufen: Hofverwaltung → Hof → Futterkammer.</p>`); return; } box.krippeVoll = true; reaktionZeigen(reaktion(p, "fuettern")); spielerLernt("futter"); speichern(); zeigeStall(); zeigeTag(); return; }
     if (t.closest("[data-keimer]")) { e.stopPropagation(); I.eimer = true; if (box.kraftVoll) { zeigeStall(); return; } if (!kraftNoetig(p, box)) { dialog(`<h3>🪣 Futtereimer</h3><p>Im Futterplan von ${esc(p.name)} steht nichts außer Heu – der Eimer bleibt leer.</p>`); return; } fuetternAusLager(box, "du", "kraft"); box.kraftVoll = true; reaktionZeigen(reaktion(p, "fuettern")); speichern(); zeigeStall(); zeigeTag(); return; }
-    if (t.closest("[data-kaepfel]")) { e.stopPropagation(); I.aepfel = true; const g = paddockVon(p), w = weideVon(p); if (g && !p.weide) g.mist = 0; else if (w) w.aepfel = spiel.tag; spielerLernt("klima"); speichern(); zeigeStall(); funkeln(); return; }
+    if (t.closest("[data-kaepfel]")) { e.stopPropagation(); I.aepfel = true; const g = paddockVon(p), w = weideVon(p); if (box.offen && !p.weide && !g) { box.mistig = false; box.mistStufe = 0; } else if (g && !p.weide) g.mist = 0; else if (w) w.aepfel = spiel.tag; spielerLernt("klima"); speichern(); zeigeStall(); funkeln(); return; }
   });   // Dome: Weide-/Sandpaddock-Bild – Schild, Heuraufe, Futtereimer, Pferdeäpfel   // Dome: Weide-Schild → Boxenübersicht
   // alte Neuigkeiten-Meldungen in Briefe umwandeln
   if (spiel.meldungen && spiel.meldungen.length) { spiel.meldungen.reverse().forEach(m => brief("Hofverwaltung", "Neuigkeit", m)); delete spiel.meldungen; speichern(); }

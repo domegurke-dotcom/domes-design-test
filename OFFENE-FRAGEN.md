@@ -8,8 +8,8 @@ Erledigt und umgesetzt: H1–H3 bestätigt (Postkasten aus der Immobilien-Verwal
 
 ## Noch zu bauen (Domes Antworten, Aufgaben)
 0. ✅ Verkaufsrennen (v340) und Heu/Raufutter-Bild (v341) erledigt.
-1. ~~**Verkaufsrennen (H8):** Preis beim Nennen selbst festlegen; auch ohne Rennstall teilnehmen (als Verkäufer mit Trainergebühr wie bei Galopprennen) und im Pferdemarkt als Käufer bei Verkaufsrennen mitbieten. *Claude: in echt so – jeder Besitzer mit einem Pferd im Training bei einem lizenzierten Trainer darf starten und kaufen.*
-2. **Heu und Raufutter-Darstellung (v317-3):** Heu geht beim Rausbringen auch mit (Sandpaddock/Weide). In Box, Sandpaddock und Weide zeigt der Heuhaufen alles Raufutter aus dem Futterplan (außer Heucobs) – Farbe/Struktur nach Anteil (Heu, Heulage, Stroh, Luzerne). Heucobs: beim Antippen des Heus steht ein Eimer mit Heucobs davor.
+1. **Verkaufsrennen (erledigt v340) (H8):** Preis beim Nennen selbst festlegen; auch ohne Rennstall teilnehmen (als Verkäufer mit Trainergebühr wie bei Galopprennen) und im Pferdemarkt als Käufer bei Verkaufsrennen mitbieten. *Claude: in echt so – jeder Besitzer mit einem Pferd im Training bei einem lizenzierten Trainer darf starten und kaufen.*
+2. **Heu und Raufutter-Darstellung (erledigt v341):** Heu geht beim Rausbringen auch mit (Sandpaddock/Weide). In Box, Sandpaddock und Weide zeigt der Heuhaufen alles Raufutter aus dem Futterplan (außer Heucobs) – Farbe/Struktur nach Anteil (Heu, Heulage, Stroh, Luzerne). Heucobs: beim Antippen des Heus steht ein Eimer mit Heucobs davor.
 3. **Decktermin für fremde Stuten** → steht schon in `PROJEKT-CHAT-THEMEN.md` Punkt 2 (Termin ausmachen, Hengst am Decktag nicht in der Box). Bis dahin reicht der Brief.
 4. **Waisenfohlen im Offenstall/zwei Fohlen je Box** → `PROJEKT-CHAT-THEMEN.md` Punkt 11.
 

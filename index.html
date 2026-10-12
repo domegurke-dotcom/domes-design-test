@@ -898,7 +898,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "341";
+  const SPIEL_VERSION = "342";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -906,9 +906,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=341"></script>
-<script src="kopfteile.js?v=341"></script>
-<script src="kopfalter.js?v=341"></script>
+<script src="pferd.js?v=342"></script>
+<script src="kopfteile.js?v=342"></script>
+<script src="kopfalter.js?v=342"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -5420,26 +5420,29 @@
     championate(D, rz, neu, ortW);                       // nur mit Qualifikation
     fohlenschauErzeugen(D, rz, neu, ortW);               // Sommer und Herbst (6c)
   }
-  // ---------- H8: Hausturnier (Pensions- und Ausbildungsstall) – 1× je Jahreszeit auf dem eigenen Hof ----------
+  // ---------- H8: Hausturnier (Pensions- und Ausbildungsstall) – 1× im Jahr, eine Jahreszeit im Voraus geplant (Dome, v342) ----------
   // Prüfungen vom Hofturnier (Wettbewerbe, Gelassenheit), Ausbildungsstall zusätzlich E und A · Bedingung Reitplatz, im Winter Reithalle · Kosten Richter/Parcours
   // Einnahmen: Nenngelder der Gaststarter · Folgen: Ansehen +4, mehr Anfragen (Pension/Beritt ×1,5 in dieser und der nächsten Jahreszeit), Einsteller-Pferde starten mit (zufriedener)
   const HAUS = { kosten: { pension: 300, ausbildung: 500 }, halle: 100, ansehen: 4, anfrage: 1.5, zufr: 5 };
   const hausArt = () => spiel.hof && ["pension", "ausbildung"].includes(spiel.hof.art) && vorteil(spiel.hof.art) ? spiel.hof.art : null;
   function hausturnierSperre() {
     if (!hausArt()) return "nur Pensions- und Ausbildungsstall mit erfüllten Bedingungen";
-    const A = spiel.anlage || {}, s = datum().s; if (!A.reitplatz) return "braucht einen Reitplatz"; if (s === 3 && !A.reithalle) return "im Winter nur mit Reithalle";
-    if ((spiel.turniere || []).some(t => t.haus === aktivHid() && datum(t.tag).s === s && datum(t.tag).j === datum().j)) return "diese Jahreszeit schon ausgerichtet";
-    if (datum().t >= tpj() - 1) return "zu spät in der Jahreszeit (Nennschluss am Vortag)";
+    // Dome (v342): einmal im Jahr, mit einer Jahreszeit Vorlauf – geplant wird für die nächste Jahreszeit
+    const A = spiel.anlage || {}, z = hausZiel(); if (!A.reitplatz) return "braucht einen Reitplatz"; if (z.s === 3 && !A.reithalle) return "nächste Jahreszeit ist Winter – dann nur mit Reithalle";
+    if ((spiel.turniere || []).some(t => t.haus === aktivHid() && t.tag >= spiel.tag)) return "schon geplant";
+    if (((spiel.hof || {}).hausJahre || []).includes(z.j)) return `${z.j} gibt es schon ein Hausturnier – nur einmal im Jahr`;
     return "";
   }
   const hausKosten = () => (HAUS.kosten[hausArt()] || 300) + (datum().s === 3 ? HAUS.halle : 0);
+  const hausZiel = () => { const jz = jzJetzt() + 1; return { jz, j: Math.floor(jz / 4), s: jz % 4 }; };   // nächste Jahreszeit
   function hausturnierAnlegen(tag) {
     const sp = hausturnierSperre(); if (sp) return sp; const k = hausKosten(); if (!spiel.admin && spiel.geld < k) return "zu wenig Geld";
     if (!spiel.admin) buchen(-k, "Hausturnier: Richter und Parcours");
     const rz = Math.random, n = () => 4 + Math.floor(rz() * 7), pr = (disz, st, name) => ({ id: "p" + Math.floor(rz() * 1e9).toString(36), disz, stufe: st, starter: n(), name });
     const pruef = [pr("dressur", -1, "Dressurwettbewerb"), pr("springen", -1, "Stilspringwettbewerb"), pr("pleasure", -1, "Westernreiter-Wettbewerb"), pr("gelassenheit", -1, "Gelassenheitsprüfung"),
       ...(hausArt() === "ausbildung" ? [pr("dressur", 0, "Dressur Kl. E"), pr("dressur", 1, "Dressur Kl. A"), pr("springen", 0, "Springen Kl. E"), pr("springen", 1, "Springen Kl. A")] : [])];
-    (spiel.turniere = spiel.turniere || []).push({ id: "th" + Math.random().toString(36).slice(2, 8), tag, art: "hof", typ: "haus", haus: aktivHid(), name: `Hausturnier ${hofName()}`, halle: datum().s === 3, pruef, nennung: [] });
+    (spiel.turniere = spiel.turniere || []).push({ id: "th" + Math.random().toString(36).slice(2, 8), tag, art: "hof", typ: "haus", haus: aktivHid(), name: `Hausturnier ${hofName()}`, halle: datum(tag).s === 3, pruef, nennung: [] });
+    const H = spiel.hof; (H.hausJahre = H.hausJahre || []).push(datum(tag).j);
     spiel.turniere.sort((a, b) => a.tag - b.tag); return "";
   }
   // am Turniertag (morgens, auf dem ausrichtenden Hof): Nenngelder der Gäste, Einsteller starten mit, Ansehen
@@ -5456,11 +5459,11 @@
   function hausturnierHTML() {
     if (!spiel.hof || !["pension", "ausbildung"].includes(spiel.hof.art)) return "";
     const geplant = (spiel.turniere || []).find(t => t.haus === aktivHid() && t.tag >= spiel.tag), sp = hausturnierSperre();
-    return `<div class="wn-hinweis" style="margin:8px 0">🏆 <b>Hausturnier</b>${geplant ? ` am ${tagText(geplant.tag)} – eigene Pferde nennen: Box → Ort → Pferdeanhänger → Turnier (keine Fahrt nötig)` : sp ? `<br><small>${esc(sp)}.</small>` : `<br><small>Einmal je Jahreszeit auf dem eigenen Hof: Wettbewerbe und Gelassenheit${hausArt() === "ausbildung" ? ", dazu Dressur und Springen Kl. E und A" : ""}. Kosten ${fmt(hausKosten())} (Richter, Parcours), Einnahmen aus den Nenngeldern der Gäste, mehr Ansehen und Anfragen.</small><br><button class="mini-knopf" id="hausturnierKnopf">🏆 Hausturnier ausrichten</button>`}</div>`;
+    return `<div class="wn-hinweis" style="margin:8px 0">🏆 <b>Hausturnier</b>${geplant ? ` am ${tagText(geplant.tag)} – eigene Pferde nennen: Box → Ort → Pferdeanhänger → Turnier (keine Fahrt nötig)` : sp ? `<br><small>${esc(sp)}.</small>` : `<br><small>Einmal im Jahr auf dem eigenen Hof, eine Jahreszeit im Voraus geplant: Wettbewerbe und Gelassenheit${hausArt() === "ausbildung" ? ", dazu Dressur und Springen Kl. E und A" : ""}. Kosten ${fmt(hausKosten())} (Richter, Parcours), Einnahmen aus den Nenngeldern der Gäste, mehr Ansehen und Anfragen.</small><br><button class="mini-knopf" id="hausturnierKnopf">🏆 Hausturnier planen</button>`}</div>`;
   }
   function hausturnierDialog(danach) {
-    const tage = Array.from({ length: tpj() }, (_, i) => spiel.tag + 2 + i).filter(t => datum(t).s === datum().s && datum(t).j === datum().j);
-    dialog(`<h3>🏆 Hausturnier ausrichten</h3><p>An welchem Tag? Kosten <b>${fmt(hausKosten())}</b>. Genannt werden kann bis zum Vortag.</p><div class="weide-wahl">${tage.map(t => `<button data-htag="${t}"><b>${tagText(t)}</b></button>`).join("")}</div>`, [["Abbrechen", danach || null, "zweit"]]);
+    const z = hausZiel(), tage = Array.from({ length: 2 * tpj() + 2 }, (_, i) => spiel.tag + 1 + i).filter(t => datum(t).j * 4 + datum(t).s === z.jz);
+    dialog(`<h3>🏆 Hausturnier planen</h3><p>Ein Hausturnier plant man eine Jahreszeit im Voraus (Richter, Ausschreibung) – einmal im Jahr. An welchem Tag im <b>${JZ[z.s][0]} ${z.j}</b>? Kosten <b>${fmt(hausKosten())}</b>. Genannt werden kann bis zum Vortag.</p><div class="weide-wahl">${tage.map(t => `<button data-htag="${t}"><b>${tagText(t)}</b></button>`).join("")}</div>`, [["Abbrechen", danach || null, "zweit"]]);
     document.querySelectorAll("[data-htag]").forEach(x => x.onclick = () => { const f = hausturnierAnlegen(+x.dataset.htag); $("dlg").hidden = true; if (f) dialog(`<h3>Hausturnier</h3><p>${esc(f)}</p>`, [["OK", danach]]); else { speichern(); if (danach) danach(); } });
   }
   // Kalender: Turniere dieser und der nächsten Jahreszeit (fest, sobald erzeugt)
@@ -9875,7 +9878,7 @@
       H.artVerloren = true; delete H.artFrist; H.foerderLog = [];
       brief("Landwirtschaftsamt", `${name}: Status verloren`, `{dein|Ihr} Hof <b>${esc(hofName())}</b> hat die Bedingungen als ${name} auch nach der Frist nicht erfüllt (${fehlt.join(", ")}). Der Hof verliert den Status – die Vorteile entfallen${zurueck ? `, und die Förderung des letzten Jahres (<b>${fmt(zurueck)}</b>) wurde zurückgebucht` : ""}. Sobald die Bedingungen wieder erfüllt sind, bekommt der Hof den Status zurück.`); }
   }
-  const STALLART_VORTEILE = { pension: ["30 % mehr Anfragen von Einstellern", "Pferdewirt Haltung und Service einstellbar", "Hausturnier einmal je Jahreszeit"], zucht: ["25 % Rabatt im Labor", "eigene Hengste als Deckhengst für fremde Stuten (Decktaxe)", "Aufzucht-Offenstall: Fohlen wachsen in der Herde auf, kostet nur Futter", "fremde Fohlen zur Aufzucht (120 € je Jahreszeit)"],
+  const STALLART_VORTEILE = { pension: ["30 % mehr Anfragen von Einstellern", "Pferdewirt Haltung und Service einstellbar", "Hausturnier einmal im Jahr"], zucht: ["25 % Rabatt im Labor", "eigene Hengste als Deckhengst für fremde Stuten (Decktaxe)", "Aufzucht-Offenstall: Fohlen wachsen in der Herde auf, kostet nur Futter", "fremde Fohlen zur Aufzucht (120 € je Jahreszeit)"],
     ausbildung: ["eigene Pferde lernen 20 % schneller", "fremde Pferde in Beritt (450 € je Jahreszeit)", "Hausturnier mit Kl. E und A"], gnadenhof: ["Spenden: 30 € je Pferd und Jahreszeit", "Patenschaften: 60–120 € je Patenpferd und Jahreszeit", "20 % Rabatt beim Tierarzt"],
     renn: ["halbes Jockey-Reitgeld", "keine Trainergebühr bei Galopprennen (sonst 100 € je Start)", "Rennpferdetrainer einstellbar"], western: ["halbes Nenngeld bei Westernprüfungen", "Westerntraining 20 % schneller", "Westerntrainer einstellbar"] };
   function stallartHTML() { return stallartKarteHTML() + hausturnierHTML(); }
@@ -10190,7 +10193,7 @@
       <p><b>Tests zum Verdacht (v319):</b> Der Tierarzt schlägt zu jedem Verdacht den passenden Test vor (Knopf beim Befund in der Versorgung, Rechnung per Post). Vor Ort nicht zu unterscheiden – gleich beim 1. Mal mit allen Möglichkeiten und Test: ${Object.entries(VERDACHT).filter(([, V]) => V.sofort).map(([k, V]) => `${V.bild} (${V.diff.join("/")}) → ${V.test.n} ${fmt(V.test.preis)}${V.test.tage ? `, ${V.test.tage} Tage` : ", sofort"}`).join(" · ")}. Verdeckt (Verdacht ab dem 2. Mal): Erbkrankheiten → Labortest Erbkrankheiten · Sommerekzem → Allergietest 150 € · Lymphödem/Mauke (CPL) → Hautprobe 120 €. Bis zum Ergebnis zeigen Tierarzt, Versorgung, Steckbrief und Rechnung nur das Krankheitsbild. Eindeutig (kein Test nötig): Melanom am Schimmel und alle übrigen Befunde.</p>
       <p><b>Admin: Krankheiten selbst wählen (v320):</b> Enzyklopädie → Rassen → Rasse → „🛠️ Krankheiten selbst wählen“. Erblich: Erbkrankheiten als Gen (nach Rasse / frei / Träger / betroffen – bei Fohlen-tödlichen Krankheiten nur Träger; „betroffen“ mit Befund zeigt ihn sofort), Veranlagungen (0–1) und erblich bedingte Befunde. Nicht erblich: alle übrigen Befunde mit Stufe. Zustand: unbemerkt / bemerkt / vom Tierarzt diagnostiziert. Beim „In Box stellen“ bekommt das Pferd alles mit. <b>Seit v322</b> stehen dort nur Erbkrankheiten, die in der Rasse vorkommen (Trägeranteil &gt; 0), deren Folge-Befunde (z. B. Ataxie nur bei CA-Rassen) und Melanom nur bei Rassen mit Schimmel-Gen; Seit v323 auch Veranlagungen und ihre Befunde nur, wenn sie in der Rasse vorkommen (Kehlkopfpfeifen nicht bei Ponys, Lymphödem nur bei Kaltblütern/Cobs mit Behang).</p>
       <p><b>Domes Wünsche (v317):</b> Pensionsanfragen kommen zu ${Math.round(PENSION.tragend * 100)} % (Stuten 4–16 J.) für tragende Stuten – das steht im Anfrage-Brief und beim „Ansehen“ (Fohlen in 1–3 Jahreszeiten, kommt auf dem Hof zur Welt). Pensionspferde mit gebuchtem „Bewegen“ darfst du ab LK ${SPIELER_BEREITER_LK} (beste Reitdisziplin) selbst reiten – einmal am Tag zählt das als Bereiter-Tag; die Versorgung erklärt, woher der Bereiter kommt. Kraftfutter aus der Krippe wandert beim Rausbringen mit in den Futtereimer auf der Koppel (Heu bleibt in der Box).</p>
-      <p><b>Hausturnier (H8, v315):</b> Pensions- und Ausbildungsstall mit erfüllten Bedingungen, einmal je Jahreszeit (Hof → Übersicht → „Hausturnier ausrichten“, Tag frühestens übermorgen). Bedingung Reitplatz, im Winter Reithalle. Kosten Pension ${fmt(HAUS.kosten.pension)}, Ausbildungsstall ${fmt(HAUS.kosten.ausbildung)} (+${fmt(HAUS.halle)} im Winter). Prüfungen: Dressur-, Stilspring-, Westernreiter-Wettbewerb, Gelassenheit, Ausbildungsstall zusätzlich Dressur und Springen Kl. E und A. Eigene Pferde nennen wie bei jedem Turnier (keine Fahrt, kein Fahrstress). 4–10 Starter je Prüfung. Am Turniertag: Nenngelder aller Gaststarter (Starter − eigene) als Einnahme (deckt etwa die Kosten, beim Ausbildungsstall etwas Gewinn), 60 % der Pensionspferde ab 4 Jahren starten mit (Zufriedenheit +${HAUS.zufr}), Ansehen +${HAUS.ansehen}, Anfragen (Pension, Beritt, Aufzucht) ×${String(HAUS.anfrage).replace(".", ",")} in dieser und der nächsten Jahreszeit.</p>
+      <p><b>Hausturnier (H8, v315):</b> Pensions- und Ausbildungsstall mit erfüllten Bedingungen, seit v342 einmal im Jahr und eine Jahreszeit im Voraus geplant (Hof → Übersicht → „Hausturnier planen“, Tag frühestens übermorgen). Bedingung Reitplatz, im Winter Reithalle. Kosten Pension ${fmt(HAUS.kosten.pension)}, Ausbildungsstall ${fmt(HAUS.kosten.ausbildung)} (+${fmt(HAUS.halle)} im Winter). Prüfungen: Dressur-, Stilspring-, Westernreiter-Wettbewerb, Gelassenheit, Ausbildungsstall zusätzlich Dressur und Springen Kl. E und A. Eigene Pferde nennen wie bei jedem Turnier (keine Fahrt, kein Fahrstress). 4–10 Starter je Prüfung. Am Turniertag: Nenngelder aller Gaststarter (Starter − eigene) als Einnahme (deckt etwa die Kosten, beim Ausbildungsstall etwas Gewinn), 60 % der Pensionspferde ab 4 Jahren starten mit (Zufriedenheit +${HAUS.zufr}), Ansehen +${HAUS.ansehen}, Anfragen (Pension, Beritt, Aufzucht) ×${String(HAUS.anfrage).replace(".", ",")} in dieser und der nächsten Jahreszeit.</p>
       <p><b>Verkaufsrennen (H8, v315):</b> an jedem Renntag eine Prüfung „Verkaufsrennen (Vollblut)“ (60 € + Jockey, 1.500 € Preisgeld, Feld schwach), nur für Rennställe. Verkaufspreis = Marktwert beim Nennen. Nach dem Rennen wird das eigene Pferd mit ${Math.round(VERKAUFSRENNEN.chance * 100)} % (Platz 1–3: ${Math.round((VERKAUFSRENNEN.chance + VERKAUFSRENNEN.platzPlus) * 100)} %) gekauft und am nächsten Morgen abgeholt (Geld aufs Konto). Dazu bietet der Rennverein ${VERKAUFSRENNEN.fremd} fremde Starter per Brief zum Verkaufspreis an (2 Tage gültig, „Kaufen“ im Brief).</p>
       <p><b>Koppel, Heu und Futter (v293):</b> Ort → Koppel → Weide oder Sandpaddock. Im Sandpaddock steht das Pferd draußen (Bild wie die Weide), kein Gras – Heu muss immer in die Heuraufe. Weide- und Sandpaddock-Bild: Heuraufe antippen = Heu/Raufutter aus dem Lager, Futtereimer antippen = alles außer Heu laut Futterplan (steht nur Heu im Plan, bleibt der Eimer leer), Pferdeäpfel antippen = abäppeln (Weide: wie „Abäppeln“, Sandpaddock: Mist je Pferd und Nacht, ab 3 drückt er aufs Wohlbefinden). Box: Heuhaufen hinten links = Heu (ohne Heu hungrig wie bisher), Krippe = Futter außer Heu (Haferkörner). Mitarbeiter und Turnier füttern beides. Einstreu als Boden sichtbar (Stroh, Späne, Pellets, Leinstroh/Hanf; ohne Einstreu Pflaster), leere Boxen behalten Einstreu und Futterreste bis „Box leeren“. Neue Futterstellen zeigen eine Info-Sprechblase, bis man sie einmal angetippt hat.</p>
       <p><b>Weide-Bild (H6):</b> steht ein Pferd auf der Weide, zeigt die Box statt der leeren Box die Weide mit bis zu 6 Pferden dieser Weide (das gewählte vorne in der Mitte), Gras-Farbe je Jahreszeit, oben Name und Grasstand.</p>

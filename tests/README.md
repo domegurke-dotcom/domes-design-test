@@ -27,3 +27,6 @@ Erwartet: jede Zeile beginnt mit „✓“, am Ende `Fehler []` und `alles ok`. 
 
 ## Oberflächen-Test Weiden (`weiden-oberflaeche-test.js`)
 Klickt wie eine Spielerin: hvw – Hof – Land → 2 ha Weideland kaufen, Bauen → „Weide einzäunen“ als neue Weide, danach „Weide 1 vergrößern“, dann zwei Pferde über Box – ppf – Ort – Weide mit dem Auswahl-Fenster auf verschiedene Weiden. Ausgabe: Weiden nach jedem Schritt und wo die Pferde stehen; am Ende `Fehler []`.
+
+## Neuladen-Test (v307)
+`NODE_PATH=/opt/node22/lib/node_modules node tests/neuladen-test.js` – speichert Spielstände mit Pferden draußen (Weide, Sandpaddock, Pensionspferde, nachmittags draußen, gelöschte Weide/Paddock), lädt neu und spielt weiter. Nach Änderungen am Start oder an Weide/Paddock/Pension laufen lassen.

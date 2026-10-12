@@ -879,8 +879,9 @@
 <div id="auswahl" role="dialog" aria-modal="true" aria-label="Pferd auswählen"></div>
 
 <script>
+  window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "306";
+  const SPIEL_VERSION = "307";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -888,9 +889,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=306"></script>
-<script src="kopfteile.js?v=306"></script>
-<script src="kopfalter.js?v=306"></script>
+<script src="pferd.js?v=307"></script>
+<script src="kopfteile.js?v=307"></script>
+<script src="kopfalter.js?v=307"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -7160,9 +7161,7 @@
     speichern(); zeigeStall(); zeigeTag();
   }
   $("pfeilWeiter").addEventListener("click", () => wechsleBox(1));
-
-  zeigeStall();
-  zeigeTag();
+  // v307: Stall und Tag werden erst ganz am Ende des Skripts gezeichnet (siehe unten vor zeigeStart) – hier mitten im Skript fehlen noch spätere Teile (Pension, Höfe, Bauten), dann hing der Start
 
   // ---------- Startmenü, Charaktererstellung, Hauptmenü ----------
   const AVATARE = ["👩‍🌾", "🧑‍🌾", "🧔", "🤠", "👧", "👦", "👩", "🧑", "👨", "👵", "🧓", "👴"];
@@ -9937,7 +9936,25 @@
   if (spiel.tempoBrief) { delete spiel.tempoBrief;
     brief("Hofverwaltung", "Neues Spieltempo", `das Spiel hat ein neues Tempo bekommen: Eine Jahreszeit dauert jetzt <b>7 Tage</b> (Standard, vorher ${spiel.tempoAlt}). Neue Spiele können zwischen 4 (schnell), 7 (Standard) und 10 Tagen (langsam) wählen.<br><br>Das Datum bleibt gleich. Pro Tag ändert sich nichts – Füttern, Misten, Gesundheit und Wohlbefinden laufen wie bisher. Weil die Jahreszeit jetzt mehr Tage hat, braucht alles, was nach Jahreszeiten geht (Tragzeit, Alter, Hufschmied, Wurmkur …), entsprechend mehr Tage.`);
     speichern(); }
+  // v307: Startbild erst jetzt, wenn alle Teile des Skripts bereitstehen; ein Fehler beim Zeichnen darf den Start nie aufhalten
+  try { stallFormat(); zeigeStall(); zeigeTag(); } catch (e) { console.error("Startbild:", e); }
   zeigeStart();
+  window.spielGestartet = true;
+</script>
+<script>
+  // v307: Sicherheitsnetz – ist das Spielskript beim Laden abgebrochen, erscheint ein Hinweis statt einer hängenden Seite (Spielstand bleibt erhalten)
+  if (!window.spielGestartet) {
+    const box = document.createElement("div");
+    box.style.cssText = "position:fixed;inset:0;z-index:9999;background:#fffaf0;color:#2b1d12;font-family:system-ui,sans-serif;padding:max(24px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 24px max(16px,env(safe-area-inset-left));overflow:auto";
+    box.innerHTML = `<h2>🐴 Das Spiel konnte nicht starten</h2><p>Beim Laden ist ein Fehler aufgetreten. Dein Spielstand ist noch gespeichert.</p>
+      <p><small id="nfFehler" style="color:#7a6552"></small></p>
+      <p><button id="nfNeu" style="padding:10px 16px;font:inherit">🔄 Neu laden</button> <button id="nfSichern" style="padding:10px 16px;font:inherit">💾 Spielstand sichern (Datei)</button></p>
+      <p><small>Bitte Claude Bescheid geben (am besten mit einem Bildschirmfoto dieser Seite).</small></p>`;
+    document.body.appendChild(box);
+    document.getElementById("nfFehler").textContent = (window.ladeFehler || []).join(" · ") || "unbekannter Fehler";
+    document.getElementById("nfNeu").onclick = () => location.reload();
+    document.getElementById("nfSichern").onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([localStorage.getItem("zuchtstall-v2") || ""], { type: "application/json" })); a.download = "zuchtstall-spielstand.json"; a.click(); };
+  }
 </script>
 </body>
 </html>

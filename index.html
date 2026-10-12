@@ -917,7 +917,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "370";
+  const SPIEL_VERSION = "371";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -925,10 +925,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=370"></script>
-<script src="boxstufen.js?v=370"></script>
-<script src="kopfteile.js?v=370"></script>
-<script src="kopfalter.js?v=370"></script>
+<script src="pferd.js?v=371"></script>
+<script src="boxstufen.js?v=371"></script>
+<script src="kopfteile.js?v=371"></script>
+<script src="kopfalter.js?v=371"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -10085,7 +10085,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   function eigenePferdeHof() { return spiel.boxen.filter(b => b.pferd && !b.tot && !fremd(b.pferd)).map(b => b.pferd); }
   function stallartBed(art) {   // [Text, erfüllt, kommt später (zählt noch nicht)]
     const P = eigenePferdeHof(), A = spiel.anlage || {};
-    if (art === "pension") { const n = Math.ceil(spiel.boxen.length / 2), e = einstellerListe().filter(x => pensionBox(x)).length; return [[`mindestens die Hälfte der Boxen an Einsteller (${e} von ${n})`, e >= n]]; }
+    if (art === "pension") { const n = Math.ceil(spiel.boxen.filter(b => !b.quar && !b.abfohl && !b.offen).length / 2), e = einstellerListe().filter(x => pensionBox(x)).length; return [[`mindestens die Hälfte der Boxen an Einsteller (${e} von ${n})`, e >= n]]; }   // v371: Quarantäne-, Abfohl- und Offenstallplätze zählen nicht (dort stehen keine Einsteller)
     if (art === "zucht") { const h = P.filter(q => q.geschlecht === "Hengst" && alterJZ(q) >= 12).length, st = P.filter(q => q.geschlecht === "Stute" && alterJZ(q) >= 12 && alterJZ(q) < 84).length;
       return [[`mindestens 1 Deckhengst ab 3 Jahren (${h})`, h >= 1], [`mindestens 2 Zuchtstuten (${st})`, st >= 2], ["Abfohlbox", spiel.boxen.some(b => b.abfohl)], ["Aufzucht-Offenstall", gebaeude().some(g => g.typ === "aufzucht" && !g.bau)]]; }
     if (art === "ausbildung") { const ber = angestellte("bereiter").length; return [["Reitplatz", !!A.reitplatz], ["Roundpen oder Reithalle", !!(A.roundpen || A.reithalle)], [`mindestens 1 Bereiter (${ber})`, ber >= 1]]; }
@@ -10123,8 +10123,10 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     if (stallartOk()) { delete H.artFrist; if (H.artVerloren) { delete H.artVerloren; brief("Landwirtschaftsamt", `${name}: Status zurück`, `{dein|Ihr} Hof <b>${esc(hofName())}</b> erfüllt wieder alle Bedingungen als ${name}. Die Vorteile gelten wieder, die Förderung läuft ab jetzt wieder.`); }
       const fb = foerderBetrag(); buchen(fb, `Förderung ${name} (Fläche ${haTxt(H.ha + (H.pacht || 0))})`);
       if (H.art === "gnadenhof") { const n = eigenePferdeHof().length; if (n) { buchen(30 * n, "Spenden Gnadenhof"); brief("Freundeskreis Gnadenhof", "Spenden für die alten Pferde", `für {deine|Ihre} ${n} Schützlinge auf <b>${esc(hofName())}</b> sind diese Jahreszeit <b>${fmt(30 * n)}</b> an Spenden zusammengekommen. Danke für {deine|Ihre} Arbeit!`); } } (H.foerderLog = H.foerderLog || []).push({ jz: jetzt, b: fb }); H.foerderLog = H.foerderLog.filter(x => x.jz > jetzt - 4); return; }
-    if (H.artVerloren || jetzt < stallartSchonBis()) return;   // Schonfrist: keine Strafe (aber auch keine Förderung/Vorteile)
     const fehlt = stallartBed(H.art).filter(x => !x[1]).map(x => x[0]);
+    if (H.artVerloren || jetzt < stallartSchonBis()) {   // Schonfrist: keine Strafe (aber auch keine Förderung/Vorteile)
+      if (!H.artVerloren) brief("Landwirtschaftsamt", `${name}: diesmal keine Förderung`, `für {deinen|Ihren} Hof <b>${esc(hofName())}</b> wird diese Jahreszeit keine Förderung (${fmt(foerderBetrag())}) ausgezahlt, und die Vorteile als ${name} gelten noch nicht – es fehlt: <b>${fehlt.join(", ")}</b>. Sobald das erfüllt ist, gibt es zu Beginn der nächsten Jahreszeit die Förderung. (Noch Schonfrist – keine Rückzahlung.)`);   // v371 (Dome): nicht stumm ausbleiben
+      return; }
     if (H.artFrist == null) { H.artFrist = jetzt + 1; brief("Landwirtschaftsamt", `${name}: Bedingungen nicht erfüllt`, `{dein|Ihr} Hof <b>${esc(hofName())}</b> erfüllt die Bedingungen als ${name} nicht mehr: <b>${fehlt.join(", ")}</b>. {Du hast|Sie haben} bis zum Ende dieser Jahreszeit Zeit, das zu ändern. Sonst verliert der Hof den Status, und die Förderung des letzten Jahres muss zurückgezahlt werden.`); return; }
     if (jetzt >= H.artFrist) { const zurueck = (H.foerderLog || []).reduce((a, x) => a + x.b, 0); if (zurueck) buchen(-zurueck, `Rückzahlung Förderung ${name}`);
       H.artVerloren = true; delete H.artFrist; H.foerderLog = [];

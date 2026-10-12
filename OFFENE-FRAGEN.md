@@ -45,3 +45,7 @@ Zu jeder Frage steht die Lösung, die Claude vorerst gewählt hat. Die Veredler-
 1. Pensionsanfragen: 15 % der Stuten (4–16 J.) sind tragend (Fohlen in 1–3 Jahreszeiten) – steht im Brief und beim „Ansehen“.
 2. Bereiter bei „Bewegen“: Erklärung in der Versorgung (extern nach Bedarf / angestellt nur im Ausbildungsstall). **Du darfst ab LK 5** (beste Reitdisziplin) Pensionspferde mit „Bewegen“ selbst reiten – einmal am Tag zählt als Bereiter-Tag. *Frage: Passt LK 5 als Grenze?*
 3. Kraftfutter aus der Krippe geht beim Rausbringen mit in den Futtereimer (Heu bleibt in der Box).
+
+## Lymphödem und Verdacht (v318)
+1. **Kein Labortest für CPL** – in echt gibt es keinen Gentest, die Diagnose stellt der Tierarzt (Krankheitsbild, Hautprobe, Ultraschall). Deshalb nicht im Labor. *Soll der Tierarzt eine kostenpflichtige „Hautprobe“ (z. B. 120 €) anbieten, die den Verdacht bestätigt?*
+2. Verdachts-Regel gilt für PSSM, HYPP, HERDA, CA (Ataxie), Sommerekzem, Lymphödem und Mauke (bei hoher CPL-Veranlagung). Kehlkopfpfeifen, Melanom, OCD, Asthma gelten als eindeutig (hören/sehen/Röntgen). *Passt das?*

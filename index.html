@@ -917,7 +917,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "371";
+  const SPIEL_VERSION = "372";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -925,10 +925,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=371"></script>
-<script src="boxstufen.js?v=371"></script>
-<script src="kopfteile.js?v=371"></script>
-<script src="kopfalter.js?v=371"></script>
+<script src="pferd.js?v=372"></script>
+<script src="boxstufen.js?v=372"></script>
+<script src="kopfteile.js?v=372"></script>
+<script src="kopfalter.js?v=372"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -9144,7 +9144,7 @@
   // Umbau: eine Stufe höher – Preisunterschied + 20 %, halbe Bauzeit, Boxen gesperrt (müssen leer sein)
   const umbauPreis = g => Math.round((bauPreis(g.typ, g.stufe + 1, { boxen: g.boxen, anbau: g.anbau, ha: g.ha }) - bauPreis(g.typ, g.stufe, { boxen: g.boxen, anbau: g.anbau, ha: g.ha })) * (1 + UMBAU_AUFSCHLAG));
   function umbauSperre(g) {
-    if (g.bau) return "im Bau";
+    if (g.bau) return "im Bau"; if (g.abriss) return "Abriss läuft";
     if (g.typ === "abfohlbox" && hochtragendAufHof()) return "eine Stute fohlt bald – erst nach der Geburt";
     if (!BAUTEN[g.typ].preis || g.stufe >= 3) return g.stufe >= 3 ? "höchste Stufe" : "nicht möglich";
     if (g.plan) return `geplant ab ${datumText(datum(g.plan.ab))}`;
@@ -9209,7 +9209,46 @@
     einstellerListe().forEach(e => { if (e.nachlass === g.gid) delete e.nachlass; });
   }
   // jede Nacht: Baufortschritt (Außenarbeiten ruhen im Winter)
+  // v372 (Dome): Rückbau – Abriss kostet 20 % des Baupreises (in echt ≈ 15–30 % inkl. Entsorgung), 2–3 Tage, außen ruht im Winter
+  const ABRISS = 0.2;
+  const abrissPreis = g => Math.max(50, Math.round((g.preis || bauPreis(g.typ, Math.max(1, g.stufe || 1), { boxen: g.boxen, anbau: g.anbau })) * ABRISS / 10) * 10);
+  function abrissSperre(g) {
+    if (g.typ === "weide") return "Weidezaun – kommt später";
+    if (g.bau) return "im Bau"; if (g.abriss) return "Abriss läuft"; if (g.plan) return "Umbau geplant"; if (g.rep) return "Handwerker arbeitet";
+    if (gebaeude().some(x => x.anbau === g.gid)) return "erst den Anbau abreißen";
+    const Bx = spiel.boxen.filter(b => b.geb === g.gid);
+    if (Bx.some(b => b.pferd || b.reserviert || b.tot || b.fohlen)) return "erst die Boxen leeren (Pferde umstellen)";
+    if (Bx.length && spiel.boxen.length - Bx.length < 1 && (eigenePferdeHof().length || einstellerListe().length)) return "der letzte Stall – es stehen noch Pferde auf dem Hof";
+    if (g.typ === "sandpaddock" && spiel.boxen.some(b => b.pferd && b.pferd.paddock && b.pferd.paddock.pid === g.gid)) return "erst die Pferde aus dem Sandpaddock holen";
+    if (g.typ === "lager") { const F = futterkammer(), voll = Object.values(F.lager || {}).reduce((a, x) => a + (+x || 0), 0); if (voll > LAGER_START) return `zu viel Futter im Lager (${fmtKg(Math.round(voll))} – ohne Lager passen ${fmtKg(LAGER_START)})`; }
+    return "";
+  }
+  function abrissWarnung(g) {   // hängt eine Stallart-Bedingung an diesem Gebäude?
+    const H = spiel.hof; if (!H || !H.art || !stallartOk()) return "";
+    const G = spiel.gebaeude, idx = G.indexOf(g); G.splice(idx, 1); const boxen = spiel.boxen, an = { ...(spiel.anlage || {}) }; spiel.boxen = boxen.filter(b => b.geb !== g.gid); const B = BAUTEN[g.typ];
+    if (B.anlage && !G.some(x => x.typ === g.typ || BAUTEN[x.typ].anlage === B.anlage)) delete spiel.anlage[B.anlage];
+    delete H.artCache; const ok = stallartBed(H.art).every(x => x[1]); G.splice(idx, 0, g); spiel.boxen = boxen; spiel.anlage = an; delete H.artCache;
+    return ok ? "" : `<p>⚠️ Danach erfüllt der Hof die Bedingungen als <b>${STALLART_NAME[H.art]}</b> nicht mehr – keine Förderung, und nach der Frist geht der Status verloren.</p>`; }
+  function abrissDialog(g, danach) {
+    const sp = abrissSperre(g), B = BAUTEN[g.typ], n = B.n.replace(/\u00ad/g, "");
+    if (sp) { dialog(`<h3>🧨 ${esc(gebName(g).replace(/\u00ad/g, ""))} abreißen</h3><p>Geht gerade nicht: ${sp}.</p>`); return; }
+    const k = abrissPreis(g);
+    dialog(`<h3>🧨 ${esc(gebName(g).replace(/\u00ad/g, ""))} abreißen?</h3><p>Abriss und Entsorgung kosten <b>${fmt(k)}</b> (${prozent(ABRISS)} des Baupreises) und dauern 2–3 Tage${B.aussen ? " (im Winter ruhen die Außenarbeiten)" : ""}.${g.boxen ? ` Die ${g.boxen} ${g.boxen === 1 ? "Box ist" : "Boxen sind"} sofort gesperrt und fallen danach weg.` : ""} Das Bauland wird frei, der Unterhalt fällt weg, der Hofwert sinkt.</p>${abrissWarnung(g)}`,
+      [["🧨 Abreißen", () => { if (!spiel.admin && (spiel.geld || 0) < k) { dialog(`<h3>Zu wenig Geld</h3><p>Der Abriss kostet ${fmt(k)} – in der Kasse sind ${fmt(spiel.geld || 0)}.</p>`); return; }
+        if (!spiel.admin) buchen(-k, `Abriss: ${n}`); g.abriss = { rest: bauTage("kurz") }; spiel.boxen.forEach(b => { if (b.geb === g.gid) b.gesperrt = true; }); speichern(); danach && danach(); }], ["Abbrechen", null, "zweit"]]);
+  }
+  function abrissFertig(g) {
+    const G = gebaeude(), B = BAUTEN[g.typ], akt = spiel.boxen[aktBox];
+    spiel.gebaeude = G.filter(x => x !== g); spiel.boxen = spiel.boxen.filter(b => b.geb !== g.gid); spiel.boxen.forEach((b, i) => { b.nr = i + 1; });
+    const ai = spiel.boxen.indexOf(akt); aktBox = ai >= 0 ? ai : 0; spiel.aktBox = aktBox;
+    if (B.anlage && !spiel.gebaeude.some(x => BAUTEN[x.typ].anlage === B.anlage)) delete (spiel.anlage || {})[B.anlage];
+    if (g.typ === "heudampfer" && spiel.anlage) delete spiel.anlage.heudampfer;
+    if (g.typ === "lager") futterkammer().lagerMax = LAGER_START;
+    if (spiel.hof) spiel.hof.wert = Math.max(0, (spiel.hof.wert || 0) - (g.preis || 0)); if (spiel.hof) delete spiel.hof.artCache;
+    (spiel.hofFenster = spiel.hofFenster || []).push(`<h3>🧨 Abgerissen</h3><p><b>${esc(gebName(g).replace(/\u00ad/g, ""))}</b> auf <b>${esc(hofName())}</b> ist abgerissen${g.boxen ? ` – ${g.boxen} ${g.boxen === 1 ? "Box" : "Boxen"} weniger` : ""}. Das Bauland ist wieder frei.</p>`);
+  }
   function bauNacht() {
+    gebaeude().filter(g => g.abriss).forEach(g => { if (BAUTEN[g.typ].aussen && datum().s === 3) return; if (--g.abriss.rest <= 0) abrissFertig(g); });   // v372
     gebaeude().forEach(g => { if (!g.bau) return;
       if (BAUTEN[g.typ].aussen && datum().s === 3) return;
       if (--g.bau.rest > 0) return;
@@ -9289,7 +9328,7 @@
   const gebBar = z => `<div class="kr-balken geb-balken"><i style="width:${Math.round(z)}%;background:${z < 40 ? "#c0503a" : z < 70 ? "#d9a441" : "#6aa84f"}"></i></div>`;
   function gebZeile(g) { const bar = gebBar; const B = BAUTEN[g.typ], us = g.typ === "heudampfer" ? "" : umbauSperre(g), rp = reparaturPreis(g);
         return `<div class="geb"><span class="geb-ico">${B.ico}</span><span class="geb-txt"><b>${gebName(g)}</b><small>${g.typ === "heudampfer" ? "fertig" : `Stufe ${g.stufe} – ${STUFE_NAME[g.stufe]}${g.boxen ? ` · ${g.boxen} ${g.boxen === 1 ? "Box" : "Boxen"}` : ""} · Zustand ${Math.round(g.zustand)} %`}</small>${g.typ === "heudampfer" ? "" : bar(g.zustand)}
-          ${g.typ === "heudampfer" ? "" : `<span class="geb-kn">${g.rep ? `<small class="geb-rep">🔧 ${spiel.tag < g.rep.ab ? "Handwerker kommt morgen" : `Handwerker arbeitet${g.rep.bis > spiel.tag ? " (noch 2 Tage)" : " (heute fertig)"}`}</small>` : rp ? `<button class="mini-knopf" data-rep="${g.gid}">🔧 Reparieren · ${fmt(rp)}</button>` : ""}${!us ? `<button class="mini-knopf" data-umbau="${g.gid}">⬆️ Stufe ${g.stufe + 1} · ${fmt(umbauPreis(g))}</button>` : g.stufe < 3 && BAUTEN[g.typ].preis ? `<small class="geb-sperre">Umbau: ${us}</small>` : ""}${BAUTEN[g.typ].jeBox && !g.anbau ? `<button class="mini-knopf" data-anbau="${g.gid}">➕ Anbau</button>` : ""}</span>`}</span></div>`; }
+          ${g.typ === "heudampfer" ? "" : `<span class="geb-kn">${g.rep ? `<small class="geb-rep">🔧 ${spiel.tag < g.rep.ab ? "Handwerker kommt morgen" : `Handwerker arbeitet${g.rep.bis > spiel.tag ? " (noch 2 Tage)" : " (heute fertig)"}`}</small>` : rp ? `<button class="mini-knopf" data-rep="${g.gid}">🔧 Reparieren · ${fmt(rp)}</button>` : ""}${!us ? `<button class="mini-knopf" data-umbau="${g.gid}">⬆️ Stufe ${g.stufe + 1} · ${fmt(umbauPreis(g))}</button>` : g.stufe < 3 && BAUTEN[g.typ].preis && !g.abriss ? `<small class="geb-sperre">Umbau: ${us}</small>` : ""}${BAUTEN[g.typ].jeBox && !g.anbau && !g.abriss ? `<button class="mini-knopf" data-anbau="${g.gid}">➕ Anbau</button>` : ""}${g.abriss ? `<small class="geb-rep">🧨 Abriss läuft – noch ${g.abriss.rest} ${g.abriss.rest === 1 ? "Tag" : "Tage"}</small>` : g.typ !== "weide" ? `<button class="mini-knopf" data-abriss="${g.gid}">🧨 Abreißen</button>` : ""}</span>`}</span></div>`; }
   // Dome (v347): Hofplan – Gebäude antippen: Zustand, reparieren, Stufe verbessern, Anbau (vergrößern)
   function gebaeudeDialog(gid) {
     const g = gebaeude().find(x => x.gid === gid); if (!g) return;
@@ -9360,6 +9399,7 @@
     nb.querySelectorAll("[data-bau]").forEach(b => b.onclick = () => bauDialog(b.dataset.bau));
     nb.querySelectorAll("[data-land]").forEach(b => b.onclick = () => landDialog(b.dataset.land, "neu", () => bauNeuZeigen()));
     nb.querySelectorAll("[data-gummi]").forEach(b => b.onclick = () => gummiDialog(() => bauNeuZeigen()));
+    nb.querySelectorAll("[data-abriss]").forEach(b => b.onclick = () => { const g = G.find(x => x.gid === b.dataset.abriss); if (g) abrissDialog(g, () => bauNeuZeigen()); });
     nb.querySelectorAll("[data-anbau]").forEach(b => b.onclick = () => { const g = G.find(x => x.gid === b.dataset.anbau); bauDialog(g.typ, g.gid, g.stufe); });
     nb.querySelectorAll("[data-umbau]").forEach(b => b.onclick = () => { const g = G.find(x => x.gid === b.dataset.umbau);
       const U = umbauBetroffen(g), frei = ersatzBoxen(g).length, n = U.eigen.length + U.einsteller.length;
@@ -10443,6 +10483,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Rennstall und Westernstall (H7 b, v311):</b> <i>Rennbahn</i> (Hof → Bauen, ${BAUTEN.rennbahn.preis.map(fmt).join(" / ")}, 1 Jahreszeit Bauzeit, ${haTxt(PLATZ.rennbahn)} Bauland) – neuer Trainingsort mit <i>Galopptraining</i> (ab 2 Jahren, ⚡ ${UEBUNG.galopptraining.e}, Beschleunigung, Ausdauer, Kraft). <i>Rennpferdetrainer</i> (${fmt(MA_TYP.renntrainer.gehalt)} je Jahreszeit, nur im Rennstall) trainiert jeden Morgen bis zu 4 eigene Rennpferde (Vollblut ab 2, Araber/Achal-Tekkiner ab 3 Jahren): Galopptraining auf der Rennbahn (sonst Konditionstraining), danach Ausritt. <i>Westerntrainer</i> (${fmt(MA_TYP.westerntrainer.gehalt)}, nur im Westernstall) trainiert bis zu 4 Westernpferde (Quarter Horses oder mit Western-Ausbildung): Bodenarbeit/Longieren, Westernarbeit, mit Trail-Parcours Stangenarbeit. Pferde, die heute schon trainiert wurden, lassen sie aus. Ohne Rennstall kostet jedes Galopprennen ${fmt(TRAINER_GEBUEHR)} Trainergebühr zusätzlich (fremder Trainer bereitet das Pferd vor). Westernstall: Westernarbeit 20 % schneller.</p>
       <p><b>Deckhengst für fremde Stuten (H7 d, v312):</b> nur im Zuchtstall mit erfüllten Bedingungen: Box → Steckbrief → Genetik → „anbieten“ (Hengst ab 3 Jahren, ohne Zuchtsperre). In der Decksaison (Frühling, Sommer) kommen je Jahreszeit etwa 1 + Qualität Stuten (Qualität = Turniererfolge/3.000 € + 0,5 je prämiertem Fohlen + (Marktwert − 4.000)/6.000, höchstens +4), höchstens eine am Tag. Decktaxe wie bei der Deckstation (10 % des Marktwerts, mind. 150 €), sofort gebucht; der Hengst verliert ${DECK_FREMD.energie} Energie. ${Math.round(DECK_FREMD.tragend * 100)} % werden tragend – 4 Jahreszeiten später schreibt die Besitzerin, das Fohlen zählt als Nachkomme.</p>
       <p><b>Ungemistete Box beim Weidegang (v365):</b> Pferde auf Weide oder Sandpaddock kommen abends wieder in ihre Box. War die Box beim Rausbringen nicht gemistet, zählt die Nacht wie in der ungemisteten Box: Gesundheit −9,5, Wohlbefinden „Box nicht gemistet“, Mist-Stufe +1, Erkrankungsrisiko wie Mist in der Box, das Pferd wird schmutziger.</p>
+      <p><b>Abreißen (v372):</b> Hof → Bauen → Gebäude → 🧨 Abreißen: kostet ${prozent(ABRISS)} des Baupreises (mind. 50 €), dauert 2–3 Tage (außen ruht im Winter), Boxen sofort gesperrt. Nur mit leeren Boxen, Anbauten zuerst, nicht der letzte Stall solange Pferde da sind, Lager nur wenn das Futter in die Futterkammer passt. Danach: Bauland frei, kein Unterhalt, Hofwert − Baupreis; Warnung, wenn eine Stallart-Bedingung daran hängt. Weidezäune abbauen kommt später.</p>
       <p><b>Badewanne auf Weide und Sandpaddock (v360):</b> Hinten vor dem Zaun steht eine alte Badewanne als Tränke. Einmal je Jahreszeit füllen (antippen oder Stallbursche/Azubi mit der Aufgabe „Füttern“ füllen alle Wannen des Hofs). Leer: Pferde auf dieser Weide/diesem Paddock bekommen nachts Wohlbefinden −6 und Gesundheit −3 (Durst). Offenstall hat eine eigene Tränke.</p>
       <p><b>Boxenstufen (v355/v356):</b> Stufe 1 Holzbox mit Sandboden, Futtereimer und Wassereimer (täglich füllen, sonst Wohlbefinden −6, Gesundheit −3; Stallbursche füllt mit) – Einstreu ×1,2, Strahlfäule/Mauke ×1,3, Husten ×1,1. Stufe 2 Kopfsteinpflaster – ohne Einstreu Verletzung ×1,2. Stufe 3 Beton, Heunetz, Kamera – Einstreu ×0,9, Strahlfäule/Magengeschwür/Kolik ×0,8, ohne Einstreu Lahmheit ×1,2, schwache Fohlen 10 % statt 15 %. Heunetz: 10 % weniger Heu; Kamera: unbemerkte Krankheiten ab Grad 2 fallen morgens zu 50 % auf (v357). Einsteller: Gummimatten +0,1, Beton +0,05, Sandboden −0,1 Zufriedenheit je Nacht; Ansehen je Jahreszeit +1, wenn mind. die Hälfte der Boxen Gummimatten hat, −1, wenn mind. die Hälfte Stufe 1 ist (v359). Gummimatten (ab Stufe 2, Einstreu-Fenster, ${fmt(BODEN_WIRKUNG.GUMMI_PREIS)} je Box, halten dauerhaft, bleiben beim Umbau): Einstreu ×0,7, Lahmheit/Arthrose ×0,8, Verletzung ×0,9, Wohlbefinden +0,5 je Nacht.</p><p><b>Mehrere Plätze (v344):</b> Reitplätze und Roundpens kann man mehrfach bauen. Einsteller longieren manchmal im Roundpen (ein Pferd je Roundpen) – sind alle belegt, kannst du ihn an dem Tag nicht nutzen, Bodenarbeit geht dann auf dem Reitplatz. Reitplatz/Reithalle „zu voll“ ab 4 Reitern je Platz.</p><p><b>Junghengste (v336):</b> Hengste ab 1½ Jahren dürfen nicht mehr zu Stuten in den Offenstall (und umgekehrt), Hinweisbrief je Jahreszeit, solange gemischt; ein erwachsener Wallach zählt als „Onkel“ wie eine Tante. Bleibt die Gruppe gemischt, kann ein Hengst ab 2 Jahren eine Stute ab 3 Jahren decken (je Nacht 7,5 % × Erfolg wie auf der Weide).</p><p><b>Aufzucht-Offenstall (H7 a, v313):</b> nur im Zuchtstall baubar (Hof → Bauen, ${BAUTEN.aufzucht.preis.map(fmt).join(" / ")}, 1 Jahreszeit, ${haTxt(PLATZ.aufzucht)} Bauland), Bedingung des Zuchtstalls. 10 Plätze, die im Stall wie Boxen durchgeschaltet werden, aber ein gemeinsames Offenstall-Bild zeigen (Heuraufe, Futtereimer, Pferdeäpfel = Platz misten). Hinein dürfen Jungpferde von ½ bis 3 Jahren und erwachsene Stuten ab 5 Jahren ohne Fohlen bei Fuß (nicht hochtragend) als „Tanten“ – über Ort → Offenstall, Box wechseln oder beim Absetzen. Normale Pferde kommen nie automatisch auf einen Offenstall-Platz. Kostet nur Futter und Einstreu, halb so viel Arbeit für die Mitarbeiter. Jede Nacht: Jungpferde Sozialverhalten +${OFFEN.sozial} (Standardtempo, wie in der Aufzuchtstation; ohne Tante nur halb so viel, volle Wirkung ab 1 Tante je 5 Jungpferde), alle Wohlbefinden +${OFFEN.wohl} (ohne Tante +${OFFEN.wohl / 2}), sobald mindestens 2 Pferde dort leben. Wird ein Jungpferd 3 Jahre alt, zieht es zu Beginn der Jahreszeit in eine freie Box (sonst Brief).</p>
       <p><b>Beritt und Pensionsfohlen (H7 c, v314):</b> laufen über die Pension (Anfrage per Brief, Zusage, Einzug am nächsten Morgen, Zahlung zu Beginn jeder Jahreszeit, alles inklusive). <i>Beritt</i> (nur Ausbildungsstall mit erfüllten Bedingungen): je fest angestelltem Bereiter ${BERITT.jeBereiter} Beritt-Pferde (und eine freie Box), Pferde 3–7 Jahre, ${BERITT.dauer.join(" oder ")} Jahreszeiten, ${fmt(BERITT.preis)} je Jahreszeit inkl. Box, täglichem Bereiter, Putzen, Hufe/Mähne (Putzen und Hufe macht der Hof – Pfleger oder du). Am Ende holt der Besitzer ab; zufrieden, wenn die Zufriedenheit ≥ 60 ist und die Ausbildungsskala im Schnitt mindestens 2 Punkte je Jahreszeit gestiegen ist (Ansehen +3, sonst −3). <i>Aufzucht</i> (nur Zuchtstall, freier Platz im Aufzucht-Offenstall): Jungpferde ½–2 Jahre oder (${Math.round(AUFZ_FREMD.waiseAnteil * 100)} %) Waisenfohlen mit Flasche, ${fmt(AUFZ_FREMD.preis)} je Jahreszeit (Waise +${fmt(AUFZ_FREMD.waise)}), mit 3 Jahren holt der Besitzer ab. Anfragen: je Art höchstens eine offene, Chance je Tag ${BERITT.chance} × freie Plätze ÷ Tage je Jahreszeit (höchstens 50 %). Seit v314 zählt auch das Training durch den fest angestellten Bereiter als gebuchtes „Bewegen“.</p>

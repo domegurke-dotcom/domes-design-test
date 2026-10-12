@@ -87,7 +87,7 @@ const RASSEN = [
     k: { nk: 1, kb: 0.04, kw: 6, ts: 0.56, len: .98, depth: .56, legT: .12, neck: .38, nAng: 45, crest: .06, head: .47, hAng: 52, profile: 0, hw: 1.1, jw: 1.1, muz: 1, ear: .08, mane: "lang", maneLen: .28, vol: 1.3, fore: 1.2, tail: .9, tvol: 1.3, tset: .2, feather: .2, croup: .5, hq: 1, eye: 1.05 } },
   { id: "shire", name: "Shire Horse", herkunft: "England", h: [168, 190],
     text: "Eines der größten Pferde der Welt: massiger Kaltblüter mit Ramsnase und langem Fesselbehang.",
-    farben: ["rappe", "brauner", "dunkelbrauner", "schimmel"],
+    farben: ["rappe", "brauner", "sa_brauner", "dunkelbrauner", "sa_rappe", "schimmel"],
     k: { nk: 1, len: 1.08, depth: .5, legT: .125, neck: .55, nAng: 55, crest: .08, head: .48, hAng: 55, profile: .6, hw: 1.1, jw: 1, muz: 1.05, ear: .1, mane: "lang", maneLen: .15, vol: 1, fore: .6, tail: .6, tvol: 1, tset: .2, feather: 1, croup: .6, hq: 1.05, eye: .95 } },
   { id: "andalusier", name: "Andalusier (PRE)", herkunft: "Spanien", h: [152, 166],
     text: "Barockpferd mit leicht geramsnastem Kopf, kräftigem, hoch aufgesetztem Hals und welliger Langmähne.",

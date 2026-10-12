@@ -88,5 +88,12 @@ const st3 = { wand: `<defs><clipPath id="w3"><path d="M60,50 H340 V212 H60 Z M14
       <path d="M342,166 h34 q0,15 -17,19 q-17,-4 -17,-19 z" fill="url(#edel)" stroke="#2b1d14" stroke-width="1.4"/><path d="M342,166 h34" stroke="#c9a24a" stroke-width="2.4"/><ellipse cx="359" cy="167" rx="15" ry="3.2" fill="#6fb6df" stroke="#2b1d14" stroke-width="1"/><ellipse cx="355" cy="166.4" rx="5" ry="1" fill="#e2f3fb"/></g>`,
   nachbar: nachbarEdel(-260) + nachbarEdel(400) };
 
+// v367 (Dome): Paddockbox – Tür nach draußen statt Fenster
+const tuer = f => `<g fill="${f}" stroke="#2b1d14" stroke-width="1.4"><rect x="144" y="84" width="9" height="128"/><rect x="247" y="84" width="9" height="128"/><rect x="140" y="76" width="120" height="10"/></g><g stroke="#2b1d14" stroke-width=".6" opacity=".45"><line x1="146.5" y1="98" x2="146.5" y2="208"/><line x1="253.5" y1="98" x2="253.5" y2="208"/></g>`;
+st1.wandTuer = `<defs><clipPath id="wo1t"><path d="M60,50 H340 V212 H60 Z M152,88 V212 H248 V88 Z" clip-rule="evenodd"/></clipPath></defs><g clip-path="url(#wo1t)">${bretter(60, 340, 50, 212, 1)}</g>${tuer('#8f6a45')}`;
+st2.wandTuer = `${tuer('#a98357')}${LECK(306, 132)}`;
+st3.wandTuer = st3.wand.replace('id="w3"', 'id="w3t"').replace('url(#w3)', 'url(#w3t)').replace('M140,80 V158 H260 V80 Z', 'M152,88 V212 H248 V88 Z').replace(rahmen('#5a3a24', W3), tuer('#5a3a24') + '<rect x="140" y="74" width="120" height="2.5" fill="#c9a24a"/>')
+  .replace('<rect x="128" y="66" width="144" height="3" fill="#c9a24a"/>', '').replace('<rect x="134" y="157" width="132" height="2.5" fill="#c9a24a"/>', '');
+
 window.BOXSTUFE = { 1: st1, 2: st2, 3: st3, boden: { sand: sand(), pflaster: pflaster(), beton: beton(), gummi: gummi() } };
 })();

@@ -254,6 +254,19 @@ const path = require('path');
         ok('H7e Tierarztrabatt 20 %', re && re.posten.some(x => /Gnadenhof-Rabatt/.test(x.text) && x.betrag === -20), re ? re.posten.map(x => x.text + ' ' + x.betrag).join(', ') : '');
         if (re) rechnungSchliessen(re, 'Test');
         spiel.boxen.forEach((b, i) => { b.pferd = merk[i]; }); H.art = 'pension'; spiel.stallarten = ['pension']; delete H.artCache; }
+      // ---------- H7 (b) Rennbahn, Rennpferdetrainer (v311) ----------
+      { const H = spiel.hof, merk = spiel.boxen.map(b => b.pferd), mMerk = (spiel.mitarbeiter || []).slice(); spiel.boxen.forEach(b => { if (b.pferd && !fremd(b.pferd)) b.pferd = null; });
+        const frei = spiel.boxen.filter(b => !b.pferd).slice(0, 2), rp = frei.map((b, i) => { const q = neuesPferd({ rasse: 'vollblut', geschlecht: 'Stute', alter: 4, name: 'Renner' + i }); b.pferd = q; q.pflege = erzeugePflege(q); q.pflege.gesundheit = 100; q.befunde = []; werteErgaenzen(q); return q; });
+        H.art = 'renn'; spiel.stallarten = ['renn']; delete H.artCache; const g0 = spiel.geld; spiel.geld += 50000; H.bauHa += 1; bauStarten('rennbahn', 1); const g = gebaeude().find(x => x.typ === 'rennbahn'); g.bau.rest = 0; bauNacht();
+        ok('H7b Rennbahn gebaut', !g.bau && spiel.anlage.rennbahn && ortOffen('rennbahn'));
+        ok('H7b Rennpferdetrainer nur im Rennstall', maVerfuegbar('renntrainer') && !maVerfuegbar('westerntrainer'));
+        spiel.mitarbeiter = [...mMerk, { id: 'maRT', typ: 'renntrainer', name: 'Testtrainer', w: false, wissen: wissenStart(30, { ruecken: 60 }), eig: [], gehalt: 450, ab: jzJetzt(), bis: null }]; delete H.artCache;
+        ok('H7b Rennstall-Bedingungen erfüllt', stallartOk(), stallartBed('renn').map(x => (x[1] ? '✓' : '✗') + x[0]).join(', '));
+        rp.forEach(q => { delete q.trainHeute; q.energie = energieMax(q); }); trainerMorgen('renntrainer');
+        ok('H7b Trainer trainiert morgens (Galopptraining)', rp.every(q => q.trainHeute && q.trainHeute.liste.some(e => e.k === 'galopptraining')), rp.map(q => q.trainHeute ? q.trainHeute.liste.map(e => e.k).join('+') : '–').join(', '));
+        ok('H7b Trainergebühr nur ohne Rennstall', nenngeld({ art: 'regional' }, { nenn: 100, jockey: true }) === 140, String(nenngeld({ art: 'regional' }, { nenn: 100, jockey: true })));
+        spiel.gebaeude = gebaeude().filter(x => x !== g); spiel.anlage.rennbahn = false; H.bauHa -= 1; H.wert -= g.preis; spiel.geld = g0; spiel.mitarbeiter = mMerk;
+        spiel.boxen.forEach((b, i) => { b.pferd = merk[i]; }); H.art = 'pension'; spiel.stallarten = ['pension']; delete H.artCache; }
 
       // ---------- H1 Kreditrate ----------
       { const rest = k.rest; k.jz = -1; kreditJahreszeit();

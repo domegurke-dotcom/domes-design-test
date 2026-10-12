@@ -910,7 +910,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "353";
+  const SPIEL_VERSION = "354";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -918,9 +918,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=353"></script>
-<script src="kopfteile.js?v=353"></script>
-<script src="kopfalter.js?v=353"></script>
+<script src="pferd.js?v=354"></script>
+<script src="kopfteile.js?v=354"></script>
+<script src="kopfalter.js?v=354"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2995,22 +2995,28 @@
           <div class="kacheln quadrat">${anhKacheln("abgeben", { p, box })}</div>` + zurueckOrt("‹ Zurück zum Anhänger");
       } else {
       const plaetze = [
-        ["stall", "🏠", "Stall", `Box ${aktBox + 1} mit Paddockausgang`, `Box ${aktBox + 1}`],
         ["koppel", "🐎", "Koppel", "Weide oder Sandpaddock", "Weide · Sand"],
         ["waschplatz", "🚿", "Wasch\u00adplatz", "zum Abspritzen und Hufe waschen", "Abspritzen"],
         ["roundpen", "⭕", "Round\u00adpen", "runder Platz für Longieren und Bodenarbeit", "Longieren"],
         ["reitplatz", "🏟️", "Reit\u00adplatz", "Sandplatz 20 × 40 m für Dressur und Springen", "20 × 40 m"],
         ["reithalle", "🏛️", "Reit\u00adhalle", "überdachtes Reiten bei jedem Wetter", "überdacht"],
         ["gelaende", "🌲", "Gelände", "Wald- und Feldwege für Ausritte", "Ausritte"],
-        ...(spiel.anlage.rennbahn ? [["rennbahn", "🏁", "Renn\u00adbahn", "Trainingsbahn für Rennpferde", "Galopp"]] : []),
-      ];
+        ["rennbahn", "🏁", "Renn\u00adbahn", "Trainingsbahn für Rennpferde", "Galopp"],
+        ["trail", "🪵", "Trail-\u00adParcours", "Hindernisse für Western-Trail", "Trail"],
+      ].filter(([k]) => k === "koppel" || k === "gelaende" || spiel.admin || (spiel.anlage && spiel.anlage[k]));   // Dome (v354): nur Kacheln für gebaute Orte (Gelände immer)
       const da = plaetze.filter(x => spiel.anlage[x[0]]).length, ortKachel = ([k, ico, n, info, kurz]) => k === "koppel" ? kOrt("koppel", ico, n, p.weide ? "auf der Weide" : p.paddock ? "im Sandpaddock" : "Weide · Sandpaddock", "Weide oder Sandpaddock") : k === "paddock" ? kOrt("paddock", ico, "Sand\u00adpaddock", p.paddock ? "zurück in die Box" : paddocks().length ? "Auslauf" : "nicht gebaut", p.paddock ? "Pferd aus dem Sandpaddock zurück in die Box holen" : "Pferd in einen Sandpaddock bringen", !!p.paddock || paddocks().length > 0) : k === "weide" ? kOrt("weide", ico, n, p.weide ? "zurück in die Box" : "Weidegang", p.weide ? "Pferd von der Weide zurück in die Box holen" : "Pferd auf die Weide bringen") : TRAIN_ORTE[k] && ortOffen(k) && fremd(p) && !darfAlsBereiter(p) ? kOrt("tr-" + k, ico, n, "nur der Besitzer", `${info} – Pensionspferd: reiten nur der Besitzer und der Bereiter`, false) : TRAIN_ORTE[k] && ortOffen(k) ? kOrt("tr-" + k, ico, n, spiel.anlage[k] ? (pensionReiterHeute(k).length ? `Training · 🐴 ${pensionReiterHeute(k).length}` : "Training") : "🛠️ Training", `${info} – Training`) : `<div class="kachel ${spiel.anlage[k] || spiel.admin ? "" : "fehlt"}" title="${n.replace(/\u00ad/g, "")}: ${info}${spiel.anlage[k] || spiel.admin ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${spiel.anlage[k] ? kurz : spiel.admin ? "🛠️ Admin" : kurz}</small></div>`;   // Dome (v353): Trainingsplätze unter „Training“
-      if (ortModus === "training") inhalt = meld + `<p class="text" style="margin:0 0 4px">🏇 <b>Training</b> · Wo soll ${esc(p.name)} trainieren?</p><div class="kacheln quadrat">${plaetze.filter(([k]) => TRAIN_GRUPPE.includes(k)).map(ortKachel).join("")}</div>` + zurueckOrt();
+      const abc = box.fohlen && alterJZ(box.fohlen) < 2 ? kOrt("fohlenabc", "🍼", "Fohlen-ABC", box.fohlen.abcTag === spiel.tag ? "heute geübt" : abcStand(box.fohlen), "Halfter, Führen, Hufe geben – mit dem Fohlen üben") : "";
+      // Dome (v354): Boxart wechseln – Stallbox, Paddock-Box, Abfohlbox (nur, wenn gebaut)
+      const frei = f => spiel.boxen.filter(b => boxFrei(b) && !b.quar && f(b)).length, istSonder = box.paddock || box.abfohl || box.quar;
+      const boxKacheln = (istSonder && !box.offen ? kOrt("zuStall", "🏠", "Stall\u00adbox", frei(b => !b.paddock && !b.abfohl) ? `${frei(b => !b.paddock && !b.abfohl)} frei` : "keine frei", "In eine normale Stallbox umziehen", !!frei(b => !b.paddock && !b.abfohl)) : "")
+        + (spiel.boxen.some(b => b.paddock) && !box.paddock ? kOrt("zuPaddock", "🏡", "Paddock-\u00adBox", frei(b => b.paddock) ? `${frei(b => b.paddock)} frei` : "keine frei", "In eine Paddockbox umziehen (Box mit kleinem Auslauf)", !!frei(b => b.paddock)) : "")
+        + (spiel.boxen.some(b => b.abfohl) && !box.abfohl ? kOrt("zuAbfohl", "🍼", "Abfohl\u00adbox", frei(b => b.abfohl) ? `${frei(b => b.abfohl)} frei` : "keine frei", "In die Abfohlbox umziehen (große Box mit Kamera für die Geburt)", !!frei(b => b.abfohl)) : "");
+      if (ortModus === "training") inhalt = meld + `<p class="text" style="margin:0 0 4px">🏇 <b>Training</b> · Wo soll ${esc(p.name)} trainieren?</p><div class="kacheln quadrat">${plaetze.filter(([k]) => TRAIN_GRUPPE.includes(k)).map(ortKachel).join("")}${abc}</div>` + zurueckOrt();
       else
       inhalt = meld +
-        `<p class="text" style="margin:0 0 4px">📍 ${esc(p.name)} ${box.offen ? "lebt im <b>Aufzucht-Offenstall</b>" : `steht in <b>Box ${aktBox + 1}</b>`}${paddockVon(p) ? ` – gerade im <b>${paddockName(paddockVon(p))}</b>${paddockPferde(paddockVon(p)).length > 1 ? ` mit ${paddockPferde(paddockVon(p)).filter(q => q !== p).map(q => esc(q.name)).join(", ")}` : " (allein)"}` : ""}. Wohin soll ${pron(p).er}? Graue Kacheln hat dein Hof noch nicht (bauen unter Hofverwaltung → Hof → Bauen).</p>
-        <div class="kacheln quadrat">${kOrt("box", "🔀", "Box wechseln", freieBox() < 0 ? "keine frei" : `${spiel.boxen.filter(boxFrei).length} frei`, "In eine andere Box umziehen")}${offenBoxen().length ? kOrt("offenstall", "🐎", "Offen\u00adstall", box.offen ? "zurück in eine Box" : offenSperre(p, box) ? "passt nicht" : offenPlatz() < 0 ? "voll" : `${offenBoxen().filter(offenFrei).length} frei`, box.offen ? "Aus dem Aufzucht-Offenstall in eine normale Box" : "In den Aufzucht-Offenstall (Jungpferde ½–3 Jahre, Stuten als Tanten)") : ""}${box.fohlen && alterJZ(box.fohlen) < 2 ? kOrt("fohlenabc", "🍼", "Fohlen-ABC", box.fohlen.abcTag === spiel.tag ? "heute geübt" : abcStand(box.fohlen), "Halfter, Führen, Hufe geben – mit dem Fohlen üben") : ""}
-          ${ortModus === "training" ? "" : plaetze.filter(([k]) => !TRAIN_GRUPPE.includes(k)).map(ortKachel).join("") + kOrt("training", "🏇", "Training", (() => { const n = plaetze.filter(([k]) => TRAIN_GRUPPE.includes(k) && (spiel.anlage[k] || spiel.admin)).length; return n ? `${n} ${n === 1 ? "Platz" : "Plätze"}` : "kein Platz"; })(), "Roundpen, Reitplatz, Reithalle, Gelände")}
+        `<p class="text" style="margin:0 0 4px">📍 ${esc(p.name)} ${box.offen ? "lebt im <b>Aufzucht-Offenstall</b>" : `steht in <b>Box ${aktBox + 1}</b>`}${paddockVon(p) ? ` – gerade im <b>${paddockName(paddockVon(p))}</b>${paddockPferde(paddockVon(p)).length > 1 ? ` mit ${paddockPferde(paddockVon(p)).filter(q => q !== p).map(q => esc(q.name)).join(", ")}` : " (allein)"}` : ""}. Wohin soll ${pron(p).er}?</p>
+        <div class="kacheln quadrat">${kOrt("box", "🔀", "Box wechseln", freieBox() < 0 ? "keine frei" : `${spiel.boxen.filter(boxFrei).length} frei`, "In eine andere Box umziehen")}${offenBoxen().length ? kOrt("offenstall", "🐎", "Offen\u00adstall", box.offen ? "zurück in eine Box" : offenSperre(p, box) ? "passt nicht" : offenPlatz() < 0 ? "voll" : `${offenBoxen().filter(offenFrei).length} frei`, box.offen ? "Aus dem Aufzucht-Offenstall in eine normale Box" : "In den Aufzucht-Offenstall (Jungpferde ½–3 Jahre, Stuten als Tanten)") : ""}${boxKacheln}
+          ${ortModus === "training" ? "" : plaetze.filter(([k]) => !TRAIN_GRUPPE.includes(k)).map(ortKachel).join("") + kOrt("training", "🏇", "Training", (() => { const n = plaetze.filter(([k]) => TRAIN_GRUPPE.includes(k) && (spiel.anlage[k] || spiel.admin)).length; return n ? `${n} ${n === 1 ? "Platz" : "Plätze"}` : "kein Platz"; })(), "Roundpen, Reitplatz, Reithalle, Gelände, Rennbahn, Trail")}
           ${kOrt("labor", "🔬", "Labor", fremd(p) ? "nur der Besitzer" : "Gentests", "Genetische Tests mit einer Haarprobe", !fremd(p))}
           ${kOrt("anhaenger", "🚚", "Pferde\u00adanhänger", fremd(p) ? "nur der Besitzer" : "Klinik, Turnier, Abgeben …", "Mit dem Anhänger wegfahren", !fremd(p))}</div>
           ${weideDa() ? `<div class="bf-knoepfe wg-zeile"><small>🌿 Weidegang durch Stallbursche/Azubi (am Nachmittag, abends wieder rein – tagsüber steht das Pferd in der Box):</small>${Object.entries(WEIDEGANG).map(([k, t]) => `<button class="mini-knopf ${(p.weidegang || "nie") === k ? "an" : ""}" data-weidegang="${k}">${t}</button>`).join("")}${(p.weidegang || "nie") !== "nie" && !aktive("stallbursche").concat(aktive("azubi")).some(m => maDarf(m, "weide")) ? `<small>⚠️ Dafür brauchst du einen Stallburschen oder Azubi (Hofverwaltung → Mitarbeiter).</small>` : ""}${(p.weidegang || "nie") !== "nie" && datum().s === 0 && reheGefaehrdet(p) ? `<small>🌱 Im Frühling bleibt ${esc(p.name)} drin – ${reheGrund(p)}, Hufrehe-Gefahr. Selbst rausbringen geht trotzdem.</small>` : ""}</div>` : ""}`;
@@ -3101,6 +3107,11 @@
       if (id === "gnadenhof") { gnadenhofDialog(p, () => { zeigeStall(); }); return; }
       if (id === "verkaufen") { verkaufDialog(p, () => zeigeAkte()); return; }
       if (id === "turnier") { turnierDialog(p, () => zeigeAkte()); return; }
+      if (id === "zuStall" || id === "zuPaddock" || id === "zuAbfohl") {   // v354
+        if (p.weide || paddockVon(p)) { dialog(`<h3>🔀 Umziehen</h3><p>${esc(p.name)} ist gerade draußen – erst zurück in die Box holen.</p>`); return; }
+        const f = id === "zuPaddock" ? b => b.paddock : id === "zuAbfohl" ? b => b.abfohl : b => !b.paddock && !b.abfohl, z = spiel.boxen.findIndex(b => boxFrei(b) && !b.quar && f(b));
+        if (z < 0) { dialog(`<h3>Keine Box frei</h3><p>Gerade ist keine passende Box frei.</p>`); return; }
+        inBoxUmziehen(box, z); aktBox = z; spiel.aktBox = z; ortModus = null; meldung = `🔀 ${esc(p.name)} steht jetzt in Box ${z + 1}${id === "zuPaddock" ? " (Paddockbox)" : id === "zuAbfohl" ? " (Abfohlbox)" : ""}.`; speichern(); zeigeStall(); zeigeTag(); return; }
       if (id === "fohlenabc") { meldung = fohlenABC(box.fohlen); zeigeAkte(); return; }
       if (id === "offenstall") {   // H7 (a): in den Aufzucht-Offenstall oder zurück in eine Box
         if (p.weide || paddockVon(p)) { dialog(`<h3>🐎 Offenstall</h3><p>${esc(p.name)} ist gerade draußen – erst zurück in die Box holen.</p>`); return; }
@@ -4996,7 +5007,7 @@
   }
   // ---------- Training daheim (Werte-Plan, Etappe 4) ----------
   // Orte: der Spieler hat erstmal Reitplatz und Gelände (Bodenarbeit, Longieren, Stangen auch auf dem Reitplatz) · Admin: alle Orte offen (zum Testen)
-  const TRAIN_ORTE = { roundpen: { n: "Roundpen", ico: "⭕" }, reitplatz: { n: "Reitplatz", ico: "🏟️" }, reithalle: { n: "Reithalle", ico: "🏛️" }, gelaende: { n: "Gelände", ico: "🌲" }, rennbahn: { n: "Rennbahn", ico: "🏁" } };
+  const TRAIN_ORTE = { roundpen: { n: "Roundpen", ico: "⭕" }, reitplatz: { n: "Reitplatz", ico: "🏟️" }, reithalle: { n: "Reithalle", ico: "🏛️" }, gelaende: { n: "Gelände", ico: "🌲" }, rennbahn: { n: "Rennbahn", ico: "🏁" }, trail: { n: "Trail-Parcours", ico: "🪵" } };
   const ortOffen = o => !!(spiel.admin || (spiel.anlage && spiel.anlage[o] && !anlageImUmbau(o)));   // H4: im Umbau gesperrt
   // Übungen: e = Energie · ab = Mindestalter (Jahreszeiten) · sk = Ausbildungsskala (Stufe → Grundzuwachs je Einheit) · w = Werte (Grundzuwachs) · vl = Vorliebe
   // wo: boden = Roundpen, Reitplatz, Reithalle · platz = Reitplatz, Reithalle · gelaende = Gelände
@@ -5018,9 +5029,10 @@
   UEBUNG.passtraining = { n: "Pass\u00adtraining", ico: "💨", wo: "platz", ab: 20, e: 34, vl: "gangarbeit", reiten: true, gangart: "pass", w: { beschleunigung: .6, kraft: .4, reaktion: .4, konzentration: .3 }, gangP: .02, info: "Rennpass auf der Bahn – nur für Pferde mit Pass" };
   UEBUNG.springen.sprung = true;
   // H7 (b): Galopptraining auf der eigenen Rennbahn – Antritt und Ausdauer für Rennpferde (Vollblüter ab 2, sonst ab 3 Jahren)
+  UEBUNG.trailarbeit = { n: "Trail\u00adarbeit", ico: "🪵", wo: "trail", ab: 12, e: 24, vl: "western", reiten: true, sk: { 1: .2 }, w: { gehorsam: .6, koordination: .7, konzentration: .6, wendigkeit: .4, vertrauen: .3 }, d: { western: .8 }, info: "Tor, Brücke, Stangen, Rückwärts-L – Gelassenheit und Präzision für den Trail (Westernstall)" };   // Dome (v354)
   UEBUNG.galopptraining = { n: "Galopp\u00adtraining", ico: "🏁", wo: "bahn", ab: 8, e: 36, vl: "gelaende", reiten: true, w: { beschleunigung: 1, ausdauer: .8, kraft: .4, regeneration: .3, konzentration: .2 }, info: "Canter und schnelle Arbeit auf der Rennbahn – Antritt und Ausdauer" };
-  const TRAIN_GRUPPE = ["roundpen", "reitplatz", "reithalle", "gelaende", "rennbahn"];
-  const UEB_WO = { boden: ["roundpen", "reitplatz", "reithalle"], platz: ["reitplatz", "reithalle"], gelaende: ["gelaende"], bahn: ["rennbahn"] };
+  const TRAIN_GRUPPE = ["roundpen", "reitplatz", "reithalle", "gelaende", "rennbahn", "trail"];
+  const UEB_WO = { boden: ["roundpen", "reitplatz", "reithalle"], platz: ["reitplatz", "reithalle"], gelaende: ["gelaende"], bahn: ["rennbahn"], trail: ["trail"] };
   // Dome (v338): mit Roundpen gibt es die Bodenarbeit (Boden-/Freiarbeit, Longieren, Stangen) nicht mehr auf dem Reitplatz; ein Roundpen Stufe 3 ist überdacht – dann auch nicht mehr in der Reithalle
   const roundpenBelegt = () => { try { return pensionReiterHeute("roundpen").length >= anlageAnzahl("roundpen"); } catch (e) { return false; } };   // v344: Besitzer longieren dort – in einen Roundpen passt nur ein Pferd
   const roundpenUeberdacht = () => gebaeude().some(g => g.typ === "roundpen" && !g.bau && (g.stufe || 1) >= 3);
@@ -5317,7 +5329,7 @@
   const westernpferd = q => alterJZ(q) >= 12 && (q.rasse === "quarter" || ((q.disz || {}).western || 0) > 0);
   function trainerWahl(p, typ) {
     const geht = k => !uebSperre(p, k) && uebOrt(k);
-    const l = typ === "renntrainer" ? [geht("galopptraining") ? "galopptraining" : "kondition", "ausritt"] : [Math.random() < 0.4 ? "bodenarbeit" : "longieren", "western", ...(spiel.anlage && spiel.anlage.trail ? ["stangen"] : [])];
+    const l = typ === "renntrainer" ? [geht("galopptraining") ? "galopptraining" : "kondition", "ausritt"] : [Math.random() < 0.4 ? "bodenarbeit" : "longieren", "western", ...(spiel.anlage && spiel.anlage.trail ? ["trailarbeit"] : [])];
     return l.filter(geht);
   }
   function trainerMorgen(typ) {

@@ -931,7 +931,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "404";
+  const SPIEL_VERSION = "405";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -939,10 +939,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=404"></script>
-<script src="boxstufen.js?v=404"></script>
-<script src="kopfteile.js?v=404"></script>
-<script src="kopfalter.js?v=404"></script>
+<script src="pferd.js?v=405"></script>
+<script src="boxstufen.js?v=405"></script>
+<script src="kopfteile.js?v=405"></script>
+<script src="kopfalter.js?v=405"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -959,11 +959,7 @@
   // H6 Einstreu: Verbrauch je Box und Tag (kg), staubt → Husten, Saugkraft → Strahlfäule
   const EINSTREU = { streuStroh: { n: "Stroh", kg: 7, staub: true, strahl: 1 }, spaene: { n: "Späne", kg: 3, strahl: 1 }, pellets: { n: "Pellets", kg: 2, strahl: 0.7 }, leinstroh: { n: "Leinstroh/Hanf", kg: 3, strahl: 0.8 } };
   const EINSTREU_OHNE = { wohl: 3, strahl: 2 }, EINSTREU_START = 100;   // H6: Pferde je Sandpaddock nach Stufe (selbst festgelegt)
-  const NAMEN = {
-    Stute: ["Schneeflocke", "Luna", "Bella", "Stella", "Fee", "Amira", "Freya", "Nala", "Kira", "Zora", "Dana", "Leonie", "Paula", "Sina", "Aurora", "Jasmin", "Wilma", "Elfe"],
-    Hengst: ["Donnerhall", "Sturmwind", "Apollo", "Merlin", "Farid", "Orkan", "Balou", "Rocky", "Picasso", "Zeus", "Blitz", "Gandalf", "Samir", "Titan", "Odin"],
-    Wallach: ["Max", "Moritz", "Jonny", "Charly", "Fritz", "Sammy", "Benny", "Lucky", "Pepe", "Bruno", "Oskar", "Theo", "Emil"],
-  };
+  const NAMEN = { Stute: NAMEN_HOBBY.Stute, Hengst: NAMEN_HOBBY.Mann, Wallach: NAMEN_HOBBY.Mann };   // v405 (Dome): einfache Rufnamen – Zuchtnamen über pferdeName(g, rasse, "zucht")
   const zufallAus = a => a[Math.floor(Math.random() * a.length)];
 
   let spiel = {
@@ -1372,12 +1368,12 @@
     ["vatersvater", "vatersmutter"].forEach(k => geb[k] = alterVor(geb.vater)); ["muttersvater", "muttersmutter"].forEach(k => geb[k] = alterVor(geb.mutter));
     AHNEN_GP.forEach((k, i) => { geb[AHNEN_UGP[2 * i]] = alterVor(geb[k]); geb[AHNEN_UGP[2 * i + 1]] = alterVor(geb[k]); });
     const benutzt = new Set([p.name]);
-    const name = g => { const l = (g === "Hengst" ? NAMEN_HENGST : NAMEN_STUTE).filter(n => !benutzt.has(n)); const n = l.length ? l[Math.floor(r() * l.length)] : (g === "Hengst" ? NAMEN_HENGST : NAMEN_STUTE)[0]; benutzt.add(n); return n; };
+    const name = (g, rid) => { let n = pferdeName(g, rid, "zucht", r); for (let i = 0; i < 8 && benutzt.has(n); i++) n = pferdeName(g, rid, "zucht", r); benutzt.add(n); return n; };   // v405: Zuchtnamen je Rasse
     const A = {};
     AHNEN_ALLE.forEach(k => {
       const g = AHN_GESCHLECHT(k), nr = "0" + Array.from({ length: 10 }, () => Math.floor(r() * 10)).join(""), w = erzeugeWerte({ id: "ahn" + nr, rasse: rasseVon[k] });
       const ex = exZufall(r);
-      A[k] = { name: name(g), nr, geschlecht: g, rasse: rasseVon[k], anteile: ant[k], farbe: farbeAus(gen[k], ex), grauHinweis: grauH(k), gen: gen[k], ex,
+      A[k] = { name: name(g, rasseVon[k]), nr, geschlecht: g, rasse: rasseVon[k], anteile: ant[k], farbe: farbeAus(gen[k], ex), grauHinweis: grauH(k), gen: gen[k], ex,
         werte: { gang: gangNachGen({ ...w.gang }, gen[k], r), charakter: w.charakter }, sm: sm[k], geb: geb[k] };
     });
     p.ahnen = A;
@@ -1457,7 +1453,7 @@
     if (D[key]) return D[key];
     const r = zufall("deck-" + key + (spiel.spieler ? spiel.spieler.name : "")), andere = RASSEN.filter(x => x.id !== stute.rasse);
     D[key] = [stute.rasse, stute.rasse, stute.rasse, andere[Math.floor(r() * andere.length)].id, andere[Math.floor(r() * andere.length)].id].map((rid, i) => {
-      const ra = rasseById(rid), h = neuesPferd({ id: "d" + jetzt + rid + i, name: NAMEN_HENGST[Math.floor(r() * NAMEN_HENGST.length)], rasse: rid, geschlecht: "Hengst", rein: true,
+      const ra = rasseById(rid), h = neuesPferd({ id: "d" + jetzt + rid + i, name: pferdeName("Hengst", rid, "zucht", r), rasse: rid, geschlecht: "Hengst", rein: true,
         farbe: ra.farben[Math.floor(r() * ra.farben.length)], alter: 5 + Math.floor(r() * 11) });
       h.training = 30 + Math.floor(r() * 80); marktErfolge(h, r);   // Turniererfolge heben die Decktaxe
       return h;
@@ -1544,7 +1540,7 @@
     const anteile = mischAnteile(anteileVon(M), anteileVon(V));
     her.sm = erben(M, V, smVon, { min: 70, max: 195, mut: 11 });
     const ziel = Math.round(her.sm.wert), rasse = rasseZuordnen(anteile, ziel);
-    const f = { id: "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: zufallAus(NAMEN[g].filter(n => n !== M.name && n !== V.name)), rasse, farbe: phaenotyp(fGen), geschlecht: g,
+    const f = { id: "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: (n => n === M.name || n === V.name ? pferdeName(g, rasse, "zucht") : n)(pferdeName(g, rasse, "zucht")), rasse, farbe: phaenotyp(fGen), geschlecht: g,
       zielStockmass: ziel, geb: { s: d.s, j: d.j }, gebTag: spiel.tag, mutter: M.name, gen: fGen, anteile,
       grauHinweis: hat(M.gen, "G") || hat(V.gen, "G"),
       maehne: "steh", maehneSeit: spiel.tag, schopf: naturSchopf(rasse) ? "ohne" : undefined, schopfSeit: spiel.tag };   // jedes Fohlen kommt mit Stehmähne und ohne Schopf zur Welt
@@ -8381,7 +8377,7 @@
         const w = r(), fremdAnz = w < .35 ? 0 : w < .6 ? 1 : w < .8 ? 2 : w < .92 ? 4 : 3, andere = RASSEN.filter(x => x.id !== ra.id);
         const fremd = [andere[Math.floor(r() * andere.length)].id, andere[Math.floor(r() * andere.length)].id];
         const plaetze = Array.from({ length: 8 }, (_, k) => k < fremdAnz ? fremd[k % (r() < .5 ? 1 : 2)] : ra.id);
-        const h = neuesPferd({ id: "m" + jetzt + "-" + i, name: NAMEN[g][Math.floor(r() * NAMEN[g].length)], rasse: ra.id, plaetze, geschlecht: g, alter: jahre });
+        const h = neuesPferd({ id: "m" + jetzt + "-" + i, name: pferdeName(g, ra.id, r() < (fremdAnz === 0 ? 0.6 : 0.15) ? "zucht" : "hobby", r), rasse: ra.id, plaetze, geschlecht: g, alter: jahre });
         if (jahre >= 4) { h.training = Math.floor(r() * Math.min(110, (jahre - 3) * 22)); marktErfolge(h, r); } else marktFohlenschau(h, r);   // ältere Verkaufspferde sind oft schon ausgebildet und Turniere gegangen
         h.preis = Math.round(marktwert(h) * SAISON_PREIS[datum().s] * (1.1 + r() * .2) / 50) * 50;   // Händler: 110–130 % des Marktwerts
         return h;
@@ -8405,7 +8401,7 @@
     const g = geschlecht || ["Stute", "Hengst", "Wallach"][Math.floor(r() * 3)], andere = RASSEN.filter(x => x.id !== rasse);
     const fremd = [andere[Math.floor(r() * andere.length)].id, andere[Math.floor(r() * andere.length)].id];
     const plaetze = Array.from({ length: 8 }, (_, k) => k < fremdAnz ? fremd[k % (r() < .5 ? 1 : 2)] : rasse);
-    return neuesPferd({ id, name: NAMEN[g][Math.floor(r() * NAMEN[g].length)], rasse, plaetze, geschlecht: g, alter: jahre, geb });
+    return neuesPferd({ id, name: pferdeName(g, rasse, r() < (fremdAnz === 0 ? 0.5 : 0.12) ? "zucht" : "hobby", r), rasse, plaetze, geschlecht: g, alter: jahre, geb });   // v405
   }
   // Stute mit Fohlen bei Fuß (Privat, Tierschutz): Fohlen ist höchstens ein paar Monate alt
   function mitFohlen(h, r) {
@@ -8465,7 +8461,7 @@
     const r = zufall("gest-" + M.jz + rasse), ver = VEREDELUNG[rasse] || [];
     M.gestuet[rasse] = Array.from({ length: 2 + Math.floor(r() * 2) }, (_, i) => {
       const g = ["Stute", "Hengst", "Wallach"][Math.floor(r() * 3)], plaetze = Array.from({ length: 8 }, (_, k) => k === 0 && ver.length && r() < .35 ? ver[0] : rasse);
-      const jahre = 1 + Math.floor(r() * 4), h = neuesPferd({ id: "gs" + M.jz + rasse + i, name: NAMEN[g][Math.floor(r() * NAMEN[g].length)], rasse, plaetze, geschlecht: g, alter: jahre, geb: zuechterGeb(jahre, r) });
+      const jahre = 1 + Math.floor(r() * 4), h = neuesPferd({ id: "gs" + M.jz + rasse + i, name: pferdeName(g, rasse, "zucht", r), rasse, plaetze, geschlecht: g, alter: jahre, geb: zuechterGeb(jahre, r) });
       ["schritt", "trab", "galopp"].forEach(k => h.werte.gang[k] = Math.min(10, h.werte.gang[k] + .5));   // gute Abstammung: bessere Gänge
       h.tests = { farbe: true }; h.gentest = true; h.gestuet = GESTUET_NAMEN[rasse];
       if ((DMRT3[rasse] || 0) >= .3) h.tests.gang = true;                                   // Gangpferde: DMRT3-Test

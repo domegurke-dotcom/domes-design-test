@@ -1102,3 +1102,44 @@ const FARBBESCHREIBUNG = {
 };
 // Scheckungs-Beispiele für das Lexikon
 ["ov_brauner", "tv_fuchs", "tg_brauner", "fs_rappe", "sb_rappe", "sk_brauner", "sa_brauner"].forEach(id => FARBEN[id]);
+
+// ---------- v405 (Dome): realistischere Pferdenamen – Freizeitpferde einfach, Zuchtpferde besonders (je Rasse), mehr Abwechslung ----------
+const NAMEN_HOBBY = {
+  Stute: ["Bella", "Luna", "Fee", "Lotte", "Fanny", "Paula", "Kira", "Nala", "Stella", "Lissy", "Mia", "Emma", "Flocke", "Schneeflocke", "Pünktchen", "Krümel", "Biene", "Lilly", "Susi", "Molly", "Daisy", "Ronja", "Lady", "Cindy", "Maja", "Hexe", "Wilma", "Elfe", "Jule", "Gina", "Sternchen", "Mausi", "Toffee", "Cookie", "Lucy", "Tessa", "Leni", "Frieda", "Rosi", "Fritzi", "Polly", "Wendy", "Zora", "Kiki", "Sunny", "Peggy", "Lena", "Amy", "Holly", "Nessie", "Chiara", "Smilla", "Mona", "Uschi", "Hanni", "Nanni", "Bonnie", "Dolly", "Lupina", "Feline"],
+  Mann: ["Max", "Moritz", "Jonny", "Charly", "Fritz", "Sammy", "Benny", "Lucky", "Pepe", "Bruno", "Oskar", "Theo", "Emil", "Felix", "Paul", "Anton", "Balou", "Rocky", "Blacky", "Flash", "Snoopy", "Bambi", "Tommy", "Willi", "Leo", "Tobi", "Pablo", "Joker", "Merlin", "Sunny", "Teddy", "Krümel", "Fips", "Jacky", "Ronny", "Hansi", "Fred", "Louis", "Elvis", "Simba", "Nemo", "Pünktchen", "Dakota", "Cooper", "Milo", "Ole", "Bob", "Jimmy", "Cäsar", "Rudi", "Pumuckl", "Tinto", "Speedy", "Frodo", "Rambo", "Gandalf", "Picasso", "Shadow", "Lasse", "Bento"],
+};
+// Zuchtnamen nach Rassengruppe: [Stuten, Hengste] – teils mit Vorsilbe (Sir, Donna …) zusammengesetzt
+const ZUCHT_GRUPPE = { hannoveraner: "warm", trakehner: "warm", lipizzaner: "barock", andalusier: "spanisch", araber: "araber", angloaraber: "araber", shagya: "araber", tekke: "tekke", marwari: "marwari", vollblut: "vollblut",
+  quarter: "western", isi: "isi", friese: "friese", haflinger: "haflinger", fjord: "fjord", shetty: "pony", welshcob: "welsh", fell: "britpony", dales: "britpony", shire: "britkalt", clydesdale: "britkalt", tinker: "tinker" };
+const ZUCHT_NAMEN = {
+  warm: { vorS: ["Donna", "Lady", "Fürstin", "Gräfin", "Bella", "Royal", "Miss", "Dame"], vorH: ["Sir", "Lord", "Fürst", "Don", "Grand", "Royal", "Baron", "Graf", "Prince", "Count"],
+    S: ["Fleur", "Rubina", "Cassandra", "Florentine", "Valentina", "Diamanta", "Sambalina", "Sarabande", "Cornetta", "Quintana", "Bonita", "Esmeralda", "Galante", "Celeste", "Fiorella", "Anastasia", "Wolkenspiel", "Sonnenwende", "Herzdame", "Rondeau", "Belissima", "Dancing Queen", "Feine Dame", "Amour", "Fürstenliebe", "Laurentia", "Rivage", "Siena", "Vivaldi", "Weltschönheit"],
+    H: ["Diamant", "Falkenstein", "Rubinstein", "Cornado", "Feuerglanz", "Valentino", "Silberstern", "Wolkenstürmer", "Bellini", "Cassius", "Lancelot", "Sandokan", "Quintus", "Romanov", "Florian", "Montana", "Brillant", "Escudo", "Dynamo", "Weltmeister", "Fürstenball", "Donnerwetter", "Sansibar", "Belvedere", "Quatermain", "Rockefeller", "Lord Byron", "Sorento", "Vivaldi", "Grafenstolz"] },
+  barock: { S: ["Favory Bella", "Conversana Dora", "Neapolitana Sole", "Maestoso Mira", "Siglavy Flora", "Pluto Gaja", "Tulipa", "Allegra", "Bona Fortuna", "Capriola"], H: ["Favory Gratia", "Conversano Bona", "Neapolitano Dubovina", "Maestoso Calcedona", "Siglavy Allegra", "Pluto Theodorosta", "Favory Toscana", "Maestoso Mara", "Conversano Fantasia", "Pluto Bona"] },
+  spanisch: { S: ["Esperanza", "Paloma", "Bonita", "Altiva", "Orgullosa", "Carmela", "Dulcinea", "Gitana", "Morena", "Estrella", "Luz del Sol", "Reina", "Bailaora", "Soledad", "Primavera"], H: ["Bailador", "Duende", "Fandango", "Valiente", "Gitano", "Hidalgo", "Faraón", "Orgulloso", "Lucero", "Embrujo", "Bravío", "Diamante", "Torero", "Majestuoso", "Relámpago"] },
+  araber: { S: ["Jasira", "Nadira", "Samira", "Layla", "Zahra", "Shakira", "Malika", "Yasmina", "Farida", "Nur el Ain", "Bint Sahra", "Kalila", "Rahima", "Safiya", "Amani", "Dalia", "Ghazal", "Hayat", "Lulwa", "Bint Nadja"], H: ["Amir", "Shahin", "Kahil", "Raschid", "El Sharif", "Nazeer", "Bahri", "Jamil", "Malik", "Al Hadid", "Saladin", "Kasim", "Ibn Faris", "Tariq", "Zafir", "Khalid", "El Ghazi", "Mudir", "Ansata Amir", "Ibn Shahin"] },
+  tekke: { S: ["Gulsara", "Ak-Dzhamal", "Altyn", "Gyzyl", "Aigul", "Dzhennet", "Gülbahar", "Maral"], H: ["Ak-Bars", "Gelishikli", "Absent", "Arslan", "Gyrat", "Dagestan", "Kaplan", "Altyn Ok"] },
+  marwari: { S: ["Rani", "Chandni", "Moti", "Lakshmi", "Padmini", "Savitri", "Kesar", "Meera"], H: ["Raja", "Sultan", "Bhim", "Maharaj", "Shamsher", "Veer", "Ranjit", "Kesari"] },
+  vollblut: { S: ["Lady Luck", "Sea Pearl", "Morning Glory", "Desert Rose", "Summer Melody", "Crown Jewel", "Silver Lining", "Moonlight Sonata", "Wild Orchid", "Golden Dawn", "Velvet Storm", "Queen of Hearts", "Starlight Express", "Ocean Pearl", "Royal Grace"], H: ["Silver Arrow", "Northern Star", "Midnight Express", "Golden Gate", "Royal Flight", "Storm Chaser", "Lucky Strike", "Wind of Fortune", "Highland Dream", "Dark Victory", "Spirit of Dawn", "Ocean Breeze", "Flying Dutchman", "Red Baron", "Thunder Bay"] },
+  western: { a: ["Smart", "Shining", "Little", "Docs", "Hot", "Chics", "Gunners", "Wimpys", "Peppys", "Spooks", "Lenas", "Jacs", "Dun It", "Whizzen", "Starlights"], b: ["Spark", "Lena", "Jewel", "Gotta Gun", "Whiz", "Chex", "Jac", "Starlight", "Command", "Dun Lady", "Playboy", "Olena", "Sugar", "Badger", "Lil Chic"] },
+  isi: { S: ["Hekla", "Freyja", "Sunna", "Perla", "Vaka", "Stjarna", "Drífa", "Gola", "Katla", "Hrefna", "Sóley", "Elding", "Gná", "Brynja", "Snót"], H: ["Fengur", "Hrímnir", "Glói", "Skuggi", "Blesi", "Gnýr", "Ljúfur", "Sleipnir", "Þokki", "Kjarni", "Hrafn", "Logi", "Ófeigur", "Gustur", "Sólon"], von: ["Hólum", "Stóra-Hofi", "Kirkjubæ", "Skarði", "Sauðárkróki", "Árbakka", "Feti", "Selfossi"] },
+  friese: { S: ["Jildou", "Tjitske", "Doutzen", "Anneke", "Fokje", "Willemke", "Hiske", "Sjoukje", "Baukje", "Lutske"], H: ["Ytsen", "Tsjalle", "Hearke", "Wybe", "Feike", "Sjoerd", "Gerlof", "Tamme", "Bauke", "Jasper"], von: ["fan de Lijnbaan", "fan 'e Swette", "fan Hof Elsbeth", "fan Wiersma", "fan de Heide"] },
+  haflinger: { S: ["Nanni", "Anni", "Bergrose", "Almrose", "Nelke", "Sissi", "Mariella", "Afra", "Stella", "Wildrose", "Edelweiß", "Bianca"], H: ["Nordstern", "Abendwind", "Stolzer Prinz", "Bergkönig", "Merano", "Nebos", "Winterzauber", "Afrikanus", "Starlight", "Bodo", "Waldläufer", "Almsturm"] },
+  fjord: { S: ["Sigrid", "Solveig", "Ingrid", "Kari", "Liv", "Ragna", "Tora", "Hedda"], H: ["Gjest", "Rolf", "Odin", "Torvald", "Haakon", "Bjørn", "Sverre", "Leiv"] },
+  pony: { S: ["Tilly", "Pippa", "Moppel", "Trixi", "Fluffy", "Krümel", "Bonnie", "Wuschel"], H: ["Barnaby", "Pumpkin", "Muffin", "Nugget", "Biscuit", "Hamish", "Rascal", "Pebbles"] },
+  welsh: { S: ["Rhiannon", "Gwen", "Seren", "Myfanwy", "Arwen", "Ceridwen", "Eirlys", "Megan"], H: ["Dafydd", "Bryn", "Dylan", "Glyndwr", "Rhys", "Taliesin", "Owain", "Emrys"], von: ["Llanarth", "Derwen", "Thorneyside", "Nebo", "Menai"] },
+  britpony: { S: ["Heather", "Bramble", "Moorland Rose", "Fern", "Lady Mary", "Primrose"], H: ["Laddie", "Highland Lad", "Moorland Prince", "Bracken", "Rowan", "Heathcliff"] },
+  britkalt: { S: ["Duchess", "Bonnie", "Molly", "Maggie", "Lady Victoria", "Bluebell"], H: ["Duke", "Hercules", "Big Ben", "Prince Albert", "Clyde", "Sir Winston"] },
+  tinker: { S: ["Maggie May", "Bonny", "Lucky Clover", "Molly Malone", "Shannon", "Kathleen"], H: ["Paddy", "Shamrock", "Mister Ben", "Seamus", "Finnegan", "Murphy"] },
+};
+// art "zucht": besonderer Zuchtname je Rasse · "hobby": einfacher Rufname · r: Zufallsfunktion (sonst Math.random)
+function pferdeName(g, rasse, art = "hobby", r = Math.random) {
+  const pick = a => a[Math.floor(r() * a.length)], mann = g !== "Stute";
+  if (art !== "zucht") return pick(mann ? NAMEN_HOBBY.Mann : NAMEN_HOBBY.Stute);
+  const Z = ZUCHT_NAMEN[ZUCHT_GRUPPE[rasse] || "warm"];
+  if (Z.a) return `${pick(Z.a)} ${pick(Z.b)}`;   // Western: z. B. „Smart Spark“
+  const basis = pick(mann ? Z.H : Z.S);
+  if (Z.von && r() < 0.6) return Z.von.length && (ZUCHT_GRUPPE[rasse] === "isi") ? `${basis} frá ${pick(Z.von)}` : ZUCHT_GRUPPE[rasse] === "welsh" ? `${pick(Z.von)} ${basis}` : `${basis} ${pick(Z.von)}`;
+  if (Z.vorH && r() < 0.4) return `${pick(mann ? Z.vorH : Z.vorS)} ${basis}`;
+  return basis;
+}

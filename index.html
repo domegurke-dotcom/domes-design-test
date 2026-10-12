@@ -931,7 +931,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "385";
+  const SPIEL_VERSION = "386";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -939,10 +939,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=385"></script>
-<script src="boxstufen.js?v=385"></script>
-<script src="kopfteile.js?v=385"></script>
-<script src="kopfalter.js?v=385"></script>
+<script src="pferd.js?v=386"></script>
+<script src="boxstufen.js?v=386"></script>
+<script src="kopfteile.js?v=386"></script>
+<script src="kopfalter.js?v=386"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -4018,6 +4018,7 @@
       <div class="brief-aktion"><button class="knopf" data-waise="flasche">🍼 Mit der Flasche aufziehen · ${fmt(WAISE.flasche)}/Tag</button><button class="knopf zweit" data-waise="aufzucht">🏡 Aufzuchtstation · ${fmt(KOSTEN.aufzucht)}/Tag</button><button class="knopf zweit" data-waise="amme">🤱 Ammenstute mieten · ${fmt(WAISE.amme)}</button>${lm.map(M => `<button class="knopf zweit" data-waise="lm:${M.id}">🐴 Leihmutter: ${esc(M.name)}</button>`).join("")}</div>${lm.length ? "" : `<small>Leihmutter: eine eigene Stute, die gerade selbst ein Fohlen bei Fuß hat – im Moment gibt es keine.</small>`}</div>`;
   }
   document.addEventListener("click", e => { if (e.target && e.target.id === "einstreuAendern") einstreuWahl(B(), () => zeigeAkte()); });
+  document.addEventListener("click", e => { const k = e.target.closest && e.target.closest("[data-bfinfo]"); if (!k) return; const p = B().pferd; if (!p) return; const b = befundListe(p).find(x => String(x.id) === k.dataset.bfinfo); if (b) besitzerInformieren(p, b); });   // v386
   document.addEventListener("click", e => { const k = e.target.closest && e.target.closest("[data-bftest]"); if (!k) return; const p = B().pferd; if (!p) return; const b = befundListe(p).find(x => String(x.id) === k.dataset.bftest); if (b) befundTesten(p, b, () => { zeigeTag(); zeigeAkte(); }); });   // v319: Test zum Verdacht   // H6: Einstreu in der Versorgung ändern
   document.addEventListener("click", e => { const k = e.target.closest && e.target.closest("[data-waise]"); if (!k) return; const box = B(), p = box && box.pferd; if (!p || !p.waise) return;
     const w = k.dataset.waise;
@@ -4322,9 +4323,11 @@
   const tageTxt2 = n => `${n} ${n === 1 ? "Tag" : "Tagen"}`;
   function befundZeilen(p) {
     return bekannteBefunde(p).filter(b => b.diagnose).map(b => { const K = KRANK[b.art], seit = spiel.tag - b.seit;
-      const gut = b.behGestern || 0, info = `${b.tierarzt ? `Tierarzt-Plan: ${(PLAN[b.art] || []).map(behName).join(", ")}` : b.hufschmied ? `Rat vom Hufschmied: ${hufschmiedRat(b.art).map(behName).join(", ")} · noch kein Tierarzt` : "noch kein Tierarzt"} · gestern ${gut >= 0.6 ? "gut behandelt" : gut > 0 ? "etwas behandelt" : "nicht behandelt"}`;
+      const gut = b.behGestern || 0, eB = fremd(p) ? einstellerVon(p) : null, besitzerBeh = eB && !(eB.leistungen || {}).medizin;   // v386 (Dome): Pensionspferd – behandelt der Besitzer, außer „behandeln“ ist gebucht
+      const info = `${b.tierarzt ? `Tierarzt-Plan: ${(PLAN[b.art] || []).map(behName).join(", ")}` : b.hufschmied ? `Rat vom Hufschmied: ${hufschmiedRat(b.art).map(behName).join(", ")} · noch kein Tierarzt` : "noch kein Tierarzt"} · ${besitzerBeh ? "behandelt der Besitzer" : `gestern ${gut >= 0.6 ? "gut behandelt" : gut > 0 ? "etwas behandelt" : "nicht behandelt"}`}`;
       const SI = befundSicht(p, b);
-      return `<li><span class="ico">${K.ico}</span><span class="txt">Befund: ${esc(SI.name)}<small>seit ${tageTxt2(seit)} · ${esc(SI.ursache || "Ursache unklar")} · ${info}</small>${SI.hinweis ? `<small>${SI.hinweis}</small>` : ""}${(T => T ? `<button class="mini-knopf" data-bftest="${b.id}" style="margin-top:4px">${T.labor ? LABOR_TESTS[T.labor].ico : T.ico} ${b.testBis != null ? `${testName(T)} läuft …` : `${testName(T)} · ${fmt(testPreis(p, T))}`}</button>` : "")(testAngebot(p, b))}${rueckText(b) ? `<small>${rueckText(b)}</small>` : ""}</span><span class="stat ${b.grad <= 1 ? "warn" : "bad"}">${GRAD_TEXT[b.grad]}</span></li>`; }).join("");
+      return `<li><span class="ico">${K.ico}</span><span class="txt">Befund: ${esc(SI.name)}<small>seit ${tageTxt2(seit)} · ${esc(SI.ursache || "Ursache unklar")} · ${info}</small>${SI.hinweis ? `<small>${SI.hinweis}</small>` : ""}${(T => !T ? "" : eB ? (b.testBis != null || (T.labor && testLaeuft(p, T.labor)) ? `<small>🏡 ${testName(T)} läuft – ${esc(eName(eB))} hat sie beauftragt und zahlt</small>` : b.besInfo ? `<small>📞 ${esc(eName(eB))} ist informiert${b.besAbwarten ? " – möchte erst abwarten" : ""}</small>` : `<button class="mini-knopf" data-bfinfo="${b.id}" style="margin-top:4px">📞 Besitzer informieren (${testName(T)})</button>`)
+        : `<button class="mini-knopf" data-bftest="${b.id}" style="margin-top:4px">${T.labor ? LABOR_TESTS[T.labor].ico : T.ico} ${b.testBis != null ? `${testName(T)} läuft …` : `${testName(T)} · ${fmt(testPreis(p, T))}`}</button>`)(testAngebot(p, b))}${rueckText(b) ? `<small>${rueckText(b)}</small>` : ""}</span><span class="stat ${b.grad <= 1 ? "warn" : "bad"}">${GRAD_TEXT[b.grad]}</span></li>`; }).join("");
   }
   function befundKarten(p, box) {
     const offen = bekannteBefunde(p).filter(b => !b.diagnose);
@@ -5029,6 +5032,23 @@
   const testAngebot = (p, b) => { const V = verdachtVon(p, b); if (!V || !V.test) return null; if (!V.sofort && befundMal(p, b, V) < 2) return null; return V.test; };
   const testPreis = (p, T) => T.labor ? Math.round(laborPreis(p, T.labor) * (vorteil("zucht") ? 0.75 : 1)) : T.preis;
   const testName = T => T.labor ? LABOR_TESTS[T.labor].n : T.n;
+  // v386 (Dome): Pensionspferd – der Besitzer entscheidet über vorgeschlagene Tests und bezahlt sie
+  function besitzerTestBeauftragen(p, b, T) {
+    if (T.labor) (spiel.labor = spiel.labor || []).push({ id: p.id, name: p.name, test: T.labor, fertig: spiel.tag + LABOR_TESTS[T.labor].tage });
+    else { b.testBis = spiel.tag + (T.tage || 0); if (!T.tage) befundKlaeren(p, b); }
+    speichern(); }
+  function besitzerInformieren(p, b) {
+    const T = testAngebot(p, b), e = einstellerVon(p); if (!T || !e) return;
+    const ja = Math.random() < 0.3 + 0.6 * besitzerEifer(e); b.besInfo = spiel.tag; eZufr(e, 1, "wurde gleich über den Befund informiert");
+    if (ja) { delete b.besAbwarten; besitzerTestBeauftragen(p, b, T); } else b.besAbwarten = true;
+    speichern(); zeigeTag();
+    dialog(`<h3>📞 ${esc(eName(e))}</h3><p>${ja ? `„Danke für den Anruf! Ja, bitte die <b>${esc(testName(T))}</b> machen lassen – die Rechnung geht an mich.“` : `„Danke, dass ${spiel.duzen && spiel.duzen[eName(e)] ? "du mir Bescheid sagst" : "Sie mir Bescheid sagen"}. Ich möchte erst einmal abwarten, ob es von selbst besser wird.“`}</p>${ja ? `<p><small>${T.tage || T.labor ? "Das Ergebnis kommt per Post." : "Der Tierarzt macht es heute noch."}</small></p>` : ""}`); }
+  function besitzerTestNacht() {   // nicht informiert: der Besitzer lässt den Test manchmal selbst machen (bei Besuch oder nach ein paar Tagen)
+    spiel.boxen.forEach(bx => { const p = bx.pferd; if (!p || !fremd(p) || bx.tot) return; const e = einstellerVon(p);
+      befundListe(p).forEach(b => { if (b.besAbwarten && spiel.tag - b.besInfo >= tpj()) { delete b.besInfo; delete b.besAbwarten; }   // nach einer Jahreszeit kann man wieder anrufen
+        if (!b.diagnose || b.besInfo || b.testBis != null || b.geklaert) return; const T = testAngebot(p, b); if (!T || (T.labor && testLaeuft(p, T.labor))) return;
+        if (spiel.tag - b.diagnose >= 2 && Math.random() < 0.15 * besitzerEifer(e)) { b.besInfo = spiel.tag; besitzerTestBeauftragen(p, b, T); eZufr(e, -1, "musste sich selbst um eine Untersuchung kümmern");
+          brief(eName(e), `${p.name}: ${testName(T)}`, `ich habe für <b>${esc(p.name)}</b> eine <b>${esc(testName(T))}</b> beim Tierarzt beauftragt – die Rechnung geht an mich. Beim nächsten Mal würde ich mich freuen, wenn {du mir|Sie mir} gleich Bescheid {sagst|sagen}.`, { pferde: [p] }); } }); }); }
   function befundTesten(p, b, danach) {   // Spieler beauftragt den vorgeschlagenen Test
     const T = testAngebot(p, b); if (!T) return;
     if (T.labor) { laborBestellen(p, T.labor, danach); return; }
@@ -5046,7 +5066,7 @@
   const befundMal = (p, b, V) => (p.befundAlt || []).filter(x => [b.art, ...(V.verwandt || [])].includes(x.art)).length + Math.max(1, b.taZahl || 1);
   function befundSicht(p, b) {   // { name, ursache, hinweis } so, wie Tierarzt und Spieler es kennen
     const K = KRANK[b.art], V = verdachtVon(p, b); if (!V) return { name: K.n, ursache: b.ursache, hinweis: "" };
-    const n = befundMal(p, b, V), ursache = V.ursacheBleibt ? b.ursache : "noch unklar", T = testAngebot(p, b), tt = T ? ` Vorschlag: <b>${testName(T)}</b> (${fmt(testPreis(p, T))}) – Versorgung → Befund → „${testName(T)}“.` : "";
+    const n = befundMal(p, b, V), ursache = V.ursacheBleibt ? b.ursache : "noch unklar", T = testAngebot(p, b), tt = T ? (fremd(p) ? ` Vorschlag: <b>${testName(T)}</b> – das entscheidet der Besitzer (Versorgung → Befund → „Besitzer informieren“).` : ` Vorschlag: <b>${testName(T)}</b> (${fmt(testPreis(p, T))}) – Versorgung → Befund → „${testName(T)}“.`) : "";   // v386
     if (V.sofort) return { name: V.bild, ursache: b.ursache && !/Erbkrankheit|Veranlagung/.test(b.ursache) ? b.ursache : "noch unklar", hinweis: `Vor Ort nicht sicher zu unterscheiden: ${V.diff.join(", ").replace(/, ([^,]*)$/, " oder $1")}. Klarheit bringt: ${V.klar}.${tt}` };
     if (n < 2) return { name: V.bild, ursache, hinweis: `Mögliche Ursachen: ${V.diff.join(", ")}${V.ursacheBleibt ? "" : " – oder etwas Erbliches/Chronisches"}. Tritt es wieder auf, sehen wir genauer hin.` };
     return { name: V.bild, ursache, hinweis: `🔎 Schon das ${n}. Mal – Verdacht auf <b>${V.verdacht}</b>. Es kann aber auch ${V.diff.join(", ").replace(/, ([^,]*)$/, " oder $1")} sein. Klarheit bringt: ${V.klar}.${tt}` };
@@ -5311,7 +5331,7 @@
     const c = k2 => charE(p, k2), A = c("wille"), B = c("bezug"), V = c("nerven"), Te = c("temperament"), S = c("sensibel"), M = c("mut");
     let F = p.werte.talent * wohlFaktor(p) * fzLeistung(p) * vorliebeFaktor(p, U.vl) * befundBremse(p) * (m ? trainerFaktor(m) : reiterFaktor(k)) * (vorteil("ausbildung") ? 1.2 : 1) * (vorteil("western") && (k === "western" || (U.d && U.d.western)) ? 1.2 : 1);   // H7: Ausbildungsstall – eigene Pferde lernen schneller   // du: deine LK in dieser Disziplin
     const hinweise = [];
-    if (ort === "reitplatz" || ort === "reithalle") { const n = pensionPlatzStoert(ort, k); if (n) hinweise.push(`${n} ${n === 1 ? "Einsteller reitet" : "Einsteller reiten"} heute auch hier`); }   // H5
+    if (ort === "reitplatz" || ort === "reithalle") { const n = pensionPlatzStoert(ort, k); if (n) hinweise.push(`${n} ${n === 1 ? "Einsteller reitet" : "Einsteller reiten"} heute auch hier${PLATZ_STOERT.includes(k) ? " – beim Longieren/Freiarbeit ist es eng, das stört sie" : ""}`); }   // H5
     if (wetterOrt(ort) && (wetter === "regen" || wetter === "schnee" || d.s === 3)) { F *= 0.7; hinweise.push(d.s === 3 ? "Winter: gefrorener, schwerer Boden – lernt 30 % weniger" : "Regen: tiefer, nasser Boden – lernt 30 % weniger"); }
     if (ort === "reithalle" && vorliebeStufe(vorliebe(p, "reithalle")) === "nicht") F *= 0.85;
     const kalt = d.s === 3 && U.reiten && !T.liste.length;   // Winter: ohne Aufwärmen
@@ -9876,10 +9896,12 @@
   const pensionPlatzText = ort => { const l = pensionReiterHeute(ort); if (!l.length) return "";
     if (ort === "roundpen") return `${l.length >= anlageAnzahl("roundpen") ? `⚠️ ${anlageAnzahl("roundpen") > 1 ? "Alle Roundpens sind" : "Der Roundpen ist"} heute belegt – ` : ""}hier longiert heute: ${l.map(x => `${esc(x.e.vn)} mit ${esc(x.p.name)}`).join(", ")}${l.length >= anlageAnzahl("roundpen") ? ". Bodenarbeit geht heute auf dem Reitplatz." : ""}`; return `${l.length >= PENSION.voll * anlageAnzahl(ort) ? "⚠️ Platz ist voll – " : ""}heute reiten hier auch: ${l.map(x => `${esc(x.e.vn)} mit ${esc(x.p.name)}`).join(", ")}${l.length >= PENSION.voll * anlageAnzahl(ort) ? " (die Einsteller sind etwas genervt; trainierst du hier, stört das zusätzlich)" : " (trainierst du hier, stört das die Einsteller ein wenig)"}`; };
   // Eigenes Training auf dem Platz, auf dem heute Einsteller reiten: stört (Longieren mehr) – einmal am Tag je Einsteller
+  const PLATZ_STOERT = ["longieren", "doppellonge", "freiarbeit"];
   function pensionPlatzStoert(ort, k) {
     const H = spiel.pensionHeute; if (!H || H.tag !== spiel.tag) return 0;
     const l = H.reiter.filter(x => x.ort === ort); if (!l.length) return 0;
-    l.forEach(x => { const e = einstellerListe().find(y => y.eid === x.eid); if (!e || e.platzTag === spiel.tag) return; e.platzTag = spiel.tag; eZufr(e, k === "longieren" ? -2 : -1, `${ort === "reitplatz" ? "Reitplatz" : "Reithalle"} war belegt`); });
+    if (!PLATZ_STOERT.includes(k)) return l.length;   // v386 (Dome): Reiten stört die Einsteller nicht – nur Longieren und Freiarbeit brauchen viel Platz
+    l.forEach(x => { const e = einstellerListe().find(y => y.eid === x.eid); if (!e || e.platzTag === spiel.tag) return; e.platzTag = spiel.tag; eZufr(e, -2, `${ort === "reitplatz" ? "Reitplatz" : "Reithalle"} war belegt (${k === "freiarbeit" ? "Freiarbeit" : k === "doppellonge" ? "Doppellonge" : "Longieren"})`); });
     return l.length;
   }
   // Beginn jeder Jahreszeit: Gekündigte ziehen aus, alle anderen zahlen (10 % verspätet)
@@ -10027,6 +10049,7 @@
   const eiferText = e => { const x = besitzerEifer(e); return x >= 0.75 ? "fast jeden Tag" : x >= 0.5 ? "an vielen Tagen" : "eher selten"; };
   function pensionDarf(p, k) { if (!fremd(p)) return true; const e = einstellerVon(p); return !!(e && e.leistungen[k]); }
   function besitzerPflegeNacht() {
+    try { besitzerTestNacht(); } catch (x) { console.error(x); }   // v386
     spiel.boxen.forEach(b => { const p = b.pferd; if (!p || !fremd(p) || !p.pflege) return; const pf = p.pflege, T = tpj(), d = (p.dreck = p.dreck || {});
       // Dome (v265): wie gut der Besitzer pflegt, hängt von seinem Eifer ab – an Besuchstagen immer, sonst mit Chance Eifer × 0,8
       const e = einstellerVon(p), ei = besitzerEifer(e), heute = (e && e.besuchTag === spiel.tag - 1) || Math.random() < ei * 0.8;
@@ -10630,6 +10653,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Umbau</b> eine Stufe höher: Preisunterschied + ${prozent(UMBAU_AUFSCHLAG)}, halbe Bauzeit, je Abschnitt (Erstbau und jeder Anbau einzeln); die Boxen sind gesperrt. <b>Umbau-Folgen (H4):</b> Pferde ziehen beim Start in freie Boxen (normale vor Paddockboxen, nicht Quarantäne/Abfohlbox); eigene ohne Box kommen auf die Weide (ohne Weide und ohne freie Box kein Umbau – vorher per Anhänger zu einem anderen Hof). Sind Einsteller betroffen, beginnt der Umbau erst 1 Jahreszeit nach dem Auftrag (Brief); ohne freie Box braucht jeder Einsteller eine Lösung: Weide mit ${prozent(UMBAU.nachlass)} Nachlass aufs Boxengeld oder der Spieler kündigt; ohne Lösung kündigt der Einsteller selbst und zieht zum Umbau-Beginn aus (Ansehen ${UMBAU.ansehenOhne}). Zufriedenheit: Umzug ${UMBAU.zufrUmzug}, Nachlass ${UMBAU.zufrNachlass}. Keine neuen Einsteller in Boxen mit geplantem Umbau. Absagen vor dem Start: volle Erstattung. Reitplatz/Reithalle/Roundpen im Umbau: dort kein Training. Nach dem Umbau kommen die Weide-Pferde zurück in ihre Box. <b>Unterhalt</b> ${prozent(UNTERHALT)} des Baupreises je Jahreszeit. <b>Verfall</b> je Jahreszeit Stufe 1/2/3: −${VERFALL.slice(1).map(x => String(x).replace(".", ",")).join(" / −")} Zustand (Start-Stall beginnt bei 85 %); Warnbrief unter 40 %. <b>Reparatur:</b> Handwerker kommt am nächsten Tag, braucht 1 Tag (ab 50 % Zustand) bzw. 2 Tage (darunter), danach 100 %; je 10 Punkte 2 % des Baupreises; Hofhelfer (${fmt(MA_TYP.hofhelfer.gehalt)}/Jz) +${HOFHELFER_REPARATUR} Punkte je Arbeitstag am schlechtesten Gebäude.</p>
       <p><b>Zaun abbauen / Land verkaufen (v374):</b> bei jeder Weide/Futterwiese „Zaun abbauen“ – kostet ${prozent(ABRISS)} des Zaunpreises (mind. 50 €), dauert 2–3 Tage, nicht im Winter, nur ohne Pferde, nicht frisch nachgesät, Futterwiese nicht am Tag vor dem Mähen. Danach ist die Fläche freies Weideland; der Hofwert sinkt um den Zaunpreis. Eigenes freies Weideland verkaufen: ${fmt(Math.round(LAND_PREIS * HOF_VERKAUF))} je ha (${prozent(HOF_VERKAUF)} des Kaufpreises), Hofwert −${fmt(LAND_PREIS)} je ha. Pachtland nur über „Pacht kündigen“ – seit v375 auch teilweise, aber nur Land ohne Zaun (eingezäuntes Pachtland erst Zaun abbauen).</p>
       <p><b>Weiden (H6):</b> je Hof mehrere Weiden mit Grasstand und Matsch (seit v347: Hof → Hofplan, Weide antippen; Land über Hof → Bauen → Weideland/Bauland; Land kaufen mit Wahl „neue Weide“ oder „Weide X vergrößern“, Zaun wird dann gleich gebaut; nach dem Nachsäen kommt ein Fenster „Weide wieder nutzbar“). Gras je Tag (Standardtempo, wird nach Spieltempo umgerechnet): wächst Frühling/Sommer/Herbst/Winter +${GRAS.wachsen.join(" / +")} (matschig nur halb, nachgesät ×${String(GRAS.nachsaeenWachs).replace(".", ",")} für 1 Jahr), Verbrauch ${GRAS.verbrauch} × belegte ha (${haTxt(WEIDE_BEDARF[0])} je Großpferd, ${haTxt(WEIDE_BEDARF[1])} je Pony) ÷ Weidefläche. Gras unter ${GRAS.wenig} % → Heu nötig wie im Winter. Überbesetzt: Matsch +${GRAS.matschPlus}/Tag (Herbst/Winter ×2), sonst −${GRAS.matschMinus} (leer −${GRAS.matschLeer}); ab ${GRAS.matschAb} % matschig: Mauke und Strahlfäule ×1,5, Würmer ×1,3, Streit ×1,3. Abäppeln (Spieler oder Pferdepfleger, 1 Weide/Tag): Würmer ×0,6 für 1 Jahreszeit. Sperren: wächst ohne Verbrauch, trocknet ab. Nachsäen im Frühling und Herbst (einmal je Jahreszeit und Weide, Weide muss leer sein) ${fmt(GRAS.nachsaeen)}/ha: danach ruht die Weide ⅓ Jahreszeit (4/7/10 Tage je Jz → 1/2/3 Tage), dann Gras +${GRAS.nachsaeenPlus}. Neue Weide oder vergrößern beim Einzäunen; Pachtende: Weiden schrumpfen aufs vorhandene Weideland.</p>
+      <p><b>Platz teilen (v386):</b> Reitest du auf Reitplatz oder Halle, während Einsteller dort reiten, stört das niemanden. Longieren, Doppellonge oder Freiarbeit braucht viel Platz: jeder Einsteller dort Zufriedenheit −2 (einmal am Tag). Tests bei Pensionspferden (z. B. Endoskopie) entscheidet und bezahlt der Besitzer: „📞 Besitzer informieren“ → Zusage mit Chance 30 % + 60 % × Eifer (Zufriedenheit +1); nicht informiert lässt er den Test nach 2 Tagen mit Chance 15 % × Eifer je Tag selbst machen (Zufriedenheit −1, Brief). „Abwarten“: nach einer Jahreszeit kann man wieder anrufen. Ohne gebuchtes „behandeln“ behandelt der Besitzer.</p>
       <p><b>Futterwunsch der Einsteller (v385):</b> ändert sich höchstens einmal je Jahreszeit (neue Umstände, eigener Futterexperte oder ein angenommener Vorschlag von dir). Danach bleibt der Wunsch bis zur nächsten Jahreszeit, auch ein Gespräch übers Futter geht erst dann wieder.</p>
       <p><b>Sandpaddocks (H6):</b> jeder gebaute Sandpaddock (Hof → Bauen, auch mehrere) ist ein eigener Auslauf mit eigener Gruppe; Platz je Stufe 1/2/3: ${PADDOCK_PLATZ.slice(1).join(" / ")} Pferde. Zuteilen über Box → Pflege → Ort → Sandpaddock (Auswahl zeigt, wer dort steht und wie viel Platz frei ist), zurück über dieselbe Kachel. Das Pferd bleibt sonst wie in der Box versorgt (Futter, Mist), bekommt aber keinen Box-Abzug: Wohlbefinden +3 mit Gesellschaft (+1 allein) + 2 × temperamentvoll je Nacht; Herdenregeln (Streit, ungeplante Bedeckung) je Sandpaddock. Hengst mit Stute: Warnung (besser mit Wallach). Gesperrt bei Quarantäne und Boxenruhe. Hufrehe-Warnung im Frühling bietet „Lieber Sandpaddock“ an. <b>Trainingswunsch (v329):</b> Einsteller mit „Bewegen“ haken fest Übungen an (jung: Bodenarbeit/Longieren; sonst ggf. Longieren, eine Hauptarbeit Dressur/Springen/Western, ggf. Stangen, oft Ausritt; im Winter immer mit Aufwärmen) – Bereiter trainiert danach, du siehst die Häkchen am Reitplatz/Gelände und in der Versorgung. <b>Futterwunsch (v332):</b> jeder Pensionsbesitzer hat einen Futterplan für sein Pferd (berechnet wie die Expertenempfehlung, ohne Spezialfutter; neu, wenn sich die Umstände ändern) – Versorgung → Fütterung heute: Spalte „Besitzer“, „Mit dem Besitzer sprechen“ und Haken „automatisch übernehmen“ (Umstellung über 3 Tage). <b>Besitzer-Fehler (v333):</b> verstecktes Futterwissen je Besitzer 0,3–1; jeder Fehler (zu viel Kraftfutter ×1,6 bzw. +1 kg Hafer/Müsli, Heu ×0,7, kein Mineralfutter, Heu ×1,25) mit Chance (1 − Wissen) × 0,6. Zufriedenheit je Tag: nach Wunsch gefüttert +0,1, sonst −0,3. „💬 Mit dem Besitzer sprechen“ (1× am Tag): Vorschlag eigener Plan (Annahme 50 % + 30 % × fehlendes Wissen) oder Expertenempfehlung (85 %); angenommen → Wunsch = Vorschlag, Wissen +0,1, Zufriedenheit +2 („dankbar“, wenn der Wunsch Fehler hatte) bzw. +0,5. Mit Fehlern holt sich der Besitzer je Jahreszeit zu 15 % selbst einen Futterexperten (Brief, Wissen +0,15). <b>Nach Wunsch reiten (v331):</b> reitest du ein Pensionspferd selbst, prüft der Besitzer am nächsten Tag: nur Übungen aus seinem Wunsch (Aufwärmen mit Longieren/Bodenarbeit/Spaziergang ist immer erlaubt) → Zufriedenheit +0,2; andere Übungen → −0,5 („anders trainiert als gewünscht“). <b>Pension (v328):</b> Haltung „Sandpaddock“ → Stallbursche/Azubi bringen das Pferd nachmittags in einen freien Sandpaddock (ohne Hengst-Stute-Mischung), abends wieder rein; ganzjährig, Zufriedenheit +0,1 bzw. −0,3 ohne Auslauf. Haltung „Weide“ bei hufrehe-gefährdeten Pferden im Frühling: statt Weide in den Sandpaddock (+0,1, „vernünftig“), ohne Sandpaddock bleibt es drin ohne Abzug; trotzdem auf der Weide → −0,3.</p>
       <p><b>Einstreu (H6):</b> Sorten in der Futterkammer (Gruppe Einstreu): ${Object.keys(EINSTREU).map(k => `${FUTTER[k].n} ${EINSTREU[k].kg} kg je Box und Tag à ${String(FUTTER[k].preis.toFixed(2)).replace(".", ",")} €`).join(" · ")}. Wirkung: Stroh staubt – Husten ×1,3 (empfindliche Atemwege ×2); Strahlfäule Pellets ×0,7, Leinstroh/Hanf ×0,8; ohne Einstreu Wohlbefinden −${EINSTREU_OHNE.wohl} je Nacht und Strahlfäule ×${EINSTREU_OHNE.strahl} (Brief „Keine Einstreu mehr“). Wahl je Box: zieht ein Pferd ein, fragt das Spiel, welche Einstreu (nur eine Sorte im Lager → automatisch); ändern in Box → Pflege → Versorgung. Verbrauch jede Nacht je Box mit Pferd (nicht auf der Weide, nicht in der Klinik), zählt in den Platz der Futterkammer. Startvorrat einmal ${EINSTREU_START} kg Einstreu-Stroh. Wird die Box leer, wird beim nächsten Pferd neu eingestreut. <b>Pension:</b> Zusatzleistung „Bessere Einstreu“ ${fmt(PENSION_LEISTUNG.einstreu.preis)} je Jahreszeit – die Box bekommt automatisch staubarme Einstreu aus dem Lager (Späne, Pellets oder Leinstroh/Hanf); gibt es nur Stroh, Zufriedenheit −2 je Nacht.</p>

@@ -898,7 +898,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "335";
+  const SPIEL_VERSION = "336";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -906,9 +906,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=335"></script>
-<script src="kopfteile.js?v=335"></script>
-<script src="kopfalter.js?v=335"></script>
+<script src="pferd.js?v=336"></script>
+<script src="kopfteile.js?v=336"></script>
+<script src="kopfalter.js?v=336"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -9702,11 +9702,19 @@
   const offenPferde = () => offenBoxen().filter(b => b.pferd && !b.tot).map(b => b.pferd);
   const offenJung = q => alterJZ(q) >= OFFEN.jungAb && alterJZ(q) < OFFEN.jungBis;
   const offenTante = q => q.geschlecht === "Stute" && alterJZ(q) >= OFFEN.tanteAb;
+  // Dome (v336): wie in echt – Junghengste ab 1½ Jahren getrennt von den Stuten; eine Hengstgruppe bekommt statt einer Tante einen erwachsenen Wallach als „Onkel“
+  const OFFEN_HENGST_AB = 6;   // Jahreszeiten (1½ Jahre)
+  const offenJunghengst = q => q.geschlecht === "Hengst" && alterJZ(q) >= OFFEN_HENGST_AB;
+  const offenOnkel = q => q.geschlecht === "Wallach" && alterJZ(q) >= OFFEN.tanteAb;
+  const offenAufsicht = q => !offenJung(q) && (offenTante(q) || offenOnkel(q));
   function offenSperre(p, box) {   // darf p in den Offenstall? "" = ja
     if (!offenBoxen().length) return "kein Aufzucht-Offenstall";
     if (fremd(p)) return "Pensionspferd";
     if (box && box.fohlen) return "hat ein Fohlen bei Fuß";
-    if (!offenJung(p) && !offenTante(p)) return alterJZ(p) < OFFEN.jungAb ? "noch zu jung (erst nach dem Absetzen)" : "nur Jungpferde bis 3 Jahre und erwachsene Stuten";
+    if (!offenJung(p) && !offenTante(p) && !offenOnkel(p)) return alterJZ(p) < OFFEN.jungAb ? "noch zu jung (erst nach dem Absetzen)" : "nur Jungpferde bis 3 Jahre, erwachsene Stuten und Wallache";
+    const andere = offenPferde().filter(q => q !== p);
+    if (offenJunghengst(p) && andere.some(q => q.geschlecht === "Stute")) return "Junghengst – ab 1½ Jahren nicht mehr zu Stuten";
+    if (p.geschlecht === "Stute" && andere.some(offenJunghengst)) return "dort steht ein Junghengst – Stuten getrennt halten";
     if (p.traechtig && p.traechtig.geburt - jzJetzt() <= 1) return "hochtragend – lieber in die Abfohlbox";
     return "";
   }
@@ -9719,13 +9727,18 @@
   // jede Nacht: Herde im Offenstall – Jungpferde lernen Sozialverhalten (mit Tante doppelt so gut), alle fühlen sich in der Gruppe wohl
   function offenstallNacht() {
     const P = offenPferde().filter(q => !q.weide && !q.klinik && !q.turnier); if (!P.length) return;
-    const jung = P.filter(offenJung), tanten = P.filter(q => !offenJung(q) && offenTante(q)), tf = tanten.length ? Math.min(1, tanten.length * 5 / Math.max(1, jung.length)) : 0;
+    const jung = P.filter(offenJung), tanten = P.filter(offenAufsicht), tf = tanten.length ? Math.min(1, tanten.length * 5 / Math.max(1, jung.length)) : 0;
     jung.forEach(q => { sozialPlus(q, OFFEN.sozial * (0.5 + 0.5 * tf)); });
     if (P.length >= 2) P.forEach(q => wohlAendern(q, OFFEN.wohl * (jung.length && !tanten.length ? 0.5 : 1), "Offenstall mit Artgenossen"));
+    // v336: noch gemischt? Ein geschlechtsreifer Junghengst kann eine Stute decken (wie auf der Weide)
+    P.filter(deckfaehig).forEach(H => P.filter(stuteZucht).forEach(S => { if (groessenSperre(H, S) || Math.random() >= 0.25 * 0.3) return;
+      if (Math.random() < 0.4 + 0.55 * (wohlbefinden(S) + wohlbefinden(H)) / 200) S.heimlich = { vater: hengstKopie(H), seit: jzJetzt(), geburt: jzJetzt() + 4 }; }));
   }
   // zu Beginn jeder Jahreszeit: wer nicht mehr in den Offenstall gehört (3 Jahre alt), zieht in eine freie Box – sonst Hinweis
   function offenstallJahreszeit() {
-    offenBoxen().forEach(b => { const q = b.pferd; if (!q || b.tot || q.klinik || q.turnier || fremd(q) || !offenJung(q) && offenTante(q) || offenJung(q)) return;
+    { const P = offenPferde(), jh = P.filter(offenJunghengst); if (jh.length && P.some(q => q.geschlecht === "Stute") && spiel.offenTrennHinweis !== jzJetzt()) { spiel.offenTrennHinweis = jzJetzt();   // v336
+      brief("Hofverwaltung", "Junghengste im Offenstall trennen", `${jh.map(q => `<b>${esc(q.name)}</b>`).join(", ")} ${jh.length === 1 ? "ist" : "sind"} jetzt 1½ Jahre oder älter. Junghengste werden ab diesem Alter getrennt von den Stuten aufgezogen – sonst kann es eine ungeplante Bedeckung geben. Für eine Hengstgruppe passt ein erwachsener Wallach als „Onkel“ statt einer Tante.`, { pferde: jh }); } }
+    offenBoxen().forEach(b => { const q = b.pferd; if (!q || b.tot || q.klinik || q.turnier || fremd(q) || offenAufsicht(q) || offenJung(q)) return;
       const z = freieBox(); if (q.weide) vonWeideHolen(b);
       if (z >= 0) { inBoxUmziehen(b, z); brief("Hofverwaltung", `${q.name} ist aus dem Offenstall gezogen`, `<b>${esc(q.name)}</b> ist jetzt ${alterJahre(q)} Jahre alt und damit zu alt für den Aufzucht-Offenstall – ${pron(q).er} steht jetzt in Box ${z + 1}.`, { pferde: [q] }); }
       else if (q.offenHinweis !== jzJetzt()) { q.offenHinweis = jzJetzt(); brief("Hofverwaltung", `Box für ${q.name} gesucht`, `<b>${esc(q.name)}</b> ist zu alt für den Aufzucht-Offenstall, aber es ist keine Box frei. Bitte eine Box frei machen oder bauen (Hofverwaltung → Hof → Bauen).`, { pferde: [q] }); } });
@@ -10116,7 +10129,7 @@
       <p><b>Gnadenhof (H7 e, v310):</b> Tierarzt-Rechnungen ${Math.round(GNADEN_RABATT * 100)} % günstiger (eigener Posten „Gnadenhof-Rabatt“). Patenschaften: zu Beginn jeder Jahreszeit bekommt jedes eigene Pferd ohne Paten mit ${Math.round(PATE.chance * 100)} % einen Paten, der ${fmt(PATE.betrag[0])}–${fmt(PATE.betrag[1])} je Jahreszeit zahlt (erste Zahlung sofort) und manchmal schreibt (${Math.round(PATE.brief * 100)} %). Nur solange der Status erfüllt ist; stirbt das Patenpferd, verabschiedet sich der Pate. Übersicht in Hof → Übersicht.</p>
       <p><b>Rennstall und Westernstall (H7 b, v311):</b> <i>Rennbahn</i> (Hof → Bauen, ${BAUTEN.rennbahn.preis.map(fmt).join(" / ")}, 1 Jahreszeit Bauzeit, 1 ha Bauland) – neuer Trainingsort mit <i>Galopptraining</i> (ab 2 Jahren, ⚡ ${UEBUNG.galopptraining.e}, Beschleunigung, Ausdauer, Kraft). <i>Rennpferdetrainer</i> (${fmt(MA_TYP.renntrainer.gehalt)} je Jahreszeit, nur im Rennstall) trainiert jeden Morgen bis zu 4 eigene Rennpferde (Vollblut ab 2, Araber/Achal-Tekkiner ab 3 Jahren): Galopptraining auf der Rennbahn (sonst Konditionstraining), danach Ausritt. <i>Westerntrainer</i> (${fmt(MA_TYP.westerntrainer.gehalt)}, nur im Westernstall) trainiert bis zu 4 Westernpferde (Quarter Horses oder mit Western-Ausbildung): Bodenarbeit/Longieren, Westernarbeit, mit Trail-Parcours Stangenarbeit. Pferde, die heute schon trainiert wurden, lassen sie aus. Ohne Rennstall kostet jedes Galopprennen ${fmt(TRAINER_GEBUEHR)} Trainergebühr zusätzlich (fremder Trainer bereitet das Pferd vor). Westernstall: Westernarbeit 20 % schneller.</p>
       <p><b>Deckhengst für fremde Stuten (H7 d, v312):</b> nur im Zuchtstall mit erfüllten Bedingungen: Box → Steckbrief → Genetik → „anbieten“ (Hengst ab 3 Jahren, ohne Zuchtsperre). In der Decksaison (Frühling, Sommer) kommen je Jahreszeit etwa 1 + Qualität Stuten (Qualität = Turniererfolge/3.000 € + 0,5 je prämiertem Fohlen + (Marktwert − 4.000)/6.000, höchstens +4), höchstens eine am Tag. Decktaxe wie bei der Deckstation (10 % des Marktwerts, mind. 150 €), sofort gebucht; der Hengst verliert ${DECK_FREMD.energie} Energie. ${Math.round(DECK_FREMD.tragend * 100)} % werden tragend – 4 Jahreszeiten später schreibt die Besitzerin, das Fohlen zählt als Nachkomme.</p>
-      <p><b>Aufzucht-Offenstall (H7 a, v313):</b> nur im Zuchtstall baubar (Hof → Bauen, ${BAUTEN.aufzucht.preis.map(fmt).join(" / ")}, 1 Jahreszeit, ${haTxt(PLATZ.aufzucht)} Bauland), Bedingung des Zuchtstalls. 10 Plätze, die im Stall wie Boxen durchgeschaltet werden, aber ein gemeinsames Offenstall-Bild zeigen (Heuraufe, Futtereimer, Pferdeäpfel = Platz misten). Hinein dürfen Jungpferde von ½ bis 3 Jahren und erwachsene Stuten ab 5 Jahren ohne Fohlen bei Fuß (nicht hochtragend) als „Tanten“ – über Ort → Offenstall, Box wechseln oder beim Absetzen. Normale Pferde kommen nie automatisch auf einen Offenstall-Platz. Kostet nur Futter und Einstreu, halb so viel Arbeit für die Mitarbeiter. Jede Nacht: Jungpferde Sozialverhalten +${OFFEN.sozial} (Standardtempo, wie in der Aufzuchtstation; ohne Tante nur halb so viel, volle Wirkung ab 1 Tante je 5 Jungpferde), alle Wohlbefinden +${OFFEN.wohl} (ohne Tante +${OFFEN.wohl / 2}), sobald mindestens 2 Pferde dort leben. Wird ein Jungpferd 3 Jahre alt, zieht es zu Beginn der Jahreszeit in eine freie Box (sonst Brief).</p>
+      <p><b>Junghengste (v336):</b> Hengste ab 1½ Jahren dürfen nicht mehr zu Stuten in den Offenstall (und umgekehrt), Hinweisbrief je Jahreszeit, solange gemischt; ein erwachsener Wallach zählt als „Onkel“ wie eine Tante. Bleibt die Gruppe gemischt, kann ein Hengst ab 2 Jahren eine Stute ab 3 Jahren decken (je Nacht 7,5 % × Erfolg wie auf der Weide).</p><p><b>Aufzucht-Offenstall (H7 a, v313):</b> nur im Zuchtstall baubar (Hof → Bauen, ${BAUTEN.aufzucht.preis.map(fmt).join(" / ")}, 1 Jahreszeit, ${haTxt(PLATZ.aufzucht)} Bauland), Bedingung des Zuchtstalls. 10 Plätze, die im Stall wie Boxen durchgeschaltet werden, aber ein gemeinsames Offenstall-Bild zeigen (Heuraufe, Futtereimer, Pferdeäpfel = Platz misten). Hinein dürfen Jungpferde von ½ bis 3 Jahren und erwachsene Stuten ab 5 Jahren ohne Fohlen bei Fuß (nicht hochtragend) als „Tanten“ – über Ort → Offenstall, Box wechseln oder beim Absetzen. Normale Pferde kommen nie automatisch auf einen Offenstall-Platz. Kostet nur Futter und Einstreu, halb so viel Arbeit für die Mitarbeiter. Jede Nacht: Jungpferde Sozialverhalten +${OFFEN.sozial} (Standardtempo, wie in der Aufzuchtstation; ohne Tante nur halb so viel, volle Wirkung ab 1 Tante je 5 Jungpferde), alle Wohlbefinden +${OFFEN.wohl} (ohne Tante +${OFFEN.wohl / 2}), sobald mindestens 2 Pferde dort leben. Wird ein Jungpferd 3 Jahre alt, zieht es zu Beginn der Jahreszeit in eine freie Box (sonst Brief).</p>
       <p><b>Beritt und Pensionsfohlen (H7 c, v314):</b> laufen über die Pension (Anfrage per Brief, Zusage, Einzug am nächsten Morgen, Zahlung zu Beginn jeder Jahreszeit, alles inklusive). <i>Beritt</i> (nur Ausbildungsstall mit erfüllten Bedingungen): je fest angestelltem Bereiter ${BERITT.jeBereiter} Beritt-Pferde (und eine freie Box), Pferde 3–7 Jahre, ${BERITT.dauer.join(" oder ")} Jahreszeiten, ${fmt(BERITT.preis)} je Jahreszeit inkl. Box, täglichem Bereiter, Putzen, Hufe/Mähne (Putzen und Hufe macht der Hof – Pfleger oder du). Am Ende holt der Besitzer ab; zufrieden, wenn die Zufriedenheit ≥ 60 ist und die Ausbildungsskala im Schnitt mindestens 2 Punkte je Jahreszeit gestiegen ist (Ansehen +3, sonst −3). <i>Aufzucht</i> (nur Zuchtstall, freier Platz im Aufzucht-Offenstall): Jungpferde ½–2 Jahre oder (${Math.round(AUFZ_FREMD.waiseAnteil * 100)} %) Waisenfohlen mit Flasche, ${fmt(AUFZ_FREMD.preis)} je Jahreszeit (Waise +${fmt(AUFZ_FREMD.waise)}), mit 3 Jahren holt der Besitzer ab. Anfragen: je Art höchstens eine offene, Chance je Tag ${BERITT.chance} × freie Plätze ÷ Tage je Jahreszeit (höchstens 50 %). Seit v314 zählt auch das Training durch den fest angestellten Bereiter als gebuchtes „Bewegen“.</p>
       <p><b>Verdacht bei verdeckten Ursachen (v318):</b> Der Tierarzt kennt die versteckte Genetik nicht. Bei ${Object.keys(VERDACHT).map(k => KRANK[k].n).join(", ")} nennt er beim 1. Mal nur das Krankheitsbild und mögliche Ursachen; ab dem 2. Mal (gleicher oder verwandter Befund, zählt auch wiederholte Tierarztbesuche bei chronischen Befunden) äußert er den Verdacht, nennt die anderen Möglichkeiten und wie man es klärt (Gentest im Labor, Allergietest bzw. Hautprobe/Ultraschall). Nach dem Gentest „Erbkrankheiten“ ist eine Erbkrankheit eindeutig. Mauke weckt den CPL-Verdacht nur bei Pferden mit hoher Veranlagung (ab 0,4). <b>Chronisches Lymphödem (CPL)</b>: eigener chronischer Befund ab 8 Jahren (Risiko ∝ Veranlagung², Mauke ×1,5), Behandlung Schritt führen, Bandagen (Verband), Wundsalbe; Boxenruhe schadet. Einen Gentest gibt es (wie in echt) nicht.</p>
       <p><b>Tests zum Verdacht (v319):</b> Der Tierarzt schlägt zu jedem Verdacht den passenden Test vor (Knopf beim Befund in der Versorgung, Rechnung per Post). Vor Ort nicht zu unterscheiden – gleich beim 1. Mal mit allen Möglichkeiten und Test: ${Object.entries(VERDACHT).filter(([, V]) => V.sofort).map(([k, V]) => `${V.bild} (${V.diff.join("/")}) → ${V.test.n} ${fmt(V.test.preis)}${V.test.tage ? `, ${V.test.tage} Tage` : ", sofort"}`).join(" · ")}. Verdeckt (Verdacht ab dem 2. Mal): Erbkrankheiten → Labortest Erbkrankheiten · Sommerekzem → Allergietest 150 € · Lymphödem/Mauke (CPL) → Hautprobe 120 €. Bis zum Ergebnis zeigen Tierarzt, Versorgung, Steckbrief und Rechnung nur das Krankheitsbild. Eindeutig (kein Test nötig): Melanom am Schimmel und alle übrigen Befunde.</p>

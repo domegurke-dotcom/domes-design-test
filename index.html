@@ -881,7 +881,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "310";
+  const SPIEL_VERSION = "311";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -889,9 +889,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=310"></script>
-<script src="kopfteile.js?v=310"></script>
-<script src="kopfalter.js?v=310"></script>
+<script src="pferd.js?v=311"></script>
+<script src="kopfteile.js?v=311"></script>
+<script src="kopfalter.js?v=311"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2919,6 +2919,7 @@
         ["reitplatz", "🏟️", "Reit\u00adplatz", "Sandplatz 20 × 40 m für Dressur und Springen", "20 × 40 m"],
         ["reithalle", "🏛️", "Reit\u00adhalle", "überdachtes Reiten bei jedem Wetter", "überdacht"],
         ["gelaende", "🌲", "Gelände", "Wald- und Feldwege für Ausritte", "Ausritte"],
+        ...(spiel.anlage.rennbahn ? [["rennbahn", "🏁", "Renn\u00adbahn", "Trainingsbahn für Rennpferde", "Galopp"]] : []),
       ];
       const da = plaetze.filter(x => spiel.anlage[x[0]]).length;
       inhalt = meld +
@@ -4687,7 +4688,7 @@
   }
   // ---------- Training daheim (Werte-Plan, Etappe 4) ----------
   // Orte: der Spieler hat erstmal Reitplatz und Gelände (Bodenarbeit, Longieren, Stangen auch auf dem Reitplatz) · Admin: alle Orte offen (zum Testen)
-  const TRAIN_ORTE = { roundpen: { n: "Roundpen", ico: "⭕" }, reitplatz: { n: "Reitplatz", ico: "🏟️" }, reithalle: { n: "Reithalle", ico: "🏛️" }, gelaende: { n: "Gelände", ico: "🌲" } };
+  const TRAIN_ORTE = { roundpen: { n: "Roundpen", ico: "⭕" }, reitplatz: { n: "Reitplatz", ico: "🏟️" }, reithalle: { n: "Reithalle", ico: "🏛️" }, gelaende: { n: "Gelände", ico: "🌲" }, rennbahn: { n: "Rennbahn", ico: "🏁" } };
   const ortOffen = o => !!(spiel.admin || (spiel.anlage && spiel.anlage[o] && !anlageImUmbau(o)));   // H4: im Umbau gesperrt
   // Übungen: e = Energie · ab = Mindestalter (Jahreszeiten) · sk = Ausbildungsskala (Stufe → Grundzuwachs je Einheit) · w = Werte (Grundzuwachs) · vl = Vorliebe
   // wo: boden = Roundpen, Reitplatz, Reithalle · platz = Reitplatz, Reithalle · gelaende = Gelände
@@ -4708,7 +4709,9 @@
   UEBUNG.toeltarbeit = { n: "Tölt\u00adarbeit", ico: "✨", wo: "platz", ab: 16, e: 26, vl: "gangarbeit", reiten: true, gangart: "toelt", sk: { 0: .4, 1: .2 }, w: { kraft: .4, konzentration: .5, gehorsam: .3, koordination: .3 }, gangP: .02, info: "Tölt im Takt verbessern – nur für Pferde mit Tölt" };
   UEBUNG.passtraining = { n: "Pass\u00adtraining", ico: "💨", wo: "platz", ab: 20, e: 34, vl: "gangarbeit", reiten: true, gangart: "pass", w: { beschleunigung: .6, kraft: .4, reaktion: .4, konzentration: .3 }, gangP: .02, info: "Rennpass auf der Bahn – nur für Pferde mit Pass" };
   UEBUNG.springen.sprung = true;
-  const UEB_WO = { boden: ["roundpen", "reitplatz", "reithalle"], platz: ["reitplatz", "reithalle"], gelaende: ["gelaende"] };
+  // H7 (b): Galopptraining auf der eigenen Rennbahn – Antritt und Ausdauer für Rennpferde (Vollblüter ab 2, sonst ab 3 Jahren)
+  UEBUNG.galopptraining = { n: "Galopp\u00adtraining", ico: "🏁", wo: "bahn", ab: 8, e: 36, vl: "gelaende", reiten: true, w: { beschleunigung: 1, ausdauer: .8, kraft: .4, regeneration: .3, konzentration: .2 }, info: "Canter und schnelle Arbeit auf der Rennbahn – Antritt und Ausdauer" };
+  const UEB_WO = { boden: ["roundpen", "reitplatz", "reithalle"], platz: ["reitplatz", "reithalle"], gelaende: ["gelaende"], bahn: ["rennbahn"] };
   const ENERGIE_MAX = 100;
   // Tempo: Grundwerte × TRAIN_SK (Skala) bzw. × TRAIN_W (Werte), umgerechnet auf Tage pro Jahreszeit (× 7 / Tage) – Ziel: regelmäßig trainiert etwa nach 1 Jahr Klasse A, nach 2–3 Jahren L
   let TRAIN_SK = 2.2, TRAIN_W = 1.5, AUSB_X = 2.2, TRAIN_D = 1;   // v208: Skala etwas langsamer; zu hohe Klassen bekommen einen Abzug (stufenMalus)   // TRAIN_D: eigener Stand Springen/Western/Gelände
@@ -4849,7 +4852,7 @@
     const vorher = energie(p), ueber = kosten > vorher;
     p.energie = Math.max(-30, Math.round(vorher - kosten)); T.verbraucht += kosten;
     const c = k2 => charE(p, k2), A = c("wille"), B = c("bezug"), V = c("nerven"), Te = c("temperament"), S = c("sensibel"), M = c("mut");
-    let F = p.werte.talent * wohlFaktor(p) * fzLeistung(p) * vorliebeFaktor(p, U.vl) * befundBremse(p) * (m ? trainerFaktor(m) : reiterFaktor(k)) * (vorteil("ausbildung") ? 1.2 : 1);   // H7: Ausbildungsstall – eigene Pferde lernen schneller   // du: deine LK in dieser Disziplin
+    let F = p.werte.talent * wohlFaktor(p) * fzLeistung(p) * vorliebeFaktor(p, U.vl) * befundBremse(p) * (m ? trainerFaktor(m) : reiterFaktor(k)) * (vorteil("ausbildung") ? 1.2 : 1) * (vorteil("western") && (k === "western" || (U.d && U.d.western)) ? 1.2 : 1);   // H7: Ausbildungsstall – eigene Pferde lernen schneller   // du: deine LK in dieser Disziplin
     const hinweise = [];
     if (ort === "reitplatz" || ort === "reithalle") { const n = pensionPlatzStoert(ort, k); if (n) hinweise.push(`${n} ${n === 1 ? "Einsteller reitet" : "Einsteller reiten"} heute auch hier`); }   // H5
     if ((ort === "reitplatz" || ort === "roundpen") && (wetter === "regen" || wetter === "schnee" || d.s === 3)) { F *= 0.7; hinweise.push(d.s === 3 ? "Winter: gefrorener, schwerer Boden – lernt 30 % weniger" : "Regen: tiefer, nasser Boden – lernt 30 % weniger"); }
@@ -4956,6 +4959,23 @@
     const out = [];
     liste.forEach(k => { if (energie(p) >= uebKosten(p, k)) out.push(trainieren(p, k, uebOrt(k), m)); });
     return out;
+  }
+  // H7 (b): Rennpferde- und Westerntrainer – jeden Morgen bis zu 4 passende eigene Pferde, die heute noch nicht trainiert wurden
+  const rennpferd = q => (q.rasse === "vollblut" && alterJZ(q) >= 8) || (["araber", "tekke"].includes(q.rasse) && alterJZ(q) >= 12);
+  const westernpferd = q => alterJZ(q) >= 12 && (q.rasse === "quarter" || ((q.disz || {}).western || 0) > 0);
+  function trainerWahl(p, typ) {
+    const geht = k => !uebSperre(p, k) && uebOrt(k);
+    const l = typ === "renntrainer" ? [geht("galopptraining") ? "galopptraining" : "kondition", "ausritt"] : [Math.random() < 0.4 ? "bodenarbeit" : "longieren", "western", ...(spiel.anlage && spiel.anlage.trail ? ["stangen"] : [])];
+    return l.filter(geht);
+  }
+  function trainerMorgen(typ) {
+    const T = aktive(typ).filter(m => maDarf(m, "training") && !m.nurFuer); if (!T.length) return [];
+    const passt = typ === "renntrainer" ? rennpferd : westernpferd, gearbeitet = [];
+    const kand = spiel.boxen.filter(b => { const p = b.pferd; return p && !b.tot && !p.klinik && !p.weide && !p.paddock && !p.turnier && !p.boxenruhe && !fremd(p) && passt(p) && (p.pflege ? p.pflege.gesundheit : 100) > 50 && !(p.trainHeute && p.trainHeute.tag === spiel.tag); }).map(b => b.pferd);
+    T.forEach(m => { kand.splice(0, MA_TYP[typ].boxen).forEach(p => { if (trainSperre(p)) return; const out = [];
+      trainerWahl(p, typ).forEach(k => { if (energie(p) >= uebKosten(p, k)) out.push(trainieren(p, k, uebOrt(k), m)); });
+      if (out.length) { beruehrt(p, m.id, "bewegen"); maVertrauen(m, p); if (!gearbeitet.includes(m)) gearbeitet.push(m); } }); });
+    return gearbeitet;
   }
   // Zu Beginn jeder Jahreszeit: wer regelmäßig trainiert wurde (mind. an der Hälfte der Tage), altert langsamer (Abbau bis ×0,7)
   function fitJahreszeit(p) {
@@ -5105,7 +5125,8 @@
     return spiel.turniere;
   }
   const istGross = t => t.art === "gross" || t.art === "championat" || t.art === "international";
-  const nenngeld = (t, P) => P.nenn != null ? P.nenn + (P.jockey ? REITGELD * (vorteil("renn") ? 0.5 : 1) : 0) : Math.round(NENNGELD[P.stufe] * (istGross(t) ? 1.5 : 1) * (vorteil("western") && DISZ[P.disz] && DISZ[P.disz].g === "Western" ? 0.5 : 1));   // H7: Rennstall halbes Reitgeld, Westernstall halbes Nenngeld
+  const TRAINER_GEBUEHR = 100;   // H7 (b): ohne Rennstall bereitet ein fremder Trainer das Pferd auf das Rennen vor
+  const nenngeld = (t, P) => P.nenn != null ? P.nenn + (P.jockey ? REITGELD * (vorteil("renn") ? 0.5 : 1) + (vorteil("renn") ? 0 : TRAINER_GEBUEHR) : 0) : Math.round(NENNGELD[P.stufe] * (istGross(t) ? 1.5 : 1) * (vorteil("western") && DISZ[P.disz] && DISZ[P.disz].g === "Western" ? 0.5 : 1));   // H7: Rennstall halbes Reitgeld, Westernstall halbes Nenngeld
   const preisgeld = (t, P) => P.preis != null ? P.preis : P.jung ? Math.round(PREISGELD[P.stufe] * 0.8) : PREISGELD[P.stufe] * (istGross(t) ? 2 : 1);
   // Niveau der Konkurrenz (Schnitt des Starterfelds)
   // Western-Werte bestehen fast nur aus trainierbaren Werten und steigen schneller – Western-Felder sind deshalb stärker (+8), damit Open wie S erst nach einigen Jahren erreichbar ist
@@ -5177,7 +5198,7 @@
     const nachDisz = turnierSortierung === "disz";
     const karte = (t, nurD) => { const meine = t.nennung.filter(n => n.pid === p.id);
       const zeilen = t.pruef.filter(P => zeigP(t, P) && (!nurD || dk(P) === nurD)).sort((a, b) => turnierSortierung === "machbar" ? machbar(t, b) - machbar(t, a) : 0).map(P => { const drin = meine.some(n => n.prid === P.id), sp = drin ? "" : nennSperre(p, t, P), ng = nenngeld(t, P), pg = preisgeld(t, P), [c, ct] = P.fohlenschau ? fsChance(fsBox(p).fohlen) : chance(p, t, P);
-        return `<li class="tp-zeile"><span><b>${esc(P.name)}${P.fohlenschau ? ` – ${esc(fsBox(p).fohlen.name)}` : ""}</b><small>${P.starter} ${P.fohlenschau ? "Fohlen" : "Starter"} · ${P.jockey ? `Nenngeld + Jockey ${fmt(ng)}` : `Nenngeld ${fmt(ng)}`}${pg ? ` · Preisgeld ${fmt(pg)}` : P.fohlenschau ? " · Prämie, Champion" : " · Schleifen"}${sp ? "" : ` · ${c} ${ct}`}${P.q ? `<br>${qualiStand(p, P).txt}` : ""}</small></span>
+        return `<li class="tp-zeile"><span><b>${esc(P.name)}${P.fohlenschau ? ` – ${esc(fsBox(p).fohlen.name)}` : ""}</b><small>${P.starter} ${P.fohlenschau ? "Fohlen" : "Starter"} · ${P.jockey ? `Nenngeld + Jockey${vorteil("renn") ? "" : " + Trainer"} ${fmt(ng)}` : `Nenngeld ${fmt(ng)}`}${pg ? ` · Preisgeld ${fmt(pg)}` : P.fohlenschau ? " · Prämie, Champion" : " · Schleifen"}${sp ? "" : ` · ${c} ${ct}`}${P.q ? `<br>${qualiStand(p, P).txt}` : ""}</small></span>
           ${drin ? (spiel.tag < t.tag ? `<button class="mini-knopf an" data-tzurueck="${t.id}:${P.id}">✓ genannt</button>` : `<span class="stat ok">genannt</span>`) : sp ? `<span class="stat">${sp}</span>` : `<button class="mini-knopf" data-tnennen="${t.id}:${P.id}">Nennen</button>`}</li>`; }).join("");
       return `<details class="t-karte" ${meine.length ? "open" : ""}><summary><b>${({ hof: "🎀", renntag: "🏇", distanz: "🗺️", gangpferde: "✨", fohlenschau: "🍼", championat: "🏅", international: "🌍" })[t.art] || (t.typ === "western" ? "🤠" : "🏆")} ${esc(t.name)}</b><small>${datumTxt(t)} · ${artTxt[t.art]}${t.halle ? " · Halle" : " · Freiluft"}${meine.length ? ` · <b>${meine.length}× genannt</b>` : ""}</small></summary><ul class="tp-liste">${zeilen}</ul></details>`; };
     const diszListe = [...new Set(L.flatMap(t => t.pruef.filter(P => zeigP(t, P)).map(dk)))].sort((a, b) => { const i = k => DISZ[k] ? Object.keys(DISZ).indexOf(k) : 99; return i(a) - i(b); });
@@ -6213,6 +6234,10 @@
       aufgabe: "versorgt, pflegt und kümmert sich um die Einsteller in", kurz: "Haltung und Service", info: "Bewirbt sich nur in Pensionsställen und auf dem Gnadenhof (kommt mit dem Hof-Ausbau). Darf Azubis ausbilden." },
     bereiter: { name: "Bereiter", w: "Bereiterin", mehr: "Bereiter", ico: "🏇", gehalt: 420, boxen: 3, ab: "mittel", staelle: ["ausbildung"], start: wissenStart(20, { ruecken: 50, huf: 40, verhalten: 35 }), lernt: ["ruecken", "verhalten", "huf"],
       aufgabe: "trainiert jeden Morgen die Pferde aus", kurz: "trainiert die Pferde", info: "Fest angestellt nur im Ausbildungsstall – in allen anderen Ställen kommt ein Bereiter nach Bedarf (Box → Pflege → Ort → Reitplatz: Trainingstage je Jahreszeit, je Einheit bezahlt). Trainiert Pferde ab 3 Jahren – nach deinem Trainingsplan oder er entscheidet selbst (Box → Pflege → Ort → Reitplatz). Je mehr er über Rücken und Reiten weiß, desto mehr lernen die Pferde. Bemerkt Huf- und Rückenprobleme früher." },
+    renntrainer: { name: "Rennpferdetrainer", w: "Rennpferdetrainerin", mehr: "Rennpferdetrainer", ico: "⏱️", gehalt: 450, boxen: 4, ab: "klein", staelle: ["renn"], start: wissenStart(25, { ruecken: 55, verhalten: 40, huf: 35, futter: 35 }), lernt: ["ruecken", "verhalten"],
+      aufgabe: "trainiert jeden Morgen die Rennpferde", kurz: "trainiert Rennpferde", info: "Nur im Rennstall. Trainiert jeden Morgen bis zu 4 Rennpferde (Vollblüter ab 2, Araber und Achal-Tekkiner ab 3 Jahren) – Galopptraining auf der Rennbahn, sonst Konditionstraining im Gelände." },
+    westerntrainer: { name: "Westerntrainer", w: "Westerntrainerin", mehr: "Westerntrainer", ico: "🤠", gehalt: 420, boxen: 4, ab: "klein", staelle: ["western"], start: wissenStart(25, { ruecken: 50, verhalten: 45, huf: 30 }), lernt: ["ruecken", "verhalten"],
+      aufgabe: "trainiert jeden Morgen die Westernpferde", kurz: "trainiert Westernpferde", info: "Nur im Westernstall. Trainiert jeden Morgen bis zu 4 Westernpferde (Quarter Horses und Pferde mit Western-Ausbildung) – Westernarbeit, Trail und Bodenarbeit." },
     hofhelfer: { name: "Hofhelfer", w: "Hofhelferin", mehr: "Hofhelfer", ico: "🔧", gehalt: 280, boxen: 0, ab: "klein", start: wissenStart(10, {}), lernt: ["klima"],
       aufgabe: "repariert jeden Tag Gebäude und Anlagen", kurz: "repariert Gebäude", info: "Bessert jeden Arbeitstag das Gebäude mit dem schlechtesten Zustand aus (+3 Punkte bei Standardtempo, etwa +21 je Jahreszeit – reicht für einen Hof mit 6–8 Gebäuden) – so verfällt nichts. Ein Handwerker (Hof → Bauen) repariert sofort, kostet aber je 10 Punkte 2 % des Baupreises." },
     futterexperte: { name: "Futterexperte", w: "Futterexpertin", mehr: "Futterexperten", ico: "🌾", gehalt: 450, boxen: 0, ab: "groß", start: wissenStart(25, { futter: 80, klima: 40 }), lernt: ["futter"],
@@ -6220,7 +6245,7 @@
     stallmeister: { name: "Stallmeister", w: "Stallmeisterin", mehr: "Stallmeister", ico: "📋", gehalt: 500, boxen: 0, ab: "groß", start: wissenStart(40, {}), lernt: WISSEN.map(([k]) => k),
       aufgabe: "koordiniert den ganzen Stall", kurz: "koordiniert", info: "Stallburschen schaffen mit ihm 5 statt 3 Boxen, Azubis lernen bei ihm. Hufschmied-Termine zusammenlegen kommt mit dem Hufschmied (Etappe E)." } };
   // Kacheln in Hofverwaltung → Mitarbeiter (ohne Typ = kommt später)
-  const MITARBEITER = [["azubi", "", "Azubi"], ["stallbursche", "", "Stall\u00adbursche"], ["pfleger", "", "Pferde\u00adpfleger"], ["pferdewirt", "", "Pferde\u00adwirt"], ["pferdewirtHS", "", "Pferde\u00adwirt Haltung"], ["bereiter", "", "Bereiter"], ["stallmeister", "", "Stall\u00admeister"],
+  const MITARBEITER = [["azubi", "", "Azubi"], ["stallbursche", "", "Stall\u00adbursche"], ["pfleger", "", "Pferde\u00adpfleger"], ["pferdewirt", "", "Pferde\u00adwirt"], ["pferdewirtHS", "", "Pferde\u00adwirt Haltung"], ["bereiter", "", "Bereiter"], ["renntrainer", "", "Renn\u00adtrainer"], ["westerntrainer", "", "Western\u00adtrainer"], ["stallmeister", "", "Stall\u00admeister"],
     ["hofhelfer", "", "Hof\u00adhelfer"], ["futterexperte", "🌾", "Futter­experte"], ["futterberatung", "🌾", "Futter­beratung", "auf Termin"],
     ["hufschmied", "🔨", "Huf\u00adschmied", "auf Termin"], ["osteopath", "🦴", "Osteo­path", "auf Termin – später"]];
   const STALLBURSCHE = MA_TYP.stallbursche;
@@ -6267,7 +6292,7 @@
     putzen: "Putzen", maehne: "Mähne und Schopf kürzen", hufe: "Hufe auskratzen", decke: "Decke wechseln (Pension)", leicht: "leichte Arbeit (Bodenarbeit, Freiarbeit, Spaziergang)", behandeln: "Behandlungsplan",
     geburt: "Nachtdienst bei Geburten", training: "Reittraining und intensives Training", reparieren: "Gebäude ausbessern", termine: "Hufschmied-Termine zusammenlegen", plaene: "Futterpläne jede Jahreszeit prüfen", aepfeln: "Weide abäppeln (1 Weide am Tag)" };
   const MA_AUFGABEN_TYP = { stallbursche: ["fuettern", "misten", "weide"], azubi: ["fuettern", "misten", "weide"], pfleger: ["putzen", "maehne", "hufe", "decke", "leicht", "behandeln", "geburt", "aepfeln"],
-    pferdewirtHS: ["putzen", "maehne", "hufe", "decke", "leicht", "behandeln"], pferdewirt: ["geburt", "behandeln", "decke"], bereiter: ["training"], hofhelfer: ["reparieren"], stallmeister: ["termine", "decke"], futterexperte: ["plaene"] };
+    pferdewirtHS: ["putzen", "maehne", "hufe", "decke", "leicht", "behandeln"], pferdewirt: ["geburt", "behandeln", "decke"], bereiter: ["training"], renntrainer: ["training"], westerntrainer: ["training"], hofhelfer: ["reparieren"], stallmeister: ["termine", "decke"], futterexperte: ["plaene"] };
   const maDarf = (m, k) => !(m && m.aus && m.aus[k]);
   function maZuteilung(art) {
     const kand = spiel.boxen.map((b, i) => i).filter(i => { const b = spiel.boxen[i], p = b.pferd; if (!p || p.klinik || b.tot) return false;
@@ -6470,6 +6495,7 @@
       maVertrauen(m, p); gearbeitet.add(m); });
     maZuteilung("bereiter").forEach(({ i, m }) => { const p = spiel.boxen[i].pferd; if (!maDarf(m, "training")) return;
       const l = bereiterTrainiert(p, m); if (!l.length) return; beruehrt(p, m.id, "bewegen"); maVertrauen(m, p); gearbeitet.add(m); });
+    ["renntrainer", "westerntrainer"].forEach(typ => trainerMorgen(typ).forEach(m => gearbeitet.add(m)));   // H7 (b)
     spiel.maVergessen = vergessen.length ? { tag: spiel.tag, liste: vergessen } : null;
     // Erfahrung: wer gearbeitet hat, lernt in seinen Bereichen – Azubis nur mit Anleitung
     const zucht = spiel.boxen.some(b => b.fohlen || (b.pferd && b.pferd.traechtig));
@@ -8295,6 +8321,7 @@
       else if (t === "reithalle") d = `<rect x="${x}" y="${y + 4}" width="14" height="10" fill="#dcd6cc" stroke="#9aa4ab" stroke-width=".7"/><path d="M${x},${y + 4.2} Q${x + 7},${y - 1} ${x + 14},${y + 4.2}Z" fill="#a9b4bb"/>`;
       else if (t === "roundpen") d = `<circle cx="${x + 7}" cy="${y + 8}" r="6" fill="#ecdcb8" stroke="#fff"/>`;
       else if (t === "waschplatz") d = `<rect x="${x + 2}" y="${y + 3}" width="10" height="10" rx="2" fill="#bfe0f0" stroke="#7aaabb" stroke-width=".7"/>`;
+      else if (t === "rennbahn") d = `<ellipse cx="${x + 7}" cy="${y + 8}" rx="7" ry="5" fill="#a9cf8a" stroke="#d9b48f" stroke-width="2.2"/><path d="M${x + 7},${y + 3} v2" stroke="#fff" stroke-width="1"/>`;   // H7 (b): ovale Sandbahn
       else if (t === "trail") d = `<g stroke="#8a6a4a" stroke-width="2" stroke-linecap="round"><path d="M${x + 1},${y + 12} H${x + 13} M${x + 3},${y + 7} H${x + 11}"/></g>`;
       else d = `<circle cx="${x + 7}" cy="${y + 8}" r="4" fill="#ccc"/>`;
       if (g.bau) d += `<rect x="${x - .5}" y="${y}" width="15" height="15" fill="none" stroke="#e08a1e" stroke-dasharray="2 1.5" stroke-width="1.2"/>`;
@@ -8371,7 +8398,7 @@
     roundpen: { n: "Roundpen", ico: "⭕", preis: [400, 700, 1000], zeit: "kurz", aussen: true, anlage: "roundpen", einmal: true, info: "runder Platz zum Longieren und für Bodenarbeit" },
     trail: { n: "Trail-Parcours", ico: "🪵", preis: [500, 800, 1200], zeit: "kurz", aussen: true, anlage: "trail", einmal: true, info: "Hindernisse für Western-Trail" },
     reithalle: { n: "Reit\u00adhalle", ico: "🏛️", preis: [10000, 15000, 22000], zeit: "halle", anlage: "reithalle", einmal: true, info: "überdachtes Reiten bei jedem Wetter" },
-    rennbahn: { n: "Rennbahn", ico: "🏁", nur: "Rennstall (kommt mit Etappe H7)", info: "Trainingsbahn, Sand oder Gras" },
+    rennbahn: { n: "Rennbahn", ico: "🏁", preis: [6000, 9000, 14000], zeit: 1, aussen: true, anlage: "rennbahn", einmal: true, info: "Trainingsbahn (Sand, etwa 1.000 m) für Galopptraining – braucht 1 ha Bauland, Bedingung für den Rennstall" },
     weide: { n: "Weide einzäunen", ico: "🌿", preis: [200, 300, 450], jeHa: true, zeit: "kurz", aussen: true, info: "macht freies Land zur Weide (je ha)" },
     sandpaddock: { n: "Sandpaddock", ico: "🟫", preis: [300, 500, 700], zeit: "kurz", aussen: true, anlage: "paddock", info: "Auslauf mit Sandboden" },
     waschplatz: { n: "Wasch\u00adplatz", ico: "🚿", preis: [300, 500, 800], zeit: "kurz", anlage: "waschplatz", einmal: true, info: "zum Abspritzen und Hufe waschen" },
@@ -8636,7 +8663,7 @@
   }
   // ---------- Bauland und Weideland (Dome, v225): Gebäude brauchen Bauland, Weiden nur Weideland ----------
   const BAULAND_PREIS = 3000, HOFPLATZ = 0.2;   // Wohnhaus und Hofplatz
-  const PLATZ = { stall: 0.1 / 6, paddock: 0.15 / 6, reitplatz: 0.1, reithalle: 0.15, roundpen: 0.05, trail: 0.05, sandpaddock: 0.05, waschplatz: 0.05, lager: 0.05, sattelkammer: 0.05, quarantaene: 0.05, abfohlbox: 0.05 };
+  const PLATZ = { stall: 0.1 / 6, paddock: 0.15 / 6, reitplatz: 0.1, reithalle: 0.15, rennbahn: 1, roundpen: 0.05, trail: 0.05, sandpaddock: 0.05, waschplatz: 0.05, lager: 0.05, sattelkammer: 0.05, quarantaene: 0.05, abfohlbox: 0.05 };
   const platzVon = (typ, boxen) => typ === "stall" || typ === "paddock" ? PLATZ[typ] * (boxen || BAUTEN[typ].boxen) : PLATZ[typ] || 0;
   const bauHa = () => !spiel.hof ? 1 : spiel.hof.bauHa != null ? spiel.hof.bauHa : (spiel.hof.bauHa = 1);
   const baulandBelegt = () => runde2(HOFPLATZ + gebaeude().reduce((a, g) => a + platzVon(g.typ, g.boxen), 0));
@@ -9212,8 +9239,8 @@
     if (art === "ausbildung") { const ber = angestellte("bereiter").length; return [["Reitplatz", !!A.reitplatz], ["Roundpen oder Reithalle", !!(A.roundpen || A.reithalle)], [`mindestens 1 Bereiter (${ber})`, ber >= 1]]; }
     if (art === "gnadenhof") { const falsch = P.filter(q => !(istSenior(q) || befundListe(q).length || q.schutzBis || altersschwach(q))), zucht = P.some(q => q.traechtig) || spiel.boxen.some(b => b.fohlen), verk = (spiel.angebote || []).length;
       return [[`nur alte, kranke oder Notfallpferde${falsch.length ? ` (nicht: ${falsch.map(q => esc(q.name)).join(", ")})` : ""}`, !falsch.length], ["keine Zucht", !zucht], ["kein Verkauf", !verk]]; }
-    if (art === "renn") { const r = P.filter(q => (q.rasse === "vollblut" && alterJZ(q) >= 8) || (["araber", "tekke"].includes(q.rasse) && alterJZ(q) >= 12)).length; return [["Rennbahn", true, true], [`mindestens 2 Rennpferde (${r})`, r >= 2], ["Rennpferdetrainer", true, true]]; }   // Dome: Vollblüter laufen schon zweijährig, Araber/Achal-Tekkiner ab 3
-    if (art === "western") { const w = P.filter(q => q.rasse === "quarter" || ((q.disz || {}).western || 0) > 0).length; return [["Reitplatz", !!A.reitplatz], ["Trail-Parcours", !!A.trail], [`mindestens 2 Westernpferde (${w})`, w >= 2], ["Westerntrainer", true, true]]; }
+    if (art === "renn") { const r = P.filter(q => (q.rasse === "vollblut" && alterJZ(q) >= 8) || (["araber", "tekke"].includes(q.rasse) && alterJZ(q) >= 12)).length; const rt = angestellte("renntrainer").length; return [["Rennbahn", gebaeude().some(g => g.typ === "rennbahn" && !g.bau)], [`mindestens 2 Rennpferde (${r})`, r >= 2], [`Rennpferdetrainer (${rt})`, rt >= 1]]; }   // Dome: Vollblüter laufen schon zweijährig, Araber/Achal-Tekkiner ab 3
+    if (art === "western") { const w = P.filter(q => q.rasse === "quarter" || ((q.disz || {}).western || 0) > 0).length; return [["Reitplatz", !!A.reitplatz], ["Trail-Parcours", !!A.trail], [`mindestens 2 Westernpferde (${w})`, w >= 2], [`Westerntrainer (${angestellte("westerntrainer").length})`, angestellte("westerntrainer").length >= 1]]; }
     return [];
   }
   function stallartOk() { const H = spiel.hof; if (!H || !H.art) return false; if (H.artCache && H.artCache.tag === spiel.tag && H.artCache.art === H.art) return H.artCache.ok;
@@ -9253,7 +9280,7 @@
   }
   const STALLART_VORTEILE = { pension: ["30 % mehr Anfragen von Einstellern", "Pferdewirt Haltung und Service einstellbar"], zucht: ["25 % Rabatt im Labor", "eigene Hengste für fremde Stuten, Aufzucht-Offenstall – kommen später"],
     ausbildung: ["eigene Pferde lernen 20 % schneller", "fremde Pferde in Beritt – kommt später"], gnadenhof: ["Spenden: 30 € je Pferd und Jahreszeit", "Patenschaften: 60–120 € je Patenpferd und Jahreszeit", "20 % Rabatt beim Tierarzt"],
-    renn: ["halbes Jockey-Reitgeld", "Verkaufsrennen, Trainer – kommen später"], western: ["halbes Nenngeld bei Westernprüfungen", "schnelleres Westerntraining, Trainer – kommen später"] };
+    renn: ["halbes Jockey-Reitgeld", "keine Trainergebühr bei Galopprennen (sonst 100 € je Start)", "Rennpferdetrainer einstellbar", "Verkaufsrennen – kommt später"], western: ["halbes Nenngeld bei Westernprüfungen", "Westerntraining 20 % schneller", "Westerntrainer einstellbar"] };
   function stallartHTML() {   // Dome (v295): oben in Hof → Übersicht – Stallart, Verpflichtungen und Vorteile in kurzen Stichpunkten
     const H = spiel.hof || {}, art = H.art, B = art ? stallartBed(art) : [], ok = stallartOk(), schon = jzJetzt() < stallartSchonBis();
     const status = !art ? "keine Stallart" : H.artVerloren ? "⛔ Status verloren – Bedingungen erfüllen, dann kommt er zurück" : ok ? `✅ alles erfüllt – ${fmt(foerderBetrag())} Förderung je Jahreszeit` : H.artFrist != null ? `⚠️ nicht erfüllt – Frist bis Ende ${jzName(H.artFrist - 1).replace(/^\S+ /, "")}` : schon ? `🕊️ Schonfrist bis ${jzName(stallartSchonBis()).replace(/^\S+ /, "")}` : "⚠️ nicht erfüllt";
@@ -9555,6 +9582,7 @@
       <p><b>Futterwiese (H6, v296):</b> wird beim Landkauf bzw. Einzäunen gleich festgelegt („neue Futterwiese“, keine Pferde) oder später umgestellt. Am Tag vor dem Mähen und am Mähtag erscheint ein Fenster mit erwarteter Menge und freiem Platz im Futterlager. eine Weide ohne Pferde lässt sich unter Hof → Land „als Futterwiese nutzen“ (keine Pferde darauf, wächst ohne Verbrauch). Der Bauer mäht wie in echt: 1. Schnitt am ersten Sommertag (Anfang Juni), 2. Schnitt am Sommertag ⌈0,7 × Tage je Jz⌉ (Ende Juli), 3. Schnitt am ersten Herbsttag (September) – 2. und 3. nur bei Gras ≥ ${WIESE.schnitt2Gras} %. Ertrag ${WIESE.ertrag.join(" / ")} kg Heu je ha (in echt 3,5 / 2,5 / 1,5 t, Spiel-Maßstab: 1 Pferd frisst ≈ 280 statt 3.600 kg im Jahr) × Gras/70 (höchstens ×1), danach Gras −${WIESE.grasWeg}. Lohn ${fmt(WIESE.lohn)} je ha und Schnitt. Heu kommt in die Futterkammer, so viel Platz ist; der Rest geht für ${String(WIESE.verkauf.toFixed(2)).replace(".", ",")} €/kg an den Bauern. ${prozent(WIESE.regen)} Regen-Schnitt → staubiges Heu. Ohne Futterwiese: Heu im Futterhandel.</p>
       <p><b>Stallarten (H7):</b> je Hof eine Stallart (Hof → Übersicht, Wechsel jederzeit). Bedingungen: Pensionsstall ≥ ½ der Boxen an Einsteller · Zuchtstall ≥ 1 Deckhengst (ab 3 J.), ≥ 2 Zuchtstuten (3–20 J.), Abfohlbox (Aufzucht-Offenstall kommt später) · Ausbildungsstall Reitplatz + Roundpen oder Halle + ≥ 1 Bereiter · Gnadenhof nur alte/kranke/Notfallpferde, keine Zucht, kein Verkauf · Rennstall ≥ 2 Rennpferde (Vollblut ab 2 J., Araber/Achal-Tekkiner ab 3 J.; Rennbahn und Trainer kommen später) · Westernstall Reitplatz + Trail-Parcours + ≥ 2 Westernpferde (Quarter oder mit Western-Ausbildung; Trainer kommt später). Erfüllt: Förderung ${fmt(FOERDER_HA)} je ha und Jahreszeit (Flächenprämie) + 20 % Bauzuschuss für Stufe-3-Gebäude (Neubau und Umbau) + Vorteile (Pension Anfragen ×1,3 · Zucht Labor −25 % · Ausbildung Lernen ×1,2 · Gnadenhof 30 € Spenden je Pferd und Jz · Renn halbes Jockey-Reitgeld · Western halbes Nenngeld bei Westernprüfungen). Schonfrist ${STALLART_SCHON} Jahreszeiten nach Kauf/Wechsel (keine Strafe, Förderung/Vorteile nur bei erfüllten Bedingungen). Danach fehlt etwas → Warnbrief, Frist bis Ende der Jahreszeit → Statusverlust (Vorteile weg) und Rückzahlung der Förderung der letzten 4 Jahreszeiten; erfüllt man die Bedingungen wieder, kommt der Status zurück.</p>
       <p><b>Gnadenhof (H7 e, v310):</b> Tierarzt-Rechnungen ${Math.round(GNADEN_RABATT * 100)} % günstiger (eigener Posten „Gnadenhof-Rabatt“). Patenschaften: zu Beginn jeder Jahreszeit bekommt jedes eigene Pferd ohne Paten mit ${Math.round(PATE.chance * 100)} % einen Paten, der ${fmt(PATE.betrag[0])}–${fmt(PATE.betrag[1])} je Jahreszeit zahlt (erste Zahlung sofort) und manchmal schreibt (${Math.round(PATE.brief * 100)} %). Nur solange der Status erfüllt ist; stirbt das Patenpferd, verabschiedet sich der Pate. Übersicht in Hof → Übersicht.</p>
+      <p><b>Rennstall und Westernstall (H7 b, v311):</b> <i>Rennbahn</i> (Hof → Bauen, ${BAUTEN.rennbahn.preis.map(fmt).join(" / ")}, 1 Jahreszeit Bauzeit, 1 ha Bauland) – neuer Trainingsort mit <i>Galopptraining</i> (ab 2 Jahren, ⚡ ${UEBUNG.galopptraining.e}, Beschleunigung, Ausdauer, Kraft). <i>Rennpferdetrainer</i> (${fmt(MA_TYP.renntrainer.gehalt)} je Jahreszeit, nur im Rennstall) trainiert jeden Morgen bis zu 4 eigene Rennpferde (Vollblut ab 2, Araber/Achal-Tekkiner ab 3 Jahren): Galopptraining auf der Rennbahn (sonst Konditionstraining), danach Ausritt. <i>Westerntrainer</i> (${fmt(MA_TYP.westerntrainer.gehalt)}, nur im Westernstall) trainiert bis zu 4 Westernpferde (Quarter Horses oder mit Western-Ausbildung): Bodenarbeit/Longieren, Westernarbeit, mit Trail-Parcours Stangenarbeit. Pferde, die heute schon trainiert wurden, lassen sie aus. Ohne Rennstall kostet jedes Galopprennen ${fmt(TRAINER_GEBUEHR)} Trainergebühr zusätzlich (fremder Trainer bereitet das Pferd vor). Westernstall: Westernarbeit 20 % schneller.</p>
       <p><b>Koppel, Heu und Futter (v293):</b> Ort → Koppel → Weide oder Sandpaddock. Im Sandpaddock steht das Pferd draußen (Bild wie die Weide), kein Gras – Heu muss immer in die Heuraufe. Weide- und Sandpaddock-Bild: Heuraufe antippen = Heu/Raufutter aus dem Lager, Futtereimer antippen = alles außer Heu laut Futterplan (steht nur Heu im Plan, bleibt der Eimer leer), Pferdeäpfel antippen = abäppeln (Weide: wie „Abäppeln“, Sandpaddock: Mist je Pferd und Nacht, ab 3 drückt er aufs Wohlbefinden). Box: Heuhaufen hinten links = Heu (ohne Heu hungrig wie bisher), Krippe = Futter außer Heu (Haferkörner). Mitarbeiter und Turnier füttern beides. Einstreu als Boden sichtbar (Stroh, Späne, Pellets, Leinstroh/Hanf; ohne Einstreu Pflaster), leere Boxen behalten Einstreu und Futterreste bis „Box leeren“. Neue Futterstellen zeigen eine Info-Sprechblase, bis man sie einmal angetippt hat.</p>
       <p><b>Weide-Bild (H6):</b> steht ein Pferd auf der Weide, zeigt die Box statt der leeren Box die Weide mit bis zu 6 Pferden dieser Weide (das gewählte vorne in der Mitte), Gras-Farbe je Jahreszeit, oben Name und Grasstand.</p>
       <p><b>Wirkung der Stufe:</b> Wohlbefinden je Nacht in der Box: Stufe 1 −0,5, Stufe 3 +0,5, Zustand unter 40 % −0,5, Paddockbox +0,5. Verletzungsrisiko in der Box × 1,3 / 1 / 0,8, Zustand unter 70 % × 1,1, unter 40 % × 1,3. Mitarbeiter-Zufriedenheit je Jahreszeit: Ø Stufe unter 1,5 −3, ab 2,5 +3, Ø Zustand unter 50 % −3. Quarantänestall: Pferde dort stecken niemanden an und werden nicht angesteckt. Pensionspreis nach Stufe kommt mit H5.</p>
@@ -9630,7 +9658,7 @@
       <p><b>Erfolge</b> (Akte → Ausbildung) erhöhen den Marktwert: Sieg ${ERFOLG_WERT.join("/")} € (E–S), Platzierung die Hälfte, Großes Turnier ×1,3, höchstens 15.000 €.</p>
       <h3>🏋️ Training daheim</h3>
       <p><b>Orte:</b> Spieler: Reitplatz und Gelände (Bodenarbeit, Freiarbeit, Longieren, Stangen auch auf dem Reitplatz). Roundpen und Reithalle baust du unter Hofverwaltung → Hof → Bauen (🛠️ Admin: alle offen). Reitplatz/Roundpen bei Regen, Schnee oder im Winter ×0,7. Reithalle wetterunabhängig, bei Regen/Schnee wählt der Bereiter sie automatisch; scheue/nervöse Pferde mögen sie oft nicht (×0,85).</p>
-      ${verTab(["Übung", "Ort", "ab", "⚡", "Ausbildungsskala", "Werte"], Object.values(UEBUNG).map(U => [U.ico + " " + U.n.replace(/\u00ad/g, ""), ({ boden: "Roundpen/Platz/Halle", platz: "Platz/Halle", gelaende: "Gelände" })[U.wo], jzAlterTxt(U.ab).replace("Monaten", "Mon.").replace("Jahren", "J.").replace("Jahr", "J."), U.e,
+      ${verTab(["Übung", "Ort", "ab", "⚡", "Ausbildungsskala", "Werte"], Object.values(UEBUNG).map(U => [U.ico + " " + U.n.replace(/\u00ad/g, ""), ({ boden: "Roundpen/Platz/Halle", platz: "Platz/Halle", gelaende: "Gelände", bahn: "Rennbahn" })[U.wo], jzAlterTxt(U.ab).replace("Monaten", "Mon.").replace("Jahren", "J.").replace("Jahr", "J."), U.e,
         Object.entries(U.sk || {}).map(([i, x]) => AUSBILDUNG[i] + " " + String(x).replace(".", ",")).join(", ") || "–", Object.entries(U.w).map(([k, x]) => ((WERTE_KOERPER.concat(WERTE_KOPF).find(w => w.key === k) || {}).titel || k) + " " + String(x).replace(".", ",")).join(", ") + (U.gang ? ", Gangwerk +0,02" : "")]))}
       <p><b>Tempo (v208):</b> Skala × 2,2 (vorher 2,5), Ausbildungsstall × 2,2, Werte × 1,5, eigener Disziplin-Stand × 1, alles × 7 / Tage pro Jahreszeit. <b>Töltarbeit</b> (ab 4 J., nur mit Tölt) und <b>Passtraining</b> (ab 5 J., nur mit Pass) heben die gezeigte Tölt- bzw. Passnote um bis zu +1 (0,02 × Faktor je Einheit, in halben Noten).</p>
       <p><b>Zuwachs</b> je Übung = Grundwert × Lernfaktor (0,6–1,2) × Wohlbefinden-Faktor (0,5–1,2) × Vorliebe (1 + 0,25 × Vorliebe, 0,75–1,25) × Befund-Bremse × Trainer (du 1 · Bereiter 0,8 + 0,4 × Wissen Rücken/100) × Ort/Wetter. Müde (Energie reicht nicht) ×0,6 · Winter ohne Aufwärmen (erste Übung des Tages ist Reiten) ×0,8 · Dressurarbeit × (1 + 0,2·e sensibel) · Gelände und Sprünge × (1 + 0,15·e mutig − 0,25·e scheu). Charakter: Gehorsam/Konzentration × (1 + 0,4·e leistungsbereit − 0,3·e eigensinnig), Vertrauen × (1 + 0,5·e verschmust), Reaktionsfähigkeit × (1 − 0,4·e nervös). Gewöhnungsphase (Takt, Losgelassenheit, Anlehnung) × (0,8 + 0,2 × Vertrauen/100 + 0,2 × Gehorsam/100 + 0,15·(e ruhig + e gelassen) − 0,15·(e temperamentvoll + e nervös)).</p>

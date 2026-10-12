@@ -17,7 +17,7 @@ const { chromium } = require('playwright');
   await pg.selectOption('#landHa', '2'); await pg.selectOption('#landZiel', ''); await klick('#landKauf'); await klick('#dlgKnoepfe button:first-child');
   log('Nach Landkauf: freies Weideland', await pg.evaluate(() => freiesLand()));
   // 2. Einzäunen als neue Weide über Bauen
-  const zaun = async (ziel) => { await pg.evaluate(() => { hofBereich = 'bauen'; zeigeHof('hof'); }); await klick('[data-bau="weide"]');
+  const zaun = async (ziel) => { await pg.evaluate(() => { hofBereich = 'bauen'; zeigeHof('hof'); }); await klick('[data-land="weide"]'); await klick('#landZaun');   // v358: Einzäunen über das Weideland-Fenster
     const hatZiel = await pg.$('#bauZiel'); if (hatZiel) { await pg.selectOption('#bauZiel', ziel); await pg.waitForTimeout(200); }
     log('  Dialog Weide-Auswahl:', hatZiel ? await pg.$$eval('#bauZiel option', o => o.map(x => x.textContent).join(' / ')) : 'keine (erste Weide)');
     await pg.selectOption('#bauMenge', '0.5').catch(() => pg.selectOption('#bauMenge', { index: 0 }));

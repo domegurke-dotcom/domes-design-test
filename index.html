@@ -917,7 +917,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "373";
+  const SPIEL_VERSION = "374";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -925,10 +925,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=373"></script>
-<script src="boxstufen.js?v=373"></script>
-<script src="kopfteile.js?v=373"></script>
-<script src="kopfalter.js?v=373"></script>
+<script src="pferd.js?v=374"></script>
+<script src="boxstufen.js?v=374"></script>
+<script src="kopfteile.js?v=374"></script>
+<script src="kopfalter.js?v=374"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -9054,9 +9054,19 @@
     dialog(`<h3>${weide ? "🌱 Weideland" : "🏗️ Bauland"}</h3><p class="text" style="margin:0 0 6px">${weide ? `Weideland kostet <b>${fmt(LAND_PREIS)} je ha</b> oder <b>${fmt(PACHT_PREIS)} je ha und Jahreszeit</b> Pacht. Wählst du, was daraus wird, wird der Zaun gleich mitgebaut.` : `Bauland (für Gebäude, Reitplätze, Hofplatz) kostet <b>${fmt(BAULAND_PREIS)} je ha</b>.`} Gekauftes Land erhöht den Hofwert (Kreditrahmen).</p>
       <p class="text" style="margin:0 0 6px"><small>${weide ? `Weideland ${haTxt(weideland())}${H.pacht ? ` (davon Pacht ${haTxt(H.pacht)}, ${fmt(H.pacht * PACHT_PREIS)} je Jahreszeit)` : ""} · eingezäunt ${haTxt(H.weideHa || 0)} · frei ${haTxt(freiesLand())}` : `Bauland ${haTxt(bauHa())} · belegt ${haTxt(baulandBelegt())} · frei ${haTxt(baulandFrei())}`} · Kasse ${fmt(spiel.geld || 0)}</small></p>
       <div class="kr-wahl"><select id="landArt" hidden><option value="${weide ? "weide" : "bau"}" selected></option></select>${weide ? `<label id="landZielL">Daraus wird <select id="landZiel"><option value="neu" ${ziel === "neu" || !ziel ? "selected" : ""}>neue Weide (für Pferde)</option><option value="wiese" ${ziel === "wiese" ? "selected" : ""}>neue Futterwiese (keine Pferde, Heu)</option>${weiden().map(w => `<option value="${w.wid}" ${ziel === w.wid ? "selected" : ""}>${esc(w.name)} vergrößern</option>`).join("")}<option value="">nur Land, später einzäunen</option></select></label>` : ""}<label>Fläche <select id="landHa">${[0.5, 1, 2, 3, 4, 5].map(x => `<option value="${x}" ${x === 1 ? "selected" : ""}>${haTxt(x)}</option>`).join("")}</select></label></div>
-      <div class="land-knoepfe"><button class="knopf" id="landKauf">🏷️ Kaufen</button>${weide && freiesLand() >= 1 ? `<button class="knopf zweit" id="landZaun">🌿 Freies Land einzäunen (${haTxt(freiesLand())})</button>` : ""}${weide ? `<button class="knopf zweit" id="landPacht">📝 Pachten</button>${H.pacht ? `<button class="knopf zweit" id="landPachtWeg">Pacht kündigen</button>` : ""}` : ""}</div>`, [["Abbrechen", danach || null, "zweit"]], "breit");
+      <div class="land-knoepfe"><button class="knopf" id="landKauf">🏷️ Kaufen</button>${weide && freiesLand() >= 1 ? `<button class="knopf zweit" id="landZaun">🌿 Freies Land einzäunen (${haTxt(freiesLand())})</button>` : ""}${weide ? `<button class="knopf zweit" id="landPacht">📝 Pachten</button>${H.pacht ? `<button class="knopf zweit" id="landPachtWeg">Pacht kündigen</button>` : ""}${eigenesFreiesLand() >= 0.5 ? `<button class="knopf zweit" id="landVerk">💶 Freies Land verkaufen (${haTxt(eigenesFreiesLand())})</button>` : ""}` : ""}</div>`, [["Abbrechen", danach || null, "zweit"]], "breit");
     landBinden(danach || (() => zeigeHof()));
     if ($("landZaun")) $("landZaun").onclick = () => { $("dlg").hidden = true; bauDialog("weide"); };   // v358: statt der Kachel „Weide einzäunen“
+    if ($("landVerk")) $("landVerk").onclick = () => landVerkaufDialog(() => landDialog(art, ziel, danach));
+  }
+  // v374 (Dome): eigenes, nicht eingezäuntes Weideland verkaufen (z. B. nach dem Zaunabbau) – Erlös 90 % wie beim Hofverkauf
+  const eigenesFreiesLand = () => { const H = spiel.hof || {}; return runde2(Math.min(freiesLand(), Math.max(0, (H.ha || 0) - bauHa()))); };
+  function landVerkaufDialog(danach) {
+    const H = spiel.hof, max = eigenesFreiesLand(), je = Math.round(LAND_PREIS * HOF_VERKAUF), opt = [0.5, 1, 2, 3, 4, 5].filter(x => x < max - 1e-9).concat([max]);
+    dialog(`<h3>💶 Freies Weideland verkaufen</h3><p>Verkaufen lässt sich nur eigenes Land ohne Zaun (frei: ${haTxt(max)}). Du bekommst <b>${fmt(je)} je ha</b> (${prozent(HOF_VERKAUF)} des Kaufpreises). Der Hofwert sinkt um ${fmt(LAND_PREIS)} je ha.${H.pacht ? " Pachtland kannst du nicht verkaufen – dafür die Pacht kündigen." : ""}</p>
+      <div class="kr-wahl"><label>Fläche <select id="landVerkHa">${opt.map(x => `<option value="${x}">${haTxt(x)} · ${fmt(Math.round(x * je))}</option>`).join("")}</select></label></div>`,
+      [["💶 Verkaufen", () => { const x = Math.min(+$("landVerkHa").value, eigenesFreiesLand()); if (!(x > 0)) return;
+        buchen(Math.round(x * je), "Land verkaufen (Weideland)"); H.ha = runde2(H.ha - x); H.wert = Math.max(0, (H.wert || 0) - x * LAND_PREIS); speichern(); danach && danach(); }], ["Abbrechen", danach || null, "zweit"]]);
   }
   function gummiDialog(danach) {   // v358: Gummimatten je Box (ab Stufe 2)
     const L = spiel.boxen.map((b, i) => [b, i]).filter(([b]) => boxenStufe(b) >= 2 && !b.offen), P = BODEN_WIRKUNG.GUMMI_PREIS;
@@ -9267,7 +9277,7 @@
   const ABRISS = 0.2;
   const abrissPreis = g => Math.max(50, Math.round((g.preis || bauPreis(g.typ, Math.max(1, g.stufe || 1), { boxen: g.boxen, anbau: g.anbau })) * ABRISS / 10) * 10);
   function abrissSperre(g) {
-    if (g.typ === "weide") return "Weidezaun – kommt später";
+    if (g.typ === "weide") return "den Zaun baust du bei der Weide ab (Hof → Bauen → Weideland)";
     if (g.bau) return "im Bau"; if (g.abriss) return "Abriss läuft"; if (g.plan) return "Umbau geplant"; if (g.rep) return "Handwerker arbeitet";
     if (gebaeude().some(x => x.anbau === g.gid)) return "erst den Anbau abreißen";
     const Bx = spiel.boxen.filter(b => b.geb === g.gid);
@@ -9301,7 +9311,36 @@
     if (spiel.hof) spiel.hof.wert = Math.max(0, (spiel.hof.wert || 0) - (g.preis || 0)); if (spiel.hof) delete spiel.hof.artCache;
     (spiel.hofFenster = spiel.hofFenster || []).push(`<h3>🧨 Abgerissen</h3><p><b>${esc(gebName(g).replace(/\u00ad/g, ""))}</b> auf <b>${esc(hofName())}</b> ist abgerissen${g.boxen ? ` – ${g.boxen} ${g.boxen === 1 ? "Box" : "Boxen"} weniger` : ""}. Das Bauland ist wieder frei.</p>`);
   }
+  // v374 (Dome): Weidezaun abbauen – wie Abriss 20 % des Zaunpreises, 2–3 Tage, nicht im Winter, Weide leer, nicht kurz vor dem Mähen; Land bleibt (verkaufen/Pacht kündigen extra)
+  const zaunAbbauPreis = w => Math.max(50, Math.round(bauPreis("weide", 1, { ha: w.ha }) * ABRISS / 10) * 10);
+  function zaunAbbauSperre(w) {
+    const d = datum(), tag2 = Math.max(2, Math.ceil(tpj() * 0.7)), n = w.schnitte || 0;
+    if (w.abbau) return "Abbau läuft"; if (d.s === 3) return "im Winter ruhen die Außenarbeiten";
+    if (weidePferde(w).length) return "erst die Pferde von der Weide holen";
+    if (spiel.boxen.some(b => b.pferd && b.pferd.weideNachm && b.pferd.weideNachm.wid === w.wid)) return "heute Nachmittag stehen dort noch Pferde";
+    if (w.ruhtBis != null) return "frisch nachgesät – ruht noch";
+    if (imBau().some(g => g.typ === "weide" && g.ziel === w.wid)) return "der Zaun wird gerade vergrößert";
+    if (w.wiese && ((d.s === 0 && d.t === tpj()) || (d.s === 1 && ((d.t === tag2 - 1 && n === 1) || (d.t === tpj() && n === 2))))) return "morgen wird gemäht";
+    return "";
+  }
+  function zaunAbbauDialog(w, danach) {
+    const sp = zaunAbbauSperre(w), nm = esc(w.name);
+    if (sp) { dialog(`<h3>🧨 Zaun abbauen: ${nm}</h3><p>Geht gerade nicht: ${sp}.</p>`); return; }
+    const k = zaunAbbauPreis(w);
+    dialog(`<h3>🧨 Zaun abbauen: ${nm}?</h3><p>Abbau und Entsorgung des Zauns (${haTxt(w.ha)}) kosten <b>${fmt(k)}</b> (${prozent(ABRISS)} des Zaunpreises) und dauern 2–3 Tage. Die ${w.wiese ? "Futterwiese wird ab sofort nicht mehr gemäht" : "Weide ist ab sofort gesperrt"}.</p><p>Das Land bleibt danach als <b>freies Weideland</b> – verkaufen oder die Pacht kündigen geht extra unter Hof → Bauen → Weideland.</p>`,
+      [["🧨 Abbauen", () => { if (!spiel.admin && (spiel.geld || 0) < k) { dialog(`<h3>Zu wenig Geld</h3><p>Der Abbau kostet ${fmt(k)} – in der Kasse sind ${fmt(spiel.geld || 0)}.</p>`); return; }
+        if (!spiel.admin) buchen(-k, `Zaun abbauen: ${w.name}`); w.abbau = { rest: bauTage("kurz") }; w.gesperrt = true; speichern(); danach && danach(); }], ["Abbrechen", null, "zweit"]]);
+  }
+  function zaunAbbauFertig(w) {
+    const G = gebaeude(), weg = G.filter(g => g.typ === "weide" && !g.bau && (g.wid === w.wid || g.ziel === w.wid)), wert = weg.reduce((a, g) => a + (g.preis || 0), 0) || bauPreis("weide", 1, { ha: w.ha });
+    spiel.gebaeude = G.filter(g => !weg.includes(g)); spiel.weiden = weiden().filter(x => x !== w);
+    spiel.boxen.forEach(b => { const p = b.pferd; if (p && p.weideWid === w.wid) delete p.weideWid; });
+    if (spiel.hof) { spiel.hof.weideHa = weidenSumme(); spiel.hof.wert = Math.max(0, (spiel.hof.wert || 0) - wert); }
+    if (!weiden().length && spiel.anlage) delete spiel.anlage.weide;
+    (spiel.hofFenster = spiel.hofFenster || []).push(`<h3>🧨 Zaun abgebaut</h3><p>Der Zaun von <b>${esc(w.name)}</b> auf <b>${esc(hofName())}</b> ist abgebaut. ${haTxt(w.ha)} sind jetzt freies Weideland – verkaufen oder Pacht kündigen unter Hof → Bauen → Weideland.</p>`);
+  }
   function bauNacht() {
+    weiden().filter(w => w.abbau).forEach(w => { if (datum().s === 3) return; if (--w.abbau.rest <= 0) zaunAbbauFertig(w); });   // v374
     gebaeude().filter(g => g.abriss).forEach(g => { if (BAUTEN[g.typ].aussen && datum().s === 3) return; if (--g.abriss.rest <= 0) abrissFertig(g); });   // v372
     gebaeude().forEach(g => { if (!g.bau) return;
       if (BAUTEN[g.typ].aussen && datum().s === 3) return;
@@ -9318,7 +9357,7 @@
         ...(g.typ === "paddock" ? { paddock: true } : g.typ === "quarantaene" ? { quar: true } : g.typ === "abfohlbox" ? { abfohl: true } : g.typ === "aufzucht" ? { offen: true } : {}) });
       if (B.anlage) (spiel.anlage = spiel.anlage || {})[B.anlage] = true;
       if (g.typ === "weide" && spiel.hof) { const z = g.ziel && weideById(g.ziel);   // H6: neue Weide oder vorhandene vergrößern
-        if (z) z.ha = Math.round((z.ha + g.ha) * 100) / 100; else { const wi = g.ziel === "wiese", n = weiden().filter(w => !!w.wiese === wi).length + 1; weiden().push({ wid: "w" + Math.random().toString(36).slice(2, 7), name: `${wi ? "Futterwiese" : "Weide"} ${n}`, ha: g.ha, gras: 60, matsch: 0, ...(wi ? { wiese: true } : {}) }); }
+        if (z) z.ha = Math.round((z.ha + g.ha) * 100) / 100; else { const wi = g.ziel === "wiese", n = weiden().filter(w => !!w.wiese === wi).length + 1; g.wid = "w" + Math.random().toString(36).slice(2, 7); weiden().push({ wid: g.wid, name: `${wi ? "Futterwiese" : "Weide"} ${n}`, ha: g.ha, gras: 60, matsch: 0, ...(wi ? { wiese: true } : {}) }); }
         spiel.hof.weideHa = weidenSumme(); spiel.anlage.weide = true; }
       if (g.typ === "lager") futterkammer().lagerMax = LAGER_START + B.platz[g.stufe - 1];
     }
@@ -10016,15 +10055,16 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     if (!W.length) return `<p class="text">Noch keine Weide eingezäunt. Weideland kaufen oder pachten und einzäunen: Hof → Bauen → „Weideland“ (dort auch „Freies Land einzäunen“).</p>`;
     return `
       ${W.map(w => { const P = weidePferde(w), bel = weideBelegtW(w), apf = w.aepfel != null && spiel.tag - w.aepfel < tpj(), nach = w.nachgesaet != null && w.nachgesaet >= jzJetzt();
-        return `<div class="geb"><span class="geb-ico">${w.wiese ? "🌾" : "🌿"}</span><span class="geb-txt"><b>${esc(w.name)}</b><small>${haTxt(w.ha)} · ${w.wiese ? `🌾 Futterwiese – der Bauer mäht im Sommer und Herbst${w.schnitte ? ` (dieses Jahr ${w.schnitte}× gemäht)` : ""}` : P.length ? `${P.map(q => esc(q.name)).join(", ")} (braucht ${haTxt(bel)}${bel > w.ha + 1e-9 ? " – ⚠️ überbesetzt" : ""})` : w.ruhtBis != null ? `🌱 frisch nachgesät – ruht noch ${tageTxt2(Math.max(1, w.ruhtBis - spiel.tag))}` : w.gesperrt ? "🚫 gesperrt – erholt sich" : "keine Pferde"}${apf ? " · ✅ abgeäppelt" : ""}${nach ? " · 🌱 nachgesät" : ""}</small>${imBau().filter(g => g.typ === "weide" && g.ziel === w.wid).map(g => `<small>🏗️ + ${zaunText(g)}</small>`).join("")}
+        return `<div class="geb"><span class="geb-ico">${w.wiese ? "🌾" : "🌿"}</span><span class="geb-txt"><b>${esc(w.name)}</b><small>${haTxt(w.ha)} · ${w.abbau ? `🧨 Zaun wird abgebaut – noch ${w.abbau.rest} ${w.abbau.rest === 1 ? "Tag" : "Tage"}${datum().s === 3 ? " · ❄️ ruht im Winter" : ""}` : w.wiese ? `🌾 Futterwiese – der Bauer mäht im Sommer und Herbst${w.schnitte ? ` (dieses Jahr ${w.schnitte}× gemäht)` : ""}` : P.length ? `${P.map(q => esc(q.name)).join(", ")} (braucht ${haTxt(bel)}${bel > w.ha + 1e-9 ? " – ⚠️ überbesetzt" : ""})` : w.ruhtBis != null ? `🌱 frisch nachgesät – ruht noch ${tageTxt2(Math.max(1, w.ruhtBis - spiel.tag))}` : w.gesperrt ? "🚫 gesperrt – erholt sich" : "keine Pferde"}${apf ? " · ✅ abgeäppelt" : ""}${nach ? " · 🌱 nachgesät" : ""}</small>${imBau().filter(g => g.typ === "weide" && g.ziel === w.wid).map(g => `<small>🏗️ + ${zaunText(g)}</small>`).join("")}
           <small>Gras ${Math.round(w.gras)} %</small>${bar(w.gras, true)}<small>Matsch ${Math.round(w.matsch)} %</small>${bar(w.matsch, false)}
-          <span class="geb-kn">${(P.length || (w.kot || 0) > 0) && w.aepfel !== spiel.tag ? `<button class="mini-knopf" data-waepfeln="${w.wid}">💩 Abäppeln</button>` : ""}${P.length && !w.wiese ? `<button class="mini-knopf" disabled title="Erst die Pferde von dieser Weide holen">🌾 Futterwiese – erst Pferde runterholen</button>` : ""}${!P.length && w.ruhtBis == null ? `<button class="mini-knopf" data-wwiese="${w.wid}">${w.wiese ? "🐴 Wieder als Weide" : "🌾 Als Futterwiese nutzen"}</button>` : ""}${!P.length && w.ruhtBis == null && !w.wiese ? `<button class="mini-knopf" data-wsperren="${w.wid}">${w.gesperrt ? "✅ Freigeben" : "🚫 Sperren (ruhen lassen)"}</button>` : ""}${saatZeit && w.saatJz !== jzJetzt() && w.ruhtBis == null ? (P.length ? `<button class="mini-knopf" disabled title="Erst die Pferde von dieser Weide holen">🌱 Nachsäen – erst Pferde runterholen</button>` : `<button class="mini-knopf" data-wsaeen="${w.wid}">🌱 Nachsäen · ${fmt(Math.round(GRAS.nachsaeen * w.ha))}</button>`) : ""}</span></span></div>`; }).join("")}${neuBau}`;
+          <span class="geb-kn">${w.abbau ? "" : `${(P.length || (w.kot || 0) > 0) && w.aepfel !== spiel.tag ? `<button class="mini-knopf" data-waepfeln="${w.wid}">💩 Abäppeln</button>` : ""}${P.length && !w.wiese ? `<button class="mini-knopf" disabled title="Erst die Pferde von dieser Weide holen">🌾 Futterwiese – erst Pferde runterholen</button>` : ""}${!P.length && w.ruhtBis == null ? `<button class="mini-knopf" data-wwiese="${w.wid}">${w.wiese ? "🐴 Wieder als Weide" : "🌾 Als Futterwiese nutzen"}</button>` : ""}${!P.length && w.ruhtBis == null && !w.wiese ? `<button class="mini-knopf" data-wsperren="${w.wid}">${w.gesperrt ? "✅ Freigeben" : "🚫 Sperren (ruhen lassen)"}</button>` : ""}${saatZeit && w.saatJz !== jzJetzt() && w.ruhtBis == null ? (P.length ? `<button class="mini-knopf" disabled title="Erst die Pferde von dieser Weide holen">🌱 Nachsäen – erst Pferde runterholen</button>` : `<button class="mini-knopf" data-wsaeen="${w.wid}">🌱 Nachsäen · ${fmt(Math.round(GRAS.nachsaeen * w.ha))}</button>`) : ""}<button class="mini-knopf" data-wabbau="${w.wid}">🧨 Zaun abbauen · ${fmt(zaunAbbauPreis(w))}</button>`}</span></span></div>`; }).join("")}${neuBau}`;
   }
   function weidenBinden(root, danach) {
     const nb = root || $("nebenSchirm"), neu = danach ? () => { speichern(); danach(); } : () => { const y = nb.scrollTop; speichern(); zeigeHof(); nb.scrollTop = y; };
     nb.querySelectorAll("[data-waepfeln]").forEach(b => b.onclick = () => { const w = weideById(b.dataset.waepfeln); if (w) w.aepfel = spiel.tag; w.kot = 0; neu(); });
     nb.querySelectorAll("[data-wsperren]").forEach(b => b.onclick = () => { const w = weideById(b.dataset.wsperren); if (w && !weidePferde(w).length) { if (w.gesperrt) delete w.gesperrt; else w.gesperrt = true; } neu(); });
     nb.querySelectorAll("[data-wwiese]").forEach(b => b.onclick = () => { const w = weideById(b.dataset.wwiese); if (w && !weidePferde(w).length) { if (w.wiese) delete w.wiese; else { w.wiese = true; delete w.gesperrt; } } neu(); });
+    nb.querySelectorAll("[data-wabbau]").forEach(b => b.onclick = () => { const w = weideById(b.dataset.wabbau); if (w) zaunAbbauDialog(w, neu); });   // v374
     nb.querySelectorAll("[data-wsaeen]").forEach(b => b.onclick = () => { const w = weideById(b.dataset.wsaeen); if (!w) return; const f = weideNachsaeen(w); if (f) { dialog(`<h3>🌱 Nachsäen</h3><p>${f}</p>`); return; } neu(); });
   }
   // Dome (v283): Nachsäen im Frühling und Herbst, einmal je Jahreszeit, Weide muss leer sein, danach ruht sie ⅓ Jahreszeit
@@ -10070,12 +10110,12 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   // H6: Futterwiese – der Bauer mäht im Sommer (1. Schnitt Tag 1, 2. Schnitt bei gutem Gras gegen Ende), Heu ins Lager, Rest verkaufen
   function futterwieseTag() {
     const d = datum(); if (d.s === 0 && d.t === 1) weiden().forEach(w => { delete w.schnitte; });
-    const tag2 = Math.max(2, Math.ceil(tpj() * 0.7)), WS = weiden().filter(w => w.wiese && w.ha > 0);
+    const tag2 = Math.max(2, Math.ceil(tpj() * 0.7)), WS = weiden().filter(w => w.wiese && w.ha > 0 && !w.abbau);
     if (WS.length) { const F = futterkammer(), frei = Math.max(0, Math.floor(F.lagerMax - lagerBelegt())), n = WS[0].schnitte || 0;   // Dome (v296): Fenster am Tag vor dem Mähen
       const morgen = (d.s === 0 && d.t === tpj()) ? 1 : (d.s === 1 && d.t === tag2 - 1 && n === 1) ? 2 : (d.s === 1 && d.t === tpj() && n === 2) ? 3 : 0;
       if (morgen) (spiel.hofFenster = spiel.hofFenster || []).push(`<h3>🌾 Morgen wird gemäht</h3><p>Bauer Lindner mäht morgen ${WS.map(w => `<b>${esc(w.name)}</b>`).join(", ")} auf <b>${esc(hofName())}</b> (${morgen}. Schnitt${morgen > 1 ? ", nur bei gutem Gras" : ""}). Erwartet etwa <b>${fmtKg(Math.round(WS.reduce((a, w) => a + WIESE.ertrag[morgen - 1] * w.ha * Math.min(1, w.gras / 70), 0)))}</b> Heu – im Futterlager ist Platz für ${fmtKg(frei)}. Was nicht hineinpasst, kauft der Bauer.</p>`); }
     if (d.s !== 1 && d.s !== 2) return;
-    weiden().filter(w => w.wiese && w.ha > 0).forEach(w => {
+    weiden().filter(w => w.wiese && w.ha > 0 && !w.abbau).forEach(w => {
       const n = w.schnitte || 0, jetzt = (d.s === 1 && d.t === 1 && n === 0) || (d.s === 1 && d.t === tag2 && n === 1 && w.gras >= WIESE.schnitt2Gras) || (d.s === 2 && d.t === 1 && n === 2 && w.gras >= WIESE.schnitt2Gras); if (!jetzt) return;
       const F = futterkammer(), kg = Math.round(WIESE.ertrag[n] * w.ha * Math.min(1, w.gras / 70)), regen = Math.random() < WIESE.regen, sorte = regen ? "heuStaub" : "heu";
       const unterwegs = (F.liefer || []).reduce((a, x) => a + (FUTTER[x.k] && !FUTTER[x.k].stueck ? x.menge : 0), 0), platz = Math.max(0, F.lagerMax - lagerBelegt() - unterwegs), rein = Math.min(kg, Math.floor(platz)), rest = kg - rein;
@@ -10527,6 +10567,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Bauen</b> (Hofverwaltung → Hof → Bauen, Stufe 1 / 2 / 3): ${BAU_REIHE.filter(k => !BAUTEN[k].nur).map(k => { const B = BAUTEN[k]; return `${B.n.replace(/\u00ad/g, "")} ${B.fest ? fmt(B.fest) : B.preis.map(fmt).join(" / ")}${B.jeHa ? " je ha" : ""}${B.paar ? ` (je 2 Boxen mehr ${B.paar.map(fmt).join(" / ")})` : ""}${B.jeBox ? ` (Anbau +${[1, 2, 3].map(i => i * B.schritt).join("/+")} Boxen, je Box ${B.jeBox.map(fmt).join(" / ")})` : ""}`; }).join(" · ")}. Rennbahn und Aufzucht-Offenstall kommen mit den Stallarten (H7). + / − in der Boxenübersicht gibt es nicht mehr.</p>
       <p><b>Bauzeit</b> (Standardtempo, je nach Tempo anteilig): kurz 2–3 Tage (Roundpen, Trail, Weide einzäunen, Sandpaddock, Waschplatz), ½ Jahreszeit (Paddockboxenstall, Sattelkammer, Abfohlstall), 1 Jahreszeit (Stall und Anbau, Reitplatz, Lager, Quarantänestall), Reithalle 2–3 Jahreszeiten. Außenarbeiten (Reitplatz, Roundpen, Trail, Weide, Sandpaddock) ruhen im Winter. Bezahlt wird beim Auftrag; der Hofwert steigt um den Baupreis. Heudampfer nur mit Futterlager, sofort. Lager: Futterkammer ${LAGER_START.toLocaleString("de-DE")} kg + ${BAUTEN.lager.platz.map(x => x.toLocaleString("de-DE")).join(" / ")} kg.</p>
       <p><b>Umbau</b> eine Stufe höher: Preisunterschied + ${prozent(UMBAU_AUFSCHLAG)}, halbe Bauzeit, je Abschnitt (Erstbau und jeder Anbau einzeln); die Boxen sind gesperrt. <b>Umbau-Folgen (H4):</b> Pferde ziehen beim Start in freie Boxen (normale vor Paddockboxen, nicht Quarantäne/Abfohlbox); eigene ohne Box kommen auf die Weide (ohne Weide und ohne freie Box kein Umbau – vorher per Anhänger zu einem anderen Hof). Sind Einsteller betroffen, beginnt der Umbau erst 1 Jahreszeit nach dem Auftrag (Brief); ohne freie Box braucht jeder Einsteller eine Lösung: Weide mit ${prozent(UMBAU.nachlass)} Nachlass aufs Boxengeld oder der Spieler kündigt; ohne Lösung kündigt der Einsteller selbst und zieht zum Umbau-Beginn aus (Ansehen ${UMBAU.ansehenOhne}). Zufriedenheit: Umzug ${UMBAU.zufrUmzug}, Nachlass ${UMBAU.zufrNachlass}. Keine neuen Einsteller in Boxen mit geplantem Umbau. Absagen vor dem Start: volle Erstattung. Reitplatz/Reithalle/Roundpen im Umbau: dort kein Training. Nach dem Umbau kommen die Weide-Pferde zurück in ihre Box. <b>Unterhalt</b> ${prozent(UNTERHALT)} des Baupreises je Jahreszeit. <b>Verfall</b> je Jahreszeit Stufe 1/2/3: −${VERFALL.slice(1).map(x => String(x).replace(".", ",")).join(" / −")} Zustand (Start-Stall beginnt bei 85 %); Warnbrief unter 40 %. <b>Reparatur:</b> Handwerker kommt am nächsten Tag, braucht 1 Tag (ab 50 % Zustand) bzw. 2 Tage (darunter), danach 100 %; je 10 Punkte 2 % des Baupreises; Hofhelfer (${fmt(MA_TYP.hofhelfer.gehalt)}/Jz) +${HOFHELFER_REPARATUR} Punkte je Arbeitstag am schlechtesten Gebäude.</p>
+      <p><b>Zaun abbauen / Land verkaufen (v374):</b> bei jeder Weide/Futterwiese „Zaun abbauen“ – kostet ${prozent(ABRISS)} des Zaunpreises (mind. 50 €), dauert 2–3 Tage, nicht im Winter, nur ohne Pferde, nicht frisch nachgesät, Futterwiese nicht am Tag vor dem Mähen. Danach ist die Fläche freies Weideland; der Hofwert sinkt um den Zaunpreis. Eigenes freies Weideland verkaufen: ${fmt(Math.round(LAND_PREIS * HOF_VERKAUF))} je ha (${prozent(HOF_VERKAUF)} des Kaufpreises), Hofwert −${fmt(LAND_PREIS)} je ha. Pachtland nur über „Pacht kündigen“.</p>
       <p><b>Weiden (H6):</b> je Hof mehrere Weiden mit Grasstand und Matsch (seit v347: Hof → Hofplan, Weide antippen; Land über Hof → Bauen → Weideland/Bauland; Land kaufen mit Wahl „neue Weide“ oder „Weide X vergrößern“, Zaun wird dann gleich gebaut; nach dem Nachsäen kommt ein Fenster „Weide wieder nutzbar“). Gras je Tag (Standardtempo, wird nach Spieltempo umgerechnet): wächst Frühling/Sommer/Herbst/Winter +${GRAS.wachsen.join(" / +")} (matschig nur halb, nachgesät ×${String(GRAS.nachsaeenWachs).replace(".", ",")} für 1 Jahr), Verbrauch ${GRAS.verbrauch} × belegte ha (${haTxt(WEIDE_BEDARF[0])} je Großpferd, ${haTxt(WEIDE_BEDARF[1])} je Pony) ÷ Weidefläche. Gras unter ${GRAS.wenig} % → Heu nötig wie im Winter. Überbesetzt: Matsch +${GRAS.matschPlus}/Tag (Herbst/Winter ×2), sonst −${GRAS.matschMinus} (leer −${GRAS.matschLeer}); ab ${GRAS.matschAb} % matschig: Mauke und Strahlfäule ×1,5, Würmer ×1,3, Streit ×1,3. Abäppeln (Spieler oder Pferdepfleger, 1 Weide/Tag): Würmer ×0,6 für 1 Jahreszeit. Sperren: wächst ohne Verbrauch, trocknet ab. Nachsäen im Frühling und Herbst (einmal je Jahreszeit und Weide, Weide muss leer sein) ${fmt(GRAS.nachsaeen)}/ha: danach ruht die Weide ⅓ Jahreszeit (4/7/10 Tage je Jz → 1/2/3 Tage), dann Gras +${GRAS.nachsaeenPlus}. Neue Weide oder vergrößern beim Einzäunen; Pachtende: Weiden schrumpfen aufs vorhandene Weideland.</p>
       <p><b>Sandpaddocks (H6):</b> jeder gebaute Sandpaddock (Hof → Bauen, auch mehrere) ist ein eigener Auslauf mit eigener Gruppe; Platz je Stufe 1/2/3: ${PADDOCK_PLATZ.slice(1).join(" / ")} Pferde. Zuteilen über Box → Pflege → Ort → Sandpaddock (Auswahl zeigt, wer dort steht und wie viel Platz frei ist), zurück über dieselbe Kachel. Das Pferd bleibt sonst wie in der Box versorgt (Futter, Mist), bekommt aber keinen Box-Abzug: Wohlbefinden +3 mit Gesellschaft (+1 allein) + 2 × temperamentvoll je Nacht; Herdenregeln (Streit, ungeplante Bedeckung) je Sandpaddock. Hengst mit Stute: Warnung (besser mit Wallach). Gesperrt bei Quarantäne und Boxenruhe. Hufrehe-Warnung im Frühling bietet „Lieber Sandpaddock“ an. <b>Trainingswunsch (v329):</b> Einsteller mit „Bewegen“ haken fest Übungen an (jung: Bodenarbeit/Longieren; sonst ggf. Longieren, eine Hauptarbeit Dressur/Springen/Western, ggf. Stangen, oft Ausritt; im Winter immer mit Aufwärmen) – Bereiter trainiert danach, du siehst die Häkchen am Reitplatz/Gelände und in der Versorgung. <b>Futterwunsch (v332):</b> jeder Pensionsbesitzer hat einen Futterplan für sein Pferd (berechnet wie die Expertenempfehlung, ohne Spezialfutter; neu, wenn sich die Umstände ändern) – Versorgung → Fütterung heute: Spalte „Besitzer“, „Mit dem Besitzer sprechen“ und Haken „automatisch übernehmen“ (Umstellung über 3 Tage). <b>Besitzer-Fehler (v333):</b> verstecktes Futterwissen je Besitzer 0,3–1; jeder Fehler (zu viel Kraftfutter ×1,6 bzw. +1 kg Hafer/Müsli, Heu ×0,7, kein Mineralfutter, Heu ×1,25) mit Chance (1 − Wissen) × 0,6. Zufriedenheit je Tag: nach Wunsch gefüttert +0,1, sonst −0,3. „💬 Mit dem Besitzer sprechen“ (1× am Tag): Vorschlag eigener Plan (Annahme 50 % + 30 % × fehlendes Wissen) oder Expertenempfehlung (85 %); angenommen → Wunsch = Vorschlag, Wissen +0,1, Zufriedenheit +2 („dankbar“, wenn der Wunsch Fehler hatte) bzw. +0,5. Mit Fehlern holt sich der Besitzer je Jahreszeit zu 15 % selbst einen Futterexperten (Brief, Wissen +0,15). <b>Nach Wunsch reiten (v331):</b> reitest du ein Pensionspferd selbst, prüft der Besitzer am nächsten Tag: nur Übungen aus seinem Wunsch (Aufwärmen mit Longieren/Bodenarbeit/Spaziergang ist immer erlaubt) → Zufriedenheit +0,2; andere Übungen → −0,5 („anders trainiert als gewünscht“). <b>Pension (v328):</b> Haltung „Sandpaddock“ → Stallbursche/Azubi bringen das Pferd nachmittags in einen freien Sandpaddock (ohne Hengst-Stute-Mischung), abends wieder rein; ganzjährig, Zufriedenheit +0,1 bzw. −0,3 ohne Auslauf. Haltung „Weide“ bei hufrehe-gefährdeten Pferden im Frühling: statt Weide in den Sandpaddock (+0,1, „vernünftig“), ohne Sandpaddock bleibt es drin ohne Abzug; trotzdem auf der Weide → −0,3.</p>
       <p><b>Einstreu (H6):</b> Sorten in der Futterkammer (Gruppe Einstreu): ${Object.keys(EINSTREU).map(k => `${FUTTER[k].n} ${EINSTREU[k].kg} kg je Box und Tag à ${String(FUTTER[k].preis.toFixed(2)).replace(".", ",")} €`).join(" · ")}. Wirkung: Stroh staubt – Husten ×1,3 (empfindliche Atemwege ×2); Strahlfäule Pellets ×0,7, Leinstroh/Hanf ×0,8; ohne Einstreu Wohlbefinden −${EINSTREU_OHNE.wohl} je Nacht und Strahlfäule ×${EINSTREU_OHNE.strahl} (Brief „Keine Einstreu mehr“). Wahl je Box: zieht ein Pferd ein, fragt das Spiel, welche Einstreu (nur eine Sorte im Lager → automatisch); ändern in Box → Pflege → Versorgung. Verbrauch jede Nacht je Box mit Pferd (nicht auf der Weide, nicht in der Klinik), zählt in den Platz der Futterkammer. Startvorrat einmal ${EINSTREU_START} kg Einstreu-Stroh. Wird die Box leer, wird beim nächsten Pferd neu eingestreut. <b>Pension:</b> Zusatzleistung „Bessere Einstreu“ ${fmt(PENSION_LEISTUNG.einstreu.preis)} je Jahreszeit – die Box bekommt automatisch staubarme Einstreu aus dem Lager (Späne, Pellets oder Leinstroh/Hanf); gibt es nur Stroh, Zufriedenheit −2 je Nacht.</p>

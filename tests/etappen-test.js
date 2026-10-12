@@ -277,6 +277,18 @@ const path = require('path');
         delete H.artCache; ok('H7a Zuchtstall-Bedingung Offenstall erfüllt', stallartBed('zucht').some(x => /Offenstall/.test(x[0]) && x[1]));
         ansehen('H7a Offenstall-Bild', () => { aktBox = spiel.boxen.findIndex(b => b.pferd === jq); zeigeStall(); });
         spiel.gebaeude = gebaeude().slice(0, gl); spiel.boxen = merk; spiel.boxen.forEach((b, i) => { b.pferd = mBox[i]; }); aktBox = 0; H.bauHa -= 1; H.wert -= g.preis; spiel.geld = g0; H.art = 'pension'; spiel.stallarten = ['pension']; delete H.artCache; }
+      // ---------- H7 (c) Beritt im Ausbildungsstall (v314) ----------
+      { const H = spiel.hof, mMerk = (spiel.mitarbeiter || []).slice(), A0 = { ...spiel.anlage }, eMerk = einstellerListe().slice();
+        H.art = 'ausbildung'; spiel.stallarten = ['ausbildung']; spiel.anlage.reitplatz = true; spiel.anlage.roundpen = true;
+        spiel.mitarbeiter = [...mMerk, { id: 'maBT', typ: 'bereiter', name: 'Testbereiter', w: true, wissen: wissenStart(30, { ruecken: 60 }), eig: [], gehalt: 420, ab: jzJetzt(), bis: null }]; delete H.artCache;
+        ok('H7c Beritt-Plätze im Ausbildungsstall', berittPlaetze() > 0, String(berittPlaetze()));
+        fremdAnfrageNeu('beritt'); const a = spiel.pensionAnfragen.find(q => q.art === 'beritt' && !q.angenommen);
+        ok('H7c Beritt-Anfrage per Brief', !!a && (spiel.post || []).some(x => /Beritt für/.test(x.betreff || '')));
+        if (a) { ok('H7c Beritt annehmen', pensionAnnehmen(a) === ''); a.tag = spiel.tag - 1; pensionEinzug(); zu();
+          const e = einstellerListe().find(q => q.art === 'beritt');
+          ok('H7c Beritt-Pferd zieht ein (450 € je Jz)', !!e && e.preis === BERITT.preis && !!pensionBox(e), e ? `${e.preis} €` : '');
+          if (e) { e.bis = jzJetzt(); fremdEndeJahreszeit(); ok('H7c Beritt-Ende: Besitzer holt ab', !einstellerListe().includes(e)); } }
+        spiel.pensionAnfragen = (spiel.pensionAnfragen || []).filter(q => q.art !== 'beritt'); spiel.einsteller = eMerk; spiel.mitarbeiter = mMerk; spiel.anlage = { ...spiel.anlage, ...A0 }; H.art = 'pension'; spiel.stallarten = ['pension']; delete H.artCache; }
       // ---------- H7 (b) Rennbahn, Rennpferdetrainer (v311) ----------
       { const H = spiel.hof, merk = spiel.boxen.map(b => b.pferd), mMerk = (spiel.mitarbeiter || []).slice(); spiel.boxen.forEach(b => { if (b.pferd && !fremd(b.pferd)) b.pferd = null; });
         const frei = spiel.boxen.filter(b => !b.pferd).slice(0, 2), rp = frei.map((b, i) => { const q = neuesPferd({ rasse: 'vollblut', geschlecht: 'Stute', alter: 4, name: 'Renner' + i }); b.pferd = q; q.pflege = erzeugePflege(q); q.pflege.gesundheit = 100; q.befunde = []; werteErgaenzen(q); return q; });

@@ -913,7 +913,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "357";
+  const SPIEL_VERSION = "358";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -921,10 +921,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=357"></script>
-<script src="boxstufen.js?v=357"></script>
-<script src="kopfteile.js?v=357"></script>
-<script src="kopfalter.js?v=357"></script>
+<script src="pferd.js?v=358"></script>
+<script src="boxstufen.js?v=358"></script>
+<script src="kopfteile.js?v=358"></script>
+<script src="kopfalter.js?v=358"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -8937,8 +8937,17 @@
     dialog(`<h3>${weide ? "🌱 Weideland" : "🏗️ Bauland"}</h3><p class="text" style="margin:0 0 6px">${weide ? `Weideland kostet <b>${fmt(LAND_PREIS)} je ha</b> oder <b>${fmt(PACHT_PREIS)} je ha und Jahreszeit</b> Pacht. Wählst du, was daraus wird, wird der Zaun gleich mitgebaut.` : `Bauland (für Gebäude, Reitplätze, Hofplatz) kostet <b>${fmt(BAULAND_PREIS)} je ha</b>.`} Gekauftes Land erhöht den Hofwert (Kreditrahmen).</p>
       <p class="text" style="margin:0 0 6px"><small>${weide ? `Weideland ${haTxt(weideland())}${H.pacht ? ` (davon Pacht ${haTxt(H.pacht)}, ${fmt(H.pacht * PACHT_PREIS)} je Jahreszeit)` : ""} · eingezäunt ${haTxt(H.weideHa || 0)} · frei ${haTxt(freiesLand())}` : `Bauland ${haTxt(bauHa())} · belegt ${haTxt(baulandBelegt())} · frei ${haTxt(baulandFrei())}`} · Kasse ${fmt(spiel.geld || 0)}</small></p>
       <div class="kr-wahl"><select id="landArt" hidden><option value="${weide ? "weide" : "bau"}" selected></option></select>${weide ? `<label id="landZielL">Daraus wird <select id="landZiel"><option value="neu" ${ziel === "neu" || !ziel ? "selected" : ""}>neue Weide (für Pferde)</option><option value="wiese" ${ziel === "wiese" ? "selected" : ""}>neue Futterwiese (keine Pferde, Heu)</option>${weiden().map(w => `<option value="${w.wid}" ${ziel === w.wid ? "selected" : ""}>${esc(w.name)} vergrößern</option>`).join("")}<option value="">nur Land, später einzäunen</option></select></label>` : ""}<label>Fläche <select id="landHa">${[0.5, 1, 2, 3, 4, 5].map(x => `<option value="${x}" ${x === 1 ? "selected" : ""}>${haTxt(x)}</option>`).join("")}</select></label></div>
-      <div class="land-knoepfe"><button class="knopf" id="landKauf">🏷️ Kaufen</button>${weide ? `<button class="knopf zweit" id="landPacht">📝 Pachten</button>${H.pacht ? `<button class="knopf zweit" id="landPachtWeg">Pacht kündigen</button>` : ""}` : ""}</div>`, [["Abbrechen", danach || null, "zweit"]], "breit");
+      <div class="land-knoepfe"><button class="knopf" id="landKauf">🏷️ Kaufen</button>${weide && freiesLand() >= 1 ? `<button class="knopf zweit" id="landZaun">🌿 Freies Land einzäunen (${haTxt(freiesLand())})</button>` : ""}${weide ? `<button class="knopf zweit" id="landPacht">📝 Pachten</button>${H.pacht ? `<button class="knopf zweit" id="landPachtWeg">Pacht kündigen</button>` : ""}` : ""}</div>`, [["Abbrechen", danach || null, "zweit"]], "breit");
     landBinden(danach || (() => zeigeHof()));
+    if ($("landZaun")) $("landZaun").onclick = () => { $("dlg").hidden = true; bauDialog("weide"); };   // v358: statt der Kachel „Weide einzäunen“
+  }
+  function gummiDialog(danach) {   // v358: Gummimatten je Box (ab Stufe 2)
+    const L = spiel.boxen.map((b, i) => [b, i]).filter(([b]) => boxenStufe(b) >= 2 && !b.offen), P = BODEN_WIRKUNG.GUMMI_PREIS;
+    dialog(`<h3>⬛ Gummimatten</h3><p class="text">Weich, rutschfest und warm – schonen die Gelenke, etwa 30 % weniger Einstreu. Sie halten dauerhaft und bleiben beim Umbau liegen. Auf Sand (Stufe 1) gehen sie nicht. ${fmt(P)} je Box · Kasse ${fmt(spiel.geld || 0)}</p>
+      <div class="weide-wahl">${L.map(([b, i]) => `<button data-gbox="${i}" ${b.gummi ? "disabled" : ""}><b>Box ${i + 1}${b.pferd ? ` · ${esc(b.pferd.name)}` : ""}</b><small>Stufe ${boxenStufe(b)}${b.paddock ? " · Paddockbox" : b.abfohl ? " · Abfohlbox" : b.quar ? " · Quarantäne" : ""} · ${b.gummi ? "✓ Matten liegen" : fmt(P)}</small></button>`).join("")}</div>`, [["Schließen", danach || null, "zweit"]], "breit");
+    document.querySelectorAll("[data-gbox]").forEach(x => x.onclick = () => { const b = spiel.boxen[+x.dataset.gbox]; if (!b || b.gummi) return;
+      if (!spiel.admin && (spiel.geld || 0) < P) { dialog(`<h3>Zu wenig Geld</h3><p>Gummimatten kosten ${fmt(P)}.</p>`, [["OK", () => gummiDialog(danach)]]); return; }
+      if (!spiel.admin) buchen(-P, "Gummimatten"); b.gummi = true; speichern(); if (b === B()) zeigeTag(); gummiDialog(danach); });
   }
   function landHTML() {
     const H = spiel.hof || {};
@@ -9016,7 +9025,7 @@
     aufzucht: { n: "Aufzucht-Offen\u00adstall", ico: "🐎", preis: [5000, 8000, 12000], zeit: 1, boxen: 10, einmal: true, info: "Offenstall mit Liegehalle und Auslauf: bis zu 10 Fohlen und Jungpferde (½–3 Jahre) wachsen zusammen auf, erwachsene Stuten als „Tanten“ – nur im Zuchtstall" },
   };
   // Dome (v347): Bauen-Kacheln nach Wichtigkeit (Land als Kachel)
-  const BAU_WICHTIG = ["stall", "weideland", "weide", "reitplatz", "sandpaddock", "lager", "roundpen", "reithalle", "paddock", "bauland", "quarantaene", "abfohlbox", "waschplatz", "sattelkammer", "heudampfer", "trail", "rennbahn", "aufzucht"];
+  const BAU_WICHTIG = ["stall", "weideland", "reitplatz", "sandpaddock", "lager", "roundpen", "reithalle", "paddock", "gummi", "bauland", "quarantaene", "abfohlbox", "waschplatz", "sattelkammer", "heudampfer", "trail", "rennbahn", "aufzucht"];
   const BAU_REIHE = ["stall", "paddock", "reitplatz", "roundpen", "reithalle", "trail", "weide", "sandpaddock", "waschplatz", "sattelkammer", "lager", "heudampfer", "quarantaene", "abfohlbox", "rennbahn", "aufzucht"];
   const VERFALL = [0, 4, 2.5, 1.5];          // Zustand-Punkte je Jahreszeit nach Stufe
   const UNTERHALT = 0.01, UMBAU_AUFSCHLAG = 0.2, HOFHELFER_REPARATUR = 3;   // je Arbeitstag (Standardtempo)
@@ -9251,7 +9260,9 @@
       ${plan.length ? `<h4 class="ma-titel">🚧 Umbau geplant</h4>${plan.map(planHTML).join("")}` : ""}
       ${bau.length ? `<h4 class="ma-titel">🏗️ Im Bau</h4>${bau.map(g => `<div class="geb"><span class="geb-ico">${BAUTEN[g.typ].ico}</span><span class="geb-txt"><b>${gebName(g)}</b><small>${g.bau.art === "umbau" ? `Umbau auf Stufe ${g.stufe + 1}` : `Stufe ${g.stufe} – ${STUFE_NAME[g.stufe]}`} · noch ${tageTxt2(g.bau.rest)}${BAUTEN[g.typ].aussen && datum().s === 3 ? " · ❄️ ruht im Winter" : ""}</small></span></div>`).join("")}` : ""}
       <h4 class="ma-titel">🏠 Gebäude und Anlagen</h4>${steht.length ? steht.map(gebZeile).join("") : `<p class="text">Noch keine Gebäude.</p>`}
-      <h4 class="ma-titel">➕ Neu bauen</h4><div class="kacheln quadrat bau-kacheln">${BAU_WICHTIG.map(k => { if (k === "weideland" || k === "bauland") return `<button class="kachel klickbar" data-land="${k === "weideland" ? "weide" : "bau"}" title="${k === "weideland" ? "Weideland kaufen oder pachten" : "Bauland kaufen"}"><span class="ico">${k === "weideland" ? "🌱" : "📐"}</span><b>${k === "weideland" ? "Weide\u00adland" : "Bau\u00adland"}</b><small>${k === "weideland" ? `${fmt(LAND_PREIS)}/ha · Pacht` : `${fmt(BAULAND_PREIS)}/ha · frei ${haTxt(baulandFrei())}`}</small></button>`;
+      <h4 class="ma-titel">➕ Neu bauen</h4><div class="kacheln quadrat bau-kacheln">${BAU_WICHTIG.map(k => { if (k === "gummi") { const L = spiel.boxen.filter(b => boxenStufe(b) >= 2 && !b.offen); if (!L.length) return ""; const n = L.filter(b => !b.gummi).length;   // Dome (v358): Gummimatten erst ab einer Stufe-2-Box
+          return `<button class="kachel ${n ? "klickbar" : "fehlt"}" ${n ? 'data-gummi="1"' : "disabled"} title="Gummimatten für Boxen ab Stufe 2"><span class="ico">⬛</span><b>Gummi\u00admatten</b><small>${n ? `${fmt(BODEN_WIRKUNG.GUMMI_PREIS)}/Box · ${n} ohne` : "alle Boxen haben welche"}</small></button>`; }
+        if (k === "weideland" || k === "bauland") return `<button class="kachel klickbar" data-land="${k === "weideland" ? "weide" : "bau"}" title="${k === "weideland" ? "Weideland kaufen oder pachten" : "Bauland kaufen"}"><span class="ico">${k === "weideland" ? "🌱" : "📐"}</span><b>${k === "weideland" ? "Weide\u00adland" : "Bau\u00adland"}</b><small>${k === "weideland" ? `${fmt(LAND_PREIS)}/ha · Pacht` : `${fmt(BAULAND_PREIS)}/ha · frei ${haTxt(baulandFrei())}`}</small></button>`;
         const B = BAUTEN[k], sp = bauSperre(k);
         return `<button class="kachel ${sp ? "fehlt" : "klickbar"}" ${sp ? "disabled" : `data-bau="${k}"`} title="${B.n}: ${B.info}"><span class="ico">${B.ico}</span><b>${B.n}</b><small>${sp || (B.fest ? fmt(B.fest) : `ab ${fmt(B.preis[0])}${B.jeHa ? "/ha" : ""}`)}</small></button>`; }).join("")}</div>`;
   }
@@ -9285,6 +9296,7 @@
     const nb = root || $("nebenSchirm"), G = gebaeude();
     nb.querySelectorAll("[data-bau]").forEach(b => b.onclick = () => bauDialog(b.dataset.bau));
     nb.querySelectorAll("[data-land]").forEach(b => b.onclick = () => landDialog(b.dataset.land, "neu", () => bauNeuZeigen()));
+    nb.querySelectorAll("[data-gummi]").forEach(b => b.onclick = () => gummiDialog(() => bauNeuZeigen()));
     nb.querySelectorAll("[data-anbau]").forEach(b => b.onclick = () => { const g = G.find(x => x.gid === b.dataset.anbau); bauDialog(g.typ, g.gid, g.stufe); });
     nb.querySelectorAll("[data-umbau]").forEach(b => b.onclick = () => { const g = G.find(x => x.gid === b.dataset.umbau);
       const U = umbauBetroffen(g), frei = ersatzBoxen(g).length, n = U.eigen.length + U.einsteller.length;
@@ -9841,7 +9853,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     const W = weiden().filter(w => !nurWid || w.wid === nurWid), saatZeit = datum().s === 0 || datum().s === 2, bar = (z, gut) => `<div class="kr-balken geb-balken"><i style="width:${Math.round(z)}%;background:${gut ? (z < GRAS.wenig ? "#c0503a" : z < 50 ? "#d9a441" : "#6aa84f") : (z >= GRAS.matschAb ? "#8a5a33" : z >= 25 ? "#b98a5e" : "#d8c3a5")}"></i></div>`;
     const neuBau = imBau().filter(g => g.typ === "weide" && !(g.ziel && weideById(g.ziel))).map(g => `<div class="geb"><span class="geb-ico">🏗️</span><span class="geb-txt"><b>${g.ziel === "wiese" ? "Neue Futterwiese" : "Neue Weide"}</b><small>${zaunText(g)}</small></span></div>`).join("");
     if (!W.length && neuBau) return neuBau;
-    if (!W.length) return `<p class="text">Noch keine Weide eingezäunt. Weideland kaufen oder pachten und einzäunen: Hof → Bauen → „Weideland“ bzw. „Weide einzäunen“.</p>`;
+    if (!W.length) return `<p class="text">Noch keine Weide eingezäunt. Weideland kaufen oder pachten und einzäunen: Hof → Bauen → „Weideland“ (dort auch „Freies Land einzäunen“).</p>`;
     return `
       ${W.map(w => { const P = weidePferde(w), bel = weideBelegtW(w), apf = w.aepfel != null && spiel.tag - w.aepfel < tpj(), nach = w.nachgesaet != null && w.nachgesaet >= jzJetzt();
         return `<div class="geb"><span class="geb-ico">${w.wiese ? "🌾" : "🌿"}</span><span class="geb-txt"><b>${esc(w.name)}</b><small>${haTxt(w.ha)} · ${w.wiese ? `🌾 Futterwiese – der Bauer mäht im Sommer und Herbst${w.schnitte ? ` (dieses Jahr ${w.schnitte}× gemäht)` : ""}` : P.length ? `${P.map(q => esc(q.name)).join(", ")} (braucht ${haTxt(bel)}${bel > w.ha + 1e-9 ? " – ⚠️ überbesetzt" : ""})` : w.ruhtBis != null ? `🌱 frisch nachgesät – ruht noch ${tageTxt2(Math.max(1, w.ruhtBis - spiel.tag))}` : w.gesperrt ? "🚫 gesperrt – erholt sich" : "keine Pferde"}${apf ? " · ✅ abgeäppelt" : ""}${nach ? " · 🌱 nachgesät" : ""}</small>${imBau().filter(g => g.typ === "weide" && g.ziel === w.wid).map(g => `<small>🏗️ + ${zaunText(g)}</small>`).join("")}

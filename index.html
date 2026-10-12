@@ -347,6 +347,8 @@
   .rk { font-weight: 600; } .rk.ok { color: #2f6b22; } .rk.warn { color: #8a5a00; } .rk.bad { color: #9b2c1c; }
   /* Kacheln (Ausrüstung / Platz) */
   .kacheln { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 8px; }
+  .stall-kacheln { grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 8px; margin: 10px 0; } .stall-kacheln .kachel { padding: 6px 4px; min-height: 0; } .stall-kacheln .kachel b { font-size: .8rem; hyphens: manual; } .stall-kacheln .kachel small { font-size: .7rem; }
+  .stall-kacheln .kachel.an { outline: 3px solid #c8862a; outline-offset: -1px; background: #fff3d6; }
   .kacheln.quadrat > .kachel { justify-content: center; padding: 8px 4px; min-height: 100px; }
   @media (min-width: 600px) { .kacheln.quadrat > .kachel { aspect-ratio: 1; } }
   .kacheln.klein { grid-template-columns: repeat(7, 1fr); gap: 6px; }
@@ -913,7 +915,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "367";
+  const SPIEL_VERSION = "368";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -921,10 +923,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=367"></script>
-<script src="boxstufen.js?v=367"></script>
-<script src="kopfteile.js?v=367"></script>
-<script src="kopfalter.js?v=367"></script>
+<script src="pferd.js?v=368"></script>
+<script src="boxstufen.js?v=368"></script>
+<script src="kopfteile.js?v=368"></script>
+<script src="kopfalter.js?v=368"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -7999,12 +8001,20 @@
   // Stallübersicht: alle Boxen als Bilderrahmen – antippen führt in die Box
   // letzte leere, nicht reservierte Box (Box 1 bleibt immer) – -1 wenn keine
   const letzteLeere = () => { for (let i = spiel.boxen.length - 1; i > 0; i--) { const b = spiel.boxen[i]; if (!b.pferd && !b.fohlen && !b.reserviert) return i; } return -1; };
+  // v368 (Dome): Stall nach Gebäuden – Kacheln Boxenstall, Paddockboxenstall, Quarantänestall, Abfohlstall (und Aufzucht-Offenstall), nur wenn gebaut
+  const BOX_GRUPPEN = [["stall", "🏠", "Boxen\u00adstall"], ["paddock", "🏡", "Paddock\u00adboxen\u00adstall"], ["quar", "🚧", "Quarantäne\u00adstall"], ["abfohl", "🍼", "Abfohl\u00adstall"], ["offen", "🐎", "Aufzucht-Offen\u00adstall"]];
+  const boxGruppe = b => b.offen ? "offen" : b.quar ? "quar" : b.abfohl ? "abfohl" : b.paddock ? "paddock" : "stall";
+  let boxenGruppe = null;
   function zeigeBoxen() {
+    const da = BOX_GRUPPEN.filter(([k]) => spiel.boxen.some(b => boxGruppe(b) === k));
+    if (!da.some(([k]) => k === boxenGruppe)) boxenGruppe = (spiel.boxen[aktBox] && da.some(([k]) => k === boxGruppe(spiel.boxen[aktBox]))) ? boxGruppe(spiel.boxen[aktBox]) : da.length ? da[0][0] : null;
+    const gk = da.length > 1 ? `<div class="kacheln stall-kacheln">${da.map(([k, ico, n]) => { const L = spiel.boxen.filter(b => boxGruppe(b) === k); return `<button class="kachel klickbar ${k === boxenGruppe ? "an" : ""}" data-bgruppe="${k}"><span class="ico">${ico}</span><b>${n}</b><small>${L.filter(b => b.pferd).length} von ${L.length} belegt</small></button>`; }).join("")}</div>` : "";
     const leer = (i, txt) => `<button class="paar leer" data-zubox="${i}"><span class="paar-bild leer-rahmen"></span><span class="paar-brett"><b>Box ${i + 1}</b><span>${txt}</span></span></button>`;
     zeigeNeben("🏠 Stall", `<div class="panel" style="grid-column:1/-1;width:100%;max-width:760px;margin:0 auto">${(() => { const dd = datum(); return `<button class="knopf tag-beenden" id="bxTag"><span>${JZ[dd.s][1]} ${datumText(dd)} · Tag ${dd.t}/${tpj()}</span><b>🌙 Tag beenden</b></button>`; })()}<div class="hf-kopf"><b>${spiel.boxen.filter(b => b.pferd).length} von ${spiel.boxen.length} Boxen belegt</b><button class="mini-knopf" id="bxBauen">🏗️ Bauen</button></div><p style="margin:0">Antippen, um in die Box zu gehen. Neue Boxen baust du unter Hofverwaltung → Hof → Bauen.</p>${pensionStallHTML()}
-      <div class="paar-liste boxen-liste">${spiel.boxen.map((b, i) => b.pferd ? pferdKachel(b.pferd, { attr: `data-zubox="${i}"`, zeilen: [`Box ${i + 1}`, b.tot ? "🕊️ verstorben" : b.pferd.klinik ? "🏥 in der Klinik" : b.pferd.weide ? "🌿 auf der Weide" : b.pferd.weideNachm && b.pferd.weideNachm.tag === spiel.tag && !b.pferd.weideNachm.aus ? (b.pferd.weideNachm.paddock ? "🟫 nachmittags Sandpaddock" : "🌿 nachmittags Weide") : `${rasseById(b.pferd.rasse).name}`, ...(b.fohlen ? [`🍼 + ${esc(b.fohlen.name)}`] : []), ...(angebotVon(b.pferd) ? ["💰 zum Verkauf"] : []), ...(fremd(b.pferd) ? [`🏡 ${esc((einstellerVon(b.pferd) || { nn: "Pension" }).nn)}`] : [])] })
+      ${gk}<div class="paar-liste boxen-liste">${spiel.boxen.map((b, i) => boxenGruppe && boxGruppe(b) !== boxenGruppe ? "" : b.pferd ? pferdKachel(b.pferd, { attr: `data-zubox="${i}"`, zeilen: [`Box ${i + 1}`, b.tot ? "🕊️ verstorben" : b.pferd.klinik ? "🏥 in der Klinik" : b.pferd.weide ? "🌿 auf der Weide" : b.pferd.weideNachm && b.pferd.weideNachm.tag === spiel.tag && !b.pferd.weideNachm.aus ? (b.pferd.weideNachm.paddock ? "🟫 nachmittags Sandpaddock" : "🌿 nachmittags Weide") : `${rasseById(b.pferd.rasse).name}`, ...(b.fohlen ? [`🍼 + ${esc(b.fohlen.name)}`] : []), ...(angebotVon(b.pferd) ? ["💰 zum Verkauf"] : []), ...(fremd(b.pferd) ? [`🏡 ${esc((einstellerVon(b.pferd) || { nn: "Pension" }).nn)}`] : [])] })
         : leer(i, b.gesperrt ? "🚧 Umbau" : b.reserviert ? "🔒 reserviert" : `leer · ${b.offen ? "Offenstall" : b.quar ? "Quarantäne" : b.abfohl ? "Abfohlbox" : b.paddock ? "Paddockbox" : "Box"}, Stufe ${boxenStufe(b)}`)).join("")}</div></div>`);
     $("bxBauen").onclick = () => zeigeBauenFenster();
+    document.querySelectorAll("[data-bgruppe]").forEach(k => k.onclick = () => { boxenGruppe = k.dataset.bgruppe; zeigeBoxen(); });
     $("bxTag").onclick = () => tagBeenden(() => zeigeBoxen());
     if ($("pnZurPension")) $("pnZurPension").onclick = () => { hofBereich = "pension"; zeigeHof("hof"); };
     document.querySelectorAll("[data-zubox]").forEach(k => k.onclick = () => { aktBox = +k.dataset.zubox; spiel.aktBox = aktBox; aktenReiter = "steckbrief"; aktenModus = "steckbrief"; deckModus = false; ortModus = null; meldung = ""; zeigeSchirm(null); window.scrollTo(0, 0); });
@@ -9175,7 +9185,7 @@
       if (g.typ === "lager") futterkammer().lagerMax = LAGER_START + B.platz[g.stufe - 1];
     }
     hofStufeSetzen();
-    brief("Baufirma", `Fertig: ${gebName(g)}`, `{dein|Ihr} ${art === "umbau" ? `Umbau (${gebName(g)}, jetzt Stufe ${g.stufe} – ${STUFE_NAME[g.stufe]})` : `${gebName(g)} (Stufe ${g.stufe} – ${STUFE_NAME[g.stufe]})`} auf <b>${esc(hofName())}</b> ist fertig${B.boxen ? ` – ${art === "umbau" ? "die Boxen sind wieder frei" : `${g.boxen} neue ${g.boxen === 1 ? "Box" : "Boxen"}`}` : ""}.`);
+    (spiel.hofFenster = spiel.hofFenster || []).push(`<h3>🏗️ Fertig gebaut</h3><p>${art === "umbau" ? `Der Umbau ist fertig: <b>${esc(gebName(g).replace(/\u00ad/g, ""))}</b>, jetzt Stufe ${g.stufe} – ${STUFE_NAME[g.stufe]}` : `<b>${esc(gebName(g).replace(/\u00ad/g, ""))}</b> (Stufe ${g.stufe} – ${STUFE_NAME[g.stufe]}) ist fertig`} auf <b>${esc(hofName())}</b>${B.boxen ? ` – ${art === "umbau" ? "die Boxen sind wieder frei" : `${g.boxen} neue ${g.boxen === 1 ? "Box" : "Boxen"} (Stall → ${esc(B.n.replace(/\u00ad/g, ""))})`}` : ""}.</p>`);   // v368 (Dome): Fenster statt Brief
   }
   // Beginn jeder Jahreszeit: Unterhalt (1 % des Baupreises) und Verfall
   function gebaeudeJahreszeit() {

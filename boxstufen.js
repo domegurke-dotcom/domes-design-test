@@ -30,7 +30,7 @@ const fenster = (wand, bank) => `${wand ? `<rect x="143" y="156" width="114" hei
 const rahmen = (f, W = [152, 88, 248, 154]) => `<g fill="${f}" stroke="#2b1d14" stroke-width="1.4"><rect x="${W[0] - 8}" y="${W[1] - 4}" width="9" height="${W[3] - W[1] + 4}"/><rect x="${W[2] - 1}" y="${W[1] - 4}" width="9" height="${W[3] - W[1] + 4}"/><rect x="${W[0] - 12}" y="${W[1] - 12}" width="${W[2] - W[0] + 24}" height="10"/></g><rect x="${W[0] - 6}" y="${W[3] - 1}" width="${W[2] - W[0] + 12}" height="7" rx="1.5" fill="${f}" stroke="#2b1d14" stroke-width="1.2"/>`;
 const W1 = [164, 96, 236, 150], W3 = [140, 80, 260, 158];
 // Stufe 1
-const bretter = (x0, x1, y0, y1, seed) => { let s = '', x = x0, i = 0; while (x < x1) { const w = 13 + ((i * 7 + seed) % 5), c = ['#9a7046', '#8b6239', '#a57a4c', '#7f5934'][(i + seed) % 4], k = ((i * 3 + seed) % 5) - 2;
+const bretter = (x0, x1, y0, y1, seed) => { let s = '', x = x0, i = 0; while (x < x1) { const w = Math.min(13 + ((i * 7 + seed) % 5), x1 - x), c = ['#9a7046', '#8b6239', '#a57a4c', '#7f5934'][(i + seed) % 4], k = ((i * 3 + seed) % 5) - 2;
   s += `<path d="M${x},${y0 + k} L${x + w},${y0 - k} L${x + w + k * .4},${y1} L${x - k * .3},${y1} Z" fill="${c}" stroke="#3a2614" stroke-width=".9"/>`; if (i % 3 === 0) s += `<circle cx="${x + w / 2}" cy="${y0 + 30 + (i * 13) % 60}" r="1.6" fill="#5a3d24"/>`; x += w; i++; } return s; };
 const quer = sd => { const n = 6; let s = ''; const yT = sd === 'L' ? [158, 152] : [158, 152];
   for (let k = 0; k < n; k++) { const f0 = k / n, f1 = (k + 1) / n, kr = ((k * 5) % 3 - 1) * 1;

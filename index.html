@@ -913,7 +913,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "355";
+  const SPIEL_VERSION = "356";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -921,10 +921,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=355"></script>
-<script src="boxstufen.js?v=355"></script>
-<script src="kopfteile.js?v=355"></script>
-<script src="kopfalter.js?v=355"></script>
+<script src="pferd.js?v=356"></script>
+<script src="boxstufen.js?v=356"></script>
+<script src="kopfteile.js?v=356"></script>
+<script src="kopfalter.js?v=356"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -4072,6 +4072,7 @@
     if (ort === "box" && box) { const E = EINSTREU[box.einstreu]; if (box.ohneEinstreu) f.strahlfaeule *= EINSTREU_OHNE.strahl; else if (E) { if (f.husten != null && E.staub) f.husten *= atemEmpfindlich(p) ? 2 : 1.3; f.strahlfaeule *= E.strahl; } }   // H6: Einstreu
     Object.keys(f).forEach(k => { f[k] *= futterFaktor(p, k); });   // Fütterung (F3): Futterzustand, Raufutter, Stärke, Mineralien
     f.lahmheit *= hufZuLang(p) * (p.eisenWeg ? 1.5 : 1) * (p.ocd ? 1.3 : 1);
+    if (ort === "box" && box) { const BF = bodenFaktoren(box); Object.keys(BF).forEach(k => { if (f[k] != null) f[k] *= BF[k]; }); }   // v356: Boden und Ausstattung der Box
     return Object.keys(KRANK).filter(k => f[k] != null).map(k => [k, BEFUND_RISIKO * KRANK[k].gew * konst * wohlF * (k === "arthrose" || k === "cushing" ? 1 : altF) * f[k]]);
   }
   const URSACHE = {
@@ -6093,7 +6094,7 @@
     let rau = 0, min = 0, kosten = 0; const je = {};
     spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot || p.klinik || (p.weide && !heuNoetigP(p))) return; const R = tagesRation(p, b, false); rau += R.raufutter; min += R.mineral;
       Object.entries(R.kg).forEach(([k, x]) => { je[k] = (je[k] || 0) + x; kosten += FUTTER[k] ? FUTTER[k].preis * x : 0; }); });
-    spiel.boxen.forEach(b => { if (!b.pferd || b.tot || b.pferd.klinik || b.pferd.weide) return; const k = b.einstreu || einstreuDa()[0], E = EINSTREU[k]; if (E) { je[k] = (je[k] || 0) + E.kg; kosten += FUTTER[k].preis * E.kg; } });   // H6: Einstreu (v352: auch wenn die Box noch keine gewählt hat – dann die, die sie nachts bekommt)
+    spiel.boxen.forEach(b => { if (!b.pferd || b.tot || b.pferd.klinik || b.pferd.weide) return; const k = b.einstreu || einstreuDa()[0], E = EINSTREU[k]; if (E) { const kg = E.kg * einstreuFaktor(b); je[k] = (je[k] || 0) + kg; kosten += FUTTER[k].preis * kg; } });   // H6: Einstreu (v352: auch wenn die Box noch keine gewählt hat – dann die, die sie nachts bekommt)
     return { raufutter: Math.round(rau * 10) / 10, mineral: Math.round(min * 100) / 100, je, kosten: Math.round(kosten * 100) / 100 };
   }
   // Warnbrief, wenn eine Sorte leer ist oder bald leer wird (einmal, bis wieder nachgekauft wurde)
@@ -7090,7 +7091,8 @@
       return { text: `<br><br>${maTitel(m)} <b>${esc(m.name)}</b> hatte Nachtdienst und war bei der Geburt dabei (Nachtzuschlag ${fmt(NACHTZUSCHLAG)}).`, schwach: false };
     }
     if (box.abfohl && Math.random() >= ABFOHL_SCHWACH) return { text: `<br><br>Die Geburt war in der Abfohlbox – über die Kamera war alles gut zu sehen, Mutter und Fohlen hatten viel Platz.`, schwach: false };
-    if (Math.random() < (box.abfohl ? 1 : OHNE_SCHWACH)) { f.pflege.gesundheit = 70 + Math.round(Math.random() * 15);
+    if (Math.random() < (box.abfohl ? 1 : boxenStufe(box) === 3 ? KAMERA_SCHWACH : OHNE_SCHWACH)) {   // v356: Boxenkamera in Stufe 3 → 10 %
+      f.pflege.gesundheit = 70 + Math.round(Math.random() * 15);
       return { text: `<br><br>Bei der Geburt war niemand im Stall. Das Fohlen ist etwas schwach (Gesundheit ${f.pflege.gesundheit} %) – gut versorgen, dann erholt es sich.`, schwach: true }; }
     return { text: "", schwach: false };
   }
@@ -9185,6 +9187,17 @@
     if (z < 40) wohlAendern(p, -0.5, "kaputte Box");
     if (b.paddock) wohlAendern(p, 0.5, "Paddockbox");
   }
+  // Dome (v356): Boden je Stufe – Sand (1), Kopfsteinpflaster (2), Beton (3), Gummimatten (Zusatz ab Stufe 2) · Heunetz (3)
+  const BODEN_WIRKUNG = { einstreu: [1, 1.2, 1, 0.9], gummiEinstreu: 0.7, gummiWohl: 0.5, GUMMI_PREIS: 350 };
+  function bodenFaktoren(b) {
+    const st = boxenStufe(b), ohne = b.ohneEinstreu || !b.einstreu, f = {};
+    if (st === 1) { f.strahlfaeule = 1.3; f.mauke = 1.3; f.husten = 1.1; }
+    if (st === 2 && ohne && !b.gummi) f.verletzung = 1.2;
+    if (st === 3) { f.strahlfaeule = 0.8; f.magengeschwuer = 0.8; f.kolik = 0.8; if (ohne && !b.gummi) f.lahmheit = 1.2; }
+    if (b.gummi && st >= 2) { f.lahmheit = (f.lahmheit || 1) * 0.8; f.arthrose = 0.8; f.verletzung = (f.verletzung || 1) * 0.9; }
+    return f;
+  }
+  const einstreuFaktor = b => (BODEN_WIRKUNG.einstreu[boxenStufe(b)] || 1) * (b.gummi && boxenStufe(b) >= 2 ? BODEN_WIRKUNG.gummiEinstreu : 1);
   const boxVerletzung = b => [1, 1.3, 1, 0.8][boxenStufe(b)] * (gebZustand(b) < 40 ? 1.3 : gebZustand(b) < 70 ? 1.1 : 1);
   // Dome (v228): ein Pferd allein (einziges Pferd auf dem Hof) fällt durch das Alleinsein höchstens auf 30 % – wenn es sonst gut versorgt ist
   const ALLEIN_MIN = 30;
@@ -9864,14 +9877,18 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     if (b.pferd.klinik || b.pferd.weide) return;
     const F = futterkammer(), E0 = fremd(b.pferd) && einstellerVon(b.pferd), besser = !!(E0 && E0.leistungen && E0.leistungen.einstreu);
     if (!b.einstreu || (besser && EINSTREU[b.einstreu] && EINSTREU[b.einstreu].staub)) { const da = einstreuDa(), ds = da.filter(k => !EINSTREU[k].staub); if (besser && ds.length) b.einstreu = ds[0]; else if (!b.einstreu && da.length) b.einstreu = da[0]; }   // noch nicht gewählt: was da ist · Pension „bessere Einstreu“: staubarm, wenn vorhanden
-    const E = EINSTREU[b.einstreu];
-    if (E && (F.lager[b.einstreu] || 0) >= E.kg) { F.lager[b.einstreu] = Math.round((F.lager[b.einstreu] - E.kg) * 1000) / 1000; delete b.ohneEinstreu; }
+    const E = EINSTREU[b.einstreu], kg = E ? Math.round(E.kg * einstreuFaktor(b) * 10) / 10 : 0;   // v356: Boden und Gummimatten
+    if (E && (F.lager[b.einstreu] || 0) >= kg) { F.lager[b.einstreu] = Math.round((F.lager[b.einstreu] - kg) * 1000) / 1000; delete b.ohneEinstreu; if (b.gummi && boxenStufe(b) >= 2) wohlAendern(b.pferd, BODEN_WIRKUNG.gummiWohl, "weiche Gummimatten"); }
     else { b.ohneEinstreu = true; wohlAendern(b.pferd, -EINSTREU_OHNE.wohl, "keine Einstreu"); if (!F.warn.einstreu) { F.warn.einstreu = "leer"; brief("Hofverwaltung", "Keine Einstreu mehr", `in der Futterkammer ist ${E ? `kein ${esc(E.n)}` : "keine Einstreu"} mehr. Ohne Einstreu stehen die Pferde auf dem nackten Boden – das Wohlbefinden sinkt und Strahlfäule wird häufiger. Nachkaufen: Hofverwaltung → Hof → Futterkammer → Einstreu.`); } }
     if (!b.ohneEinstreu && F.warn.einstreu) delete F.warn.einstreu;
     if (besser && (b.ohneEinstreu || !EINSTREU[b.einstreu] || EINSTREU[b.einstreu].staub)) eZufr(E0, -2, "bessere Einstreu gebucht, aber nur Stroh");   // H6: Zusatzleistung nicht erfüllt
   }
   function einstreuWahl(box, danach) {   // Fenster: welche Einstreu für diese Box?
-    const F = futterkammer();
+    const F = futterkammer(), st = boxenStufe(box);
+    setTimeout(() => { const d = $("dlgKnoepfe"); if (!d || $("gummiKn") || st < 2) return; const k = document.createElement("button"); k.id = "gummiKn"; k.className = "knopf zweit";   // Dome (v356): Gummimatten nachrüsten (ab Stufe 2, halten ewig, bleiben beim Umbau)
+      k.textContent = box.gummi ? "✓ Gummimatten liegen" : `⬛ Gummimatten verlegen · ${fmt(BODEN_WIRKUNG.GUMMI_PREIS)}`; k.disabled = !!box.gummi;
+      k.onclick = () => { if (!spiel.admin && (spiel.geld || 0) < BODEN_WIRKUNG.GUMMI_PREIS) { dialog(`<h3>Zu wenig Geld</h3><p>Gummimatten kosten ${fmt(BODEN_WIRKUNG.GUMMI_PREIS)}.</p>`); return; } if (!spiel.admin) buchen(-BODEN_WIRKUNG.GUMMI_PREIS, "Gummimatten"); box.gummi = true; $("dlg").hidden = true; speichern(); if (box === B()) zeigeTag(); dialog(`<h3>⬛ Gummimatten verlegt</h3><p>Weich, rutschfest und warm – schont die Gelenke, und du brauchst etwa 30 % weniger Einstreu.</p>`, [["OK", danach || null]]); };
+      d.insertBefore(k, d.firstChild); }, 0);
     dialog(`<h3>🛏️ Einstreu für Box ${spiel.boxen.indexOf(box) + 1}</h3><div class="weide-wahl">${Object.keys(EINSTREU).map(k => `<button data-estreu="${k}" ${(F.lager[k] || 0) < EINSTREU[k].kg ? "disabled" : ""}><b>${FUTTER[k].ico} ${FUTTER[k].n}${box.einstreu === k ? " ✓" : ""}${(R => R && EINSTREU_RAT[R.art][0].includes(k) ? " · empfohlen" : "")(box.pferd && einstreuRatAktiv(box.pferd))}</b><small>${FUTTER[k].info}</small><small>im Lager: ${fmtKg(F.lager[k] || 0)}</small></button>`).join("")}</div><p class="text"><small>Kaufen: Hofverwaltung → Hof → Futterkammer → Einstreu.</small></p>`, [["Abbrechen", danach || null, "zweit"]]);
     document.querySelectorAll("[data-estreu]").forEach(x => x.onclick = () => { box.einstreu = x.dataset.estreu; delete box.einstreuFrage; delete box.ohneEinstreu; $("dlg").hidden = true; speichern(); if (box === B()) zeigeTag(); if (danach) danach(); });   // Dome (v296): Boden der Box sofort neu
   }
@@ -10069,7 +10086,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     if (bedarf > da + 1e-9) brief("Hofverwaltung", "Weide zu klein", `auf <b>${esc(hofName())}</b> stehen gerade Pferde für ${haTxt(bedarf)} Weide auf ${haTxt(da)} eingezäunter Weide (Faustregel: ${haTxt(WEIDE_BEDARF[0])} je Großpferd, ${haTxt(WEIDE_BEDARF[1])} je Pony). Die Weide wird schnell abgefressen und zertreten. Mehr Weide: Hofverwaltung → Hof → Bauen → Weideland (Weideland) und Bauen (Weide einzäunen).`);
   }
   // ---------- Abfohlbox (v226): mit Kamera und viel Platz – seltener schwache Fohlen, auch ohne Nachtdienst ----------
-  const ABFOHL_SCHWACH = 0.05, OHNE_SCHWACH = 0.15;
+  const ABFOHL_SCHWACH = 0.05, OHNE_SCHWACH = 0.15, KAMERA_SCHWACH = 0.10;
   function abfohlHinweis() {   // eine Jahreszeit vor der Geburt: Hinweis, wenn eine Abfohlbox frei ist
     const frei = spiel.boxen.some(b => b.abfohl && boxFrei(b)); if (!frei) return;
     spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot || b.abfohl || !p.traechtig || p.traechtig.geburt - jzJetzt() !== 1) return;
@@ -10335,7 +10352,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Gnadenhof (H7 e, v310):</b> Tierarzt-Rechnungen ${Math.round(GNADEN_RABATT * 100)} % günstiger (eigener Posten „Gnadenhof-Rabatt“). Patenschaften: zu Beginn jeder Jahreszeit bekommt jedes eigene Pferd ohne Paten mit ${Math.round(PATE.chance * 100)} % einen Paten, der ${fmt(PATE.betrag[0])}–${fmt(PATE.betrag[1])} je Jahreszeit zahlt (erste Zahlung sofort) und manchmal schreibt (${Math.round(PATE.brief * 100)} %). Nur solange der Status erfüllt ist; stirbt das Patenpferd, verabschiedet sich der Pate. Übersicht in Hof → Übersicht.</p>
       <p><b>Rennstall und Westernstall (H7 b, v311):</b> <i>Rennbahn</i> (Hof → Bauen, ${BAUTEN.rennbahn.preis.map(fmt).join(" / ")}, 1 Jahreszeit Bauzeit, ${haTxt(PLATZ.rennbahn)} Bauland) – neuer Trainingsort mit <i>Galopptraining</i> (ab 2 Jahren, ⚡ ${UEBUNG.galopptraining.e}, Beschleunigung, Ausdauer, Kraft). <i>Rennpferdetrainer</i> (${fmt(MA_TYP.renntrainer.gehalt)} je Jahreszeit, nur im Rennstall) trainiert jeden Morgen bis zu 4 eigene Rennpferde (Vollblut ab 2, Araber/Achal-Tekkiner ab 3 Jahren): Galopptraining auf der Rennbahn (sonst Konditionstraining), danach Ausritt. <i>Westerntrainer</i> (${fmt(MA_TYP.westerntrainer.gehalt)}, nur im Westernstall) trainiert bis zu 4 Westernpferde (Quarter Horses oder mit Western-Ausbildung): Bodenarbeit/Longieren, Westernarbeit, mit Trail-Parcours Stangenarbeit. Pferde, die heute schon trainiert wurden, lassen sie aus. Ohne Rennstall kostet jedes Galopprennen ${fmt(TRAINER_GEBUEHR)} Trainergebühr zusätzlich (fremder Trainer bereitet das Pferd vor). Westernstall: Westernarbeit 20 % schneller.</p>
       <p><b>Deckhengst für fremde Stuten (H7 d, v312):</b> nur im Zuchtstall mit erfüllten Bedingungen: Box → Steckbrief → Genetik → „anbieten“ (Hengst ab 3 Jahren, ohne Zuchtsperre). In der Decksaison (Frühling, Sommer) kommen je Jahreszeit etwa 1 + Qualität Stuten (Qualität = Turniererfolge/3.000 € + 0,5 je prämiertem Fohlen + (Marktwert − 4.000)/6.000, höchstens +4), höchstens eine am Tag. Decktaxe wie bei der Deckstation (10 % des Marktwerts, mind. 150 €), sofort gebucht; der Hengst verliert ${DECK_FREMD.energie} Energie. ${Math.round(DECK_FREMD.tragend * 100)} % werden tragend – 4 Jahreszeiten später schreibt die Besitzerin, das Fohlen zählt als Nachkomme.</p>
-      <p><b>Mehrere Plätze (v344):</b> Reitplätze und Roundpens kann man mehrfach bauen. Einsteller longieren manchmal im Roundpen (ein Pferd je Roundpen) – sind alle belegt, kannst du ihn an dem Tag nicht nutzen, Bodenarbeit geht dann auf dem Reitplatz. Reitplatz/Reithalle „zu voll“ ab 4 Reitern je Platz.</p><p><b>Junghengste (v336):</b> Hengste ab 1½ Jahren dürfen nicht mehr zu Stuten in den Offenstall (und umgekehrt), Hinweisbrief je Jahreszeit, solange gemischt; ein erwachsener Wallach zählt als „Onkel“ wie eine Tante. Bleibt die Gruppe gemischt, kann ein Hengst ab 2 Jahren eine Stute ab 3 Jahren decken (je Nacht 7,5 % × Erfolg wie auf der Weide).</p><p><b>Aufzucht-Offenstall (H7 a, v313):</b> nur im Zuchtstall baubar (Hof → Bauen, ${BAUTEN.aufzucht.preis.map(fmt).join(" / ")}, 1 Jahreszeit, ${haTxt(PLATZ.aufzucht)} Bauland), Bedingung des Zuchtstalls. 10 Plätze, die im Stall wie Boxen durchgeschaltet werden, aber ein gemeinsames Offenstall-Bild zeigen (Heuraufe, Futtereimer, Pferdeäpfel = Platz misten). Hinein dürfen Jungpferde von ½ bis 3 Jahren und erwachsene Stuten ab 5 Jahren ohne Fohlen bei Fuß (nicht hochtragend) als „Tanten“ – über Ort → Offenstall, Box wechseln oder beim Absetzen. Normale Pferde kommen nie automatisch auf einen Offenstall-Platz. Kostet nur Futter und Einstreu, halb so viel Arbeit für die Mitarbeiter. Jede Nacht: Jungpferde Sozialverhalten +${OFFEN.sozial} (Standardtempo, wie in der Aufzuchtstation; ohne Tante nur halb so viel, volle Wirkung ab 1 Tante je 5 Jungpferde), alle Wohlbefinden +${OFFEN.wohl} (ohne Tante +${OFFEN.wohl / 2}), sobald mindestens 2 Pferde dort leben. Wird ein Jungpferd 3 Jahre alt, zieht es zu Beginn der Jahreszeit in eine freie Box (sonst Brief).</p>
+      <p><b>Boxenstufen (v355/v356):</b> Stufe 1 Holzbox mit Sandboden, Futtereimer und Wassereimer (täglich füllen, sonst Wohlbefinden −6, Gesundheit −3; Stallbursche füllt mit) – Einstreu ×1,2, Strahlfäule/Mauke ×1,3, Husten ×1,1. Stufe 2 Kopfsteinpflaster – ohne Einstreu Verletzung ×1,2. Stufe 3 Beton, Heunetz, Kamera – Einstreu ×0,9, Strahlfäule/Magengeschwür/Kolik ×0,8, ohne Einstreu Lahmheit ×1,2, schwache Fohlen 10 % statt 15 %. Gummimatten (ab Stufe 2, Einstreu-Fenster, ${fmt(BODEN_WIRKUNG.GUMMI_PREIS)} je Box, halten dauerhaft, bleiben beim Umbau): Einstreu ×0,7, Lahmheit/Arthrose ×0,8, Verletzung ×0,9, Wohlbefinden +0,5 je Nacht.</p><p><b>Mehrere Plätze (v344):</b> Reitplätze und Roundpens kann man mehrfach bauen. Einsteller longieren manchmal im Roundpen (ein Pferd je Roundpen) – sind alle belegt, kannst du ihn an dem Tag nicht nutzen, Bodenarbeit geht dann auf dem Reitplatz. Reitplatz/Reithalle „zu voll“ ab 4 Reitern je Platz.</p><p><b>Junghengste (v336):</b> Hengste ab 1½ Jahren dürfen nicht mehr zu Stuten in den Offenstall (und umgekehrt), Hinweisbrief je Jahreszeit, solange gemischt; ein erwachsener Wallach zählt als „Onkel“ wie eine Tante. Bleibt die Gruppe gemischt, kann ein Hengst ab 2 Jahren eine Stute ab 3 Jahren decken (je Nacht 7,5 % × Erfolg wie auf der Weide).</p><p><b>Aufzucht-Offenstall (H7 a, v313):</b> nur im Zuchtstall baubar (Hof → Bauen, ${BAUTEN.aufzucht.preis.map(fmt).join(" / ")}, 1 Jahreszeit, ${haTxt(PLATZ.aufzucht)} Bauland), Bedingung des Zuchtstalls. 10 Plätze, die im Stall wie Boxen durchgeschaltet werden, aber ein gemeinsames Offenstall-Bild zeigen (Heuraufe, Futtereimer, Pferdeäpfel = Platz misten). Hinein dürfen Jungpferde von ½ bis 3 Jahren und erwachsene Stuten ab 5 Jahren ohne Fohlen bei Fuß (nicht hochtragend) als „Tanten“ – über Ort → Offenstall, Box wechseln oder beim Absetzen. Normale Pferde kommen nie automatisch auf einen Offenstall-Platz. Kostet nur Futter und Einstreu, halb so viel Arbeit für die Mitarbeiter. Jede Nacht: Jungpferde Sozialverhalten +${OFFEN.sozial} (Standardtempo, wie in der Aufzuchtstation; ohne Tante nur halb so viel, volle Wirkung ab 1 Tante je 5 Jungpferde), alle Wohlbefinden +${OFFEN.wohl} (ohne Tante +${OFFEN.wohl / 2}), sobald mindestens 2 Pferde dort leben. Wird ein Jungpferd 3 Jahre alt, zieht es zu Beginn der Jahreszeit in eine freie Box (sonst Brief).</p>
       <p><b>Beritt und Pensionsfohlen (H7 c, v314):</b> laufen über die Pension (Anfrage per Brief, Zusage, Einzug am nächsten Morgen, Zahlung zu Beginn jeder Jahreszeit, alles inklusive). <i>Beritt</i> (nur Ausbildungsstall mit erfüllten Bedingungen): je fest angestelltem Bereiter ${BERITT.jeBereiter} Beritt-Pferde (und eine freie Box), Pferde 3–7 Jahre, ${BERITT.dauer.join(" oder ")} Jahreszeiten, ${fmt(BERITT.preis)} je Jahreszeit inkl. Box, täglichem Bereiter, Putzen, Hufe/Mähne (Putzen und Hufe macht der Hof – Pfleger oder du). Am Ende holt der Besitzer ab; zufrieden, wenn die Zufriedenheit ≥ 60 ist und die Ausbildungsskala im Schnitt mindestens 2 Punkte je Jahreszeit gestiegen ist (Ansehen +3, sonst −3). <i>Aufzucht</i> (nur Zuchtstall, freier Platz im Aufzucht-Offenstall): Jungpferde ½–2 Jahre oder (${Math.round(AUFZ_FREMD.waiseAnteil * 100)} %) Waisenfohlen mit Flasche, ${fmt(AUFZ_FREMD.preis)} je Jahreszeit (Waise +${fmt(AUFZ_FREMD.waise)}), mit 3 Jahren holt der Besitzer ab. Anfragen: je Art höchstens eine offene, Chance je Tag ${BERITT.chance} × freie Plätze ÷ Tage je Jahreszeit (höchstens 50 %). Seit v314 zählt auch das Training durch den fest angestellten Bereiter als gebuchtes „Bewegen“.</p>
       <p><b>Verdacht bei verdeckten Ursachen (v318):</b> Der Tierarzt kennt die versteckte Genetik nicht. Bei ${Object.keys(VERDACHT).map(k => KRANK[k].n).join(", ")} nennt er beim 1. Mal nur das Krankheitsbild und mögliche Ursachen; ab dem 2. Mal (gleicher oder verwandter Befund, zählt auch wiederholte Tierarztbesuche bei chronischen Befunden) äußert er den Verdacht, nennt die anderen Möglichkeiten und wie man es klärt (Gentest im Labor, Allergietest bzw. Hautprobe/Ultraschall). Nach dem Gentest „Erbkrankheiten“ ist eine Erbkrankheit eindeutig. Mauke weckt den CPL-Verdacht nur bei Pferden mit hoher Veranlagung (ab 0,4). <b>Chronisches Lymphödem (CPL)</b>: eigener chronischer Befund ab 8 Jahren (Risiko ∝ Veranlagung², Mauke ×1,5), Behandlung Schritt führen, Bandagen (Verband), Wundsalbe; Boxenruhe schadet. Einen Gentest gibt es (wie in echt) nicht.</p>
       <p><b>Tests zum Verdacht (v319):</b> Der Tierarzt schlägt zu jedem Verdacht den passenden Test vor (Knopf beim Befund in der Versorgung, Rechnung per Post). Vor Ort nicht zu unterscheiden – gleich beim 1. Mal mit allen Möglichkeiten und Test: ${Object.entries(VERDACHT).filter(([, V]) => V.sofort).map(([k, V]) => `${V.bild} (${V.diff.join("/")}) → ${V.test.n} ${fmt(V.test.preis)}${V.test.tage ? `, ${V.test.tage} Tage` : ", sofort"}`).join(" · ")}. Verdeckt (Verdacht ab dem 2. Mal): Erbkrankheiten → Labortest Erbkrankheiten · Sommerekzem → Allergietest 150 € · Lymphödem/Mauke (CPL) → Hautprobe 120 €. Bis zum Ergebnis zeigen Tierarzt, Versorgung, Steckbrief und Rechnung nur das Krankheitsbild. Eindeutig (kein Test nötig): Melanom am Schimmel und alle übrigen Befunde.</p>

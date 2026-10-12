@@ -917,7 +917,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "369";
+  const SPIEL_VERSION = "370";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -925,10 +925,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=369"></script>
-<script src="boxstufen.js?v=369"></script>
-<script src="kopfteile.js?v=369"></script>
-<script src="kopfalter.js?v=369"></script>
+<script src="pferd.js?v=370"></script>
+<script src="boxstufen.js?v=370"></script>
+<script src="kopfteile.js?v=370"></script>
+<script src="kopfalter.js?v=370"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -8010,6 +8010,7 @@
   // v369 (Dome): Pferd in der Boxenübersicht gedrückt halten und in eine freie Box ziehen (Maus und Handy) – freie Ziele grün umrandet
   let boxGezogenAm = 0, boxZiehenAn = false;
   function boxZiehbar(b) { const p = b && b.pferd; return !!p && !b.tot && !b.offen && !b.gesperrt && !p.klinik && !p.turnier && !p.weide && !paddockVon(p); }
+  function boxZiehSperre(b) { const p = b && b.pferd; if (!p) return ""; return b.tot ? "ist verstorben" : b.offen ? "steht im Aufzucht-Offenstall" : b.gesperrt ? "steht in einer Box im Umbau" : p.klinik ? "ist in der Klinik" : p.turnier ? "ist auf dem Turnier" : p.weide ? "ist gerade auf der Weide – erst zurück in die Box holen" : paddockVon(p) ? "ist gerade im Sandpaddock – erst zurück in die Box holen" : ""; }
   function boxZielOk(von, nach) { const p = von.pferd; if (!boxZiehbar(von) || nach === von || !boxFrei(nach)) return false;
     if (von.quar && !nach.quar && inQuarantaene(p)) return false;   // Quarantäne läuft noch
     if (fremd(p) && boxGruppe(von) !== boxGruppe(nach)) return false;   // Einsteller: gebuchte Boxart bleibt
@@ -8020,22 +8021,27 @@
     const ziele = () => [...document.querySelectorAll(".boxen-liste [data-zubox]")].filter(el => boxZielOk(spiel.boxen[d.i], spiel.boxen[+el.dataset.zubox]));
     const kachelZiel = k => spiel.boxen.findIndex(b => boxGruppe(b) === k && boxZielOk(spiel.boxen[d.i], b));
     const ende = () => { if (!d) return; clearTimeout(d.t); if (d.geist) d.geist.remove(); d.el.style.opacity = ""; document.querySelectorAll(".ziel-gruen,.ziel-drueber").forEach(x => x.classList.remove("ziel-gruen", "ziel-drueber")); document.body.classList.remove("box-zieht"); d = null; };
-    const starten = () => { if (!d) return; d.aktiv = true; const r = d.el.getBoundingClientRect(), g = d.el.cloneNode(true);
+    const starten = () => { if (!d) return;
+      if (d.sperre) { d.sperreAn = true; d.el.style.opacity = ".6"; return; }   // v370: Grund beim Loslassen zeigen statt „passiert nichts“
+      d.aktiv = true; const r = d.el.getBoundingClientRect(), g = d.el.cloneNode(true);
       g.removeAttribute("data-zubox"); Object.assign(g.style, { position: "fixed", left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px", margin: 0, opacity: .9, pointerEvents: "none", zIndex: 9999, transform: "scale(1.06) rotate(-2deg)", boxShadow: "0 8px 22px rgba(0,0,0,.35)" });
       document.body.appendChild(g); d.geist = g; d.dx = d.sx - r.left; d.dy = d.sy - r.top; d.el.style.opacity = ".35"; document.body.classList.add("box-zieht");
       ziele().forEach(el => el.classList.add("ziel-gruen")); document.querySelectorAll("[data-bgruppe]").forEach(k => { if (k.dataset.bgruppe !== boxenGruppe && kachelZiel(k.dataset.bgruppe) >= 0) k.classList.add("ziel-gruen"); });
       if (navigator.vibrate && d.touch) try { navigator.vibrate(25); } catch (x) {} };
     const unter = (x, y) => { const e = document.elementFromPoint(x, y); return e && (e.closest(".ziel-gruen[data-zubox]") || e.closest(".ziel-gruen[data-bgruppe]")); };
     document.addEventListener("pointerdown", e => { const el = e.target.closest && e.target.closest(".boxen-liste [data-zubox]"); if (!el || (e.pointerType === "mouse" && e.button !== 0)) return;
-      const i = +el.dataset.zubox; if (!boxZiehbar(spiel.boxen[i])) return; ende();
-      d = { i, el, sx: e.clientX, sy: e.clientY, touch: e.pointerType !== "mouse", aktiv: false }; d.t = setTimeout(starten, d.touch ? 380 : 180); });
+      const i = +el.dataset.zubox, sp = boxZiehSperre(spiel.boxen[i]); if (!spiel.boxen[i].pferd) return; ende();
+      d = { i, el, sx: e.clientX, sy: e.clientY, touch: e.pointerType !== "mouse", aktiv: false, sperre: sp }; d.t = setTimeout(starten, sp ? 550 : d.touch ? 380 : 180); });
     document.addEventListener("pointermove", e => { if (!d) return;
-      if (!d.aktiv) { if (Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 8) { if (d.touch) ende(); else { clearTimeout(d.t); starten(); } } if (!d || !d.aktiv) return; }
+      if (d.sperreAn) return;
+      if (!d.aktiv) { if (Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 8) { if (d.touch) ende(); else { clearTimeout(d.t); starten(); } } if (!d || !d.aktiv) return; }   // Touch: erst nach dem Gedrückthalten
       d.geist.style.left = e.clientX - d.dx + "px"; d.geist.style.top = e.clientY - d.dy + "px";
       document.querySelectorAll(".ziel-drueber").forEach(x => x.classList.remove("ziel-drueber")); const z = unter(e.clientX, e.clientY); if (z) z.classList.add("ziel-drueber"); });
     document.addEventListener("touchmove", e => { if (d && d.aktiv) e.preventDefault(); }, { passive: false });
     document.addEventListener("contextmenu", e => { if (d || (e.target.closest && e.target.closest(".boxen-liste [data-zubox]"))) e.preventDefault(); });
-    document.addEventListener("pointerup", e => { if (!d) return; if (!d.aktiv) { ende(); return; }
+    document.addEventListener("pointerup", e => { if (!d) return;
+      if (d.sperreAn) { const p = spiel.boxen[d.i].pferd, t = d.sperre; boxGezogenAm = Date.now(); ende(); setTimeout(() => dialog(`<h3>🔀 Umstellen geht gerade nicht</h3><p><b>${esc(p.name)}</b> ${t}.</p>`), 350); return; }
+      if (!d.aktiv) { ende(); return; }
       const z = unter(e.clientX, e.clientY), von = spiel.boxen[d.i]; boxGezogenAm = Date.now();
       let ziel = -1; if (z && z.dataset.zubox != null) ziel = +z.dataset.zubox; else if (z && z.dataset.bgruppe) { ziel = kachelZiel(z.dataset.bgruppe); boxenGruppe = z.dataset.bgruppe; }
       ende();

@@ -47,5 +47,5 @@ Zu jeder Frage steht die Lösung, die Claude vorerst gewählt hat. Die Veredler-
 3. Kraftfutter aus der Krippe geht beim Rausbringen mit in den Futtereimer (Heu bleibt in der Box).
 
 ## Lymphödem und Verdacht (v318)
-1. **Kein Labortest für CPL** – in echt gibt es keinen Gentest, die Diagnose stellt der Tierarzt (Krankheitsbild, Hautprobe, Ultraschall). Deshalb nicht im Labor. *Soll der Tierarzt eine kostenpflichtige „Hautprobe“ (z. B. 120 €) anbieten, die den Verdacht bestätigt?*
-2. Verdachts-Regel gilt für PSSM, HYPP, HERDA, CA (Ataxie), Sommerekzem, Lymphödem und Mauke (bei hoher CPL-Veranlagung). Kehlkopfpfeifen, Melanom, OCD, Asthma gelten als eindeutig (hören/sehen/Röntgen). *Passt das?*
+1. ✅ (Dome: ja, v319) Tierarzt schlägt beim Verdacht den Test vor – CPL: Hautprobe 120 €, 3 Tage.
+2. ✅ (Dome, v319) Nur eindeutig, wenn nichts anderes in Frage kommt. Vor Ort mehrdeutig mit Test-Vorschlag (selbst festgelegte Preise, bitte prüfen): Kehlkopfpfeifen → Endoskopie 180 € (sofort) · Asthma → Lungenspülung 220 € (2 Tage) · OCD → Röntgen 150 € (sofort) · Influenza/Herpes/Erkältung → Nasentupfer 90 € (2 Tage) · Cushing → ACTH-Bluttest 90 € (2 Tage) · Sommerekzem → Allergietest 150 € (3 Tage). Eindeutig bleiben z. B. Melanom am Schimmel, Verletzung, Hufabszess, Kolik. *Frage: Sollen auch Lahmheit (Röntgen/Ultraschall) und Husten so behandelt werden?*

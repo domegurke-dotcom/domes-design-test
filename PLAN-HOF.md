@@ -214,6 +214,6 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 - [ ] (b) Rennbahn bauen + Berufe Rennpferdetrainer und Westerntrainer.
 - [ ] (c) Fremde Pferde in Beritt (Ausbildungsstall) und Pensionsfohlen/-jungpferde zur Aufzucht (nur Zuchtstall, stehen im Aufzucht-Offenstall; Dome 12.10.: Aufnahme ab Absetzer bis unter 3 Jahre, mit 3 holt der Besitzer ab; **auch Waisenfohlen** können aufgenommen werden).
 - [ ] (d) Eigene Hengste als Deckhengst für fremde Stuten.
-- [ ] (e) Gnadenhof: Patenschaften und Tierarztrabatt.
-- [ ] (f) Fest angestellte Bereiter nur im Ausbildungsstall, sonst nur auf Abruf (wie jetzt). Bereits angestellte Bereiter auf anderen Höfen dürfen bleiben, neue gibt es dort nicht.
+- [x] (e) Gnadenhof: Patenschaften und Tierarztrabatt (v310: 20 % Rabatt, Paten 60–120 € je Jahreszeit, Chance 35 % je Pferd und Jahreszeit).
+- [x] (f) (war schon umgesetzt, geprüft v310) Fest angestellte Bereiter nur im Ausbildungsstall, sonst nur auf Abruf (wie jetzt). Bereits angestellte Bereiter auf anderen Höfen dürfen bleiben, neue gibt es dort nicht.
 - [x] Statusverlust: Hof behält die Stallart (Dome: ja). Bedingungen „kommt später“ zählen vorerst als erfüllt (Dome: ok).

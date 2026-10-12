@@ -9,13 +9,13 @@ const path = require("path");
 const SPIELER = {
   1: { name: "Nr. 1 – Anfänger (kennt Spiel und Pferde nicht, viele Fehler)",
        fuettern: 0.35, wasser: 0.4, misten: 0.5, putzen: 0.8, postSpaet: 0.6, anfrageAnnehmen: 0.5, futterErstWennLeer: true,
-       pferdKauf: "teuer", aku: false, mitarbeiterFrueh: true, bauenFrueh: true, tierarzt: 0.3, tippsBefolgen: 0.9 },
+       pferdKauf: "tierschutz", anzahl: 3, aku: false, mitarbeiterFrueh: true, bauenFrueh: true, tierarzt: 0.3, tippsBefolgen: 0.9 },
   2: { name: "Nr. 2 – etwas Erfahrung (Spiel ein paar Mal gespielt, etwas Pferdeahnung, einige Fehler)",
        fuettern: 0.12, wasser: 0.15, misten: 0.15, putzen: 0.5, postSpaet: 0.2, anfrageAnnehmen: 0.85, futterErstWennLeer: false,
-       pferdKauf: "mittel", aku: true, mitarbeiterFrueh: false, bauenFrueh: false, tierarzt: 0.7, tippsBefolgen: 0.5 },
+       pferdKauf: "tierschutz", anzahl: 2, aku: true, mitarbeiterFrueh: false, bauenFrueh: false, tierarzt: 0.7, tippsBefolgen: 0.5 },
   3: { name: "Nr. 3 – Profi (Spiel oft gespielt, kennt sich mit Pferden aus, wenige Fehler)",
        fuettern: 0.02, wasser: 0.02, misten: 0.03, putzen: 0.05, postSpaet: 0.02, anfrageAnnehmen: 1, futterErstWennLeer: false,
-       pferdKauf: "tierschutz", aku: true, mitarbeiterFrueh: false, bauenFrueh: false, tierarzt: 0.95, tippsBefolgen: 0.1 },
+       pferdKauf: "tierschutz", anzahl: 2, aku: true, mitarbeiterFrueh: false, bauenFrueh: false, tierarzt: 0.95, tippsBefolgen: 0.1 },
 };
 
 async function spiele(nr) {
@@ -36,7 +36,7 @@ async function spiele(nr) {
     const tippsMerken = () => { const t = $("dlg").hidden ? "" : $("dlgInhalt").innerText.split("\n")[0]; if (!t.startsWith("💡") || tippsGesehen.includes(t)) return; tippsGesehen.push(t);
       if (zuf() > S.tippsBefolgen) return; befolgt.push(t);   // Tipp befolgen: weniger Fehler im passenden Bereich
       const halb = k => { S[k] = S[k] / 2; };
-      if (t.includes("2 Jahre")) { S.anfrageAnnehmen = Math.max(S.anfrageAnnehmen, 0.95); S.futterErstWennLeer = false; S.mitarbeiterFrueh = false; S.bauenFrueh = false; if (S.pferdKauf === "teuer") S.pferdKauf = "tierschutz"; }
+      if (t.includes("2 Jahre")) { S.anfrageAnnehmen = Math.max(S.anfrageAnnehmen, 0.95); S.futterErstWennLeer = false; S.bauenFrueh = false; S.anzahl = Math.min(S.anzahl, 2); }
       if (t.includes("Box")) { halb("fuettern"); halb("wasser"); halb("misten"); } if (t.includes("Putzen")) halb("putzen");
       if (t.includes("Post") || t.includes("Postfach")) halb("postSpaet"); if (t.includes("krank") || t.includes("Tierarzt")) S.tierarzt = Math.min(1, S.tierarzt + 0.3);
       if (t.includes("Pferdemarkt")) S.aku = true; if (t.includes("Futterkammer")) S.futterErstWennLeer = false; };
@@ -56,13 +56,15 @@ async function spiele(nr) {
       const F = futterkammer(), heu = RAUFUTTER_REIHE.reduce((a, k) => a + (F.lager[k] || 0), 0), bedarf = spiel.boxen.filter(b => b.pferd).length * 10 * tpj();
       if (S.futterErstWennLeer ? heu < 20 : heu < bedarf) { const menge = Math.min(Math.max(200, bedarf * 2), Math.floor(F.lagerMax - lagerBelegt())); if (menge > 0 && (spiel.geld || 0) > menge * FUTTER.heu.preis) { const f = futterKaufen("heu", menge); if (f) log.push(`Tag ${spiel.tag}: Futter: ${f}`); } }
       // erstes eigenes Pferd (ab Tag 3)
-      if (!gekauft && spiel.tag >= 3) {
-        const M = marktNeu(), L = S.pferdKauf === "tierschutz" ? (M.notfall || []) : (M.privat || []).slice().sort((a, b) => (b.preis || 0) - (a.preis || 0));
-        const h = S.pferdKauf === "mittel" ? L[Math.floor(L.length / 2)] : L[0];
-        if (h && spiel.boxen.some(boxFrei) && (spiel.geld || 0) > (h.preis || 0) + (S.aku ? 420 : 0)) { if (S.aku) buchen(-420, "AKU (Testspieler)"); pferdEinstellen(h, h.preis || 0, "Pferdekauf"); zu(); gekauft = `${h.name} (${fmt(h.preis || 0)}${S.aku ? ", mit AKU" : ", ohne AKU"})`; }
+      if (spiel.tag >= 3 && eigenePferdeHof().length < S.anzahl && spiel.letzterKauf !== jzJetzt()) {
+        const M = marktNeu(), h = (M.notfall || []).find(x => !(spiel.marktGekauft || []).includes(x.id));
+        if (h && spiel.boxen.filter(boxFrei).length > 1 && (spiel.geld || 0) > (h.preis || 0) + (S.aku ? 420 : 0) + 1500) { if (S.aku) buchen(-420, "AKU (Testspieler)"); pferdEinstellen(h, h.preis || 0, "Tierschutz"); (spiel.marktGekauft = spiel.marktGekauft || []).push(h.id); spiel.letzterKauf = jzJetzt(); zu(); gekauft = (gekauft ? gekauft + ", " : "") + `${h.name} (${fmt(h.preis || 0)}${S.aku ? ", mit AKU" : ""})`; }
       }
+      // Kredit aufnehmen, wenn die Kasse unter Rate + Futterreserve fällt (Bank: bis 80 % Hofwert)
+      const rate = kredite().reduce((a, k) => a + (kreditLaeuft(k) ? k.rate : 0), 0);
+      if ((spiel.geld || 0) < rate + 500 && kreditRahmen() >= 1000) { const summe = Math.min(kreditRahmen(), 3000); kreditNeu(summe, 12, "Kredit Testspieler"); log.push(`Tag ${spiel.tag}: Kredit ${fmt(summe)} aufgenommen`); }
       // Fehler Anfänger: früh Mitarbeiter / bauen
-      if (S.mitarbeiterFrueh && spiel.tag === 5 && !(spiel.mitarbeiter || []).length) log.push("Tag 5: würde einen Pferdepfleger einstellen (330 €/Jz) – im Skript nur als Kosten gebucht"), (spiel.testLohn = 330);
+      if (S.mitarbeiterFrueh && !spiel.testLohn && spiel.boxen.filter(b => b.pferd).length >= 5) log.push(`Tag ${spiel.tag}: ab 5 Pferden einen Pferdepfleger einstellen (330 €/Jz) – im Skript nur als Kosten gebucht`), (spiel.testLohn = 330);
       if (spiel.testLohn && datum().t === 1) buchen(-spiel.testLohn, "Lohn (Testspieler)");
       if (S.bauenFrueh && spiel.tag === 8) { const ok = bauStarten("reitplatz", 1); zu(); log.push(`Tag 8: Reitplatz bauen – ${ok ? "gestartet" : "ging nicht"}`); }
       // Stallarbeit je Box

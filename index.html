@@ -536,7 +536,7 @@
   .vorschau svg#gross { width: 100%; transform-origin: 0 0; touch-action: none; cursor: zoom-in; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; }   /* v451: zoomen (Zwei-Finger / Mausrad) */
   .zoombar { position: relative; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; } .zoombar svg, .zoombar svg * { -webkit-user-drag: none; user-select: none; }
   /* v453: während des Zoomens/Verschiebens wird das fertige Bild nur verschoben/skaliert (eigene Ebene, ruckelfrei) – nach kurzer Pause wird es scharf neu gezeichnet */
-  .zoom-aktiv svg, svg.zoom-aktiv { will-change: transform; } .zoombar svg { transform-origin: 0 0; cursor: zoom-in; }
+  .zoombar svg, .vorschau svg#gross { will-change: transform; }   /* dauerhaft eigene Ebene: die erste Bewegung muss nichts neu aufbauen */ .zoombar svg { transform-origin: 0 0; cursor: zoom-in; }
   .farbspalte.musterspalte { right: calc(var(--pf) + var(--fsB) + 2px); }   /* v451: Scheckungen links neben den Fellfarben */
   .ms-pfeil { right: calc(var(--pf) + var(--fsB) + 4px) !important; }
   .fs-kachel:disabled { opacity: .35; cursor: default; }
@@ -948,7 +948,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "456";
+  const SPIEL_VERSION = "457";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -956,9 +956,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=456"></script>
-<script src="boxstufen.js?v=456"></script>
-<script src="kopfneu.js?v=456"></script>
+<script src="pferd.js?v=457"></script>
+<script src="boxstufen.js?v=457"></script>
+<script src="kopfneu.js?v=457"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3758,8 +3758,8 @@
     const Z = el._zoom, svg = () => svgMode ? el : el.querySelector("svg");
     const anwenden = () => { if (svgMode) { const g = el.querySelector("#zoomG"); if (g) g.setAttribute("transform", zoomTransform(el)); } else { const v = svg(); if (v) v.style.transform = Z.s > 1 ? `translate(${Z.x.toFixed(1)}px, ${Z.y.toFixed(1)}px) scale(${Z.s.toFixed(3)})` : ""; } el.style.cursor = Z.s > 1 ? "grab" : ""; };
     // Maße/Matrix nur einmal je Geste lesen (nicht bei jedem Bewegungs-Ereignis – das erzwingt jedes Mal ein neues Layout und ruckelt)
-    let cache = null, Zc = { s: 1, x: 0, y: 0 };   // Zc = zuletzt scharf gezeichneter Stand (svgMode)
-    const frisch = () => { const t = Date.now(); if (cache && t - cache.t < 600) return cache; cache = { t };
+    const zeiger = new Map(); let cache = null, Zc = { s: 1, x: 0, y: 0 };   // Zc = zuletzt scharf gezeichneter Stand (svgMode)
+    const frisch = () => { const t = Date.now(); if (cache && (zeiger.size || t - cache.t < 600)) { cache.t = t; return cache; } cache = { t };   // während einer Geste nie neu messen (ruckelt)
       const keep = el.style.transform; if (svgMode && keep) el.style.transform = "";   // ohne Vorschau-Transform messen
       if (svgMode) { const b = el.viewBox.baseVal, m = el.getScreenCTM(), r = el.getBoundingClientRect(); cache.g = [b.width, b.height]; cache.inv = m ? m.inverse() : null; cache.k = m ? m.a : 1; cache.o = m ? [m.e - r.left, m.f - r.top] : [0, 0]; }
       else { const c = getComputedStyle(svg()), ce = getComputedStyle(el), r = el.getBoundingClientRect(); cache.g = [parseFloat(c.width) || 1, parseFloat(c.height) || 1]; cache.r = r; cache.px = parseFloat(ce.paddingLeft) + parseFloat(ce.borderLeftWidth); cache.py = parseFloat(ce.paddingTop) + parseFloat(ce.borderTopWidth); }
@@ -3772,13 +3772,13 @@
     const scharf = () => { clearTimeout(ruhe); cancelAnimationFrame(raf); raf = 0; if (svgMode) { Zc = { s: Z.s, x: Z.x, y: Z.y }; el.style.transform = ""; } anwenden(); el.classList.remove("zoom-aktiv"); };
     // Vorschau: das schon gezeichnete Bild wird nur per CSS verschoben/skaliert (GPU) – erst nach kurzer Ruhe wird neu gezeichnet
     const vorschau = () => { const c = frisch(); if (svgMode) { const r = Z.s / Zc.s, tx = Z.x - r * Zc.x, ty = Z.y - r * Zc.y; el.style.transform = `translate(${(c.k * tx + c.o[0] * (1 - r)).toFixed(1)}px, ${(c.k * ty + c.o[1] * (1 - r)).toFixed(1)}px) scale(${r.toFixed(4)})`; el.style.cursor = Z.s > 1 ? "grab" : ""; } else anwenden(); };
-    const planen = () => { el.classList.add("zoom-aktiv"); clearTimeout(ruhe); ruhe = setTimeout(scharf, 200); if (!raf) raf = requestAnimationFrame(() => { raf = 0; vorschau(); }); };
+    const planen = () => { el.classList.add("zoom-aktiv"); clearTimeout(ruhe); ruhe = setTimeout(scharf, 350); if (!raf) raf = requestAnimationFrame(() => { raf = 0; vorschau(); }); };
     const aktiv = () => { el.classList.add("zoom-aktiv"); };
     // Punkt im Koordinatensystem von Z.x/Z.y (SVG-Einheiten bzw. Pixel im Bild)
     const punkt = (cx, cy) => { const c = frisch(); if (svgMode) { if (!c.inv) return { x: 0, y: 0 }; const q = new DOMPoint(cx, cy).matrixTransform(c.inv); return { x: q.x, y: q.y }; } return { x: cx - c.r.left - c.px, y: cy - c.r.top - c.py }; };
     const zoomUm = (p, f) => { const s2 = Math.min(ZOOM_MAX, Math.max(1, Z.s * f)), q = s2 / Z.s; Z.x = p.x - (p.x - Z.x) * q; Z.y = p.y - (p.y - Z.y) * q; Z.s = s2; klemmen(); planen(); };
     el._zoomAnwenden = anwenden; if (el._zoomInit) { Zc = { s: 1, x: 0, y: 0 }; anwenden(); return; } el._zoomInit = true;
-    const zeiger = new Map(); let letzterTipp = 0, bewegt = 0;
+    let letzterTipp = 0, bewegt = 0; window.addEventListener("resize", () => { cache = null; });
     el.addEventListener("wheel", e => { e.preventDefault(); aktiv(); zoomUm(punkt(e.clientX, e.clientY), e.deltaY < 0 ? 1.18 : 1 / 1.18); }, { passive: false });
     // Maus: weder Text/Bild markieren noch ziehen (sonst startet beim 2. Mal ein Ziehen der Markierung und das Verschieben bricht ab)
     ["dragstart", "selectstart"].forEach(t => el.addEventListener(t, e => e.preventDefault()));

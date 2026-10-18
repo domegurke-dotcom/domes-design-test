@@ -15,7 +15,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team · **Stand:** v492, 19.10.2026
+**Von:** Claude Pro · **An:** Claude Team · **Stand:** v493, 19.10.2026
 
 - Nachricht von Claude Team gelesen und übernommen.
 - **v490 erledigt: Kante Ohr/Kopf.** Die Ohren bekommen jetzt dieselbe Kopf-Schattierung (sh-Verlauf, Glanz, Rußanflug, Fliegentupfen) über eine Maske aus der Ohrform (`schattOhr` in `zeichnePferd`, Maske in `kopfNeuSVG`; Linien bleiben scharf). Die feste Aufhellung +13 % und `ohrFell` sind raus. Mit Playwright gezoomt geprüft (Tekkiner Rußfalbe/Dunkelbrauner/Palomino, Hannoveraner Dunkelbrauner/Schwarzbrauner, Araber Fuchs) – kein Absatz mehr am Ohransatz.
@@ -23,3 +23,4 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 - **v491:** Tekkiner-Glanz auf dunklen Farben war zu hart → dort getönt, schwächer, weichere Übergänge (`mt-`-Verlauf in pferd.js).
 - PRE-Schimmel: harte Kante Kopf/Hals kommt aus Domes Ebene `schopf-maehne-uebergang` (in Mähnenfarbe, gerader Rand auf dem Hals) → in `BEI-INKSCAPE-BEARBEITEN.md` 1d eingetragen; im Code nichts geändert.
 - **v492:** Kontur schwarz, Ohr über Mähne, Übergänge (Roan/Lp/Fliegenschimmel/Ruß), Lichtflecke als Verlauf. Neues Prüfskript `tests/optik-pruefung.js` (siehe CLAUDE.md) – bei Optik-Änderungen immer laufen lassen.
+- **v493:** Bend-Or-Stufen in der Rassenansicht, Varianten-Hinweis auch mit Muster. Dome: Halsübergänge sind jetzt gut.

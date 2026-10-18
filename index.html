@@ -933,7 +933,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "420";
+  const SPIEL_VERSION = "421";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -941,10 +941,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=420"></script>
-<script src="boxstufen.js?v=420"></script>
-<script src="kopfteile.js?v=420"></script>
-<script src="kopfalter.js?v=420"></script>
+<script src="pferd.js?v=421"></script>
+<script src="boxstufen.js?v=421"></script>
+<script src="kopfteile.js?v=421"></script>
+<script src="kopfalter.js?v=421"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1923,6 +1923,9 @@
           `die Kastration von <b>${esc(p.name)}</b> ist gut verlaufen. Er ist jetzt ein Wallach und steht wieder in Box ${i + 1}. Im Abstammungsschein bleibt er als Hengst eingetragen.<br><br>`);
         return;
       }
+      if (!op && p.klinik.besitzer && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {   // v421: vom Besitzer gebracht – er zahlt, keine Rechnung an den Hof
+        delete p.klinik; delete p.dreck; const e = einstellerVon(p);
+        brief(e ? eName(e) : "Tierarztpraxis", `${p.name} ist zurück`, `<b>${esc(p.name)}</b> hat sich in der Klinik erholt (Gesundheit ${p.pflege.gesundheit.toLocaleString("de-DE")} %) und steht wieder in Box ${i + 1}. Bitte gut auf ${pron(p).ihn} aufpassen.`, { pferde: [p] }); return; }
       if (!op && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {
         const betrag = p.klinik.rechnung, tage = spiel.tag - p.klinik.seit;
         delete p.klinik; delete p.dreck;   // in der Klinik wird geputzt
@@ -2911,7 +2914,7 @@
         const st = rest < 0 ? ["überfällig", "bad"] : rest <= Math.max(1, Math.round(tpj() / 4)) ? ["bald fällig", "warn"] : ["ok", "ok"];
         return `<li><span class="ico">${ico}</span><span class="txt">${name}<small>zuletzt vor ${vor} ${vor === 1 ? "Tag" : "Tagen"} · ${info}</small></span><span class="stat ${st[1]}">${st[0]}</span></li>`;
       };
-      inhalt = pensionVsgHTML(p, box) + waiseVsgHTML(p) + weideNachmHTML(p) + streitWarnHTML(p) + einstreuVsgHTML(box) + `<div class="zeile-wert"><div class="kopf"><b>Gesundheitszustand</b><span>${g.toLocaleString("de-DE", { maximumFractionDigits: 1 })} % · ${zustand[0]}</span></div>
+      inhalt = vergessenHinweis(aktBox) + pensionVsgHTML(p, box) + waiseVsgHTML(p) + weideNachmHTML(p) + streitWarnHTML(p) + einstreuVsgHTML(box) + `<div class="zeile-wert"><div class="kopf"><b>Gesundheitszustand</b><span>${g.toLocaleString("de-DE", { maximumFractionDigits: 1 })} % · ${zustand[0]}</span></div>
           <div class="balken"><i style="width:${g}%;${g < 45 ? "background:#c0503a" : ""}"></i></div>
           ${box.tot ? "" : (() => { const w = wohlbefinden(p); return `<div class="kopf" style="margin-top:8px"><b>Wohlbefinden</b><span>${w} % · ${w >= 85 ? "rundum zufrieden" : w >= 65 ? "zufrieden" : w >= 45 ? "unzufrieden" : "fühlt sich unwohl"}</span></div>
           <div class="balken"><i style="width:${w}%;background:${w < 45 ? "#c0503a" : "#5a9a6a"}"></i></div>${wohlGruende(p)}`; })()}
@@ -6425,7 +6428,7 @@
     const e = fremd(p) ? einstellerVon(p) : null; if (!e || !p.pflege) return null;
     const an = futterAnlass(p, box);
     if (e.futter && e.futter.anlass !== an.k && e.futterJz === jzJetzt()) return e.futter;   // v385 (Dome): Futterwunsch ändert sich höchstens 1× je Jahreszeit
-    if (!e.futter || e.futter.anlass !== an.k) { let P; if (e.futter) e.futterJz = jzJetzt(); try { P = expertenPlan(p, box).P; } catch (x) { P = standardPlan(p, box); }
+    if (!e.futter || e.futter.anlass !== an.k) { let P; if (e.futter) { e.futterJz = jzJetzt(); e.futterNeu = spiel.tag; } try { P = expertenPlan(p, box).P; } catch (x) { P = standardPlan(p, box); }   // v421: neuer Wunsch → Brief (besitzerAutoTag)
       const kg = {}; Object.entries(P.kg || {}).forEach(([k, x]) => { if (FUTTER[k] && !k.startsWith("sp_") && x > 0) kg[k] = x; });
       if (!Object.keys(kg).length) Object.assign(kg, standardPlan(p, box).kg);
       // v333 (Dome): Besitzer sind keine Futterexperten – je nach (verstecktem) Futterwissen machen sie typische Fehler, die sich aufs Pferd auswirken
@@ -6484,7 +6487,11 @@
     if (!p.besitzerAuto || !fremd(p)) return false; const W = besitzerFutter(p, box); if (!W || planGleich(futterplanVon(p, box), W)) return false;
     planAendernStart(p, box); p.futterplan = { mahl: W.mahl, kg: { ...W.kg }, vom: "besitzer" }; planAendernEnde(p, box); return true;
   }
-  const besitzerAutoTag = () => spiel.boxen.forEach(b => { if (b.pferd && !b.tot) besitzerAuto(b.pferd, b); });
+  const besitzerAutoTag = () => spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot) return;
+    const e = fremd(p) ? einstellerVon(p) : null; if (e) besitzerFutter(p, b);
+    const auto = besitzerAuto(p, b);
+    if (e && e.futterNeu != null) { delete e.futterNeu; const W = e.futter;   // v421 (Dome): Brief, wenn der Besitzer seinen Futterwunsch ändert (z. B. tragend, Arbeit, Alter)
+      brief(eName(e), `Neuer Futterwunsch für ${p.name}`, `für <b>${esc(p.name)}</b> hat sich etwas geändert (${esc(W.umst || W.anlass)}), deshalb möchte ich ${pron(p).ihn} ab jetzt etwas anders füttern: ${Object.entries(W.kg).map(([k, x]) => `${FUTTER[k] ? FUTTER[k].n : k} ${fmtKg(x)}`).join(", ")}.${auto || p.besitzerAuto ? " Danke, dass {du es gleich so übernimmst|Sie es gleich so übernehmen}!" : " Den Plan {findest du|finden Sie} unter Versorgung → Fütterung heute."}`, { w: e.w, pferde: [p], ...(auto || p.besitzerAuto ? {} : { aktion: { typ: "futterwunsch", pid: p.id } }) }); } });
   function futterDialog(p, box, zurueck) {
     if (zurueck !== undefined) futterDialogZurueck = zurueck;
     const R = tagesRation(p, box), H = p.futterHeute && p.futterHeute.tag === spiel.tag ? p.futterHeute : null, eigen = !!(p.futterplan && p.futterplan.kg);
@@ -8310,13 +8317,20 @@
       zeigeBoxen(); });
     document.addEventListener("pointercancel", () => { if (d && !d.aktiv) ende(); });
   }
+  // v421 (Dome): vergessene Boxen sichtbar machen (Azubi/Stallbursche) – sonst merkt man es erst, wenn der Besitzer sich beschwert
+  const vergessenHeute = () => spiel.maVergessen && spiel.maVergessen.tag === spiel.tag ? spiel.maVergessen.liste.filter(x => { const b = spiel.boxen[x.i]; return b && b.pferd && !b.tot && (!b.krippeVoll || b.mistig); }) : [];
+  function vergessenHinweis(i) {
+    const L = vergessenHeute().filter(x => i == null || x.i === i); if (!L.length) return "";
+    return i == null ? `<div class="klasse">⚠️ <b>Heute vergessen:</b> ${L.map(x => `Box ${x.i + 1} (${esc(x.name)})`).join(", ")} – nicht gefüttert und nicht gemistet. Bitte selbst versorgen!</div>`
+      : `<div class="wn-hinweis">⚠️ <b>${esc(L[0].name)}</b> hat diese Box heute vergessen – nicht gefüttert und nicht gemistet. Bitte selbst versorgen!</div>`;
+  }
   function zeigeBoxen() {
     const da = BOX_GRUPPEN.filter(([k]) => spiel.boxen.some(b => boxGruppe(b) === k));
     if (!da.some(([k]) => k === boxenGruppe)) boxenGruppe = (spiel.boxen[aktBox] && da.some(([k]) => k === boxGruppe(spiel.boxen[aktBox]))) ? boxGruppe(spiel.boxen[aktBox]) : da.length ? da[0][0] : null;
     const gk = da.length > 1 ? `<div class="kacheln stall-kacheln">${da.map(([k, ico, n]) => { const L = spiel.boxen.filter(b => boxGruppe(b) === k); return `<button class="kachel klickbar ${k === boxenGruppe ? "an" : ""}" data-bgruppe="${k}"><span class="ico">${ico}</span><b>${n}</b><small>${L.filter(b => b.pferd).length} von ${L.length} belegt</small></button>`; }).join("")}</div>` : "";
     const leer = (i, txt) => `<button class="paar leer" data-zubox="${i}"><span class="paar-bild leer-rahmen"></span><span class="paar-brett"><b>Box ${i + 1}</b><span>${txt}</span></span></button>`;
     zeigeNeben("🏠 Stall", `<div class="panel" style="grid-column:1/-1;width:100%;max-width:760px;margin:0 auto"><div class="hf-kopf"><b>${spiel.boxen.filter(b => b.pferd).length} von ${spiel.boxen.length} Boxen belegt</b><button class="mini-knopf" id="bxBauen">🏗️ Bauen</button></div><p style="margin:0">Antippen, um in die Box zu gehen. Gedrückt halten und ziehen, um ein Pferd in eine freie Box umzustellen. Neue Boxen baust du unter Hofverwaltung → Hof → Bauen.</p>${pensionStallHTML()}
-      ${gk}<div class="paar-liste boxen-liste">${spiel.boxen.map((b, i) => boxenGruppe && boxGruppe(b) !== boxenGruppe ? "" : b.pferd ? pferdKachel(b.pferd, { attr: `data-zubox="${i}"`, zeilen: [`Box ${i + 1}`, b.tot ? "🕊️ verstorben" : b.pferd.klinik ? "🏥 in der Klinik" : b.pferd.weide ? "🌿 auf der Weide" : paddockVon(b.pferd) ? "🟫 auf dem Sandpaddock" : b.pferd.turnier ? "🏆 auf dem Turnier" : b.pferd.weideNachm && b.pferd.weideNachm.tag === spiel.tag && !b.pferd.weideNachm.aus ? (b.pferd.weideNachm.paddock ? "🟫 nachmittags Sandpaddock" : "🌿 nachmittags Weide") : `${rasseById(b.pferd.rasse).name}`, ...(b.fohlen ? [`🍼 + ${esc(b.fohlen.name)}`] : []), ...(angebotVon(b.pferd) ? ["💰 zum Verkauf"] : []), ...(fremd(b.pferd) ? [`🏡 ${esc((einstellerVon(b.pferd) || { nn: "Pension" }).nn)}`] : [])] })
+      ${vergessenHinweis()}${gk}<div class="paar-liste boxen-liste">${spiel.boxen.map((b, i) => boxenGruppe && boxGruppe(b) !== boxenGruppe ? "" : b.pferd ? pferdKachel(b.pferd, { attr: `data-zubox="${i}"`, zeilen: [`Box ${i + 1}`, b.tot ? "🕊️ verstorben" : b.pferd.klinik ? "🏥 in der Klinik" : b.pferd.weide ? "🌿 auf der Weide" : paddockVon(b.pferd) ? "🟫 auf dem Sandpaddock" : b.pferd.turnier ? "🏆 auf dem Turnier" : b.pferd.weideNachm && b.pferd.weideNachm.tag === spiel.tag && !b.pferd.weideNachm.aus ? (b.pferd.weideNachm.paddock ? "🟫 nachmittags Sandpaddock" : "🌿 nachmittags Weide") : `${rasseById(b.pferd.rasse).name}`, ...(b.fohlen ? [`🍼 + ${esc(b.fohlen.name)}`] : []), ...(angebotVon(b.pferd) ? ["💰 zum Verkauf"] : []), ...(fremd(b.pferd) ? [`🏡 ${esc((einstellerVon(b.pferd) || { nn: "Pension" }).nn)}`] : [])] })
         : leer(i, b.gesperrt ? "🚧 Umbau" : b.reserviert ? "🔒 reserviert" : `leer · ${b.offen ? "Offenstall" : b.quar ? "Quarantäne" : b.abfohl ? "Abfohlbox" : b.paddock ? "Paddockbox" : "Box"}, Stufe ${boxenStufe(b)}`)).join("")}</div></div>`);
     $("bxBauen").onclick = () => zeigeBauenFenster();
     document.querySelectorAll("[data-bgruppe]").forEach(k => k.onclick = () => { boxenGruppe = k.dataset.bgruppe; zeigeBoxen(); });
@@ -10038,6 +10052,10 @@
           brief("Tierarztpraxis", `Bluttest von ${p.name}: positiv`, `der nachgereichte Bluttest von <b>${esc(p.name)}</b> zeigt: ${l.map(x => KRANK[x.art].n).join(", ")}. ${esc(p.name)} sollte sofort in Quarantäne – die Behandlung zahlt ${eName(e)}.`, { pferde: [p] }); } }
       // Besitzer ruft den Tierarzt, sobald eine Krankheit bemerkt wurde (zahlt selbst)
       if (!p.klinik && befundListe(p).some(x => x.bemerkt && !x.tierarzt && x.bemerkt.tag < spiel.tag && (!imInkub(x) || x.diagnose))) tierarztBesuch(p, b, null, eName(e));
+      if (!p.klinik && !p.turnier && p.pflege && p.pflege.gesundheit <= 30) {   // v421 (Dome): bei 30 % oder weniger erholt sich ein Pferd nur noch in der Klinik – der Besitzer bringt es hin (und zahlt), ist aber sehr verärgert
+        if (p.weide) vonWeideHolen(b); if (p.paddock) { delete p.paddock; zurueckInBox(b); }
+        fahrtStress(p, "klinik"); p.klinik = { seit: spiel.tag, besitzer: true }; eZufr(e, -15, "musste in die Klinik"); pensionAnsehen(-3);
+        brief(eName(e), `${p.name} ist in der Klinik`, `<b>${esc(p.name)}</b> ging es so schlecht (Gesundheit ${p.pflege.gesundheit.toLocaleString("de-DE")} %), dass ich ${pron(p).ihn} in die Klinik bringen musste. Die Kosten trage ich – aber ich erwarte, dass ${esc(p.name)} bei {euch|Ihnen} ordentlich versorgt wird!`, { w: e.w, pferde: [p] }); return; }
       if (p.klinik || p.turnier) return;
       if (Math.random() >= PENSION.besuch * (datum().s === 3 ? 0.8 : 1)) return;
       e.besuchTag = spiel.tag; putzen(p, "buerste"); putzen(p, "kamm"); p.ausgekratzt = spiel.tag; beruehrt(p, e.eid, "putz");   // v388: Hufe gehören zum Putzen

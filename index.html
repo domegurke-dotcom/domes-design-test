@@ -933,7 +933,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "433";
+  const SPIEL_VERSION = "434";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -941,9 +941,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=433"></script>
-<script src="boxstufen.js?v=433"></script>
-<script src="kopfneu.js?v=433"></script>
+<script src="pferd.js?v=434"></script>
+<script src="boxstufen.js?v=434"></script>
+<script src="kopfneu.js?v=434"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1194,8 +1194,12 @@
     const za = zufall("auge-" + id)();
     const glasMoeglich = !!(sw || hat(g, "O") || abz.includes("laterne"));
     const glas = glasMoeglich && (ex.auge ? ex.auge === "blau" : (sw && za < AUGE_BLAU.Sw) || (hat(g, "O") && za < AUGE_BLAU.O) || (abz.includes("laterne") && za < AUGE_BLAU.laterne));   // ex.auge: im Adminmodus festgelegt
-    return { abz, maul, augeBlau: anzahl(g, "Cr") === 2 || !!glas, glas: !!glas && anzahl(g, "Cr") < 2, glasMoeglich: glasMoeglich && anzahl(g, "Cr") < 2 };
+    // Form-Variante (v434): je zur Hälfte Domes Originalform oder die Variante – fest je Pferd (ex.abzForm: im Adminmodus festgelegt)
+    const varK = haupt && Object.keys(ABZ_VARIANTE).find(v => v.startsWith(haupt + "~")), mitVar = varK && (ex.abzForm != null ? ex.abzForm === "v" : zufall("abzv-" + id)() < ABZ_VAR_ANTEIL);
+    const zeichnung = abz.map(a => a === haupt && mitVar ? varK : a);
+    return { abz, zeichnung, variante: mitVar ? ABZ_VARIANTE[varK].name : null, maul, augeBlau: anzahl(g, "Cr") === 2 || !!glas, glas: !!glas && anzahl(g, "Cr") < 2, glasMoeglich: glasMoeglich && anzahl(g, "Cr") < 2 };
   }
+  const ABZ_VAR_ANTEIL = .5;
   // Logit-Zuschlag der Gene auf die Weiß-Anlage
   const weissZuschlag = g => { const sw = anzahl(g, "Sw"); return (!hat(g, "E") ? ABZ_ZUSCHLAG.fuchs : 0) + (sw === 2 ? ABZ_ZUSCHLAG.Sw2 : sw ? ABZ_ZUSCHLAG.Sw1 : 0) + (hat(g, "Sb") ? ABZ_ZUSCHLAG.Sb : 0) + (hat(g, "O") ? ABZ_ZUSCHLAG.O : 0); };
   // Admin (Gene selbst wählen): Weiß-Anlage so setzen, dass genau dieses Abzeichen herauskommt (Mitte der Stufe, Gene eingerechnet)
@@ -1206,7 +1210,8 @@
   const TAUB_SCHRECK = .25, TAUB_SCHRECK_WOHL = -1.5;
   // Anzeige (sichtbar, keine Genetik): „Stern mit Schnippe“, „Mehlmaul“, „blau (Glasauge)“
   function abzeichenText(p) { const a = kopfZeichen(p).abz; if (!a.length) return "keine"; const h = a.filter(x => x !== "schnippe");
-    return h.length ? ABZ_NAME[h[0]] + (a.includes("schnippe") ? " mit Schnippe" : "") : "Schnippe"; }
+    const v = kopfZeichen(p).variante;
+    return h.length ? ABZ_NAME[h[0]] + (v ? ` (${v})` : "") + (a.includes("schnippe") ? " mit Schnippe" : "") : "Schnippe"; }
   const maulText = p => MAUL_NAME[kopfZeichen(p).maul] || "";
   const augenText = p => { const k = kopfZeichen(p); return k.augeBlau ? (k.glas ? "blau (Glasauge)" : "blau") : "braun"; };
   // ---------- Beinabzeichen je Bein und Zebrastreifen (v430, Dome) ----------
@@ -1623,7 +1628,7 @@
     return a.some(x => !erlaubt.includes(x)) || Object.values(b).some(st => st && !["ballen", "krone"].includes(st)); }
   const kopfOpt = (p, andere) => { if (!p) return {}; const kz = kopfZeichen(p);
     const b = beinZeichen(p), z = zebraVon(p);
-    return { kopfform: kopfVon(p), ohrStellung: ohrenVon(p, andere), eigenKopf: p.nase === "spiel" ? false : undefined, kopfAbz: kz.abz, maul: kz.maul, augeBlau: kz.augeBlau,
+    return { kopfform: kopfVon(p), ohrStellung: ohrenVon(p, andere), eigenKopf: p.nase === "spiel" ? false : undefined, kopfAbz: kz.zeichnung || kz.abz, maul: kz.maul, augeBlau: kz.augeBlau,
       beinAbz: { vn: b.bvl, vf: b.bvr, hn: b.bhl, hf: b.bhr }, zebra: z.zebra, schulter: z.schulter, ohrGr: ohrGrVon(p) }; };
   // Hengste der Deckstation – fest für die ganze Jahreszeit gespeichert (jeder mit eigener Akte)
   function deckhengste(stute) {
@@ -3857,6 +3862,8 @@
       exOpt("o" + sd, ["vorne", "seite", "hinten", "angelegt"].map(o => [o, ON[o]]), OS[sd]))));
     const z = [...kz0, zeile("x-abz", "Kopfabzeichen", `Wird über die Weiß-Anlage vererbt (Füchse, Sabino, Splash und Overo haben mehr Weiß). Angeboten wird nur, was beim ${rn} vorkommt.`,
       exOpt("abz", ABZ_STUFEN.filter(([, a]) => !a || RZ.abz.has(a) || a === haupt).map(([, a]) => [a || "keine", a ? ABZ_NAME[a] : "keins"]), haupt || "keine"))];
+    if (haupt && Object.keys(ABZ_VARIANTE).some(v => v.startsWith(haupt + "~"))) { const vk = Object.keys(ABZ_VARIANTE).find(v => v.startsWith(haupt + "~"));
+      z.push(zeile("x-abzform", "Form", "Domes Originalform oder die Variante – zufällig je Pferd, wird nicht vererbt.", exOpt("abzForm", [["o", "Original"], ["v", ABZ_VARIANTE[vk].name]], k.variante ? "v" : "o"))); }
     if (haupt && haupt !== "schnippe") z.push(zeile("x-schn", "Schnippe dazu", "Zusätzlich eine Schnippe zwischen den Nüstern.", exOpt("schn", [["1", "ja"], ["0", "nein"]], k.abz.includes("schnippe") ? "1" : "0")));
     if (anzahl(g, "Cr") === 2) z.push(zeile("x-maul", "Maul", "Bei Doppel-Cream sieht man keine Maulfärbung.", `<small>– (Doppel-Cream)</small>`));
     else if (b === "schwarzbrauner") z.push(zeile("x-maul", "Maul", "Schwarzbraune (At) haben immer ein Kupfermaul.", `<small>Kupfermaul (immer bei Schwarzbraunen)</small>`));
@@ -3927,6 +3934,7 @@
       else if (k === "kf") { const typ = KOPFFORM_RASSE[wahl.rasse]; wahl.kopf = { f: v, s: v === "gerade" ? 0 : (typ === v || v === "schaf" || v === "schwein") ? 2 : 1 }; }
       else if (k === "ks") wahl.kopf = { ...kopfVon(wahl), s: +v };
       else if (k === "oR" || k === "oL") (wahl.ohrVorschau = wahl.ohrVorschau || { R: "vorne", L: "vorne" })[k[1]] = v;
+      else if (k === "abzForm") wahl.ex.abzForm = v;
       else if (k.startsWith("b_")) (wahl.beinWahl = wahl.beinWahl || {})[k.slice(2)] = v;
       else if (k === "abz") wahl.abzWahl = v; else if (k === "schn") wahl.ex.schn = v === "1"; else if (k === "auge") wahl.ex.auge = v; else wahl.ex[k] = +v;
       if (k === "fliegen") wahl.ex.fliegenAb = 10; glZeigen(); });
@@ -3935,7 +3943,7 @@
   document.getElementById("glAlter").oninput = e => { wahl.alter = +e.target.value; if ($("alter")) $("alter").value = wahl.alter; glZeigen(); };
   document.getElementById("glFertig").onclick = () => { $("genLabor").hidden = true; aktualisiere(); };
   document.getElementById("glZufall").onclick = () => { glFarbeSetzen(wahl.chip);
-    delete wahl.abzWahl; delete wahl.beinWahl; delete wahl.kopf; delete wahl.ohrVorschau; delete wahl.ex.schn; delete wahl.ex.auge; delete wahl.ex.dunkel;
+    delete wahl.abzWahl; delete wahl.beinWahl; delete wahl.kopf; delete wahl.ohrVorschau; delete wahl.ex.schn; delete wahl.ex.auge; delete wahl.ex.abzForm; delete wahl.ex.dunkel;
     BEINE.forEach(([k]) => { wahl.ex[k] = beinZufall(wahl.rasse, Math.random); }); wahl.ex.zebra = zebraZufall(wahl.rasse, Math.random); wahl.ex.weiss = weissZufall(wahl.rasse, Math.random); wahl.ex.pangare = pangareZufall(wahl.rasse, Math.random);   // v427: Kopf neu würfeln
     glZeigen(); };
 
@@ -11086,6 +11094,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Weiß-Anlage</b> (versteckt, <code>ex.weiss</code> 0–1, vererbt wie die anderen Veranlagungen: 30 % Mutter · 30 % Vater · 20 % dazwischen · 10 % Großelternteil · 7 % Urgroßelternteil · 3 % Mutation). Marktpferde: Grundwert gleichverteilt, je Rasse verschoben (Logit): ${Object.entries(WEISS_RASSE).map(([r, v]) => `${rasseById(r).name} ${v > 0 ? "+" : ""}${String(v).replace(".", ",")}`).join(" · ")}.
         Mehr Weiß (Logit): Fuchs +${String(ABZ_ZUSCHLAG.fuchs).replace(".", ",")} · Splashed White +${String(ABZ_ZUSCHLAG.Sw1).replace(".", ",")} (reinerbig +${String(ABZ_ZUSCHLAG.Sw2).replace(".", ",")}) · Sabino +${ABZ_ZUSCHLAG.Sb} · Overo +${ABZ_ZUSCHLAG.O}.</p>
       ${verTab(["Weiß-Menge bis", "Abzeichen", "Anteil ohne Verschiebung"], ABZ_STUFEN.map(([t, a], i) => [t === Infinity ? "1" : String(t).replace(".", ","), a ? ABZ_NAME[a] : "keine", `${Math.round(((t === Infinity ? 1 : t) - (i ? ABZ_STUFEN[i - 1][0] : 0)) * 100)} %`]))}
+      <p>Form-Varianten (v434): ${Object.entries(ABZ_VARIANTE).map(([k, v]) => `${ABZ_NAME[k.split("~")[0]]} ${v.name}`).join(", ")} – je ${Math.round(ABZ_VAR_ANTEIL * 100)} % statt der Originalform, fest je Pferd, nicht vererbt.</p>
       <p>Zu jedem Abzeichen außer der Schnippe kommt zu ${Math.round(ABZ_PLUS_SCHNIPPE * 100)} % noch eine Schnippe dazu. Das Abzeichen ist für jedes Pferd fest (<code>kopfZeichen</code>) und steht im Steckbrief (Daten).</p>
       <p><b>Maulfärbung (v428):</b> Veranlagung Pangaré (versteckt, <code>ex.pangare</code>, vererbt wie oben), wirksam ab 0,5. So viele Marktpferde haben sie: ${Object.entries(PANGARE_RASSE).map(([r, v]) => `${rasseById(r).name} ${Math.round(v * 100)} %`).join(" · ")} · alle anderen ${Math.round(PANGARE_SONST * 100)} %. Pangaré hellt nur rotes Pigment auf: Mehlmaul bei Braunen, Füchsen und ihren Falben/Cream-Varianten – bei Rappen und Mausfalben unsichtbar (wird trotzdem vererbt). Mehlmaul ist kein Abzeichen (nur aufgehellte Haare). Schwarzbraune (At) haben immer ein Kupfermaul. Dunkles Maul: Mausfalben immer, Braun- und Weißfalben ohne Pangaré zu ${Math.round(MAUL_DUNKEL * 100)} %. Alle anderen Pferde haben ein normales Maul in Fellfarbe. Beim Ausschimmeln (ab halb weiß) und bei Doppel-Cream verschwindet die Maulfärbung. Krötenmaul folgt.</p>
       <p><b>Augen:</b> Doppel-Cream (Cremello, Perlino, Smoky Cream) immer blau. Sonst blaues „Glasauge“ bei Splashed White ${Math.round(AUGE_BLAU.Sw * 100)} %, Frame Overo ${Math.round(AUGE_BLAU.O * 100)} %, Laterne ${Math.round(AUGE_BLAU.laterne * 100)} % – alle anderen braun.</p>

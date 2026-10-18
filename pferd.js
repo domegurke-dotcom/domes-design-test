@@ -807,10 +807,14 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     if (LP.flocken > 0) { let t = ""; for (let i = 0; i < LP.flocken; i++) { const x = (0.1 + Math.pow(rl(), 0.6) * 0.85) * L, y = top + (0.05 + rl() * 0.75) * D, r = 0.9 + rl() * 1.6;
       t += klecks(rl, x, y, r, r * (0.7 + rl() * 0.4), "#f6f3ec"); } g += `<g clip-path="url(#cr-${uid})" filter="url(#wm-${uid})">${t}</g>`; }
   }
-  // v448 (Dome): weicher Farbübergang vom Hals zum Kopf, wenn der Kopf eine eigene Farbe hat (Tiger, Wenigpunkt, Tovero)
-  if (eigenKopf && C.head && C.head !== C.body && ["leopard", "fewspot", "tovero"].includes(C.pattern)) {
-    const m1 = add(mid(Pn, T), mul(norm(sub(Wn, Pn)), 0.06 * N));
-    g += `<g clip-path="url(#cr-${uid})" filter="url(#wb-${uid})"><ellipse cx="${f(m1.x)}" cy="${f(m1.y)}" rx="${f(0.2 * N)}" ry="${f(0.12 * N)}" transform="rotate(${f(Math.atan2(Wn.y - Pn.y, Wn.x - Pn.x) * 180 / Math.PI)} ${f(m1.x)} ${f(m1.y)})" fill="${head}" opacity=".75"/></g>`;
+  // v454 (Dome): weicher Farbübergang vom Kopf zum Hals – überall dort, wo Kopf und Hals verschieden aussehen (Schecken, Roan, Tiger, Schimmel-Ausgrauen …):
+  // die Kopffarbe läuft auf dem Hals hinter der Linie Genick–Kehle weich aus (Verlauf), statt an einer geraden Kante abzubrechen
+  const kopfAnders = eigenKopf && (C.pattern || (C.head && C.head !== C.body) || C.grau != null);
+  if (kopfAnders) {
+    const bnd = norm(sub(T, Pn)), hin = mul(u, -1), dTief = 0.34 * hl, mt = mid(Pn, T), ende = add(mt, mul(hin, dTief));
+    const q = [add(Pn, mul(bnd, -0.25 * hl)), add(T, mul(bnd, 0.25 * hl)), add(add(T, mul(bnd, 0.25 * hl)), mul(hin, dTief)), add(add(Pn, mul(bnd, -0.25 * hl)), mul(hin, dTief))];
+    g += `<linearGradient id="uh-${uid}" gradientUnits="userSpaceOnUse" x1="${f(mt.x)}" y1="${f(mt.y)}" x2="${f(ende.x)}" y2="${f(ende.y)}"><stop offset="0" stop-color="${head}" stop-opacity="1"/><stop offset=".45" stop-color="${head}" stop-opacity=".55"/><stop offset="1" stop-color="${head}" stop-opacity="0"/></linearGradient>` +
+      `<filter id="uf-${uid}" filterUnits="userSpaceOnUse" x="${f(Pn.x - 3 * hl)}" y="${f(Pn.y - 3 * hl)}" width="${f(6 * hl)}" height="${f(6 * hl)}"><feGaussianBlur stdDeviation="${f(0.1 * hl)}"/></filter><g clip-path="url(#cr-${uid})"><path d="${eckig(q)}" fill="url(#uh-${uid})" filter="url(#uf-${uid})"/></g>`;
   }
   if (C.stripe && !ganzWeiss) g += `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${C.stripe}" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>`;
   if (C.muzzle && !eigenKopf) g += `<ellipse cx="${f(hp(0.93, 0.12).x)}" cy="${f(hp(0.93, 0.12).y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.93, 0.12).x)} ${f(hp(0.93, 0.12).y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>`;

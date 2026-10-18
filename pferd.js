@@ -328,7 +328,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Jungpferde mit Spielkopf: weicher, gerader Kehlgang wie beim gezeichneten Kopf (sonst wirkt der Hals wie ein dünner Stiel)
   const sanft = ekKehle || (stufe && ["fohlen", "jaehrling", "jungpferd"].includes(stufe));
   const k1 = sanft ? add(add(T, mul(sub(Cn, T), 0.35)), mul(nOut, 0.06 * kehleLen)) : kehle1, k2 = sanft ? add(add(Cn, mul(sub(T, Cn), 0.35)), mul(nOut, 0.04 * kehleLen)) : kehle2;
-  const halsD = `M${f(Wn.x)},${f(Wn.y)}Q${f(crestCtrl.x)},${f(crestCtrl.y)} ${f(Pn.x)},${f(Pn.y)}L${f(hp(0.06, 0.2).x)},${f(hp(0.06, 0.2).y)}L${f(T.x)},${f(T.y)}C${f(k1.x)},${f(k1.y)} ${f(k2.x)},${f(k2.y)} ${f(Cn.x)},${f(Cn.y)}L${f(0.35 * L)},${f(top + 0.6 * D)}Z`;
+  // Neuer Kopf (v429): Hals reicht bis unter die Backe – sonst bleibt zwischen Genick, Kopfhinterkante und Mähne eine Lücke (Ecke des alten Spielkopfs)
+  const halsKopf = eigenKopf ? hp(0.3, 0.22) : hp(0.06, 0.2);
+  const halsD = `M${f(Wn.x)},${f(Wn.y)}Q${f(crestCtrl.x)},${f(crestCtrl.y)} ${f(Pn.x)},${f(Pn.y)}L${f(halsKopf.x)},${f(halsKopf.y)}L${f(T.x)},${f(T.y)}C${f(k1.x)},${f(k1.y)} ${f(k2.x)},${f(k2.y)} ${f(Cn.x)},${f(Cn.y)}L${f(0.35 * L)},${f(top + 0.6 * D)}Z`;
   const kamm = t => { const s = 1 - t; return P(s * s * Wn.x + 2 * s * t * crestCtrl.x + t * t * Pn.x, s * s * Wn.y + 2 * s * t * crestCtrl.y + t * t * Pn.y); };
 
   // --- Beine ---

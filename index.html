@@ -933,7 +933,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "418";
+  const SPIEL_VERSION = "419";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -941,10 +941,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=418"></script>
-<script src="boxstufen.js?v=418"></script>
-<script src="kopfteile.js?v=418"></script>
-<script src="kopfalter.js?v=418"></script>
+<script src="pferd.js?v=419"></script>
+<script src="boxstufen.js?v=419"></script>
+<script src="kopfteile.js?v=419"></script>
+<script src="kopfalter.js?v=419"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2509,12 +2509,7 @@
       if (jetzt >= t.frist) { brief("Tierschutzverein", `${t.pferd.name} wurde vermittelt`, `die Frist zum Zurückkaufen ist abgelaufen. <b>${esc(t.pferd.name)}</b> wurde an eine neue Familie vermittelt und hat dort ein gutes Zuhause gefunden.`); return false; }
       return true;
     });
-    spiel.boxen.slice().forEach(b => {   // v418 (Dome): gibt es eine freie Abfohlbox, zieht die Stute zur Geburt automatisch dort ein
-      const p = b.pferd;
-      if (!p || !p.traechtig || b.tot || b.fohlen || b.abfohl || fremd(p) || jetzt < p.traechtig.geburt || p.weide || p.paddock || p.klinik || p.turnier) return;
-      const z = spiel.boxen.findIndex(x => x.abfohl && boxFrei(x) && !x.quar && !x.gesperrt); if (z < 0) return;
-      const von = spiel.boxen.indexOf(b) + 1; inBoxUmziehen(b, z); if (aktBox === von - 1) { aktBox = z; spiel.aktBox = z; }
-      brief("Hofverwaltung", `${p.name}: in der Abfohlbox`, `<b>${esc(p.name)}</b> ist zur Geburt aus Box ${von} in die <b>Abfohlbox</b> (Box ${z + 1}) umgezogen – dort ist mehr Platz, und die Kamera zeigt, wie es läuft.`, { pferde: [p] }); });
+    stutenInAbfohl(jetzt);   // v418/v419: falls noch nicht geschehen, zieht die Stute spätestens zur Geburt in die Abfohlbox
     spiel.boxen.forEach((b, i) => {
       const p = b.pferd;
       if (!p || !p.traechtig || b.tot || b.fohlen || jetzt < p.traechtig.geburt) return;
@@ -2531,6 +2526,24 @@
       brief("Tierarztpraxis", `${p.name} hat ein Fohlen bekommen!`, `herzlichen Glückwunsch! <b>${esc(p.name)}</b> (Box ${i + 1}) hat zu Beginn von ${datumLang()} ein ${nd.schwach ? "" : "gesundes "}${f.geschlecht === "Stute" ? "Stutfohlen" : "Hengstfohlen"} zur Welt gebracht: <b>${esc(f.name)}</b>.
         <br><br>Vater: <b>${esc(f.ahnen.vater.name)}</b> (${rasseById(f.ahnen.vater.rasse).name}) · Farbe: ${farbText(f)} · Rasse: ${rasseById(f.rasse).name}${nd.text}`);
     });
+  }
+  // v419 (Dome): Stute zieht ein paar Tage vor der Geburt in die Abfohlbox (in echt etwa 2–4 Wochen vorher; hier die letzten 30 % der Jahreszeit: 1 / 2 / 3 Tage bei 4 / 7 / 10 Tagen) und danach wieder aus, wenn kein Fohlen mehr bei ihr steht
+  function stutenInAbfohl(jetzt) {
+    const vorTage = Math.max(1, Math.round(tpj() * 0.3));
+    spiel.boxen.slice().forEach(b => { const p = b.pferd;
+      if (!p || !p.traechtig || b.tot || b.fohlen || b.abfohl || fremd(p) || p.weide || p.paddock || p.klinik || p.turnier) return;
+      const rest = p.traechtig.geburt - (jetzt != null ? jetzt : jzJetzt()), bald = rest <= 0 || (rest === 1 && jetzt == null && datum().t > tpj() - vorTage);
+      if (!bald) return;
+      const z = spiel.boxen.findIndex(x => x.abfohl && boxFrei(x) && !x.quar && !x.gesperrt); if (z < 0) return;
+      const von = spiel.boxen.indexOf(b) + 1; inBoxUmziehen(b, z); if (aktBox === von - 1) { aktBox = z; spiel.aktBox = z; }
+      brief("Hofverwaltung", `${p.name}: in der Abfohlbox`, `<b>${esc(p.name)}</b> ist kurz vor der Geburt aus Box ${von} in die <b>Abfohlbox</b> (Box ${z + 1}) umgezogen – dort ist mehr Platz, und die Kamera zeigt, wie es läuft. Nach der Geburt zieht ${pron(p).er} wieder aus, sobald das Fohlen eine eigene Box hat oder verkauft ist.`, { pferde: [p] }); });
+  }
+  function stutenAusAbfohl() {
+    spiel.boxen.slice().forEach(b => { const p = b.pferd;
+      if (!p || !b.abfohl || b.tot || b.fohlen || p.traechtig || fremd(p) || p.weide || p.paddock || p.klinik || p.turnier) return;
+      const z = spiel.boxen.findIndex(x => boxFrei(x) && !x.abfohl && !x.quar && !x.paddock && !x.offen && !x.gesperrt); if (z < 0) return;
+      const von = spiel.boxen.indexOf(b) + 1; inBoxUmziehen(b, z); if (aktBox === von - 1) { aktBox = z; spiel.aktBox = z; }
+      brief("Hofverwaltung", `${p.name}: zurück in eine normale Box`, `<b>${esc(p.name)}</b> hat kein Fohlen mehr bei sich und ist aus der Abfohlbox in Box ${z + 1} umgezogen – die Abfohlbox ist wieder frei.`, { pferde: [p] }); });
   }
   // v418 (Dome): Fohlen ab 2 Jahreszeiten ziehen in eine eigene Box – erst am Ende des Jahreszeit-Wechsels, damit Boxen, die dabei frei werden (Pension, Verkauf), noch zählen
   function fohlenAbsetzen() {
@@ -2898,7 +2911,7 @@
         const st = rest < 0 ? ["überfällig", "bad"] : rest <= Math.max(1, Math.round(tpj() / 4)) ? ["bald fällig", "warn"] : ["ok", "ok"];
         return `<li><span class="ico">${ico}</span><span class="txt">${name}<small>zuletzt vor ${vor} ${vor === 1 ? "Tag" : "Tagen"} · ${info}</small></span><span class="stat ${st[1]}">${st[0]}</span></li>`;
       };
-      inhalt = pensionVsgHTML(p, box) + waiseVsgHTML(p) + weideNachmHTML(p) + einstreuVsgHTML(box) + `<div class="zeile-wert"><div class="kopf"><b>Gesundheitszustand</b><span>${g.toLocaleString("de-DE", { maximumFractionDigits: 1 })} % · ${zustand[0]}</span></div>
+      inhalt = pensionVsgHTML(p, box) + waiseVsgHTML(p) + weideNachmHTML(p) + streitWarnHTML(p) + einstreuVsgHTML(box) + `<div class="zeile-wert"><div class="kopf"><b>Gesundheitszustand</b><span>${g.toLocaleString("de-DE", { maximumFractionDigits: 1 })} % · ${zustand[0]}</span></div>
           <div class="balken"><i style="width:${g}%;${g < 45 ? "background:#c0503a" : ""}"></i></div>
           ${box.tot ? "" : (() => { const w = wohlbefinden(p); return `<div class="kopf" style="margin-top:8px"><b>Wohlbefinden</b><span>${w} % · ${w >= 85 ? "rundum zufrieden" : w >= 65 ? "zufrieden" : w >= 45 ? "unzufrieden" : "fühlt sich unwohl"}</span></div>
           <div class="balken"><i style="width:${w}%;background:${w < 45 ? "#c0503a" : "#5a9a6a"}"></i></div>${wohlGruende(p)}`; })()}
@@ -3862,6 +3875,11 @@
   function auslaufZielName(p) { const W = p.weideNachm; if (!W || W.tag !== spiel.tag || W.aus) return ""; try { if (W.paddock) { const g = paddockFrei(p); return g ? paddockName(g) : ""; } const w = weideOhneMix(p); return w ? w.name : ""; } catch (e) { return ""; } }
   function auslaufLogText(p) { const L = p.auslaufLog; if (!L) return ""; const vor = spiel.tag - L.tag; if (vor < 0 || vor > 7) return "";
     return `${esc(L.wer)} hat ${esc(p.name)} ${vor <= 1 ? "gestern" : `vor ${vor} Tagen`} auf „${esc(L.ort)}“ gebracht.`; }
+  // v419 (Dome): Versorgung – Warnung, wenn sich zwei Pferde auf der Weide nicht vertragen (3 Streits oder mehr in letzter Zeit)
+  function streitWarnHTML(p) {
+    const P = spiel.herdePaare || {}, schlecht = spiel.boxen.map(b => b.pferd).filter(q => q && q !== p && !(spiel.boxen.find(b => b.pferd === q) || {}).tot && !q.klinik && (() => { const x = P[[p.id, q.id].sort().join("|")]; return x && (x.streit || 0) >= 3 && spiel.tag - (x.zuletzt || 0) <= tpj(); })());
+    return schlecht.length ? `<div class="wn-hinweis">⚠️ <b>${esc(p.name)}</b> versteht sich nicht mit <b>${schlecht.map(q => esc(q.name)).join(", ")}</b> – die beiden streiten oft. Besser auf verschiedene Weiden stellen (Ort → Koppel oder Weidegang-Auswahl „welche“).</div>` : "";
+  }
   const weideNachmHTML = p => { const W = p && p.weideNachm; if (!W || W.tag !== spiel.tag) return "";
     return `<div class="wn-hinweis">${W.paddock ? "🟫" : "🌿"} ${W.aus ? `${esc(p.name)} bleibt heute drin.` : `geht heute Nachmittag mit ${esc(W.name || "dem Stallbursche")} ${W.paddock ? `auf den Sandpaddock${auslaufZielName(p) ? ` („${esc(auslaufZielName(p))}“)` : ""}${paddockStattWeide(p) ? " (statt Weide – Hufrehe-Gefahr)" : ""}` : `auf die Weide${auslaufZielName(p) ? ` („${esc(auslaufZielName(p))}“)` : ""}`} (bis abends)`} <button class="mini-knopf" id="wnUmschalten">${W.aus ? "doch rauslassen" : "heute drinlassen"}</button></div>`; };
   function vonWeideHolen(box) {
@@ -7666,7 +7684,7 @@
     jedenHof(hofNacht, true);
     tierschutzKlinik(); tierschutzFohlen(); laborNacht(); auktionsNacht();
     if (datum().t === 1) weihnachtsSpende();   // v378
-    if (datum().t === 1) { jedenHof(() => { stallartJahreszeit(); patenJahreszeit(); fremdFohlenJahreszeit(); offenstallJahreszeit(); kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); auktionsEnde(); jahreszeitBeginn(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); pensionJahreszeit(); bereiterAbrechnung(); bereiterPensionAbrechnung(); maKnappPruefen(); fohlenAbsetzen(); }, true); spamAufraeumen(); hoefeVersteigern(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
+    if (datum().t === 1) { jedenHof(() => { stallartJahreszeit(); patenJahreszeit(); pensionJahreszeit(); bereiterPensionAbrechnung(); fremdFohlenJahreszeit(); offenstallJahreszeit(); kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); jahreszeitBeginn(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); bereiterAbrechnung(); maKnappPruefen(); auktionsEnde(); fohlenAbsetzen(); stutenAusAbfohl(); }, true); spamAufraeumen(); hoefeVersteigern(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
     turnierKalender();
     jedenHof(hofMorgen, true);
     blutbilderTag();     // Laborergebnisse
@@ -7757,6 +7775,7 @@
   }
   function hofMorgen() {
     turnierMorgen(); hausturnierMorgen(); verkaufsrennenAbgang(); verkaufsrennenMarkt(); befundTestTag(); hofhelferTag(); reparaturTag(); umbauPlanTag(); futterwieseTag(); rateVorwarnung();   // Turniertag: genannte Pferde fahren los
+    stutenInAbfohl(); stutenAusAbfohl();   // v419: Abfohlbox – Einzug kurz vor der Geburt, Auszug nach dem Fohlen
     futterLieferung();  // bestelltes Futter kommt an
     bedarfTag();   // Dome: Bedarf vorher gedeckt, jetzt nicht mehr → Meldung beim nächsten Besuch der Box
     expertKorrektur265();    // v265: fehlerhafte Expertenpläne einmal kostenlos neu rechnen
@@ -10061,6 +10080,15 @@
       buchen(box, "Pension"); if (leist) buchen(leist, "Pension: Zusatzleistungen");
       zeilen.push(`<li>${esc(eName(e))} (${p ? esc(p.name) : "–"}): ${fmt(box + leist)}</li>`);
     });
+    einstellerListe().forEach(e => {   // v419 (Dome): Einsteller kündigen Zusatzleistungen – aus Unzufriedenheit oder weil sie sie nicht mehr brauchen
+      const p = (pensionBox(e) || {}).pferd; if (!p || e.art || e.kuendigt != null || jetzt - e.seit < 1) return;
+      const buchbar = PL_REIHE.filter(k => e.leistungen[k] && k !== "paddockbox" && k !== "decke"); if (!buchbar.length) return;
+      const kranklos = !befundListe(p).length && !(p.behPlan), unzufrieden = e.zufr < 45;
+      const k = zufallAus(buchbar.filter(x => unzufrieden || (x === "medizin" && kranklos) || x !== "medizin")); if (!k) return;
+      const chance = unzufrieden ? 0.3 : k === "medizin" && kranklos ? 0.4 : 0.06;
+      if (Math.random() >= chance) return;
+      delete e.leistungen[k]; if (k === "bewegen") delete e.bewegenAnteil; const L = PENSION_LEISTUNG[k];
+      brief(eName(e), `${p.name}: ${L.n} gekündigt`, unzufrieden ? `mit der Leistung <b>${L.ico} ${L.n}</b> für <b>${esc(p.name)}</b> bin ich nicht zufrieden. Ich kündige sie hiermit zur neuen Jahreszeit.` : k === "medizin" ? `<b>${esc(p.name)}</b> ist wieder gesund, die Leistung <b>${L.ico} ${L.n}</b> brauche ich nicht mehr. Ich kündige sie.` : `ich möchte die Leistung <b>${L.ico} ${L.n}</b> für <b>${esc(p.name)}</b> nicht mehr buchen und kümmere mich wieder selbst darum.`, { pferde: [p] }); });
     einstellerListe().forEach(e => {   // v418 (Dome): zufriedene Stammkunden buchen mit der Zeit Zusatzleistungen dazu
       const p = (pensionBox(e) || {}).pferd; if (!p || e.art || e.kuendigt != null || e.zufr < 65 || jetzt - e.seit < 2 || Math.random() >= 0.2 + 0.2 * (e.zufr - 65) / 35) return;
       const k = zufallAus(PL_REIHE.filter(x => !e.leistungen[x] && x !== "bewegen" && x !== "paddockbox" && leistungMoeglich(x))); if (!k) return;

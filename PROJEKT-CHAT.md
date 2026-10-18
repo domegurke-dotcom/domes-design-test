@@ -1,4 +1,4 @@
-# Zuchtstall – Planungsstand aus dem Projekt-Chat (Stand 18.10.2026, Code v377)
+# Zuchtstall – Planungsstand aus dem Projekt-Chat (Stand 18.10.2026, Code v425)
 
 Diese Datei erklärt, wie das Spiel „Zuchtstall“ geplant wird, welche Grundregeln gelten, welche Pläne fertig sind und welche Themen noch offen sind. Sie ist für alle gedacht, die am Code mitarbeiten (Menschen und Claude-Sitzungen).
 
@@ -62,7 +62,7 @@ Diese Datei erklärt, wie das Spiel „Zuchtstall“ geplant wird, welche Grundr
 | 5 | Hof-Ausbau | `PLAN-HOF.md` | Spielstart über Immobilien-Menü (alter Pensionsstall, halb Kredit), mehrere Höfe, Bauen in Stufen, Pension und Einsteller, Weiden, Paddock, Einstreu, Stallarten mit Bedingungen (1 Jahr Schonfrist), Hausturnier und Verkaufsrennen | umgesetzt |
 | 6 | Veredler-Rassen | – | z. B. Clydesdale, Fell-Pony, Dales-Pony, Welsh Cob, Trakehner | gebaut (v316), Abnahme durch Dome offen |
 
-Bei Code v377 waren alle Pläne oben umgesetzt; danach kamen laufend Testkorrekturen.
+Alle Pläne oben sind umgesetzt (Stand v425); dazu kommen laufend Testkorrekturen.
 
 ## 5. Offene Themen in Reihenfolge
 
@@ -97,7 +97,7 @@ Ist-Stand: Es gibt einen Spielstand im Browser (`localStorage["zuchtstall-v2"]`)
 
 1. Weitere Rassen (Knabstrupper, Appaloosa, Noriker, Paint Horse).
 2. Inzucht-Auswirkungen.
-3. Vererbung von Abzeichen, Kopfform und Kopfgröße.
+3. Vererbung von Abzeichen und Kopfgröße (die Kopfform-Vererbung ist seit v424 eingebaut).
 4. Gangpferdestall und Trabrennbahn (mit Rasse Traber).
 5. Selbst reiten.
 

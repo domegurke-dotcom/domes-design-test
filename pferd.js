@@ -666,8 +666,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       g += `<rect ${bx} fill="${SW}"/><g filter="url(#wm-${uid})"><path d="${glatt(zack(0.02 * L, top + 0.42 * D, 0.1 * L * fc, 0.3 * D * Math.min(1.4, fc), 14, .4))}" fill="${body}"/>`;
       g += `<path d="${glatt(zack(0.93 * L, top + 0.3 * D, 0.11 * L * fc, 0.32 * D * Math.min(1.4, fc), 14, .4))}" fill="${body}"/>`;
       if (M2 === 0 || (M2 === 1 && (rnd(), true))) g += `<path d="${glatt(zack(0.15 * L + (M2 ? 0 : 0.2 * L), -H - 4 + (M2 ? 0 : 0.2 * D), 0.08 * L * fc, 0.18 * D * fc, 12, .4))}" fill="${body}"/>`;
-      if (M2 === 1) { const rt = zufall((opt.seed || rasseId) + "-tovero");   // v440 (Dome): typisch mit Farbe über dem Rücken/an der Flanke – deutlich mehr als „viel“
-        g += `<path d="${glatt(zack(0.5 * L + (rt() - .5) * 0.12 * L, top + 0.18 * D, 0.16 * L, 0.32 * D, 14, .45))}" fill="${body}"/>`; }
+      if (M2 <= 1) { const rt = zufall((opt.seed || rasseId) + "-tovero"), w0 = M2 === 0;   // v440 (Dome): typisch mit Farbe über dem Rücken – wenig: Farbe bedeckt den größten Teil des Rumpfs, weiß bleiben Bauch, Beine und Teile von Hals/Flanke
+        g += `<path d="${glatt(zack(0.5 * L + (rt() - .5) * 0.12 * L, top + (w0 ? 0.3 : 0.18) * D, (w0 ? 0.34 : 0.16) * L, (w0 ? 0.5 : 0.32) * D, 16, .45))}" fill="${body}"/>`;
+        if (w0) g += `<path d="${glatt(zack(0.08 * L, top - 0.05 * D, 0.13 * L, 0.45 * D, 14, .45))}" fill="${body}"/>`; }
       g += `</g>`;
     }
     if (C.pattern === "sabino") {

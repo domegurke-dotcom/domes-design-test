@@ -6,13 +6,13 @@ Mit Dome besprochen am 18.10.2026 (Stand Spiel v423). Alle Köpfe werden komplet
 
 ## Aufbau der Datei (inkscape:label)
 - `kopf`
-  - `marwarie-ohren rechts`: ohr-…-angelegt, -nach hinten, -zur seite, ohr-rechts (= nach vorne) – ⚠️ Namen uneinheitlich („ohr-links-angelegt“ steht unter rechts, „ohr-recht-zur seite“)
+  - `marwarie-ohren rechts`: angelegt, nach hinten, zur seite, nach vorne (Namen von Dome am 18.10. korrigiert)
   - `basisohren rechts`: ohr-rechts-angelegt, -nach hinten, -zur seite, -nach vorne
   - `kopfformen`
     - `basiskopfform`: `gerader kopf` (darin `maulfärbung`, `kopfabzeichen`), `hechtkopf` / `ramsnase` / `ramskopf` je -leicht/-normal/-stark, `basiskopfform-kehleanschlusspunkt (kap)`
     - `keilkopf`, `schafskopf`, `schweinskopf` je -leicht/-normal/-stark + eigener kap
   - `marwarieohren links`, `basisohren links` (wie rechts)
-  - `auge` (noch ohne klare Namen für blau/braun und Wimpern – beim Einbau prüfen bzw. Dome fragen)
+  - `auge`: Formen `blaues auge` und `braunes auge` (in g162-13/g161-77), `stute + fohlen` = **zusätzliche** Wimper (nur Stuten und Fohlen; Hengst/Wallach ohne diese Form, die normale Wimper haben alle). Achtung: Namen stehen auch auf einzelnen Pfaden/Kreisen, nicht nur auf Gruppen.
   - `genikanschlusspunkt (gap)`, `schopfanschlusspunkt (schap)`
 - `schopf`: extralang, lang, mittel, kurz + schap (Aalstrich laut Dome im Schopf)
 - **Reihenfolge der Ebenen = vorne/hinten, genau so übernehmen.**
@@ -26,7 +26,7 @@ Mit Dome besprochen am 18.10.2026 (Stand Spiel v423). Alle Köpfe werden komplet
 - **Maulfärbung:** höchstens eine. Eine versteckte, vererbte Veranlagung (Pangaré, je Rasse unterschiedlich häufig): Mehlmaul bei Braunen/Falben, Kupfermaul bei Füchsen, Graumaul bei Rappen. Krötenmaul später (Dome zeichnet noch).
 - **Augen:** blau nur über Gene/Abzeichen: Doppel-Cream (Cremello, Perlino, Smoky Cream), Splash White, Frame Overo, Blesse/Laterne über dem Auge (ein- oder beidseitig, „Glasauge“). Sonst braun. Häufigkeiten beim Einbau Dome vorschlagen, in enz – Vererbung eintragen.
 - **Ohren:** Stellungen vorne / zur Seite / hinten / angelegt. Linkes und rechtes Ohr unabhängig (jede Mischung). Grundstellung nach Vertrauen und Charakter: viel Vertrauen/neugierig → meist vorne, gelassen → meist seitlich, scheu/nervös/wenig Vertrauen → öfter hinten (je Ohr gewürfelt). Ohrenspiel: ab und zu wechselt ein Ohr kurz die Stellung (Reihenfolge aus der Datei). Angelegt nur beidseitig und nur im Extremfall (Streit, starker Schmerz, starke Abneigung). Marwari: gleiche Regeln mit eigenen 4 Stellungen. Keine Hängeohren mehr.
-- **Wimpern:** Hengst/Wallach normal, Stute/Fohlen mit Zusatzwimper.
+- **Wimpern:** alle haben die normale Wimper; Stuten und Fohlen zusätzlich `stute + fohlen`.
 - **Schöpfe:** alte ersetzen (kurz, mittel, lang, extralang). Aalstrich im Schopf/zwischen den Ohren an Gen D (Falbe); Körper folgt, wenn Dome ihn zeichnet.
 - **Anschlusspunkte:** kap (Kehle), gap (Genick), schap (Schopf) zum Ansetzen an Hals und Schopf nutzen.
 

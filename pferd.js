@@ -15,6 +15,7 @@ const FARBEN_BASIS = {
   brauner:       { name: "Brauner",                body: "#7c3f1d", mane: "#161212", points: "#1b1616", hoof: "#2c2a29" },
   dunkelbrauner: { name: "Dunkelbrauner",          body: "#402419", mane: "#120f0f", points: "#161212", hoof: "#2c2a29" },
   fuchs:         { name: "Fuchs",                  body: "#b65a29", mane: "#a64c22", hoof: "#4a3a30" },
+  dfuchs:        { name: "Dunkelfuchs",            body: "#7e3a1b", mane: "#5f2913", hoof: "#3c3029" },
   hellfuchs:     { name: "Fuchs mit Flachsmähne",  body: "#c98843", mane: "#f3e6c2", hoof: "#4a3a30" },
   dunkelfuchs:   { name: "Dunkelfuchs mit Flachsmähne", body: "#8f4a24", mane: "#eadbb0", hoof: "#3c3029" },
   palomino:      { name: "Palomino",               body: "#dcb164", mane: "#f6eed6", hoof: "#6b5a48" },
@@ -63,7 +64,7 @@ const FARBEN = new Proxy(FARBEN_BASIS, { get(t, k) { if (typeof k === "string" &
 const RASSEN = [
   { id: "araber", name: "Araber", herkunft: "Arabische Halbinsel", h: [145, 155],
     text: "Edles Wüstenpferd mit Hechtkopf, großen Augen, flacher Kruppe und hoch getragenem Schweif.",
-    farben: ["schimmel", "fliegenschimmel", "fuchs", "brauner", "rappe"],
+    farben: ["schimmel", "fliegenschimmel", "fuchs", "dfuchs", "brauner", "rappe"],
     k: { len: .96, depth: .42, legT: .072, neck: .56, nAng: 54, crest: .03, head: .35, hAng: 52, profile: -1, hw: .92, jw: 1.2, muz: .8, ear: .09, mane: "lang", maneLen: .13, vol: .6, fore: .5, tail: .62, tvol: .7, tset: 1, feather: 0, croup: 0, hq: 1, eye: 1.3 } },
   { id: "friese", name: "Friese", herkunft: "Niederlande", h: [158, 172],
     text: "Barockes Rappenpferd mit hoch aufgesetztem Hals, üppiger Mähne und langem Kötenbehang.",
@@ -74,8 +75,8 @@ const RASSEN = [
     farben: ["brauner", "fuchs", "schimmel", "braunfalbe", "braunschecke"],
     k: { nk: 0.3, len: 1.0, depth: .41, legT: .075, neck: .56, nAng: 58, crest: .04, head: .42, hAng: 55, profile: .3, hw: .95, jw: 1, muz: .9, ear: .115, curl: true, mane: "lang", maneLen: .12, vol: .6, fore: .4, tail: .7, tvol: .8, tset: .5, feather: 0, croup: .3, hq: 1, eye: 1.1 } },
   { id: "fjord", name: "Fjordpferd (Norweger)", herkunft: "Norwegen", h: [135, 150],
-    text: "Kompaktes Falbpferd mit Aalstrich und typisch gestutzter Stehmähne mit dunklem Mittelstreifen.",
-    farben: ["braunfalbe", "rotfalbe", "mausfalbe", "weissfalbe", "gelbfalbe"],
+    text: "Kompaktes Falbpferd aus Norwegen. Fünf Farbschläge: Braunfalbe (norweg. brunblakk, rund 90 %), Rotfalbe (rødblakk), Mausfalbe (grå), Weißfalbe (ulsblakk) und Gelbfalbe (gulblakk, sehr selten). Typisch sind die Urzeichnung – Aalstrich vom Schweif über den Rücken bis in die Mähne, oft Zebrastreifen an den Beinen und dunkle Streifen am Widerrist bzw. an der Schulter – und die kurz und aufrecht geschnittene Stehmähne mit dunklem Mittelstreifen. Weiße Abzeichen sind im Zuchtstandard unerwünscht: höchstens ein kleiner Stern bei Stuten und Wallachen, bei Hengsten noch strenger",
+    farben: ["braunfalbe", "rotfalbe", "mausfalbe", "weissfalbe", "gelbfalbe"], farbAnteil: { braunfalbe: .9, rotfalbe: .04, mausfalbe: .03, weissfalbe: .02, gelbfalbe: .01 },
     k: { nk: 1, len: .98, depth: .52, legT: .1, neck: .45, nAng: 48, crest: .08, head: .44, hAng: 50, profile: 0, hw: 1.1, jw: 1.1, muz: 1, ear: .085, mane: "fjord", maneLen: 0, vol: 1, fore: .5, tail: .75, tvol: 1, tset: .2, feather: .15, croup: .5, hq: 1.05, eye: 1 } },
   { id: "haflinger", name: "Haflinger", herkunft: "Südtirol / Österreich", h: [138, 150],
     text: "Kräftiges Gebirgspferd, immer fuchsfarben mit heller Flachsmähne.",
@@ -99,16 +100,16 @@ const RASSEN = [
     k: { nk: 0.8, len: .97, depth: .47, legT: .09, neck: .52, nAng: 58, crest: .08, head: .44, hAng: 58, profile: .6, hw: 1, jw: 1, muz: 1, ear: .1, mane: "lang", maneLen: .2, vol: .9, fore: .7, tail: .75, tvol: 1, tset: .3, feather: 0, croup: .6, hq: 1, eye: 1 } },
   { id: "vollblut", name: "Englisches Vollblut", herkunft: "England", h: [155, 172],
     text: "Das Rennpferd schlechthin: lange Beine, tiefe Brust, langer schräger Hals und feiner Kopf.",
-    farben: ["brauner", "dunkelbrauner", "fuchs", "rappe", "schimmel"],
+    farben: ["brauner", "dunkelbrauner", "fuchs", "dfuchs", "rappe", "schimmel"],
     k: { len: 1.02, depth: .41, legT: .075, neck: .6, nAng: 45, crest: .02, head: .42, hAng: 50, profile: 0, hw: .92, jw: 1, muz: .9, ear: .1, mane: "kurz", maneLen: .05, vol: .6, fore: .3, tail: .6, tvol: .6, tset: .3, feather: 0, croup: .3, hq: 1, eye: 1.05 } },
   { id: "quarter", name: "Quarter Horse", herkunft: "USA", h: [142, 163],
     text: "Muskulöses Westernpferd mit kurzem Kopf, großen Ganaschen und extrem kräftiger Hinterhand.",
-    farben: ["fuchs", "brauner", "rappe", "palomino", "buckskin", "braunfalbe", "mausfalbe", "blueroan", "rotschimmel", "ov_brauner"],
+    farben: ["fuchs", "dfuchs", "brauner", "rappe", "palomino", "buckskin", "braunfalbe", "mausfalbe", "blueroan", "rotschimmel", "ov_brauner"],
     warnung: "In dieser Rasse kommt das Overo-Gen (Frame Overo) vor. Werden zwei Overo-Träger verpaart, ist jedes vierte Fohlen ein Lethal-White-Fohlen (O/O): Ihm fehlen Nervenzellen im Darm, es bekommt schwere Koliken und stirbt in den ersten Lebenstagen. Vor der Zucht mit einem Overo den Partner per Gentest prüfen!",
     k: { nk: 0.7, len: .96, depth: .47, legT: .09, neck: .5, nAng: 54, crest: .05, head: .42, hAng: 56, profile: 0, hw: 1.08, jw: 1.06, muz: .95, ear: .085, mane: "kurz", maneLen: .06, vol: .8, fore: .3, tail: .65, tvol: .8, tset: .1, feather: 0, croup: .5, hq: 1.2, eye: 1 } },
   { id: "hannoveraner", name: "Hannoveraner", herkunft: "Deutschland", h: [160, 175],
     text: "Großrahmiges Warmblut für Dressur und Springen – langer Hals, gerader Kopf, viel Rahmen.",
-    farben: ["brauner", "dunkelbrauner", "fuchs", "rappe", "schimmel"],
+    farben: ["brauner", "dunkelbrauner", "fuchs", "dfuchs", "rappe", "schimmel"],
     k: { nk: 0.4, len: 1.03, depth: .45, legT: .09, neck: .6, nAng: 52, crest: .05, head: .44, hAng: 55, profile: 0, hw: 1, jw: 1, muz: 1, ear: .1, mane: "kurz", maneLen: .05, vol: .7, fore: .3, tail: .65, tvol: .8, tset: .3, feather: 0, croup: .4, hq: 1, eye: 1 } },
   { id: "isi", name: "Islandpferd", herkunft: "Island", h: [130, 145],
     text: "Robustes Gangpferd (Tölt!) mit dichter Doppelmähne und fast allen Farben der Pferdewelt.",
@@ -125,11 +126,11 @@ const RASSEN = [
   // ---------- Veredler-Rassen (v316) – Spielkopf, bis Dome eigene Köpfe zeichnet ----------
   { id: "trakehner", name: "Trakehner", herkunft: "Ostpreußen / Deutschland", h: [160, 170],
     text: "Edles Reitpferd mit feinem Kopf, langem Hals und viel Ausdruck – ältestes deutsches Warmblut, darf auch andere Warmblutrassen veredeln.",
-    farben: ["brauner", "dunkelbrauner", "fuchs", "rappe", "schimmel"],
+    farben: ["brauner", "dunkelbrauner", "fuchs", "dfuchs", "rappe", "schimmel"],
     k: { nk: 0.3, len: 1.01, depth: .43, legT: .084, neck: .61, nAng: 53, crest: .04, head: .41, hAng: 54, profile: -.15, hw: .96, jw: 1.05, muz: .94, ear: .1, mane: "kurz", maneLen: .05, vol: .65, fore: .3, tail: .65, tvol: .75, tset: .4, feather: 0, croup: .35, hq: 1, eye: 1.08 } },
   { id: "welshcob", name: "Welsh Cob (Sektion D)", herkunft: "Wales", h: [137, 155],
     text: "Kraftvoller, temperamentvoller Cob aus Wales mit spektakulärem Trab, dichter Mähne und leichtem Fesselbehang – robust und genügsam.",
-    farben: ["fuchs", "brauner", "rappe", "dunkelbrauner", "palomino", "buckskin", "schimmel"],
+    farben: ["fuchs", "dfuchs", "brauner", "rappe", "dunkelbrauner", "palomino", "buckskin", "schimmel"],
     k: { nk: 0.9, len: .98, depth: .5, legT: .1, neck: .52, nAng: 58, crest: .09, head: .42, hAng: 55, profile: -.1, hw: 1.04, jw: 1.1, muz: .95, ear: .085, mane: "lang", maneLen: .22, vol: 1.1, fore: .8, tail: .8, tvol: 1.1, tset: .35, feather: .35, croup: .5, hq: 1.05, eye: 1.1 } },
   { id: "clydesdale", name: "Clydesdale", herkunft: "Schottland", h: [163, 183],
     text: "Schottischer Kaltblüter mit viel Weiß (Sabino), hohem Gang und langem, seidigem Fesselbehang – etwas leichter und höherbeiniger als das Shire.",
@@ -145,7 +146,7 @@ const RASSEN = [
     k: { nk: 1, len: 1.01, depth: .53, legT: .115, neck: .49, nAng: 54, crest: .09, head: .45, hAng: 54, profile: .05, hw: 1.1, jw: 1.05, muz: 1, ear: .085, mane: "lang", maneLen: .3, vol: 1.3, fore: 1, tail: .9, tvol: 1.3, tset: .2, feather: .8, croup: .6, hq: 1.08, eye: 1 } },
   { id: "angloaraber", name: "Anglo-Araber", herkunft: "Frankreich / Polen", h: [155, 165],
     text: "Kreuzung aus Englischem Vollblut und Araber (mindestens 25 % Araber) – leistungsstark, ausdauernd und edel, für Vielseitigkeit, Springen und Rennen.",
-    farben: ["fuchs", "brauner", "dunkelbrauner", "schimmel", "rappe"],
+    farben: ["fuchs", "dfuchs", "brauner", "dunkelbrauner", "schimmel", "rappe"],
     k: { len: .99, depth: .42, legT: .076, neck: .58, nAng: 50, crest: .03, head: .39, hAng: 52, profile: -.4, hw: .92, jw: 1.1, muz: .86, ear: .095, mane: "kurz", maneLen: .06, vol: .6, fore: .35, tail: .62, tvol: .65, tset: .6, feather: 0, croup: .2, hq: 1, eye: 1.15 } },
   { id: "shagya", name: "Shagya-Araber", herkunft: "Ungarn (Bábolna)", h: [150, 160],
     text: "Großrahmiger Araber aus der ungarischen Militärzucht: edel wie ein Araber, aber kräftiger – sehr oft Schimmel, robust und leistungsbereit.",
@@ -542,6 +543,30 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   defs += `<filter id="wb-${uid}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.2"/></filter>`;
   let g = `<defs>${defs}</defs>`;
 
+  // Beinabzeichen je Bein (v430): opt.beinAbz = { vn, vf, hn, hf } – vorn/hinten, nah = linke Seite (zum Betrachter), fern = rechte Seite
+  // Stufen: ballen, krone, halbeFessel, fessel, halberFuss, fuss, hochweiss. Zebrastreifen (Falben): opt.zebra 0–1, Schulterstreifen opt.schulter
+  const BA = opt.beinAbz || {};
+  const BEIN_H = { krone: .045, halbeFessel: .085, fessel: .12, halberFuss: .3, fuss: .5, hochweiss: .75 };
+  const beinClip = (id, pts) => `<clipPath id="bw-${uid}-${id}"><path d="${glatt(pts)}"/></clipPath>`;
+  const beinWeiss = (st, xc, id, farbe) => {
+    if (!st) return "";
+    let m;
+    if (st === "ballen") m = `<ellipse cx="${f(xc + 0.5 * w)}" cy="${f(-hh - 0.4)}" rx="${f(0.5 * w)}" ry="${f(0.42 * hh)}" fill="${farbe}"/>`;
+    else { const hoehe = BEIN_H[st] || 0, wl = [P(xc - 3 * w, 2)]; for (let x = xc - 3 * w; x <= xc + 3 * w; x += 1.5) wl.push(P(x, -hoehe * Lg - hh - 1 + Math.sin(x * 0.7) * 0.8)); wl.push(P(xc + 3 * w, 2)); m = `<path d="${eckig(wl)}" fill="${farbe}"/>`; }
+    return `<g clip-path="url(#bw-${uid}-${id})">${m}</g>`;
+  };
+  const zebraStreifen = (xc, id, farbe) => {   // Streifen am Unterarm bzw. Unterschenkel (oberhalb von Knie/Sprunggelenk)
+    if (!opt.zebra || !(C.stripe || C.points)) return "";
+    const n = 2 + Math.round(opt.zebra * 3), op = (0.3 + 0.45 * opt.zebra).toFixed(2), sw = (1 + 0.7 * opt.zebra).toFixed(2);
+    let m = "";
+    for (let i = 0; i < n; i++) { const y = -(0.93 - i * 0.3 / Math.max(1, n - 1)) * Lg; m += `<path d="M${f(xc - 1.6 * w)},${f(y + 0.6)}Q${f(xc)},${f(y + 1.6)} ${f(xc + 1.6 * w)},${f(y - 0.4)}" fill="none" stroke="${farbe}" stroke-width="${sw}" stroke-linecap="round" opacity="${op}"/>`; }
+    return `<g clip-path="url(#bw-${uid}-${id})">${m}</g>`;
+  };
+  const weissHuf = st => st && st !== "ballen" && st !== "krone";   // ab weißer Fessel: heller Huf (wie in echt)
+  const hufFarbe = st => weissHuf(st) ? "#cbbd9c" : hoof;
+  if (!liegt) defs += beinClip("vn", vorderN) + beinClip("hn", hinterN) + beinClip("vf", vorderF) + beinClip("hf", hinterF);
+  g = `<defs>${defs}</defs>`;
+
   // Hintere Beine
   g += `<g>${umriss(fern, INK)}`;
   if (C.pattern === "tobiano") g += `<rect x="${f(minX)}" y="${f(-0.68 * Lg)}" width="${f(maxX - minX)}" height="${f(0.68 * Lg + 2)}" fill="#dedad3" clip-path="url(#cf-${uid})" filter="url(#wm-${uid})"/>`;
@@ -550,8 +575,10 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     if (C.pattern === "leopard") for (let i = 0; i < 9; i++) g += `<ellipse cx="${f(minX + rnd() * (maxX - minX))}" cy="${f(-rnd() * Lg)}" rx="${f(1.6 + rnd() * 1.8)}" ry="${f(1.4 + rnd() * 1.5)}" fill="${dunkel(spotFarbe)}"/>`;
     g += `</g>`;
   }
+  if (!liegt) { const sf = dunkel(C.stripe || C.points || body), wf = dunkel("#f6f4ee");
+    g += zebraStreifen(fx2, "vf", sf) + zebraStreifen(hx2, "hf", sf) + beinWeiss(BA.vf, fx2, "vf", wf) + beinWeiss(BA.hf, hx2, "hf", wf); }
   g += `<g stroke="${INK}" stroke-width="1.6" vector-effect="non-scaling-stroke">` +
-    (liegt ? [] : [huf(fx2), huf(hx2)]).map(h => `<path d="${eckig(h)}" fill="${dunkel(hoof)}" vector-effect="non-scaling-stroke"/>`).join("") + "</g></g>";
+    (liegt ? [] : [[huf(fx2), BA.vf], [huf(hx2), BA.hf]]).map(([h, st]) => `<path d="${eckig(h)}" fill="${dunkel(hufFarbe(st))}" vector-effect="non-scaling-stroke"/>`).join("") + "</g></g>";
 
   // Kopfbewegung (leichtes Nicken): Kopf-Gruppe
   const nick = `<animateTransform attributeName="transform" type="rotate" values="0 ${f(Pn.x)} ${f(Pn.y)};0 ${f(Pn.x)} ${f(Pn.y)};-3 ${f(Pn.x)} ${f(Pn.y)};0 ${f(Pn.x)} ${f(Pn.y)}" keyTimes="0;.8;.9;1" dur="6s" repeatCount="indefinite"/>`;
@@ -651,7 +678,12 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     if (t === "durchgehend") m += `<path d="${band(0.14, 1.06, -0.09, 0.08, false)}" fill="${WEISS}"/>`;
     g += `<g clip-path="url(#ck-${uid})">${m}</g>`;
   }
-  if (abz.beine && !liegt) {
+  if (!liegt && opt.beinAbz) {
+    const sf = C.stripe || C.points || body;
+    g += zebraStreifen(fx, "vn", sf) + zebraStreifen(hx, "hn", sf) + beinWeiss(BA.vn, fx, "vn", WEISS) + beinWeiss(BA.hn, hx, "hn", WEISS);
+    // Schulterstreifen (primitives Abzeichen der Falben): kurzer dunkler Streifen vom Widerrist über die Schulter
+    if (opt.schulter && C.stripe) g += `<g clip-path="url(#cr-${uid})"><path d="M${f(Wn.x + 0.5)},${f(Wn.y + 2)}Q${f(Wn.x - 1.5)},${f(Wn.y + 0.2 * D)} ${f(Wn.x - 3.5)},${f(Wn.y + 0.38 * D)}" fill="none" stroke="${C.stripe}" stroke-width="2.2" stroke-linecap="round" opacity=".55"/></g>`;
+  } else if (abz.beine && !liegt) {
     const hoehe = { krone: 0.05, fessel: 0.12, halbefessel: 0.085, halbstrumpf: 0.33, strumpf: 0.55, hochweiss: 0.75 }[abz.beine] || 0;
     const welle = [P(minX - 5, 2)];
     for (let x = minX - 5; x <= maxX + 5; x += 3) welle.push(P(x, -hoehe * Lg - hh - 1 + Math.sin(x * 0.7) * 0.8));
@@ -761,7 +793,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += `<g clip-path="url(#cr-${uid})">` + strich(add(mid(T, Cn), mul(nOut, -2)), 2, 1.5) + strich(add(mid(T, Cn), add(mul(nOut, -2), P(1, 4))), 2, 1.2) + `</g>`;
   // Hufe vorn
   g += `<g stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke">` +
-    (liegt ? [hufLiegend, hufLiegendH] : [huf(fx), huf(hx)]).map(h => `<path d="${eckig(h)}" fill="${hoof}" vector-effect="non-scaling-stroke"/>`).join("") + "</g>" +
+    (liegt ? [[hufLiegend], [hufLiegendH]] : [[huf(fx), BA.vn], [huf(hx), BA.hn]]).map(([h, st]) => `<path d="${eckig(h)}" fill="${hufFarbe(st)}" vector-effect="non-scaling-stroke"/>`).join("") + "</g>" +
     (liegt ? [] : [fx, hx]).map(xc => `<path d="M${f(xc - 0.55 * w)},${f(-hh + 1.2)}L${f(xc - 0.75 * w)},${f(-1.2)}" stroke="#fff" stroke-opacity=".35" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`).join("");
   // Behang über Hufe (vorn)
   if (behN.length) {
@@ -815,7 +847,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     const schopfFarbe = dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane);
     g += `<g transform="matrix(${ekMatrix})">${kopfNeuSVG(eigenKopf, "ek" + uid, { fell: head, muschel, maehne: schopfFarbe, ink: INK, statisch: opt.statisch, augenZu: opt.augenZu, schattierung: schatt, alter: kopfAlter,
       marwari: !!k.curl, wimper: opt.wimper != null ? opt.wimper : (opt.geschlecht === "Stute" || stufe === "fohlen"), ohrR: OS.R, ohrL: OS.L, ohrSpiel: OS.spiel !== false, seed: opt.seed || rasseId,
-      abz: opt.kopfAbz, maul: opt.maul, augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
+      abz: opt.kopfAbz, maul: opt.maul, ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
   }
   // Mähne
   if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
@@ -876,9 +908,10 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     // nur das vordere Bein (für die Enzyklopädie)
     let b = `<defs>${pts ? `<linearGradient id="lg-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-0.72 * Lg)}" x2="0" y2="${f(-0.32 * Lg)}"><stop offset=".15" stop-color="${body}"/><stop offset=".85" stop-color="${pts}"/></linearGradient>` : ""}<clipPath id="cb-${uid}"><path d="${glatt(vorderN)}"/></clipPath></defs>`;
     b += umriss([[glatt(vorderN), beinFill]], INK);
-    const hoehe = { krone: 0.05, fessel: 0.12, halbefessel: 0.085, halbstrumpf: 0.33, strumpf: 0.55, hochweiss: 0.75 }[(opt.abzeichen || {}).beine] || 0;
+    b += `<defs>${beinClip("vn", vorderN)}</defs>` + zebraStreifen(fx, "vn", C.stripe || C.points || body) + beinWeiss(BA.vn, fx, "vn", "#fbfaf6");
+    const hoehe = BA.vn ? 0 : { krone: 0.05, fessel: 0.12, halbefessel: 0.085, halbstrumpf: 0.33, strumpf: 0.55, hochweiss: 0.75 }[(opt.abzeichen || {}).beine] || 0;
     if (hoehe) { const wl = [P(fx - 3 * w, 2)]; for (let x = fx - 3 * w; x <= fx + 3 * w; x += 1.5) wl.push(P(x, -hoehe * Lg - hh - 1 + Math.sin(x * 0.7) * 0.8)); wl.push(P(fx + 3 * w, 2)); b += `<g clip-path="url(#cb-${uid})"><path d="${eckig(wl)}" fill="#fbfaf6"/></g>`; }
-    b += `<path d="${eckig(huf(fx))}" fill="${hoof}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+    b += `<path d="${eckig(huf(fx))}" fill="${hufFarbe(BA.vn)}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
     return { svg: `<g>${b}</g>`, box: { minX: fx - 1.6 * w, maxX: fx + 1.8 * w, minY: bottom - 8 } };
   }
   // Einzelteile für Zeichenvorlagen (Krita/Inkscape)
@@ -1050,6 +1083,9 @@ function ALTERS_K(stufe, k) {
 const KOPFFORMEN = { gerade: "Gerader Kopf", hecht: "Hechtkopf", ramsnase: "Ramsnase", rams: "Ramskopf", keil: "Keilkopf", schaf: "Schafskopf", schwein: "Schweinskopf" };
 const KOPF_STUFE = ["", "leicht", "normal", "stark"];
 const KOPF_WEISS = "#f6f4ee";   // Farbe der Kopfabzeichen
+// Ohrgröße je Rasse (v430, Dome): Araber klein und fein, Ponys und Quarter klein, Kaltblüter groß – alle anderen 1
+const OHR_RASSE = { araber: .82, shagya: .85, angloaraber: .88, quarter: .88, shetty: .85, isi: .88, welshcob: .88, fell: .9, dales: .92, fjord: .9, haflinger: .95, vollblut: .95, lipizzaner: .95,
+  tekke: 1.08, marwari: 1, shire: 1.12, clydesdale: 1.12, tinker: 1.05, friese: 1, andalusier: 1, hannoveraner: 1, trakehner: 1 };
 // typische Kopfform je Rasse (fehlt die Rasse: gerader Kopf)
 const KOPFFORM_RASSE = { araber: "hecht", shagya: "hecht", angloaraber: "hecht", welshcob: "hecht", vollblut: "keil", trakehner: "keil", hannoveraner: "keil", tekke: "keil",
   shire: "ramsnase", clydesdale: "ramsnase", tinker: "ramsnase", friese: "ramsnase", andalusier: "ramsnase", lipizzaner: "rams" };
@@ -1082,7 +1118,10 @@ function kopfNeuSVG(key, uid, o = {}) {
     .replaceAll("__AAL__", o.maehne || "#555").replaceAll("#090609", ink).replaceAll("__WEISS__", KOPF_WEISS).replaceAll("__MEHL__", mix(o.fell || "#9a9a9a", "#f1e4c4", .75)).replaceAll("__DUNKEL__", mix(o.fell || "#9a9a9a", "#171313", .7)).replaceAll("__U__", uid + "-");
   const am = kopfAlterMatrix(o.alter), A = KOPF_ALTER[o.alter] || {}, ac = K.augeMitte, ac2 = kmPunkt(am, ac), as = A.a || 1;
   const rnd = zufall((o.seed || "k") + "-ohren");
-  const ohr = (seite) => {
+  // Ohrgröße je Rasse (v430, o.ohrGr): um den Ohransatz skaliert
+  const ohr = seite => { const s = o.ohrGr || 1, B = (K.ohrBasis || {})[(o.marwari ? "marwari" : "basis") + seite]; const h = ohrRoh(seite);
+    return s === 1 || !B ? h : `<g transform="translate(${B.x},${B.y}) scale(${s.toFixed(3)}) translate(${-B.x},${-B.y})">${h}</g>`; };
+  const ohrRoh = (seite) => {
     const T = K.ohren[o.marwari ? "marwari" : "basis"][seite], st = OHR_REIHE.includes(o["ohr" + seite]) ? o["ohr" + seite] : "vorne";
     const ziel = o.ohrSpiel && !o.statisch ? ohrSpielZiel(st, rnd()) : null;
     if (!ziel) return farbe(T[st]);
@@ -1159,6 +1198,7 @@ const FARBBESCHREIBUNG = {
   brauner: "Braunes Fell mit schwarzer Mähne, schwarzem Schweif und dunklen Beinen.",
   dunkelbrauner: "Sehr dunkles Braun, wirkt fast schwarz.",
   fuchs: "Rotbraunes Fell, Mähne und Schweif gleichfarbig.",
+  dfuchs: "Dunkler, schokoladen- bis leberbrauner Fuchs mit gleichfarbiger oder dunklerer Mähne (Sooty-Gen) – sehr dunkle heißen auch Kohlfuchs.",
   hellfuchs: "Fuchs mit heller Flachsmähne – typisch Haflinger.",
   dunkelfuchs: "Dunkler, schokoladiger Fuchs mit Flachsmähne.",
   palomino: "Goldgelbes Fell mit weißer Mähne (Fuchs + ein Cream-Gen).",

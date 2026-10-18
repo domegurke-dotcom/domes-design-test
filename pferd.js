@@ -13,15 +13,15 @@ const FARBEN_BASIS = {
   apfelschimmel: { name: "Apfelschimmel",          body: "#b9b9b6", mane: "#626262", points: "#666666", head: "#aaaaa7", muzzle: "#4a4646", grau: .6, pattern: "dapple", dapple: "#e6e6e3", hoof: "#474442" },
   rappe:         { name: "Rappe (schwarz)",        body: "#211e1f", mane: "#121011", hoof: "#2c2a29" },
   brauner:       { name: "Brauner",                body: "#7c3f1d", mane: "#161212", points: "#1b1616", hoof: "#2c2a29" },
-  dunkelbrauner: { name: "Dunkelbrauner",          body: "#58301b", head: "#3a2218", russ: "#2a1810", mane: "#120f0f", points: "#161212", hoof: "#2c2a29" },   // v485 (Dome): Ruß oben (Kopf, Hals, Rücken, Kruppe), Bauch/Flanke heller
+  dunkelbrauner: { name: "Dunkelbrauner",          body: "#58301b", russ: "#2a1810", mane: "#120f0f", points: "#161212", hoof: "#2c2a29" },   // v485 (Dome): Ruß oben (Kopf, Hals, Rücken, Kruppe), Bauch/Flanke heller
   fuchs:         { name: "Fuchs",                  body: "#b65a29", mane: "#a64c22", hoof: "#4a3a30" },
-  dfuchs:        { name: "Dunkelfuchs",            body: "#86401f", head: "#5c2a15", russ: "#4a2010", mane: "#5f2913", hoof: "#3c3029" },
+  dfuchs:        { name: "Dunkelfuchs",            body: "#86401f", russ: "#4a2010", mane: "#5f2913", hoof: "#3c3029" },
   hellfuchs:     { name: "Fuchs mit Flachsmähne",  body: "#c98843", mane: "#f3e6c2", hoof: "#4a3a30" },
-  dunkelfuchs:   { name: "Dunkelfuchs mit Flachsmähne", body: "#96502a", head: "#64321a", russ: "#52281a", mane: "#eadbb0", hoof: "#3c3029" },
+  dunkelfuchs:   { name: "Dunkelfuchs mit Flachsmähne", body: "#96502a", russ: "#52281a", mane: "#eadbb0", hoof: "#3c3029" },
   palomino:      { name: "Palomino",               body: "#dcb164", mane: "#f6eed6", hoof: "#6b5a48" },
   isabell:       { name: "Isabell (Cremello)",     body: "#efe4cc", mane: "#f7f1e3", muzzle: "#d8a699", hoof: "#b9a88f" },
   buckskin:      { name: "Buckskin",               body: "#c9a064", mane: "#171313", points: "#1d1818", hoof: "#2c2a29" },
-  russbuckskin:  { name: "Rußfalbe (Sooty Buckskin)", body: "#c2a172", head: "#5f4d3d", russ: "#5f4d3d", mane: "#141111", points: "#1a1515", hoof: "#2c2a29" },   // v484 (Dome): Buckskin mit Rußanflug (Sty) – dunkler Kopf/Hals, heller Körper
+  russbuckskin:  { name: "Rußfalbe (Sooty Buckskin)", body: "#c2a172", russ: "#5f4d3d", mane: "#141111", points: "#1a1515", hoof: "#2c2a29" },   // v484 (Dome): Buckskin mit Rußanflug (Sty) – dunkler Kopf/Hals, heller Körper
   braunfalbe:    { name: "Braunfalbe",             body: "#c9a878", mane: "#1d1818", points: "#2a2220", stripe: "#2a2220", hoof: "#2c2a29" },
   rotfalbe:      { name: "Rotfalbe",               body: "#d8a882", mane: "#9a5a38", stripe: "#9e5c38", hoof: "#5a4538" },
   mausfalbe:     { name: "Mausfalbe (Grullo)",     body: "#8f887c", mane: "#1a1818", points: "#1f1d1c", stripe: "#1f1d1c", head: "#6d675f", hoof: "#2c2a29" },
@@ -34,7 +34,7 @@ const FARBEN_BASIS = {
   blueroan:      { name: "Blue Roan",              body: "#757c82", mane: "#1a1818", points: "#222021", head: "#2c2a2a", pattern: "roan", hoof: "#2c2a29" },
   rotschimmel:   { name: "Rotschimmel (Roan)",     body: "#c3947c", mane: "#8a4424", points: "#8f4a28", head: "#9a4e2a", pattern: "roan", hoof: "#4a3a30" },
   hellbrauner:   { name: "Hellbrauner",            body: "#a8643a", mane: "#1d1716", points: "#2a201c", hoof: "#2c2a29" },
-  schwarzbrauner:{ name: "Schwarzbrauner",         body: "#2a1d18", mane: "#100d0d", points: "#141010", head: "#3a2a22", muzzle: "#8a5a3a", hoof: "#2c2a29" },
+  schwarzbrauner:{ name: "Schwarzbrauner",         body: "#2a1d18", mane: "#100d0d", points: "#141010", muzzle: "#8a5a3a", hoof: "#2c2a29" },
   lethalwhite:   { name: "Weiß (Lethal White)",    body: "#f7f3ee", mane: "#f3eee6", muzzle: "#e3b5ae", hoof: "#cdbfa8" },
 };
 // Scheckungen, die auf jeder Grundfarbe vorkommen: Kürzel + "_" + Grundfarbe (z. B. "ov_brauner")
@@ -1024,7 +1024,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     const det = a_ * a_ + b_ * b_, ia = a_ / det, ib = -b_ / det, ie = -(ia * e_ - ib * f_), iff = -(ib * e_ + ia * f_);
     const mz = hp(0.93, 0.12);
     const schatt = `<g transform="matrix(${[ia, ib, -ib, ia, ie, iff].map(x => x.toFixed(5)).join(" ")})">` +
-      `<rect x="${f(minX - 60)}" y="${f(minY - 5)}" width="${f(maxX - minX + 120)}" height="${f(-minY + 10)}" fill="url(#sh-${uid})" opacity=".8"/>` + (C.pattern === "fleck" ? `<rect ${bx} fill="url(#fk-${uid})" opacity=".8"/>` : "") +   // v468: Fliegenschimmel-Tupfen auch im Gesicht; v461: größer als bx – Domes Köpfe ragen vorn über den Rahmen (sonst Streifen an der Nasenkante)
+      `<rect x="${f(minX - 60)}" y="${f(minY - 5)}" width="${f(maxX - minX + 120)}" height="${f(-minY + 10)}" fill="url(#sh-${uid})" opacity=".8"/>` + (C.pattern === "fleck" ? `<rect ${bx} fill="url(#fk-${uid})" opacity=".8"/>` : "") + (C.russ ? `<rect ${bx} fill="${C.russ}" opacity=".45"/>` : "") +   /* v489 (Dome): Kopf mit demselben Rußanflug wie der Hals – keine eigene Kopffarbe mehr */   // v468: Fliegenschimmel-Tupfen auch im Gesicht; v461: größer als bx – Domes Köpfe ragen vorn über den Rahmen (sonst Streifen an der Nasenkante)
       (C.muzzle && !opt.maul && !(C.grau > .3) ? `<ellipse cx="${f(mz.x)}" cy="${f(mz.y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(mz.x)} ${f(mz.y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>` : "") +   // Schimmel: Domes Ebene „graumaul“ (im Spiel „dunkel“) in kopfNeuSVG (v449)
       (MG > 0 ? `<rect ${bx} fill="url(#mt-${uid})"/>` : "") + `<g filter="url(#wb-${uid})"><path d="${kehleD}" fill="${schatten}" opacity=".18"/></g></g>`;   // v472 (Dome): Kopf bekommt dieselben Schichten wie der Hals (Glanz, Kehlschatten) – kein eigener Kieferschatten/Lichtfleck mehr, sonst Kanten am Übergang
     // Ohrstellung (opt.ohrStellung = { R, L, spiel }); ohne Angabe: beide Ohren vorne, bei Unwohlsein (opt.ohren „geknickt“) seitlich
@@ -1032,7 +1032,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     const schopfFarbe = dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane);
     g += `<g transform="matrix(${ekMatrix})">${kopfNeuSVG(eigenKopf, "ek" + uid, { fell: head, muschel, maehne: schopfFarbe, ink: INK, statisch: opt.statisch, augenZu: opt.augenZu, schattierung: schatt, alter: kopfAlter,
       marwari: !!k.curl, wimper: opt.wimper != null ? opt.wimper : (opt.geschlecht === "Stute" || stufe === "fohlen"), ohrR: OS.R, ohrL: OS.L, ohrSpiel: OS.spiel !== false, seed: opt.seed || rasseId,
-      ohneUeb: !schopfL || rasseId === "tekke", abz: opt.kopfAbz, maul: opt.maul || (C.grau > .3 ? "dunkel" : undefined), ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, augenRing: C.grau > .3 && !opt.maul ? { farbe: C.muzzle, st: C.grau } : /schwarzbrauner/.test(farbId) ? { farbe: "#a8643a", st: .5 } : null, /* v481 (Dome): Schwarzbraune – kupferfarben ums Auge (Platzhalter) */ lpHaut: !!(LP && LP.haut) || !!opt.kroete, kroeteHell: !LP && !!opt.kroete, sklera: !!(LP && LP.sklera), augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
+      ohneUeb: !schopfL || rasseId === "tekke", ohrFell: C.russ ? mix(head, C.russ, .45) : null, abz: opt.kopfAbz, maul: opt.maul || (C.grau > .3 ? "dunkel" : undefined), ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, augenRing: C.grau > .3 && !opt.maul ? { farbe: C.muzzle, st: C.grau } : /schwarzbrauner/.test(farbId) ? { farbe: "#a8643a", st: .5 } : null, /* v481 (Dome): Schwarzbraune – kupferfarben ums Auge (Platzhalter) */ lpHaut: !!(LP && LP.haut) || !!opt.kroete, kroeteHell: !LP && !!opt.kroete, sklera: !!(LP && LP.sklera), augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
   }
   // Mähne
   if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
@@ -1326,7 +1326,7 @@ function kopfNeuSVG(key, uid, o = {}) {
   const ohr = seite => { const s = o.ohrGr || 1, B = (K.ohrBasis || {})[(o.marwari ? "marwari" : "basis") + seite]; const h = ohrRoh(seite);
     return s === 1 || !B ? h : `<g transform="translate(${B.x},${B.y}) scale(${s.toFixed(3)}) translate(${-B.x},${-B.y})">${h}</g>`; };
   // v463 (Dome): Ohren so hell wie der Kopf daneben – der Kopf bekommt oben die helle Schattierung (sh-), die Ohren liegen außerhalb
-  const farbeOhr = t => farbe(o.schattierung ? t.replaceAll("__FELL__", mix(o.fell || "#9a9a9a", "#ffffff", .13)) : t);
+  const farbeOhr = t => farbe(o.schattierung ? t.replaceAll("__FELL__", mix(o.ohrFell || o.fell || "#9a9a9a", "#ffffff", .13)) : t);
   const ohrRoh = (seite) => {
     const T = K.ohren[o.marwari ? "marwari" : "basis"][seite], st = OHR_REIHE.includes(o["ohr" + seite]) ? o["ohr" + seite] : "vorne";
     const ziel = o.ohrSpiel && !o.statisch ? ohrSpielZiel(st, rnd()) : null;

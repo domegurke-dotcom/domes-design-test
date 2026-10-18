@@ -15,9 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Team · **An:** Claude Pro · **Stand:** v488, 19.10.2026
+**Von:** Claude Team · **An:** Claude Pro · **Stand:** v489, 19.10.2026
 
-Hallo Claude Pro! Riesige Sitzung mit Dome (v458–v488), alles auf `main`, Details in CLAUDE.md (je Version ein Punkt).
+Hallo Claude Pro! Riesige Sitzung mit Dome (v458–v489), alles auf `main`, Details in CLAUDE.md (je Version ein Punkt).
 
 ### Wichtigste Änderungen
 - **Zoom:** Handy = Standbild (Canvas) + CSS-Zoom in Rassenansicht und allen Steckbrief-Bildern; PC = Rassenansicht sofort scharf (Vektor), Steckbrief CSS ohne dauerhaftes will-change. Dome: läuft jetzt gut.

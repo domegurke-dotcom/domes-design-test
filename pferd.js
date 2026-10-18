@@ -590,7 +590,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Apfelschimmel / Roan: jeder Fleck mit kreisförmiger Blende (weicher Verlauf von innen nach außen)
   if (C.pattern === "dapple") defs += `<radialGradient id="dg-${uid}"><stop offset="0" stop-color="${C.dapple}" stop-opacity=".95"/><stop offset=".55" stop-color="${C.dapple}" stop-opacity=".7"/><stop offset="1" stop-color="${C.dapple}" stop-opacity="0"/></radialGradient>` +
     `<pattern id="dp-${uid}" patternUnits="userSpaceOnUse" width="8" height="7"><circle cx="4" cy="3.5" r="3" fill="url(#dg-${uid})"/><circle cx="0" cy="0" r="2.7" fill="url(#dg-${uid})"/><circle cx="8" cy="0" r="2.7" fill="url(#dg-${uid})"/><circle cx="0" cy="7" r="2.7" fill="url(#dg-${uid})"/><circle cx="8" cy="7" r="2.7" fill="url(#dg-${uid})"/></pattern>`;
-  if (C.pattern === "fleck") defs += `<pattern id="fk-${uid}" patternUnits="userSpaceOnUse" width="6" height="5.5"><circle cx="1" cy="1.2" r=".42" fill="${C.fleck}"/><circle cx="3.9" cy="2.6" r=".36" fill="${C.fleck}"/><circle cx="2.2" cy="4.3" r=".3" fill="${C.fleck}"/><circle cx="5.3" cy="4.9" r=".4" fill="${C.fleck}"/><circle cx="4.6" cy=".5" r=".28" fill="${C.fleck}"/></pattern>`;
+  if (C.pattern === "fleck") { const FP = [[1, 1.2, .42], [3.9, 2.6, .36], [2.2, 4.3, .3], [5.3, 4.9, .4], [4.6, .5, .28], [.4, 3.1, .3], [3, .3, .26], [5.6, 2.2, .3], [1.6, 5.2, .27]], nF = C.fleckSt === 0 ? 2 : C.fleckSt === 2 ? 9 : 5;   // v474: wenige/typisch/viele Fliegen
+    defs += `<pattern id="fk-${uid}" patternUnits="userSpaceOnUse" width="6" height="5.5">${FP.slice(0, nF).map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${C.fleck}"/>`).join("")}</pattern>`; }
   if (C.pattern === "roan") defs += `<radialGradient id="rg-${uid}"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>` +
     `<pattern id="rn-${uid}" patternUnits="userSpaceOnUse" width="3" height="3"><circle cx="1" cy="1" r=".85" fill="url(#rg-${uid})"/><circle cx="2.4" cy="2.2" r=".7" fill="url(#rg-${uid})"/></pattern>`;
   // v443 (Dome): beim Achal-Tekkiner glänzen Cream- und Falbfarben golden („Gold“: Goldfalbe/Buckskin, Gold-Palomino)
@@ -1315,7 +1316,7 @@ function kopfNeuSVG(key, uid, o = {}) {
   const ohr = seite => { const s = o.ohrGr || 1, B = (K.ohrBasis || {})[(o.marwari ? "marwari" : "basis") + seite]; const h = ohrRoh(seite);
     return s === 1 || !B ? h : `<g transform="translate(${B.x},${B.y}) scale(${s.toFixed(3)}) translate(${-B.x},${-B.y})">${h}</g>`; };
   // v463 (Dome): Ohren so hell wie der Kopf daneben – der Kopf bekommt oben die helle Schattierung (sh-), die Ohren liegen außerhalb
-  const farbeOhr = t => farbe(o.schattierung ? t.replaceAll("__FELL__", mix(o.fell || "#9a9a9a", "#ffffff", .1)) : t);
+  const farbeOhr = t => farbe(o.schattierung ? t.replaceAll("__FELL__", mix(o.fell || "#9a9a9a", "#ffffff", .13)) : t);
   const ohrRoh = (seite) => {
     const T = K.ohren[o.marwari ? "marwari" : "basis"][seite], st = OHR_REIHE.includes(o["ohr" + seite]) ? o["ohr" + seite] : "vorne";
     const ziel = o.ohrSpiel && !o.statisch ? ohrSpielZiel(st, rnd()) : null;

@@ -536,7 +536,7 @@
   .vorschau svg#gross { width: 100%; transform-origin: 0 0; touch-action: none; cursor: zoom-in; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; }   /* v451: zoomen (Zwei-Finger / Mausrad) */
   .zoombar { position: relative; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; } .zoombar svg, .zoombar svg * { -webkit-user-drag: none; user-select: none; }
   /* v453: während des Zoomens/Verschiebens wird das fertige Bild nur verschoben/skaliert (eigene Ebene, ruckelfrei) – nach kurzer Pause wird es scharf neu gezeichnet */
-  .zoombar.zoom-aktiv svg, .vorschau svg#gross { will-change: transform; } .zoom-bild { position: absolute; display: none; transform-origin: 0 0; pointer-events: none; will-change: transform; }   /* v458: Standbild (Bitmap) für die Geste */   /* dauerhaft eigene Ebene: die erste Bewegung muss nichts neu aufbauen */ .zoombar svg { transform-origin: 0 0; cursor: zoom-in; }
+  .zoombar.zoom-aktiv svg, .vorschau svg#gross { will-change: transform; } .vorschau .zoombar:not(.zoom-aktiv) svg#gross { will-change: auto; } .zoom-bild { position: absolute; display: none; transform-origin: 0 0; pointer-events: none; will-change: transform; }   /* v458: Standbild (Bitmap) für die Geste */   /* dauerhaft eigene Ebene: die erste Bewegung muss nichts neu aufbauen */ .zoombar svg { transform-origin: 0 0; cursor: zoom-in; }
   .farbspalte.musterspalte { right: calc(var(--pf) + var(--fsB) + 2px); }   /* v451: Scheckungen links neben den Fellfarben */
   .ms-pfeil { right: calc(var(--pf) + var(--fsB) + 4px) !important; }
   .fs-kachel:disabled { opacity: .35; cursor: default; }
@@ -949,7 +949,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "473";
+  const SPIEL_VERSION = "474";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -957,9 +957,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=473"></script>
-<script src="boxstufen.js?v=473"></script>
-<script src="kopfneu.js?v=473"></script>
+<script src="pferd.js?v=474"></script>
+<script src="boxstufen.js?v=474"></script>
+<script src="kopfneu.js?v=474"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1390,7 +1390,8 @@
     const st = grauStand(p, jahre), basis = falbTon(p, p.farbe);
     if (!st || (st.t < 0.02 && st.tm < 0.1)) return saisonFarbe(p, basis);
     const phase = st.t >= 1 ? (st.ex.fliegen > .5 && st.j >= st.ex.fliegenAb ? "fliegen" : "weiss") : st.ex.apfel > .45 && st.t >= .35 && st.t < .85 ? "apfel" : "grau";
-    const k = Math.round(st.t * 20) / 20, km = Math.round(st.tm * 20) / 20, id = `gr_${basis}_${k}_${km}_${phase}`;
+    const fs = phase === "fliegen" ? (st.ex.fliegen < .72 ? 0 : st.ex.fliegen < .9 ? 1 : 2) : 1;   // v474: wenige/typisch/viele Fliegen
+    const k = Math.round(st.t * 20) / 20, km = Math.round(st.tm * 20) / 20, id = `gr_${basis}_${k}_${km}_${phase}${fs !== 1 ? "_f" + fs : ""}`;
     if (!FARBEN[id]) {
       const B = FARBEN[basis] || FARBEN.brauner, W8 = "#f2f0eb", tb = phase === "weiss" || phase === "fliegen" ? 1 : k, e = { ...B };
       e.body = mix(B.body, W8, Math.min(1, tb * .97));
@@ -1404,7 +1405,7 @@
         delete e.pattern;
         if (phase === "apfel") { e.pattern = "dapple"; e.dapple = mix(e.body, W8, .6); }
         else if (phase === "grau") { e.pattern = "roan"; e.roanDeck = Math.min(1, .2 + k * 4); }   // erste weiße Haare: anfangs nur wenige
-        else if (phase === "fliegen") { e.pattern = "fleck"; e.fleck = istFuchsBasis(basis) ? "#9a5a38" : "#5b4b44"; }
+        else if (phase === "fliegen") { e.pattern = "fleck"; e.fleck = istFuchsBasis(basis) ? "#9a5a38" : "#5b4b44"; e.fleckSt = fs; }
       }
       e.name = phase === "apfel" ? "Apfelschimmel" : phase === "weiss" ? "Schimmel (weiß)" : phase === "fliegen" ? "Fliegenschimmel" : SCHIMMEL_NAME(basis.replace(/^(ov|tv|tg|fs|sb|sk|sa|sw)_/, ""));
       FARBEN[id] = e;
@@ -3728,6 +3729,8 @@
   function farbVarianten0(f) {
     const C = FARBEN[f] || {}, pat = C.pattern, v = [];
     if (wahl && wahl.rasse === "tekke" && TEKKE_GLANZ[f]) { const [n, art] = TEKKE_GLANZ[f]; return [{ n: `${n} – ohne Glanz`, ex: { glanz: .05 } }, { n: `${n} – mit ${art}`, ex: { glanz: .9 } }]; }   // v463 (Dome): Tekkiner echt oder mit Gold-/Silberglanz
+    if (f === "apfelschimmel") return [{ n: "dunkler Apfelschimmel", grau: { t: .42 } }, { n: "Apfelschimmel – typisch", grau: { t: .6 } }, { n: "heller Apfelschimmel – die Äpfel verblassen", grau: { t: .8 } }];   // v474 (Dome)
+    if (f === "fliegenschimmel") return [{ n: "wenige Fliegen", grau: { fl: .62 } }, { n: "Fliegenschimmel – typisch", grau: { fl: .8 } }, { n: "viele Fliegen", grau: { fl: .95 } }];
     if (f === "rappe") return [{ n: "Sommerrappe", ex: { sonne: .2 } }];   // v469 (Dome): beim Rappen nur der Sommerrappe (keine Winterrappe-Varianten mehr)
     if (BLEICH[f]) { const l = [{ n: "im Winter (Winterfell)", saison: 3 }, { n: "im Sommer – von der Sonne ausgeblichen", ex: { sonne: .9 }, saison: 1 }]; if (f === "brauner") l.push({ n: "Hellbrauner", ex: { ton: .1 }, saison: 3, farbe: "hellbrauner" }); return l; }
     if (f === "braunfalbe") v.push({ n: "Braunfalbe", ex: { ton: .6, zebra: .1 } }, { n: "Hellfalbe", ex: { ton: .1, zebra: .1 } });
@@ -3740,6 +3743,9 @@
     const L = farbVarianten(wahl.farbeWahl), i = wahl.varIdx, V = L.length && i >= 0 ? L[i % L.length] : null;
     wahl.saisonVar = V && V.saison != null ? V.saison : null; wahl.varText = V ? V.n : ""; if (V && V.farbe) wahl.farbe = V.farbe;   // v459: Hellbrauner ist eine eigene Farbe (sonst kein Unterschied zum Brauner)
     if (V && V.ex && !(wahl.muster && V.stufe)) wahl.ex = { ...(wahl.ex || exZufall(zufall("wahl-" + wahl.id))), ...V.ex };
+    if (V && V.grau && !wahl.muster) { wahl.genZaehler = 0; glFarbeSetzen(wahl.farbeWahl); wahl.eigeneGene = true; const ex = wahl.ex, gg = wahl.gen.G[0] === "G" && wahl.gen.G[1] === "G" ? .75 : 1;   // v474: Schimmel-Varianten über die echten Gene (Ausschimmelung, Fliegen)
+      if (V.grau.t) { ex.apfel = .8; ex.kurve = 0; ex.grauTempo = Math.max(.3, (wahl.alter - .4) / V.grau.t / gg); }
+      if (V.grau.fl) { ex.fliegen = V.grau.fl; ex.fliegenAb = Math.min(ex.fliegenAb || 99, Math.max(1, wahl.alter)); } }
   }
   function farbeKlick(f) {
     const gleich = f === wahl.farbeWahl;
@@ -3789,7 +3795,7 @@
       const k = m.a, o = [m.e - r.left, m.f - r.top], mx = svgMode && Zc.s > 1 ? r.width * 0.25 : 0, my = svgMode && Zc.s > 1 ? r.height * 0.25 : 0, W = r.width + 2 * mx, H = r.height + 2 * my;
       const d = Math.min(svgMode ? 2 : 3, (window.devicePixelRatio || 1) * (svgMode ? 1 : 2), Math.sqrt(4e6 / (W * H))), cw = Math.round(W * d), ch = Math.round(H * d);   // Steckbrief: doppelte Auflösung, weil dort nur das Standbild skaliert wird
       const kl = v.cloneNode(true); kl.removeAttribute("style"); kl.removeAttribute("class"); kl.setAttribute("font-family", getComputedStyle(v).fontFamily); kl.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-      kl.setAttribute("width", cw); kl.setAttribute("height", ch); kl.setAttribute("preserveAspectRatio", "none");   // Seiten-CSS gilt im Bild nicht – Schrift und Variablen werden übernommen
+      kl.setAttribute("width", W.toFixed(1)); kl.setAttribute("height", H.toFixed(1));   /* v474: Bildgröße = Anzeigegröße, sonst werden Linien (non-scaling-stroke) im Standbild dünner */ kl.setAttribute("preserveAspectRatio", "none");   // Seiten-CSS gilt im Bild nicht – Schrift und Variablen werden übernommen
       kl.setAttribute("viewBox", [(-mx - o[0]) / k, (-my - o[1]) / k, W / k, H / k].map(x => x.toFixed(3)).join(" "));
       const nr = ++bildNr, url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(kl).replace(/var\((--[\w-]+)\)/g, (x, n) => getComputedStyle(v).getPropertyValue(n).trim() || "#000")], { type: "image/svg+xml" })), img = new Image();
       img.onload = () => { URL.revokeObjectURL(url); if (nr !== bildNr) return;
@@ -3914,7 +3920,7 @@
     a.querySelectorAll("#farben .chip, #farbSpalte .fs-kachel").forEach(b => b.onclick = () => farbeKlick(b.dataset.f));
     a.querySelectorAll("#musterSpalte .ms-kachel, #musterChips .chip").forEach(b => b.onclick = () => musterWaehlen(b.dataset.m));
     a.querySelectorAll("#musterStufe button").forEach(b => b.onclick = () => { wahl.mStufe = +b.dataset.s; musterAnwenden(); aktualisiere(); });
-    zoomInit($("gross"), true);
+    if (navigator.maxTouchPoints) { const hu = $("gross").parentNode; hu.classList.add("zoombar"); zoomInit(hu); } else zoomInit($("gross"), true);   // v474 (Dome): Handy wie im Steckbrief (ganzes Bild als Standbild, CSS-Zoom) – PC zeichnet jeden Schritt scharf
     if ($("genLaborAuf")) $("genLaborAuf").onclick = genLabor;
     if ($("charWahlAuf")) $("charWahlAuf").onclick = charakterWaehlen;
     if ($("krankWahlAuf")) $("krankWahlAuf").onclick = krankWaehlen;

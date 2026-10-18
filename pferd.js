@@ -861,7 +861,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if ((opt.glanzAepfel || C.gAepfel) && !C.pattern) { const hl2 = mix(body, "#ffffff", .3);   // v485 (Dome): Glanzäpfel bei gut genährten, gepflegten Pferden (keine Schimmel-Äpfel)
     g += `<defs><radialGradient id="gag-${uid}"><stop offset="0" stop-color="${hl2}" stop-opacity=".6"/><stop offset=".65" stop-color="${hl2}" stop-opacity=".25"/><stop offset="1" stop-color="${hl2}" stop-opacity="0"/></radialGradient>` +
       `<pattern id="ga-${uid}" patternUnits="userSpaceOnUse" width="9" height="8"><circle cx="4.5" cy="4" r="3.3" fill="url(#gag-${uid})"/><circle cx="0" cy="0" r="3" fill="url(#gag-${uid})"/><circle cx="9" cy="0" r="3" fill="url(#gag-${uid})"/><circle cx="0" cy="8" r="3" fill="url(#gag-${uid})"/><circle cx="9" cy="8" r="3" fill="url(#gag-${uid})"/></pattern></defs>` +
-      `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#ga-${uid})" opacity=".6"/></g>`; }
+      `<linearGradient id="gam-${uid}" gradientUnits="userSpaceOnUse" x1="${f(0.02 * L)}" y1="0" x2="${f(0.3 * L)}" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity="1"/></linearGradient><mask id="gamk-${uid}" maskUnits="userSpaceOnUse" ${bx}><rect ${bx} fill="url(#gam-${uid})"/></mask>` +
+      `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#ga-${uid})" opacity=".6" mask="url(#gamk-${uid})"/></g>`; }   // v487 (Dome): Äpfel laufen zum Hals/Kopf hin weich aus
   if (MG > 0) g += `<rect ${bx} fill="url(#mt-${uid})"/>`;
   // Weiche Schattierung (Airbrush-Look): Schattenformen werden weichgezeichnet
   g += `<rect ${bx} fill="url(#sh-${uid})" opacity=".8"/><g filter="url(#wb-${uid})">`;

@@ -933,7 +933,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "431";
+  const SPIEL_VERSION = "432";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -941,9 +941,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=431"></script>
-<script src="boxstufen.js?v=431"></script>
-<script src="kopfneu.js?v=431"></script>
+<script src="pferd.js?v=432"></script>
+<script src="boxstufen.js?v=432"></script>
+<script src="kopfneu.js?v=432"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1279,8 +1279,17 @@
     return k ? saisonEintrag(basis, k) : basis;
   }
   // sichtbare Farbe heute: Geburtsfarbe → Schimmel der Grundfarbe → (Apfelschimmel) → weiß (→ Fliegenschimmel)
+  // v432 (Dome): Braunfalben in Schattierungen von hell („Hellfalbe“) bis dunkel – über die vererbte Farbton-Veranlagung ex.ton, ohne eigenen Farbnamen
+  const FALB_TON = [[.25, "#e6d3ab", .45], [.45, "#dcc49a", .2], [.75, null, 0], [Infinity, "#a5845a", .35]];
+  function falbTon(p, basis) {
+    if (basis !== "braunfalbe" || !(p.gen || p.ex)) return basis;
+    const t = exVon(p).ton, i = FALB_TON.findIndex(([g]) => t < g), [, ziel, w] = FALB_TON[i]; if (!ziel) return basis;
+    const id = "braunfalbe~t" + i;
+    if (!FARBEN[id]) { const B = FARBEN.braunfalbe; FARBEN[id] = { ...B, body: mix(B.body, ziel, w), ...(B.head ? { head: mix(B.head, ziel, w) } : {}) }; }
+    return id;
+  }
   function fb(p, jahre) {
-    const st = grauStand(p, jahre), basis = p.farbe;
+    const st = grauStand(p, jahre), basis = falbTon(p, p.farbe);
     if (!st || (st.t < 0.02 && st.tm < 0.1)) return saisonFarbe(p, basis);
     const phase = st.t >= 1 ? (st.ex.fliegen > .5 && st.j >= st.ex.fliegenAb ? "fliegen" : "weiss") : st.ex.apfel > .45 && st.t >= .35 && st.t < .85 ? "apfel" : "grau";
     const k = Math.round(st.t * 20) / 20, km = Math.round(st.tm * 20) / 20, id = `gr_${basis}_${k}_${km}_${phase}`;
@@ -3889,6 +3898,7 @@
         zeile("x-apfel", "Schimmel: Apfelung", "Ob der Schimmel auf dem Weg zum Weiß Apfelschimmel wird.", exOpt("apfel", [[.8, "ja"], [.2, "nein"]], ex.apfel > .45 ? .8 : .2)),
         zeile("x-maehne", "Schimmel: Mähne &amp; Schweif", "Ob das Langhaar früher, gleich oder später als das Fell weiß wird. Später heißt: es wird erst nach dem Fell weiß, aber am Ende immer. Selten wird es sehr früh weiß – dann gibt es junge, noch dunkle Schimmel mit fast weißer Mähne. Wird vererbt.", exOpt("maehne", [[.7, "sehr früh weiß (selten)"], [.3, "früher hell"], [0, "wie das Fell"], [-.3, "länger dunkel"]], ex.maehne > .45 ? .7 : ex.maehne > .08 ? .3 : ex.maehne < -.08 ? -.3 : 0)),
         zeile("x-fliegen", "Fliegenschimmel", "Manche Schimmel bekommen im Alter wieder kleine farbige Sprenkel.", exOpt("fliegen", [[.8, "ja (ab ca. 10 J.)"], [.2, "nein"]], ex.fliegen > .5 ? .8 : .2))] : []),
+      ...(phaenotyp(g) === "braunfalbe" ? [zeile("x-ton", "Farbton Braunfalbe", "Von hell („Hellfalbe“) bis dunkel – hängt von mehreren Genen ab und wird vererbt.", exOpt("ton", [[.1, "hell"], [.35, "etwas heller"], [.6, "normal"], [.9, "dunkel"]], ex.ton < .25 ? .1 : ex.ton < .45 ? .35 : ex.ton < .75 ? .6 : .9))] : []),
       ...(ohneTon(phaenotyp(g)) === "brauner" ? [zeile("x-ton", "Farbton Brauner", "Hell- oder normaler Brauner – hängt von mehreren Genen ab.", exOpt("ton", [[.6, "normal"], [.1, "hell"]], ex.ton < .25 ? .1 : .6))] : []),
       ...(istRappe(phaenotyp(g)) ? [zeile("x-sonne", "Rappe im Sommer", "Sommerrappen bleiben schwarz, Winterrappen bleichen im Sommer rostbraun aus.", exOpt("sonne", [[.2, "Sommerrappe"], [.8, "Winterrappe"]], ex.sonne > .5 ? .8 : .2))] : []),
       ...glKopfZeilen(zeile, exOpt),
@@ -11075,6 +11085,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Zebrastreifen (primitive Abzeichen):</b> nur bei Falben (Gen D). Versteckte Anlage <code>ex.zebra</code> (vererbt), Querstreifen an Unterarm/Unterschenkel ab ${String(ZEBRA_AB).replace(".", ",")}, zusätzlich Schulterstreifen ab ${String(SCHULTER_AB).replace(".", ",")}. Marktpferde: Fjord deutlich häufiger (Logit +${String(ZEBRA_RASSE.fjord).replace(".", ",")}), Isi/Marwari +0,3, Quarter +0,2.</p>
       <p><b>Ohrgröße je Rasse</b> (Mittel nach Rasseanteilen, <code>OHR_RASSE</code>): ${Object.entries(OHR_RASSE).filter(([, v]) => v !== 1).map(([r, v]) => `${rasseById(r) ? rasseById(r).name : r} ×${String(v).replace(".", ",")}`).join(" · ")} · alle anderen ×1.</p>
       <p><b>Fjordpferd:</b> Marktpferde Braunfalbe ≈ 90 %, Rotfalbe, Mausfalbe, Weißfalbe, Gelbfalbe selten (Gene E ${RASSE_GENE.fjord.E * 100} %, A ${RASSE_GENE.fjord.A * 100} %, Cr ${String(RASSE_GENE.fjord.Cr * 100).replace(".", ",")} %, D ${RASSE_GENE.fjord.D * 100} %; Deckstation nach <code>farbAnteil</code>). Zuchtstandard: Stuten/Wallache höchstens Flocke oder Stern, Hengste nur Flocke, weiße Beine nur bis Krone – sonst Fohlenschau Typnote −${String(FJORD_WEISS_TYP).replace(".", ",")} und Marktwert −${Math.round((1 - FJORD_WEISS_WERT) * 100)} % (ab 87,5 % Fjord).</p>
+      <p><b>Braunfalbe hell bis dunkel</b> (v432): Farbton-Veranlagung <code>ex.ton</code> (vererbt): unter 0,25 hell („Hellfalbe“), bis 0,45 etwas heller, bis 0,75 normal, darüber dunkel – gleicher Farbname „Braunfalbe“.</p>
       <p><b>Dunkelfuchs</b> (v430): Fuchs mit Sooty ohne Flachsmähne heißt jetzt „Dunkelfuchs“; mit Flachsmähne „Dunkelfuchs mit Flachsmähne“. Ältere Pferde behalten ihre gespeicherte Geburtsfarbe.</p>
       <h3>⚠️ Inzucht</h3>
       <p>Geprüft werden Eltern, Großeltern und Urgroßeltern: taucht dieselbe Lebensnummer mehrfach auf oder ist ein Pferd Vorfahre des anderen, gibt es eine Warnung. Folgen für das Fohlen kommen später.</p>

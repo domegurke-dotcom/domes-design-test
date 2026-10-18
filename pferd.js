@@ -807,6 +807,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     if (LP.flocken > 0) { let t = ""; for (let i = 0; i < LP.flocken; i++) { const x = (0.1 + Math.pow(rl(), 0.6) * 0.85) * L, y = top + (0.05 + rl() * 0.75) * D, r = 0.9 + rl() * 1.6;
       t += klecks(rl, x, y, r, r * (0.7 + rl() * 0.4), "#f6f3ec"); } g += `<g clip-path="url(#cr-${uid})" filter="url(#wm-${uid})">${t}</g>`; }
   }
+  // v448 (Dome): weicher Farbübergang vom Hals zum Kopf, wenn der Kopf eine eigene Farbe hat (Tiger, Wenigpunkt, Tovero)
+  if (eigenKopf && C.head && C.head !== C.body && ["leopard", "fewspot", "tovero"].includes(C.pattern)) {
+    const m1 = add(mid(Pn, T), mul(norm(sub(Wn, Pn)), 0.06 * N));
+    g += `<g clip-path="url(#cr-${uid})" filter="url(#wb-${uid})"><ellipse cx="${f(m1.x)}" cy="${f(m1.y)}" rx="${f(0.2 * N)}" ry="${f(0.12 * N)}" transform="rotate(${f(Math.atan2(Wn.y - Pn.y, Wn.x - Pn.x) * 180 / Math.PI)} ${f(m1.x)} ${f(m1.y)})" fill="${head}" opacity=".75"/></g>`;
+  }
   if (C.stripe && !ganzWeiss) g += `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${C.stripe}" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>`;
   if (C.muzzle && !eigenKopf) g += `<ellipse cx="${f(hp(0.93, 0.12).x)}" cy="${f(hp(0.93, 0.12).y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.93, 0.12).x)} ${f(hp(0.93, 0.12).y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>`;
   // Abzeichen (weiß): Kopf und Beine
@@ -998,9 +1003,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     const mz = hp(0.93, 0.12);
     const schatt = `<g transform="matrix(${[ia, ib, -ib, ia, ie, iff].map(x => x.toFixed(5)).join(" ")})">` +
       `<rect ${bx} fill="url(#sh-${uid})" opacity=".8"/>` +
-      (C.muzzle && !opt.maul ? (C.grau > .3 ? (() => { const a = hp(0.97, 0.06), b2 = hp(0.9, 0.17);   // v447 (Dome): beim Schimmel ist die ganze Maulpartie dunkelgrau (Nüstern, Ober- und Unterlippe)
-        return `<g filter="url(#wb-${uid})" opacity="${f(0.45 + 0.35 * C.grau)}"><ellipse cx="${f(a.x)}" cy="${f(a.y)}" rx="${f(0.17 * hl)}" ry="${f(0.13 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(a.x)} ${f(a.y)})" fill="${C.muzzle}"/><ellipse cx="${f(b2.x)}" cy="${f(b2.y)}" rx="${f(0.15 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(b2.x)} ${f(b2.y)})" fill="${C.muzzle}"/></g>`; })()
-        : `<ellipse cx="${f(mz.x)}" cy="${f(mz.y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(mz.x)} ${f(mz.y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>`) : "") +
+      (C.muzzle && !opt.maul && !(C.grau > .3) ? `<ellipse cx="${f(mz.x)}" cy="${f(mz.y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(mz.x)} ${f(mz.y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>` : "") +   // Schimmel: Graumaul als Verlauf in kopfNeuSVG (v448)
       `<g filter="url(#wb-${uid})"><path d="${glatt([hp(0.1, 0.42 * hw), hp(0.3, 0.47 * hw * jw), hp(0.55, 0.36 * hw), hp(0.8, 0.28 * hw), hp(0.6, 0.3 * hw), hp(0.35, 0.37 * hw * jw)])}" fill="${schatten}" opacity=".45"/>` +
       `<ellipse cx="${f(hp(0.3, -0.1).x)}" cy="${f(hp(0.3, -0.1).y)}" rx="${f(0.22 * hl)}" ry="${f(0.07 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.3, -0.1).x)} ${f(hp(0.3, -0.1).y)})" fill="${licht}" opacity=".45"/></g></g>`;
     // Ohrstellung (opt.ohrStellung = { R, L, spiel }); ohne Angabe: beide Ohren vorne, bei Unwohlsein (opt.ohren „geknickt“) seitlich
@@ -1008,7 +1011,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     const schopfFarbe = dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane);
     g += `<g transform="matrix(${ekMatrix})">${kopfNeuSVG(eigenKopf, "ek" + uid, { fell: head, muschel, maehne: schopfFarbe, ink: INK, statisch: opt.statisch, augenZu: opt.augenZu, schattierung: schatt, alter: kopfAlter,
       marwari: !!k.curl, wimper: opt.wimper != null ? opt.wimper : (opt.geschlecht === "Stute" || stufe === "fohlen"), ohrR: OS.R, ohrL: OS.L, ohrSpiel: OS.spiel !== false, seed: opt.seed || rasseId,
-      abz: opt.kopfAbz, maul: opt.maul, ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, augenRing: C.grau > .3 && !opt.maul ? { farbe: C.muzzle, st: C.grau } : null, lpHaut: !!(LP && LP.haut) || !!opt.kroete, kroeteHell: !LP && !!opt.kroete, sklera: !!(LP && LP.sklera), augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
+      abz: opt.kopfAbz, maul: opt.maul, ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, augenRing: C.grau > .3 && !opt.maul ? { farbe: C.muzzle, st: C.grau } : null, grauMaul: C.grau > .3 && !opt.maul ? { farbe: mix(C.muzzle, "#3a3638", .35), st: C.grau } : null, lpHaut: !!(LP && LP.haut) || !!opt.kroete, kroeteHell: !LP && !!opt.kroete, sklera: !!(LP && LP.sklera), augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
   }
   // Mähne
   if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
@@ -1325,6 +1328,8 @@ function kopfNeuSVG(key, uid, o = {}) {
   const zeichen = (o.maul && F.maul && F.maul[o.maul] ? F.maul[o.maul] : "") + (o.abz || []).map(abzSVG).join("");
   return ohr("R") + farbe(fell) + `<clipPath id="${uid}-fell">${fell}</clipPath>` +
     (zeichen ? `<defs>${farbe(kopfDefs(zeichen))}</defs><g clip-path="url(#${uid}-fell)"><g transform="${kmText(am)}">${farbe(zeichen)}</g></g>` : "") +
+    (o.grauMaul ? (() => { const N = K.nase, G = K.gap, l = Math.hypot(G.x - N.x, G.y - N.y), cx = N.x + (G.x - N.x) * .05, cy = N.y + (G.y - N.y) * .05;   // v448 (Dome): Graumaul – ganze Maulpartie dunkel, weicher Verlauf nach oben
+      return `<radialGradient id="${uid}-gm" gradientUnits="userSpaceOnUse" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(l * .42).toFixed(1)}"><stop offset="0" stop-color="${o.grauMaul.farbe}" stop-opacity="${(0.55 + 0.35 * o.grauMaul.st).toFixed(2)}"/><stop offset=".55" stop-color="${o.grauMaul.farbe}" stop-opacity="${(0.45 + 0.3 * o.grauMaul.st).toFixed(2)}"/><stop offset="1" stop-color="${o.grauMaul.farbe}" stop-opacity="0"/></radialGradient><g clip-path="url(#${uid}-fell)"><g transform="${kmText(am)}"><circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(l * .42).toFixed(1)}" fill="url(#${uid}-gm)"/></g></g>`; })() : "") +
     (o.augenRing ? `<filter id="${uid}-ar" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="16"/></filter><g clip-path="url(#${uid}-fell)"><g transform="${kmText(am)}"><ellipse cx="${ac.x}" cy="${ac.y}" rx="62" ry="50" fill="${o.augenRing.farbe}" opacity="${(0.25 + 0.3 * o.augenRing.st).toFixed(2)}" filter="url(#${uid}-ar)"/></g></g>` : "") +   // v447: dunkle Haut ums Auge beim Schimmel
     (o.lpHaut ? `<g clip-path="url(#${uid}-fell)"><g transform="${kmText(am)}">${lpHautSVG(K, o.seed, o.kroeteHell)}</g></g>` : "") +
     (o.schattierung ? `<g clip-path="url(#${uid}-fell)">${o.schattierung}</g>` : "") +
@@ -1332,7 +1337,7 @@ function kopfNeuSVG(key, uid, o = {}) {
 }
 // v441 Leopard-Komplex: weiße Lederhaut im Augenwinkel (wie beim Menschen) und gefleckte rosa Haut um Maul und Augen – in Koordinaten von Domes Kopf
 function skleraSVG(ac) { const ec = (dx, dy, rx, ry) => `<ellipse cx="${(ac.x + dx).toFixed(1)}" cy="${(ac.y + dy).toFixed(1)}" rx="${rx}" ry="${ry}" transform="rotate(-15 ${(ac.x + dx).toFixed(1)} ${(ac.y + dy).toFixed(1)})" fill="#f3eee4"/>`;
-  return ec(21, -5.5, 8, 5.5) + ec(-21, 5.5, 6, 4.5); }
+  return ec(25, -6.5, 5, 3.2); }   // v448 (Dome): nur ein schmaler weißer Rand im hinteren Augenwinkel
 function lpHautSVG(K, seed, hell) {   // hell: Krötenmaul auf heller Haut (Doppel-Cream) – dunkle Sprenkel auf rosa statt rosa Flecken auf dunkel
   const r = zufall((seed || "k") + "-lphaut"), N = K.nase, G = K.gap, A = K.augeMitte, ux = G.x - N.x, uy = G.y - N.y, l = Math.hypot(ux, uy), nx = -uy / l, ny = ux / l;
   let s = "";

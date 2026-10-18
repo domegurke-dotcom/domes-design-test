@@ -126,7 +126,7 @@ const RASSEN = [
     k: { nk: 1, len: 1.02, depth: .52, legT: .115, neck: .5, nAng: 52, crest: .1, head: .46, hAng: 55, profile: .4, hw: 1.1, jw: 1, muz: 1.05, ear: .09, mane: "lang", maneLen: .3, vol: 1.3, fore: 1.1, tail: .9, tvol: 1.3, tset: .15, feather: 1, croup: .7, hq: 1.05, eye: 1 } },
   { id: "tekke", name: "Achal-Tekkiner", herkunft: "Turkmenistan", h: [147, 163],
     text: "Schlankes Wüstenpferd mit langem Hals, feiner, kurzer Mähne und einzigartigem metallischem Fellglanz.",
-    farben: ["isabell", "palomino", "buckskin", "brauner", "fuchs", "rappe", "schimmel"],
+    farben: ["isabell", "palomino", "buckskin", "brauner", "fuchs", "dfuchs", "rappe", "schimmel"],
     k: { len: 1.06, depth: .41, legT: .07, neck: .56, nAng: 56, crest: .02, head: .41, hAng: 54, profile: -.1, hw: .92, jw: 1, muz: .92, ear: .11, earDx: -1.6, mane: "kurz", maneLen: .03, vol: .4, fore: .15, tail: .55, tvol: .45, tset: .4, feather: 0, croup: .3, hq: .95, eye: 1.1, metallic: true } },
   // ---------- Veredler-Rassen (v316) – Spielkopf, bis Dome eigene Köpfe zeichnet ----------
   { id: "trakehner", name: "Trakehner", herkunft: "Ostpreußen / Deutschland", h: [160, 170],
@@ -636,6 +636,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
 
   // Hintere Beine
   g += `<g>${umriss(fern, INK)}`;
+  if (C.pattern === "fleck" && !liegt) g += `<g clip-path="url(#cf-${uid})"><rect ${bx} fill="url(#fk-${uid})" opacity=".8"/></g>`;   // v468 (Dome): Fliegentupfen auch an den fernen Beinen
   if (C.pattern === "tobiano") g += `<rect x="${f(minX)}" y="${f(-0.68 * Lg)}" width="${f(maxX - minX)}" height="${f(0.68 * Lg + 2)}" fill="#dedad3" clip-path="url(#cf-${uid})" filter="url(#wm-${uid})"/>`;
   if (["tovero", "leopard", "fewspot"].includes(C.pattern) || ganzWeiss) {
     g += `<g clip-path="url(#cf-${uid})"><rect x="${f(minX)}" y="${f(-Lg - 6)}" width="${f(maxX - minX)}" height="${f(Lg + 8)}" fill="#dedad3"/>`;
@@ -864,9 +865,15 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += `<ellipse cx="${f(0.84 * L)}" cy="${f(top + 0.28 * D)}" rx="${f(0.1 * L)}" ry="${f(0.22 * D)}" fill="${licht}" opacity=".35"/>`;
   g += `</g>`;
   // v464 (Dome): Bauchschatten läuft weich in die nahen Beine aus (vorher harte Kante an der Rumpflinie) – nur unterhalb des Rumpfs, oben so dunkel wie der Schatten dort
-  if (!liegt) g += `<defs><linearGradient id="bs-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(bottom - 0.05 * D)}" x2="0" y2="${f(bottom * 0.55)}"><stop offset="0" stop-color="${schatten}" stop-opacity=".42"/><stop offset="1" stop-color="${schatten}" stop-opacity="0"/></linearGradient>` +
-    `<mask id="bm-${uid}" maskUnits="userSpaceOnUse" ${bx}><path d="${glatt(vorderN)}" fill="#fff"/><path d="${glatt(hinterN)}" fill="#fff"/><path d="${glatt(rumpf)}" fill="#000"/></mask><filter id="bf-${uid}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${f(0.06 * D)}"/></filter></defs>` +
-    `<g mask="url(#bm-${uid})"><rect ${bx} fill="url(#bs-${uid})" filter="url(#bf-${uid})"/></g>`;
+  if (!liegt) g += `<defs><linearGradient id="bs-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(bottom - 0.05 * D)}" x2="0" y2="${f(bottom * 0.55)}"><stop offset="0" stop-color="${schatten}" stop-opacity=".55"/><stop offset="1" stop-color="${schatten}" stop-opacity="0"/></linearGradient>` +
+    `<mask id="bm-${uid}" maskUnits="userSpaceOnUse" ${bx}><g filter="url(#bf-${uid})"><path d="${glatt(vorderN)}" fill="#fff"/><path d="${glatt(hinterN)}" fill="#fff"/><path d="${glatt(rumpf)}" fill="#000"/></g></mask><filter id="bf-${uid}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${f(0.06 * D)}"/></filter></defs>` +
+    `<g mask="url(#bm-${uid})"><rect ${bx} fill="url(#bs-${uid})"/></g>`;
+  if (eigenKopf && !liegt) {   // v468 (Dome): Kopf → Hals weich überblenden (auch bei gleicher Farbe – sonst Kante durch die Halsschattierung)
+    const bnd = norm(sub(T, Pn)), hin = mul(u, -1), dTief = 0.22 * hl, mt = mid(Pn, T), ende = add(mt, mul(hin, dTief));
+    const q = [add(Pn, mul(bnd, -0.25 * hl)), add(T, mul(bnd, 0.25 * hl)), add(add(T, mul(bnd, 0.25 * hl)), mul(hin, dTief)), add(add(Pn, mul(bnd, -0.25 * hl)), mul(hin, dTief))];
+    g += `<defs><linearGradient id="uk-${uid}" gradientUnits="userSpaceOnUse" x1="${f(mt.x)}" y1="${f(mt.y)}" x2="${f(ende.x)}" y2="${f(ende.y)}"><stop offset="0" stop-color="${head}" stop-opacity=".7"/><stop offset=".5" stop-color="${head}" stop-opacity=".3"/><stop offset="1" stop-color="${head}" stop-opacity="0"/></linearGradient>` +
+      `<filter id="ukf-${uid}" filterUnits="userSpaceOnUse" x="${f(Pn.x - 3 * hl)}" y="${f(Pn.y - 3 * hl)}" width="${f(6 * hl)}" height="${f(6 * hl)}"><feGaussianBlur stdDeviation="${f(0.06 * hl)}"/></filter></defs><g clip-path="url(#cr-${uid})"><path d="${eckig(q)}" fill="url(#uk-${uid})" filter="url(#ukf-${uid})"/></g>`;
+  }
   g += `</g>`;
   // Schmutz im Fell (opt.dreck 0–100): weiche Schlammflecken am ganzen Körper, dreckige Beine – immer an denselben Stellen.
   // Auf dunklem Fell sieht man eher hellen, getrockneten Staub, auf hellem Fell braunen Schlamm.
@@ -1011,7 +1018,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     const det = a_ * a_ + b_ * b_, ia = a_ / det, ib = -b_ / det, ie = -(ia * e_ - ib * f_), iff = -(ib * e_ + ia * f_);
     const mz = hp(0.93, 0.12);
     const schatt = `<g transform="matrix(${[ia, ib, -ib, ia, ie, iff].map(x => x.toFixed(5)).join(" ")})">` +
-      `<rect x="${f(minX - 60)}" y="${f(minY - 5)}" width="${f(maxX - minX + 120)}" height="${f(-minY + 10)}" fill="url(#sh-${uid})" opacity=".8"/>` +   // v461: größer als bx – Domes Köpfe ragen vorn über den Rahmen (sonst Streifen an der Nasenkante)
+      `<rect x="${f(minX - 60)}" y="${f(minY - 5)}" width="${f(maxX - minX + 120)}" height="${f(-minY + 10)}" fill="url(#sh-${uid})" opacity=".8"/>` + (C.pattern === "fleck" ? `<rect ${bx} fill="url(#fk-${uid})" opacity=".8"/>` : "") +   // v468: Fliegenschimmel-Tupfen auch im Gesicht; v461: größer als bx – Domes Köpfe ragen vorn über den Rahmen (sonst Streifen an der Nasenkante)
       (C.muzzle && !opt.maul && !(C.grau > .3) ? `<ellipse cx="${f(mz.x)}" cy="${f(mz.y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(mz.x)} ${f(mz.y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>` : "") +   // Schimmel: Domes Ebene „graumaul“ (im Spiel „dunkel“) in kopfNeuSVG (v449)
       `<g filter="url(#wb-${uid})"><path d="${glatt([hp(0.1, 0.42 * hw), hp(0.3, 0.47 * hw * jw), hp(0.55, 0.36 * hw), hp(0.8, 0.28 * hw), hp(0.6, 0.3 * hw), hp(0.35, 0.37 * hw * jw)])}" fill="${schatten}" opacity="${hexRgb(head).reduce((x, y) => x + y) / 3 > 200 ? ".15" : ".45"}"/>` +
       `<ellipse cx="${f(hp(0.3, -0.1).x)}" cy="${f(hp(0.3, -0.1).y)}" rx="${f(0.22 * hl)}" ry="${f(0.07 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.3, -0.1).x)} ${f(hp(0.3, -0.1).y)})" fill="${licht}" opacity=".45"/></g></g>`;
@@ -1340,9 +1347,23 @@ function kopfNeuSVG(key, uid, o = {}) {
   return ohr("R") + farbe(fell) + `<clipPath id="${uid}-fell">${fell}</clipPath>` +
     (zeichen ? `<defs>${farbe(kopfDefs(zeichen))}</defs><g clip-path="url(#${uid}-fell)"><g transform="${kmText(am)}">${farbe(zeichen)}</g></g>` : "") +
     (o.augenRing ? `<filter id="${uid}-ar" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="16"/></filter><g clip-path="url(#${uid}-fell)"><g transform="${kmText(am)}"><ellipse cx="${ac.x}" cy="${ac.y}" rx="62" ry="50" fill="${o.augenRing.farbe}" opacity="${(0.25 + 0.3 * o.augenRing.st).toFixed(2)}" filter="url(#${uid}-ar)"/></g></g>` : "") +   // v447: dunkle Haut ums Auge beim Schimmel
+    (ALTERS_ZEICHEN[o.alter] ? `<g clip-path="url(#${uid}-fell)"><g transform="${kmText(am)}"><g transform="matrix(${altersZeichenMatrix()})">${ALTERS_ZEICHEN[o.alter].replaceAll("__INK__", ink).replaceAll("__ID__", uid)}</g></g></g>` : "") +   // v468
     (o.lpHaut ? `<g clip-path="url(#${uid}-fell)"><g transform="${kmText(am)}">${lpHautSVG(K, o.seed, o.kroeteHell)}</g></g>` : "") +
     (o.schattierung ? `<g clip-path="url(#${uid}-fell)">${o.schattierung}</g>` : "") +
     `<g transform="${kmText(am)}">${farbe(o.ohneUeb ? F.svg.replaceAll('class="ueb"', 'class="ueb" display="none"') : F.svg)}</g>` + ohr("L") + auge;   // v463 (Dome): Tekkiner ohne Schopf-Mähne-Übergang
+}
+// v468 (Dome): Alterszeichen wie bei den alten Köpfen (bis v423) – graue Haare ums Auge (Maulfleck wirkte komisch – raus, Dome), eingefallene Augengrube, Tränenrinne, Falte am Nasenrücken.
+// Aus den alten Koordinaten (Auge 68,96/77,85 · Nase 19,85/127,82) per Ähnlichkeitsabbildung auf Domes Kopf übertragen. Platzhalter, bis Dome die Ebenen zeichnet (BEI-INKSCAPE-BEARBEITEN.md).
+const ALTERS_ZEICHEN = {
+  reif: `<filter id="__ID__-az" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.6"/></filter><g fill="#d8d3ca" opacity=".3" filter="url(#__ID__-az)"><ellipse cx="68.96" cy="77.85" rx="7" ry="5.5"/></g><path fill="none" stroke="__INK__" stroke-width="1.2" stroke-linecap="round" opacity=".55" d="M61.31 63.25 C65.25 59.20 73.04 58.03 79.00 63.00"/>`,
+  senior: `<filter id="__ID__-az" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.8"/></filter><g fill="#d8d3ca" opacity=".5" filter="url(#__ID__-az)"><ellipse cx="68.98" cy="77.87" rx="9" ry="7"/></g>` +
+    `<path fill="none" stroke="__INK__" stroke-width="1.5" stroke-linecap="round" d="M60.79 64.62 C64.76 58.60 74.07 57.06 80.01 63.01"/><path fill="none" stroke="__INK__" stroke-width="1.2" stroke-linecap="round" opacity=".7" d="M61.88 88.24 C68.16 92.44 76.70 92.69 83.00 88.81"/>` +
+    `<path fill="none" stroke="__INK__" stroke-width="1.2" stroke-linecap="round" opacity=".6" d="M51.54 96.59 C53.44 104.77 51.28 110.95 47.09 117.17"/>` };
+function altersZeichenMatrix() {
+  const K = KOPF_NEU, A0 = { x: 68.96, y: 77.85 }, N0 = { x: 19.85, y: 127.82 }, A1 = K.augeMitte, N1 = K.nase;
+  const v0 = { x: N0.x - A0.x, y: N0.y - A0.y }, v1 = { x: N1.x - A1.x, y: N1.y - A1.y }, s = Math.hypot(v1.x, v1.y) / Math.hypot(v0.x, v0.y) * .82, w = Math.atan2(v1.y, v1.x) - Math.atan2(v0.y, v0.x) - .12;
+  const a = s * Math.cos(w), b = s * Math.sin(w);   // .82 / −0,12: Domes Kopf ist länger und steiler – Merkpunkte bleiben am Auge, Maulfleck auf dem Nasenrücken
+  return [a, b, -b, a, A1.x - (a * A0.x - b * A0.y), A1.y - (b * A0.x + a * A0.y)].map(x => x.toFixed(4)).join(" ");
 }
 // v441 Leopard-Komplex: weiße Lederhaut im Augenwinkel (wie beim Menschen) und gefleckte rosa Haut um Maul und Augen – in Koordinaten von Domes Kopf
 function skleraSVG(ac) { const ec = (dx, dy, rx, ry) => `<ellipse cx="${(ac.x + dx).toFixed(1)}" cy="${(ac.y + dy).toFixed(1)}" rx="${rx}" ry="${ry}" transform="rotate(-15 ${(ac.x + dx).toFixed(1)} ${(ac.y + dy).toFixed(1)})" fill="#f3eee4"/>`;

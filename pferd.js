@@ -862,7 +862,12 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += `<path d="${glatt([P(0.24 * L, -H + 3.5), P(0.42 * L, top + 5), P(0.62 * L, top + 4), P(0.8 * L, croupY + 3), P(0.8 * L, croupY + 6.5), P(0.62 * L, top + 7.5), P(0.42 * L, top + 8.5)], true)}" fill="${licht}" opacity=".7"/>`;
   g += `<ellipse cx="${f(0.1 * L)}" cy="${f(top + 0.3 * D)}" rx="${f(0.08 * L)}" ry="${f(0.2 * D)}" fill="${licht}" opacity=".35"/>`;
   g += `<ellipse cx="${f(0.84 * L)}" cy="${f(top + 0.28 * D)}" rx="${f(0.1 * L)}" ry="${f(0.22 * D)}" fill="${licht}" opacity=".35"/>`;
-  g += `</g></g>`;
+  g += `</g>`;
+  // v464 (Dome): Bauchschatten läuft weich in die nahen Beine aus (vorher harte Kante an der Rumpflinie) – nur unterhalb des Rumpfs, oben so dunkel wie der Schatten dort
+  if (!liegt) g += `<defs><linearGradient id="bs-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(bottom - 0.05 * D)}" x2="0" y2="${f(bottom * 0.55)}"><stop offset="0" stop-color="${schatten}" stop-opacity=".42"/><stop offset="1" stop-color="${schatten}" stop-opacity="0"/></linearGradient>` +
+    `<mask id="bm-${uid}" maskUnits="userSpaceOnUse" ${bx}><path d="${glatt(vorderN)}" fill="#fff"/><path d="${glatt(hinterN)}" fill="#fff"/><path d="${glatt(rumpf)}" fill="#000"/></mask><filter id="bf-${uid}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${f(0.06 * D)}"/></filter></defs>` +
+    `<g mask="url(#bm-${uid})"><rect ${bx} fill="url(#bs-${uid})" filter="url(#bf-${uid})"/></g>`;
+  g += `</g>`;
   // Schmutz im Fell (opt.dreck 0–100): weiche Schlammflecken am ganzen Körper, dreckige Beine – immer an denselben Stellen.
   // Auf dunklem Fell sieht man eher hellen, getrockneten Staub, auf hellem Fell braunen Schlamm.
   if (opt.dreck > 0) {

@@ -933,7 +933,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "432";
+  const SPIEL_VERSION = "433";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -941,9 +941,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=432"></script>
-<script src="boxstufen.js?v=432"></script>
-<script src="kopfneu.js?v=432"></script>
+<script src="pferd.js?v=433"></script>
+<script src="boxstufen.js?v=433"></script>
+<script src="kopfneu.js?v=433"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1279,13 +1279,13 @@
     return k ? saisonEintrag(basis, k) : basis;
   }
   // sichtbare Farbe heute: Geburtsfarbe → Schimmel der Grundfarbe → (Apfelschimmel) → weiß (→ Fliegenschimmel)
-  // v432 (Dome): Braunfalben in Schattierungen von hell („Hellfalbe“) bis dunkel – über die vererbte Farbton-Veranlagung ex.ton, ohne eigenen Farbnamen
-  const FALB_TON = [[.25, "#e6d3ab", .45], [.45, "#dcc49a", .2], [.75, null, 0], [Infinity, "#a5845a", .35]];
+  // v432/v433 (Dome): Braunfalbe oder Hellfalbe – über die vererbte Farbton-Veranlagung ex.ton (wie Hellbrauner), unter 0,25 hell
+  const FALB_TON = [[.25, "#e6d3ab", .45], [Infinity, null, 0]];
   function falbTon(p, basis) {
     if (basis !== "braunfalbe" || !(p.gen || p.ex)) return basis;
     const t = exVon(p).ton, i = FALB_TON.findIndex(([g]) => t < g), [, ziel, w] = FALB_TON[i]; if (!ziel) return basis;
     const id = "braunfalbe~t" + i;
-    if (!FARBEN[id]) { const B = FARBEN.braunfalbe; FARBEN[id] = { ...B, body: mix(B.body, ziel, w), ...(B.head ? { head: mix(B.head, ziel, w) } : {}) }; }
+    if (!FARBEN[id]) { const B = FARBEN.braunfalbe; FARBEN[id] = { ...B, name: "Hellfalbe", body: mix(B.body, ziel, w), ...(B.head ? { head: mix(B.head, ziel, w) } : {}) }; }
     return id;
   }
   function fb(p, jahre) {
@@ -1543,6 +1543,7 @@
     if (o.charakter) Object.assign(p.werte.charakter, o.charakter);   // Admin: Charakter selbst gewählt
     nrVon(p);
     p.alter = alterJahre(p); p.stockmass = Math.round(p.zielStockmass * wuchs(alterJZ(p) * 3));
+    if (o.kopf && KOPFFORMEN[o.kopf.f]) p.kopf = { f: o.kopf.f, s: o.kopf.f === "gerade" ? 0 : o.kopf.s || 2 };   // Admin: Kopfform selbst gewählt (v433)
     kopfVon(p);
     return p;
   }
@@ -3624,7 +3625,7 @@
       aktBox = zb; spiel.aktBox = zb;
       const bx = B(), neu = !bx.pferd;
       // neues Pferd mit vollständiger, fester Akte (Gene, Stammbaum bis zu den Urgroßeltern)
-      bx.pferd = neuesPferd({ id: wahl.id, name: wahl.name, rasse: wahl.rasse, geschlecht: wahl.geschlecht, farbe: wahl.farbe, alter: wahl.alter, ...(wahl.alter === 0 ? { geb: { s: datum().s, j: datum().j } } : {}), zielStockmass: wahl.zielStockmass, rein: true, ...(wahl.eigeneGene ? { gen: wahl.gen, ex: wahl.ex } : {}), ...(wahl.charakter ? { charakter: wahl.charakter } : {}) });
+      bx.pferd = neuesPferd({ id: wahl.id, name: wahl.name, rasse: wahl.rasse, geschlecht: wahl.geschlecht, farbe: wahl.farbe, alter: wahl.alter, ...(wahl.alter === 0 ? { geb: { s: datum().s, j: datum().j } } : {}), zielStockmass: wahl.zielStockmass, rein: true, ...(wahl.eigeneGene ? { gen: wahl.gen, ex: wahl.ex } : {}), kopf: wahl.kopf, ...(wahl.charakter ? { charakter: wahl.charakter } : {}) });
       if (wahl.alter === 0) { bx.pferd.gebTag = spiel.tag; bx.pferd.waise = { tag: spiel.tag }; }   // 1 Tag alt, ohne Mutter: Waisenfohlen (heute schon Milch bekommen, ab morgen Flasche/Amme/Leihmutter – Versorgung)
       alterAktualisieren();
       bx.pferd.maehneSeit = spiel.tag; bx.pferd.schopfSeit = spiel.tag;
@@ -3846,7 +3847,15 @@
     const g = wahl.gen, ex = wahl.ex, k = kopfZeichen({ ...wahl, geb: undefined }), haupt = k.abz.filter(a => a !== "schnippe")[0] || (k.abz.length ? "schnippe" : null);
     const b = grundfarbe(g, ex.ton), rot = !hat(g, "E") || hat(g, "A"), dunkelFalbe = hat(g, "D") && hat(g, "E");
     const RZ = rasseZeichen(wahl.rasse), rn = rasseById(wahl.rasse).name;
-    const z = [zeile("x-abz", "Kopfabzeichen", `Wird über die Weiß-Anlage vererbt (Füchse, Sabino, Splash und Overo haben mehr Weiß). Angeboten wird nur, was beim ${rn} vorkommt.`,
+    // v433: Kopfform (nur Formen, die bei der Rasse vorkommen) und Ohrstellung für die Vorschau
+    const kf = kopfVon(wahl), typ = KOPFFORM_RASSE[wahl.rasse], formen = ["gerade", ...(typ ? [typ] : ["hecht", "ramsnase", "keil"]), "schaf", "schwein"];
+    const kz0 = [zeile("x-kopf", "Kopfform", `Typische Form beim ${rn}: ${KOPFFORMEN[typ || "gerade"]}. Schafs- und Schweinskopf sind Exterieurfehler (Marktwert, Fohlenschau). Wird vererbt.`,
+      exOpt("kf", formen.map(f => [f, KOPFFORMEN[f]]), kf.f))];
+    if (kf.f !== "gerade") kz0.push(zeile("x-kopfs", "Ausprägung", "Wie stark die Kopfform ausgeprägt ist.", exOpt("ks", (typ || ["schaf", "schwein"].includes(kf.f) ? [1, 2, 3] : [1]).map(n => [n, KOPF_STUFE[n]]), kf.s)));
+    const OS = wahl.ohrVorschau || { R: "vorne", L: "vorne" }, ON = { vorne: "vorne", seite: "zur Seite", hinten: "nach hinten", angelegt: "angelegt" };
+    ["R", "L"].forEach(sd => kz0.push(zeile("x-ohr" + sd, `Ohr ${sd === "L" ? "vorn (links)" : "hinten (rechts)"}`, "Nur für die Vorschau – im Spiel richtet sich die Ohrstellung nach Vertrauen, Charakter, Schmerz und Herde. Angelegt nur im Extremfall.",
+      exOpt("o" + sd, ["vorne", "seite", "hinten", "angelegt"].map(o => [o, ON[o]]), OS[sd]))));
+    const z = [...kz0, zeile("x-abz", "Kopfabzeichen", `Wird über die Weiß-Anlage vererbt (Füchse, Sabino, Splash und Overo haben mehr Weiß). Angeboten wird nur, was beim ${rn} vorkommt.`,
       exOpt("abz", ABZ_STUFEN.filter(([, a]) => !a || RZ.abz.has(a) || a === haupt).map(([, a]) => [a || "keine", a ? ABZ_NAME[a] : "keins"]), haupt || "keine"))];
     if (haupt && haupt !== "schnippe") z.push(zeile("x-schn", "Schnippe dazu", "Zusätzlich eine Schnippe zwischen den Nüstern.", exOpt("schn", [["1", "ja"], ["0", "nein"]], k.abz.includes("schnippe") ? "1" : "0")));
     if (anzahl(g, "Cr") === 2) z.push(zeile("x-maul", "Maul", "Bei Doppel-Cream sieht man keine Maulfärbung.", `<small>– (Doppel-Cream)</small>`));
@@ -3873,7 +3882,7 @@
     wahl.farbe = farbeAus(g, ex);
     // Bild
     saisonFix = glSaison;
-    const z = zeichnePferd(wahl.rasse, fb(wahl, wahl.alter), { seed: wahl.id, geschlecht: wahl.geschlecht, alterStufe: stufeAusMonaten(wahl.alter * 12), statisch: 1, ...kopfOpt(wahl) });
+    const z = zeichnePferd(wahl.rasse, fb(wahl, wahl.alter), { seed: wahl.id, geschlecht: wahl.geschlecht, alterStufe: stufeAusMonaten(wahl.alter * 12), statisch: 1, ...kopfOpt(wahl), ...(wahl.ohrVorschau ? { ohrStellung: { ...wahl.ohrVorschau, spiel: false } } : {}) });
     saisonFix = null;
     $("glSaison").innerHTML = JZ.map(([n, ico], i) => `<button class="chip ${i === glSaison ? "an" : ""}" data-gls="${i}" title="${n}">${ico} ${n}</button>`).join("");
     $("glSaison").querySelectorAll("[data-gls]").forEach(b => b.onclick = () => { glSaison = +b.dataset.gls; glZeigen(); });
@@ -3898,7 +3907,7 @@
         zeile("x-apfel", "Schimmel: Apfelung", "Ob der Schimmel auf dem Weg zum Weiß Apfelschimmel wird.", exOpt("apfel", [[.8, "ja"], [.2, "nein"]], ex.apfel > .45 ? .8 : .2)),
         zeile("x-maehne", "Schimmel: Mähne &amp; Schweif", "Ob das Langhaar früher, gleich oder später als das Fell weiß wird. Später heißt: es wird erst nach dem Fell weiß, aber am Ende immer. Selten wird es sehr früh weiß – dann gibt es junge, noch dunkle Schimmel mit fast weißer Mähne. Wird vererbt.", exOpt("maehne", [[.7, "sehr früh weiß (selten)"], [.3, "früher hell"], [0, "wie das Fell"], [-.3, "länger dunkel"]], ex.maehne > .45 ? .7 : ex.maehne > .08 ? .3 : ex.maehne < -.08 ? -.3 : 0)),
         zeile("x-fliegen", "Fliegenschimmel", "Manche Schimmel bekommen im Alter wieder kleine farbige Sprenkel.", exOpt("fliegen", [[.8, "ja (ab ca. 10 J.)"], [.2, "nein"]], ex.fliegen > .5 ? .8 : .2))] : []),
-      ...(phaenotyp(g) === "braunfalbe" ? [zeile("x-ton", "Farbton Braunfalbe", "Von hell („Hellfalbe“) bis dunkel – hängt von mehreren Genen ab und wird vererbt.", exOpt("ton", [[.1, "hell"], [.35, "etwas heller"], [.6, "normal"], [.9, "dunkel"]], ex.ton < .25 ? .1 : ex.ton < .45 ? .35 : ex.ton < .75 ? .6 : .9))] : []),
+      ...(phaenotyp(g) === "braunfalbe" ? [zeile("x-ton", "Farbton Braunfalbe", "Braunfalbe oder heller Hellfalbe – hängt von mehreren Genen ab und wird vererbt (wie Hellbrauner).", exOpt("ton", [[.6, "Braunfalbe"], [.1, "Hellfalbe"]], ex.ton < .25 ? .1 : .6))] : []),
       ...(ohneTon(phaenotyp(g)) === "brauner" ? [zeile("x-ton", "Farbton Brauner", "Hell- oder normaler Brauner – hängt von mehreren Genen ab.", exOpt("ton", [[.6, "normal"], [.1, "hell"]], ex.ton < .25 ? .1 : .6))] : []),
       ...(istRappe(phaenotyp(g)) ? [zeile("x-sonne", "Rappe im Sommer", "Sommerrappen bleiben schwarz, Winterrappen bleichen im Sommer rostbraun aus.", exOpt("sonne", [[.2, "Sommerrappe"], [.8, "Winterrappe"]], ex.sonne > .5 ? .8 : .2))] : []),
       ...glKopfZeilen(zeile, exOpt),
@@ -3915,6 +3924,9 @@
       glZeigen(); });
     S.querySelectorAll("[data-glex]").forEach(b => b.onclick = () => { const k = b.dataset.glex, v = b.dataset.v;
       if (k === "maul") { wahl.ex.pangare = v === "mehl" ? .8 : .2; wahl.ex.dunkel = v === "dunkel"; }
+      else if (k === "kf") { const typ = KOPFFORM_RASSE[wahl.rasse]; wahl.kopf = { f: v, s: v === "gerade" ? 0 : (typ === v || v === "schaf" || v === "schwein") ? 2 : 1 }; }
+      else if (k === "ks") wahl.kopf = { ...kopfVon(wahl), s: +v };
+      else if (k === "oR" || k === "oL") (wahl.ohrVorschau = wahl.ohrVorschau || { R: "vorne", L: "vorne" })[k[1]] = v;
       else if (k.startsWith("b_")) (wahl.beinWahl = wahl.beinWahl || {})[k.slice(2)] = v;
       else if (k === "abz") wahl.abzWahl = v; else if (k === "schn") wahl.ex.schn = v === "1"; else if (k === "auge") wahl.ex.auge = v; else wahl.ex[k] = +v;
       if (k === "fliegen") wahl.ex.fliegenAb = 10; glZeigen(); });
@@ -3923,7 +3935,7 @@
   document.getElementById("glAlter").oninput = e => { wahl.alter = +e.target.value; if ($("alter")) $("alter").value = wahl.alter; glZeigen(); };
   document.getElementById("glFertig").onclick = () => { $("genLabor").hidden = true; aktualisiere(); };
   document.getElementById("glZufall").onclick = () => { glFarbeSetzen(wahl.chip);
-    delete wahl.abzWahl; delete wahl.beinWahl; delete wahl.ex.schn; delete wahl.ex.auge; delete wahl.ex.dunkel;
+    delete wahl.abzWahl; delete wahl.beinWahl; delete wahl.kopf; delete wahl.ohrVorschau; delete wahl.ex.schn; delete wahl.ex.auge; delete wahl.ex.dunkel;
     BEINE.forEach(([k]) => { wahl.ex[k] = beinZufall(wahl.rasse, Math.random); }); wahl.ex.zebra = zebraZufall(wahl.rasse, Math.random); wahl.ex.weiss = weissZufall(wahl.rasse, Math.random); wahl.ex.pangare = pangareZufall(wahl.rasse, Math.random);   // v427: Kopf neu würfeln
     glZeigen(); };
 
@@ -11085,7 +11097,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Zebrastreifen (primitive Abzeichen):</b> nur bei Falben (Gen D). Versteckte Anlage <code>ex.zebra</code> (vererbt), Querstreifen an Unterarm/Unterschenkel ab ${String(ZEBRA_AB).replace(".", ",")}, zusätzlich Schulterstreifen ab ${String(SCHULTER_AB).replace(".", ",")}. Marktpferde: Fjord deutlich häufiger (Logit +${String(ZEBRA_RASSE.fjord).replace(".", ",")}), Isi/Marwari +0,3, Quarter +0,2.</p>
       <p><b>Ohrgröße je Rasse</b> (Mittel nach Rasseanteilen, <code>OHR_RASSE</code>): ${Object.entries(OHR_RASSE).filter(([, v]) => v !== 1).map(([r, v]) => `${rasseById(r) ? rasseById(r).name : r} ×${String(v).replace(".", ",")}`).join(" · ")} · alle anderen ×1.</p>
       <p><b>Fjordpferd:</b> Marktpferde Braunfalbe ≈ 90 %, Rotfalbe, Mausfalbe, Weißfalbe, Gelbfalbe selten (Gene E ${RASSE_GENE.fjord.E * 100} %, A ${RASSE_GENE.fjord.A * 100} %, Cr ${String(RASSE_GENE.fjord.Cr * 100).replace(".", ",")} %, D ${RASSE_GENE.fjord.D * 100} %; Deckstation nach <code>farbAnteil</code>). Zuchtstandard: Stuten/Wallache höchstens Flocke oder Stern, Hengste nur Flocke, weiße Beine nur bis Krone – sonst Fohlenschau Typnote −${String(FJORD_WEISS_TYP).replace(".", ",")} und Marktwert −${Math.round((1 - FJORD_WEISS_WERT) * 100)} % (ab 87,5 % Fjord).</p>
-      <p><b>Braunfalbe hell bis dunkel</b> (v432): Farbton-Veranlagung <code>ex.ton</code> (vererbt): unter 0,25 hell („Hellfalbe“), bis 0,45 etwas heller, bis 0,75 normal, darüber dunkel – gleicher Farbname „Braunfalbe“.</p>
+      <p><b>Hellfalbe</b> (v433): Braunfalbe mit Farbton-Veranlagung <code>ex.ton</code> unter 0,25 (vererbt, wie Hellbrauner) heißt „Hellfalbe“ – heller Körper, gleiche Gene.</p>
       <p><b>Dunkelfuchs</b> (v430): Fuchs mit Sooty ohne Flachsmähne heißt jetzt „Dunkelfuchs“; mit Flachsmähne „Dunkelfuchs mit Flachsmähne“. Ältere Pferde behalten ihre gespeicherte Geburtsfarbe.</p>
       <h3>⚠️ Inzucht</h3>
       <p>Geprüft werden Eltern, Großeltern und Urgroßeltern: taucht dieselbe Lebensnummer mehrfach auf oder ist ein Pferd Vorfahre des anderen, gibt es eine Warnung. Folgen für das Fohlen kommen später.</p>

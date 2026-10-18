@@ -868,7 +868,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (eigenKopf) {
     // (handgezeichneter Kopf wurde schon vor der Mähne gezeichnet) – hier kommt Domes Schopf obendrauf
     const sv = schopfL;
-    if (sv && ekMatrix) g += `<g transform="matrix(${ekMatrix})">${schopfNeuSVG(sv, dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane), dunKern, INK, kopfAlter)}</g>`;
+    if (sv && ekMatrix) g += `<g transform="matrix(${ekMatrix})">${schopfNeuSVG(sv, dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane), dunKern || C.stripe || null, INK, kopfAlter)}</g>`;   // Etappe 3 (v433): Aalstrich im Schopf bei allen Falben
   } else {
   if (fl >= 0.25) g += `<path d="${schopf ? glatt(schopf) : schopfBueschel()}" fill="${mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
   if (fl >= 0.25 && !schopf) g += schopfStraehnen();
@@ -1155,7 +1155,7 @@ function kopfDefs(svg) {
 }
 // Kehlpunkt (Anschluss an den Hals) des neuen Kopfs, mit Altersstauchung
 function kopfNeuKehle(key, alter) { const K = KOPF_NEU, F = K.formen[key] || K.formen.gerade; return kmPunkt(kopfAlterMatrix(alter), K.kap[F.kap]); }
-// Schopf aus Domes Datei (kurz, mittel, lang, extralang) – Aalstrich erst in Etappe 3, bis dahin wie bisher nur beim Fjord-Schopf
+// Schopf aus Domes Datei (kurz, mittel, lang, extralang) – mit Aalstrich (aal = Farbe des Aalstrichs) bei allen Falben (Etappe 3, v433)
 function schopfNeuSVG(variante, farbe, aal, ink, alter) {
   const s = KOPF_NEU.schoepfe[variante]; if (!s) return "";
   return `<g transform="${kmText(kopfAlterMatrix(alter))}">${s.replaceAll("__MAEHNE__", farbe).replaceAll("__AAL__", aal || farbe).replaceAll("#090609", ink)}</g>`;

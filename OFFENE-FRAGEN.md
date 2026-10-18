@@ -7,11 +7,9 @@ Zu jeder Frage steht die Lösung, die Claude vorerst gewählt hat. Die Veredler-
 Erledigt und umgesetzt: H1–H3 bestätigt (Postkasten aus der Immobilien-Verwaltung entfernt v334, echte Gebäudeflächen v337), Pension bestätigt (Start-Pensionsstall 3 Plätze v334), Futter-Etappe bestätigt (Hafer bei nervösen Pferden mit Folgen v335), H7-Rest (Junghengste trennen v336), Veredler 1/3/4/5 (Anglo-Araber-Rennen v339), H8-1, Danach-1.
 
 ## Noch zu bauen (Domes Antworten, Aufgaben)
-0. ✅ Verkaufsrennen (v340) und Heu/Raufutter-Bild (v341) erledigt.
-1. **Verkaufsrennen (erledigt v340) (H8):** Preis beim Nennen selbst festlegen; auch ohne Rennstall teilnehmen (als Verkäufer mit Trainergebühr wie bei Galopprennen) und im Pferdemarkt als Käufer bei Verkaufsrennen mitbieten. *Claude: in echt so – jeder Besitzer mit einem Pferd im Training bei einem lizenzierten Trainer darf starten und kaufen.*
-2. **Heu und Raufutter-Darstellung (erledigt v341):** Heu geht beim Rausbringen auch mit (Sandpaddock/Weide). In Box, Sandpaddock und Weide zeigt der Heuhaufen alles Raufutter aus dem Futterplan (außer Heucobs) – Farbe/Struktur nach Anteil (Heu, Heulage, Stroh, Luzerne). Heucobs: beim Antippen des Heus steht ein Eimer mit Heucobs davor.
-3. **Decktermin für fremde Stuten** → steht schon in `PROJEKT-CHAT-THEMEN.md` Punkt 2 (Termin ausmachen, Hengst am Decktag nicht in der Box). Bis dahin reicht der Brief.
-4. **Waisenfohlen im Offenstall/zwei Fohlen je Box** → `PROJEKT-CHAT-THEMEN.md` Punkt 11.
+✅ Alles erledigt und von Dome abgehakt (18.10.2026): Verkaufsrennen (v340), Heu-/Raufutter-Bild (v341). Decktermin für fremde Stuten und Waisenfohlen/zwei Fohlen je Box stehen in `PROJEKT-CHAT-THEMEN.md` (Punkte 2 und 11).
+✅ Domes Abnahme H7-Rest, H8 und Veredler-Rassen: erledigt (18.10.2026).
+✅ Ausbilder-Nachholen mit angestelltem Pferdewirt per Test-Skript geprüft (v433): Azubi mit 18 % Fehlerquote → nur noch 2,5 % der Boxen bleiben unversorgt (Ausbilder holt 80 % nach).
 
 ## Noch offen – bitte entscheiden
 (Domes Antworten v340–v345: Preise → Projekt-Chat Punkt 12, Ausreißer angeglichen; Shire Sabino 40 %; LK 5 bleibt; Lahmheit und Husten mit Verdacht/Test)

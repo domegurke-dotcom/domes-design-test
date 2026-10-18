@@ -31,3 +31,6 @@ Jede neue Rasse kommt komplett: `RASSEN` (Größe, Farben, Profil, Charakter), F
 1. **Pension – tragende Stute in der Anfrage nennen:** Ist das Pensionspferd eine tragende Stute, soll die Einstellerin das schon im Anfrage-Brief sagen (und im „Ansehen“ der Anfrage sichtbar machen).
 2. **Pension – Bereiter bei „Bewegen“:** Box – ppf – vsg zeigt bei gebuchtem „Bewegen“ „🏇 Bereiter 0/2“, aber ohne angestellten Bereiter ist unklar, wie man einen bekommt. Lösung: Hinweis/Knopf, wo man einen Bereiter einstellt oder extern bucht (`BEREITER_EXTERN`), und der Spieler selbst soll mit passendem Reiter-Level (LK) als Bereiter einspringen können.
 3. **Futter mit auf die Koppel:** Wurde die Krippe in der Box gefüllt und das Pferd dann auf die Weide oder den Sandpaddock gestellt, soll das Kraftfutter mit in den Futtereimer auf der Koppel wandern (statt in der Box liegen zu bleiben, vgl. `rausAusBox`/`zurueckInBox`, `[data-keimer]`).
+
+
+**Domes Abnahme: erledigt (18.10.2026).**

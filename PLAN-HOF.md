@@ -217,3 +217,6 @@ Voraussetzungen: Mitarbeiter und Stallart-Feld (Azubi-Nachtrag, jetziger Hof gil
 - [x] (e) Gnadenhof: Patenschaften und Tierarztrabatt (v310: 20 % Rabatt, Paten 60–120 € je Jahreszeit, Chance 35 % je Pferd und Jahreszeit).
 - [x] (f) (war schon umgesetzt, geprüft v310) Fest angestellte Bereiter nur im Ausbildungsstall, sonst nur auf Abruf (wie jetzt). Bereits angestellte Bereiter auf anderen Höfen dürfen bleiben, neue gibt es dort nicht.
 - [x] Statusverlust: Hof behält die Stallart (Dome: ja). Bedingungen „kommt später“ zählen vorerst als erfüllt (Dome: ok).
+
+
+**Domes Abnahme: erledigt (18.10.2026).**

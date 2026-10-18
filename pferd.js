@@ -1023,16 +1023,18 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     // Licht & Schatten wie beim Spielkopf (in Pferdekoordinaten, dann zurück in Zeichnungskoordinaten)
     const det = a_ * a_ + b_ * b_, ia = a_ / det, ib = -b_ / det, ie = -(ia * e_ - ib * f_), iff = -(ib * e_ + ia * f_);
     const mz = hp(0.93, 0.12);
-    const schatt = `<g transform="matrix(${[ia, ib, -ib, ia, ie, iff].map(x => x.toFixed(5)).join(" ")})">` +
-      `<rect x="${f(minX - 60)}" y="${f(minY - 5)}" width="${f(maxX - minX + 120)}" height="${f(-minY + 10)}" fill="url(#sh-${uid})" opacity=".8"/>` + (C.pattern === "fleck" ? `<rect ${bx} fill="url(#fk-${uid})" opacity=".8"/>` : "") + (C.russ ? `<rect ${bx} fill="${C.russ}" opacity=".45"/>` : "") +   /* v489 (Dome): Kopf mit demselben Rußanflug wie der Hals – keine eigene Kopffarbe mehr */   // v468: Fliegenschimmel-Tupfen auch im Gesicht; v461: größer als bx – Domes Köpfe ragen vorn über den Rahmen (sonst Streifen an der Nasenkante)
+    const schattLage = (ob, bxS) => `<g transform="matrix(${[ia, ib, -ib, ia, ie, iff].map(x => x.toFixed(5)).join(" ")})">` +
+      `<rect x="${f(minX - 60)}" y="${f(minY - 5 - ob)}" width="${f(maxX - minX + 120)}" height="${f(-minY + 10 + ob)}" fill="url(#sh-${uid})" opacity=".8"/>` + (C.pattern === "fleck" ? `<rect ${bxS} fill="url(#fk-${uid})" opacity=".8"/>` : "") + (C.russ ? `<rect ${bxS} fill="${C.russ}" opacity=".45"/>` : "") +   /* v489 (Dome): Kopf mit demselben Rußanflug wie der Hals – keine eigene Kopffarbe mehr */   // v468: Fliegenschimmel-Tupfen auch im Gesicht; v461: größer als bx – Domes Köpfe ragen vorn über den Rahmen (sonst Streifen an der Nasenkante)
       (C.muzzle && !opt.maul && !(C.grau > .3) ? `<ellipse cx="${f(mz.x)}" cy="${f(mz.y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(mz.x)} ${f(mz.y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>` : "") +   // Schimmel: Domes Ebene „graumaul“ (im Spiel „dunkel“) in kopfNeuSVG (v449)
-      (MG > 0 ? `<rect ${bx} fill="url(#mt-${uid})"/>` : "") + `<g filter="url(#wb-${uid})"><path d="${kehleD}" fill="${schatten}" opacity=".18"/></g></g>`;   // v472 (Dome): Kopf bekommt dieselben Schichten wie der Hals (Glanz, Kehlschatten) – kein eigener Kieferschatten/Lichtfleck mehr, sonst Kanten am Übergang
+      (MG > 0 ? `<rect ${bxS} fill="url(#mt-${uid})"/>` : "") + `<g filter="url(#wb-${uid})"><path d="${kehleD}" fill="${schatten}" opacity=".18"/></g></g>`;
+    const schatt = schattLage(0, bx), obO = H;   // v490: Ohren bekommen dieselben Schichten (Maske aus der Ohrform) – Rechteck nach oben bis in die Ohrspitzen verlängert, die Verläufe sind userSpaceOnUse und bleiben gleich
+    const schattOhr = schattLage(obO, `x="${f(minX - 5)}" y="${f(minY - 5 - obO)}" width="${f(maxX - minX + 10)}" height="${f(-minY + 10 + obO)}"`);   // v472 (Dome): Kopf bekommt dieselben Schichten wie der Hals (Glanz, Kehlschatten) – kein eigener Kieferschatten/Lichtfleck mehr, sonst Kanten am Übergang
     // Ohrstellung (opt.ohrStellung = { R, L, spiel }); ohne Angabe: beide Ohren vorne, bei Unwohlsein (opt.ohren „geknickt“) seitlich
     const OS = opt.ohrStellung || (opt.ohren === "geknickt" ? { R: "seite", L: "seite" } : { R: "vorne", L: "vorne" });
     const schopfFarbe = dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane);
-    g += `<g transform="matrix(${ekMatrix})">${kopfNeuSVG(eigenKopf, "ek" + uid, { fell: head, muschel, maehne: schopfFarbe, ink: INK, statisch: opt.statisch, augenZu: opt.augenZu, schattierung: schatt, alter: kopfAlter,
+    g += `<g transform="matrix(${ekMatrix})">${kopfNeuSVG(eigenKopf, "ek" + uid, { fell: head, muschel, maehne: schopfFarbe, ink: INK, statisch: opt.statisch, augenZu: opt.augenZu, schattierung: schatt, schattOhr, alter: kopfAlter,
       marwari: !!k.curl, wimper: opt.wimper != null ? opt.wimper : (opt.geschlecht === "Stute" || stufe === "fohlen"), ohrR: OS.R, ohrL: OS.L, ohrSpiel: OS.spiel !== false, seed: opt.seed || rasseId,
-      ohneUeb: !schopfL || rasseId === "tekke", ohrFell: C.russ ? mix(head, C.russ, .45) : null, abz: opt.kopfAbz, maul: opt.maul || (C.grau > .3 ? "dunkel" : undefined), ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, augenRing: C.grau > .3 && !opt.maul ? { farbe: C.muzzle, st: C.grau } : /schwarzbrauner/.test(farbId) ? { farbe: "#a8643a", st: .5 } : null, /* v481 (Dome): Schwarzbraune – kupferfarben ums Auge (Platzhalter) */ lpHaut: !!(LP && LP.haut) || !!opt.kroete, kroeteHell: !LP && !!opt.kroete, sklera: !!(LP && LP.sklera), augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
+      ohneUeb: !schopfL || rasseId === "tekke", abz: opt.kopfAbz, maul: opt.maul || (C.grau > .3 ? "dunkel" : undefined), ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, augenRing: C.grau > .3 && !opt.maul ? { farbe: C.muzzle, st: C.grau } : /schwarzbrauner/.test(farbId) ? { farbe: "#a8643a", st: .5 } : null, /* v481 (Dome): Schwarzbraune – kupferfarben ums Auge (Platzhalter) */ lpHaut: !!(LP && LP.haut) || !!opt.kroete, kroeteHell: !LP && !!opt.kroete, sklera: !!(LP && LP.sklera), augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
   }
   // Mähne
   if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
@@ -1323,18 +1325,22 @@ function kopfNeuSVG(key, uid, o = {}) {
   const am = kopfAlterMatrix(o.alter), A = KOPF_ALTER[o.alter] || {}, ac = K.augeMitte, ac2 = kmPunkt(am, ac), as = A.a || 1;
   const rnd = zufall((o.seed || "k") + "-ohren");
   // Ohrgröße je Rasse (v430, o.ohrGr): um den Ohransatz skaliert
-  const ohr = seite => { const s = o.ohrGr || 1, B = (K.ohrBasis || {})[(o.marwari ? "marwari" : "basis") + seite]; const h = ohrRoh(seite);
-    return s === 1 || !B ? h : `<g transform="translate(${B.x},${B.y}) scale(${s.toFixed(3)}) translate(${-B.x},${-B.y})">${h}</g>`; };
+  const ohr = seite => { const s = o.ohrGr || 1, B = (K.ohrBasis || {})[(o.marwari ? "marwari" : "basis") + seite], [h, hm] = ohrRoh(seite);
+    const um = x => s === 1 || !B ? x : `<g transform="translate(${B.x},${B.y}) scale(${s.toFixed(3)}) translate(${-B.x},${-B.y})">${x}</g>`;
+    return um(h) + (o.schattOhr ? `<mask id="${uid}-om${seite}">${um(hm)}</mask><g mask="url(#${uid}-om${seite})">${o.schattOhr}</g>` : ""); };   // v490: Kopf-Schattierung (Verlauf, Glanz, Ruß) auch auf dem Ohr – keine Kante am Ohransatz
+  // Maske: Fell und Muschel weiß, Linien schwarz (bleiben scharf)
+  const maskeOhr = t => t.replaceAll("__FELL__", "#fff").replaceAll("__MUSCHEL__", "#fff").replaceAll("#090609", "#000");
   // v463 (Dome): Ohren so hell wie der Kopf daneben – der Kopf bekommt oben die helle Schattierung (sh-), die Ohren liegen außerhalb
-  const farbeOhr = t => farbe(o.schattierung ? t.replaceAll("__FELL__", mix(o.ohrFell || o.fell || "#9a9a9a", "#ffffff", .13)) : t);
-  const ohrRoh = (seite) => {
+  const farbeOhr = t => farbe(o.schattierung && !o.schattOhr ? t.replaceAll("__FELL__", mix(o.fell || "#9a9a9a", "#ffffff", .13)) : t);   // ohne schattOhr (alte Aufrufe): feste Aufhellung wie bis v489
+  const ohrRoh = (seite) => {   // [Ohr, Maske] – beide mit demselben Rhythmus
     const T = K.ohren[o.marwari ? "marwari" : "basis"][seite], st = OHR_REIHE.includes(o["ohr" + seite]) ? o["ohr" + seite] : "vorne";
     const ziel = o.ohrSpiel && !o.statisch ? ohrSpielZiel(st, rnd()) : null;
-    if (!ziel) return farbeOhr(T[st]);
+    if (!ziel) return [farbeOhr(T[st]), maskeOhr(T[st])];
     // eigener Rhythmus je Ohr: alle 5–11 s für gut 1 s in die Nachbarstellung
     const dur = (5 + rnd() * 6).toFixed(1), a = 0.15 + rnd() * 0.6, b = a + 1.2 / dur;
-    return `<g><animate attributeName="opacity" values="1;0;1" keyTimes="0;${a.toFixed(3)};${b.toFixed(3)}" calcMode="discrete" dur="${dur}s" repeatCount="indefinite"/>${farbeOhr(T[st])}</g>` +
-      `<g opacity="0"><animate attributeName="opacity" values="0;1;0" keyTimes="0;${a.toFixed(3)};${b.toFixed(3)}" calcMode="discrete" dur="${dur}s" repeatCount="indefinite"/>${farbeOhr(T[ziel])}</g>`;
+    const zwei = fn => `<g><animate attributeName="opacity" values="1;0;1" keyTimes="0;${a.toFixed(3)};${b.toFixed(3)}" calcMode="discrete" dur="${dur}s" repeatCount="indefinite"/>${fn(T[st])}</g>` +
+      `<g opacity="0"><animate attributeName="opacity" values="0;1;0" keyTimes="0;${a.toFixed(3)};${b.toFixed(3)}" calcMode="discrete" dur="${dur}s" repeatCount="indefinite"/>${fn(T[ziel])}</g>`;
+    return [zwei(farbeOhr), zwei(maskeOhr)];
   };
   // Auge: offen (blinzelt) und geschlossenes Lid; Stuten und Fohlen haben eine Wimper mehr
   const blinkAuf = o.statisch || o.augenZu ? "" : '<animate attributeName="opacity" values="1;0;1" keyTimes="0;.93;.97" calcMode="discrete" dur="4.5s" repeatCount="indefinite"/>';

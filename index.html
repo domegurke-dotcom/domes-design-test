@@ -541,7 +541,7 @@
   .ms-pfeil { right: calc(var(--pf) + var(--fsB) + 4px) !important; }
   .fs-kachel:disabled { opacity: .35; cursor: default; }
   .var-hinweis { position: absolute; top: 8px; left: calc(var(--rgB) + var(--pf) + 8px); right: calc(var(--pf) + var(--fsB) + var(--msB) + 8px); z-index: 2; text-align: center; pointer-events: none; } .var-hinweis span { display: inline-block; background: rgba(255,255,255,.86); border: 1.5px solid #e2d6c3; border-radius: 10px; padding: 3px 10px; font-size: .78rem; font-weight: 700; color: var(--akzent); }   /* v456: welche Variante gerade gezeigt wird */
-  .sort-seg { max-width: 340px; margin: 6px 0 10px; grid-column: 1 / -1; } .kont-kopf { margin: 14px 0 4px; padding-bottom: 3px; border-bottom: 2px solid #e2d6c3; color: var(--akzent); font-size: 1rem; } .kont-kopf small { color: var(--leise); font-weight: 500; }   /* v455: Sortierung nach Kontinent */
+  .sort-seg { max-width: 520px; margin: 6px 0 10px; grid-column: 1 / -1; flex-wrap: wrap; } .kont-kopf { margin: 14px 0 4px; padding-bottom: 3px; border-bottom: 2px solid #e2d6c3; color: var(--akzent); font-size: 1rem; } .kont-kopf small { color: var(--leise); font-weight: 500; }   /* v455: Sortierung nach Kontinent */
   @media (orientation: landscape) { .vorschau { height: calc(100dvh - var(--leisteH, 56px)); } .vorschau svg { height: 100%; } .vorschau .gross-huelle { height: 100%; } }   /* v458 (Dome): PC – Stockmaßbild füllt den Schirm, Text erst beim Runterscrollen */
   /* Fellfarben als kleine Kacheln rechts im Bild (quer und PC) */
   .farbspalte { position: absolute; right: calc(var(--pf) + 2px); top: 8px; bottom: 8px; width: calc(var(--fsB) - 8px); overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 2px; z-index: 2; scrollbar-width: none; }
@@ -949,7 +949,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "461";
+  const SPIEL_VERSION = "462";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -957,9 +957,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=461"></script>
-<script src="boxstufen.js?v=461"></script>
-<script src="kopfneu.js?v=461"></script>
+<script src="pferd.js?v=462"></script>
+<script src="boxstufen.js?v=462"></script>
+<script src="kopfneu.js?v=462"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3654,23 +3654,20 @@
   // ---------- v455 (Dome): Rassen nach Kontinent sortieren (Enzyklopädie, Pferdemarkt, Deckanzeigen) – Umschalter „Alle / Nach Kontinent“, Kontinente A–Z ----------
   const KONTINENT = { araber: "Asien", marwari: "Asien", tekke: "Asien", quarter: "Nordamerika", appaloosa: "Nordamerika", paint: "Nordamerika" };   // alle anderen Rassen: Europa (nach Herkunft)
   const kontinentVon = id => KONTINENT[id] || "Europa";
-  const sortSegment = () => `<div class="segment sort-seg" data-sortseg><button data-sort="alle" class="${spiel.sortKont ? "" : "an"}">Alle</button><button data-sort="kont" class="${spiel.sortKont ? "an" : ""}">Nach Kontinent</button></div>`;
-  // Liste(n) mit Kacheln, die data-rasse tragen: Umschalter davor, bei „Nach Kontinent“ in Gruppen (Überschrift je Kontinent, Rassen A–Z darin) – die Knöpfe bleiben dieselben (Klick-Funktionen bleiben erhalten)
+  // v462 (Dome): statt „Nach Kontinent“ direkt die Kontinente als Knöpfe (A–Z, nur die in dieser Liste vorkommen) – ein Knopf zeigt nur dessen Rassen
+  const sortSegment = konts => `<div class="segment sort-seg" data-sortseg><button data-sort="" class="${konts.includes(spiel.sortKont) ? "" : "an"}">Alle</button>${konts.map(k => `<button data-sort="${k}" class="${spiel.sortKont === k ? "an" : ""}">${k}</button>`).join("")}</div>`;
+  // Liste(n) mit Kacheln, die data-rasse tragen: Knopfzeile davor, beim gewählten Kontinent werden die anderen Kacheln ausgeblendet (Klick-Funktionen bleiben erhalten)
   function rasseSortieren(root, neu) {
     if (!root) return;
     const listen = [...root.querySelectorAll(".paar-liste, .rassen, .markt-kacheln")].filter(l => l.querySelector(":scope > [data-rasse]") && !l.closest("[data-sortseg]"));
     if (!listen.length) return;
-    if (!root.querySelector("[data-sortseg]")) listen[0].insertAdjacentHTML("beforebegin", sortSegment());
-    root.querySelectorAll("[data-sortseg] button").forEach(b => b.onclick = () => { spiel.sortKont = b.dataset.sort === "kont"; speichern(); neu(); });
-    if (!spiel.sortKont) return;
-    const name = c => (rasseById(c.dataset.rasse) || { name: "" }).name;
-    listen.forEach(l => { const gr = {};
-      [...l.children].forEach(c => { const k = kontinentVon(c.dataset.rasse); (gr[k] = gr[k] || []).push(c); });
-      const frag = document.createDocumentFragment();
-      Object.keys(gr).sort((x, y) => x.localeCompare(y, "de")).forEach(k => {
-        const h = document.createElement("h4"); h.className = "kont-kopf voll"; h.innerHTML = `${k} <small>${gr[k].length}</small>`; frag.appendChild(h);
-        const d = document.createElement("div"); d.className = l.className; gr[k].sort((x, y) => name(x).localeCompare(name(y), "de")).forEach(c => d.appendChild(c)); frag.appendChild(d); });
-      l.replaceWith(frag); });
+    const kacheln = listen.flatMap(l => [...l.children].filter(c => c.dataset.rasse)), konts = [...new Set(kacheln.map(c => kontinentVon(c.dataset.rasse)))].sort((x, y) => x.localeCompare(y, "de"));
+    const alt = root.querySelector("[data-sortseg]"); if (alt) alt.remove();
+    if (konts.length < 2) return;
+    listen[0].insertAdjacentHTML("beforebegin", sortSegment(konts));
+    root.querySelectorAll("[data-sortseg] button").forEach(b => b.onclick = () => { spiel.sortKont = b.dataset.sort || false; speichern(); neu(); });
+    const k = konts.includes(spiel.sortKont) ? spiel.sortKont : null;
+    kacheln.forEach(c => { c.style.display = k && kontinentVon(c.dataset.rasse) !== k ? "none" : ""; });
   }
   const rassenABC = () => RASSEN.slice().sort((a, b) => a.name.localeCompare(b.name, "de"));   // Dome (v324): Rassen nach Namen (ABC)
   function zeigeRassen() { enzyKat = "rassen"; zeigeEnzy(); }
@@ -11442,7 +11439,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Leopard-Komplex (v441, PLAN-SCHECKUNG.md Schritt 3):</b> Lp mit PATN1 = Tigerschecke (Lp/Lp: Wenigpunkt), ohne PATN1 = Schabracke mit Punkten (Lp/Lp: ohne Punkte) – Größe nach Muster-Ausprägung, unter ${String(LP_OHNE).replace(".", ",")} gar keine Schabracke (nur Merkmale/Lackschimmel). Alle Lp-Pferde: gefleckte rosa Haut an Maul und Augen, weiße Lederhaut im Augenwinkel, gestreifte Hufe (sichtbar, keine versteckte Genetik). Lackschimmel (Varnish Roan): Veranlagung <code>ex.lack</code> (vererbt) × Alter (voll nach ${LP_LACK_JAHRE} Jahren, Lp/Lp ×1,2), dunkel bleiben Bug, Ellbogen, Hüfthöcker, Knie, Widerrist; ab 0,5 heißt das Pferd „Lackschimmel“. Snowflake ${LP_SNOW * 100} % (Flöckchen: 4 + 3 je Lebensjahr, höchstens 40) und Frost ${LP_FROST * 100} % (ab 1 Jahr) – Zufall je Pferd, nicht vererbt. Bei ganz getigerten Pferden (Tiger, Wenigpunkt) ist der Körper ohnehin weiß.</p>
       <p><b>Neue Rassen (v442):</b> <b>Appaloosa</b> (142–160 cm, Lp ${RASSE_GENE.appaloosa.Lp * 100} %, PATN1 ${RASSE_GENE.appaloosa.Patn * 100} %, Veredler Quarter/Vollblut/Araber, Hufe ${HUF_RASSE.appaloosa}, dünne Mähne) · <b>Knabstrupper</b> (145–168 cm, Lp ${RASSE_GENE.knabstrupper.Lp * 100} %, PATN1 ${RASSE_GENE.knabstrupper.Patn * 100} %, Veredler Vollblut/Trakehner/Hannoveraner, Hufe ${HUF_RASSE.knabstrupper}) · <b>Paint Horse</b> (142–163 cm wie Quarter, Tobiano ${RASSE_GENE.paint.To * 100} %, Overo ${RASSE_GENE.paint.O * 100} %, Sabino ${RASSE_GENE.paint.Sb * 100} %, Splash ${RASSE_GENE.paint.Sw * 100} %, BR1, Veredler Quarter/Vollblut, mehr Weiß: Weiß-Anlage +${WEISS_RASSE.paint}, Muster +${MUSTER_RASSE.paint}). Erbkrankheiten: HYPP, HERDA, PSSM1 bei Paint/Appaloosa; neu <b>GBED</b> (rezessiv, tödlich im 1. Jahr) – Quarter ${ERBKRANK.gbed.rassen.quarter * 100} %, Paint ${ERBKRANK.gbed.rassen.paint * 100} %, Appaloosa ${ERBKRANK.gbed.rassen.appaloosa * 100} % Träger. Neue Veranlagung <b>Mondblindheit</b> (ERU): Appaloosa ${VERANLAGUNG.eru.rassen.appaloosa * 100} %, Knabstrupper ${VERANLAGUNG.eru.rassen.knabstrupper * 100} %, sonst ${VERANLAGUNG.eru.sonst * 100} %; Risiko ab 2 Jahren (0,3 + 6 × Veranlagung²) × (1 + 0,5 je Lp-Allel), Sommer ×1,3. Behandlung Kortison/Schmerzmittel/abgedunkelte Box, Glaskörper-OP ${OP_KLINIK.vitrektomie.preis} € (Erfolg 85 %). Westernturniere wie beim Quarter.</p>
       <p><b>Scheckungs-Auswahl und Zoom (v451):</b> Rassenansicht (für alle): Spalte „Scheckung“ links neben den Fellfarben, nur Muster, die bei der Rasse vorkommen (Gene nach Rassen-Häufigkeit, Rabicano/Bend-Or nach Tabelle, Birdcatcher und dunkler Brindle bei allen); ein Klick baut die Gene aus Grundfarbe + Muster zusammen (Ausprägung wählbar). Bend-Or nur bei Füchsen, weißer Brindle nur bei Stuten. Zoomen (Zwei-Finger bzw. Mausrad, bis ${ZOOM_MAX}-fach, Doppeltipp = ranzoomen/zurück) in der Rassenansicht und bei den Steckbrief-Bildern (Kauf, Deckanzeigen, Lese-Steckbrief) – nicht im Stall.</p>
-      <p><b>Sortierung nach Kontinent (v455):</b> Umschalter „Alle / Nach Kontinent“ (gilt überall, gemerkt in <code>spiel.sortKont</code>) in Enzyklopädie – Rassen, Pferdemarkt (Händler, Privat, Auktion, Fohlenauktion, Gestüte, Verkaufsrennen, Notfallpferde) und Deckanzeigen. Kontinente A–Z, Rassen darin A–Z. Zuordnung nach Herkunft: Asien – Araber, Marwari, Achal-Tekkiner · Nordamerika – Quarter Horse, Appaloosa, Paint Horse · Europa – alle anderen (<code>KONTINENT</code>, neue Rassen dort eintragen).</p>
+      <p><b>Sortierung nach Kontinent (v455):</b> v462: Knöpfe „Alle“ + die Kontinente der Liste A–Z, ein Kontinent zeigt nur dessen Rassen (gilt überall, gemerkt in <code>spiel.sortKont</code>) in Enzyklopädie – Rassen, Pferdemarkt (Händler, Privat, Auktion, Fohlenauktion, Gestüte, Verkaufsrennen, Notfallpferde) und Deckanzeigen. Kontinente A–Z, Rassen darin A–Z. Zuordnung nach Herkunft: Asien – Araber, Marwari, Achal-Tekkiner · Nordamerika – Quarter Horse, Appaloosa, Paint Horse · Europa – alle anderen (<code>KONTINENT</code>, neue Rassen dort eintragen).</p>
       <p><b>Achal-Tekkiner (v443/v446):</b> Metallglanz als Veranlagung <code>ex.glanz</code> (vererbt): unter ${String(GLANZ_AB).replace(".", ",")} keiner (ca. 15 %), sonst Stärke 0,35 + 0,65 × Anlage, mal Tekkiner-Anteil. Cream-/Falbfarben heißen beim Tekkiner „Gold“ (Goldfalbe, Gold-Palomino), Isabell glänzt silbrig. Schimmel verlieren die Maulfärbung, sobald sie sichtbar grau werden. Ab 30 % Ausschimmelung bekommt der Schimmel Domes Graumaul (Ebene „graumaul“) und einen dunklen Schatten um die Augen (v447/v449).</p>
       <p><b>Neue Rassen (v445):</b> <b>Noriker</b> (155–165 cm, Kaltblut, leichtfuttrig, Tiger Lp ${RASSE_GENE.noriker.Lp * 100} %, Roan ${RASSE_GENE.noriker.Rn * 100} % = „Mohrenkopf“, Tobiano ${RASSE_GENE.noriker.To * 100} %, PSSM1 ${ERBKRANK.pssm.rassen.noriker * 100} %, Lymphödem-Veranlagung ${VERANLAGUNG.lymph.rassen.noriker * 100} %, Mondblindheit ${VERANLAGUNG.eru.rassen.noriker * 100} %, Hufe ${HUF_RASSE.noriker}; Hengste tragen den Namen ihrer Linie: Vulkan, Nero, Diamant, Elmar, Schaunitz) · <b>Lewitzer</b> (130–148 cm, Schecken-Reitpony, Tobiano ${RASSE_GENE.lewitzer.To * 100} %, Veredler Welsh Cob/Araber/Trakehner, Hufe ${HUF_RASSE.lewitzer}) · <b>Barock Pinto</b> (150–168 cm, Friesentyp mit Tobiano ${RASSE_GENE.barockpinto.To * 100} %, Veredler Friese, Tinker, Paint (Pinto-Partner), Friesen-Erbkrankheiten Zwergwuchs/Wasserkopf je ${ERBKRANK.zwerg_f.rassen.barockpinto * 100} %, Sommerekzem ${VERANLAGUNG.ekzem.rassen.barockpinto * 100} %, Hufe ${HUF_RASSE.barockpinto}).</p>
       <p><b>Hellfalbe</b> (v433): Braunfalbe mit Farbton-Veranlagung <code>ex.ton</code> unter 0,25 (vererbt, wie Hellbrauner) heißt „Hellfalbe“ – heller Körper, gleiche Gene.</p>

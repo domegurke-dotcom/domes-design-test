@@ -9,6 +9,7 @@ Nach dem Zeichnen einfach hochladen – `werkzeuge/kopf-export.js` übernimmt ne
 ### 1. Laterne: Farbverlauf
 - **Problem:** Der Verlauf blendet im unteren Gesichtsteil auf 0 % Deckkraft aus – zwischen Auge und Nase scheint das Fell durch („braun in der Mitte“).
 - **In echt:** Eine Laterne ist von der Stirn bis über die Nüstern durchgehend weiß und reicht seitlich über das Auge.
+- **Auch die Form:** Selbst voll weiß gefüllt bleibt zwischen Auge und Nase eine Lücke – die Form der Laterne deckt die Nasenmitte nicht ab (Test v433). Bitte die Form bis über die Nüstern schließen.
 - **Ändern:** Die Fläche überall voll weiß lassen. Weich auslaufen nur am äußeren Rand zur Backe hin (z. B. nur ein schmaler Blur am Rand oder ein Verlauf, der erst ganz außen ausblendet).
 - Bei **breite Blesse** und **Blesse** kurz prüfen, ob dort auch zu viel ausblendet – sie sollen ebenfalls von der Stirn bis zur Nase durchgehen.
 

@@ -933,7 +933,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "416";
+  const SPIEL_VERSION = "417";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -941,10 +941,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=416"></script>
-<script src="boxstufen.js?v=416"></script>
-<script src="kopfteile.js?v=416"></script>
-<script src="kopfalter.js?v=416"></script>
+<script src="pferd.js?v=417"></script>
+<script src="boxstufen.js?v=417"></script>
+<script src="kopfteile.js?v=417"></script>
+<script src="kopfalter.js?v=417"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2791,6 +2791,7 @@
           <dt>Geboren</dt><dd>${JZ[p.geb.s][1]} ${JZ[p.geb.s][0]} ${p.geb.j}</dd>
           ${p.fohlenschau ? `<dt>Fohlenschau</dt><dd>${fsText(p)}${p.championat ? `<br>Championat: ${p.championat.platz}. von ${p.championat.von} (${esc(p.championat.name)})` : ""}</dd>` : ""}${plakettenVon(p).length ? `<dt>Plaketten</dt><dd>${plakettenText(p)}</dd>` : ""}
           ${box.fohlen ? `<dt>Fohlen</dt><dd>${esc(box.fohlen.name)} · ${box.fohlen.geschlecht} · ${alterText(box.fohlen)} (${altersstufe(box.fohlen)[1].replace(/^\S+ /, "")})${box.fohlen.fohlenschau ? `<br><small>${fsText(box.fohlen)}</small>` : ""}${alterJZ(box.fohlen) >= 2 ? `<br><button class="knopf" id="absetzen" style="width:auto;padding:6px 12px;margin-top:6px;font-size:.85rem">In eigene Box umstellen</button> <button class="knopf zweit" id="fohlenAufzucht" style="width:auto;padding:6px 12px;margin-top:6px;font-size:.85rem">🍼 In die Aufzuchtstation</button>` : ""}</dd>` : ""}
+          ${box.fohlen ? `<dt>Fohlen-Gesundheit</dt><dd>${fohlenGesundheit(box.fohlen)}</dd>` : ""}
           <dt>Stockmaß</dt><dd>${p.stockmass} cm</dd><dt>Gewicht</dt><dd>ca. ${gewichtAnzeige(p)} kg</dd>${p.zwerg ? `<dt>Besonderheit</dt><dd>Zwergwuchs – bleibt deutlich kleiner</dd>` : ""}${p.hufGr ? `<dt>Hufgröße</dt><dd>vorne ${HUFSCHUH_GR[p.hufGr.vorne]} · hinten ${HUFSCHUH_GR[p.hufGr.hinten]}</dd>` : ""}${spiel.admin && !box.lesen ? `<dt>Hufe 🛠️</dt><dd>${hufStufe(p)} (${hufQ(p)}) · wächst ${hufW(p)}</dd>` : ""}
           ${zucht ? `<dt>Zucht</dt><dd>${zucht}</dd>` : ""}
           ${(() => { const W = p.weideNachm, heute = W && W.tag === spiel.tag ? (W.aus ? `${esc(p.name)} bleibt heute drin.` : `Heute Nachmittag bringt ${esc(W.name || "der Stallbursche")} ${esc(p.name)} auf ${auslaufZielName(p) ? `„${esc(auslaufZielName(p))}“` : W.paddock ? "den Sandpaddock" : "die Weide"}.`) : "", log = auslaufLogText(p); return heute || log ? `<dt>Auslauf</dt><dd>${[heute, log].filter(Boolean).join("<br>")}</dd>` : ""; })()}
@@ -5296,10 +5297,16 @@
   // Was spricht gegen Training heute? (für alle Übungen) – "" = geht
   // v414 (Dome): Verfassungsprüfung am Turniertag – fällt durch, wenn die Krankheit das Pferd spürbar beeinträchtigt (ab diesem Grad); Melanom u. Ä. nie. Kein Doping, keine Sperrfrist.
   const TURNIER_GRENZE = { lahmheit: 1, hufrehe: 1, hufabszess: 1, kolik: 1, vergiftung: 1, erkaeltung: 1, husten: 1, influenza: 1, druse: 1, herpes: 1, hautpilz: 1, ataxie: 1, hypp: 1, verletzung: 2, hornspalt: 2, asthma: 2, magengeschwuer: 3, arthrose: 3, cushing: 3, mauke: 3, strahlfaeule: 3, ocd: 3, lymphoedem: 3, pssm: 3, herda: 3, wuermer: 4, sommerekzem: 4, ekzem: 4, kehlkopf: 4, pfeifen: 4, melanom: 99 };
-  function turnierSperre(p, box) {
-    const s = trainSperre(p, box, false, true); if (s) return s;
-    const b = befundListe(p).find(x => x.grad >= (TURNIER_GRENZE[x.art] != null ? TURNIER_GRENZE[x.art] : 3));
-    return b ? `ist bei der Verfassungsprüfung durchgefallen (${befundSicht(p, b).name}, ${GRAD_TEXT[b.grad]})` : "";
+  const krankFit = q => { const b = befundListe(q).find(x => x.grad >= (TURNIER_GRENZE[x.art] != null ? TURNIER_GRENZE[x.art] : 3)); return b ? `${befundSicht(q, b).name}, ${GRAD_TEXT[b.grad]}` : ""; };
+  // Boxenruhe zählt nicht mehr, wenn nichts mehr da ist (gesund geworden – Boxenruhe wurde nur noch nicht beendet): Pferd darf starten
+  function turnierSperre(p, box, fs) {
+    const gesund = !befundListe(p).length, br = p.boxenruhe;
+    if (br && gesund) delete p.boxenruhe;
+    const s = trainSperre(p, box, false, true); if (s) { if (br && gesund) p.boxenruhe = br; return s; }
+    const k = krankFit(p); if (k) { if (br && gesund) p.boxenruhe = br; return `ist bei der Verfassungsprüfung durchgefallen (${k})`; }
+    const f = fs && box && box.fohlen, kf = f ? krankFit(f) : "";
+    if (kf) return `darf nicht starten: ${f.name} ist krank (${kf})`;
+    return "";
   }
   function trainSperre(p, box, darf, turnier) {
     if (!p || (box && box.tot)) return "–";
@@ -5792,7 +5799,7 @@
     const nachDisz = turnierSortierung === "disz";
     const karte = (t, nurD) => { const meine = t.nennung.filter(n => n.pid === p.id);
       const zeilen = t.pruef.filter(P => zeigP(t, P) && (!nurD || dk(P) === nurD)).sort((a, b) => turnierSortierung === "machbar" ? machbar(t, b) - machbar(t, a) : 0).map(P => { const drin = meine.some(n => n.prid === P.id), sp = drin ? "" : nennSperre(p, t, P), ng = nenngeld(t, P), pg = preisgeld(t, P), [c, ct] = P.fohlenschau ? fsChance(fsBox(p).fohlen) : chance(p, t, P);
-        return `<li class="tp-zeile"><span><b>${esc(P.name)}${P.fohlenschau ? ` – ${esc(fsBox(p).fohlen.name)}` : ""}</b><small>${P.starter} ${P.fohlenschau ? "Fohlen" : "Starter"} · ${P.jockey ? `Nenngeld + Jockey${vorteil("renn") ? "" : " + Trainer"} ${fmt(ng)}` : `Nenngeld ${fmt(ng)}`}${pg ? ` · Preisgeld ${fmt(pg)}` : P.fohlenschau ? " · Prämie, Champion" : " · Schleifen"}${sp ? "" : ` · ${c} ${ct}`}${P.q ? `<br>${qualiStand(p, P).txt}` : ""}</small></span>
+        return `<li class="tp-zeile"><span><b>${esc(P.name)}${P.fohlenschau ? ` – ${esc(fsBox(p).fohlen.name)}` : ""}</b><small>${P.fohlenschau ? `Fohlen: ${fohlenGesundheit(fsBox(p).fohlen)}<br>` : ""}${P.starter} ${P.fohlenschau ? "Fohlen" : "Starter"} · ${P.jockey ? `Nenngeld + Jockey${vorteil("renn") ? "" : " + Trainer"} ${fmt(ng)}` : `Nenngeld ${fmt(ng)}`}${pg ? ` · Preisgeld ${fmt(pg)}` : P.fohlenschau ? " · Prämie, Champion" : " · Schleifen"}${sp ? "" : ` · ${c} ${ct}`}${P.q ? `<br>${qualiStand(p, P).txt}` : ""}</small></span>
           ${drin ? (spiel.tag < t.tag ? `<button class="mini-knopf an" data-tzurueck="${t.id}:${P.id}">✓ genannt</button>` : `<span class="stat ok">genannt</span>`) : sp ? `<span class="stat">${sp}</span>` : `<button class="mini-knopf" data-tnennen="${t.id}:${P.id}">Nennen</button>`}</li>`; }).join("");
       return `<details class="t-karte" ${meine.length ? "open" : ""}><summary><b>${({ hof: "🎀", renntag: "🏇", distanz: "🗺️", gangpferde: "✨", fohlenschau: "🍼", championat: "🏅", international: "🌍" })[t.art] || (t.typ === "western" ? "🤠" : "🏆")} ${esc(t.name)}</b><small>${datumTxt(t)} · ${artTxt[t.art]}${t.halle ? " · Halle" : " · Freiluft"}${meine.length ? ` · <b>${meine.length}× genannt</b>` : ""}</small></summary><ul class="tp-liste">${zeilen}</ul></details>`; };
     const diszListe = [...new Set(L.flatMap(t => t.pruef.filter(P => zeigP(t, P)).map(dk)))].sort((a, b) => { const i = k => DISZ[k] ? Object.keys(DISZ).indexOf(k) : 99; return i(a) - i(b); });
@@ -5809,10 +5816,26 @@
     document.querySelectorAll("[data-tnennen]").forEach(b => b.onclick = () => { const [tid, prid] = b.dataset.tnennen.split(":"), t = spiel.turniere.find(x => x.id === tid), P = t.pruef.find(x => x.id === prid);
       if (nennSperre(p, t, P)) return;
       const nennen = preis => { t.nennung.push({ pid: p.id, prid, geld: nenngeld(t, P), ...(P.verkauf ? { verkauf: preis } : {}) }); buchen(-nenngeld(t, P), "Turniere: Nenngeld"); speichern(); zeigeTag(); turnierDialog(p, zurueck); };
+      const kr = krankHinweis(p, P);   // v417 (Dome): Warnung, wenn Pferd (oder Fohlen) gerade krank ist – wird es bis zum Turniertag gesund, startet es trotzdem
+      if (kr) { dialog(`<h3>⚠️ ${esc(p.name)} ist gerade krank</h3><p>${kr}</p><p><small>Wird ${esc(p.name)} bis zum Turniertag gesund, startet ${pron(p).er} ganz normal. Sonst kannst du bis zum Vortag abmelden – bei Krankheit bekommst du das Nenngeld zurück.</small></p>`, [["Trotzdem nennen", () => { $("dlg").hidden = true; if (!P.verkauf) nennen(); else verkaufspreisDialog(p, nennen, () => turnierDialog(p, zurueck)); }], ["Lieber nicht", () => turnierDialog(p, zurueck), "zweit"]]); return; }
       if (!P.verkauf) { nennen(); return; }
       verkaufspreisDialog(p, nennen, () => turnierDialog(p, zurueck)); });
     document.querySelectorAll("[data-tzurueck]").forEach(b => b.onclick = () => { const [tid, prid] = b.dataset.tzurueck.split(":"), t = spiel.turniere.find(x => x.id === tid);
-      t.nennung = t.nennung.filter(n => !(n.pid === p.id && n.prid === prid)); speichern(); turnierDialog(p, zurueck); });
+      const n = t.nennung.find(x => x.pid === p.id && x.prid === prid), P = t.pruef.find(x => x.id === prid), kr = krankHinweis(p, P), geld = n && n.geld || 0;   // v417 (Dome): krank abmelden → Nenngeld zurück (Tierarzt-Attest)
+      t.nennung = t.nennung.filter(x => !(x.pid === p.id && x.prid === prid));
+      if (kr && geld) { buchen(geld, "Turniere: Nenngeld erstattet (krank abgemeldet)"); zeigeTag(); meldung = `💶 ${esc(p.name)} ist krank abgemeldet – ${fmt(geld)} Nenngeld zurück.`; }
+      speichern(); turnierDialog(p, zurueck); });
+  }
+  // v417 (Dome): Gesundheitszustand des Fohlens (Zahl + bekannte Befunde)
+  function fohlenGesundheit(f) { const g = Math.round(f.pflege && f.pflege.gesundheit != null ? f.pflege.gesundheit : 100), bf = bekannteBefunde(f).map(b => `${KRANK[b.art] ? KRANK[b.art].ico + " " : ""}${esc(befundSicht(f, b).name)} (${GRAD_TEXT[b.grad]})`);
+    return `${g >= 80 ? "🟢" : g >= 50 ? "🟡" : "🔴"} ${g} %${bf.length ? ` · ${bf.join(", ")}` : " · gesund"}`; }
+  // Stute oder Fohlen gerade krank (nach Verfassungsprüfung)? Text für Warnung/Abmeldung, sonst ""
+  function krankHinweis(p, P) {
+    const box = fsBox(p) || {}, k = krankFit(p), f = P && P.fohlenschau && box.fohlen, kf = f ? krankFit(f) : "";
+    if (k) return `${esc(p.name)}: <b>${esc(k)}</b> – damit würde ${pron(p).er} bei der Verfassungsprüfung durchfallen.`;
+    if (kf) return `Fohlen ${esc(f.name)}: <b>${esc(kf)}</b> – damit darf es nicht zur Fohlenschau.`;
+    if (p.boxenruhe && befundListe(p).length) return `${esc(p.name)} hat Boxenruhe.`;
+    return "";
   }
   const genanntBei = p => (spiel.turniere || []).filter(t => t.tag >= spiel.tag && t.nennung.some(n => n.pid === p.id));
   // v399 (Dome): genanntes Pferd wird weggeschickt (Ausbildungsstall, Aufzucht, Klinik) – erst fragen
@@ -5836,7 +5859,7 @@
           if (!alleHoefePferde().some(x => x.p.id === pid)) t.nennung = t.nennung.filter(n => n.pid !== pid); return; }   // steht auf einem anderen eigenen Hof
         if (p.weide && !p.boxenruhe && !p.umbauWeide) vonWeideHolen(box);
         const fs = t.nennung.some(n => n.pid === pid && (t.pruef.find(x => x.id === n.prid) || {}).fohlenschau);
-        const sp = fs ? (turnierSperre(p, box) || (!box.fohlen ? "hat kein Fohlen mehr bei Fuß" : box.fohlen.pflege && box.fohlen.pflege.gesundheit < 50 ? "hat ein zu schwaches Fohlen" : ""))
+        const sp = fs ? (turnierSperre(p, box, true) || (!box.fohlen ? "hat kein Fohlen mehr bei Fuß" : box.fohlen.pflege && box.fohlen.pflege.gesundheit < 50 ? "hat ein zu schwaches Fohlen" : ""))
           : turnierSperre(p, box) || (box.fohlen ? "hat ein Fohlen bei Fuß" : p.traechtig && p.traechtig.geburt - jzJetzt() <= 1 ? "ist hochtragend" : "");
         if (sp) { brief("Turnierbüro", `${p.name}: nicht gestartet`, `{du|Sie} hatte{st|n} <b>${esc(p.name)}</b> beim <b>${esc(t.name)}</b> genannt. ${esc(p.name)} konnte heute nicht starten: ${esc(p.name)} ${sp}. Das Nenngeld wird nicht erstattet.`, { pferde: [p] });
           t.nennung = t.nennung.filter(n => n.pid !== pid); return; }
@@ -6097,10 +6120,14 @@
   function fohlenschauErzeugen(D, rz, neu, ortW) {
     if (D.s !== 1 && D.s !== 2) return;
     const pr = (klasse, name) => ({ id: "p" + Math.floor(rz() * 1e9).toString(36), disz: "fohlenschau", fohlenschau: true, klasse, stufe: -1, starter: 8 + Math.floor(rz() * 13), name, nenn: FS_NENNGELD, preis: 0 });
-    neu("fohlenschau", "zucht", `${D.s === 1 ? "Fohlenschau" : "Fohlen-Nachschau"} des Zuchtverbands in ${ortW()}`, [pr("stut", "Stutfohlen"), pr("hengst", "Hengstfohlen"), pr("offen", "Offene Klasse (Mischlinge)")]);
-    // Fohlenchampionat am letzten Tag der Jahreszeit – nur für Prämienfohlen; die Schau liegt mindestens 2 Tage davor (Ergebnis kommt am Tag danach, Nennschluss am Vortag)
-    const S = spiel.turniere[spiel.turniere.length - 1], start = S.tag - datum(S.tag).t + 1, letzter = start + tpj() - 1;
-    if (S.tag > letzter - 2 && letzter - 2 > spiel.tag) S.tag = Math.max(spiel.tag + 1, letzter - 2 - Math.floor(rz() * Math.max(1, Math.min(3, tpj() - 3))));
+    // v417 (Dome): mehrere Schauen je Jahreszeit (3 verschiedene Orte) – wer krank ist, hat noch eine zweite Chance
+    const orte = [], titel = D.s === 1 ? ["Fohlenschau des Zuchtverbands", "Regionale Fohlenschau", "Fohlenschau des Zuchtvereins"] : ["Fohlen-Nachschau des Zuchtverbands", "Regionale Fohlen-Nachschau", "Fohlen-Nachschau des Zuchtvereins"];
+    let letzter = 0;
+    titel.forEach(tt => { let o = ortW(); for (let k = 0; k < 8 && orte.includes(o); k++) o = ortW(); orte.push(o);
+      neu("fohlenschau", "zucht", `${tt} in ${o}`, [pr("stut", "Stutfohlen"), pr("hengst", "Hengstfohlen"), pr("offen", "Offene Klasse (Mischlinge)")]);
+      // Fohlenchampionat am letzten Tag der Jahreszeit – nur für Prämienfohlen; die Schau liegt mindestens 2 Tage davor (Ergebnis kommt am Tag danach, Nennschluss am Vortag)
+      const S = spiel.turniere[spiel.turniere.length - 1], start = S.tag - datum(S.tag).t + 1; letzter = start + tpj() - 1;
+      if (S.tag > letzter - 2 && letzter - 2 > spiel.tag) S.tag = Math.max(spiel.tag + 1, letzter - 2 - Math.floor(rz() * Math.max(1, Math.min(3, tpj() - 3)))); });
     if (letzter <= spiel.tag) return;
     const cp = (klasse, name) => ({ ...pr(klasse, name), championat: true, starter: 10 + Math.floor(rz() * 11), nenn: FSC_NENNGELD });
     neu("fohlenschau", "zucht", `Fohlenchampionat des Zuchtverbands in ${ortW()}`, [cp("stut", "Championat Stutfohlen"), cp("hengst", "Championat Hengstfohlen"), cp("offen", "Championat Offene Klasse")]);

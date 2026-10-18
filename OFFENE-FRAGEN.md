@@ -18,6 +18,7 @@ Erledigt und umgesetzt: H1–H3 bestätigt (Postkasten aus der Immobilien-Verwal
 - **Köpfe Etappe 2 (v426):**
   - ✅ Taubheit (v427): Hörtest 150 € im Labor, taube Pferde erschrecken beim Putzen bis zum Test. Farben (Weiß der Beinabzeichen, cremiges Mehlmaul) – Dome ok.
   - 👀 **Im Auge behalten (Dome 18.10.):** Flocke und Stern sitzen ganz vorn an der Stirnkante und sind im Spiel sehr klein (auf der Handy-Kachel in der Enzyklopädie kaum zu sehen). Bei Bedarf in der SVG größer zeichnen – `werkzeuge/kopf-export.js` übernimmt sie.
+  - 🎨 **Für Dome in der SVG (v428):** Die **Laterne** blendet im unteren Gesichtsteil aus (Verlauf von 100 % auf 0 % Deckkraft) – dadurch scheint dort das Fell durch. Eine echte Laterne ist bis zur Nase durchgehend weiß. Bitte den Verlauf so ändern, dass er nur am Rand zur Backe weich ausläuft (gilt in allen 19 Kopfformen). Das **dunkle Maul** (früher „graumaul“; Ebene darf umbenannt werden in „dunkles maul“) ist recht klein – bei Bedarf etwas größer zeichnen.
   - **Splash-Körper:** weißer Bauch mit glattem Rand und hohe weiße Beine habe ich selbst gezeichnet (wie Sabino). Wenn du ein eigenes Splash-Fell zeichnen möchtest, baue ich es ein.
   - ✅ Admin-Rassenansicht (v427): Abzeichen, Schnippe, Maul und Augen in „Gene selbst wählen“.
 

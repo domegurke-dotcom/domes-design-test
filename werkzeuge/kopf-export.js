@@ -37,7 +37,7 @@ const ROOT = path.join(__dirname, "..");
     const ST = { leicht: 1, normal: 2, stark: 3 }, FAM = { hechtkopf: "hecht", ramsnase: "ramsnase", ramskopf: "rams", keilkopf: "keil", schafskopf: "schaf", schweinskopf: "schwein" };
     // Etappe 2: Kopfabzeichen und Maulfärbung je Kopfform – Verläufe/Filter kommen einmal in out.defs (ids mit Platzhalter __U__, je Pferd ersetzt)
     const ABZ = { "flocke": "flocke", "stern": "stern", "keilstern": "keilstern", "schnippe": "schnippe", "schmale blesse": "schmaleBlesse", "blesse": "blesse", "breite blesse": "breiteBlesse", "laterne": "laterne" };
-    const MAUL = { "mehlmaul": "mehl", "kupfermaul": "kupfer", "graumaul": "grau" };
+    const MAUL = { "mehlmaul": "mehl", "kupfermaul": "kupfer", "graumaul": "dunkel", "dunkles maul": "dunkel" };   // „graumaul“ heißt im Spiel „dunkles Maul“ (Dome, v428)
     const defIds = new Map();
     const urls = s => [...(s || "").matchAll(/url\(#([^)]+)\)/g)].map(m => m[1]);
     const merkDef = id => { if (defIds.has(id)) return; const d = document.getElementById(id); if (!d) return; defIds.set(id, "__U__d" + defIds.size);
@@ -91,7 +91,7 @@ const ROOT = path.join(__dirname, "..");
     for (const k of Object.keys(out.formen)) for (const art of ["abz", "maul"]) for (const z of Object.keys(out.formen[k][art] || {})) out.formen[k][art][z] = umbenennen(out.formen[k][art][z]);
     out.defs = [...defIds].map(([id, neu]) => { const c = document.getElementById(id).cloneNode(true);
       for (const n of [c, ...c.querySelectorAll("*")]) for (const a of [...n.attributes]) if (/^(inkscape|sodipodi):/.test(a.name) || (a.name === "id" && n !== c)) n.removeAttribute(a.name);
-      c.setAttribute("id", neu); return umbenennen(r3(c.outerHTML.replace(/ xmlns(:\w+)?="[^"]*"/g, "").replace(/xlink:href/g, "href"))).replace(/#e5e5e5/gi, "__WEISS__").replace(/#e6e6e6/gi, "__MEHL__"); }).join("");
+      c.setAttribute("id", neu); return umbenennen(r3(c.outerHTML.replace(/ xmlns(:\w+)?="[^"]*"/g, "").replace(/xlink:href/g, "href"))).replace(/#e5e5e5/gi, "__WEISS__").replace(/#e6e6e6/gi, "__MEHL__").replace(/#656565|#4d4d4d/gi, "__DUNKEL__"); }).join("");   // dunkles Maul: Farbe aus dem Fell (v428)
     return out;
   });
   await b.close();

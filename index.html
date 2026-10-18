@@ -933,7 +933,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "427";
+  const SPIEL_VERSION = "428";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -941,9 +941,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=427"></script>
-<script src="boxstufen.js?v=427"></script>
-<script src="kopfneu.js?v=427"></script>
+<script src="pferd.js?v=428"></script>
+<script src="boxstufen.js?v=428"></script>
+<script src="kopfneu.js?v=428"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1166,8 +1166,9 @@
   const logit = x => { const y = Math.max(.001, Math.min(.999, x)); return Math.log(y / (1 - y)); }, sigmoid = x => 1 / (1 + Math.exp(-x));
   const ABZ_NAME = { flocke: "Flocke", stern: "Stern", keilstern: "Keilstern", schnippe: "Schnippe", schmaleBlesse: "Schmale Blesse", blesse: "Blesse", breiteBlesse: "Breite Blesse", laterne: "Laterne" };
   // Pangaré (ex.pangare, versteckt, vererbt): ab 0,5 sichtbar – so viele Pferde der Rasse zeigen es
-  const PANGARE_RASSE = { fjord: .5, haflinger: .5, shetty: .5, isi: .5, shire: .2, clydesdale: .2, tinker: .2, welshcob: .2, fell: .2, dales: .2, araber: .03, vollblut: .03, tekke: .03, shagya: .03, angloaraber: .03, friese: .03 }, PANGARE_SONST = .1;
-  const MAUL_NAME = { mehl: "Mehlmaul", kupfer: "Kupfermaul", grau: "Graumaul" };
+  const PANGARE_RASSE = { fjord: .2, haflinger: .5, shetty: .5, isi: .5, shire: .2, clydesdale: .2, tinker: .2, welshcob: .2, fell: .2, dales: .2, araber: .03, vollblut: .03, tekke: .03, shagya: .03, angloaraber: .03, friese: .03 }, PANGARE_SONST = .1;
+  const MAUL_NAME = { mehl: "Mehlmaul", kupfer: "Kupfermaul", dunkel: "dunkles Maul" };
+  const MAUL_DUNKEL = .7;   // Braunfalben (und Weißfalben) ohne Pangaré: so viele haben ein dunkles Maul – Mausfalben immer (dunkler Kopf)
   // blaue Augen: Doppel-Cream immer, sonst so oft bei Splash, Frame Overo und Laterne (Weiß über dem Auge → Glasauge)
   const AUGE_BLAU = { Sw: .85, O: .25, laterne: .4 };
   const TAUB_SW = [0, .08, .2];   // Splash: so viele Pferde sind taub (ein/zwei Allele) – versteckt, nur Admin
@@ -1181,9 +1182,14 @@
     const w = sigmoid(logit(ex.weiss) + weissZuschlag(g));
     const haupt = ABZ_STUFEN.find(([t]) => w < t)[1], abz = haupt ? [haupt] : [];
     if (haupt && haupt !== "schnippe" && (ex.schn != null ? ex.schn : zufall("abz-" + id)() < ABZ_PLUS_SCHNIPPE)) abz.push("schnippe");   // ex.schn: im Adminmodus festgelegt
-    // Maul: Schwarzbraune (At) haben immer ein Kupfermaul; sonst Pangaré (Braune/Falben Mehlmaul, Füchse Kupfermaul, Rappen Graumaul) – verschwindet beim Ausschimmeln, nicht bei Doppel-Cream
-    const st = grauStand(p); let maul = null;
-    if (!(st && st.t > .5) && anzahl(g, "Cr") < 2) maul = b === "schwarzbrauner" ? "kupfer" : ex.pangare >= .5 ? (!hat(g, "E") ? "kupfer" : hat(g, "A") ? "mehl" : "grau") : null;
+    // Maul (v428, wie in echt): Schwarzbraune (At) haben immer ein Kupfermaul. Pangaré hellt nur rotes Pigment auf → Mehlmaul bei Braunen, Füchsen und ihren Falben/Cream-Varianten;
+    // bei Rappen und Mausfalben unsichtbar (wird aber vererbt). Schwarzbasierte Falben ohne Pangaré: dunkles Maul. Verschwindet beim Ausschimmeln und bei Doppel-Cream.
+    const st = grauStand(p), rot = !hat(g, "E") || hat(g, "A"); let maul = null;
+    if (!(st && st.t > .5) && anzahl(g, "Cr") < 2) {
+      if (b === "schwarzbrauner") maul = "kupfer";
+      else if (ex.pangare >= .5 && rot) maul = "mehl";
+      else if (hat(g, "D") && hat(g, "E")) maul = !hat(g, "A") || (ex.dunkel != null ? ex.dunkel : zufall("maul-" + id)() < MAUL_DUNKEL) ? "dunkel" : null;   // ex.dunkel: im Adminmodus festgelegt
+    }
     const za = zufall("auge-" + id)();
     const glasMoeglich = !!(sw || hat(g, "O") || abz.includes("laterne"));
     const glas = glasMoeglich && (ex.auge ? ex.auge === "blau" : (sw && za < AUGE_BLAU.Sw) || (hat(g, "O") && za < AUGE_BLAU.O) || (abz.includes("laterne") && za < AUGE_BLAU.laterne));   // ex.auge: im Adminmodus festgelegt
@@ -2953,7 +2959,7 @@
           ${p.fohlenschau ? `<dt>Fohlenschau</dt><dd>${fsText(p)}${p.championat ? `<br>Championat: ${p.championat.platz}. von ${p.championat.von} (${esc(p.championat.name)})` : ""}</dd>` : ""}${plakettenVon(p).length ? `<dt>Plaketten</dt><dd>${plakettenText(p)}</dd>` : ""}
           ${box.fohlen ? `<dt>Fohlen</dt><dd>${esc(box.fohlen.name)} · ${box.fohlen.geschlecht} · ${alterText(box.fohlen)} (${altersstufe(box.fohlen)[1].replace(/^\S+ /, "")})${box.fohlen.fohlenschau ? `<br><small>${fsText(box.fohlen)}</small>` : ""}${alterJZ(box.fohlen) >= 2 ? `<br><button class="knopf" id="absetzen" style="width:auto;padding:6px 12px;margin-top:6px;font-size:.85rem">In eigene Box umstellen</button> <button class="knopf zweit" id="fohlenAufzucht" style="width:auto;padding:6px 12px;margin-top:6px;font-size:.85rem">🍼 In die Aufzuchtstation</button>` : ""}</dd>` : ""}
           ${box.fohlen ? `<dt>Fohlen-Gesundheit</dt><dd>${fohlenGesundheit(box.fohlen)}</dd>` : ""}
-          <dt>Stockmaß</dt><dd>${p.stockmass} cm</dd><dt>Kopf</dt><dd>${kopfName(kopfVon(p))}</dd><dt>Abzeichen</dt><dd>${abzeichenText(p)}${maulText(p) ? ` · ${maulText(p)}` : ""}</dd><dt>Augen</dt><dd>${augenText(p)}</dd><dt>Gewicht</dt><dd>ca. ${gewichtAnzeige(p)} kg</dd>${p.zwerg ? `<dt>Besonderheit</dt><dd>Zwergwuchs – bleibt deutlich kleiner</dd>` : ""}${p.hufGr ? `<dt>Hufgröße</dt><dd>vorne ${HUFSCHUH_GR[p.hufGr.vorne]} · hinten ${HUFSCHUH_GR[p.hufGr.hinten]}</dd>` : ""}${spiel.admin && !box.lesen ? `<dt>Hufe 🛠️</dt><dd>${hufStufe(p)} (${hufQ(p)}) · wächst ${hufW(p)}</dd>` : ""}
+          <dt>Stockmaß</dt><dd>${p.stockmass} cm</dd><dt>Kopf</dt><dd>${kopfName(kopfVon(p))}</dd><dt>Abzeichen</dt><dd>${abzeichenText(p)}</dd>${maulText(p) ? `<dt>Maul</dt><dd>${maulText(p)}</dd>` : ""}<dt>Augen</dt><dd>${augenText(p)}</dd><dt>Gewicht</dt><dd>ca. ${gewichtAnzeige(p)} kg</dd>${p.zwerg ? `<dt>Besonderheit</dt><dd>Zwergwuchs – bleibt deutlich kleiner</dd>` : ""}${p.hufGr ? `<dt>Hufgröße</dt><dd>vorne ${HUFSCHUH_GR[p.hufGr.vorne]} · hinten ${HUFSCHUH_GR[p.hufGr.hinten]}</dd>` : ""}${spiel.admin && !box.lesen ? `<dt>Hufe 🛠️</dt><dd>${hufStufe(p)} (${hufQ(p)}) · wächst ${hufW(p)}</dd>` : ""}
           ${zucht ? `<dt>Zucht</dt><dd>${zucht}</dd>` : ""}
           ${(() => { const W = p.weideNachm, heute = W && W.tag === spiel.tag ? (W.aus ? `${esc(p.name)} bleibt heute drin.` : `Heute Nachmittag bringt ${esc(W.name || "der Stallbursche")} ${esc(p.name)} auf ${auslaufZielName(p) ? `„${esc(auslaufZielName(p))}“` : W.paddock ? "den Sandpaddock" : "die Weide"}.`) : "", log = auslaufLogText(p); return heute || log ? `<dt>Auslauf</dt><dd>${[heute, log].filter(Boolean).join("<br>")}</dd>` : ""; })()}
           ${(() => { const akt = befundListe(p).filter(b => b.diagnose), alt = p.befundAlt || []; if (!akt.length && !alt.length) return "";
@@ -3773,14 +3779,15 @@
   // v427 (Dome): Kopfabzeichen, Maulfarbe und Augen in „Gene selbst wählen“ – setzt Weiß-Anlage/Pangaré passend (wird so auch vererbt)
   function glKopfZeilen(zeile, exOpt) {
     const g = wahl.gen, ex = wahl.ex, k = kopfZeichen({ ...wahl, geb: undefined }), haupt = k.abz.filter(a => a !== "schnippe")[0] || (k.abz.length ? "schnippe" : null);
-    const b = grundfarbe(g, ex.ton), maulName = b === "schwarzbrauner" ? null : !hat(g, "E") ? "Kupfermaul" : hat(g, "A") ? "Mehlmaul" : "Graumaul";
+    const b = grundfarbe(g, ex.ton), rot = !hat(g, "E") || hat(g, "A"), dunkelFalbe = hat(g, "D") && hat(g, "E");
     const z = [zeile("x-abz", "Kopfabzeichen", "Wird über die Weiß-Anlage vererbt (Füchse, Sabino, Splash und Overo haben mehr Weiß).",
       exOpt("abz", ABZ_STUFEN.map(([, a]) => [a || "keine", a ? ABZ_NAME[a] : "keins"]), haupt || "keine"))];
     if (haupt && haupt !== "schnippe") z.push(zeile("x-schn", "Schnippe dazu", "Zusätzlich eine Schnippe zwischen den Nüstern.", exOpt("schn", [["1", "ja"], ["0", "nein"]], k.abz.includes("schnippe") ? "1" : "0")));
     if (anzahl(g, "Cr") === 2) z.push(zeile("x-maul", "Maul", "Bei Doppel-Cream sieht man keine Maulfärbung.", `<small>– (Doppel-Cream)</small>`));
-    else if (!maulName) z.push(zeile("x-maul", "Maul", "Schwarzbraune (At) haben immer ein Kupfermaul.", `<small>Kupfermaul (immer bei Schwarzbraunen)</small>`));
-    else z.push(zeile("x-maul", "Maul", "Veranlagung Pangaré – hellt das Maul auf (Braune: Mehlmaul, Füchse: Kupfermaul, Rappen: Graumaul). Wird vererbt, verschwindet beim Ausschimmeln.",
-      exOpt("pangare", [[.8, maulName], [.2, "normal"]], ex.pangare >= .5 ? .8 : .2)));
+    else if (b === "schwarzbrauner") z.push(zeile("x-maul", "Maul", "Schwarzbraune (At) haben immer ein Kupfermaul.", `<small>Kupfermaul (immer bei Schwarzbraunen)</small>`));
+    else if (rot) z.push(zeile("x-maul", "Maul", "Mehlmaul = Veranlagung Pangaré (wird vererbt, verschwindet beim Ausschimmeln). Braunfalben ohne Pangaré haben meist ein dunkles Maul.",
+      exOpt("maul", [["mehl", "Mehlmaul"], ...(dunkelFalbe ? [["dunkel", "dunkles Maul"]] : []), ["normal", "normal"]], k.maul || "normal")));
+    else z.push(zeile("x-maul", "Pangaré", `Bei ${dunkelFalbe ? "Mausfalben (immer dunkles Maul)" : "Rappen"} sieht man Pangaré nicht – es wird aber vererbt.`, exOpt("pangare", [[.8, "ja (unsichtbar)"], [.2, "nein"]], ex.pangare >= .5 ? .8 : .2)));
     if (k.glasMoeglich) z.push(zeile("x-auge", "Augen", "Blaues „Glasauge“ gibt es bei Splashed White, Frame Overo und Laterne.", exOpt("auge", [["braun", "braun"], ["blau", "blau (Glasauge)"]], k.augeBlau ? "blau" : "braun")));
     else z.push(zeile("x-auge", "Augen", "Blau nur bei Doppel-Cream, Splashed White, Frame Overo oder Laterne.", `<small>${anzahl(g, "Cr") === 2 ? "blau (Doppel-Cream)" : "braun"}</small>`));
     return z;
@@ -3832,14 +3839,15 @@
       if (b.dataset.gl === "O" && hat(wahl.gen, "O") && !/^(ov|tv)_/.test(wahl.chip)) wahl.ex.ow = Math.min(wahl.ex.ow, .1);   // versteckter Overo-Träger
       glZeigen(); });
     S.querySelectorAll("[data-glex]").forEach(b => b.onclick = () => { const k = b.dataset.glex, v = b.dataset.v;
-      if (k === "abz") wahl.abzWahl = v; else if (k === "schn") wahl.ex.schn = v === "1"; else if (k === "auge") wahl.ex.auge = v; else wahl.ex[k] = +v;
+      if (k === "maul") { wahl.ex.pangare = v === "mehl" ? .8 : .2; wahl.ex.dunkel = v === "dunkel"; }
+      else if (k === "abz") wahl.abzWahl = v; else if (k === "schn") wahl.ex.schn = v === "1"; else if (k === "auge") wahl.ex.auge = v; else wahl.ex[k] = +v;
       if (k === "fliegen") wahl.ex.fliegenAb = 10; glZeigen(); });
     S.querySelectorAll("[data-info]").forEach(b => b.onclick = () => { const el = $("gli-" + b.dataset.info); el.hidden = !el.hidden; });
   }
   document.getElementById("glAlter").oninput = e => { wahl.alter = +e.target.value; if ($("alter")) $("alter").value = wahl.alter; glZeigen(); };
   document.getElementById("glFertig").onclick = () => { $("genLabor").hidden = true; aktualisiere(); };
   document.getElementById("glZufall").onclick = () => { glFarbeSetzen(wahl.chip);
-    delete wahl.abzWahl; delete wahl.ex.schn; delete wahl.ex.auge; wahl.ex.weiss = weissZufall(wahl.rasse, Math.random); wahl.ex.pangare = pangareZufall(wahl.rasse, Math.random);   // v427: Kopf neu würfeln
+    delete wahl.abzWahl; delete wahl.ex.schn; delete wahl.ex.auge; delete wahl.ex.dunkel; wahl.ex.weiss = weissZufall(wahl.rasse, Math.random); wahl.ex.pangare = pangareZufall(wahl.rasse, Math.random);   // v427: Kopf neu würfeln
     glZeigen(); };
 
   // ---------- Tagesablauf ----------
@@ -8247,9 +8255,10 @@
       ["Blesse", "Weißer Streifen von der Stirn bis zur Nase.", null, null, null, "gerade", { kopfAbz: ["blesse"] }],
       ["Breite Blesse", "Breiter Streifen über den Nasenrücken.", null, null, null, "gerade", { kopfAbz: ["breiteBlesse"] }],
       ["Laterne", "Sehr breite Blesse, die über das Auge und die Maulpartie reicht – darunter oft ein blaues „Glasauge“.", null, null, null, "gerade", { kopfAbz: ["laterne"], augeBlau: true }],
-      ["Mehlmaul", "Helles, mehliges Maul bei Braunen und Falben (Veranlagung Pangaré, typisch für Haflinger, Fjordpferd, Exmoor).", null, null, "brauner", "gerade", { maul: "mehl" }],
-      ["Kupfermaul", "Rötlich-kupferfarbenes Maul bei Füchsen (Pangaré) – Schwarzbraune haben es immer.", null, null, "fuchs", "gerade", { maul: "kupfer" }],
-      ["Graumaul", "Graues Maul bei Rappen (Pangaré).", null, null, "rappe", "gerade", { maul: "grau" }],
+      ["Mehlmaul", "Helles, mehliges Maul (Veranlagung Pangaré, typisch für Exmoor, Haflinger und Shetty). Keine Abzeichen – die Haare sind nur aufgehellt. Bei Rappen sieht man Pangaré nicht.", null, null, "brauner", "gerade", { maul: "mehl" }],
+      ["Mehlmaul beim Fuchs", "Beim Fuchs macht Pangaré das Maul hell-flachsfarben, z. B. beim Haflinger.", null, null, "fuchs", "gerade", { maul: "mehl" }],
+      ["Kupfermaul", "Rötlich helles Maul der Schwarzbraunen – daran erkennt man sie neben einem Rappen.", null, null, "schwarzbrauner", "gerade", { maul: "kupfer" }],
+      ["Dunkles Maul", "Dunkle Nase bei Falben, z. B. beim Fjordpferd – Mausfalben haben immer einen dunklen Kopf.", null, null, "mausfalbe", "gerade", { maul: "dunkel" }],
     ] },
     beinabz: { titel: "Beinabzeichen", ansicht: "beine", rasse: "hannoveraner", farbe: "brauner", eintraege: [
       ["Weiße Krone", "Schmaler weißer Rand direkt über dem Huf.", null, { beine: "krone" }],
@@ -10987,7 +10996,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         Mehr Weiß (Logit): Fuchs +${String(ABZ_ZUSCHLAG.fuchs).replace(".", ",")} · Splashed White +${String(ABZ_ZUSCHLAG.Sw1).replace(".", ",")} (reinerbig +${String(ABZ_ZUSCHLAG.Sw2).replace(".", ",")}) · Sabino +${ABZ_ZUSCHLAG.Sb} · Overo +${ABZ_ZUSCHLAG.O}.</p>
       ${verTab(["Weiß-Menge bis", "Abzeichen", "Anteil ohne Verschiebung"], ABZ_STUFEN.map(([t, a], i) => [t === Infinity ? "1" : String(t).replace(".", ","), a ? ABZ_NAME[a] : "keine", `${Math.round(((t === Infinity ? 1 : t) - (i ? ABZ_STUFEN[i - 1][0] : 0)) * 100)} %`]))}
       <p>Zu jedem Abzeichen außer der Schnippe kommt zu ${Math.round(ABZ_PLUS_SCHNIPPE * 100)} % noch eine Schnippe dazu. Das Abzeichen ist für jedes Pferd fest (<code>kopfZeichen</code>) und steht im Steckbrief (Daten).</p>
-      <p><b>Maulfärbung:</b> Veranlagung Pangaré (versteckt, <code>ex.pangare</code>, vererbt wie oben), sichtbar ab 0,5. So viele Marktpferde zeigen sie: ${Object.entries(PANGARE_RASSE).map(([r, v]) => `${rasseById(r).name} ${Math.round(v * 100)} %`).join(" · ")} · alle anderen ${Math.round(PANGARE_SONST * 100)} %. Braune und Falben → Mehlmaul, Füchse → Kupfermaul, Rappen → Graumaul. Schwarzbraune (At) haben immer ein Kupfermaul. Beim Ausschimmeln (ab halb weiß) und bei Doppel-Cream verschwindet sie. Krötenmaul folgt.</p>
+      <p><b>Maulfärbung (v428):</b> Veranlagung Pangaré (versteckt, <code>ex.pangare</code>, vererbt wie oben), wirksam ab 0,5. So viele Marktpferde haben sie: ${Object.entries(PANGARE_RASSE).map(([r, v]) => `${rasseById(r).name} ${Math.round(v * 100)} %`).join(" · ")} · alle anderen ${Math.round(PANGARE_SONST * 100)} %. Pangaré hellt nur rotes Pigment auf: Mehlmaul bei Braunen, Füchsen und ihren Falben/Cream-Varianten – bei Rappen und Mausfalben unsichtbar (wird trotzdem vererbt). Mehlmaul ist kein Abzeichen (nur aufgehellte Haare). Schwarzbraune (At) haben immer ein Kupfermaul. Dunkles Maul: Mausfalben immer, Braun- und Weißfalben ohne Pangaré zu ${Math.round(MAUL_DUNKEL * 100)} %. Alle anderen Pferde haben ein normales Maul in Fellfarbe. Beim Ausschimmeln (ab halb weiß) und bei Doppel-Cream verschwindet die Maulfärbung. Krötenmaul folgt.</p>
       <p><b>Augen:</b> Doppel-Cream (Cremello, Perlino, Smoky Cream) immer blau. Sonst blaues „Glasauge“ bei Splashed White ${Math.round(AUGE_BLAU.Sw * 100)} %, Frame Overo ${Math.round(AUGE_BLAU.O * 100)} %, Laterne ${Math.round(AUGE_BLAU.laterne * 100)} % – alle anderen braun.</p>
       <p><b>Splashed White</b> (Gen SW, dominant, neu v426): Häufigkeit des Allels Quarter ${RASSE_GENE.quarter.Sw * 100} % · Welsh Cob ${RASSE_GENE.welshcob.Sw * 100} % · Islandpferd ${String(RASSE_GENE.isi.Sw * 100).replace(".", ",")} % · Shetty ${String(RASSE_GENE.shetty.Sw * 100).replace(".", ",")} % · Hannoveraner/Trakehner ${String(RASSE_GENE.hannoveraner.Sw * 100).replace(".", ",")} %. Aussehen: weißer Bauch mit glattem Rand, hohe weiße Beine, viel Weiß am Kopf, meist blaue Augen („Splashed White (Brauner)“ usw.; Tobiano, Overo, Tiger und Roan überdecken das Körperbild, Splash geht vor Sabino). Labortest Fellfarben. Taub (versteckt): ${Math.round(TAUB_SW[1] * 100)} % mischerbig, ${Math.round(TAUB_SW[2] * 100)} % reinerbig – zeigt nur der Hörtest (BAER, Labor ${LABOR_TESTS.hoer.preis} €, Tierarzt vor Ort, Ergebnis nach ${LABOR_TESTS.hoer.tage} Tag). Folge (v427): Beim Putzen erschrickt ein taubes Pferd zu ${Math.round(TAUB_SCHRECK * 100)} % (Wohlbefinden ${String(TAUB_SCHRECK_WOHL).replace(".", ",")}), solange der Hörtest es nicht gezeigt hat – danach kündigt man sich an. Admin-Rassenansicht „Gene selbst wählen“: Kopfabzeichen, Schnippe, Maul (Pangaré) und Augen wählbar (setzt Weiß-Anlage/Pangaré passend, wird so vererbt), Splash zu jeder einfarbigen Farbe.</p>
       <h3>⚠️ Inzucht</h3>

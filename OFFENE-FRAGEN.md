@@ -14,7 +14,13 @@ Erledigt und umgesetzt: H1–H3 bestätigt (Postkasten aus der Immobilien-Verwal
 4. **Waisenfohlen im Offenstall/zwei Fohlen je Box** → `PROJEKT-CHAT-THEMEN.md` Punkt 11.
 
 ## Noch offen – bitte entscheiden
-(keine – Domes Antworten v340–v345: Preise → Projekt-Chat Punkt 12, Ausreißer angeglichen; Shire Sabino 40 %; LK 5 bleibt; Lahmheit und Husten mit Verdacht/Test)
+(Domes Antworten v340–v345: Preise → Projekt-Chat Punkt 12, Ausreißer angeglichen; Shire Sabino 40 %; LK 5 bleibt; Lahmheit und Husten mit Verdacht/Test)
+- **Köpfe Etappe 2 (v426):**
+  - **Taubheit bei Splashed White:** ist versteckt eingebaut (8 % mischerbig, 20 % reinerbig, nur Admin sieht es), hat aber noch keine Folgen. Vorschlag: taube Pferde erschrecken leichter, wenn man von hinten kommt (kleiner Wohlbefinden-Malus beim Putzen ohne Ansprache), und ein Hörtest beim Tierarzt (ca. 150 €) zeigt es. Soll das rein?
+  - **Farben:** Die Abzeichen sind in deiner Datei hellgrau (#e5e5e5), im Spiel nehme ich das Weiß der Beinabzeichen (#f6f4ee). Mehlmaul ist bei dir grau (#e6e6e6) – im Spiel wird es cremig hell aus der Fellfarbe gemischt, sonst sähe es auf Braunen grau aus. Kupfer- und Graumaul wie gezeichnet. Passt das?
+  - **Flocke und Stern** sitzen in der Seitenansicht ganz vorn an der Stirnkante und sind im Spiel recht klein (wie in deiner Datei). Falls sie größer/deutlicher sein sollen, bitte in der SVG nachzeichnen – `werkzeuge/kopf-export.js` übernimmt sie dann automatisch.
+  - **Splash-Körper:** weißer Bauch mit glattem Rand und hohe weiße Beine habe ich selbst gezeichnet (wie Sabino). Wenn du ein eigenes Splash-Fell zeichnen möchtest, baue ich es ein.
+  - **Admin-Rassenansicht:** Wählt man dort z. B. „Brauner“ beim Quarter, kann das Pferd selten trotzdem Splash bekommen (Genhäufigkeit der Rasse). Abzeichen/Augen lassen sich dort noch nicht wählen – kommt mit dem „Danach“-Punkt aus PLAN-KOEPFE.md.
 
 ## Antworten auf Domes Rückfragen
 - **Einstreu-Empfehlung „gilt bis 7 Tage nach der Genesung“:** Der Futterexperte empfiehlt bei Krankheit eine bestimmte Einstreu (z. B. Späne bei Husten). Diese Empfehlung steht beim Pferd, solange es krank ist, und noch 7 Tage danach (Nachsorge, z. B. die Atemwege brauchen noch Ruhe). Danach verschwindet der Hinweis – das Pferd braucht die Einstreu dann nicht mehr, du kannst wieder normal einstreuen.

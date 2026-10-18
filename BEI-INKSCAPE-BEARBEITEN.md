@@ -22,7 +22,7 @@ Nach dem Zeichnen einfach hochladen – `werkzeuge/kopf-export.js` übernimmt ne
 ## Fehlt noch (neue Ebenen)
 
 ### 0. Glanz- und Schattenbereiche für die Köpfe (Dome plant, v467)
-- Dome zeichnet eigene Licht-/Schattenflächen für die Köpfe. Sobald sie da sind: die helle Spiel-Schattierung auf dem Kopf (`sh-`-Rechteck in `zeichnePferd`) und die Aufhellung der Ohren (`farbeOhr`, +10 % Weiß) wieder entfernen.
+- Dome zeichnet eigene Licht-/Schattenflächen für die Köpfe. Sobald sie da sind: die helle Spiel-Schattierung auf dem Kopf (`sh-`-Rechteck in `zeichnePferd`) wieder entfernen (seit v490 liegt sie per Maske auch auf den Ohren – `schattOhr`).
 
 ### 0c. Kupfer um die Augen beim Schwarzbraunen (neu, Dome v481)
 - Schwarzbraune (Gen At) haben neben dem Kupfermaul auch kupferfarbene, hellere Haare um die Augen (wie der graue Augenschatten beim Schimmel, Punkt 4b – nur kupferbraun und heller statt dunkel).

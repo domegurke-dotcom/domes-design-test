@@ -51,7 +51,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (3 Stellen in index.html: pferd.js, boxstufen.js, kopfneu.js) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **445**.
+- Letzte Version bei Aktualisierung dieser Datei: **446**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName` ausfüllen → `#chLos` → Kreditbrief schließen (`#dlgKnoepfe button`) → `[data-immo="pension"]` → `#kaufName` → `#dlgKnoepfe button:first-child`. Admin: `spiel.admin = true`.
@@ -154,6 +154,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - **v443:** Achal-Tekkiner „Gold“: Cream-/Falbfarben satteres Goldgelb + goldener Metallglanz (`gold` in pferd.js), Namen `TEKKE_GOLD` (Goldfalbe (Buckskin), Gold-Palomino …).
 - **v444:** Weiß-Gene addieren sich (`weissGeneZahl`: jedes weitere To/O/Sb/Sw/W +1 Stufe, Tovero zählt als eins), Roan unter Scheckung/Tiger (`opt.roanMix`), Pintaloosa Lp+To (`opt.tobianoMix`, `kombiVon`). Krötenmaul auch bei Doppel-Cream (`opt.kroete`). Tekkiner: Isabell silbrig, Braun/Rappe stärkerer Glanz.
 - **Neue Rassen (v445):** `noriker` (Name-Gruppe `noriker` mit Hengst-Linien, Roan = „Mohrenkopf“), `lewitzer` (Gruppe pony), `barockpinto` (Gruppe friese, Friesen-Erbkrankheiten).
+- **v446:** Metallglanz als Veranlagung `ex.glanz` (`glanzVon`, `opt.glanz`, unter `GLANZ_AB` 0,15 keiner, Mischlinge nach Tekkiner-Anteil; „Gold“-Namen nur mit Glanz). Schimmel verlieren die Maulfärbung, sobald sie sichtbar grau sind (`kopfZeichen`).
 - **Aufräumen v435:** Code mit ESLint geprüft (keine echten Fehler), unbenutzte Funktionen/Variablen entfernt, `spiel.marktGekauft` auf 200 Einträge begrenzt (`marktGekauftMerken`), versehentlich hochgeladene Test-Screenshots gelöscht. Prüfskript: Skriptblöcke aus index.html in Dateien schreiben und `eslint` (liegt in /opt/node22/lib/node_modules) mit no-unused-vars/no-dupe-keys/no-unreachable laufen lassen. **Test-Screenshots nie im Projektordner speichern** (immer im Scratchpad). Kötenbehang (`behang` in pferd.js) ist vorerst ausgeblendet, der Code bleibt – kommt später (Dome).
 - **v436:** Kopfleiste beim Drehen des Handys: `--kopfH` wird sofort nachgezogen (ResizeObserver auf `header` + resize), vorher blitzte im Vollbild bis zu 0,5 s der Stall zwischen Kopfleiste und Fenster durch. **v437:** Viewport `minimum-scale=1` und `html, body { overflow-x: clip }` – verhindert, dass Chrome (Android) nach dem Drehen herauszoomt (Menüs breiter als die Kopfleiste, Dome-Screenshot ohne Vollbild).
 - **Offen (Stand v439):** Scheckmuster Schritt 2 (`PLAN-SCHECKUNG.md`). Domes Zeichnungen laut `BEI-INKSCAPE-BEARBEITEN.md`. Stute bleibt bei voller Abfohlbox in ihrer Box (gewollt). Ausbilder-Nachholen per Test geprüft (v433, funktioniert).

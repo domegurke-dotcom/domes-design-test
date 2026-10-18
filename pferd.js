@@ -271,7 +271,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const hoof = C.pattern === "tobiano" || ganzWeiss ? "#b8a88f" : (C.hoof || "#3b3531");
   const SW = "#f7f5f1", spotFarbe = C.spot || mix(body, pts || body, .35);
   const dunkel = c => mix(c, "#1b1530", 0.25);
-  const INK = "#261a14";
+  const INK = "#090609";   // v492 (Dome): Kontur immer schwarz wie in Domes Zeichnung – bei allen Pferden
   const linie = INK;
   const dunkelWert = hexRgb(body).reduce((x, y) => x + y) / 3;
   const schatten = mix(body, dunkelWert < 60 ? "#000000" : "#2b2240", dunkelWert < 60 ? 0.45 : 0.3);
@@ -319,7 +319,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const ekWahl = opt.eigenKopf === false ? null : (ALTE_NASE[opt.eigenKopf] || opt.eigenKopf || kfWahl || RASSE_KOPF[rasseId]);
   const kopfAlter = stufe && KOPF_ALTER[stufe] ? stufe : null;
   const eigenKopf = ekWahl && typeof KOPF_NEU !== "undefined" ? (KOPF_NEU.formen[ekWahl] ? ekWahl : "gerade") : null;
-  let ekMatrix = null;
+  let ekMatrix = null, ohrL = null;
   const ohrenHaengen = haltung === "tief" || liegt;
   const ohrenGeknickt = !ohrenHaengen && opt.ohren === "geknickt";
   const gl = w * 1.5;                       // Höhe der untergeschlagenen Beine beim Liegen
@@ -819,12 +819,12 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   }
   // v454 (Dome): weicher Farbübergang vom Kopf zum Hals – überall dort, wo Kopf und Hals verschieden aussehen (Schecken, Roan, Tiger, Schimmel-Ausgrauen …):
   // die Kopffarbe läuft auf dem Hals hinter der Linie Genick–Kehle weich aus (Verlauf), statt an einer geraden Kante abzubrechen
-  const kopfAnders = eigenKopf && (C.pattern || (C.head && C.head !== C.body) || C.grau != null);
+  const kopfAnders = eigenKopf && C.pattern !== "fleck" && (C.pattern || (C.head && C.head !== C.body) || C.grau != null || opt.roanMix || opt.brindle || (LP && (LP.lack > 0 || LP.flocken > 0 || LP.frost)));   // v492: auch Roan unter Scheckung, Brindle, Lackschimmel/Snowflake/Frost; nicht beim Fliegenschimmel (Kopf hat dieselben Tupfen – der Übergang ließ sie an der Kehle verblassen)
   if (kopfAnders) {
-    const bnd = norm(sub(T, Pn)), hin = mul(u, -1), dTief = 0.34 * hl, mt = mid(Pn, T), ende = add(mt, mul(hin, dTief));
-    const q = [add(Pn, mul(bnd, -0.25 * hl)), add(T, mul(bnd, 0.25 * hl)), add(add(T, mul(bnd, 0.25 * hl)), mul(hin, dTief)), add(add(Pn, mul(bnd, -0.25 * hl)), mul(hin, dTief))];
-    g += `<linearGradient id="uh-${uid}" gradientUnits="userSpaceOnUse" x1="${f(mt.x)}" y1="${f(mt.y)}" x2="${f(ende.x)}" y2="${f(ende.y)}"><stop offset="0" stop-color="${head}" stop-opacity="1"/><stop offset=".45" stop-color="${head}" stop-opacity=".55"/><stop offset="1" stop-color="${head}" stop-opacity="0"/></linearGradient>` +
-      `<filter id="uf-${uid}" filterUnits="userSpaceOnUse" x="${f(Pn.x - 3 * hl)}" y="${f(Pn.y - 3 * hl)}" width="${f(6 * hl)}" height="${f(6 * hl)}"><feGaussianBlur stdDeviation="${f(0.1 * hl)}"/></filter><g clip-path="url(#cr-${uid})"><path d="${eckig(q)}" fill="url(#uh-${uid})" filter="url(#uf-${uid})"/></g>`;
+    const bnd = norm(sub(T, Pn)), hin = (d => d.x < 0 ? mul(d, -1) : d)(P(-bnd.y, bnd.x)), dTief = (["roan", "dapple"].includes(C.pattern) || (C.grau != null && !["tobiano", "overo", "tovero", "sabino", "splash"].includes(C.pattern)) || opt.roanMix || opt.brindle || LP ? 1.0 : 0.5) * hl,   /* Punktmuster lang auslaufen, Scheckenweiß kurz (sonst grauer Schleier) */ mt = mid(Pn, T), ende = add(mt, mul(hin, dTief));   // v492: Richtung quer zur Linie Genick–Kehle zum Hals hin (vorher entlang der Kopfachse – wirkte kaum, Roan-Punkte/Tigerfarbe endeten hart am Kopf)
+    const vor = mul(hin, -0.3 * hl), q = [add(add(Pn, mul(bnd, -0.4 * hl)), vor), add(add(T, mul(bnd, 0.4 * hl)), vor), add(add(T, mul(bnd, 0.4 * hl)), mul(hin, dTief)), add(add(Pn, mul(bnd, -0.4 * hl)), mul(hin, dTief))];
+    g += `<linearGradient id="uh-${uid}" gradientUnits="userSpaceOnUse" x1="${f(mt.x)}" y1="${f(mt.y)}" x2="${f(ende.x)}" y2="${f(ende.y)}"><stop offset="0" stop-color="${head}" stop-opacity="1"/><stop offset=".3" stop-color="${head}" stop-opacity="1"/><stop offset=".55" stop-color="${head}" stop-opacity=".6"/><stop offset=".8" stop-color="${head}" stop-opacity=".2"/><stop offset="1" stop-color="${head}" stop-opacity="0"/></linearGradient>` +
+      `<filter id="uf-${uid}" filterUnits="userSpaceOnUse" x="${f(Pn.x - 3 * hl)}" y="${f(Pn.y - 3 * hl)}" width="${f(6 * hl)}" height="${f(6 * hl)}"><feGaussianBlur stdDeviation="${f(0.15 * hl)}"/></filter><g clip-path="url(#cr-${uid})"><path d="${eckig(q)}" fill="url(#uh-${uid})" filter="url(#uf-${uid})"/></g>`;
   }
   if (C.stripe && !ganzWeiss) g += `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${C.stripe}" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>`;
   if (C.muzzle && !eigenKopf) g += `<ellipse cx="${f(hp(0.93, 0.12).x)}" cy="${f(hp(0.93, 0.12).y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.93, 0.12).x)} ${f(hp(0.93, 0.12).y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>`;
@@ -876,8 +876,10 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += `<path d="${kehleD}" fill="${schatten}" opacity="${eigenKopf ? ".18" : ".45"}"/>`;   // v470 (Dome): bei Domes Köpfen schwächer – sonst dunkle Bahn direkt hinter dem Kopf
   if (!eigenKopf) g += `<path d="${glatt([hp(0.1, 0.42 * hw), hp(0.3, 0.47 * hw * jw), hp(0.55, 0.36 * hw), hp(0.8, 0.28 * hw), hp(0.6, 0.3 * hw), hp(0.35, 0.37 * hw * jw)])}" fill="${schatten}" opacity=".45"/>`;
   g += `<path d="${glatt([P(0.24 * L, -H + 3.5), P(0.42 * L, top + 5), P(0.62 * L, top + 4), P(0.8 * L, croupY + 3), P(0.8 * L, croupY + 6.5), P(0.62 * L, top + 7.5), P(0.42 * L, top + 8.5)], true)}" fill="${licht}" opacity=".7"/>`;
-  g += `<ellipse cx="${f(0.1 * L)}" cy="${f(top + 0.3 * D)}" rx="${f(0.08 * L)}" ry="${f(0.2 * D)}" fill="${licht}" opacity=".35"/>`;
-  g += `<ellipse cx="${f(0.84 * L)}" cy="${f(top + 0.28 * D)}" rx="${f(0.1 * L)}" ry="${f(0.22 * D)}" fill="${licht}" opacity=".35"/>`;
+  // v492 (Dome): Lichtflecke Schulter/Hüfte als Verlauf ohne Rand – als Fläche sah man auf dunklem Fell ein Oval mit Kante
+  g += `<radialGradient id="lt-${uid}"><stop offset="0" stop-color="${licht}" stop-opacity=".4"/><stop offset=".5" stop-color="${licht}" stop-opacity=".22"/><stop offset="1" stop-color="${licht}" stop-opacity="0"/></radialGradient>`;
+  g += `<ellipse cx="${f(0.1 * L)}" cy="${f(top + 0.3 * D)}" rx="${f(0.11 * L)}" ry="${f(0.27 * D)}" fill="url(#lt-${uid})"/>`;
+  g += `<ellipse cx="${f(0.84 * L)}" cy="${f(top + 0.28 * D)}" rx="${f(0.135 * L)}" ry="${f(0.29 * D)}" fill="url(#lt-${uid})"/>`;
   if (C.russ) g += `<path d="${halsD}" fill="${C.russ}" opacity=".45"/><ellipse cx="${f(0.12 * L)}" cy="${f(top + 0.35 * D)}" rx="${f(0.12 * L)}" ry="${f(0.3 * D)}" fill="${C.russ}" opacity=".35"/><ellipse cx="${f(0.86 * L)}" cy="${f(top + 0.3 * D)}" rx="${f(0.14 * L)}" ry="${f(0.3 * D)}" fill="${C.russ}" opacity=".3"/><ellipse cx="${f(0.5 * L)}" cy="${f(top + 0.08 * D)}" rx="${f(0.32 * L)}" ry="${f(0.16 * D)}" fill="${C.russ}" opacity=".35"/>`;   // v484/v485 (Dome): Rußanflug (Sty) über Hals, Schulter, Rücken und Kruppe – Bauch und Flanke bleiben heller
   if (/schwarzbrauner/.test(farbId)) g += `<ellipse cx="${f(0.76 * L)}" cy="${f(top + 0.6 * D)}" rx="${f(0.09 * L)}" ry="${f(0.2 * D)}" fill="#a8643a" opacity=".4"/><ellipse cx="${f(0.17 * L)}" cy="${f(bottom - 0.18 * D)}" rx="${f(0.07 * L)}" ry="${f(0.13 * D)}" fill="#a8643a" opacity=".35"/>`;   // v481 (Dome): Schwarzbraune – kupferfarbene Flanke und Ellbogen
   g += `</g>`;
@@ -1029,15 +1031,19 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     const det = a_ * a_ + b_ * b_, ia = a_ / det, ib = -b_ / det, ie = -(ia * e_ - ib * f_), iff = -(ib * e_ + ia * f_);
     const mz = hp(0.93, 0.12);
     const schattLage = (ob, bxS) => `<g transform="matrix(${[ia, ib, -ib, ia, ie, iff].map(x => x.toFixed(5)).join(" ")})">` +
-      `<rect x="${f(minX - 60)}" y="${f(minY - 5 - ob)}" width="${f(maxX - minX + 120)}" height="${f(-minY + 10 + ob)}" fill="url(#sh-${uid})" opacity=".8"/>` + (C.pattern === "fleck" ? `<rect ${bxS} fill="url(#fk-${uid})" opacity=".8"/>` : "") + (C.russ ? `<rect ${bxS} fill="${C.russ}" opacity=".45"/>` : "") +   /* v489 (Dome): Kopf mit demselben Rußanflug wie der Hals – keine eigene Kopffarbe mehr */   // v468: Fliegenschimmel-Tupfen auch im Gesicht; v461: größer als bx – Domes Köpfe ragen vorn über den Rahmen (sonst Streifen an der Nasenkante)
+      `<rect x="${f(minX - 60)}" y="${f(minY - 5 - ob)}" width="${f(maxX - minX + 120)}" height="${f(-minY + 10 + ob)}" fill="url(#sh-${uid})" opacity="${C.russ ? .44 : .8}"/>` + (C.pattern === "fleck" ? `<rect ${bxS} fill="url(#fk-${uid})" opacity=".8"/>` : "") +   /* v489 (Dome): Kopf mit demselben Rußanflug wie der Hals – keine eigene Kopffarbe mehr */   // v468: Fliegenschimmel-Tupfen auch im Gesicht; v461: größer als bx – Domes Köpfe ragen vorn über den Rahmen (sonst Streifen an der Nasenkante)
       (C.muzzle && !opt.maul && !(C.grau > .3) ? `<ellipse cx="${f(mz.x)}" cy="${f(mz.y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(mz.x)} ${f(mz.y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>` : "") +   // Schimmel: Domes Ebene „graumaul“ (im Spiel „dunkel“) in kopfNeuSVG (v449)
-      (MG > 0 ? `<rect ${bxS} fill="url(#mt-${uid})"/>` : "") + `<g filter="url(#wb-${uid})"><path d="${kehleD}" fill="${schatten}" opacity=".18"/></g></g>`;
+      (MG > 0 ? `<rect ${bxS} fill="url(#mt-${uid})"${C.russ ? ' opacity=".55"' : ""}/>` : "") + `<g filter="url(#wb-${uid})"><path d="${kehleD}" fill="${schatten}" opacity=".18"/></g></g>`;
     const schatt = schattLage(0, bx), obO = H;   // v490: Ohren bekommen dieselben Schichten (Maske aus der Ohrform) – Rechteck nach oben bis in die Ohrspitzen verlängert, die Verläufe sind userSpaceOnUse und bleiben gleich
     const schattOhr = schattLage(obO, `x="${f(minX - 5)}" y="${f(minY - 5 - obO)}" width="${f(maxX - minX + 10)}" height="${f(-minY + 10 + obO)}"`);   // v472 (Dome): Kopf bekommt dieselben Schichten wie der Hals (Glanz, Kehlschatten) – kein eigener Kieferschatten/Lichtfleck mehr, sonst Kanten am Übergang
     // Ohrstellung (opt.ohrStellung = { R, L, spiel }); ohne Angabe: beide Ohren vorne, bei Unwohlsein (opt.ohren „geknickt“) seitlich
     const OS = opt.ohrStellung || (opt.ohren === "geknickt" ? { R: "seite", L: "seite" } : { R: "vorne", L: "vorne" });
     const schopfFarbe = dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane);
-    g += `<g transform="matrix(${ekMatrix})">${kopfNeuSVG(eigenKopf, "ek" + uid, { fell: head, muschel, maehne: schopfFarbe, ink: INK, statisch: opt.statisch, augenZu: opt.augenZu, schattierung: schatt, schattOhr, alter: kopfAlter,
+    // v492 (Dome): Domes Ebene „schopf-maehne-uebergang“ (Mähnenfarbe) reicht als Keil mit gerader Kante auf den Hals – dort ausblenden (unter der Mähne ist sie ohnehin verdeckt), bis Dome sie in Inkscape anpasst (BEI-INKSCAPE-BEARBEITEN.md 1d)
+    const uebMaske = `<g transform="matrix(${[ia, ib, -ib, ia, ie, iff].map(x => x.toFixed(5)).join(" ")})"><filter id="umf-${uid}" filterUnits="userSpaceOnUse" x="${f(minX - 60)}" y="${f(minY - 2 * H)}" width="${f(maxX - minX + 120)}" height="${f(-minY + 3 * H)}"><feGaussianBlur stdDeviation="${f(0.03 * hl)}"/></filter>` +
+      `<rect x="${f(minX - 60)}" y="${f(minY - 2 * H)}" width="${f(maxX - minX + 120)}" height="${f(-minY + 3 * H)}" fill="#fff"/><path d="${halsD}" fill="#000" filter="url(#umf-${uid})"/></g>`;
+    ohrL = {};   // v492 (Dome): nahes Ohr erst nach der Mähne zeichnen – sonst verdeckt die Mähne das Ohr, wenn es nach hinten zeigt oder angelegt ist
+    g += `<g transform="matrix(${ekMatrix})">${kopfNeuSVG(eigenKopf, "ek" + uid, { fell: C.russ ? mix(head, C.russ, .45) : head, muschel,   /* v492 (Dome): Rußanflug direkt in der Kopffarbe – als eigene Schicht gab er am Rand der Kopffläche einen hellen Haarstrich */ maehne: schopfFarbe, ink: INK, statisch: opt.statisch, augenZu: opt.augenZu, schattierung: schatt, schattOhr, ohrLAussen: ohrL, uebMaske, alter: kopfAlter,
       marwari: !!k.curl, wimper: opt.wimper != null ? opt.wimper : (opt.geschlecht === "Stute" || stufe === "fohlen"), ohrR: OS.R, ohrL: OS.L, ohrSpiel: OS.spiel !== false, seed: opt.seed || rasseId,
       ohneUeb: !schopfL || rasseId === "tekke", abz: opt.kopfAbz, maul: opt.maul || (C.grau > .3 ? "dunkel" : undefined), ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, augenRing: C.grau > .3 && !opt.maul ? { farbe: C.muzzle, st: C.grau } : /schwarzbrauner/.test(farbId) ? { farbe: "#a8643a", st: .5 } : null, /* v481 (Dome): Schwarzbraune – kupferfarben ums Auge (Platzhalter) */ lpHaut: !!(LP && LP.haut) || !!opt.kroete, kroeteHell: !LP && !!opt.kroete, sklera: !!(LP && LP.sklera), augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
   }
@@ -1068,6 +1074,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += `<g>`;
   if (eigenKopf) {
     // (handgezeichneter Kopf wurde schon vor der Mähne gezeichnet) – hier kommt Domes Schopf obendrauf
+    if (ohrL && ohrL.svg && ekMatrix) g += `<g transform="matrix(${ekMatrix})">${ohrL.svg}</g>`;
     const sv = schopfL;
     if (sv && ekMatrix) g += `<g transform="matrix(${ekMatrix})">${schopfNeuSVG(sv, dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane), dunKern || C.stripe || null, INK, kopfAlter)}</g>`;   // Etappe 3 (v433): Aalstrich im Schopf bei allen Falben
   } else {
@@ -1366,7 +1373,8 @@ function kopfNeuSVG(key, uid, o = {}) {
     (ALTERS_ZEICHEN[o.alter] ? `<g clip-path="url(#${uid}-fell)"><g transform="${kmText(am)}"><g transform="matrix(${altersZeichenMatrix()})">${ALTERS_ZEICHEN[o.alter].replaceAll("__INK__", ink).replaceAll("__ID__", uid)}</g></g></g>` : "") +   // v468
     (o.lpHaut ? `<g clip-path="url(#${uid}-fell)"><g transform="${kmText(am)}">${lpHautSVG(K, o.seed, o.kroeteHell)}</g></g>` : "") +
     (o.schattierung ? `<g clip-path="url(#${uid}-fell)">${o.schattierung}</g>` : "") +
-    `<g transform="${kmText(am)}">${farbe(o.ohneUeb ? F.svg.replaceAll('class="ueb"', 'class="ueb" display="none"') : F.svg)}</g>` + ohr("L") + auge;   // v463 (Dome): Tekkiner ohne Schopf-Mähne-Übergang
+    (o.uebMaske && !o.ohneUeb ? `<mask id="${uid}-um" maskUnits="userSpaceOnUse" x="-5000" y="-5000" width="12000" height="12000">${o.uebMaske}</mask><g mask="url(#${uid}-um)"><g transform="${kmText(am)}">${farbe((F.svg.match(/<path[^>]*class="ueb"[^>]*>(<\/path>)?/g) || []).join(""))}</g></g>` : "") +
+    `<g transform="${kmText(am)}">${farbe(o.ohneUeb || o.uebMaske ? F.svg.replaceAll('class="ueb"', 'class="ueb" display="none"') : F.svg)}</g>` + (o.ohrLAussen ? ((o.ohrLAussen.svg = ohr("L")), "") : ohr("L")) + auge;   // v463 (Dome): Tekkiner ohne Schopf-Mähne-Übergang
 }
 // v468 (Dome): Alterszeichen wie bei den alten Köpfen (bis v423) – graue Haare ums Auge (Maulfleck wirkte komisch – raus, Dome), eingefallene Augengrube, Tränenrinne, Falte am Nasenrücken.
 // Aus den alten Koordinaten (Auge 68,96/77,85 · Nase 19,85/127,82) per Ähnlichkeitsabbildung auf Domes Kopf übertragen. Platzhalter, bis Dome die Ebenen zeichnet (BEI-INKSCAPE-BEARBEITEN.md).

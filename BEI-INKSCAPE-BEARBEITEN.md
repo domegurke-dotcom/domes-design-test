@@ -21,7 +21,7 @@ Nach dem Zeichnen einfach hochladen – `werkzeuge/kopf-export.js` übernimmt ne
 - **Ändern (in allen Kopfformen):**
   1. Die Fläche nur so groß lassen, dass sie unter Schopf und Mähne verschwindet – nicht unter die Backe / auf die Halsfläche ziehen.
   2. Wo sie trotzdem auf dem Hals sichtbar bleibt: den Rand weich machen (Weichzeichnen/Blur nur am Rand oder Verlauf auf 0 % Deckkraft zum Hals hin), keine gerade Kante.
-- Danach `werkzeuge/kopf-export.js` laufen lassen (macht Claude).
+- Bis dahin blendet das Spiel die Ebene auf dem Hals aus (v492). Danach `werkzeuge/kopf-export.js` laufen lassen und die Ausblendung (`uebMaske`) wieder entfernen (macht Claude).
 
 ### 1c. Keilkopf stark und Schafskopf stark überarbeiten (Dome, v462)
 - Dome überarbeitet die Formen `keilkopf-stark` und `schafskopf-stark` selbst. Danach `werkzeuge/kopf-export.js` laufen lassen; dabei auch `maulfärbung` und `kopfabzeichen` dieser beiden Formen anpassen, damit sie zur neuen Form passen.

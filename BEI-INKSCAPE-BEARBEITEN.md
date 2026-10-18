@@ -13,6 +13,10 @@ Nach dem Zeichnen einfach hochladen – `werkzeuge/kopf-export.js` übernimmt ne
 - **Ändern:** Die Fläche überall voll weiß lassen. Weich auslaufen nur am äußeren Rand zur Backe hin (z. B. nur ein schmaler Blur am Rand oder ein Verlauf, der erst ganz außen ausblendet).
 - Bei **breite Blesse** und **Blesse** kurz prüfen, ob dort auch zu viel ausblendet – sie sollen ebenfalls von der Stirn bis zur Nase durchgehen.
 
+### 1b. Rechtes Ohr (im Bild rechts, liegt vorn über dem Kopf): Umrisslinie zu lang (Dome, v459)
+- **Problem:** Die hintere Umrisslinie des Ohrs läuft am Ohransatz nicht aus, sondern geht noch ein Stück **in den Kopf/Hals hinein** und endet dort mitten im Fell mit einem runden Linienende. Gut zu sehen bei Ohrstellung „nach vorne“ (Standard) im Stockmaßbild, z. B. beim Fuchs.
+- **Ändern:** Die Linie am Ohransatz enden lassen – dort, wo sie auf die Kopf-/Halslinie trifft (bzw. unter Schopf oder Mähne verschwindet). Vermutlich Ebene `ohr-links-nach vorne` unter `basisohren links` (das Ohr, das vor dem Kopf liegt) – bitte auch die anderen Stellungen (`zur seite`, `nach hinten`, `angelegt`) und die Marwari-Ohren kurz prüfen.
+
 ## Fehlt noch (neue Ebenen)
 
 ### 2. Milchmaul (unter `kopfabzeichen`)

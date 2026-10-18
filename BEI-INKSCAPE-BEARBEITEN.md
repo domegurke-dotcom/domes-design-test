@@ -17,6 +17,8 @@ Nach dem Zeichnen einfach hochladen – `werkzeuge/kopf-export.js` übernimmt ne
 - **Problem:** Die hintere Umrisslinie des Ohrs läuft am Ohransatz nicht aus, sondern geht noch ein Stück **in den Kopf/Hals hinein** und endet dort mitten im Fell mit einem runden Linienende. Gut zu sehen bei Ohrstellung „nach vorne“ (Standard) im Stockmaßbild, z. B. beim Fuchs.
 - **Ändern:** Die Linie am Ohransatz enden lassen – dort, wo sie auf die Kopf-/Halslinie trifft (bzw. unter Schopf oder Mähne verschwindet). Vermutlich Ebene `ohr-links-nach vorne` unter `basisohren links` (das Ohr, das vor dem Kopf liegt) – bitte auch die anderen Stellungen (`zur seite`, `nach hinten`, `angelegt`) und die Marwari-Ohren kurz prüfen.
 
+- **Innenohr (Dome, v463):** Beim selben Ohr das Innenohr (dunkle Muschel) anpassen – es sitzt nicht sauber in der Ohrform (gut zu sehen beim Achal-Tekkiner, Palomino). Hinweis Claude: Ohr-Daten sind seit v424 unverändert, die Größenänderung je Rasse skaliert das ganze Ohr gleichmäßig – der Fehler steckt in der Zeichnung; bisher hat ihn meist der Schopf verdeckt.
+
 ### 1c. Keilkopf stark und Schafskopf stark überarbeiten (Dome, v462)
 - Dome überarbeitet die Formen `keilkopf-stark` und `schafskopf-stark` selbst. Danach `werkzeuge/kopf-export.js` laufen lassen; dabei auch `maulfärbung` und `kopfabzeichen` dieser beiden Formen anpassen, damit sie zur neuen Form passen.
 

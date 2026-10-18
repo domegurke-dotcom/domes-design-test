@@ -1015,7 +1015,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     const schopfFarbe = dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane);
     g += `<g transform="matrix(${ekMatrix})">${kopfNeuSVG(eigenKopf, "ek" + uid, { fell: head, muschel, maehne: schopfFarbe, ink: INK, statisch: opt.statisch, augenZu: opt.augenZu, schattierung: schatt, alter: kopfAlter,
       marwari: !!k.curl, wimper: opt.wimper != null ? opt.wimper : (opt.geschlecht === "Stute" || stufe === "fohlen"), ohrR: OS.R, ohrL: OS.L, ohrSpiel: OS.spiel !== false, seed: opt.seed || rasseId,
-      abz: opt.kopfAbz, maul: opt.maul || (C.grau > .3 ? "dunkel" : undefined), ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, augenRing: C.grau > .3 && !opt.maul ? { farbe: C.muzzle, st: C.grau } : null, lpHaut: !!(LP && LP.haut) || !!opt.kroete, kroeteHell: !LP && !!opt.kroete, sklera: !!(LP && LP.sklera), augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
+      ohneUeb: rasseId === "tekke", abz: opt.kopfAbz, maul: opt.maul || (C.grau > .3 ? "dunkel" : undefined), ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, augenRing: C.grau > .3 && !opt.maul ? { farbe: C.muzzle, st: C.grau } : null, lpHaut: !!(LP && LP.haut) || !!opt.kroete, kroeteHell: !LP && !!opt.kroete, sklera: !!(LP && LP.sklera), augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
   }
   // Mähne
   if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
@@ -1308,14 +1308,16 @@ function kopfNeuSVG(key, uid, o = {}) {
   // Ohrgröße je Rasse (v430, o.ohrGr): um den Ohransatz skaliert
   const ohr = seite => { const s = o.ohrGr || 1, B = (K.ohrBasis || {})[(o.marwari ? "marwari" : "basis") + seite]; const h = ohrRoh(seite);
     return s === 1 || !B ? h : `<g transform="translate(${B.x},${B.y}) scale(${s.toFixed(3)}) translate(${-B.x},${-B.y})">${h}</g>`; };
+  // v463 (Dome): Ohren so hell wie der Kopf daneben – der Kopf bekommt oben die helle Schattierung (sh-), die Ohren liegen außerhalb
+  const farbeOhr = t => farbe(o.schattierung ? t.replaceAll("__FELL__", mix(o.fell || "#9a9a9a", "#ffffff", .1)) : t);
   const ohrRoh = (seite) => {
     const T = K.ohren[o.marwari ? "marwari" : "basis"][seite], st = OHR_REIHE.includes(o["ohr" + seite]) ? o["ohr" + seite] : "vorne";
     const ziel = o.ohrSpiel && !o.statisch ? ohrSpielZiel(st, rnd()) : null;
-    if (!ziel) return farbe(T[st]);
+    if (!ziel) return farbeOhr(T[st]);
     // eigener Rhythmus je Ohr: alle 5–11 s für gut 1 s in die Nachbarstellung
     const dur = (5 + rnd() * 6).toFixed(1), a = 0.15 + rnd() * 0.6, b = a + 1.2 / dur;
-    return `<g><animate attributeName="opacity" values="1;0;1" keyTimes="0;${a.toFixed(3)};${b.toFixed(3)}" calcMode="discrete" dur="${dur}s" repeatCount="indefinite"/>${farbe(T[st])}</g>` +
-      `<g opacity="0"><animate attributeName="opacity" values="0;1;0" keyTimes="0;${a.toFixed(3)};${b.toFixed(3)}" calcMode="discrete" dur="${dur}s" repeatCount="indefinite"/>${farbe(T[ziel])}</g>`;
+    return `<g><animate attributeName="opacity" values="1;0;1" keyTimes="0;${a.toFixed(3)};${b.toFixed(3)}" calcMode="discrete" dur="${dur}s" repeatCount="indefinite"/>${farbeOhr(T[st])}</g>` +
+      `<g opacity="0"><animate attributeName="opacity" values="0;1;0" keyTimes="0;${a.toFixed(3)};${b.toFixed(3)}" calcMode="discrete" dur="${dur}s" repeatCount="indefinite"/>${farbeOhr(T[ziel])}</g>`;
   };
   // Auge: offen (blinzelt) und geschlossenes Lid; Stuten und Fohlen haben eine Wimper mehr
   const blinkAuf = o.statisch || o.augenZu ? "" : '<animate attributeName="opacity" values="1;0;1" keyTimes="0;.93;.97" calcMode="discrete" dur="4.5s" repeatCount="indefinite"/>';
@@ -1335,7 +1337,7 @@ function kopfNeuSVG(key, uid, o = {}) {
     (o.augenRing ? `<filter id="${uid}-ar" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="16"/></filter><g clip-path="url(#${uid}-fell)"><g transform="${kmText(am)}"><ellipse cx="${ac.x}" cy="${ac.y}" rx="62" ry="50" fill="${o.augenRing.farbe}" opacity="${(0.25 + 0.3 * o.augenRing.st).toFixed(2)}" filter="url(#${uid}-ar)"/></g></g>` : "") +   // v447: dunkle Haut ums Auge beim Schimmel
     (o.lpHaut ? `<g clip-path="url(#${uid}-fell)"><g transform="${kmText(am)}">${lpHautSVG(K, o.seed, o.kroeteHell)}</g></g>` : "") +
     (o.schattierung ? `<g clip-path="url(#${uid}-fell)">${o.schattierung}</g>` : "") +
-    `<g transform="${kmText(am)}">${farbe(F.svg)}</g>` + ohr("L") + auge;
+    `<g transform="${kmText(am)}">${farbe(o.ohneUeb ? F.svg.replaceAll('class="ueb"', 'class="ueb" display="none"') : F.svg)}</g>` + ohr("L") + auge;   // v463 (Dome): Tekkiner ohne Schopf-Mähne-Übergang
 }
 // v441 Leopard-Komplex: weiße Lederhaut im Augenwinkel (wie beim Menschen) und gefleckte rosa Haut um Maul und Augen – in Koordinaten von Domes Kopf
 function skleraSVG(ac) { const ec = (dx, dy, rx, ry) => `<ellipse cx="${(ac.x + dx).toFixed(1)}" cy="${(ac.y + dy).toFixed(1)}" rx="${rx}" ry="${ry}" transform="rotate(-15 ${(ac.x + dx).toFixed(1)} ${(ac.y + dy).toFixed(1)})" fill="#f3eee4"/>`;

@@ -154,6 +154,13 @@ const RASSEN = [
     k: { len: .98, depth: .43, legT: .075, neck: .57, nAng: 54, crest: .03, head: .37, hAng: 52, profile: -.6, hw: .93, jw: 1.15, muz: .84, ear: .09, mane: "lang", maneLen: .12, vol: .6, fore: .45, tail: .62, tvol: .7, tset: .85, feather: 0, croup: .1, hq: 1, eye: 1.25 } },
 ];
 
+// Kopfgröße wie in echt (v438, Dome): Kopflänge (Genick bis Maul) im Verhältnis zur Widerristhöhe je Rasse – Richtwerte aus der Literatur/Zuchtstandards.
+// Spiel-Kopflänge k.head = KOPF_REAL × KOPF_STIL (Cartoon-Faktor, für alle Rassen gleich). Bei Änderungen am Körper NUR diese Tabelle/den Faktor anpassen,
+// nicht k.head einzeln – so bleiben die Rassen untereinander proportional. Neue Rassen hier mit eintragen.
+const KOPF_STIL = 1.2;
+const KOPF_REAL = { araber: .35, shagya: .35, angloaraber: .355, tekke: .36, vollblut: .36, quarter: .36, marwari: .36, trakehner: .365, hannoveraner: .37, andalusier: .37, lipizzaner: .37,
+  friese: .38, welshcob: .38, haflinger: .39, fjord: .39, isi: .39, fell: .39, dales: .39, tinker: .39, shire: .40, clydesdale: .40, shetty: .45 };
+RASSEN.forEach(r => { if (KOPF_REAL[r.id]) r.k.head = Math.round(KOPF_REAL[r.id] * KOPF_STIL * 1000) / 1000; });
 const rasseById = id => RASSEN.find(r => r.id === id);
 
 // ---------- Hilfsfunktionen ----------
@@ -310,7 +317,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Handgezeichneter Kopf: Kehle setzt genau am Ende seiner Ganaschenlinie an
   let ekKehle = null;
   if (eigenKopf) {
-    const K = KOPF_NEU, G = K.gap, A = add(Pn, mul(nOut, 1.2)), B = hp(0.97, 0.0);
+    const K = KOPF_NEU, G = K.gap, A = add(Pn, mul(nOut, 1.2)), B = add(A, mul(sub(hp(0.97, 0.0), A), KOPF_GROESSE));
     const ux = K.nase.x - G.x, uy = K.nase.y - G.y, vx = B.x - A.x, vy = B.y - A.y;
     const den = ux * ux + uy * uy, a_ = (vx * ux + vy * uy) / den, b_ = (vy * ux - vx * uy) / den;
     const e_ = A.x - (a_ * G.x - b_ * G.y), f_ = A.y - (b_ * G.x + a_ * G.y);
@@ -813,7 +820,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
 
   if (eigenKopf) {
     // Handgezeichneter Kopf: Stirn- und Nasenpunkt der Zeichnung auf den Spielkopf abbilden
-    const K = KOPF_NEU, G = K.gap, A = add(Pn, mul(nOut, 1.2)), B = hp(0.97, 0.0);
+    const K = KOPF_NEU, G = K.gap, A = add(Pn, mul(nOut, 1.2)), B = add(A, mul(sub(hp(0.97, 0.0), A), KOPF_GROESSE));
     const ux = K.nase.x - G.x, uy = K.nase.y - G.y, vx = B.x - A.x, vy = B.y - A.y;
     const den = ux * ux + uy * uy, a_ = (vx * ux + vy * uy) / den, b_ = (vy * ux - vx * uy) / den;
     const e_ = A.x - (a_ * G.x - b_ * G.y), f_ = A.y - (b_ * G.x + a_ * G.y);
@@ -1079,6 +1086,8 @@ function ALTERS_K(stufe, k) {
 const KOPFFORMEN = { gerade: "Gerader Kopf", hecht: "Hechtkopf", ramsnase: "Ramsnase", rams: "Ramskopf", keil: "Keilkopf", schaf: "Schafskopf", schwein: "Schweinskopf" };
 const KOPF_STUFE = ["", "leicht", "normal", "stark"];
 const KOPF_WEISS = "#f6f4ee";   // Farbe der Kopfabzeichen
+// Größe von Domes neuen Köpfen im Verhältnis zum Spielkopf (v438, Dome: seit v424 waren alle Köpfe ca. 15 % kleiner als die alten gezeichneten)
+var KOPF_GROESSE = 1.15;
 // Varianten der Kopfabzeichen (v434, von Dome ausgesucht): unregelmäßiger Rand über Turbulenz
 const ABZ_VARIANTE = { "schmaleBlesse~geschwungen": { name: "geschwungen", freq: .022, scale: 25, seed: 11 }, "blesse~unregelmaessig": { name: "unregelmäßiger Rand", freq: .022, scale: 25, seed: 13 } };
 // Ohrgröße je Rasse (v430, Dome): Araber klein und fein, Ponys und Quarter klein, Kaltblüter groß – alle anderen 1

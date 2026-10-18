@@ -32,7 +32,7 @@ const W1 = [164, 96, 236, 150], W3 = [140, 80, 260, 158];
 // Stufe 1
 const bretter = (x0, x1, y0, y1, seed) => { let s = '', x = x0, i = 0; while (x < x1) { const w = Math.min(13 + ((i * 7 + seed) % 5), x1 - x), c = ['#9a7046', '#8b6239', '#a57a4c', '#7f5934'][(i + seed) % 4], k = ((i * 3 + seed) % 5) - 2;
   s += `<path d="M${x},${y0 + k} L${x + w},${y0 - k} L${x + w + k * .4},${y1} L${x - k * .3},${y1} Z" fill="${c}" stroke="#3a2614" stroke-width=".9"/>`; if (i % 3 === 0) s += `<circle cx="${x + w / 2}" cy="${y0 + 30 + (i * 13) % 60}" r="1.6" fill="#5a3d24"/>`; x += w; i++; } return s; };
-const quer = sd => { const n = 6; let s = ''; const yT = sd === 'L' ? [158, 152] : [158, 152];
+const quer = sd => { const n = 6; let s = '';
   for (let k = 0; k < n; k++) { const f0 = k / n, f1 = (k + 1) / n, kr = ((k * 5) % 3 - 1) * 1;
     const yo = (a, b, f) => a + (b - a) * f;
     const P = sd === 'L' ? [[0, yo(158, 266, f0) + kr], [60, yo(152, 212, f0)], [60, yo(152, 212, f1)], [0, yo(158, 266, f1) + kr]] : [[400, yo(158, 266, f0) + kr], [340, yo(152, 212, f0)], [340, yo(152, 212, f1)], [400, yo(158, 266, f1) + kr]];

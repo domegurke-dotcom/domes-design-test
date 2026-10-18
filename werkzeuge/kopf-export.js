@@ -25,6 +25,7 @@ const ROOT = path.join(__dirname, "..");
       // Teile ausblenden, die eine spätere Etappe braucht (z. B. Kopfabzeichen)
       for (const l of ohne) [...c.querySelectorAll("*")].filter(n => (n.getAttribute(LBL) || "") === l).forEach(n => n.remove());
       [...c.querySelectorAll("text")].forEach(n => n.remove());
+      [c, ...c.querySelectorAll("*")].filter(n => (n.getAttribute(LBL) || "") === "schopf-maehne-uebergang").forEach(n => n.setAttribute("class", "ueb"));   // v463: beim Tekkiner ausblendbar (kopfNeuSVG o.ohneUeb)
       putz(c);
       const pm = e.parentNode.getCTM();
       return farben(r3(`<g transform="${M(pm)}">${c.outerHTML.replace(/ xmlns(:\w+)?="[^"]*"/g, "")}</g>`));

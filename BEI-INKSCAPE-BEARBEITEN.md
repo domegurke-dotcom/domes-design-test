@@ -16,6 +16,13 @@ Nach dem Zeichnen einfach hochladen – `werkzeuge/kopf-export.js` übernimmt ne
 ### 1b. ✅ Rechtes Ohr / Innenohr – erledigt (v465)
 - Innenohr von Dome neu gezeichnet und eingebaut. Die lange hintere Linie des vorderen Ohrs ist der Fellübergang und bleibt so (Dome).
 
+### 1d. Ebene `schopf-maehne-uebergang`: harte Kante am Hals (Dome, v491, PRE-Schimmel)
+- **Problem:** Die Ebene ist in Mähnenfarbe gefüllt und reicht hinter der Backe ein Stück auf den Hals. Ihr unterer Rand ist eine **gerade, harte Kante** (vom Mähnenansatz schräg runter Richtung Kehle). Bei heller Mähne (Schimmel, PRE, Haflinger, Palomino …) sieht man das als hellen Keil mit Strich am Hals; bei dunkler Mähne fällt es kaum auf. Im Test ohne diese Ebene ist der Übergang Kopf–Hals sauber.
+- **Ändern (in allen Kopfformen):**
+  1. Die Fläche nur so groß lassen, dass sie unter Schopf und Mähne verschwindet – nicht unter die Backe / auf die Halsfläche ziehen.
+  2. Wo sie trotzdem auf dem Hals sichtbar bleibt: den Rand weich machen (Weichzeichnen/Blur nur am Rand oder Verlauf auf 0 % Deckkraft zum Hals hin), keine gerade Kante.
+- Danach `werkzeuge/kopf-export.js` laufen lassen (macht Claude).
+
 ### 1c. Keilkopf stark und Schafskopf stark überarbeiten (Dome, v462)
 - Dome überarbeitet die Formen `keilkopf-stark` und `schafskopf-stark` selbst. Danach `werkzeuge/kopf-export.js` laufen lassen; dabei auch `maulfärbung` und `kopfabzeichen` dieser beiden Formen anpassen, damit sie zur neuen Form passen.
 

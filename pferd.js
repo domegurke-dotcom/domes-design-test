@@ -261,8 +261,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const weissMuster = ["tobiano", "tovero", "splash", "sabino"].includes(C.pattern), fastWeiss = MST === 3 && weissMuster;
   const DW = opt.dw == null ? null : opt.dw;   // v440 Dominant White (Gen W): 0 wenig · 1 typisch · 2 viel · 3 ganz weiß
   const ganzWeiss = fastWeiss || DW >= 2;
-  const gold = k.metallic && /palomino|buckskin|falbe/i.test(farbId);   // v443: Achal-Tekkiner „Gold“ – satteres Goldgelb, dazu goldener Glanz (unten)
-  const body = gold ? mix(C.body, "#e8a92a", .5) : k.metallic && /isabell/.test(farbId) ? mix(C.body, "#dfe3ea", .35) : C.body, mane = DW === 3 ? "#efebe2" : C.mane, head = DW === 3 ? "#f4f1ea" : C.head || body;
+  const MG = opt.glanz != null ? opt.glanz : (k.metallic ? 1 : 0);   // v446 (Dome): Metallglanz 0–1 – nicht jeder Achal-Tekkiner glänzt gleich stark, Mischlinge anteilig
+  const gold = MG > .3 && /palomino|buckskin|falbe/i.test(farbId);   // v443: Achal-Tekkiner „Gold“ – satteres Goldgelb, dazu goldener Glanz (unten)
+  const body = gold ? mix(C.body, "#e8a92a", .5 * MG) : MG > .3 && /isabell/.test(farbId) ? mix(C.body, "#dfe3ea", .35 * MG) : C.body, mane = DW === 3 ? "#efebe2" : C.mane, head = DW === 3 ? "#f4f1ea" : C.head || body;
   const pts = C.points || null;
   const hoof = C.pattern === "tobiano" || ganzWeiss ? "#b8a88f" : (C.hoof || "#3b3531");
   const SW = "#f7f5f1", spotFarbe = C.spot || mix(body, pts || body, .35);
@@ -593,8 +594,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (C.pattern === "roan") defs += `<radialGradient id="rg-${uid}"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>` +
     `<pattern id="rn-${uid}" patternUnits="userSpaceOnUse" width="3" height="3"><circle cx="1" cy="1" r=".85" fill="url(#rg-${uid})"/><circle cx="2.4" cy="2.2" r=".7" fill="url(#rg-${uid})"/></pattern>`;
   // v443 (Dome): beim Achal-Tekkiner glänzen Cream- und Falbfarben golden („Gold“: Goldfalbe/Buckskin, Gold-Palomino)
-  const silber = k.metallic && /isabell/.test(farbId), mtc = silber ? "#eef2ff" : gold ? "#ffe08a" : "#fff", mtA = silber ? .75 : gold ? .7 : .5, mtB = silber ? .5 : gold ? .48 : .32;   // v444 (Dome): Isabell silbrig, Braune/Rappen glänzen auch
-  if (k.metallic) defs += `<linearGradient id="mt-${uid}" gradientUnits="userSpaceOnUse" x1="${f(-0.1 * L)}" y1="${f(-H * 1.3)}" x2="${f(L)}" y2="0"><stop offset=".15" stop-color="${mtc}" stop-opacity="0"/><stop offset=".35" stop-color="${mtc}" stop-opacity="${mtA}"/><stop offset=".48" stop-color="${mtc}" stop-opacity="0"/><stop offset=".62" stop-color="${mtc}" stop-opacity="${mtB}"/><stop offset=".75" stop-color="${mtc}" stop-opacity="0"/></linearGradient>`;
+  const silber = MG > .3 && /isabell/.test(farbId), mtc = silber ? "#eef2ff" : gold ? "#ffe08a" : "#fff", mtA = (silber ? .75 : gold ? .7 : .5) * MG, mtB = (silber ? .5 : gold ? .48 : .32) * MG;   // v444 (Dome): Isabell silbrig, Braune/Rappen glänzen auch
+  if (MG > 0) defs += `<linearGradient id="mt-${uid}" gradientUnits="userSpaceOnUse" x1="${f(-0.1 * L)}" y1="${f(-H * 1.3)}" x2="${f(L)}" y2="0"><stop offset=".15" stop-color="${mtc}" stop-opacity="0"/><stop offset=".35" stop-color="${mtc}" stop-opacity="${mtA}"/><stop offset=".48" stop-color="${mtc}" stop-opacity="0"/><stop offset=".62" stop-color="${mtc}" stop-opacity="${mtB}"/><stop offset=".75" stop-color="${mtc}" stop-opacity="0"/></linearGradient>`;
 
   const bx = `x="${f(minX - 5)}" y="${f(minY - 5)}" width="${f(maxX - minX + 10)}" height="${f(-minY + 10)}"`;
   if (C.pattern === "dapple" || C.pattern === "roan" || C.pattern === "fleck") defs += `<mask id="mk-${uid}" maskUnits="userSpaceOnUse" ${bx}><g filter="url(#wm6-${uid})"><path d="${halsD}" fill="#fff"/><path d="${glatt(rumpf)}" fill="#fff" transform="translate(0,-3)"/></g></mask><filter id="wm6-${uid}" filterUnits="userSpaceOnUse" ${bx}><feGaussianBlur stdDeviation="5"/></filter>`;
@@ -843,7 +844,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     g += `<g clip-path="url(#cb-${uid})"><path d="${eckig(welle)}" fill="${WEISS}"/></g>`;
   }
   if (C.head && C.head !== body) g += `<g filter="url(#wm-${uid})"><path d="${glatt([hp(-0.1, -0.1), hp(-0.12, 0.3), add(T, mul(sub(Cn, T), 0.25)), add(Pn, mul(sub(Wn, Pn), 0.18)), hp(-0.1, -0.1)])}" fill="${C.head}" opacity=".85"/></g>`;
-  if (k.metallic) g += `<rect ${bx} fill="url(#mt-${uid})"/>`;
+  if (MG > 0) g += `<rect ${bx} fill="url(#mt-${uid})"/>`;
   // Weiche Schattierung (Airbrush-Look): Schattenformen werden weichgezeichnet
   g += `<rect ${bx} fill="url(#sh-${uid})" opacity=".8"/><g filter="url(#wb-${uid})">`;
   g += `<g clip-path="url(#cr-${uid})"><path d="${glatt([P(-0.12 * H, top + 0.75 * D), P(0.15 * L, bottom - 0.2 * D), P(0.4 * L, bottom - 0.18 * D), P(0.65 * L, bottom - 0.3 * D), P(0.8 * L, bottom - 0.2 * D), P(L + 0.1 * H, top + 0.7 * D), P(L + 0.1 * H, 5), P(-0.12 * H, 5)])}" fill="${schatten}" opacity=".55"/></g>`;

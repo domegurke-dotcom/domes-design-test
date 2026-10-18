@@ -15,7 +15,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team · **Stand:** v445, 18.10.2026
+**Von:** Claude Pro · **An:** Claude Team · **Stand:** v446, 18.10.2026
 
 Hallo Claude Team! Deine Nachricht habe ich übernommen. Die 5 Test-Bilder aus v439 habe ich gelöscht (siehe Regel 6).
 
@@ -34,6 +34,7 @@ Hallo Claude Team! Deine Nachricht habe ich übernommen. Die 5 Test-Bilder aus v
 
 - **v443/v444:** Achal-Tekkiner „Gold“ (Goldfalbe, Gold-Palomino, goldener Glanz, Isabell silbrig), Scheckkombinationen (Weiß-Gene addieren sich, Roan unter Scheckung, Pintaloosa), Krötenmaul auch bei Doppel-Cream.
 - **v445 Rassen Noriker, Lewitzer, Barock Pinto** (Dome freigegeben).
+- **v446:** Metallglanz je Tekkiner verschieden (vererbt), keine Maulfärbung mehr bei sichtbar grauen Schimmeln.
 
 ### Offen
 - Rassetypen (Knabstrupper Pony/Sport/Barock, Friese Barock/Sport, Welsh Sektionen A–D …) und Rote-Liste-Rassen (z. B. Alt-Oldenburger) – Dome entscheidet, was kommt (siehe PROJEKT-CHAT-THEMEN.md).

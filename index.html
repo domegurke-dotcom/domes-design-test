@@ -532,8 +532,11 @@
   .wert { float: right; font-weight: 600; color: var(--akzent); }
   /* Rassenansicht: Regler für Größe und Alter senkrecht links im Bild */
   .vorschau { --rgB: 96px; --pf: 48px; --fsB: 96px; --msB: 96px; }
-  .vorschau svg#gross { margin-left: calc(var(--rgB) + var(--pf)); width: calc(100% - var(--rgB) - 2 * var(--pf) - var(--fsB) - var(--msB)); touch-action: none; cursor: zoom-in; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; }   /* v451: zoomen (Zwei-Finger / Mausrad) */
-  .zoombar { position: relative; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; } .zoombar svg, .zoombar svg * { -webkit-user-drag: none; user-select: none; } .zoombar svg { transform-origin: 0 0; cursor: zoom-in; }
+  .vorschau .gross-huelle { margin-left: calc(var(--rgB) + var(--pf)); width: calc(100% - var(--rgB) - 2 * var(--pf) - var(--fsB) - var(--msB)); overflow: hidden; touch-action: none; }   /* v453: Hülle schneidet das gezoomte Bild ab */
+  .vorschau svg#gross { width: 100%; transform-origin: 0 0; touch-action: none; cursor: zoom-in; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; }   /* v451: zoomen (Zwei-Finger / Mausrad) */
+  .zoombar { position: relative; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; } .zoombar svg, .zoombar svg * { -webkit-user-drag: none; user-select: none; }
+  /* v453: während des Zoomens/Verschiebens wird das fertige Bild nur verschoben/skaliert (eigene Ebene, ruckelfrei) – nach kurzer Pause wird es scharf neu gezeichnet */
+  .zoom-aktiv svg, svg.zoom-aktiv { will-change: transform; } .zoombar svg { transform-origin: 0 0; cursor: zoom-in; }
   .farbspalte.musterspalte { right: calc(var(--pf) + var(--fsB) + 2px); }   /* v451: Scheckungen links neben den Fellfarben */
   .ms-pfeil { right: calc(var(--pf) + var(--fsB) + 4px) !important; }
   .fs-kachel:disabled { opacity: .35; cursor: default; }
@@ -605,7 +608,7 @@
     body.vollbild main { padding: 0 0 16px; }
     .inhalt:has(> .vorschau) { padding-top: 0; }
     .vorschau { width: 100cqw; margin-left: calc(50% - 50cqw); border-radius: 0; height: calc(100dvh - var(--leisteH, 56px)); display: flex; align-items: center; background: linear-gradient(#dff1fa, #fff 70%); }
-    .vorschau svg { width: 100%; height: 100%; } .vorschau svg#gross { width: calc(100% - var(--rgB) - 2 * var(--pf) - var(--fsB) - var(--msB)); }
+    .vorschau svg { width: 100%; height: 100%; } .vorschau .gross-huelle { height: 100%; }
     body.vollbild #stall { width: 100vw; height: 100vh; height: 100dvh; max-width: none; border-radius: 0; box-shadow: none; }
   }
   body.spar *, body.spar *::before { animation: none !important; transition: none !important; }
@@ -943,7 +946,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "452";
+  const SPIEL_VERSION = "453";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -951,9 +954,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=452"></script>
-<script src="boxstufen.js?v=452"></script>
-<script src="kopfneu.js?v=452"></script>
+<script src="pferd.js?v=453"></script>
+<script src="boxstufen.js?v=453"></script>
+<script src="kopfneu.js?v=453"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3704,27 +3707,42 @@
     if (!el) return; const alt = el._zoom; el._zoom = alt && el._zoomInit ? Object.assign(alt, { s: 1, x: 0, y: 0 }) : { s: 1, x: 0, y: 0 };
     const Z = el._zoom, svg = () => svgMode ? el : el.querySelector("svg");
     const anwenden = () => { if (svgMode) { const g = el.querySelector("#zoomG"); if (g) g.setAttribute("transform", zoomTransform(el)); } else { const v = svg(); if (v) v.style.transform = Z.s > 1 ? `translate(${Z.x.toFixed(1)}px, ${Z.y.toFixed(1)}px) scale(${Z.s.toFixed(3)})` : ""; } el.style.cursor = Z.s > 1 ? "grab" : ""; };
-    const groesse = () => { if (svgMode) { const b = el.viewBox.baseVal; return [b.width, b.height]; } const c = getComputedStyle(svg()); return [parseFloat(c.width) || 1, parseFloat(c.height) || 1]; };
+    // Maße/Matrix nur einmal je Geste lesen (nicht bei jedem Bewegungs-Ereignis – das erzwingt jedes Mal ein neues Layout und ruckelt)
+    let cache = null, Zc = { s: 1, x: 0, y: 0 };   // Zc = zuletzt scharf gezeichneter Stand (svgMode)
+    const frisch = () => { const t = Date.now(); if (cache && t - cache.t < 600) return cache; cache = { t };
+      const keep = el.style.transform; if (svgMode && keep) el.style.transform = "";   // ohne Vorschau-Transform messen
+      if (svgMode) { const b = el.viewBox.baseVal, m = el.getScreenCTM(), r = el.getBoundingClientRect(); cache.g = [b.width, b.height]; cache.inv = m ? m.inverse() : null; cache.k = m ? m.a : 1; cache.o = m ? [m.e - r.left, m.f - r.top] : [0, 0]; }
+      else { const c = getComputedStyle(svg()), ce = getComputedStyle(el), r = el.getBoundingClientRect(); cache.g = [parseFloat(c.width) || 1, parseFloat(c.height) || 1]; cache.r = r; cache.px = parseFloat(ce.paddingLeft) + parseFloat(ce.borderLeftWidth); cache.py = parseFloat(ce.paddingTop) + parseFloat(ce.borderTopWidth); }
+      if (svgMode && keep) el.style.transform = keep;
+      return cache; };
+    const groesse = () => frisch().g;
     const klemmen = () => { const [w, h] = groesse(); Z.s = Math.min(ZOOM_MAX, Math.max(1, Z.s)); if (Z.s <= 1.001) { Z.s = 1; Z.x = 0; Z.y = 0; } else { Z.x = Math.min(0, Math.max(w - w * Z.s, Z.x)); Z.y = Math.min(0, Math.max(h - h * Z.s, Z.y)); } };
+    let ruhe = 0, raf = 0;
+    // scharf zeichnen: Vektor-Transform in <g id="zoomG">, Vorschau-Transform weg
+    const scharf = () => { clearTimeout(ruhe); cancelAnimationFrame(raf); raf = 0; if (svgMode) { Zc = { s: Z.s, x: Z.x, y: Z.y }; el.style.transform = ""; } anwenden(); el.classList.remove("zoom-aktiv"); };
+    // Vorschau: das schon gezeichnete Bild wird nur per CSS verschoben/skaliert (GPU) – erst nach kurzer Ruhe wird neu gezeichnet
+    const vorschau = () => { const c = frisch(); if (svgMode) { const r = Z.s / Zc.s, tx = Z.x - r * Zc.x, ty = Z.y - r * Zc.y; el.style.transform = `translate(${(c.k * tx + c.o[0] * (1 - r)).toFixed(1)}px, ${(c.k * ty + c.o[1] * (1 - r)).toFixed(1)}px) scale(${r.toFixed(4)})`; el.style.cursor = Z.s > 1 ? "grab" : ""; } else anwenden(); };
+    const planen = () => { el.classList.add("zoom-aktiv"); clearTimeout(ruhe); ruhe = setTimeout(scharf, 200); if (!raf) raf = requestAnimationFrame(() => { raf = 0; vorschau(); }); };
+    const aktiv = () => { el.classList.add("zoom-aktiv"); };
     // Punkt im Koordinatensystem von Z.x/Z.y (SVG-Einheiten bzw. Pixel im Bild)
-    const punkt = (cx, cy) => { if (svgMode) { const m = el.getScreenCTM(); if (!m) return { x: 0, y: 0 }; const q = new DOMPoint(cx, cy).matrixTransform(m.inverse()); return { x: q.x, y: q.y }; } const r = el.getBoundingClientRect(), c = getComputedStyle(el); return { x: cx - r.left - parseFloat(c.paddingLeft) - parseFloat(c.borderLeftWidth), y: cy - r.top - parseFloat(c.paddingTop) - parseFloat(c.borderTopWidth) }; };
-    const zoomUm = (p, f) => { const s2 = Math.min(ZOOM_MAX, Math.max(1, Z.s * f)), q = s2 / Z.s; Z.x = p.x - (p.x - Z.x) * q; Z.y = p.y - (p.y - Z.y) * q; Z.s = s2; klemmen(); anwenden(); };
-    el._zoomAnwenden = anwenden; if (el._zoomInit) { anwenden(); return; } el._zoomInit = true;
+    const punkt = (cx, cy) => { const c = frisch(); if (svgMode) { if (!c.inv) return { x: 0, y: 0 }; const q = new DOMPoint(cx, cy).matrixTransform(c.inv); return { x: q.x, y: q.y }; } return { x: cx - c.r.left - c.px, y: cy - c.r.top - c.py }; };
+    const zoomUm = (p, f) => { const s2 = Math.min(ZOOM_MAX, Math.max(1, Z.s * f)), q = s2 / Z.s; Z.x = p.x - (p.x - Z.x) * q; Z.y = p.y - (p.y - Z.y) * q; Z.s = s2; klemmen(); planen(); };
+    el._zoomAnwenden = anwenden; if (el._zoomInit) { Zc = { s: 1, x: 0, y: 0 }; anwenden(); return; } el._zoomInit = true;
     const zeiger = new Map(); let letzterTipp = 0, bewegt = 0;
-    el.addEventListener("wheel", e => { e.preventDefault(); zoomUm(punkt(e.clientX, e.clientY), e.deltaY < 0 ? 1.18 : 1 / 1.18); }, { passive: false });
+    el.addEventListener("wheel", e => { e.preventDefault(); aktiv(); zoomUm(punkt(e.clientX, e.clientY), e.deltaY < 0 ? 1.18 : 1 / 1.18); }, { passive: false });
     // Maus: weder Text/Bild markieren noch ziehen (sonst startet beim 2. Mal ein Ziehen der Markierung und das Verschieben bricht ab)
     ["dragstart", "selectstart"].forEach(t => el.addEventListener(t, e => e.preventDefault()));
-    el.addEventListener("pointerdown", e => { if (e.pointerType === "mouse") { if (e.button !== 0) return; e.preventDefault(); } zeiger.set(e.pointerId, { x: e.clientX, y: e.clientY }); bewegt = 0; try { el.setPointerCapture(e.pointerId); } catch (x) {} });
+    el.addEventListener("pointerdown", e => { if (e.pointerType === "mouse") { if (e.button !== 0) return; e.preventDefault(); } if (!zeiger.size) { if (el.style.transform) scharf(); cache = null; } zeiger.set(e.pointerId, { x: e.clientX, y: e.clientY }); bewegt = 0; try { el.setPointerCapture(e.pointerId); } catch (x) {} });
     el.addEventListener("lostpointercapture", e => { zeiger.delete(e.pointerId); });
     el.addEventListener("pointermove", e => {
       const a = zeiger.get(e.pointerId); if (!a) return;
       const vor = [...zeiger.values()].map(z => ({ ...z })); a.x = e.clientX; a.y = e.clientY; bewegt += 1;
       if (zeiger.size >= 2) { const [p1, p2] = [...zeiger.values()], [q1, q2] = vor, d1 = Math.hypot(q1.x - q2.x, q1.y - q2.y), d2 = Math.hypot(p1.x - p2.x, p1.y - p2.y);
         const c0 = punkt((q1.x + q2.x) / 2, (q1.y + q2.y) / 2), c1 = punkt((p1.x + p2.x) / 2, (p1.y + p2.y) / 2);
-        Z.x += c1.x - c0.x; Z.y += c1.y - c0.y; if (d1 > 4 && d2 > 4) zoomUm(c1, d2 / d1); else { klemmen(); anwenden(); } }
-      else if (Z.s > 1) { const alt0 = vor[0], n0 = punkt(alt0.x, alt0.y), n1 = punkt(a.x, a.y); Z.x += n1.x - n0.x; Z.y += n1.y - n0.y; klemmen(); anwenden(); } });
+        Z.x += c1.x - c0.x; Z.y += c1.y - c0.y; if (d1 > 4 && d2 > 4) zoomUm(c1, d2 / d1); else { klemmen(); planen(); } }
+      else if (Z.s > 1) { const alt0 = vor[0], n0 = punkt(alt0.x, alt0.y), n1 = punkt(a.x, a.y); Z.x += n1.x - n0.x; Z.y += n1.y - n0.y; klemmen(); planen(); } });
     const ende = e => { const war = zeiger.has(e.pointerId); zeiger.delete(e.pointerId);
-      if (war && e.type === "pointerup" && zeiger.size === 0 && bewegt < 4) { const t = Date.now(); if (t - letzterTipp < 320) { if (Z.s > 1) { Z.s = 1; klemmen(); anwenden(); } else zoomUm(punkt(e.clientX, e.clientY), 3); letzterTipp = 0; } else letzterTipp = t; } };
+      if (war && e.type === "pointerup" && zeiger.size === 0 && bewegt < 4) { const t = Date.now(); if (t - letzterTipp < 320) { if (Z.s > 1) { Z.s = 1; klemmen(); planen(); } else zoomUm(punkt(e.clientX, e.clientY), 3); letzterTipp = 0; } else letzterTipp = t; } };
     el.addEventListener("pointerup", ende); el.addEventListener("pointercancel", ende);
   }
 
@@ -3745,7 +3763,7 @@
     a.innerHTML = `
       <div class="leiste"><button id="zurueck">‹ Rassen</button><h2>${r.name}</h2><button id="zu" aria-label="Schließen">✕</button></div>
       <div class="inhalt">
-        <div class="vorschau"><svg id="gross" viewBox="0 0 ${VB.b} ${VB.h}"></svg>
+        <div class="vorschau"><div class="gross-huelle"><svg id="gross" viewBox="0 0 ${VB.b} ${VB.h}"></svg></div>
           <div class="farbspalte" id="farbSpalte">${r.farben.map(fid => { const c = FARBEN[fid]; return `<button class="fs-kachel" data-f="${fid}"><span class="swatch" style="background:linear-gradient(135deg, ${c.body} 55%, ${c.mane} 55%)"></span>${c.name.replace(/ \(.*\)/, "")}</button>`; }).join("")}</div>
           <button class="fs-pfeil hoch" id="fsHoch" hidden aria-label="Nach oben scrollen">▲</button><button class="fs-pfeil runter" id="fsRunter" hidden aria-label="Weitere Farben">▼</button>
           <div class="farbspalte musterspalte" id="musterSpalte"><button class="fs-kachel ms-kachel" data-m="keine" title="Keine Scheckung"><span class="swatch" style="background:#fff;display:flex;align-items:center;justify-content:center;font-size:.9rem">✕</span>Keine</button>${musterListe(id).map(m => `<button class="fs-kachel ms-kachel" data-m="${m.k}"><span class="swatch" style="background:${m.sw}"></span>${m.n}</button>`).join("")}</div>

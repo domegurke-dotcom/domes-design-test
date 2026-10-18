@@ -247,7 +247,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const weissMuster = ["tobiano", "tovero", "splash", "sabino"].includes(C.pattern), fastWeiss = MST === 3 && weissMuster;
   const DW = opt.dw == null ? null : opt.dw;   // v440 Dominant White (Gen W): 0 wenig · 1 typisch · 2 viel · 3 ganz weiß
   const ganzWeiss = fastWeiss || DW >= 2;
-  const body = C.body, mane = DW === 3 ? "#efebe2" : C.mane, head = DW === 3 ? "#f4f1ea" : C.head || body;
+  const gold = k.metallic && /palomino|buckskin|falbe|isabell/i.test(farbId);   // v443: Achal-Tekkiner „Gold“ – satteres Goldgelb, dazu goldener Glanz (unten)
+  const body = gold && !/isabell/.test(farbId) ? mix(C.body, "#e3a531", .45) : C.body, mane = DW === 3 ? "#efebe2" : C.mane, head = DW === 3 ? "#f4f1ea" : C.head || body;
   const pts = C.points || null;
   const hoof = C.pattern === "tobiano" || ganzWeiss ? "#b8a88f" : (C.hoof || "#3b3531");
   const SW = "#f7f5f1", spotFarbe = C.spot || mix(body, pts || body, .35);
@@ -577,7 +578,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (C.pattern === "fleck") defs += `<pattern id="fk-${uid}" patternUnits="userSpaceOnUse" width="6" height="5.5"><circle cx="1" cy="1.2" r=".42" fill="${C.fleck}"/><circle cx="3.9" cy="2.6" r=".36" fill="${C.fleck}"/><circle cx="2.2" cy="4.3" r=".3" fill="${C.fleck}"/><circle cx="5.3" cy="4.9" r=".4" fill="${C.fleck}"/><circle cx="4.6" cy=".5" r=".28" fill="${C.fleck}"/></pattern>`;
   if (C.pattern === "roan") defs += `<radialGradient id="rg-${uid}"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>` +
     `<pattern id="rn-${uid}" patternUnits="userSpaceOnUse" width="3" height="3"><circle cx="1" cy="1" r=".85" fill="url(#rg-${uid})"/><circle cx="2.4" cy="2.2" r=".7" fill="url(#rg-${uid})"/></pattern>`;
-  if (k.metallic) defs += `<linearGradient id="mt-${uid}" gradientUnits="userSpaceOnUse" x1="${f(-0.1 * L)}" y1="${f(-H * 1.3)}" x2="${f(L)}" y2="0"><stop offset=".15" stop-color="#fff" stop-opacity="0"/><stop offset=".35" stop-color="#fff" stop-opacity=".38"/><stop offset=".48" stop-color="#fff" stop-opacity="0"/><stop offset=".62" stop-color="#fff" stop-opacity=".22"/><stop offset=".75" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
+  // v443 (Dome): beim Achal-Tekkiner glänzen Cream- und Falbfarben golden („Gold“: Goldfalbe/Buckskin, Gold-Palomino)
+  const mtc = gold ? "#ffe7a3" : "#fff", mtA = gold ? .65 : .38, mtB = gold ? .42 : .22;
+  if (k.metallic) defs += `<linearGradient id="mt-${uid}" gradientUnits="userSpaceOnUse" x1="${f(-0.1 * L)}" y1="${f(-H * 1.3)}" x2="${f(L)}" y2="0"><stop offset=".15" stop-color="${mtc}" stop-opacity="0"/><stop offset=".35" stop-color="${mtc}" stop-opacity="${mtA}"/><stop offset=".48" stop-color="${mtc}" stop-opacity="0"/><stop offset=".62" stop-color="${mtc}" stop-opacity="${mtB}"/><stop offset=".75" stop-color="${mtc}" stop-opacity="0"/></linearGradient>`;
 
   const bx = `x="${f(minX - 5)}" y="${f(minY - 5)}" width="${f(maxX - minX + 10)}" height="${f(-minY + 10)}"`;
   if (C.pattern === "dapple" || C.pattern === "roan" || C.pattern === "fleck") defs += `<mask id="mk-${uid}" maskUnits="userSpaceOnUse" ${bx}><g filter="url(#wm6-${uid})"><path d="${halsD}" fill="#fff"/><path d="${glatt(rumpf)}" fill="#fff" transform="translate(0,-3)"/></g></mask><filter id="wm6-${uid}" filterUnits="userSpaceOnUse" ${bx}><feGaussianBlur stdDeviation="5"/></filter>`;

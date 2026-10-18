@@ -13,16 +13,16 @@ Nach dem Zeichnen einfach hochladen – `werkzeuge/kopf-export.js` übernimmt ne
 - **Ändern:** Die Fläche überall voll weiß lassen. Weich auslaufen nur am äußeren Rand zur Backe hin (z. B. nur ein schmaler Blur am Rand oder ein Verlauf, der erst ganz außen ausblendet).
 - Bei **breite Blesse** und **Blesse** kurz prüfen, ob dort auch zu viel ausblendet – sie sollen ebenfalls von der Stirn bis zur Nase durchgehen.
 
-### 1b. Rechtes Ohr (im Bild rechts, liegt vorn über dem Kopf): Umrisslinie zu lang (Dome, v459)
-- **Problem:** Die hintere Umrisslinie des Ohrs läuft am Ohransatz nicht aus, sondern geht noch ein Stück **in den Kopf/Hals hinein** und endet dort mitten im Fell mit einem runden Linienende. Gut zu sehen bei Ohrstellung „nach vorne“ (Standard) im Stockmaßbild, z. B. beim Fuchs.
-- **Ändern:** Die Linie am Ohransatz enden lassen – dort, wo sie auf die Kopf-/Halslinie trifft (bzw. unter Schopf oder Mähne verschwindet). Vermutlich Ebene `ohr-links-nach vorne` unter `basisohren links` (das Ohr, das vor dem Kopf liegt) – bitte auch die anderen Stellungen (`zur seite`, `nach hinten`, `angelegt`) und die Marwari-Ohren kurz prüfen.
-
-- **Innenohr (Dome, v463):** Beim selben Ohr das Innenohr (dunkle Muschel) anpassen – es sitzt nicht sauber in der Ohrform (gut zu sehen beim Achal-Tekkiner, Palomino). Hinweis Claude: Ohr-Daten sind seit v424 unverändert, die Größenänderung je Rasse skaliert das ganze Ohr gleichmäßig – der Fehler steckt in der Zeichnung; bisher hat ihn meist der Schopf verdeckt.
+### 1b. ✅ Rechtes Ohr / Innenohr – erledigt (v465)
+- Innenohr von Dome neu gezeichnet und eingebaut. Die lange hintere Linie des vorderen Ohrs ist der Fellübergang und bleibt so (Dome).
 
 ### 1c. Keilkopf stark und Schafskopf stark überarbeiten (Dome, v462)
 - Dome überarbeitet die Formen `keilkopf-stark` und `schafskopf-stark` selbst. Danach `werkzeuge/kopf-export.js` laufen lassen; dabei auch `maulfärbung` und `kopfabzeichen` dieser beiden Formen anpassen, damit sie zur neuen Form passen.
 
 ## Fehlt noch (neue Ebenen)
+
+### 0. Glanz- und Schattenbereiche für die Köpfe (Dome plant, v467)
+- Dome zeichnet eigene Licht-/Schattenflächen für die Köpfe. Sobald sie da sind: die helle Spiel-Schattierung auf dem Kopf (`sh-`-Rechteck in `zeichnePferd`) und die Aufhellung der Ohren (`farbeOhr`, +10 % Weiß) wieder entfernen.
 
 ### 2. Milchmaul (unter `kopfabzeichen`)
 - **Was ist das:** Die Lippen selbst sind weiß (Haut darunter rosa) – nicht zu verwechseln mit der Schnippe (weißer Fleck auf der Nase zwischen den Nüstern, Lippen bleiben farbig).

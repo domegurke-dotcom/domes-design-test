@@ -536,7 +536,7 @@
   .vorschau svg#gross { width: 100%; transform-origin: 0 0; touch-action: none; cursor: zoom-in; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; }   /* v451: zoomen (Zwei-Finger / Mausrad) */
   .zoombar { position: relative; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; } .zoombar svg, .zoombar svg * { -webkit-user-drag: none; user-select: none; }
   /* v453: während des Zoomens/Verschiebens wird das fertige Bild nur verschoben/skaliert (eigene Ebene, ruckelfrei) – nach kurzer Pause wird es scharf neu gezeichnet */
-  .zoombar svg, .vorschau svg#gross { will-change: transform; } .zoom-bild { position: absolute; display: none; transform-origin: 0 0; pointer-events: none; will-change: transform; }   /* v458: Standbild (Bitmap) für die Geste */   /* dauerhaft eigene Ebene: die erste Bewegung muss nichts neu aufbauen */ .zoombar svg { transform-origin: 0 0; cursor: zoom-in; }
+  .zoombar.zoom-aktiv svg, .vorschau svg#gross { will-change: transform; } .zoom-bild { position: absolute; display: none; transform-origin: 0 0; pointer-events: none; will-change: transform; }   /* v458: Standbild (Bitmap) für die Geste */   /* dauerhaft eigene Ebene: die erste Bewegung muss nichts neu aufbauen */ .zoombar svg { transform-origin: 0 0; cursor: zoom-in; }
   .farbspalte.musterspalte { right: calc(var(--pf) + var(--fsB) + 2px); }   /* v451: Scheckungen links neben den Fellfarben */
   .ms-pfeil { right: calc(var(--pf) + var(--fsB) + 4px) !important; }
   .fs-kachel:disabled { opacity: .35; cursor: default; }
@@ -949,7 +949,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "458";
+  const SPIEL_VERSION = "459";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -957,9 +957,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=458"></script>
-<script src="boxstufen.js?v=458"></script>
-<script src="kopfneu.js?v=458"></script>
+<script src="pferd.js?v=459"></script>
+<script src="boxstufen.js?v=459"></script>
+<script src="kopfneu.js?v=459"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3723,7 +3723,7 @@
   function farbVarianten(f) {
     const C = FARBEN[f] || {}, pat = C.pattern, v = [];
     if (f === "rappe") return [{ n: "Sommerrappe – bleibt das ganze Jahr schwarz", ex: { sonne: .2 }, saison: 1 }, { n: "Winterrappe im Winter – schwarz", ex: { sonne: .8 }, saison: 3 }, { n: "Winterrappe im Sommer – von der Sonne rostbraun ausgebleicht", ex: { sonne: .8 }, saison: 1 }];
-    if (BLEICH[f]) { const l = [{ n: "im Winter (Winterfell)", saison: 3 }, { n: "im Sommer – von der Sonne ausgeblichen", ex: { sonne: .9 }, saison: 1 }]; if (f === "brauner") l.push({ n: "Hellbrauner", ex: { ton: .1 }, saison: 3 }); return l; }
+    if (BLEICH[f]) { const l = [{ n: "im Winter (Winterfell)", saison: 3 }, { n: "im Sommer – von der Sonne ausgeblichen", ex: { sonne: .9 }, saison: 1 }]; if (f === "brauner") l.push({ n: "Hellbrauner", ex: { ton: .1 }, saison: 3, farbe: "hellbrauner" }); return l; }
     if (f === "braunfalbe") v.push({ n: "Braunfalbe", ex: { ton: .6, zebra: .1 } }, { n: "Hellfalbe", ex: { ton: .1, zebra: .1 } });
     if (["braunfalbe", "rotfalbe", "mausfalbe", "gelbfalbe", "weissfalbe"].includes(f)) { const t = f === "braunfalbe" ? { ton: .6 } : {}; v.push({ n: "mit Zebrastreifen an den Beinen", ex: { ...t, zebra: .6 } }, { n: "mit Zebrastreifen und Schulterstreifen", ex: { ...t, zebra: .92 } }); if (f !== "braunfalbe") v.unshift({ n: "ohne Zebrastreifen", ex: { zebra: .1 } }); return v; }
     const art = ["tobiano", "overo", "tovero", "splash", "sabino"].includes(pat) ? "weiss" : pat === "roan" ? "roan" : ["leopard", "fewspot", "blanket", "snowcap"].includes(pat) ? "tiger" : null;
@@ -3732,7 +3732,7 @@
   }
   function varianteAnwenden() {
     const L = farbVarianten(wahl.farbeWahl), i = wahl.varIdx, V = L.length && i >= 0 ? L[i % L.length] : null;
-    wahl.saisonVar = V && V.saison != null ? V.saison : null; wahl.varText = V ? V.n : "";
+    wahl.saisonVar = V && V.saison != null ? V.saison : null; wahl.varText = V ? V.n : ""; if (V && V.farbe) wahl.farbe = V.farbe;   // v459: Hellbrauner ist eine eigene Farbe (sonst kein Unterschied zum Brauner)
     if (V && V.ex && !(wahl.muster && V.stufe)) wahl.ex = { ...(wahl.ex || exZufall(zufall("wahl-" + wahl.id))), ...V.ex };
   }
   function farbeKlick(f) {
@@ -4205,7 +4205,7 @@
     saisonFix = glSaison;
     const z = zeichnePferd(wahl.rasse, fb(wahl, wahl.alter), { seed: wahl.id, geschlecht: wahl.geschlecht, alterStufe: stufeAusMonaten(wahl.alter * 12), statisch: 1, ...kopfOpt(wahl), ...(wahl.ohrVorschau ? { ohrStellung: { ...wahl.ohrVorschau, spiel: false } } : {}) });
     saisonFix = null;
-    $("glSaison").innerHTML = JZ.map(([n, ico], i) => `<button class="chip ${i === glSaison ? "an" : ""}" data-gls="${i}" title="${n}">${ico} ${n}</button>`).join("");
+    $("glSaison").innerHTML = JZ.map(([n, ico], i) => i !== 1 && i !== 3 ? "" : `<button class="chip ${i === glSaison ? "an" : ""}" data-gls="${i}" title="${n}">${ico} ${n}</button>`).join("");
     $("glSaison").querySelectorAll("[data-gls]").forEach(b => b.onclick = () => { glSaison = +b.dataset.gls; glZeigen(); });
     const m = 6, oben = 16;   // oben mehr Platz – die Ohren ragen über den berechneten Rahmen hinaus
     $("glBild").innerHTML = `<svg viewBox="${(z.box.minX - m).toFixed(1)} ${(z.box.minY - oben).toFixed(1)} ${(z.box.maxX - z.box.minX + 2 * m).toFixed(1)} ${(-z.box.minY + oben + m).toFixed(1)}">${z.svg}</svg>`;

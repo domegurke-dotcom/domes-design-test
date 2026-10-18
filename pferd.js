@@ -262,8 +262,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const DW = opt.dw == null ? null : opt.dw;   // v440 Dominant White (Gen W): 0 wenig · 1 typisch · 2 viel · 3 ganz weiß
   const ganzWeiss = fastWeiss || DW >= 2;
   const MG = opt.glanz != null ? opt.glanz : (k.metallic ? 1 : 0);   // v446 (Dome): Metallglanz 0–1 – nicht jeder Achal-Tekkiner glänzt gleich stark, Mischlinge anteilig
-  const gold = MG > .3 && /palomino|buckskin|falbe/i.test(farbId) && !/mausfalbe|weissfalbe/.test(farbId);   // v479: Mausfalbe (schwarzbasiert) und Weißfalbe nicht golden   // v443: Achal-Tekkiner „Gold“ – satteres Goldgelb, dazu goldener Glanz (unten)
-  const body = gold ? mix(C.body, "#e8a92a", .5 * MG) : MG > .3 && /isabell/.test(farbId) ? mix(C.body, "#dfe3ea", .35 * MG) : C.body, mane = DW === 3 ? "#efebe2" : C.mane, head = DW === 3 ? "#f4f1ea" : C.head || body;
+  const bronze = MG > .3 && !!opt.bronze && /buckskin/.test(farbId), perl = MG > .3 && !!opt.bronze && /isabell/.test(farbId);   // v482: Perlglanz – Isabell (Doppel-Cream) golden-perlmuttfarben statt silbrig   // v482 (Dome): Bronzeglanz – heller, rosig-goldener Buckskin
+  const gold = !bronze && MG > .3 && /palomino|buckskin|falbe/i.test(farbId) && !/mausfalbe|weissfalbe/.test(farbId);   // v479: Mausfalbe (schwarzbasiert) und Weißfalbe nicht golden   // v443: Achal-Tekkiner „Gold“ – satteres Goldgelb, dazu goldener Glanz (unten)
+  const body = perl ? mix(C.body, "#ead3a2", .55 * MG) : bronze ? mix(C.body, "#d4a878", .6 * MG) : gold ? mix(C.body, "#e8a92a", .5 * MG) : MG > .3 && /isabell/.test(farbId) ? mix(C.body, "#dfe3ea", .35 * MG) : C.body, mane = DW === 3 ? "#efebe2" : C.mane, head = DW === 3 ? "#f4f1ea" : C.head || body;
   const pts = C.points || null;
   const hoof = C.pattern === "tobiano" || ganzWeiss ? "#b8a88f" : (C.hoof || "#3b3531");
   const SW = "#f7f5f1", spotFarbe = C.spot || mix(body, pts || body, .35);
@@ -595,7 +596,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (C.pattern === "roan") defs += `<radialGradient id="rg-${uid}"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>` +
     `<pattern id="rn-${uid}" patternUnits="userSpaceOnUse" width="3" height="3"><circle cx="1" cy="1" r=".85" fill="url(#rg-${uid})"/><circle cx="2.4" cy="2.2" r=".7" fill="url(#rg-${uid})"/></pattern>`;
   // v443 (Dome): beim Achal-Tekkiner glänzen Cream- und Falbfarben golden („Gold“: Goldfalbe/Buckskin, Gold-Palomino)
-  const silber = MG > .3 && /isabell/.test(farbId), mtc = silber ? "#eef2ff" : gold ? "#ffe08a" : "#fff", mtA = (silber ? .75 : gold ? .7 : .5) * MG, mtB = (silber ? .5 : gold ? .48 : .32) * MG;   // v444 (Dome): Isabell silbrig, Braune/Rappen glänzen auch
+  const silber = !perl && MG > .3 && /isabell/.test(farbId), mtc = silber ? "#eef2ff" : perl ? "#fff0cf" : bronze ? "#ffd7a6" : gold ? "#ffe08a" : "#fff", mtA = (silber || bronze || perl ? .75 : gold ? .7 : .5) * MG, mtB = (silber || bronze || perl ? .5 : gold ? .48 : .32) * MG;   // v444 (Dome): Isabell silbrig, Braune/Rappen glänzen auch
   if (MG > 0) defs += `<linearGradient id="mt-${uid}" gradientUnits="userSpaceOnUse" x1="${f(-0.1 * L)}" y1="${f(-H * 1.3)}" x2="${f(L)}" y2="0"><stop offset=".15" stop-color="${mtc}" stop-opacity="0"/><stop offset=".35" stop-color="${mtc}" stop-opacity="${mtA}"/><stop offset=".48" stop-color="${mtc}" stop-opacity="0"/><stop offset=".62" stop-color="${mtc}" stop-opacity="${mtB}"/><stop offset=".75" stop-color="${mtc}" stop-opacity="0"/></linearGradient>`;
 
   const bx = `x="${f(minX - 5)}" y="${f(minY - 5)}" width="${f(maxX - minX + 10)}" height="${f(-minY + 10)}"`;

@@ -933,7 +933,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "423";
+  const SPIEL_VERSION = "424";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -941,10 +941,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=423"></script>
-<script src="boxstufen.js?v=423"></script>
-<script src="kopfteile.js?v=423"></script>
-<script src="kopfalter.js?v=423"></script>
+<script src="pferd.js?v=424"></script>
+<script src="boxstufen.js?v=424"></script>
+<script src="kopfneu.js?v=424"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1264,7 +1263,7 @@
   // kleines Porträt: Kopf und halber Hals
   function kopfBild(p) {
     const o = { alterStufe: p.geb ? stufeKey(p) : undefined, seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, schopf: p.schopf, typ: p.typ,
-      eigenKopf: p.nase === "spiel" ? false : (p.nase || undefined), statisch: 1 };
+      ...kopfOpt(p), statisch: 1 };
     const pk = zeichnePferd(p.rasse, fb(p), { ...o, punkte: 1 }), z = zeichnePferd(p.rasse, fb(p), o);
     // Ausschnitt wie in der Enzyklopädie: Ohren bis kurz unter das Maul, Nase links
     const y0 = pk.genick.y - 15, h = pk.nase.y + 15 - y0, w = h, x0 = pk.nase.x - 4;   // oben Platz für lange Ohren
@@ -1446,8 +1445,61 @@
     if (o.charakter) Object.assign(p.werte.charakter, o.charakter);   // Admin: Charakter selbst gewählt
     nrVon(p);
     p.alter = alterJahre(p); p.stockmass = Math.round(p.zielStockmass * wuchs(alterJZ(p) * 3));
+    kopfVon(p);
     return p;
   }
+  // ---------- Kopfform und Ohren (PLAN-KOEPFE.md, Etappe 1) ----------
+  // p.kopf = { f: Form, s: Stufe 0–3 } (gerader Kopf = Stufe 0). Marktpferde: Stufe leicht 40 % · normal 45 % · stark 15 %
+  const KOPF_STUFE_W = [0.4, 0.45, 0.15];
+  // Exterieurfehler [Schafskopf, Schweinskopf]: Shetty 8 % / 10 %, Kaltblut 8 % / 3 %, alle anderen 3 % / 2 %
+  const KOPF_FEHLER = { shetty: [0.08, 0.1], shire: [0.08, 0.03], clydesdale: [0.08, 0.03], tinker: [0.08, 0.03] }, KOPF_FEHLER_SONST = [0.03, 0.02];
+  const KOPF_TYP_GERADE = 0.1;    // Rassen mit typischer Form: so oft trotzdem gerader Kopf
+  const KOPF_GERADE_ANDERS = 0.25;  // Rassen ohne typische Form: so oft eine leichte andere Form (Hecht, Ramsnase, Keil)
+  const KOPF_MUTATION = 0.02;     // Vererbung: Mutation zu „stark“
+  const KOPF_WERT = { 2: 0.95, 3: 0.9 };   // Schafs-/Schweinskopf: Marktwert normal −5 %, stark −10 % (leicht ohne Abzug)
+  const KOPF_TYPNOTE = { 2: 0.2, 3: 0.4 }; // Fohlenschau: Abzug Typnote
+  const kopfFehler = k => k && (k.f === "schaf" || k.f === "schwein") ? k.s : 0;
+  function kopfZufall(rasse, r) {
+    const st = () => { const x = r(); return x < KOPF_STUFE_W[0] ? 1 : x < KOPF_STUFE_W[0] + KOPF_STUFE_W[1] ? 2 : 3; };
+    const [schaf, schwein] = KOPF_FEHLER[rasse] || KOPF_FEHLER_SONST, x = r();
+    if (x < schaf) return { f: "schaf", s: st() };
+    if (x < schaf + schwein) return { f: "schwein", s: st() };
+    const typ = KOPFFORM_RASSE[rasse];
+    if (typ) return r() < KOPF_TYP_GERADE ? { f: "gerade", s: 0 } : { f: typ, s: st() };
+    return r() < KOPF_GERADE_ANDERS ? { f: ["hecht", "ramsnase", "keil"][Math.floor(r() * 3)], s: 1 } : { f: "gerade", s: 0 };
+  }
+  // fehlt die Kopfform (alte Spielstände, Ahnen, Deckhengste): aus der Rasse würfeln – immer gleich für dasselbe Pferd
+  function kopfVon(p) {
+    if (!p) return { f: "gerade", s: 0 };
+    if (!p.kopf || !KOPFFORMEN[p.kopf.f]) p.kopf = kopfZufall(p.rasse, zufall("kopf-" + (p.id || p.nr || p.name)));
+    return p.kopf;
+  }
+  // Vererbung: Form 50/50 von Mutter oder Vater, Stufe = Mittel der Eltern (gerade = 0), je 25 % eine Stufe weniger/mehr, 2 % Mutation zu „stark“
+  function kopfErben(M, V) {
+    const km = kopfVon(M), kv = kopfVon(V), von = Math.random() < 0.5 ? km : kv;
+    if (von.f === "gerade") return { f: "gerade", s: 0 };
+    const mittel = ((km.s || 0) + (kv.s || 0)) / 2;
+    let s = Math.floor(mittel) + (mittel % 1 && Math.random() < 0.5 ? 1 : 0);
+    const z = Math.random(); if (z < 0.25) s--; else if (z < 0.5) s++;
+    if (Math.random() < KOPF_MUTATION) s = 3;
+    s = Math.min(3, s);
+    return s < 1 ? { f: "gerade", s: 0 } : { f: von.f, s };
+  }
+  // Ohrstellung je Ohr (links/rechts unabhängig), für den Tag fest: viel Vertrauen/neugierig → meist vorne, gelassen → meist seitlich,
+  // scheu/nervös/wenig Vertrauen → öfter hinten; matt (Gesundheit < 65 %) → eher seitlich. Angelegt nur im Extremfall.
+  const OHREN_AN = {};   // starke Abneigung gerade erlebt → Ohren kurz angelegt (nur bis zum Neuladen)
+  function ohrenVon(p) {
+    if (!p || !p.werte) return { R: "vorne", L: "vorne" };
+    if (befundListe(p).some(b => b.grad >= 4) || (OHREN_AN[p.id] && Date.now() - OHREN_AN[p.id] < 20000)) return { R: "angelegt", L: "angelegt", spiel: false };   // starker Schmerz / starke Abneigung
+    const r = zufall("ohr-" + p.id + "-" + (spiel.tag || 0)), v = vertrauenVon(p) / 100;
+    const N = charE(p, "wachheit"), G = charE(p, "nerven"), Mu = charE(p, "mut"), matt = p.pflege && p.pflege.gesundheit < 65 ? 1 : 0;
+    const w = { vorne: (0.6 + 1.6 * v + 1.2 * N.hoch) * (matt ? 0.4 : 1), seite: 0.8 + 1.2 * G.hoch + 0.6 * N.tief + 1.2 * matt,
+      hinten: 0.15 + 1.2 * Mu.tief + 1.2 * G.tief + 1.2 * Math.max(0, 0.4 - v) / 0.4 };
+    const wahl = () => { let x = r() * (w.vorne + w.seite + w.hinten); for (const k of ["vorne", "seite", "hinten"]) if ((x -= w[k]) < 0) return k; return "seite"; };
+    return { R: wahl(), L: wahl() };
+  }
+  // Zeichen-Optionen für den Kopf eines Pferds (Kopfform, Ohren; „spiel“ = alter Spielkopf, nur Admin-Test)
+  const kopfOpt = p => p ? { kopfform: kopfVon(p), ohrStellung: ohrenVon(p), eigenKopf: p.nase === "spiel" ? false : undefined } : {};
   // Hengste der Deckstation – fest für die ganze Jahreszeit gespeichert (jeder mit eigener Akte)
   function deckhengste(stute) {
     const jetzt = jzJetzt(), key = jetzt + "-" + stute.rasse, D = (spiel.deckstation = spiel.deckstation || {});
@@ -1567,6 +1619,7 @@
     her.hufQ = erben(M, V, x => hufQ(x), { min: 5, max: 95, mut: 12 }); f.hufQ = Math.round(her.hufQ.wert != null ? her.hufQ.wert : hufQ(f));
     f.hufW = Math.random() < 0.15 ? zufallAus(["langsam", "normal", "schnell"]) : hufW(Math.random() < 0.5 ? M : V);
     her.anteile = { mutter: anteileVon(M), vater: anteileVon(V), ergebnis: anteile, rasse };
+    f.kopf = kopfErben(M, V); her.kopf = { mutter: kopfName(kopfVon(M)), vater: kopfName(kopfVon(V)), ergebnis: kopfName(f.kopf) };
     f.herkunft = her;
     f.ahnen = ahnenAus(M, V);
     nrVon(f);
@@ -2201,7 +2254,7 @@
     const dreckF = (1 - 0.15 * dreckWert(p) / 100) * (p.fellGlanz >= (spiel.tag || 1) - 1 ? 1.02 : 1);   // ungeputzt: bis zu 15 % weniger wert · Öl: glänzendes Fell +2 %
     const bl = befundListe(p).filter(b => b.diagnose), befundF = Math.max(0.4, 1 - bl.reduce((a, b) => a + (KRANK[b.art].chronisch ? 0.1 : 0) + (b.beh ? 0.02 : 0.06) * b.grad, 0));   // bekannte Befunde senken den Preis, chronische dauerhaft
     const erbF = testGemacht(p, "krank") ? Object.keys(ERBKRANK).reduce((a, k) => a * (erbKrank(p, k) ? 0.75 : (erbVon(p)[k] || 0) ? 0.92 : 1), 1) : 1;   // getestete Träger sind für die Zucht weniger wert
-    const v = (1500 + 4500 * gangF * gangF + 5000 * ausb) * alterF * gesund * reinF * dreckF * befundF * erbF * fohlenschauFaktor(p);   // Fohlenschau-Note und Prämienfohlen
+    const v = (1500 + 4500 * gangF * gangF + 5000 * ausb) * alterF * gesund * reinF * dreckF * befundF * erbF * fohlenschauFaktor(p) * (KOPF_WERT[kopfFehler(kopfVon(p))] || 1);   // Fohlenschau-Note und Prämienfohlen
     return Math.max(100, Math.round(v / 50) * 50) + testWert(p) + erfolgWert(p);   // Turniererfolge steigern den Wert   // gemachte Gentests: Käufer zahlen die Testkosten mit
   }
   const testWert = p => Object.keys(LABOR_TESTS).filter(t => testGemacht(p, t)).reduce((s, t) => s + laborPreis(p, t), 0);
@@ -2701,7 +2754,7 @@
     $("weideBild").innerHTML = p && (p.weide || paddockVon(p) || B().offen) && !p.klinik && !p.turnier && !B().tot ? weideBildSVG(p) : "";   // H7 (a): Offenstall-Bild   // H6 (Dome): Pferde auf der Weide sichtbar
     if (!p || p.klinik || p.weide || p.turnier) { $("pferdPlatz").innerHTML = ""; zeigeAkte(); return; }
     const tot = !!B().tot;   // verstorben: Augen zu, keine Bewegung mehr
-    const z = zeichnePferd(p.rasse, fb(p), { dreck: p.dreck ? p.dreck.fell : 0, filz: p.dreck ? p.dreck.maehne : 0, alterStufe: stufeKey(p), seed: p.id, geschlecht: p.geschlecht, augenZu: tot, statisch: tot, maehne: p.maehne, schopf: p.schopf, typ: p.typ, eigenKopf: p.nase === "spiel" ? false : (p.nase || undefined), haltung: haltungFuer(p), ohren: (p.pflege && p.pflege.gesundheit >= 45 && p.pflege.gesundheit < 65) ? "geknickt" : "" });
+    const z = zeichnePferd(p.rasse, fb(p), { dreck: p.dreck ? p.dreck.fell : 0, filz: p.dreck ? p.dreck.maehne : 0, alterStufe: stufeKey(p), seed: p.id, geschlecht: p.geschlecht, augenZu: tot, statisch: tot, maehne: p.maehne, schopf: p.schopf, typ: p.typ, ...kopfOpt(p), haltung: haltungFuer(p) });
     const s = p.stockmass * STALL.cmZuEinheit / 100;
     const cx = (z.box.minX + z.box.maxX) / 2;
     const anim = t => spiel.sparmodus ? ohneAnim(t) : t;
@@ -2709,7 +2762,7 @@
     const f = B().fohlen;
     if (f) {
       // Fohlen bei der Mutter: vor ihr, Blick nach rechts; in den ersten Tagen liegt es noch (fohlenLiegt)
-      const fz = zeichnePferd(f.rasse, fb(f), { alterStufe: stufeKey(f), seed: f.id, geschlecht: f.geschlecht, maehne: f.maehne, schopf: f.schopf, haltung: fohlenLiegt(f) ? "liegend" : "normal", eigenKopf: undefined });
+      const fz = zeichnePferd(f.rasse, fb(f), { alterStufe: stufeKey(f), seed: f.id, geschlecht: f.geschlecht, maehne: f.maehne, schopf: f.schopf, haltung: fohlenLiegt(f) ? "liegend" : "normal", ...kopfOpt(f) });
       const fs = f.stockmass * STALL.cmZuEinheit / 100, fcx = (fz.box.minX + fz.box.maxX) / 2, fx = STALL.mitte - 34;
       fohlenSVG = `<g transform="translate(${(fx + fcx * fs).toFixed(1)},${STALL.boden + 10}) scale(${(-fs).toFixed(4)},${fs.toFixed(4)})">${anim(fz.svg)}</g>`;
     }
@@ -2725,7 +2778,7 @@
     if (!tot && p.waise && p.waise.art === "amme") {
       // gemietete Ammenstute: steht hinten in der Box (gleiche Rasse, erwachsen), das Waisenfohlen davor wie ein Fohlen bei Fuß
       const ra = rasseById(p.rasse), r = zufall("amme-" + p.id), am = { id: "amme-" + p.id, rasse: p.rasse, farbe: ra.farben[Math.floor(r() * ra.farben.length)], geschlecht: "Stute", alter: 10 };
-      const az = zeichnePferd(am.rasse, saisonFarbe(am, am.farbe), { seed: am.id, geschlecht: "Stute" }), as = (p.zielStockmass || ra.h[0]) * STALL.cmZuEinheit / 100, acx = (az.box.minX + az.box.maxX) / 2;
+      const az = zeichnePferd(am.rasse, saisonFarbe(am, am.farbe), { seed: am.id, geschlecht: "Stute", ...kopfOpt(am) }), as = (p.zielStockmass || ra.h[0]) * STALL.cmZuEinheit / 100, acx = (az.box.minX + az.box.maxX) / 2;
       const fcx = cx, fx = STALL.mitte - 34;
       $("pferdPlatz").innerHTML = `<g transform="translate(${(STALL.mitte - acx * as).toFixed(1)},${STALL.boden}) scale(${as.toFixed(4)})">${anim(az.svg)}</g>`
         + `<g transform="translate(${(fx + fcx * s).toFixed(1)},${STALL.boden + 10}) scale(${(-s).toFixed(4)},${s.toFixed(4)})">${anim(z.svg)}</g>` + blase;
@@ -2983,7 +3036,7 @@
         const jetzt = p.maehne || naturMaehne(p.rasse), ji = MAEHNEN.findIndex(m => m[0] === jetzt);
         inhalt = (meldung ? `<div class="klasse">${meldung}</div>` : "") + `<p class="text" style="margin:0 0 4px">✂️ <b>Mähne schneiden</b> · aktuell: ${MAEHNEN[ji][1]}. ${ji === 0 ? "Kürzer geht es nicht mehr." : "Wähle die neue Länge:"}<br><small>${ji === MAEHNEN.length - 1 ? "Die Mähne hat die maximale Länge erreicht." : `Wächst in ${Math.max(1, (2 * tpj()) - (spiel.tag - (p.maehneSeit || spiel.tag)))} ${Math.max(1, (2 * tpj()) - (spiel.tag - (p.maehneSeit || spiel.tag))) === 1 ? "Tag" : "Tagen"} eine Stufe länger.`}</small></p>
           <div class="kacheln">${MAEHNEN.map(([id, name], i) => {
-            const z = zeichnePferd(p.rasse, fb(p), { seed: p.id, geschlecht: p.geschlecht, maehne: id, schopf: p.schopf, eigenKopf: p.nase === "spiel" ? false : (p.nase || undefined), statisch: 1 });
+            const z = zeichnePferd(p.rasse, fb(p), { seed: p.id, geschlecht: p.geschlecht, maehne: id, schopf: p.schopf, ...kopfOpt(p), statisch: 1 });
             const status = i === ji ? "aktuell" : i < ji ? "schneiden" : "zu lang";
             const moeglich = i < ji;
             return `<div class="kachel-halten"><label class="halten" title="Wunschlänge: der Pferdepfleger hält die Mähne auf dieser Länge"><input type="checkbox" data-mziel="${id}" ${p.maehneZiel === id ? "checked" : ""} ${fremd(p) ? 'disabled title="Wunsch des Besitzers"' : ""}></label><button class="kachel ${moeglich ? "klickbar" : i === ji ? "aktuell" : "fehlt"}" data-schnitt="${moeglich ? id : ""}" ${moeglich ? "" : "disabled"}>
@@ -2995,10 +3048,10 @@
             if (!ns) return `<p class="text" style="margin:8px 0 4px">✂️ <b>Schopf</b> · ${esc(p.name)} hat von Natur aus keinen Schopf.</p>`;
             const sj = SCHOEPFE.findIndex(m => m[0] === (p.schopf || ns)), rest = Math.max(1, (2 * tpj()) - (spiel.tag - (p.schopfSeit || spiel.tag)));
             if (sj < 0) return `<p class="text" style="margin:8px 0 4px">✂️ <b>Schopf</b> · ${esc(p.name)} hat noch keinen Schopf. Er wächst in ${rest} ${rest === 1 ? "Tag" : "Tagen"}.</p>`;
-            const pk = zeichnePferd(p.rasse, fb(p), { punkte: 1, seed: p.id, eigenKopf: p.nase === "spiel" ? false : (p.nase || undefined) }), y0 = pk.genick.y - 15, hh = pk.nase.y + 14 - y0, vb = [pk.nase.x - 4, y0, hh, hh].map(x => x.toFixed(1)).join(" ");   // ganzer Kopf mit Ohren und Maul
+            const pk = zeichnePferd(p.rasse, fb(p), { punkte: 1, seed: p.id, ...kopfOpt(p) }), y0 = pk.genick.y - 15, hh = pk.nase.y + 14 - y0, vb = [pk.nase.x - 4, y0, hh, hh].map(x => x.toFixed(1)).join(" ");   // ganzer Kopf mit Ohren und Maul
             return `<p class="text" style="margin:8px 0 4px">✂️ <b>Schopf schneiden</b> · aktuell: ${SCHOEPFE[sj][1]}. ${sj === 0 ? "Kürzer geht es nicht mehr." : "Wähle die neue Länge:"}<br><small>${sj === SCHOEPFE.length - 1 ? "Der Schopf hat die maximale Länge erreicht." : `Wächst in ${rest} ${rest === 1 ? "Tag" : "Tagen"} eine Stufe länger.`}</small></p>
             <div class="kacheln">${SCHOEPFE.map(([id], i) => {
-              const z = zeichnePferd(p.rasse, fb(p), { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, schopf: id, eigenKopf: p.nase === "spiel" ? false : (p.nase || undefined), statisch: 1 });
+              const z = zeichnePferd(p.rasse, fb(p), { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, schopf: id, ...kopfOpt(p), statisch: 1 });
               const moeglich = i < sj;
               return `<div class="kachel-halten"><label class="halten" title="Wunschlänge: der Pferdepfleger hält den Schopf auf dieser Länge"><input type="checkbox" data-sziel="${id}" ${p.schopfZiel === id ? "checked" : ""} ${fremd(p) ? 'disabled title="Wunsch des Besitzers"' : ""}></label><button class="kachel ${moeglich ? "klickbar" : i === sj ? "aktuell" : "fehlt"}" data-schopf="${moeglich ? id : ""}" ${moeglich ? "" : "disabled"}>
                 <svg class="mini" viewBox="${vb}" style="background:#fff">${ohneAnim(z.svg)}</svg>
@@ -3097,13 +3150,11 @@
         <p class="text" style="margin:14px 0 4px">⏩ <b>Test: Zeit</b> · jeden Tag gefüttert und ausgemistet</p>
         <button class="knopf" id="naechsteJZ" style="width:100%;margin-top:8px">Bis zur nächsten Jahreszeit</button>
         
-        <p class="text" style="margin:14px 0 4px">🐴 <b>Test: Nasenrücken</b> · deine Zeichnungen</p>
-        <div class="kacheln klein">${(() => { const akt = p.nase || RASSE_KOPF[p.rasse] || "spiel"; return Object.entries(KOPFTEILE.nasen).map(([id, n]) => `<button class="kachel ${id === akt ? "aktuell" : "klickbar"}" data-nase="${id}">
-            <svg class="mini" viewBox="15 15 120 125" style="background:#fff">${kopfteileSVG(id, undefined, { fell: FARBEN[fb(p)].head || FARBEN[fb(p)].body })}</svg>
-            <b>${n.name}</b><small>${id === akt ? "aktuell" : "auswählen"}</small></button>`).join("") + `
-          <button class="kachel ${akt === "spiel" ? "aktuell" : "klickbar"}" data-nase="spiel">
-            <svg class="mini" viewBox="${(() => { const z = zeichnePferd(p.rasse, fb(p), { punkte: 1, seed: p.id }); return [z.nase.x - 4, z.genick.y - 16, 50, 52].map(x => x.toFixed(1)).join(" "); })()}" style="background:#fff">${zeichnePferd(p.rasse, fb(p), { seed: p.id, maehne: p.maehne, schopf: p.schopf, eigenKopf: false }).svg.replace(/<animate[^>]*\/>/g, "")}</svg>
-            <b>Spielkopf</b><small>${akt === "spiel" ? "aktuell" : "bisheriger"}</small></button>`; })()}</div>`;
+        <p class="text" style="margin:14px 0 4px">🐴 <b>Test: Kopfform</b> · Domes neue Köpfe (aktuell: ${p.nase === "spiel" ? "Spielkopf" : kopfName(kopfVon(p))})</p>
+        <div class="kacheln klein">${(() => { const akt = p.nase === "spiel" ? "spiel" : kopfKey(kopfVon(p)), pk = zeichnePferd(p.rasse, fb(p), { punkte: 1, seed: p.id }), vb = [pk.nase.x - 4, pk.genick.y - 16, 50, 52].map(x => x.toFixed(1)).join(" ");
+          return Object.keys(KOPF_NEU.formen).concat("spiel").map(id => `<button class="kachel ${id === akt ? "aktuell" : "klickbar"}" data-nase="${id}">
+            <svg class="mini" viewBox="${vb}" style="background:#fff">${zeichnePferd(p.rasse, fb(p), { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, schopf: p.schopf, statisch: 1, ...(id === "spiel" ? { eigenKopf: false } : { kopfform: id }) }).svg}</svg>
+            <b>${id === "spiel" ? "Spielkopf" : kopfName(kopfAusKey(id))}</b><small>${id === akt ? "aktuell" : "auswählen"}</small></button>`).join(""); })()}</div>`;
     }
     inhalt = ohneAnim(inhalt);   // Kacheln in der Akte ohne Animationen
     INFO.innerHTML = (LS ? (LS.nurGrunddaten ? `<p class="lese-hinweis">Von diesem Vorfahren sind nur die Grunddaten bekannt.</p>` : "") : `
@@ -3291,7 +3342,7 @@
       meldung = ""; speichern(); zeigeStall(); zeigeTag(); postIconSetzen();
     };
     const njz = $("naechsteJZ"); if (njz) njz.onclick = () => tageTest(tpj() - datum().t + 1);
-    INFO.querySelectorAll("[data-nase]").forEach(b => b.onclick = () => { p.nase = b.dataset.nase; speichern(); zeigeStall(); });
+    INFO.querySelectorAll("[data-nase]").forEach(b => b.onclick = () => { if (b.dataset.nase === "spiel") p.nase = "spiel"; else { delete p.nase; p.kopf = kopfAusKey(b.dataset.nase); } speichern(); zeigeStall(); });
     const sk = $("scherKachel"); if (sk) sk.onclick = () => { if (!pensionDarf(p, "pfleger")) return; if (wisch) wischEnde(false); putzModus = false; scherModus = true; meldung = ""; zeigeAkte(); };
     const zk = $("zaumKachel"); if (zk) zk.onclick = () => { zaumModus = true; meldung = ""; zeigeAkte(); };
     const zz = $("zaumZurueck"); if (zz) zz.onclick = () => { zaumModus = false; zeigeAkte(); };
@@ -3481,7 +3532,7 @@
     lineal += `<line x1="30" x2="${VB.b - 8}" y1="${wy}" y2="${wy}" stroke="var(--akzent)" stroke-width="1.5"/><text x="${VB.b - 8}" y="${wy - 4}" font-size="11" text-anchor="end" font-weight="700" fill="var(--akzent)" stroke="#fff" stroke-width="3" paint-order="stroke">${wahl.stockmass} cm</text>` +
       (wahl.stockmass !== wahl.zielStockmass ? `<text x="${VB.b - 8}" y="${wy - 18}" font-size="9" text-anchor="end" font-weight="600" fill="var(--akzent)" stroke="#fff" stroke-width="3" paint-order="stroke">erwachsen ${wahl.zielStockmass} cm</text>` : "");
     // Breite anpassen, damit auch große Pferde ganz ins Bild passen
-    const z = zeichnePferd(wahl.rasse, fb(wahl, wahl.alter), { seed: wahl.id, geschlecht: wahl.geschlecht, alterStufe: stufeAusMonaten(wahl.alter * 12) });
+    const z = zeichnePferd(wahl.rasse, fb(wahl, wahl.alter), { seed: wahl.id, geschlecht: wahl.geschlecht, alterStufe: stufeAusMonaten(wahl.alter * 12), ...kopfOpt(wahl) });
     const sc = wahl.stockmass / 100, breite = (z.box.maxX - z.box.minX) * sc;
     // feste Bildbreite (passend für das breiteste Pferd), damit Bild und Pfeile nie springen
     if (!window.__vbMax) window.__vbMax = Math.max(VB.b, ...RASSEN.map(r => { const zz = zeichnePferd(r.id, r.farben[0], { seed: "max" }); return 132 + (zz.box.maxX - zz.box.minX) * r.h[1] / 100 + 106; }));
@@ -3649,7 +3700,7 @@
     wahl.farbe = farbeAus(g, ex);
     // Bild
     saisonFix = glSaison;
-    const z = zeichnePferd(wahl.rasse, fb(wahl, wahl.alter), { seed: wahl.id, geschlecht: wahl.geschlecht, alterStufe: stufeAusMonaten(wahl.alter * 12), statisch: 1 });
+    const z = zeichnePferd(wahl.rasse, fb(wahl, wahl.alter), { seed: wahl.id, geschlecht: wahl.geschlecht, alterStufe: stufeAusMonaten(wahl.alter * 12), statisch: 1, ...kopfOpt(wahl) });
     saisonFix = null;
     $("glSaison").innerHTML = JZ.map(([n, ico], i) => `<button class="chip ${i === glSaison ? "an" : ""}" data-gls="${i}" title="${n}">${ico} ${n}</button>`).join("");
     $("glSaison").querySelectorAll("[data-gls]").forEach(b => b.onclick = () => { glSaison = +b.dataset.gls; glZeigen(); });
@@ -6149,7 +6200,7 @@
     const rein = f.anteile ? reinAnteil(f.anteile, f.rasse) : 100;
     // Rassetyp: wie nah die Anlagen am Zuchtziel der Rasse liegen (PROFIL.koerper) + Rasseanteil
     const ab = WERTE_KOERPER.reduce((a, x, i) => a + Math.abs((an[x.key] || 50) - (pr.koerper ? pr.koerper[i] : 60)), 0) / WERTE_KOERPER.length;
-    const typ = fsRund(8.6 - ab / 5 - (100 - rein) / 25 + z() * 0.8);
+    const typ = fsRund(8.6 - ab / 5 - (100 - rein) / 25 + z() * 0.8 - (KOPF_TYPNOTE[kopfFehler(kopfVon(f))] || 0));   // Schafs-/Schweinskopf: schlechtere Typnote
     const fund = ((an.konstitution || 50) + (an.kraft || 50)) / 2 - ((pr.koerper ? (pr.koerper[9] + pr.koerper[0]) / 2 : 60));
     const koerper = fsRund(7 + fund / 6 + z() * 0.8);
     const schritt = fsRund(7 + (g.schritt - pr.gang[0]) * 1.1 + z() * 0.8), trab = fsRund(7 + (g.trab - pr.gang[1]) * 1.1 + z() * 0.8);
@@ -7626,6 +7677,7 @@
     const H = (p.reagiert = p.reagiert && p.reagiert.tag === spiel.tag ? p.reagiert : { tag: spiel.tag, k: [] });
     if (st !== "egal" && !H.k.includes(k)) { H.k.push(k);   // Wohlbefinden und Vertrauen nur einmal am Tag je Aktion
       wohlAendern(p, 4 * v * (v < 0 && grund ? 0.15 : 1), `${st === "mag" ? "mag" : "mag nicht"}: ${Z.titel}`);
+      if (v <= -0.7 && !(grund && vertrauenVon(p) > 60)) OHREN_AN[p.id] = Date.now();   // starke Abneigung: Ohren kurz angelegt
       const vt = st === "mag" ? 0.2 : grund ? 0 : -0.1;   // Vorlieben bedienen stärkt das Vertrauen, Ungeliebtes (außer Grundbedürfnissen) kostet etwas
       if (vt && p.werte && p.werte.ist) p.werte.ist.vertrauen = Math.max(0, Math.min(100, r2(vertrauenVon(p) + vt))); }
     if (!selbst) return "";
@@ -8062,12 +8114,13 @@
   const farbRang = id => { const i = FARB_REIHE.indexOf(id); return i < 0 ? 999 : i; };
   const ENZY = {
     kopf: { titel: "Kopfformen", ansicht: "kopf", rasse: "hannoveraner", farbe: "brauner", eintraege: [
-      ["Hechtkopf", "Nach innen gewölbtes (konkaves) Profil, typisch für den Araber.", { profile: -2.6, muz: 0.8 }, null, null, "hecht"],
-      ["Gerader Kopf", "Gerades Nasenprofil – bei den meisten Warmblütern.", { profile: 0 }, null, null, "gerade"],
-      ["Ramsnase", "Leicht gewölbter Nasenrücken, z. B. beim Andalusier.", { profile: 1.1 }],
-      ["Ramskopf", "Stark nach außen gewölbtes Profil, z. B. Shire oder Lipizzaner.", { profile: 2.6 }, null, null, "rams"],
-      ["Keilkopf", "Breite Stirn, schmal zulaufendes kleines Maul.", { hw: 1.15, muz: 0.72, profile: 0 }],
-      ["Schweinskopf", "Kleine Augen, dicke Ganaschen und schweres, plumpes Maul.", { eye: 0.75, jw: 1.3, muz: 1.2, profile: 0.2 }],
+      ["Hechtkopf", "Nach innen gewölbtes (konkaves) Profil, typisch für Araber, Shagya, Anglo-Araber und Welsh.", null, null, null, "hecht2"],
+      ["Gerader Kopf", "Gerades Nasenprofil – bei Ponys, Haflingern, Quarter Horses und vielen anderen.", null, null, null, "gerade"],
+      ["Ramsnase", "Leicht nach außen gewölbter Nasenrücken, z. B. bei Kaltblütern, Tinker, Friese und Andalusier.", null, null, null, "ramsnase2"],
+      ["Ramskopf", "Stark nach außen gewölbtes Profil von der Stirn bis zur Nase, z. B. beim Lipizzaner.", null, null, null, "rams2"],
+      ["Keilkopf", "Breite Stirn, schmal zulaufendes kleines Maul – typisch für Vollblüter und Warmblüter.", null, null, null, "keil2"],
+      ["Schafskopf", "Gewölbte Stirn und langer, schmaler Nasenrücken – gilt als Exterieurfehler.", null, null, null, "schaf2"],
+      ["Schweinskopf", "Kleine Augen, dicke Ganaschen und schweres, plumpes Maul – gilt als Exterieurfehler.", null, null, null, "schwein2"],
     ] },
     hals: { titel: "Halsformen", ansicht: "vorn", rasse: "hannoveraner", farbe: "fuchs", eintraege: [
       ["Gerader Hals", "Ober- und Unterlinie verlaufen fast gerade.", { crest: 0.0, nAng: 50 }],
@@ -8107,7 +8160,7 @@
   function enzyBild(kat, e) {
     const [name, text, kOv, abz, farbe, eigen] = e;
     const kopfBild = kat.ansicht === "kopf" || kat.ansicht === "vorn";
-    if (eigen && typeof KOPFTEILE !== "undefined") {
+    if (eigen && typeof KOPF_NEU !== "undefined") {
       // Domes gezeichneter Kopf
       const o = { k: { fore: 0 }, seed: "enz", maehne: "kurz", statisch: 1 };
       const pk = zeichnePferd(kat.rasse, farbe || kat.farbe, { ...o, punkte: 1 });
@@ -8271,7 +8324,7 @@
 
   // ganzes Pferd als kleines Foto (mit Rand, nichts abgeschnitten)
   function ganzBild(p) {
-    const z = zeichnePferd(p.rasse, fb(p), { seed: p.id, geschlecht: p.geschlecht, alterStufe: p.geb ? stufeKey(p) : undefined, maehne: p.maehne, schopf: p.schopf, statisch: 1 });
+    const z = zeichnePferd(p.rasse, fb(p), { seed: p.id, geschlecht: p.geschlecht, alterStufe: p.geb ? stufeKey(p) : undefined, maehne: p.maehne, schopf: p.schopf, statisch: 1, ...kopfOpt(p) });
     const w = z.box.maxX - z.box.minX, h = -z.box.minY, m = Math.max(w, h) * 0.08;
     return `<svg viewBox="${(z.box.minX - m).toFixed(1)} ${(z.box.minY - m).toFixed(1)} ${(w + 2 * m).toFixed(1)} ${(h + 2 * m).toFixed(1)}" preserveAspectRatio="xMidYMid meet">${ohneAnim(z.svg)}</svg>`;
   }
@@ -10531,7 +10584,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     const sand = os || (!!paddockVon(p) && !p.weide), w = sand ? null : weideVon(p), g = sand && !os ? paddockVon(p) : null, s = datum().s, box = box0;
     const boden = sand ? "#dcc38e" : ["#8fcf6a", "#7cbf55", "#a8b85a", "#e9eef2"][s], boden2 = sand ? "#c9ad74" : ["#6fb24c", "#5fa33f", "#8c9a45", "#cfd8de"][s];
     const andere = (os ? offenPferde() : sand ? paddockPferde(g) : w ? weidePferde(w) : []).filter(q => q !== p).slice(0, 5);
-    const malen = (q, x, y, sc, spiegel) => { const z = zeichnePferd(q.rasse, fb(q), { alterStufe: stufeKey(q), seed: q.id, geschlecht: q.geschlecht, maehne: q.maehne, schopf: q.schopf, typ: q.typ, eigenKopf: q.nase === "spiel" ? false : (q.nase || undefined), haltung: haltungFuer(q), ohren: (q.pflege && q.pflege.gesundheit >= 45 && q.pflege.gesundheit < 65) ? "geknickt" : "", statisch: 1 });   // v380 (Dome): Kopf hängt auch auf der Koppel wie in der Box
+    const malen = (q, x, y, sc, spiegel) => { const z = zeichnePferd(q.rasse, fb(q), { alterStufe: stufeKey(q), seed: q.id, geschlecht: q.geschlecht, maehne: q.maehne, schopf: q.schopf, typ: q.typ, ...kopfOpt(q), haltung: haltungFuer(q), statisch: 1 });   // v380 (Dome): Kopf hängt auch auf der Koppel wie in der Box
       const cx = (z.box.minX + z.box.maxX) / 2; return `<g pointer-events="none" transform="translate(${(x - spiegel * cx * sc).toFixed(1)},${y}) scale(${(spiegel * sc).toFixed(4)},${sc.toFixed(4)})">${z.svg}</g>`; };
     const fohlenVon = q => { const b = os ? null : boxVon(q); return b && b.fohlen && b.fohlen !== q ? b.fohlen : null; };   // v397 (Dome): Fohlen bei Fuß läuft mit raus
     const hinten = andere.map((q, i) => { const x = [80, 320, 135, 265, 35, 365][i], y = 232 + (i % 2) * 8, sp = i % 2 ? -1 : 1, f = fohlenVon(q);
@@ -10819,6 +10872,11 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Veredelung:</b> Vollblut (Englisches Vollblut, Araber) zählt nur bei Rassen, deren Zuchtbuch das erlaubt, zur eigenen Rasse – sofern die eigene Rasse mindestens 50 % hat. Bei 50/50 mit dem Veredler bleibt es die veredelte Rasse.</p>
       ${verTab(["Rasse", "darf veredelt werden mit"], Object.entries(VEREDELUNG).map(([r, v]) => [rasseById(r).name, v.map(x => rasseById(x).name).join(", ")]))}
       <p><b>Veredler-Rassen (v316):</b> Trakehner, Welsh Cob (Sektion D), Clydesdale, Fell-Pony, Dales-Pony, Anglo-Araber, Shagya-Araber – mit Genetik, Erbkrankheiten, Veranlagungen, Hufqualität, Gewicht, Futtertyp, Gestüt, Markt und Deckstation wie alle Rassen; Kopf vorerst Spielkopf. <i>Neues Farbgen Sabino</i> (Sb, dominant, v. a. Clydesdale ${RASSE_GENE.clydesdale.Sb * 100} %, Welsh Cob ${RASSE_GENE.welshcob.Sb * 100} %): Blesse/Laterne, hohe weiße Beine, Bauchflecken mit gesprenkeltem Rand („Sabino (Brauner)“ usw.; Tobiano, Overo, Tiger und Roan überdecken es). <i>Neue Erbkrankheit FIS</i> (Foal Immunodeficiency Syndrome, rezessiv, Träger Fell ${ERBKRANK.fis.rassen.fell * 100} %, Dales ${ERBKRANK.fis.rassen.dales * 100} %): reinerbige Fohlen sterben im ersten Halbjahr – Labortest „Erbkrankheiten“. <i>Neue Veranlagung CPL</i> (chronisch progressives Lymphödem der Kaltblüter mit Fesselbehang: Clydesdale, Shire, Tinker, Friese): Mauke-Risiko ×(1 + 2 × Veranlagung). WFFS auch beim Trakehner (9 %), SCID/CA abgeschwächt bei Anglo- und Shagya-Araber, PSSM1 selten bei Clydesdale und Welsh Cob. Leichtfuttrig: Welsh Cob, Fell, Dales, Clydesdale · schwerfuttrig: Anglo-Araber. <i>Anglo-Araber-Regel:</i> ein Fohlen nur aus Vollblut, Araber und Anglo-Araber mit mindestens 25 % Araber- und 25 % Vollblutanteil (Anglo-Araber zählt halb/halb) ist ein Anglo-Araber.</p>
+      <h3>🐴 Kopfform (Domes neue Köpfe)</h3>
+      <p><b>Kopfform:</b> gerader Kopf = Stufe 0 (Mitte). Hechtkopf, Ramsnase, Ramskopf, Keilkopf, Schafskopf und Schweinskopf gibt es je in Stufe 1–3 (leicht, normal, stark) – je höher, desto weiter weg vom geraden Kopf. Gespeichert in <code>p.kopf</code> = { f, s }.</p>
+      <p><b>Vererbung der Kopfform:</b> Die Form kommt zu 50 % von der Mutter, zu 50 % vom Vater (gerader Kopf nur, wenn dieser Elternteil gerade ist). Stufe = Mittel der Stufen beider Eltern (gerade zählt als 0; bei ,5 zufällig auf- oder abgerundet), dann je 25 % eine Stufe weniger oder mehr (höchstens „stark“). Fällt die Stufe auf 0, wird es ein gerader Kopf. ${Math.round(KOPF_MUTATION * 100)} % Mutation zu „stark“ (<code>kopfErben</code>).</p>
+      <p><b>Kopfform der Marktpferde:</b> typische Form der Rasse: ${Object.entries(KOPFFORM_RASSE).map(([r, f]) => `${rasseById(r).name} – ${KOPFFORMEN[f]}`).join(" · ")} · alle anderen: gerader Kopf. Stufe: leicht ${Math.round(KOPF_STUFE_W[0] * 100)} % · normal ${Math.round(KOPF_STUFE_W[1] * 100)} % · stark ${Math.round(KOPF_STUFE_W[2] * 100)} %. Rassen mit typischer Form haben zu ${Math.round(KOPF_TYP_GERADE * 100)} % trotzdem einen geraden Kopf, Rassen ohne typische Form zu ${Math.round(KOPF_GERADE_ANDERS * 100)} % einen leichten Hecht-, Ramsnasen- oder Keilkopf. Exterieurfehler Schafs-/Schweinskopf: Shetlandpony 8 % / 10 %, Kaltblut (Shire, Clydesdale, Tinker) 8 % / 3 %, alle anderen 3 % / 2 % (<code>kopfZufall</code>, <code>KOPF_FEHLER</code>). Alte Spielstände bekommen ihre Kopfform beim ersten Anzeigen genauso gewürfelt (immer gleich für dasselbe Pferd).</p>
+      <p><b>Folgen von Schafs- und Schweinskopf:</b> Marktwert leicht ohne Abzug, normal −5 %, stark −10 % (<code>KOPF_WERT</code>). Fohlenschau: Typnote normal −0,2, stark −0,4 (<code>KOPF_TYPNOTE</code>).</p>
       <h3>⚠️ Inzucht</h3>
       <p>Geprüft werden Eltern, Großeltern und Urgroßeltern: taucht dieselbe Lebensnummer mehrfach auf oder ist ein Pferd Vorfahre des anderen, gibt es eine Warnung. Folgen für das Fohlen kommen später.</p>
       <h3>🐣 Fohlen</h3>
@@ -10829,7 +10887,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   const BZN_THEMEN = [["pferd", "🐴 Pferd: Wachstum, Werte, Charakter"], ["zucht", "🐣 Zucht und Fohlen"], ["vererbung", "🧬 Vererbung und Gene"], ["gesund", "❤️ Gesundheit, Pflege und Hufe"], ["futter", "🌾 Fütterung"],
     ["weide", "🌿 Weide und Herde"], ["training", "🎓 Training, Ausbildung und Disziplinen"], ["turnier", "🏆 Turniere und Fohlenschau"], ["markt", "🏷️ Pferdemarkt, Geld und Marktwert"],
     ["mitarbeiter", "👥 Mitarbeiter"], ["hof", "🏘️ Hof, Bauen, Land und Kredit"], ["pension", "🏡 Pension und Einsteller"], ["briefe", "✉️ Briefe und Ansehen"], ["sonst", "⏱️ Spieltempo und Allgemeines"]];
-  const BZN_STARK = [[/todesursache|senioren/i, "gesund"], [/verkauf|auktion/i, "markt"], [/bauland/i, "hof"], [/rechnung/i, "markt"], [/wohlbefinden|vorlieben|charakter|startstand/i, "pferd"], [/pension|einsteller/i, "pension"], [/ansehen|briefe|schecken-namen/i, "briefe"], [/einstreu/i, "gesund"], [/futterwiese/i, "weide"], [/stallart/i, "hof"], [/futter|fütter|bedarf|leckerli|atemwege|standardplan|krippe/i, "futter"],
+  const BZN_STARK = [[/todesursache|senioren/i, "gesund"], [/ohrstellung|ohrenspiel|wimpern|altersköpfe/i, "pferd"], [/verkauf|auktion/i, "markt"], [/bauland/i, "hof"], [/rechnung/i, "markt"], [/wohlbefinden|vorlieben|charakter|startstand/i, "pferd"], [/pension|einsteller/i, "pension"], [/ansehen|briefe|schecken-namen/i, "briefe"], [/einstreu/i, "gesund"], [/futterwiese/i, "weide"], [/stallart/i, "hof"], [/futter|fütter|bedarf|leckerli|atemwege|standardplan|krippe/i, "futter"],
     [/weide|herde|allein|sandpaddock/i, "weide"], [/mitarbeiter|azubi|arbeit jeden|erfahrung|zufriedenheit|nachtdienst|pferdepfleger/i, "mitarbeiter"],
     [/erbkrank|decksaison|waise|stute|zucht|abfohl/i, "zucht"], [/befund|tierarzt|behandlung|mitwirkung|apotheke|^hufe|ansteckung|ankauf|untersuchung|vorsorge|kastration|schmutz|putzen|gesundheit|klinik|bemerken/i, "gesund"],
     [/kredit|zentrales konto|immobilie|neues spiel|makler|land|umzug|bauen|bauzeit|umbau|wirkung der stufe|übersicht je hof|vorwarnung|lager|höfe/i, "hof"], [/spieltempo/i, "sonst"]];
@@ -11056,6 +11114,11 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Schmutz:</b> Jede Nacht in der Box wird das Fell um 9–15 Punkte schmutziger (in einer nicht gemisteten Box +5 extra), Mähne und Schweif um 5–9 (+2). Stufen Fell: unter 20 sauber · ab 20 staubig · ab 50 schmutzig · ab 80 sehr dreckig; Mähne/Schweif: gekämmt · ab 20 zerzaust · ab 50 verfilzt. Man sieht es im Bild (Flecken, dreckige Beine, Stroh im Schweif). Putzen in der Putzkiste: Bürste macht das Fell sauber, Kamm Mähne und Schweif. Der Pferdepfleger putzt seine Boxen jeden Morgen; nach Klinik, Aufzucht oder Ausbildung kommt das Pferd geputzt zurück. Folgen: bis zu 15 % weniger Marktwert (Wert = max(Fell, 0,7 × Mähne)); ist das Fell länger als eine Jahreszeit ununterbrochen schmutzig (ab 50), verliert das Pferd zusätzlich 3 % Gesundheit pro Tag.</p>
       <p><b>Gesundheit pro Tag:</b> Gut versorgt +8 % pro Tag, hungrig −19, Box nicht gemistet −9,5. Unter 40 % kommt ein Brief vom Tierarzt, bei 30 % oder weniger erholt sich ein Pferd nur noch in der Klinik (+16 %/Tag, ${fmt(KOSTEN.klinik)}/Tag) und wird mit 75 % entlassen. Die Klinikkosten kommen als Rechnung (siehe „Rechnungen“). Ausnahme: Senioren mit altersbedingter Höchstgesundheit von 40 % oder weniger.</p>
       <p><b>Senioren:</b> Senioren ab 20 Jahren: höchstens 75 %, sinkt bis 35 Jahre auf 1 %. Sterbewahrscheinlichkeit je Jahreszeit steigt ab 20 Jahren und erreicht mit 35 Jahren 100 %.</p>
+      <h3>👂 Kopf und Ohren (Köpfe-Etappe 1)</h3>
+      <p><b>Ohrstellung:</b> vorne, zur Seite, nach hinten, angelegt – linkes und rechtes Ohr unabhängig, je Tag fest gewürfelt (<code>ohrenVon</code>). Gewichte je Ohr: vorne 0,6 + 1,6 × Vertrauen (0–1) + 1,2 × neugierig (bei Gesundheit unter 65 % × 0,4) · seitlich 0,8 + 1,2 × gelassen + 0,6 × verträumt + 1,2 bei Gesundheit unter 65 % · hinten 0,15 + 1,2 × scheu + 1,2 × nervös + bis 1,2 bei Vertrauen unter 40. Beispiel: durchschnittliches Pferd mit Vertrauen 40 → vorne etwa 56 %, seitlich 37 %, hinten 7 %. Angelegt (beide Ohren) nur im Extremfall: Befund ab Grad 4 (starker Schmerz) oder gerade eine starke Abneigung erlebt (Vorliebe ≤ −0,7; ca. 20 Sekunden).</p>
+      <p><b>Ohrenspiel:</b> Jedes Ohr wechselt im eigenen Rhythmus (alle 5–11 Sekunden) für gut eine Sekunde in die Nachbarstellung der Datei-Reihenfolge (vorne ↔ seitlich ↔ hinten), nie ins Anlegen. Marwari: dieselben Regeln mit Domes Marwari-Ohren. Keine Hängeohren mehr – ein mattes Pferd zeigt es über Kopfhaltung und Ohrstellung.</p>
+      <p><b>Wimpern:</b> Alle haben die normale Wimper, Stuten und Fohlen zusätzlich eine weitere.</p>
+      <p><b>Altersköpfe:</b> Domes Kopf wird je Alter entlang Genick–Nase gestaucht und das Auge vergrößert: Fohlen Nase 87 % / Auge 142 % · Jährling 90 % / 120 % · Jungpferd 97 % / 106 % · erwachsen 101 % / 97 % · Senior 102 % / 94 % (<code>KOPF_ALTER</code>).</p>
       <h3>💰 Geld und Marktwert</h3>
       <p><b>Alter</b> – erreichbar ist Anlage × Altersfaktor. Wachstum: unter 1 Jahr 40 %, 1 J. 55 %, 2 J. 70 %, 3 J. 80 %, 4 J. 90 %, ab 5 J. 100 % (dazwischen anteilig je Jahreszeit; Lernfähigkeit ohne Wachstumsgrenze). Abbau je Jahr (anteilig je Jahreszeit): die ersten 5 Jahre −3 %, danach −5 %, nie unter 20 %. Beginn: früh ab 12 Jahren (Geschwindigkeit, Beschleunigung, Regeneration), normal ab 13 (Kraft, Ausdauer, Wendigkeit, Beweglichkeit, Koordination, Zähigkeit, Konzentration, Reaktionsfähigkeit), spät ab 18 (Konstitution, Lernfähigkeit). Vertrauen und Gehorsam altern nicht. Zu Beginn jeder Jahreszeit sinken Werte, die über der Altersgrenze liegen, auf diese Grenze. Später (Training daheim) bremst regelmäßiges Training den Abbau.</p>
       <p><b>Startstand der trainierbaren Werte</b> (bis das Training daheim kommt): Altersgrenze × (60 % + ab 3 Jahren bis zu 30 % je nach Ausbildungsstand). Vertrauen: 30 ± Menschenbezug + 30 % des Ausbildungsstands. Gehorsam: 80 % des Ausbildungsstands (+5 ab 3 Jahren).</p>

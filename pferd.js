@@ -250,13 +250,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Haltung je nach Gesundheit: normal | leicht | waagerecht | tief | liegend
   // Waagerechte = Buggelenk (Brustspitze) und Maul auf gleicher Höhe
   const haltung = opt.haltung || "normal", liegt = haltung === "liegend";
-  const ekWahl = opt.eigenKopf === false ? null : (opt.eigenKopf || RASSE_KOPF[rasseId]);
-  const kopfAlter = stufe && typeof KOPFTEILE_ALTER !== "undefined" && KOPFTEILE_ALTER[stufe] ? stufe : null;
-  const KOPF = () => kopfAlter ? KOPFTEILE_ALTER[kopfAlter] : KOPFTEILE;
-  // kürzerer Kopf (Fohlen …): Nase entsprechend näher am Genick
-  const nasenPunkt = A => { const Z = hp(0.97, 0.0); if (!kopfAlter) return Z; const K0 = KOPFTEILE, K1 = KOPF();
-    const r = Math.hypot(K1.nase.x - K1.genick.x, K1.nase.y - K1.genick.y) / Math.hypot(K0.nase.x - K0.genick.x, K0.nase.y - K0.genick.y); return add(A, mul(sub(Z, A), r)); };
-  const eigenKopf = ekWahl && typeof KOPFTEILE !== "undefined" ? ekWahl : null;
+  // Domes Kopf (kopfneu.js): opt.kopfform = { f, s } oder Schlüssel wie "hecht2"; eigenKopf: false = alter Spielkopf
+  const kfWahl = opt.kopfform ? (typeof opt.kopfform === "string" ? opt.kopfform : kopfKey(opt.kopfform)) : null;
+  const ekWahl = opt.eigenKopf === false ? null : (ALTE_NASE[opt.eigenKopf] || opt.eigenKopf || kfWahl || RASSE_KOPF[rasseId]);
+  const kopfAlter = stufe && KOPF_ALTER[stufe] ? stufe : null;
+  const eigenKopf = ekWahl && typeof KOPF_NEU !== "undefined" ? (KOPF_NEU.formen[ekWahl] ? ekWahl : "gerade") : null;
   let ekMatrix = null;
   const ohrenHaengen = haltung === "tief" || liegt;
   const ohrenGeknickt = !ohrenHaengen && opt.ohren === "geknickt";
@@ -311,12 +309,12 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Handgezeichneter Kopf: Kehle setzt genau am Ende seiner Ganaschenlinie an
   let ekKehle = null;
   if (eigenKopf) {
-    const K = KOPF(), A = add(Pn, mul(nOut, 1.2)), B = nasenPunkt(A);
-    const ux = K.nase.x - K.genick.x, uy = K.nase.y - K.genick.y, vx = B.x - A.x, vy = B.y - A.y;
+    const K = KOPF_NEU, G = K.gap, A = add(Pn, mul(nOut, 1.2)), B = hp(0.97, 0.0);
+    const ux = K.nase.x - G.x, uy = K.nase.y - G.y, vx = B.x - A.x, vy = B.y - A.y;
     const den = ux * ux + uy * uy, a_ = (vx * ux + vy * uy) / den, b_ = (vy * ux - vx * uy) / den;
-    const e_ = A.x - (a_ * K.genick.x - b_ * K.genick.y), f_ = A.y - (b_ * K.genick.x + a_ * K.genick.y);
-    const M = (x, y) => P(a_ * x - b_ * y + e_, b_ * x + a_ * y + f_), Mv = (x, y) => norm(P(a_ * x - b_ * y, b_ * x + a_ * y));
-    T = M(K.kehle.x, K.kehle.y);
+    const e_ = A.x - (a_ * G.x - b_ * G.y), f_ = A.y - (b_ * G.x + a_ * G.y);
+    const M = (x, y) => P(a_ * x - b_ * y + e_, b_ * x + a_ * y + f_), kp = kopfNeuKehle(eigenKopf, kopfAlter);
+    T = M(kp.x, kp.y);
     ekKehle = true;
   }
   // Jungpferde mit Spielkopf: Kehle weiter vorn unter der Ganasche ansetzen – der Hals wird oben breiter
@@ -777,10 +775,10 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
 
   if (eigenKopf) {
     // Handgezeichneter Kopf: Stirn- und Nasenpunkt der Zeichnung auf den Spielkopf abbilden
-    const K = KOPF(), A = add(Pn, mul(nOut, 1.2)), B = nasenPunkt(A);
-    const ux = K.nase.x - K.genick.x, uy = K.nase.y - K.genick.y, vx = B.x - A.x, vy = B.y - A.y;
+    const K = KOPF_NEU, G = K.gap, A = add(Pn, mul(nOut, 1.2)), B = hp(0.97, 0.0);
+    const ux = K.nase.x - G.x, uy = K.nase.y - G.y, vx = B.x - A.x, vy = B.y - A.y;
     const den = ux * ux + uy * uy, a_ = (vx * ux + vy * uy) / den, b_ = (vy * ux - vx * uy) / den;
-    const e_ = A.x - (a_ * K.genick.x - b_ * K.genick.y), f_ = A.y - (b_ * K.genick.x + a_ * K.genick.y);
+    const e_ = A.x - (a_ * G.x - b_ * G.y), f_ = A.y - (b_ * G.x + a_ * G.y);
     // nur den Kopf zeigen: alles hinter der Linie Genick–Kehle abschneiden
     const nT = norm(sub(T, Pn)), weit = 4 * hl;
     const zur = mul(u, -0.06 * hl), L1 = add(add(Pn, zur), mul(nT, -weit)), L2 = add(add(T, zur), mul(nT, weit));
@@ -802,7 +800,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       (C.muzzle ? `<ellipse cx="${f(mz.x)}" cy="${f(mz.y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(mz.x)} ${f(mz.y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>` : "") +
       `<g filter="url(#wb-${uid})"><path d="${glatt([hp(0.1, 0.42 * hw), hp(0.3, 0.47 * hw * jw), hp(0.55, 0.36 * hw), hp(0.8, 0.28 * hw), hp(0.6, 0.3 * hw), hp(0.35, 0.37 * hw * jw)])}" fill="${schatten}" opacity=".45"/>` +
       `<ellipse cx="${f(hp(0.3, -0.1).x)}" cy="${f(hp(0.3, -0.1).y)}" rx="${f(0.22 * hl)}" ry="${f(0.07 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.3, -0.1).x)} ${f(hp(0.3, -0.1).y)})" fill="${licht}" opacity=".45"/></g></g>`;
-    g += `<g transform="matrix(${ekMatrix})">${kopfteileSVG(eigenKopf, "ek" + uid, { fell: head, muschel, ink: INK, statisch: opt.statisch, augenZu: opt.augenZu, schattierung: schatt, alter: kopfAlter })}</g>`;
+    // Ohrstellung (opt.ohrStellung = { R, L, spiel }); ohne Angabe: beide Ohren vorne, bei Unwohlsein (opt.ohren „geknickt“) seitlich
+    const OS = opt.ohrStellung || (opt.ohren === "geknickt" ? { R: "seite", L: "seite" } : { R: "vorne", L: "vorne" });
+    const schopfFarbe = dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane);
+    g += `<g transform="matrix(${ekMatrix})">${kopfNeuSVG(eigenKopf, "ek" + uid, { fell: head, muschel, maehne: schopfFarbe, ink: INK, statisch: opt.statisch, augenZu: opt.augenZu, schattierung: schatt, alter: kopfAlter,
+      marwari: !!k.curl, wimper: opt.wimper != null ? opt.wimper : (opt.geschlecht === "Stute" || stufe === "fohlen"), ohrR: OS.R, ohrL: OS.L, ohrSpiel: OS.spiel !== false, seed: opt.seed || rasseId })}</g>`;
   }
   // Mähne
   if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
@@ -823,7 +825,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (eigenKopf) {
     // (handgezeichneter Kopf wurde schon vor der Mähne gezeichnet) – hier kommt Domes Schopf obendrauf
     const sv = schopfL;
-    if (sv && ekMatrix) g += `<g transform="matrix(${ekMatrix})">${schopfSVG(sv, dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane), INK, false, dunKern, "sk" + uid, kopfAlter)}</g>`;
+    if (sv && ekMatrix) g += `<g transform="matrix(${ekMatrix})">${schopfNeuSVG(sv, dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane), dunKern, INK, kopfAlter)}</g>`;
   } else {
   if (fl >= 0.25) g += `<path d="${schopf ? glatt(schopf) : schopfBueschel()}" fill="${mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
   if (fl >= 0.25 && !schopf) g += schopfStraehnen();
@@ -1032,9 +1034,69 @@ function ALTERS_K(stufe, k) {
   return {};
 }
 
-// Gezeichnete Kopfform (Domes Zeichnungen) je Rasse – fehlt eine Rasse hier, bleibt der Spielkopf
-const RASSE_KOPF = { araber: "hecht", friese: "gerade", fjord: "gerade", haflinger: "gerade", shetty: "gerade", vollblut: "gerade",
-  quarter: "gerade", hannoveraner: "gerade", isi: "gerade", tekke: "gerade", shire: "rams", lipizzaner: "rams" };
+// ---------- Neue Köpfe aus Domes „pferd kopf.svg“ (PLAN-KOEPFE.md, Etappe 1) ----------
+// Kopfform je Pferd: { f: "gerade" | "hecht" | "ramsnase" | "rams" | "keil" | "schaf" | "schwein", s: 0 (gerade) | 1 leicht | 2 normal | 3 stark }
+const KOPFFORMEN = { gerade: "Gerader Kopf", hecht: "Hechtkopf", ramsnase: "Ramsnase", rams: "Ramskopf", keil: "Keilkopf", schaf: "Schafskopf", schwein: "Schweinskopf" };
+const KOPF_STUFE = ["", "leicht", "normal", "stark"];
+// typische Kopfform je Rasse (fehlt die Rasse: gerader Kopf)
+const KOPFFORM_RASSE = { araber: "hecht", shagya: "hecht", angloaraber: "hecht", welshcob: "hecht", vollblut: "keil", trakehner: "keil", hannoveraner: "keil", tekke: "keil",
+  shire: "ramsnase", clydesdale: "ramsnase", tinker: "ramsnase", friese: "ramsnase", andalusier: "ramsnase", lipizzaner: "rams" };
+// alte Admin-Wahl (p.nase) → neue Form
+const RASSE_KOPF = new Proxy({}, { get: (t, r) => typeof r === "string" ? kopfKey({ f: KOPFFORM_RASSE[r] || "gerade", s: 2 }) : undefined });
+const kopfKey = k => !k || k.f === "gerade" || !k.s ? "gerade" : k.f + k.s;
+const kopfAusKey = key => { const m = /^([a-z]+?)([123])$/.exec(key || ""); return m ? { f: m[1], s: +m[2] } : { f: "gerade", s: 0 }; };
+const kopfName = k => !k || k.f === "gerade" || !k.s ? "Gerader Kopf" : `${KOPFFORMEN[k.f]} (${KOPF_STUFE[k.s]})`;
+const ALTE_NASE = { hecht: "hecht2", gerade: "gerade", rams: "rams2" };
+// Ohrstellungen in der Reihenfolge der Datei
+const OHR_REIHE = ["angelegt", "hinten", "seite", "vorne"];
+// Altersköpfe: Nase kürzer (n = Länge Genick–Nase), Auge größer (a) – wie bei den bisherigen Altersköpfen
+const KOPF_ALTER = { fohlen: { n: 0.87, a: 1.42 }, jaehrling: { n: 0.9, a: 1.2 }, jungpferd: { n: 0.97, a: 1.06 }, reif: { n: 1.01, a: 0.97 }, senior: { n: 1.02, a: 0.94 } };
+// Stauchung entlang der Achse Genick → Nase (Zeichnungskoordinaten): [a, b, c, d, e, f]
+function kopfAlterMatrix(alter) {
+  const K = KOPF_NEU, n = (KOPF_ALTER[alter] || {}).n || 1;
+  const ux0 = K.nase.x - K.gap.x, uy0 = K.nase.y - K.gap.y, l = Math.hypot(ux0, uy0), ux = ux0 / l, uy = uy0 / l;
+  const a = 1 + (n - 1) * ux * ux, b = (n - 1) * ux * uy, d = 1 + (n - 1) * uy * uy;
+  return [a, b, b, d, K.gap.x - (a * K.gap.x + b * K.gap.y), K.gap.y - (b * K.gap.x + d * K.gap.y)];
+}
+const kmPunkt = (m, q) => ({ x: m[0] * q.x + m[2] * q.y + m[4], y: m[1] * q.x + m[3] * q.y + m[5] });
+const kmText = m => `matrix(${m.map(x => +x.toFixed(5)).join(" ")})`;
+// Ohrenspiel: ein Ohr wechselt ab und zu kurz in die Nachbarstellung (nie ins Anlegen)
+function ohrSpielZiel(st, r) { return st === "vorne" ? "seite" : st === "hinten" ? "seite" : st === "seite" ? (r < 0.6 ? "vorne" : "hinten") : null; }
+// o: { fell, muschel, maehne, ink, schattierung, statisch, augenZu, alter, marwari, wimper, ohrR, ohrL, ohrSpiel, seed }
+function kopfNeuSVG(key, uid, o = {}) {
+  const K = KOPF_NEU, F = K.formen[key] || K.formen.gerade, ink = o.ink || "#090609";
+  const farbe = s => s.replaceAll("__FELL__", o.fell || "#9a9a9a").replaceAll("__MUSCHEL__", o.muschel || "#c9a0a0").replaceAll("__MAEHNE__", o.maehne || o.fell || "#555")
+    .replaceAll("__AAL__", o.maehne || "#555").replaceAll("#090609", ink);
+  const am = kopfAlterMatrix(o.alter), A = KOPF_ALTER[o.alter] || {}, ac = K.augeMitte, ac2 = kmPunkt(am, ac), as = A.a || 1;
+  const rnd = zufall((o.seed || "k") + "-ohren");
+  const ohr = (seite) => {
+    const T = K.ohren[o.marwari ? "marwari" : "basis"][seite], st = OHR_REIHE.includes(o["ohr" + seite]) ? o["ohr" + seite] : "vorne";
+    const ziel = o.ohrSpiel && !o.statisch ? ohrSpielZiel(st, rnd()) : null;
+    if (!ziel) return farbe(T[st]);
+    // eigener Rhythmus je Ohr: alle 5–11 s für gut 1 s in die Nachbarstellung
+    const dur = (5 + rnd() * 6).toFixed(1), a = 0.15 + rnd() * 0.6, b = a + 1.2 / dur;
+    return `<g><animate attributeName="opacity" values="1;0;1" keyTimes="0;${a.toFixed(3)};${b.toFixed(3)}" calcMode="discrete" dur="${dur}s" repeatCount="indefinite"/>${farbe(T[st])}</g>` +
+      `<g opacity="0"><animate attributeName="opacity" values="0;1;0" keyTimes="0;${a.toFixed(3)};${b.toFixed(3)}" calcMode="discrete" dur="${dur}s" repeatCount="indefinite"/>${farbe(T[ziel])}</g>`;
+  };
+  // Auge: offen (blinzelt) und geschlossenes Lid; Stuten und Fohlen haben eine Wimper mehr
+  const blinkAuf = o.statisch || o.augenZu ? "" : '<animate attributeName="opacity" values="1;0;1" keyTimes="0;.93;.97" calcMode="discrete" dur="4.5s" repeatCount="indefinite"/>';
+  const blinkZu = o.statisch || o.augenZu ? "" : '<animate attributeName="opacity" values="0;1;0" keyTimes="0;.93;.97" calcMode="discrete" dur="4.5s" repeatCount="indefinite"/>';
+  const lidZu = `<path d="M346.69,328.97C368,346 397,336 409.56,305.9M370,341.5L366.5,356M392,336.5L397,350" fill="none" stroke="${ink}" stroke-width="9" stroke-linecap="round"/>`;
+  const auge = `<g transform="translate(${ac2.x.toFixed(2)},${ac2.y.toFixed(2)}) scale(${as}) translate(${-ac.x},${-ac.y})">` +
+    `<g${o.augenZu ? ' opacity="0"' : ""}>${blinkAuf}${K.augeClip.replace("r15-ekp2-auge-3", uid + "-auge")}${farbe(K.auge).replace("r15-ekp2-auge-3", uid + "-auge")}${o.wimper ? farbe(K.wimper) : ""}</g>` +
+    (o.statisch && !o.augenZu ? "" : `<g opacity="${o.augenZu ? 1 : 0}">${blinkZu}${lidZu}</g>`) + `</g>`;
+  const fell = F.fell.replace('transform="', `transform="${kmText(am)} `);
+  return ohr("R") + farbe(fell) +
+    (o.schattierung ? `<clipPath id="${uid}-fell">${fell}</clipPath><g clip-path="url(#${uid}-fell)">${o.schattierung}</g>` : "") +
+    `<g transform="${kmText(am)}">${farbe(F.svg)}</g>` + ohr("L") + auge;
+}
+// Kehlpunkt (Anschluss an den Hals) des neuen Kopfs, mit Altersstauchung
+function kopfNeuKehle(key, alter) { const K = KOPF_NEU, F = K.formen[key] || K.formen.gerade; return kmPunkt(kopfAlterMatrix(alter), K.kap[F.kap]); }
+// Schopf aus Domes Datei (kurz, mittel, lang, extralang) – Aalstrich erst in Etappe 3, bis dahin wie bisher nur beim Fjord-Schopf
+function schopfNeuSVG(variante, farbe, aal, ink, alter) {
+  const s = KOPF_NEU.schoepfe[variante]; if (!s) return "";
+  return `<g transform="${kmText(kopfAlterMatrix(alter))}">${s.replaceAll("__MAEHNE__", farbe).replaceAll("__AAL__", aal || farbe).replaceAll("#090609", ink)}</g>`;
+}
 
 // Natürliche Mähnenlänge der Rasse
 function naturMaehne(rasseId) {

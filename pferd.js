@@ -1077,7 +1077,7 @@ function ohrSpielZiel(st, r) { return st === "vorne" ? "seite" : st === "hinten"
 function kopfNeuSVG(key, uid, o = {}) {
   const K = KOPF_NEU, F = K.formen[key] || K.formen.gerade, ink = o.ink || "#090609";
   const farbe = s => s.replaceAll("__FELL__", o.fell || "#9a9a9a").replaceAll("__MUSCHEL__", o.muschel || "#c9a0a0").replaceAll("__MAEHNE__", o.maehne || o.fell || "#555")
-    .replaceAll("__AAL__", o.maehne || "#555").replaceAll("#090609", ink).replaceAll("__WEISS__", KOPF_WEISS).replaceAll("__MEHL__", mix(o.fell || "#9a9a9a", "#f1e4c4", .75)).replaceAll("__U__", uid + "-");
+    .replaceAll("__AAL__", o.maehne || "#555").replaceAll("#090609", ink).replaceAll("__WEISS__", KOPF_WEISS).replaceAll("__MEHL__", mix(o.fell || "#9a9a9a", "#f1e4c4", .75)).replaceAll("__DUNKEL__", mix(o.fell || "#9a9a9a", "#171313", .7)).replaceAll("__U__", uid + "-");
   const am = kopfAlterMatrix(o.alter), A = KOPF_ALTER[o.alter] || {}, ac = K.augeMitte, ac2 = kmPunkt(am, ac), as = A.a || 1;
   const rnd = zufall((o.seed || "k") + "-ohren");
   const ohr = (seite) => {

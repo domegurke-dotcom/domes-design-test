@@ -54,7 +54,7 @@ function musterFarbe(id, t) {
 // Roan in 3 Stufen (v439): wenig = Grundfarbe scheint stärker durch, viel = sehr hell; andere Muster unverändert (deren Stufe steckt in der Zeichnung)
 function musterStufeFarbe(C, st) {
   if (st == null || st === 1 || C.pattern !== "roan" || C.roanDeck != null) return C;   // roanDeck = Schimmel im Ausgrauen, nicht betroffen
-  return { ...C, body: st === 0 ? mix(C.body, C.head || C.points || C.body, .45) : mix(C.body, "#f2efe9", .35) };   // Stufe 3 („fast weiß“) gibt es beim Roan nicht – wie „viel“
+  return { ...C, body: st === 0 ? mix(C.body, C.points || C.mane || C.body, .45) : mix(C.body, "#f2efe9", .35) };   // Stufe 3 („fast weiß“) gibt es beim Roan nicht – wie „viel“
 }
 const FARBEN = new Proxy(FARBEN_BASIS, { get(t, k) { if (typeof k === "string" && !(k in t)) { const e = musterFarbe(k, t); if (e) t[k] = e; } return t[k]; } });
 
@@ -662,9 +662,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     }
     if (C.pattern === "tovero") {
       // fast ganz weiß – Farbe bleibt an Kopf/Ohren („Medicine Hat“), Brust und Flanke
-      const fc = [2, 1, 0.55][M2];   // Farbflecken: wenig Weiß = große Flecken, viel Weiß („Medicine Hat“) = nur kleiner Brustschild
+      const fc = [2, 1, 0.75][M2];   // Farbflecken: wenig Weiß = große Flecken, viel Weiß („Medicine Hat“) = nur kleiner Brustschild
       g += `<rect ${bx} fill="${SW}"/><g filter="url(#wm-${uid})"><path d="${glatt(zack(0.02 * L, top + 0.42 * D, 0.1 * L * fc, 0.3 * D * Math.min(1.4, fc), 14, .4))}" fill="${body}"/>`;
-      if (M2 < 2) g += `<path d="${glatt(zack(0.93 * L, top + 0.3 * D, 0.11 * L * fc, 0.32 * D * Math.min(1.4, fc), 14, .4))}" fill="${body}"/>`;
+      g += `<path d="${glatt(zack(0.93 * L, top + 0.3 * D, 0.11 * L * fc, 0.32 * D * Math.min(1.4, fc), 14, .4))}" fill="${body}"/>`;
       if (M2 === 0 || (M2 === 1 && rnd() > .5)) g += `<path d="${glatt(zack(0.15 * L + (M2 ? 0 : 0.2 * L), -H - 4 + (M2 ? 0 : 0.2 * D), 0.08 * L * fc, 0.18 * D * fc, 12, .4))}" fill="${body}"/>`;
       g += `</g>`;
     }
@@ -680,7 +680,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       const hoch = [0.12 + rnd() * 0.1, 0.35 + rnd() * 0.4, 0.95 + rnd() * 0.15][M2] + (MST === 3 ? 0.45 : 0), rand = [P(minX - 6, 4)];
       for (let i = 0; i <= 20; i++) { const t = i / 20, x = minX - 6 + (maxX - minX + 12) * t; rand.push(P(x, bottom - hoch * D * (0.55 + 0.45 * Math.sin(Math.PI * Math.min(1, t * 1.15))) + Math.sin(t * 9 + hoch * 7) * 1.6 + (rnd() - .5) * 3)); }   // v439: unruhigerer Rand
       rand.push(P(maxX + 6, 4));
-      g += `<path d="${glatt(rand)}" fill="${SW}"/>`;
+      g += `<g filter="url(#wb-${uid})"><path d="${glatt(rand)}" fill="${SW}" opacity=".55" transform="translate(0,-2.5)"/></g><g filter="url(#wm-${uid})"><path d="${glatt(rand)}" fill="${SW}"/></g>`;   // v440 (Dome): weicher Übergang
     }
     if (C.pattern === "leopard") g += `<rect ${bx} fill="${SW}"/>` + punkte(minX, maxX, minY, 0, [40, 70, 100][M2], 2.2, 4.6, spotFarbe);
     if (C.pattern === "fewspot") g += `<rect ${bx} fill="${SW}"/>` + punkte(0, L, top, bottom, 7, 1.4, 2.6, spotFarbe) + `<g filter="url(#wm-${uid})"><rect x="${f(minX)}" y="${f(-0.62 * Lg)}" width="${f(maxX - minX)}" height="${f(0.2 * Lg)}" fill="${mix(body, SW, .35)}" opacity=".7"/></g>`;
@@ -699,7 +699,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const kappe = add(kamm(0.9), mul(nOut, -3));
   if ((fastWeiss && C.pattern !== "splash") || DW >= 2) {
     const rf = zufall((opt.seed || rasseId) + (DW >= 2 ? "-dw" : "-fastweiss")), pa = DW >= 2 ? "dw" : C.pattern;
-    const W_ = { tobiano: [.85, .5, .35, 0], tovero: [.9, .6, .25, 0], sabino: [.6, .2, .2, .5], overo: [.7, .3, .2, .7], dw: [.5, .2, .3, .6] }[pa];   // Chance: Kappe, Brustschild, Flankenfleck, Flecken auf dem Rücken
+    const W_ = { tobiano: [.85, .5, .35, 0], tovero: [.9, .3, 0, 0], sabino: [.6, .2, .2, .5], overo: [.7, .3, .2, .7], dw: [.5, .2, .3, .6] }[pa];   // Chance: Kappe, Brustschild, Flankenfleck, Flecken auf dem Rücken
     let rest = "";
     if (DW !== 3) {
       if (rf() < W_[0]) rest += klecks(rf, kappe.x, kappe.y, 0.09 * L, 0.15 * D);
@@ -731,14 +731,21 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   }
   // v440 Bend-Or-Flecken: unregelmäßige dunkle Flecken (Farbe aus dem Fell, dunkler) – nur bei Füchsen/Palominos
   if (opt.bendor) {
-    const ro = zufall((opt.seed || rasseId) + "-bendor"), fc = mix(body, "#3a1608", .4); let t = "";
+    const ro = zufall((opt.seed || rasseId) + "-bendor"), fc = mix(body, "#1a0c06", .68); let t = "";
     const n = 9 + Math.floor(ro() * 8);
     for (let i = 0; i < n; i++) { const zone = ro(), cx = (zone < .3 ? 0.02 + ro() * 0.2 : zone < .65 ? 0.62 + ro() * 0.3 : 0.25 + ro() * 0.35) * L, cy = top + (0.15 + ro() * 0.6) * D, r = 1.6 + ro() * 3;
       t += klecks(ro, cx, cy, r, r * (0.7 + ro() * 0.4), fc); }
-    g += `<g clip-path="url(#cr-${uid})" filter="url(#wm-${uid})" opacity=".8">${t}</g>`;
+    g += `<g clip-path="url(#cr-${uid})" filter="url(#wm-${uid})" opacity=".92">${t}</g>`;
   }
   // v440 Brindle (gestromt): feine dunkle, leicht gewellte senkrechte Streifen
-  if (opt.brindle) {
+  if (opt.brindle === "weiss") {   // v440 (Dome): Brindle mit weißen Streifen (BR1) – unterbrochene, gewellte helle Streifen aus weißen Haaren
+    const rg = zufall((opt.seed || rasseId) + "-brindleW"); let t = "";
+    for (let x = minX; x < maxX; x += 3 + rg() * 2.6) { let y = minY - 4 + rg() * 8;
+      while (y < 2) { const len = 5 + rg() * 14, pts = []; for (let yy = y; yy < y + len; yy += 2.5) pts.push(P(x + Math.sin(yy * 0.22 + x * 0.7) * 1.6 + (rg() - .5) * 0.8, yy));
+        if (pts.length > 1) t += `<path d="${glatt(pts, false)}" fill="none" stroke="#f1ede6" stroke-width="${f(0.5 + rg() * 0.9)}" stroke-linecap="round" opacity="${f(0.45 + rg() * 0.45)}"/>`;
+        y += len + 1 + rg() * 6; } }
+    g += `<g clip-path="url(#cr-${uid})" filter="url(#wm-${uid})">${t}</g>`;
+  } else if (opt.brindle) {
     const rg = zufall((opt.seed || rasseId) + "-brindle"), sc = mix(body, "#140c08", .45); let t = "";
     for (let x = minX; x < maxX; x += 3.2 + rg() * 2.2) { const pts = []; for (let y = minY - 4; y < 4; y += 6) pts.push(P(x + Math.sin(y * 0.15 + x) * 1.2 + (rg() - .5) * 1.2, y));
       t += `<path d="${glatt(pts, false)}" fill="none" stroke="${sc}" stroke-width="${f(0.8 + rg() * 1.1)}" stroke-linecap="round"/>`; }

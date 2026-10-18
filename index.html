@@ -933,7 +933,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "417";
+  const SPIEL_VERSION = "418";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -941,10 +941,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=417"></script>
-<script src="boxstufen.js?v=417"></script>
-<script src="kopfteile.js?v=417"></script>
-<script src="kopfalter.js?v=417"></script>
+<script src="pferd.js?v=418"></script>
+<script src="boxstufen.js?v=418"></script>
+<script src="kopfteile.js?v=418"></script>
+<script src="kopfalter.js?v=418"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2509,6 +2509,12 @@
       if (jetzt >= t.frist) { brief("Tierschutzverein", `${t.pferd.name} wurde vermittelt`, `die Frist zum Zurückkaufen ist abgelaufen. <b>${esc(t.pferd.name)}</b> wurde an eine neue Familie vermittelt und hat dort ein gutes Zuhause gefunden.`); return false; }
       return true;
     });
+    spiel.boxen.slice().forEach(b => {   // v418 (Dome): gibt es eine freie Abfohlbox, zieht die Stute zur Geburt automatisch dort ein
+      const p = b.pferd;
+      if (!p || !p.traechtig || b.tot || b.fohlen || b.abfohl || fremd(p) || jetzt < p.traechtig.geburt || p.weide || p.paddock || p.klinik || p.turnier) return;
+      const z = spiel.boxen.findIndex(x => x.abfohl && boxFrei(x) && !x.quar && !x.gesperrt); if (z < 0) return;
+      const von = spiel.boxen.indexOf(b) + 1; inBoxUmziehen(b, z); if (aktBox === von - 1) { aktBox = z; spiel.aktBox = z; }
+      brief("Hofverwaltung", `${p.name}: in der Abfohlbox`, `<b>${esc(p.name)}</b> ist zur Geburt aus Box ${von} in die <b>Abfohlbox</b> (Box ${z + 1}) umgezogen – dort ist mehr Platz, und die Kamera zeigt, wie es läuft.`, { pferde: [p] }); });
     spiel.boxen.forEach((b, i) => {
       const p = b.pferd;
       if (!p || !p.traechtig || b.tot || b.fohlen || jetzt < p.traechtig.geburt) return;
@@ -2525,6 +2531,10 @@
       brief("Tierarztpraxis", `${p.name} hat ein Fohlen bekommen!`, `herzlichen Glückwunsch! <b>${esc(p.name)}</b> (Box ${i + 1}) hat zu Beginn von ${datumLang()} ein ${nd.schwach ? "" : "gesundes "}${f.geschlecht === "Stute" ? "Stutfohlen" : "Hengstfohlen"} zur Welt gebracht: <b>${esc(f.name)}</b>.
         <br><br>Vater: <b>${esc(f.ahnen.vater.name)}</b> (${rasseById(f.ahnen.vater.rasse).name}) · Farbe: ${farbText(f)} · Rasse: ${rasseById(f.rasse).name}${nd.text}`);
     });
+  }
+  // v418 (Dome): Fohlen ab 2 Jahreszeiten ziehen in eine eigene Box – erst am Ende des Jahreszeit-Wechsels, damit Boxen, die dabei frei werden (Pension, Verkauf), noch zählen
+  function fohlenAbsetzen() {
+    const jetzt = jzJetzt();
     spiel.boxen.forEach(b => {
       const f = b.fohlen; if (!f) return;
       const a = alterJZ(f); if (a < 2) return;
@@ -6337,6 +6347,7 @@
           + block("fk-leckerli", "Leckerli", alle.filter(k => FUTTER[k].art === "leckerli"))
           + block("fk-einstreu", "Einstreu", alle.filter(k => FUTTER[k].art === "einstreu")); })()}</div>
       ${korbLeiste()}
+      ${RAUFUTTER_REIHE.some(k => F.lager[k] > 0) ? `<button class="knopf zweit" id="fkVerkauf" style="width:100%;margin-top:6px">💶 Heu und Raufutter verkaufen</button>` : ""}
       ${apothekeKammerHTML()}`;
   }
   // Einkaufskorb (Dome, v237): +kg legt in den Korb, gekauft wird erst nach Bestätigung
@@ -6359,10 +6370,23 @@
        [L.length ? "Abbrechen" : "‹ Zurück", () => neu(""), "zweit"]], "breit");
     document.querySelectorAll("[data-korbweg]").forEach(b => b.onclick = () => { delete K[b.dataset.korbweg]; speichern(); korbDialog(neu); });
   }
+  // v418 (Dome): Heu und anderes Raufutter selbst verkaufen – der Landhandel zahlt 60 % vom Einkaufspreis
+  const HEU_VERKAUF = 0.6;
+  function heuVerkaufDialog(neu) {
+    const F = futterkammer(), V = futterVerbrauchTag(), vorrat = RAUFUTTER_REIHE.reduce((a, k) => a + (F.lager[k] || 0), 0);
+    const zeilen = RAUFUTTER_REIHE.filter(k => F.lager[k] > 0).map(k => { const Z = FUTTER[k], v = F.lager[k], p = Math.round(Z.preis * HEU_VERKAUF * 100) / 100;
+      const stufen = [...new Set([100, 500, 1000].filter(x => x < v).concat([Math.floor(v * 10) / 10]))].filter(x => x > 0);
+      return `<div class="fk-zeile"><span class="fk-ico">${Z.ico}</span><div class="fk-info"><b>${Z.n}</b> <small>${fmtKg(v)} im Lager · Landhandel zahlt ${p.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/kg</small></div><div class="fk-werte">${stufen.map(x => `<button class="mini-knopf" data-hvk="${k}:${x}">${x === Math.floor(v * 10) / 10 && x !== 100 && x !== 500 && x !== 1000 ? "alles" : fmtKg(x)}</button>`).join("")}</div></div>`; }).join("");
+    dialog(`<h3>💶 Raufutter verkaufen</h3><p class="text"><small>Der Landhandel kauft zu ${Math.round(HEU_VERKAUF * 100)} % des Einkaufspreises. Dein Verbrauch: ${fmtKg(V.raufutter)} am Tag – ${V.raufutter > 0 ? `der Vorrat reicht noch ${Math.floor(vorrat / V.raufutter)} Tage` : "kein Verbrauch"}. Verkaufe nicht zu viel, sonst fehlt es im Winter!</small></p>${zeilen}`, [["Schließen", () => neu(""), "zweit"]], "breit");
+    document.querySelectorAll("[data-hvk]").forEach(b => b.onclick = () => { const [k, m] = b.dataset.hvk.split(":"), menge = Math.min(+m, F.lager[k] || 0); if (!(menge > 0)) return;
+      const erloes = Math.round(FUTTER[k].preis * HEU_VERKAUF * menge * 100) / 100; F.lager[k] = Math.round(((F.lager[k] || 0) - menge) * 1000) / 1000; if (k === "heulage") delete F.anbruch;
+      buchen(erloes, `Futter: ${FUTTER[k].n} verkauft`); speichern(); heuVerkaufDialog(neu); zeigeTag(); });
+  }
   function futterkammerBinden(neu) {
     document.querySelectorAll("[data-fkauf]").forEach(b => b.onclick = () => { const [k, m] = b.dataset.fkauf.split(":"), K = korb();
       K[k] = Math.round(((K[k] || 0) + +m) * 1000) / 1000; speichern(); neu(""); });
     if ($("fkKorb")) $("fkKorb").onclick = () => korbDialog(neu);
+    if ($("fkVerkauf")) $("fkVerkauf").onclick = () => heuVerkaufDialog(neu);
     document.querySelectorAll("[data-apokauf]").forEach(b => b.onclick = () => { const k = b.dataset.apokauf, M = APO[k];
       if (!spiel.admin && (spiel.geld || 0) < M.preis) { neu("Dafür reicht das Geld nicht."); return; }
       if (!spiel.admin) buchen(-M.preis, `Stallapotheke: ${M.n}`); apotheke()[k] = (apotheke()[k] || 0) + 1; speichern(); neu(`${M.ico} ${M.n} gekauft.`); });
@@ -6828,8 +6852,8 @@
       const rau = r1(B0.rauMin * 1.05), luzerne = r1(rau * 0.5), heu = r1(rau - luzerne), auf = r1((B0.energie - heu * FUTTER.heu.e - luzerne * FUTTER.luzerne.e) / FUTTER.aufzucht.e);
       return { P: { mahl: 3, kg: { heu, luzerne, aufzucht: auf, mineral: 0.05 }, vom: "experte" }, sp: undefined,
         g: [`${!p.waise.art ? "⚠️ Das Fohlen braucht zuerst Milch (Flasche, Ammenstute oder Leihmutter – Versorgung)! " : ""}Handaufzucht: Milch (${p.waise.art === "flasche" ? "Milchaustauscher aus der Flasche" : p.waise.art === "amme" ? "von der Ammenstute" : p.waise.art === "leihmutter" ? "von der Leihmutter" : "noch keine"}) deckt den Großteil – dazu etwas Heu und Fohlenaufzuchtfutter zum Gewöhnen, kein Hafer und kein Stroh`] }; }
-    const B = futterBedarf(p, box), kg = B.kg, fz = futterZustand(p), dick = fz >= 7 && alterJZ(p) >= 12, sp = spezialFuer(p), r = (x, s) => Math.max(0, Math.round(x / s) * s), ab = (x, s) => Math.max(0, Math.floor(x / s + 1e-9) * s);
-    const ziel = B.energie * (dick ? 0.85 : fz <= 3 ? 1.15 : 1), P = { mahl: 2, kg: {}, vom: "experte", spezial: sp || undefined }, g = [];
+    const B = futterBedarf(p, box), kg = B.kg, fz = futterZustand(p), dick = fz >= 6 && alterJZ(p) >= 12, sp = spezialFuer(p), r = (x, s) => Math.max(0, Math.round(x / s) * s), ab = (x, s) => Math.max(0, Math.floor(x / s + 1e-9) * s);
+    const ziel = B.energie * (dick ? (fz >= 8 ? 0.8 : fz === 7 ? 0.85 : 0.87) : fz <= 3 ? 1.15 : 1), P = { mahl: 2, kg: {}, vom: "experte", spezial: sp || undefined }, g = [];
     const husten = befundListe(p).some(b => (b.art === "asthma" || b.art === "husten") && (b.diagnose || b.bemerkt));
     // Futter-Etappe Teil 2: Heulage nur, wenn auf dem Hof genug davon gefressen wird (angebrochener Ballen hält im Sommer nur 2 Tage) – sonst gewässertes Heu
     const heulageAndere = spiel.boxen.reduce((a, b) => a + (b !== box && b.pferd && !b.tot && b.pferd.futterplan && b.pferd.futterplan.kg ? b.pferd.futterplan.kg.heulage || 0 : 0), 0);
@@ -6849,7 +6873,7 @@
     // zu viel Energie: erst Hafer, Rübenschnitzel, Öl, Spezialfutter zurück, dann Heu bis zum Minimum, zuletzt (zum Abnehmen) mehr Stroh statt Heu
     const weniger = () => { const minus = (k, s, min) => { if ((P.kg[k] || 0) - s >= min - 1e-9) { P.kg[k] = Math.round((P.kg[k] - s) * 100) / 100; return true; } return false; };
       return minus("hafer", 0.25, 0) || minus("ruebe", 0.25, 0) || minus("oel", 0.05, 0) || (sp && minus("sp_" + sp, 0.25, 0.25)) || minus(rauArt, 0.5, Math.max(kg * 0.01, rauUnten - (P.kg.luzerne || 0)))
-        || (dick && W().eiweiss > B.eiweiss - 1.6 && (P.kg.stroh || 0) + 0.5 <= (P.kg[rauArt] + (P.kg.stroh || 0)) / 3 && minus(rauArt, 0.5, 0) && (P.kg.stroh = (P.kg.stroh || 0) + 0.5)); };
+        || (dick && W().eiweiss > B.eiweiss - 1.6 && (P.kg.stroh || 0) + 0.5 <= (P.kg[rauArt] + (P.kg.stroh || 0)) * (fz >= 7 ? 0.45 : 1 / 3) && minus(rauArt, 0.5, 0) && (P.kg.stroh = (P.kg.stroh || 0) + 0.5)); };
     const heiss = charE(p, "temperament").hoch > 0.3 || charE(p, "nerven").tief > 0.3, gemuetlich = !heiss && (charE(p, "temperament").tief > 0.3 || charE(p, "wille").tief > 0.3);   // Futter-Etappe: Charakter
     const dz = futterDisz(p), dzArt = dz ? DISZ_FUTTER[dz] : null;
     const ohneStaerke = ["rehe", "pssm", "magen", "schonkost"].includes(sp) || dick || heiss;
@@ -6876,7 +6900,7 @@
         P.kg.aufzucht = Math.round(((P.kg.aufzucht || 0) + 0.25) * 100) / 100;
         if (energie() > ziel * 1.05 && !weniger()) { P.kg = JSON.parse(vorher); break; } }
       if (P.kg.aufzucht) g.push(`Aufzuchtfutter – Eiweiß für das Wachstum (Ziel ${B.eiweiss} %)`); }
-    { let n = 0; while (energie() > ziel * 1.08 && n++ < 40 && weniger()); }
+    { let n = 0; while (energie() > ziel * (dick ? 1.02 : 1.08) && n++ < 40 && weniger()); }   // v418: zu dicke Pferde knapp ans Ziel – sonst nimmt das Pferd nicht ab
     { let n = 0; const hart = () => W().staerkeMahl > B.staerkeMahl || W().kraftMahl > B.kraftMahl;   // Sicherheitsnetz: Grenzen je Mahlzeit nie überschreiten
       while (hart() && n++ < 40) { const k = ["hafer", "ruebe", "aufzucht", "luzerne"].find(x => P.kg[x] >= 0.25); if (!k) break; P.kg[k] = Math.round((P.kg[k] - 0.25) * 100) / 100; } }
     P.kg.mineral = kg < 300 ? 0.05 : 0.1;
@@ -7231,6 +7255,14 @@
     return spiel.bewerber.liste[typ];
   }
   // zu Beginn jeder Jahreszeit: Gehalt für die letzte Jahreszeit, Abgänge, Neuanfänge
+  // am Ende des Jahreszeit-Wechsels: Mitarbeiter kündigen nur, wenn das Konto trotz aller Einnahmen (Pension, Verkäufe …) im Minus bleibt
+  function maKnappPruefen() {
+    const jetzt = jzJetzt();
+    spiel.mitarbeiter = (spiel.mitarbeiter || []).filter(m => { if (m.knapp == null) return true; const knapp = m.knapp; delete m.knapp;
+      if (knapp !== jetzt || spiel.admin || (spiel.geld || 0) >= 0) return true;
+      const P = maPron(m), titel = maTitel(m);
+      brief("Hofverwaltung", `${m.name} hat gekündigt`, `${titel} <b>${esc(m.name)}</b> hat gekündigt, weil {du|Sie} ${P.sein} Gehalt nicht bezahlen {konntest|konnten}. ${P.Er === "Er" ? "Sein" : "Ihr"} letztes Gehalt von ${fmt(m.gehalt)} hat ${P.er} sich trotzdem genommen – {dein|Ihr} Hofkonto steht jetzt bei ${fmt(spiel.geld || 0)}.`); return false; });
+  }
   function mitarbeiterJahreszeit() {
     const jetzt = jzJetzt(), vorher = jetzt - 1;
     spiel.mitarbeiter = (spiel.mitarbeiter || []).map(maErgaenzen).filter(m => {
@@ -7239,7 +7271,7 @@
         const reicht = spiel.admin || (spiel.geld || 0) >= m.gehalt;
         if (!spiel.admin) buchen(-m.gehalt, `Gehalt ${titel} ${m.name}`);   // im Adminmodus kostet kein Angestellter Geld
         if (m.bis === vorher) { brief("Hofverwaltung", `${m.name} hat aufgehört`, `${titel} <b>${esc(m.name)}</b> hat ${P.seine} letzte Jahreszeit beendet und ${P.sein} Gehalt von ${fmt(m.gehalt)} bekommen.`); return false; }
-        if (!reicht) { brief("Hofverwaltung", `${m.name} hat gekündigt`, `${titel} <b>${esc(m.name)}</b> hat gekündigt, weil {du|Sie} ${P.sein} Gehalt nicht mehr bezahlen {konntest|konnten}. ${P.Er === "Er" ? "Sein" : "Ihr"} letztes Gehalt von ${fmt(m.gehalt)} hat ${P.er} sich trotzdem genommen – {dein|Ihr} Hofkonto steht jetzt bei ${fmt(spiel.geld || 0)}.`); return false; }
+        if (!reicht) m.knapp = jetzt;   // v418 (Dome): erst abwarten, ob am Jahreszeit-Beginn noch Geld reinkommt (Pension, Verkäufe) – Entscheidung in maKnappPruefen()
       }
       if (m.ab === jetzt && m.typ === "azubi") { azubiErgaenzen(m); const A = ausbilderVon(m); brief("Hofverwaltung", `${m.name} fängt heute an`, `Azubi <b>${esc(m.name)}</b> beginnt heute die Ausbildung zum Pferdewirt, Fachrichtung <b>${FACH[m.fach].n}</b> (3 Jahre). Ausbilder: ${A ? (A.id === "du" ? "{du selbst|Sie selbst}" : `<b>${esc(A.name)}</b>`) : "noch keiner"}. ${maPron(m).Er} hilft beim Füttern und Misten in ${maKapazitaet(m)} Boxen.`); return true; }
       if (m.ab === jetzt) brief("Hofverwaltung", `${m.name} fängt heute an`, `${titel} <b>${esc(m.name)}</b> arbeitet ab heute auf {deinem|Ihrem} Hof. ${P.Er} ${T.aufgabe}${T.boxen ? ` ${maKapazitaet(m)} Boxen` : ""}.`);
@@ -7372,11 +7404,16 @@
         const umStuten = stutenDabei && hengstig(a) && hengstig(b);
         if (Math.random() < (umStuten ? 0.35 : 0.2)) { verletzt = Math.random() < 0.5 ? a : b; const minus = 10 + Math.round(Math.random() * 15);
           verletzt.pflege.gesundheit = Math.max(1, Math.round((verletzt.pflege.gesundheit - minus) * 10) / 10); befundSetzen(verletzt, "Verletzung (Biss/Tritt)", minus); }
-        streite.push({ a, b, verletzt, umStuten });
+        const PX = (spiel.herdePaare || {})[[a.id, b.id].sort().join("|")]; if (PX) PX.streit = (PX.streit || 0) + 1;   // v418: wie oft schon gestritten (innerhalb dieser Gewöhnungszeit)
+        streite.push({ a, b, verletzt, umStuten, n: PX ? PX.streit : 1, tage: PX ? PX.tage : 0 });
       }
     }
     if (streite.length) brief("Hofverwaltung", streite.length === 1 ? `Streit auf der Weide` : `${streite.length}× Streit auf der Weide`,
-      `heute Nacht hat es auf der Weide Ärger gegeben:<ul>${streite.map(x => `<li><b>${esc(x.a.name)}</b> und <b>${esc(x.b.name)}</b> haben sich gestritten${x.umStuten ? " – zwei Hengste, es war ein Rangkampf um die Stuten" : hengstig(x.a) && hengstig(x.b) ? " – zwei Hengste, es war ein Rangkampf" : ""}${x.verletzt ? ` – <b>${esc(x.verletzt.name)}</b> ist dabei verletzt worden` : ""}.</li>`).join("")}</ul>Wenn sich zwei Pferde nicht vertragen, sollte man sie trennen.${streite.some(x => hengstig(x.a) && hengstig(x.b)) ? " Erwachsene Hengste kommen meist nur allein oder mit Wallachen gut zurecht." : ""}`,
+      `heute Nacht hat es auf der Weide Ärger gegeben:<ul>${streite.map(x => { const hh = hengstig(x.a) && hengstig(x.b), schlimm = hh || x.verletzt || x.n >= 3;   // v418 (Dome): klarer Rat – kleiner Streit oder „verstehen sich nicht“
+        const urteil = hh ? `<br>⚠️ <b>Zwei Hengste</b> vertragen sich auf Dauer nicht. <b>Bitte trennen</b> – andere Weide oder Sandpaddock (Ort → Koppel).`
+          : schlimm ? `<br>⚠️ <b>Die beiden verstehen sich nicht</b> (${x.n}. Streit${x.verletzt ? ", einer wurde verletzt" : ""}). <b>Bitte auf verschiedene Weiden stellen</b> (Ort → Koppel → andere Weide wählen, oder Weidegang-Auswahl „welche“ je Pferd).`
+          : `<br>🟢 Nur ein <b>kleiner Streit</b> – das ist normal, sie sind noch in der Gewöhnung (${Math.min(x.tage, tpj())} von ${tpj()} gemeinsamen Tagen; danach streiten sie nur noch halb so oft). Beobachten reicht. Streiten sie noch ein paar Mal, besser trennen.`;
+        return `<li><b>${esc(x.a.name)}</b> und <b>${esc(x.b.name)}</b> haben sich gestritten${x.umStuten ? " – es war ein Rangkampf um die Stuten" : hh ? " – es war ein Rangkampf" : ""}${x.verletzt ? ` – <b>${esc(x.verletzt.name)}</b> ist dabei verletzt worden` : ""}.${urteil}</li>`; }).join("")}</ul>`,
       { pferde: streite.flatMap(x => [x.a, x.b]) });
   }
   const ARBEIT_DAHEIM = true;      // Etappe 4 (Training daheim): dann vermissen leistungsbereite Pferde Arbeit an freien Tagen
@@ -7430,8 +7467,9 @@
     const andere = spiel.boxen.filter(b => b.pferd && b.pferd.weide && !b.pferd.klinik && !b.tot && b.pferd !== p && (weideVon(b.pferd) || {}).wid === (weideVon(p) || {}).wid).map(b => b.pferd);   // v412 (Dome): Herde = gleiche Weide · v414: über p.weide.wid
     const fo = (spiel.boxen.find(b => b.pferd === p) || {}).fohlen, foTxt = fo ? `<p class="text">🍼 ${esc(fo.name)} ist bei ihr auf der Weide.</p>` : "";
     if (!andere.length) return fo ? foTxt : `<p class="text">🐴 Gerade ist kein anderes eigenes Pferd auf der Weide.</p>`;
+    const schlecht = andere.filter(q => { const x = (spiel.herdePaare || {})[[p.id, q.id].sort().join("|")]; return x && (x.streit || 0) >= 3; });   // v418
     const H = p.herde || {}, kennt = andere.filter(q => (H[q.id] || 0) >= HERDE_KENNEN), neu = andere.filter(q => (H[q.id] || 0) < HERDE_KENNEN);
-    return foTxt + `<p class="text">🐴 <b>Herde:</b> ${andere.map(q => esc(q.name)).join(", ")}${neu.length ? `<br><small>Noch in der Eingewöhnung mit ${neu.map(q => esc(q.name)).join(", ")} – nach ${HERDE_KENNEN} gemeinsamen Weidetagen kennen sie sich.</small>` : `<br><small>Alle kennen sich schon.</small>`}</p>`;
+    return foTxt + `<p class="text">🐴 <b>Herde:</b> ${andere.map(q => esc(q.name)).join(", ")}${neu.length ? `<br><small>Noch in der Eingewöhnung mit ${neu.map(q => esc(q.name)).join(", ")} – nach ${HERDE_KENNEN} gemeinsamen Weidetagen kennen sie sich.</small>` : `<br><small>Alle kennen sich schon.</small>`}${schlecht.length ? `<br><small>⚠️ ${esc(p.name)} versteht sich nicht mit ${schlecht.map(q => esc(q.name)).join(", ")} (oft Streit) – besser auf verschiedene Weiden stellen.</small>` : ""}</p>`;
   }
   // Stress bei Fahrten mit dem Pferdeanhänger und Neuem (Klinik, fremde Herde): scheu und nervös leiden, gelassen bremst
   function fahrtStress(p, ziel) {
@@ -7628,7 +7666,7 @@
     jedenHof(hofNacht, true);
     tierschutzKlinik(); tierschutzFohlen(); laborNacht(); auktionsNacht();
     if (datum().t === 1) weihnachtsSpende();   // v378
-    if (datum().t === 1) { jedenHof(() => { stallartJahreszeit(); patenJahreszeit(); fremdFohlenJahreszeit(); offenstallJahreszeit(); kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); auktionsEnde(); jahreszeitBeginn(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); pensionJahreszeit(); bereiterAbrechnung(); bereiterPensionAbrechnung(); }, true); spamAufraeumen(); hoefeVersteigern(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
+    if (datum().t === 1) { jedenHof(() => { stallartJahreszeit(); patenJahreszeit(); fremdFohlenJahreszeit(); offenstallJahreszeit(); kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); auktionsEnde(); jahreszeitBeginn(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); pensionJahreszeit(); bereiterAbrechnung(); bereiterPensionAbrechnung(); maKnappPruefen(); fohlenAbsetzen(); }, true); spamAufraeumen(); hoefeVersteigern(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
     turnierKalender();
     jedenHof(hofMorgen, true);
     blutbilderTag();     // Laborergebnisse
@@ -9756,6 +9794,16 @@
     if (R.max == null) R.max = 99;
     return R;
   }
+  // v418 (Dome): alle Gebäude machen die Pension attraktiver – je besser die Stufe, desto mehr (Weidezaun Stufe 1 und Reitplatz Stufe 1 sind Standard und zählen nicht)
+  const AUSSTATTUNG = { reithalle: [.2, .3, .4], roundpen: [.05, .08, .12], reitplatz: [0, .06, .12], sandpaddock: [.03, .05, .08], weide: [0, .04, .08], trail: [.03, .05, .08], waschplatz: [.02, .03, .05], sattelkammer: [.02, .03, .05], lager: [.01, .02, .03], heudampfer: [.03, .03, .03], quarantaene: [.03, .04, .05] };
+  function ausstattung() {   // je Gebäudeart die beste Stufe (Zustand unter 80 % mindert, mindestens ×0,4)
+    const best = {};
+    gebaeude().forEach(g => { const T = AUSSTATTUNG[g.typ]; if (!T || g.bau) return; const v = T[Math.max(0, Math.min(2, (g.stufe || 1) - 1))] * (g.zustand == null ? 1 : Math.max(0.4, Math.min(1, g.zustand / 80)));
+      if (!best[g.typ] || v > best[g.typ]) best[g.typ] = v; });
+    Object.keys(AUSSTATTUNG).forEach(k => { const an = BAUTEN[k] && BAUTEN[k].anlage; if (!best[k] && an && spiel.anlage && spiel.anlage[an] && !gebaeude().some(g => g.typ === k)) best[k] = AUSSTATTUNG[k][0]; });   // Admin/alte Stände: Anlage ohne Gebäude zählt als Stufe 1
+    return best;
+  }
+  const ausstattungBonus = () => Object.values(ausstattung()).reduce((a, v) => a + v, 0);
   const pensionAnsehen = d => { const R = pensionRegeln(); R.ansehen = Math.max(0, Math.min(200, R.ansehen + d)); };
   // kann der Hof die Leistung gerade erbringen?
   const leistungMoeglich = k => k === "paddockbox" ? spiel.boxen.some(b => b.paddock) : k === "decke" ? false : true;   // Decken gibt es noch nicht (Dome)
@@ -9776,7 +9824,7 @@
     const frei = spiel.boxen.filter(pensionBoxFrei); const n = Math.min(frei.length, pensionPlaetze()); if (!n) return 0;
     const st = frei.reduce((a, b) => a + boxenStufe(b), 0) / frei.length, A = spiel.anlage || {};
     const preisF = pensionPreisF();   // 25 % teurer → etwa halb so viele
-    const f = PENSION.anfrage / tpj() * PENSION.stufe[Math.round(st)] * (1 + (A.reithalle ? PENSION.halle : 0) + (A.roundpen ? PENSION.roundpen : 0)) * Math.max(0.3, Math.min(1.5, R.ansehen / 100)) * preisF * PENSION.blut[R.bluttest] * (vorteil("pension") ? 1.3 : 1) * hausBonus();   // H7: Pensionsstall – mehr Anfragen
+    const f = PENSION.anfrage / tpj() * PENSION.stufe[Math.round(st)] * (1 + ausstattungBonus()) * Math.max(0.3, Math.min(1.5, R.ansehen / 100)) * preisF * PENSION.blut[R.bluttest] * (vorteil("pension") ? 1.3 : 1) * hausBonus();   // H7: Pensionsstall – mehr Anfragen
     return 1 - Math.pow(1 - Math.min(0.5, f), n);
   }
   function pensionAnfrageNeu() {
@@ -10013,8 +10061,14 @@
       buchen(box, "Pension"); if (leist) buchen(leist, "Pension: Zusatzleistungen");
       zeilen.push(`<li>${esc(eName(e))} (${p ? esc(p.name) : "–"}): ${fmt(box + leist)}</li>`);
     });
+    einstellerListe().forEach(e => {   // v418 (Dome): zufriedene Stammkunden buchen mit der Zeit Zusatzleistungen dazu
+      const p = (pensionBox(e) || {}).pferd; if (!p || e.art || e.kuendigt != null || e.zufr < 65 || jetzt - e.seit < 2 || Math.random() >= 0.2 + 0.2 * (e.zufr - 65) / 35) return;
+      const k = zufallAus(PL_REIHE.filter(x => !e.leistungen[x] && x !== "bewegen" && x !== "paddockbox" && leistungMoeglich(x))); if (!k) return;
+      e.leistungen[k] = true; const L = PENSION_LEISTUNG[k];
+      brief(eName(e), `${p.name}: zusätzliche Leistung`, `wir sind mit {euch|Ihnen} und dem Stall sehr zufrieden. Ab sofort möchte ich für <b>${esc(p.name)}</b> zusätzlich <b>${L.ico} ${L.n}</b> buchen (${fmt(leistPreis(e, k))} je Jahreszeit).`, { pferde: [p] }); });
     if (zeilen.length) brief("Hofverwaltung", `Pensionsgeld ${jzName(jetzt).replace(/^\S+ /, "")}`, `das Pensionsgeld für diese Jahreszeit:<ul>${zeilen.join("")}</ul>`);
     const L2 = einstellerListe(); if (L2.length) { const z = L2.reduce((a, e) => a + e.zufr, 0) / L2.length; pensionAnsehen(z >= 70 ? 2 : z < 40 ? -2 : 0); }
+    { const ab = ausstattungBonus(); if (ab >= 0.35) pensionAnsehen(2); else if (ab >= 0.15) pensionAnsehen(1); }   // v418: gute Ausstattung spricht sich herum
     { const B2 = spiel.boxen.filter(b => !b.offen), g = B2.filter(b => b.gummi && boxenStufe(b) >= 2).length / Math.max(1, B2.length), sand = B2.filter(b => boxenStufe(b) === 1).length / Math.max(1, B2.length);   // Dome (v359): Bodenbelag spricht sich herum
       if (g >= 0.5) pensionAnsehen(1); if (sand >= 0.5) pensionAnsehen(-1); }
   }
@@ -10797,7 +10851,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         <b>Quarantänestall:</b> gekaufte Pferde (Markt, Auktion, Tierschutz) kommen zuerst in eine freie Quarantänebox und stehen 1 Jahreszeit unter Quarantäne; danach ziehen sie – ohne bekannte ansteckende Krankheit – automatisch in eine freie normale Box (Brief). Normale Umzüge nutzen den Quarantänestall nur, wenn sonst nichts frei ist.
         <b>Hufrehe-Warnung</b> im Frühling für gefährdete Pferde (leichtfuttrige Rassen ${LEICHTFUTTRIG.join(", ")}, Futterzustand ab 7, Hufrehe oder Cushing bekannt): Hinweis beim Weidegang und Brief zu Frühlingsbeginn für alle gefährdeten Pferde auf der Weide.</p>
       <p><b>Pension und Einsteller (H5)</b> (Hofverwaltung → Hof → Pension): Pensionsplätze anbieten (Pensionsstall von Anfang an), höchstens N Plätze, Preis je Box und Jahreszeit nach Box-Stufe (Richtwert ${[1, 2, 3].map(st => `Stufe ${st} ${fmt(PENSION_PREIS[st])}`).join(", ")}; gilt für neue Verträge), Bluttest-Regel (vorher einreichen ×${String(PENSION.blut.vorher).replace(".", ",")} Anfragen, kein Ansteckungsrisiko · nachreichen ×${String(PENSION.blut.nachreichen).replace(".", ",")}, Risiko ${prozent(PENSION.risiko.nachreichen)}, Ergebnis nach 2 Tagen · keiner ×1, Risiko ${prozent(PENSION.risiko.keiner)}).
-        <b>Anfragen</b> per Brief (Zusagen/Absagen, ${PENSION.anfrageTage} Tage Zeit, höchstens ${PENSION.maxAnfragen} offen): je freier Box und Jahreszeit ${String(PENSION.anfrage).replace(".", ",")} Anfragen (Chance je Tag = das ÷ Tage pro Jahreszeit – bei jedem Tempo gleich viele je Jahreszeit, 6 freie Boxen ≈ 2; mindestens 1 je Jahreszeit garantiert, wenn Plätze frei, Preis höchstens 25 % über dem Richtwert und Ansehen ab 60) × Stufe (1 / 1,4 / 2) × (1 + ${prozent(PENSION.halle)} Reithalle + ${prozent(PENSION.roundpen)} Roundpen) × Ansehen/100 (0,3–1,5) × Preisfaktor (Richtwert ÷ Preis)³ (0,1–2; Richtwert mit dem Ansehen ±25 %) × Bluttest-Regel. ${prozent(PENSION.hengst)} Hengste (wenn Paddockboxen angeboten werden, wünschen 60 % eine, sonst normale Box). Zusage reserviert die Box, das Pferd kommt am nächsten Morgen (Quarantänestall zuerst, außer Bluttest liegt vor oder Hengst) und zahlt gleich anteilig für den Rest der Jahreszeit.
+        <b>Anfragen</b> per Brief (Zusagen/Absagen, ${PENSION.anfrageTage} Tage Zeit, höchstens ${PENSION.maxAnfragen} offen): je freier Box und Jahreszeit ${String(PENSION.anfrage).replace(".", ",")} Anfragen (Chance je Tag = das ÷ Tage pro Jahreszeit – bei jedem Tempo gleich viele je Jahreszeit, 6 freie Boxen ≈ 2; mindestens 1 je Jahreszeit garantiert, wenn Plätze frei, Preis höchstens 25 % über dem Richtwert und Ansehen ab 60) × Stufe (1 / 1,4 / 2) × (1 + Summe der Gebäude-Boni: ${Object.entries(AUSSTATTUNG).map(([k, v]) => `${BAUTEN[k].n.replace(/\u00ad/g, "")} ${v.map(x => Math.round(x * 100)).join("/")} %`).join(", ")} – je Stufe 1/2/3, nur die beste Stufe je Art, Zustand unter 80 % mindert; Ansehen: je Jahreszeit +1 ab Bonus 15 %, +2 ab 35 %) × Ansehen/100 (0,3–1,5) × Preisfaktor (Richtwert ÷ Preis)³ (0,1–2; Richtwert mit dem Ansehen ±25 %) × Bluttest-Regel. ${prozent(PENSION.hengst)} Hengste (wenn Paddockboxen angeboten werden, wünschen 60 % eine, sonst normale Box). Zusage reserviert die Box, das Pferd kommt am nächsten Morgen (Quarantänestall zuerst, außer Bluttest liegt vor oder Hengst) und zahlt gleich anteilig für den Rest der Jahreszeit.
         <b>Pensionspferd:</b> eigener Steckbrief, gehört dem Einsteller – kein Verkauf, keine Zucht, kein Anhänger/Turnier/Labor, kein Training (nur der Bereiter mit gebuchter Leistung „Bewegen“, nicht an Tagen, an denen der Besitzer reitet). Füttern, Misten, Weidegang macht der Hof (Vollpension, Futter aus der eigenen Futterkammer). Tierarzt-, Hufschmied- und Klinikkosten zahlt der Besitzer (Bericht statt Rechnung), Mittel wie Wundsalbe oder Wurmkur bringt er selbst mit (nicht aus der Stallapotheke); bemerkt jemand eine Krankheit, ruft der Besitzer am nächsten Tag selbst den Tierarzt.
         <b>Besitzer-Besuch:</b> an ${prozent(PENSION.besuch)} der Tage (Winter ×0,8): putzt, bemerkt Krankheiten ab Grad 2 zur Hälfte, reitet (25 Energie) auf Reitplatz bzw. bei Regen/Winter in der Halle. Ab ${PENSION.voll} Reitern gleichzeitig: Zufriedenheit −1; trainierst du auf demselben Platz: −1 (Longieren −2), einmal am Tag je Einsteller.
         <b>Eifer des Besitzers</b> (v265, versteckt 0,3–1): Nicht Gebuchtes erledigt er an Besuchstagen und sonst mit Chance Eifer × 0,8 je Tag (putzen: Wohlbefinden +2); sonst verdreckt das Pferd wie jedes andere (Gesundheit). Behandlung durch den Besitzer wirkt 0,4 + 0,5 × Eifer.

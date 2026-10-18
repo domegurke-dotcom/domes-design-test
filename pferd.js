@@ -858,7 +858,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Weiche Schattierung (Airbrush-Look): Schattenformen werden weichgezeichnet
   g += `<rect ${bx} fill="url(#sh-${uid})" opacity=".8"/><g filter="url(#wb-${uid})">`;
   g += `<g clip-path="url(#cr-${uid})"><path d="${glatt([P(-0.12 * H, top + 0.75 * D), P(0.15 * L, bottom - 0.2 * D), P(0.4 * L, bottom - 0.18 * D), P(0.65 * L, bottom - 0.3 * D), P(0.8 * L, bottom - 0.2 * D), P(L + 0.1 * H, top + 0.7 * D), P(L + 0.1 * H, 5), P(-0.12 * H, 5)])}" fill="${schatten}" opacity=".55"/></g>`;
-  g += `<path d="${glatt([T, add(mid(T, Cn), mul(nOut, -2)), Cn, add(Cn, P(8, 6)), add(mid(T, Cn), mul(nOut, 5)), add(T, mul(nOut, 4))])}" fill="${schatten}" opacity="${eigenKopf ? ".18" : ".45"}"/>`;   // v470 (Dome): bei Domes Köpfen schwächer – sonst dunkle Bahn direkt hinter dem Kopf
+  const kehleD = glatt([T, add(mid(T, Cn), mul(nOut, -2)), Cn, add(Cn, P(8, 6)), add(mid(T, Cn), mul(nOut, 5)), add(T, mul(nOut, 4))]);
+  g += `<path d="${kehleD}" fill="${schatten}" opacity="${eigenKopf ? ".18" : ".45"}"/>`;   // v470 (Dome): bei Domes Köpfen schwächer – sonst dunkle Bahn direkt hinter dem Kopf
   if (!eigenKopf) g += `<path d="${glatt([hp(0.1, 0.42 * hw), hp(0.3, 0.47 * hw * jw), hp(0.55, 0.36 * hw), hp(0.8, 0.28 * hw), hp(0.6, 0.3 * hw), hp(0.35, 0.37 * hw * jw)])}" fill="${schatten}" opacity=".45"/>`;
   g += `<path d="${glatt([P(0.24 * L, -H + 3.5), P(0.42 * L, top + 5), P(0.62 * L, top + 4), P(0.8 * L, croupY + 3), P(0.8 * L, croupY + 6.5), P(0.62 * L, top + 7.5), P(0.42 * L, top + 8.5)], true)}" fill="${licht}" opacity=".7"/>`;
   g += `<ellipse cx="${f(0.1 * L)}" cy="${f(top + 0.3 * D)}" rx="${f(0.08 * L)}" ry="${f(0.2 * D)}" fill="${licht}" opacity=".35"/>`;
@@ -868,12 +869,6 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (!liegt) g += `<defs><linearGradient id="bs-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(bottom - 0.05 * D)}" x2="0" y2="${f(bottom * 0.55)}"><stop offset="0" stop-color="${schatten}" stop-opacity=".55"/><stop offset="1" stop-color="${schatten}" stop-opacity="0"/></linearGradient>` +
     `<mask id="bm-${uid}" maskUnits="userSpaceOnUse" ${bx}><g filter="url(#bf-${uid})"><path d="${glatt(vorderN)}" fill="#fff"/><path d="${glatt(hinterN)}" fill="#fff"/><path d="${glatt(rumpf)}" fill="#000"/></g></mask><filter id="bf-${uid}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${f(0.06 * D)}"/></filter></defs>` +
     `<g mask="url(#bm-${uid})"><rect ${bx} fill="url(#bs-${uid})"/></g>`;
-  if (eigenKopf && !liegt) {   // v468 (Dome): Kopf → Hals weich überblenden (auch bei gleicher Farbe – sonst Kante durch die Halsschattierung)
-    const bnd = norm(sub(T, Pn)), hin = mul(u, -1), dTief = 0.22 * hl, mt = mid(Pn, T), ende = add(mt, mul(hin, dTief));
-    const q = [add(Pn, mul(bnd, -0.25 * hl)), add(T, mul(bnd, 0.25 * hl)), add(add(T, mul(bnd, 0.25 * hl)), mul(hin, dTief)), add(add(Pn, mul(bnd, -0.25 * hl)), mul(hin, dTief))];
-    g += `<defs><linearGradient id="uk-${uid}" gradientUnits="userSpaceOnUse" x1="${f(mt.x)}" y1="${f(mt.y)}" x2="${f(ende.x)}" y2="${f(ende.y)}"><stop offset="0" stop-color="${head}" stop-opacity=".5"/><stop offset=".5" stop-color="${head}" stop-opacity=".2"/><stop offset="1" stop-color="${head}" stop-opacity="0"/></linearGradient>` +
-      `<filter id="ukf-${uid}" filterUnits="userSpaceOnUse" x="${f(Pn.x - 3 * hl)}" y="${f(Pn.y - 3 * hl)}" width="${f(6 * hl)}" height="${f(6 * hl)}"><feGaussianBlur stdDeviation="${f(0.06 * hl)}"/></filter></defs><g clip-path="url(#cr-${uid})"><path d="${eckig(q)}" fill="url(#uk-${uid})" filter="url(#ukf-${uid})"/></g>`;
-  }
   g += `</g>`;
   // Schmutz im Fell (opt.dreck 0–100): weiche Schlammflecken am ganzen Körper, dreckige Beine – immer an denselben Stellen.
   // Auf dunklem Fell sieht man eher hellen, getrockneten Staub, auf hellem Fell braunen Schlamm.
@@ -1020,8 +1015,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     const schatt = `<g transform="matrix(${[ia, ib, -ib, ia, ie, iff].map(x => x.toFixed(5)).join(" ")})">` +
       `<rect x="${f(minX - 60)}" y="${f(minY - 5)}" width="${f(maxX - minX + 120)}" height="${f(-minY + 10)}" fill="url(#sh-${uid})" opacity=".8"/>` + (C.pattern === "fleck" ? `<rect ${bx} fill="url(#fk-${uid})" opacity=".8"/>` : "") +   // v468: Fliegenschimmel-Tupfen auch im Gesicht; v461: größer als bx – Domes Köpfe ragen vorn über den Rahmen (sonst Streifen an der Nasenkante)
       (C.muzzle && !opt.maul && !(C.grau > .3) ? `<ellipse cx="${f(mz.x)}" cy="${f(mz.y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(mz.x)} ${f(mz.y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>` : "") +   // Schimmel: Domes Ebene „graumaul“ (im Spiel „dunkel“) in kopfNeuSVG (v449)
-      `<g filter="url(#wb-${uid})"><path d="${glatt([hp(0.1, 0.42 * hw), hp(0.3, 0.47 * hw * jw), hp(0.55, 0.36 * hw), hp(0.8, 0.28 * hw), hp(0.6, 0.3 * hw), hp(0.35, 0.37 * hw * jw)])}" fill="${schatten}" opacity="${hexRgb(head).reduce((x, y) => x + y) / 3 > 200 ? ".15" : ".45"}"/>` +
-      `<ellipse cx="${f(hp(0.3, -0.1).x)}" cy="${f(hp(0.3, -0.1).y)}" rx="${f(0.22 * hl)}" ry="${f(0.07 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.3, -0.1).x)} ${f(hp(0.3, -0.1).y)})" fill="${licht}" opacity=".45"/></g></g>`;
+      (MG > 0 ? `<rect ${bx} fill="url(#mt-${uid})"/>` : "") + `<g filter="url(#wb-${uid})"><path d="${kehleD}" fill="${schatten}" opacity=".18"/></g></g>`;   // v472 (Dome): Kopf bekommt dieselben Schichten wie der Hals (Glanz, Kehlschatten) – kein eigener Kieferschatten/Lichtfleck mehr, sonst Kanten am Übergang
     // Ohrstellung (opt.ohrStellung = { R, L, spiel }); ohne Angabe: beide Ohren vorne, bei Unwohlsein (opt.ohren „geknickt“) seitlich
     const OS = opt.ohrStellung || (opt.ohren === "geknickt" ? { R: "seite", L: "seite" } : { R: "vorne", L: "vorne" });
     const schopfFarbe = dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane);

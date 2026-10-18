@@ -540,6 +540,7 @@
   .farbspalte.musterspalte { right: calc(var(--pf) + var(--fsB) + 2px); }   /* v451: Scheckungen links neben den Fellfarben */
   .ms-pfeil { right: calc(var(--pf) + var(--fsB) + 4px) !important; }
   .fs-kachel:disabled { opacity: .35; cursor: default; }
+  .sort-seg { max-width: 340px; margin: 6px 0 10px; grid-column: 1 / -1; } .kont-kopf { margin: 14px 0 4px; padding-bottom: 3px; border-bottom: 2px solid #e2d6c3; color: var(--akzent); font-size: 1rem; } .kont-kopf small { color: var(--leise); font-weight: 500; }   /* v455: Sortierung nach Kontinent */
   /* Fellfarben als kleine Kacheln rechts im Bild (quer und PC) */
   .farbspalte { position: absolute; right: calc(var(--pf) + 2px); top: 8px; bottom: 8px; width: calc(var(--fsB) - 8px); overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 2px; z-index: 2; scrollbar-width: none; }
   .farbspalte::-webkit-scrollbar { display: none; }
@@ -946,7 +947,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "454";
+  const SPIEL_VERSION = "455";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -954,9 +955,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=454"></script>
-<script src="boxstufen.js?v=454"></script>
-<script src="kopfneu.js?v=454"></script>
+<script src="pferd.js?v=455"></script>
+<script src="boxstufen.js?v=455"></script>
+<script src="kopfneu.js?v=455"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3138,7 +3139,7 @@
       const eigene = spiel.boxen.map((b, i) => ({ b, i })).filter(({ b, i }) => i !== aktBox && b.pferd && !b.tot && b.pferd.geschlecht === ziel);
       const deck = p.geschlecht === "Stute" ? deckhengste(p) : [];
       window.__deckListe = deck;
-      const kachel = (q, attr, sperre, alter) => `<button class="paar ${sperre ? "gesperrt" : ""}" ${sperre ? "disabled" : attr} title="${esc(q.name)}${sperre ? " – " + sperre : ""}">
+      const kachel = (q, attr, sperre, alter) => `<button class="paar ${sperre ? "gesperrt" : ""}" data-rasse="${q.rasse}" ${sperre ? "disabled" : attr} title="${esc(q.name)}${sperre ? " – " + sperre : ""}">
           <span class="paar-bild">${kopfBild(q)}</span>
           <span class="paar-brett"><b>${esc(q.name)}</b><span>${rasseById(q.rasse).name}</span><span>${alter}${sperre ? ` · ${sperre}` : ""}</span>${!sperre && inzucht(p, q).length ? `<span class="inzucht-mark">⚠️ Inzucht</span>` : ""}</span></button>`;
       inhalt = `<p class="text" style="margin:0 0 4px">💞 <b>${esc(p.name)} verpaaren mit …</b> · Tragzeit 4 Jahreszeiten (ca. 11 Monate)</p>
@@ -3458,6 +3459,7 @@
       pferdAnsehen({ p: q, ort: herkunft, aktion: [`${tr.length ? "Trotzdem verpaaren" : "💞 Verpaaren"}${tx ? ` · ${fmt(tx)}` : ""}`, () => p.geschlecht === "Stute" ? verpaaren(p, q) : verpaaren(q, p)],
         extra: { warn, mark: tr.length ? gemeinsameNrs(p, q) : null, zeilen: herkunft === "Deckstation" ? [["Ausbildung", ausbildungsKlasse(ausbStand(q), alterJahre(q), q.werte.gang)], ["Decktaxe", `<b>${fmt(tx)}</b>`]] : [] } });
     };
+    if (deckModus) rasseSortieren(INFO, zeigeAkte);   // v455 (Dome): Deckanzeigen nach Kontinent sortierbar
     INFO.querySelectorAll("[data-deck]").forEach(b => b.onclick = () => partnerZeigen(window.__deckListe[+b.dataset.deck], "Deckstation"));
     INFO.querySelectorAll("[data-partner]").forEach(b => b.onclick = () => partnerZeigen(spiel.boxen[+b.dataset.partner].pferd, `eigene Zucht · Box ${+b.dataset.partner + 1}`));
     const abk = $("abgebenKnopf"); if (abk) abk.onclick = () => abgebenDialog(p, () => { zeigeStall(); zeigeTag(); });
@@ -3647,6 +3649,27 @@
   }
 
   // Rassen stehen jetzt als erster Reiter in der Enzyklopädie
+  // ---------- v455 (Dome): Rassen nach Kontinent sortieren (Enzyklopädie, Pferdemarkt, Deckanzeigen) – Umschalter „Alle / Nach Kontinent“, Kontinente A–Z ----------
+  const KONTINENT = { araber: "Asien", marwari: "Asien", tekke: "Asien", quarter: "Nordamerika", appaloosa: "Nordamerika", paint: "Nordamerika" };   // alle anderen Rassen: Europa (nach Herkunft)
+  const kontinentVon = id => KONTINENT[id] || "Europa";
+  const sortSegment = () => `<div class="segment sort-seg" data-sortseg><button data-sort="alle" class="${spiel.sortKont ? "" : "an"}">Alle</button><button data-sort="kont" class="${spiel.sortKont ? "an" : ""}">Nach Kontinent</button></div>`;
+  // Liste(n) mit Kacheln, die data-rasse tragen: Umschalter davor, bei „Nach Kontinent“ in Gruppen (Überschrift je Kontinent, Rassen A–Z darin) – die Knöpfe bleiben dieselben (Klick-Funktionen bleiben erhalten)
+  function rasseSortieren(root, neu) {
+    if (!root) return;
+    const listen = [...root.querySelectorAll(".paar-liste, .rassen, .markt-kacheln")].filter(l => l.querySelector(":scope > [data-rasse]") && !l.closest("[data-sortseg]"));
+    if (!listen.length) return;
+    if (!root.querySelector("[data-sortseg]")) listen[0].insertAdjacentHTML("beforebegin", sortSegment());
+    root.querySelectorAll("[data-sortseg] button").forEach(b => b.onclick = () => { spiel.sortKont = b.dataset.sort === "kont"; speichern(); neu(); });
+    if (!spiel.sortKont) return;
+    const name = c => (rasseById(c.dataset.rasse) || { name: "" }).name;
+    listen.forEach(l => { const gr = {};
+      [...l.children].forEach(c => { const k = kontinentVon(c.dataset.rasse); (gr[k] = gr[k] || []).push(c); });
+      const frag = document.createDocumentFragment();
+      Object.keys(gr).sort((x, y) => x.localeCompare(y, "de")).forEach(k => {
+        const h = document.createElement("h4"); h.className = "kont-kopf voll"; h.innerHTML = `${k} <small>${gr[k].length}</small>`; frag.appendChild(h);
+        const d = document.createElement("div"); d.className = l.className; gr[k].sort((x, y) => name(x).localeCompare(name(y), "de")).forEach(c => d.appendChild(c)); frag.appendChild(d); });
+      l.replaceWith(frag); });
+  }
   const rassenABC = () => RASSEN.slice().sort((a, b) => a.name.localeCompare(b.name, "de"));   // Dome (v324): Rassen nach Namen (ABC)
   function zeigeRassen() { enzyKat = "rassen"; zeigeEnzy(); }
 
@@ -8648,13 +8671,14 @@
         <div class="enz-tabs">${tabs.map(([id, t]) => `<button data-kat="${id}" class="${id === enzyKat ? "an" : ""}">${t}</button>`).join("")}</div>
         ${enzyKat === "vererbung" ? vererbungHTML() : enzyKat === "weitere" ? bznGruppiert(weitereDatenHTML() + vererbungHTML()) : enzyKat === "rassen" ? `<p class="hinweis" style="margin:4px 0 10px">Rasse antippen, um mehr über sie zu erfahren${spiel.admin ? " und (Adminmodus) ein Pferd einzustellen" : ""}.</p><div class="rassen">
           ${rassenABC().map(r => `
-            <button class="rasse" data-id="${r.id}">
+            <button class="rasse" data-id="${r.id}" data-rasse="${r.id}">
               <svg viewBox="0 0 ${VB.b} ${VB.h}"><line x1="0" x2="${VB.b}" y1="${VB.boden}" y2="${VB.boden}" stroke="#d8cbb6" stroke-width="2"/>${pferdInRahmen(r.id, r.farben[0], (r.h[0] + r.h[1]) / 2)}</svg>
               <b>${r.name}</b><span>${r.h[0]}–${r.h[1]} cm · ${r.herkunft}</span>
             </button>`).join("")}
         </div>` : `<div class="enz-grid">${kat.eintraege.map(e => `<div class="enz-karte">${enzyBild(kat, e)}<b>${e[0]}</b><p>${e[1]}</p></div>`).join("")}</div>`}
       </div>`;
     a.querySelectorAll(".rasse").forEach(b => b.onclick = () => zeigeDetail(b.dataset.id));
+    if (enzyKat === "rassen") rasseSortieren(a, zeigeEnzy);   // v455 (Dome): Rassen nach Kontinent sortierbar
     if (enzyKat === "weitere") bznBinden(a);
     a.classList.add("offen");
     $("zu").onclick = schliessen;
@@ -9228,7 +9252,7 @@
   // einheitliche Pferde-Kachel (wie bei der Deckstation): Kopf im Holzrahmen + Infobrett – antippen öffnet das Infofenster
   function pferdKachel(q, { zeilen = [], sperre = "", attr = "", ort = "", aktion = null, extra = null, rahmen = "" } = {}) {
     const an = attr || (sperre && !ort ? "disabled" : ansehen(q, ort, aktion, extra));
-    return `<button class="paar ${sperre ? "gesperrt" : ""} ${rahmen ? "rahmen-" + rahmen : ""}" ${an} title="${esc(q.name)}${sperre ? " – " + esc(sperre) : ""}">
+    return `<button class="paar ${sperre ? "gesperrt" : ""} ${rahmen ? "rahmen-" + rahmen : ""}" data-rasse="${q.rasse}" ${an} title="${esc(q.name)}${sperre ? " – " + esc(sperre) : ""}">
       <span class="paar-bild">${kopfBild(q)}</span>
       <span class="paar-brett"><b>${esc(q.name)}</b>${zeilen.map(z => `<span>${z}</span>`).join("")}${sperre ? `<span>${esc(sperre)}</span>` : ""}</span></button>`;
   }
@@ -9301,7 +9325,7 @@
         zeilen: [rasseById(a.pferd.rasse).name, `${a.pferd.geschlecht} · ${alterText(a.pferd)}`, `<b>${fmt(a.gebot)}</b> · ${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"}`, a.fuehrt === "du" ? `✅ du führst · max ${fmt(a.duMax || a.gebot)}` : a.vorbei ? "beendet" : a.duGeboten ? "⚠️ überboten" : ""],
         aktion: a.vorbei ? null : [a.fuehrt === "du" ? "Höchstgebot erhöhen" : `Bieten · ab ${fmt(a.fuehrt ? a.gebot + bietSchritt(a) : a.gebot)}`, () => bieten(a)], extra: { zeilen: [["Höchstgebot", `<b>${fmt(a.gebot)}</b>`], ["Gebote", a.gebote]] } })).join("")}</div></div>`; }
     else if (marktBereich === "gestuet") {
-      if (!gestuetWahl) html = kopf("🏰 Gestüte", "Reinrassige Pferde mit vollständigen Papieren und Fellfarben-Test. Wähle ein Gestüt.") + `<div class="kacheln quadrat markt-kacheln">${rassenABC().map(r => `<button class="kachel klickbar" data-gest="${r.id}"><span class="ico">🏰</span><b>${GESTUET_NAMEN[r.id]}</b><small>${r.name}</small></button>`).join("")}</div></div>`;
+      if (!gestuetWahl) html = kopf("🏰 Gestüte", "Reinrassige Pferde mit vollständigen Papieren und Fellfarben-Test. Wähle ein Gestüt.") + `<div class="kacheln quadrat markt-kacheln">${rassenABC().map(r => `<button class="kachel klickbar" data-gest="${r.id}" data-rasse="${r.id}"><span class="ico">🏰</span><b>${GESTUET_NAMEN[r.id]}</b><small>${r.name}</small></button>`).join("")}</div></div>`;
       else { const gp = gestuetPferde(gestuetWahl).filter(h => !(spiel.marktGekauft || []).includes(h.id));
         html = `<button class="zurueck-s voll" id="mkGestuete" style="align-self:flex-start;justify-self:start">‹ Gestüte</button>` + kopf(`🏰 ${GESTUET_NAMEN[gestuetWahl]}`, `${rasseById(gestuetWahl).name} · reinrassig, mit Papieren und Fellfarben-Test`).replace(/<button class="zurueck-s voll" id="mkUebersicht"[^>]*>[^<]*<\/button>/, "")
           + (gp.length ? `<div class="paar-liste">${gp.map(h => pferdKachel(h, { ort: GESTUET_NAMEN[gestuetWahl], zeilen: [`${h.geschlecht} · ${alterText(h)}`, `<b>${fmt(h.preis)}</b>`],
@@ -9321,6 +9345,7 @@
             [[`🩺 ${h.akuErg ? "AKU-Ergebnis" : "Ankaufsuntersuchung"}`, () => akuDialog(h, "Tierschutz", () => { if (kaufPruefen(h, h.preis)) pferdEinstellen(h, h.preis, "Schutzgebühr", p => { p.pflege.gesundheit = h.notGesundheit; p.schutzBis = jzJetzt() + 4; if (p.fohlenBeiFuss) p.fohlenBeiFuss.schutzBis = p.schutzBis; delete p.notGesundheit; }); }, () => zeigeMarkt()), "zweit"], ["Aufnehmen", () => pferdEinstellen(h, h.preis, "Schutzgebühr", p => { p.pflege.gesundheit = h.notGesundheit; p.schutzBis = jzJetzt() + 4; if (p.fohlenBeiFuss) p.fohlenBeiFuss.schutzBis = p.schutzBis; delete p.notGesundheit; })], ["Abbrechen", null, "zweit"]]); }],
           extra: { zeilen: [["Gesundheit", `${h.notGesundheit} %`], ["Schutzgebühr", `<b>${fmt(h.preis)}</b>`]] } })).join("")}</div>` : `<p style="margin:6px 0 0">Gerade keine Notfallpferde.</p>`}</div>`; }
     zeigeNeben("🏷️ Pferdemarkt", html);
+    rasseSortieren($("nebenSchirm"), zeigeMarkt);   // v455 (Dome): alle Kaufrubriken nach Kontinent sortierbar
     $("nebenSchirm").querySelectorAll("[data-mb]").forEach(b => b.onclick = () => { marktBereich = b.dataset.mb; zeigeMarkt(); $("nebenSchirm").scrollTop = 0; });
     if ($("mkUebersicht")) $("mkUebersicht").onclick = () => { marktBereich = null; gestuetWahl = null; zeigeMarkt(); };
     if ($("mkGestuete")) $("mkGestuete").onclick = () => { gestuetWahl = null; zeigeMarkt(); };
@@ -11363,6 +11388,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Leopard-Komplex (v441, PLAN-SCHECKUNG.md Schritt 3):</b> Lp mit PATN1 = Tigerschecke (Lp/Lp: Wenigpunkt), ohne PATN1 = Schabracke mit Punkten (Lp/Lp: ohne Punkte) – Größe nach Muster-Ausprägung, unter ${String(LP_OHNE).replace(".", ",")} gar keine Schabracke (nur Merkmale/Lackschimmel). Alle Lp-Pferde: gefleckte rosa Haut an Maul und Augen, weiße Lederhaut im Augenwinkel, gestreifte Hufe (sichtbar, keine versteckte Genetik). Lackschimmel (Varnish Roan): Veranlagung <code>ex.lack</code> (vererbt) × Alter (voll nach ${LP_LACK_JAHRE} Jahren, Lp/Lp ×1,2), dunkel bleiben Bug, Ellbogen, Hüfthöcker, Knie, Widerrist; ab 0,5 heißt das Pferd „Lackschimmel“. Snowflake ${LP_SNOW * 100} % (Flöckchen: 4 + 3 je Lebensjahr, höchstens 40) und Frost ${LP_FROST * 100} % (ab 1 Jahr) – Zufall je Pferd, nicht vererbt. Bei ganz getigerten Pferden (Tiger, Wenigpunkt) ist der Körper ohnehin weiß.</p>
       <p><b>Neue Rassen (v442):</b> <b>Appaloosa</b> (142–160 cm, Lp ${RASSE_GENE.appaloosa.Lp * 100} %, PATN1 ${RASSE_GENE.appaloosa.Patn * 100} %, Veredler Quarter/Vollblut/Araber, Hufe ${HUF_RASSE.appaloosa}, dünne Mähne) · <b>Knabstrupper</b> (145–168 cm, Lp ${RASSE_GENE.knabstrupper.Lp * 100} %, PATN1 ${RASSE_GENE.knabstrupper.Patn * 100} %, Veredler Vollblut/Trakehner/Hannoveraner, Hufe ${HUF_RASSE.knabstrupper}) · <b>Paint Horse</b> (142–163 cm wie Quarter, Tobiano ${RASSE_GENE.paint.To * 100} %, Overo ${RASSE_GENE.paint.O * 100} %, Sabino ${RASSE_GENE.paint.Sb * 100} %, Splash ${RASSE_GENE.paint.Sw * 100} %, BR1, Veredler Quarter/Vollblut, mehr Weiß: Weiß-Anlage +${WEISS_RASSE.paint}, Muster +${MUSTER_RASSE.paint}). Erbkrankheiten: HYPP, HERDA, PSSM1 bei Paint/Appaloosa; neu <b>GBED</b> (rezessiv, tödlich im 1. Jahr) – Quarter ${ERBKRANK.gbed.rassen.quarter * 100} %, Paint ${ERBKRANK.gbed.rassen.paint * 100} %, Appaloosa ${ERBKRANK.gbed.rassen.appaloosa * 100} % Träger. Neue Veranlagung <b>Mondblindheit</b> (ERU): Appaloosa ${VERANLAGUNG.eru.rassen.appaloosa * 100} %, Knabstrupper ${VERANLAGUNG.eru.rassen.knabstrupper * 100} %, sonst ${VERANLAGUNG.eru.sonst * 100} %; Risiko ab 2 Jahren (0,3 + 6 × Veranlagung²) × (1 + 0,5 je Lp-Allel), Sommer ×1,3. Behandlung Kortison/Schmerzmittel/abgedunkelte Box, Glaskörper-OP ${OP_KLINIK.vitrektomie.preis} € (Erfolg 85 %). Westernturniere wie beim Quarter.</p>
       <p><b>Scheckungs-Auswahl und Zoom (v451):</b> Rassenansicht (für alle): Spalte „Scheckung“ links neben den Fellfarben, nur Muster, die bei der Rasse vorkommen (Gene nach Rassen-Häufigkeit, Rabicano/Bend-Or nach Tabelle, Birdcatcher und dunkler Brindle bei allen); ein Klick baut die Gene aus Grundfarbe + Muster zusammen (Ausprägung wählbar). Bend-Or nur bei Füchsen, weißer Brindle nur bei Stuten. Zoomen (Zwei-Finger bzw. Mausrad, bis ${ZOOM_MAX}-fach, Doppeltipp = ranzoomen/zurück) in der Rassenansicht und bei den Steckbrief-Bildern (Kauf, Deckanzeigen, Lese-Steckbrief) – nicht im Stall.</p>
+      <p><b>Sortierung nach Kontinent (v455):</b> Umschalter „Alle / Nach Kontinent“ (gilt überall, gemerkt in <code>spiel.sortKont</code>) in Enzyklopädie – Rassen, Pferdemarkt (Händler, Privat, Auktion, Fohlenauktion, Gestüte, Verkaufsrennen, Notfallpferde) und Deckanzeigen. Kontinente A–Z, Rassen darin A–Z. Zuordnung nach Herkunft: Asien – Araber, Marwari, Achal-Tekkiner · Nordamerika – Quarter Horse, Appaloosa, Paint Horse · Europa – alle anderen (<code>KONTINENT</code>, neue Rassen dort eintragen).</p>
       <p><b>Achal-Tekkiner (v443/v446):</b> Metallglanz als Veranlagung <code>ex.glanz</code> (vererbt): unter ${String(GLANZ_AB).replace(".", ",")} keiner (ca. 15 %), sonst Stärke 0,35 + 0,65 × Anlage, mal Tekkiner-Anteil. Cream-/Falbfarben heißen beim Tekkiner „Gold“ (Goldfalbe, Gold-Palomino), Isabell glänzt silbrig. Schimmel verlieren die Maulfärbung, sobald sie sichtbar grau werden. Ab 30 % Ausschimmelung bekommt der Schimmel Domes Graumaul (Ebene „graumaul“) und einen dunklen Schatten um die Augen (v447/v449).</p>
       <p><b>Neue Rassen (v445):</b> <b>Noriker</b> (155–165 cm, Kaltblut, leichtfuttrig, Tiger Lp ${RASSE_GENE.noriker.Lp * 100} %, Roan ${RASSE_GENE.noriker.Rn * 100} % = „Mohrenkopf“, Tobiano ${RASSE_GENE.noriker.To * 100} %, PSSM1 ${ERBKRANK.pssm.rassen.noriker * 100} %, Lymphödem-Veranlagung ${VERANLAGUNG.lymph.rassen.noriker * 100} %, Mondblindheit ${VERANLAGUNG.eru.rassen.noriker * 100} %, Hufe ${HUF_RASSE.noriker}; Hengste tragen den Namen ihrer Linie: Vulkan, Nero, Diamant, Elmar, Schaunitz) · <b>Lewitzer</b> (130–148 cm, Schecken-Reitpony, Tobiano ${RASSE_GENE.lewitzer.To * 100} %, Veredler Welsh Cob/Araber/Trakehner, Hufe ${HUF_RASSE.lewitzer}) · <b>Barock Pinto</b> (150–168 cm, Friesentyp mit Tobiano ${RASSE_GENE.barockpinto.To * 100} %, Veredler Friese, Tinker, Paint (Pinto-Partner), Friesen-Erbkrankheiten Zwergwuchs/Wasserkopf je ${ERBKRANK.zwerg_f.rassen.barockpinto * 100} %, Sommerekzem ${VERANLAGUNG.ekzem.rassen.barockpinto * 100} %, Hufe ${HUF_RASSE.barockpinto}).</p>
       <p><b>Hellfalbe</b> (v433): Braunfalbe mit Farbton-Veranlagung <code>ex.ton</code> unter 0,25 (vererbt, wie Hellbrauner) heißt „Hellfalbe“ – heller Körper, gleiche Gene.</p>

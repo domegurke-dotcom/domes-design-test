@@ -262,7 +262,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const DW = opt.dw == null ? null : opt.dw;   // v440 Dominant White (Gen W): 0 wenig · 1 typisch · 2 viel · 3 ganz weiß
   const ganzWeiss = fastWeiss || DW >= 2;
   const MG = opt.glanz != null ? opt.glanz : (k.metallic ? 1 : 0);   // v446 (Dome): Metallglanz 0–1 – nicht jeder Achal-Tekkiner glänzt gleich stark, Mischlinge anteilig
-  const gold = MG > .3 && /palomino|buckskin|falbe/i.test(farbId);   // v443: Achal-Tekkiner „Gold“ – satteres Goldgelb, dazu goldener Glanz (unten)
+  const gold = MG > .3 && /palomino|buckskin|falbe/i.test(farbId) && !/mausfalbe|weissfalbe/.test(farbId);   // v479: Mausfalbe (schwarzbasiert) und Weißfalbe nicht golden   // v443: Achal-Tekkiner „Gold“ – satteres Goldgelb, dazu goldener Glanz (unten)
   const body = gold ? mix(C.body, "#e8a92a", .5 * MG) : MG > .3 && /isabell/.test(farbId) ? mix(C.body, "#dfe3ea", .35 * MG) : C.body, mane = DW === 3 ? "#efebe2" : C.mane, head = DW === 3 ? "#f4f1ea" : C.head || body;
   const pts = C.points || null;
   const hoof = C.pattern === "tobiano" || ganzWeiss ? "#b8a88f" : (C.hoof || "#3b3531");

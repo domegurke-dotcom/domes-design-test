@@ -33,6 +33,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - **Futter-Etappe** (Dome 12.10.2026): **fertig** (v308 Teil 1, v309 Teil 2).
 - `PLAN-KOEPFE.md` – **neue Pferdeköpfe** aus Domes Datei `pferd kopf.svg`: **Etappen 1–3 fertig** (v424–v433: Kopfformen, Ohren, Wimpern, Kopf-/Beinabzeichen, Maulfärbung, Augen, Splashed White, Schöpfe mit Aalstrich, Admin-Auswahl). SVG (1,1 MB) nur per Skript auswerten (`werkzeuge/kopf-export.js`).
 - `BEI-INKSCAPE-BEARBEITEN.md` – was Dome in der SVG noch zeichnen/ändern soll (Laterne-Verlauf, Milchmaul, Krötenmaul, dunkles Maul …). Neue Fehler in Domes Zeichnungen dort eintragen.
+- `PLAN-SCHECKUNG.md` – Scheckmuster in 3 Stufen (Schritt 1 fertig, v439) und neue Muster (Schritt 2 offen – für Claude Pro).
 - `PLAN-RASSEN.md` – Veredler-Rassen: **fertig** (v316), dazu Domes „Danach“-Wünsche (v317). Domes Abnahme erledigt (18.10.2026).
 - `PROJEKT-CHAT-THEMEN.md` – große Themen, die Dome im Projekt-Chat plant (Ausbildungsstall je Disziplin, Deckhengst, Merkmale-Karte, Reiter-Erfahrung, zwei Fohlen je Box/Zwillinge …) – nicht eigenmächtig umsetzen.
 - `OFFENE-FRAGEN.md` – Fragen, die Claude in Domes Abwesenheit mit der empfohlenen Lösung entschieden hat; mit Dome durchgehen und danach anpassen. Stand 18.10.2026: von Dome durchgesehen und abgehakt, offen nur noch die Köpfe-Punkte (Splash-Körper, Merkpunkte).
@@ -50,7 +51,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (3 Stellen in index.html: pferd.js, boxstufen.js, kopfneu.js) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **438**.
+- Letzte Version bei Aktualisierung dieser Datei: **439**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName` ausfüllen → `#chLos` → Kreditbrief schließen (`#dlgKnoepfe button`) → `[data-immo="pension"]` → `#kaufName` → `#dlgKnoepfe button:first-child`. Admin: `spiel.admin = true`.
@@ -63,7 +64,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - **Startreihenfolge (v307):** Stall/Tag werden erst ganz am Skriptende gezeichnet (vor `zeigeStart`, mit try/catch). Keinen Code einbauen, der beim Laden mitten im Skript zeichnet – sonst hängt der Start (TDZ). Sicherheitsnetz: `window.spielGestartet` + Notfall-Fenster.
 - Abnahmetest (statt Domes eigenem Test, Dome 11.10.2026): `NODE_PATH=/opt/node22/lib/node_modules node tests/etappen-test.js` spielt die Test-Anleitungen (F1–F5, H1–H7) in allen drei Ansichten nach – nach jeder Etappe laufen lassen, um die neue Etappe ergänzen und die Etappe im Plan als „Abnahmetest erledigt“ abhaken.
 
-## Wichtige Spielsysteme (Stand v438)
+## Wichtige Spielsysteme (Stand v439)
 - **Zeit:** Jahreszeiten (Frühling, Sommer, Herbst, Winter), `tpj()` Tage pro Jahreszeit 4/7/10 (Standard 7, alte Spielstände auf 7 umgestellt). Kalender-Anker `spiel.kal` = {tag, i}, damit ein Tempowechsel das Datum nicht verschiebt. Nur das Sozialverhalten wird umgerechnet (`proTag`, Bezug 7); alles andere gilt pro Tag/Nacht. `naechsteNacht()` ist der Tageswechsel; bei `datum().t === 1` laufen die Jahreszeit-Funktionen.
 - **Zucht:** Tragzeit 4 Jahreszeiten. Deckstation (Gestütshengste) nur Frühling/Sommer, eigene Hengste immer. Zuchtalter Stuten bis 20, Hengste bis 25. Befunde sperren die Zucht (`zuchtSperre`).
 - **Genetik:** E, A (A>At>a), F, Sty, Cr, D, Z, Rn, To, O, Lp, Patn, G, Dm (DMRT3). Versteckte Veranlagungen `ex` (grauTempo, apfel, fliegen, fliegenAb, maehne, ton, ow, sonne, kurve). Gefährliche Gene in `GEFAHR_GENE` (O, Lp) – Warnung nur, wenn mind. ein Partner positiv getestet ist.
@@ -146,9 +147,10 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
   - Fjord: Farbschläge mit Anteilen (Gene + `farbAnteil`, `marktFarbe`), Hellfalbe (`falbTon`, `ex.ton` < 0,25), Weiß-Standard (`fjordWeissFehler`: Fohlenschau −0,5, Marktwert −5 %). Neue Farbe Dunkelfuchs ohne Flachsmähne (`dfuchs`).
   - Admin „Gene selbst wählen“ (`glKopfZeilen`): Kopfform + Ausprägung, Ohrstellung (Vorschau), Abzeichen, Schnippe, Maul, Augen, jedes Bein, Zebrastreifen, Farbton – nur was bei der Rasse vorkommt (`rasseZeichen`, `KOPFFORM_RASSE`). bzn: „Kopfabzeichen, Maulfärbung, Augen (v426)“ und „Beinabzeichen, Zebrastreifen, Ohren, Fjord (v430)“.
 - **Kopfgröße (v438, Dome):** echte Proportionen je Rasse in `KOPF_REAL` (Kopflänge/Widerristhöhe, z. B. Warmblut 0,37, Araber 0,35, Shetty 0,45) × `KOPF_STIL` 1,2 = `k.head` (wird beim Laden gesetzt); Domes neue Köpfe zusätzlich × `KOPF_GROESSE` 1,15 (sonst ca. 15 % kleiner als die alten). **Bei künftigen Änderungen am Körper nur diese Werte anpassen, nicht `k.head` einzeln; neue Rassen in `KOPF_REAL` eintragen.**
+- **Scheckmuster (v439, `PLAN-SCHECKUNG.md`):** Schritt 1 fertig – Muster-Ausprägung `ex.muster` (versteckt, vererbt; wenig/typisch/viel 30/50/20 %, `MUSTER_RASSE` Tinker/Clydesdale öfter viel, `musterStufeVon`) → `opt.musterStufe` in `zeichnePferd` für Tobiano, Overo, Tovero (viel = Medicine Hat), Splash, Sabino (viel = Max-Sabino), Tiger/Schabracke, Roan (`musterStufeFarbe`); bei viel Weiß Mähne/Schweif teilweise weiß; Beinabzeichen mit unruhiger, leicht schräger Oberkante. Admin „Muster-Ausprägung“. **Schritt 2 (neue Muster Rabicano, Birdcatcher, Bend-Or, Brindle, Dominant White) ist offen – für Claude Pro, Details im Plan.**
 - **Aufräumen v435:** Code mit ESLint geprüft (keine echten Fehler), unbenutzte Funktionen/Variablen entfernt, `spiel.marktGekauft` auf 200 Einträge begrenzt (`marktGekauftMerken`), versehentlich hochgeladene Test-Screenshots gelöscht. Prüfskript: Skriptblöcke aus index.html in Dateien schreiben und `eslint` (liegt in /opt/node22/lib/node_modules) mit no-unused-vars/no-dupe-keys/no-unreachable laufen lassen. **Test-Screenshots nie im Projektordner speichern** (immer im Scratchpad). Kötenbehang (`behang` in pferd.js) ist vorerst ausgeblendet, der Code bleibt – kommt später (Dome).
 - **v436:** Kopfleiste beim Drehen des Handys: `--kopfH` wird sofort nachgezogen (ResizeObserver auf `header` + resize), vorher blitzte im Vollbild bis zu 0,5 s der Stall zwischen Kopfleiste und Fenster durch. **v437:** Viewport `minimum-scale=1` und `html, body { overflow-x: clip }` – verhindert, dass Chrome (Android) nach dem Drehen herauszoomt (Menüs breiter als die Kopfleiste, Dome-Screenshot ohne Vollbild).
-- **Offen (Stand v433):** Domes Zeichnungen laut `BEI-INKSCAPE-BEARBEITEN.md`. Stute bleibt bei voller Abfohlbox in ihrer Box (gewollt). Ausbilder-Nachholen per Test geprüft (v433, funktioniert).
+- **Offen (Stand v439):** Scheckmuster Schritt 2 (`PLAN-SCHECKUNG.md`). Domes Zeichnungen laut `BEI-INKSCAPE-BEARBEITEN.md`. Stute bleibt bei voller Abfohlbox in ihrer Box (gewollt). Ausbilder-Nachholen per Test geprüft (v433, funktioniert).
 - **Sonstiges v273–v302:** bzn nach Themen gruppiert als Aufklapp-Bereiche (`bznGruppiert`, Vererbung dort integriert, eigener Reiter entfernt), Ansehen-Tabelle. Tagwechsel-Animation über allen Ansichten (`#nacht` z-index 48). Befund-Verlauf speichert die stärkste Stufe (`b.gradMax`). Wurmkur/Schmerzmittel nutzen dieselben Gewichtsstufen `DOSIS`.
 
 ## Zusammenarbeit

@@ -14,31 +14,25 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Team · **An:** Claude Pro · **Stand:** v435, 18.10.2026
+**Von:** Claude Team · **An:** Claude Pro · **Stand:** v439, 18.10.2026
 
-Hallo Claude Pro! Du hattest Etappe 1 der neuen Köpfe gemacht (v424/v425). Ich habe übernommen und v426–v434 gebaut. Die CLAUDE.md ist aktuell (Stand v434) – **neu: Claude pflegt die CLAUDE.md jetzt selbst** (Dome, 18.10.), die alte Regel „darf Claude nicht ändern“ ist ersetzt.
+Hallo Claude Pro! Seit v424/v425 (deine Köpfe-Etappe 1) habe ich v426–v439 gebaut. CLAUDE.md ist aktuell (Stand v439) – **Claude pflegt die CLAUDE.md jetzt selbst** (Dome, 18.10.). Dome hat noch ca. 15 % Volumen bei mir übrig gehabt, darum geht es bei dir weiter.
 
-### Was ich gemacht habe
-- **v426 – Köpfe Etappe 2:** Domes Kopfabzeichen (Flocke, Stern, Keilstern, Schnippe, schmale Blesse, Blesse, breite Blesse, Laterne) und Maulfärbung aus `pferd kopf.svg` exportiert (je Kopfform, Verläufe in `KOPF_NEU.defs`, `kopfDefs`). Versteckte, vererbte Weiß-Anlage `ex.weiss` (`ABZ_STUFEN`, `WEISS_RASSE`, `kopfZeichen`), Pangaré `ex.pangare`, blaue Augen (`AUGE_BLAU`), neues Gen **Splashed White** `Sw` (Muster `sw_`). Steckbrief zeigt Abzeichen/Augen.
-- **v427:** Hörtest (BAER, Labor 150 €), taube Splash-Pferde erschrecken beim Putzen bis zum Test (`TAUB_SCHRECK`). Fellfarben-Test zeigt Sabino/Splash (vorher Fehler bei `deut.Sb`). „Gene selbst wählen“ (Admin) mit Abzeichen, Schnippe, Maul, Augen.
-- **v428 – Maul wie in echt:** Pangaré hellt nur rotes Pigment auf → Mehlmaul bei Braunen/Füchsen/Falben, bei Rappen/Mausfalben unsichtbar (aber vererbt). Kupfermaul nur Schwarzbraune. „graumaul“ heißt im Spiel **dunkles Maul** (Mausfalben immer, Braunfalben ohne Pangaré 70 %). Maul ist kein Abzeichen → eigene Zeile im Steckbrief.
-- **v429:** Lücke zwischen Genick, Kopfhinterkante und Mähne geschlossen (`halsKopf` in pferd.js).
-- **v430:** Ohrgröße je Rasse (`OHR_RASSE`), **Beinabzeichen je Bein einzeln vererbt** (`ex.bvl/bvr/bhl/bhr`, 7 Stufen weißer Ballen bis hochweißer Fuß, heller Huf ab weißer Fessel), **Zebrastreifen/Schulterstreifen** bei Falben (`ex.zebra`). Fjord: Farbschläge mit Anteilen (Braunfalbe ~90 %), Weiß-Standard (`fjordWeissFehler`: Fohlenschau −0,5, Marktwert −5 %). Neue Farbe **Dunkelfuchs** ohne Flachsmähne (`dfuchs`).
-- **v431:** Admin-Auswahl nur mit Varianten, die bei der Rasse vorkommen (`rasseZeichen`). Friese/Fjord/Fell/Dales mit weniger Weiß.
-- **v432/v433:** Braunfalbe/**Hellfalbe** (`falbTon`, `ex.ton` < 0,25). Etappe 3: **Aalstrich im Schopf** bei allen Falben. Admin: Kopfform + Ausprägung, Ohrstellung (Vorschau). Abschluss-Screenshots in allen drei Ansichten gemacht.
-- **v434:** Form-Varianten (von Dome ausgesucht): schmale Blesse „geschwungen“, Blesse „unregelmäßiger Rand“ – je 50 %, fest je Pferd, alle Kopfformen (`ABZ_VARIANTE`).
-- **v435 – Aufräumen:** ESLint-Prüfung, unbenutzte Funktionen/Variablen entfernt, `spiel.marktGekauft` begrenzt, Test-Screenshots gelöscht (Test-Bilder immer ins Scratchpad, nie in den Projektordner).
-- Abgehakt: Domes Abnahme H7-Rest/H8/Veredler, `OFFENE-FRAGEN.md` „Noch zu bauen“, Ausbilder-Nachholen per Test geprüft (funktioniert).
+### Deine Aufgabe: Scheckmuster Schritt 2
+Alles steht in **`PLAN-SCHECKUNG.md`** (Abschnitt „Schritt 2“): neue Muster Rabicano, Birdcatcher-Tupfen, Bend-Or-Flecken, Brindle und Dominant White (neues Gen W, W/W nicht lebensfähig) – mit Häufigkeiten, Vererbung und Zeichnung, von Dome freigegeben. Dome mag keine harten, geraden Kanten (weiche, unregelmäßige Ränder). Vor dem Einbau hat Dome die Entwürfe als Bilder gesehen – die Zeichnung soll so aussehen wie dort beschrieben. Bei Unklarheiten Dome fragen.
 
-### Neue Dateien
-- `BEI-INKSCAPE-BEARBEITEN.md` – was Dome in der SVG noch ändern/zeichnen soll (Laterne: **Form und Verlauf** decken die Nasenmitte nicht ab, Milchmaul, Krötenmaul, dunkles Maul größer …). Neue Fehler in Domes Zeichnungen dort eintragen.
-- `UEBERGABE.md` – diese Datei.
+### Was ich gemacht habe (Kurzfassung, Details in CLAUDE.md)
+- v426–v434: Köpfe Etappe 2+3 (Kopf-/Beinabzeichen mit Vererbung, Maulfärbung, Augen, Splashed White mit Hörtest, Zebrastreifen, Ohrgröße je Rasse, Fjord-Farbschläge, Dunkelfuchs, Hellfalbe, Aalstrich im Schopf, Admin-Auswahl, Abzeichen-Varianten).
+- v435: Aufräumen (ESLint, ungenutzter Code, Test-Screenshots gelöscht).
+- v436/v437: Kopfleiste beim Drehen des Handys (kein Durchblitzen, kein Herauszoomen in Chrome/Firefox Android).
+- v438: **Kopfgröße wie in echt** je Rasse (`KOPF_REAL` × `KOPF_STIL` 1,2, neue Köpfe × `KOPF_GROESSE` 1,15) – bei Körper-Änderungen nur diese Werte anpassen.
+- v439: **Scheckmuster Schritt 1** – 3 Stufen (`ex.muster`, `opt.musterStufe`) für alle vorhandenen Muster, unruhige Beinabzeichen-Ränder.
 
 ### Offen
-- Domes Zeichnungen laut `BEI-INKSCAPE-BEARBEITEN.md` – nach dem Hochladen `NODE_PATH=/opt/node22/lib/node_modules node werkzeuge/kopf-export.js` laufen lassen und einbauen.
-- Sonst nichts offen.
+- Scheckmuster Schritt 2 (s. o.).
+- Domes Zeichnungen laut `BEI-INKSCAPE-BEARBEITEN.md` (Laterne: Form + Verlauf, Milchmaul, Krötenmaul, dunkles Maul größer) – nach dem Hochladen `NODE_PATH=/opt/node22/lib/node_modules node werkzeuge/kopf-export.js`.
 
 ### Worauf achten
-- `//`-Kommentar nie mitten in einer Zeile (ist mir in v430 passiert – Syntaxfehler, sofort bemerkt).
-- Neue `ex`-Werte immer in `EX_GRENZEN`/`EX_NAME` eintragen und in `exVon` für alte Spielstände auffüllen.
-- Dome mag kurze Antworten, realistische Regeln („nur wenn es real so ist“) und will bei Unstimmigkeiten gefragt werden.
+- `//`-Kommentar nie mitten in einer Zeile. Test-Screenshots nie im Projektordner speichern (Scratchpad).
+- Neue `ex`-Werte in `EX_GRENZEN`/`EX_NAME` und in `exVon` für alte Spielstände auffüllen.
+- Dome: kurze Antworten, realistisch („nur wenn es real so ist“), erst Bilder zeigen, dann einbauen; bei Unstimmigkeiten fragen.

@@ -8,10 +8,12 @@ Mit Dome abgestimmt am 18.10.2026 (Entwürfe als Bilder gezeigt und freigegeben)
 - Roan bleibt die heutige Zeichnung – nur in 3 Stufen (wenig: dunkler, Grundfarbe scheint durch · typisch: wie bisher · viel: sehr hell). Kopf und Beine bleiben beim Roan dunkel.
 - „Blesi“ (Domes Vorlage) ist isländisch für Blesse – kein eigenes Muster.
 
-## Schritt 1 – drei Stufen für die vorhandenen Muster (Claude Team, v439)
+## Schritt 1 – drei Stufen für die vorhandenen Muster (Claude Team, v439) – ✅ fertig
 - Versteckte, vererbte Veranlagung `ex.muster` (0–1) = Muster-Ausprägung: wenig < 0,3 · typisch bis 0,8 · viel ab 0,8 (Marktpferde 30 / 50 / 20 %). Rassen-Verschiebung (Logit) `MUSTER_RASSE`: Tinker +0,8, Clydesdale +0,8.
 - Gilt für Tobiano, Overo, Tovero (viel = „Medicine Hat“), Splashed White, Sabino (viel = „Max-Sabino“), Roan, Tiger (Schabracke klein/groß, Punkte locker/dicht).
 - Admin „Gene selbst wählen“: Zeile „Muster-Ausprägung“ (nur bei Mustern).
+- Umsetzung: `index.html` – `ex.muster` in `EX_GRENZEN`/`exVon`, `MUSTER_STUFEN` [0,3 / 0,8], `musterZufall`, `musterStufeVon`, `kopfOpt` gibt `musterStufe` weiter, bzn-Eintrag „Muster-Ausprägung (v439)“. `pferd.js` – `opt.musterStufe` (0/1/2, Standard 1) skaliert die Flecken im Musterblock von `zeichnePferd` (Tobiano/Overo/Tovero/Sabino/Splash/Leopard/Blanket), `musterStufeFarbe` für Roan (nicht beim Ausgrauen, `roanDeck`), `viel` → Mähne/Schweif heller. Beinabzeichen: `beinWeiss` mit unruhigem Rand.
+- Mögliche Verbesserung: bei dunkler Mähne wirkt „teilweise weiß“ eher grau – echte zweifarbige Strähnen wären schöner.
 
 ## Schritt 2 – neue Muster (für Claude Pro)
 Entwürfe als Overlay im Körper wie in Schritt 1, Einbau in `pferd.js` (Musterzeichnung) und `index.html` (Genetik/Vererbung/Steckbrief/bzn/Admin):

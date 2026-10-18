@@ -939,7 +939,7 @@
 <div class="schirm" id="nebenSchirm" role="dialog"></div>
 <button id="postIconRot" hidden aria-label="Neue Briefe von deinen anderen Höfen"><svg viewBox="0 0 40 30" aria-hidden="true"><rect x="1.5" y="3" width="37" height="25" rx="3" fill="#e0524a" stroke="#7a1d18" stroke-width="2"/><path d="M2.5,5 L20,18 L37.5,5" fill="none" stroke="#7a1d18" stroke-width="2" stroke-linejoin="round"/><path d="M2.5,27 L15,15 M37.5,27 L25,15" stroke="#a8322b" stroke-width="1.5"/></svg><span class="anz"></span></button>
 <button id="postIcon" hidden aria-label="Neue Briefe im Postfach"><svg viewBox="0 0 40 30" aria-hidden="true"><rect x="1.5" y="3" width="37" height="25" rx="3" fill="#ffd84a" stroke="#8a6512" stroke-width="2"/><path d="M2.5,5 L20,18 L37.5,5" fill="none" stroke="#8a6512" stroke-width="2" stroke-linejoin="round"/><path d="M2.5,27 L15,15 M37.5,27 L25,15" stroke="#c49a2a" stroke-width="1.5"/></svg><span class="anz"></span></button>
-<div id="genLabor" hidden role="dialog" aria-modal="true"><div class="gl-kopf"><b id="glTitel">🛠️ Gene selbst wählen</b><span><button class="knopf zweit" id="glZufall">🎲 Zufall</button> <button class="knopf" id="glFertig">Fertig</button></span></div><div class="gl-bild"><div id="glBild" class="zoombar"></div><p class="gl-ergebnis" id="glErgebnis"></p><label class="gl-alter">Alter <input type="range" id="glAlter" min="0" max="25"> <span id="glAlterW"></span></label><div class="gl-saison" id="glSaison"></div></div><div class="gl-steuer" id="glSteuer"></div></div>
+<div id="genLabor" hidden role="dialog" aria-modal="true"><div class="gl-kopf"><b id="glTitel">🛠️ Gene selbst wählen</b><span><button class="knopf zweit" id="glZufall">🎲 Zufall</button> <button class="knopf" id="glFertig">Fertig</button></span></div><div class="gl-bild"><div id="glBild" class="zoombar"></div><p class="gl-ergebnis" id="glErgebnis"></p><label class="gl-alter">Alter <input type="range" id="glAlter" min="0" max="27"> <span id="glAlterW"></span></label><div class="gl-saison" id="glSaison"></div></div><div class="gl-steuer" id="glSteuer"></div></div>
 <div id="lese" hidden role="dialog" aria-modal="true"><div class="lese-innen"><div class="lese-kopf"><b id="leseTitel"></b><button class="knopf zweit" id="leseZu">✕ Schließen</button></div><div class="lese-bild" id="leseBild"></div><div id="leseInfo"></div></div></div>
 <div id="dlg" hidden role="dialog" aria-modal="true"><div class="dlg-karte"><div id="dlgInhalt"></div><div class="dlg-knoepfe" id="dlgKnoepfe"></div></div></div>
 <div id="nacht" aria-live="polite"><div class="gross" id="nachtSymbol">🌙</div><div class="klein" id="nachtText">Nacht …</div></div>
@@ -949,7 +949,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "466";
+  const SPIEL_VERSION = "467";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -957,9 +957,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=466"></script>
-<script src="boxstufen.js?v=466"></script>
-<script src="kopfneu.js?v=466"></script>
+<script src="pferd.js?v=467"></script>
+<script src="boxstufen.js?v=467"></script>
+<script src="kopfneu.js?v=467"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3826,6 +3826,11 @@
   }
 
   let wahl = null;
+  // v467 (Dome): Alter in der Rassenansicht gestaffelt – 1 Tag, ½, 1, 1½, 2, 3, 4 … 25 Jahre
+  const ALTER_STUFEN = [0, .5, 1, 1.5, ...Array.from({ length: 24 }, (_, i) => i + 2)];
+  const alterIdx = a => { const i = ALTER_STUFEN.indexOf(a); return i >= 0 ? i : ALTER_STUFEN.findIndex(x => x >= a); };
+  const alterName = (a, z) => a === 0 ? `1${z}Tag` : `${String(a).replace(".", ",")}${z}${a === 1 ? "Jahr" : "Jahre"}`;
+  const gebGenau = a => { const i = jzJetzt() - Math.round(a * 4); return { s: ((i % 4) + 4) % 4, j: Math.floor(i / 4) }; };   // junge Pferde: Geburt genau nach dem eingestellten Alter
   // neues Pferd: in die aktuelle Box, wenn sie leer ist – sonst in die erste freie
   const zielBox = () => boxFrei(spiel.boxen[aktBox]) ? aktBox : freieBox();
   function zeigeDetail(id) {
@@ -3849,7 +3854,7 @@
           <button class="fs-pfeil ms-pfeil hoch" id="msHoch" hidden aria-label="Nach oben scrollen">▲</button><button class="fs-pfeil ms-pfeil runter" id="msRunter" hidden aria-label="Weitere Scheckungen">▼</button>
           <div class="regler">
             <label class="rg" title="Größe als erwachsenes Pferd"><span class="rg-wert" id="groesseWert"></span><input type="range" id="groesse" min="${r.h[0]}" max="${r.h[1]}" step="1" aria-label="Größe (erwachsen)"><span class="rg-name">Größe</span></label>
-            <label class="rg"><span class="rg-wert" id="alterWert"></span><input type="range" id="alter" min="0" max="25" step="1" aria-label="Alter"><span class="rg-name">Alter</span></label>
+            <label class="rg"><span class="rg-wert" id="alterWert"></span><input type="range" id="alter" min="0" max="${ALTER_STUFEN.length - 1}" step="1" aria-label="Alter"><span class="rg-name">Alter</span></label>
           </div>
           <button class="blaettern links" id="rasseZurueck" aria-label="Vorherige Rasse">‹</button>
           <button class="blaettern rechts" id="rasseWeiter" aria-label="Nächste Rasse">›</button></div>
@@ -3913,8 +3918,8 @@
     });
     $("groesse").value = wahl.zielStockmass;
     $("groesse").oninput = e => { wahl.zielStockmass = +e.target.value; aktualisiere(); };
-    $("alter").value = wahl.alter;
-    $("alter").oninput = e => { wahl.alter = +e.target.value; aktualisiere(); };
+    $("alter").value = alterIdx(wahl.alter);
+    $("alter").oninput = e => { wahl.alter = ALTER_STUFEN[+e.target.value]; aktualisiere(); };
     $("name").value = wahl.name;
     $("name").oninput = e => { wahl.name = e.target.value; };
     $("wuerfel").onclick = () => { wahl.name = zufallAus(NAMEN[wahl.geschlecht]); $("name").value = wahl.name; };
@@ -3925,7 +3930,7 @@
       aktBox = zb; spiel.aktBox = zb;
       const bx = B(), neu = !bx.pferd;
       // neues Pferd mit vollständiger, fester Akte (Gene, Stammbaum bis zu den Urgroßeltern)
-      bx.pferd = neuesPferd({ id: wahl.id, name: wahl.name, rasse: wahl.rasse, geschlecht: wahl.geschlecht, farbe: wahl.farbe, alter: wahl.alter, ...(wahl.alter === 0 ? { geb: { s: datum().s, j: datum().j } } : {}), zielStockmass: wahl.zielStockmass, rein: true, ...(wahl.eigeneGene ? { gen: wahl.gen, ex: wahl.ex } : {}), kopf: wahl.kopf, ...(wahl.charakter ? { charakter: wahl.charakter } : {}) });
+      bx.pferd = neuesPferd({ id: wahl.id, name: wahl.name, rasse: wahl.rasse, geschlecht: wahl.geschlecht, farbe: wahl.farbe, alter: wahl.alter, ...(wahl.alter < 2 ? { geb: gebGenau(wahl.alter) } : {}), zielStockmass: wahl.zielStockmass, rein: true, ...(wahl.eigeneGene ? { gen: wahl.gen, ex: wahl.ex } : {}), kopf: wahl.kopf, ...(wahl.charakter ? { charakter: wahl.charakter } : {}) });
       if (wahl.alter === 0) { bx.pferd.gebTag = spiel.tag; bx.pferd.waise = { tag: spiel.tag }; }   // 1 Tag alt, ohne Mutter: Waisenfohlen (heute schon Milch bekommen, ab morgen Flasche/Amme/Leihmutter – Versorgung)
       alterAktualisieren();
       bx.pferd.maehneSeit = spiel.tag; bx.pferd.schopfSeit = spiel.tag;
@@ -3955,7 +3960,7 @@
     // Regler = Größe als erwachsenes Pferd; gezeigt wird die Größe passend zum Alter
     wahl.stockmass = Math.round(wahl.zielStockmass * wuchs(wahl.alter * 12));
     $("groesseWert").innerHTML = wahl.zielStockmass + " <br>cm";
-    $("alterWert").innerHTML = wahl.alter === 0 ? "1 <br>Tag" : wahl.alter + " <br>" + (wahl.alter === 1 ? "Jahr" : "Jahre");
+    $("alterWert").innerHTML = alterName(wahl.alter, " <br>");
     // Maßband + Pferd
     let lineal = `<line x1="0" x2="${VB.b}" y1="${VB.boden}" y2="${VB.boden}" stroke="#c9b99f" stroke-width="2"/>`;
     for (let cm = 50; cm <= 250; cm += 50) {
@@ -4218,8 +4223,8 @@
     $("glBild").innerHTML = `<svg viewBox="${(z.box.minX - m).toFixed(1)} ${(z.box.minY - oben).toFixed(1)} ${(z.box.maxX - z.box.minX + 2 * m).toFixed(1)} ${(-z.box.minY + oben + m).toFixed(1)}">${z.svg}</svg>`;
     if ($("glBild")._zoomAnwenden) $("glBild")._zoomAnwenden();   // Zoom bleibt beim Ändern der Gene
     $("glTitel").textContent = `🛠️ Gene: ${r.name}`;
-    $("glErgebnis").innerHTML = `Mit ${wahl.alter === 0 ? "1 Tag" : wahl.alter + " " + (wahl.alter === 1 ? "Jahr" : "Jahren")}: <b>${farbText({ ...wahl, geb: undefined }, wahl.alter)}</b> · bei Geburt ${FARBEN[wahl.farbe].name}`;
-    $("glAlter").value = wahl.alter; $("glAlterW").textContent = wahl.alter === 0 ? "1 Tag" : wahl.alter + " J.";
+    $("glErgebnis").innerHTML = `Mit ${alterName(wahl.alter, " ").replace(/Jahre$/, "Jahren")}: <b>${farbText({ ...wahl, geb: undefined }, wahl.alter)}</b> · bei Geburt ${FARBEN[wahl.farbe].name}`;
+    $("glAlter").value = alterIdx(wahl.alter); $("glAlterW").textContent = wahl.alter === 0 ? "1 Tag" : String(wahl.alter).replace(".", ",") + " J.";
     const gleich = (a, b) => a.slice().sort().join() === b.slice().sort().join();
     const info = (id, text) => `<button class="gl-info-k" data-info="${id}" aria-label="Erklärung">i</button><span class="gl-info" id="gli-${id}" hidden>${text}</span>`;
     const zeile = (id, name, text, opts) => `<div class="gl-zeile"><span class="gl-name">${name} ${info(id, text).split("<span")[0]}</span><span class="gl-opt">${opts}</span><span class="gl-info" id="gli-${id}" hidden>${text}</span></div>`;
@@ -4263,7 +4268,7 @@
       if (k === "fliegen") wahl.ex.fliegenAb = 10; glZeigen(); });
     S.querySelectorAll("[data-info]").forEach(b => b.onclick = () => { const el = $("gli-" + b.dataset.info); el.hidden = !el.hidden; });
   }
-  document.getElementById("glAlter").oninput = e => { wahl.alter = +e.target.value; if ($("alter")) $("alter").value = wahl.alter; glZeigen(); };
+  document.getElementById("glAlter").oninput = e => { wahl.alter = ALTER_STUFEN[+e.target.value]; if ($("alter")) $("alter").value = alterIdx(wahl.alter); glZeigen(); };
   document.getElementById("glFertig").onclick = () => { $("genLabor").hidden = true; aktualisiere(); };
   document.getElementById("glZufall").onclick = () => { glFarbeSetzen(wahl.chip);
     delete wahl.abzWahl; delete wahl.beinWahl; delete wahl.kopf; delete wahl.ohrVorschau; delete wahl.ex.schn; delete wahl.ex.auge; delete wahl.ex.abzForm; delete wahl.ex.dunkel; delete wahl.ex.bird; delete wahl.ex.brin; delete wahl.ex.snow; delete wahl.ex.frost; wahl.ex.lack = Math.round(Math.random() * 100) / 100; wahl.ex.glanz = Math.round(Math.random() * 100) / 100; wahl.ex.rabi = anlageZufall(RABI_RASSE, RABI_SONST, wahl.rasse, Math.random); wahl.ex.bendor = anlageZufall(BENDOR_RASSE, BENDOR_SONST, wahl.rasse, Math.random);

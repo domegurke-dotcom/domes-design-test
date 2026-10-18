@@ -858,7 +858,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Weiche Schattierung (Airbrush-Look): Schattenformen werden weichgezeichnet
   g += `<rect ${bx} fill="url(#sh-${uid})" opacity=".8"/><g filter="url(#wb-${uid})">`;
   g += `<g clip-path="url(#cr-${uid})"><path d="${glatt([P(-0.12 * H, top + 0.75 * D), P(0.15 * L, bottom - 0.2 * D), P(0.4 * L, bottom - 0.18 * D), P(0.65 * L, bottom - 0.3 * D), P(0.8 * L, bottom - 0.2 * D), P(L + 0.1 * H, top + 0.7 * D), P(L + 0.1 * H, 5), P(-0.12 * H, 5)])}" fill="${schatten}" opacity=".55"/></g>`;
-  g += `<path d="${glatt([T, add(mid(T, Cn), mul(nOut, -2)), Cn, add(Cn, P(8, 6)), add(mid(T, Cn), mul(nOut, 5)), add(T, mul(nOut, 4))])}" fill="${schatten}" opacity=".45"/>`;
+  g += `<path d="${glatt([T, add(mid(T, Cn), mul(nOut, -2)), Cn, add(Cn, P(8, 6)), add(mid(T, Cn), mul(nOut, 5)), add(T, mul(nOut, 4))])}" fill="${schatten}" opacity="${eigenKopf ? ".18" : ".45"}"/>`;   // v470 (Dome): bei Domes Köpfen schwächer – sonst dunkle Bahn direkt hinter dem Kopf
   if (!eigenKopf) g += `<path d="${glatt([hp(0.1, 0.42 * hw), hp(0.3, 0.47 * hw * jw), hp(0.55, 0.36 * hw), hp(0.8, 0.28 * hw), hp(0.6, 0.3 * hw), hp(0.35, 0.37 * hw * jw)])}" fill="${schatten}" opacity=".45"/>`;
   g += `<path d="${glatt([P(0.24 * L, -H + 3.5), P(0.42 * L, top + 5), P(0.62 * L, top + 4), P(0.8 * L, croupY + 3), P(0.8 * L, croupY + 6.5), P(0.62 * L, top + 7.5), P(0.42 * L, top + 8.5)], true)}" fill="${licht}" opacity=".7"/>`;
   g += `<ellipse cx="${f(0.1 * L)}" cy="${f(top + 0.3 * D)}" rx="${f(0.08 * L)}" ry="${f(0.2 * D)}" fill="${licht}" opacity=".35"/>`;
@@ -871,7 +871,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (eigenKopf && !liegt) {   // v468 (Dome): Kopf → Hals weich überblenden (auch bei gleicher Farbe – sonst Kante durch die Halsschattierung)
     const bnd = norm(sub(T, Pn)), hin = mul(u, -1), dTief = 0.22 * hl, mt = mid(Pn, T), ende = add(mt, mul(hin, dTief));
     const q = [add(Pn, mul(bnd, -0.25 * hl)), add(T, mul(bnd, 0.25 * hl)), add(add(T, mul(bnd, 0.25 * hl)), mul(hin, dTief)), add(add(Pn, mul(bnd, -0.25 * hl)), mul(hin, dTief))];
-    g += `<defs><linearGradient id="uk-${uid}" gradientUnits="userSpaceOnUse" x1="${f(mt.x)}" y1="${f(mt.y)}" x2="${f(ende.x)}" y2="${f(ende.y)}"><stop offset="0" stop-color="${head}" stop-opacity=".7"/><stop offset=".5" stop-color="${head}" stop-opacity=".3"/><stop offset="1" stop-color="${head}" stop-opacity="0"/></linearGradient>` +
+    g += `<defs><linearGradient id="uk-${uid}" gradientUnits="userSpaceOnUse" x1="${f(mt.x)}" y1="${f(mt.y)}" x2="${f(ende.x)}" y2="${f(ende.y)}"><stop offset="0" stop-color="${head}" stop-opacity=".5"/><stop offset=".5" stop-color="${head}" stop-opacity=".2"/><stop offset="1" stop-color="${head}" stop-opacity="0"/></linearGradient>` +
       `<filter id="ukf-${uid}" filterUnits="userSpaceOnUse" x="${f(Pn.x - 3 * hl)}" y="${f(Pn.y - 3 * hl)}" width="${f(6 * hl)}" height="${f(6 * hl)}"><feGaussianBlur stdDeviation="${f(0.06 * hl)}"/></filter></defs><g clip-path="url(#cr-${uid})"><path d="${eckig(q)}" fill="url(#uk-${uid})" filter="url(#ukf-${uid})"/></g>`;
   }
   g += `</g>`;
@@ -1027,7 +1027,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     const schopfFarbe = dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane);
     g += `<g transform="matrix(${ekMatrix})">${kopfNeuSVG(eigenKopf, "ek" + uid, { fell: head, muschel, maehne: schopfFarbe, ink: INK, statisch: opt.statisch, augenZu: opt.augenZu, schattierung: schatt, alter: kopfAlter,
       marwari: !!k.curl, wimper: opt.wimper != null ? opt.wimper : (opt.geschlecht === "Stute" || stufe === "fohlen"), ohrR: OS.R, ohrL: OS.L, ohrSpiel: OS.spiel !== false, seed: opt.seed || rasseId,
-      ohneUeb: rasseId === "tekke", abz: opt.kopfAbz, maul: opt.maul || (C.grau > .3 ? "dunkel" : undefined), ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, augenRing: C.grau > .3 && !opt.maul ? { farbe: C.muzzle, st: C.grau } : null, lpHaut: !!(LP && LP.haut) || !!opt.kroete, kroeteHell: !LP && !!opt.kroete, sklera: !!(LP && LP.sklera), augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
+      ohneUeb: !schopfL || rasseId === "tekke", abz: opt.kopfAbz, maul: opt.maul || (C.grau > .3 ? "dunkel" : undefined), ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, augenRing: C.grau > .3 && !opt.maul ? { farbe: C.muzzle, st: C.grau } : null, lpHaut: !!(LP && LP.haut) || !!opt.kroete, kroeteHell: !LP && !!opt.kroete, sklera: !!(LP && LP.sklera), augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
   }
   // Mähne
   if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;

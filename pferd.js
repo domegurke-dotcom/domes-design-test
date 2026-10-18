@@ -783,9 +783,10 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // v440 Bend-Or-Flecken: unregelmäßige dunkle Flecken (Farbe aus dem Fell, dunkler) – nur bei Füchsen/Palominos
   if (opt.bendor) {
     const ro = zufall((opt.seed || rasseId) + "-bendor"), fc = mix(body, "#1a0c06", .68); let t = "";
-    // v494 (Dome): wie in echt frei über Vorhand, Mittelhand und Hinterhand verteilt (je Pferd andere Lage, Anzahl aus der vererbten Anlage)
-    const n = Math.round((9 + Math.floor(ro() * 8)) * (typeof opt.bendor === "number" ? opt.bendor : 1));   /* opt.bendor .5/1/1.8 = wenige/typisch/viele Flecken */
-    for (let i = 0; i < n; i++) { const cx = (0.02 + ((i + ro()) / n) * 0.92) * L, cy = top + (0.12 + ro() * 0.66) * D, r = 1.6 + ro() * 3;   // gleichmäßig über die Länge gestreut, Höhe frei
+    // v496 (Dome): Lage aus der vererbten Anlage – opt.bendorZone = Zonen (0 Vorhand, 1 Mittelhand, 2 Hinterhand), ohne Angabe überall
+    const zonen = Array.isArray(opt.bendorZone) && opt.bendorZone.length ? opt.bendorZone : [0, 1, 2], ZB = [[0.0, 0.26], [0.26, 0.62], [0.62, 0.95]];
+    const n = Math.round((9 + Math.floor(ro() * 8)) * (typeof opt.bendor === "number" ? opt.bendor : 1) * (0.55 + 0.15 * zonen.length));   /* opt.bendor .5/1/1.8 = wenige/typisch/viele; auf einer Zone etwas weniger */
+    for (let i = 0; i < n; i++) { const z = ZB[zonen[i % zonen.length]], cx = (z[0] + (z[1] - z[0]) * ((Math.floor(i / zonen.length) + ro()) / Math.ceil(n / zonen.length))) * L, cy = top + (0.12 + ro() * 0.66) * D, r = 1.6 + ro() * 3;   // innerhalb der Zone gleichmäßig gestreut
       t += klecks(ro, cx, cy, r, r * (0.7 + ro() * 0.4), fc); }
     g += `<g clip-path="url(#cr-${uid})" filter="url(#wm-${uid})" opacity=".92">${t}</g>`;
   }

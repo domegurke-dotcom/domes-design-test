@@ -13,15 +13,15 @@ const FARBEN_BASIS = {
   apfelschimmel: { name: "Apfelschimmel",          body: "#b9b9b6", mane: "#626262", points: "#666666", head: "#aaaaa7", muzzle: "#4a4646", grau: .6, pattern: "dapple", dapple: "#e6e6e3", hoof: "#474442" },
   rappe:         { name: "Rappe (schwarz)",        body: "#211e1f", mane: "#121011", hoof: "#2c2a29" },
   brauner:       { name: "Brauner",                body: "#7c3f1d", mane: "#161212", points: "#1b1616", hoof: "#2c2a29" },
-  dunkelbrauner: { name: "Dunkelbrauner",          body: "#402419", mane: "#120f0f", points: "#161212", hoof: "#2c2a29" },
+  dunkelbrauner: { name: "Dunkelbrauner",          body: "#58301b", head: "#3a2218", russ: "#2a1810", mane: "#120f0f", points: "#161212", hoof: "#2c2a29" },   // v485 (Dome): Ruß oben (Kopf, Hals, Rücken, Kruppe), Bauch/Flanke heller
   fuchs:         { name: "Fuchs",                  body: "#b65a29", mane: "#a64c22", hoof: "#4a3a30" },
-  dfuchs:        { name: "Dunkelfuchs",            body: "#7e3a1b", mane: "#5f2913", hoof: "#3c3029" },
+  dfuchs:        { name: "Dunkelfuchs",            body: "#86401f", head: "#5c2a15", russ: "#4a2010", mane: "#5f2913", hoof: "#3c3029" },
   hellfuchs:     { name: "Fuchs mit Flachsmähne",  body: "#c98843", mane: "#f3e6c2", hoof: "#4a3a30" },
-  dunkelfuchs:   { name: "Dunkelfuchs mit Flachsmähne", body: "#8f4a24", mane: "#eadbb0", hoof: "#3c3029" },
+  dunkelfuchs:   { name: "Dunkelfuchs mit Flachsmähne", body: "#96502a", head: "#64321a", russ: "#52281a", mane: "#eadbb0", hoof: "#3c3029" },
   palomino:      { name: "Palomino",               body: "#dcb164", mane: "#f6eed6", hoof: "#6b5a48" },
   isabell:       { name: "Isabell (Cremello)",     body: "#efe4cc", mane: "#f7f1e3", muzzle: "#d8a699", hoof: "#b9a88f" },
   buckskin:      { name: "Buckskin",               body: "#c9a064", mane: "#171313", points: "#1d1818", hoof: "#2c2a29" },
-  russbuckskin:  { name: "Rußfalbe (Sooty Buckskin)", body: "#c2a172", head: "#5f4d3d", mane: "#141111", points: "#1a1515", hoof: "#2c2a29" },   // v484 (Dome): Buckskin mit Rußanflug (Sty) – dunkler Kopf/Hals, heller Körper
+  russbuckskin:  { name: "Rußfalbe (Sooty Buckskin)", body: "#c2a172", head: "#5f4d3d", russ: "#5f4d3d", mane: "#141111", points: "#1a1515", hoof: "#2c2a29" },   // v484 (Dome): Buckskin mit Rußanflug (Sty) – dunkler Kopf/Hals, heller Körper
   braunfalbe:    { name: "Braunfalbe",             body: "#c9a878", mane: "#1d1818", points: "#2a2220", stripe: "#2a2220", hoof: "#2c2a29" },
   rotfalbe:      { name: "Rotfalbe",               body: "#d8a882", mane: "#9a5a38", stripe: "#9e5c38", hoof: "#5a4538" },
   mausfalbe:     { name: "Mausfalbe (Grullo)",     body: "#8f887c", mane: "#1a1818", points: "#1f1d1c", stripe: "#1f1d1c", head: "#6d675f", hoof: "#2c2a29" },
@@ -262,9 +262,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const weissMuster = ["tobiano", "tovero", "splash", "sabino"].includes(C.pattern), fastWeiss = MST === 3 && weissMuster;
   const DW = opt.dw == null ? null : opt.dw;   // v440 Dominant White (Gen W): 0 wenig · 1 typisch · 2 viel · 3 ganz weiß
   const ganzWeiss = fastWeiss || DW >= 2;
-  const MG = opt.glanz != null ? opt.glanz : (k.metallic ? 1 : 0);   // v446 (Dome): Metallglanz 0–1 – nicht jeder Achal-Tekkiner glänzt gleich stark, Mischlinge anteilig
-  const bronze = MG > .3 && !!opt.bronze && /buckskin/.test(farbId), perl = MG > .3 && !!opt.bronze && /isabell/.test(farbId);   // v482: Perlglanz – Isabell (Doppel-Cream) golden-perlmuttfarben statt silbrig   // v482 (Dome): Bronzeglanz – heller, rosig-goldener Buckskin
-  const gold = !bronze && MG > .3 && /palomino|buckskin|falbe/i.test(farbId) && !/mausfalbe|weissfalbe/.test(farbId);   // v479: Mausfalbe (schwarzbasiert) und Weißfalbe nicht golden   // v443: Achal-Tekkiner „Gold“ – satteres Goldgelb, dazu goldener Glanz (unten)
+  const MG = opt.glanz != null ? opt.glanz : C.glanzLex || (k.metallic ? 1 : 0), fidT = C.lexBasis || farbId, bronzeOpt = opt.bronze || C.bronzeLex;   // v485: Lexikon-Einträge (Enzyklopädie) mit festem Glanz/Ton   // v446 (Dome): Metallglanz 0–1 – nicht jeder Achal-Tekkiner glänzt gleich stark, Mischlinge anteilig
+  const bronze = MG > .3 && !!bronzeOpt && /buckskin/.test(fidT), perl = MG > .3 && !!bronzeOpt && /isabell/.test(fidT);   // v482: Perlglanz – Isabell (Doppel-Cream) golden-perlmuttfarben statt silbrig   // v482 (Dome): Bronzeglanz – heller, rosig-goldener Buckskin
+  const gold = !bronze && MG > .3 && /palomino|buckskin|falbe/i.test(fidT) && !/mausfalbe|weissfalbe/.test(fidT);   // v479: Mausfalbe (schwarzbasiert) und Weißfalbe nicht golden   // v443: Achal-Tekkiner „Gold“ – satteres Goldgelb, dazu goldener Glanz (unten)
   const body = perl ? mix(C.body, "#ead3a2", .55 * MG) : bronze ? mix(C.body, "#d4a878", .6 * MG) : gold ? mix(C.body, "#e8a92a", .5 * MG) : MG > .3 && /isabell/.test(farbId) ? mix(C.body, "#dfe3ea", .35 * MG) : C.body, mane = DW === 3 ? "#efebe2" : C.mane, head = DW === 3 ? "#f4f1ea" : C.head || body;
   const pts = C.points || null;
   const hoof = C.pattern === "tobiano" || ganzWeiss ? "#b8a88f" : (C.hoof || "#3b3531");
@@ -597,7 +597,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (C.pattern === "roan") defs += `<radialGradient id="rg-${uid}"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>` +
     `<pattern id="rn-${uid}" patternUnits="userSpaceOnUse" width="3" height="3"><circle cx="1" cy="1" r=".85" fill="url(#rg-${uid})"/><circle cx="2.4" cy="2.2" r=".7" fill="url(#rg-${uid})"/></pattern>`;
   // v443 (Dome): beim Achal-Tekkiner glänzen Cream- und Falbfarben golden („Gold“: Goldfalbe/Buckskin, Gold-Palomino)
-  const silber = !perl && MG > .3 && /isabell/.test(farbId), mtc = silber ? "#eef2ff" : perl ? "#fff0cf" : bronze ? "#ffd7a6" : gold ? "#ffe08a" : "#fff", mtA = (silber || bronze || perl ? .75 : gold ? .7 : .5) * MG, mtB = (silber || bronze || perl ? .5 : gold ? .48 : .32) * MG;   // v444 (Dome): Isabell silbrig, Braune/Rappen glänzen auch
+  const silber = !perl && MG > .3 && /isabell/.test(fidT), mtc = silber ? "#eef2ff" : perl ? "#fff0cf" : bronze ? "#ffd7a6" : gold ? "#ffe08a" : "#fff", mtA = (silber || bronze || perl ? .75 : gold ? .7 : .5) * MG, mtB = (silber || bronze || perl ? .5 : gold ? .48 : .32) * MG;   // v444 (Dome): Isabell silbrig, Braune/Rappen glänzen auch
   if (MG > 0) defs += `<linearGradient id="mt-${uid}" gradientUnits="userSpaceOnUse" x1="${f(-0.1 * L)}" y1="${f(-H * 1.3)}" x2="${f(L)}" y2="0"><stop offset=".15" stop-color="${mtc}" stop-opacity="0"/><stop offset=".35" stop-color="${mtc}" stop-opacity="${mtA}"/><stop offset=".48" stop-color="${mtc}" stop-opacity="0"/><stop offset=".62" stop-color="${mtc}" stop-opacity="${mtB}"/><stop offset=".75" stop-color="${mtc}" stop-opacity="0"/></linearGradient>`;
 
   const bx = `x="${f(minX - 5)}" y="${f(minY - 5)}" width="${f(maxX - minX + 10)}" height="${f(-minY + 10)}"`;
@@ -857,6 +857,10 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     g += `<g clip-path="url(#cb-${uid})"><path d="${eckig(welle)}" fill="${WEISS}"/></g>`;
   }
   if (C.head && C.head !== body) g += `<g filter="url(#wm-${uid})"><path d="${glatt([hp(-0.1, -0.1), hp(-0.12, 0.3), add(T, mul(sub(Cn, T), 0.25)), add(Pn, mul(sub(Wn, Pn), 0.18)), hp(-0.1, -0.1)])}" fill="${C.head}" opacity=".85"/></g>`;
+  if ((opt.glanzAepfel || C.gAepfel) && !C.pattern) { const hl2 = mix(body, "#ffffff", .3);   // v485 (Dome): Glanzäpfel bei gut genährten, gepflegten Pferden (keine Schimmel-Äpfel)
+    g += `<defs><radialGradient id="gag-${uid}"><stop offset="0" stop-color="${hl2}" stop-opacity=".6"/><stop offset=".65" stop-color="${hl2}" stop-opacity=".25"/><stop offset="1" stop-color="${hl2}" stop-opacity="0"/></radialGradient>` +
+      `<pattern id="ga-${uid}" patternUnits="userSpaceOnUse" width="9" height="8"><circle cx="4.5" cy="4" r="3.3" fill="url(#gag-${uid})"/><circle cx="0" cy="0" r="3" fill="url(#gag-${uid})"/><circle cx="9" cy="0" r="3" fill="url(#gag-${uid})"/><circle cx="0" cy="8" r="3" fill="url(#gag-${uid})"/><circle cx="9" cy="8" r="3" fill="url(#gag-${uid})"/></pattern></defs>` +
+      `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#ga-${uid})" opacity=".6"/></g>`; }
   if (MG > 0) g += `<rect ${bx} fill="url(#mt-${uid})"/>`;
   // Weiche Schattierung (Airbrush-Look): Schattenformen werden weichgezeichnet
   g += `<rect ${bx} fill="url(#sh-${uid})" opacity=".8"/><g filter="url(#wb-${uid})">`;
@@ -867,7 +871,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += `<path d="${glatt([P(0.24 * L, -H + 3.5), P(0.42 * L, top + 5), P(0.62 * L, top + 4), P(0.8 * L, croupY + 3), P(0.8 * L, croupY + 6.5), P(0.62 * L, top + 7.5), P(0.42 * L, top + 8.5)], true)}" fill="${licht}" opacity=".7"/>`;
   g += `<ellipse cx="${f(0.1 * L)}" cy="${f(top + 0.3 * D)}" rx="${f(0.08 * L)}" ry="${f(0.2 * D)}" fill="${licht}" opacity=".35"/>`;
   g += `<ellipse cx="${f(0.84 * L)}" cy="${f(top + 0.28 * D)}" rx="${f(0.1 * L)}" ry="${f(0.22 * D)}" fill="${licht}" opacity=".35"/>`;
-  if (/russbuckskin/.test(farbId)) g += `<path d="${halsD}" fill="${C.head}" opacity=".45"/><ellipse cx="${f(0.12 * L)}" cy="${f(top + 0.35 * D)}" rx="${f(0.12 * L)}" ry="${f(0.3 * D)}" fill="${C.head}" opacity=".35"/><ellipse cx="${f(0.86 * L)}" cy="${f(top + 0.3 * D)}" rx="${f(0.14 * L)}" ry="${f(0.3 * D)}" fill="${C.head}" opacity=".3"/>`;   // v484 (Dome): Rußanflug über Hals, Schulter und Kruppe
+  if (C.russ) g += `<path d="${halsD}" fill="${C.russ}" opacity=".45"/><ellipse cx="${f(0.12 * L)}" cy="${f(top + 0.35 * D)}" rx="${f(0.12 * L)}" ry="${f(0.3 * D)}" fill="${C.russ}" opacity=".35"/><ellipse cx="${f(0.86 * L)}" cy="${f(top + 0.3 * D)}" rx="${f(0.14 * L)}" ry="${f(0.3 * D)}" fill="${C.russ}" opacity=".3"/><ellipse cx="${f(0.5 * L)}" cy="${f(top + 0.08 * D)}" rx="${f(0.32 * L)}" ry="${f(0.16 * D)}" fill="${C.russ}" opacity=".35"/>`;   // v484/v485 (Dome): Rußanflug (Sty) über Hals, Schulter, Rücken und Kruppe – Bauch und Flanke bleiben heller
   if (/schwarzbrauner/.test(farbId)) g += `<ellipse cx="${f(0.76 * L)}" cy="${f(top + 0.6 * D)}" rx="${f(0.09 * L)}" ry="${f(0.2 * D)}" fill="#a8643a" opacity=".4"/><ellipse cx="${f(0.17 * L)}" cy="${f(bottom - 0.18 * D)}" rx="${f(0.07 * L)}" ry="${f(0.13 * D)}" fill="#a8643a" opacity=".35"/>`;   // v481 (Dome): Schwarzbraune – kupferfarbene Flanke und Ellbogen
   g += `</g>`;
   // v464 (Dome): Bauchschatten läuft weich in die nahen Beine aus (vorher harte Kante an der Rumpflinie) – nur unterhalb des Rumpfs, oben so dunkel wie der Schatten dort
@@ -1425,7 +1429,7 @@ const FARBBESCHREIBUNG = {
   apfelschimmel: "Grauschimmel mit hellen, runden Flecken (Äpfeln) im Fell.",
   rappe: "Schwarzes Fell, schwarze Mähne und schwarzer Schweif. Sommerrappen sind im Sommerfell tiefschwarz und im Winterfell ausgeblichen, Winterrappen sind nur im Winterfell richtig schwarz und bleichen im Sommer in der Sonne rostbraun aus.",
   brauner: "Braunes Fell mit schwarzer Mähne, schwarzem Schweif und dunklen Beinen.",
-  dunkelbrauner: "Sehr dunkles Braun, wirkt fast schwarz.",
+  dunkelbrauner: "Brauner mit Rußanflug (Gen Sty): Kopf, Hals, Rücken und Kruppe dunkel überhaucht, Bauch und Flanke heller – mit Metallglanz (Achal-Tekkiner) wirkt der Körper goldbraun.",
   fuchs: "Rotbraunes Fell, Mähne und Schweif gleichfarbig.",
   dfuchs: "Dunkler, schokoladen- bis leberbrauner Fuchs mit gleichfarbiger oder dunklerer Mähne (Sooty-Gen) – sehr dunkle heißen auch Kohlfuchs.",
   hellfuchs: "Fuchs mit heller Flachsmähne – typisch Haflinger.",

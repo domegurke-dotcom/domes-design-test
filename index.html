@@ -932,7 +932,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "413";
+  const SPIEL_VERSION = "414";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -940,10 +940,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=413"></script>
-<script src="boxstufen.js?v=413"></script>
-<script src="kopfteile.js?v=413"></script>
-<script src="kopfalter.js?v=413"></script>
+<script src="pferd.js?v=414"></script>
+<script src="boxstufen.js?v=414"></script>
+<script src="kopfteile.js?v=414"></script>
+<script src="kopfalter.js?v=414"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -2698,6 +2698,13 @@
     zeigeAkte();
   }
 
+  // v414: Weidegang/Auslauf-Auswahl (wohin, welche) – in der Akte und auf Weide-/Sandpaddock-Karte
+  function auslaufZeile(p) { return weideDa() || paddocks().length ? `<div class="bf-knoepfe wg-zeile"><small>${!fremd(p) && paddocks().length ? "🌿🟫 Auslauf" : "🌿 Weidegang"} durch Stallbursche/Azubi (am Nachmittag, abends wieder rein – tagsüber steht das Pferd in der Box):</small>${Object.entries(WEIDEGANG).map(([k, t]) => `<button class="mini-knopf ${(p.weidegang || "nie") === k ? "an" : ""}" data-weidegang="${k}">${t}</button>`).join("")}${!fremd(p) && paddocks().length && weideDa() ? `<small style="width:100%">wohin:</small><button class="mini-knopf ${eigenerAuslauf(p) === "weide" ? "an" : ""}" data-auslauf="weide">🌿 Weide</button><button class="mini-knopf ${p.auslauf === "paddock" ? "an" : ""}" data-auslauf="paddock">🟫 Sandpaddock</button>` : ""}${(() => { const L = ((fremd(p) ? (einstellerVon(p) || {}).haltung === "sandpaddock" : (p.auslauf === "paddock" || !weideDa())) ? paddocks().map(g => [g.gid, paddockName(g)]) : weiden().filter(w => !w.wiese).map(w => [w.wid, w.name])); return L && L.length > 1 ? `<small style="width:100%">welche:</small>${L.map(([id, n]) => `<button class="mini-knopf ${p.auslaufZiel === id ? "an" : ""}" data-azziel="${id}">${esc(n)}</button>`).join("")}<button class="mini-knopf ${!L.some(x => x[0] === p.auslaufZiel) ? "an" : ""}" data-azziel="">egal – die beste</button>` : ""; })()}${(p.weidegang || "nie") !== "nie" && !aktive("stallbursche").concat(aktive("azubi")).some(m => maDarf(m, "weide")) ? `<small>⚠️ Dafür brauchst du einen Stallburschen oder Azubi (Hofverwaltung → Mitarbeiter).</small>` : ""}${(p.weidegang || "nie") !== "nie" && datum().s === 0 && reheGefaehrdet(p) ? (eigenerAuslauf(p) === "paddock" && p.auslauf !== "paddock" ? `<small>🌱 Im Frühling geht ${esc(p.name)} statt auf die Weide auf den Sandpaddock – ${reheGrund(p)}, Hufrehe-Gefahr.</small>` : eigenerAuslauf(p) === "paddock" ? "" : `<small>🌱 Im Frühling bleibt ${esc(p.name)} drin – ${reheGrund(p)}, Hufrehe-Gefahr. Selbst rausbringen geht trotzdem.</small>`) : ""}</div>` : ""; }
+  function auslaufBinden(p, INFO) {
+    INFO.querySelectorAll("[data-azziel]").forEach(b => b.onclick = () => { if (b.dataset.azziel) p.auslaufZiel = b.dataset.azziel; else delete p.auslaufZiel; speichern(); zeigeAkte(); });   // v408
+    INFO.querySelectorAll("[data-auslauf]").forEach(b => b.onclick = () => { if (b.dataset.auslauf === "paddock") p.auslauf = "paddock"; else delete p.auslauf; speichern(); zeigeAkte(); });   // v393
+    INFO.querySelectorAll("[data-weidegang]").forEach(b => b.onclick = () => { p.weidegang = b.dataset.weidegang; if (p.weidegang === "nie") delete p.weidegang; speichern(); zeigeAkte(); });
+  }
   // ---------- Pferdeakte ----------
   function zeigeAkte() {
     const LS = leseP, p = LS || B().pferd, INFO = LS ? $("leseInfo") : $("info");
@@ -2710,10 +2717,11 @@
         ${anweidenAktiv(p) ? `<p class="text">🌱 <b>Anweiden</b>: Tag ${spiel.tag - p.anweiden + 1} von ${anweidenTage()} – ${esc(p.name)} steht erst stundenweise draußen, damit sich der Darm ans Gras gewöhnt, und braucht dazu Heu.</p>` : ""}
         ${heuNoetigP(p) ? (box.krippeVoll ? `<p class="text">🌾 Heu liegt auf der Weide bereit.</p>` : `<p class="text">🌾 <b>${anweidenAktiv(p) && !heuNoetig() ? "Heu dazu" : "Kaum Gras"}</b> – ${anweidenAktiv(p) && !heuNoetig() ? "beim Anweiden" : JZ[datum().s][0] === "Winter" ? "im Winter" : "am letzten Herbsttag"} muss Heu auf die Weide, sonst bleibt ${esc(p.name)} hungrig.</p><button class="knopf" id="weideHeu" style="width:auto;padding:9px 14px;margin:0 8px 8px 0">🌾 Heu auf die Weide</button>`) : ""}
         ${herdeText(p)}
+        ${auslaufZeile(p)}
         ${heuteGefressenHTML(p, box) ? `<ul class="liste">${heuteGefressenHTML(p, box)}</ul>` : ""}
         ${befundZeilen(p) ? `<ul class="liste">${befundZeilen(p)}</ul>` : ""}${befundKarten(p, box)}
         ${p.umbauWeide ? `<p class="text"><small>🚧 Die Box wird gerade umgebaut – ${esc(p.name)} bleibt auf der Weide, bis der Umbau fertig ist.</small></p>` : `<button class="knopf" id="vonWeide" style="width:auto;padding:9px 14px;margin-top:8px">🏠 Zurück in die Box</button>`}</div>`;
-      befundBinden(p, box);
+      befundBinden(p, box); auslaufBinden(p, INFO);
       if ($("vonWeide")) $("vonWeide").onclick = () => { vonWeideHolen(box); reaktionZeigen(reaktion(p, "box")); speichern(); zeigeStall(); zeigeTag(); };
       if ($("pnDecke")) $("pnDecke").onclick = () => { const e = einstellerVon(p); if (e) e.decke = spiel.tag; speichern(); zeigeAkte(); };
       if ($("weideHeu")) $("weideHeu").onclick = () => { if (!fuetternAusLager(box, "du", "rau")) { dialog(`<h3>🌾 Kein Heu mehr</h3><p>In der Futterkammer ist nicht genug Heu. Nachkaufen: Hofverwaltung → Hof → Futterkammer.</p>`); return; } box.krippeVoll = true; reaktionZeigen(reaktion(p, "fuettern")); speichern(); zeigeAkte(); zeigeTag(); };
@@ -2728,8 +2736,9 @@
         <p class="text">🌾 ${box.krippeVoll ? "Heu liegt in der Heuraufe." : "<b>Die Heuraufe ist leer</b> – auf dem Sandpaddock gibt es kein Gras. Heu füttern: Heuraufe im Bild antippen."}</p>
         ${heuteGefressenHTML(p, box) ? `<ul class="liste">${heuteGefressenHTML(p, box)}</ul>` : ""}
         ${befundZeilen(p) ? `<ul class="liste">${befundZeilen(p)}</ul>` : ""}${befundKarten(p, box)}
+        ${auslaufZeile(p)}
         <button class="knopf" id="vonPaddock" style="width:auto;padding:9px 14px;margin-top:8px">🏠 Zurück in die Box</button></div>`;
-      befundBinden(p, box);
+      befundBinden(p, box); auslaufBinden(p, INFO);
       $("vonPaddock").onclick = () => { delete p.paddock; zurueckInBox(box); reaktionZeigen(reaktion(p, "box")); speichern(); zeigeStall(); zeigeTag(); };
       if ($("pnDecke")) $("pnDecke").onclick = () => { const e = einstellerVon(p); if (e) e.decke = spiel.tag; speichern(); zeigeAkte(); };
       return;
@@ -3042,7 +3051,7 @@
           ${ortModus === "training" ? "" : plaetze.filter(([k]) => !TRAIN_GRUPPE.includes(k)).map(ortKachel).join("") + kOrt("training", "🏇", "Training", (() => { const n = plaetze.filter(([k]) => TRAIN_GRUPPE.includes(k) && (spiel.anlage[k] || spiel.admin)).length; return n ? `${n} ${n === 1 ? "Platz" : "Plätze"}` : "kein Platz"; })(), "Roundpen, Reitplatz, Reithalle, Gelände, Rennbahn, Trail")}
           ${kOrt("labor", "🔬", "Labor", fremd(p) ? "nur der Besitzer" : "Gentests", "Genetische Tests mit einer Haarprobe", !fremd(p))}
           ${kOrt("anhaenger", "🚚", "Pferde\u00adanhänger", fremd(p) ? "nur der Besitzer" : "Klinik, Turnier, Abgeben …", "Mit dem Anhänger wegfahren", !fremd(p))}</div>
-          ${weideDa() || paddocks().length ? `<div class="bf-knoepfe wg-zeile"><small>${!fremd(p) && paddocks().length ? "🌿🟫 Auslauf" : "🌿 Weidegang"} durch Stallbursche/Azubi (am Nachmittag, abends wieder rein – tagsüber steht das Pferd in der Box):</small>${Object.entries(WEIDEGANG).map(([k, t]) => `<button class="mini-knopf ${(p.weidegang || "nie") === k ? "an" : ""}" data-weidegang="${k}">${t}</button>`).join("")}${!fremd(p) && paddocks().length && weideDa() ? `<small style="width:100%">wohin:</small><button class="mini-knopf ${eigenerAuslauf(p) === "weide" ? "an" : ""}" data-auslauf="weide">🌿 Weide</button><button class="mini-knopf ${p.auslauf === "paddock" ? "an" : ""}" data-auslauf="paddock">🟫 Sandpaddock</button>` : ""}${(() => { const L = ((fremd(p) ? (einstellerVon(p) || {}).haltung === "sandpaddock" : (p.auslauf === "paddock" || !weideDa())) ? paddocks().map(g => [g.gid, paddockName(g)]) : weiden().filter(w => !w.wiese).map(w => [w.wid, w.name])); return L && L.length > 1 ? `<small style="width:100%">welche:</small>${L.map(([id, n]) => `<button class="mini-knopf ${p.auslaufZiel === id ? "an" : ""}" data-azziel="${id}">${esc(n)}</button>`).join("")}<button class="mini-knopf ${!L.some(x => x[0] === p.auslaufZiel) ? "an" : ""}" data-azziel="">egal – die beste</button>` : ""; })()}${(p.weidegang || "nie") !== "nie" && !aktive("stallbursche").concat(aktive("azubi")).some(m => maDarf(m, "weide")) ? `<small>⚠️ Dafür brauchst du einen Stallburschen oder Azubi (Hofverwaltung → Mitarbeiter).</small>` : ""}${(p.weidegang || "nie") !== "nie" && datum().s === 0 && reheGefaehrdet(p) ? (eigenerAuslauf(p) === "paddock" && p.auslauf !== "paddock" ? `<small>🌱 Im Frühling geht ${esc(p.name)} statt auf die Weide auf den Sandpaddock – ${reheGrund(p)}, Hufrehe-Gefahr.</small>` : eigenerAuslauf(p) === "paddock" ? "" : `<small>🌱 Im Frühling bleibt ${esc(p.name)} drin – ${reheGrund(p)}, Hufrehe-Gefahr. Selbst rausbringen geht trotzdem.</small>`) : ""}</div>` : ""}`;
+          ${auslaufZeile(p)}`;
       }
     }
     else if (aktenReiter === "test") {
@@ -3185,7 +3194,7 @@
         if (p.weide && p.umbauWeide) { dialog(`<h3>🚧 Box im Umbau</h3><p>${esc(p.name)} bleibt auf der Weide, bis der Umbau fertig ist.</p>`); return; }
         if (p.weide) { vonWeideHolen(box); meldung = `🏠 ${esc(p.name)} ist zurück in Box ${aktBox + 1}.`; reaktionZeigen(reaktion(p, "box")); }
         else { reaktionZeigen(reaktion(p, "weide")); aufWeide(p, box, null, zielW ? zielW.wid : null); meldung = "";
-          const wp = weideVon(p), herde = spiel.boxen.filter(b => b.pferd && b.pferd.weide && !b.pferd.klinik && !b.tot && weideVon(b.pferd) === wp).map(b => b.pferd);   // v410 (Dome): nur dieselbe Weide zählt als Herde
+          const wp = weideVon(p), herde = spiel.boxen.filter(b => b.pferd && b.pferd.weide && !b.pferd.klinik && !b.tot && (weideVon(b.pferd) || {}).wid === (wp || {}).wid).map(b => b.pferd);   // v410 (Dome): nur dieselbe Weide zählt als Herde
           if (!spiel.hinweisDecken && herde.some(deckfaehig) && herde.some(q => q.geschlecht === "Stute" && alterJZ(q) >= 12)) { spiel.hinweisDecken = true;
             setTimeout(() => dialog(`<h3>⚠️ Hengst und Stute zusammen</h3><p>Auf der Weide stehen jetzt ein Hengst und eine Stute zusammen. Dabei kann es zu einer <b>ungeplanten Bedeckung</b> kommen – ob die Stute tragend ist, merkst du erst später.</p>`), 0); } }
         ortModus = null; speichern(); zeigeStall(); zeigeTag(); return;
@@ -3233,9 +3242,7 @@
     const dfk = $("deckFremd"); if (dfk) dfk.onchange = () => { const q = B().pferd; if (!q) return; q.deckFremd = q.deckFremd || {}; q.deckFremd.an = dfk.checked; speichern(); };   // H7 (d)
     const wnu = $("wnUmschalten"); if (wnu) wnu.onclick = () => { const W = p.weideNachm; if (W) { if (W.aus) delete W.aus; else W.aus = true; } speichern(); zeigeAkte(); };
     INFO.querySelectorAll("[data-btage]").forEach(b => b.onclick = () => { p.bereiterTage = Math.max(0, Math.min(tpj(), (p.bereiterTage || 0) + +b.dataset.btage)); if (!p.bereiterTage) delete p.bereiterTage; speichern(); zeigeAkte(); });
-    INFO.querySelectorAll("[data-azziel]").forEach(b => b.onclick = () => { if (b.dataset.azziel) p.auslaufZiel = b.dataset.azziel; else delete p.auslaufZiel; speichern(); zeigeAkte(); });   // v408
-    INFO.querySelectorAll("[data-auslauf]").forEach(b => b.onclick = () => { if (b.dataset.auslauf === "paddock") p.auslauf = "paddock"; else delete p.auslauf; speichern(); zeigeAkte(); });   // v393
-    INFO.querySelectorAll("[data-weidegang]").forEach(b => b.onclick = () => { p.weidegang = b.dataset.weidegang; if (p.weidegang === "nie") delete p.weidegang; speichern(); zeigeAkte(); });
+    auslaufBinden(p, INFO);
     const pnd = $("pnDecke"); if (pnd) pnd.onclick = () => { const e = einstellerVon(p); if (e) e.decke = spiel.tag; meldung = `🧣 Decke von ${esc(p.name)} gewechselt.`; speichern(); zeigeAkte(); };
     const ent = $("entfernen"); if (ent) ent.onclick = () => {
       dialog(`<h3>🕊️ Abschied von ${esc(p.name)}</h3><p>${esc(p.name)} wird aus Box ${aktBox + 1} genommen und bekommt einen Grabstein auf dem Pferdefriedhof.${box.fohlen ? ` Das Fohlen <b>${esc(box.fohlen.name)}</b> bleibt in der Box.` : ""}</p>`,
@@ -3807,7 +3814,7 @@
   function zurueckInBox(box) { const vw = box.vorWeide; if (vw && vw.tag === spiel.tag) { box.krippeVoll = box.krippeVoll || vw.krippe; box.kraftVoll = box.kraftVoll || vw.kraft; box.mistig = vw.mist; box.mistStufe = vw.stufe; } delete box.vorWeide; }
   function aufWeide(p, box, ma, wid) {
     if (p.paddock) { delete p.paddock; zurueckInBox(box); }
-    const w = (wid && weideById(wid)) || weideWahl(p);
+    const w = (wid && weideById(wid)) || weideWahl(p) || weiden()[0];   // v414: immer eine Weide-Nummer setzen
     p.weide = { seit: spiel.tag, ...(ma ? { ma } : {}), ...(w ? { wid: w.wid } : {}) }; if (w) p.weideWid = w.wid;
     if (!heuNoetig() && spiel.tag - (p.weideZuletzt != null ? p.weideZuletzt : -999) > tpj()) p.anweiden = spiel.tag; else delete p.anweiden;   // lange keine Weide → anweiden
     p.boxTage = 0; rausAusBox(box);
@@ -7378,7 +7385,7 @@
   const wohlGruende = p => spiel.admin && p.wohlLog && p.wohlLog.tag === spiel.tag && p.wohlLog.g.length ? `<p class="text" style="margin:4px 0 0"><small>🛠️ Seit letzter Nacht: ${p.wohlLog.g.map(esc).join(" · ")}</small></p>` : "";
   // Weide-Herde: wer ist mit draußen, wen kennt das Pferd schon
   function herdeText(p) {
-    const andere = spiel.boxen.filter(b => b.pferd && b.pferd.weide && !b.pferd.klinik && !b.tot && b.pferd !== p && weideVon(b.pferd) === weideVon(p)).map(b => b.pferd);   // v412 (Dome): Herde = gleiche Weide
+    const andere = spiel.boxen.filter(b => b.pferd && b.pferd.weide && !b.pferd.klinik && !b.tot && b.pferd !== p && (weideVon(b.pferd) || {}).wid === (weideVon(p) || {}).wid).map(b => b.pferd);   // v412 (Dome): Herde = gleiche Weide · v414: über p.weide.wid
     const fo = (spiel.boxen.find(b => b.pferd === p) || {}).fohlen, foTxt = fo ? `<p class="text">🍼 ${esc(fo.name)} ist bei ihr auf der Weide.</p>` : "";
     if (!andere.length) return fo ? foTxt : `<p class="text">🐴 Gerade ist kein anderes eigenes Pferd auf der Weide.</p>`;
     const H = p.herde || {}, kennt = andere.filter(q => (H[q.id] || 0) >= HERDE_KENNEN), neu = andere.filter(q => (H[q.id] || 0) < HERDE_KENNEN);
@@ -10160,7 +10167,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     if (spiel.hof) spiel.hof.weideHa = weidenSumme();
   }
   function weideById(wid) { return weiden().find(w => w.wid === wid); }
-  function weideVon(p) { return p && p.weide ? (weideById(p.weide.wid) || weiden()[0]) : null; }
+  function weideVon(p) { if (!p || !p.weide) return null; const w = weideById(p.weide.wid) || weiden()[0]; if (w && p.weide.wid !== w.wid) p.weide.wid = w.wid; return w || null; }   // v414: fehlende/alte Weide-Nummer gleich festschreiben
   function weidePferde(w) { return spiel.boxen.filter(b => b.pferd && !b.tot && !b.pferd.klinik && b.pferd.weide && (weideVon(b.pferd) || {}).wid === w.wid).map(b => b.pferd); }
   function weideBelegtW(w, mit) { return weidePferde(w).concat(mit && !weidePferde(w).includes(mit) ? [mit] : []).reduce((a, q) => a + weideBedarf(q), 0); }
   function matschig(p) { const w = weideVon(p); return !!(w && w.matsch >= GRAS.matschAb); }

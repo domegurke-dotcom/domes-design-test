@@ -15,7 +15,9 @@ Mit Dome abgestimmt am 18.10.2026 (Entwürfe als Bilder gezeigt und freigegeben)
 - Umsetzung: `index.html` – `ex.muster` in `EX_GRENZEN`/`exVon`, `MUSTER_STUFEN` [0,3 / 0,8], `musterZufall`, `musterStufeVon`, `kopfOpt` gibt `musterStufe` weiter, bzn-Eintrag „Muster-Ausprägung (v439)“. `pferd.js` – `opt.musterStufe` (0/1/2, Standard 1) skaliert die Flecken im Musterblock von `zeichnePferd` (Tobiano/Overo/Tovero/Sabino/Splash/Leopard/Blanket), `musterStufeFarbe` für Roan (nicht beim Ausgrauen, `roanDeck`), `viel` → Mähne/Schweif heller. Beinabzeichen: `beinWeiss` mit unruhigem Rand.
 - Mögliche Verbesserung: bei dunkler Mähne wirkt „teilweise weiß“ eher grau – echte zweifarbige Strähnen wären schöner.
 
-## Schritt 2 – neue Muster (für Claude Pro)
+## Schritt 2 – neue Muster (Claude Pro, v440) – ✅ fertig
+**Umgesetzt (v440, mit Dome abgestimmt 18.10.2026):** 4. Stufe „fast weiß“ (Medicine Hat; `MUSTER_STUFEN` [.3,.8,.95], Marktpferde 30/50/15/5 %; nicht bei Frame Overo/Roan/Tiger – wie in echt), Sabino mit Stichelhaar-Rand (`stichel` in pferd.js), Mähne abschnittsweise/Schweif in Strähnen weiß (`maehneWeiss`, `schweifWeiss`), Kopfabzeichen bei viel/fast weiß größer (`MUSTER_KOPF`, nur Sw/O/Sb/W), Splash mit klarem, geschwungenem Rand, Tovero-Stufen deutlich verschieden. Neue Muster: Rabicano `ex.rabi`, Bend-Or `ex.bendor` (Flecken fast schwarz, je Pferd Vorhand/Hinterhand/Rumpf/überall), Birdcatcher (Zufall, `ex.bird` nur Admin), Brindle dunkel (Chimäre 0,2 %, `ex.brin` nur Admin) und weiß (Gen `Br1`, X-chromosomal, nur Quarter), Gen `W` (W/W → Stute bleibt leer, `wwLeer`, Warnung in `GEFAHR_GENE`), Roan beim Islandpferd (Rn 3 %). Anzeige: `zeichenVon`, `zeichenListe`, `zeichnungText`, `kopfOpt` → `opt.rabi/birdcatcher/bendor/brindle/dw`. Ursprünglicher Plan:
+
 Entwürfe als Overlay im Körper wie in Schritt 1, Einbau in `pferd.js` (Musterzeichnung) und `index.html` (Genetik/Vererbung/Steckbrief/bzn/Admin):
 
 | Muster | Vererbung | Häufigkeit Marktpferde | Zeichnung |
@@ -30,3 +32,8 @@ Entwürfe als Overlay im Körper wie in Schritt 1, Einbau in `pferd.js` (Musterz
 - Steckbrief (Daten) – Zeile „Zeichnung“ ergänzen (z. B. „Rabicano“, „Birdcatcher-Tupfen“); bzn-Eintrag mit allen Zahlen; Admin „Gene selbst wählen“: nur bei Rassen, wo es vorkommt (`rasseZeichen`-Prinzip).
 - Danach Screenshots in allen drei Ansichten, CLAUDE.md und `UEBERGABE.md` aktualisieren.
 - Vorschau-Skript der Entwürfe: siehe Beschreibung in `UEBERGABE.md` (Überlagerung direkt nach `<g clip-path="url(#cl-UID)">` in das SVG von `zeichnePferd` einsetzen).
+
+## Schritt 3 – Leopard-Komplex vervollständigen (Dome 18.10.2026: zusammen mit Appaloosa, Knabstrupper, Paint Horse)
+- Lp ohne PATN1 nicht immer Schabracke: auch nur Lackschimmel, Frost oder fast ohne Muster.
+- Neu: Lackschimmel (Varnish Roan, wird mit dem Alter heller, dunkel über Knochen), Snowflake, Frost.
+- Merkmale aller Lp-Pferde: gefleckte Haut (Maul, Augen), weiße Lederhaut, gestreifte Hufe.

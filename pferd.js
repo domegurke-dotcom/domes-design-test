@@ -227,8 +227,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const merke = arr => { alle.push(...arr); return arr; };
 
   // Farben
-  const MST = opt.musterStufe == null ? 1 : opt.musterStufe, M2 = Math.min(2, MST);   // v439 Muster-Ausprägung: 0 wenig · 1 typisch · 2 viel · 3 fast weiß (v440)
-  const weissMuster = ["tobiano", "tovero", "splash", "sabino", "overo"].includes(C.pattern), fastWeiss = MST === 3 && weissMuster;
+  const MST = Math.min(C.pattern === "overo" ? 2 : 3, opt.musterStufe == null ? 1 : opt.musterStufe), M2 = Math.min(2, MST);   // Frame Overo hat in echt höchstens etwa die Hälfte Weiß – „fast weiß“ sieht aus wie „viel“   // v439 Muster-Ausprägung: 0 wenig · 1 typisch · 2 viel · 3 fast weiß (v440)
+  const weissMuster = ["tobiano", "tovero", "splash", "sabino"].includes(C.pattern), fastWeiss = MST === 3 && weissMuster;
   const DW = opt.dw == null ? null : opt.dw;   // v440 Dominant White (Gen W): 0 wenig · 1 typisch · 2 viel · 3 ganz weiß
   const ganzWeiss = fastWeiss || DW >= 2;
   const body = C.body, mane = DW === 3 ? "#efebe2" : C.mane, head = DW === 3 ? "#f4f1ea" : C.head || body;
@@ -258,7 +258,6 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       schweifWeiss = [0, rw() < .4 ? .25 : 0, .5, .75][MST]; }
     if (P_ === "tovero") { if (MST === 0 && rw() < .5) ab(0, .2); if (MST === 1) ab(0, .45); if (MST >= 2) maehneWeiss.push([0, MST === 3 ? .88 : .7]); schweifWeiss = [.3, .55, .75, .9][MST]; }
     if (P_ === "sabino") { if (MST === 2 && rw() < .5) ab(0, .2 + rw() * .2); if (MST === 3) maehneWeiss.push([0, .7 + rw() * .2]); schweifWeiss = [0, 0, .3, .7][MST]; }
-    if (P_ === "overo" && MST === 3 && rw() < .3) ab(.2, .25);
     if (DW === 2) { ab(0, .4); schweifWeiss = .6; }
   }
   const tailCol = DW === 3 ? mane : dunKern ? dunHell : (k.mane === "fjord" ? mix(maneOuter, maneStripe, 0.25) : mane);
@@ -681,9 +680,10 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     if (C.pattern === "splash") {
       // Splashed White (v426): wie „von unten in weiße Farbe getaucht“ – glatter, klarer Rand, Bauch und Brust weiß, hohe weiße Beine (unten bei den Abzeichen)
       const hoch = [0.12 + rnd() * 0.1, 0.35 + rnd() * 0.4, 0.95 + rnd() * 0.15][M2] + (MST === 3 ? 0.45 : 0), rand = [P(minX - 6, 4)];
-      for (let i = 0; i <= 20; i++) { const t = i / 20, x = minX - 6 + (maxX - minX + 12) * t; rand.push(P(x, bottom - hoch * D * (0.55 + 0.45 * Math.sin(Math.PI * Math.min(1, t * 1.15))) + Math.sin(t * 9 + hoch * 7) * 1.6 + (rnd() - .5) * 3)); }   // v439: unruhigerer Rand
+      const rsp = zufall((opt.seed || rasseId) + "-splash"), ph1 = rsp() * 6.3, ph2 = rsp() * 6.3;   // v440 (Dome): klarer Rand, aber geschwungen – keine Linie wie mit dem Lineal
+      for (let i = 0; i <= 28; i++) { const t = i / 28, x = minX - 6 + (maxX - minX + 12) * t; rand.push(P(x, bottom - hoch * D * (0.55 + 0.45 * Math.sin(Math.PI * Math.min(1, t * 1.15))) + Math.sin(t * 5.5 + ph1) * D * 0.13 + Math.sin(t * 13 + ph2) * D * 0.045 + (rnd() - .5) * 3)); }
       rand.push(P(maxX + 6, 4));
-      g += `<g filter="url(#wb-${uid})"><path d="${glatt(rand)}" fill="${SW}" opacity=".55" transform="translate(0,-2.5)"/></g><g filter="url(#wm-${uid})"><path d="${glatt(rand)}" fill="${SW}"/></g>`;   // v440 (Dome): weicher Übergang
+      g += `<g filter="url(#wm-${uid})"><path d="${glatt(rand)}" fill="${SW}"/></g>`;
     }
     if (C.pattern === "leopard") g += `<rect ${bx} fill="${SW}"/>` + punkte(minX, maxX, minY, 0, [40, 70, 100][M2], 2.2, 4.6, spotFarbe);
     if (C.pattern === "fewspot") g += `<rect ${bx} fill="${SW}"/>` + punkte(0, L, top, bottom, 7, 1.4, 2.6, spotFarbe) + `<g filter="url(#wm-${uid})"><rect x="${f(minX)}" y="${f(-0.62 * Lg)}" width="${f(maxX - minX)}" height="${f(0.2 * Lg)}" fill="${mix(body, SW, .35)}" opacity=".7"/></g>`;

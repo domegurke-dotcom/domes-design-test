@@ -865,6 +865,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += `<path d="${glatt([P(0.24 * L, -H + 3.5), P(0.42 * L, top + 5), P(0.62 * L, top + 4), P(0.8 * L, croupY + 3), P(0.8 * L, croupY + 6.5), P(0.62 * L, top + 7.5), P(0.42 * L, top + 8.5)], true)}" fill="${licht}" opacity=".7"/>`;
   g += `<ellipse cx="${f(0.1 * L)}" cy="${f(top + 0.3 * D)}" rx="${f(0.08 * L)}" ry="${f(0.2 * D)}" fill="${licht}" opacity=".35"/>`;
   g += `<ellipse cx="${f(0.84 * L)}" cy="${f(top + 0.28 * D)}" rx="${f(0.1 * L)}" ry="${f(0.22 * D)}" fill="${licht}" opacity=".35"/>`;
+  if (/schwarzbrauner/.test(farbId)) g += `<ellipse cx="${f(0.76 * L)}" cy="${f(top + 0.6 * D)}" rx="${f(0.09 * L)}" ry="${f(0.2 * D)}" fill="#a8643a" opacity=".4"/><ellipse cx="${f(0.17 * L)}" cy="${f(bottom - 0.18 * D)}" rx="${f(0.07 * L)}" ry="${f(0.13 * D)}" fill="#a8643a" opacity=".35"/>`;   // v481 (Dome): Schwarzbraune – kupferfarbene Flanke und Ellbogen
   g += `</g>`;
   // v464 (Dome): Bauchschatten läuft weich in die nahen Beine aus (vorher harte Kante an der Rumpflinie) – nur unterhalb des Rumpfs, oben so dunkel wie der Schatten dort
   if (!liegt) g += `<defs><linearGradient id="bs-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(bottom - 0.05 * D)}" x2="0" y2="${f(bottom * 0.55)}"><stop offset="0" stop-color="${schatten}" stop-opacity=".55"/><stop offset="1" stop-color="${schatten}" stop-opacity="0"/></linearGradient>` +
@@ -1022,7 +1023,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     const schopfFarbe = dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane);
     g += `<g transform="matrix(${ekMatrix})">${kopfNeuSVG(eigenKopf, "ek" + uid, { fell: head, muschel, maehne: schopfFarbe, ink: INK, statisch: opt.statisch, augenZu: opt.augenZu, schattierung: schatt, alter: kopfAlter,
       marwari: !!k.curl, wimper: opt.wimper != null ? opt.wimper : (opt.geschlecht === "Stute" || stufe === "fohlen"), ohrR: OS.R, ohrL: OS.L, ohrSpiel: OS.spiel !== false, seed: opt.seed || rasseId,
-      ohneUeb: !schopfL || rasseId === "tekke", abz: opt.kopfAbz, maul: opt.maul || (C.grau > .3 ? "dunkel" : undefined), ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, augenRing: C.grau > .3 && !opt.maul ? { farbe: C.muzzle, st: C.grau } : null, lpHaut: !!(LP && LP.haut) || !!opt.kroete, kroeteHell: !LP && !!opt.kroete, sklera: !!(LP && LP.sklera), augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
+      ohneUeb: !schopfL || rasseId === "tekke", abz: opt.kopfAbz, maul: opt.maul || (C.grau > .3 ? "dunkel" : undefined), ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, augenRing: C.grau > .3 && !opt.maul ? { farbe: C.muzzle, st: C.grau } : /schwarzbrauner/.test(farbId) ? { farbe: "#a8643a", st: .5 } : null, /* v481 (Dome): Schwarzbraune – kupferfarben ums Auge (Platzhalter) */ lpHaut: !!(LP && LP.haut) || !!opt.kroete, kroeteHell: !LP && !!opt.kroete, sklera: !!(LP && LP.sklera), augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
   }
   // Mähne
   if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
@@ -1440,7 +1441,7 @@ const FARBBESCHREIBUNG = {
   fuchsschecke: "Fuchsfarben-weiß gescheckt.",
   blueroan: "Schwarzes Fell mit eingestreuten weißen Haaren, wirkt bläulich.",
   hellbrauner: "Heller, rötlich-goldener Brauner mit schwarzen Beinen, Mähne und Schweif. Wie hell ein Brauner ist, wird über mehrere Gene vererbt.",
-  schwarzbrauner: "Fast schwarzer Brauner – erkennbar am helleren, rötlichen „Kupfermaul“ und an den Flanken (Agouti-Variante At).",
+  schwarzbrauner: "Fast schwarzer Brauner – erkennbar am helleren, rötlichen „Kupfermaul“, kupferfarbenen Haaren um die Augen, in den Flanken und hinter dem Ellbogen (Agouti-Variante At).",
   lethalwhite: "Fast ganz weißes Fohlen mit rosa Haut von zwei Overo-Eltern (O/O). Ihm fehlen Nervenzellen im Darm – es stirbt in den ersten Lebenstagen (Lethal-White-Overo-Syndrom).",
   sa_brauner: "Sabino: viel unregelmäßiges Weiß – breite Blesse, hohe weiße Beine, weiße Flecken am Bauch mit gesprenkeltem Rand. Typisch für Clydesdales (Gen Sb).",
   sw_brauner: "Splashed White: sieht aus wie von unten in weiße Farbe getaucht – sehr breite Blesse oder Laterne, meist blaue Augen, hohe weiße Beine und weißer Bauch mit glattem, klarem Rand. Dominant (Gen SW), v. a. bei Quarter, Welsh, Islandpferd und Shetty. Manche Splash-Pferde sind taub.",

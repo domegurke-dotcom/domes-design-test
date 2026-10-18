@@ -24,6 +24,10 @@ Nach dem Zeichnen einfach hochladen – `werkzeuge/kopf-export.js` übernimmt ne
 ### 0. Glanz- und Schattenbereiche für die Köpfe (Dome plant, v467)
 - Dome zeichnet eigene Licht-/Schattenflächen für die Köpfe. Sobald sie da sind: die helle Spiel-Schattierung auf dem Kopf (`sh-`-Rechteck in `zeichnePferd`) und die Aufhellung der Ohren (`farbeOhr`, +10 % Weiß) wieder entfernen.
 
+### 0c. Kupfer um die Augen beim Schwarzbraunen (neu, Dome v481)
+- Schwarzbraune (Gen At) haben neben dem Kupfermaul auch kupferfarbene, hellere Haare um die Augen (wie der graue Augenschatten beim Schimmel, Punkt 4b – nur kupferbraun und heller statt dunkel).
+- **Bitte zeichnen:** unter `maulfärbung` eine Ebene `kupferaugen` (weicher Verlauf ums Auge) in allen Kopfformen. Bis dahin gibt es einen Platzhalter (weicher Kupferfleck ums Auge). Flanke und Ellbogen zeichnet das Spiel selbst.
+
 ### 0b. Alterszeichen für Senioren (neu, Dome v468)
 - Im Spiel gibt es dafür vorerst einen Platzhalter (aus den alten Köpfen bis v423 übertragen): graue Haare um das Auge, eingefallene Augengrube (Bogen über dem Auge), Tränenrinne (Linie unter dem Auge), Falte vom Maulwinkel zum Nasenrücken. Bei „reif“ (ca. 10–15 J.) nur leicht: etwas Grau ums Auge und ein schwacher Bogen.
 - **Bitte zeichnen**, je Kopfform eine Gruppe `alterszeichen` mit Ebenen `senior` und `reif` (Linien in Linienfarbe, graue Haare als Fläche mit Weichzeichner). Kein weißer Fleck am Maulwinkel (Dome).

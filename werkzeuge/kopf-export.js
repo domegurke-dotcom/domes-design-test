@@ -20,7 +20,8 @@ const ROOT = path.join(__dirname, "..");
     // Element sauber serialisieren: ohne Inkscape-Attribute und ids, mit dem Transform des Elternteils (Weltkoordinaten der Datei)
     const ser = (e, ohne = []) => {
       const c = e.cloneNode(true);
-      const putz = n => { if (n.nodeType !== 1) return; for (const a of [...n.attributes]) if (/^(inkscape|sodipodi):/.test(a.name) || a.name === "id") n.removeAttribute(a.name);
+      const putz = n => { if (n.nodeType !== 1) return; if (n.getAttribute("inkscape:groupmode") === "layer" && n.getAttribute("style")) n.setAttribute("style", n.getAttribute("style").replace(/display:none;?/g, ""));   // v465: in Inkscape ausgeblendete Ebenen (nur beim Zeichnen) trotzdem übernehmen
+        for (const a of [...n.attributes]) if (/^(inkscape|sodipodi):/.test(a.name) || a.name === "id") n.removeAttribute(a.name);
         if (n.getAttribute("style")) n.setAttribute("style", n.getAttribute("style").replace(/display:inline;?/g, "").replace(/;$/, "")); [...n.childNodes].forEach(putz); };
       // Teile ausblenden, die eine spätere Etappe braucht (z. B. Kopfabzeichen)
       for (const l of ohne) [...c.querySelectorAll("*")].filter(n => (n.getAttribute(LBL) || "") === l).forEach(n => n.remove());
@@ -46,7 +47,8 @@ const ROOT = path.join(__dirname, "..");
     // nur die eigene Gruppe der Form (manche Formen liegen in der Datei ineinander verschachtelt)
     const teil = (form, gruppe, name) => { const g = kinder(form).find(n => lab(n) === gruppe), el = g && kinder(g).find(n => lab(n) === name); if (!el) return null;
       for (const n of [el, ...el.querySelectorAll("*")]) for (const a of n.attributes) urls(a.value).forEach(merkDef);
-      return ser(el).replace(/#e5e5e5/gi, "__WEISS__"); };
+      const st0 = el.getAttribute("style"); if (st0 && /display:none/.test(st0)) el.setAttribute("style", st0.replace(/display:none;?/g, ""));   // v465: Abzeichen/Maul werden einzeln gewählt – in Inkscape ausgeblendet ist egal
+      const r = ser(el).replace(/#e5e5e5/gi, "__WEISS__"); if (st0 != null) el.setAttribute("style", st0); return r; };
     const zeichen = form => ({ abz: Object.fromEntries(Object.entries(ABZ).map(([l, k]) => [k, teil(form, "kopfabzeichen", l)]).filter(x => x[1])), maul: Object.fromEntries(Object.entries(MAUL).map(([l, k]) => [k, teil(form, "maulfärbung", l)]).filter(x => x[1])) });
     for (const e of alle) {
       const l = lab(e);

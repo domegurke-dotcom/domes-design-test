@@ -51,7 +51,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (3 Stellen in index.html: pferd.js, boxstufen.js, kopfneu.js) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **464**.
+- Letzte Version bei Aktualisierung dieser Datei: **465**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName` ausfüllen → `#chLos` → Kreditbrief schließen (`#dlgKnoepfe button`) → `[data-immo="pension"]` → `#kaufName` → `#dlgKnoepfe button:first-child`. Admin: `spiel.admin = true`.
@@ -168,6 +168,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - **v462 (Dome):** Kontinent-Sortierung als Knöpfe „Alle“ + Kontinente der jeweiligen Liste A–Z (`sortSegment(konts)`), ein Kontinent blendet die anderen Kacheln aus; `spiel.sortKont` = Kontinentname oder false.
 - **v463 (Dome):** Achal-Tekkiner ohne Domes Ebene „schopf-maehne-uebergang“ (Export markiert sie mit `class="ueb"`, `kopfNeuSVG` `o.ohneUeb`). Ohren so hell wie der Kopf (`farbeOhr`: Fell + 10 % Weiß, weil der Kopf oben die helle `sh-`-Schattierung hat). Rassenansicht Tekkiner: Isabell/Palomino/Buckskin/Braun-/Gelbfalbe schalten „ohne Glanz“ ↔ „mit Gold-/Silberglanz“ (`TEKKE_GLANZ`, `ex.glanz` .05/.9).
 - **v464 (Dome):** Bauchschatten läuft weich in die nahen Beine aus (`bs-`-Verlauf mit Maske `bm-` = Beine minus Rumpf, Stärke 0,42 → 0 bis etwa 45 % der Beinlänge).
+- **v465:** Domes neues Innenohr (`basis R vorne`) eingebaut. `kopf-export.js` übernimmt in Inkscape ausgeblendete Ebenen trotzdem (Ebenen mit `groupmode=layer` und einzeln gewählte Abzeichen/Maul ohne `display:none`) – Dome lässt beim Zeichnen Ebenen ausgeblendet. Birdcatcher in der Rassenansicht mit Stufen wenige/typisch/viele (`ex.bird` .5/1/2 → Tupfen ×0,45/1/2, max. 45). Tekkiner-Glanz bleibt bei allen Farben (Dome: wie in echt).
 - **Aufräumen v435:** Code mit ESLint geprüft (keine echten Fehler), unbenutzte Funktionen/Variablen entfernt, `spiel.marktGekauft` auf 200 Einträge begrenzt (`marktGekauftMerken`), versehentlich hochgeladene Test-Screenshots gelöscht. Prüfskript: Skriptblöcke aus index.html in Dateien schreiben und `eslint` (liegt in /opt/node22/lib/node_modules) mit no-unused-vars/no-dupe-keys/no-unreachable laufen lassen. **Test-Screenshots nie im Projektordner speichern** (immer im Scratchpad). Kötenbehang (`behang` in pferd.js) ist vorerst ausgeblendet, der Code bleibt – kommt später (Dome).
 - **v436:** Kopfleiste beim Drehen des Handys: `--kopfH` wird sofort nachgezogen (ResizeObserver auf `header` + resize), vorher blitzte im Vollbild bis zu 0,5 s der Stall zwischen Kopfleiste und Fenster durch. **v437:** Viewport `minimum-scale=1` und `html, body { overflow-x: clip }` – verhindert, dass Chrome (Android) nach dem Drehen herauszoomt (Menüs breiter als die Kopfleiste, Dome-Screenshot ohne Vollbild).
 - **Offen (Stand v439):** Scheckmuster Schritt 2 (`PLAN-SCHECKUNG.md`). Domes Zeichnungen laut `BEI-INKSCAPE-BEARBEITEN.md`. Stute bleibt bei voller Abfohlbox in ihrer Box (gewollt). Ausbilder-Nachholen per Test geprüft (v433, funktioniert).

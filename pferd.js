@@ -21,6 +21,7 @@ const FARBEN_BASIS = {
   palomino:      { name: "Palomino",               body: "#dcb164", mane: "#f6eed6", hoof: "#6b5a48" },
   isabell:       { name: "Isabell (Cremello)",     body: "#efe4cc", mane: "#f7f1e3", muzzle: "#d8a699", hoof: "#b9a88f" },
   buckskin:      { name: "Buckskin",               body: "#c9a064", mane: "#171313", points: "#1d1818", hoof: "#2c2a29" },
+  russbuckskin:  { name: "Rußfalbe (Sooty Buckskin)", body: "#c2a172", head: "#5f4d3d", mane: "#141111", points: "#1a1515", hoof: "#2c2a29" },   // v484 (Dome): Buckskin mit Rußanflug (Sty) – dunkler Kopf/Hals, heller Körper
   braunfalbe:    { name: "Braunfalbe",             body: "#c9a878", mane: "#1d1818", points: "#2a2220", stripe: "#2a2220", hoof: "#2c2a29" },
   rotfalbe:      { name: "Rotfalbe",               body: "#d8a882", mane: "#9a5a38", stripe: "#9e5c38", hoof: "#5a4538" },
   mausfalbe:     { name: "Mausfalbe (Grullo)",     body: "#8f887c", mane: "#1a1818", points: "#1f1d1c", stripe: "#1f1d1c", head: "#6d675f", hoof: "#2c2a29" },
@@ -866,6 +867,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += `<path d="${glatt([P(0.24 * L, -H + 3.5), P(0.42 * L, top + 5), P(0.62 * L, top + 4), P(0.8 * L, croupY + 3), P(0.8 * L, croupY + 6.5), P(0.62 * L, top + 7.5), P(0.42 * L, top + 8.5)], true)}" fill="${licht}" opacity=".7"/>`;
   g += `<ellipse cx="${f(0.1 * L)}" cy="${f(top + 0.3 * D)}" rx="${f(0.08 * L)}" ry="${f(0.2 * D)}" fill="${licht}" opacity=".35"/>`;
   g += `<ellipse cx="${f(0.84 * L)}" cy="${f(top + 0.28 * D)}" rx="${f(0.1 * L)}" ry="${f(0.22 * D)}" fill="${licht}" opacity=".35"/>`;
+  if (/russbuckskin/.test(farbId)) g += `<path d="${halsD}" fill="${C.head}" opacity=".45"/><ellipse cx="${f(0.12 * L)}" cy="${f(top + 0.35 * D)}" rx="${f(0.12 * L)}" ry="${f(0.3 * D)}" fill="${C.head}" opacity=".35"/><ellipse cx="${f(0.86 * L)}" cy="${f(top + 0.3 * D)}" rx="${f(0.14 * L)}" ry="${f(0.3 * D)}" fill="${C.head}" opacity=".3"/>`;   // v484 (Dome): Rußanflug über Hals, Schulter und Kruppe
   if (/schwarzbrauner/.test(farbId)) g += `<ellipse cx="${f(0.76 * L)}" cy="${f(top + 0.6 * D)}" rx="${f(0.09 * L)}" ry="${f(0.2 * D)}" fill="#a8643a" opacity=".4"/><ellipse cx="${f(0.17 * L)}" cy="${f(bottom - 0.18 * D)}" rx="${f(0.07 * L)}" ry="${f(0.13 * D)}" fill="#a8643a" opacity=".35"/>`;   // v481 (Dome): Schwarzbraune – kupferfarbene Flanke und Ellbogen
   g += `</g>`;
   // v464 (Dome): Bauchschatten läuft weich in die nahen Beine aus (vorher harte Kante an der Rumpflinie) – nur unterhalb des Rumpfs, oben so dunkel wie der Schatten dort
@@ -1431,6 +1433,7 @@ const FARBBESCHREIBUNG = {
   palomino: "Goldgelbes Fell mit weißer Mähne (Fuchs + ein Cream-Gen).",
   isabell: "Cremefarben mit rosa Haut und blauen Augen (doppeltes Cream-Gen).",
   buckskin: "Gelbbraunes Fell mit schwarzen Beinen und schwarzer Mähne.",
+  russbuckskin: "Buckskin mit Rußanflug (Gen Sty): Kopf und Hals dunkel überhaucht, Körper hell gelblich bis silbrig, schwarze Beine und Mähne. Beim Achal-Tekkiner mit Glanz „Gold-Rußfalbe“.",
   braunfalbe: "Falbfarben mit Aalstrich und dunklen Beinen.",
   rotfalbe: "Falbe auf Fuchsbasis, rötlicher Aalstrich.",
   mausfalbe: "Mausgraues Fell mit dunklem Kopf, Beinen und Aalstrich (Grullo).",

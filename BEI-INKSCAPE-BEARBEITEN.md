@@ -20,7 +20,7 @@ Nach dem Zeichnen einfach hochladen – `werkzeuge/kopf-export.js` übernimmt ne
 - **Ebenen:** `milchmaul` (Ober- und Unterlippe weiß, von der Maulspitze bis etwa zum Maulwinkel). Wenn du es genauer willst, zusätzlich `weisse oberlippe` und `weisse unterlippe` einzeln.
 - Kommt oft zusammen mit Blesse/Laterne vor, aber auch allein oder mit Schnippe → wird im Spiel wie die Schnippe kombinierbar.
 
-### 3. Krötenmaul (unter `maulfärbung`)
+### 3. Krötenmaul (unter `maulfärbung`) – ✅ nicht mehr nötig: zeichnet das Spiel seit v441/v444 selbst (`lpHautSVG`, Tiger und Doppel-Cream). Eigene Zeichnung nur, wenn Dome es schöner haben möchte.
 - **Was ist das:** Rosa Haut mit dunklen Flecken/Sprenkeln um Maul und Nüstern (oft auch um die Augen).
 - **Wann:** bei Tigerschecken (Leopard), Champagne und Cream (Cremello/Perlino). Champagne gibt es im Spiel noch nicht – kommt später als Gen.
 - **Ebene:** `kroetenmaul`. Optional für die Augenpartie `kroetenaugen` (gesprenkelte Haut rund ums Auge).

@@ -33,7 +33,7 @@ Entwürfe als Overlay im Körper wie in Schritt 1, Einbau in `pferd.js` (Musterz
 - Danach Screenshots in allen drei Ansichten, CLAUDE.md und `UEBERGABE.md` aktualisieren.
 - Vorschau-Skript der Entwürfe: siehe Beschreibung in `UEBERGABE.md` (Überlagerung direkt nach `<g clip-path="url(#cl-UID)">` in das SVG von `zeichnePferd` einsetzen).
 
-## Schritt 3 – Leopard-Komplex vervollständigen (Dome 18.10.2026: zusammen mit Appaloosa, Knabstrupper, Paint Horse)
+## Schritt 3 – Leopard-Komplex vervollständigen – ✅ fertig (v441; Rassen Appaloosa, Knabstrupper, Paint Horse folgen)
 - Lp ohne PATN1 nicht immer Schabracke: auch nur Lackschimmel, Frost oder fast ohne Muster.
 - Neu: Lackschimmel (Varnish Roan, wird mit dem Alter heller, dunkel über Knochen), Snowflake, Frost.
 - Merkmale aller Lp-Pferde: gefleckte Haut (Maul, Augen), weiße Lederhaut, gestreifte Hufe.

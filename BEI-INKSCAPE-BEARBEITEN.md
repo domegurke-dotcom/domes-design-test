@@ -24,6 +24,11 @@ Nach dem Zeichnen einfach hochladen – `werkzeuge/kopf-export.js` übernimmt ne
 ### 0. Glanz- und Schattenbereiche für die Köpfe (Dome plant, v467)
 - Dome zeichnet eigene Licht-/Schattenflächen für die Köpfe. Sobald sie da sind: die helle Spiel-Schattierung auf dem Kopf (`sh-`-Rechteck in `zeichnePferd`) und die Aufhellung der Ohren (`farbeOhr`, +10 % Weiß) wieder entfernen.
 
+### 0b. Alterszeichen für Senioren (neu, Dome v468)
+- Im Spiel gibt es dafür vorerst einen Platzhalter (aus den alten Köpfen bis v423 übertragen): graue Haare um das Auge, eingefallene Augengrube (Bogen über dem Auge), Tränenrinne (Linie unter dem Auge), Falte vom Maulwinkel zum Nasenrücken. Bei „reif“ (ca. 10–15 J.) nur leicht: etwas Grau ums Auge und ein schwacher Bogen.
+- **Bitte zeichnen**, je Kopfform eine Gruppe `alterszeichen` mit Ebenen `senior` und `reif` (Linien in Linienfarbe, graue Haare als Fläche mit Weichzeichner). Kein weißer Fleck am Maulwinkel (Dome).
+- Danach ersetzt Claude den Platzhalter (`ALTERS_ZEICHEN` in pferd.js).
+
 ### 2. Milchmaul (unter `kopfabzeichen`)
 - **Was ist das:** Die Lippen selbst sind weiß (Haut darunter rosa) – nicht zu verwechseln mit der Schnippe (weißer Fleck auf der Nase zwischen den Nüstern, Lippen bleiben farbig).
 - **Ebenen:** `milchmaul` (Ober- und Unterlippe weiß, von der Maulspitze bis etwa zum Maulwinkel). Wenn du es genauer willst, zusätzlich `weisse oberlippe` und `weisse unterlippe` einzeln.

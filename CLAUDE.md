@@ -51,7 +51,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (3 Stellen in index.html: pferd.js, boxstufen.js, kopfneu.js) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **490**.
+- Letzte Version bei Aktualisierung dieser Datei: **491**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName` ausfüllen → `#chLos` → Kreditbrief schließen (`#dlgKnoepfe button`) → `[data-immo="pension"]` → `#kaufName` → `#dlgKnoepfe button:first-child`. Admin: `spiel.admin = true`.
@@ -191,6 +191,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - **v488 (Dome):** bzn: Absatz „Nachträge vom 18.10. (v440–v457)“ (Weiß-Gene addieren, Pintaloosa/Roan-Kombis, Schimmel-Graumaul, Übergang, Rassenansicht). Enzyklopädie: Pintaloosa, Roan-Schecke.
 - **v489 (Dome):** Ruß-Farben und Schwarzbrauner ohne eigene Kopffarbe – Kopf und Ohren bekommen denselben Rußanflug wie der Hals (`C.russ` in `schatt`, `ohrFell`), dadurch kein Absatz am Hals-Kopf-Übergang.
 - **v490 (Dome):** Keine Kante mehr am Ohransatz: die Ohren bekommen dieselbe Kopf-Schattierung (sh-Verlauf, Glanz, Ruß, Tupfen) per Maske aus der Ohrform (`schattOhr`, `schattLage` mit nach oben verlängertem Rechteck; Linien bleiben scharf). Feste Ohr-Aufhellung (+13 %) und `ohrFell` entfallen.
+- **v491 (Dome):** Metallglanz auf dunklem Fell (Rappe, Schwarzbraun, Dunkelbraun, Dunkelfuchs …) weicher: Glanzfarbe in der Fellfarbe getönt, schwächer und mit weichen Übergängen (`dk` aus der Helligkeit von `body`, `mtF`, `mStop` beim `mt-`-Verlauf); helle Farben unverändert.
 - **Aufräumen v435:** Code mit ESLint geprüft (keine echten Fehler), unbenutzte Funktionen/Variablen entfernt, `spiel.marktGekauft` auf 200 Einträge begrenzt (`marktGekauftMerken`), versehentlich hochgeladene Test-Screenshots gelöscht. Prüfskript: Skriptblöcke aus index.html in Dateien schreiben und `eslint` (liegt in /opt/node22/lib/node_modules) mit no-unused-vars/no-dupe-keys/no-unreachable laufen lassen. **Test-Screenshots nie im Projektordner speichern** (immer im Scratchpad). Kötenbehang (`behang` in pferd.js) ist vorerst ausgeblendet, der Code bleibt – kommt später (Dome).
 - **v436:** Kopfleiste beim Drehen des Handys: `--kopfH` wird sofort nachgezogen (ResizeObserver auf `header` + resize), vorher blitzte im Vollbild bis zu 0,5 s der Stall zwischen Kopfleiste und Fenster durch. **v437:** Viewport `minimum-scale=1` und `html, body { overflow-x: clip }` – verhindert, dass Chrome (Android) nach dem Drehen herauszoomt (Menüs breiter als die Kopfleiste, Dome-Screenshot ohne Vollbild).
 - **Offen (Stand v439):** Scheckmuster Schritt 2 (`PLAN-SCHECKUNG.md`). Domes Zeichnungen laut `BEI-INKSCAPE-BEARBEITEN.md`. Stute bleibt bei voller Abfohlbox in ihrer Box (gewollt). Ausbilder-Nachholen per Test geprüft (v433, funktioniert).

@@ -599,7 +599,12 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     `<pattern id="rn-${uid}" patternUnits="userSpaceOnUse" width="3" height="3"><circle cx="1" cy="1" r=".85" fill="url(#rg-${uid})"/><circle cx="2.4" cy="2.2" r=".7" fill="url(#rg-${uid})"/></pattern>`;
   // v443 (Dome): beim Achal-Tekkiner glänzen Cream- und Falbfarben golden („Gold“: Goldfalbe/Buckskin, Gold-Palomino)
   const silber = !perl && MG > .3 && /isabell/.test(fidT), mtc = silber ? "#eef2ff" : perl ? "#fff0cf" : bronze ? "#ffd7a6" : gold ? "#ffe08a" : "#fff", mtA = (silber || bronze || perl ? .75 : gold ? .7 : .5) * MG, mtB = (silber || bronze || perl ? .5 : gold ? .48 : .32) * MG;   // v444 (Dome): Isabell silbrig, Braune/Rappen glänzen auch
-  if (MG > 0) defs += `<linearGradient id="mt-${uid}" gradientUnits="userSpaceOnUse" x1="${f(-0.1 * L)}" y1="${f(-H * 1.3)}" x2="${f(L)}" y2="0"><stop offset=".15" stop-color="${mtc}" stop-opacity="0"/><stop offset=".35" stop-color="${mtc}" stop-opacity="${mtA}"/><stop offset=".48" stop-color="${mtc}" stop-opacity="0"/><stop offset=".62" stop-color="${mtc}" stop-opacity="${mtB}"/><stop offset=".75" stop-color="${mtc}" stop-opacity="0"/></linearGradient>`;
+  // v491 (Dome): auf dunklem Fell wirkte der weiße Glanz zu hart – dort in der Fellfarbe getönt, schwächer und mit weicheren Übergängen (dk 0 = hell … 1 = Rappe)
+  const dk = Math.max(0, Math.min(1, (0.5 - hexRgb(body).reduce((x, y) => x + y) / 765) / 0.35)), mtF = MG > 0 ? mix(mtc.length === 4 ? "#ffffff" : mtc, mix(body, "#ffffff", .6), .45 * dk) : mtc, wA = 1 - .3 * dk;
+  const mStop = (o, a) => `<stop offset="${o}" stop-color="${mtF}" stop-opacity="${(a * wA).toFixed(3)}"/>`;
+  if (MG > 0) defs += `<linearGradient id="mt-${uid}" gradientUnits="userSpaceOnUse" x1="${f(-0.1 * L)}" y1="${f(-H * 1.3)}" x2="${f(L)}" y2="0">` + (dk > 0
+    ? mStop(.1, 0) + mStop(.24, mtA * .45) + mStop(.35, mtA) + mStop(.43, mtA * .45) + mStop(.53, 0) + mStop(.62, mtB * .55) + mStop(.68, mtB) + mStop(.74, mtB * .55) + mStop(.84, 0)
+    : mStop(.15, 0) + mStop(.35, mtA) + mStop(.48, 0) + mStop(.62, mtB) + mStop(.75, 0)) + `</linearGradient>`;
 
   const bx = `x="${f(minX - 5)}" y="${f(minY - 5)}" width="${f(maxX - minX + 10)}" height="${f(-minY + 10)}"`;
   if (C.pattern === "dapple" || C.pattern === "roan" || C.pattern === "fleck") defs += `<mask id="mk-${uid}" maskUnits="userSpaceOnUse" ${bx}><g filter="url(#wm6-${uid})"><path d="${halsD}" fill="#fff"/><path d="${glatt(rumpf)}" fill="#fff" transform="translate(0,-3)"/></g></mask><filter id="wm6-${uid}" filterUnits="userSpaceOnUse" ${bx}><feGaussianBlur stdDeviation="5"/></filter>`;

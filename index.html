@@ -540,6 +540,7 @@
   .farbspalte.musterspalte { right: calc(var(--pf) + var(--fsB) + 2px); }   /* v451: Scheckungen links neben den Fellfarben */
   .ms-pfeil { right: calc(var(--pf) + var(--fsB) + 4px) !important; }
   .fs-kachel:disabled { opacity: .35; cursor: default; }
+  .var-hinweis { position: absolute; top: 8px; left: calc(var(--rgB) + var(--pf) + 8px); right: calc(var(--pf) + var(--fsB) + var(--msB) + 8px); z-index: 2; text-align: center; pointer-events: none; } .var-hinweis span { display: inline-block; background: rgba(255,255,255,.86); border: 1.5px solid #e2d6c3; border-radius: 10px; padding: 3px 10px; font-size: .78rem; font-weight: 700; color: var(--akzent); }   /* v456: welche Variante gerade gezeigt wird */
   .sort-seg { max-width: 340px; margin: 6px 0 10px; grid-column: 1 / -1; } .kont-kopf { margin: 14px 0 4px; padding-bottom: 3px; border-bottom: 2px solid #e2d6c3; color: var(--akzent); font-size: 1rem; } .kont-kopf small { color: var(--leise); font-weight: 500; }   /* v455: Sortierung nach Kontinent */
   /* Fellfarben als kleine Kacheln rechts im Bild (quer und PC) */
   .farbspalte { position: absolute; right: calc(var(--pf) + 2px); top: 8px; bottom: 8px; width: calc(var(--fsB) - 8px); overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 2px; z-index: 2; scrollbar-width: none; }
@@ -947,7 +948,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "455";
+  const SPIEL_VERSION = "456";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -955,9 +956,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=455"></script>
-<script src="boxstufen.js?v=455"></script>
-<script src="kopfneu.js?v=455"></script>
+<script src="pferd.js?v=456"></script>
+<script src="boxstufen.js?v=456"></script>
+<script src="kopfneu.js?v=456"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3716,7 +3717,33 @@
     if (m.gen && m.gen.O) ex.ow = .7;
     wahl.gen = g; wahl.ex = ex; wahl.eigeneGene = true; wahl.chip = base; wahl.farbe = farbeAus(g, ex);
   }
+  // v456 (Dome): Rassenansicht – dieselbe Farbe/dasselbe Muster nochmal antippen schaltet die Varianten durch (Sommer-/Winterrappe, Jahreszeit, Roan- und Scheckstufen, Zebrastreifen …)
+  const STUFEN_NAME = { weiss: ["wenig Weiß", "typisch", "viel Weiß", "fast weiß"], roan: ["wenig Roan (dunkler)", "typisch", "viel Roan (heller)"], tiger: ["klein / wenige Punkte", "typisch", "groß / viele Punkte"] };
+  function farbVarianten(f) {
+    const C = FARBEN[f] || {}, pat = C.pattern, v = [];
+    if (f === "rappe") return [{ n: "Sommerrappe – bleibt das ganze Jahr schwarz", ex: { sonne: .2 }, saison: 1 }, { n: "Winterrappe im Winter – schwarz", ex: { sonne: .8 }, saison: 3 }, { n: "Winterrappe im Sommer – von der Sonne rostbraun ausgebleicht", ex: { sonne: .8 }, saison: 1 }];
+    if (BLEICH[f]) { const l = [{ n: "im Winter (Winterfell)", saison: 3 }, { n: "im Sommer – von der Sonne ausgeblichen", ex: { sonne: .9 }, saison: 1 }]; if (f === "brauner") l.push({ n: "Hellbrauner", ex: { ton: .1 }, saison: 3 }); return l; }
+    if (f === "braunfalbe") v.push({ n: "Braunfalbe", ex: { ton: .6, zebra: .1 } }, { n: "Hellfalbe", ex: { ton: .1, zebra: .1 } });
+    if (["braunfalbe", "rotfalbe", "mausfalbe", "gelbfalbe", "weissfalbe"].includes(f)) { const t = f === "braunfalbe" ? { ton: .6 } : {}; v.push({ n: "mit Zebrastreifen an den Beinen", ex: { ...t, zebra: .6 } }, { n: "mit Zebrastreifen und Schulterstreifen", ex: { ...t, zebra: .92 } }); if (f !== "braunfalbe") v.unshift({ n: "ohne Zebrastreifen", ex: { zebra: .1 } }); return v; }
+    const art = ["tobiano", "overo", "tovero", "splash", "sabino"].includes(pat) ? "weiss" : pat === "roan" ? "roan" : ["leopard", "fewspot", "blanket", "snowcap"].includes(pat) ? "tiger" : null;
+    if (art) return STUFEN_NAME[art].slice(0, art === "weiss" && pat !== "overo" ? 4 : 3).map((n, i) => ({ n, ex: { muster: MS_STUFEN[i][0] }, stufe: 1 }));
+    return [];
+  }
+  function varianteAnwenden() {
+    const L = farbVarianten(wahl.farbeWahl), i = wahl.varIdx, V = L.length && i >= 0 ? L[i % L.length] : null;
+    wahl.saisonVar = V && V.saison != null ? V.saison : null; wahl.varText = V ? V.n : "";
+    if (V && V.ex && !(wahl.muster && V.stufe)) wahl.ex = { ...(wahl.ex || exZufall(zufall("wahl-" + wahl.id))), ...V.ex };
+  }
+  function farbeKlick(f) {
+    const gleich = f === wahl.farbeWahl;
+    wahl.farbe = f; wahl.farbeWahl = f; wahl.eigeneGene = false; wahl.gen = null; wahl.ex = null;
+    const n = farbVarianten(f).length; wahl.varIdx = n ? (gleich ? (wahl.varIdx + 1) % n : 0) : -1; if (!n) wahl.varText = "";
+    if (wahl.varIdx >= 0 && gleich === false && n) wahl.varIdx = 0;
+    varianteAnwenden(); if (wahl.muster) musterAnwenden(); aktualisiere();
+  }
   function musterWaehlen(k) {
+    const M0 = MUSTER_WAHL.find(x => x.k === k);
+    if (k !== "keine" && k === wahl.muster && M0 && M0.stufe) { wahl.mStufe = ((wahl.mStufe == null ? 1 : wahl.mStufe) + 1) % (M0.fast ? 4 : 3); musterAnwenden(); aktualisiere(); return; }   // nochmal antippen = nächste Ausprägung
     wahl.muster = k === "keine" ? null : k;
     if (!wahl.muster) { wahl.gen = null; wahl.ex = null; wahl.eigeneGene = false; wahl.farbe = wahl.farbeWahl; } else musterAnwenden();
     aktualisiere();
@@ -3777,7 +3804,7 @@
     const g = zufallAus(["Stute", "Hengst", "Wallach"]);
     wahl = {
       id: "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      rasse: id, farbe: r.farben[0], farbeWahl: r.farben[0], muster: null, mStufe: 1, geschlecht: g, name: zufallAus(NAMEN[g]),
+      rasse: id, farbe: r.farben[0], farbeWahl: r.farben[0], muster: null, mStufe: 1, varIdx: -1, varText: "", saisonVar: null, geschlecht: g, name: zufallAus(NAMEN[g]),
       alter: 3 + Math.floor(Math.random() * 10),
       zielStockmass: Math.round(r.h[0] + Math.random() * (r.h[1] - r.h[0])),
     };
@@ -3786,7 +3813,7 @@
     a.innerHTML = `
       <div class="leiste"><button id="zurueck">‹ Rassen</button><h2>${r.name}</h2><button id="zu" aria-label="Schließen">✕</button></div>
       <div class="inhalt">
-        <div class="vorschau"><div class="gross-huelle"><svg id="gross" viewBox="0 0 ${VB.b} ${VB.h}"></svg></div>
+        <div class="vorschau"><div class="var-hinweis" id="varHinweis" hidden></div><div class="gross-huelle"><svg id="gross" viewBox="0 0 ${VB.b} ${VB.h}"></svg></div>
           <div class="farbspalte" id="farbSpalte">${r.farben.map(fid => { const c = FARBEN[fid]; return `<button class="fs-kachel" data-f="${fid}"><span class="swatch" style="background:linear-gradient(135deg, ${c.body} 55%, ${c.mane} 55%)"></span>${c.name.replace(/ \(.*\)/, "")}</button>`; }).join("")}</div>
           <button class="fs-pfeil hoch" id="fsHoch" hidden aria-label="Nach oben scrollen">▲</button><button class="fs-pfeil runter" id="fsRunter" hidden aria-label="Weitere Farben">▼</button>
           <div class="farbspalte musterspalte" id="musterSpalte"><button class="fs-kachel ms-kachel" data-m="keine" title="Keine Scheckung"><span class="swatch" style="background:#fff;display:flex;align-items:center;justify-content:center;font-size:.9rem">✕</span>Keine</button>${musterListe(id).map(m => `<button class="fs-kachel ms-kachel" data-m="${m.k}"><span class="swatch" style="background:${m.sw}"></span>${m.n}</button>`).join("")}</div>
@@ -3843,7 +3870,7 @@
       $(hoch).onclick = () => fsp.scrollBy({ top: -fsp.clientHeight * .7, behavior: "smooth" });
       requestAnimationFrame(pfeile); window.addEventListener("resize", pfeile);
     });
-    a.querySelectorAll("#farben .chip, #farbSpalte .fs-kachel").forEach(b => b.onclick = () => { wahl.farbe = b.dataset.f; wahl.farbeWahl = b.dataset.f; wahl.eigeneGene = false; wahl.gen = null; wahl.ex = null; if (wahl.muster) musterAnwenden(); aktualisiere(); });
+    a.querySelectorAll("#farben .chip, #farbSpalte .fs-kachel").forEach(b => b.onclick = () => farbeKlick(b.dataset.f));
     a.querySelectorAll("#musterSpalte .ms-kachel, #musterChips .chip").forEach(b => b.onclick = () => musterWaehlen(b.dataset.m));
     a.querySelectorAll("#musterStufe button").forEach(b => b.onclick = () => { wahl.mStufe = +b.dataset.s; musterAnwenden(); aktualisiere(); });
     zoomInit($("gross"), true);
@@ -3910,7 +3937,11 @@
     lineal += `<line x1="30" x2="${VB.b - 8}" y1="${wy}" y2="${wy}" stroke="var(--akzent)" stroke-width="1.5"/><text x="${VB.b - 8}" y="${wy - 4}" font-size="11" text-anchor="end" font-weight="700" fill="var(--akzent)" stroke="#fff" stroke-width="3" paint-order="stroke">${wahl.stockmass} cm</text>` +
       (wahl.stockmass !== wahl.zielStockmass ? `<text x="${VB.b - 8}" y="${wy - 18}" font-size="9" text-anchor="end" font-weight="600" fill="var(--akzent)" stroke="#fff" stroke-width="3" paint-order="stroke">erwachsen ${wahl.zielStockmass} cm</text>` : "");
     // Breite anpassen, damit auch große Pferde ganz ins Bild passen
+    saisonFix = wahl.saisonVar != null ? wahl.saisonVar : null;   // v456: Jahreszeit der gezeigten Variante
     const z = zeichnePferd(wahl.rasse, fb(wahl, wahl.alter), { seed: wahl.id, geschlecht: wahl.geschlecht, alterStufe: stufeAusMonaten(wahl.alter * 12), ...kopfOpt(wahl) });
+    saisonFix = null;
+    { const hw = $("varHinweis"), M = MUSTER_WAHL.find(x => x.k === wahl.muster), t = M ? `${M.n}${M.stufe ? " – " + (STUFEN_NAME[["tobiano", "overo", "tovero", "splash", "sabino"].includes(wahl.muster) || ["dw"].includes(wahl.muster) ? "weiss" : wahl.muster === "roan" ? "roan" : ["tiger", "fewspot", "schabrackentiger", "schabracke"].includes(wahl.muster) ? "tiger" : "weiss"][wahl.mStufe == null ? 1 : wahl.mStufe] || "") : ""}` : wahl.varText;
+      if (hw) { hw.hidden = !t; hw.innerHTML = t ? `<span>${t}</span>` : ""; } }
     const sc = wahl.stockmass / 100, breite = (z.box.maxX - z.box.minX) * sc;
     // feste Bildbreite (passend für das breiteste Pferd), damit Bild und Pfeile nie springen
     if (!window.__vbMax) window.__vbMax = Math.max(VB.b, ...RASSEN.map(r => { const zz = zeichnePferd(r.id, r.farben[0], { seed: "max" }); return 132 + (zz.box.maxX - zz.box.minX) * r.h[1] / 100 + 106; }));

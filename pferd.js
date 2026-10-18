@@ -593,6 +593,10 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   };
   const weissHuf = st => st && st !== "ballen" && st !== "krone";   // ab weißer Fessel: heller Huf (wie in echt)
   const hufFarbe = st => weissHuf(st) ? "#cbbd9c" : hoof;
+  // v441 Leopard-Komplex: gestreifte Hufe (helle und dunkle Längsstreifen)
+  const LP = opt.lp || null;
+  const hufFill = (st, fern) => LP && LP.huf && !weissHuf(st) ? `url(#hs${fern ? "f" : ""}-${uid})` : fern ? dunkel(hufFarbe(st)) : hufFarbe(st);
+  if (LP && LP.huf) [["", hoof], ["f", dunkel(hoof)]].forEach(([k, c]) => { defs += `<pattern id="hs${k}-${uid}" patternUnits="userSpaceOnUse" width="2.6" height="10"><rect width="2.6" height="10" fill="${c}"/><rect x="1.5" width="0.9" height="10" fill="${k ? dunkel("#cbbd9c") : "#cbbd9c"}"/></pattern>`; });
   if (!liegt) defs += beinClip("vn", vorderN) + beinClip("hn", hinterN) + beinClip("vf", vorderF) + beinClip("hf", hinterF);
   g = `<defs>${defs}</defs>`;
 
@@ -607,7 +611,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (!liegt) { const sf = dunkel(C.stripe || C.points || body), wf = dunkel("#f6f4ee");
     g += zebraStreifen(fx2, "vf", sf) + zebraStreifen(hx2, "hf", sf) + beinWeiss(BA.vf, fx2, "vf", wf) + beinWeiss(BA.hf, hx2, "hf", wf); }
   g += `<g stroke="${INK}" stroke-width="1.6" vector-effect="non-scaling-stroke">` +
-    (liegt ? [] : [[huf(fx2), BA.vf], [huf(hx2), BA.hf]]).map(([h, st]) => `<path d="${eckig(h)}" fill="${dunkel(hufFarbe(st))}" vector-effect="non-scaling-stroke"/>`).join("") + "</g></g>";
+    (liegt ? [] : [[huf(fx2), BA.vf], [huf(hx2), BA.hf]]).map(([h, st]) => `<path d="${eckig(h)}" fill="${hufFill(st, true)}" vector-effect="non-scaling-stroke"/>`).join("") + "</g></g>";
 
 
   // Fernes Ohr
@@ -619,9 +623,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += `<g clip-path="url(#cl-${uid})">`;
   // v440: Stichelhaare (feine weiße Punkte) mit weichem Übergang – Sabino-Ränder, Rabicano. inner = Flächen (SVG), weite = Breite des Saums
   let stN = 0;
-  const stichel = (inner, weite, dichte = 1) => { const id = `st${++stN}-${uid}`, rs = zufall(id + (opt.seed || ""));
-    let dots = ""; for (let i = 0; i < 34; i++) dots += `<ellipse cx="${f(rs() * 11)}" cy="${f(rs() * 11)}" rx="${f(0.22 + rs() * 0.3)}" ry="${f(0.35 + rs() * 0.35)}" fill="#fbfaf6" opacity="${f(0.6 + rs() * 0.4)}"/>`;
-    return `<pattern id="p${id}" patternUnits="userSpaceOnUse" width="11" height="11">${dots}</pattern><mask id="m${id}" maskUnits="userSpaceOnUse" ${bx}><g filter="url(#wb-${uid})" fill="#fff" stroke="#fff" stroke-width="${f(weite)}" opacity="${f(Math.min(1, dichte))}">${inner}</g></mask><rect ${bx} fill="url(#p${id})" mask="url(#m${id})"/>`; };
+  const stichel = (inner, weite, dichte = 1, T = 11) => { const id = `st${++stN}-${uid}`, rs = zufall(id + (opt.seed || ""));
+    let dots = ""; for (let i = 0; i < Math.round(34 * T * T / 121); i++) dots += `<ellipse cx="${f(rs() * T)}" cy="${f(rs() * T)}" rx="${f(0.22 + rs() * 0.3)}" ry="${f(0.35 + rs() * 0.35)}" fill="#fbfaf6" opacity="${f(0.6 + rs() * 0.4)}"/>`;
+    return `<pattern id="p${id}" patternUnits="userSpaceOnUse" width="${T}" height="${T}">${dots}</pattern><mask id="m${id}" maskUnits="userSpaceOnUse" ${bx}><g filter="url(#wb-${uid})" fill="#fff" stroke="#fff" stroke-width="${f(weite)}" opacity="${f(Math.min(1, dichte))}">${inner}</g></mask><rect ${bx} fill="url(#p${id})" mask="url(#m${id})"/>`; };
   if (C.pattern === "dapple") g += `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#dp-${uid})" mask="url(#mk-${uid})"/></g>`;
   if (C.pattern === "roan") g += `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#rn-${uid})" mask="url(#mk-${uid})"${C.roanDeck != null && C.roanDeck < 1 ? ` opacity="${C.roanDeck.toFixed(2)}"` : ""}/></g>`;
   if (C.pattern === "fleck") g += `<g clip-path="url(#cl-${uid})"><rect ${bx} fill="url(#fk-${uid})" opacity=".8"/></g>`;
@@ -750,6 +754,19 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
         if (pts.length > 1) t += `<path d="${glatt(pts, false)}" fill="none" stroke="${sf}" stroke-width="${f(0.5 + rg() * 0.9)}" stroke-linecap="round" opacity="${f((weiss ? 0.45 : 0.6) + rg() * 0.4)}"/>`;
         y += len + 1 + rg() * 6; } }
     g += `<g clip-path="url(#cr-${uid})" filter="url(#wm-${uid})">${t}</g>`;
+  }
+  // v441 Leopard-Komplex (PLAN-SCHECKUNG.md Schritt 3): Lackschimmel (wird mit dem Alter heller, über Knochen bleibt es dunkel), Snowflake, Frost
+  if (LP) {
+    const rl = zufall((opt.seed || rasseId) + "-lp"), koerper = `<path d="${halsD}" fill="#fff"/><path d="${glatt(rumpf)}" fill="#fff"/>`;
+    if (LP.lack > 0) {
+      g += `<g clip-path="url(#cr-${uid})">${stichel(koerper, 3, LP.lack, 29)}${stichel(koerper, 3, LP.lack * 0.85, 23)}${LP.lack > .5 ? stichel(koerper, 3, (LP.lack - .5) * 2, 31) : ""}</g>`;
+      const marke = [[0.0, top + 0.45 * D, 0.06, 0.16], [0.13, bottom - 0.12 * D, 0.05, 0.14], [0.8, top + 0.12 * D, 0.06, 0.12], [0.74, bottom - 0.2 * D, 0.06, 0.16], [0.35, top + 0.06 * D, 0.1, 0.08]]
+        .map(([x, y, rx, ry]) => klecks(rl, x * L, y, rx * L, ry * D, dunkel(body))).join("");   // „Varnish marks“ an Bug, Ellbogen, Hüfthöcker, Knie, Widerrist
+      g += `<g clip-path="url(#cr-${uid})" filter="url(#wb-${uid})" opacity="${f(Math.min(.85, LP.lack))}">${marke}</g>`;
+    }
+    if (LP.frost) { const fr = klecks(rl, 0.68 * L, top + 0.15 * D, 0.3 * L, 0.32 * D, "#fff") + klecks(rl, 0.38 * L, top + 0.08 * D, 0.18 * L, 0.2 * D, "#fff"); g += `<g clip-path="url(#cr-${uid})">${stichel(fr, 10, .9, 27)}${stichel(fr, 6, .7, 23)}</g>`; }
+    if (LP.flocken > 0) { let t = ""; for (let i = 0; i < LP.flocken; i++) { const x = (0.1 + Math.pow(rl(), 0.6) * 0.85) * L, y = top + (0.05 + rl() * 0.75) * D, r = 0.9 + rl() * 1.6;
+      t += klecks(rl, x, y, r, r * (0.7 + rl() * 0.4), "#f6f3ec"); } g += `<g clip-path="url(#cr-${uid})" filter="url(#wm-${uid})">${t}</g>`; }
   }
   if (C.stripe && !ganzWeiss) g += `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${C.stripe}" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>`;
   if (C.muzzle && !eigenKopf) g += `<ellipse cx="${f(hp(0.93, 0.12).x)}" cy="${f(hp(0.93, 0.12).y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.93, 0.12).x)} ${f(hp(0.93, 0.12).y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>`;
@@ -890,7 +907,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += `<g clip-path="url(#cr-${uid})">` + strich(add(mid(T, Cn), mul(nOut, -2)), 2, 1.5) + strich(add(mid(T, Cn), add(mul(nOut, -2), P(1, 4))), 2, 1.2) + `</g>`;
   // Hufe vorn
   g += `<g stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke">` +
-    (liegt ? [[hufLiegend], [hufLiegendH]] : [[huf(fx), BA.vn], [huf(hx), BA.hn]]).map(([h, st]) => `<path d="${eckig(h)}" fill="${hufFarbe(st)}" vector-effect="non-scaling-stroke"/>`).join("") + "</g>" +
+    (liegt ? [[hufLiegend], [hufLiegendH]] : [[huf(fx), BA.vn], [huf(hx), BA.hn]]).map(([h, st]) => `<path d="${eckig(h)}" fill="${hufFill(st)}" vector-effect="non-scaling-stroke"/>`).join("") + "</g>" +
     (liegt ? [] : [fx, hx]).map(xc => `<path d="M${f(xc - 0.55 * w)},${f(-hh + 1.2)}L${f(xc - 0.75 * w)},${f(-1.2)}" stroke="#fff" stroke-opacity=".35" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`).join("");
   // Behang über Hufe (vorn)
   if (behN.length) {
@@ -950,7 +967,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     const schopfFarbe = dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane);
     g += `<g transform="matrix(${ekMatrix})">${kopfNeuSVG(eigenKopf, "ek" + uid, { fell: head, muschel, maehne: schopfFarbe, ink: INK, statisch: opt.statisch, augenZu: opt.augenZu, schattierung: schatt, alter: kopfAlter,
       marwari: !!k.curl, wimper: opt.wimper != null ? opt.wimper : (opt.geschlecht === "Stute" || stufe === "fohlen"), ohrR: OS.R, ohrL: OS.L, ohrSpiel: OS.spiel !== false, seed: opt.seed || rasseId,
-      abz: opt.kopfAbz, maul: opt.maul, ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
+      abz: opt.kopfAbz, maul: opt.maul, ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, lpHaut: !!(LP && LP.haut), sklera: !!(LP && LP.sklera), augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
   }
   // Mähne
   if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
@@ -1251,7 +1268,7 @@ function kopfNeuSVG(key, uid, o = {}) {
   const blinkZu = o.statisch || o.augenZu ? "" : '<animate attributeName="opacity" values="0;1;0" keyTimes="0;.93;.97" calcMode="discrete" dur="4.5s" repeatCount="indefinite"/>';
   const lidZu = `<path d="M346.69,328.97C368,346 397,336 409.56,305.9M370,341.5L366.5,356M392,336.5L397,350" fill="none" stroke="${ink}" stroke-width="9" stroke-linecap="round"/>`;
   const auge = `<g transform="translate(${ac2.x.toFixed(2)},${ac2.y.toFixed(2)}) scale(${as}) translate(${-ac.x},${-ac.y})">` +
-    `<g${o.augenZu ? ' opacity="0"' : ""}>${blinkAuf}${K.augeClip.replace("r15-ekp2-auge-3", uid + "-auge")}${farbe(o.augeBlau ? K.augeBlau : K.auge).replace("r15-ekp2-auge-3", uid + "-auge")}${o.wimper ? farbe(K.wimper) : ""}</g>` +
+    `<g${o.augenZu ? ' opacity="0"' : ""}>${blinkAuf}${K.augeClip.replace("r15-ekp2-auge-3", uid + "-auge")}${farbe(o.augeBlau ? K.augeBlau : K.auge).replace("r15-ekp2-auge-3", uid + "-auge")}${o.sklera ? skleraSVG(ac) : ""}${o.wimper ? farbe(K.wimper) : ""}</g>` +
     (o.statisch && !o.augenZu ? "" : `<g opacity="${o.augenZu ? 1 : 0}">${blinkZu}${lidZu}</g>`) + `</g>`;
   const fell = F.fell.replace('transform="', `transform="${kmText(am)} `);
   // Maulfärbung und Kopfabzeichen liegen auf dem Fell, unter Schattierung und Linien (Reihenfolge wie in Domes Datei)
@@ -1261,9 +1278,21 @@ function kopfNeuSVG(key, uid, o = {}) {
   const zeichen = (o.maul && F.maul && F.maul[o.maul] ? F.maul[o.maul] : "") + (o.abz || []).map(abzSVG).join("");
   return ohr("R") + farbe(fell) + `<clipPath id="${uid}-fell">${fell}</clipPath>` +
     (zeichen ? `<defs>${farbe(kopfDefs(zeichen))}</defs><g clip-path="url(#${uid}-fell)"><g transform="${kmText(am)}">${farbe(zeichen)}</g></g>` : "") +
+    (o.lpHaut ? `<g clip-path="url(#${uid}-fell)"><g transform="${kmText(am)}">${lpHautSVG(K, o.seed)}</g></g>` : "") +
     (o.schattierung ? `<g clip-path="url(#${uid}-fell)">${o.schattierung}</g>` : "") +
     `<g transform="${kmText(am)}">${farbe(F.svg)}</g>` + ohr("L") + auge;
 }
+// v441 Leopard-Komplex: weiße Lederhaut im Augenwinkel (wie beim Menschen) und gefleckte rosa Haut um Maul und Augen – in Koordinaten von Domes Kopf
+function skleraSVG(ac) { const ec = (dx, dy, rx, ry) => `<ellipse cx="${(ac.x + dx).toFixed(1)}" cy="${(ac.y + dy).toFixed(1)}" rx="${rx}" ry="${ry}" transform="rotate(-15 ${(ac.x + dx).toFixed(1)} ${(ac.y + dy).toFixed(1)})" fill="#f3eee4"/>`;
+  return ec(21, -5.5, 8, 5.5) + ec(-21, 5.5, 6, 4.5); }
+function lpHautSVG(K, seed) {
+  const r = zufall((seed || "k") + "-lphaut"), N = K.nase, G = K.gap, A = K.augeMitte, ux = G.x - N.x, uy = G.y - N.y, l = Math.hypot(ux, uy), nx = -uy / l, ny = ux / l;
+  let s = "";
+  for (let i = 0; i < 26; i++) { const t = 0.02 + r() * 0.2, q = (r() - .5) * 150, x = N.x + ux * t + nx * q, y = N.y + uy * t + ny * q, rr = 5 + r() * 12;
+    s += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${rr.toFixed(1)}" ry="${(rr * (0.6 + r() * 0.5)).toFixed(1)}" fill="#d9a9a2" opacity="${(0.65 + r() * 0.3).toFixed(2)}"/>`; }
+  for (let i = 0; i < 9; i++) { const a = r() * Math.PI * 2, d = 42 + r() * 22, rr = 4 + r() * 7;
+    s += `<ellipse cx="${(A.x + Math.cos(a) * d).toFixed(1)}" cy="${(A.y + Math.sin(a) * d * 0.8).toFixed(1)}" rx="${rr.toFixed(1)}" ry="${(rr * 0.75).toFixed(1)}" fill="#d9a9a2" opacity=".8"/>`; }
+  return s; }
 // nur die Verläufe/Filter, die die gewählten Abzeichen brauchen (mit ihren Verweisen)
 let KOPF_DEFS = null;
 function kopfDefs(svg) {

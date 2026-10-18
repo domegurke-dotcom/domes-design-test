@@ -48,3 +48,4 @@ Mit Dome besprochen am 18.10.2026 (Stand Spiel v423). Alle Köpfe werden komplet
 
 Danach: Enzyklopädie (Vererbung, bzn) ✅, Admin-Rassenansicht ✅ (v433: Kopfform nur mit Formen der Rasse + Ausprägung, Ohrstellung je Ohr für die Vorschau; Abzeichen/Beine/Maul/Augen seit v427–v431), Screenshots in allen drei Ansichten ✅ (v433), CLAUDE.md-Datei für Dome ✅.
 - v433 (Dome): Braunfalbe nur zwei Stufen – Braunfalbe und **Hellfalbe** (eigener Name, `ex.ton` < 0,25 wie Hellbrauner).
+- v434 (Dome): Form-Varianten der Kopfabzeichen – schmale Blesse „geschwungen“, Blesse „unregelmäßiger Rand“ (je 50 %, fest je Pferd, in allen Kopfformen). Übrige Varianten-Vorschläge hat Dome abgelehnt.

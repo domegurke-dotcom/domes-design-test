@@ -1083,6 +1083,8 @@ function ALTERS_K(stufe, k) {
 const KOPFFORMEN = { gerade: "Gerader Kopf", hecht: "Hechtkopf", ramsnase: "Ramsnase", rams: "Ramskopf", keil: "Keilkopf", schaf: "Schafskopf", schwein: "Schweinskopf" };
 const KOPF_STUFE = ["", "leicht", "normal", "stark"];
 const KOPF_WEISS = "#f6f4ee";   // Farbe der Kopfabzeichen
+// Varianten der Kopfabzeichen (v434, von Dome ausgesucht): unregelmäßiger Rand über Turbulenz
+const ABZ_VARIANTE = { "schmaleBlesse~geschwungen": { name: "geschwungen", freq: .022, scale: 25, seed: 11 }, "blesse~unregelmaessig": { name: "unregelmäßiger Rand", freq: .022, scale: 25, seed: 13 } };
 // Ohrgröße je Rasse (v430, Dome): Araber klein und fein, Ponys und Quarter klein, Kaltblüter groß – alle anderen 1
 const OHR_RASSE = { araber: .82, shagya: .85, angloaraber: .88, quarter: .88, shetty: .85, isi: .88, welshcob: .88, fell: .9, dales: .92, fjord: .9, haflinger: .95, vollblut: .95, lipizzaner: .95,
   tekke: 1.08, marwari: 1, shire: 1.12, clydesdale: 1.12, tinker: 1.05, friese: 1, andalusier: 1, hannoveraner: 1, trakehner: 1 };
@@ -1139,7 +1141,10 @@ function kopfNeuSVG(key, uid, o = {}) {
     (o.statisch && !o.augenZu ? "" : `<g opacity="${o.augenZu ? 1 : 0}">${blinkZu}${lidZu}</g>`) + `</g>`;
   const fell = F.fell.replace('transform="', `transform="${kmText(am)} `);
   // Maulfärbung und Kopfabzeichen liegen auf dem Fell, unter Schattierung und Linien (Reihenfolge wie in Domes Datei)
-  const zeichen = (o.maul && F.maul && F.maul[o.maul] ? F.maul[o.maul] : "") + (o.abz || []).map(a => F.abz && F.abz[a] ? F.abz[a] : "").join("");
+  // Abzeichen-Varianten (v434, Dome): „Name~Variante“ = Domes Form mit unregelmäßigem Rand (Turbulenz), z. B. schmaleBlesse~geschwungen
+  const abzSVG = a => { const [k, v] = a.split("~"), A = ABZ_VARIANTE[k + "~" + v], basis = F.abz && F.abz[k]; if (!basis) return ""; if (!A) return basis;
+    const fid = `__U__rv${k}`; return `<filter id="${fid}" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="${A.freq}" numOctaves="2" seed="${A.seed}"/><feDisplacementMap in="SourceGraphic" scale="${A.scale}"/></filter><g filter="url(#${fid})">${basis}</g>`; };
+  const zeichen = (o.maul && F.maul && F.maul[o.maul] ? F.maul[o.maul] : "") + (o.abz || []).map(abzSVG).join("");
   return ohr("R") + farbe(fell) + `<clipPath id="${uid}-fell">${fell}</clipPath>` +
     (zeichen ? `<defs>${farbe(kopfDefs(zeichen))}</defs><g clip-path="url(#${uid}-fell)"><g transform="${kmText(am)}">${farbe(zeichen)}</g></g>` : "") +
     (o.schattierung ? `<g clip-path="url(#${uid}-fell)">${o.schattierung}</g>` : "") +

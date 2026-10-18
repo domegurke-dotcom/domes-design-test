@@ -933,7 +933,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "430";
+  const SPIEL_VERSION = "431";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -941,9 +941,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=430"></script>
-<script src="boxstufen.js?v=430"></script>
-<script src="kopfneu.js?v=430"></script>
+<script src="pferd.js?v=431"></script>
+<script src="boxstufen.js?v=431"></script>
+<script src="kopfneu.js?v=431"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1158,7 +1158,7 @@
     return p.ex; };
   // ---------- Kopfabzeichen, Maulfärbung, Augenfarbe (PLAN-KOEPFE.md Etappe 2, v426) ----------
   // Weiß-Anlage ex.weiss 0–1 (versteckt, vererbt wie die anderen Veranlagungen): Grundwert gleichverteilt, je Rasse verschoben (Logit-Stufen, damit sich oben nichts staut)
-  const WEISS_RASSE = { friese: -3, fell: -2.5, fjord: -2.5, dales: -1.8, lipizzaner: -1.5, andalusier: -.8, tekke: -.6, haflinger: .6, welshcob: .8, tinker: 1.5, shire: 1.8, clydesdale: 2, hannoveraner: .25, trakehner: .15, quarter: .25 };
+  const WEISS_RASSE = { friese: -4, fell: -3, fjord: -3, dales: -2.2, lipizzaner: -1.5, andalusier: -.8, tekke: -.6, haflinger: .6, welshcob: .8, tinker: 1.5, shire: 1.8, clydesdale: 2, hannoveraner: .25, trakehner: .15, quarter: .25 };
   // Weiß-Menge → Kopfabzeichen. Grundwert ohne Verschiebung: ohne 40 %, nur Schnippe 6 %, Flocke 8, Stern 15, Keilstern 6, schmale Blesse 9, Blesse 10, breite Blesse 4, Laterne 2
   const ABZ_STUFEN = [[.40, null], [.46, "schnippe"], [.54, "flocke"], [.69, "stern"], [.75, "keilstern"], [.84, "schmaleBlesse"], [.94, "blesse"], [.98, "breiteBlesse"], [Infinity, "laterne"]];
   const ABZ_PLUS_SCHNIPPE = .1;   // zu jedem anderen Abzeichen 10 % zusätzlich eine Schnippe
@@ -3818,11 +3818,27 @@
     $("genLabor").hidden = false; glZeigen();
   }
   // v427 (Dome): Kopfabzeichen, Maulfarbe und Augen in „Gene selbst wählen“ – setzt Weiß-Anlage/Pangaré passend (wird so auch vererbt)
+  // v431 (Dome): nur Abzeichen anbieten, die bei der Rasse wirklich vorkommen – einmal je Rasse durchgewürfelt (4.000 Marktpferde, ab 0,5 %)
+  const RASSE_ZEICHEN = {};
+  function rasseZeichen(rasse) {
+    if (RASSE_ZEICHEN[rasse]) return RASSE_ZEICHEN[rasse];
+    const r = zufall("rz-" + rasse), N = 4000, abz = {}, bein = {}, sh = WEISS_RASSE[rasse] || 0;
+    for (let i = 0; i < N; i++) {
+      const g = Object.fromEntries(["E", "Sb", "Sw", "O"].map(k => [k, [allel(rasse, k, r), allel(rasse, k, r)]]));
+      if (anzahl(g, "O") === 2) continue;
+      const weiss = sigmoid(logit(r()) + sh), z = weissZuschlag(genNorm(g)), a = ABZ_STUFEN.find(([t]) => sigmoid(logit(weiss) + z) < t)[1];
+      if (a) abz[a] = (abz[a] || 0) + 1;
+      BEINE.forEach(([k]) => { const v = sigmoid(logit(r()) + .8 * sh), st = BEIN_STUFEN.find(([t]) => sigmoid(logit(v) + BEIN_KOPF * logit(weiss) + BEIN_GEN * z + (k[1] === "h" ? BEIN_HINTEN : 0)) < t)[1]; if (st) bein[st] = (bein[st] || 0) + 1; });
+    }
+    const ab = n => n >= N * .005;
+    return (RASSE_ZEICHEN[rasse] = { abz: new Set(Object.keys(abz).filter(a => ab(abz[a]))), bein: new Set(Object.keys(bein).filter(st => ab(bein[st] / 4))) });
+  }
   function glKopfZeilen(zeile, exOpt) {
     const g = wahl.gen, ex = wahl.ex, k = kopfZeichen({ ...wahl, geb: undefined }), haupt = k.abz.filter(a => a !== "schnippe")[0] || (k.abz.length ? "schnippe" : null);
     const b = grundfarbe(g, ex.ton), rot = !hat(g, "E") || hat(g, "A"), dunkelFalbe = hat(g, "D") && hat(g, "E");
-    const z = [zeile("x-abz", "Kopfabzeichen", "Wird über die Weiß-Anlage vererbt (Füchse, Sabino, Splash und Overo haben mehr Weiß).",
-      exOpt("abz", ABZ_STUFEN.map(([, a]) => [a || "keine", a ? ABZ_NAME[a] : "keins"]), haupt || "keine"))];
+    const RZ = rasseZeichen(wahl.rasse), rn = rasseById(wahl.rasse).name;
+    const z = [zeile("x-abz", "Kopfabzeichen", `Wird über die Weiß-Anlage vererbt (Füchse, Sabino, Splash und Overo haben mehr Weiß). Angeboten wird nur, was beim ${rn} vorkommt.`,
+      exOpt("abz", ABZ_STUFEN.filter(([, a]) => !a || RZ.abz.has(a) || a === haupt).map(([, a]) => [a || "keine", a ? ABZ_NAME[a] : "keins"]), haupt || "keine"))];
     if (haupt && haupt !== "schnippe") z.push(zeile("x-schn", "Schnippe dazu", "Zusätzlich eine Schnippe zwischen den Nüstern.", exOpt("schn", [["1", "ja"], ["0", "nein"]], k.abz.includes("schnippe") ? "1" : "0")));
     if (anzahl(g, "Cr") === 2) z.push(zeile("x-maul", "Maul", "Bei Doppel-Cream sieht man keine Maulfärbung.", `<small>– (Doppel-Cream)</small>`));
     else if (b === "schwarzbrauner") z.push(zeile("x-maul", "Maul", "Schwarzbraune (At) haben immer ein Kupfermaul.", `<small>Kupfermaul (immer bei Schwarzbraunen)</small>`));
@@ -3833,8 +3849,9 @@
     else z.push(zeile("x-auge", "Augen", "Blau nur bei Doppel-Cream, Splashed White, Frame Overo oder Laterne.", `<small>${anzahl(g, "Cr") === 2 ? "blau (Doppel-Cream)" : "braun"}</small>`));
     // v430: Beinabzeichen je Bein (einzeln vererbt) und Zebrastreifen bei Falben
     const bz = beinZeichen({ ...wahl, geb: undefined }), KURZ = { ballen: "Ballen", krone: "Krone", halbeFessel: "½ Fessel", fessel: "Fessel", halberFuss: "½ Fuß", fuss: "Fuß", hochweiss: "hochweiß" };
-    BEINE.forEach(([k, n]) => z.push(zeile("x-" + k, `Bein ${n}`, "Weiße Beinabzeichen – jedes Bein wird einzeln vererbt, viel Weiß am Kopf macht weiße Beine wahrscheinlicher.",
-      exOpt("b_" + k, BEIN_STUFEN.map(([, a]) => [a || "keine", a ? KURZ[a] : "keins"]), bz[k] || "keine"))));
+    if (RZ.bein.size || BEINE.some(([k]) => bz[k])) BEINE.forEach(([k, n]) => z.push(zeile("x-" + k, `Bein ${n}`, `Weiße Beinabzeichen – jedes Bein wird einzeln vererbt, viel Weiß am Kopf macht weiße Beine wahrscheinlicher. Angeboten wird nur, was beim ${rn} vorkommt.`,
+      exOpt("b_" + k, BEIN_STUFEN.filter(([, a]) => !a || RZ.bein.has(a) || a === bz[k]).map(([, a]) => [a || "keine", a ? KURZ[a] : "keins"]), bz[k] || "keine"))));
+    else z.push(zeile("x-beine", "Beine", `Beim ${rn} kommen weiße Beinabzeichen praktisch nicht vor.`, `<small>keine Abzeichen</small>`));
     if (hat(g, "D")) z.push(zeile("x-zebra", "Zebrastreifen", "Primitive Abzeichen der Falben: Querstreifen an den Beinen, bei starker Ausprägung auch ein Schulterstreifen. Wird vererbt.",
       exOpt("zebra", [[.2, "keine"], [.6, "Beine"], [.92, "Beine + Schulter"]], ex.zebra < ZEBRA_AB ? .2 : ex.zebra < SCHULTER_AB ? .6 : .92)));
     return z;

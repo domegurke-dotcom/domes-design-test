@@ -235,6 +235,7 @@ let _uid = 0;
 // ---------- Zeichnen ----------
 // Liefert { svg: "<g>…</g>", box: {minX,maxX,minY} } in Pferde-Einheiten (Widerrist = 100)
 function zeichnePferd(rasseId, farbId, opt = {}) {
+  { const LX = FARBEN[farbId] && FARBEN[farbId].lexOpt; if (LX) opt = { ...LX, ...opt }; }   // v486: Enzyklopädie-Einträge bringen ihre Zeichnung mit (Rabicano, Brindle, Lp …)
   // Körpertyp: duenn | sportlich | normal | dick
   const typ = opt.typ || "normal";
   const TYP = { duenn: { bauch: -1, hq: 0.88, crest: -0.03, legT: 0.94 }, sportlich: { bauch: -0.45, hq: 1.07, crest: 0.025, legT: 1 }, normal: { bauch: 0, hq: 1, crest: 0, legT: 1 }, dick: { bauch: 1, hq: 1.12, crest: 0.07, legT: 1.04 } }[typ] || { bauch: 0, hq: 1, crest: 0, legT: 1 };

@@ -949,7 +949,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "494";
+  const SPIEL_VERSION = "495";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -957,9 +957,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=494"></script>
-<script src="boxstufen.js?v=494"></script>
-<script src="kopfneu.js?v=494"></script>
+<script src="pferd.js?v=495"></script>
+<script src="boxstufen.js?v=495"></script>
+<script src="kopfneu.js?v=495"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3863,13 +3863,15 @@
 
   let wahl = null;
   // v477 (Dome): Rassenansicht zeigt alle Grundfarben, die bei der Rasse über die Gene vorkommen (ab 0,25 %) – Scheckung, Roan und Schimmel stehen in der Muster-Spalte
+  const MUSTER_VON_FARBE = f => { const m = /^(ov|tv|tg|fs|sb|sk|sa|sw)_/.exec(f); if (m) return { ov: "overo", tv: "tovero", tg: "tiger", fs: "fewspot", sb: "schabrackentiger", sk: "schabracke", sa: "sabino", sw: "splash" }[m[1]];
+    return /schecke$/.test(f) ? "tobiano" : /^(blueroan|rotschimmel)$/.test(f) ? "roan" : null; };
   const ANSICHT_FARBEN = {}, KEINE_GRUNDFARBE = /^(ov|tv|tg|fs|sb|sk|sa|sw)_|^(rappschecke|braunschecke|fuchsschecke|blueroan|rotschimmel|lethalwhite|hellbrauner)$/;
   function ansichtFarben(r) {
     if (ANSICHT_FARBEN[r.id]) return ANSICHT_FARBEN[r.id];
     let rs = 7; const rnd = () => { rs = (rs * 16807) % 2147483647; return rs / 2147483647; }, n = {}, N = 4000;
     for (let i = 0; i < N; i++) { const g = Object.fromEntries(GENE.map(([k]) => [k, [allel(r.id, k, rnd), allel(r.id, k, rnd)]])); const f = phaenotyp(g, rnd(), rnd()); if (!KEINE_GRUNDFARBE.test(f) && FARBEN[f]) n[f] = (n[f] || 0) + 1; }
     const extra = Object.entries(n).filter(([f, c]) => c / N >= .0025 && !r.farben.includes(f)).sort((a, b) => b[1] - a[1]).map(([f]) => f);
-    return (ANSICHT_FARBEN[r.id] = [...new Set([...r.farben.filter(f => !GRAU_WAHL[f]), ...extra])]);
+    return (ANSICHT_FARBEN[r.id] = [...new Set([...r.farben.filter(f => !GRAU_WAHL[f]).map(f => KEINE_GRUNDFARBE.test(f) ? (f === "hellbrauner" ? "brauner" : musterBasis(f)) : f), ...extra])]);   // v495 (Dome): Scheckungs-Farben (Tiger, Schecken, Roan …) nur in der Muster-Spalte – hier ihre Grundfarbe
   }
   // v467 (Dome): Alter in der Rassenansicht gestaffelt – 1 Tag, ½, 1, 1½, 2, 3, 4 … 25 Jahre
   const ALTER_STUFEN = [0, .5, 1, 1.5, ...Array.from({ length: 24 }, (_, i) => i + 2)];
@@ -3889,7 +3891,8 @@
     };
     wahl.stockmass = wahl.zielStockmass;
     { const f0 = r.farben[0], grauK = { schimmel: "grau", apfelschimmel: "apfel", fliegenschimmel: "fliegen", grauschimmel: "grau" }[f0];   // v476: Schimmel ist jetzt ein Muster über der Grundfarbe
-      if (grauK) { const b = r.farben.find(f => !GRAU_WAHL[f]) || "brauner"; wahl.farbe = wahl.farbeWahl = b; wahl.muster = grauK; musterAnwenden(); } }
+      if (grauK) { const b = r.farben.find(f => !GRAU_WAHL[f]) || "brauner"; wahl.farbe = wahl.farbeWahl = b; wahl.muster = grauK; musterAnwenden(); }
+      else if (KEINE_GRUNDFARBE.test(f0) && f0 !== "hellbrauner") { const mk = MUSTER_VON_FARBE(f0); wahl.farbe = wahl.farbeWahl = musterBasis(f0); if (mk && musterGibt(MUSTER_WAHL.find(x => x.k === mk), id)) { wahl.muster = mk; musterAnwenden(); } } }   // v495: Rasse startet mit Scheckungs-Farbe → Grundfarbe + Muster
     const a = $("auswahl");
     a.innerHTML = `
       <div class="leiste"><button id="zurueck">‹ Rassen</button><h2>${r.name}</h2><button id="zu" aria-label="Schließen">✕</button></div>

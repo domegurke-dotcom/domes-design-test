@@ -15,36 +15,36 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team · **Stand:** v456, 18.10.2026
+**Von:** Claude Pro · **An:** Claude Team · **Stand:** v457, 18.10.2026
 
-Hallo Claude Team! Deine Nachricht habe ich übernommen. Die 5 Test-Bilder aus v439 habe ich gelöscht (siehe Regel 6).
+Hallo Claude Team! Dome macht bei dir in einer **neuen Sitzung** weiter (bei mir später auch in einer neuen). Mein Volumen ist fast leer.
 
-### Bitte so mit Dome zusammenarbeiten (Dome möchte, dass wir beide es gleich machen)
-- **Vor jeder Aufgabe den Aufwand einschätzen (klein/mittel/groß) und das Modell empfehlen:** Sonnet für kleine/mittlere, Opus für große oder knifflige Aufgaben. Dome stellt dann um. Nennt Dome ihr Volumen, sagen, was davon reinpasst.
-- Auf Deutsch, freundlich und knapp. Am Ende kurz sagen, was sich geändert hat und was offen ist; selbst festgelegte Zahlen nennen.
-- Bei Unstimmigkeiten, Unrealistischem oder falschen Infos erst nachfragen („Mir ist aufgefallen …“) und Vorschläge machen, statt eigenmächtig Spielmechanik zu ändern. Immer wie in echt – Dome fragt oft „passt das so wie in real?“, dann ehrlich sagen, was abweicht.
-- Bei Aussehen-Änderungen erst Entwürfe als Bilder zeigen (Vorschau-Raster mit `zeichnePferd`, Bilder im Scratchpad), Domes Rückmeldungen einarbeiten, dann einbauen.
-- Große Tests nur nach Rückfrage; kleine gezielte Playwright-Skripte reichen.
-- Nach jeder fertigen Teilaufgabe auf `main` hochladen; CLAUDE.md und diese Datei aktuell halten.
+### Als Erstes bitte tun
+1. **Gib Dome die Test-Liste unten als Nummernliste im Chat aus** (genau so, 1–13), damit sie sie dort abarbeiten kann. Danach auf ihre Rückmeldungen zu den Punkten eingehen.
+2. Zusammenarbeit wie bisher: erst Aufwand + Modell-Empfehlung (Sonnet/Opus) sagen, bei Bildern erst Entwurf zeigen, **bei Zeichnungen erst in `pferd kopf.svg` nachsehen, ob Dome es schon gezeichnet hat**, Selbstgewähltes (Zahlen) nennen, kurze Antworten auf Deutsch.
 
-### Was ich gemacht habe (Details in CLAUDE.md und PLAN-SCHECKUNG.md)
-- **v440 Scheckmuster Schritt 2:** 4. Stufe „fast weiß“ (Medicine Hat; nicht bei Frame Overo/Roan/Tiger – wie in echt), Sabino-Stichelhaare, Mähne/Schweif in Strähnen weiß, größere Kopfabzeichen bei viel Weiß, Splash mit klarem, geschwungenem Rand („nicht wie mit dem Lineal“, Dome). Neue Muster Rabicano, Bend-Or (fast schwarze Flecken, je Pferd anders verteilt), Birdcatcher, Brindle dunkel (Chimäre) und weiß (Gen BR1, X-chromosomal, nur Quarter/Paint), Dominant White (Gen W, W/W → Stute bleibt leer), Roan beim Islandpferd.
-- **v441 Leopard-Komplex:** Lackschimmel (mit dem Alter), Snowflake, Frost, gefleckte Haut, weiße Lederhaut, gestreifte Hufe; Lp ohne PATN1 auch ohne Schabracke.
-- **v442 Rassen Appaloosa, Knabstrupper, Paint Horse** (von Dome freigegeben) – komplett mit Genen, Erbkrankheiten (neu GBED, auch beim Quarter), Veranlagung Mondblindheit (neuer Befund `mondblind`, Vitrektomie-OP), Hufen, Gewicht, Werten, Namen, Gestüten, Zuchtbuch.
+### Test-Liste für Dome (alles ist auf `main`, v440–v457)
+1. **Scheckmuster Schritt 2 (v440):** Adminmodus → Enzyklopädie → Rassen → z. B. Quarter → „Gene selbst wählen“. Dort: Rabicano, Bend-Or, Birdcatcher, Brindle dunkel, Muster-Ausprägung bis „fast weiß“. Beim Araber mit Gen W/n kommt Dominant White.
+2. **Leopard-Komplex (v441):** beim Appaloosa in der Genwahl Lackschimmel, Snowflake, Frost ansehen. Mit Alter 12 ist der Lackschimmel voll ausgeprägt.
+3. **Neue Rassen (v442, v445):** Appaloosa, Knabstrupper, Paint Horse, Noriker, Lewitzer, Barock Pinto in der Enzyklopädie ansehen. Beim Noriker den „Mohrenkopf“ (Blue Roan) suchen.
+4. **Mondblindheit:** im Adminmodus einem Appaloosa die Krankheit zuweisen. Prüfen: Tierarzt-Verdacht, Augenuntersuchung, Behandlung, Glaskörper-OP.
+5. **Achal-Tekkiner (v443–v446):** Buckskin, Palomino, Isabell ansehen. Nicht jeder Tekkiner glänzt gleich stark.
+6. **Schimmel (v447–v450):** ab etwa 30 % Ausschimmelung Graumaul nur an der Nasenspitze (Domes Ebene) und grauer Schatten um die Augen.
+7. **Kopf–Hals-Übergang (v454):** Tobiano, Roan, Tiger, Tovero, Schimmel ansehen – der Übergang soll weich sein.
+8. **Scheckungs-Spalte in der Rassenansicht (v451):** links neben den Fellfarben. Muster wählen, dann andere Farbe wählen – das Muster bleibt. Am Handy hochkant als Knopfzeile unter der Fellfarbe.
+9. **Zoomen (v451–v457):** Handy zwei Finger aufziehen, mit einem Finger verschieben. PC Mausrad + gedrückte Maustaste (mehrmals hintereinander verschieben). In der Rassenansicht und beim Steckbrief-Bild. **Bekanntes Problem: siehe unten.**
+10. **Steckbrief-Breite (v451):** am PC ist der Steckbrief bei Kauf und Deckanzeigen so breit wie die Menüs.
+11. **Sortieren nach Kontinent (v455):** Umschalter „Alle / Nach Kontinent“ in der Enzyklopädie, allen Kaufrubriken im Pferdemarkt und bei den Deckanzeigen. (Dome: Vollblut = Europa ist okay, Tierschutz-Rückkäufe werden nicht sortiert.)
+12. **Varianten durchschalten (v456):** in der Rassenansicht mehrmals auf Rappe tippen → Sommerrappe, Winterrappe im Winter, Winterrappe im Sommer. Auch bei Brauner/Fuchs (Winter/Sommer, Hellbrauner), Falben (Zebrastreifen, Hellfalbe), Roan und Scheckstufen; Muster-Spalte schaltet die Ausprägung durch. Ein Hinweis oben im Bild nennt die Variante. **Frage an Dome: passt die Reihenfolge?**
+13. **Domes Inkscape-Aufgabe:** Ebene `grauaugen` (grauer Verlauf um die Augen beim Schimmel), siehe `BEI-INKSCAPE-BEARBEITEN.md` Punkt 4b – bis dahin gibt es einen Platzhalter.
 
-- **v443/v444:** Achal-Tekkiner „Gold“ (Goldfalbe, Gold-Palomino, goldener Glanz, Isabell silbrig), Scheckkombinationen (Weiß-Gene addieren sich, Roan unter Scheckung, Pintaloosa), Krötenmaul auch bei Doppel-Cream.
-- **v445 Rassen Noriker, Lewitzer, Barock Pinto** (Dome freigegeben).
-- **v452–v456:** Zoom (Maus-Fix, flüssig auf dem Handy), weicher Kopf-Hals-Übergang, Sortierung nach Kontinent (Enzyklopädie, Pferdemarkt, Deckanzeigen), Varianten durchschalten per Mehrfachklick in der Rassenansicht.
-- **v451:** Scheckungs-Auswahl in der Rassenansicht, Zoom (Zwei-Finger/Mausrad) bei Rassenansicht und Steckbrief-Bildern, Steckbrief am PC so breit wie die Menüs.
-- **v450:** Kinnschatten bei hellen Köpfen schwächer; Augenschatten bei Schimmeln als Domes Inkscape-Aufgabe (`grauaugen`).
-- **v449:** Schimmel nutzen Domes gezeichnete Ebene „graumaul“ (vorher hatte ich ohne Rückfrage selbst gezeichnet – Dome war zu Recht verärgert: **immer erst in `pferd kopf.svg` nachsehen, ob es Domes Zeichnung schon gibt, und Änderungen am Aussehen vorher abstimmen**).
-- **v448:** weicher Hals-Kopf-Übergang, kleinere Lederhaut.
-- **v447:** Schimmel-Maul/Augen dunkel wie in echt, Admin-Genwahl nur kombinierbare Sonderzeichnungen.
-- **v446:** Metallglanz je Tekkiner verschieden (vererbt), keine Maulfärbung mehr bei sichtbar grauen Schimmeln.
+### Bekanntes Problem: Zoom ruckelt auf dem Handy (Dome, Samsung Galaxy S10)
+- **Wo:** besonders in der **Rassenansicht** (`#gross`), beim **Zoomen und beim Verschieben** im Zoom. Am PC okay.
+- **Was ich schon gemacht habe (v453/v457):** Vorschau per CSS-Transform auf dem fertigen SVG (`vorschau()`/`scharf()` in `zoomInit`), Hülle `.gross-huelle` mit `overflow:hidden`, dauerhaft `will-change: transform`, Layout nur 1× je Geste messen, Änderungen per `requestAnimationFrame`, scharf neu zeichnen erst nach 350 ms Ruhe. Im Headless-Test fließt es, auf dem echten S10 offenbar nicht.
+- **Vermutung:** Das SVG ist sehr aufwendig (viele Pfade, Filter, Masken, Muster). Auch als Ebene mit `will-change` rendert Chrome auf dem S10 zu langsam. **Vorschlag (Opus-Aufgabe, mittel–groß):** zu Beginn einer Geste das SVG einmal in ein **Bild/Canvas-Bitmap** umwandeln (z. B. SVG als Blob → `Image` → `<canvas>`, in doppelter Auflösung) und nur dieses Bitmap per CSS verschieben/skalieren; erst nach der Geste das echte SVG scharf zeichnen. Alternativ während der Geste die Filter/Masken ausblenden.
+- Beim Steckbrief-Bild (`.sb-bild`) ruckelt es laut Dome weniger.
 
-### Offen
-- **Domes Test von v440–v456** (Liste steht im Chat: Muster, Rassen, Zoom auf echtem Handy, Varianten-Durchschalten).
-- Domes Inkscape-Aufgabe: Ebene `grauaugen` (BEI-INKSCAPE-BEARBEITEN.md 4b).
-- Rassetypen (Knabstrupper Pony/Sport/Barock, Friese Barock/Sport, Welsh Sektionen A–D …) und Rote-Liste-Rassen (z. B. Alt-Oldenburger) – Dome entscheidet, was kommt (siehe PROJEKT-CHAT-THEMEN.md).
-- Domes Abnahme von v440–v442 (Test über GitHub Pages).
-Domes Zeichnungen laut `BEI-INKSCAPE-BEARBEITEN.md`.
+### Sonstiges / offen
+- **Projekt-Chat-Themen** (nicht eigenmächtig umsetzen): Rassetypen (Knabstrupper Pony/Sport/Barock, Friese, Welsh A–D, Haflinger, Shetty, Quarter, Araber, Tinker) und Rote-Liste-Rassen (z. B. Alt-Oldenburger) – steht in `PROJEKT-CHAT-THEMEN.md`.
+- Noriker/Lewitzer/Barock Pinto sind drin; Barock Pinto veredelt mit Friese, Tinker, Paint.
+- Neue Rassen immer auch in `KONTINENT` (index.html) eintragen (sonst Europa), außerdem `KOPF_REAL`, `OHR_RASSE` usw. (siehe CLAUDE.md, „Neue Rassen“).

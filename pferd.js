@@ -36,18 +36,18 @@ const FARBEN_BASIS = {
   lethalwhite:   { name: "Weiß (Lethal White)",    body: "#f7f3ee", mane: "#f3eee6", muzzle: "#e3b5ae", hoof: "#cdbfa8" },
 };
 // Scheckungen, die auf jeder Grundfarbe vorkommen: Kürzel + "_" + Grundfarbe (z. B. "ov_brauner")
-//  ov Overo · tv Tovero · tg Tigerschecke · fs Wenigpunkt-Tiger · sb Schabrackentiger · sk Schabracke ohne Punkte (Snowcap) · sa Sabino (v316)
+//  ov Overo · tv Tovero · tg Tigerschecke · fs Wenigpunkt-Tiger · sb Schabrackentiger · sk Schabracke ohne Punkte (Snowcap) · sa Sabino (v316) · sw Splashed White (v426)
 const MUSTER = {
-  ov: ["Overo", "overo"], tv: ["Tovero", "tovero"], tg: ["Tigerschecke", "leopard"], fs: ["Wenigpunkt-Tiger", "fewspot"], sb: ["Schabrackentiger", "blanket"], sk: ["Schabracke ohne Punkte", "snowcap"], sa: ["Sabino", "sabino"],
+  ov: ["Overo", "overo"], tv: ["Tovero", "tovero"], tg: ["Tigerschecke", "leopard"], fs: ["Wenigpunkt-Tiger", "fewspot"], sb: ["Schabrackentiger", "blanket"], sk: ["Schabracke ohne Punkte", "snowcap"], sa: ["Sabino", "sabino"], sw: ["Splashed White", "splash"],
 };
 function musterFarbe(id, t) {
-  const m = /^(ov|tv|tg|fs|sb|sk|sa)_(.+)$/.exec(id); if (!m || !t[m[2]]) return null;
+  const m = /^(ov|tv|tg|fs|sb|sk|sa|sw)_(.+)$/.exec(id); if (!m || !t[m[2]]) return null;
   const B = t[m[2]], [name, pattern] = MUSTER[m[1]], e = { ...B, pattern, name: `${name} (${B.name.replace(/ \(.*\)$/, "")})` };
   delete e.stripe;
   if (pattern === "tovero" || pattern === "fewspot") { e.head = mix(B.head || B.body, "#f7f5f1", pattern === "fewspot" ? .75 : .2); e.hoof = "#b8a88f"; }
   if (pattern === "leopard") { e.head = mix(B.head || B.body, "#f7f5f1", .45); e.hoof = "#b8a88f"; }
   if (pattern === "tovero" || pattern === "fewspot" || pattern === "leopard") e.muzzle = "#c9a49a";
-  if (pattern === "sabino") { e.hoof = "#b8a88f"; e.muzzle = "#c9a49a"; }   // weiße Beine → helle Hufe, Blesse → rosa Maul
+  if (pattern === "sabino" || pattern === "splash") { e.hoof = "#b8a88f"; e.muzzle = "#c9a49a"; }   // weiße Beine → helle Hufe, Blesse → rosa Maul
   return e;
 }
 const FARBEN = new Proxy(FARBEN_BASIS, { get(t, k) { if (typeof k === "string" && !(k in t)) { const e = musterFarbe(k, t); if (e) t[k] = e; } return t[k]; } });
@@ -581,7 +581,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     g += `<path d="${eckig(wl)}" fill="#f7f5f1"/></g>`;
   }
   // Overo, Tovero, Tiger: Flecken / Punkte
-  if (["overo", "tovero", "leopard", "fewspot", "blanket", "snowcap", "sabino"].includes(C.pattern)) {
+  if (["overo", "tovero", "leopard", "fewspot", "blanket", "snowcap", "sabino", "splash"].includes(C.pattern)) {
     const zack = (cx, cy, rx, ry, n = 20, var_ = .55) => { const ps = []; for (let i = 0; i < n; i++) { const an = i / n * Math.PI * 2, r = 0.7 + rnd() * var_; ps.push(P(cx + Math.cos(an) * rx * r, cy + Math.sin(an) * ry * r)); } return ps; };
     const punkte = (x0, x1, y0, y1, n, r0, r1, farbe) => { let s = ""; for (let i = 0; i < n; i++) { const r = r0 + rnd() * (r1 - r0); s += `<ellipse cx="${f(x0 + rnd() * (x1 - x0))}" cy="${f(y0 + rnd() * (y1 - y0))}" rx="${f(r)}" ry="${f(r * (.75 + rnd() * .35))}" fill="${farbe}"/>`; } return s; };
     if (C.pattern === "overo") {
@@ -606,6 +606,13 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       if (rnd() > .45) w += `<path d="${eckig(zack(0.12 * L, bottom - 0.12 * D, 0.08 * L, 0.18 * D, 18, .7))}" fill="${SW}"/>`;
       g += `<g filter="url(#wm-${uid})">${w}</g>` + punkte(mx - 0.3 * L, mx + 0.3 * L, bottom - 0.45 * D, bottom - 0.12 * D, 22, 0.6, 1.4, SW);
     }
+    if (C.pattern === "splash") {
+      // Splashed White (v426): wie „von unten in weiße Farbe getaucht“ – glatter, klarer Rand, Bauch und Brust weiß, hohe weiße Beine (unten bei den Abzeichen)
+      const hoch = 0.35 + rnd() * 0.4, rand = [P(minX - 6, 4)];
+      for (let i = 0; i <= 12; i++) { const t = i / 12, x = minX - 6 + (maxX - minX + 12) * t; rand.push(P(x, bottom - hoch * D * (0.55 + 0.45 * Math.sin(Math.PI * Math.min(1, t * 1.15))) + Math.sin(t * 9 + hoch * 7) * 1.2)); }
+      rand.push(P(maxX + 6, 4));
+      g += `<path d="${glatt(rand)}" fill="${SW}"/>`;
+    }
     if (C.pattern === "leopard") g += `<rect ${bx} fill="${SW}"/>` + punkte(minX, maxX, minY, 0, 70, 2.2, 4.6, spotFarbe);
     if (C.pattern === "fewspot") g += `<rect ${bx} fill="${SW}"/>` + punkte(0, L, top, bottom, 7, 1.4, 2.6, spotFarbe) + `<g filter="url(#wm-${uid})"><rect x="${f(minX)}" y="${f(-0.62 * Lg)}" width="${f(maxX - minX)}" height="${f(0.2 * Lg)}" fill="${mix(body, SW, .35)}" opacity=".7"/></g>`;
     if (C.pattern === "blanket" || C.pattern === "snowcap") {
@@ -621,7 +628,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (C.stripe) g += `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${C.stripe}" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>`;
   if (C.muzzle && !eigenKopf) g += `<ellipse cx="${f(hp(0.93, 0.12).x)}" cy="${f(hp(0.93, 0.12).y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.93, 0.12).x)} ${f(hp(0.93, 0.12).y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>`;
   // Abzeichen (weiß): Kopf und Beine
-  const abz = opt.abzeichen || (C.pattern === "sabino" ? { kopf: rnd() < .6 ? "blesse" : "laterne", beine: rnd() < .55 ? "hochweiss" : "strumpf" } : {});   // Sabino: Blesse/Laterne und hohes Weiß an den Beinen
+  const abz = opt.abzeichen || (C.pattern === "sabino" ? { kopf: rnd() < .6 ? "blesse" : "laterne", beine: rnd() < .55 ? "hochweiss" : "strumpf" }
+    : C.pattern === "splash" ? { kopf: "laterne", beine: rnd() < .6 ? "hochweiss" : "strumpf" } : {});   // Sabino/Splash: Blesse/Laterne und hohes Weiß an den Beinen (Kopf: beim neuen Kopf über opt.kopfAbz)
   const WEISS = "#fbfaf6";
   if (abz.kopf && !eigenKopf) {
     const band = (s1, s2, b1, b2, rund) => {
@@ -797,14 +805,15 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     const mz = hp(0.93, 0.12);
     const schatt = `<g transform="matrix(${[ia, ib, -ib, ia, ie, iff].map(x => x.toFixed(5)).join(" ")})">` +
       `<rect ${bx} fill="url(#sh-${uid})" opacity=".8"/>` +
-      (C.muzzle ? `<ellipse cx="${f(mz.x)}" cy="${f(mz.y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(mz.x)} ${f(mz.y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>` : "") +
+      (C.muzzle && !opt.maul ? `<ellipse cx="${f(mz.x)}" cy="${f(mz.y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(mz.x)} ${f(mz.y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>` : "") +
       `<g filter="url(#wb-${uid})"><path d="${glatt([hp(0.1, 0.42 * hw), hp(0.3, 0.47 * hw * jw), hp(0.55, 0.36 * hw), hp(0.8, 0.28 * hw), hp(0.6, 0.3 * hw), hp(0.35, 0.37 * hw * jw)])}" fill="${schatten}" opacity=".45"/>` +
       `<ellipse cx="${f(hp(0.3, -0.1).x)}" cy="${f(hp(0.3, -0.1).y)}" rx="${f(0.22 * hl)}" ry="${f(0.07 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.3, -0.1).x)} ${f(hp(0.3, -0.1).y)})" fill="${licht}" opacity=".45"/></g></g>`;
     // Ohrstellung (opt.ohrStellung = { R, L, spiel }); ohne Angabe: beide Ohren vorne, bei Unwohlsein (opt.ohren „geknickt“) seitlich
     const OS = opt.ohrStellung || (opt.ohren === "geknickt" ? { R: "seite", L: "seite" } : { R: "vorne", L: "vorne" });
     const schopfFarbe = dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane);
     g += `<g transform="matrix(${ekMatrix})">${kopfNeuSVG(eigenKopf, "ek" + uid, { fell: head, muschel, maehne: schopfFarbe, ink: INK, statisch: opt.statisch, augenZu: opt.augenZu, schattierung: schatt, alter: kopfAlter,
-      marwari: !!k.curl, wimper: opt.wimper != null ? opt.wimper : (opt.geschlecht === "Stute" || stufe === "fohlen"), ohrR: OS.R, ohrL: OS.L, ohrSpiel: OS.spiel !== false, seed: opt.seed || rasseId })}</g>`;
+      marwari: !!k.curl, wimper: opt.wimper != null ? opt.wimper : (opt.geschlecht === "Stute" || stufe === "fohlen"), ohrR: OS.R, ohrL: OS.L, ohrSpiel: OS.spiel !== false, seed: opt.seed || rasseId,
+      abz: opt.kopfAbz, maul: opt.maul, augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
   }
   // Mähne
   if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
@@ -1038,6 +1047,7 @@ function ALTERS_K(stufe, k) {
 // Kopfform je Pferd: { f: "gerade" | "hecht" | "ramsnase" | "rams" | "keil" | "schaf" | "schwein", s: 0 (gerade) | 1 leicht | 2 normal | 3 stark }
 const KOPFFORMEN = { gerade: "Gerader Kopf", hecht: "Hechtkopf", ramsnase: "Ramsnase", rams: "Ramskopf", keil: "Keilkopf", schaf: "Schafskopf", schwein: "Schweinskopf" };
 const KOPF_STUFE = ["", "leicht", "normal", "stark"];
+const KOPF_WEISS = "#f6f4ee";   // Farbe der Kopfabzeichen
 // typische Kopfform je Rasse (fehlt die Rasse: gerader Kopf)
 const KOPFFORM_RASSE = { araber: "hecht", shagya: "hecht", angloaraber: "hecht", welshcob: "hecht", vollblut: "keil", trakehner: "keil", hannoveraner: "keil", tekke: "keil",
   shire: "ramsnase", clydesdale: "ramsnase", tinker: "ramsnase", friese: "ramsnase", andalusier: "ramsnase", lipizzaner: "rams" };
@@ -1062,11 +1072,12 @@ const kmPunkt = (m, q) => ({ x: m[0] * q.x + m[2] * q.y + m[4], y: m[1] * q.x + 
 const kmText = m => `matrix(${m.map(x => +x.toFixed(5)).join(" ")})`;
 // Ohrenspiel: ein Ohr wechselt ab und zu kurz in die Nachbarstellung (nie ins Anlegen)
 function ohrSpielZiel(st, r) { return st === "vorne" ? "seite" : st === "hinten" ? "seite" : st === "seite" ? (r < 0.6 ? "vorne" : "hinten") : null; }
-// o: { fell, muschel, maehne, ink, schattierung, statisch, augenZu, alter, marwari, wimper, ohrR, ohrL, ohrSpiel, seed }
+// o: { fell, muschel, maehne, ink, schattierung, statisch, augenZu, alter, marwari, wimper, ohrR, ohrL, ohrSpiel, seed,
+//      abz: Kopfabzeichen (Liste, z. B. ["stern", "schnippe"]), maul: "mehl" | "kupfer" | "grau", augeBlau } – Etappe 2
 function kopfNeuSVG(key, uid, o = {}) {
   const K = KOPF_NEU, F = K.formen[key] || K.formen.gerade, ink = o.ink || "#090609";
   const farbe = s => s.replaceAll("__FELL__", o.fell || "#9a9a9a").replaceAll("__MUSCHEL__", o.muschel || "#c9a0a0").replaceAll("__MAEHNE__", o.maehne || o.fell || "#555")
-    .replaceAll("__AAL__", o.maehne || "#555").replaceAll("#090609", ink);
+    .replaceAll("__AAL__", o.maehne || "#555").replaceAll("#090609", ink).replaceAll("__WEISS__", KOPF_WEISS).replaceAll("__MEHL__", mix(o.fell || "#9a9a9a", "#f1e4c4", .75)).replaceAll("__U__", uid + "-");
   const am = kopfAlterMatrix(o.alter), A = KOPF_ALTER[o.alter] || {}, ac = K.augeMitte, ac2 = kmPunkt(am, ac), as = A.a || 1;
   const rnd = zufall((o.seed || "k") + "-ohren");
   const ohr = (seite) => {
@@ -1083,12 +1094,23 @@ function kopfNeuSVG(key, uid, o = {}) {
   const blinkZu = o.statisch || o.augenZu ? "" : '<animate attributeName="opacity" values="0;1;0" keyTimes="0;.93;.97" calcMode="discrete" dur="4.5s" repeatCount="indefinite"/>';
   const lidZu = `<path d="M346.69,328.97C368,346 397,336 409.56,305.9M370,341.5L366.5,356M392,336.5L397,350" fill="none" stroke="${ink}" stroke-width="9" stroke-linecap="round"/>`;
   const auge = `<g transform="translate(${ac2.x.toFixed(2)},${ac2.y.toFixed(2)}) scale(${as}) translate(${-ac.x},${-ac.y})">` +
-    `<g${o.augenZu ? ' opacity="0"' : ""}>${blinkAuf}${K.augeClip.replace("r15-ekp2-auge-3", uid + "-auge")}${farbe(K.auge).replace("r15-ekp2-auge-3", uid + "-auge")}${o.wimper ? farbe(K.wimper) : ""}</g>` +
+    `<g${o.augenZu ? ' opacity="0"' : ""}>${blinkAuf}${K.augeClip.replace("r15-ekp2-auge-3", uid + "-auge")}${farbe(o.augeBlau ? K.augeBlau : K.auge).replace("r15-ekp2-auge-3", uid + "-auge")}${o.wimper ? farbe(K.wimper) : ""}</g>` +
     (o.statisch && !o.augenZu ? "" : `<g opacity="${o.augenZu ? 1 : 0}">${blinkZu}${lidZu}</g>`) + `</g>`;
   const fell = F.fell.replace('transform="', `transform="${kmText(am)} `);
-  return ohr("R") + farbe(fell) +
-    (o.schattierung ? `<clipPath id="${uid}-fell">${fell}</clipPath><g clip-path="url(#${uid}-fell)">${o.schattierung}</g>` : "") +
+  // Maulfärbung und Kopfabzeichen liegen auf dem Fell, unter Schattierung und Linien (Reihenfolge wie in Domes Datei)
+  const zeichen = (o.maul && F.maul && F.maul[o.maul] ? F.maul[o.maul] : "") + (o.abz || []).map(a => F.abz && F.abz[a] ? F.abz[a] : "").join("");
+  return ohr("R") + farbe(fell) + `<clipPath id="${uid}-fell">${fell}</clipPath>` +
+    (zeichen ? `<defs>${farbe(kopfDefs(zeichen))}</defs><g clip-path="url(#${uid}-fell)"><g transform="${kmText(am)}">${farbe(zeichen)}</g></g>` : "") +
+    (o.schattierung ? `<g clip-path="url(#${uid}-fell)">${o.schattierung}</g>` : "") +
     `<g transform="${kmText(am)}">${farbe(F.svg)}</g>` + ohr("L") + auge;
+}
+// nur die Verläufe/Filter, die die gewählten Abzeichen brauchen (mit ihren Verweisen)
+let KOPF_DEFS = null;
+function kopfDefs(svg) {
+  if (!KOPF_DEFS) { KOPF_DEFS = {}; for (const m of KOPF_NEU.defs.matchAll(/<(linearGradient|radialGradient|filter)\b[^>]*\bid="__U__(d\d+)"[^>]*?(\/>|>[\s\S]*?<\/\1>)/g)) KOPF_DEFS[m[2]] = m[0]; }
+  const da = new Set(), los = s => { for (const m of s.matchAll(/(?:url\(#|href="#)__U__(d\d+)/g)) if (!da.has(m[1]) && KOPF_DEFS[m[1]]) { da.add(m[1]); los(KOPF_DEFS[m[1]]); } };
+  los(svg);
+  return [...da].map(k => KOPF_DEFS[k]).join("");
 }
 // Kehlpunkt (Anschluss an den Hals) des neuen Kopfs, mit Altersstauchung
 function kopfNeuKehle(key, alter) { const K = KOPF_NEU, F = K.formen[key] || K.formen.gerade; return kmPunkt(kopfAlterMatrix(alter), K.kap[F.kap]); }
@@ -1154,6 +1176,7 @@ const FARBBESCHREIBUNG = {
   schwarzbrauner: "Fast schwarzer Brauner – erkennbar am helleren, rötlichen „Kupfermaul“ und an den Flanken (Agouti-Variante At).",
   lethalwhite: "Fast ganz weißes Fohlen mit rosa Haut von zwei Overo-Eltern (O/O). Ihm fehlen Nervenzellen im Darm – es stirbt in den ersten Lebenstagen (Lethal-White-Overo-Syndrom).",
   sa_brauner: "Sabino: viel unregelmäßiges Weiß – breite Blesse, hohe weiße Beine, weiße Flecken am Bauch mit gesprenkeltem Rand. Typisch für Clydesdales (Gen Sb).",
+  sw_brauner: "Splashed White: sieht aus wie von unten in weiße Farbe getaucht – sehr breite Blesse oder Laterne, meist blaue Augen, hohe weiße Beine und weißer Bauch mit glattem, klarem Rand. Dominant (Gen SW), v. a. bei Quarter, Welsh, Islandpferd und Shetty. Manche Splash-Pferde sind taub.",
   ov_brauner: "Overo (Frame): waagerecht gezackte weiße Flecken an Seite und Hals, die den Rücken nie kreuzen. Beine meist farbig, oft viel Weiß im Gesicht. Zwei Overo-Eltern können ein tödliches Lethal-White-Fohlen bekommen.",
   tv_fuchs: "Tovero: Tobiano und Overo zusammen – fast ganz weiß, Farbe meist nur noch an Ohren und Kopf („Medicine Hat“), an der Brust und an der Flanke.",
   tg_brauner: "Tigerschecke (Leopard): weißes Fell mit farbigen Punkten am ganzen Körper. Gen Lp mischerbig + Muster-Gen PATN1.",
@@ -1163,7 +1186,7 @@ const FARBBESCHREIBUNG = {
   rotschimmel: "Roan auf Fuchs: schon bei der Geburt weiße Stichelhaare im roten Fell – ein unveränderlicher Schimmel, hellt nicht auf.",
 };
 // Scheckungs-Beispiele für das Lexikon
-["ov_brauner", "tv_fuchs", "tg_brauner", "fs_rappe", "sb_rappe", "sk_brauner", "sa_brauner"].forEach(id => FARBEN[id]);
+["ov_brauner", "tv_fuchs", "tg_brauner", "fs_rappe", "sb_rappe", "sk_brauner", "sa_brauner", "sw_brauner"].forEach(id => FARBEN[id]);
 
 // ---------- v405 (Dome): realistischere Pferdenamen – Freizeitpferde einfach, Zuchtpferde besonders (je Rasse), mehr Abwechslung ----------
 const NAMEN_HOBBY = {

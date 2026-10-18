@@ -949,7 +949,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "476";
+  const SPIEL_VERSION = "477";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -957,9 +957,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=476"></script>
-<script src="boxstufen.js?v=476"></script>
-<script src="kopfneu.js?v=476"></script>
+<script src="pferd.js?v=477"></script>
+<script src="boxstufen.js?v=477"></script>
+<script src="kopfneu.js?v=477"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1063,9 +1063,9 @@
   const genNorm = g => { if (g) GENE.forEach(([k, , , rez]) => { if (!g[k]) g[k] = [rez, rez]; }); return g; };
   // Häufigkeit des dominanten Allels je Rasse (alles nicht Genannte: kommt nicht vor)
   const RASSE_GENE = {
-    araber: { E: .6, A: .55, F: .7, Sty: .1, G: .3, W: .005 }, friese: { E: .98, A: .03, F: .9 }, marwari: { E: .5, A: .6, F: .7, Sty: .1, D: .1, To: .1, G: .15 },
+    araber: { E: .6, A: .55, F: .7, Sty: .1, G: .3, W: .005 }, friese: { E: .98, A: 0, At: .0001, F: .9 }, marwari: { E: .5, A: .6, F: .7, Sty: .1, D: .1, To: .1, G: .15 },
     fjord: { E: .8, A: .85, F: .7, Sty: .05, Cr: .015, D: .99 }, haflinger: { E: 0, A: .5, F: 0, Sty: .3 }, shetty: { E: .6, A: .5, F: .6, Sty: .1, Z: .1, To: .15, G: .1, Cr: .05, D: .05, Sw: .015 },
-    shire: { E: .7, A: .6, At: .2, F: .8, Sty: .2, G: .1, Sb: .4 }, andalusier: { E: .7, A: .5, F: .8, Sty: .1, G: .75 }, lipizzaner: { E: .98, A: .5, F: .9, Sty: .05, G: .9 },
+    shire: { E: .7, A: .6, At: .2, F: .8, Sty: .2, G: .1, Sb: .4 }, andalusier: { E: .7, A: .5, F: .8, Sty: .1, G: .75, Cr: .02 }, lipizzaner: { E: .98, A: .5, F: .9, Sty: .05, G: .9 },
     vollblut: { E: .55, A: .6, At: .25, F: .8, Sty: .2, G: .05, W: .005 }, quarter: { E: .45, A: .5, At: .1, F: .7, Sty: .1, Cr: .1, D: .08, Rn: .08, O: .02, To: .02, Sw: .02, Br1: .002 }, hannoveraner: { E: .55, A: .6, At: .3, F: .8, Sty: .2, G: .05, Sw: .005 },
     isi: { E: .5, A: .5, F: .6, Sty: .1, Cr: .08, D: .08, Z: .08, Rn: .03, To: .1, G: .1, Sw: .015 },   // v440: Roan auch beim Islandpferd
     tinker: { E: .7, A: .4, F: .7, To: .8 }, tekke: { E: .5, A: .5, F: .7, Sty: .1, Cr: .15, D: .05, G: .05 },
@@ -3848,6 +3848,15 @@
   }
 
   let wahl = null;
+  // v477 (Dome): Rassenansicht zeigt alle Grundfarben, die bei der Rasse über die Gene vorkommen (ab 0,25 %) – Scheckung, Roan und Schimmel stehen in der Muster-Spalte
+  const ANSICHT_FARBEN = {}, KEINE_GRUNDFARBE = /^(ov|tv|tg|fs|sb|sk|sa|sw)_|^(rappschecke|braunschecke|fuchsschecke|blueroan|rotschimmel|lethalwhite|hellbrauner)$/;
+  function ansichtFarben(r) {
+    if (ANSICHT_FARBEN[r.id]) return ANSICHT_FARBEN[r.id];
+    let rs = 7; const rnd = () => { rs = (rs * 16807) % 2147483647; return rs / 2147483647; }, n = {}, N = 4000;
+    for (let i = 0; i < N; i++) { const g = Object.fromEntries(GENE.map(([k]) => [k, [allel(r.id, k, rnd), allel(r.id, k, rnd)]])); const f = phaenotyp(g, rnd(), rnd()); if (!KEINE_GRUNDFARBE.test(f) && FARBEN[f]) n[f] = (n[f] || 0) + 1; }
+    const extra = Object.entries(n).filter(([f, c]) => c / N >= .0025 && !r.farben.includes(f)).sort((a, b) => b[1] - a[1]).map(([f]) => f);
+    return (ANSICHT_FARBEN[r.id] = [...new Set([...r.farben.filter(f => !GRAU_WAHL[f]), ...extra])]);
+  }
   // v467 (Dome): Alter in der Rassenansicht gestaffelt – 1 Tag, ½, 1, 1½, 2, 3, 4 … 25 Jahre
   const ALTER_STUFEN = [0, .5, 1, 1.5, ...Array.from({ length: 24 }, (_, i) => i + 2)];
   const alterIdx = a => { const i = ALTER_STUFEN.indexOf(a); return i >= 0 ? i : ALTER_STUFEN.findIndex(x => x >= a); };
@@ -3872,7 +3881,7 @@
       <div class="leiste"><button id="zurueck">‹ Rassen</button><h2>${r.name}</h2><button id="zu" aria-label="Schließen">✕</button></div>
       <div class="inhalt">
         <div class="vorschau"><div class="var-hinweis" id="varHinweis" hidden></div><div class="gross-huelle"><svg id="gross" viewBox="0 0 ${VB.b} ${VB.h}"></svg></div>
-          <div class="farbspalte" id="farbSpalte">${r.farben.filter(f => !GRAU_WAHL[f]).map(fid => { const c = FARBEN[fid]; return `<button class="fs-kachel" data-f="${fid}"><span class="swatch" style="background:linear-gradient(135deg, ${c.body} 55%, ${c.mane} 55%)"></span>${c.name.replace(/ \(.*\)/, "")}</button>`; }).join("")}</div>
+          <div class="farbspalte" id="farbSpalte">${ansichtFarben(r).map(fid => { const c = FARBEN[fid]; return `<button class="fs-kachel" data-f="${fid}"><span class="swatch" style="background:linear-gradient(135deg, ${c.body} 55%, ${c.mane} 55%)"></span>${c.name.replace(/ \(.*\)/, "")}</button>`; }).join("")}</div>
           <button class="fs-pfeil hoch" id="fsHoch" hidden aria-label="Nach oben scrollen">▲</button><button class="fs-pfeil runter" id="fsRunter" hidden aria-label="Weitere Farben">▼</button>
           <div class="farbspalte musterspalte" id="musterSpalte"><button class="fs-kachel ms-kachel" data-m="keine" title="Keine Scheckung"><span class="swatch" style="background:#fff;display:flex;align-items:center;justify-content:center;font-size:.9rem">✕</span>Keine</button>${musterListe(id).map(m => `<button class="fs-kachel ms-kachel" data-m="${m.k}"><span class="swatch" style="background:${m.sw}"></span>${m.n}</button>`).join("")}</div>
           <button class="fs-pfeil ms-pfeil hoch" id="msHoch" hidden aria-label="Nach oben scrollen">▲</button><button class="fs-pfeil ms-pfeil runter" id="msRunter" hidden aria-label="Weitere Scheckungen">▼</button>
@@ -3885,7 +3894,7 @@
         <p class="text"><b>${r.herkunft}</b> · ${r.h[0]}–${r.h[1]} cm Stockmaß<br>${r.text}</p>${r.warnung ? `<div class="rasse-warn"><b>⚠️ Achtung Erbkrankheit</b>${r.warnung}</div>` : ""}
 
         <div class="feld farb-feld"><span class="titel">Fellfarbe</span>
-          <div class="chips" id="farben">${r.farben.filter(f => !GRAU_WAHL[f]).map(fid => {
+          <div class="chips" id="farben">${ansichtFarben(r).map(fid => {
             const c = FARBEN[fid];
             return `<button class="chip" data-f="${fid}"><span class="swatch" style="background:linear-gradient(135deg, ${c.body} 55%, ${c.mane} 55%)"></span>${c.name}</button>`;
           }).join("")}</div>

@@ -662,10 +662,12 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     }
     if (C.pattern === "tovero") {
       // fast ganz weiß – Farbe bleibt an Kopf/Ohren („Medicine Hat“), Brust und Flanke
-      const fc = [2, 1, 0.75][M2];   // Farbflecken: wenig Weiß = große Flecken, viel Weiß („Medicine Hat“) = nur kleiner Brustschild
+      const fc = [2, 1.7, 0.75][M2];   // Farbflecken: wenig Weiß = große Flecken, viel Weiß = nur Brustschild und Flankenfleck (v440: typisch deutlich mehr Farbe)
       g += `<rect ${bx} fill="${SW}"/><g filter="url(#wm-${uid})"><path d="${glatt(zack(0.02 * L, top + 0.42 * D, 0.1 * L * fc, 0.3 * D * Math.min(1.4, fc), 14, .4))}" fill="${body}"/>`;
       g += `<path d="${glatt(zack(0.93 * L, top + 0.3 * D, 0.11 * L * fc, 0.32 * D * Math.min(1.4, fc), 14, .4))}" fill="${body}"/>`;
-      if (M2 === 0 || (M2 === 1 && rnd() > .5)) g += `<path d="${glatt(zack(0.15 * L + (M2 ? 0 : 0.2 * L), -H - 4 + (M2 ? 0 : 0.2 * D), 0.08 * L * fc, 0.18 * D * fc, 12, .4))}" fill="${body}"/>`;
+      if (M2 === 0 || (M2 === 1 && (rnd(), true))) g += `<path d="${glatt(zack(0.15 * L + (M2 ? 0 : 0.2 * L), -H - 4 + (M2 ? 0 : 0.2 * D), 0.08 * L * fc, 0.18 * D * fc, 12, .4))}" fill="${body}"/>`;
+      if (M2 === 1) { const rt = zufall((opt.seed || rasseId) + "-tovero");   // v440 (Dome): typisch mit Farbe über dem Rücken/an der Flanke – deutlich mehr als „viel“
+        g += `<path d="${glatt(zack(0.5 * L + (rt() - .5) * 0.12 * L, top + 0.18 * D, 0.16 * L, 0.32 * D, 14, .45))}" fill="${body}"/>`; }
       g += `</g>`;
     }
     if (C.pattern === "sabino") {
@@ -732,24 +734,21 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // v440 Bend-Or-Flecken: unregelmäßige dunkle Flecken (Farbe aus dem Fell, dunkler) – nur bei Füchsen/Palominos
   if (opt.bendor) {
     const ro = zufall((opt.seed || rasseId) + "-bendor"), fc = mix(body, "#1a0c06", .68); let t = "";
-    const n = 9 + Math.floor(ro() * 8);
-    for (let i = 0; i < n; i++) { const zone = ro(), cx = (zone < .3 ? 0.02 + ro() * 0.2 : zone < .65 ? 0.62 + ro() * 0.3 : 0.25 + ro() * 0.35) * L, cy = top + (0.15 + ro() * 0.6) * D, r = 1.6 + ro() * 3;
+    // je Pferd anders verteilt: nur Vorhand 25 %, nur Hinterhand 25 %, nur Rumpf 15 %, überall 35 %
+    const n = 9 + Math.floor(ro() * 8), art = ro(), zonen = art < .25 ? [0] : art < .5 ? [1] : art < .65 ? [2] : [0, 1, 2];
+    for (let i = 0; i < n; i++) { const zone = zonen[Math.floor(ro() * zonen.length)], cx = (zone === 0 ? 0.0 + ro() * 0.24 : zone === 1 ? 0.62 + ro() * 0.32 : 0.25 + ro() * 0.36) * L, cy = top + (0.15 + ro() * 0.6) * D, r = 1.6 + ro() * 3;
       t += klecks(ro, cx, cy, r, r * (0.7 + ro() * 0.4), fc); }
     g += `<g clip-path="url(#cr-${uid})" filter="url(#wm-${uid})" opacity=".92">${t}</g>`;
   }
   // v440 Brindle (gestromt): feine dunkle, leicht gewellte senkrechte Streifen
-  if (opt.brindle === "weiss") {   // v440 (Dome): Brindle mit weißen Streifen (BR1) – unterbrochene, gewellte helle Streifen aus weißen Haaren
-    const rg = zufall((opt.seed || rasseId) + "-brindleW"); let t = "";
+  // v440 Brindle (gestromt): unterbrochene, gewellte senkrechte Streifen – weiß (BR1, vererbt) oder dunkel (Chimäre, Zufall)
+  if (opt.brindle) {
+    const weiss = opt.brindle === "weiss", rg = zufall((opt.seed || rasseId) + (weiss ? "-brindleW" : "-brindle")), sf = weiss ? "#f1ede6" : mix(body, "#140c08", .55); let t = "";
     for (let x = minX; x < maxX; x += 3 + rg() * 2.6) { let y = minY - 4 + rg() * 8;
       while (y < 2) { const len = 5 + rg() * 14, pts = []; for (let yy = y; yy < y + len; yy += 2.5) pts.push(P(x + Math.sin(yy * 0.22 + x * 0.7) * 1.6 + (rg() - .5) * 0.8, yy));
-        if (pts.length > 1) t += `<path d="${glatt(pts, false)}" fill="none" stroke="#f1ede6" stroke-width="${f(0.5 + rg() * 0.9)}" stroke-linecap="round" opacity="${f(0.45 + rg() * 0.45)}"/>`;
+        if (pts.length > 1) t += `<path d="${glatt(pts, false)}" fill="none" stroke="${sf}" stroke-width="${f(0.5 + rg() * 0.9)}" stroke-linecap="round" opacity="${f((weiss ? 0.45 : 0.6) + rg() * 0.4)}"/>`;
         y += len + 1 + rg() * 6; } }
     g += `<g clip-path="url(#cr-${uid})" filter="url(#wm-${uid})">${t}</g>`;
-  } else if (opt.brindle) {
-    const rg = zufall((opt.seed || rasseId) + "-brindle"), sc = mix(body, "#140c08", .45); let t = "";
-    for (let x = minX; x < maxX; x += 3.2 + rg() * 2.2) { const pts = []; for (let y = minY - 4; y < 4; y += 6) pts.push(P(x + Math.sin(y * 0.15 + x) * 1.2 + (rg() - .5) * 1.2, y));
-      t += `<path d="${glatt(pts, false)}" fill="none" stroke="${sc}" stroke-width="${f(0.8 + rg() * 1.1)}" stroke-linecap="round"/>`; }
-    g += `<g clip-path="url(#cr-${uid})" opacity=".5">${t}</g>`;
   }
   if (C.stripe && !ganzWeiss) g += `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${C.stripe}" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>`;
   if (C.muzzle && !eigenKopf) g += `<ellipse cx="${f(hp(0.93, 0.12).x)}" cy="${f(hp(0.93, 0.12).y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.93, 0.12).x)} ${f(hp(0.93, 0.12).y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>`;

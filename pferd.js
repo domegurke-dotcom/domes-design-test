@@ -247,8 +247,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const weissMuster = ["tobiano", "tovero", "splash", "sabino"].includes(C.pattern), fastWeiss = MST === 3 && weissMuster;
   const DW = opt.dw == null ? null : opt.dw;   // v440 Dominant White (Gen W): 0 wenig · 1 typisch · 2 viel · 3 ganz weiß
   const ganzWeiss = fastWeiss || DW >= 2;
-  const gold = k.metallic && /palomino|buckskin|falbe|isabell/i.test(farbId);   // v443: Achal-Tekkiner „Gold“ – satteres Goldgelb, dazu goldener Glanz (unten)
-  const body = gold && !/isabell/.test(farbId) ? mix(C.body, "#e3a531", .45) : C.body, mane = DW === 3 ? "#efebe2" : C.mane, head = DW === 3 ? "#f4f1ea" : C.head || body;
+  const gold = k.metallic && /palomino|buckskin|falbe/i.test(farbId);   // v443: Achal-Tekkiner „Gold“ – satteres Goldgelb, dazu goldener Glanz (unten)
+  const body = gold ? mix(C.body, "#e8a92a", .5) : k.metallic && /isabell/.test(farbId) ? mix(C.body, "#dfe3ea", .35) : C.body, mane = DW === 3 ? "#efebe2" : C.mane, head = DW === 3 ? "#f4f1ea" : C.head || body;
   const pts = C.points || null;
   const hoof = C.pattern === "tobiano" || ganzWeiss ? "#b8a88f" : (C.hoof || "#3b3531");
   const SW = "#f7f5f1", spotFarbe = C.spot || mix(body, pts || body, .35);
@@ -579,7 +579,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (C.pattern === "roan") defs += `<radialGradient id="rg-${uid}"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>` +
     `<pattern id="rn-${uid}" patternUnits="userSpaceOnUse" width="3" height="3"><circle cx="1" cy="1" r=".85" fill="url(#rg-${uid})"/><circle cx="2.4" cy="2.2" r=".7" fill="url(#rg-${uid})"/></pattern>`;
   // v443 (Dome): beim Achal-Tekkiner glänzen Cream- und Falbfarben golden („Gold“: Goldfalbe/Buckskin, Gold-Palomino)
-  const mtc = gold ? "#ffe7a3" : "#fff", mtA = gold ? .65 : .38, mtB = gold ? .42 : .22;
+  const silber = k.metallic && /isabell/.test(farbId), mtc = silber ? "#eef2ff" : gold ? "#ffe08a" : "#fff", mtA = silber ? .75 : gold ? .7 : .5, mtB = silber ? .5 : gold ? .48 : .32;   // v444 (Dome): Isabell silbrig, Braune/Rappen glänzen auch
   if (k.metallic) defs += `<linearGradient id="mt-${uid}" gradientUnits="userSpaceOnUse" x1="${f(-0.1 * L)}" y1="${f(-H * 1.3)}" x2="${f(L)}" y2="0"><stop offset=".15" stop-color="${mtc}" stop-opacity="0"/><stop offset=".35" stop-color="${mtc}" stop-opacity="${mtA}"/><stop offset=".48" stop-color="${mtc}" stop-opacity="0"/><stop offset=".62" stop-color="${mtc}" stop-opacity="${mtB}"/><stop offset=".75" stop-color="${mtc}" stop-opacity="0"/></linearGradient>`;
 
   const bx = `x="${f(minX - 5)}" y="${f(minY - 5)}" width="${f(maxX - minX + 10)}" height="${f(-minY + 10)}"`;
@@ -774,6 +774,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
         y += len + 1 + rg() * 6; } }
     g += `<g clip-path="url(#cr-${uid})" filter="url(#wm-${uid})">${t}</g>`;
   }
+  // v444 Kombinationen (Dome): Roan unter einem anderen Muster (Stichelhaare in den farbigen Flecken), Tiger + Tobiano („Pintaloosa“: weiße Platten dazu)
+  if (opt.roanMix) g += `<g clip-path="url(#cr-${uid})">${stichel(`<path d="${halsD}" fill="#fff"/><path d="${glatt(rumpf)}" fill="#fff"/>`, 3, .9, 23)}${stichel(`<path d="${glatt(rumpf)}" fill="#fff"/>`, 3, .6, 29)}</g>`;
+  if (opt.tobianoMix) { const rt = zufall((opt.seed || rasseId) + "-pinta");
+    const pl = klecks(rt, (0.4 + rt() * 0.15) * L, top + 0.25 * D, 0.22 * L, 0.6 * D, SW) + klecks(rt, 0.1 * L, -H - 6, 0.12 * L, 0.35 * D, SW) + (rt() < .6 ? klecks(rt, 0.85 * L, top + 0.35 * D, 0.12 * L, 0.4 * D, SW) : "");
+    g += `<g filter="url(#wm-${uid})">${pl}</g>`; }
   // v441 Leopard-Komplex (PLAN-SCHECKUNG.md Schritt 3): Lackschimmel (wird mit dem Alter heller, über Knochen bleibt es dunkel), Snowflake, Frost
   if (LP) {
     const rl = zufall((opt.seed || rasseId) + "-lp"), koerper = `<path d="${halsD}" fill="#fff"/><path d="${glatt(rumpf)}" fill="#fff"/>`;
@@ -986,7 +991,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     const schopfFarbe = dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane);
     g += `<g transform="matrix(${ekMatrix})">${kopfNeuSVG(eigenKopf, "ek" + uid, { fell: head, muschel, maehne: schopfFarbe, ink: INK, statisch: opt.statisch, augenZu: opt.augenZu, schattierung: schatt, alter: kopfAlter,
       marwari: !!k.curl, wimper: opt.wimper != null ? opt.wimper : (opt.geschlecht === "Stute" || stufe === "fohlen"), ohrR: OS.R, ohrL: OS.L, ohrSpiel: OS.spiel !== false, seed: opt.seed || rasseId,
-      abz: opt.kopfAbz, maul: opt.maul, ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, lpHaut: !!(LP && LP.haut), sklera: !!(LP && LP.sklera), augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
+      abz: opt.kopfAbz, maul: opt.maul, ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, lpHaut: !!(LP && LP.haut) || !!opt.kroete, kroeteHell: !LP && !!opt.kroete, sklera: !!(LP && LP.sklera), augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
   }
   // Mähne
   if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
@@ -1300,20 +1305,20 @@ function kopfNeuSVG(key, uid, o = {}) {
   const zeichen = (o.maul && F.maul && F.maul[o.maul] ? F.maul[o.maul] : "") + (o.abz || []).map(abzSVG).join("");
   return ohr("R") + farbe(fell) + `<clipPath id="${uid}-fell">${fell}</clipPath>` +
     (zeichen ? `<defs>${farbe(kopfDefs(zeichen))}</defs><g clip-path="url(#${uid}-fell)"><g transform="${kmText(am)}">${farbe(zeichen)}</g></g>` : "") +
-    (o.lpHaut ? `<g clip-path="url(#${uid}-fell)"><g transform="${kmText(am)}">${lpHautSVG(K, o.seed)}</g></g>` : "") +
+    (o.lpHaut ? `<g clip-path="url(#${uid}-fell)"><g transform="${kmText(am)}">${lpHautSVG(K, o.seed, o.kroeteHell)}</g></g>` : "") +
     (o.schattierung ? `<g clip-path="url(#${uid}-fell)">${o.schattierung}</g>` : "") +
     `<g transform="${kmText(am)}">${farbe(F.svg)}</g>` + ohr("L") + auge;
 }
 // v441 Leopard-Komplex: weiße Lederhaut im Augenwinkel (wie beim Menschen) und gefleckte rosa Haut um Maul und Augen – in Koordinaten von Domes Kopf
 function skleraSVG(ac) { const ec = (dx, dy, rx, ry) => `<ellipse cx="${(ac.x + dx).toFixed(1)}" cy="${(ac.y + dy).toFixed(1)}" rx="${rx}" ry="${ry}" transform="rotate(-15 ${(ac.x + dx).toFixed(1)} ${(ac.y + dy).toFixed(1)})" fill="#f3eee4"/>`;
   return ec(21, -5.5, 8, 5.5) + ec(-21, 5.5, 6, 4.5); }
-function lpHautSVG(K, seed) {
+function lpHautSVG(K, seed, hell) {   // hell: Krötenmaul auf heller Haut (Doppel-Cream) – dunkle Sprenkel auf rosa statt rosa Flecken auf dunkel
   const r = zufall((seed || "k") + "-lphaut"), N = K.nase, G = K.gap, A = K.augeMitte, ux = G.x - N.x, uy = G.y - N.y, l = Math.hypot(ux, uy), nx = -uy / l, ny = ux / l;
   let s = "";
   for (let i = 0; i < 26; i++) { const t = 0.02 + r() * 0.2, q = (r() - .5) * 150, x = N.x + ux * t + nx * q, y = N.y + uy * t + ny * q, rr = 5 + r() * 12;
-    s += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${rr.toFixed(1)}" ry="${(rr * (0.6 + r() * 0.5)).toFixed(1)}" fill="#d9a9a2" opacity="${(0.65 + r() * 0.3).toFixed(2)}"/>`; }
+    s += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${rr.toFixed(1)}" ry="${(rr * (0.6 + r() * 0.5)).toFixed(1)}" fill="${hell ? "#8d6b63" : "#d9a9a2"}" opacity="${(hell ? 0.35 + r() * 0.3 : 0.65 + r() * 0.3).toFixed(2)}"/>`; }
   for (let i = 0; i < 9; i++) { const a = r() * Math.PI * 2, d = 42 + r() * 22, rr = 4 + r() * 7;
-    s += `<ellipse cx="${(A.x + Math.cos(a) * d).toFixed(1)}" cy="${(A.y + Math.sin(a) * d * 0.8).toFixed(1)}" rx="${rr.toFixed(1)}" ry="${(rr * 0.75).toFixed(1)}" fill="#d9a9a2" opacity=".8"/>`; }
+    s += `<ellipse cx="${(A.x + Math.cos(a) * d).toFixed(1)}" cy="${(A.y + Math.sin(a) * d * 0.8).toFixed(1)}" rx="${rr.toFixed(1)}" ry="${(rr * 0.75).toFixed(1)}" fill="${hell ? "#8d6b63" : "#d9a9a2"}" opacity="${hell ? ".4" : ".8"}"/>`; }
   return s; }
 // nur die Verläufe/Filter, die die gewählten Abzeichen brauchen (mit ihren Verweisen)
 let KOPF_DEFS = null;

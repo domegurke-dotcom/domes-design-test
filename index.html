@@ -934,7 +934,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "443";
+  const SPIEL_VERSION = "444";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -942,9 +942,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=443"></script>
-<script src="boxstufen.js?v=443"></script>
-<script src="kopfneu.js?v=443"></script>
+<script src="pferd.js?v=444"></script>
+<script src="boxstufen.js?v=444"></script>
+<script src="kopfneu.js?v=444"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1268,7 +1268,10 @@
   const MUSTER_STUFEN = [.3, .8, .95], MUSTER_RASSE = { tinker: .8, clydesdale: .8, paint: .4 }, MUSTER_NAME = ["wenig Weiß", "typisch", "viel Weiß", "fast weiß"];
   function musterZufall(rasse, r) { return Math.round(sigmoid(logit(r()) + (MUSTER_RASSE[rasse] || 0)) * 100) / 100; }
   const musterStufeAus = m => m < MUSTER_STUFEN[0] ? 0 : m < MUSTER_STUFEN[1] ? 1 : m < MUSTER_STUFEN[2] ? 2 : 3;
-  const musterStufeVon = p => { if (!p || (!p.gen && !p.ex)) return 1; return musterStufeAus(exVon(p).muster); };
+  // v444 (Dome): mehrere Weiß-Gene addieren sich – jedes weitere (Tobiano, Overo, Sabino, Splash, Dominant White) hebt die Ausprägung um eine Stufe (wie in echt)
+  const WEISS_GENE = ["To", "O", "Sb", "Sw", "W"];
+  const weissGeneZahl = (g, ex) => WEISS_GENE.filter(k => hat(g, k) && !(k === "O" && ex && ex.ow < .2 && !hat(g, "To"))).length - (hat(g, "To") && hat(g, "O") ? 1 : 0);   // Tovero (To + O) ist schon ein eigenes Muster
+  const musterStufeVon = p => { if (!p || (!p.gen && !p.ex)) return 1; const ex = exVon(p), n = p.gen ? weissGeneZahl(p.gen, ex) : 0; return Math.min(3, musterStufeAus(ex.muster) + Math.max(0, n - 1)); };
   // ---------- v440 Scheckmuster Schritt 2 (PLAN-SCHECKUNG.md) ----------
   // Birdcatcher-Tupfen und dunkler Brindle (Chimäre): nicht vererbt, Zufall je Pferd
   const BIRD_RASSE = { araber: .03 }, BIRD_SONST = .02, BRINDLE_CHIM = .002;
@@ -1295,14 +1298,19 @@
     return { haut: true, sklera: true, huf: true, lack, flocken: snow && !weissKoerper ? Math.min(40, Math.round(4 + 3 * Math.max(0, jahre))) : 0, frost: frost && !weissKoerper && jahre >= 1 };
   }
   const DW_NAME = ["wenig", "typisch", "viel", "ganz weiß"];
+  // v444: Roan unter Scheckung/Tiger und Tiger + Tobiano (Pintaloosa) – sonst zeigt die Farbe nur das stärkste Muster
+  function kombiVon(p) { if (!p || (!p.gen && !p.farbe)) return {}; const g = genVon(p), pat = (FARBEN[p.farbe] || {}).pattern;
+    return { roanMix: hat(g, "Rn") && !!pat && pat !== "roan" && !["leopard", "fewspot"].includes(pat), tobianoMix: anzahl(g, "Lp") > 0 && hat(g, "To") }; }
   function zeichenListe(p) { const z = zeichenVon(p), t = [];
     if (z.dw != null) t.push(z.dw === 3 ? "ganz weiß (Weißgeborener)" : `viel Weiß an Kopf, Beinen und Bauch${z.dw >= 1 ? " – großflächig" : ""}`);
     if (z.rabi != null) t.push("Rabicano (weiße Stichelhaare an Flanke und Schweifansatz)");
     if (z.bendor) t.push("Bend-Or-Flecken");
     if (z.bird) t.push("Birdcatcher-Tupfen");
     if (z.brindle) t.push(z.brindle === "weiss" ? "gestromt (weiße Streifen)" : "gestromt (dunkle Streifen)");
+    const kb = kombiVon(p); if (kb.roanMix) t.push("Roan (Stichelhaare in den farbigen Flecken)"); if (kb.tobianoMix) t.push("Pintaloosa (Tiger mit Tobiano-Platten)");
     if (z.lp) { if (z.lp.lack >= .15) t.push(z.lp.lack >= .5 ? "Lackschimmel (stark)" : "Lackschimmel"); if (z.lp.flocken) t.push("Snowflake (weiße Flöckchen)"); if (z.lp.frost) t.push("Frost");
-      t.push("gefleckte Haut an Maul und Augen, weiße Lederhaut, gestreifte Hufe"); }
+      t.push("Krötenmaul (gefleckte Haut an Maul und Augen), weiße Lederhaut, gestreifte Hufe"); }
+    else if (anzahl(genVon(p), "Cr") === 2) t.push("Krötenmaul (rosa Haut mit Sprenkeln an Maul und Augen)");   // v444: auch bei Doppel-Cream (Champagne gibt es noch nicht)
     return t; }
   // Ohrgröße: Mittel der Rassen nach Anteilen (OHR_RASSE in pferd.js)
   const ohrGrVon = p => { const a = p.anteile && Object.keys(p.anteile).length ? p.anteile : { [p.rasse]: 100 }; let s = 0, n = 0; Object.entries(a).forEach(([r, v]) => { s += v * (OHR_RASSE[r] || 1); n += v; }); return n ? Math.round(s / n * 1000) / 1000 : 1; };
@@ -1699,7 +1707,7 @@
   const kopfOpt = (p, andere) => { if (!p) return {}; const kz = kopfZeichen(p);
     const b = beinZeichen(p), z = zebraVon(p);
     return { kopfform: kopfVon(p), ohrStellung: ohrenVon(p, andere), eigenKopf: p.nase === "spiel" ? false : undefined, kopfAbz: kz.zeichnung || kz.abz, maul: kz.maul, augeBlau: kz.augeBlau,
-      beinAbz: { vn: b.bvl, vf: b.bvr, hn: b.bhl, hf: b.bhr }, zebra: z.zebra, schulter: z.schulter, ohrGr: ohrGrVon(p), musterStufe: musterStufeVon(p), ...(z2 => ({ rabi: z2.rabi, birdcatcher: z2.bird, bendor: z2.bendor, brindle: z2.brindle, dw: z2.dw, lp: z2.lp }))(zeichenVon(p)) }; };
+      beinAbz: { vn: b.bvl, vf: b.bvr, hn: b.bhl, hf: b.bhr }, zebra: z.zebra, schulter: z.schulter, ohrGr: ohrGrVon(p), musterStufe: musterStufeVon(p), ...(z2 => ({ rabi: z2.rabi, birdcatcher: z2.bird, bendor: z2.bendor, brindle: z2.brindle, dw: z2.dw, lp: z2.lp }))(zeichenVon(p)), kroete: anzahl(genVon(p), "Cr") === 2, ...kombiVon(p) }; };
   // Hengste der Deckstation – fest für die ganze Jahreszeit gespeichert (jeder mit eigener Akte)
   function deckhengste(stute) {
     const jetzt = jzJetzt(), key = jetzt + "-" + stute.rasse, D = (spiel.deckstation = spiel.deckstation || {});

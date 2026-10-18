@@ -783,9 +783,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // v440 Bend-Or-Flecken: unregelmäßige dunkle Flecken (Farbe aus dem Fell, dunkler) – nur bei Füchsen/Palominos
   if (opt.bendor) {
     const ro = zufall((opt.seed || rasseId) + "-bendor"), fc = mix(body, "#1a0c06", .68); let t = "";
-    // je Pferd anders verteilt: nur Vorhand 25 %, nur Hinterhand 25 %, nur Rumpf 15 %, überall 35 %
-    const n = Math.round((9 + Math.floor(ro() * 8)) * (typeof opt.bendor === "number" ? opt.bendor : 1)), art = ro(),   /* v493: opt.bendor .5/1/1.8 = wenige/typisch/viele Flecken */ zonen = art < .25 ? [0] : art < .5 ? [1] : art < .65 ? [2] : [0, 1, 2];
-    for (let i = 0; i < n; i++) { const zone = zonen[Math.floor(ro() * zonen.length)], cx = (zone === 0 ? 0.0 + ro() * 0.24 : zone === 1 ? 0.62 + ro() * 0.32 : 0.25 + ro() * 0.36) * L, cy = top + (0.15 + ro() * 0.6) * D, r = 1.6 + ro() * 3;
+    // v494 (Dome): wie in echt frei über Vorhand, Mittelhand und Hinterhand verteilt (je Pferd andere Lage, Anzahl aus der vererbten Anlage)
+    const n = Math.round((9 + Math.floor(ro() * 8)) * (typeof opt.bendor === "number" ? opt.bendor : 1));   /* opt.bendor .5/1/1.8 = wenige/typisch/viele Flecken */
+    for (let i = 0; i < n; i++) { const cx = (0.02 + ((i + ro()) / n) * 0.92) * L, cy = top + (0.12 + ro() * 0.66) * D, r = 1.6 + ro() * 3;   // gleichmäßig über die Länge gestreut, Höhe frei
       t += klecks(ro, cx, cy, r, r * (0.7 + ro() * 0.4), fc); }
     g += `<g clip-path="url(#cr-${uid})" filter="url(#wm-${uid})" opacity=".92">${t}</g>`;
   }

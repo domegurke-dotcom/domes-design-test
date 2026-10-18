@@ -157,6 +157,22 @@ const RASSEN = [
     text: "Großrahmiger Araber aus der ungarischen Militärzucht: edel wie ein Araber, aber kräftiger – sehr oft Schimmel, robust und leistungsbereit.",
     farben: ["schimmel", "apfelschimmel", "fliegenschimmel", "brauner", "fuchs", "rappe"],
     k: { len: .98, depth: .43, legT: .075, neck: .57, nAng: 54, crest: .03, head: .37, hAng: 52, profile: -.6, hw: .93, jw: 1.15, muz: .84, ear: .09, mane: "lang", maneLen: .12, vol: .6, fore: .45, tail: .62, tvol: .7, tset: .85, feather: 0, croup: .1, hq: 1, eye: 1.25 } },
+  // v442 (Dome): Appaloosa, Knabstrupper, Paint Horse – Tigerpferde (Leopard-Komplex) und gescheckter Quarter-Typ
+  { id: "appaloosa", name: "Appaloosa", herkunft: "USA (Nez Percé)", h: [142, 160],
+    text: "Kompaktes, trittsicheres Westernpferd mit Tigerscheckung – dazu gefleckte Haut, weiße Lederhaut, gestreifte Hufe und oft eine dünne Mähne.",
+    farben: ["sb_brauner", "sb_rappe", "sb_fuchs", "tg_brauner", "tg_fuchs", "fs_brauner", "sk_brauner", "brauner", "fuchs", "rappe"],
+    warnung: "Appaloosas tragen das Leopard-Gen (Lp). Werden zwei Lp-Träger verpaart, ist jedes vierte Fohlen Lp/Lp und damit nachtblind (CSNB). Außerdem neigen Tigerpferde stark zur Mondblindheit (periodische Augenentzündung).",
+    k: { nk: 0.5, len: .98, depth: .46, legT: .085, neck: .52, nAng: 52, crest: .04, head: .42, hAng: 55, profile: 0, hw: 1.04, jw: 1.04, muz: .95, ear: .085, mane: "kurz", maneLen: .05, vol: .45, fore: .15, tail: .5, tvol: .45, tset: .15, feather: 0, croup: .45, hq: 1.12, eye: 1 } },
+  { id: "knabstrupper", name: "Knabstrupper", herkunft: "Dänemark", h: [145, 168],
+    text: "Dänisches Tigerpferd vom Pony- bis zum Sporttyp – meist Tigerschecke, vielseitig in Dressur und Springen, menschenbezogen und klug.",
+    farben: ["tg_brauner", "tg_rappe", "tg_fuchs", "fs_rappe", "sb_brauner", "sb_fuchs", "brauner", "fuchs", "rappe"],
+    warnung: "Knabstrupper tragen das Leopard-Gen (Lp). Werden zwei Lp-Träger verpaart, ist jedes vierte Fohlen Lp/Lp und damit nachtblind (CSNB). Außerdem neigen Tigerpferde stark zur Mondblindheit (periodische Augenentzündung).",
+    k: { nk: 0.4, len: 1.0, depth: .45, legT: .088, neck: .58, nAng: 52, crest: .05, head: .43, hAng: 54, profile: 0, hw: 1, jw: 1, muz: .98, ear: .095, mane: "kurz", maneLen: .05, vol: .7, fore: .3, tail: .65, tvol: .75, tset: .3, feather: 0, croup: .4, hq: 1.02, eye: 1 } },
+  { id: "paint", name: "Paint Horse", herkunft: "USA", h: [142, 163],
+    text: "Gescheckter Quarter-Typ: muskulös, ruhig und vielseitig – mit Tobiano-, Overo- (Frame, Sabino, Splash) oder Tovero-Zeichnung.",
+    farben: ["braunschecke", "fuchsschecke", "rappschecke", "ov_brauner", "ov_fuchs", "tv_brauner", "sa_brauner", "sw_fuchs", "fuchs", "brauner"],
+    warnung: "Im Paint Horse kommt das Overo-Gen (Frame Overo) vor. Werden zwei Overo-Träger verpaart, ist jedes vierte Fohlen ein Lethal-White-Fohlen (O/O): Ihm fehlen Nervenzellen im Darm, es stirbt in den ersten Lebenstagen. Vor der Zucht mit einem Overo den Partner per Gentest prüfen!",
+    k: { nk: 0.7, len: .96, depth: .47, legT: .09, neck: .5, nAng: 54, crest: .05, head: .42, hAng: 56, profile: 0, hw: 1.08, jw: 1.06, muz: .95, ear: .085, mane: "kurz", maneLen: .06, vol: .8, fore: .3, tail: .65, tvol: .8, tset: .1, feather: 0, croup: .5, hq: 1.2, eye: 1 } },
 ];
 
 // Kopfgröße wie in echt (v438, Dome): Kopflänge (Genick bis Maul) im Verhältnis zur Widerristhöhe je Rasse – Richtwerte aus der Literatur/Zuchtstandards.
@@ -164,7 +180,7 @@ const RASSEN = [
 // nicht k.head einzeln – so bleiben die Rassen untereinander proportional. Neue Rassen hier mit eintragen.
 const KOPF_STIL = 1.2;
 const KOPF_REAL = { araber: .35, shagya: .35, angloaraber: .355, tekke: .36, vollblut: .36, quarter: .36, marwari: .36, trakehner: .365, hannoveraner: .37, andalusier: .37, lipizzaner: .37,
-  friese: .38, welshcob: .38, haflinger: .39, fjord: .39, isi: .39, fell: .39, dales: .39, tinker: .39, shire: .40, clydesdale: .40, shetty: .45 };
+  knabstrupper: .37, appaloosa: .365, paint: .36, friese: .38, welshcob: .38, haflinger: .39, fjord: .39, isi: .39, fell: .39, dales: .39, tinker: .39, shire: .40, clydesdale: .40, shetty: .45 };
 RASSEN.forEach(r => { if (KOPF_REAL[r.id]) r.k.head = Math.round(KOPF_REAL[r.id] * KOPF_STIL * 1000) / 1000; });
 const rasseById = id => RASSEN.find(r => r.id === id);
 
@@ -1083,6 +1099,9 @@ const PROFIL = {
   dales:        { gang: [5.5, 6, 5],     char: [40, 75, 60, 80, 80, 80, 35], dress: .6, koerper: [80, 80, 45, 50, 55, 55, 60, 86, 75, 88], kopf: [60, 62, 55] },
   angloaraber:  { gang: [6, 6, 7],       char: [80, 62, 80, 65, 80, 45, 80], dress: .85, koerper: [62, 86, 85, 80, 65, 75, 70, 78, 80, 72], kopf: [75, 60, 80] },
   shagya:       { gang: [6, 6, 6],       char: [70, 62, 80, 80, 80, 55, 70], dress: .85, koerper: [65, 86, 75, 70, 70, 75, 70, 86, 80, 82], kopf: [75, 65, 75] },
+  appaloosa:    { gang: [5.5, 5, 5.5],   char: [40, 75, 70, 75, 80, 80, 45], dress: .7, koerper: [75, 75, 70, 80, 85, 65, 75, 85, 75, 82], kopf: [65, 70, 80] },   // v442: zäh und trittsicher (Ranch, Distanz)
+  knabstrupper: { gang: [6, 6, 6],       char: [55, 65, 75, 80, 80, 65, 60], dress: .9, koerper: [72, 72, 65, 65, 70, 78, 75, 72, 70, 72], kopf: [75, 70, 70] },
+  paint:        { gang: [5.5, 5, 6],     char: [35, 75, 65, 80, 80, 85, 40], dress: .75, koerper: [80, 60, 75, 90, 90, 65, 75, 75, 70, 75], kopf: [65, 70, 85] },
 };
 
 const CHARAKTER = [
@@ -1218,7 +1237,7 @@ var KOPF_GROESSE = 1.15;
 const ABZ_VARIANTE = { "schmaleBlesse~geschwungen": { name: "geschwungen", freq: .022, scale: 25, seed: 11 }, "blesse~unregelmaessig": { name: "unregelmäßiger Rand", freq: .022, scale: 25, seed: 13 } };
 // Ohrgröße je Rasse (v430, Dome): Araber klein und fein, Ponys und Quarter klein, Kaltblüter groß – alle anderen 1
 const OHR_RASSE = { araber: .82, shagya: .85, angloaraber: .88, quarter: .88, shetty: .85, isi: .88, welshcob: .88, fell: .9, dales: .92, fjord: .9, haflinger: .95, vollblut: .95, lipizzaner: .95,
-  tekke: 1.08, marwari: 1, shire: 1.12, clydesdale: 1.12, tinker: 1.05, friese: 1, andalusier: 1, hannoveraner: 1, trakehner: 1 };
+  appaloosa: .9, paint: .88, knabstrupper: 1, tekke: 1.08, marwari: 1, shire: 1.12, clydesdale: 1.12, tinker: 1.05, friese: 1, andalusier: 1, hannoveraner: 1, trakehner: 1 };
 // typische Kopfform je Rasse (fehlt die Rasse: gerader Kopf)
 const KOPFFORM_RASSE = { araber: "hecht", shagya: "hecht", angloaraber: "hecht", welshcob: "hecht", vollblut: "keil", trakehner: "keil", hannoveraner: "keil", tekke: "keil",
   shire: "ramsnase", clydesdale: "ramsnase", tinker: "ramsnase", friese: "ramsnase", andalusier: "ramsnase", lipizzaner: "rams" };
@@ -1332,6 +1351,7 @@ const FREMDBLUT = {
   shetty: "isi", shire: "tinker", andalusier: "araber", lipizzaner: "andalusier", vollblut: "araber",
   quarter: "vollblut", hannoveraner: "vollblut", isi: "fjord", tinker: "shire", tekke: "araber",
   trakehner: "vollblut", welshcob: "araber", clydesdale: "shire", fell: "dales", dales: "fell", angloaraber: "vollblut", shagya: "araber",
+  appaloosa: "quarter", knabstrupper: "trakehner", paint: "quarter",
 };
 const FARBBESCHREIBUNG = {
   schimmel: "Weißes Fell – Schimmel werden dunkel geboren und hellen mit dem Alter auf.",
@@ -1382,7 +1402,7 @@ const NAMEN_HOBBY = {
   Mann: ["Max", "Moritz", "Jonny", "Charly", "Fritz", "Sammy", "Benny", "Lucky", "Pepe", "Bruno", "Oskar", "Theo", "Emil", "Felix", "Paul", "Anton", "Balou", "Rocky", "Blacky", "Flash", "Snoopy", "Bambi", "Tommy", "Willi", "Leo", "Tobi", "Pablo", "Joker", "Merlin", "Sunny", "Teddy", "Krümel", "Fips", "Jacky", "Ronny", "Hansi", "Fred", "Louis", "Elvis", "Simba", "Nemo", "Pünktchen", "Dakota", "Cooper", "Milo", "Ole", "Bob", "Jimmy", "Cäsar", "Rudi", "Pumuckl", "Tinto", "Speedy", "Frodo", "Rambo", "Gandalf", "Picasso", "Shadow", "Lasse", "Bento"],
 };
 // Zuchtnamen nach Rassengruppe: [Stuten, Hengste] – teils mit Vorsilbe (Sir, Donna …) zusammengesetzt
-const ZUCHT_GRUPPE = { hannoveraner: "warm", trakehner: "warm", lipizzaner: "barock", andalusier: "spanisch", araber: "araber", angloaraber: "araber", shagya: "araber", tekke: "tekke", marwari: "marwari", vollblut: "vollblut",
+const ZUCHT_GRUPPE = { hannoveraner: "warm", trakehner: "warm", lipizzaner: "barock", andalusier: "spanisch", araber: "araber", angloaraber: "araber", shagya: "araber", tekke: "tekke", marwari: "marwari", vollblut: "vollblut", appaloosa: "western", paint: "western", knabstrupper: "knab",
   quarter: "western", isi: "isi", friese: "friese", haflinger: "haflinger", fjord: "fjord", shetty: "pony", welshcob: "welsh", fell: "britpony", dales: "britpony", shire: "britkalt", clydesdale: "britkalt", tinker: "tinker" };
 const ZUCHT_NAMEN = {
   warm: { vorS: ["Donna", "Lady", "Fürstin", "Gräfin", "Bella", "Royal", "Miss", "Dame"], vorH: ["Sir", "Lord", "Fürst", "Don", "Grand", "Royal", "Baron", "Graf", "Prince", "Count"],
@@ -1404,6 +1424,7 @@ const ZUCHT_NAMEN = {
   britpony: { S: ["Heather", "Bramble", "Moorland Rose", "Fern", "Lady Mary", "Primrose"], H: ["Laddie", "Highland Lad", "Moorland Prince", "Bracken", "Rowan", "Heathcliff"] },
   britkalt: { S: ["Duchess", "Bonnie", "Molly", "Maggie", "Lady Victoria", "Bluebell"], H: ["Duke", "Hercules", "Big Ben", "Prince Albert", "Clyde", "Sir Winston"] },
   tinker: { S: ["Maggie May", "Bonny", "Lucky Clover", "Molly Malone", "Shannon", "Kathleen"], H: ["Paddy", "Shamrock", "Mister Ben", "Seamus", "Finnegan", "Murphy"] },
+  knab: { S: ["Frida", "Ingeborg", "Karen", "Sigrun", "Dagmar", "Mette", "Freja", "Astrid", "Tilde", "Ronja"], H: ["Valdemar", "Thor", "Frederik", "Knud", "Ragnar", "Mikkel", "Egil", "Sigurd", "Holger", "Leif"], von: ["fra Skovgaard", "fra Ryegaard", "fra Frederiksborg", "fra Knabstrup", "fra Mosegaard"] },
 };
 // art "zucht": besonderer Zuchtname je Rasse · "hobby": einfacher Rufname · r: Zufallsfunktion (sonst Math.random)
 function pferdeName(g, rasse, art = "hobby", r = Math.random) {

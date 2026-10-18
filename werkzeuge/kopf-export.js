@@ -62,6 +62,9 @@ const ROOT = path.join(__dirname, "..");
     for (const [ebene, art, seite] of [["marwarieohren rechts", "marwari", "R"], ["basisohren rechts", "basis", "R"], ["marwarieohren links", "marwari", "L"], ["basisohren links", "basis", "L"]]) {
       const g = alle.find(e => lab(e) === ebene);
       for (const o of kinder(g)) out.ohren[art][seite][OS(lab(o))] = ser(o);
+      // Ohransatz (unten Mitte der Ebene in Weltkoordinaten) – um diesen Punkt wird das Ohr je Rasse größer/kleiner (v430)
+      const r = g.getBoundingClientRect(), sv = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal, sx = vb.width / sv.width, sy = vb.height / sv.height;
+      (out.ohrBasis = out.ohrBasis || {})[art + seite] = { x: Math.round(((r.left + r.right) / 2 - sv.left) * sx + vb.x), y: Math.round((r.bottom - sv.top) * sy + vb.y) };
     }
     // Auge: blaues Auge (Etappe 2) erst einmal entfernen, Zusatz-Wimper für Stuten/Fohlen getrennt
     const auge = alle.find(e => lab(e) === "auge");

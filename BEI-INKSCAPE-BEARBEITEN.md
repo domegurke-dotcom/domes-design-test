@@ -54,7 +54,11 @@ Nach dem Zeichnen einfach hochladen – `werkzeuge/kopf-export.js` übernimmt ne
 - Fohlen haben in echt einen kurzen, wuscheligen Schopf (der im Spiel erst wächst) – passt so.
 
 ## Hinweise (keine Fehler, nur zur Info)
-- **Wimpern:** In echt haben Hengste, Wallache und Stuten gleich lange Wimpern. Die Zusatz-Wimper für Stuten und Fohlen ist eine schöne Spiel-Idee und darf bleiben – nur zur Info.
-- **Pupille:** Echte Pferde haben eine waagerecht-längliche Pupille. Im Comic-Stil ist rund völlig in Ordnung.
-- **Ohrgröße:** Ist in echt je Rasse verschieden (Araber klein und nach innen gebogen, Kaltblüter und Ponys mit Winterfell eher groß/breit). Das muss nicht gezeichnet werden – Claude kann die Ohren je Rasse im Spiel etwas größer/kleiner machen, wenn du das möchtest.
+- ✅ **Wimpern** (bleibt, Cartoon-Stil): In echt haben Hengste, Wallache und Stuten gleich lange Wimpern. Die Zusatz-Wimper für Stuten und Fohlen ist eine schöne Spiel-Idee und darf bleiben – nur zur Info.
+- ✅ **Pupille** (bleibt rund): Echte Pferde haben eine waagerecht-längliche Pupille. Im Comic-Stil ist rund völlig in Ordnung.
+- ✅ **Ohrgröße:** ist in echt je Rasse verschieden – macht jetzt das Spiel (v430, `OHR_RASSE`), nichts zu zeichnen.
 - **Hängeohren** (Schlappohren) gibt es in echt bei manchen alten Pferden und bei einzelnen Rassen-Linien – du hast entschieden: keine Hängeohren mehr. Bleibt so.
+
+## Neu seit v430 (optional)
+- **Zebrastreifen und Schulterstreifen** zeichnet das Spiel selbst (dunkle Querstreifen an Unterarm/Unterschenkel, Streifen über die Schulter). Wenn du eine eigene Zeichnung möchtest: ein SVG mit Ebenen `zebra vorne`, `zebra hinten`, `schulterstreifen` – dann baue ich sie ein.
+- **Beinabzeichen** (weißer Ballen bis hochweißer Fuß) zeichnet das Spiel ebenfalls selbst mit glattem, leicht welligem Rand. Für echte Abzeichen typisch wäre ein unregelmäßigerer Rand – falls du Vorlagen zeichnen magst, gern.

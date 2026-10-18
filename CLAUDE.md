@@ -50,7 +50,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (3 Stellen in index.html: pferd.js, boxstufen.js, kopfneu.js) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **436**.
+- Letzte Version bei Aktualisierung dieser Datei: **437**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName` ausfüllen → `#chLos` → Kreditbrief schließen (`#dlgKnoepfe button`) → `[data-immo="pension"]` → `#kaufName` → `#dlgKnoepfe button:first-child`. Admin: `spiel.admin = true`.
@@ -63,7 +63,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - **Startreihenfolge (v307):** Stall/Tag werden erst ganz am Skriptende gezeichnet (vor `zeigeStart`, mit try/catch). Keinen Code einbauen, der beim Laden mitten im Skript zeichnet – sonst hängt der Start (TDZ). Sicherheitsnetz: `window.spielGestartet` + Notfall-Fenster.
 - Abnahmetest (statt Domes eigenem Test, Dome 11.10.2026): `NODE_PATH=/opt/node22/lib/node_modules node tests/etappen-test.js` spielt die Test-Anleitungen (F1–F5, H1–H7) in allen drei Ansichten nach – nach jeder Etappe laufen lassen, um die neue Etappe ergänzen und die Etappe im Plan als „Abnahmetest erledigt“ abhaken.
 
-## Wichtige Spielsysteme (Stand v436)
+## Wichtige Spielsysteme (Stand v437)
 - **Zeit:** Jahreszeiten (Frühling, Sommer, Herbst, Winter), `tpj()` Tage pro Jahreszeit 4/7/10 (Standard 7, alte Spielstände auf 7 umgestellt). Kalender-Anker `spiel.kal` = {tag, i}, damit ein Tempowechsel das Datum nicht verschiebt. Nur das Sozialverhalten wird umgerechnet (`proTag`, Bezug 7); alles andere gilt pro Tag/Nacht. `naechsteNacht()` ist der Tageswechsel; bei `datum().t === 1` laufen die Jahreszeit-Funktionen.
 - **Zucht:** Tragzeit 4 Jahreszeiten. Deckstation (Gestütshengste) nur Frühling/Sommer, eigene Hengste immer. Zuchtalter Stuten bis 20, Hengste bis 25. Befunde sperren die Zucht (`zuchtSperre`).
 - **Genetik:** E, A (A>At>a), F, Sty, Cr, D, Z, Rn, To, O, Lp, Patn, G, Dm (DMRT3). Versteckte Veranlagungen `ex` (grauTempo, apfel, fliegen, fliegenAb, maehne, ton, ow, sonne, kurve). Gefährliche Gene in `GEFAHR_GENE` (O, Lp) – Warnung nur, wenn mind. ein Partner positiv getestet ist.
@@ -146,7 +146,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
   - Fjord: Farbschläge mit Anteilen (Gene + `farbAnteil`, `marktFarbe`), Hellfalbe (`falbTon`, `ex.ton` < 0,25), Weiß-Standard (`fjordWeissFehler`: Fohlenschau −0,5, Marktwert −5 %). Neue Farbe Dunkelfuchs ohne Flachsmähne (`dfuchs`).
   - Admin „Gene selbst wählen“ (`glKopfZeilen`): Kopfform + Ausprägung, Ohrstellung (Vorschau), Abzeichen, Schnippe, Maul, Augen, jedes Bein, Zebrastreifen, Farbton – nur was bei der Rasse vorkommt (`rasseZeichen`, `KOPFFORM_RASSE`). bzn: „Kopfabzeichen, Maulfärbung, Augen (v426)“ und „Beinabzeichen, Zebrastreifen, Ohren, Fjord (v430)“.
 - **Aufräumen v435:** Code mit ESLint geprüft (keine echten Fehler), unbenutzte Funktionen/Variablen entfernt, `spiel.marktGekauft` auf 200 Einträge begrenzt (`marktGekauftMerken`), versehentlich hochgeladene Test-Screenshots gelöscht. Prüfskript: Skriptblöcke aus index.html in Dateien schreiben und `eslint` (liegt in /opt/node22/lib/node_modules) mit no-unused-vars/no-dupe-keys/no-unreachable laufen lassen. **Test-Screenshots nie im Projektordner speichern** (immer im Scratchpad). Kötenbehang (`behang` in pferd.js) ist vorerst ausgeblendet, der Code bleibt – kommt später (Dome).
-- **v436:** Kopfleiste beim Drehen des Handys: `--kopfH` wird sofort nachgezogen (ResizeObserver auf `header` + resize), vorher blitzte im Vollbild bis zu 0,5 s der Stall zwischen Kopfleiste und Fenster durch.
+- **v436:** Kopfleiste beim Drehen des Handys: `--kopfH` wird sofort nachgezogen (ResizeObserver auf `header` + resize), vorher blitzte im Vollbild bis zu 0,5 s der Stall zwischen Kopfleiste und Fenster durch. **v437:** Viewport `minimum-scale=1` und `html, body { overflow-x: clip }` – verhindert, dass Chrome (Android) nach dem Drehen herauszoomt (Menüs breiter als die Kopfleiste, Dome-Screenshot ohne Vollbild).
 - **Offen (Stand v433):** Domes Zeichnungen laut `BEI-INKSCAPE-BEARBEITEN.md`. Stute bleibt bei voller Abfohlbox in ihrer Box (gewollt). Ausbilder-Nachholen per Test geprüft (v433, funktioniert).
 - **Sonstiges v273–v302:** bzn nach Themen gruppiert als Aufklapp-Bereiche (`bznGruppiert`, Vererbung dort integriert, eigener Reiter entfernt), Ansehen-Tabelle. Tagwechsel-Animation über allen Ansichten (`#nacht` z-index 48). Befund-Verlauf speichert die stärkste Stufe (`b.gradMax`). Wurmkur/Schmerzmittel nutzen dieselben Gewichtsstufen `DOSIS`.
 

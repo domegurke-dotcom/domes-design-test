@@ -221,7 +221,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const SW = "#f7f5f1", spotFarbe = C.spot || mix(body, pts || body, .35);
   const dunkel = c => mix(c, "#1b1530", 0.25);
   const INK = "#261a14";
-  const linie = INK, manLinie = INK;
+  const linie = INK;
   const dunkelWert = hexRgb(body).reduce((x, y) => x + y) / 3;
   const schatten = mix(body, dunkelWert < 60 ? "#000000" : "#2b2240", dunkelWert < 60 ? 0.45 : 0.3);
   const licht = dunkelWert < 60 ? mix(body, "#8a9bc0", 0.35) : mix(body, "#ffffff", 0.35);
@@ -320,7 +320,6 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   }
   // Jungpferde mit Spielkopf: Kehle weiter vorn unter der Ganasche ansetzen – der Hals wird oben breiter
   if (!eigenKopf && stufe && ["fohlen", "jaehrling", "jungpferd"].includes(stufe)) T = hp(0.36, 0.44 * hw * Math.min(jw, 1.1));
-  const underCtrl = add(mid(T, Cn), mul(nOut, 1));
   // Kehle: weicher, offener Übergang von der Ganasche in die Halsunterseite
   // weicher Bogen am Kopfansatz: die Linie läuft erst ein Stück an der Ganasche entlang nach hinten und biegt dann nach unten
   const kehle1 = add(add(add(T, mul(sub(Cn, T), 0.3 * (1 - nk))), mul(nOut, 10 * (1 - nk))), P((0.22 + ((k.kb != null ? k.kb : 0.22) - 0.22) * kSp) * hl * nk, 0.14 * hl * nk));
@@ -486,7 +485,6 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
 
   // --- Details ---
   const auge = hp(0.3, 0.11), er = 0.048 * hl * (k.eye || 1);
-  const nuester = hp(0.9, 0.1);
   const maulA = hp(1.0, 0.22 * m), maulB = hp(0.88, 0.25 * m);
 
   // ---------- SVG zusammensetzen ----------
@@ -580,8 +578,6 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += `<g stroke="${INK}" stroke-width="1.6" vector-effect="non-scaling-stroke">` +
     (liegt ? [] : [[huf(fx2), BA.vf], [huf(hx2), BA.hf]]).map(([h, st]) => `<path d="${eckig(h)}" fill="${dunkel(hufFarbe(st))}" vector-effect="non-scaling-stroke"/>`).join("") + "</g></g>";
 
-  // Kopfbewegung (leichtes Nicken): Kopf-Gruppe
-  const nick = `<animateTransform attributeName="transform" type="rotate" values="0 ${f(Pn.x)} ${f(Pn.y)};0 ${f(Pn.x)} ${f(Pn.y)};-3 ${f(Pn.x)} ${f(Pn.y)};0 ${f(Pn.x)} ${f(Pn.y)}" keyTimes="0;.8;.9;1" dur="6s" repeatCount="indefinite"/>`;
 
   // Fernes Ohr
   if (!eigenKopf) g += ohr(add(Eb, P(4.5, 0.5)), dunkel(head), true);
@@ -1190,8 +1186,6 @@ const FREMDBLUT = {
   quarter: "vollblut", hannoveraner: "vollblut", isi: "fjord", tinker: "shire", tekke: "araber",
   trakehner: "vollblut", welshcob: "araber", clydesdale: "shire", fell: "dales", dales: "fell", angloaraber: "vollblut", shagya: "araber",
 };
-const NAMEN_STUTE = ["Bella", "Luna", "Fee", "Amira", "Freya", "Nala", "Zora", "Dana", "Aurora", "Wilma", "Rosalie", "Gräfin", "Melodie", "Primel", "Selma"];
-const NAMEN_HENGST = ["Donnerhall", "Sturmwind", "Apollo", "Merlin", "Farid", "Orkan", "Picasso", "Zeus", "Gandalf", "Samir", "Titan", "Odin", "Rubin", "Falko", "Kaiser"];
 const FARBBESCHREIBUNG = {
   schimmel: "Weißes Fell – Schimmel werden dunkel geboren und hellen mit dem Alter auf.",
   grauschimmel: "Rappe mit Schimmel-Gen auf dem Weg zum weißen Schimmel: immer mehr weiße Haare im schwarzen Fell.",

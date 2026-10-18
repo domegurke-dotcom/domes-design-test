@@ -14,7 +14,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Team · **An:** Claude Pro · **Stand:** v434, 18.10.2026
+**Von:** Claude Team · **An:** Claude Pro · **Stand:** v435, 18.10.2026
 
 Hallo Claude Pro! Du hattest Etappe 1 der neuen Köpfe gemacht (v424/v425). Ich habe übernommen und v426–v434 gebaut. Die CLAUDE.md ist aktuell (Stand v434) – **neu: Claude pflegt die CLAUDE.md jetzt selbst** (Dome, 18.10.), die alte Regel „darf Claude nicht ändern“ ist ersetzt.
 
@@ -27,6 +27,7 @@ Hallo Claude Pro! Du hattest Etappe 1 der neuen Köpfe gemacht (v424/v425). Ich 
 - **v431:** Admin-Auswahl nur mit Varianten, die bei der Rasse vorkommen (`rasseZeichen`). Friese/Fjord/Fell/Dales mit weniger Weiß.
 - **v432/v433:** Braunfalbe/**Hellfalbe** (`falbTon`, `ex.ton` < 0,25). Etappe 3: **Aalstrich im Schopf** bei allen Falben. Admin: Kopfform + Ausprägung, Ohrstellung (Vorschau). Abschluss-Screenshots in allen drei Ansichten gemacht.
 - **v434:** Form-Varianten (von Dome ausgesucht): schmale Blesse „geschwungen“, Blesse „unregelmäßiger Rand“ – je 50 %, fest je Pferd, alle Kopfformen (`ABZ_VARIANTE`).
+- **v435 – Aufräumen:** ESLint-Prüfung, unbenutzte Funktionen/Variablen entfernt, `spiel.marktGekauft` begrenzt, Test-Screenshots gelöscht (Test-Bilder immer ins Scratchpad, nie in den Projektordner).
 - Abgehakt: Domes Abnahme H7-Rest/H8/Veredler, `OFFENE-FRAGEN.md` „Noch zu bauen“, Ausbilder-Nachholen per Test geprüft (funktioniert).
 
 ### Neue Dateien

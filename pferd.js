@@ -51,6 +51,11 @@ function musterFarbe(id, t) {
   if (pattern === "sabino" || pattern === "splash") { e.hoof = "#b8a88f"; e.muzzle = "#c9a49a"; }   // weiße Beine → helle Hufe, Blesse → rosa Maul
   return e;
 }
+// Roan in 3 Stufen (v439): wenig = Grundfarbe scheint stärker durch, viel = sehr hell; andere Muster unverändert (deren Stufe steckt in der Zeichnung)
+function musterStufeFarbe(C, st) {
+  if (st == null || st === 1 || C.pattern !== "roan" || C.roanDeck != null) return C;   // roanDeck = Schimmel im Ausgrauen, nicht betroffen
+  return { ...C, body: st === 0 ? mix(C.body, C.head || C.points || C.body, .45) : mix(C.body, "#f2efe9", .35) };
+}
 const FARBEN = new Proxy(FARBEN_BASIS, { get(t, k) { if (typeof k === "string" && !(k in t)) { const e = musterFarbe(k, t); if (e) t[k] = e; } return t[k]; } });
 
 
@@ -203,7 +208,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const typ = opt.typ || "normal";
   const TYP = { duenn: { bauch: -1, hq: 0.88, crest: -0.03, legT: 0.94 }, sportlich: { bauch: -0.45, hq: 1.07, crest: 0.025, legT: 1 }, normal: { bauch: 0, hq: 1, crest: 0, legT: 1 }, dick: { bauch: 1, hq: 1.12, crest: 0.07, legT: 1.04 } }[typ] || { bauch: 0, hq: 1, crest: 0, legT: 1 };
   const R = rasseById(rasseId), stufe = opt.alterStufe || null, kBasis = { ...R.k, ...ALTERS_K(stufe, R.k), ...(opt.k || {}) };
-  const k = { ...kBasis, hq: (kBasis.hq || 1) * TYP.hq, crest: kBasis.crest + TYP.crest, legT: kBasis.legT * TYP.legT, nk: Math.max(kBasis.nk || 0, typ === "dick" ? 0.7 : 0) }, C = FARBEN[farbId] || FARBEN.schimmel;
+  const k = { ...kBasis, hq: (kBasis.hq || 1) * TYP.hq, crest: kBasis.crest + TYP.crest, legT: kBasis.legT * TYP.legT, nk: Math.max(kBasis.nk || 0, typ === "dick" ? 0.7 : 0) }, C = musterStufeFarbe(FARBEN[farbId] || FARBEN.schimmel, opt.musterStufe);
   const uid = "p" + (++_uid);
   const rnd = zufall(opt.seed || rasseId + farbId);
   const hengst = opt.geschlecht === "Hengst";
@@ -239,7 +244,10 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // realistisch: der deutlich zweifarbige Behang (helle Seiten, dunkle Mitte) ist typisch fürs Fjordpferd – andere Falben haben dunklen, einfarbigen Behang
   const dunKern = k.mane === "fjord" ? (C.stripe || null) : null;
   const dunHell = dunKern ? (k.mane === "fjord" ? "#efe6d2" : mstil === "fjord" ? mix(C.body, "#efe6d2", 0.55) : mix(mane, C.body, 0.5)) : null;
-  const tailCol = dunKern ? dunHell : (k.mane === "fjord" ? mix(maneOuter, maneStripe, 0.25) : mane);
+  const MST = opt.musterStufe == null ? 1 : opt.musterStufe;   // v439 Muster-Ausprägung: 0 wenig · 1 typisch · 2 viel
+  const viel = MST === 2 && ["tobiano", "tovero", "splash", "sabino"].includes(C.pattern);   // bei viel Weiß: Mähne/Schweif teilweise weiß
+  const tailCol = viel ? mix(mane, "#f4f2ec", .65) : dunKern ? dunHell : (k.mane === "fjord" ? mix(maneOuter, maneStripe, 0.25) : mane);
+  if (viel) maneOuter = mix(mane, "#f4f2ec", .45);
   if (mstil === "fjord" && k.mane !== "fjord") { maneOuter = dunKern ? dunHell : mane; maneStripe = dunKern; }   // Stehmähne: mit Aalstrich zweifarbig wie beim Norweger
   if (mstil !== "fjord" && k.mane === "fjord") { maneOuter = mix("#efe6d2", C.stripe || mane, 0.2); maneStripe = null; }
 
@@ -557,7 +565,10 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     if (!st) return "";
     let m;
     if (st === "ballen") m = `<ellipse cx="${f(xc + 0.5 * w)}" cy="${f(-hh - 0.4)}" rx="${f(0.5 * w)}" ry="${f(0.42 * hh)}" fill="${farbe}"/>`;
-    else { const hoehe = BEIN_H[st] || 0, wl = [P(xc - 3 * w, 2)]; for (let x = xc - 3 * w; x <= xc + 3 * w; x += 1.5) wl.push(P(x, -hoehe * Lg - hh - 1 + Math.sin(x * 0.7) * 0.8)); wl.push(P(xc + 3 * w, 2)); m = `<path d="${eckig(wl)}" fill="${farbe}"/>`; }
+    else {   // v437 (Dome): unregelmäßiger, leicht schräger Rand statt gerader Kante – je höher das Weiß, desto unruhiger
+      const hoehe = BEIN_H[st] || 0, rj = zufall((opt.seed || rasseId) + "-bein-" + id), amp = 0.5 + hoehe * 7, schraeg = (rj() - 0.5) * hoehe * 10, wl = [P(xc - 3 * w, 3), P(xc + 3 * w, 3)];
+      for (let x = xc + 3 * w; x >= xc - 3 * w; x -= 1.2) wl.push(P(x, -hoehe * Lg - hh - 1 + (rj() - 0.5) * amp + schraeg * (x - xc) / (3 * w)));
+      m = `<path d="${glatt(wl)}" fill="${farbe}"/>`; }
     return `<g clip-path="url(#bw-${uid}-${id})">${m}</g>`;
   };
   const zebraStreifen = (xc, id, farbe) => {   // Streifen am Unterarm bzw. Unterschenkel (oberhalb von Knie/Sprunggelenk)
@@ -603,12 +614,17 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       for (let i = 0; i < n; i++) { const an = i / n * Math.PI * 2, r = 0.72 + rnd() * 0.5; ps.push(P(cx + Math.cos(an) * rx * r, cy + Math.sin(an) * ry * r)); }
       return glatt(ps);
     };
-    flecken.push(blob(0.45 * L + (rnd() - .5) * 0.15 * L, top + 0.15 * D, 0.2 * L + rnd() * 0.1 * L, 0.75 * D));
-    if (rnd() > 0.3) flecken.push(blob(0.1 * L, -H - 8, 0.12 * L, 0.35 * D + 6));
-    if (rnd() > 0.35) flecken.push(blob(0.86 * L, top + 0.3 * D, 0.1 * L + rnd() * 0.08 * L, 0.45 * D));
+    const sc = [0.5, 1, 1.6][MST];
+    if (MST === 0) flecken.push(blob(0.12 * L + rnd() * 0.25 * L, top + 0.05 * D, 0.08 * L, 0.22 * D));   // wenig: ein kleiner Fleck über dem Rücken
+    else {
+      flecken.push(blob(0.45 * L + (rnd() - .5) * 0.15 * L, top + 0.15 * D * sc, (0.2 * L + rnd() * 0.1 * L) * sc, 0.75 * D * sc));
+      if (MST === 2 || rnd() > 0.3) flecken.push(blob(0.1 * L, -H - 8, 0.12 * L * sc, (0.35 * D + 6) * sc));
+      if (MST === 2 || rnd() > 0.35) flecken.push(blob(0.86 * L, top + 0.3 * D, (0.1 * L + rnd() * 0.08 * L) * sc, 0.45 * D * sc));
+    }
     g += `<g filter="url(#wm-${uid})">` + flecken.map(fd => `<path d="${fd}" fill="#f7f5f1"/>`).join("");
     const wl = [P(minX, 2)];
-    for (let x = minX; x <= maxX; x += 6) wl.push(P(x, -(0.66 + 0.1 * Math.sin(x * 0.21) + rnd() * 0.06) * Lg));
+    const bh = [0.38, 0.66, 0.9][MST];
+    for (let x = minX; x <= maxX; x += 6) wl.push(P(x, -(bh + 0.1 * Math.sin(x * 0.21) + rnd() * 0.06) * Lg));
     wl.push(P(maxX, 2));
     g += `<path d="${eckig(wl)}" fill="#f7f5f1"/></g>`;
   }
@@ -618,38 +634,40 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     const punkte = (x0, x1, y0, y1, n, r0, r1, farbe) => { let s = ""; for (let i = 0; i < n; i++) { const r = r0 + rnd() * (r1 - r0); s += `<ellipse cx="${f(x0 + rnd() * (x1 - x0))}" cy="${f(y0 + rnd() * (y1 - y0))}" rx="${f(r)}" ry="${f(r * (.75 + rnd() * .35))}" fill="${farbe}"/>`; } return s; };
     if (C.pattern === "overo") {
       // waagerecht gezackte weiße Flecken an Seite und Hals – kreuzen nie den Rücken, Beine bleiben farbig
-      const mx = 0.45 * L + (rnd() - .5) * 0.1 * L;
-      let w = `<path d="${eckig(zack(mx - 0.08 * L, top + 0.64 * D, 0.15 * L, 0.24 * D, 26, .6))}" fill="${SW}"/><path d="${eckig(zack(mx + 0.09 * L, top + 0.56 * D + (rnd() - .5) * 4, 0.14 * L, 0.2 * D, 24, .6))}" fill="${SW}"/>`;
-      w += `<path d="${eckig(zack(0.04 * L, top + 0.05 * D - 6, 0.09 * L, 0.3 * D, 16))}" fill="${SW}"/>`;
-      if (rnd() > .4) w += `<path d="${eckig(zack(0.74 * L, top + 0.62 * D, 0.1 * L, 0.2 * D, 16))}" fill="${SW}"/>`;
+      const mx = 0.45 * L + (rnd() - .5) * 0.1 * L, sc = [0.45, 1, 1.5][MST];
+      let w = `<path d="${eckig(zack(mx - 0.08 * L, top + 0.66 * D, 0.15 * L * sc, 0.24 * D * Math.min(1.3, sc), 26, .6))}" fill="${SW}"/>`;
+      if (MST > 0) { w += `<path d="${eckig(zack(mx + 0.09 * L, top + 0.56 * D + (rnd() - .5) * 4, 0.14 * L * sc, 0.2 * D * Math.min(1.3, sc), 24, .6))}" fill="${SW}"/>`;
+        w += `<path d="${eckig(zack(0.04 * L, top + 0.05 * D - 6, 0.09 * L * sc, 0.3 * D * sc, 16))}" fill="${SW}"/>`;
+        if (MST === 2 || rnd() > .4) w += `<path d="${eckig(zack(0.74 * L, top + 0.62 * D, 0.1 * L * sc, 0.2 * D * sc, 16))}" fill="${SW}"/>`; }
       g += `<g filter="url(#wm-${uid})">${w}</g>`;
     }
     if (C.pattern === "tovero") {
       // fast ganz weiß – Farbe bleibt an Kopf/Ohren („Medicine Hat“), Brust und Flanke
-      g += `<rect ${bx} fill="${SW}"/><g filter="url(#wm-${uid})"><path d="${glatt(zack(0.02 * L, top + 0.42 * D, 0.1 * L, 0.3 * D, 14, .4))}" fill="${body}"/>`;
-      g += `<path d="${glatt(zack(0.93 * L, top + 0.3 * D, 0.11 * L, 0.32 * D, 14, .4))}" fill="${body}"/>`;
-      if (rnd() > .5) g += `<path d="${glatt(zack(0.15 * L, -H - 4, 0.08 * L, 0.18 * D, 12, .4))}" fill="${body}"/>`;
+      const fc = [2, 1, 0.55][MST];   // Farbflecken: wenig Weiß = große Flecken, viel Weiß („Medicine Hat“) = nur kleiner Brustschild
+      g += `<rect ${bx} fill="${SW}"/><g filter="url(#wm-${uid})"><path d="${glatt(zack(0.02 * L, top + 0.42 * D, 0.1 * L * fc, 0.3 * D * Math.min(1.4, fc), 14, .4))}" fill="${body}"/>`;
+      if (MST < 2) g += `<path d="${glatt(zack(0.93 * L, top + 0.3 * D, 0.11 * L * fc, 0.32 * D * Math.min(1.4, fc), 14, .4))}" fill="${body}"/>`;
+      if (MST === 0 || (MST === 1 && rnd() > .5)) g += `<path d="${glatt(zack(0.15 * L + (MST ? 0 : 0.2 * L), -H - 4 + (MST ? 0 : 0.2 * D), 0.08 * L * fc, 0.18 * D * fc, 12, .4))}" fill="${body}"/>`;
       g += `</g>`;
     }
     if (C.pattern === "sabino") {
       // Sabino (v316): weißer Bauchfleck mit unruhigem, gesprenkeltem Rand, oft ein zweiter an Brust/Flanke – dazu Blesse und hohe weiße Beine (unten bei den Abzeichen)
-      const mx = 0.5 * L + (rnd() - .5) * 0.12 * L;
-      let w = `<path d="${eckig(zack(mx, bottom - 0.08 * D, 0.2 * L + rnd() * 0.06 * L, 0.24 * D, 28, .75))}" fill="${SW}"/>`;
-      if (rnd() > .45) w += `<path d="${eckig(zack(0.12 * L, bottom - 0.12 * D, 0.08 * L, 0.18 * D, 18, .7))}" fill="${SW}"/>`;
-      g += `<g filter="url(#wm-${uid})">${w}</g>` + punkte(mx - 0.3 * L, mx + 0.3 * L, bottom - 0.45 * D, bottom - 0.12 * D, 22, 0.6, 1.4, SW);
+      const mx = 0.5 * L + (rnd() - .5) * 0.12 * L, sc = [0.35, 1, 2.2][MST];
+      let w = `<path d="${eckig(zack(mx, bottom - 0.08 * D * sc, (0.2 * L + rnd() * 0.06 * L) * Math.min(1.9, sc), 0.24 * D * sc, 28, .75))}" fill="${SW}"/>`;
+      if (MST === 2 || (MST === 1 && rnd() > .45)) w += `<path d="${eckig(zack(0.12 * L, bottom - 0.12 * D * sc, 0.08 * L * sc, 0.18 * D * sc, 18, .7))}" fill="${SW}"/>`;
+      g += `<g filter="url(#wm-${uid})">${w}</g>` + punkte(mx - 0.3 * L * Math.min(1.6, sc), mx + 0.3 * L * Math.min(1.6, sc), bottom - 0.45 * D * Math.min(2, sc), bottom - 0.12 * D, [10, 22, 55][MST], 0.6, 1.4, SW);
     }
     if (C.pattern === "splash") {
       // Splashed White (v426): wie „von unten in weiße Farbe getaucht“ – glatter, klarer Rand, Bauch und Brust weiß, hohe weiße Beine (unten bei den Abzeichen)
-      const hoch = 0.35 + rnd() * 0.4, rand = [P(minX - 6, 4)];
-      for (let i = 0; i <= 12; i++) { const t = i / 12, x = minX - 6 + (maxX - minX + 12) * t; rand.push(P(x, bottom - hoch * D * (0.55 + 0.45 * Math.sin(Math.PI * Math.min(1, t * 1.15))) + Math.sin(t * 9 + hoch * 7) * 1.2)); }
+      const hoch = [0.12 + rnd() * 0.1, 0.35 + rnd() * 0.4, 0.95 + rnd() * 0.15][MST], rand = [P(minX - 6, 4)];
+      for (let i = 0; i <= 20; i++) { const t = i / 20, x = minX - 6 + (maxX - minX + 12) * t; rand.push(P(x, bottom - hoch * D * (0.55 + 0.45 * Math.sin(Math.PI * Math.min(1, t * 1.15))) + Math.sin(t * 9 + hoch * 7) * 1.6 + (rnd() - .5) * 3)); }   // v439: unruhigerer Rand
       rand.push(P(maxX + 6, 4));
       g += `<path d="${glatt(rand)}" fill="${SW}"/>`;
     }
-    if (C.pattern === "leopard") g += `<rect ${bx} fill="${SW}"/>` + punkte(minX, maxX, minY, 0, 70, 2.2, 4.6, spotFarbe);
+    if (C.pattern === "leopard") g += `<rect ${bx} fill="${SW}"/>` + punkte(minX, maxX, minY, 0, [40, 70, 100][MST], 2.2, 4.6, spotFarbe);
     if (C.pattern === "fewspot") g += `<rect ${bx} fill="${SW}"/>` + punkte(0, L, top, bottom, 7, 1.4, 2.6, spotFarbe) + `<g filter="url(#wm-${uid})"><rect x="${f(minX)}" y="${f(-0.62 * Lg)}" width="${f(maxX - minX)}" height="${f(0.2 * Lg)}" fill="${mix(body, SW, .35)}" opacity=".7"/></g>`;
     if (C.pattern === "blanket" || C.pattern === "snowcap") {
       // weiße Decke über Kruppe und Hüfte
-      const x0 = (C.pattern === "snowcap" ? 0.38 : 0.5) * L + (rnd() - .5) * 0.08 * L, rand = [];
+      const x0 = ((C.pattern === "snowcap" ? 0.38 : 0.5) + [0.28, 0, -0.25][MST]) * L + (rnd() - .5) * 0.08 * L, rand = [];   // Schabracke klein/typisch/groß
       rand.push(P(L + 8, croupY - 8), P(x0, top - 6));
       for (let i = 0; i <= 8; i++) { const t = i / 8; rand.push(P(x0 + (L + 6 - x0) * t + (rnd() - .5) * 4, top + (0.35 + 0.25 * Math.sin(t * Math.PI) + rnd() * .12) * D)); }
       rand.push(P(L + 8, top + 0.75 * D));

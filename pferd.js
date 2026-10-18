@@ -5,12 +5,12 @@
 
 // ---------- Fellfarben ----------
 const FARBEN_BASIS = {
-  schimmel:      { name: "Schimmel (weiß)",        body: "#f3f1ed", mane: "#e2ddd3", muzzle: "#6f6a6a", hoof: "#8a8580" },
+  schimmel:      { name: "Schimmel (weiß)",        body: "#f3f1ed", mane: "#e2ddd3", muzzle: "#6f6a6a", hoof: "#8a8580", grau: 1 },
   grauschimmel:  { name: "Rappschimmel",           body: "#6f6c6a", mane: "#2a2726", points: "#2f2c2b", head: "#4e4b49", muzzle: "#2f2b2b", pattern: "roan", hoof: "#2c2a29" },
   braunschimmel: { name: "Braunschimmel",          body: "#a2887a", mane: "#3a302c", points: "#4a3d36", head: "#b4a196", muzzle: "#3a302c", pattern: "roan", hoof: "#3a3230" },
   fuchsschimmel: { name: "Fuchsschimmel",          body: "#c9a48e", mane: "#b98a6c", head: "#d6bcab", muzzle: "#6f5a50", pattern: "roan", hoof: "#6a5246" },
-  fliegenschimmel: { name: "Fliegenschimmel",      body: "#eeebe5", mane: "#d6d0c6", muzzle: "#6f6a6a", hoof: "#8a8580", pattern: "fleck", fleck: "#8b5a3e" },
-  apfelschimmel: { name: "Apfelschimmel",          body: "#b9b9b6", mane: "#626262", points: "#666666", head: "#aaaaa7", muzzle: "#4a4646", pattern: "dapple", dapple: "#e6e6e3", hoof: "#474442" },
+  fliegenschimmel: { name: "Fliegenschimmel",      body: "#eeebe5", mane: "#d6d0c6", muzzle: "#6f6a6a", hoof: "#8a8580", grau: 1, pattern: "fleck", fleck: "#8b5a3e" },
+  apfelschimmel: { name: "Apfelschimmel",          body: "#b9b9b6", mane: "#626262", points: "#666666", head: "#aaaaa7", muzzle: "#4a4646", grau: .6, pattern: "dapple", dapple: "#e6e6e3", hoof: "#474442" },
   rappe:         { name: "Rappe (schwarz)",        body: "#211e1f", mane: "#121011", hoof: "#2c2a29" },
   brauner:       { name: "Brauner",                body: "#7c3f1d", mane: "#161212", points: "#1b1616", hoof: "#2c2a29" },
   dunkelbrauner: { name: "Dunkelbrauner",          body: "#402419", mane: "#120f0f", points: "#161212", hoof: "#2c2a29" },

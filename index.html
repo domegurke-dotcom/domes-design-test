@@ -933,7 +933,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "424";
+  const SPIEL_VERSION = "425";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -941,9 +941,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=424"></script>
-<script src="boxstufen.js?v=424"></script>
-<script src="kopfneu.js?v=424"></script>
+<script src="pferd.js?v=425"></script>
+<script src="boxstufen.js?v=425"></script>
+<script src="kopfneu.js?v=425"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1488,18 +1488,33 @@
   // Ohrstellung je Ohr (links/rechts unabhängig), für den Tag fest: viel Vertrauen/neugierig → meist vorne, gelassen → meist seitlich,
   // scheu/nervös/wenig Vertrauen → öfter hinten; matt (Gesundheit < 65 %) → eher seitlich. Angelegt nur im Extremfall.
   const OHREN_AN = {};   // starke Abneigung gerade erlebt → Ohren kurz angelegt (nur bis zum Neuladen)
-  function ohrenVon(p) {
+  // Beziehung zweier Pferde für die Ohren: „streit“ (gerade gestritten, bis zum nächsten Tag), „feind“ (3× gestritten oder können sich nicht riechen),
+  // „freund“ (gewöhnt, nie gestritten, riechen sich gut) – sonst null
+  function paarBeziehung(a, b) {
+    const x = (spiel.herdePaare || {})[[a.id, b.id].sort().join("|")] || {}, g = paarGrund(a, b);
+    if (x.streitTag != null && spiel.tag - x.streitTag <= 1) return "streit";
+    if ((x.streit || 0) >= 3 || g >= OHR_FEIND_GRUND) return "feind";
+    if (x.tage > tpj() && !x.streit && g < OHR_FREUND_GRUND) return "freund";
+    return null;
+  }
+  const OHR_FEIND_GRUND = 10, OHR_FREUND_GRUND = 4;   // paarGrund 0–12 (feste „Chemie“ je Paar)
+  // andere = Pferde, die gerade mit im Bild sind (Weide, Sandpaddock, Offenstall)
+  function ohrenVon(p, andere = []) {
     if (!p || !p.werte) return { R: "vorne", L: "vorne" };
     if (befundListe(p).some(b => b.grad >= 4) || (OHREN_AN[p.id] && Date.now() - OHREN_AN[p.id] < 20000)) return { R: "angelegt", L: "angelegt", spiel: false };   // starker Schmerz / starke Abneigung
+    const bez = andere.filter(q => q && q.id && q !== p).map(q => paarBeziehung(p, q));
+    if (bez.includes("streit")) return { R: "angelegt", L: "angelegt", spiel: false };   // gerade gestritten und wieder zusammen
+    if (bez.includes("feind")) return { R: "hinten", L: "hinten" };                     // ein Pferd dabei, das es nicht mag
     const r = zufall("ohr-" + p.id + "-" + (spiel.tag || 0)), v = vertrauenVon(p) / 100;
     const N = charE(p, "wachheit"), G = charE(p, "nerven"), Mu = charE(p, "mut"), matt = p.pflege && p.pflege.gesundheit < 65 ? 1 : 0;
     const w = { vorne: (0.6 + 1.6 * v + 1.2 * N.hoch) * (matt ? 0.4 : 1), seite: 0.8 + 1.2 * G.hoch + 0.6 * N.tief + 1.2 * matt,
       hinten: 0.15 + 1.2 * Mu.tief + 1.2 * G.tief + 1.2 * Math.max(0, 0.4 - v) / 0.4 };
+    if (bez.includes("freund")) { w.vorne += 1.5; w.hinten *= 0.3; }   // ein Freund ist dabei: entspannt, aufmerksam
     const wahl = () => { let x = r() * (w.vorne + w.seite + w.hinten); for (const k of ["vorne", "seite", "hinten"]) if ((x -= w[k]) < 0) return k; return "seite"; };
     return { R: wahl(), L: wahl() };
   }
   // Zeichen-Optionen für den Kopf eines Pferds (Kopfform, Ohren; „spiel“ = alter Spielkopf, nur Admin-Test)
-  const kopfOpt = p => p ? { kopfform: kopfVon(p), ohrStellung: ohrenVon(p), eigenKopf: p.nase === "spiel" ? false : undefined } : {};
+  const kopfOpt = (p, andere) => p ? { kopfform: kopfVon(p), ohrStellung: ohrenVon(p, andere), eigenKopf: p.nase === "spiel" ? false : undefined } : {};
   // Hengste der Deckstation – fest für die ganze Jahreszeit gespeichert (jeder mit eigener Akte)
   function deckhengste(stute) {
     const jetzt = jzJetzt(), key = jetzt + "-" + stute.rasse, D = (spiel.deckstation = spiel.deckstation || {});
@@ -2879,7 +2894,7 @@
           ${p.fohlenschau ? `<dt>Fohlenschau</dt><dd>${fsText(p)}${p.championat ? `<br>Championat: ${p.championat.platz}. von ${p.championat.von} (${esc(p.championat.name)})` : ""}</dd>` : ""}${plakettenVon(p).length ? `<dt>Plaketten</dt><dd>${plakettenText(p)}</dd>` : ""}
           ${box.fohlen ? `<dt>Fohlen</dt><dd>${esc(box.fohlen.name)} · ${box.fohlen.geschlecht} · ${alterText(box.fohlen)} (${altersstufe(box.fohlen)[1].replace(/^\S+ /, "")})${box.fohlen.fohlenschau ? `<br><small>${fsText(box.fohlen)}</small>` : ""}${alterJZ(box.fohlen) >= 2 ? `<br><button class="knopf" id="absetzen" style="width:auto;padding:6px 12px;margin-top:6px;font-size:.85rem">In eigene Box umstellen</button> <button class="knopf zweit" id="fohlenAufzucht" style="width:auto;padding:6px 12px;margin-top:6px;font-size:.85rem">🍼 In die Aufzuchtstation</button>` : ""}</dd>` : ""}
           ${box.fohlen ? `<dt>Fohlen-Gesundheit</dt><dd>${fohlenGesundheit(box.fohlen)}</dd>` : ""}
-          <dt>Stockmaß</dt><dd>${p.stockmass} cm</dd><dt>Gewicht</dt><dd>ca. ${gewichtAnzeige(p)} kg</dd>${p.zwerg ? `<dt>Besonderheit</dt><dd>Zwergwuchs – bleibt deutlich kleiner</dd>` : ""}${p.hufGr ? `<dt>Hufgröße</dt><dd>vorne ${HUFSCHUH_GR[p.hufGr.vorne]} · hinten ${HUFSCHUH_GR[p.hufGr.hinten]}</dd>` : ""}${spiel.admin && !box.lesen ? `<dt>Hufe 🛠️</dt><dd>${hufStufe(p)} (${hufQ(p)}) · wächst ${hufW(p)}</dd>` : ""}
+          <dt>Stockmaß</dt><dd>${p.stockmass} cm</dd><dt>Kopf</dt><dd>${kopfName(kopfVon(p))}</dd><dt>Gewicht</dt><dd>ca. ${gewichtAnzeige(p)} kg</dd>${p.zwerg ? `<dt>Besonderheit</dt><dd>Zwergwuchs – bleibt deutlich kleiner</dd>` : ""}${p.hufGr ? `<dt>Hufgröße</dt><dd>vorne ${HUFSCHUH_GR[p.hufGr.vorne]} · hinten ${HUFSCHUH_GR[p.hufGr.hinten]}</dd>` : ""}${spiel.admin && !box.lesen ? `<dt>Hufe 🛠️</dt><dd>${hufStufe(p)} (${hufQ(p)}) · wächst ${hufW(p)}</dd>` : ""}
           ${zucht ? `<dt>Zucht</dt><dd>${zucht}</dd>` : ""}
           ${(() => { const W = p.weideNachm, heute = W && W.tag === spiel.tag ? (W.aus ? `${esc(p.name)} bleibt heute drin.` : `Heute Nachmittag bringt ${esc(W.name || "der Stallbursche")} ${esc(p.name)} auf ${auslaufZielName(p) ? `„${esc(auslaufZielName(p))}“` : W.paddock ? "den Sandpaddock" : "die Weide"}.`) : "", log = auslaufLogText(p); return heute || log ? `<dt>Auslauf</dt><dd>${[heute, log].filter(Boolean).join("<br>")}</dd>` : ""; })()}
           ${(() => { const akt = befundListe(p).filter(b => b.diagnose), alt = p.befundAlt || []; if (!akt.length && !alt.length) return "";
@@ -7510,7 +7525,7 @@
         const umStuten = stutenDabei && hengstig(a) && hengstig(b);
         if (Math.random() < (umStuten ? 0.35 : 0.2)) { verletzt = Math.random() < 0.5 ? a : b; const minus = 10 + Math.round(Math.random() * 15);
           verletzt.pflege.gesundheit = Math.max(1, Math.round((verletzt.pflege.gesundheit - minus) * 10) / 10); befundSetzen(verletzt, "Verletzung (Biss/Tritt)", minus); }
-        const PX = (spiel.herdePaare || {})[[a.id, b.id].sort().join("|")]; if (PX) PX.streit = (PX.streit || 0) + 1;   // v418: wie oft schon gestritten (innerhalb dieser Gewöhnungszeit)
+        const PX = (spiel.herdePaare || {})[[a.id, b.id].sort().join("|")]; if (PX) { PX.streit = (PX.streit || 0) + 1; PX.streitTag = spiel.tag; }   // streitTag: Ohren angelegt, solange sie danach zusammen sind   // v418: wie oft schon gestritten (innerhalb dieser Gewöhnungszeit)
         streite.push({ a, b, verletzt, umStuten, n: PX ? PX.streit : 1, tage: PX ? PX.tage : 0 });
       }
     }
@@ -10584,7 +10599,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     const sand = os || (!!paddockVon(p) && !p.weide), w = sand ? null : weideVon(p), g = sand && !os ? paddockVon(p) : null, s = datum().s, box = box0;
     const boden = sand ? "#dcc38e" : ["#8fcf6a", "#7cbf55", "#a8b85a", "#e9eef2"][s], boden2 = sand ? "#c9ad74" : ["#6fb24c", "#5fa33f", "#8c9a45", "#cfd8de"][s];
     const andere = (os ? offenPferde() : sand ? paddockPferde(g) : w ? weidePferde(w) : []).filter(q => q !== p).slice(0, 5);
-    const malen = (q, x, y, sc, spiegel) => { const z = zeichnePferd(q.rasse, fb(q), { alterStufe: stufeKey(q), seed: q.id, geschlecht: q.geschlecht, maehne: q.maehne, schopf: q.schopf, typ: q.typ, ...kopfOpt(q), haltung: haltungFuer(q), statisch: 1 });   // v380 (Dome): Kopf hängt auch auf der Koppel wie in der Box
+    const malen = (q, x, y, sc, spiegel) => { const z = zeichnePferd(q.rasse, fb(q), { alterStufe: stufeKey(q), seed: q.id, geschlecht: q.geschlecht, maehne: q.maehne, schopf: q.schopf, typ: q.typ, ...kopfOpt(q, [p, ...andere]), haltung: haltungFuer(q), statisch: 1 });   // v380 (Dome): Kopf hängt auch auf der Koppel wie in der Box
       const cx = (z.box.minX + z.box.maxX) / 2; return `<g pointer-events="none" transform="translate(${(x - spiegel * cx * sc).toFixed(1)},${y}) scale(${(spiegel * sc).toFixed(4)},${sc.toFixed(4)})">${z.svg}</g>`; };
     const fohlenVon = q => { const b = os ? null : boxVon(q); return b && b.fohlen && b.fohlen !== q ? b.fohlen : null; };   // v397 (Dome): Fohlen bei Fuß läuft mit raus
     const hinten = andere.map((q, i) => { const x = [80, 320, 135, 265, 35, 365][i], y = 232 + (i % 2) * 8, sp = i % 2 ? -1 : 1, f = fohlenVon(q);
@@ -11116,6 +11131,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Senioren:</b> Senioren ab 20 Jahren: höchstens 75 %, sinkt bis 35 Jahre auf 1 %. Sterbewahrscheinlichkeit je Jahreszeit steigt ab 20 Jahren und erreicht mit 35 Jahren 100 %.</p>
       <h3>👂 Kopf und Ohren (Köpfe-Etappe 1)</h3>
       <p><b>Ohrstellung:</b> vorne, zur Seite, nach hinten, angelegt – linkes und rechtes Ohr unabhängig, je Tag fest gewürfelt (<code>ohrenVon</code>). Gewichte je Ohr: vorne 0,6 + 1,6 × Vertrauen (0–1) + 1,2 × neugierig (bei Gesundheit unter 65 % × 0,4) · seitlich 0,8 + 1,2 × gelassen + 0,6 × verträumt + 1,2 bei Gesundheit unter 65 % · hinten 0,15 + 1,2 × scheu + 1,2 × nervös + bis 1,2 bei Vertrauen unter 40. Beispiel: durchschnittliches Pferd mit Vertrauen 40 → vorne etwa 56 %, seitlich 37 %, hinten 7 %. Angelegt (beide Ohren) nur im Extremfall: Befund ab Grad 4 (starker Schmerz) oder gerade eine starke Abneigung erlebt (Vorliebe ≤ −0,7; ca. 20 Sekunden).</p>
+      <p><b>Ohren in der Herde</b> (Weide, Sandpaddock, Offenstall – nur wenn die Pferde zusammen im Bild sind, <code>paarBeziehung</code>): gerade gestritten (in der letzten Nacht) → beide Ohren angelegt, bis zum nächsten Tag · mögen sich nicht (3× gestritten oder feste Paar-„Chemie“ ab ${OHR_FEIND_GRUND} von 12) → beide Ohren hinten · Freunde (länger als 1 Jahreszeit zusammen, nie gestritten, Chemie unter ${OHR_FREUND_GRUND}) → Ohren öfter vorne (vorne +1,5, hinten × 0,3).</p>
       <p><b>Ohrenspiel:</b> Jedes Ohr wechselt im eigenen Rhythmus (alle 5–11 Sekunden) für gut eine Sekunde in die Nachbarstellung der Datei-Reihenfolge (vorne ↔ seitlich ↔ hinten), nie ins Anlegen. Marwari: dieselben Regeln mit Domes Marwari-Ohren. Keine Hängeohren mehr – ein mattes Pferd zeigt es über Kopfhaltung und Ohrstellung.</p>
       <p><b>Wimpern:</b> Alle haben die normale Wimper, Stuten und Fohlen zusätzlich eine weitere.</p>
       <p><b>Altersköpfe:</b> Domes Kopf wird je Alter entlang Genick–Nase gestaucht und das Auge vergrößert: Fohlen Nase 87 % / Auge 142 % · Jährling 90 % / 120 % · Jungpferd 97 % / 106 % · erwachsen 101 % / 97 % · Senior 102 % / 94 % (<code>KOPF_ALTER</code>).</p>

@@ -35,7 +35,7 @@ Mit Dome besprochen am 18.10.2026 (Stand Spiel v423). Alle Köpfe werden komplet
    - Umsetzung: `werkzeuge/kopf-export.js` erzeugt `kopfneu.js` (`KOPF_NEU`) aus der SVG – nach Änderungen an der SVG einfach neu laufen lassen. `kopfteile.js`/`kopfalter.js` sind gelöscht.
    - pferd.js: `kopfNeuSVG`, `schopfNeuSVG`, `KOPFFORM_RASSE`, `KOPF_ALTER` (Altersköpfe: Stauchung Genick–Nase + größeres Auge). index.html: `p.kopf`, `kopfZufall`, `kopfVon`, `kopfErben`, `ohrenVon`, `kopfOpt`.
    - Schöpfe kommen schon aus der neuen Datei (sonst passen sie nicht), Aalstrich darin erst in Etappe 3 (bis dahin nur beim Fjord dunkle Mitte wie bisher).
-   - Angelegte Ohren bei Streit auf der Weide fehlen noch (nur Schmerz ab Grad 4 und starke Abneigung).
+   - v425 (Dome): Ohren in der Herde (`paarBeziehung`): gerade gestritten → angelegt, mögen sich nicht → hinten, Freunde → öfter vorne. Kopfform steht im Steckbrief (Daten) – Projekt-Chat plant dazu evtl. noch mehr.
 2. Kopfabzeichen, Maulfärbung, Augenfarbe
 3. Schöpfe mit Aalstrich
 

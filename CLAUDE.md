@@ -19,7 +19,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - Anzeige-/Interaktionsboxen dürfen sich nicht überdecken.
 - Nach Aktionen nicht aus der Ansicht werfen (z. B. Schere bleibt offen, Bieten aus Brief → zurück zum Brief).
 - Emojis, die es erst seit Kurzem gibt (z. B. 🪮, 🪝), auf älteren Handys nicht verwenden – lieber kleine SVG-Zeichnung (`KAMM_ICO`, `HUFKR_ICO`).
-- **Noch warten, bis Dome es sagt:** weitere Rassen (Noriker), Inzucht-Auswirkungen, Vererbung der Kopfgröße. (Die Veredler-Rassen sind seit v316 drin, Appaloosa/Knabstrupper/Paint Horse seit v442. Kopfform-Vererbung und Vererbung von Kopf-/Beinabzeichen sind seit 18.10.2026 freigegeben – siehe `PLAN-KOEPFE.md`.)
+- **Noch warten, bis Dome es sagt:** weitere Rassen (z. B. Rote-Liste-Rassen, Rassetypen), Inzucht-Auswirkungen, Vererbung der Kopfgröße. (Die Veredler-Rassen sind seit v316 drin, Appaloosa/Knabstrupper/Paint Horse seit v442, Noriker/Lewitzer/Barock Pinto seit v445. Kopfform-Vererbung und Vererbung von Kopf-/Beinabzeichen sind seit 18.10.2026 freigegeben – siehe `PLAN-KOEPFE.md`.)
 - **Alles nur so, wie es bei der Rasse in echt vorkommt** (Dome, v431): Auswahl in der Admin-Rassenansicht (Gene, Abzeichen, Beine, Kopfform …) nur mit Varianten, die es bei der Rasse gibt.
 - **Tierarzt weiß nichts Verstecktes:** Bei Krankheiten, die vor Ort nicht eindeutig sind, nennt er das Krankheitsbild, alle Möglichkeiten und schlägt den Test vor; bei verdeckten (erblichen) Ursachen äußert er den Verdacht erst ab dem 2. Mal (Dome, v318/v319). Neue Krankheiten immer in `VERDACHT` einordnen.
 - **Info-Knopf** (rundes i, klappt den Info-Text auf) bei Auswahl-Fenstern mit Erklärungen anbieten (Dome, v321).
@@ -51,7 +51,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (3 Stellen in index.html: pferd.js, boxstufen.js, kopfneu.js) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **444**.
+- Letzte Version bei Aktualisierung dieser Datei: **445**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName` ausfüllen → `#chLos` → Kreditbrief schließen (`#dlgKnoepfe button`) → `[data-immo="pension"]` → `#kaufName` → `#dlgKnoepfe button:first-child`. Admin: `spiel.admin = true`.
@@ -153,6 +153,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - **Neue Rassen (v442):** `appaloosa`, `knabstrupper`, `paint` (überall eingetragen: RASSEN, PROFIL, FREMDBLUT, KOPF_REAL, OHR_RASSE, ZUCHT_GRUPPE (neu `knab`), RASSE_GENE, WEISS_RASSE, MUSTER_RASSE, VEREDELUNG, BAU, HUF_RASSE, GESTUET_NAMEN, ERBKRANK, westernpferd). Neue Erbkrankheit `gbed` (Quarter-Linien), neue Veranlagung `eru` → Befund `mondblind` (in VERDACHT, Vitrektomie in `OP_KLINIK`).
 - **v443:** Achal-Tekkiner „Gold“: Cream-/Falbfarben satteres Goldgelb + goldener Metallglanz (`gold` in pferd.js), Namen `TEKKE_GOLD` (Goldfalbe (Buckskin), Gold-Palomino …).
 - **v444:** Weiß-Gene addieren sich (`weissGeneZahl`: jedes weitere To/O/Sb/Sw/W +1 Stufe, Tovero zählt als eins), Roan unter Scheckung/Tiger (`opt.roanMix`), Pintaloosa Lp+To (`opt.tobianoMix`, `kombiVon`). Krötenmaul auch bei Doppel-Cream (`opt.kroete`). Tekkiner: Isabell silbrig, Braun/Rappe stärkerer Glanz.
+- **Neue Rassen (v445):** `noriker` (Name-Gruppe `noriker` mit Hengst-Linien, Roan = „Mohrenkopf“), `lewitzer` (Gruppe pony), `barockpinto` (Gruppe friese, Friesen-Erbkrankheiten).
 - **Aufräumen v435:** Code mit ESLint geprüft (keine echten Fehler), unbenutzte Funktionen/Variablen entfernt, `spiel.marktGekauft` auf 200 Einträge begrenzt (`marktGekauftMerken`), versehentlich hochgeladene Test-Screenshots gelöscht. Prüfskript: Skriptblöcke aus index.html in Dateien schreiben und `eslint` (liegt in /opt/node22/lib/node_modules) mit no-unused-vars/no-dupe-keys/no-unreachable laufen lassen. **Test-Screenshots nie im Projektordner speichern** (immer im Scratchpad). Kötenbehang (`behang` in pferd.js) ist vorerst ausgeblendet, der Code bleibt – kommt später (Dome).
 - **v436:** Kopfleiste beim Drehen des Handys: `--kopfH` wird sofort nachgezogen (ResizeObserver auf `header` + resize), vorher blitzte im Vollbild bis zu 0,5 s der Stall zwischen Kopfleiste und Fenster durch. **v437:** Viewport `minimum-scale=1` und `html, body { overflow-x: clip }` – verhindert, dass Chrome (Android) nach dem Drehen herauszoomt (Menüs breiter als die Kopfleiste, Dome-Screenshot ohne Vollbild).
 - **Offen (Stand v439):** Scheckmuster Schritt 2 (`PLAN-SCHECKUNG.md`). Domes Zeichnungen laut `BEI-INKSCAPE-BEARBEITEN.md`. Stute bleibt bei voller Abfohlbox in ihrer Box (gewollt). Ausbilder-Nachholen per Test geprüft (v433, funktioniert).

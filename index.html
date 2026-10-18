@@ -933,7 +933,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "426";
+  const SPIEL_VERSION = "427";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -941,9 +941,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=426"></script>
-<script src="boxstufen.js?v=426"></script>
-<script src="kopfneu.js?v=426"></script>
+<script src="pferd.js?v=427"></script>
+<script src="boxstufen.js?v=427"></script>
+<script src="kopfneu.js?v=427"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1178,17 +1178,25 @@
     if (!p || (!p.gen && !p.farbe)) return { abz: [], maul: null, augeBlau: false };
     const g = genVon(p), ex = exVon(p), id = p.id || p.nr || p.name, b = grundfarbe(g, ex.ton), sw = anzahl(g, "Sw");
     if (anzahl(g, "O") === 2) return { abz: [], maul: null, augeBlau: false };   // Lethal White: ohnehin ganz weiß
-    const w = sigmoid(logit(ex.weiss) + (!hat(g, "E") ? ABZ_ZUSCHLAG.fuchs : 0) + (sw === 2 ? ABZ_ZUSCHLAG.Sw2 : sw ? ABZ_ZUSCHLAG.Sw1 : 0) + (hat(g, "Sb") ? ABZ_ZUSCHLAG.Sb : 0) + (hat(g, "O") ? ABZ_ZUSCHLAG.O : 0));
+    const w = sigmoid(logit(ex.weiss) + weissZuschlag(g));
     const haupt = ABZ_STUFEN.find(([t]) => w < t)[1], abz = haupt ? [haupt] : [];
-    if (haupt && haupt !== "schnippe" && zufall("abz-" + id)() < ABZ_PLUS_SCHNIPPE) abz.push("schnippe");
+    if (haupt && haupt !== "schnippe" && (ex.schn != null ? ex.schn : zufall("abz-" + id)() < ABZ_PLUS_SCHNIPPE)) abz.push("schnippe");   // ex.schn: im Adminmodus festgelegt
     // Maul: Schwarzbraune (At) haben immer ein Kupfermaul; sonst Pangaré (Braune/Falben Mehlmaul, Füchse Kupfermaul, Rappen Graumaul) – verschwindet beim Ausschimmeln, nicht bei Doppel-Cream
     const st = grauStand(p); let maul = null;
-    if (!(st && st.t > .5) && anzahl(g, "Cr") < 2) maul = b === "schwarzbrauner" ? "kupfer" : ex.pangare >= .5 ? (hat(g, "D") || (hat(g, "E") && hat(g, "A")) ? "mehl" : !hat(g, "E") ? "kupfer" : "grau") : null;   // Falben immer Mehlmaul
+    if (!(st && st.t > .5) && anzahl(g, "Cr") < 2) maul = b === "schwarzbrauner" ? "kupfer" : ex.pangare >= .5 ? (!hat(g, "E") ? "kupfer" : hat(g, "A") ? "mehl" : "grau") : null;
     const za = zufall("auge-" + id)();
-    const glas = (sw && za < AUGE_BLAU.Sw) || (hat(g, "O") && za < AUGE_BLAU.O) || (abz.includes("laterne") && za < AUGE_BLAU.laterne);
-    return { abz, maul, augeBlau: anzahl(g, "Cr") === 2 || !!glas, glas: !!glas && anzahl(g, "Cr") < 2 };
+    const glasMoeglich = !!(sw || hat(g, "O") || abz.includes("laterne"));
+    const glas = glasMoeglich && (ex.auge ? ex.auge === "blau" : (sw && za < AUGE_BLAU.Sw) || (hat(g, "O") && za < AUGE_BLAU.O) || (abz.includes("laterne") && za < AUGE_BLAU.laterne));   // ex.auge: im Adminmodus festgelegt
+    return { abz, maul, augeBlau: anzahl(g, "Cr") === 2 || !!glas, glas: !!glas && anzahl(g, "Cr") < 2, glasMoeglich: glasMoeglich && anzahl(g, "Cr") < 2 };
   }
+  // Logit-Zuschlag der Gene auf die Weiß-Anlage
+  const weissZuschlag = g => { const sw = anzahl(g, "Sw"); return (!hat(g, "E") ? ABZ_ZUSCHLAG.fuchs : 0) + (sw === 2 ? ABZ_ZUSCHLAG.Sw2 : sw ? ABZ_ZUSCHLAG.Sw1 : 0) + (hat(g, "Sb") ? ABZ_ZUSCHLAG.Sb : 0) + (hat(g, "O") ? ABZ_ZUSCHLAG.O : 0); };
+  // Admin (Gene selbst wählen): Weiß-Anlage so setzen, dass genau dieses Abzeichen herauskommt (Mitte der Stufe, Gene eingerechnet)
+  function weissFuer(abz, g) { const i = ABZ_STUFEN.findIndex(([, a]) => a === abz), lo = i ? ABZ_STUFEN[i - 1][0] : 0, hi = Math.min(.995, ABZ_STUFEN[i][0]);
+    return Math.round(Math.max(.001, Math.min(.999, sigmoid(logit((lo + hi) / 2) - weissZuschlag(g)))) * 1000) / 1000; }
   const istTaub = p => { const n = anzahl(genVon(p), "Sw"); return n > 0 && zufall("taub-" + (p.id || p.nr || p.name))() < TAUB_SW[n]; };
+  // Dome (v427): taube Pferde erschrecken beim Putzen, wenn man unbemerkt herankommt – ist die Taubheit per Hörtest bekannt, kündigt man sich an (Hand zeigen, Boden stampfen)
+  const TAUB_SCHRECK = .25, TAUB_SCHRECK_WOHL = -1.5;
   // Anzeige (sichtbar, keine Genetik): „Stern mit Schnippe“, „Mehlmaul“, „blau (Glasauge)“
   function abzeichenText(p) { const a = kopfZeichen(p).abz; if (!a.length) return "keine"; const h = a.filter(x => x !== "schnippe");
     return h.length ? ABZ_NAME[h[0]] + (a.includes("schnippe") ? " mit Schnippe" : "") : "Schnippe"; }
@@ -2168,10 +2176,11 @@
   const NICHT_TESTBAR = { F: "kein Labortest bekannt – zeigt sich nur am Fohlen", Sty: "kein Labortest bekannt – mehrere Gene, noch nicht erforscht" };
   // ---------- Labor: nur Tests, die es auch in echt gibt. Bezahlen, Haarprobe einschicken, Ergebnis kommt per Post ----------
   const LABOR_TESTS = {
-    farbe: { ico: "🎨", n: "Fellfarben-Test", kurz: "Fell\u00adfarben", preis: 120, tage: 2, info: "Farbgene: Extension, Agouti, Creme, Falbe, Silber, Roan, Tobiano, Overo, Leopard, PATN1 und Schimmel" },
+    farbe: { ico: "🎨", n: "Fellfarben-Test", kurz: "Fell\u00adfarben", preis: 120, tage: 2, info: "Farbgene: Extension, Agouti, Creme, Falbe, Silber, Roan, Tobiano, Overo, Leopard, PATN1, Sabino, Splashed White und Schimmel" },
     krank: { ico: "🩺", n: "Erbkrankheiten-Test", kurz: "Erb\u00adkrank\u00adheiten", preis: 60, tage: 2, info: "Lethal White (Overo), Nachtblindheit (Leopard) und die Erbkrankheiten der Rasse(n): Hannoveraner WFFS · Araber SCID, CA · Friese Zwergwuchs, Wasserkopf · Quarter Horse HYPP, HERDA, PSSM1 · Shire/Tinker PSSM1 · Shetty Zwergwuchs (ACAN) · Achal-Tekkiner NFS. Mischlinge: +30 € je weitere Rasse" },
     gang: { ico: "🐎", n: "Gangpferde-Test (DMRT3)", kurz: "Gang\u00adpferde-Gen", preis: 50, tage: 2, info: "Gangpferde-Gen DMRT3: zeigt, ob das Pferd Tölt und Pass veranlagt hat und vererben kann" },
     abst: { ico: "🧾", n: "Abstammungsnachweis", kurz: "Abstam\u00admung", preis: 80, tage: 3, info: "DNA-Vergleich mit den eingetragenen Eltern" },
+    hoer: { ico: "👂", n: "Hörtest (BAER)", kurz: "Hör\u00adtest", preis: 150, tage: 1, vorOrt: true, info: "Der Tierarzt misst mit kleinen Elektroden am Kopf, ob die Ohren Geräusche ans Gehirn weiterleiten – sinnvoll vor allem bei Pferden mit viel Weiß (Splashed White)" },
   };
   // Gene mit Erbkrankheit, wenn ein Fohlen sie von beiden Eltern bekommt
   const GEFAHR_GENE = [
@@ -2193,6 +2202,8 @@
         <p class="text"><small>Geprüft wurden die Erbkrankheiten der Rassen in ${esc(p.name)} (${erbRassen(p).map(r => rasseById(r) ? rasseById(r).name : r).join(", ")}). Veranlagungen wie Sommerekzem, Kehlkopfpfeifen oder OCD lassen sich nicht testen.</small></p>`; }
     if (t === "gang") { const n = anzahl(genVon(p), "Dm");
       return `<div class="gentab">${zeile("Gangpferde-Gen (DMRT3)", n === 2 ? "A / A" : n ? "A / C" : "C / C", n === 2 ? "veranlagt für Tölt und Pass (Fünfgänger) – gibt das A-Allel an jedes Fohlen weiter" : n ? "veranlagt für Tölt (Viergänger) – gibt das A-Allel an die Hälfte der Fohlen weiter" : "keine Veranlagung für Tölt oder Pass")}</div>`; }
+    if (t === "hoer") { const taub = istTaub(p);
+      return `<div class="gentab">${zeile("Hörtest (BAER)", taub ? "taub" : "hört normal", taub ? "beide Ohren ohne Antwort – das Pferd ist taub. Taube Pferde kommen gut zurecht, erschrecken aber, wenn man unbemerkt herankommt: vorher ansprechen geht nicht, also Hand zeigen oder leicht auftreten." : "beide Ohren leiten normal weiter")}</div>`; }
     if (t === "abst") { const A = ahnenFuellen(p), NAM = { vatersvater: "Vatersvater", vatersmutter: "Vatersmutter", muttersvater: "Muttersvater", muttersmutter: "Muttersmutter" };
       return `<div class="gentab">${zeile("Mutter", esc(A.mutter ? A.mutter.name : "–"), "✅ bestätigt – die DNA passt zur eingetragenen Mutter")}${zeile("Vater", esc(A.vater ? A.vater.name : "–"), "✅ bestätigt – die DNA passt zum eingetragenen Vater")}${(p.ahnenErmittelt || p.ahnenUnbekannt || []).map(k => zeile(NAM[k], esc(A[k] ? A[k].name : "–"), "🔎 ermittelt – per Abgleich mit dem Zuchtbuch")).join("")}</div>`; }
     return "";
@@ -2203,7 +2214,7 @@
     if (testLaeuft(p, t)) { dialog(`<h3>${T.ico} ${T.n}</h3><p>Die Probe von ${esc(p.name)} ist schon im Labor. Das Ergebnis kommt per Post.</p>`); return; }
     const preis = Math.round(laborPreis(p, t) * (vorteil("zucht") ? 0.75 : 1));   // H7: Zuchtstall – 25 % Laborrabatt
     if ((spiel.geld || 0) < preis) { dialog(`<h3>Nicht genug Geld</h3><p>Der ${T.n} kostet ${fmt(preis)}, du hast ${fmt(spiel.geld || 0)}.</p>`); return; }
-    dialog(`<h3>${T.ico} ${T.n} für ${esc(p.name)}?</h3><p>${T.info}.</p><p>Der Tierarzt schickt eine Haarprobe ein. Kosten: <b>${fmt(preis)}</b>${preis > T.preis ? ` (${erbRassen(p).length} Rassen)` : ""}. Das Ergebnis kommt in etwa ${T.tage} Tagen per Post.</p>`,
+    dialog(`<h3>${T.ico} ${T.n} für ${esc(p.name)}?</h3><p>${T.info}.</p><p>${T.vorOrt ? "Der Tierarzt macht den Test im Stall und wertet ihn aus." : "Der Tierarzt schickt eine Haarprobe ein."} Kosten: <b>${fmt(preis)}</b>${preis > T.preis ? ` (${erbRassen(p).length} Rassen)` : ""}. Das Ergebnis kommt in etwa ${T.tage} Tagen per Post.</p>`,
       [["Bestellen", () => { buchen(-preis, `Labor: ${T.n}`); (spiel.labor = spiel.labor || []).push({ id: p.id, name: p.name, test: t, fertig: spiel.tag + T.tage }); speichern(); zeigeTag(); nachher(); }], ["Abbrechen", null, "zweit"]]);
   }
   // jede Nacht: fertige Laborergebnisse kommen per Post
@@ -2238,6 +2249,8 @@
       Lp: n => n === 2 ? "reinerbiger Tiger – kaum Punkte, nachtblind (CSNB)" : n ? "Tiger (Leopard-Komplex)" : "kein Tiger",
       Patn: n => n ? "Muster-Gen: mit Lp ganzer Körper getigert" : "kein PATN1 – mit Lp nur Schabracke",
       Dm: n => n === 2 ? "A/A – meist Fünfgänger (Tölt und Pass)" : n ? "A/C – meist Viergänger (Tölt)" : "C/C – keine Spezialgangart",
+      Sb: n => n ? (n === 2 ? "Sabino, reinerbig" : "Sabino") : "kein Sabino",
+      Sw: n => n ? (n === 2 ? "Splashed White, reinerbig – sehr viel Weiß" : "Splashed White") + " – Splash-Pferde sind manchmal taub (Hörtest)" : "kein Splashed White",
     };
     return `<p style="margin:6px 0"><b>${esc(p.name)}</b> · geboren als ${FARBEN[p.farbe].name} · heute: ${farbText(p)}</p>
       <div class="gentab">${GENE.filter(([k]) => FARB_GENE_KEYS(k) && (["E", "A"].includes(k) || NICHT_TESTBAR[k] || anzahl(g, k) > 0)).map(([k, n, dom]) => NICHT_TESTBAR[k] ? `<div class="gen-zeile"><b>${n}</b><span class="gen-ergebnis">–</span><small>${NICHT_TESTBAR[k]}</small></div>`
@@ -3742,7 +3755,8 @@
     if (GRAU_WAHL[chip]) return hat(g, "G");
     if (hat(g, "G")) return false;
     const ow = hat(g, "O") && !/^(ov|tv)_/.test(chip) ? .1 : ex.ow;   // einfarbig gewählt: Overo-Gen bleibt unsichtbar (versteckter Träger)
-    return ohneTon(phaenotyp(g, ex.ton, ow)) === ohneTon(chip) && (chip !== "hellbrauner" || ex.ton < .25) && (chip !== "brauner" || ex.ton >= .25);
+    const f = ohneTon(phaenotyp(g, ex.ton, ow));
+    return (f === ohneTon(chip) || (!/_/.test(chip) && f === "sw_" + ohneTon(chip))) && (chip !== "hellbrauner" || ex.ton < .25) && (chip !== "brauner" || ex.ton >= .25);   // v427: Splash lässt sich zu jeder einfarbigen Farbe dazuwählen
   }
   function glFarbeSetzen(chip) {
     wahl.chip = chip;
@@ -3756,8 +3770,25 @@
     if (!wahl.eigeneGene || !wahl.gen) { glFarbeSetzen(wahl.farbe); wahl.eigeneGene = true; }
     $("genLabor").hidden = false; glZeigen();
   }
+  // v427 (Dome): Kopfabzeichen, Maulfarbe und Augen in „Gene selbst wählen“ – setzt Weiß-Anlage/Pangaré passend (wird so auch vererbt)
+  function glKopfZeilen(zeile, exOpt) {
+    const g = wahl.gen, ex = wahl.ex, k = kopfZeichen({ ...wahl, geb: undefined }), haupt = k.abz.filter(a => a !== "schnippe")[0] || (k.abz.length ? "schnippe" : null);
+    const b = grundfarbe(g, ex.ton), maulName = b === "schwarzbrauner" ? null : !hat(g, "E") ? "Kupfermaul" : hat(g, "A") ? "Mehlmaul" : "Graumaul";
+    const z = [zeile("x-abz", "Kopfabzeichen", "Wird über die Weiß-Anlage vererbt (Füchse, Sabino, Splash und Overo haben mehr Weiß).",
+      exOpt("abz", ABZ_STUFEN.map(([, a]) => [a || "keine", a ? ABZ_NAME[a] : "keins"]), haupt || "keine"))];
+    if (haupt && haupt !== "schnippe") z.push(zeile("x-schn", "Schnippe dazu", "Zusätzlich eine Schnippe zwischen den Nüstern.", exOpt("schn", [["1", "ja"], ["0", "nein"]], k.abz.includes("schnippe") ? "1" : "0")));
+    if (anzahl(g, "Cr") === 2) z.push(zeile("x-maul", "Maul", "Bei Doppel-Cream sieht man keine Maulfärbung.", `<small>– (Doppel-Cream)</small>`));
+    else if (!maulName) z.push(zeile("x-maul", "Maul", "Schwarzbraune (At) haben immer ein Kupfermaul.", `<small>Kupfermaul (immer bei Schwarzbraunen)</small>`));
+    else z.push(zeile("x-maul", "Maul", "Veranlagung Pangaré – hellt das Maul auf (Braune: Mehlmaul, Füchse: Kupfermaul, Rappen: Graumaul). Wird vererbt, verschwindet beim Ausschimmeln.",
+      exOpt("pangare", [[.8, maulName], [.2, "normal"]], ex.pangare >= .5 ? .8 : .2)));
+    if (k.glasMoeglich) z.push(zeile("x-auge", "Augen", "Blaues „Glasauge“ gibt es bei Splashed White, Frame Overo und Laterne.", exOpt("auge", [["braun", "braun"], ["blau", "blau (Glasauge)"]], k.augeBlau ? "blau" : "braun")));
+    else z.push(zeile("x-auge", "Augen", "Blau nur bei Doppel-Cream, Splashed White, Frame Overo oder Laterne.", `<small>${anzahl(g, "Cr") === 2 ? "blau (Doppel-Cream)" : "braun"}</small>`));
+    return z;
+  }
   function glZeigen() {
     const r = rasseById(wahl.rasse), g = wahl.gen, ex = wahl.ex;
+    exVon(wahl);
+    if (wahl.abzWahl) ex.weiss = weissFuer(wahl.abzWahl === "keine" ? null : wahl.abzWahl, g);   // gewähltes Abzeichen bleibt, auch wenn sich die Gene ändern
     wahl.farbe = farbeAus(g, ex);
     // Bild
     saisonFix = glSaison;
@@ -3788,6 +3819,7 @@
         zeile("x-fliegen", "Fliegenschimmel", "Manche Schimmel bekommen im Alter wieder kleine farbige Sprenkel.", exOpt("fliegen", [[.8, "ja (ab ca. 10 J.)"], [.2, "nein"]], ex.fliegen > .5 ? .8 : .2))] : []),
       ...(ohneTon(phaenotyp(g)) === "brauner" ? [zeile("x-ton", "Farbton Brauner", "Hell- oder normaler Brauner – hängt von mehreren Genen ab.", exOpt("ton", [[.6, "normal"], [.1, "hell"]], ex.ton < .25 ? .1 : .6))] : []),
       ...(istRappe(phaenotyp(g)) ? [zeile("x-sonne", "Rappe im Sommer", "Sommerrappen bleiben schwarz, Winterrappen bleichen im Sommer rostbraun aus.", exOpt("sonne", [[.2, "Sommerrappe"], [.8, "Winterrappe"]], ex.sonne > .5 ? .8 : .2))] : []),
+      ...glKopfZeilen(zeile, exOpt),
       ...(hat(g, "O") && !hat(g, "To") ? [zeile("x-ow", "Overo: Weiß sichtbar", "Manche Overo-Träger zeigen kaum Weiß – nur der Gentest verrät sie.", exOpt("ow", [[.7, "ja"], [.1, "kaum"]], ex.ow < .2 ? .1 : .7))] : []),
     ].join("");
     $("glSteuer").innerHTML = `<div class="gl-titel">Fellfarbe</div><div class="gl-farben">${r.farben.map(f => `<button data-glf="${f}" class="${f === wahl.chip ? "an" : ""}">${FARBEN[f].name}</button>`).join("")}</div>
@@ -3799,12 +3831,16 @@
     S.querySelectorAll("[data-gl]").forEach(b => b.onclick = () => { wahl.gen[b.dataset.gl] = b.dataset.o.split("/");
       if (b.dataset.gl === "O" && hat(wahl.gen, "O") && !/^(ov|tv)_/.test(wahl.chip)) wahl.ex.ow = Math.min(wahl.ex.ow, .1);   // versteckter Overo-Träger
       glZeigen(); });
-    S.querySelectorAll("[data-glex]").forEach(b => b.onclick = () => { wahl.ex[b.dataset.glex] = +b.dataset.v; if (b.dataset.glex === "fliegen") wahl.ex.fliegenAb = 10; glZeigen(); });
+    S.querySelectorAll("[data-glex]").forEach(b => b.onclick = () => { const k = b.dataset.glex, v = b.dataset.v;
+      if (k === "abz") wahl.abzWahl = v; else if (k === "schn") wahl.ex.schn = v === "1"; else if (k === "auge") wahl.ex.auge = v; else wahl.ex[k] = +v;
+      if (k === "fliegen") wahl.ex.fliegenAb = 10; glZeigen(); });
     S.querySelectorAll("[data-info]").forEach(b => b.onclick = () => { const el = $("gli-" + b.dataset.info); el.hidden = !el.hidden; });
   }
   document.getElementById("glAlter").oninput = e => { wahl.alter = +e.target.value; if ($("alter")) $("alter").value = wahl.alter; glZeigen(); };
   document.getElementById("glFertig").onclick = () => { $("genLabor").hidden = true; aktualisiere(); };
-  document.getElementById("glZufall").onclick = () => { glFarbeSetzen(wahl.chip); glZeigen(); };
+  document.getElementById("glZufall").onclick = () => { glFarbeSetzen(wahl.chip);
+    delete wahl.abzWahl; delete wahl.ex.schn; delete wahl.ex.auge; wahl.ex.weiss = weissZufall(wahl.rasse, Math.random); wahl.ex.pangare = pangareZufall(wahl.rasse, Math.random);   // v427: Kopf neu würfeln
+    glZeigen(); };
 
   // ---------- Tagesablauf ----------
   $("pferdPlatz").insertAdjacentHTML("afterend", `<g id="krippenHinweis" pointer-events="none">
@@ -8016,6 +8052,8 @@
   }
   function wischStart(tool) {
     const p = B().pferd; if (!p || p.klinik || p.weide || B().tot) return;
+    if (tool !== "streicheln" && istTaub(p) && !testGemacht(p, "hoer") && Math.random() < TAUB_SCHRECK) {
+      wohlAendern(p, TAUB_SCHRECK_WOHL, "beim Putzen erschrocken"); reaktionZeigen("😳 Huch! Zuckt erschrocken zusammen."); }
     const d = p.dreck || {};
     wisch = { tool, p, fort: 0, start: { fell: d.fell || 0, maehne: d.maehne || 0 }, huf: 0, schritte: 0 };
     if (tool === "huf") wisch.klumpen = hufKlumpen();
@@ -10951,7 +10989,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p>Zu jedem Abzeichen außer der Schnippe kommt zu ${Math.round(ABZ_PLUS_SCHNIPPE * 100)} % noch eine Schnippe dazu. Das Abzeichen ist für jedes Pferd fest (<code>kopfZeichen</code>) und steht im Steckbrief (Daten).</p>
       <p><b>Maulfärbung:</b> Veranlagung Pangaré (versteckt, <code>ex.pangare</code>, vererbt wie oben), sichtbar ab 0,5. So viele Marktpferde zeigen sie: ${Object.entries(PANGARE_RASSE).map(([r, v]) => `${rasseById(r).name} ${Math.round(v * 100)} %`).join(" · ")} · alle anderen ${Math.round(PANGARE_SONST * 100)} %. Braune und Falben → Mehlmaul, Füchse → Kupfermaul, Rappen → Graumaul. Schwarzbraune (At) haben immer ein Kupfermaul. Beim Ausschimmeln (ab halb weiß) und bei Doppel-Cream verschwindet sie. Krötenmaul folgt.</p>
       <p><b>Augen:</b> Doppel-Cream (Cremello, Perlino, Smoky Cream) immer blau. Sonst blaues „Glasauge“ bei Splashed White ${Math.round(AUGE_BLAU.Sw * 100)} %, Frame Overo ${Math.round(AUGE_BLAU.O * 100)} %, Laterne ${Math.round(AUGE_BLAU.laterne * 100)} % – alle anderen braun.</p>
-      <p><b>Splashed White</b> (Gen SW, dominant, neu v426): Häufigkeit des Allels Quarter ${RASSE_GENE.quarter.Sw * 100} % · Welsh Cob ${RASSE_GENE.welshcob.Sw * 100} % · Islandpferd ${String(RASSE_GENE.isi.Sw * 100).replace(".", ",")} % · Shetty ${String(RASSE_GENE.shetty.Sw * 100).replace(".", ",")} % · Hannoveraner/Trakehner ${String(RASSE_GENE.hannoveraner.Sw * 100).replace(".", ",")} %. Aussehen: weißer Bauch mit glattem Rand, hohe weiße Beine, viel Weiß am Kopf, meist blaue Augen („Splashed White (Brauner)“ usw.; Tobiano, Overo, Tiger und Roan überdecken das Körperbild, Splash geht vor Sabino). Labortest Fellfarben. Taub (versteckt, nur Admin, noch ohne Folgen): ${Math.round(TAUB_SW[1] * 100)} % mischerbig, ${Math.round(TAUB_SW[2] * 100)} % reinerbig.</p>
+      <p><b>Splashed White</b> (Gen SW, dominant, neu v426): Häufigkeit des Allels Quarter ${RASSE_GENE.quarter.Sw * 100} % · Welsh Cob ${RASSE_GENE.welshcob.Sw * 100} % · Islandpferd ${String(RASSE_GENE.isi.Sw * 100).replace(".", ",")} % · Shetty ${String(RASSE_GENE.shetty.Sw * 100).replace(".", ",")} % · Hannoveraner/Trakehner ${String(RASSE_GENE.hannoveraner.Sw * 100).replace(".", ",")} %. Aussehen: weißer Bauch mit glattem Rand, hohe weiße Beine, viel Weiß am Kopf, meist blaue Augen („Splashed White (Brauner)“ usw.; Tobiano, Overo, Tiger und Roan überdecken das Körperbild, Splash geht vor Sabino). Labortest Fellfarben. Taub (versteckt): ${Math.round(TAUB_SW[1] * 100)} % mischerbig, ${Math.round(TAUB_SW[2] * 100)} % reinerbig – zeigt nur der Hörtest (BAER, Labor ${LABOR_TESTS.hoer.preis} €, Tierarzt vor Ort, Ergebnis nach ${LABOR_TESTS.hoer.tage} Tag). Folge (v427): Beim Putzen erschrickt ein taubes Pferd zu ${Math.round(TAUB_SCHRECK * 100)} % (Wohlbefinden ${String(TAUB_SCHRECK_WOHL).replace(".", ",")}), solange der Hörtest es nicht gezeigt hat – danach kündigt man sich an. Admin-Rassenansicht „Gene selbst wählen“: Kopfabzeichen, Schnippe, Maul (Pangaré) und Augen wählbar (setzt Weiß-Anlage/Pangaré passend, wird so vererbt), Splash zu jeder einfarbigen Farbe.</p>
       <h3>⚠️ Inzucht</h3>
       <p>Geprüft werden Eltern, Großeltern und Urgroßeltern: taucht dieselbe Lebensnummer mehrfach auf oder ist ein Pferd Vorfahre des anderen, gibt es eine Warnung. Folgen für das Fohlen kommen später.</p>
       <h3>🐣 Fohlen</h3>

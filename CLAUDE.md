@@ -5,6 +5,8 @@ Live: https://domegurke-dotcom.github.io/domes-design-test/ (GitHub Pages, Branc
 Spielerin/Auftraggeberin: **Dome** – zeichnet Teile selbst in Krita/Inkscape (Pferdeköpfe, Schöpfe, Fell-SVGs).
 Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, was sich geändert hat.
 
+**Zuerst `UEBERGABE.md` lesen** (Austausch zwischen den Konten **Claude Team** und **Claude Pro**): Nachricht vom anderen Konto übernehmen und löschen, am Sitzungsende eigene Nachricht hineinschreiben – Regeln stehen in der Datei.
+
 ## Feste Regeln von Dome (immer beachten)
 - **Immer wie in echt:** Behandlungen, Abläufe und Zahlen sollen der echten Pferdehaltung entsprechen. Wenn etwas unrealistisch ist, erst nachfragen.
 - **Bei Unstimmigkeiten, Unrealistischem oder falschen Infos erst nachfragen**, ob weitergemacht werden soll („mir ist xy aufgefallen …“). Nicht eigenmächtig Spielmechanik ändern, die nicht verlangt wurde – vorschlagen und fragen. Selbst festgelegte Zahlen am Ende einer Etappe nennen.

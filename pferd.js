@@ -1419,7 +1419,7 @@ const FARBBESCHREIBUNG = {
   fuchsschimmel: "Fuchs mit Schimmel-Gen: rötlich-graues Fell, wird mit den Jahren weiß. Nicht zu verwechseln mit dem Rotschimmel (Roan).",
   fliegenschimmel: "Spätphase mancher Schimmel: im weißen Fell erscheinen wieder kleine farbige Sprenkel – meist ab etwa 8–15 Jahren.",
   apfelschimmel: "Grauschimmel mit hellen, runden Flecken (Äpfeln) im Fell.",
-  rappe: "Schwarzes Fell, schwarze Mähne und schwarzer Schweif. Sommerrappen bleiben das ganze Jahr tiefschwarz, Winterrappen bleichen im Sommer in der Sonne rostbraun aus und sind nur im Winterfell richtig schwarz.",
+  rappe: "Schwarzes Fell, schwarze Mähne und schwarzer Schweif. Sommerrappen sind im Sommerfell tiefschwarz und im Winterfell ausgeblichen, Winterrappen sind nur im Winterfell richtig schwarz und bleichen im Sommer in der Sonne rostbraun aus.",
   brauner: "Braunes Fell mit schwarzer Mähne, schwarzem Schweif und dunklen Beinen.",
   dunkelbrauner: "Sehr dunkles Braun, wirkt fast schwarz.",
   fuchs: "Rotbraunes Fell, Mähne und Schweif gleichfarbig.",

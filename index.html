@@ -949,7 +949,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "475";
+  const SPIEL_VERSION = "476";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -957,9 +957,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=475"></script>
-<script src="boxstufen.js?v=475"></script>
-<script src="kopfneu.js?v=475"></script>
+<script src="pferd.js?v=476"></script>
+<script src="boxstufen.js?v=476"></script>
+<script src="kopfneu.js?v=476"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1372,7 +1372,7 @@
   function saisonFarbe(p, basis) {
     if (!spiel || !spiel.tag || !(istRappe(basis) || BLEICH[basis])) return basis;
     const s = saisonFix != null ? saisonFix : datum().s, f = s === 1 ? 1 : s === 2 ? .5 : 0;
-    if (istRappe(basis) && s === 3) { const id = "rappe~w"; if (!FARBEN[id]) { const B = FARBEN.rappe; FARBEN[id] = { ...B, body: mix(B.body, "#4a3a30", .28), head: mix(B.head || B.body, "#4a3a30", .22), mane: mix(B.mane, "#3a2e28", .15) }; } return id; }   // v475 (Dome): Rappen im Winterfell stumpfer, leicht bräunlich
+    if (istRappe(basis) && !winterrappe(p)) { const f2 = s === 3 ? 1 : s === 2 ? .5 : 0; return f2 ? saisonEintrag(basis, f2) : basis; }   // v476 (Dome): Sommerrappe im Sommer schwarz, im Winterfell ausgeblichen (gleiche Farbe wie der Winterrappe im Sommer)
     if (!f) return basis;   // Sommer voll ausgeblichen, Herbst halb (Fellwechsel)
     if (istRappe(basis)) return winterrappe(p) ? saisonEintrag(basis, f) : basis;
     const k = Math.round(f * (.4 + .6 * exVon(p).sonne) * 10) / 10;
@@ -3681,6 +3681,10 @@
   const MS = (g1, g2, g3) => g1;   // (Platzhalter für Lesbarkeit der Tabelle unten)
   const PUNKTE = (f, n) => `radial-gradient(circle at 25% 30%, ${f} 0 11%, transparent 13%), radial-gradient(circle at 62% 52%, ${f} 0 11%, transparent 13%), radial-gradient(circle at 38% 80%, ${f} 0 10%, transparent 12%), radial-gradient(circle at 80% 22%, ${f} 0 9%, transparent 11%)`;
   const MUSTER_WAHL = [
+    // v476 (Dome): Schimmel als „Muster“ über der Grundfarbe (Gen G) – Ausprägung je nach Alter, 3 Stufen zum Durchschalten
+    { k: "grau", n: "Schimmel", gen: { G: 1 }, grau: "weiss", stufe: 1, sw: "linear-gradient(135deg, #f3f1ed 55%, #b9b5ae 55%)" },
+    { k: "apfel", n: "Apfelschimmel", gen: { G: 1 }, grau: "apfel", stufe: 1, sw: "radial-gradient(circle at 30% 35%, #e6e6e3 0 14%, transparent 16%), radial-gradient(circle at 68% 62%, #e6e6e3 0 14%, transparent 16%), radial-gradient(circle at 70% 25%, #e6e6e3 0 11%, transparent 13%), #a9a9a6" },
+    { k: "fliegen", n: "Fliegenschimmel", gen: { G: 1 }, grau: "fliegen", stufe: 1, sw: "radial-gradient(circle at 28% 32%, #8b5a3e 0 5%, transparent 7%), radial-gradient(circle at 62% 58%, #8b5a3e 0 5%, transparent 7%), radial-gradient(circle at 76% 26%, #8b5a3e 0 4%, transparent 6%), radial-gradient(circle at 40% 76%, #8b5a3e 0 4%, transparent 6%), #eeebe5" },
     { k: "tobiano", n: "Tobiano", gen: { To: 1 }, stufe: 1, fast: 1, sw: "radial-gradient(ellipse at 35% 40%, #fff 0 34%, transparent 36%), radial-gradient(ellipse at 76% 76%, #fff 0 22%, transparent 24%), #7c3f1d" },
     { k: "overo", n: "Frame Overo", gen: { O: 1 }, stufe: 1, sw: "radial-gradient(ellipse 48% 20% at 50% 52%, #fff 0 92%, transparent), #b65a29" },
     { k: "tovero", n: "Tovero", gen: { To: 1, O: 1 }, stufe: 1, fast: 1, sw: "radial-gradient(ellipse at 25% 30%, #8a4a26 0 22%, transparent 24%), radial-gradient(ellipse at 78% 68%, #8a4a26 0 18%, transparent 20%), #f4f1ea" },
@@ -3711,17 +3715,22 @@
   function musterAnwenden() {
     const m = MUSTER_WAHL.find(x => x.k === wahl.muster); if (!m) return;
     const base = musterBasis(wahl.farbeWahl || wahl.farbe), g = genAusFarbe(base, wahl.id + "-m", wahl.rasse);
-    ["To", "O", "Sw", "Sb", "Rn", "Lp", "Patn", "W", "Br1"].forEach(k => { g[k] = [GEN[k][3], GEN[k][3]]; });   // erst alle Muster-Gene weg, dann nur das gewählte
+    ["To", "O", "Sw", "Sb", "Rn", "Lp", "Patn", "W", "Br1", "G"].forEach(k => { g[k] = [GEN[k][3], GEN[k][3]]; });   // erst alle Muster-Gene weg, dann nur das gewählte
     Object.entries(m.gen || {}).forEach(([k, n]) => { const [, , dom, rez] = GEN[k]; g[k] = n === 2 ? [dom, dom] : [dom, rez]; });
     const ex = exVon({ id: wahl.id, rasse: wahl.rasse, ex: wahl.ex || exZufall(zufall("wahl-" + wahl.id)) });
     Object.assign(ex, { rabi: .2, bendor: .2, bird: 0, brin: 0, snow: 0, frost: 0, muster: MS_STUFEN[wahl.mStufe == null ? 1 : wahl.mStufe][0] }, m.ex || {});
     if (m.stufe && m.fast !== 1 && wahl.mStufe === 3) ex.muster = MS_STUFEN[2][0];
     if (m.k === "bird") ex.bird = [.5, 1, 2][Math.min(2, wahl.mStufe == null ? 1 : wahl.mStufe)];   // v465 (Dome): Birdcatcher wenige/typisch/viele Tupfen
     if (m.gen && m.gen.O) ex.ow = .7;
+    if (m.grau && base === "brauner" && ex.ton < .25) ex.ton = .6;   // Brauner bleibt Brauner (nicht Hellbrauner)
+    if (m.grau) { const st = Math.min(2, wahl.mStufe == null ? 1 : wahl.mStufe), a = wahl.alter, tempo = t => Math.max(.8, (a - .4) / t);   // v476: Ausschimmelung passend zum Alter (schneller als 0,8 schimmelt kein Pferd aus)
+      if (m.grau === "weiss") Object.assign(ex, { apfel: .2, fliegen: .2, kurve: 0, grauTempo: tempo([.5, .85, 1.15][st]) });
+      if (m.grau === "apfel") Object.assign(ex, { apfel: .8, fliegen: .2, kurve: 0, grauTempo: tempo([.42, .6, .8][st]) });
+      if (m.grau === "fliegen") Object.assign(ex, { apfel: .2, fliegen: [.62, .8, .95][st], kurve: 0, grauTempo: tempo(1.15), fliegenAb: Math.max(1, Math.min(a, 8)) }); }
     wahl.gen = g; wahl.ex = ex; wahl.eigeneGene = true; wahl.chip = base; wahl.farbe = farbeAus(g, ex);
   }
   // v456 (Dome): Rassenansicht – dieselbe Farbe/dasselbe Muster nochmal antippen schaltet die Varianten durch (Sommer-/Winterrappe, Jahreszeit, Roan- und Scheckstufen, Zebrastreifen …)
-  const STUFEN_NAME = { weiss: ["wenig Weiß", "typisch", "viel Weiß", "fast weiß"], roan: ["wenig Roan (dunkler)", "typisch", "viel Roan (heller)"], tiger: ["klein / wenige Punkte", "typisch", "groß / viele Punkte"], bird: ["wenige Tupfen", "typisch", "viele Tupfen"] };
+  const STUFEN_NAME = { weiss: ["wenig Weiß", "typisch", "viel Weiß", "fast weiß"], roan: ["wenig Roan (dunkler)", "typisch", "viel Roan (heller)"], tiger: ["klein / wenige Punkte", "typisch", "groß / viele Punkte"], bird: ["wenige Tupfen", "typisch", "viele Tupfen"], grau: ["wird grau", "fast weiß", "weiß"], apfel: ["dunkel", "typisch", "hell – die Äpfel verblassen"], fliegen: ["wenige Fliegen", "typisch", "viele Fliegen"] };
   // v466 (Dome): Tekkiner Braun/Fuchs/Rappe/Schimmel – Varianten mit Glanz und zusätzlich „ohne Glanz“
   function farbVarianten(f) {
     let l = farbVarianten0(f);
@@ -3731,9 +3740,7 @@
   function farbVarianten0(f) {
     const C = FARBEN[f] || {}, pat = C.pattern, v = [];
     if (wahl && wahl.rasse === "tekke" && TEKKE_GLANZ[f]) { const [n, art] = TEKKE_GLANZ[f]; return [{ n: `${n} – ohne Glanz`, ex: { glanz: .05 } }, { n: `${n} – mit ${art}`, ex: { glanz: .9 } }]; }   // v463 (Dome): Tekkiner echt oder mit Gold-/Silberglanz
-    if (f === "apfelschimmel") return [{ n: "dunkler Apfelschimmel", grau: { t: .42 } }, { n: "Apfelschimmel – typisch", grau: { t: .6 } }, { n: "heller Apfelschimmel – die Äpfel verblassen", grau: { t: .8 } }];   // v474 (Dome)
-    if (f === "fliegenschimmel") return [{ n: "wenige Fliegen", grau: { fl: .62 } }, { n: "Fliegenschimmel – typisch", grau: { fl: .8 } }, { n: "viele Fliegen", grau: { fl: .95 } }];
-    if (f === "rappe") return [{ n: "Sommerrappe – Sommerfell", ex: { sonne: .2 }, saison: 1 }, { n: "Sommerrappe – Winterfell (stumpfer, leicht bräunlich)", ex: { sonne: .2 }, saison: 3 }];   // v475 (Dome)   // v469 (Dome): beim Rappen nur der Sommerrappe (keine Winterrappe-Varianten mehr)
+    if (f === "rappe") return [{ n: "Sommerrappe – Sommerfell", ex: { sonne: .2 }, saison: 1 }, { n: "Sommerrappe – Winterfell (ausgeblichen)", ex: { sonne: .2 }, saison: 3 }];   // v475 (Dome)   // v469 (Dome): beim Rappen nur der Sommerrappe (keine Winterrappe-Varianten mehr)
     if (BLEICH[f]) { const l = [{ n: "im Winter (Winterfell)", saison: 3 }, { n: "im Sommer – von der Sonne ausgeblichen", ex: { sonne: .9 }, saison: 1 }]; if (f === "brauner") l.push({ n: "Hellbrauner", ex: { ton: .1 }, saison: 3, farbe: "hellbrauner" }); return l; }
     if (f === "braunfalbe") v.push({ n: "Braunfalbe", ex: { ton: .6, zebra: .1 } }, { n: "Hellfalbe", ex: { ton: .1, zebra: .1 } });
     if (["braunfalbe", "rotfalbe", "mausfalbe", "gelbfalbe", "weissfalbe"].includes(f)) { const t = f === "braunfalbe" ? { ton: .6 } : {}; v.push({ n: "mit Zebrastreifen an den Beinen", ex: { ...t, zebra: .6 } }, { n: "mit Zebrastreifen und Schulterstreifen", ex: { ...t, zebra: .92 } }); if (f !== "braunfalbe") v.unshift({ n: "ohne Zebrastreifen", ex: { zebra: .1 } }); return v; }
@@ -3858,12 +3865,14 @@
       zielStockmass: Math.round(r.h[0] + Math.random() * (r.h[1] - r.h[0])),
     };
     wahl.stockmass = wahl.zielStockmass;
+    { const f0 = r.farben[0], grauK = { schimmel: "grau", apfelschimmel: "apfel", fliegenschimmel: "fliegen", grauschimmel: "grau" }[f0];   // v476: Schimmel ist jetzt ein Muster über der Grundfarbe
+      if (grauK) { const b = r.farben.find(f => !GRAU_WAHL[f]) || "brauner"; wahl.farbe = wahl.farbeWahl = b; wahl.muster = grauK; musterAnwenden(); } }
     const a = $("auswahl");
     a.innerHTML = `
       <div class="leiste"><button id="zurueck">‹ Rassen</button><h2>${r.name}</h2><button id="zu" aria-label="Schließen">✕</button></div>
       <div class="inhalt">
         <div class="vorschau"><div class="var-hinweis" id="varHinweis" hidden></div><div class="gross-huelle"><svg id="gross" viewBox="0 0 ${VB.b} ${VB.h}"></svg></div>
-          <div class="farbspalte" id="farbSpalte">${r.farben.map(fid => { const c = FARBEN[fid]; return `<button class="fs-kachel" data-f="${fid}"><span class="swatch" style="background:linear-gradient(135deg, ${c.body} 55%, ${c.mane} 55%)"></span>${c.name.replace(/ \(.*\)/, "")}</button>`; }).join("")}</div>
+          <div class="farbspalte" id="farbSpalte">${r.farben.filter(f => !GRAU_WAHL[f]).map(fid => { const c = FARBEN[fid]; return `<button class="fs-kachel" data-f="${fid}"><span class="swatch" style="background:linear-gradient(135deg, ${c.body} 55%, ${c.mane} 55%)"></span>${c.name.replace(/ \(.*\)/, "")}</button>`; }).join("")}</div>
           <button class="fs-pfeil hoch" id="fsHoch" hidden aria-label="Nach oben scrollen">▲</button><button class="fs-pfeil runter" id="fsRunter" hidden aria-label="Weitere Farben">▼</button>
           <div class="farbspalte musterspalte" id="musterSpalte"><button class="fs-kachel ms-kachel" data-m="keine" title="Keine Scheckung"><span class="swatch" style="background:#fff;display:flex;align-items:center;justify-content:center;font-size:.9rem">✕</span>Keine</button>${musterListe(id).map(m => `<button class="fs-kachel ms-kachel" data-m="${m.k}"><span class="swatch" style="background:${m.sw}"></span>${m.n}</button>`).join("")}</div>
           <button class="fs-pfeil ms-pfeil hoch" id="msHoch" hidden aria-label="Nach oben scrollen">▲</button><button class="fs-pfeil ms-pfeil runter" id="msRunter" hidden aria-label="Weitere Scheckungen">▼</button>
@@ -3876,7 +3885,7 @@
         <p class="text"><b>${r.herkunft}</b> · ${r.h[0]}–${r.h[1]} cm Stockmaß<br>${r.text}</p>${r.warnung ? `<div class="rasse-warn"><b>⚠️ Achtung Erbkrankheit</b>${r.warnung}</div>` : ""}
 
         <div class="feld farb-feld"><span class="titel">Fellfarbe</span>
-          <div class="chips" id="farben">${r.farben.map(fid => {
+          <div class="chips" id="farben">${r.farben.filter(f => !GRAU_WAHL[f]).map(fid => {
             const c = FARBEN[fid];
             return `<button class="chip" data-f="${fid}"><span class="swatch" style="background:linear-gradient(135deg, ${c.body} 55%, ${c.mane} 55%)"></span>${c.name}</button>`;
           }).join("")}</div>
@@ -3934,7 +3943,7 @@
     $("groesse").value = wahl.zielStockmass;
     $("groesse").oninput = e => { wahl.zielStockmass = +e.target.value; aktualisiere(); };
     $("alter").value = alterIdx(wahl.alter);
-    $("alter").oninput = e => { wahl.alter = ALTER_STUFEN[+e.target.value]; aktualisiere(); };
+    $("alter").oninput = e => { wahl.alter = ALTER_STUFEN[+e.target.value]; const M = MUSTER_WAHL.find(x => x.k === wahl.muster); if (M && M.grau) musterAnwenden(); aktualisiere(); };   // v476: Ausschimmelung passt sich dem Alter an
     $("name").value = wahl.name;
     $("name").oninput = e => { wahl.name = e.target.value; };
     $("wuerfel").onclick = () => { wahl.name = zufallAus(NAMEN[wahl.geschlecht]); $("name").value = wahl.name; };
@@ -3989,8 +3998,10 @@
     saisonFix = wahl.saisonVar != null ? wahl.saisonVar : null;   // v456: Jahreszeit der gezeigten Variante
     const z = zeichnePferd(wahl.rasse, fb(wahl, wahl.alter), { seed: wahl.id, geschlecht: wahl.geschlecht, alterStufe: stufeAusMonaten(wahl.alter * 12), ...kopfOpt(wahl) });
     saisonFix = null;
-    { const hw = $("varHinweis"), M = MUSTER_WAHL.find(x => x.k === wahl.muster), t = M ? `${M.n}${M.stufe ? " – " + (STUFEN_NAME[["tobiano", "overo", "tovero", "splash", "sabino"].includes(wahl.muster) || ["dw"].includes(wahl.muster) ? "weiss" : wahl.muster === "roan" ? "roan" : wahl.muster === "bird" ? "bird" : ["tiger", "fewspot", "schabrackentiger", "schabracke"].includes(wahl.muster) ? "tiger" : "weiss"][wahl.mStufe == null ? 1 : wahl.mStufe] || "") : ""}` : wahl.varText;
-      if (hw) { hw.hidden = !t; hw.innerHTML = t ? `<span>${t}</span>` : ""; } }
+    { const hw = $("varHinweis"), M = MUSTER_WAHL.find(x => x.k === wahl.muster), t = M ? `${M.n}${M.stufe ? " – " + (STUFEN_NAME[["tobiano", "overo", "tovero", "splash", "sabino"].includes(wahl.muster) || ["dw"].includes(wahl.muster) ? "weiss" : wahl.muster === "roan" ? "roan" : ["bird", "grau", "apfel", "fliegen"].includes(wahl.muster) ? wahl.muster : ["tiger", "fewspot", "schabrackentiger", "schabracke"].includes(wahl.muster) ? "tiger" : "weiss"][wahl.mStufe == null ? 1 : wahl.mStufe] || "") : ""}` : wahl.varText;
+      const zuJung = M && M.grau && !new RegExp("_" + (M.grau === "weiss" ? "(grau|weiss)" : M.grau) + "(_|$)").test(fb(wahl, wahl.alter));   // v476: so jung noch nicht so weit ausgeschimmelt
+      const t2 = zuJung ? `${t} – mit ${alterName(wahl.alter, " ").replace(/Jahre$/, "Jahren")} noch nicht so weit (Schimmel werden mit den Jahren heller)` : t;
+      if (hw) { hw.hidden = !t2; hw.innerHTML = t2 ? `<span>${t2}</span>` : ""; } }
     const sc = wahl.stockmass / 100, breite = (z.box.maxX - z.box.minX) * sc;
     // feste Bildbreite (passend für das breiteste Pferd), damit Bild und Pfeile nie springen
     if (!window.__vbMax) window.__vbMax = Math.max(VB.b, ...RASSEN.map(r => { const zz = zeichnePferd(r.id, r.farben[0], { seed: "max" }); return 132 + (zz.box.maxX - zz.box.minX) * r.h[1] / 100 + 106; }));
@@ -4258,7 +4269,7 @@
         zeile("x-fliegen", "Fliegenschimmel", "Manche Schimmel bekommen im Alter wieder kleine farbige Sprenkel.", exOpt("fliegen", [[.8, "ja (ab ca. 10 J.)"], [.2, "nein"]], ex.fliegen > .5 ? .8 : .2))] : []),
       ...(phaenotyp(g) === "braunfalbe" ? [zeile("x-ton", "Farbton Braunfalbe", "Braunfalbe oder heller Hellfalbe – hängt von mehreren Genen ab und wird vererbt (wie Hellbrauner).", exOpt("ton", [[.6, "Braunfalbe"], [.1, "Hellfalbe"]], ex.ton < .25 ? .1 : .6))] : []),
       ...(ohneTon(phaenotyp(g)) === "brauner" ? [zeile("x-ton", "Farbton Brauner", "Hell- oder normaler Brauner – hängt von mehreren Genen ab.", exOpt("ton", [[.6, "normal"], [.1, "hell"]], ex.ton < .25 ? .1 : .6))] : []),
-      ...(istRappe(phaenotyp(g)) ? [zeile("x-sonne", "Rappe im Sommer", "Sommerrappen bleiben schwarz, Winterrappen bleichen im Sommer rostbraun aus.", exOpt("sonne", [[.2, "Sommerrappe"], [.8, "Winterrappe"]], ex.sonne > .5 ? .8 : .2))] : []),
+      ...(istRappe(phaenotyp(g)) ? [zeile("x-sonne", "Rappe im Sommer", "Sommerrappen sind im Sommerfell tiefschwarz und im Winterfell ausgeblichen, Winterrappen genau umgekehrt (im Sommer rostbraun ausgeblichen).", exOpt("sonne", [[.2, "Sommerrappe"], [.8, "Winterrappe"]], ex.sonne > .5 ? .8 : .2))] : []),
       ...glKopfZeilen(zeile, exOpt),
       ...(hat(g, "O") && !hat(g, "To") ? [zeile("x-ow", "Overo: Weiß sichtbar", "Manche Overo-Träger zeigen kaum Weiß – nur der Gentest verrät sie.", exOpt("ow", [[.7, "ja"], [.1, "kaum"]], ex.ow < .2 ? .1 : .7))] : []),
     ].join("");
@@ -8635,7 +8646,7 @@
       titel = `🎨 ${FARBEN[lid] ? FARBEN[lid].name : FARBEN[id].name}`;
       const extra = [];
       if (/~/.test(id)) extra.push(istRappe(p.farbe) ? "Gerade ist Sommer bzw. Herbst – deshalb ist das Fell ausgeblichen. Im Winterfell ist es wieder tiefschwarz." : "Gerade ist Sommer bzw. Herbst – das Fell ist von der Sonne etwas ausgeblichen. Im Winterfell ist es wieder dunkler.");
-      if (istRappe(p.farbe)) extra.push(winterrappe(p) ? "<b>Winterrappe:</b> nur im Winterfell tiefschwarz, im Sommer rostbraun ausgeblichen." : "<b>Sommerrappe:</b> bleibt das ganze Jahr tiefschwarz.");
+      if (istRappe(p.farbe)) extra.push(winterrappe(p) ? "<b>Winterrappe:</b> nur im Winterfell tiefschwarz, im Sommer rostbraun ausgeblichen." : "<b>Sommerrappe:</b> im Sommerfell tiefschwarz, im Winterfell ausgeblichen.");
       if (/kann Schimmel werden/.test(farbText(p))) extra.push("<b>(kann Schimmel werden):</b> Ein Elternteil ist Schimmel. Ob das Pferd das Schimmel-Gen geerbt hat, zeigt erst ein Gentest – oder die Zeit: Schimmel werden mit den Jahren immer heller.");
       html = bild(p.rasse, id) + `<p>${FARBBESCHREIBUNG[lid] || ""}</p>${extra.map(t => `<p><small>${t}</small></p>`).join("")}`; }
     const [art1, k1] = art.split(":");
@@ -8660,7 +8671,7 @@
   // Sommerfell-Beispiele für das Lexikon
   [["fuchs", "Fuchs im Sommer (ausgeblichen)", "Im Sommer bleicht die Sonne das Fell von Füchsen auf – es wird heller und goldiger, die Mähne oft fast blond. Mit dem Fellwechsel im Herbst kommt das dunklere Winterfell. Wie stark ein Pferd ausbleicht, ist veranlagt und wird vererbt."],
    ["brauner", "Brauner im Sommer (ausgeblichen)", "Auch Braune bleichen in der Sonne aus: das Fell wird heller, Mähne und Schweif werden rötlich-braun statt schwarz. Im Winterfell sind sie wieder satt braun mit schwarzem Langhaar."],
-   ["rappe", "Winterrappe im Sommer", "Winterrappen sind nur im Winterfell tiefschwarz. Im Sommer bleicht die Sonne sie rostbraun aus. Sommerrappen bleiben das ganze Jahr schwarz."]].forEach(([b, n, t]) => {
+   ["rappe", "Winterrappe im Sommer", "Winterrappen sind nur im Winterfell tiefschwarz. Im Sommer bleicht die Sonne sie rostbraun aus. Sommerrappen sind dagegen im Sommer schwarz und im Winterfell ausgeblichen."]].forEach(([b, n, t]) => {
     const id = `lex_${b}_sommer`; FARBEN[id] = { ...FARBEN[saisonEintrag(b, 1)], name: n }; FARBBESCHREIBUNG[id] = t; });
   // Fellfarben in der Enzyklopädie nach Farbfamilien: Rappen, Braune, Füchse, Falben, Cremefarben, Roans, Schimmel, Schecken, Tiger
   const FARB_REIHE = ["rappe", "lex_rappe_sommer", "windfarben", "brauner", "hellbrauner", "dunkelbrauner", "schwarzbrauner", "lex_brauner_sommer", "fuchs", "dfuchs", "hellfuchs", "dunkelfuchs", "lex_fuchs_sommer",
@@ -11415,7 +11426,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Todesursache:</b> Jeder Todesfall bekommt eine Todesursache (Brief, Akte, Pferdefriedhof).</p>
       <h3>📜 „(kann Schimmel werden)“</h3>
       <p>Ohne Gentest weiß niemand, ob ein Pferd das Schimmel-Gen hat. Der Hinweis richtet sich deshalb nach der Abstammung: Ist ein Elternteil Schimmel, steht er im Abstammungsschein (bleibt dort für immer) und in den Daten, solange das Pferd nicht sichtbar grau ist – auch wenn es das Gen in Wahrheit nicht hat. Sobald es sichtbar grau wird und sich der Farbname ändert (z. B. Rappschimmel), fällt der Hinweis weg.</p>
-      <p><b>Sommer- und Winterrappen:</b> Winterrappen sind nur im Winterfell tiefschwarz, im Sommer bleicht die Sonne das Fell rostbraun aus (Herbst: halb). Sommerrappen bleiben das ganze Jahr schwarz. Das ist ein versteckter, vererbbarer Wert („Rappe: bleicht im Sommer aus“); die Genetik dahinter ist in echt noch nicht geklärt, es gibt keinen Labortest. In den Daten steht „Rappe, Winterrappe“, im Abstammungsschein nur „Rappe“. Nach einem Gentest steht das sichere Ergebnis da.</p>
+      <p><b>Sommer- und Winterrappen:</b> Winterrappen sind nur im Winterfell tiefschwarz, im Sommer bleicht die Sonne das Fell rostbraun aus (Herbst: halb). Sommerrappen umgekehrt: im Sommerfell tiefschwarz, im Winterfell ausgeblichen (Herbst: halb) – v476, Dome. Das ist ein versteckter, vererbbarer Wert („Rappe: bleicht im Sommer aus“); die Genetik dahinter ist in echt noch nicht geklärt, es gibt keinen Labortest. In den Daten steht „Rappe, Winterrappe“, im Abstammungsschein nur „Rappe“. Nach einem Gentest steht das sichere Ergebnis da.</p>
       <p><b>Fellwechsel-Hinweis:</b> Ändert sich das Fell eines Pferdes durch die Jahreszeit sichtbar (Sommerfell, Fellwechsel im Herbst, Winterfell), zeigt der Stall beim ersten Anblick eine kleine Sprechblase über dem Pferd (den Tag über) – aber nur beim ersten Fellwechsel, den du bei diesem Pferd erlebst, egal wie alt es ist. Danach nicht mehr. Sommerrappen und Schimmel wechseln nicht sichtbar – bei ihnen kommt kein Hinweis.</p>
       <h3>🛒 Herkunft der Pferde ohne Eltern im Spiel</h3>
       <p><b>Pferdemarkt:</b> reinrassige Pferde und Mischlinge. Für jedes Pferd werden die Rassen der 8 Urgroßeltern festgelegt (35 % alle gleich, sonst 1–4 Urgroßeltern aus 1–2 anderen Rassen). Die Urgroßeltern bekommen Gene nach ihrer Rasse, dann wird Generation für Generation normal vererbt – Farbe, Rasse (größter Anteil, bei Gleichstand nach Exterieur) und Stockmaß ergeben sich daraus. <b>Deckstation</b> und Admin-Rassenauswahl: reinrassig, Farbe vorgegeben, Stammbaum rückwärts passend erzeugt. Gestüte mit reinrassigen Pferden (Mix nur durch Veredelung) kommen später.</p>

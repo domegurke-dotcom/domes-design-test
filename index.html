@@ -949,7 +949,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "470";
+  const SPIEL_VERSION = "471";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -957,9 +957,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=470"></script>
-<script src="boxstufen.js?v=470"></script>
-<script src="kopfneu.js?v=470"></script>
+<script src="pferd.js?v=471"></script>
+<script src="boxstufen.js?v=471"></script>
+<script src="kopfneu.js?v=471"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -3776,29 +3776,36 @@
     const klemmen = () => { const [w, h] = groesse(); Z.s = Math.min(ZOOM_MAX, Math.max(1, Z.s)); if (Z.s <= 1.001) { Z.s = 1; Z.x = 0; Z.y = 0; } else { Z.x = Math.min(0, Math.max(w - w * Z.s, Z.x)); Z.y = Math.min(0, Math.max(h - h * Z.s, Z.y)); } };
     let ruhe = 0, raf = 0;
     // scharf zeichnen: Vektor-Transform in <g id="zoomG">, Vorschau-Transform weg
-    const scharf = () => { clearTimeout(ruhe); cancelAnimationFrame(raf); raf = 0; if (svgMode) { Zc = { s: Z.s, x: Z.x, y: Z.y }; el.style.transform = ""; bildAus(); } anwenden(); el.classList.remove("zoom-aktiv"); };
+    const scharf = () => { clearTimeout(ruhe); cancelAnimationFrame(raf); raf = 0; if (svgMode) { Zc = { s: Z.s, x: Z.x, y: Z.y }; el.style.transform = ""; } bildAus(); anwenden(); el.classList.remove("zoom-aktiv"); };
     // v458 (Dome, S10): Standbild – das SVG ist für schwache Handys zu aufwendig, um es während der Geste zu verschieben. In Ruhepausen wird es einmal
     // als Bitmap (Canvas, mit Rand zum Verschieben) gerendert; während der Geste wird nur dieses Bild verschoben/skaliert, danach scharf neu gezeichnet.
     let bild = null, bildOk = false, bildAn = false, bildNr = 0, bildPlan = 0, touchGeste = false;   // v469 (Dome): Standbild nur bei Touch – am PC (Mausrad/Maus) lädt es sonst kurz nach
-    const bildAus = () => { if (!bildAn) return; bildAn = false; bild.style.display = "none"; el.style.opacity = ""; };
-    const bildMachen = () => { bildPlan = 0; if (!svgMode || !navigator.maxTouchPoints || zeiger.size || el.classList.contains("zoom-aktiv") || !el.isConnected) return;
-      const h = el.parentNode, r = el.getBoundingClientRect(), hr = h.getBoundingClientRect(), m = el.getScreenCTM(); if (!m || r.width < 2 || r.height < 2) return;
-      const k = m.a, o = [m.e - r.left, m.f - r.top], mx = Zc.s > 1 ? r.width * 0.25 : 0, my = Zc.s > 1 ? r.height * 0.25 : 0, W = r.width + 2 * mx, H = r.height + 2 * my;
-      const d = Math.min(2, window.devicePixelRatio || 1, Math.sqrt(4e6 / (W * H))), cw = Math.round(W * d), ch = Math.round(H * d);
-      const kl = el.cloneNode(true); kl.removeAttribute("style"); kl.removeAttribute("class"); kl.setAttribute("font-family", getComputedStyle(el).fontFamily);   // Seiten-CSS gilt im Bild nicht kl.setAttribute("xmlns", "http://www.w3.org/2000/svg"); kl.setAttribute("width", cw); kl.setAttribute("height", ch); kl.setAttribute("preserveAspectRatio", "none");
-      kl.setAttribute("viewBox", [(-mx - o[0]) / k, (-my - o[1]) / k, W / k, H / k].map(v => v.toFixed(3)).join(" "));
-      const nr = ++bildNr, url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(kl).replace(/var\((--[\w-]+)\)/g, (x, v) => getComputedStyle(el).getPropertyValue(v).trim() || "#000")], { type: "image/svg+xml" })), img = new Image();
+    const bildAus = () => { if (!bildAn) return; bildAn = false; bild.style.display = "none"; el.style.opacity = ""; const v = svg(); if (v) v.style.opacity = ""; };
+    const bildMachen = () => { bildPlan = 0; if (!navigator.maxTouchPoints || zeiger.size || el.classList.contains("zoom-aktiv") || !el.isConnected) return;
+      const v = svgMode ? el : svg(); if (!v) return;   // v471 (Dome): Standbild auch für Steckbrief-Bilder (dort das SVG im Kasten, ungezoomt)
+      const h = svgMode ? el.parentNode : el, tf = v.style.transform; if (!svgMode) v.style.transform = "";
+      const r = v.getBoundingClientRect(), hr = h.getBoundingClientRect(), m = v.getScreenCTM(); if (!svgMode) v.style.transform = tf;
+      if (!m || r.width < 2 || r.height < 2) return;
+      const k = m.a, o = [m.e - r.left, m.f - r.top], mx = svgMode && Zc.s > 1 ? r.width * 0.25 : 0, my = svgMode && Zc.s > 1 ? r.height * 0.25 : 0, W = r.width + 2 * mx, H = r.height + 2 * my;
+      const d = Math.min(svgMode ? 2 : 3, (window.devicePixelRatio || 1) * (svgMode ? 1 : 2), Math.sqrt(4e6 / (W * H))), cw = Math.round(W * d), ch = Math.round(H * d);   // Steckbrief: doppelte Auflösung, weil dort nur das Standbild skaliert wird
+      const kl = v.cloneNode(true); kl.removeAttribute("style"); kl.removeAttribute("class"); kl.setAttribute("font-family", getComputedStyle(v).fontFamily); kl.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      kl.setAttribute("width", cw); kl.setAttribute("height", ch); kl.setAttribute("preserveAspectRatio", "none");   // Seiten-CSS gilt im Bild nicht – Schrift und Variablen werden übernommen
+      kl.setAttribute("viewBox", [(-mx - o[0]) / k, (-my - o[1]) / k, W / k, H / k].map(x => x.toFixed(3)).join(" "));
+      const nr = ++bildNr, url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(kl).replace(/var\((--[\w-]+)\)/g, (x, n) => getComputedStyle(v).getPropertyValue(n).trim() || "#000")], { type: "image/svg+xml" })), img = new Image();
       img.onload = () => { URL.revokeObjectURL(url); if (nr !== bildNr) return;
         const neu = document.createElement("canvas"); neu.className = "zoom-bild"; if (bild && bild.parentNode) bild.replaceWith(neu); else h.appendChild(neu); bild = neu;   // jedes Mal neu (eine umgebaute Ebene behielt sonst ihre alte Größe als Ausschnitt)
         bild.width = cw; bild.height = ch; const c = bild.getContext("2d"); c.clearRect(0, 0, cw, ch); c.drawImage(img, 0, 0, cw, ch);
-        Object.assign(bild.style, { left: (r.left - hr.left - mx).toFixed(1) + "px", top: (r.top - hr.top - my).toFixed(1) + "px", width: W.toFixed(1) + "px", height: H.toFixed(1) + "px" });
+        const rand = svgMode ? 0 : h.clientLeft, randO = svgMode ? 0 : h.clientTop;
+        Object.assign(bild.style, { left: (r.left - hr.left - rand - mx).toFixed(1) + "px", top: (r.top - hr.top - randO - my).toFixed(1) + "px", width: W.toFixed(1) + "px", height: H.toFixed(1) + "px" });
         bild._m = [mx, my]; bildOk = true; };
       img.onerror = () => URL.revokeObjectURL(url); img.src = url; };
-    const bildVeraltet = () => { bildOk = false; bildAus(); bildNr++; clearTimeout(bildPlan); if (svgMode) bildPlan = setTimeout(bildMachen, 450); };
+    const bildVeraltet = () => { bildOk = false; bildAus(); bildNr++; clearTimeout(bildPlan); bildPlan = setTimeout(bildMachen, 450); };
     // Vorschau: das schon gezeichnete Bild wird nur per CSS verschoben/skaliert (GPU) – erst nach kurzer Ruhe wird neu gezeichnet
     const vorschau = () => { const c = frisch(); if (svgMode) { const r = Z.s / Zc.s, tx = c.k * (Z.x - r * Zc.x) + c.o[0] * (1 - r), ty = c.k * (Z.y - r * Zc.y) + c.o[1] * (1 - r);
         if (bildOk && touchGeste) { const [mx, my] = bild._m; bild.style.transform = `translate(${(tx + mx * (1 - r)).toFixed(1)}px, ${(ty + my * (1 - r)).toFixed(1)}px) scale(${r.toFixed(4)})`; if (!bildAn) { bildAn = true; bild.style.display = "block"; el.style.opacity = "0"; } }
-        else el.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${r.toFixed(4)})`; el.style.cursor = Z.s > 1 ? "grab" : ""; } else anwenden(); };
+        else el.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${r.toFixed(4)})`; el.style.cursor = Z.s > 1 ? "grab" : ""; }
+      else if (bildOk && touchGeste) { bild.style.transform = Z.s > 1 ? `translate(${Z.x.toFixed(1)}px, ${Z.y.toFixed(1)}px) scale(${Z.s.toFixed(3)})` : ""; if (!bildAn) { bildAn = true; bild.style.display = "block"; svg().style.opacity = "0"; } }   // v471: Steckbrief-Bild – nur das Standbild skalieren
+      else anwenden(); };
     const planen = () => { el.classList.add("zoom-aktiv"); clearTimeout(ruhe); ruhe = setTimeout(scharf, 350); if (!raf) raf = requestAnimationFrame(() => { raf = 0; vorschau(); }); };
     const aktiv = () => { el.classList.add("zoom-aktiv"); };
     // Punkt im Koordinatensystem von Z.x/Z.y (SVG-Einheiten bzw. Pixel im Bild)
@@ -3806,7 +3813,7 @@
     const zoomUm = (p, f) => { const s2 = Math.min(ZOOM_MAX, Math.max(1, Z.s * f)), q = s2 / Z.s; Z.x = p.x - (p.x - Z.x) * q; Z.y = p.y - (p.y - Z.y) * q; Z.s = s2; klemmen(); planen(); };
     el._zoomAnwenden = anwenden; if (el._zoomInit) { Zc = { s: 1, x: 0, y: 0 }; anwenden(); return; } el._zoomInit = true;
     let letzterTipp = 0, bewegt = 0; window.addEventListener("resize", () => { cache = null; bildVeraltet(); });
-    if (svgMode) { new MutationObserver(bildVeraltet).observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ["transform", "d", "fill", "viewBox"] }); bildVeraltet(); }
+    new MutationObserver(ms => { if (ms.some(m => m.type !== "childList" || [...m.addedNodes, ...m.removedNodes].some(n => !(n.classList && n.classList.contains("zoom-bild"))))) bildVeraltet(); }).observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ["transform", "d", "fill", "viewBox"] }); bildVeraltet();
     el.addEventListener("wheel", e => { e.preventDefault(); touchGeste = false; aktiv(); zoomUm(punkt(e.clientX, e.clientY), e.deltaY < 0 ? 1.18 : 1 / 1.18); }, { passive: false });
     // Maus: weder Text/Bild markieren noch ziehen (sonst startet beim 2. Mal ein Ziehen der Markierung und das Verschieben bricht ab)
     ["dragstart", "selectstart"].forEach(t => el.addEventListener(t, e => e.preventDefault()));

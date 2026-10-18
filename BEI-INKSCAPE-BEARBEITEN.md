@@ -29,6 +29,11 @@ Nach dem Zeichnen einfach hochladen – `werkzeuge/kopf-export.js` übernimmt ne
 - **In echt:** Pangaré (Mehlmaul) hellt nicht nur das Maul auf, sondern auch einen Ring um die Augen. Schwarzbraune haben ebenfalls hellere Augenpartien.
 - **Ebene:** `mehlaugen` (heller, weicher Ring ums Auge). Das Spiel zeigt sie dann zusammen mit dem Mehlmaul bzw. Kupfermaul.
 
+### 4b. Graue Augenpartie beim Schimmel (neu, unter `maulfärbung`)
+- **In echt:** Schimmel haben unter dem weißen Fell schwarze Haut – ums Auge sind die Haare dünn, darum sieht die Augenpartie dunkelgrau aus (wie beim Graumaul).
+- **Im Spiel bisher:** ein weicher, verschwommener grauer Fleck ums Auge (von Claude als Platzhalter, ab 30 % Ausschimmelung).
+- **Ebene:** `grauaugen` (weicher grauer Verlauf rund ums Auge, Farbe #656565 wie beim Graumaul). Wenn sie da ist, nimmt das Spiel deine Zeichnung statt des Platzhalters (Claude stellt dann das Skript um).
+
 ### 5. Weitere Kopfabzeichen (optional, unter `kopfabzeichen`)
 - `strich`: schmaler weißer Streifen nur auf dem Nasenrücken, ohne Verbindung zur Stirn.
 - `unterbrochene blesse`: Stern oben + Strich unten, dazwischen farbig.

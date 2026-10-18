@@ -1006,7 +1006,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     const det = a_ * a_ + b_ * b_, ia = a_ / det, ib = -b_ / det, ie = -(ia * e_ - ib * f_), iff = -(ib * e_ + ia * f_);
     const mz = hp(0.93, 0.12);
     const schatt = `<g transform="matrix(${[ia, ib, -ib, ia, ie, iff].map(x => x.toFixed(5)).join(" ")})">` +
-      `<rect ${bx} fill="url(#sh-${uid})" opacity=".8"/>` +
+      `<rect x="${f(minX - 60)}" y="${f(minY - 5)}" width="${f(maxX - minX + 120)}" height="${f(-minY + 10)}" fill="url(#sh-${uid})" opacity=".8"/>` +   // v461: größer als bx – Domes Köpfe ragen vorn über den Rahmen (sonst Streifen an der Nasenkante)
       (C.muzzle && !opt.maul && !(C.grau > .3) ? `<ellipse cx="${f(mz.x)}" cy="${f(mz.y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(mz.x)} ${f(mz.y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>` : "") +   // Schimmel: Domes Ebene „graumaul“ (im Spiel „dunkel“) in kopfNeuSVG (v449)
       `<g filter="url(#wb-${uid})"><path d="${glatt([hp(0.1, 0.42 * hw), hp(0.3, 0.47 * hw * jw), hp(0.55, 0.36 * hw), hp(0.8, 0.28 * hw), hp(0.6, 0.3 * hw), hp(0.35, 0.37 * hw * jw)])}" fill="${schatten}" opacity="${hexRgb(head).reduce((x, y) => x + y) / 3 > 200 ? ".15" : ".45"}"/>` +
       `<ellipse cx="${f(hp(0.3, -0.1).x)}" cy="${f(hp(0.3, -0.1).y)}" rx="${f(0.22 * hl)}" ry="${f(0.07 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.3, -0.1).x)} ${f(hp(0.3, -0.1).y)})" fill="${licht}" opacity=".45"/></g></g>`;
@@ -1302,7 +1302,7 @@ function ohrSpielZiel(st, r) { return st === "vorne" ? "seite" : st === "hinten"
 function kopfNeuSVG(key, uid, o = {}) {
   const K = KOPF_NEU, F = K.formen[key] || K.formen.gerade, ink = o.ink || "#090609";
   const farbe = s => s.replaceAll("__FELL__", o.fell || "#9a9a9a").replaceAll("__MUSCHEL__", o.muschel || "#c9a0a0").replaceAll("__MAEHNE__", o.maehne || o.fell || "#555")
-    .replaceAll("__AAL__", o.maehne || "#555").replaceAll("#090609", ink).replaceAll("__WEISS__", KOPF_WEISS).replaceAll("__MEHL__", mix(o.fell || "#9a9a9a", "#f7f1e3", .93)).replaceAll("__DUNKEL__", mix(o.fell || "#9a9a9a", "#171313", .7)).replaceAll("__U__", uid + "-");
+    .replaceAll("__AAL__", o.maehne || "#555").replaceAll("#090609", ink).replaceAll("__WEISS__", KOPF_WEISS).replaceAll("__MEHL__", mix(o.fell || "#9a9a9a", "#faf8f2", .97)).replaceAll("__DUNKEL__", mix(o.fell || "#9a9a9a", "#171313", .7)).replaceAll("__U__", uid + "-");
   const am = kopfAlterMatrix(o.alter), A = KOPF_ALTER[o.alter] || {}, ac = K.augeMitte, ac2 = kmPunkt(am, ac), as = A.a || 1;
   const rnd = zufall((o.seed || "k") + "-ohren");
   // Ohrgröße je Rasse (v430, o.ohrGr): um den Ohransatz skaliert

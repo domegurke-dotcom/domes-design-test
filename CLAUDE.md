@@ -17,7 +17,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - Anzeige-/Interaktionsboxen dürfen sich nicht überdecken.
 - Nach Aktionen nicht aus der Ansicht werfen (z. B. Schere bleibt offen, Bieten aus Brief → zurück zum Brief).
 - Emojis, die es erst seit Kurzem gibt (z. B. 🪮, 🪝), auf älteren Handys nicht verwenden – lieber kleine SVG-Zeichnung (`KAMM_ICO`, `HUFKR_ICO`).
-- **Noch warten, bis Dome es sagt:** weitere Rassen (Knabstrupper, Appaloosa, Noriker, Paint Horse), Inzucht-Auswirkungen, Vererbung von Abzeichen/Kopfform/Kopfgröße. (Die Veredler-Rassen sind seit v316 drin.)
+- **Noch warten, bis Dome es sagt:** weitere Rassen (Knabstrupper, Appaloosa, Noriker, Paint Horse), Inzucht-Auswirkungen, Vererbung von Abzeichen/Kopfgröße. (Die Veredler-Rassen sind seit v316 drin. Kopfform-Vererbung ist seit 18.10.2026 freigegeben – siehe `PLAN-KOEPFE.md`.)
 - **Tierarzt weiß nichts Verstecktes:** Bei Krankheiten, die vor Ort nicht eindeutig sind, nennt er das Krankheitsbild, alle Möglichkeiten und schlägt den Test vor; bei verdeckten (erblichen) Ursachen äußert er den Verdacht erst ab dem 2. Mal (Dome, v318/v319). Neue Krankheiten immer in `VERDACHT` einordnen.
 - **Info-Knopf** (rundes i, klappt den Info-Text auf) bei Auswahl-Fenstern mit Erklärungen anbieten (Dome, v321).
 - Grundsatz: Kommen neue Rassen dazu, bekommen sie ihre Erbkrankheiten, Eigenheiten, Hufqualität, Körperbau (Gewicht) und Futtertyp gleich mit.
@@ -28,6 +28,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - `PLAN-FUETTERUNG.md` – F1–F5. **Alle Etappen fertig** (v210–v214, Abnahmetest von Claude erledigt, `tests/etappen-test.js`). Offene Detailfragen in `OFFENE-FRAGEN.md`.
 - `PLAN-HOF.md` – Hof-Ausbau H1–H8. **Alle Etappen fertig** (H1–H6 bis v300, H7 Stallarten v289–v295 + Rest v310–v314, H8 v315), Abnahmetests in `tests/etappen-test.js`. Domes Abnahme von H7-Rest/H8 steht noch aus. **Testspieler nicht mehr starten** (Dome).
 - **Futter-Etappe** (Dome 12.10.2026): **fertig** (v308 Teil 1, v309 Teil 2).
+- `PLAN-KOEPFE.md` – **neue Pferdeköpfe** aus Domes Datei `pferd kopf.svg` (Kopfformen mit Vererbung, Ohrstellungen, Wimpern, Abzeichen, Maulfärbung, Augenfarbe, Schöpfe mit Aalstrich). **Noch nicht begonnen** – in einer neuen Sitzung mit Opus, Etappe für Etappe. SVG (1,1 MB) nur per Skript auswerten.
 - `PLAN-RASSEN.md` – Veredler-Rassen: **fertig** (v316), dazu Domes „Danach“-Wünsche (v317). Domes Abnahme steht noch aus.
 - `PROJEKT-CHAT-THEMEN.md` – große Themen, die Dome im Projekt-Chat plant (Ausbildungsstall je Disziplin, Deckhengst, Merkmale-Karte, Reiter-Erfahrung, zwei Fohlen je Box/Zwillinge …) – nicht eigenmächtig umsetzen.
 - `OFFENE-FRAGEN.md` – Fragen, die Claude in Domes Abwesenheit mit der empfohlenen Lösung entschieden hat; mit Dome durchgehen und danach anpassen. **Viele neue Punkte aus der Nacht 12.10.2026** (Futter-Etappe, H7-Rest, H8, Rassen, Verdacht/Tests) – noch nicht durchgesehen.
@@ -37,6 +38,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - `index.html` – gesamte Oberfläche und Spiellogik (ein großer `<script>`-Block + `<style>`).
 - `pferd.js` – SVG-Pferdezeichnung (`zeichnePferd`), `FARBEN` (Proxy, baut Muster-IDs wie `ov_`, `tv_`, `tg_`, `fs_`, `sb_`, `sk_`), `RASSEN`, `KLASSEN`, `FARBBESCHREIBUNG`, `PROFIL`, `CHARAKTER`, `WERTE_KOERPER`/`WERTE_KOPF`, `erzeugeWerte`, `erzeugePflege`.
 - `boxstufen.js` – Box-Bilder je Stufe (`window.BOXSTUFE` 1/2/3: wand, wandTuer (Paddockbox mit Tür), seiten, vorn, nachbar, boden sand/pflaster/beton/gummi).
+- `pferd kopf.svg` – Domes neue Kopf-Datei (alle Köpfe, Ohren, Augen, Schöpfe; ersetzt die alten Teile laut `PLAN-KOEPFE.md`).
 - `kopfteile.js`, `kopfalter.js` – Domes gezeichnete Köpfe/Schöpfe (`RASSE_KOPF` in pferd.js ordnet Rassen zu; Andalusier, Marwari, Tinker haben noch den Spielkopf).
 - `version.json` – aktuelle Version.
 - `werte/` – Bilder zur Ausbildungsskala.

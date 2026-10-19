@@ -64,7 +64,7 @@ const { chromium } = require('playwright'); const path = require('path');
     // Kolik im Stall ohne OP-Ablehnung stirbt nicht „trotz Behandlung“
     let stall = 0; for (let i = 0; i < 100; i++) { const q = neu({ rasse: 'hannoveraner', geschlecht: 'Wallach', alter: 9, name: 'ST' + i }); const bx = spiel.boxen[6]; bx.pferd = q; bx.tot = false; bx.krippeVoll = true; const ko = befundNeu(q, 'kolik', 4, 'Test'); ko.diagnose = spiel.tag; ko.tierarzt = true; ko.beh = spiel.tag; ko.gradMax = 4;
       try { naechsteNacht(); } catch (e) { } zu(); if (bx.tot) stall++; bx.pferd = null; bx.tot = false; }
-    ok('Schwere Kolik im Stall (OP nicht abgelehnt): kein Tod trotz Behandlung', stall === 0, `${stall} von 100`);
+    ok('Schwere Kolik ohne OP (nur Tierarzt/zu Hause): etwa 70 % sterben, mehr als mit OP', stall > 50 && stall < 90 && stall / 100 > tod / 200, `${stall} von 100 ohne OP, ${tod} von 200 mit OP`);
     return out;
   });
   R.forEach(x => console.log(x)); console.log('Seitenfehler:', errs.length ? errs.join('; ') : 'keine'); await b.close(); process.exit(R.some(x => x[0] === '✗') || errs.length ? 1 : 0);

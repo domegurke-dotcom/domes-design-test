@@ -55,7 +55,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (4 Stellen in index.html: lz-string.min.js, pferd.js, boxstufen.js, kopfneu.js) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **539**.
+- Letzte Version bei Aktualisierung dieser Datei: **540**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName` ausfüllen → `#chLos` → Kreditbrief schließen (`#dlgKnoepfe button`) → `[data-immo="pension"]` → `#kaufName` → `#dlgKnoepfe button:first-child`. Admin: `spiel.admin = true`.
@@ -240,6 +240,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - **v537 (Dome):** Tiefgefriersamen (`DECK_ART.tief`, nur Deckstation, 40 %, Samenportion 60 % der Decktaxe `taxeF`, Tierarzt 150 €). Nachtblindheit Lp/Lp (`nachtblind`, `NACHTBLIND`): Weide-Verletzung ×1,3, Winter Wohl −1/Nacht, Hallenturnier ×0,97.
 - **v538:** Fehler behoben: mit Ultraschall-Befund wird die Stute nach 3 Tagen als „sicher tragend“ geführt (`sicher: !!G.tuPos` in `deckNacht`).
 - **v539 (Dome):** Nach „leer“ (Trächtigkeitsuntersuchung) ist die Stute sofort wieder deckbar (`rosseAb` entfällt) – bei 4 Tagen je Jahreszeit sonst zu lang.
+- **v540 (Dome):** schwere Kolik ohne OP (abgelehnt oder nur zu Hause behandelt) stirbt wieder mit `TOD_TROTZ.kolik` 0,7 – mit OP nur `KOLIK_OP_TOD` 0,25 (v536 hatte den Tod im Stall fälschlich abgeschaltet).
 - **v520 Spielstand S2:** Spielstand als Datei (lesbares JSON `typ: zuchtstall-spielstand`, `format: 1`, Name `Zuchtstall_<Hof>_Jahr<jj>-<Jahreszeit>_<Datum>.json`, Umlaute bleiben – im Test-Chromium geht der Download-Name mit Umlaut verloren, auf dem Handy prüfen): hvw – Einstellungen „💾 Spielstand als Datei speichern“ mit Auswahl laufendes Spiel/Platz 1/Platz 2 (`dateiWahl`) und „Zuletzt als Datei gesichert“ (`spiel.zuletztExport`), Startmenü „💾 Als Datei“ je Platz + „Laufendes Spiel als Datei speichern“. Handy: Teilen-Menü (`navigator.share`), sonst Download. Notfall-Fenster sichert im selben Format (entpackt den Autospeicher selbst).
 - **Aufräumen v435:** Code mit ESLint geprüft (keine echten Fehler), unbenutzte Funktionen/Variablen entfernt, `spiel.marktGekauft` auf 200 Einträge begrenzt (`marktGekauftMerken`), versehentlich hochgeladene Test-Screenshots gelöscht. Prüfskript: Skriptblöcke aus index.html in Dateien schreiben und `eslint` (liegt in /opt/node22/lib/node_modules) mit no-unused-vars/no-dupe-keys/no-unreachable laufen lassen. **Test-Screenshots nie im Projektordner speichern** (immer im Scratchpad). Kötenbehang (`behang` in pferd.js) ist vorerst ausgeblendet, der Code bleibt – kommt später (Dome).
 - **v436:** Kopfleiste beim Drehen des Handys: `--kopfH` wird sofort nachgezogen (ResizeObserver auf `header` + resize), vorher blitzte im Vollbild bis zu 0,5 s der Stall zwischen Kopfleiste und Fenster durch. **v437:** Viewport `minimum-scale=1` und `html, body { overflow-x: clip }` – verhindert, dass Chrome (Android) nach dem Drehen herauszoomt (Menüs breiter als die Kopfleiste, Dome-Screenshot ohne Vollbild).

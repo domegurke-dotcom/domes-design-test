@@ -24,6 +24,7 @@ Diese Punkte sind zu groß oder brauchen erst eine Planung. Darum hat Claude sie
     - dazu Zwillingsgeburten (selten, mit erhöhtem Risiko wie in echt)
 12. **Echte Preise im ganzen Spiel** (Dome, v345): Pension kostet in echt 250–600 € im Monat, im Spiel 150/250/400 € je Jahreszeit; Gehälter, Futter, Tierarzt und Pferdepreise sind im Spiel ähnlich verkleinert. Alles auf echte Zahlen umstellen heißt: Gehälter (z. B. Stallbursche ~2.000 € im Monat), Pension, Beritt (600–900 €/Monat), Aufzucht (150–300 €/Monat), Futter, Tierarzt, Kredite und Startkapital gemeinsam anpassen – sonst wird das Spiel zu leicht oder zu schwer. Bis dahin werden nur Ausreißer angeglichen (v345: Aufzuchtstation 15 → 10 € am Tag).
 13. **Sachpreise bei kleinen Turnieren** (Dome): Bei Prüfungen ohne Preisgeld (Wettbewerbe, Hofturniere, E-Prüfungen) gibt es für die Platzierten Sachpreise wie in echt – Putzzeug, Schabracken, Decken, Leckerli, Halfter usw. (wandern ins Lager bzw. in die Futterkammer). Braucht die Ausrüstung (Schabracken, Decken) als System.
+14. **Waschplatz mit Wirkung** (Dome, 19.10.2026): Bisher ist der Waschplatz nur eine Kachel ohne Wirkung. Ideen: Pferd nach dem Training im Sommer abspritzen (Schmutz weg, Wohlbefinden besser), Hufe waschen gegen Strahlfäule, Mauke-Pflege. Wie in echt planen (z. B. im Winter nicht nass abspritzen, Beine danach trocknen).
 
 
 ## Rassetypen und Rote-Liste-Rassen (Dome, 18.10.2026 – noch planen)

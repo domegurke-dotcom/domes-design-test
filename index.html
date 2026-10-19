@@ -949,7 +949,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "507";
+  const SPIEL_VERSION = "508";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -957,9 +957,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=507"></script>
-<script src="boxstufen.js?v=507"></script>
-<script src="kopfneu.js?v=507"></script>
+<script src="pferd.js?v=508"></script>
+<script src="boxstufen.js?v=508"></script>
+<script src="kopfneu.js?v=508"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1385,17 +1385,21 @@
     brauner: [["#c58a52", .25], ["#8a4a26", .45], ["#6b3a22", .3]], hellbrauner: [["#d39a62", .22], ["#8a4a26", .4], ["#6b3a22", .28]], dunkelbrauner: [["#8a5a3a", .22], ["#6a3a22", .35], ["#5a3222", .25]] };
   function saisonEintrag(basis, k) {
     const id = `${basis}~s${k}`; if (FARBEN[id]) return id; const B = FARBEN[basis];
-    if (istRappe(basis)) FARBEN[id] = { ...B, body: mix(B.body, "#5e3d27", .42 * k), mane: mix(B.mane, "#4d3121", .3 * k), head: mix(B.head || B.body, "#5e3d27", .3 * k) };
-    else { const [b, m, pt] = BLEICH[basis]; FARBEN[id] = { ...B, body: mix(B.body, b[0], b[1] * k), head: mix(B.head || B.body, b[0], b[1] * k * .8), mane: mix(B.mane, m[0], m[1] * k), ...(B.points && pt ? { points: mix(B.points, pt[0], pt[1] * k) } : {}) }; }
+    const gb = saisonBasis(basis);
+    if (istRappe(gb)) FARBEN[id] = { ...B, body: mix(B.body, "#5e3d27", .42 * k), mane: mix(B.mane, "#4d3121", .3 * k), head: mix(B.head || B.body, "#5e3d27", .3 * k) };
+    else { const [b, m, pt] = BLEICH[gb]; FARBEN[id] = { ...B, body: mix(B.body, b[0], b[1] * k), head: mix(B.head || B.body, b[0], b[1] * k * .8), mane: mix(B.mane, m[0], m[1] * k), ...(B.points && pt ? { points: mix(B.points, pt[0], pt[1] * k) } : {}) }; }
     return id;
   }
   let saisonFix = null, glSaison = 1;   // Gen-Labor (Admin): Vorschau in einer gewählten Jahreszeit
+  // v508 (Dome): auch gescheckte/gemusterte Pferde bleichen nach ihrer Grundfarbe aus (Rappschecke wie Rappe, ov_/to_/sa_/tg_ … wie die Grundfarbe darunter)
+  const SCHECKE_BASIS = { rappschecke: "rappe", braunschecke: "brauner", fuchsschecke: "fuchs" };
+  const saisonBasis = id => SCHECKE_BASIS[id] || (/^(to|ov|tv|tg|fs|sb|sk|sa|sw)_(.+)$/.exec(id) || [])[2] || id;
   function saisonFarbe(p, basis) {
-    if (!spiel || !spiel.tag || !(istRappe(basis) || BLEICH[basis])) return basis;
+    if (!spiel || !spiel.tag || !(istRappe(saisonBasis(basis)) || BLEICH[saisonBasis(basis)])) return basis;
     const s = saisonFix != null ? saisonFix : datum().s, f = s === 1 ? 1 : s === 2 ? .5 : 0;
-    if (istRappe(basis) && !winterrappe(p)) { const f2 = s === 3 ? 1 : s === 2 ? .5 : 0; return f2 ? saisonEintrag(basis, f2) : basis; }   // v476 (Dome): Sommerrappe im Sommer schwarz, im Winterfell ausgeblichen (gleiche Farbe wie der Winterrappe im Sommer)
+    if (istRappe(saisonBasis(basis)) && !winterrappe(p)) { const f2 = s === 3 ? 1 : s === 2 ? .5 : 0; return f2 ? saisonEintrag(basis, f2) : basis; }   // v476 (Dome): Sommerrappe im Sommer schwarz, im Winterfell ausgeblichen (gleiche Farbe wie der Winterrappe im Sommer)
     if (!f) return basis;   // Sommer voll ausgeblichen, Herbst halb (Fellwechsel)
-    if (istRappe(basis)) return winterrappe(p) ? saisonEintrag(basis, f) : basis;
+    if (istRappe(saisonBasis(basis))) return winterrappe(p) ? saisonEintrag(basis, f) : basis;
     const k = Math.round(f * (.4 + .6 * exVon(p).sonne) * 10) / 10;
     return k ? saisonEintrag(basis, k) : basis;
   }
@@ -3756,7 +3760,7 @@
     if (m.k === "bird") ex.bird = [.5, 1, 2][Math.min(2, wahl.mStufe == null ? 1 : wahl.mStufe)];   // v465 (Dome): Birdcatcher wenige/typisch/viele Tupfen
     if (m.gen && m.gen.Lp && !(m.gen.Patn) && ex.muster < LP_OHNE) ex.muster = .22;   // v502 (Dome): Schabracke „klein“ muss sichtbar bleiben (unter LP_OHNE gäbe es gar keine Decke)
     if (m.gen && m.gen.O) ex.ow = .7;
-    if (m.grau && base === "brauner" && ex.ton < .25) ex.ton = .6;   // Brauner bleibt Brauner (nicht Hellbrauner)
+    if (base === "brauner" && ex.ton < .25) ex.ton = .6;   // Brauner bleibt Brauner (nicht Hellbrauner) – bei allen Mustern (v508)   // Brauner bleibt Brauner (nicht Hellbrauner)
     if (m.grau) { const st = Math.min(2, wahl.mStufe == null ? 1 : wahl.mStufe), a = wahl.alter, tempo = t => Math.max(.8, (a - .4) / t);   // v476: Ausschimmelung passend zum Alter (schneller als 0,8 schimmelt kein Pferd aus)
       if (m.grau === "weiss") Object.assign(ex, { apfel: .2, fliegen: .2, kurve: 0, grauTempo: tempo([.5, .85, 1.15][st]) });
       if (m.grau === "apfel") Object.assign(ex, { apfel: .8, fliegen: .2, kurve: 0, grauTempo: tempo([.42, .6, .8][st]) });

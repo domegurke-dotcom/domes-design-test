@@ -794,10 +794,12 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // v440 Brindle (gestromt): unterbrochene, gewellte senkrechte Streifen – weiß (BR1, vererbt) oder dunkel (Chimäre, Zufall)
   if (opt.brindle) {
     const weiss = opt.brindle === "weiss", rg = zufall((opt.seed || rasseId) + (weiss ? "-brindleW" : "-brindle")), sf = weiss ? "#f1ede6" : mix(body, "#140c08", .55); let t = "";
-    for (let x = minX; x < maxX; x += 3 + rg() * 2.6) { let y = minY - 4 + rg() * 8;
+    const BA = opt.brindleArt || "", sw0 = BA === "fein" ? .55 : 1, op0 = BA === "dezent" ? .45 : 1;   // v500 (Dome): Ausprägung typisch/dezent/fein/teil (nur teilweise)
+    for (let x = minX; x < maxX; x += (BA === "fein" ? 1.7 + rg() * 1.2 : 3 + rg() * 2.6)) { let y = minY - 4 + rg() * 8;
       while (y < 2) { const len = 5 + rg() * 14, pts = []; for (let yy = y; yy < y + len; yy += 2.5) pts.push(P(x + Math.sin(yy * 0.22 + x * 0.7) * 1.6 + (rg() - .5) * 0.8, yy));
-        if (pts.length > 1) t += `<path d="${glatt(pts, false)}" fill="none" stroke="${sf}" stroke-width="${f(0.5 + rg() * 0.9)}" stroke-linecap="round" opacity="${f((weiss ? 0.45 : 0.6) + rg() * 0.4)}"/>`;
+        if (pts.length > 1) t += `<path d="${glatt(pts, false)}" fill="none" stroke="${sf}" stroke-width="${f((0.5 + rg() * 0.9) * sw0)}" stroke-linecap="round" opacity="${f(((weiss ? 0.45 : 0.6) + rg() * 0.4) * op0)}"/>`;
         y += len + 1 + rg() * 6; } }
+    if (BA === "teil") { const rk = zufall((opt.seed || rasseId) + "-brteil"), fl = klecks(rk, 0.82 * L, top + 0.4 * D, 0.2 * L, 0.5 * D, "#fff") + klecks(rk, 0.12 * L, top + 0.35 * D, 0.12 * L, 0.4 * D, "#fff"); t = `<mask id="bt-${uid}" maskUnits="userSpaceOnUse" ${bx}><g filter="url(#wb-${uid})">${fl}</g></mask><g mask="url(#bt-${uid})">${t}</g>`; }   // Streifen nur an Hinterhand und Schulter
     g += `<g clip-path="url(#cr-${uid})" filter="url(#wm-${uid})">${t}</g>`;
   }
   // v444 Kombinationen (Dome): Roan unter einem anderen Muster (Stichelhaare in den farbigen Flecken), Tiger + Tobiano („Pintaloosa“: weiße Platten dazu)

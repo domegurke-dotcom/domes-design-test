@@ -57,4 +57,12 @@ Häufigste Befunde bei guter Pflege (je 100 Pferdejahre): Druse 153, Verletzung 
 Heildauer gute Pflege (Median/Max Spieltage): Verletzung, Husten, Lahmheit, Kolik 1 · Druse 6/38 · Hufrehe 6/20 · Sehnenschaden 7/28 · Hornspalt 5/31 · Arthrose 26/69 (chronisch).
 
 ## Bewertung (Claude)
-Siehe Chat-Bericht vom 19.10.2026 und Fragen an Dome – Änderungen erst nach Domes Antwort.
+Vergleich mit echter Haltung (grobe Richtwerte aus Tierarzt-/Versicherungsstudien): ein gut gehaltenes Pferd hat ca. 1–1,5 tierarztpflichtige Erkrankungen je Jahr und ist an ca. 5–10 % der Tage krank; Kolik 4–10, Hufrehe 2–7, behandlungswürdige Verletzungen 20–40, Atemwegsinfekte 10–30 je 100 Pferdejahre; Tierarzt ca. 500–1.000 € je Jahr inkl. Vorsorge.
+1. **Viel zu viel krank** (54 % der Tage, 4,3 Befunde/Jahr bei guter Pflege) – Hauptursache **Druse 153 je 100 Pferdejahre**: keine Immunität nach überstandener Druse (in echt ~75 % für Jahre), Träger und Weide stecken immer wieder an. Ähnlich Hautpilz (48) und Influenza ohne Immunität. Dazu Verletzungen auf der Weide (92) gut doppelt so häufig wie in echt.
+2. **Gute Pflege → mehr Befunde als mittlere**: mehr Weide = mehr Druse-Ansteckung und mehr Verletzungen. In echt ist regelmäßiger Weidegang in fester Gruppe eher gesünder.
+3. **Arbeit:** gute Pflege braucht für Kranke ~1 zusätzliche Handlung je Pferd und Tag (17 % aller Handlungen), 4,9 Tierarztbesuche und ~1.840 € je Pferd und Jahr – deutlich zu viel, fast nur wegen der Infekte.
+4. **Schwere und Heilung** passen im Zeitmaßstab meist (Verletzung/Husten/Kolik ≈ 2 Wochen, Hufrehe ≈ 2–3 Monate). Zu kurz: Sehnenschaden (7 Spieltage ≈ 3 Monate, in echt 6–12 Monate). Etwas lang: Druse (6 Spieltage ≈ 11 Wochen, in echt 3–6 Wochen).
+5. **Kein Krankheitstod** bei guter/mittlerer Pflege (nur Altersschwäche) – in echt endet etwa jede 10. Kolik tödlich.
+6. **Alter:** Fohlen und Jungpferde werden nicht öfter krank als Erwachsene; in echt haben Fohlen mehr Infekte (Durchfall, Atemwege), Senioren deutlich mehr (Zähne, Cushing, Arthrose).
+7. **Schlechte Pflege:** schon bei 15 % Hungertagen, 15 % ohne Wasser und 60 % nicht gemistet sind nach 2–3 Wochen alle Pferde tot oder beim Tierschutz. Im Zeitmaßstab (1 Tag ≈ 2 Wochen) folgerichtig, als Spiel sehr hart.
+8. **Rassen:** auffällig hoch Kehlkopfpfeifen Vollblut (10 je 100 PJ, in echt Lebens-Häufigkeit 3–8 %), Darmstein Araber (8,5, in echt selten außer bei viel Luzerne), Sarkoid Araber/Anglo-Araber (5–6), PSSM Shire (11,8 – Belege sprechen eher für wenig PSSM1 bei Shire/Clydesdale). Passend: Melanom bei Schimmel-Rassen, EMS bei Ponys/Barock, Shivers bei Kaltblut, HYPP/PSSM bei Paint/Quarter, Mondblindheit Appaloosa/Knabstrupper, Aorta/Megaösophagus Friese/Barock Pinto.

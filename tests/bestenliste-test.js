@@ -12,7 +12,7 @@ const { chromium } = require('playwright'); const path = require('path');
     zu(); spiel.tippsAus = true; spiel.admin = false; spiel.geld = 1e6;
     const g0 = spiel.boxen[0]; while (spiel.boxen.length < 10) spiel.boxen.push({ nr: spiel.boxen.length + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false, geb: g0.geb, stufe: g0.stufe });
     const neu = (o) => { const p = neuesPferd(o); p.pflege = erzeugePflege(p); p.werte = p.werte || erzeugeWerte(p); ['impf', 'wurm', 'zahn', 'huf'].forEach(k => p.pflege[k] = spiel.tag); return p; };
-    const erf = (p, siege, plaetze) => { p.erfolge = []; for (let i = 0; i < siege; i++) p.erfolge.push({ tag: 1, platz: 1, plaziert: true }); for (let i = 0; i < plaetze; i++) p.erfolge.push({ tag: 1, platz: 2, plaziert: true }); };
+    const erf = (p, siege, plaetze) => { p.erfolge = []; for (let i = 0; i < siege; i++) p.erfolge.push({ tag: 1, disz: 'dressur', stufe: 2, platz: 1, plaziert: true }); for (let i = 0; i < plaetze; i++) p.erfolge.push({ tag: 1, disz: 'dressur', stufe: 2, platz: 2, plaziert: true }); delete p.bilanz; };
     const h = aktivHid(); spiel.chronik = undefined; spiel.archiv = {}; spiel.friedhof = [];
     // --- 1. Auswertung: 3 beste, 3 wertvollste, Pensionspferd zählt nicht ---
     const P = [['A', 5, 0, 'shetty'], ['B', 2, 3, 'hannoveraner'], ['C', 1, 0, 'hannoveraner'], ['D', 0, 4, 'araber'], ['E', 0, 0, 'vollblut']].map(([n, s, pl, r], i) => { const p = neu({ rasse: r, geschlecht: 'Stute', alter: 8, name: n }); erf(p, s, pl); spiel.boxen[i].pferd = p; return p; });
@@ -35,11 +35,23 @@ const { chromium } = require('playwright'); const path = require('path');
     // --- 4. Anzeige ---
     const html = bestenKarteHTML();
     ok('Anzeige: Namen anklickbar (data-ansehen) für verkauftes und verstorbenes Pferd', (html.match(/data-ansehen=/g) || []).length >= 2, (html.match(/data-ansehen=/g) || []).length + ' Links');
-    ok('Anzeige: „Stand beim Verkauf/Abgang“ beim verkauften Pferd', /A<\/b>[^<]*·[^<]*·[^<]*<br><small>Stand beim Verkauf\/Abgang/.test(html));
+    ok('Anzeige: „Stand beim Verkauf/Abgang“ beim verkauften Pferd', /A<\/b> · [^<]*<br>[^<]*<br><small>Stand beim Verkauf\/Abgang/.test(html));
     ok('Anzeige: „verstorben“ beim toten Pferd', /B<\/b>[^]*?<small>verstorben/.test(html));
     // --- 5. Alter Spielstand ohne Chronik ---
     spiel.chronik = undefined; ok('Ohne Chronik: Auswertung läuft ohne Fehler', (() => { bestenAlle(); return !!spiel.chronik[h]; })());
     spiel.chronik = undefined; ok('Ohne Daten keine Karte', bestenKarteHTML() === '');
+    // --- 6. Lebensbilanz (Variante A2): wird nie gekürzt, Aufbau aus bestehenden Erfolgen ohne Doppelzählung ---
+    const Z = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 9, name: 'Alt' }); Z.erfolge = [{ disz: 'dressur', stufe: 2, platz: 1, plaziert: true }, { disz: 'dressur', stufe: 2, platz: 3, plaziert: true }, { disz: 'springen', stufe: 1, platz: 7, plaziert: false }, { disz: 'dressur', stufe: 2, aus: true, platz: 9 }]; delete Z.bilanz;
+    bilanzZaehlen(Z, { disz: 'dressur', stufe: 2 }, 1);   // wie im Spiel: VOR dem Einfügen des neuen Eintrags
+    const B = Z.bilanz, bz = B['dressur|' + turnierKlasse({ disz: 'dressur', stufe: 2 })];
+    ok('Bestehendes Pferd: Dressur L = 4 Starts (3 alte + 1 neu), 2× erster, 1× dritter', bz && bz[0] === 4 && bz[1] === 2 && bz[2] === 0 && bz[3] === 1, JSON.stringify(B));
+    ok('Springen A: 1 Start ohne Platz', JSON.stringify(B['springen|' + turnierKlasse({ disz: 'springen', stufe: 1 })]) === '[1,0,0,0]');
+    for (let i = 0; i < 80; i++) bilanzZaehlen(Z, { disz: 'dressur', stufe: 2 }, i % 4 === 0 ? 1 : i % 4 === 1 ? 2 : i % 4 === 2 ? 3 : 5); Z.erfolge.length = 0;
+    ok('Nach 84 Starts und leerer Erfolgsliste bleibt die Bilanz erhalten', Z.bilanz['dressur|' + turnierKlasse({ disz: 'dressur', stufe: 2 })][0] === 84);
+    Z.erfolge = [{ disz: 'dressur', stufe: 2, platz: 1, plaziert: true }];
+    const bh = bilanzHTML(Z); ok('Steckbrief-Anzeige „Bilanz insgesamt“ mit Summenzeile', /Bilanz insgesamt/.test(bh) && /Zusammen/.test(bh) && /Dressur/.test(bh));
+    ok('erfolgeHTML enthält die Bilanz', /Bilanz insgesamt/.test(erfolgeHTML(Z)));
+    const Y = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 6, name: 'Neu' }); ok('Pferd ohne Starts: keine Bilanz-Anzeige', bilanzHTML(Y) === '');
     return out.join('\n');
   });
   console.log(R); console.log('Seitenfehler:', errs.join(' ; ') || 'keine'); await b.close();

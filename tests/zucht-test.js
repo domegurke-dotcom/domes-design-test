@@ -79,6 +79,13 @@ const { chromium } = require('playwright'); const path = require('path');
     // Pensionsstall: nur ganz selten
     spiel.hof.art = 'pension'; let zP = 0; for (let n = 0; n < 200; n++) { spiel.tag = base; const e = { eid: 'tp' + n, vn: 'Frau', nn: 'P' + n, w: true, pid: 'x', stufe: 1, leistungen: {}, haltung: 'box' }; spiel.einsteller.length = 0; spiel.einsteller.push(e); const P = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'PP' + n }); P.einsteller = e.eid; const bx = spiel.boxen[9]; bx.pferd = P; bx.tot = false; delete bx.fohlen; spiel.tag++; pensionZuchtNacht(); if (e.zuechter) zP++; }
     ok('Pensionsstall: nur etwa 4 % Züchter (selten)', zP < 20, zP + ' von 200'); spiel.hof.art = art0;
+    // Pensionsstute zieht zur Geburt in die Abfohlbox und danach zurück (v544)
+    { const e = { eid: 'tg', vn: 'Frau', nn: 'Geburt', w: true, pid: 'x', stufe: 1, leistungen: {}, haltung: 'box' }; spiel.einsteller.length = 0; spiel.einsteller.push(e);
+      const P = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Abfohl' }); P.einsteller = e.eid; P.traechtig = { vater: hengstKopie(H), seit: jzJetzt() - 4, geburt: jzJetzt(), sicher: true }; const bx = spiel.boxen[9]; bx.pferd = P; bx.tot = false; delete bx.fohlen; spiel.post = [];
+      stutenInAbfohl(jzJetzt()); const nb = spiel.boxen.findIndex(x => x.pferd === P);
+      ok('Pensionsstute zieht in die Abfohlbox', nb >= 8 && spiel.boxen[nb].abfohl === true && pensionBox(e) === spiel.boxen[nb], 'Box ' + (nb + 1));
+      ok('Brief an den Spieler (Abfohlbox, Besitzer holt Fohlen ab)', spiel.post.some(x => /in der Abfohlbox/.test(x.betreff)) && /Besitzer das Fohlen abgeholt/.test(JSON.stringify(spiel.post.find(x => /in der Abfohlbox/.test(x.betreff)) || {})));
+      delete P.traechtig; stutenAusAbfohl(); const nb2 = spiel.boxen.findIndex(x => x.pferd === P); ok('Ohne Fohlen zurück in eine normale Box', nb2 >= 0 && !spiel.boxen[nb2].abfohl, 'Box ' + (nb2 + 1)); spiel.boxen[nb2].pferd = null; }
     spiel.einsteller.length = 0; spiel.boxen[9].pferd = null;
     // --- 5. Totgeburt/Stute stirbt: Konstanten ---
     ok('Totgeburt 5 % ohne Aufsicht, 1,5 % Nachtdienst+Abfohlbox', GEBURT_TOT.ohne === 0.05 && GEBURT_TOT.maAbfohl === 0.015);

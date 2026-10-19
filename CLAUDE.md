@@ -51,7 +51,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (3 Stellen in index.html: pferd.js, boxstufen.js, kopfneu.js) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **499**.
+- Letzte Version bei Aktualisierung dieser Datei: **500**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName` ausfüllen → `#chLos` → Kreditbrief schließen (`#dlgKnoepfe button`) → `[data-immo="pension"]` → `#kaufName` → `#dlgKnoepfe button:first-child`. Admin: `spiel.admin = true`.
@@ -199,7 +199,8 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - **v495 (Dome):** Rassenansicht: Grundfarben-Spalte ohne Scheckungs-Farben (Tiger, Schabracke, Schecken, Roan … aus `r.farben` werden auf ihre Grundfarbe abgebildet, `ansichtFarben`). Startet eine Rasse mit Scheckungs-Farbe (Appaloosa, Knabstrupper, Tinker, Paint, Lewitzer, Barock Pinto, Clydesdale), wird Grundfarbe + Muster gesetzt (`MUSTER_VON_FARBE`).
 - **v497 (Dome):** Wenigpunkt-Tiger nutzt die Muster-Stufe (wenige/typisch/mehr: 3/7/14 Punkte, Restfarbe an Knien/Sprunggelenken .45/.7/.85) – vorher immer 7 Punkte.
 - **v498 (Dome):** Rassenansicht: Muster Frost/Snowflake setzen `ex.lack` auf 0 (vorher blieb der zufällige Lackschimmel-Anteil und überdeckte Frost – sah gleich aus wie Lackschimmel).
-- **v499 (Dome):** Birdcatcher = winzige, scharfe Pünktchen (ohne Weichzeichner, r 0,45–1); Snowflake = größere, weiche, unregelmäßige Flocken (r 1,2–3), stärker über Hüfte/Kruppe – vorher sahen beide gleich aus. Brindle-Varianten (dezent/fein/nur teilweise) nur als Vorschaubild gezeigt – wartet auf Domes Wahl.
+- **v499 (Dome):** Birdcatcher = winzige, scharfe Pünktchen (ohne Weichzeichner, r 0,45–1); Snowflake = größere, weiche, unregelmäßige Flocken (r 1,2–3), stärker über Hüfte/Kruppe – vorher sahen beide gleich aus.
+- **v500 (Dome):** Brindle hell/dunkel mit Ausprägung typisch/dezent/fein/nur teilweise (`BRINDLE_ART`, `brindleArtVon`, `opt.brindleArt`; hell vererbt über Anlage `brinWA`, dunkel als Chimäre fest je Pferd; Admin `ex.brinArt`). Snowflake wenige/typisch/viele Flocken (Anlage `snowMA`, Admin `ex.snowM`, Faktor .4/1/1,7). Beide in der Rassenansicht durchschaltbar.
 - **Aufräumen v435:** Code mit ESLint geprüft (keine echten Fehler), unbenutzte Funktionen/Variablen entfernt, `spiel.marktGekauft` auf 200 Einträge begrenzt (`marktGekauftMerken`), versehentlich hochgeladene Test-Screenshots gelöscht. Prüfskript: Skriptblöcke aus index.html in Dateien schreiben und `eslint` (liegt in /opt/node22/lib/node_modules) mit no-unused-vars/no-dupe-keys/no-unreachable laufen lassen. **Test-Screenshots nie im Projektordner speichern** (immer im Scratchpad). Kötenbehang (`behang` in pferd.js) ist vorerst ausgeblendet, der Code bleibt – kommt später (Dome).
 - **v436:** Kopfleiste beim Drehen des Handys: `--kopfH` wird sofort nachgezogen (ResizeObserver auf `header` + resize), vorher blitzte im Vollbild bis zu 0,5 s der Stall zwischen Kopfleiste und Fenster durch. **v437:** Viewport `minimum-scale=1` und `html, body { overflow-x: clip }` – verhindert, dass Chrome (Android) nach dem Drehen herauszoomt (Menüs breiter als die Kopfleiste, Dome-Screenshot ohne Vollbild).
 - **Offen (Stand v439):** Scheckmuster Schritt 2 (`PLAN-SCHECKUNG.md`). Domes Zeichnungen laut `BEI-INKSCAPE-BEARBEITEN.md`. Stute bleibt bei voller Abfohlbox in ihrer Box (gewollt). Ausbilder-Nachholen per Test geprüft (v433, funktioniert).

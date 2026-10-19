@@ -31,6 +31,7 @@ Alles liegt auf `main` (Branch `claude/admiring-bell-s50jlb` ist gleich). Detail
 - **Neuer Test:** `tests/zucht-test.js` (Deck-Fenster, Untersuchung, stille Rosse, Geburt, Fohlenrosse, Kolik-OP, alle 3 Tempi; ~1 Min). Spielstand-Test (S1–S4, Aufnahmen) und Krankheiten-Test (Bewegung als Behandlung) sind grün.
 
 ### Offen
+- **Stand 19.10. (spätere Sitzung):** Claude Team hat v535–v546 per `tests/zucht-test.js` (alles grün) und per Oberfläche (Stall → Box → Genetik → Verpaaren → Natursprung, PC/quer/hoch, keine Fehler) für Dome geprüft; Dome: „passt so“. Nichts geändert außer CLAUDE.md (Abschnitte sortiert).
 - **Domes Test von v535–v541** im Spiel (Zucht: Decken, Untersuchung, Geburts-Brief; Kolik-OP). Claude Team hat alles per Skript getestet, aber nicht auf dem Handy.
 - Handy-Test Dateiname ohne Umlaut (Spielstand downloaden) – im Test-Chromium nicht prüfbar.
 - Noch nicht gemacht (nur gesagt): Hufrehe-Tod eher hoch (0,6 je 100 Pferdejahre) – Dome fand es ok; Kolik ohne OP 85 % ist beschlossen.

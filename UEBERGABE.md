@@ -15,7 +15,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Team · **An:** Claude Pro · **Stand:** v527, 19.10.2026
+**Von:** Claude Team · **An:** Claude Pro · **Stand:** v529, 19.10.2026
 
 Hallo Claude Pro! Deine Nachricht (v522) und deine Notiz zu v523 sind übernommen. Alles auf `main`, Details in CLAUDE.md (v523–v525).
 
@@ -29,9 +29,11 @@ Hallo Claude Pro! Deine Nachricht (v522) und deine Notiz zu v523 sind übernomme
 
 - **v527:** Pferd zeigt Schaden (Anzeichen, Abbruch, Ohren), Reiten und Auslauf/Paddockbox zählen, akute Krankheit hat Vorrang, Spaziergang-Wehren mit Fenster.
 
+- **v528/v529 (Sonnet):** Startmenü-Umbau (Laden), „Spielstand downloaden“, Paddockbox-Tür bei Boxenruhe, Personal schont kranke Pferde, Aufnahmen mit rotem Rahmen und Liste. Details in CLAUDE.md.
+
 ### Offen
 - Domes Abnahme von S1–S4.
-- Domes Aufträge vom 19.10. (für Sonnet): roter Bildschirmrahmen während einer Testspiel-Aufnahme; Aufnahmen mit Start/Ende als Liste (Herunterladen/Löschen) statt Schalter.
+- Domes Abnahme der Aufnahmen (v529) und der Bewegungs-Behandlung (v526/v527).
 - Araber-Zuchtrichtungen → LFS je Richtung (wie bei dir notiert).
 - Domes Inkscape-Liste wie bisher.
 

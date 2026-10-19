@@ -968,7 +968,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "554";
+  const SPIEL_VERSION = "555";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -976,10 +976,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=554"></script>
-<script src="pferd.js?v=554"></script>
-<script src="boxstufen.js?v=554"></script>
-<script src="kopfneu.js?v=554"></script>
+<script src="lz-string.min.js?v=555"></script>
+<script src="pferd.js?v=555"></script>
+<script src="boxstufen.js?v=555"></script>
+<script src="kopfneu.js?v=555"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2392,6 +2392,36 @@
       + `<p class="text"><small>Gewinn und Verlust ohne Hofkauf, Kreditauszahlung und Tilgung. Die Pfeile vergleichen mit dem Vorjahr.</small></p>`;
     const G = gesamt.d, gewinn = G.ein - G.aus, gA = grossePosten(G, "aus")[0], gE = grossePosten(G, "ein")[0], b0 = R[0].best && R[0].best.beste[0];
     brief("Hofverwaltung", `Jahresbericht ${j}`, text, { aktion: { typ: "jbild", daten: { jahr: j, hof: mehr ? "Alle Höfe zusammen" : R[0].name, gewinn: Math.round(gewinn), geld: Math.round(gesamt.geld), pferde: gesamt.pferde, siege: G.siege, plaz: G.plaz, starts: G.starts, ausgabe: gA ? [gA[0], Math.round(gA[1].aus)] : null, einnahme: gE ? [gE[0], Math.round(gE[1].ein)] : null, bestes: b0 ? { id: b0.id, n: b0.n, r: b0.r } : null } } });
+  }
+  // ---------- B5 (PLAN-BILANZ.md, Dome): Bilanz als Bild teilen (Jahresbericht; B4 nutzt dasselbe für die Abschlussbilanz) ----------
+  // PNG 1080 × 1350: Hofname, Zeitraum, 6 Kacheln, bestes Pferd als Bild, unten Spielname/Version. Keine versteckten Werte. Handy: Teilen-Menü, sonst Download.
+  const BILD_B = 1080, BILD_H = 1350;
+  const kurzText = (t, n) => { t = String(t == null ? "" : t); return t.length > n ? t.slice(0, n - 1) + "…" : t; };
+  function bilanzBildSVG(D) {   // D: { titel, hof, zeit, gewinn, geld, pferde, siege, plaz, starts, ausgabe: [Posten, €] | null, einnahme: [Posten, €] | null, bestes: { n, r } | null, bild: Daten-URI des Pferdebilds | "" }
+    const x = esc, eur = n => `${n < 0 ? "−" : ""}${fmt(Math.abs(Math.round(n)))}`, rName = id => (RASSEN.find(r => r.id === id) || {}).name || id || "";
+    const K = [[D.gewinn >= 0 ? "Gewinn" : "Verlust", eur(D.gewinn), ""], ["Kontostand", eur(D.geld), ""], ["Pferde", String(D.pferde), ""], ["Turniere", `${D.siege} ${D.siege === 1 ? "Sieg" : "Siege"} · ${D.plaz} platziert`, `${D.starts} ${D.starts === 1 ? "Start" : "Starts"}`],
+      ["Größte Ausgabe", D.ausgabe ? eur(D.ausgabe[1]) : "–", D.ausgabe ? kurzText(D.ausgabe[0], 26) : ""], ["Größte Einnahme", D.einnahme ? eur(D.einnahme[1]) : "–", D.einnahme ? kurzText(D.einnahme[0], 26) : ""]];
+    const kachel = (z, i) => { const cx = 60 + (i % 2) * 495, cy = 250 + Math.floor(i / 2) * 190; return `<rect x="${cx}" y="${cy}" width="465" height="166" rx="22" fill="#f1e4cc"/><text x="${cx + 28}" y="${cy + 46}" font-size="28" fill="#7a6650">${x(z[0])}</text><text x="${cx + 28}" y="${cy + 102}" font-size="${z[1].length > 14 ? 38 : 50}" font-weight="700" fill="#3b2a1a">${x(z[1])}</text><text x="${cx + 28}" y="${cy + 142}" font-size="25" fill="#7a6650">${x(z[2])}</text>`; };
+    const pferd = D.bestes ? `<text x="60" y="866" font-size="30" font-weight="700" fill="#7a6650">Bestes Pferd</text>${D.bild ? `<image href="${D.bild}" x="60" y="890" width="600" height="380" preserveAspectRatio="xMidYMid meet"/>` : ""}<text x="${D.bild ? 690 : 60}" y="1010" font-size="52" font-weight="700" fill="#3b2a1a">${x(kurzText(D.bestes.n, 16))}</text><text x="${D.bild ? 690 : 60}" y="1062" font-size="32" fill="#7a6650">${x(kurzText(rName(D.bestes.r), 22))}</text>` : `<text x="60" y="880" font-size="30" fill="#7a6650">Noch kein Pferd mit Erfolgen</text>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${BILD_B}" height="${BILD_H}" viewBox="0 0 ${BILD_B} ${BILD_H}" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif"><rect width="${BILD_B}" height="${BILD_H}" fill="#fbf4e6"/><rect width="${BILD_B}" height="14" fill="#b8662f"/>
+      <text x="60" y="110" font-size="30" fill="#b8662f" font-weight="700">${x(D.titel || "Bilanz")}</text><text x="60" y="172" font-size="64" font-weight="700" fill="#3b2a1a">${x(kurzText(D.hof, 22))}</text><text x="60" y="216" font-size="34" fill="#7a6650">${x(D.zeit)}</text>
+      ${K.map(kachel).join("")}${pferd}<text x="60" y="1312" font-size="24" fill="#a89478">Zuchtstall · Version ${SPIEL_VERSION}</text></svg>`;
+  }
+  async function bilanzBildBlob(D) {
+    const img = new Image(); await new Promise((ok, no) => { img.onload = ok; img.onerror = () => no(new Error("Bild konnte nicht gezeichnet werden")); img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(bilanzBildSVG(D)); });
+    const c = document.createElement("canvas"); c.width = BILD_B; c.height = BILD_H; c.getContext("2d").drawImage(img, 0, 0, BILD_B, BILD_H);
+    return await new Promise(ok => c.toBlob(ok, "image/png"));
+  }
+  const bildDateiTeil = t => String(t).replace(/[/\\:*?"<>|\s]+/g, "-").replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/Ä/g, "Ae").replace(/Ö/g, "Oe").replace(/Ü/g, "Ue").replace(/ß/g, "ss");
+  async function bilanzBildTeilen(A) {   // A: Daten aus der Brief-Aktion „jbild“ (oder die Abschlussbilanz)
+    try {
+      const q = A.bestes && pferdePool().find(e => e.p.id === A.bestes.id);
+      const bild = q ? "data:image/svg+xml;charset=utf-8," + encodeURIComponent(ganzBild(q.p).replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="380" ')) : "";
+      const D = { ...A, titel: A.titel || "Jahresbericht", zeit: A.zeit || `Jahr ${A.jahr}`, bild }, blob = await bilanzBildBlob(D);
+      const name = `Zuchtstall_${bildDateiTeil(D.hof)}_Bilanz_${bildDateiTeil(D.zeit)}.png`;
+      try { const f = new File([blob], name, { type: "image/png" }); if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: name }); return; } } catch (e) { if (e && e.name === "AbortError") return; }
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    } catch (e) { console.error("Bilanzbild:", e); dialog(`<h3>🖼️ Bild nicht möglich</h3><p>Das Bild konnte auf diesem Gerät nicht erstellt werden.</p>`); }
   }
   const AUFNAHME_MAX = 20000;
   function prot(k, info) {
@@ -12965,7 +12995,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         const bi = post.findIndex(b => b.id === br.id);
         inhalt = `<div class="brief-nav"><button class="knopf zweit" id="hbVor" ${bi <= 0 ? "disabled" : ""} aria-label="Neuerer Brief">‹</button><span>Brief ${bi + 1} von ${post.length}</span><button class="knopf zweit" id="hbNach" ${bi < 0 || bi >= post.length - 1 ? "disabled" : ""} aria-label="Älterer Brief">›</button></div>${briefPapier(br)}
           <div class="brief-knoepfe"><button class="knopf zweit" id="briefZurueck">‹ ${br.spam ? "Spam" : "Postfach"}</button>${br.spam ? `<button class="knopf" id="keinSpam">✅ Kein Spam</button>` : br.typ === "jahresbericht" ? "" : `<button class="knopf zweit" id="istSpam">🚫 Spam</button>`}<button class="knopf rot" id="briefWeg">🗑️ Löschen</button></div>
-          <p class="text" style="margin-top:8px"><small>${br.spam ? `Ereignis „${briefTyp(br.betreff)[2]}“ ist als Spam markiert. Diese Briefe bleiben ein Jahr im Spamordner und werden dann gelöscht.` : `„Spam“ verschiebt alle Briefe zum Ereignis „${briefTyp(br.betreff)[2]}“ in den Spamordner – auch künftige, ohne Benachrichtigung.`}</small></p>`;
+          ${br.typ === "jahresbericht" ? "" : `<p class="text" style="margin-top:8px"><small>${br.spam ? `Ereignis „${briefTyp(br.betreff)[2]}“ ist als Spam markiert. Diese Briefe bleiben ein Jahr im Spamordner und werden dann gelöscht.` : `„Spam“ verschiebt alle Briefe zum Ereignis „${briefTyp(br.betreff)[2]}“ in den Spamordner – auch künftige, ohne Benachrichtigung.`}</small></p>`}`;
       } else if (!post.length) inhalt = ordnerLeiste + `<div class="post-leer">${BRIEF_SVG(true).replace("<svg", '<svg width="60"')}<br>${postOrdner === "spam" ? "Der Spamordner ist leer." : postOrdner === "jahr" ? "Noch kein Jahresbericht. Er kommt zu Beginn jedes neuen Jahres." : postOrdner === "stern" ? "Noch keine wichtigen Briefe. Tippe beim Lesen oder in der Liste auf den ☆, um einen Brief zu markieren." : "Dein Postfach ist leer."}</div>`;
       else if (postAuswahl) inhalt = ordnerLeiste + `<div class="post-leiste"><span>${postAuswahl.size} von ${post.length} markiert</span><span><button id="postAlle">${postAuswahl.size === post.length ? "Keine" : "Alle"} markieren</button></span></div>
         <div class="briefe">${post.map(b => `<button class="brief auswahl ${postAuswahl.has(b.id) ? "markiert" : ""} ${b.gelesen ? "" : "neu"}" data-mark="${b.id}"><span class="haken">${postAuswahl.has(b.id) ? "✓" : ""}</span><span class="ico">${BRIEF_SVG(b.gelesen)}</span>
@@ -13081,6 +13111,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   // Knöpfe im Brief: „Du“ annehmen, erneut bieten …
   function briefAktionHTML(br) {
     const A = br.aktion;
+    if (A.typ === "jbild") return `<div class="brief-aktion"><button class="knopf zweit" data-baktion="jbild" data-bid="${br.id}">🖼️ Als Bild teilen</button></div>`;   // B5
     if (A.typ === "duzen") return A.antwort ? `<p class="brief-aktion-info">${A.antwort === "ja" ? "🤝 Du hast das „Du“ angenommen." : "Sie bleiben beim „Sie“."}</p>`
       : `<div class="brief-aktion"><button class="knopf" data-baktion="du-ja" data-bid="${br.id}">🤝 Gerne, Du</button><button class="knopf zweit" data-baktion="du-nein" data-bid="${br.id}">Lieber beim „Sie“ bleiben</button></div>`;
     if (A.typ === "kaufangebot") { const a = (spiel.angebote || []).find(y => y.id === A.pferd && y.vorschlag && y.vorschlag.id === A.vid);
@@ -13132,6 +13163,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     });
   }
   function briefAktionAus(b, br, A, nachher) {
+    if (b.dataset.baktion === "jbild") { bilanzBildTeilen(A.daten); return; }   // B5: bleibt im Brief
       if (["pp-ja", "pp-neu", "pp-alt"].includes(b.dataset.baktion)) { const e = einstellerListe().find(x => x.eid === A.eid), N = e && e.preisNeu, p = e && (pensionBox(e) || {}).pferd; if (!e || !N) { nachher(); return; }   // v422: Preis verhandeln
         if (b.dataset.baktion === "pp-ja") { N.preis = N.angebot; N.ok = true; eZufr(e, 3, "fairer Preis ausgehandelt"); A.antwort = `✅ Abgemacht: ab der nächsten Jahreszeit ${fmt(N.preis)}.`; }
         else if (b.dataset.baktion === "pp-alt") { delete e.preisNeu; eZufr(e, 4, "darf beim alten Preis bleiben"); A.antwort = `✅ ${esc(eName(e))} zahlt weiter ${fmt(e.preis)}.`; }

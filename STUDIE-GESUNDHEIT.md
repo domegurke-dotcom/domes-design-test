@@ -66,3 +66,17 @@ Vergleich mit echter Haltung (grobe Richtwerte aus Tierarzt-/Versicherungsstudie
 6. **Alter:** Fohlen und Jungpferde werden nicht öfter krank als Erwachsene; in echt haben Fohlen mehr Infekte (Durchfall, Atemwege), Senioren deutlich mehr (Zähne, Cushing, Arthrose).
 7. **Schlechte Pflege:** schon bei 15 % Hungertagen, 15 % ohne Wasser und 60 % nicht gemistet sind nach 2–3 Wochen alle Pferde tot oder beim Tierschutz. Im Zeitmaßstab (1 Tag ≈ 2 Wochen) folgerichtig, als Spiel sehr hart.
 8. **Rassen:** auffällig hoch Kehlkopfpfeifen Vollblut (10 je 100 PJ, in echt Lebens-Häufigkeit 3–8 %), Darmstein Araber (8,5, in echt selten außer bei viel Luzerne), Sarkoid Araber/Anglo-Araber (5–6), PSSM Shire (11,8 – Belege sprechen eher für wenig PSSM1 bei Shire/Clydesdale). Passend: Melanom bei Schimmel-Rassen, EMS bei Ponys/Barock, Shivers bei Kaltblut, HYPP/PSSM bei Paint/Quarter, Mondblindheit Appaloosa/Knabstrupper, Aorta/Megaösophagus Friese/Barock Pinto.
+
+## Nachher (v532, 4 Rassen, gute / mittlere Pflege)
+| Rasse | Befunde je Pferd und Jahr | kranke Tage | Tierarzt €/Jahr | Tierarzt-Besuche/Jahr | Senior Befunde/Jahr |
+|---|---|---|---|---|---|
+| Achal-Tekkiner gut | 4,7 → 2,8 | 58 → 21 % | 2.133 → 842 € | 5,6 → 2,7 | 5,3 → 3,0 |
+| Vollblut gut | 5,7 → 3,3 | 56 → 31 % | 2.051 → 994 € | 5,5 → 3,2 | 7,0 → 4,2 |
+| Araber gut | 3,8 → 2,6 | 49 → 38 % | 1.600 → 894 € | 4,2 → 2,7 | 5,1 → 3,4 |
+| Shire gut | 6,2 → 3,0 | 71 → 33 % | 2.578 → 913 € | 6,5 → 3,0 | 6,3 → 4,1 |
+| mittel (Ø der 4) | 3,9 → 3,3 | 69 → 52 % | 1.590 → 1.140 € | 2,7 → 2,2 | |
+
+Druse sinkt von ~150 auf ~40 je 100 Pferdejahre. **Noch zu hoch: Weide-Verletzungen (~120 je 100 Pferdejahre, in echt 20–40)** – gesündere Pferde sind öfter draußen. Erste Tode „trotz Behandlung“ (Hufrehe, Druse).
+
+## Plan: Zucht-Test (als Nächstes, Dome 19.10.)
+Je Rasse 10 Zuchtstuten + eigener Hengst bzw. Deckstation, 3–5 Jahre, gute Pflege: Trächtigkeitsrate, Fohlen je Stute, Geburtsprobleme (schwere Geburt, schwache Fohlen, Abfohlbox ja/nein), Erbkrankheiten der Fohlen (LFS, OAAM, CHF, SCID, FIS, LWOS, W/W …) mit und ohne Gentest vor der Verpaarung, Fohlen-Krankheiten und -Todesfälle bis zum Absetzen, Waisen. Vergleich mit echten Zahlen (Trächtigkeit ~60–70 % je Saison, Fohlenverluste ~5–10 %).

@@ -61,7 +61,7 @@ const NEU_VL = ['sarkoid', 'hautkrebs', 'ems', 'aorta', 'megaoes', 'shiver', 'kr
     { const [v1, bx] = neu('vollblut', 'Hengst', 5, q => { q.arbeitSchnitt = 70; }); const [s1] = neu('shetty', 'Hengst', 5, q => { q.arbeitSchnitt = 70; }); const rv = faktor(v1, bx); const rs = faktor(s1, spiel.boxen[0]);
       check('Sehne: Vollblut > Shetty (' + jahr(rv.sehne * KRANK.sehne.gew) + ' % vs ' + jahr(rs.sehne * KRANK.sehne.gew) + ' %)', rv.sehne > rs.sehne * 3); check('Lungenblutung: nur Rennrassen', rv.eiph > 0 && rs.eiph === 0);
       check('Röhrbeinbruch: junges Vollblut mit schwerer Arbeit', rv.fraktur > rs.fraktur * 3); const [alt] = neu('vollblut', 'Hengst', 14, q => { q.arbeitSchnitt = 70; }); check('Röhrbeinbruch: nicht mehr im Alter', faktor(alt, spiel.boxen[0]).fraktur === 0); }
-    { const [a, bx] = neu('araber', 'Stute', 8), [h] = neu('hannoveraner', 'Stute', 8); const ra = faktor(a, bx).darmstein, rh = faktor(h, spiel.boxen[0]).darmstein; check('Darmstein: Araber > Hannoveraner', ra > rh * 3); a.futterStatus = { luzerne: 2, tag: spiel.tag }; check('Darmstein: Luzerne ×3', faktor(a, bx).darmstein > ra * 2.5); }
+    { const [a, bx] = neu('araber', 'Stute', 8), [h] = neu('hannoveraner', 'Stute', 8); const ra = faktor(a, bx).darmstein, rh = faktor(h, spiel.boxen[0]).darmstein; check('Darmstein: Araber > Hannoveraner', ra > rh * 2.5); /* v532: Araber-Faktor 1,5 statt 3 */ a.futterStatus = { luzerne: 2, tag: spiel.tag }; check('Darmstein: Luzerne ×3', faktor(a, bx).darmstein > ra * 2.5); }
     { const [f1, bx] = neu('friese', 'Stute', 8, q => { q.vl = { ...veranlagungVon(q), aorta: 0.25, megaoes: 0.15 }; }); const rf = faktor(f1, bx); const [hn] = neu('hannoveraner', 'Stute', 8); const rh = faktor(hn, spiel.boxen[0]); check('Aorta/Megaösophagus nur beim Friesen', rf.aorta > 0 && rf.megaoes > 0 && rh.aorta === 0 && rh.megaoes === 0);
       f1.befunde = []; f1.futterStatus = { einweich: 1, tag: spiel.tag }; const s0 = risiko(f1, bx).schlund; befundNeu(f1, 'megaoes', 1, 'x'); check('Megaösophagus erhöht Schlundverstopfung ×3 (' + s0 + ' → ' + risiko(f1, bx).schlund + ')', s0 > 0 && risiko(f1, bx).schlund > s0 * 2.9); }
     { const [sh, bx] = neu('shire', 'Stute', 8, q => { q.vl = { ...veranlagungVon(q), shiver: 0.35 }; }); const [ha] = neu('hannoveraner', 'Stute', 8, q => { q.vl = { ...veranlagungVon(q), shiver: 0.04 }; }); check('Shivers: Shire > Hannoveraner', faktor(sh, bx).shivers > faktor(ha, spiel.boxen[0]).shivers * 5); }
@@ -171,7 +171,8 @@ const NEU_VL = ['sarkoid', 'hautkrebs', 'ems', 'aorta', 'megaoes', 'shiver', 'kr
           const x = befundListe(p).find(q => q.art === k); if (!x) weg++; summe += x ? x.grad : 0; } return { grad: Math.round(summe / N * 100) / 100, geheilt: weg }; };
       A.verlauf = {};
       ['sonnenbrand', 'sehne', 'hyperlipaemie', 'kissing', 'spat', 'eiph', 'ems', 'mh'].forEach(k => { const mit = verlauf(k, true), ohne = verlauf(k, false); A.verlauf[k] = { mit, ohne };
-        if (['sonnenbrand', 'sehne', 'hyperlipaemie'].includes(k)) check('Verlauf ' + k + ': nicht chronisch – behandelt heilen einige aus (' + mit.geheilt + ')', mit.geheilt > ohne.geheilt);
+        if (['sonnenbrand', 'hyperlipaemie'].includes(k)) check('Verlauf ' + k + ': nicht chronisch – behandelt heilen einige aus (' + mit.geheilt + ')', mit.geheilt > ohne.geheilt);
+        if (k === 'sehne') check('Verlauf sehne: heilt langsam (v532: nach 10 Tagen ≈ 4–5 Monaten noch nicht aus, geheilt ' + mit.geheilt + ')', mit.geheilt <= 15);
         check('Verlauf ' + k + ': behandelt besser (Grad ' + mit.grad + ' vs ' + ohne.grad + ', geheilt ' + mit.geheilt + ' vs ' + ohne.geheilt + ')', mit.grad < ohne.grad || mit.geheilt > ohne.geheilt); });
     }
     // ---- 6. Hodenhochstand sperrt die Zucht ----

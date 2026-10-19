@@ -949,7 +949,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "500";
+  const SPIEL_VERSION = "501";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -957,9 +957,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=500"></script>
-<script src="boxstufen.js?v=500"></script>
-<script src="kopfneu.js?v=500"></script>
+<script src="pferd.js?v=501"></script>
+<script src="boxstufen.js?v=501"></script>
+<script src="kopfneu.js?v=501"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1714,6 +1714,8 @@
   }
   // Ohrstellung je Ohr (links/rechts unabhängig), für den Tag fest: viel Vertrauen/neugierig → meist vorne, gelassen → meist seitlich,
   // scheu/nervös/wenig Vertrauen → öfter hinten; matt (Gesundheit < 65 %) → eher seitlich. Angelegt nur im Extremfall.
+  const OHREN_REAKT = {};   // v501 (Dome): gerade erlebte Vorliebe/Abneigung → Ohrenstellung für kurze Zeit {zeit, mag}
+  const OHREN_VT_SCHLECHT = 40, OHREN_VT_GUT = 60;   // Vertrauen: unter 40 noch schlecht, ab 60 schon gut
   const OHREN_AN = {};   // starke Abneigung gerade erlebt → Ohren kurz angelegt (nur bis zum Neuladen)
   // Beziehung zweier Pferde für die Ohren: „streit“ (gerade gestritten, bis zum nächsten Tag), „feind“ (3× gestritten oder können sich nicht riechen),
   // „freund“ (gewöhnt, nie gestritten, riechen sich gut) – sonst null
@@ -1729,6 +1731,9 @@
   function ohrenVon(p, andere = []) {
     if (!p || !p.werte) return { R: "vorne", L: "vorne" };
     if (befundListe(p).some(b => b.grad >= 4) || (OHREN_AN[p.id] && Date.now() - OHREN_AN[p.id] < 20000)) return { R: "angelegt", L: "angelegt", spiel: false };   // starker Schmerz / starke Abneigung
+    { const R0 = OHREN_REAKT[p.id]; if (R0 && Date.now() - R0.zeit < 20000) { const vt = vertrauenVon(p);   // v501 (Dome): Vorliebe → beide Ohren nach vorn (bei schlechtem Vertrauen nur eins), Abneigung → beide nach hinten (bei mehr Vertrauen nur eins)
+      if (R0.mag) return vt < OHREN_VT_SCHLECHT ? { R: "seite", L: "vorne", spiel: false } : { R: "vorne", L: "vorne", spiel: false };
+      return vt >= OHREN_VT_GUT ? { R: "seite", L: "hinten", spiel: false } : { R: "hinten", L: "hinten", spiel: false }; } }
     const bez = andere.filter(q => q && q.id && q !== p).map(q => paarBeziehung(p, q));
     if (bez.includes("streit")) return { R: "angelegt", L: "angelegt", spiel: false };   // gerade gestritten und wieder zusammen
     if (bez.includes("feind")) return { R: "hinten", L: "hinten" };                     // ein Pferd dabei, das es nicht mag
@@ -8281,9 +8286,12 @@
     const H = (p.reagiert = p.reagiert && p.reagiert.tag === spiel.tag ? p.reagiert : { tag: spiel.tag, k: [] });
     if (st !== "egal" && !H.k.includes(k)) { H.k.push(k);   // Wohlbefinden und Vertrauen nur einmal am Tag je Aktion
       wohlAendern(p, 4 * v * (v < 0 && grund ? 0.15 : 1), `${st === "mag" ? "mag" : "mag nicht"}: ${Z.titel}`);
-      if (v <= -0.7 && !(grund && vertrauenVon(p) > 60)) OHREN_AN[p.id] = Date.now();   // starke Abneigung: Ohren kurz angelegt
+      if (v <= -0.7 && !(grund && vertrauenVon(p) > 60) && vertrauenVon(p) < OHREN_VT_GUT) OHREN_AN[p.id] = Date.now();   // starke Abneigung bei wenig Vertrauen: Ohren kurz angelegt   // starke Abneigung: Ohren kurz angelegt
       const vt = st === "mag" ? 0.2 : grund ? 0 : -0.1;   // Vorlieben bedienen stärkt das Vertrauen, Ungeliebtes (außer Grundbedürfnissen) kostet etwas
       if (vt && p.werte && p.werte.ist) p.werte.ist.vertrauen = Math.max(0, Math.min(100, r2(vertrauenVon(p) + vt))); }
+    if (vorliebeStufe(vorliebe(p, k)) === "mag") delete OHREN_AN[p.id];
+    { const stR = vorliebeStufe(vorliebe(p, k));   // Ohren nach der echten Vorliebe/Abneigung (auch wenn Vertrauen die Abneigung schon abschwächt – dann nur ein Ohr nach hinten)
+      if (stR !== "egal" && !(OHREN_AN[p.id] && Date.now() - OHREN_AN[p.id] < 20000)) OHREN_REAKT[p.id] = { zeit: Date.now(), mag: stR === "mag" }; }   // v501: Ohren bei jeder Vorliebe/Abneigung
     if (!selbst) return "";
     (p.entdeckt = p.entdeckt || {})[k] = st;
     const Zl = (p.vlZaehl = p.vlZaehl || {}), Zt = (p.vlTag = p.vlTag || {}); if (Zt[k] !== spiel.tag) { Zt[k] = spiel.tag; Zl[k] = (Zl[k] || 0) + 1; if (Zl[k] === VL_SICHTBAR_AB && st !== "egal") vlEntdecktPopup(p, k, st); }   // Dome (v240): erst nach 5 Erlebnissen (je Tag einmal) sichtbar

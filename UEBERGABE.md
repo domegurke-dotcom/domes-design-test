@@ -15,30 +15,22 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team · **Stand:** v511, 19.10.2026
+**Von:** Claude Pro · **An:** Claude Team · **Stand:** v512, 19.10.2026
 
-- Nachricht von Claude Team gelesen und übernommen.
-- **v490 erledigt: Kante Ohr/Kopf.** Die Ohren bekommen jetzt dieselbe Kopf-Schattierung (sh-Verlauf, Glanz, Rußanflug, Fliegentupfen) über eine Maske aus der Ohrform (`schattOhr` in `zeichnePferd`, Maske in `kopfNeuSVG`; Linien bleiben scharf). Die feste Aufhellung +13 % und `ohrFell` sind raus. Mit Playwright gezoomt geprüft (Tekkiner Rußfalbe/Dunkelbrauner/Palomino, Hannoveraner Dunkelbrauner/Schwarzbrauner, Araber Fuchs) – kein Absatz mehr am Ohransatz.
-- Offen bleibt nur, was Dome zeichnet (`BEI-INKSCAPE-BEARBEITEN.md` 0, 0b, 0c, 1c, 4b) und Domes Rassen-Testliste.
-- **v491:** Tekkiner-Glanz auf dunklen Farben war zu hart → dort getönt, schwächer, weichere Übergänge (`mt-`-Verlauf in pferd.js).
-- PRE-Schimmel: harte Kante Kopf/Hals kommt aus Domes Ebene `schopf-maehne-uebergang` (in Mähnenfarbe, gerader Rand auf dem Hals) → in `BEI-INKSCAPE-BEARBEITEN.md` 1d eingetragen; im Code nichts geändert.
-- **v492:** Kontur schwarz, Ohr über Mähne, Übergänge (Roan/Lp/Fliegenschimmel/Ruß), Lichtflecke als Verlauf. Neues Prüfskript `tests/optik-pruefung.js` (siehe CLAUDE.md) – bei Optik-Änderungen immer laufen lassen.
-- **v493:** Bend-Or-Stufen in der Rassenansicht, Varianten-Hinweis auch mit Muster. Dome: Halsübergänge sind jetzt gut.
-- **v494:** Bend-Or-Flecken frei über den ganzen Körper verteilt.
-- **v495:** Rassenansicht – Scheckungen nur noch in der Muster-Spalte, nicht bei den Grundfarben.
-- **v496:** Bend-Or-Lage (vorn/Mitte/hinten/Kombis/überall) als vererbte Anlage, in der Rassenansicht durchschaltbar.
-- **v497:** Wenigpunkt-Stufen wirken jetzt.
-- **v498:** Frost sah aus wie Lackschimmel (Lack-Anteil nicht zurückgesetzt) – behoben.
-- **v499:** Birdcatcher/Snowflake unterscheidbar.
-- **v500:** Brindle-Ausprägungen (typisch/dezent/fein/teilweise) und Snowflake-Menge (wenige/typisch/viele) als vererbte Anlagen.
-- **v501:** Ohren reagieren auf Vorlieben/Abneigungen je nach Vertrauen; weiße Lederhaut (Lp) als Sichel im Augenwinkel.
-- **v502:** Schabracke klein sichtbar, Stufen-Namen „kleine/große Decke“.
-- **v503:** Bend-Or-Flecken natürlicher (Gruppen statt Reihe).
-- **v504:** Birdcatcher/Brindle dunkel nur bei echten Rassen; Bend-Or lockerer.
-- **v505:** Tobiano behält jede Grundfarbe (`to_`-Kürzel); Tobiano in der Rassenansicht ohne Kopfabzeichen.
-- **v506:** Sabino/Splash ohne rosa Maul.
-- **v507:** Rassenansicht: typisches Kopfweiß je Scheckung.
-- **v508:** Gemusterte Pferde bleichen nach Grundfarbe aus (Sommer-/Winterfell).
-- **v509:** Snowflake/Frost/Lackschimmel ohne Schabracke.
-- **v510:** Ohren bewegen sich seltener; Aalstrich bei gescheckten Falben.
-- **v511:** Ohren reagieren auf jede Interaktion (neutral seitlich).
+Hallo Claude Team! Lange Sitzung mit Dome (v490–v512), alles auf `main`, Details je Version in CLAUDE.md.
+
+### Wichtigste Änderungen
+- **Kontur immer schwarz** `#090609` (`INK`) – Domes Regel, nie wieder ändern. Farben aus Domes Zeichnungen nicht vom Spiel überschreiben.
+- **Übergänge:** Ohren mit Kopf-Schattierung per Maske (`schattOhr`), Kopf-Hals-Übergang `uh-` quer zur Linie Genick–Kehle (Punktmuster lang, Scheckung kurz, Fliegenschimmel ohne), Ruß in der Kopffarbe, Lichtflecke als Verlauf. Dome: „Halsübergänge sind endlich gut“.
+- **Neues Prüfskript `tests/optik-pruefung.js`** (Raster mit Ausschnitten Kopf/Ohr/Hals und Bauch/Beine für alle Farben, Muster, Köpfe, Ohren, Alter) – nach jeder Optik-Änderung laufen lassen und Bilder ansehen (Dome wünscht gründliche Prüfung!).
+- **Muster:** Tobiano auf jeder Grundfarbe (`to_`-Kürzel), Bend-Or (Lage `bendorZ` 7 Zonen, Anzahl, unregelmäßige Gruppen), Brindle-Ausprägungen, Snowflake-Menge, Wenigpunkt-Stufen, Schabracke klein, Birdcatcher scharf/Snowflake weich, Birdcatcher/Brindle dunkel nur echte Rassen (`rassenRate`), Aalstrich bei gescheckten Falben, Ausbleichen auch bei gemusterten Pferden (`saisonBasis`), Sabino/Splash ohne rosa Maul, Lp-Lederhaut als Sichel.
+- **Rassenansicht:** nur Grundfarben in der Farbspalte (Muster nur in der Muster-Spalte), typisches Kopfweiß je Scheckung (`MUSTER_KOPF_TYP`), Tobiano ohne Kopfweiß, Varianten-Hinweis zeigt Muster + Farbvariante.
+- **Ohren:** nahes Ohr über der Mähne; Reaktion auf jede Spieler-Interaktion 10 s (Vorliebe vorn / egal seitlich / Abneigung hinten, je nach Vertrauen eins oder beide; `OHREN_REAKT`, `OHREN_DAUER`, Rückkehr per Zeitgeber); Ohrenspiel seltener (15–30 s).
+
+### Offen
+- Domes Inkscape-Liste (`BEI-INKSCAPE-BEARBEITEN.md`): Laterne bis über die Nüstern (wirkt im Spiel noch schmal), **1d neu**: Ebene `schopf-maehne-uebergang` hat harte Kante am Hals (Spiel blendet sie per `uebMaske` aus – nach Domes Änderung wieder entfernen), Glanz/Schatten, Alterszeichen, Kupfer-/Grauaugen, Keil-/Schafskopf stark.
+- Dome geht weiter je Rasse Farben/Muster/Varianten durch und meldet Fehler.
+
+### Achtung
+- Bei Fragen zu Realismus (Gene je Rasse, Muster) erst nachfragen; Dome mag kurze Auswahlfragen.
+- `//`-Kommentare nur am Zeilenende.

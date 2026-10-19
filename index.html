@@ -949,7 +949,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "511";
+  const SPIEL_VERSION = "512";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -957,9 +957,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=511"></script>
-<script src="boxstufen.js?v=511"></script>
-<script src="kopfneu.js?v=511"></script>
+<script src="pferd.js?v=512"></script>
+<script src="boxstufen.js?v=512"></script>
+<script src="kopfneu.js?v=512"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1726,7 +1726,10 @@
   // Ohrstellung je Ohr (links/rechts unabhängig), für den Tag fest: viel Vertrauen/neugierig → meist vorne, gelassen → meist seitlich,
   // scheu/nervös/wenig Vertrauen → öfter hinten; matt (Gesundheit < 65 %) → eher seitlich. Angelegt nur im Extremfall.
   const OHREN_REAKT = {};   // v501 (Dome): gerade erlebte Vorliebe/Abneigung → Ohrenstellung für kurze Zeit {zeit, mag}
-  const OHREN_VT_SCHLECHT = 40, OHREN_VT_GUT = 60;   // Vertrauen: unter 40 noch schlecht, ab 60 schon gut
+  const OHREN_VT_SCHLECHT = 40, OHREN_VT_GUT = 60, OHREN_DAUER = 10000;   // v512 (Dome): Reaktion 10 s, danach kehren die Ohren von selbst zurück
+  let ohrenUhr = null;
+  function ohrenZurueckPlanen() { clearTimeout(ohrenUhr); ohrenUhr = setTimeout(() => { try {   // nur neu zeichnen, wenn der Stall frei sichtbar ist (kein Fenster, kein Putzen, kein Menü darüber)
+    const st = $("stall"); if (!st || !st.getClientRects().length || !$("dlg").hidden || wisch || document.querySelector(".schirm.offen")) return; zeigeStall(); } catch (e) {} }, OHREN_DAUER + 150); }   // Vertrauen: unter 40 noch schlecht, ab 60 schon gut
   const OHREN_AN = {};   // starke Abneigung gerade erlebt → Ohren kurz angelegt (nur bis zum Neuladen)
   // Beziehung zweier Pferde für die Ohren: „streit“ (gerade gestritten, bis zum nächsten Tag), „feind“ (3× gestritten oder können sich nicht riechen),
   // „freund“ (gewöhnt, nie gestritten, riechen sich gut) – sonst null
@@ -1741,8 +1744,8 @@
   // andere = Pferde, die gerade mit im Bild sind (Weide, Sandpaddock, Offenstall)
   function ohrenVon(p, andere = []) {
     if (!p || !p.werte) return { R: "vorne", L: "vorne" };
-    if (befundListe(p).some(b => b.grad >= 4) || (OHREN_AN[p.id] && Date.now() - OHREN_AN[p.id] < 20000)) return { R: "angelegt", L: "angelegt", spiel: false };   // starker Schmerz / starke Abneigung
-    { const R0 = OHREN_REAKT[p.id]; if (R0 && Date.now() - R0.zeit < 20000) { const vt = vertrauenVon(p);   // v501 (Dome): Vorliebe → beide Ohren nach vorn (bei schlechtem Vertrauen nur eins), Abneigung → beide nach hinten (bei mehr Vertrauen nur eins)
+    if (befundListe(p).some(b => b.grad >= 4) || (OHREN_AN[p.id] && Date.now() - OHREN_AN[p.id] < OHREN_DAUER)) return { R: "angelegt", L: "angelegt", spiel: false };   // starker Schmerz / starke Abneigung
+    { const R0 = OHREN_REAKT[p.id]; if (R0 && Date.now() - R0.zeit < OHREN_DAUER) { const vt = vertrauenVon(p);   // v501 (Dome): Vorliebe → beide Ohren nach vorn (bei schlechtem Vertrauen nur eins), Abneigung → beide nach hinten (bei mehr Vertrauen nur eins)
       if (R0.mag == null) return { R: "seite", L: "seite", spiel: false };   // neutral: beide Ohren entspannt seitlich (lässt es geschehen)
       if (R0.mag) return vt < OHREN_VT_SCHLECHT ? { R: "seite", L: "vorne", spiel: false } : { R: "vorne", L: "vorne", spiel: false };
       return vt >= OHREN_VT_GUT ? { R: "seite", L: "hinten", spiel: false } : { R: "hinten", L: "hinten", spiel: false }; } }
@@ -7483,7 +7486,7 @@
   // Leckerli: bis 3 am Tag stärken das Vertrauen (+0,3 je Stück) – mehr → bettelt und schnappt (nach 5 solchen Tagen; verschwindet nach 14 Tagen ohne)
   const LECK_STUECK = { moehren: 0.1, leckerli: 0.01 };   // kg je Stück: 1 Möhre/Apfel ≈ 100 g, 1 Leckerli ≈ 10 g
   function leckerliGeben(p, k) {
-    OHREN_REAKT[p.id] = { zeit: Date.now(), mag: true };   // v511: Leckerli – Ohren nach vorn (bei wenig Vertrauen nur eins)
+    OHREN_REAKT[p.id] = { zeit: Date.now(), mag: true }; ohrenZurueckPlanen();   // v511: Leckerli – Ohren nach vorn (bei wenig Vertrauen nur eins)
     const F = futterkammer(), kg = LECK_STUECK[k]; if ((F.lager[k] || 0) + 1e-9 < kg) return "";
     F.lager[k] = Math.round((F.lager[k] - kg) * 1000) / 1000;
     const L = (p.leckHeute = p.leckHeute && p.leckHeute.tag === spiel.tag ? p.leckHeute : { tag: spiel.tag, n: 0, kg: {} });
@@ -8303,12 +8306,12 @@
     const H = (p.reagiert = p.reagiert && p.reagiert.tag === spiel.tag ? p.reagiert : { tag: spiel.tag, k: [] });
     if (st !== "egal" && !H.k.includes(k)) { H.k.push(k);   // Wohlbefinden und Vertrauen nur einmal am Tag je Aktion
       wohlAendern(p, 4 * v * (v < 0 && grund ? 0.15 : 1), `${st === "mag" ? "mag" : "mag nicht"}: ${Z.titel}`);
-      if (v <= -0.7 && !(grund && vertrauenVon(p) > 60) && vertrauenVon(p) < OHREN_VT_GUT) OHREN_AN[p.id] = Date.now();   // starke Abneigung bei wenig Vertrauen: Ohren kurz angelegt   // starke Abneigung: Ohren kurz angelegt
+      if (v <= -0.7 && !(grund && vertrauenVon(p) > 60) && vertrauenVon(p) < OHREN_VT_GUT) OHREN_AN[p.id] = Date.now(); ohrenZurueckPlanen();   // starke Abneigung bei wenig Vertrauen: Ohren kurz angelegt   // starke Abneigung: Ohren kurz angelegt
       const vt = st === "mag" ? 0.2 : grund ? 0 : -0.1;   // Vorlieben bedienen stärkt das Vertrauen, Ungeliebtes (außer Grundbedürfnissen) kostet etwas
       if (vt && p.werte && p.werte.ist) p.werte.ist.vertrauen = Math.max(0, Math.min(100, r2(vertrauenVon(p) + vt))); }
     if (vorliebeStufe(vorliebe(p, k)) === "mag") delete OHREN_AN[p.id];
-    { const stR = vorliebeStufe(vorliebe(p, k));   // Ohren nach der echten Vorliebe/Abneigung (auch wenn Vertrauen die Abneigung schon abschwächt – dann nur ein Ohr nach hinten)
-      if (!(OHREN_AN[p.id] && Date.now() - OHREN_AN[p.id] < 20000)) OHREN_REAKT[p.id] = { zeit: Date.now(), mag: stR === "egal" ? null : stR === "mag" }; }   // v511 (Dome): jede Interaktion zeigt sich an den Ohren (egal → aufmerksam zum Spieler)   // v501: Ohren bei jeder Vorliebe/Abneigung
+    if (selbst) { const stR = vorliebeStufe(vorliebe(p, k));   // nur Interaktionen des Spielers (nicht Pfleger/Bereiter)   // Ohren nach der echten Vorliebe/Abneigung (auch wenn Vertrauen die Abneigung schon abschwächt – dann nur ein Ohr nach hinten)
+      if (!(OHREN_AN[p.id] && Date.now() - OHREN_AN[p.id] < OHREN_DAUER)) OHREN_REAKT[p.id] = { zeit: Date.now(), mag: stR === "egal" ? null : stR === "mag" }; } ohrenZurueckPlanen();   // v511 (Dome): jede Interaktion zeigt sich an den Ohren (egal → aufmerksam zum Spieler)   // v501: Ohren bei jeder Vorliebe/Abneigung
     if (!selbst) return "";
     (p.entdeckt = p.entdeckt || {})[k] = st;
     const Zl = (p.vlZaehl = p.vlZaehl || {}), Zt = (p.vlTag = p.vlTag || {}); if (Zt[k] !== spiel.tag) { Zt[k] = spiel.tag; Zl[k] = (Zl[k] || 0) + 1; if (Zl[k] === VL_SICHTBAR_AB && st !== "egal") vlEntdecktPopup(p, k, st); }   // Dome (v240): erst nach 5 Erlebnissen (je Tag einmal) sichtbar
@@ -8599,7 +8602,7 @@
     if (!w) return;
     const p = w.p;
     if (fertig) {
-      if (w.tool === "huf") { auskratzen(p); OHREN_REAKT[p.id] = { zeit: Date.now(), mag: null };   /* v511: Ohren aufmerksam */ spielerLernt("huf"); beruehrt(p, "du", "putz"); meldung = `${HUFKR_ICO} Alle vier Hufe von ${esc(p.name)} sind ausgekratzt.`; }
+      if (w.tool === "huf") { auskratzen(p); OHREN_REAKT[p.id] = { zeit: Date.now(), mag: null }; ohrenZurueckPlanen();   /* v511: Ohren aufmerksam */ spielerLernt("huf"); beruehrt(p, "du", "putz"); meldung = `${HUFKR_ICO} Alle vier Hufe von ${esc(p.name)} sind ausgekratzt.`; }
       else if (w.tool === "streicheln") { streicheln(p); meldung = `✋ Du hast ${esc(p.name)} ausgiebig gestreichelt.`; }
       else { putzen(p, w.tool); spielerLernt("haut"); beruehrt(p, "du", "putz"); reaktionZeigen(reaktion(p, w.tool === "buerste" ? "putzen" : "kaemmen"));
         meldung = w.tool === "buerste" ? `🧽 ${esc(p.name)} ist geputzt – das Fell glänzt wieder.` : `${KAMM_ICO} Mähne und Schweif von ${esc(p.name)} sind gekämmt.`; }

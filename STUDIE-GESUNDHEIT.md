@@ -80,3 +80,6 @@ Druse sinkt von ~150 auf ~40 je 100 Pferdejahre. **Noch zu hoch: Weide-Verletzun
 
 ## Plan: Zucht-Test (als Nächstes, Dome 19.10.)
 Je Rasse 10 Zuchtstuten + eigener Hengst bzw. Deckstation, 3–5 Jahre, gute Pflege: Trächtigkeitsrate, Fohlen je Stute, Geburtsprobleme (schwere Geburt, schwache Fohlen, Abfohlbox ja/nein), Erbkrankheiten der Fohlen (LFS, OAAM, CHF, SCID, FIS, LWOS, W/W …) mit und ohne Gentest vor der Verpaarung, Fohlen-Krankheiten und -Todesfälle bis zum Absetzen, Waisen. Vergleich mit echten Zahlen (Trächtigkeit ~60–70 % je Saison, Fohlenverluste ~5–10 %).
+
+## Nachher 2 (v533, 4 Rassen)
+Weide-Verletzungen jetzt ~40 je 100 Pferdejahre (Ziel 30–40), Streit-Verletzung 7 %/15 %. Gute Pflege: 1,9–2,7 Befunde je Pferd und Jahr, 19–31 % kranke Tage, 660–913 € Tierarzt je Jahr, 1,8–2,6 Tierarztbesuche. Mittel: 2,5–3,5 Befunde, 42–52 % kranke Tage. Schlecht (Spieler 1 mit 50 % Klinik und Boxenruhe-Ende): 2,2–3,1 Befunde, 14–20 % tot und 53–64 % beim Tierschutz nach 3 Jahren (vorher 100 % nach 2–3 Wochen).

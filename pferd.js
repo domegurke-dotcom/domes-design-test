@@ -1274,7 +1274,7 @@ function ausbildungsKlasse(werte, alter, gang) {
 }
 const NOTENWORT = n => n >= 10 ? "ausgezeichnet" : n >= 9 ? "sehr gut" : n >= 8 ? "gut" : n >= 7 ? "ziemlich gut" : n >= 6 ? "befriedigend" : n >= 5 ? "genügend" : "mangelhaft";
 
-// Pflege-Startwerte: wann zuletzt Hufschmied, Impfung, Wurmkur und Zahnkontrolle waren (Tag-Nummern)
+// Pflege-Startwerte: wann zuletzt Hufschmied, Impfung, Wurmkur und Zahnbehandlung waren (Tag-Nummern)
 function erzeugePflege(pferd, heute) {
   const r = zufall("pflege-" + pferd.id);
   const t = heute || (typeof spiel !== "undefined" ? spiel.tag : 1) || 1;

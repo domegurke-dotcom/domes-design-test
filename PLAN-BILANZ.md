@@ -3,7 +3,7 @@
 **Stand:** 19.10.2026, im Projekt-Chat mit Dome geplant (Fragen 1–42), Code-Stand beim Planen v513 (jetzt v546). **Voraussetzung:** `PLAN-SPIELSTAND.md` (Thema 1) ist umgesetzt, vor allem S1 (Speicherplätze, Autospeicher) und S4 (Zähler je Jahreszeit). Reihenfolge: B1 → B2 → B3 → B4 → B5.
 Alle Fragen sind beantwortet.
 
-**Fortschritt:** B1 fertig (v547, Abnahmetest `tests/dispo-test.js`; Dome 19.10.: Kreditrate darf ins Dispo, erst über −2.000 € Mahnung; Kolik-OP immer erlaubt; Aufzucht/Ausbildung bei jedem Minus gesperrt) · mit 2 Höfen noch nicht getestet · B2 offen · B3 offen · B4 offen · B5 offen
+**Fortschritt:** B1 fertig (v547, Abnahmetest `tests/dispo-test.js`; Dome 19.10.: Kreditrate darf ins Dispo, erst über −2.000 € Mahnung; Kolik-OP immer erlaubt; Aufzucht/Ausbildung bei jedem Minus gesperrt) · mit 2 Höfen noch nicht getestet · B2 Teil 1 fertig (v548, `tests/chronik-test.js`: Zähler je Hof, Turnier-Klassen, Kontostand hoch/tief, Abgaben, Pfändung, Höfe) · **B2 Teil 2 offen (Bestenliste)** · B2 offen · B3 offen · B4 offen · B5 offen
 
 ## Ist-Stand (v513)
 1. Einziger Verlust-Weg: `kreditJahreszeit()` → 3 offene Raten (`KREDIT.verpasst`) → `pfaendung(k)` (Pferde zu ¾ Wert) → reicht nicht → `zwangsversteigerung(k)`; bei mehreren Höfen wird nur der aktive Hof entfernt (`spiel.hofWeg`), beim letzten Hof wird `spiel.verloren` gesetzt → `spielVerloren()` zeigt kurzes Fenster, löscht Spielstand und Post.
@@ -34,7 +34,7 @@ Zähler je Jahreszeit (`spiel.protokoll`) für die Bilanz um diese Felder ergän
 2. Turniere: Starts, Siege und Platzierungen **je Klasse** (E, A, L, M, S …, auch Western/Rennen/Distanz mit ihrer Klassen-Bezeichnung), höchste erreichte Klasse.
 3. Finanzen: bleiben aus `finanzen`/`finanzSaison` (nicht doppelt führen); zusätzlich höchster Kontostand und tiefster Kontostand je Jahreszeit.
 4. Höfe: gekauft, verloren (mit Name, Jahreszeit).
-5. Pferde-Bestenliste: pro Pferd Erfolge (Siege/Platzierungen mit Klasse), Höchstwert; für „bestes Pferd“ und „wertvollstes Pferd“ (auch wenn das Pferd inzwischen verkauft oder gestorben ist, mit Bild/Farbe festhalten).
+5. Pferde-Bestenliste **(Dome 19.10.: je Hof die 3 besten und die 3 wertvollsten Pferde)**: Mini-Eintrag je Pferd (Pferde-Nummer, Name, Rasse, Erfolgspunkte, Wert), „beste“ = meiste Erfolge (Siege zählen mehr als Platzierungen), „wertvollste“ = Marktwert; nur eigene Pferde (keine Pensionspferde). Auswertung zu Beginn jeder Jahreszeit und wenn ein Pferd den Hof verlässt (`archivieren`, `begraben`). **Der Name ist anklickbar wie im Abstammungsschein** (`leseAkte` über `pferdePool()`): damit das auch nach Verkauf geht, sind die Pferde der Bestenliste im `spiel.archiv` vor dem 40er-Limit geschützt (höchstens 6 je Hof); verstorbene liegen schon komplett auf dem Friedhof. Bei Pferden, die nicht mehr beim Spieler sind, steht **„Stand beim Verkauf“** (bzw. „beim Abgang“) dabei.
 6. Alte Spielstände: Felder fehlen → in der Anzeige „–“; was sich aus Finanzen, Friedhof und Turnieren nachrechnen lässt, wird nachgerechnet.
 
 ## Etappe B3 – Jahresbericht per Post (mittel)

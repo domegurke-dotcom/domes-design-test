@@ -52,6 +52,12 @@ const { chromium } = require('playwright'); const path = require('path');
     nacht(1); const sp = zuchtSperre(M, spiel.boxen[3]); ok('Tag danach: Fohlenrosse, deckbar', sp === '' || sp === 'Winterruhe', sp);
     // liegendes Fohlen: nur Besamung
     if (spiel.boxen[3].fohlen) { spiel.boxen[3].fohlen.gebTag = spiel.tag; aktBox = 3; verpaaren(M, H); weiter(); k = knoepfe(); ok('Liegendes Fohlen: kein Natursprung, Besamung ja', !k.some(x => /Natursprung/.test(x)) && k.some(x => /Besamung/.test(x)), k.join(' | ')); zu(); }
+    // --- 4b. Wartezeiten nach Spieltempo (4 / 7 / 10 Tage je Jahreszeit) ---
+    const tempo0 = spiel.tempo; [[4, 1, 1], [7, 2, 3], [10, 3, 4]].forEach(([t, r, si]) => { spiel.tempo = t; ok('Tempo ' + t + ': Rosse nach ' + r + ' Tag(en), sicher nach ' + si, rosseTage() === r && sicherTage() === si, rosseTage() + ' / ' + sicherTage()); });
+    spiel.tempo = 4; const Q = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Schnell' }); spiel.boxen[7].pferd = Q;
+    Q.gedeckt = { vater: hengstKopie(H), art: 'natur', tag: spiel.tag, seit: jzJetzt(), erfolg: true, verlust: null }; Q.gedeckt.tuPos = spiel.tag; naechsteNacht(); zu();
+    ok('Tempo 4: mit Ultraschall nach 1 Tag sicher tragend', !!Q.traechtig && Q.traechtig.sicher === true, JSON.stringify(Q.traechtig && Q.traechtig.sicher));
+    spiel.tempo = tempo0;
     // --- 5. Totgeburt/Stute stirbt: Konstanten ---
     ok('Totgeburt 5 % ohne Aufsicht, 1,5 % Nachtdienst+Abfohlbox', GEBURT_TOT.ohne === 0.05 && GEBURT_TOT.maAbfohl === 0.015);
     // --- 6. Kolik-OP ---
@@ -64,7 +70,7 @@ const { chromium } = require('playwright'); const path = require('path');
     // Kolik im Stall ohne OP-Ablehnung stirbt nicht „trotz Behandlung“
     let stall = 0; for (let i = 0; i < 100; i++) { const q = neu({ rasse: 'hannoveraner', geschlecht: 'Wallach', alter: 9, name: 'ST' + i }); const bx = spiel.boxen[6]; bx.pferd = q; bx.tot = false; bx.krippeVoll = true; const ko = befundNeu(q, 'kolik', 4, 'Test'); ko.diagnose = spiel.tag; ko.tierarzt = true; ko.beh = spiel.tag; ko.gradMax = 4;
       try { naechsteNacht(); } catch (e) { } zu(); if (bx.tot) stall++; bx.pferd = null; bx.tot = false; }
-    ok('Schwere Kolik ohne OP (nur Tierarzt/zu Hause): etwa 70 % sterben, mehr als mit OP', stall > 50 && stall < 90 && stall / 100 > tod / 200, `${stall} von 100 ohne OP, ${tod} von 200 mit OP`);
+    ok('Schwere Kolik ohne OP (nur Tierarzt/zu Hause): etwa 85 % sterben, mehr als mit OP', stall > 70 && stall < 100 && stall / 100 > tod / 200, `${stall} von 100 ohne OP, ${tod} von 200 mit OP`);
     return out;
   });
   R.forEach(x => console.log(x)); console.log('Seitenfehler:', errs.length ? errs.join('; ') : 'keine'); await b.close(); process.exit(R.some(x => x[0] === '✗') || errs.length ? 1 : 0);

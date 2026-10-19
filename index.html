@@ -968,7 +968,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "536";
+  const SPIEL_VERSION = "537";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -976,10 +976,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=536"></script>
-<script src="pferd.js?v=536"></script>
-<script src="boxstufen.js?v=536"></script>
-<script src="kopfneu.js?v=536"></script>
+<script src="lz-string.min.js?v=537"></script>
+<script src="pferd.js?v=537"></script>
+<script src="boxstufen.js?v=537"></script>
+<script src="kopfneu.js?v=537"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2094,7 +2094,9 @@
     natur: { n: "Natursprung", ico: "🐎", chance: 0.65, verletzung: 0.02, transport: 50,
       info: "Der Hengst deckt die Stute direkt – höchste Chance je Rosse (etwa 65 %). Zur Deckstation fährt die Stute hin (Transport 50 €). Kleines Risiko, dass Stute oder Hengst beim Decken einen Schlag abbekommen (etwa 2 %). Galopper (Vollblut) dürfen nur im Natursprung gezüchtet werden." },
     besamung: { n: "Besamung", ico: "💉", chance: 0.6, tierarzt: 120,
-      info: "Der Tierarzt besamt die Stute in ihrer Box (Tierarzt 120 €). Etwa so sicher wie der Natursprung, weil der Tierarzt den Eisprung per Ultraschall abpasst: Frischsamen vom eigenen Hengst etwa 65 %, gekühlter Versandsamen der Deckstation etwa 60 % (der Samen ist ein bis zwei Tage unterwegs). Kein Transport, keine Verletzungsgefahr." } };   // v536 (Dome)
+      info: "Der Tierarzt besamt die Stute in ihrer Box (Tierarzt 120 €). Etwa so sicher wie der Natursprung, weil der Tierarzt den Eisprung per Ultraschall abpasst: Frischsamen vom eigenen Hengst etwa 65 %, gekühlter Versandsamen der Deckstation etwa 60 % (der Samen ist ein bis zwei Tage unterwegs). Kein Transport, keine Verletzungsgefahr." },   // v536 (Dome)
+    tief: { n: "Tiefgefriersamen", ico: "❄️", chance: 0.4, tierarzt: 150, taxeF: 0.6,
+      info: "Eingefrorener Samen der Deckstation – günstiger (Samenportion etwa 60 % der Decktaxe), dafür kleinere Chance (etwa 40 % je Rosse): Der aufgetaute Samen lebt nur wenige Stunden, der Tierarzt muss den Eisprung sehr genau abpassen (Tierarzt 150 €). So kommen Züchter auch an berühmte oder weit entfernte Hengste." } };   // v537 (Dome)
   const DECK_FRISCH = 0.65;                   // Besamung mit Frischsamen vom eigenen Hengst (v536, Dome: so sicher wie Natursprung)
   const DECK_SAISON = [1, 1, 0.4, 0];         // Frühling/Sommer = Decksaison · Herbst nur noch einzelne Rossen · Winter: Winterruhe, keine Rosse
   const NUR_NATURSPRUNG = ["vollblut"];       // Zuchtbuch der Galopper: nur Natursprung
@@ -2106,13 +2108,16 @@
   const GEBURT_TOT = { maAbfohl: 0.015, ma: 0.02, abfohl: 0.025, kamera: 0.03, ohne: 0.05 };   // Fohlen tot geboren oder in den ersten Stunden gestorben – je nach Aufsicht bei der Geburt
   const STUTE_GEBURT_TOD = 0.005;             // Stute stirbt bei der Geburt (z. B. Riss einer Gebärmutterarterie) – mit Nachtdienst halb so oft
   function deckChance(stute, hengst, art) {
-    const eigen = !istDeckstation(hengst), base = art === "besamung" && eigen ? DECK_FRISCH : DECK_ART[art].chance;
+    const eigen = !istDeckstation(hengst), base = art === "besamung" && eigen ? DECK_FRISCH : DECK_ART[art].chance;   // Tiefgefriersamen nur von der Deckstation
     const w = eigen ? (wohlbefinden(stute) + wohlbefinden(hengst)) / 2 : wohlbefinden(stute);
     const j = alterJahre(stute), alt = j > 14 ? Math.max(0.55, 1 - 0.04 * (j - 14)) : 1;
     const fr = spiel.boxen.some(b => b.pferd === stute && b.fohlen && alterJZ(b.fohlen) === 0) ? FOHLENROSSE : 1;
     return Math.max(0, Math.min(0.9, base * (0.6 + 0.45 * w / 100) * alt * fr * DECK_SAISON[datum().s]));
   }
   const pc535 = x => String(Math.round(x * 1000) / 10).replace(".", ",") + " %";   // bzn
+  // v537 (Dome): Nachtblindheit (CSNB) bei Lp/Lp – sieht in Dämmerung und Dunkelheit kaum etwas, sonst normal
+  const NACHTBLIND = { weide: 1.3, winterWohl: 1, halle: 0.97 };
+  const nachtblind = p => !!p && anzahl(genVon(p), "Lp") === 2;
   const embryoVerlust = p => Math.min(0.3, EMBRYO_VERLUST + Math.max(0, alterJahre(p) - 14) * 0.01);
   const tagIn = t => { const n = t - spiel.tag; return n <= 0 ? "heute" : n === 1 ? "morgen" : n === 2 ? "übermorgen" : `in ${n} Tagen`; };
   // jede Nacht: Rosse oder Trächtigkeit nach dem Decken
@@ -2161,24 +2166,25 @@
     const taxe = istDeckstation(hengst) ? decktaxe(hengst) : 0;
     if (taxe && (spiel.geld || 0) < taxe) { dialog(`<h3>Nicht genug Geld</h3><p>Die Decktaxe für <b>${esc(hengst.name)}</b> beträgt ${fmt(taxe)}, du hast ${fmt(spiel.geld || 0)}.</p>`); return; }
     const eigenH = !istDeckstation(hengst), nurNatur = NUR_NATURSPRUNG.includes(stute.rasse) && NUR_NATURSPRUNG.includes(hengst.rasse);
+    const taxe0 = taxe, taxeVon = art => Math.round(taxe0 * ((DECK_ART[art] && DECK_ART[art].taxeF) || 1) / 10) * 10;   // v537: Tiefgefriersamen günstiger
     // v535 (Dome): erst wählen – Natursprung oder Besamung (mit Chance), dann decken
     const wahl = () => {
-      const zeile = art => { const A = DECK_ART[art], ch = Math.round(deckChance(stute, hengst, art) * 20) * 5, k = art === "besamung" ? A.tierarzt : eigenH ? 0 : A.transport;
-        return `<div class="wn-hinweis" style="margin:8px 0"><b>${A.ico} ${A.n}</b> <button class="gl-info-k" data-dinfo="${art}" aria-label="Erklärung">i</button> · Chance je Rosse etwa <b>${ch} %</b>${k + taxe ? ` · ${fmt(k + taxe)}${taxe ? ` (inkl. Decktaxe ${fmt(taxe)})` : ""}` : " · kostenlos"}<span class="gl-info" id="dinfo-${art}" style="display:none;margin-top:4px">${A.info}${art === "besamung" ? (eigenH ? " Hier: Frischsamen vom eigenen Hengst." : " Hier: gekühlter Versandsamen der Deckstation.") : ""}</span></div>`; };
+      const zeile = art => { const A = DECK_ART[art], ch = Math.round(deckChance(stute, hengst, art) * 20) * 5, k = A.tierarzt ? A.tierarzt : eigenH ? 0 : A.transport, taxe = taxeVon(art);
+        return `<div class="wn-hinweis" style="margin:8px 0"><b>${A.ico} ${A.n}</b> <button class="gl-info-k" data-dinfo="${art}" aria-label="Erklärung">i</button> · Chance je Rosse etwa <b>${ch} %</b>${k + taxe ? ` · ${fmt(k + taxe)}${taxe ? ` (inkl. ${art === "tief" ? "Samenportion" : "Decktaxe"} ${fmt(taxe)})` : ""}` : " · kostenlos"}<span class="gl-info" id="dinfo-${art}" style="display:none;margin-top:4px">${A.info}${art === "besamung" ? (eigenH ? " Hier: Frischsamen vom eigenen Hengst." : " Hier: gekühlter Versandsamen der Deckstation.") : ""}</span></div>`; };
       const s = datum().s;
       const liegt = fohlenNochLiegend(spiel.boxen.find(b => b.pferd === stute));   // v536 (Dome): Stute bleibt beim liegenden Fohlen in der Box – Natursprung erst, wenn es steht
-      dialog(`<h3>💞 ${esc(stute.name)} × ${esc(hengst.name)}</h3><p>Wie soll gedeckt werden?</p>${liegt ? `<div class="wn-hinweis" style="margin:8px 0">🐎 <b>Natursprung</b> geht noch nicht – das Fohlen liegt noch, ${esc(stute.name)} bleibt bei ihm in der Box. Besamen geht in der Box.</div>` : zeile("natur")}${nurNatur ? `<p class="text"><small>🏇 Galopper (Vollblut) dürfen laut Zuchtbuch nur im Natursprung gezüchtet werden.</small></p>` : zeile("besamung")}
+      dialog(`<h3>💞 ${esc(stute.name)} × ${esc(hengst.name)}</h3><p>Wie soll gedeckt werden?</p>${liegt ? `<div class="wn-hinweis" style="margin:8px 0">🐎 <b>Natursprung</b> geht noch nicht – das Fohlen liegt noch, ${esc(stute.name)} bleibt bei ihm in der Box. Besamen geht in der Box.</div>` : zeile("natur")}${nurNatur ? `<p class="text"><small>🏇 Galopper (Vollblut) dürfen laut Zuchtbuch nur im Natursprung gezüchtet werden.</small></p>` : zeile("besamung") + (eigenH ? "" : zeile("tief"))}
         <p class="text"><small>Die Chance hängt vom Wohlbefinden${eigenH ? " beider Pferde" : " der Stute"} und vom Alter der Stute ab (ab 15 Jahren sinkt sie)${s === 2 ? ". Im Herbst rossen nur noch einzelne Stuten – die Chance ist deutlich kleiner" : ""}${spiel.boxen.some(b => b.pferd === stute && b.fohlen && alterJZ(b.fohlen) === 0) ? ". In der Fohlenrosse kurz nach der Geburt ist sie etwas kleiner" : ""}. Ob die Stute tragend ist, zeigt erst die Trächtigkeitsuntersuchung – oder ob sie wieder rosst.</small></p>`,
-        [...(liegt ? [] : [[`${DECK_ART.natur.ico} Natursprung`, () => decken("natur")]]), ...(nurNatur ? [] : [[`${DECK_ART.besamung.ico} Besamung`, () => decken("besamung"), liegt ? "" : "zweit"]]), ["Abbrechen", null, "zweit"]]);
+        [...(liegt ? [] : [[`${DECK_ART.natur.ico} Natursprung`, () => decken("natur")]]), ...(nurNatur ? [] : [[`${DECK_ART.besamung.ico} Besamung`, () => decken("besamung"), liegt ? "" : "zweit"]]), ...(nurNatur || eigenH ? [] : [[`${DECK_ART.tief.ico} Tiefgefriersamen`, () => decken("tief"), "zweit"]]), ["Abbrechen", null, "zweit"]]);
       $("dlgInhalt").querySelectorAll("[data-dinfo]").forEach(b => b.onclick = () => { const x = $("dinfo-" + b.dataset.dinfo); x.style.display = x.style.display === "none" ? "block" : "none"; });
     };
     const decken = art => {
       const jetzt = jzJetzt(), A = DECK_ART[art];
       if (stute.heimlich) { const hv = stute.heimlich.vater; stute.traechtig = stute.heimlich; delete stute.heimlich; deckModus = false; speichern(); zeigeAkte();
         dialog(`<h3>🩺 Schon tragend!</h3><p>Beim Decken stellt sich heraus: <b>${esc(stute.name)}</b> ist bereits tragend – ungeplant von <b>${esc(hv.name)}</b> auf der Weide. Das Fohlen kommt zu Beginn von ${jzName(stute.traechtig.geburt)} zur Welt.</p>`); return; }
-      const extra = art === "besamung" ? A.tierarzt : eigenH ? 0 : A.transport;
-      if (taxe) buchen(-taxe, `Decktaxe: ${hengst.name}`);
-      if (extra) buchen(-extra, art === "besamung" ? `Tierarzt: Besamung ${stute.name}` : `Transport zur Deckstation: ${stute.name}`);
+      const extra = A.tierarzt ? A.tierarzt : eigenH ? 0 : A.transport, taxe = taxeVon(art);
+      if (taxe) buchen(-taxe, `${art === "tief" ? "Samenportion" : "Decktaxe"}: ${hengst.name}`);
+      if (extra) buchen(-extra, A.tierarzt ? `Tierarzt: Besamung ${stute.name}` : `Transport zur Deckstation: ${stute.name}`);
       prot("Bedeckung", { p: stute, o: `${hengst.name} (${A.n})`, b: -taxe - extra });   // S4
       // v535 (Dome): ob es geklappt hat, weiß man erst später (Trächtigkeitsuntersuchung oder Rosse) – früher Embryoverlust bis ~Tag 40 möglich
       const ok = Math.random() < deckChance(stute, hengst, art) && !wwLeer(stute, hengst);
@@ -2188,7 +2194,7 @@
       if (art === "natur" && Math.random() < A.verletzung) { const wer = eigenH && Math.random() < 0.3 ? hengst : stute;   // v535: Deckverletzung (Schlag beim Natursprung)
         befundNeu(wer, "verletzung", Math.random() < 0.3 ? 2 : 1, "beim Decken geschlagen"); verl = `<p>⚠️ Beim Decken hat ${wer === stute ? `${esc(stute.name)} einen Schlag abbekommen` : `${esc(hengst.name)} einen Schlag abbekommen`} – bitte die Versorgung ansehen.</p>`; }
       deckModus = false; speichern(); zeigeAkte();
-      dialog(`<h3>💞 Gedeckt!</h3><p><b>${esc(stute.name)}</b> wurde von <b>${esc(hengst.name)}</b> gedeckt (${A.n}${taxe ? `, Decktaxe ${fmt(taxe)}` : ""}${extra ? `, ${art === "besamung" ? "Tierarzt" : "Transport"} ${fmt(extra)}` : ""}).</p>${verl}
+      dialog(`<h3>💞 Gedeckt!</h3><p><b>${esc(stute.name)}</b> wurde von <b>${esc(hengst.name)}</b> gedeckt (${A.n}${taxe ? `, ${art === "tief" ? "Samenportion" : "Decktaxe"} ${fmt(taxe)}` : ""}${extra ? `, ${A.tierarzt ? "Tierarzt" : "Transport"} ${fmt(extra)}` : ""}).</p>${verl}
         <p>Ob sie tragend ist, zeigt sich erst:</p><ul style="margin:4px 0 0 18px;padding:0"><li>🩺 <b>Trächtigkeitsuntersuchung</b> (Ultraschall, ${fmt(TU_PREIS)}) ab morgen – im Steckbrief „Daten“ bei „Zucht“.</li><li>Ohne Untersuchung: rosst ${esc(stute.name)} in etwa ${ROSSE_TAGE} Tagen wieder, hat es nicht geklappt – aber etwa jede 3. Rosse ist „still“ und fällt niemandem auf. Dann weißt du es erst in der nächsten Jahreszeit sicher und verlierst Zeit.</li></ul>`);
     };
     // tückische Gene (z. B. Overo × Overo = Lethal White): Warnung nur, wenn mindestens eins der Pferde einen positiven Gentest hat
@@ -5086,6 +5092,7 @@
       influenza: (geimpft(p) ? 0.3 : 1) * (s === 3 || s === 2 ? 1.5 : 1), herpes: geimpft(p) ? 0.3 : 1, hautpilz: dreck ? 2 : 1,
       wuermer: (wurmFrisch(p) ? 0.2 : spiel.tag - (p.pflege.wurm || 0) > 2.5 * tpj() ? 3 : 1) * (ort === "weide" ? 1.5 * (matschig(p) ? 1.3 : 1) * (abgeaeppelt(p) ? 0.6 : 1) : 1) };   // Dome (v242): Wurmkur im Frühjahr und Herbst
     f.kolik *= zahnUeber(p) ? 1.5 : 1;
+    if (ort === "weide" && nachtblind(p)) f.verletzung *= NACHTBLIND.weide;   // v537: nachtblind – stößt sich in der Dämmerung eher
     if (ort === "box" && box) { const E = EINSTREU[box.einstreu]; if (box.ohneEinstreu) f.strahlfaeule *= EINSTREU_OHNE.strahl; else if (E) { if (f.husten != null && E.staub) f.husten *= atemEmpfindlich(p) ? 2 : 1.3; f.strahlfaeule *= E.strahl; } }   // H6: Einstreu
     Object.keys(f).forEach(k => { f[k] *= futterFaktor(p, k); });   // Fütterung (F3): Futterzustand, Raufutter, Stärke, Mineralien
     f.lahmheit *= hufZuLang(p) * (p.eisenWeg ? 1.5 : 1) * (p.ocd ? 1.3 : 1) * (ausgekratztGestern(p) ? 1 : 1.2);   // v533: Steine im Huf → Prellung
@@ -7162,7 +7169,7 @@
         const kost = P.disz === "distanz" ? Math.round(25 + 0.6 * P.km) : START_ENERGIE[P.disz] || 30, E = energie(p), muede = kost > E; p.energie = Math.max(-30, E - kost);
         const g = p.pflege.gesundheit, form = (0.85 + 0.15 * wohlbefinden(p) / 100) * (0.8 + 0.2 * Math.min(1, g / 85)) * (muede ? 0.85 : 1);
         const grp = LK_GRUPPE[P.disz], reiterF = profi ? 1.04 : grp ? 0.95 + 0.015 * (7 - lkVon(grp)) : 1;   // Bereiter des Ausbildungsstalls reitet wie LK 2
-        const wert = startWert(p, P.disz) * stufenMalus(p, P) * form * stress * reiterF * fzLeistung(p) * hufTurnierF(p, P.disz) * (1 + (rz() + rz() + rz() - 1.5) * 0.16), niveau = feldNiveau(t, P);
+        const wert = startWert(p, P.disz) * stufenMalus(p, P) * form * stress * reiterF * fzLeistung(p) * hufTurnierF(p, P.disz) * (t.halle && nachtblind(p) ? NACHTBLIND.halle : 1) * (1 + (rz() + rz() + rz() - 1.5) * 0.16), niveau = feldNiveau(t, P);
         const vet = P.disz === "distanz" ? distanzVet(p, P, muede, rz) : null;
         if (vet && vet.aus) { if (vet.lahm) befundNeu(p, "lahmheit", 1, "Distanzritt", "Tierarzt beim Distanzritt");
           (p.erfolge = p.erfolge || []).unshift({ tag: spiel.tag, turnier: t.name, art: t.art, disz: P.disz, stufe: P.stufe, pruef: P.name, platz: P.starter, von: P.starter, erg: vet.aus, geld: 0, plaziert: false, aus: true });
@@ -8690,6 +8697,7 @@
   function wohlNacht(p, ort, { hungrig, mistig, herde, fohlen } = {}) {
     const T = charE(p, "temperament"), N = charE(p, "wachheit"), B = charE(p, "bezug"), M = charE(p, "mut"), V = charE(p, "nerven"), S = charE(p, "sensibel"), A = charE(p, "wille");
     p.wohlLog = { tag: spiel.tag, g: [] };
+    if (datum(spiel.tag - 1).s === 3 && nachtblind(p)) wohlAendern(p, -NACHTBLIND.winterWohl, "lange Dunkelheit (nachtblind)");   // v537
     // Dome (v260): Pferde sind Herdentiere – ist es das einzige Pferd auf dem Hof, sinkt das Wohlbefinden jeden Tag (eigenständige weniger); höchstens bis 30 % (wohlAllein)
     const hA = deckfaehig(p) ? HENGST_ALLEIN : 1;   // v536: Hengste vertragen Einzelhaltung besser
     if (spiel.boxen.filter(b => b.pferd && !b.tot && !b.pferd.klinik).length === 1 && !fohlen) wohlAendern(p, -4 * hA * (1 - 0.6 * B.tief) * (1 + 0.3 * B.hoch), "allein – kein anderes Pferd auf dem Hof");
@@ -12217,7 +12225,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Agouti hat drei Allele:</b> A (Brauner) &gt; At (Schwarzbrauner mit Kupfermaul) &gt; a (Rappe). <b>Hellbrauner:</b> der Farbton eines Braunen hängt von mehreren Genen ab – im Spiel als versteckter, vererbbarer Wert „Farbton“ (unter 25 % = Hellbrauner).</p>
       <h3>☠️ Erbkrankheiten durch Farbgene</h3>
       ${verTab(["Gen", "Folge", "Rassen"], [["Overo O/O", "Lethal-White-Overo-Syndrom: fast weißes Fohlen, ohne Nervenzellen im Darm – stirbt in der ersten Nacht. Overo × Overo: 25 % Risiko. Beim Verpaaren zweier bekannter Overos kommt eine Warnung.", RASSEN.filter(r => (RASSE_GENE[r.id] || {}).O).map(r => r.name).join(", ") || "–"],
-        ["Leopard Lp/Lp", "Nachtblindheit (CSNB) – nicht tödlich, Folgen kommen später.", RASSEN.filter(r => (RASSE_GENE[r.id] || {}).Lp).map(r => r.name).join(", ") || "– (noch keine Tiger-Rasse im Spiel)"]])}
+        ["Leopard Lp/Lp", "Nachtblindheit (CSNB) – nicht tödlich: auf der Weide öfter verletzt (×1,3), im Winter etwas weniger Wohlbefinden, Hallenturniere im Winter ×0,97.", RASSEN.filter(r => (RASSE_GENE[r.id] || {}).Lp).map(r => r.name).join(", ") || "– (noch keine Tiger-Rasse im Spiel)"]])}
       <p><b>Versteckte Overo-Träger:</b> Wie viel Weiß ein Overo zeigt, ist ein versteckter, vererbbarer Wert („Overo: Weißanteil“). Unter 20 % sieht man fast nichts – das Pferd wirkt einfarbig, trägt das Gen aber. Erkennen kann man es nur mit dem Fellfarben- oder Erbkrankheiten-Test; nur dann kommt beim Verpaaren die Warnung.</p>
       <h3>🐎 Gangpferde-Gen (DMRT3)</h3>
       <p>C/C: kein Tölt, kein Pass · A/C: Tölt (Viergänger) · A/A: Tölt und Pass (Fünfgänger). Die Noten für Tölt und Pass werden wie alle Gangnoten vererbt – vorhanden sind sie aber nur mit dem passenden Gen. Häufigkeit des A-Allels: ${Object.entries(DMRT3).map(([r, f]) => `${rasseById(r).name} ${Math.round(f * 100)} %`).join(", ")}, sonst 0 %. Testbar im Labor (Gangpferde-Test).</p>
@@ -12566,6 +12574,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Untersuchung wie AKU</b> (v265, Box – ppf – Versorgung, eigene Pferde): gleiche Stufen und Preise wie die AKU; findet unbemerkte Befunde nach Bereich (Haut/Kolik immer, Atemwege mit Lunge, Hufe/Lahmheit mit Gangbild, Arthrose mit Beugeproben, PSSM/Ataxie/HYPP mit Longe, Würmer/Vergiftung/Magen mit kleinem Blutbild, Cushing/Influenza/Herpes mit großem Blutbild, OCD mit Röntgen) und nennt bei der großen die Röntgenklasse.</p><p><b>Vorsorge und Labor:</b> Impfung ${fmt(VORSORGE.impfung)}, Zahnbehandlung ${fmt(VORSORGE.zahn)} (über 1 Jahr überfällig: Kolik ×1,5), Wurmkur aus der Stallapotheke im Frühjahr und Herbst (Dome, v242; Knopf nur dann; überfällig über 2½ Jahreszeiten: Würmer ×3), kleines Blutbild ${fmt(VORSORGE.blutKlein)} (Entzündung ja/nein), großes ${fmt(VORSORGE.blutGross)} (konkrete Krankheit, auch in der Inkubation) – Ergebnis nach 2 Tagen per Brief. Eigenes Putzzeug ${fmt(VORSORGE.putzzeug)} (Putzkiste). Ein Quarantänestall (kein Risiko) kommt mit dem Hof-Ausbau.</p>
       <p><b>Behandlung (Etappe D)</b> unter Pflege → Versorgung, jede Aktion einmal am Tag: ${Object.values(AKTION).map(A => `${A.ico} ${A.n}`).join(", ")}, Medikament mit Dosis. Wirkung in der Nacht danach: Behandlungswert = Summe der passenden Anteile (höchstens 1) × (0,5 + 0,5 × Mitwirkung). Besserung pro Nacht: Wert ÷ (Heilungszahl × 0,5) ÷ (1,3 − Regeneration ÷ 100 × 0,6), höchstens 80 % (chronisch nur bis Grad 1); Verschlechterung × (1 − Wert) + Schaden; Wirkung auf Gesundheit/Wohlbefinden × (1 − 0,6 × Wert). Heilt ein Befund unter Behandlung, gilt die Ursache als geklärt (Erfahrung). Tod und Warnbrief nur bei Wert unter 0,3.</p>
       <p><b>Folgen vernachlässigter Pflege und Nachbesserung (v533, Dome):</b> Zahnkontrolle heißt jetzt „Zahnbehandlung“. <i>Ungekämmte Mähne/Schweif</i> (Schmutz Mähne ≥ 60 %): nur Wohlbefinden −0,5 je Nacht – sie macht <b>nicht krank</b> (v534: Hautpilz, Mauke, Husten und Ekzem hängen nur noch am Schmutz im <i>Fell</i>, nicht an der Mähne). <i>Hufe nicht ausgekratzt</i> (gestern nicht): Strahlfäule ×3,3 (wie bisher), Hufabszess ×1,5, Lahmheit ×1,2. <i>Turniere</i> nur mit gültiger Influenza-Impfung (wie bei der FN, Nennung gesperrt). <i>Boxenruhe</i> endet von selbst, sobald keine Krankheit mehr da ist, für die sie nötig ist (im Plan oder mit Hilfswert). <i>Weide-Verletzungen</i>: Toben 0,3 (vorher 0,75), Box 0,3 × Boxzustand, Verletzung beim Streit 7 % (mit Stuten 15 %, vorher 20/35 %) – Ergebnis etwa 40 Verletzungen je 100 Pferdejahre (Studie vorher 120). Was bei Weglassen passiert: Impfung → Influenza/Herpes ×3 (Ansteckung ×3,3), Zähne → Kolik/Schlund ×1,5, Wurmkur → Wurmbefall ×3, Hufschmied → bis ×4 Lahmheit/Abszess/Hornspalt, Bürsten → Hautpilz ×2, Mauke ×1,5, Husten ×1,2, −3 % Gesundheit/Tag nach 1 Jahreszeit Schmutz.</p>
+      <p><b>Nachträge v537 (Dome):</b> Nachtblindheit (CSNB) bei Lp/Lp: Weide-Verletzungen ×${String(NACHTBLIND.weide).replace(".", ",")}, im Winter Wohlbefinden −${NACHTBLIND.winterWohl} je Nacht (lange Dunkelheit), Hallenturniere im Winter ×${String(NACHTBLIND.halle).replace(".", ",")}; sichtbar nur über den Gentest. Tiefgefriersamen (nur Deckstation): Chance ${pc535(DECK_ART.tief.chance)}, Samenportion ${pc535(DECK_ART.tief.taxeF)} der Decktaxe, Tierarzt ${fmt(DECK_ART.tief.tierarzt)}.</p>
       <p><b>Nachträge v536 (Dome):</b> Rosse wird ohne Probierhengst nur zu ${pc535(ROSSE_BEMERKT)} bemerkt („stille Rosse“) – dann bleibt die Stute „gedeckt, keine Rosse beobachtet“, bis eine Trächtigkeitsuntersuchung Klarheit bringt oder die nächste Jahreszeit beginnt (dann Brief: tragend bzw. rosst deutlich). Ultraschall ab ${TRAECHTIG_SICHER} Tagen nach dem Decken = sicher tragend (Herzschlag). Natursprung erst, wenn das Fohlen steht (Stute bleibt beim liegenden Fohlen), Besamen schon ab dem Tag nach der Geburt. Totgeburt mit Nachtdienst in der Abfohlbox ${pc535(GEBURT_TOT.maAbfohl)}, Nachtdienst in normaler Box ${pc535(GEBURT_TOT.ma)}. Ungemistete Box −${MIST_G} Gesundheit je Nacht (vorher −9,5). Hengste leiden nur ${pc535(HENGST_ALLEIN)} so stark unter Einsamkeit (Hof, Weide, Sandpaddock). Ungeplante Bedeckung auf der Weide auch mit Fohlen bei Fuß (Fohlenrosse).</p>
       <p><b>Zucht wie in echt (v535, Dome, nach der Zucht-Studie):</b> Decken per <b>Natursprung</b> (Chance je Rosse ${pc535(DECK_ART.natur.chance)}, Deckstation +${fmt(DECK_ART.natur.transport)} Transport, ${pc535(DECK_ART.natur.verletzung)} Deckverletzung) oder <b>Besamung</b> (Versandsamen ${pc535(DECK_ART.besamung.chance)}, Frischsamen eigener Hengst ${pc535(DECK_FRISCH)}, Tierarzt ${fmt(DECK_ART.besamung.tierarzt)}); Galopper (Vollblut × Vollblut) nur Natursprung. Chance × (0,6 + 0,45 × Wohlbefinden) – beim eigenen Hengst Mittel beider –, × Alter der Stute (ab 15 J. −4 % je Jahr, mind. ×0,55), × Fohlenrosse ${String(FOHLENROSSE).replace(".", ",")}, × Jahreszeit ${DECK_SAISON.map(x => String(x).replace(".", ",")).join(" / ")} (Frühling/Sommer/Herbst/Winter), höchstens 90 %. Nach dem Decken ist die Stute „gedeckt“ (<code>p.gedeckt</code>): <b>Trächtigkeitsuntersuchung</b> ${fmt(TU_PREIS)} ab ${TU_AB} Tag danach (leer → Tierarzt leitet die Rosse ein, ab morgen wieder deckbar), ohne Untersuchung rosst sie nach ${ROSSE_TAGE} Tagen wieder (Brief), sonst gilt sie nach ${TRAECHTIG_SICHER} Tagen als tragend. Früher Embryoverlust ${pc535(EMBRYO_VERLUST)} (+1 % je Jahr ab 15 J.), verfohlen ${pc535(VERFOHLEN_JZ)} je Jahreszeit der Trächtigkeit, Fohlen tot geboren: Nachtdienst + Abfohlbox ${pc535(GEBURT_TOT.maAbfohl)} · Nachtdienst ${pc535(GEBURT_TOT.ma)} · Abfohlbox ${pc535(GEBURT_TOT.abfohl)} · Boxenkamera ${pc535(GEBURT_TOT.kamera)} · ohne Aufsicht ${pc535(GEBURT_TOT.ohne)}, Stute stirbt bei der Geburt ${pc535(STUTE_GEBURT_TOD)} (mit Nachtdienst halb so oft). Fohlenrosse ab dem Tag nach der Geburt – das Fohlen bleibt bei der Mutter (Hinweis im Geburts-Brief). Ungeplante Bedeckung auf der Weide mit derselben Chance wie Natursprung. Leopard × Leopard ist nur ein Hinweis (Lp/Lp: kaum Punkte, nachtblind – nicht tödlich).</p>
       <p><b>Krankheits-Studie, Nachbesserung (v535, Dome):</b> Druse seltener (Grundrisiko 0,02 → 0,001, Weide 0,20 → 0,07, Kontakt 0,12 → 0,06), Husten und Erkältung 0,15 → 0,06 – Atemwege zusammen jetzt etwa 25 je 100 Pferdejahre (echt 10–30). Tod trotz Behandlung zählt, sobald ein Fall einmal schwer war (Grad ≥ 4): Kolik ${pc535(TOD_TROTZ.kolik)} (v536: nur wenn die OP abgelehnt wurde – sonst entscheidet die OP), Hufrehe ${pc535(TOD_TROTZ.hufrehe)}; schwere Kolik von Anfang an ${pc535(KOLIK_SCHWER)}, Kolik-OP überleben ${pc535(1 - KOLIK_OP_TOD)}. Altersschwäche siehe „Senioren“.</p>

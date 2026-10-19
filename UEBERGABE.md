@@ -15,7 +15,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team · **Stand:** v512, 19.10.2026
+**Von:** Claude Pro · **An:** Claude Team · **Stand:** v513, 19.10.2026
 
 Hallo Claude Team! Lange Sitzung mit Dome (v490–v512), alles auf `main`, Details je Version in CLAUDE.md.
 
@@ -26,6 +26,9 @@ Hallo Claude Team! Lange Sitzung mit Dome (v490–v512), alles auf `main`, Detai
 - **Muster:** Tobiano auf jeder Grundfarbe (`to_`-Kürzel), Bend-Or (Lage `bendorZ` 7 Zonen, Anzahl, unregelmäßige Gruppen), Brindle-Ausprägungen, Snowflake-Menge, Wenigpunkt-Stufen, Schabracke klein, Birdcatcher scharf/Snowflake weich, Birdcatcher/Brindle dunkel nur echte Rassen (`rassenRate`), Aalstrich bei gescheckten Falben, Ausbleichen auch bei gemusterten Pferden (`saisonBasis`), Sabino/Splash ohne rosa Maul, Lp-Lederhaut als Sichel.
 - **Rassenansicht:** nur Grundfarben in der Farbspalte (Muster nur in der Muster-Spalte), typisches Kopfweiß je Scheckung (`MUSTER_KOPF_TYP`), Tobiano ohne Kopfweiß, Varianten-Hinweis zeigt Muster + Farbvariante.
 - **Ohren:** nahes Ohr über der Mähne; Reaktion auf jede Spieler-Interaktion 10 s (Vorliebe vorn / egal seitlich / Abneigung hinten, je nach Vertrauen eins oder beide; `OHREN_REAKT`, `OHREN_DAUER`, Rückkehr per Zeitgeber); Ohrenspiel seltener (15–30 s).
+
+### Nachtrag v513
+- Handy quer im Vollbild: ☰-Menü klappte in Menüs (Pferdemarkt, Hauptmenü …) hinter der Menüfläche auf – Kopfleiste jetzt z-index 36.
 
 ### Offen
 - Domes Inkscape-Liste (`BEI-INKSCAPE-BEARBEITEN.md`): Laterne bis über die Nüstern (wirkt im Spiel noch schmal), **1d neu**: Ebene `schopf-maehne-uebergang` hat harte Kante am Hals (Spiel blendet sie per `uebMaske` aus – nach Domes Änderung wieder entfernen), Glanz/Schatten, Alterszeichen, Kupfer-/Grauaugen, Keil-/Schafskopf stark.

@@ -38,12 +38,12 @@ const FARBEN_BASIS = {
   lethalwhite:   { name: "Weiß (Lethal White)",    body: "#f7f3ee", mane: "#f3eee6", muzzle: "#e3b5ae", hoof: "#cdbfa8" },
 };
 // Scheckungen, die auf jeder Grundfarbe vorkommen: Kürzel + "_" + Grundfarbe (z. B. "ov_brauner")
-//  ov Overo · tv Tovero · tg Tigerschecke · fs Wenigpunkt-Tiger · sb Schabrackentiger · sk Schabracke ohne Punkte (Snowcap) · sa Sabino (v316) · sw Splashed White (v426)
+//  to Tobiano (v505) · ov Overo · tv Tovero · tg Tigerschecke · fs Wenigpunkt-Tiger · sb Schabrackentiger · sk Schabracke ohne Punkte (Snowcap) · sa Sabino (v316) · sw Splashed White (v426)
 const MUSTER = {
-  ov: ["Overo", "overo"], tv: ["Tovero", "tovero"], tg: ["Tigerschecke", "leopard"], fs: ["Wenigpunkt-Tiger", "fewspot"], sb: ["Schabrackentiger", "blanket"], sk: ["Schabracke ohne Punkte", "snowcap"], sa: ["Sabino", "sabino"], sw: ["Splashed White", "splash"],
+  to: ["Schecke", "tobiano"], ov: ["Overo", "overo"], tv: ["Tovero", "tovero"], tg: ["Tigerschecke", "leopard"], fs: ["Wenigpunkt-Tiger", "fewspot"], sb: ["Schabrackentiger", "blanket"], sk: ["Schabracke ohne Punkte", "snowcap"], sa: ["Sabino", "sabino"], sw: ["Splashed White", "splash"],
 };
 function musterFarbe(id, t) {
-  const m = /^(ov|tv|tg|fs|sb|sk|sa|sw)_(.+)$/.exec(id); if (!m || !t[m[2]]) return null;
+  const m = /^(to|ov|tv|tg|fs|sb|sk|sa|sw)_(.+)$/.exec(id); if (!m || !t[m[2]]) return null;   // v505: to_ = Tobiano auf jeder Grundfarbe (Rapp-/Braun-/Fuchsschecke bleiben eigene Farben)
   const B = t[m[2]], [name, pattern] = MUSTER[m[1]], e = { ...B, pattern, name: `${name} (${B.name.replace(/ \(.*\)$/, "")})` };
   delete e.stripe;
   if (pattern === "tovero" || pattern === "fewspot") { e.head = mix(B.head || B.body, "#f7f5f1", pattern === "fewspot" ? .75 : .2); e.hoof = "#b8a88f"; }

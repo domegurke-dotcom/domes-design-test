@@ -76,6 +76,11 @@ const NEU_VL = ['sarkoid', 'hautkrebs', 'ems', 'aorta', 'megaoes', 'shiver', 'kr
         const O = Object.entries(OP_KLINIK).find(([, o]) => o.art.includes(k)); if (O) { const bef = befundListe(p).find(x => x.art === k); if (bef) { bef.diagnose = spiel.tag; bef.bemerkt = { von: 'Tierarzt', tag: spiel.tag }; check('OP-Karte für ' + k, /möglich/.test(opKarteHTML(p)));
             p.klinik = { seit: spiel.tag, op: O[0], bis: spiel.tag }; p.pflege.gesundheit = 90; const erfolg = O[1].erfolg; const ro = Math.random; Math.random = () => 0; externNacht(); Math.random = ro; check('OP ' + k + ' abgeschlossen', !p.klinik && !befundListe(p).some(x => x.art === k) || erfolg < 1); if (O[1].wallach) check('Kryptorchiden-OP macht Wallach', p.geschlecht === 'Wallach'); } } }
       catch (e) { fehler.push('Ablauf ' + k + ': ' + e.message); } });
+    // ---- 5b. Renntag: Lungenblutung und Röhrbeinbruch ----
+    { leer(); const [r1] = neu('vollblut', 'Hengst', 4); r1.befunde = []; const z = []; const rr = Math.random; Math.random = () => 0; rennRisiko(r1, false, z); Math.random = rr;
+      check('Renntag: Lungenblutung + Röhrbeinbruch möglich', befundListe(r1).some(b => b.art === 'eiph') && befundListe(r1).some(b => b.art === 'fraktur') && z.length === 2);
+      const [sh] = neu('shetty', 'Hengst', 4); sh.befunde = []; Math.random = () => 0; rennRisiko(sh, false, []); Math.random = rr; check('Renntag: Shetty bekommt keine Lungenblutung', !befundListe(sh).some(b => b.art === 'eiph'));
+      const [r2] = neu('vollblut', 'Hengst', 4); r2.befunde = []; let n = 0; for (let i = 0; i < 4000; i++) { r2.befunde = []; rennRisiko(r2, false, []); if (befundListe(r2).some(b => b.art === 'fraktur')) n++; } check('Röhrbeinbruch ≈ 0,16 % der Starts (' + n + ' von 4000)', n >= 1 && n <= 20); }
     // ---- 6. Hodenhochstand sperrt die Zucht ----
     { leer(); const [h, bx] = neu('quarter', 'Hengst', 8); h.befunde = []; const vorher = zuchtSperre(h, bx); befundNeu(h, 'krypt', 1, 'x'); check('Zucht gesperrt bei Hodenhochstand', /Hodenhochstand/.test(zuchtSperre(h, bx)) && !/Hodenhochstand/.test(vorher)); }
     // ---- 7. Gebiss ----

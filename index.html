@@ -969,7 +969,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "529";
+  const SPIEL_VERSION = "530";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -977,10 +977,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=529"></script>
-<script src="pferd.js?v=529"></script>
-<script src="boxstufen.js?v=529"></script>
-<script src="kopfneu.js?v=529"></script>
+<script src="lz-string.min.js?v=530"></script>
+<script src="pferd.js?v=530"></script>
+<script src="boxstufen.js?v=530"></script>
+<script src="kopfneu.js?v=530"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2167,11 +2167,12 @@
     if (spiel.aufnahme) return; const nr = (spiel.aufnahmeNr = (spiel.aufnahmeNr || 0) + 1);
     spiel.aufnahme = { id: "a" + Date.now().toString(36), nr, von: datumText() + ", Tag " + datum().t, vonTag: spiel.tag, eintraege: [] }; speichern(); rahmenSetzen();
   }
-  function aufnahmeEnde() {
+  function aufnahmeEnde(name) {   // name: eigener Name (leer = automatisch)
     const A = spiel.aufnahme; if (!A) return; delete spiel.aufnahme;
-    A.bis = datumText() + ", Tag " + datum().t; A.bisTag = spiel.tag; A.name = `Aufnahme ${A.nr}: ${A.von} bis ${A.bis}`; A.hof = (spiel.hof && spiel.hof.name) || "";
-    (spiel.aufnahmen = spiel.aufnahmen || []).push(A); speichern(); rahmenSetzen();
+    A.bis = datumText() + ", Tag " + datum().t; A.bisTag = spiel.tag; A.name = name ? `${name} (${A.von} bis ${A.bis})` : `Aufnahme ${A.nr}: ${A.von} bis ${A.bis}`; A.hof = (spiel.hof && spiel.hof.name) || "";
+    (spiel.aufnahmen = spiel.aufnahmen || []).push(A); aufListeOffen = true; speichern(); rahmenSetzen();
   }
+  let aufListeOffen = false;   // v530 (Dome): die Liste der Aufnahmen erscheint nur nach Auswahl
   const rahmenSetzen = (id) => { try { const offen = id !== undefined ? id : (SCHIRME.find(x => $(x) && $(x).classList.contains("offen")) || null); document.body.classList.toggle("aufnahme", !!(hatSpielstand && spiel && spiel.aufnahme && offen !== "startMenue" && offen !== "charakter")); } catch (e) { } };   // roter Rahmen, solange eine Aufnahme läuft
   async function aufnahmeDownload(id) {
     const A = (spiel.aufnahmen || []).find(x => x.id === id); if (!A) return;
@@ -2184,7 +2185,8 @@
   function aufnahmeHTML() {   // Einstellungen: Start/Ende + Liste
     const A = spiel.aufnahme, L = spiel.aufnahmen || [];
     return `<button class="sknopf" id="hfAufnahme"><span class="i">${A ? "⏹️" : "🔴"}</span><span>${A ? "Aufnahme beenden" : "Aufnahme starten"}<small>${A ? `läuft seit ${esc(A.von)} · ${A.eintraege.length.toLocaleString("de-DE")} Einträge` : "schreibt jede Aktion mit Spieltag auf – für Test- und Lernspiele"}</small></span></button>
-      ${L.length ? `<h4 class="ma-titel">🎞️ Aufnahmen</h4><div class="ma-liste">${L.map(a => `<div class="ma-karte"><div class="ma-zeile"><span><b>${esc(a.name)}</b><small>${a.eintraege.length.toLocaleString("de-DE")} ${a.eintraege.length === 1 ? "Eintrag" : "Einträge"} · ca. ${kbText(a.eintraege)}</small></span><span class="auf-knoepfe"><button class="mini-knopf" data-aufdl="${a.id}">⬇️ Herunterladen</button><button class="mini-knopf" data-aufweg="${a.id}">🗑️ Löschen</button></span></div></div>`).join("")}</div>` : ""}`;
+      ${L.length || aufListeOffen ? `<button class="sknopf" id="hfAufListe"><span class="i">🎞️</span><span>Aufnahmen ansehen (${L.length})<small>${aufListeOffen ? "Liste ist offen – antippen zum Zuklappen" : "Herunterladen oder löschen"}</small></span></button>` : ""}
+      ${aufListeOffen && L.length ? `<div class="ma-liste">${L.map(a => `<div class="ma-karte"><div class="ma-zeile"><span><b>${esc(a.name)}</b><small>${a.eintraege.length.toLocaleString("de-DE")} ${a.eintraege.length === 1 ? "Eintrag" : "Einträge"} · ca. ${kbText(a.eintraege)}</small></span><span class="auf-knoepfe"><button class="mini-knopf" data-aufdl="${a.id}">⬇️ Herunterladen</button><button class="mini-knopf" data-aufweg="${a.id}">🗑️ Löschen</button></span></div></div>`).join("")}</div>` : ""}`;
   }
   const KOSTEN = { aufzucht: 10, ausbildung: 35, klinik: 60, gentest: 150, kastration: 450 };
   const KASTRATION_AB = 4;
@@ -2298,7 +2300,7 @@
       e.offen = (e.offen || 0) + KOSTEN[e.ort];   // wird zu Beginn der Jahreszeit (oder bei der Rückkehr) in Rechnung gestellt
       if (e.abbruch) { const nr = zurueckholen(e); if (nr >= 0) brief(ORT_NAME[e.ort], `${p.name} ist zurück`, `wie angekündigt haben wir <b>${esc(p.name)}</b> zurückgebracht – ${pron(p).er} steht jetzt in Box ${nr + 1}.`); return; }
       p.pflege.gesundheit = Math.min(gesundheitMax(p), Math.round((p.pflege.gesundheit + 8) * 10) / 10);
-      if (e.ort === "ausbildung") { p.training = Math.round(((p.training || 0) + (p.traechtig ? 0.5 : 1) * wohlFaktor(p)) * 10) / 10; ausbildungsstallTag(p); }   // tragend: halbes Tempo; Wohlbefinden beschleunigt oder bremst
+      if (e.ort === "ausbildung") { p.training = Math.round(((p.training || 0) + (p.traechtig ? 0.5 : 1) * wohlFaktor(p)) * 10) / 10; if (!bewegSchadenStark(p)) ausbildungsstallTag(p); }   // v530 (Dome): der Profi trainiert kein Pferd, dem Reiten jetzt schadet · tragend: halbes Tempo; Wohlbefinden beschleunigt oder bremst
       if (e.ort === "aufzucht") { p.pflege.wohl = Math.min(100, (p.pflege.wohl == null ? 100 : p.pflege.wohl) + 10); sozialPlus(p, 2); }   // Herde mit vielen Jungpferden, viel draußen
       if (e.ort === "aufzucht" && alterJZ(p) >= AUSBILDUNGSALTER) {
         const box = zurueckholen(e);
@@ -6631,6 +6633,7 @@
     if (b.tierarzt || b.diagnose) return true;
     const w = ((m.wissen || {})[(KRANK[b.art] || {}).bereich] || 0) / 100; return Math.random() < 0.3 + 0.7 * w;
   }
+  const bewegSchadenStark = p => { const st = bewegSchaden(p, "reiten"); return !!st && st.x >= 0.3; };   // Reiten schadet mindestens 0,3 (Sehne, Hufrehe, Bruch, Lahmheit, Infekte …)
   function pflegerLeicht(p, m) {
     if (trainSperre(p)) return [];
     const P = trainPlan(p), l = P.liste.filter(k => LEICHT_UEB.includes(k) && UEBUNG[k] && !uebSperre(p, k) && uebOrt(k)), out = [];
@@ -9216,9 +9219,9 @@
       ["🔄 Autospeicher", "Das Spiel speichert nach jeder Aktion von selbst im Browser. Schließt du die Seite, geht es beim nächsten Öffnen mit „Weiterspielen“ genau dort weiter."],
       ["💾 Speicherplatz 1 und 2", "Einen festen Speicherstand gibt es erst, wenn du selbst speicherst: Menü ☰ → „💾 Spiel speichern“. Beim ersten Mal wählst du Speicherplatz 1 oder 2 – so kannst du zwei Spiele nebeneinander haben und im Startmenü zwischen ihnen wechseln."],
       ["❓ Ungespeicherter Fortschritt", "Wechselst du den Speicherplatz oder startest ein neues Spiel, obwohl du seit dem letzten Speichern weitergespielt hast, fragt das Spiel vorher, ob du speichern möchtest."],
-      ["📤 Spielstand downloaden", "In der Hofverwaltung → Einstellungen oder im Startmenü (Laden) kannst du einen Spielstand als Datei downloaden. Am Handy öffnet sich das Teilen-Menü – so schickst du die Datei z. B. per Telegram oder E-Mail an dich selbst oder an dein anderes Gerät."],
-      ["📂 Laden", "Startmenü → „📂 Laden“ zeigt Speicherplatz 1 und 2 zum Weiterspielen. Eine Datei lädst du dort mit „Spielstand aus Datei laden“: Speicherplatz wählen, Datei aussuchen. Du siehst vorher Hof, Datum, Pferde und Geld. Ist der Speicherplatz belegt oder die Datei älter als dein Spiel, fragt das Spiel noch einmal nach."],
-      ["🗑️ Löschen", "Im Startmenü unter „Laden“ kannst du einen Speicherplatz löschen. Vorher kommt immer eine Sicherheitsfrage."],
+      ["📤 Spielstand downloaden", "In der Hofverwaltung → Einstellungen oder im Startmenü (Speichern & Laden) kannst du einen Spielstand als Datei downloaden. Am Handy öffnet sich das Teilen-Menü – so schickst du die Datei z. B. per Telegram oder E-Mail an dich selbst oder an dein anderes Gerät."],
+      ["📂 Laden", "Startmenü → „📂 Speichern & Laden“ zeigt Speicherplatz 1 und 2 zum Speichern und Weiterspielen. Eine Datei lädst du dort mit „Spielstand aus Datei laden“: Speicherplatz wählen, Datei aussuchen. Du siehst vorher Hof, Datum, Pferde und Geld. Ist der Speicherplatz belegt oder die Datei älter als dein Spiel, fragt das Spiel noch einmal nach."],
+      ["🗑️ Speichern und Löschen", "Im Startmenü unter „Speichern & Laden“ kannst du das laufende Spiel auf Speicherplatz 1 oder 2 speichern und einen Speicherplatz löschen. Vorher kommt immer eine Sicherheitsfrage."],
       ["⚠️ Spiel verloren", "Wird dein Hof zwangsversteigert, ist nur der Autospeicher weg. Deine Speicherplätze und Dateien bleiben – mit „Vom letzten Speicherstand neu starten“ spielst du von dort aus weiter."],
       ["💡 Tipp", "Speichere regelmäßig, z. B. am Ende jeder Jahreszeit, und sichere ab und zu eine Datei. Löschst du die Browserdaten (z. B. „Verlauf löschen“), sind Autospeicher und Speicherplätze weg – die Datei nicht."]] },
   };
@@ -9331,6 +9334,13 @@
     if (spiel.platz) { pruefe(spiel.platz); return; }
     dialog(`<h3>💾 Spiel speichern</h3><p>Auf welchem Speicherplatz soll ${esc(standInfo(spiel).hof)} gespeichert werden?</p>`, [...[1, 2].map(n => { const w = lesenPlatz(n); return [`Speicherplatz ${n} · ${w ? esc(platzText(w)) : "frei"}`, () => pruefe(n), w ? "zweit" : ""]; }), ["Abbrechen", null, "zweit"]]);
   }
+  // v530 (Dome): „Speichern“ bei Speicherplatz 1/2 im Startmenü – das laufende Spiel auf genau diesen Platz, bei belegtem fremdem Platz nach Sicherheitsfrage
+  function platzSpeichernAuf(n) {
+    speichernJetzt(); const w = lesenPlatz(n);
+    const los = () => { spiel.platz = n; speichern(); speichernJetzt(); try { platzSchreiben(n, spiel); } catch (e) { speicherFehler(true); return; }
+      dialog(`<h3>💾 Gespeichert</h3><p>Gespeichert auf <b>Speicherplatz ${n}</b> (${esc(standInfo(spiel).hof)}, ${datumText()}).</p>`, [["OK", () => zeigeLadenMenue()]]); };
+    if (w && w.spiel.spielId !== spiel.spielId) dialog(`<h3>💾 Speicherplatz ${n} ersetzen?</h3><p>Auf Speicherplatz ${n} liegt <b>${esc(platzText(w))}</b>. Es wird durch <b>${esc(standInfo(spiel).hof)}</b> ersetzt. Sicher?</p>`, [["Ersetzen", los, "rot"], ["Abbrechen", null, "zweit"]]); else los();
+  }
   // S1 Punkt 6: ungespeicherten Fortschritt nicht stillschweigend verlieren
   function ungespeichertFrage(weiter) {
     if (!ungespeichert()) { weiter(); return; }
@@ -9353,7 +9363,7 @@
   function platzLoeschen(n) {
     const w = lesenPlatz(n); if (!w) return;
     dialog(`<h3>🗑️ Speicherplatz ${n} löschen?</h3><p><b>${esc(platzText(w))}</b> wird endgültig gelöscht. Sicher?</p>`,
-      [["🗑️ Löschen", () => { loeschen(PLATZ_KEY[n]); if (hatSpielstand && spiel.platz === n && spiel.spielId === w.spiel.spielId) { spiel.platz = null; speichern(); } zeigeStart(); }, "rot"], ["Abbrechen", null, "zweit"]]);
+      [["🗑️ Speichern und Löschen", () => { loeschen(PLATZ_KEY[n]); if (hatSpielstand && spiel.platz === n && spiel.spielId === w.spiel.spielId) { spiel.platz = null; speichern(); } zeigeStart(); }, "rot"], ["Abbrechen", null, "zweit"]]);
   }
   function platzKopieren(n) {
     const w = lesenPlatz(n), z = n === 1 ? 2 : 1, ziel = lesenPlatz(z); if (!w) return;
@@ -9442,10 +9452,11 @@
   function zeigeLadenMenue() {
     const P = { 1: lesenPlatz(1), 2: lesenPlatz(2) }, am = w => new Date(w.meta.gespeichert).toLocaleDateString("de-DE");
     const karte = n => { const w = P[n]; return `<div class="platz-karte${w ? "" : " leer"}"><div class="pk-kopf"><b>Speicherplatz ${n}</b><span>${w ? `${esc(w.meta.hof)} · gespeichert: ${esc(w.meta.datum)}, am ${am(w)}` : "frei"}</span></div>
+      ${(hatSpielstand ? `<div class="pk-knoepfe"><button class="knopf" data-pspeich="${n}">💾 Speichern</button></div>` : "")}
       ${w ? `<div class="pk-knoepfe"><button class="knopf" data-pspiel="${n}">▶ Spielen</button><button class="knopf zweit" data-pdatei="${n}">💾 Spielstand downloaden</button><button class="knopf zweit" data-pweg="${n}">🗑️ Löschen</button></div>` : ""}</div>`; };
     $("startMenue").innerHTML = `<div class="schirm-innen">
       <button class="zurueck-s" id="ldZurueck">‹ Startmenü</button>
-      <div class="logo">📂</div><h1>Laden</h1><p class="unter">Welchen Spielstand möchtest du laden?</p>
+      <div class="logo">📂</div><h1>Speichern &amp; Laden</h1><p class="unter">${hatSpielstand ? `Das laufende Spiel (${esc(hofName())}) speichern oder einen Spielstand laden` : "Welchen Spielstand möchtest du laden?"}</p>
       ${karte(1)}${karte(2)}
       <button class="sknopf" id="smLaden"><span class="i">📂</span><span>Spielstand aus Datei laden<small>z. B. vom anderen Gerät (per Telegram oder E-Mail geschickt)</small></span></button>
     </div>`;
@@ -9455,13 +9466,14 @@
     $("startMenue").querySelectorAll("[data-pspiel]").forEach(b => b.onclick = () => platzSpielen(+b.dataset.pspiel));
     $("startMenue").querySelectorAll("[data-pweg]").forEach(b => b.onclick = () => platzLoeschen(+b.dataset.pweg));
     $("startMenue").querySelectorAll("[data-pdatei]").forEach(b => b.onclick = () => dateiSpeichern(+b.dataset.pdatei));
+    $("startMenue").querySelectorAll("[data-pspeich]").forEach(b => b.onclick = () => platzSpeichernAuf(+b.dataset.pspeich));   // v530 (Dome): laufendes Spiel auf diesen Platz speichern
   }
   function zeigeStart() {
     speichernJetzt();
     $("startMenue").innerHTML = `<div class="schirm-innen">
       <div class="logo">🐴</div><h1>Zuchtstall</h1><p class="unter">Züchte, pflege und trainiere deine eigenen Pferde</p>
       <button class="sknopf haupt" id="smWeiter" ${hatSpielstand ? "" : "disabled"}><span class="i">▶</span><span>Weiterspielen${hatSpielstand ? ` – ${esc(hofName())}` : ""}<small>${hatSpielstand ? `läuft: ${datumText()} ${spiel.platz ? `(Speicherplatz ${spiel.platz})` : "(noch nicht gespeichert)"}` : altStand ? "alter Spielstand – für den Hof-Ausbau ist ein neues Spiel nötig" : "noch kein laufendes Spiel"}</small></span></button>
-      <button class="sknopf" id="smLadenMenue"><span class="i">📂</span><span>Laden<small>Speicherplatz 1 und 2 oder Spielstand aus Datei</small></span></button>
+      <button class="sknopf" id="smLadenMenue"><span class="i">📂</span><span>Speichern &amp; Laden<small>Speicherplatz 1 und 2 oder Spielstand aus Datei</small></span></button>
       <button class="sknopf" id="smNeu"><span class="i">✨</span><span>Neues Spiel<small>Charakter erstellen und den ersten Hof kaufen</small></span></button>
       <button class="sknopf" id="smVoll"><span class="i">⛶</span><span>Vollbildmodus ist ${istVoll() ? "an" : "aus"}<small>antippen zum Umschalten</small></span></button>
       <button class="sknopf" id="smEnde"><span class="i">🚪</span><span>Beenden<small>das laufende Spiel ist im Autospeicher</small></span></button>
@@ -12655,7 +12667,10 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     nb.querySelectorAll("[data-fs]").forEach(b => b.onclick = () => { finanzStart += +b.dataset.fs; zeigeHof(); });
     nb.querySelectorAll("[data-zahle]").forEach(b => b.onclick = () => rechnungZahlen(b.dataset.zahle, () => zeigeHof()));
     if ($("hfTipps")) $("hfTipps").onclick = () => { spiel.tipps = spiel.tipps || {}; spiel.tippsAus = !spiel.tippsAus; speichern(); zeigeHof(); };   // v376
-    if ($("hfAufnahme")) $("hfAufnahme").onclick = () => { if (spiel.aufnahme) aufnahmeEnde(); else aufnahmeStart(); zeigeHof(); };   // v529
+    if ($("hfAufnahme")) $("hfAufnahme").onclick = () => { if (!spiel.aufnahme) { aufnahmeStart(); zeigeHof(); return; }   // v529/v530: beim Beenden darf die Aufnahme einen Namen bekommen
+      const fertig = () => { const v = (($("aufName") || {}).value || "").trim().slice(0, 40); aufnahmeEnde(v); zeigeHof(); };
+      dialog(`<h3>⏹️ Aufnahme beenden</h3><p>Wie soll die Aufnahme heißen? (leer lassen für einen automatischen Namen)</p><p><input id="aufName" type="text" maxlength="40" placeholder="z. B. Test Winter-Training" style="width:100%;font-size:1rem;padding:8px"></p>`, [["Beenden und speichern", fertig], ["Weiter aufnehmen", null, "zweit"]]); setTimeout(() => { const i = $("aufName"); if (i) i.focus(); }, 50); };
+    if ($("hfAufListe")) $("hfAufListe").onclick = () => { aufListeOffen = !aufListeOffen; zeigeHof(); };
     document.querySelectorAll("[data-aufdl]").forEach(b => b.onclick = () => aufnahmeDownload(b.dataset.aufdl));
     document.querySelectorAll("[data-aufweg]").forEach(b => b.onclick = () => { const a = (spiel.aufnahmen || []).find(x => x.id === b.dataset.aufweg); if (!a) return;
       dialog(`<h3>🗑️ Aufnahme löschen?</h3><p><b>${esc(a.name)}</b> wird endgültig gelöscht.</p>`, [["Löschen", () => { spiel.aufnahmen = spiel.aufnahmen.filter(x => x !== a); speichern(); zeigeHof(); }], ["Abbrechen", null, "zweit"]]); });
@@ -12815,7 +12830,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       [["🚫 Spam", () => { const [, typ, label] = briefTyp(br.betreff);
          dialog(`<h3>🚫 Als Spam markieren?</h3><p>Alle Briefe zum Ereignis <b>„${label}“</b> kommen dann in den Spamordner – auch künftige. Sie lösen keine Benachrichtigung mehr aus und werden nach einem Jahr gelöscht.</p>`,
            [["Als Spam markieren", () => { spamSetzen(typ, true); const rest = (spiel.post || []).filter(b => !b.spam && (!nur || nur.includes(b.id))); if (rest.length) briefFenster((rest[i] || rest[rest.length - 1]).id, nur); }], ["Abbrechen", () => briefFenster(br.id, nur), "zweit"]]); }, "zweit"],
-       ["🗑️ Löschen", () => { spiel.post = spiel.post.filter(x => x !== br); speichern(); postIconSetzen(); const n = liste[i + 1] || liste[i - 1]; if (n) briefFenster(n.id, nur); }, "rot"],
+       ["🗑️ Speichern und Löschen", () => { spiel.post = spiel.post.filter(x => x !== br); speichern(); postIconSetzen(); const n = liste[i + 1] || liste[i - 1]; if (n) briefFenster(n.id, nur); }, "rot"],
        ["Schließen", null, "zweit"]], "breit");
     briefAktionenBinden(() => briefFenster(br.id, nur));
     sternBinden(document, () => briefFenster(br.id, nur));

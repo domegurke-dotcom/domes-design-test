@@ -99,3 +99,36 @@ Spieler 4 = wie Spieler 3 (gut), behandelt die ersten 2 Tage selbst (nur frei ka
 | tot in 3 Jahren | 9,8 % | 8,8 % | 8,3 % (alle Altersschwäche bzw. Einzelfälle) |
 Der Selbstbehandler spart etwa 30 € Tierarzt im Jahr, hat aber ~4 % mehr kranke Tage und verläuft ~0,7 Tage länger je Krankheit – realistisch: selbst behandeln verzögert die Heilung etwas, kostet aber weniger.
 Schmutzige Mähne macht nicht mehr krank (nur Fell-Schmutz zählt für Hautpilz/Mauke/Husten; Mähne nur Wohlbefinden −0,5).
+
+## Zweite Studie (v534, 19.10.2026): alle 28 Rassen × 4 Spieler, Vergleich mit v531
+Gleicher Aufbau wie oben, aber **3 Durchläufe** je Rasse und Spieler (statt 2) → je Spieler ca. 9.500 Pferdejahre (schlecht 4.200, weil die Pferde wegkommen). Daten: `studie-daten/zweite-studie-v534/` (`_tabelle.md` = Vergleich alt → neu, `_befundarten.txt` = alle Befunde je Spieler). Keine Skriptfehler.
+Spieler (v534): **gut** (3) · **mittel** (2, Tierarzt nach 1–2 Tagen) · **schlecht** (1, Futter/Wasser 85 %, Tierarzt ab Grad 4, 50 % Klinik, Boxenruhe endet) · **selbst** (4, wie gut, behandelt erst 2 Tage selbst).
+
+| Mittel aller Rassen (alt v531 → neu v534) | gut | mittel | schlecht | selbst (neu) |
+|---|---|---|---|---|
+| Befunde je Pferd und Jahr | 4,3 → **2,0** | 3,4 → 2,4 | 2,8 → 2,3 | 2,0 |
+| kranke Tage | 54 → **27 %** | 62 → 40 % | 31 → 63 % | 30 % |
+| schwer (Grad ≥ 4) | 2 → 2 % | 9 → 6 % | 9 → 20 % | 3 % |
+| Heilung Ø (Spieltage) | 3,4 → 1,9 | 6,2 → 4,2 | 4,0 → 11,9 | 2,6 |
+| bemerkt nach (Tage) | 0,8 → 0,9 | 1,9 → 2,0 | 1,9 → 6,7 | 1,0 |
+| Tierarzt-Besuche je Pferd und Jahr | 4,9 → **2,0** | 2,4 → 1,8 | 0,1 → 0,4 | 1,7 |
+| Tierarzt + Klinik je Pferd und Jahr | 1.843 → **730 €** | 1.384 → 950 € | 40 → 800 € | 693 € |
+| Hufschmied je Pferd und Jahr | 120 € | 89 → 91 € | 21 → 55 € | 119 € |
+| tot in 3 Jahren / beim Tierschutz | 9,5 → 9,7 % / 0 | 9,2 → 9,3 % / 0 | 17,5 → 16,4 % / 83 → **53 %** | 9,4 % / 0 |
+| Handlungen je Tag für 10 Pferde: Kranke / Routine | 9,5 → **4,5** / 57 | 5,6 → 3,9 / 36 | 0,1 → 1,8 / 21 | 5,2 / 57 |
+| Befunde je Jahr Fohlen / Jung / Erwachsen / Senior | 4,2/4,1/4,3/4,9 → **1,8/1,8/2,0/2,6** | 2,3/2,2/2,2/3,1 | 2,1/2,1/2,3/3,0 | 1,8/1,9/1,9/2,6 |
+| kranke Tage Fohlen / Jung / Erwachsen / Senior (neu) | 20/20/28/41 % | 35/34/37/55 % | 61/60/63/69 % | 21/24/31/45 % |
+
+**Häufigste Befunde, gute Pflege (je 100 Pferdejahre, alt → neu):** Druse 153 → 38 · Verletzung 92 → 35 · Husten 30 → 27 · Erkältung 23 → 22 · Lahmheit 16 → 17 · Mauke 14 → 13 · Kolik 8 → 8,5 · Strahlfäule 8 → 7 · Hautpilz 48 → 5,6 · Hufrehe 5 → 4,5 · Wurmbefall 7 → 1,1. Heildauer (Median Spieltage): fast alles 1–2, Hufrehe 7, Sehne 28, chronische (Sarkoid, Spat, PSSM …) bleiben.
+**Todesursachen gut (alle Rassen, 3.360 Pferde, 3 Jahre):** Altersschwäche 319, Hufrehe 3, Kolik 2, Hyperlipämie 1 („trotz Behandlung“). Mittel zusätzlich Röhrbeinbruch 2. Schlecht: Entkräftung 414.
+**Rassetypisch (gute Pflege, je 100 PJ):** Melanom bei Schimmel-Rassen 11 (Andalusier, Araber, Lipizzaner, Shagya), EMS bei Ponys/Kaltblut/Barock 2–6 (Shire 6, Welsh Cob 5, Haflinger 4,7), Shivers Shire 5/Clydesdale 3, PSSM Noriker/Tinker/Quarter/Paint 2–3, HYPP Quarter 2, Sarkoid/Mondblindheit Appaloosa/Knabstrupper 3–4, Aorta Friese 3, Sommerekzem Isländer 2, Hufrolle Hannoveraner 3. Die auffälligen Werte von v531 (Kehlkopfpfeifen Vollblut 10, Darmstein Araber 8,5, PSSM Shire 12) sind weg.
+
+### Bewertung (Claude): wie in echt?
+- **Gute Pflege jetzt nah dran:** 2 Befunde je Pferd und Jahr (echt ca. 1–1,5 tierarztpflichtige, dazu kleine Sachen wie Mauke/Strahlfäule, die im Spiel mitzählen), 2 Tierarztbesuche und ~730 € je Jahr (echt 500–1.000 € inkl. Vorsorge), Kolik 8,5 (echt 4–10), Hufrehe 4,5 (2–7), Verletzung 35 (20–40), Lahmheit 17 (10–30). Klinik 2 je 100 Pferdejahre passt.
+- **Noch zu hoch:** Druse 38 je 100 Pferdejahre ist weiter der häufigste Befund in fast allen Rassen (echt: einzelne Ausbrüche, im Mittel eher 1–5). Atemwege (Husten + Erkältung + Druse + Influenza) zusammen ~88 (echt 10–30). Kranke Tage 27 % (echt 5–10 %; im Spiel zählen chronische Befunde wie Melanom/Sarkoid/EMS jeden Tag mit, Senioren 41 %).
+- **Zu wenig tödlich:** Kolik endet bei guter Pflege in 0,25 % der Fälle tödlich (2 von ~810), Hufrehe in 0,7 % (echt Kolik 6–10 %, Hufrehe ~10 %).
+- **Zu viel Arbeit mit Kranken?** Nein mehr: bei guter Pflege ~4,5 zusätzliche Handlungen je Tag für 10 Pferde (8 % aller Handlungen, vorher 17 %). Mittel 3,9, Selbstbehandler 5,2. Das ist spielbar.
+- **Alter:** Fohlen/Jungpferde 1,8, Senioren 2,6 Befunde je Jahr – Senioren passen, Fohlen werden aber nicht öfter krank als Erwachsene (echt mehr Durchfall/Atemwegsinfekte).
+- **Selbstbehandler** ≈ gut (etwas mehr kranke Tage, etwas billiger) – realistisch.
+- **Schlecht:** 63 % kranke Tage, 16 % tot, 53 % vom Tierschutz geholt (vorher 83 %) – als Folge echter Vernachlässigung plausibel.
+- **Mittel:** Pferde stehen im Schnitt bei ~65 % Gesundheit und kommen ~1× im Jahr in die Klinik (101 je 100 Pferdejahre, v531: ähnlich) – Ursache ist nicht Krankheit, sondern Hunger/Mist (an 1 von 10 Tagen kein Futter, an 3 von 10 Tagen nicht gemistet → −19/−9,5 und unter 30 % erholt sich ein Pferd nur in der Klinik).

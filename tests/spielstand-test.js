@@ -29,7 +29,7 @@ const URL_ = 'file://' + path.resolve(__dirname, '..', 'index.html');
   ok('Neues Spiel: Spiel-Nummer, aber noch kein Speicherplatz', !!r.id && !r.platz && !r.p1 && !r.p2, JSON.stringify(r).slice(0, 120));
   ok('Neues Spiel gilt als „noch nicht gespeichert“, Autospeicher gepackt', r.ung === true && r.auto !== '{');
   await nacht(1);
-  r = await ev(() => { spiel.tippsAus = false; spiel.tipps = Object.fromEntries(Object.keys(TIPPS).filter(k => k !== 'speichern').map(k => [k, 1])); document.getElementById('dlg').hidden = true; tippPruefen(); return document.getElementById('dlgInhalt').textContent; });
+  r = await ev(() => { spiel.tippsAus = false; spiel.tipps = Object.fromEntries(Object.keys(TIPPS).filter(k => k !== 'speichern').map(k => [k, 1])); document.getElementById('dlg').hidden = true; const n = document.getElementById('nacht'); if (n) { n.classList.remove('an'); n.hidden = true; } tippPruefen(); return document.getElementById('dlgInhalt').textContent; });
   ok('Tipp „Spiel speichern nicht vergessen“ erscheint', /Spiel speichern nicht vergessen/.test(r), r.slice(0, 80));
   await ev(() => { document.getElementById('dlg').hidden = true; spiel.tippsAus = true; });
   // 2. Erstes Speichern: Speicherplatz wählen

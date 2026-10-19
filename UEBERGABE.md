@@ -40,4 +40,5 @@ Hallo Claude Team! Lange Sitzung mit Dome (v490–v512), alles auf `main`, Detai
 
 ### Nachtrag 19.10.2026 (neue Pro-Sitzung, Team hat noch nicht gelesen)
 - Domes Rassen-Testliste (Farben/Muster/Varianten in der Rassenansicht) ist **abgeschlossen**.
-- Noch offen für Dome: Splash-Körper (eigenes Fell zeichnen oder so lassen?), Flocke/Stern größer zeichnen? (`OFFENE-FRAGEN.md`).
+- `OFFENE-FRAGEN.md` geklärt: Flocke/Stern bleiben so (realistisch), Splash-Körper bleibt erstmal so (Dome zeichnet evtl. später ein eigenes Fell).
+- Waschplatz (hat noch keine Wirkung) steht nicht in `PROJEKT-CHAT-THEMEN.md` – Dome gefragt, ob er als Punkt 14 rein soll.

@@ -1,4 +1,4 @@
-// Spielstand-Test (PLAN-SPIELSTAND.md, Stand v522 mit Domes Änderungen vom 19.10.: keine Rücksicherung, neues Spiel ohne Speicherstand, „Speicherplatz 1/2“)
+// Spielstand-Test (PLAN-SPIELSTAND.md, Stand v525 inkl. S4 Spielprotokoll mit Domes Änderungen vom 19.10.: keine Rücksicherung, neues Spiel ohne Speicherstand, „Speicherplatz 1/2“)
 // Start (im Repo-Ordner): NODE_PATH=/opt/node22/lib/node_modules node tests/spielstand-test.js  → jede Zeile „✓“, am Ende „alles ok“
 const { chromium } = require('playwright');
 const path = require('path');
@@ -29,8 +29,8 @@ const URL_ = 'file://' + path.resolve(__dirname, '..', 'index.html');
   ok('Neues Spiel: Spiel-Nummer, aber noch kein Speicherplatz', !!r.id && !r.platz && !r.p1 && !r.p2, JSON.stringify(r).slice(0, 120));
   ok('Neues Spiel gilt als „noch nicht gespeichert“, Autospeicher gepackt', r.ung === true && r.auto !== '{');
   await nacht(1);
-  r = await ev(() => { spiel.tippsAus = false; spiel.tipps = Object.fromEntries(Object.keys(TIPPS).filter(k => k !== 'speichern').map(k => [k, 1])); document.getElementById('dlg').hidden = true; const n = document.getElementById('nacht'); if (n) { n.classList.remove('an'); n.hidden = true; } tippPruefen(); return document.getElementById('dlgInhalt').textContent; });
-  ok('Tipp „Spiel speichern nicht vergessen“ erscheint', /Spiel speichern nicht vergessen/.test(r), r.slice(0, 80));
+  r = await ev(() => { spiel.tippsAus = false; spiel.tippStart = 1; spiel.tipps = Object.fromEntries(Object.keys(TIPPS).filter(k => k !== 'speichern').map(k => [k, 1])); document.getElementById('dlg').hidden = true; const n = document.getElementById('nacht'); if (n) { n.classList.remove('an'); n.hidden = true; } tippPruefen(); return document.getElementById('dlgInhalt').textContent; });
+  ok('Tipp „Spiel speichern nicht vergessen“ erscheint', /Spiel speichern nicht vergessen/.test(r), r.slice(0, 80));   // tippStart = 1 fest: lief tippPruefen zufällig erst nach dem Tageswechsel zum ersten Mal, stand er auf Tag 2 (v525)
   await ev(() => { document.getElementById('dlg').hidden = true; spiel.tippsAus = true; });
   // 2. Erstes Speichern: Speicherplatz wählen
   await speichernUeberMenue(1);
@@ -94,6 +94,19 @@ const URL_ = 'file://' + path.resolve(__dirname, '..', 'index.html');
   await pg.reload(); await lade();
   r = await ev(() => ({ id: spiel.spielId, platz: spiel.platz, p1: !!lesenPlatz(1), tsort: spiel.tsort, ung: ungespeichert(), rueck: localStorage.getItem('zuchtstall-rueck') }));
   ok('alter Spielstand: Spiel-Nummer, Speicherplatz 1, Turnier-Sortierung, alte Rücksicherung entfernt', !!r.id && r.platz === 1 && r.p1 && r.tsort === 'disz' && !r.ung && r.rueck === null, JSON.stringify(r));
+  // 7. S4 Spielprotokoll: Zähler je Jahreszeit, Schalter in den Einstellungen, Tagebuch im Testspiel, Übersicht in bzn, bleibt nach dem Neuladen
+  await neuesSpiel('Prot', 'Protokollhof');
+  r = await ev(() => { const p = neuesPferd({ name: 'Zaehli', rasse: 'haflinger', geschlecht: 'Stute', alter: 8 }); p.pflege = erzeugePflege(p); p.werte = p.werte || erzeugeWerte(p); const bx = spiel.boxen[0]; bx.pferd = p;
+    fuetternAusLager(bx, 'du', 'rau'); trainieren(p, 'spazieren', 'gelaende', null); kreditNeu(1000, 4, 'Test'); const z = datum().j + '-' + datum().s; return { P: spiel.protokoll[z], tb: (spiel.tagebuch || []).length }; });
+  ok('Protokoll zählt je Jahreszeit (Füttern, Training, Kredit), ohne Testspiel kein Tagebuch', r.P && r.P['Füttern selbst'] === 1 && r.P['Training Spazier­gang (selbst)'.replace(/­/g, '')] === 1 && r.P['Kredit aufgenommen'] >= 2 && r.tb === 0, JSON.stringify(r));
+  await ev(() => zeigeHof('einst')); await pg.click('#hfTestProt'); await pg.waitForTimeout(100);
+  r = await ev(() => { const p = spiel.boxen[0].pferd; trainieren(p, 'bodenarbeit', 'reitplatz', null); buchen(-12, 'Testposten'); speichern(); speichernJetzt(); zeigeHof('einst'); return { an: spiel.testProtokoll, T: spiel.tagebuch, knopf: document.getElementById('hfTestProt').textContent }; });
+  ok('Schalter „Testspiel: ausführliches Protokoll“: Tagebuch mit Tag, Pferd, Ort und Buchungen, Größe am Schalter', r.an === true && r.T.some(e => /Training/.test(e.a) && e.p === 'Zaehli' && e.t >= 1) && r.T.some(e => e.a === 'Geld' && e.x === 'Testposten' && e.b === -12) && /ist an.*Einträge, ca\. \d+ KB/.test(r.knopf), JSON.stringify(r).slice(0, 300));
+  r = await ev(() => { spiel.admin = true; const h = bznGruppiert(weitereDatenHTML() + vererbungHTML()); spiel.admin = false; return /Spielprotokoll \(S4/.test(h) && /Füttern selbst 1/.test(h) && /Tagebuch \(Testspiel\)/.test(h) && /Testposten/.test(h); });
+  ok('bzn zeigt Zähler und Tagebuch', r);
+  await pg.reload(); await lade();
+  r = await ev(() => { const z = datum().j + '-' + datum().s; return { f: spiel.protokoll && spiel.protokoll[z] && spiel.protokoll[z]['Füttern selbst'], n: (spiel.tagebuch || []).length, an: spiel.testProtokoll }; });
+  ok('Protokoll und Tagebuch bleiben nach dem Neuladen', r.f === 1 && r.n >= 2 && r.an === true, JSON.stringify(r));
   ok('keine Seitenfehler', !errs.length, errs.slice(0, 3).join(' | '));
   L.forEach(x => console.log(x.filter(Boolean).join('  '))); const alles = L.every(x => x[0] === '✓'); console.log(alles ? 'alles ok' : 'FEHLER');
   await b.close(); process.exit(alles ? 0 : 1);

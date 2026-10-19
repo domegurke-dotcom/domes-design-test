@@ -949,7 +949,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "513";
+  const SPIEL_VERSION = "514";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -957,9 +957,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=513"></script>
-<script src="boxstufen.js?v=513"></script>
-<script src="kopfneu.js?v=513"></script>
+<script src="pferd.js?v=514"></script>
+<script src="boxstufen.js?v=514"></script>
+<script src="kopfneu.js?v=514"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1692,7 +1692,7 @@
   // Exterieurfehler [Schafskopf, Schweinskopf]: Shetty 8 % / 10 %, Kaltblut 8 % / 3 %, alle anderen 3 % / 2 %
   const KOPF_FEHLER = { shetty: [0.08, 0.1], shire: [0.08, 0.03], clydesdale: [0.08, 0.03], tinker: [0.08, 0.03] }, KOPF_FEHLER_SONST = [0.03, 0.02];
   const KOPF_TYP_GERADE = 0.1;    // Rassen mit typischer Form: so oft trotzdem gerader Kopf
-  const KOPF_GERADE_ANDERS = 0.25;  // Rassen ohne typische Form: so oft eine leichte andere Form (Hecht, Ramsnase, Keil)
+  const KOPF_NEIGUNG = { marwari: ["ramsnase", 0.5, 2], haflinger: ["hecht", 0.35, 1], fjord: ["hecht", 0.25, 1], noriker: ["ramsnase", 0.35, 2], knabstrupper: ["ramsnase", 0.35, 2] };   // v514 (Dome): echte Neigung der Rasse [Form, Anteil, höchste Stufe] – Rassen ohne Eintrag haben immer einen geraden Kopf (Standard)
   const KOPF_MUTATION = 0.02;     // Vererbung: Mutation zu „stark“
   const KOPF_WERT = { 2: 0.95, 3: 0.9 };   // Schafs-/Schweinskopf: Marktwert normal −5 %, stark −10 % (leicht ohne Abzug)
   const KOPF_TYPNOTE = { 2: 0.2, 3: 0.4 }; // Fohlenschau: Abzug Typnote
@@ -1704,7 +1704,8 @@
     if (x < schaf + schwein) return { f: "schwein", s: st() };
     const typ = KOPFFORM_RASSE[rasse];
     if (typ) return r() < KOPF_TYP_GERADE ? { f: "gerade", s: 0 } : { f: typ, s: st() };
-    return r() < KOPF_GERADE_ANDERS ? { f: ["hecht", "ramsnase", "keil"][Math.floor(r() * 3)], s: 1 } : { f: "gerade", s: 0 };
+    const n = KOPF_NEIGUNG[rasse];
+    return n && r() < n[1] ? { f: n[0], s: 1 + Math.floor(r() * n[2]) } : { f: "gerade", s: 0 };
   }
   // fehlt die Kopfform (alte Spielstände, Ahnen, Deckhengste): aus der Rasse würfeln – immer gleich für dasselbe Pferd
   function kopfVon(p) {
@@ -2009,6 +2010,7 @@
     if (p.weide) return "auf der Weide";
     if (p.turnier) return "auf dem Turnier";
     if (p.geschlecht === "Wallach") return "Wallach";
+    if (befundListe(p).some(b => b.art === "krypt")) return "Hodenhochstand (Zuchtausschluss)";   // v514
     if (alterJZ(p) < ZUCHTALTER) return "zu jung";
     if (alterJahre(p) > (p.geschlecht === "Stute" ? ZUCHT_MAX.Stute : ZUCHT_MAX.Hengst)) return "zu alt";
     if (p.pflege && p.pflege.gesundheit < 50) return "zu schwach";
@@ -2242,8 +2244,9 @@
         const O = OP_KLINIK[p.klinik.op], extra = p.klinik.rechnung || 0, tage = Math.round(extra / KOSTEN.klinik), ok = Math.random() < O.erfolg;
         delete p.klinik; delete p.dreck;
         befundListe(p).filter(x => O.art.includes(x.art)).forEach(x => { if (ok) befundAbschliessen(p, x, "operiert"); else x.grad = Math.max(1, x.grad - 1); });
+        if (ok && O.wallach) { p.geburtsGeschlecht = p.geburtsGeschlecht || "Hengst"; p.geschlecht = "Wallach"; p.kastriert = jzJetzt(); p.kastriertAlterJZ = alterJZ(p); }   // v514: Kryptorchiden-Kastration
         rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: ${O.n} inkl. ${O.tage} Tage Klinik`, betrag: O.preis }, ...(extra ? [{ text: `${p.name}: ${tageTxt(tage)} zusätzliche Behandlung × ${fmt(KOSTEN.klinik)}`, betrag: extra }] : [])], [p.id], `${p.name}: ${O.n} – Rechnung`,
-          `${ok ? `die Operation von <b>${esc(p.name)}</b> ist gut verlaufen – ${O.art.includes("melanom") ? "die Melanome sind entfernt" : "der Kehlkopf ist wieder frei"}.` : `die Operation von <b>${esc(p.name)}</b> hat leider nur teilweise geholfen – es ist besser als vorher, aber nicht ganz weg.`} ${pron(p).er[0].toUpperCase() + pron(p).er.slice(1)} steht wieder in Box ${i + 1}. Bitte in den nächsten Tagen nur ruhig im Schritt bewegen und dann langsam wieder antrainieren.<br><br>`);
+          `${ok ? `die Operation von <b>${esc(p.name)}</b> ist gut verlaufen – ${O.fertig || (O.art.includes("melanom") ? "die Melanome sind entfernt" : "der Kehlkopf ist wieder frei")}.` : `die Operation von <b>${esc(p.name)}</b> hat leider nur teilweise geholfen – es ist besser als vorher, aber nicht ganz weg.`} ${pron(p).er[0].toUpperCase() + pron(p).er.slice(1)} steht wieder in Box ${i + 1}. Bitte in den nächsten Tagen nur ruhig im Schritt bewegen und dann langsam wieder antrainieren.<br><br>`);
         return;
       }
       if (p.klinik.op === "kolik" && spiel.tag >= p.klinik.bis && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {
@@ -3285,7 +3288,7 @@
             return `<li><span class="ico">🔨</span><span class="txt">Hufe (Hufschmied)<small>${p.beschlag ? "beschlagen" : "barhuf"}${p.eisenWeg ? " · ⚠️ ein Eisen fehlt" : ""} · zuletzt vor ${tageTxt2(spiel.tag - pf.huf)}${p.hufAuftrag ? " · Dauerauftrag" : ""} · ${p.ausgekratzt === spiel.tag ? "heute ausgekratzt" : "heute noch nicht ausgekratzt"} ${fremd(p) ? " · Hufschmied bestellt der Besitzer" : `<button class="mini-knopf" id="hufschmiedKnopf">🔨 Hufschmied</button>`}</small></span><span class="stat ${st[1]}">${st[0]}</span></li>`; })()}
           ${termin("💉", "Impfung (Tierarzt)", pf.impf, 2, `Influenza & Herpes alle 2 Jahreszeiten ${vorsorgeKnopf(pf.impf, 2, "impfung", `💉 impfen ${fmt(VORSORGE.impfung)}`)}`)}
           ${termin("💊", "Wurmkur", pf.wurm, 2, `im Frühjahr und Herbst ${(() => { if (datum().s % 2 === 1) return "· nächste im " + (datum().s === 1 ? "Herbst" : "Frühjahr"); const k = vorsorgeKnopf(pf.wurm, 2, "wurmkur", `🐛 Wurmkur geben (${apotheke().wurmkur || 0} da)`); return k.startsWith("<button") && !((apotheke().wurmkur || 0) > 0) ? "· keine Wurmkur in der Stallapotheke (Hofverwaltung → Hof → Futterkammer)" : k; })()}`)}
-          ${termin("🦷", "Zahnkontrolle", pf.zahn, 4, `einmal im Jahr ${vorsorgeKnopf(pf.zahn, 4, "zahn", `🦷 kontrollieren ${fmt(VORSORGE.zahn)}`)}`)}
+          ${termin("🦷", "Zahnkontrolle", pf.zahn, p.gebissFehler ? 2 : 4, `${p.gebissFehler ? "zweimal im Jahr (Gebissfehler)" : "einmal im Jahr"} ${vorsorgeKnopf(pf.zahn, p.gebissFehler ? 2 : 4, "zahn", `🦷 kontrollieren ${fmt(VORSORGE.zahn)}`)}`)}
         </ul>${box.tot ? "" : befundKarten(p, box)}`;
     } else if (aktenReiter === "ausruestung") {
       const sm = p.stockmass;
@@ -4171,7 +4174,7 @@
     const nichtErb = Object.keys(KRANK).filter(k => KRANK[k].n && !ERB_BEFUND.includes(k));
     // Dome (v322): nur, was die gewählte Rasse betreffen kann – Erbkrankheiten mit Trägeranteil in der Rasse, deren Folge-Befunde, Melanom nur bei Rassen mit Schimmel-Gen
     const R = wahl.rasse, erbHier = Object.keys(ERBKRANK).filter(k => (ERBKRANK[k].rassen[R] || 0) > 0);
-    const VL_BEFUND = { kehlkopf: "pfeifen", ocd: "ocd", sommerekzem: "ekzem", asthma: "atem", lymphoedem: "lymph", mondblind: "eru" };   // v323: Befund ↔ Veranlagung
+    const VL_BEFUND = { kehlkopf: "pfeifen", ocd: "ocd", sommerekzem: "ekzem", asthma: "atem", lymphoedem: "lymph", mondblind: "eru", ...VL_BEFUND_NEU };   // v323: Befund ↔ Veranlagung
     const erbBef = ERB_BEFUND.filter(k => KRANK[k] && (k === "melanom" ? genFreq(R, "G") > 0 : VL_BEFUND[k] ? vlRasse(VERANLAGUNG[VL_BEFUND[k]], R) > 0 : !Object.values(ERBKRANK).some(E => E.art === k) || erbHier.some(e => ERBKRANK[e].art === k)));
     dialog(`<h3>🛠️ Krankheiten selbst wählen</h3><p class="text"><small>Das Pferd kommt mit diesen Krankheiten in den Stall. Erbkrankheiten und Veranlagungen bleiben versteckt (nur Labortest/Admin).</small></p>
       <p class="text" style="margin:6px 0"><b>Zustand der Befunde:</b> <select id="kwStatus">${Object.entries(KRANK_STATUS).map(([k, t]) => `<option value="${k}" ${K.status === k ? "selected" : ""}>${t}</option>`).join("")}</select></p>
@@ -4251,7 +4254,7 @@
     const b = grundfarbe(g, ex.ton), rot = !hat(g, "E") || hat(g, "A"), dunkelFalbe = hat(g, "D") && hat(g, "E");
     const RZ = rasseZeichen(wahl.rasse), rn = rasseById(wahl.rasse).name;
     // v433: Kopfform (nur Formen, die bei der Rasse vorkommen) und Ohrstellung für die Vorschau
-    const kf = kopfVon(wahl), typ = KOPFFORM_RASSE[wahl.rasse], formen = ["gerade", ...(typ ? [typ] : ["hecht", "ramsnase", "keil"]), "schaf", "schwein"];
+    const kf = kopfVon(wahl), typ = KOPFFORM_RASSE[wahl.rasse] || (KOPF_NEIGUNG[wahl.rasse] || [])[0], formen = ["gerade", ...(typ ? [typ] : []), "schaf", "schwein"];
     const kz0 = [zeile("x-kopf", "Kopfform", `Typische Form beim ${rn}: ${KOPFFORMEN[typ || "gerade"]}. Schafs- und Schweinskopf sind Exterieurfehler (Marktwert, Fohlenschau). Wird vererbt.`,
       exOpt("kf", formen.map(f => [f, KOPFFORMEN[f]]), kf.f))];
     if (kf.f !== "gerade") kz0.push(zeile("x-kopfs", "Ausprägung", "Wie stark die Kopfform ausgeprägt ist.", exOpt("ks", (typ || ["schaf", "schwein"].includes(kf.f) ? [1, 2, 3] : [1]).map(n => [n, KOPF_STUFE[n]]), kf.s)));
@@ -4346,7 +4349,7 @@
       glZeigen(); });
     S.querySelectorAll("[data-glex]").forEach(b => b.onclick = () => { wahl.muster = null; const k = b.dataset.glex, v = b.dataset.v;
       if (k === "maul") { wahl.ex.pangare = v === "mehl" ? .8 : .2; wahl.ex.dunkel = v === "dunkel"; }
-      else if (k === "kf") { const typ = KOPFFORM_RASSE[wahl.rasse]; wahl.kopf = { f: v, s: v === "gerade" ? 0 : (typ === v || v === "schaf" || v === "schwein") ? 2 : 1 }; }
+      else if (k === "kf") { const typ = KOPFFORM_RASSE[wahl.rasse] || (KOPF_NEIGUNG[wahl.rasse] || [])[0]; wahl.kopf = { f: v, s: v === "gerade" ? 0 : (typ === v || v === "schaf" || v === "schwein") ? 2 : 1 }; }
       else if (k === "ks") wahl.kopf = { ...kopfVon(wahl), s: +v };
       else if (k === "oR" || k === "oL") (wahl.ohrVorschau = wahl.ohrVorschau || { R: "vorne", L: "vorne" })[k[1]] = v;
       else if (k === "abzForm") wahl.ex.abzForm = v;
@@ -4882,6 +4885,9 @@
     Object.keys(f).forEach(k => { f[k] *= futterFaktor(p, k); });   // Fütterung (F3): Futterzustand, Raufutter, Stärke, Mineralien
     f.lahmheit *= hufZuLang(p) * (p.eisenWeg ? 1.5 : 1) * (p.ocd ? 1.3 : 1);
     if (ort === "box" && box) { const BF = bodenFaktoren(box); Object.keys(BF).forEach(k => { if (f[k] != null) f[k] *= BF[k]; }); }   // v356: Boden und Ausstattung der Box
+    Object.entries(BEFUND_ZUSATZ).forEach(([k, fn]) => { f[k] = fn(p, box, ort, s, j); });   // v514: neue Krankheiten (Rasse, Alter, Arbeit, Fütterung)
+    if (f.hufrehe != null && befundListe(p).some(b => b.art === "ems")) f.hufrehe *= 3;   // EMS: Hufrehe-Gefahr
+    if (f.schlund != null && befundListe(p).some(b => b.art === "megaoes")) f.schlund *= 3;   // Megaösophagus: Schlundverstopfung
     return Object.keys(KRANK).filter(k => f[k] != null).map(k => [k, BEFUND_RISIKO * KRANK[k].gew * konst * wohlF * (k === "arthrose" || k === "cushing" ? 1 : altF) * f[k]]);
   }
   const URSACHE = {
@@ -5459,7 +5465,7 @@
   const VORSORGE = { impfung: 60, zahn: 70, blutKlein: 40, blutGross: 120, putzzeug: 35 };
   const geimpft = p => p.pflege && spiel.tag - (p.pflege.impf || -999) <= 2 * tpj();
   const wurmFrisch = p => p.pflege && spiel.tag - (p.pflege.wurm || -999) <= tpj();
-  const zahnUeber = p => p.pflege && spiel.tag - (p.pflege.zahn || -999) > 4 * tpj();
+  const zahnUeber = p => p.pflege && spiel.tag - (p.pflege.zahn || -999) > ((veranlagungVon(p).biss || 0) >= 0.3 ? 2 : 4) * tpj();   // v514: Gebissfehler (Über-/Unterbiss) → zweimal im Jahr
   const inQuarantaene = p => !!(p.quarantaene && spiel.tag - p.quarantaene < tpj());
   const eigenesPutzzeug = p => !!p.putzzeug || inQuarantaene(p);
   const ansteckendeBefunde = p => befundListe(p).filter(b => ANSTECKEND[b.art]);
@@ -5534,7 +5540,7 @@
   // Vorsorge beim Tierarzt (ohne extra Hausbesuch)
   function vorsorge(p, was) {
     if (was === "impfung") { p.pflege.impf = spiel.tag; rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: Impfung Influenza und Herpes`, betrag: VORSORGE.impfung }], [p.id], `Impfung ${p.name} – Rechnung`, `<b>${esc(p.name)}</b> ist gegen Influenza und Herpes geimpft (schützt etwa 2 Jahreszeiten).<br><br>`); }
-    if (was === "zahn") { p.pflege.zahn = spiel.tag; rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: Zahnkontrolle und Raspeln`, betrag: VORSORGE.zahn }], [p.id], `Zahnkontrolle ${p.name} – Rechnung`, `die Zähne von <b>${esc(p.name)}</b> sind kontrolliert und Haken abgeraspelt.<br><br>`); }
+    if (was === "zahn") { p.pflege.zahn = spiel.tag; const gf = (veranlagungVon(p).biss || 0) >= 0.3; if (gf) p.gebissFehler = true; rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: Zahnkontrolle und Raspeln`, betrag: VORSORGE.zahn }], [p.id], `Zahnkontrolle ${p.name} – Rechnung`, `die Zähne von <b>${esc(p.name)}</b> sind kontrolliert und Haken abgeraspelt.<br><br>${gf ? `Der Tierarzt hat einen <b>Gebissfehler</b> (Über-/Unterbiss) festgestellt: Die Zähne nutzen sich ungleich ab – ab jetzt zweimal im Jahr kontrollieren.<br><br>` : ""}`); }
   }
   // ---------- Lager: Zubehör bleibt auf dem Hof, wenn ein Pferd geht (Putzzeug, Hufschuhe) – weitergeben oder spenden ----------
   const lager = () => (spiel.lager = spiel.lager || { putzzeug: [], hufschuhe: [] });
@@ -5710,7 +5716,7 @@
     wasserkopf: { n: "Hydrocephalus (Wasserkopf)", kurz: "Wasserkopf", rassen: { friese: 0.12, barockpinto: 0.06 }, folge: "tot", text: "das Fohlen hatte einen stark vergrößerten Schädel (Wasserkopf) und kam tot zur Welt. Die Geburt war für die Stute schwer" },
     hypp: { n: "HYPP (Hyperkaliämische periodische Paralyse)", kurz: "HYPP", rassen: { quarter: 0.02, paint: 0.03, appaloosa: 0.01 }, dominant: true, folge: "befund", art: "hypp", ab: 4 },
     herda: { n: "HERDA (Hautkrankheit)", kurz: "HERDA", rassen: { quarter: 0.035, paint: 0.03, appaloosa: 0.01 }, folge: "befund", art: "herda", ab: 6 },
-    pssm: { n: "PSSM1 (Muskelerkrankung)", kurz: "PSSM1", rassen: { quarter: 0.08, paint: 0.08, appaloosa: 0.05, noriker: 0.1, shire: 0.3, tinker: 0.12, clydesdale: 0.02, welshcob: 0.02 }, dominant: true, folge: "befund", art: "pssm", ab: 8 },
+    pssm: { n: "PSSM1 (Muskelerkrankung)", kurz: "PSSM1", rassen: { haflinger: 0.02, quarter: 0.08, paint: 0.08, appaloosa: 0.05, noriker: 0.1, shire: 0.3, tinker: 0.12, clydesdale: 0.02, welshcob: 0.02 }, dominant: true, folge: "befund", art: "pssm", ab: 8 },
     zwerg_s: { n: "Zwergwuchs (ACAN, Shetlandpony)", kurz: "ACAN", rassen: { shetty: 0.15 }, folge: "acan" },
     nfs: { n: "Naked Foal Syndrome (NFS)", kurz: "NFS", rassen: { tekke: 0.05 }, folge: "tod", jz: 1,
       text: "das Fohlen kam ohne Fell zur Welt (Naked Foal Syndrome). Die Haut ist schuppig und empfindlich, die meisten dieser Fohlen sterben in den ersten Monaten" },
@@ -5842,7 +5848,7 @@
     pfeifen: { n: "Kehlkopfpfeifen", rassen: { noriker: 0.2, barockpinto: 0.1, lewitzer: 0, vollblut: 0.35, hannoveraner: 0.3, trakehner: 0.2, angloaraber: 0.25, clydesdale: 0.3, shire: 0.3, friese: 0.1, tinker: 0.08, araber: 0.02, shagya: 0.03, shetty: 0, isi: 0, fjord: 0, haflinger: 0, welshcob: 0, fell: 0, dales: 0 }, sonst: 0.05 },
     ocd: { n: "OCD/Chips", rassen: { hannoveraner: 0.3, vollblut: 0.25, quarter: 0.2, trakehner: 0.25, angloaraber: 0.2, friese: 0.25, andalusier: 0.15, lipizzaner: 0.12, shetty: 0.03, isi: 0.03, fell: 0.04, dales: 0.04 }, sonst: 0.08 },
     atem: { n: "Empfindliche Atemwege", rassen: { lipizzaner: 0.3, hannoveraner: 0.25, friese: 0.25, andalusier: 0.2, trakehner: 0.2 }, sonst: 0.12 },
-    eru: { n: "Mondblindheit (ERU)", rassen: { appaloosa: 0.45, knabstrupper: 0.4, noriker: 0.1 }, sonst: 0.06 },   // v442: häufigste Augenkrankheit, Tigerpferde mit vielfachem Risiko
+    eru: { n: "Mondblindheit (ERU)", rassen: { appaloosa: 0.45, knabstrupper: 0.4, isi: 0.15, noriker: 0.1 }, sonst: 0.06 },   // v442: häufigste Augenkrankheit, Tigerpferde mit vielfachem Risiko
     lymph: { n: "Lymphödem (CPL)", rassen: { barockpinto: 0.18, noriker: 0.15, lewitzer: 0, clydesdale: 0.45, shire: 0.4, tinker: 0.25, friese: 0.15, fell: 0.08, dales: 0.08, welshcob: 0.05 }, sonst: 0 } };   // v316: chronisch progressives Lymphödem der Kaltblüter mit Fesselbehang → Mauke
   const vlRasse = (V, r) => V.rassen[r] != null ? V.rassen[r] : V.sonst;   // Anteil je Rasse (0 = kommt in der Rasse nicht vor)
   const vlFreq = (p, V) => Object.entries(rassenMix(p)).reduce((a, [r, pr]) => a + vlRasse(V, r) * pr / 100, 0);
@@ -5894,6 +5900,8 @@
       if (p.ocd && jz >= 12 && !da("ocd") && Math.random() < 0.04) befundNeu(p, "ocd", 1, URSACHE.ocd(p));
       // Melanome: an das Schimmel-Gen gekoppelt, häufiger mit dem Alter (in echt hat die Mehrheit der alten Schimmel welche)
       if (hat(genVon(p), "G") && jz >= 24 && !da("melanom") && Math.random() < Math.min(0.15, (jz - 20) / 400)) befundNeu(p, "melanom", 1, URSACHE.melanom(p));
+      if (anzahl(genVon(p), "Z") === 2 && jz >= 4 && !da("mcoa") && Math.random() < 0.5) befundNeu(p, "mcoa", 1, URSACHE.mcoa(p));   // v514: Silber-Gen reinerbig → Augenfehlbildungen
+      if (p.geschlecht === "Hengst" && jz >= 6 && jz <= 16 && !p.kryptPruefung) { p.kryptPruefung = true; if (Math.random() < (v.krypt || 0) * 0.5) befundNeu(p, "krypt", 1, URSACHE.krypt(p)); }   // v514: Hodenhochstand zeigt sich mit 1,5–4 Jahren
     });
   }
   // Labortest Erbkrankheiten: prüft die Krankheiten aller Rassen im Pferd – Mischlinge zahlen je weiterer Rasse mehr
@@ -6039,6 +6047,193 @@
   // v414 (Dome): Verfassungsprüfung am Turniertag – fällt durch, wenn die Krankheit das Pferd spürbar beeinträchtigt (ab diesem Grad); Melanom u. Ä. nie. Kein Doping, keine Sperrfrist.
   const TURNIER_GRENZE = { lahmheit: 1, hufrehe: 1, hufabszess: 1, kolik: 1, vergiftung: 1, erkaeltung: 1, husten: 1, influenza: 1, druse: 1, herpes: 1, hautpilz: 1, ataxie: 1, hypp: 1, verletzung: 2, hornspalt: 2, asthma: 2, magengeschwuer: 3, arthrose: 3, cushing: 3, mauke: 3, strahlfaeule: 3, ocd: 3, lymphoedem: 3, mondblind: 2, pssm: 3, herda: 3, wuermer: 4, sommerekzem: 4, ekzem: 4, kehlkopf: 4, pfeifen: 4, melanom: 99 };
   const krankFit = q => { const b = befundListe(q).find(x => x.grad >= (TURNIER_GRENZE[x.art] != null ? TURNIER_GRENZE[x.art] : 3)); return b ? `${befundSicht(q, b).name}, ${GRAD_TEXT[b.grad]}` : ""; };
+
+  // ---------- Neue Krankheiten (v514, Dome: alles einbauen, was es bei unseren Rassen in echt gibt) ----------
+  // Erbkrankheiten mit Gentest: LFS, OAAM (Araber), MH (Quarter/Paint), Leberfibrose (Haflinger) · Veranlagungen ohne Gentest: Sarkoid, Hautkrebs, EMS, Aorta/Megaösophagus (Friese), Shivers, Hodenhochstand, Gebiss
+  // Befunde über Haltung/Arbeit: Sonnenbrand, Hyperlipämie, Kissing Spines, Hufrolle, Spat, Sehnenschaden, Lungenblutung, Röhrbeinbruch, Darmstein · MCOA aus dem Silber-Gen (Z/Z)
+  // Träger-Anteile und Risiken sind von Claude in echter Größenordnung gesetzt (bzn: „Neue Krankheiten v514“)
+  Object.assign(ERBKRANK, {
+    lfs: { n: "LFS (Lavender Foal Syndrome)", kurz: "LFS", rassen: { araber: 0.05, angloaraber: 0.02, shagya: 0.02 }, folge: "tod", tage: 1,
+      text: "das Fohlen hat Krämpfe, kann nicht aufstehen und nicht saugen (Lavender Foal Syndrome). Es kann nicht überleben und musste eingeschläfert werden" },
+    oaam: { n: "OAAM (Fehlbildung der oberen Halswirbel)", kurz: "OAAM", rassen: { araber: 0.03, angloaraber: 0.015, shagya: 0.015 }, folge: "tod", tage: 1,
+      text: "die ersten Halswirbel des Fohlens sind fehlgebildet (OAAM): Es hält den Kopf schief, kann kaum aufstehen und ist nicht lebensfähig" },
+    mh: { n: "MH (Maligne Hyperthermie)", kurz: "MH", rassen: { quarter: 0.01, paint: 0.01, appaloosa: 0.005 }, dominant: true, folge: "befund", art: "mh", ab: 4 },
+    chf: { n: "Angeborene Leberfibrose (Haflinger)", kurz: "CHF", rassen: { haflinger: 0.03 }, folge: "tod", jz: 2,
+      text: "die Leber des Fohlens ist von Geburt an vernarbt (angeborene Leberfibrose). Es bleibt schwach, magert ab und stirbt in den ersten Monaten" } });
+  Object.assign(KRANK, {
+    mh: { n: "MH (Maligne Hyperthermie)", ico: "🌡️", bereich: "ruecken", chronisch: true, gew: 0, start: [1, 2], selbst: 0, schlimmer: .05, g: .8, tod: 2, kosten: 130,
+      anz: ["zittert und schwitzt ohne Anstrengung", "hat harte Muskeln und erhöhte Temperatur"], schwer: "hat hohes Fieber, zittert am ganzen Körper und bricht fast zusammen" },
+    sarkoid: { n: "Sarkoid (Hauttumor)", ico: "🔴", bereich: "haut", chronisch: true, gew: .02, start: [1, 2], selbst: 0, schlimmer: .03, g: .2, kosten: 110, heil: 8,
+      anz: ["hat eine krustige, haarlose Stelle", "hat einen warzigen Knoten in der Haut", "hat wunde Stellen am Augenlid, in der Achsel oder am Bauch"], schwer: "der Knoten wächst, blutet und entzündet sich" },
+    sonnenbrand: { n: "Sonnenbrand (rosa Haut)", ico: "☀️", bereich: "haut", gew: .35, start: [1, 2], selbst: .5, schlimmer: .15, g: .5, kosten: 60, heil: 2,
+      anz: ["hat eine gerötete, schuppige Nase", "scheuert sich an der rosa Haut an Nase und Maul", "die rosa Haut an den Beinen ist gerötet"], schwer: "die Haut ist wund, nässt und verkrustet" },
+    augenkrebs: { n: "Augenlid-Krebs (Plattenepithelkarzinom)", ico: "👁️", bereich: "haut", chronisch: true, gew: .1, start: [1, 2], selbst: 0, schlimmer: .04, g: .3, kosten: 140, heil: 8,
+      anz: ["hat eine rosa, wuchernde Stelle am Augenlid", "das Auge tränt, am Lidrand sitzt ein rauer Knoten"], schwer: "der Tumor ist groß und blutet, das Auge ist stark gereizt" },
+    ems: { n: "EMS (Equines Metabolisches Syndrom)", ico: "🍩", bereich: "futter", chronisch: true, gew: .1, start: [1, 2], selbst: 0, schlimmer: .03, g: .2, kosten: 120, heil: 8,
+      anz: ["hat Fettpolster am Mähnenkamm und am Schweifansatz", "ist trotz wenig Futter dick und frisst gierig", "wirkt träge, die Hufe sind warm"], schwer: "ist sehr dick und steht schon wie auf Eiern (Rehe-Gefahr!)" },
+    hyperlipaemie: { n: "Hyperlipämie", ico: "🥛", bereich: "futter", gew: .08, start: [3, 3], selbst: 0, schlimmer: .35, g: 3, tod: 3, kosten: 250, heil: 5,
+      anz: ["ist matt, frisst kaum noch und steht teilnahmslos da", "schwankt und hat Durchfall"], schwer: "liegt viel, ist apathisch und frisst nicht mehr" },
+    kissing: { n: "Kissing Spines (Rücken)", ico: "🦴", bereich: "ruecken", chronisch: true, gew: .02, start: [1, 2], selbst: 0, schlimmer: .03, g: .4, kosten: 160, heil: 8,
+      anz: ["ist beim Satteln und Gurten empfindlich", "buckelt oder wird im Rücken fest", "mag nicht auf der Hinterhand arbeiten"], schwer: "ist unreitbar und schwingt nicht mehr im Rücken" },
+    hufrolle: { n: "Hufrollenerkrankung (Podotrochlose)", ico: "🦶", bereich: "huf", chronisch: true, gew: .03, start: [1, 2], selbst: 0, schlimmer: .03, g: .4, kosten: 150, heil: 8,
+      anz: ["geht vorne klamm und tritt mit der Zehe auf", "ist auf hartem Boden vorne kurzschrittig", "lahmt vorne nach dem Wenden"], schwer: "lahmt dauernd auf beiden Vorderbeinen" },
+    spat: { n: "Spat (Arthrose im Sprunggelenk)", ico: "🦵", bereich: "huf", chronisch: true, gew: .03, start: [1, 2], selbst: 0, schlimmer: .03, g: .4, kosten: 150, heil: 8,
+      anz: ["geht hinten steif an", "zieht die Hinterhand beim Angaloppieren nicht richtig nach", "ist nach dem Stehen hinten steif"], schwer: "lahmt hinten hochgradig" },
+    sehne: { n: "Sehnenschaden (Beugesehne)", ico: "🦵", bereich: "huf", gew: .02, start: [2, 3], selbst: 0, schlimmer: .10, g: 1.5, kosten: 220, heil: 12,
+      anz: ["hat ein warmes, geschwollenes Bein", "lahmt nach dem Training", "hat hinten am Bein eine verdickte Stelle (Sehne)"], schwer: "lahmt hochgradig, die Sehne ist stark verdickt" },
+    eiph: { n: "Lungenblutung (EIPH)", ico: "🩸", bereich: "klima", chronisch: true, gew: .05, start: [1, 2], selbst: 0, schlimmer: .03, g: .4, kosten: 150, heil: 6,
+      anz: ["hat nach dem Galopp Blut an den Nüstern", "hustet nach starker Anstrengung und schluckt oft", "lässt plötzlich in der Leistung nach"], schwer: "blutet stark aus den Nüstern und bekommt kaum Luft" },
+    fraktur: { n: "Röhrbeinbruch", ico: "🦴", bereich: "huf", gew: .01, start: [4, 4], selbst: 0, schlimmer: .3, g: 4, tod: 3, kosten: 400, heil: 14,
+      anz: ["lahmt plötzlich hochgradig und belastet ein Bein kaum noch"], schwer: "kann das Bein nicht mehr belasten" },
+    darmstein: { n: "Darmstein (Enterolith)", ico: "🔘", bereich: "futter", gew: .03, start: [2, 3], selbst: .05, schlimmer: .20, g: 2, tod: 2, kosten: 200, heil: 3,
+      anz: ["hat immer wieder leichte Koliken", "scharrt und schaut zum Bauch, der Kot ist spärlich"], schwer: "hat starke Koliken, der Darm ist verlegt" },
+    aorta: { n: "Aortenwandschwäche (Friese)", ico: "❤️", bereich: "ruecken", chronisch: true, gew: .02, start: [1, 1], selbst: 0, schlimmer: .02, g: .2, tod: 1, kosten: 200,
+      anz: ["ermüdet schnell und atmet schwer", "schwitzt bei wenig Arbeit und wird matt"], schwer: "bricht bei Belastung fast zusammen" },
+    megaoes: { n: "Megaösophagus (erweiterte Speiseröhre)", ico: "😖", bereich: "futter", chronisch: true, gew: .02, start: [1, 1], selbst: 0, schlimmer: .02, g: .3, kosten: 130,
+      anz: ["würgt und hustet beim Fressen", "magert trotz gutem Futter ab", "hat Futterreste an den Nüstern"], schwer: "kann kaum noch schlucken" },
+    shivers: { n: "Shivers (Zittern der Hinterhand)", ico: "📳", bereich: "ruecken", chronisch: true, gew: .02, start: [1, 1], selbst: 0, schlimmer: .02, g: .15, kosten: 100,
+      anz: ["zieht beim Rückwärtsgehen ein Hinterbein krampfhaft hoch", "zittert mit dem Schweif, wenn man die Hinterhufe gibt"], schwer: "die Hinterhand krampft schon beim Stehen" },
+    krypt: { n: "Hodenhochstand (Kryptorchismus)", ico: "⚪", bereich: "zucht", chronisch: true, gew: 0, start: [1, 1], selbst: 0, schlimmer: .005, g: .05, kosten: 90,
+      anz: ["hat nur einen Hoden im Hodensack – der andere ist nicht abgestiegen"], schwer: "hat Schmerzen im Bauch (Hodentumor oder Stieldrehung)" },
+    mcoa: { n: "Augenfehlbildung (MCOA)", ico: "👁️", bereich: "haut", chronisch: true, gew: 0, start: [1, 1], selbst: 0, schlimmer: .01, g: .1, kosten: 100,
+      anz: ["hat trübe Stellen und Zysten am Auge", "sieht in der Dämmerung schlecht"], schwer: "sieht auf dem Auge kaum noch etwas" } });
+  Object.assign(HILFT, { mh: { boxenruhe: .4, kuehlen: .4, schmerzmittel: .2 }, sarkoid: {}, sonnenbrand: { wundsalbe: .6, boxenruhe: .3 }, augenkrebs: {}, ems: { schritt: .4 },
+    hyperlipaemie: { boxenruhe: .3, schmerzmittel: .2 }, kissing: { schmerzmittel: .3, schritt: .3, kortison: .2 }, hufrolle: { schmerzmittel: .35, beschlag: .35, kortison: .15 },
+    spat: { schritt: .4, schmerzmittel: .35, kortison: .2 }, sehne: { boxenruhe: .4, kuehlen: .4, schmerzmittel: .3, verband: .2 }, eiph: { boxenruhe: .4, hustensaft: .2 },
+    fraktur: { boxenruhe: .1, schmerzmittel: .1 }, darmstein: { schmerzmittel: .3, schritt: .2 }, aorta: { boxenruhe: .2 }, megaoes: {}, shivers: { schritt: .3 }, krypt: {}, mcoa: {} });
+  Object.assign(SCHADET, { ems: { boxenruhe: .1 }, sehne: { schritt: .2 }, kissing: { boxenruhe: .05 }, fraktur: { schritt: .3 }, aorta: { schritt: .1 } });
+  Object.assign(PLAN, { mh: ["boxenruhe", "kuehlen"], sarkoid: [], sonnenbrand: ["wundsalbe", "boxenruhe"], augenkrebs: [], ems: ["schritt"], hyperlipaemie: ["boxenruhe", "schmerzmittel"],
+    kissing: ["schmerzmittel", "schritt"], hufrolle: ["schmerzmittel", "beschlag"], spat: ["schritt", "schmerzmittel"], sehne: ["boxenruhe", "kuehlen", "schmerzmittel"], eiph: ["boxenruhe"],
+    fraktur: [], darmstein: [], aorta: ["boxenruhe"], megaoes: [], shivers: ["schritt"], krypt: [], mcoa: [] });
+  Object.assign(URSACHE, {
+    mh: () => "Erbkrankheit (MH)", sarkoid: () => "Veranlagung (Papillomviren, Fliegenstiche)",
+    sonnenbrand: (p, ort) => ort === "weide" ? "pralle Sonne auf der Weide bei rosa Haut" : "Sonne durch das Boxenfenster bei rosa Haut",
+    augenkrebs: () => "unpigmentiertes Augenlid, viel Sonne über die Jahre", ems: () => "Veranlagung und Übergewicht", hyperlipaemie: () => "dickes Pony hat zu wenig gefressen (Stress, Krankheit, Hunger)",
+    kissing: () => "Rücken überlastet (Veranlagung des Baus)", hufrolle: () => "Belastung der Vorderhufe", spat: () => "Belastung der Sprunggelenke",
+    sehne: () => "Überlastung bei hartem Training", eiph: () => "extreme Anstrengung im Galopp", fraktur: () => "Belastungsbruch bei hartem Training",
+    darmstein: () => "Mineralstein im Darm (viel Luzerne)", aorta: () => "Veranlagung der Friesen", megaoes: () => "Veranlagung der Friesen", shivers: () => "Veranlagung (Kaltblut)",
+    krypt: () => "Veranlagung", mcoa: () => "Silber-Gen reinerbig (Z/Z)" });
+  Object.assign(UCHECK, { mh: "longe", sarkoid: "klinisch", sonnenbrand: "klinisch", augenkrebs: "klinisch", ems: "blutGross", hyperlipaemie: "blutGross", kissing: "roentgen", hufrolle: "roentgen", spat: "roentgen",
+    sehne: "gang", eiph: "lunge", fraktur: "roentgen", darmstein: "klinisch", aorta: "klinisch", megaoes: "klinisch", shivers: "longe", krypt: "klinisch", mcoa: "klinisch" });
+  Object.assign(TURNIER_GRENZE, { mh: 1, sarkoid: 99, sonnenbrand: 4, augenkrebs: 3, ems: 3, hyperlipaemie: 1, kissing: 2, hufrolle: 2, spat: 2, sehne: 1, eiph: 1, fraktur: 1, darmstein: 1, aorta: 1, megaoes: 3, shivers: 3, krypt: 99, mcoa: 3 });
+  KRANK.sarkoid.rat = "Sarkoide niemals selbst behandeln oder anschneiden – das macht sie bösartiger. Der Tierarzt entfernt sie (Laser, Kälte oder OP); oft kommen sie an anderer Stelle wieder. Fliegen fernhalten (Fliegendecke, Fliegenmaske).";
+  KRANK.augenkrebs.rat = "Der Tumor am Augenlid wächst weiter, wenn man nichts tut. Früh operieren (Entfernen mit Kältetherapie) – dann sind die Chancen gut. Rosa Lider vor Sonne schützen (Fliegenmaske mit UV-Schutz, Schatten).";
+  KRANK.ems.rat = "EMS ist nicht heilbar, aber gut zu kontrollieren: abnehmen (Futterzustand 5 anstreben), zucker- und stärkearm füttern, kein junges Frühlingsgras (Paddock statt Weide), täglich bewegen. Der Futterexperte stellt eine Diät auf. Hufrehe-Gefahr!";
+  KRANK.hyperlipaemie.rat = "Notfall bei dicken Ponys, die nicht mehr fressen: Der Tierarzt gibt Infusionen und Medikamente. Das Pony muss wieder fressen – Futter anbieten, Stress vermeiden.";
+  KRANK.fraktur.rat = "Ein Röhrbeinbruch muss ruhiggestellt und in der Klinik operiert werden (Platte und Schrauben). Ohne Operation hat das Pferd keine Chance. Nicht bewegen, nicht führen!";
+  KRANK.darmstein.rat = "Darmsteine lassen sich nicht mit Medikamenten lösen. Wiederkehrende Koliken bei Arabern sind oft Darmsteine – nur eine Operation in der Klinik entfernt sie. Luzerne und Mineralfutter sparsam geben.";
+  KRANK.aorta.rat = "Die Aortenwand beim Friesen ist erblich schwach. Es gibt keine Behandlung; schonen, nicht fordern. Ein Riss der Hauptschlagader führt zum plötzlichen Tod.";
+  KRANK.megaoes.rat = "Nicht heilbar: eingeweichtes Futter, mehrere kleine Mahlzeiten, Futter erhöht anbieten. Die Gefahr von Schlundverstopfung ist größer.";
+  KRANK.krypt.rat = "Solche Hengste sind von der Zucht ausgeschlossen. Der zurückgebliebene Hoden kann entarten oder sich verdrehen – meist wird er mit einer Kastration in der Klinik entfernt.";
+  KRANK.mcoa.rat = "Nicht heilbar. Das Pferd sieht in der Dämmerung schlecht – ruhig und gleichmäßig führen. Das Silber-Gen reinerbig ist die Ursache: nicht zwei Silber-Träger verpaaren.";
+  Object.assign(KRANK_INFO, {
+    mh: "Maligne Hyperthermie (Quarter, Paint; dominant): Bei Stress, Anstrengung oder Narkose entgleist die Muskulatur – Zittern, Schwitzen, Fieber. Kühlen, Boxenruhe, den Tierarzt rufen; Narkosen vorher mit dem Tierarzt besprechen.",
+    sarkoid: "Häufigster Hauttumor des Pferdes (Papillomviren, über Fliegen übertragen): krustige, warzige oder knotige Stellen an Augenlid, Achsel, Bauch oder Maul. Gutartig, aber lästig – nie selbst behandeln. Araber, Quarter und Appaloosa sind häufiger betroffen.",
+    sonnenbrand: "Pferde mit rosa Haut (große Blesse, Laterne, Schecken, Appaloosa, Cremello) bekommen im Sommer leicht Sonnenbrand an Nase und Maul – auch weiße Beine sind lichtempfindlich. Schatten (Box), Wundsalbe.",
+    augenkrebs: "Plattenepithelkarzinom am Augenlid: wuchernde rosa Stelle am unpigmentierten Lid – bei Pferden mit rosa Haut und viel Sonne ab etwa 8 Jahren; Haflinger haben eine Veranlagung. Früh operieren.",
+    ems: "Equines Metabolisches Syndrom: Insulinresistenz bei zu dicken, leichtfuttrigen Pferden (v. a. Ponys, Haflinger, Barockpferde, Quarter). Fettpolster am Mähnenkamm und Schweifansatz, Hufrehe-Gefahr. Nicht heilbar, aber gut zu kontrollieren.",
+    hyperlipaemie: "Gefährliche Entgleisung des Fettstoffwechsels bei dicken Ponys: Fressen sie wenig (Stress, Krankheit, Hunger), baut der Körper so schnell Fett ab, dass die Leber verfettet. Notfall – Tierarzt.",
+    kissing: "Kissing Spines: Dornfortsätze der Wirbel stoßen im Rücken aneinander – Rückenschmerzen, Buckeln, schlechter Takt, vor allem bei Sportpferden (Warmblut, Vollblut). Training, Physio, Spritzen; im Röntgen sichtbar, bei schweren Fällen OP.",
+    hufrolle: "Hufrollenerkrankung (Podotrochlose): Schmerzen an Strahlbein und Hufrolle der Vorderhufe – klammer Gang, vor allem bei Quarter Horses und Warmblütern. Orthopädischer Beschlag und Schmerzmittel lindern; nicht heilbar.",
+    spat: "Arthrose im Sprunggelenk: Das Pferd geht hinten steif und zieht die Hinterhand nicht nach – bei Isländern, Quarter Horses und Sportpferden. Bewegung, Schmerzmittel, Gelenkinjektionen.",
+    sehne: "Schaden an der Beugesehne durch Überlastung (Galopp, Springen, Distanz): warmes, verdicktes Bein, Lahmheit. Kühlen, Boxenruhe, Schmerzmittel und sehr langsamer Wiederaufbau – Rückfälle sind häufig.",
+    eiph: "Lungenblutung: Bei extremer Anstrengung reißen feine Lungengefäße, Blut kommt aus den Nüstern. Typisch bei Rennpferden (Vollblut, Anglo-Araber). Pause und Boxenruhe.",
+    fraktur: "Röhrbeinbruch (Belastungsbruch), vor allem bei jungen Rennpferden: Das Pferd lahmt plötzlich und kann das Bein kaum belasten. Notfall – ruhigstellen, Klinik; die Bruch-OP ist oft möglich, aber riskant.",
+    darmstein: "Darmsteine (Enterolithen): Mineralsteine im Dickdarm lösen wiederkehrende Koliken aus – bei Arabern gehäuft, oft nach viel Luzerne. Nur eine OP in der Klinik entfernt sie.",
+    aorta: "Aortenwandschwäche beim Friesen: Die Hauptschlagader kann bei Anstrengung reißen – plötzlicher Tod. Erblich, kein Gentest. Warnzeichen: schnelle Ermüdung, Atemnot. Nicht heilbar.",
+    megaoes: "Erweiterte, schlaffe Speiseröhre (Friese): Futter wird schlecht transportiert – Würgen, Husten, öfter Schlundverstopfung. Nicht heilbar: eingeweichtes Futter, kleine Mahlzeiten.",
+    shivers: "Shivers: Muskelkrampf der Hinterhand, vor allem beim Rückwärtsgehen oder Hufe geben (Shire, Clydesdale, Kaltblüter). Fortschreitend, nicht heilbar – gleichmäßige Bewegung, stärkearm füttern.",
+    krypt: "Hodenhochstand (Kryptorchismus): ein oder beide Hoden sind nicht in den Hodensack gewandert. Erblich; solche Hengste sind von der Zucht ausgeschlossen. Meist Kastration in der Klinik.",
+    mcoa: "Multiple Augenfehlbildungen (MCOA): reinerbiges Silber-Gen (Z/Z) – Zysten, trübe Linse, schlechtes Sehen in der Dämmerung. Das Silber-Gen kommt z. B. beim Islandpferd und Shetty vor." });
+  Object.assign(ERB_INFO, {
+    lfs: "Lavender Foal Syndrome (Araber, v. a. Ägypter, rezessiv): betroffene Fohlen haben Krämpfe und können nicht aufstehen – sie müssen eingeschläfert werden. Träger sind gesund.",
+    oaam: "OAAM (Araber, rezessiv): Fehlbildung der oberen Halswirbel. Betroffene Fohlen halten den Kopf schief und können nicht richtig aufstehen.",
+    mh: "Maligne Hyperthermie (Quarter, Paint, dominant): schon ein Gen macht anfällig – bei Stress, Anstrengung oder Narkose Zittern, Schwitzen, Fieber.",
+    chf: "Angeborene Leberfibrose (Haflinger, rezessiv): betroffene Fohlen haben eine vernarbte Leber und sterben in den ersten Monaten." });
+  // Veranlagungen (vererbt, versteckt): 0 = keine, 1 = sehr stark – Rassenwerte wie in echt, „sonst“ = alle anderen Rassen
+  Object.assign(VERANLAGUNG, {
+    sarkoid: { n: "Neigung zu Sarkoiden", rassen: { appaloosa: 0.35, quarter: 0.3, araber: 0.3, angloaraber: 0.25, paint: 0.25, shagya: 0.2, knabstrupper: 0.2, shetty: 0.04, shire: 0.04, clydesdale: 0.04 }, sonst: 0.06 },
+    hautkrebs: { n: "Neigung zu Hautkrebs (Augenlid)", rassen: { haflinger: 0.4, appaloosa: 0.3, paint: 0.3, lewitzer: 0.2, tinker: 0.15, fjord: 0.15, araber: 0.02, vollblut: 0.02 }, sonst: 0.06 },
+    ems: { n: "Neigung zu EMS", rassen: { shetty: 0.6, haflinger: 0.5, welshcob: 0.4, isi: 0.35, fjord: 0.35, fell: 0.3, dales: 0.3, tinker: 0.3, quarter: 0.3, friese: 0.3, barockpinto: 0.3, lewitzer: 0.3, noriker: 0.25, shire: 0.25, clydesdale: 0.25, paint: 0.25,
+      andalusier: 0.25, lipizzaner: 0.25, knabstrupper: 0.2, appaloosa: 0.2, araber: 0.15, marwari: 0.15, hannoveraner: 0.15, trakehner: 0.15, shagya: 0.12, angloaraber: 0.1, vollblut: 0.05, tekke: 0.05 }, sonst: 0.15 },
+    aorta: { n: "Neigung zum Aortenriss (Friese)", rassen: { friese: 0.25, barockpinto: 0.15 }, sonst: 0 },
+    megaoes: { n: "Megaösophagus (Friese)", rassen: { friese: 0.15, barockpinto: 0.1 }, sonst: 0 },
+    shiver: { n: "Neigung zu Shivers", rassen: { shire: 0.35, clydesdale: 0.35, noriker: 0.12, tinker: 0.06, friese: 0.05, hannoveraner: 0.04, trakehner: 0.04, barockpinto: 0.03 }, sonst: 0.01 },
+    krypt: { n: "Neigung zum Hodenhochstand", rassen: { quarter: 0.08, paint: 0.08, appaloosa: 0.08, shire: 0.06, clydesdale: 0.06, noriker: 0.06, tinker: 0.05, friese: 0.05, shetty: 0.05 }, sonst: 0.03 },
+    biss: { n: "Neigung zu Gebissfehlern", rassen: { shetty: 0.45, araber: 0.25, shagya: 0.15, angloaraber: 0.15 }, sonst: 0.05 } });
+  Object.assign(VL_INFO, {
+    sarkoid: "Neigung zu Sarkoiden (Hauttumoren) – häufiger bei Appaloosa, Quarter und Arabern.",
+    hautkrebs: "Neigung zum Plattenepithelkarzinom am Augenlid – Haflinger tragen oft die Genvariante; rosa Haut und Sonne verstärken sie.",
+    ems: "Neigung zu EMS (Insulinresistenz) – leichtfuttrige Ponys, Haflinger, Barockpferde und Quarter; zu dick plus Gras = Gefahr.",
+    aorta: "Neigung zur Aortenwandschwäche beim Friesen (kein Gentest).", megaoes: "Neigung zum Megaösophagus beim Friesen (kein Gentest).",
+    shiver: "Neigung zu Shivers – vor allem Shire und Clydesdale.", krypt: "Neigung zum Hodenhochstand – bei Hengsten aller Rassen, häufiger bei Quarter und Kaltblütern.",
+    biss: "Neigung zu Gebissfehlern (Über-/Unterbiss) – Shetty und Araber: die Zähne nutzen sich ungleich ab, die Zahnkontrolle ist zweimal im Jahr nötig." });
+  ERB_BEFUND.push("mh", "sarkoid", "augenkrebs", "ems", "aorta", "megaoes", "shivers", "krypt");
+  const VL_BEFUND_NEU = { sarkoid: "sarkoid", augenkrebs: "hautkrebs", ems: "ems", aorta: "aorta", megaoes: "megaoes", shivers: "shiver", krypt: "krypt" };   // Befund ↔ Veranlagung (Admin-Auswahl)
+  // Klinik-Operationen (OP_KLINIK): Preis und Erfolg wie in echt, gerundet
+  Object.assign(OP_KLINIK, {
+    sarkoidop: { art: ["sarkoid"], n: "Sarkoid entfernen", ico: "🔴", preis: 900, tage: 2, erfolg: 0.7, fertig: "das Sarkoid ist entfernt", info: "Der Tumor wird mit Laser, Kälte oder Skalpell entfernt. In etwa 7 von 10 Fällen kommt er nicht wieder – an anderer Stelle können neue wachsen." },
+    augenop: { art: ["augenkrebs"], n: "Tumor am Augenlid entfernen", ico: "👁️", preis: 1200, tage: 3, erfolg: 0.75, fertig: "der Tumor am Augenlid ist entfernt", info: "Der Tumor wird herausgeschnitten und das Lid mit Kältetherapie nachbehandelt. Früh operiert klappt es bei etwa 3 von 4 Pferden." },
+    rueckenop: { art: ["kissing"], n: "Dornfortsatz-OP (Kissing Spines)", ico: "🦴", preis: 3500, tage: 6, erfolg: 0.7, fertig: "die Dornfortsätze sind gekürzt", info: "Die sich berührenden Dornfortsätze werden gekürzt. Danach braucht das Pferd Monate Aufbautraining; bei etwa 7 von 10 Pferden verschwinden die Beschwerden." },
+    frakturop: { art: ["fraktur"], n: "Bruch-OP (Platte und Schrauben)", ico: "🦴", preis: 5000, tage: 10, erfolg: 0.6, fertig: "der Bruch ist mit Platte und Schrauben versorgt", info: "Der Knochen wird mit Platte und Schrauben stabilisiert. Etwa 6 von 10 Pferden heilen aus; danach lange Boxenruhe und Aufbau." },
+    steinop: { art: ["darmstein"], n: "Darmstein-OP (Bauchschnitt)", ico: "🔘", preis: 3500, tage: 4, erfolg: 0.85, fertig: "der Darmstein ist entfernt", info: "Bei einer Bauchoperation wird der Stein aus dem Darm geholt – etwa 85 von 100 Pferden überstehen es gut." },
+    kryptop: { art: ["krypt"], n: "Kryptorchiden-Kastration", ico: "⚪", preis: 1800, tage: 4, erfolg: 1, wallach: true, fertig: "der nicht abgestiegene Hoden ist entfernt – er ist jetzt ein Wallach", info: "Der zurückgebliebene Hoden wird im Bauch gesucht und entfernt; das Pferd wird zum Wallach. Aufwendiger als eine normale Kastration." } });
+  // Verdacht und Tests (wie bei den anderen: Tierarzt sagt nur, was er sieht – verdeckte Ursachen erst ab dem 2. Mal)
+  Object.assign(VERDACHT, {
+    mh: { bild: "Muskelzittern, Schwitzen und Fieber ohne Anstrengung", diff: ["Kreuzverschlag", "Hitzschlag", "Infekt mit Fieber"], verdacht: "MH (erbliche Muskelerkrankung)", klar: "Gentest im Labor (Erbkrankheiten)", erb: "mh", test: { labor: "krank" } },
+    sarkoid: { sofort: true, bild: "krustige, warzige Hautveränderung", diff: ["Warze", "Hautpilz", "Narbe oder Fremdkörper-Granulom"], klar: "Hautabstrich im Labor – nicht anschneiden", test: { n: "Hautabstrich (Labor)", ico: "🔬", preis: 140, tage: 3 } },
+    sonnenbrand: { bild: "Rötung und Schuppen an der rosa Haut", diff: ["Hautpilz", "Mauke", "Sonnenbrand"], verdacht: "Sonnenbrand (rosa Haut)", klar: "Hautabstrich beim Tierarzt", test: { n: "Hautabstrich", ico: "🔬", preis: 60, tage: 2 } },
+    augenkrebs: { sofort: true, bild: "Wucherung am Augenlid", diff: ["Augenlid-Krebs", "Sarkoid", "Warze (Papillom)"], klar: "Gewebeprobe (Biopsie)", test: { n: "Gewebeprobe (Biopsie)", ico: "🔬", preis: 160, tage: 3 } },
+    ems: { sofort: true, bild: "Fettpolster und Hufrehe-Neigung", diff: ["EMS (Insulinresistenz)", "Cushing (PPID)", "einfach zu dick"], klar: "Insulin-Bluttest (nüchtern)", test: { n: "Insulin-Bluttest", ico: "🩸", preis: 90, tage: 2 } },
+    hyperlipaemie: { sofort: true, bild: "Apathie und Futterverweigerung bei einem dicken Pony", diff: ["Hyperlipämie", "Kolik", "Infekt"], klar: "Blutuntersuchung (Fette im Blut)", test: { n: "Blutuntersuchung", ico: "🩸", preis: 100, tage: 0 } },
+    kissing: { sofort: true, bild: "Rückenschmerzen beim Reiten", diff: ["Kissing Spines", "Satteldruck", "Muskelverspannung"], klar: "Röntgen des Rückens", test: { n: "Röntgen des Rückens", ico: "🩻", preis: 220, tage: 0 } },
+    hufrolle: { sofort: true, bild: "Klammer Gang vorne", diff: ["Hufrollenerkrankung", "Hufgeschwür", "Rehe"], klar: "Röntgen der Hufe und Leitungsanästhesie", test: { n: "Röntgen der Hufe", ico: "🩻", preis: 200, tage: 0 } },
+    spat: { sofort: true, bild: "Steifer Gang hinten", diff: ["Spat (Sprunggelenk)", "Muskelverspannung", "Hufproblem"], klar: "Röntgen des Sprunggelenks", test: { n: "Röntgen des Sprunggelenks", ico: "🩻", preis: 150, tage: 0 } },
+    sehne: { sofort: true, bild: "Warmes, verdicktes Bein", diff: ["Sehnenschaden", "Prellung", "Phlegmone (Entzündung)"], klar: "Ultraschall der Sehnen", test: { n: "Ultraschall der Sehnen", ico: "🩻", preis: 170, tage: 0 } },
+    eiph: { sofort: true, bild: "Nasenbluten und Husten nach Anstrengung", diff: ["Lungenblutung (EIPH)", "Nasenbluten durch Verletzung", "Infekt der Atemwege"], klar: "Endoskopie der Atemwege", test: { n: "Endoskopie", ico: "🔦", preis: 180, tage: 0 } },
+    fraktur: { sofort: true, bild: "Plötzliche hochgradige Lahmheit", diff: ["Röhrbeinbruch", "Hufabszess", "Sehnenschaden"], klar: "Röntgen des Beins", test: { n: "Röntgen des Beins", ico: "🩻", preis: 150, tage: 0 } },
+    darmstein: { sofort: true, bild: "Wiederkehrende Kolik", diff: ["Darmstein", "Verstopfung", "Gasansammlung"], klar: "Ultraschall und Röntgen des Bauchs", test: { n: "Ultraschall und Röntgen des Bauchs", ico: "🩻", preis: 260, tage: 0 } },
+    aorta: { sofort: true, bild: "Schwäche und Atemnot bei Anstrengung", diff: ["Herzproblem (Aortenwand)", "schlechte Kondition", "Atemwegsinfekt"], klar: "Herz-Ultraschall (Echokardiographie)", test: { n: "Herz-Ultraschall", ico: "🩻", preis: 250, tage: 2 } },
+    megaoes: { sofort: true, bild: "Würgen und Husten beim Fressen", diff: ["Schlundverstopfung", "Megaösophagus", "Zahnprobleme"], klar: "Endoskopie der Speiseröhre", test: { n: "Endoskopie der Speiseröhre", ico: "🔦", preis: 180, tage: 0 } },
+    shivers: { bild: "Zittern der Hinterhand", diff: ["Shivers", "PSSM (Muskelerkrankung)", "Spat"], verdacht: "Shivers (Muskelkrampf der Hinterhand)", klar: "Untersuchung beim Tierarzt – einen Gentest gibt es nicht", test: { n: "Neurologische Untersuchung", ico: "🩺", preis: 100, tage: 1 } },
+    krypt: { sofort: true, bild: "ein Hoden fehlt im Hodensack", diff: ["Hodenhochstand (Kryptorchismus)", "Hoden noch nicht abgestiegen (Jungtier)"], klar: "Ultraschall der Leistengegend", test: { n: "Ultraschall (Hoden)", ico: "🩻", preis: 120, tage: 0 } },
+    mcoa: { bild: "trübe Stellen am Auge", diff: ["Hornhautgeschwür", "Grauer Star", "Zysten am Auge"], verdacht: "MCOA (Silber-Gen reinerbig)", klar: "Augenuntersuchung in der Klinik", test: { n: "Augenuntersuchung", ico: "👁️", preis: 160, tage: 3 } } });
+  // Rosa Haut (Sonnenbrand, Augenlid-Krebs): große Blesse/Laterne, Schecken- und Weißgene, Tigerhaut, Cremello, weiße Beine
+  function rosaHaut(p) {
+    if (!p || (!p.gen && !p.farbe)) return 0;
+    const g = genVon(p), abz = kopfZeichen(p).abz || [];
+    let r = abz.includes("laterne") ? 0.5 : abz.includes("breiteBlesse") || abz.includes("blesse") ? 0.35 : abz.includes("schmaleBlesse") ? 0.2 : abz.includes("keilstern") ? 0.1 : 0;
+    r += Math.min(0.4, 0.2 * Math.max(0, weissGeneZahl(g, exVon(p)))); if (anzahl(g, "Lp")) r += 0.15; if (anzahl(g, "Cr") >= 2) r += 0.35;
+    const b = beinZeichen(p); r += 0.05 * BEINE.filter(([k]) => ["fessel", "halberFuss", "fuss", "hochweiss"].includes(b[k])).length;
+    return Math.min(1, Math.round(r * 100) / 100);
+  }
+  // Risiko je Nacht (× gew): Rasse, Alter, Arbeit, Fütterung – wird in befundRisiko mit eingerechnet
+  const fsVon = p => p.futterStatus && p.futterStatus.tag >= spiel.tag - 1 ? p.futterStatus : {};   // Futterstatus von gestern (sonst keine Angaben)
+  const rasseF = (p, T, sonst) => Object.entries(rassenMix(p)).reduce((s, [r, pr]) => s + (T[r] != null ? T[r] : sonst) * pr / 100, 0);
+  const BAU_RUECKEN = { hannoveraner: 1.5, trakehner: 1.5, angloaraber: 1.5, vollblut: 1.8, knabstrupper: 1.2, quarter: 1, paint: 1, appaloosa: 1, andalusier: 0.8, lipizzaner: 0.8, araber: 0.5, shagya: 0.6 };
+  const BAU_HUFROLLE = { quarter: 1.6, paint: 1.4, appaloosa: 1.2, hannoveraner: 1.3, trakehner: 1.3, vollblut: 1.3, angloaraber: 1.1, andalusier: 0.9, lipizzaner: 0.9, friese: 0.9 };
+  const BAU_SPAT = { isi: 2, quarter: 1.4, paint: 1.2, hannoveraner: 1.2, trakehner: 1.2, welshcob: 1, haflinger: 0.8 };
+  const BAU_SEHNE = { vollblut: 2.5, angloaraber: 2, araber: 1.3, quarter: 1.3, hannoveraner: 1.2, trakehner: 1.2, shetty: 0.4, haflinger: 0.5, fjord: 0.5, shire: 0.4, clydesdale: 0.4, noriker: 0.4 };
+  const BAU_RENNEN = { vollblut: 1, angloaraber: 0.9, araber: 0.4, quarter: 0.5, tekke: 0.4 };
+  const BAU_BRUCH = { vollblut: 2, angloaraber: 1.5, quarter: 0.8, araber: 0.5 };
+  const BAU_STEIN = { araber: 3, shagya: 2.5, angloaraber: 2, vollblut: 0.8 };
+  const BEFUND_ZUSATZ = {
+    sarkoid: (p, box, ort, s) => 8 * (veranlagungVon(p).sarkoid || 0) * (s === 1 ? 1.5 : 1),
+    sonnenbrand: (p, box, ort, s) => s === 1 ? rosaHaut(p) * (ort === "weide" ? 1 : 0.15) : 0,
+    augenkrebs: (p, box, ort, s, j) => j >= 8 ? (j - 6) / 6 * rosaHaut(p) * (0.3 + 3 * Math.pow(veranlagungVon(p).hautkrebs || 0, 2)) : 0,
+    ems: p => { const v = veranlagungVon(p).ems || 0, fz = futterZustand(p); return fz >= 7 ? v * 6 * (fz - 6) / 3 : fz === 6 ? v * 0.5 : 0; },
+    hyperlipaemie: p => { const fz = futterZustand(p); if (fz < 7 || (p.zielStockmass || 150) >= 148) return 0; const S = fsVon(p);
+      return (S.hunger || S.ratio < 0.8 || p.boxenruhe || befundListe(p).some(b => b.grad >= 2 && b.art !== "hyperlipaemie") ? (fz - 6) / 3 * (befundListe(p).some(b => b.art === "ems") ? 2 : 1) : 0.1); },
+    kissing: (p, box, ort, s, j) => j >= 4 ? (0.3 + arbeitStufe(p)[1]) * rasseF(p, BAU_RUECKEN, 0.4) : 0,
+    hufrolle: (p, box, ort, s, j) => j >= 6 ? Math.min(2, (j - 5) / 4) * (0.3 + arbeitStufe(p)[1]) * rasseF(p, BAU_HUFROLLE, 0.4) : 0,
+    spat: (p, box, ort, s, j) => j >= 6 ? Math.min(2, (j - 5) / 5) * (0.3 + arbeitStufe(p)[1]) * rasseF(p, BAU_SPAT, 0.7) : 0,
+    sehne: (p, box, ort, s, j) => j >= 3 ? (0.2 + 2.8 * arbeitStufe(p)[1]) * rasseF(p, BAU_SEHNE, 1) * (j > 12 ? 1.4 : 1) : 0,
+    eiph: (p, box, ort, s, j) => { const a = arbeitStufe(p)[1]; return j >= 2 ? (a >= 0.5 ? 1 + a : a * 0.5) * rasseF(p, BAU_RENNEN, 0) : 0; },
+    fraktur: (p, box, ort, s, j) => { const a = arbeitStufe(p)[1]; return j >= 2 && j <= 8 ? (a >= 1 ? 1 : a >= 0.5 ? 0.5 : 0.05) * rasseF(p, BAU_BRUCH, 0.15) : 0; },
+    darmstein: (p, box, ort, s, j) => j >= 4 ? rasseF(p, BAU_STEIN, 0.5) * (fsVon(p).luzerne >= 1 ? 3 : 1) : 0,
+    aorta: (p, box, ort, s, j) => j >= 5 ? Math.min(2, (j - 4) / 4) * 6 * (veranlagungVon(p).aorta || 0) : 0,
+    megaoes: p => 6 * (veranlagungVon(p).megaoes || 0),
+    shivers: (p, box, ort, s, j) => j >= 2 ? 6 * (veranlagungVon(p).shiver || 0) : 0 };
   // Boxenruhe zählt nicht mehr, wenn nichts mehr da ist (gesund geworden – Boxenruhe wurde nur noch nicht beendet): Pferd darf starten
   function turnierSperre(p, box, fs) {
     const gesund = !befundListe(p).length, br = p.boxenruhe;
@@ -6060,7 +6255,7 @@
     if (turnier) return "";   // Turnier: siehe turnierSperre
     const b = bekannteBefunde(p).find(x => !x.beh && x.grad >= 3);
     if (b) return `ist krank (${KRANK[b.art] ? KRANK[b.art].n : b.art}) – erst behandeln`;
-    if (bekannteBefunde(p).some(x => ["lahmheit", "hufabszess", "hufrehe"].includes(x.art))) return "lahmt – Trainingspause, bis es ausgeheilt ist";
+    if (bekannteBefunde(p).some(x => ["lahmheit", "hufabszess", "hufrehe", "sehne", "fraktur"].includes(x.art))) return "lahmt – Trainingspause, bis es ausgeheilt ist";
     return "";
   }
   function uebSperre(p, k, ort) {
@@ -7253,7 +7448,7 @@
 
   // ---------- Fütterung F2: Futterplan, Bedarf, Nährwerte ----------
   // Futterplan je Pferd: p.futterplan = { mahl: 2|3, kg: { sorte: kg am Tag } } – Mengen werden gleichmäßig auf die Mahlzeiten verteilt. Ohne Plan: Standardplan.
-  const LEICHTFUTTRIG = ["haflinger", "fjord", "shetty", "isi", "tinker", "welshcob", "fell", "dales", "clydesdale", "noriker", "lewitzer", "barockpinto"], SCHWERFUTTRIG = ["vollblut", "araber", "tekke", "angloaraber"];   // neue Rassen hier eintragen
+  const LEICHTFUTTRIG = ["haflinger", "fjord", "shetty", "isi", "tinker", "welshcob", "fell", "dales", "clydesdale", "shire", "noriker", "lewitzer", "barockpinto"], SCHWERFUTTRIG = ["vollblut", "araber", "tekke", "angloaraber"];   // neue Rassen hier eintragen
   const PLAN_SORTEN = Object.keys(FUTTER).filter(k => !FUTTER[k].stueck && FUTTER[k].art !== "leckerli" && FUTTER[k].art !== "einstreu");
   const PLAN_SCHRITT = k => FUTTER[k].art === "raufutter" ? 0.5 : k === "oel" || k === "mineral" ? 0.05 : 0.25;
   function standardPlan(p, box) { const R = tagesRationStandard(p, box); return { mahl: 2, kg: { heu: R.raufutter, mineral: R.mineral } }; }
@@ -7399,6 +7594,7 @@
       if (alterJZ(p) >= SENIOR_AB && S.spezial !== "senior" && !(H.heucobs >= 1)) ratio *= 0.9;   // Senioren verwerten Heu schlechter (Zähne) – Seniorenfutter oder Heucobs helfen
       S.rauWenig = W.rau < B.rauMin * 0.9; S.staerkeViel = W.staerkeMahl > B.staerkeMahl || W.kraftMahl > B.kraftMahl;
       // Futter-Etappe Teil 2: Futterstroh-Anteil, Einweichfutter je Mahlzeit, Müsli, Öl
+      S.luzerne = H.luzerne || 0;   // v514: Darmsteine bei Arabern
       S.stroh = H.stroh || 0; S.strohViel = W.rau > 0 && S.stroh > W.rau / 3; S.einweich = Math.round(((H.heucobs || 0) + (H.ruebe || 0)) / (futterplanVon(p, box).mahl || 2) * 100) / 100;
       S.muesli = H.muesli || 0; S.oel = H.oel || 0; S.oelViel = (H.oel || 0) > B.oelMax + 1e-9;
       S.eiweissWenig = W.eiweiss < B.eiweiss - 3; S.eiweissViel = W.eiweiss > B.eiweiss + 6; S.mineral = W.mineral;
@@ -7542,7 +7738,7 @@
   function spezialFuer(p) {
     const hat = a => befundListe(p).some(b => b.art === a && (b.diagnose || b.bemerkt)), alt = a => (p.befundAlt || []).some(x => x.art === a && x.bis >= spiel.tag - 7);
     if (hat("kolik") || alt("kolik")) return "schonkost";
-    if (hat("hufrehe") || hat("cushing")) return "rehe";
+    if (hat("hufrehe") || hat("cushing") || hat("ems")) return "rehe";   // v514: EMS bekommt das zuckerarme Rehe-Futter
     if (hat("pssm")) return "pssm";
     if (hat("magengeschwuer")) return "magen";
     if (futterZustand(p) <= 2 || befundListe(p).filter(b => b.diagnose).length >= 2) return "immun";
@@ -11533,7 +11729,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <h3>🐴 Kopfform (Domes neue Köpfe)</h3>
       <p><b>Kopfform:</b> gerader Kopf = Stufe 0 (Mitte). Hechtkopf, Ramsnase, Ramskopf, Keilkopf, Schafskopf und Schweinskopf gibt es je in Stufe 1–3 (leicht, normal, stark) – je höher, desto weiter weg vom geraden Kopf. Gespeichert in <code>p.kopf</code> = { f, s }.</p>
       <p><b>Vererbung der Kopfform:</b> Die Form kommt zu 50 % von der Mutter, zu 50 % vom Vater (gerader Kopf nur, wenn dieser Elternteil gerade ist). Stufe = Mittel der Stufen beider Eltern (gerade zählt als 0; bei ,5 zufällig auf- oder abgerundet), dann je 25 % eine Stufe weniger oder mehr (höchstens „stark“). Fällt die Stufe auf 0, wird es ein gerader Kopf. ${Math.round(KOPF_MUTATION * 100)} % Mutation zu „stark“ (<code>kopfErben</code>).</p>
-      <p><b>Kopfform der Marktpferde:</b> typische Form der Rasse: ${Object.entries(KOPFFORM_RASSE).map(([r, f]) => `${rasseById(r).name} – ${KOPFFORMEN[f]}`).join(" · ")} · alle anderen: gerader Kopf. Stufe: leicht ${Math.round(KOPF_STUFE_W[0] * 100)} % · normal ${Math.round(KOPF_STUFE_W[1] * 100)} % · stark ${Math.round(KOPF_STUFE_W[2] * 100)} %. Rassen mit typischer Form haben zu ${Math.round(KOPF_TYP_GERADE * 100)} % trotzdem einen geraden Kopf, Rassen ohne typische Form zu ${Math.round(KOPF_GERADE_ANDERS * 100)} % einen leichten Hecht-, Ramsnasen- oder Keilkopf. Exterieurfehler Schafs-/Schweinskopf: Shetlandpony 8 % / 10 %, Kaltblut (Shire, Clydesdale, Tinker) 8 % / 3 %, alle anderen 3 % / 2 % (<code>kopfZufall</code>, <code>KOPF_FEHLER</code>). Alte Spielstände bekommen ihre Kopfform beim ersten Anzeigen genauso gewürfelt (immer gleich für dasselbe Pferd).</p>
+      <p><b>Kopfform der Marktpferde:</b> typische Form der Rasse: ${Object.entries(KOPFFORM_RASSE).map(([r, f]) => `${rasseById(r).name} – ${KOPFFORMEN[f]}`).join(" · ")} · mit Neigung (v514, echte Standards): ${Object.entries(KOPF_NEIGUNG).map(([r, n]) => `${rasseById(r).name} – ${KOPFFORMEN[n[0]]} (${Math.round(n[1] * 100)} %, bis Stufe ${n[2]})`).join(" · ")} · alle anderen: immer gerader Kopf. Stufe: leicht ${Math.round(KOPF_STUFE_W[0] * 100)} % · normal ${Math.round(KOPF_STUFE_W[1] * 100)} % · stark ${Math.round(KOPF_STUFE_W[2] * 100)} %. Rassen mit typischer Form haben zu ${Math.round(KOPF_TYP_GERADE * 100)} % trotzdem einen geraden Kopf. Exterieurfehler Schafs-/Schweinskopf: Shetlandpony 8 % / 10 %, Kaltblut (Shire, Clydesdale, Tinker) 8 % / 3 %, alle anderen 3 % / 2 % (<code>kopfZufall</code>, <code>KOPF_FEHLER</code>). Alte Spielstände bekommen ihre Kopfform beim ersten Anzeigen genauso gewürfelt (immer gleich für dasselbe Pferd).</p>
       <p><b>Kopfgröße wie in echt (v438):</b> Kopflänge (Genick bis Maul) im Verhältnis zur Widerristhöhe je Rasse (<code>KOPF_REAL</code>), im Spiel × ${String(KOPF_STIL).replace(".", ",")} (Cartoon-Faktor, für alle gleich); Domes neue Köpfe zusätzlich × ${String(KOPF_GROESSE).replace(".", ",")} (Ausgleich zu den alten Köpfen): ${Object.entries(KOPF_REAL).map(([r, v]) => `${rasseById(r) ? rasseById(r).name : r} ${String(v).replace(".", ",")}`).join(" · ")}. Bei Änderungen am Körper nur diese Tabelle/den Faktor anpassen.</p>
       <p><b>Folgen von Schafs- und Schweinskopf:</b> Marktwert leicht ohne Abzug, normal −5 %, stark −10 % (<code>KOPF_WERT</code>). Fohlenschau: Typnote normal −0,2, stark −0,4 (<code>KOPF_TYPNOTE</code>).</p>
       <h3>⚪ Kopfabzeichen, Maulfärbung, Augen (v426)</h3>
@@ -11838,6 +12034,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Weitere AKU (v380):</b> nach einer AKU kann eine andere Stufe dazugebucht werden (nicht dieselbe); das Protokoll fasst alle Befunde zusammen, die Wertminderung zählt alle gefundenen Befunde. Danach „Pferd kaufen? Ja / Nein“ (Tierschutz: aufnehmen).</p>
       <p><b>Ankaufsuntersuchung (Etappe G)</b> – in jedem Kauf-/Bieten-Fenster am Pferdemarkt: ${Object.entries(AKU).map(([k, S]) => `${S.n} ${fmt(S.preis)} (${akuAufstellung(k)})`).join(", ")} – gleiche Preise wie Tierarzt-Hausbesuch und Blutbild; dazu Labortest Erbkrankheiten zum Laborpreis (${fmt(LABOR_TESTS.krank.preis)} + 30 € je weitere Rasse), Blutprobe einlagern +${fmt(AKU_PROBE)} (später prüfen ${fmt(PROBE_PRUEFEN)}). Ergebnis sofort und als Protokoll per Brief. Versteckte Befunde je Pferd nach Herkunft (Grundrisiko ${Object.entries(AKU_RISIKO).map(([q, x]) => `${q} ${Math.round(x * 100)} %`).join(", ")}): Lahmheit (Risiko × 0,7; Grad 2 sieht man im Gangbild, Grad 1 erst bei der Beugeprobe; beim Händler in 50 % mit Schmerzmittel verschleiert – nur das große Blutbild findet es, nach dem Kauf zeigt sich die Lahmheit nach 2 Tagen), Husten (× 0,35, Lunge), Herzgeräusch (× 0,15), Linsentrübung (× 0,12), Taktunreinheit an der Longe (× 0,15), Arthrose ab 10 Jahren (× 0,5, Beugeprobe oder Röntgen), Röntgenklasse I–IV (mit Arthrose III/IV), ansteckende Krankheit in der Inkubation wie bei Neuzugängen (kleines Blutbild: Entzündung, großes: welche). Jeder Befund mindert den Wert (z. B. Lahmheit 8/15 %, Arthrose 12 %, Röntgen III 15 %/IV 30 %, höchstens 50 %). Danach: kaufen, Preis um diesen Anteil verhandeln (einmal; Erfolg privat ${Math.round(AKU_VERHANDELN.Privat * 100)} %, Händler ${Math.round(AKU_VERHANDELN["Händler"] * 100)} %, Gestüt ${Math.round(AKU_VERHANDELN["Gestüt"] * 100)} %) oder ablehnen. Beim Kauf kommen alle versteckten Befunde mit (gefundene schon diagnostiziert). Eingelagerte Probe mit Schmerzmittel (Händler): der Händler erstattet die Hälfte des Kaufpreises. Eigener Verkauf ab ${fmt(1500)}: 40 % der Käufer machen eine AKU – jeder bekannte oder unbekannte Befund senkt den Preis (5 % je Grad, chronisch +10 %, frühere chronische 8 %, höchstens 40 %).</p>
       <p><b>Putzen durch Wischen</b> (Ausrüstung → Putzkiste): Werkzeug antippen, dann im Stallbild über das Pferd wischen (Finger oder gedrückte linke Maustaste). Bürste: überall auf dem Pferd; Kamm: nur oben (Mähne) und hinten/vorne (Schweif, Schopf). Nötige Wischstrecke 350 + 6 × Schmutz (Bildpunkte im Stall, 400 breit) – der Schmutz geht dabei anteilig weg, das Bild wird alle 25 % neu gezeichnet. Hufkratzer: 4 Hufunterseiten mit je 6 Dreckklumpen nacheinander wegwischen. Pfleger putzen weiter automatisch.</p>
+      <p><b>Neue Krankheiten (v514, alles, was es bei unseren Rassen in echt gibt):</b> <i>Erbkrankheiten mit Gentest:</i> LFS (Araber ${ERBKRANK.lfs.rassen.araber * 100} %, Anglo-Araber/Shagya ${ERBKRANK.lfs.rassen.angloaraber * 100} %, rezessiv, Fohlen stirbt am 1. Tag), OAAM (Araber ${ERBKRANK.oaam.rassen.araber * 100} %, rezessiv, Fohlen stirbt), MH (Quarter/Paint ${ERBKRANK.mh.rassen.quarter * 100} %, Appaloosa ${ERBKRANK.mh.rassen.appaloosa * 100} %, dominant, Befund „MH“ ab 1 Jahr), Angeborene Leberfibrose (Haflinger ${ERBKRANK.chf.rassen.haflinger * 100} %, rezessiv, stirbt mit 2 Jahreszeiten), PSSM1 jetzt auch beim Haflinger (2 %). <i>Veranlagungen (versteckt, kein Gentest):</i> Sarkoid, Hautkrebs (Augenlid), EMS, Aortenriss und Megaösophagus (Friese), Shivers (Kaltblut), Hodenhochstand (Hengste, Befund mit 1,5–4 Jahren, Zuchtausschluss, Kastration-OP 1.800 €), Gebissfehler (Shetty/Araber: Zahnkontrolle alle 2 statt 4 Jahreszeiten, der Tierarzt findet es beim Raspeln). <i>Befunde nach Haltung und Arbeit:</i> Sonnenbrand (nur Sommer, rosa Haut: Blesse/Laterne, Schecken- und Weißgene, Tigerhaut, Cremello, weiße Beine; Weide ×1, Box ×0,15), Hyperlipämie (Pony unter 148 cm, Futterzustand ab 7, hungert/krank), Kissing Spines, Hufrolle (ab 1,5 J.), Spat (Isländer ×2), Sehnenschaden (Vollblut ×2,5, Arbeit schwer ×3), Lungenblutung (Rennpferde), Röhrbeinbruch (2–8 J., Vollblut), Darmstein (Araber ×3, Luzerne ×3). MCOA bei reinerbigem Silber-Gen (Z/Z). EMS verdreifacht das Hufrehe-Risiko, Megaösophagus das der Schlundverstopfung. Risiko je Jahr ≈ Gewicht × Faktor (Tabelle „Krankheiten“). OPs in der Klinik: Sarkoid 900 €, Augenlid-Tumor 1.200 €, Kissing Spines 3.500 €, Bruch-OP 5.000 €, Darmstein 3.500 €, Kryptorchiden-Kastration 1.800 €. Shire ist jetzt leichtfuttrig (Kaltblüter), Isländer-ERU-Veranlagung 15 %. Kopfform nur noch mit echter Neigung je Rasse (siehe unten).</p>
       <p><b>Erbkrankheiten (Etappe H)</b> – versteckt je Pferd (<code>p.erb</code>: 0/1/2 Krankheits-Allele), von jedem Elternteil ein Allel; Mischlinge nach Rassenanteil. Träger-Anteil je Rasse: ${Object.values(ERBKRANK).map(K => `${K.kurz} ${Object.entries(K.rassen).map(([r, q]) => `${rasseById(r) ? rasseById(r).name : r} ${Math.round(q * 100)} %`).join("/")}${K.dominant ? " (dominant)" : ""}`).join(" · ")}. Rezessiv: Träger gesund, Träger × Träger → ¼ betroffen; dominant (HYPP, PSSM1): schon ein Allel macht krank. Folgen: WFFS Tod nach 1 Tag, SCID nach 2 Jahreszeiten, NFS nach 1 Jahreszeit, Wasserkopf Totgeburt (Stute −20 % Gesundheit), Friesen-Zwergwuchs und ACAN (halb Totgeburt, halb Zwerg) 78 % der Größe, CA/HERDA/HYPP/PSSM als chronischer Befund ab ¼/1½/1/2 Jahren (50 % je Jahreszeit). Labortest Erbkrankheiten prüft die Krankheiten aller Rassen ab 12,5 % Anteil: ${fmt(LABOR_TESTS.krank.preis)} + 30 € je weitere Rasse. Warnung beim Verpaaren nur, wenn ein Partner positiv getestet ist (dominant immer; rezessiv, wenn beide getestete Träger sind oder der Partner ungetestet und aus einer betroffenen Rasse ist). Getestete Träger sind für die Zucht 8 % weniger wert, Betroffene 25 %. Veranlagungen ohne Gentest (0–1, vererbt als Mittel der Eltern ± 10 %): ${Object.values(VERANLAGUNG).map(V => `${V.n} (${Object.entries(V.rassen).filter(([, q]) => q > 0).map(([r, q]) => `${rasseById(r) ? rasseById(r).name : r} ${Math.round(q * 100)} %`).join(", ")}, ${V.sonst ? `sonst ${Math.round(V.sonst * 100)} %` : "sonst nicht"}${Object.values(V.rassen).some(q => !q) ? `; nie: ${Object.entries(V.rassen).filter(([, q]) => !q).map(([r]) => rasseById(r) ? rasseById(r).name : r).join(", ")}` : ""})`).join(" · ")}. Seit v323 wie in echt: kommt eine Veranlagung in keiner Rasse des Pferdes vor, ist sie 0 (auch bei alten Pferden nachgetragen); zwei freie Eltern → freies Fohlen. Sommerekzem: Risiko × Veranlagung × 5 im Sommer. Kehlkopfpfeifen ab 2 Jahren. OCD entsteht im Wachstum (unsichtbar, nur Röntgen bei der großen AKU, Lahmheit ×1,3, ab 3 Jahren manchmal als Befund). Melanome nur bei Schimmeln (Gen G) ab 6 Jahren, steigend mit dem Alter. Ekzemerdecke und Weidezeiten kommen mit Ausrüstung bzw. Fütterung.</p>
       <p><b>Lager (Hofverwaltung → Hof):</b> Verlässt ein Pferd den Hof (Verkauf, Rückgabe, Abgabe, Gnadenhof, Tod), kommen sein eigenes Putzzeug und seine Hufschuhe (mit Größe und Zustand) ins Lager. Von dort an ein anderes Pferd geben (Putzzeug desinfiziert und kostenlos; Putzzeug von einem Pferd mit Hautpilz in der letzten Jahreszeit: 30 % Ansteckung – besser wegwerfen), an Gnadenhof oder Tierschutzverein spenden (Sympathie +${SPENDE_RUF} je Teil, Dankesbrief) oder wegwerfen. Beim Verkauf (Festpreis/Auktion) kann man das Zubehör mitgeben: Preis + gebrauchtes Putzzeug 20 €, Hufschuhe 60 % vom Neupreis × Zustand je Paar.</p>
       <p><b>Untersuchung wie AKU</b> (v265, Box – ppf – Versorgung, eigene Pferde): gleiche Stufen und Preise wie die AKU; findet unbemerkte Befunde nach Bereich (Haut/Kolik immer, Atemwege mit Lunge, Hufe/Lahmheit mit Gangbild, Arthrose mit Beugeproben, PSSM/Ataxie/HYPP mit Longe, Würmer/Vergiftung/Magen mit kleinem Blutbild, Cushing/Influenza/Herpes mit großem Blutbild, OCD mit Röntgen) und nennt bei der großen die Röntgenklasse.</p><p><b>Vorsorge und Labor:</b> Impfung ${fmt(VORSORGE.impfung)}, Zahnkontrolle ${fmt(VORSORGE.zahn)} (über 1 Jahr überfällig: Kolik ×1,5), Wurmkur aus der Stallapotheke im Frühjahr und Herbst (Dome, v242; Knopf nur dann; überfällig über 2½ Jahreszeiten: Würmer ×3), kleines Blutbild ${fmt(VORSORGE.blutKlein)} (Entzündung ja/nein), großes ${fmt(VORSORGE.blutGross)} (konkrete Krankheit, auch in der Inkubation) – Ergebnis nach 2 Tagen per Brief. Eigenes Putzzeug ${fmt(VORSORGE.putzzeug)} (Putzkiste). Ein Quarantänestall (kein Risiko) kommt mit dem Hof-Ausbau.</p>

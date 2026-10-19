@@ -35,3 +35,6 @@ Klickt wie eine Spielerin: hvw – Hof – Land → 2 ha Weideland kaufen, Bauen
 `NODE_PATH=/opt/node22/lib/node_modules node tests/testspieler.js [1|2|3|alle] [Jahre]` – drei Spielertypen spielen ab einem neuen Spiel (Standard 10 Jahre, alle drei zusammen ca. 1 Minute):
 Nr. 1 Anfänger (viele Fehler, befolgt die Tipps), Nr. 2 Fortgeschritten (Domes Zuchtstrategie fast genau), Nr. 3 Experte (baut erst die Pension aus, dann Zucht).
 Ziel: 2 Höfe (Pension 20 Boxen + Zuchtstall 10 Pferde), keine Kredite. Fehlerquoten und Strategie oben im Skript (`SPIELER`). Bericht je Jahr, Finanzen des letzten Jahres, Verkäufe, Ereignisse.
+
+## Krankheiten-Test (v514)
+`NODE_PATH=/opt/node22/lib/node_modules node tests/krankheiten-test.js` – prüft die neuen Erbkrankheiten, Veranlagungen und Befunde (Daten vollständig, Erbgang, Risiken je Rasse, Tierarzt-Besuch, OPs, Zuchtsperre, Gebiss, Kopfform-Neigung, Speichern/Neuladen). Erwartet: nur „✓“ und „alles ok“.

@@ -95,5 +95,9 @@ st2.wandTuer = `${tuer('#a98357')}${LECK(306, 132)}`;
 st3.wandTuer = st3.wand.replace('id="w3"', 'id="w3t"').replace('url(#w3)', 'url(#w3t)').replace('M140,80 V158 H260 V80 Z', 'M152,88 V212 H248 V88 Z').replace(rahmen('#5a3a24', W3), tuer('#5a3a24') + '<rect x="140" y="74" width="120" height="2.5" fill="#c9a24a"/>')
   .replace('<rect x="128" y="66" width="144" height="3" fill="#c9a24a"/>', '').replace('<rect x="134" y="157" width="132" height="2.5" fill="#c9a24a"/>', '');
 
+// v528 (Dome): Paddockbox bei Boxenruhe – geschlossene Tür statt Blick nach draußen
+const tuerZu = (f, g) => `<g stroke="#2b1d14" stroke-width="1.4"><rect x="152" y="88" width="96" height="124" fill="${f}"/></g><g stroke="#2b1d14" stroke-width="1" opacity=".55">${[168, 184, 200, 216, 232].map(x => `<line x1="${x}" y1="90" x2="${x}" y2="210"/>`).join('')}</g><g fill="none" stroke="#2b1d14" stroke-width="3.2" opacity=".75"><line x1="152" y1="110" x2="248" y2="110"/><line x1="152" y1="190" x2="248" y2="190"/></g><g fill="${g}" stroke="#2b1d14" stroke-width="1"><rect x="232" y="146" width="10" height="22" rx="3"/></g><g fill="#2b1d14"><circle cx="156" cy="110" r="2"/><circle cx="156" cy="190" r="2"/></g>`;
+st1.tuerZu = tuerZu('#8f6a45', '#c9a24a'); st2.tuerZu = tuerZu('#a98357', '#c9a24a'); st3.tuerZu = tuerZu('#5a3a24', '#c9a24a');
+
 window.BOXSTUFE = { 1: st1, 2: st2, 3: st3, boden: { sand: sand(), pflaster: pflaster(), beton: beton(), gummi: gummi() } };
 })();

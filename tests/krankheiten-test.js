@@ -148,6 +148,14 @@ const NEU_VL = ['sarkoid', 'hautkrebs', 'ems', 'aorta', 'megaoes', 'shiver', 'kr
       { leer(); const [p, bx] = neu('hannoveraner', 'Stute', 8); p.befunde = []; befundNeu(p, 'kissing', 2, 'Test'); befundNeu(p, 'sehne', 2, 'Test'); tierarztBesuch(p, bx, () => {}); document.getElementById('dlg').hidden = true;
         const t = ((spiel.post || [])[0] || {}).text.replace(/<[^>]+>/g, ''), plan = t.slice(t.indexOf('Behandlungsplan'), t.indexOf('Bewegung:'));
         check('Kissing + Sehne: akute Sehne hat Vorrang (kein Longieren im Plan, „Zuerst muss … heilen“)', !/longieren/.test(plan) && /Zuerst muss .* heilen/.test(t), t.slice(t.indexOf('Bewegung'), t.indexOf('Bewegung') + 300)); }
+      // v528: Personal schont Pferde mit bekannten Befunden, abgebrochenes Training zählt nicht als Trainingstag
+      { leer(); const [p] = neu('hannoveraner', 'Stute', 8); p.befunde = []; const b = befundNeu(p, 'sehne', 2, 'Test'); const m = { id: 'x', name: 'Bea', wissen: { huf: 100 } }, m0 = { id: 'y', name: 'Max', wissen: { huf: 0 } };
+        const unbekannt = schont(p, 'dressur', m); b.diagnose = spiel.tag; b.tierarzt = true; Math.random = () => 0.99;
+        check('Personal schont: Befund unbekannt → nein, Tierarzt-Diagnose → ja (Reiten, Longieren), du selbst nie', !unbekannt && schont(p, 'dressur', m0) && schont(p, 'longieren', m0) && !schont(p, 'dressur', null));
+        check('Personal schont bei Sehnenschaden nicht das Schritt-Führen (hilft)', !schont(p, 'spazieren', m0)); Math.random = rr;
+        b.tierarzt = false; delete b.diagnose; b.bemerkt = { von: 'du', tag: spiel.tag }; Math.random = () => 0.5; check('Bemerkter Befund: viel Wissen schont (100 %), kein Wissen meist nicht (30 %)', schont(p, 'dressur', m) && !schont(p, 'dressur', m0)); Math.random = rr; }
+      { leer(); const [p] = neu('hannoveraner', 'Stute', 8); p.trainHeute = { tag: spiel.tag - 1, liste: [], verbraucht: 20, abgebr: 20 }; p.muskel = 0; delete p.zuletztTrainiert; arbeitNacht(p); const a = p.zuletztTrainiert;
+        p.trainHeute = { tag: spiel.tag - 1, liste: [], verbraucht: 20, abgebr: 0 }; arbeitNacht(p); check('Abgebrochenes Training zählt nicht als Trainingstag, normales schon', a == null && p.zuletztTrainiert === spiel.tag - 1); }
       // falsches Mittel gegen eine neue Krankheit → Nebenwirkung (z. B. Hustensaft bei Spat)
       { leer(); const [p] = neu('hannoveraner', 'Stute', 8); p.befunde = []; befundNeu(p, 'spat', 2, 'Test'); apotheke().hustensaft = 5; Math.random = () => 0.5; const t = behandeln(p, 'hustensaft', dosisKlasse(gewichtAnzeige(p)), null); Math.random = rr; check('falsches Mittel bei Spat → Nebenwirkung', /Nebenwirkung/.test(t)); }
       // Tierarzt-Besuch: Rezept für Rezeptmittel des Plans, Boxenruhe gesetzt, Erstbehandlung zählt den Tag

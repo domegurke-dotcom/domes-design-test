@@ -28,7 +28,7 @@ dateien.forEach(f => { const e = JSON.parse(fs.readFileSync(path.join(dir, f), '
 if (alsJson) { console.log(JSON.stringify(alle)); process.exit(0); }
 Object.entries(alle).forEach(([rasse, S]) => {
   console.log(`\n== ${rasse} ==`);
-  [3, 2, 1].forEach(st => { const W = S[st]; if (!W) return;
+  [3, 2, 1, 4].forEach(st => { const W = S[st]; if (!W) return;
     console.log(`${NAME[st].padEnd(8)} Befunde/Pferd/Jahr ${W.proJahr} · krank ${W.krank} % der Tage · Ø Grad ${W.grad} (schwer ${W.schwer} %) · Heilung Ø ${W.heilTage} T · bemerkt nach ${W.bemerktNach} T · chronisch ${W.chronisch}/PJ · tot ${W.tot} % · Tierschutz ${W.weg} % · Tierarzt ${W.tierarzt}/PJ · ${W.kosten} €/PJ Tierarzt + ${W.huf} € Huf · Arbeit/Tag je 10 Pferde: krank ${W.krankArbeit}, Routine ${W.routine}`);
     console.log(`         Alter: ${KL.map(k => `${k} ${W.kl[k].proJahr}/J ${W.kl[k].krank}%`).join(' · ')} | Tod: ${JSON.stringify(W.tod)} | Top (je 100 PJ): ${W.top.map(([n, x]) => `${n} ${x}`).join(', ')}${W.fehler.length ? ' | FEHLER ' + W.fehler.join('; ') : ''}`); });
 });

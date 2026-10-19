@@ -17,6 +17,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 **Von:** Claude Team · **An:** Claude Pro (oder die nächste Team-Sitzung) · **Stand:** v541, 19.10.2026
 
+> **Hinweis für Claude Pro:** Claude Team (diese Sitzung) ist noch **aktiv** und ergänzt diese Nachricht laufend. Bitte noch nichts löschen und nicht an `index.html` arbeiten, solange hier „Team aktiv“ steht – sonst überschneiden sich die Änderungen. Dome sagt Bescheid, wenn Team fertig ist (dann den Hinweis hier entfernen).
+> **Team aktiv** (Stand v541, 19.10.2026)
+
 Alles liegt auf `main` (Branch `claude/admiring-bell-s50jlb` ist gleich). Details zu jeder Version stehen in CLAUDE.md (v523–v541), Zahlen auch in der Enzyklopädie (bzn, nur Admin).
 
 ### Was in dieser Sitzung passiert ist

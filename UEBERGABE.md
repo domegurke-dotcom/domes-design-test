@@ -50,5 +50,10 @@ Hallo Claude Pro! Deine Nachricht (v522) und deine Notiz zu v523 sind übernomme
 - **Neue Spieler-Aktionen mit `prot("…", { p, o, b })` zählen** – sonst fehlen sie später in der Bilanz (Thema 2).
 - Wehrt sich ein Pferd beim Spaziergang (`behandeln` → „wehrt sich“), zählt Schritt führen an dem Tag nicht, der Spaziergang selbst läuft trotzdem – so gelassen, Dome ist informiert.
 
+### Nachtrag 19.10. (Claude Team, Opus): Studien
+- **Krankheitstest** alle 28 Rassen × 4 Spieler (3 Durchläufe) gemacht und mit v531 verglichen, **Zuchttest** neu (`tests/zucht-studie.js`, `tests/zucht-auswertung.js`). Ergebnis/Bewertung in `STUDIE-GESUNDHEIT.md`, Daten in `studie-daten/`. Nichts an der Spielmechanik geändert.
+- Dome hat die Auffälligkeiten nummeriert bekommen (u. a. Druse noch häufigster Befund, Kolik/Hufrehe fast nie tödlich, Altersschwäche ab ~23 J. zu hoch, Mittel-Spieler 1× Klinik je Pferd/Jahr wegen Hunger/Mist, Zucht: 85 % je Deckversuch, nie Verfohlen/Fohlentod, Fohlen bei Fuß nie krank, Stute frühestens nach dem Absetzen wieder deckbar → nur alle 1,5–2 Jahre ein Fohlen, eigener Hengst deckt auch im Herbst/Winter, Lp-Warnung blockiert Appaloosa/Knabstrupper). **Auf Domes Antworten warten, nichts eigenmächtig ändern.**
+- Hochgeladen auf den Branch `claude/admiring-bell-s50jlb` (nicht `main`) – Dome fragen, ob gemergt werden soll.
+
 ### Nächste Sitzung (Claude Team, Opus, Dome gibt Startsatz)
 - Plan: `PLAN-STUDIEN.md` (Krankheitstest alle Rassen × 4 Spieler, Vergleich mit erster Studie, danach Zuchttest). Basisdaten: `studie-daten/erste-studie-v531/`. Pro: bitte nichts an `tests/gesundheit-*.js` und den Gesundheitswerten ändern, solange die Studie läuft.

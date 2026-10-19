@@ -968,7 +968,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "551";
+  const SPIEL_VERSION = "552";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -976,10 +976,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=551"></script>
-<script src="pferd.js?v=551"></script>
-<script src="boxstufen.js?v=551"></script>
-<script src="kopfneu.js?v=551"></script>
+<script src="lz-string.min.js?v=552"></script>
+<script src="pferd.js?v=552"></script>
+<script src="boxstufen.js?v=552"></script>
+<script src="kopfneu.js?v=552"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -6972,18 +6972,19 @@
   const diszName = d => (DISZ[d] || {}).n || ({ gelassenheit: "Gelassenheit" })[d] || d;
   const turnierKlasse = P => { try { const D = DISZ[P.disz], eigen = P.pruef || P.name;   // Klassen E–S / Einsteiger–Open gibt es nur bei Englisch und Western – Rennen, Tölt, Pass, Distanz: der Prüfungsname (Ausgleich II, Tölt B, Distanzritt 60 km …)
       if (D && (D.stufen === "englisch" || D.stufen === "western") && P.stufe != null && P.stufe >= 0) return String(stufeText(D, P.stufe)).replace(/^Klasse /, ""); return eigen || "ohne Klasse"; } catch (e) { return "ohne Klasse"; } };
-  const protKlasse = (was, p, t, P) => { prot(`Turnier ${bilanzName(P.disz, turnierKlasse(P))}: ${was}`, { p, o: t.name }); if (was === "Start") chronikKlasse(P.disz, P.stufe); };   // B2
+  const protKlasse = (was, p, t, P) => { prot(`Turnier ${bilanzName(P.disz, turnierKlasse(P) + artZusatz(t.art))}: ${was}`, { p, o: t.name }); if (was === "Start") chronikKlasse(P.disz, P.stufe); };   // B2
   // B2 Teil 2 (Dome): Lebensbilanz je Pferd – p.bilanz["<disz>|<Klasse>"] = [Starts, 1., 2., 3. Platz]; wird nie gekürzt (p.erfolge behält nur die letzten 60 Einträge).
   // Bestehende Pferde: wird beim ersten Zugriff aus den vorhandenen Erfolgen aufgebaut (immer VOR dem Einfügen des neuen Eintrags zählen!).
   const bilanzName = (d, kl) => kl.toLowerCase().startsWith(diszName(d).toLowerCase()) ? kl : `${diszName(d)} ${kl}`;   // „Tölt B“, „Dressur L“, „Distanzritt 60 km“, „Galopprennen Ausgleich II (Vollblut)“
-  const bilanzSchluessel = e => `${e.disz}|${turnierKlasse(e)}`;
+  const artZusatz = a => a === "championat" ? " (Meisterschaft)" : a === "international" ? " (International)" : "";   // v552 (Dome): Meisterschaften/Championate und Internationale Turniere bekommen eine eigene Bilanz-Zeile
+  const bilanzSchluessel = e => `${e.disz}|${turnierKlasse(e)}${artZusatz(e.art)}`;
   function bilanzEintragen(B, e, platz) { const k = bilanzSchluessel(e), z = (B[k] = B[k] || [0, 0, 0, 0]); z[0]++; if (platz >= 1 && platz <= 3) z[platz]++; }
   function bilanzHolen(p) {
-    if (p.bilanz && p.bilanzV === 2) return p.bilanz;   // v551: Klassen-Schlüssel korrigiert (v550 hatte bei Rennen/Tölt/Distanz englische Buchstaben) → alte Bilanz neu aus den Erfolgen aufbauen
-    p.bilanzV = 2; const B = (p.bilanz = {}); (p.erfolge || []).forEach(e => { if (e.disz && !e.fohlenschau) bilanzEintragen(B, e, e.aus ? null : e.platz); });
+    if (p.bilanz && p.bilanzV === 3) return p.bilanz;   // v551: Klassen-Schlüssel korrigiert (v550 hatte bei Rennen/Tölt/Distanz englische Buchstaben) → alte Bilanz neu aus den Erfolgen aufbauen
+    p.bilanzV = 3; const B = (p.bilanz = {}); (p.erfolge || []).forEach(e => { if (e.disz && !e.fohlenschau) bilanzEintragen(B, e, e.aus ? null : e.platz); });
     return B;
   }
-  const bilanzZaehlen = (p, P, platz) => { try { bilanzEintragen(bilanzHolen(p), P, platz); } catch (e) { console.error("Bilanz:", e); } };
+  const bilanzZaehlen = (p, P, platz, art) => { try { bilanzEintragen(bilanzHolen(p), { ...P, art }, platz); } catch (e) { console.error("Bilanz:", e); } };
   function bilanzHTML(p) {
     const B = p.erfolge && p.erfolge.length ? bilanzHolen(p) : p.bilanz || {}, K = Object.keys(B).sort((a, b) => B[b][0] - B[a][0]); if (!K.length) return "";
     const sum = K.reduce((a, k) => a.map((x, i) => x + B[k][i]), [0, 0, 0, 0]), name = k => { const [d, kl] = k.split("|"); return esc(bilanzName(d, kl)); };
@@ -7277,13 +7278,13 @@
         const wert = startWert(p, P.disz) * stufenMalus(p, P) * form * stress * reiterF * fzLeistung(p) * hufTurnierF(p, P.disz) * (t.halle && nachtblind(p) ? NACHTBLIND.halle : 1) * (1 + (rz() + rz() + rz() - 1.5) * 0.16), niveau = feldNiveau(t, P);
         const vet = P.disz === "distanz" ? distanzVet(p, P, muede, rz) : null;
         if (vet && vet.aus) { if (vet.lahm) befundNeu(p, "lahmheit", 1, "Distanzritt", "Tierarzt beim Distanzritt");
-          bilanzZaehlen(p, P, null); (p.erfolge = p.erfolge || []).unshift({ tag: spiel.tag, turnier: t.name, art: t.art, disz: P.disz, stufe: P.stufe, pruef: P.name, platz: P.starter, von: P.starter, erg: vet.aus, geld: 0, plaziert: false, aus: true });
+          bilanzZaehlen(p, P, null, t.art); (p.erfolge = p.erfolge || []).unshift({ tag: spiel.tag, turnier: t.name, art: t.art, disz: P.disz, stufe: P.stufe, pruef: P.name, platz: P.starter, von: P.starter, erg: vet.aus, geld: 0, plaziert: false, aus: true });
           prot("Turnierstart", { p, o: t.name }); protKlasse("Start", p, t, P); zeilen.push(`<li><b>${esc(P.name)}</b>: ❌ ${vet.aus}</li>`); return; }
         const ich = ergebnisText(P.disz, wert, niveau, rz, P.stufe), andere = Array.from({ length: P.starter - 1 }, () => ergebnisText(P.disz, niveau + (rz() + rz() + rz() - 1.5) * 14, niveau, rz, P.stufe).sort);
         const platz = 1 + andere.filter(s => s > ich.sort).length, plaziert = platz <= Math.max(3, Math.ceil(P.starter / 4));
         let geld = 0; if (plaziert && preisgeld(t, P)) { const anteil = PREIS_ANTEIL.slice(0, Math.max(3, Math.ceil(P.starter / 4))), summe = anteil.reduce((a, b) => a + b, 0); geld = Math.round(preisgeld(t, P) * (anteil[platz - 1] || 0.05) / summe / 5) * 5; }
         geldSumme += geld;
-        bilanzZaehlen(p, P, platz); (p.erfolge = p.erfolge || []).unshift({ tag: spiel.tag, turnier: t.name, art: t.art, disz: P.disz, stufe: P.stufe, pruef: P.name, platz, von: P.starter, erg: ich.txt, geld, plaziert, jung: !!P.jung });
+        bilanzZaehlen(p, P, platz, t.art); (p.erfolge = p.erfolge || []).unshift({ tag: spiel.tag, turnier: t.name, art: t.art, disz: P.disz, stufe: P.stufe, pruef: P.name, platz, von: P.starter, erg: ich.txt, geld, plaziert, jung: !!P.jung });
         if (p.erfolge.length > 60) p.erfolge.length = 60;
         prot("Turnierstart", { p, o: t.name }); protKlasse("Start", p, t, P); if (platz === 1) { prot("Turniersieg", { p, o: t.name }); protKlasse("Sieg", p, t, P); } else if (plaziert) { prot("Turnier platziert", { p, o: t.name }); protKlasse("Platz", p, t, P); }   // S4
         if (muede) { wohlAendern(p, -8, "Turnier: übermüdet gestartet"); p.pflege.gesundheit = Math.max(1, r2(p.pflege.gesundheit - 3)); if (rz() < 0.15 * (1.5 - (p.werte.ist.zaehigkeit || 50) / 100)) befundNeu(p, "lahmheit", 1, "Überlastung auf dem Turnier", "du"); }

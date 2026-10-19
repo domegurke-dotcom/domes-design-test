@@ -51,7 +51,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (3 Stellen in index.html: pferd.js, boxstufen.js, kopfneu.js) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **507**.
+- Letzte Version bei Aktualisierung dieser Datei: **508**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName` ausfüllen → `#chLos` → Kreditbrief schließen (`#dlgKnoepfe button`) → `[data-immo="pension"]` → `#kaufName` → `#dlgKnoepfe button:first-child`. Admin: `spiel.admin = true`.
@@ -208,6 +208,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - **v505 (Dome):** Tobiano auf jeder Grundfarbe: neues Muster-Kürzel `to_` (+ Grundfarbe, `MUSTER.to`, `MUSTER_GENE.to`) – vorher fiel jede Farbe auf Rapp-/Braun-/Fuchsschecke zurück (Falben, Dunkelbrauner, Palomino … gingen verloren). Rapp-/Braun-/Fuchsschecke bleiben eigene Farben (alte Spielstände). Name über `SCHECKE_NAME` (z. B. Falbschecke). Alle Muster-Regexe enthalten jetzt `to`. Rassenansicht: Tobiano ohne Kopfabzeichen (nur Sb/Sw/O/W behalten Kopfweiß).
 - **v506 (Dome):** Sabino/Splash ohne pauschal rosa Maul (`musterFarbe`) – rosa Haut nur unter Domes Kopfabzeichen; vorher sah es wie ein weißes Kinn aus.
 - **v507 (Dome):** Rassenansicht zeigt das typische Kopfweiß der Scheckung je Ausprägung (`MUSTER_KOPF_TYP`: Splash Blesse→Laterne, Sabino schmale Blesse→Laterne, Overo Blesse→Laterne, Tovero breite Blesse/Laterne, Dominant White Stern→Laterne; über `weissFuer`). Tobiano weiter ohne.
+- **v508 (Dome):** Jahreszeiten-Ausbleichen auch bei gemusterten Pferden (`saisonBasis`: Rapp-/Braun-/Fuchsschecke und alle `xx_`-Muster bleichen nach ihrer Grundfarbe; Sommer-/Winterrappe gilt auch für Rappschecken) – im Spiel und in der Rassenansicht. Rassenansicht: „Brauner“ + Muster bleibt Brauner (ton ≥ .25).
 - **Aufräumen v435:** Code mit ESLint geprüft (keine echten Fehler), unbenutzte Funktionen/Variablen entfernt, `spiel.marktGekauft` auf 200 Einträge begrenzt (`marktGekauftMerken`), versehentlich hochgeladene Test-Screenshots gelöscht. Prüfskript: Skriptblöcke aus index.html in Dateien schreiben und `eslint` (liegt in /opt/node22/lib/node_modules) mit no-unused-vars/no-dupe-keys/no-unreachable laufen lassen. **Test-Screenshots nie im Projektordner speichern** (immer im Scratchpad). Kötenbehang (`behang` in pferd.js) ist vorerst ausgeblendet, der Code bleibt – kommt später (Dome).
 - **v436:** Kopfleiste beim Drehen des Handys: `--kopfH` wird sofort nachgezogen (ResizeObserver auf `header` + resize), vorher blitzte im Vollbild bis zu 0,5 s der Stall zwischen Kopfleiste und Fenster durch. **v437:** Viewport `minimum-scale=1` und `html, body { overflow-x: clip }` – verhindert, dass Chrome (Android) nach dem Drehen herauszoomt (Menüs breiter als die Kopfleiste, Dome-Screenshot ohne Vollbild).
 - **Offen (Stand v439):** Scheckmuster Schritt 2 (`PLAN-SCHECKUNG.md`). Domes Zeichnungen laut `BEI-INKSCAPE-BEARBEITEN.md`. Stute bleibt bei voller Abfohlbox in ihrer Box (gewollt). Ausbilder-Nachholen per Test geprüft (v433, funktioniert).

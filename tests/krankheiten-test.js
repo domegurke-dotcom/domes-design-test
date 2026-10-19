@@ -112,7 +112,7 @@ const NEU_VL = ['sarkoid', 'hautkrebs', 'ems', 'aorta', 'megaoes', 'shiver', 'kr
         const txt = anwenden(p, k); check('Behandlung ' + k + ' ohne Nebenwirkung/Fehler (' + txt.join(' | ').replace(/<[^>]+>/g, '') + ')', !txt.some(s => /Nebenwirkung|kein Rezept|nichts mehr|Dosis zu|zu hoch/.test(s)));
         spiel.tag++; const BW = behandlungsWert(p, b); wert[k] = Math.round(BW.wert * 100) / 100; const nurLindern = ['aorta', 'shivers'].includes(k);   // nicht heilbar – Behandlung bremst nur
         check('Behandlung ' + k + ' wirkt (Wert ' + wert[k] + ')', (nurLindern ? BW.wert > 0 : BW.wert >= 0.3) && BW.schaden === 0);
-        spiel.tag--; delete p.behHeute; p.boxenruhe = false; p.beschlag = false; spiel.tag++; check('ohne Behandlung ' + k + ' kein Wert', behandlungsWert(p, b).wert === 0); spiel.tag--; });
+        spiel.tag--; delete p.behHeute; p.boxenruhe = false; p.beschlag = false; p.fz = 7; spiel.tag++; check('ohne Behandlung ' + k + ' kein Wert', behandlungsWert(p, b).wert === 0); spiel.tag--; });
       Math.random = rr; A.behWert = wert;
       // falsche Behandlung schadet (SCHADET)
       [['sehne', 'schritt'], ['fraktur', 'schritt'], ['ems', 'boxenruhe'], ['aorta', 'schritt']].forEach(([k, a]) => { leer(); const [p] = neu('hannoveraner', 'Stute', 8); p.befunde = []; const b = befundNeu(p, k, 2, 'Test'); b.diagnose = spiel.tag; Math.random = () => 0.5;

@@ -81,6 +81,18 @@ const NEU_VL = ['sarkoid', 'hautkrebs', 'ems', 'aorta', 'megaoes', 'shiver', 'kr
       check('Renntag: Lungenblutung + Röhrbeinbruch möglich', befundListe(r1).some(b => b.art === 'eiph') && befundListe(r1).some(b => b.art === 'fraktur') && z.length === 2);
       const [sh] = neu('shetty', 'Hengst', 4); sh.befunde = []; Math.random = () => 0; rennRisiko(sh, false, []); Math.random = rr; check('Renntag: Shetty bekommt keine Lungenblutung', !befundListe(sh).some(b => b.art === 'eiph'));
       const [r2] = neu('vollblut', 'Hengst', 4); r2.befunde = []; let n = 0; for (let i = 0; i < 4000; i++) { r2.befunde = []; rennRisiko(r2, false, []); if (befundListe(r2).some(b => b.art === 'fraktur')) n++; } check('Röhrbeinbruch ≈ 0,16 % der Starts (' + n + ' von 4000)', n >= 1 && n <= 20); }
+    // ---- 5c. Ankaufsuntersuchung findet die neuen Krankheiten (v516) ----
+    { const zaehl = {}; let mitNeu = 0; const N = 1500, alle = RASSEN.map(r => r.id);
+      for (let i = 0; i < N; i++) { const h = neuesPferd({ name: 'M' + i, rasse: alle[i % alle.length], geschlecht: i % 2 ? 'Stute' : 'Hengst', alter: 3 + (i % 14), id: 'aku' + i }); const F = akuFunde(h, 'Händler'); const neuF = F.filter(f => NEU.includes(f.art) || f.gebiss); if (neuF.length) mitNeu++; neuF.forEach(f => { const k = f.art || 'gebiss'; zaehl[k] = (zaehl[k] || 0) + 1; }); }
+      A.akuZaehl = zaehl; A.akuAnteil = Math.round(mitNeu / N * 100);
+      check('AKU: neue Krankheiten kommen vor, aber nicht bei jedem Pferd (' + A.akuAnteil + ' %)', mitNeu > 0 && mitNeu / N < 0.4);
+      ['spat', 'hufrolle', 'kissing', 'sehne', 'sarkoid', 'krypt'].forEach(k => check('AKU findet ' + k + ' (' + (zaehl[k] || 0) + ')', (zaehl[k] || 0) > 0));
+      // Röntgen nur in der großen AKU, Haut/Gebiss/Hengst immer
+      const h = neuesPferd({ name: 'Rx', rasse: 'quarter', geschlecht: 'Hengst', alter: 12, id: 'akuRx' }); h.akuF = [{ art: 'spat', grad: 1, check: 'roentgen', text: 'Spat (Röntgen)', minus: 0.1 }, { art: 'sarkoid', grad: 1, check: 'klinisch', text: 'Sarkoid', minus: 0.08 }, { gebiss: true, check: 'klinisch', text: 'Gebissfehler', minus: 0.03 }];
+      akuMachen(h, 'Händler', 'klein', false, false); check('kleine AKU: Haut/Gebiss ja, Röntgen nein', h.akuErg.funde.includes('Sarkoid') && h.akuErg.funde.includes('Gebissfehler') && !h.akuErg.funde.includes('Spat (Röntgen)'));
+      akuMachen(h, 'Händler', 'gross', false, false); check('große AKU findet den Spat im Röntgen', h.akuErg.funde.includes('Spat (Röntgen)'));
+      leer(); const p = JSON.parse(JSON.stringify(h)); p.pflege = erzeugePflege(p); akuUebernehmen(p, h, 'Händler');
+      check('beim Kauf kommen die Befunde mit (diagnostiziert) und der Gebissfehler', befundListe(p).some(b => b.art === 'spat' && b.diagnose) && befundListe(p).some(b => b.art === 'sarkoid' && b.diagnose) && p.gebissFehler === true); }
     // ---- 6. Hodenhochstand sperrt die Zucht ----
     { leer(); const [h, bx] = neu('quarter', 'Hengst', 8); h.befunde = []; const vorher = zuchtSperre(h, bx); befundNeu(h, 'krypt', 1, 'x'); check('Zucht gesperrt bei Hodenhochstand', /Hodenhochstand/.test(zuchtSperre(h, bx)) && !/Hodenhochstand/.test(vorher)); }
     // ---- 7. Gebiss ----
@@ -98,6 +110,7 @@ const NEU_VL = ['sarkoid', 'hautkrebs', 'ems', 'aorta', 'megaoes', 'shiver', 'kr
   ok('Daten vollständig (KRANK, HILFT, PLAN, URSACHE, VERDACHT, Infos, Rassen)', !(r.datenFehler || []).length);
   (r.fehler || []).forEach(f => L.push(['✗', f, '']));
   ok('Einzelprüfungen (Erbgang, Risiken, Abläufe, OPs, Zucht, Gebiss, Kopfform)', !(r.fehler || []).length);
+  console.log('AKU-Funde (1500 Marktpferde, Händler): ' + JSON.stringify(r.akuZaehl) + ' – Pferde mit neuem Fund: ' + r.akuAnteil + ' %');
   console.log('Erwartete neue Befunde je Rasse und Jahr (Stute 8 J., mittlere Arbeit, Weide):'); r.tabelle.forEach(([n, w, d]) => console.log('  ' + n.padEnd(13) + String(w).padEnd(6) + d));
   // ---- 9. Speichern und Neuladen mit neuen Befunden ----
   await pg.evaluate(() => { leer(); const [p] = neu('friese', 'Stute', 8); p.befunde = []; befundNeu(p, 'aorta', 2, 'x'); befundNeu(p, 'sarkoid', 1, 'x'); p.erb = { ...(p.erb || {}), lfs: 1 }; spiel.aktBox = 0; speichern(); });

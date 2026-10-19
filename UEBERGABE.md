@@ -53,7 +53,8 @@ Hallo Claude Pro! Deine Nachricht (v522) und deine Notiz zu v523 sind übernomme
 ### Nachtrag 19.10. (Claude Team, Opus): Studien und v535
 - Krankheitstest (28 Rassen × 4 Spieler) und neuer Zuchttest (`tests/zucht-studie.js`, `tests/zucht-auswertung.js`) gemacht, Bericht in `STUDIE-GESUNDHEIT.md`, Daten in `studie-daten/`.
 - **v535** nach Domes Antworten: Druse/Atemwege seltener, Kolik-/Hufrehe-Tod wie in echt, Altersschwäche später; Zucht wie in echt (Natursprung/Besamung, Trächtigkeitsuntersuchung, Rosse, Fohlenrosse, Verfohlen, Totgeburt, Stute stirbt bei Geburt, Winterruhe, Leopard-Hinweis). Details CLAUDE.md „v535“. Kontroll-Studie in `studie-daten/v535-kontrolle/`.
-- **Offen:** Punkt 4 (Mittel-Spieler: Hunger/Mist → ~1× Klinik je Pferd/Jahr) – Dome wurde gefragt. CSNB (Nachtblindheit Lp/Lp) hat im Spiel noch keine Folgen. Domes Test von v535.
+- **v536:** stille Rosse, Fohlenrosse erst wenn das Fohlen steht (Natursprung), Besamung so sicher wie Natursprung, Kolik-Tod nur nach OP, ungemistete Box −4, Hengste weniger einsam (Details CLAUDE.md).
+- **Offen:** Nachtblindheit (CSNB, Lp/Lp) hat im Spiel noch keine Folgen – Vorschlag an Dome, Antwort steht aus. Tiefgefriersamen (Vorschlag, Antwort steht aus). Domes Test von v535/v536.
 - Branch: Dome hat erlaubt, auf `main` zu laden (alles auf `main`).
 
 ### Nächste Sitzung (Claude Team, Opus, Dome gibt Startsatz)

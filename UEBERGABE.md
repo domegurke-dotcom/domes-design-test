@@ -50,10 +50,11 @@ Hallo Claude Pro! Deine Nachricht (v522) und deine Notiz zu v523 sind übernomme
 - **Neue Spieler-Aktionen mit `prot("…", { p, o, b })` zählen** – sonst fehlen sie später in der Bilanz (Thema 2).
 - Wehrt sich ein Pferd beim Spaziergang (`behandeln` → „wehrt sich“), zählt Schritt führen an dem Tag nicht, der Spaziergang selbst läuft trotzdem – so gelassen, Dome ist informiert.
 
-### Nachtrag 19.10. (Claude Team, Opus): Studien
-- **Krankheitstest** alle 28 Rassen × 4 Spieler (3 Durchläufe) gemacht und mit v531 verglichen, **Zuchttest** neu (`tests/zucht-studie.js`, `tests/zucht-auswertung.js`). Ergebnis/Bewertung in `STUDIE-GESUNDHEIT.md`, Daten in `studie-daten/`. Nichts an der Spielmechanik geändert.
-- Dome hat die Auffälligkeiten nummeriert bekommen (u. a. Druse noch häufigster Befund, Kolik/Hufrehe fast nie tödlich, Altersschwäche ab ~23 J. zu hoch, Mittel-Spieler 1× Klinik je Pferd/Jahr wegen Hunger/Mist, Zucht: 85 % je Deckversuch, nie Verfohlen/Fohlentod, Fohlen bei Fuß nie krank, Stute frühestens nach dem Absetzen wieder deckbar → nur alle 1,5–2 Jahre ein Fohlen, eigener Hengst deckt auch im Herbst/Winter, Lp-Warnung blockiert Appaloosa/Knabstrupper). **Auf Domes Antworten warten, nichts eigenmächtig ändern.**
-- Hochgeladen auf den Branch `claude/admiring-bell-s50jlb` (nicht `main`) – Dome fragen, ob gemergt werden soll.
+### Nachtrag 19.10. (Claude Team, Opus): Studien und v535
+- Krankheitstest (28 Rassen × 4 Spieler) und neuer Zuchttest (`tests/zucht-studie.js`, `tests/zucht-auswertung.js`) gemacht, Bericht in `STUDIE-GESUNDHEIT.md`, Daten in `studie-daten/`.
+- **v535** nach Domes Antworten: Druse/Atemwege seltener, Kolik-/Hufrehe-Tod wie in echt, Altersschwäche später; Zucht wie in echt (Natursprung/Besamung, Trächtigkeitsuntersuchung, Rosse, Fohlenrosse, Verfohlen, Totgeburt, Stute stirbt bei Geburt, Winterruhe, Leopard-Hinweis). Details CLAUDE.md „v535“. Kontroll-Studie in `studie-daten/v535-kontrolle/`.
+- **Offen:** Punkt 4 (Mittel-Spieler: Hunger/Mist → ~1× Klinik je Pferd/Jahr) – Dome wurde gefragt. CSNB (Nachtblindheit Lp/Lp) hat im Spiel noch keine Folgen. Domes Test von v535.
+- Branch: Dome hat erlaubt, auf `main` zu laden (alles auf `main`).
 
 ### Nächste Sitzung (Claude Team, Opus, Dome gibt Startsatz)
 - Plan: `PLAN-STUDIEN.md` (Krankheitstest alle Rassen × 4 Spieler, Vergleich mit erster Studie, danach Zuchttest). Basisdaten: `studie-daten/erste-studie-v531/`. Pro: bitte nichts an `tests/gesundheit-*.js` und den Gesundheitswerten ändern, solange die Studie läuft.

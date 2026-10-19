@@ -157,3 +157,29 @@ Aufbau: je Rasse 10 Zuchtstuten (4–14 J.), 4 Jahre (112 Spieltage), gute Pfleg
 
 Rassen: Trächtigkeit je Versuch am niedrigsten bei Anglo-Araber 69 %, Tekkiner 73 %, Vollblut 74 %, Welsh Cob 77 %, Hannoveraner 78 % (heißere/sensiblere Pferde → weniger Wohlbefinden), am höchsten Clydesdale 94 %. Appaloosa und Knabstrupper in B: **0 Fohlen** – fast jede Verpaarung bekommt die Leopard-Warnung (Lp × Lp), wer sie befolgt, kann diese Rassen nicht züchten.
 Erbkrankheiten-Mechanik funktioniert: mit Gentest und Ausweichen keine betroffenen Fohlen, ohne Gentest im erwarteten Umfang. Seltene rezessive tödliche (LFS, OAAM, CHF, SCID, FIS, WFFS) liegen bei < 0,5 % je Fohlen – bei 2.000 Fohlen kein Fall, das passt zu den Träger-Anteilen.
+
+## Nachbesserung v535 (Domes Antworten) und Kontroll-Studie
+Dome (19.10.): Punkte 1–3, 7–10 anpassen, 5/6 bleiben, 4 offen (Frage). Umgesetzt in v535 (Details in bzn „Zucht wie in echt (v535)“ und „Krankheits-Studie, Nachbesserung (v535)“). Kontrolle: alle 28 Rassen, Gesundheit 1 Lauf je Spieler, Zucht 3 Läufe je Variante (A Natursprung ohne Gentest, B Besamung mit Gentest + Abfohlbox, Trächtigkeitsuntersuchung 1 Tag nach dem Decken). Daten `studie-daten/v535-kontrolle/`.
+
+| Gesundheit, gute Pflege (v534 → v535) | |
+|---|---|
+| Befunde je Pferd und Jahr | 2,0 → **1,4** (echt 1–1,5) |
+| Tierarzt je Pferd und Jahr | 730 → **554 €**, 2,0 → 1,4 Besuche |
+| Atemwege (Druse + Husten + Erkältung + Influenza) je 100 PJ | ~88 → **~23** (Druse 38 → ~2) |
+| Kolik: Tod je Fall | 0,25 % → **6,3 %** (echt 6–10 %) |
+| Hufrehe: Tod je Fall | 0,7 % → **14 %** (echt ~10–15 %) |
+| Altersschwäche (je Lauf, 28 Rassen × 40 Pferde) | ~106 → 20 |
+| kranke Tage | 27 → 25 % (chronische Befunde zählen mit) |
+
+| Zucht v535 | A Natursprung | B Besamung | echt |
+|---|---|---|---|
+| tragend je Deckversuch | 55 % | 48 % | 50–65 % (Besamung 45–60 %) |
+| tragend je Stute und Jahreszeit (Fr/So) | 90–93 % | 87 % | 80–90 % |
+| Herbst | 61 % | 34 % | wenige Rossen |
+| Fohlen je Stute und Jahr (ab Jahr 2) | 1,1 (von 4 Möglichkeiten 3,3) | 1,04 | 0,65–0,8 |
+| verfohlt | 3,6 % | 3,2 % | 3–5 % (+ früher Embryoverlust) |
+| Fohlen tot bis Absetzen | 4,6 % | 2,6 % | 3–10 % |
+| Stute stirbt bei der Geburt | ~0,4 % | ~0,7 % | ~0,5–1 % |
+| schwach geboren | 14 % | 4,7 % (Abfohlbox) | – |
+| Fohlen mit Erbkrankheit | 67 (PSSM1 54, FIS 3, HYPP 3, CA 2, ACAN 2, MH 2, NFS 1) | 3 | – |
+Appaloosa/Knabstrupper züchten jetzt auch mit Gentest (Leopard-Hinweis statt Warnung). Fohlen bekommen jedes Jahr ein Geschwister (Fohlenrosse).

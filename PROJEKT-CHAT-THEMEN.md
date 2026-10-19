@@ -17,7 +17,7 @@ Diese Punkte sind zu groß oder brauchen erst eine Planung. Darum hat Claude sie
 8. **Spielbalance: Tierschutz-Strategie.** Tierschutzstuten mit Fohlen kaufen und nach einem Jahr verkaufen, dazu Turniere und ein Kredit: So gibt es keine Geldsorgen.
    - Schon gemacht (v261): Das Fohlen hat jetzt auch den Verkaufsschutz, und Stuten mit Fohlen kommen seltener.
    - Offen: Preise, Turniergeld, Kreditgrenzen insgesamt prüfen.
-9. **Spielstand zwischen PC und Handy übertragen:** Ein QR-Code reicht nicht, weil der Spielstand zu groß ist. Vorschlag: Datei exportieren und importieren (oder später ein Konto).
+9. **Spielstand zwischen PC und Handy übertragen:** Ein QR-Code reicht nicht, weil der Spielstand zu groß ist. Vorschlag: Datei exportieren und importieren (oder später ein Konto). **Geplant → `PLAN-SPIELSTAND.md`** (Etappen S1–S4).
 10. **Paddock und Sandpaddock** als nutzbarer Ort (kommt mit H6).
 11. **Zwei Fohlen in einer Box und Zwillingsgeburten:** Bisher hat eine Box nur Platz für ein Fohlen bei Fuß. Eine Leihmutter säugt das Waisenfohlen zwar (v265), es steht im Spiel aber in seiner eigenen Box. Geplant:
     - ein echtes zweites Fohlen in derselben Box (Anzeige, Versorgung, Absetzen, Verkauf mit der Mutter …)
@@ -26,6 +26,7 @@ Diese Punkte sind zu groß oder brauchen erst eine Planung. Darum hat Claude sie
 13. **Sachpreise bei kleinen Turnieren** (Dome): Bei Prüfungen ohne Preisgeld (Wettbewerbe, Hofturniere, E-Prüfungen) gibt es für die Platzierten Sachpreise wie in echt – Putzzeug, Schabracken, Decken, Leckerli, Halfter usw. (wandern ins Lager bzw. in die Futterkammer). Braucht die Ausrüstung (Schabracken, Decken) als System.
 14. **Waschplatz mit Wirkung** (Dome, 19.10.2026): Bisher ist der Waschplatz nur eine Kachel ohne Wirkung. Ideen: Pferd nach dem Training im Sommer abspritzen (Schmutz weg, Wohlbefinden besser), Hufe waschen gegen Strahlfäule, Mauke-Pflege. Wie in echt planen (z. B. im Winter nicht nass abspritzen, Beine danach trocknen).
 
+15. **Speicherplatz (noch im Projekt-Chat besprechen):** Der Browser-Speicher (ca. 5 MB) kann bei langen Spielen und zwei Speicherplätzen voll werden. Dome will **nichts automatisch löschen**: besondere Briefe bleiben, Turnierergebnisse müssen ein Pferdeleben lang sichtbar bleiben (Verkaufswert). Gepackt speichern ist schon in S1 Punkt 11 (`PLAN-SPIELSTAND.md`) enthalten; offen ist nur, ob und was später aufgeräumt werden darf.
 
 ## Rassetypen und Rote-Liste-Rassen (Dome, 18.10.2026 – noch planen)
 - **Typen innerhalb einer Rasse:** Knabstrupper (Pony, Sport, Barock), Friese (Barock-/Sporttyp, Prädikate Ster/Kroon/Model), Welsh (Sektion A–D, im Spiel nur D), Haflinger (alter, schwerer Typ / moderner Reittyp), Shetlandpony (Mini-Shetty unter 87 cm / Standard), Quarter (Halter, Racing, Working), Araber (Zuchtrichtungen, z. B. Ägypter), Tinker (Größen vom Pony bis zum Cob).

@@ -49,7 +49,7 @@ function musterFarbe(id, t) {
   if (pattern === "tovero" || pattern === "fewspot") { e.head = mix(B.head || B.body, "#f7f5f1", pattern === "fewspot" ? .75 : .2); e.hoof = "#b8a88f"; }
   if (pattern === "leopard") { e.head = mix(B.head || B.body, "#f7f5f1", .45); e.hoof = "#b8a88f"; }
   if (pattern === "tovero" || pattern === "fewspot" || pattern === "leopard") e.muzzle = "#c9a49a";
-  if (pattern === "sabino" || pattern === "splash") { e.hoof = "#b8a88f"; e.muzzle = "#c9a49a"; }   // weiße Beine → helle Hufe, Blesse → rosa Maul
+  if (pattern === "sabino" || pattern === "splash") e.hoof = "#b8a88f";   // weiße Beine → helle Hufe; v506 (Dome): kein pauschal rosa Maul mehr – rosa Haut nur unter dem Kopfabzeichen (Domes Schnippe/Laterne)
   return e;
 }
 // Roan in 3 Stufen (v439): wenig = Grundfarbe scheint stärker durch, viel = sehr hell; andere Muster unverändert (deren Stufe steckt in der Zeichnung)

@@ -12,9 +12,9 @@ fs.mkdirSync(aus, { recursive: true });
 
 // Pflegestufen: Wahrscheinlichkeit, dass etwas an einem Tag gemacht wird
 const STUFEN = {
-  3: { name: 'gut', fuettern: 1, misten: 1, wasser: 1, putzen: .9, hufe: .9, weide: .85, besuch: 1, tierarzt: 1, tierarztAb: 1, kontrolle: 4, behandeln: 1, vorsorge: 1, hufschmied: 1, klinik: true, boxenruheEnde: true, schont: true, training: 4 / 7, putzzeug: 1 },
-  2: { name: 'mittel', fuettern: .9, misten: .7, wasser: .9, putzen: .5, hufe: .4, weide: .5, besuch: .6, tierarzt: .4, tierarztAb: 1, kontrolle: 8, behandeln: .7, vorsorge: .5, hufschmied: 1.4, klinik: true, boxenruheEnde: true, schont: true, training: 3 / 7, putzzeug: .5 },
-  1: { name: 'schlecht', fuettern: .85, misten: .4, wasser: .85, putzen: .15, hufe: .1, weide: .3, besuch: .25, tierarzt: .5, tierarztAb: 4, kontrolle: 99, behandeln: .3, vorsorge: 0, hufschmied: 2.2, klinik: false, boxenruheEnde: false, schont: false, training: 2 / 7, putzzeug: 0 },
+  3: { name: 'gut', fuettern: 1, misten: 1, wasser: 1, putzen: .9, hufe: .9, weide: .85, besuch: 1, tierarzt: 1, tierarztAb: 1, kontrolle: 4, behandeln: 1, vorsorge: 1, hufschmied: 1, klinik: 1, boxenruheEnde: true, schont: true, training: 4 / 7, putzzeug: 1 },
+  2: { name: 'mittel', fuettern: .9, misten: .7, wasser: .9, putzen: .5, hufe: .4, weide: .5, besuch: .6, tierarzt: .4, tierarztAb: 1, kontrolle: 8, behandeln: .7, vorsorge: .5, hufschmied: 1.4, klinik: 1, boxenruheEnde: true, schont: true, training: 3 / 7, putzzeug: .5 },
+  1: { name: 'schlecht', fuettern: .85, misten: .4, wasser: .85, putzen: .15, hufe: .1, weide: .3, besuch: .25, tierarzt: .5, tierarztAb: 4, kontrolle: 99, behandeln: .3, vorsorge: 0, hufschmied: 2.2, klinik: .5, boxenruheEnde: true, schont: false, training: 2 / 7, putzzeug: 0 },
 };
 const WDH = +(process.env.WDH || 2);   // Durchläufe je Pflegestufe (Seuchen machen die Zahlen zufällig)
 const KLASSEN = [['Fohlen', .6, .95], ['Jungpferd', 1, 3.9], ['Erwachsen', 4, 14], ['Senior', 15, 26]];
@@ -35,7 +35,7 @@ async function lauf(rasse, stufe) {
     const ap = apotheke(); Object.keys(APO).filter(k => APO[k].frei).forEach(k => ap[k] = 999);
     const pferde = []; let n = 0;
     KLASSEN.forEach(([kl, a, z]) => { for (let i = 0; i < 10; i++) { const alter = a + (z - a) * i / 9, p = neuesPferd({ name: 'S' + (++n), rasse, geschlecht: i % 2 ? 'Stute' : 'Wallach', alter });
-      p.pflege = erzeugePflege(p); p.werte = p.werte || erzeugeWerte(p); p.studie = { kl, alter }; p.pflege.impf = spiel.tag; p.pflege.wurm = spiel.tag; p.pflege.zahn = spiel.tag; p.pflege.huf = spiel.tag; if (zuf() < S.putzzeug) p.putzzeug = true;
+      p.pflege = erzeugePflege(p); p.werte = p.werte || erzeugeWerte(p); p.studie = { kl, alter, klinikJa: zuf() < S.klinik }; p.pflege.impf = spiel.tag; p.pflege.wurm = spiel.tag; p.pflege.zahn = spiel.tag; p.pflege.huf = spiel.tag; if (zuf() < S.putzzeug) p.putzzeug = true;
       spiel.boxen[n - 1].pferd = p; pferde.push(p); } });
     // Messung
     const M = { befunde: {}, tage: 0, krankTage: {}, lebendTage: {}, tod: [], tierarzt: 0, kontrolle: 0, klinik: 0, behandlungen: 0, routine: 0, krankArbeit: 0, kosten: { tierarzt: 0, hufschmied: 0, klinik: 0 }, fehler: {} };
@@ -58,7 +58,7 @@ async function lauf(rasse, stufe) {
         if (!p.weide && weideOk && !p.boxenruhe && !p.quarantaene && zuf() < S.weide) schritt('weide', () => { const w = 'w' + (KLASSEN.findIndex(([kl]) => kl === p.studie.kl) + 1); aufWeide(p, box, null, w); M.routine++; });
         // Tierarzt: bemerkt und noch keine Diagnose (gut sofort, mittel mit Verzögerung, schlecht erst ab schwer)
         const L = befundListe(p), neu = L.filter(x => x.bemerkt && !x.diagnose && x.grad >= S.tierarztAb), alt = L.filter(x => x.diagnose && spiel.tag - (x.beh || x.diagnose) >= S.kontrolle && !KRANK[x.art].chronisch);
-        if ((neu.length && zuf() < S.tierarzt) || (alt.length && zuf() < S.tierarzt) || (!S.klinik ? false : L.some(x => x.grad >= 4 && x.bemerkt && x.beh !== spiel.tag))) schritt('tierarzt', () => {
+        if ((neu.length && zuf() < S.tierarzt) || (alt.length && zuf() < S.tierarzt) || (!p.studie.klinikJa ? false : L.some(x => x.grad >= 4 && x.bemerkt && x.beh !== spiel.tag))) schritt('tierarzt', () => {
           if (alt.length && !neu.length) M.kontrolle++; else M.tierarzt++; M.krankArbeit++;
           tierarztBesuch(p, box, () => {}); const t = document.getElementById('dlg').hidden ? '' : document.getElementById('dlgInhalt').textContent;
           if (/Klinik/.test(t) && S.klinik) { const k = [...document.querySelectorAll('#dlgKnoepfe button')].find(x => /Klinik/.test(x.textContent)); if (k) { k.click(); M.klinik++; } } zu(); });
@@ -67,7 +67,7 @@ async function lauf(rasse, stufe) {
           plan.forEach(k => { if (k === 'boxenruhe' || k === 'beschlag' || zuf() >= S.behandeln) return; M.krankArbeit++; M.behandlungen++;
             if (AKTION[k] && AKTION[k].ueb) { const ue = k === 'longe' ? 'longieren' : k === 'frei' ? 'bodenarbeit' : null; if (ue && !p.weide && energie(p) >= uebKosten(p, ue)) schritt('beh-ueb', () => trainieren(p, ue, uebOrt(ue) || 'reitplatz', null)); return; }
             schritt('beh', () => behandeln(p, k, APO[k] && APO[k].dosis ? dosisKlasse(gewichtAnzeige(p)) : 0, undefined)); }); }
-        if (S.klinik && p.pflege.gesundheit <= 30 && !p.klinik) schritt('klinik', () => { ANH_ZIEL.stationaer.aus(p, box); M.klinik++; M.krankArbeit++; });
+        if (p.studie.klinikJa && p.pflege.gesundheit <= 30 && !p.klinik) schritt('klinik', () => { ANH_ZIEL.stationaer.aus(p, box); M.klinik++; M.krankArbeit++; });
         // Vorsorge
         if (S.vorsorge && zuf() < S.vorsorge) { schritt('vorsorge', () => { if (!geimpft(p) || spiel.tag - (p.pflege.impf || 0) > 1.8 * tpj()) { vorsorge(p, 'impfung'); M.routine++; } if (zahnUeber(p)) { vorsorge(p, 'zahn'); M.routine++; }
           if ((d.s === 0 || d.s === 2) && spiel.tag - (p.pflege.wurm || 0) > tpj() && d.t <= 2) { behandeln(p, 'wurmkur', dosisKlasse(gewichtAnzeige(p)), undefined); M.routine++; } }); }
@@ -85,7 +85,7 @@ async function lauf(rasse, stufe) {
     const messen = () => { M.tage++; const Lb = lebend(); if (M.tage % 7 === 0) M.ges.push(Lb.length ? Math.round(Lb.reduce((a, p) => a + p.pflege.gesundheit, 0) / Lb.length) : 0);
       lebend().forEach(p => { const kl = p.studie.kl; M.lebendTage[kl]++;
         const L = befundListe(p).filter(x => !imInkub(x)); if (L.length) M.krankTage[kl]++;
-        L.forEach(x => { const B = (M.befunde[x.id] = M.befunde[x.id] || { art: x.art, kl, start: spiel.tag, max: 0, bemerkt: null, diagnose: null, ende: null, pferd: p.name });
+        L.forEach(x => { const B = (M.befunde[x.id] = M.befunde[x.id] || { art: x.art, urs: (x.ursache || '').slice(0, 30), kl, start: spiel.tag, max: 0, bemerkt: null, diagnose: null, ende: null, pferd: p.name });
           B.max = Math.max(B.max, x.grad); B.letzt = spiel.tag; if (x.bemerkt && B.bemerkt == null) B.bemerkt = spiel.tag; if (x.diagnose && B.diagnose == null) B.diagnose = spiel.tag; }); });
       Object.values(M.befunde).forEach(B => { if (B.ende == null && B.letzt < spiel.tag) B.ende = B.letzt + 1; }); };
     const tote0 = (spiel.friedhof || []).length;

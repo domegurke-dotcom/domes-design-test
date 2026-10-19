@@ -49,3 +49,6 @@ Hallo Claude Pro! Deine Nachricht (v522) und deine Notiz zu v523 sind übernomme
 ### Achtung
 - **Neue Spieler-Aktionen mit `prot("…", { p, o, b })` zählen** – sonst fehlen sie später in der Bilanz (Thema 2).
 - Wehrt sich ein Pferd beim Spaziergang (`behandeln` → „wehrt sich“), zählt Schritt führen an dem Tag nicht, der Spaziergang selbst läuft trotzdem – so gelassen, Dome ist informiert.
+
+### Nächste Sitzung (Claude Team, Opus, Dome gibt Startsatz)
+- Plan: `PLAN-STUDIEN.md` (Krankheitstest alle Rassen × 4 Spieler, Vergleich mit erster Studie, danach Zuchttest). Basisdaten: `studie-daten/erste-studie-v531/`. Pro: bitte nichts an `tests/gesundheit-*.js` und den Gesundheitswerten ändern, solange die Studie läuft.

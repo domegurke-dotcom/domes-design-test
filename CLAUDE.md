@@ -27,6 +27,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - Grundsatz: Kommen neue Rassen dazu, bekommen sie ihre Erbkrankheiten, Eigenheiten, Hufqualität, Körperbau (Gewicht) und Futtertyp gleich mit.
 
 ## Pläne (in dieser Reihenfolge)
+- `PLAN-STUDIEN.md` – **nächste Sitzung:** großer Krankheitstest (28 Rassen × 4 Spieler) mit Vergleich zur ersten Studie (`studie-daten/erste-studie-v531/`), danach großer Zuchttest. Erst lesen!
 - `PLAN-WERTE.md` – Werte, Charakter, Training, Disziplinen, Turniere, Fohlenschau. **Alle Etappen 1–6 fertig** (6a Turniere, 6b Rennen/Distanz/Gangpferde/Championate/Reiterprofil, 6c Fohlenschau; Stand v211).
 - `PLAN-KRANKHEITEN.md` – Spieltempo, Mitarbeiter (inkl. Nachtrag B3 Azubi/Ausbilder), Befunde, Behandlung, Hufe, Ansteckung, AKU, Erbkrankheiten. **Alle Etappen A–H fertig.**
 - `PLAN-FUETTERUNG.md` – F1–F5. **Alle Etappen fertig** (v210–v214, Abnahmetest von Claude erledigt, `tests/etappen-test.js`). Offene Detailfragen in `OFFENE-FRAGEN.md`.

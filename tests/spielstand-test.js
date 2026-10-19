@@ -102,6 +102,23 @@ const URL_ = 'file://' + path.resolve(__dirname, '..', 'index.html');
   ok('Datei: Format (typ, format 1, version, spielId, info, spiel – lesbar, nicht gepackt)', datei.typ === 'zuchtstall-spielstand' && datei.format === 1 && !!datei.version && !!datei.spielId && datei.info && datei.info.hoefe[0] === 'Sonnenhof' && datei.spiel && datei.spiel.boxen);
   ok('nach dem Datei-Sichern: „zuletzt als Datei gesichert“ gemerkt', await ev(() => !!(spiel.zuletztExport && spiel.zuletztExport.am)));
 
+  // 9b. S2: Auswahl in den Einstellungen, „zuletzt als Datei gesichert“, Platz als Datei im Startmenü
+  await ev(() => { document.getElementById('dlg').hidden = true; zeigeHof('einst'); });
+  r = await ev(() => document.getElementById('hfDatei').textContent);
+  ok('Einstellungen: „Zuletzt als Datei gesichert: <Datum> · <Spieldatum>“', /Zuletzt als Datei gesichert: \d+\.\d+\.\d{4} · /.test(r), r);
+  await pg.click('#hfDatei'); await pg.waitForTimeout(150);
+  r = await ev(() => [...document.querySelectorAll('#dlgKnoepfe button')].map(b => b.textContent));
+  ok('Auswahl: laufendes Spiel, Platz 1, Platz 2', r.some(t => /Laufendes Spiel \(Autospeicher\)/.test(t)) && r.some(t => /^Platz 1 · Sonnenhof/.test(t)) && r.some(t => /^Platz 2 · Lindenhof/.test(t)), r.join(' | '));
+  const [dl2] = await Promise.all([pg.waitForEvent('download'), knopf('Platz 2')]);
+  const d2 = JSON.parse(fs.readFileSync(await dl2.path(), 'utf8'));
+  ok('Platz 2 als Datei: Lindenhof', d2.typ === 'zuchtstall-spielstand' && d2.info.hoefe[0] === 'Lindenhof' && d2.spiel.platz === 2);
+  await zumStart();
+  ok('Startmenü: „Als Datei“ bei Platz 1/2 und beim laufenden Spiel', await ev(() => !!document.querySelector('[data-pdatei="1"]') && !!document.querySelector('[data-pdatei="2"]') && !!document.getElementById('smDateiAuto')));
+  const [dl3] = await Promise.all([pg.waitForEvent('download'), pg.click('[data-pdatei="1"]')]);
+  const d3 = JSON.parse(fs.readFileSync(await dl3.path(), 'utf8'));
+  ok('Startmenü Platz 1 als Datei: Sonnenhof, gleicher Stand wie der Platz', d3.info.hoefe[0] === 'Sonnenhof' && JSON.stringify(d3.spiel) === await ev(() => JSON.stringify(lesenPlatz(1).spiel)));
+  await ev(() => { document.getElementById('dlg').hidden = true; zeigeHaupt(); });
+
   // 10. Spiel verloren: Autospeicher weg, Plätze bleiben, vom Speicherstand neu starten
   await ev(() => { document.getElementById('dlg').hidden = true; platzSpeichern(true); spiel.verloren = { tag: spiel.tag, jz: jzJetzt(), kredit: 'Hofkredit', offen: 3, schuld: 1000, pferde: 0 }; spielVerloren(); });
   r = await ev(() => ({ auto: localStorage.getItem('zuchtstall-v2'), p1: !!lesenPlatz(1), p2: !!lesenPlatz(2), knopf: (document.getElementById('vlPlatz') || {}).textContent || '' }));
@@ -121,6 +138,16 @@ const URL_ = 'file://' + path.resolve(__dirname, '..', 'index.html');
   // 12. Größe: gepackt deutlich kleiner
   r = await ev(() => ({ j: JSON.stringify(spiel).length, p: localStorage.getItem('zuchtstall-v2').length }));
   ok('gepackt kleiner als ungepackt (' + r.j + ' → ' + r.p + ' Zeichen)', r.p < r.j / 2);
+
+  // 13. Notfall-Fenster: sichert den (gepackten) Autospeicher im selben Dateiformat
+  const html = fs.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf8').replace('<script>\n  // ---------- Spielzustand ----------', '<script>\n  throw new Error("Testabsturz");\n  // ---------- Spielzustand ----------');
+  const nf = path.resolve(__dirname, '..', '_notfall-test.html'); fs.writeFileSync(nf, html);
+  try { const pg2 = await ctx.newPage(); await pg2.goto('file://' + nf); await pg2.waitForTimeout(600);
+    const sicht = await pg2.evaluate(() => !!document.getElementById('nfSichern'));
+    const [dl4] = await Promise.all([pg2.waitForEvent('download'), pg2.click('#nfSichern')]);
+    const d4 = JSON.parse(fs.readFileSync(await dl4.path(), 'utf8'));
+    ok('Notfall-Fenster: „Spielstand sichern (Datei)“ im selben Format, entpackt', sicht && d4.typ === 'zuchtstall-spielstand' && d4.format === 1 && d4.spiel && d4.spiel.boxen && d4.info.hoefe[0] === 'Sonnenhof');
+    await pg2.close(); } finally { fs.unlinkSync(nf); }
 
   ok('keine Seitenfehler', !errs.length, errs.slice(0, 3).join(' | '));
   L.forEach(x => console.log(x.filter(Boolean).join('  ')));

@@ -85,6 +85,6 @@ Grundidee (Dome, 19.10.2026): Ein Speicherplatz enthält nur, was der Spieler **
 
 ## Fortschritt (Claude hakt ab)
 - [x] S1 Selbst speichern, zwei Plätze, Autospeicher, Rücksicherung, gepackt (v519, `tests/spielstand-test.js`)
-- [ ] S2 Spielstand als Datei speichern
+- [x] S2 Spielstand als Datei speichern (v520)
 - [ ] S3 Spielstand aus Datei laden
 - [ ] S4 Spielprotokoll

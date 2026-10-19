@@ -83,3 +83,19 @@ Je Rasse 10 Zuchtstuten + eigener Hengst bzw. Deckstation, 3–5 Jahre, gute Pfl
 
 ## Nachher 2 (v533, 4 Rassen)
 Weide-Verletzungen jetzt ~40 je 100 Pferdejahre (Ziel 30–40), Streit-Verletzung 7 %/15 %. Gute Pflege: 1,9–2,7 Befunde je Pferd und Jahr, 19–31 % kranke Tage, 660–913 € Tierarzt je Jahr, 1,8–2,6 Tierarztbesuche. Mittel: 2,5–3,5 Befunde, 42–52 % kranke Tage. Schlecht (Spieler 1 mit 50 % Klinik und Boxenruhe-Ende): 2,2–3,1 Befunde, 14–20 % tot und 53–64 % beim Tierschutz nach 3 Jahren (vorher 100 % nach 2–3 Wochen).
+
+## Spieler 4 „Selbstbehandler“ und Nachbesserung (v534, 4 Rassen: Tekkiner, Vollblut, Araber, Shire)
+Spieler 4 = wie Spieler 3 (gut), behandelt die ersten 2 Tage selbst (nur frei kaufbare Mittel/Aktionen, in 60 % passend zum Befund, sonst falsches Mittel) und ruft den Tierarzt erst bei Misserfolg (nach 2 Tagen oder ab Grad 3). Spieler 2 (mittel) ruft den Tierarzt jetzt nach 1–2 Tagen (60 % je Tag, vorher 40 %).
+
+| Mittel der 4 Rassen | gut (3) | Selbstbehandler (4) | mittel (2) |
+|---|---|---|---|
+| Befunde je Pferd und Jahr | 2,1 | 2,3 | 2,8 |
+| kranke Tage | 28 % | 32 % | 44 % |
+| schwere Befunde (Grad ≥ 4) | 2 % | 2,5 % | 5,8 % |
+| Heilung Ø (Spieltage) | 1,9 | 2,6 | 4,2 |
+| bemerkt nach (Tage) | 0,9 | 1,0 | 2,1 |
+| Tierarzt-Besuche je Pferd und Jahr | 2,1 | 1,9 | 2,0 |
+| Tierarztkosten je Pferd und Jahr | 759 € | 732 € | 1.045 € |
+| tot in 3 Jahren | 9,8 % | 8,8 % | 8,3 % (alle Altersschwäche bzw. Einzelfälle) |
+Der Selbstbehandler spart etwa 30 € Tierarzt im Jahr, hat aber ~4 % mehr kranke Tage und verläuft ~0,7 Tage länger je Krankheit – realistisch: selbst behandeln verzögert die Heilung etwas, kostet aber weniger.
+Schmutzige Mähne macht nicht mehr krank (nur Fell-Schmutz zählt für Hautpilz/Mauke/Husten; Mähne nur Wohlbefinden −0,5).

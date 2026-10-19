@@ -13,9 +13,10 @@ fs.mkdirSync(aus, { recursive: true });
 // Pflegestufen: Wahrscheinlichkeit, dass etwas an einem Tag gemacht wird
 const STUFEN = {
   3: { name: 'gut', fuettern: 1, misten: 1, wasser: 1, putzen: .9, hufe: .9, weide: .85, besuch: 1, tierarzt: 1, tierarztAb: 1, kontrolle: 4, behandeln: 1, vorsorge: 1, hufschmied: 1, klinik: 1, boxenruheEnde: true, schont: true, training: 4 / 7, putzzeug: 1 },
-  2: { name: 'mittel', fuettern: .9, misten: .7, wasser: .9, putzen: .5, hufe: .4, weide: .5, besuch: .6, tierarzt: .4, tierarztAb: 1, kontrolle: 8, behandeln: .7, vorsorge: .5, hufschmied: 1.4, klinik: 1, boxenruheEnde: true, schont: true, training: 3 / 7, putzzeug: .5 },
+  2: { name: 'mittel', fuettern: .9, misten: .7, wasser: .9, putzen: .5, hufe: .4, weide: .5, besuch: .6, tierarzt: .6, tierarztAb: 1, kontrolle: 8, behandeln: .7, vorsorge: .5, hufschmied: 1.4, klinik: 1, boxenruheEnde: true, schont: true, training: 3 / 7, putzzeug: .5 },
   1: { name: 'schlecht', fuettern: .85, misten: .4, wasser: .85, putzen: .15, hufe: .1, weide: .3, besuch: .25, tierarzt: .5, tierarztAb: 4, kontrolle: 99, behandeln: .3, vorsorge: 0, hufschmied: 2.2, klinik: .5, boxenruheEnde: true, schont: false, training: 2 / 7, putzzeug: 0 },
 };
+STUFEN[4] = { ...STUFEN[3], name: 'selbst', selbst: 2 };   // Dome 19.10.: wie gut, aber behandelt die ersten 2 Tage selbst (mit frei kaufbaren Mitteln, Treffer 60 %) und ruft den Tierarzt erst bei Misserfolg (nach 2 Tagen oder ab Grad 3)
 const WDH = +(process.env.WDH || 2);   // Durchläufe je Pflegestufe (Seuchen machen die Zahlen zufällig)
 const KLASSEN = [['Fohlen', .6, .95], ['Jungpferd', 1, 3.9], ['Erwachsen', 4, 14], ['Senior', 15, 26]];
 
@@ -56,8 +57,13 @@ async function lauf(rasse, stufe) {
         const d = datum(), weideOk = d.s !== 3 && !(d.s === 2 && d.t === tpj());
         if (S.boxenruheEnde && p.boxenruhe && !befundListe(p).some(x => (PLAN[x.art] || []).includes('boxenruhe') && (x.diagnose || x.bemerkt))) p.boxenruhe = false;
         if (!p.weide && weideOk && !p.boxenruhe && !p.quarantaene && zuf() < S.weide) schritt('weide', () => { const w = 'w' + (KLASSEN.findIndex(([kl]) => kl === p.studie.kl) + 1); aufWeide(p, box, null, w); M.routine++; });
+        // Selbstbehandler: erst selbst versuchen (nur frei kaufbare Mittel und Aktionen, 60 % passend zum Befund)
+        if (S.selbst) befundListe(p).filter(x => x.bemerkt && !x.diagnose && (x.selbstTage || 0) < S.selbst && x.grad < 3 && x.selbstAm !== spiel.tag).forEach(x => { x.selbstAm = spiel.tag; x.selbstTage = (x.selbstTage || 0) + 1; M.selbst = (M.selbst || 0) + 1; M.krankArbeit++;
+          const frei = k => (AKTION[k] && !AKTION[k].ueb && k !== 'boxenruhe') || (APO[k] && APO[k].frei && !APO[k].dosis), passend = (PLAN[x.art] || []).filter(frei), falsch = ['wundsalbe', 'kuehlen', 'verband', 'schritt', 'hustensaft'];
+          const wahl = passend.length && zuf() < 0.6 ? passend : [falsch[Math.floor(zuf() * falsch.length)]];
+          wahl.forEach(k => schritt('selbst', () => { if (AKTION[k] && AKTION[k].mittel) apotheke()[AKTION[k].mittel] = 20; if (APO[k] && APO[k].frei) apotheke()[k] = 20; behandeln(p, k, APO[k] && APO[k].dosis ? dosisKlasse(gewichtAnzeige(p)) : 0, undefined); })); });
         // Tierarzt: bemerkt und noch keine Diagnose (gut sofort, mittel mit Verzögerung, schlecht erst ab schwer)
-        const L = befundListe(p), neu = L.filter(x => x.bemerkt && !x.diagnose && x.grad >= S.tierarztAb), alt = L.filter(x => x.diagnose && spiel.tag - (x.beh || x.diagnose) >= S.kontrolle && !KRANK[x.art].chronisch);
+        const L = befundListe(p), neu = L.filter(x => x.bemerkt && !x.diagnose && x.grad >= S.tierarztAb && (!S.selbst || (x.selbstTage || 0) >= S.selbst || x.grad >= 3)), alt = L.filter(x => x.diagnose && spiel.tag - (x.beh || x.diagnose) >= S.kontrolle && !KRANK[x.art].chronisch);
         if ((neu.length && zuf() < S.tierarzt) || (alt.length && zuf() < S.tierarzt) || (!p.studie.klinikJa ? false : L.some(x => x.grad >= 4 && x.bemerkt && x.beh !== spiel.tag))) schritt('tierarzt', () => {
           if (alt.length && !neu.length) M.kontrolle++; else M.tierarzt++; M.krankArbeit++;
           tierarztBesuch(p, box, () => {}); const t = document.getElementById('dlg').hidden ? '' : document.getElementById('dlgInhalt').textContent;
@@ -105,7 +111,7 @@ async function lauf(rasse, stufe) {
 (async () => {
   for (const rasse of rassen) {
     const erg = { rasse, stufen: {} };
-    for (const st of [3, 2, 1]) for (let w = 0; w < WDH; w++) { const t = Date.now(), M = await lauf(rasse, st); M.sek = Math.round((Date.now() - t) / 1000); (erg.stufen[st] = erg.stufen[st] || []).push(M);
+    for (const st of (process.env.STUFEN || '3,2,1').split(',').map(Number)) for (let w = 0; w < WDH; w++) { const t = Date.now(), M = await lauf(rasse, st); M.sek = Math.round((Date.now() - t) / 1000); (erg.stufen[st] = erg.stufen[st] || []).push(M);
       console.log(`${rasse} Stufe ${st} (${STUFEN[st].name}): ${M.befunde.length} Befunde, ${M.tod.length} tot, ${Math.round(Object.values(M.krankTage).reduce((a, b) => a + b, 0) / Object.values(M.lebendTage).reduce((a, b) => a + b, 0) * 100)} % kranke Tage, Fehler ${Object.keys(M.fehler).length}, ${M.sek} s`); }
     fs.writeFileSync(path.join(aus, rasse + '.json'), JSON.stringify(erg));
   }

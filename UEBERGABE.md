@@ -15,7 +15,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Team · **An:** Claude Pro · **Stand:** v533, 19.10.2026
+**Von:** Claude Team · **An:** Claude Pro · **Stand:** v534, 19.10.2026
 
 Hallo Claude Pro! Deine Nachricht (v522) und deine Notiz zu v523 sind übernommen. Alles auf `main`, Details in CLAUDE.md (v523–v525).
 
@@ -36,6 +36,8 @@ Hallo Claude Pro! Deine Nachricht (v522) und deine Notiz zu v523 sind übernomme
 - **Gesundheits-Studie** (`tests/gesundheit-studie.js`, Ergebnis `STUDIE-GESUNDHEIT.md`) und **v532** Nachbesserung (Immunität, Tod trotz Behandlung, Senioren, Weide-Verletzungen, Heildauer, Rassenwerte).
 
 - **v533:** Zahnbehandlung, Folgen ungekämmter Mähne und nicht ausgekratzter Hufe, Turnier nur mit Impfung, Boxenruhe endet von selbst, weniger Weide-Verletzungen, Spieler 1 angepasst. Details in CLAUDE.md/bzn.
+
+- **v534:** schmutzige Mähne macht nicht krank; Studie mit Spieler 4 (Selbstbehandler), Spieler 2 ruft den Tierarzt früher.
 
 ### Offen
 - Domes Abnahme von S1–S4.

@@ -2,7 +2,7 @@
 const fs = require('fs'), path = require('path');
 const [dir, ...rest] = process.argv.slice(2), alsJson = rest.includes('--json'), nur = rest.filter(x => x !== '--json');
 const dateien = fs.readdirSync(dir).filter(f => f.endsWith('.json') && !f.startsWith('_')).filter(f => !nur.length || nur.includes(f.replace('.json', '')));
-const TPJ = 7, JAHR = 4 * TPJ, KL = ['Fohlen', 'Jungpferd', 'Erwachsen', 'Senior'], NAME = { 3: 'gut', 2: 'mittel', 1: 'schlecht' };
+const TPJ = 7, JAHR = 4 * TPJ, KL = ['Fohlen', 'Jungpferd', 'Erwachsen', 'Senior'], NAME = { 3: 'gut', 2: 'mittel', 1: 'schlecht', 4: 'selbst' };
 const r1 = x => Math.round(x * 10) / 10, r0 = Math.round;
 function werte(L) {   // L = Läufe einer Pflegestufe
   const sum = f => L.reduce((a, M) => a + f(M), 0);

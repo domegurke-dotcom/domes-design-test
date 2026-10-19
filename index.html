@@ -968,7 +968,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "549";
+  const SPIEL_VERSION = "550";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -976,10 +976,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=549"></script>
-<script src="pferd.js?v=549"></script>
-<script src="boxstufen.js?v=549"></script>
-<script src="kopfneu.js?v=549"></script>
+<script src="lz-string.min.js?v=550"></script>
+<script src="pferd.js?v=550"></script>
+<script src="boxstufen.js?v=550"></script>
+<script src="kopfneu.js?v=550"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2300,7 +2300,7 @@
   // Mini-Eintrag { id, n, r, e Punkte, s Siege, pl Platzierungen, w Wert } in spiel.chronik[hid].beste / .wertvoll; das Pferd selbst bleibt über pferdePool() anklickbar
   // (eigene Pferde, Gnadenhof, Friedhof) bzw. im spiel.archiv, wo Bestenlisten-Pferde vor dem 40er-Limit geschützt sind (bestenIds).
   const BESTEN = { anzahl: 3, sieg: 3, platz: 1 };
-  const erfolgZahlen = p => (p.erfolge || []).reduce((a, e) => { if (e.aus) return a; if (e.platz === 1) a.s++; else if (e.plaziert) a.pl++; return a; }, { s: 0, pl: 0 });
+  const erfolgZahlen = p => { let s = 0, pl = 0; Object.values(bilanzHolen(p)).forEach(z => { s += z[1]; pl += z[2] + z[3]; }); return { s, pl }; };   // 1. Plätze / 2. und 3. Plätze aus der Lebensbilanz
   const bestenListen = hid => { const Z = (spiel.chronik = spiel.chronik || {}), H = (Z[hid] = Z[hid] || {}); return { beste: (H.beste = H.beste || []), wertvoll: (H.wertvoll = H.wertvoll || []) }; };
   function bestenEintrag(liste, x, key) {
     const i = liste.findIndex(y => y.id === x.id); if (i >= 0) liste.splice(i, 1);
@@ -2320,7 +2320,7 @@
       const lebt = heute.find(e => e.p.id === x.id), q = pool.find(e => e.p.id === x.id);
       const stand = lebt ? (lebt.ort || "bei dir") : q ? (q.tot ? "verstorben" : "Stand beim Verkauf/Abgang") : "nicht mehr abrufbar";
       const name = q ? `<b class="ansehen-link" ${ansehen(q.p, q.ort, null, q.tot ? { tot: true, alter: q.tot.alter } : undefined)}>${esc(x.n)}</b>` : `<b>${esc(x.n)}</b>`;
-      return `<li>${name} · ${esc(rName(x.r))} · ${text}<br><small>${esc(stand)}</small></li>`;
+      return `<li style="display:block">${name} · ${esc(rName(x.r))}<br>${text}<br><small>${esc(stand)}</small></li>`;
     };
     return `<details style="margin:10px 0"><summary><b>🏅 Bestenliste dieses Hofs</b></summary>
       ${L.beste.length ? `<p class="text" style="margin:8px 0 2px"><b>Meiste Erfolge</b></p><ol class="liste">${L.beste.map(x => zeile(x, `${x.s} ${x.s === 1 ? "Sieg" : "Siege"}, ${x.pl} ${x.pl === 1 ? "Platzierung" : "Platzierungen"}`)).join("")}</ol>` : ""}
@@ -6971,6 +6971,21 @@
   const leistungWort = w => LEISTUNG.find(([ab]) => w >= ab)[1];
   const turnierKlasse = P => { try { return P.stufe == null || P.stufe < 0 ? "ohne Klasse" : String(stufeText(DISZ[P.disz], P.stufe)).replace(/^Klasse /, ""); } catch (e) { return "ohne Klasse"; } };
   const protKlasse = (was, p, t, P) => { prot(`Turnier ${(DISZ[P.disz] || {}).n || P.disz} ${turnierKlasse(P)}: ${was}`, { p, o: t.name }); if (was === "Start") chronikKlasse(P.disz, P.stufe); };   // B2
+  // B2 Teil 2 (Dome): Lebensbilanz je Pferd – p.bilanz["<disz>|<Klasse>"] = [Starts, 1., 2., 3. Platz]; wird nie gekürzt (p.erfolge behält nur die letzten 60 Einträge).
+  // Bestehende Pferde: wird beim ersten Zugriff aus den vorhandenen Erfolgen aufgebaut (immer VOR dem Einfügen des neuen Eintrags zählen!).
+  const bilanzSchluessel = e => `${e.disz}|${turnierKlasse(e)}`;
+  function bilanzEintragen(B, e, platz) { const k = bilanzSchluessel(e), z = (B[k] = B[k] || [0, 0, 0, 0]); z[0]++; if (platz >= 1 && platz <= 3) z[platz]++; }
+  function bilanzHolen(p) {
+    if (p.bilanz) return p.bilanz;
+    const B = (p.bilanz = {}); (p.erfolge || []).forEach(e => { if (e.disz && !e.fohlenschau) bilanzEintragen(B, e, e.aus ? null : e.platz); });
+    return B;
+  }
+  const bilanzZaehlen = (p, P, platz) => { try { bilanzEintragen(bilanzHolen(p), P, platz); } catch (e) { console.error("Bilanz:", e); } };
+  function bilanzHTML(p) {
+    const B = p.erfolge && p.erfolge.length ? bilanzHolen(p) : p.bilanz || {}, K = Object.keys(B).sort((a, b) => B[b][0] - B[a][0]); if (!K.length) return "";
+    const sum = K.reduce((a, k) => a.map((x, i) => x + B[k][i]), [0, 0, 0, 0]), name = k => { const [d, kl] = k.split("|"); return `${esc((DISZ[d] || {}).n || d)} ${esc(kl)}`; };
+    return `<details class="disz"><summary><span class="disz-kopf"><b>📊 Bilanz insgesamt</b><span>${sum[0]} Starts</span></span></summary>${verTab(["Disziplin · Klasse", "Starts", "🥇", "🥈", "🥉"], [...K.map(k => [name(k), ...B[k]]), ["<b>Zusammen</b>", ...sum.map(x => `<b>${x}</b>`)]])}<p class="text"><small>Zählt alle Turnierstarts des Pferdes, auch die, die in der Liste oben nicht mehr stehen (dort bleiben die letzten 60).</small></p></details>`;
+  }
   const stufeText = (D, s) => s == null ? null : s < 0 ? "noch keine Klasse" : D.stufen === "western" ? STUFEN.western[s] : `Klasse ${STUFEN.englisch[s]}`;
   const diszListe = p => Object.keys(DISZ).filter(k => !DISZ[k].nur || DISZ[k].nur(p));
   // beste Disziplin (für den Marktwert: ein Spezialist ist mehr wert als ein Allrounder)
@@ -7259,13 +7274,13 @@
         const wert = startWert(p, P.disz) * stufenMalus(p, P) * form * stress * reiterF * fzLeistung(p) * hufTurnierF(p, P.disz) * (t.halle && nachtblind(p) ? NACHTBLIND.halle : 1) * (1 + (rz() + rz() + rz() - 1.5) * 0.16), niveau = feldNiveau(t, P);
         const vet = P.disz === "distanz" ? distanzVet(p, P, muede, rz) : null;
         if (vet && vet.aus) { if (vet.lahm) befundNeu(p, "lahmheit", 1, "Distanzritt", "Tierarzt beim Distanzritt");
-          (p.erfolge = p.erfolge || []).unshift({ tag: spiel.tag, turnier: t.name, art: t.art, disz: P.disz, stufe: P.stufe, pruef: P.name, platz: P.starter, von: P.starter, erg: vet.aus, geld: 0, plaziert: false, aus: true });
+          bilanzZaehlen(p, P, null); (p.erfolge = p.erfolge || []).unshift({ tag: spiel.tag, turnier: t.name, art: t.art, disz: P.disz, stufe: P.stufe, pruef: P.name, platz: P.starter, von: P.starter, erg: vet.aus, geld: 0, plaziert: false, aus: true });
           prot("Turnierstart", { p, o: t.name }); protKlasse("Start", p, t, P); zeilen.push(`<li><b>${esc(P.name)}</b>: ❌ ${vet.aus}</li>`); return; }
         const ich = ergebnisText(P.disz, wert, niveau, rz, P.stufe), andere = Array.from({ length: P.starter - 1 }, () => ergebnisText(P.disz, niveau + (rz() + rz() + rz() - 1.5) * 14, niveau, rz, P.stufe).sort);
         const platz = 1 + andere.filter(s => s > ich.sort).length, plaziert = platz <= Math.max(3, Math.ceil(P.starter / 4));
         let geld = 0; if (plaziert && preisgeld(t, P)) { const anteil = PREIS_ANTEIL.slice(0, Math.max(3, Math.ceil(P.starter / 4))), summe = anteil.reduce((a, b) => a + b, 0); geld = Math.round(preisgeld(t, P) * (anteil[platz - 1] || 0.05) / summe / 5) * 5; }
         geldSumme += geld;
-        (p.erfolge = p.erfolge || []).unshift({ tag: spiel.tag, turnier: t.name, art: t.art, disz: P.disz, stufe: P.stufe, pruef: P.name, platz, von: P.starter, erg: ich.txt, geld, plaziert, jung: !!P.jung });
+        bilanzZaehlen(p, P, platz); (p.erfolge = p.erfolge || []).unshift({ tag: spiel.tag, turnier: t.name, art: t.art, disz: P.disz, stufe: P.stufe, pruef: P.name, platz, von: P.starter, erg: ich.txt, geld, plaziert, jung: !!P.jung });
         if (p.erfolge.length > 60) p.erfolge.length = 60;
         prot("Turnierstart", { p, o: t.name }); protKlasse("Start", p, t, P); if (platz === 1) { prot("Turniersieg", { p, o: t.name }); protKlasse("Sieg", p, t, P); } else if (plaziert) { prot("Turnier platziert", { p, o: t.name }); protKlasse("Platz", p, t, P); }   // S4
         if (muede) { wohlAendern(p, -8, "Turnier: übermüdet gestartet"); p.pflege.gesundheit = Math.max(1, r2(p.pflege.gesundheit - 3)); if (rz() < 0.15 * (1.5 - (p.werte.ist.zaehigkeit || 50) / 100)) befundNeu(p, "lahmheit", 1, "Überlastung auf dem Turnier", "du"); }
@@ -7337,7 +7352,8 @@
   // Erfolge in der Akte und im Marktwert: Sieg voll, Platzierung halb · Wert je Klasse (WB 0, E 40, A 120, L 300, M 700, S 1.500 €), Großes Turnier ×1,3, höchstens 15.000 €
   const ERFOLG_WERT = [40, 120, 300, 700, 1500];
   const erfolgWert = p => Math.min(40000, Math.round((p.erfolge || []).filter(e => e.plaziert && e.stufe >= 0).reduce((a, e) => a + ERFOLG_WERT[e.stufe] * (e.platz === 1 ? 1 : 0.5) * (({ gross: 1.3, championat: 2.5, international: 4 })[e.art] || 1), 0) / 50) * 50);   // Championate ×2,5, International ×4, höchstens 40.000 €
-  function erfolgeHTML(p) {
+  const erfolgeHTML = p => erfolgeHTML0(p) + bilanzHTML(p);
+  function erfolgeHTML0(p) {
     const E = p.erfolge || [], gen = genanntBei(p);
     if (!E.length && !gen.length && !(p.titel || []).length) return "";
     const siege = E.filter(e => e.platz === 1).length, plaz = E.filter(e => e.plaziert).length;
@@ -12678,7 +12694,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Weitere AKU (v380):</b> nach einer AKU kann eine andere Stufe dazugebucht werden (nicht dieselbe); das Protokoll fasst alle Befunde zusammen, die Wertminderung zählt alle gefundenen Befunde. Danach „Pferd kaufen? Ja / Nein“ (Tierschutz: aufnehmen).</p>
       <p><b>Spielstand und Speicherplätze (PLAN-SPIELSTAND.md, v519):</b> Schlüssel im Browser: Autospeicher <code>zuchtstall-v2</code> (läuft immer mit, kurz verzögert 0,4 s und sofort beim Verlassen/Verstecken der Seite), Platz 1 <code>zuchtstall-p1</code>, Platz 2 <code>zuchtstall-p2</code> (nur selbst gespeichert, mit Kurzinfo Hof/Datum/Tag/Version/echtes Datum), Alles gepackt mit lz-string (<code>compressToUTF16</code>; ungepackte alte Stände beginnen mit „{“ und werden beim nächsten Speichern gepackt). Größe jetzt: ${(() => { try { const j = JSON.stringify(spiel).length, g = packen(spiel).length; return `ungepackt ${j.toLocaleString("de-DE")} Zeichen → gepackt ${g.toLocaleString("de-DE")} Zeichen (${Math.round(g / j * 100)} %)`; } catch (e) { return "–"; } })()}. Spiel-Nummer <code>spiel.spielId</code>, eigener Speicherplatz <code>spiel.platz</code> (null = noch nie gespeichert; neues Spiel legt keinen Speicherstand an, Tipp „Spiel speichern“; beim ersten Speichern Speicherplatz wählen), Turnier-Sortierung <code>spiel.tsort</code>. „Ungespeicherter Fortschritt“ = Tag, Geld, Pferde/Fohlen, Einsteller, Mitarbeiter, Kredite oder Briefe weichen vom Platz ab (<code>fortschritt</code>). Platzwechsel lädt den Stand in den Autospeicher und startet die Seite neu (Merker <code>zuchtstall-start</code> in sessionStorage → direkt ins Spiel). Speichern schlägt fehl → rote Meldung mit Datei-Knopf, höchstens 1× je Spieltag. Spiel verloren → nur der Autospeicher wird gelöscht. Datei (S2/S3): <code>Zuchtstall_&lt;Hof&gt;_Jahr&lt;jj&gt;-&lt;Jahreszeit&gt;_&lt;Datum&gt;.json</code>, Umlaute im Dateinamen als ae/oe/ue/ss (v523, auch im Notfall-Fenster) – im Spiel bleibt der Hofname mit Umlauten.</p>
       <p><b>Hofchronik (B2, v548):</b> Dieselben Zähler wie das Spielprotokoll, aber <b>je Hof</b> getrennt (<code>spiel.chronik[Hof]["Jahr-Jahreszeit"].k</code>); das Spielprotokoll bleibt als „Gesamt“. Neu gezählt: Turnier-Start/Sieg/Platz <b>je Disziplin und Klasse</b> („Turnier Dressur L: Sieg“), höchste erreichte Klasse je Disziplin, „Abgabe: Gnadenhof / Tierschutz / Händler (Rückgabe)“, „Pferd gepfändet“, höchster und tiefster Kontostand je Jahreszeit (<code>hoch</code>/<code>tief</code>, gemessen bei jeder Buchung), Höfe gekauft/verkauft/verloren mit Name und Jahreszeit (<code>spiel.chronikHoefe</code>). Alte Spielstände haben keine Aufteilung nach Höfen (Anzeige später „–“). Die Anzeige (Jahresbericht, Verloren-Bilanz) folgt in B3/B4.</p>
-      <p><b>Bestenliste (B2 Teil 2, v549):</b> je Hof die ${BESTEN.anzahl} besten Pferde (meiste Erfolge: Sieg ${BESTEN.sieg} Punkte, Platzierung ${BESTEN.platz}; gezählt werden die letzten 60 Turniereinträge je Pferd) und die ${BESTEN.anzahl} wertvollsten (Marktwert). Ausgewertet zu Beginn jeder Jahreszeit und wenn ein Pferd den Hof verlässt (Verkauf, Rückgabe, Pfändung, Tod). Pensionspferde zählen nicht. Gespeichert wird nur eine Mini-Zeile je Pferd (<code>spiel.chronik[Hof].beste/.wertvoll</code>); der Name ist anklickbar (Steckbrief), auch nach dem Verkauf: Bestenlisten-Pferde bleiben im Archiv vor dem 40er-Limit geschützt, verstorbene liegen auf dem Friedhof. Anzeige: hvw – Hof – Übersicht „🏅 Bestenliste dieses Hofs“, bei nicht mehr eigenen Pferden mit „Stand beim Verkauf/Abgang“.</p>
+      <p><b>Bestenliste (B2 Teil 2, v549):</b> je Hof die ${BESTEN.anzahl} besten Pferde (meiste Erfolge: Sieg ${BESTEN.sieg} Punkte, 2./3. Platz ${BESTEN.platz}; gezählt wird die Lebensbilanz <code>p.bilanz</code> – je Pferd [Starts, 1., 2., 3. Platz] nach Disziplin und Klasse, nie gekürzt, im Steckbrief „📊 Bilanz insgesamt“) und die ${BESTEN.anzahl} wertvollsten (Marktwert). Ausgewertet zu Beginn jeder Jahreszeit und wenn ein Pferd den Hof verlässt (Verkauf, Rückgabe, Pfändung, Tod). Pensionspferde zählen nicht. Gespeichert wird nur eine Mini-Zeile je Pferd (<code>spiel.chronik[Hof].beste/.wertvoll</code>); der Name ist anklickbar (Steckbrief), auch nach dem Verkauf: Bestenlisten-Pferde bleiben im Archiv vor dem 40er-Limit geschützt, verstorbene liegen auf dem Friedhof. Anzeige: hvw – Hof – Übersicht „🏅 Bestenliste dieses Hofs“, bei nicht mehr eigenen Pferden mit „Stand beim Verkauf/Abgang“.</p>
       <p><b>Spielprotokoll (S4, v525) und Aufnahmen (v529):</b> Zähler je Jahreszeit in <code>spiel.protokoll["&lt;jahr&gt;-&lt;jz&gt;"]</code> (immer an, für den Spieler unsichtbar, Grundlage für die Bilanz in Thema 2): Füttern selbst/Personal/Turnier, Putzen, Kämmen, Hufe auskratzen, Misten (selbst), Training je Übung (selbst/Personal), Turnierstart/-sieg/platziert, Kauf je Markt, Verkauf (Festpreis/Auktion/Verkaufsrennen), Bedeckung, tragend geworden, Fohlen geboren, Tierarzt, Klinik, Todesfall, Brief gelesen, Kredit, Bauauftrag, Mitarbeiter eingestellt/gekündigt/selbst gekündigt. <b>Aufnahme</b> (hvw – Einstellungen „🔴 Aufnahme starten/beenden“): ab dem Start schreibt das Spiel jede gezählte Aktion und jede Buchung mit Spieltag in <code>spiel.aufnahme.eintraege</code> (höchstens ${AUFNAHME_MAX.toLocaleString("de-DE")} Einträge je Aufnahme); beim Beenden kommt sie als eigene Aufnahme in die Liste <code>spiel.aufnahmen</code> (je Eintrag ⬇️ Herunterladen als Datei <code>typ: zuchtstall-aufnahme</code> und 🗑️ Löschen mit Sicherheitsfrage). Solange eine Aufnahme läuft, hat der Bildschirm einen dünnen roten Rahmen (<code>body.aufnahme</code>, nicht im Startmenü).
         ${(() => { const P = spiel.protokoll || {}, K = Object.keys(P).sort((a, b) => { const [ja, sa] = a.split("-").map(Number), [jb, sb] = b.split("-").map(Number); return ja - jb || sa - sb; });
           if (!K.length) return "<p><i>Noch keine Einträge.</i></p>";

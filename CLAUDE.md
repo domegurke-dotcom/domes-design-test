@@ -51,7 +51,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (3 Stellen in index.html: pferd.js, boxstufen.js, kopfneu.js) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **509**.
+- Letzte Version bei Aktualisierung dieser Datei: **510**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName` ausfüllen → `#chLos` → Kreditbrief schließen (`#dlgKnoepfe button`) → `[data-immo="pension"]` → `#kaufName` → `#dlgKnoepfe button:first-child`. Admin: `spiel.admin = true`.
@@ -210,6 +210,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - **v507 (Dome):** Rassenansicht zeigt das typische Kopfweiß der Scheckung je Ausprägung (`MUSTER_KOPF_TYP`: Splash Blesse→Laterne, Sabino schmale Blesse→Laterne, Overo Blesse→Laterne, Tovero breite Blesse/Laterne, Dominant White Stern→Laterne; über `weissFuer`). Tobiano weiter ohne.
 - **v508 (Dome):** Jahreszeiten-Ausbleichen auch bei gemusterten Pferden (`saisonBasis`: Rapp-/Braun-/Fuchsschecke und alle `xx_`-Muster bleichen nach ihrer Grundfarbe; Sommer-/Winterrappe gilt auch für Rappschecken) – im Spiel und in der Rassenansicht. Rassenansicht: „Brauner“ + Muster bleibt Brauner (ton ≥ .25).
 - **v509:** Rassenansicht: Snowflake/Frost/Lackschimmel wieder ohne Decke (der v502-Mindestwert für die Schabracke galt versehentlich für alle Lp-Muster).
+- **v510 (Dome):** Ohrenspiel seltener (je Ohr alle 15–30 s statt 5–11 s). Aalstrich bei gescheckten Falben (Tobiano, Overo, Tovero, Sabino, Splash, Schabracke) bleibt und wird vor dem Scheckungsweiß gezeichnet (`WEISS_MUSTER`, `aalStrich`) – nur in den farbigen Flächen sichtbar; Tiger/Wenigpunkt weiter ohne.
 - **Aufräumen v435:** Code mit ESLint geprüft (keine echten Fehler), unbenutzte Funktionen/Variablen entfernt, `spiel.marktGekauft` auf 200 Einträge begrenzt (`marktGekauftMerken`), versehentlich hochgeladene Test-Screenshots gelöscht. Prüfskript: Skriptblöcke aus index.html in Dateien schreiben und `eslint` (liegt in /opt/node22/lib/node_modules) mit no-unused-vars/no-dupe-keys/no-unreachable laufen lassen. **Test-Screenshots nie im Projektordner speichern** (immer im Scratchpad). Kötenbehang (`behang` in pferd.js) ist vorerst ausgeblendet, der Code bleibt – kommt später (Dome).
 - **v436:** Kopfleiste beim Drehen des Handys: `--kopfH` wird sofort nachgezogen (ResizeObserver auf `header` + resize), vorher blitzte im Vollbild bis zu 0,5 s der Stall zwischen Kopfleiste und Fenster durch. **v437:** Viewport `minimum-scale=1` und `html, body { overflow-x: clip }` – verhindert, dass Chrome (Android) nach dem Drehen herauszoomt (Menüs breiter als die Kopfleiste, Dome-Screenshot ohne Vollbild).
 - **Offen (Stand v439):** Scheckmuster Schritt 2 (`PLAN-SCHECKUNG.md`). Domes Zeichnungen laut `BEI-INKSCAPE-BEARBEITEN.md`. Stute bleibt bei voller Abfohlbox in ihrer Box (gewollt). Ausbilder-Nachholen per Test geprüft (v433, funktioniert).

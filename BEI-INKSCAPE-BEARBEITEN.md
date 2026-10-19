@@ -93,3 +93,4 @@ Nach dem Zeichnen einfach hochladen – `werkzeuge/kopf-export.js` übernimmt ne
 ## Neu seit v430 (optional)
 - **Zebrastreifen und Schulterstreifen** zeichnet das Spiel selbst (dunkle Querstreifen an Unterarm/Unterschenkel, Streifen über die Schulter). Wenn du eine eigene Zeichnung möchtest: ein SVG mit Ebenen `zebra vorne`, `zebra hinten`, `schulterstreifen` – dann baue ich sie ein.
 - **Beinabzeichen** (weißer Ballen bis hochweißer Fuß) zeichnet das Spiel ebenfalls selbst mit glattem, leicht welligem Rand. Für echte Abzeichen typisch wäre ein unregelmäßigerer Rand – falls du Vorlagen zeichnen magst, gern.
+- **Splash-Körper** (Dome 19.10.2026: bleibt erstmal so, vielleicht später): Weißer Bauch mit glattem Rand und hohe weiße Beine zeichnet das Spiel selbst (wie Sabino). Wenn du ein eigenes Splash-Fell zeichnest, baue ich es ein.

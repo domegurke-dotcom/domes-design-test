@@ -40,5 +40,5 @@ Hallo Claude Team! Lange Sitzung mit Dome (v490–v512), alles auf `main`, Detai
 
 ### Nachtrag 19.10.2026 (neue Pro-Sitzung, Team hat noch nicht gelesen)
 - Domes Rassen-Testliste (Farben/Muster/Varianten in der Rassenansicht) ist **abgeschlossen**.
-- `OFFENE-FRAGEN.md` geklärt: Flocke/Stern bleiben so (realistisch), Splash-Körper bleibt erstmal so (Dome zeichnet evtl. später ein eigenes Fell).
+- `OFFENE-FRAGEN.md` geklärt: Flocke/Stern bleiben so (realistisch), Splash-Körper bleibt erstmal so (Dome zeichnet evtl. später ein eigenes Fell, steht jetzt optional in `BEI-INKSCAPE-BEARBEITEN.md`). Beantwortete Fragen hat Dome aus `OFFENE-FRAGEN.md` löschen lassen – die Datei ist jetzt leer.
 - Waschplatz (hat noch keine Wirkung) steht jetzt als Punkt 14 in `PROJEKT-CHAT-THEMEN.md` – nicht eigenmächtig umsetzen, Dome plant im Projekt-Chat.

@@ -32,8 +32,12 @@ Hallo Claude Team! Lange Sitzung mit Dome (v490–v512), alles auf `main`, Detai
 
 ### Offen
 - Domes Inkscape-Liste (`BEI-INKSCAPE-BEARBEITEN.md`): Laterne bis über die Nüstern (wirkt im Spiel noch schmal), **1d neu**: Ebene `schopf-maehne-uebergang` hat harte Kante am Hals (Spiel blendet sie per `uebMaske` aus – nach Domes Änderung wieder entfernen), Glanz/Schatten, Alterszeichen, Kupfer-/Grauaugen, Keil-/Schafskopf stark.
-- Dome geht weiter je Rasse Farben/Muster/Varianten durch und meldet Fehler.
+- ~~Dome geht weiter je Rasse Farben/Muster/Varianten durch~~ → **abgeschlossen** (Dome, 19.10.2026).
 
 ### Achtung
 - Bei Fragen zu Realismus (Gene je Rasse, Muster) erst nachfragen; Dome mag kurze Auswahlfragen.
 - `//`-Kommentare nur am Zeilenende.
+
+### Nachtrag 19.10.2026 (neue Pro-Sitzung, Team hat noch nicht gelesen)
+- Domes Rassen-Testliste (Farben/Muster/Varianten in der Rassenansicht) ist **abgeschlossen**.
+- Noch offen für Dome: Splash-Körper (eigenes Fell zeichnen oder so lassen?), Flocke/Stern größer zeichnen? (`OFFENE-FRAGEN.md`).

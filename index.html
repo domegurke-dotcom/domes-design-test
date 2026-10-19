@@ -968,7 +968,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "548";
+  const SPIEL_VERSION = "549";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -976,10 +976,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=548"></script>
-<script src="pferd.js?v=548"></script>
-<script src="boxstufen.js?v=548"></script>
-<script src="kopfneu.js?v=548"></script>
+<script src="lz-string.min.js?v=549"></script>
+<script src="pferd.js?v=549"></script>
+<script src="boxstufen.js?v=549"></script>
+<script src="kopfneu.js?v=549"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2296,6 +2296,37 @@
   }
   const chronikKlasse = (disz, stufe) => { try { if (stufe == null || stufe < 0) return; const H = (spiel.chronik = spiel.chronik || {})[aktivHid()] = (spiel.chronik || {})[aktivHid()] || {}, K = (H.klasse = H.klasse || {}); if (K[disz] == null || stufe > K[disz]) K[disz] = stufe; } catch (e) { console.error("Chronik:", e); } };
   function chronikHof(was, name) { (spiel.chronikHoefe = spiel.chronikHoefe || []).push({ was, name, jz: jzJetzt() }); }   // gekauft / verkauft / verloren
+  // B2 Teil 2: Bestenliste je Hof (Dome 19.10.): die 3 besten (meiste Erfolge: Sieg 3 Punkte, Platzierung 1) und die 3 wertvollsten Pferde.
+  // Mini-Eintrag { id, n, r, e Punkte, s Siege, pl Platzierungen, w Wert } in spiel.chronik[hid].beste / .wertvoll; das Pferd selbst bleibt über pferdePool() anklickbar
+  // (eigene Pferde, Gnadenhof, Friedhof) bzw. im spiel.archiv, wo Bestenlisten-Pferde vor dem 40er-Limit geschützt sind (bestenIds).
+  const BESTEN = { anzahl: 3, sieg: 3, platz: 1 };
+  const erfolgZahlen = p => (p.erfolge || []).reduce((a, e) => { if (e.aus) return a; if (e.platz === 1) a.s++; else if (e.plaziert) a.pl++; return a; }, { s: 0, pl: 0 });
+  const bestenListen = hid => { const Z = (spiel.chronik = spiel.chronik || {}), H = (Z[hid] = Z[hid] || {}); return { beste: (H.beste = H.beste || []), wertvoll: (H.wertvoll = H.wertvoll || []) }; };
+  function bestenEintrag(liste, x, key) {
+    const i = liste.findIndex(y => y.id === x.id); if (i >= 0) liste.splice(i, 1);
+    if (!(x[key] > 0)) return;   // ohne Erfolg/Wert nicht in die Liste
+    liste.push(x); liste.sort((a, b) => b[key] - a[key]); liste.length = Math.min(liste.length, BESTEN.anzahl);
+  }
+  function bestenPflegen(p) {   // Pensionspferde zählen nicht
+    try { if (!p || !p.id || p.einsteller) return; const z = erfolgZahlen(p), x = { id: p.id, n: p.name, r: p.rasse, e: z.s * BESTEN.sieg + z.pl * BESTEN.platz, s: z.s, pl: z.pl, w: Math.round(marktwert(p)) };
+      const L = bestenListen(aktivHid()); bestenEintrag(L.beste, x, "e"); bestenEintrag(L.wertvoll, x, "w"); } catch (e) { console.error("Bestenliste:", e); }
+  }
+  const bestenAlle = () => alleEigenenPferde().forEach(x => bestenPflegen(x.p));   // zu Beginn jeder Jahreszeit, je Hof
+  const bestenIds = () => { const g = new Set(); Object.values(spiel.chronik || {}).forEach(H => [...(H.beste || []), ...(H.wertvoll || [])].forEach(x => g.add(String(x.id)))); return g; };
+  function bestenKarteHTML() {
+    const L = bestenListen(aktivHid()); if (!L.beste.length && !L.wertvoll.length) return "";
+    const rName = id => (RASSEN.find(r => r.id === id) || {}).name || id, heute = alleHoefePferde(), pool = pferdePool();
+    const zeile = (x, text) => {
+      const lebt = heute.find(e => e.p.id === x.id), q = pool.find(e => e.p.id === x.id);
+      const stand = lebt ? (lebt.ort || "bei dir") : q ? (q.tot ? "verstorben" : "Stand beim Verkauf/Abgang") : "nicht mehr abrufbar";
+      const name = q ? `<b class="ansehen-link" ${ansehen(q.p, q.ort, null, q.tot ? { tot: true, alter: q.tot.alter } : undefined)}>${esc(x.n)}</b>` : `<b>${esc(x.n)}</b>`;
+      return `<li>${name} · ${esc(rName(x.r))} · ${text}<br><small>${esc(stand)}</small></li>`;
+    };
+    return `<details style="margin:10px 0"><summary><b>🏅 Bestenliste dieses Hofs</b></summary>
+      ${L.beste.length ? `<p class="text" style="margin:8px 0 2px"><b>Meiste Erfolge</b></p><ol class="liste">${L.beste.map(x => zeile(x, `${x.s} ${x.s === 1 ? "Sieg" : "Siege"}, ${x.pl} ${x.pl === 1 ? "Platzierung" : "Platzierungen"}`)).join("")}</ol>` : ""}
+      <p class="text" style="margin:8px 0 2px"><b>Wertvollste Pferde</b></p><ol class="liste">${L.wertvoll.map(x => zeile(x, fmt(x.w))).join("")}</ol>
+      <p class="text"><small>Gewertet wird der letzte Stand des Pferdes; bei verkauften Pferden der Stand beim Verkauf.</small></p></details>`;
+  }
   const AUFNAHME_MAX = 20000;
   function prot(k, info) {
     try { const d = datum(), z = d.j + "-" + d.s, P = (spiel.protokoll = spiel.protokoll || {}), J = (P[z] = P[z] || {}); J[k] = (J[k] || 0) + 1;
@@ -2872,7 +2903,7 @@
     const box = boxVon(p); if (!rueckgabeMoeglich(p)) return;
     const geld = Math.round(p.rueckgabe.preis * .8 / 10) * 10;
     dialog(`<h3>↩️ ${esc(p.name)} zurückgeben?</h3><p>Der Pferdehändler nimmt ${esc(p.name)} zurück und erstattet <b>${fmt(geld)}</b> (Kaufpreis ${fmt(p.rueckgabe.preis)} minus 20 %).</p>`,
-      [["Zurückgeben", () => { prot("Abgabe: Händler (Rückgabe)", { p }); buchen(geld, `Rückgabe: ${p.name}`); box.pferd = null; box.tot = false; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0;
+      [["Zurückgeben", () => { prot("Abgabe: Händler (Rückgabe)", { p }); bestenPflegen(p); if (bestenIds().has(String(p.id))) (spiel.archiv = spiel.archiv || {})[p.id] = JSON.parse(JSON.stringify(p)); buchen(geld, `Rückgabe: ${p.name}`); box.pferd = null; box.tot = false; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0;
         aktenReiter = "steckbrief"; aktenModus = "steckbrief"; ortModus = null; speichern(); zeigeTag(); nachher(); }], ["Abbrechen", null, "zweit"]]);
   }
   // Notfallpferd vor Ablauf des Vertrags abgeben: der Tierschutz holt es zurück, die Schutzgebühr wird nicht erstattet
@@ -3024,10 +3055,12 @@
   }
   // Pferd verlässt den Hof (Verkauf, Rückgabe …): Kopie aufheben, damit Briefe es noch zeigen können
   function archivieren(p) {
+    const eigen = alleEigenenPferde().some(e => e.p === p) || spiel.boxen.some(b => b.pferd === p);
     if (p.zubehoerMit) delete p.zubehoerMit;   // mitverkauft: geht mit dem Pferd
-    else if (alleEigenenPferde().some(e => e.p === p) || spiel.boxen.some(b => b.pferd === p)) zubehoerInsLager(p);
+    else if (eigen) zubehoerInsLager(p);
+    if (eigen) bestenPflegen(p);   // B2: letzter Stand fürs Verlassen des Hofs
     const A = (spiel.archiv = spiel.archiv || {}); A[p.id] = JSON.parse(JSON.stringify(p));
-    const ks = Object.keys(A); if (ks.length > 40) delete A[ks[0]];
+    const ks = Object.keys(A); if (ks.length > 40) { const g = bestenIds(), k = ks.find(x => !g.has(x)); if (k != null) delete A[k]; }   // Bestenlisten-Pferde bleiben
   }
   function briefLinks(text, pferde) {
     const L = {}, pool = pferdePool();
@@ -4978,7 +5011,7 @@
   // Eine Nacht vergeht: Gesundheit, Mist, Mähne und Schopf
   // Verstorbene Pferde kommen auf den Pferdefriedhof – die Box ist danach wieder leer
   function begraben(p, ort) {
-    zubehoerInsLager(p); pateAbschied(p); prot("Todesfall", { p, o: p.todesursache });   // S4
+    zubehoerInsLager(p); pateAbschied(p); bestenPflegen(p); prot("Todesfall", { p, o: p.todesursache });   // S4
     (spiel.friedhof = spiel.friedhof || []).push({ pferd: JSON.parse(JSON.stringify(p)), name: p.name, rasse: p.rasse, geschlecht: p.geschlecht, farbe: fb(p), farbName: farbName(p, fb(p)), geb: p.geb ? { ...p.geb } : null, tod: jzJetzt(), alter: alterText(p), ort, nachkommen: p.nachkommen || 0, ursache: p.todesursache || "unbekannt" });
   }
   function erbTodPruefen() {
@@ -9003,7 +9036,7 @@
     jedenHof(hofNacht, true);
     tierschutzKlinik(); tierschutzFohlen(); laborNacht(); auktionsNacht();
     if (datum().t === 1) weihnachtsSpende();   // v378
-    if (datum().t === 1) { jedenHof(() => { stallartJahreszeit(); patenJahreszeit(); pensionJahreszeit(); bereiterPensionAbrechnung(); fremdFohlenJahreszeit(); offenstallJahreszeit(); kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); jahreszeitBeginn(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); bereiterAbrechnung(); maKnappPruefen(); dispoJahreszeit(); auktionsEnde(); fohlenAbsetzen(); stutenAusAbfohl(); }, true); spamAufraeumen(); hoefeVersteigern(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
+    if (datum().t === 1) { jedenHof(() => { stallartJahreszeit(); patenJahreszeit(); pensionJahreszeit(); bereiterPensionAbrechnung(); fremdFohlenJahreszeit(); offenstallJahreszeit(); kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); jahreszeitBeginn(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); bereiterAbrechnung(); maKnappPruefen(); dispoJahreszeit(); bestenAlle(); auktionsEnde(); fohlenAbsetzen(); stutenAusAbfohl(); }, true); spamAufraeumen(); hoefeVersteigern(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
     turnierKalender();
     jedenHof(hofMorgen, true);
     blutbilderTag();     // Laborergebnisse
@@ -12644,7 +12677,8 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Ansteckung (Etappe F):</b> ansteckend sind ${Object.keys(ANSTECKEND).map(k => KRANK[k].n).join(", ")}. Nach der Ansteckung erst Inkubation (Influenza 2, Druse/Herpes/Pilz 3, Würmer 4 Tage): schon ansteckend, aber ohne Anzeichen – nur das große Blutbild findet sie. Chance pro Nacht je krankem Pferd: ${Object.entries(ANSTECKEND).map(([k, A]) => `${KRANK[k].n} ${Object.entries(A).map(([w, x]) => `${w} ${String(x).replace(".", ",")}`).join("/")}`).join(" · ")}. Wege: Weide (beide auf der Weide), Luft (im Stall ÷ (1 + Boxabstand)), Kontakt (Nachbarbox), Tränke (alle im Stall), Putzzeug (vom selben geputzt, nicht beide mit eigenem Putzzeug), Träger (vom selben Mitarbeiter oder dir gestern versorgt; zuverlässige oder erfahrene ab 50 machen das bemerkte kranke Pferd zuletzt ×0,3). Quarantäne (1 Jahreszeit): kein Weidegang, eigenes Putzzeug, Luft ×0,5, Kontakt ×0,2, Träger ×0,3, keine Tränke. Ein Mitarbeiter „nur für dieses Pferd“ versorgt nur dieses und trägt nichts weiter. Geimpft (Influenza/Herpes, 2 Jahreszeiten) ×0,3 und Start eine Stufe leichter; Wurmkur in der letzten Jahreszeit: Würmer ×0,2. × Konstitution (1,5 − Anlage ÷ 100). Herpes bei tragenden Stuten: Verfohlen 5 % je Grad pro Nacht. Neuzugänge bringen etwas mit: ${Object.entries(NEUZUGANG_RISIKO).map(([q, x]) => `${q} ${Math.round(x * 100)} %`).join(", ")} (Influenza 30 %, Druse 15 %, Herpes 10 %, Pilz 20 %, Würmer 25 %).</p>
       <p><b>Weitere AKU (v380):</b> nach einer AKU kann eine andere Stufe dazugebucht werden (nicht dieselbe); das Protokoll fasst alle Befunde zusammen, die Wertminderung zählt alle gefundenen Befunde. Danach „Pferd kaufen? Ja / Nein“ (Tierschutz: aufnehmen).</p>
       <p><b>Spielstand und Speicherplätze (PLAN-SPIELSTAND.md, v519):</b> Schlüssel im Browser: Autospeicher <code>zuchtstall-v2</code> (läuft immer mit, kurz verzögert 0,4 s und sofort beim Verlassen/Verstecken der Seite), Platz 1 <code>zuchtstall-p1</code>, Platz 2 <code>zuchtstall-p2</code> (nur selbst gespeichert, mit Kurzinfo Hof/Datum/Tag/Version/echtes Datum), Alles gepackt mit lz-string (<code>compressToUTF16</code>; ungepackte alte Stände beginnen mit „{“ und werden beim nächsten Speichern gepackt). Größe jetzt: ${(() => { try { const j = JSON.stringify(spiel).length, g = packen(spiel).length; return `ungepackt ${j.toLocaleString("de-DE")} Zeichen → gepackt ${g.toLocaleString("de-DE")} Zeichen (${Math.round(g / j * 100)} %)`; } catch (e) { return "–"; } })()}. Spiel-Nummer <code>spiel.spielId</code>, eigener Speicherplatz <code>spiel.platz</code> (null = noch nie gespeichert; neues Spiel legt keinen Speicherstand an, Tipp „Spiel speichern“; beim ersten Speichern Speicherplatz wählen), Turnier-Sortierung <code>spiel.tsort</code>. „Ungespeicherter Fortschritt“ = Tag, Geld, Pferde/Fohlen, Einsteller, Mitarbeiter, Kredite oder Briefe weichen vom Platz ab (<code>fortschritt</code>). Platzwechsel lädt den Stand in den Autospeicher und startet die Seite neu (Merker <code>zuchtstall-start</code> in sessionStorage → direkt ins Spiel). Speichern schlägt fehl → rote Meldung mit Datei-Knopf, höchstens 1× je Spieltag. Spiel verloren → nur der Autospeicher wird gelöscht. Datei (S2/S3): <code>Zuchtstall_&lt;Hof&gt;_Jahr&lt;jj&gt;-&lt;Jahreszeit&gt;_&lt;Datum&gt;.json</code>, Umlaute im Dateinamen als ae/oe/ue/ss (v523, auch im Notfall-Fenster) – im Spiel bleibt der Hofname mit Umlauten.</p>
-      <p><b>Hofchronik (B2, v548):</b> Dieselben Zähler wie das Spielprotokoll, aber <b>je Hof</b> getrennt (<code>spiel.chronik[Hof]["Jahr-Jahreszeit"].k</code>); das Spielprotokoll bleibt als „Gesamt“. Neu gezählt: Turnier-Start/Sieg/Platz <b>je Disziplin und Klasse</b> („Turnier Dressur L: Sieg“), höchste erreichte Klasse je Disziplin, „Abgabe: Gnadenhof / Tierschutz / Händler (Rückgabe)“, „Pferd gepfändet“, höchster und tiefster Kontostand je Jahreszeit (<code>hoch</code>/<code>tief</code>, gemessen bei jeder Buchung), Höfe gekauft/verkauft/verloren mit Name und Jahreszeit (<code>spiel.chronikHoefe</code>). Alte Spielstände haben keine Aufteilung nach Höfen (Anzeige später „–“). Die Anzeige (Jahresbericht, Verloren-Bilanz) und die Bestenliste (3 beste / 3 wertvollste Pferde je Hof, anklickbar) folgen in B2 Teil 2 bis B4.</p>
+      <p><b>Hofchronik (B2, v548):</b> Dieselben Zähler wie das Spielprotokoll, aber <b>je Hof</b> getrennt (<code>spiel.chronik[Hof]["Jahr-Jahreszeit"].k</code>); das Spielprotokoll bleibt als „Gesamt“. Neu gezählt: Turnier-Start/Sieg/Platz <b>je Disziplin und Klasse</b> („Turnier Dressur L: Sieg“), höchste erreichte Klasse je Disziplin, „Abgabe: Gnadenhof / Tierschutz / Händler (Rückgabe)“, „Pferd gepfändet“, höchster und tiefster Kontostand je Jahreszeit (<code>hoch</code>/<code>tief</code>, gemessen bei jeder Buchung), Höfe gekauft/verkauft/verloren mit Name und Jahreszeit (<code>spiel.chronikHoefe</code>). Alte Spielstände haben keine Aufteilung nach Höfen (Anzeige später „–“). Die Anzeige (Jahresbericht, Verloren-Bilanz) folgt in B3/B4.</p>
+      <p><b>Bestenliste (B2 Teil 2, v549):</b> je Hof die ${BESTEN.anzahl} besten Pferde (meiste Erfolge: Sieg ${BESTEN.sieg} Punkte, Platzierung ${BESTEN.platz}; gezählt werden die letzten 60 Turniereinträge je Pferd) und die ${BESTEN.anzahl} wertvollsten (Marktwert). Ausgewertet zu Beginn jeder Jahreszeit und wenn ein Pferd den Hof verlässt (Verkauf, Rückgabe, Pfändung, Tod). Pensionspferde zählen nicht. Gespeichert wird nur eine Mini-Zeile je Pferd (<code>spiel.chronik[Hof].beste/.wertvoll</code>); der Name ist anklickbar (Steckbrief), auch nach dem Verkauf: Bestenlisten-Pferde bleiben im Archiv vor dem 40er-Limit geschützt, verstorbene liegen auf dem Friedhof. Anzeige: hvw – Hof – Übersicht „🏅 Bestenliste dieses Hofs“, bei nicht mehr eigenen Pferden mit „Stand beim Verkauf/Abgang“.</p>
       <p><b>Spielprotokoll (S4, v525) und Aufnahmen (v529):</b> Zähler je Jahreszeit in <code>spiel.protokoll["&lt;jahr&gt;-&lt;jz&gt;"]</code> (immer an, für den Spieler unsichtbar, Grundlage für die Bilanz in Thema 2): Füttern selbst/Personal/Turnier, Putzen, Kämmen, Hufe auskratzen, Misten (selbst), Training je Übung (selbst/Personal), Turnierstart/-sieg/platziert, Kauf je Markt, Verkauf (Festpreis/Auktion/Verkaufsrennen), Bedeckung, tragend geworden, Fohlen geboren, Tierarzt, Klinik, Todesfall, Brief gelesen, Kredit, Bauauftrag, Mitarbeiter eingestellt/gekündigt/selbst gekündigt. <b>Aufnahme</b> (hvw – Einstellungen „🔴 Aufnahme starten/beenden“): ab dem Start schreibt das Spiel jede gezählte Aktion und jede Buchung mit Spieltag in <code>spiel.aufnahme.eintraege</code> (höchstens ${AUFNAHME_MAX.toLocaleString("de-DE")} Einträge je Aufnahme); beim Beenden kommt sie als eigene Aufnahme in die Liste <code>spiel.aufnahmen</code> (je Eintrag ⬇️ Herunterladen als Datei <code>typ: zuchtstall-aufnahme</code> und 🗑️ Löschen mit Sicherheitsfrage). Solange eine Aufnahme läuft, hat der Bildschirm einen dünnen roten Rahmen (<code>body.aufnahme</code>, nicht im Startmenü).
         ${(() => { const P = spiel.protokoll || {}, K = Object.keys(P).sort((a, b) => { const [ja, sa] = a.split("-").map(Number), [jb, sb] = b.split("-").map(Number); return ja - jb || sa - sb; });
           if (!K.length) return "<p><i>Noch keine Einträge.</i></p>";
@@ -12795,7 +12829,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         <dt>Pferde</dt><dd>${spiel.boxen.filter(b => b.pferd).length} in ${spiel.boxen.length} ${spiel.boxen.length === 1 ? "Box" : "Boxen"}${spiel.boxen.some(b => b.fohlen) ? ` · ${spiel.boxen.filter(b => b.fohlen).length} Fohlen bei der Mutter` : ""}</dd>
         <dt>Mitarbeiter</dt><dd>${Object.entries(MA_TYP).map(([t, T]) => { const a = aktive(t).length; return a ? `${a} ${a === 1 ? T.name : T.mehr}` : ""; }).filter(Boolean).join(", ") || "keine"}</dd>
         <dt>Lager</dt><dd>${(() => { const L = lager(), n = L.putzzeug.length + L.hufschuhe.length; return n ? `${L.putzzeug.length ? `${L.putzzeug.length}× Putzzeug` : ""}${L.putzzeug.length && L.hufschuhe.length ? ", " : ""}${L.hufschuhe.length ? `${L.hufschuhe.length}× Hufschuhe` : ""}` : "leer"; })()}</dd>
-        <dt>Geld</dt><dd ${spiel.admin ? 'class="hf-edit" id="hfGeld" title="antippen zum Ändern (Adminmodus)"' : ""}>${fmt(spiel.geld || 0)}${spiel.admin ? ' <span class="stift">✏️</span>' : ""}</dd></dl>` + (spiel.hof && spiel.hof.art ? stallartHTML() : "") + `<h4 class="ma-titel">📦 Lager</h4>${lagerHTML()}`;   // Dome (v296): Stallart über dem Lager
+        <dt>Geld</dt><dd ${spiel.admin ? 'class="hf-edit" id="hfGeld" title="antippen zum Ändern (Adminmodus)"' : ""}>${fmt(spiel.geld || 0)}${spiel.admin ? ' <span class="stift">✏️</span>' : ""}</dd></dl>` + bestenKarteHTML() + (spiel.hof && spiel.hof.art ? stallartHTML() : "") + `<h4 class="ma-titel">📦 Lager</h4>${lagerHTML()}`;   // Dome (v296): Stallart über dem Lager
     } else if (hofReiter === "reiter") {
       inhalt = reiterHTML();
     } else if (hofReiter === "pferde") {

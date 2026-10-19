@@ -3,7 +3,7 @@
 **Stand:** 19.10.2026, im Projekt-Chat mit Dome geplant (Fragen 1–42), Code-Stand beim Planen v513 (jetzt v546). **Voraussetzung:** `PLAN-SPIELSTAND.md` (Thema 1) ist umgesetzt, vor allem S1 (Speicherplätze, Autospeicher) und S4 (Zähler je Jahreszeit). Reihenfolge: B1 → B2 → B3 → B4 → B5.
 Alle Fragen sind beantwortet.
 
-**Fortschritt:** B1 fertig (v547, Abnahmetest `tests/dispo-test.js`; Dome 19.10.: Kreditrate darf ins Dispo, erst über −2.000 € Mahnung; Kolik-OP immer erlaubt; Aufzucht/Ausbildung bei jedem Minus gesperrt) · mit 2 Höfen noch nicht getestet · B2 Teil 1 fertig (v548, `tests/chronik-test.js`: Zähler je Hof, Turnier-Klassen, Kontostand hoch/tief, Abgaben, Pfändung, Höfe) · **B2 Teil 2 offen (Bestenliste)** · B2 offen · B3 offen · B4 offen · B5 offen
+**Fortschritt:** B1 fertig (v547, Abnahmetest `tests/dispo-test.js`; Dome 19.10.: Kreditrate darf ins Dispo, erst über −2.000 € Mahnung; Kolik-OP immer erlaubt; Aufzucht/Ausbildung bei jedem Minus gesperrt) · mit 2 Höfen noch nicht getestet · B2 Teil 1 fertig (v548, `tests/chronik-test.js`: Zähler je Hof, Turnier-Klassen, Kontostand hoch/tief, Abgaben, Pfändung, Höfe) · B2 Teil 2 fertig (v549, `tests/bestenliste-test.js`, Anzeige hvw – Hof – Übersicht) · **B3 als Nächstes** (nutzt `bestenListen`, `chronik[hid]`, `spiel.chronikHoefe`) · B2 offen · B3 offen · B4 offen · B5 offen
 
 ## Ist-Stand (v513)
 1. Einziger Verlust-Weg: `kreditJahreszeit()` → 3 offene Raten (`KREDIT.verpasst`) → `pfaendung(k)` (Pferde zu ¾ Wert) → reicht nicht → `zwangsversteigerung(k)`; bei mehreren Höfen wird nur der aktive Hof entfernt (`spiel.hofWeg`), beim letzten Hof wird `spiel.verloren` gesetzt → `spielVerloren()` zeigt kurzes Fenster, löscht Spielstand und Post.

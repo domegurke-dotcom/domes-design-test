@@ -965,7 +965,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "522";
+  const SPIEL_VERSION = "523";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -973,10 +973,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=522"></script>
-<script src="pferd.js?v=522"></script>
-<script src="boxstufen.js?v=522"></script>
-<script src="kopfneu.js?v=522"></script>
+<script src="lz-string.min.js?v=523"></script>
+<script src="pferd.js?v=523"></script>
+<script src="boxstufen.js?v=523"></script>
+<script src="kopfneu.js?v=523"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -5229,12 +5229,14 @@
     return Math.max(0.2, Math.min(1, 0.4 + v / 100 * 0.6 - 0.2 * M.tief - 0.2 * N.tief));
   }
   // wie gut ein Befund gestern behandelt wurde (0–1) und wie sehr etwas geschadet hat
+  const EMS_ABNEHMEN = .5;
   function behandlungsWert(p, b) {
     const g = p.behHeute && p.behHeute.tag === spiel.tag - 1 ? p.behHeute.a : {}, ruhe = !!p.boxenruhe;
     const H = HILFT[b.art] || {}, S = SCHADET[b.art] || {}, hat = k => k === "boxenruhe" ? ruhe : k === "beschlag" ? !!p.beschlag : !!g[k];
     if (g.tierarzt) return { wert: 1, schaden: 0 };
     if (fremd(p) && !pensionDarf(p, "medizin") && (b.tierarzt || b.diagnose)) return { wert: Math.round((0.4 + 0.5 * besitzerEifer(einstellerVon(p))) * 100) / 100, schaden: 0 };   // Besitzer behandelt – so gut, wie er sich kümmert   // Pensionspferd ohne gebuchte Medikamente: der Besitzer behandelt nach Tierarzt-Plan
     let w = 0, s = 0; Object.entries(H).forEach(([k, x]) => { if (hat(k)) w += x; }); Object.entries(S).forEach(([k, x]) => { if (hat(k)) s += x; });
+    if (b.art === "ems" && (p.fz || 5) <= 5) w += EMS_ABNEHMEN;   // v523 (Dome): EMS bessert sich durch Abnehmen (Futterzustand höchstens 5)
     return { wert: Math.min(1, w) * (0.5 + 0.5 * mitwirkung(p)), schaden: s };
   }
   // eine Behandlung durchführen (Spieler oder Mitarbeiter) – gibt den Text für die Meldung zurück
@@ -6366,6 +6368,7 @@
   function trainieren(p, k, ort, m) {
     werteErgaenzen(p); skalaErgaenzen(p);
     const U = UEBUNG[k], d = datum(), wetter = wetterHeute(d), kosten = uebKosten(p, k), wer = m ? m.name : null;
+    if (k === "spazieren" && !behHeute(p).a.schritt && (p.befunde || []).some(b => (HILFT[b.art] || {}).schritt || (SCHADET[b.art] || {}).schritt)) behandeln(p, "schritt", null, wer || undefined);   // v523 (Dome): im Gelände führen wirkt wie Schritt führen
     const T = (p.trainHeute = p.trainHeute && p.trainHeute.tag === spiel.tag ? p.trainHeute : { tag: spiel.tag, liste: [], verbraucht: 0 });
     const vorher = energie(p), ueber = kosten > vorher;
     p.energie = Math.max(-30, Math.round(vorher - kosten)); T.verbraucht += kosten;
@@ -9230,7 +9233,7 @@
   // S2: Spielstand als Datei (lesbares JSON, ungepackt) – am Handy über das Teilen-Menü (Telegram, E-Mail), sonst Download
   function standDatei(s) { const I = standInfo(s); return { typ: "zuchtstall-spielstand", format: 1, version: SPIEL_VERSION, gespeichert: new Date().toISOString(), spielId: s.spielId || "", info: { hoefe: I.hoefe, spieldatum: I.tagTxt, pferde: I.pferde, geld: I.geld }, spiel: s }; }
   function dateiName(s) { const I = standInfo(s), h = String(I.hof).replace(/[/\\:*?"<>|\s]+/g, "-"), d = new Date(), z = x => String(x).padStart(2, "0");
-    return `Zuchtstall_${h}_Jahr${jj(I.d.j)}-${JZ[I.d.s][0]}_${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}.json`; }
+    return `Zuchtstall_${h}_Jahr${jj(I.d.j)}-${JZ[I.d.s][0]}_${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}.json`.replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/Ä/g, "Ae").replace(/Ö/g, "Oe").replace(/Ü/g, "Ue").replace(/ß/g, "ss"); }   // v523 (Dome): Umlaute nur im Dateinamen umschreiben
   async function dateiSpeichern(quelle) {
     let s = null; if (quelle === "auto") { if (hatSpielstand) { speichernJetzt(); s = spiel; } else s = lesen(SPEICHER); } else { const w = lesenPlatz(quelle); s = w && w.spiel; }
     if (!s) { dialog(`<h3>💾 Nichts zu sichern</h3><p>Hier liegt kein Spielstand.</p>`); return; }

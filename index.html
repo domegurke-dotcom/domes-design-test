@@ -949,7 +949,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "510";
+  const SPIEL_VERSION = "511";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -957,9 +957,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=510"></script>
-<script src="boxstufen.js?v=510"></script>
-<script src="kopfneu.js?v=510"></script>
+<script src="pferd.js?v=511"></script>
+<script src="boxstufen.js?v=511"></script>
+<script src="kopfneu.js?v=511"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1743,6 +1743,7 @@
     if (!p || !p.werte) return { R: "vorne", L: "vorne" };
     if (befundListe(p).some(b => b.grad >= 4) || (OHREN_AN[p.id] && Date.now() - OHREN_AN[p.id] < 20000)) return { R: "angelegt", L: "angelegt", spiel: false };   // starker Schmerz / starke Abneigung
     { const R0 = OHREN_REAKT[p.id]; if (R0 && Date.now() - R0.zeit < 20000) { const vt = vertrauenVon(p);   // v501 (Dome): Vorliebe → beide Ohren nach vorn (bei schlechtem Vertrauen nur eins), Abneigung → beide nach hinten (bei mehr Vertrauen nur eins)
+      if (R0.mag == null) return { R: "seite", L: "seite", spiel: false };   // neutral: beide Ohren entspannt seitlich (lässt es geschehen)
       if (R0.mag) return vt < OHREN_VT_SCHLECHT ? { R: "seite", L: "vorne", spiel: false } : { R: "vorne", L: "vorne", spiel: false };
       return vt >= OHREN_VT_GUT ? { R: "seite", L: "hinten", spiel: false } : { R: "hinten", L: "hinten", spiel: false }; } }
     const bez = andere.filter(q => q && q.id && q !== p).map(q => paarBeziehung(p, q));
@@ -7482,6 +7483,7 @@
   // Leckerli: bis 3 am Tag stärken das Vertrauen (+0,3 je Stück) – mehr → bettelt und schnappt (nach 5 solchen Tagen; verschwindet nach 14 Tagen ohne)
   const LECK_STUECK = { moehren: 0.1, leckerli: 0.01 };   // kg je Stück: 1 Möhre/Apfel ≈ 100 g, 1 Leckerli ≈ 10 g
   function leckerliGeben(p, k) {
+    OHREN_REAKT[p.id] = { zeit: Date.now(), mag: true };   // v511: Leckerli – Ohren nach vorn (bei wenig Vertrauen nur eins)
     const F = futterkammer(), kg = LECK_STUECK[k]; if ((F.lager[k] || 0) + 1e-9 < kg) return "";
     F.lager[k] = Math.round((F.lager[k] - kg) * 1000) / 1000;
     const L = (p.leckHeute = p.leckHeute && p.leckHeute.tag === spiel.tag ? p.leckHeute : { tag: spiel.tag, n: 0, kg: {} });
@@ -8306,7 +8308,7 @@
       if (vt && p.werte && p.werte.ist) p.werte.ist.vertrauen = Math.max(0, Math.min(100, r2(vertrauenVon(p) + vt))); }
     if (vorliebeStufe(vorliebe(p, k)) === "mag") delete OHREN_AN[p.id];
     { const stR = vorliebeStufe(vorliebe(p, k));   // Ohren nach der echten Vorliebe/Abneigung (auch wenn Vertrauen die Abneigung schon abschwächt – dann nur ein Ohr nach hinten)
-      if (stR !== "egal" && !(OHREN_AN[p.id] && Date.now() - OHREN_AN[p.id] < 20000)) OHREN_REAKT[p.id] = { zeit: Date.now(), mag: stR === "mag" }; }   // v501: Ohren bei jeder Vorliebe/Abneigung
+      if (!(OHREN_AN[p.id] && Date.now() - OHREN_AN[p.id] < 20000)) OHREN_REAKT[p.id] = { zeit: Date.now(), mag: stR === "egal" ? null : stR === "mag" }; }   // v511 (Dome): jede Interaktion zeigt sich an den Ohren (egal → aufmerksam zum Spieler)   // v501: Ohren bei jeder Vorliebe/Abneigung
     if (!selbst) return "";
     (p.entdeckt = p.entdeckt || {})[k] = st;
     const Zl = (p.vlZaehl = p.vlZaehl || {}), Zt = (p.vlTag = p.vlTag || {}); if (Zt[k] !== spiel.tag) { Zt[k] = spiel.tag; Zl[k] = (Zl[k] || 0) + 1; if (Zl[k] === VL_SICHTBAR_AB && st !== "egal") vlEntdecktPopup(p, k, st); }   // Dome (v240): erst nach 5 Erlebnissen (je Tag einmal) sichtbar
@@ -8597,7 +8599,7 @@
     if (!w) return;
     const p = w.p;
     if (fertig) {
-      if (w.tool === "huf") { auskratzen(p); spielerLernt("huf"); beruehrt(p, "du", "putz"); meldung = `${HUFKR_ICO} Alle vier Hufe von ${esc(p.name)} sind ausgekratzt.`; }
+      if (w.tool === "huf") { auskratzen(p); OHREN_REAKT[p.id] = { zeit: Date.now(), mag: null };   /* v511: Ohren aufmerksam */ spielerLernt("huf"); beruehrt(p, "du", "putz"); meldung = `${HUFKR_ICO} Alle vier Hufe von ${esc(p.name)} sind ausgekratzt.`; }
       else if (w.tool === "streicheln") { streicheln(p); meldung = `✋ Du hast ${esc(p.name)} ausgiebig gestreichelt.`; }
       else { putzen(p, w.tool); spielerLernt("haut"); beruehrt(p, "du", "putz"); reaktionZeigen(reaktion(p, w.tool === "buerste" ? "putzen" : "kaemmen"));
         meldung = w.tool === "buerste" ? `🧽 ${esc(p.name)} ist geputzt – das Fell glänzt wieder.` : `${KAMM_ICO} Mähne und Schweif von ${esc(p.name)} sind gekämmt.`; }

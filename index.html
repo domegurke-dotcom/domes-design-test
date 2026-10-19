@@ -949,7 +949,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "506";
+  const SPIEL_VERSION = "507";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -957,9 +957,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=506"></script>
-<script src="boxstufen.js?v=506"></script>
-<script src="kopfneu.js?v=506"></script>
+<script src="pferd.js?v=507"></script>
+<script src="boxstufen.js?v=507"></script>
+<script src="kopfneu.js?v=507"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1240,6 +1240,8 @@
     return { abz, zeichnung, variante: mitVar ? ABZ_VARIANTE[varK].name : null, maul, augeBlau: anzahl(g, "Cr") === 2 || !!glas, glas: !!glas && anzahl(g, "Cr") < 2, glasMoeglich: glasMoeglich && anzahl(g, "Cr") < 2 };
   }
   const ABZ_VAR_ANTEIL = .5;
+  // v507 (Dome): typisches Kopfweiß je Scheckung und Ausprägung (wenig/typisch/viel/fast weiß) – nur Rassenansicht; im Spiel entscheidet die vererbte Weiß-Anlage (mit Zuschlag der Gene)
+  const MUSTER_KOPF_TYP = { splash: ["blesse", "breiteBlesse", "laterne", "laterne"], sabino: ["schmaleBlesse", "blesse", "breiteBlesse", "laterne"], overo: ["blesse", "breiteBlesse", "laterne"], tovero: ["breiteBlesse", "laterne", "laterne", "laterne"], dw: ["stern", "blesse", "breiteBlesse", "laterne"] };
   // Logit-Zuschlag der Gene auf die Weiß-Anlage
   // v440 (Dome): bei „viel“ und „fast weiß“ mehr Weiß am Kopf – nur bei Splash, Overo, Tovero, Sabino und Dominant White (beim Tobiano bleibt der Kopf meist dunkel)
   const weissZuschlag = (g, ex) => { const sw = anzahl(g, "Sw"), weissGen = sw || hat(g, "Sb") || hat(g, "O") || hat(g, "W");
@@ -4043,7 +4045,10 @@
     // Breite anpassen, damit auch große Pferde ganz ins Bild passen
     saisonFix = wahl.saisonVar != null ? wahl.saisonVar : null;   // v456: Jahreszeit der gezeigten Variante
     if (!wahl.labor) { const weissGen = (wahl.gen && ["Sb", "Sw", "O", "W"].some(k => hat(wahl.gen, k))) || /^(sa|sw|ov|tv)_/.test(wahl.farbe);   // v505 (Dome): Tobiano hat typisch einen dunklen Kopf – kein Kopfweiß in der Rassenansicht
-      Object.assign(exVon(wahl), weissGen ? { pangare: 0 } : { weiss: 0, bvl: 0, bvr: 0, bhl: 0, bhr: 0, pangare: 0 }, { aepfelA: wahl.aepfelVar ? .9 : 0 }); }   // v480 (Dome): Rassenansicht ohne Abzeichen und Mehlmaul – Weiß nur, wenn es zur Scheckung gehört (eigene Wahl unter „Gene selbst wählen“)
+      Object.assign(exVon(wahl), weissGen ? { pangare: 0 } : { weiss: 0, bvl: 0, bvr: 0, bhl: 0, bhr: 0, pangare: 0 }, { aepfelA: wahl.aepfelVar ? .9 : 0 });
+      if (weissGen && wahl.gen) { const g = wahl.gen, ex = exVon(wahl), st = Math.min(3, musterStufeAus(ex.muster != null ? ex.muster : .55));   // v507 (Dome): Kopfweiß, das zur Scheckung typisch dazugehört, immer zeigen (je Ausprägung)
+        const typ = hat(g, "O") && hat(g, "To") ? MUSTER_KOPF_TYP.tovero : anzahl(g, "Sw") ? MUSTER_KOPF_TYP.splash : hat(g, "O") ? MUSTER_KOPF_TYP.overo : hat(g, "Sb") ? MUSTER_KOPF_TYP.sabino : MUSTER_KOPF_TYP.dw;
+        ex.weiss = weissFuer(typ[st] || typ[typ.length - 1], g, ex); ex.schnA = .99; } }   // v480 (Dome): Rassenansicht ohne Abzeichen und Mehlmaul – Weiß nur, wenn es zur Scheckung gehört (eigene Wahl unter „Gene selbst wählen“)
     const z = zeichnePferd(wahl.rasse, fb(wahl, wahl.alter), { seed: wahl.id, geschlecht: wahl.geschlecht, alterStufe: stufeAusMonaten(wahl.alter * 12), ...kopfOpt(wahl) });
     saisonFix = null;
     { const hw = $("varHinweis"), M = MUSTER_WAHL.find(x => x.k === wahl.muster), t = M ? `${M.n}${M.stufe ? " – " + (STUFEN_NAME[["tobiano", "overo", "tovero", "splash", "sabino"].includes(wahl.muster) || ["dw"].includes(wahl.muster) ? "weiss" : wahl.muster === "roan" ? "roan" : ["bird", "grau", "apfel", "fliegen", "bendor", "snow"].includes(wahl.muster) ? wahl.muster : /^brindle/.test(wahl.muster) ? "brindle" : wahl.muster === "tiger" ? "tiger" : wahl.muster === "fewspot" ? "fewspot" : ["schabrackentiger", "schabracke"].includes(wahl.muster) ? "decke" : "weiss"][wahl.mStufe == null ? 1 : wahl.mStufe] || "") : ""}${wahl.varText ? " · " + wahl.varText : ""}` : wahl.varText;   // v493: Farbvariante auch bei gewähltem Muster anzeigen

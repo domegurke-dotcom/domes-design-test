@@ -52,6 +52,17 @@ const { chromium } = require('playwright'); const path = require('path');
     const bh = bilanzHTML(Z); ok('Steckbrief-Anzeige „Bilanz insgesamt“ mit Summenzeile', /Bilanz insgesamt/.test(bh) && /Zusammen/.test(bh) && /Dressur/.test(bh));
     ok('erfolgeHTML enthält die Bilanz', /Bilanz insgesamt/.test(erfolgeHTML(Z)));
     const Y = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 6, name: 'Neu' }); ok('Pferd ohne Starts: keine Bilanz-Anzeige', bilanzHTML(Y) === '');
+    // --- 7. Klassen-Namen je Disziplin (v551): Rennen/Tölt/Pass/Distanz mit Prüfungsnamen statt englischer Buchstaben ---
+    const W = neu({ rasse: 'vollblut', geschlecht: 'Hengst', alter: 7, name: 'Allrounder' }); delete W.bilanz; delete W.bilanzV;
+    W.erfolge = [{ disz: 'galopprennen', stufe: 2, pruef: 'Ausgleich II (Vollblut)', platz: 1 }, { disz: 'galopprennen', stufe: 0, pruef: 'Araberrennen Kl. C', platz: 3 }, { disz: 'toelt', stufe: 3, pruef: 'Tölt B', platz: 1 }, { disz: 'distanz', stufe: 2, pruef: 'Distanzritt 60 km', platz: 2 },
+      { disz: 'passrennen', stufe: 0, pruef: 'Passrennen 250 m', platz: 4 }, { disz: 'dressur', stufe: 2, pruef: 'Dressur Kl. L', platz: 1 }, { disz: 'reining', stufe: 3, pruef: 'Reining Intermediate', platz: 2 }, { disz: 'gelassenheit', stufe: -1, pruef: 'Gelassenheitsprüfung', platz: 3 }, { disz: 'dressur', stufe: -1, pruef: 'Dressurwettbewerb', platz: 1 }];
+    const wh = bilanzHTML(W);
+    ok('Rennen: Prüfungsname statt Buchstabe', /Galopprennen Ausgleich II \(Vollblut\)/.test(wh) && /Galopprennen Araberrennen Kl\. C/.test(wh) && !/Galopprennen [EALMS]</.test(wh));
+    ok('Tölt B / Distanzritt 60 km / Passrennen 250 m ohne doppelten Namen', />Tölt B</.test(wh) && />Distanzritt 60 km</.test(wh) && />Passrennen 250 m</.test(wh), wh.replace(/<[^>]+>/g, ' ').slice(0, 300));
+    ok('Dressur L und Reining Intermediate behalten ihre Klasse', />Dressur L</.test(wh) && />Reining Intermediate</.test(wh));
+    ok('Gelassenheit hat einen richtigen Namen, Wettbewerb ohne Klasse bleibt lesbar', />Gelassenheitsprüfung</.test(wh) && />Dressurwettbewerb</.test(wh), '');
+    W.bilanz = { 'toelt|M': [1, 1, 0, 0] }; W.bilanzV = undefined; ok('Alte Bilanz (v550, falsche Schlüssel) wird neu aufgebaut', !('toelt|M' in bilanzHolen(W)) && W.bilanzV === 2);
+    ok('Chronik-Zähler nutzt dieselben Namen', (() => { spiel.protokoll = {}; protKlasse('Sieg', W, { name: 'T' }, { disz: 'toelt', stufe: 3, name: 'Tölt B' }); return Object.keys(spiel.protokoll[Object.keys(spiel.protokoll)[0]]).some(k => k === 'Turnier Tölt B: Sieg'); })());
     return out.join('\n');
   });
   console.log(R); console.log('Seitenfehler:', errs.join(' ; ') || 'keine'); await b.close();

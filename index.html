@@ -421,6 +421,8 @@
   .enz-karte svg { width: 100%; display: block; border-radius: 8px; background: linear-gradient(#e3f1f9, #fff); }
   .enz-karte b { display: block; font-size: .92rem; margin: 6px 4px 2px; }
   .enz-karte p { margin: 0 4px; font-size: .8rem; color: var(--leise); line-height: 1.35; }
+  body.aufnahme::after { content: ""; position: fixed; inset: 0; border: 3px solid #e02424; box-sizing: border-box; pointer-events: none; z-index: 9999; }   /* v529 (Dome): läuft eine Aufnahme, hat der Bildschirm einen dünnen roten Rahmen */
+  .auf-knoepfe { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .enz-grid.text { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }   /* v525: Text-Karten ohne Bild (Spielstand) */
   .enz-grid.text .enz-karte { padding: 10px 10px 12px; }
   /* Pferdeakte mit Aktenreitern */
@@ -967,7 +969,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "528";
+  const SPIEL_VERSION = "529";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -975,10 +977,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=528"></script>
-<script src="pferd.js?v=528"></script>
-<script src="boxstufen.js?v=528"></script>
-<script src="kopfneu.js?v=528"></script>
+<script src="lz-string.min.js?v=529"></script>
+<script src="pferd.js?v=529"></script>
+<script src="boxstufen.js?v=529"></script>
+<script src="kopfneu.js?v=529"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -1015,6 +1017,7 @@
   let hatSpielstand = false, altStand = null;   // altStand: Spielstand von vor dem Hof-Ausbau – lässt sich nicht weiterspielen (Dome: alte Spielstände werden gelöscht)
   try { const s = lesen(SPEICHER); if (s && s.boxen) { if (s.hofAusbau && !s.verloren) { spiel = s; hatSpielstand = true; } else if (!s.verloren) { altStand = { hof: (s.spieler && s.spieler.hof) || "" }; spiel.sparmodus = s.sparmodus; } } } catch (e) {}
   if (hatSpielstand && !spiel.spielId) { spiel.spielId = neueSpielId(); spiel.platz = 1; platzMigration = true; }   // S1 Punkt 2: unsichtbare Spiel-Nummer und eigener Platz
+  if (hatSpielstand && (spiel.tagebuch || spiel.testProtokoll != null)) { if ((spiel.tagebuch || []).length) (spiel.aufnahmen = spiel.aufnahmen || []).push({ id: "a" + Date.now().toString(36), nr: (spiel.aufnahmeNr = (spiel.aufnahmeNr || 0) + 1), name: "Aufnahme " + spiel.aufnahmeNr + ": frühere Aufzeichnung", von: "", bis: "", hof: (spiel.hof && spiel.hof.name) || "", eintraege: spiel.tagebuch }); delete spiel.tagebuch; delete spiel.testProtokoll; }   // v529: alte Testspiel-Protokolle (v525) werden zur ersten Aufnahme
   if (hatSpielstand && spiel.tsort == null) { try { spiel.tsort = localStorage.getItem("zuchtstall-tsort") || "datum"; } catch (e) { spiel.tsort = "datum"; } }   // S1 Punkt 7: Turnier-Sortierung gehört zum Spielstand
   if (!spiel.anlage) spiel.anlage = { stall: true, paddock: true, weide: false, waschplatz: false, roundpen: false, reitplatz: false, reithalle: false, gelaende: true, anhaenger: true };
   spiel.anlage.anhaenger = true; if (!spiel.hof) { spiel.anlage.weide = true; spiel.anlage.reitplatz = true; spiel.anlage.gelaende = true; }   // Start: Reitplatz und Gelände (Training daheim) – ab H2 je Hof
@@ -2143,25 +2146,45 @@
     const FS = (spiel.finanzSaison = spiel.finanzSaison || {}), S = ((FS[j] = FS[j] || {})[datum().s] = FS[j][datum().s] || {});
     const es = (S[posten] = S[posten] || { ein: 0, aus: 0, n: 0 });
     if (betrag > 0) es.ein += betrag; else es.aus -= betrag; es.n++;
-    if (spiel.testProtokoll) tagebuch("Geld", { x: posten, b: betrag });   // S4: im Testspiel jede Buchung ins Tagebuch
+    if (spiel.aufnahme) tagebuch("Geld", { x: posten, b: betrag });   // S4: bei laufender Aufnahme jede Buchung
   }
   // S4 (PLAN-SPIELSTAND.md): Spielprotokoll – Zähler je Jahreszeit in spiel.protokoll["<jahr>-<jz>"] (immer an, für den Spieler unsichtbar, für die Bilanz in Thema 2)
-  // Testspiel (hvw – Einstellungen): zusätzlich jede Aktion mit Spieltag in spiel.tagebuch (a Aktion, p Pferd, o Ort, b Betrag, x Posten, h Hof)
-  const TAGEBUCH_MAX = 20000;
+  // v529 (Dome): Aufnahmen – hvw – Einstellungen „Aufnahme starten/beenden“: ab Start schreibt das Spiel jede Aktion und jede Buchung mit Spieltag in spiel.aufnahme.eintraege
+  // (t Tag, a Aktion, p Pferd, o Ort, b Betrag, x Posten, h Hof); beim Beenden kommt sie in die Liste spiel.aufnahmen (Herunterladen/Löschen); solange sie läuft, hat der Bildschirm einen roten Rahmen
+  const AUFNAHME_MAX = 20000;
   function prot(k, info) {
     try { const d = datum(), z = d.j + "-" + d.s, P = (spiel.protokoll = spiel.protokoll || {}), J = (P[z] = P[z] || {}); J[k] = (J[k] || 0) + 1;
-      if (spiel.testProtokoll) tagebuch(k, info); } catch (e) { console.error("Protokoll:", e); }
+      if (spiel.aufnahme) tagebuch(k, info); } catch (e) { console.error("Protokoll:", e); }
   }
   function tagebuch(a, info = {}) {
-    const T = (spiel.tagebuch = spiel.tagebuch || []), e = { t: spiel.tag, a };
+    const A = spiel.aufnahme; if (!A) return; const T = A.eintraege, e = { t: spiel.tag, a };
     if (info.p) e.p = typeof info.p === "string" ? info.p : info.p.name; if (info.o) e.o = info.o; if (info.b) e.b = Math.round(info.b * 100) / 100; if (info.x) e.x = info.x;
     if ((spiel.hofReihe || []).length > 1 && spiel.hof) e.h = spiel.hof.name;
-    T.push(e); if (T.length > TAGEBUCH_MAX) T.splice(0, T.length - TAGEBUCH_MAX);
+    T.push(e); if (T.length > AUFNAHME_MAX) T.splice(0, T.length - AUFNAHME_MAX);
   }
-  function tagebuchInfo() {   // S4: Größe beim Schalter anzeigen
-    const T = spiel.tagebuch || [], kb = x => Math.max(1, Math.round(x / 1024)).toLocaleString("de-DE");
-    let g = 0; try { g = T.length ? packen(T).length * 2 : 0; } catch (e) { g = JSON.stringify(T).length; }
-    return (spiel.testProtokoll ? "schreibt jede Aktion mit Spieltag auf" : "nur für Test- und Lernspiele – braucht spürbar mehr Speicher") + (T.length ? ` · ${T.length.toLocaleString("de-DE")} Einträge, ca. ${kb(g)} KB` : "");
+  const kbText = o => { let g = 0; try { g = packen(o).length * 2; } catch (e) { g = JSON.stringify(o).length; } return Math.max(1, Math.round(g / 1024)).toLocaleString("de-DE") + " KB"; };
+  function aufnahmeStart() {
+    if (spiel.aufnahme) return; const nr = (spiel.aufnahmeNr = (spiel.aufnahmeNr || 0) + 1);
+    spiel.aufnahme = { id: "a" + Date.now().toString(36), nr, von: datumText() + ", Tag " + datum().t, vonTag: spiel.tag, eintraege: [] }; speichern(); rahmenSetzen();
+  }
+  function aufnahmeEnde() {
+    const A = spiel.aufnahme; if (!A) return; delete spiel.aufnahme;
+    A.bis = datumText() + ", Tag " + datum().t; A.bisTag = spiel.tag; A.name = `Aufnahme ${A.nr}: ${A.von} bis ${A.bis}`; A.hof = (spiel.hof && spiel.hof.name) || "";
+    (spiel.aufnahmen = spiel.aufnahmen || []).push(A); speichern(); rahmenSetzen();
+  }
+  const rahmenSetzen = (id) => { try { const offen = id !== undefined ? id : (SCHIRME.find(x => $(x) && $(x).classList.contains("offen")) || null); document.body.classList.toggle("aufnahme", !!(hatSpielstand && spiel && spiel.aufnahme && offen !== "startMenue" && offen !== "charakter")); } catch (e) { } };   // roter Rahmen, solange eine Aufnahme läuft
+  async function aufnahmeDownload(id) {
+    const A = (spiel.aufnahmen || []).find(x => x.id === id); if (!A) return;
+    const name = ("Zuchtstall_" + A.name.replace(/[:/\\*?"<>|\s]+/g, "-") + ".json").replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/Ä/g, "Ae").replace(/Ö/g, "Oe").replace(/Ü/g, "Ue").replace(/ß/g, "ss");
+    const blob = new Blob([JSON.stringify({ typ: "zuchtstall-aufnahme", format: 1, version: SPIEL_VERSION, hof: A.hof, name: A.name, von: A.von, bis: A.bis, eintraege: A.eintraege }, null, 1)], { type: "application/json" });
+    try { const f = new File([blob], name, { type: "application/json" }); if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: name }); return; } }
+    catch (e) { if (e && e.name === "AbortError") return; }
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }
+  function aufnahmeHTML() {   // Einstellungen: Start/Ende + Liste
+    const A = spiel.aufnahme, L = spiel.aufnahmen || [];
+    return `<button class="sknopf" id="hfAufnahme"><span class="i">${A ? "⏹️" : "🔴"}</span><span>${A ? "Aufnahme beenden" : "Aufnahme starten"}<small>${A ? `läuft seit ${esc(A.von)} · ${A.eintraege.length.toLocaleString("de-DE")} Einträge` : "schreibt jede Aktion mit Spieltag auf – für Test- und Lernspiele"}</small></span></button>
+      ${L.length ? `<h4 class="ma-titel">🎞️ Aufnahmen</h4><div class="ma-liste">${L.map(a => `<div class="ma-karte"><div class="ma-zeile"><span><b>${esc(a.name)}</b><small>${a.eintraege.length.toLocaleString("de-DE")} ${a.eintraege.length === 1 ? "Eintrag" : "Einträge"} · ca. ${kbText(a.eintraege)}</small></span><span class="auf-knoepfe"><button class="mini-knopf" data-aufdl="${a.id}">⬇️ Herunterladen</button><button class="mini-knopf" data-aufweg="${a.id}">🗑️ Löschen</button></span></div></div>`).join("")}</div>` : ""}`;
   }
   const KOSTEN = { aufzucht: 10, ausbildung: 35, klinik: 60, gentest: 150, kastration: 450 };
   const KASTRATION_AB = 4;
@@ -9270,7 +9293,7 @@
   function zeigeSchirm(id) {
     SCHIRME.forEach(x => $(x).classList.toggle("offen", x === id));
     try { kopfPruefen(); } catch (e) { }   // v380
-    document.documentElement.style.overflow = id ? "hidden" : "";
+    document.documentElement.style.overflow = id ? "hidden" : ""; rahmenSetzen(id);
     if (!id) { stallFormat(); zeigeStall(); zeigeTag(); }
     setTimeout(postIconSetzen, 30);
   }
@@ -9355,7 +9378,7 @@
     let s = null; if (quelle === "auto") { if (hatSpielstand) { speichernJetzt(); s = spiel; } else s = lesen(SPEICHER); } else { const w = lesenPlatz(quelle); s = w && w.spiel; }
     if (!s) { dialog(`<h3>💾 Nichts zu sichern</h3><p>Hier liegt kein Spielstand.</p>`); return; }
     const name = dateiName(s), blob = new Blob([JSON.stringify(standDatei(s))], { type: "application/json" });
-    const fertig = geteilt => { if (hatSpielstand && s.spielId && s.spielId === spiel.spielId) { spiel.zuletztExport = { am: new Date().toISOString(), datum: standInfo(s).datum }; speichern(); const k = $("hfDatei"); if (k) k.querySelector("small").innerHTML = `Zuletzt downgeloadet: ${exportText()}`; }   // S2 Punkt 6
+    const fertig = geteilt => { if (hatSpielstand && s.spielId && s.spielId === spiel.spielId) { spiel.zuletztExport = { am: new Date().toISOString(), datum: standInfo(s).datum }; speichern(); const k = $("hfDatei"); if (k) k.querySelector("small").innerHTML = `Zuletzt heruntergeladen: ${exportText()}`; }   // S2 Punkt 6
       dialog(`<h3>💾 Spielstand gesichert</h3><p>Die Datei <b>${esc(name)}</b> ${geteilt ? "ist geteilt" : "ist heruntergeladen"}.</p><p><small>Die Datei kannst du z. B. per Telegram oder E-Mail an dein anderes Gerät schicken und dort im Startmenü laden.</small></p>`); };
     try { const f = new File([blob], name, { type: "application/json" }); if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: name }); fertig(true); return; } }
     catch (e) { if (e && e.name === "AbortError") return; }
@@ -12381,11 +12404,11 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Ansteckung (Etappe F):</b> ansteckend sind ${Object.keys(ANSTECKEND).map(k => KRANK[k].n).join(", ")}. Nach der Ansteckung erst Inkubation (Influenza 2, Druse/Herpes/Pilz 3, Würmer 4 Tage): schon ansteckend, aber ohne Anzeichen – nur das große Blutbild findet sie. Chance pro Nacht je krankem Pferd: ${Object.entries(ANSTECKEND).map(([k, A]) => `${KRANK[k].n} ${Object.entries(A).map(([w, x]) => `${w} ${String(x).replace(".", ",")}`).join("/")}`).join(" · ")}. Wege: Weide (beide auf der Weide), Luft (im Stall ÷ (1 + Boxabstand)), Kontakt (Nachbarbox), Tränke (alle im Stall), Putzzeug (vom selben geputzt, nicht beide mit eigenem Putzzeug), Träger (vom selben Mitarbeiter oder dir gestern versorgt; zuverlässige oder erfahrene ab 50 machen das bemerkte kranke Pferd zuletzt ×0,3). Quarantäne (1 Jahreszeit): kein Weidegang, eigenes Putzzeug, Luft ×0,5, Kontakt ×0,2, Träger ×0,3, keine Tränke. Ein Mitarbeiter „nur für dieses Pferd“ versorgt nur dieses und trägt nichts weiter. Geimpft (Influenza/Herpes, 2 Jahreszeiten) ×0,3 und Start eine Stufe leichter; Wurmkur in der letzten Jahreszeit: Würmer ×0,2. × Konstitution (1,5 − Anlage ÷ 100). Herpes bei tragenden Stuten: Verfohlen 5 % je Grad pro Nacht. Neuzugänge bringen etwas mit: ${Object.entries(NEUZUGANG_RISIKO).map(([q, x]) => `${q} ${Math.round(x * 100)} %`).join(", ")} (Influenza 30 %, Druse 15 %, Herpes 10 %, Pilz 20 %, Würmer 25 %).</p>
       <p><b>Weitere AKU (v380):</b> nach einer AKU kann eine andere Stufe dazugebucht werden (nicht dieselbe); das Protokoll fasst alle Befunde zusammen, die Wertminderung zählt alle gefundenen Befunde. Danach „Pferd kaufen? Ja / Nein“ (Tierschutz: aufnehmen).</p>
       <p><b>Spielstand und Speicherplätze (PLAN-SPIELSTAND.md, v519):</b> Schlüssel im Browser: Autospeicher <code>zuchtstall-v2</code> (läuft immer mit, kurz verzögert 0,4 s und sofort beim Verlassen/Verstecken der Seite), Platz 1 <code>zuchtstall-p1</code>, Platz 2 <code>zuchtstall-p2</code> (nur selbst gespeichert, mit Kurzinfo Hof/Datum/Tag/Version/echtes Datum), Alles gepackt mit lz-string (<code>compressToUTF16</code>; ungepackte alte Stände beginnen mit „{“ und werden beim nächsten Speichern gepackt). Größe jetzt: ${(() => { try { const j = JSON.stringify(spiel).length, g = packen(spiel).length; return `ungepackt ${j.toLocaleString("de-DE")} Zeichen → gepackt ${g.toLocaleString("de-DE")} Zeichen (${Math.round(g / j * 100)} %)`; } catch (e) { return "–"; } })()}. Spiel-Nummer <code>spiel.spielId</code>, eigener Speicherplatz <code>spiel.platz</code> (null = noch nie gespeichert; neues Spiel legt keinen Speicherstand an, Tipp „Spiel speichern“; beim ersten Speichern Speicherplatz wählen), Turnier-Sortierung <code>spiel.tsort</code>. „Ungespeicherter Fortschritt“ = Tag, Geld, Pferde/Fohlen, Einsteller, Mitarbeiter, Kredite oder Briefe weichen vom Platz ab (<code>fortschritt</code>). Platzwechsel lädt den Stand in den Autospeicher und startet die Seite neu (Merker <code>zuchtstall-start</code> in sessionStorage → direkt ins Spiel). Speichern schlägt fehl → rote Meldung mit Datei-Knopf, höchstens 1× je Spieltag. Spiel verloren → nur der Autospeicher wird gelöscht. Datei (S2/S3): <code>Zuchtstall_&lt;Hof&gt;_Jahr&lt;jj&gt;-&lt;Jahreszeit&gt;_&lt;Datum&gt;.json</code>, Umlaute im Dateinamen als ae/oe/ue/ss (v523, auch im Notfall-Fenster) – im Spiel bleibt der Hofname mit Umlauten.</p>
-      <p><b>Spielprotokoll (S4, v525):</b> Zähler je Jahreszeit in <code>spiel.protokoll["&lt;jahr&gt;-&lt;jz&gt;"]</code> (immer an, für den Spieler unsichtbar, Grundlage für die Bilanz in Thema 2): Füttern selbst/Personal/Turnier, Putzen, Kämmen, Hufe auskratzen, Misten (selbst), Training je Übung (selbst/Personal), Turnierstart/-sieg/platziert, Kauf je Markt, Verkauf (Festpreis/Auktion/Verkaufsrennen), Bedeckung, tragend geworden, Fohlen geboren, Tierarzt, Klinik, Todesfall, Brief gelesen, Kredit, Bauauftrag, Mitarbeiter eingestellt/gekündigt/selbst gekündigt. Testspiel (hvw – Einstellungen „🧪 Testspiel: ausführliches Protokoll“, <code>spiel.testProtokoll</code>): jede gezählte Aktion und jede Buchung mit Spieltag in <code>spiel.tagebuch</code> (höchstens ${TAGEBUCH_MAX.toLocaleString("de-DE")} Einträge, älteste fallen weg, Ausschalten behält die Einträge).</p>
+      <p><b>Spielprotokoll (S4, v525) und Aufnahmen (v529):</b> Zähler je Jahreszeit in <code>spiel.protokoll["&lt;jahr&gt;-&lt;jz&gt;"]</code> (immer an, für den Spieler unsichtbar, Grundlage für die Bilanz in Thema 2): Füttern selbst/Personal/Turnier, Putzen, Kämmen, Hufe auskratzen, Misten (selbst), Training je Übung (selbst/Personal), Turnierstart/-sieg/platziert, Kauf je Markt, Verkauf (Festpreis/Auktion/Verkaufsrennen), Bedeckung, tragend geworden, Fohlen geboren, Tierarzt, Klinik, Todesfall, Brief gelesen, Kredit, Bauauftrag, Mitarbeiter eingestellt/gekündigt/selbst gekündigt. <b>Aufnahme</b> (hvw – Einstellungen „🔴 Aufnahme starten/beenden“): ab dem Start schreibt das Spiel jede gezählte Aktion und jede Buchung mit Spieltag in <code>spiel.aufnahme.eintraege</code> (höchstens ${AUFNAHME_MAX.toLocaleString("de-DE")} Einträge je Aufnahme); beim Beenden kommt sie als eigene Aufnahme in die Liste <code>spiel.aufnahmen</code> (je Eintrag ⬇️ Herunterladen als Datei <code>typ: zuchtstall-aufnahme</code> und 🗑️ Löschen mit Sicherheitsfrage). Solange eine Aufnahme läuft, hat der Bildschirm einen dünnen roten Rahmen (<code>body.aufnahme</code>, nicht im Startmenü).
         ${(() => { const P = spiel.protokoll || {}, K = Object.keys(P).sort((a, b) => { const [ja, sa] = a.split("-").map(Number), [jb, sb] = b.split("-").map(Number); return ja - jb || sa - sb; });
           if (!K.length) return "<p><i>Noch keine Einträge.</i></p>";
           return verTab(["Jahreszeit", "Zähler"], K.map(z => { const [j, sz] = z.split("-").map(Number); return [`${JZ[sz] ? JZ[sz][0] : sz} ${jj(j)}`, Object.entries(P[z]).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${esc(k)} ${n}`).join(" · ")]; })); })()}
-        ${(spiel.tagebuch || []).length ? `<p><b>Tagebuch (Testspiel):</b> ${spiel.tagebuch.length.toLocaleString("de-DE")} Einträge, die letzten 30</p>` + verTab(["Tag", "Aktion", "Pferd", "Ort/Posten", "Betrag"], spiel.tagebuch.slice(-30).reverse().map(e => [e.t, esc(e.a), esc(e.p || ""), esc(e.o || e.x || ""), e.b ? fmt(e.b) : ""])) : ""}
+        ${(spiel.aufnahmen || []).length ? `<p><b>Aufnahmen:</b></p>` + verTab(["Name", "Einträge", "Größe"], spiel.aufnahmen.map(a => [esc(a.name), a.eintraege.length, kbText(a.eintraege)])) : ""}</p>
       <p><b>AKU findet die neuen Krankheiten (v516):</b> Röntgen/Ultraschall (große AKU): Spat, Hufrolle, Kissing Spines, alter Sehnenschaden · Augen: Mondblindheit-Narben, Augenlid-Tumor, MCOA · Herz: Aortenwand (Friese) · Longe: Shivers · immer dabei („klinisch“): Sarkoid, Hodenhochstand bei Hengsten, Gebissfehler (wird beim Kauf bekannt → Zahnkontrolle zweimal im Jahr). Wahrscheinlichkeit = 15 % × Befund-Gewicht × Rassen-/Alters-Faktor × Jahre in Arbeit × (Herkunftsrisiko ÷ 0,25); etwa jedes 4. Händlerpferd hat einen neuen Fund. Händler verdecken Spat, Sehnenschaden, Hufrolle und Kissing Spines zur Hälfte mit Schmerzmittel (Lahmheit erst 2 Tage nach dem Kauf sichtbar; Röntgen/Ultraschall findet sie trotzdem, das große Blutbild zeigt das Schmerzmittel). Gefundene Befunde kommen beim Kauf diagnostiziert mit, nicht gefundene als unbemerkte Befunde. Röntgenfunde heben die Röntgenklasse auf III/IV. Eigene Pferde: „Untersuchung“ (Versorgung) nutzt <code>UCHECK</code> (Aorta → Herz, Augenlid-Krebs/MCOA → Augen).</p>
       <p><b>Ankaufsuntersuchung (Etappe G)</b> – in jedem Kauf-/Bieten-Fenster am Pferdemarkt: ${Object.entries(AKU).map(([k, S]) => `${S.n} ${fmt(S.preis)} (${akuAufstellung(k)})`).join(", ")} – gleiche Preise wie Tierarzt-Hausbesuch und Blutbild; dazu Labortest Erbkrankheiten zum Laborpreis (${fmt(LABOR_TESTS.krank.preis)} + 30 € je weitere Rasse), Blutprobe einlagern +${fmt(AKU_PROBE)} (später prüfen ${fmt(PROBE_PRUEFEN)}). Ergebnis sofort und als Protokoll per Brief. Versteckte Befunde je Pferd nach Herkunft (Grundrisiko ${Object.entries(AKU_RISIKO).map(([q, x]) => `${q} ${Math.round(x * 100)} %`).join(", ")}): Lahmheit (Risiko × 0,7; Grad 2 sieht man im Gangbild, Grad 1 erst bei der Beugeprobe; beim Händler in 50 % mit Schmerzmittel verschleiert – nur das große Blutbild findet es, nach dem Kauf zeigt sich die Lahmheit nach 2 Tagen), Husten (× 0,35, Lunge), Herzgeräusch (× 0,15), Linsentrübung (× 0,12), Taktunreinheit an der Longe (× 0,15), Arthrose ab 10 Jahren (× 0,5, Beugeprobe oder Röntgen), Röntgenklasse I–IV (mit Arthrose III/IV), ansteckende Krankheit in der Inkubation wie bei Neuzugängen (kleines Blutbild: Entzündung, großes: welche). Jeder Befund mindert den Wert (z. B. Lahmheit 8/15 %, Arthrose 12 %, Röntgen III 15 %/IV 30 %, höchstens 50 %). Danach: kaufen, Preis um diesen Anteil verhandeln (einmal; Erfolg privat ${Math.round(AKU_VERHANDELN.Privat * 100)} %, Händler ${Math.round(AKU_VERHANDELN["Händler"] * 100)} %, Gestüt ${Math.round(AKU_VERHANDELN["Gestüt"] * 100)} %) oder ablehnen. Beim Kauf kommen alle versteckten Befunde mit (gefundene schon diagnostiziert). Eingelagerte Probe mit Schmerzmittel (Händler): der Händler erstattet die Hälfte des Kaufpreises. Eigener Verkauf ab ${fmt(1500)}: 40 % der Käufer machen eine AKU – jeder bekannte oder unbekannte Befund senkt den Preis (5 % je Grad, chronisch +10 %, frühere chronische 8 %, höchstens 40 %).</p>
       <p><b>Putzen durch Wischen</b> (Ausrüstung → Putzkiste): Werkzeug antippen, dann im Stallbild über das Pferd wischen (Finger oder gedrückte linke Maustaste). Bürste: überall auf dem Pferd; Kamm: nur oben (Mähne) und hinten/vorne (Schweif, Schopf). Nötige Wischstrecke 350 + 6 × Schmutz (Bildpunkte im Stall, 400 breit) – der Schmutz geht dabei anteilig weg, das Bild wird alle 25 % neu gezeichnet. Hufkratzer: 4 Hufunterseiten mit je 6 Dreckklumpen nacheinander wegwischen. Pfleger putzen weiter automatisch.</p>
@@ -12552,12 +12575,12 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         <h4 class="ma-titel">🎓 Ausbilderschein</h4><p class="text" style="margin:0 0 4px">${spiel.ausbilderschein ? `✅ Du hast den Ausbilderschein und darfst selbst einen Azubi ausbilden${angestellte("azubi").some(z => z.ausbilder === "du" && z.bis == null) ? " (Platz belegt)" : " (Platz frei)"}.` : `Mit dem Ausbilderschein darfst du selbst einen Azubi ausbilden – im kleinen Stall die einzige Möglichkeit. Einmaliger Kurs: <b>${fmt(AUSBILDERSCHEIN)}</b>.`}</p>${spiel.ausbilderschein ? "" : `<button class="knopf" id="ausbilderschein" style="width:auto;padding:8px 14px">🎓 Ausbilderschein machen · ${fmt(AUSBILDERSCHEIN)}</button>`}
         <h4 class="ma-titel">Deine eigene Erfahrung</h4><p class="text" style="margin:0 0 4px"><small>Wächst, wenn du selbst fütterst, mistest und putzt.</small></p>${wissenHTML(spiel.wissen || wissenStart(10, {}))}`;
     } else if (hofReiter === "einst") {
-      inhalt = `<button class="sknopf" id="hfDatei" style="margin-top:0"><span class="i">💾</span><span>Spielstand downloaden<small>Zuletzt downgeloadet: ${exportText()}</small></span></button>
+      inhalt = `<button class="sknopf" id="hfDatei" style="margin-top:0"><span class="i">💾</span><span>Spielstand downloaden<small>Zuletzt heruntergeladen: ${exportText()}</small></span></button>
         <button class="sknopf" id="hfSpar"><span class="i">🔋</span><span>Sparmodus ist ${spiel.sparmodus ? "an" : "aus"}<small>keine Animationen – schont den Akku</small></span></button>
         <button class="sknopf" id="hfVoll"><span class="i">⛶</span><span>Vollbildmodus ist ${istVoll() ? "an" : "aus"}<small>antippen zum Umschalten</small></span></button>
         <button class="sknopf" id="hfTipps"><span class="i">💡</span><span>Tipps für Einsteiger sind ${spiel.tippsAus ? "aus" : "an"}<small>kurze Erklärung beim ersten Öffnen einer Seite</small></span></button>
         <button class="sknopf" id="hfTippsNeu"><span class="i">🔁</span><span>Alle Tipps wieder zeigen<small>jeder Tipp kommt noch einmal</small></span></button>
-        <button class="sknopf" id="hfTestProt"><span class="i">🧪</span><span>Testspiel: ausführliches Protokoll ist ${spiel.testProtokoll ? "an" : "aus"}<small>${tagebuchInfo()}</small></span></button>
+        ${aufnahmeHTML()}
         <button class="sknopf" id="hfAdmin"><span class="i">🛠️</span><span>Adminmodus ist ${spiel.admin ? "an" : "aus"}<small>Testkarte, Pferde aus der Rassenliste, Geld ändern, Vererbung</small></span></button>`;
     } else {
       const br = offenerBrief && allePost.find(b => b.id === offenerBrief);
@@ -12632,7 +12655,10 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     nb.querySelectorAll("[data-fs]").forEach(b => b.onclick = () => { finanzStart += +b.dataset.fs; zeigeHof(); });
     nb.querySelectorAll("[data-zahle]").forEach(b => b.onclick = () => rechnungZahlen(b.dataset.zahle, () => zeigeHof()));
     if ($("hfTipps")) $("hfTipps").onclick = () => { spiel.tipps = spiel.tipps || {}; spiel.tippsAus = !spiel.tippsAus; speichern(); zeigeHof(); };   // v376
-    if ($("hfTestProt")) $("hfTestProt").onclick = () => { spiel.testProtokoll = !spiel.testProtokoll; speichern(); zeigeHof(); };   // S4
+    if ($("hfAufnahme")) $("hfAufnahme").onclick = () => { if (spiel.aufnahme) aufnahmeEnde(); else aufnahmeStart(); zeigeHof(); };   // v529
+    document.querySelectorAll("[data-aufdl]").forEach(b => b.onclick = () => aufnahmeDownload(b.dataset.aufdl));
+    document.querySelectorAll("[data-aufweg]").forEach(b => b.onclick = () => { const a = (spiel.aufnahmen || []).find(x => x.id === b.dataset.aufweg); if (!a) return;
+      dialog(`<h3>🗑️ Aufnahme löschen?</h3><p><b>${esc(a.name)}</b> wird endgültig gelöscht.</p>`, [["Löschen", () => { spiel.aufnahmen = spiel.aufnahmen.filter(x => x !== a); speichern(); zeigeHof(); }], ["Abbrechen", null, "zweit"]]); });
     if ($("hfTippsNeu")) $("hfTippsNeu").onclick = () => { spiel.tipps = {}; spiel.tippStart = spiel.tag; delete spiel.tippsAus; delete spiel.tippWarte; speichern(); zeigeHof(); };
     if ($("hfSpar")) $("hfSpar").onclick = () => { $("mSpar").click(); zeigeHof(); };
     if ($("hfVoll")) $("hfVoll").onclick = () => { vollbildUmschalten(); setTimeout(zeigeHof, 300); };

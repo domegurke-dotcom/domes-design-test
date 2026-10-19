@@ -45,7 +45,7 @@ const MUSTER = {
 function musterFarbe(id, t) {
   const m = /^(to|ov|tv|tg|fs|sb|sk|sa|sw)_(.+)$/.exec(id); if (!m || !t[m[2]]) return null;   // v505: to_ = Tobiano auf jeder Grundfarbe (Rapp-/Braun-/Fuchsschecke bleiben eigene Farben)
   const B = t[m[2]], [name, pattern] = MUSTER[m[1]], e = { ...B, pattern, name: `${name} (${B.name.replace(/ \(.*\)$/, "")})` };
-  delete e.stripe;
+  if (pattern === "leopard" || pattern === "fewspot") delete e.stripe;   // v510 (Dome): Aalstrich bleibt bei Scheckungen (wird unter dem Weiß gezeichnet), nur bei fast weißen Tigern nicht
   if (pattern === "tovero" || pattern === "fewspot") { e.head = mix(B.head || B.body, "#f7f5f1", pattern === "fewspot" ? .75 : .2); e.hoof = "#b8a88f"; }
   if (pattern === "leopard") { e.head = mix(B.head || B.body, "#f7f5f1", .45); e.hoof = "#b8a88f"; }
   if (pattern === "tovero" || pattern === "fewspot" || pattern === "leopard") e.muzzle = "#c9a49a";
@@ -665,6 +665,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += `<g>${umriss(haupt, linie)}`;
   // Überlagerungen
   g += `<g clip-path="url(#cl-${uid})">`;
+  const WEISS_MUSTER = ["tobiano", "overo", "tovero", "blanket", "snowcap", "sabino", "splash"], aalStrich = () => `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${C.stripe}" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>`;
+  if (C.stripe && !ganzWeiss && WEISS_MUSTER.includes(C.pattern)) g += aalStrich();   // v510 (Dome): bei Scheckungen vor dem Weiß – Aalstrich nur in den farbigen Flächen sichtbar
   // v440: Stichelhaare (feine weiße Punkte) mit weichem Übergang – Sabino-Ränder, Rabicano. inner = Flächen (SVG), weite = Breite des Saums
   let stN = 0;
   const stichel = (inner, weite, dichte = 1, T = 11) => { const id = `st${++stN}-${uid}`, rs = zufall(id + (opt.seed || ""));
@@ -832,7 +834,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     g += `<linearGradient id="uh-${uid}" gradientUnits="userSpaceOnUse" x1="${f(mt.x)}" y1="${f(mt.y)}" x2="${f(ende.x)}" y2="${f(ende.y)}"><stop offset="0" stop-color="${head}" stop-opacity="1"/><stop offset=".3" stop-color="${head}" stop-opacity="1"/><stop offset=".55" stop-color="${head}" stop-opacity=".6"/><stop offset=".8" stop-color="${head}" stop-opacity=".2"/><stop offset="1" stop-color="${head}" stop-opacity="0"/></linearGradient>` +
       `<filter id="uf-${uid}" filterUnits="userSpaceOnUse" x="${f(Pn.x - 3 * hl)}" y="${f(Pn.y - 3 * hl)}" width="${f(6 * hl)}" height="${f(6 * hl)}"><feGaussianBlur stdDeviation="${f(0.15 * hl)}"/></filter><g clip-path="url(#cr-${uid})"><path d="${eckig(q)}" fill="url(#uh-${uid})" filter="url(#uf-${uid})"/></g>`;
   }
-  if (C.stripe && !ganzWeiss) g += `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${C.stripe}" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>`;
+  if (C.stripe && !ganzWeiss && !WEISS_MUSTER.includes(C.pattern)) g += aalStrich();
   if (C.muzzle && !eigenKopf) g += `<ellipse cx="${f(hp(0.93, 0.12).x)}" cy="${f(hp(0.93, 0.12).y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.93, 0.12).x)} ${f(hp(0.93, 0.12).y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>`;
   // Abzeichen (weiß): Kopf und Beine
   const abz = opt.abzeichen || (C.pattern === "sabino" ? { kopf: rnd() < .6 ? "blesse" : "laterne", beine: rnd() < .55 ? "hochweiss" : "strumpf" }
@@ -1354,8 +1356,8 @@ function kopfNeuSVG(key, uid, o = {}) {
     const T = K.ohren[o.marwari ? "marwari" : "basis"][seite], st = OHR_REIHE.includes(o["ohr" + seite]) ? o["ohr" + seite] : "vorne";
     const ziel = o.ohrSpiel && !o.statisch ? ohrSpielZiel(st, rnd()) : null;
     if (!ziel) return [farbeOhr(T[st]), maskeOhr(T[st])];
-    // eigener Rhythmus je Ohr: alle 5–11 s für gut 1 s in die Nachbarstellung
-    const dur = (5 + rnd() * 6).toFixed(1), a = 0.15 + rnd() * 0.6, b = a + 1.2 / dur;
+    // eigener Rhythmus je Ohr: alle 15–30 s für gut 1 s in die Nachbarstellung
+    const dur = (15 + rnd() * 15).toFixed(1), a = 0.15 + rnd() * 0.6, b = a + 1.5 / dur;   // v510 (Dome): seltener – alle 15–30 s für gut 1 s
     const zwei = fn => `<g><animate attributeName="opacity" values="1;0;1" keyTimes="0;${a.toFixed(3)};${b.toFixed(3)}" calcMode="discrete" dur="${dur}s" repeatCount="indefinite"/>${fn(T[st])}</g>` +
       `<g opacity="0"><animate attributeName="opacity" values="0;1;0" keyTimes="0;${a.toFixed(3)};${b.toFixed(3)}" calcMode="discrete" dur="${dur}s" repeatCount="indefinite"/>${fn(T[ziel])}</g>`;
     return [zwei(farbeOhr), zwei(maskeOhr)];

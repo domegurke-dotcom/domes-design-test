@@ -93,4 +93,5 @@ Grundidee (Dome, 19.10.2026): Ein Speicherplatz enthält nur, was der Spieler **
 - [x] S1 Selbst speichern, zwei Plätze, Autospeicher, Rücksicherung, gepackt (v519, `tests/spielstand-test.js`)
 - [x] S2 Spielstand als Datei speichern (v520)
 - [x] S3 Spielstand aus Datei laden (v521/v522, Notfall-Fenster kann auch laden)
-- [ ] S4 Spielprotokoll – **offen** (Volumen reichte nicht; für die nächste Sitzung)
+- [x] S4 Spielprotokoll (v525, Claude Team): Zähler `spiel.protokoll`, Schalter „🧪 Testspiel: ausführliches Protokoll“ → `spiel.tagebuch`, Übersicht in bzn, Test in `tests/spielstand-test.js`
+- [x] Enzyklopädie: öffentlicher Reiter „💾 Spielstand“ (v525), bzn-Einträge Spielstand + Spielprotokoll

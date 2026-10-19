@@ -421,6 +421,8 @@
   .enz-karte svg { width: 100%; display: block; border-radius: 8px; background: linear-gradient(#e3f1f9, #fff); }
   .enz-karte b { display: block; font-size: .92rem; margin: 6px 4px 2px; }
   .enz-karte p { margin: 0 4px; font-size: .8rem; color: var(--leise); line-height: 1.35; }
+  .enz-grid.text { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }   /* v525: Text-Karten ohne Bild (Spielstand) */
+  .enz-grid.text .enz-karte { padding: 10px 10px 12px; }
   /* Pferdeakte mit Aktenreitern */
   .akte { width: 100%; }
   .reiter { display: flex; gap: 3px; overflow-x: auto; scrollbar-width: none; padding: 0 4px; }
@@ -965,7 +967,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "524";
+  const SPIEL_VERSION = "525";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -973,10 +975,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=524"></script>
-<script src="pferd.js?v=524"></script>
-<script src="boxstufen.js?v=524"></script>
-<script src="kopfneu.js?v=524"></script>
+<script src="lz-string.min.js?v=525"></script>
+<script src="pferd.js?v=525"></script>
+<script src="boxstufen.js?v=525"></script>
+<script src="kopfneu.js?v=525"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -1888,7 +1890,7 @@
   // angezeigter Wert: nur vererbte Werte = Anlage (mit Altersfaktor), sonst aktueller Stand (höchstens bis zur Altersgrenze)
   const wertVon = (p, x) => { werteErgaenzen(p); return x.art === "anlage" ? wertGrenze(p, x.key) : x.art === "training" ? Math.min(p.werte.ist[x.key] || 0, wertGrenze(p, x.key)) : (p.werte.ist[x.key] || 0); };
   function geburt(box, vater) {
-    const M = box.pferd, V = vater || M.traechtig.vater;
+    const M = box.pferd, V = vater || M.traechtig.vater; prot("Fohlen geboren", { p: M });   // S4
     ahnenFuellen(M); ahnenFuellen(V); nrVon(M); nrVon(V); exVon(V);
     const g = Math.random() < .5 ? "Stute" : "Hengst", d = datum(), her = { gang: {}, charakter: {}, ex: {} };
     // Fellfarbe: von jedem Elternteil ein Allel
@@ -2088,12 +2090,12 @@
       const jetzt = jzJetzt();
       if (stute.heimlich) { const hv = stute.heimlich.vater; stute.traechtig = stute.heimlich; delete stute.heimlich; deckModus = false; speichern(); zeigeAkte();
         dialog(`<h3>🩺 Schon tragend!</h3><p>Beim Decken stellt sich heraus: <b>${esc(stute.name)}</b> ist bereits tragend – ungeplant von <b>${esc(hv.name)}</b> auf der Weide. Das Fohlen kommt zu Beginn von ${jzName(stute.traechtig.geburt)} zur Welt.</p>`); return; }
-      if (taxe) buchen(-taxe, `Decktaxe: ${hengst.name}`);
+      if (taxe) buchen(-taxe, `Decktaxe: ${hengst.name}`); prot("Bedeckung", { p: stute, o: hengst.name, b: -taxe });   // S4
       // Fruchtbarkeit: Chance 40 % + 55 % × Wohlbefinden (eigener Hengst zählt zur Hälfte mit)
       const w = istDeckstation(hengst) ? wohlbefinden(stute) : (wohlbefinden(stute) + wohlbefinden(hengst)) / 2, chance = 0.4 + 0.55 * w / 100;
       if (Math.random() >= chance || wwLeer(stute, hengst)) { deckModus = false; speichern(); zeigeAkte();
         dialog(`<h3>💔 Nicht aufgenommen</h3><p><b>${esc(stute.name)}</b> wurde von <b>${esc(hengst.name)}</b> gedeckt${taxe ? ` (Decktaxe ${fmt(taxe)})` : ""}, ist aber leider nicht tragend geworden. ${w < 70 ? `Ein besseres Wohlbefinden (Weide, Putzen, nicht zu lange in der Box) erhöht die Chance.` : "Das passiert manchmal – ein neuer Versuch ist möglich."}</p>`); return; }
-      stute.traechtig = { vater: hengstKopie(hengst), seit: jetzt, geburt: jetzt + 4 };
+      stute.traechtig = { vater: hengstKopie(hengst), seit: jetzt, geburt: jetzt + 4 }; prot("tragend geworden", { p: stute });   // S4
       deckModus = false; speichern(); zeigeAkte();
       dialog(`<h3>💞 Verpaart!</h3><p><b>${esc(stute.name)}</b> wurde von <b>${esc(hengst.name)}</b> gedeckt${taxe ? ` (Decktaxe ${fmt(taxe)})` : ""}. Das Fohlen kommt zu Beginn von ${jzName(jetzt + 4)} zur Welt.</p>`);
     };
@@ -2141,6 +2143,25 @@
     const FS = (spiel.finanzSaison = spiel.finanzSaison || {}), S = ((FS[j] = FS[j] || {})[datum().s] = FS[j][datum().s] || {});
     const es = (S[posten] = S[posten] || { ein: 0, aus: 0, n: 0 });
     if (betrag > 0) es.ein += betrag; else es.aus -= betrag; es.n++;
+    if (spiel.testProtokoll) tagebuch("Geld", { x: posten, b: betrag });   // S4: im Testspiel jede Buchung ins Tagebuch
+  }
+  // S4 (PLAN-SPIELSTAND.md): Spielprotokoll – Zähler je Jahreszeit in spiel.protokoll["<jahr>-<jz>"] (immer an, für den Spieler unsichtbar, für die Bilanz in Thema 2)
+  // Testspiel (hvw – Einstellungen): zusätzlich jede Aktion mit Spieltag in spiel.tagebuch (a Aktion, p Pferd, o Ort, b Betrag, x Posten, h Hof)
+  const TAGEBUCH_MAX = 20000;
+  function prot(k, info) {
+    try { const d = datum(), z = d.j + "-" + d.s, P = (spiel.protokoll = spiel.protokoll || {}), J = (P[z] = P[z] || {}); J[k] = (J[k] || 0) + 1;
+      if (spiel.testProtokoll) tagebuch(k, info); } catch (e) { console.error("Protokoll:", e); }
+  }
+  function tagebuch(a, info = {}) {
+    const T = (spiel.tagebuch = spiel.tagebuch || []), e = { t: spiel.tag, a };
+    if (info.p) e.p = typeof info.p === "string" ? info.p : info.p.name; if (info.o) e.o = info.o; if (info.b) e.b = Math.round(info.b * 100) / 100; if (info.x) e.x = info.x;
+    if ((spiel.hofReihe || []).length > 1 && spiel.hof) e.h = spiel.hof.name;
+    T.push(e); if (T.length > TAGEBUCH_MAX) T.splice(0, T.length - TAGEBUCH_MAX);
+  }
+  function tagebuchInfo() {   // S4: Größe beim Schalter anzeigen
+    const T = spiel.tagebuch || [], kb = x => Math.max(1, Math.round(x / 1024)).toLocaleString("de-DE");
+    let g = 0; try { g = T.length ? packen(T).length * 2 : 0; } catch (e) { g = JSON.stringify(T).length; }
+    return (spiel.testProtokoll ? "schreibt jede Aktion mit Spieltag auf" : "nur für Test- und Lernspiele – braucht spürbar mehr Speicher") + (T.length ? ` · ${T.length.toLocaleString("de-DE")} Einträge, ca. ${kb(g)} KB` : "");
   }
   const KOSTEN = { aufzucht: 10, ausbildung: 35, klinik: 60, gentest: 150, kastration: 450 };
   const KASTRATION_AB = 4;
@@ -2729,7 +2750,7 @@
     const b = spiel.boxen[x], p = b.pferd;
     const KA = kaeuferAku(p, preis); if (KA.text) { preis = KA.preis; brief(a.art === "auktion" ? "Auktionshaus" : "Pferdemarkt", `Ankaufsuntersuchung: ${p.name}`, KA.text, { pferde: [p] }); }
         const wertEnde = verkaufsWert(p);
-        buchen(preis, `Verkauf: ${p.name}`); archivieren(p);
+        buchen(preis, `Verkauf: ${p.name}`); archivieren(p); prot(a.art === "auktion" ? "Verkauf (Auktion)" : "Verkauf (Festpreis)", { p, b: preis });   // S4
         // Fohlen bei Fuß geht mit der Mutter (auch wenn es inzwischen in eine eigene Box umgezogen ist)
         let fohlenName = "";
         if (b.fohlen) { fohlenName = b.fohlen.name; archivieren(b.fohlen); delete b.fohlen; }
@@ -4749,7 +4770,7 @@
   const ausmisten = () => {
     const box = B();
     if (!box.pferd || box.tot || box.pferd.klinik || box.pferd.weide || !box.mistig) return;
-    box.mistig = false; box.mistStufe = 0; spielerLernt("klima"); beruehrt(box.pferd, "du", "stall");
+    box.mistig = false; box.mistStufe = 0; spielerLernt("klima"); beruehrt(box.pferd, "du", "stall"); prot("Misten selbst", { p: box.pferd });   // S4
     speichern(); zeigeTag(); funkeln();
   };
   $("mist").addEventListener("click", ausmisten);
@@ -4757,7 +4778,7 @@
   // Eine Nacht vergeht: Gesundheit, Mist, Mähne und Schopf
   // Verstorbene Pferde kommen auf den Pferdefriedhof – die Box ist danach wieder leer
   function begraben(p, ort) {
-    zubehoerInsLager(p); pateAbschied(p);
+    zubehoerInsLager(p); pateAbschied(p); prot("Todesfall", { p, o: p.todesursache });   // S4
     (spiel.friedhof = spiel.friedhof || []).push({ pferd: JSON.parse(JSON.stringify(p)), name: p.name, rasse: p.rasse, geschlecht: p.geschlecht, farbe: fb(p), farbName: farbName(p, fb(p)), geb: p.geb ? { ...p.geb } : null, tod: jzJetzt(), alter: alterText(p), ort, nachkommen: p.nachkommen || 0, ursache: p.todesursache || "unbekannt" });
   }
   function erbTodPruefen() {
@@ -5064,6 +5085,7 @@
   // Hausbesuch: sichere Diagnose aller Befunde, Behandlung gleich mit (Dome: bis Etappe D) – Kolik ab Grad 4 nur mit OP in der Klinik
   function tierarztBesuch(p, box, danach, besitzer) {   // besitzer: Einsteller ruft selbst (H5) – ohne Fenster, er zahlt
     if (!besitzer) tippMerken("tierarzt");   // v376: Einsteiger-Tipp
+    prot(besitzer ? "Tierarzt (vom Besitzer gerufen)" : "Tierarzt", { p });   // S4
     const i = spiel.boxen.indexOf(box), l = befundListe(p).filter(b => !imInkub(b) || b.diagnose), posten = [{ text: `${p.name}: Hausbesuch und Untersuchung`, betrag: TIERARZT_BESUCH }], zeilen = [], plan = new Set(), rz = rezeptVon(p);
     let opNoetig = null;
     l.forEach(b => {
@@ -6370,6 +6392,7 @@
     const U = UEBUNG[k], d = datum(), wetter = wetterHeute(d), kosten = uebKosten(p, k), wer = m ? m.name : null;
     if (k === "spazieren" && !behHeute(p).a.schritt && (p.befunde || []).some(b => (HILFT[b.art] || {}).schritt || (SCHADET[b.art] || {}).schritt)) behandeln(p, "schritt", null, wer || undefined);   // v523 (Dome): im Gelände führen wirkt wie Schritt führen
     const T = (p.trainHeute = p.trainHeute && p.trainHeute.tag === spiel.tag ? p.trainHeute : { tag: spiel.tag, liste: [], verbraucht: 0 });
+    prot(`Training ${(U.n || k).replace(/\u00ad/g, "")} (${m ? "Personal" : "selbst"})`, { p, o: ort });   // S4: je Übung
     const vorher = energie(p), ueber = kosten > vorher;
     p.energie = Math.max(-30, Math.round(vorher - kosten)); T.verbraucht += kosten;
     const c = k2 => charE(p, k2), A = c("wille"), B = c("bezug"), V = c("nerven"), Te = c("temperament"), S = c("sensibel"), M = c("mut");
@@ -6906,13 +6929,14 @@
         const vet = P.disz === "distanz" ? distanzVet(p, P, muede, rz) : null;
         if (vet && vet.aus) { if (vet.lahm) befundNeu(p, "lahmheit", 1, "Distanzritt", "Tierarzt beim Distanzritt");
           (p.erfolge = p.erfolge || []).unshift({ tag: spiel.tag, turnier: t.name, art: t.art, disz: P.disz, stufe: P.stufe, pruef: P.name, platz: P.starter, von: P.starter, erg: vet.aus, geld: 0, plaziert: false, aus: true });
-          zeilen.push(`<li><b>${esc(P.name)}</b>: ❌ ${vet.aus}</li>`); return; }
+          prot("Turnierstart", { p, o: t.name }); zeilen.push(`<li><b>${esc(P.name)}</b>: ❌ ${vet.aus}</li>`); return; }
         const ich = ergebnisText(P.disz, wert, niveau, rz, P.stufe), andere = Array.from({ length: P.starter - 1 }, () => ergebnisText(P.disz, niveau + (rz() + rz() + rz() - 1.5) * 14, niveau, rz, P.stufe).sort);
         const platz = 1 + andere.filter(s => s > ich.sort).length, plaziert = platz <= Math.max(3, Math.ceil(P.starter / 4));
         let geld = 0; if (plaziert && preisgeld(t, P)) { const anteil = PREIS_ANTEIL.slice(0, Math.max(3, Math.ceil(P.starter / 4))), summe = anteil.reduce((a, b) => a + b, 0); geld = Math.round(preisgeld(t, P) * (anteil[platz - 1] || 0.05) / summe / 5) * 5; }
         geldSumme += geld;
         (p.erfolge = p.erfolge || []).unshift({ tag: spiel.tag, turnier: t.name, art: t.art, disz: P.disz, stufe: P.stufe, pruef: P.name, platz, von: P.starter, erg: ich.txt, geld, plaziert, jung: !!P.jung });
         if (p.erfolge.length > 60) p.erfolge.length = 60;
+        prot("Turnierstart", { p, o: t.name }); if (platz === 1) prot("Turniersieg", { p, o: t.name }); else if (plaziert) prot("Turnier platziert", { p, o: t.name });   // S4
         if (muede) { wohlAendern(p, -8, "Turnier: übermüdet gestartet"); p.pflege.gesundheit = Math.max(1, r2(p.pflege.gesundheit - 3)); if (rz() < 0.15 * (1.5 - (p.werte.ist.zaehigkeit || 50) / 100)) befundNeu(p, "lahmheit", 1, "Überlastung auf dem Turnier", "du"); }
         if (grp && plaziert && P.stufe >= 0 && !profi) { const m = lkErfolg(grp, P.stufe, platz); if (m) lkMeld.push(m); }
         if (platz === 1 && P.titel) { (p.titel = p.titel || []).push({ titel: P.titel, pruef: P.name, tag: spiel.tag }); }
@@ -6964,7 +6988,7 @@
   }
   function verkaufsrennenAbgang() {
     spiel.boxen.forEach((b, x) => { const p = b.pferd; if (!p || !p.verkauftImRennen) return; const preis = p.verkauftImRennen.preis; delete p.verkauftImRennen;
-      buchen(preis, `Verkaufsrennen: ${p.name}`); archivieren(p); zubehoerInsLager(p); spiel.angebote = (spiel.angebote || []).filter(a => a.id !== p.id);
+      buchen(preis, `Verkaufsrennen: ${p.name}`); archivieren(p); prot("Verkauf (Verkaufsrennen)", { p, b: preis });   // S4 zubehoerInsLager(p); spiel.angebote = (spiel.angebote || []).filter(a => a.id !== p.id);
       b.pferd = null; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; b.tot = false;
       brief("Rennverein", `${p.name} wurde verkauft`, `<b>${esc(p.name)}</b> (Box ${x + 1}) wurde nach dem Verkaufsrennen zum Verkaufspreis von <b>${fmt(preis)}</b> gekauft und heute abgeholt. Das Geld ist auf {deinem|Ihrem} Konto.`); });
   }
@@ -7261,6 +7285,7 @@
   function fuetternAusLager(box, wer, teil) {
     const F = futterkammer(), p = box.pferd; if (!p) return false;
     const R = tagesRation(p, box, p.weide && !heuNoetigP(p)), RK = tagesRation(p, box, false), rauJa = teil !== "kraft", kraftJa = teil !== "rau";
+    prot(wer === "du" ? (teil === "kraft" ? "Kraftfutter selbst" : "Füttern selbst") : wer === "turnier" ? "Füttern unterwegs (Turnier)" : "Füttern Personal", { p });   // S4
     const perBrief = wer !== "du";   // Dome: Warnbrief nur, wenn ein Mitarbeiter (oder unterwegs beim Turnier) nicht füttern konnte – der Spieler sieht es selbst
     const vorrat = RAUFUTTER_REIHE.reduce((a, k) => a + F.lager[k], 0);
     if (rauJa && vorrat + 1e-9 < R.raufutter) { if (perBrief) futterWarnung("raufutter"); return false; }
@@ -8229,7 +8254,7 @@
       }
       // niedrige Zufriedenheit: Kündigung zum Ende der Jahreszeit
       if (m.bis == null && zufr(m) < KUENDIGEN_AB && Math.random() < 0.1) {
-        m.bis = jzJetzt(); m.selbstGekuendigt = true;
+        m.bis = jzJetzt(); m.selbstGekuendigt = true; prot("Mitarbeiter hat selbst gekündigt", { p: m.name });   // S4
         brief("Hofverwaltung", `${m.name} kündigt`, `${titel} <b>${esc(m.name)}</b> hat zum Ende der Jahreszeit gekündigt. ${P.Er} war schon länger unzufrieden. Bis dahin arbeitet ${P.er} noch normal.`);
       }
     });
@@ -8478,6 +8503,7 @@
   }
   // Stress bei Fahrten mit dem Pferdeanhänger und Neuem (Klinik, fremde Herde): scheu und nervös leiden, gelassen bremst
   function fahrtStress(p, ziel) {
+    if (p && ziel === "klinik") prot("Klinik", { p });   // S4
     if (!p || !p.werte) return;
     reaktionZeigen(reaktion(p, "verladen"));
     // nervös: vor allem die Fahrt (Enge, Lärm, Schaukeln) · scheu: vor allem das Neue (fremde Klinik, fremde Herde) · beides zählt zusammen, gelassen bremst bis zur Hälfte
@@ -8869,6 +8895,7 @@
     if (!w) return;
     const p = w.p;
     if (fertig) {
+      prot(w.tool === "huf" ? "Hufe auskratzen selbst" : w.tool === "streicheln" ? "Streicheln" : w.tool === "buerste" ? "Putzen selbst" : "Kämmen selbst", { p });   // S4
       if (w.tool === "huf") { auskratzen(p); OHREN_REAKT[p.id] = { zeit: Date.now(), mag: null }; ohrenZurueckPlanen();   /* v511: Ohren aufmerksam */ spielerLernt("huf"); beruehrt(p, "du", "putz"); meldung = `${HUFKR_ICO} Alle vier Hufe von ${esc(p.name)} sind ausgekratzt.`; }
       else if (w.tool === "streicheln") { streicheln(p); meldung = `✋ Du hast ${esc(p.name)} ausgiebig gestreichelt.`; }
       else { putzen(p, w.tool); spielerLernt("haut"); beruehrt(p, "du", "putz"); reaktionZeigen(reaktion(p, w.tool === "buerste" ? "putzen" : "kaemmen"));
@@ -9081,6 +9108,15 @@
       ["Zebrastreifen", "Dunkle Querstreifen an Unterarm und Unterschenkel – primitives Abzeichen der Falben, typisch für das Fjordpferd.", null, null, "braunfalbe", null, { zebra: .9 }],
     ] },
     farben: { titel: "Fellfarben", ansicht: "ganz", rasse: "quarter", farbe: null, eintraege: Object.entries(FARBEN).filter(([id]) => !/^gr_/.test(id) && (!/~/.test(id) || FARBBESCHREIBUNG[id]) && (!/^(to|ov|tv|tg|fs|sb|sk|sa|sw)_/.test(id) || FARBBESCHREIBUNG[id])).map(([id, c]) => [c.name, FARBBESCHREIBUNG[id] || "", null, null, id]).sort((x, y) => farbRang(x[4]) - farbRang(y[4])) },
+    spielstand: { titel: "💾 Spielstand", text: true, eintraege: [   // PLAN-SPIELSTAND.md, Enzyklopädie Punkt 1 (v525)
+      ["🔄 Autospeicher", "Das Spiel speichert nach jeder Aktion von selbst im Browser. Schließt du die Seite, geht es beim nächsten Öffnen mit „Weiterspielen“ genau dort weiter."],
+      ["💾 Speicherplatz 1 und 2", "Einen festen Speicherstand gibt es erst, wenn du selbst speicherst: Menü ☰ → „💾 Spiel speichern“ oder Hofverwaltung → Einstellungen. Beim ersten Mal wählst du Speicherplatz 1 oder 2 – so kannst du zwei Spiele nebeneinander haben und im Startmenü zwischen ihnen wechseln."],
+      ["❓ Ungespeicherter Fortschritt", "Wechselst du den Speicherplatz oder startest ein neues Spiel, obwohl du seit dem letzten Speichern weitergespielt hast, fragt das Spiel vorher, ob du speichern möchtest."],
+      ["📤 Als Datei sichern", "In der Hofverwaltung → Einstellungen oder im Startmenü kannst du einen Spielstand als Datei speichern. Am Handy öffnet sich das Teilen-Menü – so schickst du die Datei z. B. per Telegram oder E-Mail an dich selbst oder an dein anderes Gerät."],
+      ["📂 Aus Datei laden", "Startmenü → „📂 Spielstand aus Datei laden“: Speicherplatz wählen, Datei aussuchen. Du siehst vorher Hof, Datum, Pferde und Geld. Ist der Speicherplatz belegt oder die Datei älter als dein Spiel, fragt das Spiel noch einmal nach."],
+      ["📋 Kopieren und Löschen", "Im Startmenü kannst du einen Speicherplatz auf den anderen kopieren oder löschen. Bevor etwas überschrieben oder gelöscht wird, kommt immer eine Sicherheitsfrage."],
+      ["⚠️ Spiel verloren", "Wird dein Hof zwangsversteigert, ist nur der Autospeicher weg. Deine Speicherplätze und Dateien bleiben – mit „Vom letzten Speicherstand neu starten“ spielst du von dort aus weiter."],
+      ["💡 Tipp", "Speichere regelmäßig, z. B. am Ende jeder Jahreszeit, und sichere ab und zu eine Datei. Löschst du die Browserdaten (z. B. „Verlauf löschen“), sind Autospeicher und Speicherplätze weg – die Datei nicht."]] },
   };
   let enzyKat = "kopf";
   function enzyBild(kat, e) {
@@ -9117,7 +9153,7 @@
               <svg viewBox="0 0 ${VB.b} ${VB.h}"><line x1="0" x2="${VB.b}" y1="${VB.boden}" y2="${VB.boden}" stroke="#d8cbb6" stroke-width="2"/>${pferdInRahmen(r.id, r.farben[0], (r.h[0] + r.h[1]) / 2)}</svg>
               <b>${r.name}</b><span>${r.h[0]}–${r.h[1]} cm · ${r.herkunft}</span>
             </button>`).join("")}
-        </div>` : `<div class="enz-grid">${kat.eintraege.map(e => `<div class="enz-karte">${enzyBild(kat, e)}<b>${e[0]}</b><p>${e[1]}</p></div>`).join("")}</div>`}
+        </div>` : `<div class="enz-grid${kat.text ? " text" : ""}">${kat.eintraege.map(e => `<div class="enz-karte">${kat.text ? "" : enzyBild(kat, e)}<b>${e[0]}</b><p>${e[1]}</p></div>`).join("")}</div>`}
       </div>`;
     a.querySelectorAll(".rasse").forEach(b => b.onclick = () => zeigeDetail(b.dataset.id));
     if (enzyKat === "rassen") rasseSortieren(a, zeigeEnzy);   // v455 (Dome): Rassen nach Kontinent sortierbar
@@ -9781,7 +9817,7 @@
     [...M.auktion, ...(M.fohlen || [])].forEach(a => { if (a.vorbei || a.fuehrt !== "du" || (a.hid && hofVon(a.hid) ? a.hid : hofReihe()[0]) !== aktivHid()) return; a.vorbei = true;   // Zuschlag an den Hof, von dem aus geboten wurde
       const zb = neuzugangBox();
       if (zb < 0 || (spiel.geld || 0) < a.gebot) { brief("Auktionshaus", `Auktion verloren: ${a.pferd.name}`, `{du hattest|Sie hatten} das Höchstgebot für <b>${esc(a.pferd.name)}</b> (${fmt(a.gebot)}), aber ${zb < 0 ? "keine freie Box" : "nicht genug Geld"}. Das Pferd ging an den Nächstbietenden.`, { pferde: [a.pferd] }); return; }
-      buchen(-a.gebot, `Auktion: ${a.pferd.name}`);
+      buchen(-a.gebot, `Auktion: ${a.pferd.name}`); prot(a.fohlen ? "Kauf: Fohlenauktion" : "Kauf: Auktion", { p: a.pferd, b: -a.gebot });   // S4
       const p = JSON.parse(JSON.stringify(a.pferd)); p.pflege = erzeugePflege(p); p.maehneSeit = spiel.tag; p.schopfSeit = spiel.tag; akuUebernehmen(p, a.pferd, "Auktion");
       const nb = spiel.boxen[zb]; nb.pferd = p; nb.pferd.quarantaene = nb.quar ? spiel.tag : nb.pferd.quarantaene; nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false;
       ruf("Auktionshaus", 5); brief("Auktionshaus", `Zuschlag: ${p.name}`, `herzlichen Glückwunsch! ${a.fohlen ? `{Dein|Ihr} Fohlen aus der Fohlenauktion ist abgesetzt und abgeholt: ` : ""}{Du hast|Sie haben} <b>${esc(p.name)}</b> für <b>${fmt(a.gebot)}</b> ersteigert (${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"} insgesamt). ${pron(p).er === "sie" ? "Sie" : "Er"} steht jetzt in Box ${zb + 1}.`, { pferde: [p] }); });
@@ -9789,7 +9825,7 @@
   // gekauftes Pferd in die Box stellen
   function pferdEinstellen(h, preis, posten, zusatz) {
     const zb = neuzugangBox();   // freie Box im Quarantänestall zuerst
-    buchen(-preis, `${posten}: ${h.name}`); marktGekauftMerken(h.id);
+    buchen(-preis, `${posten}: ${h.name}`); marktGekauftMerken(h.id); prot("Kauf: " + posten, { p: h, b: -preis });   // S4
     const p = JSON.parse(JSON.stringify(h)); delete p.preis;
     p.pflege = erzeugePflege(p); p.maehneSeit = spiel.tag; p.schopfSeit = spiel.tag;
     if (zusatz) zusatz(p);
@@ -9995,6 +10031,7 @@
   const kreditRahmen = () => Math.max(0, Math.floor((hofWert() * KREDIT.beleihung - restschuld()) / 500) * 500);
   const prozent = x => (Math.round(x * 1000) / 10).toLocaleString("de-DE") + " %";
   function kreditNeu(summe, n, name) {
+    prot("Kredit aufgenommen", { x: name, b: summe });   // S4
     const k = { id: "k" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, summe, zins: KREDIT.zins, raten: n, rate: kreditRate(summe, KREDIT.zins, n),
       rest: summe, getilgt: 0, zinsen: 0, bezahlt: 0, offen: [], jz: jzJetzt() };
     kredite().push(k); buchen(summe, "Kredit (Auszahlung)");
@@ -10589,7 +10626,7 @@
     const B = BAUTEN[typ], preis = bauPreis(typ, stufe, opt);
     if (platzVon(typ, opt.boxen) > baulandFrei() + 1e-9) { dialog(`<h3>Zu wenig Bauland</h3><p>${B.n.replace(/\u00ad/g, "")} braucht ${haTxt(platzVon(typ, opt.boxen))} Bauland, frei sind nur ${haTxt(baulandFrei())}. Bauland kaufst du unter Hof → Bauen → Weideland.</p>`); return false; }
     if (!spiel.admin && (spiel.geld || 0) < preis) { dialog(`<h3>Zu wenig Geld</h3><p>Der Bau kostet ${fmt(preis)} – in der Kasse sind ${fmt(spiel.geld || 0)}.</p>`); return false; }
-    if (!spiel.admin) buchen(-preis, `Bau: ${B.n}`);
+    if (!spiel.admin) buchen(-preis, `Bau: ${B.n}`); prot("Bauauftrag: " + B.n.replace(/\u00ad/g, ""), { b: -preis });   // S4
     if (stufe === 3) { const z = bauZuschuss(preis); if (z) buchen(z, `Bauzuschuss Stufe 3: ${B.n.replace(/\u00ad/g, "")}`); }   // Dome (v295)
     if (typ === "heudampfer") { gebaeude().push({ gid: "g" + Math.random().toString(36).slice(2, 8), typ, stufe: 0, zustand: 100, preis }); (spiel.anlage = spiel.anlage || {}).heudampfer = true; return true; }
     const g = { gid: "g" + Math.random().toString(36).slice(2, 8), typ, stufe, zustand: 100, preis, bau: { rest: bauTage(B.zeit), art: "neu" } };
@@ -12253,6 +12290,11 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Ansteckung (Etappe F):</b> ansteckend sind ${Object.keys(ANSTECKEND).map(k => KRANK[k].n).join(", ")}. Nach der Ansteckung erst Inkubation (Influenza 2, Druse/Herpes/Pilz 3, Würmer 4 Tage): schon ansteckend, aber ohne Anzeichen – nur das große Blutbild findet sie. Chance pro Nacht je krankem Pferd: ${Object.entries(ANSTECKEND).map(([k, A]) => `${KRANK[k].n} ${Object.entries(A).map(([w, x]) => `${w} ${String(x).replace(".", ",")}`).join("/")}`).join(" · ")}. Wege: Weide (beide auf der Weide), Luft (im Stall ÷ (1 + Boxabstand)), Kontakt (Nachbarbox), Tränke (alle im Stall), Putzzeug (vom selben geputzt, nicht beide mit eigenem Putzzeug), Träger (vom selben Mitarbeiter oder dir gestern versorgt; zuverlässige oder erfahrene ab 50 machen das bemerkte kranke Pferd zuletzt ×0,3). Quarantäne (1 Jahreszeit): kein Weidegang, eigenes Putzzeug, Luft ×0,5, Kontakt ×0,2, Träger ×0,3, keine Tränke. Ein Mitarbeiter „nur für dieses Pferd“ versorgt nur dieses und trägt nichts weiter. Geimpft (Influenza/Herpes, 2 Jahreszeiten) ×0,3 und Start eine Stufe leichter; Wurmkur in der letzten Jahreszeit: Würmer ×0,2. × Konstitution (1,5 − Anlage ÷ 100). Herpes bei tragenden Stuten: Verfohlen 5 % je Grad pro Nacht. Neuzugänge bringen etwas mit: ${Object.entries(NEUZUGANG_RISIKO).map(([q, x]) => `${q} ${Math.round(x * 100)} %`).join(", ")} (Influenza 30 %, Druse 15 %, Herpes 10 %, Pilz 20 %, Würmer 25 %).</p>
       <p><b>Weitere AKU (v380):</b> nach einer AKU kann eine andere Stufe dazugebucht werden (nicht dieselbe); das Protokoll fasst alle Befunde zusammen, die Wertminderung zählt alle gefundenen Befunde. Danach „Pferd kaufen? Ja / Nein“ (Tierschutz: aufnehmen).</p>
       <p><b>Spielstand und Speicherplätze (PLAN-SPIELSTAND.md, v519):</b> Schlüssel im Browser: Autospeicher <code>zuchtstall-v2</code> (läuft immer mit, kurz verzögert 0,4 s und sofort beim Verlassen/Verstecken der Seite), Platz 1 <code>zuchtstall-p1</code>, Platz 2 <code>zuchtstall-p2</code> (nur selbst gespeichert, mit Kurzinfo Hof/Datum/Tag/Version/echtes Datum), Alles gepackt mit lz-string (<code>compressToUTF16</code>; ungepackte alte Stände beginnen mit „{“ und werden beim nächsten Speichern gepackt). Größe jetzt: ${(() => { try { const j = JSON.stringify(spiel).length, g = packen(spiel).length; return `ungepackt ${j.toLocaleString("de-DE")} Zeichen → gepackt ${g.toLocaleString("de-DE")} Zeichen (${Math.round(g / j * 100)} %)`; } catch (e) { return "–"; } })()}. Spiel-Nummer <code>spiel.spielId</code>, eigener Speicherplatz <code>spiel.platz</code> (null = noch nie gespeichert; neues Spiel legt keinen Speicherstand an, Tipp „Spiel speichern“; beim ersten Speichern Speicherplatz wählen), Turnier-Sortierung <code>spiel.tsort</code>. „Ungespeicherter Fortschritt“ = Tag, Geld, Pferde/Fohlen, Einsteller, Mitarbeiter, Kredite oder Briefe weichen vom Platz ab (<code>fortschritt</code>). Platzwechsel lädt den Stand in den Autospeicher und startet die Seite neu (Merker <code>zuchtstall-start</code> in sessionStorage → direkt ins Spiel). Speichern schlägt fehl → rote Meldung mit Datei-Knopf, höchstens 1× je Spieltag. Spiel verloren → nur der Autospeicher wird gelöscht. Datei (S2/S3): <code>Zuchtstall_&lt;Hof&gt;_Jahr&lt;jj&gt;-&lt;Jahreszeit&gt;_&lt;Datum&gt;.json</code>, Umlaute im Dateinamen als ae/oe/ue/ss (v523, auch im Notfall-Fenster) – im Spiel bleibt der Hofname mit Umlauten.</p>
+      <p><b>Spielprotokoll (S4, v525):</b> Zähler je Jahreszeit in <code>spiel.protokoll["&lt;jahr&gt;-&lt;jz&gt;"]</code> (immer an, für den Spieler unsichtbar, Grundlage für die Bilanz in Thema 2): Füttern selbst/Personal/Turnier, Putzen, Kämmen, Hufe auskratzen, Misten (selbst), Training je Übung (selbst/Personal), Turnierstart/-sieg/platziert, Kauf je Markt, Verkauf (Festpreis/Auktion/Verkaufsrennen), Bedeckung, tragend geworden, Fohlen geboren, Tierarzt, Klinik, Todesfall, Brief gelesen, Kredit, Bauauftrag, Mitarbeiter eingestellt/gekündigt/selbst gekündigt. Testspiel (hvw – Einstellungen „🧪 Testspiel: ausführliches Protokoll“, <code>spiel.testProtokoll</code>): jede gezählte Aktion und jede Buchung mit Spieltag in <code>spiel.tagebuch</code> (höchstens ${TAGEBUCH_MAX.toLocaleString("de-DE")} Einträge, älteste fallen weg, Ausschalten behält die Einträge).</p>
+        ${(() => { const P = spiel.protokoll || {}, K = Object.keys(P).sort((a, b) => { const [ja, sa] = a.split("-").map(Number), [jb, sb] = b.split("-").map(Number); return ja - jb || sa - sb; });
+          if (!K.length) return "<p><i>Noch keine Einträge.</i></p>";
+          return verTab(["Jahreszeit", "Zähler"], K.map(z => { const [j, sz] = z.split("-").map(Number); return [`${JZ[sz] ? JZ[sz][0] : sz} ${jj(j)}`, Object.entries(P[z]).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${esc(k)} ${n}`).join(" · ")]; })); })()}
+        ${(spiel.tagebuch || []).length ? `<p><b>Tagebuch (Testspiel):</b> ${spiel.tagebuch.length.toLocaleString("de-DE")} Einträge, die letzten 30</p>` + verTab(["Tag", "Aktion", "Pferd", "Ort/Posten", "Betrag"], spiel.tagebuch.slice(-30).reverse().map(e => [e.t, esc(e.a), esc(e.p || ""), esc(e.o || e.x || ""), e.b ? fmt(e.b) : ""])) : ""}
       <p><b>AKU findet die neuen Krankheiten (v516):</b> Röntgen/Ultraschall (große AKU): Spat, Hufrolle, Kissing Spines, alter Sehnenschaden · Augen: Mondblindheit-Narben, Augenlid-Tumor, MCOA · Herz: Aortenwand (Friese) · Longe: Shivers · immer dabei („klinisch“): Sarkoid, Hodenhochstand bei Hengsten, Gebissfehler (wird beim Kauf bekannt → Zahnkontrolle zweimal im Jahr). Wahrscheinlichkeit = 15 % × Befund-Gewicht × Rassen-/Alters-Faktor × Jahre in Arbeit × (Herkunftsrisiko ÷ 0,25); etwa jedes 4. Händlerpferd hat einen neuen Fund. Händler verdecken Spat, Sehnenschaden, Hufrolle und Kissing Spines zur Hälfte mit Schmerzmittel (Lahmheit erst 2 Tage nach dem Kauf sichtbar; Röntgen/Ultraschall findet sie trotzdem, das große Blutbild zeigt das Schmerzmittel). Gefundene Befunde kommen beim Kauf diagnostiziert mit, nicht gefundene als unbemerkte Befunde. Röntgenfunde heben die Röntgenklasse auf III/IV. Eigene Pferde: „Untersuchung“ (Versorgung) nutzt <code>UCHECK</code> (Aorta → Herz, Augenlid-Krebs/MCOA → Augen).</p>
       <p><b>Ankaufsuntersuchung (Etappe G)</b> – in jedem Kauf-/Bieten-Fenster am Pferdemarkt: ${Object.entries(AKU).map(([k, S]) => `${S.n} ${fmt(S.preis)} (${akuAufstellung(k)})`).join(", ")} – gleiche Preise wie Tierarzt-Hausbesuch und Blutbild; dazu Labortest Erbkrankheiten zum Laborpreis (${fmt(LABOR_TESTS.krank.preis)} + 30 € je weitere Rasse), Blutprobe einlagern +${fmt(AKU_PROBE)} (später prüfen ${fmt(PROBE_PRUEFEN)}). Ergebnis sofort und als Protokoll per Brief. Versteckte Befunde je Pferd nach Herkunft (Grundrisiko ${Object.entries(AKU_RISIKO).map(([q, x]) => `${q} ${Math.round(x * 100)} %`).join(", ")}): Lahmheit (Risiko × 0,7; Grad 2 sieht man im Gangbild, Grad 1 erst bei der Beugeprobe; beim Händler in 50 % mit Schmerzmittel verschleiert – nur das große Blutbild findet es, nach dem Kauf zeigt sich die Lahmheit nach 2 Tagen), Husten (× 0,35, Lunge), Herzgeräusch (× 0,15), Linsentrübung (× 0,12), Taktunreinheit an der Longe (× 0,15), Arthrose ab 10 Jahren (× 0,5, Beugeprobe oder Röntgen), Röntgenklasse I–IV (mit Arthrose III/IV), ansteckende Krankheit in der Inkubation wie bei Neuzugängen (kleines Blutbild: Entzündung, großes: welche). Jeder Befund mindert den Wert (z. B. Lahmheit 8/15 %, Arthrose 12 %, Röntgen III 15 %/IV 30 %, höchstens 50 %). Danach: kaufen, Preis um diesen Anteil verhandeln (einmal; Erfolg privat ${Math.round(AKU_VERHANDELN.Privat * 100)} %, Händler ${Math.round(AKU_VERHANDELN["Händler"] * 100)} %, Gestüt ${Math.round(AKU_VERHANDELN["Gestüt"] * 100)} %) oder ablehnen. Beim Kauf kommen alle versteckten Befunde mit (gefundene schon diagnostiziert). Eingelagerte Probe mit Schmerzmittel (Händler): der Händler erstattet die Hälfte des Kaufpreises. Eigener Verkauf ab ${fmt(1500)}: 40 % der Käufer machen eine AKU – jeder bekannte oder unbekannte Befund senkt den Preis (5 % je Grad, chronisch +10 %, frühere chronische 8 %, höchstens 40 %).</p>
       <p><b>Putzen durch Wischen</b> (Ausrüstung → Putzkiste): Werkzeug antippen, dann im Stallbild über das Pferd wischen (Finger oder gedrückte linke Maustaste). Bürste: überall auf dem Pferd; Kamm: nur oben (Mähne) und hinten/vorne (Schweif, Schopf). Nötige Wischstrecke 350 + 6 × Schmutz (Bildpunkte im Stall, 400 breit) – der Schmutz geht dabei anteilig weg, das Bild wird alle 25 % neu gezeichnet. Hufkratzer: 4 Hufunterseiten mit je 6 Dreckklumpen nacheinander wegwischen. Pfleger putzen weiter automatisch.</p>
@@ -12306,13 +12348,13 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       [["Schließen", null, "zweit"]], "breit");
     document.querySelectorAll("[data-azeins]").forEach(b => b.onclick = () => { const [i, k] = b.dataset.azeins.split(":"), m = sb[+i]; if (k === "putzen") m.einsatz = "putzen"; else delete m.einsatz; speichern(); mitarbeiterDialog(typ); });   // v398
     document.querySelectorAll("[data-maauf]").forEach(c => c.onchange = () => { const [i, k] = c.dataset.maauf.split(":"), m = sb[+i]; m.aus = m.aus || {}; if (c.checked) delete m.aus[k]; else m.aus[k] = true; speichern(); });
-    document.querySelectorAll("[data-kuend]").forEach(b => b.onclick = () => { const m = sb[+b.dataset.kuend];
+    document.querySelectorAll("[data-kuend]").forEach(b => b.onclick = () => { const m = sb[+b.dataset.kuend]; prot("Mitarbeiter gekündigt", { p: m.name });   // S4
       if (m.ab > jetzt) spiel.mitarbeiter = spiel.mitarbeiter.filter(x => x !== m); else m.bis = jetzt;
       speichern(); zeigeHof(); mitarbeiterDialog(typ); });
     document.querySelectorAll("[data-einst]").forEach(b => b.onclick = () => { const x = bw[+b.dataset.einst]; if (!x) return;
       const neu = { id: "ma" + Date.now().toString(36), typ, name: x.name, w: x.w, wissen: { ...x.wissen }, eig: [...x.eig], gehalt: x.gehalt, ab: jetzt + 1, bis: null };
       if (typ === "azubi") { const a = freierAusbilder(); if (!a) return; neu.ausbilder = a.id; neu.fach = b.dataset.fach || fachAngebot()[0] || "zucht"; neu.pruefung = neu.ab + AUSBILDUNG_JZ; }
-      (spiel.mitarbeiter = spiel.mitarbeiter || []).push(neu);
+      (spiel.mitarbeiter = spiel.mitarbeiter || []).push(neu); prot("Mitarbeiter eingestellt: " + MA_TYP[typ].name, { p: neu.name });   // S4
       spiel.bewerber.liste[typ] = bw.filter(y => y !== x);
       speichern(); zeigeHof(); mitarbeiterDialog(typ); });
   }
@@ -12423,6 +12465,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         <button class="sknopf" id="hfVoll"><span class="i">⛶</span><span>Vollbildmodus ist ${istVoll() ? "an" : "aus"}<small>antippen zum Umschalten</small></span></button>
         <button class="sknopf" id="hfTipps"><span class="i">💡</span><span>Tipps für Einsteiger sind ${spiel.tippsAus ? "aus" : "an"}<small>kurze Erklärung beim ersten Öffnen einer Seite</small></span></button>
         <button class="sknopf" id="hfTippsNeu"><span class="i">🔁</span><span>Alle Tipps wieder zeigen<small>jeder Tipp kommt noch einmal</small></span></button>
+        <button class="sknopf" id="hfTestProt"><span class="i">🧪</span><span>Testspiel: ausführliches Protokoll ist ${spiel.testProtokoll ? "an" : "aus"}<small>${tagebuchInfo()}</small></span></button>
         <button class="sknopf" id="hfAdmin"><span class="i">🛠️</span><span>Adminmodus ist ${spiel.admin ? "an" : "aus"}<small>Testkarte, Pferde aus der Rassenliste, Geld ändern, Vererbung</small></span></button>`;
     } else {
       const br = offenerBrief && allePost.find(b => b.id === offenerBrief);
@@ -12498,6 +12541,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     nb.querySelectorAll("[data-fs]").forEach(b => b.onclick = () => { finanzStart += +b.dataset.fs; zeigeHof(); });
     nb.querySelectorAll("[data-zahle]").forEach(b => b.onclick = () => rechnungZahlen(b.dataset.zahle, () => zeigeHof()));
     if ($("hfTipps")) $("hfTipps").onclick = () => { spiel.tipps = spiel.tipps || {}; spiel.tippsAus = !spiel.tippsAus; speichern(); zeigeHof(); };   // v376
+    if ($("hfTestProt")) $("hfTestProt").onclick = () => { spiel.testProtokoll = !spiel.testProtokoll; speichern(); zeigeHof(); };   // S4
     if ($("hfTippsNeu")) $("hfTippsNeu").onclick = () => { spiel.tipps = {}; spiel.tippStart = spiel.tag; delete spiel.tippsAus; delete spiel.tippWarte; speichern(); zeigeHof(); };
     if ($("hfSpar")) $("hfSpar").onclick = () => { $("mSpar").click(); zeigeHof(); };
     if ($("hfVoll")) $("hfVoll").onclick = () => { vollbildUmschalten(); setTimeout(zeigeHof, 300); };
@@ -12510,7 +12554,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       b.addEventListener("contextmenu", e => e.preventDefault());
       b.onclick = () => { if (lang) return;
       const br = allePost.find(x => x.id === b.dataset.brief); if (!br) return;
-      br.gelesen = true; offenerBrief = br.id; speichern(); postIconSetzen(); zeigeHof(); nb.scrollTop = 0; };
+      if (!br.gelesen) prot("Brief gelesen", { x: br.betreff }); br.gelesen = true; offenerBrief = br.id; speichern(); postIconSetzen(); zeigeHof(); nb.scrollTop = 0; };
     });
     if ($("postWaehlen")) $("postWaehlen").onclick = () => { postAuswahl = new Set(); zeigeHof(); };
     if ($("postFertig")) $("postFertig").onclick = () => { postAuswahl = null; zeigeHof(); };
@@ -12525,7 +12569,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     };
     if ($("alleGelesen")) $("alleGelesen").onclick = () => { post.forEach(b => b.gelesen = true); speichern(); postIconSetzen(); zeigeHof(); };
     if ($("briefZurueck")) $("briefZurueck").onclick = () => { offenerBrief = null; zeigeHof(); };
-    const hbGehe = d => { const i = post.findIndex(b => b.id === offenerBrief), n = post[i + d]; if (!n) return; n.gelesen = true; offenerBrief = n.id; speichern(); postIconSetzen(); zeigeHof(); nb.scrollTop = 0; };
+    const hbGehe = d => { const i = post.findIndex(b => b.id === offenerBrief), n = post[i + d]; if (!n) return; if (!n.gelesen) prot("Brief gelesen", { x: n.betreff }); n.gelesen = true; offenerBrief = n.id; speichern(); postIconSetzen(); zeigeHof(); nb.scrollTop = 0; };
     if ($("hbVor")) $("hbVor").onclick = () => hbGehe(-1);
     if ($("hbNach")) $("hbNach").onclick = () => hbGehe(1);
     briefAktionenBinden(() => zeigeHof());
@@ -12648,7 +12692,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   function briefFenster(id, nur) {
     const liste = (spiel.post || []).filter(b => !b.spam && (!nur || nur.includes(b.id))); if (!liste.length) return;
     let i = id ? liste.findIndex(b => b.id === id) : liste.findIndex(b => !b.gelesen); if (i < 0) i = 0;
-    const br = liste[i]; br.gelesen = true; speichern(); postIconSetzen();
+    const br = liste[i]; if (!br.gelesen) prot("Brief gelesen", { x: br.betreff }); br.gelesen = true; speichern(); postIconSetzen();
     const neu = liste.filter(b => !b.gelesen).length;
     dialog(`<div class="brief-nav"><button class="knopf zweit" id="bfVor" ${i <= 0 ? "disabled" : ""} aria-label="Neuerer Brief">‹</button><span>${nur ? "Neuer Brief" : "Brief"} ${i + 1} von ${liste.length}${neu ? ` · ${neu} ungelesen` : ""}</span><button class="knopf zweit" id="bfNach" ${i >= liste.length - 1 ? "disabled" : ""} aria-label="Älterer Brief">›</button></div>${briefPapier(br)}`,
       [["🚫 Spam", () => { const [, typ, label] = briefTyp(br.betreff);

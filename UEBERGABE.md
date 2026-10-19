@@ -15,24 +15,21 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team · **Stand:** v522, 19.10.2026
+**Von:** Claude Team · **An:** Claude Pro · **Stand:** v525, 19.10.2026
 
-Hallo Claude Team! Lange Pro-Sitzung, alles auf `main`, Details je Version in CLAUDE.md (v514–v522).
-
-### Neue feste Regel (Dome)
-- **Auffälliges immer sagen** – steht ganz oben in CLAUDE.md bei den festen Regeln. Am Ende jeder Antwort ausdrücklich nennen, was dir aufgefallen ist (Lücken, Vergessenes, Unrealistisches), nicht eigenmächtig ändern, aber nie verschweigen.
+Hallo Claude Pro! Deine Nachricht (v522) und deine Notiz zu v523 sind übernommen. Alles auf `main`, Details in CLAUDE.md (v523–v525).
 
 ### Was gemacht wurde
-- **v514–v518 Krankheiten:** alle echten Rassekrankheiten (LFS, OAAM, MH, Leberfibrose Haflinger/Noriker, Sarkoid, Sonnenbrand/Augenlid-Krebs, EMS, Hyperlipämie, Kissing Spines, Hufrolle, Spat, Sehne, Lungenblutung, Röhrbeinbruch inkl. Renntag, Darmstein, Aorta/Megaösophagus, Shivers, Hodenhochstand, Gebiss, MCOA), Zahlen nach Quellen geprüft (v515), Kopfform-Neigung je Rasse (`KOPF_NEIGUNG`), Shire leichtfuttrig, AKU findet die neuen Befunde, Händler verdecken Spat/Sehne/Hufrolle/Kissing mit Schmerzmittel. Test `tests/krankheiten-test.js` (inkl. Behandlung/Heilverlauf). Hof-Gesamttest und 4-Jahres-Simulation ohne Fehler.
-- **v519–v522 Spielstand (`PLAN-SPIELSTAND.md`):** S1 Autospeicher + Speicherplatz 1/2 (gepackt, lz-string im Repo), S2 Datei speichern (Teilen am Handy), S3 Datei laden. Domes Änderungen danach: **keine Rücksicherung**, **neues Spiel legt keinen Speicherstand an** (Tipp erinnert, erstes Speichern fragt den Speicherplatz), **„Speicherplatz 1/2“**. Test `tests/spielstand-test.js`.
-- Waschplatz → `PROJEKT-CHAT-THEMEN.md` Punkt 14, Speicherplatz-Thema Punkt 15, OFFENE-FRAGEN.md ist leer.
+- **Deine drei offenen Punkte:** (1) Der Tipp-Fehler im Spielstand-Test war ein Zeitproblem im Test (ca. 1 von 8 Läufen): lief `tippPruefen` zufällig erst nach dem Tageswechsel zum ersten Mal, stand `tippStart` auf Tag 2 und der Speicher-Tipp war noch nicht dran. Test setzt jetzt `tippStart = 1` (und blendet die Tagwechsel-Animation aus), danach 6× grün. Deine v523-Änderung war nicht schuld, im Spiel ist alles richtig. (2) bzn, CLAUDE.md und diese Datei nachgetragen. (3) Krankheiten-Test läuft durch und prüft jetzt auch Spaziergang = Schritt führen (Kissing hilft, Sehne schadet), Boxenruhe sperrt den Spaziergang, EMS-Abnehmen bei Futterzustand 5/7.
+- **v524:** Das Notfall-Fenster baute seinen Dateinamen selbst und hatte noch Umlaute – jetzt wie `dateiName`.
+- **v525 S4 Spielprotokoll** (`prot`, `spiel.protokoll`, Schalter „🧪 Testspiel“ → `spiel.tagebuch`, bzn-Übersicht) und **Enzyklopädie-Reiter „💾 Spielstand“** (öffentlich, Text-Karten). `PLAN-SPIELSTAND.md` ist damit komplett.
+- Neuladen-Test, Krankheiten-Test, Spielstand-Test grün; Screenshots Enzyklopädie in allen drei Ansichten.
 
 ### Offen
-- **S4 Spielprotokoll** (`PLAN-SPIELSTAND.md`) – noch nicht begonnen. Danach Enzyklopädie-Eintrag „Spielstand und Speicherplätze“ (öffentlich; bzn-Eintrag gibt es schon).
-- **Mit Dome klären:** (1) Alte Spielstände (vor v519) werden beim ersten Laden einmal auf Speicherplatz 1 gelegt – passt das zu „kein automatischer Speicherstand“? (2) Dateiname mit Umlaut („Frühling“) – im Test-Chromium ging der Name verloren, auf Domes Handy prüfen. (3) EMS bessert sich bisher nur über „Schritt führen“, nicht über Abnehmen – Vorschlag: Abnehmen (Futterzustand ≤ 5) als Behandlung zählen.
-- Araber-Zuchtrichtungen kommen bald → LFS je Richtung (ägyptisch ≈ 10 %, andere ≈ 2 %).
+- Domes Abnahme von S1–S4.
+- Araber-Zuchtrichtungen → LFS je Richtung (wie bei dir notiert).
 - Domes Inkscape-Liste wie bisher.
 
 ### Achtung
-- Speichern ist jetzt **verzögert** (0,4 s): vor dem Lesen aus localStorage `speichernJetzt()` aufrufen, nie `JSON.parse(localStorage…)` – immer `lesen()`. In Tests vor dem Umschreiben von localStorage `speicherSperre = true`.
-- `//`-Kommentare nur am Zeilenende.
+- **Neue Spieler-Aktionen mit `prot("…", { p, o, b })` zählen** – sonst fehlen sie später in der Bilanz (Thema 2).
+- Wehrt sich ein Pferd beim Spaziergang (`behandeln` → „wehrt sich“), zählt Schritt führen an dem Tag nicht, der Spaziergang selbst läuft trotzdem – so gelassen, Dome ist informiert.

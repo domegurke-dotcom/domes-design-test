@@ -949,7 +949,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "503";
+  const SPIEL_VERSION = "504";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -957,9 +957,9 @@
     }
   }).catch(() => {});
 </script>
-<script src="pferd.js?v=503"></script>
-<script src="boxstufen.js?v=503"></script>
-<script src="kopfneu.js?v=503"></script>
+<script src="pferd.js?v=504"></script>
+<script src="boxstufen.js?v=504"></script>
+<script src="kopfneu.js?v=504"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";
@@ -1296,7 +1296,11 @@
   const musterStufeVon = p => { if (!p || (!p.gen && !p.ex)) return 1; const ex = exVon(p), n = p.gen ? weissGeneZahl(p.gen, ex) : 0; return Math.min(3, musterStufeAus(ex.muster) + Math.max(0, n - 1)); };
   // ---------- v440 Scheckmuster Schritt 2 (PLAN-SCHECKUNG.md) ----------
   // Birdcatcher-Tupfen: vererbte Anlage (v483); dunkler Brindle (Chimäre): Zufall je Pferd – in echt nicht vererbbar
-  const BIRD_RASSE = { araber: .03 }, BIRD_SONST = .02, BRINDLE_CHIM = .002;
+  const BIRD_RASSE = { araber: .03, vollblut: .02, angloaraber: .02, shagya: .02, tekke: .02, quarter: .01 }, BIRD_SONST = 0, BRINDLE_CHIM = .002;   // v504 (Dome): nur Rassen, bei denen es in echt beschrieben ist
+  const BRINDLE_RASSE = { quarter: 1, paint: 1, vollblut: 1, angloaraber: 1, araber: 1 };
+  // Anteil nach Rassen-Blut (Mischlinge anteilig)
+  const rassenRate = (p, tab, sonst = 0) => { let a = null; try { a = anteileVon(p); } catch (e) {} if (!a || !Object.keys(a).length) return tab[p.rasse] != null ? tab[p.rasse] : sonst;
+    return Object.entries(a).reduce((x, [r, w]) => x + (w / 100) * (tab[r] != null ? tab[r] : sonst), 0); };
   function anlageZufall(tab, sonst, rasse, r) { const q = tab[rasse] != null ? tab[rasse] : sonst; return Math.round((r() < q ? .5 + r() * .5 : r() * .49) * 100) / 100; }
   // sichtbare Zeichnung: rabi (Stufe 0–3), bendor, bird (Anzahl Tupfen), brindle ("weiss" | "dunkel"), dw (Stufe 0–3)
   // v496 (Dome): Bend-Or-Flecken mal nur Vorhand, mal nur Mittelhand, mal nur Hinterhand, mal kombiniert – vererbte Anlage bendorZ (Grenze, Name, Zonen 0 vorn/1 Mitte/2 hinten)
@@ -1310,8 +1314,8 @@
     if (!p || (!p.gen && !p.farbe)) return leer;
     const g = genVon(p), ex = exVon(p), id = p.id || p.nr || p.name, st = musterStufeVon(p), cr2 = anzahl(g, "Cr") === 2;
     const jahre = p.geb ? alterJZ(p) / 4 : (p.alter != null ? p.alter : 5);
-    const birdJa = ex.bird != null ? !!ex.bird : anl(p, "birdA") < (BIRD_RASSE[p.rasse] != null ? BIRD_RASSE[p.rasse] : BIRD_SONST);   // ex.bird / ex.brin: im Adminmodus festgelegt
-    const brinDunkel = ex.brin != null ? !!ex.brin : zufall("brin-" + id)() < BRINDLE_CHIM;
+    const birdJa = ex.bird != null ? !!ex.bird : anl(p, "birdA") < rassenRate(p, BIRD_RASSE, BIRD_SONST);   // ex.bird / ex.brin: im Adminmodus festgelegt
+    const brinDunkel = ex.brin != null ? !!ex.brin : zufall("brin-" + id)() < BRINDLE_CHIM * rassenRate(p, BRINDLE_RASSE);
     return { rabi: ex.rabi >= .5 && !cr2 ? st : null, bendor: ex.bendor >= .5 && !hat(g, "E") && !cr2 ? (ex.bendor < .65 ? .5 : ex.bendor < .85 ? 1 : 1.8) : false,   /* v493: Anzahl der Flecken aus der vererbten Anlage */ bendorZone: bendorZoneVon(p)[2], bird: birdJa ? Math.min(45, Math.round((3 + 2.2 * Math.max(0, jahre)) * (ex.bird > 1.5 ? 2 : ex.bird > 0 && ex.bird < .75 ? .45 : 1))) : 0,
       brindle: p.geschlecht === "Stute" && hat(g, "Br1") ? "weiss" : brinDunkel ? "dunkel" : null, brindleArt: (p.geschlecht === "Stute" && hat(g, "Br1")) || brinDunkel ? brindleArtVon(p, p.geschlecht === "Stute" && hat(g, "Br1")) : "", dw: hat(g, "W") ? st : null, lp: lpVon(p, g, ex, id, jahre) };
   }
@@ -3725,8 +3729,8 @@
     { k: "brindleW", n: "Brindle (weiß)", gen: { Br1: 1 }, stufe: 1, stufen: 4, nurStute: 1, sw: "repeating-linear-gradient(90deg, #8a4a26 0 3px, #eadfcf 3px 4.5px)" },
     { k: "rabi", n: "Rabicano", ex: { rabi: .8 }, stufe: 1, gibt: r => !!RABI_RASSE[r], sw: "radial-gradient(circle, #fff 0 20%, transparent 24%) 0 0/5px 5px, #8a4a26" },
     { k: "bendor", n: "Bend-Or", ex: { bendor: .75 }, stufe: 1, stufen: 7, nurRot: 1, gibt: r => !!BENDOR_RASSE[r], sw: "radial-gradient(circle at 30% 35%, #2a1208 0 12%, transparent 14%), radial-gradient(circle at 68% 62%, #2a1208 0 12%, transparent 14%), radial-gradient(circle at 74% 24%, #2a1208 0 9%, transparent 11%), #b65a29" },
-    { k: "bird", n: "Birdcatcher", ex: { bird: 1 }, stufe: 1, sw: "radial-gradient(circle at 28% 32%, #fff 0 6%, transparent 8%), radial-gradient(circle at 62% 58%, #fff 0 6%, transparent 8%), radial-gradient(circle at 76% 26%, #fff 0 5%, transparent 7%), radial-gradient(circle at 36% 78%, #fff 0 5%, transparent 7%), #7c3f1d" },
-    { k: "brindleD", n: "Brindle (dunkel)", ex: { brin: 1 }, stufe: 1, stufen: 4, sw: "repeating-linear-gradient(90deg, #b65a29 0 3px, #4a200c 3px 4.5px)" },
+    { k: "bird", n: "Birdcatcher", ex: { bird: 1 }, stufe: 1, gibt: r => !!BIRD_RASSE[r], sw: "radial-gradient(circle at 28% 32%, #fff 0 6%, transparent 8%), radial-gradient(circle at 62% 58%, #fff 0 6%, transparent 8%), radial-gradient(circle at 76% 26%, #fff 0 5%, transparent 7%), radial-gradient(circle at 36% 78%, #fff 0 5%, transparent 7%), #7c3f1d" },
+    { k: "brindleD", n: "Brindle (dunkel)", ex: { brin: 1 }, gibt: r => !!BRINDLE_RASSE[r], stufe: 1, stufen: 4, sw: "repeating-linear-gradient(90deg, #b65a29 0 3px, #4a200c 3px 4.5px)" },
   ];
   const MS_STUFEN = [[.15, "wenig"], [.55, "typisch"], [.9, "viel"], [.97, "fast weiß"]];
   // gibt es das Muster bei dieser Rasse? (Gene nach Rassen-Häufigkeit, Veranlagungen nach Tabelle, Birdcatcher/Brindle dunkel bei allen)

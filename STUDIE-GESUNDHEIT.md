@@ -183,3 +183,6 @@ Dome (19.10.): Punkte 1–3, 7–10 anpassen, 5/6 bleiben, 4 offen (Frage). Umge
 | schwach geboren | 14 % | 4,7 % (Abfohlbox) | – |
 | Fohlen mit Erbkrankheit | 67 (PSSM1 54, FIS 3, HYPP 3, CA 2, ACAN 2, MH 2, NFS 1) | 3 | – |
 Appaloosa/Knabstrupper züchten jetzt auch mit Gentest (Leopard-Hinweis statt Warnung). Fohlen bekommen jedes Jahr ein Geschwister (Fohlenrosse).
+
+## Nachträge v536 (Dome)
+Stille Rosse (40 % der Rossen fallen nicht auf) – die Trächtigkeitsuntersuchung lohnt sich jetzt. Besamung so sicher wie Natursprung (Frisch 65 %, Versand 60 %). Kolik stirbt nur nach der OP (25 %) oder bei abgelehnter OP. Ungemistete Box −4. Hengste weniger einsam. Probelauf (4 Rassen): Kolik-Tod je Fall 6 % (alle nach OP), mittlerer Spieler Klinik 101 → 48 je 100 Pferdejahre; Zucht 91 % (Natursprung) bzw. 84 % (Besamung) tragend je Saison.

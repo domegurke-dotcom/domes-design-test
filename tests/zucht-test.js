@@ -42,7 +42,7 @@ const { chromium } = require('playwright'); const path = require('path');
     S2.gedeckt = { vater: hengstKopie(H), art: 'natur', tag: spiel.tag, seit: jzJetzt(), erfolg: false, verlust: null };
     let still = 0, laut = 0; for (let i = 0; i < 100; i++) { const X = { ...S2, gedeckt: { ...S2.gedeckt } }; S2.gedeckt = { vater: hengstKopie(H), art: 'natur', tag: spiel.tag - 2, seit: jzJetzt(), erfolg: false, verlust: null }; deckNacht(); if (S2.gedeckt) still++; else laut++; }
     ok('Stille Rosse ≈ 40 %', still > 20 && still < 60, `still ${still} / laut ${laut}`);
-    S2.gedeckt = { vater: hengstKopie(H), art: 'natur', tag: spiel.tag, seit: jzJetzt(), erfolg: false, verlust: null }; nacht(1); traechtigkeitsUntersuchung(S2, () => {}); ok('Untersuchung leer: nicht tragend, Rosse eingeleitet', /Nicht tragend/.test(document.getElementById('dlgInhalt').innerText) && !S2.gedeckt && S2.rosseAb != null); zu();
+    S2.gedeckt = { vater: hengstKopie(H), art: 'natur', tag: spiel.tag, seit: jzJetzt(), erfolg: false, verlust: null }; nacht(1); traechtigkeitsUntersuchung(S2, () => {}); ok('Untersuchung leer: nicht tragend, sofort wieder deckbar', /Nicht tragend/.test(document.getElementById('dlgInhalt').innerText) && !S2.gedeckt && S2.rosseAb == null && zuchtSperre(S2, spiel.boxen[2]) === '', zuchtSperre(S2, spiel.boxen[2])); zu();
     // --- 4. Geburt, Fohlenrosse, Brief ---
     spiel.post = []; S.traechtig.geburt = jzJetzt(); S.traechtig.seit = jzJetzt() - 4;
     // Geburt erzwingen ohne Verluste: Zufall mehrfach versuchen

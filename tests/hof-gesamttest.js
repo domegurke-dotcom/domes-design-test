@@ -62,7 +62,7 @@ const { chromium } = require('playwright');
  });
  console.log(JSON.stringify(r, null, 1));
  await pg.reload(); await pg.waitForTimeout(300);
- const r2 = await pg.evaluate(() => { const s = JSON.parse(localStorage.getItem('zuchtstall-v2')); return [hatSpielstand, hofName(), hofAnzahl(), Object.keys(s.hoefe), spiel.geld, imHof('h2', () => [spiel.geld, spiel.boxen.filter(b=>b.pferd).map(b=>b.pferd.name + ' ' + Math.round(b.pferd.pflege.gesundheit))]), spiel.boxen.filter(b=>b.pferd).map(b=>b.pferd.name + ' ' + Math.round(b.pferd.pflege.gesundheit)), gebaeude().map(g => g.typ + ' S' + g.stufe + ' Z' + Math.round(g.zustand) + (g.bau ? ' BAU' : ''))]; });
+ const r2 = await pg.evaluate(() => { speichernJetzt(); const s = lesen('zuchtstall-v2'); return [hatSpielstand, hofName(), hofAnzahl(), Object.keys(s.hoefe), spiel.geld, imHof('h2', () => [spiel.geld, spiel.boxen.filter(b=>b.pferd).map(b=>b.pferd.name + ' ' + Math.round(b.pferd.pflege.gesundheit))]), spiel.boxen.filter(b=>b.pferd).map(b=>b.pferd.name + ' ' + Math.round(b.pferd.pflege.gesundheit)), gebaeude().map(g => g.typ + ' S' + g.stufe + ' Z' + Math.round(g.zustand) + (g.bau ? ' BAU' : ''))]; });
  console.log('Reload', JSON.stringify(r2));
  const briefe = await pg.evaluate(() => { const c = {}; spiel.post.forEach(p => { const k = (p.hofName || '') + ': ' + p.betreff.replace(/[A-ZÄÖÜ][a-zäöüß]+ (hat|ist|muss)/, 'X $1'); c[k] = (c[k] || 0) + 1; }); return Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0, 30); });
  console.log('Briefe', JSON.stringify(briefe));

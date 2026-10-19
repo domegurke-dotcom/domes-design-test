@@ -786,8 +786,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     // v496 (Dome): Lage aus der vererbten Anlage – opt.bendorZone = Zonen (0 Vorhand, 1 Mittelhand, 2 Hinterhand), ohne Angabe überall
     const zonen = Array.isArray(opt.bendorZone) && opt.bendorZone.length ? opt.bendorZone : [0, 1, 2], ZB = [[0.0, 0.26], [0.26, 0.62], [0.62, 0.95]];
     const n = Math.round((9 + Math.floor(ro() * 8)) * (typeof opt.bendor === "number" ? opt.bendor : 1) * (0.55 + 0.15 * zonen.length));   /* opt.bendor .5/1/1.8 = wenige/typisch/viele; auf einer Zone etwas weniger */
-    for (let i = 0; i < n; i++) { const z = ZB[zonen[i % zonen.length]], cx = (z[0] + (z[1] - z[0]) * ((Math.floor(i / zonen.length) + ro()) / Math.ceil(n / zonen.length))) * L, cy = top + (0.12 + ro() * 0.66) * D, r = 1.6 + ro() * 3;   // innerhalb der Zone gleichmäßig gestreut
-      t += klecks(ro, cx, cy, r, r * (0.7 + ro() * 0.4), fc); }
+    // v503 (Dome): wie in echt unregelmäßig – lockere Gruppen (2–3 je Zone) mit verschieden großen Flecken, dazwischen Lücken; einzelne Flecken auch frei
+    const gruppen = []; zonen.forEach(zi => { const z = ZB[zi], m = 2 + Math.floor(ro() * 2); for (let j = 0; j < m; j++) gruppen.push({ x: (z[0] + (z[1] - z[0]) * (0.1 + ro() * 0.8)) * L, y: top + (0.2 + ro() * 0.5) * D, z }); });
+    for (let i = 0; i < n; i++) { const G0 = gruppen[Math.floor(ro() * gruppen.length)], frei = ro() < 0.2, gauss = () => (ro() + ro() + ro() - 1.5) / 1.5;
+      const cx = frei ? (G0.z[0] + (G0.z[1] - G0.z[0]) * ro()) * L : G0.x + gauss() * 0.09 * L, cy = frei ? top + (0.12 + ro() * 0.66) * D : G0.y + gauss() * 0.22 * D, r = 0.9 + Math.pow(ro(), 1.8) * 4.2;
+      t += klecks(ro, cx, cy, r, r * (0.65 + ro() * 0.5), fc); }
     g += `<g clip-path="url(#cr-${uid})" filter="url(#wm-${uid})" opacity=".92">${t}</g>`;
   }
   // v440 Brindle (gestromt): feine dunkle, leicht gewellte senkrechte Streifen

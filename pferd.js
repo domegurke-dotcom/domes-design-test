@@ -777,8 +777,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // v440 Birdcatcher-Tupfen: kleine weiße Tupfen verstreut (Anzahl wächst mit dem Alter)
   if (opt.birdcatcher > 0) {
     const rb = zufall((opt.seed || rasseId) + "-bird"); let t = "";
-    for (let i = 0; i < opt.birdcatcher; i++) { const r = 0.7 + rb() * 0.9; t += `<ellipse cx="${f((0.08 + rb() * 0.9) * L)}" cy="${f(top + (0.1 + rb() * 0.7) * D)}" rx="${f(r)}" ry="${f(r * (0.8 + rb() * 0.3))}" fill="#fbfaf6" opacity="${f(0.75 + rb() * 0.25)}"/>`; }
-    g += `<g clip-path="url(#cr-${uid})" filter="url(#wm-${uid})">${t}</g>`;
+    for (let i = 0; i < opt.birdcatcher; i++) { const r = 0.45 + rb() * 0.55; t += `<ellipse cx="${f((0.08 + rb() * 0.9) * L)}" cy="${f(top + (0.1 + rb() * 0.7) * D)}" rx="${f(r)}" ry="${f(r * (0.8 + rb() * 0.3))}" fill="#fbfaf6" opacity="${f(0.85 + rb() * 0.15)}"/>`; }
+    g += `<g clip-path="url(#cr-${uid})">${t}</g>`;   // v499 (Dome): Birdcatcher = winzige, scharf begrenzte Pünktchen (Snowflake: größere, weiche Flocken)
   }
   // v440 Bend-Or-Flecken: unregelmäßige dunkle Flecken (Farbe aus dem Fell, dunkler) – nur bei Füchsen/Palominos
   if (opt.bendor) {
@@ -815,7 +815,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       g += `<g clip-path="url(#cr-${uid})" filter="url(#wb-${uid})" opacity="${f(Math.min(.85, LP.lack))}">${marke}</g>`;
     }
     if (LP.frost) { const fr = klecks(rl, 0.68 * L, top + 0.15 * D, 0.3 * L, 0.32 * D, "#fff") + klecks(rl, 0.38 * L, top + 0.08 * D, 0.18 * L, 0.2 * D, "#fff"); g += `<g clip-path="url(#cr-${uid})">${stichel(fr, 10, .9, 27)}${stichel(fr, 6, .7, 23)}</g>`; }
-    if (LP.flocken > 0) { let t = ""; for (let i = 0; i < LP.flocken; i++) { const x = (0.1 + Math.pow(rl(), 0.6) * 0.85) * L, y = top + (0.05 + rl() * 0.75) * D, r = 0.9 + rl() * 1.6;
+    if (LP.flocken > 0) { let t = ""; for (let i = 0; i < LP.flocken; i++) { const x = (0.1 + Math.pow(rl(), 0.45) * 0.85) * L, y = top + (0.05 + rl() * 0.7) * D, r = 1.2 + rl() * 1.8;   // v499 (Dome): größere, unregelmäßige Flocken, vor allem über Hüfte/Kruppe
       t += klecks(rl, x, y, r, r * (0.7 + rl() * 0.4), "#f6f3ec"); } g += `<g clip-path="url(#cr-${uid})" filter="url(#wm-${uid})">${t}</g>`; }
   }
   // v454 (Dome): weicher Farbübergang vom Kopf zum Hals – überall dort, wo Kopf und Hals verschieden aussehen (Schecken, Roan, Tiger, Schimmel-Ausgrauen …):

@@ -968,7 +968,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "541";
+  const SPIEL_VERSION = "542";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -976,10 +976,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=541"></script>
-<script src="pferd.js?v=541"></script>
-<script src="boxstufen.js?v=541"></script>
-<script src="kopfneu.js?v=541"></script>
+<script src="lz-string.min.js?v=542"></script>
+<script src="pferd.js?v=542"></script>
+<script src="boxstufen.js?v=542"></script>
+<script src="kopfneu.js?v=542"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2037,10 +2037,10 @@
     return saetze;
   }
   // Warum kann dieses Pferd gerade nicht verpaart werden? ("" = es geht)
-  function zuchtSperre(p, box) {
-    if (fremd(p)) return "Pensionspferd";
+  function zuchtSperre(p, box, besitzer) {
+    if (fremd(p) && !besitzer) return "Pensionspferd";   // v542: der Besitzer selbst (besitzer = true) darf züchten
     if (p.klinik) return "in der Klinik";
-    if (p.weide) return "auf der Weide";
+    if (p.weide && !besitzer) return "auf der Weide";   // der Besitzer lässt sie auch von der Weide holen
     if (p.turnier) return "auf dem Turnier";
     if (p.geschlecht === "Wallach") return "Wallach";
     if (befundListe(p).some(b => b.art === "krypt")) return "Hodenhochstand (Zuchtausschluss)";   // v514
@@ -2125,8 +2125,12 @@
   const tagIn = t => { const n = t - spiel.tag; return n <= 0 ? "heute" : n === 1 ? "morgen" : n === 2 ? "übermorgen" : `in ${n} Tagen`; };
   // jede Nacht: Rosse oder Trächtigkeit nach dem Decken
   function deckNacht() {
-    alleEigenenPferde().forEach(({ p }) => { const G = p.gedeckt; if (!G || fremd(p)) return;
+    alleEigenenPferde().forEach(({ p }) => { const G = p.gedeckt; if (!G) return;
+      const fr = fremd(p);
       if (G.erfolg && G.verlust != null && spiel.tag >= G.verlust) { G.erfolg = false; G.verloren = true; G.rosseTag = spiel.tag + 1; }
+      // v542 (Dome): Besitzer denken und handeln wie Spieler – Trächtigkeitsuntersuchung (80 %) am Tag danach auf eigene Kosten; leer → sofort wieder decken
+      if (fr && G.besitzer && !G.tuGemacht && spiel.tag - G.tag >= TU_AB) { G.tuGemacht = true; const e = einstellerVon(p); if (Math.random() < PENSION_ZUCHT.untersuchung) { if (e) e.zuchtKosten = (e.zuchtKosten || 0) + TU_PREIS;
+        if (G.erfolg) G.tuPos = spiel.tag; else { delete p.gedeckt; return; } } }
       const jzVorbei = jzJetzt() > G.seit && spiel.tag - G.tag > rosseTage();   // ohne Untersuchung weiß man es spätestens in der nächsten Jahreszeit
       if (!G.erfolg) {
         if (spiel.tag < (G.rosseTag != null ? G.rosseTag : G.tag + rosseTage())) return;
@@ -2134,15 +2138,41 @@
         if (!G.rosseGeprueft) { G.rosseGeprueft = true; if (Math.random() >= ROSSE_BEMERKT) G.still = true; }
         if (G.still && !jzVorbei) return;
         delete p.gedeckt;
+        if (fr) return;   // Besitzer versucht es selbst wieder (pensionZuchtNacht)
         brief("Hofverwaltung", `${p.name} rosst wieder`, G.still
           ? `<b>${esc(p.name)}</b> rosst jetzt deutlich – das Decken mit <b>${esc(G.vater.name)}</b> ${G.tuPos ? "hat leider nicht gehalten (früher Embryoverlust)" : "hat nicht geklappt"}. Die Rosse danach war still und ist niemandem aufgefallen. Mit einer Trächtigkeitsuntersuchung (schon 1 Tag nach dem Decken) hätte man es viel früher gewusst.${DECK_SAISON[datum().s] > 0 ? "" : " In der Winterruhe kann sie erst im Frühling wieder gedeckt werden."}`
           : `<b>${esc(p.name)}</b> zeigt wieder Rosse – ${G.tuPos ? "die Trächtigkeit ist leider nicht geblieben (früher Embryoverlust, kommt bei etwa 1 von 8 Stuten vor)" : `das Decken mit <b>${esc(G.vater.name)}</b> hat leider nicht geklappt`}.${DECK_SAISON[datum().s] > 0 ? ` {Du kannst|Sie können} sie jetzt wieder decken lassen.` : " In der Winterruhe rosst sie nicht mehr – im Frühling geht es weiter."}`, { pferde: [p] });
         return; }
       // tragend: mit Ultraschall ab ~Tag 40 sicher, ohne Untersuchung erst in der nächsten Jahreszeit (keine Rosse mehr gesehen)
       if (G.tuPos ? spiel.tag - G.tag < sicherTage() : !jzVorbei) return;
-      p.traechtig = { vater: G.vater, seit: G.seit, geburt: G.seit + 4, art: G.art, sicher: !!G.tuPos }; delete p.gedeckt; prot("tragend geworden", { p });   // S4
+      p.traechtig = { vater: G.vater, seit: G.seit, geburt: G.seit + 4, art: G.art, sicher: !!G.tuPos }; delete p.gedeckt;
+      if (fr) { delete p.zuchtWunsch; const e = einstellerVon(p);
+        if (e) brief(eName(e), `${p.name} ist tragend`, `gute Nachrichten: <b>${esc(p.name)}</b> ist tragend von <b>${esc(G.vater.name)}</b>${G.tuPos ? " – der Tierarzt hat es per Ultraschall bestätigt" : ""}. Das Fohlen kommt zu Beginn von ${jzName(G.seit + 4)} zur Welt und gehört mir. Bitte {sorgt|sorgen Sie} dafür, dass ${esc(p.name)} bis dahin ruhig gearbeitet wird und genug Platz hat. Danke!`, { w: e.w, pferde: [p] });
+        return; }
+      prot("tragend geworden", { p });   // S4
       brief("Hofverwaltung", `${p.name} ist tragend`, G.tuPos ? `<b>${esc(p.name)}</b> ist weiter tragend von <b>${esc(G.vater.name)}</b> – keine Rosse mehr seit dem Ultraschall. Das Fohlen kommt zu Beginn von ${jzName(G.seit + 4)} zur Welt. Eine Kontrolle mit Herzschlag macht es ganz sicher.`
         : `<b>${esc(p.name)}</b> hat seit dem Decken mit <b>${esc(G.vater.name)}</b> keine Rosse mehr gezeigt – sie ist wahrscheinlich tragend. Das Fohlen käme zu Beginn von ${jzName(G.seit + 4)} zur Welt. Ganz sicher ist das nur mit einer Trächtigkeitsuntersuchung (Steckbrief – Daten – Zucht).`, { pferde: [p] });
+    });
+  }
+  // v542 (Dome): Besitzer von Pensionsstuten züchten selbst – gleiche Regeln wie beim Spieler (Decksaison, Rosse, Chance, Untersuchung), eigener Tierarzt auf eigene Kosten
+  const PENSION_ZUCHT = { anteil: 0.25, jeJz: 0.35, untersuchung: 0.8, versuche: 3, jz: 3, natur: 0.45, besamung: 0.4 };   // Anteil Züchter unter den Besitzern · Wunsch je Jahreszeit · Untersuchung · Versuche je Wunsch · Dauer des Wunsches in Jahreszeiten · Natursprung/Besamung (Rest Tiefgefrier)
+  function pensionZuchtNacht() {
+    if (!einstellerListe().length) return;
+    einstellerListe().forEach(e => { const b = pensionBox(e), p = b && b.pferd; if (!p || b.tot || p.geschlecht !== "Stute" || p.gedeckt || p.traechtig || p.heimlich) return;
+      if (e.zuechter == null) e.zuechter = Math.random() < PENSION_ZUCHT.anteil;   // fest je Besitzer
+      if (!e.zuechter) return;
+      if (zuchtSperre(p, b, true)) return;   // zu jung/alt, krank, in der Klinik, Winterruhe …
+      let W = p.zuchtWunsch;
+      if (W && jzJetzt() > W.bis) { delete p.zuchtWunsch; W = null; }
+      if (!W) { if (Math.random() >= PENSION_ZUCHT.jeJz / tpj()) return; W = p.zuchtWunsch = { bis: jzJetzt() + PENSION_ZUCHT.jz, versuche: 0 }; }
+      if (W.versuche >= PENSION_ZUCHT.versuche) { delete p.zuchtWunsch; return; }
+      const L = deckhengste(p); if (!L.length) return;
+      const H = L[Math.floor(Math.random() * L.length)], nurNat = NUR_NATURSPRUNG.includes(p.rasse) && NUR_NATURSPRUNG.includes(H.rasse), r = Math.random(), art = nurNat || r < PENSION_ZUCHT.natur ? "natur" : r < PENSION_ZUCHT.natur + PENSION_ZUCHT.besamung ? "besamung" : "tief";
+      const kosten = decktaxe(H) * (DECK_ART[art].taxeF || 1) + (DECK_ART[art].tierarzt || DECK_ART[art].transport || 0); e.zuchtKosten = (e.zuchtKosten || 0) + Math.round(kosten);
+      const ok = Math.random() < deckChance(p, H, art) && !wwLeer(p, H);
+      p.gedeckt = { vater: hengstKopie(H), art, tag: spiel.tag, seit: jzJetzt(), erfolg: ok, verlust: ok && Math.random() < embryoVerlust(p) ? spiel.tag + 1 + Math.floor(Math.random() * Math.max(1, sicherTage() - 1)) : null, besitzer: true };
+      W.versuche++;
+      if (W.versuche === 1) brief(eName(e), `${p.name}: Ich möchte ein Fohlen`, `ich möchte mit <b>${esc(p.name)}</b> züchten und habe sie heute von <b>${esc(H.name)}</b> (${rasseById(H.rasse).name.replace(/ \(.*\)/, "")}) ${art === "natur" ? "decken lassen" : art === "besamung" ? "vom Tierarzt besamen lassen" : "mit Tiefgefriersamen besamen lassen"}. Den Tierarzt und die Decktaxe zahle ich selbst. Ob es geklappt hat, weiß ich in ein paar Tagen – {ich melde mich|ich melde mich bei Ihnen}.`, { w: e.w, pferde: [p] });
     });
   }
   // Trächtigkeitsuntersuchung (Ultraschall) durch den Tierarzt
@@ -9033,6 +9063,7 @@
     ansteckungNacht(); // ansteckende Krankheiten verbreiten sich
     waiseNacht();     // Waisenfohlen: Flasche oder Hunger
     deckNacht();      // v535: Rosse oder Trächtigkeit nach dem Decken
+    pensionZuchtNacht();   // v542: Besitzer von Pensionsstuten züchten selbst
     befundeNacht();   // Krankheiten und Verletzungen: neu, Verlauf, Wirkung
     spiel.boxen.forEach(b => { delete b.nachtMist; });   // v365
     externNacht(); rechnungenTag();
@@ -12577,6 +12608,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Untersuchung wie AKU</b> (v265, Box – ppf – Versorgung, eigene Pferde): gleiche Stufen und Preise wie die AKU; findet unbemerkte Befunde nach Bereich (Haut/Kolik immer, Atemwege mit Lunge, Hufe/Lahmheit mit Gangbild, Arthrose mit Beugeproben, PSSM/Ataxie/HYPP mit Longe, Würmer/Vergiftung/Magen mit kleinem Blutbild, Cushing/Influenza/Herpes mit großem Blutbild, OCD mit Röntgen) und nennt bei der großen die Röntgenklasse.</p><p><b>Vorsorge und Labor:</b> Impfung ${fmt(VORSORGE.impfung)}, Zahnbehandlung ${fmt(VORSORGE.zahn)} (über 1 Jahr überfällig: Kolik ×1,5), Wurmkur aus der Stallapotheke im Frühjahr und Herbst (Dome, v242; Knopf nur dann; überfällig über 2½ Jahreszeiten: Würmer ×3), kleines Blutbild ${fmt(VORSORGE.blutKlein)} (Entzündung ja/nein), großes ${fmt(VORSORGE.blutGross)} (konkrete Krankheit, auch in der Inkubation) – Ergebnis nach 2 Tagen per Brief. Eigenes Putzzeug ${fmt(VORSORGE.putzzeug)} (Putzkiste). Ein Quarantänestall (kein Risiko) kommt mit dem Hof-Ausbau.</p>
       <p><b>Behandlung (Etappe D)</b> unter Pflege → Versorgung, jede Aktion einmal am Tag: ${Object.values(AKTION).map(A => `${A.ico} ${A.n}`).join(", ")}, Medikament mit Dosis. Wirkung in der Nacht danach: Behandlungswert = Summe der passenden Anteile (höchstens 1) × (0,5 + 0,5 × Mitwirkung). Besserung pro Nacht: Wert ÷ (Heilungszahl × 0,5) ÷ (1,3 − Regeneration ÷ 100 × 0,6), höchstens 80 % (chronisch nur bis Grad 1); Verschlechterung × (1 − Wert) + Schaden; Wirkung auf Gesundheit/Wohlbefinden × (1 − 0,6 × Wert). Heilt ein Befund unter Behandlung, gilt die Ursache als geklärt (Erfahrung). Tod und Warnbrief nur bei Wert unter 0,3.</p>
       <p><b>Folgen vernachlässigter Pflege und Nachbesserung (v533, Dome):</b> Zahnkontrolle heißt jetzt „Zahnbehandlung“. <i>Ungekämmte Mähne/Schweif</i> (Schmutz Mähne ≥ 60 %): nur Wohlbefinden −0,5 je Nacht – sie macht <b>nicht krank</b> (v534: Hautpilz, Mauke, Husten und Ekzem hängen nur noch am Schmutz im <i>Fell</i>, nicht an der Mähne). <i>Hufe nicht ausgekratzt</i> (gestern nicht): Strahlfäule ×3,3 (wie bisher), Hufabszess ×1,5, Lahmheit ×1,2. <i>Turniere</i> nur mit gültiger Influenza-Impfung (wie bei der FN, Nennung gesperrt). <i>Boxenruhe</i> endet von selbst, sobald keine Krankheit mehr da ist, für die sie nötig ist (im Plan oder mit Hilfswert). <i>Weide-Verletzungen</i>: Toben 0,3 (vorher 0,75), Box 0,3 × Boxzustand, Verletzung beim Streit 7 % (mit Stuten 15 %, vorher 20/35 %) – Ergebnis etwa 40 Verletzungen je 100 Pferdejahre (Studie vorher 120). Was bei Weglassen passiert: Impfung → Influenza/Herpes ×3 (Ansteckung ×3,3), Zähne → Kolik/Schlund ×1,5, Wurmkur → Wurmbefall ×3, Hufschmied → bis ×4 Lahmheit/Abszess/Hornspalt, Bürsten → Hautpilz ×2, Mauke ×1,5, Husten ×1,2, −3 % Gesundheit/Tag nach 1 Jahreszeit Schmutz.</p>
+      <p><b>Besitzer von Pensionsstuten züchten selbst (v542, Dome):</b> Sie denken und handeln wie Spieler, mit denselben Regeln (Decksaison, Rosse, Chance je Art, stille Rosse, Embryoverlust, Verfohlen, Geburt). Etwa ${pc535(PENSION_ZUCHT.anteil)} der Besitzer sind Züchter (fest je Besitzer, <code>e.zuechter</code>). Je Jahreszeit der Decksaison entsteht bei ihnen mit ${pc535(PENSION_ZUCHT.jeJz)} ein Zuchtwunsch (<code>p.zuchtWunsch</code>, ${PENSION_ZUCHT.jz} Jahreszeiten, höchstens ${PENSION_ZUCHT.versuche} Versuche): Sie wählen einen Hengst der Deckstation und Natursprung ${pc535(PENSION_ZUCHT.natur)} / Besamung ${pc535(PENSION_ZUCHT.besamung)} / Tiefgefrier, zahlen Decktaxe und Tierarzt selbst (<code>e.zuchtKosten</code>, nicht vom Spieler), lassen am Tag danach mit ${pc535(PENSION_ZUCHT.untersuchung)} eine Trächtigkeitsuntersuchung machen und decken bei „leer“ sofort wieder. Brief vom Besitzer beim ersten Versuch und wenn die Stute tragend ist (das Fohlen gehört ihm, <code>f.einsteller</code>). Die ungeplante Bedeckung auf der Weide (BEDECKT) bleibt unverändert.</p>
       <p><b>Nachträge v537 (Dome):</b> Nachtblindheit (CSNB) bei Lp/Lp: Weide-Verletzungen ×${String(NACHTBLIND.weide).replace(".", ",")}, im Winter Wohlbefinden −${NACHTBLIND.winterWohl} je Nacht (lange Dunkelheit), Hallenturniere im Winter ×${String(NACHTBLIND.halle).replace(".", ",")}; sichtbar nur über den Gentest. Tiefgefriersamen (nur Deckstation): Chance ${pc535(DECK_ART.tief.chance)}, Samenportion ${pc535(DECK_ART.tief.taxeF)} der Decktaxe, Tierarzt ${fmt(DECK_ART.tief.tierarzt)}.</p>
       <p><b>Nachträge v536 (Dome):</b> Rosse wird ohne Probierhengst nur zu ${pc535(ROSSE_BEMERKT)} bemerkt („stille Rosse“) – dann bleibt die Stute „gedeckt, keine Rosse beobachtet“, bis eine Trächtigkeitsuntersuchung Klarheit bringt oder die nächste Jahreszeit beginnt (dann Brief: tragend bzw. rosst deutlich). Ultraschall ab ${sicherTage()} Tagen nach dem Decken = sicher tragend (Herzschlag). Natursprung erst, wenn das Fohlen steht (Stute bleibt beim liegenden Fohlen), Besamen schon ab dem Tag nach der Geburt. Totgeburt mit Nachtdienst in der Abfohlbox ${pc535(GEBURT_TOT.maAbfohl)}, Nachtdienst in normaler Box ${pc535(GEBURT_TOT.ma)}. Ungemistete Box −${MIST_G} Gesundheit je Nacht (vorher −9,5). Hengste leiden nur ${pc535(HENGST_ALLEIN)} so stark unter Einsamkeit (Hof, Weide, Sandpaddock). Ungeplante Bedeckung auf der Weide auch mit Fohlen bei Fuß (Fohlenrosse).</p>
       <p><b>Zucht wie in echt (v535, Dome, nach der Zucht-Studie):</b> Decken per <b>Natursprung</b> (Chance je Rosse ${pc535(DECK_ART.natur.chance)}, Deckstation +${fmt(DECK_ART.natur.transport)} Transport, ${pc535(DECK_ART.natur.verletzung)} Deckverletzung) oder <b>Besamung</b> (Versandsamen ${pc535(DECK_ART.besamung.chance)}, Frischsamen eigener Hengst ${pc535(DECK_FRISCH)}, Tierarzt ${fmt(DECK_ART.besamung.tierarzt)}); Galopper (Vollblut × Vollblut) nur Natursprung. Chance × (0,6 + 0,45 × Wohlbefinden) – beim eigenen Hengst Mittel beider –, × Alter der Stute (ab 15 J. −4 % je Jahr, mind. ×0,55), × Fohlenrosse ${String(FOHLENROSSE).replace(".", ",")}, × Jahreszeit ${DECK_SAISON.map(x => String(x).replace(".", ",")).join(" / ")} (Frühling/Sommer/Herbst/Winter), höchstens 90 %. Nach dem Decken ist die Stute „gedeckt“ (<code>p.gedeckt</code>): <b>Trächtigkeitsuntersuchung</b> ${fmt(TU_PREIS)} ab ${TU_AB} Tag danach (leer → Tierarzt leitet die Rosse ein, sofort wieder deckbar), ohne Untersuchung rosst sie nach ${WARTE_TEMPO.rosse[4]} / ${WARTE_TEMPO.rosse[7]} / ${WARTE_TEMPO.rosse[10]} Tagen wieder (Brief; bei 4 / 7 / 10 Tagen je Jahreszeit), sicher tragend nach ${WARTE_TEMPO.sicher[4]} / ${WARTE_TEMPO.sicher[7]} / ${WARTE_TEMPO.sicher[10]} Tagen. Früher Embryoverlust ${pc535(EMBRYO_VERLUST)} (+1 % je Jahr ab 15 J.), verfohlen ${pc535(VERFOHLEN_JZ)} je Jahreszeit der Trächtigkeit, Fohlen tot geboren: Nachtdienst + Abfohlbox ${pc535(GEBURT_TOT.maAbfohl)} · Nachtdienst ${pc535(GEBURT_TOT.ma)} · Abfohlbox ${pc535(GEBURT_TOT.abfohl)} · Boxenkamera ${pc535(GEBURT_TOT.kamera)} · ohne Aufsicht ${pc535(GEBURT_TOT.ohne)}, Stute stirbt bei der Geburt ${pc535(STUTE_GEBURT_TOD)} (mit Nachtdienst halb so oft). Fohlenrosse ab dem Tag nach der Geburt – das Fohlen bleibt bei der Mutter (Hinweis im Geburts-Brief). Ungeplante Bedeckung auf der Weide mit derselben Chance wie Natursprung. Leopard × Leopard ist nur ein Hinweis (Lp/Lp: kaum Punkte, nachtblind – nicht tödlich).</p>

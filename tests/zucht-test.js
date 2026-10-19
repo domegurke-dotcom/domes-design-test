@@ -58,6 +58,24 @@ const { chromium } = require('playwright'); const path = require('path');
     Q.gedeckt = { vater: hengstKopie(H), art: 'natur', tag: spiel.tag, seit: jzJetzt(), erfolg: true, verlust: null }; Q.gedeckt.tuPos = spiel.tag; naechsteNacht(); zu();
     ok('Tempo 4: mit Ultraschall nach 1 Tag sicher tragend', !!Q.traechtig && Q.traechtig.sicher === true, JSON.stringify(Q.traechtig && Q.traechtig.sicher));
     spiel.tempo = tempo0;
+    // --- 4c. Pensionsstuten: Besitzer züchten selbst (v542) ---
+    spiel.tempo = 7; while (datum().s !== 0) { spiel.tag++; } const base = spiel.tag - (datum().t - 1); spiel.tag = base;
+    let versucht = 0, tragend = 0, zuechterN = 0, kosten = 0, briefe = 0, ohneZuechter = 0; const N = 80;
+    for (let n = 0; n < N; n++) {
+      spiel.tag = base; spiel.post = [];
+      const e = { eid: 'te' + n, vn: 'Frau', nn: 'Test' + n, w: true, pid: 'x', stufe: 1, leistungen: {}, haltung: 'box' }; (spiel.einsteller = spiel.einsteller || []).length = 0; spiel.einsteller.push(e);
+      const P = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Pension' + n }); P.einsteller = e.eid; const bx = spiel.boxen[9]; bx.pferd = P; bx.tot = false; delete bx.fohlen; bx.krippeVoll = true; bx.abfohl = false;
+      for (let t = 0; t < 28; t++) { spiel.tag++; try { deckNacht(); pensionZuchtNacht(); } catch (er) { ok('Fehler in Pensionszucht', false, er.message); return out; } }
+      if (e.zuechter) zuechterN++; else if (P.gedeckt || P.traechtig) ohneZuechter++;
+      if (P.zuchtWunsch || P.gedeckt || P.traechtig) versucht++; if (P.traechtig) tragend++; kosten += e.zuchtKosten || 0; briefe += spiel.post.filter(x => /Fohlen|tragend/.test(x.betreff)).length;
+      if (n === 0) ok('Pensionsstute (Besitzer) ist keine Spieler-Stute: Sperre „Pensionspferd“', zuchtSperre(P, bx) === 'Pensionspferd');
+    }
+    ok('Etwa 25 % der Besitzer sind Züchter', zuechterN > 8 && zuechterN < 35, zuechterN + ' von ' + N);
+    ok('Nur Züchter-Besitzer lassen decken', ohneZuechter === 0, String(ohneZuechter));
+    ok('Züchter-Stuten werden tragend (Natursprung/Besamung wie beim Spieler)', tragend > 0 && tragend <= zuechterN, tragend + ' tragend von ' + zuechterN + ' Züchtern, ' + versucht + ' mit Versuch');
+    ok('Besitzer zahlen selbst (Kosten gezählt)', kosten > 0, Math.round(kosten) + ' € gesamt');
+    ok('Briefe vom Besitzer (Wunsch/tragend)', briefe > 0, String(briefe));
+    spiel.einsteller.length = 0; spiel.boxen[9].pferd = null;
     // --- 5. Totgeburt/Stute stirbt: Konstanten ---
     ok('Totgeburt 5 % ohne Aufsicht, 1,5 % Nachtdienst+Abfohlbox', GEBURT_TOT.ohne === 0.05 && GEBURT_TOT.maAbfohl === 0.015);
     // --- 6. Kolik-OP ---

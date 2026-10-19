@@ -15,48 +15,30 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Team · **An:** Claude Pro · **Stand:** v534, 19.10.2026
+**Von:** Claude Team · **An:** Claude Pro (oder die nächste Team-Sitzung) · **Stand:** v541, 19.10.2026
 
-Hallo Claude Pro! Deine Nachricht (v522) und deine Notiz zu v523 sind übernommen. Alles auf `main`, Details in CLAUDE.md (v523–v525).
+Alles liegt auf `main` (Branch `claude/admiring-bell-s50jlb` ist gleich). Details zu jeder Version stehen in CLAUDE.md (v523–v541), Zahlen auch in der Enzyklopädie (bzn, nur Admin).
 
-### Was gemacht wurde
-- **Deine drei offenen Punkte:** (1) Der Tipp-Fehler im Spielstand-Test war ein Zeitproblem im Test (ca. 1 von 8 Läufen): lief `tippPruefen` zufällig erst nach dem Tageswechsel zum ersten Mal, stand `tippStart` auf Tag 2 und der Speicher-Tipp war noch nicht dran. Test setzt jetzt `tippStart = 1` (und blendet die Tagwechsel-Animation aus), danach 6× grün. Deine v523-Änderung war nicht schuld, im Spiel ist alles richtig. (2) bzn, CLAUDE.md und diese Datei nachgetragen. (3) Krankheiten-Test läuft durch und prüft jetzt auch Spaziergang = Schritt führen (Kissing hilft, Sehne schadet), Boxenruhe sperrt den Spaziergang, EMS-Abnehmen bei Futterzustand 5/7.
-- **v524:** Das Notfall-Fenster baute seinen Dateinamen selbst und hatte noch Umlaute – jetzt wie `dateiName`.
-- **v525 S4 Spielprotokoll** (`prot`, `spiel.protokoll`, Schalter „🧪 Testspiel“ → `spiel.tagebuch`, bzn-Übersicht) und **Enzyklopädie-Reiter „💾 Spielstand“** (öffentlich, Text-Karten). `PLAN-SPIELSTAND.md` ist damit komplett.
-- Neuladen-Test, Krankheiten-Test, Spielstand-Test grün; Screenshots Enzyklopädie in allen drei Ansichten.
-
-- **v526 Bewegung als Behandlung** (Dome): Schritt führen/Spaziergang, ruhig longieren, Boden-/Freiarbeit helfen oder schaden je Krankheit wie in echt, nur die beste Bewegungsart zählt 1× am Tag, der Tierarzt nennt Häufigkeit und Verbote. Details in CLAUDE.md.
-
-- **v527:** Pferd zeigt Schaden (Anzeichen, Abbruch, Ohren), Reiten und Auslauf/Paddockbox zählen, akute Krankheit hat Vorrang, Spaziergang-Wehren mit Fenster.
-
-- **v528/v529 (Sonnet):** Startmenü-Umbau (Laden), „Spielstand downloaden“, Paddockbox-Tür bei Boxenruhe, Personal schont kranke Pferde, Aufnahmen mit rotem Rahmen und Liste. Details in CLAUDE.md.
-
-- **v530:** „Speichern & Laden“ mit Speichern-Knopf je Platz, Aufnahmen mit Namen und Auswahl-Liste, Ausbildungsstall pausiert bei Schaden.
-
-- **Gesundheits-Studie** (`tests/gesundheit-studie.js`, Ergebnis `STUDIE-GESUNDHEIT.md`) und **v532** Nachbesserung (Immunität, Tod trotz Behandlung, Senioren, Weide-Verletzungen, Heildauer, Rassenwerte).
-
-- **v533:** Zahnbehandlung, Folgen ungekämmter Mähne und nicht ausgekratzter Hufe, Turnier nur mit Impfung, Boxenruhe endet von selbst, weniger Weide-Verletzungen, Spieler 1 angepasst. Details in CLAUDE.md/bzn.
-
-- **v534:** schmutzige Mähne macht nicht krank; Studie mit Spieler 4 (Selbstbehandler), Spieler 2 ruft den Tierarzt früher.
+### Was in dieser Sitzung passiert ist
+- **Studien** (Plan `PLAN-STUDIEN.md`, erledigt): Krankheitstest 28 Rassen × 4 Spieler (`studie-daten/zweite-studie-v534/`), Zuchttest (`tests/zucht-studie.js`, `tests/zucht-auswertung.js`, `studie-daten/zucht-studie-v534/`), Kontrolle nach den Änderungen (`studie-daten/v535-kontrolle/`). Bericht und Bewertung: `STUDIE-GESUNDHEIT.md`.
+- **v535** Krankheiten: Druse/Atemwege seltener, Tod trotz Behandlung, Altersschwäche später (ab 22 J., viele Pferde werden 30). **Zucht wie in echt:** Natursprung/Besamung, Trächtigkeitsuntersuchung, Rosse, Fohlenrosse, Embryoverlust/Verfohlen/Totgeburt, Winterruhe, Leopard-Hinweis.
+- **v536** stille Rosse, Natursprung erst wenn das Fohlen steht, ungemistete Box −4, Hengste weniger einsam, Besamung so sicher wie Natursprung.
+- **v537** Tiefgefriersamen (nur Deckstation), Folgen der Nachtblindheit (Lp/Lp).
+- **v538–v541:** Fehler „sicher tragend“ behoben, nach leerer Untersuchung sofort wieder deckbar, Wartezeiten nach Spieltempo (`WARTE_TEMPO`), schwere Kolik ohne OP stirbt zu 85 % (mit OP 25 %).
+- **Neuer Test:** `tests/zucht-test.js` (Deck-Fenster, Untersuchung, stille Rosse, Geburt, Fohlenrosse, Kolik-OP, alle 3 Tempi; ~1 Min). Spielstand-Test (S1–S4, Aufnahmen) und Krankheiten-Test (Bewegung als Behandlung) sind grün.
 
 ### Offen
-- Domes Abnahme von S1–S4.
-- Domes Abnahme der Aufnahmen (v529) und der Bewegungs-Behandlung (v526/v527).
-- Weide-Verletzungen noch zu häufig (Dome fragen), schlechte Pflege (Testspieler 1) mit Dome anpassen, Zucht-Test (Plan in STUDIE-GESUNDHEIT.md).
-- Araber-Zuchtrichtungen → LFS je Richtung (wie bei dir notiert).
-- Domes Inkscape-Liste wie bisher.
+- **Domes Test von v535–v541** im Spiel (Zucht: Decken, Untersuchung, Geburts-Brief; Kolik-OP). Claude Team hat alles per Skript getestet, aber nicht auf dem Handy.
+- Handy-Test Dateiname ohne Umlaut (Spielstand downloaden) – im Test-Chromium nicht prüfbar.
+- Noch nicht gemacht (nur gesagt): Hufrehe-Tod eher hoch (0,6 je 100 Pferdejahre) – Dome fand es ok; Kolik ohne OP 85 % ist beschlossen.
+- Bekannte Lücke: Stuten der **Pension** laufen nicht durch die neue Zucht (`fremd(p)` übersprungen in `deckNacht`); Pensionsstuten werden vom Besitzer entschieden (`pensionBedeckt`).
+- Araber-Zuchtrichtungen → LFS je Richtung, Hautpilz an der Mähne ohne eigene Regel, Selbstbehandler kann ohne Rezeptmittel Kolik/Hufrehe/Sehne nicht behandeln (siehe PLAN-STUDIEN.md), Domes Inkscape-Liste wie bisher.
+- Dome fragt oft nach „wie in echt“: Wenn Zahlen angepasst werden, vorher mit einem kleinen Skript prüfen und Dome die Zahlen nennen.
 
 ### Achtung
-- **Neue Spieler-Aktionen mit `prot("…", { p, o, b })` zählen** – sonst fehlen sie später in der Bilanz (Thema 2).
-- Wehrt sich ein Pferd beim Spaziergang (`behandeln` → „wehrt sich“), zählt Schritt führen an dem Tag nicht, der Spaziergang selbst läuft trotzdem – so gelassen, Dome ist informiert.
+- **Neue Spieler-Aktionen mit `prot("…", { p, o, b })` zählen.**
+- Kommentare in Skript-Ersetzungen nur am Zeilenende (siehe CLAUDE.md „Falle“). Beim Einfügen von `${…}` in Texte auf den Typ der Anführungszeichen achten (Backticks!) – ist in v541 einmal passiert, `new Function`-Syntaxprüfung vor jedem Upload fängt es.
+- Test-Läufe von Studien nie parallel zu Änderungen an `index.html` (die Läufe laden die Datei neu).
 
-### Nachtrag 19.10. (Claude Team, Opus): Studien und v535
-- Krankheitstest (28 Rassen × 4 Spieler) und neuer Zuchttest (`tests/zucht-studie.js`, `tests/zucht-auswertung.js`) gemacht, Bericht in `STUDIE-GESUNDHEIT.md`, Daten in `studie-daten/`.
-- **v535** nach Domes Antworten: Druse/Atemwege seltener, Kolik-/Hufrehe-Tod wie in echt, Altersschwäche später; Zucht wie in echt (Natursprung/Besamung, Trächtigkeitsuntersuchung, Rosse, Fohlenrosse, Verfohlen, Totgeburt, Stute stirbt bei Geburt, Winterruhe, Leopard-Hinweis). Details CLAUDE.md „v535“. Kontroll-Studie in `studie-daten/v535-kontrolle/`.
-- **v536:** stille Rosse, Fohlenrosse erst wenn das Fohlen steht (Natursprung), Besamung so sicher wie Natursprung, Kolik-Tod nur nach OP, ungemistete Box −4, Hengste weniger einsam (Details CLAUDE.md).
-- **v537:** Tiefgefriersamen und Folgen der Nachtblindheit (Lp/Lp) eingebaut.
-- **Offen:** Domes Test von v535–v537.
-- Branch: Dome hat erlaubt, auf `main` zu laden (alles auf `main`).
-
-### Nächste Sitzung (Claude Team, Opus, Dome gibt Startsatz)
-- Plan: `PLAN-STUDIEN.md` (Krankheitstest alle Rassen × 4 Spieler, Vergleich mit erster Studie, danach Zuchttest). Basisdaten: `studie-daten/erste-studie-v531/`. Pro: bitte nichts an `tests/gesundheit-*.js` und den Gesundheitswerten ändern, solange die Studie läuft.
+### Nächste Sitzung (Claude Team, Sonnet reicht für kleine Dinge, Opus für große Umbauten)
+- Dome gibt den Startsatz. Erst `UEBERGABE.md`, `CLAUDE.md` lesen, dann Domes Rückmeldung zum Test von v535–v541 abarbeiten.

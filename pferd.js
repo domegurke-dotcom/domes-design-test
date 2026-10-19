@@ -1362,7 +1362,7 @@ function kopfNeuSVG(key, uid, o = {}) {
   const blinkZu = o.statisch || o.augenZu ? "" : '<animate attributeName="opacity" values="0;1;0" keyTimes="0;.93;.97" calcMode="discrete" dur="4.5s" repeatCount="indefinite"/>';
   const lidZu = `<path d="M346.69,328.97C368,346 397,336 409.56,305.9M370,341.5L366.5,356M392,336.5L397,350" fill="none" stroke="${ink}" stroke-width="9" stroke-linecap="round"/>`;
   const auge = `<g transform="translate(${ac2.x.toFixed(2)},${ac2.y.toFixed(2)}) scale(${as}) translate(${-ac.x},${-ac.y})">` +
-    `<g${o.augenZu ? ' opacity="0"' : ""}>${blinkAuf}${K.augeClip.replace("r15-ekp2-auge-3", uid + "-auge")}${farbe(o.augeBlau ? K.augeBlau : K.auge).replace("r15-ekp2-auge-3", uid + "-auge")}${o.sklera ? skleraSVG(ac) : ""}${o.wimper ? farbe(K.wimper) : ""}</g>` +
+    `<g${o.augenZu ? ' opacity="0"' : ""}>${blinkAuf}${K.augeClip.replace("r15-ekp2-auge-3", uid + "-auge")}${(t => o.sklera ? t.replace("</ellipse>", `</ellipse><ellipse cx="31" cy="1" rx="7.5" ry="19" fill="#f3eee4"/>`) : t)(farbe(o.augeBlau ? K.augeBlau : K.auge).replace("r15-ekp2-auge-3", uid + "-auge"))}${o.wimper ? farbe(K.wimper) : ""}</g>` +
     (o.statisch && !o.augenZu ? "" : `<g opacity="${o.augenZu ? 1 : 0}">${blinkZu}${lidZu}</g>`) + `</g>`;
   const fell = F.fell.replace('transform="', `transform="${kmText(am)} `);
   // Maulfärbung und Kopfabzeichen liegen auf dem Fell, unter Schattierung und Linien (Reihenfolge wie in Domes Datei)
@@ -1393,8 +1393,6 @@ function altersZeichenMatrix() {
   return [a, b, -b, a, A1.x - (a * A0.x - b * A0.y), A1.y - (b * A0.x + a * A0.y)].map(x => x.toFixed(4)).join(" ");
 }
 // v441 Leopard-Komplex: weiße Lederhaut im Augenwinkel (wie beim Menschen) und gefleckte rosa Haut um Maul und Augen – in Koordinaten von Domes Kopf
-function skleraSVG(ac) { const ec = (dx, dy, rx, ry) => `<ellipse cx="${(ac.x + dx).toFixed(1)}" cy="${(ac.y + dy).toFixed(1)}" rx="${rx}" ry="${ry}" transform="rotate(-15 ${(ac.x + dx).toFixed(1)} ${(ac.y + dy).toFixed(1)})" fill="#f3eee4"/>`;
-  return ec(25, -6.5, 5, 3.2); }   // v448 (Dome): nur ein schmaler weißer Rand im hinteren Augenwinkel
 function lpHautSVG(K, seed, hell) {   // hell: Krötenmaul auf heller Haut (Doppel-Cream) – dunkle Sprenkel auf rosa statt rosa Flecken auf dunkel
   const r = zufall((seed || "k") + "-lphaut"), N = K.nase, G = K.gap, A = K.augeMitte, ux = G.x - N.x, uy = G.y - N.y, l = Math.hypot(ux, uy), nx = -uy / l, ny = ux / l;
   let s = "";

@@ -49,7 +49,7 @@ const { chromium } = require('playwright'); const path = require('path');
     for (let i = 0; i < 80; i++) bilanzZaehlen(Z, { disz: 'dressur', stufe: 2 }, i % 4 === 0 ? 1 : i % 4 === 1 ? 2 : i % 4 === 2 ? 3 : 5); Z.erfolge.length = 0;
     ok('Nach 84 Starts und leerer Erfolgsliste bleibt die Bilanz erhalten', Z.bilanz['dressur|' + turnierKlasse({ disz: 'dressur', stufe: 2 })][0] === 84);
     Z.erfolge = [{ disz: 'dressur', stufe: 2, platz: 1, plaziert: true }];
-    const bh = bilanzHTML(Z); ok('Steckbrief-Anzeige „Bilanz insgesamt“ mit Summenzeile', /Bilanz insgesamt/.test(bh) && /Zusammen/.test(bh) && /Dressur/.test(bh));
+    const bh = bilanzHTML(Z); ok('Steckbrief-Anzeige „Bilanz insgesamt“ mit Summenzeile', /Bilanz insgesamt/.test(bh) && /Zusammen normale Turniere/.test(bh) && !/Zusammen Meisterschaften/.test(bh) && /Dressur/.test(bh));
     ok('erfolgeHTML enthält die Bilanz', /Bilanz insgesamt/.test(erfolgeHTML(Z)));
     const Y = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 6, name: 'Neu' }); ok('Pferd ohne Starts: keine Bilanz-Anzeige', bilanzHTML(Y) === '');
     // --- 7. Klassen-Namen je Disziplin (v551): Rennen/Tölt/Pass/Distanz mit Prüfungsnamen statt englischer Buchstaben ---
@@ -69,6 +69,8 @@ const { chromium } = require('playwright'); const path = require('path');
     bilanzZaehlen(M, { disz: 'dressur', stufe: 2, name: 'Landesmeisterschaft Dressur Kl. L' }, 1, 'championat');   // neuer Start im Spiel (vor dem Einfügen)
     const mh = bilanzHTML(M);
     ok('Normale und Meisterschaft getrennt: Dressur L / Dressur L (Meisterschaft)', />Dressur L</.test(mh) && />Dressur L \(Meisterschaft\)</.test(mh) && /Dressur S \(International\)/.test(mh) && /Reining Open \(Meisterschaft\)/.test(mh), mh.replace(/<[^>]+>/g, ' ').slice(0, 260));
+    ok('Getrennte Summen: normale Turniere / Meisterschaften / International, keine Gesamtzeile', />Zusammen normale Turniere</.test(mh) && />Zusammen Meisterschaften</.test(mh) && />Zusammen International</.test(mh) && !/>Zusammen</.test(mh), mh.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(-230));
+    ok('Summe Meisterschaften = 2 + 1 Starts (Dressur L 2, Reining Open 1) → 3 Starts, 2 Siege, 1 zweiter', /Zusammen Meisterschaften<\/b><\/td><td><b>3<\/b><\/td><td><b>2<\/b><\/td><td><b>1<\/b>/.test(mh));
     ok('Meisterschaft: 2 Starts (1 alt + 1 neu), 1× erster, 1× zweiter', JSON.stringify(M.bilanz['dressur|L (Meisterschaft)']) === '[2,1,1,0]', JSON.stringify(M.bilanz['dressur|L (Meisterschaft)']));
     ok('Bestenliste zählt weiter alle Siege zusammen', (() => { const z = erfolgZahlen(M); return z.s === 3 && z.pl === 2; })(), JSON.stringify(erfolgZahlen(M)));
     ok('Chronik-Zähler mit Zusatz', (() => { spiel.protokoll = {}; protKlasse('Sieg', M, { name: 'T', art: 'championat' }, { disz: 'dressur', stufe: 2, name: 'x' }); return Object.keys(spiel.protokoll[Object.keys(spiel.protokoll)[0]]).some(k => k === 'Turnier Dressur L (Meisterschaft): Sieg'); })());

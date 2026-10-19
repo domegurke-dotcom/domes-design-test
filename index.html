@@ -968,7 +968,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "534";
+  const SPIEL_VERSION = "535";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -976,10 +976,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=534"></script>
-<script src="pferd.js?v=534"></script>
-<script src="boxstufen.js?v=534"></script>
-<script src="kopfneu.js?v=534"></script>
+<script src="lz-string.min.js?v=535"></script>
+<script src="pferd.js?v=535"></script>
+<script src="boxstufen.js?v=535"></script>
+<script src="kopfneu.js?v=535"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2049,8 +2049,11 @@
     if (p.pflege && p.pflege.gesundheit < 50) return "zu schwach";
     if (befundListe(p).some(b => (b.diagnose || b.bemerkt) && !(b.beh && KRANK[b.art].chronisch) && (b.grad >= 3 || ["kolik", "druse", "hufrehe"].includes(b.art)))) return "krank";
     if (p.geschlecht === "Stute") {
-      if (box && box.fohlen) return "hat ein Fohlen";
       if (p.traechtig) return "ist tragend";
+      if (p.gedeckt) return spiel.tag - p.gedeckt.tag < ROSSE_TAGE ? "gerade gedeckt" : "keine Rosse";   // v535: tragend, aber noch nicht sicher – sie rosst nicht mehr
+      if (p.rosseAb && spiel.tag < p.rosseAb) return "noch keine Rosse";
+      if (box && box.fohlen && box.fohlen.gebTag != null && spiel.tag <= box.fohlen.gebTag) return "gerade abgefohlt";   // v535 (Dome): Fohlenrosse ab dem nächsten Tag (≈ 7–10 Tage nach der Geburt)
+      if (DECK_SAISON[datum().s] <= 0) return "Winterruhe";
     }
     return "";
   }
@@ -2085,21 +2088,96 @@
   // Decktaxe der Deckstation: richtet sich nach dem Marktwert des Hengstes (ca. 10 %, mindestens 150 €) – eigene Hengste decken umsonst
   const decktaxe = h => Math.max(150, Math.round(marktwert(h) * 0.1 / 10) * 10);
   const istDeckstation = h => !alleEigenenPferde().some(e => e.p.id === h.id);
+  // ---------- v535 (Dome, Zucht-Studie): Decken wie in echt – Natursprung oder Besamung, Rosse, Trächtigkeitsuntersuchung, Verluste ----------
+  // Zeitmaßstab (7 Tage je Jahreszeit): 1 Spieltag ≈ 13 echte Tage → nächste Rosse nach ~21 Tagen ≈ 2 Spieltage, Ultraschall ab Tag 14–16 ≈ 1 Spieltag, sicher (Herzschlag, ~Tag 40) ≈ 3 Spieltage
+  const DECK_ART = {
+    natur: { n: "Natursprung", ico: "🐎", chance: 0.65, verletzung: 0.02, transport: 50,
+      info: "Der Hengst deckt die Stute direkt – höchste Chance je Rosse (etwa 65 %). Zur Deckstation fährt die Stute hin (Transport 50 €). Kleines Risiko, dass Stute oder Hengst beim Decken einen Schlag abbekommen (etwa 2 %). Galopper (Vollblut) dürfen nur im Natursprung gezüchtet werden." },
+    besamung: { n: "Besamung", ico: "💉", chance: 0.55, tierarzt: 120,
+      info: "Der Tierarzt besamt die Stute in ihrer Box (Tierarzt 120 €) – mit Frischsamen vom eigenen Hengst (etwa 60 %) oder gekühltem Versandsamen der Deckstation (etwa 55 %). Kein Transport, keine Verletzungsgefahr, aber eine etwas kleinere Chance als im Natursprung." } };
+  const DECK_FRISCH = 0.6;                    // Besamung mit Frischsamen vom eigenen Hengst
+  const DECK_SAISON = [1, 1, 0.4, 0];         // Frühling/Sommer = Decksaison · Herbst nur noch einzelne Rossen · Winter: Winterruhe, keine Rosse
+  const NUR_NATURSPRUNG = ["vollblut"];       // Zuchtbuch der Galopper: nur Natursprung
+  const ROSSE_TAGE = 2, TU_AB = 1, TRAECHTIG_SICHER = 3, TU_PREIS = 60;
+  const EMBRYO_VERLUST = 0.12;                // früher Embryoverlust bis ~Tag 40 (in echt 10–15 %), ab 15 Jahren +1 % je Jahr
+  const VERFOHLEN_JZ = 0.01;                  // später verfohlen je Jahreszeit der Trächtigkeit (≈ 3 % gesamt)
+  const FOHLENROSSE = 0.85;                   // Fohlenrosse kurz nach der Geburt: etwas geringere Chance
+  const GEBURT_TOT = { ma: 0.015, abfohl: 0.025, kamera: 0.03, ohne: 0.05 };   // Fohlen tot geboren oder in den ersten Stunden gestorben – je nach Aufsicht bei der Geburt
+  const STUTE_GEBURT_TOD = 0.005;             // Stute stirbt bei der Geburt (z. B. Riss einer Gebärmutterarterie) – mit Nachtdienst halb so oft
+  function deckChance(stute, hengst, art) {
+    const eigen = !istDeckstation(hengst), base = art === "besamung" && eigen ? DECK_FRISCH : DECK_ART[art].chance;
+    const w = eigen ? (wohlbefinden(stute) + wohlbefinden(hengst)) / 2 : wohlbefinden(stute);
+    const j = alterJahre(stute), alt = j > 14 ? Math.max(0.55, 1 - 0.04 * (j - 14)) : 1;
+    const fr = spiel.boxen.some(b => b.pferd === stute && b.fohlen && alterJZ(b.fohlen) === 0) ? FOHLENROSSE : 1;
+    return Math.max(0, Math.min(0.9, base * (0.6 + 0.45 * w / 100) * alt * fr * DECK_SAISON[datum().s]));
+  }
+  const pc535 = x => String(Math.round(x * 1000) / 10).replace(".", ",") + " %";   // bzn
+  const embryoVerlust = p => Math.min(0.3, EMBRYO_VERLUST + Math.max(0, alterJahre(p) - 14) * 0.01);
+  const tagIn = t => { const n = t - spiel.tag; return n <= 0 ? "heute" : n === 1 ? "morgen" : n === 2 ? "übermorgen" : `in ${n} Tagen`; };
+  // jede Nacht: Rosse oder Trächtigkeit nach dem Decken
+  function deckNacht() {
+    alleEigenenPferde().forEach(({ p }) => { const G = p.gedeckt; if (!G || fremd(p)) return;
+      if (G.erfolg && G.verlust != null && spiel.tag >= G.verlust) { G.erfolg = false; G.verloren = true; G.rosseTag = spiel.tag + 1; }
+      if (!G.erfolg) { if (spiel.tag < (G.rosseTag != null ? G.rosseTag : G.tag + ROSSE_TAGE)) return;
+        delete p.gedeckt;
+        brief("Hofverwaltung", `${p.name} rosst wieder`, `<b>${esc(p.name)}</b> zeigt wieder Rosse – ${G.tuPos ? "die Trächtigkeit ist leider nicht geblieben (früher Embryoverlust, kommt bei etwa 1 von 8 Stuten vor)" : `das Decken mit <b>${esc(G.vater.name)}</b> hat leider nicht geklappt`}.${DECK_SAISON[datum().s] > 0 ? ` {Du kannst|Sie können} sie jetzt wieder decken lassen.` : " In der Winterruhe rosst sie nicht mehr – im Frühling geht es weiter."}`, { pferde: [p] });
+        return; }
+      if (spiel.tag - G.tag < TRAECHTIG_SICHER) return;
+      p.traechtig = { vater: G.vater, seit: G.seit, geburt: G.seit + 4, art: G.art, sicher: false }; delete p.gedeckt; prot("tragend geworden", { p });   // S4
+      brief("Hofverwaltung", `${p.name} ist tragend`, `<b>${esc(p.name)}</b> zeigt seit dem Decken mit <b>${esc(G.vater.name)}</b> keine Rosse mehr – sie ist ${G.tuPos ? "tragend (Ultraschall)" : "sehr wahrscheinlich tragend"}. Das Fohlen kommt zu Beginn von ${jzName(G.seit + 4)} zur Welt.${G.tuPos ? "" : " Gewissheit bringt eine Trächtigkeitsuntersuchung (Steckbrief – Daten – Zucht)."}`, { pferde: [p] });
+    });
+  }
+  // Trächtigkeitsuntersuchung (Ultraschall) durch den Tierarzt
+  function traechtigkeitsUntersuchung(p, fertig) {
+    const G = p.gedeckt, T = p.traechtig;
+    if (!G && !T) return;
+    if (G && spiel.tag - G.tag < TU_AB) { dialog(`<h3>🩺 Noch zu früh</h3><p>Eine Trächtigkeit sieht man im Ultraschall frühestens etwa 14 Tage nach dem Decken – also ab morgen.</p>`); return; }
+    if (!spiel.admin) buchen(-TU_PREIS, `Tierarzt: Trächtigkeitsuntersuchung ${p.name}`); prot("Trächtigkeitsuntersuchung", { p, b: -TU_PREIS });
+    let h;
+    if (T) { T.sicher = true; h = `<h3>🩺 Tragend ✅</h3><p>Im Ultraschall ist das Fohlen mit Herzschlag zu sehen – <b>${esc(p.name)}</b> ist sicher tragend von <b>${esc(T.vater.name)}</b>. Das Fohlen kommt zu Beginn von ${jzName(T.geburt)} zur Welt.</p>`; }
+    else if (G.erfolg) { G.tuPos = spiel.tag; h = `<h3>🩺 Tragend ✅</h3><p>Im Ultraschall ist eine Fruchtblase zu sehen – <b>${esc(p.name)}</b> ist tragend von <b>${esc(G.vater.name)}</b>.</p><p><small>In den ersten Wochen geht noch etwa jede 8. Trächtigkeit verloren. Ab ${tagIn(G.tag + TRAECHTIG_SICHER)} gilt sie als sicher (Herzschlag) – rosst ${esc(p.name)} bis dahin wieder, ist sie leider leer.</small></p>`; }
+    else { const verl = G.verloren; delete p.gedeckt; p.rosseAb = spiel.tag + 1;
+      h = `<h3>🩺 Nicht tragend ❌</h3><p>${verl && G.tuPos ? "Die Fruchtblase ist nicht mehr zu sehen – früher Embryoverlust. Das kommt bei etwa 1 von 8 Stuten vor und hat meist keine erkennbare Ursache." : `<b>${esc(p.name)}</b> ist leer – das Decken mit <b>${esc(G.vater.name)}</b> hat nicht geklappt.`}</p><p>Der Tierarzt hat die nächste Rosse eingeleitet: ${DECK_SAISON[datum().s] > 0 ? `ab morgen kann ${esc(p.name)} wieder gedeckt werden.` : "im Winter rossen Stuten nicht – im Frühling geht es weiter."}</p>`; }
+    speichern(); dialog(h, [["OK", fertig]]);
+  }
+  // Hinweis im Geburts-Brief: wann die Stute wieder gedeckt werden kann (v535, Dome)
+  function wiederDeckenText() {
+    const s = datum().s;
+    return s >= 2 || DECK_SAISON[s] <= 0 ? `<br><br>💞 <b>Wieder decken:</b> Kurz nach der Geburt kommt die Fohlenrosse – ${s === 3 ? "im Winter rossen Stuten aber nicht. Ab dem Frühling (Decksaison) kann sie wieder gedeckt werden." : "im Herbst rossen aber nur noch einzelne Stuten (kleine Chance). Am besten wieder ab dem Frühling (Decksaison)."}`
+      : `<br><br>💞 <b>Wieder decken:</b> Die <b>Fohlenrosse</b> kommt etwa 7–10 Tage nach der Geburt – ab morgen kann sie wieder gedeckt werden (etwas kleinere Chance), sonst bei jeder weiteren Rosse in der Decksaison (Frühling und Sommer). Das Fohlen bleibt dabei bei ihr.`;
+  }
   function verpaaren(stute, hengst) {
     const taxe = istDeckstation(hengst) ? decktaxe(hengst) : 0;
     if (taxe && (spiel.geld || 0) < taxe) { dialog(`<h3>Nicht genug Geld</h3><p>Die Decktaxe für <b>${esc(hengst.name)}</b> beträgt ${fmt(taxe)}, du hast ${fmt(spiel.geld || 0)}.</p>`); return; }
-    const decken = () => {
-      const jetzt = jzJetzt();
+    const eigenH = !istDeckstation(hengst), nurNatur = NUR_NATURSPRUNG.includes(stute.rasse) && NUR_NATURSPRUNG.includes(hengst.rasse);
+    // v535 (Dome): erst wählen – Natursprung oder Besamung (mit Chance), dann decken
+    const wahl = () => {
+      const zeile = art => { const A = DECK_ART[art], ch = Math.round(deckChance(stute, hengst, art) * 20) * 5, k = art === "besamung" ? A.tierarzt : eigenH ? 0 : A.transport;
+        return `<div class="wn-hinweis" style="margin:8px 0"><b>${A.ico} ${A.n}</b> <button class="gl-info-k" data-dinfo="${art}" aria-label="Erklärung">i</button> · Chance je Rosse etwa <b>${ch} %</b>${k + taxe ? ` · ${fmt(k + taxe)}${taxe ? ` (inkl. Decktaxe ${fmt(taxe)})` : ""}` : " · kostenlos"}<span class="gl-info" id="dinfo-${art}" hidden style="display:block;margin-top:4px">${A.info}${art === "besamung" ? (eigenH ? " Hier: Frischsamen vom eigenen Hengst." : " Hier: gekühlter Versandsamen der Deckstation.") : ""}</span></div>`; };
+      const s = datum().s;
+      dialog(`<h3>💞 ${esc(stute.name)} × ${esc(hengst.name)}</h3><p>Wie soll gedeckt werden?</p>${zeile("natur")}${nurNatur ? `<p class="text"><small>🏇 Galopper (Vollblut) dürfen laut Zuchtbuch nur im Natursprung gezüchtet werden.</small></p>` : zeile("besamung")}
+        <p class="text"><small>Die Chance hängt vom Wohlbefinden${eigenH ? " beider Pferde" : " der Stute"} und vom Alter der Stute ab (ab 15 Jahren sinkt sie)${s === 2 ? ". Im Herbst rossen nur noch einzelne Stuten – die Chance ist deutlich kleiner" : ""}${spiel.boxen.some(b => b.pferd === stute && b.fohlen && alterJZ(b.fohlen) === 0) ? ". In der Fohlenrosse kurz nach der Geburt ist sie etwas kleiner" : ""}. Ob die Stute tragend ist, zeigt erst die Trächtigkeitsuntersuchung – oder ob sie wieder rosst.</small></p>`,
+        [[`${DECK_ART.natur.ico} Natursprung`, () => decken("natur")], ...(nurNatur ? [] : [[`${DECK_ART.besamung.ico} Besamung`, () => decken("besamung"), "zweit"]]), ["Abbrechen", null, "zweit"]]);
+      $("dlgInhalt").querySelectorAll("[data-dinfo]").forEach(b => b.onclick = () => { const x = $("dinfo-" + b.dataset.dinfo); x.hidden = !x.hidden; });
+    };
+    const decken = art => {
+      const jetzt = jzJetzt(), A = DECK_ART[art];
       if (stute.heimlich) { const hv = stute.heimlich.vater; stute.traechtig = stute.heimlich; delete stute.heimlich; deckModus = false; speichern(); zeigeAkte();
         dialog(`<h3>🩺 Schon tragend!</h3><p>Beim Decken stellt sich heraus: <b>${esc(stute.name)}</b> ist bereits tragend – ungeplant von <b>${esc(hv.name)}</b> auf der Weide. Das Fohlen kommt zu Beginn von ${jzName(stute.traechtig.geburt)} zur Welt.</p>`); return; }
-      if (taxe) buchen(-taxe, `Decktaxe: ${hengst.name}`); prot("Bedeckung", { p: stute, o: hengst.name, b: -taxe });   // S4
-      // Fruchtbarkeit: Chance 40 % + 55 % × Wohlbefinden (eigener Hengst zählt zur Hälfte mit)
-      const w = istDeckstation(hengst) ? wohlbefinden(stute) : (wohlbefinden(stute) + wohlbefinden(hengst)) / 2, chance = 0.4 + 0.55 * w / 100;
-      if (Math.random() >= chance || wwLeer(stute, hengst)) { deckModus = false; speichern(); zeigeAkte();
-        dialog(`<h3>💔 Nicht aufgenommen</h3><p><b>${esc(stute.name)}</b> wurde von <b>${esc(hengst.name)}</b> gedeckt${taxe ? ` (Decktaxe ${fmt(taxe)})` : ""}, ist aber leider nicht tragend geworden. ${w < 70 ? `Ein besseres Wohlbefinden (Weide, Putzen, nicht zu lange in der Box) erhöht die Chance.` : "Das passiert manchmal – ein neuer Versuch ist möglich."}</p>`); return; }
-      stute.traechtig = { vater: hengstKopie(hengst), seit: jetzt, geburt: jetzt + 4 }; prot("tragend geworden", { p: stute });   // S4
+      const extra = art === "besamung" ? A.tierarzt : eigenH ? 0 : A.transport;
+      if (taxe) buchen(-taxe, `Decktaxe: ${hengst.name}`);
+      if (extra) buchen(-extra, art === "besamung" ? `Tierarzt: Besamung ${stute.name}` : `Transport zur Deckstation: ${stute.name}`);
+      prot("Bedeckung", { p: stute, o: `${hengst.name} (${A.n})`, b: -taxe - extra });   // S4
+      // v535 (Dome): ob es geklappt hat, weiß man erst später (Trächtigkeitsuntersuchung oder Rosse) – früher Embryoverlust bis ~Tag 40 möglich
+      const ok = Math.random() < deckChance(stute, hengst, art) && !wwLeer(stute, hengst);
+      stute.gedeckt = { vater: hengstKopie(hengst), art, tag: spiel.tag, seit: jetzt, erfolg: ok, verlust: ok && Math.random() < embryoVerlust(stute) ? spiel.tag + 1 + Math.floor(Math.random() * (TRAECHTIG_SICHER - 1)) : null };
+      delete stute.rosseAb;
+      let verl = "";
+      if (art === "natur" && Math.random() < A.verletzung) { const wer = eigenH && Math.random() < 0.3 ? hengst : stute;   // v535: Deckverletzung (Schlag beim Natursprung)
+        befundNeu(wer, "verletzung", Math.random() < 0.3 ? 2 : 1, "beim Decken geschlagen"); verl = `<p>⚠️ Beim Decken hat ${wer === stute ? `${esc(stute.name)} einen Schlag abbekommen` : `${esc(hengst.name)} einen Schlag abbekommen`} – bitte die Versorgung ansehen.</p>`; }
       deckModus = false; speichern(); zeigeAkte();
-      dialog(`<h3>💞 Verpaart!</h3><p><b>${esc(stute.name)}</b> wurde von <b>${esc(hengst.name)}</b> gedeckt${taxe ? ` (Decktaxe ${fmt(taxe)})` : ""}. Das Fohlen kommt zu Beginn von ${jzName(jetzt + 4)} zur Welt.</p>`);
+      dialog(`<h3>💞 Gedeckt!</h3><p><b>${esc(stute.name)}</b> wurde von <b>${esc(hengst.name)}</b> gedeckt (${A.n}${taxe ? `, Decktaxe ${fmt(taxe)}` : ""}${extra ? `, ${art === "besamung" ? "Tierarzt" : "Transport"} ${fmt(extra)}` : ""}).</p>${verl}
+        <p>Ob sie tragend ist, zeigt sich erst:</p><ul style="margin:4px 0 0 18px;padding:0"><li>🩺 <b>Trächtigkeitsuntersuchung</b> (Ultraschall, ${fmt(TU_PREIS)}) ab morgen – im Steckbrief „Daten“ bei „Zucht“.</li><li>Ohne Untersuchung: rosst ${esc(stute.name)} in etwa ${ROSSE_TAGE} Tagen wieder, hat es nicht geklappt. Zeigt sie keine Rosse mehr, ist sie wahrscheinlich tragend.</li></ul>`);
     };
     // tückische Gene (z. B. Overo × Overo = Lethal White): Warnung nur, wenn mindestens eins der Pferde einen positiven Gentest hat
     // und das andere ebenfalls positiv getestet ist oder das Muster sichtbar zeigt
@@ -2112,15 +2190,15 @@
       return;
     }
     if (gefahr && !verpaaren.overoOk) {
-      dialog(`<h3>⚠️ ${gefahr.titel}</h3><p><b>${esc(stute.name)}</b> und <b>${esc(hengst.name)}</b> tragen beide ${gefahr.gentext}. ${gefahr.folge}</p><p>${gefahr.rat}</p>`,
-        [["Trotzdem verpaaren", () => { verpaaren.overoOk = true; verpaaren(stute, hengst); verpaaren.overoOk = false; }], ["Abbrechen", null, "zweit"]]);
+      dialog(`<h3>${gefahr.harmlos ? "ℹ️" : "⚠️"} ${gefahr.titel}</h3><p><b>${esc(stute.name)}</b> und <b>${esc(hengst.name)}</b> tragen beide ${gefahr.gentext}. ${gefahr.folge}</p><p>${gefahr.rat}</p>`,
+        [[gefahr.harmlos ? "💞 Verpaaren" : "Trotzdem verpaaren", () => { verpaaren.overoOk = true; verpaaren(stute, hengst); verpaaren.overoOk = false; }], ["Abbrechen", null, "zweit"]]);
       return;
     }
     // freie Boxen minus Boxen, die schon für Fohlen gebraucht werden (Fohlen bei der Mutter + tragende Stuten)
     const frei = spiel.boxen.filter(boxFrei).length, belegt = spiel.boxen.filter(b => b.fohlen).length + spiel.boxen.filter(b => b.pferd && b.pferd.traechtig && b.pferd !== stute).length + (spiel.extern || []).filter(e => e.pferd.traechtig && e.pferd !== stute).length + (spiel.extern || []).filter(e => e.ort === "aufzucht").length;
     if (frei - belegt <= 0) dialog(`<h3>⚠️ Keine freie Box für das Fohlen</h3><p>Das Fohlen braucht ab seiner dritten Jahreszeit eine <b>eigene Box</b>. Du hast ${frei} freie ${frei === 1 ? "Box" : "Boxen"}${belegt ? `, aber ${belegt} ${belegt === 1 ? "davon ist" : "davon sind"} schon für ${belegt === 1 ? "ein anderes Fohlen" : "andere Fohlen"} eingeplant` : ""}.</p><p>Bau rechtzeitig in der Hofverwaltung eine neue – sonst holt der Tierschutz das Fohlen ab.</p>`,
-      [["Trotzdem verpaaren", decken], ["Abbrechen", null, "zweit"]]);
-    else decken();
+      [["Trotzdem verpaaren", wahl], ["Abbrechen", null, "zweit"]]);
+    else wahl();
   }
   function fohlenUmstellen(box, frei) {
     const f = box.fohlen; delete box.fohlen;
@@ -2323,6 +2401,11 @@
           `${ok ? `die Operation von <b>${esc(p.name)}</b> ist gut verlaufen – ${O.fertig || (O.art.includes("melanom") ? "die Melanome sind entfernt" : "der Kehlkopf ist wieder frei")}.` : `die Operation von <b>${esc(p.name)}</b> hat leider nur teilweise geholfen – es ist besser als vorher, aber nicht ganz weg.`} ${pron(p).er[0].toUpperCase() + pron(p).er.slice(1)} steht wieder in Box ${i + 1}. Bitte in den nächsten Tagen nur ruhig im Schritt bewegen und dann langsam wieder antrainieren.<br><br>`);
         return;
       }
+      if (p.klinik.op === "kolik" && !p.klinik.opWurf) { p.klinik.opWurf = true;   // v535 (Dome, Studie): wie in echt überleben etwa 80 % eine Kolik-OP
+        if (Math.random() < KOLIK_OP_TOD) { b.tot = true; p.pflege.gesundheit = 0; p.todesursache = "Kolik (trotz Operation)"; delete p.klinik;
+          rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: Kolik-OP`, betrag: KOLIK_OP }], [p.id], `${p.name}: Kolik-OP – Rechnung`,
+            `es tut uns sehr leid: <b>${esc(p.name)}</b> hat die Kolik-Operation nicht überstanden. Der Darm war schon zu stark geschädigt – wir haben alles versucht, {du hast|Sie haben} nichts falsch gemacht.<br><br>`);
+          return; } }
       if (p.klinik.op === "kolik" && spiel.tag >= p.klinik.bis && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {
         const extra = p.klinik.rechnung || 0, tage = Math.round(extra / KOSTEN.klinik);
         delete p.klinik; delete p.dreck;
@@ -2475,8 +2558,9 @@
   const GEFAHR_GENE = [
     { gen: "O", titel: "Zwei Overo-Pferde", gentext: "das Overo-Gen (O)", sichtbar: q => /^(ov|tv)_/.test(q.farbe),
       folge: "Jedes vierte Fohlen aus dieser Verpaarung wäre ein <b>Lethal-White-Fohlen</b> (O/O): Ihm fehlen Nervenzellen im Darm, es stirbt in den ersten Lebenstagen.", rat: "Verantwortungsvolle Züchter verpaaren zwei Overos nicht miteinander." },
-    { gen: "Lp", titel: "Zwei Leopard-Pferde", gentext: "das Leopard-Gen (Lp)", sichtbar: q => /leopard|fewspot|blanket|snowcap/.test(FARBEN[q.farbe] ? FARBEN[q.farbe].pattern || "" : ""),
-      folge: "Jedes vierte Fohlen wäre Lp/Lp und damit <b>nachtblind</b> (CSNB) – es sieht in der Dämmerung und nachts kaum etwas.", rat: "Züchter achten darauf, nachtblinde Fohlen zu vermeiden." },
+    { gen: "Lp", titel: "Hinweis: Zwei Leopard-Pferde", gentext: "das Leopard-Gen (Lp)", sichtbar: q => /leopard|fewspot|blanket|snowcap/.test(FARBEN[q.farbe] ? FARBEN[q.farbe].pattern || "" : ""), harmlos: true,
+      folge: "Etwa jedes vierte Fohlen wäre Lp/Lp: Es hat kaum oder keine Punkte (Wenigpunkt-Tiger, Schneekappe) und ist <b>nachtblind</b> (CSNB). Das ist <b>nicht tödlich und nicht schmerzhaft</b> – das Pferd sieht bei Tag ganz normal, in der Dämmerung und nachts aber kaum etwas. Es erschrickt dann leichter, sollte nachts nicht allein auf eine unbekannte Weide und braucht im Dunkeln etwas Licht im Stall.",
+      rat: "Bei Appaloosa und Knabstruppern werden Leopard-Pferde oft miteinander verpaart – Lp/Lp-Pferde sind sogar gesuchte Vererber, weil alle ihre Fohlen das Leopard-Gen bekommen." },
     { gen: "W", titel: "Zwei Dominant-White-Pferde", gentext: "das Dominant-White-Gen (W)", sichtbar: q => hat(genVon(q), "W") && musterStufeVon(q) >= 2,
       folge: "Jeder vierte Embryo aus dieser Verpaarung wäre W/W und ist <b>nicht lebensfähig</b> – die Stute bleibt dann leer.", rat: "Züchter verpaaren Dominant-White-Pferde lieber mit einfarbigen Partnern." }];
   const testGemacht = (p, t) => !!((p.tests && p.tests[t]) || (t === "farbe" && p.gentest));
@@ -2897,10 +2981,12 @@
     (spiel.post || []).forEach(b => { if ((b.typ || briefTyp(b.betreff)[1]) !== typ) return; b.typ = typ; b.spam = an; if (an) { b.gelesen = true; b.spamSeit = jzJetzt(); } });
     speichern(); postIconSetzen();
   }
-  // Senioren (ab 20 Jahren): höchstens 75 % Gesundheit, sinkt bis 35 Jahre auf 1 %
-  function gesundheitMax(p) { const j = alterJZ(p) / 4; return j < 20 ? 100 : Math.max(1, Math.round((75 - (j - 20) / 15 * 74) * 10) / 10); }
-  // Sterbewahrscheinlichkeit je Jahreszeit: ab 20 Jahren steigend, mit 35 Jahren 100 %
-  const sterbeChance = p => { const j = alterJZ(p) / 4; return j < 20 ? 0 : Math.min(1, Math.pow((j - 20) / 15, 2)); };
+  // v535 (Dome): ab 20 Jahren sinkt die Obergrenze langsam: 25 J. 77,5 % · 30 J. 55 % · 35 J. 32,5 % · 40 J. 10 % (vorher mit 20 J. sofort 75 %, mit 35 J. 1 %)
+  function gesundheitMax(p) { const j = alterJZ(p) / 4; return j < 20 ? 100 : Math.max(1, Math.round((100 - (j - 20) * 4.5) * 10) / 10); }
+  // v535 (Dome, Studie): wie in echt werden viele Pferde 30, einzelne über 35 – Sterbechance an Altersschwäche je Jahr ab 22 J. 3 %, je Jahr ×1,2 (25 J. ≈ 5 %, 28 J. ≈ 9 %, 30 J. ≈ 13 %, 33 J. ≈ 22 %, 35 J. ≈ 32 %, 38 J. ≈ 55 %, mit 40 J. sicher)
+  const ALTER_TOD = { ab: 22, start: 0.03, faktor: 1.2, max: 40 };
+  const sterbeChanceJahr = j => j < ALTER_TOD.ab ? 0 : j >= ALTER_TOD.max ? 1 : Math.min(1, ALTER_TOD.start * Math.pow(ALTER_TOD.faktor, j - ALTER_TOD.ab));
+  const sterbeChance = p => { const m = sterbeChanceJahr(alterJZ(p) / 4); return m >= 1 ? 1 : 1 - Math.pow(1 - m, 1 / 4); };   // je Jahreszeit
   // läuft zu Beginn jeder Jahreszeit
   function jahreszeitBeginn() {
     alleEigenenPferde().forEach(x => { fitJahreszeit(x.p); werteAltern(x.p); });   // Werte über der Altersgrenze sinken langsam mit
@@ -2940,6 +3026,10 @@
       if (jetzt >= t.frist) { brief("Tierschutzverein", `${t.pferd.name} wurde vermittelt`, `die Frist zum Zurückkaufen ist abgelaufen. <b>${esc(t.pferd.name)}</b> wurde an eine neue Familie vermittelt und hat dort ein gutes Zuhause gefunden.`); return false; }
       return true;
     });
+    // v535 (Dome, Zucht-Studie): später Verlust der Trächtigkeit (Plazentainfektion, Nabelschnur, Zwillinge …) – etwa 3 % über die ganze Tragzeit
+    alleEigenenPferde().forEach(({ p }) => { const T = p.traechtig; if (!T || fremd(p) || jetzt <= T.seit || jetzt >= T.geburt || Math.random() >= VERFOHLEN_JZ) return;
+      delete p.traechtig; prot("verfohlt", { p });
+      brief("Tierarztpraxis", `${p.name} hat verfohlt`, `es tut uns sehr leid: <b>${esc(p.name)}</b> hat ihr Fohlen verloren. Die Ursache bleibt oft unklar (z. B. Infektion der Plazenta, verdrehte Nabelschnur oder Zwillinge) – etwa 3 von 100 Stuten verfohlen im Lauf der Trächtigkeit. ${esc(p.name)} erholt sich und kann ${DECK_SAISON[datum().s] > 0 ? "in der nächsten Rosse" : "ab dem Frühling"} wieder gedeckt werden.`, { pferde: [p] }); });
     stutenInAbfohl(jetzt);   // v418/v419: falls noch nicht geschehen, zieht die Stute spätestens zur Geburt in die Abfohlbox
     spiel.boxen.forEach((b, i) => {
       const p = b.pferd;
@@ -2953,9 +3043,17 @@
         <br><br>Vater: <b>${esc(f.ahnen.vater.name)}</b> (${rasseById(f.ahnen.vater.rasse).name})<br><br>Zur Gesundheit des Fohlens {bekommst du|bekommen Sie} von uns einen eigenen Brief.`);
         brief("Tierarztpraxis", `Diagnose: ${f.name}`, `leider {müssen wir dir|müssen wir Ihnen} eine schlechte Nachricht mitteilen: Das neugeborene Fohlen <b>${esc(f.name)}</b> (Box ${i + 1}, Mutter <b>${esc(p.name)}</b>) ist fast ganz weiß und hat rosa Haut. Beide Eltern tragen das Overo-Gen – wir befürchten das <b>Lethal-White-Overo-Syndrom</b> (O/O). Solchen Fohlen fehlen Nervenzellen im Darm; die Krankheit ist nicht heilbar. Wir beobachten ${pron(f).ihn} genau.`); return; }
       const nd = nachtdienstGeburt(b, f);
+      // v535 (Dome, Zucht-Studie): Geburtsverluste wie in echt – mit Aufsicht seltener
+      if (Math.random() < GEBURT_TOT[nd.aufsicht || "ohne"]) { delete b.fohlen; f.todesursache = "Geburtskomplikation (tot geboren)"; begraben(f, `Box ${i + 1}`); spiel.friedhof[spiel.friedhof.length - 1].alter = "tot geboren";
+        p.pflege.gesundheit = Math.max(30, Math.round((p.pflege.gesundheit - 15) * 10) / 10); wohlAendern(p, -15, "schwere Geburt");
+        brief("Tierarztpraxis", `${p.name}: Fohlen tot geboren`, `es tut uns sehr leid: <b>${esc(p.name)}</b> (Box ${i + 1}) hat ihr Fohlen <b>${esc(f.name)}</b> nicht lebend zur Welt gebracht – ${nd.aufsicht === "ma" ? "trotz Nachtwache war nichts mehr zu machen (z. B. Fohlen falsch gelegen, Nabelschnur)." : "die Geburt war schwer, und es war niemand rechtzeitig da, um zu helfen. Mit Nachtwache oder in der Abfohlbox wird so etwas öfter bemerkt."} Etwa 3–5 von 100 Fohlen sterben bei oder kurz nach der Geburt.${wiederDeckenText()}`, { pferde: [p] });
+        return; }
+      if (Math.random() < STUTE_GEBURT_TOD * (nd.aufsicht === "ma" ? 0.5 : 1)) { b.tot = true; p.pflege.gesundheit = 0; p.todesursache = "Geburtskomplikation (innere Blutung)";
+        brief("Tierarztpraxis", `Abschied von ${p.name}`, `es tut uns sehr leid: <b>${esc(p.name)}</b> (Box ${i + 1}) hat ihr Fohlen <b>${esc(f.name)}</b> zur Welt gebracht, ist aber kurz danach an einer inneren Blutung gestorben (Riss einer Gebärmutterarterie – das kommt selten vor und ist kaum zu verhindern). Das Fohlen lebt und braucht jetzt Milch.`, { pferde: [p] });
+        return; }
       if (f.erbTod && ["wffs", "nfs"].includes(f.erbTod.k)) { nd.schwach = true; nd.text += `<br><br>⚠️ <b>Mit dem Fohlen stimmt etwas nicht:</b> ${ERBKRANK[f.erbTod.k].text}.`; }
       brief("Tierarztpraxis", `${p.name} hat ein Fohlen bekommen!`, `herzlichen Glückwunsch! <b>${esc(p.name)}</b> (Box ${i + 1}) hat zu Beginn von ${datumLang()} ein ${nd.schwach ? "" : "gesundes "}${f.geschlecht === "Stute" ? "Stutfohlen" : "Hengstfohlen"} zur Welt gebracht: <b>${esc(f.name)}</b>.
-        <br><br>Vater: <b>${esc(f.ahnen.vater.name)}</b> (${rasseById(f.ahnen.vater.rasse).name}) · Farbe: ${farbText(f)} · Rasse: ${rasseById(f.rasse).name}${nd.text}`);
+        <br><br>Vater: <b>${esc(f.ahnen.vater.name)}</b> (${rasseById(f.ahnen.vater.rasse).name}) · Farbe: ${farbText(f)} · Rasse: ${rasseById(f.rasse).name}${nd.text}${fremd(p) ? "" : wiederDeckenText()}`);
     });
   }
   // v419 (Dome): Stute zieht ein paar Tage vor der Geburt in die Abfohlbox (in echt etwa 2–4 Wochen vorher; hier die letzten 30 % der Jahreszeit: 1 / 2 / 3 Tage bei 4 / 7 / 10 Tagen) und danach wieder aus, wenn kein Fohlen mehr bei ihr steht
@@ -3239,8 +3337,13 @@
     let inhalt = "";
     if (aktenReiter === "steckbrief") {
       const zsp = zuchtSperre(p, box), nk = p.nachkommen || 0;
-      const zstatus = p.traechtig ? `🤰 tragend von <b>${esc(p.traechtig.vater.name)}</b> (${rasseById(p.traechtig.vater.rasse).name}) · Fohlen kommt ${jzName(p.traechtig.geburt)}`
-        : zsp === "hat ein Fohlen" ? "säugt ihr Fohlen – decken erst, wenn es ausgezogen ist"
+      const tuK = t => box.lesen || fremd(p) ? "" : `<br><button class="knopf zweit" id="tuKnopf" style="width:auto;padding:6px 12px;margin-top:6px;font-size:.85rem">🩺 ${t} · ${fmt(TU_PREIS)}</button>`;   // v535
+      const G = p.gedeckt;
+      const zstatus = p.traechtig ? `🤰 tragend von <b>${esc(p.traechtig.vater.name)}</b> (${rasseById(p.traechtig.vater.rasse).name}) · Fohlen kommt ${jzName(p.traechtig.geburt)}${p.traechtig.sicher === false ? ` · keine Rosse mehr, noch nicht untersucht${tuK("Trächtigkeitsuntersuchung")}` : ""}`
+        : G ? `💞 gedeckt von <b>${esc(G.vater.name)}</b> (${DECK_ART[G.art] ? DECK_ART[G.art].n : "gedeckt"}) · ${G.tuPos ? `Ultraschall: tragend – sicher ab ${tagIn(G.tag + TRAECHTIG_SICHER)}` : spiel.tag - G.tag < TU_AB ? "ob sie tragend ist, zeigt die Trächtigkeitsuntersuchung ab morgen – oder ob sie in etwa 2 Tagen wieder rosst" : spiel.tag - G.tag < ROSSE_TAGE ? "tragend? Das zeigt die Trächtigkeitsuntersuchung – oder ob sie wieder rosst" : "zeigt keine Rosse mehr – wahrscheinlich tragend"}${G.tuPos ? "" : tuK("Trächtigkeitsuntersuchung")}`
+        : zsp === "gerade abgefohlt" ? "hat gerade abgefohlt – Fohlenrosse ab morgen"
+        : zsp === "noch keine Rosse" ? `nicht tragend – nächste Rosse ${tagIn(p.rosseAb)}`
+        : zsp === "Winterruhe" ? "Winterruhe – Stuten rossen erst wieder im Frühling"
         : zsp === "zu jung" ? "zu jung – Zucht erst ab 3 Jahren"
         : zsp === "zu alt" ? (p.geschlecht === "Stute" ? "zu alt – Stuten werden nur bis 20 Jahre gedeckt" : "zu alt – Hengste decken nur bis 25 Jahre")
         : zsp === "zu schwach" ? "nicht bereit – Gesundheit unter 50 %"
@@ -3284,7 +3387,7 @@
         <button class="knopf zweit" id="deckZurueck" style="width:100%;margin-top:14px">‹ Zurück</button>`;
     } else if (aktenReiter === "genetik") {
       const sperre = zuchtSperre(p, box);
-      const paar = sperre === "Wallach" ? "" : sperre === "Pensionspferd" ? `<p class="text" style="margin:14px 0 0">💞 Pensionspferd – über Zucht entscheidet der Besitzer.</p>` : sperre ? `<p class="text" style="margin:14px 0 0">💞 Verpaaren nicht möglich: ${esc(p.name)} ${sperre === "zu jung" ? "ist zu jung (Zucht ab 3 Jahren)" : sperre === "zu schwach" ? "ist nicht gesund genug (Gesundheit unter 50 %)" : sperre}.</p>`
+      const paar = sperre === "Wallach" ? "" : sperre === "Pensionspferd" ? `<p class="text" style="margin:14px 0 0">💞 Pensionspferd – über Zucht entscheidet der Besitzer.</p>` : sperre ? `<p class="text" style="margin:14px 0 0">💞 Verpaaren nicht möglich: ${esc(p.name)} ${sperre === "zu jung" ? "ist zu jung (Zucht ab 3 Jahren)" : sperre === "zu schwach" ? "ist nicht gesund genug (Gesundheit unter 50 %)" : ({ "gerade gedeckt": "ist gerade gedeckt worden – ob es geklappt hat, zeigt die Trächtigkeitsuntersuchung oder die nächste Rosse", "keine Rosse": "zeigt keine Rosse – sie ist wahrscheinlich tragend", "noch keine Rosse": `ist nicht tragend – die nächste Rosse kommt ${p.rosseAb ? tagIn(p.rosseAb) : "bald"}`, "gerade abgefohlt": "hat gerade abgefohlt – die Fohlenrosse kommt ab morgen", "Winterruhe": "ist in der Winterruhe – Stuten rossen erst wieder im Frühling" })[sperre] || sperre}.</p>`
         : `<button class="knopf" id="paarKnopf" style="width:100%;margin:16px 0 0">💞 Verpaaren mit …</button>`;
       const D = p.deckFremd || {}, deckF = p.geschlecht === "Hengst" && !fremd(p) && alterJZ(p) >= ZUCHTALTER ? `<div class="wn-hinweis" style="margin-top:10px">🐎 <b>Deckhengst für fremde Stuten</b>${vorteil("zucht")
         ? `<br><label class="fp-check"><input type="checkbox" id="deckFremd" ${D.an ? "checked" : ""}> anbieten – Decktaxe ${fmt(decktaxe(p))} (10 % des Marktwerts)</label><small style="display:block">Stutenbesitzer kommen in der Decksaison (Frühling und Sommer), etwa ${String(Math.round(deckFremdErwartet(p) * 10) / 10).replace(".", ",")} ${Math.round(deckFremdErwartet(p) * 10) === 10 ? "Stute" : "Stuten"} je Jahreszeit – mehr mit Turniererfolgen und prämierten Fohlen.${D.n ? ` Bisher ${D.n} fremde ${D.n === 1 ? "Stute" : "Stuten"} gedeckt, ${fmt(D.summe || 0)} Decktaxe.` : ""}${sperre ? ` Gerade nicht möglich: ${esc(sperre)}.` : ""}</small>`
@@ -3708,6 +3811,7 @@
     const va = $("vglAus"); if (va) va.onclick = () => { vergleichId = null; zeigeAkte(); };
     const vk = $("vglKnopf"); if (vk) vk.onclick = () => vergleichWaehlen(p);
     const pk = $("paarKnopf"); if (pk) pk.onclick = () => { deckModus = true; zeigeAkte(); };
+    const tk = $("tuKnopf"); if (tk) tk.onclick = () => traechtigkeitsUntersuchung(p, () => zeigeAkte());   // v535
     const dfk = $("deckFremd"); if (dfk) dfk.onchange = () => { const q = B().pferd; if (!q) return; q.deckFremd = q.deckFremd || {}; q.deckFremd.an = dfk.checked; speichern(); };   // H7 (d)
     const wnu = $("wnUmschalten"); if (wnu) wnu.onclick = () => { const W = p.weideNachm; if (W) { if (W.aus) delete W.aus; else W.aus = true; } speichern(); zeigeAkte(); };
     INFO.querySelectorAll("[data-btage]").forEach(b => b.onclick = () => { p.bereiterTage = Math.max(0, Math.min(tpj(), (p.bereiterTage || 0) + +b.dataset.btage)); if (!p.bereiterTage) delete p.bereiterTage; speichern(); zeigeAkte(); });
@@ -4891,15 +4995,15 @@
       anz: ["geht nicht ganz taktrein", "lahmt leicht", "schont ein Bein"], schwer: "belastet ein Bein kaum noch" },
     kolik: { n: "Kolik", ico: "🌀", bereich: "futter", gew: .05, start: [1, 2], selbst: .30, schlimmer: .45, g: 4, tod: 1, kosten: 120, heil: 1, op: 4,
       anz: ["scharrt und schaut sich zum Bauch um", "frisst nicht richtig", "legt sich auffällig oft hin"], schwer: "wälzt sich und schwitzt stark" },
-    husten: { n: "Husten", ico: "😮‍💨", bereich: "klima", gew: .15, start: [1, 2], selbst: .15, schlimmer: .10, g: 1, kosten: 70, heil: 3,
+    husten: { n: "Husten", ico: "😮‍💨", bereich: "klima", gew: .06, start: [1, 2], selbst: .15, schlimmer: .10, g: 1, kosten: 70, heil: 3,
       anz: ["hustet beim Fressen", "hustet ab und zu"], schwer: "hustet stark und atmet schwer" },
-    erkaeltung: { n: "Erkältung", ico: "🤧", bereich: "klima", gew: .15, start: [1, 2], selbst: .20, schlimmer: .10, g: 1.3, kosten: 60, heil: 2,
+    erkaeltung: { n: "Erkältung", ico: "🤧", bereich: "klima", gew: .06, start: [1, 2], selbst: .20, schlimmer: .10, g: 1.3, kosten: 60, heil: 2,
       anz: ["hat etwas Nasenausfluss", "wirkt matt und müde"], schwer: "hat hohes Fieber und frisst kaum" },
     hufrehe: { n: "Hufrehe", ico: "⚠️", bereich: "huf", gew: .04, start: [2, 3], selbst: 0, schlimmer: .30, g: 3, tod: 3, kosten: 200, heil: 6,
       anz: ["steht wie auf Eiern", "will sich kaum bewegen", "verlagert das Gewicht nach hinten"], schwer: "liegt viel und steht nur unter Schmerzen auf" },
     mauke: { n: "Mauke", ico: "🟤", bereich: "haut", gew: .08, start: [1, 1], selbst: .10, schlimmer: .10, g: .8, kosten: 50, heil: 3,
       anz: ["hat Krusten in der Fesselbeuge", "knabbert an den Fesseln"], schwer: "die Fesseln sind geschwollen und nässen" },
-    druse: { n: "Druse", ico: "🦠", bereich: "klima", gew: .02, start: [2, 2], selbst: 0, schlimmer: .25, g: 3, tod: 3, kosten: 250, heil: 3,
+    druse: { n: "Druse", ico: "🦠", bereich: "klima", gew: .001, start: [2, 2], selbst: 0, schlimmer: .25, g: 3, tod: 3, kosten: 250, heil: 3,
       anz: ["hat dicke Knubbel am Kehlgang", "hat Fieber und Nasenausfluss"], schwer: "bekommt kaum Luft – die Lymphknoten sind riesig" },
     arthrose: { n: "Arthrose", ico: "🦴", bereich: "huf", chronisch: true, gew: .04, start: [1, 2], selbst: 0, schlimmer: .04, g: .6, kosten: 150,
       anz: ["läuft sich morgens steif ein", "ist nach dem Aufstehen steif"], schwer: "geht deutlich steif und klamm" },
@@ -4916,6 +5020,7 @@
   const GRAD_TEXT = ["", "leicht", "mittel", "deutlich", "schwer", "lebensbedrohlich"];
   const BEFUND_RISIKO = 0.04;            // Grundrisiko pro Nacht (× Anteil) – bei guter Haltung etwa 1–2 Befunde pro Spieljahr
   const TIERARZT_BESUCH = 80, KOLIK_OP = 3000, KOLIK_OP_TAGE = 3;
+  const KOLIK_OP_TOD = 0.25;   // v535 (Dome): etwa 1 von 5 Pferden stirbt trotz Kolik-OP (in echt überleben 75–90 % die ersten Wochen)
   const befundBremse = p => { const l = aktiveBefunde(p).filter(b => b.diagnose || b.bemerkt); return Math.max(0.2, 1 - l.reduce((a, b) => a + b.grad * 0.12, 0)); };   // für Training (Etappe 4)
   // alte Speicherstände: ein einzelner Befund (Streit) → Liste
   function befundListe(p) {
@@ -4987,8 +5092,8 @@
     erkaeltung: () => "Wetterwechsel", hufrehe: (p, ort) => ort === "weide" ? "junges Frühlingsgras" : "Stoffwechsel", mauke: () => "Nässe und Schmutz an den Beinen",
     druse: () => "Ansteckung", arthrose: () => "Alter", sommerekzem: () => "Mückenstiche (Veranlagung)", cushing: () => "Alter (Hormone)" };
   // jede Nacht: neue Befunde, Verlauf ohne Behandlung, Wirkung auf Gesundheit und Wohlbefinden, Tod nach Warnung
-  const TOD_TROTZ = { kolik: 0.35, hyperlipaemie: 0.5, fraktur: 0.5, hufrehe: 0.15, herpes: 0.2, druse: 0.05, mh: 0.3 };   // v532: Sterberisiko je schwerem Fall (Grad 4–5) trotz Behandlung – von Claude nach üblichen Tierarzt-Zahlen gesetzt
-  const KOLIK_SCHWER = 0.1;   // v532: 10 % der Koliken sind von Anfang an schwer (z. B. Darmverschlingung) – OP nötig
+  const TOD_TROTZ = { kolik: 0.7, hyperlipaemie: 0.5, fraktur: 0.5, hufrehe: 0.5, herpes: 0.2, druse: 0.05, mh: 0.3 };   // v532: Sterberisiko je schwerem Fall (Grad 4–5) trotz Behandlung · v535 (Dome, Studie): Kolik 0,35 → 0,7 (schwere Kolik ohne OP), Hufrehe 0,15 → 0,5 (Hufbeinrotation) – zählt jetzt auch, wenn es nach dem schweren Tag schon etwas besser ist
+  const KOLIK_SCHWER = 0.2;   // v532: Koliken, die von Anfang an schwer sind (z. B. Darmverschlingung) – OP nötig · v535 (Dome, Studie): 20 % statt 10 % – sonst starben zu wenige Pferde an Kolik (echt ~0,7 je 100 Pferdejahre)
   const HEIL_TEMPO = { 4: 0.35, 7: 0.55, 10: 1 };   // Anteil der Heildauer bei 4 / 7 / 10 Tagen je Jahreszeit
   // Rückmeldung zur Behandlung von gestern (Dome): schlägt an, hilft wenig, hilft nicht, schadet
   function rueckText(b) {
@@ -5038,7 +5143,7 @@
         // Dome (v260): krank und kerngesund zugleich geht nicht – Obergrenze der Gesundheit je nach Grad (chronisch milder)
         const decke = 100 - (K.chronisch ? 6 : 12) * b.grad; if (p.pflege.gesundheit > decke) p.pflege.gesundheit = decke;
         // v532 (Dome): manche schweren Fälle sterben auch mit Behandlung – das ist keine Vernachlässigung (kein Tierschutz)
-        if (TOD_TROTZ[b.art] && b.grad >= 4 && !b.todWurf && (BW.wert >= 0.3 || b.tierarzt)) { b.todWurf = true;
+        if (TOD_TROTZ[b.art] && (b.gradMax || b.grad) >= 4 && !b.todWurf && (BW.wert >= 0.3 || b.tierarzt)) { b.todWurf = true;   // v535: auch wenn es nach dem schweren Tag schon etwas besser ist
           if (Math.random() < TOD_TROTZ[b.art]) { box.tot = true; p.pflege.gesundheit = 0; p.todesursache = `${K.n} (trotz Behandlung)`;
             brief("Tierarztpraxis", `Abschied von ${p.name}`, `es tut uns sehr leid: <b>${esc(p.name)}</b> (Box ${i + 1}) ist heute Nacht gestorben.<br><br><b>Todesursache:</b> ${K.n}. Wir haben alles versucht – {du hast|Sie haben} alles richtig gemacht, aber manchmal ist ein Fall zu schwer.`, { pferde: [p] }); return; } }
         // Tod: nur nach mindestens einer deutlichen Warnung
@@ -5570,7 +5675,7 @@
   const ANSTECKEND = {
     influenza: { weide: .20, luft: .12, traeger: .05 },
     herpes: { weide: .12, luft: .06, kontakt: .10, traeger: .04 },
-    druse: { weide: .20, kontakt: .12, traenke: .03, traeger: .06 },
+    druse: { weide: .07, kontakt: .06, traenke: .02, traeger: .03 },   // v535 (Dome, Studie): Druse war mit 38 je 100 Pferdejahren der häufigste Befund – in echt einzelne Ausbrüche
     hautpilz: { weide: .05, kontakt: .08, putzzeug: .25, traeger: .03 },
     wuermer: { weide: .12, traeger: .04 } };   // Würmer: über die Mistgabel = vom selben versorgt
   Object.assign(HILFT, { influenza: { boxenruhe: .4, hustensaft: .3 }, herpes: { boxenruhe: .5, schmerzmittel: .2 }, hautpilz: { pilzmittel: .6 }, wuermer: { wurmkur: .9 } });
@@ -8475,13 +8580,14 @@
       if (!spiel.admin) buchen(-NACHTZUSCHLAG, `Nachtzuschlag ${maTitel(m)} ${m.name}`);
       m.naechte = (m.naechte || 0) + 1; maLernt(m, "zucht", 1.5); zufrAendern(m, hatEig(m, "nachteule") ? 1 : -5);
       f.pflege.gesundheit = 100; wohlAendern(box.pferd, 5, "Geburt gut betreut");
-      return { text: `<br><br>${maTitel(m)} <b>${esc(m.name)}</b> hatte Nachtdienst und war bei der Geburt dabei (Nachtzuschlag ${fmt(NACHTZUSCHLAG)}).`, schwach: false };
+      return { text: `<br><br>${maTitel(m)} <b>${esc(m.name)}</b> hatte Nachtdienst und war bei der Geburt dabei (Nachtzuschlag ${fmt(NACHTZUSCHLAG)}).`, schwach: false, aufsicht: "ma" };
     }
-    if (box.abfohl && Math.random() >= ABFOHL_SCHWACH) return { text: `<br><br>Die Geburt war in der Abfohlbox – über die Kamera war alles gut zu sehen, Mutter und Fohlen hatten viel Platz.`, schwach: false };
+    const aufsicht = box.abfohl ? "abfohl" : boxenStufe(box) === 3 ? "kamera" : "ohne";   // v535: für Geburtsverluste
+    if (box.abfohl && Math.random() >= ABFOHL_SCHWACH) return { text: `<br><br>Die Geburt war in der Abfohlbox – über die Kamera war alles gut zu sehen, Mutter und Fohlen hatten viel Platz.`, schwach: false, aufsicht };
     if (Math.random() < (box.abfohl ? 1 : boxenStufe(box) === 3 ? KAMERA_SCHWACH : OHNE_SCHWACH)) {   // v356: Boxenkamera in Stufe 3 → 10 %
       f.pflege.gesundheit = 70 + Math.round(Math.random() * 15);
-      return { text: `<br><br>Bei der Geburt war niemand im Stall. Das Fohlen ist etwas schwach (Gesundheit ${f.pflege.gesundheit} %) – gut versorgen, dann erholt es sich.`, schwach: true }; }
-    return { text: "", schwach: false };
+      return { text: `<br><br>Bei der Geburt war niemand im Stall. Das Fohlen ist etwas schwach (Gesundheit ${f.pflege.gesundheit} %) – gut versorgen, dann erholt es sich.`, schwach: true, aufsicht }; }
+    return { text: "", schwach: false, aufsicht };
   }
   // ---------- Schmutz: jede Nacht in der Box etwas dreckiger (Fell schneller als Mähne/Schweif, im Mist noch schneller) ----------
   // p.dreck = { fell: 0–100, maehne: 0–100, seit: Tag, ab dem das Fell verdreckt ist (≥ 50) }
@@ -8510,7 +8616,7 @@
   // Hengstverhalten: Hengst ab 3 Jahren = 1 · später (ab 2 J.) kastrierter Wallach = 0,5 · sonst 0
   const hengstig = p => p.geschlecht === "Hengst" ? (alterJZ(p) >= 12 ? 1 : 0) : p.geschlecht === "Wallach" && (p.kastriertAlterJZ || 0) > 8 ? 0.5 : 0;
   const deckfaehig = p => p.geschlecht === "Hengst" && alterJZ(p) >= 8;
-  const stuteZucht = p => p.geschlecht === "Stute" && alterJZ(p) >= 12 && alterJahre(p) <= ZUCHT_MAX.Stute && !p.traechtig && !p.heimlich;
+  const stuteZucht = p => p.geschlecht === "Stute" && alterJZ(p) >= 12 && alterJahre(p) <= ZUCHT_MAX.Stute && !p.traechtig && !p.heimlich && !p.gedeckt && DECK_SAISON[datum().s] > 0;   // v535: keine Rosse in der Winterruhe
   const sozial = p => { if (!p.werte) return 20; if (p.werte.sozial == null) p.werte.sozial = alterJZ(p) >= 12 ? 40 : 20; return p.werte.sozial; };
   const sozialPlus = (p, x) => { if (!p || !p.werte || alterJZ(p) >= 12) return; p.werte.sozial = Math.min(100, Math.round((sozial(p) + proTag(x)) * 10) / 10); };
   // fester Zufallswert je Paar: wie gut sich zwei Pferde grundsätzlich riechen können (0–12 % Streit-Chance)
@@ -8543,7 +8649,7 @@
       [[a, b], [b, a]].forEach(([H, S]) => {
         if (!deckfaehig(H) || !stuteZucht(S) || groessenSperre(H, S) || spiel.boxen.some(x => x.pferd === S && x.fohlen) || Math.random() >= 0.25) return;   // Dome: gleiche Größenregel wie beim Decken, nicht mit Fohlen bei Fuß   // auch bei Pensionspferden (Dome: kann passieren – Folgen in pensionBedeckt)
         const w = (wohlbefinden(S) + wohlbefinden(H)) / 2;
-        if (Math.random() < 0.4 + 0.55 * w / 100 && !wwLeer(S, H)) S.heimlich = { vater: hengstKopie(H), seit: jzJetzt(), geburt: jzJetzt() + 4 };
+        if (Math.random() < DECK_ART.natur.chance * (0.6 + 0.45 * w / 100) * DECK_SAISON[datum().s] && !wwLeer(S, H)) S.heimlich = { vater: hengstKopie(H), seit: jzJetzt(), geburt: jzJetzt() + 4 };   // v535: wie Natursprung
       });
       if ((deckfaehig(a) && b.geschlecht === "Stute") || (deckfaehig(b) && a.geschlecht === "Stute")) continue;   // Hengst und Stute streiten nicht
       if (Math.random() < streitChance(a, b) * gewoehnung(a, b) * herdeFaktor) {
@@ -8902,6 +9008,7 @@
     hufNacht();       // Eisen verlieren
     ansteckungNacht(); // ansteckende Krankheiten verbreiten sich
     waiseNacht();     // Waisenfohlen: Flasche oder Hunger
+    deckNacht();      // v535: Rosse oder Trächtigkeit nach dem Decken
     befundeNacht();   // Krankheiten und Verletzungen: neu, Verlauf, Wirkung
     spiel.boxen.forEach(b => { delete b.nachtMist; });   // v365
     externNacht(); rechnungenTag();
@@ -9142,7 +9249,7 @@
     if (art === "klassen") { titel = "🎓 Klassen der Dressur";
       html = `<table class="ver-tab"><tr><th>Klasse</th><th>Lektionen</th></tr>${KLASSEN.map(c => `<tr><td><b>${c.k}</b><br><small>${c.name}</small></td><td>${c.lekt}<br><small>Bewertet: ${c.fokus}</small></td></tr>`).join("")}</table>`; }
     if (art === "geschlecht") { titel = `📖 ${p.geschlecht}`;
-      html = `<p>${({ Stute: "Weibliches Pferd. Stuten können ab 3 Jahren gedeckt werden – bis zum Alter von 20 Jahren. Die Tragzeit dauert 4 Jahreszeiten (in echt etwa 11 Monate).", Hengst: "Männliches, nicht kastriertes Pferd. Hengste können ab 3 Jahren decken – bis zum Alter von 25 Jahren.", Wallach: "Kastriertes männliches Pferd. Wallache sind meist ruhiger und können nicht zur Zucht eingesetzt werden." })[p.geschlecht]}</p>`; }
+      html = `<p>${({ Stute: "Weibliches Pferd. Stuten können ab 3 Jahren gedeckt werden – bis zum Alter von 20 Jahren, in der Decksaison (Frühling und Sommer; im Herbst rossen nur noch einzelne, im Winter keine). Ob das Decken geklappt hat, zeigt eine Trächtigkeitsuntersuchung oder ob sie wieder rosst. Die Tragzeit dauert 4 Jahreszeiten (in echt etwa 11 Monate); kurz nach der Geburt kann sie in der Fohlenrosse wieder gedeckt werden.", Hengst: "Männliches, nicht kastriertes Pferd. Hengste können ab 3 Jahren decken – bis zum Alter von 25 Jahren.", Wallach: "Kastriertes männliches Pferd. Wallache sind meist ruhiger und können nicht zur Zucht eingesetzt werden." })[p.geschlecht]}</p>`; }
     if (art === "alter") { const st = altersstufe(p);
       titel = `📖 ${st[1]}`; html = `<p>${st[2].charAt(0).toUpperCase() + st[2].slice(1)}.</p><table class="ver-tab"><tr><th>Altersstufe</th><th>Alter</th></tr>${ALTERSSTUFEN.map(([m, n], i) => { const von = i ? ALTERSSTUFEN[i - 1][0] : 0, txt = x => x < 12 ? `${x} Monate` : x === 12 ? "1 Jahr" : `${x / 12} Jahre`;
         const alter = m === Infinity ? `ab ${txt(von)}n` : von === 0 ? `bis ${txt(m)}` : `${txt(von).replace(/ (Jahre|Jahr|Monate)$/, von < 12 && m >= 12 ? " Monate" : "")} – ${txt(m)}`;
@@ -11819,7 +11926,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     if (P.length >= 2) P.forEach(q => wohlAendern(q, OFFEN.wohl * (jung.length && !tanten.length ? 0.5 : 1), "Offenstall mit Artgenossen"));
     // v336: noch gemischt? Ein geschlechtsreifer Junghengst kann eine Stute decken (wie auf der Weide)
     P.filter(deckfaehig).forEach(H => P.filter(stuteZucht).forEach(S => { if (groessenSperre(H, S) || Math.random() >= 0.25 * 0.3) return;
-      if (Math.random() < 0.4 + 0.55 * (wohlbefinden(S) + wohlbefinden(H)) / 200 && !wwLeer(S, H)) S.heimlich = { vater: hengstKopie(H), seit: jzJetzt(), geburt: jzJetzt() + 4 }; }));
+      if (Math.random() < DECK_ART.natur.chance * (0.6 + 0.45 * (wohlbefinden(S) + wohlbefinden(H)) / 200) * DECK_SAISON[datum().s] && !wwLeer(S, H)) S.heimlich = { vater: hengstKopie(H), seit: jzJetzt(), geburt: jzJetzt() + 4 }; }));
   }
   // zu Beginn jeder Jahreszeit: wer nicht mehr in den Offenstall gehört (3 Jahre alt), zieht in eine freie Box – sonst Hinweis
   function offenstallJahreszeit() {
@@ -12166,7 +12273,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <h3>⚠️ Inzucht</h3>
       <p>Geprüft werden Eltern, Großeltern und Urgroßeltern: taucht dieselbe Lebensnummer mehrfach auf oder ist ein Pferd Vorfahre des anderen, gibt es eine Warnung. Folgen für das Fohlen kommen später.</p>
       <h3>🐣 Fohlen</h3>
-      <p>Tragzeit 4 Jahreszeiten (ca. 11 Monate), Geburt zu Beginn einer Jahreszeit. Geschlecht 50/50. Jedes Fohlen hat eine Stehmähne und keinen Schopf. Zucht ab 3 Jahren und ab 50 % Gesundheit, Größenunterschied höchstens 25 cm. Abzeichen, Kopfform und Kopfgröße bekommen später einen eigenen dominant-rezessiven Erbgang.</p>
+      <p>Tragzeit 4 Jahreszeiten (ca. 11 Monate), Geburt zu Beginn einer Jahreszeit (Decken, Rosse und Verluste: siehe „Zucht wie in echt (v535)“). Geschlecht 50/50. Jedes Fohlen hat eine Stehmähne und keinen Schopf. Zucht ab 3 Jahren und ab 50 % Gesundheit, Größenunterschied höchstens 25 cm. Abzeichen, Kopfform und Kopfgröße bekommen später einen eigenen dominant-rezessiven Erbgang.</p>
     </div>`;
   }
   // Dome (v278): Berechnungen zum Nachschlagen nach Themen gruppiert und sortiert, zum Aufklappen, mit Suche
@@ -12399,7 +12506,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Weide</b> (Ort → Weide, antippen = hin und zurück): Box bleibt frei und leer, kein Füttern und Misten nötig (Stallbursche lässt die Box aus, der Pferdepfleger putzt weiter). Gesundheit pro Tag: Frühling +10, Sommer +12, Herbst +7, Winter +5 (Box +8); bei 30 % oder weniger keine Erholung. Fohlen bei Fuß kommt mit. Schmutz wie in der Box (ohne Mist-Zuschlag).</p>
       <p><b>Schmutz:</b> Jede Nacht in der Box wird das Fell um 9–15 Punkte schmutziger (in einer nicht gemisteten Box +5 extra), Mähne und Schweif um 5–9 (+2). Stufen Fell: unter 20 sauber · ab 20 staubig · ab 50 schmutzig · ab 80 sehr dreckig; Mähne/Schweif: gekämmt · ab 20 zerzaust · ab 50 verfilzt. Man sieht es im Bild (Flecken, dreckige Beine, Stroh im Schweif). Putzen in der Putzkiste: Bürste macht das Fell sauber, Kamm Mähne und Schweif. Der Pferdepfleger putzt seine Boxen jeden Morgen; nach Klinik, Aufzucht oder Ausbildung kommt das Pferd geputzt zurück. Folgen: bis zu 15 % weniger Marktwert (Wert = max(Fell, 0,7 × Mähne)); ist das Fell länger als eine Jahreszeit ununterbrochen schmutzig (ab 50), verliert das Pferd zusätzlich 3 % Gesundheit pro Tag.</p>
       <p><b>Gesundheit pro Tag:</b> Gut versorgt +8 % pro Tag, hungrig −19, Box nicht gemistet −9,5. Unter 40 % kommt ein Brief vom Tierarzt, bei 30 % oder weniger erholt sich ein Pferd nur noch in der Klinik (+16 %/Tag, ${fmt(KOSTEN.klinik)}/Tag) und wird mit 75 % entlassen. Die Klinikkosten kommen als Rechnung (siehe „Rechnungen“). Ausnahme: Senioren mit altersbedingter Höchstgesundheit von 40 % oder weniger.</p>
-      <p><b>Senioren:</b> Senioren ab 20 Jahren: höchstens 75 %, sinkt bis 35 Jahre auf 1 %. Sterbewahrscheinlichkeit je Jahreszeit steigt ab 20 Jahren und erreicht mit 35 Jahren 100 %.</p>
+      <p><b>Senioren (v535):</b> höchste Gesundheit ab 20 Jahren 100 % − 4,5 % je Jahr (25 J. 77,5 %, 30 J. 55 %, 35 J. 32,5 %, 40 J. 10 %). Sterbechance an Altersschwäche je Jahr: ${[22, 25, 28, 30, 33, 35, 38].map(j => `${j} J. ${Math.round(sterbeChanceJahr(j) * 100)} %`).join(" · ")}, ab ${ALTER_TOD.max} J. sicher (wie in echt werden viele Pferde 30).</p>
       <h3>👂 Kopf und Ohren (Köpfe-Etappe 1)</h3>
       <p><b>Ohrstellung:</b> vorne, zur Seite, nach hinten, angelegt – linkes und rechtes Ohr unabhängig, je Tag fest gewürfelt (<code>ohrenVon</code>). Gewichte je Ohr: vorne 0,6 + 1,6 × Vertrauen (0–1) + 1,2 × neugierig (bei Gesundheit unter 65 % × 0,4) · seitlich 0,8 + 1,2 × gelassen + 0,6 × verträumt + 1,2 bei Gesundheit unter 65 % · hinten 0,15 + 1,2 × scheu + 1,2 × nervös + bis 1,2 bei Vertrauen unter 40. Beispiel: durchschnittliches Pferd mit Vertrauen 40 → vorne etwa 56 %, seitlich 37 %, hinten 7 %. Angelegt (beide Ohren) nur im Extremfall: Befund ab Grad 4 (starker Schmerz) oder gerade eine starke Abneigung erlebt (Vorliebe ≤ −0,7; ca. 20 Sekunden).</p>
       <p><b>Ohren in der Herde</b> (Weide, Sandpaddock, Offenstall – nur wenn die Pferde zusammen im Bild sind, <code>paarBeziehung</code>): gerade gestritten (in der letzten Nacht) → beide Ohren angelegt, bis zum nächsten Tag · mögen sich nicht (3× gestritten oder feste Paar-„Chemie“ ab ${OHR_FEIND_GRUND} von 12) → beide Ohren hinten · Freunde (länger als 1 Jahreszeit zusammen, nie gestritten, Chemie unter ${OHR_FREUND_GRUND}) → Ohren öfter vorne (vorne +1,5, hinten × 0,3).</p>
@@ -12444,6 +12551,8 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Untersuchung wie AKU</b> (v265, Box – ppf – Versorgung, eigene Pferde): gleiche Stufen und Preise wie die AKU; findet unbemerkte Befunde nach Bereich (Haut/Kolik immer, Atemwege mit Lunge, Hufe/Lahmheit mit Gangbild, Arthrose mit Beugeproben, PSSM/Ataxie/HYPP mit Longe, Würmer/Vergiftung/Magen mit kleinem Blutbild, Cushing/Influenza/Herpes mit großem Blutbild, OCD mit Röntgen) und nennt bei der großen die Röntgenklasse.</p><p><b>Vorsorge und Labor:</b> Impfung ${fmt(VORSORGE.impfung)}, Zahnbehandlung ${fmt(VORSORGE.zahn)} (über 1 Jahr überfällig: Kolik ×1,5), Wurmkur aus der Stallapotheke im Frühjahr und Herbst (Dome, v242; Knopf nur dann; überfällig über 2½ Jahreszeiten: Würmer ×3), kleines Blutbild ${fmt(VORSORGE.blutKlein)} (Entzündung ja/nein), großes ${fmt(VORSORGE.blutGross)} (konkrete Krankheit, auch in der Inkubation) – Ergebnis nach 2 Tagen per Brief. Eigenes Putzzeug ${fmt(VORSORGE.putzzeug)} (Putzkiste). Ein Quarantänestall (kein Risiko) kommt mit dem Hof-Ausbau.</p>
       <p><b>Behandlung (Etappe D)</b> unter Pflege → Versorgung, jede Aktion einmal am Tag: ${Object.values(AKTION).map(A => `${A.ico} ${A.n}`).join(", ")}, Medikament mit Dosis. Wirkung in der Nacht danach: Behandlungswert = Summe der passenden Anteile (höchstens 1) × (0,5 + 0,5 × Mitwirkung). Besserung pro Nacht: Wert ÷ (Heilungszahl × 0,5) ÷ (1,3 − Regeneration ÷ 100 × 0,6), höchstens 80 % (chronisch nur bis Grad 1); Verschlechterung × (1 − Wert) + Schaden; Wirkung auf Gesundheit/Wohlbefinden × (1 − 0,6 × Wert). Heilt ein Befund unter Behandlung, gilt die Ursache als geklärt (Erfahrung). Tod und Warnbrief nur bei Wert unter 0,3.</p>
       <p><b>Folgen vernachlässigter Pflege und Nachbesserung (v533, Dome):</b> Zahnkontrolle heißt jetzt „Zahnbehandlung“. <i>Ungekämmte Mähne/Schweif</i> (Schmutz Mähne ≥ 60 %): nur Wohlbefinden −0,5 je Nacht – sie macht <b>nicht krank</b> (v534: Hautpilz, Mauke, Husten und Ekzem hängen nur noch am Schmutz im <i>Fell</i>, nicht an der Mähne). <i>Hufe nicht ausgekratzt</i> (gestern nicht): Strahlfäule ×3,3 (wie bisher), Hufabszess ×1,5, Lahmheit ×1,2. <i>Turniere</i> nur mit gültiger Influenza-Impfung (wie bei der FN, Nennung gesperrt). <i>Boxenruhe</i> endet von selbst, sobald keine Krankheit mehr da ist, für die sie nötig ist (im Plan oder mit Hilfswert). <i>Weide-Verletzungen</i>: Toben 0,3 (vorher 0,75), Box 0,3 × Boxzustand, Verletzung beim Streit 7 % (mit Stuten 15 %, vorher 20/35 %) – Ergebnis etwa 40 Verletzungen je 100 Pferdejahre (Studie vorher 120). Was bei Weglassen passiert: Impfung → Influenza/Herpes ×3 (Ansteckung ×3,3), Zähne → Kolik/Schlund ×1,5, Wurmkur → Wurmbefall ×3, Hufschmied → bis ×4 Lahmheit/Abszess/Hornspalt, Bürsten → Hautpilz ×2, Mauke ×1,5, Husten ×1,2, −3 % Gesundheit/Tag nach 1 Jahreszeit Schmutz.</p>
+      <p><b>Zucht wie in echt (v535, Dome, nach der Zucht-Studie):</b> Decken per <b>Natursprung</b> (Chance je Rosse ${pc535(DECK_ART.natur.chance)}, Deckstation +${fmt(DECK_ART.natur.transport)} Transport, ${pc535(DECK_ART.natur.verletzung)} Deckverletzung) oder <b>Besamung</b> (Versandsamen ${pc535(DECK_ART.besamung.chance)}, Frischsamen eigener Hengst ${pc535(DECK_FRISCH)}, Tierarzt ${fmt(DECK_ART.besamung.tierarzt)}); Galopper (Vollblut × Vollblut) nur Natursprung. Chance × (0,6 + 0,45 × Wohlbefinden) – beim eigenen Hengst Mittel beider –, × Alter der Stute (ab 15 J. −4 % je Jahr, mind. ×0,55), × Fohlenrosse ${String(FOHLENROSSE).replace(".", ",")}, × Jahreszeit ${DECK_SAISON.map(x => String(x).replace(".", ",")).join(" / ")} (Frühling/Sommer/Herbst/Winter), höchstens 90 %. Nach dem Decken ist die Stute „gedeckt“ (<code>p.gedeckt</code>): <b>Trächtigkeitsuntersuchung</b> ${fmt(TU_PREIS)} ab ${TU_AB} Tag danach (leer → Tierarzt leitet die Rosse ein, ab morgen wieder deckbar), ohne Untersuchung rosst sie nach ${ROSSE_TAGE} Tagen wieder (Brief), sonst gilt sie nach ${TRAECHTIG_SICHER} Tagen als tragend. Früher Embryoverlust ${pc535(EMBRYO_VERLUST)} (+1 % je Jahr ab 15 J.), verfohlen ${pc535(VERFOHLEN_JZ)} je Jahreszeit der Trächtigkeit, Fohlen tot geboren: Nachtdienst ${pc535(GEBURT_TOT.ma)} · Abfohlbox ${pc535(GEBURT_TOT.abfohl)} · Boxenkamera ${pc535(GEBURT_TOT.kamera)} · ohne Aufsicht ${pc535(GEBURT_TOT.ohne)}, Stute stirbt bei der Geburt ${pc535(STUTE_GEBURT_TOD)} (mit Nachtdienst halb so oft). Fohlenrosse ab dem Tag nach der Geburt – das Fohlen bleibt bei der Mutter (Hinweis im Geburts-Brief). Ungeplante Bedeckung auf der Weide mit derselben Chance wie Natursprung. Leopard × Leopard ist nur ein Hinweis (Lp/Lp: kaum Punkte, nachtblind – nicht tödlich).</p>
+      <p><b>Krankheits-Studie, Nachbesserung (v535, Dome):</b> Druse seltener (Grundrisiko 0,02 → 0,001, Weide 0,20 → 0,07, Kontakt 0,12 → 0,06), Husten und Erkältung 0,15 → 0,06 – Atemwege zusammen jetzt etwa 25 je 100 Pferdejahre (echt 10–30). Tod trotz Behandlung zählt, sobald ein Fall einmal schwer war (Grad ≥ 4): Kolik ${pc535(TOD_TROTZ.kolik)}, Hufrehe ${pc535(TOD_TROTZ.hufrehe)}; schwere Kolik von Anfang an ${pc535(KOLIK_SCHWER)}, Kolik-OP überleben ${pc535(1 - KOLIK_OP_TOD)}. Altersschwäche siehe „Senioren“.</p>
       <p><b>Gesundheits-Studie, Nachbesserung (v532, Dome):</b> Immunität nach überstandener Infektion (<code>IMMUNITAET</code>): Druse 75 % für 5 Jahre, Influenza 90 % für 1 Jahr, Hautpilz 80 % für 1 Jahr (Herpes nicht). Senioren stecken sich leichter an (ab 15 J. ×1,25, ab 20 J. ×1,5; Fohlen normal). Weide: Toben-Verletzungen halb so oft (Faktor 0,75 statt 1,5), Streit in fester Gruppe nach 1 Jahreszeit ×0,25 (vorher ×0,5). Heildauer Druse 3 (vorher 6), Sehnenschaden 24 (vorher 12). Tod trotz Behandlung (<code>TOD_TROTZ</code>, je schwerem Fall ab Grad 4, zählt <i>nicht</i> als Vernachlässigung, kein Tierschutz): Kolik 35 %, Hyperlipämie 50 %, Röhrbeinbruch 50 %, Hufrehe 15 %, Herpes 20 %, Druse 5 %, MH 30 %; 10 % der Koliken sind von Anfang an schwer (<code>KOLIK_SCHWER</code>, Grad 4, OP nötig). Rassen nach Quellen: Kehlkopfpfeifen je Jahreszeit × Veranlagung × ${KEHLKOPF_JZ.toString().replace(".", ",")} (vorher 0,08), Darmstein seltener (Gewicht 0,015, Araber ×1,5 statt ×3), Sarkoid Araber/Anglo-Araber 15 %, Shagya 12 %, PSSM1 Shire 3 %, Clydesdale 0 %.</p>
       <p><b>Bewegung als Behandlung (v526):</b> Schritt führen (Versorgung) oder Spaziergang im Gelände = 🚶 Schritt führen · Longieren/Doppellonge = 🌀 ruhig longieren · Boden-, Frei- und Stangenarbeit = 🤝 Boden- oder Freiarbeit (Ort → Training, auch durch Pfleger/Bereiter). Jede Art zählt 1× am Tag; machst du mehrere Arten am selben Tag, zählt nur die mit dem höchsten Wert (nicht die Summe). Was schadet, schadet aber auch dann. Der Tierarzt schreibt in den Plan, welche Bewegung wie oft hilft (1× täglich, Dauer) und welche bis zur Heilung schadet. Mitarbeiter-Pläne übernehmen nur Behandlungen in der Box, Bewegung läuft über das Training. Werte stehen in der Tabelle (hilft/schadet). Begründung: kontrolliertes Führen gehört zur Heilung von Wunden und Sehnenschäden, bei Arthrose, Spat, Kissing Spines, PSSM, EMS, Shivers und Lymphödem hilft regelmäßige ruhige Bewegung; bei Hufrehe, Bruch, Fieber/Infekten, Herpes, Ataxie und MH ist Anstrengung schädlich; Hufrolle verträgt keine engen Zirkel.</p>
       <p><b>Reaktion, Reiten, Auslauf, Vorrang (v527):</b> Alle anderen Übungen zählen als 🏇 Reiten und schwere Arbeit (schadet z. B. bei Bruch 0,6, Hufrehe 0,5, Sehne/Influenza/Herpes/MH/Ataxie 0,4). 🌳 Auslauf = Weide, Sandpaddock oder Paddockbox (Paddockbox nicht bei Boxenruhe), zählt zusätzlich zur Bewegung (hilft z. B. Arthrose, Spat, EMS, PSSM, Asthma 0,3 · schadet z. B. Bruch 0,4, Hufrehe/Sehne/Ataxie 0,3). Schadet eine Übung, zeigt das Pferd Anzeichen der Krankheit (lahmt, geht klamm, hustet, stolpert …) und das Training wird mit Chance 35 % + 1,2 × Schaden + 8 % je Grad (höchstens 95 %) abgebrochen – Fenster, Ohren nach hinten, halbe Energie, der Schaden zählt trotzdem, ein unbemerkter Befund ist danach bemerkt. Sonst Hinweis „geht nicht ganz frei“ bzw. „wirkt lockerer“. Behandlungen in der Box: Ohren nach vorn, wenn es hilft, nach hinten, wenn es schadet oder das Pferd sich wehrt (Arzneien: Ohren neutral, nur Nebenwirkung → hinten). Wehrt es sich beim Spaziergang, kommt ein Fenster, es zählt nicht als Behandlung. Akute Krankheit hat Vorrang: was ihr schadet, streicht der Tierarzt aus dem Plan (auch wenn es einer chronischen hilft) und schreibt „Zuerst muss … heilen“.</p>

@@ -968,7 +968,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "550";
+  const SPIEL_VERSION = "551";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -976,10 +976,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=550"></script>
-<script src="pferd.js?v=550"></script>
-<script src="boxstufen.js?v=550"></script>
-<script src="kopfneu.js?v=550"></script>
+<script src="lz-string.min.js?v=551"></script>
+<script src="pferd.js?v=551"></script>
+<script src="boxstufen.js?v=551"></script>
+<script src="kopfneu.js?v=551"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -6969,21 +6969,24 @@
   }
   const LEISTUNG = [[82, "Spitze"], [72, "sehr gut"], [60, "gut"], [45, "ordentlich"], [30, "mäßig"], [0, "schwach"]];
   const leistungWort = w => LEISTUNG.find(([ab]) => w >= ab)[1];
-  const turnierKlasse = P => { try { return P.stufe == null || P.stufe < 0 ? "ohne Klasse" : String(stufeText(DISZ[P.disz], P.stufe)).replace(/^Klasse /, ""); } catch (e) { return "ohne Klasse"; } };
-  const protKlasse = (was, p, t, P) => { prot(`Turnier ${(DISZ[P.disz] || {}).n || P.disz} ${turnierKlasse(P)}: ${was}`, { p, o: t.name }); if (was === "Start") chronikKlasse(P.disz, P.stufe); };   // B2
+  const diszName = d => (DISZ[d] || {}).n || ({ gelassenheit: "Gelassenheit" })[d] || d;
+  const turnierKlasse = P => { try { const D = DISZ[P.disz], eigen = P.pruef || P.name;   // Klassen E–S / Einsteiger–Open gibt es nur bei Englisch und Western – Rennen, Tölt, Pass, Distanz: der Prüfungsname (Ausgleich II, Tölt B, Distanzritt 60 km …)
+      if (D && (D.stufen === "englisch" || D.stufen === "western") && P.stufe != null && P.stufe >= 0) return String(stufeText(D, P.stufe)).replace(/^Klasse /, ""); return eigen || "ohne Klasse"; } catch (e) { return "ohne Klasse"; } };
+  const protKlasse = (was, p, t, P) => { prot(`Turnier ${bilanzName(P.disz, turnierKlasse(P))}: ${was}`, { p, o: t.name }); if (was === "Start") chronikKlasse(P.disz, P.stufe); };   // B2
   // B2 Teil 2 (Dome): Lebensbilanz je Pferd – p.bilanz["<disz>|<Klasse>"] = [Starts, 1., 2., 3. Platz]; wird nie gekürzt (p.erfolge behält nur die letzten 60 Einträge).
   // Bestehende Pferde: wird beim ersten Zugriff aus den vorhandenen Erfolgen aufgebaut (immer VOR dem Einfügen des neuen Eintrags zählen!).
+  const bilanzName = (d, kl) => kl.toLowerCase().startsWith(diszName(d).toLowerCase()) ? kl : `${diszName(d)} ${kl}`;   // „Tölt B“, „Dressur L“, „Distanzritt 60 km“, „Galopprennen Ausgleich II (Vollblut)“
   const bilanzSchluessel = e => `${e.disz}|${turnierKlasse(e)}`;
   function bilanzEintragen(B, e, platz) { const k = bilanzSchluessel(e), z = (B[k] = B[k] || [0, 0, 0, 0]); z[0]++; if (platz >= 1 && platz <= 3) z[platz]++; }
   function bilanzHolen(p) {
-    if (p.bilanz) return p.bilanz;
-    const B = (p.bilanz = {}); (p.erfolge || []).forEach(e => { if (e.disz && !e.fohlenschau) bilanzEintragen(B, e, e.aus ? null : e.platz); });
+    if (p.bilanz && p.bilanzV === 2) return p.bilanz;   // v551: Klassen-Schlüssel korrigiert (v550 hatte bei Rennen/Tölt/Distanz englische Buchstaben) → alte Bilanz neu aus den Erfolgen aufbauen
+    p.bilanzV = 2; const B = (p.bilanz = {}); (p.erfolge || []).forEach(e => { if (e.disz && !e.fohlenschau) bilanzEintragen(B, e, e.aus ? null : e.platz); });
     return B;
   }
   const bilanzZaehlen = (p, P, platz) => { try { bilanzEintragen(bilanzHolen(p), P, platz); } catch (e) { console.error("Bilanz:", e); } };
   function bilanzHTML(p) {
     const B = p.erfolge && p.erfolge.length ? bilanzHolen(p) : p.bilanz || {}, K = Object.keys(B).sort((a, b) => B[b][0] - B[a][0]); if (!K.length) return "";
-    const sum = K.reduce((a, k) => a.map((x, i) => x + B[k][i]), [0, 0, 0, 0]), name = k => { const [d, kl] = k.split("|"); return `${esc((DISZ[d] || {}).n || d)} ${esc(kl)}`; };
+    const sum = K.reduce((a, k) => a.map((x, i) => x + B[k][i]), [0, 0, 0, 0]), name = k => { const [d, kl] = k.split("|"); return esc(bilanzName(d, kl)); };
     return `<details class="disz"><summary><span class="disz-kopf"><b>📊 Bilanz insgesamt</b><span>${sum[0]} Starts</span></span></summary>${verTab(["Disziplin · Klasse", "Starts", "🥇", "🥈", "🥉"], [...K.map(k => [name(k), ...B[k]]), ["<b>Zusammen</b>", ...sum.map(x => `<b>${x}</b>`)]])}<p class="text"><small>Zählt alle Turnierstarts des Pferdes, auch die, die in der Liste oben nicht mehr stehen (dort bleiben die letzten 60).</small></p></details>`;
   }
   const stufeText = (D, s) => s == null ? null : s < 0 ? "noch keine Klasse" : D.stufen === "western" ? STUFEN.western[s] : `Klasse ${STUFEN.englisch[s]}`;

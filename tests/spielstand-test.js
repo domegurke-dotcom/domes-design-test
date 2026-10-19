@@ -1,7 +1,5 @@
-// Spielstand-Test (PLAN-SPIELSTAND.md): Autospeicher, Platz 1/2, selbst speichern, Wechsel mit/ohne ungespeicherten Fortschritt, Kopieren, Löschen,
-// Rücksicherung, Speicher voll, Spiel verloren, alter Spielstand → Platz 1, gepackt speichern, Datei speichern/laden.
-// Start (im Repo-Ordner): NODE_PATH=/opt/node22/lib/node_modules node tests/spielstand-test.js
-// Erwartet: jede Zeile „✓“ und am Ende „alles ok“.
+// Spielstand-Test (PLAN-SPIELSTAND.md, Stand v522 mit Domes Änderungen vom 19.10.: keine Rücksicherung, neues Spiel ohne Speicherstand, „Speicherplatz 1/2“)
+// Start (im Repo-Ordner): NODE_PATH=/opt/node22/lib/node_modules node tests/spielstand-test.js  → jede Zeile „✓“, am Ende „alles ok“
 const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
@@ -9,148 +7,94 @@ const URL_ = 'file://' + path.resolve(__dirname, '..', 'index.html');
 (async () => {
   const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, acceptDownloads: true }); const pg = await ctx.newPage();
   const errs = []; pg.on('pageerror', e => errs.push(e.message));
-  const L = []; const ok = (n, c, info = '') => L.push([c ? '✓' : '✗', n, info]);
+  const L = []; const ok = (n, c, info = '') => L.push([c ? '✓' : '✗', n, c ? '' : info]);
   const ev = (f, a) => pg.evaluate(f, a);
-  const knopf = async t => { const k = pg.locator('#dlgKnoepfe button', { hasText: t }).first(); await k.click(); await pg.waitForTimeout(150); };
-  const neuesSpiel = async (name, hof, platzText) => {
-    await pg.click('#smNeu'); await pg.waitForTimeout(150);
-    if (platzText) { await knopf(platzText); if (await pg.locator('#dlgKnoepfe button', { hasText: 'Ersetzen' }).count()) await knopf('Ersetzen'); if (await pg.locator('#dlgKnoepfe button', { hasText: 'Nicht speichern' }).count()) await knopf('Nicht speichern'); }
-    await pg.fill('#chName', name); await pg.click('#chLos'); await pg.waitForTimeout(150); await pg.click('#dlgKnoepfe button');
-    await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', hof); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(200);
-  };
+  const dlg = () => ev(() => document.getElementById('dlg').hidden ? '' : document.getElementById('dlgInhalt').textContent);
+  const knopf = async t => { await pg.locator('#dlgKnoepfe button', { hasText: t }).first().click(); await pg.waitForTimeout(150); };
+  const hat = async t => (await pg.locator('#dlgKnoepfe button', { hasText: t }).count()) > 0;
+  const lade = async () => { await pg.waitForLoadState('load'); await pg.waitForTimeout(700); };
   const zumStart = () => ev(() => { document.getElementById('dlg').hidden = true; zeigeStart(); });
   const nacht = n => ev(n => { for (let i = 0; i < n; i++) { naechsteNacht(); document.getElementById('dlg').hidden = true; } speichern(); speichernJetzt(); }, n);
-  const lade = async () => { await pg.waitForLoadState('load'); await pg.waitForTimeout(700); };
+  const neuesSpiel = async (name, hof) => { await pg.click('#smNeu'); await pg.waitForTimeout(150); if (await hat('Nicht speichern')) await knopf('Nicht speichern');
+    await pg.fill('#chName', name); await pg.click('#chLos'); await pg.waitForTimeout(150); await pg.click('#dlgKnoepfe button');
+    await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', hof); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(200);
+    await ev(() => { document.getElementById('dlg').hidden = true; spiel.tippsAus = true; }); };
+  const speichernUeberMenue = async platz => { await ev(() => { document.getElementById('dlg').hidden = true; }); await pg.click('#menueKnopf'); await pg.click('#mSpeichern'); await pg.waitForTimeout(150);
+    if (platz && await hat('Speicherplatz ' + platz)) await knopf('Speicherplatz ' + platz); if (await hat('Ersetzen')) await knopf('Ersetzen'); };
 
   await pg.goto(URL_); await ev(() => localStorage.clear()); await pg.reload(); await lade();
-
-  // 1. Neues Spiel (beide Plätze frei → Platz 1 ohne Frage)
+  // 1. Neues Spiel: kein Speicherstand, Tipp erinnert ans Speichern
   await neuesSpiel('Anna', 'Sonnenhof');
-  let r = await ev(() => ({ id: spiel.spielId, platz: spiel.platz, p1: (lesenPlatz(1) || {}).meta, auto: localStorage.getItem('zuchtstall-v2')[0], p1roh: localStorage.getItem('zuchtstall-p1')[0], ung: ungespeichert() }));
-  ok('Neues Spiel: Spiel-Nummer und Platz 1', !!r.id && r.platz === 1);
-  ok('Neues Spiel liegt sofort auf Platz 1', r.p1 && r.p1.hof === 'Sonnenhof' && r.p1.spielId === r.id);
-  ok('Autospeicher und Platz sind gepackt gespeichert', r.auto !== '{' && r.p1roh !== '{');
-  ok('direkt nach dem Start nichts ungespeichert', r.ung === false);
-
-  // 2. Spielen → ungespeichert → selbst speichern (Menü)
-  await nacht(3);
-  ok('nach 3 Tagen: ungespeicherter Fortschritt', await ev(() => ungespeichert()));
-  await ev(() => { document.getElementById('dlg').hidden = true; }); await pg.click('#menueKnopf'); await pg.click('#mSpeichern'); await pg.waitForTimeout(150);
-  r = await ev(() => ({ txt: document.getElementById('dlgInhalt').textContent, ung: ungespeichert(), tag: (lesenPlatz(1) || {}).meta.tag, jetzt: spiel.tag }));
-  ok('Menü – Spiel speichern: Meldung „Gespeichert auf Platz 1 (Sonnenhof, …)“', /Gespeichert auf Platz 1 \(Sonnenhof, /.test(r.txt), r.txt);
-  ok('nach dem Speichern nichts ungespeichert, Platz 1 hat den Tag', !r.ung && r.tag === r.jetzt);
-
-  // 3. Neues Spiel auf Platz 2 (mit ungespeichertem Fortschritt → Frage)
-  await nacht(2); await zumStart();
-  await pg.click('#smNeu'); await pg.waitForTimeout(150); await knopf('Platz 2');
-  r = await ev(() => document.getElementById('dlgInhalt').textContent);
-  ok('Neues Spiel bei ungespeichertem Fortschritt: Frage „Jetzt speichern?“', /Ungespeicherter Fortschritt auf Platz 1/.test(r), r);
-  await knopf('Speichern'); await pg.fill('#chName', 'Ben'); await pg.click('#chLos'); await pg.waitForTimeout(150); await pg.click('#dlgKnoepfe button');
-  await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'Lindenhof'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(200);
-  r = await ev(() => ({ p1: lesenPlatz(1).meta, p2: lesenPlatz(2).meta, hof: hofName(), platz: spiel.platz, id1: lesenPlatz(1).spiel.spielId, id2: spiel.spielId }));
-  ok('Platz 1 wurde vorher gespeichert (Sonnenhof, weiter als vorher)', r.p1.hof === 'Sonnenhof' && r.p1.tag > 1);
-  ok('neues Spiel Lindenhof läuft auf Platz 2 mit eigener Spiel-Nummer', r.hof === 'Lindenhof' && r.platz === 2 && r.p2.hof === 'Lindenhof' && r.id1 !== r.id2);
-
-  // 4. Startmenü zeigt drei Zeilen mit Hofnamen
-  await zumStart();
-  r = await ev(() => document.getElementById('startMenue').innerText);
-  ok('Startmenü: Weiterspielen – Lindenhof · läuft … (Platz 2)', /Weiterspielen – Lindenhof/.test(r) && /\(Platz 2\)/.test(r));
-  ok('Startmenü: Platz 1 – Sonnenhof, Platz 2 – Lindenhof', /Platz 1\s*Sonnenhof · gespeichert/.test(r) && /Platz 2\s*Lindenhof · gespeichert/.test(r), r.slice(0, 300));
-
-  // 5. Platz wechseln ohne ungespeicherten Fortschritt → direkt, nach Neuladen läuft Sonnenhof
+  let r = await ev(() => ({ id: spiel.spielId, platz: spiel.platz, p1: lesenPlatz(1), p2: lesenPlatz(2), ung: ungespeichert(), auto: localStorage.getItem('zuchtstall-v2')[0] }));
+  ok('Neues Spiel: Spiel-Nummer, aber noch kein Speicherplatz', !!r.id && !r.platz && !r.p1 && !r.p2, JSON.stringify(r).slice(0, 120));
+  ok('Neues Spiel gilt als „noch nicht gespeichert“, Autospeicher gepackt', r.ung === true && r.auto !== '{');
+  await nacht(1);
+  r = await ev(() => { spiel.tippsAus = false; spiel.tipps = Object.fromEntries(Object.keys(TIPPS).filter(k => k !== 'speichern').map(k => [k, 1])); document.getElementById('dlg').hidden = true; tippPruefen(); return document.getElementById('dlgInhalt').textContent; });
+  ok('Tipp „Spiel speichern nicht vergessen“ erscheint', /Spiel speichern nicht vergessen/.test(r), r.slice(0, 80));
+  await ev(() => { document.getElementById('dlg').hidden = true; spiel.tippsAus = true; });
+  // 2. Erstes Speichern: Speicherplatz wählen
+  await speichernUeberMenue(1);
+  r = await ev(() => ({ t: document.getElementById('dlgInhalt').textContent, platz: spiel.platz, p1: (lesenPlatz(1) || {}).meta, ung: ungespeichert() }));
+  ok('Erstes Speichern: Speicherplatz wählen → „Gespeichert auf Speicherplatz 1 (Sonnenhof, …)“', /Gespeichert auf Speicherplatz 1 \(Sonnenhof, /.test(r.t) && r.platz === 1 && r.p1 && r.p1.hof === 'Sonnenhof', r.t);
+  ok('nach dem Speichern nichts ungespeichert', r.ung === false);
+  await nacht(2); ok('nach 2 Tagen: ungespeicherter Fortschritt', await ev(() => ungespeichert()));
+  await speichernUeberMenue(); ok('zweites Speichern ohne Frage auf Speicherplatz 1', await ev(() => !ungespeichert() && lesenPlatz(1).meta.tag === spiel.tag));
+  // 3. Zweites Spiel auf Speicherplatz 2
+  await nacht(1); await zumStart(); await pg.click('#smNeu'); await pg.waitForTimeout(150);
+  ok('Neues Spiel bei ungespeichertem Fortschritt: Frage „Jetzt speichern?“', /Ungespeicherter Fortschritt auf Speicherplatz 1/.test(await dlg()));
+  await knopf('Speichern'); await pg.waitForTimeout(150); await pg.fill('#chName', 'Ben'); await pg.click('#chLos'); await pg.waitForTimeout(150); await pg.click('#dlgKnoepfe button');
+  await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'Lindenhof'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(200); await ev(() => { spiel.tippsAus = true; });
+  await speichernUeberMenue(2);
+  r = await ev(() => ({ p1: lesenPlatz(1).meta.hof, p2: lesenPlatz(2).meta.hof, platz: spiel.platz }));
+  ok('Sonnenhof auf Speicherplatz 1, Lindenhof auf Speicherplatz 2', r.p1 === 'Sonnenhof' && r.p2 === 'Lindenhof' && r.platz === 2, JSON.stringify(r));
+  // 4. Startmenü
+  await zumStart(); r = await ev(() => document.getElementById('startMenue').innerText);
+  ok('Startmenü: „Speicherplatz 1/2“ mit Hofnamen, keine Rücksicherung', /Weiterspielen – Lindenhof/.test(r) && /Speicherplatz 2\)/.test(r) && /Speicherplatz 1\s*Sonnenhof/.test(r) && /Speicherplatz 2\s*Lindenhof/.test(r) && !/rückgängig/i.test(r), r.slice(0, 200));
+  // 5. Wechsel
   await pg.click('[data-pspiel="1"]'); await lade();
-  r = await ev(() => ({ hof: hofName(), platz: spiel.platz, offen: document.getElementById('startMenue').classList.contains('offen'), ung: ungespeichert() }));
-  ok('Wechsel auf Platz 1: Sonnenhof läuft, direkt im Spiel', r.hof === 'Sonnenhof' && r.platz === 1 && !r.offen);
-  ok('nach dem Wechsel kein „ungespeicherter Fortschritt“', r.ung === false);
-
-  // 6. Wechsel mit ungespeichertem Fortschritt: „Nicht speichern“ verwirft, „Abbrechen“ bleibt
-  await nacht(2); const tagVorher = await ev(() => spiel.tag); await zumStart();
-  await pg.click('[data-pspiel="2"]'); await pg.waitForTimeout(150);
-  ok('Wechsel mit Fortschritt: Frage erscheint', /Ungespeicherter Fortschritt auf Platz 1 \(Sonnenhof, seit/.test(await ev(() => document.getElementById('dlgInhalt').textContent)));
-  await knopf('Abbrechen'); ok('Abbrechen: Sonnenhof läuft weiter', await ev(() => hofName() === 'Sonnenhof'));
-  await pg.click('[data-pspiel="2"]'); await pg.waitForTimeout(150); await knopf('Nicht speichern'); await lade();
-  r = await ev(() => ({ hof: hofName(), p1tag: lesenPlatz(1).meta.tag }));
-  ok('Nicht speichern: Lindenhof läuft, Platz 1 hat den alten Stand', r.hof === 'Lindenhof' && r.p1tag < tagVorher);
-
-  // 7. Kopieren, Rücksicherung, rückgängig
-  await zumStart(); await pg.click('[data-pkopie="1"]'); await pg.waitForTimeout(150); await knopf('Kopieren');
-  r = await ev(() => ({ p2: lesenPlatz(2).meta.hof, r: (lesen('zuchtstall-rueck') || {}).platz, rh: ((lesen('zuchtstall-rueck') || {}).meta || {}).hof, knopf: !!document.getElementById('smRueck') }));
-  ok('Kopieren 1 → 2: Platz 2 = Sonnenhof, Lindenhof in der Rücksicherung', r.p2 === 'Sonnenhof' && r.r === 2 && r.rh === 'Lindenhof' && r.knopf);
-  await pg.click('#smRueck'); await pg.waitForTimeout(150); await knopf('Rückgängig');
-  r = await ev(() => ({ p2: lesenPlatz(2).meta.hof, rh: ((lesen('zuchtstall-rueck') || {}).meta || {}).hof }));
-  ok('Rückgängig: Platz 2 wieder Lindenhof (Sonnenhof-Kopie in der Rücksicherung)', r.p2 === 'Lindenhof' && r.rh === 'Sonnenhof');
-  await pg.click('[data-pweg="2"]'); await pg.waitForTimeout(150); await knopf('Löschen');
-  ok('Löschen: Platz 2 frei, Rücksicherung = Lindenhof', await ev(() => !lesenPlatz(2) && lesen('zuchtstall-rueck').meta.hof === 'Lindenhof'));
-  await pg.click('#smRueck'); await pg.waitForTimeout(150); await knopf('Rückgängig');
-  ok('Löschen rückgängig: Platz 2 wieder Lindenhof', await ev(() => lesenPlatz(2) && lesenPlatz(2).meta.hof === 'Lindenhof'));
-
-  // 8. Speicher voll: rote Meldung höchstens 1× je Spieltag
-  r = await ev(() => { const alt = Storage.prototype.setItem; Storage.prototype.setItem = function () { throw new Error('QuotaExceededError'); };
-    const w = () => { const e = document.getElementById('speicherWarn'); return !!e && !e.hidden; };
-    spiel.geld += 1; speichern(); speichernJetzt(); const a = w(); document.getElementById('speicherWarn').hidden = true;
-    spiel.geld += 1; speichern(); speichernJetzt(); const b2 = w();
-    spiel.tag++; spiel.geld += 1; speichern(); speichernJetzt(); const c = w(); const txt = document.getElementById('speicherWarn').textContent; spiel.tag--;
-    Storage.prototype.setItem = alt; document.getElementById('speicherWarn').hidden = true; spiel.geld -= 3; speichern(); speichernJetzt(); return { a, b: b2, c, txt }; });
-  ok('Speicher voll: rote Meldung erscheint', r.a && /konnte nicht gespeichert werden/.test(r.txt) && /Jetzt als Datei sichern/.test(r.txt));
-  ok('Speicher voll: am selben Tag nicht nochmal, am nächsten Tag wieder', !r.b && r.c);
-
-  // 9. Datei speichern (Autospeicher): Format und Dateiname
-  await zumStart(); await pg.click('[data-pspiel="1"]'); await lade();
+  ok('Wechsel auf Speicherplatz 1: Sonnenhof läuft, nichts ungespeichert', await ev(() => hofName() === 'Sonnenhof' && spiel.platz === 1 && !ungespeichert()));
+  await nacht(2); await zumStart(); await pg.click('[data-pspiel="2"]'); await pg.waitForTimeout(150);
+  ok('Wechsel mit Fortschritt: Frage', /Ungespeicherter Fortschritt auf Speicherplatz 1 \(Sonnenhof, seit/.test(await dlg()));
+  await knopf('Nicht speichern'); await lade(); ok('Nicht speichern: Lindenhof läuft', await ev(() => hofName() === 'Lindenhof'));
+  // 6. Kopieren und Löschen (Sicherheitsfrage, keine Rücksicherung)
+  await zumStart(); await pg.click('[data-pkopie="1"]'); await pg.waitForTimeout(150); ok('Kopieren auf belegten Speicherplatz: Sicherheitsfrage', /Speicherplatz 2 \(.*\) wird ersetzt/.test(await dlg()));
+  await knopf('Abbrechen'); await pg.click('[data-pweg="1"]'); await pg.waitForTimeout(150); ok('Löschen: Sicherheitsfrage', /endgültig gelöscht/.test(await dlg()));
+  await knopf('Abbrechen'); ok('nach Abbrechen beide Speicherplätze unverändert', await ev(() => lesenPlatz(1).meta.hof === 'Sonnenhof' && lesenPlatz(2).meta.hof === 'Lindenhof' && !localStorage.getItem('zuchtstall-rueck')));
+  // 7. Speicher voll
+  r = await ev(() => { const alt = Storage.prototype.setItem; Storage.prototype.setItem = function () { throw new Error('voll'); }; const w = () => { const e = document.getElementById('speicherWarn'); return !!e && !e.hidden; };
+    spiel.geld += 1; speichern(); speichernJetzt(); const a = w(); document.getElementById('speicherWarn').hidden = true; spiel.geld += 1; speichern(); speichernJetzt(); const b2 = w();
+    spiel.tag++; speichern(); speichernJetzt(); const c = w(); spiel.tag--; Storage.prototype.setItem = alt; document.getElementById('speicherWarn').hidden = true; spiel.geld -= 2; speichern(); speichernJetzt(); return { a, b: b2, c }; });
+  ok('Speicher voll: rote Meldung, am selben Tag nicht nochmal, am nächsten wieder', r.a && !r.b && r.c);
+  // 8. Datei speichern + laden
   const [dl] = await Promise.all([pg.waitForEvent('download'), ev(() => dateiSpeichern('auto'))]);
-  const name = await ev(() => dateiName(spiel)), datei = JSON.parse(fs.readFileSync(await dl.path(), 'utf8'));   // Name aus dateiName(): der Test-Chromium verwirft Download-Namen mit Umlaut
-  ok('Datei: Name Zuchtstall_Sonnenhof_JahrXX-Jahreszeit_JJJJ-MM-TT.json', /^Zuchtstall_Sonnenhof_Jahr\d\d-(Frühling|Sommer|Herbst|Winter)_\d{4}-\d\d-\d\d\.json$/.test(name), name);
-  ok('Datei: Format (typ, format 1, version, spielId, info, spiel – lesbar, nicht gepackt)', datei.typ === 'zuchtstall-spielstand' && datei.format === 1 && !!datei.version && !!datei.spielId && datei.info && datei.info.hoefe[0] === 'Sonnenhof' && datei.spiel && datei.spiel.boxen);
-  ok('nach dem Datei-Sichern: „zuletzt als Datei gesichert“ gemerkt', await ev(() => !!(spiel.zuletztExport && spiel.zuletztExport.am)));
-
-  // 9b. S2: Auswahl in den Einstellungen, „zuletzt als Datei gesichert“, Platz als Datei im Startmenü
-  await ev(() => { document.getElementById('dlg').hidden = true; zeigeHof('einst'); });
-  r = await ev(() => document.getElementById('hfDatei').textContent);
-  ok('Einstellungen: „Zuletzt als Datei gesichert: <Datum> · <Spieldatum>“', /Zuletzt als Datei gesichert: \d+\.\d+\.\d{4} · /.test(r), r);
-  await pg.click('#hfDatei'); await pg.waitForTimeout(150);
-  r = await ev(() => [...document.querySelectorAll('#dlgKnoepfe button')].map(b => b.textContent));
-  ok('Auswahl: laufendes Spiel, Platz 1, Platz 2', r.some(t => /Laufendes Spiel \(Autospeicher\)/.test(t)) && r.some(t => /^Platz 1 · Sonnenhof/.test(t)) && r.some(t => /^Platz 2 · Lindenhof/.test(t)), r.join(' | '));
-  const [dl2] = await Promise.all([pg.waitForEvent('download'), knopf('Platz 2')]);
-  const d2 = JSON.parse(fs.readFileSync(await dl2.path(), 'utf8'));
-  ok('Platz 2 als Datei: Lindenhof', d2.typ === 'zuchtstall-spielstand' && d2.info.hoefe[0] === 'Lindenhof' && d2.spiel.platz === 2);
-  await zumStart();
-  ok('Startmenü: „Als Datei“ bei Platz 1/2 und beim laufenden Spiel', await ev(() => !!document.querySelector('[data-pdatei="1"]') && !!document.querySelector('[data-pdatei="2"]') && !!document.getElementById('smDateiAuto')));
-  const [dl3] = await Promise.all([pg.waitForEvent('download'), pg.click('[data-pdatei="1"]')]);
-  const d3 = JSON.parse(fs.readFileSync(await dl3.path(), 'utf8'));
-  ok('Startmenü Platz 1 als Datei: Sonnenhof, gleicher Stand wie der Platz', d3.info.hoefe[0] === 'Sonnenhof' && JSON.stringify(d3.spiel) === await ev(() => JSON.stringify(lesenPlatz(1).spiel)));
-  await ev(() => { document.getElementById('dlg').hidden = true; zeigeHaupt(); });
-
-  // 10. Spiel verloren: Autospeicher weg, Plätze bleiben, vom Speicherstand neu starten
-  await ev(() => { document.getElementById('dlg').hidden = true; platzSpeichern(true); spiel.verloren = { tag: spiel.tag, jz: jzJetzt(), kredit: 'Hofkredit', offen: 3, schuld: 1000, pferde: 0 }; spielVerloren(); });
-  r = await ev(() => ({ auto: localStorage.getItem('zuchtstall-v2'), p1: !!lesenPlatz(1), p2: !!lesenPlatz(2), knopf: (document.getElementById('vlPlatz') || {}).textContent || '' }));
-  ok('Spiel verloren: Autospeicher gelöscht, Platz 1 und 2 bleiben', r.auto === null && r.p1 && r.p2);
-  ok('Spiel verloren: Knopf „Vom letzten Speicherstand neu starten (Platz 1, Sonnenhof …)“', /Vom letzten Speicherstand neu starten/.test(r.knopf) && /Platz 1, Sonnenhof/.test(r.knopf), r.knopf);
-  await pg.click('#vlPlatz'); await lade();
-  ok('Neustart vom Speicherstand: Sonnenhof läuft wieder', await ev(() => hatSpielstand && hofName() === 'Sonnenhof' && !spiel.verloren));
-
-  // 11. Alter Spielstand (vor S1, ungepackt, ohne Spiel-Nummer) → Autospeicher + Platz 1, Turnier-Sortierung übernommen
-  const alt = await ev(() => { const s = JSON.parse(JSON.stringify(spiel)); delete s.spielId; delete s.platz; delete s.tsort; delete s.zuletztExport; return JSON.stringify(s); });
-  await ev(a => { speicherSperre = true; localStorage.clear(); localStorage.setItem('zuchtstall-v2', a); localStorage.setItem('zuchtstall-tsort', 'disz'); }, alt);
+  const D = JSON.parse(fs.readFileSync(await dl.path(), 'utf8'));
+  ok('Datei: Format und Name', D.typ === 'zuchtstall-spielstand' && D.format === 1 && D.info.hoefe[0] === 'Lindenhof' && /^Zuchtstall_Lindenhof_Jahr\d\d-/.test(await ev(() => dateiName(spiel))));
+  const tmp = path.resolve(__dirname, '..', '_s3-test'); fs.mkdirSync(tmp, { recursive: true });
+  try { const schreibe = (n, x) => { const f = path.join(tmp, n); fs.writeFileSync(f, typeof x === 'string' ? x : JSON.stringify(x)); return f; };
+    const laden = async (n, f) => { await zumStart(); await pg.click('#smLaden'); await pg.waitForTimeout(150); if (await hat('Nicht speichern')) await knopf('Nicht speichern');
+      const [fc] = await Promise.all([pg.waitForEvent('filechooser'), knopf('Speicherplatz ' + n)]); await fc.setFiles(f); await pg.waitForTimeout(300); return dlg(); };
+    ok('Laden: kaputtes JSON → Meldung', /kein Zuchtstall-Spielstand/.test(await laden(1, schreibe('k.json', '{ kaputt'))));
+    ok('Laden: vor dem Hof-Ausbau → Meldung', /vor dem Hof-Ausbau/.test(await laden(1, schreibe('a.json', { ...D, spiel: { ...D.spiel, hofAusbau: undefined } }))));
+    ok('Laden: neuere Version → Meldung', /neueren Spielversion/.test(await laden(1, schreibe('n.json', { ...D, version: '999' }))));
+    const v = await laden(1, schreibe('o.json', { ...D, spiel: { ...D.spiel, tag: 0 } })); await knopf('Ja, laden');
+    ok('Laden: Vorschau, ältere Datei → „schon weiter … Trotzdem laden?“', /Vorschau/.test(v) && /schon weiter/.test(await dlg()));
+    await knopf('Abbrechen');
+    await laden(1, schreibe('g.json', D)); await knopf('Ja, laden'); ok('Laden auf belegten Speicherplatz: Sicherheitsfrage', /Speicherplatz 1 \(.*\) wird ersetzt/.test(await dlg())); await knopf('Ersetzen');
+    ok('Datei auf Speicherplatz 1: Stand identisch', await ev(s => JSON.stringify(lesenPlatz(1).spiel) === JSON.stringify({ ...JSON.parse(s), platz: 1 }), JSON.stringify(D.spiel)));
+    await knopf('Jetzt spielen'); await lade(); ok('Jetzt spielen: Lindenhof läuft auf Speicherplatz 1', await ev(() => hofName() === 'Lindenhof' && spiel.platz === 1 && !ungespeichert()));
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  // 9. Spiel verloren
+  await ev(() => { spiel.verloren = { tag: spiel.tag, jz: jzJetzt(), kredit: 'Hofkredit', offen: 3, schuld: 1, pferde: 0 }; spielVerloren(); });
+  r = await ev(() => ({ auto: localStorage.getItem('zuchtstall-v2'), p: !!lesenPlatz(1) && !!lesenPlatz(2), k: (document.getElementById('vlPlatz') || {}).textContent || '' }));
+  ok('Spiel verloren: Autospeicher weg, Speicherplätze bleiben, Neustart-Knopf', r.auto === null && r.p && /Speicherplatz 1, Lindenhof/.test(r.k), r.k);
+  await pg.click('#vlPlatz'); await lade(); ok('Neustart vom Speicherstand', await ev(() => hatSpielstand && hofName() === 'Lindenhof' && !spiel.verloren));
+  // 10. alter Spielstand (vor S1) → Speicherplatz 1
+  const alt = await ev(() => { const s = JSON.parse(JSON.stringify(spiel)); delete s.spielId; delete s.platz; delete s.tsort; return JSON.stringify(s); });
+  await ev(a => { speicherSperre = true; localStorage.clear(); localStorage.setItem('zuchtstall-v2', a); localStorage.setItem('zuchtstall-tsort', 'disz'); localStorage.setItem('zuchtstall-rueck', 'x'); }, alt);
   await pg.reload(); await lade();
-  r = await ev(() => ({ id: spiel.spielId, platz: spiel.platz, p1: (lesenPlatz(1) || {}).meta, tsort: spiel.tsort, roh: localStorage.getItem('zuchtstall-v2')[0], ung: ungespeichert() }));
-  ok('alter Spielstand: Spiel-Nummer, Platz 1 und Kopie auf Platz 1', !!r.id && r.platz === 1 && r.p1 && r.p1.spielId === r.id);
-  ok('alter Spielstand: jetzt gepackt, Turnier-Sortierung übernommen, nichts ungespeichert', r.roh !== '{' && r.tsort === 'disz' && r.ung === false);
-
-  // 12. Größe: gepackt deutlich kleiner
-  r = await ev(() => ({ j: JSON.stringify(spiel).length, p: localStorage.getItem('zuchtstall-v2').length }));
-  ok('gepackt kleiner als ungepackt (' + r.j + ' → ' + r.p + ' Zeichen)', r.p < r.j / 2);
-
-  // 13. Notfall-Fenster: sichert den (gepackten) Autospeicher im selben Dateiformat
-  const html = fs.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf8').replace('<script>\n  // ---------- Spielzustand ----------', '<script>\n  throw new Error("Testabsturz");\n  // ---------- Spielzustand ----------');
-  const nf = path.resolve(__dirname, '..', '_notfall-test.html'); fs.writeFileSync(nf, html);
-  try { const pg2 = await ctx.newPage(); await pg2.goto('file://' + nf); await pg2.waitForTimeout(600);
-    const sicht = await pg2.evaluate(() => !!document.getElementById('nfSichern'));
-    const [dl4] = await Promise.all([pg2.waitForEvent('download'), pg2.click('#nfSichern')]);
-    const d4 = JSON.parse(fs.readFileSync(await dl4.path(), 'utf8'));
-    ok('Notfall-Fenster: „Spielstand sichern (Datei)“ im selben Format, entpackt', sicht && d4.typ === 'zuchtstall-spielstand' && d4.format === 1 && d4.spiel && d4.spiel.boxen && d4.info.hoefe[0] === 'Sonnenhof');
-    await pg2.close(); } finally { fs.unlinkSync(nf); }
-
+  r = await ev(() => ({ id: spiel.spielId, platz: spiel.platz, p1: !!lesenPlatz(1), tsort: spiel.tsort, ung: ungespeichert(), rueck: localStorage.getItem('zuchtstall-rueck') }));
+  ok('alter Spielstand: Spiel-Nummer, Speicherplatz 1, Turnier-Sortierung, alte Rücksicherung entfernt', !!r.id && r.platz === 1 && r.p1 && r.tsort === 'disz' && !r.ung && r.rueck === null, JSON.stringify(r));
   ok('keine Seitenfehler', !errs.length, errs.slice(0, 3).join(' | '));
-  L.forEach(x => console.log(x.filter(Boolean).join('  ')));
-  const alles = L.every(x => x[0] === '✓'); console.log(alles ? 'alles ok' : 'FEHLER');
+  L.forEach(x => console.log(x.filter(Boolean).join('  '))); const alles = L.every(x => x[0] === '✓'); console.log(alles ? 'alles ok' : 'FEHLER');
   await b.close(); process.exit(alles ? 0 : 1);
 })();

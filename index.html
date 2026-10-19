@@ -965,7 +965,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "520";
+  const SPIEL_VERSION = "522";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -973,14 +973,14 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=520"></script>
-<script src="pferd.js?v=520"></script>
-<script src="boxstufen.js?v=520"></script>
-<script src="kopfneu.js?v=520"></script>
+<script src="lz-string.min.js?v=522"></script>
+<script src="pferd.js?v=522"></script>
+<script src="boxstufen.js?v=522"></script>
+<script src="kopfneu.js?v=522"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
-  const PLATZ_KEY = { 1: "zuchtstall-p1", 2: "zuchtstall-p2" }, RUECK = "zuchtstall-rueck", START_FLAG = "zuchtstall-start";   // Platz 1/2 ändern sich nur, wenn der Spieler speichert · eine Rücksicherung
+  const PLATZ_KEY = { 1: "zuchtstall-p1", 2: "zuchtstall-p2" }, START_FLAG = "zuchtstall-start";   // Speicherplatz 1/2 ändern sich nur, wenn der Spieler speichert
   // S1 Punkt 11: gepackt speichern (lz-string, liegt im Repo) – beginnt der Text mit „{“, ist er noch ungepackt (alte Spielstände)
   const packen = o => { const t = JSON.stringify(o); return window.LZString ? LZString.compressToUTF16(t) : t; };
   const auspacken = t => { if (!t) return null; if (t[0] === "{") return JSON.parse(t); const u = window.LZString && LZString.decompressFromUTF16(t); return u ? JSON.parse(u) : null; };
@@ -988,7 +988,8 @@
   const schreiben = (k, o) => localStorage.setItem(k, packen(o));   // wirft bei vollem Speicher
   const loeschen = k => { try { localStorage.removeItem(k); } catch (e) {} };
   const neueSpielId = () => "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  let platzMigration = false;   // Spielstand von vor S1: am Skriptende einmal auf Platz 1 legen
+  let platzMigration = false;   // Spielstand von vor S1: am Skriptende einmal auf Speicherplatz 1 legen (das laufende Spiel soll nicht verloren gehen)
+  loeschen("zuchtstall-rueck");   // Rücksicherung gibt es nicht mehr (Dome, 19.10.)
   // H4/H6: Zahlen und Merker ganz oben, damit sie schon beim Laden eines Spielstands bereitstehen (sonst hängt der Start)
   const GRAS = { wachsen: [8, 5, 2, 0], verbrauch: 4, wenig: 20, matschPlus: 5, matschMinus: 2, matschLeer: 5, matschAb: 50, nachsaeen: 30, nachsaeenPlus: 30, nachsaeenWachs: 1.25 };
   const UMBAU = { nachlass: 0.3, zufrUmzug: -5, zufrNachlass: -5, ansehenOhne: -5 };
@@ -9168,36 +9169,31 @@
   const lesenPlatz = n => { const w = lesen(PLATZ_KEY[n]); return w && w.spiel && w.meta ? w : null; };
   const platzText = w => w ? `${w.meta.hof}, ${w.meta.datum}` : "frei";
   function platzSchreiben(n, s, meta) { const I = standInfo(s); schreiben(PLATZ_KEY[n], { meta: { hof: I.hof, datum: I.datum, tag: s.tag, spielId: s.spielId, version: SPIEL_VERSION, gespeichert: new Date().toISOString(), ...(meta || {}) }, spiel: { ...s, platz: n } }); }
-  // S1 Punkt 8: bevor Platz 1 oder 2 ersetzt oder gelöscht wird, kommt der alte Stand einmal in die Rücksicherung (die nächste überschreibt sie)
-  function rueckSichern(n) { const w = lesenPlatz(n); if (!w) return; try { schreiben(RUECK, { platz: n, meta: w.meta, spiel: w.spiel }); } catch (e) {} }
-  function rueckgaengig() {
-    const r = lesen(RUECK); if (!r || !r.spiel) return; const n = r.platz, jetzt = lesenPlatz(n);
-    try { schreiben(PLATZ_KEY[n], { meta: r.meta, spiel: r.spiel }); if (jetzt) schreiben(RUECK, { platz: n, meta: jetzt.meta, spiel: jetzt.spiel }); else loeschen(RUECK); } catch (e) { speicherFehler(true); return; }
-    zeigeStart();
-  }
   // läuft der Autospeicher weiter als sein Platz? Verglichen wird der echte Fortschritt (Tag, Geld, Pferde/Fohlen, Einsteller, Mitarbeiter, Kredite, Briefe – Bauen kostet Geld) –
   // nicht Felder, die das Spiel beim Anzeigen von selbst ergänzt (sonst käme die Frage auch ohne Spielen)
   const fortschritt = s => JSON.stringify([s.tag, Math.round(((s.zentral && s.zentral.geld) || 0) * 100), (s.post || []).length, (s.friedhof || []).length, standHoefe(s).map(h => [Math.round((h.geld || 0) * 100),
     (h.boxen || []).map(b => [b.pferd ? b.pferd.id : 0, b.fohlen ? b.fohlen.id : 0, b.tot ? 1 : 0]), (h.einsteller || []).length, (h.mitarbeiter || []).length, (h.kredite || []).map(k => Math.round((k.rest || 0) * 100))])]);
   function ungespeichert() {
     if (!hatSpielstand || spiel.verloren) return false; speichernJetzt();
-    const w = lesenPlatz(spiel.platz || 1); if (!w || w.spiel.spielId !== spiel.spielId) return true;
+    if (!spiel.platz) return true;   // noch nie gespeichert (Dome: neues Spiel legt keinen Speicherstand an)
+    const w = lesenPlatz(spiel.platz); if (!w || w.spiel.spielId !== spiel.spielId) return true;
     return fortschritt(w.spiel) !== fortschritt(spiel);
   }
-  // S1 Punkt 3: selbst speichern – auf den eigenen Platz des Spiels
-  function platzSpeichern(still) {
-    const n = spiel.platz || 1; speichernJetzt();
-    const w = lesenPlatz(n); if (w && w.spiel.spielId !== spiel.spielId) rueckSichern(n);   // liegt dort inzwischen ein anderes Spiel: vorher sichern
-    try { platzSchreiben(n, spiel); } catch (e) { speicherFehler(true); return false; }
-    if (!still) dialog(`<h3>💾 Gespeichert</h3><p>Gespeichert auf <b>Platz ${n}</b> (${esc(standInfo(spiel).hof)}, ${datumText()}).</p>`);
-    return true;
+  // S1 Punkt 3: selbst speichern – auf den Speicherplatz des Spiels; beim ersten Mal wählt der Spieler den Speicherplatz (Dome: kein automatischer Speicherstand)
+  function platzSpeichern(still, danach) {
+    speichernJetzt();
+    const schreibeAuf = n => { spiel.platz = n; speichern(); speichernJetzt(); try { platzSchreiben(n, spiel); } catch (e) { speicherFehler(true); return; }
+      if (!still) dialog(`<h3>💾 Gespeichert</h3><p>Gespeichert auf <b>Speicherplatz ${n}</b> (${esc(standInfo(spiel).hof)}, ${datumText()}).</p>`, [["OK", danach]]); else if (danach) danach(); };
+    const pruefe = n => { const w = lesenPlatz(n); if (w && w.spiel.spielId !== spiel.spielId) dialog(`<h3>💾 Speicherplatz ${n} ersetzen?</h3><p>Auf Speicherplatz ${n} liegt <b>${esc(platzText(w))}</b>. Es wird ersetzt. Sicher?</p>`, [["Ersetzen", () => schreibeAuf(n), "rot"], ["Abbrechen", null, "zweit"]]); else schreibeAuf(n); };
+    if (spiel.platz) { pruefe(spiel.platz); return; }
+    dialog(`<h3>💾 Spiel speichern</h3><p>Auf welchem Speicherplatz soll ${esc(standInfo(spiel).hof)} gespeichert werden?</p>`, [...[1, 2].map(n => { const w = lesenPlatz(n); return [`Speicherplatz ${n} · ${w ? esc(platzText(w)) : "frei"}`, () => pruefe(n), w ? "zweit" : ""]; }), ["Abbrechen", null, "zweit"]]);
   }
   // S1 Punkt 6: ungespeicherten Fortschritt nicht stillschweigend verlieren
   function ungespeichertFrage(weiter) {
     if (!ungespeichert()) { weiter(); return; }
-    const n = spiel.platz || 1, w = lesenPlatz(n), eigen = w && w.spiel.spielId === spiel.spielId;
-    dialog(`<h3>💾 Ungespeicherter Fortschritt</h3><p>Ungespeicherter Fortschritt auf <b>Platz ${n}</b> (${esc(standInfo(spiel).hof)}${eigen ? `, seit ${esc(w.meta.datum)}` : ""}). Jetzt speichern?</p>${w && !eigen ? `<p><small>Auf Platz ${n} liegt inzwischen ein anderes Spiel (${esc(platzText(w))}). Es wird ersetzt und lässt sich mit „Letzte Ersetzung rückgängig“ zurückholen.</small></p>` : ""}`,
-      [["💾 Speichern", () => { if (platzSpeichern(true)) weiter(); }], ["Nicht speichern", weiter, "zweit"], ["Abbrechen", null, "zweit"]]);
+    const n = spiel.platz, w = n && lesenPlatz(n), eigen = w && w.spiel.spielId === spiel.spielId;
+    dialog(`<h3>💾 Ungespeicherter Fortschritt</h3><p>${n ? `Ungespeicherter Fortschritt auf <b>Speicherplatz ${n}</b> (${esc(standInfo(spiel).hof)}${eigen ? `, seit ${esc(w.meta.datum)}` : ""})` : `<b>${esc(standInfo(spiel).hof)}</b> ist noch auf keinem Speicherplatz gespeichert`}. Jetzt speichern?</p>`,
+      [["💾 Speichern", () => platzSpeichern(true, weiter)], ["Nicht speichern", weiter, "zweit"], ["Abbrechen", null, "zweit"]]);
   }
   // Stand in den Autospeicher legen und das Spiel sauber neu starten (keine halb laufenden Zeitgeber, alle Ergänzungen fehlender Felder laufen wie beim normalen Start)
   function standStarten(s) {
@@ -9208,29 +9204,22 @@
   }
   function platzSpielen(n) {
     const w = lesenPlatz(n); if (!w) return;
-    if (hatSpielstand && !spiel.verloren && spiel.spielId === w.spiel.spielId && (spiel.platz || 1) === n && !ungespeichert()) { zeigeHaupt(); return; }   // ist schon das laufende Spiel
+    if (hatSpielstand && !spiel.verloren && spiel.spielId === w.spiel.spielId && spiel.platz === n && !ungespeichert()) { zeigeHaupt(); return; }   // ist schon das laufende Spiel
     ungespeichertFrage(() => standStarten({ ...w.spiel, platz: n }));
   }
   function platzLoeschen(n) {
     const w = lesenPlatz(n); if (!w) return;
-    dialog(`<h3>🗑️ Platz ${n} löschen?</h3><p><b>${esc(platzText(w))}</b> wird gelöscht.</p><p><small>Bis zur nächsten Ersetzung kannst du es im Startmenü mit „Letzte Ersetzung rückgängig“ zurückholen.</small></p>`,
-      [["🗑️ Löschen", () => { rueckSichern(n); loeschen(PLATZ_KEY[n]); zeigeStart(); }, "rot"], ["Abbrechen", null, "zweit"]]);
+    dialog(`<h3>🗑️ Speicherplatz ${n} löschen?</h3><p><b>${esc(platzText(w))}</b> wird endgültig gelöscht. Sicher?</p>`,
+      [["🗑️ Löschen", () => { loeschen(PLATZ_KEY[n]); if (hatSpielstand && spiel.platz === n && spiel.spielId === w.spiel.spielId) { spiel.platz = null; speichern(); } zeigeStart(); }, "rot"], ["Abbrechen", null, "zweit"]]);
   }
   function platzKopieren(n) {
     const w = lesenPlatz(n), z = n === 1 ? 2 : 1, ziel = lesenPlatz(z); if (!w) return;
-    const tun = () => { rueckSichern(z); try { schreiben(PLATZ_KEY[z], { meta: { ...w.meta }, spiel: { ...w.spiel, platz: z } }); } catch (e) { speicherFehler(true); return; } zeigeStart(); };
-    if (ziel) dialog(`<h3>📋 In Platz ${z} kopieren?</h3><p>Platz ${z} (<b>${esc(platzText(ziel))}</b>) wird ersetzt. Sicher?</p><p><small>Der alte Stand wird vorher gesichert („Letzte Ersetzung rückgängig“).</small></p>`, [["📋 Kopieren", tun, "rot"], ["Abbrechen", null, "zweit"]]);
+    const tun = () => { try { schreiben(PLATZ_KEY[z], { meta: { ...w.meta }, spiel: { ...w.spiel, platz: z } }); } catch (e) { speicherFehler(true); return; } zeigeStart(); };
+    if (ziel) dialog(`<h3>📋 In Speicherplatz ${z} kopieren?</h3><p>Speicherplatz ${z} (<b>${esc(platzText(ziel))}</b>) wird ersetzt. Sicher?</p>`, [["📋 Kopieren", tun, "rot"], ["Abbrechen", null, "zweit"]]);
     else tun();
   }
-  // S1 Punkt 4: neues Spiel – auf welchen Platz? (beide frei: gleich Platz 1)
-  let neuPlatz = null;
-  function neuesSpielWahl() {
-    const P = { 1: lesenPlatz(1), 2: lesenPlatz(2) };
-    const los = n => ungespeichertFrage(() => { neuPlatz = n; zeigeCharakter(); });
-    if (!P[1] && !P[2]) { los(1); return; }
-    const wahl = n => [`Platz ${n} · ${P[n] ? esc(platzText(P[n])) : "frei"}`, () => { if (P[n]) dialog(`<h3>✨ Neues Spiel auf Platz ${n}</h3><p>Platz ${n} (<b>${esc(platzText(P[n]))}</b>) wird ersetzt. Sicher?</p><p><small>Der alte Stand wird vorher gesichert („Letzte Ersetzung rückgängig“ im Startmenü).</small></p>`, [["Ersetzen", () => los(n), "rot"], ["Abbrechen", null, "zweit"]]); else los(n); }, P[n] ? "zweit" : ""];
-    dialog(`<h3>✨ Neues Spiel</h3><p>Auf welchem Platz soll das neue Spiel gespeichert werden?</p>`, [wahl(1), wahl(2), ["Abbrechen", null, "zweit"]]);
-  }
+  // Neues Spiel (Dome, 19.10.): legt keinen Speicherstand an – ein Einsteiger-Tipp erinnert ans Speichern; der Speicherplatz wird beim ersten Speichern gewählt
+  function neuesSpielWahl() { ungespeichertFrage(() => zeigeCharakter()); }
   // S1 Punkt 10: Speichern schlägt fehl → rote Meldung mit Datei-Knopf
   function speicherFehler(sofort) {
     if (!sofort && speicherFehlerTag === spiel.tag) return; speicherFehlerTag = spiel.tag;
@@ -9258,24 +9247,66 @@
   function dateiWahl() {
     const P = { 1: lesenPlatz(1), 2: lesenPlatz(2) }, k = [];
     if (hatSpielstand) k.push([`Laufendes Spiel (Autospeicher) · ${esc(hofName())}, ${datumText()}`, () => dateiSpeichern("auto")]);
-    [1, 2].forEach(n => { if (P[n]) k.push([`Platz ${n} · ${esc(platzText(P[n]))}`, () => dateiSpeichern(n), "zweit"]); });
+    [1, 2].forEach(n => { if (P[n]) k.push([`Speicherplatz ${n} · ${esc(platzText(P[n]))}`, () => dateiSpeichern(n), "zweit"]); });
     if (!k.length) { dialog(`<h3>💾 Nichts zu sichern</h3><p>Es gibt noch keinen Spielstand.</p>`); return; }
     dialog(`<h3>💾 Spielstand als Datei speichern</h3><p>Welchen Stand möchtest du als Datei speichern?</p><p><small>Die Datei kannst du z. B. per Telegram oder E-Mail an dein anderes Gerät schicken und dort im Startmenü laden.</small></p>`, [...k, ["Abbrechen", null, "zweit"]]);
+  }
+  // ---------- S3: Spielstand aus Datei laden (nur im Startmenü und im Notfall-Fenster, nicht mitten im Spiel) ----------
+  function dateiPruefen(text) {   // prüft, ohne etwas zu verändern
+    const kein = { fehler: "Diese Datei ist kein Zuchtstall-Spielstand." }; let d; try { d = JSON.parse(text); } catch (e) { return kein; }
+    let st = null, version = "", gesp = "";
+    if (d && d.typ === "zuchtstall-spielstand" && d.spiel) { st = d.spiel; version = String(d.version || ""); gesp = d.gespeichert || ""; }
+    else if (d && d.boxen) st = d;   // alte Notfall-Datei: rohes spiel-Objekt
+    if (!st || !Array.isArray(st.boxen)) return kein;
+    if (!st.hofAusbau) return { fehler: "Dieser Spielstand ist von vor dem Hof-Ausbau und kann nicht mehr gespielt werden." };
+    if (version && Number(version) > Number(SPIEL_VERSION)) return { fehler: "Diese Datei stammt aus einer neueren Spielversion. Bitte die Seite neu laden, dein Spiel ist veraltet." };
+    if (st.verloren) return { fehler: "Dieser Spielstand ist verloren (Zwangsversteigerung) und kann nicht mehr gespielt werden." };
+    return { s: st, version, gesp };
+  }
+  function dateiLadenStart() {
+    ungespeichertFrage(() => dialog(`<h3>📂 Spielstand aus Datei laden</h3><p>Auf welchen Speicherplatz soll der Spielstand?</p>`,
+      [...[1, 2].map(n => { const w = lesenPlatz(n); return [`Speicherplatz ${n} · ${w ? esc(platzText(w)) : "frei"}`, () => dateiWaehlen(n), w ? "zweit" : ""]; }), ["Abbrechen", null, "zweit"]]));
+  }
+  function dateiWaehlen(n) {
+    const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".json,application/json"; inp.id = "dateiEingabe"; inp.style.display = "none"; document.body.appendChild(inp);
+    inp.onchange = async () => { const f = inp.files && inp.files[0]; inp.remove(); if (!f) return; let t = ""; try { t = await f.text(); } catch (e) {} dateiVorschau(n, dateiPruefen(t)); };
+    inp.click();
+  }
+  function dateiVorschau(n, P) {
+    if (P.fehler) { dialog(`<h3>📂 Laden nicht möglich</h3><p>${P.fehler}</p>`); return; }
+    const I = standInfo(P.s), z = (a, b) => `<tr><td>${a}</td><td>${b}</td></tr>`;
+    dialog(`<h3>📂 Vorschau</h3><table class="ver-tab">${z(I.hoefe.length > 1 ? "Höfe" : "Hof", I.hoefe.map(esc).join(", "))}${z("Spieldatum", esc(I.tagTxt))}${z("Pferde", I.pferde)}${z("Geld", fmt(I.geld))}${z("gespeichert am", P.gesp ? new Date(P.gesp).toLocaleString("de-DE") : "unbekannt")}${z("Spielversion", esc(P.version || "unbekannt"))}</table><p>Auf <b>Speicherplatz ${n}</b> laden?</p>`,
+      [["Ja, laden", () => dateiAeltereFrage(n, P)], ["Abbrechen", null, "zweit"]]);
+  }
+  // S3 Punkt 5/6: dieselbe Spiel-Nummer ist woanders schon weiter → nachfragen · Zielplatz belegt → Sicherheitsfrage (vorher Rücksicherung)
+  function dateiAeltereFrage(n, P) {
+    const id = P.s.spielId, weiter = [];
+    if (id) { if (hatSpielstand && spiel.spielId === id && (spiel.tag || 0) > (P.s.tag || 0)) weiter.push(["Im laufenden Spiel", datumText()]);
+      [1, 2].forEach(k => { const w = lesenPlatz(k); if (w && w.spiel.spielId === id && (w.spiel.tag || 0) > (P.s.tag || 0)) weiter.push([`Auf Speicherplatz ${k}`, w.meta.datum]); }); }
+    const zielFrage = () => { const w = lesenPlatz(n); if (w) dialog(`<h3>📂 Speicherplatz ${n} ersetzen?</h3><p>Speicherplatz ${n} (<b>${esc(platzText(w))}</b>) wird ersetzt. Sicher?</p>`, [["Ersetzen", () => dateiAufPlatz(n, P), "rot"], ["Abbrechen", null, "zweit"]]); else dateiAufPlatz(n, P); };
+    if (weiter.length) dialog(`<h3>⚠️ Ältere Datei</h3><p>${weiter.map(([wo, d]) => `${wo} bist du in diesem Spiel schon weiter (${esc(d)}).`).join("<br>")} Trotzdem laden?</p>`, [["Trotzdem laden", zielFrage], ["Abbrechen", null, "zweit"]]);
+    else zielFrage();
+  }
+  function dateiAufPlatz(n, P) {
+    const st = { ...P.s, spielId: P.s.spielId || neueSpielId(), platz: n };
+    try { platzSchreiben(n, st, P.gesp ? { gespeichert: P.gesp } : null); } catch (e) { speicherFehler(true); return; }
+    dialog(`<h3>📂 Geladen</h3><p>Der Spielstand liegt jetzt auf <b>Speicherplatz ${n}</b> (${esc(platzText(lesenPlatz(n)))}). Jetzt spielen?</p>`,
+      [["▶ Jetzt spielen", () => standStarten({ ...lesenPlatz(n).spiel, platz: n })], ["Später", () => zeigeStart(), "zweit"]]);
   }
   const exportText = () => spiel.zuletztExport ? `${new Date(spiel.zuletztExport.am).toLocaleDateString("de-DE")} · ${esc(spiel.zuletztExport.datum)}` : "noch nie";
 
   function zeigeStart() {
     speichernJetzt();
-    const P = { 1: lesenPlatz(1), 2: lesenPlatz(2) }, R = lesen(RUECK), am = w => new Date(w.meta.gespeichert).toLocaleDateString("de-DE");
-    const karte = n => { const w = P[n]; return `<div class="platz-karte${w ? "" : " leer"}"><div class="pk-kopf"><b>Platz ${n}</b><span>${w ? `${esc(w.meta.hof)} · gespeichert: ${esc(w.meta.datum)}, am ${am(w)}` : "frei"}</span></div>
-      ${w ? `<div class="pk-knoepfe"><button class="knopf" data-pspiel="${n}">▶ Spielen</button><button class="knopf zweit" data-pkopie="${n}">📋 In Platz ${n === 1 ? 2 : 1} kopieren</button><button class="knopf zweit" data-pdatei="${n}">💾 Als Datei</button><button class="knopf zweit" data-pweg="${n}">🗑️ Löschen</button></div>` : ""}</div>`; };
+    const P = { 1: lesenPlatz(1), 2: lesenPlatz(2) }, am = w => new Date(w.meta.gespeichert).toLocaleDateString("de-DE");
+    const karte = n => { const w = P[n]; return `<div class="platz-karte${w ? "" : " leer"}"><div class="pk-kopf"><b>Speicherplatz ${n}</b><span>${w ? `${esc(w.meta.hof)} · gespeichert: ${esc(w.meta.datum)}, am ${am(w)}` : "frei"}</span></div>
+      ${w ? `<div class="pk-knoepfe"><button class="knopf" data-pspiel="${n}">▶ Spielen</button><button class="knopf zweit" data-pkopie="${n}">📋 In Speicherplatz ${n === 1 ? 2 : 1} kopieren</button><button class="knopf zweit" data-pdatei="${n}">💾 Als Datei</button><button class="knopf zweit" data-pweg="${n}">🗑️ Löschen</button></div>` : ""}</div>`; };
     $("startMenue").innerHTML = `<div class="schirm-innen">
       <div class="logo">🐴</div><h1>Zuchtstall</h1><p class="unter">Züchte, pflege und trainiere deine eigenen Pferde</p>
-      <button class="sknopf haupt" id="smWeiter" ${hatSpielstand ? "" : "disabled"}><span class="i">▶</span><span>Weiterspielen${hatSpielstand ? ` – ${esc(hofName())}` : ""}<small>${hatSpielstand ? `läuft: ${datumText()} (Platz ${spiel.platz || 1})` : altStand ? "alter Spielstand – für den Hof-Ausbau ist ein neues Spiel nötig" : "noch kein laufendes Spiel"}</small></span></button>
+      <button class="sknopf haupt" id="smWeiter" ${hatSpielstand ? "" : "disabled"}><span class="i">▶</span><span>Weiterspielen${hatSpielstand ? ` – ${esc(hofName())}` : ""}<small>${hatSpielstand ? `läuft: ${datumText()} ${spiel.platz ? `(Speicherplatz ${spiel.platz})` : "(noch nicht gespeichert)"}` : altStand ? "alter Spielstand – für den Hof-Ausbau ist ein neues Spiel nötig" : "noch kein laufendes Spiel"}</small></span></button>
       ${hatSpielstand ? `<button class="knopf zweit sm-datei" id="smDateiAuto">💾 Laufendes Spiel als Datei speichern</button>` : ""}
       ${karte(1)}${karte(2)}
-      ${R && R.spiel ? `<button class="sknopf" id="smRueck"><span class="i">↩️</span><span>Letzte Ersetzung rückgängig<small>Platz ${R.platz}: ${esc(platzText(R))}</small></span></button>` : ""}
       <button class="sknopf" id="smNeu"><span class="i">✨</span><span>Neues Spiel<small>Charakter erstellen und den ersten Hof kaufen</small></span></button>
+      <button class="sknopf" id="smLaden"><span class="i">📂</span><span>Spielstand aus Datei laden<small>z. B. vom anderen Gerät (per Telegram oder E-Mail geschickt)</small></span></button>
       <button class="sknopf" id="smVoll"><span class="i">⛶</span><span>Vollbildmodus ist ${istVoll() ? "an" : "aus"}<small>antippen zum Umschalten</small></span></button>
       <button class="sknopf" id="smEnde"><span class="i">🚪</span><span>Beenden<small>das laufende Spiel ist im Autospeicher</small></span></button>
       <p class="version">Version ${SPIEL_VERSION}</p>
@@ -9283,7 +9314,7 @@
     zeigeSchirm("startMenue");
     $("smWeiter").onclick = () => { if (hatSpielstand) zeigeHaupt(); };
     $("smNeu").onclick = () => neuesSpielWahl();
-    if ($("smRueck")) $("smRueck").onclick = () => dialog(`<h3>↩️ Rückgängig machen?</h3><p>Platz ${R.platz} bekommt wieder <b>${esc(platzText(R))}</b>.${P[R.platz] ? ` Der jetzige Stand (${esc(platzText(P[R.platz]))}) kommt dafür in die Rücksicherung.` : ""}</p>`, [["↩️ Rückgängig", rueckgaengig], ["Abbrechen", null, "zweit"]]);
+    $("smLaden").onclick = () => dateiLadenStart();
     $("startMenue").querySelectorAll("[data-pspiel]").forEach(b => b.onclick = () => platzSpielen(+b.dataset.pspiel));
     $("startMenue").querySelectorAll("[data-pweg]").forEach(b => b.onclick = () => platzLoeschen(+b.dataset.pweg));
     $("startMenue").querySelectorAll("[data-pkopie]").forEach(b => b.onclick = () => platzKopieren(+b.dataset.pkopie));
@@ -10033,7 +10064,7 @@
   }
   // Spiel verloren: Spielstand wird gelöscht, zurück zum Start
   function spielVerloren() {
-    const V = spiel.verloren, name = hofName(), np = spiel.platz || 1, pw = lesenPlatz(np), pwOk = pw && pw.spiel.spielId === spiel.spielId;
+    const V = spiel.verloren, name = hofName(), np = spiel.platz, pw = np && lesenPlatz(np), pwOk = pw && pw.spiel.spielId === spiel.spielId;
     clearTimeout(speicherUhr); speicherOffen = false; loeschen(SPEICHER);   // S1 Punkt 9: nur der Autospeicher dieses Spiels – die Speicherplätze bleiben
     hatSpielstand = false;
     $("nacht").classList.remove("an");
@@ -10042,7 +10073,7 @@
       <div class="panel verloren"><p style="margin-top:0">${V.offen} Raten für den ${esc(V.kredit)} sind nicht bezahlt worden. Die Hausbank hat den Kredit gekündigt und <b>${esc(name)}</b> zwangsversteigern lassen.</p>
         <p>Der Hof, ${V.pferde ? `deine ${V.pferde === 1 ? "Pferd" : `${V.pferde} Pferde`}, ` : ""}die Ausrüstung und das Futter gehören jetzt anderen. <b>Das Spiel ist verloren.</b></p>
         <p style="margin-bottom:0"><small>Restschuld bei der Kündigung: ${fmt(V.schuld)}. Tipp: Halte immer etwas Geld für die Kreditrate zu Beginn jeder Jahreszeit bereit.</small></p></div>
-      ${pwOk ? `<button class="sknopf haupt" id="vlPlatz"><span class="i">💾</span><span>Vom letzten Speicherstand neu starten<small>Platz ${np}, ${esc(platzText(pw))}</small></span></button>` : ""}
+      ${pwOk ? `<button class="sknopf haupt" id="vlPlatz"><span class="i">💾</span><span>Vom letzten Speicherstand neu starten<small>Speicherplatz ${np}, ${esc(platzText(pw))}</small></span></button>` : ""}
       <button class="sknopf ${pwOk ? "" : "haupt"}" id="vlNeu"><span class="i">✨</span><span>Neues Spiel<small>noch einmal von vorn beginnen</small></span></button>
       <button class="sknopf" id="vlStart"><span class="i">↩</span><span>Zum Startmenü</span></button></div>`;
     spiel.post = []; zeigeSchirm("charakter");
@@ -10143,11 +10174,10 @@
     brief(KREDIT.bank, "Ihr Hofkredit", `herzlichen Glückwunsch zu {deinem|Ihrem} neuen Hof <b>${esc(name)}</b>! Hier die Eckdaten {deines|Ihres} Kredits:` +
       verTab(["Hofkredit", ""], [["Kreditsumme", fmt(k.summe)], ["Zinsen", `${prozent(k.zins)} im Jahr`], ["Laufzeit", `${k.raten / 4} Jahre (${k.raten} Raten)`], ["Rate je Jahreszeit", fmt(k.rate)], ["erste Rate", `Beginn ${jzName(jzJetzt() + 1)}`]]) +
       `<br>Die Rate buchen wir zu Beginn jeder Jahreszeit automatisch von {deinem|Ihrem} Hofkonto ab. Bitte {achte|achten Sie} darauf, dass dann genug Geld da ist. Weitere Kredite und alle Zahlen {findest du|finden Sie} in der Hofverwaltung unter Finanzen → Bank.`);
-    const np = neuPlatz || 1; neuPlatz = null; spiel.spielId = neueSpielId(); spiel.platz = np; spiel.tsort = turnierSortierung;   // S1 Punkt 4: das neue Spiel liegt sofort auf seinem Platz
+    spiel.spielId = neueSpielId(); spiel.platz = null; spiel.tsort = turnierSortierung;   // S1: Spiel-Nummer · noch auf keinem Speicherplatz (Tipp „Spiel speichern“)
     aktBox = 0; hatSpielstand = true; altStand = null;
     aktenReiter = "steckbrief"; aktenModus = "steckbrief"; scherModus = false; medModus = false; zaumModus = false; putzModus = false; meldung = "";
-    speichern(); speichernJetzt(); rueckSichern(np); try { platzSchreiben(np, spiel); } catch (e) { speicherFehler(true); }
-    titelSetzen(); zeigeHaupt();
+    speichern(); speichernJetzt(); titelSetzen(); zeigeHaupt();
   }
   // ---------- Hof-Ausbau H2: mehrere Höfe, jeder mit eigener Kasse, eigenen Boxen, Mitarbeitern, Futter ----------
   // Der aktive Hof liegt wie bisher direkt in „spiel“, die anderen in spiel.hoefe[hid]. imHof() tauscht für eine Aktion kurz um.
@@ -12219,7 +12249,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Hufe (Etappe E):</b> Hufqualität 5–100 (nur Admin): Rasse (${Object.entries(HUF_RASSE).map(([r, q]) => `${rasseById(r) ? rasseById(r).name : r} ${q}`).join(", ")}) ± 20, vererbt wie eine Anlage; instabil unter 35, stabil ab 65. Hufwachstum (vererbt, 20 % langsam / 60 % normal / 20 % schnell, beim Fohlen 15 % anders als das Elternteil): Hufschmied alle ${Object.entries(HUF_WACHS).map(([k, v]) => `${k} ${String(v).replace(".", ",")}`).join(" / ")} Jahreszeiten. Preise: Barhuf ${fmt(HUF_PREIS.barhuf)}, Beschlag ${fmt(HUF_PREIS.beschlag)}, Anfahrt ${fmt(HUF_PREIS.anfahrt)} je Besuch. Dauerauftrag mit wählbarem Rhythmus je Pferd: wie der Hufschmied empfiehlt (eigenes Hufwachstum – kennt er erst nach ${HUF_KENNT_AB} Besuchen, vorher 1 Jahreszeit) oder alle ½ / 1 / 2 Jahreszeiten – seltener spart Geld, aber zu lange Hufe erhöhen das Risiko. Mit Stallmeister werden die Termine zusammengelegt (wer in ⅓ Jahreszeit fällig wäre, kommt mit, nur eine Anfahrt). Ohne Dauerauftrag ein Erinnerungsbrief. Zu lange Hufe (Länge = Tage seit Hufschmied ÷ eigener Rhythmus): Risiko-Faktor 1 + (Länge − 1) × 1,5 (höchstens 4) für Lahmheit, Hufabszess und Hornspalt; ab 1,3 Sprechblase „stolpert“. Eisen verlieren (beschlagen): 1 % pro Nacht × instabil 3 / stabil 0,5 × Weide 1,5 × Länge-Faktor; ohne Eisen Lahmheit ×1,5, Abszess ×2. Hufkrankheiten: Strahlfäule (nicht ausgekratzt ×1, ausgekratzt ×0,3; Mist ×2; Herbst-/Winterweide ×2), Hufabszess, Hornspalt (instabil ×3, stabil ×0,5, Beschlag ×0,5, barhuf auf der Weide ×1,3). Der Hufschmied findet und versorgt sie (eine Stufe besser) und gibt einen Plan. Hufe auskratzen: Putzkiste (Hufkratzer), Pfleger jeden Morgen oder als Behandlung. Hufgröße misst der Hufschmied nur auf Anfrage für ${fmt(HUF_MESSEN)} (nach Gewichtsklasse, hinten in 30 % eine Nummer kleiner; steht danach im Steckbrief). Anfahrt nur einmal am Tag (ruft man ihn am selben Tag für mehrere Boxen, kommt eine gemeinsame Rechnung mit allen Posten). Frisch gemachte Hufe schneidet bzw. beschlägt er erst wieder, wenn die Hälfte des eigenen Rhythmus vorbei ist – außer bei verlorenem Eisen, Hufbefund oder Wechsel barhuf ↔ Beschlag. Hufschuhe (Ausrüstung → Hufschuhe): je Pferd ein Paar vorne und/oder hinten, ${fmt(HUFSCHUH_PREIS)} pro Paar, Zustand 100 %; falsche Größe scheuert – eingesetzt und abgenutzt werden sie mit dem Training im Gelände.</p>
       <p><b>Ansteckung (Etappe F):</b> ansteckend sind ${Object.keys(ANSTECKEND).map(k => KRANK[k].n).join(", ")}. Nach der Ansteckung erst Inkubation (Influenza 2, Druse/Herpes/Pilz 3, Würmer 4 Tage): schon ansteckend, aber ohne Anzeichen – nur das große Blutbild findet sie. Chance pro Nacht je krankem Pferd: ${Object.entries(ANSTECKEND).map(([k, A]) => `${KRANK[k].n} ${Object.entries(A).map(([w, x]) => `${w} ${String(x).replace(".", ",")}`).join("/")}`).join(" · ")}. Wege: Weide (beide auf der Weide), Luft (im Stall ÷ (1 + Boxabstand)), Kontakt (Nachbarbox), Tränke (alle im Stall), Putzzeug (vom selben geputzt, nicht beide mit eigenem Putzzeug), Träger (vom selben Mitarbeiter oder dir gestern versorgt; zuverlässige oder erfahrene ab 50 machen das bemerkte kranke Pferd zuletzt ×0,3). Quarantäne (1 Jahreszeit): kein Weidegang, eigenes Putzzeug, Luft ×0,5, Kontakt ×0,2, Träger ×0,3, keine Tränke. Ein Mitarbeiter „nur für dieses Pferd“ versorgt nur dieses und trägt nichts weiter. Geimpft (Influenza/Herpes, 2 Jahreszeiten) ×0,3 und Start eine Stufe leichter; Wurmkur in der letzten Jahreszeit: Würmer ×0,2. × Konstitution (1,5 − Anlage ÷ 100). Herpes bei tragenden Stuten: Verfohlen 5 % je Grad pro Nacht. Neuzugänge bringen etwas mit: ${Object.entries(NEUZUGANG_RISIKO).map(([q, x]) => `${q} ${Math.round(x * 100)} %`).join(", ")} (Influenza 30 %, Druse 15 %, Herpes 10 %, Pilz 20 %, Würmer 25 %).</p>
       <p><b>Weitere AKU (v380):</b> nach einer AKU kann eine andere Stufe dazugebucht werden (nicht dieselbe); das Protokoll fasst alle Befunde zusammen, die Wertminderung zählt alle gefundenen Befunde. Danach „Pferd kaufen? Ja / Nein“ (Tierschutz: aufnehmen).</p>
-      <p><b>Spielstand und Speicherplätze (PLAN-SPIELSTAND.md, v519):</b> Schlüssel im Browser: Autospeicher <code>zuchtstall-v2</code> (läuft immer mit, kurz verzögert 0,4 s und sofort beim Verlassen/Verstecken der Seite), Platz 1 <code>zuchtstall-p1</code>, Platz 2 <code>zuchtstall-p2</code> (nur selbst gespeichert, mit Kurzinfo Hof/Datum/Tag/Version/echtes Datum), Rücksicherung <code>zuchtstall-rueck</code> (der zuletzt ersetzte oder gelöschte Platz, immer nur einer; „rückgängig“ tauscht). Alles gepackt mit lz-string (<code>compressToUTF16</code>; ungepackte alte Stände beginnen mit „{“ und werden beim nächsten Speichern gepackt). Größe jetzt: ${(() => { try { const j = JSON.stringify(spiel).length, g = packen(spiel).length; return `ungepackt ${j.toLocaleString("de-DE")} Zeichen → gepackt ${g.toLocaleString("de-DE")} Zeichen (${Math.round(g / j * 100)} %)`; } catch (e) { return "–"; } })()}. Spiel-Nummer <code>spiel.spielId</code>, eigener Platz <code>spiel.platz</code>, Turnier-Sortierung <code>spiel.tsort</code>. „Ungespeicherter Fortschritt“ = Tag, Geld, Pferde/Fohlen, Einsteller, Mitarbeiter, Kredite oder Briefe weichen vom Platz ab (<code>fortschritt</code>). Platzwechsel lädt den Stand in den Autospeicher und startet die Seite neu (Merker <code>zuchtstall-start</code> in sessionStorage → direkt ins Spiel). Speichern schlägt fehl → rote Meldung mit Datei-Knopf, höchstens 1× je Spieltag. Spiel verloren → nur der Autospeicher wird gelöscht.</p>
+      <p><b>Spielstand und Speicherplätze (PLAN-SPIELSTAND.md, v519):</b> Schlüssel im Browser: Autospeicher <code>zuchtstall-v2</code> (läuft immer mit, kurz verzögert 0,4 s und sofort beim Verlassen/Verstecken der Seite), Platz 1 <code>zuchtstall-p1</code>, Platz 2 <code>zuchtstall-p2</code> (nur selbst gespeichert, mit Kurzinfo Hof/Datum/Tag/Version/echtes Datum), Alles gepackt mit lz-string (<code>compressToUTF16</code>; ungepackte alte Stände beginnen mit „{“ und werden beim nächsten Speichern gepackt). Größe jetzt: ${(() => { try { const j = JSON.stringify(spiel).length, g = packen(spiel).length; return `ungepackt ${j.toLocaleString("de-DE")} Zeichen → gepackt ${g.toLocaleString("de-DE")} Zeichen (${Math.round(g / j * 100)} %)`; } catch (e) { return "–"; } })()}. Spiel-Nummer <code>spiel.spielId</code>, eigener Speicherplatz <code>spiel.platz</code> (null = noch nie gespeichert; neues Spiel legt keinen Speicherstand an, Tipp „Spiel speichern“; beim ersten Speichern Speicherplatz wählen), Turnier-Sortierung <code>spiel.tsort</code>. „Ungespeicherter Fortschritt“ = Tag, Geld, Pferde/Fohlen, Einsteller, Mitarbeiter, Kredite oder Briefe weichen vom Platz ab (<code>fortschritt</code>). Platzwechsel lädt den Stand in den Autospeicher und startet die Seite neu (Merker <code>zuchtstall-start</code> in sessionStorage → direkt ins Spiel). Speichern schlägt fehl → rote Meldung mit Datei-Knopf, höchstens 1× je Spieltag. Spiel verloren → nur der Autospeicher wird gelöscht.</p>
       <p><b>AKU findet die neuen Krankheiten (v516):</b> Röntgen/Ultraschall (große AKU): Spat, Hufrolle, Kissing Spines, alter Sehnenschaden · Augen: Mondblindheit-Narben, Augenlid-Tumor, MCOA · Herz: Aortenwand (Friese) · Longe: Shivers · immer dabei („klinisch“): Sarkoid, Hodenhochstand bei Hengsten, Gebissfehler (wird beim Kauf bekannt → Zahnkontrolle zweimal im Jahr). Wahrscheinlichkeit = 15 % × Befund-Gewicht × Rassen-/Alters-Faktor × Jahre in Arbeit × (Herkunftsrisiko ÷ 0,25); etwa jedes 4. Händlerpferd hat einen neuen Fund. Händler verdecken Spat, Sehnenschaden, Hufrolle und Kissing Spines zur Hälfte mit Schmerzmittel (Lahmheit erst 2 Tage nach dem Kauf sichtbar; Röntgen/Ultraschall findet sie trotzdem, das große Blutbild zeigt das Schmerzmittel). Gefundene Befunde kommen beim Kauf diagnostiziert mit, nicht gefundene als unbemerkte Befunde. Röntgenfunde heben die Röntgenklasse auf III/IV. Eigene Pferde: „Untersuchung“ (Versorgung) nutzt <code>UCHECK</code> (Aorta → Herz, Augenlid-Krebs/MCOA → Augen).</p>
       <p><b>Ankaufsuntersuchung (Etappe G)</b> – in jedem Kauf-/Bieten-Fenster am Pferdemarkt: ${Object.entries(AKU).map(([k, S]) => `${S.n} ${fmt(S.preis)} (${akuAufstellung(k)})`).join(", ")} – gleiche Preise wie Tierarzt-Hausbesuch und Blutbild; dazu Labortest Erbkrankheiten zum Laborpreis (${fmt(LABOR_TESTS.krank.preis)} + 30 € je weitere Rasse), Blutprobe einlagern +${fmt(AKU_PROBE)} (später prüfen ${fmt(PROBE_PRUEFEN)}). Ergebnis sofort und als Protokoll per Brief. Versteckte Befunde je Pferd nach Herkunft (Grundrisiko ${Object.entries(AKU_RISIKO).map(([q, x]) => `${q} ${Math.round(x * 100)} %`).join(", ")}): Lahmheit (Risiko × 0,7; Grad 2 sieht man im Gangbild, Grad 1 erst bei der Beugeprobe; beim Händler in 50 % mit Schmerzmittel verschleiert – nur das große Blutbild findet es, nach dem Kauf zeigt sich die Lahmheit nach 2 Tagen), Husten (× 0,35, Lunge), Herzgeräusch (× 0,15), Linsentrübung (× 0,12), Taktunreinheit an der Longe (× 0,15), Arthrose ab 10 Jahren (× 0,5, Beugeprobe oder Röntgen), Röntgenklasse I–IV (mit Arthrose III/IV), ansteckende Krankheit in der Inkubation wie bei Neuzugängen (kleines Blutbild: Entzündung, großes: welche). Jeder Befund mindert den Wert (z. B. Lahmheit 8/15 %, Arthrose 12 %, Röntgen III 15 %/IV 30 %, höchstens 50 %). Danach: kaufen, Preis um diesen Anteil verhandeln (einmal; Erfolg privat ${Math.round(AKU_VERHANDELN.Privat * 100)} %, Händler ${Math.round(AKU_VERHANDELN["Händler"] * 100)} %, Gestüt ${Math.round(AKU_VERHANDELN["Gestüt"] * 100)} %) oder ablehnen. Beim Kauf kommen alle versteckten Befunde mit (gefundene schon diagnostiziert). Eingelagerte Probe mit Schmerzmittel (Händler): der Händler erstattet die Hälfte des Kaufpreises. Eigener Verkauf ab ${fmt(1500)}: 40 % der Käufer machen eine AKU – jeder bekannte oder unbekannte Befund senkt den Preis (5 % je Grad, chronisch +10 %, frühere chronische 8 %, höchstens 40 %).</p>
       <p><b>Putzen durch Wischen</b> (Ausrüstung → Putzkiste): Werkzeug antippen, dann im Stallbild über das Pferd wischen (Finger oder gedrückte linke Maustaste). Bürste: überall auf dem Pferd; Kamm: nur oben (Mähne) und hinten/vorne (Schweif, Schopf). Nötige Wischstrecke 350 + 6 × Schmutz (Bildpunkte im Stall, 400 breit) – der Schmutz geht dabei anteilig weg, das Bild wird alle 25 % neu gezeichnet. Hufkratzer: 4 Hufunterseiten mit je 6 Dreckklumpen nacheinander wegwischen. Pfleger putzen weiter automatisch.</p>
@@ -12384,7 +12414,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         <h4 class="ma-titel">🎓 Ausbilderschein</h4><p class="text" style="margin:0 0 4px">${spiel.ausbilderschein ? `✅ Du hast den Ausbilderschein und darfst selbst einen Azubi ausbilden${angestellte("azubi").some(z => z.ausbilder === "du" && z.bis == null) ? " (Platz belegt)" : " (Platz frei)"}.` : `Mit dem Ausbilderschein darfst du selbst einen Azubi ausbilden – im kleinen Stall die einzige Möglichkeit. Einmaliger Kurs: <b>${fmt(AUSBILDERSCHEIN)}</b>.`}</p>${spiel.ausbilderschein ? "" : `<button class="knopf" id="ausbilderschein" style="width:auto;padding:8px 14px">🎓 Ausbilderschein machen · ${fmt(AUSBILDERSCHEIN)}</button>`}
         <h4 class="ma-titel">Deine eigene Erfahrung</h4><p class="text" style="margin:0 0 4px"><small>Wächst, wenn du selbst fütterst, mistest und putzt.</small></p>${wissenHTML(spiel.wissen || wissenStart(10, {}))}`;
     } else if (hofReiter === "einst") {
-      inhalt = `<button class="sknopf" id="hfSpeichern" style="margin-top:0"><span class="i">💾</span><span>Spiel speichern<small>auf Platz ${spiel.platz || 1} – der Speicherplatz ändert sich nur, wenn du speicherst</small></span></button>
+      inhalt = `<button class="sknopf" id="hfSpeichern" style="margin-top:0"><span class="i">💾</span><span>Spiel speichern<small>${spiel.platz ? `auf Speicherplatz ${spiel.platz}` : "noch nicht gespeichert – du wählst den Speicherplatz"} · der Speicherplatz ändert sich nur, wenn du speicherst</small></span></button>
         <button class="sknopf" id="hfDatei"><span class="i">💾</span><span>Spielstand als Datei speichern<small>Zuletzt als Datei gesichert: ${exportText()}</small></span></button>
         <button class="sknopf" id="hfSpar"><span class="i">🔋</span><span>Sparmodus ist ${spiel.sparmodus ? "an" : "aus"}<small>keine Animationen – schont den Akku</small></span></button>
         <button class="sknopf" id="hfVoll"><span class="i">⛶</span><span>Vollbildmodus ist ${istVoll() ? "an" : "aus"}<small>antippen zum Umschalten</small></span></button>
@@ -12686,6 +12716,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   }
   // ---------- v376 (Dome): Einsteiger-Tipps – beim ersten Öffnen einer Ansicht / ersten Aktion ein kurzes Fenster, je Spielstand einmal ----------
   const TIPPS = {
+    speichern: ["💾 Spiel speichern nicht vergessen", "Dein Spiel läuft im Autospeicher. Einen festen Speicherstand gibt es erst, wenn du selbst speicherst – über das Menü ☰ → „💾 Spiel speichern“ oder Hofverwaltung → Einstellungen. Beim ersten Mal wählst du Speicherplatz 1 oder 2.", "Speichere regelmäßig, z. B. am Ende jeder Jahreszeit. Als Datei (Einstellungen) kannst du dein Spiel auch auf ein anderes Gerät mitnehmen."],
     start: ["🗺️ So schaffst du die ersten 2 Jahre", `Dein Hof ist gekauft, der Rest vom Startkapital liegt in der Kasse. Die Bank bucht jede Jahreszeit eine Kreditrate ab – dafür muss immer Geld da sein.<ul>
       <li><b>Pension zuerst:</b> Pensionsanfragen kommen per Brief – annehmen! Einsteller zahlen jede Jahreszeit und sind am Anfang deine wichtigste Einnahme.</li>
       <li><b>Selbst versorgen:</b> füttern, Wasser, misten und putzen machst du am Anfang selbst – Mitarbeiter kosten Lohn.</li>
@@ -12732,7 +12763,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     const offen = SCHIRME.find(x => $(x) && $(x).classList.contains("offen")); if (offen === "startMenue" || offen === "charakter") return;
     const P = spiel.boxen.filter(b => b.pferd && !b.tot).map(b => b.pferd);
     const A = tippAnsicht(), L = ["start", ...A, ...(spiel.tippWarte || []), ...(spiel.tag > (spiel.tippStart || 1) && (spiel.geld || 0) < 1000 ? ["geld"] : [])];   // v380: Tipp zur offenen Ansicht zuerst, dann die gemerkten
-    if (eigenePferdeHof().length) L.push("kauf"); if (putzModus) L.push("putzen"); if (spiel.tag > (spiel.tippStart || 1)) L.push("tag");
+    if (eigenePferdeHof().length) L.push("kauf"); if (putzModus) L.push("putzen"); if (spiel.tag > (spiel.tippStart || 1)) L.push("tag"); if (spiel.tag > (spiel.tippStart || 1) && !spiel.platz) L.push("speichern");
     if (ungelesen() > 0) L.push("brief"); if (P.some(p => (p.befunde || []).some(b => b.bemerkt))) L.push("befund"); if (P.some(p => p.weide)) L.push("weide"); if (imBau().length) L.push("bau");
     const k = L.find(x => TIPPS[x] && !spiel.tipps[x]); spiel.tippWarte = (spiel.tippWarte || []).filter(x => !spiel.tipps[x] && x !== k); if (!k) return;
     spiel.tipps[k] = 1; speichern(); const [t, txt, rat] = TIPPS[k];
@@ -12743,7 +12774,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   try { stallFormat(); zeigeStall(); zeigeTag(); } catch (e) { console.error("Startbild:", e); }
   // S1: alter Spielstand → einmal auf Platz 1 (bzw. den freien Platz) · nach einem Platzwechsel direkt weiterspielen (der Platz bekommt den ergänzten Stand, damit kein „ungespeicherter Fortschritt“ entsteht)
   let startFlag = null; try { startFlag = sessionStorage.getItem(START_FLAG); sessionStorage.removeItem(START_FLAG); } catch (e) {}
-  try { if (hatSpielstand) { speichern(); speichernJetzt(); const n = spiel.platz || 1, w = lesenPlatz(n);
+  try { if (hatSpielstand) { speichern(); speichernJetzt(); const n = spiel.platz, w = n && lesenPlatz(n);
       if (platzMigration) { const frei = !lesenPlatz(1) ? 1 : !lesenPlatz(2) ? 2 : 0; if (frei) { spiel.platz = frei; speichern(); speichernJetzt(); platzSchreiben(frei, spiel); } }
       else if (startFlag === "spielen" && w && w.spiel.spielId === spiel.spielId) platzSchreiben(n, spiel, { gespeichert: w.meta.gespeichert, datum: w.meta.datum }); } } catch (e) { console.error("Speicherplatz:", e); }
   if (startFlag === "spielen" && hatSpielstand) zeigeHaupt(); else zeigeStart();
@@ -12756,7 +12787,8 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     box.style.cssText = "position:fixed;inset:0;z-index:9999;background:#fffaf0;color:#2b1d12;font-family:system-ui,sans-serif;padding:max(24px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 24px max(16px,env(safe-area-inset-left));overflow:auto";
     box.innerHTML = `<h2>🐴 Das Spiel konnte nicht starten</h2><p>Beim Laden ist ein Fehler aufgetreten. Dein Spielstand ist noch gespeichert.</p>
       <p><small id="nfFehler" style="color:#7a6552"></small></p>
-      <p><button id="nfNeu" style="padding:10px 16px;font:inherit">🔄 Neu laden</button> <button id="nfSichern" style="padding:10px 16px;font:inherit">💾 Spielstand sichern (Datei)</button></p>
+      <p><button id="nfNeu" style="padding:10px 16px;font:inherit">🔄 Neu laden</button> <button id="nfSichern" style="padding:10px 16px;font:inherit">💾 Spielstand sichern (Datei)</button> <button id="nfLaden" style="padding:10px 16px;font:inherit">📂 Spielstand aus Datei laden</button></p>
+      <div id="nfLadeBox" hidden style="margin:10px 0;padding:12px;border-radius:12px;background:#f3e6d2"></div>
       <p><small>Bitte Claude Bescheid geben (am besten mit einem Bildschirmfoto dieser Seite).</small></p>`;
     document.body.appendChild(box);
     document.getElementById("nfFehler").textContent = (window.ladeFehler || []).join(" · ") || "unbekannter Fehler";
@@ -12772,6 +12804,27 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         text = JSON.stringify({ typ: "zuchtstall-spielstand", format: 1, version: typeof SPIEL_VERSION !== "undefined" ? SPIEL_VERSION : "", gespeichert: d.toISOString(), spielId: s.spielId || "",
           info: { hoefe: H.map(h => (h.hof && h.hof.name) || ""), spieldatum: `${jz} ${j}, Tag ${((k % T) + T) % T + 1}`, pferde: H.reduce((a, h) => a + (h.boxen || []).filter(b => b.pferd && !b.tot).length, 0), geld: Math.round(H.reduce((a, h) => a + (h.geld || 0), 0)) }, spiel: s }); }
       const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "application/json" })); a.download = name; a.click(); };
+    // S3: auch im Notfall-Fenster laden – Platz wählen, Datei prüfen, auf den Platz und in den Autospeicher legen, neu starten
+    document.getElementById("nfLaden").onclick = () => {
+      const box2 = document.getElementById("nfLadeBox"), pk = n => { try { const t = localStorage.getItem("zuchtstall-p" + n); if (!t) return null; return t[0] === "{" ? JSON.parse(t) : JSON.parse(LZString.decompressFromUTF16(t)); } catch (e) { return null; } };
+      const packN = o => window.LZString ? LZString.compressToUTF16(JSON.stringify(o)) : JSON.stringify(o);
+      box2.hidden = false; box2.innerHTML = `<b>Auf welchen Speicherplatz?</b><br>${[1, 2].map(n => { const w = pk(n); return `<button data-nfp="${n}" style="padding:8px 12px;margin:6px 6px 0 0;font:inherit">Speicherplatz ${n} · ${w && w.meta ? `${w.meta.hof}, ${w.meta.datum}` : "frei"}</button>`; }).join("")}`;
+      box2.querySelectorAll("[data-nfp]").forEach(b => b.onclick = () => {
+        const n = +b.dataset.nfp, inp = document.createElement("input"); inp.type = "file"; inp.accept = ".json,application/json"; inp.id = "dateiEingabe"; inp.style.display = "none"; document.body.appendChild(inp);
+        inp.onchange = async () => { const f = inp.files && inp.files[0]; inp.remove(); if (!f) return; let d = null; try { d = JSON.parse(await f.text()); } catch (e) {}
+          const st = d && d.typ === "zuchtstall-spielstand" ? d.spiel : d && d.boxen ? d : null, meld = t => { box2.innerHTML = `<p style="margin:0">${t}</p>`; };
+          if (!st || !Array.isArray(st.boxen)) return meld("Diese Datei ist kein Zuchtstall-Spielstand.");
+          if (!st.hofAusbau) return meld("Dieser Spielstand ist von vor dem Hof-Ausbau und kann nicht mehr gespielt werden.");
+          if (d.version && typeof SPIEL_VERSION !== "undefined" && Number(d.version) > Number(SPIEL_VERSION)) return meld("Diese Datei stammt aus einer neueren Spielversion. Bitte die Seite neu laden, dein Spiel ist veraltet.");
+          const hof = (st.hof && st.hof.name) || "Mein Hof", alt = pk(n);
+          if (!confirm(`Spielstand ${hof}${d.info && d.info.spieldatum ? `, ${d.info.spieldatum}` : ""} auf Speicherplatz ${n} laden${alt && alt.meta ? ` und ${alt.meta.hof}, ${alt.meta.datum} ersetzen` : ""}?`)) return;
+          try { const s2 = { ...st, spielId: st.spielId || ("s" + Date.now().toString(36)), platz: n };
+            localStorage.setItem("zuchtstall-p" + n, packN({ meta: { hof, datum: (d.info && d.info.spieldatum) || "", tag: s2.tag, spielId: s2.spielId, version: d.version || "", gespeichert: d.gespeichert || new Date().toISOString() }, spiel: s2 }));
+            localStorage.setItem("zuchtstall-v2", packN(s2)); try { sessionStorage.setItem("zuchtstall-start", "spielen"); } catch (e) {}
+          } catch (e) { return meld("Speichern hat nicht geklappt (Speicher voll?)."); }
+          location.reload(); };
+        inp.click(); });
+    };
   }
 </script>
 </body>

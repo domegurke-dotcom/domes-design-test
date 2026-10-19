@@ -15,10 +15,10 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Team · **An:** Claude Pro (oder die nächste Team-Sitzung) · **Stand:** v541, 19.10.2026
+**Von:** Claude Team · **An:** Claude Pro (oder die nächste Team-Sitzung) · **Stand:** v542, 19.10.2026
 
 > **Hinweis für Claude Pro:** Claude Team (diese Sitzung) ist noch **aktiv** und ergänzt diese Nachricht laufend. Bitte noch nichts löschen und nicht an `index.html` arbeiten, solange hier „Team aktiv“ steht – sonst überschneiden sich die Änderungen. Dome sagt Bescheid, wenn Team fertig ist (dann den Hinweis hier entfernen).
-> **Team aktiv** (Stand v541, 19.10.2026)
+> **Team aktiv** (Stand v542, 19.10.2026)
 
 Alles liegt auf `main` (Branch `claude/admiring-bell-s50jlb` ist gleich). Details zu jeder Version stehen in CLAUDE.md (v523–v541), Zahlen auch in der Enzyklopädie (bzn, nur Admin).
 
@@ -34,7 +34,7 @@ Alles liegt auf `main` (Branch `claude/admiring-bell-s50jlb` ist gleich). Detail
 - **Domes Test von v535–v541** im Spiel (Zucht: Decken, Untersuchung, Geburts-Brief; Kolik-OP). Claude Team hat alles per Skript getestet, aber nicht auf dem Handy.
 - Handy-Test Dateiname ohne Umlaut (Spielstand downloaden) – im Test-Chromium nicht prüfbar.
 - Noch nicht gemacht (nur gesagt): Hufrehe-Tod eher hoch (0,6 je 100 Pferdejahre) – Dome fand es ok; Kolik ohne OP 85 % ist beschlossen.
-- Bekannte Lücke: Stuten der **Pension** laufen nicht durch die neue Zucht (`fremd(p)` übersprungen in `deckNacht`); Pensionsstuten werden vom Besitzer entschieden (`pensionBedeckt`).
+- **v542:** Pensionsstuten laufen jetzt durch die neue Zucht (Besitzer züchten selbst, `pensionZuchtNacht`). Offen: Dome kennt das noch nicht im Spiel getestet.
 - Araber-Zuchtrichtungen → LFS je Richtung, Hautpilz an der Mähne ohne eigene Regel, Selbstbehandler kann ohne Rezeptmittel Kolik/Hufrehe/Sehne nicht behandeln (siehe PLAN-STUDIEN.md), Domes Inkscape-Liste wie bisher.
 - Dome fragt oft nach „wie in echt“: Wenn Zahlen angepasst werden, vorher mit einem kleinen Skript prüfen und Dome die Zahlen nennen.
 

@@ -38,6 +38,8 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - `PLAN-SCHECKUNG.md` – Scheckmuster in 3 Stufen (Schritt 1 fertig, v439) und neue Muster (Schritt 2 offen – für Claude Pro).
 - `PLAN-SPIELSTAND.md` – Spielstand: **S1–S4 fertig** (v519–v525, Test `tests/spielstand-test.js`), Enzyklopädie-Reiter „💾 Spielstand“. Domes Abnahme steht aus.
 - `PLAN-RASSEN.md` – Veredler-Rassen: **fertig** (v316), dazu Domes „Danach“-Wünsche (v317). Domes Abnahme erledigt (18.10.2026).
+- `PLAN-BILANZ.md` – Dispo (−2.000 €, Käufe sperren, Pfändung/Insolvenz), Hofchronik-Zähler, Jahresbericht per Post, Spiel-verloren-Bilanz mit „Nur ansehen“, Bilanz als Bild (B1–B5, **alle offen**, Dome 19.10.2026).
+- `PLAN-RARITAETEN.md` – Seltenheitsstufen für alle Pferde (Gen-/Leistungs-Rarität, 5 Symbole) und Raritäten-Markt (R1–R4, **alle offen**, Dome 19.10.2026; baut auf PLAN-BILANZ B1/B2 auf).
 - `PROJEKT-CHAT-THEMEN.md` – große Themen, die Dome im Projekt-Chat plant (Ausbildungsstall je Disziplin, Deckhengst, Merkmale-Karte, Reiter-Erfahrung, zwei Fohlen je Box/Zwillinge …) – nicht eigenmächtig umsetzen.
 - `OFFENE-FRAGEN.md` – Fragen, die Claude in Domes Abwesenheit mit der empfohlenen Lösung entschieden hat; mit Dome durchgehen und danach anpassen. Stand 19.10.2026: alles beantwortet, beantwortete Fragen gelöscht (Flocke/Stern bleiben, Splash-Fell optional in BEI-INKSCAPE-BEARBEITEN.md).
 - Nach jeder Etappe: testen, hochladen, Dome eine Test-Anleitung mit ausgeschriebenen Wegen geben, auf Rückmeldung warten, Etappe im Plan abhaken.

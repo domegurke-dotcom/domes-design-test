@@ -10,8 +10,8 @@ Diese Punkte sind zu groß oder brauchen erst eine Planung. Darum hat Claude sie
    - der Charakter wirkt mit; bei sensiblen Pferden kommt ein Brief mit der Empfehlung, abzubrechen
 2. **Eigener Deckhengst:** eine Jahreszeit lang anbieten, Anfragen je nach Qualität, Termine (keine Überschneidung mit Turnieren), am Decktag ist der Hengst nicht im Stall.
 3. **Ausbildungsskala für die anderen Disziplinen** (Western, Gangpferde, Distanz, Rennen …): recherchieren, ob es dort Vergleichbares gibt.
-4. **Spiel verloren:** Fenster mit den Gründen und einer Bilanz (Turniere, gekaufte, gezüchtete, abgegebene und verstorbene Pferde, Finanzen, Höfe). Der letzte Spielstand bleibt zum Ansehen, ohne weiterzuspielen.
-5. **Raritäten-Markt** (jährlich im Sommer, seltene Gene mit Nachweis).
+4. **Spiel verloren:** Fenster mit den Gründen und einer Bilanz (Turniere, gekaufte, gezüchtete, abgegebene und verstorbene Pferde, Finanzen, Höfe). Der letzte Spielstand bleibt zum Ansehen, ohne weiterzuspielen. **Geplant → `PLAN-BILANZ.md`** (Dispo B1, Chronik B2, Jahresbericht B3, Verloren-Bilanz B4, Bild B5).
+5. **Raritäten-Markt** (jährlich im Sommer, seltene Gene mit Nachweis). **Geplant → `PLAN-RARITAETEN.md`** (R1–R4).
 6. **Neue Karte „Merkmale“** (Interieur, Exterieur, Gangwerk, Rassemerkmale, jeweils mit „vergleichen mit …“).
 7. **Reiter-Erfahrung:** Der Reiter wird durch Training und Turniere erfahrener. Ein unerfahrener Reiter gewinnt nicht mit einem M-Pferd. Ein erfahrenerer Reiter trainiert besser, solange er weiter ist als das Pferd.
 8. **Spielbalance: Tierschutz-Strategie.** Tierschutzstuten mit Fohlen kaufen und nach einem Jahr verkaufen, dazu Turniere und ein Kredit: So gibt es keine Geldsorgen.
@@ -27,6 +27,7 @@ Diese Punkte sind zu groß oder brauchen erst eine Planung. Darum hat Claude sie
 14. **Waschplatz mit Wirkung** (Dome, 19.10.2026): Bisher ist der Waschplatz nur eine Kachel ohne Wirkung. Ideen: Pferd nach dem Training im Sommer abspritzen (Schmutz weg, Wohlbefinden besser), Hufe waschen gegen Strahlfäule, Mauke-Pflege. Wie in echt planen (z. B. im Winter nicht nass abspritzen, Beine danach trocknen).
 
 15. **Speicherplatz (noch im Projekt-Chat besprechen):** Der Browser-Speicher (ca. 5 MB) kann bei langen Spielen und zwei Speicherplätzen voll werden. Dome will **nichts automatisch löschen**: besondere Briefe bleiben, Turnierergebnisse müssen ein Pferdeleben lang sichtbar bleiben (Verkaufswert). Gepackt speichern ist schon in S1 Punkt 11 (`PLAN-SPIELSTAND.md`) enthalten; offen ist nur, ob und was später aufgeräumt werden darf.
+16. **Tierhalteverbot bei wiederholter schwerer Vernachlässigung** (Dome, 19.10.2026): zweiter Verlust-Weg neben Kredit und Dispo. Dome will das später ausführlich im Projekt-Chat besprechen – bis dahin nichts bauen.
 
 ## Rassetypen und Rote-Liste-Rassen (Dome, 18.10.2026 – noch planen)
 - **Typen innerhalb einer Rasse:** Knabstrupper (Pony, Sport, Barock), Friese (Barock-/Sporttyp, Prädikate Ster/Kroon/Model), Welsh (Sektion A–D, im Spiel nur D), Haflinger (alter, schwerer Typ / moderner Reittyp), Shetlandpony (Mini-Shetty unter 87 cm / Standard), Quarter (Halter, Racing, Working), Araber (Zuchtrichtungen, z. B. Ägypter), Tinker (Größen vom Pony bis zum Cob).

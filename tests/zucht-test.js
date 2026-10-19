@@ -60,6 +60,7 @@ const { chromium } = require('playwright'); const path = require('path');
     spiel.tempo = tempo0;
     // --- 4c. Pensionsstuten: Besitzer züchten selbst (v542) ---
     spiel.tempo = 7; while (datum().s !== 0) { spiel.tag++; } const base = spiel.tag - (datum().t - 1); spiel.tag = base;
+    const art0 = spiel.hof.art; spiel.hof.art = 'zucht';   // Zuchtstall: viele Besitzer züchten
     let versucht = 0, tragend = 0, zuechterN = 0, kosten = 0, briefe = 0, ohneZuechter = 0; const N = 80;
     for (let n = 0; n < N; n++) {
       spiel.tag = base; spiel.post = [];
@@ -75,6 +76,9 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Züchter-Stuten werden tragend (Natursprung/Besamung wie beim Spieler)', tragend > 0 && tragend <= zuechterN, tragend + ' tragend von ' + zuechterN + ' Züchtern, ' + versucht + ' mit Versuch');
     ok('Besitzer zahlen selbst (Kosten gezählt)', kosten > 0, Math.round(kosten) + ' € gesamt');
     ok('Briefe vom Besitzer (Wunsch/tragend)', briefe > 0, String(briefe));
+    // Pensionsstall: nur ganz selten
+    spiel.hof.art = 'pension'; let zP = 0; for (let n = 0; n < 200; n++) { spiel.tag = base; const e = { eid: 'tp' + n, vn: 'Frau', nn: 'P' + n, w: true, pid: 'x', stufe: 1, leistungen: {}, haltung: 'box' }; spiel.einsteller.length = 0; spiel.einsteller.push(e); const P = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'PP' + n }); P.einsteller = e.eid; const bx = spiel.boxen[9]; bx.pferd = P; bx.tot = false; delete bx.fohlen; spiel.tag++; pensionZuchtNacht(); if (e.zuechter) zP++; }
+    ok('Pensionsstall: nur etwa 4 % Züchter (selten)', zP < 20, zP + ' von 200'); spiel.hof.art = art0;
     spiel.einsteller.length = 0; spiel.boxen[9].pferd = null;
     // --- 5. Totgeburt/Stute stirbt: Konstanten ---
     ok('Totgeburt 5 % ohne Aufsicht, 1,5 % Nachtdienst+Abfohlbox', GEBURT_TOT.ohne === 0.05 && GEBURT_TOT.maAbfohl === 0.015);

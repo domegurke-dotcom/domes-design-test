@@ -99,6 +99,41 @@ const NEU_VL = ['sarkoid', 'hautkrebs', 'ems', 'aorta', 'megaoes', 'shiver', 'kr
       const m1 = JSON.parse(JSON.stringify(m)); m1.pflege = erzeugePflege(m1); akuUebernehmen(m1, m, 'Händler'); const bm = befundListe(m1).find(b => b.art === 'spat'); check('verdeckter Spat: Lahmheit erst später sichtbar (Inkubation)', !!bm && bm.inkub > spiel.tag);
       leer(); const p = JSON.parse(JSON.stringify(h)); p.pflege = erzeugePflege(p); akuUebernehmen(p, h, 'Händler');
       check('beim Kauf kommen die Befunde mit (diagnostiziert) und der Gebissfehler', befundListe(p).some(b => b.art === 'spat' && b.diagnose) && befundListe(p).some(b => b.art === 'sarkoid' && b.diagnose) && p.gebissFehler === true); }
+    // ---- 5d. Behandlung der neuen Krankheiten (Dome: nicht nur die Krankheit, auch die Behandlung testen) ----
+    { const gueltig = k => k === 'boxenruhe' || k === 'beschlag' || !!AKTION[k] || !!APO[k];
+      NEU.forEach(k => { Object.keys(HILFT[k] || {}).forEach(a => check('HILFT ' + k + ': ' + a + ' gibt es', gueltig(a))); (PLAN[k] || []).forEach(a => check('PLAN ' + k + ': ' + a + ' gibt es', gueltig(a))); Object.keys(SCHADET[k] || {}).forEach(a => check('SCHADET ' + k + ': ' + a + ' gibt es', gueltig(a)));
+        (PLAN[k] || []).forEach(a => check('PLAN ' + k + ': ' + a + ' hilft auch (HILFT)', a === 'boxenruhe' || (HILFT[k] || {})[a] > 0)); if (!(PLAN[k] || []).length) check(k + ': ohne Plan → Tierarzt-Rat oder OP vorhanden', !!KRANK[k].rat || Object.values(OP_KLINIK).some(O => O.art.includes(k)) || k === 'mh'); });
+      // Plan des Tierarztes anwenden: Mittel bereitlegen, behandeln (Dosis nach Gewicht), am nächsten Tag zählt die Behandlung
+      const anwenden = (p, k) => { const ap = apotheke(), rz = rezeptVon(p); p.beschlag = p.beschlag || (PLAN[k] || []).includes('beschlag'); const out = [];
+        (PLAN[k] || []).forEach(a => { if (a === 'beschlag') return; if (a === 'boxenruhe') { p.boxenruhe = true; return; } const mittel = AKTION[a] ? AKTION[a].mittel : a; if (mittel) { if (APO[mittel].frei) ap[mittel] = 20; else rz[mittel] = 20; }
+          const M = APO[a]; out.push(behandeln(p, a, M && M.dosis ? dosisKlasse(gewichtAnzeige(p)) : 0, null)); }); return out; };
+      const rr = Math.random; Math.random = () => 0.5;   // Pferd wehrt sich nicht (Zufall fest)
+      const wert = {}; NEU.forEach(k => { if (!(PLAN[k] || []).length) return; leer(); const [p] = neu(k === 'krypt' ? 'quarter' : 'hannoveraner', 'Stute', 8); p.befunde = []; p.boxenruhe = false; const b = befundNeu(p, k, 2, 'Test'); b.diagnose = spiel.tag; b.tierarzt = true;
+        const txt = anwenden(p, k); check('Behandlung ' + k + ' ohne Nebenwirkung/Fehler (' + txt.join(' | ').replace(/<[^>]+>/g, '') + ')', !txt.some(s => /Nebenwirkung|kein Rezept|nichts mehr|Dosis zu|zu hoch/.test(s)));
+        spiel.tag++; const BW = behandlungsWert(p, b); wert[k] = Math.round(BW.wert * 100) / 100; const nurLindern = ['aorta', 'shivers'].includes(k);   // nicht heilbar – Behandlung bremst nur
+        check('Behandlung ' + k + ' wirkt (Wert ' + wert[k] + ')', (nurLindern ? BW.wert > 0 : BW.wert >= 0.3) && BW.schaden === 0);
+        spiel.tag--; delete p.behHeute; p.boxenruhe = false; p.beschlag = false; spiel.tag++; check('ohne Behandlung ' + k + ' kein Wert', behandlungsWert(p, b).wert === 0); spiel.tag--; });
+      Math.random = rr; A.behWert = wert;
+      // falsche Behandlung schadet (SCHADET)
+      [['sehne', 'schritt'], ['fraktur', 'schritt'], ['ems', 'boxenruhe'], ['aorta', 'schritt']].forEach(([k, a]) => { leer(); const [p] = neu('hannoveraner', 'Stute', 8); p.befunde = []; const b = befundNeu(p, k, 2, 'Test'); b.diagnose = spiel.tag; Math.random = () => 0.5;
+        if (a === 'boxenruhe') p.boxenruhe = true; else behandeln(p, a, 0, null); Math.random = rr; spiel.tag++; check('falsch behandelt schadet: ' + k + ' + ' + a, behandlungsWert(p, b).schaden > 0); spiel.tag--; p.boxenruhe = false; });
+      // falsches Mittel gegen eine neue Krankheit → Nebenwirkung (z. B. Hustensaft bei Spat)
+      { leer(); const [p] = neu('hannoveraner', 'Stute', 8); p.befunde = []; befundNeu(p, 'spat', 2, 'Test'); apotheke().hustensaft = 5; Math.random = () => 0.5; const t = behandeln(p, 'hustensaft', dosisKlasse(gewichtAnzeige(p)), null); Math.random = rr; check('falsches Mittel bei Spat → Nebenwirkung', /Nebenwirkung/.test(t)); }
+      // Tierarzt-Besuch: Rezept für Rezeptmittel des Plans, Boxenruhe gesetzt, Erstbehandlung zählt den Tag
+      NEU.forEach(k => { leer(); const [p, bx] = neu(k === 'krypt' ? 'quarter' : 'hannoveraner', k === 'krypt' ? 'Hengst' : 'Stute', 8); p.befunde = []; p.rezept = {}; p.boxenruhe = false; const b = befundNeu(p, k, 2, 'Test'); tierarztBesuch(p, bx, () => {}); document.getElementById('dlg').hidden = true;
+        const rez = (PLAN[k] || []).filter(a => APO[a] && !APO[a].frei); check('Tierarzt ' + k + ': Rezept ' + (rez.join(',') || '–'), rez.every(a => (p.rezept[a] || 0) >= REZEPT_DOSEN)); if ((PLAN[k] || []).includes('boxenruhe')) check('Tierarzt ' + k + ': Boxenruhe', p.boxenruhe === true);
+        spiel.tag++; check('Tierarzt ' + k + ': Erstbehandlung zählt (Wert 1)', befundListe(p).every(x => x.art !== k) || behandlungsWert(p, befundListe(p).find(x => x.art === k)).wert === 1); spiel.tag--; });
+      // Hufschmied-Rat bei Hufrolle: Beschlag (ohne Rezeptmittel)
+      check('Hufschmied rät bei Hufrolle zum Beschlag', hufschmiedRat('hufrolle').includes('beschlag') && !hufschmiedRat('hufrolle').includes('schmerzmittel'));
+      // Heilverlauf: behandelt heilt schneller als unbehandelt (nicht chronische) bzw. wird seltener schlimmer (chronische) – je 150 Durchläufe à 10 Nächte
+      const verlauf = (k, beh) => { let summe = 0, weg = 0; const N = 150; for (let i = 0; i < N; i++) { leer(); const [p, bx] = neu('hannoveraner', 'Stute', 8); p.befunde = []; p.boxenruhe = false; const b = befundNeu(p, k, 3, 'Test'); b.diagnose = spiel.tag; b.tierarzt = true; b.gewarnt = false;
+          for (let n = 0; n < 10; n++) { if (beh) { Math.random = () => 0.5; anwenden(p, k); Math.random = rr; } spiel.tag++; bx.krippeVoll = true; befundeNacht(); if (bx.tot) { bx.tot = false; break; } }
+          const x = befundListe(p).find(q => q.art === k); if (!x) weg++; summe += x ? x.grad : 0; } return { grad: Math.round(summe / N * 100) / 100, geheilt: weg }; };
+      A.verlauf = {};
+      ['sonnenbrand', 'sehne', 'hyperlipaemie', 'kissing', 'spat', 'eiph', 'ems', 'mh'].forEach(k => { const mit = verlauf(k, true), ohne = verlauf(k, false); A.verlauf[k] = { mit, ohne };
+        if (['sonnenbrand', 'sehne', 'hyperlipaemie'].includes(k)) check('Verlauf ' + k + ': nicht chronisch – behandelt heilen einige aus (' + mit.geheilt + ')', mit.geheilt > ohne.geheilt);
+        check('Verlauf ' + k + ': behandelt besser (Grad ' + mit.grad + ' vs ' + ohne.grad + ', geheilt ' + mit.geheilt + ' vs ' + ohne.geheilt + ')', mit.grad < ohne.grad || mit.geheilt > ohne.geheilt); });
+    }
     // ---- 6. Hodenhochstand sperrt die Zucht ----
     { leer(); const [h, bx] = neu('quarter', 'Hengst', 8); h.befunde = []; const vorher = zuchtSperre(h, bx); befundNeu(h, 'krypt', 1, 'x'); check('Zucht gesperrt bei Hodenhochstand', /Hodenhochstand/.test(zuchtSperre(h, bx)) && !/Hodenhochstand/.test(vorher)); }
     // ---- 7. Gebiss ----
@@ -116,6 +151,8 @@ const NEU_VL = ['sarkoid', 'hautkrebs', 'ems', 'aorta', 'megaoes', 'shiver', 'kr
   ok('Daten vollständig (KRANK, HILFT, PLAN, URSACHE, VERDACHT, Infos, Rassen)', !(r.datenFehler || []).length);
   (r.fehler || []).forEach(f => L.push(['✗', f, '']));
   ok('Einzelprüfungen (Erbgang, Risiken, Abläufe, OPs, Zucht, Gebiss, Kopfform)', !(r.fehler || []).length);
+  console.log('Behandlungswert je Krankheit: ' + JSON.stringify(r.behWert));
+  console.log('Verlauf nach 10 Nächten (Grad Ø, geheilt von 150): ' + JSON.stringify(r.verlauf));
   console.log('AKU-Funde (1500 Marktpferde, Händler): ' + JSON.stringify(r.akuZaehl) + ' – Pferde mit neuem Fund: ' + r.akuAnteil + ' %');
   console.log('Erwartete neue Befunde je Rasse und Jahr (Stute 8 J., mittlere Arbeit, Weide):'); r.tabelle.forEach(([n, w, d]) => console.log('  ' + n.padEnd(13) + String(w).padEnd(6) + d));
   // ---- 9. Speichern und Neuladen mit neuen Befunden ----

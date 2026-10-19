@@ -323,8 +323,8 @@
   .post-leiste button { border: 0; background: none; color: var(--akzent); font: inherit; font-weight: 600; cursor: pointer; padding: 4px; }
   .brief .haken { width: 22px; height: 22px; flex: none; border: 2px solid #c9b597; border-radius: 6px; background: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; }
   .brief.markiert { border-color: var(--akzent); background: #fff3e8; } .brief.markiert .haken { background: var(--akzent); border-color: var(--akzent); }
-  .post-ordner { display: flex; gap: 6px; margin-bottom: 10px; } .post-ordner button { flex: 1; border: 0; border-radius: 10px; padding: 8px 6px; font: inherit; font-size: .85rem; font-weight: 700; background: #efe4d2; color: #6b5440; cursor: pointer; }
-  .post-ordner button.an { background: var(--akzent); color: #fff; }
+  .post-ordner { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; } .post-ordner button { flex: 1 1 calc(25% - 6px); min-width: 0; border: 0; border-radius: 10px; padding: 8px 6px; font: inherit; font-size: .85rem; font-weight: 700; background: #efe4d2; color: #6b5440; cursor: pointer; }
+  .post-ordner button.an { background: var(--akzent); color: #fff; } @media (max-width: 520px) { .post-ordner button { flex: 1 1 calc(50% - 6px); } }   /* 4 Ordner: auf schmalen Handys 2 × 2 */
   .brief-stern { flex: none; border: 0; background: none; padding: 0 4px; margin-right: 4px; font: inherit; font-size: 1.35rem; line-height: 1; color: #b9a58a; cursor: pointer; vertical-align: -2px; }
   .brief-stern.an { color: #e0a800; }
   .briefe .brief .brief-stern { margin: 0 0 0 auto; align-self: center; }
@@ -968,7 +968,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "553";
+  const SPIEL_VERSION = "554";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -976,10 +976,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=553"></script>
-<script src="pferd.js?v=553"></script>
-<script src="boxstufen.js?v=553"></script>
-<script src="kopfneu.js?v=553"></script>
+<script src="lz-string.min.js?v=554"></script>
+<script src="pferd.js?v=554"></script>
+<script src="boxstufen.js?v=554"></script>
+<script src="kopfneu.js?v=554"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2327,6 +2327,72 @@
       <p class="text" style="margin:8px 0 2px"><b>Wertvollste Pferde</b></p><ol class="liste">${L.wertvoll.map(x => zeile(x, fmt(x.w))).join("")}</ol>
       <p class="text"><small>Gewertet wird der letzte Stand des Pferdes; bei verkauften Pferden der Stand beim Verkauf.</small></p></details>`;
   }
+  // ---------- B3 (PLAN-BILANZ.md, Dome): Jahresbericht per Post ----------
+  // Zu Beginn jedes neuen Jahres (Frühling, Tag 1) kommt ein Brief der Hofverwaltung mit der Bilanz des letzten Jahres (Vergleich zum Vorjahr, „seit Spielbeginn“).
+  // Oben 6 Kacheln, alles andere im Akkordeon. Mehrere Höfe: ein Brief, „Alle Höfe zusammen“ + je Hof ein aufklappbarer Abschnitt. Ordner „Jahresberichte“, nie automatisch gelöscht.
+  const BILANZ_NEUTRAL = ["Hofkauf", "Eigenanteil vom zentralen Konto", "Kredit (Auszahlung)", "Kredit: Tilgung", "Kredit: Sondertilgung"];   // Hofkauf und Kredit-Bewegungen zählen nicht als Einnahme/Ausgabe (wie in Finanzen „darin enthalten“)
+  const leereDaten = () => ({ ein: 0, aus: 0, posten: {}, starts: 0, siege: 0, plaz: 0, bew: { gekauft: 0, gezuechtet: 0, verkauft: 0, abgegeben: 0, verstorben: 0, gepfaendet: 0 }, klassen: {}, hoefe: [] });
+  function jahresDaten(hid, jahre) {   // im Kontext des Hofs aufrufen (imHof)
+    const D = leereDaten();
+    jahre.forEach(j => {
+      Object.entries((spiel.finanzen || {})[String(j)] || {}).forEach(([k, e]) => { if (BILANZ_NEUTRAL.includes(k)) return; D.ein += e.ein; D.aus += e.aus; const x = (D.posten[k] = D.posten[k] || { ein: 0, aus: 0 }); x.ein += e.ein; x.aus += e.aus; });
+      for (let sz = 0; sz < 4; sz++) { const C = ((spiel.chronik || {})[hid] || {})[`${j}-${sz}`]; if (!C) continue;
+        Object.entries(C.k || {}).forEach(([k, n]) => { let m;
+          if (k === "Turnierstart") D.starts += n; else if (k === "Turniersieg") D.siege += n; else if (k === "Turnier platziert") D.plaz += n;
+          else if (/^Kauf: /.test(k)) D.bew.gekauft += n; else if (k === "Fohlen geboren") D.bew.gezuechtet += n; else if (/^Verkauf/.test(k)) D.bew.verkauft += n; else if (/^Abgabe/.test(k)) D.bew.abgegeben += n;
+          else if (k === "Todesfall") D.bew.verstorben += n; else if (k === "Pferd gepfändet") D.bew.gepfaendet += n;
+          else if ((m = k.match(/^Turnier (.+): (Start|Sieg|Platz)$/))) { const z = (D.klassen[m[1]] = D.klassen[m[1]] || [0, 0, 0]); z[{ Start: 0, Sieg: 1, Platz: 2 }[m[2]]] += n; } }); }
+      (spiel.chronikHoefe || []).forEach(h => { if (Math.floor(h.jz / 4) === j) D.hoefe.push(h); });
+    });
+    return D;
+  }
+  const datenSumme = L => L.reduce((a, d) => { a.ein += d.ein; a.aus += d.aus; Object.entries(d.posten).forEach(([k, x]) => { const y = (a.posten[k] = a.posten[k] || { ein: 0, aus: 0 }); y.ein += x.ein; y.aus += x.aus; });
+    a.starts += d.starts; a.siege += d.siege; a.plaz += d.plaz; Object.keys(a.bew).forEach(k => { a.bew[k] += d.bew[k]; });
+    Object.entries(d.klassen).forEach(([k, z]) => { const y = (a.klassen[k] = a.klassen[k] || [0, 0, 0]); z.forEach((v, i) => { y[i] += v; }); }); a.hoefe.push(...d.hoefe); return a; }, leereDaten());
+  const hatBuchungen = D => D.ein + D.aus > 0;
+  const grossePosten = (D, art) => Object.entries(D.posten).filter(([, x]) => x[art] > 0).sort((a, b) => b[1][art] - a[1][art]);
+  function vglText(neu, alt, euro) {   // ↑/↓ zum Vorjahr
+    if (alt == null) return "<small>–</small>"; const d = neu - alt, f = x => euro ? fmt(Math.round(Math.abs(x))) : String(Math.abs(Math.round(x)));
+    return d > 0 ? `<small style="color:#2e7d32">↑ ${f(d)} zum Vorjahr</small>` : d < 0 ? `<small style="color:#b3261e">↓ ${f(d)} zum Vorjahr</small>` : `<small>wie im Vorjahr</small>`;
+  }
+  function jbKachel(titel, wert, vgl) { return `<div style="background:#f3e8d3;border-radius:10px;padding:8px 10px"><small>${titel}</small><br><b style="font-size:1.05rem">${wert}</b><br>${vgl || ""}</div>`; }
+  function jbHofHTML(R, j) {   // R = { name, d, v, alle, geld, pferde, vGeld, vPferde } – eine Bilanz (ein Hof oder alle Höfe zusammen)
+    const D = R.d, V = R.v && hatBuchungen(R.v) ? R.v : null, gewinn = D.ein - D.aus, gA = grossePosten(D, "aus")[0], gE = grossePosten(D, "ein")[0];
+    const kacheln = `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:8px 0">
+      ${jbKachel(gewinn >= 0 ? "Gewinn" : "Verlust", `${gewinn >= 0 ? "" : "−"}${fmt(Math.round(Math.abs(gewinn)))}`, vglText(gewinn, V ? V.ein - V.aus : null, true))}
+      ${jbKachel("Kontostand", fmt(Math.round(R.geld)), vglText(R.geld, R.vGeld, true))}
+      ${jbKachel("Pferde", String(R.pferde), vglText(R.pferde, R.vPferde))}
+      ${jbKachel("Turniere", `${D.siege} ${D.siege === 1 ? "Sieg" : "Siege"} · ${D.plaz} platziert`, `<small>${D.starts} ${D.starts === 1 ? "Start" : "Starts"}</small>`)}
+      ${jbKachel("Größte Ausgabe", gA ? `${fmt(Math.round(gA[1].aus))}` : "–", gA ? `<small>${esc(gA[0])}</small>` : "")}
+      ${jbKachel("Größte Einnahme", gE ? `${fmt(Math.round(gE[1].ein))}` : "–", gE ? `<small>${esc(gE[0])}</small>` : "")}</div>`;
+    const bw = (a, b) => ["Gekaufte Pferde", "Gezüchtete Fohlen", "Verkaufte Pferde", "Abgegebene Pferde (Gnadenhof, Tierschutz, Händler)", "Verstorbene Pferde", "Gepfändete Pferde"].map((t, i) => { const k = ["gekauft", "gezuechtet", "verkauft", "abgegeben", "verstorben", "gepfaendet"][i]; return [t, a.bew[k], b ? b.bew[k] : "–"]; }).filter(z => z[1] || (z[2] && z[2] !== "–"));
+    const det = (titel, inhalt) => `<details style="margin:6px 0"><summary><b>${titel}</b></summary>${inhalt}</details>`, leer = "<p class=\"text\"><small>Nichts verzeichnet.</small></p>";
+    const kl = Object.entries(D.klassen).sort((a, b) => b[1][0] - a[1][0]), pos = Object.entries(D.posten).sort((a, b) => (b[1].ein + b[1].aus) - (a[1].ein + a[1].aus));
+    const best = R.best && (R.best.beste[0] || R.best.wertvoll[0]) ? `<ul class="liste">${R.best.beste[0] ? `<li>🏅 Meiste Erfolge: <b>${esc(R.best.beste[0].n)}</b> · ${R.best.beste[0].s} ${R.best.beste[0].s === 1 ? "Sieg" : "Siege"}, ${R.best.beste[0].pl} ${R.best.beste[0].pl === 1 ? "Platzierung" : "Platzierungen"}</li>` : ""}${R.best.wertvoll[0] ? `<li>💎 Wertvollstes Pferd: <b>${esc(R.best.wertvoll[0].n)}</b> · ${fmt(R.best.wertvoll[0].w)}</li>` : ""}</ul>` : leer;
+    const alle = R.alle, seit = verTab(["Seit Spielbeginn", ""], [["Gewinn insgesamt", `${alle.ein - alle.aus >= 0 ? "" : "−"}${fmt(Math.round(Math.abs(alle.ein - alle.aus)))}`], ["Turnierstarts", alle.starts], ["Siege", alle.siege], ["Platzierungen", alle.plaz], ["Pferde gekauft", alle.bew.gekauft], ["Fohlen gezüchtet", alle.bew.gezuechtet], ["Pferde verkauft", alle.bew.verkauft], ["Pferde verstorben", alle.bew.verstorben]]);
+    return kacheln
+      + det("🐴 Pferde-Bewegungen", bw(D, V).length ? verTab(V ? ["", String(j), String(j - 1)] : ["", String(j)], bw(D, V).map(z => V ? z : z.slice(0, 2))) : leer)
+      + det("🏆 Turniere je Klasse", kl.length ? verTab(["Klasse", "Starts", "🥇", "🎀"], kl.map(([k, z]) => [esc(k), ...z])) : leer)
+      + det("💶 Finanzen im Detail", pos.length ? verTab(["Posten", "Einnahmen", "Ausgaben"], pos.map(([k, x]) => [esc(k), x.ein ? fmt(Math.round(x.ein)) : "", x.aus ? fmt(Math.round(x.aus)) : ""])) : leer)
+      + (D.hoefe.length ? det("🏡 Höfe", `<ul class="liste">${D.hoefe.map(h => `<li>${esc(h.name)} – ${h.was}</li>`).join("")}</ul>`) : "")
+      + det("⭐ Bestes Pferd", best) + det("📅 Seit Spielbeginn", seit);
+  }
+  function jahresbericht() {
+    const d = datum(); if (d.s !== 0 || d.t !== 1) return;
+    const j = d.j - 1, hofs = hofReihe().filter(h => h === aktivHid() || (spiel.hoefe || {})[h]), jahreAb = h => Object.keys(imHof(h, () => spiel.finanzen) || {}).map(Number).filter(x => x <= j);
+    const R = hofs.map(h => imHof(h, () => {
+      const Z = (spiel.chronik = spiel.chronik || {}), H = (Z[h] = Z[h] || {}), J = (H.jahr = H.jahr || {}), vorher = J[String(j - 1)], n = alleEigenenPferde().filter(x => !fremd(x.p)).length;
+      const r = { hid: h, name: hofName(), d: jahresDaten(h, [j]), v: jahresDaten(h, [j - 1]), alle: jahresDaten(h, jahreAb(h)), geld: spiel.geld || 0, pferde: n, vGeld: vorher ? vorher.geld : null, vPferde: vorher ? vorher.pferde : null, best: bestenListen(h) };
+      J[String(j)] = { geld: r.geld, pferde: n }; return r; }));
+    if (!R.some(r => hatBuchungen(r.d))) return;   // erstes Jahr ohne Buchungen: noch kein Bericht
+    const sum = f => R.reduce((a, r) => a + (f(r) || 0), 0), mehr = R.length > 1;
+    const gesamt = mehr ? { name: "Alle Höfe zusammen", d: datenSumme(R.map(r => r.d)), v: datenSumme(R.map(r => r.v)), alle: datenSumme(R.map(r => r.alle)), geld: sum(r => r.geld) + ((spiel.zentral && spiel.zentral.geld) || 0), pferde: sum(r => r.pferde), vGeld: R.every(r => r.vGeld != null) ? sum(r => r.vGeld) : null, vPferde: R.every(r => r.vPferde != null) ? sum(r => r.vPferde) : null, best: null } : R[0];
+    const text = `hier ist {dein|Ihr} Jahresbericht für das Jahr <b>${j}</b>${mehr ? ` – für alle ${R.length} Höfe zusammen und für jeden Hof einzeln` : ` für <b>${esc(R[0].name)}</b>`}.${mehr ? `<br><b>Alle Höfe zusammen</b> (Kontostand inklusive zentralem Konto)` : ""}`
+      + jbHofHTML(gesamt, j) + (mehr ? R.map(r => `<details style="margin:10px 0"><summary><b>🏠 ${esc(r.name)}</b></summary>${jbHofHTML(r, j)}</details>`).join("") : "")
+      + `<p class="text"><small>Gewinn und Verlust ohne Hofkauf, Kreditauszahlung und Tilgung. Die Pfeile vergleichen mit dem Vorjahr.</small></p>`;
+    const G = gesamt.d, gewinn = G.ein - G.aus, gA = grossePosten(G, "aus")[0], gE = grossePosten(G, "ein")[0], b0 = R[0].best && R[0].best.beste[0];
+    brief("Hofverwaltung", `Jahresbericht ${j}`, text, { aktion: { typ: "jbild", daten: { jahr: j, hof: mehr ? "Alle Höfe zusammen" : R[0].name, gewinn: Math.round(gewinn), geld: Math.round(gesamt.geld), pferde: gesamt.pferde, siege: G.siege, plaz: G.plaz, starts: G.starts, ausgabe: gA ? [gA[0], Math.round(gA[1].aus)] : null, einnahme: gE ? [gE[0], Math.round(gE[1].ein)] : null, bestes: b0 ? { id: b0.id, n: b0.n, r: b0.r } : null } } });
+  }
   const AUFNAHME_MAX = 20000;
   function prot(k, info) {
     try { const d = datum(), z = d.j + "-" + d.s, P = (spiel.protokoll = spiel.protokoll || {}), J = (P[z] = P[z] || {}); J[k] = (J[k] || 0) + 1;
@@ -3008,7 +3074,7 @@
     [/wieder fit/, "klinik", "Klinik: Entlassung und Rechnung"], [/muss behandelt werden/, "gesundheit", "Tierarzt: Behandlung nötig"],
     [/^Kein Käufer|^Kein Gebot/, "kein-kaeufer", "Verkauf: kein Käufer"], [/^Preisvorschlag/, "preisvorschlag", "Verkauf: Preisvorschlag"], [/^Zwischenstand/, "auktion", "Auktion: Zwischenstand"], [/wurde verkauft/, "verkauf", "Pferd verkauft"], [/geplatzt/, "geplatzt", "Verkauf geplatzt"],
     [/ist 3 Jahre alt/, "drei-jahre", "Pferd wird 3 Jahre alt"], [/fängt heute an|hat aufgehört|hat gekündigt| kündigt$|ist krank$|^Urlaubsantrag|Abschlussprüfung|Ausbilder|Ausbildung ab/, "mitarbeiter", "Mitarbeiter"], [/ist auffällig$/, "auffaellig", "Mitarbeiter: Auffälligkeit"], [/^Huftermin/, "huftermin", "Hufschmied: Erinnerung"], [/^Blutbild .*Ergebnis$/, "blutbild", "Tierarzt: Blutbild"], [/^AKU-Protokoll/, "aku", "Tierarzt: AKU-Protokoll"], [/: Totgeburt$/, "totgeburt", "Tierarzt: Totgeburt"], [/^Ankaufsuntersuchung:/, "kaeuferaku", "Verkauf: AKU des Käufers"], [/^Blutprobe /, "probe", "Tierarzt: Blutprobe"], [/hat verfohlt$/, "verfohlt", "Tierarzt: Verfohlen"], [/^Sorge um/, "sorge", "Tierarzt: Warnung"], [/^Überboten/, "ueberboten", "Auktion: überboten"], [/^Zuschlag|^Auktion verloren/, "zuschlag", "Auktion: Ergebnis"], [/ist wieder gesund$/, "ts-gesund", "Tierschutz: Pferd wieder gesund"], [/^Ausbildungsbericht/, "ausbildungsbericht", "Ausbildungsbericht"], [/^Strafe/, "strafe", "Tierschutz: Strafe"], [/beschlagnahmt/, "ts-beschlagnahme", "Tierschutz: Beschlagnahme"],
-    [/^Willkommen/, "gnadenhof", "Gnadenhof: Ankunft"], [/^Abschied/, "tod", "Pferd verstorben"], [/^Gentest|^Laborergebnis/, "gentest", "Laborergebnis"],
+    [/^Jahresbericht/, "jahresbericht", "Jahresbericht"], [/^Willkommen/, "gnadenhof", "Gnadenhof: Ankunft"], [/^Abschied/, "tod", "Pferd verstorben"], [/^Gentest|^Laborergebnis/, "gentest", "Laborergebnis"],
   ];
   const briefTyp = betreff => (BRIEF_TYPEN.find(([re]) => re.test(betreff)) || [, "sonstiges", "Sonstige Nachricht"]);
   // Briefe: immer „Sie“ – bis der Absender nach einigen Briefen das „Du“ anbietet und der Spieler zustimmt.
@@ -3032,7 +3098,7 @@
     const [, typ] = briefTyp(betreff), spam = (spiel.spam || []).includes(typ);
     const { pferde, ...rest } = extra || {};   // pferde: diese Pferde sind gemeint (bei gleichen Namen)
     (spiel.post = spiel.post || []).unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), jz: jzJetzt(), tag: spiel.tag, von, betreff, text, typ, gelesen: spam, spam, du, links: briefLinks(text, pferde), hid: aktivHid(), hofName: hofName(), ...rest });
-    if (spiel.post.length > 120) spiel.post.length = 120;
+    if (spiel.post.length > 120) { for (let i = spiel.post.length - 1; i >= 0 && spiel.post.length > 120; i--) if (spiel.post[i].typ !== "jahresbericht") spiel.post.splice(i, 1); }   // B3: Jahresberichte werden nie automatisch gelöscht
     if (betreff !== "Neuigkeit" && typ !== "duzen") {
       const K = (spiel.kontakt = spiel.kontakt || {}); K[von] = (K[von] || 0) + 1;
       if (K[von] >= DU_ANGEBOT_NACH && rufWert(von) >= DU_AB_RUF && !(spiel.duzen && von in spiel.duzen) && !(spiel.duAngeboten || []).includes(von)) {
@@ -3079,6 +3145,7 @@
   // Spam: nach einem Jahr (4 Jahreszeiten) automatisch löschen
   const spamAufraeumen = () => { const j = jzJetzt(); spiel.post = (spiel.post || []).filter(b => !b.spam || j - (b.spamSeit != null ? b.spamSeit : b.jz) < 4); };
   function spamSetzen(typ, an) {
+    if (typ === "jahresbericht") return;   // B3: nie Spam
     spiel.spam = (spiel.spam || []).filter(t => t !== typ); if (an) spiel.spam.push(typ);
     (spiel.post || []).forEach(b => { if ((b.typ || briefTyp(b.betreff)[1]) !== typ) return; b.typ = typ; b.spam = an; if (an) { b.gelesen = true; b.spamSeit = jzJetzt(); } });
     speichern(); postIconSetzen();
@@ -9057,7 +9124,7 @@
     jedenHof(hofNacht, true);
     tierschutzKlinik(); tierschutzFohlen(); laborNacht(); auktionsNacht();
     if (datum().t === 1) weihnachtsSpende();   // v378
-    if (datum().t === 1) { jedenHof(() => { stallartJahreszeit(); patenJahreszeit(); pensionJahreszeit(); bereiterPensionAbrechnung(); fremdFohlenJahreszeit(); offenstallJahreszeit(); kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); jahreszeitBeginn(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); bereiterAbrechnung(); maKnappPruefen(); dispoJahreszeit(); bestenAlle(); auktionsEnde(); fohlenAbsetzen(); stutenAusAbfohl(); }, true); spamAufraeumen(); hoefeVersteigern(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
+    if (datum().t === 1) { jedenHof(() => { stallartJahreszeit(); patenJahreszeit(); pensionJahreszeit(); bereiterPensionAbrechnung(); fremdFohlenJahreszeit(); offenstallJahreszeit(); kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); jahreszeitBeginn(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); bereiterAbrechnung(); maKnappPruefen(); dispoJahreszeit(); bestenAlle(); auktionsEnde(); fohlenAbsetzen(); stutenAusAbfohl(); }, true); spamAufraeumen(); hoefeVersteigern(); jahresbericht(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
     turnierKalender();
     jedenHof(hofMorgen, true);
     blutbilderTag();     // Laborergebnisse
@@ -10698,14 +10765,20 @@
     const b = H.pacht * PACHT_PREIS; buchen(-b, "Pacht");
   }
   // Zwangsversteigerung eines von mehreren Höfen: Hof, Pferde und Mitarbeiter sind weg, das Spiel geht weiter
+  // B3 Punkt 8: kleine Bilanz für einen Hof, der versteigert wird, während das Spiel weitergeht (im Kontext des Hofs aufrufen)
+  function hofAbschlussText(hid, grund) {
+    const jahre = Object.keys(spiel.finanzen || {}).map(Number).sort(), D = jahresDaten(hid, jahre), n = alleEigenenPferde().filter(x => !fremd(x.p)).length, gw = D.ein - D.aus;
+    return `<br><br><b>Bilanz von ${esc(hofName())}</b><ul class="liste"><li>Grund: ${grund}</li><li>Dauer: ${jahre.length ? `${jahre[0]} bis ${jahre[jahre.length - 1]} (${jahre.length} ${jahre.length === 1 ? "Jahr" : "Jahre"})` : "weniger als ein Jahr"}</li><li>Pferde zuletzt: ${n}</li><li>Turniere: ${D.starts} ${D.starts === 1 ? "Start" : "Starts"}, ${D.siege} ${D.siege === 1 ? "Sieg" : "Siege"}, ${D.plaz} platziert</li><li>Gekaufte Pferde: ${D.bew.gekauft} · Fohlen gezüchtet: ${D.bew.gezuechtet} · verkauft: ${D.bew.verkauft}</li><li>${gw >= 0 ? "Gewinn" : "Verlust"} insgesamt: ${gw < 0 ? "−" : ""}${fmt(Math.round(Math.abs(gw)))}</li></ul>`;
+  }
   function hoefeVersteigern() {
     const weg = spiel.hofWeg || [], dispoWeg = spiel.hofWegDispo || []; delete spiel.hofWeg; delete spiel.hofWegDispo; if (!weg.length) return;
     weg.forEach(hid => {
       if (hofAnzahl() <= 1) return;
       if (hid === aktivHid()) hofWechseln(hofReihe().find(h => h !== hid));
       const H = spiel.hoefe[hid], name = H.hof.name, pferde = (H.boxen || []).filter(b => b.pferd).length; chronikHof("verloren", name);
+      const bilanz = imHof(hid, () => hofAbschlussText(hid, dispoWeg.includes(hid) ? "Insolvenz (Konto zu lange im Minus)" : "drei Kreditraten nicht bezahlt")) || "";   // B3: kleine Bilanz, solange der Hof noch da ist
       delete spiel.hoefe[hid]; spiel.hofReihe = hofReihe().filter(h => h !== hid);
-      brief(KREDIT.bank, `Zwangsversteigerung: ${name}`, `${dispoWeg.includes(hid) ? `leider war {dein|Ihr} Hofkonto bei <b>${esc(name)}</b> zu lange im Minus. Wir haben das Konto gekündigt und den Hof zwangsversteigern lassen.` : `leider {hast du|haben Sie} drei Kreditraten für <b>${esc(name)}</b> nicht bezahlt. Wir haben den Kredit gekündigt und den Hof zwangsversteigern lassen.`} ${pferde ? `Die ${pferde} ${pferde === 1 ? "Pferd" : "Pferde"}, ` : ""}Mitarbeiter, Futter und Ausrüstung dieses Hofs gehören jetzt anderen. {Deine|Ihre} anderen Höfe sind davon nicht betroffen.`);
+      brief(KREDIT.bank, `Zwangsversteigerung: ${name}`, `${dispoWeg.includes(hid) ? `leider war {dein|Ihr} Hofkonto bei <b>${esc(name)}</b> zu lange im Minus. Wir haben das Konto gekündigt und den Hof zwangsversteigern lassen.` : `leider {hast du|haben Sie} drei Kreditraten für <b>${esc(name)}</b> nicht bezahlt. Wir haben den Kredit gekündigt und den Hof zwangsversteigern lassen.`} ${pferde ? `Die ${pferde} ${pferde === 1 ? "Pferd" : "Pferde"}, ` : ""}Mitarbeiter, Futter und Ausrüstung dieses Hofs gehören jetzt anderen. {Deine|Ihre} anderen Höfe sind davon nicht betroffen.${bilanz}`);
     });
   }
   // ---------- Immobilien-Menü (H2): eigene Höfe wechseln, Makler-Angebote ----------
@@ -12826,8 +12899,8 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     if (hofReiter === "aussen") hofReiter = "pferde";   // Dome (v326): „Außer Haus“ steckt jetzt in „Pferde“
     if (hofReiter !== "post") { offenerBrief = null; postAuswahl = null; }
     const sp = spiel.spieler || {}, allePost = spiel.post || (spiel.post = []), n = ungelesen();
-    const post = allePost.filter(b => !fremderBrief(b)).filter(b => postOrdner === "spam" ? b.spam : postOrdner === "stern" ? b.stern && !b.spam : !b.spam), spamAnz = allePost.filter(b => b.spam).length, sternAnz = allePost.filter(b => b.stern && !b.spam).length;
-    const ordnerLeiste = `<div class="post-ordner"><button data-ordner="eingang" class="${postOrdner === "eingang" ? "an" : ""}">📥 Posteingang${n ? ` (${n})` : ""}</button><button data-ordner="stern" class="${postOrdner === "stern" ? "an" : ""}">⭐ Wichtig${sternAnz ? ` (${sternAnz})` : ""}</button><button data-ordner="spam" class="${postOrdner === "spam" ? "an" : ""}">🚫 Spam${spamAnz ? ` (${spamAnz})` : ""}</button></div>`;
+    const post = allePost.filter(b => !fremderBrief(b)).filter(b => postOrdner === "spam" ? b.spam : postOrdner === "jahr" ? (b.typ || briefTyp(b.betreff)[1]) === "jahresbericht" && !b.spam : postOrdner === "stern" ? b.stern && !b.spam : !b.spam), spamAnz = allePost.filter(b => b.spam).length, sternAnz = allePost.filter(b => b.stern && !b.spam).length, jahrAnz = allePost.filter(b => !b.spam && (b.typ || briefTyp(b.betreff)[1]) === "jahresbericht").length;
+    const ordnerLeiste = `<div class="post-ordner"><button data-ordner="eingang" class="${postOrdner === "eingang" ? "an" : ""}">📥 Posteingang${n ? ` (${n})` : ""}</button><button data-ordner="stern" class="${postOrdner === "stern" ? "an" : ""}">⭐ Wichtig${sternAnz ? ` (${sternAnz})` : ""}</button><button data-ordner="jahr" class="${postOrdner === "jahr" ? "an" : ""}">📊 Jahresberichte${jahrAnz ? ` (${jahrAnz})` : ""}</button><button data-ordner="spam" class="${postOrdner === "spam" ? "an" : ""}">🚫 Spam${spamAnz ? ` (${spamAnz})` : ""}</button></div>`;
     const reiterListe = [["hof", "Hof"], ["reiter", "Reiter"], ["pferde", "Pferde"], ["finanzen", "Finanzen"], ["mitarbeiter", "Mitarbeiter"], ["post", "Postfach"], ["einst", "Einstellungen"]];
     let inhalt = "";
     if (hofReiter === "hof") {
@@ -12891,9 +12964,9 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       if (br) {
         const bi = post.findIndex(b => b.id === br.id);
         inhalt = `<div class="brief-nav"><button class="knopf zweit" id="hbVor" ${bi <= 0 ? "disabled" : ""} aria-label="Neuerer Brief">‹</button><span>Brief ${bi + 1} von ${post.length}</span><button class="knopf zweit" id="hbNach" ${bi < 0 || bi >= post.length - 1 ? "disabled" : ""} aria-label="Älterer Brief">›</button></div>${briefPapier(br)}
-          <div class="brief-knoepfe"><button class="knopf zweit" id="briefZurueck">‹ ${br.spam ? "Spam" : "Postfach"}</button>${br.spam ? `<button class="knopf" id="keinSpam">✅ Kein Spam</button>` : `<button class="knopf zweit" id="istSpam">🚫 Spam</button>`}<button class="knopf rot" id="briefWeg">🗑️ Löschen</button></div>
+          <div class="brief-knoepfe"><button class="knopf zweit" id="briefZurueck">‹ ${br.spam ? "Spam" : "Postfach"}</button>${br.spam ? `<button class="knopf" id="keinSpam">✅ Kein Spam</button>` : br.typ === "jahresbericht" ? "" : `<button class="knopf zweit" id="istSpam">🚫 Spam</button>`}<button class="knopf rot" id="briefWeg">🗑️ Löschen</button></div>
           <p class="text" style="margin-top:8px"><small>${br.spam ? `Ereignis „${briefTyp(br.betreff)[2]}“ ist als Spam markiert. Diese Briefe bleiben ein Jahr im Spamordner und werden dann gelöscht.` : `„Spam“ verschiebt alle Briefe zum Ereignis „${briefTyp(br.betreff)[2]}“ in den Spamordner – auch künftige, ohne Benachrichtigung.`}</small></p>`;
-      } else if (!post.length) inhalt = ordnerLeiste + `<div class="post-leer">${BRIEF_SVG(true).replace("<svg", '<svg width="60"')}<br>${postOrdner === "spam" ? "Der Spamordner ist leer." : postOrdner === "stern" ? "Noch keine wichtigen Briefe. Tippe beim Lesen oder in der Liste auf den ☆, um einen Brief zu markieren." : "Dein Postfach ist leer."}</div>`;
+      } else if (!post.length) inhalt = ordnerLeiste + `<div class="post-leer">${BRIEF_SVG(true).replace("<svg", '<svg width="60"')}<br>${postOrdner === "spam" ? "Der Spamordner ist leer." : postOrdner === "jahr" ? "Noch kein Jahresbericht. Er kommt zu Beginn jedes neuen Jahres." : postOrdner === "stern" ? "Noch keine wichtigen Briefe. Tippe beim Lesen oder in der Liste auf den ☆, um einen Brief zu markieren." : "Dein Postfach ist leer."}</div>`;
       else if (postAuswahl) inhalt = ordnerLeiste + `<div class="post-leiste"><span>${postAuswahl.size} von ${post.length} markiert</span><span><button id="postAlle">${postAuswahl.size === post.length ? "Keine" : "Alle"} markieren</button></span></div>
         <div class="briefe">${post.map(b => `<button class="brief auswahl ${postAuswahl.has(b.id) ? "markiert" : ""} ${b.gelesen ? "" : "neu"}" data-mark="${b.id}"><span class="haken">${postAuswahl.has(b.id) ? "✓" : ""}</span><span class="ico">${BRIEF_SVG(b.gelesen)}</span>
           <span class="txt"><b>${esc(b.betreff)}</b><small>${esc(b.von)} · ${briefDatum(b)}</small></span></button>`).join("")}</div>

@@ -15,7 +15,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team · **Stand:** v498, 19.10.2026
+**Von:** Claude Pro · **An:** Claude Team · **Stand:** v499, 19.10.2026
 
 - Nachricht von Claude Team gelesen und übernommen.
 - **v490 erledigt: Kante Ohr/Kopf.** Die Ohren bekommen jetzt dieselbe Kopf-Schattierung (sh-Verlauf, Glanz, Rußanflug, Fliegentupfen) über eine Maske aus der Ohrform (`schattOhr` in `zeichnePferd`, Maske in `kopfNeuSVG`; Linien bleiben scharf). Die feste Aufhellung +13 % und `ohrFell` sind raus. Mit Playwright gezoomt geprüft (Tekkiner Rußfalbe/Dunkelbrauner/Palomino, Hannoveraner Dunkelbrauner/Schwarzbrauner, Araber Fuchs) – kein Absatz mehr am Ohransatz.
@@ -29,3 +29,4 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 - **v496:** Bend-Or-Lage (vorn/Mitte/hinten/Kombis/überall) als vererbte Anlage, in der Rassenansicht durchschaltbar.
 - **v497:** Wenigpunkt-Stufen wirken jetzt.
 - **v498:** Frost sah aus wie Lackschimmel (Lack-Anteil nicht zurückgesetzt) – behoben.
+- **v499:** Birdcatcher/Snowflake unterscheidbar. Offen: Dome wählt Brindle-Zusatzvariante (Vorschau dezent/fein/nur teilweise gezeigt, noch nicht eingebaut).

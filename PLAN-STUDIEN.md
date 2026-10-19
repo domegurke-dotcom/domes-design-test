@@ -1,6 +1,6 @@
 # Plan der großen Studien (Stand v534, 19.10.2026)
 
-## A) Krankheitstest, zweiter Durchlauf (alle 28 Rassen, 4 Spieler)
+## A) Krankheitstest, zweiter Durchlauf (alle 28 Rassen, 4 Spieler) – ✅ erledigt 19.10.2026 (Ergebnis in STUDIE-GESUNDHEIT.md, Daten studie-daten/zweite-studie-v534/)
 Ziel: Vergleich **erste Studie (v531)** mit **neuer Studie (v534)** und Bewertung (zu viel Pflegearbeit? Häufigkeit/Schwere/Verlauf/Behandlung realistisch?).
 
 **Erste Studie (Grunddaten im Repo):** `studie-daten/erste-studie-v531/` (je Rasse `<rasse>.json`, `_alle.json`, `_tabelle.md`). Spieler 1/2/3 mit den damaligen Definitionen: Spieler 1 schlecht (Futter .85/Wasser .65–.7 im ersten Test, kein Tierarzt unter Grad 4, Boxenruhe blieb stehen), Spieler 2 mittel (Tierarzt .4/Tag), Spieler 3 gut. Ergebnis und Bewertung: `STUDIE-GESUNDHEIT.md`.
@@ -25,7 +25,7 @@ Rassen: andalusier angloaraber appaloosa araber barockpinto clydesdale dales fel
 **Ergebnis:** Vergleichstabelle alt/neu je Stufe (Befunde/PJ, krank-%, Ø Grad, schwer-%, Heilung, Tod-%, Tierarzt/PJ, Kosten, Arbeit) + Bewertung „wie in echt?“ + Auffälligkeiten (Rassen, Alter) in `STUDIE-GESUNDHEIT.md` nachtragen, Ergebnisse (JSON) nach `studie-daten/zweite-studie-v5xx/`.
 Nicht eigenmächtig Mechanik ändern – Auffälliges nummeriert an Dome melden.
 
-## B) Zuchttest (danach, alle Rassen)
+## B) Zuchttest (danach, alle Rassen) – ✅ erledigt 19.10.2026 (tests/zucht-studie.js, Ergebnis in STUDIE-GESUNDHEIT.md, Daten studie-daten/zucht-studie-v534/)
 Plan in `STUDIE-GESUNDHEIT.md` (Abschnitt Zucht): je Rasse 10 Zuchtstuten + Hengst/Deckstation, 3–5 Jahre, gute Pflege. Messen: Trächtigkeitsrate (echt ca. 60–70 %/Saison), Fohlen je Stute, Geburtsprobleme, Erbkrankheiten mit/ohne Gentest, Fohlenkrankheiten/-verluste bis Absetzen (echt ca. 5–10 %), Waisen. Vergleich mit echten Werten, Bericht an Dome. Skript neu (`tests/zucht-studie.js`) auf Basis von `gesundheit-studie.js`.
 
 ## Offen daneben

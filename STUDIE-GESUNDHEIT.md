@@ -132,3 +132,28 @@ Spieler (v534): **gut** (3) · **mittel** (2, Tierarzt nach 1–2 Tagen) · **sc
 - **Selbstbehandler** ≈ gut (etwas mehr kranke Tage, etwas billiger) – realistisch.
 - **Schlecht:** 63 % kranke Tage, 16 % tot, 53 % vom Tierschutz geholt (vorher 83 %) – als Folge echter Vernachlässigung plausibel.
 - **Mittel:** Pferde stehen im Schnitt bei ~65 % Gesundheit und kommen ~1× im Jahr in die Klinik (101 je 100 Pferdejahre, v531: ähnlich) – Ursache ist nicht Krankheit, sondern Hunger/Mist (an 1 von 10 Tagen kein Futter, an 3 von 10 Tagen nicht gemistet → −19/−9,5 und unter 30 % erholt sich ein Pferd nur in der Klinik).
+
+## Zucht-Studie (v534, 19.10.2026): alle 28 Rassen
+Skript `tests/zucht-studie.js`, Auswertung `tests/zucht-auswertung.js`, Daten `studie-daten/zucht-studie-v534/` (`_auswertung.txt`).
+Aufbau: je Rasse 10 Zuchtstuten (4–14 J.), 4 Jahre (112 Spieltage), gute Pflege wie Spieler 3, Weide 85 %. Stuten 1–5 → eigener Hengst, Stuten 6–10 → Deckstation (nur Frühling/Sommer). Jede leere, zuchttaugliche Stute wird 1× am Tag gedeckt. 3 Durchläufe je Variante → je Variante 840 Stuten.
+- **A:** ohne Gentest, ohne Abfohlbox, niemand bei der Geburt.
+- **B:** alle Eltern gentestet (Erbkrankheiten + Farbe); bei Warnung wird der andere Hengst genommen (deshalb deckt dort der eigene Hengst auch Stuten der Deckstation-Gruppe); 10 Abfohlboxen.
+
+| | A | B | echt (Richtwerte) |
+|---|---|---|---|
+| tragend je Deckversuch | 85 % | 87 % | 50–65 % je Rosse |
+| tragend je Stute und Jahreszeit mit Deckversuch | 99,9 % | 97 % | 80–90 % je Saison |
+| verfohlt / Totgeburt | 1 / 0 von 2.100 | 1 / 0 | 5–10 % (inkl. früher Embryoverlust) |
+| Fohlen je Stute in 4 Jahren | 2,49 | 2,54 | 2,4–3 (60–75 % Abfohlrate, 1. Jahr leer) |
+| Abstand zwischen 2 Fohlen | 6 Jz (eigener Hengst) bzw. 8 Jz (Deckstation), nie 4 | 6 Jz | 1 Jahr möglich (Fohlenrosse, 30-Tage-Rosse) |
+| schwach geboren | 15 % (niemand dabei) | 4,6 % (Abfohlbox) | Schwergeburt 4–10 % |
+| Fohlen tot bis Absetzen | 0 von 2.094 | 0 von 2.132 | 3–10 % |
+| Stute tot bei der Geburt | 0 | 0 | ~1 % |
+| Befunde der Fohlen bei Fuß | 0 | 0 | Fohlendurchfall, Nabel-/Gelenkinfekt, Lungenentzündung häufig |
+| Befunde nach dem Absetzen bis 1 Jahr | 0,69 je Fohlen (Verletzung, Druse, Husten …) | 0,69 | plausibel |
+| Fohlen mit Erbkrankheit | 43 (PSSM1 41, HYPP 2) – passt zu den Träger-Anteilen (erwartet ~2–3 %) | 0 | – |
+| Zuchtsperre (Stuten-Tage) | „hat ein Fohlen“ 22.454, krank 1.404, zu schwach 407 | ähnlich | – |
+| Decktaxe / Tierarzt je Lauf (10 Stuten + Nachzucht, 4 J.) | 3.371 € / 50.699 € | 4.406 € / 52.778 € | – |
+
+Rassen: Trächtigkeit je Versuch am niedrigsten bei Anglo-Araber 69 %, Tekkiner 73 %, Vollblut 74 %, Welsh Cob 77 %, Hannoveraner 78 % (heißere/sensiblere Pferde → weniger Wohlbefinden), am höchsten Clydesdale 94 %. Appaloosa und Knabstrupper in B: **0 Fohlen** – fast jede Verpaarung bekommt die Leopard-Warnung (Lp × Lp), wer sie befolgt, kann diese Rassen nicht züchten.
+Erbkrankheiten-Mechanik funktioniert: mit Gentest und Ausweichen keine betroffenen Fohlen, ohne Gentest im erwarteten Umfang. Seltene rezessive tödliche (LFS, OAAM, CHF, SCID, FIS, WFFS) liegen bei < 0,5 % je Fohlen – bei 2.000 Fohlen kein Fall, das passt zu den Träger-Anteilen.

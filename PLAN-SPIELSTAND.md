@@ -8,6 +8,12 @@
 3. In `PROJEKT-CHAT-THEMEN.md` neuen Punkt anlegen: **„Speicherplatz (noch im Projekt-Chat besprechen)“**: Browser-Speicher (ca. 5 MB) kann bei langen Spielen und zwei Speicherplätzen voll werden. Dome will **nichts automatisch löschen**: besondere Briefe bleiben, Turnierergebnisse müssen ein Pferdeleben lang sichtbar bleiben (Verkaufswert). Gepackt speichern ist schon in S1 Punkt 11 enthalten; offen ist nur, ob und was später aufgeräumt werden darf.
 4. Dann Etappe für Etappe umsetzen, abhaken und nach jeder Etappe auf `main` hochladen.
 
+## Änderungen von Dome (19.10.2026, nach S1–S3 – gelten vor dem Text unten)
+1. **Keine Rücksicherung** („Letzte Ersetzung rückgängig“ ist raus, S1 Punkt 8 entfällt). Ersetzen/Löschen/Kopieren/Laden fragen nur „Sicher?“.
+2. **Neues Spiel legt keinen Speicherstand an** (S1 Punkt 4 geändert): kein Platz bei „Neues Spiel“; ein Einsteiger-Tipp „💾 Spiel speichern nicht vergessen“ erinnert daran; beim **ersten Speichern** wählt der Spieler den Speicherplatz.
+3. Überall **„Speicherplatz 1 / Speicherplatz 2“** statt „Platz 1 / Platz 2“.
+4. Alte Spielstände (vor S1) landen trotzdem einmal auf Speicherplatz 1 (Claude, damit das laufende Spiel nicht verloren geht – mit Dome klären).
+
 ## Ist-Stand (v513)
 1. Ein Spielstand je Browser in `localStorage["zuchtstall-v2"]` (alle Höfe in einem Objekt `spiel`). Turnier-Sortierung extra in `localStorage["zuchtstall-tsort"]`.
 2. `speichern()` fängt Fehler stumm ab (`try { setItem } catch (e) {}`). Ist der Speicher voll, wird ohne Warnung nicht mehr gespeichert.
@@ -86,5 +92,5 @@ Grundidee (Dome, 19.10.2026): Ein Speicherplatz enthält nur, was der Spieler **
 ## Fortschritt (Claude hakt ab)
 - [x] S1 Selbst speichern, zwei Plätze, Autospeicher, Rücksicherung, gepackt (v519, `tests/spielstand-test.js`)
 - [x] S2 Spielstand als Datei speichern (v520)
-- [ ] S3 Spielstand aus Datei laden
-- [ ] S4 Spielprotokoll
+- [x] S3 Spielstand aus Datei laden (v521/v522, Notfall-Fenster kann auch laden)
+- [ ] S4 Spielprotokoll – **offen** (Volumen reichte nicht; für die nächste Sitzung)

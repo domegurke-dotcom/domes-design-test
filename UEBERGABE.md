@@ -15,33 +15,24 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team · **Stand:** v513, 19.10.2026
+**Von:** Claude Pro · **An:** Claude Team · **Stand:** v522, 19.10.2026
 
-Hallo Claude Team! Lange Sitzung mit Dome (v490–v512), alles auf `main`, Details je Version in CLAUDE.md.
+Hallo Claude Team! Lange Pro-Sitzung, alles auf `main`, Details je Version in CLAUDE.md (v514–v522).
 
-### Wichtigste Änderungen
-- **Kontur immer schwarz** `#090609` (`INK`) – Domes Regel, nie wieder ändern. Farben aus Domes Zeichnungen nicht vom Spiel überschreiben.
-- **Übergänge:** Ohren mit Kopf-Schattierung per Maske (`schattOhr`), Kopf-Hals-Übergang `uh-` quer zur Linie Genick–Kehle (Punktmuster lang, Scheckung kurz, Fliegenschimmel ohne), Ruß in der Kopffarbe, Lichtflecke als Verlauf. Dome: „Halsübergänge sind endlich gut“.
-- **Neues Prüfskript `tests/optik-pruefung.js`** (Raster mit Ausschnitten Kopf/Ohr/Hals und Bauch/Beine für alle Farben, Muster, Köpfe, Ohren, Alter) – nach jeder Optik-Änderung laufen lassen und Bilder ansehen (Dome wünscht gründliche Prüfung!).
-- **Muster:** Tobiano auf jeder Grundfarbe (`to_`-Kürzel), Bend-Or (Lage `bendorZ` 7 Zonen, Anzahl, unregelmäßige Gruppen), Brindle-Ausprägungen, Snowflake-Menge, Wenigpunkt-Stufen, Schabracke klein, Birdcatcher scharf/Snowflake weich, Birdcatcher/Brindle dunkel nur echte Rassen (`rassenRate`), Aalstrich bei gescheckten Falben, Ausbleichen auch bei gemusterten Pferden (`saisonBasis`), Sabino/Splash ohne rosa Maul, Lp-Lederhaut als Sichel.
-- **Rassenansicht:** nur Grundfarben in der Farbspalte (Muster nur in der Muster-Spalte), typisches Kopfweiß je Scheckung (`MUSTER_KOPF_TYP`), Tobiano ohne Kopfweiß, Varianten-Hinweis zeigt Muster + Farbvariante.
-- **Ohren:** nahes Ohr über der Mähne; Reaktion auf jede Spieler-Interaktion 10 s (Vorliebe vorn / egal seitlich / Abneigung hinten, je nach Vertrauen eins oder beide; `OHREN_REAKT`, `OHREN_DAUER`, Rückkehr per Zeitgeber); Ohrenspiel seltener (15–30 s).
+### Neue feste Regel (Dome)
+- **Auffälliges immer sagen** – steht ganz oben in CLAUDE.md bei den festen Regeln. Am Ende jeder Antwort ausdrücklich nennen, was dir aufgefallen ist (Lücken, Vergessenes, Unrealistisches), nicht eigenmächtig ändern, aber nie verschweigen.
 
-### Nachtrag v513
-- Handy quer im Vollbild: ☰-Menü klappte in Menüs (Pferdemarkt, Hauptmenü …) hinter der Menüfläche auf – Kopfleiste jetzt z-index 36.
+### Was gemacht wurde
+- **v514–v518 Krankheiten:** alle echten Rassekrankheiten (LFS, OAAM, MH, Leberfibrose Haflinger/Noriker, Sarkoid, Sonnenbrand/Augenlid-Krebs, EMS, Hyperlipämie, Kissing Spines, Hufrolle, Spat, Sehne, Lungenblutung, Röhrbeinbruch inkl. Renntag, Darmstein, Aorta/Megaösophagus, Shivers, Hodenhochstand, Gebiss, MCOA), Zahlen nach Quellen geprüft (v515), Kopfform-Neigung je Rasse (`KOPF_NEIGUNG`), Shire leichtfuttrig, AKU findet die neuen Befunde, Händler verdecken Spat/Sehne/Hufrolle/Kissing mit Schmerzmittel. Test `tests/krankheiten-test.js` (inkl. Behandlung/Heilverlauf). Hof-Gesamttest und 4-Jahres-Simulation ohne Fehler.
+- **v519–v522 Spielstand (`PLAN-SPIELSTAND.md`):** S1 Autospeicher + Speicherplatz 1/2 (gepackt, lz-string im Repo), S2 Datei speichern (Teilen am Handy), S3 Datei laden. Domes Änderungen danach: **keine Rücksicherung**, **neues Spiel legt keinen Speicherstand an** (Tipp erinnert, erstes Speichern fragt den Speicherplatz), **„Speicherplatz 1/2“**. Test `tests/spielstand-test.js`.
+- Waschplatz → `PROJEKT-CHAT-THEMEN.md` Punkt 14, Speicherplatz-Thema Punkt 15, OFFENE-FRAGEN.md ist leer.
 
 ### Offen
-- Domes Inkscape-Liste (`BEI-INKSCAPE-BEARBEITEN.md`): Laterne bis über die Nüstern (wirkt im Spiel noch schmal), **1d neu**: Ebene `schopf-maehne-uebergang` hat harte Kante am Hals (Spiel blendet sie per `uebMaske` aus – nach Domes Änderung wieder entfernen), Glanz/Schatten, Alterszeichen, Kupfer-/Grauaugen, Keil-/Schafskopf stark.
-- ~~Dome geht weiter je Rasse Farben/Muster/Varianten durch~~ → **abgeschlossen** (Dome, 19.10.2026).
+- **S4 Spielprotokoll** (`PLAN-SPIELSTAND.md`) – noch nicht begonnen. Danach Enzyklopädie-Eintrag „Spielstand und Speicherplätze“ (öffentlich; bzn-Eintrag gibt es schon).
+- **Mit Dome klären:** (1) Alte Spielstände (vor v519) werden beim ersten Laden einmal auf Speicherplatz 1 gelegt – passt das zu „kein automatischer Speicherstand“? (2) Dateiname mit Umlaut („Frühling“) – im Test-Chromium ging der Name verloren, auf Domes Handy prüfen. (3) EMS bessert sich bisher nur über „Schritt führen“, nicht über Abnehmen – Vorschlag: Abnehmen (Futterzustand ≤ 5) als Behandlung zählen.
+- Araber-Zuchtrichtungen kommen bald → LFS je Richtung (ägyptisch ≈ 10 %, andere ≈ 2 %).
+- Domes Inkscape-Liste wie bisher.
 
 ### Achtung
-- Bei Fragen zu Realismus (Gene je Rasse, Muster) erst nachfragen; Dome mag kurze Auswahlfragen.
+- Speichern ist jetzt **verzögert** (0,4 s): vor dem Lesen aus localStorage `speichernJetzt()` aufrufen, nie `JSON.parse(localStorage…)` – immer `lesen()`. In Tests vor dem Umschreiben von localStorage `speicherSperre = true`.
 - `//`-Kommentare nur am Zeilenende.
-
-### Nachtrag 19.10.2026 (neue Pro-Sitzung, Team hat noch nicht gelesen)
-- Domes Rassen-Testliste (Farben/Muster/Varianten in der Rassenansicht) ist **abgeschlossen**.
-- `OFFENE-FRAGEN.md` geklärt: Flocke/Stern bleiben so (realistisch), Splash-Körper bleibt erstmal so (Dome zeichnet evtl. später ein eigenes Fell, steht jetzt optional in `BEI-INKSCAPE-BEARBEITEN.md`). Beantwortete Fragen hat Dome aus `OFFENE-FRAGEN.md` löschen lassen – die Datei ist jetzt leer.
-- Waschplatz (hat noch keine Wirkung) steht jetzt als Punkt 14 in `PROJEKT-CHAT-THEMEN.md` – nicht eigenmächtig umsetzen, Dome plant im Projekt-Chat.
-- **v514 (Dome: „alles einbauen“):** Neue Krankheiten für unsere Rassen (Erbkrankheiten LFS/OAAM/MH/Leberfibrose, Veranlagungen Sarkoid/Hautkrebs/EMS/Aorta/Megaösophagus/Shivers/Hodenhochstand/Gebiss, Befunde Sonnenbrand/Hyperlipämie/Kissing Spines/Hufrolle/Spat/Sehne/Lungenblutung/Röhrbeinbruch/Darmstein/MCOA) + Kopfform-Neigung je Rasse (`KOPF_NEIGUNG`) + Shire leichtfuttrig. Alles in CLAUDE.md (v514) und bzn. Test: `tests/krankheiten-test.js` (alles ✓). **Offen:** Dome soll die Zahlen durchgehen (Träger-Anteile, Risiken); Leberfibrose beim Haflinger hat eine schwache Quelle.
-- Araber-Zuchtrichtungen kommen bald (Dome): dann LFS je Richtung anpassen (ägyptisch ≈ 10 %, andere ≈ 2 %, bisher 5 % für alle) – Hinweis in `PROJEKT-CHAT-THEMEN.md`.
-- **v516 + neue Regel (Dome, 19.10.2026):** Die AKU findet jetzt die neuen Krankheiten (Spat, Hufrolle, Kissing Spines, Sehne, Augen, Herz, Sarkoid, Hodenhochstand, Gebiss). **Dome möchte, dass beide Claude-Konten ihr immer sagen, wenn ihnen etwas auffällt** (Lücken, Unstimmigkeiten, Vergessenes) – steht jetzt oben in CLAUDE.md bei den festen Regeln.

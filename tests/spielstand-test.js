@@ -13,6 +13,7 @@ const URL_ = 'file://' + path.resolve(__dirname, '..', 'index.html');
   const knopf = async t => { await pg.locator('#dlgKnoepfe button', { hasText: t }).first().click(); await pg.waitForTimeout(150); };
   const hat = async t => (await pg.locator('#dlgKnoepfe button', { hasText: t }).count()) > 0;
   const lade = async () => { await pg.waitForLoadState('load'); await pg.waitForTimeout(700); };
+  const zumLaden = () => ev(() => { document.getElementById('dlg').hidden = true; zeigeLadenMenue(); });   // v528: Speicherplätze liegen unter Startmenü → Laden
   const zumStart = () => ev(() => { document.getElementById('dlg').hidden = true; zeigeStart(); });
   const nacht = n => ev(n => { for (let i = 0; i < n; i++) { naechsteNacht(); document.getElementById('dlg').hidden = true; } speichern(); speichernJetzt(); }, n);
   const neuesSpiel = async (name, hof) => { await pg.click('#smNeu'); await pg.waitForTimeout(150); if (await hat('Nicht speichern')) await knopf('Nicht speichern');
@@ -49,16 +50,18 @@ const URL_ = 'file://' + path.resolve(__dirname, '..', 'index.html');
   ok('Sonnenhof auf Speicherplatz 1, Lindenhof auf Speicherplatz 2', r.p1 === 'Sonnenhof' && r.p2 === 'Lindenhof' && r.platz === 2, JSON.stringify(r));
   // 4. Startmenü
   await zumStart(); r = await ev(() => document.getElementById('startMenue').innerText);
-  ok('Startmenü: „Speicherplatz 1/2“ mit Hofnamen, keine Rücksicherung', /Weiterspielen – Lindenhof/.test(r) && /Speicherplatz 2\)/.test(r) && /Speicherplatz 1\s*Sonnenhof/.test(r) && /Speicherplatz 2\s*Lindenhof/.test(r) && !/rückgängig/i.test(r), r.slice(0, 200));
+  ok('Startmenü: Weiterspielen + Kachel „Laden“, keine Speicherplatz-Karten, kein „Laufendes Spiel als Datei“', /Weiterspielen – Lindenhof/.test(r) && /Speicherplatz 2\)/.test(r) && /Laden/.test(r) && !/Speicherplatz 1\s*Sonnenhof/.test(r) && !/Laufendes Spiel als Datei/.test(r), r.slice(0, 200));
+  await zumLaden(); r = await ev(() => document.getElementById('startMenue').innerText);
+  ok('Laden: „Speicherplatz 1/2“ mit Hofnamen, „Spielstand downloaden“, „Spielstand aus Datei laden“, kein Kopieren', /Speicherplatz 1\s*Sonnenhof/.test(r) && /Speicherplatz 2\s*Lindenhof/.test(r) && /Spielstand downloaden/.test(r) && /Spielstand aus Datei laden/.test(r) && !/kopieren/i.test(r) && !/rückgängig/i.test(r), r.slice(0, 300));
   // 5. Wechsel
-  await pg.click('[data-pspiel="1"]'); await lade();
+  await zumLaden(); await pg.click('[data-pspiel="1"]'); await lade();
   ok('Wechsel auf Speicherplatz 1: Sonnenhof läuft, nichts ungespeichert', await ev(() => hofName() === 'Sonnenhof' && spiel.platz === 1 && !ungespeichert()));
-  await nacht(2); await zumStart(); await pg.click('[data-pspiel="2"]'); await pg.waitForTimeout(150);
+  await nacht(2); await zumLaden(); await pg.click('[data-pspiel="2"]'); await pg.waitForTimeout(150);
   ok('Wechsel mit Fortschritt: Frage', /Ungespeicherter Fortschritt auf Speicherplatz 1 \(Sonnenhof, seit/.test(await dlg()));
   await knopf('Nicht speichern'); await lade(); ok('Nicht speichern: Lindenhof läuft', await ev(() => hofName() === 'Lindenhof'));
   // 6. Kopieren und Löschen (Sicherheitsfrage, keine Rücksicherung)
-  await zumStart(); await pg.click('[data-pkopie="1"]'); await pg.waitForTimeout(150); ok('Kopieren auf belegten Speicherplatz: Sicherheitsfrage', /Speicherplatz 2 \(.*\) wird ersetzt/.test(await dlg()));
-  await knopf('Abbrechen'); await pg.click('[data-pweg="1"]'); await pg.waitForTimeout(150); ok('Löschen: Sicherheitsfrage', /endgültig gelöscht/.test(await dlg()));
+  await zumLaden(); ok('kein Kopieren-Knopf mehr', await ev(() => !document.querySelector('[data-pkopie]')));
+  await pg.click('[data-pweg="1"]'); await pg.waitForTimeout(150); ok('Löschen: Sicherheitsfrage', /endgültig gelöscht/.test(await dlg()));
   await knopf('Abbrechen'); ok('nach Abbrechen beide Speicherplätze unverändert', await ev(() => lesenPlatz(1).meta.hof === 'Sonnenhof' && lesenPlatz(2).meta.hof === 'Lindenhof' && !localStorage.getItem('zuchtstall-rueck')));
   // 7. Speicher voll
   r = await ev(() => { const alt = Storage.prototype.setItem; Storage.prototype.setItem = function () { throw new Error('voll'); }; const w = () => { const e = document.getElementById('speicherWarn'); return !!e && !e.hidden; };
@@ -71,7 +74,7 @@ const URL_ = 'file://' + path.resolve(__dirname, '..', 'index.html');
   ok('Datei: Format und Name', D.typ === 'zuchtstall-spielstand' && D.format === 1 && D.info.hoefe[0] === 'Lindenhof' && /^Zuchtstall_Lindenhof_Jahr\d\d-/.test(await ev(() => dateiName(spiel))));
   const tmp = path.resolve(__dirname, '..', '_s3-test'); fs.mkdirSync(tmp, { recursive: true });
   try { const schreibe = (n, x) => { const f = path.join(tmp, n); fs.writeFileSync(f, typeof x === 'string' ? x : JSON.stringify(x)); return f; };
-    const laden = async (n, f) => { await zumStart(); await pg.click('#smLaden'); await pg.waitForTimeout(150); if (await hat('Nicht speichern')) await knopf('Nicht speichern');
+    const laden = async (n, f) => { await zumLaden(); await pg.click('#smLaden'); await pg.waitForTimeout(150); if (await hat('Nicht speichern')) await knopf('Nicht speichern');
       const [fc] = await Promise.all([pg.waitForEvent('filechooser'), knopf('Speicherplatz ' + n)]); await fc.setFiles(f); await pg.waitForTimeout(300); return dlg(); };
     ok('Laden: kaputtes JSON → Meldung', /kein Zuchtstall-Spielstand/.test(await laden(1, schreibe('k.json', '{ kaputt'))));
     ok('Laden: vor dem Hof-Ausbau → Meldung', /vor dem Hof-Ausbau/.test(await laden(1, schreibe('a.json', { ...D, spiel: { ...D.spiel, hofAusbau: undefined } }))));

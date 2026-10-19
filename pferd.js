@@ -734,7 +734,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       g += `<g filter="url(#wm-${uid})"><path d="${glatt(rand)}" fill="${SW}"/></g>`;
     }
     if (C.pattern === "leopard") g += `<rect ${bx} fill="${SW}"/>` + punkte(minX, maxX, minY, 0, [40, 70, 100][M2], 2.2, 4.6, spotFarbe);
-    if (C.pattern === "fewspot") g += `<rect ${bx} fill="${SW}"/>` + punkte(0, L, top, bottom, 7, 1.4, 2.6, spotFarbe) + `<g filter="url(#wm-${uid})"><rect x="${f(minX)}" y="${f(-0.62 * Lg)}" width="${f(maxX - minX)}" height="${f(0.2 * Lg)}" fill="${mix(body, SW, .35)}" opacity=".7"/></g>`;
+    if (C.pattern === "fewspot") g += `<rect ${bx} fill="${SW}"/>` + punkte(0, L, top, bottom, [3, 7, 14][M2], 1.4, [2.2, 2.6, 3][M2], spotFarbe) + `<g filter="url(#wm-${uid})"><rect x="${f(minX)}" y="${f(-0.62 * Lg)}" width="${f(maxX - minX)}" height="${f(0.2 * Lg)}" fill="${mix(body, SW, .35)}" opacity="${[.45, .7, .85][M2]}"/></g>`;   // v497 (Dome): Stufe wirkt – wenige/typisch/mehr Punkte, Restfarbe an Knien/Sprunggelenken
     if (C.pattern === "blanket" || C.pattern === "snowcap") {
       // weiße Decke über Kruppe und Hüfte
       const x0 = ((C.pattern === "snowcap" ? 0.38 : 0.5) + [0.28, 0, -0.25][M2]) * L + (rnd() - .5) * 0.08 * L, rand = [];   // Schabracke klein/typisch/groß

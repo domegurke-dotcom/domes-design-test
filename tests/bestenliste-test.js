@@ -61,8 +61,17 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Tölt B / Distanzritt 60 km / Passrennen 250 m ohne doppelten Namen', />Tölt B</.test(wh) && />Distanzritt 60 km</.test(wh) && />Passrennen 250 m</.test(wh), wh.replace(/<[^>]+>/g, ' ').slice(0, 300));
     ok('Dressur L und Reining Intermediate behalten ihre Klasse', />Dressur L</.test(wh) && />Reining Intermediate</.test(wh));
     ok('Gelassenheit hat einen richtigen Namen, Wettbewerb ohne Klasse bleibt lesbar', />Gelassenheitsprüfung</.test(wh) && />Dressurwettbewerb</.test(wh), '');
-    W.bilanz = { 'toelt|M': [1, 1, 0, 0] }; W.bilanzV = undefined; ok('Alte Bilanz (v550, falsche Schlüssel) wird neu aufgebaut', !('toelt|M' in bilanzHolen(W)) && W.bilanzV === 2);
+    W.bilanz = { 'toelt|M': [1, 1, 0, 0] }; W.bilanzV = 2; ok('Alte Bilanz (v550/v551, andere Schlüssel) wird neu aufgebaut', !('toelt|M' in bilanzHolen(W)) && W.bilanzV === 3);
     ok('Chronik-Zähler nutzt dieselben Namen', (() => { spiel.protokoll = {}; protKlasse('Sieg', W, { name: 'T' }, { disz: 'toelt', stufe: 3, name: 'Tölt B' }); return Object.keys(spiel.protokoll[Object.keys(spiel.protokoll)[0]]).some(k => k === 'Turnier Tölt B: Sieg'); })());
+    // --- 8. Meisterschaften/International eigene Zeile (v552, Dome) ---
+    const M = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 9, name: 'Meisterin' }); delete M.bilanz; delete M.bilanzV;
+    M.erfolge = [{ disz: 'dressur', stufe: 2, pruef: 'Dressur Kl. L', platz: 1, art: 'regional' }, { disz: 'dressur', stufe: 2, pruef: 'Landesmeisterschaft Dressur Kl. L', platz: 2, art: 'championat' }, { disz: 'dressur', stufe: 4, pruef: 'CDI Grand Prix', platz: 3, art: 'international' }, { disz: 'reining', stufe: 4, pruef: 'Deutsche Meisterschaft Reining (Open)', platz: 1, art: 'championat' }];
+    bilanzZaehlen(M, { disz: 'dressur', stufe: 2, name: 'Landesmeisterschaft Dressur Kl. L' }, 1, 'championat');   // neuer Start im Spiel (vor dem Einfügen)
+    const mh = bilanzHTML(M);
+    ok('Normale und Meisterschaft getrennt: Dressur L / Dressur L (Meisterschaft)', />Dressur L</.test(mh) && />Dressur L \(Meisterschaft\)</.test(mh) && /Dressur S \(International\)/.test(mh) && /Reining Open \(Meisterschaft\)/.test(mh), mh.replace(/<[^>]+>/g, ' ').slice(0, 260));
+    ok('Meisterschaft: 2 Starts (1 alt + 1 neu), 1× erster, 1× zweiter', JSON.stringify(M.bilanz['dressur|L (Meisterschaft)']) === '[2,1,1,0]', JSON.stringify(M.bilanz['dressur|L (Meisterschaft)']));
+    ok('Bestenliste zählt weiter alle Siege zusammen', (() => { const z = erfolgZahlen(M); return z.s === 3 && z.pl === 2; })(), JSON.stringify(erfolgZahlen(M)));
+    ok('Chronik-Zähler mit Zusatz', (() => { spiel.protokoll = {}; protKlasse('Sieg', M, { name: 'T', art: 'championat' }, { disz: 'dressur', stufe: 2, name: 'x' }); return Object.keys(spiel.protokoll[Object.keys(spiel.protokoll)[0]]).some(k => k === 'Turnier Dressur L (Meisterschaft): Sieg'); })());
     return out.join('\n');
   });
   console.log(R); console.log('Seitenfehler:', errs.join(' ; ') || 'keine'); await b.close();

@@ -967,7 +967,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "525";
+  const SPIEL_VERSION = "526";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -975,10 +975,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=525"></script>
-<script src="pferd.js?v=525"></script>
-<script src="boxstufen.js?v=525"></script>
-<script src="kopfneu.js?v=525"></script>
+<script src="lz-string.min.js?v=526"></script>
+<script src="pferd.js?v=526"></script>
+<script src="boxstufen.js?v=526"></script>
+<script src="kopfneu.js?v=526"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -5108,7 +5108,10 @@
     if (plan.has("boxenruhe")) p.boxenruhe = true;
     if (p.heissFutter >= spiel.tag - 1 && heissPferd(p)) zeilen.push(`<li>🌾 <b>Hinweis zum Futter:</b> ${esc(p.name)} wirkt sehr aufgedreht. Bei einem so ${charE(p, "nerven").tief > 0.3 ? "nervösen" : "temperamentvollen"} Pferd besser keinen Hafer oder Müsli – Energie lieber aus Rübenschnitzeln und Öl (Futterexperte fragen).</li>`);   // v335
     const planTxt = plan.size ? `<p><b>Behandlungsplan</b> – jeden Tag, bis es besser ist: ${[...plan].map(behName).join(", ")}.${rezept.length ? ` Rezeptmittel: je ${REZEPT_DOSEN} Dosen dagelassen (Dosis nach Gewicht: ${esc(p.name)} wiegt etwa ${gewichtAnzeige(p)} kg → Stufe ${dosisKlasse(gewichtAnzeige(p))}).` : ""}${plan.has("boxenruhe") ? " Boxenruhe ist eingetragen." : ""}</p>` : "";
-    const text = `${besitzer ? `${esc(besitzer)} hat uns zu ${esc(p.name)} gerufen.<br><br>` : ""}<b>${esc(p.name)}</b> (Box ${i + 1}) – unser Befund: ${zeilen.length ? `<ul>${zeilen.join("")}</ul>${planTxt}` : " gesund, wir haben nichts gefunden.<br><br>"}`;
+    const bw = [...plan].filter(k => BEWEG.includes(k)), nicht = BEWEG.filter(x => !plan.has(x) && l.some(b => (SCHADET[b.art] || {})[x]) && !l.some(b => (HILFT[b.art] || {})[x]));   // v526: Bewegung mit Häufigkeit, und was schadet
+    const auch = BEWEG.filter(x => !plan.has(x) && !nicht.includes(x) && l.some(b => (HILFT[b.art] || {})[x]) && !l.some(b => (SCHADET[b.art] || {})[x]));
+    const bewTxt = bw.length || nicht.length ? `<p><b>Bewegung:</b> ${bw.map(k => `${behName(k)}: ${AKTION[k].info}`).join(" · ")}${bw.length ? `.${auch.length ? ` Stattdessen geht auch: ${auch.map(behName).join(" oder ")}.` : ""} Öfter am Tag hilft nicht mehr, und verschiedene Bewegungsarten am selben Tag zählen nicht zusammen.` : ""}${nicht.length ? ` Bitte bis zur Heilung nicht: ${nicht.map(k => BEWEG_NICHT[k]).join(", ")} – das schadet ${esc(p.name)} jetzt.` : ""}</p>` : "";
+    const text = `${besitzer ? `${esc(besitzer)} hat uns zu ${esc(p.name)} gerufen.<br><br>` : ""}<b>${esc(p.name)}</b> (Box ${i + 1}) – unser Befund: ${zeilen.length ? `<ul>${zeilen.join("")}</ul>${planTxt}${bewTxt}` : " gesund, wir haben nichts gefunden.<br><br>"}`;
     rechnungStellen("Tierarztpraxis", "klinik", posten, [p.id], `Hausbesuch bei ${p.name} – Rechnung`, text);
     speichern();
     if (besitzer) { if (opNoetig) { fahrtStress(p, "klinik"); delete p.weide; opNoetig.beh = spiel.tag; p.klinik = { seit: spiel.tag, op: "kolik", bis: spiel.tag + KOLIK_OP_TAGE }; } return; }
@@ -5257,7 +5260,7 @@
     const H = HILFT[b.art] || {}, S = SCHADET[b.art] || {}, hat = k => k === "boxenruhe" ? ruhe : k === "beschlag" ? !!p.beschlag : !!g[k];
     if (g.tierarzt) return { wert: 1, schaden: 0 };
     if (fremd(p) && !pensionDarf(p, "medizin") && (b.tierarzt || b.diagnose)) return { wert: Math.round((0.4 + 0.5 * besitzerEifer(einstellerVon(p))) * 100) / 100, schaden: 0 };   // Besitzer behandelt – so gut, wie er sich kümmert   // Pensionspferd ohne gebuchte Medikamente: der Besitzer behandelt nach Tierarzt-Plan
-    let w = 0, s = 0; Object.entries(H).forEach(([k, x]) => { if (hat(k)) w += x; }); Object.entries(S).forEach(([k, x]) => { if (hat(k)) s += x; });
+    let w = 0, s = 0, wb = 0; Object.entries(H).forEach(([k, x]) => { if (hat(k)) { if (BEWEG.includes(k)) wb = Math.max(wb, x); else w += x; } }); w += wb; Object.entries(S).forEach(([k, x]) => { if (hat(k)) s += x; });
     if (b.art === "ems" && (p.fz || 5) <= 5) w += EMS_ABNEHMEN;   // v523 (Dome): EMS bessert sich durch Abnehmen (Futterzustand höchstens 5)
     return { wert: Math.min(1, w) * (0.5 + 0.5 * mitwirkung(p)), schaden: s };
   }
@@ -5316,10 +5319,10 @@
   let behMed = null, behMeldung = "", behMeldungTag = 0;
   // was ein Mitarbeiter übernehmen kann: die heutige Behandlung, sonst die letzte eigene, sonst der Tierarzt-Plan (mit richtiger Dosis)
   function planVorlage(p) {
-    const nimm = a => Object.keys(a).filter(k => (AKTION[k] || APO[k]) && k !== "boxenruhe" && k !== "wurmkur").map(k => ({ k, stufe: APO[k] && APO[k].dosis ? a[k] : 0 }));
+    const nimm = a => Object.keys(a).filter(k => ((AKTION[k] && !AKTION[k].ueb) || APO[k]) && k !== "boxenruhe" && k !== "wurmkur").map(k => ({ k, stufe: APO[k] && APO[k].dosis ? a[k] : 0 }));
     const H = behHeute(p).a, heute = nimm(H); if (heute.length) return { akt: heute, quelle: "heutige Behandlung" };
     if (p.behLetzt && nimm(p.behLetzt.a).length) return { akt: nimm(p.behLetzt.a), quelle: "letzte Behandlung" };
-    const ta = [...new Set(befundListe(p).filter(b => b.tierarzt || b.hufschmied).flatMap(b => b.tierarzt ? PLAN[b.art] || [] : hufschmiedRat(b.art)))].filter(k => k !== "boxenruhe" && k !== "beschlag");
+    const ta = [...new Set(befundListe(p).filter(b => b.tierarzt || b.hufschmied).flatMap(b => b.tierarzt ? PLAN[b.art] || [] : hufschmiedRat(b.art)))].filter(k => k !== "boxenruhe" && k !== "beschlag" && !(AKTION[k] && AKTION[k].ueb));
     if (ta.length) return { akt: ta.map(k => ({ k, stufe: APO[k] && APO[k].dosis ? dosisKlasse(gewichtAnzeige(p)) : 0 })), quelle: befundListe(p).some(b => b.tierarzt) ? "Tierarzt-Plan" : "Rat vom Hufschmied" };
     return null;
   }
@@ -5336,10 +5339,11 @@
     return `<div class="bf-karte beh-karte"><b>💉 Behandlung heute</b><small>${esc(p.name)} wiegt etwa <b>${kg} kg</b> · Mitwirkung: ${mitwirkung(p) >= 0.75 ? "lässt sich gut behandeln" : mitwirkung(p) >= 0.5 ? "macht meistens mit" : "wehrt sich oft"}</small>${H.tierarzt ? `<p class="bf-annahme">✅ <b>Heute ist nichts mehr nötig</b> – ${befundListe(p).some(b => b.tierarzt) ? "der Tierarzt" : "der Hufschmied"} hat heute schon behandelt. Ab morgen den ${befundListe(p).some(b => b.tierarzt) ? "Plan" : "Rat"} jeden Tag umsetzen (oder einem Mitarbeiter geben).</p>` : ""}
       ${behMeldung ? `<p class="bf-annahme">${behMeldung}</p>` : ""}
       <div class="bf-knoepfe">${knopf("boxenruhe", `${AKTION.boxenruhe.ico} Boxenruhe ${p.boxenruhe ? "beenden" : "an"}`, p.boxenruhe, p.weide)}
-        ${[...new Set(["schritt", "kuehlen", "verband", "wundsalbe", ...bekannteBefunde(p).flatMap(b => PLAN[b.art] || []).filter(k => (AKTION[k] && k !== "boxenruhe") || (APO[k] && APO[k].frei && !APO[k].dosis))])].map(k => { const A = AKTION[k] || { ...APO[k], mittel: k }, n = A.mittel ? vorrat(A.mittel) : null; return knopf(k, `${A.ico} ${A.n}${n != null ? ` (${vTxt(A.mittel)})` : ""}${H[k] ? " ✓" : ""}`, H[k], H[k] || (n != null && n <= 0) || p.weide); }).join("")}
+        ${[...new Set(["schritt", "kuehlen", "verband", "wundsalbe", ...bekannteBefunde(p).flatMap(b => PLAN[b.art] || []).filter(k => (AKTION[k] && k !== "boxenruhe" && !AKTION[k].ueb) || (APO[k] && APO[k].frei && !APO[k].dosis))])].map(k => { const A = AKTION[k] || { ...APO[k], mittel: k }, n = A.mittel ? vorrat(A.mittel) : null; return knopf(k, `${A.ico} ${A.n}${n != null ? ` (${vTxt(A.mittel)})` : ""}${H[k] ? " ✓" : ""}`, H[k], H[k] || (n != null && n <= 0) || p.weide); }).join("")}
         <button class="mini-knopf" data-behmed="1" ${p.weide || H.tierarzt ? "disabled" : ""}>💊 Medikament…</button>${folgerezeptMoeglich(p) ? `<button class="mini-knopf" data-folgerezept="1">📝 Folgerezept · ${fmt(folgerezeptPreis(p))}</button>` : ""}</div>
       ${behMed ? `<div class="bf-wahl">${meds.length ? meds.map(m => `<button class="mini-knopf ${behMed === m ? "an" : ""}" data-behwahl="${m}">${APO[m].ico} ${APO[m].n} (${vTxt(m)})${H[m] ? " ✓" : ""}</button>`).join("") : "<small>Keine Medikamente da – frei kaufbare unter Hofverwaltung → Hof → Futterkammer, starke nur mit Rezept vom Tierarzt.</small>"}</div>
         ${APO[behMed] ? `<div class="bf-wahl"><small>Dosis für ${APO[behMed].n}:</small>${DOSIS.map(([, t], i) => `<button class="mini-knopf" data-behdosis="${i + 1}">Stufe ${i + 1} · ${t}</button>`).join("")}</div>` : ""}` : ""}
+      ${(() => { const U = [...new Set(bekannteBefunde(p).flatMap(b => PLAN[b.art] || []))].filter(k => AKTION[k] && AKTION[k].ueb); return U.length ? `<small>${U.map(k => behName(k) + (H[k] ? " ✓" : "")).join(", ")}: über Ort → Training (zählt 1× am Tag)</small>` : ""; })()}
       ${heute.length ? `<small>Heute erledigt: ${heute.map(behName).join(", ")}</small>` : ""}
       ${p.behPlan ? `<small>📋 Plan: ${esc(((spiel.mitarbeiter || []).find(m => m.id === p.behPlan.mid) || {}).name || "?")} macht jeden Morgen ${p.behPlan.akt.map(x => behName(x.k) + (x.stufe ? ` (Stufe ${x.stufe})` : "")).join(", ")} <button class="mini-knopf" data-behplan="weg">beenden</button></small>`
         : planM.length ? (planVorlage(p) ? (() => { const V = planVorlage(p); return `<div class="bf-knoepfe"><small>${V.quelle[0].toUpperCase() + V.quelle.slice(1)} (${V.akt.map(x => behName(x.k) + (x.stufe ? ` Stufe ${x.stufe}` : "")).join(", ")}) jeden Morgen machen lassen von:</small>${planM.map(m => `<button class="mini-knopf" data-behplan="${m.id}">📋 ${esc(m.name)}</button>`).join("")}</div>`; })() : `<small>📋 Tipp: Behandle selbst oder ruf den Tierarzt – danach kann ${planM.map(m => esc(m.name)).join(" oder ")} das jeden Morgen übernehmen.</small>`)
@@ -6189,6 +6193,25 @@
   Object.assign(PLAN, { mh: ["boxenruhe", "kuehlen"], sarkoid: [], sonnenbrand: ["wundsalbe", "boxenruhe"], augenkrebs: [], ems: ["schritt"], hyperlipaemie: ["boxenruhe", "schmerzmittel"],
     kissing: ["schmerzmittel", "schritt"], hufrolle: ["schmerzmittel", "beschlag"], spat: ["schritt", "schmerzmittel"], sehne: ["boxenruhe", "kuehlen", "schmerzmittel"], eiph: ["boxenruhe"],
     fraktur: [], darmstein: [], aorta: ["boxenruhe"], megaoes: [], shivers: ["schritt"], krypt: [], mcoa: [] });
+  // v526 (Dome: was in echt bei der Heilung hilft, soll auch im Spiel helfen): Bewegung als Behandlung – Schritt führen/Spaziergang, ruhig longieren, Boden-/Freiarbeit
+  // jede Art zählt 1× am Tag, verschiedene Arten am selben Tag zählen nicht zusammen (nur die beste) – Werte von Claude nach üblicher Tierarzt-Praxis gesetzt
+  Object.assign(AKTION, {
+    longe: { n: "Ruhig longieren", ico: "🌀", ueb: true, info: "1× täglich 10–15 Minuten ruhig auf großem Zirkel, vorwärts-abwärts (Ort → Training: Longieren oder Doppellonge)" },
+    frei: { n: "Boden- oder Freiarbeit", ico: "🤝", ueb: true, info: "1× täglich 10–15 Minuten ruhige Boden-, Frei- oder Stangenarbeit (Ort → Training)" } });
+  AKTION.schritt.info = "1× täglich 15–20 Minuten ruhig im Schritt führen – oder ein Spaziergang im Gelände";
+  const BEWEG = ["schritt", "longe", "frei"], BEWEG_UEB = { spazieren: "schritt", longieren: "longe", doppellonge: "longe", bodenarbeit: "frei", freiarbeit: "frei", stangen: "frei" };
+  const BEWEG_NICHT = { schritt: "Schritt führen oder Spaziergänge", longe: "Longieren", frei: "Boden- oder Freiarbeit" };
+  const BEWEG_H = { verletzung: { schritt: .2 }, husten: { schritt: .2 }, asthma: { schritt: .2 }, arthrose: { longe: .3, frei: .3 }, cushing: { schritt: .1, longe: .1 },
+    hypp: { longe: .2, frei: .2 }, pssm: { longe: .4, frei: .3 }, lymphoedem: { longe: .2, frei: .3 }, ems: { longe: .4, frei: .3 }, kissing: { longe: .4, frei: .3 },
+    hufrolle: { schritt: .2 }, spat: { longe: .3, frei: .3 }, sehne: { schritt: .3 }, shivers: { longe: .2, frei: .3 } };
+  const BEWEG_S = { verletzung: { longe: .15, frei: .15 }, lahmheit: { longe: .2, frei: .2 }, erkaeltung: { longe: .2, frei: .2 }, hufrehe: { longe: .4, frei: .3 }, druse: { longe: .2, frei: .2 },
+    asthma: { longe: .1 }, hufabszess: { schritt: .1, longe: .2, frei: .2 }, hornspalt: { longe: .15, frei: .1 }, influenza: { longe: .3, frei: .3 }, herpes: { longe: .3, frei: .3 },
+    ataxie: { longe: .2, frei: .2 }, ocd: { longe: .2, frei: .1 }, mh: { longe: .3, frei: .3 }, hyperlipaemie: { longe: .2, frei: .2 }, hufrolle: { longe: .15 },
+    sehne: { longe: .3, frei: .3 }, eiph: { longe: .2, frei: .1 }, fraktur: { longe: .5, frei: .5 }, aorta: { longe: .2, frei: .1 } };
+  delete SCHADET.verletzung.schritt; delete SCHADET.sehne.schritt; delete SCHADET.aorta.schritt;   // Wunde/Sehne: kontrolliertes Führen gehört zur Heilung · Aorta: nur Anstrengung ist gefährlich
+  Object.entries(BEWEG_H).forEach(([k, o]) => Object.assign((HILFT[k] = HILFT[k] || {}), o));
+  Object.entries(BEWEG_S).forEach(([k, o]) => Object.assign((SCHADET[k] = SCHADET[k] || {}), o));
+  ["verletzung", "husten", "asthma", "sehne", "hufrolle"].forEach(k => PLAN[k].push("schritt")); PLAN.kissing.push("longe");
   Object.assign(URSACHE, {
     mh: () => "Erbkrankheit (MH)", sarkoid: () => "Veranlagung (Papillomviren, Fliegenstiche)",
     sonnenbrand: (p, ort) => ort === "weide" ? "pralle Sonne auf der Weide bei rosa Haut" : "Sonne durch das Boxenfenster bei rosa Haut",
@@ -6390,7 +6413,7 @@
   function trainieren(p, k, ort, m) {
     werteErgaenzen(p); skalaErgaenzen(p);
     const U = UEBUNG[k], d = datum(), wetter = wetterHeute(d), kosten = uebKosten(p, k), wer = m ? m.name : null;
-    if (k === "spazieren" && !behHeute(p).a.schritt && (p.befunde || []).some(b => (HILFT[b.art] || {}).schritt || (SCHADET[b.art] || {}).schritt)) behandeln(p, "schritt", null, wer || undefined);   // v523 (Dome): im Gelände führen wirkt wie Schritt führen
+    { const bk = BEWEG_UEB[k]; if (bk && !behHeute(p).a[bk] && (p.befunde || []).some(b => (HILFT[b.art] || {})[bk] || (SCHADET[b.art] || {})[bk])) behandeln(p, bk, null, wer || undefined); }   // v523/v526 (Dome): Spaziergang = Schritt führen, Longieren/Doppellonge = ruhig longieren, Boden-/Frei-/Stangenarbeit = Boden- oder Freiarbeit
     const T = (p.trainHeute = p.trainHeute && p.trainHeute.tag === spiel.tag ? p.trainHeute : { tag: spiel.tag, liste: [], verbraucht: 0 });
     prot(`Training ${(U.n || k).replace(/\u00ad/g, "")} (${m ? "Personal" : "selbst"})`, { p, o: ort });   // S4: je Übung
     const vorher = energie(p), ueber = kosten > vorher;
@@ -12303,6 +12326,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Lager (Hofverwaltung → Hof):</b> Verlässt ein Pferd den Hof (Verkauf, Rückgabe, Abgabe, Gnadenhof, Tod), kommen sein eigenes Putzzeug und seine Hufschuhe (mit Größe und Zustand) ins Lager. Von dort an ein anderes Pferd geben (Putzzeug desinfiziert und kostenlos; Putzzeug von einem Pferd mit Hautpilz in der letzten Jahreszeit: 30 % Ansteckung – besser wegwerfen), an Gnadenhof oder Tierschutzverein spenden (Sympathie +${SPENDE_RUF} je Teil, Dankesbrief) oder wegwerfen. Beim Verkauf (Festpreis/Auktion) kann man das Zubehör mitgeben: Preis + gebrauchtes Putzzeug 20 €, Hufschuhe 60 % vom Neupreis × Zustand je Paar.</p>
       <p><b>Untersuchung wie AKU</b> (v265, Box – ppf – Versorgung, eigene Pferde): gleiche Stufen und Preise wie die AKU; findet unbemerkte Befunde nach Bereich (Haut/Kolik immer, Atemwege mit Lunge, Hufe/Lahmheit mit Gangbild, Arthrose mit Beugeproben, PSSM/Ataxie/HYPP mit Longe, Würmer/Vergiftung/Magen mit kleinem Blutbild, Cushing/Influenza/Herpes mit großem Blutbild, OCD mit Röntgen) und nennt bei der großen die Röntgenklasse.</p><p><b>Vorsorge und Labor:</b> Impfung ${fmt(VORSORGE.impfung)}, Zahnkontrolle ${fmt(VORSORGE.zahn)} (über 1 Jahr überfällig: Kolik ×1,5), Wurmkur aus der Stallapotheke im Frühjahr und Herbst (Dome, v242; Knopf nur dann; überfällig über 2½ Jahreszeiten: Würmer ×3), kleines Blutbild ${fmt(VORSORGE.blutKlein)} (Entzündung ja/nein), großes ${fmt(VORSORGE.blutGross)} (konkrete Krankheit, auch in der Inkubation) – Ergebnis nach 2 Tagen per Brief. Eigenes Putzzeug ${fmt(VORSORGE.putzzeug)} (Putzkiste). Ein Quarantänestall (kein Risiko) kommt mit dem Hof-Ausbau.</p>
       <p><b>Behandlung (Etappe D)</b> unter Pflege → Versorgung, jede Aktion einmal am Tag: ${Object.values(AKTION).map(A => `${A.ico} ${A.n}`).join(", ")}, Medikament mit Dosis. Wirkung in der Nacht danach: Behandlungswert = Summe der passenden Anteile (höchstens 1) × (0,5 + 0,5 × Mitwirkung). Besserung pro Nacht: Wert ÷ (Heilungszahl × 0,5) ÷ (1,3 − Regeneration ÷ 100 × 0,6), höchstens 80 % (chronisch nur bis Grad 1); Verschlechterung × (1 − Wert) + Schaden; Wirkung auf Gesundheit/Wohlbefinden × (1 − 0,6 × Wert). Heilt ein Befund unter Behandlung, gilt die Ursache als geklärt (Erfahrung). Tod und Warnbrief nur bei Wert unter 0,3.</p>
+      <p><b>Bewegung als Behandlung (v526):</b> Schritt führen (Versorgung) oder Spaziergang im Gelände = 🚶 Schritt führen · Longieren/Doppellonge = 🌀 ruhig longieren · Boden-, Frei- und Stangenarbeit = 🤝 Boden- oder Freiarbeit (Ort → Training, auch durch Pfleger/Bereiter). Jede Art zählt 1× am Tag; machst du mehrere Arten am selben Tag, zählt nur die mit dem höchsten Wert (nicht die Summe). Was schadet, schadet aber auch dann. Der Tierarzt schreibt in den Plan, welche Bewegung wie oft hilft (1× täglich, Dauer) und welche bis zur Heilung schadet. Mitarbeiter-Pläne übernehmen nur Behandlungen in der Box, Bewegung läuft über das Training. Werte stehen in der Tabelle (hilft/schadet). Begründung: kontrolliertes Führen gehört zur Heilung von Wunden und Sehnenschäden, bei Arthrose, Spat, Kissing Spines, PSSM, EMS, Shivers und Lymphödem hilft regelmäßige ruhige Bewegung; bei Hufrehe, Bruch, Fieber/Infekten, Herpes, Ataxie und MH ist Anstrengung schädlich; Hufrolle verträgt keine engen Zirkel.</p>
       ${verTab(["Befund", "hilft", "schadet", "Tierarzt-Plan"], Object.keys(HILFT).map(k => [`${KRANK[k].ico} ${KRANK[k].n}`, Object.entries(HILFT[k]).map(([a, x]) => `${behName(a)} ${String(x).replace(".", ",")}`).join(", "), Object.entries(SCHADET[k] || {}).map(([a, x]) => `${behName(a)} +${String(x).replace(".", ",")}`).join(", ") || "–", (PLAN[k] || []).map(behName).join(", ")]))}
       <p><b>Mitwirkung</b> = 0,4 + Vertrauen ÷ 100 × 0,6 − 0,2 × scheu − 0,2 × nervös (0,2–1); Chance, dass sich das Pferd wehrt und die Aktion misslingt: (1 − Mitwirkung) × 40 %. Boxenruhe: kein Weidegang, Bereiter lässt das Pferd stehen, Wohlbefinden −1 (temperamentvoll bis −4) pro Nacht; endet, wenn kein Befund mehr da ist. <b>Gewicht</b> = Körperbau × Stockmaß³ ÷ 10 000 (Körperbau: Robustpferde 1,55, Friese/Lipizzaner 1,4, Araber/Hannoveraner 1,3, Vollblut/Marwari 1,15, Achal-Tekkiner 1,1) ± 5 %; angezeigt als „ca.“ mit bis zu ±4 % Schätzfehler. <b>Dosis</b> in 5 Stufen: ${DOSIS.map(([, t], i) => `${i + 1} = ${t}`).join(", ")}. Zu niedrig: wirkt nicht. Zu hoch: Vergiftung (1 Stufe zu viel → leicht, 2 → deutlich, 3 → schwer, 4 → lebensbedrohlich). Falsches Mittel (hilft gegen keinen Befund): Wohlbefinden −5, Gesundheit −2; Kortison 10 % Hufrehe, Antibiotikum 10 % Kolik.</p>
       <p><b>Stallapotheke</b> (Hofverwaltung → Hof → Futterkammer): ${Object.values(APO).map(M => `${M.ico} ${M.n} ${M.frei ? fmt(M.preis) : "nur Rezept"}`).join(" · ")}. <b>Behandlungsplan:</b> Pfleger oder Pferdewirt übernimmt die heutige Behandlung (sonst die letzte eigene, sonst den Tierarzt-Plan mit richtiger Dosis) jeden Morgen (nicht auf der Weide): vergisst eine Aktion mit 25 % × (1 − Erfahrung ÷ 100) (schusselig ×1,5, zuverlässig nie), unter 30 Erfahrung gibt er in 15 % der Fälle eine Dosisstufe zu wenig; +0,3 Erfahrung pro Tag. Plan endet, wenn kein Befund mehr da ist.</p>

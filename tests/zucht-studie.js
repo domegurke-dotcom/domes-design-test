@@ -1,6 +1,7 @@
 // Zucht-Studie (Plan B in PLAN-STUDIEN.md, 19.10.2026): je Rasse 10 Zuchtstuten (4–14 J.) über 4 Jahre bei guter Pflege (wie Spieler 3 der Gesundheits-Studie)
 // Stuten 1–5 → eigener Hengst (immer möglich), Stuten 6–10 → Deckstation (nur Frühling/Sommer, Decktaxe). Jede leere, zuchttaugliche Stute wird 1× am Tag gedeckt, bis sie tragend ist.
-// Variante A: ohne Gentest, ohne Abfohlbox · Variante B: alle Elterntiere gentestet (Erbkrankheiten + Farbe), Warnung → anderer Hengst, 10 Abfohlboxen
+// Variante A: Natursprung, ohne Gentest, ohne Abfohlbox · Variante B: Besamung, alle Elterntiere gentestet (Erbkrankheiten + Farbe), Warnung → anderer Hengst (Lp-Hinweis nicht), 10 Abfohlboxen
+// v535: jede Stute bekommt einen Tag nach dem Decken eine Trächtigkeitsuntersuchung (guter Züchter)
 // Gemessen: Deckversuche, Trächtigkeit je Versuch und je Stute und Saison, Gründe für Zuchtsperre, Verfohlen, Geburten, schwache Fohlen, Erbkrankheiten,
 // Fohlentod bis zum Absetzen und im 1. Lebensjahr, Fohlen-Befunde nach dem Absetzen, Waisen, Abstand zwischen zwei Fohlen
 // Start (im Repo-Ordner): NODE_PATH=/opt/node22/lib/node_modules node tests/zucht-studie.js <Ausgabe-Ordner> <rasse> [<rasse> …]   (VARIANTEN=A,B  WDH=2)
@@ -22,8 +23,8 @@ async function lauf(rasse, variante) {
     const dlg = () => document.getElementById('dlg'), zu = () => { dlg().hidden = true; }, zuf = Math.random, B_ = V === 'B';
     window.reaktionZeigen = () => {}; window.zeigeStall = () => {}; window.zeigeTag = () => {}; window.zeigeAkte = () => {};
     spiel.tippsAus = true; spiel.admin = false; spiel.geld = 1e7;
-    const g0 = spiel.boxen[0]; while (spiel.boxen.length < 40) spiel.boxen.push({ nr: spiel.boxen.length + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false, geb: g0.geb, stufe: g0.stufe });
-    if (B_) spiel.boxen.slice(30, 40).forEach(x => { x.abfohl = true; });
+    const g0 = spiel.boxen[0]; while (spiel.boxen.length < 70) spiel.boxen.push({ nr: spiel.boxen.length + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false, geb: g0.geb, stufe: g0.stufe });
+    if (B_) spiel.boxen.slice(60, 70).forEach(x => { x.abfohl = true; });
     spiel.hof.ha = 21; spiel.hof.weideHa = 20; spiel.weiden = ['Stuten', 'Hengst', 'Absetzer'].map((n, i) => ({ wid: 'w' + (i + 1), name: n, ha: 6, gras: 80, matsch: 0 }));
     const F = futterkammer(); F.lagerMax = 1e7; Object.keys(FUTTER).forEach(k => { if (['raufutter', 'kraftfutter', 'zusatz'].includes(FUTTER[k].art)) F.lager[k] = 1e5; });
     const ap = apotheke(); Object.keys(APO).filter(k => APO[k].frei).forEach(k => ap[k] = 999);
@@ -32,7 +33,8 @@ async function lauf(rasse, variante) {
     const hengst = neu({ name: 'Eigenhengst', geschlecht: 'Hengst', alter: 8 }); hengst.studie = { rolle: 'hengst' }; spiel.boxen[10].pferd = hengst;
     const deckH = neu({ name: 'Stationshengst', geschlecht: 'Hengst', alter: 9 }); deckH.stockmass = deckH.stockmass || deckH.zielStockmass;
     const M = { versuche: 0, tragend: 0, versucheEigen: 0, tragendEigen: 0, versucheDeck: 0, tragendDeck: 0, saison: {}, sperre: {}, warnung: 0, ausweich: 0, kosten: { deck: 0, tierarzt: 0 },
-      fohlen: [], verfohlt: 0, stutenTot: [], fehler: {}, wohlHengst: [], wohlStute: [], tragendTage: 0, stutenTage: 0, stutenFohlenTage: 0 };
+      fohlen: [], verfohlt: 0, embryo: 0, totgeburt: 0, tu: 0, stutenTot: [], fehler: {}, briefe: {}, wohlHengst: [], wohlStute: [], tragendTage: 0, stutenTage: 0, stutenFohlenTage: 0 };
+    const brief0 = brief; window.brief = brief = (von, betreff, ...rest) => { [['verfohlt', /hat verfohlt/], ['totgeburt', /tot geboren/], ['rosst', /rosst wieder/], ['tragend', /ist tragend$/]].forEach(([k, re]) => { if (re.test(betreff)) M.briefe[k] = (M.briefe[k] || 0) + 1; }); return brief0(von, betreff, ...rest); };
     const schritt = (k, f) => { try { f(); } catch (e) { M.fehler[k + ': ' + e.message] = (M.fehler[k + ': ' + e.message] || 0) + 1; } };
     let von = null; const buchen0 = buchen; window.buchen = buchen = (x, posten) => { if (x < 0) { const t = von || String(posten); if (/Decktaxe/.test(t)) M.kosten.deck -= x; else if (/Tierarzt|Klinik|OP/i.test(t)) M.kosten.tierarzt -= x; } return buchen0(x, posten); };
     // Geburten mitschreiben
@@ -50,10 +52,15 @@ async function lauf(rasse, variante) {
       if (!B_) kand = kand.slice(0, 1).filter(h => h === (p.studie.gruppe === 'eigen' ? hengst : deckH));
       for (const h of kand) {
         zu(); aktBox = spiel.boxen.indexOf(box); verpaaren(p, h);
-        const t = dlg().hidden ? '' : document.getElementById('dlgInhalt').textContent;
-        if (/Erbkrankheit|Lethal|Trotzdem/.test(t) || [...document.querySelectorAll('#dlgKnoepfe button')].some(x => /Trotzdem/.test(x.textContent))) { M.warnung++; zu(); continue; }
+        let knoepfe = [...document.querySelectorAll('#dlgKnoepfe button')];
+        const lp = knoepfe.find(x => /💞 Verpaaren/.test(x.textContent));   // v535: Leopard-Hinweis ist keine Warnung
+        if (lp) { lp.click(); knoepfe = [...document.querySelectorAll('#dlgKnoepfe button')]; }
+        if (knoepfe.some(x => /Trotzdem/.test(x.textContent))) { M.warnung++; zu(); continue; }
+        const art = knoepfe.find(x => (B_ ? /Besamung/ : /Natursprung/).test(x.textContent)) || knoepfe.find(x => /Natursprung/.test(x.textContent));
+        if (!art) { zu(); continue; }
+        art.click();
         if (h !== kand[0] || (B_ && h !== (p.studie.gruppe === 'eigen' ? hengst : deckH))) M.ausweich++;
-        const ok = !!p.traechtig, eig = h === hengst; M.versuche++; if (eig) M.versucheEigen++; else M.versucheDeck++; if (ok) { M.tragend++; if (eig) M.tragendEigen++; else M.tragendDeck++; }
+        const ok = !!(p.gedeckt && p.gedeckt.erfolg), eig = h === hengst; if (p.gedeckt && p.gedeckt.verlust != null) M.embryo++; M.versuche++; if (eig) M.versucheEigen++; else M.versucheDeck++; if (ok) { M.tragend++; if (eig) M.tragendEigen++; else M.tragendDeck++; }
         const S = (M.saison[seasonKey] = M.saison[seasonKey] || { versuche: 0, tragend: false, s: d.s }); S.versuche++; if (ok) S.tragend = true;
         if (ok) zuchtVerlauf[p.name].tragendSeit = spiel.tag;
         zu(); return;
@@ -69,6 +76,7 @@ async function lauf(rasse, variante) {
         schritt('besuch', () => anzeichenBeimBesuch(box));
         // Zucht zuerst (vor dem Weidegang)
         if (p.studie.rolle === 'stute') { if (p.traechtig) M.tragendTage++; M.stutenTage++; if (box.fohlen) M.stutenFohlenTage++;
+          if (p.gedeckt && spiel.tag - p.gedeckt.tag >= TU_AB && !p.gedeckt.tuPos && !p.gedeckt.tuGemacht) { p.gedeckt.tuGemacht = true; M.tu++; schritt('tu', () => { traechtigkeitsUntersuchung(p, () => {}); zu(); }); }
           if (!p.traechtig && !p.weide) { const s = zuchtSperre(p, box); if (s) M.sperre[s] = (M.sperre[s] || 0) + 1; else schritt('decken', () => decken(p, box)); } }
         if (!p.weide && !box.krippeVoll) schritt('fuettern', () => { if (fuetternAusLager(box, 'du', 'rau')) box.krippeVoll = true; if (kraftNoetig(p, box)) { fuetternAusLager(box, 'du', 'kraft'); box.kraftVoll = true; } });
         box.wasserTag = spiel.tag;
@@ -92,12 +100,12 @@ async function lauf(rasse, variante) {
       (spiel.post || []).forEach(x => { x.gelesen = true; }); zu();
     };
     const fohlenFinden = id => { for (const b of spiel.boxen) { if (b.fohlen && b.fohlen.id === id) return { f: b.fohlen, beiFuss: true }; if (b.pferd && b.pferd.id === id) return { f: b.pferd, beiFuss: false }; } const e = (spiel.extern || []).find(x => x.pferd && x.pferd.id === id); return e ? { f: e.pferd, beiFuss: false } : null; };
-    const tote0 = (spiel.friedhof || []).length, tage = JAHRE * 4 * tpj(); let tr0 = new Map(stuten.map(p => [p.name, false])); const t0 = performance.now();
+    const tote0 = (spiel.friedhof || []).length, tage = JAHRE * 4 * tpj(); const t0 = performance.now();
     for (let dd = 0; dd < tage; dd++) {
       tag();
       try { naechsteNacht(); } catch (e) { M.fehler['nacht: ' + e.message] = (M.fehler['nacht: ' + e.message] || 0) + 1; } zu();
       // Verfohlen erkennen: tragend weg, ohne Geburt
-      stuten.forEach(p => { const war = tr0.get(p.name), box = boxVon(p); if (war && !p.traechtig && !(box && box.fohlen && box.fohlen.gebTag === spiel.tag) && !Object.values(FO).some(f => f.mutter === p.name && spiel.tag - f.tag <= 1)) M.verfohlt++; tr0.set(p.name, !!p.traechtig); });
+      M.verfohlt = M.briefe.verfohlt || 0; M.totgeburt = M.briefe.totgeburt || 0;
       Object.values(FO).forEach(o => { if (o.tod) return; const x = fohlenFinden(o.id); if (!x) return; const f = x.f;
         if (o.ges0 == null && f.pflege) o.ges0 = f.pflege.gesundheit;
         if (!x.beiFuss && o.abgesetzt == null) o.abgesetzt = spiel.tag;

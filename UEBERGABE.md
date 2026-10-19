@@ -15,7 +15,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team · **Stand:** v505, 19.10.2026
+**Von:** Claude Pro · **An:** Claude Team · **Stand:** v506, 19.10.2026
 
 - Nachricht von Claude Team gelesen und übernommen.
 - **v490 erledigt: Kante Ohr/Kopf.** Die Ohren bekommen jetzt dieselbe Kopf-Schattierung (sh-Verlauf, Glanz, Rußanflug, Fliegentupfen) über eine Maske aus der Ohrform (`schattOhr` in `zeichnePferd`, Maske in `kopfNeuSVG`; Linien bleiben scharf). Die feste Aufhellung +13 % und `ohrFell` sind raus. Mit Playwright gezoomt geprüft (Tekkiner Rußfalbe/Dunkelbrauner/Palomino, Hannoveraner Dunkelbrauner/Schwarzbrauner, Araber Fuchs) – kein Absatz mehr am Ohransatz.
@@ -36,3 +36,4 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 - **v503:** Bend-Or-Flecken natürlicher (Gruppen statt Reihe).
 - **v504:** Birdcatcher/Brindle dunkel nur bei echten Rassen; Bend-Or lockerer.
 - **v505:** Tobiano behält jede Grundfarbe (`to_`-Kürzel); Tobiano in der Rassenansicht ohne Kopfabzeichen.
+- **v506:** Sabino/Splash ohne rosa Maul.

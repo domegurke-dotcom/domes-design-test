@@ -51,7 +51,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (3 Stellen in index.html: pferd.js, boxstufen.js, kopfneu.js) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **505**.
+- Letzte Version bei Aktualisierung dieser Datei: **506**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName` ausfüllen → `#chLos` → Kreditbrief schließen (`#dlgKnoepfe button`) → `[data-immo="pension"]` → `#kaufName` → `#dlgKnoepfe button:first-child`. Admin: `spiel.admin = true`.
@@ -206,6 +206,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - **v503 (Dome):** Bend-Or-Flecken unregelmäßig in lockeren Gruppen (2–3 je Zone, 20 % frei verstreut), Größe stark verschieden – vorher gleichmäßige Abstände → wirkte wie eine Strichreihe.
 - **v504 (Dome):** Birdcatcher und Brindle dunkel nur bei Rassen, bei denen sie in echt beschrieben sind (`BIRD_RASSE`: Araber, Vollblut, Anglo-Araber, Shagya, Tekkiner, Quarter; `BRINDLE_RASSE`: Quarter, Paint, Vollblut, Anglo-Araber, Araber), Mischlinge anteilig nach Blut (`rassenRate`), auch in der Rassenansicht (`gibt`). Bend-Or weniger Flecken (typisch 4–7), lockerer verteilt (45 % frei).
 - **v505 (Dome):** Tobiano auf jeder Grundfarbe: neues Muster-Kürzel `to_` (+ Grundfarbe, `MUSTER.to`, `MUSTER_GENE.to`) – vorher fiel jede Farbe auf Rapp-/Braun-/Fuchsschecke zurück (Falben, Dunkelbrauner, Palomino … gingen verloren). Rapp-/Braun-/Fuchsschecke bleiben eigene Farben (alte Spielstände). Name über `SCHECKE_NAME` (z. B. Falbschecke). Alle Muster-Regexe enthalten jetzt `to`. Rassenansicht: Tobiano ohne Kopfabzeichen (nur Sb/Sw/O/W behalten Kopfweiß).
+- **v506 (Dome):** Sabino/Splash ohne pauschal rosa Maul (`musterFarbe`) – rosa Haut nur unter Domes Kopfabzeichen; vorher sah es wie ein weißes Kinn aus.
 - **Aufräumen v435:** Code mit ESLint geprüft (keine echten Fehler), unbenutzte Funktionen/Variablen entfernt, `spiel.marktGekauft` auf 200 Einträge begrenzt (`marktGekauftMerken`), versehentlich hochgeladene Test-Screenshots gelöscht. Prüfskript: Skriptblöcke aus index.html in Dateien schreiben und `eslint` (liegt in /opt/node22/lib/node_modules) mit no-unused-vars/no-dupe-keys/no-unreachable laufen lassen. **Test-Screenshots nie im Projektordner speichern** (immer im Scratchpad). Kötenbehang (`behang` in pferd.js) ist vorerst ausgeblendet, der Code bleibt – kommt später (Dome).
 - **v436:** Kopfleiste beim Drehen des Handys: `--kopfH` wird sofort nachgezogen (ResizeObserver auf `header` + resize), vorher blitzte im Vollbild bis zu 0,5 s der Stall zwischen Kopfleiste und Fenster durch. **v437:** Viewport `minimum-scale=1` und `html, body { overflow-x: clip }` – verhindert, dass Chrome (Android) nach dem Drehen herauszoomt (Menüs breiter als die Kopfleiste, Dome-Screenshot ohne Vollbild).
 - **Offen (Stand v439):** Scheckmuster Schritt 2 (`PLAN-SCHECKUNG.md`). Domes Zeichnungen laut `BEI-INKSCAPE-BEARBEITEN.md`. Stute bleibt bei voller Abfohlbox in ihrer Box (gewollt). Ausbilder-Nachholen per Test geprüft (v433, funktioniert).

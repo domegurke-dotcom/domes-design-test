@@ -1,4 +1,4 @@
-# Plan der großen Studien (Stand v534, 19.10.2026)
+# Plan der großen Studien (Stand v541, 19.10.2026) – beide Studien erledigt, Nachbesserungen v535–v541 umgesetzt, Kontrolle in `studie-daten/v535-kontrolle/`. Nächste Studie erst auf Wunsch (nach Domes Test).
 
 ## A) Krankheitstest, zweiter Durchlauf (alle 28 Rassen, 4 Spieler) – ✅ erledigt 19.10.2026 (Ergebnis in STUDIE-GESUNDHEIT.md, Daten studie-daten/zweite-studie-v534/)
 Ziel: Vergleich **erste Studie (v531)** mit **neuer Studie (v534)** und Bewertung (zu viel Pflegearbeit? Häufigkeit/Schwere/Verlauf/Behandlung realistisch?).

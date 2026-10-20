@@ -8,7 +8,7 @@ Quelle: Projekt-Chat mit Dome, 20.10.2026. Alle Punkte sind von Dome entschieden
 | Etappe | Inhalt | Stand |
 |---|---|---|
 | P1 | Post: wichtige Briefe nie löschen | **fertig (v599)**, Test `tests/post-test.js` |
-| V1 | Vorfälle, Stufen, gerechte Ausnahmen | offen |
+| V1 | Vorfälle, Stufen, gerechte Ausnahmen | **fertig (v600)**, Test `tests/veterinaer-test.js`; selbst gesetzt: `KLINIK_TOD` 4 %/Tag, `KLINIK_BEFUND` 20 €, Klinik-Ziel aus Altersgrenze und Krankheitsdecke |
 | V2 | Kontrollen, Auflagen, Meldungen | offen |
 | V3 | Tierhalteverbot und Spielende | offen |
 | V4 | Vom Tierarzt erlösen lassen | offen |

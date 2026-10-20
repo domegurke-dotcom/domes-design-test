@@ -46,3 +46,17 @@ Alles liegt auf `main` (Branch `claude/admiring-bell-s50jlb` ist gleich). Detail
 
 ### Nächste Sitzung (Claude Team, Sonnet reicht für kleine Dinge, Opus für große Umbauten)
 - Dome gibt den Startsatz. Erst `UEBERGABE.md`, `CLAUDE.md` lesen, dann Domes Rückmeldung zum Test von v535–v541 abarbeiten.
+
+### Nachtrag Claude Team, 20.10.2026 (Stand v557) – gleiche Sitzung wie oben, ergänzt
+**Fertig und auf `main` (alle mit Test, Plan-Dateien und CLAUDE.md sind aktuell):**
+- **v547 Dispo** (`PLAN-BILANZ.md` B1, `tests/dispo-test.js`): Konto bis −2.000 €, 12 % Zinsen, Käufe gesperrt, Kreditrate darf ins Dispo, Androhung → Pfändung → Insolvenz.
+- **v548–v553 Hofchronik + Bestenliste + Lebensbilanz** (B2): Zähler je Hof (`spiel.chronik`), 3 beste/3 wertvollste Pferde je Hof (anklickbar, im Archiv geschützt), Bilanz je Pferd `p.bilanz` nach Disziplin und Klasse (Rennen/Tölt/Distanz mit Prüfungsnamen, Meisterschaft/International eigene Zeilen, getrennte Summen), Anzeige im Steckbrief.
+- **v554 Jahresbericht** (B3, `tests/jahresbericht-test.js`), **v555 Bilanz als Bild** (B5, `tests/bild-test.js`).
+- **v556/v557 Seltenheit** (R1 aus `PLAN-RARITAETEN.md`, `tests/seltenheit-test.js`, Rang-Tabelle per `werkzeuge/seltenheit-schwellen.js`).
+
+**Offen (Dome hat auf Sonnet gearbeitet; für diese Opus empfohlen):**
+- **B4 Spiel-verloren-Bilanz und „Nur ansehen“** (groß): Abschlussfenster mit Tipps, Platz „Verloren“, Nur-ansehen-Modus (nichts änderbar). `bilanzBildTeilen`, `bestenListen`, `jahresDaten`, `jbHofHTML` sind wiederverwendbar.
+- **R2 Raritäten-Markt** (groß), dann **R3** (Preise/Auktion) und **R4** (eigene Raritäten anbieten). Voraussetzungen (Dispo, Chronik, Seltenheit) sind da.
+- Fragen an Dome stehen in der Antwort der Sitzung (20.10.); Antworten bitte hier und in den Plänen nachtragen.
+
+**Achtung:** `jahresbericht()` läuft im Jahreszeit-Block nach `hoefeVersteigern()` nur im Frühling Tag 1; Brief-Typ `jahresbericht` wird nie automatisch gelöscht (Post-Limit überspringt ihn). Bilanz-Schlüssel: `p.bilanzV = 3`. Große Tests (Etappen-, Hof-Gesamt-, Neuladen-Test) wurden in dieser Sitzung **nicht** gelaufen – bei Bedarf einmal laufen lassen (kostet Volumen, Dome vorher fragen).

@@ -30,9 +30,9 @@ const URL_ = 'file://' + path.resolve(__dirname, '..', 'index.html');
   ok('Neues Spiel: Spiel-Nummer, aber noch kein Speicherplatz', !!r.id && !r.platz && !r.p1 && !r.p2, JSON.stringify(r).slice(0, 120));
   ok('Neues Spiel gilt als „noch nicht gespeichert“, Autospeicher gepackt', r.ung === true && r.auto !== '{');
   await nacht(1);
-  r = await ev(() => { spiel.tippsAus = false; spiel.tippStart = 1; spiel.tipps = Object.fromEntries(Object.keys(TIPPS).filter(k => k !== 'speichern').map(k => [k, 1])); document.getElementById('dlg').hidden = true; const n = document.getElementById('nacht'); if (n) { n.classList.remove('an'); n.hidden = true; } tippPruefen(); return document.getElementById('dlgInhalt').textContent; });
-  ok('Tipp „Spiel speichern nicht vergessen“ erscheint', /Spiel speichern nicht vergessen/.test(r), r.slice(0, 80));   // tippStart = 1 fest: lief tippPruefen zufällig erst nach dem Tageswechsel zum ersten Mal, stand er auf Tag 2 (v525)
-  await ev(() => { document.getElementById('dlg').hidden = true; spiel.tippsAus = true; });
+  r = await ev(() => { spiel.tippsAus = false; spiel.tippStart = spiel.tag - tpj() - 1; spiel.tipps = Object.fromEntries([...Object.keys(TIPPS), ...Object.keys(HINWEISE), 'geldKnapp'].filter(k => k !== 'speichern').map(k => [k, 1])); delete spiel.hinweisZaehler; spiel.tippWarte = []; if (blase) blaseWeg(false); document.getElementById('dlg').hidden = true; const n = document.getElementById('nacht'); if (n) { n.classList.remove('an'); n.hidden = true; } document.querySelectorAll('.schirm.offen').forEach(x => x.classList.remove('offen')); hinweisPruefen(); const b = document.getElementById('hinweisBlase'); return b && !b.hidden ? b.textContent : ''; });
+  ok('Hinweisblase „Speichern“ erscheint (T1)', /Speichern/.test(r), r.slice(0, 80));   // tippStart = 1 fest: lief tippPruefen zufällig erst nach dem Tageswechsel zum ersten Mal, stand er auf Tag 2 (v525)
+  await ev(() => { document.getElementById('dlg').hidden = true; spiel.tippsAus = true; if (blase) blaseWeg(false); });
   // 2. Erstes Speichern: Speicherplatz wählen
   await speichernUeberMenue(1);
   r = await ev(() => ({ t: document.getElementById('dlgInhalt').textContent, platz: spiel.platz, p1: (lesenPlatz(1) || {}).meta, ung: ungespeichert() }));

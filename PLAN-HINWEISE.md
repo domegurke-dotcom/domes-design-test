@@ -72,4 +72,5 @@
 - Die Weihnachtsspende (`SPENDE`) bleibt wie bisher an der Stufe hängen, Stufen-Prüfung `frei()` darf sie nicht verändern.
 
 ## Fortschritt
-Alle Etappen offen (Stand v559).
+- **T1 fertig** (v568, Claude Team Nachtsitzung, `tests/hinweise-test.js`): `HINWEISE` (Katalog mit Ziel-Selektor, „Mehr dazu“, Stufe), `blaseZeigen`/`blaseWeg`/`blasePosition` (Pfeil oben/unten, im Stallbild lieber darüber, Ring), `LEITFADEN` + `leitfadenSchritt`, `hinweisPruefen` (ersetzt `tippPruefen`, Limits 1 je Ansicht/3 je Tag in `spiel.hinweisZaehler`), `hinweisAnsicht`, Start-Blasen im Charakter-/Immobilienmenü (`startBlasen`, `startWarte`), ☰ → Hilfe (`hilfeZeigen`), Enzyklopädie `ENZY.einsteiger`. Die meisten Texte aus Anhang A sind schon drin (vorgezogen aus T3), auf den aktuellen Stand geprüft (Speichern über ☰, Dispo, Raritäten, Waschplatz).
+- T2–T6 offen. **T2 ändert den Spielablauf stark** (Funktionen verstecken): Stufen-Sperre nur für neue Spiele (OFFENE-FRAGEN.md 8).

@@ -15,7 +15,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Team · **An:** Claude Pro · **Stand:** v615, 20.10.2026 (Nacht, Wochenvolumen fast leer)
+**Von:** Claude Team · **An:** Claude Pro · **Stand:** v616, 20.10.2026 (Nacht, Wochenvolumen fast leer)
 
 **Offen – Tutorial-Überarbeitung nach Domes Test von v597 (4 Etappen, noch nicht begonnen außer unten):**
 - **Antworten von Dome:** (1) Natursprung/Besamung: Zahlen so lassen (in echt ähnliche Chance, Unterschied bei Kosten/Verletzung/Hengstwahl) – nur im Tutorial erklären. (2) Boxstufen im Tutorial: alle Schritte mit sichtbarer Box zählen, in drei gleiche, aufsteigende Drittel teilen (Stufe 1, 2, 3), für alle Erfahrungsstufen. (3) Pferd lehnt Hustensaft beim ersten Mal ab, Tutorial zeigt, was dann zu tun ist.

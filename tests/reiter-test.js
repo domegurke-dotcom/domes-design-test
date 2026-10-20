@@ -132,6 +132,62 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Dialog öffnet ohne Fehler', (() => { try { unterrichtDialog(); const ok1 = !document.getElementById('dlg').hidden && /Reitunterricht/.test(document.getElementById('dlgInhalt').innerHTML); document.getElementById('dlg').hidden = true; return ok1; } catch (er) { return er.message; } })());
     ok('Reiter-Seite hat den Knopf Reitunterricht, keine +4 %-Spalte mehr', (() => { const h = reiterHTML(); return /id="ruKnopf"/.test(h) && !/<th>Training<\/th>/.test(h); })());
     ok('Ort-Reiter-Satz: Pferd weiter → „bremst“, Reiter weiter → „gutes Training“', (() => { spiel.reiter.koennen.dressur = 10; const a = reiterSatz(tp('S1', { dressur: 50 }), null); spiel.reiter.koennen.dressur = 90; const b2 = reiterSatz(tp('S2', { dressur: 30 }), null), c = reiterSatz(tp('S3', { dressur: 85 }), null); return /bremst/.test(a) && /gutes Training/.test(b2) && c === ''; })());
+    // ==================== K3 ====================
+    spiel.mitarbeiter = []; spiel.admin = false; spiel.geld = 1e5;
+    const RF = (k, P) => reiterTurnierFaktor(k, P), PL = { disz: 'dressur', stufe: 2 };   // Anforderung 50
+    ok('Turnier-Reiterfaktor: q = 0,2 → 0,84 · q = 1 → 1,00 · q = 2 → 1,08 · q = 3 → 1,08', nah(RF(10, PL), 0.84) && nah(RF(50, PL), 1) && nah(RF(100, PL), 1.08) && nah(RF(150, PL), 1.08));
+    ok('Anforderung mindestens 10 (Wettbewerb: Können 10 → ×1,0)', nah(RF(10, { disz: 'dressur', stufe: -1 }), 1));
+    const tp3 = (name, fest) => { const x = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 9, name }); x.reiterStandFest = fest || {}; x.erfolge = []; return x; };
+    const T0 = (art, Pr) => ({ id: 'k3' + Math.random(), tag: spiel.tag + 3, art, name: 'Testturnier', halle: false, nennung: [], pruef: [Pr] });
+    const stufeSetzen = s => { spiel.stufenAn = true; spiel.spieler = spiel.spieler || {}; spiel.spieler.stufe = s; };
+    const pM = { id: 'pm', disz: 'dressur', stufe: 3, name: 'Dressur Kl. M', starter: 12 }, pS = { id: 'ps', disz: 'dressur', stufe: 4, name: 'Dressur Kl. S', starter: 12 };
+    spiel.lk.dressur = 7; spiel.reiter.koennen.dressur = 10;
+    stufeSetzen('anf'); ok('Anfänger: nur „Du selbst“ (keine Reiterwahl)', reiterOptionen(tp3('A'), T0('regional', pM), pM).map(o => o.id).join() === 'du');
+    stufeSetzen('exp'); const O1 = reiterOptionen(tp3('B'), T0('gross', pM), pM);
+    ok('Ohne festen Bereiter: Du, Bereiter nach Bedarf (70 €), Profi (150 €)', O1.map(o => o.id).join() === 'du,bedarf,profi' && O1[1].kosten === 70 && O1[2].kosten === 150 && O1[2].koennen === 85);
+    ok('Startrecht: du mit LK 7 nicht in M · Bereiter (60) in M ja, in S nicht · Profi in S ja', !!O1[0].ok && !O1[1].ok && !!reiterOptionen(tp3('C'), T0('gross', pS), pS)[1].ok && !reiterOptionen(tp3('C'), T0('gross', pS), pS)[2].ok);
+    spiel.mitarbeiter = [{ id: 'br1', name: 'Bernd', typ: 'bereiter', ab: jzJetzt() - 1, bis: null, wissen: { ruecken: 70 }, eig: [], zufr: 80 }];
+    const O2 = reiterOptionen(tp3('D'), T0('gross', pM), pM); ok('Mit festem Bereiter: er statt „nach Bedarf“, kostenlos', O2.map(o => o.id).join() === 'du,m:br1,profi' && O2[1].kosten === 0 && O2[1].koennen === reiterKoennenMa(spiel.mitarbeiter[0]));
+    spiel.mitarbeiter = [];
+    const tm = T0('gross', pM), pm1 = tp3('E'); pm1.pflege.impf = spiel.tag;
+    ok('nennSperre: LK reicht nicht, aber ein anderer Reiter darf → nennbar (Experte)', !/LK/.test(nennSperre(pm1, tm, pM)), nennSperre(pm1, tm, pM));
+    stufeSetzen('fort'); ok('Fortgeschritten: Reiterwahl ebenso', !/LK/.test(nennSperre(pm1, tm, { ...pM, stufe: 2, id: 'pl', name: 'Dressur Kl. L' })));
+    stufeSetzen('anf'); ok('Anfänger: LK-Sperre bleibt', /LK|Klasse|nur/.test(nennSperre(pm1, tm, pM)), nennSperre(pm1, tm, pM)); stufeSetzen('exp');
+    const rP = { id: 'rr', disz: 'galopprennen', stufe: 1, name: 'Ausgleich III (Vollblut)', starter: 10, nenn: 80, jockey: true, rassen: ['vollblut'] }, rT = T0('renntag', rP);
+    spiel.reiter.koennen.rennen = 20; let RO = reiterOptionen(tp3('F'), rT, rP);
+    ok('Rennen: Jockey und „selbst“ (erst ab Können 30)', RO.map(o => o.id).join() === 'jockey,du' && /30/.test(RO[1].ok));
+    spiel.reiter.koennen.rennen = 35; RO = reiterOptionen(tp3('F'), rT, rP); ok('Rennen selbst ab Können 30: spart das Reitgeld', !RO[1].ok && RO[1].kosten === -REITGELD * (vorteil('renn') ? 0.5 : 1));
+    ok('Nenn-Zeile: reicht / knapp / fehlt', (() => { spiel.reiter.koennen.dressur = 60; const a = reiterNennZeile(tp3('G'), PL); spiel.reiter.koennen.dressur = 44; const b2 = reiterNennZeile(tp3('G'), PL); spiel.reiter.koennen.dressur = 10; const c = reiterNennZeile(tp3('G'), PL); return /reicht/.test(a) && /knapp/.test(b2) && /fehlt/.test(c); })());
+    // Nennen über die Oberfläche: Reiter wählen → Profi
+    { const x = tp3('Nennpferd', { dressur: 70 }); x.pflege.impf = spiel.tag; spiel.boxen[0].pferd = x; spiel.boxen[0].tot = false; delete spiel.boxen[0].fohlen;
+      const Pu = { id: 'pu', disz: 'dressur', stufe: 3, name: 'Dressur Kl. M', starter: 14 }, tu = T0('gross', Pu); spiel.turniere = [tu]; window.turnierKalender = () => spiel.turniere;
+      const g0 = spiel.geld; turnierDialog(x, () => {}); const kn = document.querySelector(`[data-tnennen="${tu.id}:pu"]`);
+      if (!kn) ok('Nennen-Knopf da (Reiterwahl über LK)', false, document.getElementById('dlgInhalt').textContent.slice(0, 200));
+      else { kn.click(); const knoepfe = [...document.querySelectorAll('#dlgKnoepfe button')].map(b => b.textContent);
+        ok('Reiterwahl-Fenster mit Profi (du darfst nicht: LK)', /Wer reitet/.test(document.getElementById('dlgInhalt').textContent) && knoepfe.some(k => /Profi/.test(k)) && !knoepfe.some(k => /Selbst/.test(k)), knoepfe.join(' | '));
+        [...document.querySelectorAll('#dlgKnoepfe button')].find(b => /Profi/.test(b.textContent)).click();
+        const n = tu.nennung[0]; ok('Genannt mit Profi: Nenngeld + 150 € abgebucht', !!n && n.reiter === 'profi' && n.geld === nenngeld(tu, Pu) + 150 && nah(g0 - spiel.geld, n.geld, 0.01), JSON.stringify(n));
+        document.getElementById('dlg').hidden = true; } }
+    // Warnfenster 8e und Brief 8c
+    { const x = tp3('Warnpferd', { dressur: 70 }); spiel.reiter.koennen.dressur = 20; let w = 0; reiterNennWarnung(x, PL, { id: 'du' }, () => w++, () => {});
+      const offen = !document.getElementById('dlg').hidden && /weiter als du/.test(document.getElementById('dlgInhalt').textContent); document.getElementById('dlg').hidden = true;
+      reiterNennWarnung(x, PL, { id: 'du' }, () => w++, () => {}); ok('Nennen-Warnung „weiter als du“ einmal je Pferd und Disziplin, danach direkt weiter', offen && w === 1);
+      let w2 = 0; reiterNennWarnung(tp3('Warn2', { dressur: 70 }), PL, { id: 'profi' }, () => w2++, () => {}); ok('Mit anderem Reiter keine Warnung', w2 === 1 && document.getElementById('dlg').hidden); }
+    { const x = tp3('Rueck', { dressur: 70 }); spiel.reiter.koennen.dressur = 20; const n0 = spiel.post.length; reiterRueckBrief(x); const n1 = spiel.post.length; reiterRueckBrief(x);
+      ok('Brief vom Ausbildungsstall „… ist jetzt weiter als du“, einmal', n1 === n0 + 1 && spiel.post.length === n1 && /weiter als/.test(spiel.post[0].betreff) && /Klasse M/.test(spiel.post[0].text), spiel.post[0].betreff); }
+    ok('Ausbildungsstall anmelden: Warnung bei wenig Können, keine bei viel', (() => { spiel.reiter.koennen.dressur = 20; const a = ausbWarnung(tp3('Aw')); spiel.reiter.koennen.dressur = 75; const b2 = ausbWarnung(tp3('Aw2')); return /erst/.test(a) && /LK 4/.test(a) && b2 === ''; })());
+    // Turnier-Nacht: Profi reitet – Erfolg fürs Pferd, nichts für dich
+    { const x = tp3('Profipferd'); x.energie = 100; spiel.boxen[0].pferd = x; const Pq = { id: 'pq', disz: 'dressur', stufe: 1, name: 'Dressur Kl. A', starter: 8 }, tq = { id: 'tq', tag: spiel.tag, art: 'regional', name: 'Profiturnier', halle: false, nennung: [{ pid: x.id, prid: 'pq', reiter: 'profi', reiterName: 'Profi von außen' }], pruef: [Pq] };
+      spiel.turniere = [tq]; x.turnier = { tid: 'tq', tag: spiel.tag }; spiel.reiter.koennen.dressur = 20; spiel.lkErfolge = {}; turnierNacht();
+      ok('Profi geritten: Erfolg beim Pferd, dein Können und deine LK-Erfolge bleiben', x.erfolge.length === 1 && reiterKoennen('dressur') === 20 && !(spiel.lkErfolge.dressur && spiel.lkErfolge.dressur.plaz.some(v => v)) && /geritten von Profi/.test(spiel.post[0].text)); }
+    // Bereiter reitet: trainiert an dem Tag nicht
+    { spiel.mitarbeiter = [{ id: 'br2', name: 'Berta', typ: 'bereiter', ab: jzJetzt() - 1, bis: null, wissen: { ruecken: 60, verhalten: 50, huf: 40 }, eig: [], zufr: 80, turnierTag: spiel.tag }];
+      const x = tp3('Bereitertag'); x.energie = 100; x.pflege.gesundheit = 100; spiel.boxen[0].pferd = x; spiel.boxen.slice(1).forEach(b => { b.pferd = null; }); const vor = x.trainHeute && x.trainHeute.tag === spiel.tag ? x.trainHeute.liste.length : 0; mitarbeiterTag();
+      ok('Bereiter mit Turniertag trainiert an dem Tag nicht', (x.trainHeute && x.trainHeute.tag === spiel.tag ? x.trainHeute.liste.length : 0) === vor); spiel.mitarbeiter = []; }
+    // LK-Aufstieg wartet auf Können
+    { spiel.lk.springen = 7; spiel.reiter.koennen.springen = 10; spiel.lkErfolge = {}; spiel.tippsAus = false; spiel.tipps = {}; spiel.tippWarte = [];
+      const m1 = lkErfolg('springen', 0, 2); ok('Erfolge reichen (1 Platzierung), Können 10 < 15: kein Aufstieg, Blase vorgemerkt', m1 === '' && spiel.lk.springen === 7 && spiel.tippWarte.includes('lkWartet'));
+      spiel.reiter.koennen.springen = 16; const m2 = lkErfolg('springen', 0, 3); ok('Mit Können 16: Aufstieg auf LK 6 (Erfolge haben sich gesammelt)', /LK 6/.test(m2) && spiel.lk.springen === 6); }
     // --- 14. Bereiter trainiert nach dem Unterricht am nächsten Morgen nicht ---
     ok('Bereiter, der gestern dich unterrichtet hat, trainiert heute kein Pferd – sonst schon', (() => {
       try { spiel.mitarbeiter = [{ id: 'bt1', name: 'Berta', typ: 'bereiter', ab: jzJetzt() - 1, bis: null, wissen: { ruecken: 60, verhalten: 50, huf: 40 }, eig: [], zufr: 80 }]; const m = spiel.mitarbeiter[0];

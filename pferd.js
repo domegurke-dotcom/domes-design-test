@@ -1064,7 +1064,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       ohneUeb: !schopfL || rasseId === "tekke", abz: opt.kopfAbz, maul: opt.maul || (C.grau > .3 ? "dunkel" : undefined), ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, augenRing: C.grau > .3 && !opt.maul ? { farbe: C.muzzle, st: C.grau } : /schwarzbrauner/.test(farbId) ? { farbe: "#a8643a", st: .5 } : null, /* v481 (Dome): Schwarzbraune – kupferfarben ums Auge (Platzhalter) */ lpHaut: !!(LP && LP.haut) || !!opt.kroete, kroeteHell: !LP && !!opt.kroete, sklera: !!(LP && LP.sklera), augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
   }
   // Mähne
-  if (maehneD) g += `<path d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
+  if (maehneD) g += `<path class="maehnePfad" d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
   if (maehneD && maehneWeiss.length) {   // v440: weiße Mähnenabschnitte mit einzelnen Strähnen am Übergang
     const runter = norm(P(0.12, 1)), lang = maneLenE * H + 12; let m = "";
     for (const [t1, t2] of maehneWeiss) { const ob = [], un = [];

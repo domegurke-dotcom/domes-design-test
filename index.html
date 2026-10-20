@@ -1026,7 +1026,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "617";
+  const SPIEL_VERSION = "620";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1034,11 +1034,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=617"></script>
-<script src="pferd.js?v=617"></script>
-<script src="boxstufen.js?v=617"></script>
-<script src="kopfneu.js?v=617"></script>
-<script src="waschbild.js?v=617"></script>
+<script src="lz-string.min.js?v=620"></script>
+<script src="pferd.js?v=620"></script>
+<script src="boxstufen.js?v=620"></script>
+<script src="kopfneu.js?v=620"></script>
+<script src="waschbild.js?v=620"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -10286,12 +10286,13 @@
       // nicht über das Boxschild (x 166–234, y 38–60): erst nach links ausweichen, sonst darunter
       if (x < 236 + plakettenBreite() && x + breite > 164 && y < 62 && y + hoehe > 36) { if (162 - breite >= 4) x = 162 - breite; else y = 62; }
       const spitze = Math.max(x + 10, Math.min(x + breite - 18, ax));
-      svg.insertAdjacentHTML("beforeend", `<g id="sprechblase" pointer-events="none" class="sb-an">
+      const bleibt = !!(spiel.tutorial && (tutListe()[spiel.tutorial.kap] || {}).n === "Krankes Pony");   // Dome 20.10.: nur im Tutorial-Kapitel zur Krankheit bleibt die Sprechblase, bis sie angetippt wurde
+      svg.insertAdjacentHTML("beforeend", `<g id="sprechblase" ${bleibt ? 'style="cursor:pointer"' : 'pointer-events="none"'} class="sb-an">
         <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${breite.toFixed(1)}" height="${hoehe}" rx="9" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4"/>
         <path d="M${(spitze - 5).toFixed(1)},${(y + hoehe - 0.5).toFixed(1)} l5,9 l5,-9" fill="#fffaf0" stroke="#2b1d14" stroke-width="1.4" stroke-linejoin="round"/>
         <path d="M${(spitze - 5.5).toFixed(1)},${(y + hoehe - 1).toFixed(1)} h11" stroke="#fffaf0" stroke-width="2"/>
         ${zeilen.map((z, i) => `<text x="${(x + breite / 2).toFixed(1)}" y="${(y + 8 + lh * i + fs - 1).toFixed(1)}" text-anchor="middle" font-size="${fs}" font-weight="700" font-style="italic" fill="#2b1d12" font-family="system-ui, sans-serif">${esc(z)}</text>`).join("")}</g>`);
-      clearTimeout(reaktionZeigen.t); reaktionZeigen.t = setTimeout(() => { const b = $("sprechblase"); if (b) b.remove(); }, 4500);
+      clearTimeout(reaktionZeigen.t); if (bleibt) { const sb = $("sprechblase"); if (sb) sb.onclick = e => { e.stopPropagation(); sb.remove(); }; } else reaktionZeigen.t = setTimeout(() => { const b = $("sprechblase"); if (b) b.remove(); }, 4500);
     }, 30);
   }
   // angezeigtes Wohlbefinden = Grundwert minus Schmutz (bis −40, sensible Pferde stört Schmutz mehr, robuste weniger) – Putzen hebt es sofort
@@ -10712,7 +10713,10 @@
     let bb; try { bb = $("pferdPlatz").getBBox(); } catch (e) { return; }
     const drin = q.x >= bb.x && q.x <= bb.x + bb.width && q.y >= bb.y && q.y <= bb.y + bb.height;
     if (!drin) return;
-    if (w.tool === "kamm") { const oben = q.y < bb.y + bb.height * 0.45, hinten = q.x < bb.x + bb.width * 0.25 || q.x > bb.x + bb.width * 0.75; if (!oben && !hinten) return; }
+    if (w.tool === "kamm") {   // Dome 20.10.: nur über Mähne und Schweif (mit etwas Rand), nicht neben dem Pferd
+      const teile = [...document.querySelectorAll("#pferdPlatz .maehnePfad, #pferdPlatz .schweif")];
+      if (teile.length) { const m = 14, cx = ev.clientX, cy = ev.clientY; if (!teile.some(e => { const r = e.getBoundingClientRect(); return cx >= r.left - m && cx <= r.right + m && cy >= r.top - m && cy <= r.bottom + m; })) return; }
+      else { const oben = q.y < bb.y + bb.height * 0.45, hinten = q.x < bb.x + bb.width * 0.25 || q.x > bb.x + bb.width * 0.75; if (!oben && !hinten) return; } }
     if (w.tool === "beine" && q.y < bb.y + bb.height * 0.6) return;   // W2: nur die Beine
     if (WASCH_TOOLS.includes(w.tool)) { const vorher = w.fort; w.fort = Math.min(1, w.fort + weg / (w.tool === "beine" ? 220 : 380));
       if (w.tool !== "trocknen" && Math.random() < 0.6) { document.querySelectorAll("#stall .tropfen.alt").forEach(c => c.remove()); document.querySelectorAll("#stall .tropfen").forEach(c => c.classList.add("alt"));
@@ -15427,8 +15431,8 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         ["Heu geben", "Das Heu ist da: Tippe in der Box auf das Heu. Ab Box-Stufe 2 hängt es im Heunetz.", "@heu", b => b.krippeVoll],
         ["Futtereimer", "Und der Futtereimer für das Mineralfutter.", ".stufeEl .sKrippe, #krippe", b => b.kraftVoll || !kraftNoetig(b.pferd, b)]],
       fertig: b => b.krippeVoll && (b.kraftVoll || !kraftNoetig(b.pferd, b)) && spiel.tag > spiel.tutorial.tag0 },
-    { n: "Krankes Pony", ziel: "Tierarzt gerufen und Brief gelesen", post: true, neu: () => { const b = spiel.boxen[0]; b.pferd = TUT_PFERD({ rasse: "shetty", geschlecht: "Stute", alter: 12, name: "Krümel" }); b.krippeVoll = true; b.mistig = false; tutBoxStufe(2); tutLagerFuellen(); (spiel.post || []).forEach(x => { x.gelesen = true; }); befundNeu(b.pferd, "husten", 2, "Stallluft", "du"); const B2 = b.pferd.befunde.find(x => x.art === "husten"); if (B2) { B2.bemerkt = { von: "du", tag: spiel.tag }; delete B2.inkub; } },
-      schritte: [["Woran du es merkst", "Krümel hustet. Krankheit erkennst du an: frisst nicht, steht teilnahmslos da, hustet, lahmt, schwitzt ohne Grund. Meist zeigt es eine Sprechblase im Stall oder die Pferdepflege → Versorgung.", null, () => false, true],
+    { n: "Krankes Pony", ziel: "Tierarzt gerufen und Brief gelesen", post: true, neu: () => { const b = spiel.boxen[0]; b.pferd = TUT_PFERD({ rasse: "shetty", geschlecht: "Stute", alter: 12, name: "Krümel" }); b.krippeVoll = true; b.mistig = false; tutBoxStufe(2); tutLagerFuellen(); (spiel.post || []).forEach(x => { x.gelesen = true; }); befundNeu(b.pferd, "husten", 2, "Stallluft", "du"); const B2 = b.pferd.befunde.find(x => x.art === "husten"); if (B2) { B2.bemerkt = { von: "du", tag: spiel.tag }; delete B2.inkub; } setTimeout(() => reaktionZeigen("hustet ab und zu"), 700); },
+      schritte: [["Woran du es merkst", "Krümel hustet – das zeigt sie dir mit der Sprechblase im Stall (sie bleibt, bis du sie antippst). Krankheit erkennst du an: frisst nicht, steht teilnahmslos da, hustet, lahmt, schwitzt ohne Grund. Meist zeigt es eine Sprechblase im Stall oder die Pferdepflege → Versorgung.", null, () => false, true],
         ["Versorgung", "Unter Pferdepflege → Versorgung siehst du, was los ist.", "[data-r=\"gesundheit\"], [data-m=\"pflege\"]", () => aktenModus === "pflege" && aktenReiter === "gesundheit"],
         ["Selbst einschätzen", "Kleine Dinge wie Schrammen, leichten Husten oder Mauke behandelst du selbst aus der Stallapotheke (Versorgung → Behandlung). Wird es nicht besser, hat das Pferd Fieber oder bist du unsicher: Tierarzt. Er kostet einen Hausbesuch plus Behandlung.", null, () => false, true],
         ["In Behandlung", "Ein krankes Pferd in Behandlung gilt nie als vernachlässigt.", null, () => false, true],
@@ -15618,7 +15622,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   // Dome 20.10.: im Tutorial lässt sich nur antippen, was gerade gefragt ist – und was in früheren Schritten schon gelernt wurde
   const tutSel = sel => !sel ? [] : (sel === "@heu" ? ".stufeEl .sHeunetz, #heuhaufen" : sel).split(",").map(x => x.trim()).filter(Boolean);
   function tutGelernt(S) { const T = spiel.tutorial, G = (T.gelernt = T.gelernt || []); [...tutSel(S[2]), ...tutSel(S[5])].forEach(x => { if (!G.includes(x)) G.push(x); }); }
-  const TUT_IMMER = ["#hinweisBlase", "#tutBand", "#tutFade", ".sb-bild", "#leseBild"];   /* Bild zoomen/verschieben ist immer erlaubt (Dome 20.10.) */   // Dome 20.10.: Zurück-Pfeile und Menüs nur, wenn der Schritt sie braucht (steht dann im Ziel des Schritts)
+  const TUT_IMMER = ["#hinweisBlase", "#tutBand", "#tutFade", ".sb-bild", "#leseBild", "#sprechblase"];   /* Bild zoomen/verschieben ist immer erlaubt (Dome 20.10.) */   // Dome 20.10.: Zurück-Pfeile und Menüs nur, wenn der Schritt sie braucht (steht dann im Ziel des Schritts)
   function tutErlaubt(el) {
     const T = spiel && spiel.tutorial; if (!T || !el || !el.closest) return true; const K = tutListe()[T.kap]; if (!K) return true;
     const S = K.schritte[Math.min(T.schritt, K.schritte.length - 1)];

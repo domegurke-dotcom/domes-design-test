@@ -142,6 +142,33 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Abschlussfenster: Grund Tierhalteverbot, Vorfälle in der Bilanz, Tipps', /Tierhalteverbot/.test(txt) && /Vorfälle beim Veterinäramt/.test(txt) && /Das Spiel ist verloren/.test(txt) && /Tipps für das nächste Spiel/.test(txt) && /V-B/.test(txt), txt.slice(0, 120));
     ok('Tipps zur Vernachlässigung (Stallbursche/Behandlung/Warnung) stehen da', /Stallbursche|Tierarzt|Tierhalteverbot bekommt|gegensteuern/.test(txt));
     ok('Platz „Verloren“ geschrieben (Grund Tierhalteverbot)', (lesenVerloren() || { meta: {} }).meta.grund === 'Tierhalteverbot');
+    // --- 12. V4: vom Tierarzt erlösen lassen ---
+    frisch(); spiel.stufenAn = false; const E1 = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Gesund2' }); box(0, E1);
+    ok('Gesundes Pferd: Erlösen nicht möglich', erloesenGrund(E1) === null);
+    const Fr = neu({ rasse: 'hannoveraner', geschlecht: 'Wallach', alter: 8, name: 'Bruch' }); const fb = befundNeu(Fr, 'fraktur', 4, 'Test'); box(1, Fr);
+    ok('Befund ohne Untersuchung: Erlösen noch nicht möglich', erloesenGrund(Fr) === null);
+    tierarztBesuch(Fr, spiel.boxen[1], null, null); zu();
+    ok('Tierarzt stellt bei Röhrbeinbruch „keine Heilung mehr möglich“ fest → Erlösen möglich', erloesenGrund(Fr) && /keine Heilung mehr möglich/.test(erloesenGrund(Fr)) && /Keine Heilung mehr möglich/.test(spiel.post.concat(spiel.rechnungen || []).map(x => x.text || '').join(' ')), erloesenGrund(Fr));
+    const Alt2 = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 36, name: 'Oma4' }); Alt2.pflege.gesundheit = 25; ok('Altersschwach mit 25 %: Erlösen noch nicht möglich', altersschwach(Alt2) && erloesenGrund(Alt2) === null); Alt2.pflege.gesundheit = 15; ok('Altersschwach unter 20 %: Erlösen möglich (Altersschwäche)', erloesenGrund(Alt2) === 'Altersschwäche');
+    const Jung = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Jung' }); Jung.pflege.gesundheit = 10; ok('Junges krankes Pferd unter 20 % ohne Feststellung: kein Erlösen', erloesenGrund(Jung) === null);
+    // Durchführen: 250 €, Friedhof, kein Vorfall
+    spiel.geld = 5000; buchungen.length = 0; const fr1 = (spiel.friedhof || []).length, v0 = vetDaten().vorfaelle.length; const bx1 = spiel.boxen[1]; erloesenDurchfuehren(Fr, bx1, erloesenGrund(Fr), false); zu();
+    ok('Erlösen kostet 250 € (Tierarzt: Erlösen)', buchungen.some(x => x[0] === -250 && /^Tierarzt: Erlösen/.test(x[1])));
+    ok('Pferd auf dem Friedhof mit Todesursache „vom Tierarzt erlöst“, Box leer', spiel.friedhof.length === fr1 + 1 && /vom Tierarzt erlöst/.test(spiel.friedhof[spiel.friedhof.length - 1].pferd.todesursache) && !bx1.pferd);
+    ok('Kein Vorfall, keine Vernachlässigung gemeldet', vetDaten().vorfaelle.length === v0 && !(spiel.vernachlaessigt || []).length && briefe(/Abschied von Bruch/) === 1);
+    // Stute mit Fohlen bei Fuß → Waise
+    const Stute = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 36, name: 'Mama' }); Stute.pflege.gesundheit = 10; const bxm = box(2, Stute); const Fol = neu({ rasse: 'hannoveraner', geschlecht: 'Hengst', alter: 0, name: 'Wuschel' }); Fol.gebTag = spiel.tag - 3; bxm.fohlen = Fol;
+    erloesenDurchfuehren(Stute, bxm, 'Altersschwäche', false); zu();
+    ok('Fohlen bei Fuß wird Waise (wie beim normalen Tod der Stute), bleibt in der Box', bxm.pferd && bxm.pferd.name === 'Wuschel' && !!bxm.pferd.waise && !(spiel.tierschutz || []).length, bxm.pferd && bxm.pferd.name);
+    // Pensionspferd: nur mit Zustimmung, am nächsten Tag, Besitzer zahlt
+    const PP = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 36, name: 'Gastoma' }); PP.pflege.gesundheit = 10; PP.einsteller = 'ee1'; const bxp = box(3, PP); spiel.einsteller = [{ eid: 'ee1', pid: PP.id, vn: 'Anna', nn: 'Test', w: true }]; buchungen.length = 0;
+    spiel.einsteller[0].erloesen = { tag: spiel.tag, grund: 'Altersschwäche', pid: PP.id }; pensionErloesen(); ok('Pensionspferd: am selben Tag passiert nichts', !!bxp.pferd && !buchungen.length);
+    spiel.tag += 1; pensionErloesen(); zu();
+    ok('Am nächsten Tag: Zustimmung per Brief, Pferd erlöst, Besitzer zahlt (kein Abzug für dich)', briefe(/Ich bin einverstanden/) === 1 && !bxp.pferd && !buchungen.some(x => /Erlösen/.test(x[1])) && einstellerListe().length === 0);
+    const PQ = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Gastok' }); PQ.einsteller = 'ee2'; const bxq = box(3, PQ); spiel.einsteller = [{ eid: 'ee2', pid: PQ.id, vn: 'Bo', nn: 'Test', w: false, erloesen: { tag: spiel.tag - 1, grund: 'Altersschwäche', pid: PQ.id } }]; pensionErloesen();
+    ok('Pensionspferd inzwischen gesund: Besitzer wartet ab', !!bxq.pferd && briefe(/Wir warten ab/) === 1); spiel.einsteller = [];
+    // Knopf in der Versorgung
+    const Kn = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 36, name: 'KnopfOma' }); Kn.pflege.gesundheit = 10; box(0, Kn); ok('Versorgung zeigt den Knopf „Vom Tierarzt erlösen lassen“ nur bei Möglichkeit', /Vom Tierarzt erlösen lassen/.test(befundKarten(Kn, spiel.boxen[0])));
     window.buchen = buchen0; return out;
   });
   R.forEach(l => console.log(l)); console.log(errs.length ? 'Seitenfehler: ' + errs.join(' | ') : 'keine Seitenfehler');

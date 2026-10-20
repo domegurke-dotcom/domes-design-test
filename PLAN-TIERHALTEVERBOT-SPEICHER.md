@@ -11,7 +11,7 @@ Quelle: Projekt-Chat mit Dome, 20.10.2026. Alle Punkte sind von Dome entschieden
 | V1 | Vorfälle, Stufen, gerechte Ausnahmen | **fertig (v600)**, Test `tests/veterinaer-test.js`; selbst gesetzt: `KLINIK_TOD` 4 %/Tag, `KLINIK_BEFUND` 20 €, Klinik-Ziel aus Altersgrenze und Krankheitsdecke |
 | V2 | Kontrollen, Auflagen, Meldungen | **fertig (v601)**; selbst gesetzt: Meldechance von Einsteller/Tierarzt/Hufschmied 50 % je Besuch |
 | V3 | Tierhalteverbot und Spielende | **fertig (v602)** |
-| V4 | Vom Tierarzt erlösen lassen | offen |
+| V4 | Vom Tierarzt erlösen lassen | **fertig (v603)**; selbst gesetzt: welche Leiden „keine Heilung“ sind (`KEINE_HEILUNG`) |
 | P2 | Speicheranzeige und „Speicher aufräumen“ | offen |
 | T | Tutorial, Hinweisblasen, Enzyklopädie | offen |
 

@@ -1024,7 +1024,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "602";
+  const SPIEL_VERSION = "603";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1032,11 +1032,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=602"></script>
-<script src="pferd.js?v=602"></script>
-<script src="boxstufen.js?v=602"></script>
-<script src="kopfneu.js?v=602"></script>
-<script src="waschbild.js?v=602"></script>
+<script src="lz-string.min.js?v=603"></script>
+<script src="pferd.js?v=603"></script>
+<script src="boxstufen.js?v=603"></script>
+<script src="kopfneu.js?v=603"></script>
+<script src="waschbild.js?v=603"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -6111,12 +6111,14 @@
       if (!b.diagnose) { b.diagnose = spiel.tag; befundAufklaeren(p, b); }
       b.tierarzt = true; if (!b.bemerkt) b.bemerkt = { von: "Tierarzt", tag: spiel.tag };
       if (K.op && b.grad >= K.op) { opNoetig = b; zeilen.push(`<li>${K.ico} <b>${K.n}</b> (${GRAD_TEXT[b.grad]}) – muss operiert werden!</li>`); return; }
+      const khGrad = keineHeilungAb(b), keineH = b.grad >= khGrad;   // V4: vor der Erstbehandlung – ist keine Heilung mehr möglich?
       const kontrolle = !!(b.diagnose && b.beh), preis = Math.round(behandlungsPreis(b) * (kontrolle ? 0.5 : 1)); posten.push({ text: `${p.name}: ${kontrolle ? "Kontrolle und Behandlung" : "Erstbehandlung"} ${verdachtVon(p, b) ? befundSicht(p, b).name : K.n} (${GRAD_TEXT[b.grad]})`, betrag: preis });   // v319: Rechnung verrät nichts Ungeklärtes   // bekannte Diagnose: halber Preis
       b.beh = spiel.tag; b.besserTag = spiel.tag; const vorher = b.grad;
       if (K.chronisch) b.grad = 1; else b.grad = Math.max(1, b.grad - 1);   // Erstbehandlung: eine Stufe besser
       (PLAN[b.art] || []).forEach(k => plan.add(k));
       const eRat = EINSTREU_RAT[b.art] ? (einstreuEmpfehlen(p, b.art, "Tierarzt"), `<br><small>🛏️ Einstreu: ${einstreuPasst(box, b.art) ? `${FUTTER[box.einstreu].n} passt gut – so lassen` : `am besten ${einstreuRatText(b.art)}`}</small>`) : "";   // Futter-Etappe: Einstreu-Empfehlung
       b.taZahl = (b.taZahl || 0) + (b.taTag === spiel.tag ? 0 : 1); b.taTag = spiel.tag; const SI = befundSicht(p, b), eindeutig = !verdachtVon(p, b);   // Dome (v318): Verdacht erst ab dem 2. Mal
+      if (keineH) { b.keineHeilung = spiel.tag; zeilen.push(`<li>🕊️ <b>Keine Heilung mehr möglich:</b> ${esc(SI.name)} ist bei ${esc(p.name)} so weit fortgeschritten, dass wir ${pron(p).ihn} nur noch lindern können. Wenn ${pron(p).er} leidet, können wir ${pron(p).ihn} auf Wunsch erlösen (Pferdepflege → Versorgung).</li>`); }
       zeilen.push(`<li>${K.ico} <b>${esc(SI.name)}</b> (${GRAD_TEXT[vorher]}${vorher !== b.grad ? ` → jetzt ${GRAD_TEXT[b.grad]}` : ""})${K.chronisch && eindeutig ? " – chronisch, wird eingestellt" : ""} · Erstbehandlung ${fmt(preis)}${SI.ursache ? `<br><small>Wahrscheinliche Ursache: ${esc(SI.ursache)}</small>` : ""}${SI.hinweis ? `<br><small>${SI.hinweis}</small>` : ""}${K.rat && eindeutig ? `<br><small>💬 ${K.rat}</small>` : ""}${eRat}</li>`);
     });
     behHeute(p).a.tierarzt = 1;   // heute ist alles richtig behandelt
@@ -6145,6 +6147,42 @@
     else dialog(`<h3>🩺 Tierarzt war da</h3>${zeilen.length ? `<ul>${zeilen.join("")}</ul>${planTxt}` : `<p>${esc(p.name)} ist gesund – der Tierarzt hat nichts gefunden.</p>`}<p><small>Die Rechnung kommt per Brief.</small></p>`, [["OK", fertig]]);
   }
 
+  // ---------- V4 (PLAN-TIERHALTEVERBOT-SPEICHER): vom Tierarzt erlösen lassen ----------
+  // Möglich, wenn der Tierarzt bei einer Untersuchung „keine Heilung mehr möglich“ festgestellt hat (schwere unheilbare Fälle: chronisch ab Grad 5, bestimmte Leiden ab Grad 4) oder das Pferd altersschwach ist und unter 20 % Gesundheit liegt. Kein Vorfall.
+  const ERLOESEN = { preis: 250, unter: 20 };
+  const KEINE_HEILUNG = { fraktur: 4, megaoes: 4, aorta: 4, herda: 4, ataxie: 4 };   // Grad, ab dem bei der Untersuchung keine Heilung mehr möglich ist (selbst gesetzt); sonstige chronische Krankheiten erst bei Grad 5
+  const keineHeilungAb = b => b.art in KEINE_HEILUNG ? KEINE_HEILUNG[b.art] : KRANK[b.art] && KRANK[b.art].chronisch ? 5 : 99;
+  function erloesenGrund(p) {
+    if (!p || !p.pflege) return null;
+    const b = befundListe(p).find(x => x.keineHeilung && x.diagnose); if (b) return `keine Heilung mehr möglich: ${befundSicht(p, b).name}`;
+    if (altersschwach(p) && p.pflege.gesundheit < ERLOESEN.unter) return "Altersschwäche";
+    return null;
+  }
+  function erloesenDurchfuehren(p, box, grund, besitzer) {   // besitzer: Einsteller zahlt (und hat zugestimmt)
+    prot("Tierarzt: Erlösen", { p, o: grund }); if (!besitzer) buchen(-ERLOESEN.preis, `Tierarzt: Erlösen (${p.name})`);
+    p.todesursache = `vom Tierarzt erlöst (${grund})`; p.pflege.gesundheit = 0; box.tot = true; const f = box.fohlen;
+    brief("Tierarztpraxis", `Abschied von ${p.name}`, `es tut uns leid: <b>${esc(p.name)}</b> (Box ${spiel.boxen.indexOf(box) + 1}) wurde heute vom Tierarzt <b>erlöst</b> – ${esc(grund)}. ${pron(p).er[0].toUpperCase() + pron(p).er.slice(1)} musste nicht länger leiden.${f ? ` Das Fohlen <b>${esc(f.name)}</b> hat seine Mutter verloren – ${alterJZ(f) < 2 ? "es braucht jetzt Milch (Flasche, Aufzuchtstation, Ammenstute oder Leihmutter)" : "es bleibt in der Box und wird ab jetzt selbst versorgt"}.` : ""}${besitzer ? "" : ` Die Kosten von ${fmt(ERLOESEN.preis)} (Tierarzt und Abholung) stehen in den Finanzen.`}`, { pferde: [p] });
+    tote();
+  }
+  function erloesenDialog(p, box) {
+    const grund = erloesenGrund(p); if (!grund) return;
+    const e = fremd(p) ? einstellerVon(p) : null;
+    if (e) { dialog(`<h3>🕊️ ${esc(p.name)} erlösen lassen?</h3><p><b>${esc(p.name)}</b> gehört ${esc(eName(e))}. Der Tierarzt darf ${pron(p).ihn} nur mit Zustimmung des Besitzers erlösen. {Du fragst|Sie fragen} ${esc(eName(e))} – die Antwort kommt morgen. Die Kosten trägt der Besitzer.</p><p><small>Grund: ${esc(grund)}.</small></p>`,
+      [["Besitzer fragen", () => { e.erloesen = { tag: spiel.tag, grund, pid: p.id }; speichern(); zeigeAkte(); }], ["Abbrechen", null, "zweit"]]); return; }
+    if (!spiel.admin && geldFrei() < ERLOESEN.preis) { dialog(`<h3>Zu wenig Geld</h3>${dispoHinweis()}<p>Erlösen kostet ${fmt(ERLOESEN.preis)}.</p>`, [["OK", null]]); return; }
+    dialog(`<h3>🕊️ ${esc(p.name)} erlösen lassen?</h3><p>Der Tierarzt kommt, erlöst <b>${esc(p.name)}</b> und holt ${pron(p).ihn} ab. <b>Das lässt sich nicht rückgängig machen.</b> ${esc(p.name)} kommt auf den Pferdefriedhof.</p><p><small>Grund: ${esc(grund)}. Kosten: ${fmt(ERLOESEN.preis)} (Tierarzt und Abholung). Das ist keine Vernachlässigung und hat keine Strafe zur Folge.</small></p>`,
+      [["Ja, erlösen lassen", () => { erloesenDurchfuehren(p, box, grund, false); speichern(); zeigeStall(); zeigeTag(); dialog(`<h3>🕊️ Abschied von ${esc(p.name)}</h3><p>${esc(p.name)} ruht jetzt auf {deinem|Ihrem} Pferdefriedhof. Der Tierarzt schickt einen Brief.</p>`, [["OK", null]]); }, "rot"], ["Abbrechen", null, "zweit"]]);
+  }
+  // Pensionspferd: am nächsten Morgen antwortet der Besitzer (Zustimmung), dann wird erlöst – er zahlt
+  function pensionErloesen() {
+    einstellerListe().filter(e => e.erloesen && e.erloesen.tag < spiel.tag).forEach(e => {
+      const E = e.erloesen; delete e.erloesen; const b = spiel.boxen.find(x => x.pferd && x.pferd.id === E.pid), p = b && b.pferd; if (!p) return;
+      const grund = erloesenGrund(p);
+      if (!grund) { brief(eName(e), `${p.name}: Wir warten ab`, `danke für {deine|Ihre} Nachfrage. Es geht <b>${esc(p.name)}</b> wieder besser – dann warten wir noch ab.`, { w: e.w, pferde: [p] }); return; }
+      brief(eName(e), `${p.name}: Ich bin einverstanden`, `schweren Herzens bin ich einverstanden: <b>${esc(p.name)}</b> soll nicht länger leiden. Der Tierarzt darf ${pron(p).ihn} erlösen – die Kosten übernehme ich.`, { w: e.w, pferde: [p] });
+      erloesenDurchfuehren(p, b, grund, true);
+    });
+  }
   // Versorgung: Befunde, Auffälligkeiten mit Einschätzungen und der Tierarzt-Knopf
   let bfWahl = null;   // Befund, für den gerade „selbst einschätzen“ offen ist
   const tageTxt2 = n => `${n} ${n === 1 ? "Tag" : "Tagen"}`;
@@ -6186,7 +6224,7 @@
       <small>${inQuarantaene(p) ? `🚧 Unter Quarantäne – noch ${tageTxt2(tpj() - (spiel.tag - p.quarantaene))}: kein Weidegang, eigenes Putzzeug, weniger Ansteckung über Luft, Nachbarbox und Hände.` : krankAnst ? "⚠️ Ansteckend! Quarantäne schützt die anderen Pferde." : "Quarantäne für Neuzugänge oder ansteckend kranke Pferde: 1 Jahreszeit eigene Box, kein Weidegang, eigenes Putzzeug."}${geimpft(p) ? " · 💉 geimpft" : ""}${eigenesPutzzeug(p) && !inQuarantaene(p) ? " · 🧰 eigenes Putzzeug" : ""}</small>
       <div class="bf-knoepfe"><button class="mini-knopf ${inQuarantaene(p) ? "an" : ""}" data-quar="1">🚧 Quarantäne ${inQuarantaene(p) ? "beenden" : "an"}</button><button class="mini-knopf" data-blut="0">🩸 kleines Blutbild ${fmt(VORSORGE.blutKlein)}</button><button class="mini-knopf" data-blut="1">🩸 großes Blutbild ${fmt(VORSORGE.blutGross)}</button>${fremd(p) ? "" : `<button class="mini-knopf" data-ucheck="1">🩺 Untersuchung wie AKU</button>`}${p.blutprobe && !p.blutprobe.geprueft ? `<button class="mini-knopf" data-probe="1">🧪 eingelagerte Blutprobe vom Kauf prüfen ${fmt(PROBE_PRUEFEN)}</button>` : ""}</div>
       ${krankAnst || inQuarantaene(p) || nurDa ? `<div class="bf-knoepfe"><small>Mitarbeiter nur für ${esc(p.name)} einteilen (trägt nichts weiter):</small>${nurDa ? `<button class="mini-knopf an" data-nurfuer="weg">👤 ${esc(nurDa.name)} – beenden</button>` : maListe.length ? maListe.map(m => `<button class="mini-knopf" data-nurfuer="${m.id}">👤 ${esc(m.name)}</button>`).join("") : "<small>keine Stallburschen oder Pfleger angestellt</small>"}</div>` : ""}</div>`;
-    return `${karten}${behandlungHTML(p, box)}${opKarteHTML(p)}${vorsorgeKarte}<button class="knopf" id="tierarztKnopf" style="width:auto;padding:9px 14px;margin-top:8px">🩺 Tierarzt rufen · Hausbesuch ${fmt(TIERARZT_BESUCH)} + Behandlung</button>`;
+    return `${karten}${behandlungHTML(p, box)}${opKarteHTML(p)}${vorsorgeKarte}<button class="knopf" id="tierarztKnopf" style="width:auto;padding:9px 14px;margin-top:8px">🩺 Tierarzt rufen · Hausbesuch ${fmt(TIERARZT_BESUCH)} + Behandlung</button>${erloesenGrund(p) ? (tippMerken("erloesen"), `<button class="knopf zweit" id="erloesenKnopf" style="width:auto;padding:9px 14px;margin-top:8px">🕊️ Vom Tierarzt erlösen lassen${fremd(p) ? " · Besitzer fragen" : ` · ${fmt(ERLOESEN.preis)}`}</button>${fremd(p) && (einstellerVon(p) || {}).erloesen ? `<small style="display:block">Der Besitzer antwortet morgen.</small>` : ""}`) : ""}`;
   }
   function befundBinden(p, box) {
     const finde = id => befundListe(p).find(b => b.id === id);
@@ -6217,6 +6255,7 @@
     document.querySelectorAll("[data-quar]").forEach(el => el.onclick = () => { if (inQuarantaene(p)) delete p.quarantaene; else { p.quarantaene = spiel.tag; if (p.weide) { vonWeideHolen(box); } } speichern(); zeigeStall(); zeigeTag(); });
     document.querySelectorAll("[data-nurfuer]").forEach(el => el.onclick = () => { const id = el.dataset.nurfuer;
       (spiel.mitarbeiter || []).forEach(m => { if (m.nurFuer === p.id) delete m.nurFuer; }); if (id !== "weg") { const m = spiel.mitarbeiter.find(x => x.id === id); if (m) m.nurFuer = p.id; } speichern(); zeigeAkte(); });
+    const ek = $("erloesenKnopf"); if (ek) ek.onclick = () => erloesenDialog(p, box);
     const tk = $("tierarztKnopf"); if (tk) tk.onclick = () => {
       const l = befundListe(p).filter(b => !(b.beh && !KRANK[b.art].chronisch));
       dialog(`<h3>🩺 Tierarzt rufen?</h3><p>Der Tierarzt kommt heute noch vorbei, untersucht <b>${esc(p.name)}</b> gründlich, macht die Erstbehandlung und lässt einen Behandlungsplan da (mit Rezeptmitteln, falls nötig).</p><p>Hausbesuch: <b>${fmt(TIERARZT_BESUCH)}</b>, dazu die Erstbehandlung je nach Befund (etwa 50–300 €) und Rezeptmittel. ${l.some(b => b.bemerkt) ? "" : "Findet er nichts, zahlst du nur den Hausbesuch."}<br><small>Die Rechnung kommt per Brief.</small></p>`,
@@ -13441,7 +13480,7 @@
       brief(eName(e), `Kündigung: ${p.name}`, `${fmt(neu)} statt ${fmt(e.preis)} für <b>${esc(p.name)}</b> kann ich mir nicht leisten. Ich kündige den Pensionsvertrag zum Ende dieser Jahreszeit und hole ${esc(p.name)} dann ab.`, { w: e.w, pferde: [p] }); });
   }
   function pensionMorgen() {
-    pensionEinzug(); pensionPreisPruefen();
+    pensionEinzug(); pensionPreisPruefen(); pensionErloesen();   // V4: Antwort des Besitzers auf „erlösen“
     const A = spiel.anlage || {}, H = (spiel.pensionHeute = { tag: spiel.tag, reiter: [] });
     einstellerListe().forEach(e => {
       const b = pensionBox(e); if (!b || b.tot) return; const p = b.pferd;
@@ -15062,6 +15101,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     merkHuf: ["Huf", () => { const p = (B() || {}).pferd; return `Die Hufe von ${p ? esc(p.name) : "deinem Pferd"} weichen vom Idealen ab. Regelmäßige Hufschmied-Termine machen sie besser, Vernachlässigung macht sie schlechter.`; }, "", null, "bogen", "fort"],
     merkMuskel: ["Bemuskelung", () => { const p = (B() || {}).pferd; return `${p ? esc(p.name) : "Dein Pferd"} ist schwach bemuskelt. Training und gutes Futter bauen Muskeln auf, Krankheit und Boxenruhe bauen sie ab.`; }, "", null, "bogen", "fort"],
     merkRasse: ["Rassestandard", () => { const p = (B() || {}).pferd; return `${p ? esc(p.name) : "Dein Pferd"} verstößt gegen den Standard der Rasse und ist nicht zuchtbuchfähig. Das senkt den Wert, und Fohlen können dasselbe erben.`; }, "", null, "bogen", "fort"],
+    erloesen: ["Erlösen", "Der Tierarzt kann ein Pferd erlösen, das nicht mehr gesund wird. Das ist keine Vernachlässigung.", "", null, "krank", "alle"],
     postVoll: ["Deine Post ist bald voll", "Ab 300 Briefen werden die ältesten gelesenen Briefe ohne ⭐ gelöscht. Wichtige Briefe markierst du mit ⭐, die bleiben immer.", "", null, "speichern", "alle"],
     merkVorschau: ["Vorschau für das Fohlen", "Hier steht, was der Hengst bei deiner Stute ausgleicht und was er verstärkt. Haben beide denselben Fehler, geben sie ihn oft weiter.", "", null, "bogen", "fort"],
     merkFohlenschau: ["Fohlenschau", "Die Noten der Fohlenschau kommen aus Körperbau, Typ und Gängen. Schau vorher in die Karte Merkmale, dann weißt du, was die Richter sehen.", "", null, "bogen", "fort"],

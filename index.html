@@ -350,6 +350,7 @@
   .modus { display: flex; background: #e4d3b4; border-radius: 12px; padding: 3px; margin-bottom: 8px; }
   .modus button { flex: 1; border: 0; background: none; padding: 9px 6px; border-radius: 9px; font: inherit; font-weight: 700; font-size: .92rem; color: #6b5440; cursor: pointer; }
   .modus button.an { background: var(--karte); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+  .schl-liste { list-style: none; margin: 8px 0; padding: 0; } .schl-liste li, .schl-zeile { display: flex; align-items: center; gap: 10px; margin: 6px 0; } .schl-liste li > span { flex: 1; min-width: 0; } svg.schleife { flex: none; vertical-align: middle; }   /* S1: Turnierschleifen */
   .liste { list-style: none; margin: 0; padding: 0; }
   .liste li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #efe4d2; font-size: .92rem; }
   .liste li:last-child { border-bottom: 0; }
@@ -1006,7 +1007,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "583";
+  const SPIEL_VERSION = "584";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1014,11 +1015,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=583"></script>
-<script src="pferd.js?v=583"></script>
-<script src="boxstufen.js?v=583"></script>
-<script src="kopfneu.js?v=583"></script>
-<script src="waschbild.js?v=583"></script>
+<script src="lz-string.min.js?v=584"></script>
+<script src="pferd.js?v=584"></script>
+<script src="boxstufen.js?v=584"></script>
+<script src="kopfneu.js?v=584"></script>
+<script src="waschbild.js?v=584"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -3380,6 +3381,7 @@
   }
   // Name im Brief → Infofenster des Pferdes
   function briefMitLinks(br, text) {
+    text = schleifenErsetzen(text);   // S1: [[S:…]] → Schleifen-SVG
     if (!br.links) return text;
     const pool = pferdePool();
     Object.entries(br.links).forEach(([name, id]) => { const x = pool.find(e => e.p.id === id); if (!x) return;
@@ -7366,7 +7368,7 @@
     const B = p.erfolge && p.erfolge.length ? bilanzHolen(p) : p.bilanz || {}, grp = k => /\(Meisterschaft\)$/.test(k) ? 1 : /\(International\)$/.test(k) ? 2 : 0;   // v553 (Dome): Summen getrennt nach normalen Turnieren, Meisterschaften, International
     const K = Object.keys(B).sort((a, b) => grp(a) - grp(b) || B[b][0] - B[a][0]); if (!K.length) return "";
     const sum = K.reduce((a, k) => a.map((x, i) => x + B[k][i]), [0, 0, 0, 0]), summen = ["Zusammen normale Turniere", "Zusammen Meisterschaften", "Zusammen International"].map((n, g) => { const L = K.filter(k => grp(k) === g); return L.length ? [`<b>${n}</b>`, ...L.reduce((a, k) => a.map((x, i) => x + B[k][i]), [0, 0, 0, 0]).map(x => `<b>${x}</b>`)] : null; }).filter(Boolean), name = k => { const [d, kl] = k.split("|"); return esc(bilanzName(d, kl)); };
-    return `<details class="disz"><summary><span class="disz-kopf"><b>📊 Bilanz insgesamt</b><span>${sum[0]} Starts</span></span></summary>${verTab(["Disziplin · Klasse", "Starts", "🥇", "🥈", "🥉"], [...K.map(k => [name(k), ...B[k]]), ...summen])}<p class="text"><small>Zählt alle Turnierstarts des Pferdes, auch die, die in der Liste oben nicht mehr stehen (dort bleiben die letzten 60).</small></p></details>`;
+    return `<details class="disz"><summary><span class="disz-kopf"><b>📊 Bilanz insgesamt</b><span>${sum[0]} Starts</span></span></summary>${verTab(["Disziplin · Klasse", "Starts", schleifeSVG(1, 1, false, 20), schleifeSVG(1, 2, false, 20), schleifeSVG(1, 3, false, 20)], [...K.map(k => [name(k), ...B[k]]), ...summen])}<p class="text"><small>Zählt alle Turnierstarts des Pferdes, auch die, die in der Liste oben nicht mehr stehen (dort bleiben die letzten 60).</small></p></details>`;
   }
   const stufeText = (D, s) => s == null ? null : s < 0 ? "noch keine Klasse" : D.stufen === "western" ? STUFEN.western[s] : `Klasse ${STUFEN.englisch[s]}`;
   const diszListe = p => Object.keys(DISZ).filter(k => !DISZ[k].nur || DISZ[k].nur(p));
@@ -7641,6 +7643,67 @@
     if (disz === "dressur" && stufe >= 2) { const pz = Math.round((64 + d * 0.9 + (rz() - 0.5) * 2) * 100) / 100; return { sort: pz, txt: `${String(pz.toFixed(2)).replace(".", ",")} %` }; }
     const note = Math.max(4, Math.min(9.8, Math.round((6.8 + d / 7 + (rz() - 0.5) * 0.3) * 10) / 10)); return { sort: note, txt: `Wertnote ${String(note).replace(".", ",")}` };
   }
+  // ---------- Turnierschleifen (PLAN-SCHLEIFEN S1, Dome 20.10.2026): echte Rosetten statt 🥇🥈🥉🎀; gespeichert je Pferd in p.schleifen ----------
+  // Farben nach FN: Platz 1 Gold, 2 Silber, 3 Weiß, 4 Blau, 5 Rot, 6 Grün, 0 = braune Teilnehmerschleife (Hufeisen). [Grundfarbe, dunkel, hell, Zeichen]
+  const SCHL_FARBE = { 1: ["#f2c418", "#9a700a", "#fff4a0", "1"], 2: ["#c3c9d2", "#6f7782", "#f7f9fb", "2"], 3: ["#f2f2ec", "#8f8f88", "#ffffff", "3"], 4: ["#2f6fd1", "#183c80", "#b3cfff", "4"], 5: ["#d33a3a", "#831a1a", "#ffb6ae", "5"], 6: ["#2e9b4f", "#185a2c", "#b0e9c3", "6"], 0: ["#8a5a32", "#4a2e15", "#d9b48c", "H"] };
+  const SCHL_GOLD = ["#f2c418", "#9a700a", "#fff4a0"], SCHL_KOPF = "M6.3,0.2 L7.1,2.1 C8.4,2.9 9.3,4.6 9.6,7.0 L9.6,9.9 L5.4,9.9 C5.2,8.8 4.9,8.0 4.4,7.5 C3.6,8.0 2.8,8.6 1.9,8.7 C1.0,8.8 0.4,8.3 0.4,7.6 C0.5,6.6 1.6,5.3 2.6,3.9 C3.3,2.9 4.2,2.0 5.0,1.6 Z";
+  // Turnierart → Stufe (Aussehen): 1 Haus-/Hofturnier · 2 Regional, Western, Distanz, Gangpferde, Renntag, Fohlenschau · 3 Großes Turnier (auch Western, Dome fragen) · 4 Championat, International
+  const SCHL_STUFE = { hof: 1, regional: 2, distanz: 2, gangpferde: 2, renntag: 2, fohlenschau: 2, gross: 3, championat: 4, international: 4 };
+  const schleifenStufe = art => SCHL_STUFE[art] || 2, SCHL_MAX = 300;
+  let schlZaehler = 0;
+  function schleifeSVG(stufe, platz, champion, px = 32) {
+    const id = "sg" + (++schlZaehler), f = champion ? SCHL_GOLD.concat("K") : SCHL_FARBE[platz] || SCHL_FARBE[0], [base, dark, light] = f, st = champion ? "champion" : stufe, [gb, gd] = SCHL_GOLD;
+    const sym = champion ? "K" : (!platz ? "H" : stufe <= 2 ? String(platz) : "K");
+    const ring = (cx, cy, ro, ri, n, rot = 0) => Array.from({ length: 2 * n }, (_, i) => { const r = i % 2 ? ri : ro, a = Math.PI * i / n + rot; return `${(cx + r * Math.sin(a)).toFixed(2)},${(cy - r * Math.cos(a)).toFixed(2)}`; }).join(" ");
+    const tail = (ang, col, dk, lang = 30.5) => `<g transform="rotate(${ang} 16 14)"><path d="M13.4,14 L18.6,14 L18.6,${lang} L16,${lang - 1.9} L13.4,${lang} Z" fill="${col}" stroke="${dk}" stroke-width=".7" stroke-linejoin="round"/><path d="M14.8,16 L14.8,${lang - 1.7}" stroke="#fff" stroke-width=".5" opacity=".35"/></g>`;
+    const poly = (pts, fill, stroke, w) => `<polygon points="${pts}" fill="${fill}" stroke="${stroke}" stroke-width="${w}" stroke-linejoin="round"/>`;
+    let s = `<defs><radialGradient id="${id}" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="${light}"/><stop offset=".55" stop-color="${base}"/><stop offset="1" stop-color="${dark}"/></radialGradient></defs>`;
+    if (st === "champion") s += tail(-24, "#1f3f8f", "#0f2050") + tail(24, "#1f3f8f", "#0f2050") + tail(0, gb, gd) + poly(ring(16, 13, 13.4, 11.2, 28), "#1f3f8f", "#0f2050", .7) + poly(ring(16, 13, 11.0, 9.2, 24, .06), `url(#${id})`, dark, .6);
+    else if (st === 1) s += tail(-18, base, dark) + tail(18, base, dark) + poly(ring(16, 13, 12.6, 10.4, 24), `url(#${id})`, dark, .7);
+    else if (st === 2) s += tail(-18, base, dark) + tail(18, base, dark) + poly(ring(16, 13, 13.4, 11.6, 30), base, dark, .6) + poly(ring(16, 13, 11.3, 9.6, 24, .07), `url(#${id})`, dark, .6);
+    else if (st === 3) s += tail(-20, base, dark, 31.2) + tail(20, base, dark, 31.2) + poly(ring(16, 13, 13.6, 11.8, 30), base, dark, .6) + `<circle cx="16" cy="13" r="11.4" fill="none" stroke="${gb}" stroke-width="1.1"/>` + poly(ring(16, 13, 11.0, 9.4, 24, .07), `url(#${id})`, dark, .6);
+    else s += tail(-22, base, dark, 31.4) + tail(0, gb, gd, 31.4) + tail(22, base, dark, 31.4) + poly(ring(16, 13, 14.0, 12.4, 32), gb, gd, .6) + poly(ring(16, 13, 12.3, 10.7, 28, .05), base, dark, .6) + poly(ring(16, 13, 10.5, 9.0, 24, .1), `url(#${id})`, dark, .6);
+    s += poly(ring(16, 13, 8.6, 7.4, 18, .09), light, dark, .5).replace("/>", ' opacity=".9"/>');
+    const gold = st === 3 || st === 4 || st === "champion";
+    s += `<circle cx="16" cy="13" r="6.2" fill="#fffdf4" stroke="${gold ? "#c9960f" : dark}" stroke-width="${gold ? 1.3 : .8}"/>`;
+    if (sym === "K") s += `<g transform="translate(11.9,8.8) scale(.82)"><path d="${SCHL_KOPF}" fill="${dark}"/><circle cx="4.6" cy="3.9" r=".5" fill="#fffdf4"/></g>`;
+    else if (sym === "H") s += `<path d="M13.3,16.4 L13.0,12.6 A3.05,3.05 0 1 1 19.0,12.6 L18.7,16.4" fill="none" stroke="${dark}" stroke-width="1.7" stroke-linecap="round"/>` + [[13.1, 14.6], [13.3, 11.3], [18.9, 14.6], [18.7, 11.3]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".35" fill="#fffdf4"/>`).join("");
+    else s += `<text x="16" y="16.6" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="bold" font-size="9.5" fill="${dark}">${sym}</text>`;
+    return `<svg class="schleife" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="${px}" height="${px}" role="img" aria-label="${champion ? "Champion-Schleife" : platz ? `Schleife ${platz}. Platz` : "Teilnehmerschleife"}">${s}</svg>`;
+  }
+  // Welche Schleife gibt es? Platz 1–6 nur wenn platziert (bestes Viertel, mind. 3); platziert aber Platz 7+ → braun; nicht platziert → braun nur auf Haus-/Hofturnier; ausgeschieden → nie; Titel (Championat, Fohlenchampion) → Champion statt Gold
+  function schleifeRegel(art, platz, plaziert, aus, titel) {
+    if (aus) return null;
+    const st = schleifenStufe(art);
+    if (platz === 1 && titel) return { st, pl: 1, c: true };
+    if (plaziert && platz >= 1 && platz <= 6) return { st, pl: platz, c: false };
+    if (plaziert || art === "hof") return { st, pl: 0, c: false };
+    return null;
+  }
+  // Platzhalter im Brieftext (Briefe stehen als Text im Spielstand – kein SVG darin): [[S:2:1]] Stufe 2, Platz 1 · [[S:2:0]] braun · [[S:c]] Champion
+  const schleifeMarke = e => e ? (e.c ? "[[S:c]]" : `[[S:${e.st}:${e.pl}]]`) : "";
+  const schleifenErsetzen = (text, px = 58) => String(text).replace(/\[\[S:(?:(c)|(\d):(\d))\]\]/g, (m, c, st, pl) => schleifeSVG(+st, +pl, !!c, px));
+  const schleifeEintrag = (e, px) => e ? schleifeSVG(e.st, e.pl, e.c, px) : "";
+  // Einmalige Übernahme alter Spielstände: aus p.erfolge (inkl. „beim Vorbesitzer“), p.fohlenschau und p.championat nachbauen (Merker p.schleifenV)
+  function schleifenHolen(p) {
+    if (p.schleifenV === 1 && Array.isArray(p.schleifen)) return p.schleifen;
+    p.schleifenV = 1; const L = (p.schleifen = []), titel = p.titel || [], plz = (platz, von) => platz <= Math.max(3, Math.ceil((von || 0) / 4));
+    (p.erfolge || []).slice().reverse().forEach(e => { if (e.aus || !e.pruef || e.fohlenschau) return;
+      const s = schleifeRegel(e.art, e.platz, !!e.plaziert, false, e.platz === 1 && titel.some(x => x.tag === e.tag && x.pruef === e.pruef));
+      if (s) L.push({ ...s, von: e.von, platz: e.platz, pruef: e.pruef, turnier: e.turnier, tag: e.tag }); });
+    const S = p.fohlenschau, C = p.championat;
+    if (S && S.platz) { const s = schleifeRegel("fohlenschau", S.platz, plz(S.platz, S.von), false, !!S.champion); if (s) L.push({ ...s, von: S.von, platz: S.platz, pruef: S.klasse || "Fohlenschau", turnier: S.schau || "Fohlenschau", tag: S.tag }); }
+    if (C && C.platz) { const s = schleifeRegel("fohlenschau", C.platz, !!C.plaziert, false, C.platz === 1); if (s) L.push({ ...s, von: C.von, platz: C.platz, pruef: C.name || "Fohlenchampionat", turnier: C.name || "Fohlenchampionat", tag: C.tag }); }
+    L.sort((a, b) => (a.tag || 0) - (b.tag || 0));
+    return L;
+  }
+  // neue Schleife nach einer Prüfung (vor dem Eintrag in p.erfolge aufrufen, damit die Übernahme sie nicht doppelt zählt)
+  function schleifeGeben(p, art, platz, von, plaziert, titel, pruef, turnier) {
+    const L = schleifenHolen(p), s = schleifeRegel(art, platz, plaziert, false, titel); if (!s) return null;
+    const e = { ...s, von, platz, pruef, turnier, tag: spiel.tag }; L.push(e);
+    while (L.length > SCHL_MAX) L.shift();
+    return e;
+  }
   // Nacht nach dem Turniertag: Ergebnisse berechnen, Brief, Preisgeld, Erfolge, LK – Pferd ist am nächsten Morgen wieder da
   function turnierNacht() {
     const ein = (box, p, profi) => { if (!p || !p.turnier || p.turnier.tag !== spiel.tag) return;   // v399: profi = Ausbildungsstall stellt das Pferd vor
@@ -7666,6 +7729,7 @@
         const platz = 1 + andere.filter(s => s > ich.sort).length, plaziert = platz <= Math.max(3, Math.ceil(P.starter / 4));
         let geld = 0; if (plaziert && preisgeld(t, P)) { const anteil = PREIS_ANTEIL.slice(0, Math.max(3, Math.ceil(P.starter / 4))), summe = anteil.reduce((a, b) => a + b, 0); geld = Math.round(preisgeld(t, P) * (anteil[platz - 1] || 0.05) / summe / 5) * 5; }
         geldSumme += geld;
+        const schl = schleifeGeben(p, t.art, platz, P.starter, plaziert, platz === 1 && !!P.titel, P.name, t.name);   // S1: vor dem Erfolgs-Eintrag
         bilanzZaehlen(p, P, platz, t.art); (p.erfolge = p.erfolge || []).unshift({ tag: spiel.tag, turnier: t.name, art: t.art, disz: P.disz, stufe: P.stufe, pruef: P.name, platz, von: P.starter, erg: ich.txt, geld, plaziert, jung: !!P.jung });
         if (p.erfolge.length > 60) p.erfolge.length = 60;
         prot("Turnierstart", { p, o: t.name }); protKlasse("Start", p, t, P); if (platz === 1) { prot("Turniersieg", { p, o: t.name }); protKlasse("Sieg", p, t, P); } else if (plaziert) { prot("Turnier platziert", { p, o: t.name }); protKlasse("Platz", p, t, P); }   // S4
@@ -7674,11 +7738,11 @@
         if (platz === 1 && P.titel) { (p.titel = p.titel || []).push({ titel: P.titel, pruef: P.name, tag: spiel.tag }); }
         if (P.disz === "galopprennen") rennRisiko(p, muede, zeilen);   // v514: Lungenblutung und Röhrbeinbruch im Rennen
         if (P.verkauf) verkaufsrennenNach(p, t, P, platz, rz);   // H8
-        zeilen.push(`<li><b>${esc(P.name)}</b>: ${platz === 1 && P.titel ? `🏆 <b>${P.titel}!</b> Sieg` : platz === 1 ? "🥇 Sieg" : platz === 2 ? "🥈 2. Platz" : platz === 3 ? "🥉 3. Platz" : `${platz}. Platz`} von ${P.starter} · ${ich.txt}${vet ? ` · Puls ${vet.puls}` : ""}${plaziert ? (geld ? ` · ${fmt(geld)} Preisgeld` : " · Schleife 🎀") : ""}${muede ? " <small>(war schon müde)</small>" : ""}</li>`);
+        zeilen.push(`<li class="schl-zeile">${schleifeMarke(schl)}<span><b>${esc(P.name)}</b>: ${platz === 1 && P.titel ? `<b>${P.titel}!</b> Sieg` : platz === 1 ? "Sieg" : `${platz}. Platz`} von ${P.starter} · ${ich.txt}${vet ? ` · Puls ${vet.puls}` : ""}${muede ? " <small>(war schon müde)</small>" : ""}${plaziert && geld ? `<br><small>${fmt(geld)} Preisgeld</small>` : ""}</span></li>`);
       });
       p.turnierStarts = (p.turnierStarts || 0) + starts.filter(P => !P.fohlenschau).length; if (starts.some(P => !P.fohlenschau)) p.turnierGestern = true; p.arbeitTag = spiel.tag; p.boxTage = 0;
       if (geldSumme) buchen(geldSumme, "Turniere: Preisgeld");
-      brief("Turnierbüro", `Ergebnis: ${p.name} beim ${t.name}`, `hier {sind deine|sind Ihre} Ergebnisse vom <b>${esc(t.name)}</b> mit <b>${esc(p.name)}</b>:<ul>${zeilen.join("")}</ul>${reakt ? `<p>Auf dem Turnierplatz: ${esc(p.name)} ${esc(reakt)}.</p>` : ""}${geldSumme ? `<p>Das Preisgeld (${fmt(geldSumme)}) ist überwiesen.</p>` : ""}${lkMeld.map(m => `<p>🎉 ${m}</p>`).join("")}${starts.some(P => !P.fohlenschau) ? `<p><small>Nach dem Turnier braucht ${esc(p.name)} Erholung – die Energie ist heute niedrig.</small></p>` : ""}${profi ? `<p><small>🎓 Geritten vom Bereiter des Ausbildungsstalls – Reitgeld ${fmt(AUSB_TURNIER)} wurde abgebucht.</small></p>` : ""}`, { pferde: [p, ...(box && box.fohlen ? [box.fohlen] : [])] });
+      brief("Turnierbüro", `Ergebnis: ${p.name} beim ${t.name}`, `hier {sind deine|sind Ihre} Ergebnisse vom <b>${esc(t.name)}</b> mit <b>${esc(p.name)}</b>:<ul class="schl-liste">${zeilen.join("")}</ul>${reakt ? `<p>Auf dem Turnierplatz: ${esc(p.name)} ${esc(reakt)}.</p>` : ""}${geldSumme ? `<p>Das Preisgeld (${fmt(geldSumme)}) ist überwiesen.</p>` : ""}${lkMeld.map(m => `<p>🎉 ${m}</p>`).join("")}${starts.some(P => !P.fohlenschau) ? `<p><small>Nach dem Turnier braucht ${esc(p.name)} Erholung – die Energie ist heute niedrig.</small></p>` : ""}${profi ? `<p><small>🎓 Geritten vom Bereiter des Ausbildungsstalls – Reitgeld ${fmt(AUSB_TURNIER)} wurde abgebucht.</small></p>` : ""}`, { pferde: [p, ...(box && box.fohlen ? [box.fohlen] : [])] });
     };
     spiel.boxen.forEach(box => ein(box, box.pferd));
     (spiel.extern || []).filter(e => e.ort === "ausbildung").forEach(e => ein(null, e.pferd, true));
@@ -7746,8 +7810,10 @@
     const genTxt = gen.length ? `<p class="text" style="margin:2px 0"><small>📅 Genannt: ${gen.map(t => `${esc(t.name)} (${t.tag === spiel.tag ? "heute" : `in ${t.tag - spiel.tag} ${t.tag - spiel.tag === 1 ? "Tag" : "Tagen"}`})`).join(", ")}</small></p>` : "";
     const titel = (p.titel || []).length ? `<p class="text" style="margin:2px 0"><b>🏆 ${p.titel.map(x => `${esc(x.titel)} ${datum(x.tag).j} (${esc(x.pruef)})`).join(" · ")}</b></p>` : "";
     return `<h3 class="werte-titel">🏆 Turniere</h3>${titel}${genTxt}${E.length ? `<details class="disz"><summary><span class="disz-kopf"><b>${E.length} ${E.length === 1 ? "Start" : "Starts"} · ${siege} ${siege === 1 ? "Sieg" : "Siege"} · ${plaz} platziert</b><span>${fmt(E.reduce((a, e) => a + (e.geld || 0), 0))}</span></span></summary>
-      <ul class="liste erfolge">${E.slice(0, 15).map(e => { const d = e.frueher ? null : datum(e.tag); return `<li><span class="txt">${e.aus ? "❌" : e.platz === 1 ? "🥇" : e.platz === 2 ? "🥈" : e.platz === 3 ? "🥉" : e.plaziert ? "🎀" : "▫️"} <b>${esc(e.pruef)}</b> – ${e.aus ? "ausgeschieden" : `${e.platz}. von ${e.von}`}<small>${esc(e.turnier)} · ${e.frueher ? "beim Vorbesitzer" : `${JZ[d.s][0]} ${d.j}`} · ${e.erg}${e.geld ? ` · ${fmt(e.geld)}` : ""}</small></span></li>`; }).join("")}</ul></details>` : ""}`;
+      <ul class="liste erfolge">${E.slice(0, 15).map(e => { const d = e.frueher ? null : datum(e.tag); return `<li><span class="txt">${e.aus ? "❌" : erfolgSchleife(e, p) || "▫️"} <b>${esc(e.pruef)}</b> – ${e.aus ? "ausgeschieden" : `${e.platz}. von ${e.von}`}<small>${esc(e.turnier)} · ${e.frueher ? "beim Vorbesitzer" : `${JZ[d.s][0]} ${d.j}`} · ${e.erg}${e.geld ? ` · ${fmt(e.geld)}` : ""}</small></span></li>`; }).join("")}</ul></details>` : ""}`;
   }
+  // S1: kleine Schleife (22 px) für die Erfolgsliste – aus Turnierart, Platz und Titel wie beim Vergeben
+  const erfolgSchleife = (e, p) => { const s = schleifeRegel(e.art, e.platz, !!e.plaziert, !!e.aus, e.platz === 1 && ((p && p.titel) || []).some(x => x.tag === e.tag && x.pruef === e.pruef)); return s ? schleifeEintrag(s, 22) : ""; };
   // ---------- Etappe 6b: Erfolge auf dem Markt, Reiter-LK im Training, Reiterprofil ----------
   // Pferde vom Markt und Deckhengste: ausgebildete Pferde ab 4 J. sind meist schon Turniere gegangen (fest je Pferd) – Erfolge stehen in der Akte und heben Preis und Decktaxe
   function marktErfolge(h, r) {
@@ -7909,23 +7975,25 @@
     // Fohlenchampion: Sieger der eigenen Klasse und besser als die Sieger der anderen Klassen
     const andereSieger = t.pruef.filter(x => x !== P).map(() => Math.round((7 + (Math.max(rz(), rz(), rz(), rz()) - 0.5) * 2.4) * 10) / 10);
     const champion = platz === 1 && praemie && andereSieger.every(x => N.gesamt > x);
+    const schl = schleifeGeben(f, "fohlenschau", platz, P.starter, platz <= Math.max(3, Math.ceil(P.starter / 4)), champion, P.name, t.name);   // S1: vor dem Eintrag f.fohlenschau
     f.fohlenschau = { tag: spiel.tag, schau: t.name, klasse: P.name, noten: N, gesamt: N.gesamt, platz, von: P.starter, praemie, champion };
     if (praemie) elternGutschrift(f, p, "praemienFohlen");   // Dome 20.10.: auch der Vater, wenn er dir gehört
     if (champion) elternGutschrift(f, p, "championFohlen");
     if (champion) buchen(FS_CHAMPION_GELD, "Turniere: Preisgeld");
     const n = x => String(x).replace(".", ",");
-    return `<li><b>${esc(f.name)}</b> (${esc(P.name)}): ${champion ? "🏆 <b>Fohlenchampion!</b> " : ""}${platz}. Platz von ${P.starter} · Gesamtnote <b>${n(N.gesamt)}</b>${praemie ? " · 🎗️ <b>Prämienfohlen</b>" : ""}<br><small>Typ ${n(N.typ)} · Körperbau ${n(N.koerper)} · Schritt ${n(N.schritt)} · Trab ${n(N.trab)} · Gesamteindruck ${n(N.eindruck)}${champion ? ` · Ehrenpreis ${fmt(FS_CHAMPION_GELD)}` : ""}</small></li>`;
+    return `<li class="schl-zeile">${schleifeMarke(schl)}<span><b>${esc(f.name)}</b> (${esc(P.name)}): ${champion ? "<b>Fohlenchampion!</b> " : ""}${platz}. Platz von ${P.starter} · Gesamtnote <b>${n(N.gesamt)}</b>${praemie ? " · 🎗️ <b>Prämienfohlen</b>" : ""}<br><small>Typ ${n(N.typ)} · Körperbau ${n(N.koerper)} · Schritt ${n(N.schritt)} · Trab ${n(N.trab)} · Gesamteindruck ${n(N.eindruck)}${champion ? ` · Ehrenpreis ${fmt(FS_CHAMPION_GELD)}` : ""}</small></span></li>`;
   }
   // Fohlenchampionat: alle Starter sind Prämienfohlen (Feld Schnitt 7,9) – neu gerichtet; Preisgeld für das beste Viertel (mind. 3)
   function fsChampionatErgebnis(f, P, rz, mutter) {
     const N = fohlenNoten(f, rz), andere = Array.from({ length: P.starter - 1 }, () => Math.round((7.9 + (rz() + rz() + rz() - 1.5) * 0.7) * 10) / 10);
     const platz = 1 + andere.filter(x => x > N.gesamt).length, anz = Math.max(3, Math.ceil(P.starter / 4)), plaziert = platz <= anz;
     const anteil = PREIS_ANTEIL.slice(0, anz), geld = plaziert ? Math.round(FSC_PREIS * (anteil[platz - 1] || 0.05) / anteil.reduce((a, b) => a + b, 0) / 5) * 5 : 0;
+    const schl = schleifeGeben(f, "fohlenschau", platz, P.starter, plaziert, platz === 1, P.name, P.name);   // S1: vor dem Eintrag f.championat
     f.championat = { tag: spiel.tag, name: P.name, gesamt: N.gesamt, platz, von: P.starter, plaziert, geld };
     if (platz === 1) elternGutschrift(f, mutter, "championFohlen");   // Dome 20.10.: Fohlenchampionat-Sieger zählt für Mutter und Vater
     if (geld) buchen(geld, "Turniere: Preisgeld");
     const n = x => String(x).replace(".", ",");
-    return `<li><b>${esc(f.name)}</b> (${esc(P.name)}): ${platz === 1 ? "🏆 <b>Champion!</b> " : plaziert ? "🎀 platziert · " : ""}${platz}. Platz von ${P.starter} · Gesamtnote <b>${n(N.gesamt)}</b>${geld ? ` · Preisgeld ${fmt(geld)}` : ""}${platz <= 3 ? " · 🏅 Stallplakette" : ""}</li>`;
+    return `<li class="schl-zeile">${schleifeMarke(schl)}<span><b>${esc(f.name)}</b> (${esc(P.name)}): ${platz === 1 ? "<b>Champion!</b> " : plaziert ? "platziert · " : ""}${platz}. Platz von ${P.starter} · Gesamtnote <b>${n(N.gesamt)}</b>${geld ? ` · Preisgeld ${fmt(geld)}` : ""}${platz <= 3 ? " · 🏅 Stallplakette" : ""}</span></li>`;
   }
   // Stallplaketten (hängen am Pferd, wandern also mit – bei Boxwechsel, Absetzen und Kauf): Prämienfohlen, Fohlenchampion, Championat Platz 1–3
   function plakettenVon(p) {

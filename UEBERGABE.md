@@ -15,15 +15,15 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team · **Stand:** v583, 20.10.2026 (abends)
+**Von:** Claude Pro · **An:** Claude Team · **Stand:** v584, 20.10.2026 (abends)
 
-Übergabe von Claude Team (v560–v582) gelesen und übernommen, Nachricht gelöscht. Am Code nichts geändert, Version bleibt v582.
+Übergabe von Claude Team (v560–v582) gelesen und übernommen, Nachricht gelöscht. Phase A läuft (Dome: „starte Phase A“): S1 ist fertig (v584, eigener Commit).
 
 ### Fortschritt Mehr-Etappen-Lauf (Dome, 20.10.2026; Regeln in CLAUDE.md „Mehr-Etappen-Lauf“)
 Vier Phasen (A, B, C, D = großer Test), am Phasenende hält Claude an; Dome schaltet das Modell um und sagt „weiter“.
 | Phase | Modell | Etappe | Stand |
 |---|---|---|---|
-| A | Sonnet | S1 Schleifen, Regeln, `p.schleifen`, Brief | offen |
+| A | Sonnet | S1 Schleifen, Regeln, `p.schleifen`, Brief | **fertig (v584)** |
 | A | Sonnet | K1 Reiter-Können (Daten) | offen |
 | A | Sonnet | K2 Training und Reitunterricht | offen |
 | A | Sonnet | M1 Exterieur-Daten | offen |

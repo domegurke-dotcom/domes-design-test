@@ -53,7 +53,13 @@ const ORDNER = process.argv[2];
     const q = neu({ rasse: 'araber', geschlecht: 'Wallach', alter: 7, name: 'Zweiter' }); spiel.boxen[1].pferd = q; gebaeude().find(g => g.gid === 'gw').stufe = 1;
     p.schweiss = spiel.tag; p.dreck = { fell: 30, maehne: 10, seit: null }; q.dreck = { fell: 80, maehne: 50, seit: null }; delete p.gewaschen; delete q.gewaschen;
     R.pflBoxen = maBoxen('pfleger'); waschAbend(); R.w4p = !schweissHeute(p) && p.gewaschen === spiel.tag; R.w4q = q.dreck.fell;
+    // W5: Fohlen „Duschen üben“, Fohlenschau +0,3 am Tag danach
+    const mut = spiel.boxen[0]; const fo = neuesPferd({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 0, name: 'Fohli' }); fo.pflege = erzeugePflege(fo); fo.gebTag = spiel.tag - 10; mut.fohlen = fo; mut.pferd.befunde = [];
+    R.dusch = fohlenDuschen(fo, mut); R.dusch2 = fohlenDuschen(fo, mut); const rz5 = () => 0.5;
+    const n0 = (fo.duschTag = spiel.tag - 5, fohlenNoten(fo, rz5).eindruck); fo.duschTag = spiel.tag - 1; const n1 = fohlenNoten(fo, rz5).eindruck; R.fsDiff = Math.round((n1 - n0) * 10) / 10; delete mut.fohlen;
     return R; });
+  ok('W5: Duschen üben (1× am Tag)', /Duschen geübt/.test(A.dusch) && /heute schon/.test(A.dusch2), A.dusch);
+  ok('W5: Fohlenschau Eindruck +0,3 nach Duschen am Vortag', Math.abs(A.fsDiff - 0.3) < 0.11, String(A.fsDiff));
   ok('W4: Pfleger wäscht zuerst das verschwitzte Pferd (1 Platz)', A.w4p && A.w4q === 80, JSON.stringify([A.pflBoxen, A.w4p, A.w4q]));
   ok('Solarium: ohne Gebäude gesperrt', /kein Pferdesolarium/.test(A.solOhne), A.solOhne); ok('Solarium Winter: vorher wärmt auf (kein „nicht aufgewärmt“)', A.aufgew && !A.kalt);
   ok('Solarium Winter: 2× am Tag, 3. Mal gesperrt', A.beide && /zweimal/.test(A.sperre3), A.sperre3); ok('Solarium vor + nach dem Reiten: Lahmheit ×0,7', Math.abs(A.lahm - 0.7) < 0.01, String(A.lahm));

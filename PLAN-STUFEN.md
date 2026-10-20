@@ -32,3 +32,5 @@ Idee von Dome: **Anfänger** stark vereinfacht (nur Pensionsstall, einfache Füt
 
 ## Offen
 Nichts mehr offen. Die Einzelheiten der Tabelle (Höfe-Anzahl, Turnierklassen je Stufe, Märkte) sind Vorschläge, die Dome beim Gegenlesen noch ändern kann.
+
+**Nachtrag v605:** Veterinäramt, Tierhalteverbot (Anfänger beim 4., sonst beim 3. Vorfall), Erlösen, Post-Grenze und Speicher aufräumen gelten für **alle** Stufen; Blasen mit Stufe "alle".

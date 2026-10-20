@@ -2,7 +2,7 @@
 
 Quelle: Projekt-Chat mit Dome, 20.10.2026. Alle Punkte sind von Dome entschieden. Zahlen, die als „Vorschlag“ markiert sind, dürfen nach Tests angepasst werden, dann bitte Dome Bescheid geben.
 
-**Stand:** P1 fertig (v599); der Rest ist offen (wird nach jeder Etappe nachgeführt).
+**Stand 20.10.2026: alle Etappen fertig (v599–v605), Domes Abnahme steht aus.**
 
 ## Fortschritt
 | Etappe | Inhalt | Stand |
@@ -13,7 +13,7 @@ Quelle: Projekt-Chat mit Dome, 20.10.2026. Alle Punkte sind von Dome entschieden
 | V3 | Tierhalteverbot und Spielende | **fertig (v602)** |
 | V4 | Vom Tierarzt erlösen lassen | **fertig (v603)**; selbst gesetzt: welche Leiden „keine Heilung“ sind (`KEINE_HEILUNG`) |
 | P2 | Speicheranzeige und „Speicher aufräumen“ | **fertig (v604)**; die „Rücksicherung“ gibt es seit v522 nicht mehr (Ersatz: Platz „Verloren“) |
-| T | Tutorial, Hinweisblasen, Enzyklopädie | offen |
+| T | Tutorial, Hinweisblasen, Enzyklopädie | **fertig (v605)** |
 
 ## Ist-Stand (gelesen in v596)
 1. Tod durch Vernachlässigung (Entkräftung oder unbehandelte Krankheit, nur eigene Pferde) schreibt den Namen in `spiel.vernachlaessigt`; `tierschutzEinsatz()` bucht dann `STRAFE_VERNACHLAESSIGUNG` (2.000 €), Ansehen Tierschutzverein −5, und beschlagnahmt alle Pferde mit Gesundheit ≤ 30 % (außer `altersschwach(p)` = `gesundheitMax(p) <= 40`, also erst ab etwa 33 Jahren, und außer Klinik). Pensionspferde gehen an den Besitzer zurück.

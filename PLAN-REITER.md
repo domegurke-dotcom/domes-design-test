@@ -67,7 +67,7 @@ K1 – Reiter-Können (Daten, Wachstum)
            Turnier selbst geritten: Start +0,3, Platzierung +0,8, Sieg +1,5, mal Klassenfaktor
            (Wettbewerb/Hofturnier 0,5 · E 1,0 · A 1,25 · L 1,5 · M 1,75 · S 2,0, Western entsprechend).
            Reitunterricht: +0,8, bei Können unter 30 doppelt, wirkt nur bis Können 60 (Punkt 9).
-           Verlernen gibt es nicht (nur Wachstum).
+           Verlernen gibt es nicht (nur Wachstum) – von Dome am 20.10.2026 ausdrücklich bestätigt („ist ein Spiel, würde frustrieren“).
   3. Übungen → Gruppe über UEB_LK erweitern: Dressur-/Springen-/Vielseitigkeit-/Western-
      Übungen wie bisher, dazu Trail-Arbeit → western, Galopp- und Konditionsarbeit im Gelände →
      rennen, Ausritt und Kondition → distanz, Tölt-/Passübungen → gangpferde. Die genauen Schlüssel
@@ -89,13 +89,10 @@ Prüfung der Übungsschlüssel gegen den Code (Claude Pro, 20.10.2026, Code v583
   western. Neu zuordnen: trailarbeit → western · galopptraining → rennen · ausritt → distanz ·
   toeltarbeit, passtraining → gangpferde. Zählt nicht fürs Können (nur Reitunterricht und Turniere):
   bodenarbeit, freiarbeit, spazieren.
-  OFFEN (Dome): kondition steht im Plan bei vielseitigkeit, rennen und distanz, UEB_LK ordnet je Übung
-  aber nur EINE Gruppe zu. Vorschlag: UEB_LK darf eine Liste von Gruppen enthalten, voller Zuwachs in
-  jeder Gruppe (Kondition hilft in allen dreien). Ohne Antwort baut Claude diese Variante und trägt sie
-  in OFFENE-FRAGEN.md ein.
-  Hinweis: galopptraining braucht die Rennbahn (UEBUNG wo: „bahn“, Gebäude aus H7). Ohne Rennbahn wächst
-  das Können „rennen“ nur über kondition, Turniere und Unterricht; das Startrecht für Rennen selbst
-  reiten (Können 30, Punkt 12) ist dann ein langer Weg.
+  ENTSCHIEDEN (Projekt-Chat, Nachtrag in PLAN-REITER-TEXTE.md Abschnitt 9): UEB_LK darf eine Liste von
+  Gruppen enthalten, voller Zuwachs in jeder; kondition zählt bei vielseitigkeit, rennen und distanz.
+  Rennbahn (Nachtrag, Abschnitt 9): Mit dem Gebäude „Rennbahn“ wächst rennen voll durch galopptraining;
+  ohne Rennbahn zählen Galopp-/Konditionsarbeit im Gelände (ausritt) nur zur Hälfte (Faktor 0,5).
 
 K2 – Training und Reitunterricht
   6. Abstandsfaktor beim Training v = (Können − Stand des Pferdes) / 20 (eine Klasse ≈ 20

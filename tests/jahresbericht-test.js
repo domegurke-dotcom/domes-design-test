@@ -38,6 +38,13 @@ const { chromium } = require('playwright'); const path = require('path');
     const S = datenSumme([A, C]); ok('Summe über Höfe: Einnahmen 150, Ausgaben 110, Siege 3, Dressur L 4 Starts', S.ein === 150 && S.aus === 110 && S.siege === 3 && S.klassen['Dressur L'][0] === 4 && S.hoefe.length === 1);
     const html = jbHofHTML({ name: 'Alle', d: S, v: null, alle: S, geld: 5000, pferde: 4, vGeld: null, vPferde: null, best: null }, 2001); ok('Bericht ohne Vorjahr: „–“ statt Pfeil, keine Fehler', html.includes('Kontostand') && !/NaN|undefined/.test(html), '');
     ok('Hof wird versteigert: kleine Bilanz mit Grund, Dauer, Pferde, Turniere, Gewinn', (() => { const x = hofAbschlussText(aktivHid(), 'Test'); return /Grund: Test/.test(x) && /Dauer: 2000 bis/.test(x) && /Pferde zuletzt:/.test(x) && /Turniere:/.test(x) && /insgesamt:/.test(x) && !/NaN|undefined/.test(x); })());
+    // --- Pferdezahl: Stall; Gnadenhof/Aufzucht extra; Pensionspferde zählen nicht ---
+    const neu = (o) => { const p = neuesPferd(o); p.pflege = erzeugePflege(p); p.werte = p.werte || erzeugeWerte(p); return p; };
+    spiel.boxen.forEach(b => { b.pferd = null; delete b.fohlen; }); spiel.gnadenhof = []; spiel.extern = [];
+    spiel.boxen[0].pferd = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Eigen1' }); const PP = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Pension1' }); PP.einsteller = 'x'; spiel.boxen[1].pferd = PP;
+    spiel.gnadenhof.push({ pferd: neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 25, name: 'Oma' }), seit: jzJetzt() });
+    const Z0 = pferdeZahlen(); ok('Pferdezahl: 1 im Stall, 1 Gnadenhof extra, Pensionspferd zählt nicht', Z0.n === 1 && Z0.gn === 1 && Z0.ex === 0, JSON.stringify(Z0));
+    ok('Kachel „Pferde“ zeigt die Extra-Zeile', /\+ 1 Gnadenhof/.test(jbHofHTML({ name: 'x', d: leereDaten(), v: null, alle: leereDaten(), geld: 1, pferde: Z0.n, gn: Z0.gn, ex: Z0.ex, vGeld: null, vPferde: null, best: null }, 2001)));
     return out.join('\n');
   });
   console.log(R); console.log('Seitenfehler:', errs.join(' ; ') || 'keine'); await b.close();

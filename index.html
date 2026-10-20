@@ -968,7 +968,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "557";
+  const SPIEL_VERSION = "558";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -976,10 +976,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=557"></script>
-<script src="pferd.js?v=557"></script>
-<script src="boxstufen.js?v=557"></script>
-<script src="kopfneu.js?v=557"></script>
+<script src="lz-string.min.js?v=558"></script>
+<script src="pferd.js?v=558"></script>
+<script src="boxstufen.js?v=558"></script>
+<script src="kopfneu.js?v=558"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2319,7 +2319,7 @@
     const zeile = (x, text) => {
       const lebt = heute.find(e => e.p.id === x.id), q = pool.find(e => e.p.id === x.id);
       const stand = lebt ? (lebt.ort || "bei dir") : q ? (q.tot ? "verstorben" : "Stand beim Verkauf/Abgang") : "nicht mehr abrufbar";
-      const name = q ? `<b class="ansehen-link" ${ansehen(q.p, q.ort, null, q.tot ? { tot: true, alter: q.tot.alter } : undefined)}>${esc(x.n)}</b>` : `<b>${esc(x.n)}</b>`;
+      const name = (q ? `<b class="ansehen-link" ${ansehen(q.p, q.ort, null, q.tot ? { tot: true, alter: q.tot.alter } : undefined)}>${esc(x.n)}</b>` : `<b>${esc(x.n)}</b>`) + (q ? seltenMarke(q.p) : "");
       return `<li style="display:block">${name} · ${esc(rName(x.r))}<br>${text}<br><small>${esc(stand)}</small></li>`;
     };
     return `<details style="margin:10px 0"><summary><b>🏅 Bestenliste dieses Hofs</b></summary>
@@ -2349,6 +2349,7 @@
   const datenSumme = L => L.reduce((a, d) => { a.ein += d.ein; a.aus += d.aus; Object.entries(d.posten).forEach(([k, x]) => { const y = (a.posten[k] = a.posten[k] || { ein: 0, aus: 0 }); y.ein += x.ein; y.aus += x.aus; });
     a.starts += d.starts; a.siege += d.siege; a.plaz += d.plaz; Object.keys(a.bew).forEach(k => { a.bew[k] += d.bew[k]; });
     Object.entries(d.klassen).forEach(([k, z]) => { const y = (a.klassen[k] = a.klassen[k] || [0, 0, 0]); z.forEach((v, i) => { y[i] += v; }); }); a.hoefe.push(...d.hoefe); return a; }, leereDaten());
+  const pferdeZahlen = () => { const eig = alleEigenenPferde().filter(x => !fremd(x.p)), n = eig.filter(x => x.box != null).length, gn = eig.filter(x => x.ort === "Gnadenhof").length; return { n, gn, ex: eig.length - n - gn }; };   // Stall (Boxen + Fohlen bei Fuß) · Gnadenhof und Aufzucht/Ausbildung extra · Pensionspferde zählen nicht
   const hatBuchungen = D => D.ein + D.aus > 0;
   const grossePosten = (D, art) => Object.entries(D.posten).filter(([, x]) => x[art] > 0).sort((a, b) => b[1][art] - a[1][art]);
   function vglText(neu, alt, euro) {   // ↑/↓ zum Vorjahr
@@ -2361,7 +2362,7 @@
     const kacheln = `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:8px 0">
       ${jbKachel(gewinn >= 0 ? "Gewinn" : "Verlust", `${gewinn >= 0 ? "" : "−"}${fmt(Math.round(Math.abs(gewinn)))}`, vglText(gewinn, V ? V.ein - V.aus : null, true))}
       ${jbKachel("Kontostand", fmt(Math.round(R.geld)), vglText(R.geld, R.vGeld, true))}
-      ${jbKachel("Pferde", String(R.pferde), vglText(R.pferde, R.vPferde))}
+      ${jbKachel("Pferde", String(R.pferde), vglText(R.pferde, R.vPferde) + (R.gn || R.ex ? `<br><small>+ ${R.gn} Gnadenhof · ${R.ex} Aufzucht/Ausbildung</small>` : ""))}
       ${jbKachel("Turniere", `${D.siege} ${D.siege === 1 ? "Sieg" : "Siege"} · ${D.plaz} platziert`, `<small>${D.starts} ${D.starts === 1 ? "Start" : "Starts"}</small>`)}
       ${jbKachel("Größte Ausgabe", gA ? `${fmt(Math.round(gA[1].aus))}` : "–", gA ? `<small>${esc(gA[0])}</small>` : "")}
       ${jbKachel("Größte Einnahme", gE ? `${fmt(Math.round(gE[1].ein))}` : "–", gE ? `<small>${esc(gE[0])}</small>` : "")}</div>`;
@@ -2381,12 +2382,12 @@
     const d = datum(); if (d.s !== 0 || d.t !== 1) return;
     const j = d.j - 1, hofs = hofReihe().filter(h => h === aktivHid() || (spiel.hoefe || {})[h]), jahreAb = h => Object.keys(imHof(h, () => spiel.finanzen) || {}).map(Number).filter(x => x <= j);
     const R = hofs.map(h => imHof(h, () => {
-      const Z = (spiel.chronik = spiel.chronik || {}), H = (Z[h] = Z[h] || {}), J = (H.jahr = H.jahr || {}), vorher = J[String(j - 1)], n = alleEigenenPferde().filter(x => !fremd(x.p)).length;
-      const r = { hid: h, name: hofName(), d: jahresDaten(h, [j]), v: jahresDaten(h, [j - 1]), alle: jahresDaten(h, jahreAb(h)), geld: spiel.geld || 0, pferde: n, vGeld: vorher ? vorher.geld : null, vPferde: vorher ? vorher.pferde : null, best: bestenListen(h) };
+      const Z = (spiel.chronik = spiel.chronik || {}), H = (Z[h] = Z[h] || {}), J = (H.jahr = H.jahr || {}), vorher = J[String(j - 1)], Z0 = pferdeZahlen(), n = Z0.n;
+      const r = { hid: h, name: hofName(), d: jahresDaten(h, [j]), v: jahresDaten(h, [j - 1]), alle: jahresDaten(h, jahreAb(h)), geld: spiel.geld || 0, pferde: n, gn: Z0.gn, ex: Z0.ex, vGeld: vorher ? vorher.geld : null, vPferde: vorher ? vorher.pferde : null, best: bestenListen(h) };
       J[String(j)] = { geld: r.geld, pferde: n }; return r; }));
     if (!R.some(r => hatBuchungen(r.d))) return;   // erstes Jahr ohne Buchungen: noch kein Bericht
     const sum = f => R.reduce((a, r) => a + (f(r) || 0), 0), mehr = R.length > 1;
-    const gesamt = mehr ? { name: "Alle Höfe zusammen", d: datenSumme(R.map(r => r.d)), v: datenSumme(R.map(r => r.v)), alle: datenSumme(R.map(r => r.alle)), geld: sum(r => r.geld) + ((spiel.zentral && spiel.zentral.geld) || 0), pferde: sum(r => r.pferde), vGeld: R.every(r => r.vGeld != null) ? sum(r => r.vGeld) : null, vPferde: R.every(r => r.vPferde != null) ? sum(r => r.vPferde) : null, best: null } : R[0];
+    const gesamt = mehr ? { name: "Alle Höfe zusammen", d: datenSumme(R.map(r => r.d)), v: datenSumme(R.map(r => r.v)), alle: datenSumme(R.map(r => r.alle)), geld: sum(r => r.geld) + ((spiel.zentral && spiel.zentral.geld) || 0), pferde: sum(r => r.pferde), gn: sum(r => r.gn), ex: sum(r => r.ex), vGeld: R.every(r => r.vGeld != null) ? sum(r => r.vGeld) : null, vPferde: R.every(r => r.vPferde != null) ? sum(r => r.vPferde) : null, best: null } : R[0];
     const text = `hier ist {dein|Ihr} Jahresbericht für das Jahr <b>${j}</b>${mehr ? ` – für alle ${R.length} Höfe zusammen und für jeden Hof einzeln` : ` für <b>${esc(R[0].name)}</b>`}.${mehr ? `<br><b>Alle Höfe zusammen</b> (Kontostand inklusive zentralem Konto)` : ""}`
       + jbHofHTML(gesamt, j) + (mehr ? R.map(r => `<details style="margin:10px 0"><summary><b>🏠 ${esc(r.name)}</b></summary>${jbHofHTML(r, j)}</details>`).join("") : "")
       + `<p class="text"><small>Gewinn und Verlust ohne Hofkauf, Kreditauszahlung und Tilgung. Die Pfeile vergleichen mit dem Vorjahr.</small></p>`;
@@ -2426,41 +2427,42 @@
   // ---------- R1 (PLAN-RARITAETEN.md, Dome 19.10.2026): Seltenheit für jedes Pferd ----------
   // Seltenheit = Wahrscheinlichkeit, dass ein zufälliges reinrassiges Pferd derselben Rasse dieses Merkmal hat. Gen-Rarität (Fellfarben-Gene) und Leistungs-Rarität (Rang in der Rasse), einzeln oder multipliziert.
   const SELTEN_MERKMAL = 0.07;   // Genotyp mit einer Häufigkeit darunter zählt als seltenes Merkmal. Abstimmung per Stichprobe (28 Rassen × 1.500 Pferde): 0,07 → je Rasse 1–18 % mit Gen-Seltenheit (ein einzelner Genotyp unter 5 % macht schon „selten“, darunter geht es nicht); bei 0,30 wären es bis zu 60 %
-  const SELTEN_STUFEN = [null, { n: "selten", bis: 0.05 }, { n: "sehr selten", bis: 0.01 }, { n: "einzigartig", bis: 0.001 }, { n: "Ausnahmepferd", bis: 0.0001, faktor: 1.5 }, { n: "Jahrhundertpferd", bis: 0.00001, faktor: 2 }];
+  const SELTEN_STUFEN = [null, { n: "selten", bis: 0.03 }, { n: "sehr selten", bis: 0.01 }, { n: "einzigartig", bis: 0.001 }, { n: "Ausnahmepferd", bis: 0.0001, faktor: 1.5 }, { n: "Jahrhundertpferd", bis: 0.00001, faktor: 2 }];
   const SELTEN_HINWEIS = "Seltenheit macht ein Pferd nur auf dem Raritäten-Markt mehr wert. Im normalen Pferdemarkt zählt sie nicht.";
   const SELTEN_ALTER = 2;   // Leistungs-Rarität erst ab 2 Jahren
-  // Rang-Schwellen je Rasse (20.000 Pferde je Rasse, feste Seeds): [Gangwerk 5 %, 1 %, 0,1 %, Aufschlüsselung 5 %, 1 %, 0,1 %, Charakter 5 %, 1 %, 0,1 %] – ein Pferd gehört dazu, wenn sein Wert darüber liegt
+  // Rang-Schwellen je Rasse (20.000 Pferde je Rasse, feste Seeds): [Gangwerk 5 %, 1 %, 0,1 %, Aufschlüsselung 5 %, 1 %, 0,1 %] – ein Pferd gehört dazu, wenn sein Wert darüber liegt (Charakter zählt nicht, Dome 20.10.)
   const SELTEN_SCHWELLE = {
-    andalusier: [6.67, 6.83, 7.17, 71.38, 72.23, 73.23, 78.4, 80.6, 82.6],
-    angloaraber: [7, 7.17, 7.5, 76.62, 77.46, 78.46, 71.8, 74, 76.2],
-    appaloosa: [6, 6.17, 6.5, 77.62, 78.62, 79.62, 81.4, 83.6, 85.8],
-    araber: [6.33, 6.5, 6.83, 76.38, 77.23, 78.08, 70.4, 72.4, 74.6],
-    barockpinto: [6.67, 6.83, 7.17, 62, 62.92, 63.85, 76.4, 78.6, 80.8],
-    clydesdale: [6, 6.17, 6.5, 57.54, 58.46, 59.38, 80.2, 82.4, 84.4],
-    dales: [6.17, 6.33, 6.67, 67.62, 68.46, 69.31, 80.4, 82.6, 84.8],
-    fell: [6.17, 6.33, 6.67, 68.62, 69.54, 70.54, 80.6, 82.8, 84.8],
-    fjord: [5.83, 6.17, 6.33, 65.62, 66.46, 67.46, 77.4, 79.4, 81.4],
-    friese: [6.67, 6.83, 7.17, 59.85, 60.69, 61.69, 73.4, 75.6, 78.2],
-    haflinger: [6, 6.33, 6.5, 65.62, 66.46, 67.46, 78.4, 80.6, 83],
-    hannoveraner: [7.17, 7.33, 7.67, 71.69, 72.62, 73.62, 73.2, 75.4, 77.6],
-    isi: [6, 6.17, 6.5, 70.92, 71.85, 72.85, 81.4, 83.6, 86],
-    knabstrupper: [6.67, 6.83, 7.17, 73.38, 74.38, 75.23, 78.4, 80.6, 82.8],
-    lewitzer: [6.33, 6.5, 6.83, 70.38, 71.31, 72.15, 81.4, 83.6, 85.8],
-    lipizzaner: [6.33, 6.5, 6.83, 72.15, 73, 73.85, 79.4, 81.4, 83.6],
-    marwari: [6.17, 6.33, 6.67, 72.08, 73, 74, 72.4, 74.6, 77],
-    noriker: [5.83, 6, 6.33, 62.69, 63.62, 64.38, 81.2, 83.4, 85.6],
-    paint: [6.17, 6.33, 6.67, 77.15, 78.08, 79.15, 82.2, 84.4, 86.6],
-    quarter: [6.17, 6.33, 6.67, 77.15, 78, 78.85, 82.2, 84.6, 86.6],
-    shagya: [6.67, 6.83, 7.17, 77.08, 77.92, 78.85, 76.8, 79, 81.4],
-    shetty: [5.33, 5.5, 5.83, 64.85, 65.62, 66.62, 70.4, 72.6, 74.8],
-    shire: [5.67, 5.83, 6.17, 54.85, 55.69, 56.69, 78, 80, 82.4],
-    tekke: [6.83, 7, 7.33, 75.92, 76.85, 77.69, 67.4, 69.4, 71.4],
-    tinker: [5.5, 5.67, 6, 61.77, 62.62, 63.69, 76.2, 78.4, 80.4],
-    trakehner: [7.17, 7.33, 7.67, 73.92, 74.85, 75.92, 73.4, 75.6, 78],
-    vollblut: [6.83, 7, 7.33, 72.85, 73.69, 74.54, 68.4, 70.4, 72.6],
-    welshcob: [6.67, 6.83, 7.17, 69.54, 70.38, 71.38, 78.4, 80.6, 82.8]
+    andalusier: [6.67, 6.83, 7.17, 71.38, 72.23, 73.23],
+    angloaraber: [7, 7.17, 7.5, 76.62, 77.46, 78.46],
+    appaloosa: [6, 6.17, 6.5, 77.62, 78.62, 79.62],
+    araber: [6.33, 6.5, 6.83, 76.38, 77.23, 78.08],
+    barockpinto: [6.67, 6.83, 7.17, 62, 62.92, 63.85],
+    clydesdale: [6, 6.17, 6.5, 57.54, 58.46, 59.38],
+    dales: [6.17, 6.33, 6.67, 67.62, 68.46, 69.31],
+    fell: [6.17, 6.33, 6.67, 68.62, 69.54, 70.54],
+    fjord: [5.83, 6.17, 6.33, 65.62, 66.46, 67.46],
+    friese: [6.67, 6.83, 7.17, 59.85, 60.69, 61.69],
+    haflinger: [6, 6.33, 6.5, 65.62, 66.46, 67.46],
+    hannoveraner: [7.17, 7.33, 7.67, 71.69, 72.62, 73.62],
+    isi: [6, 6.17, 6.5, 70.92, 71.85, 72.85],
+    knabstrupper: [6.67, 6.83, 7.17, 73.38, 74.38, 75.23],
+    lewitzer: [6.33, 6.5, 6.83, 70.38, 71.31, 72.15],
+    lipizzaner: [6.33, 6.5, 6.83, 72.15, 73, 73.85],
+    marwari: [6.17, 6.33, 6.67, 72.08, 73, 74],
+    noriker: [5.83, 6, 6.33, 62.69, 63.62, 64.38],
+    paint: [6.17, 6.33, 6.67, 77.15, 78.08, 79.15],
+    quarter: [6.17, 6.33, 6.67, 77.15, 78, 78.85],
+    shagya: [6.67, 6.83, 7.17, 77.08, 77.92, 78.85],
+    shetty: [5.33, 5.5, 5.83, 64.85, 65.62, 66.62],
+    shire: [5.67, 5.83, 6.17, 54.85, 55.69, 56.69],
+    tekke: [6.83, 7, 7.33, 75.92, 76.85, 77.69],
+    tinker: [5.5, 5.67, 6, 61.77, 62.62, 63.69],
+    trakehner: [7.17, 7.33, 7.67, 73.92, 74.85, 75.92],
+    vollblut: [6.83, 7, 7.33, 72.85, 73.69, 74.54],
+    welshcob: [6.67, 6.83, 7.17, 69.54, 70.38, 71.38]
   };
-  const stufeVonP = w => { let st = 0; SELTEN_STUFEN.forEach((x, i) => { if (x && w <= x.bis) st = i; }); return st; };   // „obere 5 %“ (= 0,05) zählt noch als selten
+
+  const stufeVonP = w => { let st = 0; SELTEN_STUFEN.forEach((x, i) => { if (x && w <= x.bis) st = i; }); return st; };   // die Grenze selbst zählt noch mit
   const alProb = (rasse, k, a) => { const f = genFreq(rasse, k); if (k === "A" && (RASSE_GENE[rasse] || {}).At != null) { const fAt = genFreq(rasse, "At"); return a === "A" ? f : a === "At" ? (1 - f) * fAt : (1 - f) * (1 - fAt); } return a === GEN[k][2] ? f : 1 - f; };
   function genotypProb(rasse, k, g, hengst) {
     const al = g[k] || [GEN[k][3], GEN[k][3]]; if (k === "Br1" && hengst) return alProb(rasse, k, al[0]);   // X-Chromosom: Hengste haben nur ein Allel
@@ -2469,7 +2471,7 @@
   function seltenGen(p) {   // null = keine Gen-Rarität (Mischlinge zählen nicht)
     if (!p || !p.rasse || !(p.gen || p.farbe)) return null; if (p.anteile && reinAnteil(p.anteile, p.rasse) < 99) return null;
     const g = genVon(p), hengst = p.geschlecht === "Hengst", M = [];
-    GENE.forEach(([k]) => { if (k === "Dm") return; const q = Math.max(1e-6, genotypProb(p.rasse, k, g, hengst)); if (q < SELTEN_MERKMAL) M.push({ k, q, al: (g[k] || []).join("/") }); });
+    GENE.forEach(([k]) => { if (k === "Dm") return; const q = Math.max(1e-6, genotypProb(p.rasse, k, g, hengst)); if (q < SELTEN_MERKMAL) M.push({ k, q, al: (g[k] || []).slice().sort().join("/") }); });
     return M.length ? { p: M.reduce((a, m) => a * m.q, 1), merkmale: M } : null;
   }
   const rasseName = id => (RASSEN.find(r => r.id === id) || {}).name || id;
@@ -2478,25 +2480,25 @@
     Object.entries(B).forEach(([k, z]) => { const [d, kl] = k.split("|"), D = DISZ[d]; if (!D) return; const top = D.stufen === "western" ? "Open" : D.stufen === "englisch" ? "S" : null; if (!top || kl.replace(/ \((Meisterschaft|International)\)$/, "") !== top) return; const x = (G[d] = G[d] || [0, 0, 0, 0]); z.forEach((v, i) => { x[i] += v; }); });
     let best = null;
     Object.entries(G).forEach(([d, z]) => { const siege = z[1], platz = z[1] + z[2] + z[3], gross = (p.erfolge || []).filter(e => e.disz === d && e.platz === 1 && e.stufe === 4 && ["gross", "championat", "international"].includes(e.art)).length;
-      const w = siege >= 15 && gross >= 3 ? 0.001 : siege >= 5 ? 0.01 : platz >= 1 ? 0.05 : null; if (w == null || (best && best.p <= w)) return;
+      const w = siege >= 15 && gross >= 3 ? 0.001 : siege >= 5 ? 0.01 : platz >= 1 ? 0.03 : null; if (w == null || (best && best.p <= w)) return;
       best = { p: w, art: "Ausbildung", text: `${DISZ[d].n}, höchste Klasse: ${siege} ${siege === 1 ? "Sieg" : "Siege"}, ${platz} ${platz === 1 ? "Platzierung" : "Platzierungen"}` }; });
     return best;
   }
   function seltenLeistung(p) {   // null = keine Leistungs-Rarität; sonst die seltenste der vier Kategorien
     if (!p || !p.werte || alterJahre(p) < SELTEN_ALTER) return null; const T = SELTEN_SCHWELLE[p.rasse]; let best = seltenAusb(p);
-    // Drei Kategorien (Gangwerk, Werte, Charakter) = drei Chancen: die Wahrscheinlichkeit, in mindestens einer so gut zu sein, ist 1 − (1 − Anteil)³ (obere 1 % → ≈ 3 %, obere 0,1 % → ≈ 0,3 %)
-    const rang = (v, t, art, text) => { const w = v > t[2] ? 0.001 : v > t[1] ? 0.01 : v > t[0] ? 0.05 : null; if (w == null) return; const pa = 1 - Math.pow(1 - w, 3); if (pa > SELTEN_STUFEN[1].bis) return;
+    // Zwei Kategorien (Gangwerk, Werte) = zwei Chancen: die Wahrscheinlichkeit, in mindestens einer so gut zu sein, ist 1 − (1 − Anteil)² (obere 1 % → ≈ 2 %, obere 0,1 % → ≈ 0,2 %)
+    const rang = (v, t, art, text) => { const w = v > t[2] ? 0.001 : v > t[1] ? 0.01 : v > t[0] ? 0.05 : null; if (w == null) return; const pa = 1 - Math.pow(1 - w, 2); if (pa > SELTEN_STUFEN[1].bis) return;
       if (!best || pa < best.p) best = { p: pa, art, text: `${text} – besser als ${w === 0.01 ? "99" : "99,9"} % der Pferde der Rasse ${rasseName(p.rasse)}` }; };
     if (T) {
-      const n1 = x => String(Math.round(x * 10) / 10).replace(".", ","), c = p.werte.charakter || {};
+      const n1 = x => String(Math.round(x * 10) / 10).replace(".", ",");
       rang(gangSchnitt(p), T.slice(0, 3), "Gangwerk", `Gangwerk: Schnitt aus Schritt, Trab und Galopp ${n1(gangSchnitt(p))}`);
       const ws = WERTE_KOERPER.concat(WERTE_KOPF.slice(0, 3)).map(x => wertVon(p, x)), wm = ws.reduce((a, b) => a + b, 0) / ws.length; rang(wm, T.slice(3, 6), "Aufschlüsselung", `Körperliche und mentale Werte: Schnitt ${n1(wm)} %`);
-      const cm = ((c.mut || 0) + (c.wachheit || 0) + (c.bezug || 0) + (c.wille || 0) + (c.nerven || 0)) / 5; rang(cm, T.slice(6, 9), "Charakter", `Charakter: mutig, neugierig, menschenbezogen, leistungsbereit, gelassen – Schnitt ${n1(cm)} %`);
     }
     return best;
   }
   // Ergebnis: { stufe 0–5, p, gen, leist }. Die Gen-Rarität zählt erst nach dem Fellfarben-Test (versteckte Genetik) – im Adminmodus und auf dem Raritäten-Markt (alle = true) immer.
   function seltenheit(p, alle) {
+    if (!p || (p.anteile && reinAnteil(p.anteile, p.rasse) < 99)) return { stufe: 0, p: 1, gen: null, leist: null };   // Mischlinge haben keine Seltenheit (Dome 20.10.)
     const sg = alle || spiel.admin || testGemacht(p, "farbe") ? seltenGen(p) : null, sl = seltenLeistung(p), ps = [sg && sg.p, sl && sl.p].filter(x => x != null), w = ps.reduce((a, b) => a * b, 1);
     return { stufe: ps.length ? stufeVonP(w) : 0, p: w, gen: sg, leist: sl };
   }
@@ -9664,9 +9666,9 @@
     ] },
     farben: { titel: "Fellfarben", ansicht: "ganz", rasse: "quarter", farbe: null, eintraege: Object.entries(FARBEN).filter(([id]) => !/^gr_/.test(id) && (!/~/.test(id) || FARBBESCHREIBUNG[id]) && (!/^(to|ov|tv|tg|fs|sb|sk|sa|sw)_/.test(id) || FARBBESCHREIBUNG[id])).map(([id, c]) => [c.name, FARBBESCHREIBUNG[id] || "", null, null, id]).sort((x, y) => farbRang(x[4]) - farbRang(y[4])) },
     selten: { titel: "💎 Seltenheit", text: true, eintraege: [   // R1 (PLAN-RARITAETEN.md)
-      ["💎 Was ist die Seltenheit?", "Jedes Pferd hat eine Seltenheit: Sie sagt, wie viele Pferde derselben Rasse dieselben Eigenschaften haben. Stufen: ⭐ selten (unter 5 %), ⭐⭐ sehr selten (unter 1 %), 🔷 einzigartig (unter 0,1 %), Ausnahmepferd (unter 0,01 %) und Jahrhundertpferd (unter 0,001 %). Das Symbol steht hinter dem Namen im Steckbrief und als runde Plakette am Boxschild; antippen zeigt, warum das Pferd selten ist."],
-      ["🧬 Seltene Gene", "Sehr seltene Fellfarben-Kombinationen zählen: Das Spiel rechnet aus, wie häufig die Gene des Pferdes in seiner Rasse sind, und multipliziert die seltenen Merkmale. Die Gene siehst du erst nach dem Fellfarben-Test beim Tierarzt – vorher zeigt das Pferd keine Gen-Seltenheit. Mischlinge haben keine Gen-Seltenheit."],
-      ["🏆 Seltene Leistung", "Auch Leistung kann selten machen: das beste Gangwerk, die besten körperlichen und mentalen Werte oder der beste Charakter in der Rasse (obere 1 % oder 0,1 %) – und eine Ausbildung bis Klasse S mit vielen Siegen in S. Leistungs-Seltenheit gibt es ab 2 Jahren."],
+      ["💎 Was ist die Seltenheit?", "Jedes Pferd hat eine Seltenheit: Sie sagt, wie viele Pferde derselben Rasse dieselben Eigenschaften haben. Stufen: ⭐ selten (unter 3 %), ⭐⭐ sehr selten (unter 1 %), 🔷 einzigartig (unter 0,1 %), Ausnahmepferd (unter 0,01 %) und Jahrhundertpferd (unter 0,001 %). Das Symbol steht hinter dem Namen im Steckbrief und als runde Plakette am Boxschild; antippen zeigt, warum das Pferd selten ist."],
+      ["🧬 Seltene Gene", "Sehr seltene Fellfarben-Kombinationen zählen: Das Spiel rechnet aus, wie häufig die Gene des Pferdes in seiner Rasse sind, und multipliziert die seltenen Merkmale. Die Gene siehst du erst nach dem Fellfarben-Test beim Tierarzt – vorher zeigt das Pferd keine Gen-Seltenheit. Mischlinge (unter 99 % Rassenanteil) haben gar keine Seltenheit."],
+      ["🏆 Seltene Leistung", "Auch Leistung kann selten machen: das beste Gangwerk oder die besten körperlichen und mentalen Werte in der Rasse (obere 1 % oder 0,1 %) – und eine Ausbildung bis Klasse S mit vielen Siegen in S. Leistungs-Seltenheit gibt es ab 2 Jahren."],
       ["💶 Was bringt es?", "Seltenheit macht ein Pferd nur auf dem Raritäten-Markt mehr wert. Im normalen Pferdemarkt zählt sie nicht."]] },
     spielstand: { titel: "💾 Spielstand", text: true, eintraege: [   // PLAN-SPIELSTAND.md, Enzyklopädie Punkt 1 (v525)
       ["🔄 Autospeicher", "Das Spiel speichert nach jeder Aktion von selbst im Browser. Schließt du die Seite, geht es beim nächsten Öffnen mit „Weiterspielen“ genau dort weiter."],
@@ -10902,7 +10904,7 @@
   // Zwangsversteigerung eines von mehreren Höfen: Hof, Pferde und Mitarbeiter sind weg, das Spiel geht weiter
   // B3 Punkt 8: kleine Bilanz für einen Hof, der versteigert wird, während das Spiel weitergeht (im Kontext des Hofs aufrufen)
   function hofAbschlussText(hid, grund) {
-    const jahre = Object.keys(spiel.finanzen || {}).map(Number).sort(), D = jahresDaten(hid, jahre), n = alleEigenenPferde().filter(x => !fremd(x.p)).length, gw = D.ein - D.aus;
+    const jahre = Object.keys(spiel.finanzen || {}).map(Number).sort(), D = jahresDaten(hid, jahre), n = pferdeZahlen().n, gw = D.ein - D.aus;
     return `<br><br><b>Bilanz von ${esc(hofName())}</b><ul class="liste"><li>Grund: ${grund}</li><li>Dauer: ${jahre.length ? `${jahre[0]} bis ${jahre[jahre.length - 1]} (${jahre.length} ${jahre.length === 1 ? "Jahr" : "Jahre"})` : "weniger als ein Jahr"}</li><li>Pferde zuletzt: ${n}</li><li>Turniere: ${D.starts} ${D.starts === 1 ? "Start" : "Starts"}, ${D.siege} ${D.siege === 1 ? "Sieg" : "Siege"}, ${D.plaz} platziert</li><li>Gekaufte Pferde: ${D.bew.gekauft} · Fohlen gezüchtet: ${D.bew.gezuechtet} · verkauft: ${D.bew.verkauft}</li><li>${gw >= 0 ? "Gewinn" : "Verlust"} insgesamt: ${gw < 0 ? "−" : ""}${fmt(Math.round(Math.abs(gw)))}</li></ul>`;
   }
   function hoefeVersteigern() {
@@ -12907,7 +12909,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Weitere AKU (v380):</b> nach einer AKU kann eine andere Stufe dazugebucht werden (nicht dieselbe); das Protokoll fasst alle Befunde zusammen, die Wertminderung zählt alle gefundenen Befunde. Danach „Pferd kaufen? Ja / Nein“ (Tierschutz: aufnehmen).</p>
       <p><b>Spielstand und Speicherplätze (PLAN-SPIELSTAND.md, v519):</b> Schlüssel im Browser: Autospeicher <code>zuchtstall-v2</code> (läuft immer mit, kurz verzögert 0,4 s und sofort beim Verlassen/Verstecken der Seite), Platz 1 <code>zuchtstall-p1</code>, Platz 2 <code>zuchtstall-p2</code> (nur selbst gespeichert, mit Kurzinfo Hof/Datum/Tag/Version/echtes Datum), Alles gepackt mit lz-string (<code>compressToUTF16</code>; ungepackte alte Stände beginnen mit „{“ und werden beim nächsten Speichern gepackt). Größe jetzt: ${(() => { try { const j = JSON.stringify(spiel).length, g = packen(spiel).length; return `ungepackt ${j.toLocaleString("de-DE")} Zeichen → gepackt ${g.toLocaleString("de-DE")} Zeichen (${Math.round(g / j * 100)} %)`; } catch (e) { return "–"; } })()}. Spiel-Nummer <code>spiel.spielId</code>, eigener Speicherplatz <code>spiel.platz</code> (null = noch nie gespeichert; neues Spiel legt keinen Speicherstand an, Tipp „Spiel speichern“; beim ersten Speichern Speicherplatz wählen), Turnier-Sortierung <code>spiel.tsort</code>. „Ungespeicherter Fortschritt“ = Tag, Geld, Pferde/Fohlen, Einsteller, Mitarbeiter, Kredite oder Briefe weichen vom Platz ab (<code>fortschritt</code>). Platzwechsel lädt den Stand in den Autospeicher und startet die Seite neu (Merker <code>zuchtstall-start</code> in sessionStorage → direkt ins Spiel). Speichern schlägt fehl → rote Meldung mit Datei-Knopf, höchstens 1× je Spieltag. Spiel verloren → nur der Autospeicher wird gelöscht. Datei (S2/S3): <code>Zuchtstall_&lt;Hof&gt;_Jahr&lt;jj&gt;-&lt;Jahreszeit&gt;_&lt;Datum&gt;.json</code>, Umlaute im Dateinamen als ae/oe/ue/ss (v523, auch im Notfall-Fenster) – im Spiel bleibt der Hofname mit Umlauten.</p>
       <p><b>Hofchronik (B2, v548):</b> Dieselben Zähler wie das Spielprotokoll, aber <b>je Hof</b> getrennt (<code>spiel.chronik[Hof]["Jahr-Jahreszeit"].k</code>); das Spielprotokoll bleibt als „Gesamt“. Neu gezählt: Turnier-Start/Sieg/Platz <b>je Disziplin und Klasse</b> („Turnier Dressur L: Sieg“), höchste erreichte Klasse je Disziplin, „Abgabe: Gnadenhof / Tierschutz / Händler (Rückgabe)“, „Pferd gepfändet“, höchster und tiefster Kontostand je Jahreszeit (<code>hoch</code>/<code>tief</code>, gemessen bei jeder Buchung), Höfe gekauft/verkauft/verloren mit Name und Jahreszeit (<code>spiel.chronikHoefe</code>). Alte Spielstände haben keine Aufteilung nach Höfen (Anzeige später „–“). Die Anzeige (Jahresbericht, Verloren-Bilanz) folgt in B3/B4.</p>
-      <p><b>Seltenheit (R1, v556):</b> Wahrscheinlichkeit, dass ein zufälliges reinrassiges Pferd der Rasse dieses Merkmal hat. Stufen: selten &lt; ${SELTEN_STUFEN[1].bis * 100} %, sehr selten &lt; ${SELTEN_STUFEN[2].bis * 100} %, einzigartig &lt; ${SELTEN_STUFEN[3].bis * 100} %, Ausnahmepferd &lt; ${SELTEN_STUFEN[4].bis * 100} % (Preis ×1,5), Jahrhundertpferd &lt; ${SELTEN_STUFEN[5].bis * 100} % (Preis ×2). <b>Gen-Rarität:</b> je Fellfarben-Gen (ohne DMRT3) die Häufigkeit des Genotyps in der Rasse (Hardy-Weinberg aus <code>RASSE_GENE</code>; A mit At; BR1 bei Hengsten nur ein Allel); ein Genotyp mit Häufigkeit unter <code>SELTEN_MERKMAL</code> = ${SELTEN_MERKMAL} zählt als seltenes Merkmal, die Häufigkeiten aller seltenen Merkmale werden multipliziert (mindestens 10<sup>−6</sup> je Merkmal); nur Pferde ab 99 % Rassenanteil; sichtbar erst nach dem Fellfarben-Test (Adminmodus immer). <b>Leistungs-Rarität</b> ab ${SELTEN_ALTER} Jahren: Rang in der Rasse (Tabelle <code>SELTEN_SCHWELLE</code> aus 20.000 Pferden je Rasse: obere 5 % / 1 % / 0,1 %; weil es drei Kategorien sind, gilt die Wahrscheinlichkeit 1 − (1 − Anteil)³: obere 1 % → ≈ 3 % = selten, obere 0,1 % → ≈ 0,3 % = sehr selten, obere 5 % → ≈ 14 % = keine Seltenheit) bei Gangwerk (Schnitt Schritt/Trab/Galopp), Aufschlüsselung (Schnitt der 13 Werte, wie sie der Spieler sieht) und Charakter (Schnitt aus Mut, Neugier, Menschenbezug, Arbeitswille, Nervenstärke) oder Ausbildung (Klasse S bzw. Open: ≥ 1 Platzierung = 5 % selten, ≥ 5 Siege = 1 % sehr selten, ≥ 15 Siege davon ≥ 3 auf großen Turnieren = 0,1 % einzigartig); die seltenste Kategorie zählt. Gen und Leistung werden multipliziert.</p>
+      <p><b>Seltenheit (R1, v556):</b> Wahrscheinlichkeit, dass ein zufälliges reinrassiges Pferd der Rasse dieses Merkmal hat. Stufen: selten &lt; ${SELTEN_STUFEN[1].bis * 100} %, sehr selten &lt; ${SELTEN_STUFEN[2].bis * 100} %, einzigartig &lt; ${SELTEN_STUFEN[3].bis * 100} %, Ausnahmepferd &lt; ${SELTEN_STUFEN[4].bis * 100} % (Preis ×1,5), Jahrhundertpferd &lt; ${SELTEN_STUFEN[5].bis * 100} % (Preis ×2). <b>Gen-Rarität:</b> je Fellfarben-Gen (ohne DMRT3) die Häufigkeit des Genotyps in der Rasse (Hardy-Weinberg aus <code>RASSE_GENE</code>; A mit At; BR1 bei Hengsten nur ein Allel); ein Genotyp mit Häufigkeit unter <code>SELTEN_MERKMAL</code> = ${SELTEN_MERKMAL} zählt als seltenes Merkmal, die Häufigkeiten aller seltenen Merkmale werden multipliziert (mindestens 10<sup>−6</sup> je Merkmal); nur Pferde ab 99 % Rassenanteil (Mischlinge haben gar keine Seltenheit, auch nicht durch Leistung); sichtbar erst nach dem Fellfarben-Test (Adminmodus immer). <b>Leistungs-Rarität</b> ab ${SELTEN_ALTER} Jahren: Rang in der Rasse (Tabelle <code>SELTEN_SCHWELLE</code> aus 20.000 Pferden je Rasse: obere 5 % / 1 % / 0,1 %; weil es zwei Kategorien sind, gilt die Wahrscheinlichkeit 1 − (1 − Anteil)²: obere 1 % → ≈ 2 % = selten, obere 0,1 % → ≈ 0,2 % = sehr selten, obere 5 % → ≈ 10 % = keine Seltenheit) bei Gangwerk (Schnitt Schritt/Trab/Galopp) und Aufschlüsselung (Schnitt der 13 Werte, wie sie der Spieler sieht; Charakter zählt nicht) oder Ausbildung (Klasse S bzw. Open: ≥ 1 Platzierung = 3 % selten, ≥ 5 Siege = 1 % sehr selten, ≥ 15 Siege davon ≥ 3 auf großen Turnieren = 0,1 % einzigartig); die seltenste Kategorie zählt. Gen und Leistung werden multipliziert.</p>
       <p><b>Bestenliste (B2 Teil 2, v549):</b> je Hof die ${BESTEN.anzahl} besten Pferde (meiste Erfolge: Sieg ${BESTEN.sieg} Punkte, 2./3. Platz ${BESTEN.platz}; gezählt wird die Lebensbilanz <code>p.bilanz</code> – je Pferd [Starts, 1., 2., 3. Platz] nach Disziplin und Klasse, nie gekürzt, im Steckbrief „📊 Bilanz insgesamt“) und die ${BESTEN.anzahl} wertvollsten (Marktwert). Ausgewertet zu Beginn jeder Jahreszeit und wenn ein Pferd den Hof verlässt (Verkauf, Rückgabe, Pfändung, Tod). Pensionspferde zählen nicht. Gespeichert wird nur eine Mini-Zeile je Pferd (<code>spiel.chronik[Hof].beste/.wertvoll</code>); der Name ist anklickbar (Steckbrief), auch nach dem Verkauf: Bestenlisten-Pferde bleiben im Archiv vor dem 40er-Limit geschützt, verstorbene liegen auf dem Friedhof. Anzeige: hvw – Hof – Übersicht „🏅 Bestenliste dieses Hofs“, bei nicht mehr eigenen Pferden mit „Stand beim Verkauf/Abgang“.</p>
       <p><b>Spielprotokoll (S4, v525) und Aufnahmen (v529):</b> Zähler je Jahreszeit in <code>spiel.protokoll["&lt;jahr&gt;-&lt;jz&gt;"]</code> (immer an, für den Spieler unsichtbar, Grundlage für die Bilanz in Thema 2): Füttern selbst/Personal/Turnier, Putzen, Kämmen, Hufe auskratzen, Misten (selbst), Training je Übung (selbst/Personal), Turnierstart/-sieg/platziert, Kauf je Markt, Verkauf (Festpreis/Auktion/Verkaufsrennen), Bedeckung, tragend geworden, Fohlen geboren, Tierarzt, Klinik, Todesfall, Brief gelesen, Kredit, Bauauftrag, Mitarbeiter eingestellt/gekündigt/selbst gekündigt. <b>Aufnahme</b> (hvw – Einstellungen „🔴 Aufnahme starten/beenden“): ab dem Start schreibt das Spiel jede gezählte Aktion und jede Buchung mit Spieltag in <code>spiel.aufnahme.eintraege</code> (höchstens ${AUFNAHME_MAX.toLocaleString("de-DE")} Einträge je Aufnahme); beim Beenden kommt sie als eigene Aufnahme in die Liste <code>spiel.aufnahmen</code> (je Eintrag ⬇️ Herunterladen als Datei <code>typ: zuchtstall-aufnahme</code> und 🗑️ Löschen mit Sicherheitsfrage). Solange eine Aufnahme läuft, hat der Bildschirm einen dünnen roten Rahmen (<code>body.aufnahme</code>, nicht im Startmenü).
         ${(() => { const P = spiel.protokoll || {}, K = Object.keys(P).sort((a, b) => { const [ja, sa] = a.split("-").map(Number), [jb, sb] = b.split("-").map(Number); return ja - jb || sa - sb; });
@@ -13016,7 +13018,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     return `<div class="fin-tabs">${[["alle", "Alle"], ["eigen", "Eigene Pferde"], ["pension", "Pensionspferde"]].map(([k, t]) => `<button data-pff="${k}" class="${F.filter === k ? "an" : ""}">${t} (${n(k)})</button>`).join("")}</div>
       ${l.length ? `<div class="pf-tab-wrap"><table class="ver-tab pf-tab"><tr>${sp.map(([k, t]) => `<th><button class="pf-sort ${F.sort === k ? "an" : ""}" data-pfs="${k}">${t}${F.sort === k ? (F.ab > 0 ? " ▲" : " ▼") : ""}</button></th>`).join("")}</tr>
         ${l.map(z => `<tr ${z.extern != null ? "" : `data-pfbox="${z.box}"`}>${sp.map(([k]) => `<td class="${k === "wert" ? "re nw" : k === "alter" ? "nw2" : k === "gesund" && z.gesund < 50 ? "pf-warn" : ""}">${
-          k === "name" ? `<b>${esc(z.name)}</b>${z.fohlen ? " <small>🍼 bei Fuß</small>" : ""}${z.extern != null ? `<small class="pf-ext">${z.ort === "aufzucht" ? "🍼" : "🎓"} ${ORT_NAME[z.ort].replace("\u00ad", "")} · ${fmt(KOSTEN[z.ort])}/Tag</small><button class="mini-knopf pf-hol" data-hol="${z.extern}">🏠 Zurückholen</button>` : `<small>Box ${z.box + 1}${z.pension ? " · 🏡" : ""}</small>`}`
+          k === "name" ? `<b>${esc(z.name)}</b>${z.p && !z.pension ? seltenMarke(z.p) : ""}${z.fohlen ? " <small>🍼 bei Fuß</small>" : ""}${z.extern != null ? `<small class="pf-ext">${z.ort === "aufzucht" ? "🍼" : "🎓"} ${ORT_NAME[z.ort].replace("\u00ad", "")} · ${fmt(KOSTEN[z.ort])}/Tag</small><button class="mini-knopf pf-hol" data-hol="${z.extern}">🏠 Zurückholen</button>` : `<small>Box ${z.box + 1}${z.pension ? " · 🏡" : ""}</small>`}`
           : k === "alter" ? z.alterTxt.replace(/ Jahre?$/, "\u00a0J.").replace(/ Monate$/, "\u00a0Mon.") : k === "gesund" ? esc(z.gesundTxt) : k === "heute" ? (z.pension ? (z.heute ? `<span class="${z.heuteOffen ? "pf-offen" : "pf-ok"}">${z.heute}</span>` : "–") : "")
           : k === "wert" ? (z.wert == null ? "" : fmt(z.wert)) : k === "rasse" ? esc(kurzRasse(z.rasse)) : esc(String(z[k]))}</td>`).join("")}</tr>`).join("")}</table></div>
         ${(spiel.extern || []).length && F.filter !== "pension" ? `<p class="text" style="margin:6px 0 0"><small>🍼🎓 Außer Haus (Aufzuchtstation, Ausbildungsstall): ${(spiel.extern || []).length} · laufende Kosten <b>${fmt((spiel.extern || []).reduce((a, e) => a + KOSTEN[e.ort], 0))} pro Tag</b></small></p>` : ""}

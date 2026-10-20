@@ -22,8 +22,8 @@ Die Nachricht von Claude Team (v629) ist übernommen. **Ursache des Pension-Fehl
 
 ### Tutorial-Überarbeitung: Stand v631
 Etappe A und **B fertig** (Zwei Pferde im Pension-Kapitel, Hauptmenü-Kapitel, Mitarbeiter ohne Sperre, Boxstufen nach Dritteln). Tutorial-Spieler anf 390×844, 844×390 (beim ersten Lauf zufälliger Hänger bei „Hufe“, Wiederholung grün) und 1366×768 grün, `tutorial-test` grün. **Nicht gelaufen:** fort/exp. **Noch offen:** Etappe C (Opus), Etappe D (Sonnet) laut Liste oben; zurückgestellt: Infofeld nach Turnier-Nennen, Kamm-Zone Handy.
-### Offene Wünsche von Dome (21.10., noch nicht gebaut)
-1. Pension: Besitzer bucht Zusatzleistungen, die der Hof gar nicht anbietet (Stammkunden-Zubuchen prüft `leistungAngeboten` nicht, Stelle `pensionJahreszeit` „v418“). Nimmt Dome ein Angebot weg (Hof – Pension, Häkchen), soll es bei Einstellern entfallen: nicht mehr bezahlt, kein Mangel. 2. Tierarzt rufen bei Pensionspferden nur 1× je Tag und Pferd. 3. **Neu (wartet auf Domes Antworten zu Kosten und falscher Einschätzung):** bei Pensionspferden dem Besitzer Krankheit mitteilen und eine Behandlung vorschlagen; der Besitzer entscheidet per Brief (Spieler/Personal, Tierarzt, abwarten).
+### Von Dome gewünscht und gebaut (21.10.)
+v632 Finanzen als Aufklapp-Jahreszeiten, v633 Pension (nicht angebotene Leistungen, Tierarzt 1×/Tag, Besitzer informieren + Behandlung vorschlagen, Rückmeldung zur Einschätzung, Fenster ohne {du|Sie}-Reste). Zahlen selbst gesetzt: siehe CLAUDE.md v633. Domes Abnahme steht aus.
 Phase D (großer Test) wartet weiter auf Domes „weiter“.
 
 ---

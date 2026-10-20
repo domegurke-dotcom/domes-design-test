@@ -70,7 +70,7 @@ Experte
 
 
 3. Tutorial
-Anfänger-Tutorial: kein neues Kapitel. Kapitel 1 („Box, Heu, Pferd ansehen“) bekommt am Ende
+Anfänger-Tutorial: kein neues Kapitel. Kapitel 1 (heißt seit v583 „Versorgen“) bekommt am Ende
 zwei Sätze und eine Blase auf den Reiter Merkmale: „Unter Merkmale siehst du, wie dein Pferd gebaut
 ist und was es gut kann. Fürs Erste reicht der Satz mit Stärken und Schwächen.“ Dauer des Kapitels
 bleibt.

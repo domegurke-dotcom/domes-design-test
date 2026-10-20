@@ -15,7 +15,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Team · **An:** Claude Pro · **Stand:** v628, 20.10.2026 (Nacht, Wochenvolumen fast leer)
+**Von:** Claude Team · **An:** Claude Pro · **Stand:** v629, 20.10.2026 (Nacht, Wochenvolumen fast leer)
 
 **Offen – Tutorial-Überarbeitung nach Domes Test von v597 (4 Etappen, noch nicht begonnen außer unten):**
 - **Antworten von Dome:** (1) Natursprung/Besamung: Zahlen so lassen (in echt ähnliche Chance, Unterschied bei Kosten/Verletzung/Hengstwahl) – nur im Tutorial erklären. (2) Boxstufen im Tutorial: alle Schritte mit sichtbarer Box zählen, in drei gleiche, aufsteigende Drittel teilen (Stufe 1, 2, 3), für alle Erfahrungsstufen. (3) Pferd lehnt Hustensaft beim ersten Mal ab, Tutorial zeigt, was dann zu tun ist.
@@ -39,6 +39,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 - **v627 / Fund beim Pension-Kapitel:** Dome: Heu, Kraftfutter und Wasser füllt sie bei Pensionspferden selbst auf (stimmt: `#heuhaufen`-Handler hat keine `fremd`-Sperre) – der Text im Info-Schritt „Was du für den Einsteller tust“ ist korrigiert. **Warum die Klickschritte hingen:** Im Tutorial bleiben Pferde früherer Kapitel in den Boxen stehen (beim Pension-Kapitel: Flocke in Box 1 Stufe 3, Krümel in Box 2), `tutPensionBox()` fand Flocke statt des Einstellers und der Einsteller stand ggf. in einer anderen Box. Für Klickschritte beim Einsteller müssen die Boxen zu Kapitelbeginn geleert werden (`spiel.boxen` zurücksetzen) und `[data-zubox]` die Einsteller-Box treffen. Tests: `tests/tutorial-spieler.js` hat bei `LAUT=1` nun eine Zusatzausgabe „Heu-Zustand“ beim Schritt „Heu“.
 - **v628 (Dome-Spielstand: Pensionsanfrage angenommen, Box „reserviert“, Pferd zog nie ein, nicht kündbar, nicht sichtbar):** Ursache unbekannt (Spielstand nicht vorhanden – Dome schickt ggf. „Spielstand downloaden“-Datei). Verdacht: Reservierung `b.reserviert` ohne passende `spiel.pensionAnfragen`-Eintrag (`angenommen`) bzw. ohne Pferd in `spiel.extern`. Reparatur: `pensionAnfragenTag()` (nachts) gibt verwaiste Reservierungen frei. Test `tests/reservierung-test.js`. Falls die Anfrage noch existiert, aber nie einzieht: `pensionEinzug` (Bedingung `a.angenommen && a.tag < spiel.tag`, `pensionZielBox`, Ausnahme im forEach) mit dem Spielstand untersuchen.
 - **Entscheidung Dome (20.10.):** Boxen zu Kapitelbeginn im Tutorial NICHT leeren – bleibt so (Pferde früherer Kapitel stehen weiter in den Boxen). Daher keine Klickschritte für das Pensionspferd; der Info-Schritt im Pension-Kapitel reicht.
+- **v629 (Dome-Spielstand, Fortsetzung):** Nachtliche Bereinigung (v628) hat nicht geholfen → die Anfrage existiert noch, zieht aber nicht ein. Neuer Knopf „🔓 Reservierung aufheben“ in der leeren reservierten Box (`reservierungHaengt`: keine angenommene Anfrage dazu oder seit > 2 Tagen angenommen; löscht Anfrage + Reservierung). Ursache weiterhin unbekannt – Spielstand/Box-Text von Dome erbeten (siehe `pensionEinzug`). Test `tests/reservierung-test.js` (9 Prüfungen).
 - Hinweis: `tests/tutorial-test.js` erwartet, dass nach der ersten Blase Schritt „Heu geben“ kommt – Reihenfolge der ersten Kapitel-1-Schritte nicht verschieben. Phase D (großer Test) wartet weiter auf Domes „weiter“.
 
 ---

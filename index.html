@@ -1026,7 +1026,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "623";
+  const SPIEL_VERSION = "625";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1034,11 +1034,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=623"></script>
-<script src="pferd.js?v=623"></script>
-<script src="boxstufen.js?v=623"></script>
-<script src="kopfneu.js?v=623"></script>
-<script src="waschbild.js?v=623"></script>
+<script src="lz-string.min.js?v=625"></script>
+<script src="pferd.js?v=625"></script>
+<script src="boxstufen.js?v=625"></script>
+<script src="kopfneu.js?v=625"></script>
+<script src="waschbild.js?v=625"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -15379,6 +15379,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   // Ein Testpferd nach dem anderen (Überblendung), jedes Kapitel hat ein Ziel und Schritte mit Blase + Ring; Menüs schalten sich Kapitel für Kapitel frei (body[data-tutkap]).
   // Überspringen: einzelnes Kapitel oder alles. Am Ende Frage, ob bekannte Hinweise im eigenen Spiel nochmal kommen. Wiederholen aus den Einstellungen (Spielstand bleibt: danach Neustart der Seite).
   const tutUmgestellt = () => !!spiel.tutorial.um0 && spiel.tutorial.um0 !== spiel.boxen.map(b => b.pferd ? b.pferd.id : "").join("|");
+  const tutPensionBox = () => spiel.boxen.find(x => x.pferd) || null;   // Box des ersten Einstellers im Tutorial
   const tutZugesagt = () => einstellerListe().length > 0 || (spiel.post || []).some(br => br.aktion && br.aktion.typ === "einsteller" && br.aktion.antwort === "ja");
   const tutBoxStufe = st => { const b = spiel.boxen[0]; if (b) b.stufe = st; };   // Dome 20.10.: Kapitel 1–2 Stufe 1, 3–4 Stufe 2, 5–6 Stufe 3 – der Spieler sieht, was es gibt
   const TUT_PFERD = (o) => { const p = neuesPferd({ rein: true, ...o }); p.pflege = erzeugePflege(p); p.werte = p.werte || erzeugeWerte(p); ["impf", "wurm", "zahn", "huf"].forEach(k => p.pflege[k] = spiel.tag); return p; };
@@ -15440,16 +15441,22 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       schritte: [["Ort", "Unter Pferdepflege → Ort → Training geht es zum Reitplatz. (Flockes Box ist schon versorgt – in Stufe 3 hängt das Heu im Heunetz.)", "[data-ort=\"training\"], [data-r=\"platz\"], [data-m=\"pflege\"]", () => ortModus === "training" || (ortModus || "").startsWith("tr-")],
         ["Reitplatz", "Wähle den Reitplatz.", "[data-ort=\"tr-reitplatz\"]", () => (ortModus || "").startsWith("tr-")],
         ["Üben", "Wähle eine Übung. Jede kostet Energie (⚡), über Nacht füllt sie sich wieder auf. Das Gangwerk im Steckbrief zeigt, wofür das Pferd gut ist.", "[data-ueb]", b => !!(b.pferd.trainHeute && b.pferd.trainHeute.tag === spiel.tag && b.pferd.trainHeute.liste.length)],
-        ["Du und dein Pferd", "Wie gut ein Training wirkt, hängt auch von dir ab. Flocke ist weiter als du – das bremst sie. Reitunterricht hilft am Anfang am meisten (Hofverwaltung → Reiter).", null, () => false, true],
-        ["Bereiter", "Später kann ein Bereiter für dich trainieren, mit Plan (Häkchen je Übung). Das kommt im Kapitel Mitarbeiter.", null, () => false, true]],
+        ["Du und dein Pferd", "Auch du als Reiterin lernst: Dein Können (Hofverwaltung → Reiter) wächst durch Training, Turniere und Reitstunden. Flocke ist in Dressur schon weiter, als du es kannst – das bremst ihr Training, weil sie bei dir nicht mehr dazulernt. Dann helfen Reitstunden (Hofverwaltung → Reiter → Reitunterricht), oder jemand Besseres reitet sie.", null, () => false, true],
+        ["Bereiter", "Jemand Besseres kann ein Bereiter sein: ein Mitarbeiter, den du später unter Hofverwaltung → Mitarbeiter einstellst (ab mittlerem Stall). Er reitet und trainiert die Pferde nach deinem Plan (Häkchen je Übung). Das brauchst du jetzt noch nicht – merke dir nur, dass es ihn gibt.", null, () => false, true]],
       fertig: b => !!(b.pferd.trainHeute && b.pferd.trainHeute.liste.length) },
-    { n: "Pension", ziel: "Einsteller aufnehmen", post: true, neu: () => { (spiel.post || []).forEach(x => { x.gelesen = true; }); try { pensionRegeln().offen = true; pensionAnfrageNeu(); } catch (e) { console.error(e); } },
+    { n: "Pension", ziel: "Einsteller aufnehmen", post: true, neu: () => { (spiel.post || []).forEach(x => { x.gelesen = true; }); try { pensionRegeln().offen = true; pensionAnfrageNeu(); } catch (e) { console.error(e); } tutLagerFuellen(); spiel.boxen.forEach(x => { x.einstreu = "spaene"; }); },
       schritte: [["Post", "Eine Pensionsanfrage ist gekommen. Tippe auf den gelben Umschlag.", "#postIcon", () => !$("dlg").hidden && /Brief \d+ von/.test($("dlgInhalt").textContent)],
-        ["Briefe lesen", "Oben steht „Brief 1 von …“: Mit ‹ und › blätterst du durch deine Briefe, auch durch ungelesene. Der Stern ☆ merkt einen wichtigen Brief vor, 🚫 Spam blendet unwichtige Absender aus, 🗑️ Löschen entfernt den Brief. Alle Briefe liegen später in der Hofverwaltung → Postfach.", null, () => false, true],
+        ["Briefe lesen", "Oben steht „Brief 1 von …“: Mit ‹ und › blätterst du durch deine Briefe, auch durch ungelesene. Der Stern ☆ merkt einen wichtigen Brief vor, 🚫 Spam blendet unwichtige Absender aus, 🗑️ Löschen entfernt den Brief. Alle Briefe liegen später in der Hofverwaltung → Postfach. Probiere es gleich aus: Tippe auf den Stern.", null, () => false, true, "[data-stern]"],
+        ["Pferd vorab ansehen", "Der Name des Pferdes im Brief ist antippbar: So siehst du Bild, Steckbrief und Abstammung, bevor du zusagst. Prüfe immer, ob das Pferd zu deinem Stall passt – ein Einsteller bleibt, bis er kündigt.", null, () => false, true],
         ["Zusagen", "Tippe im Brief auf „Zusagen“. Das Pferd zieht morgen ein. Einsteller zahlen jede Jahreszeit – am Anfang deine wichtigste Einnahme.", "[data-baktion=\"e-ja\"]", tutZugesagt, true],
         ["Nächster Tag", "Tippe oben auf den Mond – dann zieht der Einsteller ein.", "#kopfTagEnde, #tagAnzeige", () => spiel.tag > spiel.tutorial.tag0, false, "#dlgKnoepfe button"],
-        ["Boxenübersicht", "Tippe oben auf das Schild mit der Boxnummer. Dort steht jetzt dein erster Einsteller.", "#boxSchildKnopf", () => !!document.querySelector("#nebenSchirm.offen .boxen-liste")]],
-      fertig: () => tutZugesagt() && spiel.tag > spiel.tutorial.tag0 && !!document.querySelector("#nebenSchirm.offen .boxen-liste") },
+        ["Boxenübersicht", "Tippe oben auf das Schild mit der Boxnummer. Dort steht jetzt dein erster Einsteller.", "#boxSchildKnopf", () => !!document.querySelector("#nebenSchirm.offen .boxen-liste")],
+        ["Zur Box", "Tippe auf das Pferd des Einstellers. Ein Einsteller ist ein Gast: Er zahlt dafür, dass du sein Pferd wie dein eigenes versorgst – Heu, Futter, Wasser, saubere Box und Einstreu.", "[data-zubox]", () => !$("nebenSchirm").classList.contains("offen") && !!tutPensionBox()],
+        ["Heu", "Fang mit dem Heu an.", "@heu", () => !!(tutPensionBox() || {}).krippeVoll],
+        ["Futtereimer", "Dann der Futtereimer.", ".stufeEl .sKrippe, #krippe", () => { const b = tutPensionBox(); return !b || b.kraftVoll || !kraftNoetig(b.pferd, b); }],
+        ["Wasser", "Wasser nicht vergessen.", ".stufeEl .sWasser", () => { const b = tutPensionBox(); return !b || boxenStufe(b) !== 1 || b.wasserTag === spiel.tag; }],
+        ["Misten", "Und die Box misten. Die Einstreu verbraucht sich über Nacht aus dem Lager – steht in der Futterkammer.", "#mist", () => { const b = tutPensionBox(); return !b || !b.mistig; }]],
+      fertig: () => tutZugesagt() && spiel.tag > spiel.tutorial.tag0 && !!tutPensionBox() && !!tutPensionBox().krippeVoll },
     { n: "Mitarbeiter", ziel: "Hilfe einstellen", haupt: true, neu: () => {},
       schritte: [["Hofverwaltung", "Tippe auf „Hofverwaltung“.", "#hmHof", () => $("nebenSchirm").classList.contains("offen") && /Hofverwaltung/.test(($("nebenSchirm").querySelector("h1") || {}).textContent || "")], ["Mitarbeiter", "Tippe auf den Reiter „Mitarbeiter“.", "[data-hr=\"mitarbeiter\"]", () => hofReiter === "mitarbeiter"],
         ["Stallbursche", "Ein Stallbursche füttert und mistet, ein Pferdepfleger putzt. Jeder kostet Lohn – mit wenigen Pferden machst du es lieber selbst. Tippe auf „Stallbursche“.", "[data-ma=\"stallbursche\"]", () => !$("dlg").hidden && /Bewerbungen/.test($("dlgInhalt").textContent)],

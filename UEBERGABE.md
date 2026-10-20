@@ -101,6 +101,17 @@ Bricht die Sitzung ab, kann **Claude Pro** hier weitermachen (Dome: Stand nach *
 4. Selbststart 7:05 ist gelaufen; den Selbststart um 12:05 hat Dome abgesagt (Routine gelöscht).
 5. **7:05-Start (20.10.2026) erledigt:** Stand v572 auf `main` geprüft, Stufen- und Tutorial-Test grün, nichts Neues angefangen. Es fehlen nur Domes Antworten (OFFENE-FRAGEN 1–9) und ihr Test.
 
-### Domes Antworten beim Durchgehen (20.10.2026, Sammlung – erst umsetzen, wenn Dome „fertig“ sagt)
+### Domes Antworten beim Durchgehen (20.10.2026) – Umsetzung (Claude Team, Vormittag)
+| Punkt | Stand |
+|---|---|
+| Alte Spielstände → Experte (umschaltbar) | ✅ v573 |
+| Raritäten: eigene Auktion startet beim Raritäten-Marktwert | ✅ v573 |
+| Raritäten: Auktion läuft ab dem 1. Gebot `tpj()` Tage (auch übers Marktjahr), ohne Spieler keine Gebote | ✅ v573 |
+| Raritäten: mehr „selten“ (`RAR.stufe` 0,92/0,06/0,02 → ca. 65/31/4 %) | ✅ v573 |
+| Anfänger: fester Futterplan, Charakter-Details aus, keine Pfändung im 1. Jahr, Training fester Weg (2–3 empfohlene Übungen entlang der Skala) | ⏳ als Nächstes |
+| Abstammungs-Zuschlag Marktwert (Eltern/Großeltern-Erfolge, Prämien-/Championfohlen machen Eltern wertvoller, max. ca. +50 %, wirkt bei Jungen am stärksten) | ⏳ danach |
+| Tutorial-Balken Handy quer verschieben (deckt ~30 px Stall) | ⏳ danach |
+
+Domes Antworten (Original):
 - Stufen-Sperre / alte Spielstände: alte Spielstände werden automatisch zu **Experten** und können im Menü umschalten.
 - Raritäten-Markt, eigene Pferde verkaufen: Auktion startet beim **Raritäten-Marktwert** des Pferdes (nicht bei der Hälfte).

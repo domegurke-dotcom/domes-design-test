@@ -15,9 +15,11 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team · **Stand:** v594, 20.10.2026 (abends)
+**Von:** Claude Pro · **An:** Claude Team · **Stand:** v597, 20.10.2026 (Nacht)
 
-Übergabe von Claude Team (v560–v582) gelesen und übernommen, Nachricht gelöscht. Phase A läuft (Dome: „starte Phase A“): S1 (v584), K1 (v585), K2 (v586) und M1 (v587) sind fertig, je ein eigener Commit.
+**WICHTIGSTE AUFGABE ZUM START (Dome-Wunsch): Gib Dome sofort alle offenen Fragen aus `OFFENE-FRAGEN.md` (Nr. 1–12) im Chat aus – kurz, nummeriert, mit deiner Empfehlung – und gehe sie mit ihr durch. Beantwortete Fragen umsetzen und aus der Datei löschen.** Danach wartet alles auf Domes „weiter“ für Phase D.
+
+Phasen A, B und C sind fertig (S1–S4, K1–K4, M1–M5, Tutorial-Überarbeitung v597), je Etappe ein eigener Commit auf `main`. Übergabe von Claude Team (v560–v582) war gelesen und übernommen.
 
 ### Fortschritt Mehr-Etappen-Lauf (Dome, 20.10.2026; Regeln in CLAUDE.md „Mehr-Etappen-Lauf“)
 Vier Phasen (A, B, C, D = großer Test), am Phasenende hält Claude an; Dome schaltet das Modell um und sagt „weiter“.
@@ -38,7 +40,13 @@ Vier Phasen (A, B, C, D = großer Test), am Phasenende hält Claude an; Dome sch
 | C | Sonnet | M5 Verpaaren, Fremd-Vergleich, Hinweise, Admin | **fertig (v596/v597)**; Tutorial-Kapitel (Anfänger-Satz, Fort „Merkmale lesen…“, Exp „Zuchtverbands-Noten…“) kommen mit der Tutorial-Überarbeitung; Fremd-Vergleich und Blasen M3/M7 offen (OFFENE-FRAGEN 11) |
 | D | Sonnet | großer Test ohne Bilder (etappen, hof-gesamt, neuladen) + neue kleine Tests + Tutorial-Spieler – erst nach Domes „weiter“ | offen |
 
-Phase B fertig. **Phase C läuft (Sonnet):** S3, S4, K4, M3 (v594), M4 (v595) und M5-Kern (v596) fertig, Domes Tutorial-Mängelliste ist abgearbeitet (v597, siehe CLAUDE.md), danach Domes Tutorial-Mängelliste (vor Phase D). (Phase C: S3 → S4 → K4 → M3 → M4 → M5.) (Phase B: S2 Pinnwand in der Box → K3 Turnier und Rennen → M2 Karte Merkmale; K3 und der Schleifen-Brief nie gleichzeitig.)
+Phasen A, B und C fertig. **Phase D (großer Test) startet erst nach Domes „weiter“** – vorher die offenen Fragen mit Dome durchgehen.
+
+### Test-Anleitung Phase C (Wege ausgeschrieben)
+1. **Wirkungen (v594):** Box – Steckbrief – Merkmale: Pferde mit Fehlern (steile Schulter u. a.) sind weniger wert (Hauptmenü – Pferdemarkt, Preis vergleichen), Fohlenschau-Körperbau kommt aus dem Exterieur.
+2. **Rassemerkmale/Besonderheiten/Zuchtbuch (v595):** Box – Steckbrief – Merkmale – Bereiche „Rassemerkmale“ und „Besonderheiten“ aufklappen (Anfänger: nur Sätze; Fortgeschritten: Zeilen mit ✅/⚪/❌; Experte: Zuchtbuch-Klasse im Gesamteindruck, Stuten ab 3 Jahren; Hengste „Körung kommt später“).
+3. **Verpaaren-Vorschau (v596):** Box einer Stute – Steckbrief – Genetik – „Verpaaren mit …“ – einen Hengst antippen (Fortgeschritten/Experte): Kasten „Vorschau für das Fohlen“, Knopf „🧬 Merkmale“ öffnet die Karte des Hengstes mit der Stute als Vergleich. Admin: Rassenansicht – Pferd einstellen – „Merkmale selbst wählen“.
+4. **Tutorial (v597):** Charaktermenü – „Erst das Tutorial“ (alle Stufen), 12 Kapitel Anfänger: im Fenster ist nur das Gefragte antippbar, Haken-Liste im blauen Band (Handy quer nur „Schritt n/m“), Kauf im Pferdemarkt endet mit „Zur Box / Weiter einkaufen“. Auch prüfen: Brief-Knopf heißt „Löschen“, neues Spiel zeigt sofort das richtige Datum.
 
 ### Test-Anleitung Phase A (Wege ausgeschrieben)
 1. **Schleifen (v584):** Turnier nennen und einen Tag weiterspielen: Hauptmenü – Pferdeanhänger – Turnier (oder Box – Pferdepflege – Ort – Pferdeanhänger – Turnier) → nennen → „Tag beenden“ → am nächsten Tag Brief „Ergebnis: <Pferd> beim <Turnier>“ im Postfach: links neben jeder Prüfungszeile die große Schleife (Platz 1 Gold … 6 Grün, braun = Teilnehmer, auf dem Hofturnier auch ohne Platzierung, Championat-Sieger blau-gold). Danach Box – Steckbrief – Ausbildung – Turniere: kleine Schleifen in der Erfolgsliste, in „Bilanz insgesamt“ die Spaltenköpfe als Schleifen. Fohlenschau: Ergebniszeile mit Schleife.

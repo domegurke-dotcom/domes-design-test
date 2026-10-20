@@ -18,7 +18,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 **Von:** Claude Team · **An:** Claude Pro (oder die nächste Team-Sitzung) · **Stand:** v546, 19.10.2026
 
 > **Hinweis für Claude Pro:** Claude Team (diese Sitzung) ist noch **aktiv** und ergänzt diese Nachricht laufend. Bitte noch nichts löschen und nicht an `index.html` arbeiten, solange hier „Team aktiv“ steht – sonst überschneiden sich die Änderungen. Dome sagt Bescheid, wenn Team fertig ist (dann den Hinweis hier entfernen).
-> **Team aktiv** (Stand v546, 19.10.2026)
+> (Hinweis „Team aktiv“ erledigt – siehe Fortschritt Nachtsitzung unten.)
 
 Alles liegt auf `main` (Branch `claude/admiring-bell-s50jlb` ist gleich). Details zu jeder Version stehen in CLAUDE.md (v523–v541), Zahlen auch in der Enzyklopädie (bzn, nur Admin).
 
@@ -66,3 +66,15 @@ Alles liegt auf `main` (Branch `claude/admiring-bell-s50jlb` ist gleich). Detail
 **Fertig (auf `main`):** v558 (Seltenheit: selten < 3 %, Charakter raus, Mischlinge ohne Seltenheit, Symbol hinter dem Namen, Jahresbericht-Pferdezahl nur Stall), v559 (Gen-Schwelle je Rasse `SELTEN_MERKMAL_RASSE`, ca. 4 % je Rasse; Haflinger bleibt bei 0,7 %). Dazu nur Dokumentation: `PLAN-WASCHPLATZ.md`, `PLAN-HINWEISE.md` (+ Anhänge `PLAN-HINWEISE-TEXTE.md`, `PLAN-TUTORIAL.md`, `PLAN-STUFEN.md`), `PROJEKT-CHAT-THEMEN.md` Punkte 14/17/18, neuer Abschnitt „Selbstständig arbeiten“ in `CLAUDE.md`.
 **Reihenfolge (Dome):** B4 (Spiel-verloren-Bilanz, Opus) → R2–R4 (Raritäten-Markt, Opus) → Waschplatz W1–W6 (Sonnet) → Hinweise/Stufen/Tutorials T1–T6 (T2/T4 Opus). Immer erst Überblick/Aufwand/Modell, auf klares „Ja“ warten.
 **Offen/Fragen an Dome:** Solarium-Bilder sind von Dome freigegeben (20.10.); Zahlen im Waschplatz-Plan („Von Projekt-Chat ergänzt“) bestätigen lassen; Katalog-Thema 41 ohne Text.
+
+
+---
+
+## Fortschritt Nachtsitzung 20.10.2026 (Claude Team, Opus, selbstständig)
+Auftrag von Dome (20.10., 3:30 Uhr): „Starte mit allem, was nach Plan offen ist, so weit wie es geht.“ Selbststarts um 7:05 und 12:05 Uhr (12:05: höchstens 50 % Volumen) sind als Erinnerung eingerichtet.
+Reihenfolge: **B4 → R2 → R3 → R4 → Waschplatz W1–W6 → Hinweise T1–T6**. Fragen zur Spielmechanik → `OFFENE-FRAGEN.md` (empfohlene Lösung gebaut, leicht änderbar).
+Bricht die Sitzung ab, kann **Claude Pro** hier weitermachen: Stand steht in der Liste unten (wird nach jedem Schritt aktualisiert), Code liegt auf `main`.
+
+| Schritt | Stand |
+|---|---|
+| B4 Spiel-verloren-Bilanz + Nur ansehen | in Arbeit |

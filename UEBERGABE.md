@@ -35,7 +35,7 @@ Vier Phasen (A, B, C, D = großer Test), am Phasenende hält Claude an; Dome sch
 | C | Sonnet | K4 Anzeige, Stufen, Hinweise | **fertig (v593)** |
 | C | Sonnet | M3 Wirkungen | **fertig (v594)** |
 | C | Sonnet | M4 Rassemerkmale, Besonderheiten, Zuchtbuch | **fertig (v595)** |
-| C | Sonnet | M5 Verpaaren, Fremd-Vergleich, Hinweise, Admin | **Kern fertig (v596)**; Tutorial-Kapitel (Anfänger-Satz, Fort „Merkmale lesen…“, Exp „Zuchtverbands-Noten…“) kommen mit der Tutorial-Überarbeitung; Fremd-Vergleich und Blasen M3/M7 offen (OFFENE-FRAGEN 11) |
+| C | Sonnet | M5 Verpaaren, Fremd-Vergleich, Hinweise, Admin | **fertig (v596/v597)**; Tutorial-Kapitel (Anfänger-Satz, Fort „Merkmale lesen…“, Exp „Zuchtverbands-Noten…“) kommen mit der Tutorial-Überarbeitung; Fremd-Vergleich und Blasen M3/M7 offen (OFFENE-FRAGEN 11) |
 | D | Sonnet | großer Test ohne Bilder (etappen, hof-gesamt, neuladen) + neue kleine Tests + Tutorial-Spieler – erst nach Domes „weiter“ | offen |
 
 Phase B fertig. **Phase C läuft (Sonnet):** S3, S4, K4, M3 (v594), M4 (v595) und M5-Kern (v596) fertig, Domes Tutorial-Mängelliste ist abgearbeitet (v597, siehe CLAUDE.md), danach Domes Tutorial-Mängelliste (vor Phase D). (Phase C: S3 → S4 → K4 → M3 → M4 → M5.) (Phase B: S2 Pinnwand in der Box → K3 Turnier und Rennen → M2 Karte Merkmale; K3 und der Schleifen-Brief nie gleichzeitig.)
@@ -57,3 +57,6 @@ Wecker nur innerhalb einer Phase. Zwischen den Phasen: „Phase X fertig – bit
 2b. **Bilder-Schalter für große Tests** (Dome, 20.10.): `BILDER=aus|fehler|alle` + `BILDER_ORDNER` für etappen-test, hof-gesamttest, neuladen-test (`tests/bilder.js`, siehe `tests/README.md`). Geprüft nur mit einem Mini-Probelauf, die großen Tests selbst sind **nicht** gelaufen (Dome: noch nicht starten, vorher fragen, welche Variante).
 3. Große Tests (Etappen-, Hof-Gesamt-, Neuladen-Test) nur mit Domes Erlaubnis.
 4. Wisch-/Ziehgefühl am echten Handy kann nur Dome prüfen.
+
+
+**Phase C fertig (v597) – bitte ‚weiter‘ für Phase D (großer Test) sagen.** Domes Tutorial-Liste ist abgearbeitet (siehe CLAUDE.md v597 und OFFENE-FRAGEN 11/12). Tutorial-Spieler grün: anf 390×844, 844×390, 1366×768, fort 390×844 und 844×390, exp 390×844. Kleine Tests grün (merkmale, schleifen, stufen, hinweise, tutorial); reiter-test ist zufallsabhängig (OFFENE-FRAGEN 12d).

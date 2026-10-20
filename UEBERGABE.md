@@ -15,7 +15,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Team · **An:** Claude Pro · **Stand:** v613, 20.10.2026 (Nacht, Wochenvolumen fast leer)
+**Von:** Claude Team · **An:** Claude Pro · **Stand:** v614, 20.10.2026 (Nacht, Wochenvolumen fast leer)
 
 **Offen – Tutorial-Überarbeitung nach Domes Test von v597 (4 Etappen, noch nicht begonnen außer unten):**
 - **Antworten von Dome:** (1) Natursprung/Besamung: Zahlen so lassen (in echt ähnliche Chance, Unterschied bei Kosten/Verletzung/Hengstwahl) – nur im Tutorial erklären. (2) Boxstufen im Tutorial: alle Schritte mit sichtbarer Box zählen, in drei gleiche, aufsteigende Drittel teilen (Stufe 1, 2, 3), für alle Erfahrungsstufen. (3) Pferd lehnt Hustensaft beim ersten Mal ab, Tutorial zeigt, was dann zu tun ist.
@@ -29,7 +29,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 - **Fertig in v610:** Boxschild (Klick zur Boxenübersicht) im Tutorial nur erlaubt, wenn der Schritt es nennt (`tutErlaubt`, nicht mehr über `#stall`); Turnier-Kapitel (Anfänger) zählt nur eine Nennung des eigenen Tutorial-Pferdes; Fort-Kapitel „Reiter-Können“ war durch `fertig: () => true` sofort „geschafft“ (Info-Schritte übersprungen) → `false`. **Nicht gelöst:** Kamm-Auslöser (Dome: reagiert links/rechts neben dem Pferd statt auf Mähne/Schweif) – `wischBewegen`, Bedingung `oben || hinten` bei `w.tool === "kamm"` (Mähne = obere 45 %, Schweif/Kopf = äußere 25 % links/rechts des `#pferdPlatz`-Rahmens); braucht Blick auf das Bild, Zonen evtl. an echte Mähnen-/Schweifposition koppeln. Pferdebild verschieben (Zoom) ebenfalls offen.
 - **Fertig in v611:** Pferdebild im Tutorial-Fenster (`.sb-bild`, `#leseBild`) zoomen/verschieben ist immer erlaubt (die Tutorial-Klicksperre blockierte es; Verschieben mit der Maus im normalen Spiel funktionierte schon – Dome-Fehler war wohl die Sperre, auf dem Handy bitte gegenprüfen).
 - **Fertig in v612:** leeres Heunetz in der Stufe-3-Box wird durchsichtig und schlaff gezeichnet (CSS `#stall.leer .sHeunetz`, Screenshot geprüft in 844×390). **Noch offen:** Kraftfutter-Krippe Stufe 3 „wie Stufe 2“ (Dome) – unklar, welches Aussehen gemeint ist (Stufe 3 hat einen hängenden Futtereimer); Pferde-Sprechblase im Tutorial bleibt bis gelesen; Infofeld nach Turnier-Nennen; Steckbrief/Daten/Merkmale im Tutorial erklären.
-- **Fertig in v613:** Kraftfutter in der Stufe-3-Krippe als Haufen mit Körnern wie in Stufe 2 (`boxstufen.js`, Klasse `sFutter`, verschwindet bei `kraftLeer`). Damit ist der Punkt „Krippe/Heunetz Stufe 3“ erledigt.
+- **Fertig in v613:** Kraftfutter in der Stufe-3-Krippe als exakt dieselbe Futter-Ebene wie in Stufe 2 (`heuBerg` aus index.html in `boxstufen.js` kopiert, Klasse `sFutter`, Krippe unverändert, v614, verschwindet bei `kraftLeer`). Damit ist der Punkt „Krippe/Heunetz Stufe 3“ erledigt.
 - Hinweis: `tests/tutorial-test.js` erwartet, dass nach der ersten Blase Schritt „Heu geben“ kommt – Reihenfolge der ersten Kapitel-1-Schritte nicht verschieben. Phase D (großer Test) wartet weiter auf Domes „weiter“.
 
 ---

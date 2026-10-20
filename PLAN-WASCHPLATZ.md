@@ -1,6 +1,6 @@
 # Auftrag: Waschplatz mit Wirkung und Pferdesolarium
 
-**Stand:** 19.10.2026, im Projekt-Chat mit Dome geplant (Fragen 1–38), Code-Stand beim Planen v546–v548. Reihenfolge: W1 → W2 → W3 → W4 → W5 → W6. Bilder: siehe Abschnitt „Bilder“ (noch nicht einbauen, bis Dome sie freigibt).
+**Stand:** 19.10.2026, im Projekt-Chat mit Dome geplant (Fragen 1–38), Code-Stand beim Planen v546–v548. Reihenfolge: W1 → W2 → W3 → W4 → W5 → W6. Bilder: siehe Abschnitt „Bilder“ (freigegeben am 20.10.2026).
 
 **Wann umsetzen (Dome, 20.10.2026):** Nicht mitten in einer laufenden Etappe beginnen. Reihenfolge der Themen = wie sie hereinkamen: erst Bilanz (B4), Raritäten (R2–R4), dann **Waschplatz (dieser Plan)**, dann Hinweise/Stufen/Tutorials (`PLAN-HINWEISE.md`). Waschplatz/Solarium überschneidet sich kaum mit Bilanz und Raritäten. Je Etappe Sonnet reicht.
 
@@ -61,12 +61,12 @@
 3. Alte Spielstände: neue Felder (`schweiss`, `nassBis`, `wasserGewohnt`, Solarium-Gebäude) fehlen = Standardwert, nichts geht kaputt.
 4. Hinweisblase beim ersten Bau (siehe `PLAN-HINWEISE.md`, später), Enzyklopädie-Eintrag unter Berechnungen zum Nachschlagen (nur Admin; Zahlen dort ablegen).
 
-## Bilder (noch nicht einbauen)
+## Bilder (freigegeben)
 1. Entwürfe als SVG im Stil der Stallboxen (`boxstufen.js`, 400 × 300, Blick von vorne, Boden in Perspektive, Wand je Stufe). Das Pferd zeichnet das Spiel davor, die Räume sind leer.
 2. **Wo die Bilder liegen:** im Repo auf dem Branch `entwurf-waschplatz-bilder`, Ordner `entwuerfe/waschplatz-bilder/` (je SVG plus PNG-Vorschau). Holen mit `git fetch origin entwurf-waschplatz-bilder` und `git checkout origin/entwurf-waschplatz-bilder -- entwuerfe/waschplatz-bilder`, dann mit auf `main` nehmen. Dateien:
    1. Waschplatz: `stufe1.svg`, `stufe2.svg`, `stufe2-gummi.svg`, `stufe3.svg`, `stufe3-gummi.svg`.
    2. Solarium: `solarium-stufe1.svg`, `solarium-stufe2.svg`, `solarium-stufe2-gummi.svg`, `solarium-stufe3.svg`, `solarium-stufe3-gummi.svg`.
-3. Waschplatz-Bilder hat Dome gut bewertet; die Solarium-Bilder prüft Dome noch. **Erst nach Freigabe** in `boxstufen.js` (oder neue Datei `waschplatz.js`) übernehmen; bis dahin Platzhalter.
+3. Waschplatz-Bilder hat Dome gut bewertet; die **Solarium-Bilder sind freigegeben (Dome, 20.10.2026)**. Alle zehn Bilder dürfen in `boxstufen.js` (oder neue Datei `waschplatz.js`) übernommen werden (in W2 bzw. W3 als echte Bilder statt Platzhalter, spätestens W6).
 4. Solarium: Stufe 1 **eine Hängelampe wie in der Abfohlbox Stufe 3**, Stufe 2 **3 Hängelampen in einer Reihe** auf Kalkstein, Stufe 3 das große Lampenfeld mit 3 Reihen, Goldrand und Goldleiste. **Boden wie bei den Stallboxen** (`BOXSTUFE.boden`): Stufe 1 Sand, Stufe 2 Pflaster, Stufe 3 Beton. **Gummimatten müssen extra gekauft werden** (wie bei den Boxen, `gummiDialog`, `b.gummi`, ab Stufe 2). Matten im Solarium: **350 €, ab Stufe 2, einmal je Solarium, Wohlbefinden +4 statt +3 je Anwendung** (Dome 19.10.).
 
 ## Etappen

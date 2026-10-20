@@ -1024,7 +1024,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "599";
+  const SPIEL_VERSION = "600";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1032,11 +1032,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=599"></script>
-<script src="pferd.js?v=599"></script>
-<script src="boxstufen.js?v=599"></script>
-<script src="kopfneu.js?v=599"></script>
-<script src="waschbild.js?v=599"></script>
+<script src="lz-string.min.js?v=600"></script>
+<script src="pferd.js?v=600"></script>
+<script src="boxstufen.js?v=600"></script>
+<script src="kopfneu.js?v=600"></script>
+<script src="waschbild.js?v=600"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2847,26 +2847,92 @@
     spiel.extern = spiel.extern.filter(x => x !== e);
     return frei;
   }
-  // Tod durch Vernachlässigung: Strafe, und schlecht versorgte Pferde (≤ 30 %, nicht altersschwach) werden beschlagnahmt
+  // ---------- Veterinäramt (PLAN-TIERHALTEVERBOT-SPEICHER V1, Dome 20.10.2026) ----------
+  // Vorfälle gelten für die Person (alle Höfe zusammen). Alles, was in einer Nacht passiert, ist zusammen ein Vorfall. Strafe: 1. Vorfall 2.000 €, danach 5.000 €; Tierhalteverbot beim 3. Vorfall (Anfänger: 4.). Nach 2 Spieljahren ohne neuen Vorfall fällt der älteste weg.
+  const VET = { strafe: [2000, 5000], verbotAb: { anf: 4, fort: 3, exp: 3 }, entlastetJz: 8, altNah: 10, neuTage: 7 };
+  let nachtTag = null;   // Tag, an dem die laufende Nacht begann – alles in dieser Nacht ist derselbe Vorfall
+  const vetDaten = () => { const V = (spiel.veterinaer = spiel.veterinaer || {}); V.vorfaelle = V.vorfaelle || []; V.kontrollen = V.kontrollen || []; if (V.auflage === undefined) V.auflage = null; if (V.naechsteKontrolle === undefined) V.naechsteKontrolle = null; return V; };
+  const vetVerbotAb = () => VET.verbotAb[stufeAktiv()] || 3;
+  function vetStufe() {   // unauffaellig · verwarnt · auflage · letzte
+    const V = vetDaten(), n = V.vorfaelle.length; if (V.verbot) return "verbot";
+    if (n >= vetVerbotAb() - 1 && n > 0) return "letzte"; if (V.auflage || n >= 2) return "auflage"; return n ? "verwarnt" : "unauffaellig";
+  }
+  const VET_NAME = { unauffaellig: "unauffällig", verwarnt: "verwarnt", auflage: "unter Auflagen", letzte: "letzte Warnung", verbot: "Tierhalteverbot" };
+  // Gerechte Ausnahmen: kein Vorfall, keine Beschlagnahme – gibt den Grund zurück (oder null)
+  function vetAusnahme(p) {
+    if (!p || !p.pflege) return null; const bl = befundListe(p);
+    if (p.klinik) return "ist in der Klinik";
+    if (p.gekauftTag != null && spiel.tag - p.gekauftTag < VET.neuTage) return "ist erst seit Kurzem auf dem Hof";
+    if (bl.some(b => (b.behGestern || 0) > 0 || (b.tierarzt && p.behPlan && p.behPlan.akt && p.behPlan.akt.length) || (p.behHeute && spiel.tag - p.behHeute.tag <= 1 && Object.keys(p.behHeute.a || {}).length)) && bl.length) return "ist in Behandlung";
+    if (bl.some(b => KRANK[b.art] && KRANK[b.art].chronisch && (b.tierarzt || b.diagnose || b.beh))) return "hat eine chronische Krankheit, die behandelt wird";
+    if (p.pflege.gesundheit >= gesundheitMax(p) - VET.altNah) return "ist alt – mehr gibt das Alter nicht her";
+    return null;
+  }
+  // Vorfall eintragen; die Folgen (Strafe, Briefe) kommen in `vetAbschluss` – am Ende der Nacht, damit alles zusammen in einem Brief steht
+  function vetVorfall(art, text, o = {}) {
+    const V = vetDaten(), nacht = nachtTag != null ? nachtTag : spiel.tag, letzte = V.vorfaelle[V.vorfaelle.length - 1];
+    if (letzte && letzte.nacht === nacht && !o.neu) { letzte.text += "; " + text; letzte.arten = [...(letzte.arten || [letzte.art]), art]; return { neu: false }; }
+    const v = { tag: spiel.tag, nacht, jz: jzJetzt(), art, arten: [art], hid: aktivHid(), text }; V.vorfaelle.push(v); V.offen = v;
+    if (nachtTag == null) vetAbschluss();
+    return { neu: true, v };
+  }
+  function vetAbschluss() {
+    const V = vetDaten(), v = V.offen; if (!v) return; delete V.offen;
+    const n = V.vorfaelle.length, strafe = n === 1 ? VET.strafe[0] : VET.strafe[1], ab = vetVerbotAb(), arten = v.arten || [v.art];
+    imHof(v.hid, () => {
+      buchen(-strafe, "Strafe Veterinäramt"); ruf("Tierschutzverein", -5);
+      if (n >= ab) { V.naechsteKontrolle = null; tierhalteverbot(v); return; }
+      const minus = (spiel.geld || 0) < 0 ? ` Das Konto ist jetzt im Minus. Solange es im Minus ist, {kannst du|können Sie} nichts kaufen.` : "";
+      const gnaedig = (V.gnaedig || []).splice(0), gn = gnaedig.length ? `<br><br>${gnaedig.map(x => `Der Zustand von <b>${esc(x.name)}</b> ist nachvollziehbar, das Pferd ${x.grund}.`).join(" ")}` : "";
+      brief("Veterinäramt", n === 1 ? "Veterinäramt: Verwarnung" : "Veterinäramt: Strafe und Auflagen", `bei Ihrem Betrieb <b>${esc(hofName())}</b> kam es zu einem Vorfall: ${v.text}. ${n === 1 ? "Wir erteilen Ihnen eine <b>Verwarnung</b>." : `Das ist der <b>${n}. Vorfall</b>. Wir werden Ihren Betrieb in nächster Zeit kontrollieren und Auflagen erteilen.`} Für den Verstoß gegen das Tierschutzgesetz wird eine Strafe von <b>${fmt(strafe)}</b> fällig. Der Betrag wurde von Ihrem Hofkonto abgebucht.${minus}${n === 1 ? " Wir kündigen eine Kontrolle an." : ""}${gn}`);
+      if (n >= ab - 1) brief("Veterinäramt", "Veterinäramt: Letzte Warnung", `Beim nächsten Vorfall wird ein <b>Tierhalteverbot</b> ausgesprochen. Dann werden Ihnen alle Pferde fortgenommen. Bitte sorgen Sie dafür, dass Ihre Pferde jeden Tag versorgt und kranke Pferde sofort behandelt werden.`);
+      V.naechsteKontrolle = spiel.tag + 1 + Math.floor(Math.random() * 2 * tpj());   // V2: Kontrolle an einem zufälligen Tag in den nächsten 2 Jahreszeiten
+    });
+    if (typeof vetNachVorfall === "function") vetNachVorfall(v, arten);
+  }
+  // Verjährung: nach 2 Spieljahren (8 Jahreszeiten) ohne neuen Vorfall fällt der älteste weg
+  function vetJahreszeit() {
+    const V = vetDaten(); if (!V.vorfaelle.length) return;
+    const letzte = Math.max(...V.vorfaelle.map(x => x.jz || 0), V.entlastetJz || 0);
+    if (jzJetzt() - letzte >= VET.entlastetJz) { const x = V.vorfaelle.shift(); V.entlastetJz = jzJetzt(); if (!V.vorfaelle.length) { V.auflage = null; V.naechsteKontrolle = null; }
+      brief("Veterinäramt", "Veterinäramt: Akte entlastet", `Die Akte zu Ihrem Betrieb wurde entlastet: Der Vorfall vom ${jzName(x.jz)} ist verjährt. ${V.vorfaelle.length ? `Es ${V.vorfaelle.length === 1 ? "bleibt noch ein Vorfall" : `bleiben noch ${V.vorfaelle.length} Vorfälle`} in der Akte.` : "Ihre Akte ist wieder ohne Eintrag."}`); }
+  }
+  // Anzeige: Zeile in Hofverwaltung – Hof und Fenster mit den gültigen Vorfällen
+  function vetZeileHTML() {
+    const V = vetDaten(), st = vetStufe(), rot = st === "letzte" || st === "verbot";
+    return `<dt>Veterinäramt</dt><dd class="hf-edit" id="vetZeile" role="button" tabindex="0" title="antippen: Vorfälle und Auflagen" style="${rot ? "color:#b3261e;font-weight:700" : st === "auflage" ? "color:#9a6b00" : ""}">${VET_NAME[st]}${V.vorfaelle.length ? ` · ${V.vorfaelle.length} ${V.vorfaelle.length === 1 ? "Vorfall" : "Vorfälle"}` : ""} <span class="stift">›</span></dd>`;
+  }
+  function vetDialog(zurueck) {
+    const V = vetDaten(), st = vetStufe(), letzte = Math.max(...V.vorfaelle.map(x => x.jz || 0), V.entlastetJz || 0), ab = vetVerbotAb();
+    const liste = V.vorfaelle.length ? `<ul class="liste">${V.vorfaelle.map((v, i) => `<li><b>${jzName(v.jz)}</b>, Tag ${v.tag} · ${esc(hofNameVon(v.hid) || hofName())}<br>${esc(v.text)}${spiel.admin ? ` <button class="mini-knopf" data-vetweg="${i}" title="Vorfall entfernen (Admin)">✕</button>` : ""}</li>`).join("")}</ul>` : `<p class="text">Keine Vorfälle in der Akte.</p>`;
+    const A = V.auflage ? `<p class="text"><b>Offene Auflage:</b> ${V.auflage.maengel.map(m => esc(m.text)).join("; ")}.<br>Frist bis Tag ${V.auflage.bis}.</p>` : "";
+    dialog(`<h3>🩺 Veterinäramt: <span style="${st === "letzte" || st === "verbot" ? "color:#b3261e" : ""}">${VET_NAME[st]}</span></h3>
+      <p class="text">Das Veterinäramt prüft, ob deine Pferde gut versorgt sind. Es zählen alle Höfe zusammen. Beim <b>${ab}. Vorfall</b> gibt es ein Tierhalteverbot – dann ist das Spiel vorbei.${V.vorfaelle.length ? ` Der älteste Vorfall verjährt im ${jzName(letzte + VET.entlastetJz)}, wenn bis dahin nichts Neues passiert.` : ""}</p>${liste}${A}`,
+      [...(spiel.admin ? [["➕ Vorfall (Admin)", () => { vetVorfall("admin", "Testvorfall (Adminmodus)", { neu: true }); vetDialog(zurueck); }, "zweit"]] : []), ["Schließen", zurueck || null]], "breit");
+    document.querySelectorAll("[data-vetweg]").forEach(b => b.onclick = () => { V.vorfaelle.splice(+b.dataset.vetweg, 1); speichern(); vetDialog(zurueck); });
+  }
+  function tierhalteverbot() { const V = vetDaten(); V.verbot = jzJetzt(); }   // V3 ersetzt das durch das Spielende
+  // Tod durch Vernachlässigung: Vorfall beim Veterinäramt; schlecht versorgte Pferde (≤ 30 %, keine Ausnahme) werden vom Tierschutz beschlagnahmt
   function tierschutzEinsatz() {
     const tote = spiel.vernachlaessigt; if (!tote || !tote.length) return; delete spiel.vernachlaessigt; spiel.tierschutz = spiel.tierschutz || [];
-    buchen(-STRAFE_VERNACHLAESSIGUNG, "Strafe Tierschutz"); ruf("Tierschutzverein", -5);
-    const weg = [];
+    const weg = [], V = vetDaten(); V.gnaedig = V.gnaedig || [];
     spiel.boxen.forEach((b, i) => {
-      const p = b.pferd; if (!p || b.tot || p.klinik || !p.pflege || altersschwach(p) || p.pflege.gesundheit > 30) return;
+      const p = b.pferd; if (!p || b.tot || !p.pflege || p.pflege.gesundheit > 30) return;
+      const grund = vetAusnahme(p); if (grund) { if (!p.klinik) V.gnaedig.push({ name: p.name, grund: grund.replace(/^ist /, "ist ").replace(/^hat /, "hat ") }); return; }
       if (fremd(p)) { const e = einstellerVon(p); weg.push(`${esc(p.name)} (Box ${i + 1}, zurück zu ${e ? esc(eName(e)) : "dem Besitzer"})`); b.pferd = null; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; b.tot = false;   // H5: Pensionspferd geht an den Besitzer zurück
+        vetVorfall("pension", `Pensionspferd ${p.name} vernachlässigt und vom Besitzer abgeholt`);
         if (e) { einstellerListe().splice(einstellerListe().indexOf(e), 1); pensionAnsehen(-15); brief(eName(e), `${p.name}: Vertrag beendet`, `der Tierschutz hat mich angerufen: <b>${esc(p.name)}</b> war bei {euch|Ihnen} völlig vernachlässigt. Ich habe ${esc(p.name)} sofort abgeholt – unser Vertrag ist beendet.`, { w: e.w }); }
         return; }
       p.pflege = p.pflege || erzeugePflege(p);
-      const f = b.fohlen, t = { pferd: p, klinik: true, kosten: 0, seit: spiel.tag };
+      const f = b.fohlen, t = { pferd: p, klinik: true, kosten: 0, seit: spiel.tag, jz: jzJetzt() };
       if (f && alterJZ(f) < 2) t.fohlen = f;   // Fohlen bei Fuß bleibt bei der Mutter
       else if (f) { f.pflege = f.pflege || erzeugePflege(f); spiel.tierschutz.push({ pferd: f, frist: jzJetzt() + 2, preis: tierschutzPreis(f) }); }
       (spiel.tierschutz = spiel.tierschutz || []).push(t); weg.push(`${esc(p.name)}${f ? ` mit Fohlen ${esc(f.name)}` : ""} (Box ${i + 1})`);
       spiel.angebote = (spiel.angebote || []).filter(a => a.id !== p.id);
       b.pferd = null; delete b.fohlen; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; b.tot = false;
     });
-    brief("Tierschutzverein", `Strafe wegen Vernachlässigung`, `${tote.map(n => `<b>${esc(n)}</b>`).join(", ")} ${tote.length === 1 ? "ist" : "sind"} gestorben – ${tote.length === 1 ? "das Pferd hat" : "die Pferde haben"} zu lange zu wenig Futter, Pflege oder tierärztliche Behandlung bekommen. Dafür {musst du|müssen Sie} eine Strafe von <b>${fmt(STRAFE_VERNACHLAESSIGUNG)}</b> zahlen. Der Betrag wurde von {deinem|Ihrem} Hofkonto abgebucht${spiel.geld < 0 ? " – {dein|Ihr} Konto ist jetzt im Minus. Solange es im Minus ist, {kannst du|können Sie} nichts kaufen" : ""}.
-      ${weg.length ? `<br><br>Außerdem waren weitere Pferde in einem sehr schlechten Zustand. Wir haben sie <b>beschlagnahmt</b>: ${weg.join(", ")}. Sie kommen zuerst in die Klinik, bis sie wieder gesund sind. Danach {kannst du|können Sie} sie im Pferdemarkt unter „Tierschutz“ zurückkaufen – für den halben Marktwert plus die Klinikkosten.` : ""}`);
+    vetVorfall("tod", `${tote.join(", ")} ${tote.length === 1 ? "ist" : "sind"} gestorben – zu lange zu wenig Futter, Pflege oder tierärztliche Behandlung${weg.length ? `; beschlagnahmt: ${weg.map(x => x.replace(/<[^>]*>/g, "")).join(", ")}` : ""}`);
+    if (weg.length) brief("Tierschutzverein", `Pferde beschlagnahmt`, `Wegen der Vernachlässigung bei {dir|Ihnen} waren weitere Pferde in einem sehr schlechten Zustand. Wir haben sie <b>beschlagnahmt</b>: ${weg.join(", ")}. Sie kommen zuerst in die Klinik, bis sie wieder so gesund sind, wie Alter und Krankheit es zulassen. Danach {kannst du|können Sie} sie im Pferdemarkt unter „Tierschutz“ zurückkaufen – für den halben Marktwert plus die Klinikkosten.`);
   }
   // Konto im Minus: Aufzuchtstation und Ausbildungsstall brechen ab und bringen die Pferde zurück
   function kontoMinus() {
@@ -2887,14 +2953,26 @@
       spiel.tierschutz.push({ pferd: f, frist: Math.max(jzJetzt() + 2, t.frist || 0), preis: tierschutzPreis(f) });
     });
   }
-  // beschlagnahmte Pferde in der Klinik: +16 % pro Tag, bis 75 % – dann können sie 2 Jahreszeiten lang zurückgekauft werden
+  // beschlagnahmte Pferde in der Klinik (V1, Dome 20.10.): +16 % pro Tag, aber nur so gesund, wie Alter und Krankheiten es erlauben (höchstens 75 %); Krankheiten werden behandelt (Kosten in t.kosten), chronische bleiben; dann 2 Jahreszeiten Rückkauf. Stirbt ein schwer vorerkranktes Pferd, kommt es auf deinen Pferdefriedhof (kein neuer Vorfall).
+  const KLINIK_BEFUND = 20, KLINIK_TOD = 0.04;   // Behandlungskosten je Krankheit und Tag · Chance je Tag, dass ein schwer vorerkranktes oder sehr altes Pferd in den ersten Tagen stirbt (selbst gesetzt, Dome informieren)
+  const klinikZiel = p => Math.min(75, gesundheitMax(p), ...befundListe(p).map(b => 100 - (KRANK[b.art] && KRANK[b.art].chronisch ? 6 : 12) * (b.grad || 1)));
+  function klinikTod(t) {
+    const p = t.pferd; p.todesursache = "in der Tierschutz-Klinik gestorben"; p.pflege.gesundheit = 0; begraben(p, "Tierschutz-Klinik");
+    spiel.tierschutz = (spiel.tierschutz || []).filter(x => x !== t);
+    if (t.fohlen) { const f = t.fohlen; f.pflege = f.pflege || erzeugePflege(f); spiel.tierschutz.push({ pferd: f, frist: jzJetzt() + 2, preis: tierschutzPreis(f) }); }
+    brief("Tierschutzverein", `Abschied von ${p.name}`, `es tut uns sehr leid: <b>${esc(p.name)}</b> ist in unserer Klinik gestorben. ${pron(p).er[0].toUpperCase() + pron(p).er.slice(1)} war schon zu schwach oder zu krank. Wir haben alles versucht. ${esc(p.name)} ruht jetzt auf {deinem|Ihrem} Pferdefriedhof.${t.fohlen ? ` Das Fohlen <b>${esc(t.fohlen.name)}</b> bleibt bei uns und kann im Pferdemarkt unter „Tierschutz“ zurückgekauft werden.` : ""}`, { pferde: [p] });
+  }
   function tierschutzKlinik() {
-    (spiel.tierschutz || []).forEach(t => {
-      if (!t.klinik) return; const p = t.pferd;
-      t.kosten += KOSTEN.klinik; p.pflege.gesundheit = Math.min(gesundheitMax(p), Math.round((p.pflege.gesundheit + 16) * 10) / 10);
-      if (p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {
+    (spiel.tierschutz || []).slice().forEach(t => {
+      if (!t.klinik) return; const p = t.pferd; p.pflege = p.pflege || erzeugePflege(p);
+      t.kosten += KOSTEN.klinik; t.tage = (t.tage || 0) + 1;
+      befundListe(p).slice().forEach(b => { const K = KRANK[b.art]; if (!K) return; t.kosten += KLINIK_BEFUND; if (!K.chronisch && t.tage % 2 === 0) { b.grad--; if (b.grad <= 0) befundAbschliessen(p, b, "in der Klinik geheilt"); } });
+      const alt = p.pflege.gesundheit;
+      if ((befundListe(p).some(b => KRANK[b.art] && KRANK[b.art].chronisch && b.grad >= 4) || gesundheitMax(p) <= 25) && alt < 50 && Math.random() < KLINIK_TOD) { klinikTod(t); return; }
+      const ziel = klinikZiel(p); p.pflege.gesundheit = Math.min(ziel, Math.max(alt, Math.round((alt + 16) * 10) / 10));
+      if (p.pflege.gesundheit >= ziel || (t.jz != null && jzJetzt() - t.jz >= 1 && p.pflege.gesundheit <= alt)) {   // Ziel erreicht – oder nach 1 Jahreszeit, wenn es nicht mehr besser wird
         delete t.klinik; t.frist = jzJetzt() + 2; t.preis = tierschutzPreis(p, t.kosten) + (t.fohlen ? tierschutzPreis(t.fohlen) : 0);
-        brief("Tierschutzverein", `${p.name} ist wieder gesund`, `<b>${esc(p.name)}</b> hat sich in der Klinik erholt. {Du kannst|Sie können} ${pron(p).ihn} bis Ende ${jzName(t.frist - 1).replace(/^\S+ /, "")} im Pferdemarkt unter „Tierschutz“ zurückkaufen: <b>${fmt(t.preis)}</b> (halber Marktwert + ${fmt(t.kosten)} Klinikkosten).`);
+        brief("Tierschutzverein", `${p.name} ist wieder gesund`, `<b>${esc(p.name)}</b> hat sich in der Klinik erholt${ziel < 75 ? ` – so gesund, wie Alter und Krankheiten es zulassen (${p.pflege.gesundheit.toLocaleString("de-DE")} %)` : ""}. {Du kannst|Sie können} ${pron(p).ihn} bis Ende ${jzName(t.frist - 1).replace(/^\S+ /, "")} im Pferdemarkt unter „Tierschutz“ zurückkaufen: <b>${fmt(t.preis)}</b> (halber Marktwert + ${fmt(t.kosten)} Klinikkosten).`);
       }
     });
   }
@@ -3507,6 +3585,7 @@
     [/^Kein Käufer|^Kein Gebot/, "kein-kaeufer", "Verkauf: kein Käufer"], [/^Preisvorschlag/, "preisvorschlag", "Verkauf: Preisvorschlag"], [/^Zwischenstand/, "auktion", "Auktion: Zwischenstand"], [/wurde verkauft/, "verkauf", "Pferd verkauft"], [/geplatzt/, "geplatzt", "Verkauf geplatzt"],
     [/ist 3 Jahre alt/, "drei-jahre", "Pferd wird 3 Jahre alt"], [/fängt heute an|hat aufgehört|hat gekündigt| kündigt$|ist krank$|^Urlaubsantrag|Abschlussprüfung|Ausbilder|Ausbildung ab/, "mitarbeiter", "Mitarbeiter"], [/ist auffällig$/, "auffaellig", "Mitarbeiter: Auffälligkeit"], [/^Huftermin/, "huftermin", "Hufschmied: Erinnerung"], [/^Blutbild .*Ergebnis$/, "blutbild", "Tierarzt: Blutbild"], [/^AKU-Protokoll/, "aku", "Tierarzt: AKU-Protokoll"], [/: Totgeburt$/, "totgeburt", "Tierarzt: Totgeburt"], [/^Ankaufsuntersuchung:/, "kaeuferaku", "Verkauf: AKU des Käufers"], [/^Blutprobe /, "probe", "Tierarzt: Blutprobe"], [/hat verfohlt$/, "verfohlt", "Tierarzt: Verfohlen"], [/^Sorge um/, "sorge", "Tierarzt: Warnung"], [/^Überboten/, "ueberboten", "Auktion: überboten"], [/^Zuschlag|^Auktion verloren/, "zuschlag", "Auktion: Ergebnis"], [/ist wieder gesund$/, "ts-gesund", "Tierschutz: Pferd wieder gesund"], [/^Ausbildungsbericht/, "ausbildungsbericht", "Ausbildungsbericht"], [/^Strafe/, "strafe", "Tierschutz: Strafe"], [/beschlagnahmt/, "ts-beschlagnahme", "Tierschutz: Beschlagnahme"],
     [/^Jahresbericht/, "jahresbericht", "Jahresbericht"], [/^Willkommen/, "gnadenhof", "Gnadenhof: Ankunft"], [/^Abschied/, "tod", "Pferd verstorben"], [/^Gentest|^Laborergebnis/, "gentest", "Laborergebnis"],
+    [/^Veterinäramt:/, "veterinaer", "Veterinäramt"],
     [/^Post aufgeräumt/, "post-aufgeraeumt", "Hofverwaltung: Post aufgeräumt"],
   ];
   const briefTyp = betreff => (BRIEF_TYPEN.find(([re]) => re.test(betreff)) || [, "sonstiges", "Sonstige Nachricht"]);
@@ -3547,7 +3626,7 @@
     postKuerzen(); if (spiel.post.length >= POST.warn) tippMerken("postVoll");   // P1: wichtige Briefe werden nie automatisch gelöscht
     if (betreff !== "Neuigkeit" && typ !== "duzen") {
       const K = (spiel.kontakt = spiel.kontakt || {}); K[von] = (K[von] || 0) + 1;
-      if (K[von] >= DU_ANGEBOT_NACH && rufWert(von) >= DU_AB_RUF && !(spiel.duzen && von in spiel.duzen) && !(spiel.duAngeboten || []).includes(von)) {
+      if (von !== "Veterinäramt" && K[von] >= DU_ANGEBOT_NACH && rufWert(von) >= DU_AB_RUF && !(spiel.duzen && von in spiel.duzen) && !(spiel.duAngeboten || []).includes(von)) {
         (spiel.duAngeboten = spiel.duAngeboten || []).push(von);
         brief(von, "Wollen wir uns duzen?", `wir haben in letzter Zeit schon öfter miteinander zu tun gehabt. Wenn es Ihnen recht ist, würden wir Ihnen gern das „Du“ anbieten. Geben Sie uns einfach hier Bescheid.`, { aktion: { typ: "duzen" } });
       }
@@ -3590,9 +3669,10 @@
     return text;
   }
   // Spam: nach einem Jahr (4 Jahreszeiten) automatisch löschen
+  const NIE_SPAM = ["jahresbericht", "veterinaer"];
   const spamAufraeumen = () => { const j = jzJetzt(); spiel.post = (spiel.post || []).filter(b => !b.spam || j - (b.spamSeit != null ? b.spamSeit : b.jz) < 4); };
   function spamSetzen(typ, an) {
-    if (typ === "jahresbericht") return;   // B3: nie Spam
+    if (NIE_SPAM.includes(typ)) return;   // B3/V1: Jahresberichte und Briefe vom Veterinäramt sind nie Spam
     spiel.spam = (spiel.spam || []).filter(t => t !== typ); if (an) spiel.spam.push(typ);
     (spiel.post || []).forEach(b => { if ((b.typ || briefTyp(b.betreff)[1]) !== typ) return; b.typ = typ; b.spam = an; if (an) { b.gelesen = true; b.spamSeit = jzJetzt(); } });
     speichern(); postIconSetzen();
@@ -3718,7 +3798,7 @@
         delete b.fohlen;
         const pf = { ...f, werte: f.werte || erzeugeWerte(f), pflege: erzeugePflege(f) };
         spiel.tierschutz.push({ pferd: pf, frist: jetzt + 2, preis: tierschutzPreis(pf) });
-        ruf("Tierschutzverein", -5);
+        ruf("Tierschutzverein", -5); vetVorfall("fohlen", `das Fohlen ${f.name} hatte keine eigene Box und wurde vom Tierschutz abgeholt`);
         brief("Tierschutzverein", `${f.name} wurde abgeholt`, `da <b>${esc(f.name)}</b> keine eigene Box bekommen hat, haben wir ${pr.ihn} heute abgeholt.<br><br>{Du kannst|Sie können} ${pr.ihn} bis Ende ${jzName(jetzt + 1).replace(/^\S+ /, "")} für ${fmt(tierschutzPreis(pf))} zurückkaufen – {du findest|Sie finden} es im Pferdemarkt unter „Tierschutz“. Dafür {brauchst du|brauchen Sie} eine freie Box.`);
       }
     });
@@ -6622,6 +6702,7 @@
   }
   // beim Kauf: versteckte Befunde gehen mit (gefundene sind schon bekannt), eingelagerte Probe merken
   function akuUebernehmen(p, h, quelle) {
+    p.gekauftTag = spiel.tag;   // V1: in den ersten 7 Tagen zählt ein schlechter Zustand nicht als Vernachlässigung
     const F = akuFunde(h, quelle);
     F.filter(f => f.art).forEach(f => {
       const b = f.ansteckend ? anstecken(p, f.art, `mitgebracht (${quelle})`) : befundNeu(p, f.art, f.grad, `beim Kauf schon vorhanden (${quelle})`);
@@ -10232,13 +10313,15 @@
       });
   }
   // Tageswechsel: jeder Hof läuft für sich (H2), Markt, Labor, Tierschutz und Turnierkalender nur einmal
-  function naechsteNacht() {
+  function naechsteNacht() { nachtTag = spiel.tag; try { return naechsteNacht0(); } finally { nachtTag = null; vetAbschluss(); } }   // V1: alles in einer Nacht = ein Vorfall; Strafe und Briefe am Ende
+  function naechsteNacht0() {
     if (spiel.ansehen) return;
     jedenHof(() => { try { waschAbend(); } catch (e) { console.error("Waschen:", e); } tote(); turnierNacht(); }, true);   // W4: abends waschen Pfleger/Einsteller-Leistung · Turnierpferde von heute: Ergebnis (Brief kommt am nächsten Tag)
     spiel.tag += 1;
     jedenHof(hofNacht, true);
     tierschutzKlinik(); tierschutzFohlen(); laborNacht(); auktionsNacht(); try { rarAuktionEnde(); } catch (e) { console.error("Raritäten:", e); }   // Dome 20.10.: Raritäten-Auktionen enden tageweise
     if (datum().t === 1) weihnachtsSpende();   // v378
+    if (datum().t === 1) vetJahreszeit();   // V1: Verjährung der Vorfälle
     if (datum().t === 1) { jedenHof(() => { stallartJahreszeit(); patenJahreszeit(); pensionJahreszeit(); bereiterPensionAbrechnung(); fremdFohlenJahreszeit(); offenstallJahreszeit(); kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); jahreszeitBeginn(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); bereiterAbrechnung(); maKnappPruefen(); dispoJahreszeit(); bestenAlle(); auktionsEnde(); fohlenAbsetzen(); stutenAusAbfohl(); }, true); spamAufraeumen(); hoefeVersteigern(); jahresbericht(); try { rarJahreszeit(); } catch (e) { console.error("Raritäten:", e); } try { stufeBrief(); } catch (e) { console.error("Stufe:", e); } }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
     turnierKalender();
     jedenHof(hofMorgen, true);
@@ -13391,7 +13474,7 @@
     const p = b.pferd, e = einstellerVon(p); if (!e) return false;
     const L = einstellerListe(); L.splice(L.indexOf(e), 1);
     const schuld = /Entkräftung|unbehandelt/.test(p.todesursache || "");   // Vernachlässigung durch Hof oder Angestellte
-    if (schuld) { const wert = Math.round(marktwert(p) * PENSION.entsch); pensionAnsehen(-15); buchen(-wert, "Pension: Entschädigung");
+    if (schuld) { const wert = Math.round(marktwert(p) * PENSION.entsch); pensionAnsehen(-15); buchen(-wert, "Pension: Entschädigung"); vetVorfall("pension", `Pensionspferd ${p.name} ist durch Vernachlässigung gestorben`);
       brief(eName(e), `${p.name} ist tot`, `ich bin fassungslos: <b>${esc(p.name)}</b> ist bei {euch|Ihnen} gestorben (${esc(p.todesursache)}). Das wäre bei guter Versorgung nicht passiert. Unser Vertrag ist beendet, und ich verlange Schadenersatz: <b>${fmt(wert)}</b> (der Wert von ${esc(p.name)}) – das Geld ist bereits abgebucht.`, { w: e.w }); }
     else brief(eName(e), `${p.name} ist tot`, `ich bin sehr traurig: <b>${esc(p.name)}</b> ist gestorben (${esc(p.todesursache || "Ursache unbekannt")}). Danke, dass {ihr euch|Sie sich} so gut gekümmert {habt|haben}. Unser Vertrag ist damit beendet.`, { w: e.w });
     b.pferd = null; delete b.fohlen; b.tot = false; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0;
@@ -14461,6 +14544,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         <dt>Spieltempo</dt><dd>${((TEMPI.find(x => x[0] === tpj()) || [0, "eigenes"])[1])} (${tpj()} Tage pro Jahreszeit)</dd>
         <dt>Pferde</dt><dd>${spiel.boxen.filter(b => b.pferd).length} in ${spiel.boxen.length} ${spiel.boxen.length === 1 ? "Box" : "Boxen"}${spiel.boxen.some(b => b.fohlen) ? ` · ${spiel.boxen.filter(b => b.fohlen).length} Fohlen bei der Mutter` : ""}</dd>
         <dt>Mitarbeiter</dt><dd>${Object.entries(MA_TYP).map(([t, T]) => { const a = aktive(t).length; return a ? `${a} ${a === 1 ? T.name : T.mehr}` : ""; }).filter(Boolean).join(", ") || "keine"}</dd>
+        ${vetZeileHTML()}
         <dt>Lager</dt><dd>${(() => { const L = lager(), n = L.putzzeug.length + L.hufschuhe.length; return n ? `${L.putzzeug.length ? `${L.putzzeug.length}× Putzzeug` : ""}${L.putzzeug.length && L.hufschuhe.length ? ", " : ""}${L.hufschuhe.length ? `${L.hufschuhe.length}× Hufschuhe` : ""}` : "leer"; })()}</dd>
         <dt>Geld</dt><dd ${spiel.admin ? 'class="hf-edit" id="hfGeld" title="antippen zum Ändern (Adminmodus)"' : ""}>${fmt(spiel.geld || 0)}${spiel.admin ? ' <span class="stift">✏️</span>' : ""}</dd></dl>` + bestenKarteHTML() + (spiel.hof && spiel.hof.art ? stallartHTML() : "") + `<h4 class="ma-titel">📦 Lager</h4>${lagerHTML()}`;   // Dome (v296): Stallart über dem Lager
     } else if (hofReiter === "reiter") {
@@ -14507,7 +14591,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         const bi = post.findIndex(b => b.id === br.id);
         inhalt = `<div class="brief-nav"><button class="knopf zweit" id="hbVor" ${bi <= 0 ? "disabled" : ""} aria-label="Neuerer Brief">‹</button><span>Brief ${bi + 1} von ${post.length}</span><button class="knopf zweit" id="hbNach" ${bi < 0 || bi >= post.length - 1 ? "disabled" : ""} aria-label="Älterer Brief">›</button></div>${briefPapier(br)}
           <div class="brief-knoepfe"><button class="knopf zweit" id="briefZurueck">‹ ${br.spam ? "Spam" : "Postfach"}</button>${br.spam ? `<button class="knopf" id="keinSpam">✅ Kein Spam</button>` : br.typ === "jahresbericht" ? "" : `<button class="knopf zweit" id="istSpam">🚫 Spam</button>`}<button class="knopf rot" id="briefWeg">🗑️ Löschen</button></div>
-          ${br.typ === "jahresbericht" ? "" : `<p class="text" style="margin-top:8px"><small>${br.spam ? `Ereignis „${briefTyp(br.betreff)[2]}“ ist als Spam markiert. Diese Briefe bleiben ein Jahr im Spamordner und werden dann gelöscht.` : `„Spam“ verschiebt alle Briefe zum Ereignis „${briefTyp(br.betreff)[2]}“ in den Spamordner – auch künftige, ohne Benachrichtigung.`}</small></p>`}`;
+          ${NIE_SPAM.includes(br.typ) ? "" : `<p class="text" style="margin-top:8px"><small>${br.spam ? `Ereignis „${briefTyp(br.betreff)[2]}“ ist als Spam markiert. Diese Briefe bleiben ein Jahr im Spamordner und werden dann gelöscht.` : `„Spam“ verschiebt alle Briefe zum Ereignis „${briefTyp(br.betreff)[2]}“ in den Spamordner – auch künftige, ohne Benachrichtigung.`}</small></p>`}`;
       } else if (!post.length) inhalt = ordnerLeiste + `<div class="post-leer">${BRIEF_SVG(true).replace("<svg", '<svg width="60"')}<br>${postOrdner === "spam" ? "Der Spamordner ist leer." : postOrdner === "jahr" ? "Noch kein Jahresbericht. Er kommt zu Beginn jedes neuen Jahres." : postOrdner === "stern" ? "Noch keine wichtigen Briefe. Tippe beim Lesen oder in der Liste auf den ☆, um einen Brief zu markieren." : "Dein Postfach ist leer."}</div>`;
       else if (postAuswahl) inhalt = ordnerLeiste + `<div class="post-leiste"><span>${postAuswahl.size} von ${post.length} markiert</span><span><button id="postAlle">${postAuswahl.size === post.length ? "Keine" : "Alle"} markieren</button></span></div>
         <div class="briefe">${post.map(b => `<button class="brief auswahl ${postAuswahl.has(b.id) ? "markiert" : ""} ${b.gelesen ? "" : "neu"}" data-mark="${b.id}"><span class="haken">${postAuswahl.has(b.id) ? "✓" : ""}</span><span class="ico">${BRIEF_SVG(b.gelesen)}</span>
@@ -14563,6 +14647,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     });
     if ($("hfDatei")) $("hfDatei").onclick = () => dateiWahl();
     if ($("hfAdmin")) $("hfAdmin").onclick = () => { spiel.admin = !spiel.admin; if (!spiel.admin && aktenReiter === "test") { aktenReiter = "gesundheit"; } speichern(); zeigeHof(); };
+    if ($("vetZeile")) $("vetZeile").onclick = () => vetDialog(() => zeigeHof());
     if ($("hfGeld")) $("hfGeld").onclick = () => {
       const dd = $("hfGeld"); dd.onclick = null; dd.innerHTML = `<input type="number" step="50" value="${Math.round(spiel.geld || 0)}">`;
       const inp = dd.querySelector("input"); inp.focus(); inp.select();
@@ -14728,7 +14813,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     const alt = br.du === undefined, du = alt ? br.von !== "Tierschutzverein" : br.du;   // alte Briefe: wie damals geschrieben
     const anrede = du ? `Hallo ${esc(spName)},` : `Guten Tag ${esc(spName)},`;
     const weiblich = ["Tierarztpraxis", "Hofverwaltung", "Aufzuchtstation"].includes(br.von) || br.w === true;
-    const unterschrift = ({ Futterberatung: "Futterexperte" })[br.von] || br.von;   // Dome: der Futterexperte unterschreibt selbst
+    const unterschrift = ({ Futterberatung: "Futterexperte", "Veterinäramt": "Amtstierarzt" })[br.von] || br.von;   // Dome: der Futterexperte unterschreibt selbst
     const gruss = br.betreff === "Neuigkeit" || (alt && br.von === "Tierschutzverein") ? "" : du ? `<br><br>Viele Grüße<br>${weiblich ? "Deine" : "Dein"} ${unterschrift}` : `<br><br>Mit freundlichen Grüßen<br>${weiblich ? "Ihre" : "Ihr"} ${unterschrift}`;
     const akt = br.aktion ? (br.hid && br.hid !== aktivHid() && hofVon(br.hid) ? imHof(br.hid, () => briefAktionHTML(br)) : briefAktionHTML(br)) : "";   // Brief eines anderen Hofs: dessen Rechnungen, Pferde, Mitarbeiter
     return `<div class="brief-papier"><div class="kopf"><span>Von: <b>${esc(br.von)}</b><br>An: <b>${esc(spName)}</b>, ${esc(br.hid && hofVon(br.hid) ? hofNameVon(br.hid) : br.hofName || hofName())}</span><span>${briefDatum(br)}</span></div>

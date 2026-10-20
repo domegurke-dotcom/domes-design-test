@@ -21,6 +21,7 @@ z. B. „pmk - Pferdehändler“ oder „asr - Putzkiste“.
 | **Daten** | Box - stb - Daten |
 | **Genetik** | Box - stb - Genetik |
 | **Aufschlüsselung** oder **afs** | Box - stb - Aufschlüsselung |
+| **Merkmale** oder **mkm** | Box - stb - Merkmale (Beurteilungsbogen; **gw**, **eig**, **Charakter** sind jetzt Abschnitte darin, z. B. Box - stb - Merkmale - Gangwerk) – ab PLAN-MERKMALE.md |
 | **Gangwerk** oder **gw** | Box - stb - Gangwerk |
 | **Charakter** | Box - stb - Charakter |
 | **Ausbildung** oder **asb** | Box - stb - Ausbildung (der *Ausbildungsstall* wird immer ausgeschrieben) |

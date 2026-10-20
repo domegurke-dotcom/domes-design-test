@@ -1007,7 +1007,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "586";
+  const SPIEL_VERSION = "587";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1015,11 +1015,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=586"></script>
-<script src="pferd.js?v=586"></script>
-<script src="boxstufen.js?v=586"></script>
-<script src="kopfneu.js?v=586"></script>
-<script src="waschbild.js?v=586"></script>
+<script src="lz-string.min.js?v=587"></script>
+<script src="pferd.js?v=587"></script>
+<script src="boxstufen.js?v=587"></script>
+<script src="kopfneu.js?v=587"></script>
+<script src="waschbild.js?v=587"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -1851,7 +1851,7 @@
     return a.some(x => !erlaubt.includes(x)) || Object.values(b).some(st => st && !["ballen", "krone"].includes(st)); }
   const kopfOpt = (p, andere) => { if (!p) return {}; const kz = kopfZeichen(p);
     const b = beinZeichen(p), z = zebraVon(p);
-    return { kopfform: kopfVon(p), ohrStellung: ohrenVon(p, andere), eigenKopf: p.nase === "spiel" ? false : undefined, kopfAbz: kz.zeichnung || kz.abz, maul: kz.maul, augeBlau: kz.augeBlau,
+    return { bau: bauOpt(p), kopfform: kopfVon(p), ohrStellung: ohrenVon(p, andere), eigenKopf: p.nase === "spiel" ? false : undefined, kopfAbz: kz.zeichnung || kz.abz, maul: kz.maul, augeBlau: kz.augeBlau,
       beinAbz: { vn: b.bvl, vf: b.bvr, hn: b.bhl, hf: b.bhr }, zebra: z.zebra, schulter: z.schulter, ohrGr: ohrGrVon(p), musterStufe: musterStufeVon(p), ...(z2 => ({ rabi: z2.rabi, birdcatcher: z2.bird, bendor: z2.bendor, bendorZone: z2.bendorZone, brindle: z2.brindle, brindleArt: z2.brindleArt, dw: z2.dw, lp: z2.lp }))(zeichenVon(p)), kroete: anzahl(genVon(p), "Cr") === 2, glanz: glanzVon(p), bronze: bronzeVon(p), glanzAepfel: aepfelVon(p), ...kombiVon(p) }; };
   // Hengste der Deckstation – fest für die ganze Jahreszeit gespeichert (jeder mit eigener Akte)
   function deckhengste(stute) {
@@ -1870,10 +1870,76 @@
   }
   // eigene Hengste ab 3 Jahren aus den anderen Boxen
   function hengstKopie(h) {
-    ahnenFuellen(h); nrVon(h); exVon(h);
+    ahnenFuellen(h); nrVon(h); exVon(h); bauErgaenzen(h);
     const k = JSON.parse(JSON.stringify(h)); delete k.pflege; delete k.klinik; delete k.traechtig;
     if (!k.geb && gebVon(h)) k.geb = { ...gebVon(h) };
     return k;
+  }
+  // ---------- Exterieur (PLAN-MERKMALE M1, Dome 20.10.2026): zwölf Werte je Pferd (0–100) mit Zuchtziel je Rasse, vererbt, fest ab Geburt (außer Muskel und Huf) ----------
+  // p.bau = { rahmen, halsL, halsA, schulter, ruecken, kruppe, muskel (Anlage), fundament, fessel, stV, stH, huf (Anlage) }; Ist-Werte: muskelIst(p), hufIst(p)
+  const BAU_KEYS = ["rahmen", "halsL", "halsA", "schulter", "ruecken", "kruppe", "muskel", "fundament", "fessel", "stV", "stH", "huf"], BAU_S = 15;
+  const BAU_NAME = { rahmen: "Rahmen", halsL: "Hals: Länge", halsA: "Hals: Aufsatz", schulter: "Schulter / Widerrist", ruecken: "Rücken", kruppe: "Kruppe", muskel: "Bemuskelung", fundament: "Röhrbein / Gelenke", fessel: "Fesselung", stV: "Stellung vorne", stH: "Stellung hinten", huf: "Huf" };
+  // Zuchtziel (Mitte) je Rassengruppe – Reihenfolge der Zahlen: rahmen, halsL, halsA, schulter, ruecken, kruppe, muskel, fundament, fessel, huf (Stellung vorne/hinten überall 50 = gerade)
+  const BAU_GRUPPEN = { edel: [62, 62, 64, 62, 45, 62, 45, 42, 55, 50], warmblut: [55, 60, 58, 65, 55, 55, 55, 55, 55, 50], barock: [42, 55, 70, 55, 50, 38, 58, 55, 58, 50], western: [42, 42, 38, 58, 48, 45, 72, 55, 50, 50],
+    kaltblut: [45, 42, 55, 48, 50, 40, 68, 72, 48, 55], cob: [38, 42, 52, 50, 48, 40, 62, 62, 48, 55], islaender: [42, 50, 58, 55, 50, 42, 60, 62, 48, 55], kleinpony: [38, 38, 50, 45, 48, 40, 60, 60, 45, 55] };
+  const BAU_GRUPPE = { araber: "edel", shagya: "edel", angloaraber: "edel", vollblut: "edel", tekke: "edel", marwari: "edel", hannoveraner: "warmblut", trakehner: "warmblut", friese: "barock", andalusier: "barock", lipizzaner: "barock", barockpinto: "barock", knabstrupper: "barock",
+    quarter: "western", paint: "western", appaloosa: "western", shire: "kaltblut", clydesdale: "kaltblut", noriker: "kaltblut", tinker: "cob", welshcob: "cob", fell: "cob", dales: "cob", haflinger: "cob", lewitzer: "cob", fjord: "cob", isi: "islaender", shetty: "kleinpony" };
+  const BAU_EINZEL = { vollblut: { halsA: 50, halsL: 58, fundament: 45 }, araber: { ruecken: 38 }, friese: { fundament: 58, fessel: 60 }, andalusier: { muskel: 60 }, lipizzaner: { muskel: 60 }, quarter: { kruppe: 42 }, tinker: { fundament: 66 }, fell: { fundament: 66 }, dales: { fundament: 66 }, fjord: { halsL: 38 } };
+  const bauKlemm = x => Math.max(0, Math.min(100, Math.round(x)));
+  const bauGauss = r => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r());
+  function bauZielRasse(id) {
+    const g = BAU_GRUPPEN[BAU_GRUPPE[id] || "warmblut"], z = { stV: 50, stH: 50 }; ["rahmen", "halsL", "halsA", "schulter", "ruecken", "kruppe", "muskel", "fundament", "fessel", "huf"].forEach((k, i) => { z[k] = g[i]; });
+    return Object.assign(z, BAU_EINZEL[id] || {});
+  }
+  const bauZielCache = {};
+  // Zuchtziel des Pferdes: reine Rasse direkt, Mischlinge als gewichteter Schnitt nach Rasseanteil
+  function bauZiel(p) {
+    const A = anteileVon(p), ks = Object.keys(A), key = ks.map(k => `${k}:${Math.round(A[k])}`).join("|");
+    if (bauZielCache[key]) return bauZielCache[key];
+    const z = {}; BAU_KEYS.forEach(k => { z[k] = ks.reduce((s, id) => s + bauZielRasse(id)[k] * A[id] / 100, 0); });
+    return (bauZielCache[key] = z);
+  }
+  // fehlende Exterieur-Werte einmal auswürfeln (alte Spielstände, Markt, Deckstation, Archiv): fester Seed je Pferd, ohne Brief – Normalverteilung um das Zuchtziel
+  function bauErgaenzen(p) {
+    if (!p || !p.rasse) return null;
+    if (p.bau && BAU_KEYS.every(k => p.bau[k] != null)) return p.bau;
+    const r = zufall((p.id || p.nr || p.name) + "-bau"), Z = bauZiel(p), b = p.bau || {};
+    BAU_KEYS.forEach(k => { const w = bauKlemm(Z[k] + bauGauss(r) * BAU_S); if (b[k] == null) b[k] = w; }); p.bau = b; return b;
+  }
+  // Vererbung: Mitte der Eltern + 0,2 × (Zuchtziel des Fohlens − Mitte) + Zufall (Streuung 0,6 × BAU_S); mit 3 % zusätzlich Mutation (±1,5 bis ±2,5 × BAU_S). Gibt die Herkunft je Merkmal zurück (H.bau)
+  const BAU_MUTATION = 0.03;
+  function bauErben(M, V, f) {
+    const bm = bauErgaenzen(M) || {}, bv = bauErgaenzen(V) || {}, Z = bauZiel(f), b = {}, her = {};
+    BAU_KEYS.forEach(k => { const mid = ((bm[k] != null ? bm[k] : Z[k]) + (bv[k] != null ? bv[k] : Z[k])) / 2; let w = mid + 0.2 * (Z[k] - mid) + bauGauss(Math.random) * 0.6 * BAU_S, quelle = "Schnitt der Eltern";
+      if (Math.random() < BAU_MUTATION) { w += (Math.random() < 0.5 ? -1 : 1) * (1.5 + Math.random()) * BAU_S; quelle = "Mutation"; }
+      b[k] = bauKlemm(w); her[k] = { wert: b[k], quelle, von: quelle === "Mutation" ? "–" : `${M.name} / ${V.name}` }; });
+    f.bau = b; return her;
+  }
+  const bauJahre = p => p.geb ? alterJZ(p) / 4 : (p.alter != null ? p.alter : 5);
+  const bauWaechst = p => bauJahre(p) < 3;   // Fohlen und Jährlinge: „Fohlen wachsen noch – endgültig mit 3 Jahren“, die Werte zeigen die Anlage
+  // Bemuskelung (Ist): Anlage + 0,4 × (Kraft-Ist − Kraft-Anlage) − 3 × (4 − Futterzustand) bei Futterzustand unter 4; Alter ab 15 Jahren −1 je Jahr (höchstens −10), Boxenruhe oder lange Krankheit −5
+  const MUSKEL_ZAHL = { kraft: 0.4, futter: 3, futterGrenze: 4, alterAb: 15, alterMax: 10, krank: 5 };
+  function muskelIst(p) {
+    const b = bauErgaenzen(p); if (!b) return 50; if (bauWaechst(p) || !p.werte || !p.werte.ist || !p.werte.anlage) return b.muskel;
+    let m = b.muskel + MUSKEL_ZAHL.kraft * ((p.werte.ist.kraft || 0) - (p.werte.anlage.kraft || 0));
+    const fz = futterZustand(p); if (fz < MUSKEL_ZAHL.futterGrenze) m -= MUSKEL_ZAHL.futter * (MUSKEL_ZAHL.futterGrenze - fz);
+    m -= Math.min(MUSKEL_ZAHL.alterMax, Math.max(0, bauJahre(p) - MUSKEL_ZAHL.alterAb));
+    if (p.boxenruhe || (p.befunde || []).some(x => spiel.tag - (x.seit || spiel.tag) > tpj())) m -= MUSKEL_ZAHL.krank;
+    return Math.max(0, Math.min(100, Math.round(m * 10) / 10));
+  }
+  // Huf (Ist): Abweichung der Anlage vom Zuchtziel × 0,7 bei guter Hufpflege (Hufschmied-Termin eingehalten, Hufe in der letzten Jahreszeit ausgekratzt), × 1,5 bei vernachlässigter (Termin deutlich überfällig oder zwei Jahreszeiten nicht ausgekratzt)
+  const HUF_PFLEGE = { gut: 0.7, schlecht: 1.5 };
+  function hufIst(p) {
+    const b = bauErgaenzen(p); if (!b) return 50; if (bauWaechst(p) || !p.pflege) return b.huf;
+    const ziel = bauZiel(p).huf, aus = spiel.tag - (p.ausgekratzt || -1e9), gut = hufLaenge(p) <= 1 && aus <= tpj(), schlecht = hufLaenge(p) > 1.5 || aus > 2 * tpj();
+    return Math.max(0, Math.min(100, Math.round((ziel + (b.huf - ziel) * (gut ? HUF_PFLEGE.gut : schlecht ? HUF_PFLEGE.schlecht : 1)) * 10) / 10));
+  }
+  // alle zwölf Werte, wie sie heute sind (Muskel und Huf als Ist-Wert)
+  function bauIst(p) { const b = bauErgaenzen(p); return b ? { ...b, muskel: muskelIst(p), huf: hufIst(p) } : null; }
+  // fürs Pferdebild: Abweichung vom Zuchtziel in Streuungen (σ) für Rahmen, Hals (Länge, Aufsatz), Kruppe, Fundament, Bemuskelung – zeichnePferd macht daraus höchstens ±15 % (opt.bau)
+  function bauOpt(p) {
+    if (!p || !p.rasse) return undefined; let I, Z; try { I = bauIst(p); Z = bauZiel(p); } catch (e) { return undefined; } if (!I) return undefined;
+    const d = k => Math.round((I[k] - Z[k]) / BAU_S * 100) / 100; return { rahmen: d("rahmen"), halsL: d("halsL"), halsA: d("halsA"), kruppe: d("kruppe"), fundament: d("fundament"), muskel: d("muskel") };
   }
   // ---------- Vererbung von Stockmaß, Gangwerk, Charakter und Schimmel-Veranlagung ----------
   // 30 % Mutter · 30 % Vater · 20 % zwischen den Eltern · 10 % ein Großelternteil · 7 % ein Urgroßelternteil · 3 % Mutation
@@ -1958,6 +2024,7 @@
     f.ex = {};
     Object.entries(EX_GRENZEN).forEach(([k, [min, max, schritt]]) => { her.ex[k] = erben(M, V, x => ANL_SEED[k] ? anl(x, k) : exVon(x)[k], { min, max, schritt, mut: (max - min) * .15 }); f.ex[k] = her.ex[k].wert; });
     f.farbe = farbeAus(fGen, f.ex);
+    her.bau = bauErben(M, V, f);   // M1: Exterieur vor werteErgaenzen(f), sonst würfelt bauErgaenzen es neu aus
     if (f.farbe === "lethalwhite") { f.lethalWhite = true; f.lwTag = spiel.tag; }   // O/O: stirbt in den ersten Lebenstagen
     // Gangwerk und Charakter
     const w = erzeugeWerte(f);
@@ -3041,6 +3108,9 @@
     if (aufschlTeil === "rasse") html = tab(["", "Anteile"], [["Mutter", anteileText(anteileVon(M.rasse ? M : { rasse: p.rasse }))], ["Vater", anteileText(anteileVon(V.rasse ? V : { rasse: p.rasse }))], [H ? "Fohlen (Schnitt)" : "Pferd", anteileText(anteileVon(p))], ["zugeordnet", rasseById(p.rasse).name]]);
     if (aufschlTeil === "exterieur") html = tab(kopf, [["Stockmaß (Endmaß)", `${wert(H && H.sm, smVon(p))} cm`, M.sm ? `${M.sm} cm` : "–", V.sm ? `${V.sm} cm` : "–", q(H && H.sm)],
         ...Object.keys(EX_GRENZEN).map(k => [EX_NAME[k] || k, zahl(wert(H && H.ex && H.ex[k], ex[k])), zahl((M.ex || {})[k]), zahl((V.ex || {})[k]), q(H && H.ex && H.ex[k])])]);
+    if (aufschlTeil === "exterieur") { const b = bauErgaenzen(p), Z = bauZiel(p), I = bauIst(p), HB = (H && H.bau) || {}, mq = a => (a.bau || {});   // M1: zwölf Exterieur-Werte mit Zuchtziel, Herkunft und Ist-Wert
+      html += tab(["Merkmal", "Wert", "Ziel", "Mutter", "Vater", "Quelle"], BAU_KEYS.map(k => { const e = HB[k], ist = (k === "muskel" || k === "huf") ? ` <small>(heute ${zahl(I[k])})</small>` : ""; return [BAU_NAME[k], `${zahl(b[k])}${ist}`, zahl(Math.round(Z[k] * 10) / 10), zahl(mq(M)[k]), zahl(mq(V)[k]), H && H.bau ? herkunftText(e) : "angeboren (Stammpferd)"]; }))
+        + `<p class="text"><small>Wert = Anlage (fest ab Geburt). Bemuskelung und Huf zeigen heute den Ist-Wert (Training, Futterzustand, Alter, Krankheit bzw. Hufpflege). Abweichung d = |Wert − Ziel| / ${BAU_S}. Fohlen wachsen noch – endgültig mit 3 Jahren.</small></p>`; }
     if (aufschlTeil === "gang") html = tab(kopf, Object.keys({ ...p.werte.gang, ...(H ? H.gang : {}) }).map(k => { const e = H && H.gang[k]; return [gn[k] || k, e ? (e.wert == null ? "– (nicht vererbt)" : zahl(e.wert)) : zahl(p.werte.gang[k]), zahl(gw(M)[k]), zahl(gw(V)[k]), q(e)]; }));
     if (aufschlTeil === "charakter") html = tab(kopf, CHARAKTER.map(t => { const e = H && H.charakter[t.key]; return [t.titel, e ? e.wert : p.werte.charakter[t.key], zahl(cw(M)[t.key]), zahl(cw(V)[t.key]), q(e)]; }));
     if (aufschlTeil === "anlage") { werteErgaenzen(p); const aw = a => (a.werte || {}).anlage || {};
@@ -3051,6 +3121,7 @@
         Object.entries(H.gang || {}).forEach(([k, e]) => { if (e.quelle === "Mutation" && e.wert != null) m.push([`Gangwerk: ${gn[k] || k}`, `Note ${zahl(e.wert)}`]); });
         Object.entries(H.charakter || {}).forEach(([k, e]) => { if (e.quelle === "Mutation") m.push([`Charakter: ${(CHARAKTER.find(t => t.key === k) || {}).titel || k}`, e.wert]); });
         Object.entries(H.ex || {}).forEach(([k, e]) => { if (e.quelle === "Mutation") m.push([EX_NAME[k] || k, zahl(e.wert)]); });
+        Object.entries(H.bau || {}).forEach(([k, e]) => { if (e.quelle === "Mutation") m.push([`Exterieur: ${BAU_NAME[k] || k}`, zahl(e.wert)]); });
         Object.entries(H.anlage || {}).forEach(([k, e]) => { if (e.quelle === "Mutation") m.push([`Anlage: ${([...WERTE_KOERPER, ...WERTE_KOPF].find(x => x.key === k) || {}).titel || k}`, e.wert]); }); }
       html = m.length ? tab(["Merkmal", "Wert"], m) : `<p class="text">${H ? "Bei diesem Pferd ist keine Mutation aufgetreten – alle Werte stammen von Vorfahren." : "Stammpferd ohne bekannte Eltern – Mutationen lassen sich nicht feststellen."}</p>`; }
     return `<button class="knopf zweit frei" id="aufschlZurueck" style="width:auto;padding:6px 12px;margin-bottom:8px">‹ Übersicht</button><h3 class="schein-zwischen" style="margin-top:4px">${ico} ${titel}</h3>${html}`;
@@ -4701,7 +4772,7 @@
       if (weissGen && wahl.gen) { const g = wahl.gen, ex = exVon(wahl), st = Math.min(3, musterStufeAus(ex.muster != null ? ex.muster : .55));   // v507 (Dome): Kopfweiß, das zur Scheckung typisch dazugehört, immer zeigen (je Ausprägung)
         const typ = hat(g, "O") && hat(g, "To") ? MUSTER_KOPF_TYP.tovero : anzahl(g, "Sw") ? MUSTER_KOPF_TYP.splash : hat(g, "O") ? MUSTER_KOPF_TYP.overo : hat(g, "Sb") ? MUSTER_KOPF_TYP.sabino : MUSTER_KOPF_TYP.dw;
         ex.weiss = weissFuer(typ[st] || typ[typ.length - 1], g, ex); ex.schnA = .99; } }   // v480 (Dome): Rassenansicht ohne Abzeichen und Mehlmaul – Weiß nur, wenn es zur Scheckung gehört (eigene Wahl unter „Gene selbst wählen“)
-    const z = zeichnePferd(wahl.rasse, fb(wahl, wahl.alter), { seed: wahl.id, geschlecht: wahl.geschlecht, alterStufe: stufeAusMonaten(wahl.alter * 12), ...kopfOpt(wahl) });
+    const z = zeichnePferd(wahl.rasse, fb(wahl, wahl.alter), { seed: wahl.id, geschlecht: wahl.geschlecht, alterStufe: stufeAusMonaten(wahl.alter * 12), ...kopfOpt(wahl), bau: undefined });
     saisonFix = null;
     { const hw = $("varHinweis"), M = MUSTER_WAHL.find(x => x.k === wahl.muster), t = M ? `${M.n}${M.stufe ? " – " + (STUFEN_NAME[["tobiano", "overo", "tovero", "splash", "sabino"].includes(wahl.muster) || ["dw"].includes(wahl.muster) ? "weiss" : wahl.muster === "roan" ? "roan" : ["bird", "grau", "apfel", "fliegen", "bendor", "snow"].includes(wahl.muster) ? wahl.muster : /^brindle/.test(wahl.muster) ? "brindle" : wahl.muster === "tiger" ? "tiger" : wahl.muster === "fewspot" ? "fewspot" : ["schabrackentiger", "schabracke"].includes(wahl.muster) ? "decke" : "weiss"][wahl.mStufe == null ? 1 : wahl.mStufe] || "") : ""}${wahl.varText ? " · " + wahl.varText : ""}` : wahl.varText;   // v493: Farbvariante auch bei gewähltem Muster anzeigen
       const zuJung = M && M.grau && !new RegExp("_" + (M.grau === "weiss" ? "(grau|weiss)" : M.grau) + "(_|$)").test(fb(wahl, wahl.alter));   // v476: so jung noch nicht so weit ausgeschimmelt
@@ -4947,7 +5018,7 @@
     wahl.farbe = farbeAus(g, ex);
     // Bild
     saisonFix = glSaison;
-    const z = zeichnePferd(wahl.rasse, fb(wahl, wahl.alter), { seed: wahl.id, geschlecht: wahl.geschlecht, alterStufe: stufeAusMonaten(wahl.alter * 12), statisch: 1, ...kopfOpt(wahl), ...(wahl.ohrVorschau ? { ohrStellung: { ...wahl.ohrVorschau, spiel: false } } : {}) });
+    const z = zeichnePferd(wahl.rasse, fb(wahl, wahl.alter), { seed: wahl.id, geschlecht: wahl.geschlecht, alterStufe: stufeAusMonaten(wahl.alter * 12), statisch: 1, ...kopfOpt(wahl), bau: undefined, ...(wahl.ohrVorschau ? { ohrStellung: { ...wahl.ohrVorschau, spiel: false } } : {}) });
     saisonFix = null;
     $("glSaison").innerHTML = JZ.map(([n, ico], i) => i !== 1 && i !== 3 ? "" : `<button class="chip ${i === glSaison ? "an" : ""}" data-gls="${i}" title="${n}">${ico} ${n}</button>`).join("");
     $("glSaison").querySelectorAll("[data-gls]").forEach(b => b.onclick = () => { glSaison = +b.dataset.gls; glZeigen(); });
@@ -13626,6 +13697,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <h3>🏘️ Hof-Ausbau (H1: Hofkauf und Kredit)</h3>
       <p><b>Neues Spiel:</b> Startmenü → Neues Spiel → Charakter (ohne Hofname) → Immobilien-Menü. Startkapital ${fmt(START_KAPITAL)}. Am Anfang nur kaufbar: Alter Pensionsstall ${fmt(20000)} (6 baufällige Boxen = Stufe 1, Reitplatz, Gelände, 2 ha: Hofstelle mit Reitplatz + 1 ha Weide). Eigenanteil ${fmt(10000)}, Kredit ${fmt(10000)} → ${fmt(5000)} bleiben. Hofname wird beim Kauf eingegeben. Start immer als Pensionsstall (<code>spiel.stallarten = ["pension"]</code>, <code>spiel.hof</code>). Alte Spielstände (ohne <code>spiel.hofAusbau</code>) lassen sich nicht weiterspielen.</p>
       <p><b>Weitere Immobilien</b> (ausgegraut, Kauf ab H2): ${IMMOBILIEN.filter(I => !I.start).map(I => `${I.n} ${fmt(I.preis)}`).join(" · ")}. Frei, wenn der erste Kredit zur Hälfte getilgt ist und die Hälfte des Kaufpreises auf dem Hofkonto liegt.</p>
+      <p><b>Exterieur (v587, M1, Dome 20.10.):</b> zwölf Werte je Pferd in <code>p.bau</code> (${BAU_KEYS.map(k => BAU_NAME[k]).join(", ")}), jeder 0–100, fest ab Geburt (Bemuskelung und Huf sind die Anlage). Zuchtziel je Rasse <code>bauZielRasse</code> aus Gruppen (<code>BAU_GRUPPEN</code>, Stellung vorne/hinten überall 50) und Einzelwerten (<code>BAU_EINZEL</code>), Mischlinge als gewichteter Schnitt nach Rasseanteil (<code>bauZiel</code>), Streuung <code>BAU_S</code> = ${BAU_S}. Abweichung d = |Wert − Ziel| / ${BAU_S} (ideal d &lt; 0,7 ≈ 51 %, ab 1,75 ≈ 8 %, ab 2,33 ≈ 2 %). Alte Pferde, Markt, Deckstation, Archiv: <code>bauErgaenzen</code> würfelt einmal aus (Seed Pferde-ID + „-bau“, Normalverteilung um das Ziel). Vererbung <code>bauErben</code>: Mitte der Eltern + 0,2 × (Zuchtziel des Fohlens − Mitte) + Zufall (0,6 × ${BAU_S}), mit ${BAU_MUTATION * 100} % Mutation (±1,5 bis ±2,5 × ${BAU_S}); Herkunft in <code>herkunft.bau</code>. Ist-Werte: <code>muskelIst</code> = Anlage + ${MUSKEL_ZAHL.kraft} × (Kraft-Ist − Kraft-Anlage) − ${MUSKEL_ZAHL.futter} × (${MUSKEL_ZAHL.futterGrenze} − Futterzustand) unter ${MUSKEL_ZAHL.futterGrenze}, Alter ab ${MUSKEL_ZAHL.alterAb} Jahren −1 je Jahr (höchstens −${MUSKEL_ZAHL.alterMax}), Boxenruhe oder lange Krankheit −${MUSKEL_ZAHL.krank}; <code>hufIst</code> = Ziel + Abweichung × ${HUF_PFLEGE.gut} (gute Pflege) bzw. × ${HUF_PFLEGE.schlecht} (vernachlässigt); Fohlen/Jährlinge zeigen die Anlage. Bild: <code>opt.bau</code> (<code>bauOpt</code>, in <code>kopfOpt</code>; <code>bauK</code> in pferd.js): je σ 5 %, höchstens ±15 % auf Rumpflänge/-tiefe, Hals, Halswinkel, Beindicke, Hinterhand, Kruppe; Rassenansicht ohne. Admin: Aufschlüsselung „Größe &amp; Exterieur“ und „Mutationen“. Die Karte „Merkmale“ (M2), Noten und Wirkungen (M3) folgen.</p>
       <p><b>Reiter-Können (v585/v586, K1/K2, Dome 20.10.):</b> Können 0–100 je Gruppe in <code>spiel.reiter.koennen</code> (${Object.keys(REITER_DISZ).map(g => `${REITER_DISZ[g].n}${REITER_DISZ[g].lk ? " (LK)" : ""}`).join(", ")}; Tabelle <code>REITER_DISZ</code>, eine Zeile je Gruppe), nur Wachstum, nie weniger. Alte Spielstände (<code>reiterErgaenzen</code>): LK 7/6/5/4/3/2/1 = ${[7, 6, 5, 4, 3, 2, 1].map(l => REITER.alt[l]).join("/")}, Rennen/Distanz/Gangpferde ${REITER.start}. Zuwachs mal (1 − Können/${REITER.abnahme}): Training selbst +${REITER.training} je Einheit (Gewicht je Übung in <code>REITER_DISZ.ueb</code>; Gelände-Arbeit zählt beim Rennen nur halb; ein Drittel, wenn das Pferd ${REITER.nahe} Punkte oder mehr unter deinem Können steht – Stand des Pferdes = Anforderung seiner Klasse), Turnier Start +${REITER.turnier.start} / Platzierung +${REITER.turnier.platz} / Sieg +${REITER.turnier.sieg} mal Klassenfaktor (Wettbewerb/Hofturnier 0,5, E ${REITER_KL_FAKTOR[0]}, A ${REITER_KL_FAKTOR[1]}, L ${REITER_KL_FAKTOR[2]}, M ${REITER_KL_FAKTOR[3]}, S ${REITER_KL_FAKTOR[4]}), nur selbst geritten (kein Jockey, kein Ausbildungsstall). Anforderung je Klasse E/A/L/M/S = ${REITER_ANFORD.join("/")}. <b>Abstandsfaktor (K2, v586):</b> v = (Können − Stand des Pferdes) / 20 Klassen; Trainingsfaktor ${ABSTAND.map(([v, f]) => `v ${v} → ×${String(f).replace(".", ",")}`).join(" · ")}, ab v ≥ 2 ×1,2 (dazwischen linear) – ersetzt die alten +4 % je LK. Bei v ≤ −1 sinkt das Vertrauen um ${ABSTAND_VERTRAUEN.map(([v, x]) => `${String(x).replace(".", ",")} (v ≤ ${v})`).reverse().join(" / ")} je Einheit. Mitarbeiter: <code>trainerFaktor</code> × Abstandsfaktor mit Können = Fachwissen Rücken (+10 im Ausbildungsstall, höchstens 95). Übung mit mehreren Gruppen (Kondition, Ausritt): die Gruppe, in der das Pferd am weitesten ist. <b>Reitunterricht:</b> extern ${fmt(UNTERRICHT.preis)} je Stunde, beim festen Bereiter/Ausbilder kostenlos (er trainiert am nächsten Morgen keine Pferde, <code>m.unterrichtTag</code>); +${REITER.unterricht} (doppelt unter Können ${REITER.unterrichtDoppelUnter}) × Abnahme, nur bis Können ${REITER.unterrichtBis}, 1 Stunde je Tag und Gruppe. Hinweis „weiter als du“: Blase einmal je Pferd und Gruppe (<code>p.hinw.besser</code>, Hinweis <code>reiterBesser</code>), Zeile im Kauf-Infofenster, Satz im Ort-Reiter. Der Turnier-Reiterfaktor folgt in K3. Zahlen im Adminmodus: Hofverwaltung – Reiter.</p>
       <p><b>Dispo</b> (je Hofkonto, Dome 19.10.): Rahmen −${fmt(DISPO.rahmen)}, ${prozent(DISPO.zins)} Zinsen im Jahr (je Jahreszeit ein Viertel, Buchung „Dispo: Zinsen“). Bis −${fmt(DISPO.rahmen)} kauft der Spieler normal ein, bei oder unter −${fmt(DISPO.rahmen)} sind alle Käufe gesperrt (Futter, Einstreu, Medikamente, Pferde, Bauen, Land, Ausrüstung, Labor); Rechnungen, Gehälter, Kreditraten und die Kolik-OP laufen weiter. Kreditraten dürfen bis −${fmt(DISPO.rahmen)} abgebucht werden – erst darüber gilt die Rate als verpasst (Mahnung wie beim Kredit). Aufzucht und Ausbildung sind schon bei jedem Minus gesperrt. Ablauf: ist das Konto zu Beginn einer Jahreszeit im Minus, zählt <code>jzMinus</code>; unter −${fmt(DISPO.rahmen)} oder ab ${DISPO.jzMinus} Jahreszeiten hintereinander kommt der Brief „Kündigung des Kontos angedroht“ (Bank-Ansehen −5), nach einer weiteren Jahreszeit im Minus Pfändung der Pferde zu ¾, bleibt das Konto danach im Minus: Insolvenz (bei mehreren Höfen nur dieser Hof, beim letzten Hof ist das Spiel verloren). Im Plus: Entwarnung. Mitarbeiter kündigen wie bisher, wenn das Konto am Jahreszeit-Ende im Minus ist. <b>Das zentrale Konto hat kein Dispo</b> – eine Überweisung vom zentralen Konto auf einen Hof im Minus bringt ihn aus dem Dispo.</p>
       <p><b>Kredit</b> (Hausbank): ${prozent(KREDIT.zins)} Zinsen im Jahr, Rate jede Jahreszeit (Annuität): Rate = Summe × q ÷ (1 − (1 + q)<sup>−n</sup>) mit q = Zins ÷ 4, n = Anzahl Raten. Hofkredit ${fmt(10000)}, ${KREDIT.jz} Raten → ${fmt(kreditRate(10000, KREDIT.zins, KREDIT.jz))}. Je Rate: Zinsen = Restschuld × q, Rest tilgt. Abbuchung automatisch zu Beginn jeder Jahreszeit (erste Rate in der Jahreszeit nach der Aufnahme), offene Raten zuerst. Reicht das Geld nicht: Mahnung + Mahngebühr (10 %, mind. 20 €) je verpasster Rate, bezahlen im Brief oder Finanzen → Bank. 2 Tage vor der dritten Rate Warnfenster (zwangsWarnungZeigen). ${KREDIT.verpasst} offene Raten → Pfändung: alle eigenen Pferde des Hofs (auch extern, Fohlen bei Fuß mit) zu ¾ des Werts zwangsverkauft; reicht Erlös + Kasse für die offenen Raten, bleibt der Hof – sonst Zwangsversteigerung (beim letzten Hof: Spiel verloren, Spielstand gelöscht).</p>

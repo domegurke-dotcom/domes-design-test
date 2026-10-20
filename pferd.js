@@ -234,12 +234,20 @@ let _uid = 0;
 
 // ---------- Zeichnen ----------
 // Liefert { svg: "<g>…</g>", box: {minX,maxX,minY} } in Pferde-Einheiten (Widerrist = 100)
+// Exterieur (PLAN-MERKMALE M1): opt.bau = Abweichung vom Zuchtziel in Streuungen (σ) für rahmen, halsL, halsA, kruppe, fundament, muskel – je σ 5 %, höchstens ±15 % vom Rassenwert (ab ±3 σ)
+// rahmen → Rumpflänge (Tiefe halb), halsL → Halslänge, halsA → Halswinkel, fundament → Beindicke, muskel → Hinterhand (Mähnenkamm etwas), kruppe → Kruppenneigung (waagerecht = weniger Neigung)
+function bauK(k, bau) {
+  if (!bau) return k;
+  const f = key => 1 + 0.05 * Math.max(-3, Math.min(3, bau[key] || 0)), fr = f("rahmen"), fm = f("muskel"), s = Math.max(-3, Math.min(3, bau.kruppe || 0)) / 3;
+  return { ...k, len: k.len * fr, depth: k.depth * (1 + (fr - 1) / 2), neck: k.neck * f("halsL"), nAng: k.nAng * f("halsA"), legT: k.legT * f("fundament"), hq: (k.hq || 1) * fm, crest: k.crest * (1 + (fm - 1) / 2),
+    croup: (k.croup || 0) - 0.15 * Math.max(0.4, Math.abs(k.croup || 0)) * s };
+}
 function zeichnePferd(rasseId, farbId, opt = {}) {
   { const LX = FARBEN[farbId] && FARBEN[farbId].lexOpt; if (LX) opt = { ...LX, ...opt }; }   // v486: Enzyklopädie-Einträge bringen ihre Zeichnung mit (Rabicano, Brindle, Lp …)
   // Körpertyp: duenn | sportlich | normal | dick
   const typ = opt.typ || "normal";
   const TYP = { duenn: { bauch: -1, hq: 0.88, crest: -0.03, legT: 0.94 }, sportlich: { bauch: -0.45, hq: 1.07, crest: 0.025, legT: 1 }, normal: { bauch: 0, hq: 1, crest: 0, legT: 1 }, dick: { bauch: 1, hq: 1.12, crest: 0.07, legT: 1.04 } }[typ] || { bauch: 0, hq: 1, crest: 0, legT: 1 };
-  const R = rasseById(rasseId), stufe = opt.alterStufe || null, kBasis = { ...R.k, ...ALTERS_K(stufe, R.k), ...(opt.k || {}) };
+  const R = rasseById(rasseId), stufe = opt.alterStufe || null, kBasis = bauK({ ...R.k, ...ALTERS_K(stufe, R.k), ...(opt.k || {}) }, opt.bau);   // M1: Exterieur des Pferdes wirkt nach dem Alter als Faktor (höchstens ±15 %)
   const k = { ...kBasis, hq: (kBasis.hq || 1) * TYP.hq, crest: kBasis.crest + TYP.crest, legT: kBasis.legT * TYP.legT, nk: Math.max(kBasis.nk || 0, typ === "dick" ? 0.7 : 0) }, C = musterStufeFarbe(FARBEN[farbId] || FARBEN.schimmel, opt.musterStufe);
   const uid = "p" + (++_uid);
   const rnd = zufall(opt.seed || rasseId + farbId);

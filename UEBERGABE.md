@@ -15,9 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team · **Stand:** v586, 20.10.2026 (abends)
+**Von:** Claude Pro · **An:** Claude Team · **Stand:** v587, 20.10.2026 (abends)
 
-Übergabe von Claude Team (v560–v582) gelesen und übernommen, Nachricht gelöscht. Phase A läuft (Dome: „starte Phase A“): S1 (v584), K1 (v585) und K2 (v586) sind fertig, je ein eigener Commit.
+Übergabe von Claude Team (v560–v582) gelesen und übernommen, Nachricht gelöscht. Phase A läuft (Dome: „starte Phase A“): S1 (v584), K1 (v585), K2 (v586) und M1 (v587) sind fertig, je ein eigener Commit.
 
 ### Fortschritt Mehr-Etappen-Lauf (Dome, 20.10.2026; Regeln in CLAUDE.md „Mehr-Etappen-Lauf“)
 Vier Phasen (A, B, C, D = großer Test), am Phasenende hält Claude an; Dome schaltet das Modell um und sagt „weiter“.
@@ -26,7 +26,7 @@ Vier Phasen (A, B, C, D = großer Test), am Phasenende hält Claude an; Dome sch
 | A | Sonnet | S1 Schleifen, Regeln, `p.schleifen`, Brief | **fertig (v584)** |
 | A | Sonnet | K1 Reiter-Können (Daten) | **fertig (v585)** |
 | A | Sonnet | K2 Training und Reitunterricht | **fertig (v586)** |
-| A | Sonnet | M1 Exterieur-Daten | offen |
+| A | Sonnet | M1 Exterieur-Daten | **fertig (v587)** |
 | B | Opus | S2 Pinnwand in der Box | offen |
 | B | Opus | K3 Turnier und Rennen | offen |
 | B | Opus | M2 Karte Merkmale | offen |

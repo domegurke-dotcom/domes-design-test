@@ -103,3 +103,4 @@ Bricht die Sitzung ab, kann **Claude Pro** hier weitermachen (Dome: Stand nach *
 
 ### Domes Antworten beim Durchgehen (20.10.2026, Sammlung – erst umsetzen, wenn Dome „fertig“ sagt)
 - Stufen-Sperre / alte Spielstände: alte Spielstände werden automatisch zu **Experten** und können im Menü umschalten.
+- Raritäten-Markt, eigene Pferde verkaufen: Auktion startet beim **Raritäten-Marktwert** des Pferdes (nicht bei der Hälfte).

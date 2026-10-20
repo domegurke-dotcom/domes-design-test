@@ -80,4 +80,5 @@ Bricht die Sitzung ab, kann **Claude Pro** hier weitermachen: Stand steht in der
 | B4 Spiel-verloren-Bilanz + Nur ansehen | **fertig v560** (`tests/verloren-test.js` grün, Screenshots angesehen) |
 | R2 + R3 Raritäten-Markt mit Preisen und Auktion | **fertig v561** (`tests/raritaeten-test.js` grün) |
 | R4 Eigene Raritäten anbieten | **fertig v562** |
-| Waschplatz W1–W6 | in Arbeit |
+| Waschplatz W1+W2 | **fertig v563** (`tests/waschplatz-test.js`) |
+| Waschplatz W3 Solarium | in Arbeit |

@@ -90,4 +90,12 @@ Bricht die Sitzung ab, kann **Claude Pro** hier weitermachen: Stand steht in der
 | Hinweise T3 Texte | **fertig v570** |
 | Hinweise T4 Anfänger-Tutorial | **fertig v571** (`tests/tutorial-test.js`) |
 | Hinweise T5 (Fortgeschrittenen-/Experten-Tutorial) | **fertig v572** |
-| Hinweise T6 Gesamtprüfung | als Nächstes |
+| Hinweise T6 Gesamtprüfung | **erledigt** (ESLint ohne Fehler, Screenshots) |
+
+### Stand am Ende der Nachtsitzung (20.10.2026, ca. 4:45 Uhr deutscher Zeit, v572)
+**Alle Etappen der Reihenfolge sind umgesetzt und auf `main`:** B4 (v560), R2–R4 (v561/v562), Waschplatz W1–W6 (v563–v567), Hinweise/Stufen/Tutorials T1–T6 (v568–v572). Jede Etappe hat einen eigenen Test (`tests/verloren-test.js`, `raritaeten-test.js`, `waschplatz-test.js`, `hinweise-test.js`, `stufen-test.js`, `tutorial-test.js`), alle grün; die bestehenden kleinen Tests (Spielstand, Dispo, Chronik, Bestenliste, Jahresbericht, Bild, Seltenheit, Krankheiten, Zucht) laufen weiter grün.
+**Für die nächste Sitzung (Team oder Pro):**
+1. Mit Dome `OFFENE-FRAGEN.md` Punkte 1–9 durchgehen (Entscheidungen der Nacht), danach anpassen und beantwortete Fragen löschen.
+2. Dome testet im Spiel: neues Spiel als Anfänger (Tutorial, Blasen, Stufen), Raritäten-Markt (ab Sommer), Waschplatz/Solarium bauen, Spiel verlieren → Abschlussbilanz → „Letzten Stand ansehen“.
+3. Große Tests (Etappen-, Hof-Gesamt-, Neuladen-Test) wurden **nicht** gelaufen – vorher Dome fragen. Achtung: neue Spiele haben seit v569 die Stufen-Sperre (Standard Anfänger) → in großen Tests nach dem Start `spiel.stufenAn = false` setzen.
+4. Die Selbststarts 7:05 und 12:05 (Routinen „Zuchtstall: Fortsetzen …“) finden nichts Offenes mehr im Plan vor – dort nur kurz prüfen und berichten.

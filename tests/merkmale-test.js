@@ -81,6 +81,56 @@ const { chromium } = require('playwright'); const path = require('path');
     aufschlTeil = null; spiel.admin = false;
     return out;
   });
+  // ==================== M2: Karte „Merkmale“ (eigene Seite mit echter Akte) ====================
+  const pg2 = await b.newPage({ viewport: { width: 390, height: 844 } }); pg2.on('pageerror', e => errs.push(e.message));
+  await pg2.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg2.waitForTimeout(700);
+  await pg2.click('#smNeu'); await pg2.waitForTimeout(150); await pg2.fill('#chName', 'Test'); await pg2.click('#chLos'); await pg2.waitForTimeout(150);
+  await pg2.click('#dlgKnoepfe button'); await pg2.click('[data-immo="pension"]'); await pg2.fill('#kaufName', 'Testhof'); await pg2.click('#dlgKnoepfe button:first-child'); await pg2.waitForTimeout(400);
+  const R2 = await pg2.evaluate(() => {
+    const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : '')); document.getElementById('dlg').hidden = true; spiel.tippsAus = true;
+    const neu = (n, f) => { const p = neuesPferd({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 9, name: n }); p.pflege = erzeugePflege(p); p.werte = p.werte || erzeugeWerte(p); werteErgaenzen(p); bauErgaenzen(p); const Z = bauZiel(p); BAU_KEYS.forEach(k => { p.bau[k] = Math.round(Z[k]); }); p.werte.ist.kraft = p.werte.anlage.kraft; p.fz = 5; if (f) f(p.bau); return p; };
+    const A = neu('Anna', b => { b.schulter = 25; b.halsL = 90; }), Bq = neu('Berta');
+    spiel.boxen[0].pferd = A; spiel.boxen[1].pferd = Bq; aktBox = 0; spiel.aktBox = 0; delete spiel.merkOffen;
+    const stufe = s => { spiel.stufenAn = true; spiel.spieler.stufe = s; };
+    const zeig = r => { aktenModus = 'steckbrief'; aktenReiter = r; zeigeSchirm(null); zeigeStall(); zeigeAkte(); return document.getElementById('info'); };
+    stufe('exp'); let I = zeig('steckbrief');
+    const tabs = [...I.querySelectorAll('.reiter button')].map(x => x.dataset.r).join();
+    ok('Reiter: Daten, Genetik, Merkmale, Ausbildung (Gangwerk/Eigenschaften/Charakter weg)', tabs === 'steckbrief,genetik,merkmale,ausbildung', tabs);
+    const daten = I.querySelector('.karte').textContent;
+    ok('Daten ohne Stockmaß, Kopf, Abzeichen, Beine, Augen, Gewicht', !/Stockmaß|Abzeichen|Augen|Gewicht/.test(daten) && /Rasse/.test(daten) && /Marktwert/.test(daten));
+    I = zeig('merkmale'); const offen = [...I.querySelectorAll('[data-merk]')].filter(d => d.open).map(d => d.dataset.merk).join(), alle = [...I.querySelectorAll('[data-merk]')].map(d => d.dataset.merk).join();
+    ok('Fünf Aufklapp-Bereiche, beim ersten Öffnen nur Gesamteindruck offen', alle === 'gesamt,exterieur,farbe,gang,interieur' && offen === 'gesamt', alle + ' / offen ' + offen);
+    ok('Ein „Vergleichen mit …“ oben', I.querySelectorAll('#vglKnopf').length === 1);
+    const ex = I.querySelector('[data-merk="exterieur"]'); ex.open = true; ex.dispatchEvent(new Event('toggle'));
+    ok('Offener Bereich wird gemerkt (spiel.merkOffen)', spiel.merkOffen.exterieur === true && zeig('merkmale').querySelector('[data-merk="exterieur"]').open);
+    I = zeig('merkmale'); const t = I.querySelector('.karte').textContent;
+    ok('Exterieur: Stockmaß, Kopf, Gewicht + 12 Merkmale (Hals als 2 Balken) mit Raute', /Stockmaß/.test(t) && /Kopf/.test(t) && I.querySelectorAll('[data-merk="exterieur"] .skala.merk').length === 12 && I.querySelectorAll('[data-merk="exterieur"] .raute').length === 12);
+    ok('Farbe & Abzeichen: Abzeichen, Beine, Augen', /Abzeichen/.test(I.querySelector('[data-merk="farbe"]').textContent) && /Augen/.test(I.querySelector('[data-merk="farbe"]').textContent));
+    ok('Gangwerk und Interieur (Charakter + Eigenschaften) als Abschnitte', /Schritt/.test(I.querySelector('[data-merk="gang"]').textContent) && /Charakter/.test(I.querySelector('[data-merk="interieur"]').textContent) && /Eigenschaften/.test(I.querySelector('[data-merk="interieur"]').textContent) && !!I.querySelector('#vorliebenKnopf'));
+    ok('Experte: Noten-Tabelle (Typ, Körperbau, Bewegung, Interieur, Gesamt)', !!I.querySelector('.merk-noten') && /Körperbau/.test(I.querySelector('.merk-noten').textContent));
+    ok('Fehler-Wörter: steile Schulter = starker Fehler, langer Hals = deutlicher Fehler', /sehr steil · starker Fehler/.test(t) && /sehr lang · deutlicher Fehler|lang · deutlicher Fehler/.test(t), (t.match(/Schulter \/ Widerrist[^S]*/) || [''])[0]);
+    ok('Satz: Schwächen „zu steile Schulter“ und „zu langer Hals“', /Schwächen: zu steile Schulter und zu langer Hals\./.test(staerkenSatz(A)), staerkenSatz(A));
+    ok('Satz ohne Schwächen (alles am Ziel)', /^Stärken: .*Keine auffälligen Schwächen\.$/.test(staerkenSatz(Bq)), staerkenSatz(Bq));
+    stufe('fort'); I = zeig('merkmale'); ok('Fortgeschritten: Balken ja, Noten nein', I.querySelectorAll('.skala.merk').length === 12 && !I.querySelector('.merk-noten'));
+    stufe('anf'); I = zeig('merkmale'); ok('Anfänger: keine Exterieur-Balken, Satz im Gesamteindruck, Vergleichen da', I.querySelectorAll('.skala.merk').length === 0 && /Stärken|Schwächen|durchschnittliches/.test(I.querySelector('[data-merk="gesamt"]').textContent) && !!I.querySelector('#vglKnopf'));
+    stufe('exp'); vergleichId = Bq.id; I = zeig('merkmale'); ok('Vergleich: zweite Marke in jedem Exterieur-Balken und zweite Notenzeile', I.querySelectorAll('[data-merk="exterieur"] .skala.merk i.vgl').length === 12 && !!I.querySelector('.merk-noten .vgl-zeile')); vergleichId = null;
+    spiel.admin = true; I = zeig('merkmale'); ok('Adminmodus: Zahlen (Wert, Ziel, d; Muskel/Huf mit Anlage und Ist)', /Ziel \d+ · d \d/.test(I.textContent) && /Anlage \d+ · Ist/.test(I.textContent)); spiel.admin = false;
+    spiel.merkOffen = {}; I = zeig('gang'); ok('Alter Reiter „gang“ öffnet Merkmale mit Abschnitt Gangwerk', aktenReiter === 'merkmale' && I.querySelector('[data-merk="gang"]').open);
+    spiel.merkOffen = {}; I = zeig('charakter'); ok('Alter Reiter „charakter“ öffnet Interieur', I.querySelector('[data-merk="interieur"]').open);
+    // Noten
+    const N = merkNoten(A);
+    ok('Merkmalnote 9 − 2,5 × d (halbe Noten, 3 … 9,5): am Ziel 9, Schulter weit weg 3', N.merkmal.rahmen === 9 && N.merkmal.schulter === 3 && BAU_KEYS.every(k => N.merkmal[k] >= 3 && N.merkmal[k] <= 9.5 && N.merkmal[k] * 2 === Math.round(N.merkmal[k] * 2)));
+    ok('Gesamt = 0,2 Typ + 0,3 Körperbau + 0,3 Bewegung + 0,2 Interieur', Math.abs(N.gesamt - Math.round((0.2 * N.typ + 0.3 * N.koerper + 0.3 * N.bewegung + 0.2 * N.interieur) * 10) / 10) < 1e-9 && N.typ === typNote(A));
+    const st = []; for (let i = 0; i < 300; i++) { const x = neuesPferd({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'S' + i, id: 'st' + i }); x.pflege = erzeugePflege(x); x.werte = x.werte || erzeugeWerte(x); werteErgaenzen(x); x.fz = 5; st.push(merkNoten(x)); }
+    const m = k => st.reduce((a, x) => a + x[k], 0) / st.length;
+    out.push(`ℹ️ Schnitt von 300 Hannoveranern: Körperbau ${m('koerper').toFixed(2)} · Typ ${m('typ').toFixed(2)} · Bewegung ${m('bewegung').toFixed(2)} · Interieur ${m('interieur').toFixed(2)} · Gesamt ${m('gesamt').toFixed(2)}`);
+    ok('Körperbau-Schnitt in der Nähe von 7 (M3 stimmt fein ab)', Math.abs(m('koerper') - 7) < 0.6, m('koerper').toFixed(2));
+    // Lese-Modus (Marktpferd)
+    const M = neuesPferd({ rasse: 'araber', geschlecht: 'Hengst', alter: 7, name: 'Markt' }); M.pflege = erzeugePflege(M); M.werte = M.werte || erzeugeWerte(M); werteErgaenzen(M);
+    leseAkte(M); aktenReiter = 'merkmale'; zeigeAkte(); ok('Lese-Modus (Markt): Karte Merkmale mit Balken', document.querySelectorAll('#info .skala.merk').length === 12 && !!M.bau);
+    return out;
+  });
+  R.push(...R2);
   const html = require('fs').readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf8'), ras = (html.match(/\.\.\.kopfOpt\(wahl\), bau: undefined/g) || []).length, alle = (html.match(/kopfOpt\(wahl\)/g) || []).length;
   R.push((ras === alle && alle >= 2 ? '✓ ' : '✗ ') + 'Rassenansicht/Gene selbst wählen: kopfOpt(wahl) immer mit bau: undefined (ohne Exterieur) – ' + ras + ' von ' + alle);
   R.forEach(l => console.log(l)); console.log(errs.length ? 'Seitenfehler: ' + errs.join(' | ') : 'keine Seitenfehler');

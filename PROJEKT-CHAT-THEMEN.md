@@ -36,6 +36,8 @@ Diese Punkte sind zu groß oder brauchen erst eine Planung. Darum hat Claude sie
 21. **Ponys: Reiter, Gewicht, Fahren** (Dome, 20.10.2026, später planen): Erwachsene können Ponys und Shettys in echt nicht reiten (Gewichtsgrenze etwa 20 % des Pferdegewichts, Pony-Turniere sind für Kinder). Mögliche Wege: Kinder oder Jugendliche als Reiter, Fahren (Kutsche), beides. Bis dahin starten Ponys wie alle Pferde.
 22. **Zu Punkt 1 ergänzt (Dome, 20.10.2026):** je Disziplin mehrere Ausbildungsställe zur Auswahl (günstig, moderat, teuer), das Pferd lernt je nach Stall mehr oder weniger; ein Westernpferd gehört in einen Western-Ausbildungsstall. `PLAN-REITER.md` nimmt bis dahin Platzhalter-Können 65 / 80 / 92.
 
+23. **Turnier-Schleifen und Pinnwand** (Dome, 20.10.2026): echte Schleifen statt 🥇🥈🥉🎀 (Stufe je Turnierart, Farbe nach Platz, Champion), Pinnwand in der Box, Schleifen je Pferd lebenslang. **Geplant → `PLAN-SCHLEIFEN.md`** (Bilder auf Branch `entwurf-schleifen-bilder`). Dome sagt, wann es losgeht.
+
 ## Rassetypen und Rote-Liste-Rassen (Dome, 18.10.2026 – noch planen)
 - **Typen innerhalb einer Rasse:** Knabstrupper (Pony, Sport, Barock), Friese (Barock-/Sporttyp, Prädikate Ster/Kroon/Model), Welsh (Sektion A–D, im Spiel nur D), Haflinger (alter, schwerer Typ / moderner Reittyp), Shetlandpony (Mini-Shetty unter 87 cm / Standard), Quarter (Halter, Racing, Working), Araber (Zuchtrichtungen, z. B. Ägypter), Tinker (Größen vom Pony bis zum Cob).
 - **Rote Liste (GEH):** z. B. Alt-Oldenburger/Ostfriese, Leutstettener, Rottaler, Senner, Dülmener, Schleswiger Kaltblut, Schwarzwälder Fuchs, Rheinisch-Deutsches Kaltblut, Sächsisch-Thüringisches Schweres Warmblut, Mecklenburger Kaltblut.

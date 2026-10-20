@@ -1007,7 +1007,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "584";
+  const SPIEL_VERSION = "585";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1015,11 +1015,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=584"></script>
-<script src="pferd.js?v=584"></script>
-<script src="boxstufen.js?v=584"></script>
-<script src="kopfneu.js?v=584"></script>
-<script src="waschbild.js?v=584"></script>
+<script src="lz-string.min.js?v=585"></script>
+<script src="pferd.js?v=585"></script>
+<script src="boxstufen.js?v=585"></script>
+<script src="kopfneu.js?v=585"></script>
+<script src="waschbild.js?v=585"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -7118,6 +7118,7 @@
     let gangPlus = 0; if (U.gangP) { const key = U.gangart === "toelt" ? "gangToelt" : "gangPass", vor = p[key] || 0; p[key] = r2(Math.min(1, vor + U.gangP * F)); gangPlus = p[key] - vor; }
     if (U.gang) p.gangStangen = r2(Math.min(0.5, (p.gangStangen || 0) + U.gang * F));
     (p.uebKann = p.uebKann || {})[k] = (p.uebKann[k] || 0) + 1;
+    if (!m) reiterTrainiert(p, k);   // K1: dein eigenes Können wächst (Mitarbeiter trainieren ohne dich)
     if (p.trainTag !== spiel.tag) { p.trainTag = spiel.tag; p.trainTage = (p.trainTage || 0) + 1; wohlAendern(p, 3 + 2 * Te.hoch, "bewegt (Training)"); }
     p.arbeitTag = spiel.tag; p.boxTage = 0;
     const text = reaktion(p, U.vl, !m);
@@ -7723,12 +7724,14 @@
         const wert = startWert(p, P.disz) * stufenMalus(p, P) * form * stress * reiterF * fzLeistung(p) * hufTurnierF(p, P.disz) * (t.halle && nachtblind(p) ? NACHTBLIND.halle : 1) * (1 + (rz() + rz() + rz() - 1.5) * 0.16), niveau = feldNiveau(t, P);
         const vet = P.disz === "distanz" ? distanzVet(p, P, muede, rz) : null;
         if (vet && vet.aus) { if (vet.lahm) befundNeu(p, "lahmheit", 1, "Distanzritt", "Tierarzt beim Distanzritt");
+          if (!profi) reiterTurnier(P, t.art, null, false);   // K1: ausgeschieden zählt als Start
           bilanzZaehlen(p, P, null, t.art); (p.erfolge = p.erfolge || []).unshift({ tag: spiel.tag, turnier: t.name, art: t.art, disz: P.disz, stufe: P.stufe, pruef: P.name, platz: P.starter, von: P.starter, erg: vet.aus, geld: 0, plaziert: false, aus: true });
           prot("Turnierstart", { p, o: t.name }); protKlasse("Start", p, t, P); zeilen.push(`<li><b>${esc(P.name)}</b>: ❌ ${vet.aus}</li>`); return; }
         const ich = ergebnisText(P.disz, wert, niveau, rz, P.stufe), andere = Array.from({ length: P.starter - 1 }, () => ergebnisText(P.disz, niveau + (rz() + rz() + rz() - 1.5) * 14, niveau, rz, P.stufe).sort);
         const platz = 1 + andere.filter(s => s > ich.sort).length, plaziert = platz <= Math.max(3, Math.ceil(P.starter / 4));
         let geld = 0; if (plaziert && preisgeld(t, P)) { const anteil = PREIS_ANTEIL.slice(0, Math.max(3, Math.ceil(P.starter / 4))), summe = anteil.reduce((a, b) => a + b, 0); geld = Math.round(preisgeld(t, P) * (anteil[platz - 1] || 0.05) / summe / 5) * 5; }
         geldSumme += geld;
+        if (!profi && !P.jockey) reiterTurnier(P, t.art, platz, plaziert);   // K1: selbst geritten (Jockey und Ausbildungsstall reiten ohne dein Können)
         const schl = schleifeGeben(p, t.art, platz, P.starter, plaziert, platz === 1 && !!P.titel, P.name, t.name);   // S1: vor dem Erfolgs-Eintrag
         bilanzZaehlen(p, P, platz, t.art); (p.erfolge = p.erfolge || []).unshift({ tag: spiel.tag, turnier: t.name, art: t.art, disz: P.disz, stufe: P.stufe, pruef: P.name, platz, von: P.starter, erg: ich.txt, geld, plaziert, jung: !!P.jung });
         if (p.erfolge.length > 60) p.erfolge.length = 60;
@@ -7791,6 +7794,7 @@
   // Reiter-LK: Aufstieg nur in der Disziplin mit Erfolgen · 7→6: 1 Platzierung ab E · 6→5: 3 ab A · 5→4: 3 ab L · 4→3: 3 ab M · 3→2: 3 Siege ab M · 2→1: 3 Siege in S
   const LK_REGEL = { 7: [0, 1, false], 6: [1, 3, false], 5: [2, 3, false], 4: [3, 3, false], 3: [3, 3, true], 2: [4, 3, true] };
   function lkErfolg(g, stufe, platz) {
+    reiterErgaenzen();   // K1: Können vor jeder LK-Änderung aus der alten LK ableiten
     const E = ((spiel.lkErfolge = spiel.lkErfolge || {})[g] = spiel.lkErfolge[g] || { plaz: [0, 0, 0, 0, 0], sieg: [0, 0, 0, 0, 0] });
     E.plaz[stufe]++; if (platz === 1) E.sieg[stufe]++;
     const lk = lkVon(g), R = LK_REGEL[lk]; if (!R) return "";
@@ -7837,6 +7841,72 @@
   const UEB_LK = { longieren: "dressur", doppellonge: "dressur", dressur: "dressur", stangen: "springen", springen: "springen", gelaendesprung: "vielseitigkeit", kondition: "vielseitigkeit", western: "western" };
   const reiterFaktor = k => UEB_LK[k] ? 1 + 0.04 * (7 - lkVon(UEB_LK[k])) : 1;
   // Reiterprofil (Hofverwaltung → Reiter)
+  // ---------- Reiter-Können (PLAN-REITER K1, Dome 20.10.2026): Können 0–100 je Gruppe, wächst durch Training, Turniere und Reitunterricht (nie weniger) ----------
+  // Eine neue oder umgebaute Disziplin braucht nur eine Zeile hier (Gruppe, Disziplinen, Übungen mit Gewicht, LK ja/nein) und die Anforderung je Klasse in reiterAnforderung.
+  const REITER_DISZ = {
+    dressur: { n: "Dressur", lk: true, disz: ["dressur"], ueb: { longieren: 1, doppellonge: 1, dressur: 1 } },
+    springen: { n: "Springen", lk: true, disz: ["springen"], ueb: { stangen: 1, springen: 1 } },
+    vielseitigkeit: { n: "Vielseitigkeit", lk: true, disz: ["vielseitigkeit"], ueb: { gelaendesprung: 1, kondition: 1 } },
+    western: { n: "Western", lk: true, disz: ["reining", "pleasure", "trail"], ueb: { western: 1, trailarbeit: 1 } },
+    rennen: { n: "Rennen", lk: false, disz: ["galopprennen", "trabrennen", "passrennen"], ueb: { galopptraining: 1, kondition: 0.5, ausritt: 0.5 } },   // Nachtrag 9.2: Gelände-Arbeit ohne Rennbahn nur zur Hälfte
+    distanz: { n: "Distanz", lk: false, disz: ["distanz"], ueb: { ausritt: 1, kondition: 1 } },
+    gangpferde: { n: "Gangpferde", lk: false, disz: ["toelt"], ueb: { toeltarbeit: 1, passtraining: 1 } } };
+  const REITER_ANFORD = [10, 30, 50, 70, 85], REITER_KL_FAKTOR = [1, 1.25, 1.5, 1.75, 2];   // Anforderung je Klasse E/A/L/M/S (Western Einsteiger … Open) und Wachstumsfaktor je Klasse
+  const REITER = { alt: { 7: 10, 6: 22, 5: 38, 4: 52, 3: 66, 2: 80, 1: 92 }, start: 10, training: 0.15, turnier: { start: 0.3, platz: 0.8, sieg: 1.5 }, unterricht: 0.8, unterrichtBis: 60, unterrichtDoppelUnter: 30, nahe: 10, abnahme: 120 };   // Zuwachs × (1 − Können / 120)
+  const reiterGruppeVon = disz => Object.keys(REITER_DISZ).find(g => REITER_DISZ[g].disz.includes(disz));
+  // alte Spielstände: Können der vier LK-Gruppen aus der LK, Rennen/Distanz/Gangpferde 10 – einmal, ohne Brief, danach fest
+  function reiterErgaenzen() {
+    const R = (spiel.reiter = spiel.reiter || {}); R.koennen = R.koennen || {}; R.zuwachs = R.zuwachs || {};
+    Object.keys(REITER_DISZ).forEach(g => { if (R.koennen[g] == null) R.koennen[g] = REITER_DISZ[g].lk ? REITER.alt[lkVon(g)] : REITER.start; });
+    return R;
+  }
+  const reiterKoennen = g => reiterErgaenzen().koennen[g];
+  // Zuwachs mit Abnahme je höher das Können; art: training | turnier | unterricht (nur zur Statistik im Adminmodus) – gibt den echten Zuwachs zurück
+  function reiterWachsen(g, x, art) {
+    const R = reiterErgaenzen(), k = R.koennen[g]; if (k == null || !(x > 0)) return 0;
+    const d = Math.min(100 - k, x * (1 - k / REITER.abnahme)); if (d <= 0) return 0;
+    R.koennen[g] = Math.round((k + d) * 1000) / 1000; const Z = (R.zuwachs[g] = R.zuwachs[g] || {}); Z[art] = Math.round(((Z[art] || 0) + d) * 1000) / 1000; return d;
+  }
+  // Anforderung einer Prüfung (Können, das der Reiter braucht, damit er nichts verliert; mindestens 10)
+  function reiterAnforderung(P) {
+    const d = P.disz;
+    if (d === "galopprennen") return P.verkauf || /Anglo-Araber-Rennen Kl\. C/.test(P.name || "") ? 30 : 50;   // Verkaufsrennen 30 · Anglo-Araber C 30 / B 50 · Ausgleich und Araberrennen 50
+    if (d === "trabrennen" || d === "passrennen") return 50;
+    if (d === "distanz") return P.km <= 20 ? 10 : P.km <= 40 ? 30 : P.km <= 80 ? 50 : 70;
+    if (P.stufe == null || P.stufe < 0) return 10;   // Wettbewerb, Hofturnier, Gelassenheit
+    return REITER_ANFORD[Math.min(4, P.stufe)];
+  }
+  // Wachstumsfaktor je Klasse: Wettbewerb/Hofturnier 0,5 · E 1 · A 1,25 · L 1,5 · M 1,75 · S 2 (Western, Rennen, Tölt, Distanz nach Anforderung)
+  const reiterKlassenFaktor = (P, art) => art === "hof" || P.stufe == null || P.stufe < 0 ? 0.5 : REITER_KL_FAKTOR[Math.max(0, REITER_ANFORD.filter(x => reiterAnforderung(P) >= x).length - 1)];
+  // Stand des Pferdes in der Gruppe = Anforderung der Klasse, die es dort erreicht hat (höchste der Disziplinen der Gruppe; junge/unausgebildete 0)
+  function reiterStand(p, g) {
+    let best = 0;
+    REITER_DISZ[g].disz.forEach(k => { try { const D = DISZ[k]; if (!D || (D.nur && !D.nur(p))) return; const w = diszWert(p, k);
+      let s = w.stufe; if (s == null) s = alterJZ(p) < 12 ? -1 : STUFE_WERT.filter(x => w.wert >= x).length - 1;
+      if (s >= 0) best = Math.max(best, REITER_ANFORD[Math.min(4, s)]); } catch (e) { /* Pferd kann die Disziplin nicht */ } });
+    return best;
+  }
+  // Training selbst geritten: +0,15 je Einheit (je Gruppe der Übung, Gewicht aus REITER_DISZ); ist das Pferd 10 Punkte oder mehr unter deinem Können, nur ein Drittel
+  function reiterTrainiert(p, k) {
+    const out = {};
+    Object.keys(REITER_DISZ).forEach(g => { const w = REITER_DISZ[g].ueb[k]; if (!w) return;
+      const zu = reiterKoennen(g) - reiterStand(p, g) >= REITER.nahe;
+      const x = reiterWachsen(g, REITER.training * w * (zu ? 1 / 3 : 1) * proTag(1), "training"); if (x) out[g] = x; });
+    return out;
+  }
+  // Turnier selbst geritten: Start +0,3 · Platzierung +0,8 · Sieg +1,5, mal Klassenfaktor; platz null = ausgeschieden (zählt als Start)
+  function reiterTurnier(P, art, platz, plaziert) {
+    const g = reiterGruppeVon(P.disz); if (!g) return 0;
+    const Z = REITER.turnier, x = platz === 1 ? Z.sieg : plaziert ? Z.platz : Z.start;
+    return reiterWachsen(g, x * reiterKlassenFaktor(P, art), "turnier");
+  }
+  // Adminmodus: Können je Gruppe mit Herkunft des Zuwachses (Anzeige für alle folgt in K4)
+  function reiterAdminHTML() {
+    if (!spiel.admin) return "";
+    const R = reiterErgaenzen(), z = (g, a) => String(((R.zuwachs[g] || {})[a] || 0).toFixed(1)).replace(".", ",");
+    return `<h4 class="ma-titel">🛠️ Reiter-Können (Adminmodus)</h4><table class="ver-tab"><tr><th>Gruppe</th><th>Können</th><th>Training</th><th>Turnier</th><th>Unterricht</th></tr>${Object.keys(REITER_DISZ).map(g => `<tr><td>${REITER_DISZ[g].n}${REITER_DISZ[g].lk ? ` (LK ${lkVon(g)})` : ""}</td><td><b>${String(R.koennen[g].toFixed(1)).replace(".", ",")}</b></td><td>+${z(g, "training")}</td><td>+${z(g, "turnier")}</td><td>+${z(g, "unterricht")}</td></tr>`).join("")}</table>
+      <p class="text"><small>Wachstum: Training +${String(REITER.training).replace(".", ",")} je Einheit (nur ein Drittel, wenn das Pferd ${REITER.nahe} Punkte oder mehr unter deinem Können steht), Turnier Start +${String(REITER.turnier.start).replace(".", ",")} / Platzierung +${String(REITER.turnier.platz).replace(".", ",")} / Sieg +${String(REITER.turnier.sieg).replace(".", ",")} mal Klassenfaktor – alles mal (1 − Können/${REITER.abnahme}). Nie weniger.</small></p>`;
+  }
   function reiterHTML() {
     const sp = spiel.spieler || {}, E = (spiel.lkErfolge = spiel.lkErfolge || {});
     const alle = [...new Map([...Object.values(spiel.archiv || {}), ...(spiel.friedhof || []).map(g => g.pferd), ...alleEigenenPferde().map(x => x.p)].filter(p => p && p.erfolge).map(p => [p.id, p])).values()];
@@ -7848,7 +7918,7 @@
       <div class="bf-knoepfe" style="margin:6px 0 10px"><small>Bild:</small>${AVATARE.map(a => `<button class="mini-knopf ${a === sp.avatar ? "an" : ""}" data-rava="${a}">${a}</button>`).join("")}</div>
       <table class="ver-tab lk-tab"><tr><th>Disziplin</th><th>LK</th><th>darf starten</th><th>Training</th></tr>${Object.keys(LK_NAME).map(g => `<tr><td>${LK_NAME[g]}</td><td><b>${lkVon(g)}</b></td><td>${LK_STUFEN[lkVon(g)].map(s => g === "western" ? STUFEN.western[s] : STUFEN.englisch[s]).join(", ")}<br><small>${naechste(g)}</small></td><td>${lkVon(g) < 7 ? `+${(7 - lkVon(g)) * 4} %` : "–"}</td></tr>`).join("")}</table>
       <p class="text"><small>Die Leistungsklasse (LK) gilt je Disziplin und steigt mit Erfolgen auf Turnieren. Je besser deine LK, desto mehr lernen die Pferde, wenn du selbst trainierst (Bereiter zählen ihr eigenes Wissen). Wettbewerbe, Gelassenheits- und Aufbauprüfungen sind für jede LK offen.</small></p>
-      <h4 class="ma-titel">🏆 Deine Turnierbilanz</h4><p class="text">${eigene.length ? `${eigene.length} ${eigene.length === 1 ? "Start" : "Starts"} · ${(n => `${n} ${n === 1 ? "Sieg" : "Siege"}`)(eigene.filter(e => e.platz === 1).length)} · ${(n => `${n} ${n === 1 ? "Platzierung" : "Platzierungen"}`)(eigene.filter(e => e.plaziert).length)} · ${fmt(eigene.reduce((a, e) => a + (e.geld || 0), 0))} Preisgeld` : "Noch keine Turniere geritten – Pferdeanhänger → Turnier."}</p>`;
+      <h4 class="ma-titel">🏆 Deine Turnierbilanz</h4><p class="text">${eigene.length ? `${eigene.length} ${eigene.length === 1 ? "Start" : "Starts"} · ${(n => `${n} ${n === 1 ? "Sieg" : "Siege"}`)(eigene.filter(e => e.platz === 1).length)} · ${(n => `${n} ${n === 1 ? "Platzierung" : "Platzierungen"}`)(eigene.filter(e => e.plaziert).length)} · ${fmt(eigene.reduce((a, e) => a + (e.geld || 0), 0))} Preisgeld` : "Noch keine Turniere geritten – Pferdeanhänger → Turnier."}</p>${reiterAdminHTML()}`;
   }
   // ---------- Etappe 6b Teil 2: Rennen, Distanz, Tölt und Pass (Dome: wie in echt) ----------
   // Galopprennen nur reinrassige Vollblüter (ab 2 J., Jockey-Reitgeld), Araberrennen für Araber und Achal-Tekkiner (ab 3 J.), Trabrennen erst mit der Rasse Traber.
@@ -13491,6 +13561,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <h3>🏘️ Hof-Ausbau (H1: Hofkauf und Kredit)</h3>
       <p><b>Neues Spiel:</b> Startmenü → Neues Spiel → Charakter (ohne Hofname) → Immobilien-Menü. Startkapital ${fmt(START_KAPITAL)}. Am Anfang nur kaufbar: Alter Pensionsstall ${fmt(20000)} (6 baufällige Boxen = Stufe 1, Reitplatz, Gelände, 2 ha: Hofstelle mit Reitplatz + 1 ha Weide). Eigenanteil ${fmt(10000)}, Kredit ${fmt(10000)} → ${fmt(5000)} bleiben. Hofname wird beim Kauf eingegeben. Start immer als Pensionsstall (<code>spiel.stallarten = ["pension"]</code>, <code>spiel.hof</code>). Alte Spielstände (ohne <code>spiel.hofAusbau</code>) lassen sich nicht weiterspielen.</p>
       <p><b>Weitere Immobilien</b> (ausgegraut, Kauf ab H2): ${IMMOBILIEN.filter(I => !I.start).map(I => `${I.n} ${fmt(I.preis)}`).join(" · ")}. Frei, wenn der erste Kredit zur Hälfte getilgt ist und die Hälfte des Kaufpreises auf dem Hofkonto liegt.</p>
+      <p><b>Reiter-Können (v585, K1, Dome 20.10.):</b> Können 0–100 je Gruppe in <code>spiel.reiter.koennen</code> (${Object.keys(REITER_DISZ).map(g => `${REITER_DISZ[g].n}${REITER_DISZ[g].lk ? " (LK)" : ""}`).join(", ")}; Tabelle <code>REITER_DISZ</code>, eine Zeile je Gruppe), nur Wachstum, nie weniger. Alte Spielstände (<code>reiterErgaenzen</code>): LK 7/6/5/4/3/2/1 = ${[7, 6, 5, 4, 3, 2, 1].map(l => REITER.alt[l]).join("/")}, Rennen/Distanz/Gangpferde ${REITER.start}. Zuwachs mal (1 − Können/${REITER.abnahme}): Training selbst +${REITER.training} je Einheit (Gewicht je Übung in <code>REITER_DISZ.ueb</code>; Gelände-Arbeit zählt beim Rennen nur halb; ein Drittel, wenn das Pferd ${REITER.nahe} Punkte oder mehr unter deinem Können steht – Stand des Pferdes = Anforderung seiner Klasse), Turnier Start +${REITER.turnier.start} / Platzierung +${REITER.turnier.platz} / Sieg +${REITER.turnier.sieg} mal Klassenfaktor (Wettbewerb/Hofturnier 0,5, E ${REITER_KL_FAKTOR[0]}, A ${REITER_KL_FAKTOR[1]}, L ${REITER_KL_FAKTOR[2]}, M ${REITER_KL_FAKTOR[3]}, S ${REITER_KL_FAKTOR[4]}), nur selbst geritten (kein Jockey, kein Ausbildungsstall). Anforderung je Klasse E/A/L/M/S = ${REITER_ANFORD.join("/")}. Reitunterricht (+${REITER.unterricht}, bis Können ${REITER.unterrichtBis}) und der Abstandsfaktor beim Training folgen in K2, der Turnier-Reiterfaktor in K3. Zahlen im Adminmodus: Hofverwaltung – Reiter.</p>
       <p><b>Dispo</b> (je Hofkonto, Dome 19.10.): Rahmen −${fmt(DISPO.rahmen)}, ${prozent(DISPO.zins)} Zinsen im Jahr (je Jahreszeit ein Viertel, Buchung „Dispo: Zinsen“). Bis −${fmt(DISPO.rahmen)} kauft der Spieler normal ein, bei oder unter −${fmt(DISPO.rahmen)} sind alle Käufe gesperrt (Futter, Einstreu, Medikamente, Pferde, Bauen, Land, Ausrüstung, Labor); Rechnungen, Gehälter, Kreditraten und die Kolik-OP laufen weiter. Kreditraten dürfen bis −${fmt(DISPO.rahmen)} abgebucht werden – erst darüber gilt die Rate als verpasst (Mahnung wie beim Kredit). Aufzucht und Ausbildung sind schon bei jedem Minus gesperrt. Ablauf: ist das Konto zu Beginn einer Jahreszeit im Minus, zählt <code>jzMinus</code>; unter −${fmt(DISPO.rahmen)} oder ab ${DISPO.jzMinus} Jahreszeiten hintereinander kommt der Brief „Kündigung des Kontos angedroht“ (Bank-Ansehen −5), nach einer weiteren Jahreszeit im Minus Pfändung der Pferde zu ¾, bleibt das Konto danach im Minus: Insolvenz (bei mehreren Höfen nur dieser Hof, beim letzten Hof ist das Spiel verloren). Im Plus: Entwarnung. Mitarbeiter kündigen wie bisher, wenn das Konto am Jahreszeit-Ende im Minus ist. <b>Das zentrale Konto hat kein Dispo</b> – eine Überweisung vom zentralen Konto auf einen Hof im Minus bringt ihn aus dem Dispo.</p>
       <p><b>Kredit</b> (Hausbank): ${prozent(KREDIT.zins)} Zinsen im Jahr, Rate jede Jahreszeit (Annuität): Rate = Summe × q ÷ (1 − (1 + q)<sup>−n</sup>) mit q = Zins ÷ 4, n = Anzahl Raten. Hofkredit ${fmt(10000)}, ${KREDIT.jz} Raten → ${fmt(kreditRate(10000, KREDIT.zins, KREDIT.jz))}. Je Rate: Zinsen = Restschuld × q, Rest tilgt. Abbuchung automatisch zu Beginn jeder Jahreszeit (erste Rate in der Jahreszeit nach der Aufnahme), offene Raten zuerst. Reicht das Geld nicht: Mahnung + Mahngebühr (10 %, mind. 20 €) je verpasster Rate, bezahlen im Brief oder Finanzen → Bank. 2 Tage vor der dritten Rate Warnfenster (zwangsWarnungZeigen). ${KREDIT.verpasst} offene Raten → Pfändung: alle eigenen Pferde des Hofs (auch extern, Fohlen bei Fuß mit) zu ¾ des Werts zwangsverkauft; reicht Erlös + Kasse für die offenen Raten, bleibt der Hof – sonst Zwangsversteigerung (beim letzten Hof: Spiel verloren, Spielstand gelöscht).</p>
       <p><b>Weitere Kredite</b> (Finanzen → Bank): bis ${prozent(KREDIT.beleihung)} des Immobilienwerts minus Restschuld (Start: 16.000 € − 10.000 € = 6.000 €), in 1.000-€-Schritten, Laufzeit ${KREDIT.laufzeiten.map(n => n / 4).join(" / ")} Jahre, gleicher Zins. Nicht, solange eine Rate offen ist. Finanzen-Posten: Hofkauf, Kredit (Auszahlung), Kredit: Zinsen, Kredit: Tilgung, Kredit: Mahngebühr.</p>

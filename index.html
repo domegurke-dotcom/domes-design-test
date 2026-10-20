@@ -978,7 +978,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "564";
+  const SPIEL_VERSION = "565";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -986,10 +986,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=564"></script>
-<script src="pferd.js?v=564"></script>
-<script src="boxstufen.js?v=564"></script>
-<script src="kopfneu.js?v=564"></script>
+<script src="lz-string.min.js?v=565"></script>
+<script src="pferd.js?v=565"></script>
+<script src="boxstufen.js?v=565"></script>
+<script src="kopfneu.js?v=565"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -8702,10 +8702,10 @@
   // Aufgaben je Beruf (Dome, v255): in der Hofverwaltung → Mitarbeiter abwählbar (m.aus[k] = true heißt „macht das nicht“)
   const MA_AUFGABEN = {
     fuettern: "Füttern", misten: "Misten", weide: "Weidegang (nachmittags, abends wieder rein)",
-    putzen: "Putzen (bürsten, kämmen, Hufe auskratzen)", maehne: "Mähne und Schopf kürzen", hufe: "Hufe auskratzen", decke: "Decke wechseln (Pension)", leicht: "leichte Arbeit (Bodenarbeit, Freiarbeit, Spaziergang, Longieren)", behandeln: "Behandlungsplan",
+    putzen: "Putzen (bürsten, kämmen, Hufe auskratzen)", waschen: "Waschen (verschwitzt oder schmutzig, mit Waschplatz)", maehne: "Mähne und Schopf kürzen", hufe: "Hufe auskratzen", decke: "Decke wechseln (Pension)", leicht: "leichte Arbeit (Bodenarbeit, Freiarbeit, Spaziergang, Longieren)", behandeln: "Behandlungsplan",
     geburt: "Nachtdienst bei Geburten", abc: "Fohlen-ABC (Halfter, Führen, Hufe geben)", training: "Reittraining und intensives Training", reparieren: "Gebäude ausbessern", termine: "Hufschmied-Termine zusammenlegen", plaene: "Futterpläne jede Jahreszeit prüfen", aepfeln: "Weide abäppeln (1 Weide am Tag)" };
-  const MA_AUFGABEN_TYP = { stallbursche: ["fuettern", "misten", "weide"], azubi: ["fuettern", "misten", "weide"], pfleger: ["putzen", "maehne", "decke", "leicht", "behandeln", "geburt", "aepfeln"],
-    pferdewirtHS: ["putzen", "maehne", "decke", "leicht", "behandeln"], pferdewirt: ["putzen", "abc", "geburt", "behandeln", "decke"], bereiter: ["training"], renntrainer: ["training"], westerntrainer: ["training"], hofhelfer: ["reparieren"], stallmeister: ["termine", "decke"], futterexperte: ["plaene"] };
+  const MA_AUFGABEN_TYP = { stallbursche: ["fuettern", "misten", "weide"], azubi: ["fuettern", "misten", "weide"], pfleger: ["putzen", "waschen", "maehne", "decke", "leicht", "behandeln", "geburt", "aepfeln"],
+    pferdewirtHS: ["putzen", "waschen", "maehne", "decke", "leicht", "behandeln"], pferdewirt: ["putzen", "abc", "geburt", "behandeln", "decke"], bereiter: ["training"], renntrainer: ["training"], westerntrainer: ["training"], hofhelfer: ["reparieren"], stallmeister: ["termine", "decke"], futterexperte: ["plaene"] };
   const maDarf = (m, k) => !(m && m.aus && m.aus[k]);
   function maZuteilung(art) {
     const kand = spiel.boxen.map((b, i) => i).filter(i => { const b = spiel.boxen[i], p = b.pferd; if (!p || p.klinik || b.tot) return false;
@@ -9343,6 +9343,26 @@
     prot("Solarium selbst", { p });
     return `☀️ ${esc(p.name)} stand 10 Minuten unter dem Solarium${war ? " und ist jetzt trocken" : ""}${!trainiert && datum().s === 3 ? " – gut aufgewärmt fürs Reiten" : ""}.${S.vor && S.nach ? " Vor und nach dem Reiten – das beugt Verspannungen und Muskelkater vor." : ""}`;
   }
+  // W4: abends (vor der Nacht) – Pferdepfleger wäscht in seinen Boxen verschwitzte oder schmutzige Pferde (nur mit Waschplatz, so viele wie Plätze, verschwitzte zuerst);
+  // Pensionspferde mit gebuchter Leistung „Waschen“/„Solarium“ ebenso (Besitzer zahlt je Nutzung). Im Herbst/Winter ohne Abspritzen nur trocken reiben.
+  function waschAbend() {
+    const plaetze = waschGeb() ? waschStufe() : 0, solarPl = solarGeb() ? solarGeb().stufe || 1 : 0; if (!plaetze && !solarPl) return;
+    const pfl = [...aktive("pfleger"), ...aktive("pferdewirtHS")].filter(m => maDarf(m, "waschen")), pBoxen = new Set(maBoxen("pfleger"));
+    const kand = spiel.boxen.map((b, i) => ({ b, i, p: b.pferd })).filter(({ b, p }) => p && !b.tot && !p.klinik && !p.weide && !paddockVon(p) && !waschSperre(p, b));
+    const will = x => fremd(x.p) ? pensionDarf(x.p, "waschen") : pfl.length && pBoxen.has(x.i);
+    const noetig = x => schweissHeute(x.p) || nassHeute(x.p) || ((x.p.dreck && x.p.dreck.fell) || 0) >= 50;
+    let frei = plaetze;
+    kand.filter(x => will(x) && noetig(x) && x.p.gewaschen !== spiel.tag).sort((a, b) => (schweissHeute(b.p) ? 1 : 0) - (schweissHeute(a.p) ? 1 : 0) || ((b.p.dreck || {}).fell || 0) - ((a.p.dreck || {}).fell || 0)).forEach(x => {
+      if (frei <= 0) return; frei--; const p = x.p, E = waschErlaubt(p);
+      if (E.ganz && ((p.dreck && p.dreck.fell >= 50) || schweissHeute(p))) { const d = (p.dreck = p.dreck || { fell: 0, maehne: 0, seit: null }); d.fell = 0; d.seit = null; d.maehne = Math.round((d.maehne || 0) / 2); wasserGewoehnen(p); p.gewaschen = spiel.tag; }
+      delete p.schweiss; delete p.nass; delete p.nassBeine; p.getrocknet = spiel.tag;   // das Personal trocknet immer ab
+      if (fremd(p)) { const e = einstellerVon(p); if (e) e.waschSumme = (e.waschSumme || 0) + PENSION_LEISTUNG.waschen.preis; }
+    });
+    let sfrei = solarPl;
+    kand.filter(x => fremd(x.p) && pensionDarf(x.p, "solarium") && solarHeute(x.p).n === 0 && (x.p.trainHeute && x.p.trainHeute.tag === spiel.tag || nassHeute(x.p) || schweissHeute(x.p))).forEach(x => {
+      if (sfrei <= 0) return; sfrei--; const p = x.p, S = (p.solar = solarHeute(p)); S.n++; S.nach = true; delete p.schweiss; delete p.nass; delete p.nassBeine; p.getrocknet = spiel.tag; wohlAendern(p, SOLAR.wohl, "Solarium");
+      const e = einstellerVon(p); if (e) e.solarSumme = (e.solarSumme || 0) + PENSION_LEISTUNG.solarium.preis; });
+  }
   const nassHeute = p => p && p.nass === spiel.tag;
   const schweissHeute = p => p && p.schweiss === spiel.tag;
   // Pferdepfleger: zu lang gewordene Mähne / zu langen Schopf zurück auf die Wunschlänge (länger wachsen lassen geht nur von selbst)
@@ -9373,7 +9393,7 @@
   // Tageswechsel: jeder Hof läuft für sich (H2), Markt, Labor, Tierschutz und Turnierkalender nur einmal
   function naechsteNacht() {
     if (spiel.ansehen) return;
-    jedenHof(() => { tote(); turnierNacht(); }, true);   // Turnierpferde von heute: Ergebnis (Brief kommt am nächsten Tag)
+    jedenHof(() => { try { waschAbend(); } catch (e) { console.error("Waschen:", e); } tote(); turnierNacht(); }, true);   // W4: abends waschen Pfleger/Einsteller-Leistung · Turnierpferde von heute: Ergebnis (Brief kommt am nächsten Tag)
     spiel.tag += 1;
     jedenHof(hofNacht, true);
     tierschutzKlinik(); tierschutzFohlen(); laborNacht(); auktionsNacht();
@@ -12057,8 +12077,11 @@
     decke: { n: "Decke wechseln", ico: "🧣", preis: 20, chance: .4, saison: [2, 3], info: "Herbst und Winter: jeden Tag Decke wechseln (Pfleger/Pferdewirt oder du)" },
     medizin: { n: "Medikamente geben", ico: "💊", preis: 20, chance: .2, info: "bei Krankheit den Behandlungsplan des Tierarztes umsetzen" },
     paddockbox: { n: "Paddockbox", ico: "🏡", preis: 50, chance: .35, info: "Paddockbox statt normaler Box (nur mit Paddockboxenstall)" },
-    einstreu: { n: "Bessere Einstreu", ico: "🛏️", preis: 30, chance: .25, info: "staubarme Einstreu (Späne, Pellets oder Leinstroh/Hanf) statt Stroh – aus deinem Lager" } };   // H6 (v286)
-  const PL_REIHE = ["putzen", "bewegen", "decke", "medizin", "paddockbox", "einstreu"];   // v388: „pfleger“ (Hufe und Mähne) steckt jetzt in „putzen“ (Pflege)
+    einstreu: { n: "Bessere Einstreu", ico: "🛏️", preis: 30, chance: .25, info: "staubarme Einstreu (Späne, Pellets oder Leinstroh/Hanf) statt Stroh – aus deinem Lager" },   // H6 (v286)
+    waschen: { n: "Waschen", ico: "🚿", get preis() { return WASCH_PENSION[Math.max(1, waschStufe()) - 1]; }, jeTag: true, nutzung: true, chance: .2, info: "abends waschen, wenn das Pferd verschwitzt oder schmutzig ist (Pfleger oder du) – bezahlt wird je Wäsche (6 / 8 / 10 € nach Stufe)" },   // W4 (Dome 19.10.)
+    solarium: { n: "Solarium", ico: "☀️", get preis() { const g = solarGeb(); return SOLAR_PENSION[Math.max(1, g ? g.stufe || 1 : 1) - 1]; }, jeTag: true, nutzung: true, chance: .15, info: "nach dem Training oder wenn das Pferd nass ist unters Solarium – bezahlt wird je Anwendung (3 / 4 / 5 € nach Stufe)" } };
+  const PL_REIHE = ["putzen", "bewegen", "decke", "medizin", "paddockbox", "einstreu", "waschen", "solarium"];
+  const WASCH_PENSION = [6, 8, 10], SOLAR_PENSION = [3, 4, 5];   // W4: Preis je Nutzung nach Stufe (Waschplatz / Solarium)   // v388: „pfleger“ (Hufe und Mähne) steckt jetzt in „putzen“ (Pflege)
   const PENSION = { anfrage: 0.33, stufe: [0, 1, 1.4, 2], halle: 0.3, roundpen: 0.1, blut: { vorher: 0.7, nachreichen: 0.9, keiner: 1 }, risiko: { vorher: 0, nachreichen: 0.03, keiner: 0.03 },
     besuch: 0.6, verspaetet: 0.1, tragend: 0.15, start: 70, beschwerde: 35, kuendigung: 20, hengst: 0.1, maxAnfragen: 2, anfrageTage: 3, mahnZins: 0.1, voll: 4, entsch: 1, feedback: 0.5 };
   // Tempo-unabhängig (Dome, v252): 0,33 Anfragen je freier Box und Jahreszeit (6 freie Boxen ≈ 2 je Jahreszeit), mindestens 1 garantiert
@@ -12104,7 +12127,7 @@
   const ausstattungBonus = () => Object.values(ausstattung()).reduce((a, v) => a + v, 0);
   const pensionAnsehen = d => { const R = pensionRegeln(); R.ansehen = Math.max(0, Math.min(200, R.ansehen + d)); };
   // kann der Hof die Leistung gerade erbringen?
-  const leistungMoeglich = k => k === "paddockbox" ? spiel.boxen.some(b => b.paddock) : k === "decke" ? false : true;   // Decken gibt es noch nicht (Dome)
+  const leistungMoeglich = k => k === "paddockbox" ? spiel.boxen.some(b => b.paddock) : k === "decke" ? false : k === "waschen" ? !!waschGeb() : k === "solarium" ? !!solarGeb() : true;   // Decken gibt es noch nicht (Dome)
   const leistungAngeboten = k => !!pensionRegeln().leistungen[k] && leistungMoeglich(k);
   const leistungFaellig = (e, k) => e.leistungen[k] && leistungMoeglich(k) && (!PENSION_LEISTUNG[k].saison || PENSION_LEISTUNG[k].saison.includes(datum().s));
   // erledigen Mitarbeiter die Leistung automatisch?
@@ -12113,7 +12136,7 @@
   const pensionPlaetze = () => { const R = pensionRegeln(); return Math.max(0, R.max - einstellerListe().filter(e => !e.art).length - (spiel.pensionAnfragen || []).filter(a => a.angenommen && !a.art).length); };
   // Betrag je Jahreszeit (Box + gebuchte Leistungen dieser Jahreszeit)
   const bewegenTage = e => Math.round((e.bewegenAnteil || 0) * tpj());
-  const leistPreis = (e, k) => k === "bewegen" ? 0 : PENSION_LEISTUNG[k].preis;   // v327: Bewegen wird nach gerittenen Einheiten abgerechnet (bereiterPensionAbrechnung)
+  const leistPreis = (e, k) => k === "bewegen" || PENSION_LEISTUNG[k].nutzung ? 0 : PENSION_LEISTUNG[k].preis;   // W4: Waschen/Solarium je Nutzung (e.waschN/e.solarN)   // v327: Bewegen wird nach gerittenen Einheiten abgerechnet (bereiterPensionAbrechnung)
   const pensionLeistBetrag = (e, s = datum().s) => e.art ? 0 : PL_REIHE.filter(k => e.leistungen[k] && leistungMoeglich(k) && (!PENSION_LEISTUNG[k].saison || PENSION_LEISTUNG[k].saison.includes(s))).reduce((a, k) => a + leistPreis(e, k), 0);
   // Anfrage-Chance je Tag: 3 % je freier Box × Stufe × Anlagen × Ansehen × Preis × Bluttest-Regel
   const pensionPreisF = () => { const R = pensionRegeln(); return Math.max(0.1, Math.min(2, Math.pow([1, 2, 3].reduce((a, s) => a + pensionRichtwert(s) / (R.preis[s] || PENSION_PREIS[s]), 0) / 3, 3))); };
@@ -12378,7 +12401,7 @@
     einstellerListe().forEach(e => { const N = e.preisNeu; if (!N || N.ab > jetzt) return; if (N.ok) e.preis = N.preis; delete e.preisNeu; });   // v422: vereinbarter neuer Preis gilt ab jetzt
     const zeilen = [];
     einstellerListe().forEach(e => {
-      const p = (pensionBox(e) || {}).pferd, box = e.nachlass ? Math.round(e.preis * (1 - UMBAU.nachlass)) : e.preis, auf = Math.round((e.abfohlSumme || 0) + (e.abfohlTage || 0) * ABFOHL_AUFPREIS[1]), leist = pensionLeistBetrag(e, s) + auf; e.abfohlSumme = 0; e.abfohlTage = 0;   // (abfohlTage: Spielstände von v545)   // v545: Abfohlbox-Aufpreis gehört zu den Zusatzleistungen
+      const p = (pensionBox(e) || {}).pferd, box = e.nachlass ? Math.round(e.preis * (1 - UMBAU.nachlass)) : e.preis, auf = Math.round((e.abfohlSumme || 0) + (e.abfohlTage || 0) * ABFOHL_AUFPREIS[1]), leist = pensionLeistBetrag(e, s) + auf + (e.waschSumme || 0) + (e.solarSumme || 0); e.abfohlSumme = 0; e.waschSumme = 0; e.solarSumme = 0; e.abfohlTage = 0;   // (abfohlTage: Spielstände von v545)   // v545: Abfohlbox-Aufpreis gehört zu den Zusatzleistungen
       if (Math.random() < PENSION.verspaetet && !e.offen) { e.offen = { box, leist, faellig: spiel.tag + 2, mahn: 0 }; zeilen.push(`<li>${esc(eName(e))} (${p ? esc(p.name) : "–"}): ${fmt(box + leist)} – <b>noch offen</b></li>`); return; }
       buchen(box, "Pension"); if (leist) buchen(leist, "Pension: Zusatzleistungen");
       zeilen.push(`<li>${esc(eName(e))} (${p ? esc(p.name) : "–"}): ${fmt(box + leist)}${auf ? ` (inkl. Abfohlbox ${fmt(auf)})` : ""}</li>`);
@@ -12498,7 +12521,7 @@
       <p class="text" style="margin:2px 0 0"><small>Gilt für neue Verträge. Teurer heißt weniger Anfragen (25 % über dem Richtwert etwa halb so viele), günstiger mehr.</small></p>
       <h4 class="ma-titel">🧰 Zusatzleistungen anbieten</h4>
       ${PL_REIHE.map(k => { const P = PENSION_LEISTUNG[k], ok = leistungMoeglich(k);
-        return `<label class="pn-leist ${ok ? "" : "aus"}"><input type="checkbox" data-pnleist="${k}" ${R.leistungen[k] && ok ? "checked" : ""} ${ok ? "" : "disabled"}><span><b>${P.ico} ${P.n} · ${fmt(P.preis)}${P.jeTag ? " je Einheit" : ""}</b><small>${ok ? P.info : k === "decke" ? "geht noch nicht – Decken kommen später" : "nur mit Paddockboxen (Hof → Bauen)"}</small></span></label>`; }).join("")}
+        return `<label class="pn-leist ${ok ? "" : "aus"}"><input type="checkbox" data-pnleist="${k}" ${R.leistungen[k] && ok ? "checked" : ""} ${ok ? "" : "disabled"}><span><b>${P.ico} ${P.n} · ${fmt(P.preis)}${P.jeTag ? " je Einheit" : ""}</b><small>${ok ? P.info : k === "decke" ? "geht noch nicht – Decken kommen später" : k === "waschen" ? "nur mit Waschplatz (Hof → Bauen)" : k === "solarium" ? "nur mit Pferdesolarium (Hof → Bauen)" : "nur mit Paddockboxen (Hof → Bauen)"}</small></span></label>`; }).join("")}
       <p class="text" style="margin:2px 0 0"><small>Je Jahreszeit zusätzlich – jeder Einsteller bucht selbst, was er möchte. Gebuchtes muss jeden Tag erledigt werden (siehe „Pension heute“ im Stall), sonst sinkt die Zufriedenheit.</small></p>
       ${A.length ? `<h4 class="ma-titel">✉️ Offene Anfragen (${A.length})</h4><div class="ma-liste">${A.map(anfrage).join("")}</div>` : ""}
       <h4 class="ma-titel">🐴 Einsteller (${L.length})</h4>${L.length ? `<div class="ma-liste">${L.map(karte).join("")}</div>` : `<p class="text"><small>Noch keine Einsteller.${R.offen ? " Sobald Boxen frei sind, kommen Anfragen per Brief." : " Hake „Pensionsplätze anbieten“ an, dann kommen Anfragen per Brief."}</small></p>`}`;
@@ -13368,6 +13391,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Hofchronik (B2, v548):</b> Dieselben Zähler wie das Spielprotokoll, aber <b>je Hof</b> getrennt (<code>spiel.chronik[Hof]["Jahr-Jahreszeit"].k</code>); das Spielprotokoll bleibt als „Gesamt“. Neu gezählt: Turnier-Start/Sieg/Platz <b>je Disziplin und Klasse</b> („Turnier Dressur L: Sieg“), höchste erreichte Klasse je Disziplin, „Abgabe: Gnadenhof / Tierschutz / Händler (Rückgabe)“, „Pferd gepfändet“, höchster und tiefster Kontostand je Jahreszeit (<code>hoch</code>/<code>tief</code>, gemessen bei jeder Buchung), Höfe gekauft/verkauft/verloren mit Name und Jahreszeit (<code>spiel.chronikHoefe</code>). Alte Spielstände haben keine Aufteilung nach Höfen (Anzeige später „–“). Die Anzeige (Jahresbericht, Verloren-Bilanz) folgt in B3/B4.</p>
       <p><b>Waschplatz (W1/W2, v563):</b> Pferdepflege → Ort → Waschplatz, Werkzeuge per Wischen: Abspritzen (Fell sauber, Mähne halb, Sommer Wohlbefinden +${WASCH.sommerWohl} einmal am Tag; Putz-Wohlbefinden nur einmal zusammen mit Bürste), Shampoo (${fmt(WASCH.shampooPreis)} je Flasche, ${WASCH.shampooN} Anwendungen, Fellglanz 1 Jahreszeit = +2 % Marktwert), Beine &amp; Hufe, Abtrocknen (Handtuch Stufe 1, Schweißmesser ab Stufe 2; ersetzt das Abschwitzen), Beine kühlen ab Stufe 3, Pilzwaschung. Ganzes Pferd: Sommer immer, Frühling/Herbst bei Sonne/Wolken, Winter nie; Beine/Hufe im Winter nur mit warmem Wasser (ab Stufe 2, Zustand ≥ ${WASCH.warmAb} %); unter 1 Jahr nur Beine. Verschwitzt nach ≥ ${WASCH.schweiss} Energie Training (≥ ${WASCH.schweissHeiss} bei Sonne im Sommer oder nervösen Pferden): über Nacht Herbst/Winter Erkältung ×${WASCH.erkaeltSchweiss}, sonst Fell +${WASCH.schweissDreck}. Nass über Nacht (außer Sommer): Mauke ×${WASCH.maukeNass}, Herbst/Winter Erkältung ×${WASCH.erkaeltNass}. Hufe an zwei Tagen hintereinander gewaschen: Strahlfäule ×${WASCH.hufOft}. Mauke: Beine waschen + abtrocknen + Wundsalbe +${WASCH.maukeSalbe} Heilwirkung, ohne Abtrocknen schadet es. Gewöhnung ${WASCH.gewohnt} Wäschen (ängstlich ${WASCH.gewohntAngst}), Wohlbefinden −3 … −1, bleibt für immer. Ohne Gummimatten ${WASCH.ausrutschen * 100} % Ausrutschen (kleine Verletzung), mit Matten Wohlbefinden +${WASCH.mattenWohl}. Gesperrt bei Erkältung, Husten, Fieber, Wunde, Hufverband, Kolik, Hufrehe, Klinik, draußen.</p>
       <p><b>Pferdesolarium (W3, v564):</b> eigenes Gebäude ${BAUTEN.solarium.preis.map(fmt).join(" / ")}, 12 m², Pension-Bonus ${AUSSTATTUNG.solarium.map(x => Math.round(x * 100) + " %").join(" / ")}. Trocknet nasse und verschwitzte Pferde sofort, Wohlbefinden +${SOLAR.wohl} je Anwendung (mit Gummimatten +${SOLAR.wohlMatten}). Winter ${SOLAR.maxWinter}× am Tag (vor dem Reiten ersetzt es das Aufwärmen – kein −20 %), sonst ${SOLAR.max}×. Vor und nach dem Reiten am selben Tag: in der Nacht Lahmheit ×${SOLAR.lahm}, Kreuzverschlag ×${SOLAR.kreuz}. Gleiche Sperren wie am Waschplatz (ohne Wetter).</p>
+      <p><b>Pfleger und Einsteller (W4, v565):</b> Pferdepfleger/Pferdewirt Haltung und Service (Aufgabe „Waschen“, in mab abwählbar) waschen abends in ihren Boxen verschwitzte oder schmutzige Pferde (Fell ≥ 50) – höchstens so viele wie der Waschplatz Plätze hat (Stufe 1/2/3), verschwitzte zuerst; im Herbst/Winter ohne Abspritzen nur trocken reiben. Einsteller-Leistungen „Waschen“ (je Wäsche ${WASCH_PENSION.map(fmt).join(" / ")}) und „Solarium“ (je Anwendung ${SOLAR_PENSION.map(fmt).join(" / ")}, nach Training oder wenn nass) – abgerechnet mit dem Pensionsgeld zu Beginn der nächsten Jahreszeit.</p>
       <p><b>Raritäten-Markt (R2/R3, v561):</b> Pferdemarkt → 💎 Raritäten-Markt. Marktjahr ab Sommer (Tag 1) bis Ende Frühling, vorher „öffnet im Sommer“. Jahreskarte ${fmt(RAR.eintritt)} (Admin frei). Je Rasse 2 reinrassige Pferde, ${RAR.alter[0]}–${RAR.alter[1]} Jahre, Hengst/Stute; Art ${RAR.art.map(x => Math.round(x * 100) + " %").join(" / ")} (nur Gen / nur Leistung / beides, Haflinger nur Leistung), Ziel-Stufe ${RAR.stufe.map(x => Math.round(x * 100) + " %").join(" / ")} (selten / sehr selten / einzigartig). Gen-Raritäten: Genotyp (oder zwei zusammen) im Band der Stufe, alle übrigen seltenen Gene auf den häufigsten Genotyp; die Hauptmerkmale des Vorjahrs werden nicht wiederholt. Leistung: Gangwerk über der 1-%- bzw. 0,1-%-Schwelle der Rasse oder Ausbildung bis S/Open mit echten Turniereinträgen (5–8 bzw. 15–18 Siege, davon 3+ auf Großen Reitturnieren) – nur in Disziplinen, in denen die Rasse mit voller Ausbildung die höchste Klasse erreicht. Die Pferde werden nie gespeichert (immer gleich aus dem Zufall erzeugt), nur Gebote/Zuschläge. Preis = max(Mindestpreis ${RAR.mindest.map(fmt).join(" / ")}, Marktwert ohne Tests × Faktor) – Gen (auch beides) ${RAR.faktorGen.join(" / ")}, nur Leistung ${RAR.faktorLeist.join(" / ")}; Ausnahmepferd ×1,5, Jahrhundertpferd ×2; + Testkosten. Kaufen nur per Auktion (Startgebot = Preis, Gegenbieter wie im Auktionshaus, erst wenn du mitbietest), Zuschlag zu Beginn der nächsten Jahreszeit (Quarantänebox zuerst), Buchung „Raritäten-Markt: Name“. <b>R4 (v562):</b> „📤 Eigenes Pferd anbieten“ – mindestens selten, Gen-Rarität nur mit Fellfarben-Test und Abstammungsnachweis; Auktion wie die eigene Auktion (Start ½ Richtwert, 1 Jahreszeit, Abbruchstrafe ½ letztes Gebot), die Gebote richten sich nach dem Raritäten-Richtwert.</p>
       <p><b>Seltenheit (R1, v556):</b> Wahrscheinlichkeit, dass ein zufälliges reinrassiges Pferd der Rasse dieses Merkmal hat. Stufen: selten &lt; ${SELTEN_STUFEN[1].bis * 100} %, sehr selten &lt; ${SELTEN_STUFEN[2].bis * 100} %, einzigartig &lt; ${SELTEN_STUFEN[3].bis * 100} %, Ausnahmepferd &lt; ${SELTEN_STUFEN[4].bis * 100} % (Preis ×1,5), Jahrhundertpferd &lt; ${SELTEN_STUFEN[5].bis * 100} % (Preis ×2). <b>Gen-Rarität:</b> je Fellfarben-Gen (ohne DMRT3) die Häufigkeit des Genotyps in der Rasse (Hardy-Weinberg aus <code>RASSE_GENE</code>; A mit At; BR1 bei Hengsten nur ein Allel); ein Genotyp mit Häufigkeit unter <code>SELTEN_MERKMAL</code> = ${SELTEN_MERKMAL} zählt als seltenes Merkmal, die Häufigkeiten aller seltenen Merkmale werden multipliziert (mindestens 10<sup>−6</sup> je Merkmal); nur Pferde ab 99 % Rassenanteil (Mischlinge haben gar keine Seltenheit, auch nicht durch Leistung); sichtbar erst nach dem Fellfarben-Test (Adminmodus immer). <b>Leistungs-Rarität</b> ab ${SELTEN_ALTER} Jahren: Rang in der Rasse (Tabelle <code>SELTEN_SCHWELLE</code> aus 20.000 Pferden je Rasse: obere 5 % / 1 % / 0,1 %; weil es zwei Kategorien sind, gilt die Wahrscheinlichkeit 1 − (1 − Anteil)²: obere 1 % → ≈ 2 % = selten, obere 0,1 % → ≈ 0,2 % = sehr selten, obere 5 % → ≈ 10 % = keine Seltenheit) bei Gangwerk (Schnitt Schritt/Trab/Galopp) und Aufschlüsselung (Schnitt der 13 Werte, wie sie der Spieler sieht; Charakter zählt nicht) oder Ausbildung (Klasse S bzw. Open: ≥ 1 Platzierung = 3 % selten, ≥ 5 Siege = 1 % sehr selten, ≥ 15 Siege davon ≥ 3 auf großen Turnieren = 0,1 % einzigartig); die seltenste Kategorie zählt. Gen und Leistung werden multipliziert.</p>
       <p><b>Spiel verloren (B4, v560):</b> Abschlussfenster mit Grund (Zwangsversteigerung/Insolvenz), Spieldauer, 6 Kacheln (Gewinn/Verlust ohne Hofkauf und Kredit, Kontostand am Ende, Pferde vor der Pfändung, Turniere, größte Ausgabe, größte Einnahme ohne den Zwangsverkauf), Kurve „Kontostand am Ende jeder Jahreszeit“ (rückwärts aus allen Buchungen), bestes/wertvollstes Pferd und <b>1–3 Tipps</b>: Dispo/Kreditrate immer; Personal ≥ 40 %, Bauen ≥ 35 %, Pferdekäufe ≥ 35 % (mehr gekauft als verkauft), Tierarzt ≥ 25 %, Futter ≥ 40 % der Ausgaben; keine Pensions-Einnahmen; keine Turniere bzw. nie platziert. Der Stand <b>kurz vor der Pfändung</b> liegt auf dem Platz „Verloren“ (<code>${VERLOREN_KEY}</code>, nur der letzte, gepackt, mit Post) und lässt sich nur ansehen: Band unten, gesperrte Knöpfe ausgegraut (Tag beenden, Markt, Immobilien, Anhänger, Pferdepflege, Kaufen/Bauen/Einstellen, Brief-Aktionen, Häkchen), nichts wird gespeichert, die Zeit steht. Als Datei mit Kennzeichen <code>verloren: true</code> speicher- und ladbar.</p>

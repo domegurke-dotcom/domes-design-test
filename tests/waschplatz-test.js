@@ -47,7 +47,14 @@ const ORDNER = process.argv[2];
     R.sol2 = solarium(p); R.sperre3 = solarSperre(p, box); R.beide = p.solar.vor && p.solar.nach;
     spiel.tag++; const rl = Object.fromEntries(befundRisiko(p, box, 'box')); const S0 = p.solar; delete p.solar; const rl0 = Object.fromEntries(befundRisiko(p, box, 'box')); p.solar = S0; spiel.tag--;
     R.lahm = rl.lahmheit / rl0.lahmheit;
+    // W4: Pferdepfleger wäscht abends verschwitzte/schmutzige Pferde (nur so viele wie Plätze)
+    while (datum().s !== 1) nacht(); p.befunde = [];
+    const x = bewerber('pfleger')[0]; spiel.mitarbeiter = spiel.mitarbeiter || []; spiel.mitarbeiter.push({ id: 'maT', typ: 'pfleger', name: x.name, w: x.w, wissen: { ...x.wissen }, eig: [...x.eig], gehalt: x.gehalt, ab: jzJetzt(), bis: null });
+    const q = neu({ rasse: 'araber', geschlecht: 'Wallach', alter: 7, name: 'Zweiter' }); spiel.boxen[1].pferd = q; gebaeude().find(g => g.gid === 'gw').stufe = 1;
+    p.schweiss = spiel.tag; p.dreck = { fell: 30, maehne: 10, seit: null }; q.dreck = { fell: 80, maehne: 50, seit: null }; delete p.gewaschen; delete q.gewaschen;
+    R.pflBoxen = maBoxen('pfleger'); waschAbend(); R.w4p = !schweissHeute(p) && p.gewaschen === spiel.tag; R.w4q = q.dreck.fell;
     return R; });
+  ok('W4: Pfleger wäscht zuerst das verschwitzte Pferd (1 Platz)', A.w4p && A.w4q === 80, JSON.stringify([A.pflBoxen, A.w4p, A.w4q]));
   ok('Solarium: ohne Gebäude gesperrt', /kein Pferdesolarium/.test(A.solOhne), A.solOhne); ok('Solarium Winter: vorher wärmt auf (kein „nicht aufgewärmt“)', A.aufgew && !A.kalt);
   ok('Solarium Winter: 2× am Tag, 3. Mal gesperrt', A.beide && /zweimal/.test(A.sperre3), A.sperre3); ok('Solarium vor + nach dem Reiten: Lahmheit ×0,7', Math.abs(A.lahm - 0.7) < 0.01, String(A.lahm));
   ok('Ohne Waschplatz kein Waschen (Spieler)', A.ohne === 0 && A.mit === 1);
@@ -60,8 +67,8 @@ const ORDNER = process.argv[2];
   ok('Sperre bei Erkältung', /erkältet/.test(A.sperre), A.sperre); ok('Verschwitzt nach viel Training', A.schweiss, 'verbraucht ' + A.verbraucht + (A.trainFehler ? ' ' + A.trainFehler : ''));
   ok('Mauke: gewaschen + getrocknet + Salbe besser', A.m1.wert > A.m0.wert, JSON.stringify([A.m0, A.m1])); ok('Mauke: gewaschen ohne Trocknen schadet', A.m2.schaden > A.m0.schaden, JSON.stringify(A.m2));
   // Oberfläche: Sommer, Waschplatz im Ort, Abspritzen durch Wischen
-  await pg.evaluate(() => { const p = spiel.boxen[0].pferd; const nacht = () => { spiel.boxen.forEach(x => { x.krippeVoll = !!x.pferd; x.mistig = false; }); naechsteNacht(); document.getElementById('dlg').hidden = true; };
-    while (datum().s !== 1) nacht(); p.befunde = []; p.dreck = { fell: 60, maehne: 40, seit: null }; document.querySelectorAll('.schirm.offen').forEach(x => x.classList.remove('offen')); zeigeStall(); zeigeTag(); aktenModus = 'pflege'; aktenReiter = 'platz'; ortModus = 'waschplatz'; zeigeAkte(); });
+  await pg.evaluate(() => { let p = spiel.boxen[0].pferd; if (!p) { p = neuesPferd({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Nixe' }); p.pflege = erzeugePflege(p); spiel.boxen[0].pferd = p; } const nacht = () => { spiel.boxen.forEach(x => { x.krippeVoll = !!x.pferd; x.mistig = false; }); naechsteNacht(); document.getElementById('dlg').hidden = true; };
+    while (datum().s !== 1) nacht(); if (!spiel.boxen[0].pferd) spiel.boxen[0].pferd = p; p.befunde = []; p.pflege.gesundheit = 100; p.dreck = { fell: 60, maehne: 40, seit: null }; document.querySelectorAll('.schirm.offen').forEach(x => x.classList.remove('offen')); zeigeStall(); zeigeTag(); aktenModus = 'pflege'; aktenReiter = 'platz'; ortModus = 'waschplatz'; zeigeAkte(); });
   await pg.waitForTimeout(300); await pg.evaluate(() => { document.getElementById('dlg').hidden = true; });
   const K = await pg.evaluate(() => [...document.querySelectorAll('[data-wasch]')].map(x => x.dataset.wasch + (x.disabled ? '-' : '+')).join(','));
   ok('Waschplatz-Ansicht mit Werkzeugen', /spritzen\+/.test(K) && /trocknen\+/.test(K), K);

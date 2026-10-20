@@ -38,6 +38,8 @@ Diese Punkte sind zu groß oder brauchen erst eine Planung. Darum hat Claude sie
 
 23. **Turnier-Schleifen und Pinnwand** (Dome, 20.10.2026): echte Schleifen statt 🥇🥈🥉🎀 (Stufe je Turnierart, Farbe nach Platz, Champion), Pinnwand in der Box, Schleifen je Pferd lebenslang. **Geplant → `PLAN-SCHLEIFEN.md`** (Bilder auf Branch `entwurf-schleifen-bilder`). Dome sagt, wann es losgeht.
 
+24. **Ungespültes Shampoo – Folgen?** (Claude Team, 20.10.2026, Dome: „für Projekt-Chat speichern“): Seit v609 gilt die Reihenfolge nass → Shampoo → ausspülen; erst nach dem Ausspülen glänzt das Fell. Bleibt das Shampoo im Fell (nicht ausgespült), passiert bisher nichts – `p.schaum` gilt nur den Tag. Frage zum Planen: Soll Shampoo-Rest Nachteile haben (juckende/trockene Haut, Ekzem- oder Mauke-Risiko ↑, Wohlbefinden ↓, stumpfes Fell)? In echt reizt zurückgebliebenes Shampoo die Haut und trocknet das Fell aus. Nicht eigenmächtig bauen.
+
 ## Rassetypen und Rote-Liste-Rassen (Dome, 18.10.2026 – noch planen)
 - **Typen innerhalb einer Rasse:** Knabstrupper (Pony, Sport, Barock), Friese (Barock-/Sporttyp, Prädikate Ster/Kroon/Model), Welsh (Sektion A–D, im Spiel nur D), Haflinger (alter, schwerer Typ / moderner Reittyp), Shetlandpony (Mini-Shetty unter 87 cm / Standard), Quarter (Halter, Racing, Working), Araber (Zuchtrichtungen, z. B. Ägypter), Tinker (Größen vom Pony bis zum Cob).
 - **Rote Liste (GEH):** z. B. Alt-Oldenburger/Ostfriese, Leutstettener, Rottaler, Senner, Dülmener, Schleswiger Kaltblut, Schwarzwälder Fuchs, Rheinisch-Deutsches Kaltblut, Sächsisch-Thüringisches Schweres Warmblut, Mecklenburger Kaltblut.

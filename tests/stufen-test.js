@@ -29,5 +29,10 @@ const { chromium } = require('playwright'); const path = require('path');
     spiel.stufenAn = true; spiel.spieler.stufe = 'anf'; delete spiel.spieler.stufeStart; stufeWaehlen(); [...document.querySelectorAll('#dlgKnoepfe button')].find(x => /Experte/.test(x.textContent)).click();
     ok('Umstellen auf Experte: Liste der Neuheiten, Spende bleibt an der Start-Stufe', spiel.spieler.stufe === 'exp' && spiel.spieler.stufeStart === 'anf' && /Raritäten/.test(document.getElementById('dlgInhalt').textContent));
     return out.join('\n'); });
+  // Dome 20.10.: alter Spielstand (ohne stufenAn) wird beim Laden Experte, Spielumfang an, Spende bleibt an der alten Stufe
+  await pg.evaluate(() => { spiel.spieler.stufe = 'anf'; delete spiel.spieler.stufeStart; delete spiel.stufenAn; speicherSperre = true; schreiben(SPEICHER, spiel); });
+  await pg.reload(); await pg.waitForTimeout(800);
+  const M = await pg.evaluate(() => ({ an: spiel.stufenAn, st: spiel.spieler.stufe, start: spiel.spieler.stufeStart, zucht: frei('zucht') }));
+  console.log((M.an === true && M.st === 'exp' && M.start === 'anf' && M.zucht ? '✓ ' : '✗ ') + 'Alter Spielstand beim Laden: Experte, Spielumfang an, Spende-Stufe bleibt – ' + JSON.stringify(M));
   console.log(R); console.log('Seitenfehler:', errs.join(' ; ') || 'keine'); await b.close();
 })();

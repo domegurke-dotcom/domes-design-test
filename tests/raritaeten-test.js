@@ -45,19 +45,29 @@ const ORDNER = process.argv[2];
   // Bieten über die Oberfläche und Zuschlag zu Beginn der nächsten Jahreszeit
   await pg.evaluate(() => { const b = [...document.querySelectorAll('#dlgKnoepfe button')].find(x => /Bieten/.test(x.textContent)); b.click(); }); await pg.waitForTimeout(300);
   await pg.evaluate(() => { const b = [...document.querySelectorAll('#dlgKnoepfe button')].find(x => /^Bieten/.test(x.textContent)); b.click(); }); await pg.waitForTimeout(200);
-  const B = await pg.evaluate(() => { const a = Object.values(spiel.rar.auk || {})[0]; return a ? { fuehrt: a.fuehrt, gebot: a.gebot, pferdGespeichert: JSON.stringify(spiel.rar).includes('"werte"'), id: a.id } : null; });
+  const B = await pg.evaluate(() => { const a = Object.values(spiel.rar.auk || {})[0]; return a ? { fuehrt: a.fuehrt, gebot: a.gebot, pferdGespeichert: JSON.stringify(spiel.rar).includes('"werte"'), id: a.id, dauer: a.endeTag - spiel.tag, tpj: tpj() } : null; });
+  ok('Auktion läuft ab dem ersten Gebot eine Jahreszeit (Tage)', B && B.dauer === B.tpj, B && B.dauer + ' Tage');
   ok('Gebot abgegeben, du führst', B && B.fuehrt === 'du', JSON.stringify(B)); ok('Pferd nicht im Spielstand gespeichert', B && !B.pferdGespeichert);
   const C = await pg.evaluate(id => { const vor = spiel.geld, a = spiel.rar.auk[id]; a.max = 0; const nacht = () => { spiel.boxen.forEach(x => { x.krippeVoll = !!x.pferd; x.mistig = false; }); naechsteNacht(); document.getElementById('dlg').hidden = true; };
-    do nacht(); while (datum().t !== 1);
-    const box = spiel.boxen.find(x => x.pferd && x.pferd.id === id); return { im: !!box, quar: box && !!box.quar, bezahlt: Math.round(vor - spiel.geld), gebot: a.gebot, weg: spiel.rar.weg.includes(id), brief: spiel.post.some(x => /^Zuschlag/.test(x.betreff)),
+    const ende = a.endeTag; let vorEnde = null; while (spiel.tag < ende) { if (spiel.tag === ende - 1) vorEnde = !a.vorbei; nacht(); }
+    const box = spiel.boxen.find(x => x.pferd && x.pferd.id === id); return { vorEnde, im: !!box, quar: box && !!box.quar, bezahlt: Math.round(vor - spiel.geld), gebot: a.gebot, weg: spiel.rar.weg.includes(id), brief: spiel.post.some(x => /^Zuschlag/.test(x.betreff)),
       fin: Object.values(spiel.finanzSaison || {}).some(J => Object.values(J).some(S => Object.keys(S).some(k => /^Raritäten-Markt: /.test(k) && !/Eintritt/.test(k)))) }; }, B.id);
-  ok('Zuschlag: Pferd im Stall', C.im, JSON.stringify(C)); ok('Bezahlt und gebucht (Finanzen „Raritäten-Markt: …“)', C.fin && C.bezahlt >= C.gebot * 0.9); ok('Aus dem Angebot verschwunden', C.weg); ok('Brief „Zuschlag“', C.brief);
+  ok('Am letzten Tag noch offen', C.vorEnde === true); ok('Zuschlag: Pferd im Stall', C.im, JSON.stringify(C)); ok('Bezahlt und gebucht (Finanzen „Raritäten-Markt: …“)', C.fin && C.bezahlt >= C.gebot * 0.9); ok('Aus dem Angebot verschwunden', C.weg); ok('Brief „Zuschlag“', C.brief);
   // Folgejahr: neue Pferde, anderes Hauptmerkmal je Rasse
   const F = await pg.evaluate(w1 => { const nacht = () => { spiel.boxen.forEach(x => { x.krippeVoll = !!x.pferd; x.mistig = false; }); naechsteNacht(); document.getElementById('dlg').hidden = true; };
     let n = 0; do { nacht(); n++; } while (!(datum().s === 1 && datum().t === 1) && n < 200);
     const W1 = JSON.parse(w1), W2 = spiel.rar.wahl, gleich = Object.keys(W2).filter(r => W1[r] && [].concat(W2[r]).some(k => [].concat(W1[r]).includes(k)) && rarGenotypen(r, false).length > 2);
     return { mj: spiel.rar.mj, karte: spiel.rar.karte, gleich, namen: rarAngebot().map(h => h.name).join() }; }, A.wahl1);
   ok('Neues Marktjahr: Jahreskarte neu nötig', F.karte === false); ok('Anderes Hauptmerkmal als im Vorjahr', F.gleich.length === 0, F.gleich.join(',')); ok('Neue Pferde', F.namen !== A.namen1);
+  // Dome 20.10.: Gebot am letzten Frühlingstag läuft über das Marktjahr hinaus weiter
+  const U = await pg.evaluate(() => { const nacht = () => { spiel.boxen.forEach(x => { x.krippeVoll = !!x.pferd; x.mistig = false; }); naechsteNacht(); document.getElementById('dlg').hidden = true; };
+    let n = 0; while (!(datum().s === 0 && datum().t === tpj()) && n++ < 400) nacht();
+    spiel.geld = 500000; const h = rarAngebot()[5], a = rarAuktion(h); a.gebot = h.preis; a.gebote = 1; a.duMax = h.preis; a.fuehrt = 'du'; a.duGeboten = true; a.hid = aktivHid(); a.endeTag = spiel.tag + tpj(); a.max = 0;
+    const id = h.id, mj0 = spiel.rar.mj; nacht(); const neuMj = spiel.rar.mj !== mj0, laeuft = !!spiel.rar.auk[id] && !spiel.rar.auk[id].vorbei, sichtbar = (zeigeMarkt('raritaeten'), document.getElementById('nebenSchirm').textContent.includes(h.name));
+    while (spiel.tag < spiel.rar.auk[id].endeTag) nacht();
+    return { neuMj, laeuft, sichtbar, im: spiel.boxen.some(x => x.pferd && x.pferd.id === id) }; });
+  ok("Gebot am letzten Frühlingstag läuft ins neue Marktjahr weiter (sichtbar) und endet mit Zuschlag", U.neuMj && U.laeuft && U.sichtbar && U.im, JSON.stringify(U));
+  await pg.evaluate(() => { spiel.rar.karte = true; });
   // R4: eigenes Pferd anbieten – ohne Nachweis abgelehnt, mit Nachweis Auktion mit Richtwert
   const E = await pg.evaluate(() => { document.getElementById('dlg').hidden = true; const box = spiel.boxen.find(x => x.pferd && x.pferd.rarStufe); const p = box.pferd;
     const mit = rarEigenSeltenheit(p).stufe; const t = p.tests; p.tests = { farbe: true }; const ohne = rarEigenSeltenheit(p); p.tests = t;
@@ -67,7 +77,7 @@ const ORDNER = process.argv[2];
     const a = (spiel.angebote || []).find(x => x.id === p.id); return { mit, ohne: ohne.stufe, ohneAbst: ohne.ohneAbst || ohne.leist, kachel: true, a: a && { rar: a.rar, preis: a.preis, wert: a.wert } }; });
   ok('R4: Rarität mit Nachweis zugelassen', E.mit >= 1 && E.kachel, JSON.stringify(E).slice(0, 300));
   ok('R4: Gen-Rarität ohne Abstammungsnachweis zählt nicht (nur Leistung)', E.ohne === 0 || !!E.ohneAbst, JSON.stringify(E.ohne));
-  ok('R4: Auktion mit Start = ½ Richtwert', E.a && E.a.rar && Math.abs(E.a.preis - Math.round(E.a.wert / 2 / 50) * 50) <= 50, JSON.stringify(E.a));
+  ok('R4: Auktion startet beim Richtwert (Raritäten-Marktwert)', E.a && E.a.rar && E.a.preis === E.a.wert, JSON.stringify(E.a));
   const G = await pg.evaluate(() => { const a = spiel.angebote.find(x => x.rar), vor = spiel.geld; a.endeTag = spiel.tag; a.halbOk = true; angeboteTag(); const weg = !spiel.boxen.some(x => x.pferd && x.pferd.id === a.id);
     return { weg, geld: Math.round(spiel.geld - vor), brief: spiel.post.slice(0, 3).map(x => x.von + ': ' + x.betreff).join(' | ') }; });
   ok('R4: Auktion endet mit Verkauf oder Brief', G.weg ? G.geld > 0 : /Kein Gebot/.test(G.brief), JSON.stringify(G));

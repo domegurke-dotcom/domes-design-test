@@ -1,6 +1,8 @@
 # Auftrag: Turnier-Schleifen und Pinnwand (kopierfertig, eigenständig)
 
-Quelle: Projekt-Chat (Dome, 20.10.2026), von Dome an Claude Pro weitergegeben. **Stand: geplant, noch nichts gebaut – Dome sagt, wann es losgeht.**
+Quelle: Projekt-Chat (Dome, 20.10.2026), von Dome an Claude Pro weitergegeben. **Stand 20.10.2026: S1 fertig (v584: `schleifeSVG`, Regeln, `p.schleifen` + Übernahme, Platzhalter im Brief, Fohlenschau/Championat-Zeilen, Erfolgsliste, Bilanz-Spaltenköpfe, `tests/schleifen-test.js`); S2–S4 offen.**
+
+**Festlegungen in S1 (Claude, bitte Dome kurz bestätigen – steht in `OFFENE-FRAGEN.md`):** Platz 1–6 farbig nur, wenn platziert (bestes Viertel, mind. 3) – ein nicht platzierter 5. Platz in einem kleinen Feld bekommt keine Schleife (außer Hofturnier: braun); Großes Westernturnier = Stufe 3; Fohlenchampionat und Fohlenschau = Stufe 2; Fohlen-Schleifen hängen am Fohlen.
 
 Auftraggeberin ist Dome. Alles auf Deutsch, Wege mit ausgeschriebenen Menüpfaden angeben (Beispiel: „Hauptmenü - Stall - Box - Pinnwand“).
 Die Bilder liegen im Repo auf dem Branch `entwurf-schleifen-bilder` im Ordner `entwuerfe/schleifen-bilder/` (Schleifen als SVG, Übersicht, Pinnwand, Box-Stufe-3-Vorschau, Brief-Beispiel, Zeichen-Skript `gen2.py`). Zuerst `uebersicht.png` ansehen: jede Reihe ist eine Stufe, ganz rechts in Reihe 1 die braune Teilnehmerschleife, dazu `champion.svg`.

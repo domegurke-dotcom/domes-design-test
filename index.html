@@ -430,6 +430,8 @@
   body.ansehen .schirm, body.ansehen #dlg, body.ansehen #lese { bottom: calc(46px + env(safe-area-inset-bottom)); }
   .ans-aus { opacity: .42 !important; filter: grayscale(.7); cursor: not-allowed !important; }
   #ansHinweis { position: fixed; left: 50%; bottom: calc(58px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 10000; background: #2b1d12; color: #fff; padding: 8px 14px; border-radius: 10px; font-size: .9rem; max-width: calc(100vw - 32px); text-align: center; }
+  /* W6: Waschplatz-/Solarium-Ansicht – Boxteile vor dem Pferd ausblenden */
+  #stall.waschAnsicht #traenke, #stall.waschAnsicht #plaketten { display: none; }
   body.aufnahme::after { content: ""; position: fixed; inset: 0; border: 3px solid #e02424; box-sizing: border-box; pointer-events: none; z-index: 9999; }   /* v529 (Dome): läuft eine Aufnahme, hat der Bildschirm einen dünnen roten Rahmen */
   .auf-knoepfe { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .enz-grid.text { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }   /* v525: Text-Karten ohne Bild (Spielstand) */
@@ -978,7 +980,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "566";
+  const SPIEL_VERSION = "567";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -986,10 +988,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=566"></script>
-<script src="pferd.js?v=566"></script>
-<script src="boxstufen.js?v=566"></script>
-<script src="kopfneu.js?v=566"></script>
+<script src="lz-string.min.js?v=567"></script>
+<script src="pferd.js?v=567"></script>
+<script src="boxstufen.js?v=567"></script>
+<script src="kopfneu.js?v=567"></script>
+<script src="waschbild.js?v=567"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -3890,6 +3893,7 @@
           <p class="text" style="margin:0 0 4px"><small>Fell: ${Math.round(d0.fell || 0)} % schmutzig · Mähne: ${Math.round(d0.maehne || 0)} %${zust ? ` · ${zust}` : ""} · Wasser gewohnt: ${gew >= need ? "ja" : `${gew} von ${need} Wäschen`}</small></p>
           ${sp ? `<p class="text">🚫 ${esc(p.name)} ${esc(sp)}.</p>` : E.grund ? `<p class="text"><small>ℹ️ ${esc(E.grund)}.</small></p>` : ""}
           <div class="kacheln quadrat">${wk("spritzen", "🚿", "Abspritzen", "ganzes Pferd mit dem Schlauch", !sp && E.ganz)}${wk("shampoo", "🧴", "Mit Shampoo", sh ? `noch ${sh} Anwendungen` : `Flasche ${fmt(WASCH.shampooPreis)} (10×)`, !sp && E.ganz)}${wk("beine", "🦵", "Beine & Hufe", "Beine und Hufe waschen", !sp && E.beine)}${wk("trocknen", st >= 2 ? "🧽" : "🧺", "Abtrocknen", st >= 2 ? "mit dem Schweißmesser" : "mit dem Handtuch", !sp)}${st >= 3 ? wk("kuehlen", "🧊", "Beine kühlen", "Kaltwasser-Gang (hilft Sehnen und Gelenken)", !sp) : ""}${befundListe(p).some(b => b.art === "hautpilz" && b.diagnose) ? wk("pilz", "🧴", "Pilzwaschung", "aus der Stallapotheke", !sp) : ""}</div>
+          ${g && st >= 2 && !g.gummi ? `<button class="knopf zweit" data-matten="waschplatz" style="width:auto;margin:4px 0">🟫 Gummimatten verlegen · ${fmt(MATTEN_PREIS)}</button>` : ""}
           <p class="text"><small>Wischen wie beim Putzen. Danach immer abtrocknen – nass über Nacht: Mauke ×2, im Herbst/Winter Erkältung ×1,5. Waschen ersetzt nicht das Hufe-Auskratzen.</small></p>` + zurueckOrt();
       } else if (ortModus === "solarium") {   // W3: Pferdesolarium
         const sp = solarSperre(p, box), S = solarHeute(p), g = solarGeb(), st = g ? g.stufe || 1 : 3;
@@ -3897,6 +3901,7 @@
           <p class="text" style="margin:0 0 4px"><small>Heute: ${S.n}× ${datum().s === 3 ? "von 2" : "von 1"}${S.vor ? " · vor dem Reiten ✓" : ""}${S.nach ? " · nach dem Reiten ✓" : ""}${nassHeute(p) ? " · 💧 nass" : ""}${schweissHeute(p) ? " · 💦 verschwitzt" : ""}</small></p>
           ${sp ? `<p class="text">🚫 ${esc(p.name)} ${esc(sp)}.</p>` : ""}
           <div class="kacheln quadrat"><button class="kachel ${sp ? "fehlt" : "klickbar"}" data-solar="1" ${sp ? "disabled" : ""}><span class="ico">☀️</span><b>10 Minuten Wärme</b><small>${datum().s === 3 && !(p.trainHeute && p.trainHeute.tag === spiel.tag && p.trainHeute.liste.length) ? "zum Aufwärmen vor dem Reiten" : "trocknen und entspannen"}</small></button></div>
+          ${g && st >= 2 && !g.gummi ? `<button class="knopf zweit" data-matten="solarium" style="width:auto;margin:4px 0">🟫 Gummimatten verlegen · ${fmt(MATTEN_PREIS)}</button>` : ""}
           <p class="text"><small>Trocknet nasse und verschwitzte Pferde sofort. Im Winter 2× am Tag: vorher zum Aufwärmen (ersetzt Bodenarbeit/Longieren), nachher zum Trocknen – beides zusammen beugt Lahmheit und Kreuzverschlag vor. Sonst 1× nach dem Training.</small></p>` + zurueckOrt();
       } else if (ortModus === "labor") {
         inhalt = meld + `<p class="text" style="margin:0 0 4px">🔬 <b>Labor</b> · Der Tierarzt schickt eine Haarprobe von ${esc(p.name)} ein – dafür muss ${pron(p).er} nicht wegfahren.</p>
@@ -3981,6 +3986,7 @@
         ${inhalt}
       </div>`;
     { const an = INFO.querySelector(".reiter.viele button.an"); if (an) an.parentElement.scrollLeft = Math.max(0, an.offsetLeft - 40); }
+    if (!LS) waschBildPlanen();   // W6
     INFO.querySelectorAll(".reiter button").forEach(b => b.onclick = () => { aktenReiter = b.dataset.r; aufschlTeil = null; deckModus = false; ortModus = null; scherModus = false; medModus = false; zaumModus = false; putzModus = false; meldung = ""; zeigeAkte(); });
     INFO.querySelectorAll("[data-lex]").forEach(x => x.onclick = () => lexFenster(x.dataset.lex, p));
     INFO.querySelectorAll("[data-kinder]").forEach(x => x.onclick = () => nachkommenFenster(p));
@@ -4037,6 +4043,10 @@
       speichern(); zeigeStall(); zeigeTag(); };
     const azk = $("angebotZurueck"); if (azk) azk.onclick = () => angebotZurueckziehen(p, () => zeigeAkte());
     // ---------- Karte Ort ----------
+    INFO.querySelectorAll("[data-matten]").forEach(k => k.onclick = () => { const g = k.dataset.matten === "solarium" ? solarGeb() : waschGeb(); if (!g) return;   // W6: Gummimatten am Waschplatz/im Solarium (ab Stufe 2, einmal)
+      if (geldFrei() < MATTEN_PREIS) { dialog(`<h3>Nicht genug Geld</h3>${dispoHinweis()}<p>Gummimatten kosten ${fmt(MATTEN_PREIS)}.</p>`); return; }
+      dialog(`<h3>🟫 Gummimatten verlegen?</h3><p>Rutschfeste Matten für ${k.dataset.matten === "solarium" ? "das Pferdesolarium" : "den Waschplatz"} für <b>${fmt(MATTEN_PREIS)}</b>. ${k.dataset.matten === "solarium" ? "Wohlbefinden +4 statt +3 je Anwendung." : "Kein Ausrutschen mehr, Wohlbefinden +1 beim Waschen."}</p>`,
+        [["Verlegen", () => { buchen(-MATTEN_PREIS, "Gummimatten"); g.gummi = true; prot("Bauauftrag", { x: "Gummimatten " + k.dataset.matten }); meldung = "🟫 Die Gummimatten liegen."; speichern(); zeigeStall(); zeigeAkte(); }], ["Abbrechen", null, "zweit"]]); });
     INFO.querySelectorAll("[data-solar]").forEach(k => k.onclick = () => { meldung = solarium(p); speichern(); zeigeStall(); zeigeTag(); zeigeAkte(); });
     INFO.querySelectorAll("[data-wasch]").forEach(k => k.onclick = () => { const w = k.dataset.wasch; meldung = "";   // W2: Waschplatz-Werkzeuge
       if (w === "shampoo" && !(spiel.shampoo > 0)) { if (geldFrei() < WASCH.shampooPreis) { dialog(`<h3>Nicht genug Geld</h3>${dispoHinweis()}<p>Eine Flasche Shampoo kostet ${fmt(WASCH.shampooPreis)}.</p>`); return; } buchen(-WASCH.shampooPreis, "Shampoo"); spiel.shampoo = WASCH.shampooN; }
@@ -5212,6 +5222,7 @@
     boxStufeZeichnen(box);
     $("stall").classList.toggle("mistig", !!box.mistig);
     { const pp = $("pferdPlatz"); if (pp) { if (box.pferd && nassHeute(box.pferd) && !box.pferd.weide) pp.setAttribute("filter", "url(#nassF)"); else pp.removeAttribute("filter"); } }   // W2: nasses Fell dunkler, bis es abgetrocknet ist
+    waschBildPlanen();   // W6: am Waschplatz/im Solarium steht das Pferd vor Domes Bild
     $("stall").classList.toggle("ohneHinweise", (spiel.tag || 1) > 2 || !box.pferd || !!box.pferd.klinik || !!box.pferd.weide);
     $("stall").classList.toggle("klinikBox", !!(box.pferd && (box.pferd.klinik || box.pferd.weide || box.pferd.paddock)));
     if (box.mistig) { zeichneMist(); $("mist").classList.remove("weg"); } else $("mist").classList.add("weg");
@@ -9340,6 +9351,7 @@
   // ---------- W3 (PLAN-WASCHPLATZ.md): Pferdesolarium – eigenes Gebäude ----------
   // trocknet nasse und verschwitzte Pferde sofort; Winter 2× am Tag (vor dem Reiten = Aufwärmen, danach), sonst 1× nach dem Training; mehr ist gesperrt (Haut)
   // je Anwendung Wohlbefinden +3 (mit Gummimatten +4); beide Anwendungen an einem Tag: Lahmheit ×0,7, Kreuzverschlag (PSSM) ×0,5 in der Nacht
+  const MATTEN_PREIS = 350;   // W6: Gummimatten am Waschplatz bzw. im Solarium (ab Stufe 2, einmal je Gebäude)
   const SOLAR = { wohl: 3, wohlMatten: 4, lahm: 0.7, kreuz: 0.5, maxWinter: 2, max: 1 };
   const solarGeb = () => gebaeude().filter(g => g.typ === "solarium" && !g.bau).sort((a, b) => (b.stufe || 1) - (a.stufe || 1))[0] || null;
   const solarHeute = p => p && p.solar && p.solar.tag === spiel.tag ? p.solar : { tag: spiel.tag, n: 0, vor: false, nach: false };
@@ -9378,6 +9390,20 @@
     kand.filter(x => fremd(x.p) && pensionDarf(x.p, "solarium") && solarHeute(x.p).n === 0 && (x.p.trainHeute && x.p.trainHeute.tag === spiel.tag || nassHeute(x.p) || schweissHeute(x.p))).forEach(x => {
       if (sfrei <= 0) return; sfrei--; const p = x.p, S = (p.solar = solarHeute(p)); S.n++; S.nach = true; delete p.schweiss; delete p.nass; delete p.nassBeine; p.getrocknet = spiel.tag; wohlAendern(p, SOLAR.wohl, "Solarium");
       const e = einstellerVon(p); if (e) e.solarSumme = (e.solarSumme || 0) + PENSION_LEISTUNG.solarium.preis; });
+  }
+  // W6: Domes Bilder (waschbild.js) – in der Waschplatz-/Solarium-Ansicht hinter dem Pferd statt der Box (Stufe, mit/ohne Gummimatten)
+  let waschBildUhr = null;
+  const waschBildPlanen = () => { cancelAnimationFrame(waschBildUhr); waschBildUhr = requestAnimationFrame(() => { try { waschBildSetzen(B()); } catch (e) { console.error("Waschbild:", e); } }); };   // erst nach dem ganzen Stallbild
+  function waschBildSetzen(box) {
+    const st = $("stall"), alt = $("waschBild"); if (alt) alt.remove(); st.classList.remove("waschAnsicht");
+    st.querySelectorAll("[data-wasch-aus]").forEach(el => { el.style.display = ""; delete el.dataset.waschAus; });
+    const p = box && box.pferd, W = window.WASCHBILD; if (!p || !W || p.weide || paddockVon(p) || aktenModus !== "pflege" || (ortModus !== "waschplatz" && ortModus !== "solarium")) return;
+    const sol = ortModus === "solarium", g = sol ? solarGeb() : waschGeb(), stufe = Math.max(1, Math.min(3, g ? g.stufe || 1 : 3)), k = (sol ? "s" : "w") + stufe + (g && g.gummi && stufe >= 2 ? "g" : "");
+    const svg = W[k] || W[(sol ? "s" : "w") + stufe]; if (!svg) return;
+    const pp = $("pferdPlatz"); pp.insertAdjacentHTML("beforebegin", `<g id="waschBild" pointer-events="none">${svg}${sol ? `<rect x="0" y="0" width="400" height="300" fill="#ffb347" opacity=".08"/>` : ""}</g>`); st.classList.add("waschAnsicht");
+    const aus = el => { if (el && el.style.display !== "none") { el.style.display = "none"; el.dataset.waschAus = "1"; } };   // Box-Teile vor dem Pferd (Eimer, Spinnweben, Mist, Licht, Sprechblasen) ausblenden – Boxschild bleibt
+    let n = pp.nextElementSibling; while (n) { if (n.id !== "boxSchildKnopf") aus(n); n = n.nextElementSibling; }
+    st.querySelectorAll(":scope > .stufeEl").forEach(aus);
   }
   const nassHeute = p => p && p.nass === spiel.tag;
   const schweissHeute = p => p && p.schweiss === spiel.tag;
@@ -13409,6 +13435,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Pferdesolarium (W3, v564):</b> eigenes Gebäude ${BAUTEN.solarium.preis.map(fmt).join(" / ")}, 12 m², Pension-Bonus ${AUSSTATTUNG.solarium.map(x => Math.round(x * 100) + " %").join(" / ")}. Trocknet nasse und verschwitzte Pferde sofort, Wohlbefinden +${SOLAR.wohl} je Anwendung (mit Gummimatten +${SOLAR.wohlMatten}). Winter ${SOLAR.maxWinter}× am Tag (vor dem Reiten ersetzt es das Aufwärmen – kein −20 %), sonst ${SOLAR.max}×. Vor und nach dem Reiten am selben Tag: in der Nacht Lahmheit ×${SOLAR.lahm}, Kreuzverschlag ×${SOLAR.kreuz}. Gleiche Sperren wie am Waschplatz (ohne Wetter).</p>
       <p><b>Pfleger und Einsteller (W4, v565):</b> Pferdepfleger/Pferdewirt Haltung und Service (Aufgabe „Waschen“, in mab abwählbar) waschen abends in ihren Boxen verschwitzte oder schmutzige Pferde (Fell ≥ 50) – höchstens so viele wie der Waschplatz Plätze hat (Stufe 1/2/3), verschwitzte zuerst; im Herbst/Winter ohne Abspritzen nur trocken reiben. Einsteller-Leistungen „Waschen“ (je Wäsche ${WASCH_PENSION.map(fmt).join(" / ")}) und „Solarium“ (je Anwendung ${SOLAR_PENSION.map(fmt).join(" / ")}, nach Training oder wenn nass) – abgerechnet mit dem Pensionsgeld zu Beginn der nächsten Jahreszeit.</p>
       <p><b>Fohlen „Duschen üben“ (W5, v566):</b> Ort → „Duschen üben“ (Fohlen bei Fuß, ab etwa 1 Monat, mit Waschplatz; Winter nur mit warmem Wasser): 1× am Tag, Vertrauen +${FOHLEN_DUSCHE.vertrauen} (bezogen auf 7 Tage), zählt zur Wassergewöhnung. Fohlenschau: am Vortag geübt → Eindrucksnote +${FOHLEN_DUSCHE.note}, schmutziges Fohlen −${FOHLEN_DUSCHE.note} (Schau und Championat).</p>
+      <p><b>Bilder und Matten (W6, v567):</b> In der Waschplatz-/Solarium-Ansicht steht das Pferd vor Domes Bild je Stufe (mit Gummimatten eigene Bilder, <code>waschbild.js</code>). Gummimatten am Waschplatz und im Solarium: ${fmt(MATTEN_PREIS)}, ab Stufe 2, einmal je Gebäude.</p>
       <p><b>Raritäten-Markt (R2/R3, v561):</b> Pferdemarkt → 💎 Raritäten-Markt. Marktjahr ab Sommer (Tag 1) bis Ende Frühling, vorher „öffnet im Sommer“. Jahreskarte ${fmt(RAR.eintritt)} (Admin frei). Je Rasse 2 reinrassige Pferde, ${RAR.alter[0]}–${RAR.alter[1]} Jahre, Hengst/Stute; Art ${RAR.art.map(x => Math.round(x * 100) + " %").join(" / ")} (nur Gen / nur Leistung / beides, Haflinger nur Leistung), Ziel-Stufe ${RAR.stufe.map(x => Math.round(x * 100) + " %").join(" / ")} (selten / sehr selten / einzigartig). Gen-Raritäten: Genotyp (oder zwei zusammen) im Band der Stufe, alle übrigen seltenen Gene auf den häufigsten Genotyp; die Hauptmerkmale des Vorjahrs werden nicht wiederholt. Leistung: Gangwerk über der 1-%- bzw. 0,1-%-Schwelle der Rasse oder Ausbildung bis S/Open mit echten Turniereinträgen (5–8 bzw. 15–18 Siege, davon 3+ auf Großen Reitturnieren) – nur in Disziplinen, in denen die Rasse mit voller Ausbildung die höchste Klasse erreicht. Die Pferde werden nie gespeichert (immer gleich aus dem Zufall erzeugt), nur Gebote/Zuschläge. Preis = max(Mindestpreis ${RAR.mindest.map(fmt).join(" / ")}, Marktwert ohne Tests × Faktor) – Gen (auch beides) ${RAR.faktorGen.join(" / ")}, nur Leistung ${RAR.faktorLeist.join(" / ")}; Ausnahmepferd ×1,5, Jahrhundertpferd ×2; + Testkosten. Kaufen nur per Auktion (Startgebot = Preis, Gegenbieter wie im Auktionshaus, erst wenn du mitbietest), Zuschlag zu Beginn der nächsten Jahreszeit (Quarantänebox zuerst), Buchung „Raritäten-Markt: Name“. <b>R4 (v562):</b> „📤 Eigenes Pferd anbieten“ – mindestens selten, Gen-Rarität nur mit Fellfarben-Test und Abstammungsnachweis; Auktion wie die eigene Auktion (Start ½ Richtwert, 1 Jahreszeit, Abbruchstrafe ½ letztes Gebot), die Gebote richten sich nach dem Raritäten-Richtwert.</p>
       <p><b>Seltenheit (R1, v556):</b> Wahrscheinlichkeit, dass ein zufälliges reinrassiges Pferd der Rasse dieses Merkmal hat. Stufen: selten &lt; ${SELTEN_STUFEN[1].bis * 100} %, sehr selten &lt; ${SELTEN_STUFEN[2].bis * 100} %, einzigartig &lt; ${SELTEN_STUFEN[3].bis * 100} %, Ausnahmepferd &lt; ${SELTEN_STUFEN[4].bis * 100} % (Preis ×1,5), Jahrhundertpferd &lt; ${SELTEN_STUFEN[5].bis * 100} % (Preis ×2). <b>Gen-Rarität:</b> je Fellfarben-Gen (ohne DMRT3) die Häufigkeit des Genotyps in der Rasse (Hardy-Weinberg aus <code>RASSE_GENE</code>; A mit At; BR1 bei Hengsten nur ein Allel); ein Genotyp mit Häufigkeit unter <code>SELTEN_MERKMAL</code> = ${SELTEN_MERKMAL} zählt als seltenes Merkmal, die Häufigkeiten aller seltenen Merkmale werden multipliziert (mindestens 10<sup>−6</sup> je Merkmal); nur Pferde ab 99 % Rassenanteil (Mischlinge haben gar keine Seltenheit, auch nicht durch Leistung); sichtbar erst nach dem Fellfarben-Test (Adminmodus immer). <b>Leistungs-Rarität</b> ab ${SELTEN_ALTER} Jahren: Rang in der Rasse (Tabelle <code>SELTEN_SCHWELLE</code> aus 20.000 Pferden je Rasse: obere 5 % / 1 % / 0,1 %; weil es zwei Kategorien sind, gilt die Wahrscheinlichkeit 1 − (1 − Anteil)²: obere 1 % → ≈ 2 % = selten, obere 0,1 % → ≈ 0,2 % = sehr selten, obere 5 % → ≈ 10 % = keine Seltenheit) bei Gangwerk (Schnitt Schritt/Trab/Galopp) und Aufschlüsselung (Schnitt der 13 Werte, wie sie der Spieler sieht; Charakter zählt nicht) oder Ausbildung (Klasse S bzw. Open: ≥ 1 Platzierung = 3 % selten, ≥ 5 Siege = 1 % sehr selten, ≥ 15 Siege davon ≥ 3 auf großen Turnieren = 0,1 % einzigartig); die seltenste Kategorie zählt. Gen und Leistung werden multipliziert.</p>
       <p><b>Spiel verloren (B4, v560):</b> Abschlussfenster mit Grund (Zwangsversteigerung/Insolvenz), Spieldauer, 6 Kacheln (Gewinn/Verlust ohne Hofkauf und Kredit, Kontostand am Ende, Pferde vor der Pfändung, Turniere, größte Ausgabe, größte Einnahme ohne den Zwangsverkauf), Kurve „Kontostand am Ende jeder Jahreszeit“ (rückwärts aus allen Buchungen), bestes/wertvollstes Pferd und <b>1–3 Tipps</b>: Dispo/Kreditrate immer; Personal ≥ 40 %, Bauen ≥ 35 %, Pferdekäufe ≥ 35 % (mehr gekauft als verkauft), Tierarzt ≥ 25 %, Futter ≥ 40 % der Ausgaben; keine Pensions-Einnahmen; keine Turniere bzw. nie platziert. Der Stand <b>kurz vor der Pfändung</b> liegt auf dem Platz „Verloren“ (<code>${VERLOREN_KEY}</code>, nur der letzte, gepackt, mit Post) und lässt sich nur ansehen: Band unten, gesperrte Knöpfe ausgegraut (Tag beenden, Markt, Immobilien, Anhänger, Pferdepflege, Kaufen/Bauen/Einstellen, Brief-Aktionen, Häkchen), nichts wird gespeichert, die Zeit steht. Als Datei mit Kennzeichen <code>verloren: true</code> speicher- und ladbar.</p>

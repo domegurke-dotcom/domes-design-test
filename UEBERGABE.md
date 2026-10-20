@@ -89,4 +89,5 @@ Bricht die Sitzung ab, kann **Claude Pro** hier weitermachen: Stand steht in der
 | Hinweise T2 Stufen | **fertig v569** (`tests/stufen-test.js`; nur neue Spiele) |
 | Hinweise T3 Texte | **fertig v570** |
 | Hinweise T4 Anfänger-Tutorial | **fertig v571** (`tests/tutorial-test.js`) |
-| Hinweise T5 (Fortgeschrittenen-/Experten-Tutorial) | als Nächstes |
+| Hinweise T5 (Fortgeschrittenen-/Experten-Tutorial) | **fertig v572** |
+| Hinweise T6 Gesamtprüfung | als Nächstes |

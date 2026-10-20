@@ -9312,7 +9312,7 @@
   function futterplanDialog(p, box, zurueck, S) {
     if (futterFest()) { futterDialog(p, box, zurueck); return; }   // Anfänger: kein eigener Futterplan
     if (spiel.tutorial) spiel.tutorial.planAuf = true;
-    tippMerken("futterplan");   // v376: Einsteiger-Tipp
+    if (!spiel.tutorial) tippMerken("futterplan");   // v376: Einsteiger-Tipp (im Tutorial kein zweites Infobläschen)
     if (!S) S = JSON.parse(JSON.stringify({ futterplan: p.futterplan || null, umstellung: p.umstellung || null, umstellungSofort: p.umstellungSofort || null, expertBetreut: p.expertBetreut || null, expertAuto: p.expertAuto || null, heuWaessern: p.heuWaessern || null }));
     const abbrechen = () => { Object.entries(S).forEach(([k, v]) => { if (v == null) delete p[k]; else p[k] = JSON.parse(JSON.stringify(v)); }); speichern(); zurueck(); };
     const eigener = !!(p.futterplan && p.futterplan.kg), P = eigener ? p.futterplan : standardPlan(p, box), F = futterkammer();
@@ -15659,16 +15659,39 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         ["Reitstunde", "Reitunterricht (Hofverwaltung → Reiter → Reitunterricht) bringt dir am Anfang am meisten. Ein Pferd, das weiter ist als du, muss nicht weg.", null, () => false, true],
         ["Reiterwahl", "Beim Nennen kannst du einen Bereiter oder Profi als Reiter wählen. Dann zählt dessen Können, und der Erfolg gehört dem Pferd. Gute Reiter lernen an einem Pferd, das sie fordert – und lassen das Pferd, das weiter ist, von jemandem reiten, der besser ist.", null, () => false, true]],
       fertig: () => false },
-    { n: "Zucht", ziel: "eine Stute decken lassen", neu: () => { const b = spiel.boxen[0], h = spiel.boxen[1]; b.pferd = TUT_PFERD({ rasse: "hannoveraner", geschlecht: "Stute", alter: 8, name: "Fee" }); h.pferd = TUT_PFERD({ rasse: "hannoveraner", geschlecht: "Hengst", alter: 9, name: "Donar" }); b.krippeVoll = h.krippeVoll = true; datumZuchtTauglich(); },
-      schritte: [["Genetik", "Im Steckbrief unter „Genetik“ findest du „Verpaaren mit …“. Tragzeit: 4 Jahreszeiten, gedeckt wird im Frühling und Sommer.", "#paarKnopf, [data-r='genetik']", () => deckModus], ["Hengst wählen", "Tippe auf Donar, deinen eigenen Hengst.", "[data-partner]", b => !$("dlg").hidden || !!(b.pferd.gedeckt || b.pferd.traechtig)],
-        ["Decken", "Tippe auf „Verpaaren“, wähle die Deckart (Natursprung oder Besamung) und bestätige. Danach zeigt eine Trächtigkeitsuntersuchung, ob es geklappt hat.", "#dlgKnoepfe button:not(.zweit):not(.rot)", b => !!(b.pferd.gedeckt || b.pferd.traechtig), true]],
-      fertig: b => !!(b.pferd.gedeckt || b.pferd.traechtig) },
-    TUT_ZEIGEN("Gentests", "einen Test bestellen", "Pferdepflege → Ort → Labor: Fellfarben- und Erbkrankheiten-Test. Die Ergebnisse stehen danach im Steckbrief unter Genetik.", "[data-ort^='lt-'], [data-ort='labor'], [data-r='platz'], [data-m='pflege']", () => (spiel.labor || []).length > 0 || spiel.boxen.some(b => b.pferd && Object.keys(b.pferd.tests || {}).length), "[data-ort^='lt-'], #dlgKnoepfe button:not(.zweit)"),
-    { n: "Freier Futterplan", ziel: "den Futterplan öffnen", neu: () => {},
+    { n: "Zucht und Gentests", ziel: "eine Stute decken lassen und einen Gentest auswerten", post: true, neu: () => { const b = spiel.boxen[0], h = spiel.boxen[1]; b.pferd = TUT_PFERD({ rasse: "hannoveraner", geschlecht: "Stute", alter: 8, name: "Fee" }); h.pferd = TUT_PFERD({ rasse: "hannoveraner", geschlecht: "Hengst", alter: 9, name: "Donar" });
+        tutLagerFuellen(); tutVersorgt(b); tutVersorgt(h); datumZuchtTauglich(); spiel.geld = Math.max(spiel.geld || 0, 5000); (spiel.post || []).forEach(x => { x.gelesen = true; }); spiel.labor = []; },   // Dome 21.10.: Zucht und Gentests in einem Kapitel, Pferde versorgt, Ende mit dem Gentest-Ergebnis
+      schritte: [["Merkmale", "Bevor du verpaarst, sieh dir Fee genau an. Tippe unten auf „Steckbrief“ und dann auf „Merkmale“.", "[data-m=\"steckbrief\"], [data-r=\"merkmale\"]", () => aktenModus === "steckbrief" && aktenReiter === "merkmale"],
+        ["Exterieur öffnen", "Tippe auf „Exterieur“. Die Balken zeigen, wie Fee gebaut ist; die kleine Raute ist das Zuchtziel der Rasse.", "details[data-merk=\"exterieur\"] > summary", () => !!document.querySelector("details[data-merk=\"exterieur\"][open]")],
+        ["Das Zuchtziel", "Beim Verpaaren suchst du einen Hengst, der Feens Schwächen ausgleicht – zwei Pferde mit derselben Schwäche vererben sie meist weiter. Schau dir später auch Donars Merkmale an.", null, () => false, true],
+        ["Genetik", "Wechsle jetzt zu „Genetik“: Dort findest du „Verpaaren mit …“. Tragzeit: 4 Jahreszeiten, gedeckt wird im Frühling und Sommer.", "[data-r=\"genetik\"], #paarKnopf", () => deckModus],
+        ["Hengst wählen", "Tippe auf Donar, deinen eigenen Hengst.", "[data-partner]", b => !$("dlg").hidden || !!(b.pferd.gedeckt || b.pferd.traechtig)],
+        ["Natursprung oder Besamung", "Es gibt zwei Wege: Beim Natursprung deckt der Hengst die Stute direkt (höchste Chance je Rosse, kleines Verletzungsrisiko). Bei der Besamung kommt der Tierarzt in die Box (kostet, aber kein Transport und keine Verletzung). Tippe auf das kleine „i“ hinter einer Deckart – dann steht dort die Erklärung mit allen Zahlen.", null, () => false, true, ".gl-info-k, [data-dinfo]"],
+        ["Decken", "Wähle jetzt eine Deckart und bestätige. Danach zeigt eine Trächtigkeitsuntersuchung, ob es geklappt hat.", "#dlgKnoepfe button:not(.zweit):not(.rot)", b => !!(b.pferd.gedeckt || b.pferd.traechtig), true],
+        ["Zum Labor", "Jetzt zu den Gentests: Tippe unten auf „Pferdepflege“.", "[data-m=\"pflege\"]", () => aktenModus === "pflege"],
+        ["Ort", "Tippe auf „Ort“.", "[data-r=\"platz\"]", () => aktenModus === "pflege" && aktenReiter === "platz"],
+        ["Labor", "Tippe auf „Labor“.", "[data-ort=\"labor\"]", () => ortModus === "labor"],
+        ["Fellfarben-Test", "Der Fellfarben-Test zeigt die versteckten Farbgene – wichtig, wenn du Farben züchtest. Tippe darauf.", "[data-ort=\"lt-farbe\"]", () => !$("dlg").hidden && /Fellfarben-Test/.test($("dlgInhalt").textContent)],
+        ["Bestellen", "Tippe auf „Bestellen“. Der Tierarzt schickt eine Haarprobe ein, das Ergebnis kommt per Post.", "#dlgKnoepfe button[data-txt=\"Bestellen\"]", () => (spiel.labor || []).some(x => x.test === "farbe") || spiel.boxen.some(b => b.pferd && b.pferd.tests && b.pferd.tests.farbe), true],
+        ["Nächster Tag", "Tippe oben auf den Mond. (Im Spiel braucht der Test 2 Tage – hier geht es schneller.)", "#kopfTagEnde, #tagAnzeige", () => spiel.tag > spiel.tutorial.tag0, false, null, null, () => { (spiel.labor || []).forEach(x => { x.fertig = spiel.tag; }); }],
+        ["Ergebnis lesen", "Das Labor hat geschrieben. Tippe auf den gelben Umschlag und lies das Ergebnis.", "#postIcon", () => !ungelesen(), false, "#dlgKnoepfe button"],
+        ["Im Steckbrief", "Das Ergebnis steht danach auch im Steckbrief unter Genetik → „Laborergebnisse“. Gentests lohnen sich vor allem vor dem Verpaaren.", null, () => false, true]],
+      fertig: () => false },
+    { n: "Freier Futterplan", ziel: "den Futterplan öffnen und wieder schließen", neu: () => { delete spiel.tutorial.planAuf; delete spiel.tutorial.futterAuf; spiel.boxen.forEach(b => { if (b.pferd) tutVersorgt(b); }); },
       schritte: [["Fütterung heute", "Unter Pferdepflege → Versorgung öffnest du „Fütterung heute“.", "#futterZeile, [data-r='gesundheit'], [data-m='pflege']", () => !!spiel.tutorial.futterAuf],
-        ["Futterplan", "Tippe auf „📋 Futterplan“. Dort stellst du den Plan jetzt selbst zusammen: Heu, Kraftfutter, Zusätze, Mineral – Änderungen am besten über 3 Tage umstellen.", "#dlgKnoepfe button:first-child", () => !!spiel.tutorial.planAuf, true]],
-      fertig: () => !!spiel.tutorial.planAuf },
-    TUT_ZEIGEN("Auktionshaus und Gestüte", "das Auktionshaus öffnen", "Im Pferdemarkt gibt es jetzt Auktionshaus, Fohlenauktion und Gestüte – mit Höchstgebot wie bei eBay.", "[data-mb='auktion'], #hmMarkt, #mHaupt, #menueKnopf", () => marktBereich === "auktion"),
+        ["Futterplan", "Tippe auf „📋 Futterplan“.", "#dlgKnoepfe button:first-child", () => !!spiel.tutorial.planAuf, true],
+        ["Dein Plan", "Hier stellst du den Plan selbst zusammen: mit + und − änderst du Heu, Kraftfutter, Zusätze und Mineral. Unten steht, ob der Bedarf gedeckt ist. Änderungen am besten über 3 Tage umstellen („3-Tage-Umstellung“) – ein plötzlicher Wechsel erhöht das Kolikrisiko.", null, () => false, true],
+        ["Schließen", "Tippe auf „Abbrechen“ (verwirft Änderungen) oder auf „Fertig“.", "#dlgKnoepfe button[data-txt=\"Abbrechen\"], #dlgKnoepfe button[data-txt=\"Fertig\"]", () => $("dlg").hidden && !!spiel.tutorial.planAuf, true]],
+      fertig: () => false },
+    { n: "Auktionshaus", ziel: "auf ein Pferd bieten und es ersteigern", haupt: true, neu: () => { spiel.geld = Math.max(spiel.geld || 0, 30000); try { marktNeu(); } catch (e) { console.error(e); } },   // Dome 21.10.: Auktionshaus im Hauptmenü starten, bieten, Zuschlag
+      schritte: [["Pferdemarkt", "Tippe auf „Pferdemarkt“.", "#hmMarkt", () => $("nebenSchirm").classList.contains("offen") && /Pferdemarkt/.test(($("nebenSchirm").querySelector("h1") || {}).textContent || "")],
+        ["Auktionshaus", "Tippe auf „Auktionshaus“.", "[data-mb=\"auktion\"]", () => marktBereich === "auktion"],
+        ["So läuft eine Auktion", "Ausgesuchte Jungpferde, Höchstgebot wie bei eBay: Du gibst an, wie viel du höchstens zahlst – bezahlt wird nur so viel wie nötig. Die Auktion endet mit der Jahreszeit, dann bekommt das Höchstgebot den Zuschlag.", null, () => false, true],
+        ["Pferd ansehen", "Tippe ein Pferd an.", ".paar", () => !$("dlg").hidden && !!document.querySelector("#dlg .sb-bild")],
+        ["Bieten", "Tippe auf „Bieten“.", "#dlgKnoepfe button[data-txt^=\"Bieten\"]", () => !$("dlg").hidden && /Dein Höchstgebot/.test($("dlgInhalt").textContent), true],
+        ["Höchstgebot", "Mit dem Regler stellst du dein Höchstgebot ein (Mindestgebot reicht zum Üben). Tippe auf „Bieten“.", "#dlgKnoepfe button[data-txt=\"Bieten\"]", () => ((spiel.markt || {}).auktion || []).some(a => a.fuehrt === "du"), true],
+        ["Das Ende der Auktion", "Du führst jetzt. Am Ende der Jahreszeit bekommt das Höchstgebot den Zuschlag – wir springen jetzt dorthin: Das Pferd ist ersteigert, bezahlt und steht im Quarantänestall (Neuzugänge stehen erst eine Jahreszeit für sich). Der Zuschlag kommt auch per Brief.", null, () => false, true, null, null, () => { try { if (spiel.markt) { spiel.markt.jz = jzJetzt() - 1; auktionsEnde(); spiel.markt.jz = jzJetzt(); } zeigeMarkt(); zeigeTag(); } catch (e) { console.error(e); } }]],
+      fertig: () => false },
     TUT_ZEIGEN("Ausbildungsskala", "die Ausbildung ansehen", "Im Steckbrief unter „Ausbildung“ siehst du die Ausbildungsskala – sie zeigt, was als Nächstes dran ist.", "[data-r='ausbildung'], [data-m='steckbrief']", () => aktenModus === "steckbrief" && aktenReiter === "ausbildung"),
     { n: "Waschen", ziel: "waschen, trocknen, Solarium", neu: () => { tutSommer(); const b = spiel.boxen[0];   // Dome 20.10.: Waschplatz und Solarium (Testhof bekommt beides, Sommer, Pferd verschwitzt)
         ["waschplatz", "solarium"].forEach(t => { spiel.anlage[t] = true; if (!gebaeude().some(g => g.typ === t)) gebaeude().push({ gid: "gt" + t, typ: t, stufe: 2, zustand: 95 }); });

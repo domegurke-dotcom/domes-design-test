@@ -998,7 +998,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "575";
+  const SPIEL_VERSION = "576";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1006,11 +1006,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=575"></script>
-<script src="pferd.js?v=575"></script>
-<script src="boxstufen.js?v=575"></script>
-<script src="kopfneu.js?v=575"></script>
-<script src="waschbild.js?v=575"></script>
+<script src="lz-string.min.js?v=576"></script>
+<script src="pferd.js?v=576"></script>
+<script src="boxstufen.js?v=576"></script>
+<script src="kopfneu.js?v=576"></script>
+<script src="waschbild.js?v=576"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -10616,6 +10616,7 @@
         const plaetze = Array.from({ length: 8 }, (_, k) => k < fremdAnz ? fremd[k % (r() < .5 ? 1 : 2)] : ra.id);
         const h = neuesPferd({ id: "m" + jetzt + "-" + i, name: pferdeName(g, ra.id, r() < (fremdAnz === 0 ? 0.6 : 0.15) ? "zucht" : "hobby", r), rasse: ra.id, plaetze, geschlecht: g, alter: jahre });
         if (jahre >= 4) { h.training = Math.floor(r() * Math.min(110, (jahre - 3) * 22)); marktErfolge(h, r); } else marktFohlenschau(h, r);   // ältere Verkaufspferde sind oft schon ausgebildet und Turniere gegangen
+        marktAhnenRuf(h, fremdAnz === 0 ? "haendler" : "mix");
         h.preis = Math.round(marktwert(h) * SAISON_PREIS[datum().s] * (1.1 + r() * .2) / 50) * 50;   // Händler: 110–130 % des Marktwerts
         return h;
       }) };
@@ -10635,11 +10636,20 @@
   const fohlenZeit = () => datum().s === 1 || datum().s === 2;   // Fohlenauktion: Sommer und Herbst
   // Geburt bei Züchtern: fast immer im Frühling (selten früh im Winter oder im Sommer)
   const zuechterGeb = (jahre, r) => { const u = r(), s = u < .85 ? 0 : u < .95 ? 3 : 1, d = datum(); return { s, j: d.j - jahre - (s > d.s ? 1 : 0) }; };
-  function mkPferd(id, rasse, fremdAnz, jahre, r, geschlecht, geb) {
+  // Dome 20.10.: Marktpferde haben oft bekannte, erfolgreiche Eltern – je Herkunft unterschiedlich (Chance Vater / Mutter / je Großelternteil); eigener Zufall, damit das übrige Angebot gleich bleibt
+  const MARKT_AHNEN = { gestuet: [0.75, 0.5, 0.3], zuechter: [0.5, 0.35, 0.2], haendler: [0.25, 0.15, 0.1], mix: [0.1, 0.05, 0.03], privat: [0.15, 0.1, 0.05] };
+  function marktAhnenRuf(h, art) {
+    const W = MARKT_AHNEN[art]; if (!W) return h; ahnenFuellen(h); const A = h.ahnen; if (!A) return h; const r = zufall("ruf-" + h.id);
+    const ruf = (a, w, stute) => { if (!a || r() >= w) return; a.ruf = { e: Math.round((1500 + r() * r() * 18500) / 50) * 50, fs: stute && r() < 0.4 ? (r() < 0.15 ? 2 : 1) : 0, pf: stute ? Math.floor(r() * 3) : Math.floor(r() * 5), cf: r() < 0.1 ? 1 : 0 }; };
+    ruf(A.vater, W[0], false); ruf(A.mutter, W[1], true); ["vatersvater", "vatersmutter", "muttersvater", "muttersmutter"].forEach(k => ruf(A[k], W[2], /mutter$/.test(k)));
+    return h;
+  }
+  function mkPferd(id, rasse, fremdAnz, jahre, r, geschlecht, geb, art) {
     const g = geschlecht || ["Stute", "Hengst", "Wallach"][Math.floor(r() * 3)], andere = RASSEN.filter(x => x.id !== rasse);
     const fremd = [andere[Math.floor(r() * andere.length)].id, andere[Math.floor(r() * andere.length)].id];
     const plaetze = Array.from({ length: 8 }, (_, k) => k < fremdAnz ? fremd[k % (r() < .5 ? 1 : 2)] : rasse);
-    return neuesPferd({ id, name: pferdeName(g, rasse, r() < (fremdAnz === 0 ? 0.5 : 0.12) ? "zucht" : "hobby", r), rasse, plaetze, geschlecht: g, alter: jahre, geb });   // v405
+    const h = neuesPferd({ id, name: pferdeName(g, rasse, r() < (fremdAnz === 0 ? 0.5 : 0.12) ? "zucht" : "hobby", r), rasse, plaetze, geschlecht: g, alter: jahre, geb });   // v405
+    return art ? marktAhnenRuf(h, fremdAnz ? "mix" : art) : h;
   }
   // Stute mit Fohlen bei Fuß (Privat, Tierschutz): Fohlen ist höchstens ein paar Monate alt
   function mitFohlen(h, r) {
@@ -10664,7 +10674,7 @@
     const r = zufall("markt3-" + jetzt + (spiel.spieler ? spiel.spieler.name : "")), M = { jz: jetzt, gestuet: {}, v: 3 };
     // Privatanzeigen: wenige Pferde, oft älter und Mix, 70–100 % des Marktwerts, Gesundheit erst nach dem Kauf sichtbar
     M.privat = Array.from({ length: 2 + Math.floor(r() * 3) }, (_, i) => {
-      const w = r(), fo = r() < fohlenChance(), h = mkPferd("pv" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, w < .2 ? 0 : 1 + Math.floor(r() * 4), fo ? 5 + Math.floor(r() * 12) : 5 + Math.floor(r() * 15), r, fo ? "Stute" : null);
+      const w = r(), fo = r() < fohlenChance(), h = mkPferd("pv" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, w < .2 ? 0 : 1 + Math.floor(r() * 4), fo ? 5 + Math.floor(r() * 12) : 5 + Math.floor(r() * 15), r, fo ? "Stute" : null, undefined, "privat");
       h.training = Math.floor(r() * 60); h.verdeckt = Math.round(45 + r() * 55); marktErfolge(h, r);
       h.ahnenUnbekannt = AHNEN_LUECKE.filter(() => r() < .3);
       if (fo) mitFohlen(h, r);
@@ -10674,12 +10684,12 @@
       h.preis = Math.round(((wGesund + wEcht) / 2 + (h.fohlenBeiFuss ? marktwert(h.fohlenBeiFuss) : 0)) * saisonF() * (.7 + r() * .3) / 50) * 50; return h; });
     // Auktionshaus: ausgesuchte Jungpferde, Start beim halben Marktwert
     M.auktion = Array.from({ length: 3 + Math.floor(r() * 3) }, (_, i) => {
-      const jahre = 1 + Math.floor(r() * 4), h = mkPferd("au" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, r() < .7 ? 0 : 1, jahre, r, null, zuechterGeb(jahre, r)), wert = Math.round(marktwert(h) * saisonF());
+      const jahre = 1 + Math.floor(r() * 4), h = mkPferd("au" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, r() < .7 ? 0 : 1, jahre, r, null, zuechterGeb(jahre, r), "zuechter"), wert = Math.round(marktwert(h) * saisonF());
       const start = Math.max(100, Math.round(wert / 2 / 50) * 50); marktKoerper(h, r, "zuechter");
       return { pferd: h, wert, start, gebot: start, gebote: 0, fuehrt: null, max: npcLimit(wert, r) }; });
     // Fohlenauktion (Sommer, Herbst): Frühlingsfohlen vom Züchter, abgeholt nach dem Absetzen zu Beginn der nächsten Jahreszeit
     M.fohlen = !fohlenZeit() ? [] : Array.from({ length: 3 + Math.floor(r() * 3) }, (_, i) => {
-      const h = mkPferd("fa" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, 0, 0, r, r() < .5 ? "Stute" : "Hengst", { s: 0, j: datum().j }); marktFohlenschau(h, r);   // viele Auktionsfohlen sind schon vorgestellt
+      const h = mkPferd("fa" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, 0, 0, r, r() < .5 ? "Stute" : "Hengst", { s: 0, j: datum().j }, "zuechter"); marktFohlenschau(h, r);   // viele Auktionsfohlen sind schon vorgestellt
       const wert = Math.round(marktwert(h) * saisonF());
       const start = Math.max(100, Math.round(wert / 2 / 50) * 50);
       return { pferd: h, wert, start, gebot: start, gebote: 0, fuehrt: null, fohlen: true, max: npcLimit(wert, r) }; });
@@ -10704,6 +10714,7 @@
       h.tests = { farbe: true }; h.gentest = true; h.gestuet = GESTUET_NAMEN[rasse];
       if ((DMRT3[rasse] || 0) >= .3) h.tests.gang = true;                                   // Gangpferde: DMRT3-Test
       if (GEFAHR_GENE.some(G => genFreq(rasse, G.gen) > 0) || Object.values(ERBKRANK).some(K => K.rassen[rasse])) h.tests.krank = true;           // Rassen mit Erbkrankheit: Erbkrankheiten-Test
+      marktAhnenRuf(h, "gestuet");   // Dome 20.10.: Gestütspferde haben meist bekannte, erfolgreiche Eltern
       const tw = testWert(h);   // Testkosten kommen oben drauf (nicht mit dem Gestüts-Aufschlag multipliziert)
       h.preis = Math.round(((marktwert(h) - tw) * saisonF() * (1.2 + r() * .3) + tw) / 50) * 50; return h; });
     speichern(); return M.gestuet[rasse];
@@ -13584,7 +13595,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Hofchronik (B2, v548):</b> Dieselben Zähler wie das Spielprotokoll, aber <b>je Hof</b> getrennt (<code>spiel.chronik[Hof]["Jahr-Jahreszeit"].k</code>); das Spielprotokoll bleibt als „Gesamt“. Neu gezählt: Turnier-Start/Sieg/Platz <b>je Disziplin und Klasse</b> („Turnier Dressur L: Sieg“), höchste erreichte Klasse je Disziplin, „Abgabe: Gnadenhof / Tierschutz / Händler (Rückgabe)“, „Pferd gepfändet“, höchster und tiefster Kontostand je Jahreszeit (<code>hoch</code>/<code>tief</code>, gemessen bei jeder Buchung), Höfe gekauft/verkauft/verloren mit Name und Jahreszeit (<code>spiel.chronikHoefe</code>). Alte Spielstände haben keine Aufteilung nach Höfen (Anzeige später „–“). Die Anzeige (Jahresbericht, Verloren-Bilanz) folgt in B3/B4.</p>
       <p><b>Hinweisblasen (T1, v568):</b> ersetzen die Tipp-Fenster (nur Spielstart und „Geld wird knapp“ bleiben Fenster). Blase mit Pfeil und Ring, Antippen = weg. Leitfaden der ersten Tage (zählt nicht gegen das Limit, gesehen oder erledigt → nächster Schritt): ${LEITFADEN.map(x => HINWEISE[x[0]][0]).join(" → ")}. Nebentipps höchstens 1 je Ansicht und 3 je Spieltag, nie während Fenster, Wischen, Box-Ziehen, Menü oder Tagwechsel. Stufe: Anfänger alle, Fortgeschrittene nur die wichtigen, Experten keine (einschaltbar). ☰ → Hilfe listet die gesehenen Tipps, Enzyklopädie „🌱 Einsteiger-Wissen“ für „Mehr dazu“. ${Object.keys(HINWEISE).length} Hinweise im Katalog.</p>
       <p><b>Spielumfang je Stufe (T2, v569):</b> für alle Spiele (<code>spiel.stufenAn</code>; alte Spielstände von vor v569 werden beim Laden automatisch <b>Experte</b> und können in den Einstellungen umschalten, Dome 20.10.). ${["anf", "fort", "exp"].map(k => { const S = ERFAHRUNG_STUFEN[k]; return `<b>${S.n}</b>: ${S.hoefe} ${S.hoefe === 1 ? "Hof" : "Höfe"}, Märkte ${S.maerkte ? S.maerkte.length : "alle"}, Zucht ${S.zucht ? "ja" : "nein"}, Labor ${S.labor ? "ja" : "nein"}, Turniere bis ${S.turnierMax < 1 ? "E" : S.turnierMax < 3 ? "M" : "alle"}${S.championat ? " inkl. Championate" : ""}, Krankheiten ×${String(S.krankF).replace(".", ",")}${S.krankTod ? "" : " (kein Tod durch Krankheit)"}`; }).join(" · ")}. Umstellen jederzeit (Hofverwaltung → Einstellungen), die Weihnachtsspende bleibt an der Stufe beim Spielstart. Nach einem Jahr Brief „Bereit für mehr?“. <b>Anfänger zusätzlich (Dome 20.10., v574):</b> fester Futterplan (<code>futterFest</code>: kein Futterplan-Fenster, Standardplan Heu + Mineral, Empfehlung des Futterexperten und Futterwunsch des Besitzers werden immer automatisch übernommen – Knopf „Futterexperte fragen“), Charakter-Reiter nur mit Vorlieben/Abneigungen, fester Trainingsweg (<code>ANF_WEG</code>/<code>anfWeg</code>: unter 3 Jahren Bodenarbeit → Spaziergang → Longieren; Takt/Losgelassenheit unter 50 %: Longieren → Dressur → Ausritt; Anlehnung/Schwung unter 50 %: Dressur → Stangen → Ausritt; danach Dressur → Springgymnastik → Konditionstraining – am Trainingsort nur diese Übungen), keine Pfändung im ersten Spieljahr (<code>pfaendSchutz</code>: Tag ≤ 4 × Tage je Jahreszeit; Mahnungen, Mahngebühren und Dispozinsen laufen weiter, Hinweis „Schonfrist für Anfänger“ in den Briefen). Alte Spielstände (vor v569) werden beim Laden Experte.</p>
-      <p><b>Abstammungs-Zuschlag (Dome 20.10., v575):</b> Marktwert × (1 + Zuschlag × Alter × eigene Erfolge). Zuschlag = ${ABST.eltern} × (Ruf Vater + Ruf Mutter) + ${ABST.gross} × Summe Ruf der 4 Großeltern, höchstens ${Math.round(ABST.max * 100)} %. Ruf je Pferd 0–1 = 0,6 × Turniererfolge (voll bei ${fmt(ABST.erfolgVoll)} Erfolgswert) + 0,08 × eigene Fohlenschau (Prämie 1, Champion 2) + 0,04 × prämierte Nachkommen (bis 5) + 0,1 × Champion-Nachkommen (bis 3). Lebt der Ahne bei dir (alle Höfe, Gnadenhof, Archiv; über die Lebensnummer), zählt der heutige Stand, sonst der Stand beim Decken (<code>ahn.ruf</code>). Alter: unter 3 Jahren voll, 3–5 Jahre ×0,6, ab 6 ×0,35; eigene Erfolge: × 1 / (1 + Erfolgswert / 5.000). Prämien- und Championfohlen zählen für Mutter <b>und</b> Vater (wenn er dir gehört): je Prämie +5 % (bis 5), je Champion (Fohlenschau oder Fohlenchampionat) +10 % (bis 3). Marktpferde mit zufälligen Ahnen haben keinen Zuschlag.</p>
+      <p><b>Abstammungs-Zuschlag (Dome 20.10., v575):</b> Marktwert × (1 + Zuschlag × Alter × eigene Erfolge). Zuschlag = ${ABST.eltern} × (Ruf Vater + Ruf Mutter) + ${ABST.gross} × Summe Ruf der 4 Großeltern, höchstens ${Math.round(ABST.max * 100)} %. Ruf je Pferd 0–1 = 0,6 × Turniererfolge (voll bei ${fmt(ABST.erfolgVoll)} Erfolgswert) + 0,08 × eigene Fohlenschau (Prämie 1, Champion 2) + 0,04 × prämierte Nachkommen (bis 5) + 0,1 × Champion-Nachkommen (bis 3). Lebt der Ahne bei dir (alle Höfe, Gnadenhof, Archiv; über die Lebensnummer), zählt der heutige Stand, sonst der Stand beim Decken (<code>ahn.ruf</code>). Alter: unter 3 Jahren voll, 3–5 Jahre ×0,6, ab 6 ×0,35; eigene Erfolge: × 1 / (1 + Erfolgswert / 5.000). Prämien- und Championfohlen zählen für Mutter <b>und</b> Vater (wenn er dir gehört): je Prämie +5 % (bis 5), je Champion (Fohlenschau oder Fohlenchampionat) +10 % (bis 3). <b>Marktpferde (v576):</b> haben je nach Herkunft bekannte, erfolgreiche Ahnen (<code>MARKT_AHNEN</code>, Chance Vater / Mutter / je Großelternteil): Gestüt ${MARKT_AHNEN.gestuet.map(x => Math.round(x * 100) + " %").join(" / ")}, Züchter (Auktionshaus, Fohlenauktion) ${MARKT_AHNEN.zuechter.map(x => Math.round(x * 100) + " %").join(" / ")}, Händler ${MARKT_AHNEN.haendler.map(x => Math.round(x * 100) + " %").join(" / ")}, Privat ${MARKT_AHNEN.privat.map(x => Math.round(x * 100) + " %").join(" / ")}, Mischlinge ${MARKT_AHNEN.mix.map(x => Math.round(x * 100) + " %").join(" / ")}; Erfolgswert 1.500–20.000 € (meist niedrig), Stuten teils mit Prämie auf der Fohlenschau, Tierschutz ohne.</p>
       <p><b>Anfänger-Tutorial (T4, v571):</b> nach dem Charaktermenü (nur Anfänger, überspringbar) im Testhof mit ${fmt(20000)} Testgeld, wird nie gespeichert. ${TUT.length} Kapitel: ${TUT.map((K, i) => `${i + 1}. ${K.n} (Ziel: ${K.ziel})`).join(" · ")}. Menü ☰ ab Kapitel ${TUT_MENUE_AB}. Kapitel oder alles überspringen; am Ende Frage, ob bekannte Hinweise im eigenen Spiel nochmal kommen. Wiederholen: Hofverwaltung → Einstellungen (Spielstand bleibt).</p>
       <p><b>Weitere Tutorials (T5, v572):</b> Fortgeschritten (${TUT_FORT.map(K => K.n).join(", ")}) und Experte (${TUT_EXP.map(K => K.n).join(", ")}) – werden beim Aufstieg angeboten (ja / später / nein) und lassen sich in den Einstellungen wiederholen; laufen im eigenen Testhof.</p>
       <p><b>Waschplatz (W1/W2, v563):</b> Pferdepflege → Ort → Waschplatz, Werkzeuge per Wischen: Abspritzen (Fell sauber, Mähne halb, Sommer Wohlbefinden +${WASCH.sommerWohl} einmal am Tag; Putz-Wohlbefinden nur einmal zusammen mit Bürste), Shampoo (${fmt(WASCH.shampooPreis)} je Flasche, ${WASCH.shampooN} Anwendungen, Fellglanz 1 Jahreszeit = +2 % Marktwert), Beine &amp; Hufe, Abtrocknen (Handtuch Stufe 1, Schweißmesser ab Stufe 2; ersetzt das Abschwitzen), Beine kühlen ab Stufe 3, Pilzwaschung. Ganzes Pferd: Sommer immer, Frühling/Herbst bei Sonne/Wolken, Winter nie; Beine/Hufe im Winter nur mit warmem Wasser (ab Stufe 2, Zustand ≥ ${WASCH.warmAb} %); unter 1 Jahr nur Beine. Verschwitzt nach ≥ ${WASCH.schweiss} Energie Training (≥ ${WASCH.schweissHeiss} bei Sonne im Sommer oder nervösen Pferden): über Nacht Herbst/Winter Erkältung ×${WASCH.erkaeltSchweiss}, sonst Fell +${WASCH.schweissDreck}. Nass über Nacht (außer Sommer): Mauke ×${WASCH.maukeNass}, Herbst/Winter Erkältung ×${WASCH.erkaeltNass}. Hufe an zwei Tagen hintereinander gewaschen: Strahlfäule ×${WASCH.hufOft}. Mauke: Beine waschen + abtrocknen + Wundsalbe +${WASCH.maukeSalbe} Heilwirkung, ohne Abtrocknen schadet es. Gewöhnung ${WASCH.gewohnt} Wäschen (ängstlich ${WASCH.gewohntAngst}), Wohlbefinden −3 … −1, bleibt für immer. Ohne Gummimatten ${WASCH.ausrutschen * 100} % Ausrutschen (kleine Verletzung), mit Matten Wohlbefinden +${WASCH.mattenWohl}. Gesperrt bei Erkältung, Husten, Fieber, Wunde, Hufverband, Kolik, Hufrehe, Klinik, draußen.</p>

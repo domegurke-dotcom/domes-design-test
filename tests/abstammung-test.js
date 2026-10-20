@@ -24,6 +24,10 @@ const { chromium } = require('playwright'); const path = require('path');
     const mv0 = marktwert(M), vv0 = marktwert(V); const k = fohlen(); elternGutschrift(k, M, 'praemienFohlen'); elternGutschrift(k, M, 'championFohlen');
     ok('Prämien-/Championfohlen: Mutter und Vater werden wertvoller', marktwert(M) > mv0 && marktwert(V) > vv0 && V.praemienFohlen === 1 && V.championFohlen === 1, mv0 + '→' + marktwert(M) + ' · ' + vv0 + '→' + marktwert(V));
     const ohne = neu('Wallach', 'Markt', 4); ok('Marktpferd ohne bekannte Erfolge der Ahnen: kein Zuschlag', abstFaktor(ohne) === 1);
+    // Dome 20.10.: Marktpferde mit bekannten, erfolgreichen Eltern – Gestüt am häufigsten, Händler selten
+    const schnitt = L => L.reduce((x, h) => x + abstZuschlag(h), 0) / Math.max(1, L.length);
+    const G = ['hannoveraner', 'trakehner', 'araber', 'haflinger', 'friese', 'quarter'].flatMap(r => gestuetPferde(r)), H = marktpferde().filter(h => reinAnteil(h.anteile, h.rasse) >= 99);
+    ok('Gestütspferde haben öfter erfolgreiche Eltern als Händlerpferde', schnitt(G) > schnitt(H) && G.some(h => h.ahnen.vater.ruf), schnitt(G).toFixed(3) + ' / ' + schnitt(H).toFixed(3));
     return out.join('\n'); });
   console.log(R); console.log('Seitenfehler:', errs.join(' ; ') || 'keine'); await b.close();
 })();

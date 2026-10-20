@@ -84,7 +84,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (5 Stellen in index.html: lz-string.min.js, pferd.js, boxstufen.js, kopfneu.js, waschbild.js) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **612** (Tutorial-Überarbeitung nach Domes Test von v597 steht in `UEBERGABE.md`, Etappen A–D offen).
+- Letzte Version bei Aktualisierung dieser Datei: **613** (Tutorial-Überarbeitung nach Domes Test von v597 steht in `UEBERGABE.md`, Etappen A–D offen).
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName` ausfüllen → `#chLos` → Kreditbrief schließen (`#dlgKnoepfe button`) → `[data-immo="pension"]` → `#kaufName` → `#dlgKnoepfe button:first-child`. Admin: `spiel.admin = true`.

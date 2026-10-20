@@ -100,3 +100,6 @@ Bricht die Sitzung ab, kann **Claude Pro** hier weitermachen (Dome: Stand nach *
 3. Große Tests (Etappen-, Hof-Gesamt-, Neuladen-Test) wurden **nicht** gelaufen – vorher Dome fragen. Achtung: neue Spiele haben seit v569 die Stufen-Sperre (Standard Anfänger) → in großen Tests nach dem Start `spiel.stufenAn = false` setzen.
 4. Selbststart 7:05 ist gelaufen; den Selbststart um 12:05 hat Dome abgesagt (Routine gelöscht).
 5. **7:05-Start (20.10.2026) erledigt:** Stand v572 auf `main` geprüft, Stufen- und Tutorial-Test grün, nichts Neues angefangen. Es fehlen nur Domes Antworten (OFFENE-FRAGEN 1–9) und ihr Test.
+
+### Domes Antworten beim Durchgehen (20.10.2026, Sammlung – erst umsetzen, wenn Dome „fertig“ sagt)
+- Stufen-Sperre / alte Spielstände: alte Spielstände werden automatisch zu **Experten** und können im Menü umschalten.

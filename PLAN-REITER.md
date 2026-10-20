@@ -2,6 +2,7 @@ Auftrag für die Coding-Sitzung: Reiter-Erfahrung (Reiter-
 Können)
 Stand: 20.10.2026, im Projekt-Chat mit Dome geplant (Runden 1–2), Code-Stand beim Planen v577.
 Etappen K1 → K2 → K3 → K4.
+**Stand 20.10.2026: K1 fertig (v585: `REITER_DISZ`, `spiel.reiter.koennen`, Wachstum Training/Turnier, `reiterErgaenzen`, Adminanzeige, `tests/reiter-test.js`); K2–K4 offen.** K1-Festlegungen (Claude, in `OFFENE-FRAGEN.md`): Gelände-Arbeit (Ausritt, Kondition) zählt beim Rennen immer halb, Galopptraining (nur auf der Rennbahn) voll; Können wird auf 3 Nachkommastellen gespeichert; Stand des Pferdes aus `diszWert(...).stufe` (Rennen/Distanz/Tölt aus dem Disziplin-Wert über `STUFE_WERT`).
 
 Kurz: Bisher steigt nur die Reiter-LK durch Turniererfolge, Training gibt pauschal +4 % je LK-Stufe,
 und der Reiter verändert ein Turnierergebnis nur um −5 % … +4 %. Neu: ein Reiter-Können (0–

@@ -421,6 +421,15 @@
   .enz-karte svg { width: 100%; display: block; border-radius: 8px; background: linear-gradient(#e3f1f9, #fff); }
   .enz-karte b { display: block; font-size: .92rem; margin: 6px 4px 2px; }
   .enz-karte p { margin: 0 4px; font-size: .8rem; color: var(--leise); line-height: 1.35; }
+  /* B4: Nur-ansehen-Modus (verlorenes Spiel) – Band unten, gesperrte Knöpfe ausgegraut, kurzer Hinweis */
+  body.ansehen::after { content: ""; position: fixed; inset: 0; border: 3px solid #8a7560; box-sizing: border-box; pointer-events: none; z-index: 9999; }
+  #ansBand { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 10px; background: #5b4a3a; color: #fff; font-size: .85rem; line-height: 1.25;
+    padding: 6px max(12px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+  #ansBand .knopf { width: auto; flex: 0 0 auto; padding: 4px 10px; font-size: .8rem; min-height: 0; border-radius: 8px; }
+  body.ansehen { padding-bottom: calc(46px + env(safe-area-inset-bottom)); }
+  body.ansehen .schirm, body.ansehen #dlg, body.ansehen #lese { bottom: calc(46px + env(safe-area-inset-bottom)); }
+  .ans-aus { opacity: .42 !important; filter: grayscale(.7); cursor: not-allowed !important; }
+  #ansHinweis { position: fixed; left: 50%; bottom: calc(58px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 10000; background: #2b1d12; color: #fff; padding: 8px 14px; border-radius: 10px; font-size: .9rem; max-width: calc(100vw - 32px); text-align: center; }
   body.aufnahme::after { content: ""; position: fixed; inset: 0; border: 3px solid #e02424; box-sizing: border-box; pointer-events: none; z-index: 9999; }   /* v529 (Dome): läuft eine Aufnahme, hat der Bildschirm einen dünnen roten Rahmen */
   .auf-knoepfe { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .enz-grid.text { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }   /* v525: Text-Karten ohne Bild (Spielstand) */
@@ -968,7 +977,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "559";
+  const SPIEL_VERSION = "560";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -976,14 +985,14 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=559"></script>
-<script src="pferd.js?v=559"></script>
-<script src="boxstufen.js?v=559"></script>
-<script src="kopfneu.js?v=559"></script>
+<script src="lz-string.min.js?v=560"></script>
+<script src="pferd.js?v=560"></script>
+<script src="boxstufen.js?v=560"></script>
+<script src="kopfneu.js?v=560"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
-  const PLATZ_KEY = { 1: "zuchtstall-p1", 2: "zuchtstall-p2" }, START_FLAG = "zuchtstall-start";   // Speicherplatz 1/2 ändern sich nur, wenn der Spieler speichert
+  const PLATZ_KEY = { 1: "zuchtstall-p1", 2: "zuchtstall-p2" }, START_FLAG = "zuchtstall-start", VERLOREN_KEY = "zuchtstall-verloren";   // B4: Platz „Verloren“ (nur der letzte verlorene Stand, nur ansehen)   // Speicherplatz 1/2 ändern sich nur, wenn der Spieler speichert
   // S1 Punkt 11: gepackt speichern (lz-string, liegt im Repo) – beginnt der Text mit „{“, ist er noch ungepackt (alte Spielstände)
   const packen = o => { const t = JSON.stringify(o); return window.LZString ? LZString.compressToUTF16(t) : t; };
   const auspacken = t => { if (!t) return null; if (t[0] === "{") return JSON.parse(t); const u = window.LZString && LZString.decompressFromUTF16(t); return u ? JSON.parse(u) : null; };
@@ -1014,7 +1023,10 @@
     boxen: [{ nr: 1, pferd: { id: "start", name: "Schneeflocke", rasse: "araber", farbe: "schimmel", geschlecht: "Stute", alter: 5, stockmass: 150 } }],
   };
   let hatSpielstand = false, altStand = null;   // altStand: Spielstand von vor dem Hof-Ausbau – lässt sich nicht weiterspielen (Dome: alte Spielstände werden gelöscht)
-  try { const s = lesen(SPEICHER); if (s && s.boxen) { if (s.hofAusbau && !s.verloren) { spiel = s; hatSpielstand = true; } else if (!s.verloren) { altStand = { hof: (s.spieler && s.spieler.hof) || "" }; spiel.sparmodus = s.sparmodus; } } } catch (e) {}
+  // B4: „Letzten Stand ansehen“ startet die Seite mit dem Merker „ansehen“ neu – dann wird der Platz „Verloren“ geladen (nie gespeichert, der Autospeicher bleibt unberührt)
+  const ansehenStart = (() => { try { return sessionStorage.getItem(START_FLAG) === "ansehen"; } catch (e) { return false; } })();
+  if (ansehenStart) { const w = lesen(VERLOREN_KEY); if (w && w.spiel && w.spiel.boxen) { spiel = w.spiel; spiel.ansehen = w.meta || { hof: "" }; hatSpielstand = true; } }
+  if (!hatSpielstand) try { const s = lesen(SPEICHER); if (s && s.boxen) { if (s.hofAusbau && !s.verloren) { spiel = s; hatSpielstand = true; } else if (!s.verloren) { altStand = { hof: (s.spieler && s.spieler.hof) || "" }; spiel.sparmodus = s.sparmodus; } } } catch (e) {}
   if (hatSpielstand && !spiel.spielId) { spiel.spielId = neueSpielId(); spiel.platz = 1; platzMigration = true; }   // S1 Punkt 2: unsichtbare Spiel-Nummer und eigener Platz
   if (hatSpielstand && (spiel.tagebuch || spiel.testProtokoll != null)) { if ((spiel.tagebuch || []).length) (spiel.aufnahmen = spiel.aufnahmen || []).push({ id: "a" + Date.now().toString(36), nr: (spiel.aufnahmeNr = (spiel.aufnahmeNr || 0) + 1), name: "Aufnahme " + spiel.aufnahmeNr + ": frühere Aufzeichnung", von: "", bis: "", hof: (spiel.hof && spiel.hof.name) || "", eintraege: spiel.tagebuch }); delete spiel.tagebuch; delete spiel.testProtokoll; }   // v529: alte Testspiel-Protokolle (v525) werden zur ersten Aufnahme
   if (hatSpielstand && spiel.tsort == null) { try { spiel.tsort = localStorage.getItem("zuchtstall-tsort") || "datum"; } catch (e) { spiel.tsort = "datum"; } }   // S1 Punkt 7: Turnier-Sortierung gehört zum Spielstand
@@ -2272,7 +2284,7 @@
   const dispoLimit = () => !spiel.admin && (spiel.geld || 0) <= -DISPO.rahmen;
   const dispoHinweis = () => dispoLimit() ? `<p class="text"><b>Dein Konto ist im Dispo am Limit (−${fmt(DISPO.rahmen)}).</b> Erst Geld einnehmen oder Raten zahlen.</p>` : "";
   function buchen(betrag, posten) {
-    if (!betrag) return;
+    if (!betrag || spiel.ansehen) return;
     try { chronikJz(spiel.geld || 0); } catch (e) { console.error("Chronik:", e); }   // B2: Kontostand zum Start der Jahreszeit merken, bevor gebucht wird
     spiel.geld = Math.round(((spiel.geld || 0) + betrag) * 100) / 100;
     try { const C = chronikJz(spiel.geld); if (spiel.geld > C.hoch) C.hoch = spiel.geld; if (spiel.geld < C.tief) C.tief = spiel.geld; } catch (e) { console.error("Chronik:", e); }   // B2: höchster/tiefster Stand
@@ -3463,10 +3475,10 @@
   function speichernJetzt() {
     clearTimeout(speicherUhr); speicherUhr = null;
     if (!speicherOffen || speicherSperre) return true; speicherOffen = false;
-    if (spiel.verloren) return true;
+    if (spiel.verloren || spiel.ansehen) return true;
     try { schreiben(SPEICHER, spiel); return true; } catch (e) { speicherFehler(); return false; }
   }
-  const speichern = () => { if (spiel.verloren || speicherSperre) return; if (hofTiefe) { hofSpeichern = true; return; } speicherOffen = true; if (!speicherUhr) speicherUhr = setTimeout(speichernJetzt, 400); };
+  const speichern = () => { if (spiel.verloren || spiel.ansehen || speicherSperre) return; if (hofTiefe) { hofSpeichern = true; return; } speicherOffen = true; if (!speicherUhr) speicherUhr = setTimeout(speichernJetzt, 400); };
   window.addEventListener("pagehide", speichernJetzt);
   document.addEventListener("visibilitychange", () => { if (document.hidden) speichernJetzt(); });
 
@@ -9252,6 +9264,7 @@
   }
   // Tageswechsel: jeder Hof läuft für sich (H2), Markt, Labor, Tierschutz und Turnierkalender nur einmal
   function naechsteNacht() {
+    if (spiel.ansehen) return;
     jedenHof(() => { tote(); turnierNacht(); }, true);   // Turnierpferde von heute: Ergebnis (Brief kommt am nächsten Tag)
     spiel.tag += 1;
     jedenHof(hofNacht, true);
@@ -9368,6 +9381,7 @@
   $("tagAnzeige").tabIndex = -1;   // nur Anzeige (Dome v274)
   // Dome (v263): „Tag beenden“ sitzt im Stall (Boxenübersicht) – danach bleibt man dort
   function tagBeenden(danach) {
+    if (spiel.ansehen) { ansehenHinweis(); return; }   // B4: im verlorenen Stand steht die Zeit
     $("nachtSymbol").textContent = "🌙"; $("nachtText").textContent = `Ende von ${datumLang()} · Tag ${datum().t}`;
     $("nacht").classList.add("an");
     setTimeout(() => {
@@ -9757,7 +9771,7 @@
     setTimeout(postIconSetzen, 30);
   }
   const hofName = () => (spiel.hof && spiel.hof.name) || (spiel.spieler && spiel.spieler.hof) || "Mein Hof";
-  function titelSetzen() { document.querySelector("header h1").innerHTML = `<span class="emoji">🐴 </span>${esc(hofName())}`; document.title = hofName(); }
+  function titelSetzen() { document.querySelector("header h1").innerHTML = `<span class="emoji">${spiel.ansehen ? "🔨" : "🐴"} </span>${esc(hofName())}`; document.title = (spiel.ansehen ? "🔨 " : "") + hofName(); }
   const istVoll = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
 
   // ---------- Spielstand: Autospeicher, zwei Speicherplätze, Rücksicherung, Datei (PLAN-SPIELSTAND.md S1/S2) ----------
@@ -9837,11 +9851,11 @@
     el.hidden = false; $("swDatei").onclick = () => dateiSpeichern("auto"); $("swZu").onclick = () => { el.hidden = true; };
   }
   // S2: Spielstand als Datei (lesbares JSON, ungepackt) – am Handy über das Teilen-Menü (Telegram, E-Mail), sonst Download
-  function standDatei(s) { const I = standInfo(s); return { typ: "zuchtstall-spielstand", format: 1, version: SPIEL_VERSION, gespeichert: new Date().toISOString(), spielId: s.spielId || "", info: { hoefe: I.hoefe, spieldatum: I.tagTxt, pferde: I.pferde, geld: I.geld }, spiel: s }; }
+  function standDatei(s) { const I = standInfo(s), V = s.ansehenInfo ? lesenVerloren() : null; return { typ: "zuchtstall-spielstand", format: 1, version: SPIEL_VERSION, gespeichert: new Date().toISOString(), spielId: s.spielId || "", info: { hoefe: I.hoefe, spieldatum: I.tagTxt, pferde: I.pferde, geld: I.geld }, ...(s.ansehenInfo ? { verloren: true, verlorenMeta: V ? V.meta : null } : {}), spiel: s }; }   // B4: verlorener Stand mit Kennzeichen
   function dateiName(s) { const I = standInfo(s), h = String(I.hof).replace(/[/\\:*?"<>|\s]+/g, "-"), d = new Date(), z = x => String(x).padStart(2, "0");
-    return `Zuchtstall_${h}_Jahr${jj(I.d.j)}-${JZ[I.d.s][0]}_${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}.json`.replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/Ä/g, "Ae").replace(/Ö/g, "Oe").replace(/Ü/g, "Ue").replace(/ß/g, "ss"); }   // v523 (Dome): Umlaute nur im Dateinamen umschreiben
+    return `Zuchtstall_${h}${s.ansehenInfo ? "_verloren" : ""}_Jahr${jj(I.d.j)}-${JZ[I.d.s][0]}_${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}.json`.replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/Ä/g, "Ae").replace(/Ö/g, "Oe").replace(/Ü/g, "Ue").replace(/ß/g, "ss"); }   // v523 (Dome): Umlaute nur im Dateinamen umschreiben
   async function dateiSpeichern(quelle) {
-    let s = null; if (quelle === "auto") { if (hatSpielstand) { speichernJetzt(); s = spiel; } else s = lesen(SPEICHER); } else { const w = lesenPlatz(quelle); s = w && w.spiel; }
+    let s = null; if (quelle === "auto") { if (hatSpielstand) { speichernJetzt(); s = spiel; } else s = lesen(SPEICHER); } else if (quelle === "verloren") { const w = lesenVerloren(); s = w && w.spiel; } else { const w = lesenPlatz(quelle); s = w && w.spiel; }
     if (!s) { dialog(`<h3>💾 Nichts zu sichern</h3><p>Hier liegt kein Spielstand.</p>`); return; }
     const name = dateiName(s), blob = new Blob([JSON.stringify(standDatei(s))], { type: "application/json" });
     const fertig = geteilt => { if (hatSpielstand && s.spielId && s.spielId === spiel.spielId) { spiel.zuletztExport = { am: new Date().toISOString(), datum: standInfo(s).datum }; speichern(); const k = $("hfDatei"); if (k) k.querySelector("small").innerHTML = `Zuletzt heruntergeladen: ${exportText()}`; }   // S2 Punkt 6
@@ -9869,6 +9883,7 @@
     if (!st || !Array.isArray(st.boxen)) return kein;
     if (!st.hofAusbau) return { fehler: "Dieser Spielstand ist von vor dem Hof-Ausbau und kann nicht mehr gespielt werden." };
     if (version && Number(version) > Number(SPIEL_VERSION)) return { fehler: "Diese Datei stammt aus einer neueren Spielversion. Bitte die Seite neu laden, dein Spiel ist veraltet." };
+    if (d.verloren && st.ansehenInfo) return { s: st, version, gesp, verloren: true, meta: d.verlorenMeta || null };   // B4: verlorener Stand → Platz „Verloren“, nur ansehen
     if (st.verloren) return { fehler: "Dieser Spielstand ist verloren (Zwangsversteigerung) und kann nicht mehr gespielt werden." };
     return { s: st, version, gesp };
   }
@@ -9883,6 +9898,7 @@
   }
   function dateiVorschau(n, P) {
     if (P.fehler) { dialog(`<h3>📂 Laden nicht möglich</h3><p>${P.fehler}</p>`); return; }
+    if (P.verloren) { verlorenDateiLaden(P); return; }
     const I = standInfo(P.s), z = (a, b) => `<tr><td>${a}</td><td>${b}</td></tr>`;
     dialog(`<h3>📂 Vorschau</h3><table class="ver-tab">${z(I.hoefe.length > 1 ? "Höfe" : "Hof", I.hoefe.map(esc).join(", "))}${z("Spieldatum", esc(I.tagTxt))}${z("Pferde", I.pferde)}${z("Geld", fmt(I.geld))}${z("gespeichert am", P.gesp ? new Date(P.gesp).toLocaleString("de-DE") : "unbekannt")}${z("Spielversion", esc(P.version || "unbekannt"))}</table><p>Auf <b>Speicherplatz ${n}</b> laden?</p>`,
       [["Ja, laden", () => dateiAeltereFrage(n, P)], ["Abbrechen", null, "zweit"]]);
@@ -9902,6 +9918,14 @@
     dialog(`<h3>📂 Geladen</h3><p>Der Spielstand liegt jetzt auf <b>Speicherplatz ${n}</b> (${esc(platzText(lesenPlatz(n)))}). Jetzt spielen?</p>`,
       [["▶ Jetzt spielen", () => standStarten({ ...lesenPlatz(n).spiel, platz: n })], ["Später", () => zeigeStart(), "zweit"]]);
   }
+  // B4 Punkt 6: verlorener Stand aus einer Datei → Platz „Verloren“ (ersetzt den bisherigen), danach ansehen
+  function verlorenDateiLaden(P) {
+    const I = standInfo(P.s), M = P.meta || { hof: I.hof, datum: I.datum, grund: P.s.ansehenInfo.grund === "dispo" ? "Insolvenz" : "Zwangsversteigerung" }, alt = lesenVerloren();
+    const tun = () => { try { schreiben(VERLOREN_KEY, { meta: { ...M, spielId: P.s.spielId || "", version: P.version || SPIEL_VERSION, gespeichert: P.gesp || new Date().toISOString() }, spiel: P.s }); } catch (e) { speicherFehler(true); return; }
+      dialog(`<h3>🔨 Verlorenes Spiel geladen</h3><p><b>${esc(M.hof)}</b> (${esc(M.grund || "verloren")} in ${esc(M.datum)}) liegt jetzt auf dem Platz <b>„Verloren“</b>. Es lässt sich nur ansehen, nicht weiterspielen.</p>`, [["👁️ Jetzt ansehen", () => verlorenAnsehen()], ["Später", () => zeigeStart(), "zweit"]]); };
+    dialog(`<h3>🔨 Verlorenes Spiel</h3><p>Diese Datei ist ein verlorenes Spiel (<b>${esc(M.hof)}</b>, ${esc(M.datum)}). Es kommt nicht auf einen Speicherplatz, sondern auf den Platz <b>„Verloren“</b> und lässt sich nur ansehen.</p>${alt ? `<p>Der bisherige Platz „Verloren“ (<b>${esc(verlorenText(alt))}</b>) wird ersetzt.</p>` : ""}`,
+      [["Laden", tun, alt ? "rot" : ""], ["Abbrechen", null, "zweit"]]);
+  }
   const exportText = () => spiel.zuletztExport ? `${new Date(spiel.zuletztExport.am).toLocaleDateString("de-DE")} · ${esc(spiel.zuletztExport.datum)}` : "noch nie";
 
   // v528 (Dome): Startmenü → „Laden“: Speicherplatz 1/2 und Spielstand aus Datei laden (Kopieren und „laufendes Spiel als Datei“ im Startmenü entfallen)
@@ -9913,23 +9937,26 @@
     $("startMenue").innerHTML = `<div class="schirm-innen">
       <button class="zurueck-s" id="ldZurueck">‹ Startmenü</button>
       <div class="logo">📂</div><h1>Speichern &amp; Laden</h1><p class="unter">${hatSpielstand ? `Das laufende Spiel (${esc(hofName())}) speichern oder einen Spielstand laden` : "Welchen Spielstand möchtest du laden?"}</p>
-      ${karte(1)}${karte(2)}
+      ${karte(1)}${karte(2)}${(() => { const v = lesenVerloren(); return v ? `<div class="platz-karte"><div class="pk-kopf"><b>🔨 Verloren</b><span>${esc(verlorenText(v))} · nur ansehen</span></div><div class="pk-knoepfe"><button class="knopf" id="vpAnsehen">👁️ Ansehen</button><button class="knopf zweit" id="vpDatei">💾 Spielstand downloaden</button></div></div>` : ""; })()}
       <button class="sknopf" id="smLaden"><span class="i">📂</span><span>Spielstand aus Datei laden<small>z. B. vom anderen Gerät (per Telegram oder E-Mail geschickt)</small></span></button>
     </div>`;
     zeigeSchirm("startMenue");
     $("ldZurueck").onclick = zeigeStart;
     $("smLaden").onclick = () => dateiLadenStart();
+    if ($("vpAnsehen")) { $("vpAnsehen").onclick = () => verlorenAnsehen(); $("vpDatei").onclick = () => dateiSpeichern("verloren"); }
     $("startMenue").querySelectorAll("[data-pspiel]").forEach(b => b.onclick = () => platzSpielen(+b.dataset.pspiel));
     $("startMenue").querySelectorAll("[data-pweg]").forEach(b => b.onclick = () => platzLoeschen(+b.dataset.pweg));
     $("startMenue").querySelectorAll("[data-pdatei]").forEach(b => b.onclick = () => dateiSpeichern(+b.dataset.pdatei));
     $("startMenue").querySelectorAll("[data-pspeich]").forEach(b => b.onclick = () => platzSpeichernAuf(+b.dataset.pspeich));   // v530 (Dome): laufendes Spiel auf diesen Platz speichern
   }
   function zeigeStart() {
-    speichernJetzt();
+    if (spiel.ansehen) { try { sessionStorage.removeItem(START_FLAG); } catch (e) {} location.reload(); return; }   // B4: Nur-ansehen verlassen → Seite normal neu starten (lädt wieder den Autospeicher)
+    speichernJetzt(); const vl = lesenVerloren();
     $("startMenue").innerHTML = `<div class="schirm-innen">
       <div class="logo">🐴</div><h1>Zuchtstall</h1><p class="unter">Züchte, pflege und trainiere deine eigenen Pferde</p>
       <button class="sknopf haupt" id="smWeiter" ${hatSpielstand ? "" : "disabled"}><span class="i">▶</span><span>Weiterspielen${hatSpielstand ? ` – ${esc(hofName())}` : ""}<small>${hatSpielstand ? `läuft: ${datumText()} ${spiel.platz ? `(Speicherplatz ${spiel.platz})` : "(noch nicht gespeichert)"}` : altStand ? "alter Spielstand – für den Hof-Ausbau ist ein neues Spiel nötig" : "noch kein laufendes Spiel"}</small></span></button>
       <button class="sknopf" id="smLadenMenue"><span class="i">📂</span><span>Speichern &amp; Laden<small>Speicherplatz 1 und 2 oder Spielstand aus Datei</small></span></button>
+      ${vl ? `<button class="sknopf" id="smVerloren"><span class="i">🔨</span><span>${esc(verlorenText(vl))}<small>ansehen – nur zum Anschauen, nichts änderbar</small></span></button>` : ""}
       <button class="sknopf" id="smNeu"><span class="i">✨</span><span>Neues Spiel<small>Charakter erstellen und den ersten Hof kaufen</small></span></button>
       <button class="sknopf" id="smVoll"><span class="i">⛶</span><span>Vollbildmodus ist ${istVoll() ? "an" : "aus"}<small>antippen zum Umschalten</small></span></button>
       <button class="sknopf" id="smEnde"><span class="i">🚪</span><span>Beenden<small>das laufende Spiel ist im Autospeicher</small></span></button>
@@ -9939,6 +9966,7 @@
     $("smWeiter").onclick = () => { if (hatSpielstand) zeigeHaupt(); };
     $("smNeu").onclick = () => neuesSpielWahl();
     $("smLadenMenue").onclick = () => zeigeLadenMenue();
+    if ($("smVerloren")) $("smVerloren").onclick = () => verlorenAnsehen();
     $("startMenue").querySelectorAll("[data-pspiel]").forEach(b => b.onclick = () => platzSpielen(+b.dataset.pspiel));
     $("startMenue").querySelectorAll("[data-pweg]").forEach(b => b.onclick = () => platzLoeschen(+b.dataset.pweg));
     if (altStand && !altStand.gezeigt) { altStand.gezeigt = true;
@@ -10073,7 +10101,7 @@
       ziele().forEach(el => el.classList.add("ziel-gruen")); document.querySelectorAll("[data-bgruppe]").forEach(k => { if (k.dataset.bgruppe !== boxenGruppe && kachelZiel(k.dataset.bgruppe) >= 0) k.classList.add("ziel-gruen"); });
       if (navigator.vibrate && d.touch) try { navigator.vibrate(25); } catch (x) {} };
     const unter = (x, y) => { const e = document.elementFromPoint(x, y); return e && (e.closest(".ziel-gruen[data-zubox]") || e.closest(".ziel-gruen[data-bgruppe]")); };
-    document.addEventListener("pointerdown", e => { const el = e.target.closest && e.target.closest(".boxen-liste [data-zubox]"); if (!el || (e.pointerType === "mouse" && e.button !== 0)) return;
+    document.addEventListener("pointerdown", e => { const el = e.target.closest && e.target.closest(".boxen-liste [data-zubox]"); if (!el || spiel.ansehen || (e.pointerType === "mouse" && e.button !== 0)) return;
       const i = +el.dataset.zubox, sp = boxZiehSperre(spiel.boxen[i]); if (!spiel.boxen[i].pferd) return; ende();
       d = { i, el, sx: e.clientX, sy: e.clientY, touch: e.pointerType !== "mouse", aktiv: false, sperre: sp }; d.t = setTimeout(starten, sp ? 550 : d.touch ? 380 : 180); });
     document.addEventListener("pointermove", e => { if (!d) return;
@@ -10683,7 +10711,16 @@
   // Pfändung (Dome): die eigenen Pferde dieses Hofs werden beschlagnahmt und zu ¾ ihres Werts zwangsverkauft (Fohlen bei Fuß mit der Mutter).
   // Reicht der Erlös mit dem Kontostand für alle offenen Raten, bleibt der Hof – sonst wird er zwangsversteigert. true = Hof gerettet
   const PFAENDUNG = 0.75;
+  // B4: Stand kurz vor der Pfändung des letzten Hofs merken – geht das Spiel verloren, liegt er danach auf dem Platz „Verloren“ (nur ansehen)
+  let verlorenSchnapp = null;
+  const letzterHof = () => !hofReihe().some(h => h !== aktivHid() && !(spiel.hofWeg || []).includes(h));
+  function schnappMachen() {
+    const s2 = JSON.parse(JSON.stringify(spiel)), akt = s2.hof && s2.hof.hid;   // während imHof() steht der Hof schon in spiel – die alte Kopie in hoefe weg, Höfe ohne Daten aus der Reihe
+    if (s2.hoefe && akt) delete s2.hoefe[akt]; s2.hofReihe = (s2.hofReihe || [akt]).filter(h => h === akt || (s2.hoefe || {})[h]); delete s2.hofWeg; delete s2.hofWegDispo; delete s2.verloren;
+    return { tag: spiel.tag, s: s2 };
+  }
   function pfaendung(k) {
+    try { if (letzterHof()) verlorenSchnapp = schnappMachen(); } catch (e) { console.error("Verloren-Stand:", e); }
     const liste = [];
     spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot || fremd(p)) return; prot("Pferd gepfändet", { p }); const w = Math.round(verkaufsWert(p) * PFAENDUNG / 10) * 10; liste.push({ name: p.name, fohlen: b.fohlen ? b.fohlen.name : "", w });
       archivieren(p); if (b.fohlen) { archivieren(b.fohlen); delete b.fohlen; } b.pferd = null; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; });
@@ -10700,28 +10737,163 @@
     const weg = (spiel.hofWeg = spiel.hofWeg || []);
     if (hofReihe().some(h => h !== aktivHid() && !weg.includes(h))) { weg.push(aktivHid()); if (!k) (spiel.hofWegDispo = spiel.hofWegDispo || []).push(aktivHid()); return; }   // weitere Höfe: nur dieser wird versteigert
     delete spiel.hofWeg;
+    try { if (!verlorenSchnapp || verlorenSchnapp.tag !== spiel.tag) verlorenSchnapp = schnappMachen(); } catch (e) { console.error("Verloren-Stand:", e); }
     chronikHof("verloren", hofName());   // letzter Hof
     spiel.verloren = k ? { tag: spiel.tag, jz: jzJetzt(), kredit: k.name, offen: k.offen.length, schuld: runde2(k.rest + k.offen.reduce((a, r) => a + r.zins + (r.gebuehr || 0), 0)),
       pferde: alleEigenenPferde().length } : { tag: spiel.tag, jz: jzJetzt(), grund: "dispo", schuld: runde2(-(spiel.geld || 0)), pferde: alleEigenenPferde().length };
   }
-  // Spiel verloren: Spielstand wird gelöscht, zurück zum Start
+  // ---------- B4 (PLAN-BILANZ.md, Dome): Spiel verloren – Abschlussbilanz, Platz „Verloren“ und „Nur ansehen“ ----------
+  // Der Autospeicher wird gelöscht, die Speicherplätze bleiben (S1 Punkt 9). Der Stand kurz vor der Pfändung kommt auf den Platz „Verloren“ (immer nur der letzte, gepackt).
+  // Abschlussfenster: Grund, Datum, Spieldauer, 6 Kacheln, Details, Kurve Kontostand (aus finanzSaison), bestes und wertvollstes Pferd, 1–3 Tipps zum Spielverlauf.
+  const lesenVerloren = () => { const w = lesen(VERLOREN_KEY); return w && w.spiel && w.meta ? w : null; };
+  const verlorenText = w => `${w.meta.hof}, verloren in ${w.meta.datum}`;
+  function kontoKurve() {   // Kontostand am Ende jeder Jahreszeit, rückwärts aus allen Buchungen aller noch vorhandenen Höfe (finanzSaison) und dem Kontostand jetzt
+    const fl = {}; let jetzt = 0;
+    hofReihe().forEach(h => imHof(h, () => { jetzt += spiel.geld || 0; Object.entries(spiel.finanzSaison || {}).forEach(([j, S]) => Object.entries(S || {}).forEach(([sz, P]) => { const k = Number(j) * 4 + Number(sz); fl[k] = (fl[k] || 0) + Object.values(P || {}).reduce((a, e) => a + (e.ein || 0) - (e.aus || 0), 0); })); }));
+    const ks = Object.keys(fl).map(Number).sort((x, y) => x - y); if (!ks.length) return [];
+    const pkt = []; let g = jetzt; for (let k = ks[ks.length - 1]; k >= ks[0]; k--) { pkt.unshift({ k, g }); g -= fl[k] || 0; }
+    return pkt;
+  }
+  function kurveSVG(pkt) {
+    if (pkt.length < 2) return `<p class="text"><small>Noch zu kurz gespielt für eine Kurve.</small></p>`;
+    const W = 320, H = 130, L = 46, R = 8, T = 10, U = 22, gs = pkt.map(x => x.g), mx = Math.max(0, ...gs), mn = Math.min(0, ...gs), sp = mx - mn || 1;
+    const X = i => L + i * (W - L - R) / (pkt.length - 1), Y = g => T + (mx - g) * (H - T - U) / sp, kurz = g => `${g < 0 ? "−" : ""}${Math.abs(g) >= 1000 ? Math.round(Math.abs(g) / 1000) + " T" : Math.round(Math.abs(g))} €`;
+    const linie = pkt.map((x, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(x.g).toFixed(1)}`).join(" "), jn = x => `${JZ[((x.k % 4) + 4) % 4][1]} ${jj(Math.floor(x.k / 4))}`;
+    return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:520px;display:block" role="img" aria-label="Kontostand über die Zeit">
+      <line x1="${L}" x2="${W - R}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" stroke="#a89478" stroke-dasharray="4 3" stroke-width="1"/>
+      <text x="${L - 4}" y="${(Y(mx) + 4).toFixed(1)}" font-size="10" text-anchor="end" fill="#7a6650">${kurz(mx)}</text><text x="${L - 4}" y="${(Y(mn) + 3).toFixed(1)}" font-size="10" text-anchor="end" fill="#7a6650">${kurz(mn)}</text>
+      ${mn < 0 && mx > 0 ? `<text x="${L - 4}" y="${(Y(0) + 3).toFixed(1)}" font-size="10" text-anchor="end" fill="#7a6650">0 €</text>` : ""}
+      <path d="${linie}" fill="none" stroke="#b8662f" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+      ${pkt.map((x, i) => x.g < 0 ? `<circle cx="${X(i).toFixed(1)}" cy="${Y(x.g).toFixed(1)}" r="2.6" fill="#b3261e"/>` : "").join("")}
+      <text x="${L}" y="${H - 6}" font-size="10" fill="#7a6650">${jn(pkt[0])}</text><text x="${W - R}" y="${H - 6}" font-size="10" text-anchor="end" fill="#7a6650">${jn(pkt[pkt.length - 1])}</text></svg>
+      <p class="text"><small>Kontostand am Ende jeder Jahreszeit${hofAnzahl() > 1 ? " (alle Höfe zusammen)" : ""}; rote Punkte = im Minus.</small></p>`;
+  }
+  // Ausgaben nach Bereichen (für die Tipps) – Posten-Namen enthalten oft den Pferdenamen, daher nach dem Anfang
+  const AUSGABE_BEREICH = [["Personal", /^(Gehalt|Nachtzuschlag)/], ["Futter und Einstreu", /^(Futter|Einstreu|Heu|Stallapotheke)/], ["Tierarzt und Klinik", /^(Tierarzt|Klinik|Labor|Ankaufsuntersuchung|Blutprobe|Abbuchung Tierarzt|Ammenstute)/], ["Bauen", /^(Bau|Umbau|Abriss|Unterhalt|Handwerker|Gummimatten|Land kaufen|Zaun|Nachsäen)/], ["Pferdekäufe", /^(Kauf|Auktion|Tierschutz:)/], ["Kredit und Dispo", /^(Kredit: Zinsen|Kredit: Mahngebühr|Dispo)/]];
+  function abschlussTipps(A) {   // 1–3 Tipps, regelbasiert nach dem Spielverlauf (wichtigste zuerst)
+    const T = [], aus = A.d.aus || 1, ber = {};
+    Object.entries(A.d.posten).forEach(([k, x]) => { const b = AUSGABE_BEREICH.find(([, re]) => re.test(k)); if (b && x.aus) ber[b[0]] = (ber[b[0]] || 0) + x.aus; });
+    const anteil = n => (ber[n] || 0) / aus, pz = x => `${Math.round(x * 100)} %`;
+    const minus = A.kurve.filter(x => x.g < 0).length;
+    if (A.V.grund === "dispo") T.push([9, `Dein Konto war ${minus} ${minus === 1 ? "Jahreszeit" : "Jahreszeiten"} im Minus. Rutscht es ins Minus, hilft schnell: ein Pferd verkaufen, Pensionspferde aufnehmen oder Geld vom zentralen Konto überweisen.`]);
+    else T.push([9, `Die Kreditrate wird zu Beginn jeder Jahreszeit abgebucht. Halte immer etwas mehr als eine Rate auf dem Hofkonto bereit – nach ${KREDIT.verpasst} offenen Raten pfändet die Bank.`]);
+    if (anteil("Personal") >= 0.4) T.push([8, `Personalkosten waren ${pz(anteil("Personal"))} deiner Ausgaben. Mitarbeiter lohnen sich erst bei vielen Pferden – vorher lieber selbst versorgen.`]);
+    if (anteil("Bauen") >= 0.35) T.push([7, `${pz(anteil("Bauen"))} deiner Ausgaben gingen ins Bauen. Größere Bauten lieber erst, wenn regelmäßig Geld hereinkommt.`]);
+    if (anteil("Pferdekäufe") >= 0.35 && A.d.bew.verkauft < A.d.bew.gekauft) T.push([7, `Du hast ${A.d.bew.gekauft} Pferde gekauft, aber nur ${A.d.bew.verkauft} verkauft (${pz(anteil("Pferdekäufe"))} der Ausgaben). Jedes Pferd kostet jeden Tag Futter und Pflege.`]);
+    if (anteil("Tierarzt und Klinik") >= 0.25) T.push([6, `Tierarzt und Klinik waren ${pz(anteil("Tierarzt und Klinik"))} deiner Ausgaben. Vorsorge (Impfung, Wurmkur, Hufe, saubere Box) ist günstiger als Behandeln.`]);
+    if (anteil("Futter und Einstreu") >= 0.4) T.push([5, `Futter und Einstreu waren ${pz(anteil("Futter und Einstreu"))} deiner Ausgaben. Eine eigene Futterwiese und ein passender Futterplan sparen Geld.`]);
+    if (!Object.keys(A.d.posten).some(k => /^Pension/.test(k) && A.d.posten[k].ein > 0)) T.push([4, `Du hattest keine Einnahmen aus der Pension. Einsteller bringen jede Jahreszeit sicheres Geld.`]);
+    if (A.d.starts === 0) T.push([3, `Du bist auf keinem Turnier gestartet. Turniere bringen Preisgeld und machen Pferde wertvoller.`]);
+    else if (A.d.siege + A.d.plaz === 0) T.push([3, `Deine Pferde sind ${A.d.starts}-mal gestartet, aber nie platziert. Erst gut ausbilden, dann in passenden Klassen starten.`]);
+    if (A.kauf && A.kauf.length) T.push([2, `Größte Ausgabe war „${esc(A.kauf[0])}“ (${fmt(Math.round(A.kauf[1]))}).`]);
+    return T.sort((a, b) => b[0] - a[0]).slice(0, 3).map(t => t[1]);
+  }
+  function abschlussDaten(V) {
+    const hofs = hofReihe().filter(h => h === aktivHid() || (spiel.hoefe || {})[h]);
+    const D = datenSumme(hofs.map(h => imHof(h, () => jahresDaten(h, Object.keys(spiel.finanzen || {}).map(Number))) || leereDaten()));
+    Object.keys(spiel.chronik || {}).filter(h => !hofs.includes(h)).forEach(h => { const L = leereDaten(); for (const [z, C] of Object.entries(spiel.chronik[h])) { if (!/^\d+-\d$/.test(z)) continue;   // Turniere und Pferde früherer Höfe zählen mit (ihre Finanzen sind mit dem Hof weg)
+      Object.entries(C.k || {}).forEach(([k, n]) => { if (k === "Turnierstart") L.starts += n; else if (k === "Turniersieg") L.siege += n; else if (k === "Turnier platziert") L.plaz += n; else if (/^Kauf: /.test(k)) L.bew.gekauft += n; else if (k === "Fohlen geboren") L.bew.gezuechtet += n; else if (/^Verkauf/.test(k)) L.bew.verkauft += n; else if (k === "Todesfall") L.bew.verstorben += n; }); }
+      const S = datenSumme([D, L]); Object.assign(D, S); });
+    const B = { beste: [], wertvoll: [] }; Object.values(spiel.chronik || {}).forEach(H => { B.beste.push(...(H.beste || [])); B.wertvoll.push(...(H.wertvoll || [])); });
+    B.beste.sort((a, b) => b.e - a.e); B.wertvoll.sort((a, b) => b.w - a.w);
+    const T = spiel.tempo || 7, jz = Math.floor(((spiel.tag || 1) - 1) / T), kurve = kontoKurve(), gA = grossePosten(D, "aus")[0], gE = grossePosten(D, "ein").find(([k]) => !/^Pfändung/.test(k));   // der Zwangsverkauf zählt nicht als „größte Einnahme“
+    const A = { V, hof: hofName(), d: D, kurve, best: B.beste[0] || null, wert: B.wertvoll[0] || null, jz, geld: hofs.reduce((a, h) => a + (imHof(h, () => spiel.geld || 0) || 0), 0), pferde: verlorenSchnapp ? standInfo(verlorenSchnapp.s).pferde : V.pferde || 0, ausgabe: gA ? [gA[0], gA[1].aus] : null, einnahme: gE ? [gE[0], gE[1].ein] : null };
+    A.kauf = A.ausgabe; A.tipps = abschlussTipps(A); return A;
+  }
+  const dauerText = jz => { const j = Math.floor(jz / 4), r = jz % 4; return jz < 1 ? "weniger als eine Jahreszeit" : [j ? `${j} ${j === 1 ? "Jahr" : "Jahre"}` : "", r ? `${r} ${r === 1 ? "Jahreszeit" : "Jahreszeiten"}` : ""].filter(Boolean).join(" und "); };
+  function abschlussHTML(A) {
+    const D = A.d, gw = D.ein - D.aus, eur = n => `${n < 0 ? "−" : ""}${fmt(Math.round(Math.abs(n)))}`;
+    const kacheln = `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:8px 0;color:#3b2a1a">
+      ${jbKachel(gw >= 0 ? "Gewinn insgesamt" : "Verlust insgesamt", eur(gw), "<small>ohne Hofkauf und Kredit</small>")}
+      ${jbKachel("Kontostand am Ende", eur(A.geld), `<small>${A.V.grund === "dispo" ? "Dispo-Rahmen −" + fmt(DISPO.rahmen) : "Restschuld " + fmt(A.V.schuld || 0)}</small>`)}
+      ${jbKachel("Pferde vor der Pfändung", String(A.pferde), `<small>${D.bew.gekauft} gekauft · ${D.bew.gezuechtet} gezüchtet</small>`)}
+      ${jbKachel("Turniere", `${D.siege} ${D.siege === 1 ? "Sieg" : "Siege"} · ${D.plaz} platziert`, `<small>${D.starts} ${D.starts === 1 ? "Start" : "Starts"}</small>`)}
+      ${jbKachel("Größte Ausgabe", A.ausgabe ? fmt(Math.round(A.ausgabe[1])) : "–", A.ausgabe ? `<small>${esc(A.ausgabe[0])}</small>` : "")}
+      ${jbKachel("Größte Einnahme", A.einnahme ? fmt(Math.round(A.einnahme[1])) : "–", A.einnahme ? `<small>${esc(A.einnahme[0])}</small>` : "")}</div>`;
+    const det = (t, i, offen) => `<details style="margin:6px 0"${offen ? " open" : ""}><summary><b>${t}</b></summary>${i}</details>`, leer = `<p class="text"><small>Nichts verzeichnet.</small></p>`;
+    const bw = [["Gekaufte Pferde", D.bew.gekauft], ["Gezüchtete Fohlen", D.bew.gezuechtet], ["Verkaufte Pferde", D.bew.verkauft], ["Abgegebene Pferde", D.bew.abgegeben], ["Verstorbene Pferde", D.bew.verstorben], ["Gepfändete Pferde", D.bew.gepfaendet]].filter(z => z[1]);
+    const kl = Object.entries(D.klassen).sort((a, b) => b[1][0] - a[1][0]), pos = Object.entries(D.posten).sort((a, b) => (b[1].ein + b[1].aus) - (a[1].ein + a[1].aus));
+    const pferdZeile = (x, t) => { const q = x && pferdePool().find(e => e.p.id === x.id); return x ? `<li>${t}: ${q ? `<b class="ansehen-link" ${ansehen(q.p, q.ort, null, q.tot ? { tot: true, alter: q.tot.alter } : undefined)}>${esc(x.n)}</b>` : `<b>${esc(x.n)}</b>`}</li>` : ""; };
+    const best = A.best || A.wert ? `<ul class="liste">${A.best ? pferdZeile(A.best, `🏅 Meiste Erfolge (${A.best.s} ${A.best.s === 1 ? "Sieg" : "Siege"}, ${A.best.pl} platziert)`) : ""}${A.wert ? pferdZeile(A.wert, `💎 Wertvollstes Pferd (${fmt(A.wert.w)})`) : ""}</ul>` : leer;
+    return kacheln + `<div class="panel" style="margin:8px 0"><p style="margin:0 0 4px"><b>💡 Tipps für das nächste Spiel</b></p><ul class="liste" style="margin:0">${A.tipps.map(t => `<li>${t}</li>`).join("")}</ul></div>`
+      + det("📈 Kontostand über die Zeit", kurveSVG(A.kurve), true) + det("⭐ Bestes und wertvollstes Pferd", best)
+      + det("🐴 Pferde-Bewegungen", bw.length ? verTab(["", "Anzahl"], bw) : leer)
+      + det("🏆 Turniere je Klasse", kl.length ? verTab(["Klasse", "Starts", "🥇", "🎀"], kl.map(([k, z]) => [esc(k), ...z])) : leer)
+      + det("💶 Finanzen im Detail", pos.length ? verTab(["Posten", "Einnahmen", "Ausgaben"], pos.map(([k, x]) => [esc(k), x.ein ? fmt(Math.round(x.ein)) : "", x.aus ? fmt(Math.round(x.aus)) : ""])) : leer)
+      + (D.hoefe.length ? det("🏡 Höfe", `<ul class="liste">${D.hoefe.map(h => `<li>${esc(h.name)} – ${h.was} (${jzName(h.jz)})</li>`).join("")}</ul>`) : "");
+  }
+  const abschlussBild = A => ({ titel: A.V.grund === "dispo" ? "Abschlussbilanz · Insolvenz" : "Abschlussbilanz · Zwangsversteigerung", hof: A.hof, zeit: `${dauerText(A.jz)} gespielt`, gewinn: Math.round(A.d.ein - A.d.aus), geld: Math.round(A.geld), pferde: A.pferde, siege: A.d.siege, plaz: A.d.plaz, starts: A.d.starts, ausgabe: A.ausgabe ? [A.ausgabe[0], Math.round(A.ausgabe[1])] : null, einnahme: A.einnahme ? [A.einnahme[0], Math.round(A.einnahme[1])] : null, bestes: A.best ? { id: A.best.id, n: A.best.n, r: A.best.r } : null });
   function spielVerloren() {
     const V = spiel.verloren, name = hofName(), np = spiel.platz, pw = np && lesenPlatz(np), pwOk = pw && pw.spiel.spielId === spiel.spielId;
     clearTimeout(speicherUhr); speicherOffen = false; loeschen(SPEICHER);   // S1 Punkt 9: nur der Autospeicher dieses Spiels – die Speicherplätze bleiben
     hatSpielstand = false;
     $("nacht").classList.remove("an");
+    let A = null; try { A = abschlussDaten(V); } catch (e) { console.error("Abschlussbilanz:", e); }
+    let vlOk = false;   // Punkt 3: Stand kurz vor der Pfändung auf den Platz „Verloren“ (Post bleibt, Punkt 5)
+    try { const S = verlorenSchnapp && verlorenSchnapp.s; if (S) { const I = standInfo(S); S.ansehenInfo = { grund: V.grund === "dispo" ? "dispo" : "kredit", jz: V.jz, bild: A ? abschlussBild(A) : null };
+      schreiben(VERLOREN_KEY, { meta: { hof: name, datum: jzName(V.jz), grund: V.grund === "dispo" ? "Insolvenz" : "Zwangsversteigerung", spielId: spiel.spielId, version: SPIEL_VERSION, gespeichert: new Date().toISOString(), pferde: I.pferde }, spiel: S }); vlOk = true; } }
+    catch (e) { console.error("Platz Verloren:", e); }
+    verlorenSchnapp = null;
     $("charakter").innerHTML = `<div class="schirm-innen">
-      <div class="logo">🔨</div><h1>${V.grund === "dispo" ? "Insolvenz" : "Zwangsversteigerung"}</h1><p class="unter">${esc(name)} · ${jzName(V.jz)}</p>
+      <div class="logo">🔨</div><h1>${V.grund === "dispo" ? "Insolvenz" : "Zwangsversteigerung"}</h1><p class="unter">${esc(name)} · ${jzName(V.jz)}${A ? ` · ${dauerText(A.jz)} gespielt` : ""}</p>
       <div class="panel verloren"><p style="margin-top:0">${V.grund === "dispo" ? `Das Hofkonto war zu lange im Minus. Die Hausbank hat das Konto gekündigt, die Pferde gepfändet und <b>${esc(name)}</b> zwangsversteigern lassen.` : `${V.offen} Raten für den ${esc(V.kredit)} sind nicht bezahlt worden. Die Hausbank hat den Kredit gekündigt und <b>${esc(name)}</b> zwangsversteigern lassen.`}</p>
-        <p>Der Hof, ${V.pferde ? `deine ${V.pferde === 1 ? "Pferd" : `${V.pferde} Pferde`}, ` : ""}die Ausrüstung und das Futter gehören jetzt anderen. <b>Das Spiel ist verloren.</b></p>
-        <p style="margin-bottom:0"><small>${V.grund === "dispo" ? `Kontostand bei der Kündigung: −${fmt(V.schuld)}. Tipp: Steht das Konto im Minus, zahle zuerst Geld ein (Verkauf, Turnier, Überweisung vom zentralen Konto).` : `Restschuld bei der Kündigung: ${fmt(V.schuld)}. Tipp: Halte immer etwas Geld für die Kreditrate zu Beginn jeder Jahreszeit bereit.`}</small></p></div>
+        <p style="margin-bottom:0">Der Hof, ${V.pferde ? `deine ${V.pferde === 1 ? "Pferd" : `${V.pferde} Pferde`}, ` : ""}die Ausrüstung und das Futter gehören jetzt anderen. <b>Das Spiel ist verloren.</b></p></div>
+      ${A ? `<h2 style="margin:14px 0 2px">📊 Abschlussbilanz</h2>${abschlussHTML(A)}` : ""}
       ${pwOk ? `<button class="sknopf haupt" id="vlPlatz"><span class="i">💾</span><span>Vom letzten Speicherstand neu starten<small>Speicherplatz ${np}, ${esc(platzText(pw))}</small></span></button>` : ""}
       <button class="sknopf ${pwOk ? "" : "haupt"}" id="vlNeu"><span class="i">✨</span><span>Neues Spiel<small>noch einmal von vorn beginnen</small></span></button>
+      ${vlOk ? `<button class="sknopf" id="vlAnsehen"><span class="i">👁️</span><span>Letzten Stand ansehen<small>der Hof kurz vor der Pfändung – nur ansehen, nichts änderbar</small></span></button>` : ""}
+      ${A ? `<button class="sknopf" id="vlBild"><span class="i">🖼️</span><span>Als Bild teilen<small>die Abschlussbilanz als Bild</small></span></button>` : ""}
       <button class="sknopf" id="vlStart"><span class="i">↩</span><span>Zum Startmenü</span></button></div>`;
-    spiel.post = []; zeigeSchirm("charakter");
+    zeigeSchirm("charakter"); $("charakter").scrollTop = 0; $("postIcon").hidden = true; $("postIconRot").hidden = true;
     $("vlNeu").onclick = () => neuesSpielWahl();
     if ($("vlPlatz")) $("vlPlatz").onclick = () => standStarten({ ...pw.spiel, platz: np });
+    if ($("vlAnsehen")) $("vlAnsehen").onclick = () => verlorenAnsehen();
+    if ($("vlBild")) $("vlBild").onclick = () => bilanzBildTeilen(abschlussBild(A));
     $("vlStart").onclick = zeigeStart;
+  }
+  // B4 Punkt 4: Nur-ansehen-Modus – alles lässt sich öffnen, Knöpfe mit Aktion sind ausgegraut und gesperrt, die Zeit steht, nichts wird gespeichert (spiel.ansehen fängt speichern() ab)
+  const ANS_NAV = /^\s*(‹|›|✕|←|→|↩|ℹ️|i|\?|OK|Ok|Schließen|Abbrechen|Zurück|Verstanden|Später|Nein|Fertig|Weiter|Alle|Ansehen|👁️|📋 Steckbrief|📖)(\s|$|\W)/;
+  const ANS_FREI = "#menueKnopf, #mHaupt, #mHof, #mEnzy, #mVollbild, #mSpar, #kontoAnzeige, #postIcon, #postIconRot, #boxSchildKnopf, [data-wbschild], .zurueck-s, .zurueck, .hm-kachel, .hm-wechsel, .vgl-knopf, .ahn-link, .ansehen-link, [data-ansehen], [data-lex], [data-kinder], [data-aufschl], #aufschlZurueck, #gentestKachel, #glZu, #leseZu, summary, #bfVor, #bfNach, #ansBand button";
+  const ANS_ZU = "#tagAnzeige, #kopfTagEnde, #mSpeichern, #hmImmo, #hmMarkt, #hmAnh, #pferdName, #nameEdit";
+  function ansehenGesperrt(el) {
+    if (!spiel.ansehen || !el || !el.closest) return false;
+    if (el.closest(ANS_ZU)) return true;
+    if (el.closest("#lese, #ansBand, .reiter, .modus, .fin-tabs, .enz-tabs, .bzn-tab, .gentab")) return false;
+    if (el.closest("#stall, #weideBild")) return !el.closest("#boxSchildKnopf, [data-wbschild]");   // Krippe, Heu, Eimer, Äpfel im Bild: füttern/misten gesperrt
+    const k = el.closest("button, input, select, textarea, [role=button], .kachel.klickbar, [data-ort], [data-typ]"); if (!k) return false;
+    if (k.matches(ANS_FREI) || k.closest(ANS_FREI)) return false;
+    if (k.matches("input[type=text], input[type=search], input:not([type])") && !k.closest(".karte")) return false;   // Suchfelder
+    if (k.closest("#info .karte") && aktenModus === "pflege") return true;   // Pferdepflege: alles Aktion
+    if (k.matches("input, select, textarea")) return true;
+    if (k.closest(".brief-aktion")) return true;
+    if (ANS_NAV.test(k.textContent || "")) return false;
+    if (k.closest("#dlg")) return true;   // in Fenstern nur Schließen/Zurück
+    return k.matches(".knopf, .mini-knopf, .sknopf, [data-ort], [data-typ]");
+  }
+  let ansHinweisUhr = null;
+  function ansehenHinweis() {
+    let el = document.getElementById("ansHinweis"); if (!el) { el = document.createElement("div"); el.id = "ansHinweis"; el.setAttribute("role", "status"); document.body.appendChild(el); }
+    el.textContent = "🔨 Nur ansehen – im verlorenen Spiel lässt sich nichts ändern."; el.hidden = false; clearTimeout(ansHinweisUhr); ansHinweisUhr = setTimeout(() => { el.hidden = true; }, 2200);
+  }
+  function ansehenMarkieren() { document.querySelectorAll("button, input, select, textarea, [role=button], .kachel.klickbar, [data-ort], [data-typ]").forEach(b => b.classList.toggle("ans-aus", ansehenGesperrt(b))); }
+  function ansehenStarten() {
+    document.body.classList.add("ansehen"); const I = spiel.ansehenInfo || {};
+    const sperr = e => { if (!spiel.ansehen) return; const t = e.target; if (!ansehenGesperrt(t)) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); if (e.type === "click") ansehenHinweis(); };
+    ["click", "pointerdown", "mousedown", "touchstart", "change", "input", "keydown"].forEach(ev => document.addEventListener(ev, e => { if (ev === "keydown" && e.key !== "Enter" && e.key !== " ") return; if (ev === "touchstart" && !e.target.closest("input, select")) return; sperr(e); }, { capture: true, passive: false }));
+    let geplant = false; new MutationObserver(() => { if (geplant) return; geplant = true; requestAnimationFrame(() => { geplant = false; ansehenMarkieren(); }); }).observe(document.body, { childList: true, subtree: true });
+    const band = document.createElement("div"); band.id = "ansBand";
+    band.innerHTML = `<span>🔨 Nur ansehen · Spiel verloren (${esc(spiel.ansehen.grund || (I.grund === "dispo" ? "Insolvenz" : "Zwangsversteigerung"))}, ${esc(spiel.ansehen.datum || "")})</span>${I.bild ? `<button class="knopf zweit" id="ansBild">🖼️ Bilanz als Bild</button>` : ""}<button class="knopf zweit" id="ansEnde">↩ Beenden</button>`;
+    document.body.appendChild(band);
+    if ($("ansBild")) $("ansBild").onclick = () => bilanzBildTeilen(I.bild);
+    $("ansEnde").onclick = () => zeigeStart();
+    titelSetzen(); ansehenMarkieren();
+  }
+  // Platz „Verloren“ ansehen: Seite mit Merker neu starten (der Autospeicher eines anderen laufenden Spiels bleibt unberührt)
+  function verlorenAnsehen() {
+    if (!lesenVerloren()) return;
+    const los = () => { speicherSperre = true; clearTimeout(speicherUhr); speicherOffen = false; try { sessionStorage.setItem(START_FLAG, "ansehen"); } catch (e) {} location.reload(); };
+    if (hatSpielstand && !spiel.ansehen) { speichern(); speichernJetzt(); }   // das laufende Spiel bleibt im Autospeicher
+    los();
   }
   // blasses Bild eines Hofs (je Immobilie etwas anders)
   function hofBild(art) {
@@ -12911,6 +13083,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Spielstand und Speicherplätze (PLAN-SPIELSTAND.md, v519):</b> Schlüssel im Browser: Autospeicher <code>zuchtstall-v2</code> (läuft immer mit, kurz verzögert 0,4 s und sofort beim Verlassen/Verstecken der Seite), Platz 1 <code>zuchtstall-p1</code>, Platz 2 <code>zuchtstall-p2</code> (nur selbst gespeichert, mit Kurzinfo Hof/Datum/Tag/Version/echtes Datum), Alles gepackt mit lz-string (<code>compressToUTF16</code>; ungepackte alte Stände beginnen mit „{“ und werden beim nächsten Speichern gepackt). Größe jetzt: ${(() => { try { const j = JSON.stringify(spiel).length, g = packen(spiel).length; return `ungepackt ${j.toLocaleString("de-DE")} Zeichen → gepackt ${g.toLocaleString("de-DE")} Zeichen (${Math.round(g / j * 100)} %)`; } catch (e) { return "–"; } })()}. Spiel-Nummer <code>spiel.spielId</code>, eigener Speicherplatz <code>spiel.platz</code> (null = noch nie gespeichert; neues Spiel legt keinen Speicherstand an, Tipp „Spiel speichern“; beim ersten Speichern Speicherplatz wählen), Turnier-Sortierung <code>spiel.tsort</code>. „Ungespeicherter Fortschritt“ = Tag, Geld, Pferde/Fohlen, Einsteller, Mitarbeiter, Kredite oder Briefe weichen vom Platz ab (<code>fortschritt</code>). Platzwechsel lädt den Stand in den Autospeicher und startet die Seite neu (Merker <code>zuchtstall-start</code> in sessionStorage → direkt ins Spiel). Speichern schlägt fehl → rote Meldung mit Datei-Knopf, höchstens 1× je Spieltag. Spiel verloren → nur der Autospeicher wird gelöscht. Datei (S2/S3): <code>Zuchtstall_&lt;Hof&gt;_Jahr&lt;jj&gt;-&lt;Jahreszeit&gt;_&lt;Datum&gt;.json</code>, Umlaute im Dateinamen als ae/oe/ue/ss (v523, auch im Notfall-Fenster) – im Spiel bleibt der Hofname mit Umlauten.</p>
       <p><b>Hofchronik (B2, v548):</b> Dieselben Zähler wie das Spielprotokoll, aber <b>je Hof</b> getrennt (<code>spiel.chronik[Hof]["Jahr-Jahreszeit"].k</code>); das Spielprotokoll bleibt als „Gesamt“. Neu gezählt: Turnier-Start/Sieg/Platz <b>je Disziplin und Klasse</b> („Turnier Dressur L: Sieg“), höchste erreichte Klasse je Disziplin, „Abgabe: Gnadenhof / Tierschutz / Händler (Rückgabe)“, „Pferd gepfändet“, höchster und tiefster Kontostand je Jahreszeit (<code>hoch</code>/<code>tief</code>, gemessen bei jeder Buchung), Höfe gekauft/verkauft/verloren mit Name und Jahreszeit (<code>spiel.chronikHoefe</code>). Alte Spielstände haben keine Aufteilung nach Höfen (Anzeige später „–“). Die Anzeige (Jahresbericht, Verloren-Bilanz) folgt in B3/B4.</p>
       <p><b>Seltenheit (R1, v556):</b> Wahrscheinlichkeit, dass ein zufälliges reinrassiges Pferd der Rasse dieses Merkmal hat. Stufen: selten &lt; ${SELTEN_STUFEN[1].bis * 100} %, sehr selten &lt; ${SELTEN_STUFEN[2].bis * 100} %, einzigartig &lt; ${SELTEN_STUFEN[3].bis * 100} %, Ausnahmepferd &lt; ${SELTEN_STUFEN[4].bis * 100} % (Preis ×1,5), Jahrhundertpferd &lt; ${SELTEN_STUFEN[5].bis * 100} % (Preis ×2). <b>Gen-Rarität:</b> je Fellfarben-Gen (ohne DMRT3) die Häufigkeit des Genotyps in der Rasse (Hardy-Weinberg aus <code>RASSE_GENE</code>; A mit At; BR1 bei Hengsten nur ein Allel); ein Genotyp mit Häufigkeit unter <code>SELTEN_MERKMAL</code> = ${SELTEN_MERKMAL} zählt als seltenes Merkmal, die Häufigkeiten aller seltenen Merkmale werden multipliziert (mindestens 10<sup>−6</sup> je Merkmal); nur Pferde ab 99 % Rassenanteil (Mischlinge haben gar keine Seltenheit, auch nicht durch Leistung); sichtbar erst nach dem Fellfarben-Test (Adminmodus immer). <b>Leistungs-Rarität</b> ab ${SELTEN_ALTER} Jahren: Rang in der Rasse (Tabelle <code>SELTEN_SCHWELLE</code> aus 20.000 Pferden je Rasse: obere 5 % / 1 % / 0,1 %; weil es zwei Kategorien sind, gilt die Wahrscheinlichkeit 1 − (1 − Anteil)²: obere 1 % → ≈ 2 % = selten, obere 0,1 % → ≈ 0,2 % = sehr selten, obere 5 % → ≈ 10 % = keine Seltenheit) bei Gangwerk (Schnitt Schritt/Trab/Galopp) und Aufschlüsselung (Schnitt der 13 Werte, wie sie der Spieler sieht; Charakter zählt nicht) oder Ausbildung (Klasse S bzw. Open: ≥ 1 Platzierung = 3 % selten, ≥ 5 Siege = 1 % sehr selten, ≥ 15 Siege davon ≥ 3 auf großen Turnieren = 0,1 % einzigartig); die seltenste Kategorie zählt. Gen und Leistung werden multipliziert.</p>
+      <p><b>Spiel verloren (B4, v560):</b> Abschlussfenster mit Grund (Zwangsversteigerung/Insolvenz), Spieldauer, 6 Kacheln (Gewinn/Verlust ohne Hofkauf und Kredit, Kontostand am Ende, Pferde vor der Pfändung, Turniere, größte Ausgabe, größte Einnahme ohne den Zwangsverkauf), Kurve „Kontostand am Ende jeder Jahreszeit“ (rückwärts aus allen Buchungen), bestes/wertvollstes Pferd und <b>1–3 Tipps</b>: Dispo/Kreditrate immer; Personal ≥ 40 %, Bauen ≥ 35 %, Pferdekäufe ≥ 35 % (mehr gekauft als verkauft), Tierarzt ≥ 25 %, Futter ≥ 40 % der Ausgaben; keine Pensions-Einnahmen; keine Turniere bzw. nie platziert. Der Stand <b>kurz vor der Pfändung</b> liegt auf dem Platz „Verloren“ (<code>${VERLOREN_KEY}</code>, nur der letzte, gepackt, mit Post) und lässt sich nur ansehen: Band unten, gesperrte Knöpfe ausgegraut (Tag beenden, Markt, Immobilien, Anhänger, Pferdepflege, Kaufen/Bauen/Einstellen, Brief-Aktionen, Häkchen), nichts wird gespeichert, die Zeit steht. Als Datei mit Kennzeichen <code>verloren: true</code> speicher- und ladbar.</p>
       <p><b>Bestenliste (B2 Teil 2, v549):</b> je Hof die ${BESTEN.anzahl} besten Pferde (meiste Erfolge: Sieg ${BESTEN.sieg} Punkte, 2./3. Platz ${BESTEN.platz}; gezählt wird die Lebensbilanz <code>p.bilanz</code> – je Pferd [Starts, 1., 2., 3. Platz] nach Disziplin und Klasse, nie gekürzt, im Steckbrief „📊 Bilanz insgesamt“) und die ${BESTEN.anzahl} wertvollsten (Marktwert). Ausgewertet zu Beginn jeder Jahreszeit und wenn ein Pferd den Hof verlässt (Verkauf, Rückgabe, Pfändung, Tod). Pensionspferde zählen nicht. Gespeichert wird nur eine Mini-Zeile je Pferd (<code>spiel.chronik[Hof].beste/.wertvoll</code>); der Name ist anklickbar (Steckbrief), auch nach dem Verkauf: Bestenlisten-Pferde bleiben im Archiv vor dem 40er-Limit geschützt, verstorbene liegen auf dem Friedhof. Anzeige: hvw – Hof – Übersicht „🏅 Bestenliste dieses Hofs“, bei nicht mehr eigenen Pferden mit „Stand beim Verkauf/Abgang“.</p>
       <p><b>Spielprotokoll (S4, v525) und Aufnahmen (v529):</b> Zähler je Jahreszeit in <code>spiel.protokoll["&lt;jahr&gt;-&lt;jz&gt;"]</code> (immer an, für den Spieler unsichtbar, Grundlage für die Bilanz in Thema 2): Füttern selbst/Personal/Turnier, Putzen, Kämmen, Hufe auskratzen, Misten (selbst), Training je Übung (selbst/Personal), Turnierstart/-sieg/platziert, Kauf je Markt, Verkauf (Festpreis/Auktion/Verkaufsrennen), Bedeckung, tragend geworden, Fohlen geboren, Tierarzt, Klinik, Todesfall, Brief gelesen, Kredit, Bauauftrag, Mitarbeiter eingestellt/gekündigt/selbst gekündigt. <b>Aufnahme</b> (hvw – Einstellungen „🔴 Aufnahme starten/beenden“): ab dem Start schreibt das Spiel jede gezählte Aktion und jede Buchung mit Spieltag in <code>spiel.aufnahme.eintraege</code> (höchstens ${AUFNAHME_MAX.toLocaleString("de-DE")} Einträge je Aufnahme); beim Beenden kommt sie als eigene Aufnahme in die Liste <code>spiel.aufnahmen</code> (je Eintrag ⬇️ Herunterladen als Datei <code>typ: zuchtstall-aufnahme</code> und 🗑️ Löschen mit Sicherheitsfrage). Solange eine Aufnahme läuft, hat der Bildschirm einen dünnen roten Rahmen (<code>body.aufnahme</code>, nicht im Startmenü).
         ${(() => { const P = spiel.protokoll || {}, K = Object.keys(P).sort((a, b) => { const [ja, sa] = a.split("-").map(Number), [jb, sb] = b.split("-").map(Number); return ja - jb || sa - sb; });
@@ -13442,6 +13615,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     return L;
   }
   function tippPruefen() {
+    if (spiel.ansehen) return;
     if (!spiel || !spiel.hof || !$("dlg").hidden || ($("nacht") && !$("nacht").hidden && $("nacht").classList.contains("an"))) return;
     if (!spiel.tipps) { spiel.tipps = {}; spiel.tippStart = spiel.tag; if (spiel.tag > 3) spiel.tippsAus = true; }   // alte Spielstände: Tipps aus (in Einstellungen einschaltbar)
     if (spiel.tippsAus) return;
@@ -13459,10 +13633,11 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   try { stallFormat(); zeigeStall(); zeigeTag(); } catch (e) { console.error("Startbild:", e); }
   // S1: alter Spielstand → einmal auf Platz 1 (bzw. den freien Platz) · nach einem Platzwechsel direkt weiterspielen (der Platz bekommt den ergänzten Stand, damit kein „ungespeicherter Fortschritt“ entsteht)
   let startFlag = null; try { startFlag = sessionStorage.getItem(START_FLAG); sessionStorage.removeItem(START_FLAG); } catch (e) {}
-  try { if (hatSpielstand) { speichern(); speichernJetzt(); const n = spiel.platz, w = n && lesenPlatz(n);
+  try { if (hatSpielstand && !spiel.ansehen) { speichern(); speichernJetzt(); const n = spiel.platz, w = n && lesenPlatz(n);
       if (platzMigration) { const frei = !lesenPlatz(1) ? 1 : !lesenPlatz(2) ? 2 : 0; if (frei) { spiel.platz = frei; speichern(); speichernJetzt(); platzSchreiben(frei, spiel); } }
       else if (startFlag === "spielen" && w && w.spiel.spielId === spiel.spielId) platzSchreiben(n, spiel, { gespeichert: w.meta.gespeichert, datum: w.meta.datum }); } } catch (e) { console.error("Speicherplatz:", e); }
-  if (startFlag === "spielen" && hatSpielstand) zeigeHaupt(); else zeigeStart();
+  if (spiel.ansehen) { try { ansehenStarten(); } catch (e) { console.error("Nur ansehen:", e); } zeigeHaupt(); }   // B4: verlorenen Stand ansehen
+  else if (startFlag === "spielen" && hatSpielstand) zeigeHaupt(); else zeigeStart();
   window.spielGestartet = true;
 </script>
 <script>

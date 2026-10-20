@@ -1024,7 +1024,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "603";
+  const SPIEL_VERSION = "604";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1032,11 +1032,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=603"></script>
-<script src="pferd.js?v=603"></script>
-<script src="boxstufen.js?v=603"></script>
-<script src="kopfneu.js?v=603"></script>
-<script src="waschbild.js?v=603"></script>
+<script src="lz-string.min.js?v=604"></script>
+<script src="pferd.js?v=604"></script>
+<script src="boxstufen.js?v=604"></script>
+<script src="kopfneu.js?v=604"></script>
+<script src="waschbild.js?v=604"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2209,6 +2209,7 @@
   // Infofenster für jedes Pferd (Bild, Daten, Abstammungsschein) – aus Vorfahren-Links geöffnet, merkt es sich den Weg zurück
   let ansichtStapel = [];
   function pferdAnsehen(a, verschachtelt) {
+    if (a.p && a.p.gekuerzt) { grabsteinDialog(a.p); return; }   // P2: Details gelöscht – nur noch der Grabstein
     if (!verschachtelt) ansichtStapel = [];
     const { p, ort, aktion, extra } = a, tot = extra && extra.tot;
     const zurueck = ansichtStapel.length ? ansichtStapel[ansichtStapel.length - 1] : null;
@@ -3434,7 +3435,7 @@
   let nrKarte = null;
   function lebendNachNr(nr) {   // eigenes Pferd (alle Höfe, extern, Gnadenhof, Archiv) mit dieser Lebensnummer – je Spieltag einmal aufgebaut
     if (!nr || !spiel) return null;
-    if (!nrKarte || nrKarte.tag !== spiel.tag) { const M = new Map(), rein = p => { if (p && p.nr) M.set(p.nr, p); };
+    if (!nrKarte || nrKarte.tag !== spiel.tag) { const M = new Map(), rein = p => { if (p && p.nr && !p.gekuerzt) M.set(p.nr, p); };
       Object.values(spiel.archiv || {}).forEach(rein);
       Object.values(spiel.hoefe || {}).forEach(H => (H && H.boxen || []).forEach(b => { rein(b.pferd); rein(b.fohlen); }));
       spiel.boxen.forEach(b => { rein(b.pferd); rein(b.fohlen); }); (spiel.extern || []).forEach(e => rein(e.pferd)); (spiel.gnadenhof || []).forEach(g => rein(g.pferd));
@@ -3729,11 +3730,11 @@
   function pferdePool() {
     const M = spiel.markt || {}, l = [...alleHoefePferde()];
     (spiel.tierschutz || []).forEach(t => { l.push({ p: t.pferd, ort: "Tierschutz" }); if (t.fohlen) l.push({ p: t.fohlen, ort: "Tierschutz" }); });
-    (spiel.friedhof || []).forEach(g => g.pferd && l.push({ p: g.pferd, ort: "Pferdefriedhof", tot: g }));
+    (spiel.friedhof || []).forEach(g => g.pferd && !g.pferd.gekuerzt && l.push({ p: g.pferd, ort: "Pferdefriedhof", tot: g }));
     [...(M.auktion || []), ...(M.fohlen || [])].forEach(a => l.push({ p: a.pferd, ort: a.fohlen ? "Fohlenauktion" : "Auktionshaus" }));
     [...(M.privat || []), ...(M.notfall || [])].forEach(h => l.push({ p: h, ort: "Pferdemarkt" }));
     Object.values(spiel.deckstation || {}).forEach(L => (L || []).forEach(h => l.push({ p: h, ort: "Deckstation" })));
-    Object.values(spiel.archiv || {}).forEach(h => l.push({ p: h, ort: "nicht mehr bei dir" }));
+    Object.values(spiel.archiv || {}).forEach(h => !h.gekuerzt && l.push({ p: h, ort: "nicht mehr bei dir" }));
     return l.filter(x => x.p);
   }
   // Pferd verlässt den Hof (Verkauf, Rückgabe …): Kopie aufheben, damit Briefe es noch zeigen können
@@ -3742,7 +3743,7 @@
     if (p.zubehoerMit) delete p.zubehoerMit;   // mitverkauft: geht mit dem Pferd
     else if (eigen) zubehoerInsLager(p);
     if (eigen) bestenPflegen(p);   // B2: letzter Stand fürs Verlassen des Hofs
-    const A = (spiel.archiv = spiel.archiv || {}); A[p.id] = JSON.parse(JSON.stringify(p));
+    const A = (spiel.archiv = spiel.archiv || {}); A[p.id] = JSON.parse(JSON.stringify(p)); A[p.id].archiviertJz = jzJetzt();   // P2: „abgegeben vor … Jahren“ fürs Aufräumen
     const ks = Object.keys(A); if (ks.length > 40) { const g = bestenIds(), k = ks.find(x => !g.has(x)); if (k != null) delete A[k]; }   // Bestenlisten-Pferde bleiben
   }
   function briefLinks(text, pferde) {
@@ -10446,7 +10447,7 @@
       });
   }
   // Tageswechsel: jeder Hof läuft für sich (H2), Markt, Labor, Tierschutz und Turnierkalender nur einmal
-  function naechsteNacht() { nachtTag = spiel.tag; try { return naechsteNacht0(); } finally { nachtTag = null; vetAbschluss(); } }   // V1: alles in einer Nacht = ein Vorfall; Strafe und Briefe am Ende
+  function naechsteNacht() { nachtTag = spiel.tag; try { return naechsteNacht0(); } finally { nachtTag = null; vetAbschluss(); if (!spiel.tutorial && !spiel.ansehen && !spiel.verloren) { try { speicherPruefen(); } catch (e) { console.error("Speicher:", e); } } } }   // V1: alles in einer Nacht = ein Vorfall; Strafe und Briefe am Ende
   function naechsteNacht0() {
     if (spiel.ansehen) return;
     jedenHof(() => { try { waschAbend(); } catch (e) { console.error("Waschen:", e); } tote(); turnierNacht(); }, true);   // W4: abends waschen Pfleger/Einsteller-Leistung · Turnierpferde von heute: Ergebnis (Brief kommt am nächsten Tag)
@@ -10732,7 +10733,7 @@
   // ---------- Enzyklopädie ----------
   // Nachkommen eines Pferdes: Kacheln im Holzrahmen – lebt das Fohlen noch bei dir, öffnet sich sein Steckbrief
   function nachkommenFenster(p, zurueck) {
-    const alle = [...alleEigenenPferde(), ...(spiel.tierschutz || []).map(t => ({ p: t.pferd, ort: "Tierschutz" })), ...(spiel.friedhof || []).filter(g => g.pferd).map(g => ({ p: g.pferd, ort: "Pferdefriedhof" }))];
+    const alle = [...alleEigenenPferde(), ...(spiel.tierschutz || []).map(t => ({ p: t.pferd, ort: "Tierschutz" })), ...(spiel.friedhof || []).filter(g => g.pferd && !g.pferd.gekuerzt).map(g => ({ p: g.pferd, ort: "Pferdefriedhof" }))];
     const fb = p.fohlenBeiFuss;   // Marktpferd mit Fohlen bei Fuß: das echte Fohlen zeigen (nicht den Stammbuch-Eintrag)
     const kinder = (p.kinder || []).map(k => { const e = alle.find(x => x.p.id === k.id); return e ? { q: e.p, ort: e.ort } : fb && fb.id === k.id ? { q: fb, ort: "bei der Mutter" } : { q: k, ort: "nicht mehr bei dir" }; });
     dialog(`<h3>🐣 Nachkommen von ${esc(p.name)}</h3>${kinder.length ? `<div class="paar-liste">${kinder.map(({ q, ort }) => pferdKachel(q, { ort, zeilen: [`${q.geschlecht} · ${rasseById(q.rasse).name}`, q.geb ? `geb. ${JZ[q.geb.s][0]} ${q.geb.j}` : "", ort] })).join("")}</div>`
@@ -11293,8 +11294,8 @@
   function zeigeFriedhof() {
     const f = (spiel.friedhof || []).slice().reverse();
     zeigeNeben("🕯️ Pferdefriedhof", f.length ? `<div class="panel friedhof-text"><p style="margin:0">Hier erinnern Grabsteine an deine verstorbenen Pferde. Antippen zeigt den Steckbrief.</p></div>
-      <div class="friedhof-liste">${f.map(g => `<div class="grab" ${g.pferd ? ansehen(g.pferd, "Pferdefriedhof", null, { tot: true, alter: g.alter, zeilen: [["Todesursache", esc(g.ursache || "unbekannt")]] }) : ""}><div class="grab-bild">${grabstein(g)}</div>
-        <div class="grab-info"><b>${esc(g.name)}</b><small>${rasseById(g.rasse).name} · ${g.geschlecht}</small><small>${g.pferd ? farbText(g.pferd) : g.farbName || (FARBEN[g.farbe] ? FARBEN[g.farbe].name : "")}</small>
+      <div class="friedhof-liste">${f.map(g => `<div class="grab" ${g.pferd && g.pferd.gekuerzt ? `data-grabdetail="${g.pferd.id}" role="button" tabindex="0" title="Grabstein"` : g.pferd ? ansehen(g.pferd, "Pferdefriedhof", null, { tot: true, alter: g.alter, zeilen: [["Todesursache", esc(g.ursache || "unbekannt")]] }) : ""}><div class="grab-bild">${grabstein(g)}</div>
+        <div class="grab-info"><b>${esc(g.name)}</b><small>${rasseById(g.rasse).name} · ${g.geschlecht}</small><small>${g.pferd && !g.pferd.gekuerzt ? farbText(g.pferd) : g.farbName || (FARBEN[g.farbe] ? FARBEN[g.farbe].name : "")}</small>
         <small>† ${jzName(g.tod).replace(/^\S+ /, "")}${g.alter ? ` · ${g.alter.replace(/ /g, "\u00a0")}` : ""}</small>
         ${g.nachkommen ? `<small>${g.nachkommen} ${g.nachkommen === 1 ? "Nachkomme" : "Nachkommen"}</small>` : ""}
         <small class="grab-ursache">${esc(g.ursache || "unbekannt")}</small></div></div>`).join("")}</div>`
@@ -12161,6 +12162,97 @@
     chronikHof("verloren", hofName());   // letzter Hof
     spiel.verloren = k ? { tag: spiel.tag, jz: jzJetzt(), kredit: k.name, offen: k.offen.length, schuld: runde2(k.rest + k.offen.reduce((a, r) => a + r.zins + (r.gebuehr || 0), 0)),
       pferde: alleEigenenPferde().length } : { tag: spiel.tag, jz: jzJetzt(), grund: "dispo", schuld: runde2(-(spiel.geld || 0)), pferde: alleEigenenPferde().length };
+  }
+  // ---------- P2 (PLAN-TIERHALTEVERBOT-SPEICHER, Dome 20.10.2026): Speicheranzeige und „Speicher aufräumen“ ----------
+  // Aufgeräumt wird nie von allein: Fenster mit Häkchen, vorher Sicherheitsfrage mit Summe. Die Rücksicherung gibt es seit v522 nicht mehr (Platz „Verloren“ steht an ihrer Stelle).
+  const SPEICHER_QUOTA = 5 * 1024 * 1024, SP_GELB = 0.7, SP_ROT = 0.9;   // ca. 5 MB (Zeichen) je Browser-Adresse · gelb ab 70 %, rot ab 90 %
+  function speicherMass() {   // alle Schlüssel dieser Adresse zählen (auch fremde Seiten teilen sich den Platz), unsere extra
+    let ges = 0; const unser = {};
+    try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i), v = localStorage.getItem(k) || "", n = k.length + v.length; ges += n; if (/^zuchtstall/.test(k)) unser[k] = n; } } catch (e) {}
+    return { ges, unser, anteil: ges / SPEICHER_QUOTA };
+  }
+  const mbTxt = n => (n / 1048576).toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const kbTxt = n => `${Math.max(1, Math.round(n / 1024)).toLocaleString("de-DE")} KB`;
+  function speicherAnzeigeHTML() {
+    const M = speicherMass(), p = Math.round(M.anteil * 100), rot = M.anteil >= SP_ROT, gelb = M.anteil >= SP_GELB;
+    return `<div class="speicher-box" id="speicherBox" style="margin:0 0 10px;padding:10px 12px;border-radius:12px;background:${rot ? "#fde8e6" : gelb ? "#fff3d1" : "#f3ead8"};color:#3b2a1a"><b>💽 Speicher: ${mbTxt(M.ges)} von ca. 5 MB belegt (${p} %)</b>
+      <div class="balken" style="margin:6px 0"><i style="width:${Math.min(100, p)}%;background:${rot ? "#b3261e" : gelb ? "#c58a00" : "#5a8f3c"}"></i></div>
+      ${rot ? `<p style="margin:4px 0 8px;color:#b3261e"><b>⚠️ Der Speicher ist fast voll.</b> Sichere dein Spiel jetzt als Datei und räume auf – sonst kann es sein, dass nicht mehr gespeichert wird.</p><button class="knopf" id="spDatei">💾 Jetzt als Datei sichern</button>` : gelb ? `<p style="margin:4px 0 0">Der Speicher wird voll. Räume unten auf oder sichere dein Spiel als Datei.</p>` : ""}</div>`;
+  }
+  let speicherTag = null;
+  function speicherPruefen() {   // einmal je Spieltag: Blase ab 70 %, rote Meldung ab 90 %
+    if (!spiel || speicherTag === spiel.tag) return; speicherTag = spiel.tag;
+    const M = speicherMass(); if (M.anteil >= SP_GELB) tippMerken("speicherVoll");
+    if (M.anteil >= SP_ROT) { let el = document.getElementById("speicherWarn"); if (!el) { el = document.createElement("div"); el.id = "speicherWarn"; el.setAttribute("role", "alert"); document.body.appendChild(el); }
+      el.innerHTML = `<span><b>⚠️ Dein Speicher ist fast voll (${Math.round(M.anteil * 100)} %).</b> Bitte den Spielstand jetzt downloaden und aufräumen (Hofverwaltung – Einstellungen).</span><span class="sw-knoepfe"><button class="knopf" id="swDatei">💾 Jetzt downloaden</button><button class="knopf zweit" id="swZu" aria-label="Schließen">✕</button></span>`;
+      el.hidden = false; $("swDatei").onclick = () => dateiSpeichern("auto"); $("swZu").onclick = () => { el.hidden = true; }; }
+  }
+  // Pferd auf Name und Bilanz kürzen („Grabstein bleibt“): Werte, Gene, Erfolge-Liste, Bildteile fallen weg
+  function pferdKuerzen(p) {
+    if (p.gekuerzt) return p; if (p.erfolge && p.erfolge.length) { try { bilanzHolen(p); } catch (e) {} }
+    let fn = ""; try { fn = farbName(p, fb(p)); } catch (e) {}
+    return { id: p.id, nr: p.nr, name: p.name, rasse: p.rasse, geschlecht: p.geschlecht, farbe: p.farbe, farbName: fn, anteile: p.anteile, geb: p.geb ? { ...p.geb } : null, todesursache: p.todesursache, nachkommen: p.nachkommen || 0,
+      bilanz: p.bilanz, bilanzV: p.bilanzV, schleifenAnzahl: (p.schleifen || []).length, erfolgeAnzahl: (p.erfolge || []).length, archiviertJz: p.archiviertJz, gekuerzt: true, gekuerztJz: jzJetzt() };
+  }
+  function grabsteinDialog(p) {
+    dialog(`<h3>🪦 ${esc(p.name)}</h3><dl class="werte"><dt>Rasse</dt><dd>${esc(rasseById(p.rasse).name)}</dd><dt>Geschlecht</dt><dd>${esc(p.geschlecht || "")}</dd>${p.farbName ? `<dt>Farbe</dt><dd>${esc(p.farbName)}</dd>` : ""}${p.geb ? `<dt>Geboren</dt><dd>${esc(jzName(p.geb.j * 4 + p.geb.s))}</dd>` : ""}${p.todesursache ? `<dt>Todesursache</dt><dd>${esc(p.todesursache)}</dd>` : ""}${p.nachkommen ? `<dt>Nachkommen</dt><dd>${p.nachkommen}</dd>` : ""}${p.schleifenAnzahl ? `<dt>Schleifen</dt><dd>${p.schleifenAnzahl}</dd>` : ""}</dl>${(() => { try { return bilanzHTML(p); } catch (e) { return ""; } })()}
+      <p class="text"><small>Die Details (Werte, Gene, Erfolge-Liste) wurden gelöscht, um Speicher zu sparen. Name, Lebensdaten und Lebensbilanz bleiben.</small></p>`, [["Schließen", null]], "breit");
+  }
+  document.addEventListener("click", e => { const k = e.target.closest && e.target.closest("[data-grabdetail]"); if (!k) return; const g = (spiel.friedhof || []).find(x => x.pferd && String(x.pferd.id) === k.dataset.grabdetail); if (g) grabsteinDialog(g.pferd); });
+  const nachfahrenVon = p => { const nr = p.nr; if (!nr) return []; try { return alleHoefePferde().map(x => x.p).filter(q => q && q.ahnen && AHNEN_ALLE.some(k => q.ahnen[k] && q.ahnen[k].nr === nr)); } catch (e) { return []; } };
+  function aufraeumenPlan() {   // was würde aufgeräumt – reine Berechnung (ohne etwas zu löschen)
+    const j = jzJetzt(), P = spiel.post || [];
+    return { briefe: P.filter(b => !b.spam && b.gelesen && !b.stern && (b.typ || briefTyp(b.betreff)[1]) !== "jahresbericht" && j - (b.jz != null ? b.jz : j) >= 8 && !briefOffen(b)), spam: P.filter(b => b.spam),
+      verloren: lesenVerloren() ? (localStorage.getItem(VERLOREN_KEY) || "").length : 0 };
+  }
+  function aufraeumenDialog(meld) {
+    let R = 0.3; try { const t = JSON.stringify(spiel); R = packen(spiel).length / t.length; } catch (e) {}
+    const gr = o => Math.round(JSON.stringify(o).length * R), Pl = aufraeumenPlan(), gB = gr(Pl.briefe), gS = gr(Pl.spam), M = speicherMass();
+    const zeile = (id, text, n, gb) => `<li style="margin:6px 0"><label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="${id}" ${n ? "" : "disabled"}><span>${text}<br><small>${n ? `ca. ${kbTxt(gb)} werden frei` : "nichts zu tun"}</small></span></label></li>`;
+    dialog(`<h3>🧹 Speicher aufräumen</h3>${meld ? `<p class="text"><b>${meld}</b></p>` : ""}<p class="text"><small>Belegt: ${mbTxt(M.ges)} von ca. 5 MB. Es wird nur gelöscht, was du ankreuzt und bestätigst. Briefe mit ⭐, Jahresberichte und Briefe mit offener Rechnung oder Aktion bleiben immer.</small></p>
+      <ul style="list-style:none;padding:0;margin:0">${zeile("arBriefe", `Gelesene Briefe ohne ⭐, älter als 2 Spieljahre (${Pl.briefe.length})`, Pl.briefe.length, gB)}${zeile("arSpam", `Spam-Ordner leeren (${Pl.spam.length})`, Pl.spam.length, gS)}${zeile("arVerloren", "Platz „Verloren“ löschen (der zuletzt verlorene Spielstand)", Pl.verloren, Pl.verloren)}</ul>
+      <p class="text"><button class="knopf zweit" id="arTiere" style="width:auto;padding:8px 12px">🐴 Friedhof und Archiv aufräumen …</button></p>`,
+      [["Aufräumen", () => {
+        const a = { briefe: $("arBriefe") && $("arBriefe").checked, spam: $("arSpam") && $("arSpam").checked, verloren: $("arVerloren") && $("arVerloren").checked };
+        const frei = (a.briefe ? gB : 0) + (a.spam ? gS : 0) + (a.verloren ? Pl.verloren : 0);
+        if (!frei && !a.briefe && !a.spam && !a.verloren) { aufraeumenDialog("Nichts angekreuzt."); return; }
+        dialog(`<h3>🧹 Wirklich aufräumen?</h3><p>Es werden ca. <b>${kbTxt(frei)}</b> frei: ${[a.briefe ? `${Pl.briefe.length} alte Briefe` : "", a.spam ? `${Pl.spam.length} Spam-Briefe` : "", a.verloren ? "der Platz „Verloren“" : ""].filter(Boolean).join(", ")}. Das lässt sich nicht rückgängig machen. Sicher?</p>`,
+          [["Ja, aufräumen", () => { const weg = new Set([...(a.briefe ? Pl.briefe : []), ...(a.spam ? Pl.spam : [])]); spiel.post = (spiel.post || []).filter(b => !weg.has(b)); if (a.verloren) loeschen(VERLOREN_KEY); postIconSetzen(); speichern(); speichernJetzt(); aufraeumenFertig(frei); }, "rot"], ["Zurück", () => aufraeumenDialog(), "zweit"]]); }],
+        ["Schließen", () => zeigeHof("einst"), "zweit"]], "breit");
+    $("arTiere").onclick = () => { $("dlg").hidden = true; tierAufraeumenDialog(); };
+  }
+  function aufraeumenFertig(frei) { dialog(`<h3>🧹 Aufgeräumt</h3><p>Es wurden ca. <b>${kbTxt(frei)}</b> frei. Der Spielstand ist gespeichert. (Die Speicherplätze 1 und 2 werden erst beim nächsten Speichern kleiner.)</p>`, [["OK", () => zeigeHof("einst")]]); }
+  let arSel = new Set(), arFilter = { jahre: 0, ohneKinder: false, ohneErfolg: false };
+  function tierKandidaten() {
+    const j = jzJetzt(), l = [];
+    (spiel.friedhof || []).forEach(g => g.pferd && l.push({ art: "friedhof", g, p: g.pferd, jz: g.tod, key: "f" + g.pferd.id }));
+    Object.values(spiel.archiv || {}).forEach(p => p && l.push({ art: "archiv", p, jz: p.archiviertJz != null ? p.archiviertJz : 0, key: "a" + p.id }));
+    return l;
+  }
+  function tierAufraeumenDialog(meld) {
+    let R = 0.3; try { const t = JSON.stringify(spiel); R = packen(spiel).length / t.length; } catch (e) {}
+    const gr = o => Math.round(JSON.stringify(o).length * R), j = jzJetzt(), best = bestenIds(), alle = tierKandidaten();
+    alle.forEach(x => { x.gb = gr(x.p); x.nach = nachfahrenVon(x.p); x.best = best.has(String(x.p.id)); x.erfolg = (x.p.erfolgeAnzahl || (x.p.erfolge || []).length) > 0 || Object.keys(x.p.bilanz || {}).length > 0; });
+    const sicht = () => alle.filter(x => (!arFilter.jahre || j - x.jz > arFilter.jahre * 4) && (!arFilter.ohneKinder || !x.nach.length) && (!arFilter.ohneErfolg || !x.erfolg));
+    const liste = () => { const L = sicht(); return L.length ? L.map(x => `<li style="margin:5px 0"><label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" data-ark="${x.key}" ${arSel.has(x.key) ? "checked" : ""}><span><b>${esc(x.p.name)}</b> · ${x.art === "friedhof" ? `† ${esc(jzName(x.jz).replace(/^\S+ /, ""))}` : x.jz ? `nicht mehr bei dir seit ${esc(jzName(x.jz))}` : "nicht mehr bei dir"} · ca. ${kbTxt(x.gb)}${x.p.gekuerzt ? " · schon gekürzt" : ""}<br><small>${x.nach.length ? `Vorfahre von ${x.nach.slice(0, 3).map(q => esc(q.name)).join(", ")}${x.nach.length > 3 ? " …" : ""}` : "keine Nachkommen bei dir"}${x.best ? " · ⭐ in der Bestenliste" : ""}${x.erfolg ? " · mit Turniererfolgen" : ""}</small></span></label></li>`).join("") : `<li><small>Keine Pferde mit diesen Filtern.</small></li>`; };
+    dialog(`<h3>🐴 Friedhof und Archiv aufräumen</h3>${meld ? `<p class="text"><b>${meld}</b></p>` : ""}<p class="text"><small>Wähle Pferde aus. „Details löschen“ behält Name, Rasse, Geschlecht, Farbe, Lebensdaten, Todesursache und Lebensbilanz (der Grabstein bleibt). „Ganz löschen“ entfernt das Pferd. Stammbäume deiner Pferde behalten ihre eigenen Eltern-Daten.</small></p>
+      <p class="text" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label>Länger her als <select id="arJahre"><option value="0">egal</option>${[1, 2, 3, 5].map(n => `<option value="${n}" ${arFilter.jahre === n ? "selected" : ""}>${n} ${n === 1 ? "Jahr" : "Jahre"}</option>`).join("")}</select></label><label><input type="checkbox" id="arKinder" ${arFilter.ohneKinder ? "checked" : ""}> ohne Nachkommen bei dir</label><label><input type="checkbox" id="arErfolg" ${arFilter.ohneErfolg ? "checked" : ""}> ohne Turniererfolge</label></p>
+      <ul style="list-style:none;padding:0;margin:0;max-height:46vh;overflow:auto" id="arListe">${liste()}</ul>`,
+      [["Details löschen, Grabstein bleibt", () => tierLoeschen("details", alle)], ["Ganz löschen", () => tierLoeschen("ganz", alle), "rot"], ["Zurück", () => aufraeumenDialog(), "zweit"]], "breit");
+    const neu = () => { $("arListe").innerHTML = liste(); bindeListe(); }, bindeListe = () => document.querySelectorAll("[data-ark]").forEach(c => c.onchange = () => { if (c.checked) arSel.add(c.dataset.ark); else arSel.delete(c.dataset.ark); });
+    $("arJahre").onchange = e => { arFilter.jahre = +e.target.value; neu(); }; $("arKinder").onchange = e => { arFilter.ohneKinder = e.target.checked; neu(); }; $("arErfolg").onchange = e => { arFilter.ohneErfolg = e.target.checked; neu(); }; bindeListe();
+  }
+  function tierLoeschen(modus, alle) {
+    const wahl = alle.filter(x => arSel.has(x.key) && !(modus === "details" && x.p.gekuerzt));
+    if (!wahl.length) { tierAufraeumenDialog(modus === "details" ? "Nichts ausgewählt (schon gekürzte Pferde lassen sich nur ganz löschen)." : "Nichts ausgewählt."); return; }
+    const frei = wahl.reduce((a, x) => a + (modus === "ganz" ? x.gb : Math.round(x.gb * 0.9)), 0), warn = wahl.filter(x => x.nach.length), best = wahl.filter(x => x.best);
+    const tun = () => { wahl.forEach(x => {
+      if (x.art === "friedhof") { if (modus === "ganz") spiel.friedhof = spiel.friedhof.filter(g => g !== x.g); else x.g.pferd = pferdKuerzen(x.p); }
+      else { if (modus === "ganz") delete spiel.archiv[x.p.id]; else spiel.archiv[x.p.id] = pferdKuerzen(x.p); } });
+      arSel = new Set(); speichern(); speichernJetzt(); aufraeumenFertig(frei); };
+    const zweite = () => best.length ? dialog(`<h3>⭐ Bestenliste</h3><p>${best.map(x => `<b>${esc(x.p.name)}</b>`).join(", ")} ${best.length === 1 ? "steht" : "stehen"} in deiner Bestenliste. Wirklich ${modus === "ganz" ? "ganz löschen" : "die Details löschen"}?</p>`, [["Ja, trotzdem", tun, "rot"], ["Zurück", () => tierAufraeumenDialog(), "zweit"]]) : tun();
+    dialog(`<h3>🐴 ${wahl.length} ${wahl.length === 1 ? "Pferd" : "Pferde"} ${modus === "ganz" ? "ganz löschen" : "kürzen"}?</h3><p>Es werden ca. <b>${kbTxt(frei)}</b> frei: ${wahl.slice(0, 6).map(x => esc(x.p.name)).join(", ")}${wahl.length > 6 ? " …" : ""}. Das lässt sich nicht rückgängig machen.</p>${warn.length ? `<p class="text"><small>${warn.slice(0, 4).map(x => `<b>${esc(x.p.name)}</b> ist Vorfahre von ${x.nach.slice(0, 3).map(q => esc(q.name)).join(", ")}${x.nach.length > 3 ? " …" : ""}`).join("; ")}. Der Stammbaum bleibt (die Eltern-Daten stehen dort selbst), nur ${warn.length === 1 ? "der Steckbrief des Vorfahren" : "die Steckbriefe der Vorfahren"} gehen verloren.</small></p>` : ""}<p>Sicher?</p>`,
+      [["Ja, " + (modus === "ganz" ? "löschen" : "kürzen"), zweite, "rot"], ["Zurück", () => tierAufraeumenDialog(), "zweit"]]);
   }
   // ---------- B4 (PLAN-BILANZ.md, Dome): Spiel verloren – Abschlussbilanz, Platz „Verloren“ und „Nur ansehen“ ----------
   // Der Autospeicher wird gelöscht, die Speicherplätze bleiben (S1 Punkt 9). Der Stand kurz vor der Pfändung kommt auf den Platz „Verloren“ (immer nur der letzte, gepackt).
@@ -14721,7 +14813,8 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         <h4 class="ma-titel">🎓 Ausbilderschein</h4><p class="text" style="margin:0 0 4px">${spiel.ausbilderschein ? `✅ Du hast den Ausbilderschein und darfst selbst einen Azubi ausbilden${angestellte("azubi").some(z => z.ausbilder === "du" && z.bis == null) ? " (Platz belegt)" : " (Platz frei)"}.` : `Mit dem Ausbilderschein darfst du selbst einen Azubi ausbilden – im kleinen Stall die einzige Möglichkeit. Einmaliger Kurs: <b>${fmt(AUSBILDERSCHEIN)}</b>.`}</p>${spiel.ausbilderschein ? "" : `<button class="knopf" id="ausbilderschein" style="width:auto;padding:8px 14px">🎓 Ausbilderschein machen · ${fmt(AUSBILDERSCHEIN)}</button>`}
         <h4 class="ma-titel">Deine eigene Erfahrung</h4><p class="text" style="margin:0 0 4px"><small>Wächst, wenn du selbst fütterst, mistest und putzt.</small></p>${wissenHTML(spiel.wissen || wissenStart(10, {}))}`;
     } else if (hofReiter === "einst") {
-      inhalt = `<button class="sknopf" id="hfDatei" style="margin-top:0"><span class="i">💾</span><span>Spielstand downloaden<small>Zuletzt heruntergeladen: ${exportText()}</small></span></button>
+      inhalt = `${speicherAnzeigeHTML()}<button class="sknopf" id="hfDatei" style="margin-top:0"><span class="i">💾</span><span>Spielstand downloaden<small>Zuletzt heruntergeladen: ${exportText()}</small></span></button>
+        <button class="sknopf" id="hfAufraeumen"><span class="i">🧹</span><span>Speicher aufräumen<small>alte Briefe, Spam, Friedhof und Archiv – nur auf Knopfdruck</small></span></button>
         <button class="sknopf" id="hfSpar"><span class="i">🔋</span><span>Sparmodus ist ${spiel.sparmodus ? "an" : "aus"}<small>keine Animationen – schont den Akku</small></span></button>
         <button class="sknopf" id="hfVoll"><span class="i">⛶</span><span>Vollbildmodus ist ${istVoll() ? "an" : "aus"}<small>antippen zum Umschalten</small></span></button>
         <button class="sknopf" id="hfStufe"><span class="i">🎓</span><span>Erfahrungsstufe: ${(ERFAHRUNG_STUFEN[(spiel.spieler && spiel.spieler.stufe) || "anf"] || {}).n || "Anfänger"}<small>${spiel.stufenAn ? "bestimmt, welche Funktionen und Krankheiten es gibt – jederzeit änderbar" : "Spielumfang je Stufe ist aus (alter Spielstand: alles frei)"}</small></span></button>
@@ -14794,6 +14887,8 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     if ($("hfDatei")) $("hfDatei").onclick = () => dateiWahl();
     if ($("hfAdmin")) $("hfAdmin").onclick = () => { spiel.admin = !spiel.admin; if (!spiel.admin && aktenReiter === "test") { aktenReiter = "gesundheit"; } speichern(); zeigeHof(); };
     if ($("vetZeile")) $("vetZeile").onclick = () => vetDialog(() => zeigeHof());
+    if ($("hfAufraeumen")) $("hfAufraeumen").onclick = () => aufraeumenDialog();
+    if ($("spDatei")) $("spDatei").onclick = () => dateiSpeichern("auto");
     if ($("hfGeld")) $("hfGeld").onclick = () => {
       const dd = $("hfGeld"); dd.onclick = null; dd.innerHTML = `<input type="number" step="50" value="${Math.round(spiel.geld || 0)}">`;
       const inp = dd.querySelector("input"); inp.focus(); inp.select();
@@ -15101,6 +15196,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     merkHuf: ["Huf", () => { const p = (B() || {}).pferd; return `Die Hufe von ${p ? esc(p.name) : "deinem Pferd"} weichen vom Idealen ab. Regelmäßige Hufschmied-Termine machen sie besser, Vernachlässigung macht sie schlechter.`; }, "", null, "bogen", "fort"],
     merkMuskel: ["Bemuskelung", () => { const p = (B() || {}).pferd; return `${p ? esc(p.name) : "Dein Pferd"} ist schwach bemuskelt. Training und gutes Futter bauen Muskeln auf, Krankheit und Boxenruhe bauen sie ab.`; }, "", null, "bogen", "fort"],
     merkRasse: ["Rassestandard", () => { const p = (B() || {}).pferd; return `${p ? esc(p.name) : "Dein Pferd"} verstößt gegen den Standard der Rasse und ist nicht zuchtbuchfähig. Das senkt den Wert, und Fohlen können dasselbe erben.`; }, "", null, "bogen", "fort"],
+    speicherVoll: ["Dein Speicher wird voll", "Dein Speicher wird voll. Unter Hofverwaltung – Einstellungen kannst du aufräumen oder als Datei sichern.", "", null, "speichern", "alle"],
     erloesen: ["Erlösen", "Der Tierarzt kann ein Pferd erlösen, das nicht mehr gesund wird. Das ist keine Vernachlässigung.", "", null, "krank", "alle"],
     postVoll: ["Deine Post ist bald voll", "Ab 300 Briefen werden die ältesten gelesenen Briefe ohne ⭐ gelöscht. Wichtige Briefe markierst du mit ⭐, die bleiben immer.", "", null, "speichern", "alle"],
     merkVorschau: ["Vorschau für das Fohlen", "Hier steht, was der Hengst bei deiner Stute ausgleicht und was er verstärkt. Haben beide denselben Fehler, geben sie ihn oft weiter.", "", null, "bogen", "fort"],

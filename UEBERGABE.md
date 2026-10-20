@@ -108,8 +108,8 @@ Bricht die Sitzung ab, kann **Claude Pro** hier weitermachen (Dome: Stand nach *
 | Raritäten: eigene Auktion startet beim Raritäten-Marktwert | ✅ v573 |
 | Raritäten: Auktion läuft ab dem 1. Gebot `tpj()` Tage (auch übers Marktjahr), ohne Spieler keine Gebote | ✅ v573 |
 | Raritäten: mehr „selten“ (`RAR.stufe` 0,92/0,06/0,02 → ca. 65/31/4 %) | ✅ v573 |
-| Anfänger: fester Futterplan, Charakter-Details aus, keine Pfändung im 1. Jahr, Training fester Weg (2–3 empfohlene Übungen entlang der Skala) | ⏳ als Nächstes |
-| Abstammungs-Zuschlag Marktwert (Eltern/Großeltern-Erfolge, Prämien-/Championfohlen machen Eltern wertvoller, max. ca. +50 %, wirkt bei Jungen am stärksten) | ⏳ danach |
+| Anfänger: fester Futterplan, Charakter-Details aus, keine Pfändung im 1. Jahr, Training fester Weg (2–3 empfohlene Übungen entlang der Skala) | ✅ v574 (Test `stufen-test.js`; dispo-/verloren-test setzen jetzt `spiel.stufenAn = false`) |
+| Abstammungs-Zuschlag Marktwert (Eltern/Großeltern-Erfolge, Prämien-/Championfohlen machen Eltern wertvoller, max. ca. +50 %, wirkt bei Jungen am stärksten) | ⏳ als Nächstes |
 | Tutorial-Balken Handy quer verschieben (deckt ~30 px Stall) | ⏳ danach |
 
 Domes Antworten (Original):

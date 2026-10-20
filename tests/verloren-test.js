@@ -8,6 +8,7 @@ const ORDNER = process.argv[2];
   await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(700);
   await pg.click('#smNeu'); await pg.waitForTimeout(150); await pg.fill('#chName', 'Test'); await pg.click('#chLos'); await pg.waitForTimeout(150);
   await pg.click('#dlgKnoepfe button'); await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'Sonnenhof'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(400);
+  await pg.evaluate(() => { spiel.stufenAn = false; });   // ganzes Spiel prüfen (Anfänger hätten im 1. Jahr keine Pfändung)
   // Spiel mit Pferden, Buchungen und Briefen, auf Speicherplatz 1 gespeichert; dann Insolvenz am nächsten Jahreszeit-Beginn
   const vor = await pg.evaluate(() => {
     document.getElementById('dlg').hidden = true; spiel.tippsAus = true; spiel.admin = false;

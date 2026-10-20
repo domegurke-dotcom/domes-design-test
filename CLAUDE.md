@@ -48,7 +48,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - `PLAN-BILANZ.md` – Dispo (−2.000 €, Käufe sperren, Pfändung/Insolvenz), Hofchronik-Zähler, Jahresbericht per Post, Spiel-verloren-Bilanz mit „Nur ansehen“, Bilanz als Bild (B1–B5 fertig: B1 v547, B2 v548–v553, B3 v554, B5 v555, B4 v560; Dome 19.10.2026).
 - `PLAN-RARITAETEN.md` – Seltenheitsstufen für alle Pferde (Gen-/Leistungs-Rarität, 5 Symbole) und Raritäten-Markt (R1–R4 fertig: R1 v556, R2+R3 v561, R4 v562; Dome 19.10.2026; baut auf PLAN-BILANZ B1/B2 auf – beides da).
 - `PLAN-WASCHPLATZ.md` – Waschplatz mit Wirkung (Zustände nass/verschwitzt, Abspritzen, Hufe/Beine, Wassergewöhnung) und Pferdesolarium (eigenes Gebäude), Pfleger/Einsteller, Fohlen „Duschen üben“; **alle Etappen W1–W6 fertig** (v563–v567, Domes Abnahme steht aus); Bilder auf Branch `entwurf-waschplatz-bilder` (alle zehn freigegeben, 20.10.2026). Reihenfolge nach Dome 20.10.2026: B4 → R2–R4 → Waschplatz → Hinweise.
-- `PLAN-HINWEISE.md` – Hinweisblasen statt Tipp-Fenster, Spielumfang je Erfahrungsstufe (`STUFEN`, `frei()`), Tutorials; T1–T3 fertig (v568–v570), T4–T6 offen (T4 groß → Opus), Anhänge `PLAN-HINWEISE-TEXTE.md`, `PLAN-TUTORIAL.md`, `PLAN-STUFEN.md`; erst nach Waschplatz.
+- `PLAN-HINWEISE.md` – Hinweisblasen statt Tipp-Fenster, Spielumfang je Erfahrungsstufe (`STUFEN`, `frei()`), Tutorials; T1–T4 fertig (v568–v571), T5–T6 offen, Anhänge `PLAN-HINWEISE-TEXTE.md`, `PLAN-TUTORIAL.md`, `PLAN-STUFEN.md`; erst nach Waschplatz.
 - `PROJEKT-CHAT-THEMEN.md` – große Themen, die Dome im Projekt-Chat plant (Ausbildungsstall je Disziplin, Deckhengst, Merkmale-Karte, Reiter-Erfahrung, zwei Fohlen je Box/Zwillinge …) – nicht eigenmächtig umsetzen.
 - `OFFENE-FRAGEN.md` – Fragen, die Claude in Domes Abwesenheit mit der empfohlenen Lösung entschieden hat; mit Dome durchgehen und danach anpassen. Stand 19.10.2026: alles beantwortet, beantwortete Fragen gelöscht (Flocke/Stern bleiben, Splash-Fell optional in BEI-INKSCAPE-BEARBEITEN.md).
 - Nach jeder Etappe: testen, hochladen, Dome eine Test-Anleitung mit ausgeschriebenen Wegen geben, auf Rückmeldung warten, Etappe im Plan abhaken.
@@ -67,7 +67,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (5 Stellen in index.html: lz-string.min.js, pferd.js, boxstufen.js, kopfneu.js, waschbild.js) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **570**.
+- Letzte Version bei Aktualisierung dieser Datei: **571**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName` ausfüllen → `#chLos` → Kreditbrief schließen (`#dlgKnoepfe button`) → `[data-immo="pension"]` → `#kaufName` → `#dlgKnoepfe button:first-child`. Admin: `spiel.admin = true`.
@@ -82,6 +82,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - Jahresbericht-Test (v554): `NODE_PATH=/opt/node22/lib/node_modules node tests/jahresbericht-test.js` – 2 Jahre durchspielen, Berichte, Vergleich, Ordner, Löschschutz, Summen über Höfe (~30 s).
 - Bild-Test (v555): `NODE_PATH=/opt/node22/lib/node_modules node tests/bild-test.js [Ordner]` – PNG aus der Bilanz, Pferdebild, Dateiname, Download (~10 s).
 - Verloren-Test (v560): `NODE_PATH=/opt/node22/lib/node_modules node tests/verloren-test.js [Ordner]` – Insolvenz, Abschlussfenster, Tipps, Platz „Verloren“, Nur ansehen (nichts änderbar, Zeit steht, Speicherplätze unverändert), Datei (~15 s, mit Ordner Bildschirmfotos).
+- Tutorial-Test (v571): `NODE_PATH=/opt/node22/lib/node_modules node tests/tutorial-test.js [Ordner]` – Tutorial-Frage, Testhof, Kapitel/Ziele, Überblendung, Überspringen, Abschlussfrage, echtes Spiel frisch (~15 s). Das Tutorial startet über den Knopf `#chTutorial` (nur Anfänger, im Charaktermenü) – `#chLos` überspringt es, bestehende Tests laufen unverändert.
 - Stufen-Test (v569): `NODE_PATH=/opt/node22/lib/node_modules node tests/stufen-test.js` – Sperren je Erfahrungsstufe, alte Stände frei, Umstellen (~10 s). **Seit v569 starten neue Spiele mit Stufen-Sperre (Standard Anfänger):** Tests, die das ganze Spiel prüfen, setzen nach dem Start `spiel.stufenAn = false` (krankheiten-, zucht-, waschplatz-test; große Tests/Studien bei Bedarf ebenso).
 - Hinweise-Test (v568): `NODE_PATH=/opt/node22/lib/node_modules node tests/hinweise-test.js [Ordner]` – Start-Blasen, Spielstart-Fenster, Leitfaden, Limits, Hilfe, Einsteiger-Wissen in 3 Ansichten (~20 s).
 - Waschplatz-Test (v563): `NODE_PATH=/opt/node22/lib/node_modules node tests/waschplatz-test.js [Ordner]` – Abspritzen/Abtrocknen, Nacht-Risiken, Jahreszeit/Stufe, Sperren, Schweiß, Mauke, Wischen (~20 s).

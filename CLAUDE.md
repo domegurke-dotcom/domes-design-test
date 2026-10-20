@@ -47,7 +47,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - `PLAN-RASSEN.md` – Veredler-Rassen: **fertig** (v316), dazu Domes „Danach“-Wünsche (v317). Domes Abnahme erledigt (18.10.2026).
 - `PLAN-BILANZ.md` – Dispo (−2.000 €, Käufe sperren, Pfändung/Insolvenz), Hofchronik-Zähler, Jahresbericht per Post, Spiel-verloren-Bilanz mit „Nur ansehen“, Bilanz als Bild (B1–B5 fertig: B1 v547, B2 v548–v553, B3 v554, B5 v555, B4 v560; Dome 19.10.2026).
 - `PLAN-RARITAETEN.md` – Seltenheitsstufen für alle Pferde (Gen-/Leistungs-Rarität, 5 Symbole) und Raritäten-Markt (R1–R4 fertig: R1 v556, R2+R3 v561, R4 v562; Dome 19.10.2026; baut auf PLAN-BILANZ B1/B2 auf – beides da).
-- `PLAN-WASCHPLATZ.md` – Waschplatz mit Wirkung (Zustände nass/verschwitzt, Abspritzen, Hufe/Beine, Wassergewöhnung) und Pferdesolarium (eigenes Gebäude), Pfleger/Einsteller, Fohlen „Duschen üben“; W1–W4 fertig (v563–v565), W5–W6 offen; Bilder auf Branch `entwurf-waschplatz-bilder` (alle zehn freigegeben, 20.10.2026). Reihenfolge nach Dome 20.10.2026: B4 → R2–R4 → Waschplatz → Hinweise.
+- `PLAN-WASCHPLATZ.md` – Waschplatz mit Wirkung (Zustände nass/verschwitzt, Abspritzen, Hufe/Beine, Wassergewöhnung) und Pferdesolarium (eigenes Gebäude), Pfleger/Einsteller, Fohlen „Duschen üben“; W1–W5 fertig (v563–v566), W6 offen (Bilder, Matten kaufen); Bilder auf Branch `entwurf-waschplatz-bilder` (alle zehn freigegeben, 20.10.2026). Reihenfolge nach Dome 20.10.2026: B4 → R2–R4 → Waschplatz → Hinweise.
 - `PLAN-HINWEISE.md` – Hinweisblasen statt Tipp-Fenster, Spielumfang je Erfahrungsstufe (`STUFEN`, `frei()`), Tutorials; T1–T6, **alle offen** (T2/T4 groß → Opus), Anhänge `PLAN-HINWEISE-TEXTE.md`, `PLAN-TUTORIAL.md`, `PLAN-STUFEN.md`; erst nach Waschplatz.
 - `PROJEKT-CHAT-THEMEN.md` – große Themen, die Dome im Projekt-Chat plant (Ausbildungsstall je Disziplin, Deckhengst, Merkmale-Karte, Reiter-Erfahrung, zwei Fohlen je Box/Zwillinge …) – nicht eigenmächtig umsetzen.
 - `OFFENE-FRAGEN.md` – Fragen, die Claude in Domes Abwesenheit mit der empfohlenen Lösung entschieden hat; mit Dome durchgehen und danach anpassen. Stand 19.10.2026: alles beantwortet, beantwortete Fragen gelöscht (Flocke/Stern bleiben, Splash-Fell optional in BEI-INKSCAPE-BEARBEITEN.md).
@@ -66,7 +66,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (4 Stellen in index.html: lz-string.min.js, pferd.js, boxstufen.js, kopfneu.js) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **565**.
+- Letzte Version bei Aktualisierung dieser Datei: **566**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName` ausfüllen → `#chLos` → Kreditbrief schließen (`#dlgKnoepfe button`) → `[data-immo="pension"]` → `#kaufName` → `#dlgKnoepfe button:first-child`. Admin: `spiel.admin = true`.

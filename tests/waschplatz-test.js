@@ -40,7 +40,16 @@ const ORDNER = process.argv[2];
     const bw = () => behandlungsWert(p, M); p.behHeute = { tag: spiel.tag - 1, a: { wundsalbe: 1 } }; const m0 = bw();
     p.beineGew = spiel.tag - 1; p.getrocknet = spiel.tag - 1; const m1 = bw(); delete p.getrocknet; const m2 = bw();
     R.m0 = m0; R.m1 = m1; R.m2 = m2; delete p.beineGew; p.befunde = [];
+    // W3 Solarium (Winter): vorher aufwärmen, nachher trocknen, 3. Mal gesperrt, Lahmheit ×0,7 in der Nacht
+    R.solOhne = solarSperre(p, box); gebaeude().push({ gid: 'gs', typ: 'solarium', stufe: 1, zustand: 100 }); spiel.anlage.solarium = true;
+    p.energie = energieMax(p); delete p.trainHeute; delete p.solar; const wv = p.pflege.wohl; R.sol1 = solarium(p); R.aufgew = p.aufgewaermt === spiel.tag;
+    const reit = Object.keys(UEBUNG).find(k => UEBUNG[k].reiten && UEBUNG[k].wo === 'platz'); const e = trainieren(p, reit, 'reitplatz'); R.kalt = (e.hinweise || []).some(h => /aufgewärmt/.test(h));
+    R.sol2 = solarium(p); R.sperre3 = solarSperre(p, box); R.beide = p.solar.vor && p.solar.nach;
+    spiel.tag++; const rl = Object.fromEntries(befundRisiko(p, box, 'box')); const S0 = p.solar; delete p.solar; const rl0 = Object.fromEntries(befundRisiko(p, box, 'box')); p.solar = S0; spiel.tag--;
+    R.lahm = rl.lahmheit / rl0.lahmheit;
     return R; });
+  ok('Solarium: ohne Gebäude gesperrt', /kein Pferdesolarium/.test(A.solOhne), A.solOhne); ok('Solarium Winter: vorher wärmt auf (kein „nicht aufgewärmt“)', A.aufgew && !A.kalt);
+  ok('Solarium Winter: 2× am Tag, 3. Mal gesperrt', A.beide && /zweimal/.test(A.sperre3), A.sperre3); ok('Solarium vor + nach dem Reiten: Lahmheit ×0,7', Math.abs(A.lahm - 0.7) < 0.01, String(A.lahm));
   ok('Ohne Waschplatz kein Waschen (Spieler)', A.ohne === 0 && A.mit === 1);
   ok('Sommer: ganzes Pferd erlaubt', A.sommer.ganz && A.sommer.beine);
   ok('Abspritzen: Fell sauber, Mähne halb, nass', A.fell === 0 && A.maehne === 30 && A.nass, JSON.stringify([A.fell, A.maehne, A.nass]));

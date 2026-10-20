@@ -81,4 +81,5 @@ Bricht die Sitzung ab, kann **Claude Pro** hier weitermachen: Stand steht in der
 | R2 + R3 Raritäten-Markt mit Preisen und Auktion | **fertig v561** (`tests/raritaeten-test.js` grün) |
 | R4 Eigene Raritäten anbieten | **fertig v562** |
 | Waschplatz W1+W2 | **fertig v563** (`tests/waschplatz-test.js`) |
-| Waschplatz W3 Solarium | in Arbeit |
+| Waschplatz W3 Solarium | **fertig v564** |
+| Waschplatz W4 Pfleger/Einsteller | in Arbeit |

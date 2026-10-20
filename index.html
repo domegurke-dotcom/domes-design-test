@@ -100,6 +100,7 @@
   #stall.leer .heu { transform: scaleY(0); opacity: 0; }
   #stall .krippeFutter { transform-box: fill-box; transform-origin: 50% 100%; transition: transform .6s cubic-bezier(.3,1.5,.5,1), opacity .4s; }
   #stall.kraftLeer .krippeFutter { transform: scaleY(0); opacity: 0; }
+  #pferdPlatz rect { pointer-events: none; }   /* Dome 20.10.: Schattierungsflächen der Pferdezeichnung (z. B. Kopf-Verlauf, breiter als der Kopf) fingen Tipper aufs Heu ab */
   #stall.leer #heuhaufen .heuVoll, #stall:not(.leer) #heuhaufen .heuRest { display: none; }
   #stall.klinikBox #heuhaufen, #stall.boxLeer.leer #heuhaufen { display: none; }
   #stall.infoHeu #krippenHinweis, #stall.infoKrippe #kraftHinweis { display: inline !important; }
@@ -448,6 +449,10 @@
   #tutBand .knopf { width: auto; padding: 3px 9px; font-size: .78rem; margin-left: 4px; border-radius: 8px; }
   body.tutorial { padding-bottom: calc(48px + env(safe-area-inset-bottom)); }
   body.tutorial[data-tutkap="1"] #menueKnopf, body.tutorial[data-tutkap="2"] #menueKnopf, body.tutorial[data-tutkap="1"] #kopfTagEnde, body.tutorial[data-tutkap="1"] #tagAnzeige, body.tutorial[data-tutkap="1"] #kontoAnzeige, body.tutorial[data-tutkap="2"] #kontoAnzeige { visibility: hidden; }
+  html body.tutorial #stall #krippenHinweis, html body.tutorial #stall #kraftHinweis, html body.tutorial #stall #mistHinweis { display: none !important; }   /* Dome 20.10.: im Tutorial nur eine Aufgabe auf einmal */
+  body.tutorial #hinweisBlase.ueber { z-index: 52; } body.tutorial #hinweisRing.ueber { z-index: 51; }
+  body.tutorial .tut-gesperrt { animation: tutWackel .35s; } @keyframes tutWackel { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+  body.tutorial:not([data-tutpost]) #postIcon, body.tutorial #postIconRot { display: none !important; }   /* Dome 20.10.: Post im Tutorial nur, wenn sie Thema ist */
   #tutFade { position: fixed; inset: 0; z-index: 60; background: #fffaf0; opacity: 0; transition: opacity .45s; pointer-events: none; } #tutFade.an { opacity: 1; }
   body.aufnahme::after { content: ""; position: fixed; inset: 0; border: 3px solid #e02424; box-sizing: border-box; pointer-events: none; z-index: 9999; }   /* v529 (Dome): läuft eine Aufnahme, hat der Bildschirm einen dünnen roten Rahmen */
   .auf-knoepfe { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
@@ -998,7 +1003,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "576";
+  const SPIEL_VERSION = "577";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1006,11 +1011,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=576"></script>
-<script src="pferd.js?v=576"></script>
-<script src="boxstufen.js?v=576"></script>
-<script src="kopfneu.js?v=576"></script>
-<script src="waschbild.js?v=576"></script>
+<script src="lz-string.min.js?v=577"></script>
+<script src="pferd.js?v=577"></script>
+<script src="boxstufen.js?v=577"></script>
+<script src="kopfneu.js?v=577"></script>
+<script src="waschbild.js?v=577"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2538,6 +2543,7 @@
     const d = datum(); if (!spiel.stufenAn || d.s !== 0 || d.t !== 1 || stufeAktiv() === "exp") return; const S = (spiel.stufeBriefe = spiel.stufeBriefe || []); if (S.includes(d.j) || spiel.tag < 4 * tpj()) return; S.push(d.j);
     brief("Hofverwaltung", "Bereit für mehr?", `ein Jahr auf dem Hof liegt hinter {dir|Ihnen}. Wenn {du magst|Sie mögen}, {kannst du|können Sie} unter Hofverwaltung → Einstellungen die Erfahrungsstufe erhöhen. Dann gibt es mehr: ${(STUFE_NEU[stufeAktiv() === "anf" ? "fort" : "exp"] || []).join(", ")}. Nichts davon ist Pflicht.`);
   }
+  function freiStufe(f, x) { return frei(f, x); }   // im Code immer freiStufe(...) – „frei“ heißen auch lokale Zähler (v576: das hatte den Reiter „Ort“ lahmgelegt)
   function frei(f, x) {   // Dome 20.10. (Anfänger): futterplan (selbst ändern), charakter (Details), training (freie Übungswahl), pfaendung1 (Pfändung im 1. Jahr)
     const S = STUFE();
     if (f === "markt") return !S.maerkte || S.maerkte.includes(x);
@@ -3793,7 +3799,7 @@
     } else if (aktenReiter === "genetik") {
       const sperre = zuchtSperre(p, box);
       const paar = sperre === "Wallach" ? "" : sperre === "Pensionspferd" ? `<p class="text" style="margin:14px 0 0">💞 Pensionspferd – über Zucht entscheidet der Besitzer.</p>` : sperre ? `<p class="text" style="margin:14px 0 0">💞 Verpaaren nicht möglich: ${esc(p.name)} ${sperre === "zu jung" ? "ist zu jung (Zucht ab 3 Jahren)" : sperre === "zu schwach" ? "ist nicht gesund genug (Gesundheit unter 50 %)" : ({ "gerade gedeckt": "ist gerade gedeckt worden – ob es geklappt hat, zeigt die Trächtigkeitsuntersuchung oder die nächste Rosse", "keine Rosse": "zeigt keine Rosse – vielleicht ist sie tragend, vielleicht war die Rosse still. Gewissheit bringt die Trächtigkeitsuntersuchung (Daten – Zucht)", "noch keine Rosse": `ist nicht tragend – die nächste Rosse kommt ${p.rosseAb ? tagIn(p.rosseAb) : "bald"}`, "gerade abgefohlt": "hat gerade abgefohlt – die Fohlenrosse kommt ab morgen", "Winterruhe": "ist in der Winterruhe – Stuten rossen erst wieder im Frühling" })[sperre] || sperre}.</p>`
-        : frei("zucht") ? `<button class="knopf" id="paarKnopf" style="width:100%;margin:16px 0 0">💞 Verpaaren mit …</button>` : "";
+        : freiStufe("zucht") ? `<button class="knopf" id="paarKnopf" style="width:100%;margin:16px 0 0">💞 Verpaaren mit …</button>` : "";
       const D = p.deckFremd || {}, deckF = p.geschlecht === "Hengst" && !fremd(p) && alterJZ(p) >= ZUCHTALTER ? `<div class="wn-hinweis" style="margin-top:10px">🐎 <b>Deckhengst für fremde Stuten</b>${vorteil("zucht")
         ? `<br><label class="fp-check"><input type="checkbox" id="deckFremd" ${D.an ? "checked" : ""}> anbieten – Decktaxe ${fmt(decktaxe(p))} (10 % des Marktwerts)</label><small style="display:block">Stutenbesitzer kommen in der Decksaison (Frühling und Sommer), etwa ${String(Math.round(deckFremdErwartet(p) * 10) / 10).replace(".", ",")} ${Math.round(deckFremdErwartet(p) * 10) === 10 ? "Stute" : "Stuten"} je Jahreszeit – mehr mit Turniererfolgen und prämierten Fohlen.${D.n ? ` Bisher ${D.n} fremde ${D.n === 1 ? "Stute" : "Stuten"} gedeckt, ${fmt(D.summe || 0)} Decktaxe.` : ""}${sperre ? ` Gerade nicht möglich: ${esc(sperre)}.` : ""}</small>`
         : `<br><small>Nur im Zuchtstall mit erfüllten Bedingungen (Hofverwaltung → Hof → Übersicht → Stallart).${D.n ? ` Bisher ${D.n} fremde Stuten gedeckt.` : ""}</small>`}</div>` : "";
@@ -3828,7 +3834,7 @@
     } else if (aktenReiter === "charakter") {
       werteErgaenzen(p); const c = w.charakter;
       const q = vergleichPferd(p);
-      inhalt = vglKopf(p, box.lesen ? "" : `<span class="vl-knoepfe"><button class="vgl-knopf" id="vorliebenKnopf">😊 Vorlieben${vlSichtbar(p, "mag").length ? ` (${vlSichtbar(p, "mag").length})` : ""}</button><button class="vgl-knopf" id="abneigungenKnopf">😣 Abneigungen${vlSichtbar(p, "nicht").length ? ` (${vlSichtbar(p, "nicht").length})` : ""}</button></span>`) + (!frei("charakter") ? `<p class="text" style="margin:8px 0">🎓 Als Anfänger siehst du hier die Vorlieben und Abneigungen von ${esc(p.name)}. Die einzelnen Charakterzüge (z. B. nervös – gelassen) kommen ab „Fortgeschritten“ dazu – wie es dem Pferd geht, zeigt der Balken „Wohlbefinden“ unter Versorgung.</p>` : CHARAKTER.map(t => `
+      inhalt = vglKopf(p, box.lesen ? "" : `<span class="vl-knoepfe"><button class="vgl-knopf" id="vorliebenKnopf">😊 Vorlieben${vlSichtbar(p, "mag").length ? ` (${vlSichtbar(p, "mag").length})` : ""}</button><button class="vgl-knopf" id="abneigungenKnopf">😣 Abneigungen${vlSichtbar(p, "nicht").length ? ` (${vlSichtbar(p, "nicht").length})` : ""}</button></span>`) + (!freiStufe("charakter") ? `<p class="text" style="margin:8px 0">🎓 Als Anfänger siehst du hier die Vorlieben und Abneigungen von ${esc(p.name)}. Die einzelnen Charakterzüge (z. B. nervös – gelassen) kommen ab „Fortgeschritten“ dazu – wie es dem Pferd geht, zeigt der Balken „Wohlbefinden“ unter Versorgung.</p>` : CHARAKTER.map(t => `
         <div class="zeile-wert"><div class="kopf"><b class="lex" data-lex="char:${t.key}">${t.titel}</b></div>
         <div class="skala"><i style="left:${c[t.key]}%"></i>${q ? `<i class="vgl" style="left:${(werteErgaenzen(q), q.werte.charakter[t.key])}%"></i>` : ""}</div>
         <div class="pole"><span>${t.links}</span><span>${t.rechts}</span></div></div>`).join(""));   // Dome 20.10.: Anfänger ohne Charakter-Details
@@ -3998,7 +4004,7 @@
         const ort = ortModus.slice(3), O = TRAIN_ORTE[ort], wt = wetterHeute(), E = energie(p), sp = trainSperre(p, box, darfAlsBereiter(p));
         const T = p.trainHeute && p.trainHeute.tag === spiel.tag ? p.trainHeute : null, P = trainPlan(p), mitB = true, festB = festerBereiter(), beimB = maBoxen("bereiter").includes(aktBox);
         const liste0 = Object.keys(UEBUNG).filter(k => uebHier(k, ort) && (!UEBUNG[k].gangart || (p.werte && p.werte.gang[UEBUNG[k].gangart] != null)));   // Tölt-/Passtraining nur für Pferde mit dieser Gangart
-        const AW = frei("training") ? null : anfWeg(p), liste = AW ? AW.liste.filter(k => liste0.includes(k)) : liste0;   // Anfänger: nur die Übungen des festen Wegs, in seiner Reihenfolge
+        const AW = freiStufe("training") ? null : anfWeg(p), liste = AW ? AW.liste.filter(k => liste0.includes(k)) : liste0;   // Anfänger: nur die Übungen des festen Wegs, in seiner Reihenfolge
         const awText = AW ? `<p class="text" style="margin:4px 0;background:#eef5e6;border-radius:8px;padding:6px 8px"><small>🎓 <b>Dein Trainingsweg</b> (${esc(AW.stufe)}): ${AW.liste.length ? AW.liste.map((k, i) => `${i + 1}. ${UEBUNG[k].n.replace(/\u00ad/g, "")} (${anfWegOrt(k)})`).join(" · ") : "noch zu jung zum Trainieren"}.${liste.length ? "" : " Hier ist heute nichts davon dran."} Weitere Übungen gibt es ab „Fortgeschritten“.</small></p>` : "";
         const wetterTxt = wetterOrt(ort) && (wt === "regen" || wt === "schnee" || datum().s === 3) ? ` · ${WETTER_NAME[wt]} – ${datum().s === 3 ? "gefrorener, schwerer Boden" : "tiefer, nasser Boden"}: das Pferd lernt heute 30 % weniger (in der Reithalle nicht)` : ort === "reithalle" || (ort === "roundpen" && roundpenUeberdacht()) ? " · wetterunabhängig" : ` · ${WETTER_NAME[wt]}`;
         const kachel = k => { const U = UEBUNG[k], us = sp || uebSperre(p, k, ort), ko = uebKosten(p, k), drin = P.liste.includes(k);
@@ -4036,10 +4042,10 @@
       const abc = box.fohlen && alterJZ(box.fohlen) < 2 ? kOrt("fohlenabc", "🍼", "Fohlen-ABC", box.fohlen.abcTag === spiel.tag ? "heute geübt" : abcStand(box.fohlen), "Halfter, Führen, Hufe geben – mit dem Fohlen üben")
         + (waschGeb() || spiel.admin ? kOrt("fohlendusche", "🚿", "Duschen üben", box.fohlen.duschTag === spiel.tag ? "heute geübt" : `${Math.min(3, box.fohlen.wasserGewohnt || 0)}/3`, "Fohlen an Wasser gewöhnen (Beine und Hufe) – am Tag vor der Fohlenschau gibt es Pluspunkte") : "") : "";
       // Dome (v354): Boxart wechseln – Stallbox, Paddock-Box, Abfohlbox (nur, wenn gebaut)
-      const frei = f => spiel.boxen.filter(b => boxFrei(b) && !b.quar && f(b)).length, istSonder = box.paddock || box.abfohl || box.quar;
-      const boxKacheln = (istSonder && !box.offen ? kOrt("zuStall", "🏠", "Stall\u00adbox", frei(b => !b.paddock && !b.abfohl) ? `${frei(b => !b.paddock && !b.abfohl)} frei` : "keine frei", "In eine normale Stallbox umziehen", !!frei(b => !b.paddock && !b.abfohl)) : "")
-        + (spiel.boxen.some(b => b.paddock) && !box.paddock ? kOrt("zuPaddock", "🏡", "Paddock-\u00adBox", frei(b => b.paddock) ? `${frei(b => b.paddock)} frei` : "keine frei", "In eine Paddockbox umziehen (Box mit kleinem Auslauf)", !!frei(b => b.paddock)) : "")
-        + (spiel.boxen.some(b => b.abfohl) && !box.abfohl ? kOrt("zuAbfohl", "🍼", "Abfohl\u00adbox", frei(b => b.abfohl) ? `${frei(b => b.abfohl)} frei` : "keine frei", "In die Abfohlbox umziehen (große Box mit Kamera für die Geburt)", !!frei(b => b.abfohl)) : "")
+      const freiBoxen = f => spiel.boxen.filter(b => boxFrei(b) && !b.quar && f(b)).length, istSonder = box.paddock || box.abfohl || box.quar;
+      const boxKacheln = (istSonder && !box.offen ? kOrt("zuStall", "🏠", "Stall\u00adbox", freiBoxen(b => !b.paddock && !b.abfohl) ? `${freiBoxen(b => !b.paddock && !b.abfohl)} frei` : "keine frei", "In eine normale Stallbox umziehen", !!freiBoxen(b => !b.paddock && !b.abfohl)) : "")
+        + (spiel.boxen.some(b => b.paddock) && !box.paddock ? kOrt("zuPaddock", "🏡", "Paddock-\u00adBox", freiBoxen(b => b.paddock) ? `${freiBoxen(b => b.paddock)} frei` : "keine frei", "In eine Paddockbox umziehen (Box mit kleinem Auslauf)", !!freiBoxen(b => b.paddock)) : "")
+        + (spiel.boxen.some(b => b.abfohl) && !box.abfohl ? kOrt("zuAbfohl", "🍼", "Abfohl\u00adbox", freiBoxen(b => b.abfohl) ? `${freiBoxen(b => b.abfohl)} frei` : "keine frei", "In die Abfohlbox umziehen (große Box mit Kamera für die Geburt)", !!freiBoxen(b => b.abfohl)) : "")
         + (spiel.boxen.some(b => b.quar) && !box.quar ? (() => { const n = spiel.boxen.filter(b => b.quar && boxFrei(b)).length; return kOrt("zuQuar", "🚧", "Quarantäne", n ? `${n} frei` : "keine frei", "In den Quarantänestall (abseits – steckt niemanden an)", !!n); })() : "");
       if (ortModus === "training") inhalt = meld + `<p class="text" style="margin:0 0 4px">🏇 <b>Training</b> · Wo soll ${esc(p.name)} trainieren?</p><div class="kacheln quadrat">${plaetze.filter(([k]) => TRAIN_GRUPPE.includes(k)).map(ortKachel).join("")}${abc}</div>` + zurueckOrt();
       else
@@ -4047,7 +4053,7 @@
         `<p class="text" style="margin:0 0 4px">📍 ${esc(p.name)} ${box.offen ? "lebt im <b>Aufzucht-Offenstall</b>" : `steht in <b>Box ${aktBox + 1}</b>`}${paddockVon(p) ? ` – gerade im <b>${paddockName(paddockVon(p))}</b>${paddockPferde(paddockVon(p)).length > 1 ? ` mit ${paddockPferde(paddockVon(p)).filter(q => q !== p).map(q => esc(q.name)).join(", ")}` : " (allein)"}` : ""}. Wohin soll ${pron(p).er}?</p>
         <div class="kacheln quadrat">${kOrt("box", "🔀", "Box wechseln", freieBox() < 0 ? "keine frei" : `${spiel.boxen.filter(boxFrei).length} frei`, "In eine andere Box umziehen")}${offenBoxen().length ? kOrt("offenstall", "🐎", "Offen\u00adstall", box.offen ? "zurück in eine Box" : offenSperre(p, box) ? "passt nicht" : offenPlatz() < 0 ? "voll" : `${offenBoxen().filter(offenFrei).length} frei`, box.offen ? "Aus dem Aufzucht-Offenstall in eine normale Box" : "In den Aufzucht-Offenstall (Jungpferde ½–3 Jahre, Stuten als Tanten)") : ""}${boxKacheln}
           ${ortModus === "training" ? "" : plaetze.filter(([k]) => !TRAIN_GRUPPE.includes(k)).map(ortKachel).join("") + kOrt("training", "🏇", "Training", (() => { const n = plaetze.filter(([k]) => TRAIN_GRUPPE.includes(k) && (spiel.anlage[k] || spiel.admin)).length; return n ? `${n} ${n === 1 ? "Platz" : "Plätze"}` : "kein Platz"; })(), "Roundpen, Reitplatz, Reithalle, Gelände, Rennbahn, Trail")}
-          ${frei("labor") ? kOrt("labor", "🔬", "Labor", fremd(p) ? "nur der Besitzer" : "Gentests", "Genetische Tests mit einer Haarprobe", !fremd(p)) : ""}
+          ${freiStufe("labor") ? kOrt("labor", "🔬", "Labor", fremd(p) ? "nur der Besitzer" : "Gentests", "Genetische Tests mit einer Haarprobe", !fremd(p)) : ""}
           ${kOrt("anhaenger", "🚚", "Pferde\u00adanhänger", fremd(p) ? "nur der Besitzer" : "Klinik, Turnier, Abgeben …", "Mit dem Anhänger wegfahren", !fremd(p))}</div>
           ${auslaufZeile(p)}`;
       }
@@ -5528,7 +5534,7 @@
     if (f.hufrehe != null && befundListe(p).some(b => b.art === "ems")) f.hufrehe *= 3;   // EMS: Hufrehe-Gefahr
     if (f.schlund != null && befundListe(p).some(b => b.art === "megaoes")) f.schlund *= 3;   // Megaösophagus: Schlundverstopfung
     const SF = STUFE().krankF;   // T2: Krankheiten je Stufe (Liste und Faktor)
-    return Object.keys(KRANK).filter(k => f[k] != null && frei("krank", k)).map(k => [k, BEFUND_RISIKO * KRANK[k].gew * konst * wohlF * (k === "arthrose" || k === "cushing" ? 1 : altF) * f[k] * SF]);
+    return Object.keys(KRANK).filter(k => f[k] != null && freiStufe("krank", k)).map(k => [k, BEFUND_RISIKO * KRANK[k].gew * konst * wohlF * (k === "arthrose" || k === "cushing" ? 1 : altF) * f[k] * SF]);
   }
   const URSACHE = {
     verletzung: (p, ort) => ort === "weide" ? "beim Toben auf der Weide" : "in der Box angeschlagen",
@@ -8145,7 +8151,7 @@
   // Versorgung → Fütterung heute: was bekommt dieses Pferd? (bis v248 Ausrüstung → Futter)
   let futterDialogZurueck = null;
   // Empfehlung automatisch übernehmen (Dome, v249): passt der aktuelle Plan nicht zur gespeicherten Empfehlung für die jetzigen Umstände, wird sie eingeführt (Umstellung über 3 Tage)
-  const futterFest = () => !frei("futterplan");   // Dome 20.10.: Anfänger ändern den Futterplan nicht selbst – Standardplan, Empfehlung des Futterexperten bzw. Wunsch des Besitzers gelten automatisch
+  const futterFest = () => !freiStufe("futterplan");   // Dome 20.10.: Anfänger ändern den Futterplan nicht selbst – Standardplan, Empfehlung des Futterexperten bzw. Wunsch des Besitzers gelten automatisch
   function expertAuto(p, box) {
     if (!(p.expertAuto || (futterFest() && !fremd(p))) || !p.pflege) return false;   // Anfänger: Empfehlung immer automatisch
     const an = futterAnlass(p, box), E = (p.expertArchiv || {})[an.k]; if (!E || !(E.v >= 3)) return false;
@@ -11041,7 +11047,7 @@
     const kopf = (t, sub) => `<button class="zurueck-s voll" id="mkUebersicht" style="align-self:flex-start;justify-self:start">‹ Pferdemarkt</button><div class="panel voll"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>${t}</b>${geld}</div>${sub ? `<p style="margin:4px 0 0;font-size:.85rem;opacity:.75">${sub}</p>` : ""}`;
     let html = "";
     if (!B_) html = `<div class="panel voll"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>Was möchtest du tun?</b>${geld}</div>
-      <div class="kacheln quadrat markt-kacheln">${MARKT_BEREICHE.filter(([id]) => frei("markt", id)).map(([id, ico, n, kurz, an0], _i, _l, an = an0 && (id !== "fohlen" || fohlenZeit())) => `<button class="kachel ${an ? "klickbar" : "fehlt"}" data-mb="${id}" ${an ? "" : "disabled"}><span class="ico">${ico}</span><b>${n}</b><small>${!an ? (id === "fohlen" ? "nur Sommer und Herbst" : "bald") : id === "raritaeten" && !rarOffen() ? "öffnet im Sommer" : id === "angebote" ? `${eigene.length} ${eigene.length === 1 ? "Angebot" : "Angebote"}` : id === "tierschutz" && ts.length ? `${ts.length} ${ts.length === 1 ? "Pferd" : "Pferde"}` : kurz}</small></button>`).join("")}</div></div>`;
+      <div class="kacheln quadrat markt-kacheln">${MARKT_BEREICHE.filter(([id]) => freiStufe("markt", id)).map(([id, ico, n, kurz, an0], _i, _l, an = an0 && (id !== "fohlen" || fohlenZeit())) => `<button class="kachel ${an ? "klickbar" : "fehlt"}" data-mb="${id}" ${an ? "" : "disabled"}><span class="ico">${ico}</span><b>${n}</b><small>${!an ? (id === "fohlen" ? "nur Sommer und Herbst" : "bald") : id === "raritaeten" && !rarOffen() ? "öffnet im Sommer" : id === "angebote" ? `${eigene.length} ${eigene.length === 1 ? "Angebot" : "Angebote"}` : id === "tierschutz" && ts.length ? `${ts.length} ${ts.length === 1 ? "Pferd" : "Pferde"}` : kurz}</small></button>`).join("")}</div></div>`;
     else if (marktBereich === "angebote") html = kopf("🏷️ Meine Verkaufspferde", "Antippen für alle Infos oder um ein Angebot zurückzuziehen.") + angebotListe + `</div>`;
     else if (marktBereich === "haendler") html = kopf("🐴 Pferdehändler", "Das Angebot wechselt jede Jahreszeit. Antippen für alle Infos.") + kaufListe + `</div>`;
     else if (marktBereich === "privat") { const pv = marktNeu().privat.filter(h => !(spiel.marktGekauft || []).includes(h.id));
@@ -11159,7 +11165,7 @@
   const kreditFertigBrief = k => brief(KREDIT.bank, `${k.name} abbezahlt`, `herzlichen Glückwunsch: {dein|Ihr} <b>${esc(k.name)}</b> über ${fmt(k.summe)} ist vollständig zurückgezahlt. Insgesamt {hast du|haben Sie} ${fmt(k.zinsen)} Zinsen bezahlt. Vielen Dank für {dein|Ihr} Vertrauen!`);
   // B1: Beginn jeder Jahreszeit – im Minus: Zinsen; unter −2.000 € oder 2 Jahreszeiten hintereinander im Minus: Kündigungsandrohung, nach einer Jahreszeit Pfändung, danach Insolvenz
   // Dome 20.10.: Anfänger werden im ersten Spieljahr nicht gepfändet (Mahnungen und Zinsen gibt es trotzdem)
-  const pfaendSchutz = () => !frei("pfaendung1") && (spiel.tag || 1) <= 4 * tpj();
+  const pfaendSchutz = () => !freiStufe("pfaendung1") && (spiel.tag || 1) <= 4 * tpj();
   const SCHUTZ_TEXT = " <br><br>🎓 <b>Schonfrist für Anfänger:</b> Im ersten Spieljahr pfänden wir nicht – danach gelten die normalen Regeln.";
   function dispoJahreszeit() {
     if (spiel.admin || spiel.verloren) return;
@@ -12184,7 +12190,7 @@
       ${plan.length ? `<h4 class="ma-titel">🚧 Umbau geplant</h4>${plan.map(planHTML).join("")}` : ""}
       ${bau.length ? `<h4 class="ma-titel">🏗️ Im Bau</h4>${bau.map(g => `<div class="geb"><span class="geb-ico">${BAUTEN[g.typ].ico}</span><span class="geb-txt"><b>${gebName(g)}</b><small>${g.bau.art === "umbau" ? `Umbau auf Stufe ${g.stufe + 1}` : `Stufe ${g.stufe} – ${STUFE_NAME[g.stufe]}`} · noch ${tageTxt2(g.bau.rest)}${BAUTEN[g.typ].aussen && datum().s === 3 ? " · ❄️ ruht im Winter" : ""}</small></span></div>`).join("")}` : ""}
       <h4 class="ma-titel">🏠 Gebäude und Anlagen</h4>${steht.length ? steht.map(gebZeile).join("") : `<p class="text">Noch keine Gebäude.</p>`}
-      <h4 class="ma-titel">➕ Neu bauen</h4><div class="kacheln quadrat bau-kacheln">${BAU_WICHTIG.filter(k => frei("bauen", k)).map(k => { if (k === "gummi") { const L = spiel.boxen.filter(b => boxenStufe(b) >= 2 && !b.offen); if (!L.length) return ""; const n = L.filter(b => !b.gummi).length;   // Dome (v358): Gummimatten erst ab einer Stufe-2-Box
+      <h4 class="ma-titel">➕ Neu bauen</h4><div class="kacheln quadrat bau-kacheln">${BAU_WICHTIG.filter(k => freiStufe("bauen", k)).map(k => { if (k === "gummi") { const L = spiel.boxen.filter(b => boxenStufe(b) >= 2 && !b.offen); if (!L.length) return ""; const n = L.filter(b => !b.gummi).length;   // Dome (v358): Gummimatten erst ab einer Stufe-2-Box
           return `<button class="kachel ${n ? "klickbar" : "fehlt"}" ${n ? 'data-gummi="1"' : "disabled"} title="Gummimatten für Boxen ab Stufe 2"><span class="ico">⬛</span><b>Gummi\u00admatten</b><small>${n ? `${fmt(BODEN_WIRKUNG.GUMMI_PREIS)}/Box · ${n} ohne` : "alle Boxen haben welche"}</small></button>`; }
         if (k === "weideland" || k === "bauland") return `<button class="kachel klickbar" data-land="${k === "weideland" ? "weide" : "bau"}" title="${k === "weideland" ? "Weideland kaufen oder pachten" : "Bauland kaufen"}"><span class="ico">${k === "weideland" ? "🌱" : "📐"}</span><b>${k === "weideland" ? "Weide\u00adland" : "Bau\u00adland"}</b><small>${k === "weideland" ? `${fmt(LAND_PREIS)}/ha · Pacht` : `${fmt(BAULAND_PREIS)}/ha · frei ${haTxt(baulandFrei())}`}</small></button>`;
         const B = BAUTEN[k], sp = bauSperre(k);
@@ -13772,7 +13778,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       const zuVersorgen = spiel.boxen.filter(b => b.pferd && !b.pferd.klinik && !b.tot).length, st = maZuteilung("stall"), bb = st.map(x => x.i);
       const vg = spiel.maVergessen && spiel.maVergessen.tag === spiel.tag ? spiel.maVergessen.liste : [];
       inhalt = `<p class="text" style="margin:0 0 8px">Dein Stall: <b>${stallGroesse()}</b> (${spiel.boxen.length} ${spiel.boxen.length === 1 ? "Box" : "Boxen"} · klein bis 8, mittel 9–19, groß ab 20). Je größer der Stall, desto mehr Berufe bewerben sich.</p>
-        <div class="kacheln quadrat markt-kacheln">${MITARBEITER.filter(([id]) => { const T = MA_TYP[id]; if (id === "futterberatung" || id === "hufschmied") return true; if (!T) return false; if (!frei("ma", id) && !angestellte(id).length) return false; return !(T.staelle && !T.staelle.some(x => stallarten().includes(x))) || angestellte(id).length > 0; }).map(([id, ico, n, kurz]) => { const T = MA_TYP[id];   // Dome (v343): nur Berufe, die es bei dieser Stallart gibt
+        <div class="kacheln quadrat markt-kacheln">${MITARBEITER.filter(([id]) => { const T = MA_TYP[id]; if (id === "futterberatung" || id === "hufschmied") return true; if (!T) return false; if (!freiStufe("ma", id) && !angestellte(id).length) return false; return !(T.staelle && !T.staelle.some(x => stallarten().includes(x))) || angestellte(id).length > 0; }).map(([id, ico, n, kurz]) => { const T = MA_TYP[id];   // Dome (v343): nur Berufe, die es bei dieser Stallart gibt
           if (id === "futterberatung") return `<button class="kachel klickbar" id="futterberatungAlle"><span class="ico">${ico}</span><b>${n}</b><small>${spiel.futterTermin ? "Termin morgen" : futterexperteAngestellt() ? "angestellt – kostenlos" : `auf Termin · ${fmt(FUTTER_BERATUNG)}/Pferd + Anfahrt`}</small></button>`;
           if (id === "hufschmied") return `<button class="kachel klickbar" id="hufschmiedAlle"><span class="ico">${ico}</span><b>${n}</b><small>${spiel.boxen.filter(b => b.pferd && b.pferd.pflege && !b.pferd.klinik && hufLaenge(b.pferd) >= 1).length || "keine"} fällig</small></button>`;
           if (!T) return `<button class="kachel fehlt" disabled><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></button>`;
@@ -14206,19 +14212,22 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   const hinweisStufe = () => (spiel.spieler && spiel.spieler.stufe) || "anf";
   const hinweisFuer = k => { const H = HINWEISE[k]; if (!H) return false; const st = hinweisStufe(); return st === "anf" || (st === "fort" && H[5] === "fort") || (st === "exp" && spiel.tippsExperte); };
   let blase = null;   // { k, el, leit }
-  function hinweisZiel(sel) {
-    if (!sel) return null; const sichtbar = el => { if (!el || !el.getBoundingClientRect) return false; const r = el.getBoundingClientRect(); return r.width > 2 && r.height > 2 && r.bottom > 0 && r.top < innerHeight && getComputedStyle(el).visibility !== "hidden"; };
+  function hinweisZiel(sel, mem) {   // mem (Tutorial): liegt das Ziel außerhalb des Bildschirms, einmal dorthin scrollen
+    if (!sel) return null; const unten = mem && $("tutBand") ? $("tutBand").getBoundingClientRect().top : innerHeight;   // Tutorial: das Band unten verdeckt den Rand
+    const sichtbar = el => { if (!el || !el.getBoundingClientRect) return false; const r = el.getBoundingClientRect(); return r.width > 2 && r.height > 2 && r.bottom > 0 && (r.top + r.height / 2 < unten || el.closest("#dlg")) && r.top < innerHeight && getComputedStyle(el).visibility !== "hidden"; };
     if (sel === "@heu") sel = ".stufeEl .sHeunetz, #heuhaufen";
-    for (const s1 of sel.split(",")) { const el = [...document.querySelectorAll(s1.trim())].find(sichtbar); if (el) return el; }
+    for (const s1 of sel.split(",")) { const L = [...document.querySelectorAll(s1.trim())], el = L.find(sichtbar); if (el) return el;
+      if (mem) { const da = L.find(e => { const r = e.getBoundingClientRect(); return r.width > 2 && r.height > 2 && getComputedStyle(e).visibility !== "hidden" && !e.closest("[hidden]"); });
+        if (da) { mem.gescrollt = mem.gescrollt || {}; if (!mem.gescrollt[s1]) { mem.gescrollt[s1] = 1; da.scrollIntoView({ block: "center" }); if (sichtbar(da)) return da; } } } }
     return null;
   }
   function blaseWeg(gesehen) {
     if (!blase) return; if (gesehen && !blase.lokal) { spiel.tipps = spiel.tipps || {}; spiel.tipps[blase.k] = 1; speichern(); }   // Leitfaden: gesehen zählt wie erledigt (dann kommt der nächste Schritt)
-    const b = $("hinweisBlase"), r = $("hinweisRing"); if (b) b.hidden = true; if (r) r.hidden = true; const fn = blase.danach; blase = null; if (fn) fn();
+    const b = $("hinweisBlase"), r = $("hinweisRing"); if (b) b.hidden = true; if (r) r.hidden = true; const fn = gesehen ? blase.danach : null; blase = null; if (fn) fn();   // danach nur, wenn der Spieler die Blase angetippt hat
   }
   function blasePosition() {
     const b = $("hinweisBlase"), r = $("hinweisRing"); if (!blase || !b) return;
-    const ziel = blase.sel ? hinweisZiel(blase.sel) : null; if (blase.sel && !ziel && !blase.frei) { blaseWeg(false); return; }
+    const ziel = blase.sel ? hinweisZiel(blase.sel, spiel && spiel.tutorial && blase.lokal ? blase : null) : null; if (blase.sel && !ziel && !blase.frei) { blaseWeg(false); return; }
     const iw = document.documentElement.clientWidth, ih = innerHeight, kopf = ($("header") || document.querySelector("header")).getBoundingClientRect().bottom || 0, sa = 8;
     b.hidden = false; const bw = Math.min(360, iw - 32); b.style.width = bw + "px"; const bh = b.offsetHeight;
     if (!ziel) { b.style.left = Math.round((iw - bw) / 2) + "px"; b.style.top = Math.round(kopf + 12) + "px"; b.dataset.pfeil = ""; r.hidden = true; return; }
@@ -14303,17 +14312,22 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   const TUT = [
     { n: "Versorgen", ziel: "Pferd ist versorgt", neu: () => { const b = spiel.boxen[0]; b.pferd = TUT_PFERD({ rasse: "haflinger", geschlecht: "Stute", alter: 9, name: "Tutti" }); b.krippeVoll = false; b.mistig = true; b.mistStufe = 3; delete b.wasserTag; },
       schritte: [["Das ist deine Box", "Hier steht Tutti. Jeden Tag braucht sie Heu, Wasser und eine saubere Box. Einfache Boxen (Stufe 1) haben noch keine Selbsttränke – bessere Boxen (Stufe 2 und 3) halten gesünder, die baust du später unter Hofverwaltung → Hof → Bauen.", null, () => false, true],
-        ["Heu geben", "Tippe das Heu an – das ist das Hauptfutter.", "@heu", b => b.krippeVoll], ["Wasser", "Tippe den Wassereimer an und fülle ihn.", ".stufeEl .sWasser", b => boxenStufe(b) !== 1 || b.wasserTag === spiel.tag], ["Misten", "Tippe den Mist an, dann ist die Box sauber.", "#mist", b => !b.mistig]],
-      fertig: b => b.krippeVoll && !b.mistig && (boxenStufe(b) !== 1 || b.wasserTag === spiel.tag) },
+        ["Heu geben", "Tippe das Heu an – das ist das Hauptfutter.", "@heu", b => b.krippeVoll],
+        ["Futtereimer", "Jetzt den Futtereimer antippen: Darin bekommt Tutti ihr Mineralfutter (und später Kraftfutter, wenn sie viel arbeitet).", ".stufeEl .sKrippe, #krippe", b => b.kraftVoll || !kraftNoetig(b.pferd, b)],
+        ["Wasser", "Tippe den Wassereimer an und fülle ihn.", ".stufeEl .sWasser", b => boxenStufe(b) !== 1 || b.wasserTag === spiel.tag], ["Misten", "Tippe den Mist an, dann ist die Box sauber.", "#mist", b => !b.mistig]],
+      fertig: b => b.krippeVoll && (b.kraftVoll || !kraftNoetig(b.pferd, b)) && !b.mistig && (boxenStufe(b) !== 1 || b.wasserTag === spiel.tag) },
     { n: "Sauber und draußen", ziel: "Pferd ist sauber, Tag beendet", neu: () => { const p = spiel.boxen[0].pferd; p.dreck = { fell: 80, maehne: 60, seit: null }; delete p.geputzt; delete p.ausgekratzt; },
       schritte: [["Pferdepflege", "Tippe unten auf „Pferdepflege“.", "[data-m=\"pflege\"]", () => aktenModus === "pflege"], ["Ausrüstung", "Unter „Ausrüstung“ liegt die Putzkiste.", "#putzKachel, [data-r=\"ausruestung\"]", () => putzModus],
-        ["Putzen", "Wähle die Bürste und wische über das Pferd, dann den Hufkratzer für die Hufe. Ein sauberes Pferd bleibt gesund und ist mehr wert.", "#info .karte", b => b.pferd.dreck.fell < 20 && b.pferd.ausgekratzt === spiel.tag],
+        ["Bürste", "Tippe auf die Bürste und wische dann mit dem Finger (oder der Maus) über das Pferd, bis das Fell sauber ist.", "[data-putz=\"buerste\"]", b => b.pferd.dreck.fell < 20, false, "#stall, #pferdPlatz, [data-putz=\"buerste\"]"],
+        ["Hufe", "Jetzt den Hufkratzer: antippen und die vier Hufe auskratzen. Saubere Hufe beugen Krankheiten vor.", "[data-putz=\"huf\"]", b => b.pferd.ausgekratzt === spiel.tag, false, "#stall, #pferdPlatz, [data-putz], #info .karte"],
         ["Tag beenden", "Tippe oben auf den Mond. Über Nacht frisst das Pferd, die Box wird schmutzig.", "#kopfTagEnde, #tagAnzeige", () => spiel.tag > spiel.tutorial.tag0]],
       fertig: () => spiel.tag > spiel.tutorial.tag0 },
     { n: "Richtig füttern", ziel: "Futterplan und Vorrat", neu: () => { const b = spiel.boxen[0]; b.pferd = TUT_PFERD({ rasse: "hannoveraner", geschlecht: "Wallach", alter: 8, name: "Max" }); b.krippeVoll = false; b.mistig = false; },
       schritte: [["Versorgung", "Unter Pferdepflege → Versorgung steht, was Max braucht.", "[data-r=\"gesundheit\"], [data-m=\"pflege\"]", () => aktenModus === "pflege" && aktenReiter === "gesundheit"],
         ["Futterplan", "Öffne „Fütterung heute“. Als Anfänger stellt sich der Futterplan selbst ein: Heu nach Gewicht ist das Hauptfutter, dazu Mineralfutter.", "#futterZeile", () => !!spiel.tutorial.futterAuf],
-        ["Futter einkaufen", "Futter kaufst du selbst: Menü ☰ → Hofverwaltung → Hof → Futterkammer. Die Lieferung kommt am nächsten Tag.", "[data-hbereich=\"futter\"], [data-hr=\"hof\"], #mHof, #menueKnopf", () => !!(spiel.futter && spiel.futter.liefer && Object.keys(spiel.futter.liefer).length) || (spiel.tutorial.lager0 != null && futterLagerSumme() > spiel.tutorial.lager0)]],
+        ["Zur Futterkammer", "Futter kaufst du selbst: Menü ☰ → Hofverwaltung → Hof → Futterkammer.", "[data-hbereich=\"futter\"], [data-hr=\"hof\"], #mHof, #menueKnopf", () => hofReiter === "hof" && hofBereich === "futter" && $("nebenSchirm").classList.contains("offen")],
+        ["Heu in den Korb", "Lege Heu in den Einkaufskorb (z. B. „+ 100 kg“).", "[data-fkauf^=\"heu:\"]", () => !!korb().heu || !!(spiel.futter && spiel.futter.liefer && Object.keys(spiel.futter.liefer).length)],
+        ["Bestellen", "Öffne den Einkaufskorb und bestätige den Kauf. Die Lieferung kommt am nächsten Tag.", "#fkKorb", () => !!(spiel.futter && spiel.futter.liefer && Object.keys(spiel.futter.liefer).length) || (spiel.tutorial.lager0 != null && futterLagerSumme() > spiel.tutorial.lager0)]],
       fertig: () => !!spiel.tutorial.futterAuf && ((spiel.futter && spiel.futter.liefer && Object.keys(spiel.futter.liefer).length) || futterLagerSumme() > spiel.tutorial.lager0) },
     { n: "Krankes Pony", ziel: "Tierarzt gerufen", neu: () => { const b = spiel.boxen[0]; b.pferd = TUT_PFERD({ rasse: "shetty", geschlecht: "Stute", alter: 12, name: "Krümel" }); b.krippeVoll = true; b.mistig = false; befundNeu(b.pferd, "husten", 2, "Stallluft", "du"); const B2 = b.pferd.befunde.find(x => x.art === "husten"); if (B2) { B2.bemerkt = true; delete B2.inkub; } },
       schritte: [["Krümel hustet", "Unter Pferdepflege → Versorgung siehst du, was los ist.", "[data-r=\"gesundheit\"], [data-m=\"pflege\"]", () => aktenModus === "pflege" && aktenReiter === "gesundheit"],
@@ -14324,24 +14338,26 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         ["Reitplatz", "Wähle den Reitplatz.", "[data-ort=\"tr-reitplatz\"]", () => (ortModus || "").startsWith("tr-")],
         ["Üben", "Wähle eine Übung. Jede kostet Energie (⚡), über Nacht füllt sie sich wieder auf. Das Gangwerk im Steckbrief zeigt, wofür das Pferd gut ist.", "[data-ueb]", b => !!(b.pferd.trainHeute && b.pferd.trainHeute.tag === spiel.tag && b.pferd.trainHeute.liste.length)]],
       fertig: b => !!(b.pferd.trainHeute && b.pferd.trainHeute.liste.length) },
-    { n: "Pension", ziel: "Einsteller aufnehmen", neu: () => { try { pensionRegeln().offen = true; pensionAnfrageNeu(); } catch (e) { console.error(e); } },
-      schritte: [["Post", "Eine Pensionsanfrage ist gekommen. Tippe auf den gelben Umschlag.", "#postIcon", () => !ungelesen()], ["Annehmen", "Nimm die Anfrage im Brief an. Einsteller zahlen jede Jahreszeit – am Anfang deine wichtigste Einnahme.", "[data-baktion]", () => einstellerListe().length > 0]],
+    { n: "Pension", ziel: "Einsteller aufnehmen", post: true, neu: () => { (spiel.post || []).forEach(x => { x.gelesen = true; }); try { pensionRegeln().offen = true; pensionAnfrageNeu(); } catch (e) { console.error(e); } },
+      schritte: [["Post", "Eine Pensionsanfrage ist gekommen. Tippe auf den gelben Umschlag.", "#postIcon", () => !ungelesen()], ["Annehmen", "Nimm die Anfrage im Brief an. Einsteller zahlen jede Jahreszeit – am Anfang deine wichtigste Einnahme.", "[data-baktion], #postIcon", () => einstellerListe().length > 0, true]],
       fertig: () => einstellerListe().length > 0 },
     { n: "Mitarbeiter", ziel: "Hilfe einstellen", neu: () => {},
-      schritte: [["Hofverwaltung", "Menü ☰ → Hofverwaltung → Mitarbeiter.", "[data-hr=\"mitarbeiter\"], #mHof, #menueKnopf", () => hofReiter === "mitarbeiter"], ["Stallbursche", "Ein Stallbursche füttert und mistet, ein Pferdepfleger putzt. Jeder kostet Lohn – mit wenigen Pferden machst du es lieber selbst. Stelle zum Üben einen Stallburschen ein.", "[data-ma=\"stallbursche\"]", () => angestellte("stallbursche").length > 0]],
+      schritte: [["Hofverwaltung", "Menü ☰ → Hofverwaltung → Mitarbeiter.", "[data-hr=\"mitarbeiter\"], #mHof, #menueKnopf", () => hofReiter === "mitarbeiter"], ["Stallbursche", "Ein Stallbursche füttert und mistet, ein Pferdepfleger putzt. Jeder kostet Lohn – mit wenigen Pferden machst du es lieber selbst. Tippe auf „Stallbursche“.", "[data-ma=\"stallbursche\"]", () => !$("dlg").hidden && /Bewerbungen/.test($("dlgInhalt").textContent)],
+        ["Einstellen", "Stelle zum Üben einen der Bewerber ein. Er fängt zu Beginn der nächsten Jahreszeit an.", "[data-einst], [data-ma=\"stallbursche\"]", () => angestellte("stallbursche").length > 0, true]],
       fertig: () => angestellte("stallbursche").length > 0 },
     { n: "Hofausbau", ziel: "etwas bauen", neu: () => {},
       schritte: [["Bauen", "Hofverwaltung → Hof → Bauen. Höhere Box-Stufen und Gummimatten halten die Pferde gesünder; Bauen kostet Unterhalt und ruht im Winter.", "[data-hbereich=\"bauen\"], [data-hr=\"hof\"], #mHof, #menueKnopf", () => hofBereich === "bauen"], ["Bauauftrag", "Gib einen Bau in Auftrag, z. B. einen Waschplatz.", "[data-bau], [data-gummi]", () => imBau().length > 0 || gebaeude().some(g => g.plan)]],
       fertig: () => imBau().length > 0 || gebaeude().some(g => g.plan) },
     { n: "Turnier", ziel: "auf einem Turnier nennen", neu: () => { const b = spiel.boxen[0]; b.pferd = TUT_PFERD({ rasse: "hannoveraner", geschlecht: "Stute", alter: 9, name: "Bella" }); b.pferd.training = 60; },
       schritte: [["Pferdeanhänger", "Pferdepflege → Ort → Pferdeanhänger → Turnier. Genannt wird bis zum Vortag, das Ergebnis kommt per Brief.", "[data-ort=\"anhaenger\"], [data-r=\"platz\"], [data-m=\"pflege\"]", () => ortModus === "anhaenger" || !$("dlg").hidden],
+        ["Turnier", "Tippe auf „Turnier“ – dort steht der Turnierkalender.", "[data-ort=\"turnier\"]", () => !$("dlg").hidden],
         ["Nennen", "Wähle eine Prüfung, die zum Ausbildungsstand passt, und nenne.", null, () => (spiel.turniere || []).some(t => t.nennung.length), true]],
       fertig: () => (spiel.turniere || []).some(t => t.nennung.length) },
     { n: "Pferdemarkt", ziel: "ein Pferd kaufen", neu: () => {},
       schritte: [["Pferdemarkt", "Hauptmenü → Pferdemarkt. Am Anfang lieber günstig, z. B. vom Tierschutz – und vorher eine Ankaufsuntersuchung (AKU).", "[data-mb=\"tierschutz\"], [data-mb=\"haendler\"], #hmMarkt, #mHaupt, #menueKnopf", () => marktBereich === "haendler" || marktBereich === "tierschutz"],
         ["Kaufen", "Kaufe ein Pferd. Verkaufen geht später über den Steckbrief (Festpreis oder Auktion).", ".paar", () => eigenePferdeHof().length > 1]],
       fertig: () => eigenePferdeHof().length > 1 },
-    { n: "Geld und Post", ziel: "Geld im Blick", neu: () => {},
+    { n: "Geld", ziel: "Geld im Blick", neu: () => {},
       schritte: [["Finanzen", "Tippe auf dein Geld oben – das öffnet die Finanzen. Die Kreditrate wird zu Beginn jeder Jahreszeit abgebucht, das Konto darf bis −2.000 € ins Minus (Dispo).", "#kontoAnzeige", () => hofReiter === "finanzen"]],
       fertig: () => hofReiter === "finanzen" },
     { n: "Speichern", ziel: "Spiel speichern", neu: () => {},
@@ -14363,6 +14379,9 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     TUT_ZEIGEN("Stallarten", "die Hof-Übersicht ansehen", "Unter Hofverwaltung → Hof → Übersicht wählst du die Stallart (z. B. Zuchtstall, Rennstall) – mit Förderung und Vorteilen, wenn die Bedingungen erfüllt sind.", "[data-hbereich='uebersicht'], [data-hr='hof'], #mHof, #menueKnopf", () => hofReiter === "hof" && hofBereich === "uebersicht" && $("nebenSchirm").classList.contains("offen")),
     TUT_ZEIGEN("Rassen und Erbkrankheiten", "die Enzyklopädie öffnen", "Jede Rasse hat eigene Erbkrankheiten und Veranlagungen. Der Erbkrankheiten-Test im Labor zeigt Träger – nie zwei Träger verpaaren.", "#mEnzy, #menueKnopf", () => $("auswahl").classList.contains("offen")),
     TUT_ZEIGEN("Championate", "verstanden", "Mit Erfolgen in Klasse S qualifiziert sich ein Pferd für Meisterschaften und Internationale Turniere – die stehen im Turnierkalender beim Nennen.", null, () => false)];
+  TUT_EXP[0].neu = () => {   // Dome 20.10.: Raritäten-Markt im Tutorial – es ist Sommer, die Jahreskarte liegt bereit, Pferde sind zu sehen
+    const d = datum(); if (d.s !== 1) spiel.tag += ((1 - d.s + 4) % 4) * tpj() - (d.t - 1);
+    spiel.rar = { mj: rarMj(), karte: true, vor: {}, wahl: {}, auk: {}, weg: [] }; rarCache = null; };
   const TUT_SETS = { anf: () => TUT, fort: () => TUT_FORT, exp: () => TUT_EXP };
   const tutListe = () => (TUT_SETS[(spiel.tutorial && spiel.tutorial.set) || "anf"] || TUT_SETS.anf)();
   function datumZuchtTauglich() { const d = datum(); if (d.s >= 2) { const T = spiel.tempo || 7; spiel.tag += (4 - d.s) * T; } }   // Zucht-Kapitel: in die Decksaison springen (Testhof)
@@ -14377,25 +14396,24 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   }
   function tutBand() {
     let el = $("tutBand"); if (!el) { el = document.createElement("div"); el.id = "tutBand"; document.body.appendChild(el); }
-    const T = spiel.tutorial, L = tutListe(), K = L[T.kap]; document.body.dataset.tutkap = T.set && T.set !== "anf" ? 9 : T.kap + 1;
+    const T = spiel.tutorial, L = tutListe(), K = L[T.kap]; document.body.dataset.tutkap = T.set && T.set !== "anf" ? 9 : T.kap + 1; if (K.post) document.body.dataset.tutpost = 1; else delete document.body.dataset.tutpost;
     el.innerHTML = `<span>🎓 <b>${T.set === "fort" ? "Fortgeschrittenen-" : T.set === "exp" ? "Experten-" : ""}Tutorial ${T.kap + 1}/${L.length}: ${esc(K.n)}</b> · Ziel: ${esc(K.ziel)}</span><span><button class="knopf zweit" id="tutKapWeg">Kapitel überspringen</button><button class="knopf zweit" id="tutAllesWeg">Tutorial beenden</button></span>`;
     $("tutKapWeg").onclick = () => tutKapitelFertig(true); $("tutAllesWeg").onclick = () => tutEnde(true);
   }
   function tutKapitel(i) {
-    const T = spiel.tutorial; T.kap = i; T.schritt = 0; T.tag0 = spiel.tag; T.lager0 = futterLagerSumme();
+    const T = spiel.tutorial; T.kap = i; T.schritt = 0; delete T.geschafft; T.tag0 = spiel.tag; T.lager0 = futterLagerSumme();
     const fade = document.createElement("div"); fade.id = "tutFade"; document.body.appendChild(fade); requestAnimationFrame(() => fade.classList.add("an"));   // Überblendung zum nächsten Testpferd
-    setTimeout(() => { try { tutListe()[i].neu(); } catch (e) { console.error("Tutorial:", e); } aktBox = 0; spiel.aktBox = 0; aktenModus = "steckbrief"; aktenReiter = "steckbrief"; ortModus = null; putzModus = false; marktBereich = null;
-      document.querySelectorAll(".schirm.offen").forEach(x => x.classList.remove("offen")); $("dlg").hidden = true; zeigeStall(); zeigeTag(); zeigeAkte(); tutBand(); window.scrollTo(0, 0);
+    setTimeout(() => { try { if (wisch) wischEnde(false); } catch (e) { } try { tutListe()[i].neu(); } catch (e) { console.error("Tutorial:", e); } aktBox = 0; spiel.aktBox = 0; aktenModus = "steckbrief"; aktenReiter = "steckbrief"; ortModus = null; putzModus = false; marktBereich = null;
+      document.querySelectorAll(".schirm.offen").forEach(x => x.classList.remove("offen")); zeigeSchirm(null); $("dlg").hidden = true; zeigeStall(); zeigeTag(); zeigeAkte(); tutBand(); window.scrollTo(0, 0);   // zeigeSchirm(null) hebt die Scroll-Sperre der Menüs auf (sonst ließ sich im Tutorial nicht scrollen)
       fade.classList.remove("an"); setTimeout(() => fade.remove(), 500); }, 450);
   }
   function tutKapitelFertig(uebersprungen) {
     if (blase) blaseWeg(false); const T = spiel.tutorial; if (!uebersprungen) T.erledigt = (T.erledigt || 0) + 1;
     const L = tutListe(); if (T.kap + 1 >= L.length) { tutEnde(false); return; }
-    if (!uebersprungen) dialog(`<h3>🎉 Ziel erreicht: ${esc(L[T.kap].ziel)}</h3><p>Weiter mit Kapitel ${T.kap + 2}: <b>${esc(L[T.kap + 1].n)}</b>.</p>`, [["Weiter", () => tutKapitel(T.kap + 1)]]);
-    else tutKapitel(T.kap + 1);
+    tutKapitel(T.kap + 1);   // „Geschafft“ steht schon in der Blase
   }
   function tutEnde(abgebrochen) {
-    if (blase) blaseWeg(false); const T = spiel.tutorial, warSchon = (T.erledigt || 0) > 0; document.body.classList.remove("tutorial"); delete document.body.dataset.tutkap; delete document.body.dataset.tutset; const el = $("tutBand"); if (el) el.remove();
+    if (blase) blaseWeg(false); const T = spiel.tutorial, warSchon = (T.erledigt || 0) > 0; document.body.classList.remove("tutorial"); delete document.body.dataset.tutkap; delete document.body.dataset.tutset; delete document.body.dataset.tutpost; const el = $("tutBand"); if (el) el.remove();
     const weiter = nochmal => { hinweisNochmal = nochmal; const fn = tutWeiter; tutWeiter = null;
       if (fn) { const A0 = { stall: true, paddock: true, weide: false, waschplatz: false, roundpen: false, reitplatz: false, reithalle: false, gelaende: true, anhaenger: true };   // Testhof weg: nichts davon (Anlagen, Ausrüstung) ins echte Spiel mitnehmen
         spiel = { sparmodus: spiel.sparmodus, boxen: [], anlage: A0, ausruestung: { halfter: true, strick: true, putzkiste: true, sattel: false, trense: false, schabracke: false, decke: false, gamaschen: false, schere: true, medizin: true } }; hatSpielstand = false; fn(); }
@@ -14405,12 +14423,34 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       [["Ja, nochmal zeigen", () => weiter(true)], ["Nein, nur neue", () => weiter(false), "zweit"]]);
   }
   let hinweisNochmal = true;   // Antwort der Abschlussfrage – wird beim Anlegen des echten Spiels übernommen
+  // Dome 20.10.: im Tutorial lässt sich nur antippen, was gerade gefragt ist – und was in früheren Schritten schon gelernt wurde
+  const tutSel = sel => !sel ? [] : (sel === "@heu" ? ".stufeEl .sHeunetz, #heuhaufen" : sel).split(",").map(x => x.trim()).filter(Boolean);
+  function tutGelernt(S) { const T = spiel.tutorial, G = (T.gelernt = T.gelernt || []); [...tutSel(S[2]), ...tutSel(S[5])].forEach(x => { if (!G.includes(x)) G.push(x); }); }
+  const TUT_IMMER = ["#hinweisBlase", "#tutBand", "#dlg", "#tutFade", "#nbZurueck", ".zurueck-s"];
+  function tutErlaubt(el) {
+    const T = spiel && spiel.tutorial; if (!T || !el || !el.closest) return true; const K = tutListe()[T.kap]; if (!K) return true;
+    const L = [...TUT_IMMER, ...(T.gelernt || [])], S = K.schritte[Math.min(T.schritt, K.schritte.length - 1)];
+    if (S) L.push(...tutSel(S[2]), ...tutSel(S[5]));
+    if (T.geschafft === T.kap) K.schritte.forEach(x => L.push(...tutSel(x[2]), ...tutSel(x[5])));   // geschafft: alles aus diesem Kapitel zum Ansehen
+    return L.some(x => { try { return !!el.closest(x); } catch (e) { return false; } });
+  }
+  ["click", "pointerdown", "mousedown"].forEach(ev => document.addEventListener(ev, e => {
+    if (!spiel || !spiel.tutorial || tutErlaubt(e.target)) return;
+    e.stopPropagation(); if (ev === "click") { e.preventDefault(); const b = $("hinweisBlase"); if (b && !b.hidden) { b.classList.remove("tut-gesperrt"); void b.offsetWidth; b.classList.add("tut-gesperrt"); } } }, true));
   function tutPruefen() {   // läuft mit hinweisPruefen (alle 400 ms)
     const T = spiel.tutorial, K = tutListe()[T.kap], b = spiel.boxen[0]; if (!K || $("tutFade")) return true; if (!b.pferd && (!T.set || T.set === "anf")) return true;
-    let fertig = false; try { fertig = K.fertig(b); } catch (e) {} if (fertig) { tutKapitelFertig(false); return true; }
-    while (T.schritt < K.schritte.length) { const S = K.schritte[T.schritt]; let ok = false; try { ok = S[3](b); } catch (e) {} if (!ok) break; T.schritt++; }
+    let fertig = T.geschafft === T.kap; if (!fertig) { try { fertig = K.fertig(b); } catch (e) {} if (fertig) T.geschafft = T.kap; }
+    if (fertig) {   // Dome 20.10.: nicht gleich weiterschalten – erst ansehen lassen, weiter mit Antippen der Blase
+      const key = "tut_fertig_" + T.kap; if (!$("dlg").hidden) { if (blase) { $("hinweisBlase").hidden = true; $("hinweisRing").hidden = true; } return true; }
+      if (blase && blase.k === key) { blasePosition(); return true; }
+      HINWEISE[key] = ["✅ Geschafft: " + K.ziel, "Schau dir alles in Ruhe an. Wenn du so weit bist, tippe auf diese Blase – dann geht es weiter.", "", null, null, "anf"]; if (blase) blaseWeg(false);
+      blaseZeigen(key, { lokal: true, frei: true, danach: () => { if (T.geschafft === T.kap) tutKapitelFertig(false); } });
+      return true;
+    }
+    while (T.schritt < K.schritte.length) { const S = K.schritte[T.schritt]; let ok = false; try { ok = S[3](b); } catch (e) {} if (!ok) break; tutGelernt(S); T.schritt++; }
     const S = K.schritte[Math.min(T.schritt, K.schritte.length - 1)], key = "tut_" + T.kap + "_" + T.schritt;
     if (!$("dlg").hidden && !(S && S[4])) { if (blase) { $("hinweisBlase").hidden = true; $("hinweisRing").hidden = true; } return true; }
+    { const ue = !$("dlg").hidden; ["hinweisBlase", "hinweisRing"].forEach(id => { const e = $(id); if (e) e.classList.toggle("ueber", ue); }); }   // Schritt im Fenster: Blase über dem Fenster
     if (blase && blase.k === key) { blasePosition(); return true; }
     HINWEISE[key] = [S[0], S[1], "", S[2], null, "anf"]; if (blase) blaseWeg(false);
     blaseZeigen(key, { lokal: true, frei: true, danach: () => { if (S[3].toString().includes("=> false")) T.schritt++; } });   // reine Erklär-Schritte: Antippen = weiter

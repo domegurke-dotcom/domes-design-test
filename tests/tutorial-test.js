@@ -16,9 +16,11 @@ const ORDNER = process.argv[2];
   if (ORDNER) await pg.screenshot({ path: `${ORDNER}/kap1.png` });
   await pg.click('#hinweisBlase'); await pg.waitForTimeout(600);
   const B = await pg.evaluate(() => blase && blase.k); ok('Erklärung antippen → Schritt „Heu geben“', B === 'tut_0_1', String(B));
-  await pg.evaluate(() => { const b = spiel.boxen[0]; b.krippeVoll = true; b.wasserTag = spiel.tag; b.mistig = false; }); await pg.waitForTimeout(900);
-  const C = await pg.evaluate(() => document.getElementById('dlgInhalt').textContent); ok('Ziel erreicht → Fenster', /Ziel erreicht/.test(C), C.slice(0, 50));
-  await pg.evaluate(() => [...document.querySelectorAll('#dlgKnoepfe button')].find(x => /Weiter/.test(x.textContent)).click()); await pg.waitForTimeout(1200);
+  ok('Nur das Gefragte antippbar (Wasser gesperrt, Heu erlaubt)', await pg.evaluate(() => !tutErlaubt(document.querySelector('.stufeEl .sWasser') || document.body) && tutErlaubt(document.getElementById('heuhaufen'))));
+  await pg.evaluate(() => { const b = spiel.boxen[0]; b.krippeVoll = true; b.kraftVoll = true; b.wasserTag = spiel.tag; b.mistig = false; }); await pg.waitForTimeout(900);
+  const C = await pg.evaluate(() => ({ k: blase && blase.k, kap: spiel.tutorial.kap })); ok('Ziel erreicht → Blase „Geschafft“, bleibt stehen', C.k === 'tut_fertig_0' && C.kap === 0, JSON.stringify(C));
+  await pg.waitForTimeout(1200); ok('Ohne Antippen kein Weiterschalten', await pg.evaluate(() => spiel.tutorial.kap === 0));
+  await pg.click('#hinweisBlase'); await pg.waitForTimeout(1200);
   const D = await pg.evaluate(() => ({ kap: spiel.tutorial.kap, dreck: spiel.boxen[0].pferd.dreck && spiel.boxen[0].pferd.dreck.fell })); ok('Überblendung zu Kapitel 2 (dreckig)', D.kap === 1 && D.dreck >= 80, JSON.stringify(D));
   if (ORDNER) await pg.screenshot({ path: `${ORDNER}/kap2.png` });
   for (let i = 0; i < 3; i++) { await pg.click('#tutKapWeg'); await pg.waitForTimeout(1100); }

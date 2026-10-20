@@ -15,7 +15,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team · **Stand:** v591, 20.10.2026 (abends)
+**Von:** Claude Pro · **An:** Claude Team · **Stand:** v592, 20.10.2026 (abends)
 
 Übergabe von Claude Team (v560–v582) gelesen und übernommen, Nachricht gelöscht. Phase A läuft (Dome: „starte Phase A“): S1 (v584), K1 (v585), K2 (v586) und M1 (v587) sind fertig, je ein eigener Commit.
 
@@ -31,14 +31,14 @@ Vier Phasen (A, B, C, D = großer Test), am Phasenende hält Claude an; Dome sch
 | B | Opus | K3 Turnier und Rennen | **fertig (v589)** |
 | B | Opus | M2 Karte Merkmale | **fertig (v590)** |
 | C | Sonnet | S3 große Pinnwand | **fertig (v591)** |
-| C | Sonnet | S4 Tutorial, Hinweis, Stufen, Enzyklopädie (Schleifen) | offen |
+| C | Sonnet | S4 Tutorial, Hinweis, Stufen, Enzyklopädie (Schleifen) | **fertig (v592)** |
 | C | Sonnet | K4 Anzeige, Stufen, Hinweise | offen |
 | C | Sonnet | M3 Wirkungen | offen |
 | C | Sonnet | M4 Rassemerkmale, Besonderheiten, Zuchtbuch | offen |
 | C | Sonnet | M5 Verpaaren, Fremd-Vergleich, Hinweise, Admin | offen |
 | D | Sonnet | großer Test ohne Bilder (etappen, hof-gesamt, neuladen) + neue kleine Tests + Tutorial-Spieler – erst nach Domes „weiter“ | offen |
 
-Phase B fertig. **Phase C läuft (Sonnet):** S3 fertig (v591), als Nächstes S4. (Phase C: S3 → S4 → K4 → M3 → M4 → M5.) (Phase B: S2 Pinnwand in der Box → K3 Turnier und Rennen → M2 Karte Merkmale; K3 und der Schleifen-Brief nie gleichzeitig.)
+Phase B fertig. **Phase C läuft (Sonnet):** S3 (v591) und S4 (v592) fertig, als Nächstes K4. (Phase C: S3 → S4 → K4 → M3 → M4 → M5.) (Phase B: S2 Pinnwand in der Box → K3 Turnier und Rennen → M2 Karte Merkmale; K3 und der Schleifen-Brief nie gleichzeitig.)
 
 ### Test-Anleitung Phase A (Wege ausgeschrieben)
 1. **Schleifen (v584):** Turnier nennen und einen Tag weiterspielen: Hauptmenü – Pferdeanhänger – Turnier (oder Box – Pferdepflege – Ort – Pferdeanhänger – Turnier) → nennen → „Tag beenden“ → am nächsten Tag Brief „Ergebnis: <Pferd> beim <Turnier>“ im Postfach: links neben jeder Prüfungszeile die große Schleife (Platz 1 Gold … 6 Grün, braun = Teilnehmer, auf dem Hofturnier auch ohne Platzierung, Championat-Sieger blau-gold). Danach Box – Steckbrief – Ausbildung – Turniere: kleine Schleifen in der Erfolgsliste, in „Bilanz insgesamt“ die Spaltenköpfe als Schleifen. Fohlenschau: Ergebniszeile mit Schleife.

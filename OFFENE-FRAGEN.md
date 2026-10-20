@@ -18,4 +18,6 @@ Zeichen-Aufgaben stehen in `BEI-INKSCAPE-BEARBEITEN.md`, große Themen in `PROJE
 
 6. **Karte Merkmale (M2, v590):** (a) Die Bemuskelung (Ist) zieht nach Plan 0,4 × (Kraft-Ist − Kraft-Anlage) ab – fast jedes Pferd hat Kraft-Ist unter der Anlage, darum liegt die Bemuskelung bei untrainierten Pferden oft unter dem Zuchtziel („schwach“). Gewollt so (Training baut Muskeln auf)? (b) Schnitt von 300 Hannoveranern: Körperbau 6,9, Typ 7,5, Bewegung 6,5, Interieur 6,9, Gesamt 6,9 – Feinabstimmung kommt mit M3. (c) Hals 95 bei Ziel 60 ist schon „starker Fehler“ (d = 2,33). (d) Auf dem Branch `entwurf-merkmale-bilder` liegt ein Beurteilungsschema (nummerierte Körperzonen) und Zuchtbuch-Siegel – im Plan steht nicht, wo das Schema hin soll; die Siegel passen zu M4 (Zuchtbuch-Klasse). Schema vorerst nicht eingebaut.
 
+7. **Schleifen S4 (v592):** Der Plan nennt einen „Stufen-Eintrag“ für die Pinnwand; die Schleifen sind aber für alle Stufen sichtbar, deshalb gibt es keine Sperre und keinen Eintrag in `STUFE_NEU` (nur die Blase mit Stufe fort = alle). Der Hinweis kommt als normale Nebenblase (nur wenn die Box mit der Pinnwand im Bild ist).
+
 _Frühere Meldung: zurzeit keine weiteren offenen Fragen – die 9 Fragen der Nachtsitzung hat Dome am 20.10.2026 beantwortet (umgesetzt in v573–v575, siehe UEBERGABE.md)._

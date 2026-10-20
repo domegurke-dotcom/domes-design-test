@@ -80,6 +80,43 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Alte Brief-Texte mit Emoji bleiben unverändert', schleifenErsetzen('🥇 Sieg 🎀') === '🥇 Sieg 🎀');
     return out;
   });
+  // ==================== S2: Pinnwand in der Box (eigene Seite, echte Stallzeichnung) ====================
+  const pg2 = await b.newPage({ viewport: { width: 1366, height: 768 } }); pg2.on('pageerror', e => errs.push(e.message));
+  await pg2.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg2.waitForTimeout(700);
+  await pg2.click('#smNeu'); await pg2.waitForTimeout(150); await pg2.fill('#chName', 'Test'); await pg2.click('#chLos'); await pg2.waitForTimeout(150);
+  await pg2.click('#dlgKnoepfe button'); await pg2.click('[data-immo="pension"]'); await pg2.fill('#kaufName', 'Testhof'); await pg2.click('#dlgKnoepfe button:first-child'); await pg2.waitForTimeout(400);
+  const R2 = await pg2.evaluate(() => {
+    const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : '')); document.getElementById('dlg').hidden = true; spiel.tippsAus = true; spiel.stufenAn = false;
+    const neu = o => { const p = neuesPferd(o); p.pflege = erzeugePflege(p); p.werte = p.werte || erzeugeWerte(p); werteErgaenzen(p); return p; };
+    const p = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 9, name: 'Wand' }); p.erfolge = [];
+    [['hof', 0, 1], ['regional', 2, 2], ['gross', 1, 3], ['championat', 1, 4], ['regional', 5, 5], ['hof', 3, 6], ['gross', 6, 7], ['regional', 4, 8], ['regional', 1, 9], ['hof', 2, 10], ['championat', 2, 11]].forEach(([a, pl, t]) => { spiel.tag = t; schleifeGeben(p, a, pl || 9, 12, true, a === 'championat' && pl === 1, 'P' + t, 'T' + t); });
+    const S = schleifenSortiert(p), sig = S.map(e => (e.c ? 'c' : '') + e.st + ':' + e.pl).join(' ');
+    ok('Reihenfolge: Champion, Stufe 4 → 1, Platz 1 → 6, braun zuletzt', sig === 'c4:1 4:2 3:1 3:6 2:1 2:2 2:4 2:5 1:2 1:3 1:0', sig);
+    const q = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 9, name: 'Gleich' }); q.erfolge = []; spiel.tag = 3; schleifeGeben(q, 'regional', 1, 10, true, false, 'alt', 'a'); spiel.tag = 8; schleifeGeben(q, 'regional', 1, 10, true, false, 'neu', 'b');
+    ok('Gleichstand: die neueste zuerst', schleifenSortiert(q)[0].pruef === 'neu');
+    const svg = pinnwandSVG(p, 266.5, 84); ok('Wand zeigt höchstens 9 Schleifen (3 × 3)', (svg.match(/class="schleife"/g) || []).length === 9);
+    ok('Ohne Schleife keine Pinnwand', pinnwandSVG(neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 9, name: 'Leer' }), 0, 0) === '');
+    const b0 = spiel.boxen[0]; b0.pferd = p; b0.tot = false; b0.leckstein = jzJetzt(); aktBox = 0; spiel.aktBox = 0;
+    const zeig = f => { delete b0.paddock; delete b0.abfohl; f(b0); zeigeSchirm(null); zeigeStall(); const g = document.querySelector('#stall .sPinn'); return g; };
+    [[1, [260.5, 86]], [2, [266.5, 84]], [3, [272.5, 82]]].forEach(([st, l]) => { const g = zeig(x => { x.stufe = st; }); const r = g && g.querySelector('rect[rx="3"]');
+      ok(`Stufe ${st}: Pinnwand 60 × 55 an ${l.join(' / ')}`, !!r && +r.getAttribute('x') === l[0] && +r.getAttribute('y') === l[1] && +r.getAttribute('width') === 60 && +r.getAttribute('height') === 55 && g.style.display !== 'none'); });
+    { const g = zeig(x => { x.stufe = 3; x.paddock = true; }), r = g && g.querySelector('rect[rx="3"]'); ok('Paddockbox (Stufe 3): Lage wie Stufe 2 (266,5 / 84)', !!r && +r.getAttribute('x') === 266.5 && +r.getAttribute('y') === 84); }
+    { const g = zeig(x => { x.stufe = 2; }), wand = g.parentNode, pf = document.getElementById('pferdPlatz') || document.getElementById('pferd');
+      ok('Pinnwand liegt in der Wand-Gruppe (hinter dem Pferd)', wand.classList.contains('stufeEl') && !!pf && !!(wand.compareDocumentPosition(pf) & Node.DOCUMENT_POSITION_FOLLOWING)); }
+    { const g = zeig(x => { x.stufe = 3; x.abfohl = true; }); ok('Abfohlbox: Pinnwand wird mit der Rückwand verkleinert (liegt in .abfHinten)', !!g && !!g.closest('.abfHinten'));
+      const lampe = [...document.querySelectorAll('#stall .abfohlEl g[transform*="scale(1.35)"]')][0], tr = lampe && lampe.getAttribute('transform').match(/translate\(([\d.]+),([\d.]+)\)/);
+      const ex = 200 + (272.5 + 60 - 200) * 0.8, ey = 86 + (82 + 55 - 86) * 0.8; ok('Abfohlbox: Rotlichtlampe rechts neben der Pinnwand, berührt die untere rechte Ecke', !!tr && Math.abs(+tr[1] - 14.85 - ex) < 1.5 && Math.abs(+tr[2] + 15 - ey) < 1.5, tr && tr.slice(1).join(',')); }
+    { zeig(x => { x.stufe = 1; }); const l = document.querySelector('#stall .sLeck rect'); ok('Leckstein links vom Fenster (x 107)', !!l && +l.getAttribute('x') === 107); }
+    { zeig(x => { x.stufe = 3; }); const l = document.querySelector('#stall .sLeck rect'); ok('Stufe 3: Leckstein rechts neben dem Heunetz (x 116, Heunetz endet bei ~118, Fensterrahmen ab 132)', !!l && +l.getAttribute('x') === 116);
+      ok('Stufe 3: kein goldenes Namensschild mehr', !document.querySelector('#stall .sName')); }
+    { b0.tot = true; const g = zeig(x => { x.stufe = 2; }); ok('Totes Pferd: keine Pinnwand', g.style.display === 'none' && g.innerHTML === ''); b0.tot = false; }
+    { const f = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 0, name: 'Fohlen' }); f.erfolge = []; schleifeGeben(f, 'fohlenschau', 1, 8, true, true, 'Stutfohlen', 'Schau'); b0.fohlen = f; const g = zeig(x => { x.stufe = 2; }); ok('Mit Fohlen bei Fuß: Pinnwand zeigt die Schleifen der Mutter', (g.innerHTML.match(/class="schleife"/g) || []).length === 9 && !/Champion-Schleife.*Fohlen/.test(g.innerHTML)); delete b0.fohlen; }
+    { const g = zeig(x => { x.stufe = 2; }); g.dispatchEvent(new MouseEvent('click', { bubbles: true })); const d = document.getElementById('dlg'); ok('Antippen öffnet alle Schleifen (11) vor der Box', !d.hidden && (document.getElementById('dlgInhalt').innerHTML.match(/class="schleife"/g) || []).length === 11); d.hidden = true;
+      g.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); ok('Auch mit Tastatur (Enter)', !d.hidden); d.hidden = true; }
+    ok('Tipp-Text: Prüfung · Platz von Starter / Turnier / Jahreszeit, Jahr', /^P\d+ · \d\. Platz von 12 \/ T\d+ \/ (Frühling|Sommer|Herbst|Winter), Jahr \d+$/.test(schleifeText(S[2])), schleifeText(S[2]));
+    return out;
+  });
+  R.push(...R2);
   R.forEach(l => console.log(l)); console.log(errs.length ? 'Seitenfehler: ' + errs.join(' | ') : 'keine Seitenfehler');
   const bad = R.filter(l => l.startsWith('✗')).length + errs.length; console.log(bad ? 'Fehler ' + bad : 'alles ok'); await b.close(); process.exit(bad ? 1 : 0);
 })();

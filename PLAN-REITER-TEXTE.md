@@ -179,3 +179,13 @@ Zahlen aus den Konstanten lesen (${…}), nicht von Hand einsetzen.
 Fortgeschritten „Reiter-Können als Balken, Reiter wählen beim Nennen, Rennen selbst reiten“
 Experte         „genaue Zuwächse des Reiter-Könnens und alle Rechenwerte“
 
+
+9. Nachtrag (20.10.2026, nach Rückfrage von Coding)
+   1. Kondition zählt in mehreren Gruppen. Eine Übung darf in REITER_DISZ bei mehreren Gruppen stehen
+      (Liste statt einer Gruppe); der Zuwachs gilt voll in jeder. Betroffen: kondition bei vielseitigkeit,
+      rennen und distanz.
+   2. Galopptraining und Rennbahn. Mit dem Gebäude „Rennbahn“ wächst das Können rennen voll durch
+      Galopptraining. Ohne Rennbahn zählen Galopp- und Konditionsarbeit im Gelände (Ausritt) zur Hälfte
+      (Faktor 0,5). Das Startrecht „Rennen selbst reiten“ bei Können 30 bleibt; Turniere und
+      Reitunterricht zählen wie überall voll.
+   3. Beide Punkte sind Vorschläge und gelten als Standard, bis Dome etwas anderes sagt.

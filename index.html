@@ -1024,7 +1024,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "598";
+  const SPIEL_VERSION = "599";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1032,11 +1032,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=598"></script>
-<script src="pferd.js?v=598"></script>
-<script src="boxstufen.js?v=598"></script>
-<script src="kopfneu.js?v=598"></script>
-<script src="waschbild.js?v=598"></script>
+<script src="lz-string.min.js?v=599"></script>
+<script src="pferd.js?v=599"></script>
+<script src="boxstufen.js?v=599"></script>
+<script src="kopfneu.js?v=599"></script>
+<script src="waschbild.js?v=599"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -3507,6 +3507,7 @@
     [/^Kein Käufer|^Kein Gebot/, "kein-kaeufer", "Verkauf: kein Käufer"], [/^Preisvorschlag/, "preisvorschlag", "Verkauf: Preisvorschlag"], [/^Zwischenstand/, "auktion", "Auktion: Zwischenstand"], [/wurde verkauft/, "verkauf", "Pferd verkauft"], [/geplatzt/, "geplatzt", "Verkauf geplatzt"],
     [/ist 3 Jahre alt/, "drei-jahre", "Pferd wird 3 Jahre alt"], [/fängt heute an|hat aufgehört|hat gekündigt| kündigt$|ist krank$|^Urlaubsantrag|Abschlussprüfung|Ausbilder|Ausbildung ab/, "mitarbeiter", "Mitarbeiter"], [/ist auffällig$/, "auffaellig", "Mitarbeiter: Auffälligkeit"], [/^Huftermin/, "huftermin", "Hufschmied: Erinnerung"], [/^Blutbild .*Ergebnis$/, "blutbild", "Tierarzt: Blutbild"], [/^AKU-Protokoll/, "aku", "Tierarzt: AKU-Protokoll"], [/: Totgeburt$/, "totgeburt", "Tierarzt: Totgeburt"], [/^Ankaufsuntersuchung:/, "kaeuferaku", "Verkauf: AKU des Käufers"], [/^Blutprobe /, "probe", "Tierarzt: Blutprobe"], [/hat verfohlt$/, "verfohlt", "Tierarzt: Verfohlen"], [/^Sorge um/, "sorge", "Tierarzt: Warnung"], [/^Überboten/, "ueberboten", "Auktion: überboten"], [/^Zuschlag|^Auktion verloren/, "zuschlag", "Auktion: Ergebnis"], [/ist wieder gesund$/, "ts-gesund", "Tierschutz: Pferd wieder gesund"], [/^Ausbildungsbericht/, "ausbildungsbericht", "Ausbildungsbericht"], [/^Strafe/, "strafe", "Tierschutz: Strafe"], [/beschlagnahmt/, "ts-beschlagnahme", "Tierschutz: Beschlagnahme"],
     [/^Jahresbericht/, "jahresbericht", "Jahresbericht"], [/^Willkommen/, "gnadenhof", "Gnadenhof: Ankunft"], [/^Abschied/, "tod", "Pferd verstorben"], [/^Gentest|^Laborergebnis/, "gentest", "Laborergebnis"],
+    [/^Post aufgeräumt/, "post-aufgeraeumt", "Hofverwaltung: Post aufgeräumt"],
   ];
   const briefTyp = betreff => (BRIEF_TYPEN.find(([re]) => re.test(betreff)) || [, "sonstiges", "Sonstige Nachricht"]);
   // Briefe: immer „Sie“ – bis der Absender nach einigen Briefen das „Du“ anbietet und der Spieler zustimmt.
@@ -3524,13 +3525,26 @@
       brief(von, "Zurück zum Sie", `nach den letzten Vorfällen möchten wir unsere Geschäftsbeziehung lieber wieder etwas förmlicher halten. Wir bleiben deshalb ab jetzt beim „Sie“.`);
     }
   }
+  // P1 (PLAN-TIERHALTEVERBOT-SPEICHER, Dome 20.10.2026): Post-Grenze 300; beim Kürzen bleiben Briefe mit ⭐, Jahresberichte, ungelesene Briefe und Briefe mit offener Aktion/Rechnung immer; gekürzt wird in einem Rutsch bis `unter` (damit der Hinweisbrief eine sinnvolle Zahl nennt)
+  const POST = { grenze: 300, unter: 280, warn: 250 };
+  const briefOffen = br => { if (!br.aktion || br.aktion.typ === "jbild") return false; try { return /<button[^>]*data-baktion/.test(briefAktionHTML(br)); } catch (e) { return true; } };   // Knopf im Brief noch nicht erledigt (im Zweifel geschützt)
+  let postKuerzt = false;
+  function postKuerzen() {
+    const P = spiel.post; if (!P || P.length <= POST.grenze || postKuerzt) return; postKuerzt = true;
+    try {
+      let n = 0;
+      for (let i = P.length - 1; i >= 0 && P.length > POST.unter; i--) { const b = P[i]; if (b.stern || !b.gelesen || (b.typ || briefTyp(b.betreff)[1]) === "jahresbericht" || briefOffen(b)) continue; P.splice(i, 1); n++; }
+      const jahr = Math.floor(jzJetzt() / 4);
+      if (n && spiel.postLoeschJahr !== jahr) { spiel.postLoeschJahr = jahr; brief("Hofverwaltung", "Post aufgeräumt", `${n} alte, gelesene Briefe ohne ⭐ wurden gelöscht, weil die Post voll war. Briefe mit ⭐ bleiben immer.`); }
+    } finally { postKuerzt = false; }
+  }
   function brief(von, betreff, text, extra) {
     const du = duMit(von);
     text = String(text).replace(/\{([^{}|]*)\|([^{}|]*)\}/g, (m, a, b) => du ? a : b);
     const [, typ] = briefTyp(betreff), spam = (spiel.spam || []).includes(typ);
     const { pferde, ...rest } = extra || {};   // pferde: diese Pferde sind gemeint (bei gleichen Namen)
     (spiel.post = spiel.post || []).unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), jz: jzJetzt(), tag: spiel.tag, von, betreff, text, typ, gelesen: spam, spam, du, links: briefLinks(text, pferde), hid: aktivHid(), hofName: hofName(), ...rest });
-    if (spiel.post.length > 120) { for (let i = spiel.post.length - 1; i >= 0 && spiel.post.length > 120; i--) if (spiel.post[i].typ !== "jahresbericht") spiel.post.splice(i, 1); }   // B3: Jahresberichte werden nie automatisch gelöscht
+    postKuerzen(); if (spiel.post.length >= POST.warn) tippMerken("postVoll");   // P1: wichtige Briefe werden nie automatisch gelöscht
     if (betreff !== "Neuigkeit" && typ !== "duzen") {
       const K = (spiel.kontakt = spiel.kontakt || {}); K[von] = (K[von] || 0) + 1;
       if (K[von] >= DU_ANGEBOT_NACH && rufWert(von) >= DU_AB_RUF && !(spiel.duzen && von in spiel.duzen) && !(spiel.duAngeboten || []).includes(von)) {
@@ -14856,6 +14870,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     merkHuf: ["Huf", () => { const p = (B() || {}).pferd; return `Die Hufe von ${p ? esc(p.name) : "deinem Pferd"} weichen vom Idealen ab. Regelmäßige Hufschmied-Termine machen sie besser, Vernachlässigung macht sie schlechter.`; }, "", null, "bogen", "fort"],
     merkMuskel: ["Bemuskelung", () => { const p = (B() || {}).pferd; return `${p ? esc(p.name) : "Dein Pferd"} ist schwach bemuskelt. Training und gutes Futter bauen Muskeln auf, Krankheit und Boxenruhe bauen sie ab.`; }, "", null, "bogen", "fort"],
     merkRasse: ["Rassestandard", () => { const p = (B() || {}).pferd; return `${p ? esc(p.name) : "Dein Pferd"} verstößt gegen den Standard der Rasse und ist nicht zuchtbuchfähig. Das senkt den Wert, und Fohlen können dasselbe erben.`; }, "", null, "bogen", "fort"],
+    postVoll: ["Deine Post ist bald voll", "Ab 300 Briefen werden die ältesten gelesenen Briefe ohne ⭐ gelöscht. Wichtige Briefe markierst du mit ⭐, die bleiben immer.", "", null, "speichern", "alle"],
     merkVorschau: ["Vorschau für das Fohlen", "Hier steht, was der Hengst bei deiner Stute ausgleicht und was er verstärkt. Haben beide denselben Fehler, geben sie ihn oft weiter.", "", null, "bogen", "fort"],
     merkFohlenschau: ["Fohlenschau", "Die Noten der Fohlenschau kommen aus Körperbau, Typ und Gängen. Schau vorher in die Karte Merkmale, dann weißt du, was die Richter sehen.", "", null, "bogen", "fort"],
     reiterBesser: ["Dein Pferd ist besser als du", () => reiterBesserText(), "", null, null, "fort"],
@@ -14920,7 +14935,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   const EINSTEIGER_MEHR = { futter: "🌾 Futter", krank: "🩺 Krank – was tun?", training: "🏇 Training", geld: "💶 Geld, Kredit und Dispo", speichern: "💾 Speichern", reiter: "🏇 Reiter-Können", schleifen: "🎀 Turnierschleifen", bogen: "🧬 Beurteilungsbogen" };
   const hinweisText = H => typeof H[1] === "function" ? H[1]() : H[1];   // K2: Text mit dem Namen des Pferdes wird erst beim Zeigen gebaut
   const hinweisStufe = () => (spiel.spieler && spiel.spieler.stufe) || "anf";
-  const hinweisFuer = k => { const H = HINWEISE[k]; if (!H) return false; const st = hinweisStufe(); return st === "anf" || (st === "fort" && H[5] === "fort") || (st === "exp" && spiel.tippsExperte); };
+  const hinweisFuer = k => { const H = HINWEISE[k]; if (!H) return false; const st = hinweisStufe(); return H[5] === "alle" || st === "anf" || (st === "fort" && H[5] === "fort") || (st === "exp" && spiel.tippsExperte); };
   let blase = null;   // { k, el, leit }
   function hinweisZiel(sel, mem) {   // mem (Tutorial): liegt das Ziel außerhalb des Bildschirms, einmal dorthin scrollen
     if (!sel) return null; const unten = mem && $("tutBand") ? $("tutBand").getBoundingClientRect().top : innerHeight;   // Tutorial: das Band unten verdeckt den Rand

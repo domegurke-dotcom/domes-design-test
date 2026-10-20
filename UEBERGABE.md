@@ -19,6 +19,24 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 Übergabe von Claude Team (v560–v582) gelesen und übernommen, Nachricht gelöscht. Am Code nichts geändert, Version bleibt v582.
 
+### Fortschritt Mehr-Etappen-Lauf (Dome, 20.10.2026; Regeln in CLAUDE.md „Mehr-Etappen-Lauf“)
+| Phase | Modell | Etappe | Stand |
+|---|---|---|---|
+| A | Sonnet | S1 Schleifen, Regeln, `p.schleifen`, Brief | offen |
+| A | Sonnet | K1 Reiter-Können (Daten) | offen |
+| A | Sonnet | K2 Training und Reitunterricht | offen |
+| A | Sonnet | M1 Exterieur-Daten | offen |
+| B | Opus | S2 Pinnwand in der Box | offen |
+| B | Opus | K3 Turnier und Rennen | offen |
+| B | Opus | M2 Karte Merkmale | offen |
+| C | Sonnet | S3 große Pinnwand | offen |
+| C | Sonnet | S4 Tutorial, Hinweis, Stufen, Enzyklopädie (Schleifen) | offen |
+| C | Sonnet | K4 Anzeige, Stufen, Hinweise | offen |
+| C | Sonnet | M3 Wirkungen, M4 Rassemerkmale/Zuchtbuch, M5 Verpaaren/Texte | offen |
+| Ende | – | großer Test ohne Bilder (etappen, hof-gesamt, neuladen) + kleine Tests + Tutorial-Spieler | offen |
+
+Zwischen den Phasen hält Claude an und schreibt hier „Phase X fertig – bitte umschalten“. Fragen: `OFFENE-FRAGEN.md`.
+
 ### Offen (unverändert aus der Team-Nachricht)
 1. Domes Test im Spiel von v560–v582 (Tutorial als Anfänger am Handy und PC, Raritäten im Sommer, Waschplatz/Solarium, Stufen, Abstammung).
 2. **v583:** Hinweisblase blendet sich beim Ziehen eines Pferdes aus (hochkant deckte sie die freien Boxen ab, Dome: „das da“). `tests/tutorial-spieler.js` Anfänger 390×844, 844×390, 1366×768 laufen durch (nicht parallel starten – sonst hängt es zufällig bei „Bürste“).

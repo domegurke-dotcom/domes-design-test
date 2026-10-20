@@ -22,4 +22,6 @@ Zeichen-Aufgaben stehen in `BEI-INKSCAPE-BEARBEITEN.md`, große Themen in `PROJE
 
 8. **Reiter K4 (v593):** (a) Das Fortgeschrittenen-Kapitel „Reiter-Können, Unterricht, Reiterwahl“ besteht aus vier Info-Schritten (kein 2-Tage-Ablauf mit echten Klicks wie im Plan: Reiter-Seite öffnen, trainieren, Reitstunde, im Turnier mit Bereiter nennen) – das ließe sich später zu einem echten Ablauf ausbauen. (b) Die Blase R5 (LK wartet) gab es schon als `lkWartet`; der Experten-Satz zum Rennen steht in der Stallarten-Karte (es gibt kein Rennen-Kapitel).
 
+9. **Exterieur-Wirkungen (M3, v594):** (a) Der Marktwert-Faktor liegt bei guten Pferden schnell am Deckel +8 % (zwölf Stärken zu je 0,7 %): ein ideal gebautes Pferd ist 8 % mehr wert, ein sehr schlechtes bis 25 % weniger. (b) Prämienfohlen-Anteil der Fohlenschau: vorher 14,6 %, nachher 15,5 % im Schnitt (Friese 16,3 → 20,0 %, sonst ±2 Punkte) – innerhalb der Vorgabe ±3, nur Friese etwas darüber. (c) Die Körperbau-Note hängt jetzt vom Exterieur ab, nicht mehr von Konstitution/Kraft. (d) Rassemerkmal-Abzug auf die Typnote (−0,5 je Verstoß) und Hahnentritt kommen in M4.
+
 _Frühere Meldung: zurzeit keine weiteren offenen Fragen – die 9 Fragen der Nachtsitzung hat Dome am 20.10.2026 beantwortet (umgesetzt in v573–v575, siehe UEBERGABE.md)._

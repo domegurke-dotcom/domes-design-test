@@ -125,6 +125,32 @@ const { chromium } = require('playwright'); const path = require('path');
     const m = k => st.reduce((a, x) => a + x[k], 0) / st.length;
     out.push(`ℹ️ Schnitt von 300 Hannoveranern: Körperbau ${m('koerper').toFixed(2)} · Typ ${m('typ').toFixed(2)} · Bewegung ${m('bewegung').toFixed(2)} · Interieur ${m('interieur').toFixed(2)} · Gesamt ${m('gesamt').toFixed(2)}`);
     ok('Körperbau-Schnitt in der Nähe von 7 (M3 stimmt fein ab)', Math.abs(m('koerper') - 7) < 0.6, m('koerper').toFixed(2));
+    // ==================== M3: Wirkungen ====================
+    const idealP = n => { const p = neu(n); const Z = bauZiel(p); BAU_KEYS.forEach(k => { p.bau[k] = Math.round(Z[k]); }); p.werte.ist.kraft = p.werte.anlage.kraft; p.fz = 5; p.pflege.huf = spiel.tag; p.ausgekratzt = spiel.tag; return p; };
+    const setze = (p, k, d) => { p.bau[k] = Math.max(0, Math.min(100, Math.round(bauZiel(p)[k] + d * BAU_S))); };
+    const I0 = idealP('Ideal'), w0 = marktwert(I0);
+    ok('Marktwert ideal: nur Stärken (12 × 0,7 % → +8 %-Deckel)', Math.abs(bauWertFaktor(I0) - 1.08) < 1e-9, bauWertFaktor(I0).toFixed(3));
+    const F1 = idealP('F1'); setze(F1, 'schulter', 2); ok('Ein deutlicher Fehler: −3 % statt einer Stärke (+0,7 %)', Math.abs(bauWertFaktor(F1) - (1 - 0.03 + 11 * 0.007)) < 1e-9, bauWertFaktor(F1).toFixed(4));
+    const F2 = idealP('F2'); setze(F2, 'schulter', 3); ok('Ein starker Fehler: −6 %', Math.abs(bauWertFaktor(F2) - (1 - 0.06 + 11 * 0.007)) < 1e-9);
+    const F3 = idealP('F3'); BAU_KEYS.forEach(k => setze(F3, k, 3)); ok('Alles starker Fehler: höchstens −25 %', Math.abs(bauWertFaktor(F3) - 0.75) < 1e-9);
+    { const x = idealP('Mw'), a = marktwert(x); setze(x, 'schulter', 2); const b2 = marktwert(x); BAU_KEYS.forEach(k => setze(x, k, 3)); const c = marktwert(x); ok('Marktwert sinkt mit schlechterem Exterieur (gleiches Pferd)', c < b2 && b2 < a, c + ' < ' + b2 + ' < ' + a); }
+    ok('Faktor immer zwischen 60 % und 125 %', (() => { for (let i = 0; i < 300; i++) { const x = { id: 'mw' + i, rasse: 'hannoveraner', name: 'x', anteile: { hannoveraner: 100 } }; bauErgaenzen(x); const f = bauWertFaktor(x); if (f < 0.6 || f > 1.25) return false; } return true; })());
+    // Disziplin
+    const D0 = idealP('D0'), D1 = idealP('D1'); BAU_KEYS.forEach(k => setze(D1, k, 3));
+    const f0 = bauDisziplinFaktor(D0, 'dressur'), f1 = bauDisziplinFaktor(D1, 'dressur');
+    ok('Disziplin: ideal +4 %, alles weit weg bis −4 % (am Rand 0/100 etwas weniger)', Math.abs(f0 - 1.04) < 0.004 && f1 >= 0.96 && f1 < 0.99, f0.toFixed(3) + ' / ' + f1.toFixed(3));
+    ok('Gewichte je Disziplin summieren zu 1 (11 Disziplinen, alle in DISZ)', Object.entries(BAU_DISZ).every(([k, G]) => DISZ[k] && Math.abs(Object.values(G).reduce((a, b) => a + b, 0) - 1) < 1e-9) && Object.keys(DISZ).every(k => BAU_DISZ[k]), Object.keys(DISZ).filter(k => !BAU_DISZ[k]).join());
+    ok('diszWert: Pferd mit gutem Exterieur etwas besser als mit schlechtem (gleiche Werte)', diszWert(D0, 'dressur').wert > diszWert(D1, 'dressur').wert);
+    // Gesundheit
+    const G = idealP('G'), r = () => Object.fromEntries(befundRisiko(G, spiel.boxen[0], 'box')), a0 = r(), alt = { ...G.bau };
+    setze(G, 'stV', 2); setze(G, 'huf', 3); setze(G, 'ruecken', 2); const a1 = r();
+    ok('Befundrisiko: deutlicher Fehler Stellung ×1,3 (Sehne), Huf 3 σ (bei guter Hufpflege nur deutlich) ×1,3 (Strahlfäule), Rücken deutlich ×1,3 (Kissing), Kolik unverändert', a0.sehne > 0 && Math.abs(a1.sehne / a0.sehne - 1.3) < 1e-6 && Math.abs(a1.strahlfaeule / a0.strahlfaeule - 1.3) < 1e-6 && Math.abs(a1.kissing / a0.kissing - 1.3) < 1e-6 && Math.abs(a1.kolik / a0.kolik - 1) < 1e-6, [a1.sehne / a0.sehne, a1.strahlfaeule / a0.strahlfaeule, a1.kissing / a0.kissing].map(x => x.toFixed(3)).join(' / '));
+    G.bau = { ...alt }; setze(G, 'stV', -3.5); G.pflege.huf = spiel.tag - 10 * tpj(); G.bau.huf = 100; setze(G, 'stV', 3.5); const a2 = r(); ok('Starker Fehler ×1,7 (Stellung 3,5 σ)', Math.abs(a2.sehne / a0.sehne - 1.7) < 1e-6, (a2.sehne / a0.sehne).toFixed(3)); G.pflege.huf = spiel.tag; G.bau = { ...alt }; setze(G, 'stV', 1.2); ok('Leichte Abweichung kostet nichts', Math.abs(r().sehne / a0.sehne - 1) < 1e-6);
+    // Fohlenschau
+    const fs = []; for (let i = 0; i < 400; i++) { const f = neuesPferd({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 0, name: 'FS' + i, id: 'fs' + i }); f.pflege = erzeugePflege(f); f.werte = f.werte || erzeugeWerte(f); werteErgaenzen(f); fs.push(fohlenNoten(f, Math.random)); }
+    const pra = fs.filter(x => x.gesamt >= FS_PRAEMIE).length / fs.length * 100; out.push(`ℹ️ Fohlenschau: ${pra.toFixed(1)} % Prämienfohlen (vorher 13–17 % je Rasse, Schnitt 14,6)`);
+    ok('Fohlenschau: Körperbau-Note aus dem Exterieur (Schnitt um 7), Prämienfohlen-Anteil im alten Bereich', Math.abs(fs.reduce((a, x) => a + x.koerper, 0) / fs.length - 7) < 0.4 && pra > 8 && pra < 24, pra.toFixed(1));
+    const fz = neuesPferd({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 0, name: 'Fz', id: 'fz1' }); fz.werte = fz.werte || erzeugeWerte(fz); fz.pflege = erzeugePflege(fz); werteErgaenzen(fz); bauErgaenzen(fz); BAU_KEYS.forEach(k => { fz.bau[k] = Math.round(bauZiel(fz)[k]); }); const nb = fohlenNoten(fz, null, true).koerper; BAU_KEYS.forEach(k => setze(fz, k, 3)); ok('Fohlenschau: schlechtes Exterieur senkt die Körperbau-Note', fohlenNoten(fz, null, true).koerper < nb, fohlenNoten(fz, null, true).koerper + ' < ' + nb);
     // Lese-Modus (Marktpferd)
     const M = neuesPferd({ rasse: 'araber', geschlecht: 'Hengst', alter: 7, name: 'Markt' }); M.pflege = erzeugePflege(M); M.werte = M.werte || erzeugeWerte(M); werteErgaenzen(M);
     leseAkte(M); aktenReiter = 'merkmale'; zeigeAkte(); ok('Lese-Modus (Markt): Karte Merkmale mit Balken', document.querySelectorAll('#info .skala.merk').length === 12 && !!M.bau);

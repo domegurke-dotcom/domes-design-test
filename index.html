@@ -1019,7 +1019,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "593";
+  const SPIEL_VERSION = "594";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1027,11 +1027,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=593"></script>
-<script src="pferd.js?v=593"></script>
-<script src="boxstufen.js?v=593"></script>
-<script src="kopfneu.js?v=593"></script>
-<script src="waschbild.js?v=593"></script>
+<script src="lz-string.min.js?v=594"></script>
+<script src="pferd.js?v=594"></script>
+<script src="boxstufen.js?v=594"></script>
+<script src="kopfneu.js?v=594"></script>
+<script src="waschbild.js?v=594"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -1978,11 +1978,16 @@
   const bauStufe = d => BAU_STUFEN.findIndex(([g]) => d < g);   // 0 ideal · 1 leicht · 2 deutlich · 3 stark
   const bauWort = (k, s) => BAU_POL[k][2][s <= -2 ? 0 : s < -0.7 ? 1 : s <= 0.7 ? 2 : s <= 2 ? 3 : 4];
   const halbNote = x => Math.max(1, Math.min(10, Math.round(x * 2) / 2));
+  // Körperbau-Note ungerundet: gewichteter Schnitt der zwölf Merkmalnoten (auch für die Fohlenschau, M3)
+  function koerperRoh(p, n) {
+    n = n || Object.fromEntries(BAU_KEYS.map(k => [k, Math.max(BAU_NOTE.min, Math.min(BAU_NOTE.max, halbNote(BAU_NOTE.basis - BAU_NOTE.je * Math.abs(bauS(p, k)))))]));
+    const gw = k => BAU_NOTE_GEWICHT[k] || 1; return BAU_KEYS.reduce((a, k) => a + n[k] * gw(k), 0) / BAU_KEYS.reduce((a, k) => a + gw(k), 0);
+  }
   // Zuchtverbands-Noten (halbe Noten, Gesamt mit einer Kommastelle): Merkmalnote 9 − 2,5 × d (3 … 9,5)
   const BAU_NOTE = { basis: 9, je: 2.5, min: 3, max: 9.5, gesamt: { typ: 0.2, koerper: 0.3, bewegung: 0.3, interieur: 0.2 } };
   function merkNoten(p) {
     const n = {}; BAU_KEYS.forEach(k => { n[k] = Math.max(BAU_NOTE.min, Math.min(BAU_NOTE.max, halbNote(BAU_NOTE.basis - BAU_NOTE.je * Math.abs(bauS(p, k))))); });
-    const gw = k => BAU_NOTE_GEWICHT[k] || 1, koerper = halbNote(BAU_KEYS.reduce((a, k) => a + n[k] * gw(k), 0) / BAU_KEYS.reduce((a, k) => a + gw(k), 0));
+    const koerper = halbNote(koerperRoh(p, n));
     const g = bauWaechst(p) ? p.werte.gang : gangGezeigt(p), drei = [g.schritt, g.trab, g.toelt != null ? g.toelt : g.galopp].map(x => x || 0), bewegung = halbNote(drei.reduce((a, b) => a + b, 0) / 3);
     werteErgaenzen(p); const c = p.werte.charakter, alle = [...WERTE_KOERPER, ...WERTE_KOPF], wv = k => { const x = alle.find(y => y.key === k); return x ? wertVon(p, x) : 50; };
     const M = [c.wille, c.nerven, c.bezug, c.mut, wv("lernfaehigkeit"), wv("konzentration"), wv("gehorsam")].map(x => x || 0).reduce((a, b) => a + b, 0) / 7, interieur = halbNote(3 + 7 * M / 100);
@@ -3272,7 +3277,7 @@
     const dreckF = (1 - 0.15 * dreckWert(p) / 100) * (p.fellGlanz >= (spiel.tag || 1) - 1 ? 1.02 : 1);   // ungeputzt: bis zu 15 % weniger wert · Öl: glänzendes Fell +2 %
     const bl = befundListe(p).filter(b => b.diagnose), befundF = Math.max(0.4, 1 - bl.reduce((a, b) => a + (KRANK[b.art].chronisch ? 0.1 : 0) + (b.beh ? 0.02 : 0.06) * b.grad, 0));   // bekannte Befunde senken den Preis, chronische dauerhaft
     const erbF = testGemacht(p, "krank") ? Object.keys(ERBKRANK).reduce((a, k) => a * (erbKrank(p, k) ? 0.75 : (erbVon(p)[k] || 0) ? 0.92 : 1), 1) : 1;   // getestete Träger sind für die Zucht weniger wert
-    const v = (1500 + 4500 * gangF * gangF + 5000 * ausb) * alterF * gesund * reinF * dreckF * befundF * erbF * fohlenschauFaktor(p) * abstFaktor(p) * (KOPF_WERT[kopfFehler(kopfVon(p))] || 1) * (fjordWeissFehler(p) ? FJORD_WEISS_WERT : 1);   // Fohlenschau-Note und Prämienfohlen
+    const v = (1500 + 4500 * gangF * gangF + 5000 * ausb) * alterF * gesund * reinF * dreckF * befundF * erbF * fohlenschauFaktor(p) * abstFaktor(p) * bauWertFaktor(p) * (KOPF_WERT[kopfFehler(kopfVon(p))] || 1) * (fjordWeissFehler(p) ? FJORD_WEISS_WERT : 1);   // Fohlenschau-Note und Prämienfohlen
     return Math.max(100, Math.round(v / 50) * 50) + testWert(p) + erfolgWert(p);   // Turniererfolge steigern den Wert   // gemachte Gentests: Käufer zahlen die Testkosten mit
   }
   const testWert = p => Object.keys(LABOR_TESTS).filter(t => testGemacht(p, t)).reduce((s, t) => s + laborPreis(p, t), 0);
@@ -5704,10 +5709,18 @@
     f.lahmheit *= hufZuLang(p) * (p.eisenWeg ? 1.5 : 1) * (p.ocd ? 1.3 : 1) * (ausgekratztGestern(p) ? 1 : 1.2);   // v533: Steine im Huf → Prellung
     if (ort === "box" && box) { const BF = bodenFaktoren(box); Object.keys(BF).forEach(k => { if (f[k] != null) f[k] *= BF[k]; }); }   // v356: Boden und Ausstattung der Box
     Object.entries(BEFUND_ZUSATZ).forEach(([k, fn]) => { f[k] = fn(p, box, ort, s, j); });   // v514: neue Krankheiten (Rasse, Alter, Arbeit, Fütterung)
+    bauBefundFaktor(p, f);   // M3: Exterieur-Fehler erhöhen das Risiko der passenden Befunde
     if (f.hufrehe != null && befundListe(p).some(b => b.art === "ems")) f.hufrehe *= 3;   // EMS: Hufrehe-Gefahr
     if (f.schlund != null && befundListe(p).some(b => b.art === "megaoes")) f.schlund *= 3;   // Megaösophagus: Schlundverstopfung
     const SF = STUFE().krankF;   // T2: Krankheiten je Stufe (Liste und Faktor)
     return Object.keys(KRANK).filter(k => f[k] != null && freiStufe("krank", k)).map(k => [k, BEFUND_RISIKO * KRANK[k].gew * konst * wohlF * (k === "arthrose" || k === "cushing" ? 1 : altF) * f[k] * SF]);
+  }
+  // M3: deutlicher Fehler ×1,3, starker ×1,7 – nur bei bestehenden Befunden: Stellung/Fesselung/Fundament → Sehnen und Gelenke, Huf → Huf-Befunde, Rücken → Kissing Spines
+  const BAU_BEFUND = { stV: ["sehne", "arthrose", "hufrolle"], stH: ["sehne", "spat", "arthrose"], fessel: ["sehne", "arthrose"], fundament: ["sehne", "spat", "arthrose", "fraktur"], huf: ["strahlfaeule", "hufabszess", "hornspalt", "hufrehe", "hufrolle"], ruecken: ["kissing"] }, BAU_BEFUND_F = [1, 1, 1.3, 1.7];
+  function bauBefundFaktor(p, f) {
+    let I; try { I = bauIst(p); } catch (e) { return; } if (!I) return; const Z = bauZiel(p), M = {};
+    Object.entries(BAU_BEFUND).forEach(([m, L]) => { const fa = BAU_BEFUND_F[bauStufe(Math.abs(I[m] - Z[m]) / BAU_S)]; if (fa > 1) L.forEach(k => { M[k] = Math.max(M[k] || 1, fa); }); });
+    Object.entries(M).forEach(([k, fa]) => { if (f[k] != null) f[k] *= fa; });
   }
   const URSACHE = {
     verletzung: (p, ort) => ort === "weide" ? "beim Toben auf der Weide" : "in der Box angeschlagen",
@@ -7508,11 +7521,23 @@
   // maximale Sprunghöhe nach Stockmaß (≈ 0,95 × Stockmaß) → höchste erreichbare Klasse
   const sprungHoehe = p => Math.round(0.95 * (p.stockmass || p.zielStockmass || 160));
   const hoeheStufe = p => SPRUNG_HOEHE.filter(h => h <= sprungHoehe(p)).length - 1;
+  // M3: Disziplin-Wert × (1 + 0,04 × Σ w · s), s = clamp(1 − d/1,5, −1, 1) je Merkmal – höchstens ±4 %
+  const BAU_DISZ = { dressur: { halsL: .15, halsA: .15, schulter: .20, ruecken: .15, kruppe: .15, fessel: .10, muskel: .10 }, springen: { kruppe: .20, schulter: .15, ruecken: .15, fundament: .15, muskel: .15, stV: .10, stH: .10 },
+    vielseitigkeit: { ruecken: .15, fundament: .20, schulter: .15, kruppe: .15, muskel: .15, stV: .10, stH: .10 }, galopprennen: { schulter: .20, kruppe: .20, muskel: .20, fundament: .20, rahmen: .10, fessel: .10 },
+    trabrennen: { kruppe: .20, fundament: .25, stV: .15, stH: .15, schulter: .15, rahmen: .10 }, passrennen: { rahmen: .20, kruppe: .20, fundament: .20, ruecken: .15, fessel: .10, stV: .075, stH: .075 },
+    toelt: { halsL: .15, halsA: .20, schulter: .20, ruecken: .20, kruppe: .15, fessel: .10 }, reining: { kruppe: .25, muskel: .25, ruecken: .15, stH: .15, fundament: .10, schulter: .10 },
+    pleasure: { schulter: .25, ruecken: .20, halsA: .15, fessel: .15, stV: .15, stH: .10 }, trail: { fundament: .25, stV: .20, stH: .20, huf: .20, fessel: .15 }, distanz: { fundament: .25, huf: .20, stV: .15, stH: .15, fessel: .15, ruecken: .10 } };
+  const BAU_DISZ_WIRKUNG = 0.04;
+  function bauDisziplinFaktor(p, k) {
+    const G = BAU_DISZ[k]; if (!G) return 1; let I; try { I = bauIst(p); } catch (e) { return 1; } if (!I) return 1;
+    const Z = bauZiel(p), sum = Object.entries(G).reduce((a, [m, w]) => a + w * Math.max(-1, Math.min(1, 1 - Math.abs(I[m] - Z[m]) / BAU_S / 1.5)), 0);
+    return 1 + BAU_DISZ_WIRKUNG * sum;
+  }
   function diszWert(p, k) {
     werteErgaenzen(p); const D = DISZ[k], gg = gangGezeigt(p);
     const grund = D.teile ? 0.25 * gewichtet(p, DISZ.dressur.w, gg) + 0.35 * gewichtet(p, DISZ.springen.w, gg) + 0.4 * gewichtet(p, GELAENDE_TEIL, gg) : gewichtet(p, D.w, gg);
     const c = Object.fromEntries(CHARAKTER.map(t => [t.key, charE(p, t.key)])), ch = Math.max(-0.1, Math.min(0.1, D.ch(c))), ausb = diszAusb(p, D);
-    const wert = Math.max(0, Math.min(100, (0.65 * grund + 0.35 * ausb) * (1 + ch)));
+    const wert = Math.max(0, Math.min(100, (0.65 * grund + 0.35 * ausb) * (1 + ch) * bauDisziplinFaktor(p, k)));   // M3: Exterieur ±4 %
     let stufe = null;
     if (k === "dressur") stufe = klasseIndex(ausbildungsWerte({ ...p, alter: alterJahre(p) }), gg);   // Dressur: Klassen wie bisher aus der Ausbildungsskala
     else if (D.stufen) { stufe = Math.min(STUFE_STAND.filter(x => ausb >= x).length, STUFE_WERT.filter(x => wert >= x).length) - 1; if (D.hoehe) stufe = Math.min(stufe, hoeheStufe(p)); }
@@ -8354,7 +8379,15 @@
   const fsRund = x => Math.max(1, Math.min(10, Math.round(x * 2) / 2));
   const fsKlasse = f => !f.anteile || reinAnteil(f.anteile, f.rasse) >= FS_REIN ? (f.geschlecht === "Stute" ? "stut" : "hengst") : "offen";
   // Bewertung eines Fohlens – erwartet: ohne Zufall (für die Einschätzung beim Nennen)
+  // M3: Marktwert aus dem Exterieur – deutlicher Fehler −3 %, starker −6 % je Merkmal (höchstens −25 %), Stärke (d < 0,4) +0,7 % je Merkmal (höchstens +8 %), gesamt 60 % … 125 %
+  const BAU_WERT = { deutlich: 0.03, stark: 0.06, minus: 0.25, staerke: 0.007, staerkeD: 0.4, plus: 0.08, min: 0.6, max: 1.25 };
+  function bauWertFaktor(p) {
+    let I; try { I = bauIst(p); } catch (e) { return 1; } if (!I) return 1;
+    const Z = bauZiel(p); let m = 0, s = 0; BAU_KEYS.forEach(k => { const d = Math.abs(I[k] - Z[k]) / BAU_S, st = bauStufe(d); if (st === 2) m += BAU_WERT.deutlich; else if (st === 3) m += BAU_WERT.stark; else if (d < BAU_WERT.staerkeD) s += BAU_WERT.staerke; });
+    return Math.max(BAU_WERT.min, Math.min(BAU_WERT.max, 1 - Math.min(BAU_WERT.minus, m) + Math.min(BAU_WERT.plus, s)));
+  }
   // Rassetyp: wie nah die Anlagen am Zuchtziel der Rasse liegen (PROFIL.koerper) + Rasseanteil; Schafs-/Schweinskopf und Fjord-Weiß kosten Typ
+  const FS_KOERPER_KORR = 0;   // Abgleich: Anteil Prämienfohlen soll gleich bleiben (± 3 Prozentpunkte)
   function typRoh(f) {
     werteErgaenzen(f); const pr = PROFIL[f.rasse] || PROFIL.hannoveraner, an = f.werte.anlage, rein = f.anteile ? reinAnteil(f.anteile, f.rasse) : 100;
     const ab = WERTE_KOERPER.reduce((a, x, i) => a + Math.abs((an[x.key] || 50) - (pr.koerper ? pr.koerper[i] : 60)), 0) / WERTE_KOERPER.length;
@@ -8364,8 +8397,7 @@
   function fohlenNoten(f, rz, ohneZufall) {
     werteErgaenzen(f); const pr = PROFIL[f.rasse] || PROFIL.hannoveraner, an = f.werte.anlage, g = f.werte.gang, z = () => ohneZufall ? 0 : (rz() - 0.5);
     const typ = fsRund(typRoh(f) + z() * 0.8);   // M2: Typ-Formel als typRoh/typNote herausgezogen (auch für die Karte Merkmale)
-    const fund = ((an.konstitution || 50) + (an.kraft || 50)) / 2 - ((pr.koerper ? (pr.koerper[9] + pr.koerper[0]) / 2 : 60));
-    const koerper = fsRund(7 + fund / 6 + z() * 0.8);
+    const koerper = fsRund(koerperRoh(f) + FS_KOERPER_KORR + z() * 0.8);   // M3: Körperbau aus den zwölf Exterieur-Werten (vorher Konstitution/Kraft)
     const schritt = fsRund(7 + (g.schritt - pr.gang[0]) * 1.1 + z() * 0.8), trab = fsRund(7 + (g.trab - pr.gang[1]) * 1.1 + z() * 0.8);
     const M = charE(f, "mut"), V = charE(f, "nerven"), T = charE(f, "temperament");
     const dusche = !ohneZufall && f.duschTag === spiel.tag - 1 ? FOHLEN_DUSCHE.note : !ohneZufall && f.dreck && (f.dreck.fell || 0) >= 20 ? -FOHLEN_DUSCHE.note : 0;   // W5: am Vortag Duschen geübt (sauber) +0,3 · schmutzig −0,3
@@ -13937,6 +13969,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Weitere Immobilien</b> (ausgegraut, Kauf ab H2): ${IMMOBILIEN.filter(I => !I.start).map(I => `${I.n} ${fmt(I.preis)}`).join(" · ")}. Frei, wenn der erste Kredit zur Hälfte getilgt ist und die Hälfte des Kaufpreises auf dem Hofkonto liegt.</p>
       <p><b>Turnierschleifen und Pinnwand (v584/v588, S1/S2, Dome 20.10.):</b> Farben nach FN: Platz 1 Gold, 2 Silber, 3 Weiß, 4 Blau, 5 Rot, 6 Grün, braun = Teilnehmer (Hufeisen). Farbig nur, wenn platziert (bestes Viertel, mind. 3); platziert ab Platz 7 braun; nicht platziert braun nur auf Haus-/Hofturnier; ausgeschieden nie; Titel + Sieg = blau-goldene Champion-Schleife. Stufe je Turnierart (<code>SCHL_STUFE</code>): ${Object.entries(SCHL_STUFE).map(([a, s]) => `${a} ${s}`).join(", ")}. Je Pferd <code>p.schleifen</code> (höchstens ${SCHL_MAX}), alte Pferde einmal aus den Erfolgen nachgebaut. Im Brief steht nur ein Platzhalter (<code>[[S:…]]</code>). Pinnwand in der Box (Wand-Ebene, hinter dem Pferd, ${PINN.cols} × ${PINN.rows} Plätze, ${PINN.w} × ${PINN.h}): Stufe 1 ${PINN.lage[1].join("/")}, Stufe 2 ${PINN.lage[2].join("/")}, Stufe 3 ${PINN.lage[3].join("/")}, Paddockbox ${PINN.lage.t.join("/")}; Reihenfolge Champion, Stufe 4 → 1, Platz 1 → 6, braun zuletzt, neueste zuerst. Abfohlbox: Pinnwand wird mit der Rückwand verkleinert, Rotlichtlampe an ihrer unteren rechten Ecke. Leckstein jetzt links vom Fenster, Namensschild in Box Stufe 3 entfernt.</p>
       <p><b>Karte Merkmale (v590, M2, Dome 20.10.):</b> Box – Steckbrief – Merkmale ersetzt die Reiter Gangwerk, Eigenschaften, Charakter (alte Namen öffnen den passenden Abschnitt). Aufklapp-Bereiche Gesamteindruck · Exterieur · Farbe &amp; Abzeichen · Gangwerk · Interieur (offene merkt sich <code>spiel.merkOffen</code>). Balken mit Raute (Zuchtziel), rechts Lage-Wort und Stufe: ideal d &lt; ${BAU_STUFEN[0][0]}, leichte Abweichung &lt; ${BAU_STUFEN[1][0]}, deutlicher Fehler &lt; ${BAU_STUFEN[2][0]}, darüber starker Fehler. Noten: Merkmal ${BAU_NOTE.basis} − ${BAU_NOTE.je} × d (${BAU_NOTE.min} … ${BAU_NOTE.max}), Körperbau = gewichteter Schnitt (×1,5 Fundament, Fesselung, Stellung vorne/hinten, Rücken, Kruppe), Typ = Typnote der Fohlenschau (<code>typNote</code>), Bewegung = Schnitt Schritt/Trab/Galopp (Tölt statt Galopp), Interieur = 3 + 7 × Schnitt(Arbeitswille, Nervenstärke, Menschenbezug, Mut, Lernfähigkeit, Konzentration, Gehorsam)/100, Gesamt = ${BAU_NOTE.gesamt.typ} Typ + ${BAU_NOTE.gesamt.koerper} Körperbau + ${BAU_NOTE.gesamt.bewegung} Bewegung + ${BAU_NOTE.gesamt.interieur} Interieur. Stufen: Anfänger nur der Satz Stärken/Schwächen, ab Fortgeschritten Balken, ab Experte Noten; Adminmodus mit Zahlen. Wirkungen der Noten (Fohlenschau, Marktwert, Disziplin, Gesundheit) folgen in M3, Rassemerkmale/Besonderheiten/Zuchtbuch in M4.</p>
+      <p><b>Wirkungen des Exterieurs (v594, M3, Dome 20.10.):</b> Marktwert (<code>bauWertFaktor</code>, nach <code>abstFaktor</code>): deutlicher Fehler −${BAU_WERT.deutlich * 100} %, starker −${BAU_WERT.stark * 100} % je Merkmal (höchstens −${BAU_WERT.minus * 100} %), Stärke (d &lt; ${BAU_WERT.staerkeD}) +${BAU_WERT.staerke * 100} % je Merkmal (höchstens +${BAU_WERT.plus * 100} %), gesamt ${BAU_WERT.min * 100} % … ${BAU_WERT.max * 100} %. Disziplin-Wert × (1 + ${BAU_DISZ_WIRKUNG} × Σ w · s), s = clamp(1 − d/1,5, −1, 1), Gewichte je Disziplin in <code>BAU_DISZ</code> (Summe 1, höchstens ±${BAU_DISZ_WIRKUNG * 100} %). Gesundheit (<code>BAU_BEFUND</code>, Faktor ${BAU_BEFUND_F[2]} deutlich / ${BAU_BEFUND_F[3]} stark auf das Basisrisiko, danach gilt die Stufen-Regel): Stellung, Fesselung, Fundament → Sehne, Arthrose, Spat, Hufrolle, Röhrbeinbruch; Huf → Strahlfäule, Hufabszess, Hornspalt, Hufrehe, Hufrolle; Rücken → Kissing Spines. Fohlenschau: Körperbau-Note = gewichteter Schnitt der zwölf Merkmalnoten (<code>koerperRoh</code>, Korrektur <code>FS_KOERPER_KORR</code> ${FS_KOERPER_KORR}), Typnote = <code>typRoh</code>; Anteil Prämienfohlen vorher 13–17 % je Rasse (Schnitt 14,6), nachher 13–20 % (Schnitt 15,5).</p>
       <p><b>Exterieur (v587, M1, Dome 20.10.):</b> zwölf Werte je Pferd in <code>p.bau</code> (${BAU_KEYS.map(k => BAU_NAME[k]).join(", ")}), jeder 0–100, fest ab Geburt (Bemuskelung und Huf sind die Anlage). Zuchtziel je Rasse <code>bauZielRasse</code> aus Gruppen (<code>BAU_GRUPPEN</code>, Stellung vorne/hinten überall 50) und Einzelwerten (<code>BAU_EINZEL</code>), Mischlinge als gewichteter Schnitt nach Rasseanteil (<code>bauZiel</code>), Streuung <code>BAU_S</code> = ${BAU_S}. Abweichung d = |Wert − Ziel| / ${BAU_S} (ideal d &lt; 0,7 ≈ 51 %, ab 1,75 ≈ 8 %, ab 2,33 ≈ 2 %). Alte Pferde, Markt, Deckstation, Archiv: <code>bauErgaenzen</code> würfelt einmal aus (Seed Pferde-ID + „-bau“, Normalverteilung um das Ziel). Vererbung <code>bauErben</code>: Mitte der Eltern + 0,2 × (Zuchtziel des Fohlens − Mitte) + Zufall (0,6 × ${BAU_S}), mit ${BAU_MUTATION * 100} % Mutation (±1,5 bis ±2,5 × ${BAU_S}); Herkunft in <code>herkunft.bau</code>. Ist-Werte: <code>muskelIst</code> = Anlage + ${MUSKEL_ZAHL.kraft} × (Kraft-Ist − Kraft-Anlage) − ${MUSKEL_ZAHL.futter} × (${MUSKEL_ZAHL.futterGrenze} − Futterzustand) unter ${MUSKEL_ZAHL.futterGrenze}, Alter ab ${MUSKEL_ZAHL.alterAb} Jahren −1 je Jahr (höchstens −${MUSKEL_ZAHL.alterMax}), Boxenruhe oder lange Krankheit −${MUSKEL_ZAHL.krank}; <code>hufIst</code> = Ziel + Abweichung × ${HUF_PFLEGE.gut} (gute Pflege) bzw. × ${HUF_PFLEGE.schlecht} (vernachlässigt); Fohlen/Jährlinge zeigen die Anlage. Bild: <code>opt.bau</code> (<code>bauOpt</code>, in <code>kopfOpt</code>; <code>bauK</code> in pferd.js): je σ 5 %, höchstens ±15 % auf Rumpflänge/-tiefe, Hals, Halswinkel, Beindicke, Hinterhand, Kruppe; Rassenansicht ohne. Admin: Aufschlüsselung „Größe &amp; Exterieur“ und „Mutationen“. Die Karte „Merkmale“ (M2), Noten und Wirkungen (M3) folgen.</p>
       <p><b>Reiter-Können (v585–v589, K1–K3, Dome 20.10.):</b> Können 0–100 je Gruppe in <code>spiel.reiter.koennen</code> (${Object.keys(REITER_DISZ).map(g => `${REITER_DISZ[g].n}${REITER_DISZ[g].lk ? " (LK)" : ""}`).join(", ")}; Tabelle <code>REITER_DISZ</code>, eine Zeile je Gruppe), nur Wachstum, nie weniger. Alte Spielstände (<code>reiterErgaenzen</code>): LK 7/6/5/4/3/2/1 = ${[7, 6, 5, 4, 3, 2, 1].map(l => REITER.alt[l]).join("/")}, Rennen/Distanz/Gangpferde ${REITER.start}. Zuwachs mal (1 − Können/${REITER.abnahme}): Training selbst +${REITER.training} je Einheit (Gewicht je Übung in <code>REITER_DISZ.ueb</code>; Gelände-Arbeit zählt beim Rennen nur halb; ein Drittel, wenn das Pferd ${REITER.nahe} Punkte oder mehr unter deinem Können steht – Stand des Pferdes = Anforderung seiner Klasse), Turnier Start +${REITER.turnier.start} / Platzierung +${REITER.turnier.platz} / Sieg +${REITER.turnier.sieg} mal Klassenfaktor (Wettbewerb/Hofturnier 0,5, E ${REITER_KL_FAKTOR[0]}, A ${REITER_KL_FAKTOR[1]}, L ${REITER_KL_FAKTOR[2]}, M ${REITER_KL_FAKTOR[3]}, S ${REITER_KL_FAKTOR[4]}), nur selbst geritten (kein Jockey, kein Ausbildungsstall). Anforderung je Klasse E/A/L/M/S = ${REITER_ANFORD.join("/")}. <b>Abstandsfaktor (K2, v586):</b> v = (Können − Stand des Pferdes) / 20 Klassen; Trainingsfaktor ${ABSTAND.map(([v, f]) => `v ${v} → ×${String(f).replace(".", ",")}`).join(" · ")}, ab v ≥ 2 ×1,2 (dazwischen linear) – ersetzt die alten +4 % je LK. Bei v ≤ −1 sinkt das Vertrauen um ${ABSTAND_VERTRAUEN.map(([v, x]) => `${String(x).replace(".", ",")} (v ≤ ${v})`).reverse().join(" / ")} je Einheit. Mitarbeiter: <code>trainerFaktor</code> × Abstandsfaktor mit Können = Fachwissen Rücken (+10 im Ausbildungsstall, höchstens 95). Übung mit mehreren Gruppen (Kondition, Ausritt): die Gruppe, in der das Pferd am weitesten ist. <b>Reitunterricht:</b> extern ${fmt(UNTERRICHT.preis)} je Stunde, beim festen Bereiter/Ausbilder kostenlos (er trainiert am nächsten Morgen keine Pferde, <code>m.unterrichtTag</code>); +${REITER.unterricht} (doppelt unter Können ${REITER.unterrichtDoppelUnter}) × Abnahme, nur bis Können ${REITER.unterrichtBis}, 1 Stunde je Tag und Gruppe. Hinweis „weiter als du“: Blase einmal je Pferd und Gruppe (<code>p.hinw.besser</code>, Hinweis <code>reiterBesser</code>), Zeile im Kauf-Infofenster, Satz im Ort-Reiter. <b>Turnier (K3, v589):</b> Reiterfaktor = 0,80 + 0,20 × min(1, q) + 0,08 × min(1, max(0, q − 1)) mit q = Können des Reiters / Anforderung der Klasse (mind. 10), also ×0,80 bis ×1,08 (ersetzt 0,95 + 0,015 × (7 − LK) und ×1,04 für den Ausbildungsstall). Reiter wählen beim Nennen (ab Fortgeschritten): du · fester Bereiter (Können = Rücken, kostenlos, trainiert an dem Tag nicht) bzw. Bereiter nach Bedarf (${BEDARF_EINHEITEN} × ${fmt(BEREITER_EINHEIT)}) · Profi (Können ${REITER_PROFI}, ${fmt(PROFI_GELD)}); Startrecht für Bereiter/Profi: Anforderung ≤ Können + 10, deine LK-Grenze gilt nur, wenn du selbst reitest; Erfolge zählen fürs Pferd, nicht für deine LK und dein Können. Ausbildungsstall reitet mit Können ${AUSB_KOENNEN}. Rennen: Jockey (Können ${REITER_PROFI}) oder selbst ab Können ${RENNEN_SELBST_AB} (spart das Reitgeld). Distanz, Tölt, Pass: dein Können zählt über den Reiterfaktor. LK-Aufstieg nur mit Können: ${Object.entries(LK_KOENNEN).sort((a, b) => b[0] - a[0]).map(([l, k]) => `LK ${l} ab ${k}`).join(" · ")} (Erfolge sammeln sich weiter). Warnung beim Nennen und Brief vom Ausbildungsstall, wenn das Pferd eine Klasse weiter ist als du (je einmal je Pferd und Disziplin). Zahlen im Adminmodus: Hofverwaltung – Reiter.</p>
       <p><b>Dispo</b> (je Hofkonto, Dome 19.10.): Rahmen −${fmt(DISPO.rahmen)}, ${prozent(DISPO.zins)} Zinsen im Jahr (je Jahreszeit ein Viertel, Buchung „Dispo: Zinsen“). Bis −${fmt(DISPO.rahmen)} kauft der Spieler normal ein, bei oder unter −${fmt(DISPO.rahmen)} sind alle Käufe gesperrt (Futter, Einstreu, Medikamente, Pferde, Bauen, Land, Ausrüstung, Labor); Rechnungen, Gehälter, Kreditraten und die Kolik-OP laufen weiter. Kreditraten dürfen bis −${fmt(DISPO.rahmen)} abgebucht werden – erst darüber gilt die Rate als verpasst (Mahnung wie beim Kredit). Aufzucht und Ausbildung sind schon bei jedem Minus gesperrt. Ablauf: ist das Konto zu Beginn einer Jahreszeit im Minus, zählt <code>jzMinus</code>; unter −${fmt(DISPO.rahmen)} oder ab ${DISPO.jzMinus} Jahreszeiten hintereinander kommt der Brief „Kündigung des Kontos angedroht“ (Bank-Ansehen −5), nach einer weiteren Jahreszeit im Minus Pfändung der Pferde zu ¾, bleibt das Konto danach im Minus: Insolvenz (bei mehreren Höfen nur dieser Hof, beim letzten Hof ist das Spiel verloren). Im Plus: Entwarnung. Mitarbeiter kündigen wie bisher, wenn das Konto am Jahreszeit-Ende im Minus ist. <b>Das zentrale Konto hat kein Dispo</b> – eine Überweisung vom zentralen Konto auf einen Hof im Minus bringt ihn aus dem Dispo.</p>

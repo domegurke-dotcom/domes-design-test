@@ -99,7 +99,7 @@ const { chromium } = require('playwright'); const path = require('path');
     const daten = I.querySelector('.karte').textContent;
     ok('Daten ohne Stockmaß, Kopf, Abzeichen, Beine, Augen, Gewicht', !/Stockmaß|Abzeichen|Augen|Gewicht/.test(daten) && /Rasse/.test(daten) && /Marktwert/.test(daten));
     I = zeig('merkmale'); const offen = [...I.querySelectorAll('[data-merk]')].filter(d => d.open).map(d => d.dataset.merk).join(), alle = [...I.querySelectorAll('[data-merk]')].map(d => d.dataset.merk).join();
-    ok('Fünf Aufklapp-Bereiche, beim ersten Öffnen nur Gesamteindruck offen', alle === 'gesamt,exterieur,farbe,gang,interieur' && offen === 'gesamt', alle + ' / offen ' + offen);
+    ok('Sieben Aufklapp-Bereiche, beim ersten Öffnen nur Gesamteindruck offen', alle === 'gesamt,exterieur,farbe,gang,interieur,rasse,besond' && offen === 'gesamt', alle + ' / offen ' + offen);
     ok('Ein „Vergleichen mit …“ oben', I.querySelectorAll('#vglKnopf').length === 1);
     const ex = I.querySelector('[data-merk="exterieur"]'); ex.open = true; ex.dispatchEvent(new Event('toggle'));
     ok('Offener Bereich wird gemerkt (spiel.merkOffen)', spiel.merkOffen.exterieur === true && zeig('merkmale').querySelector('[data-merk="exterieur"]').open);
@@ -156,6 +156,40 @@ const { chromium } = require('playwright'); const path = require('path');
     leseAkte(M); aktenReiter = 'merkmale'; zeigeAkte(); ok('Lese-Modus (Markt): Karte Merkmale mit Balken', document.querySelectorAll('#info .skala.merk').length === 12 && !!M.bau);
     return out;
   });
+  const R4 = await pg.evaluate(() => {
+    const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : '')); spiel.admin = false; spiel.stufenAn = false;
+    const neu = o => { const p = neuesPferd(o); p.pflege = erzeugePflege(p); p.werte = p.werte || erzeugeWerte(p); werteErgaenzen(p); bauErgaenzen(p); return p; };
+    // --- M4: Rassemerkmale ---
+    const H = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'RM1', id: 'rm1' }); H.besond = { hahn: false };
+    const R1 = rasseMerkmale(H); ok('Rassemerkmale: Zeilen Größe, Farbe, Abzeichen, Kopfform, Exterieur', ['Größe', 'Farbe', 'Abzeichen', 'Kopfform', 'Exterieur insgesamt'].every(n => R1.z.some(x => x.n === n)) && !R1.misch);
+    const Mi = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Mi', id: 'rm2' }); Mi.anteile = { hannoveraner: 50, shetty: 50 };
+    ok('Mischling: keine Rassenprüfung, kein Typ-Abzug', rasseMerkmale(Mi).misch && rmTypAbzug(Mi) === 0);
+    const Fr = neu({ rasse: 'friese', geschlecht: 'Stute', alter: 8, name: 'Fr', id: 'rm3' }); Fr.ex = Fr.ex || {}; Fr.ex.weiss = 1; ['bvl', 'bvr', 'bhl', 'bhr'].forEach(k => { Fr.ex[k] = 1; });
+    const RF = rasseMerkmale(Fr); ok('Friese mit viel Weiß: Abzeichen = schwerer Verstoß, Marktwert ×0,85', RF.z.find(x => x.n === 'Abzeichen').st >= 2 && rasseWertFaktor(Fr) <= RM_ZAHL.wertVerstoss, RF.z.find(x => x.n === 'Abzeichen').st + ' / ' + rasseWertFaktor(Fr));
+    const hv = JSON.stringify(besondListe(H)) + JSON.stringify(rasseMerkmale(H)) + merkmaleHTML(H, null, () => '', () => '', () => '');
+    ok('Versteckte Gene (Cr, Lp, ex.…) stehen nicht auf der Karte', !/\bCr\b|\bLp\b|Patn|ex\./.test(hv));
+    // --- Hahnentritt ---
+    let n0 = 0, n1 = 0, n2 = 0; const N = 3000, ff = () => ({}); const A = { besond: { hahn: false }, id: 'a' }, B = { besond: { hahn: true }, id: 'b' };
+    for (let i = 0; i < N; i++) { if (besondErben(A, A, ff()).hahn) n0++; if (besondErben(A, B, ff()).hahn) n1++; if (besondErben(B, B, ff()).hahn) n2++; }
+    ok('Hahnentritt-Vererbung: ohne ≈ 0,3 %, ein Elternteil ≈ 10 %, zwei ≈ 30 %', n0 / N < 0.012 && Math.abs(n1 / N - 0.1) < 0.03 && Math.abs(n2 / N - 0.3) < 0.04, [n0, n1, n2].map(x => (x / N * 100).toFixed(1)).join(' / '));
+    const Hh = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Hh', id: 'rm4' }); Hh.besond = { hahn: false }; const w0 = besondWertFaktor(Hh); Hh.besond.hahn = true;
+    ok('Hahnentritt: Marktwert ×0,85, Besonderheit in der Liste', nah0(besondWertFaktor(Hh) / w0, RM_ZAHL.hahnWert) && besondListe(Hh).some(x => x.k === 'hahn'));
+    function nah0(a, b) { return Math.abs(a - b) < 1e-9; }
+    // --- Zuchtbuch ---
+    const Z = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Z', id: 'rm5' }); const zb = zuchtbuchVon(Z);
+    ok('Zuchtbuch: Stute ab 3 J. hat eine Klasse', !!zb && ZUCHTBUCH.some(k => k[1] === zb.n));
+    const Hn = neu({ rasse: 'hannoveraner', geschlecht: 'Hengst', alter: 8, name: 'Hn', id: 'rm6' }); const Fo = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 1, name: 'Fo', id: 'rm7' });
+    ok('Zuchtbuch: Hengst, Jungpferd und Mischling ohne Klasse', zuchtbuchVon(Hn) === null && zuchtbuchVon(Fo) === null && zuchtbuchVon(Mi) === null);
+    ok('Zuchtbuch-Schwellen 8/7/6', ZUCHTBUCH.map(k => k[0]).join() === '8,7,6,0' && ZUCHTBUCH[0][1] === 'Hauptstutbuch');
+    // --- Wirkung auf Typnote und Marktwert ---
+    const T = neu({ rasse: 'friese', geschlecht: 'Stute', alter: 1, name: 'T', id: 'rm8' }); const t0 = typRoh(T); T.kopf = { f: 'schwein', s: 3 };
+    ok('Typnote sinkt bei Verstoß (Schweinskopf bzw. Rassemerkmal)', typRoh(T) < t0);
+    const Mw = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Mw', id: 'rm9' }); Mw.besond = { hahn: false }; const m0 = marktwert(Mw); Mw.besond.hahn = true;
+    ok('Marktwert sinkt mit Hahnentritt', marktwert(Mw) < m0, marktwert(Mw) + ' < ' + m0);
+    ok('Exterieur-Faktor zwischen 60 % und 125 %', (() => { for (let i = 0; i < 100; i++) { const x = neu({ rasse: 'friese', geschlecht: 'Stute', alter: 8, name: 'e' + i, id: 'ef' + i }); const f = exterieurFaktor(x); if (f < 0.6 || f > 1.25) return false; } return true; })());
+    return out;
+  });
+  R.push(...R4);
   R.push(...R2);
   const html = require('fs').readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf8'), ras = (html.match(/\.\.\.kopfOpt\(wahl\), bau: undefined/g) || []).length, alle = (html.match(/kopfOpt\(wahl\)/g) || []).length;
   R.push((ras === alle && alle >= 2 ? '✓ ' : '✗ ') + 'Rassenansicht/Gene selbst wählen: kopfOpt(wahl) immer mit bau: undefined (ohne Exterieur) – ' + ras + ' von ' + alle);

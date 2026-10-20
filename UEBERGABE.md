@@ -20,7 +20,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 Übergabe von Claude Team (v560–v582) gelesen und übernommen, Nachricht gelöscht. Am Code nichts geändert, Version bleibt v582.
 
 ### Fortschritt Mehr-Etappen-Lauf (Dome, 20.10.2026; Regeln in CLAUDE.md „Mehr-Etappen-Lauf“)
-Drei Phasen, am Phasenende hält Claude an; Dome schaltet das Modell um und sagt „weiter“.
+Vier Phasen (A, B, C, D = großer Test), am Phasenende hält Claude an; Dome schaltet das Modell um und sagt „weiter“.
 | Phase | Modell | Etappe | Stand |
 |---|---|---|---|
 | A | Sonnet | S1 Schleifen, Regeln, `p.schleifen`, Brief | offen |
@@ -36,7 +36,7 @@ Drei Phasen, am Phasenende hält Claude an; Dome schaltet das Modell um und sagt
 | C | Sonnet | M3 Wirkungen | offen |
 | C | Sonnet | M4 Rassemerkmale, Besonderheiten, Zuchtbuch | offen |
 | C | Sonnet | M5 Verpaaren, Fremd-Vergleich, Hinweise, Admin | offen |
-| Ende | – | großer Test ohne Bilder (etappen, hof-gesamt, neuladen) + kleine Tests + Tutorial-Spieler | offen |
+| D | Sonnet | großer Test ohne Bilder (etappen, hof-gesamt, neuladen) + neue kleine Tests + Tutorial-Spieler – erst nach Domes „weiter“ | offen |
 
 Wecker nur innerhalb einer Phase. Zwischen den Phasen: „Phase X fertig – bitte umschalten“ hier eintragen und aufhören. Fragen: `OFFENE-FRAGEN.md`.
 

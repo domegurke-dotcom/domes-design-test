@@ -98,5 +98,5 @@ Bricht die Sitzung ab, kann **Claude Pro** hier weitermachen (Dome: Stand nach *
 1. Mit Dome `OFFENE-FRAGEN.md` Punkte 1–9 durchgehen (Entscheidungen der Nacht), danach anpassen und beantwortete Fragen löschen.
 2. Dome testet im Spiel: neues Spiel als Anfänger (Tutorial, Blasen, Stufen), Raritäten-Markt (ab Sommer), Waschplatz/Solarium bauen, Spiel verlieren → Abschlussbilanz → „Letzten Stand ansehen“.
 3. Große Tests (Etappen-, Hof-Gesamt-, Neuladen-Test) wurden **nicht** gelaufen – vorher Dome fragen. Achtung: neue Spiele haben seit v569 die Stufen-Sperre (Standard Anfänger) → in großen Tests nach dem Start `spiel.stufenAn = false` setzen.
-4. Die Selbststarts 7:05 und 12:05 (Routinen „Zuchtstall: Fortsetzen …“) finden nichts Offenes mehr im Plan vor – dort nur kurz prüfen und berichten.
+4. Selbststart 7:05 ist gelaufen; den Selbststart um 12:05 hat Dome abgesagt (Routine gelöscht).
 5. **7:05-Start (20.10.2026) erledigt:** Stand v572 auf `main` geprüft, Stufen- und Tutorial-Test grün, nichts Neues angefangen. Es fehlen nur Domes Antworten (OFFENE-FRAGEN 1–9) und ihr Test.

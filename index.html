@@ -991,7 +991,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "568";
+  const SPIEL_VERSION = "569";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -999,11 +999,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=568"></script>
-<script src="pferd.js?v=568"></script>
-<script src="boxstufen.js?v=568"></script>
-<script src="kopfneu.js?v=568"></script>
-<script src="waschbild.js?v=568"></script>
+<script src="lz-string.min.js?v=569"></script>
+<script src="pferd.js?v=569"></script>
+<script src="boxstufen.js?v=569"></script>
+<script src="kopfneu.js?v=569"></script>
+<script src="waschbild.js?v=569"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2502,6 +2502,40 @@
     GENE.forEach(([k]) => { if (k === "Dm") return; const q = Math.max(1e-6, genotypProb(p.rasse, k, g, hengst)); if (q < (SELTEN_MERKMAL_RASSE[p.rasse] || SELTEN_MERKMAL)) M.push({ k, q, al: (g[k] || []).slice().sort().join("/") }); });
     return M.length ? { p: M.reduce((a, m) => a * m.q, 1), merkmale: M } : null;
   }
+  // ---------- T2 (PLAN-HINWEISE.md / PLAN-STUFEN.md, Dome 20.10.2026): Spielumfang je Erfahrungsstufe ----------
+  // Gilt nur, wenn spiel.stufenAn (neue Spiele ab v569; alte Spielstände bleiben ohne Sperre, einschaltbar in Einstellungen). Gesperrtes wird versteckt; Laufendes läuft weiter.
+  // null = alles erlaubt. krankF: Faktor aufs Krankheitsrisiko · krank: erlaubte Krankheiten (null = alle, "fort" = ohne Erbkrankheiten/Veranlagungen) · krankTod: Tod durch Krankheit möglich
+  const ERFAHRUNG_STUFEN = {
+    anf: { n: "Anfänger", hoefe: 1, maerkte: ["verkaufen", "angebote", "haendler", "tierschutz"], zucht: false, labor: false, turnierMax: 0, championat: false, krankF: 0.25, krank: ["husten", "erkaeltung", "verletzung", "mauke"], krankTod: false, bauen: ["stall", "weide", "weideland", "reitplatz", "gummi"], ma: ["stallbursche", "pfleger", "azubi"] },
+    fort: { n: "Fortgeschritten", hoefe: 2, maerkte: ["verkaufen", "angebote", "privat", "haendler", "auktion", "fohlen", "gestuet", "rennen", "tierschutz"], zucht: true, labor: true, turnierMax: 2, championat: false, krankF: 0.6, krank: "fort", krankTod: true, bauen: "ohneRenn", ma: "ohneTrainer" },
+    exp: { n: "Experte", hoefe: 5, maerkte: null, zucht: true, labor: true, turnierMax: 9, championat: true, krankF: 1, krank: null, krankTod: true, bauen: null, ma: null } };
+  const KRANK_EXPERTE = ["lymphoedem", "mondblind", "pssm", "mh", "cushing", "sarkoid", "sonnenbrand", "augenkrebs", "ems", "hyperlipaemie", "kissing", "hufrolle", "spat", "sehne", "eiph", "fraktur", "darmstein", "aorta", "megaoes", "shivers", "krypt", "mcoa", "vergiftung"];   // Fortgeschritten: ohne Erbkrankheiten, Veranlagungen und die seltenen schweren Fälle
+  const stufeAktiv = () => spiel && spiel.stufenAn ? ((spiel.spieler && spiel.spieler.stufe) || "anf") : "exp";
+  const STUFE = () => ERFAHRUNG_STUFEN[stufeAktiv()] || ERFAHRUNG_STUFEN.exp;
+  const STUFE_NEU = { fort: ["Makler-Höfe (bis 2)", "alle Pferdemärkte außer Raritäten", "eigene Zucht", "Labor (Gentests)", "Turniere bis Klasse M", "Bereiter und alle Bauten außer Rennbahn", "mehr Krankheiten (etwa die Hälfte)"],
+    exp: ["bis 5 Höfe", "Raritäten-Markt", "Championate und Internationale Turniere", "alle Bauten und Berufe", "alle Krankheiten mit Erbkrankheiten und Veranlagungen"] };
+  function stufeWaehlen(danach) {   // T2: Stufe jederzeit hoch und herunter – nichts geht verloren, nur Neues wird gesperrt
+    const alt = (spiel.spieler && spiel.spieler.stufe) || "anf";
+    dialog(`<h3>🎓 Erfahrungsstufe</h3><p>Die Stufe bestimmt, welche Funktionen es gibt und wie oft Pferde krank werden. Du kannst sie jederzeit ändern – beim Herunterstellen geht nichts verloren, Laufendes (Trächtigkeit, Fohlen, Höfe, Gebäude) läuft weiter, nur Neues wird gesperrt.</p>${spiel.stufenAn ? "" : `<p class="text"><small>Hinweis: Der Spielumfang je Stufe ist für diesen Spielstand aus – die Stufe wirkt dann nur auf die Tipps.</small></p>`}`,
+      [...["anf", "fort", "exp"].map(k => [`${k === alt ? "✓ " : ""}${ERFAHRUNG_STUFEN[k].n}`, () => {
+        if (k === alt) { if (danach) danach(); return; }
+        spiel.spieler = spiel.spieler || {}; if (!spiel.spieler.stufeStart) spiel.spieler.stufeStart = alt; spiel.spieler.stufe = k; speichern();
+        const R = ["anf", "fort", "exp"], neu = R.indexOf(k) > R.indexOf(alt) ? R.slice(R.indexOf(alt) + 1, R.indexOf(k) + 1).flatMap(x => STUFE_NEU[x] || []) : [];
+        dialog(`<h3>🎓 ${ERFAHRUNG_STUFEN[k].n}</h3>${neu.length ? `<p>Neu freigeschaltet:</p><ul class="liste">${neu.map(x => `<li>${x}</li>`).join("")}</ul>` : `<p>Ab jetzt ist das Spiel einfacher: weniger Funktionen und seltener krank. Alles Laufende bleibt.</p>`}`, [["OK", danach]]); }, k === alt ? "" : "zweit"]), ["Abbrechen", null, "zweit"]]);
+  }
+  // T2: nach einem Jahr Brief „Bereit für mehr?“ (Anfänger/Fortgeschritten, Frühling Tag 1)
+  function stufeBrief() {
+    const d = datum(); if (!spiel.stufenAn || d.s !== 0 || d.t !== 1 || stufeAktiv() === "exp") return; const S = (spiel.stufeBriefe = spiel.stufeBriefe || []); if (S.includes(d.j) || spiel.tag < 4 * tpj()) return; S.push(d.j);
+    brief("Hofverwaltung", "Bereit für mehr?", `ein Jahr auf dem Hof liegt hinter {dir|Ihnen}. Wenn {du magst|Sie mögen}, {kannst du|können Sie} unter Hofverwaltung → Einstellungen die Erfahrungsstufe erhöhen. Dann gibt es mehr: ${(STUFE_NEU[stufeAktiv() === "anf" ? "fort" : "exp"] || []).join(", ")}. Nichts davon ist Pflicht.`);
+  }
+  function frei(f, x) {
+    const S = STUFE();
+    if (f === "markt") return !S.maerkte || S.maerkte.includes(x);
+    if (f === "bauen") return !S.bauen || (S.bauen === "ohneRenn" ? x !== "rennbahn" : S.bauen.includes(x));
+    if (f === "ma") return !S.ma || (S.ma === "ohneTrainer" ? !["renntrainer", "westerntrainer"].includes(x) : S.ma.includes(x));
+    if (f === "krank") return !S.krank || (S.krank === "fort" ? !KRANK_EXPERTE.includes(x) && !(BEFUND_ZUSATZ && BEFUND_ZUSATZ[x]) : S.krank.includes(x));
+    return S[f] !== false;
+  }
   const rasseName = id => (RASSEN.find(r => r.id === id) || {}).name || id;
   function seltenAusb(p) {   // Klasse S (Westernreiter: Open) mit Platzierungen/Siegen in der höchsten Klasse einer Disziplin
     const B = p.bilanz && p.bilanzV === 3 ? p.bilanz : (p.erfolge && p.erfolge.length ? bilanzHolen(p) : null); if (!B) return null; const G = {};
@@ -3717,7 +3751,7 @@
     } else if (aktenReiter === "genetik") {
       const sperre = zuchtSperre(p, box);
       const paar = sperre === "Wallach" ? "" : sperre === "Pensionspferd" ? `<p class="text" style="margin:14px 0 0">💞 Pensionspferd – über Zucht entscheidet der Besitzer.</p>` : sperre ? `<p class="text" style="margin:14px 0 0">💞 Verpaaren nicht möglich: ${esc(p.name)} ${sperre === "zu jung" ? "ist zu jung (Zucht ab 3 Jahren)" : sperre === "zu schwach" ? "ist nicht gesund genug (Gesundheit unter 50 %)" : ({ "gerade gedeckt": "ist gerade gedeckt worden – ob es geklappt hat, zeigt die Trächtigkeitsuntersuchung oder die nächste Rosse", "keine Rosse": "zeigt keine Rosse – vielleicht ist sie tragend, vielleicht war die Rosse still. Gewissheit bringt die Trächtigkeitsuntersuchung (Daten – Zucht)", "noch keine Rosse": `ist nicht tragend – die nächste Rosse kommt ${p.rosseAb ? tagIn(p.rosseAb) : "bald"}`, "gerade abgefohlt": "hat gerade abgefohlt – die Fohlenrosse kommt ab morgen", "Winterruhe": "ist in der Winterruhe – Stuten rossen erst wieder im Frühling" })[sperre] || sperre}.</p>`
-        : `<button class="knopf" id="paarKnopf" style="width:100%;margin:16px 0 0">💞 Verpaaren mit …</button>`;
+        : frei("zucht") ? `<button class="knopf" id="paarKnopf" style="width:100%;margin:16px 0 0">💞 Verpaaren mit …</button>` : "";
       const D = p.deckFremd || {}, deckF = p.geschlecht === "Hengst" && !fremd(p) && alterJZ(p) >= ZUCHTALTER ? `<div class="wn-hinweis" style="margin-top:10px">🐎 <b>Deckhengst für fremde Stuten</b>${vorteil("zucht")
         ? `<br><label class="fp-check"><input type="checkbox" id="deckFremd" ${D.an ? "checked" : ""}> anbieten – Decktaxe ${fmt(decktaxe(p))} (10 % des Marktwerts)</label><small style="display:block">Stutenbesitzer kommen in der Decksaison (Frühling und Sommer), etwa ${String(Math.round(deckFremdErwartet(p) * 10) / 10).replace(".", ",")} ${Math.round(deckFremdErwartet(p) * 10) === 10 ? "Stute" : "Stuten"} je Jahreszeit – mehr mit Turniererfolgen und prämierten Fohlen.${D.n ? ` Bisher ${D.n} fremde ${D.n === 1 ? "Stute" : "Stuten"} gedeckt, ${fmt(D.summe || 0)} Decktaxe.` : ""}${sperre ? ` Gerade nicht möglich: ${esc(sperre)}.` : ""}</small>`
         : `<br><small>Nur im Zuchtstall mit erfüllten Bedingungen (Hofverwaltung → Hof → Übersicht → Stallart).${D.n ? ` Bisher ${D.n} fremde Stuten gedeckt.` : ""}</small>`}</div>` : "";
@@ -3969,7 +4003,7 @@
         `<p class="text" style="margin:0 0 4px">📍 ${esc(p.name)} ${box.offen ? "lebt im <b>Aufzucht-Offenstall</b>" : `steht in <b>Box ${aktBox + 1}</b>`}${paddockVon(p) ? ` – gerade im <b>${paddockName(paddockVon(p))}</b>${paddockPferde(paddockVon(p)).length > 1 ? ` mit ${paddockPferde(paddockVon(p)).filter(q => q !== p).map(q => esc(q.name)).join(", ")}` : " (allein)"}` : ""}. Wohin soll ${pron(p).er}?</p>
         <div class="kacheln quadrat">${kOrt("box", "🔀", "Box wechseln", freieBox() < 0 ? "keine frei" : `${spiel.boxen.filter(boxFrei).length} frei`, "In eine andere Box umziehen")}${offenBoxen().length ? kOrt("offenstall", "🐎", "Offen\u00adstall", box.offen ? "zurück in eine Box" : offenSperre(p, box) ? "passt nicht" : offenPlatz() < 0 ? "voll" : `${offenBoxen().filter(offenFrei).length} frei`, box.offen ? "Aus dem Aufzucht-Offenstall in eine normale Box" : "In den Aufzucht-Offenstall (Jungpferde ½–3 Jahre, Stuten als Tanten)") : ""}${boxKacheln}
           ${ortModus === "training" ? "" : plaetze.filter(([k]) => !TRAIN_GRUPPE.includes(k)).map(ortKachel).join("") + kOrt("training", "🏇", "Training", (() => { const n = plaetze.filter(([k]) => TRAIN_GRUPPE.includes(k) && (spiel.anlage[k] || spiel.admin)).length; return n ? `${n} ${n === 1 ? "Platz" : "Plätze"}` : "kein Platz"; })(), "Roundpen, Reitplatz, Reithalle, Gelände, Rennbahn, Trail")}
-          ${kOrt("labor", "🔬", "Labor", fremd(p) ? "nur der Besitzer" : "Gentests", "Genetische Tests mit einer Haarprobe", !fremd(p))}
+          ${frei("labor") ? kOrt("labor", "🔬", "Labor", fremd(p) ? "nur der Besitzer" : "Gentests", "Genetische Tests mit einer Haarprobe", !fremd(p)) : ""}
           ${kOrt("anhaenger", "🚚", "Pferde\u00adanhänger", fremd(p) ? "nur der Besitzer" : "Klinik, Turnier, Abgeben …", "Mit dem Anhänger wegfahren", !fremd(p))}</div>
           ${auslaufZeile(p)}`;
       }
@@ -5449,7 +5483,8 @@
     Object.entries(BEFUND_ZUSATZ).forEach(([k, fn]) => { f[k] = fn(p, box, ort, s, j); });   // v514: neue Krankheiten (Rasse, Alter, Arbeit, Fütterung)
     if (f.hufrehe != null && befundListe(p).some(b => b.art === "ems")) f.hufrehe *= 3;   // EMS: Hufrehe-Gefahr
     if (f.schlund != null && befundListe(p).some(b => b.art === "megaoes")) f.schlund *= 3;   // Megaösophagus: Schlundverstopfung
-    return Object.keys(KRANK).filter(k => f[k] != null).map(k => [k, BEFUND_RISIKO * KRANK[k].gew * konst * wohlF * (k === "arthrose" || k === "cushing" ? 1 : altF) * f[k]]);
+    const SF = STUFE().krankF;   // T2: Krankheiten je Stufe (Liste und Faktor)
+    return Object.keys(KRANK).filter(k => f[k] != null && frei("krank", k)).map(k => [k, BEFUND_RISIKO * KRANK[k].gew * konst * wohlF * (k === "arthrose" || k === "cushing" ? 1 : altF) * f[k] * SF]);
   }
   const URSACHE = {
     verletzung: (p, ort) => ort === "weide" ? "beim Toben auf der Weide" : "in der Box angeschlagen",
@@ -5511,11 +5546,11 @@
         // Dome (v260): krank und kerngesund zugleich geht nicht – Obergrenze der Gesundheit je nach Grad (chronisch milder)
         const decke = 100 - (K.chronisch ? 6 : 12) * b.grad; if (p.pflege.gesundheit > decke) p.pflege.gesundheit = decke;
         // v532 (Dome): manche schweren Fälle sterben auch mit Behandlung – das ist keine Vernachlässigung (kein Tierschutz)
-        if (TOD_TROTZ[b.art] && (b.gradMax || b.grad) >= 4 && !b.todWurf && (BW.wert >= 0.3 || b.tierarzt)) { b.todWurf = true;   // v540 (Dome): schwere Kolik ohne OP (abgelehnt oder nur zu Hause behandelt) stirbt wahrscheinlicher (85 %) als mit OP (25 %, KOLIK_OP_TOD)   // v535: auch wenn es nach dem schweren Tag schon etwas besser ist
+        if (STUFE().krankTod && TOD_TROTZ[b.art] && (b.gradMax || b.grad) >= 4 && !b.todWurf && (BW.wert >= 0.3 || b.tierarzt)) { b.todWurf = true;   // v540 (Dome): schwere Kolik ohne OP (abgelehnt oder nur zu Hause behandelt) stirbt wahrscheinlicher (85 %) als mit OP (25 %, KOLIK_OP_TOD)   // v535: auch wenn es nach dem schweren Tag schon etwas besser ist
           if (Math.random() < TOD_TROTZ[b.art]) { box.tot = true; p.pflege.gesundheit = 0; p.todesursache = `${K.n} (trotz Behandlung)`;
             brief("Tierarztpraxis", `Abschied von ${p.name}`, `es tut uns sehr leid: <b>${esc(p.name)}</b> (Box ${i + 1}) ist heute Nacht gestorben.<br><br><b>Todesursache:</b> ${K.n}. Wir haben alles versucht – {du hast|Sie haben} alles richtig gemacht, aber manchmal ist ein Fall zu schwer.`, { pferde: [p] }); return; } }
         // Tod: nur nach mindestens einer deutlichen Warnung
-        if (K.tod && BW.wert < 0.3 && b.grad === 5 && b.gewarnt && spiel.tag - (b.grad5 || spiel.tag) >= K.tod) {
+        if (STUFE().krankTod && K.tod && BW.wert < 0.3 && b.grad === 5 && b.gewarnt && spiel.tag - (b.grad5 || spiel.tag) >= K.tod) {   // T2: Anfänger – kein Tod durch Krankheit
           box.tot = true; p.pflege.gesundheit = 0; p.todesursache = `${K.n} (unbehandelt)`; if (!fremd(p)) (spiel.vernachlaessigt = spiel.vernachlaessigt || []).push(p.name);   // Dome (v260): zählt als Vernachlässigung
           brief("Tierarztpraxis", `Abschied von ${p.name}`, `es tut uns sehr leid: <b>${esc(p.name)}</b> (Box ${i + 1}) ist heute Nacht gestorben.<br><br><b>Todesursache:</b> ${K.n} – zu lange ohne Behandlung.`, { pferde: [p] });
         }
@@ -7401,6 +7436,10 @@
   }
   // Darf dieses Pferd in dieser Prüfung genannt werden? "" = ja
   function nennSperre(p, t, P) {
+    const ST = STUFE();   // T2: Turniere je Stufe (Anfänger: Hofturnier-Wettbewerbe und E, Fortgeschritten: bis M, ohne Championate/International)
+    if (!ST.championat && (t.art === "championat" || t.art === "international")) return `ab Stufe Experte (Hofverwaltung → Einstellungen)`;
+    if (P.fohlenschau && !ST.zucht) return `ab Stufe Fortgeschritten`;
+    if (!P.fohlenschau && (P.stufe == null ? ST.turnierMax < 1 : P.stufe > ST.turnierMax)) return `als ${ST.n} ${ST.turnierMax < 1 ? "nur Wettbewerbe und Klasse E" : "nur bis Klasse M"}`;
     if (P.fohlenschau) return fohlenschauSperre(p, t, P);
     if (spiel.tag >= t.tag) return "Nennschluss vorbei";
     if (!geimpft(p)) return "keine gültige Influenza-Impfung – auf Turnieren Pflicht (Tierarzt: Impfung)";   // v533 (Dome, wie bei der FN)
@@ -9451,7 +9490,7 @@
     jedenHof(hofNacht, true);
     tierschutzKlinik(); tierschutzFohlen(); laborNacht(); auktionsNacht();
     if (datum().t === 1) weihnachtsSpende();   // v378
-    if (datum().t === 1) { jedenHof(() => { stallartJahreszeit(); patenJahreszeit(); pensionJahreszeit(); bereiterPensionAbrechnung(); fremdFohlenJahreszeit(); offenstallJahreszeit(); kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); jahreszeitBeginn(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); bereiterAbrechnung(); maKnappPruefen(); dispoJahreszeit(); bestenAlle(); auktionsEnde(); fohlenAbsetzen(); stutenAusAbfohl(); }, true); spamAufraeumen(); hoefeVersteigern(); jahresbericht(); try { rarJahreszeit(); } catch (e) { console.error("Raritäten:", e); } }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
+    if (datum().t === 1) { jedenHof(() => { stallartJahreszeit(); patenJahreszeit(); pensionJahreszeit(); bereiterPensionAbrechnung(); fremdFohlenJahreszeit(); offenstallJahreszeit(); kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); jahreszeitBeginn(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); bereiterAbrechnung(); maKnappPruefen(); dispoJahreszeit(); bestenAlle(); auktionsEnde(); fohlenAbsetzen(); stutenAusAbfohl(); }, true); spamAufraeumen(); hoefeVersteigern(); jahresbericht(); try { rarJahreszeit(); } catch (e) { console.error("Raritäten:", e); } try { stufeBrief(); } catch (e) { console.error("Stufe:", e); } }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
     turnierKalender();
     jedenHof(hofMorgen, true);
     blutbilderTag();     // Laborergebnisse
@@ -10912,7 +10951,7 @@
     const kopf = (t, sub) => `<button class="zurueck-s voll" id="mkUebersicht" style="align-self:flex-start;justify-self:start">‹ Pferdemarkt</button><div class="panel voll"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>${t}</b>${geld}</div>${sub ? `<p style="margin:4px 0 0;font-size:.85rem;opacity:.75">${sub}</p>` : ""}`;
     let html = "";
     if (!B_) html = `<div class="panel voll"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>Was möchtest du tun?</b>${geld}</div>
-      <div class="kacheln quadrat markt-kacheln">${MARKT_BEREICHE.map(([id, ico, n, kurz, an0], _i, _l, an = an0 && (id !== "fohlen" || fohlenZeit())) => `<button class="kachel ${an ? "klickbar" : "fehlt"}" data-mb="${id}" ${an ? "" : "disabled"}><span class="ico">${ico}</span><b>${n}</b><small>${!an ? (id === "fohlen" ? "nur Sommer und Herbst" : "bald") : id === "raritaeten" && !rarOffen() ? "öffnet im Sommer" : id === "angebote" ? `${eigene.length} ${eigene.length === 1 ? "Angebot" : "Angebote"}` : id === "tierschutz" && ts.length ? `${ts.length} ${ts.length === 1 ? "Pferd" : "Pferde"}` : kurz}</small></button>`).join("")}</div></div>`;
+      <div class="kacheln quadrat markt-kacheln">${MARKT_BEREICHE.filter(([id]) => frei("markt", id)).map(([id, ico, n, kurz, an0], _i, _l, an = an0 && (id !== "fohlen" || fohlenZeit())) => `<button class="kachel ${an ? "klickbar" : "fehlt"}" data-mb="${id}" ${an ? "" : "disabled"}><span class="ico">${ico}</span><b>${n}</b><small>${!an ? (id === "fohlen" ? "nur Sommer und Herbst" : "bald") : id === "raritaeten" && !rarOffen() ? "öffnet im Sommer" : id === "angebote" ? `${eigene.length} ${eigene.length === 1 ? "Angebot" : "Angebote"}` : id === "tierschutz" && ts.length ? `${ts.length} ${ts.length === 1 ? "Pferd" : "Pferde"}` : kurz}</small></button>`).join("")}</div></div>`;
     else if (marktBereich === "angebote") html = kopf("🏷️ Meine Verkaufspferde", "Antippen für alle Infos oder um ein Angebot zurückzuziehen.") + angebotListe + `</div>`;
     else if (marktBereich === "haendler") html = kopf("🐴 Pferdehändler", "Das Angebot wechselt jede Jahreszeit. Antippen für alle Infos.") + kaufListe + `</div>`;
     else if (marktBereich === "privat") { const pv = marktNeu().privat.filter(h => !(spiel.marktGekauft || []).includes(h.id));
@@ -11349,7 +11388,7 @@
   }
   function neuesSpielAnlegen(c, tempo, I, name) {
     c.hof = name;
-    spiel = { geld: START_KAPITAL, spieler: c, tag: 1, tempo, tempoNeu: true, aktBox: 0, sparmodus: spiel.sparmodus, hofAusbau: HOF_AUSBAU,
+    spiel = { geld: START_KAPITAL, spieler: c, tag: 1, tempo, tempoNeu: true, aktBox: 0, sparmodus: spiel.sparmodus, hofAusbau: HOF_AUSBAU, stufenAn: true,
       boxen: Array.from({ length: I.boxen }, (_, i) => ({ nr: i + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false, stufe: I.stufe })),
       anlage: spiel.anlage, ausruestung: spiel.ausruestung, stallarten: ["pension"],
       hof: { hid: "h1", name, id: I.id, art: "pension", ha: I.ha, weideHa: I.weide, bauHa: 1, stufe: I.stufe, wert: I.preis, kauf: { tag: 1, preis: I.preis, eigen: I.eigen }, pacht: 0, pension: { max: PENSION_START_PLAETZE } }, hofReihe: ["h1"], hoefe: {} };
@@ -11466,6 +11505,7 @@
   function ersterKredit() { return imHof(hofReihe()[0], () => kredite()[0]); }
   function immoSperre2(A) {
     if (hofAnzahl() >= MAX_HOEFE) return `Du hast schon ${MAX_HOEFE} Höfe – mehr geht nicht.`;
+    if (hofAnzahl() >= STUFE().hoefe) return `Als ${STUFE().n} ${STUFE().hoefe === 1 ? "hast du einen Hof" : `höchstens ${STUFE().hoefe} Höfe`} – mehr ab einer höheren Stufe (Hofverwaltung → Einstellungen).`;   // T2
     if ((spiel.makler.gekauft || []).includes(A.mid)) return "verkauft";
     const k = ersterKredit(), haelfte = !k || k.getilgt >= k.summe / 2, eigen = zentral().geld >= Math.ceil(A.preis / 2);
     if (!haelfte) return `Wird frei, wenn dein erster Kredit zur Hälfte abbezahlt ist (jetzt ${prozent(k.getilgt / k.summe)}).`;
@@ -12049,7 +12089,7 @@
       ${plan.length ? `<h4 class="ma-titel">🚧 Umbau geplant</h4>${plan.map(planHTML).join("")}` : ""}
       ${bau.length ? `<h4 class="ma-titel">🏗️ Im Bau</h4>${bau.map(g => `<div class="geb"><span class="geb-ico">${BAUTEN[g.typ].ico}</span><span class="geb-txt"><b>${gebName(g)}</b><small>${g.bau.art === "umbau" ? `Umbau auf Stufe ${g.stufe + 1}` : `Stufe ${g.stufe} – ${STUFE_NAME[g.stufe]}`} · noch ${tageTxt2(g.bau.rest)}${BAUTEN[g.typ].aussen && datum().s === 3 ? " · ❄️ ruht im Winter" : ""}</small></span></div>`).join("")}` : ""}
       <h4 class="ma-titel">🏠 Gebäude und Anlagen</h4>${steht.length ? steht.map(gebZeile).join("") : `<p class="text">Noch keine Gebäude.</p>`}
-      <h4 class="ma-titel">➕ Neu bauen</h4><div class="kacheln quadrat bau-kacheln">${BAU_WICHTIG.map(k => { if (k === "gummi") { const L = spiel.boxen.filter(b => boxenStufe(b) >= 2 && !b.offen); if (!L.length) return ""; const n = L.filter(b => !b.gummi).length;   // Dome (v358): Gummimatten erst ab einer Stufe-2-Box
+      <h4 class="ma-titel">➕ Neu bauen</h4><div class="kacheln quadrat bau-kacheln">${BAU_WICHTIG.filter(k => frei("bauen", k)).map(k => { if (k === "gummi") { const L = spiel.boxen.filter(b => boxenStufe(b) >= 2 && !b.offen); if (!L.length) return ""; const n = L.filter(b => !b.gummi).length;   // Dome (v358): Gummimatten erst ab einer Stufe-2-Box
           return `<button class="kachel ${n ? "klickbar" : "fehlt"}" ${n ? 'data-gummi="1"' : "disabled"} title="Gummimatten für Boxen ab Stufe 2"><span class="ico">⬛</span><b>Gummi\u00admatten</b><small>${n ? `${fmt(BODEN_WIRKUNG.GUMMI_PREIS)}/Box · ${n} ohne` : "alle Boxen haben welche"}</small></button>`; }
         if (k === "weideland" || k === "bauland") return `<button class="kachel klickbar" data-land="${k === "weideland" ? "weide" : "bau"}" title="${k === "weideland" ? "Weideland kaufen oder pachten" : "Bauland kaufen"}"><span class="ico">${k === "weideland" ? "🌱" : "📐"}</span><b>${k === "weideland" ? "Weide\u00adland" : "Bau\u00adland"}</b><small>${k === "weideland" ? `${fmt(LAND_PREIS)}/ha · Pacht` : `${fmt(BAULAND_PREIS)}/ha · frei ${haTxt(baulandFrei())}`}</small></button>`;
         const B = BAUTEN[k], sp = bauSperre(k);
@@ -13459,6 +13499,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Spielstand und Speicherplätze (PLAN-SPIELSTAND.md, v519):</b> Schlüssel im Browser: Autospeicher <code>zuchtstall-v2</code> (läuft immer mit, kurz verzögert 0,4 s und sofort beim Verlassen/Verstecken der Seite), Platz 1 <code>zuchtstall-p1</code>, Platz 2 <code>zuchtstall-p2</code> (nur selbst gespeichert, mit Kurzinfo Hof/Datum/Tag/Version/echtes Datum), Alles gepackt mit lz-string (<code>compressToUTF16</code>; ungepackte alte Stände beginnen mit „{“ und werden beim nächsten Speichern gepackt). Größe jetzt: ${(() => { try { const j = JSON.stringify(spiel).length, g = packen(spiel).length; return `ungepackt ${j.toLocaleString("de-DE")} Zeichen → gepackt ${g.toLocaleString("de-DE")} Zeichen (${Math.round(g / j * 100)} %)`; } catch (e) { return "–"; } })()}. Spiel-Nummer <code>spiel.spielId</code>, eigener Speicherplatz <code>spiel.platz</code> (null = noch nie gespeichert; neues Spiel legt keinen Speicherstand an, Tipp „Spiel speichern“; beim ersten Speichern Speicherplatz wählen), Turnier-Sortierung <code>spiel.tsort</code>. „Ungespeicherter Fortschritt“ = Tag, Geld, Pferde/Fohlen, Einsteller, Mitarbeiter, Kredite oder Briefe weichen vom Platz ab (<code>fortschritt</code>). Platzwechsel lädt den Stand in den Autospeicher und startet die Seite neu (Merker <code>zuchtstall-start</code> in sessionStorage → direkt ins Spiel). Speichern schlägt fehl → rote Meldung mit Datei-Knopf, höchstens 1× je Spieltag. Spiel verloren → nur der Autospeicher wird gelöscht. Datei (S2/S3): <code>Zuchtstall_&lt;Hof&gt;_Jahr&lt;jj&gt;-&lt;Jahreszeit&gt;_&lt;Datum&gt;.json</code>, Umlaute im Dateinamen als ae/oe/ue/ss (v523, auch im Notfall-Fenster) – im Spiel bleibt der Hofname mit Umlauten.</p>
       <p><b>Hofchronik (B2, v548):</b> Dieselben Zähler wie das Spielprotokoll, aber <b>je Hof</b> getrennt (<code>spiel.chronik[Hof]["Jahr-Jahreszeit"].k</code>); das Spielprotokoll bleibt als „Gesamt“. Neu gezählt: Turnier-Start/Sieg/Platz <b>je Disziplin und Klasse</b> („Turnier Dressur L: Sieg“), höchste erreichte Klasse je Disziplin, „Abgabe: Gnadenhof / Tierschutz / Händler (Rückgabe)“, „Pferd gepfändet“, höchster und tiefster Kontostand je Jahreszeit (<code>hoch</code>/<code>tief</code>, gemessen bei jeder Buchung), Höfe gekauft/verkauft/verloren mit Name und Jahreszeit (<code>spiel.chronikHoefe</code>). Alte Spielstände haben keine Aufteilung nach Höfen (Anzeige später „–“). Die Anzeige (Jahresbericht, Verloren-Bilanz) folgt in B3/B4.</p>
       <p><b>Hinweisblasen (T1, v568):</b> ersetzen die Tipp-Fenster (nur Spielstart und „Geld wird knapp“ bleiben Fenster). Blase mit Pfeil und Ring, Antippen = weg. Leitfaden der ersten Tage (zählt nicht gegen das Limit, gesehen oder erledigt → nächster Schritt): ${LEITFADEN.map(x => HINWEISE[x[0]][0]).join(" → ")}. Nebentipps höchstens 1 je Ansicht und 3 je Spieltag, nie während Fenster, Wischen, Box-Ziehen, Menü oder Tagwechsel. Stufe: Anfänger alle, Fortgeschrittene nur die wichtigen, Experten keine (einschaltbar). ☰ → Hilfe listet die gesehenen Tipps, Enzyklopädie „🌱 Einsteiger-Wissen“ für „Mehr dazu“. ${Object.keys(HINWEISE).length} Hinweise im Katalog.</p>
+      <p><b>Spielumfang je Stufe (T2, v569):</b> nur für neue Spiele (<code>spiel.stufenAn</code>; alte Spielstände alles frei, einschaltbar in Einstellungen). ${["anf", "fort", "exp"].map(k => { const S = ERFAHRUNG_STUFEN[k]; return `<b>${S.n}</b>: ${S.hoefe} ${S.hoefe === 1 ? "Hof" : "Höfe"}, Märkte ${S.maerkte ? S.maerkte.length : "alle"}, Zucht ${S.zucht ? "ja" : "nein"}, Labor ${S.labor ? "ja" : "nein"}, Turniere bis ${S.turnierMax < 1 ? "E" : S.turnierMax < 3 ? "M" : "alle"}${S.championat ? " inkl. Championate" : ""}, Krankheiten ×${String(S.krankF).replace(".", ",")}${S.krankTod ? "" : " (kein Tod durch Krankheit)"}`; }).join(" · ")}. Umstellen jederzeit (Hofverwaltung → Einstellungen), die Weihnachtsspende bleibt an der Stufe beim Spielstart. Nach einem Jahr Brief „Bereit für mehr?“.</p>
       <p><b>Waschplatz (W1/W2, v563):</b> Pferdepflege → Ort → Waschplatz, Werkzeuge per Wischen: Abspritzen (Fell sauber, Mähne halb, Sommer Wohlbefinden +${WASCH.sommerWohl} einmal am Tag; Putz-Wohlbefinden nur einmal zusammen mit Bürste), Shampoo (${fmt(WASCH.shampooPreis)} je Flasche, ${WASCH.shampooN} Anwendungen, Fellglanz 1 Jahreszeit = +2 % Marktwert), Beine &amp; Hufe, Abtrocknen (Handtuch Stufe 1, Schweißmesser ab Stufe 2; ersetzt das Abschwitzen), Beine kühlen ab Stufe 3, Pilzwaschung. Ganzes Pferd: Sommer immer, Frühling/Herbst bei Sonne/Wolken, Winter nie; Beine/Hufe im Winter nur mit warmem Wasser (ab Stufe 2, Zustand ≥ ${WASCH.warmAb} %); unter 1 Jahr nur Beine. Verschwitzt nach ≥ ${WASCH.schweiss} Energie Training (≥ ${WASCH.schweissHeiss} bei Sonne im Sommer oder nervösen Pferden): über Nacht Herbst/Winter Erkältung ×${WASCH.erkaeltSchweiss}, sonst Fell +${WASCH.schweissDreck}. Nass über Nacht (außer Sommer): Mauke ×${WASCH.maukeNass}, Herbst/Winter Erkältung ×${WASCH.erkaeltNass}. Hufe an zwei Tagen hintereinander gewaschen: Strahlfäule ×${WASCH.hufOft}. Mauke: Beine waschen + abtrocknen + Wundsalbe +${WASCH.maukeSalbe} Heilwirkung, ohne Abtrocknen schadet es. Gewöhnung ${WASCH.gewohnt} Wäschen (ängstlich ${WASCH.gewohntAngst}), Wohlbefinden −3 … −1, bleibt für immer. Ohne Gummimatten ${WASCH.ausrutschen * 100} % Ausrutschen (kleine Verletzung), mit Matten Wohlbefinden +${WASCH.mattenWohl}. Gesperrt bei Erkältung, Husten, Fieber, Wunde, Hufverband, Kolik, Hufrehe, Klinik, draußen.</p>
       <p><b>Pferdesolarium (W3, v564):</b> eigenes Gebäude ${BAUTEN.solarium.preis.map(fmt).join(" / ")}, 12 m², Pension-Bonus ${AUSSTATTUNG.solarium.map(x => Math.round(x * 100) + " %").join(" / ")}. Trocknet nasse und verschwitzte Pferde sofort, Wohlbefinden +${SOLAR.wohl} je Anwendung (mit Gummimatten +${SOLAR.wohlMatten}). Winter ${SOLAR.maxWinter}× am Tag (vor dem Reiten ersetzt es das Aufwärmen – kein −20 %), sonst ${SOLAR.max}×. Vor und nach dem Reiten am selben Tag: in der Nacht Lahmheit ×${SOLAR.lahm}, Kreuzverschlag ×${SOLAR.kreuz}. Gleiche Sperren wie am Waschplatz (ohne Wetter).</p>
       <p><b>Pfleger und Einsteller (W4, v565):</b> Pferdepfleger/Pferdewirt Haltung und Service (Aufgabe „Waschen“, in mab abwählbar) waschen abends in ihren Boxen verschwitzte oder schmutzige Pferde (Fell ≥ 50) – höchstens so viele wie der Waschplatz Plätze hat (Stufe 1/2/3), verschwitzte zuerst; im Herbst/Winter ohne Abspritzen nur trocken reiben. Einsteller-Leistungen „Waschen“ (je Wäsche ${WASCH_PENSION.map(fmt).join(" / ")}) und „Solarium“ (je Anwendung ${SOLAR_PENSION.map(fmt).join(" / ")}, nach Training oder wenn nass) – abgerechnet mit dem Pensionsgeld zu Beginn der nächsten Jahreszeit.</p>
@@ -13633,7 +13674,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       const zuVersorgen = spiel.boxen.filter(b => b.pferd && !b.pferd.klinik && !b.tot).length, st = maZuteilung("stall"), bb = st.map(x => x.i);
       const vg = spiel.maVergessen && spiel.maVergessen.tag === spiel.tag ? spiel.maVergessen.liste : [];
       inhalt = `<p class="text" style="margin:0 0 8px">Dein Stall: <b>${stallGroesse()}</b> (${spiel.boxen.length} ${spiel.boxen.length === 1 ? "Box" : "Boxen"} · klein bis 8, mittel 9–19, groß ab 20). Je größer der Stall, desto mehr Berufe bewerben sich.</p>
-        <div class="kacheln quadrat markt-kacheln">${MITARBEITER.filter(([id]) => { const T = MA_TYP[id]; if (id === "futterberatung" || id === "hufschmied") return true; if (!T) return false; return !(T.staelle && !T.staelle.some(x => stallarten().includes(x))) || angestellte(id).length > 0; }).map(([id, ico, n, kurz]) => { const T = MA_TYP[id];   // Dome (v343): nur Berufe, die es bei dieser Stallart gibt
+        <div class="kacheln quadrat markt-kacheln">${MITARBEITER.filter(([id]) => { const T = MA_TYP[id]; if (id === "futterberatung" || id === "hufschmied") return true; if (!T) return false; if (!frei("ma", id) && !angestellte(id).length) return false; return !(T.staelle && !T.staelle.some(x => stallarten().includes(x))) || angestellte(id).length > 0; }).map(([id, ico, n, kurz]) => { const T = MA_TYP[id];   // Dome (v343): nur Berufe, die es bei dieser Stallart gibt
           if (id === "futterberatung") return `<button class="kachel klickbar" id="futterberatungAlle"><span class="ico">${ico}</span><b>${n}</b><small>${spiel.futterTermin ? "Termin morgen" : futterexperteAngestellt() ? "angestellt – kostenlos" : `auf Termin · ${fmt(FUTTER_BERATUNG)}/Pferd + Anfahrt`}</small></button>`;
           if (id === "hufschmied") return `<button class="kachel klickbar" id="hufschmiedAlle"><span class="ico">${ico}</span><b>${n}</b><small>${spiel.boxen.filter(b => b.pferd && b.pferd.pflege && !b.pferd.klinik && hufLaenge(b.pferd) >= 1).length || "keine"} fällig</small></button>`;
           if (!T) return `<button class="kachel fehlt" disabled><span class="ico">${ico}</span><b>${n}</b><small>${kurz}</small></button>`;
@@ -13650,6 +13691,8 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       inhalt = `<button class="sknopf" id="hfDatei" style="margin-top:0"><span class="i">💾</span><span>Spielstand downloaden<small>Zuletzt heruntergeladen: ${exportText()}</small></span></button>
         <button class="sknopf" id="hfSpar"><span class="i">🔋</span><span>Sparmodus ist ${spiel.sparmodus ? "an" : "aus"}<small>keine Animationen – schont den Akku</small></span></button>
         <button class="sknopf" id="hfVoll"><span class="i">⛶</span><span>Vollbildmodus ist ${istVoll() ? "an" : "aus"}<small>antippen zum Umschalten</small></span></button>
+        <button class="sknopf" id="hfStufe"><span class="i">🎓</span><span>Erfahrungsstufe: ${(ERFAHRUNG_STUFEN[(spiel.spieler && spiel.spieler.stufe) || "anf"] || {}).n || "Anfänger"}<small>${spiel.stufenAn ? "bestimmt, welche Funktionen und Krankheiten es gibt – jederzeit änderbar" : "Spielumfang je Stufe ist aus (alter Spielstand: alles frei)"}</small></span></button>
+        <button class="sknopf" id="hfStufenAn"><span class="i">🔓</span><span>Spielumfang je Stufe ist ${spiel.stufenAn ? "an" : "aus"}<small>${spiel.stufenAn ? "Anfänger und Fortgeschrittene sehen weniger Funktionen" : "alle Funktionen frei, wie bisher"}</small></span></button>
         <button class="sknopf" id="hfTipps"><span class="i">💡</span><span>Tipps für Einsteiger sind ${spiel.tippsAus ? "aus" : "an"}<small>kurze Erklärung beim ersten Öffnen einer Seite</small></span></button>
         <button class="sknopf" id="hfTippsNeu"><span class="i">🔁</span><span>Alle Tipps wieder zeigen<small>jeder Tipp kommt noch einmal</small></span></button>
         ${aufnahmeHTML()}
@@ -13726,6 +13769,8 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     if (hofReiter === "finanzen" && finanzTab === "bank") bankBinden(nb, () => zeigeHof());
     nb.querySelectorAll("[data-fs]").forEach(b => b.onclick = () => { finanzStart += +b.dataset.fs; zeigeHof(); });
     nb.querySelectorAll("[data-zahle]").forEach(b => b.onclick = () => rechnungZahlen(b.dataset.zahle, () => zeigeHof()));
+    if ($("hfStufe")) $("hfStufe").onclick = () => stufeWaehlen(() => zeigeHof());   // T2
+    if ($("hfStufenAn")) $("hfStufenAn").onclick = () => { spiel.stufenAn = !spiel.stufenAn; speichern(); zeigeHof(); };
     if ($("hfTipps")) $("hfTipps").onclick = () => { spiel.tipps = spiel.tipps || {}; spiel.tippsAus = !spiel.tippsAus; speichern(); zeigeHof(); };   // v376
     if ($("hfAufnahme")) $("hfAufnahme").onclick = () => { if (!spiel.aufnahme) { aufnahmeStart(); zeigeHof(); return; }   // v529/v530: beim Beenden darf die Aufnahme einen Namen bekommen
       const fertig = () => { const v = (($("aufName") || {}).value || "").trim().slice(0, 40); aufnahmeEnde(v); zeigeHof(); };
@@ -13951,7 +13996,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   // v378 (Dome): Erfahrung beim Start – Anfänger 5.000 € (1. Winter) + 2.500 € (2. Winter), Fortgeschritten 2.500 € (1. Winter), Experte nichts; Werte für 7 Tage/Jz, sonst anteilig
   const SPENDE = { anf: [5000, 2500], fort: [2500], exp: [] };
   function weihnachtsSpende() {
-    if (datum().s !== 3) return; const st = (spiel.spieler && spiel.spieler.stufe) || "exp", nr = spiel.spendeNr || 0, b = SPENDE[st] && SPENDE[st][nr];
+    if (datum().s !== 3) return; const st = (spiel.spieler && (spiel.spieler.stufeStart || spiel.spieler.stufe)) || "exp", nr = spiel.spendeNr || 0, b = SPENDE[st] && SPENDE[st][nr];   // T2: die Spende hängt an der Stufe beim Spielstart (späteres Umstellen ändert sie nicht)
     spiel.spendeNr = nr + 1; if (!b) return;
     const betrag = Math.round(b * tpj() / 7 / 50) * 50; buchen(betrag, "Weihnachtsspende");
     brief("Pferdefreunde e. V.", "Frohe Weihnachten!", `zum Fest möchten wir {deinen|Ihren} Einsatz für die Pferde unterstützen: <b>${fmt(betrag)}</b> haben wir {deinem|Ihrem} Hofkonto gutgeschrieben.${nr ? "" : " Wir hoffen, das hilft gut durch den Winter!"}<br><br>Herzliche Grüße`);

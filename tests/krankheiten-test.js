@@ -14,7 +14,7 @@ const NEU_VL = ['sarkoid', 'hautkrebs', 'ems', 'aorta', 'megaoes', 'shiver', 'kr
   await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html'));
   await pg.click('#smNeu'); await pg.fill('#chName', 'Test'); await pg.click('#chLos'); await pg.waitForTimeout(200); await pg.click('#dlgKnoepfe button');
   await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'Testhof'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(200);
-  const r = await pg.evaluate(([NEU, NEU_ERB, NEU_VL]) => {
+  const r = await pg.evaluate(([NEU, NEU_ERB, NEU_VL]) => { spiel.stufenAn = false;   // T2: Test prüft das ganze Spiel (Experte)
     const A = {}; const ev = n => (0, eval)(n);
     const fehler = []; const check = (n, b) => { if (!b) fehler.push(n); };
     // ---- 1. Daten vollständig ----

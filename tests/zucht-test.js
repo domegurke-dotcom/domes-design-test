@@ -9,7 +9,7 @@ const { chromium } = require('playwright'); const path = require('path');
   const R = await pg.evaluate(() => {
     const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : '')); const zu = () => { document.getElementById('dlg').hidden = true; };
     window.zeigeStall = () => {}; window.zeigeTag = () => {}; window.zeigeAkte = () => {}; window.reaktionZeigen = () => {};
-    zu(); spiel.tippsAus = true; spiel.geld = 1e6; spiel.admin = false;
+    zu(); spiel.tippsAus = true; spiel.stufenAn = false; spiel.geld = 1e6; spiel.admin = false;
     const g0 = spiel.boxen[0]; while (spiel.boxen.length < 12) spiel.boxen.push({ nr: spiel.boxen.length + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false, geb: g0.geb, stufe: g0.stufe });
     spiel.boxen.slice(8, 12).forEach(x => { x.abfohl = true; });
     const neu = (o) => { const p = neuesPferd(o); p.pflege = erzeugePflege(p); p.werte = p.werte || erzeugeWerte(p); ['impf', 'wurm', 'zahn', 'huf'].forEach(k => p.pflege[k] = spiel.tag); return p; };

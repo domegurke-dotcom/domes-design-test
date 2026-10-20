@@ -111,8 +111,17 @@ const { chromium } = require('playwright'); const path = require('path');
       ok('Stufe 3: kein goldenes Namensschild mehr', !document.querySelector('#stall .sName')); }
     { b0.tot = true; const g = zeig(x => { x.stufe = 2; }); ok('Totes Pferd: keine Pinnwand', g.style.display === 'none' && g.innerHTML === ''); b0.tot = false; }
     { const f = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 0, name: 'Fohlen' }); f.erfolge = []; schleifeGeben(f, 'fohlenschau', 1, 8, true, true, 'Stutfohlen', 'Schau'); b0.fohlen = f; const g = zeig(x => { x.stufe = 2; }); ok('Mit Fohlen bei Fuß: Pinnwand zeigt die Schleifen der Mutter', (g.innerHTML.match(/class="schleife"/g) || []).length === 9 && !/Champion-Schleife.*Fohlen/.test(g.innerHTML)); delete b0.fohlen; }
-    { const g = zeig(x => { x.stufe = 2; }); g.dispatchEvent(new MouseEvent('click', { bubbles: true })); const d = document.getElementById('dlg'); ok('Antippen öffnet alle Schleifen (11) vor der Box', !d.hidden && (document.getElementById('dlgInhalt').innerHTML.match(/class="schleife"/g) || []).length === 11); d.hidden = true;
-      g.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); ok('Auch mit Tastatur (Enter)', !d.hidden); d.hidden = true; }
+    { const g = zeig(x => { x.stufe = 2; }); g.dispatchEvent(new MouseEvent('click', { bubbles: true })); const ov = document.getElementById('pinnGross'), n = () => (ov.innerHTML.match(/class="pinn-s"/g) || []).length;
+      ok('Antippen öffnet die große Pinnwand mit allen Schleifen (11), abgedunkelter Hintergrund', !!ov && !ov.hidden && n() === 11 && getComputedStyle(ov).position === 'fixed');
+      ok('Standard „nach Jahr“: Jahresüberschriften, neuestes Jahr zuerst', ov.querySelectorAll('.pinn-jahr').length >= 1 && (() => { const J = [...ov.querySelectorAll('.pinn-jahr')].map(h => +h.textContent.replace(/\D/g, '')); return J.every((v, i) => !i || J[i - 1] > v); })());
+      ov.querySelector('[data-psort="klasse"]').click(); ok('„nach Klasse“: ohne Jahresüberschriften, gespeichert in spiel.pinnSort', !document.querySelector('#pinnGross .pinn-jahr') && spiel.pinnSort === 'klasse' && n() === 11);
+      ok('Reihenfolge nach Klasse = Wand-Reihenfolge', [...document.querySelectorAll('#pinnGross .pinn-s')].map(b => b.getAttribute('aria-label').split(' · ')[0]).length === 11);
+      ov.querySelector('.pinn-zu').click(); g.dispatchEvent(new MouseEvent('click', { bubbles: true })); ok('Letzte Auswahl wird beim nächsten Öffnen wieder eingestellt', !document.querySelector('#pinnGross .pinn-jahr') && document.querySelector('#pinnGross [data-psort="klasse"]').classList.contains('an'));
+      document.querySelector('#pinnGross .pinn-s').click(); const bl = document.querySelector('#pinnGross .pinn-blase'); ok('Tipp auf eine Schleife: Blase mit Prüfung, Platz, Turnier, Jahreszeit', !bl.hidden && /Platz von|Sieger/.test(bl.textContent) && /Jahr \d+/.test(bl.textContent), bl.textContent);
+      ov.querySelector('.pinn-karte').dispatchEvent(new MouseEvent('click', { bubbles: true })); ok('Tipp in die Karte schließt nicht', !ov.hidden);
+      ov.dispatchEvent(new MouseEvent('click', { bubbles: true })); ok('Tipp neben die Pinnwand schließt', ov.hidden);
+      g.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); ok('Auch mit Tastatur (Enter) und ✕ schließt', !ov.hidden && (ov.querySelector('.pinn-zu').click(), ov.hidden));
+      g.dispatchEvent(new MouseEvent('click', { bubbles: true })); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); ok('Escape schließt', ov.hidden); spiel.pinnSort = 'jahr'; }
     ok('Tipp-Text: Prüfung · Platz von Starter / Turnier / Jahreszeit, Jahr', /^P\d+ · \d\. Platz von 12 \/ T\d+ \/ (Frühling|Sommer|Herbst|Winter), Jahr \d+$/.test(schleifeText(S[2])), schleifeText(S[2]));
     return out;
   });

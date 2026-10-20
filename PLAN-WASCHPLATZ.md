@@ -98,4 +98,4 @@
 - **W3 fertig** (v564, Solarium als Gebäude, Kachel im Ort, Wirkung, im Waschplatz-Test). Bilder kommen mit W6.
 - **W4 fertig** (v565): Pfleger wäscht abends (`waschAbend`, Aufgabe „waschen“), Pension-Leistungen „Waschen“/„Solarium“ je Nutzung. Abweichung: ein-/ausschaltbar je Mitarbeiter (mab), nicht je Box.
 - **W5 fertig** (v566): „Duschen üben“ als eigene Kachel neben dem Fohlen-ABC (`fohlenDuschen`, `f.duschTag`), Fohlenschau ±0,3 (`fohlenNoten`). Abweichung: eigene Kachel statt Schritt im ABC.
-- W6 offen (Bilder einbauen, Gummimatten kaufen am Waschplatz/Solarium).
+- **W6 fertig** (v567): alle zehn Bilder in `waschbild.js` (Metadaten entfernt, IDs je Bild eindeutig), Pferd steht davor, Boxteile vor dem Pferd ausgeblendet (`waschBildSetzen`); Gummimatten kaufen am Waschplatz/im Solarium (`MATTEN_PREIS` 350 €). bzn-Absätze W1–W6. **Alle Etappen W1–W6 fertig – Domes Abnahme steht aus.** Die Zahlen aus „Von Projekt-Chat ergänzt“ sind so umgesetzt und stehen in OFFENE-FRAGEN.md zur Bestätigung.

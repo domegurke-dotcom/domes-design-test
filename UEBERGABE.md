@@ -84,4 +84,5 @@ Bricht die Sitzung ab, kann **Claude Pro** hier weitermachen: Stand steht in der
 | Waschplatz W3 Solarium | **fertig v564** |
 | Waschplatz W4 Pfleger/Einsteller | **fertig v565** |
 | Waschplatz W5 Fohlen | **fertig v566** |
-| Waschplatz W6 Bilder, Matten | in Arbeit |
+| Waschplatz W6 Bilder, Matten | **fertig v567** |
+| Hinweise T1 | in Arbeit |

@@ -1,8 +1,9 @@
 // Neuladen-Test (v307): Spielstände mit Pferden draußen (Weide, Sandpaddock, Pensionspferde, Fohlen) speichern, neu laden, weiterspielen.
 // Start (im Repo-Ordner): NODE_PATH=/opt/node22/lib/node_modules node tests/neuladen-test.js
-// Erwartet: jede Zeile „✓“ und am Ende „alles ok“.
+// Erwartet: jede Zeile „✓“ und am Ende „alles ok“. Bilder: BILDER=fehler|alle BILDER_ORDNER=<Scratchpad-Ordner> (tests/bilder.js).
 const { chromium } = require('playwright');
 const path = require('path');
+const B = require('./bilder');   // Bilder-Schalter: BILDER=aus|fehler|alle, siehe tests/bilder.js
 const FAELLE = {
   'eigenes Pferd auf der Weide': () => { const p = neu('Wiese'); aufWeide(p, boxVon(p), null, weiden()[0].wid); return p; },
   'eigenes Pferd im Sandpaddock': () => { const p = neu('Sand'); paddockDa(); rausAusBox(boxVon(p)); p.paddock = { seit: spiel.tag, pid: 'gpdT' }; return p; },
@@ -35,9 +36,11 @@ const FAELLE = {
     if (start) { await pg.click('#smWeiter'); await pg.waitForTimeout(400);
       weiter = await pg.evaluate(() => { zeigeAkte(); zeigeStall(); tagBeenden(); return true; }).catch(e => { errs.push(e.message); return false; }); await pg.waitForTimeout(2500); }
     L.push([start && weiter && !errs.length ? '✓' : '✗', name, start ? '' : 'kein Startmenü', errs.join(' | ')]);
+    await B.bild(pg, 'neuladen-' + name, L[L.length - 1][0] === '✓');
     await pg.close();
   }
   L.forEach(x => console.log(x.filter(Boolean).join('  ')));
   console.log(L.every(x => x[0] === '✓') ? 'alles ok' : 'FEHLER');
+  if (B.zusammenfassung()) console.log(B.zusammenfassung());
   await b.close();
 })();

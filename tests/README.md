@@ -38,3 +38,11 @@ Ziel: 2 Höfe (Pension 20 Boxen + Zuchtstall 10 Pferde), keine Kredite. Fehlerqu
 
 ## Krankheiten-Test (v514)
 `NODE_PATH=/opt/node22/lib/node_modules node tests/krankheiten-test.js` – prüft die neuen Erbkrankheiten, Veranlagungen und Befunde (Daten vollständig, Erbgang, Risiken je Rasse, Tierarzt-Besuch, OPs, Zuchtsperre, Gebiss, Kopfform-Neigung, Speichern/Neuladen). Erwartet: nur „✓“ und „alles ok“.
+
+## Bilder bei großen Tests (Dome, 20.10.2026)
+Etappen-Test, Hof-Gesamttest und Neuladen-Test können Bildschirmfotos speichern – gewählt per Umgebungsvariable, ohne sie laufen die Tests wie bisher ohne Bilder:
+- `BILDER=aus` – keine Bilder (Standard)
+- `BILDER=fehler` – Bilder nur bei Problemen (✗ oder Seitenfehler)
+- `BILDER=alle` – Bilder in allen Ansichten, die der Test durchklickt (Etappen-Test: je Ansicht Zustand am Ende + alle Hofverwaltungs-Reiter und -Bereiche; Hof-Gesamttest: Stall + Hofverwaltungs-Reiter; Neuladen-Test: ein Bild je Fall)
+- `BILDER_ORDNER=<Ordner>` ist bei `fehler`/`alle` Pflicht und darf nicht im Projektordner liegen (Scratchpad nehmen).
+Beispiel: `BILDER=fehler BILDER_ORDNER=<Scratchpad>/etappen NODE_PATH=/opt/node22/lib/node_modules node tests/etappen-test.js`. Bilder sind nummeriert, Problem-Bilder enden auf `-FEHLER.png`. Ein Bild bei ✗ zeigt den Zustand nach den Prüfungen der Ansicht (die ✗-Zeile nennt den Schritt). Hilfsskript: `tests/bilder.js`.

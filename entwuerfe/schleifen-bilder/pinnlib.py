@@ -9,7 +9,7 @@ def pinnwand(namen, x=266, y=72, w=60, h=70, uid="p", cols=3, rows=4):
     random.seed(4)
     for _ in range(26):
         out.append(f'<circle cx="{x+5+random.random()*(w-10):.1f}" cy="{y+5+random.random()*(h-10):.1f}" r=".6" fill="#a8743f" opacity=".7"/>')
-    pitch_x,pitch_y,sz=(w-9)/cols,(h-9)/rows,13.5
+    pitch_x,pitch_y,sz=(w-9)/cols,15.25,13.5
     ox=x+4.5; oy=y+5
     pins=["#d33a3a","#2f6fd1","#f2c418","#2e9b4f"]
     for i,n in enumerate(namen[:cols*rows]):

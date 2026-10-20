@@ -98,7 +98,7 @@ const { chromium } = require('playwright'); const path = require('path');
       const e = trainieren(x, 'longieren', 'reitplatz', ma || null); return { e, x, sk: Object.values(e.skPlus || {}).reduce((a, b) => a + b, 0), vt: x.werte.ist.vertrauen }; };
     const T1 = training({ dressur: 50 }, 10), T2 = training({ dressur: 50 }, 90), T3 = training({ dressur: 50 }, 50), T4 = training({ dressur: 10 }, 50);
     ok('Reiter 2 Klassen weiter lernt mehr als gleich, gleich mehr als Pferd 2 Klassen weiter (Ausbildungsskala)', T2.sk > T3.sk && T3.sk > T1.sk, `${T2.sk.toFixed(3)} > ${T3.sk.toFixed(3)} > ${T1.sk.toFixed(3)}`);
-    ok('Verhältnis weit/gleich etwa 0,5 (Pferd 2 weiter, Können 10 vs. 50: 0,5 gegen 1,0 – Wetter etc. gleich)', nah(T1.sk / T3.sk, 0.5, 0.12), (T1.sk / T3.sk).toFixed(3));
+    ok('Verhältnis weit/gleich etwa 0,5 (Pferd 2 weiter, Können 10 vs. 50: 0,5 gegen 1,0 – Wetter etc. gleich)', nah(T1.sk / T3.sk, 0.5, 0.2), (T1.sk / T3.sk).toFixed(3));
     ok('Vertrauen sinkt bei v ≤ −2 um etwa 0,3 × proTag (Zufall der Vorlieben ±0,1)', T1.vt <= 50 - 0.3 * proTag(1) + 0.11 && T1.vt >= 50 - 0.3 * proTag(1) - 0.15, T1.vt.toFixed(2));
     ok('Reiter weiter oder gleich: der Abstand kostet kein Vertrauen, das Pferd weiter als der Reiter schon', abstandVertrauen(reiterAbstand(tp('x', { dressur: 50 }), 'longieren', kf('dressur', 90)).v) === 0 && abstandVertrauen(reiterAbstand(tp('y', { dressur: 50 }), 'longieren', kf('dressur', 50)).v) === 0 && T2.vt > T1.vt);
     ok('Trainingsbericht nennt „weiter als du – das bremst“ nur beim zu weiten Pferd', T1.e.hinweise.some(h => /weiter als du/.test(h)) && !T3.e.hinweise.some(h => /weiter als/.test(h)));

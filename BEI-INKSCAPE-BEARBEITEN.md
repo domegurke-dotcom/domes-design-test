@@ -28,6 +28,10 @@ Nach dem Zeichnen einfach hochladen – `werkzeuge/kopf-export.js` übernimmt ne
 
 ## Fehlt noch (neue Ebenen)
 
+### 0d. Kötenbehang und Ohrformen für die Rassemerkmale (Dome, 20.10.2026 – später aufarbeiten)
+- In der Karte Merkmale – Rassemerkmale fehlen die Zeilen **„Behang“** und **„Ohren“** (PLAN-MERKMALE Punkt 19), weil es dafür noch nichts zu prüfen gibt: Der Kötenbehang (`behang` in pferd.js) ist ausgeblendet, die Ohren sind immer rassetypisch.
+- **Bitte zeichnen (wenn du Zeit hast):** Kötenbehang (Fesselbehang) in 2–3 Stärken für Kaltblut/Cob/Friese/Fell/Dales und abweichende Ohrformen (z. B. Marwari-Ohren nach innen gebogen, zu kurz/zu lang). Danach baut Claude die beiden Zeilen samt Verstoß (Typnote −0,5, Marktwert −5 %) ein.
+
 ### 0. Glanz- und Schattenbereiche für die Köpfe (Dome plant, v467)
 - Dome zeichnet eigene Licht-/Schattenflächen für die Köpfe. Sobald sie da sind: die helle Spiel-Schattierung auf dem Kopf (`sh-`-Rechteck in `zeichnePferd`) wieder entfernen (seit v490 liegt sie per Maske auch auf den Ohren – `schattOhr`).
 

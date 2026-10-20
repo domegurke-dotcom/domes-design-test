@@ -35,10 +35,10 @@ Vier Phasen (A, B, C, D = großer Test), am Phasenende hält Claude an; Dome sch
 | C | Sonnet | K4 Anzeige, Stufen, Hinweise | **fertig (v593)** |
 | C | Sonnet | M3 Wirkungen | **fertig (v594)** |
 | C | Sonnet | M4 Rassemerkmale, Besonderheiten, Zuchtbuch | **fertig (v595)** |
-| C | Sonnet | M5 Verpaaren, Fremd-Vergleich, Hinweise, Admin | offen |
+| C | Sonnet | M5 Verpaaren, Fremd-Vergleich, Hinweise, Admin | **Kern fertig (v596)**; Tutorial-Kapitel (Anfänger-Satz, Fort „Merkmale lesen…“, Exp „Zuchtverbands-Noten…“) kommen mit der Tutorial-Überarbeitung; Fremd-Vergleich und Blasen M3/M7 offen (OFFENE-FRAGEN 11) |
 | D | Sonnet | großer Test ohne Bilder (etappen, hof-gesamt, neuladen) + neue kleine Tests + Tutorial-Spieler – erst nach Domes „weiter“ | offen |
 
-Phase B fertig. **Phase C läuft (Sonnet):** S3, S4, K4, M3 (v594) und M4 (v595) fertig, als Nächstes M5, danach Domes Tutorial-Mängelliste (vor Phase D). (Phase C: S3 → S4 → K4 → M3 → M4 → M5.) (Phase B: S2 Pinnwand in der Box → K3 Turnier und Rennen → M2 Karte Merkmale; K3 und der Schleifen-Brief nie gleichzeitig.)
+Phase B fertig. **Phase C läuft (Sonnet):** S3, S4, K4, M3 (v594), M4 (v595) und M5-Kern (v596) fertig, als Nächstes Domes Tutorial-Mängelliste (inkl. der M5-Tutorial-Kapitel), danach Domes Tutorial-Mängelliste (vor Phase D). (Phase C: S3 → S4 → K4 → M3 → M4 → M5.) (Phase B: S2 Pinnwand in der Box → K3 Turnier und Rennen → M2 Karte Merkmale; K3 und der Schleifen-Brief nie gleichzeitig.)
 
 ### Test-Anleitung Phase A (Wege ausgeschrieben)
 1. **Schleifen (v584):** Turnier nennen und einen Tag weiterspielen: Hauptmenü – Pferdeanhänger – Turnier (oder Box – Pferdepflege – Ort – Pferdeanhänger – Turnier) → nennen → „Tag beenden“ → am nächsten Tag Brief „Ergebnis: <Pferd> beim <Turnier>“ im Postfach: links neben jeder Prüfungszeile die große Schleife (Platz 1 Gold … 6 Grün, braun = Teilnehmer, auf dem Hofturnier auch ohne Platzierung, Championat-Sieger blau-gold). Danach Box – Steckbrief – Ausbildung – Turniere: kleine Schleifen in der Erfolgsliste, in „Bilanz insgesamt“ die Spaltenköpfe als Schleifen. Fohlenschau: Ergebniszeile mit Schleife.

@@ -190,6 +190,32 @@ const { chromium } = require('playwright'); const path = require('path');
     return out;
   });
   R.push(...R4);
+  const R5 = await pg.evaluate(() => {
+    const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : '')); spiel.admin = false; spiel.stufenAn = false;
+    const neu = (o, ab) => { const p = neuesPferd(o); p.pflege = erzeugePflege(p); p.werte = p.werte || erzeugeWerte(p); werteErgaenzen(p); bauErgaenzen(p); BAU_KEYS.forEach(k => { p.bau[k] = Math.round(bauZiel(p)[k]); }); Object.entries(ab || {}).forEach(([k, d]) => { p.bau[k] = Math.max(0, Math.min(100, Math.round(bauZiel(p)[k] + d * BAU_S))); }); p.besond = { hahn: false }; return p; };
+    // --- M5: Verpaaren-Vorschau ---
+    const st = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Tutti', id: 'v1' }, { schulter: -2 }), bruno = neu({ rasse: 'hannoveraner', geschlecht: 'Hengst', alter: 8, name: 'Bruno', id: 'v2' }, { schulter: 2 }), max = neu({ rasse: 'hannoveraner', geschlecht: 'Hengst', alter: 8, name: 'Max', id: 'v3' }, { schulter: -2 });
+    const vb = paarVorschau(st, bruno).map(x => x[1]).join('|'), vm = paarVorschau(st, max).map(x => x[1]).join('|');
+    ok('Vorschau: Gegenteil „gleicht aus: Schulter“', /gleicht aus: Schulter/.test(vb), vb);
+    ok('Vorschau: gleiche Abweichung „verstärkt: Schulter“', /verstärkt: Schulter/.test(vm), vm);
+    const ideal = neu({ rasse: 'hannoveraner', geschlecht: 'Hengst', alter: 8, name: 'I', id: 'v4' }), id2 = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'I2', id: 'v5' });
+    ok('Vorschau: zwei ideale Pferde → keine Zeile', paarVorschau(ideal, id2).length === 0);
+    const hb = neu({ rasse: 'hannoveraner', geschlecht: 'Hengst', alter: 8, name: 'H', id: 'v6' }), hs = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'S', id: 'v7' }); hb.besond.hahn = true; hs.besond.hahn = true;
+    ok('Vorschau: „Risiko: Hahnentritt bei beiden“', paarVorschau(hb, hs).some(x => /Risiko: Hahnentritt/.test(x[1])));
+    const viele = neu({ rasse: 'hannoveraner', geschlecht: 'Hengst', alter: 8, name: 'V', id: 'v8' }, { rahmen: 2, halsL: 2, halsA: 2, schulter: 2, ruecken: 2, kruppe: 2 }), viele2 = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'V2', id: 'v9' }, { rahmen: 2, halsL: 2, halsA: 2, schulter: 2, ruecken: 2, kruppe: 2 });
+    ok('Vorschau: höchstens 4 Zeilen', paarVorschau(viele, viele2).length === 4, paarVorschau(viele, viele2).length);
+    const txt = paarVorschauHTML(st, bruno); spiel.spieler = spiel.spieler || {}; 
+    ok('Vorschau: nur Wörter, keine Zahlen/Gene', !/\d|Cr\b|Lp\b/.test(txt.replace(/<[^>]*>/g, '')), txt.replace(/<[^>]*>/g, ' ').slice(0, 120));
+    // Stufen: Anfänger sieht keine Vorschau
+    spiel.stufenAn = true; spiel.spieler.stufe = 'anf'; ok('Anfänger: keine Vorschau', paarVorschauHTML(st, bruno) === ''); spiel.spieler.stufe = 'fort'; ok('Fortgeschritten: Vorschau da', paarVorschauHTML(st, bruno) !== ''); spiel.stufenAn = false;
+    // Hinweise
+    ok('Hinweise M1…M8 im Katalog mit Einsteiger-Eintrag', ['merkKarte', 'merkBalken', 'merkVergleich', 'merkFehler', 'merkHuf', 'merkMuskel', 'merkRasse'].every(k => HINWEISE[k] && EINSTEIGER_MEHR[HINWEISE[k][4]] === '🧬 Beurteilungsbogen'));
+    ok('Enzyklopädie: Eintrag „Beurteilungsbogen“', ENZY.einsteiger.eintraege.some(e => e[0] === '🧬 Beurteilungsbogen'));
+    const f = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Fe', id: 'v10' }, { huf: 2.5, muskel: -2.5, schulter: 2.5 }); B().pferd = f;
+    const L = merkHinweise(f); ok('Auslöser: Fehler, Huf, Muskel', ['merkFehler', 'merkHuf', 'merkMuskel'].every(k => L.includes(k)), L.join());
+    return out;
+  });
+  R.push(...R5);
   R.push(...R2);
   const html = require('fs').readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf8'), ras = (html.match(/\.\.\.kopfOpt\(wahl\), bau: undefined/g) || []).length, alle = (html.match(/kopfOpt\(wahl\)/g) || []).length;
   R.push((ras === alle && alle >= 2 ? '✓ ' : '✗ ') + 'Rassenansicht/Gene selbst wählen: kopfOpt(wahl) immer mit bau: undefined (ohne Exterieur) – ' + ras + ' von ' + alle);

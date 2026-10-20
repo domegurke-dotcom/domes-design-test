@@ -60,3 +60,9 @@ Alles liegt auf `main` (Branch `claude/admiring-bell-s50jlb` ist gleich). Detail
 - Fragen an Dome stehen in der Antwort der Sitzung (20.10.); Antworten bitte hier und in den Plänen nachtragen.
 
 **Achtung:** `jahresbericht()` läuft im Jahreszeit-Block nach `hoefeVersteigern()` nur im Frühling Tag 1; Brief-Typ `jahresbericht` wird nie automatisch gelöscht (Post-Limit überspringt ihn). Bilanz-Schlüssel: `p.bilanzV = 3`. Große Tests (Etappen-, Hof-Gesamt-, Neuladen-Test) wurden in dieser Sitzung **nicht** gelaufen – bei Bedarf einmal laufen lassen (kostet Volumen, Dome vorher fragen).
+
+
+### Nachtrag Claude Team, 20.10.2026 (Stand v559) – neue Sitzung folgt
+**Fertig (auf `main`):** v558 (Seltenheit: selten < 3 %, Charakter raus, Mischlinge ohne Seltenheit, Symbol hinter dem Namen, Jahresbericht-Pferdezahl nur Stall), v559 (Gen-Schwelle je Rasse `SELTEN_MERKMAL_RASSE`, ca. 4 % je Rasse; Haflinger bleibt bei 0,7 %). Dazu nur Dokumentation: `PLAN-WASCHPLATZ.md`, `PLAN-HINWEISE.md` (+ Anhänge `PLAN-HINWEISE-TEXTE.md`, `PLAN-TUTORIAL.md`, `PLAN-STUFEN.md`), `PROJEKT-CHAT-THEMEN.md` Punkte 14/17/18, neuer Abschnitt „Selbstständig arbeiten“ in `CLAUDE.md`.
+**Reihenfolge (Dome):** B4 (Spiel-verloren-Bilanz, Opus) → R2–R4 (Raritäten-Markt, Opus) → Waschplatz W1–W6 (Sonnet) → Hinweise/Stufen/Tutorials T1–T6 (T2/T4 Opus). Immer erst Überblick/Aufwand/Modell, auf klares „Ja“ warten.
+**Offen/Fragen an Dome:** Solarium-Bilder warten auf ihre Freigabe; Zahlen im Waschplatz-Plan („Von Projekt-Chat ergänzt“) bestätigen lassen; Katalog-Thema 41 ohne Text.

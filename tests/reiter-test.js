@@ -79,6 +79,69 @@ const { chromium } = require('playwright'); const path = require('path');
       spiel.turniere = (spiel.turniere || []).concat([t]); x.turnier = { tid: t.id, tag: spiel.tag }; const v = reiterKoennen(g); turnierNacht(); return reiterKoennen(g) - v; };
     ok('turnierNacht selbst geritten (Dressur): Können wächst', tn('dressur', false, 'N1') > 0);
     ok('turnierNacht mit Jockey (Galopprennen): Können wächst nicht', tn('galopprennen', true, 'N2') === 0);
+    // ==================== K2 ====================
+    // --- 9. Abstandsfaktor ---
+    const AF = v => abstandFaktor(v);
+    ok('Abstandsfaktor an den Stützpunkten: ≥2 1,2 · 1 1,1 · 0 1,0 · −1 0,8 · −2 0,5 · ≤−3 0,25', AF(3) === 1.2 && AF(2) === 1.2 && nah(AF(1), 1.1) && nah(AF(0), 1) && nah(AF(-1), 0.8) && nah(AF(-2), 0.5) && AF(-3) === 0.25 && AF(-5) === 0.25);
+    ok('Dazwischen linear (0,5 → 1,05 · −0,5 → 0,9 · −1,5 → 0,65 · −2,5 → 0,375)', nah(AF(0.5), 1.05) && nah(AF(-0.5), 0.9) && nah(AF(-1.5), 0.65) && nah(AF(-2.5), 0.375));
+    ok('Vertrauensverlust: v ≤ −2 → 0,3 · v ≤ −1 → 0,1 · sonst 0', abstandVertrauen(-2) === 0.3 && abstandVertrauen(-3) === 0.3 && abstandVertrauen(-1) === 0.1 && abstandVertrauen(-1.5) === 0.1 && abstandVertrauen(-0.9) === 0 && abstandVertrauen(1) === 0);
+    const tp = (name, fest) => { const x = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name }); x.reiterStandFest = fest; return x; };
+    const Q = tp('Quint', { dressur: 50 });
+    const kf = (g, v) => () => v;
+    ok('reiterAbstand: Können 10, Stand 50 → v = −2, ×0,5', (a => nah(a.v, -2) && nah(a.faktor, 0.5) && a.g === 'dressur')(reiterAbstand(Q, 'longieren', kf('dressur', 10))));
+    ok('reiterAbstand: Können 90, Stand 50 → v = 2, ×1,2', nah(reiterAbstand(Q, 'longieren', kf('dressur', 90)).faktor, 1.2));
+    ok('Bodenarbeit/Freiarbeit/Spazieren: kein Abstand', reiterAbstand(Q, 'bodenarbeit', kf('', 10)) === null && reiterAbstand(Q, 'spazieren', kf('', 10)) === null);
+    const Kon = tp('Kon', { vielseitigkeit: 30, rennen: 70, distanz: 10 }); ok('Kondition: Gruppe, in der das Pferd am weitesten ist (Rennen)', reiterUebGruppe(Kon, 'kondition').g === 'rennen');
+    ok('Können Mitarbeiter = Rücken (+10 im Ausbildungsstall, höchstens 95)', reiterKoennenMa({ wissen: { ruecken: 40 } }) === 40 + (vorteil('ausbildung') ? 10 : 0) && reiterKoennenMa({ wissen: { ruecken: 100 } }) === 95 && reiterKoennenMa({}) === (vorteil('ausbildung') ? 10 : 0));
+    // --- 10. Training: Faktor, Vertrauen, Bericht ---
+    const training = (fest, koennen, ma) => { const x = tp('T' + Math.random(), fest); x.energie = 100; x.werte.ist.vertrauen = 50; spiel.boxen[0].pferd = x; spiel.reiter.koennen.dressur = koennen; spiel.reiter.hinw = 0;
+      const e = trainieren(x, 'longieren', 'reitplatz', ma || null); return { e, x, sk: Object.values(e.skPlus || {}).reduce((a, b) => a + b, 0), vt: x.werte.ist.vertrauen }; };
+    const T1 = training({ dressur: 50 }, 10), T2 = training({ dressur: 50 }, 90), T3 = training({ dressur: 50 }, 50), T4 = training({ dressur: 10 }, 50);
+    ok('Reiter 2 Klassen weiter lernt mehr als gleich, gleich mehr als Pferd 2 Klassen weiter (Ausbildungsskala)', T2.sk > T3.sk && T3.sk > T1.sk, `${T2.sk.toFixed(3)} > ${T3.sk.toFixed(3)} > ${T1.sk.toFixed(3)}`);
+    ok('Verhältnis weit/gleich etwa 0,5 (Pferd 2 weiter, Können 10 vs. 50: 0,5 gegen 1,0 – Wetter etc. gleich)', nah(T1.sk / T3.sk, 0.5, 0.12), (T1.sk / T3.sk).toFixed(3));
+    ok('Vertrauen sinkt bei v ≤ −2 um etwa 0,3 × proTag (Zufall der Vorlieben ±0,1)', T1.vt <= 50 - 0.3 * proTag(1) + 0.11 && T1.vt >= 50 - 0.3 * proTag(1) - 0.15, T1.vt.toFixed(2));
+    ok('Reiter weiter oder gleich: der Abstand kostet kein Vertrauen, das Pferd weiter als der Reiter schon', abstandVertrauen(reiterAbstand(tp('x', { dressur: 50 }), 'longieren', kf('dressur', 90)).v) === 0 && abstandVertrauen(reiterAbstand(tp('y', { dressur: 50 }), 'longieren', kf('dressur', 50)).v) === 0 && T2.vt > T1.vt);
+    ok('Trainingsbericht nennt „weiter als du – das bremst“ nur beim zu weiten Pferd', T1.e.hinweise.some(h => /weiter als du/.test(h)) && !T3.e.hinweise.some(h => /weiter als/.test(h)));
+    const Mq = { id: 'mq', name: 'Frieda', typ: 'bereiter', wissen: { ruecken: 20 } }, Ms = { id: 'ms', name: 'Hans', typ: 'bereiter', wissen: { ruecken: 90 } };
+    const TM1 = training({ dressur: 50 }, 10, Mq), TM2 = training({ dressur: 50 }, 10, Ms);
+    ok('Mitarbeiter: schwacher Bereiter (Können 20) lernt Pferd Stand 50 weniger als starker (90)', TM2.sk > TM1.sk * 1.5, `${TM2.sk.toFixed(3)} vs ${TM1.sk.toFixed(3)}`);
+    ok('Dein Können wächst bei Mitarbeiter-Training nicht', (() => { spiel.reiter.koennen.dressur = 10; const x = tp('Mz', { dressur: 50 }); x.energie = 100; spiel.boxen[0].pferd = x; trainieren(x, 'longieren', 'reitplatz', Ms); return reiterKoennen('dressur') === 10; })());
+    // --- 11. Hinweis „weiter als du“ (einmal je Pferd und Gruppe) ---
+    spiel.tippsAus = false; spiel.tipps = {}; spiel.tippWarte = []; const H1 = tp('Hinweisa', { dressur: 50, springen: 50 });
+    ok('Erstes Training mit zu weitem Pferd: Hinweis wird vorgemerkt', reiterBesserMerken(H1, 'dressur') === true && spiel.tippWarte.includes('reiterBesser'));
+    ok('Text nennt das Pferd und Reitunterricht', /Hinweisa/.test(hinweisText(HINWEISE.reiterBesser)) && /Reitunterricht/.test(hinweisText(HINWEISE.reiterBesser)));
+    ok('Nicht noch einmal für dasselbe Pferd und dieselbe Gruppe', reiterBesserMerken(H1, 'dressur') === false);
+    ok('Andere Gruppe desselben Pferdes: nochmal', (() => { spiel.tipps = { reiterBesser: 1 }; const r = reiterBesserMerken(H1, 'springen'); return r === true && !spiel.tipps.reiterBesser; })());
+    ok('Training mit zu weitem Pferd: Merker am Pferd, zweites Training kein neuer Hinweis', (() => { const x = tp('Hinweisb', { dressur: 50 }); x.energie = 100; spiel.reiter.koennen.dressur = 10; spiel.tippWarte = []; spiel.tipps = {}; spiel.boxen[0].pferd = x; trainieren(x, 'longieren', 'reitplatz', null); const a = spiel.tippWarte.length; x.energie = 100; trainieren(x, 'dressur', 'reitplatz', null); return a === 1 && spiel.tippWarte.length === 1 && x.hinw.besser.dressur; })());
+    ok('Bereiter-Training löst den Hinweis nicht aus', (() => { const x = tp('Hinweisc', { dressur: 50 }); x.energie = 100; spiel.tippWarte = []; spiel.boxen[0].pferd = x; trainieren(x, 'longieren', 'reitplatz', Mq); return spiel.tippWarte.length === 0; })());
+    // --- 12. Kauf-Zeile ---
+    const Mk = tp('Marktpferd', { dressur: 70 }); spiel.reiter.koennen.dressur = 10;
+    ok('Kauf-Zeile: Pferd weiter als du → „Dieses Pferd ist weiter als du“, nur Markt-Orte', /weiter als du/.test(JSON.stringify(reiterKaufZeile(Mk))) && reiterKaufZeile(tp('Jung', {})).length === 0);
+    // --- 13. Reitunterricht ---
+    spiel.admin = false; spiel.geld = 1000; spiel.reiter.stunde = {}; spiel.reiter.koennen.dressur = 20; spiel.reiter.zuwachs = {};
+    const g0 = spiel.geld, k20 = reiterKoennen('dressur'), U1 = unterrichtNehmen('dressur', null);
+    ok('Extern: 60 € abgebucht, Können +1,6 × Abnahme bei Können unter 30 (doppelt)', spiel.geld === g0 - 60 && nah(reiterKoennen('dressur') - k20, 1.6 * (1 - 20 / 120), 0.01), (reiterKoennen('dressur') - k20).toFixed(3));
+    ok('Höchstens eine Stunde je Tag und Gruppe', !!unterrichtNehmen('dressur', null).fehler && spiel.geld === g0 - 60);
+    spiel.reiter.koennen.springen = 40; const k40 = reiterKoennen('springen'); unterrichtNehmen('springen', null); ok('Können 40: +0,8 × Abnahme (nicht doppelt)', nah(reiterKoennen('springen') - k40, 0.8 * (1 - 40 / 120), 0.01));
+    spiel.reiter.koennen.western = 60; const g1 = spiel.geld, U2 = unterrichtNehmen('western', null);
+    ok('Ab Können 60: Hinweis statt Stunde, nichts abgebucht', /Turnieren und mit schwierigeren Pferden/.test(U2.fehler) && spiel.geld === g1 && reiterKoennen('western') === 60);
+    spiel.reiter.koennen.rennen = 10; spiel.geld = -1990; ok('Zu wenig Geld: keine Stunde', !!unterrichtNehmen('rennen', null).fehler && reiterKoennen('rennen') === 10);
+    spiel.geld = 1000; const lehr = { id: 'l1', name: 'Frau Berger', typ: 'bereiter' }; const g2 = spiel.geld; spiel.reiter.koennen.distanz = 10; const U3 = unterrichtNehmen('distanz', lehr);
+    ok('Eigener Bereiter: kostenlos, sein Trainingstag entfällt (unterrichtTag)', spiel.geld === g2 && lehr.unterrichtTag === spiel.tag && U3.x > 0);
+    ok('Statistik „Unterricht“ im Adminmodus', reiterErgaenzen().zuwachs.dressur.unterricht > 1);
+    ok('Dialog öffnet ohne Fehler', (() => { try { unterrichtDialog(); const ok1 = !document.getElementById('dlg').hidden && /Reitunterricht/.test(document.getElementById('dlgInhalt').innerHTML); document.getElementById('dlg').hidden = true; return ok1; } catch (er) { return er.message; } })());
+    ok('Reiter-Seite hat den Knopf Reitunterricht, keine +4 %-Spalte mehr', (() => { const h = reiterHTML(); return /id="ruKnopf"/.test(h) && !/<th>Training<\/th>/.test(h); })());
+    ok('Ort-Reiter-Satz: Pferd weiter → „bremst“, Reiter weiter → „gutes Training“', (() => { spiel.reiter.koennen.dressur = 10; const a = reiterSatz(tp('S1', { dressur: 50 }), null); spiel.reiter.koennen.dressur = 90; const b2 = reiterSatz(tp('S2', { dressur: 30 }), null), c = reiterSatz(tp('S3', { dressur: 85 }), null); return /bremst/.test(a) && /gutes Training/.test(b2) && c === ''; })());
+    // --- 14. Bereiter trainiert nach dem Unterricht am nächsten Morgen nicht ---
+    ok('Bereiter, der gestern dich unterrichtet hat, trainiert heute kein Pferd – sonst schon', (() => {
+      try { spiel.mitarbeiter = [{ id: 'bt1', name: 'Berta', typ: 'bereiter', ab: jzJetzt() - 1, bis: null, wissen: { ruecken: 60, verhalten: 50, huf: 40 }, eig: [], zufr: 80 }]; const m = spiel.mitarbeiter[0];
+        const x = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Morgenpferd' }); x.energie = 100; x.pflege.gesundheit = 100; spiel.boxen[0].pferd = x; spiel.boxen[0].tot = false; spiel.boxen.slice(1).forEach(b => { b.pferd = null; });
+        m.unterrichtTag = spiel.tag - 1; const vorMit = x.trainHeute && x.trainHeute.tag === spiel.tag ? x.trainHeute.liste.length : 0; mitarbeiterTag();
+        const nachMit = x.trainHeute && x.trainHeute.tag === spiel.tag ? x.trainHeute.liste.length : 0;
+        const ohne = nachMit === vorMit;
+        delete m.unterrichtTag; x.energie = 100; mitarbeiterTag(); const danach = x.trainHeute && x.trainHeute.tag === spiel.tag ? x.trainHeute.liste.length : 0;
+        return ohne && danach > nachMit ? true : `ohne Unterricht ${nachMit - vorMit} Einheiten, danach ${danach - nachMit}`;
+      } catch (er) { return er.message; } })());
     return out;
   });
   R.forEach(l => console.log(l)); console.log(errs.length ? 'Seitenfehler: ' + errs.join(' | ') : 'keine Seitenfehler');

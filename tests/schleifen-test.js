@@ -122,6 +122,14 @@ const { chromium } = require('playwright'); const path = require('path');
       ov.dispatchEvent(new MouseEvent('click', { bubbles: true })); ok('Tipp neben die Pinnwand schließt', ov.hidden);
       g.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); ok('Auch mit Tastatur (Enter) und ✕ schließt', !ov.hidden && (ov.querySelector('.pinn-zu').click(), ov.hidden));
       g.dispatchEvent(new MouseEvent('click', { bubbles: true })); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); ok('Escape schließt', ov.hidden); spiel.pinnSort = 'jahr'; }
+    // --- S4: Hinweisblase, Enzyklopädie, Tutorial ---
+    { spiel.tippsAus = false; spiel.tipps = {}; spiel.tippWarte = []; delete spiel.schleifeHinweis; const x = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Erstling' }); x.energie = 100; x.erfolge = [];
+      const bx = spiel.boxen[0]; bx.pferd = x; bx.tot = false; const t = { id: 'ts4', tag: spiel.tag, art: 'hof', name: 'Hofturnier', halle: false, nennung: [{ pid: x.id, prid: 'p1' }], pruef: [{ id: 'p1', disz: 'dressur', stufe: -1, name: 'Dressurwettbewerb', starter: 2 }] };
+      spiel.turniere = [t]; x.turnier = { tid: t.id, tag: spiel.tag }; turnierNacht();
+      ok('Nach der ersten Schleife: Hinweis „schleife“ vorgemerkt, Text mit Namen', (x.schleifen || []).length === 1 && spiel.tippWarte.includes('schleife') && /Erstling hat ihre erste Schleife/.test(hinweisText(HINWEISE.schleife)) && /Pinnwand in der Box/.test(hinweisText(HINWEISE.schleife)));
+      spiel.tippWarte = []; x.energie = 100; x.turnier = { tid: t.id, tag: spiel.tag }; turnierNacht(); ok('Nur einmal je Spielstand', !spiel.tippWarte.includes('schleife')); }
+    ok('Enzyklopädie Einsteiger-Wissen: Eintrag „Turnierschleifen“ + Mehr-dazu-Schlüssel', /Turnierschleifen/.test(document.documentElement.innerHTML) && EINSTEIGER_MEHR.schleifen === '🎀 Turnierschleifen' && HINWEISE.schleife[4] === 'schleifen');
+    ok('Tutorial Turnier-Kapitel hat den Schleifen-Schritt', TUT.find(k => k.n === 'Turnier').schritte.some(s => s[0] === 'Schleifen'));
     ok('Tipp-Text: Prüfung · Platz von Starter / Turnier / Jahreszeit, Jahr', /^P\d+ · \d\. Platz von 12 \/ T\d+ \/ (Frühling|Sommer|Herbst|Winter), Jahr \d+$/.test(schleifeText(S[2])), schleifeText(S[2]));
     return out;
   });

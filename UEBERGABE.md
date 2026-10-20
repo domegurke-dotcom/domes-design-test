@@ -21,6 +21,6 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ### Offen (unverändert aus der Team-Nachricht)
 1. Domes Test im Spiel von v560–v582 (Tutorial als Anfänger am Handy und PC, Raritäten im Sommer, Waschplatz/Solarium, Stufen, Abstammung).
-2. Bekannt: `tests/tutorial-spieler.js` Anfänger 390×844 meldet manchmal „hängt: Pferd umstellen“ (vermutlich Testsimulation, Einzeltest klappt). Im Skript beim Ziehen prüfen, welche Box gewählt wird. Noch nicht angefasst.
+2. `tests/tutorial-spieler.js` behoben: Anfänger 390×844 hing bei „Pferd umstellen“, weil die Hinweisblase hochkant die freien Boxen verdeckte (der Test traf beim Loslassen die Blase). Der Test blendet die Blase jetzt nur während des Ziehens aus. Anfänger 390×844, 844×390 und 1366×768 laufen durch (nicht parallel starten – dann hängt es zufällig bei „Bürste“). **Für Dome offen:** Im Spiel verdeckt die Blase hochkant diese Boxen auch für echte Spielerinnen – nicht geändert (Layout), Dome entscheiden lassen.
 3. Große Tests (Etappen-, Hof-Gesamt-, Neuladen-Test) nur mit Domes Erlaubnis.
 4. Wisch-/Ziehgefühl am echten Handy kann nur Dome prüfen.

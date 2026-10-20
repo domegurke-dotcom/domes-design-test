@@ -15,56 +15,39 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team · **Stand:** v597, 20.10.2026 (Nacht)
+**Von:** Claude Team · **An:** Claude Pro · **Stand:** v605, 20.10.2026 (Abend)
 
-**WICHTIGSTE AUFGABE ZUM START (Dome-Wunsch): Gib Dome sofort alle offenen Fragen aus `OFFENE-FRAGEN.md` (Nr. 1–12) im Chat aus – kurz, nummeriert, mit deiner Empfehlung – und gehe sie mit ihr durch. Beantwortete Fragen umsetzen und aus der Datei löschen.** Danach wartet alles auf Domes „weiter“ für Phase D.
+Die Nachricht von Claude Pro (v597, Fragen durchgehen) ist gelesen und übernommen. Dome hat die offenen Fragen beantwortet („so lassen“, Details unten), dann den **Auftrag aus dem Projekt-Chat** (`PLAN-TIERHALTEVERBOT-SPEICHER.md`) vorgezogen. **Phase D (großer Test) startet erst nach Domes „weiter“.**
 
-Phasen A, B und C sind fertig (S1–S4, K1–K4, M1–M5, Tutorial-Überarbeitung v597), je Etappe ein eigener Commit auf `main`. Übergabe von Claude Team (v560–v582) war gelesen und übernommen.
+### Was in dieser Sitzung passiert ist (je Etappe ein eigener Commit auf dem Branch `claude/elegant-einstein-gxcam1`)
+| Version | Inhalt |
+|---|---|
+| v598 | Merkmale M5 vollständig (nichts weglassen, Dome): Fremd-Vergleich (bei fremden Pferden Interieur nur grob), Blasen `merkVorschau`/`merkFohlenschau`, Pferdebild in der Rassenansicht mit den gewählten Exterieur-Werten (`wahlBauOpt`), Kryptorchismus-Haken im Admin; Reiter-Test-Toleranz. Vermerk: Zeilen Behang/Ohren in den Rassemerkmalen später (Inkscape 0d) |
+| v599 | Post P1: Grenze 300, ⭐/ungelesen/Jahresbericht/offene Aktion nie gelöscht, Hinweisbrief, Blase ab 250 |
+| v600 | Veterinäramt V1: Vorfälle, Stufen (Verbot beim 3., Anfänger 4.), Strafen 2.000/5.000 €, gerechte Ausnahmen, Verjährung, Klinik für Beschlagnahmte umgebaut, Zeile in Hofverwaltung – Hof |
+| v601 | V2: Kontrollen, Auflagen mit Frist (≥ 7 Tage), Nachkontrolle, Meldungen (anonym, Einsteller, Tierarzt, Hufschmied) |
+| v602 | V3: Tierhalteverbot → Spiel verloren (Abschlussbilanz, Vorfälle, Tipps, Jahresbericht-Zeile) |
+| v603 | V4: Vom Tierarzt erlösen lassen (250 €, Friedhof, kein Vorfall, Pension nur mit Zustimmung) |
+| v604 | P2: Speicheranzeige (gelb 70 %, rot 90 %), „Speicher aufräumen“ (Briefe, Spam, Platz „Verloren“, Friedhof/Archiv: Details löschen oder ganz löschen) |
+| v605 | T: Anfänger-Tutorial 13 Kapitel, Fortgeschrittenen-Kapitel „Veterinäramt und Erlösen“, 6 neue Blasen, 2 Enzyklopädie-Einträge, bzn |
 
-### Fortschritt Mehr-Etappen-Lauf (Dome, 20.10.2026; Regeln in CLAUDE.md „Mehr-Etappen-Lauf“)
-Vier Phasen (A, B, C, D = großer Test), am Phasenende hält Claude an; Dome schaltet das Modell um und sagt „weiter“.
-| Phase | Modell | Etappe | Stand |
-|---|---|---|---|
-| A | Sonnet | S1 Schleifen, Regeln, `p.schleifen`, Brief | **fertig (v584)** |
-| A | Sonnet | K1 Reiter-Können (Daten) | **fertig (v585)** |
-| A | Sonnet | K2 Training und Reitunterricht | **fertig (v586)** |
-| A | Sonnet | M1 Exterieur-Daten | **fertig (v587)** |
-| B | Opus | S2 Pinnwand in der Box | **fertig (v588)** |
-| B | Opus | K3 Turnier und Rennen | **fertig (v589)** |
-| B | Opus | M2 Karte Merkmale | **fertig (v590)** |
-| C | Sonnet | S3 große Pinnwand | **fertig (v591)** |
-| C | Sonnet | S4 Tutorial, Hinweis, Stufen, Enzyklopädie (Schleifen) | **fertig (v592)** |
-| C | Sonnet | K4 Anzeige, Stufen, Hinweise | **fertig (v593)** |
-| C | Sonnet | M3 Wirkungen | **fertig (v594)** |
-| C | Sonnet | M4 Rassemerkmale, Besonderheiten, Zuchtbuch | **fertig (v595)** |
-| C | Sonnet | M5 Verpaaren, Fremd-Vergleich, Hinweise, Admin | **fertig (v596/v597)**; Tutorial-Kapitel (Anfänger-Satz, Fort „Merkmale lesen…“, Exp „Zuchtverbands-Noten…“) kommen mit der Tutorial-Überarbeitung; Fremd-Vergleich und Blasen M3/M7 offen (OFFENE-FRAGEN 11) |
-| D | Sonnet | großer Test ohne Bilder (etappen, hof-gesamt, neuladen) + neue kleine Tests + Tutorial-Spieler – erst nach Domes „weiter“ | offen |
+Neue Tests: `tests/post-test.js`, `tests/veterinaer-test.js` (~4 % zufällige Wackler bei „Behandelt/Neukauf/altes Pferd“ – bekannt, Wiederholung grün), `tests/speicher-test.js`; angepasst `merkmale-test`, `jahresbericht-test`, `tutorial-test` (Fortgeschrittenen-Tutorial 1/10), `reiter-test` (Toleranz). Tutorial-Spieler anf 390×844 / 844×390 / 1366×768 und fort 390×844 grün (844×390 hängt selten zufällig bei „Hufe“).
 
-Phasen A, B und C fertig. **Phase D (großer Test) startet erst nach Domes „weiter“** – vorher die offenen Fragen mit Dome durchgehen.
+### Domes Antworten (20.10.) – eingearbeitet
+Fragen 1–12 aus `OFFENE-FRAGEN.md`: alles „so lassen“. 3a (Reitunterricht beim festen Bereiter „man muss extra zahlen“) ist unklar → als Frage 1 in `OFFENE-FRAGEN.md` stehen gelassen, **nichts geändert**. 6a ja, 6d Beurteilungsschema als Bild im Bereich Exterieur (noch nicht eingebaut – Branch `entwurf-merkmale-bilder`), 10c Vermerk, 10e Tekkiner-Glanz so lassen, 11 alles Geplante nachbauen (erledigt v598).
 
-### Test-Anleitung Phase C (Wege ausgeschrieben)
-1. **Wirkungen (v594):** Box – Steckbrief – Merkmale: Pferde mit Fehlern (steile Schulter u. a.) sind weniger wert (Hauptmenü – Pferdemarkt, Preis vergleichen), Fohlenschau-Körperbau kommt aus dem Exterieur.
-2. **Rassemerkmale/Besonderheiten/Zuchtbuch (v595):** Box – Steckbrief – Merkmale – Bereiche „Rassemerkmale“ und „Besonderheiten“ aufklappen (Anfänger: nur Sätze; Fortgeschritten: Zeilen mit ✅/⚪/❌; Experte: Zuchtbuch-Klasse im Gesamteindruck, Stuten ab 3 Jahren; Hengste „Körung kommt später“).
-3. **Verpaaren-Vorschau (v596):** Box einer Stute – Steckbrief – Genetik – „Verpaaren mit …“ – einen Hengst antippen (Fortgeschritten/Experte): Kasten „Vorschau für das Fohlen“, Knopf „🧬 Merkmale“ öffnet die Karte des Hengstes mit der Stute als Vergleich. Admin: Rassenansicht – Pferd einstellen – „Merkmale selbst wählen“.
-4. **Tutorial (v597):** Charaktermenü – „Erst das Tutorial“ (alle Stufen), 12 Kapitel Anfänger: im Fenster ist nur das Gefragte antippbar, Haken-Liste im blauen Band (Handy quer nur „Schritt n/m“), Kauf im Pferdemarkt endet mit „Zur Box / Weiter einkaufen“. Auch prüfen: Brief-Knopf heißt „Löschen“, neues Spiel zeigt sofort das richtige Datum.
+### Test-Anleitung (Wege ausgeschrieben)
+1. **Veterinäramt-Zeile:** Hauptmenü – Hofverwaltung – Hof: Zeile „Veterinäramt: unauffällig“; antippen öffnet das Fenster (Adminmodus: ➕ Vorfall, 🔍 Kontrolle jetzt).
+2. **Vorfall provozieren:** ein Pferd mit 1 % Gesundheit hungern lassen (Adminmodus: Gesundheit setzen) und „Tag beenden“: Brief „Veterinäramt: Verwarnung“, Strafe 2.000 €, bei beschlagnahmten Pferden zusätzlich Brief vom Tierschutzverein.
+3. **Kontrolle/Auflage:** Adminmodus – Veterinäramt-Fenster – „Kontrolle jetzt“ bei einer ungemisteten Box (3 Tage) → Brief mit Box und Pferd, Auflage mit Frist.
+4. **Erlösen:** altes Pferd (ab ca. 34 Jahren) unter 20 % → Box – Pferdepflege – Versorgung: Knopf „Vom Tierarzt erlösen lassen“ (250 €).
+5. **Speicher:** Hofverwaltung – Einstellungen: Anzeige „Speicher: x von ca. 5 MB“ und „🧹 Speicher aufräumen“.
+6. **Post:** Briefe mit ⭐ bleiben, auch bei über 300 Briefen.
+7. **Tutorial:** Charaktermenü – „Erst das Tutorial“: 13 Kapitel; im Fortgeschrittenen-Tutorial das neue Kapitel „Veterinäramt und Erlösen“.
 
-### Test-Anleitung Phase A (Wege ausgeschrieben)
-1. **Schleifen (v584):** Turnier nennen und einen Tag weiterspielen: Hauptmenü – Pferdeanhänger – Turnier (oder Box – Pferdepflege – Ort – Pferdeanhänger – Turnier) → nennen → „Tag beenden“ → am nächsten Tag Brief „Ergebnis: <Pferd> beim <Turnier>“ im Postfach: links neben jeder Prüfungszeile die große Schleife (Platz 1 Gold … 6 Grün, braun = Teilnehmer, auf dem Hofturnier auch ohne Platzierung, Championat-Sieger blau-gold). Danach Box – Steckbrief – Ausbildung – Turniere: kleine Schleifen in der Erfolgsliste, in „Bilanz insgesamt“ die Spaltenköpfe als Schleifen. Fohlenschau: Ergebniszeile mit Schleife.
-2. **Reiter-Können (v585/v586):** Hofverwaltung – Reiter: Knopf „🎓 Reitunterricht“ (Wahl der Disziplin, 60 € extern; mit festem Bereiter kostenlos, dafür trainiert er am nächsten Morgen keine Pferde; nur bis Können 60, eine Stunde je Tag und Disziplin). Im **Adminmodus** zeigt dieselbe Seite unten die Zahlen (Können je Gruppe mit Herkunft des Zuwachses). Box – Pferdepflege – Ort – Training – Reitplatz: bei Pferden, die weiter sind als du, steht ein Satz „… ist in Dressur weiter als du: das bremst“; im Trainingsbericht steht dasselbe, das Vertrauen sinkt leicht. Pferdemarkt (Privat, Händler, Tierschutz, Auktionshaus): im Infofenster eines Pferdes die Zeile „Reiter: Dieses Pferd ist weiter als du“. Anfänger-Tutorial, Kapitel „Training“: neuer Schritt „Du und dein Pferd“ am Ende.
-3b. **Pinnwand (v588):** Hauptmenü – Stall – Box eines Pferdes mit Schleifen: rechts neben Fenster bzw. Tür hängt die Pinnwand (beste 9), das Pferd darf sie verdecken; Antippen zeigt alle Schleifen. Leckstein jetzt links vom Fenster (Stufe 3: rechts neben dem Heunetz), goldenes Namensschild in Stufe 3 weg. Abfohlbox: Pinnwand kleiner auf der Rückwand, Rotlichtlampe an ihrer Ecke.
-3b2. **Große Pinnwand (v591):** in der Box die Pinnwand antippen: abgedunkeltes Fenster mit allen Schleifen (5 je Reihe, hochkant 4), oben „nach Jahr“ / „nach Klasse“ (Auswahl bleibt gespeichert), Schleife antippen = Blase mit Prüfung, Platz, Turnier, Jahreszeit und Jahr; ✕, Tipp daneben oder Escape schließt.
-3c. **Turnier-Reiter (v589):** Box – Pferdepflege – Ort – Pferdeanhänger – Turnier: bei jeder Prüfung eine Zeile „Dein Können reicht / ist knapp / fehlt“. Als Fortgeschritten/Experte beim Nennen das Fenster „Wer reitet …?“ (du, dein Bereiter bzw. Bereiter nach Bedarf 70 €, Profi 150 €) – über deiner LK kann ein Bereiter oder Profi starten. Rennen: Jockey oder selbst (ab Können 30). Ergebnisbrief: „geritten von …“. Bei einem Pferd, das weiter ist als du, einmal ein Warnfenster beim Nennen. Ausbildungsstall: Warnung beim Anmelden, Brief bei der Rückkehr. LK steigt nur noch, wenn auch das Können reicht (LK 6 ab 15 … LK 1 ab 90).
-3d. **Karte Merkmale (v590):** Box – Steckbrief – Merkmale (die Reiter Gangwerk, Eigenschaften, Charakter gibt es nicht mehr – sie sind Abschnitte darin). Oben „Vergleichen mit …“, darunter Gesamteindruck (Experte: Noten), Exterieur (Stockmaß, Kopf, Gewicht, ab Fortgeschritten 12 Balken mit Raute = Ideal der Rasse), Farbe & Abzeichen, Gangwerk, Interieur (Charakter + Eigenschaften). Geöffnete Bereiche bleiben offen. Daten zeigt Stockmaß, Kopf, Abzeichen usw. nicht mehr.
-3. **Exterieur (v587):** noch unsichtbar für Spielerinnen. Adminmodus: Box – Steckbrief – Aufschlüsselung – „Größe & Exterieur“ (zwölf Werte mit Ziel, Mutter, Vater, Quelle; Bemuskelung und Huf mit „heute“-Wert) und „Mutationen“. Das Pferdebild verändert sich leicht je Rahmen, Hals, Kruppe, Fundament und Bemuskelung (höchstens ±15 %); Fohlen behalten ihre Proportionen.
-
-Wecker nur innerhalb einer Phase. Zwischen den Phasen: „Phase X fertig – bitte umschalten“ hier eintragen und aufhören. Fragen: `OFFENE-FRAGEN.md`.
-
-### Offen (unverändert aus der Team-Nachricht)
-1. Domes Test im Spiel von v560–v582 (Tutorial als Anfänger am Handy und PC, Raritäten im Sommer, Waschplatz/Solarium, Stufen, Abstammung).
-2. **v583:** Hinweisblase blendet sich beim Ziehen eines Pferdes aus (hochkant deckte sie die freien Boxen ab, Dome: „das da“). `tests/tutorial-spieler.js` Anfänger 390×844, 844×390, 1366×768 laufen durch (nicht parallel starten – sonst hängt es zufällig bei „Bürste“).
-2b. **Bilder-Schalter für große Tests** (Dome, 20.10.): `BILDER=aus|fehler|alle` + `BILDER_ORDNER` für etappen-test, hof-gesamttest, neuladen-test (`tests/bilder.js`, siehe `tests/README.md`). Geprüft nur mit einem Mini-Probelauf, die großen Tests selbst sind **nicht** gelaufen (Dome: noch nicht starten, vorher fragen, welche Variante).
-3. Große Tests (Etappen-, Hof-Gesamt-, Neuladen-Test) nur mit Domes Erlaubnis.
-4. Wisch-/Ziehgefühl am echten Handy kann nur Dome prüfen.
-
-
-**Phase C fertig (v597) – bitte ‚weiter‘ für Phase D (großer Test) sagen.** Domes Tutorial-Liste ist abgearbeitet (siehe CLAUDE.md v597 und OFFENE-FRAGEN 11/12). Tutorial-Spieler grün: anf 390×844, 844×390, 1366×768, fort 390×844 und 844×390, exp 390×844. Kleine Tests grün (merkmale, schleifen, stufen, hinweise, tutorial); reiter-test ist zufallsabhängig (OFFENE-FRAGEN 12d).
+### Offen
+1. **Domes Abnahme** von v598–v605 und aller Phasen A–C (siehe die Test-Anleitungen von Claude Pro weiter unten in Git: UEBERGABE-Verlauf).
+2. **Phase D (großer Test)** wartet auf Domes „weiter“. Große Tests nur mit ihrer Erlaubnis, vorher Variante fragen (`BILDER=aus|fehler|alle`).
+3. Die Arbeit liegt auf dem Branch `claude/elegant-einstein-gxcam1`; **`main` steht noch auf v546** – Dome hat nicht gesagt, ob auf `main` hochgeladen werden soll (CLAUDE.md sagt ja, die Sitzungsvorgabe nennt den Branch). Vor einem Wechsel nachfragen.
+4. Zahlen, die Claude selbst gesetzt hat (Meldechance 50 %, Klinik-Tod 4 %/Tag, KEINE_HEILUNG-Liste …): `OFFENE-FRAGEN.md` Nr. 2.
+5. Wisch-/Ziehgefühl und Handy-Tests kann nur Dome prüfen.

@@ -18,7 +18,7 @@ const [W, H] = (process.argv[2] || '390x844').split('x').map(Number), O = proces
     const s = await st(); if (s.ende) break;
     if (s.dlg && /Tutorial (geschafft|beendet)/.test(s.dlg)) { ende = true; break; }
     const key = JSON.stringify([s.kap, s.schritt, s.k, s.dlg]); if (key === alt) gleich++; else { gleich = 0; alt = key; nr++; if (process.env.LAUT) console.log(nr, JSON.stringify(s)); if (O) await pg.screenshot({ path: `${O}/${SET}-${W}-${String(nr).padStart(3, '0')}.png` }); }
-    if (gleich > 4) { haenger.push(`Kapitel ${s.kap + 1} Schritt „${s.titel}“`); if (O) await pg.screenshot({ path: `${O}/${SET}-${W}-HAENGT-${s.kap}.png` }); await pg.click('#tutKapWeg').catch(() => {}); gleich = 0; await pg.waitForTimeout(1300); continue; }
+    if (gleich > 9) { haenger.push(`Kapitel ${s.kap + 1} Schritt „${s.titel}“`); if (O) await pg.screenshot({ path: `${O}/${SET}-${W}-HAENGT-${s.kap}.png` }); await pg.click('#tutKapWeg').catch(() => {}); gleich = 0; await pg.waitForTimeout(1300); continue; }
     if (s.dlg && (await pg.evaluate(() => spiel.tutorial && spiel.tutorial.geschafft === spiel.tutorial.kap))) { await pg.evaluate(() => { const k = [...document.querySelectorAll('#dlgKnoepfe button')].find(x => /Schließen|Abbrechen|Zurück/.test(x.textContent)); if (k) k.click(); else document.getElementById('dlg').hidden = true; }); await pg.waitForTimeout(600); continue; }
     if (s.dlg && s.ziel && s.blase) { await pg.mouse.click(s.ziel[0], s.ziel[1]); await pg.waitForTimeout(800); continue; }   // Schritt im Fenster
     if (s.dlg && s.blase && !s.ziel) { await pg.mouse.click(s.blase[0], s.blase[1]); await pg.waitForTimeout(800); continue; }   // Erklär-Schritt über einem Fenster: Blase antippen

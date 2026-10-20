@@ -4,7 +4,7 @@
 **Voraussetzungen:** `PLAN-SPIELSTAND.md` (eingebaut) und `PLAN-BILANZ.md` (Dispo B1 und Zähler B2). Reihenfolge: R1 → R2 → R3 → R4. Größen: R1 mittel, R2 groß, R3 mittel, R4 klein/mittel.
 Alle Zahlen als Konstanten oben im Code, in der Enzyklopädie (Adminmodus, „Berechnungen zum Nachschlagen“) eintragen.
 
-**Fortschritt:** R1 fertig (v556, `tests/seltenheit-test.js`; Code: `seltenheit`, `seltenGen`, `seltenLeistung`, `SELTEN_SCHWELLE`; Abweichung vom Plan: 3 Leistungs-Kategorien = 3 Chancen, obere 1 % = selten) · **R2 + R3 fertig** (v561, zusammen gebaut, `tests/raritaeten-test.js`; Domes Abnahme steht aus; Abweichungen: Gegenbieter erst, wenn der Spieler mitbietet – sonst würden Raritäten zufällig verschwinden; Gebote laufen je Jahreszeit wie im Auktionshaus) · R4 offen
+**Fortschritt:** R1 fertig (v556, `tests/seltenheit-test.js`; Code: `seltenheit`, `seltenGen`, `seltenLeistung`, `SELTEN_SCHWELLE`; Abweichung vom Plan: 3 Leistungs-Kategorien = 3 Chancen, obere 1 % = selten) · **R2 + R3 fertig** (v561, zusammen gebaut, `tests/raritaeten-test.js`; Domes Abnahme steht aus; Abweichungen: Gegenbieter erst, wenn der Spieler mitbietet – sonst würden Raritäten zufällig verschwinden; Gebote laufen je Jahreszeit wie im Auktionshaus) · **R4 fertig** (v562, im selben Test) · **alle Etappen R1–R4 fertig**
 
 ## Ziel in einem Satz
 Es gibt eine **Seltenheit** (selten, sehr selten, einzigartig, Ausnahmepferd, Jahrhundertpferd), die für **jedes Pferd** berechnet wird (Gene und Leistung), und einen neuen **Raritäten-Markt** im Pferdemarkt, auf dem einmal im Jahr je Rasse 2 sehr teure Raritäten stehen.

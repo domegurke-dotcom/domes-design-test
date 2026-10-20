@@ -58,5 +58,18 @@ const ORDNER = process.argv[2];
     const W1 = JSON.parse(w1), W2 = spiel.rar.wahl, gleich = Object.keys(W2).filter(r => W1[r] && [].concat(W2[r]).some(k => [].concat(W1[r]).includes(k)) && rarGenotypen(r, false).length > 2);
     return { mj: spiel.rar.mj, karte: spiel.rar.karte, gleich, namen: rarAngebot().map(h => h.name).join() }; }, A.wahl1);
   ok('Neues Marktjahr: Jahreskarte neu nötig', F.karte === false); ok('Anderes Hauptmerkmal als im Vorjahr', F.gleich.length === 0, F.gleich.join(',')); ok('Neue Pferde', F.namen !== A.namen1);
+  // R4: eigenes Pferd anbieten – ohne Nachweis abgelehnt, mit Nachweis Auktion mit Richtwert
+  const E = await pg.evaluate(() => { document.getElementById('dlg').hidden = true; const box = spiel.boxen.find(x => x.pferd && x.pferd.rarStufe); const p = box.pferd;
+    const mit = rarEigenSeltenheit(p).stufe; const t = p.tests; p.tests = { farbe: true }; const ohne = rarEigenSeltenheit(p); p.tests = t;
+    p.quarantaene = null; delete p.quarantaene; p.pflege.gesundheit = 100;
+    spiel.rar.karte = true; zeigeMarkt('raritaeten'); document.getElementById('rarEigen').click(); const k = document.querySelector('[data-rarv]'); if (!k) return { mit, ohne: ohne.stufe, kachel: false, sperre: document.getElementById('dlgInhalt').textContent.slice(0, 300) };
+    k.click(); const b = [...document.querySelectorAll('#dlgKnoepfe button')].find(x => /Zur Auktion/.test(x.textContent)); b.click();
+    const a = (spiel.angebote || []).find(x => x.id === p.id); return { mit, ohne: ohne.stufe, ohneAbst: ohne.ohneAbst || ohne.leist, kachel: true, a: a && { rar: a.rar, preis: a.preis, wert: a.wert } }; });
+  ok('R4: Rarität mit Nachweis zugelassen', E.mit >= 1 && E.kachel, JSON.stringify(E).slice(0, 300));
+  ok('R4: Gen-Rarität ohne Abstammungsnachweis zählt nicht (nur Leistung)', E.ohne === 0 || !!E.ohneAbst, JSON.stringify(E.ohne));
+  ok('R4: Auktion mit Start = ½ Richtwert', E.a && E.a.rar && Math.abs(E.a.preis - Math.round(E.a.wert / 2 / 50) * 50) <= 50, JSON.stringify(E.a));
+  const G = await pg.evaluate(() => { const a = spiel.angebote.find(x => x.rar), vor = spiel.geld; a.endeTag = spiel.tag; a.halbOk = true; angeboteTag(); const weg = !spiel.boxen.some(x => x.pferd && x.pferd.id === a.id);
+    return { weg, geld: Math.round(spiel.geld - vor), brief: spiel.post.slice(0, 3).map(x => x.von + ': ' + x.betreff).join(' | ') }; });
+  ok('R4: Auktion endet mit Verkauf oder Brief', G.weg ? G.geld > 0 : /Kein Gebot/.test(G.brief), JSON.stringify(G));
   console.log(out.join('\n')); console.log('Seitenfehler:', errs.join(' ; ') || 'keine'); await b.close();
 })();

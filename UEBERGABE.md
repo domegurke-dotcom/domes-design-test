@@ -38,6 +38,13 @@ Vier Phasen (A, B, C, D = großer Test), am Phasenende hält Claude an; Dome sch
 | C | Sonnet | M5 Verpaaren, Fremd-Vergleich, Hinweise, Admin | offen |
 | D | Sonnet | großer Test ohne Bilder (etappen, hof-gesamt, neuladen) + neue kleine Tests + Tutorial-Spieler – erst nach Domes „weiter“ | offen |
 
+**Phase A fertig – bitte auf Opus umschalten und „weiter“ sagen.** (Phase B: S2 Pinnwand in der Box → K3 Turnier und Rennen → M2 Karte Merkmale; K3 und der Schleifen-Brief nie gleichzeitig.)
+
+### Test-Anleitung Phase A (Wege ausgeschrieben)
+1. **Schleifen (v584):** Turnier nennen und einen Tag weiterspielen: Hauptmenü – Pferdeanhänger – Turnier (oder Box – Pferdepflege – Ort – Pferdeanhänger – Turnier) → nennen → „Tag beenden“ → am nächsten Tag Brief „Ergebnis: <Pferd> beim <Turnier>“ im Postfach: links neben jeder Prüfungszeile die große Schleife (Platz 1 Gold … 6 Grün, braun = Teilnehmer, auf dem Hofturnier auch ohne Platzierung, Championat-Sieger blau-gold). Danach Box – Steckbrief – Ausbildung – Turniere: kleine Schleifen in der Erfolgsliste, in „Bilanz insgesamt“ die Spaltenköpfe als Schleifen. Fohlenschau: Ergebniszeile mit Schleife.
+2. **Reiter-Können (v585/v586):** Hofverwaltung – Reiter: Knopf „🎓 Reitunterricht“ (Wahl der Disziplin, 60 € extern; mit festem Bereiter kostenlos, dafür trainiert er am nächsten Morgen keine Pferde; nur bis Können 60, eine Stunde je Tag und Disziplin). Im **Adminmodus** zeigt dieselbe Seite unten die Zahlen (Können je Gruppe mit Herkunft des Zuwachses). Box – Pferdepflege – Ort – Training – Reitplatz: bei Pferden, die weiter sind als du, steht ein Satz „… ist in Dressur weiter als du: das bremst“; im Trainingsbericht steht dasselbe, das Vertrauen sinkt leicht. Pferdemarkt (Privat, Händler, Tierschutz, Auktionshaus): im Infofenster eines Pferdes die Zeile „Reiter: Dieses Pferd ist weiter als du“. Anfänger-Tutorial, Kapitel „Training“: neuer Schritt „Du und dein Pferd“ am Ende.
+3. **Exterieur (v587):** noch unsichtbar für Spielerinnen. Adminmodus: Box – Steckbrief – Aufschlüsselung – „Größe & Exterieur“ (zwölf Werte mit Ziel, Mutter, Vater, Quelle; Bemuskelung und Huf mit „heute“-Wert) und „Mutationen“. Das Pferdebild verändert sich leicht je Rahmen, Hals, Kruppe, Fundament und Bemuskelung (höchstens ±15 %); Fohlen behalten ihre Proportionen.
+
 Wecker nur innerhalb einer Phase. Zwischen den Phasen: „Phase X fertig – bitte umschalten“ hier eintragen und aufhören. Fragen: `OFFENE-FRAGEN.md`.
 
 ### Offen (unverändert aus der Team-Nachricht)

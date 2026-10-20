@@ -242,7 +242,8 @@
   .fin-karte { background: #fff; border-radius: 0 0 12px 12px; padding: 10px 12px; border: 1px solid #ecdfca; }
   .fin-summe { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; } .fin-summe span { display: flex; flex-direction: column; font-size: .75rem; color: var(--leise); } .fin-summe b { font-size: .95rem; color: var(--text); }
   .fin-posten { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid #f0e6d6; font-size: .88rem; } .fin-posten small { color: var(--leise); }
-  .fin-saison { margin-top: 10px; padding: 4px 0 2px; font-weight: 700; font-size: .9rem; color: var(--leise); border-bottom: 2px solid #e6d6bc; }
+  details.fin-saison { margin-top: 10px; border-bottom: 2px solid #e6d6bc; } details.fin-saison > summary { display: flex; justify-content: space-between; align-items: center; gap: 8px; list-style: none; cursor: pointer; padding: 6px 0; font-weight: 700; font-size: .9rem; color: var(--leise); } details.fin-saison > summary::-webkit-details-marker { display: none; }
+  details.fin-saison > summary > span::before { content: "▸ "; } details.fin-saison[open] > summary > span::before { content: "▾ "; } details.fin-saison > summary > b { color: var(--text); white-space: nowrap; } details.fin-saison > summary > b.plus { color: #3d8a3a; } details.fin-saison > summary > b.minus { color: #b4473a; }
   b.plus, .plus b { color: #3d8a3a !important; } b.minus, .minus b { color: #b4473a !important; } b.neg { color: #b4473a; }
   .rechnungen { background: #fdecea; border: 1.5px solid #e6a49b; border-radius: 10px; padding: 8px 10px; margin-bottom: 12px; }
   .vererbung h3 { margin: 16px 0 6px; font-size: 1rem; } .vererbung p { line-height: 1.45; margin: 6px 0; font-size: .9rem; }
@@ -1026,7 +1027,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "631";
+  const SPIEL_VERSION = "632";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1034,11 +1035,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=631"></script>
-<script src="pferd.js?v=631"></script>
-<script src="boxstufen.js?v=631"></script>
-<script src="kopfneu.js?v=631"></script>
-<script src="waschbild.js?v=631"></script>
+<script src="lz-string.min.js?v=632"></script>
+<script src="pferd.js?v=632"></script>
+<script src="boxstufen.js?v=632"></script>
+<script src="kopfneu.js?v=632"></script>
+<script src="waschbild.js?v=632"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -14235,7 +14236,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
           speichern(); danach(); }], ["Abbrechen", null, "zweit"]]); };
   }
   // ---------- Finanzen: eine Karte je Jahr, immer 5 Jahre sichtbar ----------
-  let finanzJahr = null, finanzStart = null;
+  let finanzJahr = null, finanzStart = null, finOffen = {};   // finOffen: aufgeklappte Jahreszeiten (Schlüssel „Jahr|Titel“) – bleibt beim Neuzeichnen erhalten
   function finanzenHTML() {
     const F = spiel.finanzen || {}, jetzt = String(datum().j);
     const jahre = [...new Set([...Object.keys(F), jetzt])].sort();
@@ -14256,7 +14257,8 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         ${sicht.map(j => `<button data-fj="${j}" class="${j === finanzJahr ? "an" : ""}">${j}</button>`).join("")}
         <button data-fs="1" ${finanzStart < maxStart ? "" : "disabled"} aria-label="spätere Jahre">›</button></div>
       <div class="fin-karte"><div class="fin-summe"><span class="plus">Einnahmen<b>${fmt(ein)}</b></span><span class="minus">Ausgaben<b>${fmt(aus)}</b></span><span>Ergebnis<b class="${ein - aus < 0 ? "neg" : ""}">${fmt(ein - aus)}</b></span></div>${sonderTxt}
-        ${posten.length ? finanzSaisonGruppen(finanzJahr, J).map(([titel, P]) => `<div class="fin-saison">${titel}</div>` + Object.entries(P).sort((a, b) => (b[1].ein + b[1].aus) - (a[1].ein + a[1].aus)).map(([k, e]) => `<div class="fin-posten"><span>${esc(k)}${e.n > 1 ? ` <small>${e.n}×</small>` : ""}</span>${e.ein ? `<b class="plus">+${fmt(e.ein)}</b>` : ""}${e.aus ? `<b class="minus">−${fmt(e.aus)}</b>` : ""}</div>`).join("")).join("")
+        ${posten.length ? finanzSaisonGruppen(finanzJahr, J).map(([titel, P], gi) => { const sum = Object.values(P).reduce((a, e) => a + e.ein - e.aus, 0), key = finanzJahr + "|" + titel, offen = finOffen[key] != null ? finOffen[key] : gi === 0;   // Dome 21.10.: Jahreszeiten als Aufklapp-Bereiche, links Jahreszeit und Jahr, rechts die Summe (neueste standardmäßig offen)
+          return `<details class="fin-saison" data-finkey="${esc(key)}" ${offen ? "open" : ""}><summary><span>${titel}</span><b class="${sum < 0 ? "minus" : sum > 0 ? "plus" : ""}">${sum > 0 ? "+" : sum < 0 ? "−" : ""}${fmt(Math.abs(sum))}</b></summary>` + Object.entries(P).sort((a, b) => (b[1].ein + b[1].aus) - (a[1].ein + a[1].aus)).map(([k, e]) => `<div class="fin-posten"><span>${esc(k)}${e.n > 1 ? ` <small>${e.n}×</small>` : ""}</span>${e.ein ? `<b class="plus">+${fmt(e.ein)}</b>` : ""}${e.aus ? `<b class="minus">−${fmt(e.aus)}</b>` : ""}</div>`).join("") + `</details>`; }).join("")
           : `<p class="text">In ${finanzJahr} gab es noch keine Einnahmen oder Ausgaben.</p>`}</div>`;
   }
   // Posten eines Jahres nach Jahreszeit gruppiert (neueste zuerst); alte Buchungen ohne Jahreszeit landen unter „früher“
@@ -14904,6 +14906,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       inp.onblur = fertig; inp.onkeydown = e => { if (e.key === "Enter") inp.blur(); if (e.key === "Escape") { inp.value = Math.round(spiel.geld || 0); inp.blur(); } };
     };
     nb.querySelectorAll("[data-fj]").forEach(b => b.onclick = () => { finanzJahr = b.dataset.fj; zeigeHof(); });
+    nb.querySelectorAll("details.fin-saison").forEach(d => d.addEventListener("toggle", () => { finOffen[d.dataset.finkey] = d.open; }));
     nb.querySelectorAll("[data-ftab]").forEach(b => b.onclick = () => { finanzTab = b.dataset.ftab; zeigeHof(); });
     if (hofReiter === "finanzen" && finanzTab === "bank") bankBinden(nb, () => zeigeHof());
     nb.querySelectorAll("[data-fs]").forEach(b => b.onclick = () => { finanzStart += +b.dataset.fs; zeigeHof(); });

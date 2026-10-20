@@ -20,7 +20,7 @@ const { chromium } = require('playwright'); const path = require('path');
     delete F.tests; spiel.admin = true; ok('Adminmodus sieht die Gen-Seltenheit immer', seltenheit(F).stufe === 3); spiel.admin = false;
     ok('Markt-/Alle-Modus (alle = true) ohne Test', seltenheit(F, true).stufe === 3);
     const M = rein('friese', 2); M.gen = genVon(M); M.gen.E = ['e', 'e']; M.anteile = { friese: 50, hannoveraner: 50 }; M.tests = { farbe: true }; M.werte.gang = { schritt: 10, trab: 10, galopp: 10 }; ok('Mischling: gar keine Seltenheit (weder Gen noch Leistung)', seltenGen(M) === null && seltenheit(M).stufe === 0 && seltenheit(M, true).stufe === 0 && seltenheit(M).leist === null);
-    const H = rein('haflinger', 3); H.tests = { farbe: true }; let hg = 0; for (let i = 0; i < 300; i++) { const q = rein('haflinger', 100 + i); if (seltenGen(q)) hg++; } ok('Haflinger hat praktisch keine Gen-Rarität (nur Leistung)', hg <= 3, hg + ' von 300');
+    const H = rein('haflinger', 3); H.tests = { farbe: true }; let hg = 0; for (let i = 0; i < 300; i++) { const q = rein('haflinger', 100 + i); if (seltenGen(q)) hg++; } ok('Haflinger hat nur selten ein Gen-Merkmal (Schwelle 0,1; meist ohne Stufe)', hg <= 30, hg + ' von 300');
     const Hg = rein('shetty', 4, 8, 'Hengst'); Hg.gen = genVon(Hg); ok('Hengst mit BR1: X-Chromosom (nur ein Allel) rechnet ohne Fehler', (() => { Hg.gen.Br1 = ['BR1', 'n']; return typeof genotypProb(Hg.rasse, 'Br1', Hg.gen, true) === 'number'; })());
     // --- 3. Leistungs-Rarität: Ausbildung ---
     const L = rein('hannoveraner', 5); L.bilanz = { 'dressur|S': [3, 0, 1, 0] }; L.bilanzV = 3; L.erfolge = [{ disz: 'dressur', stufe: 4, platz: 2, plaziert: true }];

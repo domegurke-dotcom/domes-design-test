@@ -1024,7 +1024,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "600";
+  const SPIEL_VERSION = "601";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1032,11 +1032,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=600"></script>
-<script src="pferd.js?v=600"></script>
-<script src="boxstufen.js?v=600"></script>
-<script src="kopfneu.js?v=600"></script>
-<script src="waschbild.js?v=600"></script>
+<script src="lz-string.min.js?v=601"></script>
+<script src="pferd.js?v=601"></script>
+<script src="boxstufen.js?v=601"></script>
+<script src="kopfneu.js?v=601"></script>
+<script src="waschbild.js?v=601"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2858,14 +2858,15 @@
     if (n >= vetVerbotAb() - 1 && n > 0) return "letzte"; if (V.auflage || n >= 2) return "auflage"; return n ? "verwarnt" : "unauffaellig";
   }
   const VET_NAME = { unauffaellig: "unauffällig", verwarnt: "verwarnt", auflage: "unter Auflagen", letzte: "letzte Warnung", verbot: "Tierhalteverbot" };
+  const vetInBehandlung = p => { const bl = befundListe(p); return bl.length > 0 && bl.some(b => (b.behGestern || 0) > 0 || (b.tierarzt && p.behPlan && p.behPlan.akt && p.behPlan.akt.length) || (p.behHeute && spiel.tag - p.behHeute.tag <= 1 && Object.keys(p.behHeute.a || {}).length)); };   // Tierarzt-Plan läuft oder gestern/heute behandelt
   // Gerechte Ausnahmen: kein Vorfall, keine Beschlagnahme – gibt den Grund zurück (oder null)
   function vetAusnahme(p) {
     if (!p || !p.pflege) return null; const bl = befundListe(p);
     if (p.klinik) return "ist in der Klinik";
     if (p.gekauftTag != null && spiel.tag - p.gekauftTag < VET.neuTage) return "ist erst seit Kurzem auf dem Hof";
-    if (bl.some(b => (b.behGestern || 0) > 0 || (b.tierarzt && p.behPlan && p.behPlan.akt && p.behPlan.akt.length) || (p.behHeute && spiel.tag - p.behHeute.tag <= 1 && Object.keys(p.behHeute.a || {}).length)) && bl.length) return "ist in Behandlung";
+    if (vetInBehandlung(p)) return "ist in Behandlung";
     if (bl.some(b => KRANK[b.art] && KRANK[b.art].chronisch && (b.tierarzt || b.diagnose || b.beh))) return "hat eine chronische Krankheit, die behandelt wird";
-    if (p.pflege.gesundheit >= gesundheitMax(p) - VET.altNah) return "ist alt – mehr gibt das Alter nicht her";
+    if (p.pflege.gesundheit <= 30 && p.pflege.gesundheit >= gesundheitMax(p) - VET.altNah) return "ist alt – mehr gibt das Alter nicht her";
     return null;
   }
   // Vorfall eintragen; die Folgen (Strafe, Briefe) kommen in `vetAbschluss` – am Ende der Nacht, damit alles zusammen in einem Brief steht
@@ -2886,7 +2887,7 @@
       const gnaedig = (V.gnaedig || []).splice(0), gn = gnaedig.length ? `<br><br>${gnaedig.map(x => `Der Zustand von <b>${esc(x.name)}</b> ist nachvollziehbar, das Pferd ${x.grund}.`).join(" ")}` : "";
       brief("Veterinäramt", n === 1 ? "Veterinäramt: Verwarnung" : "Veterinäramt: Strafe und Auflagen", `bei Ihrem Betrieb <b>${esc(hofName())}</b> kam es zu einem Vorfall: ${v.text}. ${n === 1 ? "Wir erteilen Ihnen eine <b>Verwarnung</b>." : `Das ist der <b>${n}. Vorfall</b>. Wir werden Ihren Betrieb in nächster Zeit kontrollieren und Auflagen erteilen.`} Für den Verstoß gegen das Tierschutzgesetz wird eine Strafe von <b>${fmt(strafe)}</b> fällig. Der Betrag wurde von Ihrem Hofkonto abgebucht.${minus}${n === 1 ? " Wir kündigen eine Kontrolle an." : ""}${gn}`);
       if (n >= ab - 1) brief("Veterinäramt", "Veterinäramt: Letzte Warnung", `Beim nächsten Vorfall wird ein <b>Tierhalteverbot</b> ausgesprochen. Dann werden Ihnen alle Pferde fortgenommen. Bitte sorgen Sie dafür, dass Ihre Pferde jeden Tag versorgt und kranke Pferde sofort behandelt werden.`);
-      V.naechsteKontrolle = spiel.tag + 1 + Math.floor(Math.random() * 2 * tpj());   // V2: Kontrolle an einem zufälligen Tag in den nächsten 2 Jahreszeiten
+      if (!V.auflage) V.naechsteKontrolle = { tag: spiel.tag + 1 + Math.floor(Math.random() * 2 * tpj()), hid: v.hid, art: "vorfall" };   // V2: Kontrolle an einem zufälligen Tag in den nächsten 2 Jahreszeiten
     });
     if (typeof vetNachVorfall === "function") vetNachVorfall(v, arten);
   }
@@ -2908,8 +2909,75 @@
     const A = V.auflage ? `<p class="text"><b>Offene Auflage:</b> ${V.auflage.maengel.map(m => esc(m.text)).join("; ")}.<br>Frist bis Tag ${V.auflage.bis}.</p>` : "";
     dialog(`<h3>🩺 Veterinäramt: <span style="${st === "letzte" || st === "verbot" ? "color:#b3261e" : ""}">${VET_NAME[st]}</span></h3>
       <p class="text">Das Veterinäramt prüft, ob deine Pferde gut versorgt sind. Es zählen alle Höfe zusammen. Beim <b>${ab}. Vorfall</b> gibt es ein Tierhalteverbot – dann ist das Spiel vorbei.${V.vorfaelle.length ? ` Der älteste Vorfall verjährt im ${jzName(letzte + VET.entlastetJz)}, wenn bis dahin nichts Neues passiert.` : ""}</p>${liste}${A}`,
-      [...(spiel.admin ? [["➕ Vorfall (Admin)", () => { vetVorfall("admin", "Testvorfall (Adminmodus)", { neu: true }); vetDialog(zurueck); }, "zweit"]] : []), ["Schließen", zurueck || null]], "breit");
+      [...(spiel.admin ? [["➕ Vorfall (Admin)", () => { vetVorfall("admin", "Testvorfall (Adminmodus)", { neu: true }); vetDialog(zurueck); }, "zweit"], ["🔍 Kontrolle jetzt (Admin)", () => { vetKontrolle("admin"); vetDialog(zurueck); }, "zweit"]] : []), ["Schließen", zurueck || null]], "breit");
     document.querySelectorAll("[data-vetweg]").forEach(b => b.onclick = () => { V.vorfaelle.splice(+b.dataset.vetweg, 1); speichern(); vetDialog(zurueck); });
+  }
+  // ---------- V2: Kontrollen, Auflagen und Meldungen (PLAN-TIERHALTEVERBOT-SPEICHER) ----------
+  // Anlässe: nach jedem Vorfall (zufälliger Tag in den nächsten 2 Jahreszeiten), nach einer Meldung (innerhalb von 7 Tagen), Nachkontrolle am Tag nach Fristende. Läuft tagsüber nach der Morgenrunde der Mitarbeiter.
+  const VET2 = { meldeTag: 0.05, meldeMax: 0.25, melde: { einsteller: 0.5, tierarzt: 0.5, hufschmied: 0.5 }, meldeTage: 7, fristMin: 7, ansehen: -3, hufWochen: 4 };   // Meldechance je Mangel/Tag, Höchstchance, Chance je Besuch (selbst gesetzt), Frist, Pensionsansehen, Hufschmied überfällig in Wochen
+  const VET_SCHWER = ["futter", "wasser", "krankheit", "gesundheit", "fohlen"];   // diese neuen Mängel sprechen bei der Nachkontrolle gegen den Betrieb
+  function bitSchieben(b, feld, wert) { if (!b.pferd) return; const h = b[feld], alt = h && h.pid === b.pferd.id ? h.bits : 0; b[feld] = { pid: b.pferd.id, bits: ((alt << 1) | wert) & 7 }; }   // letzte 3 Nächte als Bits (1 = hungrig/durstig)
+  const bitsAn = (b, feld) => { const h = b[feld]; return h && b.pferd && h.pid === b.pferd.id ? h.bits : 0; };
+  const bitsZahl = n => (n & 1) + ((n >> 1) & 1) + ((n >> 2) & 1);
+  const hufUeberfaellig = p => p.pflege && spiel.tag - (p.pflege.huf || spiel.tag) > hufIntervall(p) + Math.max(1, Math.round(VET2.hufWochen / 13 * tpj()));   // 4 Wochen = 4/13 Jahreszeit
+  // Mängel einer Box (leere Liste = alles in Ordnung)
+  function vetMaengelBox(b, i) {
+    const L = [], p = b.pferd; if (!p || b.tot || !p.pflege || p.klinik || (p.gekauftTag != null && spiel.tag - p.gekauftTag < VET.neuTage)) return L;
+    const wo = `Box ${i + 1} (${p.name})`, add = (art, text, extra) => L.push({ art, key: p.id + "|" + art, pid: p.id, text: `${wo}: ${text}`, schwer: VET_SCHWER.includes(art), ...extra });
+    if (b.mistig && (b.mistStufe || 0) >= 3) add("mist", `seit ${(b.mistStufe || 1) - 1} Tagen nicht gemistet`);
+    if (bitsZahl(bitsAn(b, "hunger")) >= 2) add("futter", "in den letzten Nächten mehrmals hungrig ins Bett");
+    if (boxenStufe(b) === 1 && (bitsAn(b, "durst") & 3) === 3) add("wasser", "Wassereimer in den letzten zwei Nächten leer");
+    if (zuLangeDreckig(p)) add("dreck", "länger als eine Jahreszeit nicht geputzt");
+    if (hufUeberfaellig(p)) add("huf", "Hufe seit Wochen überfällig");
+    if (befundListe(p).some(x => !imInkub(x) && x.grad >= 3) && !vetInBehandlung(p)) add("krankheit", "sichtbar krank, aber ohne Behandlung");
+    if (b.fohlen && alterJZ(b.fohlen) >= 3) L.push({ art: "fohlen", key: b.fohlen.id + "|fohlen", pid: b.fohlen.id, text: `Box ${i + 1}: Fohlen ${b.fohlen.name} ohne eigene Box`, schwer: true });
+    if (p.pflege.gesundheit < 30 && !vetAusnahme(p)) add("gesundheit", `Gesundheit unter 30 %`);
+    return L;
+  }
+  const vetMaengel = () => spiel.boxen.flatMap((b, i) => vetMaengelBox(b, i));
+  // Hinweis auf Mängel (Meldung): das Veterinäramt kontrolliert in den nächsten 7 Tagen – nie, von wem
+  function vetMeldung(quelle) {
+    const V = vetDaten(); if (V.verbot || V.meldung) return false;
+    const tag = spiel.tag + 1 + Math.floor(Math.random() * VET2.meldeTage); V.meldung = { tag: spiel.tag, hid: aktivHid(), quelle };
+    if (!V.naechsteKontrolle || V.naechsteKontrolle.tag > tag) V.naechsteKontrolle = { tag, hid: aktivHid(), art: "meldung" };
+    brief("Veterinäramt", "Veterinäramt: Hinweis zur Tierhaltung", `uns liegt ein Hinweis zur Tierhaltung auf <b>${esc(hofName())}</b> vor. Wir werden Ihren Betrieb in den nächsten Tagen kontrollieren.`);
+    return true;
+  }
+  // Einsteller, Tierarzt und Hufschmied sehen einen Mangel bei ihrem Termin auf dem Hof und melden ihn (Chance je Besuch)
+  function vetMeldungVon(quelle, b) {
+    const V = vetDaten(); if (V.verbot || V.meldung || !b) return;
+    const i = spiel.boxen.indexOf(b); if (i < 0 || !vetMaengelBox(b, i).length) return;
+    if (Math.random() < (VET2.melde[quelle] || 0)) vetMeldung(quelle);
+  }
+  // Anonyme Meldung (Nachbar, Spaziergänger, Futterlieferant): je Mangel 5 % am Tag, höchstens 25 %
+  function vetMeldungTag() {
+    const V = vetDaten(); if (V.verbot || V.meldung || V.auflage) return;
+    const n = vetMaengel().length; if (n && Math.random() < Math.min(VET2.meldeMax, VET2.meldeTag * n)) vetMeldung("anonym");
+  }
+  function vetKontrolle(art) {   // läuft im Hof, der kontrolliert wird
+    const V = vetDaten(), M = vetMaengel(); V.kontrollen.push({ tag: spiel.tag, jz: jzJetzt(), hid: aktivHid(), art, n: M.length });
+    const liste = ms => `<ul>${ms.map(m => `<li>${esc(m.text)}</li>`).join("")}</ul>`;
+    if (art === "nach") {
+      const alt = V.auflage ? V.auflage.maengel : [], noch = alt.filter(a => M.some(m => m.key === a.key)), neuSchwer = M.filter(m => m.schwer && !alt.some(a => a.key === m.key));
+      V.auflage = null;
+      if (!noch.length && !neuSchwer.length) { brief("Veterinäramt", "Veterinäramt: Auflage erfüllt", `bei der Nachkontrolle auf <b>${esc(hofName())}</b> waren alle beanstandeten Mängel behoben. Die Auflage ist erfüllt. Weiter so.`); return; }
+      brief("Veterinäramt", "Veterinäramt: Auflage nicht erfüllt", `bei der Nachkontrolle auf <b>${esc(hofName())}</b> haben wir ${noch.length ? "noch immer" : "neue schwere Mängel"} festgestellt:${liste([...noch, ...neuSchwer])}Die Auflage ist <b>nicht erfüllt</b>. Das zählt als neuer Vorfall.`);
+      vetVorfall("auflage", `Auflage nicht erfüllt: ${[...noch, ...neuSchwer].map(m => m.text).join("; ")}`, { neu: true }); return;
+    }
+    V.meldung = null; V.naechsteKontrolle = null;
+    if (!M.length) { brief("Veterinäramt", "Veterinäramt: Kontrolle ohne Beanstandung", `wir haben Ihren Betrieb <b>${esc(hofName())}</b> heute kontrolliert. Es gab <b>keine Beanstandungen</b>. Die Pferde sind gut versorgt.`); return; }
+    const letzterTag = spiel.tag + tpj() - datum().t, bis = Math.max(letzterTag, spiel.tag + VET2.fristMin);
+    V.auflage = { tag: spiel.tag, bis, hid: aktivHid(), maengel: M.map(m => ({ art: m.art, key: m.key, text: m.text })) };
+    if (einstellerListe().length) pensionAnsehen(VET2.ansehen);
+    brief("Veterinäramt", "Veterinäramt: Kontrolle mit Beanstandungen", `bei der Kontrolle auf <b>${esc(hofName())}</b> haben wir Folgendes beanstandet:${liste(M)}Sie erhalten eine <b>Auflage</b>: Beheben Sie die Mängel bis zum <b>Tag ${datum(bis).t} im ${datumLang(datum(bis))}</b>. Am Tag danach kommen wir zur Nachkontrolle. Sind die Mängel dann nicht behoben, zählt das als neuer Vorfall.`);
+  }
+  // täglich nach der Morgenrunde: fällige Nachkontrolle bzw. Kontrolle
+  function vetKontrolleTag() {
+    const V = vetDaten(); if (V.verbot) return;
+    if (V.auflage && spiel.tag > V.auflage.bis) { const hid = V.auflage.hid; if (!hofVon(hid)) { V.auflage = null; return; } imHof(hid, () => vetKontrolle("nach")); return; }
+    const K = V.naechsteKontrolle; if (!K || spiel.tag < K.tag) return;
+    if (!hofVon(K.hid)) { V.naechsteKontrolle = null; V.meldung = null; return; }
+    imHof(K.hid, () => vetKontrolle(K.art));
   }
   function tierhalteverbot() { const V = vetDaten(); V.verbot = jzJetzt(); }   // V3 ersetzt das durch das Spielende
   // Tod durch Vernachlässigung: Vorfall beim Veterinäramt; schlecht versorgte Pferde (≤ 30 %, keine Ausnahme) werden vom Tierschutz beschlagnahmt
@@ -6009,6 +6077,7 @@
   }
   // Hausbesuch: sichere Diagnose aller Befunde, Behandlung gleich mit (Dome: bis Etappe D) – Kolik ab Grad 4 nur mit OP in der Klinik
   function tierarztBesuch(p, box, danach, besitzer) {   // besitzer: Einsteller ruft selbst (H5) – ohne Fenster, er zahlt
+    vetMeldungVon("tierarzt", box);   // V2: sieht der Tierarzt einen Mangel, kann er ihn melden
     if (!besitzer) tippMerken("tierarzt");   // v376: Einsteiger-Tipp
     prot(besitzer ? "Tierarzt (vom Besitzer gerufen)" : "Tierarzt", { p });   // S4
     const i = spiel.boxen.indexOf(box), l = befundListe(p).filter(b => !imInkub(b) || b.diagnose), posten = [{ text: `${p.name}: Hausbesuch und Untersuchung`, betrag: TIERARZT_BESUCH }], zeilen = [], plan = new Set(), rz = rezeptVon(p);
@@ -6404,6 +6473,7 @@
     if (!pferde.length) return;
     const anfahrt = spiel.hufschmiedHeute !== spiel.tag; spiel.hufschmiedHeute = spiel.tag;   // war er heute schon da: keine zweite Anfahrt
     const posten = anfahrt ? [{ text: `Anfahrt Hufschmied`, betrag: HUF_PREIS.anfahrt }] : [], zeilen = [];
+    pferde.forEach(p => vetMeldungVon("hufschmied", spiel.boxen.find(x => x.pferd === p)));   // V2: sieht der Hufschmied einen Mangel, kann er ihn melden
     pferde.forEach(p => { const a = typeof art === "function" ? art(p) : art;
       if (a === "messen") { p.hufGr = hufGroesseEcht(p); posten.push({ text: `${p.name}: Hufe vermessen`, betrag: HUF_MESSEN }); zeilen.push(`<li><b>${esc(p.name)}</b>: Hufe vermessen – vorne ${HUFSCHUH_GR[p.hufGr.vorne]}, hinten ${HUFSCHUH_GR[p.hufGr.hinten]}</li>`); return; }
       const r = hufschmiedArbeit(p, a); posten.push(...r.posten); zeilen.push(`<li><b>${esc(p.name)}</b>: ${a === "beschlag" ? "beschlagen" : "barhuf ausgeschnitten"}${r.z.length ? ` · ${r.z.join(" · ")}` : ""}</li>`); });
@@ -10325,6 +10395,7 @@
     if (datum().t === 1) { jedenHof(() => { stallartJahreszeit(); patenJahreszeit(); pensionJahreszeit(); bereiterPensionAbrechnung(); fremdFohlenJahreszeit(); offenstallJahreszeit(); kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); jahreszeitBeginn(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); bereiterAbrechnung(); maKnappPruefen(); dispoJahreszeit(); bestenAlle(); auktionsEnde(); fohlenAbsetzen(); stutenAusAbfohl(); }, true); spamAufraeumen(); hoefeVersteigern(); jahresbericht(); try { rarJahreszeit(); } catch (e) { console.error("Raritäten:", e); } try { stufeBrief(); } catch (e) { console.error("Stufe:", e); } }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
     turnierKalender();
     jedenHof(hofMorgen, true);
+    jedenHof(vetMeldungTag); vetKontrolleTag();   // V2: Meldungen, Kontrolle nach der Morgenrunde
     blutbilderTag();     // Laborergebnisse
   }
   function hofNacht() {
@@ -10352,6 +10423,7 @@
       if (draussen) b.nachtMist = dreck ? Math.max(1, b.vorWeide ? b.vorWeide.stufe || 0 : b.mistStufe || 0) : 0;
       if (b.pferd.weide && !b.tot) {   // Weide: Gras statt Heu, kein Mist – Gesundheit je nach Jahreszeit, Wohlbefinden steigt
         const W = b.pferd, plus = WEIDE_PLUS[datum().s], hungrig = heuNoetigP(W, spiel.tag - 1) && !b.krippeVoll; W.weideZuletzt = spiel.tag - 1; if (W.anweiden && !anweidenAktiv(W)) delete W.anweiden;   // Winter / letzter Herbsttag: Heu nötig
+        bitSchieben(b, "hunger", hungrig ? 1 : 0);
         b.krippeVoll = false; b.kraftVoll = false; b.mistig = false; b.mistStufe = 0;
         [W, b.fohlen].forEach(q => { if (!q) return; const qp = (q.pflege = q.pflege || erzeugePflege(q));
           if (hungrig) qp.gesundheit = Math.max(1, Math.round((qp.gesundheit - 19) * 10) / 10);
@@ -10367,6 +10439,7 @@
       if (dreck) b.mistig = true;   // v365: Sandpaddock tagsüber, Box ungemistet → zählt für die Nacht wie Mist in der Box
       const pf = b.pferd.pflege;
       warnen(b, spiel.boxen.indexOf(b));   // Warnbrief schon beim Stand vor der Nacht
+      bitSchieben(b, "hunger", b.krippeVoll ? 0 : 1);   // V2: Kontrolle zählt hungrige Nächte
       let g = pf.gesundheit;
       if (!b.krippeVoll) g -= 19;      // hungrig ins Bett: −19 Punkte
       if (b.mistig) g -= MIST_G;       // Box nicht gemistet (v536, Dome: −4 statt −9,5)
@@ -10388,6 +10461,7 @@
       // Wohlbefinden: Box (zu lange am Stück, je nach Charakter), Hunger, Mist, Putzen vermisst …
       const pd = paddockVon(b.pferd); if (b.pferd.paddock && !pd) delete b.pferd.paddock;   // Sandpaddock abgerissen/umgebaut → zurück in die Box
       wohlNacht(b.pferd, pd ? "paddock" : "box", { hungrig: !b.krippeVoll, mistig: pd ? (pd.mist || 0) >= 3 : b.mistig, fohlen: !!b.fohlen, herde: pd ? paddockPferde(pd) : null }); einstreuNacht(b); boxWohl(b.pferd, b); if (pd && dreck) wohlAendern(b.pferd, -WOHL.mist * (1 + 0.5 * charE(b.pferd, "sensibel").hoch), "Box nicht gemistet (abends wieder drin)"); wohlAllein(b.pferd, b.krippeVoll && !b.mistig); futterNacht(b.pferd, b, "box");
+      { const durstig = boxenStufe(b) === 1 && !b.pferd.weide && !b.pferd.paddock && !b.pferd.klinik && b.wasserTag !== spiel.tag - 1; bitSchieben(b, "durst", durstig ? 1 : 0); }   // V2
       if (boxenStufe(b) === 1 && !b.pferd.weide && !b.pferd.paddock && !b.pferd.klinik && b.wasserTag !== spiel.tag - 1) { wohlAendern(b.pferd, -6, "der Wassereimer war leer – Durst"); b.pferd.pflege.gesundheit = Math.max(1, Math.round((b.pferd.pflege.gesundheit - 3) * 100) / 100); }
       if (b.pferd.paddock && !b.pferd.weide) wanneDurst(b.pferd);   // v360: Badewanne auf dem Sandpaddock   // v355: Stufe 1 ohne Selbsttränke
       schmutzen(b.pferd, b.mistig);
@@ -13351,7 +13425,7 @@
         brief(eName(e), `${p.name} ist in der Klinik`, `<b>${esc(p.name)}</b> ging es so schlecht (Gesundheit ${p.pflege.gesundheit.toLocaleString("de-DE")} %), dass ich ${pron(p).ihn} in die Klinik bringen musste. Die Kosten trage ich – aber ich erwarte, dass ${esc(p.name)} bei {euch|Ihnen} ordentlich versorgt wird!`, { w: e.w, pferde: [p] }); return; }
       if (p.klinik || p.turnier) return;
       if (Math.random() >= PENSION.besuch * (datum().s === 3 ? 0.8 : 1)) return;
-      e.besuchTag = spiel.tag; putzen(p, "buerste"); putzen(p, "kamm"); p.ausgekratzt = spiel.tag; beruehrt(p, e.eid, "putz");   // v388: Hufe gehören zum Putzen
+      e.besuchTag = spiel.tag; vetMeldungVon("einsteller", b); putzen(p, "buerste"); putzen(p, "kamm"); p.ausgekratzt = spiel.tag; beruehrt(p, e.eid, "putz");   // v388: Hufe gehören zum Putzen
       befundListe(p).forEach(x => { if (!x.bemerkt && !imInkub(x) && x.grad >= 2 && Math.random() < 0.5) x.bemerkt = { von: eName(e), tag: spiel.tag }; });
       if (!p.weide && !trainSperre(p, b, true) && energie(p) >= 30) {   // reitet (Reitplatz bzw. bei Regen/Winter Halle, sonst Gelände)
         const T = (p.trainHeute = p.trainHeute && p.trainHeute.tag === spiel.tag ? p.trainHeute : { tag: spiel.tag, liste: [], verbraucht: 0 });

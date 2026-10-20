@@ -1,8 +1,9 @@
 // Etappen-Test: spielt Domes Test-Anleitungen für Fütterung F1–F5, Hof-Ausbau H1–H3 und H5 per Skript nach.
 // Start (im Repo-Ordner): NODE_PATH=/opt/node22/lib/node_modules node tests/etappen-test.js
-// Erwartet: jede Zeile „✓“, am Ende „Fehler []“ und „alles ok“.
+// Erwartet: jede Zeile „✓“, am Ende „Fehler []“ und „alles ok“. Bilder: BILDER=fehler|alle BILDER_ORDNER=<Scratchpad-Ordner> (tests/bilder.js).
 const { chromium } = require('playwright');
 const path = require('path');
+const B = require('./bilder');   // Bilder-Schalter: BILDER=aus|fehler|alle, siehe tests/bilder.js
 (async () => {
   const b = await chromium.launch();
   const ergebnisse = [], errs = [];
@@ -324,9 +325,11 @@ const path = require('path');
       speichern(); return L;
     }, ansicht);
     ergebnisse.push(...r);
+    const gut = r.every(z => z[0] === '✓') && !errs.some(e => e.startsWith(ansicht));
+    await B.bild(pg, ansicht + '-Ende-der-Prüfungen', gut);   // Zustand nach allen Prüfungen (bei ✗: dieser Zustand, nicht der genaue Schritt – die ✗-Zeile nennt den Schritt)
     // Hofverwaltung über die Oberfläche öffnen (alle Bereiche)
-    for (const reiter of ['hof', 'finanzen', 'mitarbeiter', 'post']) await pg.evaluate(rt => { zeigeHof(rt); }, reiter);
-    for (const ber of ['uebersicht', 'plan', 'bauen', 'pension', 'futter']) await pg.evaluate(bb => { hofBereich = bb; zeigeHof('hof'); }, ber);
+    for (const reiter of ['hof', 'finanzen', 'mitarbeiter', 'post']) { await pg.evaluate(rt => { zeigeHof(rt); }, reiter); await B.bild(pg, ansicht + '-hvw-' + reiter, !errs.some(e => e.startsWith(ansicht))); }
+    for (const ber of ['uebersicht', 'plan', 'bauen', 'pension', 'futter']) { await pg.evaluate(bb => { hofBereich = bb; zeigeHof('hof'); }, ber); await B.bild(pg, ansicht + '-hof-' + ber, !errs.some(e => e.startsWith(ansicht))); }
     await pg.reload(); await pg.waitForTimeout(300);
     ergebnisse.push([await pg.evaluate(() => typeof hatSpielstand !== 'undefined' && hatSpielstand) ? '✓' : '✗', ansicht, 'Speichern und Neuladen', '']);
     await pg.close();
@@ -335,5 +338,6 @@ const path = require('path');
   const fehl = ergebnisse.filter(z => z[0] !== '✓');
   console.log('Fehler', JSON.stringify(errs));
   console.log(fehl.length || errs.length ? `${fehl.length} Prüfungen fehlgeschlagen` : 'alles ok');
+  if (B.zusammenfassung()) console.log(B.zusammenfassung());
   await b.close();
 })();

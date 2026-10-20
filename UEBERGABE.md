@@ -22,5 +22,6 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 ### Offen (unverändert aus der Team-Nachricht)
 1. Domes Test im Spiel von v560–v582 (Tutorial als Anfänger am Handy und PC, Raritäten im Sommer, Waschplatz/Solarium, Stufen, Abstammung).
 2. **v583:** Hinweisblase blendet sich beim Ziehen eines Pferdes aus (hochkant deckte sie die freien Boxen ab, Dome: „das da“). `tests/tutorial-spieler.js` Anfänger 390×844, 844×390, 1366×768 laufen durch (nicht parallel starten – sonst hängt es zufällig bei „Bürste“).
+2b. **Bilder-Schalter für große Tests** (Dome, 20.10.): `BILDER=aus|fehler|alle` + `BILDER_ORDNER` für etappen-test, hof-gesamttest, neuladen-test (`tests/bilder.js`, siehe `tests/README.md`). Geprüft nur mit einem Mini-Probelauf, die großen Tests selbst sind **nicht** gelaufen (Dome: noch nicht starten, vorher fragen, welche Variante).
 3. Große Tests (Etappen-, Hof-Gesamt-, Neuladen-Test) nur mit Domes Erlaubnis.
 4. Wisch-/Ziehgefühl am echten Handy kann nur Dome prüfen.

@@ -1,4 +1,5 @@
 const { chromium } = require('playwright');
+const B = require('./bilder');   // Bilder-Schalter: BILDER=aus|fehler|alle, siehe tests/bilder.js (Start: BILDER=fehler BILDER_ORDNER=<Scratchpad-Ordner> node tests/hof-gesamttest.js)
 (async () => { const b = await chromium.launch();
  const pg = await b.newPage({ viewport: { width: 390, height: 844 } }); const errs=[]; pg.on('pageerror', e => errs.push(e.message + ' @ ' + (e.stack||'').split('\n')[1]));
  await pg.goto('file://' + require('path').resolve(__dirname, '..', 'index.html')); await pg.evaluate(()=>localStorage.clear()); await pg.reload();
@@ -61,6 +62,10 @@ const { chromium } = require('playwright');
    speichern(); return ['ok', PROT];
  });
  console.log(JSON.stringify(r, null, 1));
+ { const probleme = (r[1] || []).filter(z => Array.isArray(z) && Array.isArray(z[4])).length + errs.length;   // PROT-Zeilen mit Fehlerliste (statt „ok“) + Seitenfehler
+   const gut = !probleme && r[0] === 'ok';
+   await B.bild(pg, 'hof-Ende-Stall', gut);
+   for (const rt of ['hof', 'finanzen', 'mitarbeiter', 'post']) { await pg.evaluate(x => { zeigeHof(x); }, rt); await B.bild(pg, 'hof-hvw-' + rt, gut); } }
  await pg.reload(); await pg.waitForTimeout(300);
  const r2 = await pg.evaluate(() => { speichernJetzt(); const s = lesen('zuchtstall-v2'); return [hatSpielstand, hofName(), hofAnzahl(), Object.keys(s.hoefe), spiel.geld, imHof('h2', () => [spiel.geld, spiel.boxen.filter(b=>b.pferd).map(b=>b.pferd.name + ' ' + Math.round(b.pferd.pflege.gesundheit))]), spiel.boxen.filter(b=>b.pferd).map(b=>b.pferd.name + ' ' + Math.round(b.pferd.pflege.gesundheit)), gebaeude().map(g => g.typ + ' S' + g.stufe + ' Z' + Math.round(g.zustand) + (g.bau ? ' BAU' : ''))]; });
  console.log('Reload', JSON.stringify(r2));
@@ -68,4 +73,4 @@ const { chromium } = require('playwright');
  console.log('Briefe', JSON.stringify(briefe));
  const fin = await pg.evaluate(() => hofReihe().map(h => imHof(h, () => [hofName(), Object.fromEntries(Object.entries(spiel.finanzen).map(([j, J]) => [j, Object.fromEntries(Object.entries(J).map(([k, e]) => [k, Math.round(e.ein - e.aus)]))]))])));
  console.log('Finanzen', JSON.stringify(fin));
- console.log('Fehler', errs); await b.close(); })();
+ console.log('Fehler', errs); if (B.zusammenfassung()) console.log(B.zusammenfassung()); await b.close(); })();

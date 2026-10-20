@@ -73,7 +73,7 @@ Alles liegt auf `main` (Branch `claude/admiring-bell-s50jlb` ist gleich). Detail
 ## Fortschritt Nachtsitzung 20.10.2026 (Claude Team, Opus, selbstständig)
 Auftrag von Dome (20.10., 3:30 Uhr): „Starte mit allem, was nach Plan offen ist, so weit wie es geht.“ Selbststarts um 7:05 und 12:05 Uhr (12:05: höchstens 50 % Volumen) sind als Erinnerung eingerichtet.
 Reihenfolge: **B4 → R2 → R3 → R4 → Waschplatz W1–W6 → Hinweise T1–T6**. Fragen zur Spielmechanik → `OFFENE-FRAGEN.md` (empfohlene Lösung gebaut, leicht änderbar).
-Bricht die Sitzung ab, kann **Claude Pro** hier weitermachen: Stand steht in der Liste unten (wird nach jedem Schritt aktualisiert), Code liegt auf `main`.
+Bricht die Sitzung ab, kann **Claude Pro** hier weitermachen (Dome: Stand nach **jeder** Etappe sichern – feste Regel in CLAUDE.md): Stand steht in der Liste unten (wird nach jedem Schritt aktualisiert), Code liegt auf `main`.
 
 | Schritt | Stand |
 |---|---|

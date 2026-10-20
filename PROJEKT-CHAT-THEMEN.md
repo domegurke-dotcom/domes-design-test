@@ -12,8 +12,8 @@ Diese Punkte sind zu groß oder brauchen erst eine Planung. Darum hat Claude sie
 3. **Ausbildungsskala für die anderen Disziplinen** (Western, Gangpferde, Distanz, Rennen …): recherchieren, ob es dort Vergleichbares gibt.
 4. **Spiel verloren:** Fenster mit den Gründen und einer Bilanz (Turniere, gekaufte, gezüchtete, abgegebene und verstorbene Pferde, Finanzen, Höfe). Der letzte Spielstand bleibt zum Ansehen, ohne weiterzuspielen. **Geplant → `PLAN-BILANZ.md`** (Dispo B1, Chronik B2, Jahresbericht B3, Verloren-Bilanz B4, Bild B5).
 5. **Raritäten-Markt** (jährlich im Sommer, seltene Gene mit Nachweis). **Geplant → `PLAN-RARITAETEN.md`** (R1–R4).
-6. **Neue Karte „Merkmale“** (Interieur, Exterieur, Gangwerk, Rassemerkmale, jeweils mit „vergleichen mit …“).
-7. **Reiter-Erfahrung:** Der Reiter wird durch Training und Turniere erfahrener. Ein unerfahrener Reiter gewinnt nicht mit einem M-Pferd. Ein erfahrenerer Reiter trainiert besser, solange er weiter ist als das Pferd.
+6. **Neue Karte „Merkmale“** (Interieur, Exterieur, Gangwerk, Rassemerkmale, jeweils mit „vergleichen mit …“). **Geplant → `PLAN-MERKMALE.md`** (M1–M5, mit `PLAN-MERKMALE-TABELLEN.md`, `PLAN-MERKMALE-TEXTE.md`; Dome, 20.10.2026).
+7. **Reiter-Erfahrung:** Der Reiter wird durch Training und Turniere erfahrener. Ein unerfahrener Reiter gewinnt nicht mit einem M-Pferd. Ein erfahrenerer Reiter trainiert besser, solange er weiter ist als das Pferd. **Geplant → `PLAN-REITER.md`** (K1–K4, mit `PLAN-REITER-TEXTE.md`; Dome, 20.10.2026).
 8. **Spielbalance: Tierschutz-Strategie.** Tierschutzstuten mit Fohlen kaufen und nach einem Jahr verkaufen, dazu Turniere und ein Kredit: So gibt es keine Geldsorgen.
    - Schon gemacht (v261): Das Fohlen hat jetzt auch den Verkaufsschutz, und Stuten mit Fohlen kommen seltener.
    - Offen: Preise, Turniergeld, Kreditgrenzen insgesamt prüfen.
@@ -30,6 +30,11 @@ Diese Punkte sind zu groß oder brauchen erst eine Planung. Darum hat Claude sie
 16. **Tierhalteverbot bei wiederholter schwerer Vernachlässigung** (Dome, 19.10.2026): zweiter Verlust-Weg neben Kredit und Dispo. Dome will das später ausführlich im Projekt-Chat besprechen – bis dahin nichts bauen.
 17. **Wasserlaufband/Aqua-Training als eigenes Gebäude** (Dome, 19.10.2026, später planen): Muskeln, Kondition, Reha. Gehört nicht in den Waschplatz (`PLAN-WASCHPLATZ.md`).
 18. **Hinweisblasen, Spielumfang je Erfahrungsstufe, Tutorials** (Dome, 20.10.2026). **Geplant → `PLAN-HINWEISE.md`** (T1–T6, mit `PLAN-HINWEISE-TEXTE.md`, `PLAN-TUTORIAL.md`, `PLAN-STUFEN.md`; nach B4, R2–R4 und Waschplatz).
+
+19. **Körung, Stutenschau, Hengstleistungsprüfung** (Dome, 20.10.2026, später planen): hängt an der Zuchtbuch-Klasse aus `PLAN-MERKMALE.md` (bis dahin „Körung kommt später“ bei Hengsten).
+20. **Rücken, Fesselung, Stellung und Huf im Pferdebild sichtbar** (Dome, 20.10.2026): wartet auf Domes überarbeiteten Körper (Ebenen siehe `BEI-INKSCAPE-BEARBEITEN.md`, Abschnitt Merkmale Punkt 5).
+21. **Ponys: Reiter, Gewicht, Fahren** (Dome, 20.10.2026, später planen): Erwachsene können Ponys und Shettys in echt nicht reiten (Gewichtsgrenze etwa 20 % des Pferdegewichts, Pony-Turniere sind für Kinder). Mögliche Wege: Kinder oder Jugendliche als Reiter, Fahren (Kutsche), beides. Bis dahin starten Ponys wie alle Pferde.
+22. **Zu Punkt 1 ergänzt (Dome, 20.10.2026):** je Disziplin mehrere Ausbildungsställe zur Auswahl (günstig, moderat, teuer), das Pferd lernt je nach Stall mehr oder weniger; ein Westernpferd gehört in einen Western-Ausbildungsstall. `PLAN-REITER.md` nimmt bis dahin Platzhalter-Können 65 / 80 / 92.
 
 ## Rassetypen und Rote-Liste-Rassen (Dome, 18.10.2026 – noch planen)
 - **Typen innerhalb einer Rasse:** Knabstrupper (Pony, Sport, Barock), Friese (Barock-/Sporttyp, Prädikate Ster/Kroon/Model), Welsh (Sektion A–D, im Spiel nur D), Haflinger (alter, schwerer Typ / moderner Reittyp), Shetlandpony (Mini-Shetty unter 87 cm / Standard), Quarter (Halter, Racing, Working), Araber (Zuchtrichtungen, z. B. Ägypter), Tinker (Größen vom Pony bis zum Cob).

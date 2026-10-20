@@ -112,7 +112,7 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Text nennt das Pferd und Reitunterricht', /Hinweisa/.test(hinweisText(HINWEISE.reiterBesser)) && /Reitunterricht/.test(hinweisText(HINWEISE.reiterBesser)));
     ok('Nicht noch einmal für dasselbe Pferd und dieselbe Gruppe', reiterBesserMerken(H1, 'dressur') === false);
     ok('Andere Gruppe desselben Pferdes: nochmal', (() => { spiel.tipps = { reiterBesser: 1 }; const r = reiterBesserMerken(H1, 'springen'); return r === true && !spiel.tipps.reiterBesser; })());
-    ok('Training mit zu weitem Pferd: Merker am Pferd, zweites Training kein neuer Hinweis', (() => { const x = tp('Hinweisb', { dressur: 50 }); x.energie = 100; spiel.reiter.koennen.dressur = 10; spiel.tippWarte = []; spiel.tipps = {}; spiel.boxen[0].pferd = x; trainieren(x, 'longieren', 'reitplatz', null); const a = spiel.tippWarte.length; x.energie = 100; trainieren(x, 'dressur', 'reitplatz', null); return a === 1 && spiel.tippWarte.length === 1 && x.hinw.besser.dressur; })());
+    ok('Training mit zu weitem Pferd: Merker am Pferd, zweites Training kein neuer Hinweis', (() => { const x = tp('Hinweisb', { dressur: 50 }); x.energie = 100; spiel.reiter.koennen.dressur = 10; spiel.tippWarte = []; spiel.tipps = {}; spiel.boxen[0].pferd = x; trainieren(x, 'longieren', 'reitplatz', null); const c = () => spiel.tippWarte.filter(k => k === 'reiterBesser').length, a = c(); x.energie = 100; trainieren(x, 'dressur', 'reitplatz', null); return a === 1 && c() === 1 && x.hinw.besser.dressur; })());
     ok('Bereiter-Training löst den Hinweis nicht aus', (() => { const x = tp('Hinweisc', { dressur: 50 }); x.energie = 100; spiel.tippWarte = []; spiel.boxen[0].pferd = x; trainieren(x, 'longieren', 'reitplatz', Mq); return spiel.tippWarte.length === 0; })());
     // --- 12. Kauf-Zeile ---
     const Mk = tp('Marktpferd', { dressur: 70 }); spiel.reiter.koennen.dressur = 10;
@@ -188,6 +188,23 @@ const { chromium } = require('playwright'); const path = require('path');
     { spiel.lk.springen = 7; spiel.reiter.koennen.springen = 10; spiel.lkErfolge = {}; spiel.tippsAus = false; spiel.tipps = {}; spiel.tippWarte = [];
       const m1 = lkErfolg('springen', 0, 2); ok('Erfolge reichen (1 Platzierung), Können 10 < 15: kein Aufstieg, Blase vorgemerkt', m1 === '' && spiel.lk.springen === 7 && spiel.tippWarte.includes('lkWartet'));
       spiel.reiter.koennen.springen = 16; const m2 = lkErfolg('springen', 0, 3); ok('Mit Können 16: Aufstieg auf LK 6 (Erfolge haben sich gesammelt)', /LK 6/.test(m2) && spiel.lk.springen === 6); }
+    // ==================== K4 ====================
+    { const st = s => { spiel.stufenAn = true; spiel.spieler = spiel.spieler || {}; spiel.spieler.stufe = s; }; spiel.reiter.koennen.dressur = 40; spiel.admin = false;
+      st('anf'); let h = reiterHTML(); ok('Anfänger: nur LK und Startrecht der vier Gruppen, keine Können-Balken, Reitunterricht-Knopf da', (h.match(/<tr><td>/g) || []).length === 4 && !/class="balken"/.test(h) && /id="ruKnopf"/.test(h) && !/Rennen/.test(h.split('lk-tab')[1].split('</table>')[0]));
+      st('fort'); h = reiterHTML(); ok('Fortgeschritten: sieben Gruppen mit Balken, Schwelle der nächsten LK, Wirkung, ohne Zahlen', (h.match(/<tr><td>/g) || []).length === 7 && (h.match(/class="balken"/g) || []).length === 7 && /nächste LK ab/.test(h) && /lernen bei dir voll/.test(h) && !/Können 40/.test(h));
+      st('exp'); h = reiterHTML(); ok('Experte: Zahlen und Tooltip mit den genauen Zuwächsen', /Können 40/.test(h) && /Zuwachs bisher: Training/.test(h) && /Unterricht \+0,8/.test(h));
+      ok('Wirkungstext: Können 40 → Pferde bis Klasse A lernen voll, ab Klasse L bremst es', /bis Klasse A lernen bei dir voll, ab Klasse L bremst/.test(h.split('Dressur')[1] || ''));
+      ok('Stufen: Balken ab Fortgeschritten, Zahlen nur Experte', (() => { st('anf'); const a = freiStufe('reiterBalken'), b2 = freiStufe('reiterZahlen'); st('fort'); const c = freiStufe('reiterBalken'), d = freiStufe('reiterZahlen'); st('exp'); return !a && !b2 && c && !d && freiStufe('reiterZahlen'); })());
+      ok('STUFE_NEU nennt Reiter-Können (fort und exp)', STUFE_NEU.fort.some(x => /Reiter-Können/.test(x)) && STUFE_NEU.exp.some(x => /Reiter-Könnens/.test(x)));
+      const hw = ['reiterKarte', 'reiterTraining', 'reiterUnterricht', 'reiterWahl', 'rennenSelbst', 'lkWartet', 'reiterBesser']; ok('Hinweise R1–R6 + Rennen selbst im System, „Mehr dazu“ → Reiter-Können', hw.every(k => HINWEISE[k]) && ['reiterKarte', 'reiterTraining', 'reiterUnterricht', 'reiterWahl', 'rennenSelbst'].every(k => HINWEISE[k][4] === 'reiter') && EINSTEIGER_MEHR.reiter);
+      ok('Enzyklopädie: Einsteiger-Wissen „Reiter-Können“', /Reiter-Können/.test(document.documentElement.innerHTML) && /Bereiter und Profis/.test(document.documentElement.innerHTML));
+      ok('Tutorial: Fortgeschrittenen-Kapitel „Reiter-Können, Unterricht, Reiterwahl“', TUT_FORT.some(k => /Reiter-Können/.test(k.n)) && TUT_FORT[0].schritte.length === 4 && /selbst reiten/.test(JSON.stringify(TUT_EXP)));
+      // Auslöser
+      spiel.tippsAus = false; spiel.tipps = {}; spiel.tippWarte = []; const tx = tp3('Hinweisx', { dressur: 50 }); tx.energie = 100; spiel.boxen[0].pferd = tx; trainieren(tx, 'longieren', 'reitplatz', null);
+      ok('Erstes eigenes Reiten im Training merkt Blase R2 vor', spiel.tippWarte.includes('reiterTraining'));
+      spiel.tippWarte = []; spiel.reiter.koennen.rennen = 35; reiterOptionen(tp3('Rx'), { id: 't', tag: spiel.tag + 2, art: 'renntag', nennung: [], pruef: [] }, { id: 'rr', disz: 'galopprennen', stufe: 1, name: 'Ausgleich III (Vollblut)', jockey: true, starter: 8 }); ok('Rennen selbst reiten möglich: Blase vorgemerkt', spiel.tippWarte.includes('rennenSelbst'));
+      spiel.tippWarte = []; const pxx = tp3('Wx'), Pxx = { id: 'pm', disz: 'dressur', stufe: 3, name: 'Dressur Kl. M', starter: 12 }; reiterWahlDialog(pxx, T0('gross', Pxx), Pxx, () => {}, () => {}); document.getElementById('dlg').hidden = true; ok('Reiterwahl zum ersten Mal: Blase R4 vorgemerkt', spiel.tippWarte.includes('reiterWahl'));
+      spiel.admin = false; st('exp'); }
     // --- 14. Bereiter trainiert nach dem Unterricht am nächsten Morgen nicht ---
     ok('Bereiter, der gestern dich unterrichtet hat, trainiert heute kein Pferd – sonst schon', (() => {
       try { spiel.mitarbeiter = [{ id: 'bt1', name: 'Berta', typ: 'bereiter', ab: jzJetzt() - 1, bis: null, wissen: { ruecken: 60, verhalten: 50, huf: 40 }, eig: [], zufr: 80 }]; const m = spiel.mitarbeiter[0];

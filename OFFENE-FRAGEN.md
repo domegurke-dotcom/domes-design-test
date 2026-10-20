@@ -20,4 +20,6 @@ Zeichen-Aufgaben stehen in `BEI-INKSCAPE-BEARBEITEN.md`, große Themen in `PROJE
 
 7. **Schleifen S4 (v592):** Der Plan nennt einen „Stufen-Eintrag“ für die Pinnwand; die Schleifen sind aber für alle Stufen sichtbar, deshalb gibt es keine Sperre und keinen Eintrag in `STUFE_NEU` (nur die Blase mit Stufe fort = alle). Der Hinweis kommt als normale Nebenblase (nur wenn die Box mit der Pinnwand im Bild ist).
 
+8. **Reiter K4 (v593):** (a) Das Fortgeschrittenen-Kapitel „Reiter-Können, Unterricht, Reiterwahl“ besteht aus vier Info-Schritten (kein 2-Tage-Ablauf mit echten Klicks wie im Plan: Reiter-Seite öffnen, trainieren, Reitstunde, im Turnier mit Bereiter nennen) – das ließe sich später zu einem echten Ablauf ausbauen. (b) Die Blase R5 (LK wartet) gab es schon als `lkWartet`; der Experten-Satz zum Rennen steht in der Stallarten-Karte (es gibt kein Rennen-Kapitel).
+
 _Frühere Meldung: zurzeit keine weiteren offenen Fragen – die 9 Fragen der Nachtsitzung hat Dome am 20.10.2026 beantwortet (umgesetzt in v573–v575, siehe UEBERGABE.md)._

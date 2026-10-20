@@ -26,6 +26,13 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - **Info-Knopf** (rundes i, klappt den Info-Text auf) bei Auswahl-Fenstern mit Erklärungen anbieten (Dome, v321).
 - Grundsatz: Kommen neue Rassen dazu, bekommen sie ihre Erbkrankheiten, Eigenheiten, Hufqualität, Körperbau (Gewicht) und Futtertyp gleich mit.
 
+## Selbstständig arbeiten (Dome, von Claude Pro formuliert, 20.10.2026)
+- **Selbst entscheiden:** wie etwas technisch gebaut wird, eindeutige Fehler beheben, Tests schreiben/anpassen, Texte/Enzyklopädie/CLAUDE.md aktuell halten, kleine Zahlen innerhalb einer gegebenen Aufgabe (danach nennen).
+- **Auf Dome warten:** neue oder geänderte Spielmechanik, die nicht verlangt wurde; Unrealistisches/Unstimmigkeiten; alles unter „Noch warten, bis Dome es sagt“; Themen aus `PROJEKT-CHAT-THEMEN.md`; große Tests (Hof-Gesamttest, Neuladen-Test, Etappen-Test, Screenshots in allen Ansichten); alles an Domes Zeichnungen.
+- **Wie weit allein:** höchstens eine Etappe eines freigegebenen Plans (testen, hochladen, Test-Anleitung geben, auf Rückmeldung warten). Ein ganzes Thema nur, wenn Dome es ausdrücklich sagt. Ist die Etappe fertig oder kommt eine Frage, die nur Dome beantworten kann: aufhören, nicht vorarbeiten. Vorher immer Überblick, Aufwand, Modell nennen und auf ein klares „Ja“ warten.
+- **Offene Fragen in Domes Abwesenheit:** geht es ohne Antwort nicht weiter, die empfohlene Lösung nehmen, leicht änderbar bauen und in `OFFENE-FRAGEN.md` eintragen. Betrifft die Frage die Spielmechanik: nicht entscheiden, eintragen und mit etwas anderem aus dem freigegebenen Plan weitermachen. Danach gehen wir sie gemeinsam durch, beantwortete Fragen werden gelöscht.
+- **Neue Funktionen** bekommen ab Beginn von `PLAN-HINWEISE.md` T1 gleich einen Tipp-Eintrag und einen Stufen-Eintrag (ab welcher Erfahrungsstufe sichtbar).
+
 ## Pläne (in dieser Reihenfolge)
 - `PLAN-STUDIEN.md` – großer Krankheitstest (28 Rassen × 4 Spieler, `studie-daten/zweite-studie-v534/`) und Zuchttest (`studie-daten/zucht-studie-v534/`) **erledigt (19.10.2026)**, Ergebnis und Bewertung in `STUDIE-GESUNDHEIT.md`. Domes Antworten umgesetzt (v535–v537).
 - `PLAN-WERTE.md` – Werte, Charakter, Training, Disziplinen, Turniere, Fohlenschau. **Alle Etappen 1–6 fertig** (6a Turniere, 6b Rennen/Distanz/Gangpferde/Championate/Reiterprofil, 6c Fohlenschau; Stand v211).
@@ -40,6 +47,8 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - `PLAN-RASSEN.md` – Veredler-Rassen: **fertig** (v316), dazu Domes „Danach“-Wünsche (v317). Domes Abnahme erledigt (18.10.2026).
 - `PLAN-BILANZ.md` – Dispo (−2.000 €, Käufe sperren, Pfändung/Insolvenz), Hofchronik-Zähler, Jahresbericht per Post, Spiel-verloren-Bilanz mit „Nur ansehen“, Bilanz als Bild (B1 fertig v547, B2 fertig v548–v553, B3 fertig v554, B5 fertig v555, B4 offen, Dome 19.10.2026).
 - `PLAN-RARITAETEN.md` – Seltenheitsstufen für alle Pferde (Gen-/Leistungs-Rarität, 5 Symbole) und Raritäten-Markt (R1 fertig v556, R2–R4 offen, Dome 19.10.2026; baut auf PLAN-BILANZ B1/B2 auf – beides da).
+- `PLAN-WASCHPLATZ.md` – Waschplatz mit Wirkung (Zustände nass/verschwitzt, Abspritzen, Hufe/Beine, Wassergewöhnung) und Pferdesolarium (eigenes Gebäude), Pfleger/Einsteller, Fohlen „Duschen üben“; W1–W6, **alle offen**; Bilder auf Branch `entwurf-waschplatz-bilder` (erst nach Domes Freigabe einbauen). Reihenfolge nach Dome 20.10.2026: B4 → R2–R4 → Waschplatz → Hinweise.
+- `PLAN-HINWEISE.md` – Hinweisblasen statt Tipp-Fenster, Spielumfang je Erfahrungsstufe (`STUFEN`, `frei()`), Tutorials; T1–T6, **alle offen** (T2/T4 groß → Opus), Anhänge `PLAN-HINWEISE-TEXTE.md`, `PLAN-TUTORIAL.md`, `PLAN-STUFEN.md`; erst nach Waschplatz.
 - `PROJEKT-CHAT-THEMEN.md` – große Themen, die Dome im Projekt-Chat plant (Ausbildungsstall je Disziplin, Deckhengst, Merkmale-Karte, Reiter-Erfahrung, zwei Fohlen je Box/Zwillinge …) – nicht eigenmächtig umsetzen.
 - `OFFENE-FRAGEN.md` – Fragen, die Claude in Domes Abwesenheit mit der empfohlenen Lösung entschieden hat; mit Dome durchgehen und danach anpassen. Stand 19.10.2026: alles beantwortet, beantwortete Fragen gelöscht (Flocke/Stern bleiben, Splash-Fell optional in BEI-INKSCAPE-BEARBEITEN.md).
 - Nach jeder Etappe: testen, hochladen, Dome eine Test-Anleitung mit ausgeschriebenen Wegen geben, auf Rückmeldung warten, Etappe im Plan abhaken.

@@ -1024,7 +1024,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "601";
+  const SPIEL_VERSION = "602";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1032,11 +1032,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=601"></script>
-<script src="pferd.js?v=601"></script>
-<script src="boxstufen.js?v=601"></script>
-<script src="kopfneu.js?v=601"></script>
-<script src="waschbild.js?v=601"></script>
+<script src="lz-string.min.js?v=602"></script>
+<script src="pferd.js?v=602"></script>
+<script src="boxstufen.js?v=602"></script>
+<script src="kopfneu.js?v=602"></script>
+<script src="waschbild.js?v=602"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2599,6 +2599,10 @@
       + (D.hoefe.length ? det("🏡 Höfe", `<ul class="liste">${D.hoefe.map(h => `<li>${esc(h.name)} – ${h.was}</li>`).join("")}</ul>`) : "")
       + det("⭐ Bestes Pferd", best) + det("📅 Seit Spielbeginn", seit);
   }
+  function vetJahrHTML(j) {   // V3: Zeile „Veterinäramt: n Vorfälle, k Kontrollen (m ohne Mängel)“ aus den unsichtbaren Zählern des Jahres
+    const P = spiel.protokoll || {}, z = k => [0, 1, 2, 3].reduce((a, sz) => a + ((P[j + "-" + sz] || {})[k] || 0), 0), n = z("Veterinäramt: Vorfall"), kk = z("Veterinäramt: Kontrolle"), m = z("Veterinäramt: Kontrolle ohne Mängel");
+    return n || kk ? `<p class="text">🩺 <b>Veterinäramt:</b> ${n} ${n === 1 ? "Vorfall" : "Vorfälle"}, ${kk} ${kk === 1 ? "Kontrolle" : "Kontrollen"} (${m} ohne Mängel)</p>` : "";
+  }
   function jahresbericht() {
     const d = datum(); if (d.s !== 0 || d.t !== 1) return;
     const j = d.j - 1, hofs = hofReihe().filter(h => h === aktivHid() || (spiel.hoefe || {})[h]), jahreAb = h => Object.keys(imHof(h, () => spiel.finanzen) || {}).map(Number).filter(x => x <= j);
@@ -2611,6 +2615,7 @@
     const gesamt = mehr ? { name: "Alle Höfe zusammen", d: datenSumme(R.map(r => r.d)), v: datenSumme(R.map(r => r.v)), alle: datenSumme(R.map(r => r.alle)), geld: sum(r => r.geld) + ((spiel.zentral && spiel.zentral.geld) || 0), pferde: sum(r => r.pferde), gn: sum(r => r.gn), ex: sum(r => r.ex), vGeld: R.every(r => r.vGeld != null) ? sum(r => r.vGeld) : null, vPferde: R.every(r => r.vPferde != null) ? sum(r => r.vPferde) : null, best: null } : R[0];
     const text = `hier ist {dein|Ihr} Jahresbericht für das Jahr <b>${j}</b>${mehr ? ` – für alle ${R.length} Höfe zusammen und für jeden Hof einzeln` : ` für <b>${esc(R[0].name)}</b>`}.${mehr ? `<br><b>Alle Höfe zusammen</b> (Kontostand inklusive zentralem Konto)` : ""}`
       + jbHofHTML(gesamt, j) + (mehr ? R.map(r => `<details style="margin:10px 0"><summary><b>🏠 ${esc(r.name)}</b></summary>${jbHofHTML(r, j)}</details>`).join("") : "")
+      + vetJahrHTML(j)
       + `<p class="text"><small>Gewinn und Verlust ohne Hofkauf, Kreditauszahlung und Tilgung. Die Pfeile vergleichen mit dem Vorjahr.</small></p>`;
     const G = gesamt.d, gewinn = G.ein - G.aus, gA = grossePosten(G, "aus")[0], gE = grossePosten(G, "ein")[0], b0 = R[0].best && R[0].best.beste[0];
     brief("Hofverwaltung", `Jahresbericht ${j}`, text, { aktion: { typ: "jbild", daten: { jahr: j, hof: mehr ? "Alle Höfe zusammen" : R[0].name, gewinn: Math.round(gewinn), geld: Math.round(gesamt.geld), pferde: gesamt.pferde, siege: G.siege, plaz: G.plaz, starts: G.starts, ausgabe: gA ? [gA[0], Math.round(gA[1].aus)] : null, einnahme: gE ? [gE[0], Math.round(gE[1].ein)] : null, bestes: b0 ? { id: b0.id, n: b0.n, r: b0.r } : null } } });
@@ -2874,6 +2879,7 @@
     const V = vetDaten(), nacht = nachtTag != null ? nachtTag : spiel.tag, letzte = V.vorfaelle[V.vorfaelle.length - 1];
     if (letzte && letzte.nacht === nacht && !o.neu) { letzte.text += "; " + text; letzte.arten = [...(letzte.arten || [letzte.art]), art]; return { neu: false }; }
     const v = { tag: spiel.tag, nacht, jz: jzJetzt(), art, arten: [art], hid: aktivHid(), text }; V.vorfaelle.push(v); V.offen = v;
+    prot("Veterinäramt: Vorfall", { x: text });
     if (nachtTag == null) vetAbschluss();
     return { neu: true, v };
   }
@@ -2956,6 +2962,7 @@
   }
   function vetKontrolle(art) {   // läuft im Hof, der kontrolliert wird
     const V = vetDaten(), M = vetMaengel(); V.kontrollen.push({ tag: spiel.tag, jz: jzJetzt(), hid: aktivHid(), art, n: M.length });
+    prot("Veterinäramt: Kontrolle"); if (!M.length) prot("Veterinäramt: Kontrolle ohne Mängel");
     const liste = ms => `<ul>${ms.map(m => `<li>${esc(m.text)}</li>`).join("")}</ul>`;
     if (art === "nach") {
       const alt = V.auflage ? V.auflage.maengel : [], noch = alt.filter(a => M.some(m => m.key === a.key)), neuSchwer = M.filter(m => m.schwer && !alt.some(a => a.key === m.key));
@@ -2979,7 +2986,24 @@
     if (!hofVon(K.hid)) { V.naechsteKontrolle = null; V.meldung = null; return; }
     imHof(K.hid, () => vetKontrolle(K.art));
   }
-  function tierhalteverbot() { const V = vetDaten(); V.verbot = jzJetzt(); }   // V3 ersetzt das durch das Spielende
+  // V3: Tierhalteverbot – gilt für die Person (alle Höfe): alle eigenen Pferde werden fortgenommen und vermittelt (kein Erlös), Pensionspferde gehen zu ihren Besitzern zurück; das Spiel ist verloren
+  function tierhalteverbot(v) {
+    const V = vetDaten(); V.verbot = jzJetzt();
+    try { verlorenSchnapp = schnappMachen(); } catch (e) { console.error("Verloren-Stand:", e); }   // Stand kurz vor dem Verbot → Platz „Verloren“ (nur ansehen)
+    let pferde = 0;
+    jedenHof(() => {
+      spiel.boxen.forEach(b => { const p = b.pferd; if (!p) return;
+        if (fremd(p)) { const e = einstellerVon(p); if (e) { einstellerListe().splice(einstellerListe().indexOf(e), 1); brief(eName(e), `${p.name}: Vertrag beendet`, `ich habe gehört, dass {dir|Ihnen} die Tierhaltung verboten wurde. Ich habe <b>${esc(p.name)}</b> abgeholt – unser Vertrag ist beendet.`, { w: e.w }); } }
+        else { pferde++; prot("Pferd fortgenommen", { p }); archivieren(p); if (b.fohlen) { pferde++; archivieren(b.fohlen); } }
+        b.pferd = null; delete b.fohlen; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; b.tot = false; });
+      (spiel.extern || []).forEach(e => { pferde++; prot("Pferd fortgenommen", { p: e.pferd }); archivieren(e.pferd); }); spiel.extern = []; spiel.angebote = []; spiel.tierschutz = [];
+      chronikHof("verloren", hofName());
+    });
+    (spiel.gnadenhof || []).forEach(g => { pferde++; archivieren(g.pferd); }); spiel.gnadenhof = [];
+    const liste = V.vorfaelle.map(x => `<li><b>${jzName(x.jz)}</b>, Tag ${x.tag} · ${esc(hofNameVon(x.hid) || "")}: ${esc(x.text)}</li>`).join("");
+    brief("Veterinäramt", "Veterinäramt: Tierhalteverbot", `nach wiederholten Verstößen gegen das Tierschutzgesetz sprechen wir ein <b>Tierhalteverbot</b> gegen Sie aus. Es gilt für alle Ihre Betriebe. In der Akte stehen:<ul>${liste}</ul>Alle Pferde in Ihrer Obhut wurden heute fortgenommen und vom Tierschutz an neue Halter vermittelt – ohne Erlös für Sie. Pensionspferde sind zu ihren Besitzern zurückgekehrt.`);
+    spiel.verloren = { tag: spiel.tag, jz: jzJetzt(), grund: "verbot", vorfaelle: V.vorfaelle.length, schuld: 0, pferde };
+  }
   // Tod durch Vernachlässigung: Vorfall beim Veterinäramt; schlecht versorgte Pferde (≤ 30 %, keine Ausnahme) werden vom Tierschutz beschlagnahmt
   function tierschutzEinsatz() {
     const tote = spiel.vernachlaessigt; if (!tote || !tote.length) return; delete spiel.vernachlaessigt; spiel.tierschutz = spiel.tierschutz || [];
@@ -11080,7 +11104,7 @@
   }
   // B4 Punkt 6: verlorener Stand aus einer Datei → Platz „Verloren“ (ersetzt den bisherigen), danach ansehen
   function verlorenDateiLaden(P) {
-    const I = standInfo(P.s), M = P.meta || { hof: I.hof, datum: I.datum, grund: P.s.ansehenInfo.grund === "dispo" ? "Insolvenz" : "Zwangsversteigerung" }, alt = lesenVerloren();
+    const I = standInfo(P.s), M = P.meta || { hof: I.hof, datum: I.datum, grund: verlorenGrund(P.s.ansehenInfo.grund) }, alt = lesenVerloren();
     const tun = () => { try { schreiben(VERLOREN_KEY, { meta: { ...M, spielId: P.s.spielId || "", version: P.version || SPIEL_VERSION, gespeichert: P.gesp || new Date().toISOString() }, spiel: P.s }); } catch (e) { speicherFehler(true); return; }
       dialog(`<h3>🔨 Verlorenes Spiel geladen</h3><p><b>${esc(M.hof)}</b> (${esc(M.grund || "verloren")} in ${esc(M.datum)}) liegt jetzt auf dem Platz <b>„Verloren“</b>. Es lässt sich nur ansehen, nicht weiterspielen.</p>`, [["👁️ Jetzt ansehen", () => verlorenAnsehen()], ["Später", () => zeigeStart(), "zweit"]]); };
     dialog(`<h3>🔨 Verlorenes Spiel</h3><p>Diese Datei ist ein verlorenes Spiel (<b>${esc(M.hof)}</b>, ${esc(M.datum)}). Es kommt nicht auf einen Speicherplatz, sondern auf den Platz <b>„Verloren“</b> und lässt sich nur ansehen.</p>${alt ? `<p>Der bisherige Platz „Verloren“ (<b>${esc(verlorenText(alt))}</b>) wird ersetzt.</p>` : ""}`,
@@ -12102,6 +12126,7 @@
   // ---------- B4 (PLAN-BILANZ.md, Dome): Spiel verloren – Abschlussbilanz, Platz „Verloren“ und „Nur ansehen“ ----------
   // Der Autospeicher wird gelöscht, die Speicherplätze bleiben (S1 Punkt 9). Der Stand kurz vor der Pfändung kommt auf den Platz „Verloren“ (immer nur der letzte, gepackt).
   // Abschlussfenster: Grund, Datum, Spieldauer, 6 Kacheln, Details, Kurve Kontostand (aus finanzSaison), bestes und wertvollstes Pferd, 1–3 Tipps zum Spielverlauf.
+  const verlorenGrund = g => g === "dispo" ? "Insolvenz" : g === "verbot" ? "Tierhalteverbot" : "Zwangsversteigerung";   // V3: dritter Weg, das Spiel zu verlieren
   const lesenVerloren = () => { const w = lesen(VERLOREN_KEY); return w && w.spiel && w.meta ? w : null; };
   const verlorenText = w => `${w.meta.hof}, verloren in ${w.meta.datum}`;
   function kontoKurve() {   // Kontostand am Ende jeder Jahreszeit, rückwärts aus allen Buchungen aller noch vorhandenen Höfe (finanzSaison) und dem Kontostand jetzt
@@ -12132,7 +12157,14 @@
     Object.entries(A.d.posten).forEach(([k, x]) => { const b = AUSGABE_BEREICH.find(([, re]) => re.test(k)); if (b && x.aus) ber[b[0]] = (ber[b[0]] || 0) + x.aus; });
     const anteil = n => (ber[n] || 0) / aus, pz = x => `${Math.round(x * 100)} %`;
     const minus = A.kurve.filter(x => x.g < 0).length;
-    if (A.V.grund === "dispo") T.push([9, `Dein Konto war ${minus} ${minus === 1 ? "Jahreszeit" : "Jahreszeiten"} im Minus. Rutscht es ins Minus, hilft schnell: ein Pferd verkaufen, Pensionspferde aufnehmen oder Geld vom zentralen Konto überweisen.`]);
+    if (A.V.grund === "verbot") { const V = vetDaten(), vt = V.vorfaelle.map(v => v.text).join(" "), arten = V.vorfaelle.flatMap(v => v.arten || [v.art]);
+      if (/gestorben|Entkräftung|Futter|Pflege/.test(vt) || arten.includes("tod")) T.push([12, `Ein Stallbursche hätte Futter und Mist zuverlässig erledigt – oder versorge selbst jeden Tag, bevor du den Tag beendest.`]);
+      if (/Behandlung|krank/.test(vt)) T.push([11, `Kranke Pferde sofort vom Tierarzt behandeln lassen. Ein Pferd in Behandlung gilt nie als vernachlässigt.`]);
+      if (arten.includes("fohlen")) T.push([10, `Fohlen brauchen spätestens mit zwei Jahreszeiten eine eigene Box – baue rechtzeitig oder verkaufe sie.`]);
+      if (arten.includes("auflage")) T.push([10, `Nach einer Kontrolle die genannten Mängel sofort beheben – bei der Nachkontrolle wird genau das geprüft.`]);
+      if (arten.includes("pension")) T.push([10, `Pensionspferde brauchen dieselbe Sorgfalt wie deine eigenen. Nimm nur so viele auf, wie du versorgen kannst.`]);
+      T.push([9, `Wer wiederholt Pferde vernachlässigt, bekommt ein Tierhalteverbot. Beim ersten Vorfall sofort gegensteuern: mehr Personal, weniger Pferde, jeden Tag nach dem Rechten sehen.`]); }
+    else if (A.V.grund === "dispo") T.push([9, `Dein Konto war ${minus} ${minus === 1 ? "Jahreszeit" : "Jahreszeiten"} im Minus. Rutscht es ins Minus, hilft schnell: ein Pferd verkaufen, Pensionspferde aufnehmen oder Geld vom zentralen Konto überweisen.`]);
     else T.push([9, `Die Kreditrate wird zu Beginn jeder Jahreszeit abgebucht. Halte immer etwas mehr als eine Rate auf dem Hofkonto bereit – nach ${KREDIT.verpasst} offenen Raten pfändet die Bank.`]);
     if (anteil("Personal") >= 0.4) T.push([8, `Personalkosten waren ${pz(anteil("Personal"))} deiner Ausgaben. Mitarbeiter lohnen sich erst bei vielen Pferden – vorher lieber selbst versorgen.`]);
     if (anteil("Bauen") >= 0.35) T.push([7, `${pz(anteil("Bauen"))} deiner Ausgaben gingen ins Bauen. Größere Bauten lieber erst, wenn regelmäßig Geld hereinkommt.`]);
@@ -12162,8 +12194,8 @@
     const D = A.d, gw = D.ein - D.aus, eur = n => `${n < 0 ? "−" : ""}${fmt(Math.round(Math.abs(n)))}`;
     const kacheln = `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:8px 0;color:#3b2a1a">
       ${jbKachel(gw >= 0 ? "Gewinn insgesamt" : "Verlust insgesamt", eur(gw), "<small>ohne Hofkauf und Kredit</small>")}
-      ${jbKachel("Kontostand am Ende", eur(A.geld), `<small>${A.V.grund === "dispo" ? "Dispo-Rahmen −" + fmt(DISPO.rahmen) : "Restschuld " + fmt(A.V.schuld || 0)}</small>`)}
-      ${jbKachel("Pferde vor der Pfändung", String(A.pferde), `<small>${D.bew.gekauft} gekauft · ${D.bew.gezuechtet} gezüchtet</small>`)}
+      ${jbKachel("Kontostand am Ende", eur(A.geld), `<small>${A.V.grund === "verbot" ? "Tierhalteverbot" : A.V.grund === "dispo" ? "Dispo-Rahmen −" + fmt(DISPO.rahmen) : "Restschuld " + fmt(A.V.schuld || 0)}</small>`)}
+      ${jbKachel(A.V.grund === "verbot" ? "Pferde vor dem Verbot" : "Pferde vor der Pfändung", String(A.pferde), `<small>${D.bew.gekauft} gekauft · ${D.bew.gezuechtet} gezüchtet</small>`)}
       ${jbKachel("Turniere", `${D.siege} ${D.siege === 1 ? "Sieg" : "Siege"} · ${D.plaz} platziert`, `<small>${D.starts} ${D.starts === 1 ? "Start" : "Starts"}</small>`)}
       ${jbKachel("Größte Ausgabe", A.ausgabe ? fmt(Math.round(A.ausgabe[1])) : "–", A.ausgabe ? `<small>${esc(A.ausgabe[0])}</small>` : "")}
       ${jbKachel("Größte Einnahme", A.einnahme ? fmt(Math.round(A.einnahme[1])) : "–", A.einnahme ? `<small>${esc(A.einnahme[0])}</small>` : "")}</div>`;
@@ -12177,9 +12209,10 @@
       + det("🐴 Pferde-Bewegungen", bw.length ? verTab(["", "Anzahl"], bw) : leer)
       + det("🏆 Turniere je Klasse", kl.length ? verTab(["Klasse", "Starts", "🥇", "🎀"], kl.map(([k, z]) => [esc(k), ...z])) : leer)
       + det("💶 Finanzen im Detail", pos.length ? verTab(["Posten", "Einnahmen", "Ausgaben"], pos.map(([k, x]) => [esc(k), x.ein ? fmt(Math.round(x.ein)) : "", x.aus ? fmt(Math.round(x.aus)) : ""])) : leer)
+      + (vetDaten().vorfaelle.length ? det("🩺 Vorfälle beim Veterinäramt", `<ul class="liste">${vetDaten().vorfaelle.map(v => `<li><b>${jzName(v.jz)}</b>, Tag ${v.tag} · ${esc(hofNameVon(v.hid) || "")}<br>${esc(v.text)}</li>`).join("")}</ul>`, A.V.grund === "verbot") : "")
       + (D.hoefe.length ? det("🏡 Höfe", `<ul class="liste">${D.hoefe.map(h => `<li>${esc(h.name)} – ${h.was} (${jzName(h.jz)})</li>`).join("")}</ul>`) : "");
   }
-  const abschlussBild = A => ({ titel: A.V.grund === "dispo" ? "Abschlussbilanz · Insolvenz" : "Abschlussbilanz · Zwangsversteigerung", hof: A.hof, zeit: `${dauerText(A.jz)} gespielt`, gewinn: Math.round(A.d.ein - A.d.aus), geld: Math.round(A.geld), pferde: A.pferde, siege: A.d.siege, plaz: A.d.plaz, starts: A.d.starts, ausgabe: A.ausgabe ? [A.ausgabe[0], Math.round(A.ausgabe[1])] : null, einnahme: A.einnahme ? [A.einnahme[0], Math.round(A.einnahme[1])] : null, bestes: A.best ? { id: A.best.id, n: A.best.n, r: A.best.r } : null });
+  const abschlussBild = A => ({ titel: "Abschlussbilanz · " + verlorenGrund(A.V.grund), hof: A.hof, zeit: `${dauerText(A.jz)} gespielt`, gewinn: Math.round(A.d.ein - A.d.aus), geld: Math.round(A.geld), pferde: A.pferde, siege: A.d.siege, plaz: A.d.plaz, starts: A.d.starts, ausgabe: A.ausgabe ? [A.ausgabe[0], Math.round(A.ausgabe[1])] : null, einnahme: A.einnahme ? [A.einnahme[0], Math.round(A.einnahme[1])] : null, bestes: A.best ? { id: A.best.id, n: A.best.n, r: A.best.r } : null });
   function spielVerloren() {
     const V = spiel.verloren, name = hofName(), np = spiel.platz, pw = np && lesenPlatz(np), pwOk = pw && pw.spiel.spielId === spiel.spielId;
     clearTimeout(speicherUhr); speicherOffen = false; loeschen(SPEICHER);   // S1 Punkt 9: nur der Autospeicher dieses Spiels – die Speicherplätze bleiben
@@ -12187,14 +12220,14 @@
     $("nacht").classList.remove("an");
     let A = null; try { A = abschlussDaten(V); } catch (e) { console.error("Abschlussbilanz:", e); }
     let vlOk = false;   // Punkt 3: Stand kurz vor der Pfändung auf den Platz „Verloren“ (Post bleibt, Punkt 5)
-    try { const S = verlorenSchnapp && verlorenSchnapp.s; if (S) { const I = standInfo(S); S.ansehenInfo = { grund: V.grund === "dispo" ? "dispo" : "kredit", jz: V.jz, bild: A ? abschlussBild(A) : null };
-      schreiben(VERLOREN_KEY, { meta: { hof: name, datum: jzName(V.jz), grund: V.grund === "dispo" ? "Insolvenz" : "Zwangsversteigerung", spielId: spiel.spielId, version: SPIEL_VERSION, gespeichert: new Date().toISOString(), pferde: I.pferde }, spiel: S }); vlOk = true; } }
+    try { const S = verlorenSchnapp && verlorenSchnapp.s; if (S) { const I = standInfo(S); S.ansehenInfo = { grund: V.grund === "dispo" ? "dispo" : V.grund === "verbot" ? "verbot" : "kredit", jz: V.jz, bild: A ? abschlussBild(A) : null };
+      schreiben(VERLOREN_KEY, { meta: { hof: name, datum: jzName(V.jz), grund: verlorenGrund(V.grund), spielId: spiel.spielId, version: SPIEL_VERSION, gespeichert: new Date().toISOString(), pferde: I.pferde }, spiel: S }); vlOk = true; } }
     catch (e) { console.error("Platz Verloren:", e); }
     verlorenSchnapp = null;
     $("charakter").innerHTML = `<div class="schirm-innen">
-      <div class="logo">🔨</div><h1>${V.grund === "dispo" ? "Insolvenz" : "Zwangsversteigerung"}</h1><p class="unter">${esc(name)} · ${jzName(V.jz)}${A ? ` · ${dauerText(A.jz)} gespielt` : ""}</p>
-      <div class="panel verloren"><p style="margin-top:0">${V.grund === "dispo" ? `Das Hofkonto war zu lange im Minus. Die Hausbank hat das Konto gekündigt, die Pferde gepfändet und <b>${esc(name)}</b> zwangsversteigern lassen.` : `${V.offen} Raten für den ${esc(V.kredit)} sind nicht bezahlt worden. Die Hausbank hat den Kredit gekündigt und <b>${esc(name)}</b> zwangsversteigern lassen.`}</p>
-        <p style="margin-bottom:0">Der Hof, ${V.pferde ? `deine ${V.pferde === 1 ? "Pferd" : `${V.pferde} Pferde`}, ` : ""}die Ausrüstung und das Futter gehören jetzt anderen. <b>Das Spiel ist verloren.</b></p></div>
+      <div class="logo">🔨</div><h1>${verlorenGrund(V.grund)}</h1><p class="unter">${esc(name)} · ${jzName(V.jz)}${A ? ` · ${dauerText(A.jz)} gespielt` : ""}</p>
+      <div class="panel verloren"><p style="margin-top:0">${V.grund === "verbot" ? `Das Veterinäramt hat nach ${V.vorfaelle} Vorfällen wegen mangelhafter Tierhaltung ein <b>Tierhalteverbot</b> gegen Sie ausgesprochen. Alle Pferde wurden fortgenommen und vom Tierschutz vermittelt, Pensionspferde sind zu ihren Besitzern zurückgekehrt.` : V.grund === "dispo" ? `Das Hofkonto war zu lange im Minus. Die Hausbank hat das Konto gekündigt, die Pferde gepfändet und <b>${esc(name)}</b> zwangsversteigern lassen.` : `${V.offen} Raten für den ${esc(V.kredit)} sind nicht bezahlt worden. Die Hausbank hat den Kredit gekündigt und <b>${esc(name)}</b> zwangsversteigern lassen.`}</p>
+        <p style="margin-bottom:0">${V.grund === "verbot" ? "" : `Der Hof, ${V.pferde ? `deine ${V.pferde === 1 ? "Pferd" : `${V.pferde} Pferde`}, ` : ""}die Ausrüstung und das Futter gehören jetzt anderen. `}<b>Das Spiel ist verloren.</b></p></div>
       ${A ? `<h2 style="margin:14px 0 2px">📊 Abschlussbilanz</h2>${abschlussHTML(A)}` : ""}
       ${pwOk ? `<button class="sknopf haupt" id="vlPlatz"><span class="i">💾</span><span>Vom letzten Speicherstand neu starten<small>Speicherplatz ${np}, ${esc(platzText(pw))}</small></span></button>` : ""}
       <button class="sknopf ${pwOk ? "" : "haupt"}" id="vlNeu"><span class="i">✨</span><span>Neues Spiel<small>noch einmal von vorn beginnen</small></span></button>
@@ -12239,7 +12272,7 @@
     ["click", "pointerdown", "mousedown", "touchstart", "change", "input", "keydown"].forEach(ev => document.addEventListener(ev, e => { if (ev === "keydown" && e.key !== "Enter" && e.key !== " ") return; if (ev === "touchstart" && !e.target.closest("input, select")) return; sperr(e); }, { capture: true, passive: false }));
     let geplant = false; new MutationObserver(() => { if (geplant) return; geplant = true; requestAnimationFrame(() => { geplant = false; ansehenMarkieren(); }); }).observe(document.body, { childList: true, subtree: true });
     const band = document.createElement("div"); band.id = "ansBand";
-    band.innerHTML = `<span>🔨 Nur ansehen · Spiel verloren (${esc(spiel.ansehen.grund || (I.grund === "dispo" ? "Insolvenz" : "Zwangsversteigerung"))}, ${esc(spiel.ansehen.datum || "")})</span>${I.bild ? `<button class="knopf zweit" id="ansBild">🖼️ Bilanz als Bild</button>` : ""}<button class="knopf zweit" id="ansEnde">↩ Beenden</button>`;
+    band.innerHTML = `<span>🔨 Nur ansehen · Spiel verloren (${esc(spiel.ansehen.grund || verlorenGrund(I.grund))}, ${esc(spiel.ansehen.datum || "")})</span>${I.bild ? `<button class="knopf zweit" id="ansBild">🖼️ Bilanz als Bild</button>` : ""}<button class="knopf zweit" id="ansEnde">↩ Beenden</button>`;
     document.body.appendChild(band);
     if ($("ansBild")) $("ansBild").onclick = () => bilanzBildTeilen(I.bild);
     $("ansEnde").onclick = () => zeigeStart();

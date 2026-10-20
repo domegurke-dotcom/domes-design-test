@@ -17,7 +17,7 @@ const { chromium } = require('playwright'); const path = require('path');
     const briefe = t => spiel.post.filter(x => t.test(x.betreff)).length;
     const leer = () => { spiel.boxen.forEach(bx => { bx.pferd = null; delete bx.fohlen; bx.tot = false; }); spiel.vernachlaessigt = []; spiel.tierschutz = []; };
     const box = (i, p, voll = true) => { while (spiel.boxen.length <= i) spiel.boxen.push({ pferd: null }); const bx = spiel.boxen[i]; bx.pferd = p; bx.krippeVoll = voll; bx.mistig = false; bx.mistStufe = 0; bx.kraftVoll = voll; bx.wasserTag = spiel.tag + 1; return bx; };
-    const frisch = () => { spiel.veterinaer = undefined; buchungen.length = 0; leer(); };
+    const frisch = () => { spiel.veterinaer = undefined; delete spiel.verloren; buchungen.length = 0; leer(); };
     // --- 1. Tod durch Hunger = 1 Vorfall, 2.000 €, Kontrolle geplant ---
     frisch(); const A = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Bella' }); A.gekauftTag = -99; A.pflege.gesundheit = 1; box(0, A, false);
     const t0 = spiel.tag; nacht(1);
@@ -125,6 +125,23 @@ const { chromium } = require('playwright'); const path = require('path');
     frisch(); spiel.stufenAn = false; const pk = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Fein' }); pk.gekauftTag = -99; box(0, pk, true); vetVorfall('admin', 'Testvorfall', { neu: true });
     const kt = vetDaten().naechsteKontrolle.tag, b0 = briefe(/ohne Beanstandung/); let n = 0; while (spiel.tag <= kt && n++ < 40) { spiel.boxen[0].krippeVoll = true; spiel.boxen[0].mistig = false; spiel.boxen[0].wasserTag = spiel.tag; pk.pflege.huf = spiel.tag; nacht(1); }
     ok('Über die Nächte: Kontrolle fand am geplanten Tag statt (ohne Mängel → „ohne Beanstandung“)', vetDaten().kontrollen.length === 1 && vetDaten().kontrollen[0].tag === kt && briefe(/ohne Beanstandung/) === b0 + 1 && !vetDaten().naechsteKontrolle, JSON.stringify(vetDaten().kontrollen) + ' kt ' + kt + ' brief ' + briefe(/ohne Beanstandung/) + ' nk ' + JSON.stringify(vetDaten().naechsteKontrolle));
+    // --- 11. V3: Tierhalteverbot und Spielende ---
+    ok('Jahresbericht-Zeile aus den Zählern', (() => { spiel.protokoll = spiel.protokoll || {}; spiel.protokoll['5-0'] = { 'Veterinäramt: Vorfall': 1 }; spiel.protokoll['5-2'] = { 'Veterinäramt: Vorfall': 1, 'Veterinäramt: Kontrolle': 3, 'Veterinäramt: Kontrolle ohne Mängel': 1 }; const h = vetJahrHTML(5); return /2 Vorfälle, 3 Kontrollen \(1 ohne Mängel\)/.test(h) && vetJahrHTML(77) === ''; })());
+    frisch(); spiel.stufenAn = true; spiel.spieler.stufe = 'fort';
+    const P1 = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Eins' }), P2 = neu({ rasse: 'hannoveraner', geschlecht: 'Wallach', alter: 8, name: 'Zwei' }); box(0, P1); box(1, P2);
+    const pensP = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Gast' }); box(2, pensP); pensP.einsteller = 'e9'; spiel.einsteller = [{ eid: 'e9', pid: pensP.id, vn: 'Anna', nn: 'Test', w: true }];
+    spiel.extern = [{ pferd: neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Extern' }), ort: 'aufzucht', seit: spiel.tag }]; spiel.gnadenhof = [{ pferd: neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 25, name: 'Gnade' }) }];
+    const vb0 = briefe(/Veterinäramt: Tierhalteverbot/), pb0 = briefe(/Vertrag beendet/); spiel.tag += 3; vetVorfall('admin', 'V-A', { neu: true }); spiel.tag += 3; vetVorfall('admin', 'V-B', { neu: true }); ok('Vor dem 3. Vorfall: Spiel läuft noch', !spiel.verloren);
+    spiel.tag += 3; vetVorfall('admin', 'V-C', { neu: true });
+    ok('3. Vorfall: Tierhalteverbot, Spiel verloren (Grund „verbot“)', !!spiel.verloren && spiel.verloren.grund === 'verbot' && spiel.verloren.vorfaelle === 3, JSON.stringify(spiel.verloren));
+    ok('Alle eigenen Pferde fort (Boxen, extern, Gnadenhof), kein Erlös', spiel.boxen.every(x => !x.pferd) && !(spiel.extern || []).length && !(spiel.gnadenhof || []).length && spiel.verloren.pferde === 4);
+    ok('Pensionspferd ist zum Besitzer zurück (Vertrag beendet)', einstellerListe().length === 0 && briefe(/Vertrag beendet/) === pb0 + 1, 'Einsteller ' + einstellerListe().length + ', Briefe ' + (briefe(/Vertrag beendet/) - pb0) + ', fremd(pensP) ' + fremd(pensP));
+    ok('Brief „Tierhalteverbot“ listet alle Vorfälle', briefe(/Veterinäramt: Tierhalteverbot/) === vb0 + 1 && /V-A/.test(spiel.post.find(x => /Tierhalteverbot/.test(x.betreff)).text) && /V-C/.test(spiel.post.find(x => /Tierhalteverbot/.test(x.betreff)).text));
+    spielVerloren();
+    const txt = $('charakter').textContent;
+    ok('Abschlussfenster: Grund Tierhalteverbot, Vorfälle in der Bilanz, Tipps', /Tierhalteverbot/.test(txt) && /Vorfälle beim Veterinäramt/.test(txt) && /Das Spiel ist verloren/.test(txt) && /Tipps für das nächste Spiel/.test(txt) && /V-B/.test(txt), txt.slice(0, 120));
+    ok('Tipps zur Vernachlässigung (Stallbursche/Behandlung/Warnung) stehen da', /Stallbursche|Tierarzt|Tierhalteverbot bekommt|gegensteuern/.test(txt));
+    ok('Platz „Verloren“ geschrieben (Grund Tierhalteverbot)', (lesenVerloren() || { meta: {} }).meta.grund === 'Tierhalteverbot');
     window.buchen = buchen0; return out;
   });
   R.forEach(l => console.log(l)); console.log(errs.length ? 'Seitenfehler: ' + errs.join(' | ') : 'keine Seitenfehler');

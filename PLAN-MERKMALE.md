@@ -2,6 +2,7 @@ Auftrag für die Coding-Sitzung: Karte „Merkmale“
 (Beurteilungsbogen wie beim Zuchtverband)
 Stand: 20.10.2026, im Projekt-Chat mit Dome geplant (Runden 1–3), Code-Stand beim Planen v575.
 Reihenfolge: M1 → M2 → M3 → M4 → M5.
+**Stand 20.10.2026: M1 fertig (v587: `p.bau`, `BAU_ZIEL…`/`bauZielRasse`, `bauErgaenzen`, `bauErben`, `muskelIst`/`hufIst`, `opt.bau`/`bauK`, Admin-Aufschlüsselung, `tests/merkmale-test.js`); M2–M5 offen.** M1-Festlegungen (Claude, in `OFFENE-FRAGEN.md`): Alters- und Krankheitsabzug der Bemuskelung, Hufpflege „gut/vernachlässigt“, Richtung von „Rahmen → Tiefe“.
 
 Wann umsetzen (Dome, 20.10.2026): Die Themen 1–5 (Spielstand, Bilanz, Raritäten,
 Waschplatz, Hinweise/Stufen/Tutorial) sind schon gebaut. Es gibt keine Wartezeit. Die Hinweise und

@@ -87,4 +87,5 @@ Bricht die Sitzung ab, kann **Claude Pro** hier weitermachen: Stand steht in der
 | Waschplatz W6 Bilder, Matten | **fertig v567** |
 | Hinweise T1 Blasen-System | **fertig v568** (`tests/hinweise-test.js`) |
 | Hinweise T2 Stufen | **fertig v569** (`tests/stufen-test.js`; nur neue Spiele) |
-| Hinweise T3 Texte | als Nächstes (Texte sind großteils schon in T1) |
+| Hinweise T3 Texte | **fertig v570** |
+| Hinweise T4 Anfänger-Tutorial | in Arbeit |

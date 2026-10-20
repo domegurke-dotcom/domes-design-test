@@ -30,5 +30,11 @@ const ORDNER = process.argv[2];
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; }); await pg.click('[data-immo="pension"]'); await pg.waitForTimeout(300); await pg.fill('#kaufName', 'Echthof'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(800);
   const H = await pg.evaluate(() => ({ tut: !!spiel.tutorial, hof: spiel.hof.name, pferde: spiel.boxen.filter(x => x.pferd).length, geld: spiel.geld, tipps: Object.keys(spiel.tipps || {}).length, auto: !!localStorage.getItem('zuchtstall-v2') }));
   ok('Echtes Spiel frisch (kein Testpferd, kein Tutorial, gespeichert)', !H.tut && H.hof === 'Echthof' && H.pferde === 0 && H.auto, JSON.stringify(H)); ok('„Nur neue Hinweise“: bekannte Tipps als gesehen markiert', H.tipps > 20, String(H.tipps));
+  // T5: beim Aufstieg Tutorial anbieten, Fortgeschrittenen-Tutorial im Testhof
+  const J = await pg.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.spieler.stufe = 'anf'; stufeWaehlen(); [...document.querySelectorAll('#dlgKnoepfe button')].find(x => /Fortgeschritten/.test(x.textContent)).click(); return document.getElementById('dlgInhalt').textContent; });
+  ok('T5: Aufstieg → „Tutorial jetzt machen?“', /Tutorial jetzt machen/.test(J), J.slice(0, 60));
+  await pg.evaluate(() => [...document.querySelectorAll('#dlgKnoepfe button')].find(x => /Ja, jetzt/.test(x.textContent)).click()); await pg.waitForTimeout(1300);
+  const K = await pg.evaluate(() => ({ set: spiel.tutorial && spiel.tutorial.set, band: (document.getElementById('tutBand') || {}).textContent || '', stute: spiel.boxen[0].pferd && spiel.boxen[0].pferd.name, hengst: spiel.boxen[1].pferd && spiel.boxen[1].pferd.name, zucht: frei('zucht') }));
+  ok('T5: Fortgeschrittenen-Tutorial mit Stute und Hengst, Zucht frei', K.set === 'fort' && /Fortgeschrittenen-Tutorial 1\/6/.test(K.band) && K.stute === 'Fee' && K.hengst === 'Donar' && K.zucht, JSON.stringify(K));
   console.log(out.join('\n')); console.log('Seitenfehler:', errs.join(' ; ') || 'keine'); await b.close();
 })();

@@ -1026,7 +1026,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "628";
+  const SPIEL_VERSION = "629";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1034,11 +1034,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=628"></script>
-<script src="pferd.js?v=628"></script>
-<script src="boxstufen.js?v=628"></script>
-<script src="kopfneu.js?v=628"></script>
-<script src="waschbild.js?v=628"></script>
+<script src="lz-string.min.js?v=629"></script>
+<script src="pferd.js?v=629"></script>
+<script src="boxstufen.js?v=629"></script>
+<script src="kopfneu.js?v=629"></script>
+<script src="waschbild.js?v=629"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -4117,8 +4117,9 @@
     }
     if (!p) { INFO.innerHTML = `<div class="karte" style="min-height:0"><h2>Box ${aktBox + 1}</h2><p class="text">${B().reserviert ? (() => { const ein = (spiel.pensionAnfragen || []).find(a => a.angenommen && a.pferd && a.pferd.id === B().reserviert); return ein ? `🔒 Diese Box ist für <b>${esc(ein.pferd.name)}</b> reserviert: Das neue Pensionspferd zieht hier ein.` : `🔒 Diese Box ist für <b>${esc(((spiel.extern || []).find(e => e.pferd.id === B().reserviert) || { pferd: { name: "eine Stute" } }).pferd.name)}</b> reserviert: Sie ist tragend im Ausbildungsstall und kommt eine Jahreszeit vor dem Abfohlen hierher zurück.`; })() : "Diese Box ist noch leer. Auf dem Pferdemarkt findest du Pferde zum Kaufen."}</p>
       ${B().einstreu || B().krippeVoll || B().kraftVoll ? `<p class="text"><small>In der Box liegt noch ${[B().einstreu && EINSTREU[B().einstreu] ? `Einstreu (${FUTTER[B().einstreu].n})` : "", B().krippeVoll ? "Heu" : "", B().kraftVoll ? "Futter in der Krippe" : ""].filter(Boolean).join(", ")}.</small></p>` : ""}
-      <div style="display:flex;gap:8px;flex-wrap:wrap">${B().reserviert ? "" : `<button class="knopf" id="zuMarkt" style="width:auto;padding:9px 14px">🏷️ Zum Pferdemarkt</button>`}${B().einstreu || B().krippeVoll || B().kraftVoll ? `<button class="knopf zweit" id="boxLeeren" style="width:auto;padding:9px 14px">🧹 Box leeren</button>` : ""}${spiel.admin ? `<button class="knopf zweit" id="zuRassen" style="width:auto;padding:9px 14px">🛠️ Rassen (Admin)</button>` : ""}</div></div>`;
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${B().reserviert ? "" : `<button class="knopf" id="zuMarkt" style="width:auto;padding:9px 14px">🏷️ Zum Pferdemarkt</button>`}${B().reserviert && reservierungHaengt(B()) ? `<button class="knopf zweit" id="resAufheben" style="width:auto;padding:9px 14px">🔓 Reservierung aufheben</button>` : ""}${B().einstreu || B().krippeVoll || B().kraftVoll ? `<button class="knopf zweit" id="boxLeeren" style="width:auto;padding:9px 14px">🧹 Box leeren</button>` : ""}${spiel.admin ? `<button class="knopf zweit" id="zuRassen" style="width:auto;padding:9px 14px">🛠️ Rassen (Admin)</button>` : ""}</div></div>`;
       if ($("zuMarkt")) $("zuMarkt").onclick = () => zeigeMarkt(null); if ($("zuRassen")) $("zuRassen").onclick = zeigeRassen;
+      if ($("resAufheben")) $("resAufheben").onclick = () => { const bx = B(), id = bx.reserviert; spiel.pensionAnfragen = (spiel.pensionAnfragen || []).filter(x => !(x.pferd && x.pferd.id === id)); delete bx.reserviert; speichern(); zeigeTag(); zeigeAkte(); };   // Reparatur (Dome 20.10.): hängende Reservierung selbst aufheben
       if ($("boxLeeren")) $("boxLeeren").onclick = () => { const b = B(); delete b.einstreu; delete b.ohneEinstreu; b.krippeVoll = false; b.kraftVoll = false; b.mistig = false; b.mistStufe = 0; speichern(); zeigeTag(); zeigeAkte(); };   // Dome: Einstreu und Restfutter raus
       return; }
     if (MERK_ALT[aktenReiter]) { (spiel.merkOffen = spiel.merkOffen || { gesamt: true })[MERK_ALT[aktenReiter]] = true; aktenReiter = "merkmale"; }   // M2: Gangwerk/Eigenschaften/Charakter sind jetzt Abschnitte der Karte Merkmale
@@ -13436,6 +13437,12 @@
     const frei = spiel.boxen.map((b, i) => ({ b, i })).filter(x => pensionBoxFrei(x.b));
     if (a.leistungen.paddockbox) { const x = frei.find(x => x.b.paddock); return x ? x.i : -1; }
     const x = frei.find(x => !x.b.paddock) || frei[0]; return x ? x.i : -1;
+  }
+  // Reservierung „hängt“: keine angenommene Anfrage dazu, oder die Anfrage ist schon über 2 Tage angenommen und das Pferd nicht eingezogen (Pferd außer Haus zählt nicht)
+  function reservierungHaengt(box) {
+    const id = box.reserviert; if (!id || (spiel.extern || []).some(x => x.pferd && x.pferd.id === id)) return false;
+    const a = (spiel.pensionAnfragen || []).find(x => x.pferd && x.pferd.id === id);
+    return !a || !a.angenommen || spiel.tag - (a.tag || 0) > 2;
   }
   function pensionAnnehmen(a) {
     if (a.art === "beritt" && berittPlaetze() <= 0) return "Kein Beritt-Platz frei (je fest angestelltem Bereiter 2 Beritt-Pferde, dazu eine freie Box).";

@@ -12,7 +12,7 @@ Quelle: Projekt-Chat mit Dome, 20.10.2026. Alle Punkte sind von Dome entschieden
 | V2 | Kontrollen, Auflagen, Meldungen | **fertig (v601)**; selbst gesetzt: Meldechance von Einsteller/Tierarzt/Hufschmied 50 % je Besuch |
 | V3 | Tierhalteverbot und Spielende | **fertig (v602)** |
 | V4 | Vom Tierarzt erlösen lassen | **fertig (v603)**; selbst gesetzt: welche Leiden „keine Heilung“ sind (`KEINE_HEILUNG`) |
-| P2 | Speicheranzeige und „Speicher aufräumen“ | offen |
+| P2 | Speicheranzeige und „Speicher aufräumen“ | **fertig (v604)**; die „Rücksicherung“ gibt es seit v522 nicht mehr (Ersatz: Platz „Verloren“) |
 | T | Tutorial, Hinweisblasen, Enzyklopädie | offen |
 
 ## Ist-Stand (gelesen in v596)

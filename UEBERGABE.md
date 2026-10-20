@@ -34,7 +34,7 @@ Die Nachricht von Claude Pro (v597, Fragen durchgehen) ist gelesen und übernomm
 Neue Tests: `tests/post-test.js`, `tests/veterinaer-test.js` (~4 % zufällige Wackler bei „Behandelt/Neukauf/altes Pferd“ – bekannt, Wiederholung grün), `tests/speicher-test.js`; angepasst `merkmale-test`, `jahresbericht-test`, `tutorial-test` (Fortgeschrittenen-Tutorial 1/10), `reiter-test` (Toleranz). Tutorial-Spieler anf 390×844 / 844×390 / 1366×768 und fort 390×844 grün (844×390 hängt selten zufällig bei „Hufe“).
 
 ### Domes Antworten (20.10.) – eingearbeitet
-Fragen 1–12 aus `OFFENE-FRAGEN.md`: alles „so lassen“. 3a (Reitunterricht beim festen Bereiter „man muss extra zahlen“) ist unklar → als Frage 1 in `OFFENE-FRAGEN.md` stehen gelassen, **nichts geändert**. 6a ja, 6d Beurteilungsschema als Bild im Bereich Exterieur (noch nicht eingebaut – Branch `entwurf-merkmale-bilder`), 10c Vermerk, 10e Tekkiner-Glanz so lassen, 11 alles Geplante nachbauen (erledigt v598).
+Fragen 1–12 aus `OFFENE-FRAGEN.md`: alles „so lassen“. 3a geklärt: auch der feste Bereiter kostet 60 € (Zusatzleistung), trainiert aber am nächsten Morgen normal (v606). 6a ja, 6d Beurteilungsschema als Bild im Bereich Exterieur (noch nicht eingebaut – Branch `entwurf-merkmale-bilder`), 10c Vermerk, 10e Tekkiner-Glanz so lassen, 11 alles Geplante nachbauen (erledigt v598).
 
 ### Test-Anleitung (Wege ausgeschrieben)
 1. **Veterinäramt-Zeile:** Hauptmenü – Hofverwaltung – Hof: Zeile „Veterinäramt: unauffällig“; antippen öffnet das Fenster (Adminmodus: ➕ Vorfall, 🔍 Kontrolle jetzt).
@@ -48,6 +48,6 @@ Fragen 1–12 aus `OFFENE-FRAGEN.md`: alles „so lassen“. 3a (Reitunterricht 
 ### Offen
 1. **Domes Abnahme** von v598–v605 und aller Phasen A–C (siehe die Test-Anleitungen von Claude Pro weiter unten in Git: UEBERGABE-Verlauf).
 2. **Phase D (großer Test)** wartet auf Domes „weiter“. Große Tests nur mit ihrer Erlaubnis, vorher Variante fragen (`BILDER=aus|fehler|alle`).
-3. Die Arbeit liegt auf dem Branch `claude/elegant-einstein-gxcam1`; **`main` steht noch auf v546** – Dome hat nicht gesagt, ob auf `main` hochgeladen werden soll (CLAUDE.md sagt ja, die Sitzungsvorgabe nennt den Branch). Vor einem Wechsel nachfragen.
+3. Dome hat bestätigt (20.10.): **auf `main` hochladen**. Stand v606 liegt auf `main` und auf dem Branch `claude/elegant-einstein-gxcam1`.
 4. Zahlen, die Claude selbst gesetzt hat (Meldechance 50 %, Klinik-Tod 4 %/Tag, KEINE_HEILUNG-Liste …): `OFFENE-FRAGEN.md` Nr. 2.
 5. Wisch-/Ziehgefühl und Handy-Tests kann nur Dome prüfen.

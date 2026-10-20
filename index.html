@@ -1025,7 +1025,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "607";
+  const SPIEL_VERSION = "608";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1033,11 +1033,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=607"></script>
-<script src="pferd.js?v=607"></script>
-<script src="boxstufen.js?v=607"></script>
-<script src="kopfneu.js?v=607"></script>
-<script src="waschbild.js?v=607"></script>
+<script src="lz-string.min.js?v=608"></script>
+<script src="pferd.js?v=608"></script>
+<script src="boxstufen.js?v=608"></script>
+<script src="kopfneu.js?v=608"></script>
+<script src="waschbild.js?v=608"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -8022,7 +8022,7 @@
   // Einschätzung für den Spieler (keine genauen Zahlen)
   function chance(p, t, P) { const d = startWert(p, P.disz) * stufenMalus(p, P) - feldNiveau(t, P); return d >= 6 ? ["🟢", "gute Chancen"] : d >= -3 ? ["🟡", "machbar"] : ["🔴", "sehr schwer"]; }
   let turnierSortierung = spiel.tsort || "datum";   // S1: steht im Spielstand (spiel.tsort)
-  const offenDisz = new Set();   // aufgeklappte Disziplinen bleiben nach dem Nennen offen
+  const offenKarte = new Set(), offenDisz = new Set();   // aufgeklappte Disziplinen bleiben nach dem Nennen offen
   let turnierAlleLK = false;
   function turnierDialog(p, zurueck) {
     tippMerken("turnier");   // v376: Einsteiger-Tipp
@@ -8045,15 +8045,16 @@
       const zeilen = t.pruef.filter(P => zeigP(t, P) && (!nurD || dk(P) === nurD)).sort((a, b) => turnierSortierung === "machbar" ? machbar(t, b) - machbar(t, a) : 0).map(P => { const drin = meine.some(n => n.prid === P.id), sp = drin ? "" : nennSperre(p, t, P), ng = nenngeld(t, P), pg = preisgeld(t, P), [c, ct] = P.fohlenschau ? fsChance(fsBox(p).fohlen) : chance(p, t, P);
         return `<li class="tp-zeile"><span><b>${esc(P.name)}${P.fohlenschau ? ` – ${esc(fsBox(p).fohlen.name)}` : ""}</b><small>${P.fohlenschau ? `Fohlen: ${fohlenGesundheit(fsBox(p).fohlen)}<br>` : ""}${P.starter} ${P.fohlenschau ? "Fohlen" : "Starter"} · ${P.jockey ? `Nenngeld + Jockey${vorteil("renn") ? "" : " + Trainer"} ${fmt(ng)}` : `Nenngeld ${fmt(ng)}`}${pg ? ` · Preisgeld ${fmt(pg)}` : P.fohlenschau ? " · Prämie, Champion" : " · Schleifen"}${sp ? "" : ` · ${c} ${ct}`}${P.q ? `<br>${qualiStand(p, P).txt}` : ""}${reiterNennZeile(p, P, meine.find(n => n.prid === P.id))}</small></span>
           ${drin ? (spiel.tag < t.tag ? `<button class="mini-knopf an" data-tzurueck="${t.id}:${P.id}">✓ genannt</button>` : `<span class="stat ok">genannt</span>`) : sp ? `<span class="stat">${sp}</span>` : `<button class="mini-knopf" data-tnennen="${t.id}:${P.id}">Nennen</button>`}</li>`; }).join("");
-      return `<details class="t-karte" ${meine.length ? "open" : ""}><summary><b>${({ hof: "🎀", renntag: "🏇", distanz: "🗺️", gangpferde: "✨", fohlenschau: "🍼", championat: "🏅", international: "🌍" })[t.art] || (t.typ === "western" ? "🤠" : "🏆")} ${esc(t.name)}</b><small>${datumTxt(t)} · ${artTxt[t.art]}${t.halle ? " · Halle" : " · Freiluft"}${meine.length ? ` · <b>${meine.length}× genannt</b>` : ""}</small></summary><ul class="tp-liste">${zeilen}</ul></details>`; };
+      return `<details class="t-karte" ${offenKarte.has(t.id) ? "open" : ""} data-tkarte="${t.id}"><summary><b>${({ hof: "🎀", renntag: "🏇", distanz: "🗺️", gangpferde: "✨", fohlenschau: "🍼", championat: "🏅", international: "🌍" })[t.art] || (t.typ === "western" ? "🤠" : "🏆")} ${esc(t.name)}</b><small>${datumTxt(t)} · ${artTxt[t.art]}${t.halle ? " · Halle" : " · Freiluft"}${meine.length ? ` · <b>${meine.length}× genannt</b>` : ""}</small></summary><ul class="tp-liste">${zeilen}</ul></details>`; };
     const diszListe = [...new Set(L.flatMap(t => t.pruef.filter(P => zeigP(t, P)).map(dk)))].sort((a, b) => { const i = k => DISZ[k] ? Object.keys(DISZ).indexOf(k) : 99; return i(a) - i(b); });
     const html = !nachDisz ? L.map(t => karte(t)).join("")
       : diszListe.map(k => { const T = L.filter(t => t.pruef.some(P => zeigP(t, P) && dk(P) === k)), genannt = T.some(t => t.nennung.some(n => n.pid === p.id && dk(t.pruef.find(P => P.id === n.prid) || {}) === k));
-        return `<details class="t-gruppe" ${genannt || offenDisz.has(k) ? "open" : ""} data-tgruppe="${k}"><summary><b>${dName(k)}</b> <small>${T.length} ${T.length === 1 ? "Turnier" : "Turniere"}${genannt ? " · <b>genannt</b>" : ""}</small></summary>${T.map(t => karte(t, k)).join("")}</details>`; }).join("");
+        return `<details class="t-gruppe" ${offenDisz.has(k) ? "open" : ""} data-tgruppe="${k}"><summary><b>${dName(k)}</b> <small>${T.length} ${T.length === 1 ? "Turnier" : "Turniere"}${genannt ? " · <b>genannt</b>" : ""}</small></summary>${T.map(t => karte(t, k)).join("")}</details>`; }).join("");
     const sortKnoepfe = L.length ? `<div class="bf-knoepfe" style="margin:0 0 8px"><small>Sortieren:</small><button class="mini-knopf ${turnierSortierung === "datum" || !["disz", "machbar"].includes(turnierSortierung) ? "an" : ""}" data-tsort="datum">📅 Nach Datum</button><button class="mini-knopf ${nachDisz ? "an" : ""}" data-tsort="disz">🗂️ Nach Disziplin</button><button class="mini-knopf ${turnierSortierung === "machbar" ? "an" : ""}" data-tsort="machbar">🟢 Nach Machbarkeit</button></div>` : "";
     const lkHinweis = versteckt || turnierAlleLK ? `<p class="text" style="margin:0 0 8px"><small>${turnierAlleLK ? "Es werden auch Prüfungen gezeigt, für die du nicht nennen kannst." : `${versteckt} ${versteckt === 1 ? "Prüfung" : "Prüfungen"} ausgeblendet, für die du nicht nennen kannst (LK, Altersklasse, Nennschluss …).`} <button class="mini-knopf" id="tAlleLK">${turnierAlleLK ? "Nur nennbare" : "Alle zeigen"}</button></small></p>` : "";
     dialog(`<h3>🏆 Turniere für ${esc(p.name)}</h3><p class="text" style="margin:0 0 6px"><small>Deine Reiter-LK: ${lkZeile}. Nennen bis spätestens am Tag vorher. Am Turniertag ist ${esc(p.name)} unterwegs, das Ergebnis kommt am nächsten Tag per Brief. Höchstens 2 Prüfungen pro Turnier in benachbarten Klassen.</small></p>${sortKnoepfe}${lkHinweis}
       ${alterJZ(p) < 16 ? `<p class="text">⚠️ ${esc(p.name)} ist noch jung – Turniere gibt es erst ab 4 Jahren, nur Rennen für Vollblüter schon ab 2 (Araber ab 3).</p>` : ""}${html || "<p>Gerade sind keine Turniere ausgeschrieben.</p>"}`, [["Schließen", zurueck, "zweit"]], "turnier-dlg");
+    document.querySelectorAll("[data-tkarte]").forEach(d => d.ontoggle = () => { if (d.open) offenKarte.add(d.dataset.tkarte); else offenKarte.delete(d.dataset.tkarte); });   // Dome 20.10.: nur selbst Aufgeklapptes bleibt offen, nicht alle genannten
     document.querySelectorAll("[data-tgruppe]").forEach(d => d.ontoggle = () => { if (d.open) offenDisz.add(d.dataset.tgruppe); else offenDisz.delete(d.dataset.tgruppe); });
     if ($("tAlleLK")) $("tAlleLK").onclick = () => { turnierAlleLK = !turnierAlleLK; turnierDialog(p, zurueck); };
     document.querySelectorAll("[data-tsort]").forEach(b => b.onclick = () => { turnierSortierung = b.dataset.tsort; spiel.tsort = turnierSortierung; speichern(); turnierDialog(p, zurueck); });
@@ -8061,7 +8062,7 @@
       if (nennSperre(p, t, P)) return;
       const nennen = (preis, R) => { R = R || { id: P.jockey ? "jockey" : "du", kosten: 0 }; const ng = Math.max(0, nenngeld(t, P) + (R.kosten || 0));   // K3: Reiter samt Kosten (Profi, Bereiter nach Bedarf; Rennen selbst reiten spart den Jockey)
         if (!spiel.admin && geldFrei() < ng) { dialog(`<h3>Zu wenig Geld</h3>${dispoHinweis()}<p>Nenngeld${R.kosten > 0 ? " und Reitgeld" : ""}: ${fmt(ng)}.</p>`, [["OK", () => turnierDialog(p, zurueck)]]); return; }
-        t.nennung.push({ pid: p.id, prid, geld: ng, reiter: R.id, ...(R.id !== "du" && R.id !== "jockey" ? { reiterName: R.name } : {}), ...(P.verkauf ? { verkauf: preis } : {}) }); buchen(-ng, "Turniere: Nenngeld" + (R.kosten > 0 ? " und Reitgeld" : "")); if (R.m) R.m.turnierTag = t.tag;
+        offenKarte.add(t.id); offenDisz.add(dk(P)); t.nennung.push({ pid: p.id, prid, geld: ng, reiter: R.id, ...(R.id !== "du" && R.id !== "jockey" ? { reiterName: R.name } : {}), ...(P.verkauf ? { verkauf: preis } : {}) }); buchen(-ng, "Turniere: Nenngeld" + (R.kosten > 0 ? " und Reitgeld" : "")); if (R.m) R.m.turnierTag = t.tag;
         prot("Turnier genannt", { p, o: R.id === "du" ? "selbst" : R.name }); if (P.fohlenschau) tippMerken("merkFohlenschau"); speichern(); zeigeTag(); turnierDialog(p, zurueck); };
       const zurueckT = () => turnierDialog(p, zurueck), weiter = R => { if (!P.verkauf) nennen(undefined, R); else verkaufspreisDialog(p, preis => nennen(preis, R), zurueckT); };
       const start = () => reiterWahlDialog(p, t, P, R => reiterNennWarnung(p, P, R, () => weiter(R), zurueckT), zurueckT);

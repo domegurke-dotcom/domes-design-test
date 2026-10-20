@@ -78,4 +78,5 @@ Bricht die Sitzung ab, kann **Claude Pro** hier weitermachen: Stand steht in der
 | Schritt | Stand |
 |---|---|
 | B4 Spiel-verloren-Bilanz + Nur ansehen | **fertig v560** (`tests/verloren-test.js` grün, Screenshots angesehen) |
-| R2 Raritäten-Markt | in Arbeit |
+| R2 + R3 Raritäten-Markt mit Preisen und Auktion | **fertig v561** (`tests/raritaeten-test.js` grün) |
+| R4 Eigene Raritäten anbieten | in Arbeit |

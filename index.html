@@ -977,7 +977,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "560";
+  const SPIEL_VERSION = "561";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -985,10 +985,10 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=560"></script>
-<script src="pferd.js?v=560"></script>
-<script src="boxstufen.js?v=560"></script>
-<script src="kopfneu.js?v=560"></script>
+<script src="lz-string.min.js?v=561"></script>
+<script src="pferd.js?v=561"></script>
+<script src="boxstufen.js?v=561"></script>
+<script src="kopfneu.js?v=561"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2535,7 +2535,7 @@
     const leist = s.leist ? `<p style="margin:8px 0 2px"><b>🏆 Leistung:</b></p><ul class="liste"><li>${esc(s.leist.text)}</li></ul>` : "";
     dialog(`<h3>${seltenSymbol(s.stufe, 30)} ${esc(p.name)}: ${esc(St.n)}</h3><p style="margin-top:0">Nur ${seltenText(s.p)} der Rasse ${esc(rasseName(p.rasse))} haben diese Eigenschaften${s.gen && s.leist ? " zusammen" : ""} (${proz(s.p)}).${St.faktor ? ` Besonderer Bonus auf dem Raritäten-Markt: Preis ×${String(St.faktor).replace(".", ",")}.` : ""}</p>${gen}${leist}<p class="text"><small>${SELTEN_HINWEIS}</small></p>`);
   }
-  document.addEventListener("click", ev => { const m = ev.target.closest && ev.target.closest("[data-selten]"); if (!m) return; ev.preventDefault(); ev.stopPropagation(); const q = pferdePool().find(e => String(e.p.id) === m.dataset.selten); if (q) seltenDialog(q.p); }, true);
+  document.addEventListener("click", ev => { const m = ev.target.closest && ev.target.closest("[data-selten]"); if (!m) return; ev.preventDefault(); ev.stopPropagation(); const q = pferdePool().find(e => String(e.p.id) === m.dataset.selten), h = !q && typeof rarFinden === "function" ? rarFinden(m.dataset.selten) : null; if (q) seltenDialog(q.p); else if (h) seltenDialog(h); }, true);
   const AUFNAHME_MAX = 20000;
   function prot(k, info) {
     try { const d = datum(), z = d.j + "-" + d.s, P = (spiel.protokoll = spiel.protokoll || {}), J = (P[z] = P[z] || {}); J[k] = (J[k] || 0) + 1;
@@ -9270,7 +9270,7 @@
     jedenHof(hofNacht, true);
     tierschutzKlinik(); tierschutzFohlen(); laborNacht(); auktionsNacht();
     if (datum().t === 1) weihnachtsSpende();   // v378
-    if (datum().t === 1) { jedenHof(() => { stallartJahreszeit(); patenJahreszeit(); pensionJahreszeit(); bereiterPensionAbrechnung(); fremdFohlenJahreszeit(); offenstallJahreszeit(); kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); jahreszeitBeginn(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); bereiterAbrechnung(); maKnappPruefen(); dispoJahreszeit(); bestenAlle(); auktionsEnde(); fohlenAbsetzen(); stutenAusAbfohl(); }, true); spamAufraeumen(); hoefeVersteigern(); jahresbericht(); }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
+    if (datum().t === 1) { jedenHof(() => { stallartJahreszeit(); patenJahreszeit(); pensionJahreszeit(); bereiterPensionAbrechnung(); fremdFohlenJahreszeit(); offenstallJahreszeit(); kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); jahreszeitBeginn(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); bereiterAbrechnung(); maKnappPruefen(); dispoJahreszeit(); bestenAlle(); auktionsEnde(); fohlenAbsetzen(); stutenAusAbfohl(); }, true); spamAufraeumen(); hoefeVersteigern(); jahresbericht(); try { rarJahreszeit(); } catch (e) { console.error("Raritäten:", e); } }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
     turnierKalender();
     jedenHof(hofMorgen, true);
     blutbilderTag();     // Laborergebnisse
@@ -10398,16 +10398,156 @@
       h.preis = Math.round(((marktwert(h) - tw) * saisonF() * (1.2 + r() * .3) + tw) / 50) * 50; return h; });
     speichern(); return M.gestuet[rasse];
   }
+  // ---------- R2/R3 (PLAN-RARITAETEN.md, Dome 19.10.2026): Raritäten-Markt ----------
+  // Marktjahr wechselt zu Beginn jedes Sommers. Je Rasse 2 reinrassige Raritäten (6–8 Jahre, Hengst/Stute), immer gleich aus dem Zufall erzeugt (nie gespeichert – ein Pferd ≈ 12 KB).
+  // Gespeichert: spiel.rar = { mj Marktjahr, karte (Jahreskarte bezahlt), wahl {rasse: Hauptmerkmal}, vor {rasse: Merkmal des Vorjahrs}, auk {id: Auktion ohne Pferd}, weg [verkaufte ids], salz }.
+  const RAR = { eintritt: 25, alter: [6, 8], art: [0.6, 0.3, 0.1], stufe: [0.6, 0.3, 0.1], faktorGen: [5, 12, 30], faktorLeist: [2, 4, 8], mindest: [10000, 25000, 60000], absender: "Verband seltener Pferdefarben" };
+  const RAR_BAND = [null, [0.01, 0.03], [0.001, 0.01], [0.0001, 0.001]];   // Wahrscheinlichkeit je Ziel-Stufe (selten, sehr selten, einzigartig)
+  // Textbausteine je Gen: [Besonderheit, Risiko (leer = keins)] – die Wirkung steht in GENE[k][4]
+  const RAR_GEN = {
+    E: ["Fuchsfarbe bzw. schwarzes Pigment, das in dieser Rasse kaum vorkommt", ""], A: ["seltene Agouti-Anlage (Verteilung von Schwarz)", ""], F: ["seltene Flachs-Anlage (helle Mähne bei Füchsen)", ""],
+    Sty: ["seltene Sooty-Anlage (dunkler Rußanflug)", ""], Cr: ["Creme-Aufhellung (Palomino, Buckskin, Cremello)", "Doppel-Cream (Cremello/Perlino): rosa Haut und blaue Augen – empfindlich gegen Sonne"],
+    D: ["Falbfarbe mit Aalstrich", ""], Z: ["Silber-Gen (Windfarben)", "Silber reinerbig (Z/Z): Augenveränderungen (MCOA) möglich"], Rn: ["echter Roan (Stichelhaar von Geburt an)", ""],
+    To: ["Tobiano-Scheckung", ""], O: ["Frame-Overo-Scheckung", "⚠️ Overo: Lethal White (tödlich) bei Verpaarung mit einem anderen Overo"], Lp: ["Leopard-Komplex (Tigerscheckung)", "Leopard reinerbig (Lp/Lp): Nachtblindheit; Leopard-Pferde neigen zur Mondblindheit"],
+    Patn: ["PATN1 – mit Leopard ganzer Körper getigert", ""], G: ["Schimmel-Gen", "Schimmel bekommen im Alter oft Melanome"], Sb: ["Sabino-Weiß (breite Blesse, hohe weiße Beine)", "viel rosa Haut: Sonnenbrand möglich"],
+    Sw: ["Splashed White (wie in weiße Farbe getaucht)", "Splashed White: manche Pferde sind taub (Hörtest im Labor)"], W: ["Dominant White (viel Weiß bis ganz weiß)", "⚠️ Dominant White reinerbig (W/W) nicht lebensfähig – die Stute bleibt leer"], Br1: ["weißer Brindle (gewellte Streifen)", ""]
+  };
+  const RAR_GEFAHR = ["O", "W", "Lp"];
+  const rarMj = () => { const d = datum(); return d.s >= 1 ? d.j : d.j - 1; };   // Marktjahr = Jahr, in dessen Sommer das Angebot kam
+  const rarOffen = () => !!(spiel.rar && spiel.rar.mj === rarMj());
+  let rarCache = null;
+  function rarGenotypen(rasse, hengst) {   // alle Genotypen der Rasse, die als seltenes Merkmal zählen (ohne tödliche O/O und W/W)
+    const L = [], grenze = SELTEN_MERKMAL_RASSE[rasse] || SELTEN_MERKMAL;
+    GENE.forEach(([k, , dom, rez]) => { if (k === "Dm" || (k === "Br1" && hengst)) return; const al = k === "A" && (RASSE_GENE[rasse] || {}).At != null ? [dom, "At", rez] : [dom, rez];
+      for (let i = 0; i < al.length; i++) for (let j = i; j < al.length; j++) { const g = [al[i], al[j]]; if ((k === "O" || k === "W") && g[0] === dom && g[1] === dom) continue;
+        const q = genotypProb(rasse, k, { [k]: g }, false); if (q > 0 && q < grenze) L.push({ k, g, q, key: k + ":" + g.join("/") }); } });
+    return L;
+  }
+  const RAR_HAEUFIG = (rasse, k) => { const dom = GEN[k][2], rez = GEN[k][3], al = k === "A" && (RASSE_GENE[rasse] || {}).At != null ? [dom, "At", rez] : [dom, rez]; let best = null;   // häufigster Genotyp (für die übrigen Gene)
+    for (let i = 0; i < al.length; i++) for (let j = i; j < al.length; j++) { const g = [al[i], al[j]], q = genotypProb(rasse, k, { [k]: g }, false); if (!best || q > best.q) best = { g, q }; } return best.g; };
+  function rarGenSetzen(h, wahl) {   // gewählte Genotypen setzen, alle anderen seltenen auf den häufigsten Genotyp der Rasse
+    const g = genVon(h), grenze = SELTEN_MERKMAL_RASSE[h.rasse] || SELTEN_MERKMAL;
+    GENE.forEach(([k]) => { if (k === "Dm") return; const w = wahl.find(x => x.k === k); if (w) { g[k] = w.g.slice(); return; } if (genotypProb(h.rasse, k, g, h.geschlecht === "Hengst") < grenze) g[k] = RAR_HAEUFIG(h.rasse, k); });
+    genNorm(g); h.farbe = farbeAus(g, h.ex); h.genFuer = h.farbe; h.grauHinweis = elternGrau(h);
+  }
+  function rarGenWahl(rasse, hengst, st, r, vorKey) {   // ein Genotyp oder zwei zusammen, deren Wahrscheinlichkeit im Band der Ziel-Stufe liegt; die Hauptmerkmale des Vorjahrs nicht noch einmal (außer die Rasse hat keine anderen)
+    const vor = [].concat(vorKey || []), G = rarGenotypen(rasse, hengst), ohne = G.filter(x => !vor.includes(x.key)), L = ohne.length ? ohne : G; if (!L.length) return null;
+    const [lo, hi] = RAR_BAND[st], opt = [];
+    L.forEach(a => { if (a.q > lo && a.q <= hi) opt.push([a]); });
+    L.forEach((a, i) => L.slice(i + 1).forEach(b => { if (a.k !== b.k && a.q * b.q > lo && a.q * b.q <= hi) opt.push([a, b]); }));
+    if (opt.length) return opt[Math.floor(r() * opt.length)];
+    const alle = L.map(a => [a]).concat(...L.map((a, i) => L.slice(i + 1).filter(b => a.k !== b.k).map(b => [a, b]))), pr = w => w.reduce((x, m) => x * m.q, 1);   // nichts im Band: die seltenste Möglichkeit knapp über dem Band, sonst die seltenste überhaupt
+    const unter = alle.filter(w => pr(w) <= hi).sort((x, y) => pr(y) - pr(x)); return unter[0] || alle.sort((x, y) => pr(x) - pr(y))[0];
+  }
+  function rarLeistung(h, st, r) {   // Leistungs-Rarität: Gangwerk ins passende Rangband – „einzigartig“ nur über Ausbildung bis S mit echten Turniereinträgen
+    const T = SELTEN_SCHWELLE[h.rasse]; werteErgaenzen(h);
+    const ausbS = () => {   // Disziplin, in der das Pferd mit voller Ausbildung die höchste Klasse erreicht (wie in echt: kein Shetty in S-Dressur)
+      h.training = 110; h.skala = AUSBILDUNG.map(() => 92); h.disz = { springen: 92, western: 92, gelaende: 80 };
+      const k = ["dressur", "springen", "reining", "trail"].filter(x => DISZ[x] && (!DISZ[x].nur || DISZ[x].nur(h))).map(x => diszWert(h, x)).filter(d => d.stufe === 4).sort((a, b) => b.wert - a.wert)[0];
+      if (!k) { delete h.skala; delete h.disz; h.training = 60 + Math.floor(r() * 40); } return k; };
+    const gang = v => ["schritt", "trab", "galopp"].forEach(x => { h.werte.gang[x] = Math.min(10, Math.round((v + (r() - 0.5) * 0.2) * 100) / 100); });
+    if (st === 1 && T) { gang((T[1] + T[2]) / 2); return; }
+    if (st === 2 && T && r() < 0.6) { gang(Math.min(10, T[2] + 0.25 + r() * 0.3)); return; }
+    const d = ausbS(); if (!d) { if (T) gang(Math.min(10, T[2] + 0.3)); return; }
+    const siege = st >= 3 ? 15 + Math.floor(r() * 4) : 5 + Math.floor(r() * 4), gross = st >= 3 ? 3 + Math.floor(r() * 2) : Math.floor(r() * 2), E = [], j = alterJahre(h);
+    for (let i = 0; i < siege + 4 + Math.floor(r() * 5); i++) {   // Siege und Platzierungen in Klasse S (Westernreiten: Open), ältere Starts in M
+      const sieg = i < siege, grossT = sieg && i < gross, von = 10 + Math.floor(r() * 14), platz = sieg ? 1 : 2 + Math.floor(r() * 4), niveau = STUFE_WERT[4] + 3;
+      E.push({ tag: spiel.tag - 1 - Math.floor(r() * Math.max(1, j - 4) * 4 * tpj()), turnier: `${grossT ? "Großes Reitturnier" : d.k === "dressur" || d.k === "springen" ? "Reitturnier" : "Westernturnier"} ${TURNIER_ORTE[Math.floor(r() * TURNIER_ORTE.length)]}`, art: grossT ? "gross" : "regional", disz: d.k,
+        stufe: 4, pruef: `${DISZ[d.k].n} ${prName(d.k, 4)}`, platz, von, erg: ergebnisText(d.k, niveau + (sieg ? 6 : 2), niveau, r, 4).txt, geld: 0, plaziert: true, frueher: true }); }
+    h.erfolge = E.sort((a, b) => b.tag - a.tag); delete h.bilanz; delete h.bilanzV; bilanzHolen(h);
+  }
+  function rarPferd(mj, rasse, i, vorKey) {
+    const r = zufall("rar-" + mj + rasse + i + ((spiel.spieler && spiel.spieler.name) || "") + (spiel.rar && spiel.rar.salz || "")), g = r() < 0.5 ? "Hengst" : "Stute", jahre = RAR.alter[0] + Math.floor(r() * (RAR.alter[1] - RAR.alter[0] + 1));
+    const h = neuesPferd({ id: "rar" + mj + rasse + i, name: pferdeName(g, rasse, "zucht", r), rasse, geschlecht: g, alter: jahre, geb: zuechterGeb(jahre, r), rein: true });
+    const u = r(), art = rasse === "haflinger" || !rarGenotypen(rasse, g === "Hengst").length ? "leist" : u < RAR.art[0] ? "gen" : u < RAR.art[0] + RAR.art[1] ? "leist" : "beides";
+    const v = r(), st = v < RAR.stufe[0] ? 1 : v < RAR.stufe[0] + RAR.stufe[1] ? 2 : 3;
+    let haupt = null;
+    if (art !== "leist") { const w = rarGenWahl(rasse, g === "Hengst", art === "beides" ? Math.max(1, st - 1) : st, r, vorKey); if (w) { rarGenSetzen(h, w); haupt = w[0].key; } } else rarGenSetzen(h, []);
+    if (art !== "gen") rarLeistung(h, art === "beides" ? Math.max(1, st - 1) : st, r);
+    h.tests = { farbe: true, abst: true, krank: true }; h.gentest = true; if ((DMRT3[rasse] || 0) > 0) h.tests.gang = true;
+    h.rarArt = art; h.rarHaupt = haupt; h.pflege = erzeugePflege(h); h.pflege.gesundheit = Math.max(90, h.pflege.gesundheit);
+    const S = seltenheit(h, true); h.rarStufe = S.stufe; h.preis = rarPreis(h, S); return h;
+  }
+  function rarPreis(h, S) {   // R3: max(Mindestpreis, Marktwert ohne Tests × Faktor) – Gen (auch beides) 5/12/30, nur Leistung 2/4/8; Ausnahmepferd ×1,5, Jahrhundertpferd ×2; Tests kommen oben drauf
+    S = S || seltenheit(h, true); const st = Math.max(1, Math.min(3, S.stufe)), tw = testWert(h), m = marktwert(h) - tw, F = S.gen ? RAR.faktorGen : RAR.faktorLeist;
+    const fx = (SELTEN_STUFEN[S.stufe] || {}).faktor || 1; return Math.round((Math.max(RAR.mindest[st - 1], m * F[st - 1]) * fx + tw) / 50) * 50;
+  }
+  function rarAngebot() {   // alle Raritäten des laufenden Marktjahrs (zwischengespeichert, nicht im Spielstand)
+    const R = spiel.rar; if (!R) return [];
+    const schl = R.mj + "|" + (R.salz || "") + "|" + ((spiel.spieler && spiel.spieler.name) || "");
+    if (!rarCache || rarCache.schl !== schl) rarCache = { schl, liste: rassenABC().flatMap(ra => [0, 1].map(i => rarPferd(R.mj, ra.id, i, (R.vor || {})[ra.id]))) };
+    return rarCache.liste.filter(h => !(R.weg || []).includes(h.id));
+  }
+  const rarFinden = id => spiel.rar ? (rarCache ? rarCache.liste : rarAngebot()).find(h => h.id === id) || null : null;
+  function rarAuktion(h) {   // Auktion je Raritätenpferd: Zustand in spiel.rar.auk (ohne das Pferd), das Pferd hängt unsichtbar daran
+    const A = (spiel.rar.auk = spiel.rar.auk || {}); let a = A[h.id];
+    if (!a) a = A[h.id] = { rar: true, id: h.id, wert: h.preis, gebot: h.preis, gebote: 0, max: 0, maxV: 2, fuehrt: null, jz: jzJetzt() };
+    if (!Object.getOwnPropertyDescriptor(a, "pferd")) Object.defineProperty(a, "pferd", { value: h, enumerable: false, writable: true });
+    return a;
+  }
+  const rarAuktionen = () => spiel.rar && spiel.rar.auk ? Object.values(spiel.rar.auk).filter(a => !a.vorbei).map(a => { const h = rarFinden(a.id); if (h) rarAuktion(h); return a; }).filter(a => a.pferd) : [];
+  // Gebote laufen eine Jahreszeit (wie im Auktionshaus): zu Beginn der nächsten Jahreszeit Zuschlag an den Hof, von dem aus geboten wurde
+  function rarAuktionEnde() {
+    const R = spiel.rar; if (!R || !R.auk) return;
+    Object.values(R.auk).forEach(a => { if (a.vorbei || a.jz >= jzJetzt() || !a.fuehrt) return; const h = rarFinden(a.id); a.vorbei = true; (R.weg = R.weg || []).push(a.id);
+      if (a.fuehrt !== "du" || !h) return;
+      const hid = a.hid && hofVon(a.hid) ? a.hid : hofReihe()[0];
+      imHof(hid, () => { const zb = neuzugangBox();
+        if (zb < 0 || geldFrei() < a.gebot) { brief(RAR.absender, `Raritäten-Markt: ${h.name} verloren`, `{du hattest|Sie hatten} das Höchstgebot für <b>${esc(h.name)}</b> (${fmt(a.gebot)}), aber ${zb < 0 ? "keine freie Box" : "nicht genug Geld"}. Das Pferd ging an den Nächstbietenden.`); return; }
+        buchen(-a.gebot, `Raritäten-Markt: ${h.name}`); prot("Kauf: Raritäten-Markt", { p: h, b: -a.gebot }); marktGekauftMerken(h.id);
+        const p = JSON.parse(JSON.stringify(h)); delete p.preis; p.maehneSeit = spiel.tag; p.schopfSeit = spiel.tag; akuUebernehmen(p, h, "Gestüt");
+        const nb = spiel.boxen[zb]; nb.pferd = p; nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false; quarantaeneNeu(nb); alterAktualisieren();
+        ruf(RAR.absender, 5); brief(RAR.absender, `Zuschlag: ${p.name}`, `herzlichen Glückwunsch! {Du hast|Sie haben} die Rarität <b>${esc(p.name)}</b> (${esc(rasseName(p.rasse))}, ${esc(SELTEN_STUFEN[h.rarStufe] ? SELTEN_STUFEN[h.rarStufe].n : "selten")}) für <b>${fmt(a.gebot)}</b> ersteigert. ${pron(p).er === "sie" ? "Sie" : "Er"} steht jetzt in Box ${zb + 1}${nb.quar ? " im Quarantänestall" : ""}.`, { pferde: [p] });
+      }); });
+  }
+  function rarJahreszeit() {   // Beginn jeder Jahreszeit: Gebote entscheiden; zu Beginn des Sommers neues Marktjahr + Einladungsbrief
+    rarAuktionEnde();
+    const d = datum(); if (d.s !== 1 || (spiel.rar && spiel.rar.mj === d.j)) return;
+    const alt = spiel.rar || {}; spiel.rar = { mj: d.j, karte: false, vor: alt.wahl || alt.vor || {}, wahl: {}, auk: {}, weg: [] };
+    rarCache = null; const L = rarAngebot(); L.forEach(h => { if (h.rarHaupt) (spiel.rar.wahl[h.rasse] = [].concat(spiel.rar.wahl[h.rasse] || [])).push(h.rarHaupt); });
+    const bsp = L.slice().sort((a, b) => b.rarStufe - a.rarStufe || b.preis - a.preis).filter((h, i, A) => A.findIndex(x => x.rasse === h.rasse) === i).slice(0, 3);
+    brief(RAR.absender, `Raritäten-Markt ${d.j}/${jj(d.j + 1)} ist eröffnet`, `der neue Raritäten-Markt ist eröffnet: <b>je Rasse 2 seltene Pferde</b> mit Fellfarben-Test, Abstammungsnachweis und Erbkrankheiten-Test. Das Angebot gilt bis zum Ende des Frühlings. Drei Beispiele:<ul class="liste">${bsp.map(h => `<li>${seltenSymbol(h.rarStufe, 18)} <b>${esc(h.name)}</b> · ${esc(rasseName(h.rasse))} · ${esc(SELTEN_STUFEN[h.rarStufe] ? SELTEN_STUFEN[h.rarStufe].n : "")} · ab ${fmt(h.preis)}</li>`).join("")}</ul>Eintritt mit der Jahreskarte: ${fmt(RAR.eintritt)} (Pferdemarkt → Raritäten-Markt).`);
+  }
+  function rarKarte(danach) {   // Jahreskarte 25 € (Admin frei)
+    if (!spiel.admin && geldFrei() < RAR.eintritt) { dialog(`<h3>Nicht genug Geld</h3>${dispoHinweis()}<p>Die Jahreskarte kostet ${fmt(RAR.eintritt)}.</p>`); return; }
+    if (!spiel.admin) buchen(-RAR.eintritt, "Raritäten-Markt: Eintritt"); spiel.rar.karte = true; prot("Raritäten-Markt: Jahreskarte", {}); speichern(); if (danach) danach();
+  }
+  const proz2 = x => x < 0.00001 ? "unter 0,001 %" : (x * 100 >= 1 ? Math.round(x * 1000) / 10 : Math.round(x * 100000) / 1000).toLocaleString("de-DE") + " %";
+  function rarAnpreisung(h) {   // Besonderheit, warum besonders (Zahlen), Wirkung (Optik, Vererbung), Risiken und Erbkrankheiten aus dem Nachweis
+    const S = seltenheit(h, true), z = [], r = rasseName(h.rasse);
+    if (S.gen) S.gen.merkmale.forEach(m => { const T = RAR_GEN[m.k] || [GEN[m.k][1], ""], g = genVon(h)[m.k] || [], dom = GEN[m.k][2], n = g.filter(a => a === dom).length;
+      const erbt = n === 2 ? `gibt ${GEN[m.k][1]} an alle Fohlen weiter` : n === 1 ? `gibt ${GEN[m.k][1]} an etwa die Hälfte der Fohlen weiter` : `gibt die Anlage an alle Fohlen weiter – sichtbar wird sie nur, wenn der andere Elternteil sie auch trägt`;
+      z.push(["Besonderheit", `${esc(T[0])} (${esc(GEN[m.k][1])} ${esc(g.join("/"))})`], ["Warum besonders", `in der Rasse ${esc(r)} bei nur ${proz2(m.q)}`], ["Wirkung", `${esc(GEN[m.k][4])} · Vererbung: ${erbt}`]);
+      if (T[1] && (m.k !== "Cr" || n === 2) && (m.k !== "Z" || n === 2) && (m.k !== "Lp" || true)) z.push(["Risiko", esc(T[1])]); });
+    if (S.leist) z.push(["Leistung", esc(S.leist.text)]);
+    const cw = (h.werte && h.werte.charakter) || {}, ch = CHARAKTER.map(t => cw[t.key] >= 75 ? t.rechts : cw[t.key] <= 25 ? t.links : null).filter(Boolean).slice(0, 3); if (S.leist && ch.length) z.push(["Charakter", esc(ch.join(", "))]);
+    const e = erbVon(h), kr = Object.keys(ERBKRANK).filter(k => ERBKRANK[k].rassen[h.rasse] && e[k]);
+    z.push(["Erbkrankheiten (Test)", kr.length ? kr.map(k => `⚠️ ${esc(ERBKRANK[k].n)}: ${e[k] === 2 || ERBKRANK[k].dominant ? "betroffen" : "Träger"}`).join(" · ") : "frei von den getesteten Erbkrankheiten der Rasse"]);
+    if (S.gen && S.leist) z.push(["Zusammen", `${proz2(S.p)} (${seltenText(S.p)})`]);
+    return z;
+  }
+  const rarWarn = h => { const g = genVon(h), l = RAR_GEFAHR.filter(k => hat(g, k)); return l.length ? `<p class="text" style="background:#fff1d6;border-radius:8px;padding:6px 8px;margin:0 0 6px">⚠️ <b>Achtung, Nachweis liegt vor:</b> ${l.map(k => esc((RAR_GEN[k] || ["", ""])[1].replace(/^⚠️ /, ""))).join(" · ")}</p>` : ""; };
+  function rarMarktHTML(kopf) {
+    if (!rarOffen()) return kopf("💎 Raritäten-Markt", "Einmal im Jahr: je Rasse 2 seltene Pferde.") + `<p class="voll">Der erste Raritäten-Markt öffnet im Sommer.</p></div>`;
+    if (!spiel.rar.karte && !spiel.admin) return kopf("💎 Raritäten-Markt", `Raritäten-Markt: 2 Pferde je Rasse, Eintritt ${fmt(RAR.eintritt)}`) + `<p class="voll" style="margin:6px 0">Mit der Jahreskarte siehst du das ganze Angebot bis zum Ende des Frühlings.</p><button class="knopf" id="rarKarte">🎟️ Jahreskarte kaufen · ${fmt(RAR.eintritt)}</button></div>`;
+    const L = rarAngebot();
+    return kopf("💎 Raritäten-Markt", `Je Rasse 2 seltene Pferde mit Fellfarben-Test, Abstammungsnachweis und Erbkrankheiten-Test. Gekauft wird per Auktion (Startgebot = Preis), die Gebote laufen bis zum Ende der Jahreszeit.`)
+      + `<p class="text voll" style="margin:4px 0"><small>${SELTEN_HINWEIS}</small></p>${spiel.admin ? `<button class="knopf zweit" id="rarNeu" style="width:auto">🛠️ Raritäten neu würfeln</button>` : ""}`
+      + `<div class="paar-liste">${L.map(h => { const a = (spiel.rar.auk || {})[h.id], du = a && a.fuehrt === "du", ueber = a && a.duGeboten && !du && !a.vorbei, st = SELTEN_STUFEN[h.rarStufe];
+        return pferdKachel(h, { ort: "Raritäten-Markt", rahmen: du ? "gruen" : ueber ? "rot" : "", zeilen: [rasseName(h.rasse), `${h.geschlecht} · ${alterText(h)}`, `${st ? seltenSymbol(h.rarStufe, 16) + " " + esc(st.n) : ""}`, a && a.gebote ? `<b>${fmt(a.gebot)}</b> · ${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"}` : `<b>ab ${fmt(h.preis)}</b>`, du ? `✅ du führst · max ${fmt(a.duMax || a.gebot)}` : ueber ? "⚠️ überboten" : ""],
+          aktion: [du ? "Höchstgebot erhöhen" : `Bieten · ab ${fmt(a && a.fuehrt ? a.gebot + bietSchritt(a) : (a ? a.gebot : h.preis))}`, () => { if (!spiel.rar || spiel.rar.mj !== rarMj()) return; bieten(rarAuktion(h)); }],
+          extra: { warn: rarWarn(h), zeilen: [["Seltenheit", st ? `${seltenSymbol(h.rarStufe, 18)} ${esc(st.n)}` : "–"], ["Startgebot", `<b>${fmt(h.preis)}</b>`], ...rarAnpreisung(h)] } }); }).join("")}</div></div>`;
+  }
   // Limit des stärksten anderen Bieters: meist um den Marktwert, manchmal ein Liebhaber, der richtig Druck macht
   function npcLimit(wert, r = Math.random) { const u = r(), f = u < .65 ? .7 + r() * .6 : u < .87 ? 1.3 + r() * .7 : u < .96 ? 2 + r() * 1.5 : 3.5 + r() * 2.5; return Math.round(wert * f / 50) * 50; }
   // Geld, das schon in deinen anderen Höchstgeboten steckt (führend), ist nicht mehr frei
-  const gebundenesGeld = ausser => { const M = spiel.markt || {}; return [...(M.auktion || []), ...(M.fohlen || [])].filter(a => a !== ausser && !a.vorbei && a.fuehrt === "du").reduce((s, a) => s + (a.duMax || a.gebot), 0); };
+  const gebundenesGeld = ausser => { const M = spiel.markt || {}; return [...(M.auktion || []), ...(M.fohlen || []), ...rarAuktionen()].filter(a => a !== ausser && !a.vorbei && a.fuehrt === "du").reduce((s, a) => s + (a.duMax || a.gebot), 0); };
   const bietSchritt = a => Math.max(50, Math.round(a.wert * .05 / 50) * 50);
-  const auktionFinden = id => { const M = spiel.markt || {}; return [...(M.auktion || []), ...(M.fohlen || [])].find(a => a.pferd.id === id); };
+  const auktionFinden = id => { const M = spiel.markt || {}; return [...(M.auktion || []), ...(M.fohlen || []), ...rarAuktionen()].find(a => a.pferd.id === id); };
   // jede Nacht: andere Bieter im Auktionshaus
   function auktionsNacht() {
-    const M = spiel.markt; if (!M || !M.auktion) return;
-    [...M.auktion, ...(M.fohlen || [])].forEach(a => { if (a.vorbei) return;
+    const M = spiel.markt || {};
+    [...(M.auktion || []), ...(M.fohlen || []), ...rarAuktionen().filter(a => a.duGeboten)].forEach(a => { if (a.vorbei) return;   // R3: Raritäten – Gegenbieter erst, wenn du mitbietest
       if (a.maxV !== 2) { a.max = Math.max(a.max, npcLimit(a.wert)); a.maxV = 2; }
       if (a.gebot + bietSchritt(a) > a.max) return;
       const druck = a.max > a.wert * 1.3;   // starker Bieter: bietet häufiger
@@ -10418,7 +10558,7 @@
         if (warDu) { a.gebot = Math.min(a.max, (a.duMax || a.gebot) + st); a.gebote += 2; }
         else { if (a.fuehrt) a.gebot = Math.min(a.max, a.gebot + st * (1 + Math.floor(Math.random() * 2))); a.gebote++; }
         a.fuehrt = "npc";
-        if (warDu) brief("Auktionshaus", `Überboten: ${a.pferd.name}`, `bei der Auktion für <b>${esc(a.pferd.name)}</b> {wurdest du|wurden Sie} überboten. Aktuelles Höchstgebot: <b>${fmt(a.gebot)}</b> (${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"}). Die Auktion endet mit dieser Jahreszeit.`, { aktion: { typ: "bieten", pferd: a.pferd.id }, pferde: [a.pferd] });
+        if (warDu) brief(a.rar ? RAR.absender : "Auktionshaus", `Überboten: ${a.pferd.name}`, `bei der Auktion für <b>${esc(a.pferd.name)}</b> {wurdest du|wurden Sie} überboten. Aktuelles Höchstgebot: <b>${fmt(a.gebot)}</b> (${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"}). Die Auktion endet mit dieser Jahreszeit.`, { aktion: { typ: "bieten", pferd: a.pferd.id }, pferde: [a.pferd] });
       } });
   }
   // zu Beginn jeder Jahreszeit: Auktionen der letzten Jahreszeit entscheiden
@@ -10494,7 +10634,7 @@
   let marktBereich = null;
   const MARKT_BEREICHE = [["verkaufen", "💰", "Pferd verkaufen", "Festpreis oder Auktion", true], ["angebote", "🏷️", "Meine Verkaufs\u00adpferde", "laufende Angebote", true], ["privat", "🏡", "Privat\u00adanzeigen", "Pferde von Privatleuten", true],
     ["haendler", "🐴", "Pferde\u00adhändler", "große Auswahl", true], ["auktion", "🔨", "Auktions\u00adhaus", "mitbieten", true], ["fohlen", "🍼", "Fohlen\u00adauktion", "Sommer und Herbst", true], ["gestuet", "🏰", "Gestüte", "reinrassig mit Papieren", true], ["rennen", "🏇", "Verkaufs\u00adrennen", "Vollblüter nach dem Rennen", true],
-    ["tierschutz", "🐾", "Tierschutz", "Pferde in Not", true]];
+    ["tierschutz", "🐾", "Tierschutz", "Pferde in Not", true], ["raritaeten", "💎", "Raritäten-Markt", "seltene Pferde, 1× im Jahr", true]];
   function zeigeMarkt(bereich) {
     if (bereich === null || typeof bereich === "string") marktBereich = bereich;
     const jetzt = jzJetzt(), ts = (spiel.tierschutz || []).filter(t => t.klinik || jetzt < t.frist);
@@ -10546,7 +10686,7 @@
     const kopf = (t, sub) => `<button class="zurueck-s voll" id="mkUebersicht" style="align-self:flex-start;justify-self:start">‹ Pferdemarkt</button><div class="panel voll"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>${t}</b>${geld}</div>${sub ? `<p style="margin:4px 0 0;font-size:.85rem;opacity:.75">${sub}</p>` : ""}`;
     let html = "";
     if (!B_) html = `<div class="panel voll"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>Was möchtest du tun?</b>${geld}</div>
-      <div class="kacheln quadrat markt-kacheln">${MARKT_BEREICHE.map(([id, ico, n, kurz, an0], _i, _l, an = an0 && (id !== "fohlen" || fohlenZeit())) => `<button class="kachel ${an ? "klickbar" : "fehlt"}" data-mb="${id}" ${an ? "" : "disabled"}><span class="ico">${ico}</span><b>${n}</b><small>${!an ? (id === "fohlen" ? "nur Sommer und Herbst" : "bald") : id === "angebote" ? `${eigene.length} ${eigene.length === 1 ? "Angebot" : "Angebote"}` : id === "tierschutz" && ts.length ? `${ts.length} ${ts.length === 1 ? "Pferd" : "Pferde"}` : kurz}</small></button>`).join("")}</div></div>`;
+      <div class="kacheln quadrat markt-kacheln">${MARKT_BEREICHE.map(([id, ico, n, kurz, an0], _i, _l, an = an0 && (id !== "fohlen" || fohlenZeit())) => `<button class="kachel ${an ? "klickbar" : "fehlt"}" data-mb="${id}" ${an ? "" : "disabled"}><span class="ico">${ico}</span><b>${n}</b><small>${!an ? (id === "fohlen" ? "nur Sommer und Herbst" : "bald") : id === "raritaeten" && !rarOffen() ? "öffnet im Sommer" : id === "angebote" ? `${eigene.length} ${eigene.length === 1 ? "Angebot" : "Angebote"}` : id === "tierschutz" && ts.length ? `${ts.length} ${ts.length === 1 ? "Pferd" : "Pferde"}` : kurz}</small></button>`).join("")}</div></div>`;
     else if (marktBereich === "angebote") html = kopf("🏷️ Meine Verkaufspferde", "Antippen für alle Infos oder um ein Angebot zurückzuziehen.") + angebotListe + `</div>`;
     else if (marktBereich === "haendler") html = kopf("🐴 Pferdehändler", "Das Angebot wechselt jede Jahreszeit. Antippen für alle Infos.") + kaufListe + `</div>`;
     else if (marktBereich === "privat") { const pv = marktNeu().privat.filter(h => !(spiel.marktGekauft || []).includes(h.id));
@@ -10571,6 +10711,7 @@
         + `<p class="text voll" style="margin:4px 0"><small>${next ? `Nächstes Verkaufsrennen: <b>${esc(next.name)}</b> am ${tagText(next.tag)}.` : "Gerade ist kein Verkaufsrennen ausgeschrieben (nur von Frühling bis Herbst)."}</small></p>`
         + (L.length ? `<div class="paar-liste">${L.map(k => pferdKachel(k.pferd, { ort: "Verkaufsrennen", zeilen: [`${k.pferd.geschlecht} · ${alterText(k.pferd)}`, `<b>${fmt(k.preis)}</b> · bis ${tagText(k.bis)}`],
             aktion: [`Kaufen · ${fmt(k.preis)}`, () => { if (rennKaufen(k, () => zeigeMarkt())) zeigeMarkt(); }], extra: { zeilen: [["Preis", `<b>${fmt(k.preis)}</b>`], ["Rennen", esc(k.rennen || "Verkaufsrennen")]] } })).join("")}</div>` : `<p class="voll">Gerade ist kein Pferd aus einem Verkaufsrennen zu haben.</p>`) + `</div>`; }
+    else if (marktBereich === "raritaeten") html = rarMarktHTML(kopf);
     else if (marktBereich === "tierschutz") { const nf = marktNeu().notfall.filter(h => !(spiel.marktGekauft || []).includes(h.id));
       html = kopf("🐾 Tierschutz", "Deine abgeholten Pferde kannst du hier zurückkaufen.") + tsListe + `</div>
         <div class="panel voll"><b>🆘 Notfallpferde</b><p style="margin:4px 0 0;font-size:.85rem;opacity:.75">Pferde in schlechtem Zustand suchen ein Zuhause – für eine Schutzgebühr. Bedingung: gesund pflegen und mindestens ein Jahr behalten – vorher kein Verkauf, nur Rückgabe ohne Erstattung.</p>
@@ -10583,6 +10724,8 @@
     $("nebenSchirm").querySelectorAll("[data-mb]").forEach(b => b.onclick = () => { marktBereich = b.dataset.mb; zeigeMarkt(); $("nebenSchirm").scrollTop = 0; });
     if ($("mkUebersicht")) $("mkUebersicht").onclick = () => { marktBereich = null; gestuetWahl = null; zeigeMarkt(); };
     if ($("mkGestuete")) $("mkGestuete").onclick = () => { gestuetWahl = null; zeigeMarkt(); };
+    if ($("rarKarte")) $("rarKarte").onclick = () => rarKarte(() => zeigeMarkt());
+    if ($("rarNeu")) $("rarNeu").onclick = () => { spiel.rar.salz = Math.random().toString(36).slice(2, 7); spiel.rar.auk = {}; spiel.rar.weg = []; rarCache = null; speichern(); zeigeMarkt(); };
     $("nebenSchirm").querySelectorAll("[data-gest]").forEach(b => b.onclick = () => { gestuetWahl = b.dataset.gest; zeigeMarkt(); $("nebenSchirm").scrollTop = 0; });
     const verkaufAuswahl = () => {
       const liste = spiel.boxen.map((b, i) => ({ b, i })).filter(({ b }) => b.pferd && !b.tot && !b.pferd.klinik);
@@ -13082,6 +13225,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Weitere AKU (v380):</b> nach einer AKU kann eine andere Stufe dazugebucht werden (nicht dieselbe); das Protokoll fasst alle Befunde zusammen, die Wertminderung zählt alle gefundenen Befunde. Danach „Pferd kaufen? Ja / Nein“ (Tierschutz: aufnehmen).</p>
       <p><b>Spielstand und Speicherplätze (PLAN-SPIELSTAND.md, v519):</b> Schlüssel im Browser: Autospeicher <code>zuchtstall-v2</code> (läuft immer mit, kurz verzögert 0,4 s und sofort beim Verlassen/Verstecken der Seite), Platz 1 <code>zuchtstall-p1</code>, Platz 2 <code>zuchtstall-p2</code> (nur selbst gespeichert, mit Kurzinfo Hof/Datum/Tag/Version/echtes Datum), Alles gepackt mit lz-string (<code>compressToUTF16</code>; ungepackte alte Stände beginnen mit „{“ und werden beim nächsten Speichern gepackt). Größe jetzt: ${(() => { try { const j = JSON.stringify(spiel).length, g = packen(spiel).length; return `ungepackt ${j.toLocaleString("de-DE")} Zeichen → gepackt ${g.toLocaleString("de-DE")} Zeichen (${Math.round(g / j * 100)} %)`; } catch (e) { return "–"; } })()}. Spiel-Nummer <code>spiel.spielId</code>, eigener Speicherplatz <code>spiel.platz</code> (null = noch nie gespeichert; neues Spiel legt keinen Speicherstand an, Tipp „Spiel speichern“; beim ersten Speichern Speicherplatz wählen), Turnier-Sortierung <code>spiel.tsort</code>. „Ungespeicherter Fortschritt“ = Tag, Geld, Pferde/Fohlen, Einsteller, Mitarbeiter, Kredite oder Briefe weichen vom Platz ab (<code>fortschritt</code>). Platzwechsel lädt den Stand in den Autospeicher und startet die Seite neu (Merker <code>zuchtstall-start</code> in sessionStorage → direkt ins Spiel). Speichern schlägt fehl → rote Meldung mit Datei-Knopf, höchstens 1× je Spieltag. Spiel verloren → nur der Autospeicher wird gelöscht. Datei (S2/S3): <code>Zuchtstall_&lt;Hof&gt;_Jahr&lt;jj&gt;-&lt;Jahreszeit&gt;_&lt;Datum&gt;.json</code>, Umlaute im Dateinamen als ae/oe/ue/ss (v523, auch im Notfall-Fenster) – im Spiel bleibt der Hofname mit Umlauten.</p>
       <p><b>Hofchronik (B2, v548):</b> Dieselben Zähler wie das Spielprotokoll, aber <b>je Hof</b> getrennt (<code>spiel.chronik[Hof]["Jahr-Jahreszeit"].k</code>); das Spielprotokoll bleibt als „Gesamt“. Neu gezählt: Turnier-Start/Sieg/Platz <b>je Disziplin und Klasse</b> („Turnier Dressur L: Sieg“), höchste erreichte Klasse je Disziplin, „Abgabe: Gnadenhof / Tierschutz / Händler (Rückgabe)“, „Pferd gepfändet“, höchster und tiefster Kontostand je Jahreszeit (<code>hoch</code>/<code>tief</code>, gemessen bei jeder Buchung), Höfe gekauft/verkauft/verloren mit Name und Jahreszeit (<code>spiel.chronikHoefe</code>). Alte Spielstände haben keine Aufteilung nach Höfen (Anzeige später „–“). Die Anzeige (Jahresbericht, Verloren-Bilanz) folgt in B3/B4.</p>
+      <p><b>Raritäten-Markt (R2/R3, v561):</b> Pferdemarkt → 💎 Raritäten-Markt. Marktjahr ab Sommer (Tag 1) bis Ende Frühling, vorher „öffnet im Sommer“. Jahreskarte ${fmt(RAR.eintritt)} (Admin frei). Je Rasse 2 reinrassige Pferde, ${RAR.alter[0]}–${RAR.alter[1]} Jahre, Hengst/Stute; Art ${RAR.art.map(x => Math.round(x * 100) + " %").join(" / ")} (nur Gen / nur Leistung / beides, Haflinger nur Leistung), Ziel-Stufe ${RAR.stufe.map(x => Math.round(x * 100) + " %").join(" / ")} (selten / sehr selten / einzigartig). Gen-Raritäten: Genotyp (oder zwei zusammen) im Band der Stufe, alle übrigen seltenen Gene auf den häufigsten Genotyp; die Hauptmerkmale des Vorjahrs werden nicht wiederholt. Leistung: Gangwerk über der 1-%- bzw. 0,1-%-Schwelle der Rasse oder Ausbildung bis S/Open mit echten Turniereinträgen (5–8 bzw. 15–18 Siege, davon 3+ auf Großen Reitturnieren) – nur in Disziplinen, in denen die Rasse mit voller Ausbildung die höchste Klasse erreicht. Die Pferde werden nie gespeichert (immer gleich aus dem Zufall erzeugt), nur Gebote/Zuschläge. Preis = max(Mindestpreis ${RAR.mindest.map(fmt).join(" / ")}, Marktwert ohne Tests × Faktor) – Gen (auch beides) ${RAR.faktorGen.join(" / ")}, nur Leistung ${RAR.faktorLeist.join(" / ")}; Ausnahmepferd ×1,5, Jahrhundertpferd ×2; + Testkosten. Kaufen nur per Auktion (Startgebot = Preis, Gegenbieter wie im Auktionshaus, erst wenn du mitbietest), Zuschlag zu Beginn der nächsten Jahreszeit (Quarantänebox zuerst), Buchung „Raritäten-Markt: Name“.</p>
       <p><b>Seltenheit (R1, v556):</b> Wahrscheinlichkeit, dass ein zufälliges reinrassiges Pferd der Rasse dieses Merkmal hat. Stufen: selten &lt; ${SELTEN_STUFEN[1].bis * 100} %, sehr selten &lt; ${SELTEN_STUFEN[2].bis * 100} %, einzigartig &lt; ${SELTEN_STUFEN[3].bis * 100} %, Ausnahmepferd &lt; ${SELTEN_STUFEN[4].bis * 100} % (Preis ×1,5), Jahrhundertpferd &lt; ${SELTEN_STUFEN[5].bis * 100} % (Preis ×2). <b>Gen-Rarität:</b> je Fellfarben-Gen (ohne DMRT3) die Häufigkeit des Genotyps in der Rasse (Hardy-Weinberg aus <code>RASSE_GENE</code>; A mit At; BR1 bei Hengsten nur ein Allel); ein Genotyp mit Häufigkeit unter <code>SELTEN_MERKMAL</code> = ${SELTEN_MERKMAL} zählt als seltenes Merkmal, die Häufigkeiten aller seltenen Merkmale werden multipliziert (mindestens 10<sup>−6</sup> je Merkmal); nur Pferde ab 99 % Rassenanteil (Mischlinge haben gar keine Seltenheit, auch nicht durch Leistung); sichtbar erst nach dem Fellfarben-Test (Adminmodus immer). <b>Leistungs-Rarität</b> ab ${SELTEN_ALTER} Jahren: Rang in der Rasse (Tabelle <code>SELTEN_SCHWELLE</code> aus 20.000 Pferden je Rasse: obere 5 % / 1 % / 0,1 %; weil es zwei Kategorien sind, gilt die Wahrscheinlichkeit 1 − (1 − Anteil)²: obere 1 % → ≈ 2 % = selten, obere 0,1 % → ≈ 0,2 % = sehr selten, obere 5 % → ≈ 10 % = keine Seltenheit) bei Gangwerk (Schnitt Schritt/Trab/Galopp) und Aufschlüsselung (Schnitt der 13 Werte, wie sie der Spieler sieht; Charakter zählt nicht) oder Ausbildung (Klasse S bzw. Open: ≥ 1 Platzierung = 3 % selten, ≥ 5 Siege = 1 % sehr selten, ≥ 15 Siege davon ≥ 3 auf großen Turnieren = 0,1 % einzigartig); die seltenste Kategorie zählt. Gen und Leistung werden multipliziert.</p>
       <p><b>Spiel verloren (B4, v560):</b> Abschlussfenster mit Grund (Zwangsversteigerung/Insolvenz), Spieldauer, 6 Kacheln (Gewinn/Verlust ohne Hofkauf und Kredit, Kontostand am Ende, Pferde vor der Pfändung, Turniere, größte Ausgabe, größte Einnahme ohne den Zwangsverkauf), Kurve „Kontostand am Ende jeder Jahreszeit“ (rückwärts aus allen Buchungen), bestes/wertvollstes Pferd und <b>1–3 Tipps</b>: Dispo/Kreditrate immer; Personal ≥ 40 %, Bauen ≥ 35 %, Pferdekäufe ≥ 35 % (mehr gekauft als verkauft), Tierarzt ≥ 25 %, Futter ≥ 40 % der Ausgaben; keine Pensions-Einnahmen; keine Turniere bzw. nie platziert. Der Stand <b>kurz vor der Pfändung</b> liegt auf dem Platz „Verloren“ (<code>${VERLOREN_KEY}</code>, nur der letzte, gepackt, mit Post) und lässt sich nur ansehen: Band unten, gesperrte Knöpfe ausgegraut (Tag beenden, Markt, Immobilien, Anhänger, Pferdepflege, Kaufen/Bauen/Einstellen, Brief-Aktionen, Häkchen), nichts wird gespeichert, die Zeit steht. Als Datei mit Kennzeichen <code>verloren: true</code> speicher- und ladbar.</p>
       <p><b>Bestenliste (B2 Teil 2, v549):</b> je Hof die ${BESTEN.anzahl} besten Pferde (meiste Erfolge: Sieg ${BESTEN.sieg} Punkte, 2./3. Platz ${BESTEN.platz}; gezählt wird die Lebensbilanz <code>p.bilanz</code> – je Pferd [Starts, 1., 2., 3. Platz] nach Disziplin und Klasse, nie gekürzt, im Steckbrief „📊 Bilanz insgesamt“) und die ${BESTEN.anzahl} wertvollsten (Marktwert). Ausgewertet zu Beginn jeder Jahreszeit und wenn ein Pferd den Hof verlässt (Verkauf, Rückgabe, Pfändung, Tod). Pensionspferde zählen nicht. Gespeichert wird nur eine Mini-Zeile je Pferd (<code>spiel.chronik[Hof].beste/.wertvoll</code>); der Name ist anklickbar (Steckbrief), auch nach dem Verkauf: Bestenlisten-Pferde bleiben im Archiv vor dem 40er-Limit geschützt, verstorbene liegen auf dem Friedhof. Anzeige: hvw – Hof – Übersicht „🏅 Bestenliste dieses Hofs“, bei nicht mehr eigenen Pferden mit „Stand beim Verkauf/Abgang“.</p>
@@ -13424,8 +13568,9 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       if (!u || A.antwort || u.ok != null) return `<p class="brief-aktion-info">${(A.antwort || (u && u.ok ? "ja" : "nein")) === "ja" ? "✅ Urlaub genehmigt." : "❌ Urlaub abgelehnt."}</p>`;
       return `<div class="brief-aktion"><button class="knopf" data-baktion="urlaub-ja" data-bid="${br.id}">✅ Genehmigen</button><button class="knopf zweit" data-baktion="urlaub-nein" data-bid="${br.id}">Ablehnen</button></div>`; }
     if (A.typ === "bieten") { const a = auktionFinden(A.pferd);
-      if (a && !a.vorbei && spiel.markt.jz === jzJetzt() && a.fuehrt === "du") return `<p class="brief-aktion-info">✅ Du führst wieder – dein Höchstgebot: ${fmt(a.duMax || a.gebot)}.</p>`;
-      return a && !a.vorbei && spiel.markt.jz === jzJetzt() ? `<div class="brief-aktion"><button class="knopf" data-baktion="bieten" data-bid="${br.id}">🔨 Erneut bieten</button></div>` : ""; }
+      const aktuell = a && !a.vorbei && (a.rar ? a.jz === jzJetzt() : spiel.markt.jz === jzJetzt());
+      if (aktuell && a.fuehrt === "du") return `<p class="brief-aktion-info">✅ Du führst wieder – dein Höchstgebot: ${fmt(a.duMax || a.gebot)}.</p>`;
+      return aktuell ? `<div class="brief-aktion"><button class="knopf" data-baktion="bieten" data-bid="${br.id}">🔨 Erneut bieten</button></div>` : ""; }
     if (A.typ === "rennkauf") { const k = (spiel.rennKauf || []).find(x => x.rid === A.rid && x.bis >= spiel.tag);   // H8: Starter aus dem Verkaufsrennen kaufen
       if (A.antwort) return `<p class="brief-aktion-info">✅ Gekauft.</p>`; if (!k) return `<p class="brief-aktion-info">⌛ Das Angebot ist abgelaufen.</p>`;
       return `<div class="brief-aktion"><button class="knopf zweit" data-baktion="rk-sehen" data-bid="${br.id}">🐴 ${esc(k.pferd.name)} ansehen</button><button class="knopf" data-baktion="rk-kauf" data-bid="${br.id}">🏇 Kaufen · ${fmt(k.preis)}</button></div>`; }

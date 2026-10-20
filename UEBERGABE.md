@@ -20,8 +20,11 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 ### Erledigt
 Die Nachricht von Claude Team (v629) ist übernommen. **Ursache des Pension-Fehlers gefunden und behoben (v630):** In `besitzerAuto` (index.html) verschluckte ein `//`-Kommentar mitten in der Zeile die Zeile `const W = besitzerFutter(...)` → `ReferenceError: W is not defined`. Bei Anfängern (`futterFest()`) mit mindestens einem Pensionspferd brach dadurch `hofMorgen` jeden Morgen vor `pensionMorgen()` ab. Folgen: kein Einzug des angenommenen Pferdes (Domes Susi), keine Preisprüfung (`pensionPreisPruefen`) und keine Mitarbeiter-Arbeit (`mitarbeiterTag`, Azubi!), ebenso blieben `befundeMorgen`/`behandlungsPlaene` aus. Damit sind wahrscheinlich **Punkt 1, 2 und 3 der Übergabe dieselbe Ursache** – Dome soll im neuen Stand prüfen, ob Susi einzieht, Preisänderungen Briefe auslösen und der Azubi wieder arbeitet. Gefunden mit Domes Spielstand (`Zuchtstall_Wuensche-Hof_Jahr07-Herbst_2026-10-21.json`) per Playwright: `hofMorgen()` direkt aufgerufen. Neuer Test `tests/morgen-test.js` (5 Prüfungen, schlägt am alten Code fehl). Der Knopf „Reservierung aufheben“ (v629) bleibt als Sicherheitsnetz.
 
-### Offen (unverändert aus der v629-Übergabe)
-Tutorial-Überarbeitung Etappe B (Rest), C, D; zurückgestellt: Infofeld nach Turnier-Nennen, Kamm-Zone Handy, Pferdebild verschieben am Handy. Phase D (großer Test) wartet auf Domes „weiter“. Dome fragen: Shampoo-Reste mit Folgen? (Projekt-Chat-Thema 24).
+### Tutorial-Überarbeitung: Stand v631
+Etappe A und **B fertig** (Zwei Pferde im Pension-Kapitel, Hauptmenü-Kapitel, Mitarbeiter ohne Sperre, Boxstufen nach Dritteln). Tutorial-Spieler anf 390×844, 844×390 (beim ersten Lauf zufälliger Hänger bei „Hufe“, Wiederholung grün) und 1366×768 grün, `tutorial-test` grün. **Nicht gelaufen:** fort/exp. **Noch offen:** Etappe C (Opus), Etappe D (Sonnet) laut Liste oben; zurückgestellt: Infofeld nach Turnier-Nennen, Kamm-Zone Handy.
+### Offene Wünsche von Dome (21.10., noch nicht gebaut)
+1. Pension: Besitzer bucht Zusatzleistungen, die der Hof gar nicht anbietet (Stammkunden-Zubuchen prüft `leistungAngeboten` nicht, Stelle `pensionJahreszeit` „v418“). Nimmt Dome ein Angebot weg (Hof – Pension, Häkchen), soll es bei Einstellern entfallen: nicht mehr bezahlt, kein Mangel. 2. Tierarzt rufen bei Pensionspferden nur 1× je Tag und Pferd. 3. **Neu (wartet auf Domes Antworten zu Kosten und falscher Einschätzung):** bei Pensionspferden dem Besitzer Krankheit mitteilen und eine Behandlung vorschlagen; der Besitzer entscheidet per Brief (Spieler/Personal, Tierarzt, abwarten).
+Phase D (großer Test) wartet weiter auf Domes „weiter“.
 
 ---
 ### Protokoll (Details je Version, chronologisch)

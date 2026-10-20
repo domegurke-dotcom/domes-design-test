@@ -127,7 +127,7 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Ab Können 60: Hinweis statt Stunde, nichts abgebucht', /Turnieren und mit schwierigeren Pferden/.test(U2.fehler) && spiel.geld === g1 && reiterKoennen('western') === 60);
     spiel.reiter.koennen.rennen = 10; spiel.geld = -1990; ok('Zu wenig Geld: keine Stunde', !!unterrichtNehmen('rennen', null).fehler && reiterKoennen('rennen') === 10);
     spiel.geld = 1000; const lehr = { id: 'l1', name: 'Frau Berger', typ: 'bereiter' }; const g2 = spiel.geld; spiel.reiter.koennen.distanz = 10; const U3 = unterrichtNehmen('distanz', lehr);
-    ok('Eigener Bereiter: kostenlos, sein Trainingstag entfällt (unterrichtTag)', spiel.geld === g2 && lehr.unterrichtTag === spiel.tag && U3.x > 0);
+    ok('Eigener Bereiter: auch 60 € (Zusatzleistung), sein Training am nächsten Tag läuft normal', spiel.geld === g2 - 60 && lehr.unterrichtTag === undefined && U3.x > 0, String(spiel.geld - g2));
     ok('Statistik „Unterricht“ im Adminmodus', reiterErgaenzen().zuwachs.dressur.unterricht > 1);
     ok('Dialog öffnet ohne Fehler', (() => { try { unterrichtDialog(); const ok1 = !document.getElementById('dlg').hidden && /Reitunterricht/.test(document.getElementById('dlgInhalt').innerHTML); document.getElementById('dlg').hidden = true; return ok1; } catch (er) { return er.message; } })());
     ok('Reiter-Seite hat den Knopf Reitunterricht, keine +4 %-Spalte mehr', (() => { const h = reiterHTML(); return /id="ruKnopf"/.test(h) && !/<th>Training<\/th>/.test(h); })());

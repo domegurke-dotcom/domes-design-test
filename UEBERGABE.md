@@ -15,7 +15,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Team · **An:** Claude Pro · **Stand:** v576, 20.10.2026 (Vormittag) · Dome wechselt jetzt zu Pro.
+**Von:** Claude Team · **An:** Claude Pro · **Stand:** v578, 20.10.2026 (Mittag) · Dome wechselt jetzt zu Pro.
 
 Alles liegt auf `main` (Branch `claude/dazzling-mccarthy-3qoghi` ist gleich). Ältere Sitzungen (v523–v572) stehen ausführlich in CLAUDE.md – dort ist alles aktuell, diese Nachricht erklärt nur das Neue.
 
@@ -36,8 +36,12 @@ Alle Etappen des Plans umgesetzt: B4 Spiel verloren (v560), Raritäten R2–R4 (
 
 Tests nach v575 grün: stufen, dispo, verloren, tutorial, hinweise, spielstand, chronik, bestenliste, jahresbericht, bild, seltenheit, krankheiten, zucht, waschplatz, raritaeten, abstammung. **Neu:** `dispo-test.js` und `verloren-test.js` setzen `spiel.stufenAn = false` (sonst greift die Anfänger-Schonfrist). Große Tests nicht gelaufen (nur mit Domes Erlaubnis).
 
+### Tutorial-Überarbeitung (v577/v578, Claude Team, angefangen)
+Domes Wünsche: nur das Gefragte antippbar (+ früher Gelerntes), eine Aufgabe nach der anderen, Post nur wenn Thema, nach Erreichen erst ansehen lassen, Raritäten-Kapitel im Sommer mit Pferden. Umgesetzt: Klick-Sperre `tutErlaubt` (+ `T.gelernt`, Schritt-Feld S[5] = zusätzlich erlaubt, S[6] = streng im Fenster), Stall-Sprechblasen im Tutorial aus, Kapitel 1 Heu → Futtereimer → Wasser → Misten, „✅ Geschafft“-Blase statt Sofort-Weiter (`T.geschafft`), Post nur im Pension-Kapitel (`post: true`, `data-tutpost`), Ziele außerhalb des Bildschirms/unter dem Band werden einmal hingescrollt (`hinweisZiel(sel, mem)`), Band über Fenstern (`--tutH`), Raritäten-Kapitel springt in den Sommer. Behobene Fehler: Heu nicht antippbar (Kopf-Schattierung `#pferdPlatz rect` fing Klicks ab – auch im normalen Spiel), kein Scrollen im Tutorial (Scroll-Sperre des Charaktermenüs blieb), **Reiter „Ort“ seit v569 kaputt** (lokale Variable `frei` überdeckte die Stufen-Funktion – jetzt `freiStufe(...)`), Hufkratzer-Modus hing ins nächste Kapitel.
+**Getestet:** Anfänger-Tutorial mit echten Klicks auf Handy hochkant komplett durch (Skript im Scratchpad, nicht im Repo). **Noch nicht getestet:** Handy quer, PC, Fortgeschrittenen- und Experten-Tutorial – bitte wie ein Spieler durchspielen.
+
 ### Offen – für Claude Pro
-1. **Tutorial überarbeiten (Dome 20.10.: „da sind Fehler drin“).** Dome sagt dir, welche. Dazu gehört: der Tutorial-Balken verdeckt beim Handy quer ca. 30 px vom Stall (Dome: „ja, verschieben“). Kapitel „Richtig füttern“ ist seit v574 an den festen Anfänger-Futterplan angepasst (Schritt prüft `spiel.tutorial.futterAuf`). Code: `TUT`, `TUT_FORT`, `TUT_EXP`, `tutorialStart`, `tutPruefen`; Test `tests/tutorial-test.js`; Plan `PLAN-TUTORIAL.md`.
+1. **Tutorial weiter prüfen (Dome 20.10.: „da sind Fehler drin“).** Dome sagt dir, welche. Dazu gehört: der Tutorial-Balken verdeckt beim Handy quer ca. 30 px vom Stall (Dome: „ja, verschieben“). Kapitel „Richtig füttern“ ist seit v574 an den festen Anfänger-Futterplan angepasst (Schritt prüft `spiel.tutorial.futterAuf`). Code: `TUT`, `TUT_FORT`, `TUT_EXP`, `tutorialStart`, `tutPruefen`; Test `tests/tutorial-test.js`; Plan `PLAN-TUTORIAL.md`.
 2. Domes Test im Spiel von v560–v575 steht aus (Abnahme der Pläne BILANZ B4, RARITÄTEN, WASCHPLATZ, HINWEISE).
 3. Selbst festgelegte Zahlen v573–v575 Dome nennen, falls sie fragt: Abstammung Eltern 0,25 / Großeltern 0,08 / max. 50 %, Ruf voll bei 20.000 € Erfolgswert, Alter < 3 J. voll, 3–5 J. ×0,6, ab 6 J. ×0,35, eigene Erfolge ÷(1 + Erfolgswert/5.000); Champion-Nachkomme +10 % (bis 3). Marktpferde: Chance auf erfolgreiche Ahnen (Vater/Mutter/Großelternteil) Gestüt 75/50/30 %, Züchter 50/35/20 %, Händler 25/15/10 %, Privat 15/10/5 %, Mischlinge 10/5/3 %, Erfolgswert 1.500–20.000 €.
 4. Übrige Punkte wie bisher in CLAUDE.md „Offen“ und `OFFENE-FRAGEN.md` (die 9 Nachtfragen sind beantwortet und gelöscht).

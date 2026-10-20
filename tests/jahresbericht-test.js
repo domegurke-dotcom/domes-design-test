@@ -29,8 +29,8 @@ const { chromium } = require('playwright'); const path = require('path');
     const B2 = berichte(); ok('Zu Beginn von 2002: zweiter Bericht', B2.length === 2 && B2[0].betreff === 'Jahresbericht 2001', B2.map(x => x.betreff).join(','));
     ok('Vergleich zum Vorjahr mit ↑ (Gewinn gestiegen)', /↑/.test(B2[0].text) && /zum Vorjahr/.test(B2[0].text));
     // --- Ordner, Löschschutz, Spam ---
-    for (let i = 0; i < 130; i++) brief('Testabsender', 'Test ' + i, 'text');
-    ok('Post-Limit 120: Jahresberichte bleiben erhalten', berichte().length === 2 && spiel.post.length <= 122, 'Briefe ' + spiel.post.length);
+    for (let i = 0; i < 330; i++) { brief('Testabsender', 'Test ' + i, 'text'); spiel.post[0].gelesen = true; }   // gelesen: ungelesene Briefe werden nie gekürzt (P1)
+    ok('Post-Limit 300: Jahresberichte bleiben erhalten', berichte().length === 2 && spiel.post.length <= 301, 'Briefe ' + spiel.post.length);
     spamSetzen('jahresbericht', true); ok('Jahresbericht lässt sich nicht als Spam markieren', !(spiel.spam || []).includes('jahresbericht'));
     ok('Brieftyp-Erkennung', briefTyp('Jahresbericht 2003')[1] === 'jahresbericht');
     // --- mehrere Höfe: Summen ---

@@ -26,8 +26,8 @@ Diese Punkte sind zu groß oder brauchen erst eine Planung. Darum hat Claude sie
 13. **Sachpreise bei kleinen Turnieren** (Dome): Bei Prüfungen ohne Preisgeld (Wettbewerbe, Hofturniere, E-Prüfungen) gibt es für die Platzierten Sachpreise wie in echt – Putzzeug, Schabracken, Decken, Leckerli, Halfter usw. (wandern ins Lager bzw. in die Futterkammer). Braucht die Ausrüstung (Schabracken, Decken) als System.
 14. **Waschplatz mit Wirkung** (Dome, 19.10.2026): Bisher ist der Waschplatz nur eine Kachel ohne Wirkung. Ideen: Pferd nach dem Training im Sommer abspritzen (Schmutz weg, Wohlbefinden besser), Hufe waschen gegen Strahlfäule, Mauke-Pflege. Wie in echt planen (z. B. im Winter nicht nass abspritzen, Beine danach trocknen). **Geplant → `PLAN-WASCHPLATZ.md`** (W1–W6, nach B4/R2–R4).
 
-15. **Speicherplatz (noch im Projekt-Chat besprechen):** Der Browser-Speicher (ca. 5 MB) kann bei langen Spielen und zwei Speicherplätzen voll werden. Dome will **nichts automatisch löschen**: besondere Briefe bleiben, Turnierergebnisse müssen ein Pferdeleben lang sichtbar bleiben (Verkaufswert). Gepackt speichern ist schon in S1 Punkt 11 (`PLAN-SPIELSTAND.md`) enthalten; offen ist nur, ob und was später aufgeräumt werden darf.
-16. **Tierhalteverbot bei wiederholter schwerer Vernachlässigung** (Dome, 19.10.2026): zweiter Verlust-Weg neben Kredit und Dispo. Dome will das später ausführlich im Projekt-Chat besprechen – bis dahin nichts bauen.
+15. **Speicherplatz:** geplant 20.10.2026, siehe `PLAN-TIERHALTEVERBOT-SPEICHER.md` (Etappen P1, P2).
+16. **Tierhalteverbot bei wiederholter schwerer Vernachlässigung:** geplant 20.10.2026, siehe `PLAN-TIERHALTEVERBOT-SPEICHER.md` (Etappen V1–V4).
 17. **Wasserlaufband/Aqua-Training als eigenes Gebäude** (Dome, 19.10.2026, später planen): Muskeln, Kondition, Reha. Gehört nicht in den Waschplatz (`PLAN-WASCHPLATZ.md`).
 18. **Hinweisblasen, Spielumfang je Erfahrungsstufe, Tutorials** (Dome, 20.10.2026). **Geplant → `PLAN-HINWEISE.md`** (T1–T6, mit `PLAN-HINWEISE-TEXTE.md`, `PLAN-TUTORIAL.md`, `PLAN-STUFEN.md`; nach B4, R2–R4 und Waschplatz).
 

@@ -96,4 +96,5 @@
 ## Fortschritt
 - **W1 + W2 fertig** (v563, Claude Team Nachtsitzung, `tests/waschplatz-test.js`): Zustände, Wirkung, Sperren, Gewöhnung, Ansicht mit Wischen in der Stallbox (Tropfen, nasses Fell dunkler). **Noch ohne Domes Waschplatz-Bilder** (Pferd steht im Bild in der Box) – kommen in W6. Abweichung: „Abtrocknen“ ersetzt auch das Abschwitzen (verschwitzt weg). Gummimatten am Waschplatz wirken schon (`g.gummi`), kaufen kommt mit W6/Bauen.
 - **W3 fertig** (v564, Solarium als Gebäude, Kachel im Ort, Wirkung, im Waschplatz-Test). Bilder kommen mit W6.
-- W4–W6 offen.
+- **W4 fertig** (v565): Pfleger wäscht abends (`waschAbend`, Aufgabe „waschen“), Pension-Leistungen „Waschen“/„Solarium“ je Nutzung. Abweichung: ein-/ausschaltbar je Mitarbeiter (mab), nicht je Box.
+- W5–W6 offen.

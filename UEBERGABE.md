@@ -82,4 +82,5 @@ Bricht die Sitzung ab, kann **Claude Pro** hier weitermachen: Stand steht in der
 | R4 Eigene Raritäten anbieten | **fertig v562** |
 | Waschplatz W1+W2 | **fertig v563** (`tests/waschplatz-test.js`) |
 | Waschplatz W3 Solarium | **fertig v564** |
-| Waschplatz W4 Pfleger/Einsteller | in Arbeit |
+| Waschplatz W4 Pfleger/Einsteller | **fertig v565** |
+| Waschplatz W5 Fohlen | in Arbeit |

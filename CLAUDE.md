@@ -68,7 +68,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (5 Stellen in index.html: lz-string.min.js, pferd.js, boxstufen.js, kopfneu.js, waschbild.js) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **580**.
+- Letzte Version bei Aktualisierung dieser Datei: **581**.
 
 ## Testen
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName` ausfüllen → `#chLos` → Kreditbrief schließen (`#dlgKnoepfe button`) → `[data-immo="pension"]` → `#kaufName` → `#dlgKnoepfe button:first-child`. Admin: `spiel.admin = true`.
@@ -84,6 +84,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - Bild-Test (v555): `NODE_PATH=/opt/node22/lib/node_modules node tests/bild-test.js [Ordner]` – PNG aus der Bilanz, Pferdebild, Dateiname, Download (~10 s).
 - Verloren-Test (v560): `NODE_PATH=/opt/node22/lib/node_modules node tests/verloren-test.js [Ordner]` – Insolvenz, Abschlussfenster, Tipps, Platz „Verloren“, Nur ansehen (nichts änderbar, Zeit steht, Speicherplätze unverändert), Datei (~15 s, mit Ordner Bildschirmfotos).
 - Tutorial-Test (v571): `NODE_PATH=/opt/node22/lib/node_modules node tests/tutorial-test.js [Ordner]` – Tutorial-Frage, Testhof, Kapitel/Ziele, Überblendung, Überspringen, Abschlussfrage, echtes Spiel frisch (~15 s). Das Tutorial startet über den Knopf `#chTutorial` (nur Anfänger, im Charaktermenü) – `#chLos` überspringt es, bestehende Tests laufen unverändert.
+- **Tutorial-Spieler (v581, Dome 20.10.):** `NODE_PATH=/opt/node22/lib/node_modules node tests/tutorial-spieler.js <B>x<H> [Ordner|-] [anf|fort|exp]` – spielt ein Tutorial mit echten Klicks wie ein Spieler (tippt das Ziel der Blase an, wischt beim Putzen/Waschen, bedient Fenster); Ausgabe ✓ durchgespielt / ✗ hängt in Kapitel …; `LAUT=1` zeigt jeden Schritt (2–5 Min. je Lauf). Fand Fehler, die die kleinen Tests übersehen (sie öffnen Ansichten direkt): Reiter „Ort“ seit v569, Waschplatz-Kachel seit v563. **Nach Änderungen an Tutorial, Ort-Reiter, Stall-Bild oder Menüs laufen lassen** (390x844 anf, 844x390 anf, 390x844 fort/exp).
 - Stufen-Test (v569): `NODE_PATH=/opt/node22/lib/node_modules node tests/stufen-test.js` – Sperren je Erfahrungsstufe, alte Stände frei, Umstellen (~10 s). **Seit v569 starten neue Spiele mit Stufen-Sperre (Standard Anfänger):** Tests, die das ganze Spiel prüfen, setzen nach dem Start `spiel.stufenAn = false` (krankheiten-, zucht-, waschplatz-, dispo-, verloren-, abstammung-test; große Tests/Studien bei Bedarf ebenso).
 - Hinweise-Test (v568): `NODE_PATH=/opt/node22/lib/node_modules node tests/hinweise-test.js [Ordner]` – Start-Blasen, Spielstart-Fenster, Leitfaden, Limits, Hilfe, Einsteiger-Wissen in 3 Ansichten (~20 s).
 - Abstammungs-Test (v575): `NODE_PATH=/opt/node22/lib/node_modules node tests/abstammung-test.js` – Zuschlag durch erfolgreiche Eltern/Großeltern, Alter, eigene Erfolge, Prämien-/Championfohlen für beide Eltern (~10 s).

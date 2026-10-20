@@ -133,7 +133,7 @@ je Pferd und Disziplin)
      Beim Anmelden im Ausbildungsstall (Auftrag 11): „Du reitest erst . Kommt {Name} mit zurück,
      bremst dein Training, und du darfst {ihn/sie} erst mit LK in starten.“
 5. Tutorial
-     Anfänger-Tutorial, Kapitel 5 (Training): zwei Sätze und eine Blase: „Wie gut ein Training
+     Anfänger-Tutorial, Kapitel 5 (Training; stimmt auch mit v583 – die 13 Kapitel: Versorgen, Sauber und draußen, Richtig füttern, Krankes Pony, Training, Pension, Mitarbeiter, Hofausbau, Turnier, Pferdemarkt, Zwei Pferde, Geld, Speichern): zwei Sätze und eine Blase: „Wie gut ein Training
      wirkt, hängt auch von dir ab. Ist ein Pferd weiter als du, bremst es dich; Reitunterricht hilft am
      Anfang am meisten.“ Das Testpferd im Kapitel ist weiter als du (Stand L, dein Können 10),
      damit die Blase R6 gleich gezeigt wird; im Testhof ist Reitunterricht 60 € vom Testgeld und gibt

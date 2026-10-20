@@ -82,6 +82,21 @@ K1 – Reiter-Können (Daten, Wachstum)
     Klasse, die es dort erreicht hat (Ausbildungsklasse bzw. Disziplin-Stand); junge oder
     unausgebildete Pferde 0.
 
+Prüfung der Übungsschlüssel gegen den Code (Claude Pro, 20.10.2026, Code v583)
+  Alle im Plan genannten Übungen gibt es in UEBUNG: longieren, doppellonge, dressur, stangen, springen,
+  gelaendesprung, kondition, western, trailarbeit, ausritt, galopptraining, toeltarbeit, passtraining.
+  UEB_LK kennt heute nur longieren, doppellonge, dressur, stangen, springen, gelaendesprung, kondition,
+  western. Neu zuordnen: trailarbeit → western · galopptraining → rennen · ausritt → distanz ·
+  toeltarbeit, passtraining → gangpferde. Zählt nicht fürs Können (nur Reitunterricht und Turniere):
+  bodenarbeit, freiarbeit, spazieren.
+  OFFEN (Dome): kondition steht im Plan bei vielseitigkeit, rennen und distanz, UEB_LK ordnet je Übung
+  aber nur EINE Gruppe zu. Vorschlag: UEB_LK darf eine Liste von Gruppen enthalten, voller Zuwachs in
+  jeder Gruppe (Kondition hilft in allen dreien). Ohne Antwort baut Claude diese Variante und trägt sie
+  in OFFENE-FRAGEN.md ein.
+  Hinweis: galopptraining braucht die Rennbahn (UEBUNG wo: „bahn“, Gebäude aus H7). Ohne Rennbahn wächst
+  das Können „rennen“ nur über kondition, Turniere und Unterricht; das Startrecht für Rennen selbst
+  reiten (Können 30, Punkt 12) ist dann ein langer Weg.
+
 K2 – Training und Reitunterricht
   6. Abstandsfaktor beim Training v = (Können − Stand des Pferdes) / 20 (eine Klasse ≈ 20
      Punkte). Faktor nach v (zwischen den Punkten linear): v ≥ 2 → ×1,2 · v = 1 → ×1,1 · v = 0 → ×1,0

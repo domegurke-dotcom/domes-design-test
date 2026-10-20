@@ -37,6 +37,6 @@ const ORDNER = process.argv[2];
   ok('T5: Aufstieg → „Tutorial jetzt machen?“', /Tutorial jetzt machen/.test(J), J.slice(0, 60));
   await pg.evaluate(() => [...document.querySelectorAll('#dlgKnoepfe button')].find(x => /Ja, jetzt/.test(x.textContent)).click()); await pg.waitForTimeout(1300);
   const K = await pg.evaluate(() => ({ set: spiel.tutorial && spiel.tutorial.set, band: (document.getElementById('tutBand') || {}).textContent || '', stute: spiel.boxen[0].pferd && spiel.boxen[0].pferd.name, hengst: spiel.boxen[1].pferd && spiel.boxen[1].pferd.name, zucht: frei('zucht') }));
-  ok('T5: Fortgeschrittenen-Tutorial mit Stute und Hengst, Zucht frei', K.set === 'fort' && /Fortgeschrittenen-Tutorial 1\/6/.test(K.band) && K.stute === 'Fee' && K.hengst === 'Donar' && K.zucht, JSON.stringify(K));
+  ok('T5: Fortgeschrittenen-Tutorial mit Stute und Hengst, Zucht frei', K.set === 'fort' && /Fortgeschrittenen-Tutorial 1\/7/.test(K.band) && K.stute === 'Fee' && K.hengst === 'Donar' && K.zucht, JSON.stringify(K));
   console.log(out.join('\n')); console.log('Seitenfehler:', errs.join(' ; ') || 'keine'); await b.close();
 })();

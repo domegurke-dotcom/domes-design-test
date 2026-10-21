@@ -28,6 +28,15 @@
     background: var(--holz-dunkel); color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.25);
   }
   header h1 { font-size: 1.1rem; margin: 0; flex: 1; padding-left: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kopf-fehler { display: none; }
+  body.auf-kopf header { flex-wrap: wrap; row-gap: 4px; padding-bottom: 6px; }
+  body.auf-kopf .kopf-fehler { display: flex; order: 9; flex-basis: 100%; align-items: center; gap: 6px; font-size: .8rem; font-weight: 700; color: #ffd9d6; cursor: pointer; }
+  body.auf-kopf .menue { order: 3; }
+  .fehler-kaestchen input { accent-color: #e02424; width: 18px; height: 18px; margin: 0; flex: none; }
+  .hb-fehler { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: .8rem; font-weight: 700; color: #b3261e; cursor: pointer; }
+  #aufFehlerFenster { position: fixed; inset: 0; z-index: 9000; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); overflow: auto; }
+  #aufFehlerFenster .dlg-karte { width: 100%; max-width: 420px; max-height: 100%; overflow: auto; }
+  #aufFehlerFenster textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 1rem; padding: 8px; }
   header h1 { visibility: hidden; }   /* Dome (v263): kein Hofname in der Box */
   #tagAnzeige { pointer-events: none; cursor: default; }
   .liste li.futter-knopf { background: #fff3d6; border: 2px solid #d9a441; border-radius: 12px; box-shadow: 0 2px 0 #c08a2e; margin: 4px 0 8px; padding-left: 8px; padding-right: 8px; }   /* v383 (Dome): deutlich als Knopf */
@@ -830,6 +839,7 @@
   <button class="tagknopf" id="tagAnzeige" title="Tag beenden"><b>☀️ Tag 1</b><small>beenden 🌙</small></button>
   <button class="kopf-mond" id="kopfTagEnde" title="Tag beenden" aria-label="Tag beenden">🌙<small>beenden</small></button>
   <span class="kopf-konto" id="kontoAnzeige" title="Kontostand dieses Hofs"></span>
+  <label class="kopf-fehler fehler-kaestchen" id="kopfFehler"><input type="checkbox"> Fehler melden</label>
   <h1><span class="emoji">🐴 </span>Mein Zuchtstall</h1>
   <div class="menue">
     <button class="menueknopf" id="menueKnopf" aria-label="Menü" aria-expanded="false" aria-controls="menueListe"><span></span><span></span><span></span></button>
@@ -1035,7 +1045,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "639";
+  const SPIEL_VERSION = "640";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1043,11 +1053,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=639"></script>
-<script src="pferd.js?v=639"></script>
-<script src="boxstufen.js?v=639"></script>
-<script src="kopfneu.js?v=639"></script>
-<script src="waschbild.js?v=639"></script>
+<script src="lz-string.min.js?v=640"></script>
+<script src="pferd.js?v=640"></script>
+<script src="boxstufen.js?v=640"></script>
+<script src="kopfneu.js?v=640"></script>
+<script src="waschbild.js?v=640"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -1057,6 +1067,15 @@
   const auspacken = t => { if (!t) return null; if (t[0] === "{") return JSON.parse(t); const u = window.LZString && LZString.decompressFromUTF16(t); return u ? JSON.parse(u) : null; };
   const lesen = k => { try { return auspacken(localStorage.getItem(k)); } catch (e) { return null; } };
   const schreiben = (k, o) => localStorage.setItem(k, packen(o));   // wirft bei vollem Speicher
+  // Dome 21.10.: Aufnahmen gehören nicht mehr zum Spielstand, sondern liegen für sich im Speicher – so läuft eine Aufnahme schon im Startmenü, im Tutorial und über mehrere Spiele hinweg
+  const AUF_KEY = "zuchtstall-aufnahmen";
+  const AUF = (() => { const a = lesen(AUF_KEY); return a && Array.isArray(a.liste) ? a : { liste: [], nr: 0, laufend: null }; })();
+  let aufTimer = null;
+  function aufSpeichern(sofort) {
+    if (!sofort) { if (!aufTimer) aufTimer = setTimeout(() => aufSpeichern(true), 1500); return; }
+    clearTimeout(aufTimer); aufTimer = null; try { if (typeof speicherSperre !== "undefined" && speicherSperre) return; schreiben(AUF_KEY, AUF); } catch (e) { console.error("Aufnahme speichern:", e); }
+  }
+  window.addEventListener("pagehide", () => { if (aufTimer) aufSpeichern(true); });
   const loeschen = k => { try { localStorage.removeItem(k); } catch (e) {} };
   const neueSpielId = () => "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   let platzMigration = false;   // Spielstand von vor S1: am Skriptende einmal auf Speicherplatz 1 legen (das laufende Spiel soll nicht verloren gehen)
@@ -1088,6 +1107,7 @@
   if (!hatSpielstand) try { const s = lesen(SPEICHER); if (s && s.boxen) { if (s.hofAusbau && !s.verloren) { spiel = s; hatSpielstand = true; } else if (!s.verloren) { altStand = { hof: (s.spieler && s.spieler.hof) || "" }; spiel.sparmodus = s.sparmodus; } } } catch (e) {}
   if (hatSpielstand && !spiel.spielId) { spiel.spielId = neueSpielId(); spiel.platz = 1; platzMigration = true; }   // S1 Punkt 2: unsichtbare Spiel-Nummer und eigener Platz
   if (hatSpielstand && (spiel.tagebuch || spiel.testProtokoll != null)) { if ((spiel.tagebuch || []).length) (spiel.aufnahmen = spiel.aufnahmen || []).push({ id: "a" + Date.now().toString(36), nr: (spiel.aufnahmeNr = (spiel.aufnahmeNr || 0) + 1), name: "Aufnahme " + spiel.aufnahmeNr + ": frühere Aufzeichnung", von: "", bis: "", hof: (spiel.hof && spiel.hof.name) || "", eintraege: spiel.tagebuch }); delete spiel.tagebuch; delete spiel.testProtokoll; }   // v529: alte Testspiel-Protokolle (v525) werden zur ersten Aufnahme
+  if (hatSpielstand && (spiel.aufnahmen || spiel.aufnahme)) { (spiel.aufnahmen || []).forEach(a => AUF.liste.push(a)); if (spiel.aufnahme && !AUF.laufend) AUF.laufend = spiel.aufnahme; AUF.nr = Math.max(AUF.nr, spiel.aufnahmeNr || 0, ...AUF.liste.map(a => a.nr || 0), AUF.laufend ? AUF.laufend.nr || 0 : 0); delete spiel.aufnahmen; delete spiel.aufnahme; delete spiel.aufnahmeNr; aufSpeichern(true); }   // v640: Aufnahmen aus dem Spielstand in den eigenen Speicher
   if (hatSpielstand && spiel.stufenAn == null) { spiel.stufenAn = true; spiel.spieler = spiel.spieler || {}; if (!spiel.spieler.stufeStart) spiel.spieler.stufeStart = spiel.spieler.stufe || "exp"; spiel.spieler.stufe = "exp"; }   // Dome 20.10.: alte Spielstände (vor v569) werden Experten (alles frei), umschaltbar in den Einstellungen – die Spende bleibt an der alten Stufe
   if (hatSpielstand && spiel.tsort == null) { try { spiel.tsort = localStorage.getItem("zuchtstall-tsort") || "datum"; } catch (e) { spiel.tsort = "datum"; } }   // S1 Punkt 7: Turnier-Sortierung gehört zum Spielstand
   if (!spiel.anlage) spiel.anlage = { stall: true, paddock: true, weide: false, waschplatz: false, roundpen: false, reitplatz: false, reithalle: false, gelaende: true, anhaenger: true };
@@ -2516,7 +2536,7 @@
     const FS = (spiel.finanzSaison = spiel.finanzSaison || {}), S = ((FS[j] = FS[j] || {})[datum().s] = FS[j][datum().s] || {});
     const es = (S[posten] = S[posten] || { ein: 0, aus: 0, n: 0 });
     if (betrag > 0) es.ein += betrag; else es.aus -= betrag; es.n++;
-    if (spiel.aufnahme) tagebuch("Geld", { x: posten, b: betrag });   // S4: bei laufender Aufnahme jede Buchung
+    if (AUF.laufend) tagebuch("Geld", { x: posten, b: betrag });   // S4: bei laufender Aufnahme jede Buchung
   }
   // S4 (PLAN-SPIELSTAND.md): Spielprotokoll – Zähler je Jahreszeit in spiel.protokoll["<jahr>-<jz>"] (immer an, für den Spieler unsichtbar, für die Bilanz in Thema 2)
   // v529 (Dome): Aufnahmen – hvw – Einstellungen „Aufnahme starten/beenden“: ab Start schreibt das Spiel jede Aktion und jede Buchung mit Spieltag in spiel.aufnahme.eintraege
@@ -2803,40 +2823,81 @@
   function prot(k, info) {
     try { const d = datum(), z = d.j + "-" + d.s, P = (spiel.protokoll = spiel.protokoll || {}), J = (P[z] = P[z] || {}); J[k] = (J[k] || 0) + 1;
       const C = chronikJz(spiel.geld || 0); C.k[k] = (C.k[k] || 0) + 1;
-      if (spiel.aufnahme) tagebuch(k, info); } catch (e) { console.error("Protokoll:", e); }
+      if (AUF.laufend) tagebuch(k, info); } catch (e) { console.error("Protokoll:", e); }
   }
   function tagebuch(a, info = {}) {
-    const A = spiel.aufnahme; if (!A) return; const T = A.eintraege, e = { t: spiel.tag, a };
+    const A = AUF.laufend; if (!A) return; const T = A.eintraege, e = { t: spiel.tag || 0, a };
     if (info.p) e.p = typeof info.p === "string" ? info.p : info.p.name; if (info.o) e.o = info.o; if (info.b) e.b = Math.round(info.b * 100) / 100; if (info.x) e.x = info.x;
     if ((spiel.hofReihe || []).length > 1 && spiel.hof) e.h = spiel.hof.name;
-    T.push(e); if (T.length > AUFNAHME_MAX) T.splice(0, T.length - AUFNAHME_MAX);
+    if (spiel.tutorial) e.tu = (spiel.tutorial.kap + 1) + "." + (spiel.tutorial.schritt + 1);   // Tutorial: Kapitel.Schritt
+    if (info.extra) Object.assign(e, info.extra);
+    T.push(e); if (T.length > AUFNAHME_MAX) T.splice(0, T.length - AUFNAHME_MAX); aufSpeichern();
   }
   const kbText = o => { let g = 0; try { g = packen(o).length * 2; } catch (e) { g = JSON.stringify(o).length; } return Math.max(1, Math.round(g / 1024)).toLocaleString("de-DE") + " KB"; };
+  function aufZeit() { try { return spiel && spiel.hof && hatSpielstand ? datumText() + ", Tag " + datum().t : "Spielstart"; } catch (e) { return "Spielstart"; } }
   function aufnahmeStart() {
-    if (spiel.aufnahme) return; const nr = (spiel.aufnahmeNr = (spiel.aufnahmeNr || 0) + 1);
-    spiel.aufnahme = { id: "a" + Date.now().toString(36), nr, von: datumText() + ", Tag " + datum().t, vonTag: spiel.tag, eintraege: [] }; speichern(); rahmenSetzen();
+    if (AUF.laufend) return; const nr = ++AUF.nr;
+    AUF.laufend = { id: "a" + Date.now().toString(36), nr, von: aufZeit(), vonTag: spiel.tag || 0, eintraege: [] }; tagebuch("Aufnahme gestartet", { x: spiel.tutorial ? "im Tutorial" : "" }); aufSpeichern(true); rahmenSetzen();
   }
   function aufnahmeEnde(name) {   // name: eigener Name (leer = automatisch)
-    const A = spiel.aufnahme; if (!A) return; delete spiel.aufnahme;
-    A.bis = datumText() + ", Tag " + datum().t; A.bisTag = spiel.tag; A.name = name ? `${name} (${A.von} bis ${A.bis})` : `Aufnahme ${A.nr}: ${A.von} bis ${A.bis}`; A.hof = (spiel.hof && spiel.hof.name) || "";
-    (spiel.aufnahmen = spiel.aufnahmen || []).push(A); aufListeOffen = true; speichern(); rahmenSetzen();
+    const A = AUF.laufend; if (!A) return; AUF.laufend = null;
+    A.bis = aufZeit(); A.bisTag = spiel.tag || 0; A.name = name ? `${name} (${A.von} bis ${A.bis})` : `Aufnahme ${A.nr}: ${A.von} bis ${A.bis}`; A.hof = (spiel.hof && spiel.hof.name) || "";
+    AUF.liste.push(A); aufListeOffen = true; aufSpeichern(true); rahmenSetzen();
   }
   let aufListeOffen = false;   // v530 (Dome): die Liste der Aufnahmen erscheint nur nach Auswahl
-  const rahmenSetzen = (id) => { try { const offen = id !== undefined ? id : (SCHIRME.find(x => $(x) && $(x).classList.contains("offen")) || null); document.body.classList.toggle("aufnahme", !!(hatSpielstand && spiel && spiel.aufnahme && offen !== "startMenue" && offen !== "charakter")); } catch (e) { } };   // roter Rahmen, solange eine Aufnahme läuft
+  const rahmenSetzen = (id) => { try {
+    const offen = id !== undefined ? id : (SCHIRME.find(x => $(x) && $(x).classList.contains("offen")) || null), an = !!AUF.laufend;
+    document.body.classList.toggle("aufnahme", an);   // roter Rahmen, solange eine Aufnahme läuft (auch im Startmenü)
+    document.body.classList.toggle("auf-kopf", an && !spiel.tutorial && !!spiel.hof && hatSpielstand && offen !== "startMenue" && offen !== "charakter");   // v640: Fehler-Kästchen unter der Datumsanzeige, nur außerhalb des Tutorials
+  } catch (e) { } };
+  setInterval(() => rahmenSetzen(), 700);
+  const aufFehlerZahl = a => a.eintraege.filter(e => e.a === "FEHLER").length;
   async function aufnahmeDownload(id) {
-    const A = (spiel.aufnahmen || []).find(x => x.id === id); if (!A) return;
+    const A = AUF.liste.find(x => x.id === id); if (!A) return;
     const name = ("Zuchtstall_" + A.name.replace(/[:/\\*?"<>|\s]+/g, "-") + ".json").replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/Ä/g, "Ae").replace(/Ö/g, "Oe").replace(/Ü/g, "Ue").replace(/ß/g, "ss");
-    const blob = new Blob([JSON.stringify({ typ: "zuchtstall-aufnahme", format: 1, version: SPIEL_VERSION, hof: A.hof, name: A.name, von: A.von, bis: A.bis, eintraege: A.eintraege }, null, 1)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify({ typ: "zuchtstall-aufnahme", format: 2, version: SPIEL_VERSION, hof: A.hof, name: A.name, von: A.von, bis: A.bis, fehler: A.eintraege.filter(e => e.a === "FEHLER"), eintraege: A.eintraege }, null, 1)], { type: "application/json" });
     try { const f = new File([blob], name, { type: "application/json" }); if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: name }); return; } }
     catch (e) { if (e && e.name === "AbortError") return; }
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   }
-  function aufnahmeHTML() {   // Einstellungen: Start/Ende + Liste
-    const A = spiel.aufnahme, L = spiel.aufnahmen || [];
-    return `<button class="sknopf" id="hfAufnahme"><span class="i">${A ? "⏹️" : "🔴"}</span><span>${A ? "Aufnahme beenden" : "Aufnahme starten"}<small>${A ? `läuft seit ${esc(A.von)} · ${A.eintraege.length.toLocaleString("de-DE")} Einträge` : "schreibt jede Aktion mit Spieltag auf – für Test- und Lernspiele"}</small></span></button>
-      ${L.length || aufListeOffen ? `<button class="sknopf" id="hfAufListe"><span class="i">🎞️</span><span>Aufnahmen ansehen (${L.length})<small>${aufListeOffen ? "Liste ist offen – antippen zum Zuklappen" : "Herunterladen oder löschen"}</small></span></button>` : ""}
-      ${aufListeOffen && L.length ? `<div class="ma-liste">${L.map(a => `<div class="ma-karte"><div class="ma-zeile"><span><b>${esc(a.name)}</b><small>${a.eintraege.length.toLocaleString("de-DE")} ${a.eintraege.length === 1 ? "Eintrag" : "Einträge"} · ca. ${kbText(a.eintraege)}</small></span><span class="auf-knoepfe"><button class="mini-knopf" data-aufdl="${a.id}">⬇️ Herunterladen</button><button class="mini-knopf" data-aufweg="${a.id}">🗑️ Löschen</button></span></div></div>`).join("")}</div>` : ""}`;
+  function aufnahmeHTML(pre = "hf") {   // Einstellungen (hf) und Startmenü (sm): Start/Ende + Liste – eigene Kennungen, damit sie sich nicht doppeln
+    const A = AUF.laufend, L = AUF.liste;
+    return `<button class="sknopf" id="${pre}Aufnahme"><span class="i">${A ? "⏹️" : "🔴"}</span><span>${A ? "Aufnahme beenden" : "Aufnahme starten"}<small>${A ? `läuft seit ${esc(A.von)} · ${A.eintraege.length.toLocaleString("de-DE")} Einträge${aufFehlerZahl(A) ? ` · ${aufFehlerZahl(A)} Fehler gemeldet` : ""}` : "schreibt jede Aktion mit Spieltag auf – für Test- und Lernspiele; du kannst Fehler melden"}</small></span></button>
+      ${L.length || aufListeOffen ? `<button class="sknopf" id="${pre}AufListe"><span class="i">🎞️</span><span>Aufnahmen ansehen (${L.length})<small>${aufListeOffen ? "Liste ist offen – antippen zum Zuklappen" : "Herunterladen oder löschen"}</small></span></button>` : ""}
+      ${aufListeOffen && L.length ? `<div class="ma-liste">${L.map(a => `<div class="ma-karte"><div class="ma-zeile"><span><b>${esc(a.name)}</b><small>${a.eintraege.length.toLocaleString("de-DE")} ${a.eintraege.length === 1 ? "Eintrag" : "Einträge"}${aufFehlerZahl(a) ? ` · ${aufFehlerZahl(a)} Fehler gemeldet` : ""} · ca. ${kbText(a.eintraege)}</small></span><span class="auf-knoepfe"><button class="mini-knopf" data-aufdl="${a.id}">⬇️ Herunterladen</button><button class="mini-knopf" data-aufweg="${a.id}">🗑️ Löschen</button></span></div></div>`).join("")}</div>` : ""}`;
   }
+  function aufnahmeBinden(neuZeichnen, pre = "hf") {   // Knöpfe von aufnahmeHTML (Einstellungen und Startmenü)
+    if ($(pre + "Aufnahme")) $(pre + "Aufnahme").onclick = () => { if (!AUF.laufend) { aufnahmeStart(); neuZeichnen(); return; }   // v529/v530: beim Beenden darf die Aufnahme einen Namen bekommen
+      const fertig = () => { const v = (($("aufName") || {}).value || "").trim().slice(0, 40); aufnahmeEnde(v); neuZeichnen(); };
+      dialog(`<h3>⏹️ Aufnahme beenden</h3><p>Wie soll die Aufnahme heißen? (leer lassen für einen automatischen Namen)</p><p><input id="aufName" type="text" maxlength="40" placeholder="z. B. Test Winter-Training" style="width:100%;font-size:1rem;padding:8px"></p>`, [["Beenden und speichern", fertig], ["Weiter aufnehmen", null, "zweit"]]); setTimeout(() => { const i = $("aufName"); if (i) i.focus(); }, 50); };
+    if ($(pre + "AufListe")) $(pre + "AufListe").onclick = () => { aufListeOffen = !aufListeOffen; neuZeichnen(); };
+    document.querySelectorAll("[data-aufdl]").forEach(b => b.onclick = () => aufnahmeDownload(b.dataset.aufdl));
+    document.querySelectorAll("[data-aufweg]").forEach(b => b.onclick = () => { const a = AUF.liste.find(x => x.id === b.dataset.aufweg); if (!a) return;
+      dialog(`<h3>🗑️ Aufnahme löschen?</h3><p><b>${esc(a.name)}</b> wird endgültig gelöscht.</p>`, [["Löschen", () => { AUF.liste = AUF.liste.filter(x => x !== a); aufSpeichern(true); neuZeichnen(); }], ["Abbrechen", null, "zweit"]]); });
+  }
+  // v640 (Dome): „Fehler melden“ – rotes Kästchen in den Infoblasen (immer, solange eine Aufnahme läuft) und links unter der Datumsanzeige (nur außerhalb des Tutorials)
+  function aufFehlerKontext() {
+    const sch = SCHIRME.find(x => $(x) && $(x).classList.contains("offen")) || "", k = {};
+    k.v = [sch, spiel && spiel.hof ? [aktenModus, aktenReiter, ortModus].filter(Boolean).join("/") : ""].filter(Boolean).join(" · ");
+    if (!$("dlg").hidden) k.f = ($("dlgInhalt").textContent || "").replace(/\s+/g, " ").trim().slice(0, 120);
+    if (blase && HINWEISE[blase.k]) { k.bk = blase.k; k.bt = HINWEISE[blase.k][0]; }
+    k.px = innerWidth + "x" + innerHeight;
+    return k;
+  }
+  function aufFehlerFrage() {
+    if (!AUF.laufend || $("aufFehlerFenster")) return; const kontext = aufFehlerKontext();
+    const w = document.createElement("div"); w.id = "aufFehlerFenster";
+    const zu = () => { w.remove(); };
+    w.innerHTML = `<div class="dlg-karte"><h3>🔴 Fehler melden?</h3><p>Ist dir hier etwas aufgefallen, das nicht stimmt?</p><div class="dlg-knoepfe"><button class="knopf" data-af="ja">Ja</button><button class="knopf zweit" data-af="nein">Nein</button></div></div>`;
+    document.body.appendChild(w);
+    w.querySelector('[data-af="nein"]').onclick = zu;
+    w.querySelector('[data-af="ja"]').onclick = () => {
+      w.innerHTML = `<div class="dlg-karte"><h3>🔴 Was ist falsch?</h3><p>Beschreibe kurz, was nicht stimmt:</p><p><textarea id="aufFehlerText" rows="5" maxlength="800" placeholder="z. B. Die Blase zeigt auf den falschen Knopf …"></textarea></p><div class="dlg-knoepfe"><button class="knopf" data-af="fertig">Fertig</button></div></div>`;
+      w.querySelector('[data-af="fertig"]').onclick = () => { const t = (($("aufFehlerText") || {}).value || "").trim().slice(0, 800); tagebuch("FEHLER", { x: t || "(ohne Text)", extra: kontext }); aufSpeichern(true); zu(); };
+      setTimeout(() => { const i = $("aufFehlerText"); if (i) i.focus(); }, 50);
+    };
+  }
+  document.addEventListener("change", e => { const c = e.target; if (!c || !c.closest || !c.closest(".fehler-kaestchen")) return; c.checked = false; aufFehlerFrage(); });
   const KOSTEN = { aufzucht: 10, ausbildung: 35, klinik: 60, gentest: 150, kastration: 450 };
   const KASTRATION_AB = 4;
   const WEIDE_PLUS = [10, 12, 7, 5];   // Gesundheit pro Tag auf der Weide: Frühling, Sommer, Herbst, Winter (Box: +8)   // ab 1 Jahr (4 Jahreszeiten)
@@ -11235,6 +11296,7 @@
       <button class="sknopf" id="smLadenMenue"><span class="i">📂</span><span>Speichern &amp; Laden<small>Speicherplatz 1 und 2 oder Spielstand aus Datei</small></span></button>
       ${vl ? `<button class="sknopf" id="smVerloren"><span class="i">🔨</span><span>${esc(verlorenText(vl))}<small>ansehen – nur zum Anschauen, nichts änderbar</small></span></button>` : ""}
       <button class="sknopf" id="smNeu"><span class="i">✨</span><span>Neues Spiel<small>Charakter erstellen und den ersten Hof kaufen</small></span></button>
+      ${aufnahmeHTML("sm")}
       <button class="sknopf" id="smVoll"><span class="i">⛶</span><span>Vollbildmodus ist ${istVoll() ? "an" : "aus"}<small>antippen zum Umschalten</small></span></button>
       <button class="sknopf" id="smEnde"><span class="i">🚪</span><span>Beenden<small>das laufende Spiel ist im Autospeicher</small></span></button>
       <p class="version">Version ${SPIEL_VERSION}</p>
@@ -11242,6 +11304,7 @@
     zeigeSchirm("startMenue");
     $("smWeiter").onclick = () => { if (hatSpielstand) zeigeHaupt(); };
     $("smNeu").onclick = () => neuesSpielWahl();
+    aufnahmeBinden(zeigeStart, "sm");
     $("smLadenMenue").onclick = () => zeigeLadenMenue();
     if ($("smVerloren")) $("smVerloren").onclick = () => verlorenAnsehen();
     $("startMenue").querySelectorAll("[data-pspiel]").forEach(b => b.onclick = () => platzSpielen(+b.dataset.pspiel));
@@ -12554,6 +12617,7 @@
   const chTutText = st => { const n = (TUT_SETS[st] || TUT_SETS.anf)().length; return st === "anf" ? `Erst das Tutorial (empfohlen)<small>${n} kurze Kapitel in einem Testhof – danach geht es zu den Immobilien</small>` : `Tutorial ${st === "fort" ? "für Fortgeschrittene" : "für Experten"} (freiwillig)<small>${n} kurze Kapitel zum Nachholen in einem Testhof – danach geht es zu den Immobilien</small>`; };
   function neuesSpielAnlegen(c, tempo, I, name, tutorial) {
     c.hof = name;
+    if (!tutorial) try { tagebuch("Neues Spiel", { x: name + " (" + (c.name || "") + ")" }); } catch (e) { }
     spiel = { geld: START_KAPITAL, spieler: c, tag: 1, tempo, tempoNeu: true, aktBox: 0, sparmodus: spiel.sparmodus, hofAusbau: HOF_AUSBAU, stufenAn: true, ...(tutorial ? { tutorial: { kap: 0 } } : {}),
       boxen: Array.from({ length: I.boxen }, (_, i) => ({ nr: i + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false, stufe: I.stufe })),
       anlage: spiel.anlage, ausruestung: spiel.ausruestung, stallarten: ["pension"],
@@ -14758,11 +14822,11 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Post und Speicher (P1/P2, v599/v604):</b> Post-Grenze ${POST.grenze} Briefe (gekürzt wird bis ${POST.unter}, Blase ab ${POST.warn}); nie gelöscht: ⭐, Jahresberichte, ungelesene, offene Aktion/Rechnung; Hinweisbrief höchstens einmal je Spieljahr. Speicher: Kontingent ca. ${mbTxt(SPEICHER_QUOTA)} MB, gelb ab ${prozent(SP_GELB)}, rot ab ${prozent(SP_ROT)}; „Speicher aufräumen“ nur auf Knopfdruck (Briefe älter als 2 Spieljahre, Spam, Platz „Verloren“, Friedhof/Archiv: Details löschen oder ganz löschen).</p>
       <p><b>Spiel verloren (B4, v560):</b> Abschlussfenster mit Grund (Zwangsversteigerung/Insolvenz), Spieldauer, 6 Kacheln (Gewinn/Verlust ohne Hofkauf und Kredit, Kontostand am Ende, Pferde vor der Pfändung, Turniere, größte Ausgabe, größte Einnahme ohne den Zwangsverkauf), Kurve „Kontostand am Ende jeder Jahreszeit“ (rückwärts aus allen Buchungen), bestes/wertvollstes Pferd und <b>1–3 Tipps</b>: Dispo/Kreditrate immer; Personal ≥ 40 %, Bauen ≥ 35 %, Pferdekäufe ≥ 35 % (mehr gekauft als verkauft), Tierarzt ≥ 25 %, Futter ≥ 40 % der Ausgaben; keine Pensions-Einnahmen; keine Turniere bzw. nie platziert. Der Stand <b>kurz vor der Pfändung</b> liegt auf dem Platz „Verloren“ (<code>${VERLOREN_KEY}</code>, nur der letzte, gepackt, mit Post) und lässt sich nur ansehen: Band unten, gesperrte Knöpfe ausgegraut (Tag beenden, Markt, Immobilien, Anhänger, Pferdepflege, Kaufen/Bauen/Einstellen, Brief-Aktionen, Häkchen), nichts wird gespeichert, die Zeit steht. Als Datei mit Kennzeichen <code>verloren: true</code> speicher- und ladbar.</p>
       <p><b>Bestenliste (B2 Teil 2, v549):</b> je Hof die ${BESTEN.anzahl} besten Pferde (meiste Erfolge: Sieg ${BESTEN.sieg} Punkte, 2./3. Platz ${BESTEN.platz}; gezählt wird die Lebensbilanz <code>p.bilanz</code> – je Pferd [Starts, 1., 2., 3. Platz] nach Disziplin und Klasse, nie gekürzt, im Steckbrief „📊 Bilanz insgesamt“) und die ${BESTEN.anzahl} wertvollsten (Marktwert). Ausgewertet zu Beginn jeder Jahreszeit und wenn ein Pferd den Hof verlässt (Verkauf, Rückgabe, Pfändung, Tod). Pensionspferde zählen nicht. Gespeichert wird nur eine Mini-Zeile je Pferd (<code>spiel.chronik[Hof].beste/.wertvoll</code>); der Name ist anklickbar (Steckbrief), auch nach dem Verkauf: Bestenlisten-Pferde bleiben im Archiv vor dem 40er-Limit geschützt, verstorbene liegen auf dem Friedhof. Anzeige: hvw – Hof – Übersicht „🏅 Bestenliste dieses Hofs“, bei nicht mehr eigenen Pferden mit „Stand beim Verkauf/Abgang“.</p>
-      <p><b>Spielprotokoll (S4, v525) und Aufnahmen (v529):</b> Zähler je Jahreszeit in <code>spiel.protokoll["&lt;jahr&gt;-&lt;jz&gt;"]</code> (immer an, für den Spieler unsichtbar, Grundlage für die Bilanz in Thema 2): Füttern selbst/Personal/Turnier, Putzen, Kämmen, Hufe auskratzen, Misten (selbst), Training je Übung (selbst/Personal), Turnierstart/-sieg/platziert, Kauf je Markt, Verkauf (Festpreis/Auktion/Verkaufsrennen), Bedeckung, tragend geworden, Fohlen geboren, Tierarzt, Klinik, Todesfall, Brief gelesen, Kredit, Bauauftrag, Mitarbeiter eingestellt/gekündigt/selbst gekündigt. <b>Aufnahme</b> (hvw – Einstellungen „🔴 Aufnahme starten/beenden“): ab dem Start schreibt das Spiel jede gezählte Aktion und jede Buchung mit Spieltag in <code>spiel.aufnahme.eintraege</code> (höchstens ${AUFNAHME_MAX.toLocaleString("de-DE")} Einträge je Aufnahme); beim Beenden kommt sie als eigene Aufnahme in die Liste <code>spiel.aufnahmen</code> (je Eintrag ⬇️ Herunterladen als Datei <code>typ: zuchtstall-aufnahme</code> und 🗑️ Löschen mit Sicherheitsfrage). Solange eine Aufnahme läuft, hat der Bildschirm einen dünnen roten Rahmen (<code>body.aufnahme</code>, nicht im Startmenü).
+      <p><b>Spielprotokoll (S4, v525) und Aufnahmen (v529):</b> Zähler je Jahreszeit in <code>spiel.protokoll["&lt;jahr&gt;-&lt;jz&gt;"]</code> (immer an, für den Spieler unsichtbar, Grundlage für die Bilanz in Thema 2): Füttern selbst/Personal/Turnier, Putzen, Kämmen, Hufe auskratzen, Misten (selbst), Training je Übung (selbst/Personal), Turnierstart/-sieg/platziert, Kauf je Markt, Verkauf (Festpreis/Auktion/Verkaufsrennen), Bedeckung, tragend geworden, Fohlen geboren, Tierarzt, Klinik, Todesfall, Brief gelesen, Kredit, Bauauftrag, Mitarbeiter eingestellt/gekündigt/selbst gekündigt. <b>Aufnahme</b> (hvw – Einstellungen „🔴 Aufnahme starten/beenden“): ab dem Start schreibt das Spiel jede gezählte Aktion und jede Buchung mit Spieltag in <code>AUF.laufend.eintraege</code> (v640: eigener Speicher <code>zuchtstall-aufnahmen</code>, nicht mehr im Spielstand – so läuft eine Aufnahme auch im Startmenü und im Tutorial; auch dort starten/beenden, Kästchen „Fehler melden“ in den Infoblasen und links unter der Datumsanzeige (nur außerhalb des Tutorials): Eintrag <code>a: "FEHLER"</code> mit Text <code>x</code>, Ansicht <code>v</code>, Fenster <code>f</code>, Blase <code>bk</code>/<code>bt</code>, Tutorial-Stelle <code>tu</code> Kapitel.Schritt; Download-Datei Format 2 mit eigener Liste <code>fehler</code>) (höchstens ${AUFNAHME_MAX.toLocaleString("de-DE")} Einträge je Aufnahme); beim Beenden kommt sie als eigene Aufnahme in die Liste <code>AUF.liste</code> (je Eintrag ⬇️ Herunterladen als Datei <code>typ: zuchtstall-aufnahme</code> und 🗑️ Löschen mit Sicherheitsfrage). Solange eine Aufnahme läuft, hat der Bildschirm einen dünnen roten Rahmen (<code>body.aufnahme</code>, auch im Startmenü).
         ${(() => { const P = spiel.protokoll || {}, K = Object.keys(P).sort((a, b) => { const [ja, sa] = a.split("-").map(Number), [jb, sb] = b.split("-").map(Number); return ja - jb || sa - sb; });
           if (!K.length) return "<p><i>Noch keine Einträge.</i></p>";
           return verTab(["Jahreszeit", "Zähler"], K.map(z => { const [j, sz] = z.split("-").map(Number); return [`${JZ[sz] ? JZ[sz][0] : sz} ${jj(j)}`, Object.entries(P[z]).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${esc(k)} ${n}`).join(" · ")]; })); })()}
-        ${(spiel.aufnahmen || []).length ? `<p><b>Aufnahmen:</b></p>` + verTab(["Name", "Einträge", "Größe"], spiel.aufnahmen.map(a => [esc(a.name), a.eintraege.length, kbText(a.eintraege)])) : ""}</p>
+        ${AUF.liste.length ? `<p><b>Aufnahmen:</b></p>` + verTab(["Name", "Einträge", "Größe"], AUF.liste.map(a => [esc(a.name), a.eintraege.length, kbText(a.eintraege)])) : ""}</p>
       <p><b>AKU findet die neuen Krankheiten (v516):</b> Röntgen/Ultraschall (große AKU): Spat, Hufrolle, Kissing Spines, alter Sehnenschaden · Augen: Mondblindheit-Narben, Augenlid-Tumor, MCOA · Herz: Aortenwand (Friese) · Longe: Shivers · immer dabei („klinisch“): Sarkoid, Hodenhochstand bei Hengsten, Gebissfehler (wird beim Kauf bekannt → Zahnbehandlung zweimal im Jahr). Wahrscheinlichkeit = 15 % × Befund-Gewicht × Rassen-/Alters-Faktor × Jahre in Arbeit × (Herkunftsrisiko ÷ 0,25); etwa jedes 4. Händlerpferd hat einen neuen Fund. Händler verdecken Spat, Sehnenschaden, Hufrolle und Kissing Spines zur Hälfte mit Schmerzmittel (Lahmheit erst 2 Tage nach dem Kauf sichtbar; Röntgen/Ultraschall findet sie trotzdem, das große Blutbild zeigt das Schmerzmittel). Gefundene Befunde kommen beim Kauf diagnostiziert mit, nicht gefundene als unbemerkte Befunde. Röntgenfunde heben die Röntgenklasse auf III/IV. Eigene Pferde: „Untersuchung“ (Versorgung) nutzt <code>UCHECK</code> (Aorta → Herz, Augenlid-Krebs/MCOA → Augen).</p>
       <p><b>Ankaufsuntersuchung (Etappe G)</b> – in jedem Kauf-/Bieten-Fenster am Pferdemarkt: ${Object.entries(AKU).map(([k, S]) => `${S.n} ${fmt(S.preis)} (${akuAufstellung(k)})`).join(", ")} – gleiche Preise wie Tierarzt-Hausbesuch und Blutbild; dazu Labortest Erbkrankheiten zum Laborpreis (${fmt(LABOR_TESTS.krank.preis)} + 30 € je weitere Rasse), Blutprobe einlagern +${fmt(AKU_PROBE)} (später prüfen ${fmt(PROBE_PRUEFEN)}). Ergebnis sofort und als Protokoll per Brief. Versteckte Befunde je Pferd nach Herkunft (Grundrisiko ${Object.entries(AKU_RISIKO).map(([q, x]) => `${q} ${Math.round(x * 100)} %`).join(", ")}): Lahmheit (Risiko × 0,7; Grad 2 sieht man im Gangbild, Grad 1 erst bei der Beugeprobe; beim Händler in 50 % mit Schmerzmittel verschleiert – nur das große Blutbild findet es, nach dem Kauf zeigt sich die Lahmheit nach 2 Tagen), Husten (× 0,35, Lunge), Herzgeräusch (× 0,15), Linsentrübung (× 0,12), Taktunreinheit an der Longe (× 0,15), Arthrose ab 10 Jahren (× 0,5, Beugeprobe oder Röntgen), Röntgenklasse I–IV (mit Arthrose III/IV), ansteckende Krankheit in der Inkubation wie bei Neuzugängen (kleines Blutbild: Entzündung, großes: welche). Jeder Befund mindert den Wert (z. B. Lahmheit 8/15 %, Arthrose 12 %, Röntgen III 15 %/IV 30 %, höchstens 50 %). Danach: kaufen, Preis um diesen Anteil verhandeln (einmal; Erfolg privat ${Math.round(AKU_VERHANDELN.Privat * 100)} %, Händler ${Math.round(AKU_VERHANDELN["Händler"] * 100)} %, Gestüt ${Math.round(AKU_VERHANDELN["Gestüt"] * 100)} %) oder ablehnen. Beim Kauf kommen alle versteckten Befunde mit (gefundene schon diagnostiziert). Eingelagerte Probe mit Schmerzmittel (Händler): der Händler erstattet die Hälfte des Kaufpreises. Eigener Verkauf ab ${fmt(1500)}: 40 % der Käufer machen eine AKU – jeder bekannte oder unbekannte Befund senkt den Preis (5 % je Grad, chronisch +10 %, frühere chronische 8 %, höchstens 40 %).</p>
       <p><b>Putzen durch Wischen</b> (Ausrüstung → Putzkiste): Werkzeug antippen, dann im Stallbild über das Pferd wischen (Finger oder gedrückte linke Maustaste). Bürste: überall auf dem Pferd; Kamm: nur oben (Mähne) und hinten/vorne (Schweif, Schopf). Nötige Wischstrecke 350 + 6 × Schmutz (Bildpunkte im Stall, 400 breit) – der Schmutz geht dabei anteilig weg, das Bild wird alle 25 % neu gezeichnet. Hufkratzer: 4 Hufunterseiten mit je 6 Dreckklumpen nacheinander wegwischen. Pfleger putzen weiter automatisch.</p>
@@ -15032,13 +15096,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       dialog(`<h3>🎓 Tutorial wiederholen</h3><p>Welches Tutorial? Es läuft in einem Testhof, dein Spiel bleibt.</p>`, [["Anfänger", () => los("anf")], ["Fortgeschritten", () => los("fort"), "zweit"], ["Experte", () => los("exp"), "zweit"], ["Abbrechen", null, "zweit"]]); };
     if ($("hfStufenAn")) $("hfStufenAn").onclick = () => { spiel.stufenAn = !spiel.stufenAn; speichern(); zeigeHof(); };
     if ($("hfTipps")) $("hfTipps").onclick = () => { spiel.tipps = spiel.tipps || {}; spiel.tippsAus = !spiel.tippsAus; speichern(); zeigeHof(); };   // v376
-    if ($("hfAufnahme")) $("hfAufnahme").onclick = () => { if (!spiel.aufnahme) { aufnahmeStart(); zeigeHof(); return; }   // v529/v530: beim Beenden darf die Aufnahme einen Namen bekommen
-      const fertig = () => { const v = (($("aufName") || {}).value || "").trim().slice(0, 40); aufnahmeEnde(v); zeigeHof(); };
-      dialog(`<h3>⏹️ Aufnahme beenden</h3><p>Wie soll die Aufnahme heißen? (leer lassen für einen automatischen Namen)</p><p><input id="aufName" type="text" maxlength="40" placeholder="z. B. Test Winter-Training" style="width:100%;font-size:1rem;padding:8px"></p>`, [["Beenden und speichern", fertig], ["Weiter aufnehmen", null, "zweit"]]); setTimeout(() => { const i = $("aufName"); if (i) i.focus(); }, 50); };
-    if ($("hfAufListe")) $("hfAufListe").onclick = () => { aufListeOffen = !aufListeOffen; zeigeHof(); };
-    document.querySelectorAll("[data-aufdl]").forEach(b => b.onclick = () => aufnahmeDownload(b.dataset.aufdl));
-    document.querySelectorAll("[data-aufweg]").forEach(b => b.onclick = () => { const a = (spiel.aufnahmen || []).find(x => x.id === b.dataset.aufweg); if (!a) return;
-      dialog(`<h3>🗑️ Aufnahme löschen?</h3><p><b>${esc(a.name)}</b> wird endgültig gelöscht.</p>`, [["Löschen", () => { spiel.aufnahmen = spiel.aufnahmen.filter(x => x !== a); speichern(); zeigeHof(); }], ["Abbrechen", null, "zweit"]]); });
+    aufnahmeBinden(zeigeHof);
     if ($("hfTippsNeu")) $("hfTippsNeu").onclick = () => { spiel.tipps = {}; spiel.tippStart = spiel.tag; delete spiel.tippsAus; delete spiel.tippWarte; speichern(); zeigeHof(); };
     if ($("hfSpar")) $("hfSpar").onclick = () => { $("mSpar").click(); zeigeHof(); };
     if ($("hfVoll")) $("hfVoll").onclick = () => { vollbildUmschalten(); setTimeout(zeigeHof, 300); };
@@ -15431,14 +15489,16 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     if (blase) { blase.behalten = true; $("hinweisBlase").hidden = true; $("hinweisRing").hidden = true; }
     dialog(`<h3>${E[0]}</h3><div class="text">${E[1]}</div>`, [["Schließen"]]);
   }
+  let aufBlaseLetzte = null;
   function blaseZeigen(k, opt = {}) {
     const H = HINWEISE[k]; if (!H) return; let b = $("hinweisBlase"), r = $("hinweisRing");
     if (!b) { b = document.createElement("div"); b.id = "hinweisBlase"; b.setAttribute("role", "status"); document.body.appendChild(b); r = document.createElement("div"); r.id = "hinweisRing"; document.body.appendChild(r); }
     const mehr = H[4] && EINSTEIGER_MEHR[H[4]];
-    b.innerHTML = `<div class="hb-kopf"><b>💡 ${esc(H[0])}</b><span>${mehr ? `<button class="hb-mehr">Mehr dazu</button>` : ""}<button class="hb-zu" aria-label="Schließen">✕</button></span></div><p>${hinweisText(H)}</p>${H[2] ? `<p class="hb-rat">👉 ${H[2]}</p>` : ""}`;
+    b.innerHTML = `<div class="hb-kopf"><b>💡 ${esc(H[0])}</b><span>${mehr ? `<button class="hb-mehr">Mehr dazu</button>` : ""}<button class="hb-zu" aria-label="Schließen">✕</button></span></div><p>${hinweisText(H)}</p>${H[2] ? `<p class="hb-rat">👉 ${H[2]}</p>` : ""}${AUF.laufend ? `<label class="hb-fehler fehler-kaestchen"><input type="checkbox"> Fehler melden</label>` : ""}`;
+    if (AUF.laufend && aufBlaseLetzte !== k) { aufBlaseLetzte = k; tagebuch("Hinweis", { x: k + ": " + H[0] }); }
     b.classList.toggle("rot", H[6] === "rot");   // T: „Letzte Warnung“ vom Veterinäramt in Rot
     blase = { k, sel: H[3], leit: !!opt.leit, lokal: !!opt.lokal, frei: !!opt.frei, danach: opt.danach, info: opt.info };
-    b.onclick = e => { if (e.target.closest(".hb-mehr")) { mehrDazu(k); return; }
+    b.onclick = e => { if (e.target.closest(".fehler-kaestchen")) return; if (e.target.closest(".hb-mehr")) { mehrDazu(k); return; }
       if (spiel && spiel.tutorial && blase && blase.lokal && blase.info === false && !$("hinweisRing").hidden) { blase.nurRing = true; b.hidden = true; return; }   // Dome 21.10.: Tutorial – Blase wegtippen, der blaue Rahmen bleibt, bis die gewünschte Aktion gemacht ist
       blaseWeg(true); };
     blasePosition();
@@ -15774,7 +15834,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     tutWeiter = danach; neuesSpielAnlegen({ ...c, name: c.name, stufe: set === "anf" ? "anf" : set }, 7, immobilie("pension"), "Testhof", true);
     spiel.geld = 20000; spiel.tippsAus = true; spiel.tutorial = { set, kap: 0, schritt: 0, tag0: spiel.tag, lager0: futterLagerSumme() };
     if (set !== "anf") { spiel.anlage.reitplatz = true; document.body.dataset.tutset = set; }
-    document.body.classList.add("tutorial"); tutBand(); tutKapitel(0);
+    tagebuch("Tutorial gestartet", { x: set }); document.body.classList.add("tutorial"); tutBand(); tutKapitel(0);
   }
   function tutBand() {
     let el = $("tutBand"); if (!el) { el = document.createElement("div"); el.id = "tutBand"; document.body.appendChild(el); }
@@ -15786,7 +15846,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     requestAnimationFrame(() => document.documentElement.style.setProperty("--tutH", el.offsetHeight + "px"));   // Höhe des Bands (1 oder 2 Zeilen)
   }
   function tutKapitel(i) {
-    const T = spiel.tutorial; T.kap = i; T.schritt = 0; delete T.geschafft; T.gelernt = []; T.tag0 = spiel.tag; T.lager0 = futterLagerSumme();   // Dome 20.10.: „gelernt“ gilt nur im Kapitel
+    const T = spiel.tutorial; T.kap = i; T.schritt = 0; delete T.geschafft; tagebuch("Tutorial Kapitel", { x: (i + 1) + ": " + (tutListe()[i] || {}).n }); T.gelernt = []; T.tag0 = spiel.tag; T.lager0 = futterLagerSumme();   // Dome 20.10.: „gelernt“ gilt nur im Kapitel
     const fade = document.createElement("div"); fade.id = "tutFade"; document.body.appendChild(fade); requestAnimationFrame(() => fade.classList.add("an"));   // Überblendung zum nächsten Testpferd
     setTimeout(() => { try { if (wisch) wischEnde(false); } catch (e) { } try { tutListe()[i].neu(); } catch (e) { console.error("Tutorial:", e); } T.versTag = null; try { tutPersonalVersorgt(); } catch (e) { }   // Dome 21.10.: Mitarbeiter versorgen gleich zu Kapitelbeginn (außer Anfänger Kapitel 1 und 2) aktBox = 0; spiel.aktBox = 0; aktenModus = "steckbrief"; aktenReiter = "steckbrief"; ortModus = null; putzModus = false; marktBereich = null; deckModus = false;
       document.querySelectorAll(".schirm.offen").forEach(x => x.classList.remove("offen")); zeigeSchirm(null); $("dlg").hidden = true; zeigeStall(); zeigeTag(); zeigeAkte(); if (tutListe()[i].haupt) zeigeHaupt(); tutBand(); window.scrollTo(0, 0);   // zeigeSchirm(null) hebt die Scroll-Sperre der Menüs auf (sonst ließ sich im Tutorial nicht scrollen)
@@ -15811,7 +15871,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   // Dome 20.10.: im Tutorial lässt sich nur antippen, was gerade gefragt ist – und was in früheren Schritten schon gelernt wurde
   const tutSel = sel => !sel ? [] : (sel === "@heu" ? ".stufeEl .sHeunetz, #heuhaufen" : sel).split(",").map(x => x.trim()).filter(Boolean);
   function tutGelernt(S) { const T = spiel.tutorial, G = (T.gelernt = T.gelernt || []); [...tutSel(S[2]), ...tutSel(S[5])].forEach(x => { if (!G.includes(x)) G.push(x); }); }
-  const TUT_IMMER = ["#hinweisBlase", "#tutBand", "#tutFade", ".sb-bild", "#leseBild", "#sprechblase"];   /* Bild zoomen/verschieben ist immer erlaubt (Dome 20.10.) */   // Dome 20.10.: Zurück-Pfeile und Menüs nur, wenn der Schritt sie braucht (steht dann im Ziel des Schritts)
+  const TUT_IMMER = ["#aufFehlerFenster", ".fehler-kaestchen", "#hinweisBlase", "#tutBand", "#tutFade", ".sb-bild", "#leseBild", "#sprechblase"];   /* Bild zoomen/verschieben ist immer erlaubt (Dome 20.10.) */   // Dome 20.10.: Zurück-Pfeile und Menüs nur, wenn der Schritt sie braucht (steht dann im Ziel des Schritts)
   // Dome 21.10.: nur im Anfänger-Tutorial Kapitel 1 und 2 versorgt der Spieler selbst (dann sind Heu, Futtereimer, Wasser und Mist immer antippbar) – in allen anderen Kapiteln versorgen die Mitarbeiter die Pferde
   const tutSelbstVersorgen = () => { const T = spiel.tutorial; return !!T && (!T.set || T.set === "anf") && T.kap <= 1; };
   const TUT_VERSORGUNG = [".stufeEl .sHeunetz", "#heuhaufen", ".stufeEl .sKrippe", "#krippe", ".stufeEl .sWasser", "#mist"];

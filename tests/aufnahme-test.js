@@ -28,7 +28,8 @@ const [W, H] = (process.argv[2] || '390x844').split('x').map(Number); const O = 
   await pg.waitForTimeout(900);
   r = await ev(() => { const k = document.getElementById('kopfFehler').getBoundingClientRect(), t = document.getElementById('tagAnzeige').getBoundingClientRect(), h = document.querySelector('header').getBoundingClientRect(), ks = document.getElementById('stall').getBoundingClientRect();
     return { sicht: k.width > 0 && k.height > 0, unterDatum: k.top >= t.bottom - 1, links: k.left < 60, imKopf: k.bottom <= h.bottom + 1, ueberStall: k.bottom > ks.top + 1, eintraege: AUF.laufend.eintraege.map(e => e.a) }; });
-  ok('Im Spiel: Kästchen sichtbar, links unter der Datumsanzeige, innerhalb der Kopfleiste (verdeckt nichts)', r.sicht && r.unterDatum && r.links && r.imKopf && !r.ueberStall, JSON.stringify(r));
+  const quer = W > H && H <= 520;   // Handy quer: Kästchen steht in derselben Zeile neben dem Geld
+  ok(quer ? 'Im Spiel (Handy quer): Kästchen sichtbar, in der Kopfzeile neben dem Geld, keine zweite Zeile' : 'Im Spiel: Kästchen sichtbar, links unter der Datumsanzeige, innerhalb der Kopfleiste (verdeckt nichts)', r.sicht && r.imKopf && !r.ueberStall && (quer ? !r.unterDatum : r.unterDatum && r.links), JSON.stringify(r));
   ok('Eintrag „Neues Spiel“ steht in der Aufnahme', r.eintraege.includes('Neues Spiel') && r.eintraege.includes('Aufnahme gestartet'), JSON.stringify(r.eintraege));
   await foto('2-kopf');
 

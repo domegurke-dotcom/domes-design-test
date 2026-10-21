@@ -30,6 +30,7 @@ Alles ist auf `main` (letzter Commit „v641“), CLAUDE.md (Versionszeile 641, 
 - **v641:** im Handy quer steht das Kästchen in der Kopfzeile neben dem Geld (keine zweite Zeile).
 
 ### Offen / als Nächstes
+**Stand 21.10. (Ende der Sitzung):** `main` = v647 (geprüft). Auf dem Entwicklungs-Branch `ccr-2a7f3d4d-du61kf` liegen zusätzlich **Weide-Schritte in Tutorial Kap. 1** (Ort → Koppel → Weide → welche Weide → Info; Dome-Wunsch), **noch nicht getestet** (Tutorial-Spieler 390×844 und 844×390 nötig, dann auf `main` schieben und Version 648). Danach offen aus der vierten Fehler-Aufnahme: Stern-„selten“-Popup im Handy quer prüfen (Fenster-Höhe wurde allgemein entschärft), Aufnahme mit echtem Datum/Uhrzeit versehen (Dome fragen).
 **Später (Dome, 21.10., alles bestätigt – nicht jetzt):**
 - Popup/Benachrichtigung, wenn neue Mitarbeiter-Berufe (z. B. Stallmeister) freigeschaltet werden (Dome: Ja, aber später).
 - „Speicher aufräumen“ bietet keine Aufnahmen an (Dome: Nein). „Besitzer informieren“ bleibt auch für Anfänger sichtbar (Dome: Nein, soll rein).

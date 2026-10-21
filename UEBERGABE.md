@@ -15,7 +15,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team (oder neue Pro-Sitzung) · **Stand:** v642, 21.10.2026
+**Von:** Claude Pro · **An:** Claude Team (oder neue Pro-Sitzung) · **Stand:** v643, 21.10.2026
 
 ### Stand
 Alles ist auf `main` (letzter Commit „v641“), CLAUDE.md (Versionszeile 641, Einträge v630–v641) und diese Datei sind aktuell. Keine halbfertige Arbeit, keine lokalen Änderungen.
@@ -24,6 +24,7 @@ Alles ist auf `main` (letzter Commit „v641“), CLAUDE.md (Versionszeile 641, 
 - **v630** Pension-Morgenrunde-Fehler (Kommentar mitten in der Zeile) behoben. **v631–v637 + v638** Tutorial-Überarbeitung komplett (Etappen A–D, Knopf „Kapitel wiederholen“). **v632** Finanzen als Aufklapp-Jahreszeiten, **v633** Pension (angebotene Leistungen, Tierarzt 1×/Tag, Besitzer informieren), **v634** Finanzen-Diagramm, **v636** Kamm über Mähne/Schopf/Schweif.
 - **v639 Tutorial:** nach jeder Nacht kontrolliert das Spiel die Post (Briefe ohne Kapitelbezug werden selbst beantwortet, Kapitelbriefe bleiben ungelesen); Mitarbeiter versorgen die Pferde außer in Anfänger-Kapitel 1+2; Blase wegtippen lässt den blauen Rahmen stehen; Turnier-Kapitel startet in Box 1 (sonst hing der Lauf bei „Pferdeanhänger“, weil die Pensionsbox aktiv war).
 - **v640 Aufnahme:** eigener Speicher `AUF` (`zuchtstall-aufnahmen`, nicht mehr im Spielstand, alte Aufnahmen wandern beim Laden hinein), Start/Ende/Liste auch im Startmenü unter „Neues Spiel“ (Kennungen `smAufnahme`/`smAufListe`, in den Einstellungen `hf…`), roter Rahmen auch im Startmenü. **Fehler melden:** rotes Kästchen in jeder Infoblase und (nur außerhalb des Tutorials) links unter der Datumsanzeige → Fenster Ja/Nein → Text → „Fertig“ → Eintrag `a: "FEHLER"` (Text `x`, Ansicht `v`, Fenster `f`, Blase `bk`/`bt`, Tutorial-Stelle `tu`, Bildgröße `px`). Download Format 2 mit Liste `fehler`. Test `tests/aufnahme-test.js [BxH] [Ordner]` (24 Prüfungen, 3 Ansichten grün).
+- **v643:** zweite Fehler-Aufnahme von Dome (Genetik-Schritte, Veterinäramt nach Versorgung, Tag-beenden-Ring, grüner Haken beendet Kapitel, Einkaufskorb, Fehler-Fenster mit Tastatur, Aufnahme-Namen im Startmenü) umgesetzt – Abnahme durch Dome steht aus.
 - **v642:** Fehler aus Domes erster Aufnahme (Blase stört beim Bürsten/Kämmen/Hufe, Bildschirm springt nicht zum Pferd, Genetik nicht erklärt) behoben.
 - **v641:** im Handy quer steht das Kästchen in der Kopfzeile neben dem Geld (keine zweite Zeile).
 

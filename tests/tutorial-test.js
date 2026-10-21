@@ -20,7 +20,7 @@ const ORDNER = process.argv[2];
   await pg.evaluate(() => { const b = spiel.boxen[0]; b.krippeVoll = true; b.kraftVoll = true; b.wasserTag = spiel.tag; b.mistig = false; spiel.tag += 1; }); await pg.waitForTimeout(900);   // v596: Kapitel 1 ist mit „Tag beenden“ fertig
   const C = await pg.evaluate(() => ({ k: blase && blase.k, kap: spiel.tutorial.kap })); ok('Ziel erreicht → Blase „Geschafft“, bleibt stehen', C.k === 'tut_fertig_0' && C.kap === 0, JSON.stringify(C));
   await pg.waitForTimeout(1200); ok('Ohne Antippen kein Weiterschalten', await pg.evaluate(() => spiel.tutorial.kap === 0));
-  await pg.click('#hinweisBlase'); await pg.waitForTimeout(1200);
+  await pg.click('#hinweisBlase'); await pg.waitForTimeout(900); ok('Blase antippen beendet das Kapitel nicht', await pg.evaluate(() => spiel.tutorial.kap === 0 && !document.getElementById('tutHaken').hidden)); await pg.click('#tutHaken'); await pg.waitForTimeout(1200);
   const D = await pg.evaluate(() => ({ kap: spiel.tutorial.kap, pferd: spiel.boxen[0].pferd && spiel.boxen[0].pferd.name })); ok('Überblendung zu Kapitel 2 (Max, Futter)', D.kap === 1 && D.pferd === 'Max', JSON.stringify(D));
   if (ORDNER) await pg.screenshot({ path: `${ORDNER}/kap2.png` });
   for (let i = 0; i < 3; i++) { await pg.click('#tutKapWeg'); await pg.waitForTimeout(1100); }

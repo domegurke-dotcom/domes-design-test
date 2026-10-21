@@ -1092,9 +1092,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     // (handgezeichneter Kopf wurde schon vor der Mähne gezeichnet) – hier kommt Domes Schopf obendrauf
     if (ohrL && ohrL.svg && ekMatrix) g += `<g transform="matrix(${ekMatrix})">${ohrL.svg}</g>`;
     const sv = schopfL;
-    if (sv && ekMatrix) g += `<g transform="matrix(${ekMatrix})">${schopfNeuSVG(sv, dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane), dunKern || C.stripe || null, INK, kopfAlter)}</g>`;   // Etappe 3 (v433): Aalstrich im Schopf bei allen Falben
+    if (sv && ekMatrix) g += `<g class="schopfTeil" transform="matrix(${ekMatrix})">${schopfNeuSVG(sv, dunKern ? dunHell : (mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane), dunKern || C.stripe || null, INK, kopfAlter)}</g>`;   // Etappe 3 (v433): Aalstrich im Schopf bei allen Falben
   } else {
-  if (fl >= 0.25) g += `<path d="${schopf ? glatt(schopf) : schopfBueschel()}" fill="${mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  if (fl >= 0.25) g += `<path class="schopfTeil" d="${schopf ? glatt(schopf) : schopfBueschel()}" fill="${mstil === "fjord" || k.mane === "fjord" ? maneOuter : mane}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
   if (fl >= 0.25 && !schopf) g += schopfStraehnen();
   g += ohr(Eb, head);
   // Comic-Auge: Weiß, Iris, Pupille, Glanzlicht, Oberlid, Braue – blinzelt

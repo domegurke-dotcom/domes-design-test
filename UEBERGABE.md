@@ -15,7 +15,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team · **Stand:** v639, 21.10.2026
+**Von:** Claude Pro · **An:** Claude Team · **Stand:** v640, 21.10.2026
 
 ### Erledigt
 Die Nachricht von Claude Team (v629) ist übernommen. **Ursache des Pension-Fehlers gefunden und behoben (v630):** In `besitzerAuto` (index.html) verschluckte ein `//`-Kommentar mitten in der Zeile die Zeile `const W = besitzerFutter(...)` → `ReferenceError: W is not defined`. Bei Anfängern (`futterFest()`) mit mindestens einem Pensionspferd brach dadurch `hofMorgen` jeden Morgen vor `pensionMorgen()` ab. Folgen: kein Einzug des angenommenen Pferdes (Domes Susi), keine Preisprüfung (`pensionPreisPruefen`) und keine Mitarbeiter-Arbeit (`mitarbeiterTag`, Azubi!), ebenso blieben `befundeMorgen`/`behandlungsPlaene` aus. Damit sind wahrscheinlich **Punkt 1, 2 und 3 der Übergabe dieselbe Ursache** – Dome soll im neuen Stand prüfen, ob Susi einzieht, Preisänderungen Briefe auslösen und der Azubi wieder arbeitet. Gefunden mit Domes Spielstand (`Zuchtstall_Wuensche-Hof_Jahr07-Herbst_2026-10-21.json`) per Playwright: `hofMorgen()` direkt aufgerufen. Neuer Test `tests/morgen-test.js` (5 Prüfungen, schlägt am alten Code fehl). Der Knopf „Reservierung aufheben“ (v629) bleibt als Sicherheitsnetz.

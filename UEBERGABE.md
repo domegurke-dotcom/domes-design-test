@@ -30,6 +30,12 @@ Alles ist auf `main` (letzter Commit „v641“), CLAUDE.md (Versionszeile 641, 
 - **v641:** im Handy quer steht das Kästchen in der Kopfzeile neben dem Geld (keine zweite Zeile).
 
 ### Offen / als Nächstes
+**Später (Dome, 21.10., alles bestätigt – nicht jetzt):**
+- Popup/Benachrichtigung, wenn neue Mitarbeiter-Berufe (z. B. Stallmeister) freigeschaltet werden (Dome: Ja, aber später).
+- „Speicher aufräumen“ bietet keine Aufnahmen an (Dome: Nein). „Besitzer informieren“ bleibt auch für Anfänger sichtbar (Dome: Nein, soll rein).
+- **Tutorial für Handy quer (844×390) optimieren, hochkant (390×844) nur bedingt gut:** prüfen und ändern (Band, Blasen, Fenster, Scroll – Screenshots in beiden Ansichten).
+- **Großer Test mit `BILDER=fehler`** (Bilder nur bei Problemen; etappen-test, hof-gesamttest, neuladen-test, dazu die kleinen Tests und Tutorial-Spieler).
+- **Test „Spieler 2“ (Studie, `tests/gesundheit-studie.js`, `STUFEN=2`) als Experte:** je 2 Jahre in den drei Spieltempi 4/7/10 Tage je Jahreszeit (`tempo`), Ergebnis berichten.
 0. **Dritte Fehler-Aufnahme (Dome, v643):** erledigt in v644/v645 bis auf (a) Reihenfolge in Kap. 3 (Dome wollte Husten selbst → Tierarzt → Klinik; jetzt Tierarzt+Hustensaft in Kap. 3, Klinik in neuem Kap. 4 – Dome fragen, ob so passt) und (c) **Spielmechanik, erst Dome fragen:** Popup, wenn neue Mitarbeiter-Berufe (z. B. Stallmeister) freigeschaltet werden.
 1. **Domes Abnahme** von v633 (Pension), v634 (Diagramm), v636 (Kamm), v639–v641 (Tutorial-Post/Versorgung, Aufnahme/Fehler melden). Neue Fehler-Aufnahmen von Dome: Datei lesen, Liste `fehler` auswerten.
 2. **Phase D (großer Test)** wartet auf Domes „weiter“ **und** ihre Wahl der Bilder-Variante (`BILDER=aus|fehler|alle`) – nie ungefragt starten.

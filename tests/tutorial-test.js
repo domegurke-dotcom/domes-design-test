@@ -16,7 +16,7 @@ const ORDNER = process.argv[2];
   if (ORDNER) await pg.screenshot({ path: `${ORDNER}/kap1.png` });
   await pg.click('#hinweisBlase'); await pg.waitForTimeout(600);
   const B = await pg.evaluate(() => blase && blase.k); ok('Erklärung antippen → Schritt „Heu geben“', B === 'tut_0_1', String(B));
-  ok('Nur das Gefragte antippbar (Wasser gesperrt, Heu erlaubt)', await pg.evaluate(() => !tutErlaubt(document.querySelector('.stufeEl .sWasser') || document.body) && tutErlaubt(document.getElementById('heuhaufen'))));
+  ok('Kapitel 1: Versorgungsflächen frei (Wasser, Heu), anderes gesperrt', await pg.evaluate(() => tutErlaubt(document.querySelector('.stufeEl .sWasser') || document.body) && tutErlaubt(document.getElementById('heuhaufen')) && !tutErlaubt(document.getElementById('kopfTagEnde') || document.body)));
   await pg.evaluate(() => { const b = spiel.boxen[0]; b.krippeVoll = true; b.kraftVoll = true; b.wasserTag = spiel.tag; b.mistig = false; spiel.tag += 1; }); await pg.waitForTimeout(900);   // v596: Kapitel 1 ist mit „Tag beenden“ fertig
   const C = await pg.evaluate(() => ({ k: blase && blase.k, kap: spiel.tutorial.kap })); ok('Ziel erreicht → Blase „Geschafft“, bleibt stehen', C.k === 'tut_fertig_0' && C.kap === 0, JSON.stringify(C));
   await pg.waitForTimeout(1200); ok('Ohne Antippen kein Weiterschalten', await pg.evaluate(() => spiel.tutorial.kap === 0));

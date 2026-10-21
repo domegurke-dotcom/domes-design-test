@@ -15,38 +15,23 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team (oder neue Pro-Sitzung) · **Stand:** v647, 21.10.2026
+**Von:** Claude Team · **An:** Claude Pro (oder neue Team-Sitzung) · **Stand:** v648, 21.10.2026
 
 ### Stand
-Alles ist auf `main` (letzter Commit „v641“), CLAUDE.md (Versionszeile 641, Einträge v630–v641) und diese Datei sind aktuell. Keine halbfertige Arbeit, keine lokalen Änderungen.
+- **v648:** Weide-Hänger im Anfänger-Tutorial Kap. 1 behoben (Schritt „Steckbrief“ holt Tutti per Schritt-Hook zurück in die Box: `vonWeideHolen`, `ortModus = null`, Stall neu zeichnen). Tutorial-Spieler anf 390×844 und 844×390 grün.
+- Domes Rückmeldung 21.10.: v634 (Diagramm) und v636 (Kamm) getestet, klappen gut. Infofeld nach Turnier-Nennen: erledigt (kein Screenshot nötig). Kap. 3 Tierarzt+Hustensaft / Kap. 4 Klinik: passt „erstmal“.
 
-### Seit der letzten Nachricht erledigt
-- **v630** Pension-Morgenrunde-Fehler (Kommentar mitten in der Zeile) behoben. **v631–v637 + v638** Tutorial-Überarbeitung komplett (Etappen A–D, Knopf „Kapitel wiederholen“). **v632** Finanzen als Aufklapp-Jahreszeiten, **v633** Pension (angebotene Leistungen, Tierarzt 1×/Tag, Besitzer informieren), **v634** Finanzen-Diagramm, **v636** Kamm über Mähne/Schopf/Schweif.
-- **v639 Tutorial:** nach jeder Nacht kontrolliert das Spiel die Post (Briefe ohne Kapitelbezug werden selbst beantwortet, Kapitelbriefe bleiben ungelesen); Mitarbeiter versorgen die Pferde außer in Anfänger-Kapitel 1+2; Blase wegtippen lässt den blauen Rahmen stehen; Turnier-Kapitel startet in Box 1 (sonst hing der Lauf bei „Pferdeanhänger“, weil die Pensionsbox aktiv war).
-- **v640 Aufnahme:** eigener Speicher `AUF` (`zuchtstall-aufnahmen`, nicht mehr im Spielstand, alte Aufnahmen wandern beim Laden hinein), Start/Ende/Liste auch im Startmenü unter „Neues Spiel“ (Kennungen `smAufnahme`/`smAufListe`, in den Einstellungen `hf…`), roter Rahmen auch im Startmenü. **Fehler melden:** rotes Kästchen in jeder Infoblase und (nur außerhalb des Tutorials) links unter der Datumsanzeige → Fenster Ja/Nein → Text → „Fertig“ → Eintrag `a: "FEHLER"` (Text `x`, Ansicht `v`, Fenster `f`, Blase `bk`/`bt`, Tutorial-Stelle `tu`, Bildgröße `px`). Download Format 2 mit Liste `fehler`. Test `tests/aufnahme-test.js [BxH] [Ordner]` (24 Prüfungen, 3 Ansichten grün).
-- **v644:** siehe Punkt 0 unter „Offen“.
-- **v643:** zweite Fehler-Aufnahme von Dome (Genetik-Schritte, Veterinäramt nach Versorgung, Tag-beenden-Ring, grüner Haken beendet Kapitel, Einkaufskorb, Fehler-Fenster mit Tastatur, Aufnahme-Namen im Startmenü) umgesetzt – Abnahme durch Dome steht aus.
-- **v642:** Fehler aus Domes erster Aufnahme (Blase stört beim Bürsten/Kämmen/Hufe, Bildschirm springt nicht zum Pferd, Genetik nicht erklärt) behoben.
-- **v641:** im Handy quer steht das Kästchen in der Kopfzeile neben dem Geld (keine zweite Zeile).
+### Geplanter Selbststart: Freitag 23.10.2026, 10:05 Uhr (Dome)
+Reihenfolge: 1) prüfen, ob alles oben Genannte fertig ist (sonst zuerst fertig machen) · 2) Popup bei Stern „selten“ im Handy quer prüfen · 3) Popup, wenn neue Mitarbeiter-Berufe freigeschaltet werden (Dome hat es ausdrücklich beauftragt) · 4) Tutorial für Handy quer + hochkant optimieren · 5) Großer Test mit `BILDER=fehler` (etappen-, hof-gesamt-, neuladen-test + kleine Tests + Tutorial-Spieler; von Dome ausdrücklich erlaubt) · 6) Test „Spieler 2“ (`tests/gesundheit-studie.js`, `STUFEN=2`) als Experte, je 2 Jahre bei 4/7/10 Tagen je Jahreszeit · Zum Schluss: offene Fragen und kompletter Bericht im Chat. Je Schritt eigener Commit auf `main`, Version hochzählen. Bei Rot nicht endlos reparieren, Ursache nennen.
 
-### Offen / als Nächstes
-**Stand 21.10. (Ende der Sitzung, Claude Pro → Claude Team) – WICHTIG:** `main` = v647 **plus ein Fehler:** die Weide-Schritte in Tutorial Kap. 1 (nach „Hufe“: Ort → Koppel → Weide → welche Weide → Info „Auf der Weide“; Dome-Wunsch) sind auf `main`, aber **das Tutorial hängt danach beim Schritt „Steckbrief“** (Tutti steht noch auf der Weide, die Reiter-Tabs der Box fehlen, Ziel `[data-m="steckbrief"]` nicht sichtbar). Aufgabe für Team: Tutti nach der Info zurück in die Box holen (z. B. Schritt-Hook am Info-Schritt: `vonWeideHolen(box)` und Ansicht `aktenModus = "steckbrief"; ortModus = null; zeigeStall(); zeigeTag()`, oder Schritt „Zurück in die Box“ über Ort → Koppel → Weide-Kachel „zurück in die Box“), dann Tutorial-Spieler anf 390×844 und 844×390 laufen lassen, Version 648, `CLAUDE.md` ergänzen. Alles andere aus v647 ist getestet (Tutorial-Spieler anf in beiden Ansichten grün vor den Weide-Schritten). Danach offen: Stern-„selten“-Popup im Handy quer prüfen (Fenster-Höhe wurde allgemein entschärft), Aufnahme mit echtem Datum/Uhrzeit (Dome fragen), die „Später“-Liste unten (Popup neue Berufe, Tutorial quer/hochkant optimieren, großer Test `BILDER=fehler`, Spieler-2-Test Experte 4/7/10).
-**Später (Dome, 21.10., alles bestätigt – nicht jetzt):**
-- Popup/Benachrichtigung, wenn neue Mitarbeiter-Berufe (z. B. Stallmeister) freigeschaltet werden (Dome: Ja, aber später).
-- „Speicher aufräumen“ bietet keine Aufnahmen an (Dome: Nein). „Besitzer informieren“ bleibt auch für Anfänger sichtbar (Dome: Nein, soll rein).
-- **Tutorial für Handy quer (844×390) optimieren, hochkant (390×844) nur bedingt gut:** prüfen und ändern (Band, Blasen, Fenster, Scroll – Screenshots in beiden Ansichten).
-- **Großer Test mit `BILDER=fehler`** (Bilder nur bei Problemen; etappen-test, hof-gesamttest, neuladen-test, dazu die kleinen Tests und Tutorial-Spieler).
-- **Test „Spieler 2“ (Studie, `tests/gesundheit-studie.js`, `STUFEN=2`) als Experte:** je 2 Jahre in den drei Spieltempi 4/7/10 Tage je Jahreszeit (`tempo`), Ergebnis berichten.
-0. **Dritte Fehler-Aufnahme (Dome, v643):** erledigt in v644/v645 bis auf (a) Reihenfolge in Kap. 3 (Dome wollte Husten selbst → Tierarzt → Klinik; jetzt Tierarzt+Hustensaft in Kap. 3, Klinik in neuem Kap. 4 – Dome fragen, ob so passt) und (c) **Spielmechanik, erst Dome fragen:** Popup, wenn neue Mitarbeiter-Berufe (z. B. Stallmeister) freigeschaltet werden.
-1. **Domes Abnahme** von v633 (Pension), v634 (Diagramm), v636 (Kamm), v639–v641 (Tutorial-Post/Versorgung, Aufnahme/Fehler melden). Neue Fehler-Aufnahmen von Dome: Datei lesen, Liste `fehler` auswerten.
-2. **Phase D (großer Test)** wartet auf Domes „weiter“ **und** ihre Wahl der Bilder-Variante (`BILDER=aus|fehler|alle`) – nie ungefragt starten.
-3. Fragen an Dome: (a) „Speicher aufräumen“ soll die Aufnahmen mit anbieten? (Sie zählen schon beim Speicherstand mit.) (b) „Besitzer informieren“ (v633) für Anfänger ausblenden – Stufen-Eintrag fehlt noch. (c) „Infofeld nach Turnier-Nennen“ wartet auf ihren Screenshot. (d) Unklar: „einheitlicher Kaufweg bei Deckanzeigen“. (e) Projekt-Chat-Thema 24 (Shampoo-Reste).
-4. Selbst gesetzte Zahlen (v633): `BES_VORSCHLAG` (Vertrauen 15 % + 60 % × Zufriedenheit + 10 % mit Personal, max. 90 %; Tierarzt-Vorschlag 50 % + 45 % × Eifer), Zufriedenheit ±6/−10/+2/−3.
+### Offen
+- Domes Abnahme von v633 (Pension), v639–v641 (Tutorial-Post/Versorgung, Aufnahme/Fehler melden), v642–v647 (Tutorial-Fehler).
+- Entschieden von Dome: „Speicher aufräumen“ bietet keine Aufnahmen an; „Besitzer informieren“ bleibt für Anfänger sichtbar (kein Stufen-Eintrag nötig).
+- Weiter offen: Frage (d) „einheitlicher Kaufweg bei Deckanzeigen“ unklar; Projekt-Chat-Thema 24 (Shampoo-Reste); Aufnahme mit echtem Datum/Uhrzeit (Dome fragen).
+- Selbst gesetzte Zahlen (v633): `BES_VORSCHLAG`, Zufriedenheit ±6/−10/+2/−3.
 
 ### Worauf achten
-- Tests, die `spiel.aufnahme(n)` nutzten, benutzen jetzt `AUF.laufend`/`AUF.liste` (spielstand-test angepasst). `spielstand-test` hatte einmal einen Zufalls-Rotlauf bei „Hinweisblase Speichern“ (Wiederholung grün).
-- Tutorial-Spieler laufen lassen nach Änderungen an Tutorial/Menüs (anf 390×844, 844×390, 1366×768; fort/exp 390×844) – alle zuletzt grün (v639).
-- Kommentare nie mitten in einer Zeile (ist mehrfach passiert); kein breites `pkill -f` (killt die eigene Shell).
+- Kommentare nie mitten in einer Zeile; kein breites `pkill -f`. Tutorial-Spieler nie parallel.
 
 ---
 ### Protokoll (Details je Version, chronologisch)

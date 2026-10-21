@@ -15,20 +15,31 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team · **Stand:** v640, 21.10.2026
+**Von:** Claude Pro · **An:** Claude Team (oder neue Pro-Sitzung) · **Stand:** v641, 21.10.2026
 
-### Erledigt
-Die Nachricht von Claude Team (v629) ist übernommen. **Ursache des Pension-Fehlers gefunden und behoben (v630):** In `besitzerAuto` (index.html) verschluckte ein `//`-Kommentar mitten in der Zeile die Zeile `const W = besitzerFutter(...)` → `ReferenceError: W is not defined`. Bei Anfängern (`futterFest()`) mit mindestens einem Pensionspferd brach dadurch `hofMorgen` jeden Morgen vor `pensionMorgen()` ab. Folgen: kein Einzug des angenommenen Pferdes (Domes Susi), keine Preisprüfung (`pensionPreisPruefen`) und keine Mitarbeiter-Arbeit (`mitarbeiterTag`, Azubi!), ebenso blieben `befundeMorgen`/`behandlungsPlaene` aus. Damit sind wahrscheinlich **Punkt 1, 2 und 3 der Übergabe dieselbe Ursache** – Dome soll im neuen Stand prüfen, ob Susi einzieht, Preisänderungen Briefe auslösen und der Azubi wieder arbeitet. Gefunden mit Domes Spielstand (`Zuchtstall_Wuensche-Hof_Jahr07-Herbst_2026-10-21.json`) per Playwright: `hofMorgen()` direkt aufgerufen. Neuer Test `tests/morgen-test.js` (5 Prüfungen, schlägt am alten Code fehl). Der Knopf „Reservierung aufheben“ (v629) bleibt als Sicherheitsnetz.
+### Stand
+Alles ist auf `main` (letzter Commit „v641“), CLAUDE.md (Versionszeile 641, Einträge v630–v641) und diese Datei sind aktuell. Keine halbfertige Arbeit, keine lokalen Änderungen.
 
-### Tutorial-Überarbeitung: Stand v631
-Etappe A und **B fertig** (Zwei Pferde im Pension-Kapitel, Hauptmenü-Kapitel, Mitarbeiter ohne Sperre, Boxstufen nach Dritteln). Tutorial-Spieler anf 390×844, 844×390 (beim ersten Lauf zufälliger Hänger bei „Hufe“, Wiederholung grün) und 1366×768 grün, `tutorial-test` grün. **Etappe D (v635) und C (v637) fertig – Tutorial-Überarbeitung komplett.** Kamm (v636) für Mähne, Schopf und Schweif mit Touch-Test. **Noch offen:** zurückgestellt: Infofeld nach Turnier-Nennen, Kamm-Zone Handy.
-### Von Dome gewünscht und gebaut (21.10.)
-v632 Finanzen als Aufklapp-Jahreszeiten, v633 Pension (nicht angebotene Leistungen, Tierarzt 1×/Tag, Besitzer informieren + Behandlung vorschlagen, Rückmeldung zur Einschätzung, Fenster ohne {du|Sie}-Reste). Zahlen selbst gesetzt: siehe CLAUDE.md v633. Domes Abnahme steht aus.
-Phase D (großer Test) wartet weiter auf Domes „weiter“.
+### Seit der letzten Nachricht erledigt
+- **v630** Pension-Morgenrunde-Fehler (Kommentar mitten in der Zeile) behoben. **v631–v637 + v638** Tutorial-Überarbeitung komplett (Etappen A–D, Knopf „Kapitel wiederholen“). **v632** Finanzen als Aufklapp-Jahreszeiten, **v633** Pension (angebotene Leistungen, Tierarzt 1×/Tag, Besitzer informieren), **v634** Finanzen-Diagramm, **v636** Kamm über Mähne/Schopf/Schweif.
+- **v639 Tutorial:** nach jeder Nacht kontrolliert das Spiel die Post (Briefe ohne Kapitelbezug werden selbst beantwortet, Kapitelbriefe bleiben ungelesen); Mitarbeiter versorgen die Pferde außer in Anfänger-Kapitel 1+2; Blase wegtippen lässt den blauen Rahmen stehen; Turnier-Kapitel startet in Box 1 (sonst hing der Lauf bei „Pferdeanhänger“, weil die Pensionsbox aktiv war).
+- **v640 Aufnahme:** eigener Speicher `AUF` (`zuchtstall-aufnahmen`, nicht mehr im Spielstand, alte Aufnahmen wandern beim Laden hinein), Start/Ende/Liste auch im Startmenü unter „Neues Spiel“ (Kennungen `smAufnahme`/`smAufListe`, in den Einstellungen `hf…`), roter Rahmen auch im Startmenü. **Fehler melden:** rotes Kästchen in jeder Infoblase und (nur außerhalb des Tutorials) links unter der Datumsanzeige → Fenster Ja/Nein → Text → „Fertig“ → Eintrag `a: "FEHLER"` (Text `x`, Ansicht `v`, Fenster `f`, Blase `bk`/`bt`, Tutorial-Stelle `tu`, Bildgröße `px`). Download Format 2 mit Liste `fehler`. Test `tests/aufnahme-test.js [BxH] [Ordner]` (24 Prüfungen, 3 Ansichten grün).
+- **v641:** im Handy quer steht das Kästchen in der Kopfzeile neben dem Geld (keine zweite Zeile).
+
+### Offen / als Nächstes
+1. **Domes Abnahme** von v633 (Pension), v634 (Diagramm), v636 (Kamm), v639–v641 (Tutorial-Post/Versorgung, Aufnahme/Fehler melden). Neue Fehler-Aufnahmen von Dome: Datei lesen, Liste `fehler` auswerten.
+2. **Phase D (großer Test)** wartet auf Domes „weiter“ **und** ihre Wahl der Bilder-Variante (`BILDER=aus|fehler|alle`) – nie ungefragt starten.
+3. Fragen an Dome: (a) „Speicher aufräumen“ soll die Aufnahmen mit anbieten? (Sie zählen schon beim Speicherstand mit.) (b) „Besitzer informieren“ (v633) für Anfänger ausblenden – Stufen-Eintrag fehlt noch. (c) „Infofeld nach Turnier-Nennen“ wartet auf ihren Screenshot. (d) Unklar: „einheitlicher Kaufweg bei Deckanzeigen“. (e) Projekt-Chat-Thema 24 (Shampoo-Reste).
+4. Selbst gesetzte Zahlen (v633): `BES_VORSCHLAG` (Vertrauen 15 % + 60 % × Zufriedenheit + 10 % mit Personal, max. 90 %; Tierarzt-Vorschlag 50 % + 45 % × Eifer), Zufriedenheit ±6/−10/+2/−3.
+
+### Worauf achten
+- Tests, die `spiel.aufnahme(n)` nutzten, benutzen jetzt `AUF.laufend`/`AUF.liste` (spielstand-test angepasst). `spielstand-test` hatte einmal einen Zufalls-Rotlauf bei „Hinweisblase Speichern“ (Wiederholung grün).
+- Tutorial-Spieler laufen lassen nach Änderungen an Tutorial/Menüs (anf 390×844, 844×390, 1366×768; fort/exp 390×844) – alle zuletzt grün (v639).
+- Kommentare nie mitten in einer Zeile (ist mehrfach passiert); kein breites `pkill -f` (killt die eigene Shell).
 
 ---
 ### Protokoll (Details je Version, chronologisch)
-**Offen – Tutorial-Überarbeitung nach Domes Test von v597 (4 Etappen, noch nicht begonnen außer unten):**
+**Tutorial-Überarbeitung nach Domes Test von v597 (Etappen A–D inzwischen alle fertig, siehe oben; Einzelheiten):**
 - **Antworten von Dome:** (1) Natursprung/Besamung: Zahlen so lassen (in echt ähnliche Chance, Unterschied bei Kosten/Verletzung/Hengstwahl) – nur im Tutorial erklären. (2) Boxstufen im Tutorial: alle Schritte mit sichtbarer Box zählen, in drei gleiche, aufsteigende Drittel teilen (Stufe 1, 2, 3), für alle Erfahrungsstufen. (3) Pferd lehnt Hustensaft beim ersten Mal ab, Tutorial zeigt, was dann zu tun ist.
 - **Etappe A (Opus):** Tutorial-Pferde immer versorgt (Heu, Krippe, Wasser, Einstreu), Spieler füttert/mistet/putzt selbst; Kamm-Ziel (Hinweis zeigte neben das Pferd statt auf Mähne/Schweif); Steckbrief/Daten/Merkmale erklären und freigeben; Box-1-Klick zum Stall sperren; zu früh gesetzte Haken (Anfänger Kap. 8, Fort Kap. 1); Pferde-Sprechblase bleibt bis gelesen; Blase auf Brief-Popup, Info im Brief „am besten gleich bezahlen“, Stern anklickbar; Heunetz-leer-Bild Stufe 3, Kraftfutter-Krippe wie Stufe 2; **echter Spielfehler: Turnier-Nennen-Akkordeon öffnet alle genannten Turniere, Infofeld kommt immer wieder**; Pferdebild auch verschiebbar (Zoom); einheitlicher Kaufweg (Pferd direkt anzeigen, auch bei Deckanzeigen).
 - **Etappe B (Sonnet, Anfänger Kap. 1–6):** Einstreu kaufen/auffüllen; Kap. 3 über zwei Tage mit Hustensaft (Stallapotheke, Weigern); Bereiter-Satz Kap. 4 klären; Kap. 5 Pferdevorschau im Brief, „Zwei Pferde“ hinein, Ende mit voller Versorgung; neues Kapitel Hauptmenü (Gnadenhof, Friedhof, alle Hofverwaltungs-Karten); Mitarbeiter ohne Einschränkung auf einen Stallburschen.

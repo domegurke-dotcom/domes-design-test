@@ -15,7 +15,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team (oder neue Pro-Sitzung) · **Stand:** v645, 21.10.2026
+**Von:** Claude Pro · **An:** Claude Team (oder neue Pro-Sitzung) · **Stand:** v646, 21.10.2026
 
 ### Stand
 Alles ist auf `main` (letzter Commit „v641“), CLAUDE.md (Versionszeile 641, Einträge v630–v641) und diese Datei sind aktuell. Keine halbfertige Arbeit, keine lokalen Änderungen.

@@ -1050,7 +1050,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "645";
+  const SPIEL_VERSION = "646";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1058,11 +1058,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=645"></script>
-<script src="pferd.js?v=645"></script>
-<script src="boxstufen.js?v=645"></script>
-<script src="kopfneu.js?v=645"></script>
-<script src="waschbild.js?v=645"></script>
+<script src="lz-string.min.js?v=646"></script>
+<script src="pferd.js?v=646"></script>
+<script src="boxstufen.js?v=646"></script>
+<script src="kopfneu.js?v=646"></script>
+<script src="waschbild.js?v=646"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -6262,6 +6262,15 @@
   }
   // Versorgung: Befunde, Auffälligkeiten mit Einschätzungen und der Tierarzt-Knopf
   let bfWahl = null;   // Befund, für den gerade „selbst einschätzen“ offen ist
+  // Dome 21.10.: beim Selbst-Einschätzen nicht alle Krankheiten zeigen – nur die richtige und mindestens 3 ähnliche (gleicher Bereich zuerst, sonst mit anderen aufgefüllt; fest je Befund)
+  const bfHash = t => { let h = 7; for (const c of String(t)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
+  const BF_ANZAHL_AEHNLICH = 3;
+  function bfOptionen(b) {
+    const K0 = KRANK[b.art]; if (!K0) return Object.keys(KRANK);
+    const sort = L => L.sort((x, y) => bfHash(b.id + x) - bfHash(b.id + y));
+    const gleich = sort(Object.keys(KRANK).filter(k => k !== b.art && KRANK[k].bereich === K0.bereich)), rest = sort(Object.keys(KRANK).filter(k => k !== b.art && KRANK[k].bereich !== K0.bereich));
+    return sort([b.art, ...[...gleich, ...rest].slice(0, BF_ANZAHL_AEHNLICH)]);
+  }
   const tageTxt2 = n => `${n} ${n === 1 ? "Tag" : "Tagen"}`;
   function befundZeilen(p) {
     return bekannteBefunde(p).filter(b => b.diagnose).map(b => { const K = KRANK[b.art], seit = spiel.tag - b.seit;
@@ -6335,7 +6344,7 @@
         ${b.vermutung ? `<p class="bf-annahme">Deine Annahme: <b>${KRANK[b.vermutung.art].n}</b>${b.vermutung.von !== "du" ? ` (du vertraust ${esc(b.vermutung.von)})` : ""} – sicher weiß es nur der Tierarzt. Eigene Behandlungen kommen bald.</p>` : ""}
         ${fremd(p) ? besVorschlagHTML(p, b) : ""}
         <div class="bf-knoepfe">${frag.length ? frag.map(m => `<button class="mini-knopf" data-bffrag="${b.id}:${m.id}">🗣️ ${esc(m.name)} fragen</button>`).join("") : ""}<button class="mini-knopf" data-bfselbst="${b.id}">🤔 selbst einschätzen</button></div>
-        ${bfWahl === b.id ? `<div class="bf-wahl">${Object.entries(KRANK).map(([k, K]) => `<button class="mini-knopf" data-bfwahl="${b.id}:${k}">${K.ico} ${K.n}</button>`).join("")}</div>` : ""}
+        ${bfWahl === b.id ? `<div class="bf-wahl">${bfOptionen(b).map(k => { const K = KRANK[k]; return `<button class="mini-knopf" data-bfwahl="${b.id}:${k}">${K.ico} ${K.n}</button>`; }).join("")}</div>` : ""}
       </div>`; }).join("");
     const krankAnst = bekannteBefunde(p).some(b => ANSTECKEND[b.art] && b.diagnose), maListe = (spiel.mitarbeiter || []).map(maErgaenzen).filter(m => maAktiv(m) && ["stallbursche", "pfleger", "azubi", "pferdewirtHS"].includes(m.typ));
     const nurDa = maListe.find(m => m.nurFuer === p.id);
@@ -15627,6 +15636,16 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         ["Heu geben", "Das Heu ist da: Tippe in der Box auf das Heu. Ab Box-Stufe 2 hängt es im Heunetz.", "@heu", b => b.krippeVoll],
         ["Futtereimer", "Und der Futtereimer für das Mineralfutter.", ".stufeEl .sKrippe, #krippe", b => b.kraftVoll || !kraftNoetig(b.pferd, b)]],
       fertig: b => b.krippeVoll && (b.kraftVoll || !kraftNoetig(b.pferd, b)) && spiel.tag > spiel.tutorial.tag0 },
+    { n: "Schürfwunde", ziel: "Eine Schramme selbst behandelt", neu: () => { const b = spiel.boxen[0]; b.pferd = TUT_PFERD({ rasse: "friese", geschlecht: "Stute", alter: 7, name: "Fenna" }); tutVersorgt(b); tutLagerFuellen(); const A = apotheke(); A.wundsalbe = Math.max(A.wundsalbe || 0, 3); A.verband = Math.max(A.verband || 0, 3);
+        befundNeu(b.pferd, "verletzung", 1, "in der Box angeschlagen", "du"); const B1 = b.pferd.befunde.find(x => x.art === "verletzung"); if (B1) { B1.bemerkt = { von: "du", tag: spiel.tag }; delete B1.inkub; B1.heilt = spiel.tag + 12; } },   // Dome 21.10.: erst eine Kleinigkeit selbst behandeln (Wunde), dann Husten, dann Klinik
+      schritte: [["Eine Schürfwunde", "Fenna hat sich am Bein geschrammt. Kleine Wunden behandelst du selbst – der Tierarzt ist dafür nicht nötig. Schau erst, was sie hat: Pferdepflege → Versorgung.", null, () => false, true],
+        ["Versorgung", "Tippe unten auf „Pferdepflege“ und dann auf „Versorgung“.", "[data-r=\"gesundheit\"], [data-m=\"pflege\"]", () => aktenModus === "pflege" && aktenReiter === "gesundheit"],
+        ["Selbst einschätzen", "Du siehst, dass Fenna sich am Bein etwas getan hat, weißt aber nicht genau, was. Tippe auf „selbst einschätzen“.", "[data-bfselbst]", () => !!document.querySelector("[data-bfwahl]") || (spiel.boxen[0].pferd.befunde || []).some(x => x.vermutung)],
+        ["Was ist es?", "Du bekommst die richtige Möglichkeit und ein paar ähnliche zur Auswahl – das gilt im ganzen Spiel. Wähle „Verletzung“.", "[data-bfwahl$=\":verletzung\"]", b => (b.pferd.befunde || []).some(x => x.vermutung && x.vermutung.art === "verletzung")],
+        ["Wundsalbe", "Unter „Behandlung heute“ tippe auf „Wundsalbe“ – sie ist schon im Vorrat.", "[data-beh=\"wundsalbe\"]", b => !!behHeute(b.pferd).a.wundsalbe],
+        ["Verband", "Jetzt noch einen Verband: tippe auf „Verband“.", "[data-beh=\"verband\"]", b => !!behHeute(b.pferd).a.verband],
+        ["Gut gemacht", "So heilt eine kleine Schramme in ein paar Tagen. Wird die Wunde dick, warm oder eitert sie, oder weißt du nicht weiter: dann den Tierarzt rufen – das üben wir gleich beim nächsten Pferd.", null, () => false, true]],
+      fertig: () => false },
     { n: "Krankes Pony", ziel: "Tierarzt gerufen und Brief gelesen", post: true, brief: br => br.von === "Tierarztpraxis", neu: () => { const b = spiel.boxen[0]; b.pferd = TUT_PFERD({ rasse: "shetty", geschlecht: "Stute", alter: 12, name: "Krümel" }); tutVersorgt(b); tutLagerFuellen(); (spiel.post || []).forEach(x => { x.gelesen = true; }); befundNeu(b.pferd, "husten", 2, "Stallluft", "du"); const B2 = b.pferd.befunde.find(x => x.art === "husten"); if (B2) { B2.bemerkt = { von: "du", tag: spiel.tag }; delete B2.inkub; } b.pferd.tutWehr = true; spiel.ausruestung = spiel.ausruestung || {}; spiel.ausruestung.medizin = true; setTimeout(() => reaktionZeigen("hustet ab und zu"), 700); },
       schritte: [["Woran du es merkst", "Ab jetzt versorgen deine Mitarbeiter die Pferde im Tutorial – du kümmerst dich um das, was in diesem Kapitel gefragt ist. Krümel hustet – das zeigt sie dir mit der Sprechblase im Stall (sie bleibt, bis du sie antippst). Krankheit erkennst du an: frisst nicht, steht teilnahmslos da, hustet, lahmt, schwitzt ohne Grund. Meist zeigt es eine Sprechblase im Stall oder die Pferdepflege → Versorgung.", null, () => false, true],
         ["Versorgung", "Unter Pferdepflege → Versorgung siehst du, was los ist.", "[data-r=\"gesundheit\"], [data-m=\"pflege\"]", () => aktenModus === "pflege" && aktenReiter === "gesundheit"],

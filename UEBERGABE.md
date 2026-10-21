@@ -15,7 +15,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Pro · **An:** Claude Team (oder neue Pro-Sitzung) · **Stand:** v644, 21.10.2026
+**Von:** Claude Pro · **An:** Claude Team (oder neue Pro-Sitzung) · **Stand:** v645, 21.10.2026
 
 ### Stand
 Alles ist auf `main` (letzter Commit „v641“), CLAUDE.md (Versionszeile 641, Einträge v630–v641) und diese Datei sind aktuell. Keine halbfertige Arbeit, keine lokalen Änderungen.
@@ -30,7 +30,7 @@ Alles ist auf `main` (letzter Commit „v641“), CLAUDE.md (Versionszeile 641, 
 - **v641:** im Handy quer steht das Kästchen in der Kopfzeile neben dem Geld (keine zweite Zeile).
 
 ### Offen / als Nächstes
-0. **Dritte Fehler-Aufnahme (Dome, v643) – noch NICHT umgesetzt:** (a) Kap. 3 „Krankes Pony“ erweitern: erst Husten selbst behandeln, dann ein schwer krankes Pferd (Tierarzt rufen), dann ein Pferd unter 30 % Gesundheit (Klinik) – Dome will alles einmal gemacht haben. (b) Kap. 6 Gnadenhof/Friedhof: Beispielpferde hineinlegen, damit man etwas sieht. (c) **Spielmechanik, erst Dome fragen:** Popup/Benachrichtigung, wenn neue Mitarbeiter-Berufe (z. B. Stallmeister) freigeschaltet werden. Erledigt in v644: Rechnung-bezahlen-Schritt, Kap. 4 Fertig-Bedingung + Bereiter-Text, Einsteller-Box, Hof→Reiter→Pferde.
+0. **Dritte Fehler-Aufnahme (Dome, v643):** erledigt in v644/v645 bis auf (a) Reihenfolge in Kap. 3 (Dome wollte Husten selbst → Tierarzt → Klinik; jetzt Tierarzt+Hustensaft in Kap. 3, Klinik in neuem Kap. 4 – Dome fragen, ob so passt) und (c) **Spielmechanik, erst Dome fragen:** Popup, wenn neue Mitarbeiter-Berufe (z. B. Stallmeister) freigeschaltet werden.
 1. **Domes Abnahme** von v633 (Pension), v634 (Diagramm), v636 (Kamm), v639–v641 (Tutorial-Post/Versorgung, Aufnahme/Fehler melden). Neue Fehler-Aufnahmen von Dome: Datei lesen, Liste `fehler` auswerten.
 2. **Phase D (großer Test)** wartet auf Domes „weiter“ **und** ihre Wahl der Bilder-Variante (`BILDER=aus|fehler|alle`) – nie ungefragt starten.
 3. Fragen an Dome: (a) „Speicher aufräumen“ soll die Aufnahmen mit anbieten? (Sie zählen schon beim Speicherstand mit.) (b) „Besitzer informieren“ (v633) für Anfänger ausblenden – Stufen-Eintrag fehlt noch. (c) „Infofeld nach Turnier-Nennen“ wartet auf ihren Screenshot. (d) Unklar: „einheitlicher Kaufweg bei Deckanzeigen“. (e) Projekt-Chat-Thema 24 (Shampoo-Reste).

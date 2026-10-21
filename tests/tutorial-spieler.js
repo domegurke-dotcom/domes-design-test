@@ -17,6 +17,7 @@ const [W, H] = (process.argv[2] || '390x844').split('x').map(Number), O = proces
   for (let i = 0; i < 400; i++) {
     const s = await st(); if (s.ende) break;
     if (s.dlg && /Tutorial (geschafft|beendet)/.test(s.dlg)) { ende = true; break; }
+    if (!s.dlg && await pg.evaluate(() => spiel.tutorial && spiel.tutorial.geschafft === spiel.tutorial.kap && !document.getElementById('tutHaken').hidden)) { await pg.waitForTimeout(500); await pg.click('#tutHaken'); await pg.waitForTimeout(1200); continue; }   // grüner Haken beendet das Kapitel
     const key = JSON.stringify([s.kap, s.schritt, s.k, s.dlg]); if (key === alt) gleich++; else { gleich = 0; alt = key; nr++; if (process.env.LAUT) console.log(nr, JSON.stringify(s)); if (O) await pg.screenshot({ path: `${O}/${SET}-${W}-${String(nr).padStart(3, '0')}.png` }); }
     if (gleich > 9) { haenger.push(`Kapitel ${s.kap + 1} Schritt „${s.titel}“`); if (O) await pg.screenshot({ path: `${O}/${SET}-${W}-HAENGT-${s.kap}.png` }); await pg.click('#tutKapWeg').catch(() => {}); gleich = 0; await pg.waitForTimeout(1300); continue; }
     if (s.dlg && (await pg.evaluate(() => spiel.tutorial && spiel.tutorial.geschafft === spiel.tutorial.kap))) { await pg.evaluate(() => { const k = [...document.querySelectorAll('#dlgKnoepfe button')].find(x => /Schließen|Abbrechen|Zurück/.test(x.textContent)); if (k) k.click(); else document.getElementById('dlg').hidden = true; }); await pg.waitForTimeout(600); continue; }

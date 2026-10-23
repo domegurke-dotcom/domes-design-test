@@ -20,7 +20,8 @@ const B = require('./bilder');   // Bilder-Schalter: BILDER=aus|fehler|alle, sie
       spiel.stufenAn = false; Object.keys(VET.verbotAb).forEach(k => { VET.verbotAb[k] = 99; });   // kein Tierhalteverbot mitten im Test (die Test-Pferde werden nicht immer versorgt);   // v650: neue Spiele starten mit Stufen-Sperre (Anfänger) – dieser Test prüft das ganze Spiel
       const L = [], ok = (name, bed, info = '') => L.push([bed ? '✓' : '✗', ansicht, name, info]);
       const nacht = n => { for (let i = 0; i < n; i++) { spiel.boxen.forEach(bx => { const q = bx.pferd; if (!q || bx.tot || q.klinik) return; fuetternAusLager(bx, 'du'); bx.krippeVoll = true; bx.mistig = false; bx.mistStufe = 0;   // auch Weide-Heu
-          q.befunde = []; if (q.pflege) q.pflege.gesundheit = Math.max(q.pflege.gesundheit, 80); }); naechsteNacht(); } };   // Tierarzt kümmert sich – hier geht es um die Abläufe
+          q.befunde = []; if (q.pflege) q.pflege.gesundheit = Math.max(q.pflege.gesundheit, 80); bx.zuletzt = q; }); const fr0 = (spiel.friedhof || []).length; naechsteNacht();
+          spiel.boxen.forEach(bx => { if (bx.zuletzt && (!bx.pferd || bx.tot) && (spiel.friedhof || []).slice(fr0).some(g => g.pferd === bx.zuletzt)) { bx.pferd = bx.zuletzt; bx.tot = false; bx.pferd.befunde = []; if (bx.pferd.pflege) bx.pferd.pflege.gesundheit = 80; } delete bx.zuletzt; }); if (spiel.friedhof) spiel.friedhof.length = Math.min(spiel.friedhof.length, fr0); } };   // v653: zufällig gestorbene Test-Pferde (Kolik, Alter) wieder in die Box – sonst stürzt der Test später ab   // Tierarzt kümmert sich – hier geht es um die Abläufe
       const zu = () => { $('dlg').hidden = true; };
       const ansehen = (name, f) => { try { f(); ok(name + ' öffnet ohne Fehler', true); } catch (e) { ok(name + ' öffnet ohne Fehler', false, e.message); } zu(); };
 

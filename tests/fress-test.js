@@ -67,6 +67,16 @@ const [W, H] = (process.argv[2] || '390x844').split('x').map(Number), ORD = proc
   }
   if (ORD) { await pg.evaluate(() => document.getElementById('stall').scrollIntoView({ block: 'center' })); await pg.screenshot({ path: `${ORD}/fress_box_krippe_${W}x${H}.png` }); }
 
+  // 3c. Matte Pferde fressen aus ihrer Haltung, liegende nicht
+  for (const [g, soll] of [[50, true], [25, true], [10, false]]) {
+    await vorbereiten(); await pg.evaluate(g => { B().pferd.pflege.gesundheit = g; zeigeStall(); zeigeTag(); document.getElementById('heuhaufen').dispatchEvent(new MouseEvent('click', { bubbles: true })); document.getElementById('dlg').hidden = true; }, g);
+    await pg.waitForTimeout(1300);
+    const x = await pg.evaluate(() => [haltungFuer(B().pferd), !!fressBox, Number((document.getElementById('pferdKoerper') || {}).dataset ? document.getElementById('pferdKoerper').dataset.senk || 0 : -1)]);
+    ok(`Gesundheit ${g} % (${x[0]}): ${soll ? 'frisst mit gesenktem Kopf' : 'liegt – keine Animation'}`, soll ? x[1] && x[2] === 1 : !x[1], x);
+    if (ORD && g === 25) await pg.screenshot({ path: `${ORD}/fress_box_matt_${W}x${H}.png` });
+    await pg.evaluate(() => fressStop());
+  }
+
   // 4. Weide: alle Pferde grasen, aber nicht alle zugleich
   const weide = await pg.evaluate(async () => { fressStop(); spiel.sparmodus = false;
     const w = weiden()[0]; if (!w) return { fehlt: true }; w.gras = 80; const ps = [];

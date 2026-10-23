@@ -774,11 +774,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const kappe = add(kamm(0.9), mul(nOut, -3));
   if ((fastWeiss && C.pattern !== "splash") || DW >= 2) {
     const rf = zufall((opt.seed || rasseId) + (DW >= 2 ? "-dw" : "-fastweiss")), pa = DW >= 2 ? "dw" : C.pattern;
-    const W_ = { tobiano: [.85, .5, .35, 0], tovero: [.9, .3, 0, 0], sabino: [.6, .2, .2, .5], overo: [.7, .3, .2, .7], dw: [.5, .2, .3, .6] }[pa];   // Chance: Kappe, Brustschild, Flankenfleck, Flecken auf dem Rücken
+    const W_ = { tobiano: [.85, .5, .35, 0], tovero: [1, .9, 0, 0], sabino: [.6, .2, .2, .5], overo: [.7, .3, .2, .7], dw: [.5, .2, .3, .6] }[pa];   // Chance: Kappe, Brustschild, Flankenfleck, Flecken auf dem Rücken
     let rest = "";
     if (DW !== 3) {
-      if (rf() < W_[0]) rest += klecks(rf, kappe.x, kappe.y, 0.09 * L, 0.15 * D);
-      if (rf() < W_[1]) rest += klecks(rf, 0.01 * L, top + 0.42 * D, 0.06 * L, 0.18 * D);
+      if (rf() < W_[0]) rest += pa === "tovero" ? klecks(rf, kappe.x - 0.01 * L, kappe.y + 0.04 * D, 0.14 * L, 0.22 * D) : klecks(rf, kappe.x, kappe.y, 0.09 * L, 0.15 * D);   // v730 (Dome): Medicine Hat = deutliche „Kappe“ im Genick plus Brustschild
+      if (rf() < W_[1]) rest += pa === "tovero" ? klecks(rf, 0.02 * L, top + 0.45 * D, 0.09 * L, 0.26 * D) : klecks(rf, 0.01 * L, top + 0.42 * D, 0.06 * L, 0.18 * D);
       if (rf() < W_[2]) rest += klecks(rf, (0.6 + rf() * 0.25) * L, top + 0.35 * D, 0.08 * L, 0.2 * D);
       if (rf() < W_[3]) { rest += klecks(rf, (0.3 + rf() * 0.1) * L, top + 0.1 * D, 0.11 * L, 0.17 * D); if (rf() < .6) rest += klecks(rf, (0.72 + rf() * 0.1) * L, top + 0.12 * D, 0.09 * L, 0.18 * D); }
     }

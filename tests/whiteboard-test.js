@@ -9,8 +9,8 @@ const [W, H] = (process.argv[2] || '844x390').split('x').map(Number), ORD = proc
   const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : ''));
   let R = await pg.evaluate(() => { const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : ''));
     document.getElementById('dlg').hidden = true; speicherSperre = true; spiel.tippsAus = true; VET.verbotAb = 99; spiel.geld = 20000;
-    spiel.stufenAn = true; spiel.spieler.stufe = 'anf'; zeigeBoxen(); ok('Anfänger: kein Whiteboard-Knopf', !document.getElementById('wbUmschalt'));
-    spiel.spieler.stufe = 'fort'; zeigeBoxen(); ok('Fortgeschritten: Knopf „Whiteboard“', !!document.getElementById('wbUmschalt'));
+    spiel.stufenAn = true; spiel.spieler.stufe = 'anf'; zeigeBoxen(); ok('Anfänger: alte Boxenansicht, kein Whiteboard', !document.getElementById('wbUmschalt') && !document.querySelector('.wb') && !!document.querySelector('.boxen-liste'));
+    spiel.spieler.stufe = 'fort'; zeigeBoxen(); ok('Fortgeschritten: Stall zeigt direkt das Whiteboard', !!document.querySelector('.wb') && !document.getElementById('wbUmschalt'));
     while (spiel.boxen.length < 4) spiel.boxen.push({ pferd: null });
     const mk = (n, g) => { const P = neuesPferd({ rasse: 'paint', geschlecht: g, alter: 8, name: n }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); return P; };
     ['Anna', 'Berta', 'Cora', 'Dora'].forEach((n, i) => { spiel.boxen[i].pferd = mk(n, 'Stute'); spiel.boxen[i].krippeVoll = true; });
@@ -66,5 +66,5 @@ const [W, H] = (process.argv[2] || '844x390').split('x').map(Number), ORD = proc
   ok('Kein waagerechtes Scrollen der Seite', await pg.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), await pg.evaluate(() => document.documentElement.scrollWidth + ' > ' + innerWidth));
   if (ORD) { await pg.screenshot({ path: ORD + `/wb-${W}x${H}.png` }); await pg.evaluate(() => { const r = document.querySelector('.wb-weiden'); if (r) r.scrollIntoView(); }); await pg.waitForTimeout(150); await pg.screenshot({ path: ORD + `/wb-${W}x${H}-weide.png` }); }
   await pg.click('#wbZurueck'); ok('Zurück zur Übersicht', await pg.evaluate(() => !!document.querySelector('.wb-uebersicht')));
-  await pg.click('#wbUmschalt'); ok('Zurück zur Boxenansicht', await pg.evaluate(() => !document.querySelector('.wb') && !!document.querySelector('.boxen-liste')));
+  ok('Stall öffnet direkt das Whiteboard (keine alte Boxenansicht mehr)', await pg.evaluate(() => { zeigeBoxen(); return !!document.querySelector('.wb') && !document.querySelector('.boxen-liste') && !document.getElementById('wbUmschalt'); }));
   out.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(out.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

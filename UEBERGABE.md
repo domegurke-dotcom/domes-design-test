@@ -29,6 +29,8 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 | Pflichttest/Quarantäne für Kontaktpferde | ✅ v685–v690 |
 | Info, was ein Reitplatz-Ausbau bringt | ✅ v685–v690 |
 | Weidefarbe nach Zustand, Rahmen um Mitarbeiter-Weide, Hinweis Bauer mäht, rechtzeitige Futter-Warnung | ✅ v685–v690 |
+| Besitzer sauer bei vergessenem Mähne/Schopf-Schneiden | ✅ v690 |
+- **Stand:** alle Punkte der Wunschliste fertig (v679–v690). Wartet auf Dome: Fragen in `OFFENE-FRAGEN.md`, Entscheidung über Update-Fenster (`NEUES`, seit v677 nichts ausgewählt), große Tests nur nach Wahl der BILDER-Variante.
 | „wirkt lockerer“ deutlicher, Dreck auf dunklen Pferden, Glanz nach dem Duschen | ✅ v685–v690 |
 - Selbst gesetzte Zahlen und zwei schon vorher rote Tests stehen in `OFFENE-FRAGEN.md` (Abschnitt „Nachtsitzung 23.10.“). Am Ende: alle Fragen gemeinsam an Dome, dann fragen, ob ein Update-Fenster kommen soll (seit v677 nichts ausgewählt).
 

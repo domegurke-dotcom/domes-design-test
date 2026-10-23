@@ -1055,7 +1055,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "660";
+  const SPIEL_VERSION = "661";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1063,11 +1063,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=660"></script>
-<script src="pferd.js?v=660"></script>
-<script src="boxstufen.js?v=660"></script>
-<script src="kopfneu.js?v=660"></script>
-<script src="waschbild.js?v=660"></script>
+<script src="lz-string.min.js?v=661"></script>
+<script src="pferd.js?v=661"></script>
+<script src="boxstufen.js?v=661"></script>
+<script src="kopfneu.js?v=661"></script>
+<script src="waschbild.js?v=661"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -13108,13 +13108,22 @@
   const VERFALL = [0, 4, 2.5, 1.5];          // Zustand-Punkte je Jahreszeit nach Stufe
   const UNTERHALT = 0.01, UMBAU_AUFSCHLAG = 0.2, HOFHELFER_REPARATUR = 3;   // je Arbeitstag (Standardtempo)
   // Gebäude des Hofs (ältere Spielstände: aus Boxen und Anlagen erzeugt)
+  // v661 (Dome 23.10.): alle Zäune verfallen und müssen repariert werden – auch der Zaun der Weide, die von Anfang an da ist (bekommt einmal je Hof ein eigenes „Weide einzäunen“-Gebäude)
+  function zaeuneErgaenzen() {
+    const H = spiel.hof; if (!H || H.zaunV === 1 || !spiel.gebaeude) return; H.zaunV = 1;
+    const w = (spiel.weiden || []).find(x => x.wid === "w1") || (!spiel.weiden && (H.weideHa || 0) > 0 ? { wid: "w1", ha: H.weideHa } : null); if (!w) return;
+    const G = spiel.gebaeude; if (G.some(g => g.typ === "weide" && g.wid === "w1")) return;
+    const dazu = G.filter(g => g.typ === "weide" && g.ziel === "w1").reduce((a, g) => a + (g.ha || 0), 0), ha = Math.round((w.ha - dazu) * 100) / 100; if (ha <= 0) return;
+    const st = H.stufe || 1; G.push({ gid: "g" + Math.random().toString(36).slice(2, 8), typ: "weide", stufe: 1, zustand: st === 1 ? 85 : 95, ha, wid: "w1", preis: BAUTEN.weide.preis[0] * ha });
+  }
   function gebaeude() {
-    if (spiel.gebaeude) return spiel.gebaeude;
+    if (spiel.gebaeude) { if (spiel.hof && spiel.hof.zaunV !== 1) zaeuneErgaenzen(); return spiel.gebaeude; }
     const G = (spiel.gebaeude = []), st = (spiel.hof && spiel.hof.stufe) || 1, A = spiel.anlage || {};
     const neu = (typ, extra) => { const g = { gid: "g" + Math.random().toString(36).slice(2, 8), typ, stufe: st, zustand: st === 1 ? 85 : 95, ...extra }; G.push(g); return g; };
     const n = (spiel.boxen || []).length;
     if (n) { const g = neu("stall", { boxen: n, preis: BAUTEN.stall.preis[st - 1] + Math.max(0, Math.ceil((n - 6) / 2)) * BAUTEN.stall.paar[st - 1] }); spiel.boxen.forEach(b => { b.geb = g.gid; b.stufe = st; }); }
     ["reitplatz", "roundpen", "reithalle"].forEach(k => { if (A[k]) neu(k, { preis: BAUTEN[k].preis[st - 1] }); });
+    zaeuneErgaenzen();
     return G;
   }
   const bauTage = z => z === "kurz" ? Math.max(1, Math.round(tpj() * 0.3)) + (Math.random() < .5 ? 1 : 0) : z === "halle" ? Math.round((2 + Math.random()) * tpj()) : Math.max(1, Math.round(z * tpj()));

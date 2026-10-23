@@ -1079,7 +1079,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "706";
+  const SPIEL_VERSION = "707";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1087,11 +1087,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=706"></script>
-<script src="pferd.js?v=706"></script>
-<script src="boxstufen.js?v=706"></script>
-<script src="kopfneu.js?v=706"></script>
-<script src="waschbild.js?v=706"></script>
+<script src="lz-string.min.js?v=707"></script>
+<script src="pferd.js?v=707"></script>
+<script src="boxstufen.js?v=707"></script>
+<script src="kopfneu.js?v=707"></script>
+<script src="waschbild.js?v=707"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -10968,7 +10968,7 @@
     brief("Hofverwaltung", `Reithalle: 1 ha Bauland geschenkt`, `die Reithalle hat jetzt dieselben Maße wie der Reitplatz (Stufe 1/2/3: 20×40 / 20×60 / 40×80 m). Damit {dein|Ihr} Hof <b>${esc(hofName())}</b> dadurch nicht zu eng wird, schenken wir {dir|Ihnen} einmalig <b>1 ha Bauland</b>.`);
   }
   function hofMorgen() {
-    flaechenGeschenk(); halleGeschenk(); turnierMorgen(); hausturnierMorgen(); verkaufsrennenAbgang(); verkaufsrennenMarkt(); befundTestTag(); hofhelferTag(); reparaturTag(); umbauPlanTag(); futterwieseTag(); rateVorwarnung();   // Turniertag: genannte Pferde fahren los
+    flaechenGeschenk(); halleGeschenk(); try { gebVerschmelzen(); } catch (er) { console.error("Verschmelzen:", er); } turnierMorgen(); hausturnierMorgen(); verkaufsrennenAbgang(); verkaufsrennenMarkt(); befundTestTag(); hofhelferTag(); reparaturTag(); umbauPlanTag(); futterwieseTag(); rateVorwarnung();   // Turniertag: genannte Pferde fahren los
     stutenInAbfohl(); stutenAusAbfohl();   // v419: Abfohlbox – Einzug kurz vor der Geburt, Auszug nach dem Fohlen
     futterLieferung();  // bestelltes Futter kommt an
     maFreischaltTag();   // v649: Popup, wenn neue Mitarbeiter-Berufe freigeschaltet werden
@@ -13482,7 +13482,7 @@
     return G;
   }
   const bauTage = z => z === "kurz" ? Math.max(1, Math.round(tpj() * 0.3)) + (Math.random() < .5 ? 1 : 0) : z === "halle" ? Math.round((2 + Math.random()) * tpj()) : Math.max(1, Math.round(z * tpj()));
-  const gebName = g => g.name ? esc(g.name) : `${BAUTEN[g.typ].n}${g.anbau ? ` (Anbau${g.boxen ? " +" + g.boxen : ""})` : ""}${g.ha ? ` ${g.ha} ha` : ""}`;   // v672 (Dome): Gebäude und Anlagen lassen sich benennen wie Weiden
+  const gebName = g => g.name ? esc(g.name) : `${BAUTEN[g.typ].n}${g.anbau ? ` (Anbau${g.boxen ? " +" + g.boxen : ""})` : ""}${g.ha ? ` ${g.ha} ha${g.pacht ? " (gepachtet)" : ""}` : ""}`;   // v672 (Dome): Gebäude und Anlagen lassen sich benennen wie Weiden
   const imBau = () => gebaeude().filter(g => g.bau);
   const zaunText = g => `${haTxt(g.ha)} Zaun im Bau – noch ${g.bau.rest} ${g.bau.rest === 1 ? "Tag" : "Tage"}${datum().s === 3 ? " · ❄️ ruht im Winter" : ""}`;   // v298: Zaun im Bau bei Land/Weiden zeigen
   const freiesLand = () => { const H = spiel.hof || {}; return Math.max(0, weideland() - (H.weideHa || 0) - imBau().filter(g => g.typ === "weide").reduce((a, g) => a + g.ha, 0)); };
@@ -13517,6 +13517,7 @@
     if (B.boxen || (opt.anbau && B.jeBox)) g.boxen = opt.boxen || (opt.anbau ? B.schritt : B.boxen);   // v681: Sandpaddock-Vergrößerung = Pferdeplätze
     if (B.jeHa) g.ha = opt.ha || 1;
     if (opt.ziel) g.ziel = opt.ziel;
+    if (typ === "weide") { const Hh = spiel.hof || {}, eigenFrei = weideland() - (Hh.pacht || 0) - (Hh.weideHa || 0) - imBau().filter(x => x.typ === "weide").reduce((a, x) => a + (x.ha || 0), 0); if (Hh.pacht && eigenFrei + 1e-9 < g.ha) g.pacht = true; }   // v707 (Dome): Zaun auf Pachtland bleibt vom Eigentum getrennt
     gebaeude().push(g); if (spiel.hof) spiel.hof.wert = (spiel.hof.wert || 0) + preis;
     return true;
   }
@@ -13525,6 +13526,20 @@
   // v682 (Dome 23.10.): Umbau nur für einen Teil der Boxen – die gewählten Boxen werden ein eigener Teil (Anbau des Hauptgebäudes) und bekommen die höhere Stufe
   const umbauPreisN = (g, n) => !g.boxen || n >= g.boxen || !BAUTEN[g.typ].jeBox ? umbauPreis(g) : Math.round((BAUTEN[g.typ].jeBox[g.stufe] - BAUTEN[g.typ].jeBox[g.stufe - 1]) * n * (1 + UMBAU_AUFSCHLAG));
   const umbauAuswahl = (g, n) => { const rang = b => !b.pferd ? 0 : !fremd(b.pferd) ? 1 : 2; return umbauBoxen(g).map((b, i) => ({ b, i })).sort((x, y) => rang(x.b) - rang(y.b) || y.i - x.i).slice(0, n).map(x => x.b); };   // freie Boxen zuerst, Einsteller zuletzt
+  // v707 (Dome 23.10.): Anbauten zählen zum Stall, als wäre es einer – gleiche Stufe, fertig → Boxen, Preis und (nach Boxen gewichteter) Zustand fließen ins Hauptgebäude; Zaunerweiterungen derselben Weide ebenso (Eigentum und Pacht bleiben getrennt)
+  function gebVerschmelzen() {
+    let n = 0; const frei = g => !g.bau && !g.abriss && !g.rep && !g.plan;
+    gebaeude().slice().forEach(c => { if (!gebaeude().includes(c)) return; let par = gebElternVon(c); if (!par || par === c || !frei(c) || !frei(par)) return;
+      if (c.typ === "weide" && !!c.pacht !== !!par.pacht) par = gebaeude().find(x => x !== c && x.typ === "weide" && !x.wid && x.ziel === c.ziel && !!x.pacht === !!c.pacht && x.stufe === c.stufe && frei(x)) || par;   // Pachtteile verschmelzen untereinander
+      if (c.stufe !== par.stufe) return;
+      const box = !!c.anbau && par.typ === c.typ && BAUTEN[c.typ].jeBox && c.typ !== "sandpaddock", zaun = c.typ === "weide" && par.typ === "weide" && !!c.pacht === !!par.pacht;
+      if (!box && !zaun) return;
+      const a = (box ? par.boxen : par.ha) || 0, b = (box ? c.boxen : c.ha) || 0; if (a + b <= 0) return;
+      par.zustand = Math.round((par.zustand * a + c.zustand * b) / (a + b) * 10) / 10; par.preis = (par.preis || 0) + (c.preis || 0);
+      if (box) { par.boxen = a + b; spiel.boxen.forEach(x => { if (x.geb === c.gid) x.geb = par.gid; }); } else par.ha = Math.round((a + b) * 100) / 100;
+      spiel.gebaeude = gebaeude().filter(x => x !== c); n++; });
+    return n;
+  }
   function gebTeilen(g, n) {
     const haupt = gebElternVon(g) || g;
     const t = { gid: "g" + Math.random().toString(36).slice(2, 8), typ: g.typ, stufe: g.stufe, zustand: g.zustand, boxen: n, anbau: haupt.gid, preis: Math.round((g.preis || 0) * n / g.boxen), teil: true };
@@ -13633,7 +13648,23 @@
     if (B.anlage && !G.some(x => x.typ === g.typ || BAUTEN[x.typ].anlage === B.anlage)) delete spiel.anlage[B.anlage];
     delete H.artCache; const ok = stallartBed(H.art).every(x => x[1]); G.splice(idx, 0, g); spiel.boxen = boxen; spiel.anlage = an; delete H.artCache;
     return ok ? "" : `<p>⚠️ Danach erfüllt der Hof die Bedingungen als <b>${STALLART_NAME[H.art]}</b> nicht mehr – keine Förderung, und nach der Frist geht der Status verloren.</p>`; }
-  function abrissDialog(g, danach) {
+  // v707 (Dome 23.10.): Boxen lassen sich in Schritten abreißen (Stall 2 Boxen, Paddockboxen/Quarantäne/Abfohlbox 1) – der gewählte Teil wird abgespalten und abgerissen
+  function abrissTeilDialog(g, danach, step) {
+    const B = BAUTEN[g.typ], nm = esc(gebName(g).replace(/\u00ad/g, "")), mengen = []; for (let n = step; n < g.boxen; n += step) mengen.push(n); mengen.push(g.boxen);
+    if (g.bau || g.abriss || g.plan || g.rep) { dialog(`<h3>🧨 ${nm} abreißen</h3><p>Geht gerade nicht: ${g.bau ? "im Bau" : g.abriss ? "Abriss läuft" : g.plan ? "Umbau geplant" : "Handwerker arbeitet"}.</p>`); return; }
+    const preisN = n => Math.max(50, Math.round((g.preis || bauPreis(g.typ, Math.max(1, g.stufe || 1), { boxen: g.boxen })) * n / g.boxen * ABRISS / 10) * 10);
+    dialog(`<h3>🧨 ${nm} abreißen</h3><div class="kr-wahl"><label>Wie viele Boxen abreißen? <select id="abrMenge">${mengen.map(n => `<option value="${n}">${n} ${n === 1 ? "Box" : "Boxen"}${n === g.boxen ? " (alles)" : ""} · ${fmt(preisN(n))}</option>`).join("")}</select></label></div><p><small>Freie Boxen werden zuerst genommen, Boxen mit Pferden müssen vorher leer sein. Abriss kostet ${prozent(ABRISS)} des Baupreises und dauert 2–3 Tage.</small></p>`,
+      [["Weiter", () => { const n = +($("abrMenge") || {}).value || step;
+        if (n >= g.boxen) { abrissDialog(g, danach, true); return; }
+        const gew = umbauAuswahl(g, n);
+        if (gew.some(b => b.pferd || b.reserviert || b.tot || b.fohlen)) { dialog(`<h3>🧨 Boxen leeren</h3><p>Die gewählten ${n} Boxen sind nicht leer (Pferde, Reservierung oder Fohlen). Erst Pferde umstellen.</p>`); return; }
+        const k = preisN(n);
+        dialog(`<h3>🧨 ${n} ${n === 1 ? "Box" : "Boxen"} von ${nm} abreißen?</h3><p>Abriss und Entsorgung kosten <b>${fmt(k)}</b> und dauern 2–3 Tage. Die ${n} ${n === 1 ? "Box ist" : "Boxen sind"} sofort gesperrt und fallen danach weg. Der Stall hat danach ${g.boxen - n} Boxen.</p>`,
+          [["🧨 Abreißen", () => { if (!spiel.admin && geldFrei() < k) { dialog(`<h3>Zu wenig Geld</h3>${dispoHinweis()}<p>Der Abriss kostet ${fmt(k)} – in der Kasse sind ${fmt(spiel.geld || 0)}.</p>`); return; }
+            if (!spiel.admin) buchen(-k, `Abriss: ${B.n.replace(/\u00ad/g, "")}`); const t = gebTeilen(g, n); t.abriss = { rest: bauTage("kurz") }; spiel.boxen.forEach(b => { if (b.geb === t.gid) b.gesperrt = true; }); speichern(); danach && danach(); }], ["Abbrechen", null, "zweit"]]); }], ["Abbrechen", null, "zweit"]]);
+  }
+  function abrissDialog(g, danach, voll) {
+    const stp = BAUTEN[g.typ].jeBox && g.boxen ? BAUTEN[g.typ].schritt : 0; if (!voll && stp && g.boxen > stp) { abrissTeilDialog(g, danach, stp); return; }
     const sp = abrissSperre(g), B = BAUTEN[g.typ], n = B.n.replace(/\u00ad/g, "");
     if (sp) { dialog(`<h3>🧨 ${esc(gebName(g).replace(/\u00ad/g, ""))} abreißen</h3><p>Geht gerade nicht: ${sp}.</p>`); return; }
     const k = abrissPreis(g);
@@ -13805,6 +13836,7 @@
     nb.querySelectorAll("[data-hpland]").forEach(x => x.onclick = () => landDialog(x.dataset.hpland, "neu", () => zeigeHof()));
   }
   function bauenHTML() {
+    try { if (gebVerschmelzen()) speichern(); } catch (er) { console.error("Verschmelzen:", er); }
     const G = gebaeude();
     const steht = G.filter(g => !g.bau), bau = G.filter(g => g.bau), plan = G.filter(g => g.plan);
     const planHTML = g => { const U = umbauBetroffen(g), frei = ersatzBoxen(g).length, W = g.plan.wahl, rest = g.plan.ab - spiel.tag;

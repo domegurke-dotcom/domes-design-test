@@ -8,7 +8,7 @@ const { chromium } = require('playwright'); const path = require('path');
     document.getElementById('dlg').hidden = true; speicherSperre = true;
     ok('neues Spiel kennt die aktuelle Version', spiel.neuGesehen === +SPIEL_VERSION);
     // alter Stand, Schalter aus (Playwright): kein Fenster, Version wird nachgezogen
-    spiel.neuGesehen = 653; neuesPruefen(); ok('Schalter aus: kein Eintrag, Version nachgezogen', !(spiel.hofFenster || []).length && spiel.neuGesehen === +SPIEL_VERSION);
+    spiel.neuGesehen = 653; neuesPruefen(); ok('Schalter aus: kein Eintrag, Version nachgezogen', !(spiel.hofFenster || []).length && spiel.neuGesehen === NEUES_STAND);
     // Schalter an
     localStorage.setItem('zuchtstall-neu-an', '1'); spiel.neuGesehen = 653; neuesPruefen();
     const H = (spiel.hofFenster || []).join('');
@@ -16,6 +16,7 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Verschlechterungen mit ⚠️ und aufgeklappt', /<details open><summary><b>⚠️ Echte Flächenmaße/.test(H));
     spiel.hofFenster = []; neuesPruefen(); ok('zweites Mal nichts mehr', !(spiel.hofFenster || []).length);
     spiel.neuGesehen = 667; neuesPruefen(); const H2 = (spiel.hofFenster || []).join(''); ok('nur neuere Einträge', !/Heilungsdauer/.test(H2) && /Boxstufe/.test(H2));
+    NEUES.push([NEUES_STAND + 5, 'Später', 'x', false]); spiel.neuGesehen = 653; spiel.hofFenster = []; neuesPruefen(); ok('Eintrag über NEUES_STAND bleibt unveröffentlicht', !/Später/.test((spiel.hofFenster || []).join(''))); NEUES.pop();
     localStorage.removeItem('zuchtstall-neu-an'); spiel.hofFenster = [];
     return out; });
   R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(R.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

@@ -38,6 +38,8 @@ Domes Wünsche zu Whiteboard, Mitarbeitern, Waschplatz/Solarium sind umgesetzt (
 
 **Nachtrag (gleiches Konto, Sitzung 23.10. spät) – v723:** Fress-Animation (Heu → Kopf zum Boden mit Grasestellung der Beine, Kraftfutter → Kopf zur Krippe, nacheinander; Weide: Pferde grasen ab und zu ~30 s), Whiteboard-Weiden mit größerer Schrift. Test `tests/fress-test.js` grün in 3 Ansichten. Offen/zu fragen: Animation auch bei matten Pferden (waagerecht/tief)? Grasen am Hofplan/Ort-Koppel? v724: matte Pferde fressen aus ihrer Haltung, 40+40 Mitarbeiter-Namen. **Offen:** Dome will die Schimmel-Anlagen (`ex.grauTempo`, `kurve`, `maehne`) in Seltenheit und Raritäten-Markt – Vorschlag mit Zahlen liegt bei ihr, Antwort abwarten.
 
+**Nachtrag v726:** Schimmel-Anlagen als Seltenheit + Raritäten-Markt (Kombination „weiß mit 18 J. / bleibt dunkelgrau / Mähne früh weiß“, im Test erstmals nach ~19 Marktjahren, Anteile selbst gesetzt), Zaun-Abgleich (Weide 5 ha vs. Bauen 4 ha), Whiteboard-Schrift, „Noch offen“ bei überlasteten Mitarbeitern. Projekt-Chat-Thema 25 (Hofplan als Raster) eingetragen, Dome erklärt noch. Update-Fenster: für v726 nichts veröffentlicht (nächste Auswahl ab v726).
+
 **Hinweise für die nächste Sitzung:** `NEUES_STAND` ist jetzt 724 (drittes Update-Fenster nach Domes Auswahl, v725). Nicht ausgewählte Punkte nie wieder anbieten (Liste in CLAUDE.md bei v725), nächste Auswahl erst ab v725. Große Tests liefen heute nicht (nur kleine Tests + Tutorial-Spieler fort 390×844 grün). `version.json` war seit v708 leer (behoben v716) – beim Hochzählen immer `echo '{ "version": "NNN" }' > version.json` benutzen, nie `open(..., 'w')` vor dem Lesen.
 
 ---

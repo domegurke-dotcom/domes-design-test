@@ -1078,7 +1078,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "689";
+  const SPIEL_VERSION = "690";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1086,11 +1086,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=689"></script>
-<script src="pferd.js?v=689"></script>
-<script src="boxstufen.js?v=689"></script>
-<script src="kopfneu.js?v=689"></script>
-<script src="waschbild.js?v=689"></script>
+<script src="lz-string.min.js?v=690"></script>
+<script src="pferd.js?v=690"></script>
+<script src="boxstufen.js?v=690"></script>
+<script src="kopfneu.js?v=690"></script>
+<script src="waschbild.js?v=690"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -10771,6 +10771,12 @@
   const nassHeute = p => p && p.nass === spiel.tag;
   const schweissHeute = p => p && p.schweiss === spiel.tag;
   // Pferdepfleger: zu lang gewordene Mähne / zu langen Schopf zurück auf die Wunschlänge (länger wachsen lassen geht nur von selbst)
+  // v690 (Dome 23.10.): Mähne/Schopf länger als die Wunschlänge des Besitzers (gebuchte Pflege = Länge halten) – ärgert den Besitzer, bis geschnitten ist
+  const MAEHNE_AERGER = 0.5;   // Zufriedenheit je Tag – selbst gesetzt
+  function maehneZuLang(p) {
+    const mz = MAEHNEN.findIndex(m => m[0] === p.maehneZiel), mi = MAEHNEN.findIndex(m => m[0] === (p.maehne || naturMaehne(p.rasse))), sz = SCHOEPFE.findIndex(m => m[0] === p.schopfZiel), si = SCHOEPFE.findIndex(m => m[0] === (p.schopf || naturSchopf(p.rasse)));
+    const m = mz >= 0 && mi > mz, sc = sz >= 0 && si > sz; return m || sc ? [m ? "Mähne" : "", sc ? "Schopf" : ""].filter(Boolean).join(" und ") : "";
+  }
   function pflegerSchneiden(p) {
     if (!p) return;
     const mz = MAEHNEN.findIndex(m => m[0] === p.maehneZiel), mi = MAEHNEN.findIndex(m => m[0] === (p.maehne || naturMaehne(p.rasse)));
@@ -14099,6 +14105,7 @@
       if (!besuch) ok("putzen", p.geputzt && p.geputzt.tag === g && p.geputzt.mit.includes("buerste") && p.geputzt.mit.includes("kamm") && p.ausgekratzt === g, 1);   // v388: Pflege = bürsten, kämmen, Hufe
       if (e.leistungen.bewegen && datum(g).s === datum().s) { const soll = Math.ceil(bewegenTage(e) * datum(g).t / tpj());   // gebuchte Trainingstage – liegt der Bereiter 2 Tage zurück, ärgert sich der Besitzer
         if (bereiterStand(p) >= soll) eZufr(e, 0.2, "das Bewegen durch den Bereiter"); else if (soll - bereiterStand(p) >= 2) eZufr(e, -1, "wurde nicht bewegt"); }
+      if (leistungFaellig(e, "putzen") && !besuch) { const zl = maehneZuLang(p); if (zl) eZufr(e, -MAEHNE_AERGER, `${zl} nicht auf der Wunschlänge`); }   // v690 (Dome): gebuchte Pflege vergessen zu schneiden → der Besitzer ärgert sich
       ok("decke", e.decke === g || pflegeTeam(), 1);
       if (e.leistungen.medizin && befundListe(p).some(x => x.diagnose && x.beh && !(KRANK[x.art] || {}).chronisch)) ok("medizin", p.behHeute && p.behHeute.tag === g && Object.keys(p.behHeute.a || {}).length > 0, 2);
       // neue Krankheiten und Verletzungen
@@ -14420,6 +14427,7 @@
     if (!fohlenNochLiegend(b) && (e.haltung === "sandpaddock" || stattW) && (paddocks().length || b.paddock) && !p.boxenruhe) l.push({ k: "sandpaddock", txt: b.paddock ? "🟫 Auslauf in der Paddockbox" : stattW ? "🟫 Sandpaddock statt Weide (Hufrehe-Gefahr)" : "🟫 Sandpaddock", ok: !!b.paddock || !!p.paddock || p.paddockZuletzt === t || (nachm && !!p.weideNachm.paddock) });   // v327: gebuchte Haltung auch in „Pension heute“ zeigen
     { const WF = besitzerFutter(p, b); if (WF) l.push({ k: "futter", txt: "🌾 Futterplan nach Wunsch", ok: planGleich(futterplanVon(p, b), WF) }); }   // v333
     if (leistungFaellig(e, "putzen") && !besuch) l.push({ k: "putzen", txt: `🧽 Pflege (bürsten, kämmen, ${HUFKR_ICO} Hufe)`, ok: !!(p.geputzt && p.geputzt.tag === t && p.geputzt.mit.includes("buerste") && p.geputzt.mit.includes("kamm")) && p.ausgekratzt === t });
+    if (leistungFaellig(e, "putzen") && !besuch) { const zl = maehneZuLang(p); if (zl) l.push({ k: "maehne", txt: `✂️ ${zl} auf die Wunschlänge kürzen`, ok: false }); }   // v690
     if (leistungFaellig(e, "decke")) l.push({ k: "decke", txt: "🧣 Decke wechseln", ok: e.decke === t || pflegeTeam() });
     if (leistungFaellig(e, "bewegen")) { const st = bereiterStand(p), so = bereiterSoll(p), rest = bewegenTage(e) - st;   // v401 (Dome): „kommt noch“ statt nicht erfüllt – erst ab 2 Tagen Rückstand (dann ärgert sich auch der Besitzer)
       if (!festerBereiter() && !spielerBereiter()) l.push({ k: "bewegen", txt: `🏇 Bereiter von außerhalb: ${st}/${bewegenTage(e)} – kommt von selbst, rechnet direkt mit dem Besitzer ab`, ok: true });   // v402 (Dome): daran kannst du nichts ändern – keine offene Aufgabe
@@ -15951,6 +15959,8 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     boxOeffnen: ["Box öffnen", "Tippe eine Box an, um das Pferd zu sehen.", "", ".boxen-liste [data-zubox]", null, "fort"],
     whiteboard: ["Whiteboard", "Unter „📋 Whiteboard“ planst du, welcher Mitarbeiter welche Box versorgt und welches Pferd an welchen Tagen auf welche Weide kommt.", "", "#wbUmschalt", "whiteboard", "fort"],   // v679
     wbBoard: ["Planen auf dem Whiteboard", () => (TOUCH ? "Halte einen Mitarbeiter unten gedrückt und zieh ihn auf eine Box" : "Zieh einen Mitarbeiter von unten mit der Maus auf eine Box") + " – oder tippe ihn an und dann die Box. Pferde legst du genauso auf die linke oder rechte Hälfte einer Weide.", "Rot umrandet: die Pferde mögen sich nicht – lieber trennen.", ".wb-ma-reihe", "whiteboard", "fort"],
+    befundPlan: ["Plan des Tierarztes", "Hier steht, was der Tierarzt festgestellt hat: wie lange es dauert (oder dass es nicht mehr ganz heilt), ob du reiten darfst, was jeden Tag zu tun ist und was bis zur Heilung tabu ist.", "Longieren, Schritt führen und Bodenarbeit gehören oft zur Heilung dazu – sie laufen über Ort → Training.", ".plan-karte", "krank", "anf"],   // v685
+    kontaktpferde: ["Kontaktpferde", "Dieses Pferd ist ansteckend krank. Hier siehst du, welche Pferde Kontakt hatten – mit einem Knopf kommen alle in Quarantäne, oder du lässt bei allen ein Blutbild machen.", "Früh trennen und testen verhindert einen Ausbruch im ganzen Stall.", "[data-kontakt]", "krank", "fort"],   // v686
     boxUmstellen: ["Pferde umstellen", "Du kannst ein Pferd in eine andere Box umstellen: " + UMSTELLEN_TXT, "", ".boxen-liste [data-zubox]", null, "anf"],
     boxWechsel: ["Nächste Box", BOXWECHSEL_TXT, "", "#pfeilWeiter, #pfeilZurueck", null, "anf"],
     zurueck: ["Zurück zum Stall", "Tippe oben auf das Schild der Box, dann kommst du zurück zur Boxenübersicht.", "", "#boxSchildKnopf", null, "anf"],
@@ -16123,7 +16133,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       if (h.includes("Hofverwaltung")) { L.push("geld"); if (hofReiter === "reiter") L.push("reiterKarte", "reiterUnterricht"); if (hofReiter === "mitarbeiter") L.push("mitarbeiter"); if (hofReiter === "finanzen") L.push("finanzen"); if (hofReiter === "hof") L.push("futterkammer", "bauen"); } }
     else if (offen === "hauptMenue") L.push("menue", "geld");
     else if (!offen && B() && B().pferd) { L.push("zurueck"); if (spiel.boxen.filter(b => b.pferd && !b.tot).length >= 2) L.push("boxWechsel");
-      if (aktenModus === "steckbrief") { if (aktenReiter === "merkmale") L.push(...merkHinweise(B().pferd)); L.push("steckbrief", ...(aktenReiter === "merkmale" || aktenReiter === "ausbildung" ? ["disziplin"] : [])); } if (aktenModus === "pflege" && aktenReiter === "gesundheit") L.push(...(document.querySelector("[data-besvor]") ? ["besInfo"] : []), "balken", "tierarzt", "selbst", "vorsorge");
+      if (aktenModus === "steckbrief") { if (aktenReiter === "merkmale") L.push(...merkHinweise(B().pferd)); L.push("steckbrief", ...(aktenReiter === "merkmale" || aktenReiter === "ausbildung" ? ["disziplin"] : [])); } if (aktenModus === "pflege" && aktenReiter === "gesundheit") L.push(...(document.querySelector(".plan-karte:not([data-kontakt])") ? ["befundPlan"] : []), ...(document.querySelector("[data-kontakt]") ? ["kontaktpferde"] : []), ...(document.querySelector("[data-besvor]") ? ["besInfo"] : []), "balken", "tierarzt", "selbst", "vorsorge");
       if (deckModus) L.push("zucht"); if (ortModus === "labor") L.push("labor"); if (ortModus === "solarium") L.push("solarium"); if (ortModus && ortModus.startsWith("tr-")) { L.push("bereiter"); if (energie(B().pferd) < 25) L.push("muede"); } if (inQuarantaene(B().pferd)) L.push("quarantaene");
       if (ortModus === "waschplatz") L.push("waschplatz"); if (ortModus && ortModus.startsWith("tr-")) L.push("training", ...(datum().s === 3 ? ["winter"] : [])); if (B().pferd.weide) L.push("weide"); }
     if ($("lese") && !$("lese").hidden) L.push("zoom");

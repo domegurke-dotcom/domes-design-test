@@ -1,0 +1,21 @@
+// v690: gebuchte Pflege, Mähne/Schopf länger als die Wunschlänge → Besitzer ärgert sich; Pfleger kürzt automatisch → kein Ärger
+const { chromium } = require('playwright'); const path = require('path');
+(async () => { const b = await chromium.launch(); const pg = await b.newPage({ viewport: { width: 390, height: 844 } }); const errs = []; pg.on('pageerror', e => errs.push(e.message));
+  await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(600);
+  await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('#chLos'); await pg.waitForTimeout(300); await pg.click('#dlgKnoepfe button');
+  await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'H'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(300);
+  const R = await pg.evaluate(() => { const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : ''));
+    speicherSperre = true; spiel.stufenAn = false; spiel.tippsAus = true; $('dlg').hidden = true; VET.verbotAb = 99;
+    const p = neuesPferd({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Lang' }); p.pflege = erzeugePflege(p); p.werte = p.werte || erzeugeWerte(p);
+    const e = { eid: 'eT', vn: 'Anna', nn: 'Test', w: true, pid: p.id, stufe: 1, leistungen: { putzen: true }, haltung: 'box', zufr: 70, seit: jzJetzt(), einzug: spiel.tag - 3, bluttest: 'keiner', kuendigt: null, log: [], befSeen: [], preis: 150 };
+    pensionRegeln().leistungen.putzen = true; p.einsteller = e.eid; p.putzzeug = 'besitzer'; einstellerListe().push(e); spiel.boxen[0].pferd = p; spiel.boxen[0].krippeVoll = true;
+    p.maehneZiel = 'kurz'; p.maehne = 'kurz'; p.schopfZiel = naturSchopf(p.rasse) ? 'kurz' : null;
+    ok('Mähne auf Wunschlänge: kein Ärger', maehneZuLang(p) === '');
+    p.maehne = 'lang'; ok('Mähne länger als Wunsch: erkannt', /Mähne/.test(maehneZuLang(p)), maehneZuLang(p));
+    const A = pensionAufgaben(e, spiel.boxen[0]); ok('Aufgabe „kürzen“ in Pension heute', A.some(a => a.k === 'maehne' && !a.ok), A.map(a => a.k).join());
+    const z0 = e.zufr; p.geputzt = { tag: spiel.tag - 1, mit: ['buerste', 'kamm'] }; p.ausgekratzt = spiel.tag - 1; pensionNacht();
+    ok('Zufriedenheit sinkt um ' + MAEHNE_AERGER, e.zufr < z0 && z0 - e.zufr >= MAEHNE_AERGER - 0.01 && /Wunschlänge/.test(JSON.stringify(e.log || [])), z0 + ' → ' + e.zufr);
+    pflegerSchneiden(p); ok('Pfleger kürzt auf die Wunschlänge', maehneZuLang(p) === '' && p.maehne === 'kurz');
+    pensionRegeln().leistungen.putzen = false; delete e.leistungen.putzen; p.maehne = 'lang'; ok('Ohne gebuchte Pflege kein Ärger (der Besitzer schneidet selbst)', !pensionAufgaben(e, spiel.boxen[0]).some(a => a.k === 'maehne'));
+    return out; });
+  R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(R.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

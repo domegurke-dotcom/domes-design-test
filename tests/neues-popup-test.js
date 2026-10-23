@@ -11,7 +11,7 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('alter Stand: Menüpunkt sichtbar, kein Fenster', !document.getElementById('mNeu').hidden && !(spiel.hofFenster || []).length);
     const H = neuesKarteHTML();
     ok('Karte mit allen veröffentlichten Einträgen', /Neu in deinem Spiel/.test(H) && NEUES.filter(n => n[0] <= NEUES_STAND).every(n => H.includes(n[1].replace(/&/g, '&amp;'))));
-    ok('Verschlechterungen mit ⚠️ und aufgeklappt', /<details open><summary><b>⚠️ Echte Flächenmaße/.test(H));
+    ok('Nur der erste Eintrag ist aufgeklappt, Verschlechterungen mit ⚠️', (H.match(/<details open>/g) || []).length === 1 && /<b>⚠️ Echte Flächenmaße/.test(H));
     hofReiter = 'hof'; hofBereich = 'uebersicht'; zeigeHof('hof'); ok('Karte steht in der Hof-Übersicht', !!document.getElementById('neuKarte'));
     document.getElementById('neuGelesen').click();
     ok('Gelesen: Karte und Menüpunkt weg, Stand gesetzt', !document.getElementById('neuKarte') && document.getElementById('mNeu').hidden && spiel.neuGesehen === NEUES_STAND);

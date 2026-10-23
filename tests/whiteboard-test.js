@@ -24,7 +24,7 @@ const [W, H] = (process.argv[2] || '844x390').split('x').map(Number), ORD = proc
     // Weideplan
     const A = spiel.boxen[0].pferd, Bp = spiel.boxen[1].pferd;
     wbAnwenden('p:0', 'w:w2:a'); ok('Anna auf Weide 2, linke Hälfte → jeden 2. Tag, Tag A', A.auslaufZiel === 'w2' && A.weidegang === 'jeden2' && A.weideTag === 'a');
-    wbAnwenden('p:0', 'w:w2:b'); ok('Auch rechts → jeden Tag', A.weidegang === 'taeglich' && !A.weideTag);
+    wbAnwenden('p:0', 'w:w2:b'); ok('Bei „alle 2 Tage“ nur an einem Tag: rechts statt links', A.weidegang === 'jeden2' && A.weideTag === 'b');
     wbAnwenden('c:1:x:x', 'w:w2:b'); wbAnwenden('p:1', 'w:w2:b'); ok('Berta nur rechts', Bp.weideTag === 'b' && Bp.auslaufZiel === 'w2');
     wbAnwenden('c:1:w2:b', 'w:w2:a'); ok('Berta von rechts nach links verschoben', Bp.weideTag === 'a' && Bp.weidegang === 'jeden2');
     wbWeg(A, 'a'); ok('Anna aus „links“ genommen → nur noch rechts', A.weidegang === 'jeden2' && A.weideTag === 'b');
@@ -44,7 +44,7 @@ const [W, H] = (process.argv[2] || '844x390').split('x').map(Number), ORD = proc
     ok('Feinde rot umrandet', document.querySelectorAll('[data-wbz="w:w2:a"] .wb-chip.rot').length === 2, document.querySelector('[data-wbz="w:w2:a"]').textContent);
     window.wbTestBez = 'freund'; zeigeBoxen(); ok('Freunde grün umrandet', document.querySelectorAll('[data-wbz="w:w2:a"] .wb-chip.gruen').length === 2);
     window.paarBeziehung = echt;
-    { const w2 = weiden().find(w => w.wid === 'w2'); wbModusSetzen('w2', 'taeglich'); zeigeBoxen(); ok('täglich: eine Spalte, alle Pferde jeden Tag', !!document.querySelector('[data-wbz="w:w2:t"]') && !document.querySelector('[data-wbz="w:w2:a"]') && A.weidegang === 'taeglich' && C.weidegang === 'taeglich'); wbAnwenden('p:1', 'w:w2:t'); ok('auf „täglich“ legen = jeden Tag', Bp.auslaufZiel === 'w2' && Bp.weidegang === 'taeglich' && !Bp.weideTag); wbAnwenden('c:1:w2:t', 'drin'); ok('wieder in die Box', !Bp.weidegang); wbModusSetzen('w2', 'jeden2'); w2.wbModus = 'jeden2'; zeigeBoxen(); ok('alle 2 Tage: zwei Hälften', !!document.querySelector('[data-wbz="w:w2:a"]') && !!document.querySelector('[data-wbz="w:w2:b"]')); }
+    { const w2 = weiden().find(w => w.wid === 'w2'); wbModusSetzen('w2', 'taeglich'); zeigeBoxen(); ok('täglich: eine Spalte, alle Pferde jeden Tag', !!document.querySelector('[data-wbz="w:w2:t"]') && !document.querySelector('[data-wbz="w:w2:a"]') && A.weidegang === 'taeglich' && C.weidegang === 'taeglich'); wbAnwenden('p:1', 'w:w2:t'); ok('auf „täglich“ legen = jeden Tag', Bp.auslaufZiel === 'w2' && Bp.weidegang === 'taeglich' && !Bp.weideTag); wbAnwenden('c:1:w2:t', 'drin'); ok('wieder in die Box', !Bp.weidegang); wbModusSetzen('w2', 'jeden2'); zeigeBoxen(); ok('Wechsel auf „alle 2 Tage“ verteilt Pferde auf genau einen Tag', [A, C].every(p => p.weidegang === 'jeden2' && (p.weideTag === 'a' || p.weideTag === 'b')) && A.weideTag !== C.weideTag, A.weideTag + C.weideTag); ok('alle 2 Tage: zwei Hälften', !!document.querySelector('[data-wbz="w:w2:a"]') && !!document.querySelector('[data-wbz="w:w2:b"]')); }
     wbSicht = 'boxen'; zeigeBoxen();
     ok('Mitarbeiter-Reihe mit „x von y Boxen“', /von 3 Boxen/.test(document.getElementById('wbMaReihe').textContent), document.getElementById('wbMaReihe').textContent.slice(0, 80));
     return out; });

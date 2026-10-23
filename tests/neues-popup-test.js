@@ -27,4 +27,9 @@ const { chromium } = require('playwright'); const path = require('path');
   r = await P(653, 677); ok('Popup 1 schon gezeigt: nur noch das zweite', !r.h && /Whiteboard/.test(r.t) && !/\(\d\/2\)/.test(r.t)); await pg.click('#dlgKnoepfe button'); await pg.waitForTimeout(400);
   r = await P(653, 694); ok('alles gezeigt: kein Fenster', r.h);
 
+  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.neuGesehen = 653; delete spiel.neuPopup; neuesLaeuft = false; zeigeSchirm('startMenue'); neuesPruefen(); });
+  await pg.waitForTimeout(2200); r = await pg.evaluate(() => ({ h: document.getElementById('dlg').hidden, p: spiel.neuPopup }));
+  ok('im Startmenü kommt kein Popup und nichts wird als gesehen gespeichert', r.h && !r.p);
+  await pg.evaluate(() => zeigeSchirm(null)); await pg.waitForTimeout(1600); r = await pg.evaluate(() => ({ h: document.getElementById('dlg').hidden }));
+  ok('sobald das Spiel läuft, kommt das Popup', !r.h);
   R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(R.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

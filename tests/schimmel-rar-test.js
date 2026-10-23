@@ -25,6 +25,12 @@ const { chromium } = require('playwright'); const path = require('path');
     // 4. echter Marktlauf: über 20 Marktjahre – wie oft taucht die komplette Kombination (und überhaupt ein Schimmel mit seltener Anlage) auf?
     let nVoll = 0, irgend = 0, erst = 0; for (let mj = 1; mj <= 20; mj++) { spiel.rar = { mj: 1000 + mj, karte: true, wahl: {}, vor: {}, auk: {}, weg: [], salz: 'x' + mj }; rarCache = null; const L = rarAngebot(); const v = L.filter(x => x.rarHaupt === 'GRAU:voll').length; nVoll += v; if (v && !erst) erst = mj; irgend += L.filter(x => /^GRAU/.test(x.rarHaupt || '') && x.rarHaupt !== 'GRAU:voll').length; }
     r.marktlauf = { voll: nVoll, irgend, erst };
+    // 5. „fast weiß“ (Scheckung, höchste Ausprägung): zählt als Merkmal und kommt auf den Markt
+    const f = neuesPferd({ rein: true, rasse: 'paint', geschlecht: 'Stute', alter: 7, name: 'Weiß' }); const gf = genVon(f); gf.To = ['To', 'to']; f.ex = exVon(f); f.ex.muster = .97; f.farbe = farbeAus(gf, f.ex);
+    r.fw = { merk: (seltenGen(f) || { merkmale: [] }).merkmale.filter(m => m.k === 'MUSTER').length, q: musterQ('paint'), stufe: musterStufeVon(f) };
+    f.ex.muster = .5; r.fwNormal = (seltenGen(f) || { merkmale: [] }).merkmale.filter(m => m.k === 'MUSTER').length;
+    let nFw = 0; const rassenFw = new Set(); for (let mj = 1; mj <= 20; mj++) { spiel.rar = { mj: 2000 + mj, karte: true, wahl: {}, vor: {}, auk: {}, weg: [], salz: 'y' + mj }; rarCache = null; rarAngebot().filter(x => x.rarHaupt === 'MUSTER:fast').forEach(x => { nFw++; rassenFw.add(x.rasse); r.fwBsp = r.fwBsp || { sStufe: seltenheit(x, true).stufe, rasse: x.rasse, stufe: musterStufeVon(x), merk: seltenheit(x, true).gen.merkmale.filter(m => m.k === 'MUSTER').length, text: JSON.stringify(rarAnpreisung(x)).includes('Scheckung in seltenster Ausprägung'), farbe: farbName(x) }; }); }
+    r.fwMarkt = { n: nFw, rassen: [...rassenFw] };
     r.test = (() => { const p = neuesPferd({ rein: true, rasse: 'andalusier', geschlecht: 'Stute', alter: 7, name: 'T' }); const g = genVon(p); g.G = ['G', 'g']; p.ex = exVon(p); Object.assign(p.ex, { grauTempo: 18, kurve: .85, maehne: .6 }); const h = gentestHTML(p); return { spaet: /sehr spät/.test(h), dunkel: /lange dunkelgrau/.test(h), maehne: /sehr früh weiß/.test(h) }; })();
     try { r.bzn = /Schimmel-Anlagen \(v726\)/.test(weitereDatenHTML()); } catch (e) { r.bzn = String(e); }
     return r; });
@@ -39,6 +45,8 @@ const { chromium } = require('playwright'); const path = require('path');
   ok('auf dem Markt gibt es nur die komplette Kombination, keine Teil-Kombinationen', R.marktlauf.irgend === 0, R.marktlauf);
   ok('der Fellfarben-Test zeigt die Schimmel-Anlagen', R.test.spaet && R.test.dunkel && R.test.maehne, R.test);
   ok('Berechnungen zum Nachschlagen (bzn) nennen die Schimmel-Anlagen', R.bzn === true, R.bzn);
+  ok('Scheckung „fast weiß“ zählt als Merkmal, „typisch“ nicht', R.fw.merk === 1 && R.fw.stufe === 3 && R.fwNormal === 0, [R.fw, R.fwNormal]);
+  ok('„fast weiß“ kommt auf den Markt (20 Jahre) und wird als Merkmal erkannt', R.fwMarkt.n >= 3 && R.fwBsp.sStufe >= 1 && R.fwBsp.stufe === 3 && R.fwBsp.merk === 1 && R.fwBsp.text, [R.fwMarkt, R.fwBsp]);
   ok('keine Seitenfehler', !errs.length, errs);
-  console.log(out.join('\n')); console.log('Anteile:', JSON.stringify(R.band), 'Marktlauf 20 Jahre:', JSON.stringify(R.marktlauf)); await b.close();
+  console.log(out.join('\n')); console.log('Anteile:', JSON.stringify(R.band), 'Marktlauf 20 Jahre:', JSON.stringify(R.marktlauf), 'fast weiß:', JSON.stringify(R.fwMarkt), JSON.stringify(R.fwBsp)); await b.close();
 })();

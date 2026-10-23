@@ -1079,7 +1079,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "696";
+  const SPIEL_VERSION = "697";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1087,11 +1087,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=696"></script>
-<script src="pferd.js?v=696"></script>
-<script src="boxstufen.js?v=696"></script>
-<script src="kopfneu.js?v=696"></script>
-<script src="waschbild.js?v=696"></script>
+<script src="lz-string.min.js?v=697"></script>
+<script src="pferd.js?v=697"></script>
+<script src="boxstufen.js?v=697"></script>
+<script src="kopfneu.js?v=697"></script>
+<script src="waschbild.js?v=697"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -10087,12 +10087,25 @@
     return `<div class="bf-karte plan-karte" id="neuKarte"><b>🆕 Neu in deinem Spiel</b>${neuesInnenHTML(neu)}<div class="bf-knoepfe"><button class="mini-knopf" id="neuGelesen">✔ Gelesen</button></div></div>`; }
   function neuesGelesen() { spiel.neuGesehen = NEUES_STAND; speichern(); neuesMenueSetzen(); }
   function neuesMenueSetzen() { const m = $("mNeu"); if (m) m.hidden = !neuesListe().length; }
+  const NEUES_STUFEN = [677, NEUES_STAND];   // v697 (Dome): jede Stufe ist ein eigenes Fenster – wer die erste schon kannte (neuGesehen/neuPopup ≥ 677), bekommt nur die zweite
+  let neuesLaeuft = false;
   function neuesPruefen() {
     neuesMenueSetzen();
     let aus = false; try { aus = !!navigator.webdriver && !localStorage.getItem("zuchtstall-neu-an"); } catch (e) {}   // Test-Schalter: unter Playwright aus, außer localStorage „zuchtstall-neu-an“ ist gesetzt
-    const neu = neuesListe(); if (aus || !neu.length || spiel.neuPopup >= NEUES_STAND) return;
-    spiel.neuPopup = NEUES_STAND; speichern();   // v696 (Dome): wie „Neue Berufe“ als Fenster im Spiel (nicht im Startmenü), einmal je Spielstand – die Karte in der Hof-Übersicht bleibt bis „Gelesen“
-    (spiel.hofFenster = spiel.hofFenster || []).push(`<h3>🆕 Neu in deinem Spiel</h3>${neuesInnenHTML(neu)}<p><small>Du findest das später auch unter ☰ „Neu im Spiel“ und in der Hofverwaltung.</small></p>`);
+    if (aus || neuesLaeuft || !neuesListe().length) return;
+    const gesehen = Math.max(spiel.neuGesehen == null ? 653 : spiel.neuGesehen, spiel.neuPopup || 0);
+    const stufen = NEUES_STUFEN.map((ende, i) => ({ ende, von: Math.max(gesehen, i ? NEUES_STUFEN[i - 1] : 0) })).filter(x => x.ende > gesehen)
+      .map(x => ({ ende: x.ende, neu: NEUES.filter(n => n[0] > x.von && n[0] <= x.ende) })).filter(x => x.neu.length);
+    if (!stufen.length) return;
+    neuesLaeuft = true;
+    const zeige = (i, versuch) => {
+      if (!spiel || spiel.tutorial || spiel.ansehen) { neuesLaeuft = false; return; }
+      if (!$("dlg").hidden) { if (versuch > 40) { neuesLaeuft = false; return; } setTimeout(() => zeige(i, versuch + 1), 1500); return; }
+      const x = stufen[i]; spiel.neuPopup = x.ende; speichern();
+      dialog(`<h3>🆕 Neu in deinem Spiel${stufen.length > 1 ? ` (${i + 1}/${stufen.length})` : ""}</h3>${neuesInnenHTML(x.neu)}<p><small>Du findest das später auch unter ☰ „Neu im Spiel“ und in der Hofverwaltung.</small></p>`,
+        [[i + 1 < stufen.length ? "Weiter" : "OK", () => { if (i + 1 < stufen.length) setTimeout(() => zeige(i + 1, 0), 150); else neuesLaeuft = false; }]]);
+    };
+    setTimeout(() => zeige(0, 0), 900);
   }
   function maFreischaltTag() {
     if (spiel.tutorial) return;

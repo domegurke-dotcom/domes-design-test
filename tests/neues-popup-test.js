@@ -17,9 +17,14 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Gelesen: Karte und Menüpunkt weg, Stand gesetzt', !document.getElementById('neuKarte') && document.getElementById('mNeu').hidden && spiel.neuGesehen === NEUES_STAND);
     spiel.neuGesehen = 667; ok('nur neuere Einträge', !/<b>Heilungsdauer<\/b>/.test(neuesKarteHTML()) && /Boxstufe/.test(neuesKarteHTML()));
     NEUES.push([NEUES_STAND + 5, 'Später', 'x', false]); spiel.neuGesehen = 653; ok('Eintrag über NEUES_STAND bleibt unveröffentlicht', !/Später/.test(neuesKarteHTML())); NEUES.pop();
-    localStorage.setItem('zuchtstall-neu-an', '1'); spiel.neuGesehen = 653; delete spiel.neuPopup; spiel.hofFenster = []; neuesPruefen();
-    ok('Schalter an: Popup mit allen Einträgen im Spiel', /Neu in deinem Spiel/.test((spiel.hofFenster || []).join('')) && spiel.neuPopup === NEUES_STAND);
-    spiel.hofFenster = []; neuesPruefen(); ok('Popup nur einmal je Spielstand', !(spiel.hofFenster || []).length);
-    localStorage.removeItem('zuchtstall-neu-an'); spiel.hofFenster = [];
     return out; });
+  const P = async (gesehen, popup) => { await pg.evaluate(([g, p]) => { localStorage.setItem('zuchtstall-neu-an', '1'); spiel.tippsAus = true; spiel.tipps = spiel.tipps || {}; spiel.tipps.start = 1; spiel.tipps.geldKnapp = 1; spiel.neuGesehen = g; if (p) spiel.neuPopup = p; else delete spiel.neuPopup; document.getElementById('dlg').hidden = true; neuesLaeuft = false; neuesPruefen(); }, [gesehen, popup]); await pg.waitForTimeout(1400); return pg.evaluate(() => ({ t: document.getElementById('dlgInhalt').textContent, h: document.getElementById('dlg').hidden })); };
+  const ok = (n, c) => { R.push((c ? '✓ ' : '✗ ') + n); };
+  let r = await P(653, 0); ok('Mittwoch-Spieler: erstes Fenster (1/2)', !r.h && /\(1\/2\)/.test(r.t) && /Whiteboard/.test(r.t) === false);
+  await pg.click('#dlgKnoepfe button'); await pg.waitForTimeout(500); r = await pg.evaluate(() => ({ t: document.getElementById('dlgInhalt').textContent, h: document.getElementById('dlg').hidden })); ok('danach zweites Fenster (2/2) mit Whiteboard', !r.h && /\(2\/2\)/.test(r.t) && /Whiteboard/.test(r.t));
+  await pg.click('#dlgKnoepfe button'); await pg.waitForTimeout(400);
+  r = await P(677, 0); ok('Spieler mit erstem Fenster gesehen: nur ein Fenster ohne Zähler', !r.h && !/\(\d\/2\)/.test(r.t) && /Whiteboard/.test(r.t)); await pg.click('#dlgKnoepfe button'); await pg.waitForTimeout(400);
+  r = await P(653, 677); ok('Popup 1 schon gezeigt: nur noch das zweite', !r.h && /Whiteboard/.test(r.t) && !/\(\d\/2\)/.test(r.t)); await pg.click('#dlgKnoepfe button'); await pg.waitForTimeout(400);
+  r = await P(653, 694); ok('alles gezeigt: kein Fenster', r.h);
+
   R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(R.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

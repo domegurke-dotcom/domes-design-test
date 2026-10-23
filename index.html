@@ -1055,7 +1055,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "659";
+  const SPIEL_VERSION = "660";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1063,11 +1063,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=659"></script>
-<script src="pferd.js?v=659"></script>
-<script src="boxstufen.js?v=659"></script>
-<script src="kopfneu.js?v=659"></script>
-<script src="waschbild.js?v=659"></script>
+<script src="lz-string.min.js?v=660"></script>
+<script src="pferd.js?v=660"></script>
+<script src="boxstufen.js?v=660"></script>
+<script src="kopfneu.js?v=660"></script>
+<script src="waschbild.js?v=660"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -3167,6 +3167,14 @@
   // beschlagnahmte Pferde in der Klinik (V1, Dome 20.10.): +16 % pro Tag, aber nur so gesund, wie Alter und Krankheiten es erlauben (höchstens 75 %); Krankheiten werden behandelt (Kosten in t.kosten), chronische bleiben; dann 2 Jahreszeiten Rückkauf. Stirbt ein schwer vorerkranktes Pferd, kommt es auf deinen Pferdefriedhof (kein neuer Vorfall).
   const KLINIK_BEFUND = 20, KLINIK_TOD = 0.04;   // Behandlungskosten je Krankheit und Tag · Chance je Tag, dass ein schwer vorerkranktes oder sehr altes Pferd in den ersten Tagen stirbt (selbst gesetzt, Dome informieren)
   const klinikZiel = p => Math.min(75, gesundheitMax(p), ...befundListe(p).map(b => 100 - (KRANK[b.art] && KRANK[b.art].chronisch ? 6 : 12) * (b.grad || 1)));
+  // v660 (Dome 23.10.): normale Klinik – entlassen wird erst, wenn alle behandelbaren Krankheiten weg sind (chronische/erbliche bleiben), jede offene Krankheit kostet KLINIK_BEFUND je Tag extra; Fälliges (Impfung, Zahn) wird bei der Entlassung miterledigt
+  const klinikGesund = p => befundListe(p).every(b => !KRANK[b.art] || KRANK[b.art].chronisch);
+  function klinikBehandeln(p) {
+    const K = p.klinik; if (!K) return; K.zusatz = K.zusatz || 0; const tage = spiel.tag - K.seit;
+    befundListe(p).slice().forEach(b => { const KK = KRANK[b.art]; if (!KK || KK.chronisch) return; K.zusatz += KLINIK_BEFUND; b.klinikTage = (b.klinikTage || 0) + 1;
+      if (b.klinikTage % 2 === 0) { b.grad--; if (b.grad <= 0) befundAbschliessen(p, b, "in der Klinik geheilt"); } });
+  }
+  const vorsorgeBald = (tagZuletzt, jz) => { const rest = jz * tpj() - (spiel.tag - (tagZuletzt == null ? -999 : tagZuletzt)); return rest <= Math.max(1, Math.round(tpj() / 4)); };
   function klinikTod(t) {
     const p = t.pferd; p.todesursache = "in der Tierschutz-Klinik gestorben"; p.pflege.gesundheit = 0; begraben(p, "Tierschutz-Klinik");
     spiel.tierschutz = (spiel.tierschutz || []).filter(x => x !== t);
@@ -3237,6 +3245,7 @@
       if (b.fohlen) { const fp = (b.fohlen.pflege = b.fohlen.pflege || erzeugePflege(b.fohlen)); fp.gesundheit = Math.min(gesundheitMax(b.fohlen), Math.round((fp.gesundheit + 16) * 10) / 10); }   // Fohlen wird mitbehandelt
       if (!op || spiel.tag > p.klinik.bis) p.klinik.rechnung = (p.klinik.rechnung || 0) + KOSTEN.klinik;   // Kastration: die ersten 2 Tage sind im Preis
       p.pflege.gesundheit = Math.min(gesundheitMax(p), Math.round((p.pflege.gesundheit + 16) * 10) / 10);
+      if (!op) klinikBehandeln(p);   // v660 (Dome): in der Klinik werden die Krankheiten wirklich behandelt (Zusatzkosten je Krankheit und Tag)
       if (OP_KLINIK[p.klinik.op] && spiel.tag >= p.klinik.bis && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {   // v422: Tie-back, Melanom
         const O = OP_KLINIK[p.klinik.op], extra = p.klinik.rechnung || 0, tage = Math.round(extra / KOSTEN.klinik), ok = Math.random() < O.erfolg;
         delete p.klinik; delete p.dreck;
@@ -3267,14 +3276,16 @@
           `die Kastration von <b>${esc(p.name)}</b> ist gut verlaufen. Er ist jetzt ein Wallach und steht wieder in Box ${i + 1}. Im Abstammungsschein bleibt er als Hengst eingetragen.<br><br>`);
         return;
       }
-      if (!op && p.klinik.besitzer && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {   // v421: vom Besitzer gebracht – er zahlt, keine Rechnung an den Hof
+      if (!op && p.klinik.besitzer && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p)) && klinikGesund(p)) {   // v421: vom Besitzer gebracht – er zahlt, keine Rechnung an den Hof
         delete p.klinik; delete p.dreck; const e = einstellerVon(p);
         brief(e ? eName(e) : "Tierarztpraxis", `${p.name} ist zurück`, `<b>${esc(p.name)}</b> hat sich in der Klinik erholt (Gesundheit ${p.pflege.gesundheit.toLocaleString("de-DE")} %) und steht wieder in Box ${i + 1}. Bitte gut auf ${pron(p).ihn} aufpassen.`, { pferde: [p] }); return; }
-      if (!op && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {
-        const betrag = p.klinik.rechnung, tage = spiel.tag - p.klinik.seit;
+      if (!op && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p)) && klinikGesund(p)) {
+        const betrag = p.klinik.rechnung, tage = spiel.tag - p.klinik.seit, zus = p.klinik.zusatz || 0, mehr = [];
+        if (vorsorgeBald(p.pflege.impf, 2)) { p.pflege.impf = spiel.tag; mehr.push({ text: `${p.name}: Impfung Influenza und Herpes (war bald fällig)`, betrag: VORSORGE.impfung }); }
+        if (vorsorgeBald(p.pflege.zahn, (veranlagungVon(p).biss || 0) >= 0.3 ? 2 : 4)) { p.pflege.zahn = spiel.tag; mehr.push({ text: `${p.name}: Zahnbehandlung (war bald fällig)`, betrag: VORSORGE.zahn }); }
         delete p.klinik; delete p.dreck;   // in der Klinik wird geputzt
-        rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: ${tage} ${tage === 1 ? "Tag" : "Tage"} stationäre Behandlung × ${fmt(KOSTEN.klinik)}`, betrag }], [p.id], `${p.name} ist wieder fit – Rechnung`,
-          `<b>${esc(p.name)}</b> hat sich in der Klinik gut erholt (Gesundheit ${p.pflege.gesundheit.toLocaleString("de-DE")} %) und steht wieder in Box ${i + 1}.<br><br>`);
+        rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: ${tage} ${tage === 1 ? "Tag" : "Tage"} stationäre Behandlung × ${fmt(KOSTEN.klinik)}`, betrag }, ...(zus ? [{ text: `${p.name}: Behandlung der Krankheiten in der Klinik`, betrag: zus }] : []), ...mehr], [p.id], `${p.name} ist wieder fit – Rechnung`,
+          `<b>${esc(p.name)}</b> hat sich in der Klinik gut erholt (Gesundheit ${p.pflege.gesundheit.toLocaleString("de-DE")} %), die Krankheiten sind auskuriert, und ${pron(p).er} steht wieder in Box ${i + 1}.${mehr.length ? " Wenn schon eine Behandlung anstand, haben wir Fälliges gleich miterledigt." : ""}<br><br>`);
       }
     });
     // Warnung unter 40 %: ab unter 30 % kann sich das Pferd im Stall nicht mehr erholen
@@ -11597,7 +11608,7 @@
       sperre: (p, b) => anhGrund(p, b) || (dispoLimit() ? "Dispo am Limit" : "") || (b.fohlen ? "mit Fohlen bei Fuß" : alterJZ(p) < AUSBILDUNGSALTER ? "ab 3 Jahren" : ""),
       kurz: () => `${fmt(KOSTEN.ausbildung)} / Tag`, aus: (p, b) => { fahrtStress(p, "ausbildung"); wegbringen(p, "ausbildung", b, false); } },
     stationaer: { ico: "🛏️", name: "Stationär behandeln", info: "Bleibt in der Klinik, bis die Gesundheit mindestens 75 % beträgt – erholt sich doppelt so schnell", wohin: "in die Klinik", wo: "in der Klinik",
-      beschreibung: "Pferde unter 75 % Gesundheit – bleiben bis 75 %, Rechnung danach", kosten: () => `${fmt(KOSTEN.klinik)} pro Tag und Pferd`,
+      beschreibung: "Pferde unter 75 % Gesundheit – bleiben bis 75 % und bis alle behandelbaren Krankheiten weg sind (je offene Krankheit 20 € extra pro Tag), Fälliges wie Impfung und Zahnbehandlung wird gleich miterledigt, Rechnung danach", kosten: () => `${fmt(KOSTEN.klinik)} pro Tag und Pferd`,
       sperre: (p, b) => anhGrund(p, b, false) || (p.pflege && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p)) ? "nicht nötig" : ""),
       kurz: () => `${fmt(KOSTEN.klinik)} / Tag`, aus: p => { fahrtStress(p, "klinik"); p.klinik = { seit: spiel.tag }; delete p.weide; spiel.angebote = (spiel.angebote || []).filter(a => a.id !== p.id); } },
     kastration: { ico: "✂️", name: "Hengst kastrieren", info: "Kastration: 2 Tage Klinik, danach ist er ein Wallach", wohin: "zur Kastration in die Klinik", wo: "in der Klinik",
@@ -14894,6 +14905,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       ${verTab(["Krankheit", "Anteil", "Bereich", "Gesundheit/Nacht je Grad", "ohne Behandlung", "Behandlung", "Heilung"], Object.values(KRANK).map(K => [`${K.ico} ${K.n}${K.chronisch ? " (chronisch)" : ""}`, String(K.gew).replace(".", ","), (WISSEN.find(w => w[0] === K.bereich) || [])[3], String(K.g).replace(".", ","), `${K.selbst ? `bis Grad 2: ${Math.round(K.selbst * 100)} % besser · ` : ""}${Math.round(K.schlimmer * 100)} % schlimmer${K.tod ? ` · Tod nach ${K.tod} ${K.tod === 1 ? "Nacht" : "Nächten"} auf Grad 5 (nur nach Warnung)` : ""}`, `${fmt(K.kosten)} (+25 % je Grad über 1)${K.op ? ` · ab Grad ${K.op} OP ${fmt(KOLIK_OP)}` : ""}`, K.chronisch ? "bleibt, behandelt Grad 1" : `${K.heil} × (0,6 + 0,4 × Grad) Tage`]))}
       <p>Unbehandelt: Gesundheit − Wert × Grad pro Nacht (nicht unter 1 %), Wohlbefinden −1,5 × Grad; behandelt nur 30 % davon. Heilung × (1,3 − Regeneration ÷ 100 × 0,6). Tödlich nur Kolik, Hufrehe und Druse auf Grad 5 ohne Behandlung – und nur, wenn vorher deutlich gewarnt wurde (Anzeichen beim Besuch gesehen, Meldung eines Mitarbeiters ab Grad 4 oder Tierarzt kannte den Fall). Kennt der Tierarzt den Fall, schreibt er ab Grad 4 einen Warnbrief. Bekannte Befunde sperren die Zucht (ab Grad 3 oder Kolik/Druse/Hufrehe) und senken den Marktwert (unbehandelt 6 % je Grad, behandelt 2 %, chronisch dauerhaft 10 %, höchstens −60 %). Für Training (Etappe 4) vorbereitet: <code>befundBremse</code>.</p>
       <p><b>Bemerken und Einschätzen:</b> Jeden Morgen kann bemerken, wer bei dem Pferd gearbeitet hat (Stallbursche/Azubi, Pfleger, Bereiter) sowie Pferdewirt und Stallmeister: Chance 25 % + 10 % je Grad + Erfahrung im Bereich ÷ 250 (+20 % aufmerksam) → Brief mit Einschätzung. Trefferquote 20 % + Erfahrung × 0,75 % (+5 % aufmerksam); Sicherheit aus Erfahrung ÷ 100 ± Zufall (ab 0,55 „sicher“, ab 0,2 „vermutet“, sonst „keine Ahnung“) – auch Unerfahrene sind manchmal fälschlich sicher. Falsche Tipps meist aus demselben Bereich. Spieler beim ersten Besuch am Tag: 35 % + 15 % je Grad + eigene Erfahrung ÷ 300, Anzeichen als Sprechblase. In Box → Pflege → Versorgung: Mitarbeiter vertrauen, anderen fragen, selbst einschätzen (Annahme – eigene Behandlungen ab Etappe D) oder Tierarzt. Erfahrung erst mit der Diagnose: richtige Einschätzung +3, falsche +1, wer es bemerkt hat +2; Spieler immer +1, eigene Einschätzung richtig +3, falsch +1,5.</p>
+      <p><b>Klinik (v660, Dome 23.10.):</b> Entlassung erst bei Gesundheit ≥ 75 % (oder dem, was Alter erlaubt) <i>und</i> ohne behandelbare Krankheit (chronische und erbliche bleiben). In der Klinik wird jede nicht chronische Krankheit behandelt: alle 2 Tage eine Stufe besser, Zusatzkosten ${fmt(KLINIK_BEFUND)} je Krankheit und Tag. Ist bei der Entlassung Impfung oder Zahnbehandlung bald fällig, wird sie miterledigt (${fmt(VORSORGE.impfung)} / ${fmt(VORSORGE.zahn)}) und steht auf der Rechnung. Gilt nicht für OPs und Pferde, die der Besitzer bringt (dort nur die Krankheiten).</p>
       <p><b>Tierarzt-Hausbesuch:</b> ${fmt(TIERARZT_BESUCH)} – sichere Diagnose aller Befunde (auch unbemerkter), Erstbehandlung (eine Stufe besser, chronisch auf Grad 1; zählt als voll behandelter Tag) und Behandlungsplan; Rezeptmittel bringt er mit (${REZEPT_DOSEN} Dosen, Preis je Dosis), Boxenruhe trägt er ein. Kolik ab Grad 4: OP in der Klinik ${fmt(KOLIK_OP)} inkl. ${KOLIK_OP_TAGE} Tage, danach ${fmt(KOSTEN.klinik)} pro Tag bis 75 %.</p>
       <p><b>Hufeisen (v381):</b> Beschlag halbiert das Hornspalt-Risiko und hilft beim Heilen. Barhuf ohne Hufschuhe im Gelände: Lahmheit (fühlig) je Ritt ${Object.entries(HUF_GELAENDE).map(([k, v]) => `${k} ${prozent(v)}`).join(", ")} je nach Hufqualität – mit Beschlag oder passenden Hufschuhen kein Risiko. Turnier barhuf: Springen ×${HUF_TURNIER.springen}, Vielseitigkeit ×${HUF_TURNIER.vielseitigkeit} (kein Halt durch Stollen), Distanz ohne Hufschuhe ×0,95. Eisen verloren zählt wie barhuf.</p>
       <p><b>Hufe (Etappe E):</b> Hufqualität 5–100 (nur Admin): Rasse (${Object.entries(HUF_RASSE).map(([r, q]) => `${rasseById(r) ? rasseById(r).name : r} ${q}`).join(", ")}) ± 20, vererbt wie eine Anlage; instabil unter 35, stabil ab 65. Hufwachstum (vererbt, 20 % langsam / 60 % normal / 20 % schnell, beim Fohlen 15 % anders als das Elternteil): Hufschmied alle ${Object.entries(HUF_WACHS).map(([k, v]) => `${k} ${String(v).replace(".", ",")}`).join(" / ")} Jahreszeiten. Preise: Barhuf ${fmt(HUF_PREIS.barhuf)}, Beschlag ${fmt(HUF_PREIS.beschlag)}, Anfahrt ${fmt(HUF_PREIS.anfahrt)} je Besuch. Dauerauftrag mit wählbarem Rhythmus je Pferd: wie der Hufschmied empfiehlt (eigenes Hufwachstum – kennt er erst nach ${HUF_KENNT_AB} Besuchen, vorher 1 Jahreszeit) oder alle ½ / 1 / 2 Jahreszeiten – seltener spart Geld, aber zu lange Hufe erhöhen das Risiko. Mit Stallmeister werden die Termine zusammengelegt (wer in ⅓ Jahreszeit fällig wäre, kommt mit, nur eine Anfahrt). Ohne Dauerauftrag ein Erinnerungsbrief. Zu lange Hufe (Länge = Tage seit Hufschmied ÷ eigener Rhythmus): Risiko-Faktor 1 + (Länge − 1) × 1,5 (höchstens 4) für Lahmheit, Hufabszess und Hornspalt; ab 1,3 Sprechblase „stolpert“. Eisen verlieren (beschlagen): 1 % pro Nacht × instabil 3 / stabil 0,5 × Weide 1,5 × Länge-Faktor; ohne Eisen Lahmheit ×1,5, Abszess ×2. Hufkrankheiten: Strahlfäule (nicht ausgekratzt ×1, ausgekratzt ×0,3; Mist ×2; Herbst-/Winterweide ×2), Hufabszess, Hornspalt (instabil ×3, stabil ×0,5, Beschlag ×0,5, barhuf auf der Weide ×1,3). Der Hufschmied findet und versorgt sie (eine Stufe besser) und gibt einen Plan. Hufe auskratzen: Putzkiste (Hufkratzer), Pfleger jeden Morgen oder als Behandlung. Hufgröße misst der Hufschmied nur auf Anfrage für ${fmt(HUF_MESSEN)} (nach Gewichtsklasse, hinten in 30 % eine Nummer kleiner; steht danach im Steckbrief). Anfahrt nur einmal am Tag (ruft man ihn am selben Tag für mehrere Boxen, kommt eine gemeinsame Rechnung mit allen Posten). Frisch gemachte Hufe schneidet bzw. beschlägt er erst wieder, wenn die Hälfte des eigenen Rhythmus vorbei ist – außer bei verlorenem Eisen, Hufbefund oder Wechsel barhuf ↔ Beschlag. Hufschuhe (Ausrüstung → Hufschuhe): je Pferd ein Paar vorne und/oder hinten, ${fmt(HUFSCHUH_PREIS)} pro Paar, Zustand 100 %; falsche Größe scheuert – eingesetzt und abgenutzt werden sie mit dem Training im Gelände.</p>

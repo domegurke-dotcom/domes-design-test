@@ -6,6 +6,7 @@ const B = require('./bilder');   // Bilder-Schalter: BILDER=aus|fehler|alle, sie
  await pg.click('#smNeu'); await pg.fill('#chName','Dome'); await pg.click('#chLos'); await pg.click('#dlgKnoepfe button'); await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName','Sonnenhof'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(200);
  // Prüffunktionen im Spiel definieren
  await pg.evaluate(() => {
+   spiel.stufenAn = false; Object.keys(VET.verbotAb).forEach(k => { VET.verbotAb[k] = 99; });   // kein Tierhalteverbot mitten im Test (die Test-Pferde werden nicht immer versorgt);   // v650: neue Spiele starten mit Stufen-Sperre (Anfänger) – dieser Test prüft das ganze Spiel
    window.START = { h1: 15000 }; window.PROT = [];
    window.pruefe = (titel) => { const f = [];
      const kasse = hid => imHof(hid, () => { const F = spiel.finanzen || {}; let s = 0; Object.values(F).forEach(J => Object.values(J).forEach(e => s += e.ein - e.aus)); return [spiel.geld, s]; });
@@ -28,7 +29,7 @@ const B = require('./bilder');   // Bilder-Schalter: BILDER=aus|fehler|alle, sie
      if (new Set(alle).size !== alle.length) f.push('Pferd doppelt auf mehreren Höfen/Boxen');
      const Z = zentral(); const zs = Z.log.reduce((a, x) => a + x.b, 0); if (Math.abs(Z.geld - zs) > 0.05 && Z.log.length < 40) f.push(`Zentrales Konto ${Z.geld} ≠ Auszug ${zs}`);
      if ((spiel.friedhof || []).some(g => g.pferd && g.pferd.einsteller)) f.push('Pensionspferd auf dem eigenen Friedhof');
-     if (spiel.verloren) f.push('VERLOREN');
+     if (spiel.verloren) f.push('VERLOREN ' + JSON.stringify(spiel.verloren) + ' hofWeg ' + JSON.stringify(spiel.hofWeg || []) + ' hofReihe ' + JSON.stringify(hofReihe()) + ' aktiv ' + aktivHid());
      PROT.push([titel, datumText(), hofReihe().map(h => `${hofNameVon(h)} ${Math.round(kasse(h)[0])} €`).join(' | '), `zentral ${Z.geld}`, f.length ? f : 'ok']);
    };
    window.tage = (n, fuettern = ['h1']) => { for (let i = 0; i < n; i++) { fuettern.forEach(h => imHof(h, () => { spiel.boxen.forEach(bx => { if (bx.pferd && !bx.pferd.weide) { bx.krippeVoll = true; bx.mistig = false; }
@@ -52,7 +53,7 @@ const B = require('./bilder');   // Bilder-Schalter: BILDER=aus|fehler|alle, sie
    neuerHof(A, 'Lindenhof'); $('dlg').hidden = true; START.h2 = 0;
    zentralBuchen(-5000, 'an Lindenhof'); imHof('h2', () => buchen(5000, 'Überweisung vom zentralen Konto'));
    pruefe('zweiter Hof');
-   const bx = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Pommes'); umziehen(bx.pferd, bx, 'h2', false);
+   const bx = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Pommes'); if (bx) umziehen(bx.pferd, bx, 'h2', false);   // v650: Pommes kann in den 2 Jz vorher zufällig gestorben sein
    imHof('h2', () => { stelleEin('stallbursche'); });
    pruefe('Umzug');
    tage(tpj()); pruefe('1 Jz mit 2 Höfen');

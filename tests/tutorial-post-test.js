@@ -13,7 +13,7 @@ const { chromium } = require('playwright'); const path = require('path');
     brief('Max Mustermann', 'Zusätzliche Frage', 'Hallo', {}); brief('Hufschmied', 'Rechnung', 'hier die Rechnung', { aktion: { typ: 'rechnung', rid: (spiel.rechnungen[0] || {}).id } });
     tutPostKontrolle(); return { ungelesen: ungelesen(), offeneRechnungen: (spiel.rechnungen || []).length, geld: g0 - spiel.geld }; });
   // Kapitel 3 (Krankes Pony): Mitarbeiter versorgen, Brief der Tierarztpraxis bleibt ungelesen
-  R.k3 = await pg.evaluate(async () => { tutKapitel(2); await new Promise(r => setTimeout(r, 1500)); const b = spiel.boxen[0]; b.krippeVoll = false; b.mistig = true; delete b.wasserTag; spiel.tutorial.versTag = null; tutPruefen();
+  R.k3 = await pg.evaluate(async () => { tutKapitel(TUT.findIndex(k => k.n === 'Krankes Pony')); await new Promise(r => setTimeout(r, 1500)); const b = spiel.boxen[0]; b.krippeVoll = false; b.mistig = true; delete b.wasserTag; spiel.tutorial.versTag = null; tutPruefen();
     const ver = b.krippeVoll && !b.mistig; brief('Tierarztpraxis', 'Hausbesuch – Bericht', 'Bericht', {}); brief('Max Mustermann', 'Nochmal eine Frage', 'Hallo', {}); tutPostKontrolle();
     return { selbst: tutSelbstVersorgen(), versorgt: ver, tierarztUngelesen: (spiel.post || []).filter(x => !x.gelesen).map(x => x.von) }; });
   const out = [], ok = (n, c) => out.push((c ? '✓ ' : '✗ ') + n + (c ? '' : ' → ' + JSON.stringify(c === false ? 'falsch' : c)));

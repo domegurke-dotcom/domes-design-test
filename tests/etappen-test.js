@@ -17,6 +17,7 @@ const B = require('./bilder');   // Bilder-Schalter: BILDER=aus|fehler|alle, sie
     await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'Testhof'); await pg.click('#dlgKnoepfe button:first-child');
     await pg.waitForTimeout(300);
     const r = await pg.evaluate((ansicht) => {
+      spiel.stufenAn = false; Object.keys(VET.verbotAb).forEach(k => { VET.verbotAb[k] = 99; });   // kein Tierhalteverbot mitten im Test (die Test-Pferde werden nicht immer versorgt);   // v650: neue Spiele starten mit Stufen-Sperre (Anfänger) – dieser Test prüft das ganze Spiel
       const L = [], ok = (name, bed, info = '') => L.push([bed ? '✓' : '✗', ansicht, name, info]);
       const nacht = n => { for (let i = 0; i < n; i++) { spiel.boxen.forEach(bx => { const q = bx.pferd; if (!q || bx.tot || q.klinik) return; fuetternAusLager(bx, 'du'); bx.krippeVoll = true; bx.mistig = false; bx.mistStufe = 0;   // auch Weide-Heu
           q.befunde = []; if (q.pflege) q.pflege.gesundheit = Math.max(q.pflege.gesundheit, 80); }); naechsteNacht(); } };   // Tierarzt kümmert sich – hier geht es um die Abläufe
@@ -230,7 +231,8 @@ const B = require('./bilder');   // Bilder-Schalter: BILDER=aus|fehler|alle, sie
       { const H = spiel.hof; ok('H7 Start-Hof ist Pensionsstall', H.art === 'pension');
         H.art = 'western'; spiel.stallarten = ['western']; spiel.anlage.trail = false; H.artSeit = jzJetzt(); delete H.artCache; delete H.artVerloren; delete H.artFrist; H.foerderLog = [];
         const vorher = (spiel.post || []).length; stallartJahreszeit();
-        ok('H7 Schonfrist: keine Strafe, keine Förderung', !H.artFrist && !H.artVerloren && (spiel.post || []).length === vorher, JSON.stringify({ f: H.artFrist, v: H.artVerloren, p: [vorher, (spiel.post || []).length], b: stallartBed('western').map(x => x[1]), ok: stallartOk(), art: spiel.hof.art, gleich: spiel.hof === H, top: (spiel.post || [])[0] && spiel.post[0].betreff }));
+        ok('H7 Schonfrist: keine Strafe, keine Förderung', !H.artFrist && !H.artVerloren && ((spiel.post || []).length === vorher || /diesmal keine Förderung/.test((spiel.post || [])[0].betreff || '')),   // v650: der Brief „diesmal keine Förderung“ (Schonfrist, keine Strafe) gehört seit v36x dazu
+           JSON.stringify({ f: H.artFrist, v: H.artVerloren, p: [vorher, (spiel.post || []).length], b: stallartBed('western').map(x => x[1]), ok: stallartOk(), art: spiel.hof.art, gleich: spiel.hof === H, top: (spiel.post || [])[0] && spiel.post[0].betreff }));
         H.artSeit = jzJetzt() - 5; H.foerderLog = [{ jz: jzJetzt() - 1, b: 300 }]; delete H.artCache; stallartJahreszeit();
         ok('H7 Bedingung fehlt → Warnbrief mit Frist', H.artFrist === jzJetzt() + 1 && (spiel.post || []).some(x => /Bedingungen nicht erfüllt/.test(x.betreff || '')));
         H.artFrist = jzJetzt(); const g0 = spiel.geld; stallartJahreszeit();
@@ -319,8 +321,8 @@ const B = require('./bilder');   // Bilder-Schalter: BILDER=aus|fehler|alle, sie
         spiel.geld = g0; spiel.mitarbeiter = mMerk; spiel.anlage = { ...spiel.anlage, ...A0 }; H.art = 'pension'; spiel.stallarten = ['pension']; delete H.artCache; }
 
       // ---------- H1 Kreditrate ----------
-      { const rest = k.rest; k.jz = -1; kreditJahreszeit();
-        ok('H1 Kreditrate wird abgebucht', k.rest < rest, `Rest ${rest} → ${k.rest} €`); }
+      { const k = kredite().find(x => kreditLaeuft(x)) || kredite()[0]; const rest = k.rest; spiel.geld = Math.max(spiel.geld, 20000); delete spiel.verloren; k.jz = -1; kreditJahreszeit();   // v650: Konto vorher füllen (Dispo-Grenze v547 – bei leerem Konto wird die Rate zur Mahnung)
+        ok('H1 Kreditrate wird abgebucht', k.rest < rest, `Rest ${rest} → ${k.rest} €` + (k.rest < rest ? '' : ' ' + JSON.stringify({ offen: k.offen, laeuft: kreditLaeuft(k), verl: !!spiel.verloren, geld: spiel.geld, dispo: dispoLimit(), jz: [k.jz, jzJetzt()], n: kredite().length }))); }
 
       speichern(); return L;
     }, ansicht);

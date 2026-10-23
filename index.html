@@ -1100,7 +1100,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "734";
+  const SPIEL_VERSION = "735";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1108,12 +1108,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=734"></script>
-<script src="pferd.js?v=734"></script>
-<script src="boxstufen.js?v=734"></script>
-<script src="kopfneu.js?v=734"></script>
-<script src="waschbild.js?v=734"></script>
-<script src="avatare.js?v=734"></script>
+<script src="lz-string.min.js?v=735"></script>
+<script src="pferd.js?v=735"></script>
+<script src="boxstufen.js?v=735"></script>
+<script src="kopfneu.js?v=735"></script>
+<script src="waschbild.js?v=735"></script>
+<script src="avatare.js?v=735"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -1629,6 +1629,8 @@
   const SCHECKE_NAME = b => ({ rappe: "Rappschecke", brauner: "Braunschecke", hellbrauner: "Braunschecke", dunkelbrauner: "Braunschecke", schwarzbrauner: "Braunschecke",
     fuchs: "Fuchsschecke", dfuchs: "Fuchsschecke", hellfuchs: "Fuchsschecke", dunkelfuchs: "Fuchsschecke", braunfalbe: "Falbschecke", rotfalbe: "Falbschecke", mausfalbe: "Falbschecke", gelbfalbe: "Falbschecke",
     palomino: "Isabellschecke", isabell: "Isabellschecke", buckskin: "Buckskin-Schecke", russbuckskin: "Buckskin-Schecke", blueroan: "Roan-Schecke", rotschimmel: "Roan-Schecke", windfarben: "Windfarbene Schecke" })[b] || "Schecke";
+  const TRICOLOR = { brauner: 1, hellbrauner: 1, dunkelbrauner: 1, schwarzbrauner: 1 };   // v735 (Dome): braune Grundfarbe + Weiß = drei Farben (weiß, braun, schwarze Mähne/Beine) heißt in echt Tricolor
+  const scheckeTri = b => SCHECKE_NAME(b) + (TRICOLOR[b] ? " (Tricolor)" : "");
   const overoGetestet = p => testGemacht(p, "farbe") || testGemacht(p, "krank");
   // Anzeigename einer Farbe für dieses Pferd (Overo nur mit Gentest)
   // Achal-Tekkiner: Cream- und Falbfarben mit metallischem Goldglanz heißen in der Zucht „Gold“
@@ -1641,9 +1643,9 @@
     if (p && p.rasse === "tekke" && id === "isabell" && bronzeVon(p)) return "Perl-Isabell (goldener Perlglanz)";
     if (p && p.rasse === "tekke" && TEKKE_GOLD[id] && glanzVon(p) > 0) return TEKKE_GOLD[id];   // v443 (Dome): Fellfarbe „Gold“ beim Achal-Tekkiner
     if (p && p.rasse === "noriker" && id === "blueroan") return "Mohrenkopf (Blauschimmel)";   // v445: so heißt der Roan mit dunklem Kopf beim Noriker
-    { const t0 = String(id).match(/^to_([^~]+)/); if (t0) return SCHECKE_NAME(t0[1]); }   // v505: Tobiano auf jeder Grundfarbe
-    const m = String(id).match(/^(ov|tv)_([^~]+)/); if (!m) return FARBEN[id] ? FARBEN[id].name : id;
-    return SCHECKE_NAME(m[2]) + (p && overoGetestet(p) ? (m[1] === "tv" ? " (Tovero)" : " (Overo)") : "");
+    { const t0 = String(id).match(/^to_([^~]+)/); if (t0) return scheckeTri(t0[1]); }   // v505: Tobiano auf jeder Grundfarbe
+    const m = String(id).match(/^(ov|tv)_([^~]+)/); if (!m) return id === "braunschecke" ? scheckeTri("brauner") : FARBEN[id] ? FARBEN[id].name : id;
+    return scheckeTri(m[2]) + (p && overoGetestet(p) ? (m[1] === "tv" ? " (Tovero)" : " (Overo)") : "");
   }
   function farbText(p, jahre) {
     const id = fb(p, jahre), name = farbName(p, id);
@@ -1681,12 +1683,16 @@
   // v734 (Dome 23.10.): Pferdeköpfe in Karten werden immer gleich zugeschnitten – Ohren (oben) und Nase (links) haben denselben Abstand zum Rand (KOPF_RAND), egal ob Fohlen, Pony oder Großpferd, Ohrstellung oder Schopf. Der Zuschnitt wird aus dem gezeichneten Bild gemessen (kopfMessen), gemerkt (kopfMess) und gilt für jeden svg.kopfauto – auch für künftige Karten.
   const KOPF_RAND = 4, kopfMess = new Map();
   const kopfHash = t => { let h = 2166136261; for (let i = 0; i < t.length; i += 3) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + t.length; };
+  function kopfAuto(pk, svg, vb0, o) {   // gemeinsamer Zuschnitt für alle Kopfbilder: o.asp = Breite/Höhe (Standard 1), o.cls, o.style
+    o = o || {}; const asp = o.asp || 1, key = kopfHash(svg) + "a" + asp, m = kopfMess.get(key);
+    return `<svg class="kopfauto${o.cls ? " " + o.cls : ""}${m ? "" : " kopf-offen"}" data-k="${key}" data-asp="${asp}" data-nx="${pk.nase.x.toFixed(2)}" data-ny="${pk.nase.y.toFixed(2)}" data-gy="${pk.genick.y.toFixed(2)}" viewBox="${m ? m : vb0}"${o.style ? ` style="${o.style}"` : ""} preserveAspectRatio="xMidYMid meet">${svg}</svg>`;
+  }
   function kopfBild(p) {
     const o = { alterStufe: p.geb ? stufeKey(p) : undefined, seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, schopf: p.schopf, typ: p.typ,
       ...kopfOpt(p), statisch: 1 };
-    const pk = zeichnePferd(p.rasse, fb(p), { ...o, punkte: 1 }), z = zeichnePferd(p.rasse, fb(p), o), svg = ohneAnim(z.svg), key = kopfHash(svg), m = kopfMess.get(key);
-    const y0 = pk.genick.y - 15 - 2 - (o.alterStufe === "fohlen" ? 14 : 0), h = pk.nase.y + 15 - y0, vb = m ? m : [pk.nase.x - 11, y0, h, h].map(x => x.toFixed(1)).join(" ");   // vorläufiger Ausschnitt, bis gemessen ist
-    return `<svg class="kopfauto${m ? "" : " kopf-offen"}" data-k="${key}" data-nx="${pk.nase.x.toFixed(2)}" data-ny="${pk.nase.y.toFixed(2)}" data-gy="${pk.genick.y.toFixed(2)}" viewBox="${vb}" preserveAspectRatio="xMidYMid meet">${svg}</svg>`;
+    const pk = zeichnePferd(p.rasse, fb(p), { ...o, punkte: 1 }), z = zeichnePferd(p.rasse, fb(p), o), svg = ohneAnim(z.svg);
+    const y0 = pk.genick.y - 15 - 2 - (o.alterStufe === "fohlen" ? 14 : 0), h = pk.nase.y + 15 - y0;
+    return kopfAuto(pk, svg, [pk.nase.x - 11, y0, h, h].map(x => x.toFixed(1)).join(" "));   // vorläufiger Ausschnitt, bis gemessen ist
   }
   function kopfMessen(el) {   // misst die dunklen Konturpixel (Ohren oben, Nase links) und setzt den Ausschnitt mit KOPF_RAND Luft
     const key = el.dataset.k, auf = () => document.querySelectorAll(`svg.kopfauto[data-k="${key}"]`).forEach(e => e.classList.remove("kopf-offen")); if (!key) { el.classList.remove("kopf-offen"); return Promise.resolve(); }
@@ -1696,7 +1702,7 @@
     return new Promise(res => { const img = new Image();
       img.onload = () => { try { const c = document.createElement("canvas"); c.width = c.height = R[2] * sc; const x = c.getContext("2d", { willReadFrequently: true }); x.drawImage(img, 0, 0); const d = x.getImageData(0, 0, c.width, c.height).data, W = c.width; let mx = W, my = W;
           for (let yy = 0; yy < W; yy++) for (let xx = 0; xx < W; xx++) { const i = (yy * W + xx) * 4; if (d[i + 3] > 100 && d[i] + d[i + 1] + d[i + 2] < 300) { if (xx < mx) mx = xx; if (yy < my) my = yy; } }
-          if (mx < W && my < W) { const left = R[0] + mx / sc - KOPF_RAND, top = R[1] + my / sc - KOPF_RAND, S = ny + 15 - top; setze([left, top, S, S].map(v => v.toFixed(1)).join(" ")); } } catch (e) {} auf(); res(); };
+          if (mx < W && my < W) { const left = R[0] + mx / sc - KOPF_RAND, top = R[1] + my / sc - KOPF_RAND, S = ny + 15 - top, asp = +el.dataset.asp || 1; setze([left, top, S * asp, S].map(v => v.toFixed(1)).join(" ")); } } catch (e) {} auf(); res(); };
       img.onerror = () => { auf(); res(); };
       img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${R[2] * sc}" height="${R[3] * sc}" viewBox="${R.join(" ")}">${el.innerHTML}</svg>`); }); }
   window.kopfMessen = kopfMessen;
@@ -4612,13 +4618,13 @@
             if (!ns) return `<p class="text" style="margin:8px 0 4px">✂️ <b>Schopf</b> · ${esc(p.name)} hat von Natur aus keinen Schopf.</p>`;
             const sj = SCHOEPFE.findIndex(m => m[0] === (p.schopf || ns)), rest = Math.max(1, (2 * tpj()) - (spiel.tag - (p.schopfSeit || spiel.tag)));
             if (sj < 0) return `<p class="text" style="margin:8px 0 4px">✂️ <b>Schopf</b> · ${esc(p.name)} hat noch keinen Schopf. Er wächst in ${rest} ${rest === 1 ? "Tag" : "Tagen"}.</p>`;
-            const pk = zeichnePferd(p.rasse, fb(p), { punkte: 1, seed: p.id, ...kopfOpt(p) }), y0 = pk.genick.y - 17, hh = pk.nase.y + 15 - y0, vb = [pk.nase.x - 11, y0, hh, hh].map(x => x.toFixed(1)).join(" ");   // ganzer Kopf mit Ohren und Maul
+            const pk = zeichnePferd(p.rasse, fb(p), { punkte: 1, seed: p.id, ...kopfOpt(p) }), y0 = pk.genick.y - 17 - 2, hh = pk.nase.y + 15 - y0, vb = [pk.nase.x - 11, y0, hh, hh].map(x => x.toFixed(1)).join(" ");   // ganzer Kopf mit Ohren und Maul
             return `<p class="text" style="margin:8px 0 4px">✂️ <b>Schopf schneiden</b> · aktuell: ${SCHOEPFE[sj][1]}. ${sj === 0 ? "Kürzer geht es nicht mehr." : "Wähle die neue Länge:"}<br><small>${sj === SCHOEPFE.length - 1 ? "Der Schopf hat die maximale Länge erreicht." : `Wächst in ${rest} ${rest === 1 ? "Tag" : "Tagen"} eine Stufe länger.`}</small></p>
             <div class="kacheln">${SCHOEPFE.map(([id], i) => {
               const z = zeichnePferd(p.rasse, fb(p), { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, schopf: id, ...kopfOpt(p), statisch: 1 });
               const moeglich = i < sj;
               return `<div class="kachel-halten"><label class="halten" title="Wunschlänge: der Pferdepfleger hält den Schopf auf dieser Länge"><input type="checkbox" data-sziel="${id}" ${p.schopfZiel === id ? "checked" : ""} ${fremd(p) ? 'disabled title="Wunsch des Besitzers"' : ""}></label><button class="kachel ${moeglich ? "klickbar" : i === sj ? "aktuell" : "fehlt"}" data-schopf="${moeglich ? id : ""}" ${moeglich ? "" : "disabled"}>
-                <svg class="mini" viewBox="${vb}" style="background:#fff">${ohneAnim(z.svg)}</svg>
+                ${kopfAuto(pk, ohneAnim(z.svg), vb, { cls: "mini", style: "background:#fff" })}
                 <b>${({ kurz: "Kurz", mittel: "Mittel", lang: "Lang", extralang: "Extra lang" })[id]}</b><small>${i === sj ? "aktuell" : moeglich ? "schneiden" : "zu lang"}${p.schopfZiel === id ? (fremd(p) ? " · Wunsch des Besitzers" : " · Wunsch") : ""}</small></button></div>`;
             }).join("")}</div>`;
           })()}
@@ -4738,7 +4744,7 @@
         <p class="text" style="margin:14px 0 4px">🐴 <b>Test: Kopfform</b> · Domes neue Köpfe (aktuell: ${p.nase === "spiel" ? "Spielkopf" : kopfName(kopfVon(p))})</p>
         <div class="kacheln klein">${(() => { const akt = p.nase === "spiel" ? "spiel" : kopfKey(kopfVon(p)), pk = zeichnePferd(p.rasse, fb(p), { punkte: 1, seed: p.id }), vb = [pk.nase.x - 11, pk.genick.y - 18, 54, 54].map(x => x.toFixed(1)).join(" ");
           return Object.keys(KOPF_NEU.formen).concat("spiel").map(id => `<button class="kachel ${id === akt ? "aktuell" : "klickbar"}" data-nase="${id}">
-            <svg class="mini" viewBox="${vb}" style="background:#fff">${zeichnePferd(p.rasse, fb(p), { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, schopf: p.schopf, statisch: 1, ...(id === "spiel" ? { eigenKopf: false } : { kopfform: id }) }).svg}</svg>
+            ${kopfAuto(pk, zeichnePferd(p.rasse, fb(p), { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, schopf: p.schopf, statisch: 1, ...(id === "spiel" ? { eigenKopf: false } : { kopfform: id }) }).svg, vb, { cls: "mini", style: "background:#fff" })}
             <b>${id === "spiel" ? "Spielkopf" : kopfName(kopfAusKey(id))}</b><small>${id === akt ? "aktuell" : "auswählen"}</small></button>`).join(""); })()}</div>`;
     }
     inhalt = ohneAnim(inhalt);   // Kacheln in der Akte ohne Animationen
@@ -11415,13 +11421,14 @@
    ["lex_snowflake", "brauner", "Snowflake", "Leopard-Komplex: weiße Flöckchen, die mit dem Alter mehr werden. Vererbte Anlage.", { lexOpt: { lp: { haut: true, sklera: true, huf: true, lack: 0, flocken: 25, frost: false } } }],
    ["lex_frost", "rappe", "Frost", "Leopard-Komplex: weißer Reif auf Rücken und Hüfte. Vererbte Anlage.", { lexOpt: { lp: { haut: true, sklera: true, huf: true, lack: 0, flocken: 0, frost: true } } }],
    ["lex_pintaloosa", "tg_brauner", "Pintaloosa", "Tigerschecke mit Tobiano-Scheckung (Lp + To) – beide Muster übereinander, z. B. beim Knabstrupper oder Paint/Appaloosa-Kreuzungen.", { lexOpt: { tobianoMix: true } }],
+   ["lex_tricolor", "braunschecke", "Tricolor (Braunschecke)", "Dreifarbig: weiß, braun und schwarz (Mähne, Schweif, Beine) – jede Scheckung (Tobiano, Overo, Tovero) auf einer braunen Grundfarbe. Rappschecken und Fuchsschecken haben nur zwei Farben.", {}],
    ["lex_roanschecke", "braunschecke", "Roan-Schecke", "Roan unter einer Scheckung: weiße Stichelhaare nur in den farbigen Flecken (Rn + To).", { lexOpt: { roanMix: true } }],
    ["lex_tekke_perl", "isabell", "Perl-Isabell (Achal-Tekkiner)", "Doppel-Cream mit goldenem Perlglanz – der berühmte „goldene“ Tekkiner. Der Ton wird vererbt.", { glanzLex: .9, bronzeLex: true }]].forEach(([id, b, n, t, x]) => { FARBEN[id] = { ...FARBEN[b], ...x, lexBasis: b, name: n }; FARBBESCHREIBUNG[id] = t; });
   // Fellfarben in der Enzyklopädie nach Farbfamilien: Rappen, Braune, Füchse, Falben, Cremefarben, Roans, Schimmel, Schecken, Tiger
   const FARB_REIHE = ["rappe", "lex_rappe_sommer", "windfarben", "brauner", "hellbrauner", "dunkelbrauner", "schwarzbrauner", "lex_brauner_sommer", "fuchs", "dfuchs", "hellfuchs", "dunkelfuchs", "lex_fuchs_sommer",
     "braunfalbe", "rotfalbe", "mausfalbe", "gelbfalbe", "weissfalbe", "palomino", "buckskin", "russbuckskin", "isabell", "lex_tekke_gold", "lex_tekke_bronze", "lex_tekke_silber", "lex_tekke_perl", "lex_glanzaepfel", "blueroan", "rotschimmel", "lex_rabicano", "lex_birdcatcher", "lex_bendor", "lex_brindle_dunkel", "lex_brindle_weiss", "lex_dw",
     "grauschimmel", "braunschimmel", "fuchsschimmel", "apfelschimmel", "schimmel", "fliegenschimmel", "rappschecke", "braunschecke", "fuchsschecke", "ov_brauner", "tv_fuchs",
-    "tg_brauner", "fs_rappe", "sb_rappe", "sk_brauner", "lex_lackschimmel", "lex_snowflake", "lex_frost", "lex_pintaloosa", "lex_roanschecke", "lethalwhite"];
+    "tg_brauner", "fs_rappe", "sb_rappe", "sk_brauner", "lex_lackschimmel", "lex_snowflake", "lex_frost", "lex_pintaloosa", "lex_roanschecke", "lex_tricolor", "lethalwhite"];
   const farbRang = id => { const i = FARB_REIHE.indexOf(id); return i < 0 ? 999 : i; };
   const ENZY = {
     kopf: { titel: "Kopfformen", ansicht: "kopf", rasse: "hannoveraner", farbe: "brauner", eintraege: [
@@ -11516,7 +11523,7 @@
       const pk = zeichnePferd(kat.rasse, farbe || kat.farbe, { ...o, punkte: 1 });
       const z = zeichnePferd(kat.rasse, farbe || kat.farbe, { ...o, eigenKopf: eigen, ...(zo || {}) });
       const y0 = pk.genick.y - 9, hh = pk.nase.y + 15 - y0, ww = hh * 58 / 52 + 7;   // v733: links mehr Luft, die Nase wurde angeschnitten
-      return `<svg viewBox="${[pk.nase.x - 11, y0, ww, hh].map(x => x.toFixed(1)).join(" ")}">${ohneAnim(z.svg)}</svg>`;
+      return kopfAuto(pk, ohneAnim(z.svg), [pk.nase.x - 11, y0, ww, hh].map(x => x.toFixed(1)).join(" "), { asp: 58 / 52 });
     }
     const z = zeichnePferd(kat.rasse, farbe || kat.farbe, { eigenKopf: kat.ansicht === "kopf" ? false : undefined, k: kopfBild ? { fore: 0, ...(kOv || {}) } : (kOv || undefined), abzeichen: abz || undefined, seed: "enz", maehne: kopfBild ? "kurz" : undefined, nurBein: kat.ansicht === "beine", ...(zo || {}) });
     const b = z.box, w = b.maxX - b.minX, h = -b.minY;

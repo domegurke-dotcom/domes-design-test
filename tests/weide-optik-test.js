@@ -21,7 +21,7 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Sommer, 1 Schnitt: Hinweis auf 2. Schnitt mit Grasgrenze', /2\. Schnitt im Sommer/.test(maehHinweis(wi)), maehHinweis(wi)); wi.gras = 30; ok('Zu wenig Gras: Grund genannt', /zu wenig Gras/.test(maehHinweis(wi)), maehHinweis(wi));
     ok('Weidenliste enthält den Mäh-Hinweis', /🚜/.test(weidenHTML()));
     // Futterwarnung
-    const F = futterkammer(); const V = futterVerbrauchTag(); F.lager.heu = Math.max(0, V.raufutter * 5.5); F.warn = {}; const br0 = (spiel.post || []).length; futterVorratPruefen();
-    ok('Warnung schon bei 5 Tagen Vorrat (Schwelle 6)', FUTTER_WARN_TAGE === 6 && F.warn.raufutter === 'bald' || V.raufutter === 0, JSON.stringify(F.warn) + ' / ' + V.raufutter);
+    const F = futterkammer(); const V = futterVerbrauchTag(); F.lager.heu = Math.max(0, V.raufutter * 3.5); F.warn = {}; const br0 = (spiel.post || []).length; futterVorratPruefen();
+    ok('Warnung schon bei 3 Tagen Vorrat (Schwelle 4)', FUTTER_WARN_TAGE === 4 && F.warn.raufutter === 'bald' || V.raufutter === 0, JSON.stringify(F.warn) + ' / ' + V.raufutter);
     return out; });
   R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(R.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

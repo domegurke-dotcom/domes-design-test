@@ -1056,7 +1056,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "673";
+  const SPIEL_VERSION = "674";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1064,11 +1064,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=673"></script>
-<script src="pferd.js?v=673"></script>
-<script src="boxstufen.js?v=673"></script>
-<script src="kopfneu.js?v=673"></script>
-<script src="waschbild.js?v=673"></script>
+<script src="lz-string.min.js?v=674"></script>
+<script src="pferd.js?v=674"></script>
+<script src="boxstufen.js?v=674"></script>
+<script src="kopfneu.js?v=674"></script>
+<script src="waschbild.js?v=674"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -9335,11 +9335,13 @@
     const W = besitzerFutter(p, box); if (!W || planGleich(futterplanVon(p, box), W)) return false;   // Anfänger: Futterwunsch des Besitzers immer automatisch
     planAendernStart(p, box); p.futterplan = { mahl: W.mahl, kg: { ...W.kg }, vom: "besitzer" }; planAendernEnde(p, box); return true;
   }
-  const besitzerAutoTag = () => spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot) return;
+  const besitzerAutoTag = () => { spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot) return;
     const e = fremd(p) ? einstellerVon(p) : null; if (e) besitzerFutter(p, b);
     const auto = besitzerAuto(p, b);
     if (e && e.futterNeu != null) { delete e.futterNeu; const W = e.futter;   // v421 (Dome): Brief, wenn der Besitzer seinen Futterwunsch ändert (z. B. tragend, Arbeit, Alter)
-      brief(eName(e), `Neuer Futterwunsch für ${p.name}`, `für <b>${esc(p.name)}</b> hat sich etwas geändert (${esc(W.umst || W.anlass)}), deshalb möchte ich ${pron(p).ihn} ab jetzt etwas anders füttern: ${Object.entries(W.kg).map(([k, x]) => `${FUTTER[k] ? FUTTER[k].n : k} ${fmtKg(x)}`).join(", ")}.${auto || p.besitzerAuto ? " Danke, dass {du es gleich so übernimmst|Sie es gleich so übernehmen}!" : " Den Plan {findest du|finden Sie} unter Versorgung → Fütterung heute."}`, { w: e.w, pferde: [p], ...(auto || p.besitzerAuto ? {} : { aktion: { typ: "futterwunsch", pid: p.id } }) }); } });
+      const kgT = Object.entries(W.kg).map(([k, x]) => `${FUTTER[k] ? FUTTER[k].n : k} ${fmtKg(x)}`).join(", "), mitAkt = !(auto || p.besitzerAuto);
+      sammelEintrag("fw", { e, p, betreff: `Neuer Futterwunsch für ${p.name}`, aktion: mitAkt, kurz: `${esc(W.umst || W.anlass)} – neu: ${kgT}.${mitAkt ? "" : " (schon so übernommen)"}`, einzel: `für <b>${esc(p.name)}</b> hat sich etwas geändert (${esc(W.umst || W.anlass)}), deshalb möchte ich ${pron(p).ihn} ab jetzt etwas anders füttern: ${Object.entries(W.kg).map(([k, x]) => `${FUTTER[k] ? FUTTER[k].n : k} ${fmtKg(x)}`).join(", ")}.${auto || p.besitzerAuto ? " Danke, dass {du es gleich so übernimmst|Sie es gleich so übernehmen}!" : " Den Plan {findest du|finden Sie} unter Versorgung → Fütterung heute."}`, extra: { w: e.w, pferde: [p], ...(auto || p.besitzerAuto ? {} : { aktion: { typ: "futterwunsch", pid: p.id } }) } }); } });
+    sammelSenden(); };
   function futterDialog(p, box, zurueck) {
     if (zurueck !== undefined) futterDialogZurueck = zurueck;
     const fest = futterFest(); if (fest) { besitzerAuto(p, box); expertAuto(p, box); } if (spiel.tutorial) spiel.tutorial.futterAuf = true;   // Anfänger: Vorschläge gleich übernehmen
@@ -13841,6 +13843,19 @@
       else if (!e.kuendigt && e.zufr < PENSION.beschwerde + pensionGeduld() && e.beschwert !== jzJetzt()) { e.beschwert = jzJetzt();
         brief(eName(e), `Beschwerde: ${p.name}`, `ich muss mich leider beschweren: ${pensionGruende(e)}. Bitte {kümmere dich|kümmern Sie sich} darum – sonst suche ich mir einen anderen Stall.`, { w: e.w, pferde: [p] }); }
     });
+    sammelSenden();
+  }
+  // v674 (Dome 23.10.): Rückmeldungen und Futterwünsche der Besitzer kommen als Sammelbrief, wenn am selben Tag mehrere anfallen (eine einzelne bleibt ein normaler Brief)
+  const SAMMEL = { fb: [], fw: [] };
+  function sammelEintrag(art, E) { SAMMEL[art].push(E); }
+  function sammelSenden() {
+    ["fb", "fw"].forEach(art => { const L = SAMMEL[art].splice(0); if (!L.length) return;
+      if (L.length === 1) { const E = L[0]; brief(eName(E.e), E.betreff, E.einzel, E.extra || { w: E.e.w, pferde: [E.p] }); return; }
+      const zeilen = L.map(E => `<b>${esc(E.p.name)}</b> (${esc(eName(E.e))}):<br>${E.kurz}`).join("<br><br>");
+      if (art === "fb") { const ruf = L[0].ruf || "";
+        brief("Die Einsteller", `Rückmeldungen von ${L.length} Besitzern`, `wir wollten {euch|Ihnen} eine kurze Rückmeldung geben:<br><br>${zeilen}${ruf}`, { pferde: L.map(E => E.p) }); }
+      else { const ids = L.filter(E => E.aktion).map(E => E.p.id);
+        brief("Die Einsteller", `Neue Futterwünsche (${L.length} Pferde)`, `bei ein paar Pferden hat sich etwas geändert, deshalb möchten wir sie etwas anders füttern:<br><br>${zeilen}`, { pferde: L.map(E => E.p), ...(ids.length ? { aktion: { typ: "fwalle", pids: ids } } : {}) }); } });
   }
   // Feedback: etwa einmal je Jahreszeit schreibt jeder Einsteller, was gefällt und was nicht (nicht, wenn er sich gerade beschwert)
   function pensionFeedback(e, p) {
@@ -13853,7 +13868,8 @@
     if (!schlecht.length && e.zufr < 55) schlecht = (e.log || []).slice(0, 3).map(x => x.grund);   // Dome 21.10.: wer „nicht ganz glücklich“ ist, nennt auch ältere Gründe – kein „Zu meckern habe ich nichts“ dahinter
     const stimmung = e.zufr >= 75 ? `Ich fühle mich mit ${esc(p.name)} bei {euch|Ihnen} rundum wohl.` : e.zufr >= 55 ? `Im Großen und Ganzen bin ich zufrieden.` : `Ehrlich gesagt bin ich nicht ganz glücklich.`;
     const ruf = R.ansehen >= 140 ? " Unter den Reitern hier in der Gegend hat {euer|Ihr} Stall übrigens einen richtig guten Ruf." : R.ansehen <= 70 ? " Unter den Reitern in der Gegend hört man über {euren|Ihren} Stall leider nicht nur Gutes." : "";
-    brief(eName(e), `Rückmeldung zu ${p.name}`, `ich wollte {euch|Ihnen} mal eine kurze Rückmeldung geben. ${stimmung}${gut.length ? `<br><br>👍 Was mir gefällt: ${gut.join(", ")}.` : ""}${schlecht.length ? `<br>👎 Was besser laufen könnte: ${schlecht.join(", ")}.` : `<br>${e.zufr < 55 ? "👎 Woran es genau liegt, kann ich gar nicht sagen – es läuft einfach nicht rund." : "👎 Zu meckern habe ich gerade nichts."}`}${ruf}`, { w: e.w, pferde: [p] });
+    const kurz = `${stimmung}${gut.length ? `<br>👍 ${gut.join(", ")}.` : ""}${schlecht.length ? `<br>👎 ${schlecht.join(", ")}.` : `<br>${e.zufr < 55 ? "👎 Woran es genau liegt, kann ich gar nicht sagen." : "👎 Zu meckern habe ich gerade nichts."}`}`;
+    sammelEintrag("fb", { e, p, betreff: `Rückmeldung zu ${p.name}`, kurz, ruf, einzel: `ich wollte {euch|Ihnen} mal eine kurze Rückmeldung geben. ${stimmung}${gut.length ? `<br><br>👍 Was mir gefällt: ${gut.join(", ")}.` : ""}${schlecht.length ? `<br>👎 Was besser laufen könnte: ${schlecht.join(", ")}.` : `<br>${e.zufr < 55 ? "👎 Woran es genau liegt, kann ich gar nicht sagen – es läuft einfach nicht rund." : "👎 Zu meckern habe ich gerade nichts."}`}${ruf}` });
   }
   const pensionGruende = e => { const l = (e.log || []).filter(x => spiel.tag - x.tag <= tpj()).map(x => x.grund); return l.length ? l.slice(0, 3).join(", ") : "die Versorgung lässt zu wünschen übrig"; };
   // morgens: Besitzer kommen vorbei (putzen, reiten, bemerken Krankheiten), rufen bei bemerkten Befunden den Tierarzt, Bluttest-Ergebnis, Zahlungen
@@ -15376,6 +15392,10 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       if (A.antwort) return `<p class="brief-aktion-info">✅ Übernommen – wird über 3 Tage umgestellt.</p>`;
       if (!bx || !v || v.vom !== "besitzer") return `<p class="brief-aktion-info">✅ Wird schon so gefüttert.</p>`;
       return `<div class="brief-aktion"><button class="knopf" data-baktion="fw-ja" data-bid="${br.id}">✅ Futterwunsch übernehmen</button></div>`; }
+    if (A.typ === "fwalle") { const n = (A.pids || []).filter(id => { const bx = spiel.boxen.find(y => y.pferd && y.pferd.id === id), v = bx && vorschlagVon(bx.pferd, bx); return v && v.vom === "besitzer"; }).length;   // v674
+      if (A.antwort) return `<p class="brief-aktion-info">✅ Übernommen – wird über 3 Tage umgestellt.</p>`;
+      if (!n) return `<p class="brief-aktion-info">✅ Wird schon so gefüttert.</p>`;
+      return `<div class="brief-aktion"><button class="knopf" data-baktion="fw-alle" data-bid="${br.id}">✅ Alle ${n} Futterwünsche übernehmen</button></div>`; }
     if (A.typ === "rechnung") { const r = (spiel.rechnungen || []).find(x => x.id === A.rid), st = (spiel.rechnungStatus || {})[A.rid];
       if (r) return `<div class="brief-aktion"><button class="knopf" data-baktion="zahlen" data-bid="${br.id}">💶 Jetzt bezahlen · ${fmt(r.betrag)}</button></div>`;
       return `<p class="brief-aktion-info">${st === "bezahlt" ? "✅ Bezahlt." : st === "abgebucht" ? "🏦 Wurde vom Konto abgebucht." : "⚠️ Diese Rechnung ist ungültig – sie wurde durch eine neuere Rechnung ersetzt."}</p>`; }
@@ -15428,6 +15448,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         else { eZufr(e, -3, "Wunsch nach besserer Box abgelehnt"); A.antwort = "Abgelehnt."; }
         speichern(); nachher(); return; }
       if (b.dataset.baktion === "fw-ja") { const bx = spiel.boxen.find(y => y.pferd && y.pferd.id === A.pid), v = bx && vorschlagVon(bx.pferd, bx); if (v) planUebernehmen(bx.pferd, bx, v.plan, v.vom); A.antwort = "ja"; speichern(); nachher(); return; }   // v383
+      if (b.dataset.baktion === "fw-alle") { (A.pids || []).forEach(id => { const bx = spiel.boxen.find(y => y.pferd && y.pferd.id === id), v = bx && vorschlagVon(bx.pferd, bx); if (v && v.vom === "besitzer") planUebernehmen(bx.pferd, bx, v.plan, v.vom); }); A.antwort = "ja"; speichern(); nachher(); return; }   // v674
       if (b.dataset.baktion === "du-ja" || b.dataset.baktion === "du-nein") { (spiel.duzen = spiel.duzen || {})[br.von] = b.dataset.baktion === "du-ja"; ruf(br.von, b.dataset.baktion === "du-ja" ? 5 : -5); A.antwort = b.dataset.baktion === "du-ja" ? "ja" : "nein"; speichern(); nachher(); }
       else if (b.dataset.baktion === "kauf-ja" || b.dataset.baktion === "kauf-nein") {
         const a = (spiel.angebote || []).find(y => y.id === A.pferd && y.vorschlag && y.vorschlag.id === A.vid); if (!a) { nachher(); return; }

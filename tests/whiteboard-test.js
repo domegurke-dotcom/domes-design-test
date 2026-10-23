@@ -41,7 +41,12 @@ const [W, H] = (process.argv[2] || '844x390').split('x').map(Number), ORD = proc
     ok('Übersicht: zwei Felder, Boxen links, Weiden rechts', (() => { const k = [...document.querySelectorAll('.wb-vorschau')]; return k.length === 2 && k[0].dataset.wbsicht === 'boxen' && k[1].dataset.wbsicht === 'weiden' && !document.querySelector('[data-wbq]') && !document.querySelector('[data-wbz]'); })());
     wbSicht = 'weiden'; weiden().find(w => w.wid === 'w2').wbModus = 'jeden2'; zeigeBoxen();
     ok('Whiteboard wird gezeigt', !!document.querySelector('.wb') && !!document.querySelector('[data-wbz="w:w2:a"]'));
-    ok('Feinde rot umrandet', document.querySelectorAll('[data-wbz="w:w2:a"] .wb-chip.rot').length === 2, document.querySelector('[data-wbz="w:w2:a"]').textContent);
+    ok('versteckte Chemie („feind“ ohne Streit) bleibt unsichtbar – nicht rot', document.querySelectorAll('[data-wbz="w:w2:a"] .wb-chip.rot').length === 0);
+    spiel.herdePaare = spiel.herdePaare || {}; spiel.herdePaare[[A.id, C.id].sort().join('|')] = { streit: 3, tage: 5 }; zeigeBoxen();
+    ok('3× gestritten → rot umrandet', document.querySelectorAll('[data-wbz="w:w2:a"] .wb-chip.rot').length === 2, document.querySelector('[data-wbz="w:w2:a"]').textContent);
+    spiel.herdePaare[[A.id, C.id].sort().join('|')] = { streit: 1, streitTag: spiel.tag, tage: 5 }; window.wbTestBez = 'streit'; zeigeBoxen();
+    ok('gestern gestritten → orange, nicht rot', document.querySelectorAll('[data-wbz="w:w2:a"] .wb-chip.orange').length === 2 && document.querySelectorAll('[data-wbz="w:w2:a"] .wb-chip.rot').length === 0);
+    window.wbTestBez = 'freund'; delete spiel.herdePaare[[A.id, C.id].sort().join('|')];
     window.wbTestBez = 'freund'; zeigeBoxen(); ok('Freunde grün umrandet', document.querySelectorAll('[data-wbz="w:w2:a"] .wb-chip.gruen').length === 2);
     window.paarBeziehung = echt;
     { const w2 = weiden().find(w => w.wid === 'w2'); wbModusSetzen('w2', 'taeglich'); zeigeBoxen(); ok('täglich: eine Spalte, alle Pferde jeden Tag', !!document.querySelector('[data-wbz="w:w2:t"]') && !document.querySelector('[data-wbz="w:w2:a"]') && A.weidegang === 'taeglich' && C.weidegang === 'taeglich'); wbAnwenden('p:1', 'w:w2:t'); ok('auf „täglich“ legen = jeden Tag', Bp.auslaufZiel === 'w2' && Bp.weidegang === 'taeglich' && !Bp.weideTag); wbAnwenden('c:1:w2:t', 'drin'); ok('wieder in die Box', !Bp.weidegang); wbModusSetzen('w2', 'jeden2'); zeigeBoxen(); ok('Wechsel auf „alle 2 Tage“ verteilt Pferde auf genau einen Tag', [A, C].every(p => p.weidegang === 'jeden2' && (p.weideTag === 'a' || p.weideTag === 'b')) && A.weideTag !== C.weideTag, A.weideTag + C.weideTag); ok('alle 2 Tage: zwei Hälften', !!document.querySelector('[data-wbz="w:w2:a"]') && !!document.querySelector('[data-wbz="w:w2:b"]')); }
@@ -65,6 +70,6 @@ const [W, H] = (process.argv[2] || '844x390').split('x').map(Number), ORD = proc
   // Überlappen / Breite
   ok('Kein waagerechtes Scrollen der Seite', await pg.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), await pg.evaluate(() => document.documentElement.scrollWidth + ' > ' + innerWidth));
   if (ORD) { await pg.screenshot({ path: ORD + `/wb-${W}x${H}.png` }); await pg.evaluate(() => { const r = document.querySelector('.wb-weiden'); if (r) r.scrollIntoView(); }); await pg.waitForTimeout(150); await pg.screenshot({ path: ORD + `/wb-${W}x${H}-weide.png` }); }
-  await pg.click('#wbZurueck'); ok('Zurück zur Übersicht', await pg.evaluate(() => !!document.querySelector('.wb-uebersicht')));
+  await pg.click('#nbZurueck'); ok('Zurück zur Übersicht', await pg.evaluate(() => !!document.querySelector('.wb-uebersicht')));
   ok('Stall öffnet direkt das Whiteboard (keine alte Boxenansicht mehr)', await pg.evaluate(() => { zeigeBoxen(); return !!document.querySelector('.wb') && !document.querySelector('.boxen-liste') && !document.getElementById('wbUmschalt'); }));
   out.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(out.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

@@ -226,6 +226,8 @@
   @media (max-width: 520px) { .wb-rahmen { width: 80px; } .wb-in { gap: 5px; } }
   .wb-jzzeile { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; } .wb-jz { display: inline-flex; gap: 4px; flex-wrap: wrap; margin-left: auto; } .wb-jz .mini-knopf.an { background: #4a8f3a; color: #fff; } @media (max-width: 520px) { .wb-jzn { display: none; } }
   .wb-vorschau { position: relative; height: 340px; overflow: hidden; } .wb-vorschau .wb-vin { width: 181.8%; transform: scale(.55); transform-origin: 0 0; } .wb-vorschau::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 46px; background: linear-gradient(transparent, rgba(255,255,255,.75)); pointer-events: none; border-radius: 0 0 12px 12px; } .wb-vorschau .wb-ma-reihe, .wb-vorschau .pn-stall, .wb-vorschau .wb-warn { display: none; } @media (max-width: 600px) { .wb-vorschau { height: 270px; } }
+  .wb-offen { padding: 6px 8px; font-size: .9rem; } .wb-offen ul { margin: 4px 0 0; padding-left: 18px; } .wb-offen li { margin: 2px 0; }
+  .wb-chip.orange { border-color: #e08a1e; box-shadow: 0 0 0 1px #e08a1e; }
   .wb-chip svg, .wb-chip img { width: 54px !important; height: 54px !important; } .wb-chip { align-items: center; padding: 2px 8px 2px 6px; border-radius: 14px; } .wb-cn { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; } .wb-cn .wb-gs { font-size: .68rem; }
   .wb-vorschau .wb-jzzeile, .wb-vorschau .klasse { display: none; } .wb-name { cursor: pointer; } .wb-zuvoll { color: #a33; font-weight: 700; }
   .wb-gs { font-size: .66rem; font-weight: 700; border-radius: 6px; padding: 0 4px; margin-left: 2px; white-space: nowrap; } .wb-gs.gs-h { background: #dce9fb; color: #1f4f8f; } .wb-gs.gs-s { background: #fbe0ea; color: #9a2a5a; } .wb-gs.gs-w { background: #e8e8e8; color: #555; }
@@ -1096,7 +1098,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "721";
+  const SPIEL_VERSION = "722";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1104,12 +1106,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=721"></script>
-<script src="pferd.js?v=721"></script>
-<script src="boxstufen.js?v=721"></script>
-<script src="kopfneu.js?v=721"></script>
-<script src="waschbild.js?v=721"></script>
-<script src="avatare.js?v=721"></script>
+<script src="lz-string.min.js?v=722"></script>
+<script src="pferd.js?v=722"></script>
+<script src="boxstufen.js?v=722"></script>
+<script src="kopfneu.js?v=722"></script>
+<script src="waschbild.js?v=722"></script>
+<script src="avatare.js?v=722"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -11929,6 +11931,9 @@
     if (m === "taeglich") spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot) return; const D = wbDat(p), P = wbPlanVon(p, D); if (P && P.ziel === zid && P.halb.length < 2) { D.weidegang = "taeglich"; delete D.weideTag; wbSichern(p, D); } });
     speichern();
   }
+  // v722 (Dome): Rahmenfarbe nur nach dem, was der Spieler wissen kann: gestern gestritten = orange (nicht schlimm), 3× gestritten = rot; die versteckte „Chemie“ (kann ihn nicht riechen) verrät das Whiteboard nicht
+  function wbBez(a, b) { const x = (spiel.herdePaare || {})[[a.id, b.id].sort().join("|")] || {}, r = paarBeziehung(a, b);
+    if ((x.streit || 0) >= 3) return "feind"; if (r === "streit") return "streit"; if (r === "feind") return null; return r; }
   const wbGs = p => `<small class="wb-gs ${p.geschlecht === "Hengst" ? "gs-h" : p.geschlecht === "Wallach" ? "gs-w" : "gs-s"}">${p.geschlecht === "Hengst" ? "♂ Hengst" : p.geschlecht === "Wallach" ? "Wallach" : "♀ Stute"}</small>`;   // Dome 23.10.: auf der Weide sieht man, wer Hengst, Wallach oder Stute ist
   function whiteboardHTML() {
     const Z = {}; Object.keys(WB_ART).forEach(a => { Z[a] = {}; maZuteilung(a).forEach(x => { Z[a][x.i] = x.m; }); });
@@ -11952,9 +11957,9 @@
       : `<small class="wb-leer">Noch keine Mitarbeiter – unter Hofverwaltung → Mitarbeiter stellst du welche ein.</small>`;
     wbZiele().forEach(z => { if (wbModusVon(z) === "jeden2") wbVerteilen(z); });
     const L = spiel.boxen.map((b, i) => ({ b, i, p: b.pferd })).filter(x => x.p && !x.b.tot && !x.b.offen), plan = new Map(L.map(x => [x.p, wbPlanVon(x.p)])), heute = wbHalbHeute(), ZL = wbZiele();
-    const chip = (x, zid, h, ps) => { const bz = ps.filter(q => q !== x.p).map(q => paarBeziehung(x.p, q)), r = bz.includes("streit") || bz.includes("feind") ? " rot" : bz.includes("freund") ? " gruen" : "", P = plan.get(x.p), k = `c:${x.i}:${zid}:${h}`,
+    const chip = (x, zid, h, ps) => { const bz = ps.filter(q => q !== x.p).map(q => wbBez(x.p, q)), r = bz.includes("feind") ? " rot" : bz.includes("streit") ? " orange" : bz.includes("freund") ? " gruen" : "", P = plan.get(x.p), k = `c:${x.i}:${zid}:${h}`,
       rehe = wbView() === 0 && !P.pd && reheGefaehrdet(x.p);   // Hufrehe-Gefahr im Frühling: nicht auf die Weide
-      return `<span class="wb-chip${r}${rehe ? " rehe" : ""}${sel(k)}" data-wbq="${k}" title="${esc(x.p.name)}${rehe ? " – Hufrehe-Gefahr: im Frühling besser auf den Sandpaddock oder in die Box" : ""}${r === " rot" ? " – mag ein Pferd hier nicht" : r ? " – hat hier einen Freund" : ""}${P.wechsel ? " – jeden 2. Tag, Tag noch nicht fest" : ""}">${kopfBild(x.p, true)}<span class="wb-cn">${esc(x.p.name)}${wbGs(x.p)}${P.wechsel ? " ½" : ""}</span>${fremd(x.p) ? " 🏡" : ""}<button class="wb-x" data-wbweg="${x.i}:${h}" aria-label="an diesen Tagen nicht" title="an diesen Tagen nicht – bleibt in der Box">✕</button></span>`; };
+      return `<span class="wb-chip${r}${rehe ? " rehe" : ""}${sel(k)}" data-wbq="${k}" title="${esc(x.p.name)}${rehe ? " – Hufrehe-Gefahr: im Frühling besser auf den Sandpaddock oder in die Box" : ""}${r === " rot" ? " – hat sich hier schon öfter gestritten" : r === " orange" ? " – hat hier gestern gestritten (nicht schlimm)" : r ? " – hat hier einen Freund" : ""}${P.wechsel ? " – jeden 2. Tag, Tag noch nicht fest" : ""}">${kopfBild(x.p, true)}<span class="wb-cn">${esc(x.p.name)}${wbGs(x.p)}${P.wechsel ? " ½" : ""}</span>${fremd(x.p) ? " 🏡" : ""}<button class="wb-x" data-wbweg="${x.i}:${h}" aria-label="an diesen Tagen nicht" title="an diesen Tagen nicht – bleibt in der Box">✕</button></span>`; };
     const modusVon = wbModusVon;
     const karte = z => { const drauf = L.filter(x => { const P = plan.get(x.p); return P && P.ziel === z.id; }), modus = modusVon(z);
       const taegl = modus === "jeden2" ? drauf.filter(x => plan.get(x.p).halb.length >= 2) : [];
@@ -11970,21 +11975,32 @@
       ${gruppen.map(([k, ico, n]) => `${gruppen.length > 1 ? `<div class="wb-gruppe">${ico} ${n}</div>` : ""}${[...new Set(spiel.boxen.filter(b => boxGruppe(b) === k).map(b => b.geb || "-"))].map(id => `${bauten[k + "|" + id] ? `<div class="wb-gruppe wb-bau">${bauten[k + "|" + id]}</div>` : ""}<div class="wb-boxen">${spiel.boxen.map((b, i) => boxGruppe(b) === k && (b.geb || "-") === id ? zelle(b, i) : "").join("")}</div>`).join("")}`).join("")}
       <div class="wb-ma-reihe" id="wbMaReihe">${maReihe}</div>`;
     const jzKn = `<span class="wb-jz">${JZ.map(([n, ico], j) => `<button class="mini-knopf${wbView() === j ? " an" : ""}" data-wbjz="${j}" title="${n}${j === wbAkt() ? " (jetzt)" : ""}">${ico}<span class="wb-jzn"> ${n}</span>${j === wbAkt() ? " •" : ""}</button>`).join("")}</span>`;
-    const weidenTeil = `<div class="wb-jzzeile"><h3 class="wb-h">🌿 Weideplan</h3>${jzKn}</div>${wbLive() ? "" : `<div class="klasse">📅 Plan für <b>${JZ[wbView()][0]}</b> – gilt ab Beginn der Jahreszeit. Wo du nichts änderst, bleibt es wie in der Jahreszeit davor.</div>`}<p class="wb-tipp">Oben rechts wählst du die Jahreszeit und planst jede Weide und jeden Sandpaddock im Voraus. Pro Weide oder Sandpaddock stellst du „täglich“ oder „alle 2 Tage“ ein. Pferd von unten auf die Weide ziehen (oder antippen und dann die Weide antippen) – bei „alle 2 Tage“ auf die linke (${wbHalbName("a")}) oder rechte Hälfte (${wbHalbName("b")}), auf beide = jeden Tag. Rot umrandet: mag ein Pferd dort nicht, grün: hat dort einen Freund. Rot gepunktet: Hufrehe-Gefahr im Frühling – besser auf den Sandpaddock oder in die Box (Pferde in Paddockboxen bleiben dann automatisch in der Box). Auch Pensionspferde kannst du frei einteilen, der Besitzer merkt es an der Zufriedenheit. Raus bringen Stallbursche und Azubi in der Morgenrunde.</p>
+    const weidenTeil = `<div class="wb-jzzeile"><h3 class="wb-h">🌿 Weideplan</h3>${jzKn}</div>${wbLive() ? "" : `<div class="klasse">📅 Plan für <b>${JZ[wbView()][0]}</b> – gilt ab Beginn der Jahreszeit. Wo du nichts änderst, bleibt es wie in der Jahreszeit davor.</div>`}<p class="wb-tipp">Oben rechts wählst du die Jahreszeit und planst jede Weide und jeden Sandpaddock im Voraus. Pro Weide oder Sandpaddock stellst du „täglich“ oder „alle 2 Tage“ ein. Pferd von unten auf die Weide ziehen (oder antippen und dann die Weide antippen) – bei „alle 2 Tage“ auf die linke (${wbHalbName("a")}) oder rechte Hälfte (${wbHalbName("b")}), auf beide = jeden Tag. Orange umrandet: hat dort gestern gestritten, rot: schon öfter gestritten, grün: hat dort einen Freund. Rot gepunktet: Hufrehe-Gefahr im Frühling – besser auf den Sandpaddock oder in die Box (Pferde in Paddockboxen bleiben dann automatisch in der Box). Auch Pensionspferde kannst du frei einteilen, der Besitzer merkt es an der Zufriedenheit. Raus bringen Stallbursche und Azubi in der Morgenrunde.</p>
       ${ZL.length ? `<div class="wb-weiden">${ZL.map(karte).join("")}${egalK}</div>` : `<p class="wb-leer">Noch keine Weide oder kein Sandpaddock.</p>`}
       <h4 class="wb-h">🏠 Bleiben in der Box</h4><div class="wb-egal-l" id="wbBleibt">${imBox.map(x => { const k = `p:${x.i}`; return `<span class="wb-chip${sel(k)}" data-wbq="${k}" title="${esc(x.p.name)} – ziehen oder antippen und dann auf eine Weide legen">${kopfBild(x.p, true)}<span class="wb-cn">${esc(x.p.name)}${wbGs(x.p)}${fremd(x.p) ? " 🏡" : ""}</span></span>`; }).join("") || `<small class="wb-leer">Alle Pferde haben einen Weideplan.</small>`}</div>`;
     const nurLesen = h => h.replace(/<button class="mini-knopf[^"]*" data-wbjz=.*?<\/button>/g, "").replace(/<input type="checkbox" data-wbwu=/g, '<input type="checkbox" disabled data-x=').replace(/ data-wb(?:q|z|loes|weg|modus|jz|name|go)="[^"]*"/g, "").replace(/<button class="wb-x"[^>]*>[^<]*<\/button>/g, "").replace(/<span class="wb-modus">.*?<\/span>/g, "");
-    const uebersicht = `<div class="wb-uebersicht"><div class="wb-vorschau" data-wbsicht="boxen" role="button" tabindex="0" title="antippen zum Bearbeiten"><div class="wb-vkopf"><b>🏠 Boxen</b><small>antippen zum Bearbeiten →</small></div><div class="wb-vin">${nurLesen(boxenTeil)}</div></div>
-      <div class="wb-vorschau" data-wbsicht="weiden" role="button" tabindex="0" title="antippen zum Bearbeiten"><div class="wb-vkopf"><b>🌿 Weiden</b><small>antippen zum Bearbeiten →</small></div><div class="wb-vin">${nurLesen(weidenTeil)}</div></div></div>`;
+    const offenB = [], offenW = [];   // v722 (Dome): Übersicht zeigt entweder das Bild (alles erledigt) oder nur, was noch offen ist
+    spiel.boxen.forEach((b, i) => { const p = b.pferd; if (!p || b.tot || p.klinik) return; const nm = `Box ${nr[i] || i + 1} · ${esc(p.name)}`;
+      if (fremd(p)) { const e = einstellerVon(p); let A = []; try { A = e ? pensionAufgaben(e, b).filter(a => !a.ok) : []; } catch (er) {} if (A.length) offenB.push([nm, A.map(a => a.txt).join(", ")]); }
+      else arten.forEach(a => { if (wunschArt(p, a) && !Z[a][i] && !(b.maPlan || {})[a]) offenB.push([nm, `kein Mitarbeiter (${WB_ART[a][1]})`]); });
+      if (spiel.maVergessen && spiel.maVergessen.tag === spiel.tag && (spiel.maVergessen.liste || []).some(v => v.i === i)) offenB.push([nm, "heute vergessen"]); });
+    L.forEach(x => { const P = plan.get(x.p); if (P && !P.ziel && (x.p.weidegang || "nie") !== "nie") offenW.push([`${esc(x.p.name)}`, "noch keine feste Weide"]); });
+    ZL.forEach(z => { const drauf = L.filter(x => { const P = plan.get(x.p); return P && P.ziel === z.id; }), ps = drauf.map(x => x.p);
+      drauf.forEach(x => { const b2 = ps.filter(q => q !== x.p).map(q => [q, wbBez(x.p, q)]).filter(t => t[1] === "feind" || t[1] === "streit"); if (b2.length) offenW.push([`${esc(x.p.name)} · ${esc(z.n)}`, b2.map(t => `${t[1] === "feind" ? "versteht sich nicht mit" : "hat gestern gestritten mit"} ${esc(t[0].name)}`).join(", ")]); });
+      if (ps.some(p => herdeGemischt(p, ps))) offenW.push([esc(z.n), "Hengst und Stute zusammen"]);
+      const bedarf = ps.reduce((a, q) => a + (z.pd ? pdBedarf(q) : weideBedarf(q)), 0), gesamt = z.pd ? paddockFlaeche(z.g) : z.w.ha; if (bedarf > gesamt + 1e-9) offenW.push([esc(z.n), "zu voll"]); });
+    const vorschau = (offen, bild) => offen.length ? `<div class="wb-offen"><b>⚠️ Noch offen (${offen.length})</b><ul>${offen.slice(0, 7).map(o => `<li><b>${o[0]}</b> – ${o[1]}</li>`).join("")}${offen.length > 7 ? `<li>… und ${offen.length - 7} weitere</li>` : ""}</ul></div>` : `<div class="wb-vin">${nurLesen(bild)}</div>`;
+    const uebersicht = `<div class="wb-uebersicht"><div class="wb-vorschau" data-wbsicht="boxen" role="button" tabindex="0" title="antippen zum Bearbeiten"><div class="wb-vkopf"><b>🏠 Boxen</b><small>antippen zum Bearbeiten →</small></div>${vorschau(offenB, boxenTeil)}</div>
+      <div class="wb-vorschau" data-wbsicht="weiden" role="button" tabindex="0" title="antippen zum Bearbeiten"><div class="wb-vkopf"><b>🌿 Weiden</b><small>antippen zum Bearbeiten →</small></div>${vorschau(offenW, weidenTeil)}</div></div>`;
     return `<div class="wb">${wbSicht === "boxen" ? boxenTeil : wbSicht === "weiden" ? weidenTeil : uebersicht}</div>`;
   }
   function zeigeWhiteboard() {
     const sy = window.scrollY, nb = $("nebenSchirm"), st = nb ? nb.scrollTop : 0, mx = $("wbMaReihe") ? $("wbMaReihe").scrollLeft : 0, offen = nb && nb.classList.contains("offen");
-    zeigeNeben("🏠 Stall", `<div class="panel" style="grid-column:1/-1;width:100%;max-width:980px;margin:0 auto"><div class="hf-kopf"><b>📋 Whiteboard${wbSicht === "boxen" ? " · Boxen" : wbSicht === "weiden" ? " · Weiden" : ""}</b><span>${wbSicht === "uebersicht" ? (spiel.tutorial ? `<button class="mini-knopf" id="wbUmschalt">🐴 Boxenansicht</button> ` : "") : `<button class="mini-knopf" id="wbZurueck">← Übersicht</button> `}<button class="mini-knopf" id="bxBauen">🏗️ Bauen</button></span></div>${wbWahl ? `<div class="klasse">👉 Jetzt ${wbWahl[0] === "m" ? "eine Box" : "eine Weide-Hälfte"} antippen (grün umrandet) – oder nochmal antippen zum Abbrechen.</div>` : ""}${whiteboardHTML()}</div>`);
+    zeigeNeben("🏠 Stall", `<div class="panel" style="grid-column:1/-1;width:100%;max-width:980px;margin:0 auto"><div class="hf-kopf"><b>📋 Whiteboard${wbSicht === "boxen" ? " · Boxen" : wbSicht === "weiden" ? " · Weiden" : ""}</b><span>${wbSicht === "uebersicht" ? (spiel.tutorial ? `<button class="mini-knopf" id="wbUmschalt">🐴 Boxenansicht</button> ` : "")   : ""}<button class="mini-knopf" id="bxBauen">🏗️ Bauen</button></span></div>${wbWahl ? `<div class="klasse">👉 Jetzt ${wbWahl[0] === "m" ? "eine Box" : "eine Weide-Hälfte"} antippen (grün umrandet) – oder nochmal antippen zum Abbrechen.</div>` : ""}${whiteboardHTML()}</div>`);
     if (offen) { window.scrollTo(0, sy); nb.scrollTop = st; } if ($("wbMaReihe")) $("wbMaReihe").scrollLeft = mx;
     if ($("wbUmschalt")) $("wbUmschalt").onclick = () => { spiel.stallAnsicht = "boxen"; wbWahl = null; speichern(); zeigeBoxen(); };
     if ($("wbZurueck")) $("wbZurueck").onclick = () => { wbSicht = "uebersicht"; wbWahl = null; zeigeWhiteboard(); };
-    if (wbSicht !== "uebersicht" && $("nbZurueck")) { $("nbZurueck").textContent = "‹ Whiteboard"; $("nbZurueck").onclick = () => { wbSicht = "uebersicht"; wbWahl = null; zeigeWhiteboard(); window.scrollTo(0, 0); }; }   // Dome 23.10.: in Boxen/Weiden zurück zum Whiteboard, nicht zum Hauptmenü
+    if (wbSicht !== "uebersicht" && $("nbZurueck")) { $("nbZurueck").textContent = "‹ Whiteboard Übersicht"; $("nbZurueck").onclick = () => { wbSicht = "uebersicht"; wbWahl = null; zeigeWhiteboard(); window.scrollTo(0, 0); }; }   // Dome 23.10.: in Boxen/Weiden zurück zum Whiteboard, nicht zum Hauptmenü
     if ($("bxBauen")) $("bxBauen").onclick = () => zeigeBauenFenster();
     if ($("pnZurPension")) $("pnZurPension").onclick = () => { hofBereich = "pension"; zeigeHof("hof"); };
     const W = nb.querySelector(".wb"); wbZiehenInit();
@@ -16186,7 +16202,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     whiteboard: ["Whiteboard", "Unter „📋 Whiteboard“ planst du, welcher Mitarbeiter welche Box versorgt und welches Pferd an welchen Tagen auf welche Weide kommt.", "", "#wbUmschalt", "whiteboard", "fort"],   // v679
     wbJahreszeit: ["Weideplan je Jahreszeit", "Oben rechts wählst du die Jahreszeit und planst jede Weide und jeden Sandpaddock im Voraus. Wo du nichts einstellst, bleibt es wie in der Jahreszeit davor.", "Rot gepunktet: Hufrehe-Gefahr im Frühling – lieber auf den Sandpaddock oder in die Box.", ".wb-jz", "whiteboard", "fort"],   // v712
     wbWuensche: ["Wünsche an die Mitarbeiter", "Bei jedem eigenen Pferd stehen unter dem Bild Haken: was die Mitarbeiter für dieses Pferd erledigen sollen (Füttern, Misten, Putzen, Waschen …). Ein Mitarbeiter geht nur zu Pferden, die seine Arbeit wünschen.", "Solarium ist standardmäßig aus. Ein Pferd ganz ohne Haken versorgt niemand – dann musst du es selbst machen.", ".wb-wu", "whiteboard", "fort"],   // v719
-    wbBoard: ["Planen auf dem Whiteboard", () => (TOUCH ? "Halte einen Mitarbeiter unten gedrückt und zieh ihn auf eine Box" : "Zieh einen Mitarbeiter von unten mit der Maus auf eine Box") + " – oder tippe ihn an und dann die Box. Pferde legst du unter „Weiden“ genauso auf eine Weide.", "Rot umrandet: die Pferde mögen sich nicht – lieber trennen.", ".wb", "whiteboard", "fort"],
+    wbBoard: ["Planen auf dem Whiteboard", () => (TOUCH ? "Halte einen Mitarbeiter unten gedrückt und zieh ihn auf eine Box" : "Zieh einen Mitarbeiter von unten mit der Maus auf eine Box") + " – oder tippe ihn an und dann die Box. Pferde legst du unter „Weiden“ genauso auf eine Weide.", "Orange oder rot umrandet: die Pferde haben gestritten – lieber trennen.", ".wb", "whiteboard", "fort"],
     befundPlan: ["Plan des Tierarztes", "Hier steht, was der Tierarzt festgestellt hat: wie lange es dauert (oder dass es nicht mehr ganz heilt), ob du reiten darfst, was jeden Tag zu tun ist und was bis zur Heilung tabu ist.", "Longieren, Schritt führen und Bodenarbeit gehören oft zur Heilung dazu – sie laufen über Ort → Training.", ".plan-karte", "krank", "anf"],   // v685
     kontaktpferde: ["Kontaktpferde", "Dieses Pferd ist ansteckend krank. Hier siehst du, welche Pferde Kontakt hatten – mit einem Knopf kommen alle in Quarantäne, oder du lässt bei allen ein Blutbild machen.", "Früh trennen und testen verhindert einen Ausbruch im ganzen Stall.", "[data-kontakt]", "krank", "fort"],   // v686
     boxUmstellen: ["Pferde umstellen", "Du kannst ein Pferd in eine andere Box umstellen: " + UMSTELLEN_TXT, "", ".boxen-liste [data-zubox]", null, "anf"],
@@ -16644,13 +16660,13 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         ["Mitarbeiter wählen", "Unten stehen deine Mitarbeiter mit Beruf und wie viele Boxen sie heute versorgen. Tippe auf Paul (oder halte ihn gedrückt und zieh ihn gleich auf eine Box).", "[data-wbq='m:tutm1']", () => wbWahl === "m:tutm1" || !!(spiel.boxen[1] && (spiel.boxen[1].maPlan || {}).stall)],
         ["Box zuteilen", "Jetzt Box 2 antippen – Paul versorgt sie ab morgen fest (📌). Boxen ohne 📌 verteilen sich wie bisher von selbst.", "[data-wbz='b:1']", () => !!(spiel.boxen[1] && (spiel.boxen[1].maPlan || {}).stall)],
         ["Fest und automatisch", "Ist Paul krank oder im Urlaub, versorgt ein anderer die Box. Hat er schon so viele Boxen wie er schafft, bekommt die nächste Box ein Kollege. Mit ✕ löst du die Zuteilung wieder.", null, () => false, true],
-        ["Zurück zur Übersicht", "Tippe auf „← Übersicht“.", "#wbZurueck", () => wbSicht === "uebersicht"],
+        ["Zurück zur Übersicht", "Tippe oben links auf „‹ Whiteboard Übersicht“.", "#nbZurueck", () => wbSicht === "uebersicht"],
         ["Weiden", "Jetzt das rechte Feld: Tippe auf „Weiden“. Dort stellst du den Weideplan ein.", "[data-wbsicht='weiden']", () => wbSicht === "weiden"],
         ["Täglich oder alle 2 Tage", "Jede Weide und jeder Sandpaddock hat oben zwei Knöpfe: „täglich“ (alle Pferde jeden Tag) oder „alle 2 Tage“ (links Tag A, rechts Tag B – zwei Gruppen wechseln sich ab).", null, () => false, true],
         ["Pferd wählen", "Unten stehen die Pferde, die in der Box bleiben. Tippe auf das Pferd Bella (oder zieh es gleich auf eine Weide).", "[data-wbq='p:0']", () => wbWahl === "p:0" || !!(spiel.boxen[0].pferd && spiel.boxen[0].pferd.auslaufZiel)],
         ["Auf die Weide", "Tippe auf Weide 2 – Bella geht dort jeden Tag raus. Bei „alle 2 Tage“ legst du sie auf die linke (Tag A) oder rechte Hälfte (Tag B); auf beide = jeden Tag.", "[data-wbz='w:w2:t']", () => !!(spiel.boxen[0].pferd && spiel.boxen[0].pferd.auslaufZiel === "w2")],
         ["Freunde und Feinde", "Ein rot umrandetes Pferd mag ein anderes auf dieser Weide nicht – dann gibt es Streit und Verletzungen. Grün umrandet: es hat dort einen Freund, das tut beiden gut. Raus bringen die Pferde Stallbursche und Azubi in der Morgenrunde.", null, () => false, true],
-        ["Zurück zur Übersicht", "Tippe auf „← Übersicht“.", "#wbZurueck", () => wbSicht === "uebersicht"],
+        ["Zurück zur Übersicht", "Tippe oben links auf „‹ Whiteboard Übersicht“.", "#nbZurueck", () => wbSicht === "uebersicht"],
         ["Zurück", "Tippe auf „🐴 Boxenansicht“ – das Whiteboard findest du jederzeit wieder im Stall.", "#wbUmschalt", () => !!document.querySelector(".boxen-liste")]],
       fertig: () => false },
     TUT_ZEIGEN("Zweiter Hof", "Immobilien ansehen", "Unter Immobilien bietet der Makler weitere Höfe an – als Fortgeschrittener bis zu 2. Jeder Hof hat eine eigene Kasse.", "#hmImmo, #mHaupt, #menueKnopf", () => !!document.querySelector(".schirm.offen [data-mak], .schirm.offen .immo-schirm, #nebenSchirm.offen h1") && /Immobilien/.test(($("nebenSchirm").querySelector("h1") || {}).textContent || ""))];

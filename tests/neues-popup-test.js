@@ -1,4 +1,4 @@
-// v677: Popup „Neu in deinem Spiel“ beim Laden älterer Spielstände (Test-Schalter: unter Playwright aus, außer localStorage „zuchtstall-neu-an“)
+// v694: „Neu in deinem Spiel“ als Karte in hvw – Hof – Übersicht und Menüpunkt ☰, je Spielstand, bis „Gelesen“ (kein Fenster beim Laden)
 const { chromium } = require('playwright'); const path = require('path');
 (async () => { const b = await chromium.launch(); const pg = await b.newPage({ viewport: { width: 844, height: 390 } }); const errs = []; pg.on('pageerror', e => errs.push(e.message));
   await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(600);
@@ -6,17 +6,16 @@ const { chromium } = require('playwright'); const path = require('path');
   await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'H'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(300);
   const R = await pg.evaluate(() => { const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : ''));
     document.getElementById('dlg').hidden = true; speicherSperre = true;
-    ok('neues Spiel kennt die aktuelle Version', spiel.neuGesehen === +SPIEL_VERSION);
-    // alter Stand, Schalter aus (Playwright): kein Fenster, Version wird nachgezogen
-    spiel.neuGesehen = 653; neuesPruefen(); ok('Schalter aus: kein Eintrag, Version nachgezogen', !(spiel.hofFenster || []).length && spiel.neuGesehen === NEUES_STAND);
-    // Schalter an
-    localStorage.setItem('zuchtstall-neu-an', '1'); spiel.neuGesehen = 653; neuesPruefen();
-    const H = (spiel.hofFenster || []).join('');
-    ok('Schalter an: Fenster mit allen Einträgen', /Neu in deinem Spiel/.test(H) && NEUES.every(n => H.includes(n[1].replace(/&/g, '&amp;'))));
+    ok('neues Spiel kennt die aktuelle Version, keine Karte', spiel.neuGesehen === +SPIEL_VERSION && neuesKarteHTML() === '' && document.getElementById('mNeu').hidden);
+    spiel.neuGesehen = 653; neuesPruefen();
+    ok('alter Stand: Menüpunkt sichtbar, kein Fenster', !document.getElementById('mNeu').hidden && !(spiel.hofFenster || []).length);
+    const H = neuesKarteHTML();
+    ok('Karte mit allen veröffentlichten Einträgen', /Neu in deinem Spiel/.test(H) && NEUES.filter(n => n[0] <= NEUES_STAND).every(n => H.includes(n[1].replace(/&/g, '&amp;'))));
     ok('Verschlechterungen mit ⚠️ und aufgeklappt', /<details open><summary><b>⚠️ Echte Flächenmaße/.test(H));
-    spiel.hofFenster = []; neuesPruefen(); ok('zweites Mal nichts mehr', !(spiel.hofFenster || []).length);
-    spiel.neuGesehen = 667; neuesPruefen(); const H2 = (spiel.hofFenster || []).join(''); ok('nur neuere Einträge', !/Heilungsdauer/.test(H2) && /Boxstufe/.test(H2));
-    NEUES.push([NEUES_STAND + 5, 'Später', 'x', false]); spiel.neuGesehen = 653; spiel.hofFenster = []; neuesPruefen(); ok('Eintrag über NEUES_STAND bleibt unveröffentlicht', !/Später/.test((spiel.hofFenster || []).join(''))); NEUES.pop();
-    localStorage.removeItem('zuchtstall-neu-an'); spiel.hofFenster = [];
+    hofReiter = 'hof'; hofBereich = 'uebersicht'; zeigeHof('hof'); ok('Karte steht in der Hof-Übersicht', !!document.getElementById('neuKarte'));
+    document.getElementById('neuGelesen').click();
+    ok('Gelesen: Karte und Menüpunkt weg, Stand gesetzt', !document.getElementById('neuKarte') && document.getElementById('mNeu').hidden && spiel.neuGesehen === NEUES_STAND);
+    spiel.neuGesehen = 667; ok('nur neuere Einträge', !/Heilungsdauer/.test(neuesKarteHTML()) && /Boxstufe/.test(neuesKarteHTML()));
+    NEUES.push([NEUES_STAND + 5, 'Später', 'x', false]); spiel.neuGesehen = 653; ok('Eintrag über NEUES_STAND bleibt unveröffentlicht', !/Später/.test(neuesKarteHTML())); NEUES.pop();
     return out; });
   R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(R.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

@@ -6,6 +6,7 @@ const { chromium } = require('playwright'); const path = require('path');
   await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'H'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(300);
   const R = await pg.evaluate(() => { const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : ''));
     document.getElementById('dlg').hidden = true; spiel.stufenAn = false; spiel.tippsAus = true;
+    { const H = spiel.hof; delete H.halleV; gebaeude().push({ gid: 'hl', typ: 'reithalle', stufe: 3, zustand: 90 }); H.bauHa = 0.5; const b0 = H.bauHa; halleGeschenk(); ok('Alte Halle Stufe 3 bei zu wenig Bauland: einmalig +1 ha', H.bauHa === b0 + 1 && H.halleV === 1); halleGeschenk(); ok('nur einmal', H.bauHa === b0 + 1); gebaeude().pop(); H.bauHa = 2; }
     ok('Reithalle Stufe 1/2/3 = wie Reitplatz (1040/1560/4160 m² mit Zuschlag) und Platz für 7/10/18', [1, 2, 3].map(x => Math.round(platzVon('reithalle', 0, x) * 1e4)).join('/') === '1040/1560/4160' && BAUTEN.reithalle.kap.join() === '7,10,18' && BAUTEN.reitplatz.kap.join() === '7,10,18');
     ok('Reitplatz Stufe 1/2/3 = 800 / 1200 / 3200 m² plus 30 %', [1, 2, 3].map(s => Math.round(platzVon('reitplatz', 0, s) * 1e4)).join('/') === '1040/1560/4160', [1, 2, 3].map(s => Math.round(platzVon('reitplatz', 0, s) * 1e4)).join('/'));
     ok('Sandpaddock Stufe 1/2/3 = 400 / 600 / 800 m² plus 30 %', [1, 2, 3].map(s => Math.round(platzVon('sandpaddock', 0, s) * 1e4)).join('/') === '520/780/1040');

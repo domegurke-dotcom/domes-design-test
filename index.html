@@ -879,6 +879,7 @@
     <div class="menueliste" id="menueListe" role="menu" hidden>
       <button role="menuitem" id="mHaupt">🏠 Hauptmenü</button>
       <button role="menuitem" id="mHof">📋 Hofverwaltung</button>
+      <button role="menuitem" id="mNeu" hidden>🆕 Neu im Spiel</button>
       <button role="menuitem" id="mSpeichern">💾 Spiel speichern</button>
       <button role="menuitem" id="mVollbild">⛶ Vollbild ist aus</button>
       <button role="menuitem" id="mSpar">🔋 Sparmodus ist aus</button>
@@ -1078,7 +1079,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "693";
+  const SPIEL_VERSION = "694";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1086,11 +1087,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=693"></script>
-<script src="pferd.js?v=693"></script>
-<script src="boxstufen.js?v=693"></script>
-<script src="kopfneu.js?v=693"></script>
-<script src="waschbild.js?v=693"></script>
+<script src="lz-string.min.js?v=694"></script>
+<script src="pferd.js?v=694"></script>
+<script src="boxstufen.js?v=694"></script>
+<script src="kopfneu.js?v=694"></script>
+<script src="waschbild.js?v=694"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -10066,16 +10067,18 @@
     [674, "Sammelbriefe der Besitzer", "Rückmeldungen und Futterwünsche mehrerer Besitzer vom selben Tag kommen als ein Brief. Bei Futterwünschen gibt es den Knopf „Alle übernehmen“.", false],
   ];
   const NEUES_STAND = 677;   // Version des letzten veröffentlichten Update-Fensters – nur auf Domes Ansage hochsetzen (Einträge in NEUES gelten bis dahin)
-  function neuesPruefen() {
-    if (!spiel || !spiel.hof || spiel.tutorial || spiel.ansehen) return;
-    let aus = false; try { aus = !!navigator.webdriver && !localStorage.getItem("zuchtstall-neu-an"); } catch (e) {}   // Test-Schalter: unter Playwright aus, außer localStorage „zuchtstall-neu-an“ ist gesetzt
-    const ver = NEUES_STAND, gesehen = spiel.neuGesehen == null ? 653 : spiel.neuGesehen;
-    if (gesehen >= ver) return;
-    spiel.neuGesehen = ver; speichern();
-    if (aus) return;
-    const neu = NEUES.filter(n => n[0] > gesehen && n[0] <= ver); if (!neu.length) return;
-    (spiel.hofFenster = spiel.hofFenster || []).push(`<h3>🆕 Neu in deinem Spiel</h3><p>Seit du zuletzt gespielt hast, hat sich Folgendes geändert:</p><div class="neu-liste" style="max-height:55vh;overflow:auto">${neu.map(n => `<details ${n[3] ? "open" : ""}><summary><b>${n[3] ? "⚠️ " : ""}${esc(n[1])}</b></summary><p>${esc(n[2])}</p></details>`).join("")}</div>`);
+  // v694 (Dome 23.10.): kein Fenster mehr beim Laden – die Neuerungen stehen als Karte oben in hvw – Hof – Übersicht und unter ☰ „Neu im Spiel“, je Spielstand (`spiel.neuGesehen`) bis „Gelesen“
+  function neuesListe() {
+    if (!spiel || !spiel.hof || spiel.tutorial || spiel.ansehen) return [];
+    const gesehen = spiel.neuGesehen == null ? 653 : spiel.neuGesehen;
+    return NEUES.filter(n => n[0] > gesehen && n[0] <= NEUES_STAND);
   }
+  function neuesInnenHTML(neu) { return `<p>Seit du zuletzt gespielt hast, hat sich Folgendes geändert:</p><div class="neu-liste" style="max-height:55vh;overflow:auto">${neu.map(n => `<details ${n[3] ? "open" : ""}><summary><b>${n[3] ? "⚠️ " : ""}${esc(n[1])}</b></summary><p>${esc(n[2])}</p></details>`).join("")}</div>`; }
+  function neuesKarteHTML() { const neu = neuesListe(); if (!neu.length) return "";
+    return `<div class="bf-karte plan-karte" id="neuKarte"><b>🆕 Neu in deinem Spiel</b>${neuesInnenHTML(neu)}<div class="bf-knoepfe"><button class="mini-knopf" id="neuGelesen">✔ Gelesen</button></div></div>`; }
+  function neuesGelesen() { spiel.neuGesehen = NEUES_STAND; speichern(); neuesMenueSetzen(); }
+  function neuesMenueSetzen() { const m = $("mNeu"); if (m) m.hidden = !neuesListe().length; }
+  function neuesPruefen() { neuesMenueSetzen(); }
   function maFreischaltTag() {
     if (spiel.tutorial) return;
     const jetzt = maFreischaltListe();
@@ -15519,6 +15522,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       if (hofBereich === "stallart") hofBereich = "uebersicht"; if (hofBereich === "weiden" || hofBereich === "land") hofBereich = "plan";   // Dome (v347): Land steckt in Bauen, Weiden im Hofplan   // Dome (v295): Stallart in der Übersicht, Weiden unter Land
       const bereiche = [["uebersicht", "Übersicht"], ["plan", "Hofplan"], ["bauen", "Bauen"], ["pension", "Pension"], ["futter", "Futterkammer"]];
       inhalt = `<div class="fin-tabs hof-tabs">${bereiche.map(([id, t]) => `<button data-hbereich="${id}" class="${hofBereich === id ? "an" : ""}">${t}</button>`).join("")}</div>`;
+      if (hofBereich === "uebersicht") inhalt += neuesKarteHTML();
       if (hofBereich === "plan") inhalt += hofplanSVG() + `<p class="text" style="margin:6px 0"><small>Weide oder Gebäude antippen: verbessern, vergrößern, ändern, Weide pflegen.</small></p><h4 class="ma-titel">🌿 Weiden</h4>${weidenHTML()}`;
       else if (hofBereich === "bauen") inhalt += bauenHTML();
       else if (hofBereich === "land") inhalt += landHTML() + `<h4 class="ma-titel">🌿 Weiden</h4>` + weidenHTML();
@@ -15603,7 +15607,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     if (hofReiter === "pferde") pferdeTabBinden();
     nb.querySelectorAll("[data-hbereich]").forEach(b => b.onclick = () => { hofBereich = b.dataset.hbereich; fkMeld = ""; zeigeHof(); });
     if (hofReiter === "hof" && hofBereich === "plan") { weidenBinden(); hofplanBinden(); }
-    if (hofReiter === "hof" && hofBereich === "uebersicht") stallartBinden();
+    if (hofReiter === "hof" && hofBereich === "uebersicht") { stallartBinden(); if ($("neuGelesen")) $("neuGelesen").onclick = () => { neuesGelesen(); zeigeHof(); }; }
     if (hofReiter === "hof" && hofBereich === "pension") { pnMeld = ""; pensionBinden(m => { const y = $("nebenSchirm").scrollTop; pnMeld = m || ""; zeigeHof(); $("nebenSchirm").scrollTop = y; }); }
     if (hofReiter === "hof" && hofBereich === "bauen") bauenBinden();
     futterkammerBinden(m => { const nbS = $("nebenSchirm"), y = nbS.scrollTop; fkMeld = m; zeigeHof(); nbS.scrollTop = y; });   // Dome: nach dem Kauf nicht nach oben springen
@@ -15861,6 +15865,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   window.addEventListener("resize", postIconSetzen);
   $("mHaupt").onclick = () => { menueZu(); zeigeHaupt(); };
   $("mHof").onclick = () => { menueZu(); zeigeHof("hof"); };
+  $("mNeu").onclick = () => { menueZu(); const neu = neuesListe(); if (!neu.length) return; dialog(`<h3>🆕 Neu in deinem Spiel</h3>${neuesInnenHTML(neu)}`, [["Gelesen", () => neuesGelesen()]]); };
   $("mSpeichern").onclick = () => { menueZu(); if (hatSpielstand) platzSpeichern(); };   // S1 Punkt 3
   titelSetzen();
   try { if (spiel.bewegenNeu === "jetzt") { spiel.bewegenNeu = jzJetzt(); speichern(); } } catch (e) {}   // v327: Übergangs-Jahreszeit für „Bewegen“

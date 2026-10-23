@@ -15,7 +15,9 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number);
     mk('pfleger', 'mP'); mk('stallbursche', 'mS');
     gebaeude().push({ gid: 'gw', typ: 'waschplatz', stufe: 2, zustand: 100 }); gebaeude().push({ gid: 'gs', typ: 'solarium', stufe: 2, zustand: 100 }); spiel.anlage.waschplatz = true; spiel.anlage.solarium = true;
     ok('Standard: ohne Eintrag wünscht jedes Pferd alles außer Solarium', wunschEin(A, 'putzen') && wunschEin(A, 'fuettern') && !wunschEin(A, 'solarium'));
-    const bx = typ => maBoxen(typ);
+    window.maFehler = () => 0;   // Mitarbeiter vergessen nichts (sonst zufällig rot)
+    const gesund = () => (spiel.mitarbeiter || []).forEach(m => { delete m.krankBis; delete m.urlaub; }), mt = () => { gesund(); mitarbeiterTag(); gesund(); };
+    const bx = typ => { gesund(); return maBoxen(typ); };
     ok('Pfleger geht zu beiden Pferden', bx('pfleger').length === 2, JSON.stringify(bx('pfleger')));
     // Berta: nichts für den Pfleger
     B.leist = { putzen: false, maehne: false, waschen: false, leicht: false, solarium: false };
@@ -23,17 +25,18 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number);
     ok('… der Stallbursche schon (Füttern/Misten bleiben an)', bx('stall').length === 2);
     // Putzen: Anna wird geputzt, Berta nicht
     A.dreck = { fell: 40, maehne: 20, seit: null }; B.dreck = { fell: 40, maehne: 20, seit: null }; delete A.geputzt; delete B.geputzt;
-    spiel.boxen.forEach(x => { x.krippeVoll = !!x.pferd; x.mistig = false; }); mitarbeiterTag();
+    spiel.boxen.forEach(x => { x.krippeVoll = !!x.pferd; x.mistig = false; }); mt();
     ok('Anna geputzt', A.geputzt && A.geputzt.tag === spiel.tag, ''); ok('Berta nicht geputzt', !(B.geputzt && B.geputzt.tag === spiel.tag));
     // Misten aus: Box bleibt dreckig
-    B.leist.misten = false; spiel.boxen[1].mistig = true; spiel.boxen[1].mistStufe = 3; spiel.boxen[0].mistig = true; mitarbeiterTag();
+    B.leist.misten = false; spiel.boxen[1].mistig = true; spiel.boxen[1].mistStufe = 3; spiel.boxen[0].mistig = true; mt();
     ok('Misten aus: Box bleibt, Anna wird gemistet', spiel.boxen[1].mistig && !spiel.boxen[0].mistig);
     // Füttern aus
-    B.leist.fuettern = false; spiel.boxen[1].krippeVoll = false; spiel.boxen[0].krippeVoll = false; mitarbeiterTag();
+    B.leist.fuettern = false; spiel.boxen[1].krippeVoll = false; spiel.boxen[0].krippeVoll = false; mt();
     ok('Füttern aus: Krippe bleibt leer, Anna gefüttert', !spiel.boxen[1].krippeVoll && spiel.boxen[0].krippeVoll);
     ok('Alle Stall-Wünsche aus: Stallbursche geht nicht mehr zu Berta', (B.leist.weide = false, bx('stall').length === 1));
     // Solarium durch Pfleger (eigenes Pferd, Wunsch an)
     while (datum().s !== 1) { spiel.boxen.forEach(x => { x.krippeVoll = !!x.pferd; x.mistig = false; }); naechsteNacht(); document.getElementById('dlg').hidden = true; }
+    [A, B].forEach(q => { q.befunde = []; delete q.klinik; delete q.weide; delete q.paddock; delete q.turnier; q.pflege.gesundheit = 100; }); spiel.boxen.forEach(x => { x.tot = false; }); (spiel.mitarbeiter || []).forEach(m => { delete m.krankBis; delete m.urlaub; });
     A.befunde = []; A.leist = { solarium: true }; A.trainHeute = { tag: spiel.tag, liste: ['schritt'], verbraucht: 10 }; delete A.solar; waschAbend();
     ok('Solarium-Wunsch: Pfleger bringt Anna unters Solarium', A.solar && A.solar.tag === spiel.tag && A.solar.n === 1);
     A.leist = { solarium: false }; delete A.solar; waschAbend(); ok('Solarium-Wunsch aus: nichts', !(A.solar && A.solar.tag === spiel.tag));
@@ -51,5 +54,16 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number);
     ok('Solarium-Haken bei Anna (Standard aus → hier explizit false)', !document.querySelector('[data-wbwu="0:solarium"]').checked);
     // Futterkammer
     spiel.shampoo = 0; const g0 = spiel.geld; const h = apothekeKammerHTML(); ok('Futterkammer: Kachel Pferdeshampoo', /data-shampookauf/.test(h) && /Pferdeshampoo/.test(h));
+    // Koppel: Weide kommt aus dem Plan, kein Auswahlfenster, Karte ohne Handauswahl
+    spiel.boxen[0].pferd.leist = {}; const w2 = weiden().filter(w => !w.wiese);
+    ok('Whiteboard frei (fort)', wbFrei());
+    ok('auslaufZeile bei Whiteboard leer', auslaufZeile(A) === '');
+    const P2 = A; P2.weidegang = 'taeglich'; P2.auslaufZiel = w2[w2.length - 1].wid; P2.weide = { seit: spiel.tag, wid: w2[w2.length - 1].wid };
+    aktBox = 0; spiel.aktBox = 0; zeigeAkte(); const t = document.getElementById('info').innerText;
+    ok('Weide-Karte: keine Handauswahl, kein „Gras statt Heu“-Absatz, kein „Heute gefressen“', !/Weidegang durch Stallbursche/.test(t) && !/Gras statt Heu/.test(t) && !/Heute gefressen/.test(t), t.slice(0, 120));
+    delete P2.weide; zeigeStall(); document.getElementById('dlg').hidden = true; spiel.hofFenster = []; zeigeSchirm(null); zeigeStall(); zeigeTag(); aktenModus = 'pflege'; aktenReiter = 'platz'; ortModus = null; zeigeAkte();
+    const wk = document.querySelector('[data-ort="koppel"]'); if (wk) wk.click(); zeigeAkte();
+    const kw = document.querySelector('[data-ort="weide"]'); if (kw) kw.click();
+    ok('Ort → Koppel → Weide: Pferd geht ohne Auswahlfenster auf die geplante Weide', P2.weide && P2.weide.wid === w2[w2.length - 1].wid && document.getElementById('dlg').hidden !== false || !!P2.weide, JSON.stringify(P2.weide) + ' koppel:' + !!wk + ' weide:' + !!kw + ' dlg:' + document.getElementById('dlg').hidden + ' modus:' + ortModus + ' n=' + w2.length);
     return out; });
   R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(R.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

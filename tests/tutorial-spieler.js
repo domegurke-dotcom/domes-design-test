@@ -10,15 +10,30 @@ const [W, H] = (process.argv[2] || '390x844').split('x').map(Number), O = proces
   await pg.waitForTimeout(1500);
   const st = () => pg.evaluate(() => { const T = spiel.tutorial; if (!T) return { ende: true }; const z = blase && blase.sel ? hinweisZiel(blase.sel) : null, r = z && z.getBoundingClientRect();
     const sb = blase && document.getElementById('hinweisBlase'); const bb = sb && !sb.hidden ? sb.getBoundingClientRect() : null;
-    return { kap: T.kap, schritt: T.schritt, tag: spiel.tag, heu: spiel.futter && spiel.futter.lager && spiel.futter.lager.heu, liefer: spiel.futter && (spiel.futter.liefer || []).length, k: blase && blase.k, titel: blase && HINWEISE[blase.k] && HINWEISE[blase.k][0], sel: blase && blase.sel, ziel: r ? [r.x + r.width / 2, r.y + r.height / 2].map(Math.round) : null, blase: bb ? [bb.x + 20, bb.y + 12].map(Math.round) : null,
+    const R = e => { if (!e || e.hidden) return null; const q = e.getBoundingClientRect(); return q.width && q.height ? [Math.round(q.left), Math.round(q.top), Math.round(q.right), Math.round(q.bottom)] : null; };
+    const geo = { vw: innerWidth, vh: innerHeight, blase: R(document.getElementById('hinweisBlase')), band: R(document.getElementById('tutBand')), kopf: R(document.querySelector('header')), ziel: r && r.width ? [Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom)] : null, dlg: R(document.querySelector('#dlg .dlg-karte')) };
+    return { geo, kap: T.kap, schritt: T.schritt, tag: spiel.tag, heu: spiel.futter && spiel.futter.lager && spiel.futter.lager.heu, liefer: spiel.futter && (spiel.futter.liefer || []).length, k: blase && blase.k, titel: blase && HINWEISE[blase.k] && HINWEISE[blase.k][0], sel: blase && blase.sel, ziel: r ? [r.x + r.width / 2, r.y + r.height / 2].map(Math.round) : null, blase: bb ? [bb.x + 20, bb.y + 12].map(Math.round) : null,
       dlg: document.getElementById('dlg').hidden ? null : document.getElementById('dlgInhalt').textContent.slice(0, 90), knoepfe: [...document.querySelectorAll('#dlgKnoepfe button')].map(x => x.textContent),
       scrollH: document.scrollingElement.scrollHeight, scrollY: Math.round(scrollY), nebenScroll: (() => { const n = document.getElementById('nebenSchirm'); return n.classList.contains('offen') ? [n.scrollHeight, n.clientHeight] : null; })() }; });
+  const GP = [], gesehen = new Set();
+  const schnitt = (a, b) => { if (!a || !b) return 0; const w = Math.min(a[2], b[2]) - Math.max(a[0], b[0]), h = Math.min(a[3], b[3]) - Math.max(a[1], b[1]); return w > 0 && h > 0 ? w * h : 0; }, flaeche = a => a ? (a[2] - a[0]) * (a[3] - a[1]) : 0;
+  const pruefeGeo = async s0 => { await pg.waitForTimeout(900); const s = await st(); if (s.kap !== s0.kap || s.schritt !== s0.schritt) return; const g = s.geo; if (!g) return; const k = s.kap + '.' + s.schritt, hier = []; const bl = g.blase, z = g.ziel;
+    if (bl && (bl[0] < -1 || bl[2] > g.vw + 1 || bl[1] < -1 || bl[3] > g.vh + 1)) hier.push('Blase ragt aus dem Bild ' + JSON.stringify(bl));
+    if (bl && g.band && schnitt(bl, g.band) > 0) hier.push('Blase überlappt das Band');
+    if (bl && g.kopf && schnitt(bl, g.kopf) > 0 && z && !(z[3] <= g.kopf[3])) hier.push('Blase überlappt die Kopfleiste');
+    if (bl && z && schnitt(bl, z) > 0.25 * flaeche(z)) hier.push('Blase verdeckt das Ziel (' + Math.round(100 * schnitt(bl, z) / flaeche(z)) + ' %)');
+    if (z && g.band && (z[2] - z[0]) < g.vw * 0.7 && schnitt(z, g.band) > 0.2 * flaeche(z)) hier.push('Ziel liegt unter dem Band');
+    if (z && g.kopf && schnitt(z, g.kopf) > 0.5 * flaeche(z) && z[1] < g.kopf[1] - 2) hier.push('Ziel hinter der Kopfleiste');
+    if (z && (z[2] < 0 || z[0] > g.vw || z[3] < 0 || z[1] > g.vh)) hier.push('Ziel außerhalb des Bildes ' + JSON.stringify(z));
+    if (g.dlg && g.band && schnitt(g.dlg, g.band) > 0) hier.push('Fenster überlappt das Band');
+    if (g.dlg && (g.dlg[1] < -1 || g.dlg[3] > g.vh + 1)) hier.push('Fenster höher als das Bild ' + JSON.stringify(g.dlg));
+    let neu = 0; hier.forEach(t => { const id = k + t.slice(0, 18); if (!gesehen.has(id)) { gesehen.add(id); neu++; GP.push(`Kap ${s.kap + 1}.${s.schritt + 1} „${s.titel || s.k}“: ${t}`); } }); if (neu && O) await pg.screenshot({ path: `${O}/GEO-${SET}-${W}-${s.kap + 1}-${s.schritt + 1}.png` }); };
   let alt = '', gleich = 0, nr = 0, ende = false;
   for (let i = 0; i < 400; i++) {
     const s = await st(); if (s.ende) break;
     if (s.dlg && /Tutorial (geschafft|beendet)/.test(s.dlg)) { ende = true; break; }
     if (!s.dlg && await pg.evaluate(() => spiel.tutorial && spiel.tutorial.geschafft === spiel.tutorial.kap && !document.getElementById('tutHaken').hidden)) { await pg.waitForTimeout(500); await pg.click('#tutHaken'); await pg.waitForTimeout(1200); continue; }   // grüner Haken beendet das Kapitel
-    const key = JSON.stringify([s.kap, s.schritt, s.k, s.dlg]); if (key === alt) gleich++; else { gleich = 0; alt = key; nr++; if (process.env.LAUT) console.log(nr, JSON.stringify(s)); if (O) await pg.screenshot({ path: `${O}/${SET}-${W}-${String(nr).padStart(3, '0')}.png` }); }
+    const key = JSON.stringify([s.kap, s.schritt, s.k, s.dlg]); if (key === alt) gleich++; else { gleich = 0; alt = key; nr++; if (process.env.GEO) await pruefeGeo(s); if (process.env.LAUT) console.log(nr, JSON.stringify(s)); if (O) await pg.screenshot({ path: `${O}/${SET}-${W}-${String(nr).padStart(3, '0')}.png` }); }
     if (gleich > 9) { haenger.push(`Kapitel ${s.kap + 1} Schritt „${s.titel}“`); if (O) await pg.screenshot({ path: `${O}/${SET}-${W}-HAENGT-${s.kap}.png` }); await pg.click('#tutKapWeg').catch(() => {}); gleich = 0; await pg.waitForTimeout(1300); continue; }
     if (s.dlg && (await pg.evaluate(() => spiel.tutorial && spiel.tutorial.geschafft === spiel.tutorial.kap))) { await pg.evaluate(() => { const k = [...document.querySelectorAll('#dlgKnoepfe button')].find(x => /Schließen|Abbrechen|Zurück/.test(x.textContent)); if (k) k.click(); else document.getElementById('dlg').hidden = true; }); await pg.waitForTimeout(600); continue; }
     if (s.dlg && s.ziel && s.blase) { await pg.mouse.click(s.ziel[0], s.ziel[1]); await pg.waitForTimeout(800); continue; }   // Schritt im Fenster
@@ -49,4 +64,5 @@ const [W, H] = (process.argv[2] || '390x844').split('x').map(Number), O = proces
     await pg.waitForTimeout(500);
   }
   console.log(`${ende && !haenger.length ? '✓' : '✗'} Tutorial ${SET} in ${W}×${H} ${ende ? 'bis zum Ende durchgespielt' : 'nicht bis zum Ende gekommen'}${haenger.length ? ' – hängt: ' + haenger.join(', ') : ''}`);
+  if (process.env.GEO) { console.log(`Geometrie ${SET} ${W}×${H}: ${GP.length} Auffälligkeiten`); GP.forEach(t => console.log('  ' + t)); }
   console.log('Seitenfehler:', errs.join(' ; ') || 'keine'); await b.close(); })();

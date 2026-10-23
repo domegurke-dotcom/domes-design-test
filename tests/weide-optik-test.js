@@ -13,7 +13,7 @@ const { chromium } = require('playwright'); const path = require('path');
     const p = neuesPferd({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Zeig' }); p.pflege = erzeugePflege(p); p.werte = p.werte || erzeugeWerte(p); spiel.boxen[0].pferd = p;
     ok('Ohne Auswahl kein Rahmen', !weidenMaZiel().has(w.wid)); p.weidegang = 'taeglich'; p.auslaufZiel = w.wid; ok('Mit Weidegang und gewählter Weide: Rahmen', weidenMaZiel().has(w.wid));
     ok('Liste markiert die Weide', /ma-ziel/.test(weidenHTML()) && /für Stallbursche\/Azubi gewählt/.test(weidenHTML()));
-    ok('Hofplan markiert die Kachel', /stroke="#2a5d8f"/.test(hofplanSVG()));
+    ok('Hofplan ohne blauen Rahmen (Dome 23.10.)', !/stroke="#2a5d8f"/.test(hofplanSVG()));
     // Mähen
     const wi = { wid: 'wx', name: 'Wiese', ha: 1, gras: 80, matsch: 0, wiese: true, schnitte: 1 }; weiden().push(wi);
     const t = k => { const d = datum(); return d; };

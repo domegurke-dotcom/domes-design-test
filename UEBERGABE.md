@@ -36,6 +36,8 @@ Domes Wünsche zu Whiteboard, Mitarbeitern, Waschplatz/Solarium sind umgesetzt (
 3. „Heute gefressen“ fehlt in der Weide-Karte (auf Dome-Wunsch entfernt) – bei Bedarf als kleine Zeile zurück.
 4. Shampoo: soll das Personal sparsamer sein (nur Pensionspferde mit Leistung)? Hinweis bei leerem Vorrat ist da (Brief).
 
+**Nachtrag (gleiches Konto, Sitzung 23.10. spät) – v723:** Fress-Animation (Heu → Kopf zum Boden mit Grasestellung der Beine, Kraftfutter → Kopf zur Krippe, nacheinander; Weide: Pferde grasen ab und zu ~30 s), Whiteboard-Weiden mit größerer Schrift. Test `tests/fress-test.js` grün in 3 Ansichten. Offen/zu fragen: Animation auch bei matten Pferden (waagerecht/tief)? Grasen am Hofplan/Ort-Koppel? Frage von Dome zum Raritäten-Markt (Schimmel-Anlagen) beantwortet – sie entscheidet, ob die Schimmel-Anlagen (`ex.grauTempo`, `kurve`, `maehne`) in die Seltenheit sollen.
+
 **Hinweise für die nächste Sitzung:** `NEUES_STAND` bleibt 694 (Update-Fenster nur auf Domes Ansage; unveröffentlicht sind seit v694 viele Punkte). Große Tests liefen heute nicht (nur kleine Tests + Tutorial-Spieler fort 390×844 grün). `version.json` war seit v708 leer (behoben v716) – beim Hochzählen immer `echo '{ "version": "NNN" }' > version.json` benutzen, nie `open(..., 'w')` vor dem Lesen.
 
 ---

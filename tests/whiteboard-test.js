@@ -69,7 +69,7 @@ const [W, H] = (process.argv[2] || '844x390').split('x').map(Number), ORD = proc
   await pg.waitForTimeout(450); ok('Lösen mit ✕', await pg.evaluate(() => { document.querySelector('[data-wbloes="0:stall"]').click(); return !spiel.boxen[0].maPlan; }));
   // Überlappen / Breite
   ok('Kein waagerechtes Scrollen der Seite', await pg.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), await pg.evaluate(() => document.documentElement.scrollWidth + ' > ' + innerWidth));
-  if (ORD) { await pg.screenshot({ path: ORD + `/wb-${W}x${H}.png` }); await pg.evaluate(() => { const r = document.querySelector('.wb-weiden'); if (r) r.scrollIntoView(); }); await pg.waitForTimeout(150); await pg.screenshot({ path: ORD + `/wb-${W}x${H}-weide.png` }); }
+  if (ORD) { await pg.screenshot({ path: ORD + `/wb-${W}x${H}.png` }); await pg.evaluate(() => { wbSicht = 'weiden'; wbWahl = null; zeigeWhiteboard(); }); await pg.waitForTimeout(150); await pg.screenshot({ path: ORD + `/wb-${W}x${H}-weide.png` }); }
   await pg.click('#nbZurueck'); ok('Zurück zur Übersicht', await pg.evaluate(() => !!document.querySelector('.wb-uebersicht')));
   ok('Stall öffnet direkt das Whiteboard (keine alte Boxenansicht mehr)', await pg.evaluate(() => { zeigeBoxen(); return !!document.querySelector('.wb') && !document.querySelector('.boxen-liste') && !document.getElementById('wbUmschalt'); }));
   out.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(out.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

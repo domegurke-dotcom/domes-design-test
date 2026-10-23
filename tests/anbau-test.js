@@ -13,16 +13,14 @@ const [W, H] = (process.argv[2] || '390x844').split('x').map(Number), ORD = proc
     ok('Anbau +2 beauftragt', bauStarten('stall', st.stufe, { anbau: st.gid, boxen: 2 }));
     const a = gebaeude().find(g => g.anbau === st.gid); a.bau.rest = 1; bauNacht();
     ok('Anbau fertig: 2 neue Boxen', spiel.boxen.length === boxen0 + 2 && !a.bau);
-    ok('gebKinder findet den Anbau', gebKinder(st).includes(a) && gebElternVon(a) === st);
-    let h = bauenHTML(); const zeilen = (h.match(/class="geb"/g) || []).length;
-    ok('Bauen-Liste: Anbau steht als „+2“ beim Stall', /<b>\+2<\/b> = /.test(h) && /geb-kind/.test(h), (h.match(/Stufe \d – [^·]+· [^<]*<b>\+2<\/b>[^<]*/) || [''])[0]);
-    ok('Keine eigene Zeile für den Anbau (Zeilen nur Hauptgebäude)', !h.includes('Boxen­stall (Anbau'), String(zeilen));
-    const hp = hofplanSVG(); ok('Hofplan: keine eigene Zeichnung für den Anbau, Zahl „+2“', !hp.includes(`data-hpgeb="${a.gid}"`) && hp.includes(`${n0}+2`));
+    let h = bauenHTML();
+    ok('Anbau (gleiche Stufe) zählt zum Stall: verschmolzen, 8 Boxen, kein eigener Eintrag (v707)', st.boxen === n0 + 2 && !gebaeude().includes(a) && !/geb-kind/.test(h) && !h.includes('Boxen­stall (Anbau'), st.boxen + '');
+    const hp = hofplanSVG(); ok('Hofplan: eine Zeichnung, Zahl = alle Boxen', hp.includes(`>${n0 + 2}<`) || hp.includes(`${n0 + 2}`));
     // Umbau mit wählbarer Boxenzahl
     ok('Umbau-Preis für 2 Boxen kleiner als für alle', umbauPreisN(st, 2) < umbauPreis(st), umbauPreisN(st, 2) + ' < ' + umbauPreis(st));
     umbauDialog(st, 2); ok('Fenster mit Auswahl „Wie viele Boxen?“', !!document.getElementById('umbauMenge') && /2 der/.test(document.getElementById('dlgInhalt').textContent));
     const geld0 = spiel.geld; document.querySelector('#dlgKnoepfe button').click();
-    const t = gebaeude().find(g => g.teil); ok('Teil abgespalten: 2 Boxen im Umbau, Rest bleibt', t && t.boxen === 2 && st.boxen === n0 - 2 && t.bau && t.bau.art === 'umbau', t && JSON.stringify({ t: t.boxen, st: st.boxen }));
+    const t = gebaeude().find(g => g.teil); ok('Teil abgespalten: 2 Boxen im Umbau, Rest bleibt', t && t.boxen === 2 && st.boxen === n0 && t.bau && t.bau.art === 'umbau', t && JSON.stringify({ t: t.boxen, st: st.boxen }));
     ok('Genau 2 Boxen gesperrt', spiel.boxen.filter(x => x.gesperrt).length === 2);
     ok('Bezahlt wurde der Preis für 2 Boxen', Math.round(geld0 - spiel.geld) === umbauPreisN({ ...st, boxen: st.boxen + 2 }, 2) - (st.stufe + 1 === 3 ? bauZuschuss(umbauPreisN(st, 2)) : 0), String(geld0 - spiel.geld));
     t.bau.rest = 1; bauNacht(); ok('Fertig: 2 Boxen eine Stufe höher', spiel.boxen.filter(x => x.geb === t.gid).every(x => x.stufe === st.stufe + 1) && t.stufe === st.stufe + 1);

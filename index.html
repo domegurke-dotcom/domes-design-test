@@ -761,6 +761,7 @@
   .korb-tab td { vertical-align: middle; }
   .hof-tabs { flex-wrap: wrap; } .hof-tabs button { flex: 1 1 auto; font-size: .8rem; padding: 7px 6px; }
   .geb { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid #e2d6c3; } .geb-ico { font-size: 1.5rem; width: 2rem; text-align: center; } .geb-txt { flex: 1; display: flex; flex-direction: column; gap: 3px; } .geb-txt small { color: var(--leise); }
+  .geb-gruppe { margin: 6px 0; } .geb-gruppe > summary { cursor: pointer; font-weight: 700; padding: 6px 0; } .geb-raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 8px; } .geb-raster .geb { border: 1px solid #e2d6c3; border-radius: 10px; padding: 8px; background: #fffdf7; } .geb-raster .geb-ico { width: 1.6rem; flex: none; }
   .geb-balken { height: 7px; max-width: 220px; } .geb-kn { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; } .geb-sperre { font-style: italic; }
   #nebenSchirm .bau-fenster { grid-column: 1 / -1; width: 100%; max-width: 760px; justify-self: center; }
   .fp-vergleich .re { text-align: right; } .fp-vergleich td.abw { color: #a8322b; font-weight: 700; }
@@ -1055,7 +1056,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "671";
+  const SPIEL_VERSION = "673";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1063,11 +1064,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=671"></script>
-<script src="pferd.js?v=671"></script>
-<script src="boxstufen.js?v=671"></script>
-<script src="kopfneu.js?v=671"></script>
-<script src="waschbild.js?v=671"></script>
+<script src="lz-string.min.js?v=673"></script>
+<script src="pferd.js?v=673"></script>
+<script src="boxstufen.js?v=673"></script>
+<script src="kopfneu.js?v=673"></script>
+<script src="waschbild.js?v=673"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -10783,8 +10784,15 @@
     aufWeide(p, b, W.ma, ww.wid); p.weide.nachm = true; p.auslaufLog = { tag: spiel.tag, wer: W.name || "der Stallbursche", ort: ww.name }; W.erledigt = true; return true;
   }
   function weideNachmTag() { spiel.boxen.forEach(b => { const p = b.pferd, W = p && p.weideNachm; if (W) weideNachmAusfuehren(b, W); }); }
+  // v672 (Dome 23.10.): alte Spielstände – die neuen Flächenmaße (v667) brauchen mehr Bauland; jeder Hof bekommt einmalig 1 ha Bauland geschenkt, mit Brief (neue Spiele nicht)
+  function flaechenGeschenk() {
+    const H = spiel.hof; if (!H || H.flaecheV === 1) return; H.flaecheV = 1;
+    if (spiel.tutorial || spiel.tag <= 1 || !(spiel.gebaeude || []).length) return;
+    H.bauHa = Math.round(((H.bauHa != null ? H.bauHa : 1) + 1) * 100) / 100;
+    brief("Hofverwaltung", `Neue Flächenmaße – 1 ha Bauland geschenkt`, `wir haben die Flächen für Gebäude auf echte Maße umgestellt (Reitplatz 20×40 / 20×60 / 40×80 m, Sandpaddock 150 m² je Pferd, Rennbahn 2 ha) und rechnen 30 % für Wege, Zufahrt und Abstände dazu. Damit {dein|Ihr} Hof <b>${esc(hofName())}</b> deshalb nicht eng wird, schenken wir {dir|Ihnen} einmalig <b>1 ha Bauland</b>. Jetzt hat der Hof ${haTxt(H.bauHa)} Bauland.`);
+  }
   function hofMorgen() {
-    turnierMorgen(); hausturnierMorgen(); verkaufsrennenAbgang(); verkaufsrennenMarkt(); befundTestTag(); hofhelferTag(); reparaturTag(); umbauPlanTag(); futterwieseTag(); rateVorwarnung();   // Turniertag: genannte Pferde fahren los
+    flaechenGeschenk(); turnierMorgen(); hausturnierMorgen(); verkaufsrennenAbgang(); verkaufsrennenMarkt(); befundTestTag(); hofhelferTag(); reparaturTag(); umbauPlanTag(); futterwieseTag(); rateVorwarnung();   // Turniertag: genannte Pferde fahren los
     stutenInAbfohl(); stutenAusAbfohl();   // v419: Abfohlbox – Einzug kurz vor der Geburt, Auszug nach dem Fohlen
     futterLieferung();  // bestelltes Futter kommt an
     maFreischaltTag();   // v649: Popup, wenn neue Mitarbeiter-Berufe freigeschaltet werden
@@ -12278,12 +12286,12 @@
   // ---------- Hof-Ausbau H1: Immobilien-Menü, Hofkauf, Kredit ----------
   const HOF_AUSBAU = 1;          // Spielstände ab dem Hof-Ausbau (ältere lassen sich nicht weiterspielen)
   const START_KAPITAL = 15000;   // Startgeld vor dem Hofkauf
-  const STUFE_NAME = ["", "baufällig", "ordentlich", "komfortabel"];
+  const STUFE_NAME = ["", "einfach", "ordentlich", "komfortabel"];
   const STALLART_NAME = { pension: "Pensionsstall", zucht: "Zuchtstall", ausbildung: "Ausbildungsstall", gnadenhof: "Gnadenhof", renn: "Rennstall", western: "Westernstall" };
   // start: am Anfang kaufbar · alle anderen werden frei, wenn der erste Kredit zur Hälfte abbezahlt ist und die Hälfte des Preises als Eigenanteil da ist
   const IMMOBILIEN = [
     { id: "pension", n: "Alter Pensionsstall", preis: 20000, eigen: 10000, boxen: 6, stufe: 1, ha: 2, weide: 1, start: true, bild: "pension",
-      text: "6 baufällige, selbstgebaute Boxen · Reitplatz · Gelände · ca. 2 ha: Hofstelle mit Reitplatz und 1 ha Weide" },
+      text: "6 einfache, selbstgebaute Boxen · Reitplatz · Gelände · ca. 2 ha: Hofstelle mit Reitplatz und 1 ha Weide" },
     { id: "grund", n: "Leeres Grundstück", preis: 5000, ha: 5, bild: "grund", text: "5 ha Grünland am Ortsrand – Stall, Reitplatz und Weiden baust du selbst" },
     { id: "resthof", n: "Resthof mit Scheune", preis: 35000, boxen: 8, stufe: 1, ha: 4, weide: 2, bild: "resthof", text: "alter Bauernhof · Scheune mit 8 Boxen · 4 ha, davon 2 ha Weide" },
     { id: "gestuet", n: "Kleines Gestüt", preis: 55000, boxen: 10, stufe: 2, ha: 8, weide: 5, bild: "gestuet", text: "10 ordentliche Boxen · Abfohlbox · 8 ha, davon 5 ha Weide" },
@@ -12748,7 +12756,7 @@
     spiel = { geld: START_KAPITAL, spieler: c, tag: 1, tempo, tempoNeu: true, aktBox: 0, sparmodus: spiel.sparmodus, hofAusbau: HOF_AUSBAU, stufenAn: true, ...(tutorial ? { tutorial: { kap: 0 } } : {}),
       boxen: Array.from({ length: I.boxen }, (_, i) => ({ nr: i + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false, stufe: I.stufe })),
       anlage: spiel.anlage, ausruestung: spiel.ausruestung, stallarten: ["pension"],
-      hof: { hid: "h1", name, id: I.id, art: "pension", ha: I.ha, weideHa: I.weide, bauHa: 1, stufe: I.stufe, wert: I.preis, kauf: { tag: 1, preis: I.preis, eigen: I.eigen }, pacht: 0, pension: { max: PENSION_START_PLAETZE } }, hofReihe: ["h1"], hoefe: {} };
+      hof: { hid: "h1", name, id: I.id, art: "pension", ha: I.ha, weideHa: I.weide, bauHa: 1, flaecheV: 1, stufe: I.stufe, wert: I.preis, kauf: { tag: 1, preis: I.preis, eigen: I.eigen }, pacht: 0, pension: { max: PENSION_START_PLAETZE } }, hofReihe: ["h1"], hoefe: {} };
     buchen(-I.preis, "Hofkauf");
     stallartBrief("pension");
     const k = kreditNeu(I.preis - I.eigen, KREDIT.jz, "Hofkredit");
@@ -12766,7 +12774,7 @@
   // Der aktive Hof liegt wie bisher direkt in „spiel“, die anderen in spiel.hoefe[hid]. imHof() tauscht für eine Aktion kurz um.
   const HOF_FELDER = ["boxen", "geld", "dispo", "mitarbeiter", "hof", "extern", "anlage", "rechnungen", "rechnungStatus", "aktBox", "bewerber", "futterTermin", "maVergessen", "stallarten",
     "finanzen", "finanzSaison", "lager", "kredite", "futter", "apotheke", "hufschmiedHeute", "angebote", "vernachlaessigt", "gebaeude", "einsteller", "pensionAnfragen", "pensionHeute", "weiden", "maBekannt"];
-  const STUFE_ADJ = ["", "baufällige", "ordentliche", "komfortable"];
+  const STUFE_ADJ = ["", "einfache", "ordentliche", "komfortable"];
   const MAX_HOEFE = 5, LAND_PREIS = 1000, PACHT_PREIS = 20;   // Land: kaufen je ha, pachten je ha und Jahreszeit
   const aktivHid = () => (spiel.hof && spiel.hof.hid) || "h1";
   const hofReihe = () => (spiel.hofReihe = spiel.hofReihe || [aktivHid()]);
@@ -12972,7 +12980,7 @@
     const H = { geld: 0, boxen: Array.from({ length: A.boxen }, (_, i) => ({ nr: i + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false, stufe: A.stufe })),
       anlage: { stall: A.boxen > 0, paddock: false, weide: A.weide > 0, waschplatz: false, roundpen: false, reitplatz: A.anlagen.includes("reitplatz"), reithalle: A.anlagen.includes("reithalle"), gelaende: true, anhaenger: true },
       stallarten: ["pension"], mitarbeiter: [], futter: { lager: {}, warn: {} }, aktBox: 0,
-      hof: { hid, name, id: A.typ, art: "pension", ha: A.ha, weideHa: A.weide, bauHa: A.bauha || 1, stufe: A.stufe, wert: A.preis, kauf: { tag: spiel.tag, preis: A.preis, eigen }, pacht: 0 } };
+      hof: { hid, name, id: A.typ, art: "pension", ha: A.ha, weideHa: A.weide, bauHa: A.bauha || 1, flaecheV: 1, stufe: A.stufe, wert: A.preis, kauf: { tag: spiel.tag, preis: A.preis, eigen }, pacht: 0 } };
     (spiel.hoefe = spiel.hoefe || {})[hid] = H; hofReihe().push(hid); chronikHof("gekauft", H.hof && H.hof.name || "Hof");
     imHof(hid, () => {
       buchen(-A.preis, "Hofkauf"); buchen(eigen, "Eigenanteil vom zentralen Konto"); stallartBrief("pension");
@@ -13160,7 +13168,7 @@
     return G;
   }
   const bauTage = z => z === "kurz" ? Math.max(1, Math.round(tpj() * 0.3)) + (Math.random() < .5 ? 1 : 0) : z === "halle" ? Math.round((2 + Math.random()) * tpj()) : Math.max(1, Math.round(z * tpj()));
-  const gebName = g => `${BAUTEN[g.typ].n}${g.anbau ? " (Anbau)" : ""}${g.ha ? ` ${g.ha} ha` : ""}`;
+  const gebName = g => g.name ? esc(g.name) : `${BAUTEN[g.typ].n}${g.anbau ? " (Anbau)" : ""}${g.ha ? ` ${g.ha} ha` : ""}`;   // v672 (Dome): Gebäude und Anlagen lassen sich benennen wie Weiden
   const imBau = () => gebaeude().filter(g => g.bau);
   const zaunText = g => `${haTxt(g.ha)} Zaun im Bau – noch ${g.bau.rest} ${g.bau.rest === 1 ? "Tag" : "Tage"}${datum().s === 3 ? " · ❄️ ruht im Winter" : ""}`;   // v298: Zaun im Bau bei Land/Weiden zeigen
   const freiesLand = () => { const H = spiel.hof || {}; return Math.max(0, weideland() - (H.weideHa || 0) - imBau().filter(g => g.typ === "weide").reduce((a, g) => a + g.ha, 0)); };
@@ -13378,8 +13386,9 @@
   // Reparatur (Dome): der Handwerker kommt am nächsten Tag und braucht 1 Tag (ab 50 % Zustand) oder 2 Tage (darunter)
   const reparaturDauer = g => (g.zustand >= 50 ? 1 : 2);
   function reparaturTag() {
-    gebaeude().forEach(g => { if (!g.rep || spiel.tag <= g.rep.bis) return; delete g.rep; g.zustand = 100;
-      brief("Hofverwaltung", `${gebName(g)} repariert`, `der Handwerker ist fertig: <b>${gebName(g)}</b> ist wieder in gutem Zustand (100 %).`); });
+    const fertig = []; gebaeude().forEach(g => { if (!g.rep || spiel.tag <= g.rep.bis) return; delete g.rep; g.zustand = 100; fertig.push(g); });
+    if (fertig.length === 1) brief("Hofverwaltung", `${gebName(fertig[0])} repariert`, `der Handwerker ist fertig: <b>${gebName(fertig[0])}</b> ist wieder in gutem Zustand (100 %).`);
+    else if (fertig.length) brief("Hofverwaltung", `Handwerker: ${fertig.length} Reparaturen fertig`, `der Handwerker ist fertig. Wieder in gutem Zustand (100 %): <ul>${fertig.map(g => `<li><b>${gebName(g)}</b></li>`).join("")}</ul>`);   // v672 (Dome): ein Brief statt vieler
   }
   const reparaturPreis = g => g.rep ? 0 : Math.round((g.preis || 0) * 0.02 * Math.ceil((100 - g.zustand) / 10));   // je 10 Punkte 2 % des Baupreises
   // Hofhelfer: repariert jeden Arbeitstag das schlechteste Gebäude
@@ -13390,7 +13399,7 @@
   // Wirkung der Stufe: Wohlbefinden, Verletzungen in der Box, Zufriedenheit der Mitarbeiter
   function boxWohl(p, b) {
     const st = boxenStufe(b), z = gebZustand(b);
-    if (st === 1) wohlAendern(p, -0.5, "baufällige Box"); else if (st === 3) wohlAendern(p, 0.5, "komfortable Box");
+    if (st === 1) wohlAendern(p, -0.5, "einfache Box"); else if (st === 3) wohlAendern(p, 0.5, "komfortable Box");
     if (z < 40) wohlAendern(p, -0.5, "kaputte Box");
     if (b.paddock) wohlAendern(p, 0.5, "Paddockbox");
   }
@@ -13424,7 +13433,7 @@
   const gebBar = z => `<div class="kr-balken geb-balken"><i style="width:${Math.round(z)}%;background:${z < 40 ? "#c0503a" : z < 70 ? "#d9a441" : "#6aa84f"}"></i></div>`;
   function gebZeile(g) { const bar = gebBar; const B = BAUTEN[g.typ], us = g.typ === "heudampfer" ? "" : umbauSperre(g), rp = reparaturPreis(g);
         return `<div class="geb"><span class="geb-ico">${B.ico}</span><span class="geb-txt"><b>${gebName(g)}</b><small>${g.typ === "heudampfer" ? "fertig" : `Stufe ${g.stufe} – ${STUFE_NAME[g.stufe]}${g.boxen ? ` · ${g.boxen} ${g.boxen === 1 ? "Box" : "Boxen"}` : ""} · Zustand ${Math.round(g.zustand)} %`}</small>${g.typ === "heudampfer" ? "" : bar(g.zustand)}
-          ${g.typ === "heudampfer" ? "" : `<span class="geb-kn">${g.rep ? `<small class="geb-rep">🔧 ${spiel.tag < g.rep.ab ? "Handwerker kommt morgen" : `Handwerker arbeitet${g.rep.bis > spiel.tag ? " (noch 2 Tage)" : " (heute fertig)"}`}</small>` : rp ? `<button class="mini-knopf" data-rep="${g.gid}">🔧 Reparieren · ${fmt(rp)}</button>` : ""}${!us ? `<button class="mini-knopf" data-umbau="${g.gid}">⬆️ Stufe ${g.stufe + 1} · ${fmt(umbauPreis(g))}</button>` : g.stufe < 3 && BAUTEN[g.typ].preis && !g.abriss ? `<small class="geb-sperre">Umbau: ${us}</small>` : ""}${BAUTEN[g.typ].jeBox && !g.anbau && !g.abriss ? `<button class="mini-knopf" data-anbau="${g.gid}">➕ Anbau</button>` : ""}${g.abriss ? `<small class="geb-rep">🧨 Abriss läuft – noch ${g.abriss.rest} ${g.abriss.rest === 1 ? "Tag" : "Tage"}</small>` : g.typ !== "weide" ? `<button class="mini-knopf" data-abriss="${g.gid}">🧨 Abreißen</button>` : ""}</span>`}</span></div>`; }
+          ${g.typ === "heudampfer" ? "" : `<span class="geb-kn">${g.rep ? `<small class="geb-rep">🔧 ${spiel.tag < g.rep.ab ? "Handwerker kommt morgen" : `Handwerker arbeitet${g.rep.bis > spiel.tag ? " (noch 2 Tage)" : " (heute fertig)"}`}</small>` : rp ? `<button class="mini-knopf" data-rep="${g.gid}">🔧 Reparieren · ${fmt(rp)}</button>` : ""}${!us ? `<button class="mini-knopf" data-umbau="${g.gid}">⬆️ Stufe ${g.stufe + 1} · ${fmt(umbauPreis(g))}</button>` : g.stufe < 3 && BAUTEN[g.typ].preis && !g.abriss ? `<small class="geb-sperre">Umbau: ${us}</small>` : ""}${BAUTEN[g.typ].jeBox && !g.anbau && !g.abriss ? `<button class="mini-knopf" data-anbau="${g.gid}">➕ Anbau</button>` : ""}${!g.bau && g.typ !== "heudampfer" ? `<button class="mini-knopf" data-gname="${g.gid}">✏️ Namen</button>` : ""}${g.abriss ? `<small class="geb-rep">🧨 Abriss läuft – noch ${g.abriss.rest} ${g.abriss.rest === 1 ? "Tag" : "Tage"}</small>` : g.typ !== "weide" ? `<button class="mini-knopf" data-abriss="${g.gid}">🧨 Abreißen</button>` : ""}</span>`}</span></div>`; }
   // Dome (v347): Hofplan – Gebäude antippen: Zustand, reparieren, Stufe verbessern, Anbau (vergrößern)
   function gebaeudeDialog(gid) {
     const g = gebaeude().find(x => x.gid === gid); if (!g) return;
@@ -13458,7 +13467,10 @@
     return `<p class="text" style="margin:0 0 6px">Kasse: <b>${fmt(spiel.geld || 0)}</b> · Bauland frei: <b>${haTxt(baulandFrei())}</b> von ${haTxt(bauHa())} · Unterhalt: ${prozent(UNTERHALT)} des Baupreises je Jahreszeit (${fmt(Math.round(G.filter(g => g.typ !== "heudampfer").reduce((a, g) => a + (g.preis || 0), 0) * UNTERHALT))}) · Stufe 1 verfällt schneller.</p>
       ${plan.length ? `<h4 class="ma-titel">🚧 Umbau geplant</h4>${plan.map(planHTML).join("")}` : ""}
       ${bau.length ? `<h4 class="ma-titel">🏗️ Im Bau</h4>${bau.map(g => `<div class="geb"><span class="geb-ico">${BAUTEN[g.typ].ico}</span><span class="geb-txt"><b>${gebName(g)}</b><small>${g.bau.art === "umbau" ? `Umbau auf Stufe ${g.stufe + 1}` : `Stufe ${g.stufe} – ${STUFE_NAME[g.stufe]}`} · noch ${tageTxt2(g.bau.rest)}${BAUTEN[g.typ].aussen && datum().s === 3 ? " · ❄️ ruht im Winter" : ""}</small></span></div>`).join("")}` : ""}
-      <h4 class="ma-titel">🏠 Gebäude und Anlagen</h4>${steht.length ? steht.map(gebZeile).join("") : `<p class="text">Noch keine Gebäude.</p>`}
+      ${(() => { const grp = g => g.typ === "weide" ? "zaeune" : (BAUTEN[g.typ].anlage || g.typ === "sandpaddock" || g.typ === "trail" || g.typ === "rennbahn") ? "anlagen" : "gebaeude", Z = spiel.gebZu || {}, reparierbar = steht.filter(g => !g.abriss && !g.rep && g.typ !== "heudampfer" && reparaturPreis(g) > 0);
+        if (!steht.length) return `<h4 class="ma-titel">🏠 Gebäude und Anlagen</h4><p class="text">Noch keine Gebäude.</p>`;
+        return `<h4 class="ma-titel">🏠 Gebäude und Anlagen</h4>${reparierbar.length ? `<p style="margin:0 0 8px"><button class="knopf zweit" data-allrep="1" style="width:auto;padding:9px 14px">🔧 Alles reparieren · ${fmt(reparierbar.reduce((a, g) => a + reparaturPreis(g), 0))}</button></p>` : ""}`
+          + [["gebaeude", "🏠 Gebäude"], ["anlagen", "🏟️ Anlagen"], ["zaeune", "🌿 Weiden und Zäune"]].map(([k, t]) => { const L = steht.filter(g => grp(g) === k); return L.length ? `<details class="geb-gruppe" data-gg="${k}" ${Z[k] ? "" : "open"}><summary>${t} (${L.length})</summary><div class="geb-raster">${L.map(gebZeile).join("")}</div></details>` : ""; }).join(""); })()}
       <h4 class="ma-titel">➕ Neu bauen</h4><div class="kacheln quadrat bau-kacheln">${BAU_WICHTIG.filter(k => freiStufe("bauen", k)).map(k => { if (k === "gummi") { const L = spiel.boxen.filter(b => boxenStufe(b) >= 2 && !b.offen); if (!L.length) return ""; const n = L.filter(b => !b.gummi).length;   // Dome (v358): Gummimatten erst ab einer Stufe-2-Box
           return `<button class="kachel ${n ? "klickbar" : "fehlt"}" ${n ? 'data-gummi="1"' : "disabled"} title="Gummimatten für Boxen ab Stufe 2"><span class="ico">⬛</span><b>Gummi\u00admatten</b><small>${n ? `${fmt(BODEN_WIRKUNG.GUMMI_PREIS)}/Box · ${n} ohne` : "alle Boxen haben welche"}</small></button>`; }
         if (k === "weideland" || k === "bauland") return `<button class="kachel klickbar" data-land="${k === "weideland" ? "weide" : "bau"}" title="${k === "weideland" ? "Weideland kaufen oder pachten" : "Bauland kaufen"}"><span class="ico">${k === "weideland" ? "🌱" : "📐"}</span><b>${k === "weideland" ? "Weide\u00adland" : "Bau\u00adland"}</b><small>${k === "weideland" ? `${fmt(LAND_PREIS)}/ha · Pacht` : `${fmt(BAULAND_PREIS)}/ha · frei ${haTxt(baulandFrei())}`}</small></button>`;
@@ -13513,6 +13525,14 @@
     nb.querySelectorAll("[data-uabsage]").forEach(b => b.onclick = () => { const g = G.find(x => x.gid === b.dataset.uabsage); if (!g || !g.plan) return;
       dialog(`<h3>✖️ Umbau absagen?</h3><p>Der geplante Umbau von <b>${gebName(g)}</b> fällt aus. Du bekommst ${fmt(g.plan.kosten - (g.plan.zuschuss || 0))} zurück${g.plan.zuschuss ? " (Kosten ohne den Bauzuschuss)" : ""}.</p>`,
         [["Absagen", () => { if (!spiel.admin) buchen(g.plan.kosten - (g.plan.zuschuss || 0), `Umbau abgesagt: ${BAUTEN[g.typ].n}`); delete g.plan; speichern(); bauNeuZeigen(); }], ["Doch nicht", null, "zweit"]]); });
+    nb.querySelectorAll("[data-gname]").forEach(b => b.onclick = () => { const g = G.find(x => x.gid === b.dataset.gname); if (!g) return;   // v672 (Dome): Gebäude/Anlagen benennen
+      dialog(`<h3>✏️ ${BAUTEN[g.typ].ico} umbenennen</h3><p class="text"><small>Leer lassen = Standardname (${BAUTEN[g.typ].n.replace(/\u00ad/g, "")}).</small></p><p><input id="gebNeuName" type="text" maxlength="28" value="${esc(g.name || "")}" placeholder="${esc(BAUTEN[g.typ].n.replace(/\u00ad/g, ""))}" style="width:100%;font-size:1rem;padding:8px"></p>`,
+        [["Speichern", () => { const v = (($("gebNeuName") || {}).value || "").trim().slice(0, 28); if (v) g.name = v; else delete g.name; speichern(); bauNeuZeigen(); }], ["Abbrechen", null, "zweit"]]); setTimeout(() => { const i = $("gebNeuName"); if (i) i.focus(); }, 50); });
+    nb.querySelectorAll("[data-allrep]").forEach(b => b.onclick = () => { const L = G.filter(g => !g.bau && !g.abriss && !g.rep && g.typ !== "heudampfer" && reparaturPreis(g) > 0), k = L.reduce((a, g) => a + reparaturPreis(g), 0); if (!L.length) return;   // v672 (Dome): alles auf einmal
+      dialog(`<h3>🔧 Alles reparieren</h3><p>Ein Handwerker bringt diese Gebäude und Anlagen auf 100 %: <ul>${L.map(g => `<li>${gebName(g)} (${Math.round(g.zustand)} % · ${fmt(reparaturPreis(g))})</li>`).join("")}</ul>Zusammen <b>${fmt(k)}</b>.</p>`,
+        [["Handwerker bestellen", () => { if (!spiel.admin && geldFrei() < k) { dialog(`<h3>Zu wenig Geld</h3>${dispoHinweis()}<p>In der Kasse sind ${fmt(spiel.geld || 0)}.</p>`); return; } if (!spiel.admin) buchen(-k, "Handwerker");
+          L.forEach(g => { const t = reparaturDauer(g); g.rep = { ab: spiel.tag + 1, bis: spiel.tag + t }; }); speichern(); bauNeuZeigen(); dialog(`<h3>🔧 Handwerker bestellt</h3><p>Der Handwerker kommt <b>morgen</b> und repariert ${L.length} ${L.length === 1 ? "Gebäude" : "Gebäude und Anlagen"} (je 1–2 Tage). Du bekommst einen Brief, wenn alles fertig ist.</p>`); }], ["Abbrechen", null, "zweit"]]); });
+    nb.querySelectorAll("details.geb-gruppe").forEach(d => d.ontoggle = () => { (spiel.gebZu = spiel.gebZu || {})[d.dataset.gg] = !d.open; });
     nb.querySelectorAll("[data-rep]").forEach(b => b.onclick = () => { const g = G.find(x => x.gid === b.dataset.rep), k = reparaturPreis(g);
       dialog(`<h3>🔧 ${gebName(g)} reparieren</h3><p>Ein Handwerker bringt den Zustand von ${Math.round(g.zustand)} % auf 100 %. Kosten: <b>${fmt(k)}</b> (je 10 Punkte 2 % des Baupreises).</p>`,
         [["Handwerker bestellen", () => { if (!spiel.admin && geldFrei() < k) { dialog(`<h3>Zu wenig Geld</h3>${dispoHinweis()}<p>In der Kasse sind ${fmt(spiel.geld || 0)}.</p>`); return; } if (!spiel.admin) buchen(-k, "Handwerker");
@@ -14216,7 +14236,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   // jede Nacht: Gras wächst und wird gefressen, Matsch bei Überbesetzung
   // ---------- H6: Sandpaddocks (jeder gebaute Sandpaddock ist ein eigener Auslauf mit eigener Gruppe) · p.paddock = { seit, pid } ----------
   function paddocks() { return gebaeude().filter(g => g.typ === "sandpaddock" && !g.bau); }
-  function paddockName(g) { return `Sandpaddock ${paddocks().indexOf(g) + 1}`; }
+  function paddockName(g) { return g.name ? g.name : `Sandpaddock ${paddocks().indexOf(g) + 1}`; }
   function paddockVon(p) { return p && p.paddock ? (paddocks().find(g => g.gid === p.paddock.pid) || null) : null; }
   function paddockPferde(g) { return spiel.boxen.filter(b => b.pferd && !b.tot && !b.pferd.klinik && b.pferd.paddock && b.pferd.paddock.pid === g.gid).map(b => b.pferd); }
   function paddockPlatz(g) { return PADDOCK_PLATZ[g.stufe || 1] || 2; }
@@ -14808,7 +14828,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Stufen:</b> Dressur wie bisher (Klassen E–S aus der Ausbildungsskala). Springen und Vielseitigkeit E/A/L/M/S, Western (Reining, Pleasure, Trail) Einsteiger/Rookie/Novice/Intermediate/Open: Stufe braucht Ausbildungsstand ${STUFE_STAND.join("/")} % und Disziplin-Wert ${STUFE_WERT.join("/")}. Springhöhe ≈ 0,95 × Stockmaß, Klassen-Mindesthöhe ${SPRUNG_HOEHE.join("/")} cm. Rennsport, Tölt und Distanz: nach Leistung (${LEISTUNG.map(([a, n]) => n + " ab " + a).join(", ")}).</p>
       <p><b>Marktwert:</b> Leistungsanteil = 5.000 € × max(0, (beste Disziplin − 35) / 30) – unausgebildet ≈ 0, gut ausgebildet (65) = 1, Spitzenpferd (80) = 1,5. Ein Spezialist ist damit mehr wert als ein Allrounder.</p>
       <h3>🏘️ Hof-Ausbau (H1: Hofkauf und Kredit)</h3>
-      <p><b>Neues Spiel:</b> Startmenü → Neues Spiel → Charakter (ohne Hofname) → Immobilien-Menü. Startkapital ${fmt(START_KAPITAL)}. Am Anfang nur kaufbar: Alter Pensionsstall ${fmt(20000)} (6 baufällige Boxen = Stufe 1, Reitplatz, Gelände, 2 ha: Hofstelle mit Reitplatz + 1 ha Weide). Eigenanteil ${fmt(10000)}, Kredit ${fmt(10000)} → ${fmt(5000)} bleiben. Hofname wird beim Kauf eingegeben. Start immer als Pensionsstall (<code>spiel.stallarten = ["pension"]</code>, <code>spiel.hof</code>). Alte Spielstände (ohne <code>spiel.hofAusbau</code>) lassen sich nicht weiterspielen.</p>
+      <p><b>Neues Spiel:</b> Startmenü → Neues Spiel → Charakter (ohne Hofname) → Immobilien-Menü. Startkapital ${fmt(START_KAPITAL)}. Am Anfang nur kaufbar: Alter Pensionsstall ${fmt(20000)} (6 einfache Boxen = Stufe 1, Reitplatz, Gelände, 2 ha: Hofstelle mit Reitplatz + 1 ha Weide). Eigenanteil ${fmt(10000)}, Kredit ${fmt(10000)} → ${fmt(5000)} bleiben. Hofname wird beim Kauf eingegeben. Start immer als Pensionsstall (<code>spiel.stallarten = ["pension"]</code>, <code>spiel.hof</code>). Alte Spielstände (ohne <code>spiel.hofAusbau</code>) lassen sich nicht weiterspielen.</p>
       <p><b>Weitere Immobilien</b> (ausgegraut, Kauf ab H2): ${IMMOBILIEN.filter(I => !I.start).map(I => `${I.n} ${fmt(I.preis)}`).join(" · ")}. Frei, wenn der erste Kredit zur Hälfte getilgt ist und die Hälfte des Kaufpreises auf dem Hofkonto liegt.</p>
       <p><b>Turnierschleifen und Pinnwand (v584/v588, S1/S2, Dome 20.10.):</b> Farben nach FN: Platz 1 Gold, 2 Silber, 3 Weiß, 4 Blau, 5 Rot, 6 Grün, braun = Teilnehmer (Hufeisen). Farbig nur, wenn platziert (bestes Viertel, mind. 3); platziert ab Platz 7 braun; nicht platziert braun nur auf Haus-/Hofturnier; ausgeschieden nie; Titel + Sieg = blau-goldene Champion-Schleife. Stufe je Turnierart (<code>SCHL_STUFE</code>): ${Object.entries(SCHL_STUFE).map(([a, s]) => `${a} ${s}`).join(", ")}. Je Pferd <code>p.schleifen</code> (höchstens ${SCHL_MAX}), alte Pferde einmal aus den Erfolgen nachgebaut. Im Brief steht nur ein Platzhalter (<code>[[S:…]]</code>). Pinnwand in der Box (Wand-Ebene, hinter dem Pferd, ${PINN.cols} × ${PINN.rows} Plätze, ${PINN.w} × ${PINN.h}): Stufe 1 ${PINN.lage[1].join("/")}, Stufe 2 ${PINN.lage[2].join("/")}, Stufe 3 ${PINN.lage[3].join("/")}, Paddockbox ${PINN.lage.t.join("/")}; Reihenfolge Champion, Stufe 4 → 1, Platz 1 → 6, braun zuletzt, neueste zuerst. Abfohlbox: Pinnwand wird mit der Rückwand verkleinert, Rotlichtlampe an ihrer unteren rechten Ecke. Leckstein jetzt links vom Fenster, Namensschild in Box Stufe 3 entfernt.</p>
       <p><b>Karte Merkmale (v590, M2, Dome 20.10.):</b> Box – Steckbrief – Merkmale ersetzt die Reiter Gangwerk, Eigenschaften, Charakter (alte Namen öffnen den passenden Abschnitt). Aufklapp-Bereiche Gesamteindruck · Exterieur · Farbe &amp; Abzeichen · Gangwerk · Interieur (offene merkt sich <code>spiel.merkOffen</code>). Balken mit Raute (Zuchtziel), rechts Lage-Wort und Stufe: ideal d &lt; ${BAU_STUFEN[0][0]}, leichte Abweichung &lt; ${BAU_STUFEN[1][0]}, deutlicher Fehler &lt; ${BAU_STUFEN[2][0]}, darüber starker Fehler. Noten: Merkmal ${BAU_NOTE.basis} − ${BAU_NOTE.je} × d (${BAU_NOTE.min} … ${BAU_NOTE.max}), Körperbau = gewichteter Schnitt (×1,5 Fundament, Fesselung, Stellung vorne/hinten, Rücken, Kruppe), Typ = Typnote der Fohlenschau (<code>typNote</code>), Bewegung = Schnitt Schritt/Trab/Galopp (Tölt statt Galopp), Interieur = 3 + 7 × Schnitt(Arbeitswille, Nervenstärke, Menschenbezug, Mut, Lernfähigkeit, Konzentration, Gehorsam)/100, Gesamt = ${BAU_NOTE.gesamt.typ} Typ + ${BAU_NOTE.gesamt.koerper} Körperbau + ${BAU_NOTE.gesamt.bewegung} Bewegung + ${BAU_NOTE.gesamt.interieur} Interieur. Stufen: Anfänger nur der Satz Stärken/Schwächen, ab Fortgeschritten Balken, ab Experte Noten; Adminmodus mit Zahlen. Wirkungen der Noten (Fohlenschau, Marktwert, Disziplin, Gesundheit) folgen in M3, Rassemerkmale/Besonderheiten/Zuchtbuch in M4.</p>

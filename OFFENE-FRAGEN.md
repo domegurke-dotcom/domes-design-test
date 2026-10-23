@@ -15,3 +15,8 @@ Zeichen-Aufgaben stehen in `BEI-INKSCAPE-BEARBEITEN.md`, große Themen in `PROJE
 2. **Hinweise zum Auftrag:** (a) Die „Rücksicherung“ gibt es seit v522 nicht mehr; statt dessen kann der Platz „Verloren“ aufgeräumt werden. (b) Der Stammbaum eines Pferdes speichert die Eltern-Daten selbst – Details eines gelöschten Vorfahren gehen dort nicht verloren, nur sein Steckbrief; die Warnung beim Aufräumen sagt das so. (c) Pferde mit Erfolgen und die 3 wertvollsten Pferde kommen beim Tod automatisch in die Bestenliste – dafür fragt das Aufräumen zusätzlich. (d) Experten sehen die neuen Blasen nur, wenn „Tipps“ in den Einstellungen an sind (Experten haben Tipps standardmäßig aus).
 
 _Reitunterricht (Dome 20.10., v606): auch der feste Bereiter kostet 60 € (Zusatzleistung), trainiert aber am nächsten Morgen normal. Frühere Antworten (Dome, 20.10.2026): Fragen 1–12 der Nachtsitzung beantwortet („so lassen“); Nachbau v598: Fremd-Vergleich (Interieur nur grob), Blasen merkVorschau/merkFohlenschau, Pferdebild und Kryptorchismus im Admin, Reiter-Test-Toleranz. Offen vermerkt: Zeilen Behang/Ohren in den Rassemerkmalen (siehe PLAN-MERKMALE.md und BEI-INKSCAPE-BEARBEITEN.md)._
+
+
+## Nachtrag 23.10.2026 (Claude Team)
+- Popup „Neue Berufe“ (v649): Text und Zeitpunkt (jeden Morgen, einmal je neuem Beruf, nicht im Tutorial) selbst gewählt – passt das so?
+- Spieler-2-Studie (Experte, „mittel“ gepflegt): bei Tempo 10 (10 Tage je Jahreszeit) fast doppelt so viele Krankheiten und doppelt so lange Heilung wie bei Tempo 7, und in 2 von 6 Läufen Tierhalteverbot. Soll Tempo 10 (`HEIL_TEMPO`, Krankheitsrisiko je Tag) angeglichen werden? Nicht geändert.

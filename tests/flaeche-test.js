@@ -7,7 +7,7 @@ const { chromium } = require('playwright'); const path = require('path');
   const R = await pg.evaluate(() => { const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : ''));
     document.getElementById('dlg').hidden = true; spiel.stufenAn = false; spiel.tippsAus = true;
     ok('Reitplatz Stufe 1/2/3 = 800 / 1200 / 3200 m² plus 30 %', [1, 2, 3].map(s => Math.round(platzVon('reitplatz', 0, s) * 1e4)).join('/') === '1040/1560/4160', [1, 2, 3].map(s => Math.round(platzVon('reitplatz', 0, s) * 1e4)).join('/'));
-    ok('Sandpaddock Stufe 1/2/3 = 300 / 450 / 600 m² plus 30 %', [1, 2, 3].map(s => Math.round(platzVon('sandpaddock', 0, s) * 1e4)).join('/') === '390/585/780');
+    ok('Sandpaddock Stufe 1/2/3 = 400 / 600 / 800 m² plus 30 %', [1, 2, 3].map(s => Math.round(platzVon('sandpaddock', 0, s) * 1e4)).join('/') === '520/780/1040');
     ok('Rennbahn 2 ha plus 30 %', Math.abs(platzVon('rennbahn') - 2.6) < 1e-6);
     ok('Start: Bauland frei bleibt positiv', baulandFrei() > 0.3, baulandFrei());
     const frei0 = baulandFrei(); spiel.hof.bauHa = baulandBelegt() + 0.05; const g = gebaeude().find(x => x.typ === 'reitplatz'); g.stufe = 1; g.zustand = 100; spiel.geld = 99999;

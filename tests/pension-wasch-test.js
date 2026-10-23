@@ -57,8 +57,13 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('… Leistungen ohne Buchung (eigenes Pferd ohne Haken) werden nicht berechnet', !eA.solarSumme && eA.waschSumme === 6 || true);
     // Pfleger-Aufgabe „waschen“ abwählen
     const m = spiel.mitarbeiter.find(q => q.id === 'maP'); m.aus = m.aus || {}; m.aus.waschen = true; start(); eB.waschSumme = 0; waschAbend(); ok('Aufgabe „Waschen“ beim Pfleger abgewählt → er wäscht nicht', pB.gewaschen !== spiel.tag, JSON.stringify(m.aus)); delete m.aus.waschen;
-    // Waschen durch Pfleger: Glanz?
-    start(); delete pB.fellGlanz; waschAbend(); ok('Wäsche durch den Pfleger macht (ohne Shampoo) keinen Glanz – wie beim Spieler', !(pB.fellGlanz >= spiel.tag));
+    // Glanz durch den Pfleger: nur mit Shampoo aus dem Vorrat
+    spiel.shampoo = 0; start(); delete pB.fellGlanz; waschAbend(); ok('Pfleger ohne Shampoo-Vorrat: sauber, aber kein Glanz', pB.gewaschen === spiel.tag && !(pB.fellGlanz >= spiel.tag));
+    spiel.shampoo = 5; start(); delete pB.fellGlanz; waschAbend(); ok('Pfleger mit Shampoo: Fell glänzt, Vorrat sinkt', pB.fellGlanz >= spiel.tag && spiel.shampoo < 5, spiel.shampoo + ' übrig');
+    // Ärger: Waschen vergessen / klappt
+    const zl = e => e.zufr; const vor = zl(eB); delete pB.gewaschen; delete pB.getrocknet; pB.schweiss = spiel.tag - 1 + 1; spiel.tag++; pB.schweiss = spiel.tag - 1; pB.trainHeute = { tag: spiel.tag - 1, liste: ['schritt'], verbraucht: 5 }; delete pB.solar;
+    eB.log = []; const z0 = eB.zufr; pensionNacht(); ok('Waschen/Solarium vergessen → Besitzer ärgert sich', eB.zufr < z0 && (eB.log || []).some(x => /Waschen vergessen/.test(x.grund)), z0 + ' → ' + eB.zufr);
+    pB.schweiss = spiel.tag - 1; pB.gewaschen = spiel.tag - 1; pB.getrocknet = spiel.tag - 1; delete pB.schweiss; pB.solar = { tag: spiel.tag - 1, n: 1 }; eB.plus = []; pensionNacht(); ok('Waschen/Solarium erledigt → Pluspunkt', (eB.plus || []).some(x => /Waschen klappt/.test(x.grund)));
     // --- 7. Abrechnung am Jahreszeitende
     start(); waschAbend(); const g0 = spiel.geld; const bz = pensionJahreszeit.toString(); ok('Abrechnung enthält waschSumme/solarSumme', /waschSumme/.test(bz) && /solarSumme/.test(bz));
     return out; });

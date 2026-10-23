@@ -19,3 +19,6 @@ _Reitunterricht (Dome 20.10., v606): auch der feste Bereiter kostet 60 € (Zusa
 
 ## Nachtrag 23.10.2026 (Claude Team)
 - **Thema Spieltempo abstimmen (Dome 23.10.):** Tempo 4/7/10 muss insgesamt besser aufeinander abgestimmt werden – Krankheitsrisiko und Heilzeit (Studie: bei Tempo 10 ≈ 2,8 Befunde/Pferd/Jahr gegen ≈ 1,8 bei Tempo 7, Heilung 7 statt 3,5 Tage, 2 von 6 Läufen mit Tierhalteverbot), außerdem Pensionseinnahmen usw. Noch nichts geändert; gemeinsam mit Dome durchgehen (Zahlen: `STUDIE`-Läufe `TEMPO=… EXPERTE=1 STUFEN=2 tests/gesundheit-studie.js`).
+
+## Nachtsitzung 23.10.2026 (Claude Team, Rest der Wunschliste) – selbst gesetzt, bitte ansehen
+- **Pension Paddockbox (v680):** Aufpreis je Stufe startet bei 50 € (wie bisher), einstellbar 0–300 €; teurer = seltener gewünscht (Faktor 50 € ÷ Aufpreis, zwischen 0,25 und 1,5). Neuer Aufpreis gilt nur für neue Verträge. **Achtung alte Spielstände:** die bisherige Platz-Grenze gilt jetzt nur noch für normale Boxen, Paddockboxen stehen auf „alle“ – wer vorher z. B. „höchstens 3“ hatte, kann jetzt zusätzlich Paddockboxen vermieten.

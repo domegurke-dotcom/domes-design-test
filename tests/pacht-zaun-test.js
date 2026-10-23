@@ -15,5 +15,6 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('1 + 1 ha werden eine 2-ha-Pachtweide', W.filter(g => g.pacht).length === 1 && W.find(g => g.pacht).ha === 2, JSON.stringify(W.map(g => [g.gid, g.ha, !!g.pacht])));
     ok('Eigenes Land bleibt eigen', !w1 || !w1.pacht);
     const html = bauenHTML ? bauenHTML() : ''; ok('Anzeige „gepachtet“', /pacht-tag miete/.test(html)); ok('Anzeige „eigenes Land“', /pacht-tag eigen/.test(html));
+    ok('Weiden-Liste zeigt das Schild', typeof weidePachtTag === 'function' && /gepachtet/.test(weidePachtTag({ wid: 'w2' })), weidePachtTag({ wid: 'w2' }));
     return out; });
   console.log(R.join('\n'), errs.length ? '\nFEHLER ' + errs : ''); await b.close(); })();

@@ -865,6 +865,7 @@
     .lese-bild svg { height: 260px; }
   }
   @media (orientation: portrait) and (max-width: 600px) { .kacheln.quadrat.bau-kacheln { grid-template-columns: repeat(3, minmax(0, 1fr)); } }   /* Dome (v352) */
+.pacht-tag { display: inline-block; font-size: .72rem; font-weight: 600; border-radius: 8px; padding: 1px 6px; margin-left: 4px; white-space: nowrap; } .pacht-tag.miete { background: #e3ecd2; color: #4c5f33; } .pacht-tag.eigen { background: #efe6d4; color: #6b5a3f; }
 </style></style>
 </head>
 <body>
@@ -1079,7 +1080,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "709";
+  const SPIEL_VERSION = "710";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1087,11 +1088,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=709"></script>
-<script src="pferd.js?v=709"></script>
-<script src="boxstufen.js?v=709"></script>
-<script src="kopfneu.js?v=709"></script>
-<script src="waschbild.js?v=709"></script>
+<script src="lz-string.min.js?v=710"></script>
+<script src="pferd.js?v=710"></script>
+<script src="boxstufen.js?v=710"></script>
+<script src="kopfneu.js?v=710"></script>
+<script src="waschbild.js?v=710"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -13488,7 +13489,7 @@
     return G;
   }
   const bauTage = z => z === "kurz" ? Math.max(1, Math.round(tpj() * 0.3)) + (Math.random() < .5 ? 1 : 0) : z === "halle" ? Math.round((2 + Math.random()) * tpj()) : Math.max(1, Math.round(z * tpj()));
-  const gebName = g => g.name ? esc(g.name) : `${BAUTEN[g.typ].n}${g.anbau ? ` (Anbau${g.boxen ? " +" + g.boxen : ""})` : ""}${g.ha ? ` ${g.ha} ha${g.pacht ? " (gepachtet)" : ""}` : ""}`;   // v672 (Dome): Gebäude und Anlagen lassen sich benennen wie Weiden
+  const gebName = g => (g.name ? esc(g.name) : `${BAUTEN[g.typ].n}${g.anbau ? ` (Anbau${g.boxen ? " +" + g.boxen : ""})` : ""}${g.ha ? ` ${g.ha} ha${g.pacht ? " (gepachtet)" : ""}` : ""}`);   // v672 (Dome): Gebäude und Anlagen lassen sich benennen wie Weiden
   const imBau = () => gebaeude().filter(g => g.bau);
   const zaunText = g => `${haTxt(g.ha)} Zaun im Bau – noch ${g.bau.rest} ${g.bau.rest === 1 ? "Tag" : "Tage"}${datum().s === 3 ? " · ❄️ ruht im Winter" : ""}`;   // v298: Zaun im Bau bei Land/Weiden zeigen
   const freiesLand = () => { const H = spiel.hof || {}; return Math.max(0, weideland() - (H.weideHa || 0) - imBau().filter(g => g.typ === "weide").reduce((a, g) => a + g.ha, 0)); };
@@ -13533,8 +13534,14 @@
   const umbauPreisN = (g, n) => !g.boxen || n >= g.boxen || !BAUTEN[g.typ].jeBox ? umbauPreis(g) : Math.round((BAUTEN[g.typ].jeBox[g.stufe] - BAUTEN[g.typ].jeBox[g.stufe - 1]) * n * (1 + UMBAU_AUFSCHLAG));
   const umbauAuswahl = (g, n) => { const rang = b => !b.pferd ? 0 : !fremd(b.pferd) ? 1 : 2; return umbauBoxen(g).map((b, i) => ({ b, i })).sort((x, y) => rang(x.b) - rang(y.b) || y.i - x.i).slice(0, n).map(x => x.b); };   // freie Boxen zuerst, Einsteller zuletzt
   // v707 (Dome 23.10.): Anbauten zählen zum Stall, als wäre es einer – gleiche Stufe, fertig → Boxen, Preis und (nach Boxen gewichteter) Zustand fließen ins Hauptgebäude; Zaunerweiterungen derselben Weide ebenso (Eigentum und Pacht bleiben getrennt)
+  function pachtZuordnen() {   // alte Spielstände (Dome 23.10.): Zäune ohne Pacht-Kennzeichnung – das gepachtete Land steckt in den zuletzt gebauten Zäunen
+    const H = spiel.hof; if (!H || H.pachtV) return; H.pachtV = 1;
+    let rest = Math.min(H.pacht || 0, Math.max(0, (H.weideHa || 0) - Math.max(0, (H.ha || 0) - bauHa())));
+    if (rest <= 0) return;
+    gebaeude().filter(g => g.typ === "weide" && !g.bau && !g.abriss && g.ha).reverse().forEach(g => { if (rest <= 1e-9 || g.pacht) return; if (g.ha <= rest + 1e-9) { g.pacht = true; rest -= g.ha; } });
+  }
   function gebVerschmelzen() {
-    let n = 0; const frei = g => !g.bau && !g.abriss && !g.rep && !g.plan;
+    pachtZuordnen(); let n = 0; const frei = g => !g.bau && !g.abriss && !g.rep && !g.plan;
     gebaeude().slice().forEach(c => { if (!gebaeude().includes(c)) return; let par = gebElternVon(c); if (!par || par === c || !frei(c) || !frei(par)) return;
       if (c.typ === "weide" && !!c.pacht !== !!par.pacht) par = gebaeude().find(x => x !== c && x.typ === "weide" && !x.wid && x.ziel === c.ziel && !!x.pacht === !!c.pacht && x.stufe === c.stufe && frei(x)) || par;   // Pachtteile verschmelzen untereinander
       if (c.stufe !== par.stufe) return;
@@ -13808,7 +13815,7 @@
   function gebZeile(g) { const bar = gebBar; const K = gebKinder(g).filter(k => !k.bau), dazu = K.reduce((a, k) => a + (k.boxen || k.ha || 0), 0);
     const menge = g.boxen ? ` · ${gebMenge(g)}${dazu ? ` <b>+${dazu}</b> = ${g.boxen + dazu}` : ""}` : g.ha && dazu ? ` · ${haTxt(g.ha)} <b>+${haTxt(dazu)}</b>` : "";
     const kinder = K.map(k => `<div class="geb-kind"><small><b>+${gebMenge(k)}</b> (${k.typ === "weide" ? "Erweiterung" : k.teil ? "umgebaut" : "Anbau"}) · Stufe ${k.stufe} – ${STUFE_NAME[k.stufe]} · Zustand ${Math.round(k.zustand)} %</small>${bar(k.zustand)}${gebKnoepfe(k)}</div>`).join("");
-    return `<div class="geb${K.length ? " mit-kind" : ""}"><span class="geb-ico">${BAUTEN[g.typ].ico}</span><span class="geb-txt"><b>${gebName(g)}</b><small>${g.typ === "heudampfer" ? "fertig" : `Stufe ${g.stufe} – ${STUFE_NAME[g.stufe]}${menge} · Zustand ${Math.round(g.zustand)} %`}</small>${g.typ === "heudampfer" ? "" : bar(g.zustand)}
+    return `<div class="geb${K.length ? " mit-kind" : ""}"><span class="geb-ico">${BAUTEN[g.typ].ico}</span><span class="geb-txt"><b>${gebName(g).replace(" (gepachtet)", "")}</b>${g.typ === "weide" && g.ha ? `<small class="pacht-tag ${g.pacht ? "miete" : "eigen"}">${g.pacht ? "🤝 gepachtet" : "🏠 eigenes Land"}</small>` : ""}<small>${g.typ === "heudampfer" ? "fertig" : `Stufe ${g.stufe} – ${STUFE_NAME[g.stufe]}${menge} · Zustand ${Math.round(g.zustand)} %`}</small>${g.typ === "heudampfer" ? "" : bar(g.zustand)}
           ${anlageInfoZeile(g)}${gebKnoepfe(g)}${kinder}</span></div>`; }
   // Dome (v347): Hofplan – Gebäude antippen: Zustand, reparieren, Stufe verbessern, Anbau (vergrößern)
   function umbauDialog(g, n) {   // v682: bei Ställen mit mehr Boxen wählbar, wie viele Boxen umgebaut werden

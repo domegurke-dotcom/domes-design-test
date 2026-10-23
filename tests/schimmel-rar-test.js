@@ -23,7 +23,7 @@ const { chromium } = require('playwright'); const path = require('path');
     const S2 = seltenheit(h, true); r.markt = { stufe: S2.stufe, grau: S2.gen.merkmale.filter(m => m.k === 'GRAU').length };
     r.text = JSON.stringify(rarAnpreisung(h)).replace(/<[^>]+>/g, ' ').slice(0, 900); try { seltenDialog(h); r.dialog = true; document.getElementById('dlg').hidden = true; } catch (e) { r.dialog = String(e); }
     // 4. echter Marktlauf: über 20 Marktjahre – wie oft taucht die komplette Kombination (und überhaupt ein Schimmel mit seltener Anlage) auf?
-    let nVoll = 0, irgend = 0, erst = 0; for (let mj = 1; mj <= 20; mj++) { spiel.rar = { mj: 1000 + mj, karte: true, wahl: {}, vor: {}, auk: {}, weg: [], salz: 'x' + mj }; rarCache = null; const L = rarAngebot(); const v = L.filter(x => x.rarHaupt === 'GRAU:voll').length; nVoll += v; if (v && !erst) erst = mj; irgend += L.filter(x => /^GRAU/.test(x.rarHaupt || '')).length; }
+    let nVoll = 0, irgend = 0, erst = 0; for (let mj = 1; mj <= 20; mj++) { spiel.rar = { mj: 1000 + mj, karte: true, wahl: {}, vor: {}, auk: {}, weg: [], salz: 'x' + mj }; rarCache = null; const L = rarAngebot(); const v = L.filter(x => x.rarHaupt === 'GRAU:voll').length; nVoll += v; if (v && !erst) erst = mj; irgend += L.filter(x => /^GRAU/.test(x.rarHaupt || '') && x.rarHaupt !== 'GRAU:voll').length; }
     r.marktlauf = { voll: nVoll, irgend, erst };
     r.test = (() => { const p = neuesPferd({ rein: true, rasse: 'andalusier', geschlecht: 'Stute', alter: 7, name: 'T' }); const g = genVon(p); g.G = ['G', 'g']; p.ex = exVon(p); Object.assign(p.ex, { grauTempo: 18, kurve: .85, maehne: .6 }); const h = gentestHTML(p); return { spaet: /sehr spät/.test(h), dunkel: /lange dunkelgrau/.test(h), maehne: /sehr früh weiß/.test(h) }; })();
     try { r.bzn = /Schimmel-Anlagen \(v726\)/.test(weitereDatenHTML()); } catch (e) { r.bzn = String(e); }
@@ -36,6 +36,7 @@ const { chromium } = require('playwright'); const path = require('path');
   ok('Markt-Pferd ist „einzigartig“ oder besser und zeigt 3 Schimmel-Merkmale', R.markt.stufe >= 3 && R.markt.grau === 3, R.markt);
   ok('Anpreisung und Seltenheits-Fenster ohne Fehler', /Schimmel mit seltener Anlage/.test(R.text) && R.dialog === true, [R.text, R.dialog]);
   ok('im Marktlauf (20 Jahre) taucht die komplette Kombination mehrfach auf', R.marktlauf.voll >= 4, R.marktlauf);
+  ok('auf dem Markt gibt es nur die komplette Kombination, keine Teil-Kombinationen', R.marktlauf.irgend === 0, R.marktlauf);
   ok('der Fellfarben-Test zeigt die Schimmel-Anlagen', R.test.spaet && R.test.dunkel && R.test.maehne, R.test);
   ok('Berechnungen zum Nachschlagen (bzn) nennen die Schimmel-Anlagen', R.bzn === true, R.bzn);
   ok('keine Seitenfehler', !errs.length, errs);

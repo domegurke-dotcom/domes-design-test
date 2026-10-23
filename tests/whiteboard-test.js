@@ -37,11 +37,15 @@ const [W, H] = (process.argv[2] || '844x390').split('x').map(Number), ORD = proc
     // Freund/Feind-Rahmen
     wbAnwenden('p:0', 'w:w2:a'); wbAnwenden('p:2', 'w:w2:a');
     const C = spiel.boxen[2].pferd, echt = window.paarBeziehung; window.paarBeziehung = (x, y) => ((x === A && y === C) || (x === C && y === A)) ? window.wbTestBez : null;
-    window.wbTestBez = 'feind'; spiel.stallAnsicht = 'board'; zeigeBoxen();
+    window.wbTestBez = 'feind'; spiel.stallAnsicht = 'board'; wbSicht = 'uebersicht'; zeigeBoxen();
+    ok('Übersicht: zwei Felder, Boxen links, Weiden rechts', (() => { const k = [...document.querySelectorAll('.wb-kachel')]; return k.length === 2 && k[0].dataset.wbsicht === 'boxen' && k[1].dataset.wbsicht === 'weiden' && !document.querySelector('[data-wbq]') && !document.querySelector('[data-wbz]'); })());
+    wbSicht = 'weiden'; weiden().find(w => w.wid === 'w2').wbModus = 'jeden2'; zeigeBoxen();
     ok('Whiteboard wird gezeigt', !!document.querySelector('.wb') && !!document.querySelector('[data-wbz="w:w2:a"]'));
     ok('Feinde rot umrandet', document.querySelectorAll('[data-wbz="w:w2:a"] .wb-chip.rot').length === 2, document.querySelector('[data-wbz="w:w2:a"]').textContent);
     window.wbTestBez = 'freund'; zeigeBoxen(); ok('Freunde grün umrandet', document.querySelectorAll('[data-wbz="w:w2:a"] .wb-chip.gruen').length === 2);
-    window.paarBeziehung = echt; zeigeBoxen();
+    window.paarBeziehung = echt;
+    { const w2 = weiden().find(w => w.wid === 'w2'); wbModusSetzen('w2', 'taeglich'); zeigeBoxen(); ok('täglich: eine Spalte, alle Pferde jeden Tag', !!document.querySelector('[data-wbz="w:w2:t"]') && !document.querySelector('[data-wbz="w:w2:a"]') && A.weidegang === 'taeglich' && C.weidegang === 'taeglich'); wbAnwenden('p:1', 'w:w2:t'); ok('auf „täglich“ legen = jeden Tag', Bp.auslaufZiel === 'w2' && Bp.weidegang === 'taeglich' && !Bp.weideTag); wbAnwenden('c:1:w2:t', 'drin'); ok('wieder in die Box', !Bp.weidegang); wbModusSetzen('w2', 'jeden2'); w2.wbModus = 'jeden2'; zeigeBoxen(); ok('alle 2 Tage: zwei Hälften', !!document.querySelector('[data-wbz="w:w2:a"]') && !!document.querySelector('[data-wbz="w:w2:b"]')); }
+    wbSicht = 'boxen'; zeigeBoxen();
     ok('Mitarbeiter-Reihe mit „x von y Boxen“', /von 3 Boxen/.test(document.getElementById('wbMaReihe').textContent), document.getElementById('wbMaReihe').textContent.slice(0, 80));
     return out; });
   out.push(...R);
@@ -51,13 +55,16 @@ const [W, H] = (process.argv[2] || '844x390').split('x').map(Number), ORD = proc
   await pg.click('[data-wbz="b:3"] .wb-nr'); await pg.waitForTimeout(150);
   ok('Paul fest auf Box 4 (antippen)', await pg.evaluate(() => (spiel.boxen[3].maPlan || {}).stall === 'm1'));
   // Ziehen mit der Maus: Dora (Box 4) auf Weide 2 rechts
+  await pg.evaluate(() => { wbSicht = 'weiden'; wbWahl = null; zeigeWhiteboard(); });
   const q = await pg.$('[data-wbq="p:3"]'), z = await pg.$('[data-wbz="w:w2:b"]');
   if (q && z) { await q.scrollIntoViewIfNeeded(); const a = await q.boundingBox(); await pg.mouse.move(a.x + a.width / 2, a.y + a.height / 2); await pg.mouse.down(); await pg.mouse.move(a.x + 30, a.y + 30, { steps: 4 }); await pg.waitForTimeout(250);
     await z.scrollIntoViewIfNeeded().catch(() => {}); const c = await z.boundingBox(); await pg.mouse.move(c.x + c.width / 2, c.y + c.height / 2, { steps: 8 }); await pg.mouse.up(); await pg.waitForTimeout(200); }
   ok('Dora per Ziehen auf Weide 2 rechts', await pg.evaluate(() => { const p = spiel.boxen[3].pferd; return p.auslaufZiel === 'w2' && p.weideTag === 'b'; }), await pg.evaluate(() => JSON.stringify({ z: spiel.boxen[3].pferd.auslaufZiel, t: spiel.boxen[3].pferd.weideTag })));
+  await pg.evaluate(() => { wbSicht = 'boxen'; wbWahl = null; zeigeWhiteboard(); });
   await pg.waitForTimeout(450); ok('Lösen mit ✕', await pg.evaluate(() => { document.querySelector('[data-wbloes="0:stall"]').click(); return !spiel.boxen[0].maPlan; }));
   // Überlappen / Breite
   ok('Kein waagerechtes Scrollen der Seite', await pg.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), await pg.evaluate(() => document.documentElement.scrollWidth + ' > ' + innerWidth));
   if (ORD) { await pg.screenshot({ path: ORD + `/wb-${W}x${H}.png` }); await pg.evaluate(() => { const r = document.querySelector('.wb-weiden'); if (r) r.scrollIntoView(); }); await pg.waitForTimeout(150); await pg.screenshot({ path: ORD + `/wb-${W}x${H}-weide.png` }); }
+  await pg.click('#wbZurueck'); ok('Zurück zur Übersicht', await pg.evaluate(() => !!document.querySelector('.wb-uebersicht')));
   await pg.click('#wbUmschalt'); ok('Zurück zur Boxenansicht', await pg.evaluate(() => !document.querySelector('.wb') && !!document.querySelector('.boxen-liste')));
   out.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(out.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

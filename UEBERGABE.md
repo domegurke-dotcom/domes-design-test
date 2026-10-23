@@ -20,13 +20,13 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 ### Selbststart 23.10. – erledigt (Dome-Liste)
 - **Stern „selten“ im Handy quer:** passt (Fenster scrollt, OK-Knopf bleibt sichtbar).
 - **v649 Popup „Neue Berufe“** (`maFreischaltTag`, Test `tests/berufe-popup-test.js`).
-- **v650 Tutorial quer/hochkant:** Blase seitlich, wenn kein Platz; Ziele unter Band/Kopfleiste einrollen; Fenster hochkant über dem Band. `GEO=1` im Tutorial-Spieler prüft die Geometrie. anf/fort in 844×390 und 390×844 (anf auch 1366×768) ohne Auffälligkeit. 844×390 hängt selten zufällig („Pferd umstellen“, „Nennen“) – Wiederholung grün. Experte (exp) nach v650 nicht mehr gelaufen.
+- **v650 Tutorial quer/hochkant:** Blase seitlich, wenn kein Platz; Ziele unter Band/Kopfleiste einrollen; Fenster hochkant über dem Band. `GEO=1` im Tutorial-Spieler prüft die Geometrie. anf/fort in 844×390 und 390×844 (anf auch 1366×768) ohne Auffälligkeit. 844×390 hängt selten zufällig („Pferd umstellen“, „Nennen“) – Wiederholung grün. Experte (exp) in v653 grün (dabei Fehler gefunden: der Haken ✔ lag in Menüs wie der Enzyklopädie unter der Menü-Kopfzeile – behoben, v653).
 - **Großer Test `BILDER=fehler`:** Etappen-Test 351 ✓, Hof-Gesamttest 3/3 Läufe ok, Neuladen-Test 7 ✓, keine Bilder nötig. Kleine Tests alle grün. Dabei **echter Fehler v633 behoben (v651):** Kommentar verschluckte `; if (!k) return;` in `pensionJahreszeit` → Jahreszeitwechsel brach ab. Tests an aktuelle Regeln angepasst (`stufenAn = false`, `VET.verbotAb` 99, Tutorial-Kapitel nach Namen).
 - **Spieler 2 als Experte** (hannoveraner/araber/haflinger, 2 Jahre, je 2 Läufe; `TEMPO=4|7|10 JAHRE=2 EXPERTE=1 STUFEN=2`, Auswertung mit `TPJ=…`): Befunde/Pferd/Jahr ≈ 1,1 (Tempo 4) · 1,8 (7) · 2,8 (10); kranke Tage 23 / 30 / 43 %; Heilung Ø 3,3 / 3,5 / 7 Tage. **Bei Tempo 10 verloren 2 von 6 Läufen alle Pferde** (Tierhalteverbot bzw. Beschlagnahme).
 
 ### Offen
 - Domes Abnahme (v633, v639–v651), Fragen siehe `OFFENE-FRAGEN.md`.
-- Zufallsfehler in `etappen-test` (H6, Pferd null nach `nacht()`), selten.
+- `etappen-test`: Zufallsabsturz behoben (v653); Tutorial-Spieler 844×390 hängt sehr selten zufällig bei „Pferd umstellen“/„Nennen“ (Wiederholung grün).
 
 ---
 ### Protokoll (Details je Version, chronologisch)

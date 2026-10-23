@@ -28,6 +28,8 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
     ok('Whiteboard unten: Avatar statt Symbol', document.querySelectorAll('#wbMaReihe .wb-ma .ma-ava').length === spiel.mitarbeiter.length);
     mitarbeiterDialog('stallbursche');
     ok('hvw Mitarbeiter: Avatar bei den Angestellten', document.querySelectorAll('#dlg .ma-karte .ma-ava').length >= 1);
+    { const m = spiel.mitarbeiter[0]; delete m.av; brief('Hofverwaltung', m.name + ' ist krank', 'Test', maBr(m)); const br = spiel.post[0]; ok('Brief über Angestellte trägt Gesicht (Schnappschuss)', br.ma && br.ma.av != null && br.ma.av === m.av);
+      const h2 = briefPapier(br); ok('Brief zeigt Avatar neben der Überschrift', /<h3>[^]*class="ma-ava"/.test(h2)); brief('Hofverwaltung', 'Etwas anderes', 'Test'); ok('Brief ohne Angestellten ohne Avatar', !/class="ma-ava"/.test(briefPapier(spiel.post[0]))); }
     return out; });
   R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler');
   if (ORD) { await pg.evaluate(() => { document.getElementById('dlg').hidden = true; wbSicht = 'boxen'; zeigeBoxen(); }); await pg.waitForTimeout(300); await pg.screenshot({ path: ORD + `/ava-wb-${W}x${H}.png` }); await pg.evaluate(() => { mitarbeiterDialog('stallbursche'); }); await pg.waitForTimeout(300); await pg.screenshot({ path: ORD + `/ava-ma-${W}x${H}.png` }); }

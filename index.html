@@ -1055,7 +1055,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "667";
+  const SPIEL_VERSION = "668";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1063,11 +1063,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=667"></script>
-<script src="pferd.js?v=667"></script>
-<script src="boxstufen.js?v=667"></script>
-<script src="kopfneu.js?v=667"></script>
-<script src="waschbild.js?v=667"></script>
+<script src="lz-string.min.js?v=668"></script>
+<script src="pferd.js?v=668"></script>
+<script src="boxstufen.js?v=668"></script>
+<script src="kopfneu.js?v=668"></script>
+<script src="waschbild.js?v=668"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -11583,7 +11583,7 @@
       const z = unter(e.clientX, e.clientY), von = spiel.boxen[d.i]; boxGezogenAm = Date.now();
       let ziel = -1; if (z && z.dataset.zubox != null) ziel = +z.dataset.zubox; else if (z && z.dataset.bgruppe) { ziel = kachelZiel(z.dataset.bgruppe); boxenGruppe = z.dataset.bgruppe; }
       ende();
-      if (ziel >= 0) { const nb = spiel.boxen[ziel]; inBoxUmziehen(von, ziel); if (nb.quar) quarantaeneNeu(nb); if (spiel.boxen[aktBox] === von) { aktBox = ziel; spiel.aktBox = ziel; } speichern(); }
+      if (ziel >= 0) { const nb = spiel.boxen[ziel], pf0 = von.pferd, stAlt = boxenStufe(von), stNeu = boxenStufe(nb); inBoxUmziehen(von, ziel); if (pf0 && fremd(pf0)) einstellerBoxWechsel(pf0, stAlt, stNeu); if (nb.quar) quarantaeneNeu(nb); if (spiel.boxen[aktBox] === von) { aktBox = ziel; spiel.aktBox = ziel; } speichern(); }
       zeigeBoxen(); });
     document.addEventListener("pointercancel", () => { if (d && !d.aktiv) ende(); });
   }
@@ -13647,11 +13647,14 @@
     if (g === "Hengst" && paddockFrei && leistungAngeboten("paddockbox") && r() < 0.6) L.paddockbox = true;   // Hengste oft lieber in die Paddockbox (Dome: dürfen aber auch in normale Boxen)
     const weide = spiel.hof && (spiel.hof.weideHa || 0) > 0, sand = spiel.anlage && spiel.anlage.paddock;
     const haltung = g === "Hengst" ? (L.paddockbox ? "paddockbox" : sand ? "sandpaddock" : "box") : weide && r() < 0.75 ? "weide" : sand ? "sandpaddock" : weide ? "weide" : "box";
-    const a = { aid: "a" + Math.random().toString(36).slice(2, 8), vn, nn, w, pferd: p, leistungen: L, haltung, tag: spiel.tag, bis: spiel.tag + PENSION.anfrageTage, bluttest: R.bluttest, blutErg: R.bluttest === "vorher" ? { entz: befundListe(p).some(b => ANSTECKEND[b.art] || ["druse", "erkaeltung", "husten", "verletzung", "hufabszess", "mauke"].includes(b.art)) } : null, ...(L.bewegen ? { bewegenAnteil: [0.3, 0.45, 0.6][Math.floor(r() * 3)] } : {}) };
+    const stufenAlle = [...new Set(spiel.boxen.filter(b => !b.paddock && !b.quar && !b.abfohl && !b.offen).map(boxenStufe))], stufenFrei = [...new Set(spiel.boxen.filter(b => pensionBoxFrei(b) && !b.paddock).map(boxenStufe))];
+    let stufeWunsch = 0; if (stufenAlle.length > 1 && stufenFrei.length && !L.paddockbox) { const gew = stufenFrei.map(st => [st, [0, 3, 2, 1][st]]); let t = gew.reduce((x, y) => x + y[1], 0) * r(); for (const [st, wt] of gew) { t -= wt; if (t <= 0) { stufeWunsch = st; break; } } }   // v668 (Dome): Einsteller bewerben sich gezielt auf eine Boxstufe (teurere seltener)
+    const a = { aid: "a" + Math.random().toString(36).slice(2, 8), vn, nn, w, pferd: p, leistungen: L, haltung, stufeWunsch, tag: spiel.tag, bis: spiel.tag + PENSION.anfrageTage, bluttest: R.bluttest, blutErg: R.bluttest === "vorher" ? { entz: befundListe(p).some(b => ANSTECKEND[b.art] || ["druse", "erkaeltung", "husten", "verletzung", "hufabszess", "mauke"].includes(b.art)) } : null, ...(L.bewegen ? { bewegenAnteil: [0.3, 0.45, 0.6][Math.floor(r() * 3)] } : {}) };
     (spiel.pensionAnfragen = spiel.pensionAnfragen || []).push(a); R.letzteAnfrage = jzJetzt();
     const lt = PL_REIHE.filter(k => L[k]).map(k => PENSION_LEISTUNG[k].n);
     brief(eName(a), `Anfrage: Pensionsplatz für ${p.name}`, `ich suche einen Pensionsplatz für {mein Pferd|mein Pferd} <b>${esc(p.name)}</b> (${rasseById(p.rasse).name.replace(/ \(.*\)/, "")}, ${p.geschlecht}, ${jahre} Jahre). {Euer|Ihr} Hof wurde mir empfohlen.
       ${p.traechtig ? `<br><br>🤰 <b>${esc(p.name)} ist tragend</b> (von ${esc(p.traechtig.vater.name)}) – das Fohlen kommt zu Beginn von <b>${jzName(p.traechtig.geburt)}</b> und soll bei {euch|Ihnen} zur Welt kommen.` : ""}
+      ${stufeWunsch ? `<br><br>Am liebsten hätte ich eine Box der <b>Stufe ${stufeWunsch}</b> (${STUFE_NAME[stufeWunsch]}) – das kostet ${fmt(R.preis[stufeWunsch] || PENSION_PREIS[stufeWunsch])} je Jahreszeit.` : ""}
       <br><br>Wichtig wäre mir: <b>${HALTUNG_TXT[haltung]}</b>${lt.length ? `; dazu möchte ich buchen: ${lt.join(", ")}` : ""}. ${a.bluttest === "vorher" ? `Den Bluttest lege ich bei (kleines Blutbild, ${a.blutErg && a.blutErg.entz ? "<b>Entzündungswerte erhöht</b>" : "Entzündungswerte unauffällig"}).` : a.bluttest === "nachreichen" ? "Den Bluttest reiche ich nach." : ""}
       <br><br>Hätte{st du|n Sie} einen Platz frei? Ich würde mich über eine Antwort in den nächsten ${PENSION.anfrageTage} Tagen freuen.`, { aktion: { typ: "einsteller", aid: a.aid }, w });
   }
@@ -13701,7 +13704,7 @@
   function pensionZielBox(a) {
     const frei = spiel.boxen.map((b, i) => ({ b, i })).filter(x => pensionBoxFrei(x.b));
     if (a.leistungen.paddockbox) { const x = frei.find(x => x.b.paddock); return x ? x.i : -1; }
-    const x = frei.find(x => !x.b.paddock) || frei[0]; return x ? x.i : -1;
+    const x = (a.stufeWunsch && frei.find(x => !x.b.paddock && boxenStufe(x.b) === a.stufeWunsch)) || frei.find(x => !x.b.paddock) || frei[0]; return x ? x.i : -1;   // v668: erst die gewünschte Boxstufe
   }
   // Reservierung „hängt“: keine angenommene Anfrage dazu, oder die Anfrage ist schon über 2 Tage angenommen und das Pferd nicht eingezogen (Pferd außer Haus zählt nicht)
   function reservierungHaengt(box) {
@@ -13731,6 +13734,7 @@
         zufr: PENSION.start, seit: jzJetzt(), einzug: spiel.tag, bluttest: a.bluttest, kuendigt: null, log: [], befSeen: [] };
       e.preis = a.art ? a.preis : R.preis[e.stufe] || PENSION_PREIS[e.stufe];
       if (a.art) { e.art = a.art; e.start = { ausb: a.art === "beritt" ? ausbSchnitt(p) : 0 }; if (a.art === "beritt") { e.bis = jzJetzt() + a.dauer; e.dauer = a.dauer; } }   // H7 (c)
+      if (a.stufeWunsch && !a.art) eZufr(e, e.stufe >= a.stufeWunsch ? 3 : -5, e.stufe >= a.stufeWunsch ? "bekommt die gewünschte Boxstufe" : "nicht die gewünschte Boxstufe");
       p.einsteller = e.eid; p.putzzeug = "besitzer"; besitzerWunschLaenge(p); einstellerListe().push(e); if (e.haltung === "weide") p.weidegang = "taeglich";   // Dome: Pensionspferde haben immer eigenes Putzzeug vom Besitzer
       nb.pferd = p; nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false;
       quarantaeneNeu(nb);
@@ -13829,14 +13833,29 @@
   const pensionGruende = e => { const l = (e.log || []).filter(x => spiel.tag - x.tag <= tpj()).map(x => x.grund); return l.length ? l.slice(0, 3).join(", ") : "die Versorgung lässt zu wünschen übrig"; };
   // morgens: Besitzer kommen vorbei (putzen, reiten, bemerken Krankheiten), rufen bei bemerkten Befunden den Tierarzt, Bluttest-Ergebnis, Zahlungen
   // v422 (Dome): Pensionspreis geändert → gilt auch für bisherige Einsteller ab der nächsten Jahreszeit; sie antworten per Brief: einverstanden, verhandeln oder kündigen
+  // v668 (Dome 23.10.): Boxstufe eines Einstellers ändert sich (Spieler stellt um): bessere Box freut ihn (aber der Mehrpreis muss ihm passen – Preisprüfung), schlechtere Box ärgert ihn, auch wenn sie billiger ist
+  function einstellerBoxWechsel(p, alt, neu) {
+    const e = einstellerListe().find(x => x.eid === p.einsteller); if (!e || e.art || alt === neu) return; e.stufe = neu;
+    if (neu > alt) eZufr(e, 6, "bessere Box bekommen"); else { eZufr(e, -10, "in eine schlechtere Box umgezogen"); e.stufeAb = true; }
+    pensionPreisPruefen();
+  }
+  // Zufriedene Einsteller fragen von sich aus, ob eine freie bessere Box möglich ist (Brief mit Ja/Nein, höchstens einmal je Jahreszeit)
+  function stufenWunschBriefe() {
+    const R = pensionRegeln();
+    einstellerListe().forEach(e => { if (e.art || e.kuendigt != null || e.stufeFrage === jzJetzt() || (e.zufr || 0) < 60 || e.stufe >= 3) return;
+      const bx = pensionBox(e), p = bx && bx.pferd; if (!p || p.klinik || Math.random() > 0.3) return;
+      const ziel = spiel.boxen.findIndex(b => pensionBoxFrei(b) && !!b.paddock === !!bx.paddock && boxenStufe(b) > e.stufe && boxenStufe(b) <= 3);
+      if (ziel < 0) return; const nst = boxenStufe(spiel.boxen[ziel]), preis = R.preis[nst] || PENSION_PREIS[nst]; e.stufeFrage = jzJetzt();
+      brief(eName(e), `Frage: bessere Box für ${p.name}?`, `ich bin mit {deinem|Ihrem} Stall sehr zufrieden. Ist zufällig noch eine Box der <b>Stufe ${nst}</b> (${STUFE_NAME[nst]}) frei? Dann würde ich <b>${esc(p.name)}</b> gern dorthin umziehen lassen und dafür <b>${fmt(preis)}</b> statt ${fmt(e.preis)} je Jahreszeit zahlen.`, { w: e.w, pferde: [p], aktion: { typ: "stufeWunsch", eid: e.eid, ziel, nst, preis } }); });
+  }
   function pensionPreisPruefen() {
     const R = pensionRegeln();
     einstellerListe().forEach(e => { if (e.art || e.kuendigt != null) return; const p = (pensionBox(e) || {}).pferd; if (!p) return;
       const neu = R.preis[e.stufe] || PENSION_PREIS[e.stufe], basis = e.preisBasis != null ? e.preisBasis : e.preis;
       if (neu === basis) return; e.preisBasis = neu;
       if (neu === e.preis) { delete e.preisNeu; return; }   // zurück auf den alten Preis
-      if (neu < e.preis) { e.preisNeu = { preis: neu, ab: jzJetzt() + 1, ok: true }; eZufr(e, 2, "günstigerer Preis");
-        brief(eName(e), `Neuer Preis für ${p.name}`, `vielen Dank für die Nachricht – ab der nächsten Jahreszeit zahle ich für <b>${esc(p.name)}</b> also nur noch <b>${fmt(neu)}</b> statt ${fmt(e.preis)}. Das freut mich!`, { w: e.w, pferde: [p] }); return; }
+      if (neu < e.preis) { e.preisNeu = { preis: neu, ab: jzJetzt() + 1, ok: true }; const ab = !!e.stufeAb; delete e.stufeAb; if (!ab) eZufr(e, 2, "günstigerer Preis");
+        brief(eName(e), `Neuer Preis für ${p.name}`, ab ? `<b>${esc(p.name)}</b> steht jetzt in einer einfacheren Box – gefallen hat mir das nicht. Immerhin zahle ich ab der nächsten Jahreszeit nur noch <b>${fmt(neu)}</b> statt ${fmt(e.preis)}.` : `vielen Dank für die Nachricht – ab der nächsten Jahreszeit zahle ich für <b>${esc(p.name)}</b> also nur noch <b>${fmt(neu)}</b> statt ${fmt(e.preis)}. Das freut mich!`, { w: e.w, pferde: [p] }); return; }
       const r = neu / e.preis - 1, ja = Math.max(0.05, Math.min(0.97, 0.95 - 2.5 * r + (e.zufr - 60) / 80));
       if (Math.random() < ja) { e.preisNeu = { preis: neu, ab: jzJetzt() + 1, ok: true };
         brief(eName(e), `Neuer Preis für ${p.name}`, `{deine|Ihre} Preiserhöhung habe ich bekommen. Ab der nächsten Jahreszeit zahle ich für <b>${esc(p.name)}</b> dann <b>${fmt(neu)}</b> statt ${fmt(e.preis)} – in Ordnung.`, { w: e.w, pferde: [p] }); return; }
@@ -13895,6 +13914,7 @@
   // Beginn jeder Jahreszeit: Gekündigte ziehen aus, alle anderen zahlen (10 % verspätet)
   function pensionJahreszeit() {
     fremdEndeJahreszeit();   // H7 (c): Beritt/Aufzucht zu Ende → Besitzer holt ab
+    try { stufenWunschBriefe(); } catch (er) { console.error("Boxstufen-Wunsch:", er); }   // v668
     besitzerExperteJahreszeit();   // v333: Besitzer holt sich manchmal selbst einen Futterexperten
     const L = einstellerListe(), jetzt = jzJetzt(), s = datum().s;
     L.filter(e => e.kuendigt != null && e.kuendigt < jetzt).forEach(e => pensionAuszug(e, e.kuendGrund === "du" ? "Vertrag gekündigt" : e.kuendGrund === "zahlung" ? "Zahlungsverzug" : e.kuendGrund === "preis" ? "zu teuer" : "unzufrieden"));
@@ -15303,6 +15323,10 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     if (A.typ === "kaufangebot") { const a = (spiel.angebote || []).find(y => y.id === A.pferd && y.vorschlag && y.vorschlag.id === A.vid);
       if (A.antwort) return `<p class="brief-aktion-info">${A.antwort === "ja" ? "✅ Angenommen – verkauft." : "Abgelehnt."}</p>`;
       return a ? `<div class="brief-aktion"><button class="knopf" data-baktion="kauf-ja" data-bid="${br.id}">✅ Annehmen · ${fmt(A.betrag)}</button><button class="knopf zweit" data-baktion="kauf-nein" data-bid="${br.id}">Ablehnen</button></div>` : `<p class="brief-aktion-info">Dieser Vorschlag gilt nicht mehr.</p>`; }
+    if (A.typ === "stufeWunsch") { const e = einstellerListe().find(x => x.eid === A.eid), nb = spiel.boxen[A.ziel], ok = e && e.kuendigt == null && nb && pensionBoxFrei(nb) && boxenStufe(nb) === A.nst && e.stufe < A.nst && pensionBox(e);
+      if (A.antwort) return `<p class="brief-aktion-info">${A.antwort}</p>`;
+      if (!ok) return `<p class="brief-aktion-info">Das gilt nicht mehr (die Box ist nicht mehr frei oder der Einsteller ist weg).</p>`;
+      return `<div class="brief-aktion"><button class="knopf" data-baktion="sw-ja" data-bid="${br.id}">✅ Umziehen · ${fmt(A.preis)} je Jahreszeit</button><button class="knopf zweit" data-baktion="sw-nein" data-bid="${br.id}">Ablehnen</button></div>`; }
     if (A.typ === "pnpreis") { const e = einstellerListe().find(x => x.eid === A.eid), N = e && e.preisNeu;   // v422
       if (A.antwort) return `<p class="brief-aktion-info">${A.antwort}</p>`;
       if (!e || !N || N.ok || e.kuendigt != null) return `<p class="brief-aktion-info">Erledigt.</p>`;
@@ -15356,6 +15380,11 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         else if (b.dataset.baktion === "pp-alt") { delete e.preisNeu; eZufr(e, 4, "darf beim alten Preis bleiben"); A.antwort = `✅ ${esc(eName(e))} zahlt weiter ${fmt(e.preis)}.`; }
         else if (Math.random() < 0.3) { N.ok = true; A.antwort = `✅ ${esc(eName(e))} ist einverstanden und zahlt ab der nächsten Jahreszeit ${fmt(N.preis)}.`; }
         else { delete e.preisNeu; e.kuendigt = jzJetzt(); e.kuendGrund = "preis"; pensionAnsehen(-2); A.antwort = `📦 ${esc(eName(e))} kündigt zum Ende dieser Jahreszeit${p ? ` und holt ${esc(p.name)} ab` : ""}.`; }
+        speichern(); nachher(); return; }
+      if (["sw-ja", "sw-nein"].includes(b.dataset.baktion)) { const e = einstellerListe().find(x => x.eid === A.eid), nb = spiel.boxen[A.ziel], von = e && pensionBox(e);
+        if (!e || !von || !nb || !pensionBoxFrei(nb)) { A.antwort = "Das ging nicht mehr."; speichern(); nachher(); return; }
+        if (b.dataset.baktion === "sw-ja") { const p = von.pferd; inBoxUmziehen(von, A.ziel); e.stufe = A.nst; e.preisNeu = { preis: A.preis, ab: jzJetzt() + 1, ok: true }; e.preisBasis = A.preis; eZufr(e, 8, "bessere Box bekommen"); A.antwort = `✅ ${esc(p.name)} ist in Box ${A.ziel + 1} (Stufe ${A.nst}) umgezogen, ab der nächsten Jahreszeit ${fmt(A.preis)}.`; }
+        else { eZufr(e, -3, "Wunsch nach besserer Box abgelehnt"); A.antwort = "Abgelehnt."; }
         speichern(); nachher(); return; }
       if (b.dataset.baktion === "fw-ja") { const bx = spiel.boxen.find(y => y.pferd && y.pferd.id === A.pid), v = bx && vorschlagVon(bx.pferd, bx); if (v) planUebernehmen(bx.pferd, bx, v.plan, v.vom); A.antwort = "ja"; speichern(); nachher(); return; }   // v383
       if (b.dataset.baktion === "du-ja" || b.dataset.baktion === "du-nein") { (spiel.duzen = spiel.duzen || {})[br.von] = b.dataset.baktion === "du-ja"; ruf(br.von, b.dataset.baktion === "du-ja" ? 5 : -5); A.antwort = b.dataset.baktion === "du-ja" ? "ja" : "nein"; speichern(); nachher(); }

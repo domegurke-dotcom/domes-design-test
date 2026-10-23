@@ -1055,7 +1055,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "654";
+  const SPIEL_VERSION = "655";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1063,11 +1063,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=654"></script>
-<script src="pferd.js?v=654"></script>
-<script src="boxstufen.js?v=654"></script>
-<script src="kopfneu.js?v=654"></script>
-<script src="waschbild.js?v=654"></script>
+<script src="lz-string.min.js?v=655"></script>
+<script src="pferd.js?v=655"></script>
+<script src="boxstufen.js?v=655"></script>
+<script src="kopfneu.js?v=655"></script>
+<script src="waschbild.js?v=655"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -14167,8 +14167,9 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   const offenPlatz = () => spiel.boxen.findIndex(offenFrei);
   function inBoxUmziehen(box, z) {   // Pferd (samt Fohlen) von box in Box z umziehen
     const ziel = spiel.boxen[z], p = box.pferd; ziel.pferd = p; if (box.fohlen) { ziel.fohlen = box.fohlen; delete box.fohlen; }
-    ziel.krippeVoll = false; ziel.mistig = false; ziel.mistStufe = 0; ziel.tot = false;
-    box.pferd = null; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0;
+    ziel.krippeVoll = box.krippeVoll || false; ziel.kraftVoll = box.kraftVoll || false; ziel.mistig = false; ziel.mistStufe = 0; ziel.tot = false;   // v655 (Dome 23.10.): Futter und Einstreu wandern mit in die neue Box
+    if (box.einstreu) ziel.einstreu = box.einstreu; else delete ziel.einstreu; if (box.ohneEinstreu) ziel.ohneEinstreu = box.ohneEinstreu; else delete ziel.ohneEinstreu;
+    box.pferd = null; box.krippeVoll = false; box.kraftVoll = false; delete box.einstreu; delete box.ohneEinstreu; box.mistig = false; box.mistStufe = 0;
   }
   // jede Nacht: Herde im Offenstall – Jungpferde lernen Sozialverhalten (mit Tante doppelt so gut), alle fühlen sich in der Gruppe wohl
   function offenstallNacht() {
@@ -14240,7 +14241,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   }
   function stallartOk() { const H = spiel.hof; if (!H || !H.art) return false; if (H.artCache && H.artCache.tag === spiel.tag && H.artCache.art === H.art) return H.artCache.ok;
     const ok = stallartBed(H.art).every(x => x[1]); H.artCache = { tag: spiel.tag, art: H.art, ok }; return ok; }
-  function vorteil(art) { const H = spiel.hof; return !!(H && H.art === art && !H.artVerloren && stallartOk()); }
+  function vorteil(art) { const H = spiel.hof; return !!(H && H.art === art && !H.artVerloren && (stallartOk() || jzJetzt() < stallartSchonBis())); }
   function stallartSchonBis() { const H = spiel.hof || {}; if (H.artSeit == null) H.artSeit = jzJetzt(); return H.artSeit + STALLART_SCHON; }
   // ---------- H7 (e): Gnadenhof – Patenschaften und Tierarztrabatt ----------
   // Paten (Tierfreunde) übernehmen eine Patenschaft für ein Pferd: zahlen zu Beginn jeder Jahreszeit, schreiben ab und zu – nur solange der Hof den Gnadenhof-Status hat
@@ -14267,9 +14268,9 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       const fb = foerderBetrag(); buchen(fb, `Förderung ${name} (Fläche ${haTxt(H.ha + (H.pacht || 0))})`);
       if (H.art === "gnadenhof") { const n = eigenePferdeHof().length; if (n) { buchen(30 * n, "Spenden Gnadenhof"); brief("Freundeskreis Gnadenhof", "Spenden für die alten Pferde", `für {deine|Ihre} ${n} Schützlinge auf <b>${esc(hofName())}</b> sind diese Jahreszeit <b>${fmt(30 * n)}</b> an Spenden zusammengekommen. Danke für {deine|Ihre} Arbeit!`); } } (H.foerderLog = H.foerderLog || []).push({ jz: jetzt, b: fb }); H.foerderLog = H.foerderLog.filter(x => x.jz > jetzt - 4); return; }
     const fehlt = stallartBed(H.art).filter(x => !x[1]).map(x => x[0]);
-    if (H.artVerloren || jetzt < stallartSchonBis()) {   // Schonfrist: keine Strafe (aber auch keine Förderung/Vorteile)
+    if (H.artVerloren || jetzt < stallartSchonBis()) {   // Schonfrist: keine Strafe (Vorteile gelten trotzdem, Dome 23.10.)
       if (!H.artVerloren) { const fb = foerderBetrag(); buchen(fb, `Förderung ${name} (Schonfrist, Fläche ${haTxt(H.ha + (H.pacht || 0))})`);   // v654 (Dome 23.10.): in der Schonfrist wird die Förderung gezahlt – ohne Rückzahlung, falls die Bedingungen später nicht erfüllt werden
-        brief("Landwirtschaftsamt", `${name}: Förderung in der Schonfrist`, `für {deinen|Ihren} Hof <b>${esc(hofName())}</b> wurde diese Jahreszeit die Förderung (<b>${fmt(fb)}</b>) ausgezahlt. Noch gilt die Schonfrist: {Du musst|Sie müssen} sie nicht zurückzahlen, auch wenn die Bedingungen später nicht erfüllt werden. Die Vorteile als ${name} gelten aber erst, wenn alles erfüllt ist – es fehlt: <b>${fehlt.join(", ")}</b>. Danach kommt die Förderung wie gewohnt, und {du musst|Sie müssen} sie bei Verstoß zurückzahlen.`); }
+        brief("Landwirtschaftsamt", `${name}: Förderung in der Schonfrist`, `für {deinen|Ihren} Hof <b>${esc(hofName())}</b> wurde diese Jahreszeit die Förderung (<b>${fmt(fb)}</b>) ausgezahlt. Noch gilt die Schonfrist: {Du musst|Sie müssen} sie nicht zurückzahlen, auch wenn die Bedingungen später nicht erfüllt werden. Auch alle Vorteile als ${name} gelten in der Schonfrist schon. Damit es danach so bleibt, fehlt noch: <b>${fehlt.join(", ")}</b>. Danach kommt die Förderung wie gewohnt, und {du musst|Sie müssen} sie bei Verstoß zurückzahlen.`); }
       return; }
     if (H.artFrist == null) { H.artFrist = jetzt + 1; brief("Landwirtschaftsamt", `${name}: Bedingungen nicht erfüllt`, `{dein|Ihr} Hof <b>${esc(hofName())}</b> erfüllt die Bedingungen als ${name} nicht mehr: <b>${fehlt.join(", ")}</b>. {Du hast|Sie haben} bis zum Ende dieser Jahreszeit Zeit, das zu ändern. Sonst verliert der Hof den Status, und die Förderung des letzten Jahres muss zurückgezahlt werden.`); return; }
     if (jetzt >= H.artFrist) { const zurueck = (H.foerderLog || []).reduce((a, x) => a + x.b, 0); if (zurueck) buchen(-zurueck, `Rückzahlung Förderung ${name}`);

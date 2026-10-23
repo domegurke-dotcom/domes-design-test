@@ -57,6 +57,7 @@ z. B. „pmk - Pferdehändler“ oder „asr - Putzkiste“.
 | **Aufklapp-Bereich** (auch **Akkordeon**) | eine Zeile mit kleinem schwarzem Pfeil ▶ davor – antippen, dann klappt der Inhalt nach unten auf (Pfeil zeigt dann ▼), nochmal antippen klappt ihn wieder zu. Beispiel: bzn – die Themen und ihre Einträge |
 | **Info-Knopf** | das kleine runde **i** hinter einem Eintrag – antippen klappt den **Info-Text** (Erklärung) auf, nochmal antippen klappt ihn zu. Beispiel: ras – Gene / Charakter / Krankheiten selbst wählen |
 | **Info-Sprechblase** | die weiße Blase im Stall- oder Koppel-Bild (z. B. „Füttern“, „Abäppeln“) – verschwindet, sobald man den Gegenstand einmal angetippt hat |
+| **Seitenrand** (genauer: Außenabstand links/rechts) | der leere Streifen zwischen Bildschirmrand und Inhalt. Am PC kommt er von der **maximalen Inhaltsbreite** (Breite der mittigen Spalte); „Seitenrand verkleinern“ = Inhalt breiter. Am Handy bleibt ein kleiner Rand wegen der Kamera-Aussparung (safe-area) |
 
 ## Beispiele
 - „**asr - Putzkiste**: Der Kamm soll …“

@@ -1076,7 +1076,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "686";
+  const SPIEL_VERSION = "687";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1084,11 +1084,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=686"></script>
-<script src="pferd.js?v=686"></script>
-<script src="boxstufen.js?v=686"></script>
-<script src="kopfneu.js?v=686"></script>
-<script src="waschbild.js?v=686"></script>
+<script src="lz-string.min.js?v=687"></script>
+<script src="pferd.js?v=687"></script>
+<script src="boxstufen.js?v=687"></script>
+<script src="kopfneu.js?v=687"></script>
+<script src="waschbild.js?v=687"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -13466,6 +13466,13 @@
   function anlageImUmbau(o) { const l = gebaeude().filter(g => BAUTEN[g.typ] && BAUTEN[g.typ].anlage === o && !(g.bau && g.bau.art !== "umbau")); return l.length > 0 && l.every(g => g.bau && g.bau.art === "umbau"); }   // v344: bei mehreren Plätzen nur gesperrt, wenn alle im Umbau sind
   // Dome (v344): Reitplätze und Roundpens kann man mehrfach bauen – Anzahl nutzbarer Plätze
   const anlageKapazitaet = o => { const L = gebaeude().filter(g => BAUTEN[g.typ] && BAUTEN[g.typ].anlage === o && !g.bau); if (!L.length) return PENSION.voll * anlageAnzahl(o); return L.reduce((a, g) => a + ((BAUTEN[g.typ].kap || [PENSION.voll, PENSION.voll, PENSION.voll])[(g.stufe || 1) - 1] || PENSION.voll), 0); };   // v667 (Dome): wie viele Reiter gleichzeitig auf Reitplatz/Reithalle passen, wächst mit der Stufe (Größe)
+  // v687 (Dome 23.10.): was bringt eine Reitanlage? – Platz für so viele Reiter gleichzeitig, heute so viele Pensionsreiter dort; beim Umbau: vorher/nachher
+  const kapReiter = (typ, stufe) => (BAUTEN[typ] && BAUTEN[typ].kap || [])[stufe - 1];
+  function anlageInfoZeile(g) {
+    if (!BAUTEN[g.typ] || !BAUTEN[g.typ].kap || g.bau) return "";
+    const k = kapReiter(g.typ, g.stufe || 1), ges = anlageKapazitaet(g.typ), heute = pensionReiterHeute(g.typ).length, mehr = g.stufe < 3 ? kapReiter(g.typ, g.stufe + 1) : null;
+    return `<small class="geb-kap">👥 Platz für <b>${k}</b> Reiter gleichzeitig${anlageAnzahl(g.typ) > 1 ? ` (alle ${g.typ === "reitplatz" ? "Reitplätze" : "Reithallen"} zusammen: ${ges})` : ""} · heute ${heute} Pensionsreiter${heute >= ges ? " – <b>voll</b>, das drückt die Stimmung der Einsteller" : heute >= ges - 1 && ges > 0 ? " – fast voll" : ""}${mehr ? ` · nächste Stufe: ${mehr}` : ""}</small>`;
+  }
   const anlageAnzahl = o => Math.max(spiel.anlage && spiel.anlage[o] ? 1 : 0, gebaeude().filter(g => BAUTEN[g.typ] && BAUTEN[g.typ].anlage === o && !g.bau).length);
   function umbauStarten(g) {
     const preis = umbauPreis(g), mehrPlatz = Math.round((platzVon(g.typ, g.boxen, (g.stufe || 1) + 1) - platzVon(g.typ, g.boxen, g.stufe || 1)) * 1000) / 1000;
@@ -13675,7 +13682,7 @@
     const menge = g.boxen ? ` · ${gebMenge(g)}${dazu ? ` <b>+${dazu}</b> = ${g.boxen + dazu}` : ""}` : g.ha && dazu ? ` · ${haTxt(g.ha)} <b>+${haTxt(dazu)}</b>` : "";
     const kinder = K.map(k => `<div class="geb-kind"><small><b>+${gebMenge(k)}</b> (${k.typ === "weide" ? "Erweiterung" : k.teil ? "umgebaut" : "Anbau"}) · Stufe ${k.stufe} – ${STUFE_NAME[k.stufe]} · Zustand ${Math.round(k.zustand)} %</small>${bar(k.zustand)}${gebKnoepfe(k)}</div>`).join("");
     return `<div class="geb${K.length ? " mit-kind" : ""}"><span class="geb-ico">${BAUTEN[g.typ].ico}</span><span class="geb-txt"><b>${gebName(g)}</b><small>${g.typ === "heudampfer" ? "fertig" : `Stufe ${g.stufe} – ${STUFE_NAME[g.stufe]}${menge} · Zustand ${Math.round(g.zustand)} %`}</small>${g.typ === "heudampfer" ? "" : bar(g.zustand)}
-          ${gebKnoepfe(g)}${kinder}</span></div>`; }
+          ${anlageInfoZeile(g)}${gebKnoepfe(g)}${kinder}</span></div>`; }
   // Dome (v347): Hofplan – Gebäude antippen: Zustand, reparieren, Stufe verbessern, Anbau (vergrößern)
   function umbauDialog(g, n) {   // v682: bei Ställen mit mehr Boxen wählbar, wie viele Boxen umgebaut werden
     const Bt = BAUTEN[g.typ], teilbar = Bt.jeBox && g.typ !== "sandpaddock" && g.boxen > Bt.schritt, mengen = teilbar ? Array.from({ length: Math.floor(g.boxen / Bt.schritt) }, (_, i) => (i + 1) * Bt.schritt).concat(g.boxen % Bt.schritt ? [g.boxen] : []) : null; n = teilbar ? (n && mengen.includes(n) ? n : g.boxen) : g.boxen;
@@ -13683,7 +13690,7 @@
       const frei = n < g.boxen ? spiel.boxen.filter(b => !Bx.includes(b) && boxFrei(b) && !b.quar && !b.abfohl && !umbauGeplant(b)).length : ersatzBoxen(g).length, anz = U.eigen.length + U.einsteller.length;
       const wer = anz ? `<p><b>Betroffen:</b> ${[...U.eigen.map(p => esc(p.name)), ...U.einsteller.map(e => `${esc(((pensionBox(e) || {}).pferd || {}).name || "–")} (Einsteller ${esc(eName(e))})`)].join(", ")}.<br>Beim Start ziehen die Pferde in freie Boxen um (frei: ${frei}).${U.eigen.length > frei ? " Eigene Pferde ohne Box kommen so lange auf die Weide – oder du bringst sie vorher per Pferdeanhänger zu einem anderen eigenen Hof." : ""}</p>
         ${U.einsteller.length ? `<p>📨 Einsteller bekommen <b>1 Jahreszeit vorher</b> Bescheid – der Umbau beginnt erst am <b>${datumText(datum(spiel.tag + tpj()))}</b>. Ist dann keine Box frei, brauchst du je Einsteller eine Lösung (Hof → Bauen): Weide mit ${prozent(UMBAU.nachlass)} Nachlass oder kündigen. Ohne Lösung kündigt der Einsteller selbst.</p>` : ""}` : "";
-      dialog(`<h3>⬆️ ${gebName(g)}: Stufe ${g.stufe + 1}</h3>${teilbar ? `<div class="kr-wahl"><label>Wie viele Boxen? <select id="umbauMenge">${mengen.map(x => `<option value="${x}" ${x === n ? "selected" : ""}>${x === g.boxen ? `alle ${x}` : x} · ${fmt(umbauPreisN(g, x))}</option>`).join("")}</select></label></div>` : ""}<p>Umbau${n < g.boxen ? ` von <b>${n} der ${g.boxen} Boxen</b>` : ""} auf <b>${STUFE_NAME[g.stufe + 1]}</b> für <b>${fmt(umbauPreisN(g, n))}</b> (Preisunterschied + 20 %).${n < g.boxen ? " Umgebaut werden zuerst freie Boxen; die umgebauten stehen danach als „+" + n + "“ unter dem Stall." : ""} Dauert die halbe Bauzeit${g.boxen ? ", die Boxen sind so lange gesperrt" : ""}${BAUTEN[g.typ].anlage && ["reitplatz", "reithalle", "roundpen"].includes(BAUTEN[g.typ].anlage) ? " – so lange wird dort nicht trainiert (die anderen Plätze und das Gelände gehen)" : ""}.</p>${wer}`,
+      dialog(`<h3>⬆️ ${gebName(g)}: Stufe ${g.stufe + 1}</h3>${teilbar ? `<div class="kr-wahl"><label>Wie viele Boxen? <select id="umbauMenge">${mengen.map(x => `<option value="${x}" ${x === n ? "selected" : ""}>${x === g.boxen ? `alle ${x}` : x} · ${fmt(umbauPreisN(g, x))}</option>`).join("")}</select></label></div>` : ""}<p>Umbau${n < g.boxen ? ` von <b>${n} der ${g.boxen} Boxen</b>` : ""} auf <b>${STUFE_NAME[g.stufe + 1]}</b> für <b>${fmt(umbauPreisN(g, n))}</b> (Preisunterschied + 20 %).${Bt.kap ? ` <b>Das bringt:</b> statt ${kapReiter(g.typ, g.stufe)} dann ${kapReiter(g.typ, g.stufe + 1)} Reiter gleichzeitig${g.typ === "reitplatz" ? ` (${["20 × 40 m", "20 × 60 m", "40 × 80 m"][g.stufe]})` : ""}. Mehr Platz heißt: weniger „zu voll“-Ärger bei den Einstellern, besonders mit vielen Pensionspferden.` : ""}${n < g.boxen ? " Umgebaut werden zuerst freie Boxen; die umgebauten stehen danach als „+" + n + "“ unter dem Stall." : ""} Dauert die halbe Bauzeit${g.boxen ? ", die Boxen sind so lange gesperrt" : ""}${BAUTEN[g.typ].anlage && ["reitplatz", "reithalle", "roundpen"].includes(BAUTEN[g.typ].anlage) ? " – so lange wird dort nicht trainiert (die anderen Plätze und das Gelände gehen)" : ""}.</p>${wer}`,
         [["Umbauen", () => { let z = g; if (n < g.boxen) z = gebTeilen(g, n); if (umbauStarten(z)) { speichern(); bauNeuZeigen(); } else if (z !== g) gebZusammen(z, g); }], ["Abbrechen", null, "zweit"]]);
     if ($("umbauMenge")) $("umbauMenge").onchange = () => umbauDialog(g, +$("umbauMenge").value);
   }

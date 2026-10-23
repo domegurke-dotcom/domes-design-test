@@ -18,4 +18,4 @@ _Reitunterricht (Dome 20.10., v606): auch der feste Bereiter kostet 60 € (Zusa
 
 
 ## Nachtrag 23.10.2026 (Claude Team)
-- Spieler-2-Studie (Experte, „mittel“ gepflegt): bei Tempo 10 (10 Tage je Jahreszeit) fast doppelt so viele Krankheiten und doppelt so lange Heilung wie bei Tempo 7, und in 2 von 6 Läufen Tierhalteverbot. Soll Tempo 10 (`HEIL_TEMPO`, Krankheitsrisiko je Tag) angeglichen werden? Nicht geändert.
+- **Thema Spieltempo abstimmen (Dome 23.10.):** Tempo 4/7/10 muss insgesamt besser aufeinander abgestimmt werden – Krankheitsrisiko und Heilzeit (Studie: bei Tempo 10 ≈ 2,8 Befunde/Pferd/Jahr gegen ≈ 1,8 bei Tempo 7, Heilung 7 statt 3,5 Tage, 2 von 6 Läufen mit Tierhalteverbot), außerdem Pensionseinnahmen usw. Noch nichts geändert; gemeinsam mit Dome durchgehen (Zahlen: `STUDIE`-Läufe `TEMPO=… EXPERTE=1 STUFEN=2 tests/gesundheit-studie.js`).

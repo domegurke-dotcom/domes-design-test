@@ -658,6 +658,7 @@
   .kachel-halten .halten.wunsch { background: #2f7a3b; border-color: #2f7a3b; color: #fff; font-weight: 700; font-size: 15px; cursor: default; }   /* v329: Wunsch des Besitzers */
   .kachel-halten .halten input { width: 16px; height: 16px; margin: 0; accent-color: var(--akzent); cursor: pointer; }
   .ma-titel { margin: 12px 0 4px; font-size: .95rem; }
+  .geb.ma-ziel { box-shadow: 0 0 0 3px #2a5d8f; } .ma-ziel-txt { color: #2a5d8f; font-weight: 700; }
   .bf-karte.plan-karte { border-color: #9cb8d6; background: #f3f8fd; } .plan-liste { margin: 0; padding-left: 18px; } .plan-reiten { margin: 2px 0; }
   .bf-karte { border: 1.5px solid #e0b98a; background: #fff8ec; border-radius: 10px; padding: 8px 10px; margin-top: 8px; display: flex; flex-direction: column; gap: 4px; font-size: .9rem; }
   .bf-karte.ernst { border-color: #c0503a; background: #fdeeea; }
@@ -1076,7 +1077,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "687";
+  const SPIEL_VERSION = "688";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1084,11 +1085,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=687"></script>
-<script src="pferd.js?v=687"></script>
-<script src="boxstufen.js?v=687"></script>
-<script src="kopfneu.js?v=687"></script>
-<script src="waschbild.js?v=687"></script>
+<script src="lz-string.min.js?v=688"></script>
+<script src="pferd.js?v=688"></script>
+<script src="boxstufen.js?v=688"></script>
+<script src="kopfneu.js?v=688"></script>
+<script src="waschbild.js?v=688"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -9244,11 +9245,12 @@
       ? `in der Futterkammer reicht das ${name} nur noch für etwa ${bald} ${bald === 1 ? "Tag" : "Tage"}. Bitte rechtzeitig im Futterhandel nachkaufen (Hofverwaltung → Hof → Futterkammer).`
       : `in der Futterkammer ist ${k === "raufutter" ? "kein Heu (und kein anderes Raufutter)" : `kein ${name}`} mehr. ${k === "raufutter" ? "Ohne Raufutter bleiben die Krippen leer – die Pferde hungern!" : k === "mineral" ? "Ohne Mineralfutter fehlen den Pferden auf Dauer Mineralien und Vitamine." : "Die Boxen bekommen keinen neuen Leckstein."} ${dispoLimit() ? "Nachkaufen geht gerade nicht: {Dein|Ihr} Konto ist im Dispo am Limit (−2.000 €) – erst Geld einnehmen." : "Nachkaufen: Hofverwaltung → Hof → Futterkammer."}`);
   }
+  const FUTTER_WARN_TAGE = 6;   // v688 (Dome 23.10.): Warnung, wenn der Vorrat unter 6 Tage fällt (vorher 3) – Lieferung braucht 1 Tag, der Spieler soll Zeit zum Bestellen haben; selbst gesetzt
   function futterVorratPruefen() {
     const F = futterkammer(), V = futterVerbrauchTag();
     const rau = RAUFUTTER_REIHE.reduce((a, k) => a + F.lager[k], 0);
-    if (V.raufutter > 0) { const t = Math.floor(rau / V.raufutter); if (t < 3 && t >= 1) futterWarnung("raufutter", t); }
-    if (V.mineral > 0) { const t = Math.floor(F.lager.mineral / V.mineral); if (t < 3 && t >= 1) futterWarnung("mineral", t); }
+    if (V.raufutter > 0) { const t = Math.floor(rau / V.raufutter); if (t < FUTTER_WARN_TAGE && t >= 1) futterWarnung("raufutter", t); }
+    if (V.mineral > 0) { const t = Math.floor(F.lager.mineral / V.mineral); if (t < FUTTER_WARN_TAGE && t >= 1) futterWarnung("mineral", t); }
   }
   function futterKaufen(k, menge) {
     const F = futterkammer(), Z = FUTTER[k], kosten = Math.round(Z.preis * menge * 100) / 100;
@@ -9275,7 +9277,8 @@
     const kosten = V.kosten;
     const zeile = k => { const Z = FUTTER[k], v = F.lager[k], tag = V.je[k] || 0;
       return `<div class="fk-zeile"><span class="fk-ico" aria-hidden="true">${Z.ico}</span><div class="fk-info"><b>${Z.n}</b> <small>${Z.info}${tag ? ` · Verbrauch ${fmtKg(Math.round(tag * 100) / 100)}/Tag, reicht ${reicht(v, tag)}` : ""}</small></div><div class="fk-werte"><b>${Z.stueck ? `${v} Stück` : fmtKg(v)}</b> · ${(Z.preis).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €${Z.stueck ? "/Stück" : "/kg"}</div><div class="fk-kauf">${Z.pack.map(m => `<button class="mini-knopf" data-fkauf="${k}:${m}">+${m}${Z.stueck ? "" : " kg"}</button>`).join("")}</div></div>`; };
-    return `${meld ? `<div class="klasse">${meld}</div>` : ""}
+    const knappZ = (() => { const L = []; const t1 = V.raufutter > 0 ? Math.floor(rauVorrat / V.raufutter) : 99, t2 = V.mineral > 0 ? Math.floor(F.lager.mineral / V.mineral) : 99; if (t1 < FUTTER_WARN_TAGE) L.push(`Heu reicht nur noch <b>${t1}</b> ${t1 === 1 ? "Tag" : "Tage"}`); if (t2 < FUTTER_WARN_TAGE) L.push(`Mineralfutter reicht nur noch <b>${t2}</b> ${t2 === 1 ? "Tag" : "Tage"}`); return L; })();   // v688
+    return `${meld ? `<div class="klasse">${meld}</div>` : ""}${knappZ.length ? `<div class="klasse">⚠️ ${knappZ.join(" · ")} – bestellen geht heute, geliefert wird morgen früh.</div>` : ""}
       ${(F.liefer || []).length ? `<div class="klasse">🚚 Lieferung morgen früh: ${F.liefer.map(x => `${FUTTER[x.k] && FUTTER[x.k].stueck ? `${x.menge} Stück` : fmtKg(x.menge)} ${FUTTER[x.k] ? FUTTER[x.k].n : x.k}`).join(", ")}</div>` : ""}
       <div class="zeile-wert"><div class="kopf"><b>📦 Platz in der Futterkammer</b><span>${fmtKg(belegt)} von ${fmtKg(F.lagerMax)}</span></div><div class="balken"><i style="width:${Math.min(100, belegt / F.lagerMax * 100)}%"></i></div></div>
       ${(() => { const ein = Object.keys(EINSTREU).reduce((a, k) => a + (V.je[k] || 0), 0), einV = Object.keys(EINSTREU).reduce((a, k) => a + (V.je[k] ? F.lager[k] || 0 : 0), 0);
@@ -13248,7 +13251,7 @@
     const pachtAb = kacheln.length - Math.ceil(pacht - 1e-9);   // v297: Pachtland steckt in Weide/frei – gestrichelter Rand
     const svg = `<svg class="hofplan" viewBox="-4 -4 ${sp * K + 8} ${zeilen * K + 8}" role="img" aria-label="Hofplan">${kacheln.map((t, i) => { const x = (i % sp) * K, y = Math.floor(i / sp) * K;
       const w = t === "weide" ? weideById(widVon(i)) : null, attr = w ? `data-hpweide="${w.wid}"` : t === "frei" ? 'data-hpland="weide"' : t === "bau" && !ICONS.slice(i * 9, i * 9 + 9).length ? 'data-hpland="bau"' : "";
-      return `<g ${attr} ${attr ? 'style="cursor:pointer"' : ""}>${w ? `<title>${esc(w.name)} (${haTxt(w.ha)})</title>` : ""}<rect x="${x}" y="${y}" width="${K - 2}" height="${K - 2}" rx="6" fill="${w && w.wiese ? "#d6dc8a" : farbe[t]}" ${i >= pachtAb && (t === "weide" || t === "frei") ? 'stroke="#6f8a4a" stroke-width="2" stroke-dasharray="4 3"' : ""}/>${w && w.wiese ? `<text x="${x + K / 2}" y="${y + K / 2 + 4}" font-size="16" text-anchor="middle">🌾</text>` : inhalt(t, x, y, i)}</g>`; }).join("")}</svg>`;
+      return `<g ${attr} ${attr ? 'style="cursor:pointer"' : ""}>${w ? `<title>${esc(w.name)} (${haTxt(w.ha)})${weidenMaZiel().has(w.wid) ? " – für Mitarbeiter gewählt" : ""}</title>` : ""}<rect x="${x}" y="${y}" width="${K - 2}" height="${K - 2}" rx="6" fill="${w && w.wiese ? "#d6dc8a" : w ? weideFarbe(farbe.weide, w, datum().s) : farbe[t]}" ${w && weidenMaZiel().has(w.wid) ? 'stroke="#2a5d8f" stroke-width="3"' : i >= pachtAb && (t === "weide" || t === "frei") ? 'stroke="#6f8a4a" stroke-width="2" stroke-dasharray="4 3"' : ""}/>${w && w.wiese ? `<text x="${x + K / 2}" y="${y + K / 2 + 4}" font-size="16" text-anchor="middle">🌾</text>` : inhalt(t, x, y, i)}</g>`; }).join("")}</svg>`;
     return `${svg}<div class="hofplan-legende"><span><i style="background:${farbe.hof}"></i>Bauland ${haTxt(bh)} (belegt ${haTxt(baulandBelegt())}, frei ${haTxt(baulandFrei())}): ${n ? `Stall mit ${n} Boxen (${belegt} belegt, Stufe ${H.stufe || 1})` : "noch kein Stall"}${A.reitplatz ? ", Reitplatz" : ""}${A.reithalle ? ", Reithalle" : ""}${A.roundpen ? ", Roundpen" : ""}</span>
       <span><i style="background:${farbe.weide}"></i>Weide: ${String(weide).replace(".", ",")} ha (reicht für etwa ${Math.floor(weide / 0.5)} Großpferde)</span><span><i style="background:${farbe.frei}"></i>freies Weideland: ${haTxt(frei)}</span>${pacht ? `<span><i style="background:${farbe.frei};border:2px dashed #6f8a4a"></i>gepachtet (gestrichelt): ${haTxt(pacht)}</span>` : ""}<span>🌲 Gelände zum Ausreiten rund um den Hof</span><span><i style="background:none;border:1.5px dashed #e08a1e"></i>im Bau · Zahl im Gebäude = Boxen</span>${gebaeude().length ? `<span>🏗️ ${gebaeude().map(g => `${gebName(g)}${g.bau ? " (im Bau)" : g.stufe ? ` (Stufe ${g.stufe})` : ""}`).join(", ")}</span>` : ""}</div>`;
   }
@@ -14487,6 +14490,18 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     return offen.slice().sort((a, b) => (b.gras * (1 + b.ha - weideBelegtW(b))) - (a.gras * (1 + a.ha - weideBelegtW(a))))[0];
   }
   // Hofverwaltung → Hof → Bauen → Weideland
+  // v688 (Dome 23.10.): welche Weide ist für die Mitarbeiter gewählt (dahin bringen Stallbursche/Azubi Pferde) – Rahmen in Hofplan und Liste
+  function weidenMaZiel() { const ids = new Set(); spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot || (p.weidegang || "nie") === "nie" || fremd(p) && eigenerAuslauf(p) === "paddock") return; const wz = p.auslaufZiel && weideById(p.auslaufZiel); if (wz && !wz.wiese) ids.add(wz.wid); }); return ids; }
+  // v688 (Dome 23.10.): wann mäht der Bauer – und warum noch nicht / nicht mehr
+  function maehHinweis(w) {
+    const d = datum(), n = w.schnitte || 0, tag2 = Math.max(2, Math.ceil(tpj() * 0.7)), gut = w.gras >= WIESE.schnitt2Gras, zu = `Gras ${Math.round(w.gras)} %, nötig ${WIESE.schnitt2Gras} %`;
+    if (d.s === 0) return "1. Schnitt zu Beginn des Sommers (Tag 1).";
+    if (d.s === 1) { if (n === 0) return d.t === 1 ? "Heute ist der 1. Schnitt." : "Der 1. Schnitt war dieses Jahr schon (die Wiese war zu spät fertig) – nächster Schnitt im nächsten Sommer."; 
+      if (n === 1) return `2. Schnitt im Sommer an Tag ${tag2}${gut ? " (das Gras reicht)" : ` – bisher zu wenig Gras (${zu}), sonst fällt er aus`}.`;
+      if (n === 2) return `3. Schnitt im Herbst (Tag 1) – ${gut ? "das Gras reicht" : `braucht ${WIESE.schnitt2Gras} % Gras (jetzt ${Math.round(w.gras)} %)`}.`; }
+    if (d.s === 2) return n === 2 ? (d.t === 1 ? `Heute wäre der 3. Schnitt${gut ? "." : ` – aber zu wenig Gras (${zu}).`}` : "Der 3. Schnitt ist im Herbst ausgefallen oder schon gewesen.") : n >= 3 ? "Dieses Jahr ist alles gemäht." : "Im Herbst gibt es nur noch den 3. Schnitt, wenn der 2. war – dieses Jahr nicht mehr.";
+    return n >= 3 ? "Dieses Jahr ist alles gemäht – im Sommer wieder." : "Im Winter wird nicht gemäht – nächster Schnitt im Sommer.";
+  }
   function weidenHTML(nurWid) {
     const W = weiden().filter(w => !nurWid || w.wid === nurWid), saatZeit = datum().s === 0 || datum().s === 2, bar = (z, gut) => `<div class="kr-balken geb-balken"><i style="width:${Math.round(z)}%;background:${gut ? (z < GRAS.wenig ? "#c0503a" : z < 50 ? "#d9a441" : "#6aa84f") : (z >= GRAS.matschAb ? "#8a5a33" : z >= 25 ? "#b98a5e" : "#d8c3a5")}"></i></div>`;
     const neuBau = imBau().filter(g => g.typ === "weide" && !(g.ziel && weideById(g.ziel))).map(g => `<div class="geb"><span class="geb-ico">🏗️</span><span class="geb-txt"><b>${g.ziel === "wiese" ? "Neue Futterwiese" : "Neue Weide"}</b><small>${zaunText(g)}</small></span></div>`).join("");
@@ -14494,7 +14509,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     if (!W.length) return `<p class="text">Noch keine Weide eingezäunt. Weideland kaufen oder pachten und einzäunen: Hof → Bauen → „Weideland“ (dort auch „Freies Land einzäunen“).</p>`;
     return `
       ${W.map(w => { const P = weidePferde(w), bel = weideBelegtW(w), apf = w.aepfel != null && spiel.tag - w.aepfel < tpj(), nach = w.nachgesaet != null && w.nachgesaet >= jzJetzt();
-        return `<div class="geb"><span class="geb-ico">${w.wiese ? "🌾" : "🌿"}</span><span class="geb-txt"><b>${esc(w.name)}</b><small>${haTxt(w.ha)} · ${w.abbau ? `🧨 Zaun wird abgebaut – noch ${w.abbau.rest} ${w.abbau.rest === 1 ? "Tag" : "Tage"}${datum().s === 3 ? " · ❄️ ruht im Winter" : ""}` : w.wiese ? `🌾 Futterwiese – der Bauer mäht im Sommer und Herbst${w.schnitte ? ` (dieses Jahr ${w.schnitte}× gemäht)` : ""}` : P.length ? `${P.map(q => esc(q.name)).join(", ")} (braucht ${haTxt(bel)}${bel > w.ha + 1e-9 ? " – ⚠️ überbesetzt" : ""})` : w.ruhtBis != null ? `🌱 frisch nachgesät – ruht noch ${tageTxt2(Math.max(1, w.ruhtBis - spiel.tag))}` : w.gesperrt ? "🚫 gesperrt – erholt sich" : "keine Pferde"}${apf ? " · ✅ abgeäppelt" : ""}${nach ? " · 🌱 nachgesät" : ""}</small>${imBau().filter(g => g.typ === "weide" && g.ziel === w.wid).map(g => `<small>🏗️ + ${zaunText(g)}</small>`).join("")}
+        return `<div class="geb${weidenMaZiel().has(w.wid) ? " ma-ziel" : ""}"><span class="geb-ico">${w.wiese ? "🌾" : "🌿"}</span><span class="geb-txt"><b>${esc(w.name)}</b>${weidenMaZiel().has(w.wid) ? ` <small class="ma-ziel-txt">👤 für Stallbursche/Azubi gewählt</small>` : ""}<small>${haTxt(w.ha)} · ${w.abbau ? `🧨 Zaun wird abgebaut – noch ${w.abbau.rest} ${w.abbau.rest === 1 ? "Tag" : "Tage"}${datum().s === 3 ? " · ❄️ ruht im Winter" : ""}` : w.wiese ? `🌾 Futterwiese – der Bauer mäht im Sommer und Herbst${w.schnitte ? ` (dieses Jahr ${w.schnitte}× gemäht)` : ""}<br>🚜 ${maehHinweis(w)}` : P.length ? `${P.map(q => esc(q.name)).join(", ")} (braucht ${haTxt(bel)}${bel > w.ha + 1e-9 ? " – ⚠️ überbesetzt" : ""})` : w.ruhtBis != null ? `🌱 frisch nachgesät – ruht noch ${tageTxt2(Math.max(1, w.ruhtBis - spiel.tag))}` : w.gesperrt ? "🚫 gesperrt – erholt sich" : "keine Pferde"}${apf ? " · ✅ abgeäppelt" : ""}${nach ? " · 🌱 nachgesät" : ""}</small>${imBau().filter(g => g.typ === "weide" && g.ziel === w.wid).map(g => `<small>🏗️ + ${zaunText(g)}</small>`).join("")}
           <small>Gras ${Math.round(w.gras)} %</small>${bar(w.gras, true)}<small>Matsch ${Math.round(w.matsch)} %</small>${bar(w.matsch, false)}
           <span class="geb-kn">${w.abbau ? "" : `${(P.length || (w.kot || 0) > 0) && w.aepfel !== spiel.tag ? `<button class="mini-knopf" data-waepfeln="${w.wid}">💩 Abäppeln</button>` : ""}${P.length && !w.wiese ? `<button class="mini-knopf" disabled title="Erst die Pferde von dieser Weide holen">🌾 Futterwiese – erst Pferde runterholen</button>` : ""}${!P.length && w.ruhtBis == null ? `<button class="mini-knopf" data-wwiese="${w.wid}">${w.wiese ? "🐴 Wieder als Weide" : "🌾 Als Futterwiese nutzen"}</button>` : ""}${!P.length && w.ruhtBis == null && !w.wiese ? `<button class="mini-knopf" data-wsperren="${w.wid}">${w.gesperrt ? "✅ Freigeben" : "🚫 Sperren (ruhen lassen)"}</button>` : ""}${saatZeit && w.saatJz !== jzJetzt() && w.ruhtBis == null ? (P.length ? `<button class="mini-knopf" disabled title="Erst die Pferde von dieser Weide holen">🌱 Nachsäen – erst Pferde runterholen</button>` : `<button class="mini-knopf" data-wsaeen="${w.wid}">🌱 Nachsäen · ${fmt(Math.round(GRAS.nachsaeen * w.ha))}</button>`) : ""}<button class="mini-knopf" data-wabbau="${w.wid}">🧨 Zaun abbauen · ${fmt(zaunAbbauPreis(w))}</button>`}</span></span></div>`; }).join("")}${neuBau}`;
   }
@@ -14635,10 +14650,16 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       if (z >= 0) { inBoxUmziehen(b, z); brief("Hofverwaltung", `${q.name} ist aus dem Offenstall gezogen`, `<b>${esc(q.name)}</b> ist jetzt ${alterJahre(q)} Jahre alt und damit zu alt für den Aufzucht-Offenstall – ${pron(q).er} steht jetzt in Box ${z + 1}.`, { pferde: [q] }); }
       else if (q.offenHinweis !== jzJetzt()) { q.offenHinweis = jzJetzt(); brief("Hofverwaltung", `Box für ${q.name} gesucht`, `<b>${esc(q.name)}</b> ist zu alt für den Aufzucht-Offenstall, aber es ist keine Box frei. Bitte eine Box frei machen oder bauen (Hofverwaltung → Hof → Bauen).`, { pferde: [q] }); } });
   }
+  // v688 (Dome 23.10.): die Weide sieht aus, wie sie ist – wenig Gras → gelbbraun und kahl, Matsch → braun (im Winter schwächer, Schnee bleibt hell)
+  function hexMix(a, b, t) { const x = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); const A = x(a), B = x(b); return "#" + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, "0")).join(""); }
+  function weideFarbe(basis, w, s) {
+    if (!w) return basis; const k = s === 3 ? 0.5 : 1, kahl = Math.max(0, Math.min(1, (60 - w.gras) / 60)) * 0.65 * k, matsch = Math.max(0, Math.min(1, (w.matsch || 0) / 100)) * 0.85 * k;
+    return hexMix(hexMix(basis, "#bfa766", kahl), "#7b5a3a", matsch);
+  }
   function weideBildSVG(p) {
     const box0 = boxVon(p) || B(), os = !p.weide && !paddockVon(p) && !!(box0 && box0.offen);   // H7 (a): Aufzucht-Offenstall
     const sand = os || (!!paddockVon(p) && !p.weide), w = sand ? null : weideVon(p), g = sand && !os ? paddockVon(p) : null, s = datum().s, box = box0;
-    const boden = sand ? "#dcc38e" : ["#8fcf6a", "#7cbf55", "#a8b85a", "#e9eef2"][s], boden2 = sand ? "#c9ad74" : ["#6fb24c", "#5fa33f", "#8c9a45", "#cfd8de"][s];
+    const boden = sand ? "#dcc38e" : weideFarbe(["#8fcf6a", "#7cbf55", "#a8b85a", "#e9eef2"][s], w, s), boden2 = sand ? "#c9ad74" : weideFarbe(["#6fb24c", "#5fa33f", "#8c9a45", "#cfd8de"][s], w, s);   // v688 (Dome): Gras und Matsch färben die Weide
     const andere = (os ? offenPferde() : sand ? paddockPferde(g) : w ? weidePferde(w) : []).filter(q => q !== p).slice(0, 5);
     const malen = (q, x, y, sc, spiegel) => { const z = zeichnePferd(q.rasse, fb(q), { alterStufe: stufeKey(q), seed: q.id, geschlecht: q.geschlecht, maehne: q.maehne, schopf: q.schopf, typ: q.typ, ...kopfOpt(q, [p, ...andere]), haltung: haltungFuer(q), statisch: 1 });   // v380 (Dome): Kopf hängt auch auf der Koppel wie in der Box
       const cx = (z.box.minX + z.box.maxX) / 2; return `<g pointer-events="none" transform="translate(${(x - spiegel * cx * sc).toFixed(1)},${y}) scale(${(spiegel * sc).toFixed(4)},${sc.toFixed(4)})">${z.svg}</g>`; };
@@ -15151,6 +15172,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Platz teilen (v386):</b> Reitest du auf Reitplatz oder Halle, während Einsteller dort reiten, stört das niemanden. Longieren, Doppellonge oder Freiarbeit braucht viel Platz: jeder Einsteller dort Zufriedenheit −2 (einmal am Tag). Tests bei Pensionspferden (z. B. Endoskopie) entscheidet und bezahlt der Besitzer: „📞 Besitzer informieren“ → Zusage mit Chance 30 % + 60 % × Eifer (Zufriedenheit +1); nicht informiert lässt er den Test nach 2 Tagen mit Chance 15 % × Eifer je Tag selbst machen (Zufriedenheit −1, Brief). „Abwarten“: nach einer Jahreszeit kann man wieder anrufen. Ohne gebuchtes „behandeln“ behandelt der Besitzer.</p>
       <p><b>Nachträge v414–v422:</b> Turnier-Verfassungsprüfung am Turniertag (<code>TURNIER_GRENZE</code>, ab diesem Grad durchgefallen): ${Object.entries(TURNIER_GRENZE).map(([k, g]) => `${KRANK[k] ? KRANK[k].n : k} ${g >= 99 ? "nie" : g}`).join(", ")}; Fohlenschau prüft auch das Fohlen, krank abmelden bis zum Vortag → Nenngeld zurück, 3 Fohlenschauen je Sommer/Herbst. Boxenruhe zählt nicht mehr, wenn das Pferd gesund ist. Futterexperte bei Zustand 6 / 7 / ab 8: ${[0.87, 0.85, 0.8].map(x => Math.round(x * 100) + " %").join(" / ")} der Energie, Stroh bis 45 %. Abfohlbox: Einzug in den letzten 30 % der Jahreszeit vor der Geburt (mind. 1 Tag), Auszug, sobald kein Fohlen mehr dabei ist. Heu/Raufutter verkaufen zu ${Math.round(HEU_VERKAUF * 100)} % des Einkaufspreises. Weidestreit: ab dem 3. Streit (oder Verletzung, zwei Hengste) „verstehen sich nicht“. Jahreswechsel: erst Einnahmen, dann Ausgaben, dann Kündigungen, Auktions-Zuschläge und Fohlen-Umzüge. Einsteller buchen Extras (Zufriedenheit ≥ 65, 20–40 %/Jz) und kündigen sie (unzufrieden < 45: 30 %, Medizin nach Genesung 40 %, sonst 6 %). Besitzer bringt Pensionspferd bei ≤ 30 % Gesundheit selbst in die Klinik (zahlt, Zufriedenheit −15, Ansehen −3). Neuer Pensionspreis gilt für Bestandskunden ab der nächsten Jahreszeit: Annahme-Chance 0,95 − 2,5 × Erhöhung + (Zufriedenheit − 60)/80 (5–97 %), sonst 60 % verhandeln (Angebot 35–65 % der Erhöhung), 40 % Kündigung; „bei neuem Preis bleiben“ nimmt nur 30 % an; Senkung immer, Zufriedenheit +2. Boxenruhe: Schritt führen −2 Box-Tage und +2 Wohlbefinden, Paddockbox −1 / +1. Azubi vergisst Boxen anfangs an ${Math.round(AZUBI_FEHLER[0] * 100)} % der Tage, mit Wissen bis ${Math.round(AZUBI_FEHLER[1] * 100)} % (ohne anwesenden Ausbilder +10 %); ein angestellter Ausbilder holt es zu ${Math.round(AUSBILDER_NACHHOLEN * 100)} % nach; vergessene Boxen stehen oben im Stall und in der Versorgung. OPs: ${Object.values(OP_KLINIK).map(O => `${O.n} ${fmt(O.preis)}, ${O.tage} Tage, Erfolg ${Math.round(O.erfolg * 100)} % (sonst Grad −1)`).join("; ")}.</p>
       <p><b>Futterwunsch der Einsteller (v385/v406):</b> ändert sich höchstens einmal je Jahreszeit (neue Umstände, eigener Futterexperte oder ein angenommener Vorschlag von dir). Ist der Wunsch fehlerhaft, kannst du trotzdem jederzeit mit dem Besitzer sprechen. Wer sich einmal vom Futterexperten beraten ließ (eigener Experte oder dein Experten-Vorschlag angenommen), macht bei neuen Umständen keine Fütterungsfehler mehr.</p>
+      <p><b>Weiden: Optik, Mäh-Hinweis, Futterwarnung (v688):</b> Die Weide im Koppel-Bild und im Hofplan färbt sich nach Zustand (<code>weideFarbe</code>: wenig Gras → gelbbraun bis 65 %, Matsch → braun bis 85 %, im Winter halb so stark). Blauer Rahmen um die Weide, die für Stallbursche/Azubi gewählt ist (<code>weidenMaZiel</code>: Pferd mit Weidegang und eigener Weidenwahl). Futterwiese zeigt, wann der Bauer mäht und warum nicht (<code>maehHinweis</code>: 1. Schnitt Sommer Tag 1, 2. Schnitt Tag ⌈0,7 × Tage je Jahreszeit⌉ und 3. Schnitt Herbst Tag 1 nur mit mindestens ${WIESE.schnitt2Gras} % Gras). Futterkammer: Warnbrief und Hinweis ab weniger als ${FUTTER_WARN_TAGE} Tagen Vorrat (vorher 3; Lieferung braucht 1 Tag).</p>
       <p><b>Kontaktpferde (v686):</b> bei einem erkannten ansteckenden Befund zeigt die Versorgung die Pferde mit Kontakt (<code>kontaktListe</code>: gleiche Weide, Nachbarbox, gleiche Hände gestern – nur eigene Pferde ohne die Krankheit) und bündelt vorhandene Aktionen: „Alle in Quarantäne“ (eine Jahreszeit) und Blutbild für alle (klein ${fmt(VORSORGE.blutKlein)} / groß ${fmt(VORSORGE.blutGross)} je Pferd, eine Sammelrechnung). Keine neue Zwangsregel – der Spieler entscheidet.</p>
       <p><b>Plan des Tierarztes in der Versorgung (v685):</b> Karte „📋 Plan des Tierarztes“ (<code>befundPlanHTML</code>) für jeden vom Tierarzt festgestellten Befund: Heilungsdauer oder „♾️ heilt nicht mehr ganz“ (chronisch), Urteil zum Reiten (<code>reitenUrteil</code>: Schadenswert Reiten ≥ ${REIT_NEIN} = nicht reiten, ≥ ${REIT_LEICHT} = nur leichte Arbeit, sonst möglich), tägliche Behandlung (<code>PLAN</code>), Bewegung, die hilft (Schritt führen, Longieren, Boden-/Freiarbeit) und Verbote (<code>BEWEG_NICHT</code>). Pferde außer Haus (Aufzucht/Ausbildung) und Fohlen sind in Hofverwaltung → Pferde antippbar (Steckbrief mit Rücksprung).</p>
       <p><b>Anbau und Teil-Umbau (v682):</b> Anbauten (Boxen, Paddockboxen, Quarantäne, Abfohlstall, Sandpaddock-Plätze) und Weide-Erweiterungen stehen unter Bauen in der Zeile des Hauptgebäudes als „+x“ mit eigener Stufe, Zustand und Knöpfen; im Hofplan haben sie keine eigene Zeichnung (Zahl „6+2“ am Stall). Umbau auf die nächste Stufe: bei mehr Boxen als ein Anbau-Schritt wählbar, wie viele Boxen (in Schritten von 2 bzw. 1); dann werden zuerst freie Boxen, danach eigene, zuletzt Einsteller-Boxen zu einem eigenen Teil („umgebaut“), Preis je Box (Unterschied der Box-Preise + ${Math.round(UMBAU_AUFSCHLAG * 100)} %).</p>

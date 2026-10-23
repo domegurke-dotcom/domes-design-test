@@ -1099,7 +1099,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "732";
+  const SPIEL_VERSION = "733";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1107,12 +1107,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=732"></script>
-<script src="pferd.js?v=732"></script>
-<script src="boxstufen.js?v=732"></script>
-<script src="kopfneu.js?v=732"></script>
-<script src="waschbild.js?v=732"></script>
-<script src="avatare.js?v=732"></script>
+<script src="lz-string.min.js?v=733"></script>
+<script src="pferd.js?v=733"></script>
+<script src="boxstufen.js?v=733"></script>
+<script src="kopfneu.js?v=733"></script>
+<script src="waschbild.js?v=733"></script>
+<script src="avatare.js?v=733"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -1682,7 +1682,7 @@
       ...kopfOpt(p), statisch: 1 };
     const pk = zeichnePferd(p.rasse, fb(p), { ...o, punkte: 1 }), z = zeichnePferd(p.rasse, fb(p), o);
     // Ausschnitt wie in der Enzyklopädie: Ohren bis kurz unter das Maul, Nase links
-    const ro = rand ? 2 : 0, rl = rand ? 7 : 0, y0 = pk.genick.y - 15 - ro, h = pk.nase.y + 15 - y0, w = h, x0 = pk.nase.x - 4 - rl;   // oben Platz für lange Ohren · rand: Whiteboard – Kopf füllt mehr vom Rahmen, links 7 und oben 2 Einheiten Luft (Nase und Ohren bleiben ganz)
+    const ro = 2 + (o.alterStufe === "fohlen" ? 14 : 0), rl = 7, y0 = pk.genick.y - 15 - ro, h = pk.nase.y + 15 - y0, w = h, x0 = pk.nase.x - 4 - rl;   // oben Platz für lange Ohren · v733 (Dome): überall links 7 und oben 2 Einheiten Luft (Pferdehändler, Deckanzeigen, Whiteboard) – sonst wurde die Nase abgeschnitten
     return `<svg viewBox="${[x0, y0, w, h].map(x => x.toFixed(1)).join(" ")}" preserveAspectRatio="xMidYMid meet">${ohneAnim(z.svg)}</svg>`;
   }
   const ZUCHTALTER = 12;   // ab 3 Jahren (12 Jahreszeiten) für Stute und Hengst
@@ -2797,10 +2797,12 @@
   function musterMerkmal(p, g, M) { if (!p.gen && !p.ex) return null; const gk = ["To", "Sb", "Sw"].find(k => hat(g, k)); if (!gk) return null; if (musterStufeVon(p) < 3) return null;
     const traeger = M && M.some(m => m.k === gk) ? 1 : Math.max(.01, 1 - genotypProb(p.rasse, gk, { [gk]: [GEN[gk][3], GEN[gk][3]] }, p.geschlecht === "Hengst"));   // Anteil der Rasse mit dem Scheckgen (zählt das Gen selbst schon als seltenes Merkmal, nicht doppelt)
     return { k: "MUSTER", q: Math.max(1e-5, musterQ(p.rasse) * traeger), al: "fast ganz weiß, nur Kopf und wenig Rest farbig" }; }
+  // v733 (Dome): auffällige Gene („Traumfarben“, SCHOEN_GENE) zählen in jeder Rasse als seltenes Merkmal, sobald sie unter der Stufe „selten“ (3 %) liegen – auch wenn die Rassen-Schwelle niedriger ist (z. B. Gelbfalbe und Mausfalbe beim Fjord)
+  const genGrenze = (rasse, k) => { const g0 = SELTEN_MERKMAL_RASSE[rasse] || SELTEN_MERKMAL; return SCHOEN_GENE.includes(k) || (rasse === "fjord" && (k === "E" || k === "A")) ? Math.max(g0, SELTEN_STUFEN[1].bis) : g0; };
   function seltenGen(p) {   // null = keine Gen-Rarität (Mischlinge zählen nicht)
     if (!p || !p.rasse || !(p.gen || p.farbe)) return null; if (p.anteile && reinAnteil(p.anteile, p.rasse) < 99) return null;
     const g = genVon(p), hengst = p.geschlecht === "Hengst", M = [];
-    GENE.forEach(([k]) => { if (k === "Dm") return; const q = Math.max(1e-6, genotypProb(p.rasse, k, g, hengst)); if (q < (SELTEN_MERKMAL_RASSE[p.rasse] || SELTEN_MERKMAL)) M.push({ k, q, al: (g[k] || []).slice().sort().join("/") }); });
+    GENE.forEach(([k]) => { if (k === "Dm") return; const q = Math.max(1e-6, genotypProb(p.rasse, k, g, hengst)); if (q < genGrenze(p.rasse, k)) M.push({ k, q, al: (g[k] || []).slice().sort().join("/") }); });
     schimmelMerkmale(p, g).forEach(m => M.push(m));
     const mm = musterMerkmal(p, g, M); if (mm) M.push(mm);
     return M.length ? { p: M.reduce((a, m) => a * m.q, 1), merkmale: M } : null;
@@ -4594,7 +4596,7 @@
             if (!ns) return `<p class="text" style="margin:8px 0 4px">✂️ <b>Schopf</b> · ${esc(p.name)} hat von Natur aus keinen Schopf.</p>`;
             const sj = SCHOEPFE.findIndex(m => m[0] === (p.schopf || ns)), rest = Math.max(1, (2 * tpj()) - (spiel.tag - (p.schopfSeit || spiel.tag)));
             if (sj < 0) return `<p class="text" style="margin:8px 0 4px">✂️ <b>Schopf</b> · ${esc(p.name)} hat noch keinen Schopf. Er wächst in ${rest} ${rest === 1 ? "Tag" : "Tagen"}.</p>`;
-            const pk = zeichnePferd(p.rasse, fb(p), { punkte: 1, seed: p.id, ...kopfOpt(p) }), y0 = pk.genick.y - 15, hh = pk.nase.y + 14 - y0, vb = [pk.nase.x - 4, y0, hh, hh].map(x => x.toFixed(1)).join(" ");   // ganzer Kopf mit Ohren und Maul
+            const pk = zeichnePferd(p.rasse, fb(p), { punkte: 1, seed: p.id, ...kopfOpt(p) }), y0 = pk.genick.y - 17, hh = pk.nase.y + 15 - y0, vb = [pk.nase.x - 11, y0, hh, hh].map(x => x.toFixed(1)).join(" ");   // ganzer Kopf mit Ohren und Maul
             return `<p class="text" style="margin:8px 0 4px">✂️ <b>Schopf schneiden</b> · aktuell: ${SCHOEPFE[sj][1]}. ${sj === 0 ? "Kürzer geht es nicht mehr." : "Wähle die neue Länge:"}<br><small>${sj === SCHOEPFE.length - 1 ? "Der Schopf hat die maximale Länge erreicht." : `Wächst in ${rest} ${rest === 1 ? "Tag" : "Tagen"} eine Stufe länger.`}</small></p>
             <div class="kacheln">${SCHOEPFE.map(([id], i) => {
               const z = zeichnePferd(p.rasse, fb(p), { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, schopf: id, ...kopfOpt(p), statisch: 1 });
@@ -4718,7 +4720,7 @@
         <button class="knopf" id="naechsteJZ" style="width:100%;margin-top:8px">Bis zur nächsten Jahreszeit</button>
         
         <p class="text" style="margin:14px 0 4px">🐴 <b>Test: Kopfform</b> · Domes neue Köpfe (aktuell: ${p.nase === "spiel" ? "Spielkopf" : kopfName(kopfVon(p))})</p>
-        <div class="kacheln klein">${(() => { const akt = p.nase === "spiel" ? "spiel" : kopfKey(kopfVon(p)), pk = zeichnePferd(p.rasse, fb(p), { punkte: 1, seed: p.id }), vb = [pk.nase.x - 4, pk.genick.y - 16, 50, 52].map(x => x.toFixed(1)).join(" ");
+        <div class="kacheln klein">${(() => { const akt = p.nase === "spiel" ? "spiel" : kopfKey(kopfVon(p)), pk = zeichnePferd(p.rasse, fb(p), { punkte: 1, seed: p.id }), vb = [pk.nase.x - 11, pk.genick.y - 18, 54, 54].map(x => x.toFixed(1)).join(" ");
           return Object.keys(KOPF_NEU.formen).concat("spiel").map(id => `<button class="kachel ${id === akt ? "aktuell" : "klickbar"}" data-nase="${id}">
             <svg class="mini" viewBox="${vb}" style="background:#fff">${zeichnePferd(p.rasse, fb(p), { seed: p.id, geschlecht: p.geschlecht, maehne: p.maehne, schopf: p.schopf, statisch: 1, ...(id === "spiel" ? { eigenKopf: false } : { kopfform: id }) }).svg}</svg>
             <b>${id === "spiel" ? "Spielkopf" : kopfName(kopfAusKey(id))}</b><small>${id === akt ? "aktuell" : "auswählen"}</small></button>`).join(""); })()}</div>`;
@@ -11497,8 +11499,8 @@
       const o = { k: { fore: 0 }, seed: "enz", maehne: "kurz", statisch: 1 };
       const pk = zeichnePferd(kat.rasse, farbe || kat.farbe, { ...o, punkte: 1 });
       const z = zeichnePferd(kat.rasse, farbe || kat.farbe, { ...o, eigenKopf: eigen, ...(zo || {}) });
-      const y0 = pk.genick.y - 9, hh = pk.nase.y + 15 - y0, ww = hh * 58 / 52;
-      return `<svg viewBox="${[pk.nase.x - 4, y0, ww, hh].map(x => x.toFixed(1)).join(" ")}">${ohneAnim(z.svg)}</svg>`;
+      const y0 = pk.genick.y - 9, hh = pk.nase.y + 15 - y0, ww = hh * 58 / 52 + 7;   // v733: links mehr Luft, die Nase wurde angeschnitten
+      return `<svg viewBox="${[pk.nase.x - 11, y0, ww, hh].map(x => x.toFixed(1)).join(" ")}">${ohneAnim(z.svg)}</svg>`;
     }
     const z = zeichnePferd(kat.rasse, farbe || kat.farbe, { eigenKopf: kat.ansicht === "kopf" ? false : undefined, k: kopfBild ? { fore: 0, ...(kOv || {}) } : (kOv || undefined), abzeichen: abz || undefined, seed: "enz", maehne: kopfBild ? "kurz" : undefined, nurBein: kat.ansicht === "beine", ...(zo || {}) });
     const b = z.box, w = b.maxX - b.minX, h = -b.minY;
@@ -12420,7 +12422,7 @@
   // ---------- R2/R3 (PLAN-RARITAETEN.md, Dome 19.10.2026): Raritäten-Markt ----------
   // Marktjahr wechselt zu Beginn jedes Sommers. Je Rasse 2 reinrassige Raritäten (6–8 Jahre, Hengst/Stute), immer gleich aus dem Zufall erzeugt (nie gespeichert – ein Pferd ≈ 12 KB).
   // Gespeichert: spiel.rar = { mj Marktjahr, karte (Jahreskarte bezahlt), wahl {rasse: Hauptmerkmal}, vor {rasse: Merkmal des Vorjahrs}, auk {id: Auktion ohne Pferd}, weg [verkaufte ids], salz }.
-  const RAR = { schimmel: 0.08, fastweiss: 0.12, eintritt: 25, alter: [6, 8], art: [0.6, 0.3, 0.1], stufe: [0.92, 0.06, 0.02], faktorGen: [5, 12, 30], faktorLeist: [2, 4, 8], mindest: [10000, 25000, 60000], absender: "Verband seltener Pferdefarben" };
+  const RAR = { traum: 0.75, schimmel: 0.08, fastweiss: 0.12, eintritt: 25, alter: [6, 8], art: [0.6, 0.3, 0.1], stufe: [0.92, 0.06, 0.02], faktorGen: [5, 12, 30], faktorLeist: [2, 4, 8], mindest: [10000, 25000, 60000], absender: "Verband seltener Pferdefarben" };
   const RAR_BAND = [null, [0.01, 0.03], [0.001, 0.01], [0.0001, 0.001]];   // Wahrscheinlichkeit je Ziel-Stufe (selten, sehr selten, einzigartig)
   // Textbausteine je Gen: [Besonderheit, Risiko (leer = keins)] – die Wirkung steht in GENE[k][4]
   const RAR_GEN = {
@@ -12441,24 +12443,28 @@
     const L = [], grenze = SELTEN_MERKMAL_RASSE[rasse] || SELTEN_MERKMAL;
     GENE.forEach(([k, , dom, rez]) => { if (k === "Dm" || (k === "Br1" && hengst)) return; const al = k === "A" && (RASSE_GENE[rasse] || {}).At != null ? [dom, "At", rez] : [dom, rez];
       for (let i = 0; i < al.length; i++) for (let j = i; j < al.length; j++) { const g = [al[i], al[j]]; if ((k === "O" || k === "W") && g[0] === dom && g[1] === dom) continue;
-        const q = genotypProb(rasse, k, { [k]: g }, false); if (q > 0 && q < grenze) L.push({ k, g, q, key: k + ":" + g.join("/") }); } });
+        const q = genotypProb(rasse, k, { [k]: g }, false); if (q > 0 && q < genGrenze(rasse, k)) L.push({ k, g, q, key: k + ":" + g.join("/") }); } });
     return L;
   }
   const RAR_HAEUFIG = (rasse, k) => { const dom = GEN[k][2], rez = GEN[k][3], al = k === "A" && (RASSE_GENE[rasse] || {}).At != null ? [dom, "At", rez] : [dom, rez]; let best = null;   // häufigster Genotyp (für die übrigen Gene)
     for (let i = 0; i < al.length; i++) for (let j = i; j < al.length; j++) { const g = [al[i], al[j]], q = genotypProb(rasse, k, { [k]: g }, false); if (!best || q > best.q) best = { g, q }; } return best.g; };
   function rarGenSetzen(h, wahl) {   // gewählte Genotypen setzen, alle anderen seltenen auf den häufigsten Genotyp der Rasse
     const g = genVon(h), grenze = SELTEN_MERKMAL_RASSE[h.rasse] || SELTEN_MERKMAL, grau = wahl.find(x => x.k === "GRAU"), fw = wahl.find(x => x.k === "MUSTER"); if (grau || fw) wahl = wahl.filter(x => x !== grau && x !== fw);
-    GENE.forEach(([k]) => { if (k === "Dm") return; const w = wahl.find(x => x.k === k); if (w) { g[k] = w.g.slice(); return; } if (genotypProb(h.rasse, k, g, h.geschlecht === "Hengst") < grenze) g[k] = RAR_HAEUFIG(h.rasse, k); });
+    GENE.forEach(([k]) => { if (k === "Dm") return; const w = wahl.find(x => x.k === k); if (w) { g[k] = w.g.slice(); return; } if (genotypProb(h.rasse, k, g, h.geschlecht === "Hengst") < genGrenze(h.rasse, k)) g[k] = RAR_HAEUFIG(h.rasse, k); });
     if (grau) { g.G = ["G", "g"]; if (genotypProb(h.rasse, "E", { E: ["E", "E"] }, false) >= grenze) g.E = ["E", "E"]; const ex = exVon(h); Object.assign(ex, grau.kombi.werte); h.ex = ex; }   // v726: Schimmel (G/g, wenn möglich schwarzbasiert E/E) mit den gewählten Anlagen
+    if (wahl.some(x => x.k === "Z") && !wahl.some(x => x.k === "E") && genotypProb(h.rasse, "E", { E: ["E", "E"] }, false) >= grenze) g.E = ["E", "E"];   // v733: Silber sieht man nur auf schwarzem Pigment – dort, wo es geht, schwarzbasiert
     if (fw) { g[fw.gen] = [GEN[fw.gen][2], GEN[fw.gen][3]]; const ex = exVon(h); ex.muster = .99; h.ex = ex; }   // v726: Scheckgen mit höchster Ausprägung „fast weiß“
     genNorm(g); h.farbe = farbeAus(g, h.ex); h.genFuer = h.farbe; h.grauHinweis = elternGrau(h);
   }
-  function rarGenWahl(rasse, hengst, st, r, vorKey) {   // ein Genotyp oder zwei zusammen, deren Wahrscheinlichkeit im Band der Ziel-Stufe liegt; die Hauptmerkmale des Vorjahrs nicht noch einmal (außer die Rasse hat keine anderen)
+  // v733 (Dome): „Traumfarben“ – auf dem Raritäten-Markt bevorzugt die auffälligen seltenen Gene (Dominant White, Creme, Silber, Splash, Sabino, Leopard, Roan, Tobiano, Overo, Brindle, Falbe; beim Fjord auch Rotfalbe/Mausfalbe), je Rasse die, die dort selten sind – nicht Sooty, Flachs oder At/At
+  const SCHOEN_GENE = ["W", "Cr", "Z", "Sw", "Sb", "Lp", "Rn", "To", "O", "Br1", "D"], rarSchoen = (rasse, x) => SCHOEN_GENE.includes(x.k) || (rasse === "fjord" && (x.k === "E" || x.k === "A"));
+  function rarGenWahl(rasse, hengst, st, r, vorKey, schoen) {   // ein Genotyp oder zwei zusammen, deren Wahrscheinlichkeit im Band der Ziel-Stufe liegt; die Hauptmerkmale des Vorjahrs nicht noch einmal (außer die Rasse hat keine anderen)
     const vor = [].concat(vorKey || []), G = rarGenotypen(rasse, hengst), ohne = G.filter(x => !vor.includes(x.key)), L = ohne.length ? ohne : G; if (!L.length) return null;
-    const [lo, hi] = RAR_BAND[st], opt = [];
-    L.forEach(a => { if (a.q > lo && a.q <= hi) opt.push([a]); });
-    L.forEach((a, i) => L.slice(i + 1).forEach(b => { if (a.k !== b.k && a.q * b.q > lo && a.q * b.q <= hi) opt.push([a, b]); }));
-    if (opt.length) return opt[Math.floor(r() * opt.length)];
+    const [lo, hi] = RAR_BAND[st], waehle = LL => { const opt = [];
+      LL.forEach(a => { if (a.q > lo && a.q <= hi) opt.push([a]); });
+      LL.forEach((a, i) => LL.slice(i + 1).forEach(b => { if (a.k !== b.k && a.q * b.q > lo && a.q * b.q <= hi) opt.push([a, b]); }));
+      return opt.length ? opt[Math.floor(r() * opt.length)] : null; };
+    const gew = (schoen ? waehle(L.filter(x => rarSchoen(rasse, x))) : null) || waehle(L); if (gew) return gew;
     const alle = L.map(a => [a]).concat(...L.map((a, i) => L.slice(i + 1).filter(b => a.k !== b.k).map(b => [a, b]))), pr = w => w.reduce((x, m) => x * m.q, 1);   // nichts im Band: die seltenste Möglichkeit knapp über dem Band, sonst die seltenste überhaupt
     const unter = alle.filter(w => pr(w) <= hi).sort((x, y) => pr(y) - pr(x)); return unter[0] || alle.sort((x, y) => pr(x) - pr(y))[0];
   }
@@ -12490,7 +12496,7 @@
       if (rg() < RAR.schimmel) { const c = SCHIMMEL_KOMBI[0]; if (!([].concat(vorKey || [])).includes("GRAU:" + c.id)) wGrau = [{ k: "GRAU", g: ["G", "g"], q: c.q, key: "GRAU:" + c.id, kombi: c }]; } }
     if (!wGrau && art !== "leist") { const gk = ["To", "Sb", "Sw"].filter(k => ((RASSE_GENE[rasse] || {})[k] || 0) > 0).sort((a, b) => RASSE_GENE[rasse][b] - RASSE_GENE[rasse][a])[0];   // v726 (Dome): „fast weiß“ als Rarität – Rassen mit Scheckgen
       if (gk) { const rf = zufall("rar-fastweiss-" + mj + rasse + i + ((spiel.spieler && spiel.spieler.name) || "") + (spiel.rar && spiel.rar.salz || "")); if (rf() < RAR.fastweiss && musterQ(rasse) * (1 - genotypProb(rasse, gk, { [gk]: [GEN[gk][3], GEN[gk][3]] }, false)) <= SELTEN_STUFEN[1].bis && !([].concat(vorKey || [])).includes("MUSTER:fast")) wGrau = [{ k: "MUSTER", gen: gk, q: musterQ(rasse), key: "MUSTER:fast" }]; } }   // Stufe ergibt sich aus der echten Seltenheit des Pferdes (Gen × Ausprägung)
-    if (art !== "leist") { const w = wGrau || rarGenWahl(rasse, g === "Hengst", art === "beides" ? Math.max(1, st - 1) : st, r, vorKey); if (w) { rarGenSetzen(h, w); haupt = w[0].key; } } else rarGenSetzen(h, []);
+    if (art !== "leist") { const w = wGrau || rarGenWahl(rasse, g === "Hengst", art === "beides" ? Math.max(1, st - 1) : st, r, vorKey, zufall("rar-traum-" + mj + rasse + i + ((spiel.spieler && spiel.spieler.name) || "") + (spiel.rar && spiel.rar.salz || ""))() < RAR.traum); if (w) { rarGenSetzen(h, w); haupt = w[0].key; } } else rarGenSetzen(h, []);
     if (art !== "gen") rarLeistung(h, art === "beides" ? Math.max(1, st - 1) : st, r);
     h.tests = { farbe: true, abst: true, krank: true }; h.gentest = true; if ((DMRT3[rasse] || 0) > 0) h.tests.gang = true;
     h.rarArt = art; h.rarHaupt = haupt; h.pflege = erzeugePflege(h); h.pflege.gesundheit = Math.max(90, h.pflege.gesundheit);

@@ -15,7 +15,24 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Team · **An:** Claude Pro (oder neue Team-Sitzung) · **Stand:** v678, 23.10.2026
+**Von:** Claude Team · **An:** Claude Pro (oder neue Team-Sitzung) · **Stand:** v682, 23.10.2026
+
+### Nachtsitzung 23.10. – Rest der Wunschliste (Opus-Teil fertig, v679–v682, alles auf `main`)
+| Punkt | Stand |
+|---|---|
+| Whiteboard (Mitarbeiter auf Boxen, Weideplan Tag A/B, Freund/Feind, Tutorial fort Kap. „Whiteboard“, Blasen, Einsteiger-Wissen, bzn, Test) | ✅ v679 |
+| Pensionsboxen/Paddockboxen einstellbar + eigener Paddockbox-Aufpreis | ✅ v680 |
+| Sandpaddock nach Fläche/Pferdegröße, vergrößern, Überfüllung mit Folgen | ✅ v681 |
+| Anbau als „+x“, Umbau mit wählbarer Boxenzahl, Hofplan ohne eigene Anbau-Zeichnung | ✅ v682 |
+| Namen anklickbar mit Steckbrief + Rücksprung (auch außer Haus) | ⏳ als Nächstes (Sonnet) |
+| Befund „kann noch geritten werden / heilt nicht mehr“, ganzer Behandlungsplan in der Versorgung | ⏳ Sonnet |
+| Pflichttest/Quarantäne für Kontaktpferde | ⏳ Sonnet |
+| Info, was ein Reitplatz-Ausbau bringt | ⏳ Sonnet |
+| Weidefarbe nach Zustand, Rahmen um Mitarbeiter-Weide, Hinweis Bauer mäht, rechtzeitige Futter-Warnung | ⏳ Sonnet |
+| „wirkt lockerer“ deutlicher, Dreck auf dunklen Pferden, Glanz nach dem Duschen | ⏳ Sonnet |
+| Besitzer sauer bei vergessenem Mähne/Schopf-Schneiden | ⏳ Sonnet |
+- **Dome hat (23.10.) gesagt:** mit Opus anfangen, bei den Sonnet-Punkten anhalten und Bescheid geben; nach dem Umstellen weitermachen. → Opus-Teil ist fertig, **wartet auf Umstellen auf Sonnet und „weiter“**.
+- Selbst gesetzte Zahlen und zwei schon vorher rote Tests stehen in `OFFENE-FRAGEN.md` (Abschnitt „Nachtsitzung 23.10.“). Am Ende: alle Fragen gemeinsam an Dome, dann fragen, ob ein Update-Fenster kommen soll (seit v677 nichts ausgewählt).
 
 ### Sitzung 23.10. (v658–v676, alles auf `main`, alle kleinen Tests grün; große Tests nicht gelaufen – vorher Dome nach der BILDER-Variante fragen)
 - v658 Stallart nach Schonfrist nur Mitteilung · v659 Aufnahme speichert Zustand je Nacht + WARNUNGen · v660 Klinik entlässt erst gesund · v661 alle Zäune verfallen · v662 Preisvorschlag 3 Tage, Heu-Verkaufskorb · v663 Stute mit liegendem Fohlen automatisch Boxenruhe · v664/665 Mitarbeiter äppeln/misten Weide + Sandpaddock, Wetter überall gleich · v666 Heilungsdauer · v667 Flächen nach echten Maßen + Kapazität der Reitanlagen · v668 Einsteller und Boxstufen · v669 Einstreu beim Pensionspferd nur mit Zustimmung · v670 Weidegang in der Morgenrunde · v671 Kolik-Stress ×1,5 (selbst gesetzt, realistisch) · v672/673 „einfach“ statt „baufällig“, 1 ha Bauland für alte Spielstände, Bauen mit Gruppen/„Alles reparieren“/Namen, Handwerker-Sammelbrief · v674 Besitzer-Sammelbriefe (`sammelEintrag`/`sammelSenden`, Aktion `fwalle`) · v675 Freunde +1 Wohlbefinden (`FREUND_WOHL`) · v676 Chemie je Paar: Feind ≥ 10, Freund < 2, Rest neutral.

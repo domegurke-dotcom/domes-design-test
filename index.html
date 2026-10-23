@@ -1055,7 +1055,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "662";
+  const SPIEL_VERSION = "663";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1063,11 +1063,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=662"></script>
-<script src="pferd.js?v=662"></script>
-<script src="boxstufen.js?v=662"></script>
-<script src="kopfneu.js?v=662"></script>
-<script src="waschbild.js?v=662"></script>
+<script src="lz-string.min.js?v=663"></script>
+<script src="pferd.js?v=663"></script>
+<script src="boxstufen.js?v=663"></script>
+<script src="kopfneu.js?v=663"></script>
+<script src="waschbild.js?v=663"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2195,7 +2195,7 @@
     f.herkunft = her;
     f.ahnen = ahnenAus(M, V);
     nrVon(f);
-    box.fohlen = f; delete M.traechtig;
+    box.fohlen = f; delete M.traechtig; fohlenBoxenruhe(box);
     if (M.einsteller) f.einsteller = M.einsteller;   // H5: Fohlen einer Pensionsstute gehört dem Besitzer
     M.nachkommen = (M.nachkommen || 0) + 1;
     const kind = { id: f.id, nr: nrVon(f), name: f.name, geschlecht: f.geschlecht, rasse: f.rasse, farbe: f.farbe, gen: f.gen, ex: f.ex, geb: { ...f.geb }, maehne: f.maehne };
@@ -4133,6 +4133,11 @@
   // Neugeborenes liegt (Dome): bei 4 Tagen je Jahreszeit 1 Tag, bei 7 Tagen 2 Tage, bei 10 Tagen 2–3 Tage (kräftige Fohlen 2, schwächere 3)
   const fohlenLiegeTage = f => tpj() <= 4 ? 1 : tpj() <= 7 ? 2 : ((f.werte && f.werte.anlage && f.werte.anlage.kraft) || 50) >= 50 ? 2 : 3;
   const fohlenLiegt = f => f.gebTag != null && spiel.tag - f.gebTag < fohlenLiegeTage(f);
+  function fohlenBoxenruhe(box) {   // v663 (Dome 23.10.): Stute mit zu jungem Fohlen (liegt noch) hat automatisch Boxenruhe, bis das Fohlen läuft; Turnier-Nennung bleibt möglich (der Turniertag liegt später)
+    const p = box && box.pferd; if (!p || box.tot) return; const liegt = fohlenNochLiegend(box);
+    if (liegt && !p.boxenruhe) { p.boxenruhe = true; p.boxenruheFohlen = true; }
+    else if (!liegt && p.boxenruheFohlen) { delete p.boxenruheFohlen; delete p.boxenruhe; }
+  }
   const fohlenNochLiegend = box => !!(box && box.fohlen && fohlenLiegt(box.fohlen));   // v392 (Dome): Stute bleibt drin, bis das Neugeborene steht und läuft
   const fohlenLiegtText = (p, box) => `<h3>🍼 Das Fohlen liegt noch</h3><p>${esc(box.fohlen.name)} ist gerade erst geboren und liegt noch im Stroh. ${esc(p.name)} bleibt beim Fohlen in der Box, bis ${pron(box.fohlen).er} sicher steht und läuft (noch ${(n => `${n} ${n === 1 ? "Tag" : "Tage"}`)(Math.max(1, fohlenLiegeTage(box.fohlen) - (spiel.tag - box.fohlen.gebTag)))}).</p>`;
   let letzterBesuch = "";
@@ -6115,9 +6120,10 @@
     spiel.boxen.forEach((box, i) => {
       const p = box.pferd; if (!p || p.klinik || box.tot || !p.pflege) return;
       const ort = p.weide ? "weide" : "box";
+      fohlenBoxenruhe(box);
       if (maehneVerfilzt(p)) wohlAendern(p, -0.5, "verfilzte Mähne");   // v533 (Dome)
-      if (p.boxenruhe && !befundListe(p).some(b => (PLAN[b.art] || []).includes("boxenruhe") || ((HILFT[b.art] || {}).boxenruhe || 0) > 0)) delete p.boxenruhe;   // v533 (Dome): Boxenruhe endet von selbst, sobald keine Krankheit mehr da ist, für die sie nötig ist
-      if (p.boxenruhe) { if (!befundListe(p).length) delete p.boxenruhe; else { const T = charE(p, "temperament"); wohlAendern(p, -1 - 3 * T.hoch, "Boxenruhe"); } }
+      if (p.boxenruhe && !p.boxenruheFohlen && !befundListe(p).some(b => (PLAN[b.art] || []).includes("boxenruhe") || ((HILFT[b.art] || {}).boxenruhe || 0) > 0)) delete p.boxenruhe;   // v533 (Dome): Boxenruhe endet von selbst, sobald keine Krankheit mehr da ist, für die sie nötig ist
+      if (p.boxenruhe && !p.boxenruheFohlen) { if (!befundListe(p).length) delete p.boxenruhe; else { const T = charE(p, "temperament"); wohlAendern(p, -1 - 3 * T.hoch, "Boxenruhe"); } }
       // neue Befunde (je Art höchstens einer gleichzeitig)
       befundRisiko(p, box, ort).forEach(([k, ch]) => { if (befundListe(p).some(b => b.art === k)) return;
         if (Math.random() < ch) { const K = KRANK[k]; if (ANSTECKEND[k]) anstecken(p, k, URSACHE[k](p, ort, box)); else befundNeu(p, k, k === "kolik" && Math.random() < KOLIK_SCHWER ? 4 : K.start[0] + Math.floor(Math.random() * (K.start[1] - K.start[0] + 1)), URSACHE[k](p, ort, box)); } });
@@ -6267,7 +6273,7 @@
     // Rezeptmittel gleich mitbringen
     const rezept = [...plan].filter(k => APO[k] && !APO[k].frei);
     rezept.forEach(k => { rz[k] = (rz[k] || 0) + REZEPT_DOSEN; posten.push({ text: `${p.name}: ${APO[k].n} – ${REZEPT_DOSEN} Dosen (Rezept)`, betrag: APO[k].preis * REZEPT_DOSEN }); });
-    if (plan.has("boxenruhe")) p.boxenruhe = true;
+    if (plan.has("boxenruhe")) { p.boxenruhe = true; delete p.boxenruheFohlen; }
     if (p.heissFutter >= spiel.tag - 1 && heissPferd(p)) zeilen.push(`<li>🌾 <b>Hinweis zum Futter:</b> ${esc(p.name)} wirkt sehr aufgedreht. Bei einem so ${charE(p, "nerven").tief > 0.3 ? "nervösen" : "temperamentvollen"} Pferd besser keinen Hafer oder Müsli – Energie lieber aus Rübenschnitzeln und Öl (Futterexperte fragen).</li>`);   // v335
     const planTxt = plan.size ? `<p><b>Behandlungsplan</b> – jeden Tag, bis es besser ist: ${[...plan].map(behName).join(", ")}.${rezept.length ? ` Rezeptmittel: je ${REZEPT_DOSEN} Dosen dagelassen (Dosis nach Gewicht: ${esc(p.name)} wiegt etwa ${gewichtAnzeige(p)} kg → Stufe ${dosisKlasse(gewichtAnzeige(p))}).` : ""}${plan.has("boxenruhe") ? " Boxenruhe ist eingetragen." : ""}</p>` : "";
     const bw = [...plan].filter(k => BEWEG.includes(k)), schadetIrgend = x => l.some(b => (SCHADET[b.art] || {})[x]), hilftIrgend = x => l.some(b => (HILFT[b.art] || {})[x]);
@@ -6524,7 +6530,7 @@
   // eine Behandlung durchführen (Spieler oder Mitarbeiter) – gibt den Text für die Meldung zurück
   function behandeln(p, k, stufe, wer) {
     const H = behHeute(p), A = AKTION[k], M = APO[k], ap = apotheke(), rz = rezeptVon(p);
-    if (k === "boxenruhe") { p.boxenruhe = !p.boxenruhe; return p.boxenruhe ? `🛏️ ${esc(p.name)} hat jetzt Boxenruhe.` : `🛏️ Boxenruhe für ${esc(p.name)} beendet.`; }
+    if (k === "boxenruhe") { delete p.boxenruheFohlen; p.boxenruhe = !p.boxenruhe; return p.boxenruhe ? `🛏️ ${esc(p.name)} hat jetzt Boxenruhe.` : `🛏️ Boxenruhe für ${esc(p.name)} beendet.`; }
     if (H.a[k]) return `${behName(k)} – heute schon gemacht.`;
     const mittel = A ? A.mittel : k;
     const vomBesitzer = fremd(p);   // H5 (Dome): Mittel für Pensionspferde kauft und bezahlt der Besitzer – nicht aus der Stallapotheke

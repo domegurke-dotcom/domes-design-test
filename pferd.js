@@ -328,15 +328,16 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const kopfAlter = stufe && KOPF_ALTER[stufe] ? stufe : null;
   const eigenKopf = ekWahl && typeof KOPF_NEU !== "undefined" ? (KOPF_NEU.formen[ekWahl] ? ekWahl : "gerade") : null;
   let ekMatrix = null, ohrL = null;
-  const ohrenHaengen = haltung === "tief" || liegt;
+  const grasen = haltung === "grasen", senk = grasen ? Math.max(0, Math.min(1, opt.senk == null ? 1 : opt.senk)) : 0, amBoden = grasen && opt.fressZiel !== "krippe";   // v723 (Dome): Fressen – opt.senk 0 (Kopf oben) bis 1 (Maul am Boden bzw. an der Krippe)
+  const ohrenHaengen = haltung === "tief" || liegt || (amBoden && senk > .5);
   const ohrenGeknickt = !ohrenHaengen && opt.ohren === "geknickt";
   const gl = w * 1.5;                       // Höhe der untergeschlagenen Beine beim Liegen
   const dLiegen = liegt ? Lg - gl : 0;      // so weit sinkt der Körper beim Liegen ab
   let a0 = (k.nAng - 20) * Math.PI / 180;
-  const N = k.neck * H * 1.1 * ({ waagerecht: 1.6, tief: 2.2, liegend: 2.2 }[haltung] ? 1 + Math.max(0, 0.56 - k.neck) * { waagerecht: 1.6, tief: 2.2, liegend: 2.2 }[haltung] : 1);
+  let N = k.neck * H * 1.1 * ({ waagerecht: 1.6, tief: 2.2, liegend: 2.2 }[haltung] ? 1 + Math.max(0, 0.56 - k.neck) * { waagerecht: 1.6, tief: 2.2, liegend: 2.2 }[haltung] : 1);
   const hl = k.head * H;
   const th0 = k.hAng * Math.PI / 180;
-  const th = th0 + ({ normal: 0, leicht: 8, waagerecht: 12, tief: 16, liegend: 16 }[haltung] || 0) * Math.PI / 180;
+  const th = th0 + ({ normal: 0, leicht: 8, waagerecht: 12, tief: 16, liegend: 16, grasen: (amBoden ? 34 : 20) * senk }[haltung] || 0) * Math.PI / 180;
   const maulY = (aa, tt) => Wn.y - N * Math.sin(aa) + (Math.sin(tt) * 1.01 + Math.cos(tt) * 0.14 * k.muz) * hl;
   const bugY = top + 0.45 * D;
   // Gesunde Pferde tragen den Kopf deutlich über der Waagerechten (hebt v. a. kurze, tief angesetzte Hälse wie beim Shetty)
@@ -352,7 +353,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // „leicht“: mindestens ~18° tiefer als normal (wichtig für Pferde mit kurzem, tief angesetztem Hals),
   // das Maul bleibt aber sichtbar über der Waagerechten
   const leichtY = Math.max(normY + 0.62 * (bugY - normY), Math.min(maulY(a0 - 18 * Math.PI / 180, th), bugY - 0.06 * H));
-  const zielY = { leicht: leichtY, waagerecht: bugY, tief: bugY + 0.5 * (-hh - 3 - bugY), liegend: -dLiegen - 2.5 }[haltung];
+  const zielY = { leicht: leichtY, waagerecht: bugY, tief: bugY + 0.5 * (-hh - 3 - bugY), liegend: -dLiegen - 2.5, grasen: amBoden ? null : normY + senk * (0.85 * bugY - normY) }[haltung];   // Krippe: Maul etwa auf Brusthöhe
   let a = a0;
   if (zielY != null) {
     // Messpunkt: bei „waagerecht“ die Mitte des Nasenrückens, sonst das Maul
@@ -360,6 +361,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       ? (Math.sin(th) * 0.55 - Math.cos(th) * 0.045) * hl
       : (Math.sin(th) * 1.01 + Math.cos(th) * 0.14 * k.muz) * hl;
     a = Math.asin(Math.max(-0.97, Math.min(Math.sin(a0), (Wn.y + c - zielY) / N)));
+  }
+  if (amBoden) {   // v723 Grasen/Heu vom Boden: Hals schräg nach vorn-unten, Kopf fast senkrecht, Maul am Boden (kurze Hälse flacher, sonst stehen sie steil)
+    const aEnd = (k.neck < .52 ? -36 : -46) * Math.PI / 180, thE = th0 + 34 * Math.PI / 180;
+    const cE = (Math.sin(thE) * 1.01 + Math.cos(thE) * 0.14 * k.muz) * hl, nE = (Wn.y + cE + hh * 0.3) / Math.sin(aEnd);
+    a = a0 + (aEnd - a0) * senk; N += (Math.max(N, nE) - N) * senk;
   }
   const Pll = P(Wn.x - N * Math.cos(a), Wn.y - N * Math.sin(a));
   const u = P(-Math.cos(th), Math.sin(th)), v = P(Math.sin(th), Math.cos(th));
@@ -405,23 +411,26 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const kamm = t => { const s = 1 - t; return P(s * s * Wn.x + 2 * s * t * crestCtrl.x + t * t * Pn.x, s * s * Wn.y + 2 * s * t * crestCtrl.y + t * t * Pn.y); };
 
   // --- Beine ---
-  const vorder = xc => [
+  let beinVers = null;   // v723 Grasen: Versatz der Hufe je Bein (Schlüssel xc), das Bein dreht um den Ansatz am Rumpf
+  const sx = (xc, x, y) => { const d = beinVers && beinVers[xc.toFixed(3)]; return d ? x + d * Math.max(0, Math.min(1, (y - bottom) / -bottom)) : x; };
+  const scher = (xc, a) => beinVers ? a.map(q => P(sx(xc, q.x, q.y), q.y)) : a;
+  const vorder = xc => scher(xc, [
     P(xc - 1.0 * w, bottom - 12), P(xc - 1.2 * w, bottom + 1), P(xc - 1.15 * w, -0.74 * Lg), P(xc - 0.9 * w, -0.6 * Lg), P(xc - 0.8 * w, -0.51 * Lg),
     P(xc - 0.92 * w, -0.46 * Lg), P(xc - 0.5 * w, -0.39 * Lg), P(xc - 0.42 * w, -0.2 * Lg), P(xc - 0.72 * w, -0.1 * Lg), P(xc - 0.8 * w, -0.05 * Lg),
     P(xc - 0.9 * w, -hh + 0.5),
     P(xc + 0.4 * w, -hh + 0.5), P(xc + 0.92 * w, -0.08 * Lg), P(xc + 0.42 * w, -0.18 * Lg),
     P(xc + 0.45 * w, -0.36 * Lg), P(xc + 0.62 * w, -0.46 * Lg), P(xc + 0.72 * w, -0.52 * Lg), P(xc + 0.68 * w, -0.64 * Lg),
     P(xc + 1.05 * w, bottom + 1), P(xc + 1.7 * w, bottom - 3), P(xc + 1.4 * w, bottom - 12),
-  ];
-  const hinter = hx => [
+  ]);
+  const hinter = hx => scher(hx, [
     P(0.7 * L, bottom - 12), P(0.79 * L, bottom + 0.015 * H), P(hx - 0.25 * w, -0.72 * Lg), P(hx - 0.35 * w, -0.62 * Lg),
     P(hx - 0.7 * w, -0.53 * Lg), P(hx - 0.45 * w, -0.41 * Lg), P(hx - 0.42 * w, -0.2 * Lg), P(hx - 0.72 * w, -0.1 * Lg),
     P(hx - 0.9 * w, -hh + 0.5),
     P(hx + 0.4 * w, -hh + 0.5), P(hx + 0.92 * w, -0.08 * Lg), P(hx + 0.42 * w, -0.18 * Lg),
     P(hx + 0.5 * w, -0.44 * Lg), P(hx + 1.15 * w, -0.57 * Lg), P(hx + 1.0 * w, -0.66 * Lg), P(hx + 1.45 * w + hq, -0.8 * Lg),
     P(L + 0.005 * H * hq, bottom - 0.05 * D), P(L + 0.035 * H * hq, top + 0.62 * D), P(hx, top + 0.45 * D),
-  ];
-  const huf = xc => [P(xc - 0.9 * w, -hh), P(xc + 0.42 * w, -hh), P(xc + 0.62 * w, 0), P(xc - 1.2 * w, 0)];
+  ]);
+  const huf = xc => scher(xc, [P(xc - 0.9 * w, -hh), P(xc + 0.42 * w, -hh), P(xc + 0.62 * w, 0), P(xc - 1.2 * w, 0)]);
   const behang = xc => {
     return null; // Kötenbehang vorerst bei allen Pferden ausgeblendet
     const tp = -(0.08 + 0.24 * fl) * Lg;
@@ -429,7 +438,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       P(xc + 0.1 * w, 0.8), P(xc - 0.4 * w, -1.2), P(xc - 0.8 * w, 0.8), P(xc - 1.05 * w - 1.2 * fl, 0.6), P(xc - 0.9 * w - 0.6 * fl, -0.06 * Lg), P(xc - 0.6 * w, tp * 0.85)];
   };
   const fx = 0.12 * L, fx2 = 0.2 * L, hx = 0.87 * L, hx2 = 0.8 * L;
-  if (!liegt) merke([P(fx - 1.2 * w, 0), P(hx + 1.2 * w, 0)]);
+  if (amBoden && senk > .6) { const t = (senk - .6) / .4; beinVers = { [fx.toFixed(3)]: -0.13 * L * t, [fx2.toFixed(3)]: 0.07 * L * t, [hx.toFixed(3)]: 0.05 * L * t, [hx2.toFixed(3)]: -0.06 * L * t }; }   // v723 (Dome): beim Grasen ein Vorderbein vor, eins zurück, hinten eins unter dem Bauch – wandert in den letzten Bildern mit
+  if (!liegt) merke([P(sx(fx, fx - 1.2 * w, 0), 0), P(hx + 1.2 * w, 0)]);
 
   // --- Schweif ---
   const Tb = P(L - 0.015 * H, croupY + 1.5 + k.croup * 3.5);
@@ -939,8 +949,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   g += inkFein(`M${f(fx + 1.4 * w)},${f(bottom - 7)}Q${f(fx + 1.8 * w)},${f(bottom - 1)} ${f(fx + 1.3 * w)},${f(bottom + 3)}`, 1.2, 'opacity=".6"');
   g += inkFein(`M${f(0.7 * L)},${f(top + 0.22 * D)}Q${f(0.9 * L)},${f(top + 0.35 * D)} ${f(hx - 0.08 * L)},${f(bottom + 1)}`, 1.3, 'opacity=".7"');
   g += inkFein(`M${f(0.62 * L)},${f(bottom - 0.3 * D)}Q${f(0.66 * L)},${f(bottom - 0.12 * D)} ${f(0.63 * L)},${f(bottom - 2)}`, 1.1, 'opacity=".45"');
-  if (!liegt) g += inkFein(`M${f(fx - 0.5 * w)},${f(-0.47 * Lg)}l${f(0.6 * w)},0`, 1.1, 'opacity=".55"');
-  if (!liegt) g += inkFein(`M${f(hx + 0.3 * w)},${f(-0.54 * Lg)}l${f(0.6 * w)},${f(-1)}`, 1.1, 'opacity=".55"');
+  if (!liegt) g += inkFein(`M${f(sx(fx, fx - 0.5 * w, -0.47 * Lg))},${f(-0.47 * Lg)}l${f(0.6 * w)},0`, 1.1, 'opacity=".55"');
+  if (!liegt) g += inkFein(`M${f(sx(hx, hx + 0.3 * w, -0.54 * Lg))},${f(-0.54 * Lg)}l${f(0.6 * w)},${f(-1)}`, 1.1, 'opacity=".55"');
   if (!eigenKopf) g += inkFein(`M${f(hp(0.34, 0.2).x)},${f(hp(0.34, 0.2).y)}Q${f(hp(0.52, 0.4).x)},${f(hp(0.52, 0.4).y)} ${f(hp(0.3, 0.47 * hw * jw).x)},${f(hp(0.3, 0.47 * hw * jw).y)}`, 1.4, 'opacity=".75"');
   // Körpertyp-Details
   if (!liegt && typ === "duenn") {
@@ -1007,7 +1017,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Hufe vorn
   g += `<g stroke="${INK}" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke">` +
     (liegt ? [[hufLiegend], [hufLiegendH]] : [[huf(fx), BA.vn], [huf(hx), BA.hn]]).map(([h, st]) => `<path d="${eckig(h)}" fill="${hufFill(st)}" vector-effect="non-scaling-stroke"/>`).join("") + "</g>" +
-    (liegt ? [] : [fx, hx]).map(xc => `<path d="M${f(xc - 0.55 * w)},${f(-hh + 1.2)}L${f(xc - 0.75 * w)},${f(-1.2)}" stroke="#fff" stroke-opacity=".35" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`).join("");
+    (liegt ? [] : [fx, hx]).map(xc => `<path d="M${f(sx(xc, xc - 0.55 * w, -hh + 1.2))},${f(-hh + 1.2)}L${f(sx(xc, xc - 0.75 * w, -1.2))},${f(-1.2)}" stroke="#fff" stroke-opacity=".35" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`).join("");
   // Behang über Hufe (vorn)
   if (behN.length) {
     const bc = C.pattern === "tobiano" ? "#f7f5f1" : featherCol;

@@ -1055,7 +1055,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "658";
+  const SPIEL_VERSION = "659";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1063,11 +1063,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=658"></script>
-<script src="pferd.js?v=658"></script>
-<script src="boxstufen.js?v=658"></script>
-<script src="kopfneu.js?v=658"></script>
-<script src="waschbild.js?v=658"></script>
+<script src="lz-string.min.js?v=659"></script>
+<script src="pferd.js?v=659"></script>
+<script src="boxstufen.js?v=659"></script>
+<script src="kopfneu.js?v=659"></script>
+<script src="waschbild.js?v=659"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2843,6 +2843,38 @@
     if (info.extra) Object.assign(e, info.extra);
     T.push(e); if (T.length > AUFNAHME_MAX) T.splice(0, T.length - AUFNAHME_MAX); aufSpeichern();
   }
+  // v658 (Dome 23.10.): Zustandsprotokoll – nach jeder Nacht ein Schnappschuss des Hofs in der Aufnahme (Pferde, Mitarbeiter, Lager, Weiden), bei „Fehler melden“ zusätzlich der sichtbare Text; dazu Plausibilitätsprüfungen (WARNUNG), auch für Fehler, die der Spieler nicht bemerkt
+  const rd1 = x => Math.round((+x || 0) * 10) / 10;
+  function zustandMachen() {
+    const Z = { tag: spiel.tag, zeit: "", geld: Math.round(spiel.geld || 0) };
+    try { Z.zeit = datumText() + ", Tag " + datum().t; } catch (e) { }
+    try { const L = (spiel.futter && spiel.futter.lager) || {}; Z.lager = {}; Object.keys(L).forEach(k => { if (L[k]) Z.lager[k] = rd1(L[k]); }); } catch (e) { }
+    try { Z.pferde = spiel.boxen.map((b, i) => { const p = b.pferd; if (!p) return null; const o = { b: i + 1, n: p.name, ges: Math.round((p.pflege && p.pflege.gesundheit) || 0), wohl: Math.round(wohlbefinden(p)), fz: p.fz || 0 };
+        o.ort = p.klinik ? "klinik" : p.turnier ? "turnier" : p.weide ? "weide" + (p.weide.wid ? ":" + p.weide.wid : "") : p.paddock ? "paddock" : b.paddock ? "paddockbox" : "box";
+        if (fremd(p)) o.fremd = 1; if (b.tot) o.tot = 1; if (p.boxenruhe) o.ruhe = 1; if (p.quarantaene != null && inQuarantaene(p)) o.quar = 1; if (p.weideNachm && p.weideNachm.tag === spiel.tag) o.nachm = p.weideNachm.paddock ? "paddock" : "weide";
+        o.box = (b.mistig ? "M" : "-") + (b.krippeVoll ? "K" : "-") + (b.wasserTag === spiel.tag ? "W" : "-") + (b.einstreu ? ":" + b.einstreu : "");
+        const bf = befundListe(p).map(x => x.art + ":" + x.grad + (x.bemerkt ? "" : "?")); if (bf.length) o.bf = bf; return o; }).filter(Boolean); } catch (e) { Z.pferdeFehler = String(e); }
+    try { Z.ma = (spiel.mitarbeiter || []).filter(m => maAktiv(m)).map(m => ({ n: m.name, typ: m.typ, krank: maKrank(m) ? 1 : 0, urlaub: maUrlaub(m) ? 1 : 0, zufr: Math.round(zufr(m)) })); } catch (e) { }
+    try { Z.weiden = weiden().map(w => ({ n: w.name, ha: w.ha, gras: Math.round(w.gras || 0), matsch: Math.round(w.matsch || 0), kot: w.kot || 0, ae: w.aepfel != null ? w.aepfel : null, pf: weidePferde(w).map(p => p.name) }));
+      Z.paddocks = paddocks().map(g => ({ n: paddockName(g), platz: paddockPlatz(g), pf: paddockPferde(g).map(p => p.name) })); } catch (e) { }
+    try { Z.post = (spiel.post || []).length; Z.einsteller = (spiel.einsteller || []).length; } catch (e) { }
+    return Z;
+  }
+  function sichtText() {   // was der Spieler gerade sieht (Fenster, Menü oder Box), gekürzt
+    try { let el = !$("dlg").hidden ? $("dlgInhalt") : null; if (!el) { const sch = SCHIRME.find(x => $(x) && $(x).classList.contains("offen")); el = sch ? $(sch) : null; }
+      const t = el ? el.textContent : ($("kopfKonto") ? "" : "") + (B() && B().pferd ? "Box " + (aktBox + 1) + ": " + B().pferd.name : ""); return String(t || "").replace(/\s+/g, " ").trim().slice(0, 1500); } catch (e) { return ""; }
+  }
+  function aufWarnung(x, p) { tagebuch("WARNUNG", { x, p }); }
+  function zustandNacht() {   // nach jeder Nacht: Schnappschuss + Prüfungen
+    if (!AUF.laufend || spiel.tutorial || spiel.ansehen) return;
+    const Z = zustandMachen(); tagebuch("Zustand", { extra: { z: Z } });
+    try { const L = Z.lager || {}; Object.keys(L).forEach(k => { if (!(L[k] >= 0)) aufWarnung("Lager hat unmögliche Menge: " + k + " = " + L[k]); });
+      const nam = {}; (Z.pferde || []).forEach(o => { if (nam[o.n]) aufWarnung("Pferdename doppelt in zwei Boxen: " + o.n); nam[o.n] = 1; if (o.ges < 0 || o.ges > 100 || o.wohl < 0 || o.wohl > 100) aufWarnung("Wert außerhalb 0–100: " + o.n + " Gesundheit " + o.ges + ", Wohl " + o.wohl); });
+      (Z.weiden || []).forEach(w => { const P = spiel.boxen.filter(b => b.pferd && b.pferd.paddock); if (w.pf.length && w.pf.length > 12) aufWarnung("Sehr viele Pferde auf einer Weide: " + w.n + " (" + w.pf.length + ")"); });
+      (Z.paddocks || []).forEach(g => { if (g.pf.length > g.platz) aufWarnung("Sandpaddock überfüllt: " + g.n + " " + g.pf.length + " von " + g.platz); });
+      (Z.pferde || []).forEach(o => { if (o.ort === "klinik" && o.nachm) aufWarnung("Pferd in der Klinik hat Nachmittags-Auslauf geplant: " + o.n); if (o.ort.indexOf("weide") === 0 && o.quar) aufWarnung("Pferd in Quarantäne steht auf der Weide: " + o.n); });
+    } catch (e) { console.error("Zustandsprüfung:", e); }
+  }
   const kbText = o => { let g = 0; try { g = packen(o).length * 2; } catch (e) { g = JSON.stringify(o).length; } return Math.max(1, Math.round(g / 1024)).toLocaleString("de-DE") + " KB"; };
   function aufZeit() { try { return spiel && spiel.hof && hatSpielstand ? datumText() + ", Tag " + datum().t : "Spielstart"; } catch (e) { return "Spielstart"; } }
   function aufnahmeStart() {
@@ -2891,7 +2923,7 @@
     k.v = [sch, spiel && spiel.hof ? [aktenModus, aktenReiter, ortModus].filter(Boolean).join("/") : ""].filter(Boolean).join(" · ");
     if (!$("dlg").hidden) k.f = ($("dlgInhalt").textContent || "").replace(/\s+/g, " ").trim().slice(0, 120);
     if (blase && HINWEISE[blase.k]) { k.bk = blase.k; k.bt = HINWEISE[blase.k][0]; }
-    k.px = innerWidth + "x" + innerHeight;
+    k.px = innerWidth + "x" + innerHeight; k.sicht = sichtText(); try { const b = B(); if (b && b.pferd) { k.box = aktBox + 1; k.pferd = b.pferd.name; } k.z = zustandMachen(); } catch (e) { }
     return k;
   }
   function aufFehlerFrage() {
@@ -3032,7 +3064,8 @@
     const V = vetDaten(); if (V.verbot || V.meldung) return false;
     const tag = spiel.tag + 1 + Math.floor(Math.random() * VET2.meldeTage); V.meldung = { tag: spiel.tag, hid: aktivHid(), quelle };
     if (!V.naechsteKontrolle || V.naechsteKontrolle.tag > tag) V.naechsteKontrolle = { tag, hid: aktivHid(), art: "meldung" };
-    brief("Veterinäramt", "Veterinäramt: Hinweis zur Tierhaltung", `uns liegt ein Hinweis zur Tierhaltung auf <b>${esc(hofName())}</b> vor. Wir werden Ihren Betrieb in den nächsten Tagen kontrollieren.`);
+    let anlass = []; try { anlass = vetMaengel().slice(0, 6); } catch (e) { }   // v659 (Dome): der Brief nennt, worum es im Hinweis ging (nicht von wem)
+    brief("Veterinäramt", "Veterinäramt: Hinweis zur Tierhaltung", `uns liegt ein Hinweis zur Tierhaltung auf <b>${esc(hofName())}</b> vor.${anlass.length ? ` Der Hinweis betrifft: <ul>${anlass.map(m => `<li>${esc(m.text)}</li>`).join("")}</ul>` : ""} <b>Das ist nur eine Ankündigung, keine Strafe und keine Beschlagnahme.</b> Wir werden Ihren Betrieb in den nächsten Tagen kontrollieren. Ist alles in Ordnung, passiert nichts. Gibt es Mängel, bekommen Sie eine Frist, sie zu beheben.`);
     return true;
   }
   // Einsteller, Tierarzt und Hufschmied sehen einen Mangel bei ihrem Termin auf dem Hof und melden ihn (Chance je Besuch)
@@ -3801,6 +3834,7 @@
     const [, typ] = briefTyp(betreff), spam = (spiel.spam || []).includes(typ);
     const { pferde, ...rest } = extra || {};   // pferde: diese Pferde sind gemeint (bei gleichen Namen)
     (spiel.post = spiel.post || []).unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), jz: jzJetzt(), tag: spiel.tag, von, betreff, text, typ, gelesen: spam, spam, du, links: briefLinks(text, pferde), hid: aktivHid(), hofName: hofName(), ...rest });
+    if (AUF.laufend) tagebuch("Brief erhalten", { x: von + ": " + betreff });
     postKuerzen(); if (spiel.post.length >= POST.warn) tippMerken("postVoll"); if (von === "Veterinäramt") tippMerken("vetBrief");   // P1: wichtige Briefe werden nie automatisch gelöscht
     if (betreff !== "Neuigkeit" && typ !== "duzen") {
       const K = (spiel.kontakt = spiel.kontakt || {}); K[von] = (K[von] || 0) + 1;
@@ -9055,10 +9089,10 @@
   function fuetternAusLager(box, wer, teil) {
     const F = futterkammer(), p = box.pferd; if (!p) return false;
     const R = tagesRation(p, box, p.weide && !heuNoetigP(p)), RK = tagesRation(p, box, false), rauJa = teil !== "kraft", kraftJa = teil !== "rau";
-    prot(wer === "du" ? (teil === "kraft" ? "Kraftfutter selbst" : "Füttern selbst") : wer === "turnier" ? "Füttern unterwegs (Turnier)" : "Füttern Personal", { p });   // S4
+    prot(wer === "du" ? (teil === "kraft" ? "Kraftfutter selbst" : "Füttern selbst") : wer === "turnier" ? "Füttern unterwegs (Turnier)" : "Füttern Personal", { p, x: wer && wer.name ? wer.name : "" });   // S4
     const perBrief = wer !== "du";   // Dome: Warnbrief nur, wenn ein Mitarbeiter (oder unterwegs beim Turnier) nicht füttern konnte – der Spieler sieht es selbst
     const vorrat = RAUFUTTER_REIHE.reduce((a, k) => a + F.lager[k], 0);
-    if (rauJa && vorrat + 1e-9 < R.raufutter) { if (perBrief) futterWarnung("raufutter"); return false; }
+    if (rauJa && vorrat + 1e-9 < R.raufutter) { if (AUF.laufend) tagebuch("Futter fehlt", { p, x: (wer && wer.name ? wer.name : wer) + ": Raufutter " + Math.round(vorrat * 10) / 10 + " kg im Lager, nötig " + Math.round(R.raufutter * 10) / 10 + " kg" }); if (perBrief) futterWarnung("raufutter"); return false; }
     const alt = p.futterHeute && p.futterHeute.tag === spiel.tag ? p.futterHeute : null;
     const genutzt = alt ? { ...alt.genutzt } : {}, fehlt = alt ? alt.fehlt.slice() : [];
     const nimm = (k, x) => { x = Math.min(x, F.lager[k]); if (x <= 0) return 0; F.lager[k] = Math.round((F.lager[k] - x) * 1000) / 1000; genutzt[k] = Math.round(((genutzt[k] || 0) + x) * 1000) / 1000; if (k === "heulage") heulageNimm(F, x); return x; };
@@ -10098,6 +10132,7 @@
       if (Math.random() < maFehler(m)) { const A = m.typ === "azubi" && m.ausbilder !== "du" ? ausbilderVon(m) : null;
         if (A && maDa(A) && Math.random() < AUSBILDER_NACHHOLEN) m = A;   // v423: Ausbilder (Pferdewirt/Stallmeister) holt es nach
         else { vergessen.push({ i, name: m.name }); return; } }
+      if (AUF.laufend) { tagebuch("Mitarbeiter versorgt", { p: b.pferd, x: m.name + " (" + m.typ + ")" + (maKrank(m) ? " [KRANK]" : "") + (maUrlaub(m) ? " [URLAUB]" : "") }); if (maKrank(m) || maUrlaub(m)) aufWarnung(m.name + " arbeitet trotz " + (maKrank(m) ? "Krankheit" : "Urlaub"), b.pferd); }
       // Futter aus der Futterkammer (leer → Krippe bleibt leer, Warnbrief)
       if (!b.pferd.weide && maDarf(m, "misten")) { b.mistig = false; b.mistStufe = 0; }
       if (maDarf(m, "fuettern") && (!b.pferd.weide || heuNoetigP(b.pferd)) && fuetternAusLager(b, m)) b.krippeVoll = true;
@@ -10601,7 +10636,7 @@
       });
   }
   // Tageswechsel: jeder Hof läuft für sich (H2), Markt, Labor, Tierschutz und Turnierkalender nur einmal
-  function naechsteNacht() { nachtTag = spiel.tag; try { return naechsteNacht0(); } finally { nachtTag = null; vetAbschluss(); if (!spiel.tutorial && !spiel.ansehen && !spiel.verloren) { try { speicherPruefen(); } catch (e) { console.error("Speicher:", e); } } } }   // V1: alles in einer Nacht = ein Vorfall; Strafe und Briefe am Ende
+  function naechsteNacht() { nachtTag = spiel.tag; try { return naechsteNacht0(); } finally { nachtTag = null; vetAbschluss(); try { zustandNacht(); } catch (e) { console.error("Zustand:", e); } if (!spiel.tutorial && !spiel.ansehen && !spiel.verloren) { try { speicherPruefen(); } catch (e) { console.error("Speicher:", e); } } } }   // V1: alles in einer Nacht = ein Vorfall; Strafe und Briefe am Ende
   function naechsteNacht0() {
     if (spiel.ansehen) return;
     jedenHof(() => { try { waschAbend(); } catch (e) { console.error("Waschen:", e); } tote(); turnierNacht(); }, true);   // W4: abends waschen Pfleger/Einsteller-Leistung · Turnierpferde von heute: Ergebnis (Brief kommt am nächsten Tag)

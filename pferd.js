@@ -904,15 +904,25 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     `<mask id="bm-${uid}" maskUnits="userSpaceOnUse" ${bx}><g filter="url(#bf-${uid})"><path d="${glatt(vorderN)}" fill="#fff"/><path d="${glatt(hinterN)}" fill="#fff"/><path d="${glatt(rumpf)}" fill="#000"/></g></mask><filter id="bf-${uid}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${f(0.06 * D)}"/></filter></defs>` +
     `<g mask="url(#bm-${uid})"><rect ${bx} fill="url(#bs-${uid})"/></g>`;
   g += `</g>`;
+  // v688 (Dome 23.10.): gewaschenes Pferd (Shampoo, Öl) glänzt – weiche Lichtflächen auf Rücken, Schulter, Kruppe und Bauchlinie, nur wenn kaum Schmutz drauf ist
+  if (opt.fellGlanz && !(opt.dreck > 20)) {
+    const gs = dunkelWert < 90 ? 0.5 : dunkelWert < 170 ? 0.42 : 0.3;
+    g += `<g clip-path="url(#cl-${uid})"><defs><filter id="fg-${uid}" x="-20%" y="-30%" width="140%" height="160%"><feGaussianBlur stdDeviation="2.4"/></filter></defs><g filter="url(#fg-${uid})" fill="#fff" opacity="${gs}">` +
+      `<ellipse cx="${f(0.78 * L)}" cy="${f(top + 0.16 * D)}" rx="${f(0.12 * L)}" ry="${f(0.07 * D)}" transform="rotate(-8 ${f(0.78 * L)} ${f(top + 0.16 * D)})"/>` +
+      `<ellipse cx="${f(0.5 * L)}" cy="${f(top + 0.1 * D)}" rx="${f(0.2 * L)}" ry="${f(0.045 * D)}"/>` +
+      `<ellipse cx="${f(0.2 * L)}" cy="${f(top + 0.32 * D)}" rx="${f(0.05 * L)}" ry="${f(0.13 * D)}" transform="rotate(10 ${f(0.2 * L)} ${f(top + 0.32 * D)})"/>` +
+      `<ellipse cx="${f(0.62 * L)}" cy="${f(top + 0.55 * D)}" rx="${f(0.1 * L)}" ry="${f(0.05 * D)}"/></g></g>`;
+  }
   // Schmutz im Fell (opt.dreck 0–100): weiche Schlammflecken am ganzen Körper, dreckige Beine – immer an denselben Stellen.
   // Auf dunklem Fell sieht man eher hellen, getrockneten Staub, auf hellem Fell braunen Schlamm.
   if (opt.dreck > 0) {
     const dr = Math.min(100, opt.dreck) / 100, rd = zufall((opt.seed || rasseId) + "-dreck"), dz = [];
-    const dunkelFell = dunkelWert < 110, farbe = () => dunkelFell ? (rd() < 0.5 ? "#a88a64" : "#9b7d58") : (rd() < 0.5 ? "#6a4b2c" : "#7d5c39");
-    const op = (dunkelFell ? 0.3 : 0.28) + dr * 0.35, n = Math.round(3 + dr * 13);
+    const dunkelFell = dunkelWert < 110, sehrDunkel = dunkelWert < 70;   // v688 (Dome): auf Rappen und Dunkelbraunen war der Staub kaum zu sehen – heller, kräftiger und mehr Flecken
+    const farbe = () => sehrDunkel ? (rd() < 0.5 ? "#c9ad82" : "#bb9e72") : dunkelFell ? (rd() < 0.5 ? "#a88a64" : "#9b7d58") : (rd() < 0.5 ? "#6a4b2c" : "#7d5c39");
+    const op = sehrDunkel ? 0.55 + dr * 0.35 : (dunkelFell ? 0.3 : 0.28) + dr * 0.35, n = Math.round((3 + dr * 13) * (sehrDunkel ? 1.35 : 1));
     for (let i = 0; i < n; i++) {
       if (i / n > dr + 0.1) break;
-      const cx = (-0.12 + rd() * 1.15) * L, cy = top + (0.15 + rd() * 0.95) * D, r = 2.2 + rd() * 4;
+      const cx = (-0.12 + rd() * 1.15) * L, cy = top + (0.15 + rd() * 0.95) * D, r = (2.2 + rd() * 4) * (sehrDunkel ? 1.3 : 1);
       // jeder Fleck aus 2–4 überlappenden Klecksen, damit er unregelmäßig aussieht
       for (let k2 = 0, m = 2 + Math.floor(rd() * 3); k2 < m; k2++) {
         const x = cx + (rd() - 0.5) * r * 1.6, y = cy + (rd() - 0.5) * r, rr = r * (0.45 + rd() * 0.55);
@@ -920,7 +930,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       }
     }
     for (let i = 0; i < Math.round(dr * 22); i++) dz.push(`<circle cx="${f((-0.15 + rd() * 1.2) * L)}" cy="${f(top + rd() * (D + Lg))}" r="${f(0.5 + rd() * 0.9)}" fill="${farbe()}"/>`);
-    g += `<g clip-path="url(#cl-${uid})"><defs><linearGradient id="dm-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-Lg * 0.65)}" x2="0" y2="0"><stop offset="0" stop-color="${dunkelFell ? "#a88a64" : "#6a4b2c"}" stop-opacity="0"/><stop offset="1" stop-color="${dunkelFell ? "#9b7d58" : "#5a3d22"}" stop-opacity="${(0.2 + dr * 0.55).toFixed(2)}"/></linearGradient>` +
+    g += `<g clip-path="url(#cl-${uid})"><defs><linearGradient id="dm-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-Lg * 0.65)}" x2="0" y2="0"><stop offset="0" stop-color="${sehrDunkel ? "#c9ad82" : dunkelFell ? "#a88a64" : "#6a4b2c"}" stop-opacity="0"/><stop offset="1" stop-color="${sehrDunkel ? "#bb9e72" : dunkelFell ? "#9b7d58" : "#5a3d22"}" stop-opacity="${(0.2 + dr * 0.55).toFixed(2)}"/></linearGradient>` +
       `<filter id="db-${uid}" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation=".7"/></filter></defs>` +
       `<rect x="${f(minX - 5)}" y="${f(-Lg * 0.65)}" width="${f(maxX - minX + 10)}" height="${f(Lg * 0.65 + 2)}" fill="url(#dm-${uid})"/><g filter="url(#db-${uid})" opacity="${op.toFixed(2)}">${dz.join("")}</g></g>`;
   }

@@ -15,7 +15,12 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Team · **An:** Claude Pro (oder neue Team-Sitzung) · **Stand:** v651, 23.10.2026
+**Von:** Claude Team · **An:** Claude Pro (oder neue Team-Sitzung) · **Stand:** v657, 23.10.2026
+
+### Nach Selbststart (23.10., v654–v657, Dome-Antworten auf die Aufnahmen)
+- v654 Fehlerpaket (`AUFNAHME-AUSWERTUNG-23-10.md`), v655 Schonfrist gibt alle Vorteile + Futter/Einstreu wandern beim Umstellen in die neue Box, v656 Paddockbox zählt als Auslauf wie Sandpaddock, v657 Wassereimer hinter dem Pferd (nur Antippfläche vorn), Pinnwand antippbar (Licht-Rechteck fing die Klicks ab), Sandpaddock-Kapazität zählt Nachmittags-Pferde mit, Einstreu-/Futterbedarf-Fenster nur bei freiem Stall.
+- **Noch offen aus Domes Antworten (je als eigenes Paket, vorher Umfang klären):** 3d Klinik-Entlassung nur bei gesund + Zusatzkosten (Impfung/Zahnarzt), 3c alle Zäune verfallen/reparieren, 3g Einstreu-Wechsel nur mit Zustimmung des Einstellers per Brief, 3f Mitarbeiter bringen Pferde in der Morgenrunde raus (Dome fragt, ob Pferde dann immer draußen/drinnen sind – Antwort steht im Chat, Bestätigung fehlt).
+- **Nicht nachstellbar ohne Daten:** Azubi krank+Urlaub versorgt trotzdem, Heu bei leerem Lager, Futterplan-Anzeige „abnehmen vs. Energie“, Weide abäppeln ohne Pferd. Vorschlag an Dome: Aufnahme-Schnappschuss beim „Fehler melden“ (sichtbarer Text, Pferd/Box, Mitarbeiterliste, Lager) – wartet auf „ja“.
 
 ### Selbststart 23.10. – erledigt (Dome-Liste)
 - **Stern „selten“ im Handy quer:** passt (Fenster scrollt, OK-Knopf bleibt sichtbar).

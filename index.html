@@ -1055,7 +1055,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "668";
+  const SPIEL_VERSION = "669";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1063,11 +1063,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=668"></script>
-<script src="pferd.js?v=668"></script>
-<script src="boxstufen.js?v=668"></script>
-<script src="kopfneu.js?v=668"></script>
-<script src="waschbild.js?v=668"></script>
+<script src="lz-string.min.js?v=669"></script>
+<script src="pferd.js?v=669"></script>
+<script src="boxstufen.js?v=669"></script>
+<script src="kopfneu.js?v=669"></script>
+<script src="waschbild.js?v=669"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -13865,9 +13865,22 @@
       e.kuendigt = jzJetzt(); e.kuendGrund = "preis"; pensionAnsehen(-2);
       brief(eName(e), `Kündigung: ${p.name}`, `${fmt(neu)} statt ${fmt(e.preis)} für <b>${esc(p.name)}</b> kann ich mir nicht leisten. Ich kündige den Pensionsvertrag zum Ende dieser Jahreszeit und hole ${esc(p.name)} dann ab.`, { w: e.w, pferde: [p] }); });
   }
+  // v669 (Dome 23.10.): Einstreu eines Pensionspferdes ändern – der Besitzer stimmt per Brief zu oder lehnt ab (nicht, wenn der Tierarzt/Futterexperte diese Einstreu empfiehlt); erst dann ändert sich die Box
+  const einstreuRang = k => EINSTREU[k] ? (EINSTREU[k].staub ? 0 : 1) + (EINSTREU[k].wohl || 0) : 0;
+  function einstreuAntworten() {
+    spiel.boxen.forEach(b => { const W = b.einstreuWunsch; if (!W || W.tag >= spiel.tag) return; delete b.einstreuWunsch;
+      const p = b.pferd, e = p && fremd(p) ? einstellerVon(p) : null; if (!e || !EINSTREU[W.k]) return;
+      const alt = b.einstreu, besser = einstreuRang(W.k) > einstreuRang(alt), schlechter = einstreuRang(W.k) < einstreuRang(alt), R = einstreuRatAktiv(p), empf = !!(R && EINSTREU_RAT[R.art][0].includes(W.k));
+      const ch = empf ? 1 : besser ? 0.9 : schlechter ? 0.25 + Math.max(0, ((e.zufr || 60) - 60) / 200) : 0.8, ja = Math.random() < ch, neu = FUTTER[W.k].n, alte = FUTTER[alt] ? FUTTER[alt].n : "der bisherigen Einstreu";
+      if (ja) { b.einstreu = W.k; delete b.ohneEinstreu; if (b === B()) zeigeTag();
+        eZufr(e, empf ? 1 : besser ? 3 : schlechter ? -3 : 0, besser ? "bessere Einstreu für sein Pferd" : schlechter ? "schlechtere Einstreu für sein Pferd" : "andere Einstreu");
+        brief(eName(e), `Einstreu für ${p.name}`, empf ? `der Tierarzt empfiehlt ${neu} für <b>${esc(p.name)}</b> – natürlich einverstanden.` : besser ? `ich würde mich über bessere Einstreu für <b>${esc(p.name)}</b> sehr freuen – ja, gern: <b>${neu}</b> statt ${alte}!` : schlechter ? `${neu} statt ${alte} für <b>${esc(p.name)}</b> ist mir eigentlich nicht recht, aber gut, ich nehme es hin.` : `${neu} statt ${alte} für <b>${esc(p.name)}</b> – in Ordnung.`, { w: e.w, pferde: [p] }); }
+      else { eZufr(e, schlechter ? 1 : -1, "Einstreu-Angebot abgelehnt"); brief(eName(e), `Einstreu für ${p.name}`, `ich möchte {dein|Ihr} Angebot einer anderen Einstreu für <b>${esc(p.name)}</b> nicht annehmen. Bei <b>${alte}</b> soll es bleiben.`, { w: e.w, pferde: [p] }); }
+    });
+  }
   function pensionMorgen() {
     pensionLeistungenBereinigen(); besitzerVorschlagTag();   // Dome 21.10.: nicht angebotene Leistungen entfallen · Antwort der Besitzer auf „Besitzer informieren“
-    pensionEinzug(); pensionPreisPruefen(); pensionErloesen();   // V4: Antwort des Besitzers auf „erlösen“
+    pensionEinzug(); pensionPreisPruefen(); pensionErloesen(); try { einstreuAntworten(); } catch (er) { console.error("Einstreu-Antwort:", er); }   // V4: Antwort des Besitzers auf „erlösen“
     const A = spiel.anlage || {}, H = (spiel.pensionHeute = { tag: spiel.tag, reiter: [] });
     einstellerListe().forEach(e => {
       const b = pensionBox(e); if (!b || b.tot) return; const p = b.pferd;
@@ -14222,9 +14235,12 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       k.onclick = () => { if (!spiel.admin && geldFrei() < BODEN_WIRKUNG.GUMMI_PREIS) { dialog(`<h3>Zu wenig Geld</h3>${dispoHinweis()}<p>Gummimatten kosten ${fmt(BODEN_WIRKUNG.GUMMI_PREIS)}.</p>`); return; } if (!spiel.admin) buchen(-BODEN_WIRKUNG.GUMMI_PREIS, "Gummimatten"); box.gummi = true; $("dlg").hidden = true; speichern(); if (box === B()) zeigeTag(); dialog(`<h3>⬛ Gummimatten verlegt</h3><p>Weich, rutschfest und warm – schont die Gelenke, und du brauchst etwa 30 % weniger Einstreu.</p>`, [["OK", danach || null]]); };
       d.insertBefore(k, d.firstChild); }, 0);
     dialog(`<h3>🛏️ Einstreu für Box ${spiel.boxen.indexOf(box) + 1}</h3><div class="weide-wahl">${Object.keys(EINSTREU).map(k => `<button data-estreu="${k}" ${(F.lager[k] || 0) < EINSTREU[k].kg ? "disabled" : ""}><b>${FUTTER[k].ico} ${FUTTER[k].n}${box.einstreu === k ? " ✓" : ""}${(R => R && EINSTREU_RAT[R.art][0].includes(k) ? " · empfohlen" : "")(box.pferd && einstreuRatAktiv(box.pferd))}</b><small>${FUTTER[k].info}</small><small>im Lager: ${fmtKg(F.lager[k] || 0)}</small></button>`).join("")}</div><p class="text"><small>Kaufen: Hofverwaltung → Hof → Futterkammer → Einstreu.</small></p>`, [["Abbrechen", danach || null, "zweit"]]);
-    document.querySelectorAll("[data-estreu]").forEach(x => x.onclick = () => { box.einstreu = x.dataset.estreu; delete box.einstreuFrage; delete box.ohneEinstreu; $("dlg").hidden = true; speichern(); if (box === B()) zeigeTag(); if (danach) danach(); });   // Dome (v296): Boden der Box sofort neu
+    document.querySelectorAll("[data-estreu]").forEach(x => x.onclick = () => {
+      const k = x.dataset.estreu, p0 = box.pferd, e0 = p0 && fremd(p0) && !p0.klinik ? einstellerVon(p0) : null;   // v669 (Dome 23.10.): beim Pensionspferd entscheidet der Besitzer – die Einstreu bleibt, bis er per Brief zustimmt
+      if (e0 && !e0.art && box.einstreu && box.einstreu !== k && !(e0.leistungen && e0.leistungen.einstreu)) { box.einstreuWunsch = { k, tag: spiel.tag }; speichern(); dialog(`<h3>✉️ Der Besitzer wird gefragt</h3><p><b>${esc(eName(e0))}</b> entscheidet, ob ${esc(p0.name)} auf <b>${FUTTER[k].n}</b> liegen soll. Bis die Antwort per Brief kommt, bleibt es bei ${FUTTER[box.einstreu] ? FUTTER[box.einstreu].n : "der alten Einstreu"}.</p>`, [["OK", () => { if (danach) danach(); }]]); return; }
+      box.einstreu = k; delete box.einstreuWunsch; delete box.einstreuFrage; delete box.ohneEinstreu; $("dlg").hidden = true; speichern(); if (box === B()) zeigeTag(); if (danach) danach(); });   // Dome (v296): Boden der Box sofort neu
   }
-  const einstreuVsgHTML = box => box && box.pferd && !box.pferd.weide ? `<div class="wn-hinweis">🛏️ Einstreu: <b>${EINSTREU[box.einstreu] ? FUTTER[box.einstreu].n : "noch keine"}</b>${box.ohneEinstreu ? " – ⚠️ leer!" : ""}${(R => R ? `<br><small>${R.von === "Tierarzt" ? "🩺 Tierarzt" : "🌾 Futterexperte"} empfiehlt wegen ${KRANK[R.art].n}: ${einstreuRatText(R.art)}${einstreuPasst(box, R.art) ? " ✓" : ""}</small>` : "")(einstreuRatAktiv(box.pferd))} <button class="mini-knopf" id="einstreuAendern">ändern</button></div>` : "";
+  const einstreuVsgHTML = box => box && box.pferd && !box.pferd.weide ? `<div class="wn-hinweis">🛏️ Einstreu: <b>${EINSTREU[box.einstreu] ? FUTTER[box.einstreu].n : "noch keine"}</b>${box.einstreuWunsch && EINSTREU[box.einstreuWunsch.k] ? ` · ✉️ Besitzer wird gefragt: ${FUTTER[box.einstreuWunsch.k].n}` : ""}${box.ohneEinstreu ? " – ⚠️ leer!" : ""}${(R => R ? `<br><small>${R.von === "Tierarzt" ? "🩺 Tierarzt" : "🌾 Futterexperte"} empfiehlt wegen ${KRANK[R.art].n}: ${einstreuRatText(R.art)}${einstreuPasst(box, R.art) ? " ✓" : ""}</small>` : "")(einstreuRatAktiv(box.pferd))} <button class="mini-knopf" id="einstreuAendern">ändern</button></div>` : "";
   // H6: Futterwiese – der Bauer mäht im Sommer (1. Schnitt Tag 1, 2. Schnitt bei gutem Gras gegen Ende), Heu ins Lager, Rest verkaufen
   function futterwieseTag() {
     const d = datum(); if (d.s === 0 && d.t === 1) weiden().forEach(w => { delete w.schnitte; });

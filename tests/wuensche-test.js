@@ -65,5 +65,17 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number);
     const wk = document.querySelector('[data-ort="koppel"]'); if (wk) wk.click(); zeigeAkte();
     const kw = document.querySelector('[data-ort="weide"]'); if (kw) kw.click();
     ok('Ort → Koppel → Weide: Pferd geht ohne Auswahlfenster auf die geplante Weide', P2.weide && P2.weide.wid === w2[w2.length - 1].wid && document.getElementById('dlg').hidden !== false || !!P2.weide, JSON.stringify(P2.weide) + ' koppel:' + !!wk + ' weide:' + !!kw + ' dlg:' + document.getElementById('dlg').hidden + ' modus:' + ortModus + ' n=' + w2.length);
+    // v721: Whiteboard – Übersicht zuerst, x auch bei Pensionspferden, leere/reservierte Boxen, Rückweg
+    spiel.boxen[2] = { pferd: null }; spiel.boxen[2].reserviert = 'rsv'; (spiel.pensionAnfragen = spiel.pensionAnfragen || []).push({ aid: 'ar', angenommen: true, pferd: { id: 'rsv', name: 'Gast' } });
+    wbSicht = 'boxen'; zeigeWhiteboard(); const nb2 = document.querySelector('#nebenSchirm');
+    ok('reservierte Box steht als „reserviert für Gast“ da', /reserviert für Gast/.test(nb2.innerText));
+    ok('leere Box hat Antipp-Ziel zur Box', !!nb2.querySelector('.wb-box.leer[data-wbgo]'));
+    ok('oben links: „‹ Whiteboard“ statt Hauptmenü', document.getElementById('nbZurueck').textContent.includes('Whiteboard'));
+    document.getElementById('nbZurueck').click(); ok('Zurück führt in die Übersicht', wbSicht === 'uebersicht' && document.getElementById('nbZurueck').textContent.includes('Hauptmenü'));
+    ok('Übersicht: beide Vorschauen als Bild (wb-vin)', document.querySelectorAll('.wb-vorschau .wb-vin').length === 2);
+    wbSicht = 'weiden'; zeigeWhiteboard(); ok('Weiden: keine Kachel „Hierher ziehen“', !/Hierher ziehen/.test(document.querySelector('#nebenSchirm').innerText));
+    const pe = { rasse: 'paint', geschlecht: 'Stute', alter: 8, name: 'Gastpferd' }; const GP = neuesPferd(pe); GP.pflege = erzeugePflege(GP); GP.werte = GP.werte || erzeugeWerte(GP); spiel.boxen[2].pferd = GP; delete spiel.boxen[2].reserviert; const Ee = { eid: 'eG', vn: 'X', nn: 'Y', w: true, pid: GP.id, stufe: 1, leistungen: {}, haltung: 'weide', zufr: 80, seit: jzJetzt(), einzug: spiel.tag - 5, kuendigt: null, log: [], plus: [], befSeen: [], preis: 200 }; GP.einsteller = 'eG'; einstellerListe().push(Ee);
+    wbSetzen(GP, w2[0].wid, 't'); zeigeWhiteboard(); ok('Pensionspferd auf der Weide hat ein ✕', !!document.querySelector('[data-wbweg="2:t"]'));
+    wbWeg(GP, 't'); ok('✕ bei Pensionspferd: bleibt in der Box', !wbPlanVon(GP));
     return out; });
   R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(R.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

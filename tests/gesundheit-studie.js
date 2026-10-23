@@ -17,7 +17,8 @@ const STUFEN = {
   1: { name: 'schlecht', fuettern: .85, misten: .4, wasser: .85, putzen: .15, hufe: .1, weide: .3, besuch: .25, tierarzt: .5, tierarztAb: 4, kontrolle: 99, behandeln: .3, vorsorge: 0, hufschmied: 2.2, klinik: .5, boxenruheEnde: true, schont: false, training: 2 / 7, putzzeug: 0 },
 };
 STUFEN[4] = { ...STUFEN[3], name: 'selbst', selbst: 2 };   // Dome 19.10.: wie gut, aber behandelt die ersten 2 Tage selbst (mit frei kaufbaren Mitteln, Treffer 60 %) und ruft den Tierarzt erst bei Misserfolg (nach 2 Tagen oder ab Grad 3)
-const WDH = +(process.env.WDH || 2);   // Durchläufe je Pflegestufe (Seuchen machen die Zahlen zufällig)
+const WDH = +(process.env.WDH || 2);
+const TEMPO = +(process.env.TEMPO || 0), JAHRE = +(process.env.JAHRE || 3), EXPERTE = process.env.EXPERTE === '1';   // v651: TEMPO 4/7/10 Tage je Jahreszeit, JAHRE Länge, EXPERTE=1 → Stufen-Sperre aus (Experte)   // Durchläufe je Pflegestufe (Seuchen machen die Zahlen zufällig)
 const KLASSEN = [['Fohlen', .6, .95], ['Jungpferd', 1, 3.9], ['Erwachsen', 4, 14], ['Senior', 15, 26]];
 
 async function lauf(rasse, stufe) {
@@ -25,10 +26,11 @@ async function lauf(rasse, stufe) {
   await pg.goto(URL_); await pg.waitForTimeout(700);
   await pg.click('#smNeu'); await pg.waitForTimeout(150); await pg.fill('#chName', 'Studie'); await pg.click('#chLos'); await pg.waitForTimeout(150);
   await pg.click('#dlgKnoepfe button'); await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'Studienhof'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(300);
-  const r = await pg.evaluate(([rasse, S, KLASSEN]) => {
+  const r = await pg.evaluate(([rasse, S, KLASSEN, TEMPO, JAHRE, EXPERTE]) => {
     const zu = () => { document.getElementById('dlg').hidden = true; }, zuf = Math.random;
     window.reaktionZeigen = () => {}; window.zeigeStall = () => {}; window.zeigeTag = () => {};   // Bildschirm nicht neu zeichnen (schneller)
     spiel.tippsAus = true; spiel.admin = false; spiel.geld = 1e7;
+    if (TEMPO) { spiel.tempo = TEMPO; spiel.kal = { tag: spiel.tag, i: 0 }; } if (EXPERTE) spiel.stufenAn = false;
     // Anlage: 40 Boxen im Start-Stall (Stufe 1 wie beim Start), 2 Weiden je 10 ha
     const g0 = spiel.boxen[0]; while (spiel.boxen.length < 40) spiel.boxen.push({ nr: spiel.boxen.length + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false, geb: g0.geb, stufe: g0.stufe });
     spiel.hof.ha = 21; spiel.hof.weideHa = 20; spiel.weiden = KLASSEN.map(([kl], i) => ({ wid: 'w' + (i + 1), name: kl, ha: 5, gras: 80, matsch: 0 }));   // 4 Gruppen à 10 Pferde, nach Altersklasse
@@ -95,7 +97,7 @@ async function lauf(rasse, stufe) {
           B.max = Math.max(B.max, x.grad); B.letzt = spiel.tag; if (x.bemerkt && B.bemerkt == null) B.bemerkt = spiel.tag; if (x.diagnose && B.diagnose == null) B.diagnose = spiel.tag; }); });
       Object.values(M.befunde).forEach(B => { if (B.ende == null && B.letzt < spiel.tag) B.ende = B.letzt + 1; }); };
     const tote0 = (spiel.friedhof || []).length;
-    const tage = 3 * 4 * tpj(); let t0 = performance.now();
+    const tage = JAHRE * 4 * tpj(); let t0 = performance.now();
     for (let d = 0; d < tage; d++) { tag(); spiel.boxen.forEach(x => { if (x.pferd && x.pferd.studie && !x.pferd.klinik) { M.pferdTage++; if (!x.krippeVoll && !x.pferd.weide) M.hunger++; if (x.mistig) M.mist++; if (x.wasserTag !== spiel.tag && !x.pferd.weide) M.durst++; } }); try { naechsteNacht(); } catch (e) { M.fehler['nacht: ' + e.message] = (M.fehler['nacht: ' + e.message] || 0) + 1; } zu(); messen(); if (spiel.verloren) break; }
     (spiel.friedhof || []).slice(tote0).forEach(g => { if (g.pferd && g.pferd.studie) M.tod.push({ kl: g.pferd.studie.kl, ursache: g.pferd.todesursache || '?', alter: Math.round(g.pferd.studie.alter * 10) / 10 }); });
     const offen = Object.values(M.befunde).filter(B => B.ende == null);
@@ -103,7 +105,7 @@ async function lauf(rasse, stufe) {
     M.beschlagnahmt = (spiel.tierschutz || []).filter(x => x.pferd && x.pferd.studie).length; M.offenAmEnde = offen.length; M.ms = Math.round(performance.now() - t0); M.lebendAmEnde = lebend().length;
     M.befunde = Object.values(M.befunde); M.krankNamen = Object.fromEntries(Object.keys(KRANK).map(k => [k, KRANK[k].n])); M.chron = Object.fromEntries(Object.keys(KRANK).map(k => [k, !!KRANK[k].chronisch]));
     return M;
-  }, [rasse, STUFEN[stufe], KLASSEN]);
+  }, [rasse, STUFEN[stufe], KLASSEN, TEMPO, JAHRE, EXPERTE]);
   r.seitenFehler = [...new Set(errs)].slice(0, 5);
   await b.close(); return r;
 }

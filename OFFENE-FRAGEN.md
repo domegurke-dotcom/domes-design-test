@@ -30,5 +30,5 @@ _Reitunterricht (Dome 20.10., v606): auch der feste Bereiter kostet 60 € (Zusa
 
 ## Stand nach Domes Antworten 23.10.2026
 - Veterinäramt-/Speicher-Zahlen und Paddock-/Sandpaddock-Zahlen: so lassen (Dome). Mähne-Ärger passt, Futterwarnung 4 Tage (v692), Quarantäne 2–4 Wochen (v692, `quarTage`).
-- **Offen:** Der Quarantänestall für Neuzugänge (Umzug nach 1 Jahreszeit, `neuzugangBox`) ist noch eine ganze Jahreszeit – ebenfalls auf 2–4 Wochen kürzen?
+- Quarantäne 2/3/5 Tage (Tempo 4/7/10), auch im Quarantänestall (v693, Dome).
 - **Offen:** Spieltempo 4/7/10 abstimmen – erst mit der Studie gemeinsam durchgehen (Dome).

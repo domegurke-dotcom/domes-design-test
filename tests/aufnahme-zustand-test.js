@@ -14,7 +14,7 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Zustand: Geld, Lager, Mitarbeiter-Liste, Weiden, Post', !!z && typeof z.geld === 'number' && !!z.lager && Array.isArray(z.ma) && Array.isArray(z.weiden) && typeof z.post === 'number');
     // Plausibilitätsprüfung: Sandpaddock überfüllt
     gebaeude().push({ gid: 'gpdT', typ: 'sandpaddock', stufe: 1, zustand: 100 });
-    const g = paddocks()[0]; for (let i = 1; i <= 3; i++) { const q = neuesPferd({ rasse: 'paint', geschlecht: 'Wallach', alter: 8, name: 'W' + i }); q.pflege = erzeugePflege(q); q.werte = q.werte || erzeugeWerte(q); spiel.boxen[i].pferd = q; q.paddock = { seit: spiel.tag, pid: g.gid }; }
+    const g = paddocks()[0]; for (let i = 1; i <= 3; i++) { const q = neuesPferd({ rasse: 'hannoveraner', geschlecht: 'Wallach', alter: 8, name: 'W' + i }); q.pflege = erzeugePflege(q); q.werte = q.werte || erzeugeWerte(q); spiel.boxen[i].pferd = q; q.paddock = { seit: spiel.tag, pid: g.gid }; }
     zustandNacht(); ok('WARNUNG bei überfülltem Sandpaddock', A.eintraege.some(e => e.a === 'WARNUNG' && /überfüllt/.test(e.x)));
     // Mitarbeiter krank, arbeitet trotzdem: Warnung
     // Fehler melden: Kontext mit sichtbarem Text und Zustand

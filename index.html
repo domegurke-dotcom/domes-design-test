@@ -118,6 +118,7 @@
   #pferdPlatz rect { pointer-events: none; }   /* Dome 20.10.: Schattierungsflächen der Pferdezeichnung (z. B. Kopf-Verlauf, breiter als der Kopf) fingen Tipper aufs Heu ab */
   #stall.leer #heuhaufen .heuVoll, #stall:not(.leer) #heuhaufen .heuRest { display: none; }
   #stall.klinikBox #heuhaufen, #stall.boxLeer.leer #heuhaufen { display: none; }
+  #stall.klinikBox .stufeEl .sWasser, #stall.klinikBox .stufeEl .sKrippe { pointer-events: none; }
   #stall.infoHeu #krippenHinweis, #stall.infoKrippe #kraftHinweis { display: inline !important; }
   #kraftHinweis { display: none; animation: hopsen 1.2s ease-in-out infinite; } #stall.kraftLeer.kraftNoetig:not(.ohneHinweise):not(.klinikBox):not(.tot) #kraftHinweis { display: inline; }
   #krippenHinweis { display: none; animation: hopsen 1.2s ease-in-out infinite; }
@@ -1054,7 +1055,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "653";
+  const SPIEL_VERSION = "654";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1062,11 +1063,11 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=653"></script>
-<script src="pferd.js?v=653"></script>
-<script src="boxstufen.js?v=653"></script>
-<script src="kopfneu.js?v=653"></script>
-<script src="waschbild.js?v=653"></script>
+<script src="lz-string.min.js?v=654"></script>
+<script src="pferd.js?v=654"></script>
+<script src="boxstufen.js?v=654"></script>
+<script src="kopfneu.js?v=654"></script>
+<script src="waschbild.js?v=654"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2150,8 +2151,8 @@
   function werteAltern(p) { if (!p || !p.werte) return; werteErgaenzen(p); Object.keys(p.werte.ist).forEach(k => { if (p.werte.anlage[k] != null) p.werte.ist[k] = Math.min(p.werte.ist[k], wertGrenze(p, k)); }); }
   // angezeigter Wert: nur vererbte Werte = Anlage (mit Altersfaktor), sonst aktueller Stand (höchstens bis zur Altersgrenze)
   const wertVon = (p, x) => { werteErgaenzen(p); return x.art === "anlage" ? wertGrenze(p, x.key) : x.art === "training" ? Math.min(p.werte.ist[x.key] || 0, wertGrenze(p, x.key)) : (p.werte.ist[x.key] || 0); };
-  function geburt(box, vater) {
-    const M = box.pferd, V = vater || M.traechtig.vater; prot("Fohlen geboren", { p: M });   // S4
+  function geburt(box, vater, still) {
+    const M = box.pferd, V = vater || M.traechtig.vater; if (!still) prot("Fohlen geboren", { p: M });   // S4 · still: Marktfohlen (Tierschutz, Händler …) zählen nicht als gezüchtet
     ahnenFuellen(M); ahnenFuellen(V); nrVon(M); nrVon(V); exVon(V);
     const g = Math.random() < .5 ? "Stute" : "Hengst", d = datum(), her = { gang: {}, charakter: {}, ex: {} };
     // Fellfarbe: von jedem Elternteil ein Allel
@@ -5792,7 +5793,7 @@
     G2.insertBefore(mk(x), $("krippe"));
   }
   // Stufe 1: Wassereimer statt Selbsttränke – muss jeden Tag gefüllt werden (Spieler oder Stallbursche)
-  function wasserEimerFuellen() { const box = B(); if (!box.pferd || box.tot) return; if (box.wasserTag === spiel.tag) { reaktionZeigen("trinkt"); return; } box.wasserTag = spiel.tag; reaktionZeigen("trinkt gierig"); speichern(); zeigeTag(); }
+  function wasserEimerFuellen() { const box = B(); if (!box.pferd || box.tot || box.pferd.klinik) return; if (box.wasserTag === spiel.tag) { reaktionZeigen("trinkt"); return; } box.wasserTag = spiel.tag; reaktionZeigen("trinkt gierig"); speichern(); zeigeTag(); }   // v654: Pferd in der Klinik – Eimer in der Box füllen ist sinnlos
   function zeigeTag() {
     wetterSetzen();
     weideFreiFenster();
@@ -6170,9 +6171,16 @@
   const behandlungsPreis = b => Math.round(KRANK[b.art].kosten * (1 + (b.grad - 1) * 0.25) / 5) * 5;
   // Folgerezept (Dome, v260): bei chronischen Krankheiten mit bekannter Diagnose Rezeptmittel nachbestellen – ohne Hausbesuch und neue Diagnose (Rezeptgebühr 10 € + Mittel, 8 Dosen)
   const FOLGEREZEPT = { gebuehr: 10, dosen: 8 };
-  const folgerezeptMittel = p => [...new Set(befundListe(p).filter(b => b.diagnose && KRANK[b.art].chronisch).flatMap(b => PLAN[b.art] || []).filter(k => APO[k] && !APO[k].frei))];
+  const folgerezeptMittel = p => [...new Set(befundListe(p).filter(b => b.diagnose && (KRANK[b.art].chronisch || b.tierarzt)).flatMap(b => PLAN[b.art] || []).filter(k => APO[k] && !APO[k].frei))];
   const folgerezeptMoeglich = p => folgerezeptMittel(p).length > 0;
   const folgerezeptPreis = p => FOLGEREZEPT.gebuehr + folgerezeptMittel(p).reduce((a, k) => a + APO[k].preis * FOLGEREZEPT.dosen, 0);
+  // v654 (Dome 23.10.): nach einer Untersuchung (auch beim Kauf mit AKU) gibt es für die gestellten Befunde das Rezept mit Dosen wie beim Hausbesuch
+  function rezeptNachBefund(p, befunde) {
+    const rz = rezeptVon(p), plan = new Set(befunde.filter(b => !imInkub(b) || b.diagnose).flatMap(b => PLAN[b.art] || [])), posten = [];
+    const mittel = [...plan].filter(k => APO[k] && !APO[k].frei);
+    mittel.forEach(k => { rz[k] = (rz[k] || 0) + REZEPT_DOSEN; posten.push({ text: `${p.name}: ${APO[k].n} – ${REZEPT_DOSEN} Dosen (Rezept)`, betrag: APO[k].preis * REZEPT_DOSEN }); });
+    return { mittel, posten };
+  }
   function folgerezept(p) {
     const l = folgerezeptMittel(p), rz = rezeptVon(p); if (!l.length) return "";
     l.forEach(k => rz[k] = (rz[k] || 0) + FOLGEREZEPT.dosen);
@@ -6273,7 +6281,8 @@
     const K0 = KRANK[b.art]; if (!K0) return Object.keys(KRANK);
     const sort = L => L.sort((x, y) => bfHash(b.id + x) - bfHash(b.id + y));
     const gleich = sort(Object.keys(KRANK).filter(k => k !== b.art && KRANK[k].bereich === K0.bereich)), rest = sort(Object.keys(KRANK).filter(k => k !== b.art && KRANK[k].bereich !== K0.bereich));
-    return sort([b.art, ...[...gleich, ...rest].slice(0, BF_ANZAHL_AEHNLICH)]);
+    const tipps = [...new Set((b.meldungen || []).map(x => x.tipp).filter(k => k && k !== b.art && KRANK[k]))];   // v654 (Dome): was ein Mitarbeiter vorgeschlagen hat, steht immer zur Wahl – sonst verrät das Fehlen, dass er falsch liegt
+    return sort([b.art, ...tipps, ...[...gleich, ...rest].filter(k => !tipps.includes(k)).slice(0, Math.max(0, BF_ANZAHL_AEHNLICH - tipps.length))]);
   }
   const tageTxt2 = n => `${n} ${n === 1 ? "Tag" : "Tagen"}`;
   function befundZeilen(p) {
@@ -6368,7 +6377,7 @@
     document.querySelectorAll("[data-bfwahl]").forEach(el => el.onclick = () => { const [id, k] = el.dataset.bfwahl.split(":"), b = finde(id); if (!b) return;
       b.meldungen = b.meldungen.filter(x => x.von !== "du"); b.meldungen.push({ von: "du", tipp: k, sicher: "vermute", tag: spiel.tag }); b.vermutung = { art: k, von: "du" }; bfWahl = null; speichern(); zeigeAkte(); });
     behandlungBinden(p, box);
-    document.querySelectorAll("[data-brende]").forEach(el => el.onclick = () => { delete p.boxenruhe; meldung = `🛏️ Boxenruhe für ${esc(p.name)} beendet.`; speichern(); zeigeAkte(); });
+    document.querySelectorAll("[data-brende]").forEach(el => el.onclick = () => { delete p.boxenruhe; meldung = `🛏️ Boxenruhe für ${esc(p.name)} beendet.`; speichern(); zeigeStall(); zeigeAkte(); });   // v654: die Tür der Paddockbox geht wieder auf
     document.querySelectorAll("[data-opklinik]").forEach(el => el.onclick = () => { const k = el.dataset.opklinik, O = OP_KLINIK[k];
       if (p.klinik) return; 
       dialog(`<h3>${O.ico} ${O.n}</h3><p>${O.info}</p><p>${esc(p.name)} bleibt mindestens <b>${O.tage} Tage</b> in der Klinik (bis die Gesundheit wieder bei 75 % ist). Rechnung danach: etwa <b>${fmt(O.preis)}</b>.</p>`,
@@ -6927,13 +6936,14 @@
       [["Abbrechen", null, "zweit"]], "breit");
     document.querySelectorAll("[data-uk]").forEach(b => b.onclick = () => { const st = b.dataset.uk, S = AKU[st];
       if (!spiel.admin && geldFrei() < S.preis) { dialog(`<h3>Nicht genug Geld</h3>${dispoHinweis()}<p>Die Untersuchung kostet ${fmt(S.preis)}.</p>`); return; }
-      const geprueft = new Set(["klinisch", ...S.prueft]), neu = [];
+      const geprueft = new Set(["klinisch", ...S.prueft]), neu = [], gefunden = [];
       befundListe(p).forEach(bf => { const c = UCHECK[bf.art] || "klinisch"; if (bf.diagnose || !(geprueft.has(c) || (c === "lunge" && geprueft.has("herz")))) return;
-        if (!bf.bemerkt) bf.bemerkt = { von: "Tierarzt", tag: spiel.tag }; bf.diagnose = spiel.tag; befundAufklaeren(p, bf); neu.push(`${KRANK[bf.art].ico} <b>${KRANK[bf.art].n}</b> (${GRAD_TEXT[bf.grad]})`); });
+        if (!bf.bemerkt) bf.bemerkt = { von: "Tierarzt", tag: spiel.tag }; bf.diagnose = spiel.tag; bf.tierarzt = true; befundAufklaeren(p, bf); gefunden.push(bf); neu.push(`${KRANK[bf.art].ico} <b>${KRANK[bf.art].n}</b> (${GRAD_TEXT[bf.grad]})`); });
+      const rezPosten = rezeptNachBefund(p, gefunden);   // v654 (Dome): wer einen Befund stellt, schreibt auch das Rezept (Plan wie beim Hausbesuch)
       const rk = st === "gross" ? roentgenKlasse(p) : 0;
       const text = `Untersuchung (${S.n.replace("AKU", "Untersuchung")}) bei <b>${esc(p.name)}</b> – geprüft: ${S.prueft.map(k => ({ herz: "Herz", lunge: "Lunge", augen: "Augen", gang: "Gangbild", beuge: "Beugeproben", longe: "Longe", blutKlein: "kleines Blutbild", roentgen: "Röntgen", blutGross: "großes Blutbild" })[k]).join(", ")}.<br><br>${neu.length ? `Gefunden:<ul>${neu.map(x => `<li>${x}</li>`).join("")}</ul>Bitte behandeln (Versorgung – Tierarzt).` : "Ohne neuen Befund."}${rk ? `<br>Röntgenklasse: <b>${ROENTGEN[rk]}</b>.` : ""}`;
-      rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: ${S.n.replace("AKU", "Untersuchung")}`, betrag: S.preis }], [p.id], `Untersuchung ${p.name} – Rechnung`, text);
-      speichern(); dialog(`<h3>🩺 Ergebnis</h3><p>${text}</p><p><small>Die Rechnung kommt per Brief.</small></p>`, [["OK", () => zeigeAkte()]]); });
+      rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: ${S.n.replace("AKU", "Untersuchung")}`, betrag: S.preis }, ...rezPosten.posten], [p.id], `Untersuchung ${p.name} – Rechnung`, text);
+      speichern(); dialog(`<h3>🩺 Ergebnis</h3><p>${text}</p>${rezPosten.mittel.length ? `<p>📝 <b>Rezept</b> gleich mitgegeben: ${rezPosten.mittel.map(k => `${APO[k].n} (${REZEPT_DOSEN} Dosen)`).join(", ")}.</p>` : ""}<p><small>Die Rechnung kommt per Brief.</small></p>`, [["OK", () => zeigeAkte()]]); });
   }
   // Fenster: Stufe wählen → Protokoll → kaufen, verhandeln oder ablehnen
   const akuAufstellung = k => [`Anfahrt ${fmt(AKU_TEIL.besuch)}`, `Untersuchung ${fmt(AKU_TEIL.klinisch)}`, ...(k !== "klein" ? [`Beugeproben/Longe ${fmt(AKU_TEIL.beuge)}`, `${k === "gross" ? "großes" : "kleines"} Blutbild ${fmt(k === "gross" ? VORSORGE.blutGross : VORSORGE.blutKlein)}`] : []), ...(k === "gross" ? [`Röntgen ${fmt(AKU_TEIL.roentgen)}`] : [])].join(" + ");
@@ -6970,6 +6980,7 @@
       if (f.maskiert) b.inkub = spiel.tag + 2;   // Schmerzmittel wirkt noch 2 Tage – erst dann sieht man die Lahmheit
     });
     if (h.ocd != null) { p.ocd = h.ocd; p.ocdGeprueft = true; }
+    { const gf = befundListe(p).filter(b => b.tierarzt && b.diagnose === spiel.tag); if (gf.length) { const R = rezeptNachBefund(p, gf); if (R.posten.length) rechnungStellen("Tierarztpraxis", "klinik", R.posten, [p.id], `Rezept ${p.name} – Rechnung`, `nach der Ankaufsuntersuchung hat der Tierarzt für <b>${esc(p.name)}</b> die Rezepte ausgestellt: ${R.mittel.map(k => APO[k].n).join(", ")}.`); } }   // v654 (Dome): Rezept auch nach der AKU
     if (F.some(f => f.gebiss && f.gefunden)) p.gebissFehler = true;   // v516: Tierarzt hat den Gebissfehler bei der AKU gesehen
     if (h.probe) p.blutprobe = { tag: spiel.tag, quelle, maskiert: F.some(f => f.maskiert), preis: h.preis };
     ["akuF", "akuErg", "akuKlasse", "akuVerhandelt", "probe"].forEach(k => delete p[k]);
@@ -8277,7 +8288,7 @@
     s += `<circle cx="16" cy="13" r="6.2" fill="#fffdf4" stroke="${gold ? "#c9960f" : dark}" stroke-width="${gold ? 1.3 : .8}"/>`;
     if (sym === "K") s += `<g transform="translate(11.9,8.8) scale(.82)"><path d="${SCHL_KOPF}" fill="${dark}"/><circle cx="4.6" cy="3.9" r=".5" fill="#fffdf4"/></g>`;
     else if (sym === "H") s += `<path d="M13.3,16.4 L13.0,12.6 A3.05,3.05 0 1 1 19.0,12.6 L18.7,16.4" fill="none" stroke="${dark}" stroke-width="1.7" stroke-linecap="round"/>` + [[13.1, 14.6], [13.3, 11.3], [18.9, 14.6], [18.7, 11.3]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".35" fill="#fffdf4"/>`).join("");
-    else s += `<text x="16" y="16.6" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="bold" font-size="9.5" fill="${dark}">${sym}</text>`;
+    else s += `<text x="16" y="16.4" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="9.5" fill="${dark}">${sym}</text>`;
     return `<svg class="schleife" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="${px}" height="${px}" role="img" aria-label="${champion ? "Champion-Schleife" : platz ? `Schleife ${platz}. Platz` : "Teilnehmerschleife"}">${s}</svg>`;
   }
   // Welche Schleife gibt es? Platz 1–6 nur wenn platziert (bestes Viertel, mind. 3); platziert aber Platz 7+ → braun; nicht platziert → braun nur auf Haus-/Hofturnier; ausgeschieden → nie; Titel (Championat, Fohlenchampion) → Champion statt Gold
@@ -10411,7 +10422,10 @@
       const svg = $("stall"); if (!svg) return;
       let g = $("sprechblase"); if (g) g.remove();
       const pp = $("pferdPlatz"); let ax = 200, ay = 120;
-      try { const bb = pp.getBBox(); if (bb.width > 5) { ax = bb.x + bb.width * 0.16; ay = bb.y + 4; } } catch (e) {}
+      try { const bb = pp.getBBox(); if (bb.width > 5) { ax = bb.x + bb.width * 0.16; ay = bb.y + 4; }
+        // v654 (Dome): die Blase saß bei kleinen Pferden zu hoch (getBBox zählt unsichtbare Flächen mit) – echte Oberkante aus den sichtbaren Teilen des Pferds
+        const m = svg.getScreenCTM(); if (m) { let oben = Infinity; pp.querySelectorAll("path, ellipse, circle, polygon").forEach(el => { if (el.closest("defs, clipPath, mask, pattern, [fill-opacity='0']")) return; const fl = el.getAttribute("fill"); if (fl === "transparent" || fl === "none" && !el.getAttribute("stroke")) return; const r = el.getBoundingClientRect(); if (r.width < 1 || r.height < 1) return; const yy = (r.top - m.f) / m.d; if (yy < oben) oben = yy; });
+          if (isFinite(oben) && oben > ay && oben < ay + 200) ay = oben + 4; } } catch (e) {}
       const woerter = ("*" + text + "*").split(" "), zeilen = [""];
       woerter.forEach(w => { const z = zeilen[zeilen.length - 1]; if ((z + " " + w).trim().length > 24 && z) zeilen.push(w); else zeilen[zeilen.length - 1] = (z + " " + w).trim(); });
       const fs = 10, lh = 12, breite = Math.max(...zeilen.map(z => z.length)) * 5.9 + 20, hoehe = zeilen.length * lh + 10;
@@ -11719,7 +11733,7 @@
   // Stute mit Fohlen bei Fuß (Privat, Tierschutz): Fohlen ist höchstens ein paar Monate alt
   function mitFohlen(h, r) {
     const V = mkPferd(h.id + "-v", RASSEN[Math.floor(r() * RASSEN.length)].id === h.rasse || r() < .6 ? h.rasse : RASSEN[Math.floor(r() * RASSEN.length)].id, r() < .7 ? 0 : 1, 5 + Math.floor(r() * 10), r, "Hengst");
-    let f = null; for (let n = 0; n < 5 && (!f || f.lethalWhite || f.erbTot || f.erbTod); n++) { const box = { pferd: h }; f = geburt(box, V); }
+    let f = null; for (let n = 0; n < 5 && (!f || f.lethalWhite || f.erbTot || f.erbTod); n++) { const box = { pferd: h }; f = geburt(box, V, true); }
     if (!f || f.lethalWhite || f.erbTot || f.erbTod) return;
     f.id = h.id + "-f"; delete f.kinder;
     const d = datum(); if (d.s === 1 && r() < .7) f.geb = { s: 0, j: d.j };   // im Sommer meist schon ein Frühlingsfohlen (3 Monate)
@@ -13457,6 +13471,7 @@
   const PENSION = { anfrage: 0.33, stufe: [0, 1, 1.4, 2], halle: 0.3, roundpen: 0.1, blut: { vorher: 0.7, nachreichen: 0.9, keiner: 1 }, risiko: { vorher: 0, nachreichen: 0.03, keiner: 0.03 },
     besuch: 0.6, verspaetet: 0.1, tragend: 0.15, start: 70, beschwerde: 35, kuendigung: 20, hengst: 0.1, maxAnfragen: 2, anfrageTage: 3, mahnZins: 0.1, voll: 4, entsch: 1, feedback: 0.5 };
   // Tempo-unabhängig (Dome, v252): 0,33 Anfragen je freier Box und Jahreszeit (6 freie Boxen ≈ 2 je Jahreszeit), mindestens 1 garantiert
+  const WEIDE_QUOTE = [0.7, 0.85, 0.5, 0.25];   // v654 (Dome 23.10.): so oft muss ein Weide-Pferd je Jahreszeit draußen gewesen sein (Frühling, Sommer, Herbst, Winter); Zahlen selbst gesetzt
   const pensionMahnMax = () => tpj() <= 4 ? 1 : tpj() <= 7 ? 2 : 3;   // nach so vielen Mahnungen kündigt der Hof (4 / 7 / 10 Tage je Jahreszeit)
   // Ansehen (0–200, Start 100) wirkt auf: Anfragen (×0,3–1,5), akzeptierten Preis (Richtwert ±25 %), Buchungen (×0,5–1,5), Geduld (Beschwerde/Kündigung früher)
   const pensionRichtwert = st => PENSION_PREIS[st] * (1 + (pensionRegeln().ansehen - 100) / 400);
@@ -13525,9 +13540,11 @@
     const f = PENSION.anfrage / tpj() * PENSION.stufe[Math.round(st)] * (1 + ausstattungBonus()) * Math.max(0.3, Math.min(1.5, R.ansehen / 100)) * preisF * PENSION.blut[R.bluttest] * (vorteil("pension") ? 1.3 : 1) * hausBonus();   // H7: Pensionsstall – mehr Anfragen
     return 1 - Math.pow(1 - Math.min(0.5, f), n);
   }
+  // v654 (Dome): kein Nachname doppelt unter Einstellern und offenen Anfragen
+  function pensionNN(pick) { const belegt = new Set([...einstellerListe().map(e => e.nn), ...(spiel.pensionAnfragen || []).map(a => a.nn || (a.e && a.e.nn))]); const frei = PENSION_NN.filter(n => !belegt.has(n)); return pick(frei.length ? frei : PENSION_NN); }
   function pensionAnfrageNeu() {
     const R = pensionRegeln(), r = Math.random, pick = l => l[Math.floor(r() * l.length)];
-    const w = r() < 0.75, vn = pick(w ? MA_NAMEN_W : MA_NAMEN_M), nn = pick(PENSION_NN);   // in echt sind die meisten Einsteller Frauen
+    const w = r() < 0.75, vn = pick(w ? MA_NAMEN_W : MA_NAMEN_M), nn = pensionNN(pick);   // in echt sind die meisten Einsteller Frauen
     const paddockFrei = spiel.boxen.some(b => b.paddock && pensionBoxFrei(b));
     const g = r() < PENSION.hengst ? "Hengst" : r() < 0.5 ? "Stute" : "Wallach", jahre = 4 + Math.floor(r() * 15);
     const p = mkPferd("e" + spiel.tag + Math.random().toString(36).slice(2, 7), pick(RASSEN).id, r() < 0.55 ? 0 : 1 + Math.floor(r() * 3), jahre, r, g);
@@ -13556,7 +13573,7 @@
     return Math.max(0, Math.min(frei, aktive("bereiter").length * BERITT.jeBereiter - einstellerListe().filter(e => e.art === "beritt").length - fremdAngenommen("beritt"))); }
   function aufzuchtPlaetze() { if (!vorteil("zucht")) return 0; return Math.max(0, offenBoxen().filter(offenFrei).length - fremdAngenommen("aufzucht")); }
   function fremdAnfrageNeu(art) {
-    const r = Math.random, pick = l => l[Math.floor(r() * l.length)], w = r() < 0.7, vn = pick(w ? MA_NAMEN_W : MA_NAMEN_M), nn = pick(PENSION_NN);
+    const r = Math.random, pick = l => l[Math.floor(r() * l.length)], w = r() < 0.7, vn = pick(w ? MA_NAMEN_W : MA_NAMEN_M), nn = pensionNN(pick);
     const waise = art === "aufzucht" && r() < AUFZ_FREMD.waiseAnteil, g = art === "beritt" ? (r() < 0.5 ? "Stute" : "Wallach") : r() < 0.5 ? "Stute" : "Hengst";
     const jz = art === "beritt" ? 12 + Math.floor(r() * 17) : waise ? 0 : 2 + Math.floor(r() * 7), jahre = Math.max(0, Math.round(jz / 4));
     const d0 = datum(), t0 = d0.j * 4 + d0.s - jz, geb = { s: ((t0 % 4) + 4) % 4, j: Math.floor(t0 / 4) };
@@ -13647,7 +13664,10 @@
     if (R.offen && R.letzteAnfrage !== jzJetzt() && datum().t >= tpj() - 1 && pensionChance() > 0 && pensionPreisF() >= 0.5 && R.ansehen >= 60) pensionAnfrageNeu();
   }
   // Zufriedenheit ändern (mit Grund für Beschwerden)
+  const GEGENSATZ = [["wird nach meinem Wunsch gefüttert", "wird nicht nach meinem Wunsch gefüttert"], ["der regelmäßige Weidegang", "kein Weidegang"], ["der regelmäßige Auslauf auf dem Sandpaddock", "kein Auslauf auf dem Sandpaddock"], ["gut gefüttert und gemistet", "hatte Hunger"], ["gut gefüttert und gemistet", "Box nicht gemistet"], ["Training nach Wunsch", "anders trainiert"]];   // v654 (Dome): in einer Rückmeldung nie 👍 und 👎 zum selben Thema – der neuere Grund gewinnt
+  const gegenTeil = g => { const r = []; GEGENSATZ.forEach(([a, b]) => { if (g === a) r.push(b); if (g === b || g.startsWith(b + " ")) r.push(a); }); return r; };
   function eZufr(e, d, grund) {
+    if (grund) { const gg = gegenTeil(grund); if (gg.length) { const weg = x => !gg.some(t => x.grund === t || x.grund.startsWith(t + " ")); e.log = (e.log || []).filter(weg); e.plus = (e.plus || []).filter(weg); } }
     e.zufr = Math.max(0, Math.min(100, Math.round((e.zufr + d) * 10) / 10));
     if (d < 0 && grund) { e.log = [{ tag: spiel.tag, grund }, ...(e.log || []).filter(x => x.grund !== grund)].slice(0, 8); }
     if (d > 0 && grund) { e.plus = [{ tag: spiel.tag, grund }, ...(e.plus || []).filter(x => x.grund !== grund)].slice(0, 8); }
@@ -13678,8 +13698,10 @@
       // Haltungswunsch: Weidegang (nicht im Winter) mindestens jeden 2. Tag
       const rehe = e.haltung === "weide" && datum(g).s === 0 && reheGefaehrdet(p), pdOk = p.paddock || (p.paddockZuletzt != null && p.paddockZuletzt >= g - 1);
       if (rehe) { if (p.weide) eZufr(e, -0.3, "trotz Hufrehe-Gefahr auf der Weide"); else if (pdOk) eZufr(e, 0.1, "Sandpaddock statt Weide – vernünftig wegen der Hufrehe-Gefahr"); }   // v328: im Frühling versteht der Besitzer, dass ein gefährdetes Pferd nicht aufs Gras darf
-      else if (e.haltung === "weide" && datum(g).s !== 3 && !p.boxenruhe && !(b.fohlen && b.fohlen.gebTag != null && g - b.fohlen.gebTag < fohlenLiegeTage(b.fohlen))) { if (p.weide || (p.weideZuletzt != null && p.weideZuletzt >= g - 1)) eZufr(e, 0.1, "der regelmäßige Weidegang"); else eZufr(e, -0.3, "kein Weidegang"); }
-      if (e.haltung === "sandpaddock" && paddocks().length && !p.boxenruhe && !(b.fohlen && b.fohlen.gebTag != null && g - b.fohlen.gebTag < fohlenLiegeTage(b.fohlen))) { if (pdOk) eZufr(e, 0.1, "der regelmäßige Auslauf auf dem Sandpaddock"); else eZufr(e, -0.3, "kein Auslauf auf dem Sandpaddock"); }   // v328: ganzjährig
+      else if (e.haltung === "weide" && !p.boxenruhe && !inQuarantaene(p) && !(b.fohlen && b.fohlen.gebTag != null && g - b.fohlen.gebTag < fohlenLiegeTage(b.fohlen))) {   // v654 (Dome): kein Vorwurf bei Quarantäne; Weidegang nur zu einem Anteil der Tage je Jahreszeit (Sommer > Frühling > Herbst > Winter)
+        const W = (e.weideZ = e.weideZ && e.weideZ.jz === jzJetzt() ? e.weideZ : { jz: jzJetzt(), n: 0, ges: 0 }); W.ges++; if (p.weide || (p.weideZuletzt != null && p.weideZuletzt >= g - 1)) W.n++;
+        if (W.ges >= 2) { if (W.n / W.ges >= WEIDE_QUOTE[datum(g).s]) eZufr(e, 0.1, "der regelmäßige Weidegang"); else eZufr(e, -0.3, "kein Weidegang"); } }
+      if (e.haltung === "sandpaddock" && paddocks().length && !b.paddock && !p.boxenruhe && !(b.fohlen && b.fohlen.gebTag != null && g - b.fohlen.gebTag < fohlenLiegeTage(b.fohlen))) { if (pdOk) eZufr(e, 0.1, "der regelmäßige Auslauf auf dem Sandpaddock"); else eZufr(e, -0.3, "kein Auslauf auf dem Sandpaddock"); }   // v328: ganzjährig
       // gebuchte Leistungen
       const ok = (k, erledigt, minus) => { if (!leistungFaellig(e, k)) return; if (erledigt) eZufr(e, 0.3, `${PENSION_LEISTUNG[k].n} klappt zuverlässig`); else eZufr(e, -minus, `${PENSION_LEISTUNG[k].n} vergessen`); };
       if (!besuch) ok("putzen", p.geputzt && p.geputzt.tag === g && p.geputzt.mit.includes("buerste") && p.geputzt.mit.includes("kamm") && p.ausgekratzt === g, 1);   // v388: Pflege = bürsten, kämmen, Hufe
@@ -13805,7 +13827,7 @@
       const p = (pensionBox(e) || {}).pferd; if (!p || e.art || e.kuendigt != null || e.zufr < 65 || jetzt - e.seit < 2 || Math.random() >= 0.2 + 0.2 * (e.zufr - 65) / 35) return;
       const k = zufallAus(PL_REIHE.filter(x => !e.leistungen[x] && x !== "bewegen" && x !== "paddockbox" && leistungAngeboten(x))); if (!k) return;   // Dome 21.10.: nur Leistungen, die der Hof wirklich anbietet
       e.leistungen[k] = true; const L = PENSION_LEISTUNG[k];
-      brief(eName(e), `${p.name}: zusätzliche Leistung`, `wir sind mit {euch|Ihnen} und dem Stall sehr zufrieden. Ab sofort möchte ich für <b>${esc(p.name)}</b> zusätzlich <b>${L.ico} ${L.n}</b> buchen (${fmt(leistPreis(e, k))} je Jahreszeit).`, { pferde: [p] }); });
+      brief(eName(e), `${p.name}: zusätzliche Leistung`, `wir sind mit {euch|Ihnen} und dem Stall sehr zufrieden. Ab sofort möchte ich für <b>${esc(p.name)}</b> zusätzlich <b>${L.ico} ${L.n}</b> buchen (${L.nutzung ? `${fmt(L.preis)} je Anwendung – bezahlt wird nur, wenn es genutzt wird` : `${fmt(leistPreis(e, k))} je Jahreszeit`}).`, { pferde: [p] }); });
     if (zeilen.length) brief("Hofverwaltung", `Pensionsgeld ${jzName(jetzt).replace(/^\S+ /, "")}`, `das Pensionsgeld für diese Jahreszeit:<ul>${zeilen.join("")}</ul>`);
     const L2 = einstellerListe(); if (L2.length) { const z = L2.reduce((a, e) => a + e.zufr, 0) / L2.length; pensionAnsehen(z >= 70 ? 2 : z < 40 ? -2 : 0); }
     { const ab = ausstattungBonus(); if (ab >= 0.35) pensionAnsehen(2); else if (ab >= 0.15) pensionAnsehen(1); }   // v418: gute Ausstattung spricht sich herum
@@ -13955,9 +13977,9 @@
     if (!p || p.klinik) return l;
     const nachm = !!(p.weideNachm && p.weideNachm.tag === t && !p.weideNachm.aus), stattW = paddockStattWeide(p);
     if (fohlenNochLiegend(b)) l.push({ k: "fohlen", txt: "🍼 bleibt drin – das Fohlen liegt noch", ok: true });   // v392 (Dome): kein Weide-/Paddockgang, solange das Neugeborene liegt
-    else if (e.haltung === "weide" && datum().s !== 3 && !stattW && !p.boxenruhe) l.push({ k: "weide", txt: "🌿 Weidegang", ok: !!p.weide || (nachm && !p.weideNachm.paddock) });
-    if (!fohlenNochLiegend(b) && (e.haltung === "sandpaddock" || stattW) && paddocks().length && !p.boxenruhe) l.push({ k: "sandpaddock", txt: stattW ? "🟫 Sandpaddock statt Weide (Hufrehe-Gefahr)" : "🟫 Sandpaddock", ok: !!p.paddock || p.paddockZuletzt === t || (nachm && !!p.weideNachm.paddock) });   // v327: gebuchte Haltung auch in „Pension heute“ zeigen
-    { const WF = besitzerFutter(p, b); if (WF) l.push({ k: "futter", txt: "🌾 Futter nach Wunsch", ok: planGleich(futterplanVon(p, b), WF) }); }   // v333
+    else if (e.haltung === "weide" && datum().s !== 3 && !stattW && !p.boxenruhe && !inQuarantaene(p)) l.push({ k: "weide", txt: "🌿 Weidegang", ok: !!p.weide || (nachm && !p.weideNachm.paddock) });
+    if (!fohlenNochLiegend(b) && (e.haltung === "sandpaddock" || stattW) && paddocks().length && !b.paddock && !p.boxenruhe) l.push({ k: "sandpaddock", txt: stattW ? "🟫 Sandpaddock statt Weide (Hufrehe-Gefahr)" : "🟫 Sandpaddock", ok: !!p.paddock || p.paddockZuletzt === t || (nachm && !!p.weideNachm.paddock) });   // v327: gebuchte Haltung auch in „Pension heute“ zeigen
+    { const WF = besitzerFutter(p, b); if (WF) l.push({ k: "futter", txt: "🌾 Futterplan nach Wunsch", ok: planGleich(futterplanVon(p, b), WF) }); }   // v333
     if (leistungFaellig(e, "putzen") && !besuch) l.push({ k: "putzen", txt: `🧽 Pflege (bürsten, kämmen, ${HUFKR_ICO} Hufe)`, ok: !!(p.geputzt && p.geputzt.tag === t && p.geputzt.mit.includes("buerste") && p.geputzt.mit.includes("kamm")) && p.ausgekratzt === t });
     if (leistungFaellig(e, "decke")) l.push({ k: "decke", txt: "🧣 Decke wechseln", ok: e.decke === t || pflegeTeam() });
     if (leistungFaellig(e, "bewegen")) { const st = bereiterStand(p), so = bereiterSoll(p), rest = bewegenTage(e) - st;   // v401 (Dome): „kommt noch“ statt nicht erfüllt – erst ab 2 Tagen Rückstand (dann ärgert sich auch der Besitzer)
@@ -14246,7 +14268,8 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       if (H.art === "gnadenhof") { const n = eigenePferdeHof().length; if (n) { buchen(30 * n, "Spenden Gnadenhof"); brief("Freundeskreis Gnadenhof", "Spenden für die alten Pferde", `für {deine|Ihre} ${n} Schützlinge auf <b>${esc(hofName())}</b> sind diese Jahreszeit <b>${fmt(30 * n)}</b> an Spenden zusammengekommen. Danke für {deine|Ihre} Arbeit!`); } } (H.foerderLog = H.foerderLog || []).push({ jz: jetzt, b: fb }); H.foerderLog = H.foerderLog.filter(x => x.jz > jetzt - 4); return; }
     const fehlt = stallartBed(H.art).filter(x => !x[1]).map(x => x[0]);
     if (H.artVerloren || jetzt < stallartSchonBis()) {   // Schonfrist: keine Strafe (aber auch keine Förderung/Vorteile)
-      if (!H.artVerloren) brief("Landwirtschaftsamt", `${name}: diesmal keine Förderung`, `für {deinen|Ihren} Hof <b>${esc(hofName())}</b> wird diese Jahreszeit keine Förderung (${fmt(foerderBetrag())}) ausgezahlt, und die Vorteile als ${name} gelten noch nicht – es fehlt: <b>${fehlt.join(", ")}</b>. Sobald das erfüllt ist, gibt es zu Beginn der nächsten Jahreszeit die Förderung. (Noch Schonfrist – keine Rückzahlung.)`);   // v371 (Dome): nicht stumm ausbleiben
+      if (!H.artVerloren) { const fb = foerderBetrag(); buchen(fb, `Förderung ${name} (Schonfrist, Fläche ${haTxt(H.ha + (H.pacht || 0))})`);   // v654 (Dome 23.10.): in der Schonfrist wird die Förderung gezahlt – ohne Rückzahlung, falls die Bedingungen später nicht erfüllt werden
+        brief("Landwirtschaftsamt", `${name}: Förderung in der Schonfrist`, `für {deinen|Ihren} Hof <b>${esc(hofName())}</b> wurde diese Jahreszeit die Förderung (<b>${fmt(fb)}</b>) ausgezahlt. Noch gilt die Schonfrist: {Du musst|Sie müssen} sie nicht zurückzahlen, auch wenn die Bedingungen später nicht erfüllt werden. Die Vorteile als ${name} gelten aber erst, wenn alles erfüllt ist – es fehlt: <b>${fehlt.join(", ")}</b>. Danach kommt die Förderung wie gewohnt, und {du musst|Sie müssen} sie bei Verstoß zurückzahlen.`); }
       return; }
     if (H.artFrist == null) { H.artFrist = jetzt + 1; brief("Landwirtschaftsamt", `${name}: Bedingungen nicht erfüllt`, `{dein|Ihr} Hof <b>${esc(hofName())}</b> erfüllt die Bedingungen als ${name} nicht mehr: <b>${fehlt.join(", ")}</b>. {Du hast|Sie haben} bis zum Ende dieser Jahreszeit Zeit, das zu ändern. Sonst verliert der Hof den Status, und die Förderung des letzten Jahres muss zurückgezahlt werden.`); return; }
     if (jetzt >= H.artFrist) { const zurueck = (H.foerderLog || []).reduce((a, x) => a + x.b, 0); if (zurueck) buchen(-zurueck, `Rückzahlung Förderung ${name}`);
@@ -14981,6 +15004,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     if (hofReiter !== "post") { offenerBrief = null; postAuswahl = null; }
     const sp = spiel.spieler || {}, allePost = spiel.post || (spiel.post = []), n = ungelesen();
     const post = allePost.filter(b => !fremderBrief(b)).filter(b => postOrdner === "spam" ? b.spam : postOrdner === "jahr" ? (b.typ || briefTyp(b.betreff)[1]) === "jahresbericht" && !b.spam : postOrdner === "stern" ? b.stern && !b.spam : !b.spam), spamAnz = allePost.filter(b => b.spam).length, sternAnz = allePost.filter(b => b.stern && !b.spam).length, jahrAnz = allePost.filter(b => !b.spam && (b.typ || briefTyp(b.betreff)[1]) === "jahresbericht").length;
+    const postSicht = () => postAuswahl && postOrdner === "eingang" ? post.filter(b => !b.stern && (b.typ || briefTyp(b.betreff)[1]) !== "jahresbericht") : post;   // v654 (Dome): beim Auswählen sind ⭐-Briefe und Jahresberichte im Posteingang nicht dabei – kein Löschen aus Versehen
     const ordnerLeiste = `<div class="post-ordner"><button data-ordner="eingang" class="${postOrdner === "eingang" ? "an" : ""}">📥 Posteingang${n ? ` (${n})` : ""}</button><button data-ordner="stern" class="${postOrdner === "stern" ? "an" : ""}">⭐ Wichtig${sternAnz ? ` (${sternAnz})` : ""}</button><button data-ordner="jahr" class="${postOrdner === "jahr" ? "an" : ""}">📊 Jahresberichte${jahrAnz ? ` (${jahrAnz})` : ""}</button><button data-ordner="spam" class="${postOrdner === "spam" ? "an" : ""}">🚫 Spam${spamAnz ? ` (${spamAnz})` : ""}</button></div>`;
     const reiterListe = [["hof", "Hof"], ["reiter", "Reiter"], ["pferde", "Pferde"], ["finanzen", "Finanzen"], ["mitarbeiter", "Mitarbeiter"], ["post", "Postfach"], ["einst", "Einstellungen"]];
     let inhalt = "";
@@ -15053,8 +15077,8 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
           <div class="brief-knoepfe"><button class="knopf zweit" id="briefZurueck">‹ ${br.spam ? "Spam" : "Postfach"}</button>${br.spam ? `<button class="knopf" id="keinSpam">✅ Kein Spam</button>` : br.typ === "jahresbericht" ? "" : `<button class="knopf zweit" id="istSpam">🚫 Spam</button>`}<button class="knopf rot" id="briefWeg">🗑️ Löschen</button></div>
           ${NIE_SPAM.includes(br.typ) ? "" : `<p class="text" style="margin-top:8px"><small>${br.spam ? `Ereignis „${briefTyp(br.betreff)[2]}“ ist als Spam markiert. Diese Briefe bleiben ein Jahr im Spamordner und werden dann gelöscht.` : `„Spam“ verschiebt alle Briefe zum Ereignis „${briefTyp(br.betreff)[2]}“ in den Spamordner – auch künftige, ohne Benachrichtigung.`}</small></p>`}`;
       } else if (!post.length) inhalt = ordnerLeiste + `<div class="post-leer">${BRIEF_SVG(true).replace("<svg", '<svg width="60"')}<br>${postOrdner === "spam" ? "Der Spamordner ist leer." : postOrdner === "jahr" ? "Noch kein Jahresbericht. Er kommt zu Beginn jedes neuen Jahres." : postOrdner === "stern" ? "Noch keine wichtigen Briefe. Tippe beim Lesen oder in der Liste auf den ☆, um einen Brief zu markieren." : "Dein Postfach ist leer."}</div>`;
-      else if (postAuswahl) inhalt = ordnerLeiste + `<div class="post-leiste"><span>${postAuswahl.size} von ${post.length} markiert</span><span><button id="postAlle">${postAuswahl.size === post.length ? "Keine" : "Alle"} markieren</button></span></div>
-        <div class="briefe">${post.map(b => `<button class="brief auswahl ${postAuswahl.has(b.id) ? "markiert" : ""} ${b.gelesen ? "" : "neu"}" data-mark="${b.id}"><span class="haken">${postAuswahl.has(b.id) ? "✓" : ""}</span><span class="ico">${BRIEF_SVG(b.gelesen)}</span>
+      else if (postAuswahl) inhalt = ordnerLeiste + `<div class="post-leiste"><span>${postAuswahl.size} von ${postSicht().length} markiert</span><span><button id="postAlle">${postAuswahl.size === postSicht().length ? "Keine" : "Alle"} markieren</button></span></div>
+        <div class="briefe">${postSicht().map(b => `<button class="brief auswahl ${postAuswahl.has(b.id) ? "markiert" : ""} ${b.gelesen ? "" : "neu"}" data-mark="${b.id}"><span class="haken">${postAuswahl.has(b.id) ? "✓" : ""}</span><span class="ico">${BRIEF_SVG(b.gelesen)}</span>
           <span class="txt"><b>${esc(b.betreff)}</b><small>${esc(b.von)} · ${briefDatum(b)}</small></span></button>`).join("")}</div>
         <div class="brief-knoepfe"><button class="knopf zweit" id="postFertig">Fertig</button><button class="knopf rot ${postAuswahl.size ? "" : "aus"}" id="postWeg">🗑️ ${postAuswahl.size || ""} Löschen</button></div>`;
       else inhalt = ordnerLeiste + `<div class="post-leiste"><span>${post.length} ${post.length === 1 ? "Brief" : "Briefe"}${n && postOrdner !== "spam" ? ` · ${n} ungelesen` : ""}</span><span>${n && postOrdner !== "spam" ? `<button id="alleGelesen">Alle gelesen</button>` : ""}<button id="postWaehlen">Auswählen</button></span></div>
@@ -15145,7 +15169,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     });
     if ($("postWaehlen")) $("postWaehlen").onclick = () => { postAuswahl = new Set(); zeigeHof(); };
     if ($("postFertig")) $("postFertig").onclick = () => { postAuswahl = null; zeigeHof(); };
-    if ($("postAlle")) $("postAlle").onclick = () => { postAuswahl = postAuswahl.size === post.length ? new Set() : new Set(post.map(b => b.id)); zeigeHof(); };
+    if ($("postAlle")) $("postAlle").onclick = () => { const PS = postSicht(); postAuswahl = postAuswahl.size === PS.length ? new Set() : new Set(PS.map(b => b.id)); zeigeHof(); };
     nb.querySelectorAll("[data-mark]").forEach(b => b.onclick = () => { const id = b.dataset.mark; postAuswahl.has(id) ? postAuswahl.delete(id) : postAuswahl.add(id); zeigeHof(); });
     if ($("postWeg")) $("postWeg").onclick = () => {
       if (!postAuswahl.size) return;

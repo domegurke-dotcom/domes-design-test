@@ -677,7 +677,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (C.stripe && !ganzWeiss && WEISS_MUSTER.includes(C.pattern)) g += aalStrich();   // v510 (Dome): bei Scheckungen vor dem Weiß – Aalstrich nur in den farbigen Flächen sichtbar
   // v440: Stichelhaare (feine weiße Punkte) mit weichem Übergang – Sabino-Ränder, Rabicano. inner = Flächen (SVG), weite = Breite des Saums
   let stN = 0;
-  const stichel = (inner, weite, dichte = 1, T = 11) => { const id = `st${++stN}-${uid}`, rs = zufall(id + (opt.seed || ""));
+  const stichel = (inner, weite, dichte = 1, T = 11) => { const id = `st${++stN}-${uid}`, rs = zufall("st" + stN + (opt.seed || ""));   // v654: ohne die laufende Zeichen-Nummer (uid) – sonst sprang das Fellmuster bei jedem Neuzeichnen (Fohlen beim Streicheln der Stute)
     let dots = ""; for (let i = 0; i < Math.round(34 * T * T / 121); i++) dots += `<ellipse cx="${f(rs() * T)}" cy="${f(rs() * T)}" rx="${f(0.22 + rs() * 0.3)}" ry="${f(0.35 + rs() * 0.35)}" fill="#fbfaf6" opacity="${f(0.6 + rs() * 0.4)}"/>`;
     return `<pattern id="p${id}" patternUnits="userSpaceOnUse" width="${T}" height="${T}">${dots}</pattern><mask id="m${id}" maskUnits="userSpaceOnUse" ${bx}><g filter="url(#wb-${uid})" fill="#fff" stroke="#fff" stroke-width="${f(weite)}" opacity="${f(Math.min(1, dichte))}">${inner}</g></mask><rect ${bx} fill="url(#p${id})" mask="url(#m${id})"/>`; };
   if (C.pattern === "dapple") g += `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#dp-${uid})" mask="url(#mk-${uid})"/></g>`;

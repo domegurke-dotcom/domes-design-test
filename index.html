@@ -1100,7 +1100,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "735";
+  const SPIEL_VERSION = "736";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1108,12 +1108,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=735"></script>
-<script src="pferd.js?v=735"></script>
-<script src="boxstufen.js?v=735"></script>
-<script src="kopfneu.js?v=735"></script>
-<script src="waschbild.js?v=735"></script>
-<script src="avatare.js?v=735"></script>
+<script src="lz-string.min.js?v=736"></script>
+<script src="pferd.js?v=736"></script>
+<script src="boxstufen.js?v=736"></script>
+<script src="kopfneu.js?v=736"></script>
+<script src="waschbild.js?v=736"></script>
+<script src="avatare.js?v=736"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -1694,7 +1694,23 @@
     const y0 = pk.genick.y - 15 - 2 - (o.alterStufe === "fohlen" ? 14 : 0), h = pk.nase.y + 15 - y0;
     return kopfAuto(pk, svg, [pk.nase.x - 11, y0, h, h].map(x => x.toFixed(1)).join(" "));   // vorläufiger Ausschnitt, bis gemessen ist
   }
+  // v736 (Dome): auch Hals-, Rücken- und Fellfarben-Bilder der Enzyklopädie – modus "lo": Nase (links) und Ohren (oben) haben KOPF_RAND Luft, Größe bleibt; modus "alle": Luft rundum
+  function enzAuto(svg, vb, modus) {
+    const v0 = vb.map(x => x.toFixed(1)).join(" "), key = kopfHash(svg) + modus + v0, m = kopfMess.get(key);
+    return `<svg class="kopfauto${m ? "" : " kopf-offen"}" data-k="${key}" data-modus="${modus}" data-vb0="${v0}" viewBox="${m ? m : v0}" preserveAspectRatio="xMidYMid meet">${svg}</svg>`;
+  }
+  function randMessen(el) {
+    const key = el.dataset.k, auf = () => document.querySelectorAll(`svg.kopfauto[data-k="${key}"]`).forEach(e => e.classList.remove("kopf-offen")); setTimeout(auf, 1200);
+    if (kopfMess.has(key)) { el.setAttribute("viewBox", kopfMess.get(key)); auf(); return Promise.resolve(); }
+    const [x0, y0, w0, h0] = el.dataset.vb0.split(" ").map(Number), alle = el.dataset.modus === "alle", ex = alle ? 60 : 40, R = [x0 - ex, y0 - ex, w0 + 2 * ex, h0 + 2 * ex], sc = Math.min(4, 1000 / Math.max(R[2], R[3]));
+    return new Promise(res => { const img = new Image();
+      img.onload = () => { try { const W = Math.round(R[2] * sc), H = Math.round(R[3] * sc), c = document.createElement("canvas"); c.width = W; c.height = H; const x = c.getContext("2d", { willReadFrequently: true }); x.drawImage(img, 0, 0); const d = x.getImageData(0, 0, W, H).data; let mx = W, my = H, Mx = -1, My = -1;
+          for (let yy = 0; yy < H; yy++) for (let xx = 0; xx < W; xx++) { const i = (yy * W + xx) * 4; if (d[i + 3] > 100 && d[i] + d[i + 1] + d[i + 2] < 300) { if (xx < mx) mx = xx; if (xx > Mx) Mx = xx; if (yy < my) my = yy; if (yy > My) My = yy; } }
+          if (Mx >= 0) { const left = R[0] + mx / sc - KOPF_RAND, top = R[1] + my / sc - KOPF_RAND, vb = alle ? [left, top, (Mx - mx) / sc + 2 * KOPF_RAND, (My - my) / sc + 2 * KOPF_RAND] : [left, top, w0, h0]; const t = vb.map(v => v.toFixed(1)).join(" "); kopfMess.set(key, t); document.querySelectorAll(`svg.kopfauto[data-k="${key}"]`).forEach(e => e.setAttribute("viewBox", t)); } } catch (e) {} auf(); res(); };
+      img.onerror = () => { auf(); res(); };
+      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(R[2] * sc)}" height="${Math.round(R[3] * sc)}" viewBox="${R.join(" ")}">${el.innerHTML}</svg>`); }); }
   function kopfMessen(el) {   // misst die dunklen Konturpixel (Ohren oben, Nase links) und setzt den Ausschnitt mit KOPF_RAND Luft
+    if (el.dataset.modus) return randMessen(el);
     const key = el.dataset.k, auf = () => document.querySelectorAll(`svg.kopfauto[data-k="${key}"]`).forEach(e => e.classList.remove("kopf-offen")); if (!key) { el.classList.remove("kopf-offen"); return Promise.resolve(); }
     setTimeout(auf, 1200);   // Sicherheitsnetz: nie dauerhaft unsichtbar
     const nx = +el.dataset.nx, ny = +el.dataset.ny, gy = +el.dataset.gy, R = [nx - 40, gy - 70, 130, 130], sc = 3, setze = vb => { kopfMess.set(key, vb); document.querySelectorAll(`svg.kopfauto[data-k="${key}"]`).forEach(e => e.setAttribute("viewBox", vb)); };
@@ -11528,9 +11544,10 @@
     const z = zeichnePferd(kat.rasse, farbe || kat.farbe, { eigenKopf: kat.ansicht === "kopf" ? false : undefined, k: kopfBild ? { fore: 0, ...(kOv || {}) } : (kOv || undefined), abzeichen: abz || undefined, seed: "enz", maehne: kopfBild ? "kurz" : undefined, nurBein: kat.ansicht === "beine", ...(zo || {}) });
     const b = z.box, w = b.maxX - b.minX, h = -b.minY;
     const vb = kat.ansicht === "kopf" ? [b.minX - 3, b.minY - 2, 58, 52]
-      : kat.ansicht === "vorn" ? [b.minX - 3, b.minY - 3, w * 0.62, h * 0.82]
+      : kat.ansicht === "vorn" ? (() => { const r = (kat.refBox = kat.refBox || zeichnePferd(kat.rasse, kat.farbe, { k: { fore: 0 }, seed: "enz", maehne: "kurz" }).box); return [b.minX - 3, b.minY - 3, (r.maxX - r.minX) * 0.62, -r.minY * 0.82]; })()   // v736: alle Halsbilder gleich groß
       : kat.ansicht === "beine" ? [(b.minX + b.maxX) / 2 - h * 0.42, b.minY - 2, h * 0.84, h + 5]
       : [b.minX - 6, b.minY - 16, w + 12, h + 16 + 10];   // oben Platz für die Ohren, unten für die Hufe
+    if (kat.ansicht === "vorn" || kat.ansicht === "ganz") return enzAuto(ohneAnim(z.svg), vb, kat.ansicht === "ganz" ? "alle" : "lo");   // v736: Randabstand wie bei allen Kopfbildern
     return `<svg viewBox="${vb.map(x => x.toFixed(1)).join(" ")}">${ohneAnim(z.svg)}</svg>`;
   }
   function zeigeEnzy() {

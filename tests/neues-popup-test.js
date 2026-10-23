@@ -20,7 +20,7 @@ const { chromium } = require('playwright'); const path = require('path');
     return out; });
   const P = async (gesehen, popup) => { await pg.evaluate(([g, p]) => { localStorage.setItem('zuchtstall-neu-an', '1'); spiel.tippsAus = true; spiel.tipps = spiel.tipps || {}; spiel.tipps.start = 1; spiel.tipps.geldKnapp = 1; spiel.neuGesehen = g; if (p) spiel.neuPopup = p; else delete spiel.neuPopup; document.getElementById('dlg').hidden = true; neuesLaeuft = false; neuesPruefen(); }, [gesehen, popup]); await pg.waitForTimeout(1400); return pg.evaluate(() => ({ t: document.getElementById('dlgInhalt').textContent, h: document.getElementById('dlg').hidden })); };
   const ok = (n, c) => { R.push((c ? '✓ ' : '✗ ') + n); };
-  let r = await P(653, 0); ok('Mittwoch-Spieler: erstes Fenster (1/2)', !r.h && /\(1\/2\)/.test(r.t) && /Whiteboard/.test(r.t) === false);
+  let r = await P(653, 0); ok('Mittwoch-Spieler: erstes Fenster (1/2) mit Datum', !r.h && /Update vom 23.10.2026/.test(r.t) && /\(1\/2\)/.test(r.t) && /Whiteboard/.test(r.t) === false);
   await pg.click('#dlgKnoepfe button'); await pg.waitForTimeout(500); r = await pg.evaluate(() => ({ t: document.getElementById('dlgInhalt').textContent, h: document.getElementById('dlg').hidden })); ok('danach zweites Fenster (2/2) mit Whiteboard', !r.h && /\(2\/2\)/.test(r.t) && /Whiteboard/.test(r.t));
   await pg.click('#dlgKnoepfe button'); await pg.waitForTimeout(400);
   r = await P(677, 0); ok('Spieler mit erstem Fenster gesehen: nur ein Fenster ohne Zähler', !r.h && !/\(\d\/2\)/.test(r.t) && /Whiteboard/.test(r.t)); await pg.click('#dlgKnoepfe button'); await pg.waitForTimeout(400);

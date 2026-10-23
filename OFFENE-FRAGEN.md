@@ -25,5 +25,10 @@ _Reitunterricht (Dome 20.10., v606): auch der feste Bereiter kostet 60 € (Zusa
 - **Sandpaddock (v681):** Fläche 150 m² je Großpferd wie bisher, Bedarf nach Größe = 150 m² × (Stockmaß ÷ 160 cm)², begrenzt 68–195 m² (Shetty ≈ 68, Haflinger ≈ 128, Warmblut ≈ 165, Shire ≈ 190 m²). Vergrößern je Platz 150/250/450 € (Stufenpreis ÷ Plätze). Zu voll (nur von Hand möglich): Wohlbefinden −2 je Nacht und Verletzungen ×1,5, ab 150 % −4 und ×2,2. (Dome v684: Stufen jetzt 400/600/800 m², 2 Kaltblüter passen auf Stufe 1.)
 - **Hinweis:** `tests/weiden-oberflaeche-test.js` hängt (Zeitüberschreitung) – auch schon vor dieser Sitzung, der Test ist veraltet. `tests/tutorial-test.js` hat einen roten Punkt („Danach Immobilienmenü, Testhof weg …“), ebenfalls schon vorher.
 - **Pflichttest/Quarantäne für Kontaktpferde (v686):** Ich habe das als Hilfe gebaut (Liste der Kontaktpferde, ein Knopf für Quarantäne, ein Knopf fürs Blutbild aller), nicht als Pflicht. Soll es zusätzlich eine Pflicht geben (z. B. das Veterinäramt verlangt nach einem Ausbruch Tests/Quarantäne, sonst Mangel bei der Kontrolle)? Das wäre neue Spielmechanik – deshalb offen.
-- **Futterwarnung (v688):** Warnbrief jetzt ab weniger als 6 Tagen Vorrat (vorher 3), damit nach der 1-Tages-Lieferzeit noch Luft bleibt. Zahl selbst gesetzt (`FUTTER_WARN_TAGE`).
+- **Futterwarnung (v688):** Warnbrief jetzt ab weniger als 4 Tagen Vorrat (Dome 23.10.: 4; vorher 3), damit nach der 1-Tages-Lieferzeit noch Luft bleibt. Zahl selbst gesetzt (`FUTTER_WARN_TAGE`).
 - **Mähne/Schopf beim Pensionspferd (v690):** Wenn die Pflege gebucht ist und die Mähne/der Schopf länger ist als die Wunschlänge, sinkt die Zufriedenheit des Besitzers um 0,5 je Tag, bis jemand schneidet (selbst gesetzt, `MAEHNE_AERGER`). Der Pfleger schneidet weiter von selbst.
+
+## Stand nach Domes Antworten 23.10.2026
+- Veterinäramt-/Speicher-Zahlen und Paddock-/Sandpaddock-Zahlen: so lassen (Dome). Mähne-Ärger passt, Futterwarnung 4 Tage (v692), Quarantäne 2–4 Wochen (v692, `quarTage`).
+- **Offen:** Der Quarantänestall für Neuzugänge (Umzug nach 1 Jahreszeit, `neuzugangBox`) ist noch eine ganze Jahreszeit – ebenfalls auf 2–4 Wochen kürzen?
+- **Offen:** Spieltempo 4/7/10 abstimmen – erst mit der Studie gemeinsam durchgehen (Dome).

@@ -15,49 +15,28 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-**Von:** Claude Team · **An:** Claude Pro (oder neue Team-Sitzung) · **Stand:** v682, 23.10.2026
+**Von:** Claude Team · **An:** Claude Pro (oder neue Team-Sitzung) · **Stand:** v722, 23.10.2026
 
-### Nachtsitzung 23.10. – Rest der Wunschliste (alles fertig, v679–v690, auf `main`)
-| Punkt | Stand |
+### Sitzung 23.10. (Abend) – v708–v722, alles auf `main`
+Domes Wünsche zu Whiteboard, Mitarbeitern, Waschplatz/Solarium sind umgesetzt (Details je Version in `CLAUDE.md`):
+| Thema | Version |
 |---|---|
-| Whiteboard (Mitarbeiter auf Boxen, Weideplan Tag A/B, Freund/Feind, Tutorial fort Kap. „Whiteboard“, Blasen, Einsteiger-Wissen, bzn, Test) | ✅ v679 |
-| Pensionsboxen/Paddockboxen einstellbar + eigener Paddockbox-Aufpreis | ✅ v680 |
-| Sandpaddock nach Fläche/Pferdegröße, vergrößern, Überfüllung mit Folgen | ✅ v681 |
-| Anbau als „+x“, Umbau mit wählbarer Boxenzahl, Hofplan ohne eigene Anbau-Zeichnung | ✅ v682 |
-| Namen anklickbar mit Steckbrief + Rücksprung (auch außer Haus) | ✅ v683–v684 |
-| Befund „kann noch geritten werden / heilt nicht mehr“, ganzer Behandlungsplan in der Versorgung | ✅ v685–v690 |
-| Pflichttest/Quarantäne für Kontaktpferde | ✅ v685–v690 |
-| Info, was ein Reitplatz-Ausbau bringt | ✅ v685–v690 |
-| Weidefarbe nach Zustand, Rahmen um Mitarbeiter-Weide, Hinweis Bauer mäht, rechtzeitige Futter-Warnung | ✅ v685–v690 |
-| Besitzer sauer bei vergessenem Mähne/Schopf-Schneiden | ✅ v690 |
-| „wirkt lockerer“ deutlicher, Dreck auf dunklen Pferden, Glanz nach dem Duschen | ✅ v685–v690 |
-- **Stand:** alle Punkte der Wunschliste fertig (v679–v690). Wartet auf Dome: Fragen in `OFFENE-FRAGEN.md`, Entscheidung über Update-Fenster (`NEUES`, seit v677 nichts ausgewählt), große Tests nur nach Wahl der BILDER-Variante.
-- Selbst gesetzte Zahlen und zwei schon vorher rote Tests stehen in `OFFENE-FRAGEN.md` (Abschnitt „Nachtsitzung 23.10.“). Am Ende: alle Fragen gemeinsam an Dome, dann fragen, ob ein Update-Fenster kommen soll (seit v677 nichts ausgewählt).
+| Seitenrand ⅓ kleiner, Pacht-Zäune verschmelzen, Weide-Tritt/Matsch | v708–v713 |
+| Whiteboard: Boxen/Weiden-Plan je Jahreszeit, Holzrahmen, Geschlecht, Chips mit ✕ (auch Pension), Übersicht als Bildschirmfoto/„Noch offen“-Liste | v703–v722 |
+| Mitarbeiter-Avatare (Dome-Blatt `avatare.js`) in hvw, Whiteboard, Briefen | v715/v716 |
+| Pension Waschen/Solarium geprüft + Fehler behoben (Aufgaben, Abrechnung, Pfleger nötig), Pferdeshampoo mit Glanz, Wäsche vergessen ärgert Besitzer | v716–v718 |
+| Wünsche an die Mitarbeiter je eigenem Pferd (Haken im Whiteboard), Shampoo-Kauf in der Futterkammer | v719 |
+| Box-Ansicht Weide aufgeräumt, Weide/Sandpaddock nur per Whiteboard (ab Fortgeschritten), Mitarbeiterfotos nach Platz | v720 |
+| Sattelkammer ausgegraut, Whiteboard-Navigation (Stall → immer Übersicht, „‹ Whiteboard Übersicht“) | v721/v722 |
+| Rahmenfarbe verrät die versteckte Chemie nicht mehr (orange = gestern gestritten, rot = 3× gestritten) | v722 |
 
-### Sitzung 23.10. (v658–v676, alles auf `main`, alle kleinen Tests grün; große Tests nicht gelaufen – vorher Dome nach der BILDER-Variante fragen)
-- v658 Stallart nach Schonfrist nur Mitteilung · v659 Aufnahme speichert Zustand je Nacht + WARNUNGen · v660 Klinik entlässt erst gesund · v661 alle Zäune verfallen · v662 Preisvorschlag 3 Tage, Heu-Verkaufskorb · v663 Stute mit liegendem Fohlen automatisch Boxenruhe · v664/665 Mitarbeiter äppeln/misten Weide + Sandpaddock, Wetter überall gleich · v666 Heilungsdauer · v667 Flächen nach echten Maßen + Kapazität der Reitanlagen · v668 Einsteller und Boxstufen · v669 Einstreu beim Pensionspferd nur mit Zustimmung · v670 Weidegang in der Morgenrunde · v671 Kolik-Stress ×1,5 (selbst gesetzt, realistisch) · v672/673 „einfach“ statt „baufällig“, 1 ha Bauland für alte Spielstände, Bauen mit Gruppen/„Alles reparieren“/Namen, Handwerker-Sammelbrief · v674 Besitzer-Sammelbriefe (`sammelEintrag`/`sammelSenden`, Aktion `fwalle`) · v675 Freunde +1 Wohlbefinden (`FREUND_WOHL`) · v676 Chemie je Paar: Feind ≥ 10, Freund < 2, Rest neutral.
-- **Nächste Aufgabe: Whiteboard** (Mitarbeiter- und Weideplan, Antworten von Dome): im Stall umschalten Whiteboard ↔ Boxenansicht; Mitarbeiter auf Boxen ziehen (nicht zugeteilte Boxen automatisch wie bisher); unten Reihe aller Mitarbeiter mit Foto/Name/Beruf und „1 von 2 Boxen“; Pferde auf Weide ziehen = Ziel-Weide; Weideplan je Weide mit Mittellinie (gerade Tage links, ungerade rechts, im 7-Tage-Modus „Tag A/Tag B“); roter Rahmen Streit/Feind, grüner Freund; ab Fortgeschritten; **auch ins Tutorial**, Hinweisblase, Enzyklopädie, bzn, Test, Bilder in 3 Ansichten.
-- **AUFTRAG FÜR DIE NÄCHSTE SITZUNG (Dome 23.10., ausdrückliche Ausnahme von „eine Etappe, dann warten“):** den **ganzen Rest der Wunschliste** abarbeiten (alle Punkte der Liste „Rest der Wunschliste“ unten, inkl. Whiteboard mit Tutorial-Kapitel, Hinweisblase, Enzyklopädie, bzn und Test; Reihenfolge selbst wählen). Je Punkt: umsetzen, testen (Layout in 3 Ansichten), Version hochzählen, eigener Commit auf `main`, `CLAUDE.md`/Übergabe nachführen. **Fragen sammeln (Spielmechanik nicht selbst entscheiden → in `OFFENE-FRAGEN.md` eintragen, mit etwas anderem weitermachen) und am Ende alle gemeinsam an Dome stellen.** Am Ende fragen, ob ein neues Update-Fenster kommen soll (Auswahlkästchen; v675/v676 Freunde/Feinde warten dafür). Große Tests nur nach Rückfrage (BILDER-Variante).
-- **Update-Fenster-Regel (Dome 23.10., v678):** `NEUES_STAND` in index.html = Version des letzten veröffentlichten Fensters. Neue Einträge nur nach Rückfrage bei Dome mit Auswahlkästchen (siehe CLAUDE.md); bei jeder Sitzung nachfragen, ob ein neues Update-Fenster kommen soll. Alle Änderungen nach v677 sind noch nicht ausgewählt (v675/v676 Freunde, v674+ …).
-- **Neue Regel von Dome (23.10.):** Alles, was für alte Spielstände neu ist, wird dem Spieler beim Laden per Popup gezeigt („Neu in deinem Spiel“). Beispiel liegt Dome zur Freigabe vor (v677 eingebaut, `NEUES` in index.html, Schalter siehe CLAUDE.md; Vorschlag war: `spiel.neuGesehen` = letzte gesehene Version, Liste `NEUES` [Version, Titel, Text] in index.html, Popup nur bei geladenem Spielstand mit älterem Stand, einmal je Spielstand).
-- **Rest der Wunschliste (D aus `AUFNAHME-AUSWERTUNG-23-10.md`, noch offen):** Whiteboard · Pensionsboxen/Paddockboxen einstellbar + eigene Preise · Sandpaddock vergrößern (4 Pferde, Fläche nach Größe, Überfüllung mit Folgen) · Anbau als „+x“ statt neuer Zeile, Stufen-Ausbau mit wählbarer Boxenzahl, Hofplan-Zeichnung für Anbau · Namen anklickbar mit Steckbrief + Rücksprung (auch Pferde außer Haus) · Befund „kann noch geritten werden / heilt nicht mehr“, ganzer Behandlungsplan (Longieren, Verbote) in der Versorgung · Pflichttest/Quarantäne für Kontaktpferde · Info, was ein Reitplatz-Ausbau bringt · Weidefarbe nach Zustand, Rahmen um die für Mitarbeiter gewählte Weide, Hinweis wann der Bauer mäht, rechtzeitige Futter-Warnung · „wirkt lockerer“ deutlicher, Dreck auf dunklen Pferden sichtbarer, Glanz nach dem Duschen · Besitzer sauer bei vergessenem Mähne/Schopf-Schneiden.
-- **Wartet auf Dome:** Abnahmen (Waschplatz, Hinweise, Tutorial, Veterinäramt/Speicher, Spielstand), Zahlen von mir (Kolik-Stress, Freund +1, Weide-Quoten, Besitzer-Vorschlag-Zahlen), Zeichnungen (`BEI-INKSCAPE-BEARBEITEN.md`), große Tests (Variante fragen). Nicht lösbar ohne Daten: Azubi krank+Urlaub, Heu bei leerem Lager, Futterplan „abnehmen vs. Energie“, Abäppeln ohne Pferd (neue Aufnahmen mit Zustand helfen).
+**Offene Fragen an Dome (Antwort steht aus):**
+1. Soll der Steckbrief bei Pensionspferden zusätzlich „heute laut Plan: …“ zeigen? (Dome fragte zweimal „wie meinst du das?“ – einfach erklärt, noch kein Ja.)
+2. Haken-Liste im Whiteboard: aufklappbar machen? (Dome schaut sich das an und sagt Bescheid – nicht von selbst fragen, sie meldet sich.)
+3. „Heute gefressen“ fehlt in der Weide-Karte (auf Dome-Wunsch entfernt) – bei Bedarf als kleine Zeile zurück.
+4. Shampoo: soll das Personal sparsamer sein (nur Pensionspferde mit Leistung)? Hinweis bei leerem Vorrat ist da (Brief).
 
-### Nach Selbststart (23.10., v654–v657, Dome-Antworten auf die Aufnahmen)
-- v654 Fehlerpaket (`AUFNAHME-AUSWERTUNG-23-10.md`), v655 Schonfrist gibt alle Vorteile + Futter/Einstreu wandern beim Umstellen in die neue Box, v656 Paddockbox zählt als Auslauf wie Sandpaddock, v657 Wassereimer hinter dem Pferd (nur Antippfläche vorn), Pinnwand antippbar (Licht-Rechteck fing die Klicks ab), Sandpaddock-Kapazität zählt Nachmittags-Pferde mit, Einstreu-/Futterbedarf-Fenster nur bei freiem Stall.
-- **Noch offen aus Domes Antworten (je als eigenes Paket, vorher Umfang klären):** 3d Klinik-Entlassung nur bei gesund + Zusatzkosten (Impfung/Zahnarzt), 3c alle Zäune verfallen/reparieren, 3g Einstreu-Wechsel nur mit Zustimmung des Einstellers per Brief, 3f Mitarbeiter bringen Pferde in der Morgenrunde raus (Dome fragt, ob Pferde dann immer draußen/drinnen sind – Antwort steht im Chat, Bestätigung fehlt).
-- **Nicht nachstellbar ohne Daten:** Azubi krank+Urlaub versorgt trotzdem, Heu bei leerem Lager, Futterplan-Anzeige „abnehmen vs. Energie“, Weide abäppeln ohne Pferd. Vorschlag an Dome: Aufnahme-Schnappschuss beim „Fehler melden“ (sichtbarer Text, Pferd/Box, Mitarbeiterliste, Lager) – wartet auf „ja“.
-
-### Selbststart 23.10. – erledigt (Dome-Liste)
-- **Stern „selten“ im Handy quer:** passt (Fenster scrollt, OK-Knopf bleibt sichtbar).
-- **v649 Popup „Neue Berufe“** (`maFreischaltTag`, Test `tests/berufe-popup-test.js`).
-- **v650 Tutorial quer/hochkant:** Blase seitlich, wenn kein Platz; Ziele unter Band/Kopfleiste einrollen; Fenster hochkant über dem Band. `GEO=1` im Tutorial-Spieler prüft die Geometrie. anf/fort in 844×390 und 390×844 (anf auch 1366×768) ohne Auffälligkeit. 844×390 hängt selten zufällig („Pferd umstellen“, „Nennen“) – Wiederholung grün. Experte (exp) in v653 grün (dabei Fehler gefunden: der Haken ✔ lag in Menüs wie der Enzyklopädie unter der Menü-Kopfzeile – behoben, v653).
-- **Großer Test `BILDER=fehler`:** Etappen-Test 351 ✓, Hof-Gesamttest 3/3 Läufe ok, Neuladen-Test 7 ✓, keine Bilder nötig. Kleine Tests alle grün. Dabei **echter Fehler v633 behoben (v651):** Kommentar verschluckte `; if (!k) return;` in `pensionJahreszeit` → Jahreszeitwechsel brach ab. Tests an aktuelle Regeln angepasst (`stufenAn = false`, `VET.verbotAb` 99, Tutorial-Kapitel nach Namen).
-- **Spieler 2 als Experte** (hannoveraner/araber/haflinger, 2 Jahre, je 2 Läufe; `TEMPO=4|7|10 JAHRE=2 EXPERTE=1 STUFEN=2`, Auswertung mit `TPJ=…`): Befunde/Pferd/Jahr ≈ 1,1 (Tempo 4) · 1,8 (7) · 2,8 (10); kranke Tage 23 / 30 / 43 %; Heilung Ø 3,3 / 3,5 / 7 Tage. **Bei Tempo 10 verloren 2 von 6 Läufen alle Pferde** (Tierhalteverbot bzw. Beschlagnahme).
-
-### Offen
-- Domes Abnahme (v633, v639–v651), Fragen siehe `OFFENE-FRAGEN.md`.
-- `etappen-test`: Zufallsabsturz behoben (v653); Tutorial-Spieler 844×390 hängt sehr selten zufällig bei „Pferd umstellen“/„Nennen“ (Wiederholung grün).
+**Hinweise für die nächste Sitzung:** `NEUES_STAND` bleibt 694 (Update-Fenster nur auf Domes Ansage; unveröffentlicht sind seit v694 viele Punkte). Große Tests liefen heute nicht (nur kleine Tests + Tutorial-Spieler fort 390×844 grün). `version.json` war seit v708 leer (behoben v716) – beim Hochzählen immer `echo '{ "version": "NNN" }' > version.json` benutzen, nie `open(..., 'w')` vor dem Lesen.
 
 ---
 ### Protokoll (Details je Version, chronologisch)

@@ -15,7 +15,7 @@ const { chromium } = require('playwright'); const path = require('path');
     hofReiter = 'hof'; hofBereich = 'uebersicht'; zeigeHof('hof'); ok('Karte steht in der Hof-Übersicht', !!document.getElementById('neuKarte'));
     document.getElementById('neuGelesen').click();
     ok('Gelesen: Karte und Menüpunkt weg, Stand gesetzt', !document.getElementById('neuKarte') && document.getElementById('mNeu').hidden && spiel.neuGesehen === NEUES_STAND);
-    spiel.neuGesehen = 667; ok('nur neuere Einträge', !/Heilungsdauer/.test(neuesKarteHTML()) && /Boxstufe/.test(neuesKarteHTML()));
+    spiel.neuGesehen = 667; ok('nur neuere Einträge', !/<b>Heilungsdauer<\/b>/.test(neuesKarteHTML()) && /Boxstufe/.test(neuesKarteHTML()));
     NEUES.push([NEUES_STAND + 5, 'Später', 'x', false]); spiel.neuGesehen = 653; ok('Eintrag über NEUES_STAND bleibt unveröffentlicht', !/Später/.test(neuesKarteHTML())); NEUES.pop();
     return out; });
   R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(R.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

@@ -38,7 +38,7 @@ const [W, H] = (process.argv[2] || '844x390').split('x').map(Number), ORD = proc
     wbAnwenden('p:0', 'w:w2:a'); wbAnwenden('p:2', 'w:w2:a');
     const C = spiel.boxen[2].pferd, echt = window.paarBeziehung; window.paarBeziehung = (x, y) => ((x === A && y === C) || (x === C && y === A)) ? window.wbTestBez : null;
     window.wbTestBez = 'feind'; spiel.stallAnsicht = 'board'; wbSicht = 'uebersicht'; zeigeBoxen();
-    ok('Übersicht: zwei Felder, Boxen links, Weiden rechts', (() => { const k = [...document.querySelectorAll('.wb-kachel')]; return k.length === 2 && k[0].dataset.wbsicht === 'boxen' && k[1].dataset.wbsicht === 'weiden' && !document.querySelector('[data-wbq]') && !document.querySelector('[data-wbz]'); })());
+    ok('Übersicht: zwei Felder, Boxen links, Weiden rechts', (() => { const k = [...document.querySelectorAll('.wb-vorschau')]; return k.length === 2 && k[0].dataset.wbsicht === 'boxen' && k[1].dataset.wbsicht === 'weiden' && !document.querySelector('[data-wbq]') && !document.querySelector('[data-wbz]'); })());
     wbSicht = 'weiden'; weiden().find(w => w.wid === 'w2').wbModus = 'jeden2'; zeigeBoxen();
     ok('Whiteboard wird gezeigt', !!document.querySelector('.wb') && !!document.querySelector('[data-wbz="w:w2:a"]'));
     ok('Feinde rot umrandet', document.querySelectorAll('[data-wbz="w:w2:a"] .wb-chip.rot').length === 2, document.querySelector('[data-wbz="w:w2:a"]').textContent);

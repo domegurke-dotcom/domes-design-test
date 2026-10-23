@@ -18,5 +18,4 @@ _Reitunterricht (Dome 20.10., v606): auch der feste Bereiter kostet 60 € (Zusa
 
 
 ## Nachtrag 23.10.2026 (Claude Team)
-- Popup „Neue Berufe“ (v649): Text und Zeitpunkt (jeden Morgen, einmal je neuem Beruf, nicht im Tutorial) selbst gewählt – passt das so?
 - Spieler-2-Studie (Experte, „mittel“ gepflegt): bei Tempo 10 (10 Tage je Jahreszeit) fast doppelt so viele Krankheiten und doppelt so lange Heilung wie bei Tempo 7, und in 2 von 6 Läufen Tierhalteverbot. Soll Tempo 10 (`HEIL_TEMPO`, Krankheitsrisiko je Tag) angeglichen werden? Nicht geändert.

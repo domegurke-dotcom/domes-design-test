@@ -10,14 +10,14 @@ const { chromium } = require('playwright');
   await pg.goto('file://' + require('path').resolve(__dirname, '..', 'index.html'));
   await klick('#smNeu'); await pg.fill('#chName', 'Test'); await klick('#chLos'); await klick('#dlgKnoepfe button');
   await klick('[data-immo="pension"]'); await pg.fill('#kaufName', 'Hof'); await klick('#dlgKnoepfe button:first-child');
-  await pg.evaluate(() => { buchen(30000, 'Test'); ['Hanni', 'Ali'].forEach(n => { const h = neuesPferd({ rasse: 'araber', geschlecht: 'Stute', alter: 7, name: n }); pferdEinstellen(h, 0, 'Händler'); }); $('dlg').hidden = true; });
+  await pg.evaluate(() => { spiel.stufenAn = false; spiel.tippsAus = true; spiel.tipps = spiel.tipps || {}; spiel.tipps.start = 1; spiel.tipps.geldKnapp = 1; buchen(30000, 'Test'); ['Hanni', 'Ali'].forEach(n => { const h = neuesPferd({ rasse: 'araber', geschlecht: 'Stute', alter: 7, name: n }); pferdEinstellen(h, 0, 'Händler'); }); $('dlg').hidden = true; });
   log('Start: Weiden', await pg.evaluate(() => JSON.stringify(weiden().map(w => [w.name, w.ha])) + ' freiesLand ' + freiesLand()));
   // 1. Weideland kaufen über hvw – Hof – Bauen → Kachel „Weideland“ (v347)
   await pg.evaluate(() => { hofBereich = 'bauen'; zeigeHof('hof'); }); await klick('[data-land="weide"]');
   await pg.selectOption('#landHa', '2'); await pg.selectOption('#landZiel', ''); await klick('#landKauf'); await klick('#dlgKnoepfe button:first-child');
   log('Nach Landkauf: freies Weideland', await pg.evaluate(() => freiesLand()));
   // 2. Einzäunen als neue Weide über Bauen
-  const zaun = async (ziel) => { await pg.evaluate(() => { hofBereich = 'bauen'; zeigeHof('hof'); }); await klick('[data-land="weide"]'); await klick('#landZaun');   // v358: Einzäunen über das Weideland-Fenster
+  const zaun = async (ziel) => { await pg.evaluate(() => { $('dlg').hidden = true; hofBereich = 'bauen'; zeigeHof('hof'); });   // v683: nach dem Landkauf steht noch ein Fenster offen await klick('[data-land="weide"]'); await klick('#landZaun');   // v358: Einzäunen über das Weideland-Fenster
     const hatZiel = await pg.$('#bauZiel'); if (hatZiel) { await pg.selectOption('#bauZiel', ziel); await pg.waitForTimeout(200); }
     log('  Dialog Weide-Auswahl:', hatZiel ? await pg.$$eval('#bauZiel option', o => o.map(x => x.textContent).join(' / ')) : 'keine (erste Weide)');
     await pg.selectOption('#bauMenge', '0.5').catch(() => pg.selectOption('#bauMenge', { index: 0 }));

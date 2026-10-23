@@ -328,16 +328,16 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const kopfAlter = stufe && KOPF_ALTER[stufe] ? stufe : null;
   const eigenKopf = ekWahl && typeof KOPF_NEU !== "undefined" ? (KOPF_NEU.formen[ekWahl] ? ekWahl : "gerade") : null;
   let ekMatrix = null, ohrL = null;
-  const grasen = haltung === "grasen", senk = grasen ? Math.max(0, Math.min(1, opt.senk == null ? 1 : opt.senk)) : 0, amBoden = grasen && opt.fressZiel !== "krippe";   // v723 (Dome): Fressen – opt.senk 0 (Kopf oben) bis 1 (Maul am Boden bzw. an der Krippe)
-  const ohrenHaengen = haltung === "tief" || liegt || (amBoden && senk > .5);
+  const grasen = haltung === "grasen", senk = grasen ? Math.max(0, Math.min(1, opt.senk == null ? 1 : opt.senk)) : 0, amBoden = grasen && opt.fressZiel !== "krippe", hv = grasen ? (["leicht", "waagerecht", "tief"].includes(opt.von) ? opt.von : "normal") : haltung;   // hv: Haltung, von der aus das Pferd frisst (matte Pferde senken den Kopf aus ihrer Haltung und kehren dorthin zurück)   // v723 (Dome): Fressen – opt.senk 0 (Kopf oben) bis 1 (Maul am Boden bzw. an der Krippe)
+  const ohrenHaengen = hv === "tief" || liegt || (amBoden && senk > .5);
   const ohrenGeknickt = !ohrenHaengen && opt.ohren === "geknickt";
   const gl = w * 1.5;                       // Höhe der untergeschlagenen Beine beim Liegen
   const dLiegen = liegt ? Lg - gl : 0;      // so weit sinkt der Körper beim Liegen ab
   let a0 = (k.nAng - 20) * Math.PI / 180;
-  let N = k.neck * H * 1.1 * ({ waagerecht: 1.6, tief: 2.2, liegend: 2.2 }[haltung] ? 1 + Math.max(0, 0.56 - k.neck) * { waagerecht: 1.6, tief: 2.2, liegend: 2.2 }[haltung] : 1);
+  let N = k.neck * H * 1.1 * ({ waagerecht: 1.6, tief: 2.2, liegend: 2.2 }[hv] ? 1 + Math.max(0, 0.56 - k.neck) * { waagerecht: 1.6, tief: 2.2, liegend: 2.2 }[hv] : 1);
   const hl = k.head * H;
   const th0 = k.hAng * Math.PI / 180;
-  const th = th0 + ({ normal: 0, leicht: 8, waagerecht: 12, tief: 16, liegend: 16, grasen: (amBoden ? 34 : 20) * senk }[haltung] || 0) * Math.PI / 180;
+  let th = th0 + ({ normal: 0, leicht: 8, waagerecht: 12, tief: 16, liegend: 16 }[hv] || 0) * Math.PI / 180;
   const maulY = (aa, tt) => Wn.y - N * Math.sin(aa) + (Math.sin(tt) * 1.01 + Math.cos(tt) * 0.14 * k.muz) * hl;
   const bugY = top + 0.45 * D;
   // Gesunde Pferde tragen den Kopf deutlich über der Waagerechten (hebt v. a. kurze, tief angesetzte Hälse wie beim Shetty)
@@ -353,11 +353,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // „leicht“: mindestens ~18° tiefer als normal (wichtig für Pferde mit kurzem, tief angesetztem Hals),
   // das Maul bleibt aber sichtbar über der Waagerechten
   const leichtY = Math.max(normY + 0.62 * (bugY - normY), Math.min(maulY(a0 - 18 * Math.PI / 180, th), bugY - 0.06 * H));
-  const zielY = { leicht: leichtY, waagerecht: bugY, tief: bugY + 0.5 * (-hh - 3 - bugY), liegend: -dLiegen - 2.5, grasen: amBoden ? null : normY + senk * (0.85 * bugY - normY) }[haltung];   // Krippe: Maul etwa auf Brusthöhe
+  const zielY = { leicht: leichtY, waagerecht: bugY, tief: bugY + 0.5 * (-hh - 3 - bugY), liegend: -dLiegen - 2.5 }[hv];
   let a = a0;
   if (zielY != null) {
     // Messpunkt: bei „waagerecht“ die Mitte des Nasenrückens, sonst das Maul
-    const c = haltung === "waagerecht"
+    const c = hv === "waagerecht"
       ? (Math.sin(th) * 0.55 - Math.cos(th) * 0.045) * hl
       : (Math.sin(th) * 1.01 + Math.cos(th) * 0.14 * k.muz) * hl;
     a = Math.asin(Math.max(-0.97, Math.min(Math.sin(a0), (Wn.y + c - zielY) / N)));
@@ -365,7 +365,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (amBoden) {   // v723 Grasen/Heu vom Boden: Hals schräg nach vorn-unten, Kopf fast senkrecht, Maul am Boden (kurze Hälse flacher, sonst stehen sie steil)
     const aEnd = (k.neck < .52 ? -36 : -46) * Math.PI / 180, thE = th0 + 34 * Math.PI / 180;
     const cE = (Math.sin(thE) * 1.01 + Math.cos(thE) * 0.14 * k.muz) * hl, nE = (Wn.y + cE + hh * 0.3) / Math.sin(aEnd);
-    a = a0 + (aEnd - a0) * senk; N += (Math.max(N, nE) - N) * senk;
+    a += (aEnd - a) * senk; th += (thE - th) * senk; N += (Math.max(N, nE) - N) * senk;
+  } else if (grasen) {   // v723 Kraftfutter an der Krippe: Maul etwa auf Brusthöhe – wer den Kopf schon tiefer trägt, bleibt so tief
+    const yV = maulY(a, th), yK = 0.85 * bugY;
+    if (yV < yK) { const thK = Math.max(th, th0 + 20 * Math.PI / 180), t2 = th + (thK - th) * senk, y = yV + (yK - yV) * senk;
+      th = t2; a = Math.asin(Math.max(-0.97, Math.min(0.97, (Wn.y + (Math.sin(th) * 1.01 + Math.cos(th) * 0.14 * k.muz) * hl - y) / N))); }
   }
   const Pll = P(Wn.x - N * Math.cos(a), Wn.y - N * Math.sin(a));
   const u = P(-Math.cos(th), Math.sin(th)), v = P(Math.sin(th), Math.cos(th));
@@ -379,7 +383,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     hp(0.06, 0.45 * hw * nkK), hp(-0.03, 0.22 * hw),
   ]);
   const nk = k.nk || 0; // kräftiger Hals: Kehle setzt weiter vorn unter der Ganasche an
-  const T0 = hp(0.15, 0.5 * hw), kSp = (haltung === "normal" || haltung === "leicht") && k.ts ? 1 : 0, T1 = hp(0.46 + ((k.ts || 0.46) - 0.46) * kSp, (0.4 - 0.04 * kSp) * hw * Math.min(jw, 1.1));
+  const T0 = hp(0.15, 0.5 * hw), kSp = (hv === "normal" || hv === "leicht") && senk < .3 && k.ts ? 1 : 0, T1 = hp(0.46 + ((k.ts || 0.46) - 0.46) * kSp, (0.4 - 0.04 * kSp) * hw * Math.min(jw, 1.1));
   let T = P(T0.x + (T1.x - T0.x) * nk, T0.y + (T1.y - T0.y) * nk); const Pn = hp(-0.02, 0.04);
   const d = norm(P(Pn.x - Wn.x, Pn.y - Wn.y));
   const nOut = P(-d.y, d.x);

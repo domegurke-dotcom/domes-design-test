@@ -1098,7 +1098,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "723";
+  const SPIEL_VERSION = "724";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1106,12 +1106,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=723"></script>
-<script src="pferd.js?v=723"></script>
-<script src="boxstufen.js?v=723"></script>
-<script src="kopfneu.js?v=723"></script>
-<script src="waschbild.js?v=723"></script>
-<script src="avatare.js?v=723"></script>
+<script src="lz-string.min.js?v=724"></script>
+<script src="pferd.js?v=724"></script>
+<script src="boxstufen.js?v=724"></script>
+<script src="kopfneu.js?v=724"></script>
+<script src="waschbild.js?v=724"></script>
+<script src="avatare.js?v=724"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -4162,7 +4162,7 @@
   // v723 (Dome): Fress-Animation – Kopf senkt sich in einzelnen Bildern zum Futter (Heu am Boden, Kraftfutter an der Krippe), bleibt unten und hebt sich wieder.
   // Box: nach dem Füttern 15 s, mehrere Fütterungen laufen nacheinander ab (keine bricht die andere ab). Weide: jedes Pferd zu einer anderen Zeit etwa 30 s.
   const FRESS = { runter: 1000, hoch: 1000, box: 15000, weide: 30000, bilder: 8, pauseMin: 10000, pauseMax: 40000, takt: 100 };
-  const FRESS_HALTUNG = ["normal", "leicht"];   // matte oder liegende Pferde senken den Kopf nicht extra
+  const FRESS_HALTUNG = ["normal", "leicht", "waagerecht", "tief"];   // Dome: auch matte Pferde – aus ihrer Haltung und zurück; liegende nicht
   let fressBox = null, fressZeich = null, fressTimer = null;   // fressBox: { pid, liste: ["boden"|"krippe"], start }
   const weideFress = {}, weideFressInfo = {};   // je Pferd: { ab: Zeitpunkt des nächsten Grasens, start }
   function fressSenk(t, halt) {   // Anteil 0–1 nach t ms, null = fertig
@@ -4175,7 +4175,7 @@
   function fressOpt(p) {
     if (!fressBox || fressBox.pid !== p.id || !FRESS_HALTUNG.includes(haltungFuer(p))) return null;
     const sk = fressSenk(Date.now() - fressBox.start, FRESS.box);
-    return sk ? { haltung: "grasen", senk: sk, fressZiel: fressBox.liste[0] } : null;
+    return sk ? { haltung: "grasen", senk: sk, fressZiel: fressBox.liste[0], von: haltungFuer(p) } : null;
   }
   function weideFressOpt(q) {
     const jetzt = Date.now(), W = weideFress[q.id] || (weideFress[q.id] = { ab: jetzt + 1000 + Math.random() * 15000, start: null });
@@ -4193,7 +4193,7 @@
   function fressStop(zeichnen) { if (!fressBox) return; fressBox = null; if (zeichnen && fressZeich && $("pferdKoerper")) fressBild(0); }
   function fressBild(sk) {   // nur das Pferd neu zeichnen (Stellung bleibt, da die Mitte vom normalen Bild kommt)
     const el = $("pferdKoerper"), Z = fressZeich; if (!el || !Z) return;
-    const o = sk ? { ...Z.opt, haltung: "grasen", senk: sk, fressZiel: fressBox ? fressBox.liste[0] : "boden" } : Z.opt, svg = zeichnePferd(Z.p.rasse, fb(Z.p), o).svg;
+    const o = sk ? { ...Z.opt, haltung: "grasen", senk: sk, fressZiel: fressBox ? fressBox.liste[0] : "boden", von: Z.opt.haltung } : Z.opt, svg = zeichnePferd(Z.p.rasse, fb(Z.p), o).svg;
     el.innerHTML = spiel.sparmodus ? ohneAnim(svg) : svg; el.dataset.senk = sk;
   }
   function fressTaktAn() { if (!fressTimer) fressTimer = setInterval(fressTakt, FRESS.takt); }
@@ -4211,7 +4211,7 @@
     }
     document.querySelectorAll("#weideBild [data-gras]").forEach(el => {   // Weide: jedes Pferd grast zu seiner Zeit
       const I = weideFressInfo[el.dataset.gras]; if (!I) return; noch = true;
-      const fo = weideFressOpt(I.q), sk = fo ? fo.senk : 0;
+      const fo = weideFressOpt(I.q), sk = fo ? fo.senk : 0; if (fo) fo.von = I.o.haltung;
       if (String(sk) !== el.dataset.senk) { el.innerHTML = zeichnePferd(I.q.rasse, fb(I.q), fo ? { ...I.o, ...fo } : I.o).svg; el.dataset.senk = sk; }
     });
     if (!noch) { clearInterval(fressTimer); fressTimer = null; }
@@ -10117,8 +10117,10 @@
     fleissig: { n: "fleißig", info: "schafft 1 Box mehr" },
     lernbegierig: { n: "lernbegierig", info: "sammelt schneller Erfahrung" },
     nachteule: { n: "Nachteule", info: "macht Nachtdienste gern" } };
-  const MA_NAMEN_M = ["Jonas", "Paul", "Finn", "Luca", "Tom", "Ben", "Felix", "Noah", "Elias", "Leon", "Moritz", "Jakob", "Anton", "Emil", "Karl", "Theo"];
-  const MA_NAMEN_W = ["Lena", "Mia", "Hannah", "Sophie", "Lea", "Clara", "Ida", "Greta", "Marie", "Emma", "Frieda", "Lotte", "Anna", "Paula", "Nele", "Ronja"];
+  const MA_NAMEN_M = ["Jonas", "Paul", "Finn", "Luca", "Tom", "Ben", "Felix", "Noah", "Elias", "Leon", "Moritz", "Jakob", "Anton", "Emil", "Karl", "Theo",
+    "Max", "Lukas", "David", "Simon", "Jan", "Niklas", "Tim", "Henry", "Oskar", "Matteo", "Julian", "Fabian", "Malte", "Hannes", "Ole", "Mats", "Johann", "Vincent", "Leo", "Samuel", "Linus", "Benedikt", "Marlon", "Florian"];   // v723 (Dome): mehr Namen, damit sie sich nicht doppeln
+  const MA_NAMEN_W = ["Lena", "Mia", "Hannah", "Sophie", "Lea", "Clara", "Ida", "Greta", "Marie", "Emma", "Frieda", "Lotte", "Anna", "Paula", "Nele", "Ronja",
+    "Laura", "Julia", "Sarah", "Lisa", "Katharina", "Johanna", "Charlotte", "Amelie", "Emilia", "Luisa", "Mila", "Merle", "Jana", "Svenja", "Carla", "Pia", "Maja", "Theresa", "Helena", "Mara", "Romy", "Isabel", "Franziska", "Leonie"];
   const maW = m => m.w != null ? m.w : MA_NAMEN_W.includes(m.name);
   // Dome (23.10.): Gesichter der Angestellten aus Domes Avatar-Blatt (avatare.js: MA_BILDER.w Frauen / .m Männer) – nach Geschlecht, möglichst jeder nur einmal (der am seltensten benutzte, bei Gleichstand zufällig, fest je Person)
   function maAvaNr(m) {
@@ -10385,7 +10387,8 @@
   }
   // ---------- Bewerbungen: zu jeder Jahreszeit 2–3 neue Bewerber je Stelle ----------
   function bewerberErzeugen(typ) {
-    const T = MA_TYP[typ], n = 2 + (Math.random() < 0.5 ? 1 : 0), schonDa = new Set((spiel.mitarbeiter || []).map(m => m.name)), liste = [];
+    const T = MA_TYP[typ], n = 2 + (Math.random() < 0.5 ? 1 : 0), liste = [];
+    const schonDa = new Set((spiel.mitarbeiter || []).concat(Object.values((spiel.bewerber || {}).liste || {}).flat(), Object.values(spiel.hoefe || {}).flatMap(h => (h && h.mitarbeiter) || [])).map(m => m && m.name));   // v723: auch Bewerber anderer Stellen und Angestellte anderer Höfe – keine doppelten Namen
     for (let k = 0; k < n; k++) {
       const w = Math.random() < 0.5, namen = (w ? MA_NAMEN_W : MA_NAMEN_M).filter(x => !schonDa.has(x)), name = zufallAus(namen.length ? namen : (w ? MA_NAMEN_W : MA_NAMEN_M)); schonDa.add(name);
       const wissen = Object.fromEntries(WISSEN.map(([key]) => [key, Math.max(1, Math.min(95, Math.round(T.start[key] * (0.6 + Math.random() * 0.9))))]));
@@ -14975,7 +14978,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     const andere = (os ? offenPferde() : sand ? paddockPferde(g) : w ? weidePferde(w) : []).filter(q => q !== p).slice(0, 5);
     const grasDa = !sand && !!w && w.gras > 5;   // v723 (Dome): auf der Weide grasen die Pferde ab und zu (Kopf runter, etwa 30 s)
     const malen = (q, x, y, sc, spiegel) => { const o = { alterStufe: stufeKey(q), seed: q.id, geschlecht: q.geschlecht, maehne: q.maehne, schopf: q.schopf, typ: q.typ, ...kopfOpt(q, [p, ...andere]), haltung: haltungFuer(q), statisch: 1 }, z = zeichnePferd(q.rasse, fb(q), o);   // v380 (Dome): Kopf hängt auch auf der Koppel wie in der Box
-      const gr = grasDa && FRESS_HALTUNG.includes(o.haltung) && !heuNoetigP(q), fo = gr ? weideFressOpt(q) : null, zz = fo ? zeichnePferd(q.rasse, fb(q), { ...o, ...fo }) : z;
+      const gr = grasDa && FRESS_HALTUNG.includes(o.haltung) && !heuNoetigP(q), fo = gr ? weideFressOpt(q) : null; if (fo) fo.von = o.haltung; const zz = fo ? zeichnePferd(q.rasse, fb(q), { ...o, ...fo }) : z;
       if (gr) weideFressInfo[q.id] = { q, o };
       const cx = (z.box.minX + z.box.maxX) / 2; return `<g pointer-events="none" ${gr ? `data-gras="${q.id}" data-senk="${fo ? fo.senk : 0}" ` : ""}transform="translate(${(x - spiegel * cx * sc).toFixed(1)},${y}) scale(${(spiegel * sc).toFixed(4)},${sc.toFixed(4)})">${zz.svg}</g>`; };
     const fohlenVon = q => { const b = os ? null : boxVon(q); return b && b.fohlen && b.fohlen !== q ? b.fohlen : null; };   // v397 (Dome): Fohlen bei Fuß läuft mit raus

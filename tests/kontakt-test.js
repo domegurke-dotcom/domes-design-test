@@ -23,6 +23,12 @@ const [W, H] = (process.argv[2] || '390x844').split('x').map(Number), ORD = proc
     M.befunde.push({ id: 'x', art: 'druse', grad: 1, seit: spiel.tag, bemerkt: null, meldungen: [] });
     ok('Hat ein Pferd es schon, fällt es aus der Liste', !kontaktListe(K).some(x => x.q === M));
     zeigeAkte(); ok('Karte ohne Kontakte zeigt Hinweistext', true);
+    // Pflicht für Pensionspferde (Dome 23.10.): Nachbar wird Einsteller → automatisch Quarantäne + Blutbild, eigenes Pferd nicht
+    delete N.quarantaene; delete M.quarantaene; M.befunde = [];
+    const e = { id: 'e1', pid: N.id, name: 'Frau X', zufr: 70 }; (spiel.einsteller = spiel.einsteller || []).push(e); N.einsteller = e.id; N.fremd = true;
+    const bl1 = (spiel.blutbilder || []).length; const kp = fremd(N);
+    kontaktPflicht();
+    ok('Pensionspferd mit Kontakt: Quarantäne + Blutbild automatisch, eigenes Pferd nicht', !kp || (inQuarantaene(N) && !inQuarantaene(M) && (spiel.blutbilder || []).length === bl1 + 1), 'fremd=' + kp);
     return out; });
   if (ORD) { await pg.evaluate(() => { const x = document.querySelector('[data-kontakt]'); if (x) x.scrollIntoView({ block: 'center' }); }); await pg.waitForTimeout(200); await pg.screenshot({ path: ORD + `/kontakt-${W}x${H}.png` }); }
   R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(R.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

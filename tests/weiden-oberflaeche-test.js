@@ -17,7 +17,7 @@ const { chromium } = require('playwright');
   await pg.selectOption('#landHa', '2'); await pg.selectOption('#landZiel', ''); await klick('#landKauf'); await klick('#dlgKnoepfe button:first-child');
   log('Nach Landkauf: freies Weideland', await pg.evaluate(() => freiesLand()));
   // 2. Einzäunen als neue Weide über Bauen
-  const zaun = async (ziel) => { await pg.evaluate(() => { $('dlg').hidden = true; hofBereich = 'bauen'; zeigeHof('hof'); });   // v683: nach dem Landkauf steht noch ein Fenster offen await klick('[data-land="weide"]'); await klick('#landZaun');   // v358: Einzäunen über das Weideland-Fenster
+  const zaun = async (ziel) => { await pg.evaluate(() => { $('dlg').hidden = true; hofBereich = 'bauen'; zeigeHof('hof'); }); await klick('[data-land="weide"]'); await klick('#landZaun');   // v358: Einzäunen über das Weideland-Fenster
     const hatZiel = await pg.$('#bauZiel'); if (hatZiel) { await pg.selectOption('#bauZiel', ziel); await pg.waitForTimeout(200); }
     log('  Dialog Weide-Auswahl:', hatZiel ? await pg.$$eval('#bauZiel option', o => o.map(x => x.textContent).join(' / ')) : 'keine (erste Weide)');
     await pg.selectOption('#bauMenge', '0.5').catch(() => pg.selectOption('#bauMenge', { index: 0 }));
@@ -30,7 +30,7 @@ const { chromium } = require('playwright');
   log('Nach Einzäunen „Weide 1 vergrößern“:', await pg.evaluate(() => JSON.stringify(weiden().map(w => [w.name, w.ha]))));
   // 3. Pferde über Box – ppf – Ort – Weide auf verschiedene Weiden
   const aufWeideUI = async (boxNr, wahl) => {
-    await pg.evaluate(n => { aktBox = n; spiel.aktBox = n; zeigeSchirm(null); zeigeStall(); zeigeTag(); aktenModus = 'pflege'; aktenReiter = 'platz'; ortModus = null; zeigeAkte(); }, boxNr);
+    await pg.evaluate(n => { $('dlg').hidden = true; spiel.hofFenster = []; aktBox = n; spiel.aktBox = n; zeigeSchirm(null); zeigeStall(); zeigeTag(); aktenModus = 'pflege'; aktenReiter = 'platz'; ortModus = null; zeigeAkte(); }, boxNr);
     await klick('[data-ort="koppel"]'); await klick('[data-ort="weide"]');   // Weide liegt seit v293 unter „Koppel“
     const liste = await pg.$$eval('[data-wziel]', x => x.map(e => e.textContent.replace(/\s+/g, ' ').trim()));
     log('  Auswahl-Fenster:', liste.join(' | ') || '(keins)');

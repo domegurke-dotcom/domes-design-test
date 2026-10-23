@@ -17,21 +17,19 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 **Von:** Claude Team · **An:** Claude Pro (oder neue Team-Sitzung) · **Stand:** v682, 23.10.2026
 
-### Nachtsitzung 23.10. – Rest der Wunschliste (Opus-Teil fertig, v679–v682, alles auf `main`)
+### Nachtsitzung 23.10. – Rest der Wunschliste (alles fertig, v679–v690, auf `main`)
 | Punkt | Stand |
 |---|---|
 | Whiteboard (Mitarbeiter auf Boxen, Weideplan Tag A/B, Freund/Feind, Tutorial fort Kap. „Whiteboard“, Blasen, Einsteiger-Wissen, bzn, Test) | ✅ v679 |
 | Pensionsboxen/Paddockboxen einstellbar + eigener Paddockbox-Aufpreis | ✅ v680 |
 | Sandpaddock nach Fläche/Pferdegröße, vergrößern, Überfüllung mit Folgen | ✅ v681 |
 | Anbau als „+x“, Umbau mit wählbarer Boxenzahl, Hofplan ohne eigene Anbau-Zeichnung | ✅ v682 |
-| Namen anklickbar mit Steckbrief + Rücksprung (auch außer Haus) | ⏳ als Nächstes (Sonnet) |
-| Befund „kann noch geritten werden / heilt nicht mehr“, ganzer Behandlungsplan in der Versorgung | ⏳ Sonnet |
-| Pflichttest/Quarantäne für Kontaktpferde | ⏳ Sonnet |
-| Info, was ein Reitplatz-Ausbau bringt | ⏳ Sonnet |
-| Weidefarbe nach Zustand, Rahmen um Mitarbeiter-Weide, Hinweis Bauer mäht, rechtzeitige Futter-Warnung | ⏳ Sonnet |
-| „wirkt lockerer“ deutlicher, Dreck auf dunklen Pferden, Glanz nach dem Duschen | ⏳ Sonnet |
-| Besitzer sauer bei vergessenem Mähne/Schopf-Schneiden | ⏳ Sonnet |
-- **Dome hat (23.10.) gesagt:** mit Opus anfangen, bei den Sonnet-Punkten anhalten und Bescheid geben; nach dem Umstellen weitermachen. → Opus-Teil ist fertig, **wartet auf Umstellen auf Sonnet und „weiter“**.
+| Namen anklickbar mit Steckbrief + Rücksprung (auch außer Haus) | ✅ v683–v684 |
+| Befund „kann noch geritten werden / heilt nicht mehr“, ganzer Behandlungsplan in der Versorgung | ✅ v685–v690 |
+| Pflichttest/Quarantäne für Kontaktpferde | ✅ v685–v690 |
+| Info, was ein Reitplatz-Ausbau bringt | ✅ v685–v690 |
+| Weidefarbe nach Zustand, Rahmen um Mitarbeiter-Weide, Hinweis Bauer mäht, rechtzeitige Futter-Warnung | ✅ v685–v690 |
+| „wirkt lockerer“ deutlicher, Dreck auf dunklen Pferden, Glanz nach dem Duschen | ✅ v685–v690 |
 - Selbst gesetzte Zahlen und zwei schon vorher rote Tests stehen in `OFFENE-FRAGEN.md` (Abschnitt „Nachtsitzung 23.10.“). Am Ende: alle Fragen gemeinsam an Dome, dann fragen, ob ein Update-Fenster kommen soll (seit v677 nichts ausgewählt).
 
 ### Sitzung 23.10. (v658–v676, alles auf `main`, alle kleinen Tests grün; große Tests nicht gelaufen – vorher Dome nach der BILDER-Variante fragen)

@@ -10,7 +10,7 @@ const [W, H] = (process.argv[2] || '390x844').split('x').map(Number), ORD = proc
     document.getElementById('dlg').hidden = true; speicherSperre = true; spiel.stufenAn = false; spiel.tippsAus = true; VET.verbotAb = 99; spiel.geld = 20000;
     spiel.boxen = [{ pferd: null }, { pferd: null }, { pferd: null }, { pferd: null, paddock: true }, { pferd: null, paddock: true }];
     const Rg = pensionRegeln(); Rg.offen = true; Rg.max = 99; Rg.leistungen.paddockbox = true;
-    ok('Neues Spiel: Paddockbox-Plätze stehen auf 0', Rg.maxPaddock === 0 && Rg.pdPreis[1] === 190 && pdAufVon(Rg, 1) === 40, String(Rg.maxPaddock));
+    ok('Neues Spiel: Paddockbox-Plätze stehen auf 0', Rg.maxPaddock === 0 && Rg.pdPreis[1] === 250 && pdAufVon(Rg, 1) === 50, String(Rg.maxPaddock));
     delete Rg.pdV; delete Rg.maxPaddock; pensionRegeln(); ok('Alter Spielstand mit Paddockboxen: „alle“', Rg.maxPaddock === 99);
     Rg.maxPaddock = 0; ok('Paddockboxen auf „keine“ → 0 Paddock-Plätze', pensionPlaetzeArt(true) === 0);
     const anf = pd => ({ aid: 'x' + Math.random(), vn: 'A', nn: 'B', w: true, pferd: neuesPferd({ rasse: 'paint', geschlecht: 'Stute', alter: 8, name: 'P' + Math.random().toString(36).slice(2, 5) }), leistungen: pd ? { paddockbox: true } : {}, haltung: 'box', tag: spiel.tag - 1, bis: spiel.tag + 3, bluttest: 'keiner' });

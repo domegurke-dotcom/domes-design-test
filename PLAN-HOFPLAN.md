@@ -1,12 +1,13 @@
 # PLAN-HOFPLAN – Hof wirklich planen (Raster, Platzieren, Bauen im Plan)
 
-Stand 24.10.2026 – von Dome beschrieben und beantwortet (Thema 25 in `PROJEKT-CHAT-THEMEN.md`). **Noch nichts gebaut.** Start erst nach Domes klarem „Ja“ (Aufwand groß, Modell Opus, Etappen siehe unten).
+Stand 24.10.2026 – von Dome beschrieben und beantwortet (Thema 25 in `PROJEKT-CHAT-THEMEN.md`). **Noch nichts gebaut.** **Start-Ja von Dome liegt vor (24.10.), aber: „jetzt noch nicht losbauen mit den Etappen“ – Etappen erst auf Domes ausdrückliches Los** (Aufwand groß, Modell Opus, Etappen siehe unten).
 
 ## Idee in einem Satz
 In hvw → Hof → Hofplan wird der Hof auf einem Raster selbst geplant (Gebäude und Anlagen ziehen, drehen, anbauen, ausbauen, abreißen); in Box → Ort zeigt dieselbe Zeichnung die Anlage, und man tippt dort das Ziel an (Reitplatz → Training, Parkplatz → Pferdeanhänger …).
 
 ## Grundstück und Raster
-- Bauland = **Rechteck, breiter als hoch**, mit 1×1-Raster. **1 Kachel = 5 × 5 m** (25 m²). **Start 0,5 ha** = 20 × 10 Kacheln (100 × 50 m) – *Domes Vermutung „reicht zum Spielstart“, ändert den Start (heute `bauHa: 1` + Hofplatz 0,2 ha); beim Bau noch einmal bestätigen*. Rechenbeispiel: Stall 10 Boxen ≈ 300 m² (`PLATZ.stall` 0,003 ha je Box), Reitplatz 20×40 m = 32 Kacheln, Sandpaddock 400 m².
+- Bauland = **Rechteck, breiter als hoch**, mit 1×1-Raster. **1 Kachel = 5 × 5 m** (25 m²). **Start 0,5 ha** = 20 × 10 Kacheln (100 × 50 m) – **von Dome bestätigt (24.10.)**; gilt nur für **neue Spiele** (heute `bauHa: 1` + Hofplatz 0,2 ha). **Alte Spielstände behalten ihre jetzige Hektarzahl.** Rechenbeispiel: Stall 10 Boxen ≈ 300 m² (`PLATZ.stall` 0,003 ha je Box), Reitplatz 20×40 m = 32 Kacheln, Sandpaddock 400 m².
+- **Unbebautes Bauland kann man wieder verkaufen** (Dome, 24.10.): wie bei Gebäuden und Anlagen – Bauland-Stück lange gedrückt halten → verschieben/umplatzieren; **einmal antippen → „Verkaufen“** (nur unbebaute Fläche; Erlös/Preis wie beim Land-Verkauf, heute 90 %, `Land einzeln verkaufen`).
 - **Weiteres Bauland:** in 0,5-ha-Stücken zukaufen; beim Kauf wählt man, ob es **unten, rechts oder links** angebaut wird (das Rechteck wächst).
 - **Rennbahn (2 ha) wächst durch Zukauf:** man kauft so viel Bauland dazu, bis sie passt (Raster wächst entsprechend).
 - **Wege:** der freie Platz zwischen den Gebäuden ist der Weg – der Zuschlag `WEGE_ZUSCHLAG` +30 % entfällt.
@@ -43,6 +44,5 @@ In hvw → Hof → Hofplan wird der Hof auf einem Raster selbst geplant (Gebäud
 5. **H5 – Anfänger, Tutorial, Hinweise, Stufen, Enzyklopädie, Tests** (inkl. Tutorial-Spieler, Handy quer/hochkant).
 
 ## Bewusst offen / beim Bau klären
-- Start 0,5 ha bestätigen (Spielmechanik).
 - Genaue Grundrisse je Gebäude/Stufe (Kachel-Maße) und Form des Parkplatzes; Zahlen werden von Claude vorgeschlagen und genannt.
 - Wie sehen Wiesen/Weiden unter dem Bauland aus (später eigene Anpassung).

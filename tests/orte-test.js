@@ -124,10 +124,16 @@ const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner 
     ok('Titel nochmal antippen → zurück zum Whiteboard', await pg.evaluate(() => /Whiteboard/.test(document.querySelector('#nebenSchirm .hf-kopf').textContent) && !document.querySelector('#nebenSchirm .boxen-liste')));
     ok('Whiteboard kennt die neue Box', await pg.evaluate(i => /Anna/.test(whiteboardHTML()) && spiel.boxen[i].pferd.name === 'Anna', nb)); }
 
-  // ===== v766: Wünsche an die Mitarbeiter – alle Aufgaben zeigen, auch ohne Pfleger/Bereiter =====
-  await pg.evaluate(() => { spiel.mitarbeiter = [{ id: 'ms1', typ: 'stallbursche', name: 'Stefan', geschlecht: 'm', zufr: 70 }]; spiel.stufenAn = false; if (!waschGeb()) { gebaeude().push({ gid: 'gw1', typ: 'waschplatz', stufe: 1, zustand: 100 }); spiel.anlage.waschplatz = true; } zeigeBoxen(); });
-  { const t = await pg.evaluate(() => { stallAlt = false; wbSicht = 'boxen'; zeigeWhiteboard(); return [...document.querySelectorAll('#nebenSchirm [data-wbwu]')].map(e => e.dataset.wbwu.split(':')[1]); });
-    ok('nur Stallbursche angestellt: Wünsche zeigen trotzdem Putzen, Mähne/Schopf, Waschen, Training', ['putzen', 'maehne', 'waschen', 'training', 'fuettern', 'misten'].every(k => t.includes(k)), JSON.stringify(t)); }
+  // ===== v766: Stall – auch Pferde draußen lassen sich umstellen; Wünsche nur mit passendem Mitarbeiter =====
+  await pg.evaluate(() => { stallAlt = true; const b = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna'); const g = paddocks()[0]; b.pferd.paddock = { seit: spiel.tag, pid: g.gid }; rausAusBox(b); boxenGruppe = boxGruppe(b); zeigeBoxen(); });
+  { const z = await pg.evaluate(() => { const von = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna'); return [spiel.boxen.indexOf(von), spiel.boxen.findIndex(b => b !== von && boxZielOk(von, b) && boxGruppe(b) === boxGruppe(von))]; });
+    ok('Pferd auf dem Sandpaddock ist ziehbar', await pg.evaluate(i => boxZiehbar(spiel.boxen[i]) && boxZiehSperre(spiel.boxen[i]) === '', z[0]) && z[1] >= 0, JSON.stringify(z));
+    await pg.evaluate(i => document.querySelector(`.boxen-liste [data-zubox="${i}"]`).scrollIntoView({ block: 'center' }), z[0]); await pg.waitForTimeout(200);
+    const a = await pg.locator(`.boxen-liste [data-zubox="${z[0]}"]`).boundingBox(), c = await pg.locator(`.boxen-liste [data-zubox="${z[1]}"]`).boundingBox();
+    await pg.mouse.move(a.x + a.width / 2, a.y + a.height / 2); await pg.mouse.down(); await pg.waitForTimeout(300); await pg.mouse.move(c.x + c.width / 2, c.y + c.height / 2, { steps: 8 }); await pg.waitForTimeout(100); await pg.mouse.up(); await pg.waitForTimeout(300);
+    const r = await pg.evaluate(() => { const i = spiel.boxen.findIndex(b => b.pferd && b.pferd.name === 'Anna'); return { i, pd: !!spiel.boxen[i].pferd.paddock }; });
+    ok('… in eine andere Box gezogen, bleibt draußen auf dem Sandpaddock', r.i === z[1] && r.pd, JSON.stringify({ z, r }));
+    await pg.evaluate(() => { const b = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna'); delete b.pferd.paddock; zurueckInBox(b); }); }
   // Pinnwand
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; const bx = spiel.boxen.find(x => x.pferd); const p = bx.pferd; p.schleifen = Array.from({ length: 12 }, (_, i) => ({ st: 1 + i % 3, pl: 1 + i % 6, c: false, von: 8, platz: 1 + i % 6, pruef: 'Dressur A', turnier: 'Test', tag: 5 + i })); pinnwandOeffnen(p); });
   await pg.waitForTimeout(300);

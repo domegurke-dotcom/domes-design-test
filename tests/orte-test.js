@@ -151,9 +151,12 @@ const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner 
   ok('Symbol „Namen“ öffnet das Namensfenster', await pg.evaluate(() => !document.getElementById('dlg').hidden && /Name/i.test(document.getElementById('dlgInhalt').textContent)));
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; }); 
   await pg.evaluate(() => { const b = [...document.querySelectorAll('.plan-radial [data-ri]')].find(x => /Abreißen/.test(x.getAttribute('aria-label'))); if (b) b.click(); }); await pg.waitForTimeout(200);
-  ok('Symbol „Abreißen“ öffnet die Sicherheitsfrage', await pg.evaluate(() => !document.getElementById('dlg').hidden && /abreiß|Abriss/i.test(document.getElementById('dlgInhalt').textContent)));
+  ok('Symbol „Abreißen“ zeigt Haken mit Preis/Bauzeit und rotes ✕ (v794)', await pg.evaluate(() => { const o = document.querySelector('[data-vr=ok]'), a = document.querySelector('[data-vr=ab]'); return !!o && !!a && /€/.test((document.querySelector('.plan-radial .rl') || {}).textContent || '') || !document.getElementById('dlg').hidden && /abreiß|Abriss/i.test(document.getElementById('dlgInhalt').textContent); }));
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; });
   await pg.click('.plan-radial .mitte'); await pg.waitForTimeout(150);
+  await pg.evaluate(() => { if (document.querySelector('[data-vr=ok]')) document.querySelector('.plan-radial .mitte').click(); });   // aus dem Bestätigungskreis zurück zum Menü
+  await pg.waitForTimeout(150);
+  await pg.evaluate(() => { const m = document.querySelector('.plan-radial .mitte'); if (m) m.click(); }); await pg.waitForTimeout(150);
   ok('✕ in der Mitte bricht ab, die Symbole verschwinden', await pg.evaluate(() => planWahl === null && !document.querySelector('.plan-radial')));
   // Reiterköpfe
   await pg.evaluate(() => { const mk = (n, i) => { const P = neuesPferd({ rasse: 'haflinger', geschlecht: 'Wallach', alter: 8, name: n }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); P.einsteller = 'ex' + i; const b = spiel.boxen.find(x => !x.pferd && boxFrei(x) && !x.paddock && !x.quar && !x.abfohl && !x.offen); b.pferd = P; einstellerListe().push({ eid: 'ex' + i, vn: ['Anja', 'Bert'][i], nn: 'X' }); return P; }; mk('Rex', 0); mk('Rio', 1);

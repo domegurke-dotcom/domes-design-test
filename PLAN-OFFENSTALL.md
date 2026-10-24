@@ -34,9 +34,9 @@ Jeder Platz (`b.og`) gehört zu einer Gruppe; Kapazität = Plätze ÷ Gruppen.
 Nach jeder Etappe testen, hochladen, Test-Anleitung, auf Rückmeldung warten.
 
 ## Antworten von Dome (24.10.2026)
-1. Gruppeneinteilung Stufe 3: Dome fragte „wäre es so real?“ – Antwort von Claude: im Wesentlichen ja (Vereinfachungen: Junghengste 1½–3 J. in einer Gruppe, Hengste 1–1½ J. noch bei den Jährlingen); **Bestätigung steht noch aus**.
+1. Gruppeneinteilung Stufe 3: Dome fragte „wäre es so real?“ – Antwort von Claude: im Wesentlichen ja (Vereinfachungen: Junghengste 1½–3 J. in einer Gruppe, Hengste 1–1½ J. noch bei den Jährlingen); **Dome 24.10.: „es passt so“ – bestätigt**.
 2. Fremdaufzucht-Nachfrage: **gleichbleiben**.
 3. Stallbursche/Azubi: Arbeit im Offenstall **je Gruppe** statt je Platz rechnen – **ja**.
 4. Alte Spielstände: **keine betroffen** (niemand hat einen Offenstall) – Punkt 6 oben entfällt, kein Umbau-Sonderfall nötig.
 
-Noch kein Bau-Auftrag: Start erst nach Domes ausdrücklichem Ja.
+**Stand: Plan komplett und bestätigt; Bau auf später verschoben (Dome 24.10.: „noch als Plan halten, nicht jetzt bauen“). Start erst nach ihrem ausdrücklichen Ja.**

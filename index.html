@@ -815,6 +815,7 @@
   .bau-stufen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0; } .bau-stufe { border: 3px solid #e2d6c3; background: #fff; border-radius: 12px; padding: 8px 4px; font: inherit; cursor: pointer; color: var(--text); display: flex; flex-direction: column; gap: 2px; align-items: center; } .bau-stufe.an { border-color: var(--akzent); } .bau-stufe small { color: var(--leise); font-size: .75rem; } .bau-stufe span { font-weight: 700; color: var(--akzent); }
   .hofplan { display: block; width: 100%; max-width: 420px; margin: 0 auto 8px; height: auto; }
   .hofplan-legende { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--text); } .hofplan-legende i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; border: 1px solid #c9b99f; }
+  .brief-ava { float: left; margin: 2px 14px 6px 0; line-height: 0; } .brief-ava .ma-ava { border: 2px solid var(--braun, #6b4d33); } @media (max-width: 520px) { .brief-ava .ma-ava { width: 78px !important; height: 78px !important; } }
   .plan-radial, .plan-kopfschicht { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 6; pointer-events: none; }
   .plan-radial button { position: absolute; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; border: 2px solid #1f5fbf; background: #fffaf0; font-size: 21px; line-height: 1; padding: 0; cursor: pointer; pointer-events: auto; box-shadow: 0 2px 8px rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; } .plan-radial button:active { background: #dfeaff; }
   .plan-radial button.mitte { background: #2b1d14; color: #fff; border-color: #fff; font-size: 20px; width: 40px; height: 40px; margin: -20px 0 0 -20px; }
@@ -1125,7 +1126,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "768";
+  const SPIEL_VERSION = "770";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1133,12 +1134,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=768"></script>
-<script src="pferd.js?v=768"></script>
-<script src="boxstufen.js?v=768"></script>
-<script src="kopfneu.js?v=768"></script>
-<script src="waschbild.js?v=768"></script>
-<script src="avatare.js?v=768"></script>
+<script src="lz-string.min.js?v=770"></script>
+<script src="pferd.js?v=770"></script>
+<script src="boxstufen.js?v=770"></script>
+<script src="kopfneu.js?v=770"></script>
+<script src="waschbild.js?v=770"></script>
+<script src="avatare.js?v=770"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -8063,6 +8064,7 @@
     if (bk !== "reiten" && !behHeute(p).a[bk] && (p.befunde || []).some(b => (HILFT[b.art] || {})[bk] || (SCHADET[b.art] || {})[bk])) { const t = behandeln(p, bk, null, wer || undefined); if (/wehrt sich/.test(t)) wehrt = t; }
     else if (bk === "reiten" && stoer) behHeute(p).a.reiten = 1;   // v523/v526 (Dome): Spaziergang = Schritt führen, Longieren/Doppellonge = ruhig longieren, Boden-/Frei-/Stangenarbeit = Boden- oder Freiarbeit
     const T = (p.trainHeute = p.trainHeute && p.trainHeute.tag === spiel.tag ? p.trainHeute : { tag: spiel.tag, liste: [], verbraucht: 0 });
+    (T.orte = T.orte || []).includes(ort) || T.orte.push(ort);   // v769: wo heute trainiert wurde (Pferdekopf auf dem Platz im Hofplan)
     prot(`Training ${(U.n || k).replace(/\u00ad/g, "")} (${m ? "Personal" : "selbst"})`, { p, o: ort });   // S4: je Übung
     if (stoer && Math.random() < Math.min(.95, .35 + stoer.x * 1.2 + .08 * stoer.b.grad)) {   // v527 (Dome): schadet die Bewegung, zeigt das Pferd Anzeichen – meist muss abgebrochen werden
       const b = stoer.b, txt = `${esc(p.name)} ${STOER_TEXT[b.art] || "wirkt unwohl und will nicht mehr"}`, bek = b.diagnose || b.bemerkt, halb = Math.round(kosten / 2);
@@ -14027,8 +14029,8 @@
     (root || document).querySelectorAll(".plan-scroll").forEach(sc => { const svg = sc.querySelector("svg.plan-raster"); sc.querySelectorAll(".plan-kopfschicht").forEach(x => x.remove()); if (!svg || !spiel.hof || !hofPlan()) return;
       const P = hofPlan(), L = planItems().filter(it => P.pos[it.id] && it.g && BAUTEN[it.typ].anlage && !(it.g.bau && it.g.bau.art !== "umbau")); if (!L.length) return;
       const nutz = {}; let html = "";
-      L.forEach(it => { const o = BAUTEN[it.typ].anlage, alle = pensionReiterHeute(o); if (!alle.length) return; const gl = L.filter(x => BAUTEN[x.typ].anlage === o), j = gl.indexOf(it), mine = alle.filter((_, i) => i % gl.length === j); if (!mine.length) return;
-        const G = planGeo(svg, planRechteck(it, P.pos[it.id]), sc), pro = Math.max(1, Math.floor((G.b - 6) / 38)); mine.forEach((x, i) => { if (!x.p) return; const px = G.x + 4 + (i % pro) * 38, py = G.y + G.h - 34 - Math.floor(i / pro) * 33; html += `<span class="plan-kopf" style="left:${Math.round(px)}px;top:${Math.round(py)}px" title="${esc(x.e.vn)} reitet mit ${esc(x.p.name)}">${kopfBild(x.p)}</span>`; }); });
+      L.forEach(it => { const o = BAUTEN[it.typ].anlage, alle = [...pensionReiterHeute(o).map(x => ({ p: x.p, txt: `${x.e.vn} reitet mit ${x.p.name}` })), ...spiel.boxen.filter(b => b.pferd && !b.tot && !fremd(b.pferd) && b.pferd.trainHeute && b.pferd.trainHeute.tag === spiel.tag && (b.pferd.trainHeute.orte || []).includes(o)).map(b => ({ p: b.pferd, txt: `${b.pferd.name} hat hier heute trainiert` }))]; if (!alle.length) return; const gl = L.filter(x => BAUTEN[x.typ].anlage === o), j = gl.indexOf(it), mine = alle.filter((_, i) => i % gl.length === j); if (!mine.length) return;
+        const G = planGeo(svg, planRechteck(it, P.pos[it.id]), sc), pro = Math.max(1, Math.floor((G.b - 6) / 38)); mine.forEach((x, i) => { if (!x.p) return; const px = G.x + 4 + (i % pro) * 38, py = G.y + G.h - 34 - Math.floor(i / pro) * 33; html += `<span class="plan-kopf" style="left:${Math.round(px)}px;top:${Math.round(py)}px" title="${esc(x.txt)}">${kopfBild(x.p)}</span>`; }); });
       if (html) { const d = document.createElement("div"); d.className = "plan-kopfschicht"; d.innerHTML = html; sc.appendChild(d); } });
   }
   function planNeu() {
@@ -16766,7 +16768,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     const gruss = br.betreff === "Neuigkeit" || (alt && br.von === "Tierschutzverein") ? "" : du ? `<br><br>Viele Grüße<br>${weiblich ? "Deine" : "Dein"} ${unterschrift}` : `<br><br>Mit freundlichen Grüßen<br>${weiblich ? "Ihre" : "Ihr"} ${unterschrift}`;
     const akt = br.aktion ? (br.hid && br.hid !== aktivHid() && hofVon(br.hid) ? imHof(br.hid, () => briefAktionHTML(br)) : briefAktionHTML(br)) : "";   // Brief eines anderen Hofs: dessen Rechnungen, Pferde, Mitarbeiter
     return `<div class="brief-papier"><div class="kopf"><span>Von: <b>${esc(br.von)}</b><br>An: <b>${esc(spName)}</b>, ${esc(br.hid && hofVon(br.hid) ? hofNameVon(br.hid) : br.hofName || hofName())}</span><span>${briefDatum(br)}</span></div>
-          <h3>${br.spam ? "" : sternKnopf(br, "button")}${br.ma ? maAva(br.ma, 40) + " " : ""}${esc(br.betreff)}</h3><p>${anrede}</p><div>${briefMitLinks(br, br.text)}${gruss}</div>${akt}</div>`;
+          ${br.ma ? `<span class="brief-ava">${maAva(br.ma, 96)}</span>` : ""}<h3>${br.spam ? "" : sternKnopf(br, "button")}${esc(br.betreff)}</h3><p>${anrede}</p><div>${briefMitLinks(br, br.text)}${gruss}</div>${akt}</div>`;
   }
   // gelber Brief oben rechts: öffnet nur den Brief – danach ist man wieder dort, wo man war; mit Pfeilen zum nächsten Brief
   // nur: Liste von Brief-IDs (über die Benachrichtigung geöffnet → nur die beim Öffnen ungelesenen Briefe)

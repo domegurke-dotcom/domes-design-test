@@ -161,7 +161,8 @@ const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner 
   await pg.waitForTimeout(300);
   ok('Reitplatz im Plan zeigt 2 Pferdeköpfe für 2 Reiter', await pg.evaluate(() => document.querySelectorAll('#planBox .plan-kopf').length === 2), await pg.evaluate(() => document.querySelectorAll('#planBox .plan-kopf').length));
   await bild('reiterkoepfe');
-  await pg.evaluate(() => { spiel.pensionHeute = null; spiel.boxen.forEach(b => { if (b.pferd && b.pferd.einsteller && /^ex\d$/.test(b.pferd.einsteller)) b.pferd = null; }); spiel.einsteller = (spiel.einsteller || []).filter(e => !/^ex\d$/.test(e.eid)); planNeu(); });
+  ok('eigenes Pferd, das heute auf dem Reitplatz trainiert hat, zeigt auch einen Kopf', await pg.evaluate(() => { const p = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna').pferd; p.trainHeute = { tag: spiel.tag, liste: [], verbraucht: 0, orte: ['reitplatz'] }; planNeu(); return document.querySelectorAll('#planBox .plan-kopf').length === 3; }));
+  await pg.evaluate(() => { spiel.pensionHeute = null; spiel.boxen.forEach(b => { if (b.pferd) delete b.pferd.trainHeute; }); spiel.boxen.forEach(b => { if (b.pferd && b.pferd.einsteller && /^ex\d$/.test(b.pferd.einsteller)) b.pferd = null; }); spiel.einsteller = (spiel.einsteller || []).filter(e => !/^ex\d$/.test(e.eid)); planNeu(); });
   // Whiteboard: roter Rahmen
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.boxen.forEach(b => { if (b.pferd) b.pferd.reheOk = spiel.tag; });
     const p = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna').pferd; const g = paddocks()[0]; wbIstSetzen(p, g.gid); const w = weiden().find(x => !x.wiese); p.weide = { seit: spiel.tag, wid: w.wid }; stallAlt = false; wbSicht = 'weiden'; zeigeWhiteboard(); });

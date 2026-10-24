@@ -10,7 +10,7 @@ const [W, H] = (process.argv[2] || '390x844').split('x').map(Number), ORD = proc
     document.getElementById('dlg').hidden = true; speicherSperre = true; spiel.stufenAn = false; spiel.tippsAus = true; VET.verbotAb = 99; spiel.geld = 20000;
     spiel.boxen = [{ pferd: null }, { pferd: null }, { pferd: null }, { pferd: null, paddock: true }, { pferd: null, paddock: true }];
     const Rg = pensionRegeln(); Rg.offen = true; Rg.max = 99; Rg.leistungen.paddockbox = true;
-    ok('Neues Spiel: Paddockbox-Plätze stehen auf 0', Rg.maxPaddock === 0 && Rg.pdPreis[1] === 500 && pdAufVon(Rg, 1) === 200, String(Rg.maxPaddock));
+    ok('Neues Spiel: Paddockbox-Plätze stehen auf 0', Rg.maxPaddock === 0 && Rg.pdPreis[1] === 190 && pdAufVon(Rg, 1) === 40, String(Rg.maxPaddock));
     delete Rg.pdV; delete Rg.maxPaddock; pensionRegeln(); ok('Alter Spielstand mit Paddockboxen: „alle“', Rg.maxPaddock === 99);
     Rg.maxPaddock = 0; ok('Paddockboxen auf „keine“ → 0 Paddock-Plätze', pensionPlaetzeArt(true) === 0);
     const anf = pd => ({ aid: 'x' + Math.random(), vn: 'A', nn: 'B', w: true, pferd: neuesPferd({ rasse: 'paint', geschlecht: 'Stute', alter: 8, name: 'P' + Math.random().toString(36).slice(2, 5) }), leistungen: pd ? { paddockbox: true } : {}, haltung: 'box', tag: spiel.tag - 1, bis: spiel.tag + 3, bluttest: 'keiner' });
@@ -22,8 +22,8 @@ const [W, H] = (process.argv[2] || '390x844').split('x').map(Number), ORD = proc
     const e = einstellerListe().find(x => x.pid === a.pferd.id); ok('Einzug: Aufpreis 80 € festgeschrieben', e && e.pdA === 80, JSON.stringify(e && { pdA: e.pdA, preis: e.preis }));
     ok('Abrechnung: Box + 80 € Aufpreis', e && leistPreis(e, 'paddockbox') === 80);
     Rg.pdPreis[1] = Rg.preis[1] + 120; ok('Spätere Preisänderung gilt nicht für den bisherigen Einsteller', leistPreis(e, 'paddockbox') === 80);
-    ok('Nachfrage sinkt bei teurem Preis', (Rg.pdPreis[1] = 900, pdNachfrage()) < 1, String(pdNachfrage()));
-    Rg.pdPreis[1] = Rg.preis[1] + 20; ok('… und steigt bei günstigem', (Rg.pdPreis[1] = 350, pdNachfrage()) > 1, String(pdNachfrage()));
+    ok('Nachfrage sinkt bei teurem Preis', (Rg.pdPreis[1] = 400, pdNachfrage()) < 1, String(pdNachfrage()));
+    Rg.pdPreis[1] = Rg.preis[1] + 20; ok('… und steigt bei günstigem', (Rg.pdPreis[1] = 160, pdNachfrage()) > 1, String(pdNachfrage()));
     ok('Belegt-Zähler: 1 Box, 1 Paddockbox', pensionBelegt(false) === 1 && pensionBelegt(true) === 1, pensionBelegt(false) + '/' + pensionBelegt(true));
     hofBereich = 'pension'; zeigeHof('hof');
     const t = document.getElementById('nebenSchirm').textContent;

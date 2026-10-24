@@ -1137,7 +1137,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "802";
+  const SPIEL_VERSION = "803";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1145,12 +1145,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=802"></script>
-<script src="pferd.js?v=802"></script>
-<script src="boxstufen.js?v=802"></script>
-<script src="kopfneu.js?v=802"></script>
-<script src="waschbild.js?v=802"></script>
-<script src="avatare.js?v=802"></script>
+<script src="lz-string.min.js?v=803"></script>
+<script src="pferd.js?v=803"></script>
+<script src="boxstufen.js?v=803"></script>
+<script src="kopfneu.js?v=803"></script>
+<script src="waschbild.js?v=803"></script>
+<script src="avatare.js?v=803"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -14901,8 +14901,12 @@
   const PENSION = { anfrage: 0.33, stufe: [0, 1, 1.4, 2], halle: 0.3, roundpen: 0.1, blut: { vorher: 0.7, nachreichen: 0.9, keiner: 1 }, risiko: { vorher: 0, nachreichen: 0.03, keiner: 0.03 },
     besuch: 0.6, verspaetet: 0.1, tragend: 0.15, start: 70, beschwerde: 35, kuendigung: 20, hengst: 0.1, maxAnfragen: 2, anfrageTage: 3, mahnZins: 0.1, voll: 4, entsch: 1, feedback: 0.5 };
   // Tempo-unabhängig (Dome, v252): 0,33 Anfragen je freier Box und Jahreszeit (6 freie Boxen ≈ 2 je Jahreszeit), mindestens 1 garantiert
-  const WEIDE_QUOTE = [0.7, 0.85, 0.5, 0.25];   // v654 (Dome 23.10.): so oft muss ein Weide-Pferd je Jahreszeit draußen gewesen sein (Frühling, Sommer, Herbst, Winter); Zahlen selbst gesetzt
+  const WEIDE_QUOTE = [0.7, 0.85, 0.5, 0.4];   // v654 (Dome 23.10.): so oft muss ein Weide-Pferd je Jahreszeit draußen gewesen sein (Frühling, Sommer, Herbst, Winter); Zahlen selbst gesetzt
   const WEIDE_FREI_MIN = 1;   // v800 (Dome 24.10.): ein Tag ohne Weide ist immer frei, die übrigen Tage (1 − Quote) ebenfalls – der Besitzer beschwert sich nicht, auch das Whiteboard zeigt keinen roten Rahmen
+  function weideMin() { const T = tpj(), q = WEIDE_QUOTE[datum().s]; return Math.max(1, Math.ceil(T - Math.max(WEIDE_FREI_MIN, T * (1 - q)) - 1e-9)); }   // v803 (Dome): so oft muss das Pferd in dieser Jahreszeit mindestens draußen gewesen sein (bei 7 Tagen: Frühling 5, Sommer 6, Herbst 4, Winter 3)
+  function weideStandTxt(e, p, key) {   // „(1/3)“: so oft war das Pferd in dieser Jahreszeit schon draußen / so oft muss es mindestens
+    const W = e[key] && e[key].jz === jzJetzt() ? e[key] : { n: 0 }, n = W.n + (key === "padZ" ? (p.paddock ? 1 : 0) : (p.weide ? 1 : 0)), z = Math.round(n * 2) / 2;
+    return ` (${String(z).replace(".", ",")}/${weideMin()})`; }
   function weideFrei(e, extra, key) {   // key: "weideZ" (Weide, Standard) oder "padZ" (Sandpaddock, v801: gleiche Quote je Jahreszeit)
     const W = e[key || "weideZ"] && e[key || "weideZ"].jz === jzJetzt() ? e[key || "weideZ"] : { n: 0, ges: 0 }, ges = W.ges + (extra || 0), q = WEIDE_QUOTE[datum().s];
     return ges - W.n <= Math.max(WEIDE_FREI_MIN, ges * (1 - q)) + 1e-9;
@@ -15488,8 +15492,8 @@
     if (!p || p.klinik) return l;
     const nachm = !!(p.weideNachm && p.weideNachm.tag === t && !p.weideNachm.aus), stattW = paddockStattWeide(p);
     if (fohlenNochLiegend(b)) l.push({ k: "fohlen", txt: "🍼 bleibt drin – das Fohlen liegt noch", ok: true });   // v392 (Dome): kein Weide-/Paddockgang, solange das Neugeborene liegt
-    else if (e.haltung === "weide" && datum().s !== 3 && !stattW && !p.boxenruhe && !inQuarantaene(p)) l.push({ k: "weide", txt: "🌿 Weidegang", ok: !!p.weide || (nachm && !p.weideNachm.paddock) });
-    if (!fohlenNochLiegend(b) && (e.haltung === "sandpaddock" || stattW) && (paddocks().length || b.paddock) && !p.boxenruhe) l.push({ k: "sandpaddock", txt: b.paddock ? "🟫 Auslauf in der Paddockbox" : stattW ? "🟫 Sandpaddock statt Weide (Hufrehe-Gefahr)" : "🟫 Sandpaddock", ok: !!b.paddock || !!p.paddock || p.paddockZuletzt === t || (nachm && !!p.weideNachm.paddock) });   // v327: gebuchte Haltung auch in „Pension heute“ zeigen
+    else if (e.haltung === "weide" && !stattW && !p.boxenruhe && !inQuarantaene(p)) l.push({ k: "weide", txt: "🌿 Weidegang" + weideStandTxt(e, p, "weideZ"), ok: !!p.weide || (nachm && !p.weideNachm.paddock) });
+    if (!fohlenNochLiegend(b) && (e.haltung === "sandpaddock" || stattW) && (paddocks().length || b.paddock) && !p.boxenruhe) l.push({ k: "sandpaddock", txt: b.paddock ? "🟫 Auslauf in der Paddockbox" : stattW ? "🟫 Sandpaddock statt Weide (Hufrehe-Gefahr)" : "🟫 Sandpaddock" + (e.haltung === "sandpaddock" && !b.paddock ? weideStandTxt(e, p, "padZ") : ""), ok: !!b.paddock || !!p.paddock || p.paddockZuletzt === t || (nachm && !!p.weideNachm.paddock) });   // v327: gebuchte Haltung auch in „Pension heute“ zeigen
     { const WF = besitzerFutter(p, b); if (WF) l.push({ k: "futter", txt: "🌾 Futterplan nach Wunsch", ok: planGleich(futterplanVon(p, b), WF) }); }   // v333
     if (leistungFaellig(e, "putzen") && !besuch) l.push({ k: "putzen", txt: `🧽 Pflege (bürsten, kämmen, ${HUFKR_ICO} Hufe)`, ok: !!(p.geputzt && p.geputzt.tag === t && p.geputzt.mit.includes("buerste") && p.geputzt.mit.includes("kamm")) && p.ausgekratzt === t });
     if (leistungFaellig(e, "putzen") && !besuch) { const zl = maehneZuLang(p); if (zl) l.push({ k: "maehne", txt: `✂️ ${zl} auf die Wunschlänge kürzen`, ok: false }); }   // v690

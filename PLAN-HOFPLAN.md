@@ -1,6 +1,6 @@
 # PLAN-HOFPLAN – Hof wirklich planen (Raster, Platzieren, Bauen im Plan)
 
-Stand 24.10.2026 – von Dome beschrieben und beantwortet (Thema 25 in `PROJEKT-CHAT-THEMEN.md`). **Dome 24.10. nachts: „Ja für alle Etappen“ – Fragen sammeln (OFFENE-FRAGEN.md), am Ende gesammelt an Dome.** Fortschritt: **H1 fertig (v752)**.
+Stand 24.10.2026 – von Dome beschrieben und beantwortet (Thema 25 in `PROJEKT-CHAT-THEMEN.md`). **Dome 24.10. nachts: „Ja für alle Etappen“ – Fragen sammeln (OFFENE-FRAGEN.md), am Ende gesammelt an Dome.** Fortschritt: **H1 fertig (v752), H2 fertig (v753)**.
 
 ## Idee in einem Satz
 In hvw → Hof → Hofplan wird der Hof auf einem Raster selbst geplant (Gebäude und Anlagen ziehen, drehen, anbauen, ausbauen, abreißen); in Box → Ort zeigt dieselbe Zeichnung die Anlage, und man tippt dort das Ziel an (Reitplatz → Training, Parkplatz → Pferdeanhänger …).
@@ -38,7 +38,7 @@ In hvw → Hof → Hofplan wird der Hof auf einem Raster selbst geplant (Gebäud
 
 ## Etappen (Vorschlag)
 1. ✅ **H1 (v752) – Raster, Grundstück, Platzieren:** Plan-Daten (`hof.plan`), Rechteck 20 × 10, Feld „zum Bauen“, Ziehen/Drehen/Überschneidung (grün/rot), Maßstab aus `PLATZ`, Übernahme alter Spielstände (alles im Feld), Sperre der Ort-Kachel bis platziert.
-2. **H2 – Anbauen/Ausbauen/Reparieren/Abreißen im Plan:** Auswahl beim Antippen, längeres Gebäude, Bestätigen (orange), Rückbau (orange, nur abgerissene Fläche), Verschmelzen/Teil-Umbau/Abriss an das Raster anpassen.
+2. ✅ **H2 (v753) – Anbauen/Ausbauen/Reparieren/Abreißen im Plan:** Auswahl beim Antippen, längeres Gebäude, Bestätigen (orange), Rückbau (orange, nur abgerissene Fläche), Verschmelzen/Teil-Umbau/Abriss an das Raster anpassen.
 3. **H3 – Box → Ort aus dem Plan:** Ansicht mit antippbaren Zielen, Parkplatz = Pferdeanhänger.
 4. **H4 – Bauland zukaufen:** 0,5 ha, Seite wählen (unten/rechts/links), Rennbahn über Zukauf.
 5. **H5 – Anfänger, Tutorial, Hinweise, Stufen, Enzyklopädie, Tests** (inkl. Tutorial-Spieler, Handy quer/hochkant).

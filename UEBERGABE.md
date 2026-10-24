@@ -20,8 +20,8 @@ Dome: „Ja für alle Etappen, Fragen sammeln und am Ende rausgeben“; Wecker 6
 | Etappe | Stand |
 |---|---|
 | H1 Raster, Platzieren (+ Feinraster 1 m / 25 m) | ✅ v752 |
-| H2 Anbauen/Ausbauen/Reparieren/Abreißen im Plan | als Nächstes |
-| H3 Box → Ort aus dem Plan | offen |
+| H2 Anbauen/Ausbauen/Reparieren/Abreißen im Plan | ✅ v753 |
+| H3 Box → Ort aus dem Plan | als Nächstes |
 | H4 Bauland zukaufen/verkaufen/verschieben | offen |
 | H5 Tutorial, Hinweise, Stufen, Enzyklopädie, Tests | offen |
 Fragen stehen in `OFFENE-FRAGEN.md` („Hofplan-Etappen“). Große Tests (etappen/hof-gesamttest) sind angepasst (`planAutoSetzen()` nach `bauStarten`), aber nicht gelaufen (nur nach Domes Ja).

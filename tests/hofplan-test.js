@@ -68,6 +68,38 @@ const [bw, bh] = (process.argv[2] || '390x844').split('x').map(Number), ordner =
     const vor = p.r ? { x: R.x, y: R.y + R.h, r: 0 } : { x: R.x + R.b, y: R.y, r: 0 }; P.pos.blk = vor; const frei = !planKonflikt('blk', planRechteck(planItems().find(x => x.id === 'blk'), vor));
     const m = planBauPruefen('stall', 1, { anbau: st.gid, boxen: 4 }); spiel.gebaeude = gebaeude().filter(x => x !== blocker); delete P.pos.blk; return { frei, m }; });
   ok('Anbau ohne Platz daneben wird abgelehnt', !r.frei || /kein Platz/.test(r.m), JSON.stringify(r));
+  // --- H2: Anbauen im Plan ---
+  r = await pg.evaluate(() => { const st = gebaeude().find(x => x.typ === 'stall'), P = hofPlan(); planWahl = st.gid; planNeu();
+    const knoepfe = [...document.querySelectorAll('#planBox .plan-kn button')].map(b => b.textContent).join('|');
+    // Platz schaffen: Stall an eine freie Stelle mit Luft rechts
+    const it = planItems().find(x => x.id === st.gid); const z = planFreiePos(it.l + 3, it.t, st.gid); if (z) { P.pos[st.gid] = { x: z.x, y: z.y, r: z.r }; } return { knoepfe, l: it.l, gid: st.gid }; });
+  ok('Stall antippen: Anbauen, Ausbauen, Reparieren/Abreißen', /Anbauen/.test(r.knoepfe) && /Ausbauen/.test(r.knoepfe) && /Abreißen/.test(r.knoepfe), r.knoepfe);
+  const stGid = r.gid, l0 = r.l;
+  await pg.evaluate(() => planNeu());
+  await pg.locator('#planBox [data-anbau]').first().click(); await pg.waitForTimeout(150);
+  r = await pg.evaluate(() => ({ v: !!planVorschau, ok: !!document.querySelector('[data-pvok]:not([disabled])'), mass: planVorschau && planVorschau.mass }));
+  ok('Anbauen zeigt die Vorschau (grün, Bau bestätigen)', r.v && r.ok, JSON.stringify(r));
+  await bild('5-anbau-vorschau');
+  await pg.selectOption('#pvMenge', '4'); await pg.waitForTimeout(150);
+  await pg.locator('[data-pvok]').click(); await pg.waitForTimeout(150);
+  r = await pg.evaluate(gid => { const st = gebaeude().find(x => x.gid === gid), k = gebKinder(st).find(x => x.bau), it = planItems().find(x => x.id === gid); return { kind: !!k, l: it.l, l0: it.l0, fest: planFest(it) }; }, stGid);
+  ok('Anbau beauftragt: Stall reserviert die neue Länge, Teil orange, nicht verschiebbar', r.kind && r.l > r.l0 && r.fest, JSON.stringify(r));
+  await bild('6-anbau-baustelle');
+  r = await pg.evaluate(gid => { for (let i = 0; i < 40 && gebaeude().some(x => x.bau && x.anbau === gid); i++) bauNacht(); gebVerschmelzen(); const it = planItems().find(x => x.id === gid); return { l: it.l, l0: it.l0, boxen: gebaeude().find(x => x.gid === gid).boxen, fest: planFest(it) }; }, stGid);
+  ok('Anbau fertig: Stall länger, 10 Boxen, wieder frei verschiebbar', r.boxen === 10 && r.l === r.l0 && !r.fest, JSON.stringify(r));
+  // Teil-Abriss: nur der abgerissene Teil ist orange
+  r = await pg.evaluate(gid => { const st = gebaeude().find(x => x.gid === gid), t = gebTeilen(st, 6); t.abriss = { rest: 2 }; const it = planItems().find(x => x.id === gid); return { l: it.l, l0: it.l0 }; }, stGid);
+  ok('Teil-Abriss: Rückbau-Teil orange, Rest bleibt', r.l0 < r.l, JSON.stringify(r));
+  await pg.evaluate(gid => { planWahl = gid; planNeu(); }, stGid); await bild('7-teilabriss');
+  await pg.evaluate(gid => { const st = gebaeude().find(x => x.gid === gid), t = gebKinder(st).find(x => x.abriss); abrissFertig(t); }, stGid);
+  // Ausbauen: Reitplatz wird größer → Vorschau, dann Umbau-Fenster
+  r = await pg.evaluate(() => { const rp = gebaeude().find(x => x.typ === 'reitplatz'); rp.zustand = 100; const s1 = planAusbauStart(rp); return { s1, mass: planVorschau && planVorschau.mass }; });
+  ok('Reitplatz ausbauen: Vorschau 60 × 20 m', r.s1 && r.mass && r.mass.join('x') === '12x4', JSON.stringify(r));
+  r = await pg.evaluate(() => { const v = planVorschau, P = hofPlan(), it = planItems().find(x => x.id === v.id); if (planKonflikt(v.id, planRechteck(it, P.pos[v.id]))) { const z = planFreiePos(it.l, it.t, v.id); if (z) P.pos[v.id] = z; } planNeu(); return !!document.querySelector('[data-pvok]:not([disabled])'); });
+  ok('… nach Platz schaffen grün', r);
+  await pg.locator('[data-pvok]').click(); await pg.waitForTimeout(200);
+  ok('… Weiter öffnet das Umbau-Fenster', await pg.evaluate(() => !document.getElementById('dlg').hidden && /Stufe 2/.test(document.getElementById('dlg').innerText)));
+  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; });
   // --- alter Spielstand: alles im Feld, Ort gesperrt ---
   r = await pg.evaluate(() => { delete spiel.hof.plan; delete spiel.hof.planNeu; spiel.hof.bauHa = 1; const P = hofPlan(); return { alt: P.alt, offen: planOffen().length, sperre: planOrtSperre().length, b: planBox(P).b, h: planBox(P).h }; });
   ok('Alter Spielstand: Raster aus seinem Bauland (1 ha ≈ 29 × 14), alles im Feld', r.alt === 1 && r.offen >= 3 && r.b * r.h >= 400, JSON.stringify(r));

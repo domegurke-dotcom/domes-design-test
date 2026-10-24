@@ -15,6 +15,31 @@ Entwürfe (Bilder, nur Vorschläge, kein Spielcode): `entwuerfe-boxansicht/` –
 - Die Sprechblasen „Füttern“ im Bild entfallen (Eimer und Heu bleiben antippbar); „Füttern“ ist ein Symbol.
 - **Seiten wie ein Buch (8.4)** nur für Hochkant, später als Idee (nicht im ersten Entwurf).
 
+## Weitere Beschlüsse (Dome, 24.10.2026)
+- **Besitzerwünsche zählen** nur, was der Spieler beeinflussen kann: Weidegang/Sandpaddock, Futterplan, Mähne/Schopf-Wunschlänge **und alle gebuchten Zusatzleistungen** (Pflege, Waschen, Solarium, Bewegen, Medikamente geben, bessere Einstreu, Paddockbox …). **Der Hufschmied zählt nicht** (kann Dome nicht beeinflussen).
+- **Scrollen im Fenster ist okay** (Dome) – das Fenster darf scrollbar sein, nur die Hauptansicht soll ohne Scrollen auskommen.
+- **Reihenfolge beim Bauen (Dome): zuerst PC fertig und klickbar, danach mobil (hochkant/quer), zuletzt Tutorial** (Hinweisblasen/Tutorial-Spieler).
+- **Reiter auf dem Reitplatz** (5 Besitzer): echte Pferdeköpfe auf dem Platz plus Zähler „5 von 7“, Antippen zeigt Liste „wer reitet mit wem“ und „Flocke hierher“; Hochkant-Kachel mit Köpfen, Zähler und Zustand (normal / voll gelb / zu voll rot) – siehe `blatt11-reitplatz-mit-5-besitzern.png`. Zu viele Köpfe schrumpfen oder werden „+2“.
+- **Stufen-Tabelle** (wer sieht was) steht unten unter „Sichtbarkeit je Erfahrungsstufe“ – noch zu bestätigen.
+
+## Sichtbarkeit je Erfahrungsstufe (Vorschlag, Claude – aus `ERFAHRUNG_STUFEN`/`frei()` abgeleitet)
+| | Anfänger | Fortgeschritten | Experte |
+|---|---|---|---|
+| Symbole Versorgung, Putzen, Orte, Steckbrief | ja | ja | ja |
+| Symbol Ausrüstung | ja (Decke, Hufschuhe, Zaumzeug – Putzzeug liegt unter „Putzen“) | ja | ja |
+| Symbol Füttern (quer/PC) | ja | ja | ja |
+| Symbol Tierarzt | nur bei Befund | immer | immer |
+| Statusringe/-balken, Plaketten, Heute-Liste | ja | ja | ja |
+| Versorgung · Heute (Fütterung heute, Ampel) | ja, Futterplan automatisch (kein selbst ändern) | ja, Futterplan selbst ändern | ja |
+| Versorgung · Gesundheit (Befunde, Selbst einschätzen, Tierarzt, Plan, Behandlung, Boxenruhe, Quarantäne) | ja, nur die Krankheiten der Stufe | ja, etwa die Hälfte der Krankheiten | alle |
+| „Ansteckung & Labor“-Karte: Blutbild/Quarantäne | ja | ja | ja |
+| „Ansteckung & Labor“: Gentests/Labor | nein | ja | ja |
+| Versorgung · Besitzer | nur bei Pensionspferden (alle Stufen) | ja | ja |
+| Putzkiste-Kreis | ja | ja | ja |
+| Orte: Kacheln/Karte | gebaute Orte; Training nur fester Weg | alle gebauten, freie Übungen | alle |
+| Steckbrief-Inhalt | Daten, Genetik-Grundlagen, Merkmale ohne Balken | + Merkmale-Balken, Charakter, Whiteboard | + Noten, alle Zahlen |
+Zu klären: Ausrüstung für Anfänger sichtbar lassen? Tierarzt-Symbol für Anfänger immer sichtbar statt nur bei Befund?
+
 ## Offene Punkte / Risiken
 1. **Kleine Handys** (z. B. 360 × 640, Querformat ~ 667 px): Plaketten müssen zu Symbol + Zahl schrumpfen, Heute-Liste einklappbar – Regel nötig.
 2. **Besitzerwünsche zusammenrechnen** („4 von 5 erfüllt“): neue Zusammenfassung aus `pensionAufgaben`, Weidegang-Quote (`weideFrei`), Futterplan, gebuchten Leistungen, Mähnenlänge – Zahlen/Regeln mit Dome festlegen.
@@ -25,7 +50,7 @@ Entwürfe (Bilder, nur Vorschläge, kein Spielcode): `entwuerfe-boxansicht/` –
 7. Kreismenü wie im Hofplan (`planRadial`) als Vorbild für die Putzkiste; Wischen am Pferd (`wischStart`) bleibt unverändert.
 8. Bestehende Funktionen, die erhalten bleiben müssen (Dome-Frage): Fütterung heute, Behandlungsplan, Befunde, Behandlung/Boxenruhe, Mitarbeiter-Empfehlungen, Besitzer informieren, Quarantäne/Labor, Besitzerwünsche – im Entwurf 10.1–10.5 zugeordnet.
 
-## Etappen (Vorschlag, Opus, jeweils testen, hochladen, Test-Anleitung, auf Rückmeldung warten)
+## Etappen (Vorschlag, Opus, jeweils testen, hochladen, Test-Anleitung, auf Rückmeldung warten) – **zuerst PC (fertig, klickbar), dann mobil, dann Tutorial**
 - **B1 Gerüst:** Symbole (quer Ränder / hochkant Reihe), Statusringe/-balken, Plaketten, Denkblase bei Befund; alte Reiter bleiben erreichbar (Umschalter), „Füttern“-Blasen weg.
 - **B2 Fenster:** Versorgung (3 Seiten), Orte (Karte zugeschnitten + Zoom bzw. Kacheln), Ausrüstung, Steckbrief als Fenster mit Rücksprung; alte Reiter-Ansicht entfernen.
 - **B3 Putzkiste-Kreis, Heute-Liste, Besitzerwünsche** (Regeln mit Dome).

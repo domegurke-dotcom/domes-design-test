@@ -1161,7 +1161,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "815";
+  const SPIEL_VERSION = "816";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1169,12 +1169,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=815"></script>
-<script src="pferd.js?v=815"></script>
-<script src="boxstufen.js?v=815"></script>
-<script src="kopfneu.js?v=815"></script>
-<script src="waschbild.js?v=815"></script>
-<script src="avatare.js?v=815"></script>
+<script src="lz-string.min.js?v=816"></script>
+<script src="pferd.js?v=816"></script>
+<script src="boxstufen.js?v=816"></script>
+<script src="kopfneu.js?v=816"></script>
+<script src="waschbild.js?v=816"></script>
+<script src="avatare.js?v=816"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -13674,7 +13674,7 @@
   // ---------- Hof-Ausbau H2: mehrere Höfe, jeder mit eigener Kasse, eigenen Boxen, Mitarbeitern, Futter ----------
   // Der aktive Hof liegt wie bisher direkt in „spiel“, die anderen in spiel.hoefe[hid]. imHof() tauscht für eine Aktion kurz um.
   const HOF_FELDER = ["boxen", "geld", "dispo", "mitarbeiter", "hof", "extern", "anlage", "rechnungen", "rechnungStatus", "aktBox", "bewerber", "futterTermin", "maVergessen", "stallarten",
-    "finanzen", "finanzSaison", "lager", "kredite", "futter", "apotheke", "hufschmiedHeute", "angebote", "vernachlaessigt", "gebaeude", "einsteller", "pensionAnfragen", "pensionHeute", "weiden", "maBekannt", "wbPlan"];
+    "finanzen", "finanzSaison", "lager", "kredite", "futter", "apotheke", "hufschmiedHeute", "angebote", "vernachlaessigt", "gebaeude", "einsteller", "pensionAnfragen", "pensionHeute", "weiden", "maBekannt", "wbPlan", "pensionSchulden"];
   const STUFE_ADJ = ["", "einfache", "ordentliche", "komfortable"];
   const MAX_HOEFE = 5, LAND_PREIS = 5000, PACHT_PREIS = 75;   // Land: kaufen je ha, pachten je ha und Jahreszeit
   const aktivHid = () => (spiel.hof && spiel.hof.hid) || "h1";
@@ -15030,6 +15030,7 @@
     const W = e[key || "weideZ"] && e[key || "weideZ"].jz === jzJetzt() ? e[key || "weideZ"] : { n: 0, ges: 0 }, ges = W.ges + (extra || 0), q = WEIDE_QUOTE[datum().s];
     return ges - W.n <= Math.max(WEIDE_FREI_MIN, ges * (1 - q)) + 1e-9;
   }
+  const PENSION_INKASSO = { chance: 0.6, anteil: 0.5 };   // Dome 24.10.: Inkasso nach dem Auszug – 60 % Erfolg, bringt die Hälfte (Zahlen selbst gesetzt)
   const pensionMahnMax = () => tpj() <= 4 ? 1 : tpj() <= 7 ? 2 : 3;   // nach so vielen Mahnungen kündigt der Hof (4 / 7 / 10 Tage je Jahreszeit)
   // Ansehen (0–200, Start 100) wirkt auf: Anfragen (×0,3–1,5), akzeptierten Preis (Richtwert ±25 %), Buchungen (×0,5–1,5), Geduld (Beschwerde/Kündigung früher)
   // Dome 24.10.: die Verwaltung (Büro) bringt Ansehen bei den Einstellern (wirkt wie ein Bonus auf das geheime Ansehen, kein Dauerzuwachs) und zufriedenere Mitarbeiter; Zahlen selbst gesetzt, Stufe 1 (Bürowagen) wirkt noch nicht; unter 50 % Zustand wirkt sie nicht
@@ -15467,6 +15468,16 @@
   }
   // verspätete Zahlungen: nach 2 Tagen zahlen 60 %, sonst Mahnung (+10 %); nach 2 erfolglosen Mahnungen kündigt der Hof
   function pensionZahlungTag() {
+    // ausgezogene Einsteller mit offener Rechnung (Dome 24.10.): weiter mahnen; zahlen sie nach der letzten Mahnung nicht, kommt ein Inkassobüro – das holt die Hälfte (abzüglich Gebühr) oder nichts
+    spiel.pensionSchulden = (spiel.pensionSchulden || []).filter(o => { if (spiel.tag < o.faellig) return true; const summe = o.box + o.leist + (o.gebuehr || 0);
+      if (Math.random() < 0.5) { buchen(o.box, "Pension"); if (o.leist) buchen(o.leist, "Pension: Zusatzleistungen"); if (o.gebuehr) buchen(o.gebuehr, "Pension: Mahngebühr");
+        brief("Hofverwaltung", `${o.name} hat bezahlt`, `${o.name} hat die offene Rechnung für <b>${esc(o.pferd)}</b> (${fmt(summe)}) nach dem Auszug doch noch bezahlt.`); return false; }
+      o.mahn++;
+      if (o.mahn > pensionMahnMax() + 1) { const inkasso = Math.random() < PENSION_INKASSO.chance ? Math.round((o.box + o.leist) * PENSION_INKASSO.anteil) : 0;
+        if (inkasso) buchen(inkasso, "Pension: Inkasso");
+        brief("Hofverwaltung", `Inkasso: ${o.name}`, `${o.name} hat die offene Rechnung für <b>${esc(o.pferd)}</b> auch nach ${o.mahn - 1} Mahnungen nicht bezahlt. Das Inkassobüro ${inkasso ? `hat <b>${fmt(inkasso)}</b> für {dich|Sie} eingetrieben (nach seiner Gebühr) – der Rest ist verloren.` : "konnte leider nichts eintreiben – das Geld ist verloren."}`); return false; }
+      o.gebuehr = Math.round((o.gebuehr || 0) + (o.box + o.leist) * PENSION.mahnZins); o.faellig = spiel.tag + 2;
+      brief("Hofverwaltung", `Mahnung an ${o.name}`, `${o.name} ist ausgezogen und hat das Pensionsgeld für <b>${esc(o.pferd)}</b> noch nicht bezahlt. Die ${o.mahn}. Mahnung ist raus (mit Mahngebühr, jetzt ${fmt(o.box + o.leist + o.gebuehr)}).`); return true; });
     einstellerListe().forEach(e => { const o = e.offen; if (!o || spiel.tag < o.faellig) return; const p = (pensionBox(e) || {}).pferd, nm = p ? p.name : "";
       if (Math.random() < 0.6) { buchen(o.box, "Pension"); if (o.leist) buchen(o.leist, "Pension: Zusatzleistungen"); if (o.gebuehr) buchen(o.gebuehr, "Pension: Mahngebühr");
         brief("Hofverwaltung", `${eName(e)} hat bezahlt`, `${eName(e)} hat das Pensionsgeld für <b>${esc(nm)}</b> (${fmt(o.box + o.leist + (o.gebuehr || 0))}) verspätet überwiesen.`); delete e.offen; return; }
@@ -15480,6 +15491,9 @@
   // Auszug: Pferd verlässt den Hof, Box wird frei
   function pensionAuszug(e, grund) {
     const L = einstellerListe(), b = pensionBox(e), p = b && b.pferd;
+    // Dome 24.10.: wer mit offener Rechnung auszieht, ist nicht aus dem Schneider – die Schuld bleibt und wird weiter angemahnt
+    if (e.offen) { const o = e.offen; (spiel.pensionSchulden = spiel.pensionSchulden || []).push({ name: eName(e), w: e.w, pferd: p ? p.name : "", box: o.box, leist: o.leist, gebuehr: o.gebuehr || 0, mahn: o.mahn || 0, faellig: Math.max(o.faellig, spiel.tag + 1) }); delete e.offen;
+      brief("Hofverwaltung", `${eName(e)} schuldet noch Geld`, `${eName(e)} ist ausgezogen, hat das Pensionsgeld für <b>${esc(p ? p.name : "das Pferd")}</b> aber noch nicht bezahlt (${fmt(o.box + o.leist + (o.gebuehr || 0))}). Die Mahnungen laufen weiter – zahlt ${ePron(e).sie} trotzdem nicht, geht die Forderung ans Inkasso.`); }
     if (b) { b.pferd = null; delete b.fohlen; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; b.tot = false; }
     L.splice(L.indexOf(e), 1);
     if (p) brief("Hofverwaltung", `${p.name} ist ausgezogen`, `${eName(e)} hat <b>${esc(p.name)}</b> abgeholt (${grund}). Box ${bnr(spiel.boxen.indexOf(b))} ist wieder frei.`);

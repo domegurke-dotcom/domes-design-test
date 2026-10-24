@@ -129,3 +129,10 @@ Rechenweg der Immobilien: wie der Sachwert des Start-Hofs (Weideland + Bauland +
 |---|---|---|
 | Sandpaddock Stufe 1/2/3 (2/3/4 Plätze) | 1.000 / 4.000 / 6.000 € | 6.000 / 15.000 / 30.000 € |
 | je Platz (Altvergrößerungen) | 500 / 1.300 / 1.500 € | 3.000 / 5.000 / 7.500 € |
+
+## Geändert v811 (Sandpaddock halbiert)
+
+| Preis | v810 | v811 |
+|---|---|---|
+| Sandpaddock Stufe 1/2/3 | 6.000 / 15.000 / 30.000 € | 3.000 / 7.500 / 15.000 € |
+| je Platz | 3.000 / 5.000 / 7.500 € | 1.500 / 2.500 / 3.750 € |

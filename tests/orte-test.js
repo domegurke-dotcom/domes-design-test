@@ -1,4 +1,4 @@
-// v763/v764/v765 (Domes Aufnahme 24.10., Etappe 1+2): Fressdauer, Pinnwand größer, Weide im Ort-Plan anklickbar, Büro = Labor, Tutorials-Liste, Schalter „Spielumfang“ weg
+// v763–v768 (Domes Aufnahme 24.10., Etappe 1+2): Fressdauer, Pinnwand größer, Weide im Ort-Plan anklickbar, Büro = Labor, Tutorials-Liste, Schalter „Spielumfang“ weg
 // Aufruf: NODE_PATH=/opt/node22/lib/node_modules node tests/orte-test.js [BxH] [Ordner für Bilder]
 const { chromium } = require('playwright'); const path = require('path'); const fs = require('fs');
 const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner = process.argv[3];
@@ -134,6 +134,42 @@ const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner 
     const r = await pg.evaluate(() => { const i = spiel.boxen.findIndex(b => b.pferd && b.pferd.name === 'Anna'); return { i, pd: !!spiel.boxen[i].pferd.paddock }; });
     ok('… in eine andere Box gezogen, bleibt draußen auf dem Sandpaddock', r.i === z[1] && r.pd, JSON.stringify({ z, r }));
     await pg.evaluate(() => { const b = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna'); delete b.pferd.paddock; zurueckInBox(b); }); }
+
+  // ===== v768 (Etappe 3): Kreis-Menü im Hofplan, Reiterköpfe auf den Plätzen, roter Rahmen im Whiteboard =====
+  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; zeigeSchirm(null); hofBereich = 'plan'; planWahl = null; planVorschau = null; planLand = null; zeigeHof('hof'); }); await pg.waitForTimeout(300);
+  const gid = await pg.evaluate(() => planItems().find(it => it.typ === 'reitplatz').id);
+  ok('Hofplan: ohne Auswahl kein Kreis-Menü', await pg.locator('.plan-radial').count() === 0);
+  await pg.evaluate(id => { planWahl = id; planNeu(); }, gid); await pg.waitForTimeout(200);
+  const rm = await pg.evaluate(() => ({ n: document.querySelectorAll('.plan-radial [data-ri]').length, mitte: !!document.querySelector('.plan-radial .mitte'), leiste: getComputedStyle(document.querySelector('.plan-leiste.radial .plan-kn') || document.body).display, txt: [...document.querySelectorAll('.plan-radial .rl')].map(x => x.textContent).join('|') }));
+  ok('Gebäude angetippt: Kreis mit ✕ und Symbolen ringsum', rm.mitte && rm.n >= 4, JSON.stringify(rm));
+  ok('… die Leiste mit den Knöpfen unter dem Plan ist weg', rm.leiste === 'none', rm.leiste);
+  await bild('radial');
+  const pos0 = await pg.evaluate(id => JSON.stringify(hofPlan().pos[id]), gid);
+  await pg.evaluate(() => { const b = [...document.querySelectorAll('.plan-radial [data-ri]')].find(x => /Drehen/.test(x.getAttribute('aria-label'))); if (b) b.click(); }); await pg.waitForTimeout(150);
+  ok('Symbol „Drehen“ dreht wirklich', await pg.evaluate(([id, p0]) => JSON.stringify(hofPlan().pos[id]) !== p0, [gid, pos0]));
+  await pg.evaluate(() => { const b = [...document.querySelectorAll('.plan-radial [data-ri]')].find(x => /Namen/.test(x.getAttribute('aria-label'))); if (b) b.click(); }); await pg.waitForTimeout(200);
+  ok('Symbol „Namen“ öffnet das Namensfenster', await pg.evaluate(() => !document.getElementById('dlg').hidden && /Name/i.test(document.getElementById('dlgInhalt').textContent)));
+  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; }); 
+  await pg.evaluate(() => { const b = [...document.querySelectorAll('.plan-radial [data-ri]')].find(x => /Abreißen/.test(x.getAttribute('aria-label'))); if (b) b.click(); }); await pg.waitForTimeout(200);
+  ok('Symbol „Abreißen“ öffnet die Sicherheitsfrage', await pg.evaluate(() => !document.getElementById('dlg').hidden && /abreiß|Abriss/i.test(document.getElementById('dlgInhalt').textContent)));
+  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; });
+  await pg.click('.plan-radial .mitte'); await pg.waitForTimeout(150);
+  ok('✕ in der Mitte bricht ab, die Symbole verschwinden', await pg.evaluate(() => planWahl === null && !document.querySelector('.plan-radial')));
+  // Reiterköpfe
+  await pg.evaluate(() => { const mk = (n, i) => { const P = neuesPferd({ rasse: 'haflinger', geschlecht: 'Wallach', alter: 8, name: n }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); P.einsteller = 'ex' + i; const b = spiel.boxen.find(x => !x.pferd && boxFrei(x) && !x.paddock && !x.quar && !x.abfohl && !x.offen); b.pferd = P; einstellerListe().push({ eid: 'ex' + i, vn: ['Anja', 'Bert'][i], nn: 'X' }); return P; }; mk('Rex', 0); mk('Rio', 1);
+    spiel.pensionHeute = { tag: spiel.tag, reiter: [{ eid: 'ex0', ort: 'reitplatz' }, { eid: 'ex1', ort: 'reitplatz' }] }; planNeu(); });
+  await pg.waitForTimeout(300);
+  ok('Reitplatz im Plan zeigt 2 Pferdeköpfe für 2 Reiter', await pg.evaluate(() => document.querySelectorAll('#planBox .plan-kopf').length === 2), await pg.evaluate(() => document.querySelectorAll('#planBox .plan-kopf').length));
+  await bild('reiterkoepfe');
+  await pg.evaluate(() => { spiel.pensionHeute = null; spiel.boxen.forEach(b => { if (b.pferd && b.pferd.einsteller && /^ex\d$/.test(b.pferd.einsteller)) b.pferd = null; }); spiel.einsteller = (spiel.einsteller || []).filter(e => !/^ex\d$/.test(e.eid)); planNeu(); });
+  // Whiteboard: roter Rahmen
+  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.boxen.forEach(b => { if (b.pferd) b.pferd.reheOk = spiel.tag; });
+    const p = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna').pferd; const g = paddocks()[0]; wbIstSetzen(p, g.gid); const w = weiden().find(x => !x.wiese); p.weide = { seit: spiel.tag, wid: w.wid }; stallAlt = false; wbSicht = 'weiden'; zeigeWhiteboard(); });
+  await pg.waitForTimeout(200);
+  ok('Whiteboard: Sandpaddock geplant, Pferd steht auf der Weide → roter gepunkteter Rahmen', await pg.evaluate(() => !![...document.querySelectorAll('#nebenSchirm .wb-chip.rehe')].find(x => /Anna/.test(x.textContent)) || /Anna soll laut Plan/.test(document.querySelector('#nebenSchirm').innerHTML)));
+  await bild('rahmen');
+  await pg.evaluate(() => { const b = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna'); delete b.pferd.weide; zeigeWhiteboard(); });
+  ok('… steht es wieder richtig (nicht draußen), verschwindet der Rahmen', await pg.evaluate(() => !/Anna soll laut Plan/.test(document.querySelector('#nebenSchirm').innerHTML)));
   // Pinnwand
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; const bx = spiel.boxen.find(x => x.pferd); const p = bx.pferd; p.schleifen = Array.from({ length: 12 }, (_, i) => ({ st: 1 + i % 3, pl: 1 + i % 6, c: false, von: 8, platz: 1 + i % 6, pruef: 'Dressur A', turnier: 'Test', tag: 5 + i })); pinnwandOeffnen(p); });
   await pg.waitForTimeout(300);

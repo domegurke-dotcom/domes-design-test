@@ -15,6 +15,17 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### Sitzung 24.10. nachts – Hofplan-Etappen (Claude Team, Opus) – Fortschritt
+Dome: „Ja für alle Etappen, Fragen sammeln und am Ende rausgeben“; Wecker 6:05 prüft, ob alles fertig ist, sonst weiter.
+| Etappe | Stand |
+|---|---|
+| H1 Raster, Platzieren (+ Feinraster 1 m / 25 m) | ✅ v752 |
+| H2 Anbauen/Ausbauen/Reparieren/Abreißen im Plan | als Nächstes |
+| H3 Box → Ort aus dem Plan | offen |
+| H4 Bauland zukaufen/verkaufen/verschieben | offen |
+| H5 Tutorial, Hinweise, Stufen, Enzyklopädie, Tests | offen |
+Fragen stehen in `OFFENE-FRAGEN.md` („Hofplan-Etappen“). Große Tests (etappen/hof-gesamttest) sind angepasst (`planAutoSetzen()` nach `bauStarten`), aber nicht gelaufen (nur nach Domes Ja).
+
 ### Sitzung 24.10. – v733–v751 (Claude Team, Sonnet), alles auf `main`
 Thema: Pferdeköpfe/Randabstand und **realistische Fellfarben nach Studien**. Details je Version in `CLAUDE.md` (v733–v751).
 - Kopfbilder überall gleich zugeschnitten (`kopfBild`/`kopfAuto`/`enzAuto`), Seitenrand-Breite für alle Enzyklopädie-Reiter, Pferdeanhänger und Whiteboard.

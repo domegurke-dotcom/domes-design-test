@@ -42,7 +42,7 @@ const { chromium } = require('playwright');
   log('Pferde auf Weiden:', await pg.evaluate(() => JSON.stringify(spiel.boxen.filter(b => b.pferd).map(b => [b.pferd.name, b.pferd.weide ? weideVon(b.pferd).name : 'Box']))));
   await pg.evaluate(() => { hofBereich = 'plan'; zeigeHof('hof'); });
   
-  log('Sandpaddock bauen (2×):', await pg.evaluate(() => { const a = bauStarten('sandpaddock', 1); const c = bauStarten('sandpaddock', 1); $('dlg').hidden = true; return [a, c, gebaeude().filter(g => g.typ === 'sandpaddock').length, BAUTEN.sandpaddock.einmal ? 'nur einmal' : 'mehrfach'].join(' '); }));
+  log('Sandpaddock bauen (2×):', await pg.evaluate(() => { const a = bauStarten('sandpaddock', 1); const c = bauStarten('sandpaddock', 1); planAutoSetzen(); $('dlg').hidden = true; return [a, c, gebaeude().filter(g => g.typ === 'sandpaddock').length, BAUTEN.sandpaddock.einmal ? 'nur einmal' : 'mehrfach'].join(' '); }));
   log('Fehler', errs);
   await b.close();
 })();

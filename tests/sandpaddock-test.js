@@ -8,7 +8,7 @@ const [W, H] = (process.argv[2] || '390x844').split('x').map(Number), ORD = proc
   await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'H'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(300);
   const R = await pg.evaluate(() => { const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : ''));
     document.getElementById('dlg').hidden = true; speicherSperre = true; spiel.stufenAn = false; spiel.tippsAus = true; VET.verbotAb = 99; spiel.geld = 50000; spiel.hof.bauHa = 3;
-    const g = { gid: 'gp1', typ: 'sandpaddock', stufe: 1, zustand: 100 }; gebaeude().push(g); (spiel.anlage = spiel.anlage || {}).paddock = true;
+    const g = { gid: 'gp1', typ: 'sandpaddock', stufe: 1, zustand: 100 }; gebaeude().push(g); delete hofPlan().pos.gp1; (spiel.anlage = spiel.anlage || {}).paddock = true;
     ok('Stufe 1: 400 m² (≈ 3 Großpferde, 2 Kaltblüter)', paddockFlaeche(g) === 400 && paddockPlatz(g) === 3 && 2 * pdBedarf({ stockmass: 180 }) <= 400);
     ok('Bedarf nach Größe: Shetty < Warmblut < Shire', pdBedarf({ stockmass: 100 }) < pdBedarf({ stockmass: 168 }) && pdBedarf({ stockmass: 168 }) < pdBedarf({ stockmass: 180 }), [100, 168, 180].map(x => pdBedarf({ stockmass: x })).join('/'));
     while (spiel.boxen.length < 5) spiel.boxen.push({ pferd: null });

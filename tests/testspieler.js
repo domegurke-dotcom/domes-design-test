@@ -140,7 +140,7 @@ async function spiele(nr, jahre) {
         if (boxen < 20 && frei <= Sx.bauWennFrei && !imBau().length && datum().s !== 3) { const n = Math.min(14, Math.max(6, 20 - boxen)), n2 = n % 2 ? n + 1 : n, k = bauPreis("stall", 1, { boxen: n2 });
           const fehlt = k + Sx.bauReserve + reserve() - (spiel.geld || 0);
           if (fehlt > 0 && Sx.bauKredit && kreditRahmen() >= fehlt) { const s2 = Math.ceil(fehlt / 500) * 500; kreditNeu(s2, 20, "Baukredit"); merk(`Baukredit ${fmt(s2)} (20 Raten) für den Stallbau`); }
-          if ((spiel.geld || 0) > k + Sx.bauReserve + reserve()) { if (bauStarten("stall", 1, { boxen: n2 })) merk(`Boxenstall mit ${n2} Boxen gebaut (${fmt(k)})`); zu(); } } };
+          if ((spiel.geld || 0) > k + Sx.bauReserve + reserve()) { if (bauStarten("stall", 1, { boxen: n2 }) && planAutoSetzen() >= 0) merk(`Boxenstall mit ${n2} Boxen gebaut (${fmt(k)})`); zu(); } } };
       // ---------- Kredite: aufnehmen, wenn knapp; tilgen, wenn viel da ist ----------
       const finanzen = () => { const rate = kredite().reduce((a, k) => a + (kreditLaeuft(k) ? k.rate : 0), 0);
         if ((spiel.geld || 0) < rate + 300 && kreditRahmen() >= 1000) { const s = Math.min(kreditRahmen(), 3000); kreditNeu(s, 20, "Kredit Testspieler"); merk(`Kredit ${fmt(s)} aufgenommen`); }

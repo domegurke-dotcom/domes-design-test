@@ -43,9 +43,9 @@ const B = require('./bilder');   // Bilder-Schalter: BILDER=aus|fehler|alle, sie
    kaufe('haflinger', 'Stute', 6, 'Hanni'); kaufe('araber', 'Wallach', 8, 'Ali'); kaufe('hannoveraner', 'Stute', 5, 'Hera'); kaufe('shetty', 'Wallach', 10, 'Pommes');
    stelleEin('stallbursche'); stelleEin('hofhelfer'); pruefe('Pferde+MA');
    { const R = pensionRegeln(); R.offen = true; R.max = 4; R.leistungen = { putzen: true, pfleger: true, decke: true }; }   // H5: Pension auf Hof 1
-   const bau = [bauStarten('stall', 2, { anbau: gebaeude()[0].gid, boxen: 4 }), bauStarten('lager', 1), bauStarten('quarantaene', 1), bauStarten('roundpen', 2)]; $('dlg').hidden = true;
+   const bau = [bauStarten('stall', 2, { anbau: gebaeude()[0].gid, boxen: 4 }), bauStarten('lager', 1), bauStarten('quarantaene', 1), bauStarten('roundpen', 2)]; planAutoSetzen(); $('dlg').hidden = true;
    bauHa(); spiel.hof.ha += 1; spiel.hof.bauHa += 0.5; spiel.hof.ha += 0.5; buchen(-(1000 + 1500), 'Land kaufen (Test)'); spiel.hof.wert += 2500;
-   bauStarten('weide', 1, { ha: 1 }); bauStarten('reithalle', 1); $('dlg').hidden = true; pruefe('Bauaufträge ' + bau.join(','));
+   bauStarten('weide', 1, { ha: 1 }); bauStarten('reithalle', 1); planAutoSetzen(); $('dlg').hidden = true; pruefe('Bauaufträge ' + bau.join(','));
    tage(2 * tpj()); pruefe('nach 2 Jz');
    const k = kredite()[0]; const st = Math.ceil(k.rest - k.summe / 2 + 10); buchen(-st, 'Kredit: Sondertilgung'); k.rest = runde2(k.rest - st); k.getilgt = runde2(k.getilgt + st); pruefe('Sondertilgung');
    buchen(-40000, 'Überweisung an das zentrale Konto'); zentralBuchen(40000, 'von Sonnenhof');

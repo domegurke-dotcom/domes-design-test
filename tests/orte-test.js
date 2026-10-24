@@ -222,6 +222,21 @@ const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner 
     ok('Grundlager steht als Gebäude im Plan (20 × 10 m), ohne Knöpfe', r.da && r.imPlan && /Strohlager/.test(r.name) && r.kn === '' && r.mass === '20×10', JSON.stringify(r)); }
   await pg.evaluate(() => { hofBereich = 'plan'; planWahl = null; zeigeHof('hof'); }); await pg.waitForTimeout(250); await bild('hofplan');
   ok('Grundlager verfällt nicht und kostet keinen Unterhalt', await pg.evaluate(() => { const g = gebaeude().find(x => x.typ === 'grundlager'); const z0 = g.zustand, g0 = spiel.geld; gebaeudeJahreszeit(); return g.zustand === z0 && g.preis === 0; }));
+
+  // ===== v774: Plan gilt auch bei vollem Sandpaddock; roter Rahmen mit Grund auch bei Besitzerwunsch ohne Plan =====
+  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; zeigeSchirm(null);
+    const mk = (n, i, hal) => { const P = neuesPferd({ rasse: 'haflinger', geschlecht: 'Wallach', alter: 8, name: n }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); P.einsteller = 'ey' + i; P.reheOk = spiel.tag; const b = spiel.boxen.find(x => !x.pferd && boxFrei(x) && !x.paddock && !x.quar && !x.abfohl && !x.offen); b.pferd = P; b.krippeVoll = true; einstellerListe().push({ eid: 'ey' + i, vn: 'Besitzer' + i, nn: 'Y', haltung: hal, leistungen: {} }); return P; };
+    window.__e1 = mk('Weida', 1, 'weide'); window.__e2 = mk('Sanda', 2, 'sandpaddock'); window.__e3 = mk('Voll', 3, 'weide'); weiden().forEach(w => { delete w.gesperrt; }); stallAlt = false; wbSicht = 'weiden'; zeigeWhiteboard(); });
+  { const a = await pg.evaluate(() => [wbAbweichung(window.__e1), wbAbweichung(window.__e2)]);
+    ok('Besitzer hat Weide gebucht, Pferd steht in der Box, kein Plan → roter Rahmen mit Grund', /Weide gebucht, steht aber in der Box/.test(a[0]) && /Sandpaddock gebucht/.test(a[1]), JSON.stringify(a)); }
+  await pg.evaluate(() => { weiden().filter(w => !w.wiese).forEach(w => { w.gesperrt = { bis: spiel.tag + 3 }; }); });
+  ok('… alle Weiden gesperrt: der Grund steht dabei', await pg.evaluate(() => /alle Weiden gesperrt/.test(wbAbweichung(window.__e1))));
+  await pg.evaluate(() => { weiden().forEach(w => { delete w.gesperrt; });
+    const g = paddocks()[0], bx = spiel.boxen.find(x => x.pferd === window.__e3), vorher = window.__e3.name;   // Sandpaddock voll stellen, dann Plan für Voll auf genau diesen
+    paddockPferde(g).forEach(q => { const bq = spiel.boxen.find(x => x.pferd === q); if (bq) { delete q.paddock; zurueckInBox(bq); } });
+    const fueller = spiel.boxen.filter(x => x.pferd && !fremd(x.pferd) && !x.tot).map(x => x.pferd).slice(0, 3); fueller.forEach(q => { const bq = spiel.boxen.find(x => x.pferd === q); rausAusBox(bq); q.paddock = { seit: spiel.tag, pid: g.gid }; });
+    window.__voll = [paddockPasst(g, window.__e3), g.gid]; wbIstSetzen(window.__e3, g.gid); zeigeWhiteboard(); });
+  { const r = await pg.evaluate(() => ({ voll: window.__voll, pid: window.__e3.paddock && window.__e3.paddock.pid })); ok('Plan gilt, auch wenn der Sandpaddock voll ist: Pferd steht dort', r.pid === r.voll[1], JSON.stringify(r)); }
   // Pinnwand
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; const bx = spiel.boxen.find(x => x.pferd); const p = bx.pferd; p.schleifen = Array.from({ length: 12 }, (_, i) => ({ st: 1 + i % 3, pl: 1 + i % 6, c: false, von: 8, platz: 1 + i % 6, pruef: 'Dressur A', turnier: 'Test', tag: 5 + i })); pinnwandOeffnen(p); });
   await pg.waitForTimeout(300);

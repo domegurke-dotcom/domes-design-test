@@ -1126,7 +1126,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "773";
+  const SPIEL_VERSION = "774";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1134,12 +1134,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=773"></script>
-<script src="pferd.js?v=773"></script>
-<script src="boxstufen.js?v=773"></script>
-<script src="kopfneu.js?v=773"></script>
-<script src="waschbild.js?v=773"></script>
-<script src="avatare.js?v=773"></script>
+<script src="lz-string.min.js?v=774"></script>
+<script src="pferd.js?v=774"></script>
+<script src="boxstufen.js?v=774"></script>
+<script src="kopfneu.js?v=774"></script>
+<script src="waschbild.js?v=774"></script>
+<script src="avatare.js?v=774"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -12107,13 +12107,20 @@
   }
   const wbBoxVon = p => spiel.boxen.find(b => b.pferd === p) || {};
   // Dome 24.10.: roter gepunkteter Rahmen (wie bei Hufrehe), wenn das Pferd nicht dort steht, wo es hingehört: Weide gebucht, aber in der Box oder auf dem Sandpaddock – oder Sandpaddock geplant, aber auf der Weide
-  function wbAbweichung(p) {
-    if (!p || p.klinik || p.turnier || p.boxenruhe || inQuarantaene(p) || wbView() !== wbAkt()) return "";
-    const e = fremd(p) ? einstellerVon(p) : null, pl = wbPlanJetzt(p), heute = pl && (pl.wechsel || pl.halb.includes(wbHalbHeute()));
-    if (e && e.haltung === "weide" && datum().s !== 3 && !p.weide) {
-      if (!pl && p.auslauf === "box") return `${p.name} hat Weide gebucht, soll aber laut Plan in der Box bleiben`;
-      if (pl && !pl.pd && heute) return `${p.name} hat Weide gebucht, steht aber ${paddockVon(p) ? "auf dem Sandpaddock" : "in der Box"}`; }
-    if (pl && pl.pd && heute && p.weide) return `${p.name} soll laut Plan auf den Sandpaddock, steht aber auf der Weide`;
+  function wbHindernis(p, b) {   // warum ein Pferd gerade nicht raus kann (leer = kann)
+    if (!p) return "kein Pferd"; if (p.klinik) return "ist in der Klinik"; if (p.turnier) return "ist auf dem Turnier"; if (p.boxenruhe) return "hat Boxenruhe"; if (inQuarantaene(p)) return "steht unter Quarantäne"; if (b && fohlenNochLiegend(b)) return "das Fohlen liegt noch";
+    return "";
+  }
+  function wbAbweichung(p) {   // Dome 24.10.: roter gepunkteter Rahmen, wenn das Pferd nicht dort steht, wo es laut Plan oder Besitzerwunsch heute stehen soll – mit Grund
+    if (!p || wbView() !== wbAkt()) return ""; const b = wbBoxVon(p); if (wbHindernis(p, b)) return "";
+    const e = fremd(p) ? einstellerVon(p) : null, pl = wbPlanJetzt(p), heute = !!(pl && pl.ziel && (pl.wechsel || pl.halb.includes(wbHalbHeute()))), draussen = !!(p.weide || paddockVon(p));
+    const ziel = pl && pl.ziel && wbZiele().find(x => x.id === pl.ziel), zn = ziel ? (ziel.pd ? "" : "Weide ") + ziel.n : "";
+    const grund = () => { if (ziel && !ziel.pd && ziel.w.gesperrt) return " (Weide gesperrt)"; if (ziel && ziel.pd && !paddockPasst(ziel.g, p)) return " (Sandpaddock zu voll)"; return ""; };
+    if (heute && ziel && !draussen) return `${p.name} soll laut Plan heute auf ${zn}, steht aber in der Box${grund()}`;
+    if (heute && ziel && ((p.weide && (ziel.pd || p.weide.wid !== ziel.id)) || (p.paddock && (!ziel.pd || p.paddock.pid !== ziel.id)))) return `${p.name} soll laut Plan auf ${zn}, steht aber ${p.weide ? "auf der Weide" : "auf dem Sandpaddock"}`;
+    if (e && !draussen && datum().s !== 3 && (e.haltung === "weide" || e.haltung === "sandpaddock") && !(pl && pl.ziel && !heute) && !(b.paddock && e.haltung === "sandpaddock")) return `${p.name} hat ${e.haltung === "weide" ? "Weide" : "Sandpaddock"} gebucht, steht aber in der Box${pl && pl.ziel ? "" : " (kein Plan im Whiteboard)"}${e.haltung === "weide" && !weiden().some(w => !w.wiese && !w.gesperrt) ? " – alle Weiden gesperrt" : ""}`;
+    if (e && e.haltung === "weide" && p.paddock && !pl) return `${p.name} hat Weide gebucht, steht aber auf dem Sandpaddock`;
+    if (e && e.haltung === "weide" && !draussen && p.auslauf === "box") return `${p.name} hat Weide gebucht, soll aber laut Plan in der Box bleiben`;
     return "";
   }
   const wbReheBox = p => wbView() === 0 && !!wbBoxVon(p).paddock && reheGefaehrdet(p);   // Paddockbox + Hufrehe-Gefahr im Frühling: bleibt in der Box
@@ -12157,13 +12164,19 @@
     return true;
   }
   // Dome 24.10.: Plan und Standort sind immer abgeglichen – ändert sich der Plan, gehen die Pferde sofort raus bzw. zurück (nicht erst am nächsten Morgen); bringt man ein Pferd von Hand zurück, bleibt es heute drin
+  function wbRaus(b, pl) {   // Dome 24.10.: der Plan gilt – Pferd direkt aufs geplante Ziel (wie von Hand, auch wenn es eng ist; die Folgen zeigt der Sandpaddock)
+    const p = b.pferd, N = { tag: spiel.tag, ma: null, name: "der Stallbursche", paddock: !!pl.pd };
+    if (pl.pd) { const g = paddocks().find(x => x.gid === pl.ziel); if (!g) return false; rausAusBox(b); p.paddock = { seit: spiel.tag, pid: g.gid, nachm: true }; p.paddockZuletzt = spiel.tag; p.boxTage = 0; p.auslaufLog = { tag: spiel.tag, wer: N.name, ort: paddockName(g), paddock: true }; }
+    else { const w = weideById(pl.ziel); if (!w || w.gesperrt || w.wiese || w.ha <= 0) return false; aufWeide(p, b, null, w.wid); p.weide.nachm = true; p.auslaufLog = { tag: spiel.tag, wer: N.name, ort: w.name }; }
+    N.erledigt = true; p.weideNachm = N; return true;
+  }
   function wbSyncSofort(b) {
     const p = b && b.pferd; if (!p || b.tot || spiel.ansehen || !wbLive()) return;
     const pl = wbPlanVon(p), heute = !!(pl && pl.ziel && !pl.wechsel && pl.halb.includes(wbHalbHeute())), draussen = !!(p.weide || paddockVon(p)), W = p.weideNachm && p.weideNachm.tag === spiel.tag ? p.weideNachm : null;
-    if (heute && !draussen && p.wbHeim !== spiel.tag) { const N = { tag: spiel.tag, ma: null, name: "der Stallbursche", paddock: !!pl.pd }; if (weideNachmAusfuehren(b, N)) p.weideNachm = N; return; }
-    if ((!heute || (pl && p.paddock && (!pl.pd || p.paddock.pid !== pl.ziel)) || (pl && p.weide && (pl.pd || p.weide.wid !== pl.ziel))) && draussen && W && W.erledigt && !W.aus) { W.aus = true; if (p.paddock) { delete p.paddock; zurueckInBox(b); } else if (p.weide) vonWeideHolen(b); delete W.erledigt; if (heute) { delete W.aus; delete p.weideNachm; const N = { tag: spiel.tag, ma: null, name: "der Stallbursche", paddock: !!pl.pd }; if (weideNachmAusfuehren(b, N)) p.weideNachm = N; } }
+    if (heute && !draussen && p.wbHeim !== spiel.tag) { if (!wbHindernis(p, b)) wbRaus(b, pl); return; }
+    if ((!heute || (pl && p.paddock && (!pl.pd || p.paddock.pid !== pl.ziel)) || (pl && p.weide && (pl.pd || p.weide.wid !== pl.ziel))) && draussen && W && W.erledigt && !W.aus) { if (p.paddock) { delete p.paddock; zurueckInBox(b); } else if (p.weide) vonWeideHolen(b); delete p.weideNachm; if (heute && p.wbHeim !== spiel.tag && !wbHindernis(p, b)) wbRaus(b, pl); }
   }
-  const wbSyncAlle = () => { try { spiel.boxen.forEach(wbSyncSofort); } catch (e) { console.error("Whiteboard-Abgleich:", e); } };
+  const wbSyncAlle = () => { try { const st = () => spiel.boxen.map(b => b.pferd ? (b.pferd.weide ? "w" : b.pferd.paddock ? "p" : "b") : "-").join(""), v = st(); spiel.boxen.forEach(wbSyncSofort); if (st() !== v) { speichern(); zeigeStall(); zeigeTag(); } } catch (e) { console.error("Whiteboard-Abgleich:", e); } };   // hat sich ein Standort geändert, wird auch das Stallbild neu gezeichnet
   function wbKZiel(von, nach) { const p = von && von.pferd; return !!p && !von.tot && !von.offen && !von.gesperrt && !p.klinik && !p.turnier && nach !== von && boxFrei(nach) && !(von.quar && !nach.quar && inQuarantaene(p)) && !(fremd(p) && boxGruppe(von) !== boxGruppe(nach)); }   // Pferd in andere Box (auch wenn es gerade auf der Weide ist)
   function wbOk(q, z) {   // q = Quelle (m:id · p:box · c:box:ziel:hälfte · k:box), z = Ziel (b:box · w:ziel:hälfte · drin)
     if (!q || !z) return false; const [qa, qb, qc, qd] = q.split(":"), [za, zb, zc] = z.split(":");

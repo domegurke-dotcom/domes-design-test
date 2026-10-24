@@ -88,3 +88,29 @@ Nicht bewertet: Wohnhaus/Hofplatz, Gelände (Wege), Pferdeanhänger. Der Kaufpre
 | Aufzucht-Offenstall | 5.000 / 8.000 / 12.000 € | 20.000–60.000 € | 8.000 / 15.000 / 25.000 € |
 | Gummimatten je Box | 350 € | 300–600 € | passt |
 | Hofplatz / Wohnhaus | – | – | heißt seit v806 „Büro“ |
+
+## Umgesetzt v808 (Dome 24.10.: „alle deine Vorschläge einbauen“) – Alt → Neu
+
+| Gebäude | Alt | Neu |
+|---|---|---|
+| Quarantäne je Box / Erstbau 2 Boxen | 600 / 950 / 1.450 € / 1.500 / 2.400 / 3.600 € | 1.500 / 3.000 / 6.000 € / 3.000 / 6.000 / 12.000 € |
+| Abfohlstall (1 Box) und je Anbau-Box | 600 / 900 / 1.400 € und 500 / 750 / 1.150 € | 3.000 / 6.000 / 12.000 € |
+| Sandpaddock (Plätze 2/3/4), je Platz bei Altvergrößerung | 300 / 750 / 1.800 €, 150 / 250 / 450 € | 1.000 / 4.000 / 6.000 €, 500 / 1.300 / 1.500 € |
+| Roundpen | 400 / 700 / 1.000 € | 1.000 / 2.000 / 4.000 € |
+| Trail-Parcours | 500 / 800 / 1.200 € | 800 / 1.500 / 2.500 € |
+| Rennbahn | 6.000 / 9.000 / 14.000 € | 15.000 / 25.000 / 40.000 € |
+| Weide einzäunen je ha | 200 / 300 / 450 € | 400 / 1.000 / 3.000 € |
+| Waschplatz | 300 / 500 / 800 € | 800 / 1.500 / 3.000 € |
+| Sattelkammer | 500 / 800 / 1.200 € | 1.500 / 3.000 / 6.000 € |
+| Heu- und Strohlager (Erweiterung) | 1.500 / 2.500 / 4.000 € | 4.000 / 8.000 / 15.000 € |
+| Heudampfer | 800 € | 2.500 € |
+| Aufzucht-Offenstall | 5.000 / 8.000 / 12.000 € | 8.000 / 15.000 / 25.000 € |
+| Solarium, Verwaltung, Gummimatten | unverändert | unverändert (1.200/2.000/3.200 · 1.500/6.000/18.000 · 350) |
+| Immobilien: Grundstück 5 ha | 5.000 € | 45.000 € (4 ha Weide + 1 ha Bauland) |
+| Immobilien: Resthof | 35.000 € | 58.000 € |
+| Immobilien: Kleines Gestüt | 55.000 € | 99.000 € |
+| Immobilien: Reitanlage mit Halle | 80.000 € | 152.000 € |
+| Makler-Hofstelle (Büro) | 8.000 € | 6.000 € |
+| Makler-Preis | Land × 1.000 + Hofstelle + Gebäude | (ha − Bauland) × 5.000 + Bauland (mind. 1 ha) × 25.000 + Hofstelle + Boxen + Anlagen, ±10 % |
+
+Rechenweg der Immobilien: wie der Sachwert des Start-Hofs (Weideland + Bauland + Gebäude). Solarium: Dome fragte, ob „wie Waschplatz“ realistisch ist – echt kosten beide dasselbe (3.000–10.000 € neu); im Spiel liegen Solarium 1.200/2.000/3.200 und Waschplatz 800/1.500/3.000 nah beieinander.

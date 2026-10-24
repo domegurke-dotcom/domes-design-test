@@ -18,7 +18,7 @@ const [W, H] = (process.argv[2] || '390x844').split('x').map(Number), ORD = proc
     ok('2 Shettys + 1 Warmblut passen auf 400 m²', paddockPasst(g, S[0]) && paddockBelegtM2(g) <= 400, paddockBelegtM2(g) + ' m²');
     ok('Warmblut passt nicht mehr dazu (Mitarbeiter stellt es nicht dazu)', !paddockPasst(g, WB) && !paddockFrei(WB), paddockBelegtM2(g, WB) + ' m²');
     // vergrößern
-    const vor = baulandFrei(); ok('Vergrößern kostet 500 € je Platz (Stufe 1, v808)', bauPreis('sandpaddock', 1, { anbau: 'gp1', boxen: 2 }) === 1000);
+    const vor = baulandFrei(); ok('Vergrößern kostet 3.000 € je Platz (Stufe 1, v810)', bauPreis('sandpaddock', 1, { anbau: 'gp1', boxen: 2 }) === 6000);
     ok('Bauauftrag Vergrößerung', bauStarten('sandpaddock', 1, { anbau: 'gp1', boxen: 2 }));
     const a = gebaeude().find(x => x.anbau === 'gp1'); ok('Anbau hat 2 Plätze und braucht Bauland', a && a.boxen === 2 && baulandFrei() < vor, a && JSON.stringify({ b: a.boxen, frei: baulandFrei(), vor }));
     ok('Im Bau zählt er noch nicht', paddockFlaeche(g) === 400); delete a.bau;

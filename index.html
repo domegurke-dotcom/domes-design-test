@@ -1100,7 +1100,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "738";
+  const SPIEL_VERSION = "740";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1108,12 +1108,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=738"></script>
-<script src="pferd.js?v=738"></script>
-<script src="boxstufen.js?v=738"></script>
-<script src="kopfneu.js?v=738"></script>
-<script src="waschbild.js?v=738"></script>
-<script src="avatare.js?v=738"></script>
+<script src="lz-string.min.js?v=740"></script>
+<script src="pferd.js?v=740"></script>
+<script src="boxstufen.js?v=740"></script>
+<script src="kopfneu.js?v=740"></script>
+<script src="waschbild.js?v=740"></script>
+<script src="avatare.js?v=740"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -1588,11 +1588,12 @@
   }
   // sichtbare Farbe heute: Geburtsfarbe → Schimmel der Grundfarbe → (Apfelschimmel) → weiß (→ Fliegenschimmel)
   // v432/v433 (Dome): Braunfalbe oder Hellfalbe – über die vererbte Farbton-Veranlagung ex.ton (wie Hellbrauner), unter 0,25 hell
+  const hellfalbeId = () => { const id = "braunfalbe~t0", ziel = "#e6d3ab", w = .45;   // v736: Farbe der Hellfalbe (Gen Hf/Hf), wird auch von der Enzyklopädie genutzt
+    if (!FARBEN[id]) { const B = FARBEN.braunfalbe; FARBEN[id] = { ...B, name: "Hellfalbe", body: mix(B.body, ziel, w), ...(B.head ? { head: mix(B.head, ziel, w) } : {}) }; }
+    return id; };
   function falbTon(p, basis) {
     if (basis !== "braunfalbe" || !(p.gen || p.ex) || anzahl(genVon(p), "Hf") !== 2) return basis;   // v736: Hellfalbe = Hf/Hf
-    const [, ziel, w] = [0, "#e6d3ab", .45], id = "braunfalbe~t0";
-    if (!FARBEN[id]) { const B = FARBEN.braunfalbe; FARBEN[id] = { ...B, name: "Hellfalbe", body: mix(B.body, ziel, w), ...(B.head ? { head: mix(B.head, ziel, w) } : {}) }; }
-    return id;
+    return hellfalbeId();
   }
   function fb(p, jahre) {
     const st = grauStand(p, jahre), basis = falbTon(p, p.farbe);
@@ -2769,7 +2770,7 @@
   async function bilanzBildTeilen(A) {   // A: Daten aus der Brief-Aktion „jbild“ (oder die Abschlussbilanz)
     try {
       const q = A.bestes && pferdePool().find(e => e.p.id === A.bestes.id);
-      const bild = q ? "data:image/svg+xml;charset=utf-8," + encodeURIComponent(ganzBild(q.p).replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="380" ')) : "";
+      const bild = q ? "data:image/svg+xml;charset=utf-8," + encodeURIComponent(ganzBild(q.p, true).replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="380" ')) : "";
       const D = { ...A, titel: A.titel || "Jahresbericht", zeit: A.zeit || `Jahr ${A.jahr}`, bild }, blob = await bilanzBildBlob(D);
       const name = `Zuchtstall_${bildDateiTeil(D.hof)}_Bilanz_${bildDateiTeil(D.zeit)}.png`;
       try { const f = new File([blob], name, { type: "image/png" }); if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: name }); return; } } catch (e) { if (e && e.name === "AbortError") return; }
@@ -11381,7 +11382,7 @@
   // kleines Erklärfenster aus dem Lexikon (von der Daten-Karte aus) – schließen führt zurück zur Karte
   function lexFenster(art, p) {
     const bild = (rasse, farbe) => { const z = zeichnePferd(rasse, farbe, { seed: "lex" + rasse, statisch: 1 }), m = 5, oben = 15;
-      return `<div class="lex-bild"><svg viewBox="${(z.box.minX - m).toFixed(1)} ${(z.box.minY - oben).toFixed(1)} ${(z.box.maxX - z.box.minX + 2 * m).toFixed(1)} ${(-z.box.minY + oben + m).toFixed(1)}">${ohneAnim(z.svg)}</svg></div>`; };
+      return `<div class="lex-bild">${enzAuto(ohneAnim(z.svg), [z.box.minX - m, z.box.minY - oben, z.box.maxX - z.box.minX + 2 * m, -z.box.minY + oben + m], "alle")}</div>`; };
     let titel = "", html = "";
     if (art === "rasse") { const r = rasseById(p.rasse), a = anteileVon(p);
       titel = `📖 ${r.name}`; html = bild(r.id, r.farben[0]) + `<p><b>${r.herkunft}</b> · ${r.h[0]}–${r.h[1]} cm Stockmaß</p><p>${r.text}</p>${r.warnung ? `<div class="rasse-warn"><b>⚠️ Achtung Erbkrankheit</b>${r.warnung}</div>` : ""}
@@ -11433,6 +11434,7 @@
    ["lex_bendor", "fuchs", "Bend-Or-Flecken", "Dunkle, runde Flecken auf Füchsen und Palominos (Rußflecken). Vererbte Anlage.", { lexOpt: { bendor: true } }],
    ["lex_brindle_dunkel", "fuchs", "Brindle (dunkel)", "Dunkle, gewellte Streifen – Chimäre aus zwei Zelllinien in einem Pferd, sehr selten und nicht vererbbar.", { lexOpt: { brindle: "dunkel" } }],
    ["lex_brindle_weiss", "brauner", "Brindle (weiß, Gen BR1)", "Weiße, gewellte Streifen – Gen auf dem X-Chromosom (Quarter Horse), fast nur bei Stuten.", { lexOpt: { brindle: "weiss" } }],
+   ["lex_hellfalbe", hellfalbeId(), "Hellfalbe (Fjordpferd)", "Eine hellere Braunfalbe: gleiche Gene wie die Braunfalbe, dazu das rezessive Gen Hf in doppelter Ausführung (Hf/Hf, rund 9 % der Fjordpferde). Mischerbige Pferde sehen aus wie normale Braunfalben, geben die Anlage aber weiter – im Fellfarben-Test zu erkennen. In echt ist das Gen nicht eindeutig belegt.", {}],
    ["lex_dw", "brauner", "Dominant White", "Gen W: von wenig Weiß bis ganz weiß geboren (Weißgeborener); W/W ist nicht lebensfähig. Kommt in der Zucht vor allem beim Vollblut vor, beim Araber wurde es nicht nachgewiesen.", { lexOpt: { dw: 2 } }],
    ["lex_lackschimmel", "brauner", "Lackschimmel", "Leopard-Komplex (Lp) ohne Muster-Gen: das Fell hellt mit den Jahren auf, Knochenpunkte (Gesicht, Hüfte, Knie) bleiben dunkel.", { lexOpt: { lp: { haut: true, sklera: true, huf: true, lack: .9, flocken: 0, frost: false } } }],
    ["lex_snowflake", "brauner", "Snowflake", "Leopard-Komplex: weiße Flöckchen, die mit dem Alter mehr werden. Vererbte Anlage.", { lexOpt: { lp: { haut: true, sklera: true, huf: true, lack: 0, flocken: 25, frost: false } } }],
@@ -11443,7 +11445,7 @@
    ["lex_tekke_perl", "isabell", "Perl-Isabell (Achal-Tekkiner)", "Doppel-Cream mit goldenem Perlglanz – der berühmte „goldene“ Tekkiner. Der Ton wird vererbt.", { glanzLex: .9, bronzeLex: true }]].forEach(([id, b, n, t, x]) => { FARBEN[id] = { ...FARBEN[b], ...x, lexBasis: b, name: n }; FARBBESCHREIBUNG[id] = t; });
   // Fellfarben in der Enzyklopädie nach Farbfamilien: Rappen, Braune, Füchse, Falben, Cremefarben, Roans, Schimmel, Schecken, Tiger
   const FARB_REIHE = ["rappe", "lex_rappe_sommer", "windfarben", "brauner", "hellbrauner", "dunkelbrauner", "schwarzbrauner", "lex_brauner_sommer", "fuchs", "dfuchs", "hellfuchs", "dunkelfuchs", "lex_fuchs_sommer",
-    "braunfalbe", "rotfalbe", "mausfalbe", "gelbfalbe", "weissfalbe", "palomino", "buckskin", "russbuckskin", "isabell", "lex_tekke_gold", "lex_tekke_bronze", "lex_tekke_silber", "lex_tekke_perl", "lex_glanzaepfel", "blueroan", "rotschimmel", "lex_rabicano", "lex_birdcatcher", "lex_bendor", "lex_brindle_dunkel", "lex_brindle_weiss", "lex_dw",
+    "braunfalbe", "lex_hellfalbe", "rotfalbe", "mausfalbe", "gelbfalbe", "weissfalbe", "palomino", "buckskin", "russbuckskin", "isabell", "lex_tekke_gold", "lex_tekke_bronze", "lex_tekke_silber", "lex_tekke_perl", "lex_glanzaepfel", "blueroan", "rotschimmel", "lex_rabicano", "lex_birdcatcher", "lex_bendor", "lex_brindle_dunkel", "lex_brindle_weiss", "lex_dw",
     "grauschimmel", "braunschimmel", "fuchsschimmel", "apfelschimmel", "schimmel", "fliegenschimmel", "rappschecke", "braunschecke", "fuchsschecke", "ov_brauner", "tv_fuchs",
     "tg_brauner", "fs_rappe", "sb_rappe", "sk_brauner", "lex_lackschimmel", "lex_snowflake", "lex_frost", "lex_pintaloosa", "lex_roanschecke", "lex_tricolor", "lethalwhite"];
   const farbRang = id => { const i = FARB_REIHE.indexOf(id); return i < 0 ? 999 : i; };
@@ -11548,7 +11550,7 @@
       : kat.ansicht === "vorn" ? (() => { const r = (kat.refBox = kat.refBox || zeichnePferd(kat.rasse, kat.farbe, { k: { fore: 0 }, seed: "enz", maehne: "kurz" }).box); return [b.minX - 3, b.minY - 3, (r.maxX - r.minX) * 0.62, -r.minY * 0.82]; })()   // v736: alle Halsbilder gleich groß
       : kat.ansicht === "beine" ? [(b.minX + b.maxX) / 2 - h * 0.42, b.minY - 2, h * 0.84, h + 5]
       : [b.minX - 6, b.minY - 16, w + 12, h + 16 + 10];   // oben Platz für die Ohren, unten für die Hufe
-    if (kat.ansicht === "vorn" || kat.ansicht === "ganz") return enzAuto(ohneAnim(z.svg), vb, kat.ansicht === "ganz" ? "alle" : "lo");   // v736: Randabstand wie bei allen Kopfbildern
+    if (["vorn", "ganz", "kopf", "beine"].includes(kat.ansicht)) return enzAuto(ohneAnim(z.svg), vb, kat.ansicht === "ganz" || kat.ansicht === "beine" ? "alle" : "lo");   // v736: Randabstand wie bei allen Kopfbildern
     return `<svg viewBox="${vb.map(x => x.toFixed(1)).join(" ")}">${ohneAnim(z.svg)}</svg>`;
   }
   function zeigeEnzy() {
@@ -11891,9 +11893,10 @@
   }
 
   // ganzes Pferd als kleines Foto (mit Rand, nichts abgeschnitten)
-  function ganzBild(p) {
+  function ganzBild(p, roh) {   // v739: Randabstand wie bei allen Bildern außerhalb der Boxen (roh = ohne Messung, für Bilder, die als Datei-URL eingebettet werden)
     const z = zeichnePferd(p.rasse, fb(p), { seed: p.id, geschlecht: p.geschlecht, alterStufe: p.geb ? stufeKey(p) : undefined, maehne: p.maehne, schopf: p.schopf, statisch: 1, ...kopfOpt(p) });
     const w = z.box.maxX - z.box.minX, h = -z.box.minY, m = Math.max(w, h) * 0.08;
+    if (!roh) return enzAuto(ohneAnim(z.svg), [z.box.minX - m, z.box.minY - m, w + 2 * m, h + 2 * m], "alle");
     return `<svg viewBox="${(z.box.minX - m).toFixed(1)} ${(z.box.minY - m).toFixed(1)} ${(w + 2 * m).toFixed(1)} ${(h + 2 * m).toFixed(1)}" preserveAspectRatio="xMidYMid meet">${ohneAnim(z.svg)}</svg>`;
   }
   function grabstein(g) {

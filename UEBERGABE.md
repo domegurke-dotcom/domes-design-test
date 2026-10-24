@@ -25,6 +25,9 @@ Dome: „Ja für alle Etappen, Fragen sammeln und am Ende rausgeben“; Wecker 6
 | H4 Bauland zukaufen/verkaufen/verschieben | ✅ v754 |
 | H5 Tutorial, Hinweise, Stufen, Enzyklopädie, Tests | ✅ v754 (Enzyklopädie am PC 5 Spalten nebenbei, Dome) |
 Fragen stehen in `OFFENE-FRAGEN.md` („Hofplan-Etappen“). Große Tests (etappen/hof-gesamttest) sind angepasst (`planAutoSetzen()` nach `bauStarten`), aber nicht gelaufen (nur nach Domes Ja).
+**Tests:** `tests/hofplan-test.js` grün in 3 Ansichten; Tutorial-Spieler anf 390×844 ✓, fort 390×844 ✓, anf 844×390 hängt zufällig bei „Hufe“ bzw. „Einstellen“ – **v751 (vor dem Hofplan) hängt dort genauso**, also nicht neu.
+**Nebenbei (Dome-Aufnahme/Wünsche):** v755 Whiteboard (automatisch zugeteilte Mitarbeiter mit ✕ entfernbar = „niemand“, Weidepferde zählen als versorgt), v756 Whiteboard zeigt alle gebuchten Pensions-Extras, Enzyklopädie am PC 5 Spalten (v754).
+**Danach (Dome):** Update-Fenster „Neu in deinem Spiel“ – Änderungen ab v725 zum Ankreuzen anbieten.
 
 ### Sitzung 24.10. – v733–v751 (Claude Team, Sonnet), alles auf `main`
 Thema: Pferdeköpfe/Randabstand und **realistische Fellfarben nach Studien**. Details je Version in `CLAUDE.md` (v733–v751).

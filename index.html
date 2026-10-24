@@ -1161,7 +1161,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "816";
+  const SPIEL_VERSION = "817";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1169,12 +1169,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=816"></script>
-<script src="pferd.js?v=816"></script>
-<script src="boxstufen.js?v=816"></script>
-<script src="kopfneu.js?v=816"></script>
-<script src="waschbild.js?v=816"></script>
-<script src="avatare.js?v=816"></script>
+<script src="lz-string.min.js?v=817"></script>
+<script src="pferd.js?v=817"></script>
+<script src="boxstufen.js?v=817"></script>
+<script src="kopfneu.js?v=817"></script>
+<script src="waschbild.js?v=817"></script>
+<script src="avatare.js?v=817"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -12249,6 +12249,23 @@
     for (let i = 0; i < 3 && z !== c; i++, z = (z + 3) % 4) { const e = spiel.wbPlan && spiel.wbPlan[z] && spiel.wbPlan[z][p.id]; if (e) return wbKopie(e); }
     return wbKopie(p);
   }
+  // Dome 24.10.: Einteilung (Weide/Sandpaddock/Box, Tag A/B, täglich/alle 2 Tage) einer Jahreszeit in eine andere kopieren
+  function wbKopieren(von, ziele) {
+    const alt = wbJz; wbJz = von === wbAkt() ? null : von;
+    const D = new Map(spiel.boxen.filter(b => b.pferd && !b.tot && !b.offen).map(b => [b.pferd, wbKopie(wbDat(b.pferd))])), M = wbZiele().map(z => [z, wbModusVon(z)]);
+    wbJz = alt;
+    ziele.filter(t => t !== von).forEach(t => {
+      D.forEach((k, p) => { if (t === wbAkt()) WB_FELDER.forEach(f => { if (k[f] != null) p[f] = k[f]; else delete p[f]; }); else { spiel.wbPlan = spiel.wbPlan || {}; (spiel.wbPlan[t] = spiel.wbPlan[t] || {})[p.id] = { ...k }; } });
+      M.forEach(([z, m]) => { const o = z.pd ? z.g : z.w; (o.wbModi = o.wbModi || {})[t] = m; if (t === wbAkt()) o.wbModus = m; });
+    });
+    if (ziele.includes(wbAkt())) wbSyncAlle(); speichern();
+  }
+  function wbKopierenDialog() {
+    const von = wbView(), andere = [0, 1, 2, 3].filter(j => j !== von), nm = j => `${JZ[j][1]} ${JZ[j][0]}${j === wbAkt() ? " (jetzt)" : ""}`;
+    const frage = ziele => dialog(`<h3>📋 Einteilung kopieren</h3><p>Die Einteilung von <b>${nm(von)}</b> (wer auf welche Weide oder welchen Sandpaddock kommt, wer in der Box bleibt, Tag A/B und „täglich / alle 2 Tage“) nach <b>${ziele.map(nm).join(", ")}</b> kopieren?</p><p><small>Die bisherige Einteilung ${ziele.length > 1 ? "dieser Jahreszeiten" : "dieser Jahreszeit"} wird überschrieben.${ziele.includes(wbAkt()) ? " Für die aktuelle Jahreszeit gilt sie sofort." : ""}</small></p>`,
+      [["📋 Kopieren", () => { wbKopieren(von, ziele); zeigeWhiteboard(); }], ["Abbrechen", null, "zweit"]]);
+    dialog(`<h3>📋 Einteilung von ${nm(von)} kopieren</h3><p>Wohin soll die Einteilung?</p>`, [...andere.map(j => [nm(j), () => setTimeout(() => frage([j]), 30)]), ["Alle anderen", () => setTimeout(() => frage(andere), 30)], ["Abbrechen", null, "zweit"]]);
+  }
   function wbSichern(p, D) { spiel.wbPlan = spiel.wbPlan || {}; (spiel.wbPlan[wbView()] = spiel.wbPlan[wbView()] || {})[p.id] = wbKopie(D); }
   function wbPlanJahreszeit() {   // zu Beginn einer Jahreszeit: den vorbereiteten Plan auf die Pferde anwenden
     const P = spiel.wbPlan && spiel.wbPlan[datum().s]; if (!P) return;
@@ -12418,10 +12435,10 @@
       ${gruppen.map(([k, ico, n]) => `${gruppen.length > 1 ? `<div class="wb-gruppe">${ico} ${n}</div>` : ""}${[...new Set(spiel.boxen.filter(b => boxGruppe(b) === k).map(b => b.geb || "-"))].map(id => `${bauten[k + "|" + id] ? `<div class="wb-gruppe wb-bau">${bauten[k + "|" + id]}</div>` : ""}<div class="wb-boxen">${spiel.boxen.map((b, i) => boxGruppe(b) === k && (b.geb || "-") === id ? zelle(b, i) : "").join("")}</div>`).join("")}`).join("")}
       <div class="wb-ma-reihe" id="wbMaReihe">${maReihe}</div>`;
     const jzKn = `<span class="wb-jz">${JZ.map(([n, ico], j) => `<button class="mini-knopf${wbView() === j ? " an" : ""}" data-wbjz="${j}" title="${n}${j === wbAkt() ? " (jetzt)" : ""}">${ico}<span class="wb-jzn"> ${n}</span>${j === wbAkt() ? " •" : ""}</button>`).join("")}</span>`;
-    const weidenTeil = `<div class="wb-jzzeile"><h3 class="wb-h">🌿 Weideplan</h3>${jzKn}</div>${wbLive() ? "" : `<div class="klasse">📅 Plan für <b>${JZ[wbView()][0]}</b> – gilt ab Beginn der Jahreszeit. Wo du nichts änderst, bleibt es wie in der Jahreszeit davor.</div>`}<p class="wb-tipp">Oben rechts wählst du die Jahreszeit und planst jede Weide und jeden Sandpaddock im Voraus. Pro Weide oder Sandpaddock stellst du „täglich“ oder „alle 2 Tage“ ein. Pferd von unten auf die Weide ziehen (oder antippen und dann die Weide antippen) – bei „alle 2 Tage“ auf die linke (${wbHalbName("a")}) oder rechte Hälfte (${wbHalbName("b")}), auf beide = jeden Tag. Orange umrandet: hat dort gestern gestritten, rot: schon öfter gestritten, grün: hat dort einen Freund. Rot gepunktet: Hufrehe-Gefahr im Frühling – besser auf den Sandpaddock oder in die Box (Pferde in Paddockboxen bleiben dann automatisch in der Box). Auch Pensionspferde kannst du frei einteilen, der Besitzer merkt es an der Zufriedenheit. Raus bringen Stallbursche und Azubi in der Morgenrunde.</p>
+    const weidenTeil = `<div class="wb-jzzeile"><h3 class="wb-h">🌿 Weideplan</h3>${jzKn.replace('<span class="wb-jz">', '<span class="wb-jz"><button class="mini-knopf" data-wbkopie="1" title="Einteilung dieser Jahreszeit in eine andere kopieren">📋 Kopieren</button>')}</div>${wbLive() ? "" : `<div class="klasse">📅 Plan für <b>${JZ[wbView()][0]}</b> – gilt ab Beginn der Jahreszeit. Wo du nichts änderst, bleibt es wie in der Jahreszeit davor.</div>`}<p class="wb-tipp">Oben rechts wählst du die Jahreszeit und planst jede Weide und jeden Sandpaddock im Voraus. Pro Weide oder Sandpaddock stellst du „täglich“ oder „alle 2 Tage“ ein. Pferd von unten auf die Weide ziehen (oder antippen und dann die Weide antippen) – bei „alle 2 Tage“ auf die linke (${wbHalbName("a")}) oder rechte Hälfte (${wbHalbName("b")}), auf beide = jeden Tag. Orange umrandet: hat dort gestern gestritten, rot: schon öfter gestritten, grün: hat dort einen Freund. Rot gepunktet: Hufrehe-Gefahr im Frühling – besser auf den Sandpaddock oder in die Box (Pferde in Paddockboxen bleiben dann automatisch in der Box). Auch Pensionspferde kannst du frei einteilen, der Besitzer merkt es an der Zufriedenheit. Raus bringen Stallbursche und Azubi in der Morgenrunde.</p>
       ${ZL.length ? `<div class="wb-weiden">${ZL.map(karte).join("")}${egalK}</div>` : `<p class="wb-leer">Noch keine Weide oder kein Sandpaddock.</p>`}
       <h4 class="wb-h">🏠 Bleiben in der Box</h4><div class="wb-egal-l" id="wbBleibt">${imBox.map(x => { const k = `p:${x.i}`; const abw = wbAbweichung(x.p); return `<span class="wb-chip${abw ? " rehe" : ""}${sel(k)}" data-wbq="${k}" title="${esc(x.p.name)}${abw ? ` – ⚠️ ${esc(abw)}` : ""} – ziehen oder antippen und dann auf eine Weide legen">${kopfBild(x.p, true)}<span class="wb-cn">${esc(x.p.name)}${wbGs(x.p)}</span></span>`; }).join("") || `<small class="wb-leer">Alle Pferde haben einen Weideplan.</small>`}</div>`;
-    const nurLesen = h => h.replace(/<button class="mini-knopf[^"]*" data-wbjz=.*?<\/button>/g, "").replace(/<input type="checkbox" data-wbwu=/g, '<input type="checkbox" disabled data-x=').replace(/ data-wb(?:q|z|loes|weg|modus|jz|name|go)="[^"]*"/g, "").replace(/<button class="wb-x"[^>]*>[^<]*<\/button>/g, "").replace(/<span class="wb-modus">.*?<\/span>/g, "");
+    const nurLesen = h => h.replace(/<button class="mini-knopf[^"]*" data-wbjz=.*?<\/button>/g, "").replace(/<button class="mini-knopf" data-wbkopie=.*?<\/button>/g, "").replace(/<input type="checkbox" data-wbwu=/g, '<input type="checkbox" disabled data-x=').replace(/ data-wb(?:q|z|loes|weg|modus|jz|name|go)="[^"]*"/g, "").replace(/<button class="wb-x"[^>]*>[^<]*<\/button>/g, "").replace(/<span class="wb-modus">.*?<\/span>/g, "");
     const offenB = [], offenW = [];   // v722 (Dome): Übersicht zeigt entweder das Bild (alles erledigt) oder nur, was noch offen ist
     spiel.boxen.forEach((b, i) => { const p = b.pferd; if (!p || b.tot || p.klinik) return; const nm = `Box ${nr[i] || i + 1} · ${esc(p.name)}`;
       if (fremd(p)) { const e = einstellerVon(p); let A = []; try { A = e ? pensionAufgaben(e, b).filter(a => !a.ok) : []; } catch (er) {} if (A.length) offenB.push([nm, A.map(a => a.txt).join(", ")]); }
@@ -12459,6 +12476,7 @@
     W.onchange = e => { const c = e.target.closest && e.target.closest("[data-wbwu]"); if (!c) return; const [i, k] = c.dataset.wbwu.split(":"), p = spiel.boxen[+i].pferd; if (!p) return; (p.leist = p.leist || {})[k] = c.checked; speichern(); zeigeWhiteboard(); if (!c.checked && (k === "fuettern" || k === "misten") && !p.leistHinweis) { p.leistHinweis = 1; speichern(); dialog(`<h3>ℹ️ Kurz gesagt</h3><p>Ohne Haken bei ${WUNSCH[k][1]} macht das für <b>${esc(p.name)}</b> kein Mitarbeiter – das musst du dann selbst übernehmen (sonst bleibt es liegen). Der freie Platz des Stallburschen geht an andere Pferde, zum Beispiel Pensionspferde.</p>`, [["Verstanden", () => zeigeWhiteboard()]]); } };
     W.onclick = e => { if (e.target.closest("[data-wbwu]") || e.target.closest(".wb-wu-z")) return; if (Date.now() - wbGezogenAm < 400) return;
       const sv = e.target.closest("[data-wbsicht]"); if (sv) { wbSicht = sv.dataset.wbsicht; wbWahl = null; zeigeWhiteboard(); window.scrollTo(0, 0); return; }
+      if (e.target.closest("[data-wbkopie]")) { wbKopierenDialog(); return; }
       const jz = e.target.closest("[data-wbjz]"); if (jz) { wbJz = +jz.dataset.wbjz === wbAkt() ? null : +jz.dataset.wbjz; wbWahl = null; zeigeWhiteboard(); return; }
       const nm = e.target.closest("[data-wbname]"); if (nm) { wbUmbenennen(nm.dataset.wbname); return; }
       const go = e.target.closest("[data-wbgo]"); if (go && !(wbWahl && go.dataset.wbz !== undefined)) { aktBox = +go.dataset.wbgo; spiel.aktBox = aktBox; aktenReiter = "steckbrief"; aktenModus = "steckbrief"; deckModus = false; ortModus = null; meldung = ""; zeigeSchirm(null); window.scrollTo(0, 0); return; }

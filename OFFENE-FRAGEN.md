@@ -56,5 +56,3 @@ Stichprobe 500 Pferde je Rasse (`neuesPferd` mit Markt-Farbverteilung). **Zu hä
 - **Bauland (v754):** 0,5 ha kosten 1.500 € (3.000 €/ha), Verkauf 90 % (1.350 €); Stücke rechts, links oder unten ansetzen; Verschieben über Antippen → „Verschieben“.
 - **Nicht gemacht:** Beinabzeichen in der Enzyklopädie haben weiter 6 Spalten (du hattest sie nicht genannt).
 
-## v816 Pension-Schulden nach Auszug (Claude Team, 24.10.2026)
-Selbst gesetzt: Ausgezogene zahlen je Mahntermin mit 50 %, nach der letzten Mahnung Inkasso mit 60 % Erfolg, das die Hälfte des Betrags bringt (ohne Mahngebühren). Bitte bestätigen oder Zahlen nennen.

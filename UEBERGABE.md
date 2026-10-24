@@ -160,3 +160,5 @@ Domes Wünsche zu Whiteboard, Mitarbeitern, Waschplatz/Solarium sind umgesetzt (
 **v815 (Claude Team, 24.10.):** Boxansicht B1 am PC (Symbole am Rand, Ringe, Plaketten, Denkblase). Test boxansicht-test grün in 3 PC-Größen; kleine Tests stichprobenartig grün (reiter-/spielstand-test je einmal zufällig rot, Wiederholung grün). Wartet auf Domes Test, dann B2.
 
 **v816 (Claude Team, 24.10.):** Offene Pensionsrechnung bleibt nach dem Auszug bestehen (Mahnungen, dann Inkasso). Zahlen selbst gesetzt: 50 % Zahlung je Mahntermin, Inkasso 60 % Erfolg × ½ Betrag.
+
+**v817 (Claude Team, 24.10.):** Whiteboard-Kopieren der Jahreszeit-Einteilung. Plan `PLAN-WEIHNACHTEN.md` (A–D) geschrieben, wartet auf Domes Ja. Offene Frage v816 erledigt (Dome: passt).

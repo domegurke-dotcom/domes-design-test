@@ -76,7 +76,7 @@ const [bw, bh] = (process.argv[2] || '390x844').split('x').map(Number), ordner =
   ok('Stall antippen: Anbauen, Ausbauen, Reparieren/Abreißen', /Anbauen/.test(r.knoepfe) && /Ausbauen/.test(r.knoepfe) && /Abreißen/.test(r.knoepfe), r.knoepfe);
   const stGid = r.gid, l0 = r.l;
   await pg.evaluate(() => planNeu());
-  await pg.locator('#planBox [data-anbau]').first().click(); await pg.waitForTimeout(150);
+  await pg.evaluate(() => { const b = [...document.querySelectorAll('.plan-radial [data-ri]')].find(x => /Anbau/.test(x.getAttribute('aria-label'))); if (b) b.click(); });   // seit v768 über das Kreis-Menü await pg.waitForTimeout(150);
   r = await pg.evaluate(() => ({ v: !!planVorschau, ok: !!document.querySelector('[data-pvok]:not([disabled])'), mass: planVorschau && planVorschau.mass }));
   ok('Anbauen zeigt die Vorschau (grün, Bau bestätigen)', r.v && r.ok, JSON.stringify(r));
   await bild('5-anbau-vorschau');

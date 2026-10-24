@@ -122,3 +122,10 @@ Rechenweg der Immobilien: wie der Sachwert des Start-Hofs (Weideland + Bauland +
 | Abfohlbox-Aufpreis je Tag (Stufe 1/2/3) | 5 / 10 / 15 € | 10 / 25 / 50 € |
 | Beritt je Jahreszeit | vorher kleiner (siehe Git v808) | 600 € |
 | Aufzucht fremder Fohlen | vorher kleiner (siehe Git v808) | 250 € (Waise 120 €) |
+
+## Umgesetzt v810 (Sandpaddock)
+
+| Preis | v808 | neu (v810) |
+|---|---|---|
+| Sandpaddock Stufe 1/2/3 (2/3/4 Plätze) | 1.000 / 4.000 / 6.000 € | 6.000 / 15.000 / 30.000 € |
+| je Platz (Altvergrößerungen) | 500 / 1.300 / 1.500 € | 3.000 / 5.000 / 7.500 € |

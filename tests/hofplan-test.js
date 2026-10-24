@@ -141,7 +141,7 @@ const [bw, bh] = (process.argv[2] || '390x844').split('x').map(Number), ordner =
     const n0 = await pg.evaluate(() => hofPlan().st.length), g0 = await pg.evaluate(() => spiel.geld);
     await pg.locator('[data-plverk]').click(); await pg.waitForTimeout(150); await pg.locator('#dlgKnoepfe button:first-child').click(); await pg.waitForTimeout(150);
     r = await pg.evaluate(() => ({ n: hofPlan().st.length, geld: spiel.geld }));
-    ok('Stück verkauft: ein Stück weniger, 90 % zurück (1.350 €)', r.n === n0 - 1 && r.geld - g0 === 1350, JSON.stringify(r));
+    ok('Stück verkauft: ein Stück weniger, 90 % zurück (11.250 €)', r.n === n0 - 1 && r.geld - g0 === 11250, JSON.stringify(r));
   }
   r = await pg.evaluate(() => { const P = hofPlan(), i = P.st.findIndex((t, j) => !planStueckFrei(P, j)); planLand = { modus: 'stueck', i }; planNeu(); return !document.querySelector('[data-plverk]'); });
   ok('Bebautes Stück: kein Verkaufen', r);

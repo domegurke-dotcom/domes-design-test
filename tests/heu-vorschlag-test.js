@@ -8,10 +8,10 @@ const { chromium } = require('playwright'); const path = require('path');
   const R = [], ok = (n, c, x) => R.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : ''));
   await pg.click('[data-hvk^="heu:100"]'); await pg.click('[data-hvk^="heu:100"]');
   let t = await pg.evaluate(() => document.getElementById('dlgInhalt').textContent.replace(/\s+/g, ' '));
-  ok('Korb zeigt Menge und Erlös, noch nichts verkauft', /Verkaufskorb/.test(t) && /200 kg/.test(t) && /Erlös 24 €/.test(t) && (await pg.evaluate(() => futterkammer().lager.heu)) === 600, t.slice(-160));
+  ok('Korb zeigt Menge und Erlös, noch nichts verkauft', /Verkaufskorb/.test(t) && /200 kg/.test(t) && /Erlös 36 €/.test(t) && (await pg.evaluate(() => futterkammer().lager.heu)) === 600, t.slice(-160));
   await pg.click('#dlgKnoepfe button:first-child');
   const nach = await pg.evaluate(() => ({ heu: futterkammer().lager.heu, geld: spiel.geld - window.__g0 }));
-  ok('Nach „Verkaufen“: 200 kg weg, 24 € Erlös', nach.heu === 400 && Math.abs(nach.geld - 24) < 0.01, JSON.stringify(nach));
+  ok('Nach „Verkaufen“: 200 kg weg, 36 € Erlös', nach.heu === 400 && Math.abs(nach.geld - 36) < 0.01, JSON.stringify(nach));
   // Preisvorschlag 3 Tage
   const v = await pg.evaluate(() => { const P = neuesPferd({ rasse: 'paint', geschlecht: 'Stute', alter: 8, name: 'Zora' }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); spiel.boxen[0].pferd = P;
     spiel.angebote = [{ id: P.id, art: 'fest', preis: 5000, wert: 6000, startTag: spiel.tag - 1, endeTag: spiel.tag + 20, vorschlag: { id: 'x', betrag: 4500, bis: spiel.tag + PREISVORSCHLAG_TAGE } }];

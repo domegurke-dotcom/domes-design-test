@@ -15,6 +15,10 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### Sitzung 24.10. (Preise) – v805 (Claude Team, Sonnet) – für Pro
+Dome wollte die Futterkammer-Preise und andere Preise real prüfen. **v805:** Heu/Einstreu/Mineral, Unterhalt, Tierarzt, Beschlag, Boxenstall, Reitplatz, Reithalle, Land, Bauland, Pacht neu (Tabelle alt/neu/echt in `PREISE-VERGLEICH.md`, Rückweg dort). Paddockboxen und Makler-Preise habe ich mitgezogen (Verhältnis). **Offen (Dome fragen):** (1) Kaufpreis des Start-Hofs (20.000 €, Sachwert mit neuen Preisen 30.266 €) und andere Immobilien (`IMMOBILIEN`, Makler-Hofstelle 8.000) – nicht angefasst; (2) Quarantäne-/Abfohlstall-/Sandpaddock-Boxpreise stehen noch auf alten Werten (600/500 €), passen nicht mehr zu 1.500 €; (3) Löhne ~½ und Pension ~2,2× echt, zwei Zeitmaßstäbe (Projekt-Chat); (4) `tests/dispo-test.js` hatte schon vor v805 3 rote Prüfungen (Kreditrate 305 statt 554, 10 Jahre) – nicht von mir, noch zu reparieren. Tests angepasst: hofplan (11.250 €), heu-vorschlag (0,18 €/kg). Preise ändern keine Mechanik, alte Spielstände behalten ihre Gebäude-Preise.
+
+
 ### Sitzung 24.10. (spät) – v769–v803 (Claude Team, Sonnet) – Stand für Pro
 Alles auf `main`, Details je Version in `CLAUDE.md` (v769–v803). Kurz:
 - **Whiteboard/Orte:** Plan ↔ Standort immer synchron, roter Rahmen = Orientierung (bleibt auch im freien Quoten-Rahmen, Tooltip erklärt), gesperrte Weide mit rotem Kreuz und „Aussaat – noch x Tage“, grüner Zielrahmen um die ganze Weide-Karte (täglich), **neu v800: Zeile „🧺 Versorgung heute“ (✔/✗ Heu, Futter, Wasser, Misten) bei jedem Pferd**.

@@ -15,7 +15,15 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-### Stand für die nächste Sitzung (Claude Team, 24.10. – v762, alles auf `main`)
+### Aufnahme von Dome (24.10., v762) – Etappe 1 fertig (Claude Team, Sonnet, v763)
+Dome hat 14 Meldungen aufgenommen (`Zuchtstall_test-der-neuesten-funktionen…json`). Abgesprochen: 3 Etappen, Etappe 2 mit Opus. **Etappe 1 ✅ v763:** Fressdauer 5 s, Pinnwand größer, Weide im Ort-Plan anklickbar, Büro = Labor (umbenannt), Spielumfang-Schalter weg, „Tutorials“ mit Liste aller Kapitel (Meldungen 1, 2, 3, 6-Teil, 13, 14).
+**Etappe 2 (Opus) offen – Domes Antworten:**
+- „Ort“ → **„Orte“** umbenennen; alles, was dort angeklickt wird, hat Rücksprung zu „Orte“ (nicht mehr zur Kachel „Training“); die Kacheln unter dem Hofplan (Box wechseln, Stallbox, Koppel, Training, Labor/Büro) entfallen komplett, alles läuft über den Plan.
+- **Umstellen (5 und 7):** Klick auf Stall-/Paddockbox (und Abfohlstall+Box, Aufzucht-Offenstall, Quarantänestall+Box) fragt „Pferd umstellen?“, dann in die nächste freie Box ohne Auswahl; Einstreu und Futter ziehen mit (Aufnahme zeigte Pünktchen danach mit Box „---“ = ohne Einstreu – prüfen). Muss zu allen und von allen Boxarten funktionieren.
+- **Weide/Sandpaddock (10, 11):** ist das Pferd im Whiteboard für Sandpaddock 5 geplant und man klickt in „Orte“ auf Weide, kommt die Rückfrage „Laut Plan ist … für Sandpaddock 5 eingeteilt, möchtest du … lieber auf die Weide stellen?“ – bei Ja die frühere Weideauswahl; umgekehrt genauso. Das **Whiteboard passt sich an** (Ist-Zustand; Änderung für die laufende Jahreszeit eintragen, gilt weiter, bis ein eigener Plan kommt – Dome noch nicht bestätigt).
+**Etappe 3 (Sonnet) offen:** Meldung 12 Kreis mit ✕ in der Mitte des angetippten Gebäudes, Symbole ringsum (Reparieren, Ausbauen, Name, Abreißen, Drehen, Infos) **mit den echten Funktionen**, ✕ bricht ab, Leiste unter dem Plan entfällt; Meldung 9 Pferdeköpfe der Reiter (z. B. 2 Köpfe bei 2 Reitern) auf Reitplatz/Roundpen im Plan; Meldung 8 roter gepunkteter Rahmen im Whiteboard, wenn Pferd nicht dort steht, wo es laut Buchung/Plan hingehört.
+
+### Stand davor (Claude Team, 24.10. – v762)
 **Fertig seit dem Hofplan:** v761 Luzerne im Heu- und Strohlager (Dome: ja); v762 Update-Fenster Stufe 4 (`NEUES_STAND` 761, Datum 24.10.2026: Hofplan, Verwaltung ⚠️, Lagerung ⚠️; alles andere von Dome abgelehnt – nie wieder anbieten, Liste in CLAUDE.md bei v762); Test `aufnahme-fixes-test` repariert (Zufallsschlüssel `data-k` beim Bildvergleich ignoriert, kein Spielfehler). Selbst gesetzte Zahlen (Verwaltung +4/+8, Futterkammer 200/350/600 kg + 30 je Box, Büro-Maße und Preise) hat Dome bestätigt („so lassen“).
 **Offen / auf Dome warten:** (1) Große Tests (etappen-test, hof-gesamttest, neuladen-test) – für den Hofplan angepasst, nie gelaufen; erst fragen, welche Bilder-Variante (aus/fehler/alle). (2) Alle Preise nochmal durchgehen (`PROJEKT-CHAT-THEMEN.md` Punkt 12). (3) Domes Abnahme des Hofplans. (4) Möglicher Zusatz: eigene Sorte „Luzerne-Cobs“ für die Futterkammer – nur auf Wunsch. (5) Nächstes Update-Fenster: nur Änderungen ab v762, und nur auf Domes Ansage. Tutorial-Spieler immer allein laufen lassen.
 

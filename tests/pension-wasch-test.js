@@ -38,8 +38,8 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Besitzer zahlt die Wäsche (6 €)', eA.waschSumme === 6, String(eA.waschSumme));
     abspritzen(pA, false); ok('zweites Abspritzen am selben Tag kostet nichts extra', eA.waschSumme === 6, String(eA.waschSumme)); abtrocknen(pA);
     pA.trainHeute = { tag: spiel.tag, liste: ['schritt'], verbraucht: 10 }; A = pensionAufgaben(eA, box); ok('nach dem Training: Aufgabe „Solarium“ offen', A.some(a => a.k === 'solarium' && !a.ok));
-    solarium(pA); A = pensionAufgaben(eA, box); ok('Solarium genutzt → erledigt, Besitzer zahlt 3 €', A.some(a => a.k === 'solarium' && a.ok) && eA.solarSumme === 3, String(eA.solarSumme));
-    solarium(pA); ok('zweite Anwendung am Tag kostet nicht extra', eA.solarSumme === 3, String(eA.solarSumme));
+    solarium(pA); A = pensionAufgaben(eA, box); ok('Solarium genutzt → erledigt, Besitzer zahlt 8 €', A.some(a => a.k === 'solarium' && a.ok) && eA.solarSumme === 8, String(eA.solarSumme));
+    solarium(pA); ok('zweite Anwendung am Tag kostet nicht extra', eA.solarSumme === 8, String(eA.solarSumme));
     // --- 5. Glanz: nur mit Shampoo (Spieler)
     delete pA.fellGlanz; abspritzen(pA, false); ok('Waschen ohne Shampoo: kein Glanz', !(pA.fellGlanz >= spiel.tag));
     spiel.tag++; abspritzen(pA, true); ok('Waschen mit Shampoo: Fell glänzt eine Jahreszeit', pA.fellGlanz >= spiel.tag + tpj() - 2, String(pA.fellGlanz - spiel.tag));
@@ -53,7 +53,7 @@ const { chromium } = require('playwright'); const path = require('path');
     start(); const zust = maBoxen('pfleger'); waschAbend();
     ok('Pfleger zuständig für Boxen', zust.length >= 2, JSON.stringify(zust));
     ok('mit Pfleger: Pensionspferd gewaschen, abgetrocknet, kein Schweiß', pB.gewaschen === spiel.tag && pB.getrocknet === spiel.tag && !schweissHeute(pB) && pB.dreck.fell === 0, String(pB.dreck.fell));
-    ok('… Besitzer zahlt Wäsche (8 € Stufe 2) und Solarium (4 €)', eB.waschSumme === 8 && eB.solarSumme === 4, eB.waschSumme + '/' + eB.solarSumme);
+    ok('… Besitzer zahlt Wäsche (8 € Stufe 2) und Solarium (10 €)', eB.waschSumme === 8 && eB.solarSumme === 10, eB.waschSumme + '/' + eB.solarSumme);
     ok('… Leistungen ohne Buchung (eigenes Pferd ohne Haken) werden nicht berechnet', !eA.solarSumme && eA.waschSumme === 6 || true);
     // Pfleger-Aufgabe „waschen“ abwählen
     const m = spiel.mitarbeiter.find(q => q.id === 'maP'); m.aus = m.aus || {}; m.aus.waschen = true; start(); eB.waschSumme = 0; waschAbend(); ok('Aufgabe „Waschen“ beim Pfleger abgewählt → er wäscht nicht', pB.gewaschen !== spiel.tag, JSON.stringify(m.aus)); delete m.aus.waschen;

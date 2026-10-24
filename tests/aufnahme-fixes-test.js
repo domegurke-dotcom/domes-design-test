@@ -28,7 +28,7 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Rezept nach Untersuchung: Rezeptmittel des Plans mit ' + REZEPT_DOSEN + ' Dosen', plan.filter(k => APO[k] && !APO[k].frei).every(k => rezeptVon(Q)[k] >= REZEPT_DOSEN) && R1.posten.length === R1.mittel.length, R1.mittel.join(','));
     ok('Folgerezept auch für nicht-chronische Befunde mit Tierarzt-Plan', folgerezeptMittel(Q).length === R1.mittel.length);
     // 5. Fellmuster springt nicht beim Neuzeichnen
-    const norm = x => x.replace(/(id="|url\(#|href="#)[^"\)]*/g, '$1'); let stabil = 0, n = 0;
+    const norm = x => x.replace(/(id="|url\(#|href="#)[^"\)]*/g, '$1').replace(/data-k="[a-z0-9]*?(?=alle)/g, 'data-k="'); let stabil = 0, n = 0;   // data-k trägt einen Zufallsschlüssel der Randmessung
     for (let i = 0; i < 12; i++) { const F = neu({ rasse: 'paint', geschlecht: 'Stute', alter: 1, name: 'F' + i }); n++; if (norm(ganzBild(F)) === norm(ganzBild(F))) stabil++; }
     ok('Fohlenbild gleich bei jedem Zeichnen (12 Paint-Fohlen)', stabil === n, stabil + '/' + n);
     // 6. Bessere Auswahl: Vorschlag des Azubis steht in den Möglichkeiten

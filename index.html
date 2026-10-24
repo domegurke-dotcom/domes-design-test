@@ -1101,7 +1101,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "747";
+  const SPIEL_VERSION = "748";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1109,12 +1109,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=747"></script>
-<script src="pferd.js?v=747"></script>
-<script src="boxstufen.js?v=747"></script>
-<script src="kopfneu.js?v=747"></script>
-<script src="waschbild.js?v=747"></script>
-<script src="avatare.js?v=747"></script>
+<script src="lz-string.min.js?v=748"></script>
+<script src="pferd.js?v=748"></script>
+<script src="boxstufen.js?v=748"></script>
+<script src="kopfneu.js?v=748"></script>
+<script src="waschbild.js?v=748"></script>
+<script src="avatare.js?v=748"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2832,7 +2832,7 @@
   }
   // v726 (Dome 23.10.): Schimmel-Anlagen als Rarität – „weiß erst spät“, „bleibt lange dunkelgrau“, „Mähne/Schweif sehr früh weiß“ (versteckte, vererbte ex-Werte; Anteile selbst gesetzt: 2 % / 15 % / 5 %)
   const SCHIMMEL_RAR = { spaet: { ab: 16, q: .02, t: "weiß erst mit 16 Jahren oder später" }, dunkel: { ab: .7, q: .15, t: "bleibt lange dunkelgrau" }, maehne: { ab: .5, q: .05, t: "Mähne und Schweif sehr früh weiß" } };
-  const GENX = k => k === "MUSTER" ? ["MUSTER", "Scheckung: Ausprägung", "To", "to", "Anlage für die Menge Weiß (wird vererbt)."] : k === "GRAU" ? ["GRAU", "Schimmel-Anlage", "G", "g", "Anlagen für den Verlauf des Ausschimmelns (werden vererbt, die Schimmel-Genetik selbst steht unter Gen G)."] : GEN[k];
+  const GENX = k => k === "FARBE" ? ["FARBE", "Seltene Fellfarbe", "", "", "Die ganze Fellfarbe (z. B. Dunkelfuchs mit Flachsmähne) kommt in dieser Rasse selten vor."] : k === "MUSTER" ? ["MUSTER", "Scheckung: Ausprägung", "To", "to", "Anlage für die Menge Weiß (wird vererbt)."] : k === "GRAU" ? ["GRAU", "Schimmel-Anlage", "G", "g", "Anlagen für den Verlauf des Ausschimmelns (werden vererbt, die Schimmel-Genetik selbst steht unter Gen G)."] : GEN[k];
   function schimmelMerkmale(p, g) {   // nur Pferde mit Schimmel-Gen; jede erfüllte Anlage ist ein Merkmal
     if (!g.G || !g.G.includes("G")) return []; const ex = exVon(p), M = [];
     if (ex.grauTempo >= SCHIMMEL_RAR.spaet.ab) M.push({ k: "GRAU", q: SCHIMMEL_RAR.spaet.q, al: SCHIMMEL_RAR.spaet.t });
@@ -2846,12 +2846,25 @@
     return { k: "MUSTER", q: Math.max(1e-5, musterQ(p.rasse) * traeger), al: "fast ganz weiß, nur Kopf und wenig Rest farbig" }; }
   // v733 (Dome): auffällige Gene („Traumfarben“, SCHOEN_GENE) zählen in jeder Rasse als seltenes Merkmal, sobald sie unter der Stufe „selten“ (3 %) liegen – auch wenn die Rassen-Schwelle niedriger ist (z. B. Gelbfalbe und Mausfalbe beim Fjord)
   const genGrenze = (rasse, k) => { const g0 = SELTEN_MERKMAL_RASSE[rasse] || SELTEN_MERKMAL; return SCHOEN_GENE.includes(k) ? Math.max(g0, SELTEN_STUFEN[1].bis) : g0; };
+  const FARBE_SELTEN = .01;   // v748: eine ganze Fellfarbe zählt als seltenes Merkmal, wenn höchstens 1 % der Pferde der Rasse sie haben
+  const FARBE_ANTEIL = {};   // Anteil jeder Grundfarbe (mit Flachs/Ruß) je Rasse, aus 3.000 Zufalls-Genotypen (einmal berechnet, nicht gespeichert)
+  function farbAnteile(rasse) {
+    if (FARBE_ANTEIL[rasse]) return FARBE_ANTEIL[rasse];
+    const r = zufall("farbanteil-" + rasse), N = 3000, c = {};
+    for (let i = 0; i < N; i++) { const g = genNorm(Object.fromEntries(GENE.map(([k]) => [k, [allel(rasse, k, r), allel(rasse, k, r)]]))); const id = grundfarbe(g, .6); c[id] = (c[id] || 0) + 1 / N; }
+    return (FARBE_ANTEIL[rasse] = c);
+  }
+  function farbMerkmal(p, g) {
+    const id = grundfarbe(g, .6), q = farbAnteile(p.rasse)[id] || 1 / 3000;
+    return q <= FARBE_SELTEN ? { k: "FARBE", q: Math.max(q, 1 / 3000), al: (FARBEN[id] || {}).name || id } : null;
+  }
   function seltenGen(p) {   // null = keine Gen-Rarität (Mischlinge zählen nicht)
     if (!p || !p.rasse || !(p.gen || p.farbe)) return null; if (p.anteile && reinAnteil(p.anteile, p.rasse) < 99) return null;
     const g = genVon(p), hengst = p.geschlecht === "Hengst", M = [];
     GENE.forEach(([k]) => { if (k === "Dm" || k === "Hf") return; const q = Math.max(1e-6, genotypProb(p.rasse, k, g, hengst)); if (q < genGrenze(p.rasse, k)) M.push({ k, q, al: (g[k] || []).slice().sort().join("/") }); });
     schimmelMerkmale(p, g).forEach(m => M.push(m));
     const mm = musterMerkmal(p, g, M); if (mm) M.push(mm);
+    if (!M.length) { const fm = farbMerkmal(p, g); if (fm) M.push(fm); }   // v748 (Dome): auch die Fellfarbe als Ganzes (z. B. Dunkelfuchs mit Flachsmähne) zählt, wenn sie in der Rasse selten ist
     return M.length ? { p: M.reduce((a, m) => a * m.q, 1), merkmale: M } : null;
   }
   // ---------- T2 (PLAN-HINWEISE.md / PLAN-STUFEN.md, Dome 20.10.2026): Spielumfang je Erfahrungsstufe ----------
@@ -12512,7 +12525,7 @@
   // v733 (Dome): „Traumfarben“ – auf dem Raritäten-Markt bevorzugt die auffälligen seltenen Gene (Dominant White, Creme, Silber, Splash, Sabino, Leopard, Roan, Tobiano, Overo, Brindle, Falbe; beim Fjord auch Rotfalbe/Mausfalbe), je Rasse die, die dort selten sind – nicht Sooty, Flachs oder At/At
   const SCHOEN_GENE = ["W", "Cr", "Z", "Sw", "Sb", "Lp", "Rn", "To", "O", "Br1", "D", "E", "A", "G", "Prl", "Mu"], rarSchoen = (rasse, x) => SCHOEN_GENE.includes(x.k);   // v734 (Dome: „seltene Farben, z. B. Fuchs bei der Friese“): alle Gene, die die sichtbare Farbe oder das Muster ändern – nicht Sooty und Flachs
   function rarGenWahl(rasse, hengst, st, r, vorKey, schoen) {   // ein Genotyp oder zwei zusammen, deren Wahrscheinlichkeit im Band der Ziel-Stufe liegt; die Hauptmerkmale des Vorjahrs nicht noch einmal (außer die Rasse hat keine anderen)
-    const vor = [].concat(vorKey || []), G = rarGenotypen(rasse, hengst), ohne = G.filter(x => !vor.includes(x.key)), L = ohne.length ? ohne : G; if (!L.length) return null;
+    const vor = [].concat(vorKey || []), G = rarGenotypen(rasse, hengst), ohneGen = G.filter(x => !vor.some(v => v.split(":")[0] === x.k)), ohne = ohneGen.length ? ohneGen : G.filter(x => !vor.includes(x.key)), L = ohne.length ? ohne : G;   // erst anderes Gen, sonst wenigstens anderer Genotyp if (!L.length) return null;
     const [lo, hi] = RAR_BAND[st], waehle = LL => { const opt = [];
       LL.forEach(a => { if (a.q > lo && a.q <= hi) opt.push([a]); });
       LL.forEach((a, i) => LL.slice(i + 1).forEach(b => { if (a.k !== b.k && a.q * b.q > lo && a.q * b.q <= hi) opt.push([a, b]); }));
@@ -12542,9 +12555,11 @@
     h.erfolge = E.sort((a, b) => b.tag - a.tag); delete h.bilanz; delete h.bilanzV; bilanzHolen(h);
   }
   function rarPferd(mj, rasse, i, vorKey) {
+    if (i === 1) { const e0 = rarPferd(mj, rasse, 0, vorKey); if (e0.rarHaupt) vorKey = [].concat(vorKey || [], e0.rarHaupt); }   // v748 (Dome: „Araber-Tobiano viel zu oft“): das zweite Angebot der Rasse wiederholt nicht das Hauptmerkmal des ersten
     const r = zufall("rar-" + mj + rasse + i + ((spiel.spieler && spiel.spieler.name) || "") + (spiel.rar && spiel.rar.salz || "")), g = r() < 0.5 ? "Hengst" : "Stute", jahre = RAR.alter[0] + Math.floor(r() * (RAR.alter[1] - RAR.alter[0] + 1));
     const h = neuesPferd({ id: "rar" + mj + rasse + i, name: pferdeName(g, rasse, "zucht", r), rasse, geschlecht: g, alter: jahre, geb: zuechterGeb(jahre, r), rein: true });
     const u = r(); let art = rasse === "haflinger" || !rarGenotypen(rasse, g === "Hengst").length ? "leist" : u < RAR.art[0] ? "gen" : u < RAR.art[0] + RAR.art[1] ? "leist" : "beides";
+    if (art !== "leist" && i === 1 && !rarGenotypen(rasse, g === "Hengst").some(x => ![].concat(vorKey || []).some(v => v.split(":")[0] === x.k))) art = "leist";   // v748: sind alle Gene schon vergeben (Vorjahr, erstes Angebot), kommt eine Leistungs-Rarität statt einer Wiederholung
     const v = r(), st = v < RAR.stufe[0] ? 1 : v < RAR.stufe[0] + RAR.stufe[1] ? 2 : 3;
     if (art === "beides" && st === 1) art = "gen";   // Dome 20.10. (mehr „selten“): Gen + Leistung zusammen ergibt fast immer „einzigartig“ – bei Ziel „selten“ nur das Gen
     let haupt = null, wGrau = null;
@@ -12611,7 +12626,8 @@
   const proz2 = x => x < 0.00001 ? "unter 0,001 %" : (x * 100 >= 1 ? Math.round(x * 1000) / 10 : Math.round(x * 100000) / 1000).toLocaleString("de-DE") + " %";
   function rarAnpreisung(h) {   // Besonderheit, warum besonders (Zahlen), Wirkung (Optik, Vererbung), Risiken und Erbkrankheiten aus dem Nachweis
     const S = seltenheit(h, true), z = [], r = rasseName(h.rasse);
-    if (S.gen) S.gen.merkmale.forEach(m => { if (m.k === "MUSTER") { z.push(["Besonderheit", `Scheckung in seltenster Ausprägung: ${esc(m.al)}`], ["Warum besonders", `bei nur ${proz2(m.q)} der Pferde in der Rasse ${esc(r)}`], ["Wirkung", "fast das ganze Pferd ist weiß · Vererbung: Anlage, wird mit den Eltern-Werten gemischt weitergegeben (siehe Fellfarben-Test)"]); return; }
+    if (S.gen) S.gen.merkmale.forEach(m => { if (m.k === "FARBE") { z.push(["Besonderheit", `Seltene Fellfarbe: ${esc(m.al)}`], ["Warum besonders", `bei nur ${proz2(m.q)} der Pferde in der Rasse ${esc(r)}`], ["Wirkung", "Farbe wird über mehrere Gene vererbt – Nachkommen können sie wieder bekommen, wenn beide Eltern die Anlagen tragen"]); return; }
+      if (m.k === "MUSTER") { z.push(["Besonderheit", `Scheckung in seltenster Ausprägung: ${esc(m.al)}`], ["Warum besonders", `bei nur ${proz2(m.q)} der Pferde in der Rasse ${esc(r)}`], ["Wirkung", "fast das ganze Pferd ist weiß · Vererbung: Anlage, wird mit den Eltern-Werten gemischt weitergegeben (siehe Fellfarben-Test)"]); return; }
       if (m.k === "GRAU") { z.push(["Besonderheit", `Schimmel mit seltener Anlage: ${esc(m.al)}`], ["Warum besonders", `bei nur ${proz2(m.q)} der Schimmel in der Rasse ${esc(r)}`], ["Wirkung", "bestimmt, wie lange das Pferd dunkel bleibt und wann es weiß wird · Vererbung: Anlage, wird mit den Eltern-Werten gemischt weitergegeben (kein Gentest nötig)"]); return; }
       const T = RAR_GEN[m.k] || [GEN[m.k][1], ""], g = genVon(h)[m.k] || [], dom = GEN[m.k][2], n = g.filter(a => a === dom).length;
       const erbt = n === 2 ? `gibt ${GEN[m.k][1]} an alle Fohlen weiter` : n === 1 ? `gibt ${GEN[m.k][1]} an etwa die Hälfte der Fohlen weiter` : `gibt die Anlage an alle Fohlen weiter – sichtbar wird sie nur, wenn der andere Elternteil sie auch trägt`;

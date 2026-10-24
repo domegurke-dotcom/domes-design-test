@@ -25,7 +25,8 @@ Dome: „Ja für alle Etappen, Fragen sammeln und am Ende rausgeben“; Wecker 6
 | H4 Bauland zukaufen/verkaufen/verschieben | ✅ v754 |
 | H5 Tutorial, Hinweise, Stufen, Enzyklopädie, Tests | ✅ v754 (Enzyklopädie am PC 5 Spalten nebenbei, Dome) |
 Fragen stehen in `OFFENE-FRAGEN.md` („Hofplan-Etappen“). Große Tests (etappen/hof-gesamttest) sind angepasst (`planAutoSetzen()` nach `bauStarten`), aber nicht gelaufen (nur nach Domes Ja).
-**Tests:** `tests/hofplan-test.js` grün in 3 Ansichten; Tutorial-Spieler anf 390×844 ✓, fort 390×844 ✓, anf 844×390 hängt zufällig bei „Hufe“ bzw. „Einstellen“ – **v751 (vor dem Hofplan) hängt dort genauso**, also nicht neu.
+**Tests:** `tests/hofplan-test.js` grün in 3 Ansichten; Tutorial-Spieler anf 390×844 ✓, fort 390×844 ✓, anf 844×390 ✓ (3 Läufe, v758). Der feste Hänger bei „Einstellen“ ist behoben (Fenster-Ziel wird ins Sichtfeld geholt), der zufällige bei „Hufe“ trat nur auf, wenn nebenbei andere Tests liefen – Tutorial-Spieler immer allein laufen lassen.
+**v758 (Dome-Antworten):** Futterkammer im Stall, Verwaltung als Gebäude (Büro Stufe 1–3), Bauland aus 0,5-ha-Rechtecken (auch alte Spielstände), Ort-Plan mit Pfeilen für Weide/Gelände, Sandpaddock gezielt – siehe OFFENE-FRAGEN.md.
 **Nebenbei (Dome-Aufnahme/Wünsche):** v755 Whiteboard (automatisch zugeteilte Mitarbeiter mit ✕ entfernbar = „niemand“, Weidepferde zählen als versorgt), v756 Whiteboard zeigt alle gebuchten Pensions-Extras, Enzyklopädie am PC 5 Spalten (v754).
 **Danach (Dome):** Update-Fenster „Neu in deinem Spiel“ – Änderungen ab v725 zum Ankreuzen anbieten.
 

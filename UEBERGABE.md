@@ -142,3 +142,5 @@ Domes Wünsche zu Whiteboard, Mitarbeitern, Waschplatz/Solarium sind umgesetzt (
 **v812 (Claude Team, 24.10.):** Pension-Richtwerte 200/400/1.000 (Paddockbox 250/500/1.250); alte Spielstände stille Anhebung (`R.anpassV` 2) + Update-Fenster Stufe 7 (NEUES_STAND 811). Tests neues-popup, pension-paddock angepasst.
 
 **v813 (Claude Team, 24.10.):** Zeile „Einnahmen“ in hvw – Hof – Pension entfernt. Offen: Aufzucht-Offenstall mit 10/25/50 Plätzen (Vorschlag Preise 15.000/40.000/90.000 €) wartet auf Domes Ja.
+
+**Plan Offenstall (Claude Team, 24.10.):** `PLAN-OFFENSTALL.md` geschrieben (nur Plan, nichts gebaut). Nächster Schritt: Dome beantwortet die 4 offenen Fragen und sagt Ja, dann Etappe 1.

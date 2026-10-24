@@ -4,7 +4,7 @@ const { chromium } = require('playwright'); const path = require('path');
   await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(600);
   await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('#chLos'); await pg.waitForTimeout(300); await pg.click('#dlgKnoepfe button');
   await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'H'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(300);
-  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; speicherSperre = true; spiel.stufenAn = false; spiel.tippsAus = true; spiel.geld = 50000; gebaeude().push({ gid: 'gpdT', typ: 'sandpaddock', stufe: 1, zustand: 40, preis: 300 }); gebaeude().forEach(g => { g.zustand = Math.min(g.zustand, 60); }); zeigeBauenFenster(); });
+  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; speicherSperre = true; spiel.stufenAn = false; spiel.tippsAus = true; spiel.geld = 50000; gebaeude().push({ gid: 'gpdT', typ: 'sandpaddock', stufe: 1, zustand: 40, preis: 300 }); gebaeude().forEach(g => { if (g.typ === 'grundlager') return; g.zustand = Math.min(g.zustand, 60); }); zeigeBauenFenster(); });
   const R = [], ok = (n, c, x) => R.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : ''));
   ok('Gruppen Gebäude / Anlagen / Weiden und Zäune', await pg.evaluate(() => document.querySelectorAll('details.geb-gruppe').length >= 3));
   ok('Knopf „Alles reparieren“ mit Summe', await pg.evaluate(() => /Alles reparieren · /.test((document.querySelector('[data-allrep]') || {}).textContent || '')));
@@ -14,7 +14,7 @@ const { chromium } = require('playwright'); const path = require('path');
   // alles reparieren
   const n = await pg.evaluate(() => { const g0 = spiel.geld; document.querySelector('[data-allrep]').click(); return { g0, text: document.getElementById('dlgInhalt').textContent.slice(0, 120) }; });
   await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(100);
-  const r = await pg.evaluate((g0) => ({ bez: spiel.geld < g0, alleRep: gebaeude().filter(g => g.typ !== 'heudampfer' && g.zustand < 100).every(g => g.rep) }), n.g0);
+  const r = await pg.evaluate((g0) => ({ bez: spiel.geld < g0, alleRep: gebaeude().filter(g => g.typ !== 'heudampfer' && g.typ !== 'grundlager' && g.zustand < 100).every(g => g.rep) }), n.g0);
   ok('Handwerker bestellt: bezahlt, alle Gebäude mit Reparatur', r.bez && r.alleRep);
   const br = await pg.evaluate(() => { spiel.tag += 3; const n0 = (spiel.post || []).filter(x => /Reparaturen fertig|repariert/.test(x.betreff)).length; reparaturTag(); const neu = (spiel.post || []).filter(x => /Reparaturen fertig|repariert/.test(x.betreff)).length - n0; return { neu, alle: gebaeude().every(g => g.zustand === 100 || g.typ === 'heudampfer') }; });
   ok('Ein Sammelbrief statt vieler', br.neu === 1 && br.alle, JSON.stringify(br));

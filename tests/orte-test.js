@@ -1,4 +1,4 @@
-// v763–v768 (Domes Aufnahme 24.10., Etappe 1+2): Fressdauer, Pinnwand größer, Weide im Ort-Plan anklickbar, Büro = Labor, Tutorials-Liste, Schalter „Spielumfang“ weg
+// v763–v771 (Domes Aufnahme 24.10., Etappe 1+2): Fressdauer, Pinnwand größer, Weide im Ort-Plan anklickbar, Büro = Labor, Tutorials-Liste, Schalter „Spielumfang“ weg
 // Aufruf: NODE_PATH=/opt/node22/lib/node_modules node tests/orte-test.js [BxH] [Ordner für Bilder]
 const { chromium } = require('playwright'); const path = require('path'); const fs = require('fs');
 const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner = process.argv[3];
@@ -171,6 +171,34 @@ const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner 
   await bild('rahmen');
   await pg.evaluate(() => { const b = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna'); delete b.pferd.weide; zeigeWhiteboard(); });
   ok('… steht es wieder richtig (nicht draußen), verschwindet der Rahmen', await pg.evaluate(() => !/Anna soll laut Plan/.test(document.querySelector('#nebenSchirm').innerHTML)));
+
+  // ===== v771: Plan und Standort immer abgeglichen; Köpfe im Orte-Plan auf dem Platz =====
+  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; zeigeSchirm(null); const P = neuesPferd({ rasse: 'haflinger', geschlecht: 'Wallach', alter: 8, name: 'Bea' }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); P.reheOk = spiel.tag; const bx = spiel.boxen.find(x => !x.pferd && boxFrei(x) && !x.paddock && !x.quar && !x.abfohl && !x.offen); bx.pferd = P; bx.krippeVoll = true; window.__bea = spiel.boxen.indexOf(bx); delete P.weideNachm; });
+  const bea = () => pg.evaluate(() => { const b = spiel.boxen[window.__bea], p = b.pferd; const pl = wbPlanJetzt(p); return { paddock: p.paddock && p.paddock.pid, weide: !!p.weide, plan: pl && { pd: pl.pd, ziel: pl.ziel } }; });
+  await pg.evaluate(() => { const b = spiel.boxen[window.__bea]; wbAnwenden('p:' + window.__bea, 'w:gpa:t'); });
+  { const r = await bea(); ok('Whiteboard: Pferd auf Sandpaddock A gelegt → steht sofort dort (nicht erst morgen)', r.paddock === 'gpa', JSON.stringify(r)); }
+  await pg.evaluate(() => { wbAnwenden('c:' + window.__bea + ':gpa:a', 'w:gpb:t'); });
+  { const r = await bea(); ok('Whiteboard: auf Sandpaddock B gezogen → steht sofort auf B', r.paddock === 'gpb', JSON.stringify(r)); }
+  await pg.evaluate(() => { wbAnwenden('c:' + window.__bea + ':gpb:a', 'drin'); });
+  { const r = await bea(); ok('Whiteboard: „bleibt in der Box“ → geht sofort zurück', !r.paddock && !r.weide && !r.plan, JSON.stringify(r)); }
+  await pg.evaluate(() => { wbAnwenden('p:' + window.__bea, 'w:gpa:t'); const b = spiel.boxen[window.__bea]; delete b.pferd.paddock; zurueckInBox(b); b.pferd.wbHeim = spiel.tag; wbSyncAlle(); });
+  { const r = await bea(); ok('von Hand zurück in die Box geholt → bleibt heute drin (kein sofortiges Rausschicken)', !r.paddock, JSON.stringify(r)); }
+  await pg.evaluate(() => { const b = spiel.boxen[window.__bea]; delete b.pferd.wbHeim; wbAnwenden('c:' + window.__bea + ':gpa:a', 'drin'); });
+  // ohne Plan: von Hand auf den Sandpaddock → Whiteboard zeigt es sofort
+  await pg.evaluate(() => { aktBox = window.__bea; spiel.aktBox = aktBox; aktenModus = 'pflege'; aktenReiter = 'platz'; ortModus = null; zeigeAkte(); }); await pg.waitForTimeout(200);
+  await klick('.plan-scroll.ort [data-pdgid="gpb"]'); await pg.waitForTimeout(200);
+  { const r = await bea(); ok('ohne Plan von Hand auf Sandpaddock B gestellt → Whiteboard-Plan zeigt B (kein Rückfrage-Fenster)', r.paddock === 'gpb' && r.plan && r.plan.pd && r.plan.ziel === 'gpb', JSON.stringify(r)); }
+  // Köpfe im Orte-Plan liegen auf dem Platz
+  await pg.evaluate(() => { const p = spiel.boxen[window.__bea].pferd; delete p.paddock; zurueckInBox(spiel.boxen[window.__bea]); p.trainHeute = { tag: spiel.tag, liste: [], verbraucht: 0, orte: ['reitplatz'] }; aktenModus = 'pflege'; aktenReiter = 'platz'; ortModus = null; zeigeStall(); zeigeAkte(); }); await pg.waitForTimeout(300); await pg.evaluate(() => { const e = document.querySelector('.plan-scroll.ort'); if (e) e.scrollIntoView({ block: 'center' }); }); await pg.waitForTimeout(200);
+  { const g = await pg.evaluate(() => { const k = document.querySelector('.plan-scroll.ort .plan-kopf'); if (!k) return null; const kr = k.getBoundingClientRect(); const reitplaetze = [...document.querySelectorAll('.plan-scroll.ort g.pl-geb')].filter(e => /Reitplatz/.test(e.textContent)).map(e => e.getBoundingClientRect()); return { in: reitplaetze.some(r => kr.left >= r.left - 2 && kr.right <= r.right + 2 && kr.top >= r.top - 2 && kr.bottom <= r.bottom + 2) }; });
+    ok('Orte-Plan: Pferdekopf liegt auf dem Reitplatz (nicht daneben)', g && g.in, JSON.stringify(g)); await bild('orte-kopf'); }
+  await pg.evaluate(() => { delete spiel.boxen[window.__bea].pferd.trainHeute; });
+
+  // ===== v771: Grundlager als Gebäude im Plan =====
+  { const r = await pg.evaluate(() => { const it = planItems().find(x => x.typ === 'grundlager'); return it ? { da: true, imPlan: !!hofPlan().pos[it.id], name: planName(it), kn: gebKnoepfe(it.g), mass: it.l * PLAN_M + '×' + it.t * PLAN_M } : { da: false }; });
+    ok('Grundlager steht als Gebäude im Plan (20 × 10 m), ohne Knöpfe', r.da && r.imPlan && /Strohlager/.test(r.name) && r.kn === '' && r.mass === '20×10', JSON.stringify(r)); }
+  await pg.evaluate(() => { hofBereich = 'plan'; planWahl = null; zeigeHof('hof'); }); await pg.waitForTimeout(250); await bild('hofplan');
+  ok('Grundlager verfällt nicht und kostet keinen Unterhalt', await pg.evaluate(() => { const g = gebaeude().find(x => x.typ === 'grundlager'); const z0 = g.zustand, g0 = spiel.geld; gebaeudeJahreszeit(); return g.zustand === z0 && g.preis === 0; }));
   // Pinnwand
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; const bx = spiel.boxen.find(x => x.pferd); const p = bx.pferd; p.schleifen = Array.from({ length: 12 }, (_, i) => ({ st: 1 + i % 3, pl: 1 + i % 6, c: false, von: 8, platz: 1 + i % 6, pruef: 'Dressur A', turnier: 'Test', tag: 5 + i })); pinnwandOeffnen(p); });
   await pg.waitForTimeout(300);

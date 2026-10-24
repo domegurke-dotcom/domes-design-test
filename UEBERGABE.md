@@ -154,3 +154,5 @@ Domes Wünsche zu Whiteboard, Mitarbeitern, Waschplatz/Solarium sind umgesetzt (
 **Plan Boxansicht (24.10.):** Beschlüsse ergänzt: Besitzerwünsche ohne Hufschmied, mit Zusatzleistungen; Fenster dürfen scrollen; **Bau-Reihenfolge PC → mobil → Tutorial**; Reitplatz mit 5 Besitzern (Bild 11); Stufen-Tabelle als Vorschlag.
 
 **Plan Boxansicht (24.10.):** Reitplatz-Darstellung 11.1/11.3 gebilligt, 11.2 (Liste beim Antippen) abgelehnt. Dome hat auf Opus gestellt; Bau-Ja für B1 (PC) und Antworten zur Stufen-Tabelle stehen noch aus.
+
+**v814 (Claude Team, 24.10.):** Frühling + Hufrehe-Gefahr → Pensionswunsch Sandpaddock statt Weide (Anzeige, Plan, Stallbursche, Whiteboard-Hinweise). Test rehe-wunsch-test grün. Als Nächstes: B1 Boxansicht am PC (Dome-Ja).

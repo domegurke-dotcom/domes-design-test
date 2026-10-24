@@ -1137,7 +1137,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "799";
+  const SPIEL_VERSION = "800";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1145,12 +1145,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=799"></script>
-<script src="pferd.js?v=799"></script>
-<script src="boxstufen.js?v=799"></script>
-<script src="kopfneu.js?v=799"></script>
-<script src="waschbild.js?v=799"></script>
-<script src="avatare.js?v=799"></script>
+<script src="lz-string.min.js?v=800"></script>
+<script src="pferd.js?v=800"></script>
+<script src="boxstufen.js?v=800"></script>
+<script src="kopfneu.js?v=800"></script>
+<script src="waschbild.js?v=800"></script>
+<script src="avatare.js?v=800"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -12150,9 +12150,10 @@
     const grund = () => { if (ziel && !ziel.pd && ziel.w.gesperrt) return " (Weide gesperrt)"; if (ziel && ziel.pd && !paddockPasst(ziel.g, p)) return " (Sandpaddock zu voll)"; return ""; };
     if (heute && ziel && !draussen) return `${p.name} soll laut Plan heute auf ${zn}, steht aber in der Box${grund()}`;
     if (heute && ziel && ((p.weide && (ziel.pd || p.weide.wid !== ziel.id)) || (p.paddock && (!ziel.pd || p.paddock.pid !== ziel.id)))) return `${p.name} soll laut Plan auf ${zn}, steht aber ${p.weide ? "auf der Weide" : "auf dem Sandpaddock"}`;
-    if (e && !draussen && datum().s !== 3 && (e.haltung === "weide" || e.haltung === "sandpaddock") && !(pl && pl.ziel && !heute) && !(b.paddock && e.haltung === "sandpaddock")) return `${p.name} hat ${e.haltung === "weide" ? "Weide" : "Sandpaddock"} gebucht, steht aber in der Box${pl && pl.ziel ? "" : " (kein Plan im Whiteboard)"}${e.haltung === "weide" && !weiden().some(w => !w.wiese && !w.gesperrt) ? " – alle Weiden gesperrt" : ""}`;
-    if (e && e.haltung === "weide" && p.paddock && !pl && !(datum().s === 0 && reheGefaehrdet(p))) return `${p.name} hat Weide gebucht, steht aber auf dem Sandpaddock`;
-    if (e && e.haltung === "weide" && !draussen && p.auslauf === "box") return `${p.name} hat Weide gebucht, soll aber laut Plan in der Box bleiben`;
+    const wfrei = !!(e && e.haltung === "weide" && weideFrei(e, 1));   // v800: noch im freien Rahmen der Quote → kein roter Rahmen
+    if (e && !wfrei && !draussen && datum().s !== 3 && (e.haltung === "weide" || e.haltung === "sandpaddock") && !(pl && pl.ziel && !heute) && !(b.paddock && e.haltung === "sandpaddock")) return `${p.name} hat ${e.haltung === "weide" ? "Weide" : "Sandpaddock"} gebucht, steht aber in der Box${pl && pl.ziel ? "" : " (kein Plan im Whiteboard)"}${e.haltung === "weide" && !weiden().some(w => !w.wiese && !w.gesperrt) ? " – alle Weiden gesperrt" : ""}`;
+    if (e && e.haltung === "weide" && !wfrei && p.paddock && !pl && !(datum().s === 0 && reheGefaehrdet(p))) return `${p.name} hat Weide gebucht, steht aber auf dem Sandpaddock`;
+    if (e && e.haltung === "weide" && !wfrei && !draussen && p.auslauf === "box") return `${p.name} hat Weide gebucht, soll aber laut Plan in der Box bleiben`;
     return "";
   }
   const wbReheBox = p => wbView() === 0 && !!wbBoxVon(p).paddock && reheGefaehrdet(p);   // Paddockbox + Hufrehe-Gefahr im Frühling: bleibt in der Box
@@ -12257,6 +12258,10 @@
       if (!A.length && !ruht) return `<div class="wb-pn"><small class="wb-leer">🏡 nichts gebucht</small></div>`;
       return `<div class="wb-pn"><small class="wb-pn-k">🏡 gebucht von ${esc(eName(e))}:</small>${A.map(a => `<span class="wb-pn-z ${a.ok ? "ok" : "nein"}"><b>${a.ok ? "✔" : "✗"}</b> ${a.txt}</span>`).join("")}${ruht}</div>`; };
     const angestellt = Object.keys(WB_ART).filter(a => (spiel.mitarbeiter || []).some(m => wbArt(maErgaenzen(m)) === a));   // v793 (Dome): Wünsche bleiben sichtbar, auch wenn der Mitarbeiter gerade im Urlaub oder krank ist
+    const versZeilen = (b, p) => {   // v800 (Dome 24.10.): bei jedem Pferd ✔/✗, ob gefüttert, getränkt und gemistet ist
+      let kraft = false; try { kraft = kraftNoetig(p, b); } catch (er) {}
+      const Z = [["🌾 Heu", b.krippeVoll]]; if (kraft) Z.push(["🥣 Futter", b.kraftVoll]); if (boxenStufe(b) === 1) Z.push(["💧 Wasser", b.wasserTag === spiel.tag]); Z.push(["🧹 Misten", !b.mistig]);
+      return `<div class="wb-pn wb-vers"><small class="wb-pn-k">🧺 Versorgung heute:</small>${Z.map(([t, ok]) => `<span class="wb-pn-z ${ok ? "ok" : "nein"}"><b>${ok ? "✔" : "✗"}</b> ${t}</span>`).join("")}</div>`; };
     const wuZeilen = (i, p) => { const K = Object.keys(WUNSCH).filter(k => angestellt.includes(WUNSCH[k][2]) && (k !== "waschen" || waschGeb()) && (k !== "solarium" || solarGeb()) && (k !== "weide" || weideDa() || paddocks().length)); if (!K.length) return "";
       return `<div class="wb-pn wb-wu"><small class="wb-pn-k">🧑‍🌾 Dein Wunsch an die Mitarbeiter:</small>${K.map(k => `<label class="wb-pn-z wb-wu-z"><input type="checkbox" data-wbwu="${i}:${k}"${wunschEin(p, k) ? " checked" : ""}> ${WUNSCH[k][0]} ${WUNSCH[k][1]}</label>`).join("")}</div>`; };
     const nr = {}, bauten = {};   // Dome: jeder Stall zählt seine Boxen selbst (Boxenstall 1, Boxenstall 2 …)
@@ -12269,7 +12274,7 @@
         if (!m) return "";   // v716 (Dome): Bild, darunter Symbol + Name; ein Mitarbeiter mittig, zwei auf Höhe der oberen/unteren Rahmenhälfte
         return `<div class="wb-ma-zeile${pm ? " fest" : ""}" title="${WB_ART[a][1]}${pm ? "" : " (automatisch)"}">${maAva(m, arten.filter(x => ((b.maPlan || {})[x] && 1) || Z[x][i]).length >= 3 ? 26 : 38)}<span class="wb-ma-n">${pm ? "📌" : "○"}${WB_ART[a][0]} <b>${esc(m.name)}</b></span><button class="wb-x wb-x-ma" data-wbloes="${i}:${a}" aria-label="${pm ? "Zuteilung lösen" : "entfernen – niemand"}" title="${pm ? "Zuteilung lösen" : "entfernen – dann versorgt niemand diese Box (machst du selbst)"}">✕</button>${pm && heute !== pm ? `<small>heute ${heute ? esc(heute.name) : "niemand"}</small>` : ""}</div>`; }).join("");
       const ort = p.klinik ? "🏥" : p.turnier ? "🏆" : p.weide ? "🌿" : paddockVon(p) ? "🟫" : "";
-      return `<div class="wb-box${ziel("b:" + i)}" data-wbz="b:${i}"><div class="wb-nr">${nrT}</div><div class="wb-in"><div class="wb-rahmen" data-wbq="k:${i}" data-wbgo="${i}" title="${wbAbweichung(p) ? `⚠️ ${esc(wbAbweichung(p))} – ` : ""}${esc(p.name)} – antippen: zur Box · gedrückt halten und ziehen: in eine andere Box"><span class="paar-bild">${kopfBild(p, 10)}${ort ? `<i class="wb-ort">${ort}</i>` : ""}</span><span class="paar-brett"><b>${esc(p.name)}</b></span></div><div class="wb-stab n${(reihen.match(/wb-ma-zeile/g) || []).length}">${reihen}</div></div>${fremd(p) ? pnZeilen(b, p) : wuZeilen(i, p)}</div>`; };
+      return `<div class="wb-box${ziel("b:" + i)}" data-wbz="b:${i}"><div class="wb-nr">${nrT}</div><div class="wb-in"><div class="wb-rahmen" data-wbq="k:${i}" data-wbgo="${i}" title="${wbAbweichung(p) ? `⚠️ ${esc(wbAbweichung(p))} – ` : ""}${esc(p.name)} – antippen: zur Box · gedrückt halten und ziehen: in eine andere Box"><span class="paar-bild">${kopfBild(p, 10)}${ort ? `<i class="wb-ort">${ort}</i>` : ""}</span><span class="paar-brett"><b>${esc(p.name)}</b></span></div><div class="wb-stab n${(reihen.match(/wb-ma-zeile/g) || []).length}">${reihen}</div></div>${versZeilen(b, p)}${fremd(p) ? pnZeilen(b, p) : wuZeilen(i, p)}</div>`; };
     const maReihe = MAs.length ? MAs.map(m => { const a = wbArt(m), n = Object.values(Z[a]).filter(x => x === m).length, kap = maKapazitaet(m), da = maDa(m);
       return `<div class="wb-ma${sel("m:" + m.id)}${da ? "" : " weg"}" data-wbq="m:${m.id}" title="${esc(m.name)} (${esc(maTitel(m))}) – ziehen oder antippen und dann eine Box antippen">${maAva(m, 44)}<b>${esc(m.name)}</b><small>${esc(maTitel(m))}</small><small class="wb-kap">${da ? `${WB_ART[a][0]} ${n} von ${kap} Boxen` : maKrank(m) ? "🤒 krank" : "🏖️ im Urlaub"}</small></div>`; }).join("")
       : `<small class="wb-leer">Noch keine Mitarbeiter – unter Hofverwaltung → Mitarbeiter stellst du welche ein.</small>`;
@@ -14897,6 +14902,11 @@
     besuch: 0.6, verspaetet: 0.1, tragend: 0.15, start: 70, beschwerde: 35, kuendigung: 20, hengst: 0.1, maxAnfragen: 2, anfrageTage: 3, mahnZins: 0.1, voll: 4, entsch: 1, feedback: 0.5 };
   // Tempo-unabhängig (Dome, v252): 0,33 Anfragen je freier Box und Jahreszeit (6 freie Boxen ≈ 2 je Jahreszeit), mindestens 1 garantiert
   const WEIDE_QUOTE = [0.7, 0.85, 0.5, 0.25];   // v654 (Dome 23.10.): so oft muss ein Weide-Pferd je Jahreszeit draußen gewesen sein (Frühling, Sommer, Herbst, Winter); Zahlen selbst gesetzt
+  const WEIDE_FREI_MIN = 1;   // v800 (Dome 24.10.): ein Tag ohne Weide ist immer frei, die übrigen Tage (1 − Quote) ebenfalls – der Besitzer beschwert sich nicht, auch das Whiteboard zeigt keinen roten Rahmen
+  function weideFrei(e, extra) {   // true: der Weidegang dieser Jahreszeit liegt (auch mit extra Tagen in der Box) noch im erlaubten Rahmen
+    const W = e.weideZ && e.weideZ.jz === jzJetzt() ? e.weideZ : { n: 0, ges: 0 }, ges = W.ges + (extra || 0), q = WEIDE_QUOTE[datum().s];
+    return ges - W.n <= Math.max(WEIDE_FREI_MIN, ges * (1 - q)) + 1e-9;
+  }
   const pensionMahnMax = () => tpj() <= 4 ? 1 : tpj() <= 7 ? 2 : 3;   // nach so vielen Mahnungen kündigt der Hof (4 / 7 / 10 Tage je Jahreszeit)
   // Ansehen (0–200, Start 100) wirkt auf: Anfragen (×0,3–1,5), akzeptierten Preis (Richtwert ±25 %), Buchungen (×0,5–1,5), Geduld (Beschwerde/Kündigung früher)
   // Dome 24.10.: die Verwaltung (Büro) bringt Ansehen bei den Einstellern (wirkt wie ein Bonus auf das geheime Ansehen, kein Dauerzuwachs) und zufriedenere Mitarbeiter; Zahlen selbst gesetzt, Stufe 1 (Bürowagen) wirkt noch nicht; unter 50 % Zustand wirkt sie nicht
@@ -15150,7 +15160,7 @@
       if (rehe) { if (p.weide) eZufr(e, -0.3, "trotz Hufrehe-Gefahr auf der Weide"); else if (pdOk) eZufr(e, 0.1, "Sandpaddock statt Weide – vernünftig wegen der Hufrehe-Gefahr"); }   // v328: im Frühling versteht der Besitzer, dass ein gefährdetes Pferd nicht aufs Gras darf
       else if (e.haltung === "weide" && !p.boxenruhe && !inQuarantaene(p) && !(b.fohlen && b.fohlen.gebTag != null && g - b.fohlen.gebTag < fohlenLiegeTage(b.fohlen))) {   // v654 (Dome): kein Vorwurf bei Quarantäne; Weidegang nur zu einem Anteil der Tage je Jahreszeit (Sommer > Frühling > Herbst > Winter)
         const W = (e.weideZ = e.weideZ && e.weideZ.jz === jzJetzt() ? e.weideZ : { jz: jzJetzt(), n: 0, ges: 0 }); W.ges++; if (p.weide || (p.weideZuletzt != null && p.weideZuletzt >= g - 1)) W.n++; else if (b.paddock) W.n += 0.5;   // v664 (Dome): die Paddockbox zählt als halber Weidegang
-        if (W.ges >= 2) { if (W.n / W.ges >= WEIDE_QUOTE[datum(g).s]) eZufr(e, 0.1, "der regelmäßige Weidegang"); else eZufr(e, -0.3, "kein Weidegang"); } }
+        if (W.ges >= 2) { const q = WEIDE_QUOTE[datum(g).s], im = (W.ges - W.n) <= Math.max(WEIDE_FREI_MIN, W.ges * (1 - q)) + 1e-9; if (W.n / W.ges >= q) eZufr(e, 0.1, "der regelmäßige Weidegang"); else if (!im) eZufr(e, -0.3, "kein Weidegang"); } }   // v800: innerhalb der freien Tage keine Beschwerde
       if (e.haltung === "sandpaddock" && (paddocks().length || b.paddock) && !p.boxenruhe && !(b.fohlen && b.fohlen.gebTag != null && g - b.fohlen.gebTag < fohlenLiegeTage(b.fohlen))) { if (pdOk) eZufr(e, 0.1, b.paddock ? "der Auslauf in der Paddockbox" : "der regelmäßige Auslauf auf dem Sandpaddock"); else eZufr(e, -0.3, "kein Auslauf auf dem Sandpaddock"); }   // v328: ganzjährig
       // gebuchte Leistungen
       const ok = (k, erledigt, minus) => { if (!leistungFaellig(e, k)) return; if (erledigt) eZufr(e, 0.3, `${PENSION_LEISTUNG[k].n} klappt zuverlässig`); else eZufr(e, -minus, `${PENSION_LEISTUNG[k].n} vergessen`); };

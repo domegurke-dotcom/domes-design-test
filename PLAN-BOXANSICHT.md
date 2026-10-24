@@ -51,10 +51,13 @@ Zu klären: Ausrüstung für Anfänger sichtbar lassen? Tierarzt-Symbol für Anf
 8. Bestehende Funktionen, die erhalten bleiben müssen (Dome-Frage): Fütterung heute, Behandlungsplan, Befunde, Behandlung/Boxenruhe, Mitarbeiter-Empfehlungen, Besitzer informieren, Quarantäne/Labor, Besitzerwünsche – im Entwurf 10.1–10.5 zugeordnet.
 
 ## Etappen (Vorschlag, Opus, jeweils testen, hochladen, Test-Anleitung, auf Rückmeldung warten) – **zuerst PC (fertig, klickbar), dann mobil, dann Tutorial**
-- **B1 Gerüst:** Symbole (quer Ränder / hochkant Reihe), Statusringe/-balken, Plaketten, Denkblase bei Befund; alte Reiter bleiben erreichbar (Umschalter), „Füttern“-Blasen weg.
+- **B1 Gerüst (PC fertig, v815):** Symbole (quer Ränder / hochkant Reihe), Statusringe/-balken, Plaketten, Denkblase bei Befund; alte Reiter bleiben erreichbar (Umschalter), „Füttern“-Blasen weg.
 - **B2 Fenster:** Versorgung (3 Seiten), Orte (Karte zugeschnitten + Zoom bzw. Kacheln), Ausrüstung, Steckbrief als Fenster mit Rücksprung; alte Reiter-Ansicht entfernen.
 - **B3 Putzkiste-Kreis, Heute-Liste, Besitzerwünsche** (Regeln mit Dome).
 - **B4 Tutorial, Hinweise, Enzyklopädie, Tests** und großer Test (nur mit Domes Okay und Bilder-Variante).
 
 ## Zu klären vor dem Start
 Reihenfolge/Etappe, Stufen-Sperren (Punkt 3), Regeln für Besitzerwünsche (Punkt 2), Verhalten auf kleinen Handys (Punkt 1).
+
+## Stand
+- **B1 PC fertig (v815):** Symbole, Ringe, Plaketten, Denkblase am PC; Klick öffnet noch den alten Reiter. Dome: Tierarzt für Anfänger nur bei Befund, Ausrüstung für alle, Stufen-Tabelle ok, „Füttern“-Info-Blasen beim ersten Mal bleiben. Nächstes: Domes Test, dann B2 (Fenster) am PC.

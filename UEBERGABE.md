@@ -156,3 +156,5 @@ Domes Wünsche zu Whiteboard, Mitarbeitern, Waschplatz/Solarium sind umgesetzt (
 **Plan Boxansicht (24.10.):** Reitplatz-Darstellung 11.1/11.3 gebilligt, 11.2 (Liste beim Antippen) abgelehnt. Dome hat auf Opus gestellt; Bau-Ja für B1 (PC) und Antworten zur Stufen-Tabelle stehen noch aus.
 
 **v814 (Claude Team, 24.10.):** Frühling + Hufrehe-Gefahr → Pensionswunsch Sandpaddock statt Weide (Anzeige, Plan, Stallbursche, Whiteboard-Hinweise). Test rehe-wunsch-test grün. Als Nächstes: B1 Boxansicht am PC (Dome-Ja).
+
+**v815 (Claude Team, 24.10.):** Boxansicht B1 am PC (Symbole am Rand, Ringe, Plaketten, Denkblase). Test boxansicht-test grün in 3 PC-Größen; kleine Tests stichprobenartig grün (reiter-/spielstand-test je einmal zufällig rot, Wiederholung grün). Wartet auf Domes Test, dann B2.

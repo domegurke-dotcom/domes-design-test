@@ -31,6 +31,8 @@ Zum Zurückgehen: die „Alt“-Spalte zeigt, was vor v805 im Spiel stand. Gerec
 
 Folgen: Verkaufserlös Bauland 90 % = 22.500 €/ha, Weideland 4.500 €/ha. Alte Spielstände behalten die Baupreise ihrer schon gebauten Gebäude (`g.preis`), neue Bauten und Land kosten den neuen Preis. Die AKU-Preise sinken um 20 € (Besuch ist Baustein).
 
+## Abgeschlossen: Löhne und Pension (Dome, 24.10.: „haben wir schon abgeschlossen“) – nicht mehr anfassen
+
 ## Bleibt unverändert (zur Information, echt bemessen wäre anders)
 
 | Posten | Spiel | Echt (7 Tage bzw. Einmal) |
@@ -63,3 +65,26 @@ Kaufpreis im Spiel: **20.000 €** (Hofwert 20.000 €, davon 10.000 € Kredit,
 | **Summe** | **8.652 €** | **30.266 €** |
 
 Nicht bewertet: Wohnhaus/Hofplatz, Gelände (Wege), Pferdeanhänger. Der Kaufpreis von 20.000 € liegt damit mit den neuen Preisen **unter** dem Sachwert (alt: darüber). Offene Frage an Dome: Kaufpreis anpassen (und damit Kredit, Startgeld, andere Immobilien/Makler)?
+
+## Noch offen: weitere Gebäude (Gegenüberstellung für Dome, 24.10.2026, nichts geändert)
+
+„Echt“ sind meine Größenordnungen aus eigener Kenntnis, nur Solarium (gebraucht 950 €, eBay-Anzeige) und Weidezaun (2009: E-Zaun 1,15–2,81 € je m, heute etwa das Doppelte) haben eine Quelle. „Vorschlag“ = im Verhältnis zu deinen neuen Preisen (Boxenstall 1.500/3.000/6.000, Reitplatz 2.000/8.000/15.000), gerundet; Stufe 1 / 2 / 3.
+
+| Gebäude | Spiel jetzt | Echt | Vorschlag |
+|---|---|---|---|
+| Quarantänestall je Box (Erstbau 2 Boxen) | 600 / 950 / 1.450 € (1.500 / 2.400 / 3.600 €) | 5.000–10.000 € | 1.500 / 3.000 / 6.000 € (3.000 / 6.000 / 12.000 €) |
+| Abfohlstall (1 Box, 20 m²) und je Anbau-Box | 600 / 900 / 1.400 € und 500 / 750 / 1.150 € | 8.000–15.000 € mit Kamera | 3.000 / 6.000 / 12.000 € |
+| Sandpaddock (400 / 600 / 800 m²) | 300 / 750 / 1.800 € | 8.000–20.000 € je 400 m² | 1.000 / 4.000 / 6.000 € (wie dein Reitplatz je m²) |
+| Roundpen (12 / 18 / 24 m) | 400 / 700 / 1.000 € | 3.000–8.000 € | 1.000 / 2.000 / 4.000 € |
+| Trail-Parcours | 500 / 800 / 1.200 € | 1.000–5.000 € | 800 / 1.500 / 2.500 € |
+| Rennbahn (1.000 m) | 6.000 / 9.000 / 14.000 € | 100.000–300.000 € | 15.000 / 25.000 / 40.000 € |
+| Weide einzäunen je ha | 200 / 300 / 450 € | E-Zaun 800–2.000 €, Holzzaun 6.000–12.000 € | 400 / 1.000 / 3.000 € |
+| Waschplatz | 300 / 500 / 800 € | 3.000–10.000 € | 800 / 1.500 / 3.000 € |
+| Pferdesolarium | 1.200 / 2.000 / 3.200 € | gebraucht 950 €, neu 3.000–8.000 € | passt, bleibt |
+| Sattelkammer (ohne Funktion) | 500 / 800 / 1.200 € | 5.000–20.000 € | 1.500 / 3.000 / 6.000 € |
+| Heu- und Strohlager (Erweiterung) | 1.500 / 2.500 / 4.000 € | 30.000–80.000 € | 4.000 / 8.000 / 15.000 € |
+| Heudampfer | 800 € | 2.500–5.000 € | 2.500 € |
+| Verwaltung (Büro) | 1.500 / 6.000 / 18.000 € | Container 5.000–15.000 €, Haus 100.000 € und mehr | passt, bleibt (Dome hat sie gesetzt) |
+| Aufzucht-Offenstall | 5.000 / 8.000 / 12.000 € | 20.000–60.000 € | 8.000 / 15.000 / 25.000 € |
+| Gummimatten je Box | 350 € | 300–600 € | passt |
+| Hofplatz / Wohnhaus | – | – | heißt seit v806 „Büro“ |

@@ -27,13 +27,13 @@ const { chromium } = require('playwright'); const path = require('path');
     // --- 3. Zinsen und Kreditrate im Dispo (Variante A) ---
     spiel.pferde = spiel.pferde; spiel.boxen[0].pferd = null; spiel.mitarbeiter = []; spiel.einsteller = []; spiel.dispo = undefined;
     const K = kredite()[0]; ok('Start-Kredit vorhanden', !!K && kreditLaeuft(K)); const rate = rateBerechnen(K).betrag;
-    while (datum().t !== Math.max(1, tpj() - 1)) nacht(1);   // 2 Tage vor Jz-Ende: Konto 300 €, Rate 554 € → Dispo reicht
-    spiel.geld = 300; spiel.post = []; const g0 = spiel.geld; bisJz();
-    ok('Rate (' + Math.round(rate) + ' €) bei 300 € wird ins Dispo abgebucht, keine Mahnung', briefe(/Mahnung: Kreditrate|Letzte Mahnung/) === 0 && (K.offen || []).length === 0, 'Konto ' + Math.round(spiel.geld) + ' €');
+    while (datum().t !== Math.max(1, tpj() - 1)) nacht(1);   // 2 Tage vor Jz-Ende: Konto = halbe Rate → die Rate rutscht ins Dispo, reicht
+    spiel.geld = Math.round(rate / 2); spiel.post = []; const g0 = spiel.geld; bisJz();
+    ok('Rate (' + Math.round(rate) + ' €) bei halber Rate auf dem Konto wird ins Dispo abgebucht, keine Mahnung', briefe(/Mahnung: Kreditrate|Letzte Mahnung/) === 0 && (K.offen || []).length === 0, 'Konto ' + Math.round(spiel.geld) + ' €');
     ok('Zinsen für den Dispo gebucht', !!(spiel.finanzen && Object.values(spiel.finanzen).some(j => j['Dispo: Zinsen'])), 'Konto ' + Math.round(spiel.geld) + ' €');
     ok('Nach 1 Jahreszeit im Minus: noch keine Kündigungsandrohung', briefe(/Kündigung des Kontos/) === 0 && spiel.dispo && spiel.dispo.jzMinus === 1, JSON.stringify(spiel.dispo));
-    // Rate über das Limit: Konto −1.700 €, Rate 554 € → verpasst, Mahnung
-    while (datum().t !== Math.max(1, tpj() - 1)) nacht(1); spiel.geld = -1700; spiel.post = []; bisJz();
+    // Rate über das Limit: Konto −2.000 € + halbe Rate → die Rate sprengt das Limit, verpasst, Mahnung
+    while (datum().t !== Math.max(1, tpj() - 1)) nacht(1); spiel.geld = -2000 + Math.round(rate / 2); spiel.post = []; bisJz();
     ok('Rate über dem Limit: verpasst, Mahnung wie beim Kredit', (K.offen || []).length >= 1 && briefe(/Mahnung: Kreditrate|Letzte Mahnung/) >= 1, 'offen ' + (K.offen || []).length);
     K.offen = [];
     // --- 4. Ablauf: Androhung → Pfändung → Insolvenz, Entwarnung ---

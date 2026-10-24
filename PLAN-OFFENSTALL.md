@@ -33,8 +33,10 @@ Jeder Platz (`b.og`) gehört zu einer Gruppe; Kapazität = Plätze ÷ Gruppen.
 - **Etappe 3 (klein–mittel):** Versorgung je Gruppe (4), Texte/Enzyklopädie/Tests (8).
 Nach jeder Etappe testen, hochladen, Test-Anleitung, auf Rückmeldung warten.
 
-## Offene Fragen an Dome
-1. Gruppeneinteilung Stufe 3 so (Absetzer / Jährlinge / Junghengste / Ältere)?
-2. Fremdaufzucht bei 25/50 Plätzen: Nachfrage gleich lassen oder niedriger?
-3. Stallbursche/Azubi: Arbeit im Offenstall je Gruppe statt je Platz rechnen (weniger Aufwand)?
-4. Stufe 2/3 für schon gebaute alte Offenställe: erst nach Umbau mehr Plätze (Vorschlag) – okay?
+## Antworten von Dome (24.10.2026)
+1. Gruppeneinteilung Stufe 3: Dome fragte „wäre es so real?“ – Antwort von Claude: im Wesentlichen ja (Vereinfachungen: Junghengste 1½–3 J. in einer Gruppe, Hengste 1–1½ J. noch bei den Jährlingen); **Bestätigung steht noch aus**.
+2. Fremdaufzucht-Nachfrage: **gleichbleiben**.
+3. Stallbursche/Azubi: Arbeit im Offenstall **je Gruppe** statt je Platz rechnen – **ja**.
+4. Alte Spielstände: **keine betroffen** (niemand hat einen Offenstall) – Punkt 6 oben entfällt, kein Umbau-Sonderfall nötig.
+
+Noch kein Bau-Auftrag: Start erst nach Domes ausdrücklichem Ja.

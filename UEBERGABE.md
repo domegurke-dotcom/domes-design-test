@@ -24,7 +24,7 @@ Thema: Pferdeköpfe/Randabstand und **realistische Fellfarben nach Studien**. De
 - **Fehler gelernt:** Backticks in bzn-Texten (Template-Literal) brechen das Spiel – `<code>` nehmen; nach jeder Änderung alle Skriptblöcke mit `new Function` prüfen.
 
 **Offen / auf Dome warten (nichts davon ohne ihre Ansage bauen):**
-1. **Hofplan als Raster** – `PLAN-HOFPLAN.md` ist fertig und beantwortet; Start erst bei Domes „Los“ (groß, Opus, Etappen H1–H5).
+1. **Hofplan als Raster** – `PLAN-HOFPLAN.md` ist fertig und beantwortet. **Dome hat am 24.10. gesagt: die nächste Sitzung beginnt mit dem Etappenbau (= Los), in Opus.** Etappen H1–H5, nach jeder Etappe testen, hochladen, Test-Anleitung geben und laut CLAUDE.md höchstens eine Etappe, dann auf Dome warten, sofern sie nichts anderes sagt.
 2. **Update-Fenster „Neu in deinem Spiel“** (`NEUES`): seit v725 sind viele Änderungen unveröffentlicht; Dome fragen, ob ein Fenster kommen soll, dann per Auswahlkästchen (nur Änderungen ab v725).
 3. Möglicher Zusatz: Tobiano bei Warmblütern (laut Review vorhanden, ohne Zahl) – nur auf Wunsch.
 4. Alte Punkte aus der Nachricht darunter (Fragen 1–4 vom 23.10.) sind weiter unbeantwortet.

@@ -1,4 +1,4 @@
-// v763/v764 (Domes Aufnahme 24.10., Etappe 1+2): Fressdauer, Pinnwand größer, Weide im Ort-Plan anklickbar, Büro = Labor, Tutorials-Liste, Schalter „Spielumfang“ weg
+// v763/v764/v765 (Domes Aufnahme 24.10., Etappe 1+2): Fressdauer, Pinnwand größer, Weide im Ort-Plan anklickbar, Büro = Labor, Tutorials-Liste, Schalter „Spielumfang“ weg
 // Aufruf: NODE_PATH=/opt/node22/lib/node_modules node tests/orte-test.js [BxH] [Ordner für Bilder]
 const { chromium } = require('playwright'); const path = require('path'); const fs = require('fs');
 const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner = process.argv[3];
@@ -107,6 +107,22 @@ const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner 
   await pg.evaluate(() => { const b = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna'); delete b.pferd.paddock; zurueckInBox(b); });
   await orte(); await klick('.plan-scroll.ort [data-pdgid="gpa"]'); await pg.waitForTimeout(200);
   ok('passt zum Plan → keine Rückfrage, Pferd kommt auf den geplanten Sandpaddock B', await pg.evaluate(() => { const p = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna').pferd; return !!(p.paddock && p.paddock.pid === 'gpb'); }));
+
+  // ===== v765: Titel „Stall“ im Whiteboard → alte Stallansicht (Pferde ziehen), zurück zum Whiteboard =====
+  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; const b = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna'); if (b.pferd.paddock) { delete b.pferd.paddock; zurueckInBox(b); } stallAlt = false; wbSicht = 'uebersicht'; zeigeBoxen(); }); await pg.waitForTimeout(200);
+  ok('Stall öffnet das Whiteboard', await pg.evaluate(() => /Whiteboard/.test(document.querySelector('#nebenSchirm .hf-kopf').textContent)));
+  await pg.click('#stallTitel'); await pg.waitForTimeout(200);
+  ok('Titel „Stall“ antippen → Stallansicht mit Boxen', await pg.evaluate(() => !!document.querySelector('#nebenSchirm .boxen-liste [data-zubox]') && !!document.getElementById('wbUmschalt')));
+  await bild('stallansicht');
+  { const z = await pg.evaluate(() => { const vi = spiel.boxen.findIndex(b => b.pferd && b.pferd.name === 'Anna'), von = spiel.boxen[vi]; const zi = spiel.boxen.findIndex(b => b !== von && boxZielOk(von, b) && boxGruppe(b) === boxGruppe(von)); boxenGruppe = boxGruppe(von); zeigeBoxen(); return [vi, zi]; });
+    await pg.evaluate(i => document.querySelector(`.boxen-liste [data-zubox="${i}"]`).scrollIntoView({ block: 'center' }), z[0]); await pg.waitForTimeout(200);
+    const a = await pg.locator(`.boxen-liste [data-zubox="${z[0]}"]`).boundingBox(), c = await pg.locator(`.boxen-liste [data-zubox="${z[1]}"]`).boundingBox();
+    await pg.mouse.move(a.x + a.width / 2, a.y + a.height / 2); await pg.mouse.down(); await pg.waitForTimeout(300); await pg.mouse.move(c.x + c.width / 2, c.y + c.height / 2, { steps: 8 }); await pg.waitForTimeout(100); await pg.mouse.up(); await pg.waitForTimeout(300);
+    const nb = await pg.evaluate(() => spiel.boxen.findIndex(b => b.pferd && b.pferd.name === 'Anna'));
+    ok('Pferd per Ziehen in eine andere Box umgestellt', nb === z[1], JSON.stringify({ z, nb }));
+    await pg.click('#stallTitel'); await pg.waitForTimeout(200);
+    ok('Titel nochmal antippen → zurück zum Whiteboard', await pg.evaluate(() => /Whiteboard/.test(document.querySelector('#nebenSchirm .hf-kopf').textContent) && !document.querySelector('#nebenSchirm .boxen-liste')));
+    ok('Whiteboard kennt die neue Box', await pg.evaluate(i => /Anna/.test(whiteboardHTML()) && spiel.boxen[i].pferd.name === 'Anna', nb)); }
   // Pinnwand
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; const bx = spiel.boxen.find(x => x.pferd); const p = bx.pferd; p.schleifen = Array.from({ length: 12 }, (_, i) => ({ st: 1 + i % 3, pl: 1 + i % 6, c: false, von: 8, platz: 1 + i % 6, pruef: 'Dressur A', turnier: 'Test', tag: 5 + i })); pinnwandOeffnen(p); });
   await pg.waitForTimeout(300);

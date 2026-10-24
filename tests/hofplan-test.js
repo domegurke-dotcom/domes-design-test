@@ -15,11 +15,11 @@ const [bw, bh] = (process.argv[2] || '390x844').split('x').map(Number), ordner =
     const rects = I.filter(it => P.pos[it.id]).map(it => planRechteck(it, P.pos[it.id])); let ueber = 0; rects.forEach((a, i) => rects.forEach((c, j) => { if (i < j && planUeber(a, c)) ueber++; }));
     return { ha: bauHa(), b: bb.b, h: bb.h, offen: planOffen().length, typen: I.map(it => it.typ).sort().join(','), ueber, frei: baulandFrei(), weideland: weideland() }; });
   ok('Neues Spiel: 0,5 ha Bauland = 20 × 10 Kacheln', r.ha === 0.5 && r.b === 20 && r.h === 10, JSON.stringify(r));
-  ok('Neues Spiel: Stall, Reitplatz, Parkplatz stehen schon im Plan', r.offen === 0 && /park/.test(r.typen) && /stall/.test(r.typen) && /reitplatz/.test(r.typen), JSON.stringify(r));
+  ok('Neues Spiel: Stall, Reitplatz, Parkplatz, Verwaltung stehen schon im Plan', r.offen === 0 && /park/.test(r.typen) && /stall/.test(r.typen) && /reitplatz/.test(r.typen) && /verwaltung/.test(r.typen), JSON.stringify(r));
   ok('nichts überschneidet sich', r.ueber === 0);
   ok('Weideland wie bisher 1 ha (Hof 1,5 ha − 0,5 ha Bauland)', Math.abs(r.weideland - 1) < 1e-6, r.weideland);
   r = await pg.evaluate(() => [planMassTyp('stall', 6, 1), planMassTyp('stall', 8, 1), planMassTyp('reitplatz', 0, 1), planMassTyp('reitplatz', 0, 3), planMassTyp('sandpaddock', 0, 1), planMassTyp('sandpaddock', 2, 1), planMassTyp('rennbahn', 0, 1)].map(x => x.join('x')).join(' '));
-  ok('Grundrisse: Stall 6 = 3×2, 8 = 3×2, Reitplatz 8×4 / 16×8, Sandpaddock 4×4 (+300 m² → 7×4), Rennbahn 40×20', r === '3x2 3x2 8x4 16x8 4x4 7x4 40x20', r);
+  ok('Grundrisse: Stall 6 = 4×2 (mit Futterkammer), 8 = 4×2, Reitplatz 8×4 / 16×8, Sandpaddock 4×4 (+300 m² → 7×4), Rennbahn 40×20', r === '4x2 4x2 8x4 16x8 4x4 7x4 40x20', r);
   // Hofplan öffnen
   await pg.evaluate(() => { hofBereich = 'plan'; zeigeHof('hof'); });
   await pg.waitForTimeout(300);
@@ -107,8 +107,8 @@ const [bw, bh] = (process.argv[2] || '390x844').split('x').map(Number), ordner =
   await pg.waitForTimeout(200);
   await pg.evaluate(() => { spiel.hofFenster = []; document.getElementById('dlg').hidden = true; aktenReiter = 'platz'; aktenModus = 'pflege'; ortModus = null; zeigeAkte(); });
   await pg.waitForTimeout(200);
-  r = await pg.evaluate(() => ({ svg: !!document.querySelector('#planOrtSvg'), park: !!document.querySelector('#planOrtSvg [data-ort="anhaenger"]'), rp: !!document.querySelector('#planOrtSvg [data-ort="tr-reitplatz"]'), kachelAnh: [...document.querySelectorAll('.kachel[data-ort="anhaenger"]')].length }));
-  ok('Ort zeigt den Hofplan mit Parkplatz (Anhänger) und Reitplatz (Training)', r.svg && r.park && r.rp && r.kachelAnh === 0, JSON.stringify(r));
+  r = await pg.evaluate(() => ({ svg: !!document.querySelector('#planOrtSvg'), park: !!document.querySelector('#planOrtSvg [data-ort="anhaenger"]'), rp: !!document.querySelector('#planOrtSvg [data-ort="tr-reitplatz"]'), kachelAnh: [...document.querySelectorAll('.kachel[data-ort="anhaenger"]')].length, weide: !!document.querySelector('#planOrtSvg .pl-pfeil[data-ort="weide"]'), gel: !!document.querySelector('#planOrtSvg .pl-pfeil[data-ort="tr-gelaende"]'), streifen: document.querySelector('#planOrtSvg').closest('.plan-scroll').parentElement.querySelectorAll('.plan-weiden').length }));
+  ok('Ort zeigt den Hofplan mit Parkplatz (Anhänger) und Reitplatz (Training), Pfeile Weide und Gelände außerhalb, kein Weidenstreifen', r.svg && r.park && r.rp && r.kachelAnh === 0 && r.weide && r.gel && r.streifen === 0, JSON.stringify(r));
   await pg.locator('#planOrtSvg').scrollIntoViewIfNeeded(); await bild('8-ort-plan');
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; }); await pg.locator('#planOrtSvg [data-ort="tr-reitplatz"]').click(); await pg.waitForTimeout(200);
   ok('Reitplatz antippen → Training dort', await pg.evaluate(() => ortModus === 'tr-reitplatz'));
@@ -116,7 +116,7 @@ const [bw, bh] = (process.argv[2] || '390x844').split('x').map(Number), ordner =
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; }); await pg.locator('#planOrtSvg [data-ort="anhaenger"]').click(); await pg.waitForTimeout(200);
   ok('Parkplatz antippen → Pferdeanhänger', await pg.evaluate(() => ortModus === 'anhaenger'));
   await pg.evaluate(() => { ortModus = null; zeigeAkte(); }); await pg.waitForTimeout(150);
-  if (await pg.locator('.plan-weiden [data-ort="weide"]').count()) { await pg.locator('.plan-weiden [data-ort="weide"]').first().click(); await pg.waitForTimeout(200);
+  if (await pg.locator('#planOrtSvg .pl-pfeil[data-ort="weide"]').count()) { await pg.locator('#planOrtSvg .pl-pfeil[data-ort="weide"]').first().click(); await pg.waitForTimeout(200);
     ok('Weide unter dem Plan antippen → Weide wählen/Pferd raus', await pg.evaluate(() => !!spiel.boxen[0].pferd.weide || !document.getElementById('dlg').hidden)); await pg.evaluate(() => { document.getElementById('dlg').hidden = true; }); }
   // --- H4: Bauland kaufen, verkaufen, verschieben ---
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; hofBereich = 'plan'; planWahl = null; planLand = null; zeigeHof('hof'); }); await pg.waitForTimeout(200);
@@ -146,6 +146,21 @@ const [bw, bh] = (process.argv[2] || '390x844').split('x').map(Number), ordner =
   r = await pg.evaluate(() => { const P = hofPlan(), i = P.st.findIndex((t, j) => !planStueckFrei(P, j)); planLand = { modus: 'stueck', i }; planNeu(); return !document.querySelector('[data-plverk]'); });
   ok('Bebautes Stück: kein Verkaufen', r);
   await pg.evaluate(() => { planLand = null; planNeu(); });
+  // --- Büro (Verwaltung) und Bauland-Raster (Dome 24.10.) ---
+  r = await pg.evaluate(() => { const g = gebaeude().find(x => x.typ === 'verwaltung'); return { da: !!g, stufe: g && g.stufe, massen: [1, 2, 3].map(st => planMassTyp('verwaltung', 0, st).join('x')).join(' '), gitter: [1, 2, 3, 4, 6].map(k => { const G = planGitter(k), x1 = Math.max(...G.map(t => t.x + t.b)), y1 = Math.max(...G.map(t => t.y + t.h)); return x1 + 'x' + y1; }).join(' ') }; });
+  ok('Jeder Hof hat ein Büro (Stufe 1); Maße 5×5, 10×10, 30×15 m', r.da && r.stufe === 1 && r.massen === '1x1 2x2 6x3', JSON.stringify(r));
+  ok('Bauland-Raster aus 0,5-ha-Rechtecken: 1 → 20×10, 2 → 40×10, 3/4 → 40×20, 6 → 60×20', r.gitter === '20x10 40x10 40x20 40x20 60x20', r.gitter);
+  r = await pg.evaluate(() => { document.getElementById('dlg').hidden = true; const s = JSON.stringify(spiel.hof.plan); const sp = bauHa(); spiel.hof.bauHa = 2; spiel.hof.ha += 1;   // alter, einteiliger Plan (v752–v757) mit einem Gebäude außerhalb der neuen Stücke
+    spiel.hof.plan = { st: [{ x: 0, y: 0, b: 40, h: 20 }], pos: { ...hofPlan().pos } }; const id = planItems().find(x => x.typ === 'park').id; spiel.hof.plan.pos[id] = { x: 38, y: 18, r: 0 };
+    const P = hofPlan(); const out = { v: P.v, st: P.st.length, park: !!P.pos[id], alt: P.alt, offen: planOffen().length }; spiel.hof.bauHa = sp; spiel.hof.ha -= 1; spiel.hof.plan = JSON.parse(s); return out; });
+  ok('Alter einteiliger Plan wird in 4 Stücke geteilt, Gebäude außerhalb wandert ins Feld', r.v === 2 && r.st === 4 && r.alt === 1 && r.offen >= 1, JSON.stringify(r));
+  // Sandpaddock im Ort-Plan antippen → genau dieser
+  r = await pg.evaluate(() => { spiel.admin = true; spiel.hof.bauHa += 0.5; spiel.hof.ha += 0.5; hofPlan(); const g = { gid: 'sp1', typ: 'sandpaddock', stufe: 1, zustand: 100, preis: 300 }, g2 = { gid: 'sp2', typ: 'sandpaddock', stufe: 1, zustand: 100, preis: 300 }; gebaeude().push(g, g2); spiel.anlage.paddock = true; planAutoSetzen(); spiel.admin = false;
+    const P = spiel.boxen[0].pferd; delete P.weide; delete P.paddock; document.getElementById('nebenSchirm').classList.remove('offen'); aktBox = 0; aktenReiter = 'platz'; ortModus = null; zeigeAkte(); return { n: planItems().filter(x => x.typ === 'sandpaddock').length, an: [...document.querySelectorAll('#planOrtSvg [data-pdgid]')].map(x => x.dataset.pdgid) }; });
+  ok('Zwei Sandpaddocks im Ort-Plan antippbar', r.an.length === 2, JSON.stringify(r));
+  if (r.an.length === 2) { await pg.evaluate(() => { spiel.stufenAn = false; }); await pg.locator('#planOrtSvg [data-pdgid="sp2"]').click({ force: true }); await pg.waitForTimeout(250);
+    r = await pg.evaluate(() => { const P = spiel.boxen[0].pferd; return { pid: P.paddock && P.paddock.pid, dlg: !document.getElementById('dlg').hidden && document.getElementById('dlg').innerText.slice(0, 80) }; });
+    ok('Antippen wählt genau diesen Sandpaddock (ohne Auswahlfenster)', r.pid === 'sp2', JSON.stringify(r)); await pg.evaluate(() => { const P = spiel.boxen[0].pferd; delete P.paddock; document.getElementById('dlg').hidden = true; ortModus = null; zeigeAkte(); }); }
   // --- alter Spielstand: alles im Feld, Ort gesperrt ---
   r = await pg.evaluate(() => { delete spiel.hof.plan; delete spiel.hof.planNeu; spiel.hof.bauHa = 1; const P = hofPlan(); return { alt: P.alt, offen: planOffen().length, sperre: planOrtSperre().length, b: planBox(P).b, h: planBox(P).h }; });
   ok('Alter Spielstand: Raster aus seinem Bauland (1 ha ≈ 29 × 14), alles im Feld', r.alt === 1 && r.offen >= 3 && r.b * r.h >= 400, JSON.stringify(r));

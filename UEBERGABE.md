@@ -158,3 +158,5 @@ Domes Wünsche zu Whiteboard, Mitarbeitern, Waschplatz/Solarium sind umgesetzt (
 **v814 (Claude Team, 24.10.):** Frühling + Hufrehe-Gefahr → Pensionswunsch Sandpaddock statt Weide (Anzeige, Plan, Stallbursche, Whiteboard-Hinweise). Test rehe-wunsch-test grün. Als Nächstes: B1 Boxansicht am PC (Dome-Ja).
 
 **v815 (Claude Team, 24.10.):** Boxansicht B1 am PC (Symbole am Rand, Ringe, Plaketten, Denkblase). Test boxansicht-test grün in 3 PC-Größen; kleine Tests stichprobenartig grün (reiter-/spielstand-test je einmal zufällig rot, Wiederholung grün). Wartet auf Domes Test, dann B2.
+
+**v816 (Claude Team, 24.10.):** Offene Pensionsrechnung bleibt nach dem Auszug bestehen (Mahnungen, dann Inkasso). Zahlen selbst gesetzt: 50 % Zahlung je Mahntermin, Inkasso 60 % Erfolg × ½ Betrag.

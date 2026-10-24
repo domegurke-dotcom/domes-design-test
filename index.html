@@ -1118,7 +1118,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "758";
+  const SPIEL_VERSION = "759";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1126,12 +1126,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=758"></script>
-<script src="pferd.js?v=758"></script>
-<script src="boxstufen.js?v=758"></script>
-<script src="kopfneu.js?v=758"></script>
-<script src="waschbild.js?v=758"></script>
-<script src="avatare.js?v=758"></script>
+<script src="lz-string.min.js?v=759"></script>
+<script src="pferd.js?v=759"></script>
+<script src="boxstufen.js?v=759"></script>
+<script src="kopfneu.js?v=759"></script>
+<script src="waschbild.js?v=759"></script>
+<script src="avatare.js?v=759"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -9400,7 +9400,16 @@
     if (!F.einstreuStart) { F.einstreuStart = true; F.lager.streuStroh = (F.lager.streuStroh || 0) + EINSTREU_START; }   // H6: einmal 100 kg Einstreu-Stroh
     return F;
   }
-  const lagerBelegt = () => Object.entries(futterkammer().lager).reduce((a, [k, v]) => a + (FUTTER[k] && !FUTTER[k].stueck ? v : 0), 0);
+  // Dome 24.10.: wie in echt – Kraftfutter, Zusätze, Leckerli und Spezialfutter lagern in der Futterkammer im Stall (je Stallgebäude, klein), Raufutter (Heu, Heulage, Stroh, Heucobs) und Einstreu im Heu- und Strohlager (groß)
+  const lagerOrt = k => FUTTER[k] && (FUTTER[k].art === "raufutter" || FUTTER[k].art === "einstreu") ? "lager" : "kammer";
+  const KAMMER = { stufe: [200, 350, 600], jeBox: 30, min: 100, geb: ["stall", "paddock", "quarantaene", "abfohlbox"] };   // kg je Stallgebäude (nach Stufe) + je Box; selbst gesetzt
+  function kammerMax() {
+    const kg = gebaeude().filter(g => KAMMER.geb.includes(g.typ) && !gebElternVon(g) && !(g.bau && g.bau.art !== "umbau") && !g.abriss).reduce((a, g) => a + KAMMER.stufe[Math.min(3, g.stufe || 1) - 1] + KAMMER.jeBox * planMenge(g, k => !k.bau), 0);
+    return Math.max(KAMMER.min, kg);
+  }
+  const lagerPlatzMax = ort => ort === "lager" ? futterkammer().lagerMax : kammerMax();
+  const lagerBelegt = ort => Object.entries(futterkammer().lager).reduce((a, [k, v]) => a + (FUTTER[k] && !FUTTER[k].stueck && (!ort || lagerOrt(k) === ort) ? v : 0), 0);
+  const lagerUnterwegs = ort => (futterkammer().liefer || []).reduce((a, x) => a + (FUTTER[x.k] && !FUTTER[x.k].stueck && (!ort || lagerOrt(x.k) === ort) ? x.menge : 0), 0);
   // Standardplan (bis zu den eigenen Futterplänen in F2): Raufutter nach Energiebedarf (1,5–2,5 kg je 100 kg Gewicht, seit F3), 100 g Mineralfutter (50 g bei Ponys unter 300 kg) · Fohlen bei Fuß frisst bei der Mutter mit (1 kg Heu je 100 kg)
   function tagesRationStandard(p, box) {
     // Heu nach Energiebedarf (6 MJ/kg), mindestens 1,5 und höchstens 2,5 kg je 100 kg Körpergewicht – mehr frisst ein Pferd nicht; Arbeitspferde brauchen dann Kraftfutter
@@ -9470,8 +9479,8 @@
   }
   function futterKaufen(k, menge) {
     const F = futterkammer(), Z = FUTTER[k], kosten = Math.round(Z.preis * menge * 100) / 100;
-    const unterwegs = (F.liefer || []).reduce((a, x) => a + (FUTTER[x.k] && !FUTTER[x.k].stueck ? x.menge : 0), 0);
-    if (!Z.stueck && lagerBelegt() + unterwegs + menge > F.lagerMax) return `Kein Platz mehr in der Futterkammer (${fmtKg(F.lagerMax)} Platz, bestellte Lieferungen zählen mit).`;
+    const ort = lagerOrt(k);
+    if (!Z.stueck && lagerBelegt(ort) + lagerUnterwegs(ort) + menge > lagerPlatzMax(ort)) return ort === "lager" ? `Kein Platz mehr im Heu- und Strohlager (${fmtKg(F.lagerMax)} Platz, bestellte Lieferungen zählen mit).` : `Kein Platz mehr in den Futterkammern der Ställe (${fmtKg(kammerMax())} Platz, bestellte Lieferungen zählen mit) – Kraftfutter und Zusätze lagern im Stall, Heu und Einstreu im Lager.`;
     if (geldFrei() < kosten) return "Nicht genug Geld.";
     // Dome: 1 Tag Lieferzeit – bestellt wird heute, geliefert morgen früh
     const L = (F.liefer = F.liefer || []), x = L.find(y => y.k === k && y.tag === spiel.tag + 1);
@@ -9487,7 +9496,7 @@
   const fmtKg = x => x >= 1 || x === 0 ? `${(Math.round(x * 10) / 10).toLocaleString("de-DE")} kg` : `${Math.round(x * 1000)} g`;
   function futterkammerHTML(meld) {
     tippMerken("futterkammer");   // v376: Einsteiger-Tipp
-    const F = futterkammer(), V = futterVerbrauchTag(), belegt = lagerBelegt();
+    const F = futterkammer(), V = futterVerbrauchTag(), belegt = lagerBelegt("lager"), belegtK = lagerBelegt("kammer");
     const rauVorrat = RAUFUTTER_REIHE.reduce((a, k) => a + F.lager[k], 0);
     const reicht = (vorrat, tag) => tag > 0 ? (vorrat >= tag ? `${Math.floor(vorrat / tag)} ${Math.floor(vorrat / tag) === 1 ? "Tag" : "Tage"}` : "<b>leer</b>") : "–";
     const kosten = V.kosten;
@@ -9496,7 +9505,8 @@
     const knappZ = (() => { const L = []; const t1 = V.raufutter > 0 ? Math.floor(rauVorrat / V.raufutter) : 99, t2 = V.mineral > 0 ? Math.floor(F.lager.mineral / V.mineral) : 99; if (t1 < FUTTER_WARN_TAGE) L.push(`Heu reicht nur noch <b>${t1}</b> ${t1 === 1 ? "Tag" : "Tage"}`); if (t2 < FUTTER_WARN_TAGE) L.push(`Mineralfutter reicht nur noch <b>${t2}</b> ${t2 === 1 ? "Tag" : "Tage"}`); return L; })();   // v688
     return `${meld ? `<div class="klasse">${meld}</div>` : ""}${knappZ.length ? `<div class="klasse">⚠️ ${knappZ.join(" · ")} – bestellen geht heute, geliefert wird morgen früh.</div>` : ""}
       ${(F.liefer || []).length ? `<div class="klasse">🚚 Lieferung morgen früh: ${F.liefer.map(x => `${FUTTER[x.k] && FUTTER[x.k].stueck ? `${x.menge} Stück` : fmtKg(x.menge)} ${FUTTER[x.k] ? FUTTER[x.k].n : x.k}`).join(", ")}</div>` : ""}
-      <div class="zeile-wert"><div class="kopf"><b>📦 Platz in der Futterkammer</b><span>${fmtKg(belegt)} von ${fmtKg(F.lagerMax)}</span></div><div class="balken"><i style="width:${Math.min(100, belegt / F.lagerMax * 100)}%"></i></div></div>
+      <div class="zeile-wert"><div class="kopf"><b>📦 Heu- und Strohlager</b><span>${fmtKg(belegt)} von ${fmtKg(F.lagerMax)}</span></div><div class="balken"><i style="width:${Math.min(100, belegt / F.lagerMax * 100)}%"></i></div><p class="text" style="margin:2px 0 0"><small>Raufutter und Einstreu</small></p></div>
+      <div class="zeile-wert"><div class="kopf"><b>🧺 Futterkammern in den Ställen</b><span>${fmtKg(belegtK)} von ${fmtKg(kammerMax())}</span></div><div class="balken"><i style="width:${Math.min(100, belegtK / kammerMax() * 100)}%"></i></div><p class="text" style="margin:2px 0 0"><small>Kraftfutter, Müsli, Zusätze, Leckerli – je Stall eine Futterkammer, größer mit Stufe und Boxenzahl</small></p></div>
       ${(() => { const ein = Object.keys(EINSTREU).reduce((a, k) => a + (V.je[k] || 0), 0), einV = Object.keys(EINSTREU).reduce((a, k) => a + (V.je[k] ? F.lager[k] || 0 : 0), 0);
         const knapp = Object.entries(V.je).filter(([k, t]) => t > 0 && FUTTER[k] && !RAUFUTTER_REIHE.includes(k)).map(([k, t]) => [k, Math.floor((F.lager[k] || 0) / t)]).concat(V.raufutter > 0 ? [["raufutter", Math.floor(rauVorrat / V.raufutter)]] : []).filter(([, d]) => d < 4).sort((a, b) => a[1] - b[1]);   // Dome (v352): oben alles, was bald alle ist
         return `${knapp.length ? `<div class="klasse">⚠️ Bald alle: ${knapp.map(([k, d]) => `<b>${k === "raufutter" ? "Raufutter" : FUTTER[k].n}</b> ${d ? `(noch ${d} ${d === 1 ? "Tag" : "Tage"})` : "(leer)"}`).join(" · ")}</div>` : ""}
@@ -9520,13 +9530,14 @@
     return `<button class="knopf fk-korb ${n ? "" : "leer"}" id="fkKorb">🛒 Einkaufskorb${n ? ` · ${n} ${n === 1 ? "Sorte" : "Sorten"} · <b>${fmt(korbSumme())}</b>` : " ist leer"}</button>`; }
   function korbDialog(neu) {
     const K = korb(), L = Object.keys(K).filter(k => FUTTER[k]), F = futterkammer();
-    const kg = L.reduce((a, k) => a + (FUTTER[k].stueck ? 0 : K[k]), 0), platz = F.lagerMax - lagerBelegt() - (F.liefer || []).reduce((a, x) => a + (FUTTER[x.k] && !FUTTER[x.k].stueck ? x.menge : 0), 0);
+    const kgO = o => L.reduce((a, k) => a + (FUTTER[k].stueck || lagerOrt(k) !== o ? 0 : K[k]), 0), platzO = o => lagerPlatzMax(o) - lagerBelegt(o) - lagerUnterwegs(o);
+    const kg = kgO("lager") + kgO("kammer"), platz = platzO("lager") + platzO("kammer"), zuVoll = ["lager", "kammer"].filter(o => kgO(o) > platzO(o) + 1e-9), platzTxt = `Lager ${fmtKg(Math.max(0, platzO("lager")))} · Stall-Futterkammer ${fmtKg(Math.max(0, platzO("kammer")))}`;
     dialog(`<h3>🛒 Einkaufskorb</h3>${L.length ? `<table class="ver-tab korb-tab"><tr><th>Futter</th><th>Menge</th><th>Preis</th><th></th></tr>${L.map(k => `<tr><td>${FUTTER[k].ico} ${FUTTER[k].n}</td><td class="nw">${korbMenge(k)}</td><td class="nw">${fmt(runde2(FUTTER[k].preis * K[k]))}</td><td><button class="mini-knopf" data-korbweg="${k}" aria-label="entfernen">✕</button></td></tr>`).join("")}
         <tr><td colspan="2"><b>Summe</b></td><td class="nw"><b>${fmt(korbSumme())}</b></td><td></td></tr></table>
-        <p class="text"><small>Kasse: ${fmt(spiel.geld || 0)} · Platz frei: ${fmtKg(Math.max(0, platz))}${kg > platz ? " – ⚠️ nicht genug Platz für alles!" : ""} · Lieferung morgen früh.</small></p>` : `<p>Der Korb ist leer. Mit den +-Knöpfen legst du Futter hinein.</p>`}`,
+        <p class="text"><small>Kasse: ${fmt(spiel.geld || 0)} · Platz frei: ${platzTxt}${zuVoll.length ? ` – ⚠️ nicht genug Platz ${zuVoll.map(o => o === "lager" ? "im Heu- und Strohlager" : "in den Futterkammern").join(" und ")}!` : ""} · Lieferung morgen früh.</small></p>` : `<p>Der Korb ist leer. Mit den +-Knöpfen legst du Futter hinein.</p>`}`,
       [...(L.length ? [["✅ Kauf bestätigen", () => {
         if (geldFrei() < korbSumme()) { dialog(`<h3>Nicht genug Geld</h3>${dispoHinweis()}<p>Der Einkauf kostet ${fmt(korbSumme())}, in der Kasse sind ${fmt(spiel.geld || 0)}.</p>`, [["‹ Zurück zum Korb", () => korbDialog(neu)]]); return; }
-        if (kg > platz + 1e-9) { dialog(`<h3>Nicht genug Platz</h3><p>Im Korb sind ${fmtKg(kg)}, frei sind nur ${fmtKg(Math.max(0, platz))}.</p>`, [["‹ Zurück zum Korb", () => korbDialog(neu)]]); return; }
+        if (zuVoll.length) { dialog(`<h3>Nicht genug Platz</h3><p>${zuVoll.map(o => `Im Korb sind ${fmtKg(kgO(o))} für ${o === "lager" ? "das Heu- und Strohlager" : "die Futterkammern der Ställe"}, frei sind nur ${fmtKg(Math.max(0, platzO(o)))}.`).join(" ")}</p>`, [["‹ Zurück zum Korb", () => korbDialog(neu)]]); return; }
         const summe = korbSumme(), fehler = []; L.forEach(k => { const f = futterKaufen(k, K[k]); if (f) fehler.push(`${FUTTER[k].n}: ${f}`); else delete K[k]; });
         speichern(); zeigeTag(); neu(fehler.length ? `⚠️ ${fehler.join(" · ")}` : `🛒 Einkauf für ${fmt(summe)} bestellt – wird morgen früh geliefert.`); }]] : []),
        [L.length ? "Abbrechen" : "‹ Zurück", () => neu(""), "zweit"]], "breit");
@@ -14129,7 +14140,7 @@
   // ---------- Hof-Ausbau H3: Bauen, Stufen, Verfall ----------
   // zeit: Anteil einer Jahreszeit („kurz“ = 2–3 Tage bei Standardtempo), aussen: ruht im Winter
   const BAUTEN = {
-    stall: { n: "Boxen\u00adstall", ico: "🏠", preis: [2400, 6000, 14400], jeBox: [400, 1000, 2400], schritt: 2, paar: [800, 2000, 4800], boxen: 6, zeit: 1, info: "Innenboxen an der Stallgasse – Erstbau 6 Boxen (mehr in 2er-Schritten), Anbau +2/+4/+6" },   // v361 (Dome): Stufen deutlich teurer (etwa 1 : 2,5 : 6 wie einfache Box / Komfort / Premium)
+    stall: { n: "Boxen\u00adstall", ico: "🏠", preis: [2400, 6000, 14400], jeBox: [400, 1000, 2400], schritt: 2, paar: [800, 2000, 4800], boxen: 6, zeit: 1, info: "Innenboxen an der Stallgasse mit Futterkammer für Kraftfutter – Erstbau 6 Boxen (mehr in 2er-Schritten), Anbau +2/+4/+6" },   // v361 (Dome): Stufen deutlich teurer (etwa 1 : 2,5 : 6 wie einfache Box / Komfort / Premium)
     paddock: { n: "Paddock\u00adboxen\u00adstall", ico: "🏡", preis: [3100, 7800, 18700], jeBox: [525, 1300, 3100], schritt: 2, paar: [1050, 2600, 6200], boxen: 6, zeit: .5, info: "Boxen mit kleinem Sandauslauf – das Pferd geht rein und raus, wie es mag; Anbau +2/+4/+6" },
     reitplatz: { n: "Reitplatz", ico: "🏟️", preis: [2000, 3000, 4500], zeit: 1, aussen: true, anlage: "reitplatz", kap: [7, 10, 18], info: "Sandplatz: Stufe 1 20 × 40 m (bis 7 Reiter gleichzeitig – wie im echten Reitstall, 6 ist angenehm, 7–8 geht noch), Stufe 2 20 × 60 m (bis 10), Stufe 3 40 × 80 m (bis 18)" },
     roundpen: { n: "Roundpen", ico: "⭕", preis: [400, 700, 1000], zeit: "kurz", aussen: true, anlage: "roundpen", info: "runder Platz zum Longieren und für Bodenarbeit – Stufe 3 ist überdacht (wetterunabhängig)" },
@@ -14142,11 +14153,11 @@
     waschplatz: { n: "Wasch\u00adplatz", ico: "🚿", preis: [300, 500, 800], zeit: "kurz", anlage: "waschplatz", einmal: true, info: "zum Abspritzen und Hufe waschen" },
     solarium: { n: "Pferde\u00adsolarium", ico: "☀️", preis: [1200, 2000, 3200], zeit: "kurz", anlage: "solarium", einmal: true, info: "trocknet nasse und verschwitzte Pferde, wärmt im Winter auf" },   // W3 (Dome 19.10.)
     sattelkammer: { n: "Sattel\u00adkammer", ico: "🧰", preis: [500, 800, 1200], zeit: .5, anlage: "sattelkammer", einmal: true, bald: "noch ohne Funktion – kommt mit der Ausrüstung", info: "für Sättel und Trensen (Funktion kommt mit der Ausrüstung)" },
-    lager: { n: "Futter- und Stroh\u00adlager", ico: "🌾", preis: [1500, 2500, 4000], zeit: 1, einmal: true, platz: [4000, 6000, 9000], info: "mehr Platz in der Futterkammer" },
+    lager: { n: "Heu- und Stroh\u00adlager", ico: "🌾", preis: [1500, 2500, 4000], zeit: 1, einmal: true, platz: [4000, 6000, 9000], info: "mehr Platz für Heu, Stroh und Einstreu (Kraftfutter und Zusätze lagern in den Futterkammern der Ställe)" },
     heudampfer: { n: "Heu\u00addampfer", ico: "♨️", fest: 800, einmal: true, info: "Heu bedampfen statt wässern – kostet keine Arbeitszeit mehr" },
     quarantaene: { n: "Quarantäne\u00adstall", ico: "🚧", preis: [1500, 2400, 3600], jeBox: [600, 950, 1450], schritt: 1, zeit: 1, boxen: 2, einmal: true, info: "2 Boxen abseits – Pferde dort stecken niemanden an; Anbau +1/+2/+3" },
     abfohlbox: { n: "Abfohl\u00adstall", ico: "🍼", preis: [600, 900, 1400], jeBox: [500, 750, 1150], schritt: 1, zeit: .5, boxen: 1, einmal: true, info: "große Abfohlbox mit Kamera für die Geburt; Anbau +1/+2/+3" },
-    verwaltung: { n: "Verwal\u00adtung", ico: "🏢", preis: [1500, 6000, 18000], zeit: 1, einmal: true, info: "Büro des Hofs: Stufe 1 ein Bürowagen, Stufe 2 ein Bürohaus, Stufe 3 ein großes Verwaltungsgebäude – noch ohne eigene Funktion" },   // Dome 24.10. (Hofplan): jeder Hof hat ein Büro
+    verwaltung: { n: "Verwal\u00adtung", ico: "🏢", preis: [1500, 6000, 18000], zeit: 1, einmal: true, info: "Büro des Hofs: Stufe 1 ein Bürowagen, Stufe 2 ein Bürohaus, Stufe 3 ein großes Verwaltungsgebäude – ab Stufe 2 mehr Ansehen bei Einstellern und zufriedenere Mitarbeiter" },   // Dome 24.10. (Hofplan): jeder Hof hat ein Büro
     aufzucht: { n: "Aufzucht-Offen\u00adstall", ico: "🐎", preis: [5000, 8000, 12000], zeit: 1, boxen: 10, einmal: true, info: "Offenstall mit Liegehalle und Auslauf: bis zu 10 Fohlen und Jungpferde (½–3 Jahre) wachsen zusammen auf, erwachsene Stuten als „Tanten“ – nur im Zuchtstall" },
   };
   // Dome (v347): Bauen-Kacheln nach Wichtigkeit (Land als Kachel)
@@ -14198,7 +14209,7 @@
     if (B.bald && !spiel.admin) return B.bald;   // Dome 23.10.: Gebäude ohne Funktion sind ausgegraut
     if (typ === "aufzucht" && (!spiel.hof || spiel.hof.art !== "zucht")) return "nur im Zuchtstall (Hof → Übersicht → Stallart)";   // H7 (a)
     if (B.einmal && gebaeude().some(g => g.typ === typ)) return typ === "heudampfer" ? "schon vorhanden" : "schon gebaut";
-    if (typ === "heudampfer" && !gebaeude().some(g => g.typ === "lager" && !g.bau)) return "braucht das Futter- und Strohlager";
+    if (typ === "heudampfer" && !gebaeude().some(g => g.typ === "lager" && !g.bau)) return "braucht das Heu- und Strohlager";
     if (typ === "weide" && freiesLand() < 1) return "kein freies Weideland (Bauen → Weideland)";
     if (planAn() ? planTyp(typ) && !planFreiePos(...planMassTyp(typ, BAUTEN[typ].boxen, 1)) : platzVon(typ) > baulandFrei() + 1e-9) return planAn() ? "kein Platz im Hofplan (verschieben oder Bauland kaufen)" : "zu wenig Bauland (Bauen → Bauland)";
     return "";
@@ -14356,7 +14367,7 @@
     if (Bx.some(b => b.pferd || b.reserviert || b.tot || b.fohlen)) return "erst die Boxen leeren (Pferde umstellen)";
     if (Bx.length && spiel.boxen.length - Bx.length < 1 && (eigenePferdeHof().length || einstellerListe().length)) return "der letzte Stall – es stehen noch Pferde auf dem Hof";
     if (g.typ === "sandpaddock" && spiel.boxen.some(b => b.pferd && b.pferd.paddock && b.pferd.paddock.pid === g.gid)) return "erst die Pferde vom Sandpaddock holen";
-    if (g.typ === "lager") { const F = futterkammer(), voll = Object.values(F.lager || {}).reduce((a, x) => a + (+x || 0), 0); if (voll > LAGER_START) return `zu viel Futter im Lager (${fmtKg(Math.round(voll))} – ohne Lager passen ${fmtKg(LAGER_START)})`; }
+    if (g.typ === "lager") { const F = futterkammer(), voll = Object.entries(F.lager || {}).reduce((a, [k, x]) => a + (lagerOrt(k) === "lager" ? +x || 0 : 0), 0); if (voll > LAGER_START) return `zu viel Futter im Lager (${fmtKg(Math.round(voll))} – ohne Lager passen ${fmtKg(LAGER_START)})`; }
     return "";
   }
   function abrissWarnung(g) {   // hängt eine Stallart-Bedingung an diesem Gebäude?
@@ -14507,7 +14518,7 @@
   function maGebaeudeZufr() {
     if (!spiel.boxen.length) return 0;
     const st = spiel.boxen.reduce((a, b) => a + boxenStufe(b), 0) / spiel.boxen.length, G = gebaeude().filter(g => g.typ !== "heudampfer"), z = G.length ? G.reduce((a, g) => a + g.zustand, 0) / G.length : 80;
-    return (st < 1.5 ? -3 : st >= 2.5 ? 3 : 0) + (z < 50 ? -3 : 0);
+    return (st < 1.5 ? -3 : st >= 2.5 ? 3 : 0) + (z < 50 ? -3 : 0) + (VERWALTUNG.zufr[Math.max(0, verwaltungStufe() - 1)] || 0);   // Dome 24.10.: Verwaltung Stufe 2/3 +1/+2 je Jahreszeit
   }
   // ---------- Hofverwaltung → Hof → Bauen ----------
   const gebBar = z => `<div class="kr-balken geb-balken"><i style="width:${Math.round(z)}%;background:${z < 40 ? "#c0503a" : z < 70 ? "#d9a441" : "#6aa84f"}"></i></div>`;
@@ -14686,8 +14697,13 @@
   const WEIDE_QUOTE = [0.7, 0.85, 0.5, 0.25];   // v654 (Dome 23.10.): so oft muss ein Weide-Pferd je Jahreszeit draußen gewesen sein (Frühling, Sommer, Herbst, Winter); Zahlen selbst gesetzt
   const pensionMahnMax = () => tpj() <= 4 ? 1 : tpj() <= 7 ? 2 : 3;   // nach so vielen Mahnungen kündigt der Hof (4 / 7 / 10 Tage je Jahreszeit)
   // Ansehen (0–200, Start 100) wirkt auf: Anfragen (×0,3–1,5), akzeptierten Preis (Richtwert ±25 %), Buchungen (×0,5–1,5), Geduld (Beschwerde/Kündigung früher)
-  const pensionRichtwert = st => PENSION_PREIS[st] * (1 + (pensionRegeln().ansehen - 100) / 400);
-  const pensionGeduld = () => Math.max(0, (100 - pensionRegeln().ansehen) / 5);
+  // Dome 24.10.: die Verwaltung (Büro) bringt Ansehen bei den Einstellern (wirkt wie ein Bonus auf das geheime Ansehen, kein Dauerzuwachs) und zufriedenere Mitarbeiter; Zahlen selbst gesetzt, Stufe 1 (Bürowagen) wirkt noch nicht; unter 50 % Zustand wirkt sie nicht
+  const VERWALTUNG = { ansehen: [0, 8, 16], zufr: [0, 1, 2] };
+  function verwaltungStufe() { const g = gebaeude().find(x => x.typ === "verwaltung" && !(x.bau && x.bau.art !== "umbau") && !x.abriss); return g && g.zustand >= 50 ? Math.max(1, Math.min(3, g.stufe || 1)) : 0; }
+  const verwaltungAnsehen = () => VERWALTUNG.ansehen[Math.max(0, verwaltungStufe() - 1)] || 0;
+  const ansehenWirk = () => Math.max(0, Math.min(200, pensionRegeln().ansehen + verwaltungAnsehen()));
+  const pensionRichtwert = st => PENSION_PREIS[st] * (1 + (ansehenWirk() - 100) / 400);
+  const pensionGeduld = () => Math.max(0, (100 - ansehenWirk()) / 5);
   const BLUTTEST_TXT = { vorher: "Bluttest vorher einreichen", nachreichen: "Bluttest nachreichen", keiner: "kein Bluttest nötig" };
   const HALTUNG_TXT = { weide: "🌿 Weidegang", sandpaddock: "🟫 Sandpaddock", box: "🏠 nur Box", paddockbox: "🏡 Paddockbox", offenstall: "🐎 Aufzucht im Offenstall" };
   const PENSION_NN = ["Becker", "Wagner", "Schulz", "Hoffmann", "Koch", "Richter", "Klein", "Wolf", "Neumann", "Schwarz", "Braun", "Zimmermann", "Krüger", "Hartmann", "Lange", "Werner", "Krause", "Lehmann", "Köhler", "Maier", "Vogel", "Jansen", "Peters", "Brandt"];
@@ -14756,7 +14772,7 @@
     const frei = spiel.boxen.filter(pensionBoxFrei); const n = Math.min(frei.length, pensionPlaetze()); if (!n) return 0;
     const st = frei.reduce((a, b) => a + boxenStufe(b), 0) / frei.length;
     const preisF = pensionPreisF();   // 25 % teurer → etwa halb so viele
-    const f = PENSION.anfrage / tpj() * PENSION.stufe[Math.round(st)] * (1 + ausstattungBonus()) * Math.max(0.3, Math.min(1.5, R.ansehen / 100)) * preisF * PENSION.blut[R.bluttest] * (vorteil("pension") ? 1.3 : 1) * hausBonus();   // H7: Pensionsstall – mehr Anfragen
+    const f = PENSION.anfrage / tpj() * PENSION.stufe[Math.round(st)] * (1 + ausstattungBonus()) * Math.max(0.3, Math.min(1.5, ansehenWirk() / 100)) * preisF * PENSION.blut[R.bluttest] * (vorteil("pension") ? 1.3 : 1) * hausBonus();   // H7: Pensionsstall – mehr Anfragen
     return 1 - Math.pow(1 - Math.min(0.5, f), n);
   }
   // v654 (Dome): kein Nachname doppelt unter Einstellern und offenen Anfragen
@@ -14770,7 +14786,7 @@
     p.training = Math.floor(r() * Math.min(110, (jahre - 3) * 22));
     if (g === "Stute" && jahre >= 4 && jahre <= 16 && r() < PENSION.tragend * (zuchtHof() ? 1 : 0.3)) { const v = mkPferd("ev" + spiel.tag + Math.random().toString(36).slice(2, 6), p.rasse, 0, 6 + Math.floor(r() * 8), r, "Hengst"), seit = jzJetzt() - 1 - Math.floor(r() * 2);
       p.traechtig = { vater: hengstKopie(v), seit, geburt: seit + 4 }; }   // Dome (v317): manchmal eine tragende Stute – steht im Anfrage-Brief
-    const bf = Math.max(0.5, Math.min(1.5, R.ansehen / 100)), L = {}; PL_REIHE.forEach(k => { if (leistungAngeboten(k) && (k !== "paddockbox" || paddockFrei) && r() < PENSION_LEISTUNG[k].chance * bf * (k === "paddockbox" ? pdNachfrage() : 1)) L[k] = true; });
+    const bf = Math.max(0.5, Math.min(1.5, ansehenWirk() / 100)), L = {}; PL_REIHE.forEach(k => { if (leistungAngeboten(k) && (k !== "paddockbox" || paddockFrei) && r() < PENSION_LEISTUNG[k].chance * bf * (k === "paddockbox" ? pdNachfrage() : 1)) L[k] = true; });
     if (!L.paddockbox && pensionPlaetzeArt(false) <= 0 && paddockFrei && leistungAngeboten("paddockbox")) L.paddockbox = true;   // nur noch Paddockbox-Plätze frei
     if (g === "Hengst" && paddockFrei && leistungAngeboten("paddockbox") && r() < 0.6 * Math.min(1, pdNachfrage())) L.paddockbox = true;   // Hengste oft lieber in die Paddockbox (Dome: dürfen aber auch in normale Boxen)
     const weide = spiel.hof && (spiel.hof.weideHa || 0) > 0, sand = spiel.anlage && spiel.anlage.paddock;
@@ -14888,7 +14904,7 @@
     if (Math.random() < pensionChance()) { pensionAnfrageNeu(); return; }
     // mindestens 1 Anfrage je Jahreszeit (am vorletzten Tag), wenn Plätze frei sind, der Preis höchstens 25 % über dem Richtwert liegt und der Ruf nicht schlecht ist
     const R = pensionRegeln();
-    if (R.offen && R.letzteAnfrage !== jzJetzt() && datum().t >= tpj() - 1 && pensionChance() > 0 && pensionPreisF() >= 0.5 && R.ansehen >= 60) pensionAnfrageNeu();
+    if (R.offen && R.letzteAnfrage !== jzJetzt() && datum().t >= tpj() - 1 && pensionChance() > 0 && pensionPreisF() >= 0.5 && ansehenWirk() >= 60) pensionAnfrageNeu();
   }
   // Zufriedenheit ändern (mit Grund für Beschwerden)
   const GEGENSATZ = [["wird nach meinem Wunsch gefüttert", "wird nicht nach meinem Wunsch gefüttert"], ["der regelmäßige Weidegang", "kein Weidegang"], ["der regelmäßige Auslauf auf dem Sandpaddock", "kein Auslauf auf dem Sandpaddock"], ["gut gefüttert und gemistet", "hatte Hunger"], ["gut gefüttert und gemistet", "Box nicht gemistet"], ["Training nach Wunsch", "anders trainiert"]];   // v654 (Dome): in einer Rückmeldung nie 👍 und 👎 zum selben Thema – der neuere Grund gewinnt
@@ -14974,7 +14990,7 @@
     const gut = frisch(e.plus).slice(0, 3); let schlecht = frisch(e.log).slice(0, 3);
     if (!schlecht.length && e.zufr < 55) schlecht = (e.log || []).slice(0, 3).map(x => x.grund);   // Dome 21.10.: wer „nicht ganz glücklich“ ist, nennt auch ältere Gründe – kein „Zu meckern habe ich nichts“ dahinter
     const stimmung = e.zufr >= 75 ? `Ich fühle mich mit ${esc(p.name)} bei {euch|Ihnen} rundum wohl.` : e.zufr >= 55 ? `Im Großen und Ganzen bin ich zufrieden.` : `Ehrlich gesagt bin ich nicht ganz glücklich.`;
-    const ruf = R.ansehen >= 140 ? " Unter den Reitern hier in der Gegend hat {euer|Ihr} Stall übrigens einen richtig guten Ruf." : R.ansehen <= 70 ? " Unter den Reitern in der Gegend hört man über {euren|Ihren} Stall leider nicht nur Gutes." : "";
+    const ruf = ansehenWirk() >= 140 ? " Unter den Reitern hier in der Gegend hat {euer|Ihr} Stall übrigens einen richtig guten Ruf." : ansehenWirk() <= 70 ? " Unter den Reitern in der Gegend hört man über {euren|Ihren} Stall leider nicht nur Gutes." : "";
     const kurz = `${stimmung}${gut.length ? `<br>👍 ${gut.join(", ")}.` : ""}${schlecht.length ? `<br>👎 ${schlecht.join(", ")}.` : `<br>${e.zufr < 55 ? "👎 Woran es genau liegt, kann ich gar nicht sagen." : "👎 Zu meckern habe ich gerade nichts."}`}`;
     sammelEintrag("fb", { e, p, betreff: `Rückmeldung zu ${p.name}`, kurz, ruf, einzel: `ich wollte {euch|Ihnen} mal eine kurze Rückmeldung geben. ${stimmung}${gut.length ? `<br><br>👍 Was mir gefällt: ${gut.join(", ")}.` : ""}${schlecht.length ? `<br>👎 Was besser laufen könnte: ${schlecht.join(", ")}.` : `<br>${e.zufr < 55 ? "👎 Woran es genau liegt, kann ich gar nicht sagen – es läuft einfach nicht rund." : "👎 Zu meckern habe ich gerade nichts."}`}${ruf}` });
   }
@@ -15426,14 +15442,14 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   function futterwieseTag() {
     const d = datum(); if (d.s === 0 && d.t === 1) weiden().forEach(w => { delete w.schnitte; });
     const tag2 = Math.max(2, Math.ceil(tpj() * 0.7)), WS = weiden().filter(w => w.wiese && w.ha > 0 && !w.abbau);
-    if (WS.length) { const F = futterkammer(), frei = Math.max(0, Math.floor(F.lagerMax - lagerBelegt())), n = WS[0].schnitte || 0;   // Dome (v296): Fenster am Tag vor dem Mähen
+    if (WS.length) { const F = futterkammer(), frei = Math.max(0, Math.floor(F.lagerMax - lagerBelegt("lager"))), n = WS[0].schnitte || 0;   // Dome (v296): Fenster am Tag vor dem Mähen
       const morgen = (d.s === 0 && d.t === tpj()) ? 1 : (d.s === 1 && d.t === tag2 - 1 && n === 1) ? 2 : (d.s === 1 && d.t === tpj() && n === 2) ? 3 : 0;
       if (morgen) (spiel.hofFenster = spiel.hofFenster || []).push(`<h3>🌾 Morgen wird gemäht</h3><p>Bauer Lindner mäht morgen ${WS.map(w => `<b>${esc(w.name)}</b>`).join(", ")} auf <b>${esc(hofName())}</b> (${morgen}. Schnitt${morgen > 1 ? ", nur bei gutem Gras" : ""}). Erwartet etwa <b>${fmtKg(Math.round(WS.reduce((a, w) => a + WIESE.ertrag[morgen - 1] * w.ha * Math.min(1, w.gras / 70), 0)))}</b> Heu – im Futterlager ist Platz für ${fmtKg(frei)}. Was nicht hineinpasst, kauft der Bauer.</p>`); }
     if (d.s !== 1 && d.s !== 2) return;
     weiden().filter(w => w.wiese && w.ha > 0 && !w.abbau).forEach(w => {
       const n = w.schnitte || 0, jetzt = (d.s === 1 && d.t === 1 && n === 0) || (d.s === 1 && d.t === tag2 && n === 1 && w.gras >= WIESE.schnitt2Gras) || (d.s === 2 && d.t === 1 && n === 2 && w.gras >= WIESE.schnitt2Gras); if (!jetzt) return;
       const F = futterkammer(), kg = Math.round(WIESE.ertrag[n] * w.ha * Math.min(1, w.gras / 70)), regen = Math.random() < WIESE.regen, sorte = regen ? "heuStaub" : "heu";
-      const unterwegs = (F.liefer || []).reduce((a, x) => a + (FUTTER[x.k] && !FUTTER[x.k].stueck ? x.menge : 0), 0), platz = Math.max(0, F.lagerMax - lagerBelegt() - unterwegs), rein = Math.min(kg, Math.floor(platz)), rest = kg - rein;
+      const platz = Math.max(0, F.lagerMax - lagerBelegt("lager") - lagerUnterwegs("lager")), rein = Math.min(kg, Math.floor(platz)), rest = kg - rein;
       F.lager[sorte] = Math.round(((F.lager[sorte] || 0) + rein) * 1000) / 1000; delete F.warn.raufutter; delete F.warn[sorte];
       const lohn = Math.round(WIESE.lohn * w.ha); buchen(-lohn, `Bauer: Mähen ${w.name}`); const erloesRest = Math.round(rest * FUTTER[sorte].preis * HEU_VERKAUF * 100) / 100; if (rest) buchen(erloesRest, `Heu an den Bauern: ${w.name}`);   // v662 (Dome): derselbe Preis wie im Lager-Verkauf
       w.schnitte = n + 1; w.gras = Math.max(5, w.gras - WIESE.grasWeg);
@@ -16007,6 +16023,9 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Dispo</b> (je Hofkonto, Dome 19.10.): Rahmen −${fmt(DISPO.rahmen)}, ${prozent(DISPO.zins)} Zinsen im Jahr (je Jahreszeit ein Viertel, Buchung „Dispo: Zinsen“). Bis −${fmt(DISPO.rahmen)} kauft der Spieler normal ein, bei oder unter −${fmt(DISPO.rahmen)} sind alle Käufe gesperrt (Futter, Einstreu, Medikamente, Pferde, Bauen, Land, Ausrüstung, Labor); Rechnungen, Gehälter, Kreditraten und die Kolik-OP laufen weiter. Kreditraten dürfen bis −${fmt(DISPO.rahmen)} abgebucht werden – erst darüber gilt die Rate als verpasst (Mahnung wie beim Kredit). Aufzucht und Ausbildung sind schon bei jedem Minus gesperrt. Ablauf: ist das Konto zu Beginn einer Jahreszeit im Minus, zählt <code>jzMinus</code>; unter −${fmt(DISPO.rahmen)} oder ab ${DISPO.jzMinus} Jahreszeiten hintereinander kommt der Brief „Kündigung des Kontos angedroht“ (Bank-Ansehen −5), nach einer weiteren Jahreszeit im Minus Pfändung der Pferde zu ¾, bleibt das Konto danach im Minus: Insolvenz (bei mehreren Höfen nur dieser Hof, beim letzten Hof ist das Spiel verloren). Im Plus: Entwarnung. Mitarbeiter kündigen wie bisher, wenn das Konto am Jahreszeit-Ende im Minus ist. <b>Das zentrale Konto hat kein Dispo</b> – eine Überweisung vom zentralen Konto auf einen Hof im Minus bringt ihn aus dem Dispo.</p>
       <p><b>Kredit</b> (Hausbank): ${prozent(KREDIT.zins)} Zinsen im Jahr, Rate jede Jahreszeit (Annuität): Rate = Summe × q ÷ (1 − (1 + q)<sup>−n</sup>) mit q = Zins ÷ 4, n = Anzahl Raten. Hofkredit ${fmt(10000)}, ${KREDIT.jz} Raten → ${fmt(kreditRate(10000, KREDIT.zins, KREDIT.jz))}. Je Rate: Zinsen = Restschuld × q, Rest tilgt. Abbuchung automatisch zu Beginn jeder Jahreszeit (erste Rate in der Jahreszeit nach der Aufnahme), offene Raten zuerst. Reicht das Geld nicht: Mahnung + Mahngebühr (10 %, mind. 20 €) je verpasster Rate, bezahlen im Brief oder Finanzen → Bank. 2 Tage vor der dritten Rate Warnfenster (zwangsWarnungZeigen). ${KREDIT.verpasst} offene Raten → Pfändung: alle eigenen Pferde des Hofs (auch extern, Fohlen bei Fuß mit) zu ¾ des Werts zwangsverkauft; reicht Erlös + Kasse für die offenen Raten, bleibt der Hof – sonst Zwangsversteigerung (beim letzten Hof: Spiel verloren, Spielstand gelöscht).</p>
       <p><b>Weitere Kredite</b> (Finanzen → Bank): bis ${prozent(KREDIT.beleihung)} des Immobilienwerts minus Restschuld (Start: 16.000 € − 10.000 € = 6.000 €), in 1.000-€-Schritten, Laufzeit ${KREDIT.laufzeiten.map(n => n / 4).join(" / ")} Jahre, gleicher Zins. Nicht, solange eine Rate offen ist. Finanzen-Posten: Hofkauf, Kredit (Auszahlung), Kredit: Zinsen, Kredit: Tilgung, Kredit: Mahngebühr.</p>
+      <h3>🏢 Verwaltung und Lagerung (v759)</h3>
+      <p><b>Verwaltung (Büro):</b> jeder Hof hat eins (Stufe 1 Bürowagen 5 × 5 m, Stufe 2 Bürohaus 10 × 10 m, Stufe 3 großes Gebäude 30 × 15 m; Preise ${fmt(BAUTEN.verwaltung.preis[0])} / ${fmt(BAUTEN.verwaltung.preis[1])} / ${fmt(BAUTEN.verwaltung.preis[2])}, alle Preise werden noch überprüft). Wirkung (<code>VERWALTUNG</code>): Stufe 1 keine; Stufe 2/3 geben ein Ansehen von +${VERWALTUNG.ansehen[1]}/+${VERWALTUNG.ansehen[2]} bei den Einstellern (Bonus auf das geheime Ansehen, wirkt auf Anfragen, Preise, Geduld – kein Dauerzuwachs) und +${VERWALTUNG.zufr[1]}/+${VERWALTUNG.zufr[2]} Zufriedenheit je Jahreszeit bei allen Mitarbeitern. Unter 50 % Zustand wirkt sie nicht.</p>
+      <p><b>Lagerung wie in echt:</b> Kraftfutter, Müsli, Zusätze, Leckerli und Spezialfutter lagern in den Futterkammern der Ställe (<code>KAMMER</code>: je Stallgebäude ${KAMMER.stufe.join(" / ")} kg nach Stufe + ${KAMMER.jeBox} kg je Box, mindestens ${KAMMER.min} kg), Raufutter (Heu, Heulage, Stroh, Heucobs) und Einstreu im Heu- und Strohlager (${LAGER_START} kg, mit Lager-Gebäude mehr). Gekauft wird nur, wo Platz ist; bestellte Lieferungen zählen mit. Leckstein zählt nicht.</p>
       <h3>🗺️ Hofplan als Raster (v752–v755)</h3>
       <p><b>Raster:</b> 1 Kachel = ${PLAN_M} × ${PLAN_M} m, feine Linien 1 m, kräftige alle 25 m. Bauland besteht aus Stücken (<code>hof.plan.st</code>), neue Spiele starten mit ${haTxt(PLAN_START_HA)} = ${PLAN_STUECK[0]} × ${PLAN_STUECK[1]} Kacheln; alte Spielstände bekommen ein Rechteck aus ihrem Bauland und müssen alles selbst aufstellen (vorher ist Ort gesperrt, nur Gebäude, die irgendwo passen). Kein Hofplatz und kein Wegezuschlag mehr – der freie Platz ist der Weg. Bauland belegt = Summe der Grundrisse.</p>
       <p><b>Grundrisse</b> (Länge × Tiefe): Boxenstall und Paddockboxenstall gleiche Boxen (je 3,5 × 3,5 m, zwei Reihen) plus Futterkammer 5 m am Ende (6 Boxen 20 × 10 m, Paddockboxenstall 25 m tief), Quarantäne eine Reihe + Futterkammer, Abfohlstall 4,5 m je Box + Futterkammer, Verwaltung Stufe 1/2/3 = 5 × 5 / 10 × 10 / 30 × 15 m (jeder Hof hat ein Büro), Reitplatz/Reithalle 40 × 20 / 60 × 20 / 80 × 40 m, Roundpen 20 × 20, Trail 40 × 20, Rennbahn 200 × 100, Sandpaddock 20 m breit nach Fläche (400/600/800 m² + ${PD_FLAECHE} m² je Vergrößerung), Lager 20 × 10, Waschplatz/Solarium/Sattelkammer 5 × 5, Parkplatz (Pferdeanhänger) 15 × 10 m.</p>

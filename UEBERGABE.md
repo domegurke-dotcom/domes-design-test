@@ -24,6 +24,7 @@ Alles auf `main`, Details je Version in `CLAUDE.md` (v769–v803). Kurz:
 **Selbst gesetzte Zahlen (Dome informieren):** Winterquote 40 %, ein freier Tag je Jahreszeit (`WEIDE_FREI_MIN`), Roundpen-Raster aufgerundet (12 m → 15 m).
 **v804 ✅ Boxnummern je Gebäude überall** (Dome: ohne Gebäudenamen; `bnr(i)`, neue Texte nie mit `i + 1`).
 **Offen / auf Dome warten:** (1) Neues Update-Fenster für v799–v803? (nur auf Domes Ansage). (3) Große Tests nur mit Domes Ja + Bilder-Variante; Tutorial-Spieler nur zusammen damit. (4) Pferdefriedhof-Idee (Thema 26) erst nach Domes Ja.
+**Regeln von Dome (24.10.):** Übergabe bei jeder Auslieferung pflegen; bei missverständlichen Wünschen erst nachfragen, nicht raten.
 **Achtung:** nach jeder Änderung alle Skriptblöcke mit `node --check` prüfen; Kommentare nur am Zeilenende.
 
 ### Aufnahme von Dome (24.10., v762) – Etappe 1+2 fertig (Claude Team, v763/v764)

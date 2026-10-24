@@ -10,10 +10,10 @@ const { chromium } = require('playwright'); const path = require('path');
     // --- Verwaltung ---
     const v = gebaeude().find(x => x.typ === 'verwaltung'); ok('Büro Stufe 1 vorhanden', !!v && v.stufe === 1, '');
     pensionRegeln().ansehen = 100; const a1 = ansehenWirk(); ok('Stufe 1 wirkt noch nicht (Ansehen 100)', a1 === 100 && maGebaeudeZufr() === maGebaeudeZufr(), a1);
-    const z1 = maGebaeudeZufr(); v.stufe = 2; ok('Stufe 2: Ansehen +8', ansehenWirk() === 108, ansehenWirk()); const z2 = maGebaeudeZufr(); ok('Stufe 2: Mitarbeiter-Zufriedenheit +1', z2 === z1 + 1, z1 + ' → ' + z2);
-    v.stufe = 3; ok('Stufe 3: Ansehen +16, Zufriedenheit +2', ansehenWirk() === 116 && maGebaeudeZufr() === z1 + 2, ansehenWirk() + ' / ' + maGebaeudeZufr());
+    const z1 = maGebaeudeZufr(); v.stufe = 2; ok('Stufe 2: Ansehen +4', ansehenWirk() === 104, ansehenWirk()); const z2 = maGebaeudeZufr(); ok('Stufe 2: Mitarbeiter-Zufriedenheit +1', z2 === z1 + 1, z1 + ' → ' + z2);
+    v.stufe = 3; ok('Stufe 3: Ansehen +8, Zufriedenheit +2', ansehenWirk() === 108 && maGebaeudeZufr() === z1 + 2, ansehenWirk() + ' / ' + maGebaeudeZufr());
     v.zustand = 40; ok('Unter 50 % Zustand wirkt sie nicht', ansehenWirk() === 100 && maGebaeudeZufr() === z1, ansehenWirk()); v.zustand = 100; v.stufe = 1;
-    pensionRegeln().ansehen = 195; v.stufe = 3; ok('Ansehen bleibt bei 200 gedeckelt', ansehenWirk() === 200, ansehenWirk()); v.stufe = 1; pensionRegeln().ansehen = 100;
+    pensionRegeln().ansehen = 197; v.stufe = 3; ok('Ansehen bleibt bei 200 gedeckelt', ansehenWirk() === 200, ansehenWirk()); v.stufe = 1; pensionRegeln().ansehen = 100;
     // --- Lagerung ---
     const F = futterkammer(); ok('Heu liegt im Lager, Hafer in der Futterkammer', lagerOrt('heu') === 'lager' && lagerOrt('streuStroh') === 'lager' && lagerOrt('hafer') === 'kammer' && lagerOrt('muesli') === 'kammer' && lagerOrt('mineral') === 'kammer' && lagerOrt('leckerli') === 'kammer', '');
     const km = kammerMax(); ok('Futterkammer-Platz: Stall Stufe 1 mit 6 Boxen = 200 + 6 × 30 = 380 kg', km === 380, km);

@@ -6,6 +6,7 @@ const { chromium } = require('playwright'); const path = require('path');
   await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'H'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(300);
   const R = await pg.evaluate(() => { const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : ''));
     document.getElementById('dlg').hidden = true; speicherSperre = true; spiel.stufenAn = false; spiel.tippsAus = true; VET.verbotAb = 99; pensionRegeln().offen = true;
+    gebaeude();   // erst die Gebäude anlegen (sie setzen die Boxstufe des Hofs)
     spiel.boxen.forEach((bx, i) => { bx.stufe = i < 3 ? 1 : 2; });   // 3 einfache, 3 bessere Boxen (ein Gebäude – für den Test reicht es)
     let ws = 0; for (let i = 0; i < 40; i++) { spiel.pensionAnfragen = []; pensionAnfrageNeu(); const a = spiel.pensionAnfragen[0]; if (a && a.stufeWunsch) ws++; }
     ok('Anfragen nennen manchmal eine Wunsch-Boxstufe', ws > 5, ws + ' von 40');

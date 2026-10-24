@@ -15,6 +15,10 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### Stand für die nächste Sitzung (Claude Team, 24.10. – v762, alles auf `main`)
+**Fertig seit dem Hofplan:** v761 Luzerne im Heu- und Strohlager (Dome: ja); v762 Update-Fenster Stufe 4 (`NEUES_STAND` 761, Datum 24.10.2026: Hofplan, Verwaltung ⚠️, Lagerung ⚠️; alles andere von Dome abgelehnt – nie wieder anbieten, Liste in CLAUDE.md bei v762); Test `aufnahme-fixes-test` repariert (Zufallsschlüssel `data-k` beim Bildvergleich ignoriert, kein Spielfehler). Selbst gesetzte Zahlen (Verwaltung +4/+8, Futterkammer 200/350/600 kg + 30 je Box, Büro-Maße und Preise) hat Dome bestätigt („so lassen“).
+**Offen / auf Dome warten:** (1) Große Tests (etappen-test, hof-gesamttest, neuladen-test) – für den Hofplan angepasst, nie gelaufen; erst fragen, welche Bilder-Variante (aus/fehler/alle). (2) Alle Preise nochmal durchgehen (`PROJEKT-CHAT-THEMEN.md` Punkt 12). (3) Domes Abnahme des Hofplans. (4) Möglicher Zusatz: eigene Sorte „Luzerne-Cobs“ für die Futterkammer – nur auf Wunsch. (5) Nächstes Update-Fenster: nur Änderungen ab v762, und nur auf Domes Ansage. Tutorial-Spieler immer allein laufen lassen.
+
 ### Sitzung 24.10. nachts – Hofplan-Etappen (Claude Team, Opus) – Fortschritt
 Dome: „Ja für alle Etappen, Fragen sammeln und am Ende rausgeben“; Wecker 6:05 prüft, ob alles fertig ist, sonst weiter.
 | Etappe | Stand |
@@ -29,7 +33,7 @@ Fragen stehen in `OFFENE-FRAGEN.md` („Hofplan-Etappen“). Große Tests (etapp
 **v759 (Dome-Antworten 2):** Verwaltung wirkt (Ansehen +4/+8 ab v760, Mitarbeiter-Zufriedenheit +1/+2 ab Stufe 2), Lagerung wie in echt (Kraftfutter in den Futterkammern der Ställe, Raufutter/Einstreu im Heu- und Strohlager); Preise: alles nochmal anschauen (Thema 12). Zahlen in OFFENE-FRAGEN.md.
 **v758 (Dome-Antworten):** Futterkammer im Stall, Verwaltung als Gebäude (Büro Stufe 1–3), Bauland aus 0,5-ha-Rechtecken (auch alte Spielstände), Ort-Plan mit Pfeilen für Weide/Gelände, Sandpaddock gezielt – siehe OFFENE-FRAGEN.md.
 **Nebenbei (Dome-Aufnahme/Wünsche):** v755 Whiteboard (automatisch zugeteilte Mitarbeiter mit ✕ entfernbar = „niemand“, Weidepferde zählen als versorgt), v756 Whiteboard zeigt alle gebuchten Pensions-Extras, Enzyklopädie am PC 5 Spalten (v754).
-**Danach (Dome):** Update-Fenster „Neu in deinem Spiel“ – Änderungen ab v725 zum Ankreuzen anbieten.
+**Danach (Dome):** Update-Fenster – ✅ erledigt in v762.
 
 ### Sitzung 24.10. – v733–v751 (Claude Team, Sonnet), alles auf `main`
 Thema: Pferdeköpfe/Randabstand und **realistische Fellfarben nach Studien**. Details je Version in `CLAUDE.md` (v733–v751).
@@ -40,8 +44,8 @@ Thema: Pferdeköpfe/Randabstand und **realistische Fellfarben nach Studien**. De
 - **Fehler gelernt:** Backticks in bzn-Texten (Template-Literal) brechen das Spiel – `<code>` nehmen; nach jeder Änderung alle Skriptblöcke mit `new Function` prüfen.
 
 **Offen / auf Dome warten (nichts davon ohne ihre Ansage bauen):**
-1. **Hofplan als Raster** – `PLAN-HOFPLAN.md` ist fertig und beantwortet. **Dome hat am 24.10. gesagt: die nächste Sitzung beginnt mit dem Etappenbau (= Los), in Opus.** Etappen H1–H5, nach jeder Etappe testen, hochladen, Test-Anleitung geben und laut CLAUDE.md höchstens eine Etappe, dann auf Dome warten, sofern sie nichts anderes sagt.
-2. **Update-Fenster „Neu in deinem Spiel“** (`NEUES`): Dome 24.10.: **erst nach den Hofplan-Etappen** – dann per Auswahlkästchen (nur Änderungen ab v725, inkl. Hofplan).
+1. Hofplan als Raster: ✅ H1–H5 fertig (v752–v754), Abnahme steht aus.
+2. Update-Fenster: ✅ erledigt (v762).
 3. Möglicher Zusatz: Tobiano bei Warmblütern (laut Review vorhanden, ohne Zahl) – nur auf Wunsch.
 4. Alte Punkte aus der Nachricht darunter (Fragen 1–4 vom 23.10.) sind weiter unbeantwortet.
 

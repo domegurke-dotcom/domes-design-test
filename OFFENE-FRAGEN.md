@@ -45,3 +45,4 @@ Stichprobe 500 Pferde je Rasse (`neuesPferd` mit Markt-Farbverteilung). **Zu hä
 - **Kein Wohnhaus/Hofplatz mehr:** Früher waren 0,2 ha Hofplatz fest belegt, jetzt ist der freie Platz zwischen den Gebäuden der Weg. Soll es ein Wohnhaus als eigenes Gebäude geben?
 - **Alte Spielstände:** Ort ist nur gesperrt, solange ein Gebäude im Feld liegt, das auch irgendwo hinpasst (ist das Bauland zu klein, sperrt es nicht – sonst käme man nie wieder heraus).
 - **Feinraster (Dome 24.10. „beides“):** feine Linien je 1 m, kräftige Linie alle 25 m; verschoben wird weiter in 5-m-Schritten.
+- **H2 Anbau (v753):** Der Anbau wächst am Ende des Gebäudes (Knopf „↔️ andere Seite“ für den Anfang). Weil je 2 Boxen nur 3,5 m dazukommen, wird ein Stall erst ab und zu eine Kachel (5 m) länger (6 und 8 Boxen = 15 m, 10 Boxen = 20 m). Teil-Umbau auf höhere Stufe ändert den Grundriss nicht.

@@ -123,6 +123,11 @@ const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner 
     await pg.click('#stallTitel'); await pg.waitForTimeout(200);
     ok('Titel nochmal antippen → zurück zum Whiteboard', await pg.evaluate(() => /Whiteboard/.test(document.querySelector('#nebenSchirm .hf-kopf').textContent) && !document.querySelector('#nebenSchirm .boxen-liste')));
     ok('Whiteboard kennt die neue Box', await pg.evaluate(i => /Anna/.test(whiteboardHTML()) && spiel.boxen[i].pferd.name === 'Anna', nb)); }
+
+  // ===== v766: Wünsche an die Mitarbeiter – alle Aufgaben zeigen, auch ohne Pfleger/Bereiter =====
+  await pg.evaluate(() => { spiel.mitarbeiter = [{ id: 'ms1', typ: 'stallbursche', name: 'Stefan', geschlecht: 'm', zufr: 70 }]; spiel.stufenAn = false; if (!waschGeb()) { gebaeude().push({ gid: 'gw1', typ: 'waschplatz', stufe: 1, zustand: 100 }); spiel.anlage.waschplatz = true; } zeigeBoxen(); });
+  { const t = await pg.evaluate(() => { stallAlt = false; wbSicht = 'boxen'; zeigeWhiteboard(); return [...document.querySelectorAll('#nebenSchirm [data-wbwu]')].map(e => e.dataset.wbwu.split(':')[1]); });
+    ok('nur Stallbursche angestellt: Wünsche zeigen trotzdem Putzen, Mähne/Schopf, Waschen, Training', ['putzen', 'maehne', 'waschen', 'training', 'fuettern', 'misten'].every(k => t.includes(k)), JSON.stringify(t)); }
   // Pinnwand
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; const bx = spiel.boxen.find(x => x.pferd); const p = bx.pferd; p.schleifen = Array.from({ length: 12 }, (_, i) => ({ st: 1 + i % 3, pl: 1 + i % 6, c: false, von: 8, platz: 1 + i % 6, pruef: 'Dressur A', turnier: 'Test', tag: 5 + i })); pinnwandOeffnen(p); });
   await pg.waitForTimeout(300);

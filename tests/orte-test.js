@@ -165,13 +165,28 @@ const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner 
   await pg.evaluate(() => { spiel.pensionHeute = null; spiel.boxen.forEach(b => { if (b.pferd) delete b.pferd.trainHeute; }); spiel.boxen.forEach(b => { if (b.pferd && b.pferd.einsteller && /^ex\d$/.test(b.pferd.einsteller)) b.pferd = null; }); spiel.einsteller = (spiel.einsteller || []).filter(e => !/^ex\d$/.test(e.eid)); planNeu(); });
   // Whiteboard: roter Rahmen
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.boxen.forEach(b => { if (b.pferd) b.pferd.reheOk = spiel.tag; });
-    const p = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna').pferd; const g = paddocks()[0]; wbIstSetzen(p, g.gid); const w = weiden().find(x => !x.wiese); p.weide = { seit: spiel.tag, wid: w.wid }; stallAlt = false; wbSicht = 'weiden'; zeigeWhiteboard(); });
+    const p = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna').pferd; const g = paddocks()[0]; wbIstSetzen(p, g.gid); delete p.weideNachm; const w = weiden().find(x => !x.wiese); p.weide = { seit: spiel.tag, wid: w.wid }; stallAlt = false; wbSicht = 'weiden'; zeigeWhiteboard(); });
   await pg.waitForTimeout(200);
   ok('Whiteboard: Sandpaddock geplant, Pferd steht auf der Weide → roter gepunkteter Rahmen', await pg.evaluate(() => !![...document.querySelectorAll('#nebenSchirm .wb-chip.rehe')].find(x => /Anna/.test(x.textContent)) || /Anna soll laut Plan/.test(document.querySelector('#nebenSchirm').innerHTML)));
   await bild('rahmen');
   await pg.evaluate(() => { const b = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna'); delete b.pferd.weide; zeigeWhiteboard(); });
   ok('… steht es wieder richtig (nicht draußen), verschwindet der Rahmen', await pg.evaluate(() => !/Anna soll laut Plan/.test(document.querySelector('#nebenSchirm').innerHTML)));
 
+  // ===== v772: nach dem Verschieben (gedrückt halten, ziehen) kein Kreis-Menü =====
+  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; zeigeSchirm(null); hofBereich = 'plan'; planWahl = null; planVorschau = null; planLand = null; zeigeHof('hof'); }); await pg.waitForTimeout(300);
+  { const id = await pg.evaluate(() => planItems().find(it => it.typ === 'sandpaddock').id);
+    const kachel = await pg.evaluate(id => { const it = planItems().find(x => x.id === id); return document.querySelector(`#planSvg [data-pit="${id}"]`).getBoundingClientRect().width / it.l; }, id);
+    let bewegt = false;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [0, 2], [0, -2]]) {
+      const pos0 = await pg.evaluate(id => JSON.stringify(hofPlan().pos[id]), id), box0 = await pg.locator(`#planSvg [data-pit="${id}"]`).boundingBox();
+      await pg.mouse.move(box0.x + box0.width / 2, box0.y + box0.height / 2); await pg.mouse.down(); await pg.waitForTimeout(250);
+      await pg.mouse.move(box0.x + box0.width / 2 + dx * kachel, box0.y + box0.height / 2 + dy * kachel, { steps: 6 }); await pg.mouse.up(); await pg.waitForTimeout(250);
+      if (await pg.evaluate(([id, p0]) => JSON.stringify(hofPlan().pos[id]) !== p0, [id, pos0])) { bewegt = true; break; } }
+    ok('Sandpaddock im Plan verschoben', bewegt);
+    ok('… danach kein Kreis-Menü', await pg.evaluate(() => !document.querySelector('.plan-radial') && planWahl === null));
+    await pg.evaluate(() => { planWahl = null; planNeu(); }); await pg.waitForTimeout(500);
+    await pg.locator(`#planSvg [data-pit="${id}"]`).dispatchEvent('click'); await pg.waitForTimeout(200);
+    ok('… ein Antippen öffnet es dagegen', await pg.evaluate(() => !!document.querySelector('.plan-radial'))); }
   // ===== v771: Plan und Standort immer abgeglichen; Köpfe im Orte-Plan auf dem Platz =====
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; zeigeSchirm(null); const P = neuesPferd({ rasse: 'haflinger', geschlecht: 'Wallach', alter: 8, name: 'Bea' }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); P.reheOk = spiel.tag; const bx = spiel.boxen.find(x => !x.pferd && boxFrei(x) && !x.paddock && !x.quar && !x.abfohl && !x.offen); bx.pferd = P; bx.krippeVoll = true; window.__bea = spiel.boxen.indexOf(bx); delete P.weideNachm; });
   const bea = () => pg.evaluate(() => { const b = spiel.boxen[window.__bea], p = b.pferd; const pl = wbPlanJetzt(p); return { paddock: p.paddock && p.paddock.pid, weide: !!p.weide, plan: pl && { pd: pl.pd, ziel: pl.ziel } }; });
@@ -187,7 +202,15 @@ const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner 
   // ohne Plan: von Hand auf den Sandpaddock → Whiteboard zeigt es sofort
   await pg.evaluate(() => { aktBox = window.__bea; spiel.aktBox = aktBox; aktenModus = 'pflege'; aktenReiter = 'platz'; ortModus = null; zeigeAkte(); }); await pg.waitForTimeout(200);
   await klick('.plan-scroll.ort [data-pdgid="gpb"]'); await pg.waitForTimeout(200);
-  { const r = await bea(); ok('ohne Plan von Hand auf Sandpaddock B gestellt → Whiteboard-Plan zeigt B (kein Rückfrage-Fenster)', r.paddock === 'gpb' && r.plan && r.plan.pd && r.plan.ziel === 'gpb', JSON.stringify(r)); }
+  { const r = await bea(); ok('ohne Plan von Hand auf Sandpaddock B gestellt → Whiteboard-Plan zeigt sofort B (täglich)', r.paddock === 'gpb' && r.plan && r.plan.pd && r.plan.ziel === 'gpb', JSON.stringify(r)); }
+  await pg.waitForTimeout(250);
+  ok('… und fragt: täglich, alle 2 Tage oder nur heute', await pg.evaluate(() => !document.getElementById('dlg').hidden && /jeden Tag/.test(document.getElementById('dlgInhalt').textContent) && /Alle 2 Tage/.test(document.getElementById('dlgKnoepfe').textContent) && /Nur heute/.test(document.getElementById('dlgKnoepfe').textContent)));
+  await pg.click('#dlgKnoepfe button:has-text("Alle 2 Tage")'); await pg.waitForTimeout(150);
+  ok('„Alle 2 Tage“ → Plan nur für einen der beiden Tage', await pg.evaluate(() => { const pl = wbPlanJetzt(spiel.boxen[window.__bea].pferd); return !!pl && pl.halb.length === 1; }));
+  await pg.evaluate(() => { const b = spiel.boxen[window.__bea]; wbAnwenden('c:' + window.__bea + ':gpb:' + wbPlanJetzt(b.pferd).halb[0], 'drin'); delete b.pferd.paddock; zurueckInBox(b); aktBox = window.__bea; aktenModus = 'pflege'; aktenReiter = 'platz'; ortModus = null; zeigeAkte(); }); await pg.waitForTimeout(200);
+  await klick('.plan-scroll.ort [data-pdgid="gpb"]'); await pg.waitForTimeout(300);
+  await pg.click('#dlgKnoepfe button:has-text("Nur heute")'); await pg.waitForTimeout(150);
+  ok('„Nur heute (kein Plan)“ → Pferd bleibt draußen, aber ohne Plan', await pg.evaluate(() => { const p = spiel.boxen[window.__bea].pferd; return !!p.paddock && !wbPlanJetzt(p); }));
   // Köpfe im Orte-Plan liegen auf dem Platz
   await pg.evaluate(() => { const p = spiel.boxen[window.__bea].pferd; delete p.paddock; zurueckInBox(spiel.boxen[window.__bea]); p.trainHeute = { tag: spiel.tag, liste: [], verbraucht: 0, orte: ['reitplatz'] }; aktenModus = 'pflege'; aktenReiter = 'platz'; ortModus = null; zeigeStall(); zeigeAkte(); }); await pg.waitForTimeout(300); await pg.evaluate(() => { const e = document.querySelector('.plan-scroll.ort'); if (e) e.scrollIntoView({ block: 'center' }); }); await pg.waitForTimeout(200);
   { const g = await pg.evaluate(() => { const k = document.querySelector('.plan-scroll.ort .plan-kopf'); if (!k) return null; const kr = k.getBoundingClientRect(); const reitplaetze = [...document.querySelectorAll('.plan-scroll.ort g.pl-geb')].filter(e => /Reitplatz/.test(e.textContent)).map(e => e.getBoundingClientRect()); return { in: reitplaetze.some(r => kr.left >= r.left - 2 && kr.right <= r.right + 2 && kr.top >= r.top - 2 && kr.bottom <= r.bottom + 2) }; });

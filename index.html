@@ -1132,7 +1132,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "780";
+  const SPIEL_VERSION = "781";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1140,12 +1140,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=780"></script>
-<script src="pferd.js?v=780"></script>
-<script src="boxstufen.js?v=780"></script>
-<script src="kopfneu.js?v=780"></script>
-<script src="waschbild.js?v=780"></script>
-<script src="avatare.js?v=780"></script>
+<script src="lz-string.min.js?v=781"></script>
+<script src="pferd.js?v=781"></script>
+<script src="boxstufen.js?v=781"></script>
+<script src="kopfneu.js?v=781"></script>
+<script src="waschbild.js?v=781"></script>
+<script src="avatare.js?v=781"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -11229,7 +11229,15 @@
     if (!weideDa()) return false; const ww = weideOhneMix(p); if (!ww) return false;   // v394 (Dome): Stallbursche/Azubi stellen Hengst und Stute nie zusammen – keine passende Weide → bleibt drin
     aufWeide(p, b, W.ma, ww.wid); p.weide.nachm = true; p.auslaufLog = { tag: spiel.tag, wer: W.name || "der Stallbursche", ort: ww.name }; W.erledigt = true; return true;
   }
-  function weideNachmTag() { spiel.boxen.forEach(b => { const p = b.pferd, W = p && p.weideNachm; if (W) weideNachmAusfuehren(b, W); }); }
+  function paddockboxBereinigen() {   // v781 (Dome): Pferde in der Paddockbox gehören nicht auf einen Sandpaddock – alte Spielstände: raus aus dem Plan (jede Jahreszeit), zurück in die Box
+    if (spiel.ansehen) return; let n = 0;
+    spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot || !b.paddock) return;
+      const weg = D => { if (!D) return; const pl = wbPlanVon(p, D); if (pl && pl.pd) { WB_FELDER.forEach(f => delete D[f]); if (fremd(p)) D.auslauf = "box"; n++; } };
+      weg(p); Object.keys(spiel.wbPlan || {}).forEach(z => weg((spiel.wbPlan[z] || {})[p.id]));
+      if (p.paddock && p.paddock.pid) { delete p.paddock; delete p.weideNachm; zurueckInBox(b); n++; } });
+    if (n) { speichern(); try { zeigeStall(); } catch (e) {} }
+  }
+  function weideNachmTag() { try { paddockboxBereinigen(); } catch (e) { console.error(e); } spiel.boxen.forEach(b => { const p = b.pferd, W = p && p.weideNachm; if (W) weideNachmAusfuehren(b, W); }); }
   // v672 (Dome 23.10.): alte Spielstände – die neuen Flächenmaße (v667) brauchen mehr Bauland; jeder Hof bekommt einmalig 1 ha Bauland geschenkt, mit Brief (neue Spiele nicht)
   function flaechenGeschenk() {
     const H = spiel.hof; if (!H || H.flaecheV === 1) return; H.flaecheV = 1;
@@ -17593,6 +17601,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   addEventListener("resize", () => { try { blasePosition(); } catch (e) {} }); addEventListener("scroll", () => { try { blasePosition(); } catch (e) {} }, true);
   setInterval(() => { try { hinweisPruefen(); } catch (e) { console.error("Hinweis:", e); } }, 400);   // T1: Hinweisblasen (ersetzt tippPruefen)
   // v307: Startbild erst jetzt, wenn alle Teile des Skripts bereitstehen; ein Fehler beim Zeichnen darf den Start nie aufhalten
+  try { if (hatSpielstand) paddockboxBereinigen(); } catch (e) { console.error("Paddockboxen:", e); }
   try { stallFormat(); zeigeStall(); zeigeTag(); } catch (e) { console.error("Startbild:", e); }
   // S1: alter Spielstand → einmal auf Platz 1 (bzw. den freien Platz) · nach einem Platzwechsel direkt weiterspielen (der Platz bekommt den ergänzten Stand, damit kein „ungespeicherter Fortschritt“ entsteht)
   let startFlag = null; try { startFlag = sessionStorage.getItem(START_FLAG); sessionStorage.removeItem(START_FLAG); } catch (e) {}

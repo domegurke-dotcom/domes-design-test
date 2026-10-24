@@ -15,7 +15,7 @@ const [W, H] = (process.argv[2] || '390x844').split('x').map(Number), ORD = proc
     ok('Anbau fertig: 2 neue Boxen', spiel.boxen.length === boxen0 + 2 && !a.bau);
     let h = bauenHTML();
     ok('Anbau (gleiche Stufe) zählt zum Stall: verschmolzen, 8 Boxen, kein eigener Eintrag (v707)', st.boxen === n0 + 2 && !gebaeude().includes(a) && !/geb-kind/.test(h) && !h.includes('Boxen­stall (Anbau'), st.boxen + '');
-    const hp = hofplanSVG(); ok('Hofplan: eine Zeichnung, Zahl = alle Boxen', hp.includes(`>${n0 + 2}<`) || hp.includes(`${n0 + 2}`));
+    const hp = planSVG(); ok('Hofplan: eine Zeichnung, Zahl = alle Boxen', hp.includes(`>${n0 + 2}<`) || hp.includes(`${n0 + 2}`));
     // Umbau mit wählbarer Boxenzahl
     ok('Umbau-Preis für 2 Boxen kleiner als für alle', umbauPreisN(st, 2) < umbauPreis(st), umbauPreisN(st, 2) + ' < ' + umbauPreis(st));
     umbauDialog(st, 2); ok('Fenster mit Auswahl „Wie viele Boxen?“', !!document.getElementById('umbauMenge') && /2 der/.test(document.getElementById('dlgInhalt').textContent));

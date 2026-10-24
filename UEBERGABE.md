@@ -25,7 +25,7 @@ Thema: Pferdeköpfe/Randabstand und **realistische Fellfarben nach Studien**. De
 
 **Offen / auf Dome warten (nichts davon ohne ihre Ansage bauen):**
 1. **Hofplan als Raster** – `PLAN-HOFPLAN.md` ist fertig und beantwortet. **Dome hat am 24.10. gesagt: die nächste Sitzung beginnt mit dem Etappenbau (= Los), in Opus.** Etappen H1–H5, nach jeder Etappe testen, hochladen, Test-Anleitung geben und laut CLAUDE.md höchstens eine Etappe, dann auf Dome warten, sofern sie nichts anderes sagt.
-2. **Update-Fenster „Neu in deinem Spiel“** (`NEUES`): seit v725 sind viele Änderungen unveröffentlicht; Dome fragen, ob ein Fenster kommen soll, dann per Auswahlkästchen (nur Änderungen ab v725).
+2. **Update-Fenster „Neu in deinem Spiel“** (`NEUES`): Dome 24.10.: **erst nach den Hofplan-Etappen** – dann per Auswahlkästchen (nur Änderungen ab v725, inkl. Hofplan).
 3. Möglicher Zusatz: Tobiano bei Warmblütern (laut Review vorhanden, ohne Zahl) – nur auf Wunsch.
 4. Alte Punkte aus der Nachricht darunter (Fragen 1–4 vom 23.10.) sind weiter unbeantwortet.
 

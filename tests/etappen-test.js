@@ -28,7 +28,7 @@ const B = require('./bilder');   // Bilder-Schalter: BILDER=aus|fehler|alle, sie
       // ---------- H1 ----------
       const k = kredite()[0];
       ok('H1 Hof gekauft (Alter Pensionsstall)', spiel.hof && spiel.hof.name === 'Testhof', spiel.hof && spiel.hof.art);
-      ok('H1 Startkapital 15.000 − 10.000 Eigenanteil = 5.000 €', Math.round(spiel.geld) === 5000, Math.round(spiel.geld) + ' €');
+      ok('H1 Startkapital 25.000 − 20.000 Eigenanteil = 5.000 €', Math.round(spiel.geld) === 5000, Math.round(spiel.geld) + ' €');
       ok('H1 Kredit 10.000 € über 10 Jahre (40 Raten)', k && k.summe === 10000 && KREDIT.jz === 40, k && `${k.summe} € / ${KREDIT.jz} Raten`);
       ansehen('H1 hvw – Finanzen – Bank', () => { $('info') && bankHTML(); });
 

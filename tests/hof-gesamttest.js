@@ -7,7 +7,7 @@ const B = require('./bilder');   // Bilder-Schalter: BILDER=aus|fehler|alle, sie
  // Prüffunktionen im Spiel definieren
  await pg.evaluate(() => {
    spiel.stufenAn = false; Object.keys(VET.verbotAb).forEach(k => { VET.verbotAb[k] = 99; });   // kein Tierhalteverbot mitten im Test (die Test-Pferde werden nicht immer versorgt);   // v650: neue Spiele starten mit Stufen-Sperre (Anfänger) – dieser Test prüft das ganze Spiel
-   window.START = { h1: 15000 }; window.PROT = [];
+   window.START = { h1: 25000 }; window.PROT = [];
    window.pruefe = (titel) => { const f = [];
      const kasse = hid => imHof(hid, () => { const F = spiel.finanzen || {}; let s = 0; Object.values(F).forEach(J => Object.values(J).forEach(e => s += e.ein - e.aus)); return [spiel.geld, s]; });
      hofReihe().forEach(hid => { const [g, s] = kasse(hid), st = START[hid] || 0; if (!isFinite(g)) f.push(`${hid}: Geld NaN`); if (Math.abs(g - (st + s)) > 0.05) f.push(`${hid}: Kasse ${g} ≠ Start ${st} + Buchungen ${Math.round(s*100)/100}`);

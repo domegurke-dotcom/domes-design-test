@@ -64,7 +64,7 @@ Kaufpreis im Spiel: **20.000 €** (Hofwert 20.000 €, davon 10.000 € Kredit,
 | Startvorrat (140 kg Heu, 100 kg Stroh, 3 kg Mineral, 1 Leckstein) | 52 € | 66 € |
 | **Summe** | **8.652 €** | **30.266 €** |
 
-Nicht bewertet: Wohnhaus/Hofplatz, Gelände (Wege), Pferdeanhänger. Der Kaufpreis von 20.000 € liegt damit mit den neuen Preisen **unter** dem Sachwert (alt: darüber). Offene Frage an Dome: Kaufpreis anpassen (und damit Kredit, Startgeld, andere Immobilien/Makler)?
+Nicht bewertet: Wohnhaus/Hofplatz, Gelände (Wege), Pferdeanhänger. Der Kaufpreis von 20.000 € liegt damit mit den neuen Preisen **unter** dem Sachwert (alt: darüber). **Entschieden (Dome 24.10., v807):** Kaufpreis 30.000 € (alt 20.000 €), Eigenanteil 20.000 € (alt 10.000 €), Kredit bleibt 10.000 €, Startgeld 25.000 € (alt 15.000 €) → nach dem Kauf wie vorher 5.000 € auf dem Konto. Zum Zurückgehen: `IMMOBILIEN` pension preis/eigen und `START_KAPITAL`. Andere Immobilien/Makler noch offen.
 
 ## Noch offen: weitere Gebäude (Gegenüberstellung für Dome, 24.10.2026, nichts geändert)
 

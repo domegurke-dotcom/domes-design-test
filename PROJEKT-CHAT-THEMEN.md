@@ -42,6 +42,8 @@ Diese Punkte sind zu groß oder brauchen erst eine Planung. Darum hat Claude sie
 
 25. **Hofplan als Raster** – **fertig besprochen, steht in `PLAN-HOFPLAN.md`** (Dome, 24.10.2026: alle Fragen beantwortet, Projekt-Chat nicht nötig). Start erst nach Domes „Ja“.
 
+26. **Pferdefriedhof als Gebäude** (Dome, 24.10.2026, Idee – noch nicht beschlossen): in Hofverwaltung – Hof – Hofplan/Bauen ein Pferdefriedhof; seine Größe bestimmt, wie viele Pferde dort liegen können; wer keinen eigenen hat, zahlt Grabpflegegebühren. Anmerkungen von Claude Team: in Deutschland dürfen Pferde meist nicht auf dem eigenen Grundstück vergraben werden (Tierkörperbeseitigung/Krematorium, nur genehmigte Tierfriedhöfe) – „wie in echt“ also als **genehmigter Tierfriedhof** mit Genehmigung/Auflagen bauen; offen: Preise, Platz je Pferd (Grabstelle ca. 2–3 m², Kaltblut mehr), was ohne Friedhof schon heute beim Tod passiert (Abholung/Kosten), voller Friedhof, Zusammenspiel mit dem bestehenden Pferdefriedhof-Menü (Grabsteine), Stufen.
+
 ## Rassetypen und Rote-Liste-Rassen (Dome, 18.10.2026 – noch planen)
 - **Typen innerhalb einer Rasse:** Knabstrupper (Pony, Sport, Barock), Friese (Barock-/Sporttyp, Prädikate Ster/Kroon/Model), Welsh (Sektion A–D, im Spiel nur D), Haflinger (alter, schwerer Typ / moderner Reittyp), Shetlandpony (Mini-Shetty unter 87 cm / Standard), Quarter (Halter, Racing, Working), Araber (Zuchtrichtungen, z. B. Ägypter), Tinker (Größen vom Pony bis zum Cob).
 - **Rote Liste (GEH):** z. B. Alt-Oldenburger/Ostfriese, Leutstettener, Rottaler, Senner, Dülmener, Schleswiger Kaltblut, Schwarzwälder Fuchs, Rheinisch-Deutsches Kaltblut, Sächsisch-Thüringisches Schweres Warmblut, Mecklenburger Kaltblut.

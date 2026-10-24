@@ -19,7 +19,7 @@ Entwürfe (Bilder, nur Vorschläge, kein Spielcode): `entwuerfe-boxansicht/` –
 - **Besitzerwünsche zählen** nur, was der Spieler beeinflussen kann: Weidegang/Sandpaddock, Futterplan, Mähne/Schopf-Wunschlänge **und alle gebuchten Zusatzleistungen** (Pflege, Waschen, Solarium, Bewegen, Medikamente geben, bessere Einstreu, Paddockbox …). **Der Hufschmied zählt nicht** (kann Dome nicht beeinflussen).
 - **Scrollen im Fenster ist okay** (Dome) – das Fenster darf scrollbar sein, nur die Hauptansicht soll ohne Scrollen auskommen.
 - **Reihenfolge beim Bauen (Dome): zuerst PC fertig und klickbar, danach mobil (hochkant/quer), zuletzt Tutorial** (Hinweisblasen/Tutorial-Spieler).
-- **Reiter auf dem Reitplatz** (5 Besitzer): echte Pferdeköpfe auf dem Platz plus Zähler „5 von 7“, Antippen zeigt Liste „wer reitet mit wem“ und „Flocke hierher“; Hochkant-Kachel mit Köpfen, Zähler und Zustand (normal / voll gelb / zu voll rot) – siehe `blatt11-reitplatz-mit-5-besitzern.png`. Zu viele Köpfe schrumpfen oder werden „+2“.
+- **Reiter auf dem Reitplatz** (5 Besitzer): echte Pferdeköpfe auf dem Platz plus Zähler „5 von 7“, **Antippen wählt den Reitplatz wie bisher (keine Liste – Dome: 11.2 nein)**; Hochkant-Kachel mit Köpfen, Zähler und Zustand (normal / voll gelb / zu voll rot) – siehe `blatt11-reitplatz-mit-5-besitzern.png`. Zu viele Köpfe schrumpfen oder werden „+2“.
 - **Stufen-Tabelle** (wer sieht was) steht unten unter „Sichtbarkeit je Erfahrungsstufe“ – noch zu bestätigen.
 
 ## Sichtbarkeit je Erfahrungsstufe (Vorschlag, Claude – aus `ERFAHRUNG_STUFEN`/`frei()` abgeleitet)

@@ -21,5 +21,14 @@ const { chromium } = require('playwright'); const path = require('path');
     const x = document.querySelector('[data-wbloes="1:stall"]'); ok('✕ auch beim automatisch zugeteilten Mitarbeiter', !!x, '');
     if (x) { x.click(); ok('Box 2: niemand', spiel.boxen[1].maPlan && spiel.boxen[1].maPlan.stall === '-' && !maZuteilung('stall').some(y => y.i === 1), JSON.stringify(spiel.boxen[1].maPlan));
       const y = document.querySelector('[data-wbloes="1:stall"]'); y && y.click(); ok('✕ bei „niemand“: wieder automatisch', !spiel.boxen[1].maPlan && maZuteilung('stall').some(q => q.i === 1), JSON.stringify(spiel.boxen[1].maPlan)); }
+    // Pensionspferd: alle gebuchten Extras stehen da (Pflege, Waschen …), auch wenn sie heute nicht dran sind
+    gebaeude().push({ gid: 'gw', typ: 'waschplatz', stufe: 1, zustand: 100 }); spiel.anlage.waschplatz = true;
+    const P = neuesPferd({ rasse: 'haflinger', geschlecht: 'Wallach', alter: 8, name: 'Pluto' }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); spiel.boxen[2].pferd = P;
+    const e = { eid: 'eP', vn: 'Leon', nn: 'Werner', w: false, pid: P.id, stufe: 1, leistungen: { putzen: true, waschen: true, einstreu: true }, haltung: 'box', zufr: 90, seit: jzJetzt() - 8, einzug: spiel.tag - 40, kuendigt: null, log: [], plus: [], befSeen: [], preis: 200, besuchTag: spiel.tag };
+    P.einsteller = e.eid; P.putzzeug = 'besitzer'; einstellerListe().push(e);
+    zeigeWhiteboard(); const t2 = document.getElementById('nebenSchirm').innerText;
+    ok('Pension: Pflege steht da (Besitzer pflegt heute selbst)', /Pflege[\s\S]{0,60}Besitzer/.test(t2), t2.slice(t2.indexOf('Pluto'), t2.indexOf('Pluto') + 300));
+    ok('Pension: Waschen steht da (heute nicht nötig)', /Waschen[\s\S]{0,30}nicht nötig/.test(t2), '');
+    ok('Pension: bessere Einstreu steht da', /bessere Einstreu|Bessere Einstreu/.test(t2), '');
     return out; });
   R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(R.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

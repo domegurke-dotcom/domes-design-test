@@ -114,3 +114,11 @@ Nicht bewertet: Wohnhaus/Hofplatz, Gelände (Wege), Pferdeanhänger. Der Kaufpre
 | Makler-Preis | Land × 1.000 + Hofstelle + Gebäude | (ha − Bauland) × 5.000 + Bauland (mind. 1 ha) × 25.000 + Hofstelle + Boxen + Anlagen, ±10 % |
 
 Rechenweg der Immobilien: wie der Sachwert des Start-Hofs (Weideland + Bauland + Gebäude). Solarium: Dome fragte, ob „wie Waschplatz“ realistisch ist – echt kosten beide dasselbe (3.000–10.000 € neu); im Spiel liegen Solarium 1.200/2.000/3.200 und Waschplatz 800/1.500/3.000 nah beieinander.
+
+## Umgesetzt v809 (Mieten)
+
+| Preis | alt | neu |
+|---|---|---|
+| Abfohlbox-Aufpreis je Tag (Stufe 1/2/3) | 5 / 10 / 15 € | 10 / 25 / 50 € |
+| Beritt je Jahreszeit | vorher kleiner (siehe Git v808) | 600 € |
+| Aufzucht fremder Fohlen | vorher kleiner (siehe Git v808) | 250 € (Waise 120 €) |

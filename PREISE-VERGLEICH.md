@@ -136,3 +136,10 @@ Rechenweg der Immobilien: wie der Sachwert des Start-Hofs (Weideland + Bauland +
 |---|---|---|
 | Sandpaddock Stufe 1/2/3 | 6.000 / 15.000 / 30.000 € | 3.000 / 7.500 / 15.000 € |
 | je Platz | 3.000 / 5.000 / 7.500 € | 1.500 / 2.500 / 3.750 € |
+
+## Geändert v812 (Pension-Richtwerte)
+
+| Preis je Jahreszeit | v785–v811 | v812 |
+|---|---|---|
+| Stallbox Stufe 1/2/3 | 150 / 400 / 750 € | 200 / 400 / 1.000 € |
+| Paddockbox Stufe 1/2/3 | 190 / 500 / 940 € | 250 / 500 / 1.250 € |

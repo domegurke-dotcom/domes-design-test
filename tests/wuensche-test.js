@@ -63,7 +63,7 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number);
     ok('Weide-Karte: keine Handauswahl, kein „Gras statt Heu“-Absatz, kein „Heute gefressen“', !/Weidegang durch Stallbursche/.test(t) && !/Gras statt Heu/.test(t) && !/Heute gefressen/.test(t), t.slice(0, 120));
     delete P2.weide; zeigeStall(); document.getElementById('dlg').hidden = true; spiel.hofFenster = []; zeigeSchirm(null); zeigeStall(); zeigeTag(); aktenModus = 'pflege'; aktenReiter = 'platz'; ortModus = null; zeigeAkte();
     const wk = document.querySelector('[data-ort="koppel"]'); if (wk) wk.click(); zeigeAkte();
-    const kw = document.querySelector('[data-ort="weide"]'); if (kw) kw.click();
+    const kw = document.querySelector('[data-ort="weide"]'); if (kw) kw.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     ok('Ort → Koppel → Weide: Pferd geht ohne Auswahlfenster auf die geplante Weide', P2.weide && P2.weide.wid === w2[w2.length - 1].wid && document.getElementById('dlg').hidden !== false || !!P2.weide, JSON.stringify(P2.weide) + ' koppel:' + !!wk + ' weide:' + !!kw + ' dlg:' + document.getElementById('dlg').hidden + ' modus:' + ortModus + ' n=' + w2.length);
     // v721: Whiteboard – Übersicht zuerst, x auch bei Pensionspferden, leere/reservierte Boxen, Rückweg
     spiel.boxen[2] = { pferd: null }; spiel.boxen[2].reserviert = 'rsv'; (spiel.pensionAnfragen = spiel.pensionAnfragen || []).push({ aid: 'ar', angenommen: true, pferd: { id: 'rsv', name: 'Gast' } });

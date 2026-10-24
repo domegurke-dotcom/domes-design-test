@@ -230,6 +230,8 @@ const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner 
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; zeigeSchirm(null);
     const mk = (n, i, hal) => { const P = neuesPferd({ rasse: 'haflinger', geschlecht: 'Wallach', alter: 8, name: n }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); P.einsteller = 'ey' + i; P.reheOk = spiel.tag; const b = spiel.boxen.find(x => !x.pferd && boxFrei(x) && !x.paddock && !x.quar && !x.abfohl && !x.offen); b.pferd = P; b.krippeVoll = true; einstellerListe().push({ eid: 'ey' + i, vn: 'Besitzer' + i, nn: 'Y', haltung: hal, leistungen: {} }); return P; };
     window.__e1 = mk('Weida', 1, 'weide'); window.__e2 = mk('Sanda', 2, 'sandpaddock'); window.__e3 = mk('Voll', 3, 'weide'); weiden().forEach(w => { delete w.gesperrt; }); stallAlt = false; wbSicht = 'weiden'; zeigeWhiteboard(); });
+  ok('v800: erster Tag ohne Weide ist frei – kein roter Rahmen (Weide gebucht, Box)', await pg.evaluate(() => { const e = einstellerVon(window.__e1); delete e.weideZ; return !/Weide gebucht/.test(wbAbweichung(window.__e1)); }));
+  await pg.evaluate(() => { const e = einstellerVon(window.__e1); e.weideZ = { jz: jzJetzt(), n: 0, ges: 4 }; });   // mehrere Tage ohne Weide: über der freien Quote
   { const a = await pg.evaluate(() => [wbAbweichung(window.__e1), wbAbweichung(window.__e2)]);
     ok('Besitzer hat Weide gebucht, Pferd steht in der Box, kein Plan → roter Rahmen mit Grund', /Weide gebucht, steht aber in der Box/.test(a[0]) && /Sandpaddock gebucht/.test(a[1]), JSON.stringify(a)); }
   await pg.evaluate(() => { weiden().filter(w => !w.wiese).forEach(w => { w.gesperrt = { bis: spiel.tag + 3 }; }); });

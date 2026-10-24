@@ -117,8 +117,11 @@ const B = require('./bilder');   // Bilder-Schalter: BILDER=aus|fehler|alle, sie
 
       // ---------- H4 Umbau-Folgen ----------
       { if (!weideDa()) { spiel.hof.weideHa = Math.max(spiel.hof.weideHa || 0, 2); spiel.anlage.weide = true; }
+        { const P = hofPlan(), n = P.st.length + 6; for (let k = P.st.length; k < n; k++) P.st.push({ x: (k % 3) * 20, y: Math.floor(k / 3) * 10, b: 20, h: 10 }); spiel.hof.bauHa = runde2(bauHa() + 3); spiel.hof.ha = runde2((spiel.hof.ha || 0) + 3); }   // Platz im Hofplan für Umbauten (Einsteller zieht zufällig in einen anderen Stall)
+        { const sE = gebaeude().find(x => x.typ === 'stall' && umbauBoxen(x).some(b => b.pferd && !fremd(b.pferd))), bf = sE && umbauBoxen(sE).find(b => !b.pferd);
+          if (sE && bf && !umbauBoxen(sE).some(b => b.pferd && fremd(b.pferd))) { const q = spiel.boxen.find(b => b.pferd && fremd(b.pferd)); if (q) { bf.pferd = q.pferd; q.pferd = null; if (q.pferd === null) { bf.futter = q.futter; } } } }
         const g = gebaeude().find(x => x.typ === 'stall' && umbauBoxen(x).some(b => b.pferd && fremd(b.pferd)) && umbauBoxen(x).some(b => b.pferd && !fremd(b.pferd)));
-        ok('H4 Stall mit eigenem Pferd und Einsteller gefunden', !!g);
+        ok('H4 Stall mit eigenem Pferd und Einsteller gefunden', !!g, JSON.stringify({ st: gebaeude().filter(x => x.typ === 'stall').map(x => ({ id: x.gid, bau: !!x.bau, bx: umbauBoxen(x).map(b => b.pferd ? (fremd(b.pferd) ? 'F' : 'E') : '-').join('') })), ein: einstellerListe().length }));
         if (g) {
           const fuellen = () => ersatzBoxen(g).forEach((b, i) => { b.pferd = neuesPferd({ rasse: 'shetty', geschlecht: 'Wallach', alter: 8, name: 'Platzhalter' + i }); b.pferd.pflege = erzeugePflege(b.pferd); });
           fuellen();   // keine Ersatzbox frei → Einsteller braucht eine Lösung
@@ -139,7 +142,7 @@ const B = require('./bilder');   // Bilder-Schalter: BILDER=aus|fehler|alle, sie
             ok('H4 Pensionsgeld mit 30 % Nachlass', offen0 || e.offen || Math.round(spiel.geld - geld) === Math.round(e.preis * 0.7) + leist, `${Math.round(spiel.geld - geld)} € statt ${e.preis + leist} €`); delete e.offen; }
           nacht(1); ok('H4 Weide-Pferde bleiben über Nacht draußen', eigen.weide && ep.weide);
           const rp = gebaeude().find(x => x.typ === 'reitplatz' && !x.bau && !x.plan && x.stufe < 3);
-          if (rp) { umbauStarten(rp); zu(); ok('H4 Reitplatz im Umbau: kein Training dort', !ortOffen('reitplatz') && ortOffen('gelaende')); }
+          if (rp) { { const fp = planFreiePos(...planMassTyp('reitplatz', 0, 2), rp.gid); if (fp) hofPlan().pos[rp.gid] = fp; } const um = umbauStarten(rp); zu(); ok('H4 Reitplatz im Umbau: kein Training dort', !ortOffen('reitplatz') && ortOffen('gelaende'), JSON.stringify({ um, plaetze: gebaeude().filter(x => x.typ === 'reitplatz').map(x => ({ b: !!x.bau, art: x.bau && x.bau.art, s: x.stufe })), pk: planUmbauPruefen(rp) })); }
           nacht(Math.max(g.bau ? g.bau.rest : 0, rp && rp.bau ? rp.bau.rest : 0) + 1);
           ok('H4 Umbau fertig → Pferde zurück in die Box', !g.bau && !eigen.weide && !eigen.umbauWeide && !ep.weide && !e.nachlass && g.stufe >= 2, 'Stufe ' + g.stufe);
           if (rp && !rp.bau) ok('H4 Reitplatz nach dem Umbau wieder offen', ortOffen('reitplatz'));
@@ -232,7 +235,7 @@ const B = require('./bilder');   // Bilder-Schalter: BILDER=aus|fehler|alle, sie
       { const H = spiel.hof; ok('H7 Start-Hof ist Pensionsstall', H.art === 'pension');
         H.art = 'western'; spiel.stallarten = ['western']; spiel.anlage.trail = false; H.artSeit = jzJetzt(); delete H.artCache; delete H.artVerloren; delete H.artFrist; H.foerderLog = [];
         const vorher = (spiel.post || []).length; stallartJahreszeit();
-        ok('H7 Schonfrist: keine Strafe, keine Förderung', !H.artFrist && !H.artVerloren && ((spiel.post || []).length === vorher || /diesmal keine Förderung/.test((spiel.post || [])[0].betreff || '')),   // v650: der Brief „diesmal keine Förderung“ (Schonfrist, keine Strafe) gehört seit v36x dazu
+        ok('H7 Schonfrist: keine Strafe, keine Förderung', !H.artFrist && !H.artVerloren && ((spiel.post || []).length === vorher || /diesmal keine Förderung|Förderung in der Schonfrist/.test((spiel.post || [])[0].betreff || '')),   // v650: der Brief „diesmal keine Förderung“ (Schonfrist, keine Strafe) gehört seit v36x dazu
            JSON.stringify({ f: H.artFrist, v: H.artVerloren, p: [vorher, (spiel.post || []).length], b: stallartBed('western').map(x => x[1]), ok: stallartOk(), art: spiel.hof.art, gleich: spiel.hof === H, top: (spiel.post || [])[0] && spiel.post[0].betreff }));
         H.artSeit = jzJetzt() - 5; H.foerderLog = [{ jz: jzJetzt() - 1, b: 300 }]; delete H.artCache; stallartJahreszeit();
         ok('H7 Bedingung fehlt → Warnbrief mit Frist', H.artFrist === jzJetzt() + 1 && (spiel.post || []).some(x => /Bedingungen nicht erfüllt/.test(x.betreff || '')));
@@ -290,13 +293,13 @@ const B = require('./bilder');   // Bilder-Schalter: BILDER=aus|fehler|alle, sie
         ok('H7c Beritt-Anfrage per Brief', !!a && (spiel.post || []).some(x => /Beritt für/.test(x.betreff || '')));
         if (a) { ok('H7c Beritt annehmen', pensionAnnehmen(a) === ''); a.tag = spiel.tag - 1; pensionEinzug(); zu();
           const e = einstellerListe().find(q => q.art === 'beritt');
-          ok('H7c Beritt-Pferd zieht ein (450 € je Jz)', !!e && e.preis === BERITT.preis && !!pensionBox(e), e ? `${e.preis} €` : '');
+          ok('H7c Beritt-Pferd zieht ein (600 € je Jz)', !!e && e.preis === BERITT.preis && !!pensionBox(e), e ? `${e.preis} €` : '');
           if (e) { e.bis = jzJetzt(); fremdEndeJahreszeit(); ok('H7c Beritt-Ende: Besitzer holt ab', !einstellerListe().includes(e)); } }
         spiel.pensionAnfragen = (spiel.pensionAnfragen || []).filter(q => q.art !== 'beritt'); spiel.einsteller = eMerk; spiel.mitarbeiter = mMerk; spiel.anlage = { ...spiel.anlage, ...A0 }; H.art = 'pension'; spiel.stallarten = ['pension']; delete H.artCache; }
       // ---------- H7 (b) Rennbahn, Rennpferdetrainer (v311) ----------
       { const H = spiel.hof, merk = spiel.boxen.map(b => b.pferd), mMerk = (spiel.mitarbeiter || []).slice(); spiel.boxen.forEach(b => { if (b.pferd && !fremd(b.pferd)) b.pferd = null; });
         const frei = spiel.boxen.filter(b => !b.pferd).slice(0, 2), rp = frei.map((b, i) => { const q = neuesPferd({ rasse: 'vollblut', geschlecht: 'Stute', alter: 4, name: 'Renner' + i }); b.pferd = q; q.pflege = erzeugePflege(q); q.pflege.gesundheit = 100; q.befunde = []; werteErgaenzen(q); return q; });
-        H.art = 'renn'; spiel.stallarten = ['renn']; delete H.artCache; const g0 = spiel.geld; spiel.geld += 50000; H.bauHa += 2.5; bauStarten('rennbahn', 1); planAutoSetzen(); const g = gebaeude().find(x => x.typ === 'rennbahn'); g.bau.rest = 0; bauNacht();
+        H.art = 'renn'; spiel.stallarten = ['renn']; delete H.artCache; const g0 = spiel.geld; spiel.geld += 50000; H.bauHa += 2.5; { const P = hofPlan(), n = Math.ceil(bauHa() * 2 + 1e-9) + 2; H.bauHa = runde2(bauHa() + 1); H.ha = runde2((H.ha || 0) + 1); P.st = []; for (let k = 0; k < n; k++) P.st.push({ x: (k % 3) * 20, y: Math.floor(k / 3) * 10, b: 20, h: 10 }); P.pos = {}; planAutoSetzen(); } bauStarten('rennbahn', 1); planAutoSetzen(); const g = gebaeude().find(x => x.typ === 'rennbahn'); g.bau.rest = 0; bauNacht();
         ok('H7b Rennbahn gebaut', !g.bau && spiel.anlage.rennbahn && ortOffen('rennbahn'));
         ok('H7b Rennpferdetrainer nur im Rennstall', maVerfuegbar('renntrainer') && !maVerfuegbar('westerntrainer'));
         spiel.mitarbeiter = [...mMerk, { id: 'maRT', typ: 'renntrainer', name: 'Testtrainer', w: false, wissen: wissenStart(30, { ruecken: 60 }), eig: [], gehalt: 450, ab: jzJetzt(), bis: null }]; delete H.artCache;

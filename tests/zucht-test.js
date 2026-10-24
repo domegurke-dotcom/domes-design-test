@@ -84,7 +84,7 @@ const { chromium } = require('playwright'); const path = require('path');
       const P = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Abfohl' }); P.einsteller = e.eid; P.traechtig = { vater: hengstKopie(H), seit: jzJetzt() - 4, geburt: jzJetzt(), sicher: true }; const bx = spiel.boxen[9]; bx.pferd = P; bx.tot = false; delete bx.fohlen; spiel.post = [];
       const z0 = e.zufr != null ? e.zufr : (e.zufriedenheit != null ? e.zufriedenheit : null); const zv = () => JSON.stringify([e.zufr, e.zufriedenheit, e.z]); const zAlt = zv();
       stutenInAbfohl(jzJetzt()); const nb = spiel.boxen.findIndex(x => x.pferd === P); ok('Besitzer freut sich über die Abfohlbox (Zufriedenheit +10)', e.zufr === 50 + ABFOHL_FREUDE, 'zufr ' + e.zufr);
-      ok('Tarif nach Stufe 5/10/15 €', ABFOHL_AUFPREIS[1] === 5 && ABFOHL_AUFPREIS[2] === 10 && ABFOHL_AUFPREIS[3] === 15);
+      ok('Tarif nach Stufe 10/25/50 €', ABFOHL_AUFPREIS[1] === 10 && ABFOHL_AUFPREIS[2] === 25 && ABFOHL_AUFPREIS[3] === 50);
       ok('Pensionsstute zieht in die Abfohlbox', nb >= 8 && spiel.boxen[nb].abfohl === true && pensionBox(e) === spiel.boxen[nb], 'Box ' + (nb + 1));
       ok('Brief an den Spieler (Abfohlbox, Besitzer holt Fohlen ab)', spiel.post.some(x => /in der Abfohlbox/.test(x.betreff)) && /Besitzer das Fohlen abgeholt/.test(JSON.stringify(spiel.post.find(x => /in der Abfohlbox/.test(x.betreff)) || {})));
       delete P.traechtig; stutenAusAbfohl(); const nb2 = spiel.boxen.findIndex(x => x.pferd === P); ok('Ohne Fohlen zurück in eine normale Box', nb2 >= 0 && !spiel.boxen[nb2].abfohl, 'Box ' + (nb2 + 1)); spiel.boxen[nb2].pferd = null; }

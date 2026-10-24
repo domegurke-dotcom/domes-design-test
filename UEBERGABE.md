@@ -130,3 +130,5 @@ Domes Wünsche zu Whiteboard, Mitarbeitern, Waschplatz/Solarium sind umgesetzt (
 - Hinweis: `tests/tutorial-test.js` erwartet, dass nach der ersten Blase Schritt „Heu geben“ kommt – Reihenfolge der ersten Kapitel-1-Schritte nicht verschieben. Phase D (großer Test) wartet weiter auf Domes „weiter“.
 
 ---
+
+**v809 (Claude Team, 24.10.):** Mietpreise (Abfohlbox, Beritt, Aufzucht fremd) wie von Dome angenommen. Großer Test mit BILDER=fehler: Etappen-Test 351 ✓, Neuladen-Test 7 ✓. Offen: Makler-Bauland-Anteil bleibt vorerst, Zeitmaßstab/Löhne/Pension = Projekt-Chat, Update-Fenster nur auf Domes Ansage.

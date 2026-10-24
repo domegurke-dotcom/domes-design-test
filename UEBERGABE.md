@@ -15,6 +15,24 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### Sitzung 24.10. – v733–v751 (Claude Team, Sonnet), alles auf `main`
+Thema: Pferdeköpfe/Randabstand und **realistische Fellfarben nach Studien**. Details je Version in `CLAUDE.md` (v733–v751).
+- Kopfbilder überall gleich zugeschnitten (`kopfBild`/`kopfAuto`/`enzAuto`), Seitenrand-Breite für alle Enzyklopädie-Reiter, Pferdeanhänger und Whiteboard.
+- Neue Gene Hellfalbe `Hf` (Fjord), Mushroom `Mu`, Pearl `Prl`; Tricolor-Name; Rassen-Häufigkeiten nach UC-Davis-Studie, Noriker-Bachelorarbeit, Durward-Akhurst-Supplement (nur belastbare Zahlen; Begründung je Version in CLAUDE.md).
+- **Seltenheit:** ganze Fellfarbe zählt als selten, wenn höchstens 1 % der Rasse sie hat (`farbMerkmal`, `FARBE_SELTEN`), nur wenn kein einzelnes Gen schon selten ist (Dome: „ja“). Raritäten-Markt: zweites Angebot einer Rasse wiederholt nicht das Gen des ersten/Vorjahrs.
+- Haflinger-Rußgen .3 → .12 (Dome: ja), Quarter-Cream .07, Clydesdale E .8/A .72, Quarter DMRT3 .052.
+- **Fehler gelernt:** Backticks in bzn-Texten (Template-Literal) brechen das Spiel – `<code>` nehmen; nach jeder Änderung alle Skriptblöcke mit `new Function` prüfen.
+
+**Offen / auf Dome warten (nichts davon ohne ihre Ansage bauen):**
+1. **Hofplan als Raster** – `PLAN-HOFPLAN.md` ist fertig und beantwortet; Start erst bei Domes „Los“ (groß, Opus, Etappen H1–H5).
+2. **Update-Fenster „Neu in deinem Spiel“** (`NEUES`): seit v725 sind viele Änderungen unveröffentlicht; Dome fragen, ob ein Fenster kommen soll, dann per Auswahlkästchen (nur Änderungen ab v725).
+3. Möglicher Zusatz: Tobiano bei Warmblütern (laut Review vorhanden, ohne Zahl) – nur auf Wunsch.
+4. Alte Punkte aus der Nachricht darunter (Fragen 1–4 vom 23.10.) sind weiter unbeantwortet.
+
+---
+
+### (Ältere Nachricht, Stand v722)
+
 **Von:** Claude Team · **An:** Claude Pro (oder neue Team-Sitzung) · **Stand:** v722, 23.10.2026
 
 ### Sitzung 23.10. (Abend) – v708–v722, alles auf `main`

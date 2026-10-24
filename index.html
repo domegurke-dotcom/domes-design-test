@@ -1118,7 +1118,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "754";
+  const SPIEL_VERSION = "755";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1126,12 +1126,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=754"></script>
-<script src="pferd.js?v=754"></script>
-<script src="boxstufen.js?v=754"></script>
-<script src="kopfneu.js?v=754"></script>
-<script src="waschbild.js?v=754"></script>
-<script src="avatare.js?v=754"></script>
+<script src="lz-string.min.js?v=755"></script>
+<script src="pferd.js?v=755"></script>
+<script src="boxstufen.js?v=755"></script>
+<script src="kopfneu.js?v=755"></script>
+<script src="waschbild.js?v=755"></script>
+<script src="avatare.js?v=755"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -10358,7 +10358,8 @@
   const wunschArt = (p, art) => !p || fremd(p) || Object.keys(WUNSCH).some(k => WUNSCH[k][2] === art && wunschEin(p, k));   // ein Mitarbeiter geht nur zu Pferden, die seine Arbeit wünschen
   function maZuteilung(art) {
     const kand = spiel.boxen.map((b, i) => i).filter(i => { const b = spiel.boxen[i], p = b.pferd; if (!p || p.klinik || b.tot) return false; if (!wunschArt(p, art)) return false;
-      if (art === "stall") return !p.weide || heuNoetigP(p);
+      if ((b.maPlan || {})[art] === "-") return false;   // Whiteboard (Dome 24.10.): „niemand“ – machst du selbst
+      if (art === "stall") return !p.weide || p.weide.seit === spiel.tag || heuNoetigP(p);   // Dome 24.10.: wer heute morgen rausgebracht wurde, dessen Box wurde trotzdem versorgt (sonst „heute niemand“ und „0 von 3“ im Whiteboard)
       if (art !== "stall" && p.turnier) return false;   // heute auf dem Turnier
       if (art === "bereiter") return !p.weide && !p.boxenruhe && alterJZ(p) >= 12 && (p.pflege ? p.pflege.gesundheit : 100) > 50 && (!fremd(p) || (!!(einstellerVon(p) || { leistungen: {} }).leistungen.bewegen && !(p.trainHeute && p.trainHeute.tag === spiel.tag && p.trainHeute.besitzer)));
       return true; });
@@ -12139,8 +12140,10 @@
     const zelle = (b, i) => { const p = b.pferd, ok = p && !b.tot;
       const nrT = `Box ${nr[i] || i + 1}${ok && fremd(p) ? " · 🏡" : ""}`;
       if (!ok) { const rs = b.reserviert && ((spiel.pensionAnfragen || []).find(a => a.pferd && a.pferd.id === b.reserviert) || {}).pferd; return `<div class="wb-box leer${ziel("b:" + i)}" data-wbz="b:${i}" data-wbgo="${i}"><div class="wb-nr">${nrT}</div><div class="wb-leerT">${b.tot ? "🕊️ verstorben" : b.gesperrt ? "🚧 Umbau" : b.reserviert ? `🔒 reserviert${rs ? ` für ${esc(rs.name)}` : ""}` : "leer"}</div></div>`; }
-      const reihen = arten.map(a => { const pin = (b.maPlan || {})[a], pm = pin && (spiel.mitarbeiter || []).find(m => m.id === pin && maAktiv(m)), heute = Z[a][i], m = pm || heute; if (!m) return "";   // v716 (Dome): Bild, darunter Symbol + Name; ein Mitarbeiter mittig, zwei auf Höhe der oberen/unteren Rahmenhälfte
-        return `<div class="wb-ma-zeile${pm ? " fest" : ""}" title="${WB_ART[a][1]}${pm ? "" : " (automatisch)"}">${maAva(m, arten.filter(x => ((b.maPlan || {})[x] && 1) || Z[x][i]).length >= 3 ? 26 : 38)}<span class="wb-ma-n">${pm ? "📌" : "○"}${WB_ART[a][0]} <b>${esc(m.name)}</b></span>${pm ? `<button class="wb-x wb-x-ma" data-wbloes="${i}:${a}" aria-label="Zuteilung lösen" title="Zuteilung lösen">✕</button>` : ""}${pm && heute !== pm ? `<small>heute ${heute ? esc(heute.name) : "niemand"}</small>` : ""}</div>`; }).join("");
+      const reihen = arten.map(a => { const pin = (b.maPlan || {})[a], pm = pin && (spiel.mitarbeiter || []).find(m => m.id === pin && maAktiv(m)), heute = Z[a][i], m = pm || heute;
+        if (pin === "-") return `<div class="wb-ma-zeile fest" title="${WB_ART[a][1]}: niemand – machst du selbst"><span class="wb-ma-n">🚫${WB_ART[a][0]} <b>niemand</b></span><button class="wb-x wb-x-ma" data-wbloes="${i}:${a}" aria-label="wieder automatisch" title="wieder automatisch">✕</button><small>machst du selbst</small></div>`;   // Dome 24.10.: auch automatisch zugeteilte Mitarbeiter lassen sich entfernen
+        if (!m) return "";   // v716 (Dome): Bild, darunter Symbol + Name; ein Mitarbeiter mittig, zwei auf Höhe der oberen/unteren Rahmenhälfte
+        return `<div class="wb-ma-zeile${pm ? " fest" : ""}" title="${WB_ART[a][1]}${pm ? "" : " (automatisch)"}">${maAva(m, arten.filter(x => ((b.maPlan || {})[x] && 1) || Z[x][i]).length >= 3 ? 26 : 38)}<span class="wb-ma-n">${pm ? "📌" : "○"}${WB_ART[a][0]} <b>${esc(m.name)}</b></span><button class="wb-x wb-x-ma" data-wbloes="${i}:${a}" aria-label="${pm ? "Zuteilung lösen" : "entfernen – niemand"}" title="${pm ? "Zuteilung lösen" : "entfernen – dann versorgt niemand diese Box (machst du selbst)"}">✕</button>${pm && heute !== pm ? `<small>heute ${heute ? esc(heute.name) : "niemand"}</small>` : ""}</div>`; }).join("");
       const ort = p.klinik ? "🏥" : p.turnier ? "🏆" : p.weide ? "🌿" : paddockVon(p) ? "🟫" : "";
       return `<div class="wb-box${ziel("b:" + i)}" data-wbz="b:${i}"><div class="wb-nr">${nrT}</div><div class="wb-in"><div class="wb-rahmen" data-wbq="k:${i}" data-wbgo="${i}" title="${esc(p.name)} – antippen: zur Box · gedrückt halten und ziehen: in eine andere Box"><span class="paar-bild">${kopfBild(p, 10)}${ort ? `<i class="wb-ort">${ort}</i>` : ""}</span><span class="paar-brett"><b>${esc(p.name)}</b></span></div><div class="wb-stab n${(reihen.match(/wb-ma-zeile/g) || []).length}">${reihen}</div></div>${fremd(p) ? pnZeilen(b, p) : wuZeilen(i, p)}</div>`; };
     const maReihe = MAs.length ? MAs.map(m => { const a = wbArt(m), n = Object.values(Z[a]).filter(x => x === m).length, kap = maKapazitaet(m), da = maDa(m);
@@ -12173,7 +12176,7 @@
     const offenB = [], offenW = [];   // v722 (Dome): Übersicht zeigt entweder das Bild (alles erledigt) oder nur, was noch offen ist
     spiel.boxen.forEach((b, i) => { const p = b.pferd; if (!p || b.tot || p.klinik) return; const nm = `Box ${nr[i] || i + 1} · ${esc(p.name)}`;
       if (fremd(p)) { const e = einstellerVon(p); let A = []; try { A = e ? pensionAufgaben(e, b).filter(a => !a.ok) : []; } catch (er) {} if (A.length) offenB.push([nm, A.map(a => a.txt).join(", ")]); }
-      else arten.forEach(a => { if (!wunschArt(p, a) || Z[a][i]) return; const pin = (b.maPlan || {})[a], pm = pin && (spiel.mitarbeiter || []).find(m => m.id === pin && maAktiv(m));   // v726 (Dome): auch fest zugeteilte Boxen melden, wenn der Mitarbeiter sie nicht schafft oder nicht da ist
+      else arten.forEach(a => { if (!wunschArt(p, a) || Z[a][i] || (b.maPlan || {})[a] === "-") return; const pin = (b.maPlan || {})[a], pm = pin && (spiel.mitarbeiter || []).find(m => m.id === pin && maAktiv(m));   // v726 (Dome): auch fest zugeteilte Boxen melden, wenn der Mitarbeiter sie nicht schafft oder nicht da ist
           offenB.push([nm, pm ? `📌 ${esc(pm.name)} ${maDa(pm) ? "schafft diese Box nicht mehr (zu viele Boxen fest zugeteilt)" : "ist heute nicht da"} – niemand versorgt sie (${WB_ART[a][1]})` : `kein Mitarbeiter (${WB_ART[a][1]})`]); });
       if (spiel.maVergessen && spiel.maVergessen.tag === spiel.tag && (spiel.maVergessen.liste || []).some(v => v.i === i)) offenB.push([nm, "heute vergessen"]); });
     L.forEach(x => { const P = plan.get(x.p); if (P && !P.ziel && (x.p.weidegang || "nie") !== "nie") offenW.push([`${esc(x.p.name)}`, "noch keine feste Weide"]); });
@@ -12203,7 +12206,7 @@
       const nm = e.target.closest("[data-wbname]"); if (nm) { wbUmbenennen(nm.dataset.wbname); return; }
       const go = e.target.closest("[data-wbgo]"); if (go && !(wbWahl && go.dataset.wbz !== undefined)) { aktBox = +go.dataset.wbgo; spiel.aktBox = aktBox; aktenReiter = "steckbrief"; aktenModus = "steckbrief"; deckModus = false; ortModus = null; meldung = ""; zeigeSchirm(null); window.scrollTo(0, 0); return; }
       const mo = e.target.closest("[data-wbmodus]"); if (mo) { wbModusSetzen(...mo.dataset.wbmodus.split(":")); zeigeWhiteboard(); return; }
-      const x = e.target.closest("[data-wbloes]"); if (x) { const [i, a] = x.dataset.wbloes.split(":"), b = spiel.boxen[+i]; if (b.maPlan) { delete b.maPlan[a]; if (!Object.keys(b.maPlan).length) delete b.maPlan; } speichern(); zeigeWhiteboard(); return; }
+      const x = e.target.closest("[data-wbloes]"); if (x) { const [i, a] = x.dataset.wbloes.split(":"), b = spiel.boxen[+i]; if (b.maPlan && b.maPlan[a]) { delete b.maPlan[a]; if (!Object.keys(b.maPlan).length) delete b.maPlan; } else (b.maPlan = b.maPlan || {})[a] = "-"; prot("Whiteboard: Mitarbeiter entfernt"); speichern(); zeigeWhiteboard(); return; }
       const y = e.target.closest("[data-wbweg]"); if (y) { const [i, h] = y.dataset.wbweg.split(":"); wbWeg(spiel.boxen[+i].pferd, h); speichern(); wbWahl = null; zeigeWhiteboard(); return; }
       const z = e.target.closest("[data-wbz]"), q = e.target.closest("[data-wbq]");
       if (wbWahl && z && wbOk(wbWahl, z.dataset.wbz)) { wbAnwenden(wbWahl, z.dataset.wbz); wbWahl = null; zeigeWhiteboard(); return; }

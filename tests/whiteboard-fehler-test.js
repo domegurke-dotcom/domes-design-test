@@ -30,5 +30,14 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Pension: Pflege steht da (Besitzer pflegt heute selbst)', /Pflege[\s\S]{0,60}Besitzer/.test(t2), t2.slice(t2.indexOf('Pluto'), t2.indexOf('Pluto') + 300));
     ok('Pension: Waschen steht da (heute nicht nötig)', /Waschen[\s\S]{0,30}nicht nötig/.test(t2), '');
     ok('Pension: bessere Einstreu steht da', /bessere Einstreu|Bessere Einstreu/.test(t2), '');
+    // Übersicht „Noch offen“: bei „alle 2 Tage“ je Tag prüfen (Peggy Tag A, Jewel Tag B treffen sich nicht)
+    spiel.boxen[2].pferd = null; spiel.einsteller = []; gebaeude().push({ gid: 'pd1', typ: 'sandpaddock', stufe: 1, zustand: 100 }); spiel.anlage.paddock = true;
+    const zp = wbZiele().find(x => x.pd); ok('Sandpaddock im Whiteboard', !!zp, JSON.stringify(wbZiele().map(x => x.id)));
+    if (zp) { wbModusSetzen(zp.id, 'jeden2'); wbSetzen(A, zp.id, 'a'); wbSetzen(B2, zp.id, 'b');
+      const k = [A.id, B2.id].sort().join('|'); (spiel.herdePaare = spiel.herdePaare || {})[k] = { streit: 1, tag: spiel.tag - 1 };
+      wbSicht = null; zeigeWhiteboard(); const t3 = document.getElementById('nebenSchirm').innerText;
+      ok('verschiedene Tage: kein Streit in „Noch offen“', !/gestritten mit/.test(t3), t3.slice(0, 400));
+      wbSetzen(B2, zp.id, 'a'); zeigeWhiteboard(); const t4 = document.getElementById('nebenSchirm').innerText;
+      ok('gleicher Tag: Streit steht drin (mit Tag)', /gestritten mit/.test(t4) || !/streit/.test(String(wbBez(A, B2))), String(wbBez(A, B2))); }
     return out; });
   R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(R.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

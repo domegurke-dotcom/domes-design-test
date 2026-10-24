@@ -136,3 +136,5 @@ Domes Wünsche zu Whiteboard, Mitarbeitern, Waschplatz/Solarium sind umgesetzt (
 **Zeitmaßstäbe (Dome 24.10.):** Idee, Kredit/Unterhalt/Pacht auf 7 Tage umzurechnen, abgelehnt. Alles bleibt wie es ist.
 
 **v810 (Claude Team, 24.10.):** Sandpaddock-Preise auf echte Werte (6.000/15.000/30.000 €). sandpaddock-test grün.
+
+**v811 (Claude Team, 24.10.):** Sandpaddock-Preise halbiert (3.000/7.500/15.000 €). sandpaddock-test grün.

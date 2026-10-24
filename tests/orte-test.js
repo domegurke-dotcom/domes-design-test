@@ -1,4 +1,4 @@
-// v763 (Domes Aufnahme 24.10., Etappe 1): Fressdauer, Pinnwand größer, Weide im Ort-Plan anklickbar, Büro = Labor, Tutorials-Liste, Schalter „Spielumfang“ weg
+// v763/v764 (Domes Aufnahme 24.10., Etappe 1+2): Fressdauer, Pinnwand größer, Weide im Ort-Plan anklickbar, Büro = Labor, Tutorials-Liste, Schalter „Spielumfang“ weg
 // Aufruf: NODE_PATH=/opt/node22/lib/node_modules node tests/orte-test.js [BxH] [Ordner für Bilder]
 const { chromium } = require('playwright'); const path = require('path'); const fs = require('fs');
 const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner = process.argv[3];
@@ -7,7 +7,7 @@ const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner 
   await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(600);
   await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('#chLos'); await pg.waitForTimeout(300); await pg.click('#dlgKnoepfe button');
   await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'Plan'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(300);
-  const out = []; const ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x != null && !c ? ' – ' + x : ''));
+  let r2; const out = []; const ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x != null && !c ? ' – ' + x : ''));
   const bild = async n => { if (ordner) { fs.mkdirSync(ordner, { recursive: true }); await pg.screenshot({ path: path.join(ordner, `orte-${bw}x${bh}-${n}.png`) }); } };
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.stufenAn = false; spiel.tippsAus = true; spiel.geld = 90000; });
   await pg.evaluate(() => { const mk = (n, r, i) => { const P = neuesPferd({ rasse: r, geschlecht: 'Stute', alter: 8, name: n }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); spiel.boxen[i].pferd = P; spiel.boxen[i].krippeVoll = true; return P; }; mk('Anna', 'haflinger', 0); });
@@ -47,6 +47,66 @@ const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner 
   const liste = await pg.evaluate(() => /Alle Tutorials/.test(document.getElementById('dlgInhalt').textContent) && !document.getElementById('dlg').hidden);
   ok('nach dem Kapitel zurück zur Tutorial-Liste (ohne Abschlussfrage)', liste);
   ok('Tutorial-Band ist weg, echtes Spiel läuft', await pg.evaluate(() => !spiel.tutorial && !document.getElementById('tutBand')));
+
+  // ===== Etappe 2 (v764): Orte, Umstellen mit Rückfrage, Whiteboard-Abgleich =====
+  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; weiden().forEach(w => { delete w.gesperrt; }); spiel.spieler.stufe = 'exp'; spiel.boxen.forEach(b => { if (b.pferd) b.pferd.reheOk = spiel.tag; });
+    const B = x => Object.assign({ pferd: null, krippeVoll: false, mistig: false, mistStufe: 0 }, x); spiel.boxen.push(B({ paddock: true }), B({ abfohl: true }), B({ quar: true }), B({ offen: true }));
+    const i = spiel.boxen.findIndex(x => x.pferd); const b = spiel.boxen[i]; b.einstreu = 'spaene'; b.krippeVoll = true; b.kraftVoll = true; b.wasserTag = spiel.tag; });
+  const orte = async () => { await pg.evaluate(() => { document.getElementById('dlg').hidden = true; zeigeSchirm(null); const i = spiel.boxen.findIndex(x => x.pferd && x.pferd.name === 'Anna'); aktBox = i; spiel.aktBox = i; aktenModus = 'pflege'; aktenReiter = 'platz'; ortModus = null; zeigeAkte(); }); await pg.waitForTimeout(200); };
+  const box = () => pg.evaluate(() => { const b = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna'); return { i: spiel.boxen.indexOf(b), art: b.offen ? 'offen' : b.quar ? 'quar' : b.abfohl ? 'abfohl' : b.paddock ? 'paddock' : 'stall', e: b.einstreu, k: !!b.krippeVoll, kr: !!b.kraftVoll, w: b.wasserTag === spiel.tag }; });
+  const klick = sel => pg.evaluate(sel => { const e = document.querySelector(sel); if (!e) return false; e.dispatchEvent(new MouseEvent('click', { bubbles: true })); return true; }, sel);
+  await orte();
+  ok('Reiter heißt „Orte“', await pg.evaluate(() => /^Orte$/.test((document.querySelector('[data-r="platz"]') || {}).textContent || '')));
+  ok('keine Kacheln „Box wechseln“, „Training“, „Koppel“, „Büro“ unter dem Plan', await pg.evaluate(() => !document.querySelector('.kachel[data-ort="box"], .kachel[data-ort="training"], .kachel[data-ort="koppel"], .kachel[data-ort="labor"]')));
+  await bild('orte');
+  ok('Reitplatz im Plan → Zurück führt zu „Orte“', await (async () => { await klick('.plan-scroll.ort [data-ort="tr-reitplatz"]'); await pg.waitForTimeout(150); const a = await pg.evaluate(() => ortModus); await klick('#ortZurueck'); await pg.waitForTimeout(150); return a === 'tr-reitplatz' && await pg.evaluate(() => ortModus === null); })());
+  const e0 = await box();
+  const um = async (sel, art, name) => { await orte(); const da = await klick(sel); await pg.waitForTimeout(150);
+    const frage = await pg.evaluate(() => /umstellen\?/.test(document.getElementById('dlgInhalt').textContent) && !document.getElementById('dlg').hidden);
+    if (frage) { await pg.click('#dlgKnoepfe button:has-text("Umstellen")'); await pg.waitForTimeout(150); }
+    const b = await box(); ok(`${name}: Rückfrage, dann ${art}, Einstreu/Futter/Wasser dabei`, da && frage && b.art === art && b.e === e0.e && b.k && b.kr && b.w, JSON.stringify({ da, frage, b })); };
+  await um('[data-ort="zuPaddock"]', 'paddock', 'Stall → Paddockbox');
+  await um('[data-ort="zuAbfohl"]', 'abfohl', 'Paddockbox → Abfohlbox');
+  await um('[data-ort="zuQuar"]', 'quar', 'Abfohlbox → Quarantäne');
+  await orte(); await klick('.plan-scroll.ort [data-ort="zuStall"]'); await pg.waitForTimeout(150);
+  ok('Quarantäne: raus erst nach Ablauf', await pg.evaluate(() => /Quarantäne/.test(document.getElementById('dlgInhalt').textContent) && !/umstellen\?/.test(document.getElementById('dlgInhalt').textContent)));
+  await pg.evaluate(() => { spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna').pferd.quarantaene = -999; });
+  await um('.plan-scroll.ort [data-ort="zuStall"]', 'stall', 'Quarantäne → Stallbox (Plan)');
+  await um('[data-ort="offenstall"]', 'offen', 'Stallbox → Offenstall');
+  await um('.plan-scroll.ort [data-ort="zuStall"]', 'stall', 'Offenstall → Stallbox (Plan)');
+  await um('[data-ort="zuQuar"]', 'quar', 'Stallbox → Quarantäne');
+  await pg.evaluate(() => { spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna').pferd.quarantaene = -999; });
+  await um('[data-ort="zuPaddock"]', 'paddock', 'Quarantäne → Paddockbox');
+  await um('.plan-scroll.ort [data-ort="zuStall"]', 'stall', 'Paddockbox → Stallbox (Plan)');
+  // Box wechseln (Liste): Einstreu zieht mit
+  await pg.evaluate(() => { const b = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna'); const z = spiel.boxen.findIndex(x => x !== b && boxFrei(x) && !x.paddock && !x.quar && !x.abfohl); aktenModus = 'pflege'; aktenReiter = 'platz'; ortModus = 'box'; zeigeAkte(); const k = document.querySelector(`[data-zielbox="${z}"]`); k.click(); });
+  { const b = await box(); ok('Box wechseln (Liste): Einstreu und Futter ziehen mit', b.e === e0.e && b.k && b.kr, JSON.stringify(b)); }
+  // Whiteboard-Abgleich
+  const pd = await pg.evaluate(() => { ['gpa', 'gpb'].forEach(gid => gebaeude().push({ gid, typ: 'sandpaddock', stufe: 1, zustand: 100 })); spiel.anlage.paddock = true; planAutoSetzen(); return ['gpa', 'gpb'].map(g => !!hofPlan().pos[g]); });
+  ok('zwei Sandpaddocks im Plan', pd[0] && pd[1], JSON.stringify(pd));
+  await pg.evaluate(() => { const p = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna').pferd; wbIstSetzen(p, 'gpa'); });
+  await orte(); await klick('.plan-scroll.ort [data-pdgid="gpb"]'); await pg.waitForTimeout(200);
+  ok('Sandpaddock B angetippt, Plan sagt A → kommt auf A', await pg.evaluate(() => { const p = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna').pferd; return !!(p.paddock && p.paddock.pid === 'gpa'); }));
+  await pg.evaluate(() => { const b = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna'); delete b.pferd.paddock; zurueckInBox(b); });
+  await orte(); await klick('.pl-pfeil[data-ort="weide"]'); await pg.waitForTimeout(200);
+  ok('Weide angetippt, Plan sagt Sandpaddock → Rückfrage', await pg.evaluate(() => /Laut Plan ist Anna für den „/.test(document.getElementById('dlgInhalt').textContent)), await pg.evaluate(() => document.getElementById('dlgInhalt').textContent.slice(0, 120)));
+  await bild('frage');
+  await pg.click('#dlgKnoepfe button:has-text("Ja")'); await pg.waitForTimeout(200);
+  ok('… Ja → Weideauswahl', await pg.evaluate(() => /Auf welche Weide/.test(document.getElementById('dlgInhalt').textContent)));
+  await pg.click('[data-wziel]'); await pg.waitForTimeout(200);
+  r2 = await pg.evaluate(() => { const p = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna').pferd, pl = wbPlanJetzt(p); return { w: !!p.weide, pd: pl && pl.pd, z: pl && pl.ziel, wid: p.weide && p.weide.wid }; });
+  ok('… Pferd auf der Weide, Whiteboard zeigt jetzt diese Weide', r2.w && r2.pd === false && r2.z === r2.wid, JSON.stringify(r2));
+  await pg.evaluate(() => { const b = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna'); vonWeideHolen(b); });
+  await orte(); await klick('.plan-scroll.ort [data-pdgid="gpb"]'); await pg.waitForTimeout(200);
+  ok('Sandpaddock angetippt, Plan sagt Weide → Rückfrage', await pg.evaluate(() => /lieber auf den Sandpaddock/.test(document.getElementById('dlgInhalt').textContent)));
+  await pg.click('#dlgKnoepfe button:has-text("Ja")'); await pg.waitForTimeout(200);
+  ok('… Ja → Sandpaddock-Auswahl', await pg.evaluate(() => /In welchen Sandpaddock/.test(document.getElementById('dlgInhalt').textContent)));
+  await pg.click('[data-pziel="gpb"]'); await pg.waitForTimeout(200);
+  r2 = await pg.evaluate(() => { const p = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna').pferd, pl = wbPlanJetzt(p); return { pd: p.paddock && p.paddock.pid, plpd: pl && pl.pd, z: pl && pl.ziel }; });
+  ok('… Pferd auf Sandpaddock B, Whiteboard zeigt Sandpaddock B', r2.pd === 'gpb' && r2.plpd === true && r2.z === 'gpb', JSON.stringify(r2));
+  await pg.evaluate(() => { const b = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna'); delete b.pferd.paddock; zurueckInBox(b); });
+  await orte(); await klick('.plan-scroll.ort [data-pdgid="gpa"]'); await pg.waitForTimeout(200);
+  ok('passt zum Plan → keine Rückfrage, Pferd kommt auf den geplanten Sandpaddock B', await pg.evaluate(() => { const p = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna').pferd; return !!(p.paddock && p.paddock.pid === 'gpb'); }));
   // Pinnwand
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; const bx = spiel.boxen.find(x => x.pferd); const p = bx.pferd; p.schleifen = Array.from({ length: 12 }, (_, i) => ({ st: 1 + i % 3, pl: 1 + i % 6, c: false, von: 8, platz: 1 + i % 6, pruef: 'Dressur A', turnier: 'Test', tag: 5 + i })); pinnwandOeffnen(p); });
   await pg.waitForTimeout(300);

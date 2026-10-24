@@ -38,6 +38,13 @@ Stichprobe 500 Pferde je Rasse (`neuesPferd` mit Markt-Farbverteilung). **Zu hä
 
 **Erledigt in v731 (Dome: „pass alles der Realität entsprechend an“):** Zahlen siehe `CLAUDE.md` v731. Noch offen: Traumfarben-Liste für den Raritäten-Markt (Dominant White, Brindle, Leopard, Splash + Doppel-Cream …) – Dome nennt Kombinationen und Rate.
 
+## Aufnahme 24.10. – Etappe 2 (Claude Team, v764) – selbst entschieden, bitte ansehen
+- **Whiteboard nach Hand-Änderung in „Orte“:** die Änderung gilt für die **laufende Jahreszeit** und läuft weiter, bis für eine spätere Jahreszeit ein eigener Plan steht (so plant das Whiteboard ohnehin). War das Pferd „alle 2 Tage“ eingeteilt, bleibt sein Tag (A/B), sonst wird es „täglich“.
+- **Plan sagt „bleibt in der Box“** (z. B. wer das Whiteboard nicht nutzt) und man tippt Weide oder Sandpaddock an: keine Rückfrage, das Whiteboard bleibt unverändert (sonst käme die Frage bei jedem Klick, und die Stallburschen würden das Pferd ab dann täglich rausbringen).
+- **Pferd zurück in die Box holen** ändert das Whiteboard nicht (das ist nur für heute).
+- **Quarantäne:** solange die Quarantäne läuft, kann man das Pferd nicht aus dem Quarantänestall umstellen (wie schon beim Ziehen in der Boxenübersicht).
+- **Kacheln unter dem Plan:** sie erscheinen nur noch für Ziele, die (noch) nicht im Hofplan stehen (z. B. Gebäude im Feld „Zum Bauen“) – sonst gäbe es keinen Weg dorthin. Fohlen-ABC und „Duschen üben“ bleiben als Kacheln (das sind keine Orte).
+
 ## Hofplan (Claude Team, 24.10.2026) – Domes Antworten sind eingebaut (v758), noch offen:
 - **Dome 24.10. (Antworten):** Büro-Maße so lassen; Start-Hof bleibt 0,5 ha Bauland + 1 ha Weide; im Hofplan bleiben die Weiden als Streifen (Pfeile nur in Box → Ort); **alle Preise werden noch einmal angeschaut** (Büro, Bauland, Bauten – `PROJEKT-CHAT-THEMEN.md` Punkt 12).
 - **Dome 24.10.:** selbst gesetzte Zahlen für Verwaltung (+4/+8 Ansehen, +1/+2 Zufriedenheit), Futterkammer (200/350/600 kg + 30 kg je Box) und Büro (Maße, Preise) bleiben so; Luzerne im Heu- und Strohlager (v761). Preise nur noch in der Gesamt-Preisdurchsicht.

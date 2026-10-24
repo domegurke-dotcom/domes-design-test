@@ -31,7 +31,7 @@ const { chromium } = require('playwright');
   // 3. Pferde über Box – ppf – Ort – Weide auf verschiedene Weiden
   const aufWeideUI = async (boxNr, wahl) => {
     await pg.evaluate(n => { $('dlg').hidden = true; spiel.hofFenster = []; aktBox = n; spiel.aktBox = n; zeigeSchirm(null); zeigeStall(); zeigeTag(); aktenModus = 'pflege'; aktenReiter = 'platz'; ortModus = null; zeigeAkte(); }, boxNr);
-    await klick('[data-ort="koppel"]'); await klick('[data-ort="weide"]');   // Weide liegt seit v293 unter „Koppel“
+    if (await pg.$('.kachel[data-ort="koppel"]')) await klick('[data-ort="koppel"]'); await klick('[data-ort="weide"]');   // seit v764: Weide-Pfeil im Hofplan („Koppel“ nur ohne Plan)
     const liste = await pg.$$eval('[data-wziel]', x => x.map(e => e.textContent.replace(/\s+/g, ' ').trim()));
     log('  Auswahl-Fenster:', liste.join(' | ') || '(keins)');
     if (liste.length) { await klick(`[data-wziel]:nth-of-type(${wahl + 1})`); }

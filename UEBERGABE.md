@@ -15,12 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-### Aufnahme von Dome (24.10., v762) – Etappe 1 fertig (Claude Team, Sonnet, v763)
+### Aufnahme von Dome (24.10., v762) – Etappe 1+2 fertig (Claude Team, v763/v764)
 Dome hat 14 Meldungen aufgenommen (`Zuchtstall_test-der-neuesten-funktionen…json`). Abgesprochen: 3 Etappen, Etappe 2 mit Opus. **Etappe 1 ✅ v763:** Fressdauer 5 s, Pinnwand größer, Weide im Ort-Plan anklickbar, Büro = Labor (umbenannt), Spielumfang-Schalter weg, „Tutorials“ mit Liste aller Kapitel (Meldungen 1, 2, 3, 6-Teil, 13, 14).
-**Etappe 2 (Opus) offen – Domes Antworten:**
-- „Ort“ → **„Orte“** umbenennen; alles, was dort angeklickt wird, hat Rücksprung zu „Orte“ (nicht mehr zur Kachel „Training“); die Kacheln unter dem Hofplan (Box wechseln, Stallbox, Koppel, Training, Labor/Büro) entfallen komplett, alles läuft über den Plan.
-- **Umstellen (5 und 7):** Klick auf Stall-/Paddockbox (und Abfohlstall+Box, Aufzucht-Offenstall, Quarantänestall+Box) fragt „Pferd umstellen?“, dann in die nächste freie Box ohne Auswahl; Einstreu und Futter ziehen mit (Aufnahme zeigte Pünktchen danach mit Box „---“ = ohne Einstreu – prüfen). Muss zu allen und von allen Boxarten funktionieren.
-- **Weide/Sandpaddock (10, 11):** ist das Pferd im Whiteboard für Sandpaddock 5 geplant und man klickt in „Orte“ auf Weide, kommt die Rückfrage „Laut Plan ist … für Sandpaddock 5 eingeteilt, möchtest du … lieber auf die Weide stellen?“ – bei Ja die frühere Weideauswahl; umgekehrt genauso. Das **Whiteboard passt sich an** (Ist-Zustand; Änderung für die laufende Jahreszeit eintragen, gilt weiter, bis ein eigener Plan kommt – Dome noch nicht bestätigt).
+**Etappe 2 ✅ v764 (Opus):** „Orte“, Kacheln unter dem Plan weg (nur Fallback für Ungeplantes), Zurück immer zu „Orte“, Umstellen mit Rückfrage zwischen allen Boxarten (Einstreu/Futter/Wasser ziehen mit – der Fehler steckte in der Box-wechseln-Liste), Weide ↔ Sandpaddock mit Rückfrage und Whiteboard-Abgleich. Selbst entschiedene Punkte in `OFFENE-FRAGEN.md` („Aufnahme 24.10. – Etappe 2“). Tests: `orte-test` 39/39 in 3 Ansichten, hofplan/sandpaddock/whiteboard/tutorial/stufen grün, Tutorial-Spieler anf+fort 390×844 ✓. **Als Nächstes: Etappe 3 mit Sonnet – Dome schaltet um.**
 **Etappe 3 (Sonnet) offen:** Meldung 12 Kreis mit ✕ in der Mitte des angetippten Gebäudes, Symbole ringsum (Reparieren, Ausbauen, Name, Abreißen, Drehen, Infos) **mit den echten Funktionen**, ✕ bricht ab, Leiste unter dem Plan entfällt; Meldung 9 Pferdeköpfe der Reiter (z. B. 2 Köpfe bei 2 Reitern) auf Reitplatz/Roundpen im Plan; Meldung 8 roter gepunkteter Rahmen im Whiteboard, wenn Pferd nicht dort steht, wo es laut Buchung/Plan hingehört.
 
 ### Stand davor (Claude Team, 24.10. – v762)

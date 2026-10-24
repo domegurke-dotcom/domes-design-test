@@ -148,3 +148,5 @@ Domes Wünsche zu Whiteboard, Mitarbeitern, Waschplatz/Solarium sind umgesetzt (
 **Plan Offenstall (24.10.):** Dome-Antworten eingetragen (Nachfrage gleich, Arbeit je Gruppe, keine alten Spielstände betroffen). Noch kein Bau-Ja.
 
 **Plan Offenstall (24.10.):** Gruppeneinteilung von Dome bestätigt, Bau auf später verschoben – nicht anfangen, bis Dome Ja sagt.
+
+**Plan Boxansicht (Claude Team, 24.10.):** `PLAN-BOXANSICHT.md` + Bilder `entwuerfe-boxansicht/` (Gesamtentwurf 9.x, wo steckt was 10.x). Dome hat die Entwürfe gebilligt („ja“), Bau aber noch nicht freigegeben. Nächster Schritt: Dome klärt Punkte 1–3 im Plan und sagt Ja zu B1.

@@ -15,6 +15,16 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### Sitzung 24.10. (spät) – v769–v803 (Claude Team, Sonnet) – Stand für Pro
+Alles auf `main`, Details je Version in `CLAUDE.md` (v769–v803). Kurz:
+- **Whiteboard/Orte:** Plan ↔ Standort immer synchron, roter Rahmen = Orientierung (bleibt auch im freien Quoten-Rahmen, Tooltip erklärt), gesperrte Weide mit rotem Kreuz und „Aussaat – noch x Tage“, grüner Zielrahmen um die ganze Weide-Karte (täglich), **neu v800: Zeile „🧺 Versorgung heute“ (✔/✗ Heu, Futter, Wasser, Misten) bei jedem Pferd**.
+- **Pension:** Richtwerte 150/400/750 (Box), Paddockbox 190/500/940, Zusatzleistungen angepasst (alte Spielstände behalten eigene Preise, zu niedrige werden einmal still angehoben), Einsteller-Kacheln. **Weide-/Sandpaddock-Wunsch mit Quote je Jahreszeit** (`WEIDE_QUOTE` 0,7/0,85/0,5/**0,4**, `weideFrei`, ein Tag immer frei); hinter dem Wunsch „(bisher/mindestens)“ (`weideStandTxt`, `weideMin`), auch im Winter sichtbar.
+- **Hofplan:** Bau-Bestätigung per Kreis (✔ mit Preis + Bauzeit, rotes ✕), Sandpaddock nur über Ausbauen (kein Vergrößern mehr), Roundpen 12/18/24 m (3/4/5 Kacheln).
+- **Sonstiges:** Pferd in allen Boxen ganz vorn (Objekte bleiben antippbar), Update-Fenster Stufe 5 und 6 veröffentlicht (`NEUES_STAND` 794).
+**Selbst gesetzte Zahlen (Dome informieren):** Winterquote 40 %, ein freier Tag je Jahreszeit (`WEIDE_FREI_MIN`), Roundpen-Raster aufgerundet (12 m → 15 m).
+**Offen / auf Dome warten:** (1) Boxnummern überall pro Gebäude (Boxschild, alte Stallansicht, Briefe) – Frage gestellt, Antwort fehlt; Whiteboard zählt schon pro Gebäude. (2) Neues Update-Fenster für v799–v803? (nur auf Domes Ansage). (3) Große Tests nur mit Domes Ja + Bilder-Variante; Tutorial-Spieler nur zusammen damit. (4) Pferdefriedhof-Idee (Thema 26) erst nach Domes Ja.
+**Achtung:** nach jeder Änderung alle Skriptblöcke mit `node --check` prüfen; Kommentare nur am Zeilenende.
+
 ### Aufnahme von Dome (24.10., v762) – Etappe 1+2 fertig (Claude Team, v763/v764)
 Dome hat 14 Meldungen aufgenommen (`Zuchtstall_test-der-neuesten-funktionen…json`). Abgesprochen: 3 Etappen, Etappe 2 mit Opus. **Etappe 1 ✅ v763:** Fressdauer 5 s, Pinnwand größer, Weide im Ort-Plan anklickbar, Büro = Labor (umbenannt), Spielumfang-Schalter weg, „Tutorials“ mit Liste aller Kapitel (Meldungen 1, 2, 3, 6-Teil, 13, 14).
 **Etappe 2 ✅ v764 (Opus):** „Orte“, Kacheln unter dem Plan weg (nur Fallback für Ungeplantes), Zurück immer zu „Orte“, Umstellen mit Rückfrage zwischen allen Boxarten (Einstreu/Futter/Wasser ziehen mit – der Fehler steckte in der Box-wechseln-Liste), Weide ↔ Sandpaddock mit Rückfrage und Whiteboard-Abgleich. Selbst entschiedene Punkte in `OFFENE-FRAGEN.md` („Aufnahme 24.10. – Etappe 2“). Tests: `orte-test` 39/39 in 3 Ansichten, hofplan/sandpaddock/whiteboard/tutorial/stufen grün, Tutorial-Spieler anf+fort 390×844 ✓. **Als Nächstes: Etappe 3 mit Sonnet – Dome schaltet um.**

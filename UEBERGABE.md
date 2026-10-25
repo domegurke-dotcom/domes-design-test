@@ -25,11 +25,13 @@ Die Nachrichten von Claude Team (v805–v824) sind übernommen und hier gelösch
 | Weihnachtsgeld (`PLAN-WEIHNACHTEN.md` D) | ✅ v826 (A–C nicht beauftragt) |
 | Aufzucht-Offenstall (`PLAN-OFFENSTALL.md` 1–3) | ✅ v827 |
 | Test Symbole PC (Weide/Sandpaddock, Pension) | ✅ v828 – 105 ✓; Fehler gefunden und behoben: Plaketten öffneten am PC nichts |
+| Domes Antworten 25.10. (v829) | ✅ Admin „Test“ im Ausrüstungs-Kreis · Offenstall-Gruppe je angefangene 5 Pferde = 1 Box · Brief: Knopf „Besitzer informieren“ + Ort statt Box bei Pferd draußen · Denkblase auch draußen · Update-Fenster 25.10. |
+| **Als Nächstes** | Tutorial auf die neue Box-Ansicht umstellen (Dome: danach großer Test mit **alle Bilder** + Tutorial-Spieler – erst auf ihr „Los“) |
 | Test Krankheitsmeldungen (Pension/eigene) | ✅ v828 – `krankmeldung-test` 17 ✓ in PC, hochkant, quer |
 | Tutorial-Etappe der Boxansicht | wartet auf Domes Ja (nur mit großem Test) |
 
 **Nicht gelaufen:** große Tests (etappen-, hof-gesamt-, neuladen-test) und Tutorial-Spieler – nur mit Domes Ja und Bilder-Variante. Kleine Tests dieser Sitzung grün: boxmobil (5 Größen), boxfenster, boxfenster-alle, boxansicht, weihnachtsgeld, offenstall, krankmeldung, pension-krank, krankheiten, hofplan, flaeche, bauen-komfort, anbau, orte, kamm, hinweise, whiteboard, berufe-popup.
-**Offene Fragen:** `OFFENE-FRAGEN.md`, Abschnitt „Sitzung 25.10.“. Update-Fenster für v825–v828: nur auf Domes Ansage.
+**Offene Fragen:** `OFFENE-FRAGEN.md`, Abschnitt „Sitzung 25.10.“. Update-Fenster vom 25.10. (v828-Stufe) ist veröffentlicht (Box-Ansicht, Namensschilder, Weihnachtsgeld, Hufrehe, Schulden, Whiteboard kopieren, Pferd holen).
 **Achtung:** Handy-Tests der Box brauchen `localStorage["zuchtstall-boxfenster"]` (sonst alte Ansicht unter Playwright) – `tests/boxmobil-test.js`.
 
 ---

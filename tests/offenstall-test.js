@@ -52,8 +52,9 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
   z = await pg.evaluate(() => { spiel.mitarbeiter = [{ id: 'sb1', typ: 'stallbursche', name: 'Sb', w: false, wissen: wissenStart(30, {}), eig: [], gehalt: 300, ab: jzJetzt() - 1, bis: null }].map(maErgaenzen);
     const Z = maZuteilung('stall'), o = Z.filter(x => spiel.boxen[x.i].offen), proG = {}; o.forEach(x => { const k = spiel.boxen[x.i].og; (proG[k] = proG[k] || new Set()).add(x.m.id); });
     const belegt = [0, 1, 2, 3].map(k => offenGruppeBoxen(k).filter(b => b.pferd).length), versorgt = [0, 1, 2, 3].map(k => o.filter(x => spiel.boxen[x.i].og === k).length);
-    return { belegt, versorgt, einer: Object.values(proG).every(s => s.size === 1) }; });
-  ok('Stallbursche (3 Boxen): schafft 3 ganze Gruppen, jede Gruppe macht derselbe', z.einer && z.versorgt.filter((n, k) => n === z.belegt[k] && n > 0).length >= 3, z);
+    const aufw = [0, 1, 2, 3].filter(k => versorgt[k] > 0).reduce((x, k) => x + Math.max(1, Math.ceil(belegt[k] / 5)), 0);
+    return { belegt, versorgt, aufw, einer: Object.values(proG).every(s => s.size === 1) }; });
+  ok('Stallbursche (3 Boxen): je angefangene 5 Pferde einer Gruppe = 1 Box, keine Gruppe halb, jede Gruppe macht derselbe', z.einer && z.versorgt.every((n, k) => n === 0 || n === z.belegt[k]) && z.aufw <= 3 + 0.01 && z.aufw >= 1, z);
   // Anzeige in der Box (Fenster-Modus aus, alte Ansicht)
   await pg.evaluate(() => { spiel.hofFenster = []; document.getElementById('dlg').hidden = true; zeigeSchirm(null); aktenModus = 'pflege'; aktenReiter = 'gesundheit'; zeigeStall(); zeigeTag(); zeigeAkte(); }); await pg.waitForTimeout(400);
   ok('Box eines Offenstall-Pferdes zeigt die Gruppen-Karte', await pg.evaluate(() => !!document.querySelector('#info .og-karte')));

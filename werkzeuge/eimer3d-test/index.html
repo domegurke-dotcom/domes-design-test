@@ -16,6 +16,7 @@
 <canvas id="c"></canvas>
 <div id="leiste">
   <button id="haferKnopf">Hafer: an</button>
+  <button id="wasserKnopf">Wasser: aus</button>
   <button id="dreh">Drehen: aus</button>
   <span id="info">lädt …</span>
 </div>
@@ -49,21 +50,29 @@ const FARBEN = {
 
 const gruppe = new THREE.Group();
 scene.add(gruppe);
-const hafer = [];
+const teile = { hafer: [], wasser: [] };   // Inhalt des Eimers, einzeln ein- und ausblendbar
 
-new GLTFLoader().load("./eimer-hafer.glb", (gltf) => {
+new GLTFLoader().load("./eimer-alle.glb", (gltf) => {
   const modell = gltf.scene;
   modell.traverse((o) => {
     if (!o.isMesh) return;
-    const alt = o.material, name = alt.name;
+    const alt = o.material, name = alt.name.replace(/\.\d{3}$/, "");   // „tinte.001“ → „tinte“
     const neu = (name === "tinte") ? new THREE.MeshBasicMaterial() : new THREE.MeshLambertMaterial();
     if (FARBEN[name]) neu.color.setRGB(...FARBEN[name], THREE.LinearSRGBColorSpace);
     else neu.color.copy(alt.color);
     // Kontur = umgestülpte Hülle: nur die Rückseiten der Hülle sichtbar (Blender: „Rückseiten ausblenden“)
+    // Hafer-Farben über den Namensanfang (Blender hängt manchmal „.001“ an)
+    if (/^hafer_basis/.test(name)) neu.color.setRGB(0.26, 0.09, 0.01, THREE.LinearSRGBColorSpace);
+    if (/^hafer_hell/.test(name)) neu.color.setRGB(0.85, 0.52, 0.09, THREE.LinearSRGBColorSpace);
+    if (/^hafer_mittel/.test(name)) neu.color.setRGB(0.71, 0.34, 0.04, THREE.LinearSRGBColorSpace);
+    if (/^hafer_dunkel/.test(name)) neu.color.setRGB(0.49, 0.18, 0.02, THREE.LinearSRGBColorSpace);
+    if (name === "wasser") neu.color.setRGB(0.0497, 0.159, 0.254, THREE.LinearSRGBColorSpace);
+    if (name === "wasser_ring") neu.color.setRGB(0.159, 0.337, 0.462, THREE.LinearSRGBColorSpace);
     neu.side = (name === "tinte") ? THREE.FrontSide : THREE.DoubleSide;
     o.material = neu;
-    let p = o; while (p) { if (/^hafer/.test(p.name)) { hafer.push(o); break; } p = p.parent; }
+    let p = o; while (p) { const m = /^(hafer|wasser)/.exec(p.name); if (m) { teile[m[1]].push(o); break; } p = p.parent; }
   });
+  teile.wasser.forEach((o) => { o.visible = false; });   // Start: Hafer an, Wasser aus
   gruppe.add(modell);
   info.textContent = "ziehen = drehen";
 }, undefined, (e) => { info.textContent = "Fehler: " + e.message; });
@@ -85,11 +94,15 @@ canvas.addEventListener("pointermove", (e) => { if (!zieht) return; gruppe.rotat
 canvas.addEventListener("pointerup", () => { zieht = false; });
 let dreht = false;
 document.getElementById("dreh").onclick = (e) => { dreht = !dreht; e.target.textContent = "Drehen: " + (dreht ? "an" : "aus"); };
-document.getElementById("haferKnopf").onclick = (e) => {
-  const an = e.target.textContent.endsWith("aus");
-  hafer.forEach((o) => { o.visible = an; });
-  e.target.textContent = "Hafer: " + (an ? "an" : "aus");
-};
+function schalter(id, name, titel) {
+  document.getElementById(id).onclick = (e) => {
+    const an = e.target.textContent.endsWith("aus");
+    teile[name].forEach((o) => { o.visible = an; });
+    e.target.textContent = titel + ": " + (an ? "an" : "aus");
+  };
+}
+schalter("haferKnopf", "hafer", "Hafer");
+schalter("wasserKnopf", "wasser", "Wasser");
 
 // Bilder pro Sekunde
 let n = 0, t0 = performance.now();

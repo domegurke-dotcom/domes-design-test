@@ -34,7 +34,7 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
     ok(`${n}: Brief hat die Knöpfe „Zum Pferd“ und „Tierarzt rufen“`, /bf-box/.test(z.html) && /bf-ta/.test(z.html), z.html.slice(0, 200));
     ok(`${n}: Knopf „Besitzer informieren“ im Brief ${wer === 'PEN' ? 'vorhanden' : 'nicht vorhanden (eigenes Pferd)'}`, /bf-bes/.test(z.html) === (wer === 'PEN'), z.html.slice(0, 400));
     await pg.evaluate(w => zeig(window[w]), wer); await pg.waitForTimeout(300); z = await pg.evaluate(() => ui());
-    ok(`${n}: in der Box Denkblase „Mir geht’s nicht gut“, Tierarzt-Ampel rot, Klemmbrett „Krank? …“`, /nicht gut/.test(z.denk) && z.ta === 'r' && z.kb.some(k => /Krank\?/.test(k)), z);
+    ok(`${n}: in der Box keine Denkblase mehr (v847), Tierarzt-Ampel rot, Klemmbrett „Krank? …“`, !z.denk && z.ta === 'r' && z.kb.some(k => /Krank\?/.test(k)), z);
     if (wer === 'PEN') ok('Pensionspferd: Plakette „Besitzer informieren“', z.chips.some(c => /Besitzer informieren/.test(c)), z.chips);
     if (ORD) await pg.screenshot({ path: `${ORD}/krank-${wer}-${W}x${H}.png` });
     // 3. Pensionspferd: Besitzer informieren über die Plakette → Antwort am nächsten Morgen
@@ -62,7 +62,7 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
   let z = await leise(`() => { befundeMorgen(); zeig(EIG); const br = spiel.post.slice(0, spiel.post.length - ${np3}).find(x => /ist auffällig/.test(x.betreff || '')); return { bemerkt: BF.bemerkt && BF.bemerkt.von, text: br ? br.text : '' }; }`);
   await pg.waitForTimeout(300); z = { ...z, ...(await pg.evaluate(() => ({ ...ui(), denkImBild: (() => { const d = document.querySelector('.bxdenk'), s = document.getElementById('stall'); if (!d) return false; const a = d.getBoundingClientRect(), q = s.getBoundingClientRect(); return a.top >= q.top - 2 && a.bottom <= q.bottom + 2; })() }))) };
   ok('Sandpaddock: Krankheit wird bemerkt, der Brief nennt den Ort („auf … Sandpaddock, Box …“)', z.bemerkt === 'Paula' && /\(auf [^)]*, Box \d+\)/.test(z.text), z.text.slice(0, 200));
-  ok('Sandpaddock: Denkblase „Mir geht’s nicht gut“ auch draußen im Bild, Tierarzt-Ampel rot', /nicht gut/.test(z.denk) && z.denkImBild && z.ta === 'r', z);
+  ok('Sandpaddock: keine Denkblase (v847), Tierarzt-Ampel rot', !z.denk && z.ta === 'r', z);
   if (ORD) await pg.screenshot({ path: `${ORD}/krank-sandpaddock-${W}x${H}.png` });
   // 6. Spieler bemerkt selbst beim Besuch (Sprechblase)
   z = await leise(`() => { EIG.befunde = []; delete EIG.paddock; zurueckInBox(spiel.boxen[boxIdx(EIG)]); window.BF = neuBefund(EIG, 'husten', 3); delete BF.angeschaut; zeig(EIG); anzeichenBeimBesuch(spiel.boxen[boxIdx(EIG)]); return { von: BF.bemerkt && BF.bemerkt.von }; }`);

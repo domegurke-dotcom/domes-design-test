@@ -57,7 +57,7 @@ const [W, H] = (process.argv[2] || '390x844').split('x').map(Number), ORD = proc
   ok('Putzkiste: Werkzeuge im Kreis, kein Fenster', z.putz && !z.offen && ['buerste', 'kamm', 'huf', 'streicheln', 'zu'].every(t => z.tools.includes(t)), z);
   ok('Werkzeuge überdecken sich nicht und bleiben im Bild', !(await ueberlapp('#boxUI .bxtool')) && await imBild('#boxUI .bxtool'), await ueberlapp('#boxUI .bxtool'));
   await klick('#boxUI [data-bxtool="buerste"]');
-  ok('Bürste: Wischen läuft, Hinweis „mit dem Finger“', await pg.evaluate(() => wisch && wisch.tool === 'buerste' && /mit dem Finger/.test(document.querySelector('.bxhinweis').textContent)));
+  ok('Bürste: Wischen läuft, Knopf „aufhören“', await pg.evaluate(() => wisch && wisch.tool === 'buerste' && /aufhören/.test(document.querySelector('.bxhinweis').textContent)));
   await bild('putzen');
   // Wischen mit dem Finger über das Pferd
   const vorher = await pg.evaluate(() => B().pferd.dreck.fell);
@@ -94,7 +94,7 @@ const [W, H] = (process.argv[2] || '390x844').split('x').map(Number), ORD = proc
   await pg.evaluate(() => { const p = B().pferd; p.einsteller = 'ex1'; einstellerListe().push({ eid: 'ex1', vn: 'Ina', nn: 'Test', haltung: 'box', leistungen: {}, zufr: 80, stufe: 1, preis: 200 });
     befundListe(p).push({ id: 'bfT', art: 'husten', grad: 2, seit: spiel.tag, ursache: 'Test', bemerkt: { von: 'du', tag: spiel.tag }, meldungen: [], vermutung: null }); zeigeStall(); zeigeTag(); }); await pg.waitForTimeout(400);
   z = await pg.evaluate(() => ({ denk: !!document.querySelector('#boxUI .bxdenk'), chips: [...document.querySelectorAll('.bxchip')].map(x => x.textContent), drei: document.body.classList.contains('bxhoch') ? [...document.querySelectorAll('#bxUnten .bx-bal')].map(x => x.dataset.vstab).join() : [...document.querySelectorAll('#kopfRinge [data-vstab]')].map(x => x.dataset.vstab).join() }));
-  ok('Pensionspferd krank: Denkblase, Plakette „Besitzer informieren“, dritter Wert = Besitzer', z.denk && z.chips.some(c => /Besitzer/.test(c)) && /besitzer$/.test(z.drei), z);
+  ok('Pensionspferd krank: keine Denkblase (v847), Plakette „Besitzer informieren“, dritter Wert = Besitzer', !z.denk && z.chips.some(c => /Besitzer/.test(c)) && /besitzer$/.test(z.drei), z);
   ok('Plaketten im Bild und ohne Überlappung', await imBild('.bxchip') && !(await ueberlapp('.bxchip, #boxUI .bxs, #boxUI .bxdenk')), await ueberlapp('.bxchip, #boxUI .bxs, #boxUI .bxdenk'));
   await bild('pension-krank');
   await klick(`${HOCH ? '#bxUnten' : '#boxUI'} [data-bx="tierarzt"]`); z = await zust(); ok('Tierarzt öffnet Versorgung · Gesundheit', z.f === 'versorgung' && z.tabs.includes('gesund*') && z.tabs.some(t => t.startsWith('besitzer')), z);

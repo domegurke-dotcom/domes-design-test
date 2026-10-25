@@ -5,6 +5,7 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
 (async () => { const b = await chromium.launch(); const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (c || x == null ? '' : ' – ' + JSON.stringify(x)));
   const pg = await b.newPage({ viewport: { width: W, height: H } }); const errs = []; pg.on('pageerror', e => errs.push(e.message));
   await pg.addInitScript(() => localStorage.setItem('zuchtstall-boxfenster', '1'));
+  if (process.env.PCZOOM) await pg.addInitScript(() => localStorage.setItem('zuchtstall-pczoom', '1'));   // v831: PC-Vergrößerung auf großen Bildschirmen mitprüfen
   await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(600);
   await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('#chLos'); await pg.waitForTimeout(300); await pg.click('#dlgKnoepfe button');
   await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'H'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(300);

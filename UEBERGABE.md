@@ -15,64 +15,20 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-### Sitzung 24./25.10. – v810–v819 (Claude Team, Opus) – für Pro
-Preise (v810–v812, Pension 200/400/1.000), Pension-Schulden nach Auszug (v816), Whiteboard kopieren (v817), Hufrehe-Wunsch Sandpaddock (v814). **Boxansicht am PC:** B1 (v815) und B2 (v818/v819, Fenster + Kreise, siehe `PLAN-BOXANSICHT.md`), v820 kein Scrollen am PC, v821–v824 (Weide-Pferde in Fenstern, Ringe öffnen Versorgung, Tierarzt links oben, Klemmbrett „heute“, Namens-/Blechschild). **Offen:** Domes PC-Test; dann mobil (Plan: quer wie PC mit 2 Spalten, hochkant Symbolreihe + Balken unter dem Bild, Orte hochkant als Kacheln) – noch nichts gebaut; dann Tutorial. **In Arbeit:** Domes PC-Test von B2; danach mobil (hochkant/quer), dann Tutorial. **Geplant, nicht bauen ohne Ja:** `PLAN-OFFENSTALL.md`, `PLAN-WEIHNACHTEN.md`. Update-Fenster: Einträge seit v812 unveröffentlicht (nur auf Domes Ansage).
+### Sitzung 25.10. (Claude Pro, Opus) – Auftrag von Dome, Start 10:05
+Die Nachrichten von Claude Team (v805–v824) sind übernommen und hier gelöscht – Details stehen je Version in `CLAUDE.md`.
+**Auftrag:** (1) Boxansicht mobil, alle Etappen · (2) Weihnachtsgeld · (3) Aufzucht-Offenstall · danach testen: neue Symbole am PC (auch Pferde/Pensionspferde auf Weide/Sandpaddock), Krankheitsmeldungen bei Pensions- und eigenen Pferden. Fragen sammeln, am Ende gesammelt geben (`OFFENE-FRAGEN.md`, Abschnitt „Sitzung 25.10.“).
 
-### Sitzung 24.10. (Preise) – v805 (Claude Team, Sonnet) – für Pro
-Dome wollte die Futterkammer-Preise und andere Preise real prüfen. **v805:** Heu/Einstreu/Mineral, Unterhalt, Tierarzt, Beschlag, Boxenstall, Reitplatz, Reithalle, Land, Bauland, Pacht neu (Tabelle alt/neu/echt in `PREISE-VERGLEICH.md`, Rückweg dort). Paddockboxen und Makler-Preise habe ich mitgezogen (Verhältnis). **Offen (Dome fragen):** (1) Kaufpreis des Start-Hofs (20.000 €, Sachwert mit neuen Preisen 30.266 €) und andere Immobilien (`IMMOBILIEN`, Makler-Hofstelle 8.000) – nicht angefasst; (2) ✅ v808 Preise der übrigen Gebäude und Immobilien/Makler umgesetzt (`PREISE-VERGLEICH.md`); **offen: Mietpreise** (Abfohlbox-Aufpreis, Ammenstute, Beritt, Aufzucht) – Dome will sie besprechen; (3) Löhne und Pension sind laut Dome abgeschlossen; zwei Zeitmaßstäbe bleiben Projekt-Chat-Thema; (4) ✅ v806: `tests/dispo-test.js` repariert, „Wohnhaus“ heißt „Büro“. Tests angepasst: hofplan (11.250 €), heu-vorschlag (0,18 €/kg). Preise ändern keine Mechanik, alte Spielstände behalten ihre Gebäude-Preise.
-
-
-### Sitzung 24.10. (spät) – v769–v803 (Claude Team, Sonnet) – Stand für Pro
-Alles auf `main`, Details je Version in `CLAUDE.md` (v769–v803). Kurz:
-- **Whiteboard/Orte:** Plan ↔ Standort immer synchron, roter Rahmen = Orientierung (bleibt auch im freien Quoten-Rahmen, Tooltip erklärt), gesperrte Weide mit rotem Kreuz und „Aussaat – noch x Tage“, grüner Zielrahmen um die ganze Weide-Karte (täglich), **neu v800: Zeile „🧺 Versorgung heute“ (✔/✗ Heu, Futter, Wasser, Misten) bei jedem Pferd**.
-- **Pension:** Richtwerte 150/400/750 (Box), Paddockbox 190/500/940, Zusatzleistungen angepasst (alte Spielstände behalten eigene Preise, zu niedrige werden einmal still angehoben), Einsteller-Kacheln. **Weide-/Sandpaddock-Wunsch mit Quote je Jahreszeit** (`WEIDE_QUOTE` 0,7/0,85/0,5/**0,4**, `weideFrei`, ein Tag immer frei); hinter dem Wunsch „(bisher/mindestens)“ (`weideStandTxt`, `weideMin`), auch im Winter sichtbar.
-- **Hofplan:** Bau-Bestätigung per Kreis (✔ mit Preis + Bauzeit, rotes ✕), Sandpaddock nur über Ausbauen (kein Vergrößern mehr), Roundpen 12/18/24 m (3/4/5 Kacheln).
-- **Sonstiges:** Pferd in allen Boxen ganz vorn (Objekte bleiben antippbar), Update-Fenster Stufe 5 und 6 veröffentlicht (`NEUES_STAND` 794).
-**Selbst gesetzte Zahlen (Dome informieren):** Winterquote 40 %, ein freier Tag je Jahreszeit (`WEIDE_FREI_MIN`), Roundpen-Raster aufgerundet (12 m → 15 m).
-**v804 ✅ Boxnummern je Gebäude überall** (Dome: ohne Gebäudenamen; `bnr(i)`, neue Texte nie mit `i + 1`).
-**Offen / auf Dome warten:** (1) Neues Update-Fenster für v799–v803? (nur auf Domes Ansage). (3) Große Tests nur mit Domes Ja + Bilder-Variante; Tutorial-Spieler nur zusammen damit. (4) Pferdefriedhof-Idee (Thema 26) erst nach Domes Ja.
-**Regeln von Dome (24.10.):** Übergabe bei jeder Auslieferung pflegen; bei missverständlichen Wünschen erst nachfragen, nicht raten.
-**Achtung:** nach jeder Änderung alle Skriptblöcke mit `node --check` prüfen; Kommentare nur am Zeilenende.
-
-### Aufnahme von Dome (24.10., v762) – Etappe 1+2 fertig (Claude Team, v763/v764)
-Dome hat 14 Meldungen aufgenommen (`Zuchtstall_test-der-neuesten-funktionen…json`). Abgesprochen: 3 Etappen, Etappe 2 mit Opus. **Etappe 1 ✅ v763:** Fressdauer 5 s, Pinnwand größer, Weide im Ort-Plan anklickbar, Büro = Labor (umbenannt), Spielumfang-Schalter weg, „Tutorials“ mit Liste aller Kapitel (Meldungen 1, 2, 3, 6-Teil, 13, 14).
-**Etappe 2 ✅ v764 (Opus):** „Orte“, Kacheln unter dem Plan weg (nur Fallback für Ungeplantes), Zurück immer zu „Orte“, Umstellen mit Rückfrage zwischen allen Boxarten (Einstreu/Futter/Wasser ziehen mit – der Fehler steckte in der Box-wechseln-Liste), Weide ↔ Sandpaddock mit Rückfrage und Whiteboard-Abgleich. Selbst entschiedene Punkte in `OFFENE-FRAGEN.md` („Aufnahme 24.10. – Etappe 2“). Tests: `orte-test` 39/39 in 3 Ansichten, hofplan/sandpaddock/whiteboard/tutorial/stufen grün, Tutorial-Spieler anf+fort 390×844 ✓. **Als Nächstes: Etappe 3 mit Sonnet – Dome schaltet um.**
-**Nachtrag v765 (Opus, Dome):** Titel „Stall“ im Whiteboard → alte Stallansicht mit Ziehen (gekoppelt), zurück über Titel/„📋 Whiteboard“. **Neue Regel:** Tutorial-Tests nur noch mit dem großen Test oder auf Domes Ansage. `wuensche-test`/`weiden-oberflaeche-test` an den Weide-Pfeil angepasst.
-**Etappe 3 ✅ v768 (Sonnet):** Kreis-Menü im Hofplan, Reiterköpfe auf den Plätzen, roter Rahmen im Whiteboard. Dazu v766/v767 (Stall: Pferde draußen umstellbar, Wünsche nur mit passendem Mitarbeiter). **Alle 14 Meldungen der Aufnahme sind umgesetzt – Dome testet.** Neue Idee von Dome: Pferdefriedhof als Gebäude → `PROJEKT-CHAT-THEMEN.md` Punkt 26 (noch nicht beschlossen, auf Dome warten).
-
-### Stand davor (Claude Team, 24.10. – v762)
-**Fertig seit dem Hofplan:** v761 Luzerne im Heu- und Strohlager (Dome: ja); v762 Update-Fenster Stufe 4 (`NEUES_STAND` 761, Datum 24.10.2026: Hofplan, Verwaltung ⚠️, Lagerung ⚠️; alles andere von Dome abgelehnt – nie wieder anbieten, Liste in CLAUDE.md bei v762); Test `aufnahme-fixes-test` repariert (Zufallsschlüssel `data-k` beim Bildvergleich ignoriert, kein Spielfehler). Selbst gesetzte Zahlen (Verwaltung +4/+8, Futterkammer 200/350/600 kg + 30 je Box, Büro-Maße und Preise) hat Dome bestätigt („so lassen“).
-**Offen / auf Dome warten:** (1) Große Tests (etappen-test, hof-gesamttest, neuladen-test) – für den Hofplan angepasst, nie gelaufen; erst fragen, welche Bilder-Variante (aus/fehler/alle). (2) Alle Preise nochmal durchgehen (`PROJEKT-CHAT-THEMEN.md` Punkt 12). (3) Domes Abnahme des Hofplans. (4) Möglicher Zusatz: eigene Sorte „Luzerne-Cobs“ für die Futterkammer – nur auf Wunsch. (5) Nächstes Update-Fenster: nur Änderungen ab v762, und nur auf Domes Ansage. Tutorial-Spieler immer allein laufen lassen.
-
-### Sitzung 24.10. nachts – Hofplan-Etappen (Claude Team, Opus) – Fortschritt
-Dome: „Ja für alle Etappen, Fragen sammeln und am Ende rausgeben“; Wecker 6:05 prüft, ob alles fertig ist, sonst weiter.
-| Etappe | Stand |
+| Teil | Stand |
 |---|---|
-| H1 Raster, Platzieren (+ Feinraster 1 m / 25 m) | ✅ v752 |
-| H2 Anbauen/Ausbauen/Reparieren/Abreißen im Plan | ✅ v753 |
-| H3 Box → Ort aus dem Plan | ✅ v754 |
-| H4 Bauland zukaufen/verkaufen/verschieben | ✅ v754 |
-| H5 Tutorial, Hinweise, Stufen, Enzyklopädie, Tests | ✅ v754 (Enzyklopädie am PC 5 Spalten nebenbei, Dome) |
-Fragen stehen in `OFFENE-FRAGEN.md` („Hofplan-Etappen“). Große Tests (etappen/hof-gesamttest) sind angepasst (`planAutoSetzen()` nach `bauStarten`), aber nicht gelaufen (nur nach Domes Ja).
-**Tests:** `tests/hofplan-test.js` grün in 3 Ansichten; Tutorial-Spieler anf 390×844 ✓, fort 390×844 ✓, anf 844×390 ✓ (3 Läufe, v758). Der feste Hänger bei „Einstellen“ ist behoben (Fenster-Ziel wird ins Sichtfeld geholt), der zufällige bei „Hufe“ trat nur auf, wenn nebenbei andere Tests liefen – Tutorial-Spieler immer allein laufen lassen.
-**v759 (Dome-Antworten 2):** Verwaltung wirkt (Ansehen +4/+8 ab v760, Mitarbeiter-Zufriedenheit +1/+2 ab Stufe 2), Lagerung wie in echt (Kraftfutter in den Futterkammern der Ställe, Raufutter/Einstreu im Heu- und Strohlager); Preise: alles nochmal anschauen (Thema 12). Zahlen in OFFENE-FRAGEN.md.
-**v758 (Dome-Antworten):** Futterkammer im Stall, Verwaltung als Gebäude (Büro Stufe 1–3), Bauland aus 0,5-ha-Rechtecken (auch alte Spielstände), Ort-Plan mit Pfeilen für Weide/Gelände, Sandpaddock gezielt – siehe OFFENE-FRAGEN.md.
-**Nebenbei (Dome-Aufnahme/Wünsche):** v755 Whiteboard (automatisch zugeteilte Mitarbeiter mit ✕ entfernbar = „niemand“, Weidepferde zählen als versorgt), v756 Whiteboard zeigt alle gebuchten Pensions-Extras, Enzyklopädie am PC 5 Spalten (v754).
-**Danach (Dome):** Update-Fenster – ✅ erledigt in v762.
+| Boxansicht mobil (hochkant + quer, Fenster, Kreise, Putzkiste, Orte-Kacheln) | ✅ v825 |
+| Weihnachtsgeld (`PLAN-WEIHNACHTEN.md` D) | als Nächstes |
+| Aufzucht-Offenstall (`PLAN-OFFENSTALL.md` 1–3) | offen |
+| Test Symbole PC (Weide/Sandpaddock, Pension) | offen |
+| Test Krankheitsmeldungen (Pension/eigene) | offen |
+| Tutorial-Etappe der Boxansicht | wartet auf Domes Ja (nur mit großem Test) |
 
-### Sitzung 24.10. – v733–v751 (Claude Team, Sonnet), alles auf `main`
-Thema: Pferdeköpfe/Randabstand und **realistische Fellfarben nach Studien**. Details je Version in `CLAUDE.md` (v733–v751).
-- Kopfbilder überall gleich zugeschnitten (`kopfBild`/`kopfAuto`/`enzAuto`), Seitenrand-Breite für alle Enzyklopädie-Reiter, Pferdeanhänger und Whiteboard.
-- Neue Gene Hellfalbe `Hf` (Fjord), Mushroom `Mu`, Pearl `Prl`; Tricolor-Name; Rassen-Häufigkeiten nach UC-Davis-Studie, Noriker-Bachelorarbeit, Durward-Akhurst-Supplement (nur belastbare Zahlen; Begründung je Version in CLAUDE.md).
-- **Seltenheit:** ganze Fellfarbe zählt als selten, wenn höchstens 1 % der Rasse sie hat (`farbMerkmal`, `FARBE_SELTEN`), nur wenn kein einzelnes Gen schon selten ist (Dome: „ja“). Raritäten-Markt: zweites Angebot einer Rasse wiederholt nicht das Gen des ersten/Vorjahrs.
-- Haflinger-Rußgen .3 → .12 (Dome: ja), Quarter-Cream .07, Clydesdale E .8/A .72, Quarter DMRT3 .052.
-- **Fehler gelernt:** Backticks in bzn-Texten (Template-Literal) brechen das Spiel – `<code>` nehmen; nach jeder Änderung alle Skriptblöcke mit `new Function` prüfen.
-
-**Offen / auf Dome warten (nichts davon ohne ihre Ansage bauen):**
-1. Hofplan als Raster: ✅ H1–H5 fertig (v752–v754), Abnahme steht aus.
-2. Update-Fenster: ✅ erledigt (v762).
-3. Möglicher Zusatz: Tobiano bei Warmblütern (laut Review vorhanden, ohne Zahl) – nur auf Wunsch.
-4. Alte Punkte aus der Nachricht darunter (Fragen 1–4 vom 23.10.) sind weiter unbeantwortet.
+**Achtung:** Handy-Tests der Box brauchen `localStorage["zuchtstall-boxfenster"]` (sonst alte Ansicht unter Playwright) – `tests/boxmobil-test.js`.
 
 ---
 

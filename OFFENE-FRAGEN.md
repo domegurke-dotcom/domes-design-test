@@ -56,3 +56,10 @@ Stichprobe 500 Pferde je Rasse (`neuesPferd` mit Markt-Farbverteilung). **Zu hä
 - **Bauland (v754):** 0,5 ha kosten 1.500 € (3.000 €/ha), Verkauf 90 % (1.350 €); Stücke rechts, links oder unten ansetzen; Verschieben über Antippen → „Verschieben“.
 - **Nicht gemacht:** Beinabzeichen in der Enzyklopädie haben weiter 6 Spalten (du hattest sie nicht genannt).
 
+
+## Sitzung 25.10. (Claude Pro, Opus) – Boxansicht mobil, selbst entschieden, bitte ansehen
+- **Hochkant-Symbolreihe:** Tierarzt · Füttern · Orte · Ausrüstung · Steckbrief – wie am PC (Putzen unter Ausrüstung, Versorgung über die Balken). Im Entwurf 9.1 standen noch Versorgung und Putzen in der Reihe. Füttern habe ich wie am PC mit hineingenommen.
+- **Kreise:** hochkant als Bogen über dem Pferd mit ✕ unten (wie Entwurf 9.2), **quer als 2-Spalten-Raster in der Nachbarbox** – ein Bogen über dem Pferd lag quer im Weg beim Wischen, am Rand war für einen Kreis zu wenig Platz.
+- **Leere Box, totes Pferd, Klinik, Turnier:** dort gibt es keine Symbole – es erscheint die alte Ansicht unter dem Bild (sonst sah man gar nichts; das war auch am PC so).
+- **Tutorial** läuft noch mit der alten Ansicht (Reihenfolge PC → mobil → Tutorial). Soll ich die Tutorial-Etappe (Blasen/Ziele auf die neuen Symbole umstellen, Tutorial-Spieler) als Nächstes bauen? Das geht nur mit dem großen Test.
+- **Auffällig:** der Admin-Reiter „Test“ in der Pferdepflege ist im Fenster-Modus (PC und Handy) nicht mehr erreichbar. Soll er z. B. in den Ausrüstungs-Kreis (nur Admin)?

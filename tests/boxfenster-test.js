@@ -81,7 +81,7 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
   ok('Putzkiste im Ausrüstungs-Fenster: Fenster zu, Werkzeuge im Kreis', !z.offen && z.putz && z.tools.includes('buerste'), z);
   await pg.keyboard.press('Escape'); await pg.waitForTimeout(200);
   ok('keine Seitenfehler (PC)', !pg.errs.length, pg.errs); await pg.close();
-  // Handy hochkant: noch ohne Fenster (PC zuerst, Dome)
-  const h = await start(390, 844); const hz = await h.evaluate(() => document.body.classList.contains('boxfenster'));
-  ok('Handy hochkant: Fenster-Modus noch aus', !hz); await h.close();
+  // Handy hochkant: Fenster-Modus jetzt auch mobil (Dome 25.10.) – Einzelheiten in tests/boxmobil-test.js
+  const h = await start(390, 844); const hz = await h.evaluate(() => document.body.classList.contains('boxfenster') && document.body.classList.contains('bxhoch'));
+  ok('Handy hochkant: Fenster-Modus an (Einzelheiten: boxmobil-test)', hz); await h.close();
   out.forEach(l => console.log(l)); await b.close(); process.exit(out.some(l => l[0] === '✗') ? 1 : 0); })();

@@ -23,7 +23,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 | Box → Orte: Karte zoombar (Mausrad, zwei Finger, + / − / Ganz) | ✅ v832 (hochkant bleibt Kacheln – Dome: so lassen) |
 | Tutorial auf die neue Box-Ansicht (alle drei Tutorials, Schritt „Karte zoomen“) | ✅ v833/v834 |
 | Großer Test (`BILDER=fehler`) | ✅ etappen-test „alles ok“, hof-gesamttest Fehler [], neuladen-test „alles ok“, 0 Fehlerbilder |
-| Tutorial-Spieler | ✅ anf 1366×768 / 844×390 / 390×844 (Bilder nur anf, Scratchpad), fort 1366×768 + 390×844, exp 1366×768 + 844×390 |
+| Tutorial-Spieler | ✅ anf 1366×768 / 844×390 / 390×844 (Bilder nur anf, Scratchpad), fort 1366×768 + 390×844 + 844×390, exp 1366×768 + 844×390 + 390×844 – alle drei Tutorials in allen drei Ansichten grün |
 
 **Behoben nebenbei:** in `tutKapitel` verschluckte ein Kommentar mitten in der Zeile das Zurücksetzen zu Kapitelbeginn (Box 1, Reiter, Putzen) – seit v639.
 **Offen / zu fragen:** Update-Fenster (Änderungen ab v829 unveröffentlicht, nur auf Domes Ansage); Optik der Fress-Haltung bei Shetty/Haflinger (Kopf zwischen den Vorderbeinen, Maul nicht ganz am Boden) – Dome ansehen lassen.

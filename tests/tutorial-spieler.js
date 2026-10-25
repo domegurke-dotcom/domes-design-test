@@ -4,11 +4,12 @@
 const { chromium } = require('playwright');
 const [W, H] = (process.argv[2] || '390x844').split('x').map(Number), O = process.argv[3] && process.argv[3] !== '-' ? process.argv[3] : null, SET = process.argv[4] || 'anf', haenger = [];
 (async () => { const b = await chromium.launch(); const pg = await b.newPage({ viewport: { width: W, height: H } }); const errs = []; pg.on('pageerror', e => errs.push(e.stack.slice(0,300)));
+  if (!process.env.ALT) await pg.addInitScript(() => localStorage.setItem('zuchtstall-boxfenster', '1'));   // v833: Tutorial in der neuen Box-Ansicht (ALT=1: alte Ansicht)
   await pg.goto('file://' + require('path').resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(700);
   await pg.click('#smNeu'); await pg.waitForTimeout(300); await pg.fill('#chName', 'Test');
   if (SET === 'anf') await pg.click('#chTutorial'); else { await pg.click('#chLos'); await pg.waitForTimeout(300); await pg.evaluate(s => { document.getElementById('dlg').hidden = true; tutorialStart({ name: 'Test', avatar: 'a1' }, 7, null, s); }, SET); }
   await pg.waitForTimeout(1500);
-  const st = () => pg.evaluate(() => { const T = spiel.tutorial; if (!T) return { ende: true }; const z = blase && blase.sel ? hinweisZiel(blase.sel) : null, r = z && z.getBoundingClientRect();
+  const st = () => pg.evaluate(() => { const T = spiel.tutorial; if (!T) return { ende: true }; const z = blase && blase.sel ? hinweisZiel(blase.sel, window.__tm = window.__tm || {}) : null, r = z && z.getBoundingClientRect();
     const sb = blase && document.getElementById('hinweisBlase'); const bb = sb && !sb.hidden ? sb.getBoundingClientRect() : null;
     const R = e => { if (!e || e.hidden) return null; const q = e.getBoundingClientRect(); return q.width && q.height ? [Math.round(q.left), Math.round(q.top), Math.round(q.right), Math.round(q.bottom)] : null; };
     const geo = { vw: innerWidth, vh: innerHeight, blase: R(document.getElementById('hinweisBlase')), band: R(document.getElementById('tutBand')), kopf: R(document.querySelector('header')), ziel: r && r.width ? [Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom)] : null, dlg: R(document.querySelector('#dlg .dlg-karte')) };

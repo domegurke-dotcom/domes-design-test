@@ -29,7 +29,7 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
   await pg.waitForTimeout(300); L = await lage();
   ok('bemerkter Befund: Tierarzt-Symbol erscheint (auch für Anfänger)', L.sym.includes('tierarzt'), L.sym);
   ok('Plaketten Boxenruhe, Quarantäne (unklarer Befund steht in der Denkblase, nicht doppelt)', !L.chips.some(c => /Befund/.test(c)) && L.chips.some(c => /Boxenruhe/.test(c)) && L.chips.some(c => /Quarantäne/.test(c)), L.chips);
-  ok('Denkblase „Mir geht’s nicht gut“ mit Anzeichen', /nicht gut/.test(L.denk), L.denk);
+  ok('keine Denkblase mehr (v847, Dome: unpraktisch)', !L.denk, L.denk);
   ok('Gesundheits-Ring zeigt 62 %', /62/.test(L.ringe[0]), L.ringe);
   ok('auch mit Tierarzt: nichts auf Pfeil, Schild, Pferd', !L.aufPfeil && !L.aufSchild && !L.aufPferd && !L.ueberlapp, L);
   if (ORD) await pg.screenshot({ path: `${ORD}/boxansicht-krank-${W}x${H}.png` });
@@ -60,5 +60,5 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
   ok('Handy ohne Test-Schalter: alte Ansicht für alte Tests', !an.an && !an.n, an); await h.close();
   // Tutorial: aus
   const t = await start(1366, 768); await t.evaluate(() => { spiel.tutorial = { kap: 0 }; zeigeStall(); }); const ta = await t.evaluate(() => document.body.classList.contains('boxneu'));
-  ok('im Tutorial noch aus (Tutorial kommt zuletzt)', !ta); await t.close();
+  ok('im Tutorial seit v833 auch die neue Ansicht', !!ta); await t.close();
   out.forEach(l => console.log(l)); await b.close(); process.exit(out.some(l => l[0] === '✗') ? 1 : 0); })();

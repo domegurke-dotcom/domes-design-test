@@ -15,6 +15,10 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### v846 (Claude Pro, 25.10.)
+- Hälse normaler Länge (Rassen mit `neck` ≥ 0,52) 10 % kürzer (`HALS_KURZ` in pferd.js, Dome wählte die Mitte der Vergleichsbilder); kurze Hälse, Fohlen-Faktoren, Fress-Animation und Müde-Haltung unverändert; Enzyklopädie-Halsformen (eigener `k.neck`) unverändert.
+- **Offen aus Aufnahme 9 (Trollhof) und Aufnahme 1 (Ponny-Pension):** Fragen an Dome: Start-Reitplatz, Tutorial-Texte kürzen (Schlüsselwörter fett), „Futterexperten fragen“ bei Anfängern, Putz-Hinweisbalken weg; eindeutige Fehler (Text über dem Rand in Tutorial 1.6/1.8/11.1, blaue Rahmen zu groß 5.2, grüner Haken rechts statt links Kap. 10, Stallbursche fehlt Kap. 7/11, Fellmuster rutscht beim Kopfbewegen, blauer Strich oben, „Mir geht’s nicht gut“-Blasen entfernen, Anbau-Ställe in der Whiteboard-Liste als eigene Boxenställe, Kapitel wiederholen ändert die Box).
+
 ### v845 (Claude Pro, 25.10.)
 - Leckerli (Domes Vorschlag 2): Tüte mit Möhre am rechten Boxrand (`#leckTuete`, alle Boxstufen), antippen → Fenster `leckFenster` (Möhre/Leckerli mit Vorrat, Zähler, bleibt nach dem Geben offen). Regeln unverändert (3 am Tag, Betteln). Alte Leckerli-Karte nur noch in der alten Ansicht. Test `tests/leckerli-test.js` (3 Ansichten grün). Offen: Dome fragen, ob Möhre und Leckerli verschieden wirken sollen (wirken gleich).
 

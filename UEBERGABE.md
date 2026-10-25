@@ -59,11 +59,7 @@ Domes Wünsche zu Whiteboard, Mitarbeitern, Waschplatz/Solarium sind umgesetzt (
 | Sattelkammer ausgegraut, Whiteboard-Navigation (Stall → immer Übersicht, „‹ Whiteboard Übersicht“) | v721/v722 |
 | Rahmenfarbe verrät die versteckte Chemie nicht mehr (orange = gestern gestritten, rot = 3× gestritten) | v722 |
 
-**Offene Fragen an Dome (Antwort steht aus):**
-1. Soll der Steckbrief bei Pensionspferden zusätzlich „heute laut Plan: …“ zeigen? (Dome fragte zweimal „wie meinst du das?“ – einfach erklärt, noch kein Ja.)
-2. Haken-Liste im Whiteboard: aufklappbar machen? (Dome schaut sich das an und sagt Bescheid – nicht von selbst fragen, sie meldet sich.)
-3. „Heute gefressen“ fehlt in der Weide-Karte (auf Dome-Wunsch entfernt) – bei Bedarf als kleine Zeile zurück.
-4. Shampoo: soll das Personal sparsamer sein (nur Pensionspferde mit Leistung)? Hinweis bei leerem Vorrat ist da (Brief).
+**Offene Fragen an Dome:** alle beantwortet (Dome, 25.10.).
 
 **Nachtrag (gleiches Konto, Sitzung 23.10. spät) – v723:** Fress-Animation (Heu → Kopf zum Boden mit Grasestellung der Beine, Kraftfutter → Kopf zur Krippe, nacheinander; Weide: Pferde grasen ab und zu ~30 s), Whiteboard-Weiden mit größerer Schrift. Test `tests/fress-test.js` grün in 3 Ansichten. Offen/zu fragen: Animation auch bei matten Pferden (waagerecht/tief)? Grasen am Hofplan/Ort-Koppel? v724: matte Pferde fressen aus ihrer Haltung, 40+40 Mitarbeiter-Namen. **Offen:** Dome will die Schimmel-Anlagen (`ex.grauTempo`, `kurve`, `maehne`) in Seltenheit und Raritäten-Markt – Vorschlag mit Zahlen liegt bei ihr, Antwort abwarten.
 

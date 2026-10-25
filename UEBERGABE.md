@@ -15,7 +15,10 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-### v840 (Claude Pro, 25.10.)
+### v841 (Claude Pro, 25.10.)
+- Ringe oben öffnen draußen dasselbe wie in der Box, mit „Zurück in die Box“ oben im Fenster. Klemmbrett ohne Bildcode bei „Pflege“.
+
+## v840 (Claude Pro, 25.10.)
 - Whiteboard: „heute vergessen“ verschwindet, sobald die Box versorgt ist.
 
 ## v839 (Claude Pro, 25.10.)

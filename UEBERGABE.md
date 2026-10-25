@@ -15,7 +15,10 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-### v841 (Claude Pro, 25.10.)
+### v842 (Claude Pro, 25.10.)
+- Pferdeköpfe im Plan (Orte und Hofplan) immer 2 × 2 Kacheln groß.
+
+## v841 (Claude Pro, 25.10.)
 - Ringe oben öffnen draußen dasselbe wie in der Box, mit „Zurück in die Box“ oben im Fenster. Klemmbrett ohne Bildcode bei „Pflege“.
 
 ## v840 (Claude Pro, 25.10.)

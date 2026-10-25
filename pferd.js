@@ -367,8 +367,12 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   }
   if (amBoden) {   // v723 Grasen/Heu vom Boden: Hals schräg nach vorn-unten, Kopf fast senkrecht, Maul am Boden (kurze Hälse flacher, sonst stehen sie steil)
     const aEnd = (k.neck < .52 ? -36 : -46) * Math.PI / 180, thE = th0 + 34 * Math.PI / 180;
-    const cE = (Math.sin(thE) * 1.01 + Math.cos(thE) * 0.14 * k.muz) * hl, nE = (Wn.y + cE + hh * 0.3) / Math.sin(aEnd);
-    a += (aEnd - a) * senk; th += (thE - th) * senk; N += (Math.max(N, nE) - N) * senk;
+    // v830 (Dome): Hals bleibt so lang wie er ist – erst wird der Hals steiler (höchstens 50°), reicht das nicht, steht der Kopf steiler (bis +42°); kurze Hälse erreichen den Boden dann nicht ganz
+    const cVon = t => (Math.sin(t) * 1.01 + Math.cos(t) * 0.14 * k.muz) * hl, aMin = -50 * Math.PI / 180;
+    let thZ = thE, sE = (Wn.y + cVon(thZ) + hh * 0.3) / N;
+    for (let i = 0; i < 21 && sE < Math.sin(aMin); i++) { thZ = Math.min(th0 + 42 * Math.PI / 180, thZ + Math.PI / 180); sE = (Wn.y + cVon(thZ) + hh * 0.3) / N; }
+    const aZ = Math.asin(Math.max(Math.sin(aMin), Math.min(Math.sin(aEnd), sE)));
+    a += (aZ - a) * senk; th += (thZ - th) * senk;
   } else if (grasen) {   // v723 Kraftfutter an der Krippe: Maul etwa auf Brusthöhe – wer den Kopf schon tiefer trägt, bleibt so tief
     const yV = maulY(a, th), yK = 0.85 * bugY;
     if (yV < yK) { const thK = Math.max(th, th0 + 20 * Math.PI / 180), t2 = th + (thK - th) * senk, y = yV + (yK - yV) * senk;

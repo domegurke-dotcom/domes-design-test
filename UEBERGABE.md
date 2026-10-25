@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### v848 (Claude Pro, 25.10.)
+- Beim Putzen/Waschen kein Hinweisfeld und kein „✋ aufhören“ mehr (`#bxUnten`/Kreis); beendet wird über die Mitte des Kreises (✕). Der Erklärtext, der entfiel: „👆 <Werkzeug> – mit dem Finger / gedrückter linker Maustaste über das Pferd wischen“. Fortschrittsbalken im Bild bleibt.
+
 ### v847 (Claude Pro, 25.10.) – Zwischenstand Aufnahmen 9 und 1
 - **Fertig:** Neuer Hof startet immer mit Reitplatz und Gelände (`neuesSpielAnlegen`: `anlage` fest, vorher erbte er die Anlagen des Tutorials); „Futterexperte fragen“ bei Anfängern weg; Erklärtext beim Putzen/Waschen weg (nur „✋ aufhören“, Fortschrittsbalken bleibt); „Mir geht’s nicht gut“-Blasen aus (`BX_DENKBLASE = false`, Tests angepasst); Tutorial: Mitarbeiter versorgen auch Pferde, die mitten am Tag einziehen (`tutPersonalVersorgt`); Whiteboard/Boxnummern: Anbauten zählen zum Hauptstall (`gebWurzel`).
 - **Noch offen:** Tutorial-Texte kürzen (alle drei Tutorials, Schlüsselwörter fett – Dome 25.10.: „alle“); Plan Tutorial-Umbau („erst tippe auf xy, dann Erklärung“, Hofplan-Bedienung mit Kreissymbolen erklären – Dome: „plane ihn“, noch nicht geschrieben); Blasen ragen rechts über den Rand (Tutorial 1.6/1.8/11.1, nicht nachgestellt); Bürste im Tutorial 1.8 registriert nicht; blauer Rahmen zu groß (5.2); grüner Haken rechts statt links (Kap. 10); Fellmuster (Tigerschecke/Appaloosa) wandern beim Kopfsenken (in pferd.js: Punkte hängen an der Körper-Box, `punkte(minX, maxX, minY …)`); blauer Strich oben zwischen Box und Kopfzeile; Kapitel wiederholen setzt Box/Lager zurück; „Sarkoid“-Text mit ⚠️ im Tierschutz (Anzeichen erklären); Hinweis „zur Box?“ nach Kauf außerhalb des Tutorials; „Ich kann mein Pferd nicht putzen“ (Fips, nicht nachgestellt).

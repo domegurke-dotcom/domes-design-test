@@ -57,7 +57,7 @@ const [W, H] = (process.argv[2] || '390x844').split('x').map(Number), ORD = proc
   ok('Putzkiste: Werkzeuge im Kreis, kein Fenster', z.putz && !z.offen && ['buerste', 'kamm', 'huf', 'streicheln', 'zu'].every(t => z.tools.includes(t)), z);
   ok('Werkzeuge überdecken sich nicht und bleiben im Bild', !(await ueberlapp('#boxUI .bxtool')) && await imBild('#boxUI .bxtool'), await ueberlapp('#boxUI .bxtool'));
   await klick('#boxUI [data-bxtool="buerste"]');
-  ok('Bürste: Wischen läuft, Knopf „aufhören“', await pg.evaluate(() => wisch && wisch.tool === 'buerste' && /aufhören/.test(document.querySelector('.bxhinweis').textContent)));
+  ok('Bürste: Wischen läuft, kein Hinweisfeld mehr', await pg.evaluate(() => wisch && wisch.tool === 'buerste' && !document.querySelector('.bxhinweis')));
   await bild('putzen');
   // Wischen mit dem Finger über das Pferd
   const vorher = await pg.evaluate(() => B().pferd.dreck.fell);

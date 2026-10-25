@@ -22,8 +22,8 @@ Die Nachrichten von Claude Team (v805–v824) sind übernommen und hier gelösch
 | Teil | Stand |
 |---|---|
 | Boxansicht mobil (hochkant + quer, Fenster, Kreise, Putzkiste, Orte-Kacheln) | ✅ v825 |
-| Weihnachtsgeld (`PLAN-WEIHNACHTEN.md` D) | als Nächstes |
-| Aufzucht-Offenstall (`PLAN-OFFENSTALL.md` 1–3) | offen |
+| Weihnachtsgeld (`PLAN-WEIHNACHTEN.md` D) | ✅ v826 (A–C nicht beauftragt) |
+| Aufzucht-Offenstall (`PLAN-OFFENSTALL.md` 1–3) | als Nächstes |
 | Test Symbole PC (Weide/Sandpaddock, Pension) | offen |
 | Test Krankheitsmeldungen (Pension/eigene) | offen |
 | Tutorial-Etappe der Boxansicht | wartet auf Domes Ja (nur mit großem Test) |

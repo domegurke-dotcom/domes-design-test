@@ -55,9 +55,9 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
   ok('Pensionspferd: dritter Ring heißt „Besitzer“', /Besitzer/.test(L.ringe[2] || ''), L.ringe);
   ok('keine Seitenfehler (PC)', !pg.errs.length, pg.errs);
   await pg.close();
-  // Handy: B1 noch aus (PC zuerst, Dome)
+  // Handy ohne Test-Schalter: unter Playwright bleibt die alte Ansicht (die alten Tests klicken in den Reitern); mit Schalter siehe tests/boxmobil-test.js
   const h = await start(390, 844); const an = await h.evaluate(() => ({ an: document.body.classList.contains('boxneu'), n: document.querySelectorAll('#boxUI .bxs').length }));
-  ok('Handy hochkant: neue Boxansicht noch aus (kommt nach dem PC)', !an.an && !an.n, an); await h.close();
+  ok('Handy ohne Test-Schalter: alte Ansicht für alte Tests', !an.an && !an.n, an); await h.close();
   // Tutorial: aus
   const t = await start(1366, 768); await t.evaluate(() => { spiel.tutorial = { kap: 0 }; zeigeStall(); }); const ta = await t.evaluate(() => document.body.classList.contains('boxneu'));
   ok('im Tutorial noch aus (Tutorial kommt zuletzt)', !ta); await t.close();

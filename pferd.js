@@ -610,6 +610,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // Bounding-Box
   let minX = Infinity, maxX = -Infinity, minY = 0;
   alle.forEach(p => { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); });
+  const sMinX = -70, sMinY = -150;   // v849 (Dome 25.10.): Muster-Rahmen unabhängig von der Kopfhaltung – sonst wanderten Punkte/Flecken beim Kopfsenken (bbox und Zufallsfolge hingen am Kopf)
 
   let defs = `<clipPath id="cl-${uid}">${haupt.map(t => `<path d="${t[0]}"/>`).join("")}</clipPath>`;
   defs += `<clipPath id="ck-${uid}"><path d="${glatt(kopf)}"/></clipPath>`;
@@ -680,7 +681,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (C.pattern === "tobiano") g += `<rect x="${f(minX)}" y="${f(-0.68 * Lg)}" width="${f(maxX - minX)}" height="${f(0.68 * Lg + 2)}" fill="#dedad3" clip-path="url(#cf-${uid})" filter="url(#wm-${uid})"/>`;
   if (["tovero", "leopard", "fewspot"].includes(C.pattern) || ganzWeiss) {
     g += `<g clip-path="url(#cf-${uid})"><rect x="${f(minX)}" y="${f(-Lg - 6)}" width="${f(maxX - minX)}" height="${f(Lg + 8)}" fill="#dedad3"/>`;
-    if (C.pattern === "leopard" && !ganzWeiss) for (let i = 0; i < 9; i++) g += `<ellipse cx="${f(minX + rnd() * (maxX - minX))}" cy="${f(-rnd() * Lg)}" rx="${f(1.6 + rnd() * 1.8)}" ry="${f(1.4 + rnd() * 1.5)}" fill="${dunkel(spotFarbe)}"/>`;
+    if (C.pattern === "leopard" && !ganzWeiss) for (let i = 0; i < 9; i++) g += `<ellipse cx="${f(sMinX + rnd() * (maxX - sMinX))}" cy="${f(-rnd() * Lg)}" rx="${f(1.6 + rnd() * 1.8)}" ry="${f(1.4 + rnd() * 1.5)}" fill="${dunkel(spotFarbe)}"/>`;
     g += `</g>`;
   }
   if (!liegt) { const sf = dunkel(C.stripe || C.points || body), wf = dunkel("#f6f4ee");
@@ -721,9 +722,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       if (M2 === 2 || rnd() > 0.35) flecken.push(blob(0.86 * L, top + 0.3 * D, (0.1 * L + rnd() * 0.08 * L) * sc, 0.45 * D * sc));
     }
     g += `<g filter="url(#wm-${uid})">` + flecken.map(fd => `<path d="${fd}" fill="#f7f5f1"/>`).join("");
-    const wl = [P(minX, 2)];
+    const wl = [P(sMinX, 2)];
     const bh = [0.38, 0.66, 0.9][M2];
-    for (let x = minX; x <= maxX; x += 6) wl.push(P(x, -(bh + 0.1 * Math.sin(x * 0.21) + rnd() * 0.06) * Lg));
+    for (let x = sMinX; x <= maxX; x += 6) wl.push(P(x, -(bh + 0.1 * Math.sin(x * 0.21) + rnd() * 0.06) * Lg));
     wl.push(P(maxX, 2));
     g += `<path d="${eckig(wl)}" fill="#f7f5f1"/></g>`;
   }
@@ -760,13 +761,13 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     }
     if (C.pattern === "splash") {
       // Splashed White (v426): wie „von unten in weiße Farbe getaucht“ – glatter, klarer Rand, Bauch und Brust weiß, hohe weiße Beine (unten bei den Abzeichen)
-      const hoch = [0.12 + rnd() * 0.1, 0.35 + rnd() * 0.4, 0.95 + rnd() * 0.15][M2] + (MST === 3 ? 0.45 : 0), rand = [P(minX - 6, 4)];
+      const hoch = [0.12 + rnd() * 0.1, 0.35 + rnd() * 0.4, 0.95 + rnd() * 0.15][M2] + (MST === 3 ? 0.45 : 0), rand = [P(sMinX - 6, 4)];
       const rsp = zufall((opt.seed || rasseId) + "-splash"), ph1 = rsp() * 6.3, ph2 = rsp() * 6.3;   // v440 (Dome): klarer Rand, aber geschwungen – keine Linie wie mit dem Lineal
-      for (let i = 0; i <= 28; i++) { const t = i / 28, x = minX - 6 + (maxX - minX + 12) * t; rand.push(P(x, bottom - hoch * D * (0.55 + 0.45 * Math.sin(Math.PI * Math.min(1, t * 1.15))) + Math.sin(t * 5.5 + ph1) * D * 0.13 + Math.sin(t * 13 + ph2) * D * 0.045 + (rnd() - .5) * 3)); }
+      for (let i = 0; i <= 28; i++) { const t = i / 28, x = sMinX - 6 + (maxX - sMinX + 12) * t; rand.push(P(x, bottom - hoch * D * (0.55 + 0.45 * Math.sin(Math.PI * Math.min(1, t * 1.15))) + Math.sin(t * 5.5 + ph1) * D * 0.13 + Math.sin(t * 13 + ph2) * D * 0.045 + (rnd() - .5) * 3)); }
       rand.push(P(maxX + 6, 4));
       g += `<g filter="url(#wm-${uid})"><path d="${glatt(rand)}" fill="${SW}"/></g>`;
     }
-    if (C.pattern === "leopard") g += `<rect ${bx} fill="${SW}"/>` + punkte(minX, maxX, minY, 0, [40, 70, 100][M2], 2.2, 4.6, spotFarbe);
+    if (C.pattern === "leopard") g += `<rect ${bx} fill="${SW}"/>` + punkte(sMinX, maxX, sMinY, 0, Math.round([40, 70, 100][M2] * 1.25), 2.2, 4.6, spotFarbe);
     if (C.pattern === "fewspot") g += `<rect ${bx} fill="${SW}"/>` + punkte(0, L, top, bottom, [3, 7, 14][M2], 1.4, [2.2, 2.6, 3][M2], spotFarbe) + `<g filter="url(#wm-${uid})"><rect x="${f(minX)}" y="${f(-0.62 * Lg)}" width="${f(maxX - minX)}" height="${f(0.2 * Lg)}" fill="${mix(body, SW, .35)}" opacity="${[.45, .7, .85][M2]}"/></g>`;   // v497 (Dome): Stufe wirkt – wenige/typisch/mehr Punkte, Restfarbe an Knien/Sprunggelenken
     if (C.pattern === "blanket" || C.pattern === "snowcap") {
       // weiße Decke über Kruppe und Hüfte

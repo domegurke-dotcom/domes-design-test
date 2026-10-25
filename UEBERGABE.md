@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### v849 (Claude Pro, 25.10.)
+- Fellmuster (Tigerschecke, Overo-Linien, Sabino-Rand, Birdcatcher …) rutschen nicht mehr, wenn das Pferd den Kopf senkt: `sMinX`/`sMinY` in pferd.js (fester Rahmen statt Pferde-Box, die am Kopf hing; auch die Zufallsfolge hing daran). Tiger-Punkte ×1,25 (größerer Rahmen).
+
 ### v848 (Claude Pro, 25.10.)
 - Beim Putzen/Waschen kein Hinweisfeld und kein „✋ aufhören“ mehr (`#bxUnten`/Kreis); beendet wird über die Mitte des Kreises (✕). Der Erklärtext, der entfiel: „👆 <Werkzeug> – mit dem Finger / gedrückter linker Maustaste über das Pferd wischen“. Fortschrittsbalken im Bild bleibt.
 

@@ -15,7 +15,10 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-### v842 (Claude Pro, 25.10.)
+### v843 (Claude Pro, 25.10.)
+- Versorgung · Heute aufgeräumt (doppelte Zeilen raus), Termine auf dem Klemmbrett. Offen: Platz für Leckerli (Vorschläge an Dome), Tierarzt-Symbol (Dome überlegt noch). Tutorial-Spieler nicht gelaufen (Regel: nur mit großem Test) – Schritt „Fütterung heute“ geändert.
+
+## v842 (Claude Pro, 25.10.)
 - Pferdeköpfe im Plan (Orte und Hofplan) immer 2 × 2 Kacheln groß.
 
 ## v841 (Claude Pro, 25.10.)

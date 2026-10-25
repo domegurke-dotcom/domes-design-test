@@ -17,7 +17,12 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
       tabs: [...document.querySelectorAll('#info .vs-tabs button')].map(x => x.dataset.vstab + (x.classList.contains('an') ? '*' : '')), sichtbar: [...document.querySelectorAll('#info [data-vs]')].filter(x => x.offsetParent).map(x => x.dataset.vs),
       imBild: q.left >= 0 && q.right <= innerWidth && q.top >= 0 && q.bottom <= innerHeight + 1, tools: [...document.querySelectorAll('#boxUI .bxtool')].map(x => x.dataset.bxtool), wisch: wisch && wisch.tool, y: scrollY }; });
   ok('Fenster-Modus an (body.boxfenster)', await pg.evaluate(() => document.body.classList.contains('boxfenster')));
-  await pg.click('#boxUI [data-bx="versorgung"]'); await pg.waitForTimeout(400); let z = await zust();
+  let z = await pg.evaluate(() => [...document.querySelectorAll('#boxUI .bxs')].map(x => x.dataset.bx));
+  ok('kein eigenes Putzen-Symbol mehr (liegt unter Ausrüstung)', !z.includes('putzen') && z.includes('ausruestung'), z);
+  await pg.click('#boxUI [data-bx="versorgung"]'); await pg.waitForTimeout(300);
+  z = await pg.evaluate(() => ({ ring: [...document.querySelectorAll('#boxUI [data-bxring]')].map(x => x.dataset.bxring), links: [...document.querySelectorAll('#boxUI .bxs')].map(x => x.dataset.bx), zu: !!document.querySelector('#boxUI .bxtool.zu') }));
+  ok('Versorgung öffnet einen Kreis (Heute, Gesundheit), Symbol wird ✕, Füttern ausgeblendet', z.ring.join() === 'heute,gesund' && z.zu && !z.links.includes('fuettern') && !z.links.includes('versorgung'), z);
+  await pg.click('#boxUI [data-bxring="heute"]'); await pg.waitForTimeout(400); z = await zust();
   ok('Versorgung öffnet ein Fenster über der Box (fest, ganz im Bild, ohne Scrollen)', z.f === 'versorgung' && z.offen && z.fest && z.imBild && z.y === 0, z);
   ok('Fenster-Kopf: Titel mit Pferdename, Reiter Heute/Gesundheit', /Versorgung · Flocke/.test(z.titel) && z.tabs.join() === 'heute*,gesund', z);
   ok('Reiter „Heute“ zeigt nur die Tages-Versorgung', z.sichtbar.join() === 'heute', z.sichtbar);
@@ -27,12 +32,16 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
   await pg.click('#info .info-zu'); await pg.waitForTimeout(300); z = await zust(); ok('✕ schließt das Fenster', !z.f && !z.offen, z);
   // krankes Pferd → Tierarzt öffnet direkt Gesundheit
   await pg.evaluate(() => { const p = spiel.boxen[0].pferd; befundListe(p).push({ id: 'bfT', art: 'husten', grad: 2, seit: spiel.tag, ursache: 'Test', bemerkt: { von: 'du', tag: spiel.tag }, meldungen: [], vermutung: null }); zeigeStall(); });
-  await pg.waitForTimeout(300); await pg.click('#boxUI [data-bx="tierarzt"]'); await pg.waitForTimeout(400); z = await zust();
+  await pg.waitForTimeout(300); await pg.click('#boxUI [data-bx="versorgung"]'); await pg.waitForTimeout(200); await pg.click('#boxUI .bxtool.zu'); await pg.waitForTimeout(200);
+  ok('✕ in der Mitte schließt den Kreis', !(await pg.$('#boxUI [data-bxring]')));
+  await pg.click('#boxUI [data-bx="tierarzt"]'); await pg.waitForTimeout(400); z = await zust();
   ok('Tierarzt öffnet Versorgung auf „Gesundheit“ mit Tierarzt-Knopf', z.f === 'versorgung' && z.tabs.includes('gesund*') && await pg.isVisible('#tierarztKnopf'), z);
   await pg.keyboard.press('Escape'); await pg.waitForTimeout(300); z = await zust(); ok('Escape schließt das Fenster', !z.f && !z.offen, z);
   // Pensionspferd → Reiter Besitzer
   await pg.evaluate(() => { const p = spiel.boxen[0].pferd; p.einsteller = 'ex1'; einstellerListe().push({ eid: 'ex1', vn: 'Ina', nn: 'Test', haltung: 'box', leistungen: {}, zufr: 80, stufe: 1, preis: 200 }); zeigeStall(); });
-  await pg.waitForTimeout(200); await pg.click('#boxUI [data-bx="versorgung"]'); await pg.waitForTimeout(400); z = await zust();
+  await pg.waitForTimeout(200); await pg.click('#boxUI [data-bx="versorgung"]'); await pg.waitForTimeout(300);
+  ok('Pensionspferd: Kreis mit „Besitzer“', !!(await pg.$('#boxUI [data-bxring="besitzer"]')));
+  await pg.click('#boxUI [data-bxring="heute"]'); await pg.waitForTimeout(400); z = await zust();
   ok('Pensionspferd: dritter Reiter „Besitzer“', z.tabs.some(t => /^besitzer/.test(t)), z.tabs);
   await pg.click('#info [data-vstab="besitzer"]'); await pg.waitForTimeout(300); z = await zust(); ok('Reiter „Besitzer“ zeigt nur die Besitzer-Karte', z.sichtbar.join() === 'besitzer', z.sichtbar);
   await pg.keyboard.press('Escape'); await pg.evaluate(() => { const p = spiel.boxen[0].pferd; delete p.einsteller; spiel.einsteller = []; zeigeStall(); }); await pg.waitForTimeout(300);
@@ -42,10 +51,15 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
   if (ORD) await pg.screenshot({ path: `${ORD}/boxfenster-orte-${W}x${H}.png` });
   await pg.keyboard.press('Escape'); await pg.waitForTimeout(300);
   // Steckbrief
-  await pg.click('#boxUI [data-bx="steckbrief"]'); await pg.waitForTimeout(400); z = await zust(); ok('Steckbrief im Fenster (mit Reitern)', z.f === 'steckbrief' && await pg.isVisible('#info .reiter'), z);
+  await pg.click('#boxUI [data-bx="steckbrief"]'); await pg.waitForTimeout(300);
+  z = await pg.evaluate(() => [...document.querySelectorAll('#boxUI [data-bxring]')].map(x => x.dataset.bxring)); ok('Steckbrief-Kreis: Daten, Genetik, Merkmale, Ausbildung', z.join() === 'steckbrief,genetik,merkmale,ausbildung', z);
+  await pg.click('#boxUI [data-bxring="genetik"]'); await pg.waitForTimeout(400); z = await zust();
+  ok('Genetik antippen → Steckbrief-Fenster auf Genetik', z.f === 'steckbrief' && await pg.evaluate(() => aktenReiter === 'genetik'), z);
   await pg.keyboard.press('Escape'); await pg.waitForTimeout(300);
   // Putzen: Werkzeuge im Kreis, kein Fenster
-  await pg.click('#boxUI [data-bx="putzen"]'); await pg.waitForTimeout(400); z = await zust();
+  await pg.click('#boxUI [data-bx="ausruestung"]'); await pg.waitForTimeout(300);
+  z = await pg.evaluate(() => [...document.querySelectorAll('#boxUI [data-bxring]')].map(x => x.dataset.bxring)); ok('Ausrüstung-Kreis: Zaumzeug, Putzkiste, Hufschuhe', z.join() === 'zaum,putzkiste,hufschuhe', z);
+  await pg.click('#boxUI [data-bxring="putzkiste"]'); await pg.waitForTimeout(400); z = await zust();
   ok('Putzen: kein Fenster, Werkzeuge im Kreis (Bürste, Kamm, Hufkratzer, Streicheln) und ✕', !z.offen && z.putz && z.pm && ['buerste', 'kamm', 'huf', 'streicheln', 'zu'].every(t => z.tools.includes(t)), z);
   const ueber = await pg.evaluate(() => { const E = [...document.querySelectorAll('#boxUI .bxtool, #boxUI .bxs')], P = [];   // runde Knöpfe: Abstand der Mittelpunkte
     E.forEach((a, i) => E.forEach((c, j) => { if (j <= i) return; const A = a.getBoundingClientRect(), C = c.getBoundingClientRect(), d = Math.hypot(A.x + A.width / 2 - C.x - C.width / 2, A.y + A.height / 2 - C.y - C.height / 2);
@@ -54,8 +68,10 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
   await pg.click('#boxUI [data-bxtool="buerste"]'); await pg.waitForTimeout(300); z = await zust(); ok('Bürste antippen startet das Wischen', z.wisch === 'buerste', z);
   if (ORD) await pg.screenshot({ path: `${ORD}/boxfenster-putzen-${W}x${H}.png` });
   await pg.keyboard.press('Escape'); await pg.waitForTimeout(300); z = await zust(); ok('Escape schließt die Putzkiste', !z.putz && !z.pm && !z.tools.length, z);
-  // Ausrüstung → Putzkiste führt ebenfalls zum Kreis
-  await pg.click('#boxUI [data-bx="ausruestung"]'); await pg.waitForTimeout(400); z = await zust(); ok('Ausrüstung öffnet ein Fenster', z.f === 'ausruestung' && z.offen, z);
+  // Zaumzeug → Ausrüstungs-Fenster; dort führt die Putzkiste ebenfalls zum Kreis
+  await pg.click('#boxUI [data-bx="ausruestung"]'); await pg.waitForTimeout(300); await pg.click('#boxUI [data-bxring="zaum"]'); await pg.waitForTimeout(400); z = await zust();
+  ok('Zaumzeug öffnet das Ausrüstungs-Fenster', z.f === 'ausruestung' && z.offen && await pg.evaluate(() => zaumModus), z);
+  await pg.evaluate(() => { zaumModus = false; zeigeAkte(); }); await pg.waitForTimeout(300);
   await pg.click('#info #putzKachel'); await pg.waitForTimeout(400); z = await zust();
   ok('Putzkiste im Ausrüstungs-Fenster: Fenster zu, Werkzeuge im Kreis', !z.offen && z.putz && z.tools.includes('buerste'), z);
   await pg.keyboard.press('Escape'); await pg.waitForTimeout(200);

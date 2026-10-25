@@ -974,7 +974,9 @@
   body.boxfenster #info [data-vs="heute"] ul.liste > li#futterZeile .txt { align-items: flex-start; }
   /* Orte: Karte groß, Doppelklick = Zoom */
   body.boxfenster #info[data-fenster="orte"] .plan-scroll { max-height: none; }
-  body.boxfenster #info[data-fenster="orte"] .plan-scroll svg.plan-raster { width: 100%; height: auto; }
+  body.boxfenster #info[data-fenster="orte"] .plan-scroll svg.plan-raster { width: auto; max-width: 100%; height: calc(100dvh - var(--kopfH, 64px) - 170px); max-height: none; display: block; }
+  body.boxfenster #info[data-fenster="orte"] .plan-scroll:not(.plan-zoom) { width: fit-content; max-width: 100%; margin: 0 auto 4px; }
+  body.boxfenster.infoOffen #info[data-fenster="orte"] { width: min(1400px, 96vw); max-width: none; }
   body.boxfenster #info[data-fenster="orte"] .plan-scroll.plan-zoom { overflow: auto; max-height: 70vh; }
   body.boxfenster #info[data-fenster="orte"] .plan-scroll.plan-zoom svg.plan-raster { width: 220%; max-width: none; }
   /* Putzkiste als Kreis um das Pferd */
@@ -1201,7 +1203,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "818";
+  const SPIEL_VERSION = "819";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1209,12 +1211,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=818"></script>
-<script src="pferd.js?v=818"></script>
-<script src="boxstufen.js?v=818"></script>
-<script src="kopfneu.js?v=818"></script>
-<script src="waschbild.js?v=818"></script>
-<script src="avatare.js?v=818"></script>
+<script src="lz-string.min.js?v=819"></script>
+<script src="pferd.js?v=819"></script>
+<script src="boxstufen.js?v=819"></script>
+<script src="kopfneu.js?v=819"></script>
+<script src="waschbild.js?v=819"></script>
+<script src="avatare.js?v=819"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -6208,7 +6210,7 @@
   }
   function bxSymbole(D) {
     const tierarzt = D.bef.length > 0 || stufeAktiv() !== "anf";   // Dome 24.10.: Anfänger sehen den Tierarzt nur bei einem Befund
-    return { links: ["versorgung", "putzen", "fuettern"], rechts: ["orte", "ausruestung", "steckbrief", ...(tierarzt ? ["tierarzt"] : [])] };
+    return { links: ["versorgung", ...(boxFensterAn() ? [] : ["putzen"]), "fuettern"], rechts: ["orte", "ausruestung", "steckbrief", ...(tierarzt ? ["tierarzt"] : [])] };   // Dome 25.10.: Putzen liegt im Fenster-Modus unter Ausrüstung
   }
   function bxPlaketten(p, D, denk) {   // denk: unklarer Befund steht schon in der Denkblase
     const L = [], R = [];
@@ -6220,20 +6222,43 @@
     return { L, R };
   }
   // ---------- B2 (PC): Fenster mit Rücksprung ----------
-  let bxFenster = null, bxTab = "heute", bxPutz = false;
+  let bxFenster = null, bxTab = "heute", bxPutz = false, bxRing = null;
+  // Kreis-Auswahl um ein Symbol (Dome 25.10.): das Symbol wird zum ✕, die anderen Symbole der Seite verschwinden. Steckbrief abschalten: Eintrag hier löschen.
+  const BX_RING = { ausruestung: true, versorgung: true, steckbrief: true };
   const boxFensterAn = () => { if (!boxNeuAn()) return false; if (navigator.webdriver) { try { return !!localStorage.getItem("zuchtstall-boxfenster"); } catch (e) { return false; } } return true; };   // unter Playwright nur mit Schalter (die alten Tests klicken im Reiter unter dem Bild)
   const BX_TITEL = { versorgung: "🧺 Versorgung", orte: "🗺️ Orte", ausruestung: "🧰 Ausrüstung", steckbrief: "📋 Steckbrief" };
   function bxFensterZu() { bxFenster = null; document.body.classList.remove("infoOffen", "infoUnten"); ortModus = null; deckModus = false; zaumModus = false; scherModus = false; meldung = ""; try { zeigeAkte(); } catch (e) {} }
-  function bxPutzZu() { bxPutz = false; if (wisch) { const w = $("wischAus"); if (w) w.click(); } putzModus = false; zeigeAkte(); }
+  function bxRingZu() { bxRing = null; zeigeAkte(); }
+  function bxPutzZu() { bxPutz = false; bxRing = null; if (wisch) { const w = $("wischAus"); if (w) w.click(); } putzModus = false; zeigeAkte(); }
+  function bxFensterAuf(k, sub) {   // Fenster über der Box; sub = Reiter (Versorgung: heute/gesund/besitzer, Steckbrief: steckbrief/genetik/…)
+    const p = B() && B().pferd; if (!p) return;
+    bxRing = null; bxPutz = false; putzModus = false; bxFenster = k;
+    if (k === "versorgung") bxTab = sub || (bekannteBefunde(p).some(x => !(x.beh && !(KRANK[x.art] || {}).chronisch)) ? "gesund" : "heute");
+    aktenModus = k === "steckbrief" ? "steckbrief" : "pflege"; aktenReiter = k === "steckbrief" ? (sub || "steckbrief") : ({ versorgung: "gesundheit", ausruestung: "ausruestung", orte: "platz" }[k] || "gesundheit");
+    aufschlTeil = null; deckModus = false; ortModus = null; scherModus = false; zaumModus = false; meldung = ""; document.body.classList.add("infoOffen"); zeigeAkte(); $("info").scrollTop = 0;
+  }
+  function bxPutzStart() { bxRing = null; bxFenster = null; document.body.classList.remove("infoOffen", "infoUnten"); bxPutz = true; aktenModus = "pflege"; aktenReiter = "ausruestung"; ortModus = null; deckModus = false; scherModus = false; zaumModus = false; putzModus = true; meldung = ""; zeigeAkte(); }
+  function bxRingItems(k, p) {
+    if (k === "versorgung") { const e = fremd(p) ? einstellerVon(p) : null; return [["heute", "🧺", "Heute"], ["gesund", "❤️", "Gesundheit"], ...(e ? [["besitzer", "👤", "Besitzer"]] : [])]; }
+    if (k === "steckbrief") return [["steckbrief", "📄", "Daten"], ["genetik", "🧬", "Genetik"], ...(spiel.admin ? [["aufschl", "🔎", "Aufschlüsselung"]] : []), ["merkmale", "📐", "Merkmale"], ["ausbildung", "🎓", "Ausbildung"]];
+    if (k === "ausruestung") return [["zaum", "🏇", "Zaumzeug"], ["putzkiste", "🧽", "Putzkiste"], ["hufschuhe", "👟", "Hufschuhe"]].filter(([id]) => !!$({ zaum: "zaumKachel", putzkiste: "putzKachel", hufschuhe: "hufschuhKachel" }[id]));
+    return [];
+  }
+  function bxRingWahl(k, id) {
+    if (k === "versorgung" || k === "steckbrief") { bxFensterAuf(k, id); return; }
+    if (id === "putzkiste") { bxPutzStart(); return; }
+    if (id === "zaum") { bxFensterAuf("ausruestung"); zaumModus = true; zeigeAkte(); return; }
+    if (id === "hufschuhe") { const h = $("hufschuhKachel"); bxRing = null; zeigeAkte(); if (h) h.click(); }
+  }
   function boxUIOeffne(k) {
     const box = B(), p = box && box.pferd; if (!p) return;
     if (k === "fuettern") { futterDialog(p, box); return; }
     if (boxFensterAn()) {
-      if (k === "putzen") { bxFenster = null; document.body.classList.remove("infoOffen", "infoUnten"); bxPutz = true; aktenModus = "pflege"; aktenReiter = "ausruestung"; ortModus = null; deckModus = false; scherModus = false; zaumModus = false; putzModus = true; meldung = ""; zeigeAkte(); return; }
-      bxPutz = false; putzModus = false; bxFenster = k === "tierarzt" ? "versorgung" : k; if (bxFenster === "versorgung") bxTab = k === "tierarzt" ? "gesund" : (bekannteBefunde(p).some(x => !(x.beh && !(KRANK[x.art] || {}).chronisch)) ? "gesund" : "heute");
-      aktenModus = k === "steckbrief" ? "steckbrief" : "pflege"; aktenReiter = { versorgung: "gesundheit", tierarzt: "gesundheit", ausruestung: "ausruestung", orte: "platz", steckbrief: "steckbrief" }[k] || "gesundheit";
-      aufschlTeil = null; deckModus = false; ortModus = null; scherModus = false; zaumModus = false; meldung = ""; document.body.classList.add("infoOffen"); zeigeAkte();
-      const I = $("info"); I.scrollTop = 0; if (k === "tierarzt") { const t = $("tierarztKnopf"); if (t) t.scrollIntoView({ block: "center" }); } return;
+      if (BX_RING[k]) { bxRing = bxRing === k ? null : k; bxPutz = false; putzModus = false; bxFenster = null; document.body.classList.remove("infoOffen", "infoUnten"); aktenModus = k === "steckbrief" ? "steckbrief" : "pflege"; aktenReiter = { versorgung: "gesundheit", ausruestung: "ausruestung", steckbrief: "steckbrief" }[k]; ortModus = null; deckModus = false; scherModus = false; zaumModus = false; meldung = ""; zeigeAkte(); return; }
+      bxRing = null;
+      if (k === "putzen") { bxPutzStart(); return; }
+      bxFensterAuf(k === "tierarzt" ? "versorgung" : k, k === "tierarzt" ? "gesund" : null);
+      if (k === "tierarzt") { const t = $("tierarztKnopf"); if (t) t.scrollIntoView({ block: "center" }); } return;
     }
     aktenModus = k === "steckbrief" ? "steckbrief" : "pflege"; aktenReiter = { versorgung: "gesundheit", tierarzt: "gesundheit", putzen: "ausruestung", ausruestung: "ausruestung", orte: "platz", steckbrief: "steckbrief" }[k] || "gesundheit";
     aufschlTeil = null; deckModus = false; ortModus = null; scherModus = false; zaumModus = false; putzModus = k === "putzen"; meldung = ""; zeigeAkte();
@@ -6241,7 +6266,7 @@
   }
   function bxFensterSchmuecken(p) {
     const I = $("info"), fa = boxFensterAn(); document.body.classList.toggle("boxfenster", fa);
-    if (!fa) { document.body.classList.remove("infoOffen", "infoUnten"); bxFenster = null; bxPutz = false; return; }
+    if (!fa) { document.body.classList.remove("infoOffen", "infoUnten"); bxFenster = null; bxPutz = false; bxRing = null; return; }
     if (putzModus && bxFenster) { bxFenster = null; bxPutz = true; document.body.classList.remove("infoOffen", "infoUnten"); }   // Putzkiste aus dem Ausrüstungs-Fenster: Fenster weg, Werkzeuge kreisen um das Pferd (das Pferd muss frei sein zum Wischen)
     if (!putzModus) bxPutz = false;
     const unten = !!bxFenster && (ortModus === "waschplatz" || ortModus === "solarium");   // Waschen/Solarium: Werkzeuge unten, Pferd bleibt sichtbar
@@ -6257,14 +6282,17 @@
     k.querySelectorAll("[data-vstab]").forEach(b => b.onclick = () => { bxTab = b.dataset.vstab; zeigeAkte(); $("info").scrollTop = 0; });
     if (bxFenster === "orte") I.querySelectorAll(".plan-scroll").forEach(sc => { sc.title = "Doppelklick: hineinzoomen / zurück"; sc.ondblclick = ev => { ev.preventDefault(); sc.classList.toggle("plan-zoom"); }; });
   }
-  function bxPutzKreis(ui, mr, px, py, gr) {   // Werkzeuge im Halbkreis um das Putzen-Symbol, ✕ in der Mitte (Dome: wie das Kreismenü im Hofplan)
-    const W = [["buerste", "🧽", "Bürste"], ["kamm", KAMM_ICO, "Kamm"], ["huf", HUFKR_ICO, "Hufkratzer"], ["streicheln", "✋", "Streicheln"], ["schere", "✂️", "Schere"]].filter(([id]) => id === "schere" ? !!$("scherKachel") : !!document.querySelector(`#info [data-putz="${id}"]`));
-    const n = W.length, rad = Math.max(165, gr * 2.6), cx = px + gr / 2, cy = py + gr / 2, rechts = cx > ui.getBoundingClientRect().width / 2 ? -1 : 1;
-    let h = W.map(([id, ico, t], i) => { const a = (-50 + (n > 1 ? 100 * i / (n - 1) : 0)) * Math.PI / 180, x = Math.round(cx + rechts * rad * Math.cos(a) - 30), y = Math.round(cy + rad * Math.sin(a) - 30);
-      return `<button class="bxtool seite${rechts < 0 ? " li" : ""}${wisch && wisch.tool === id ? " an" : ""}" data-bxtool="${id}" style="left:${x}px;top:${y}px" title="${t}">${ico}<span class="bxl">${t}</span></button>`; }).join("");
-    h += `<button class="bxtool zu" data-bxtool="zu" style="left:${Math.round(cx - 23)}px;top:${Math.round(cy - 23)}px" title="Putzkiste schließen (Esc)">✕</button>`;
-    h += `<div class="bxhinweis" style="top:8px;display:${wisch ? "block" : "none"}">👆 ${esc((WISCH_TEXT && wisch && WISCH_TEXT[wisch.tool]) || "")} – mit gedrückter linker Maustaste über das Pferd wischen<button class="mini-knopf" data-bxtool="aus">✋ aufhören</button></div>`;
-    return h;
+  function bxKreis(ui, px, py, gr, W, attr, zuTitel) {   // Auswahl im Halbkreis um ein Symbol, ✕ an seiner Stelle (Dome: wie das Kreismenü im Hofplan)
+    const n = W.length, rad = Math.max(165, gr * 2.6), cx = px + gr / 2, cy = py + gr / 2, H = ui.getBoundingClientRect().height, seite = cx > ui.getBoundingClientRect().width / 2 ? -1 : 1;
+    const span = Math.min(140, 36 * Math.max(0, n - 1));
+    let h = W.map(([id, ico, t, an], i) => { const a = (n > 1 ? -span / 2 + span * i / (n - 1) : 0) * Math.PI / 180, x = Math.round(cx + seite * rad * Math.cos(a) - 30), y = Math.round(Math.max(4, Math.min(H - 70, cy + rad * Math.sin(a) - 30)));
+      return `<button class="bxtool seite${seite < 0 ? " li" : ""}${an ? " an" : ""}" ${attr}="${id}" style="left:${x}px;top:${y}px" title="${t}">${ico}<span class="bxl">${t}</span></button>`; }).join("");
+    return h + `<button class="bxtool zu" data-bxtool="zu" style="left:${Math.round(cx - 23)}px;top:${Math.round(cy - 23)}px" title="${zuTitel} (Esc)">✕</button>`;
+  }
+  function bxPutzKreis(ui, px, py, gr) {   // Werkzeuge der Putzkiste
+    const W = [["buerste", "🧽", "Bürste"], ["kamm", KAMM_ICO, "Kamm"], ["huf", HUFKR_ICO, "Hufkratzer"], ["streicheln", "✋", "Streicheln"], ["schere", "✂️", "Schere"]].filter(([id]) => id === "schere" ? !!$("scherKachel") : !!document.querySelector(`#info [data-putz="${id}"]`)).map(w => [...w, wisch && wisch.tool === w[0]]);
+    return bxKreis(ui, px, py, gr, W, "data-bxtool", "Putzkiste schließen")
+      + `<div class="bxhinweis" style="top:8px;display:${wisch ? "block" : "none"}">👆 ${esc((WISCH_TEXT && wisch && WISCH_TEXT[wisch.tool]) || "")} – mit gedrückter linker Maustaste über das Pferd wischen<button class="mini-knopf" data-bxtool="aus">✋ aufhören</button></div>`;
   }
   function boxUI() {
     const ui = $("boxUI"), kr = $("kopfRinge"); if (!ui || !kr) return;
@@ -6283,11 +6311,11 @@
     const links = o.x, rechts = r.width - u.x, aussen = links >= gr + 24;   // Symbole mittig in den Nachbarboxen, sonst am Bildrand
     const xL = aussen ? Math.round(links / 2 - gr / 2) : 12, xR = aussen ? Math.round(u.x + rechts / 2 - gr / 2) : Math.round(r.width - gr - 12);
     const knopf = (k, x, y) => { const a = bxAmpel(k, D, box); return `<button class="bxs" data-bx="${k}" style="left:${x}px;top:${y}px;width:${gr}px;height:${gr}px;font-size:${Math.round(gr * 0.48)}px" title="${BX_SYM[k][1]}" aria-label="${BX_SYM[k][1]}">${BX_SYM[k][0]}${a ? `<i class="bxd ${a}"></i>` : ""}<span class="bxl">${BX_SYM[k][1]}</span></button>`; };
-    const putzKreis = bxPutz && putzModus && boxFensterAn(); let putzXY = null;
-    const setze = (L, x) => L.map((k, i) => { const y = Math.round(y0 + i * abst(L.length)); if (k === "putzen" && putzKreis) { putzXY = [x, y]; return ""; } return knopf(k, x, y); }).join("");
+    const putzKreis = bxPutz && putzModus && boxFensterAn(), anker = putzKreis ? "ausruestung" : (boxFensterAn() && bxRing) || null; let ankerXY = null;
+    const setze = (L, x) => { const hier = anker && L.includes(anker); return L.map((k, i) => { const y = Math.round(y0 + i * abst(L.length)); if (k === anker) { ankerXY = [x, y]; return ""; } return hier ? "" : knopf(k, x, y); }).join(""); };
     let h = setze(S.links, xL) + setze(S.rechts, xR);
     // Plaketten links und rechts vom Boxschild (Schild: x 166–234, y 38–60 im Bild)
-    const denkAn = D.offen.length && !p.weide && !paddockVon(p) && !putzKreis, P = bxPlaketten(p, D, denkAn), sl = pt(166, 38), sr = pt(234, 38), grenzeL = aussen ? links : xL + gr + 12, grenzeR = aussen ? u.x : xR - 12;
+    const denkAn = D.offen.length && !p.weide && !paddockVon(p) && !anker, P = bxPlaketten(p, D, denkAn), sl = pt(166, 38), sr = pt(234, 38), grenzeL = aussen ? links : xL + gr + 12, grenzeR = aussen ? u.x : xR - 12;
     const chip = ([c, t, k]) => `<button class="bxchip ${c}" data-bx="${k}">${esc(t)}</button>`;
     if (P.L.length) h += `<div class="bxchips" style="right:${Math.round(r.width - sl.x + 10)}px;top:${Math.round(sl.y)}px;max-width:${Math.max(120, Math.round(sl.x - 10 - grenzeL - 8))}px;justify-content:flex-end">${P.L.map(chip).join("")}</div>`;
     if (P.R.length) h += `<div class="bxchips" style="left:${Math.round(sr.x + 10)}px;top:${Math.round(sr.y)}px;max-width:${Math.max(120, Math.round(grenzeR - sr.x - 18))}px">${P.R.map(chip).join("")}</div>`;
@@ -6296,11 +6324,12 @@
       pp.querySelectorAll("path, ellipse, circle, polygon").forEach(el => { if (el.closest("defs, clipPath, mask, pattern")) return; const f = el.getAttribute("fill"); if (f === "none" || el.getAttribute("fill-opacity") === "0") return; const q = el.getBoundingClientRect(); if (q.width > 2 && q.top < oben) oben = q.top; });
       if (bb.width > 5) { const x = Math.round(bb.left - mr.left + bb.width * 0.08), y = Math.round((isFinite(oben) ? oben : bb.top) - mr.top - 52);
       h += `<div class="bxdenk" style="left:${Math.max(xL + gr + 16, x)}px;top:${Math.max(top + 4, y)}px">🤒 Mir geht’s nicht gut – ${esc(anzeichenText(D.offen[0]))}</div>`; } } catch (e) {} }
-    if (putzKreis && putzXY) h += bxPutzKreis(ui, mr, putzXY[0], putzXY[1], gr);
+    if (ankerXY) h += putzKreis ? bxPutzKreis(ui, ankerXY[0], ankerXY[1], gr) : bxKreis(ui, ankerXY[0], ankerXY[1], gr, bxRingItems(anker, p), "data-bxring", "Zurück");
     ui.innerHTML = h;
     ui.querySelectorAll("[data-bx]").forEach(el => el.onclick = ev => { ev.stopPropagation(); boxUIOeffne(el.dataset.bx); });
+    ui.querySelectorAll("[data-bxring]").forEach(el => el.onclick = ev => { ev.stopPropagation(); bxRingWahl(bxRing, el.dataset.bxring); });
     ui.querySelectorAll("[data-bxtool]").forEach(el => el.onclick = ev => { ev.stopPropagation(); const t = el.dataset.bxtool;
-      if (t === "zu") { bxPutzZu(); return; } if (t === "aus") { const w = $("wischAus"); if (w) w.click(); return; }
+      if (t === "zu") { if (bxPutz) bxPutzZu(); else bxRingZu(); return; } if (t === "aus") { const w = $("wischAus"); if (w) w.click(); return; }
       if (t === "schere") { const s = $("scherKachel"); if (s) { s.click(); bxPutz = false; bxFenster = "ausruestung"; document.body.classList.add("infoOffen"); zeigeAkte(); } return; }
       const b2 = document.querySelector(`#info [data-putz="${t}"]`); if (b2) b2.click(); });
     // Ringe in der Kopfleiste
@@ -6311,7 +6340,7 @@
       + ring(dq, D.dritte.t === "Besitzer" ? "#3d79c4" : "#f2c14e", D.dritte.ico, `${D.dritte.t} ${D.dritte.n}/${D.dritte.m}`, (D.dritte.t === "Besitzer" ? "Besitzerwünsche heute:\n" : "Versorgung heute:\n") + D.dritte.liste.join("\n"));
     kr.classList.add("an");
   }
-  document.addEventListener("keydown", e => { if (e.key !== "Escape" || !document.body.classList.contains("boxfenster") || !$("dlg").hidden) return; if (bxFenster) bxFensterZu(); else if (bxPutz) bxPutzZu(); });
+  document.addEventListener("keydown", e => { if (e.key !== "Escape" || !document.body.classList.contains("boxfenster") || !$("dlg").hidden) return; if (bxFenster) bxFensterZu(); else if (bxPutz) bxPutzZu(); else if (bxRing) bxRingZu(); });
   window.addEventListener("resize", () => { clearTimeout(boxUI.t); boxUI.t = setTimeout(() => { try { boxUI(); } catch (e) {} }, 120); });
   function zeigeTag() {
     wetterSetzen();
@@ -14187,7 +14216,7 @@
   const planOrtImPlan = k => { if (!planAn() || !hofPlan()) return false; const P = hofPlan(); return planItems().some(it => P.pos[it.id] && (k === "anhaenger" ? it.typ === "park" : it.typ === k && !(it.g && it.g.bau && it.g.bau.art !== "umbau"))); };   // Kachel entfällt, wenn das Ziel im Plan steht
   // ---------- Anzeige ----------
   function planSVG(modus, p, box) {
-    const P = hofPlan(), I = planItems(), S = PLAN_S, ort = modus === "ort", bb0 = planBox(P), K = !ort && planLand ? planStueckKandidaten(planLand.modus === "zug" ? planLand.i : -1) : [], bb = ort ? { x: bb0.x, y: bb0.y, b: bb0.b + 4, h: bb0.h + 4 } : K.length ? (() => { const x0 = Math.min(bb0.x, ...K.map(k => k.x)), y0 = Math.min(bb0.y, ...K.map(k => k.y)), x1 = Math.max(bb0.x + bb0.b, ...K.map(k => k.x + k.b)), y1 = Math.max(bb0.y + bb0.h, ...K.map(k => k.y + k.h)); return { x: x0, y: y0, b: x1 - x0, h: y1 - y0 }; })() : bb0;
+    const P = hofPlan(), I = planItems(), S = PLAN_S, ort = modus === "ort", bb0 = planBox(P), K = !ort && planLand ? planStueckKandidaten(planLand.modus === "zug" ? planLand.i : -1) : [], bb = ort ? { x: bb0.x, y: bb0.y, b: bb0.b + 2, h: bb0.h + 2 } : K.length ? (() => { const x0 = Math.min(bb0.x, ...K.map(k => k.x)), y0 = Math.min(bb0.y, ...K.map(k => k.y)), x1 = Math.max(bb0.x + bb0.b, ...K.map(k => k.x + k.b)), y1 = Math.max(bb0.y + bb0.h, ...K.map(k => k.y + k.h)); return { x: x0, y: y0, b: x1 - x0, h: y1 - y0 }; })() : bb0;
     const land = P.st.map(s => `<rect x="${s.x * S}" y="${s.y * S}" width="${s.b * S}" height="${s.h * S}" fill="#efe3c9"/>${["plFein", "plGitter", "plGross"].map(id => `<rect x="${s.x * S}" y="${s.y * S}" width="${s.b * S}" height="${s.h * S}" fill="url(#${id})"/>`).join("")}`).join("");
     const rand = P.st.map(s => `<rect x="${s.x * S + .3}" y="${s.y * S + .3}" width="${s.b * S - .6}" height="${s.h * S - .6}" fill="none" stroke="#8a6a4a" stroke-width=".6" stroke-dasharray="3 2"/>`).join("");
     const geb = I.filter(it => P.pos[it.id]).map(it => {
@@ -14212,12 +14241,12 @@
   function planOrtPfeile(p, bb, S) {
     const x1 = (bb.x + bb.b) * S, y1 = (bb.y + bb.h) * S, W = weiden().filter(w => !w.wiese), fr = p && fremd(p);
     const weideAn = !!W.length || !!(p && p.weide), geAn = !!TRAIN_ORTE.gelaende && ortOffen("gelaende") && !(fr && !darfAlsBereiter(p));
-    const pf = (an, ort, cls, d, ex, ey, txt, ico) => `<g class="pl-pfeil${an ? "" : " aus"}" ${an ? `data-ort="${ort}"` : ""} role="button" tabindex="0"><title>${txt}</title><path d="${d}" fill="${an ? "#5b8a3a" : "#9aa58d"}" stroke="#2f5a1c" stroke-width=".8" stroke-linejoin="round"/><text x="${ex}" y="${ey}" font-size="9" text-anchor="middle">${ico}</text></g>`;
+    const pf = (an, ort, cls, d, ex, ey, txt, ico) => `<g class="pl-pfeil${an ? "" : " aus"}" ${an ? `data-ort="${ort}"` : ""} role="button" tabindex="0"><title>${txt}</title><path d="${d}" fill="${an ? "#5b8a3a" : "#9aa58d"}" stroke="#2f5a1c" stroke-width=".8" stroke-linejoin="round"/><text x="${ex}" y="${ey}" font-size="6.5" text-anchor="middle">${ico}</text></g>`;
     const cx = x1 - bb.b * S / 2, ry = y1 - bb.h * S / 2;
-    return pf(weideAn, "weide", "w", `M${cx - 16},${y1 + 6} h32 v7 l-16 12 l-16 -12 z`, cx, y1 + 20, p && p.weide ? "Weide – zurück in die Box" : "Weide (verlässt den Hof)", "🌿")
-      + `<text x="${cx}" y="${y1 + 33}" font-size="4.6" text-anchor="middle" fill="#2f4a1c">${p && p.weide ? "zurück in die Box" : "Weide"}</text>`
-      + pf(geAn, "tr-gelaende", "g", `M${x1 + 6},${ry - 16} v32 h7 l12 -16 l-12 -16 z`, x1 + 14, ry + 3, fr && !geAn ? "Gelände – nur der Besitzer und der Bereiter" : "Gelände zum Ausreiten (verlässt den Hof)", "🌲")
-      + `<text x="${x1 + 17}" y="${ry + 26}" font-size="4.6" text-anchor="middle" fill="#2f4a1c">Gelände</text>`;
+    return pf(weideAn, "weide", "w", `M${cx - 16},${y1 + 3} h32 v4 l-16 6 l-16 -6 z`, cx, y1 + 9.5, p && p.weide ? "Weide – zurück in die Box" : "Weide (verlässt den Hof)", "🌿")
+      + `<text x="${cx}" y="${y1 + 18}" font-size="4.6" text-anchor="middle" fill="#2f4a1c">${p && p.weide ? "zurück in die Box" : "Weide"}</text>`
+      + pf(geAn, "tr-gelaende", "g", `M${x1 + 3},${ry - 16} v32 h4 l6 -16 l-6 -16 z`, x1 + 7.5, ry + 2.5, fr && !geAn ? "Gelände – nur der Besitzer und der Bereiter" : "Gelände zum Ausreiten (verlässt den Hof)", "🌲")
+      + `<text x="${x1 + 9}" y="${ry + 23}" font-size="4.6" text-anchor="middle" fill="#2f4a1c">Gelände</text>`;
   }
   function planWeidenHTML(p) {   // Weiden und Wiesen liegen unter dem Bauland – nur gezeigt, antippen öffnet die Weide (im Ort: Pferd auf die Weide)
     const W = weiden(), frei = freiesLand();

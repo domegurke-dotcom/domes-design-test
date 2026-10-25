@@ -15,7 +15,10 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-### v843 (Claude Pro, 25.10.)
+### v844 (Claude Pro, 25.10.)
+- Klemmbrett: jeder Klick führt dorthin, wo man die Aufgabe erledigt (getestet, auch die leuchtende Stelle im Bild). Termine kurz mit Info-Knopf.
+
+## v843 (Claude Pro, 25.10.)
 - Versorgung · Heute aufgeräumt (doppelte Zeilen raus), Termine auf dem Klemmbrett. Offen: Platz für Leckerli (Vorschläge an Dome), Tierarzt-Symbol (Dome überlegt noch). Tutorial-Spieler nicht gelaufen (Regel: nur mit großem Test) – Schritt „Fütterung heute“ geändert.
 
 ## v842 (Claude Pro, 25.10.)

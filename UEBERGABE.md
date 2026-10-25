@@ -15,6 +15,11 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### v850 (Claude Pro, 25.10.)
+- **Ursache „Text ragt rechts über den Rand“ gefunden:** Domes Bildschirm ist größer als 1366 px, der PC-Zoom (v831) rechnet `innerWidth` um, `document.documentElement.clientWidth` aber nicht – die Tutorial-Blase und die Blasen-Funktionen (`blasePosition`, Zeilen 4397/4414) nutzten clientWidth und setzten die Blase 70 px zu weit rechts. Jetzt `Math.min(clientWidth, innerWidth)`; geprüft mit PC-Zoom 1920×1080 (Blase vorher bis 1439, jetzt bis 1351 bei 1366). **Neuer Code: nie `clientWidth`/`clientHeight` von `documentElement` für die Fensterbreite nehmen, `innerWidth` nutzen.**
+- Grüner Tutorial-Haken bleibt links an seinem Kopfleisten-Platz (`#tutHaken.fest` bekommt left/top aus der ursprünglichen Lage).
+- Nicht nachgestellt: Bürste in Tutorial 1.8 (mit PC-Zoom-Test unklar, Test-Maus bewegt sich dort nicht), blauer Rahmen 5.2 (Ring sitzt im Test passend), blauer Strich oben.
+
 ### v849 (Claude Pro, 25.10.)
 - Fellmuster (Tigerschecke, Overo-Linien, Sabino-Rand, Birdcatcher …) rutschen nicht mehr, wenn das Pferd den Kopf senkt: `sMinX`/`sMinY` in pferd.js (fester Rahmen statt Pferde-Box, die am Kopf hing; auch die Zufallsfolge hing daran). Tiger-Punkte ×1,25 (größerer Rahmen).
 

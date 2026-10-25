@@ -87,6 +87,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - `boxstufen.js` – Box-Bilder je Stufe (`window.BOXSTUFE` 1/2/3: wand, wandTuer (Paddockbox mit Tür), seiten, vorn, nachbar, boden sand/pflaster/beton/gummi).
 - `pferd kopf.svg` – Domes Kopf-Datei (alle Köpfe, Ohren, Augen, Schöpfe, Kopfabzeichen, Maulfärbung).
 - `kopfneu.js` – daraus erzeugt (`KOPF_NEU`), **nicht von Hand ändern**: nach Änderungen an der SVG `NODE_PATH=/opt/node22/lib/node_modules node werkzeuge/kopf-export.js` laufen lassen. (`kopfteile.js`/`kopfalter.js` sind seit v424 gelöscht.)
+- **Inkscape als Kommandozeilen-Werkzeug (Dome 25.10.):** in der Cloud-Sitzung per `apt-get update && apt-get install -y --no-install-recommends inkscape` installierbar (1.2.2, ~1 Min.; nach jedem Sitzungsstart neu). Nutzen: Vorschau von Domes SVGs (`inkscape "pferd kopf.svg" --export-type=png --export-width=1400 --export-filename=<Scratchpad>/x.png`), Pfad-Verrechnung (`--actions`). Kein Live-Zugriff auf Domes Programm.
 - `version.json` – aktuelle Version.
 - `werte/` – Bilder zur Ausbildungsskala.
 - Speicherstand (seit v519, `PLAN-SPIELSTAND.md`): Autospeicher `localStorage["zuchtstall-v2"]` → Objekt `spiel`, Speicherplätze `zuchtstall-p1`/`-p2` ({meta, spiel}) – alles **gepackt** (lz-string, `lesen`/`schreiben`, nie direkt `localStorage.getItem` + `JSON.parse`). `speichern()` schreibt verzögert (0,4 s), sofort mit `speichernJetzt()` (vor dem Lesen in Tests!).

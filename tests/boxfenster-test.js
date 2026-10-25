@@ -27,6 +27,11 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
   ok('Fenster-Kopf: Titel mit Pferdename, Reiter Heute/Gesundheit', /Versorgung · Flocke/.test(z.titel) && z.tabs.join() === 'heute*,gesund', z);
   ok('Reiter „Heute“ zeigt nur die Tages-Versorgung', z.sichtbar.join() === 'heute', z.sichtbar);
   if (ORD) await pg.screenshot({ path: `${ORD}/boxfenster-heute-${W}x${H}.png` });
+  z = await pg.$$eval('#info .kb-zeile', a => a.map(x => x.dataset.kb + (x.disabled ? '✔' : '')));
+  ok('Klemmbrett „Flocke · heute“ mit Heu, Misten, Putzen, Hufe', ['heu', 'mist', 'putz'].every(k => z.some(x => x.startsWith(k))) && !!(await pg.$('#info .klemmbrett')), z);
+  await pg.click('#info .kb-zeile[data-kb="heu"]'); await pg.waitForTimeout(300);
+  z = await pg.evaluate(() => ({ puls: document.querySelectorAll('.bxpuls').length, f: bxFenster })); ok('Klemmbrett „Heu“ antippen: Fenster zu, Heuhaufen leuchtet auf', z.puls === 1 && !z.f, z);
+  await pg.click('#kopfRinge [data-vstab="heute"]'); await pg.waitForTimeout(400);
   await pg.click('#info [data-vstab="gesund"]'); await pg.waitForTimeout(300); z = await zust();
   ok('Reiter „Gesundheit“ umschalten', z.tabs.join() === 'heute,gesund*' && z.sichtbar.join() === 'gesund', z);
   await pg.click('#info .info-zu'); await pg.waitForTimeout(300); z = await zust(); ok('✕ schließt das Fenster', !z.f && !z.offen, z);

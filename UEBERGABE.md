@@ -15,7 +15,11 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-### Sitzung 25.10. Nachmittag (Claude Pro) – Auftrag Dome, Stand v834, alles auf `main`
+### v835 (Claude Pro, 25.10.)
+- Hals bei müden/kranken/liegenden Pferden nicht mehr verlängert (betraf kurze Halsarten). Stehend war der Hals seit v723 unverändert (Vergleich v722/heute).
+- **Offen, Antwort von Dome nötig:** (1) Denkblase/roter Punkt bei alten chronischen Befunden (z. B. Melanom) – Vorschlag: nur bei neuen, noch nicht untersuchten oder akuten unbehandelten Befunden; chronische zeigen nur die Plakette, außer sie werden schlimmer. (2) Tierarzt-Symbol, Befund-Plakette und Gesundheits-Ring öffnen dasselbe Fenster – Vorschlag: Tierarzt-Symbol fragt direkt „Tierarzt rufen?“.
+
+## Sitzung 25.10. Nachmittag (Claude Pro) – Auftrag Dome, Stand v834, alles auf `main`
 | Teil | Stand |
 |---|---|
 | Hals bei Fress-Animation nicht mehr länger | ✅ v830 (kurze Hälse erreichen den Boden nicht ganz) |

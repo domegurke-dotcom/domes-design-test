@@ -32,6 +32,12 @@ Die Nachrichten von Claude Team (v805–v824) sind übernommen und hier gelösch
 
 **Nicht gelaufen:** große Tests (etappen-, hof-gesamt-, neuladen-test) und Tutorial-Spieler – nur mit Domes Ja und Bilder-Variante. Kleine Tests dieser Sitzung grün: boxmobil (5 Größen), boxfenster, boxfenster-alle, boxansicht, weihnachtsgeld, offenstall, krankmeldung, pension-krank, krankheiten, hofplan, flaeche, bauen-komfort, anbau, orte, kamm, hinweise, whiteboard, berufe-popup.
 **Offene Fragen:** `OFFENE-FRAGEN.md`, Abschnitt „Sitzung 25.10.“. Update-Fenster vom 25.10. (v828-Stufe) ist veröffentlicht (Box-Ansicht, Namensschilder, Weihnachtsgeld, Hufrehe, Schulden, Whiteboard kopieren, Pferd holen).
+**Start der nächsten Sitzung (Stand v829, alles auf `main`, nichts uncommittet):**
+1. Nächste Aufgabe: **Tutorial auf die neue Box-Ansicht umstellen** (Tutorial läuft noch mit der alten Ansicht: `boxNeuAn()` ist im Tutorial aus, Ziele wie `[data-r="merkmale"]`, `[data-putz=…]`, Reiter unter dem Bild). Sie wird erst gebaut, wenn Dome es ausdrücklich sagt (sie hat mit „Ja, alle Bilder“ für den großen Test geantwortet, aber noch kein „Los“).
+2. Danach, ebenfalls erst auf Domes „Los“: großer Test (`etappen-test`, `hof-gesamttest`, `neuladen-test`) mit `BILDER=alle BILDER_ORDNER=<Scratchpad-Ordner>` und Tutorial-Spieler (anf 390×844, 844×390, 1366×768, nie parallel).
+3. Update-Fenster: `NEUES_STAND` = 828, nächste Änderungen ab v829 sind unveröffentlicht (nur auf Domes Ansage).
+4. Fragen von Dome in dieser Sitzung sind alle beantwortet und umgesetzt (siehe `OFFENE-FRAGEN.md`).
+5. Version hochzählen mit 5 Stellen (`SPIEL_VERSION`, 6× `?v=`, `version.json`); jede Skriptänderung mit `new Function` prüfen; Kommentare nie mitten in einer Zeile.
 **Achtung:** Handy-Tests der Box brauchen `localStorage["zuchtstall-boxfenster"]` (sonst alte Ansicht unter Playwright) – `tests/boxmobil-test.js`.
 
 ---

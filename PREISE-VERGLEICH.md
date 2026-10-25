@@ -104,7 +104,7 @@ Nicht bewertet: Wohnhaus/Hofplatz, Gelände (Wege), Pferdeanhänger. Der Kaufpre
 | Sattelkammer | 500 / 800 / 1.200 € | 1.500 / 3.000 / 6.000 € |
 | Heu- und Strohlager (Erweiterung) | 1.500 / 2.500 / 4.000 € | 4.000 / 8.000 / 15.000 € |
 | Heudampfer | 800 € | 2.500 € |
-| Aufzucht-Offenstall | 5.000 / 8.000 / 12.000 € | 8.000 / 15.000 / 25.000 € |
+| Aufzucht-Offenstall | 5.000 / 8.000 / 12.000 € | 8.000 / 15.000 / 25.000 € → **v827: 15.000 / 40.000 / 90.000 €** (10 / 25 / 50 Plätze, `PLAN-OFFENSTALL.md`) |
 | Solarium, Verwaltung, Gummimatten | unverändert | unverändert (1.200/2.000/3.200 · 1.500/6.000/18.000 · 350) |
 | Immobilien: Grundstück 5 ha | 5.000 € | 45.000 € (4 ha Weide + 1 ha Bauland) |
 | Immobilien: Resthof | 35.000 € | 58.000 € |

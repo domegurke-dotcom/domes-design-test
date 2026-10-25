@@ -71,6 +71,7 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number);
     ok('reservierte Box steht als „reserviert für Gast“ da', /reserviert für Gast/.test(nb2.innerText));
     ok('leere Box hat Antipp-Ziel zur Box', !!nb2.querySelector('.wb-box.leer[data-wbgo]'));
     ok('oben links: „‹ Whiteboard“ statt Hauptmenü', document.getElementById('nbZurueck').textContent.includes('Whiteboard'));
+    spiel.boxen.forEach(b => { if (b.pferd) { b.krippeVoll = true; b.kraftVoll = true; b.mistig = false; b.wasserTag = spiel.tag; } });   // v838: Übersicht meldet sonst „nicht versorgt“
     document.getElementById('nbZurueck').click(); ok('Zurück führt in die Übersicht', wbSicht === 'uebersicht' && document.getElementById('nbZurueck').textContent.includes('Hauptmenü'));
     ok('Übersicht: beide Vorschauen als Bild (wb-vin)', document.querySelectorAll('.wb-vorschau .wb-vin').length === 2);
     spiel.maVergessen = null; wbSicht = 'uebersicht'; zeigeWhiteboard(); const v0 = document.querySelector('.wb-vorschau[data-wbsicht="boxen"]');

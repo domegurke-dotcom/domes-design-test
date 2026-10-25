@@ -1294,7 +1294,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "837";
+  const SPIEL_VERSION = "838";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1302,12 +1302,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=837"></script>
-<script src="pferd.js?v=837"></script>
-<script src="boxstufen.js?v=837"></script>
-<script src="kopfneu.js?v=837"></script>
-<script src="waschbild.js?v=837"></script>
-<script src="avatare.js?v=837"></script>
+<script src="lz-string.min.js?v=838"></script>
+<script src="pferd.js?v=838"></script>
+<script src="boxstufen.js?v=838"></script>
+<script src="kopfneu.js?v=838"></script>
+<script src="waschbild.js?v=838"></script>
+<script src="avatare.js?v=838"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -11807,6 +11807,7 @@
     bereiterExternTag(); // Bereiter nach Bedarf
     hufschmiedTag();     // Daueraufträge und Erinnerungen
     futterexperteTag();  // Termin beim Futterexperten
+    paddockMistenMorgen(); // v838: Sandpaddocks misten, bevor die Pferde rauskommen
     weideNachmTag();     // v670: zum Schluss bringen Stallbursche/Azubi die Pferde nach draußen
   }
   $("tagAnzeige").tabIndex = -1;   // nur Anzeige (Dome v274)
@@ -12847,7 +12848,13 @@
       if (fremd(p)) { const e = einstellerVon(p); let A = []; try { A = e ? pensionAufgaben(e, b).filter(a => !a.ok) : []; } catch (er) {} if (A.length) offenB.push([nm, A.map(a => a.txt).join(", ")]); }
       else arten.forEach(a => { if (!wunschArt(p, a) || Z[a][i] || (b.maPlan || {})[a] === "-") return; const pin = (b.maPlan || {})[a], pm = pin && (spiel.mitarbeiter || []).find(m => m.id === pin && maAktiv(m));   // v726 (Dome): auch fest zugeteilte Boxen melden, wenn der Mitarbeiter sie nicht schafft oder nicht da ist
           offenB.push([nm, pm ? `📌 ${esc(pm.name)} ${maDa(pm) ? "schafft diese Box nicht mehr (zu viele Boxen fest zugeteilt)" : "ist heute nicht da"} – niemand versorgt sie (${WB_ART[a][1]})` : `kein Mitarbeiter (${WB_ART[a][1]})`]); });
-      if (spiel.maVergessen && spiel.maVergessen.tag === spiel.tag && (spiel.maVergessen.liste || []).some(v => v.i === i)) offenB.push([nm, "heute vergessen"]); });
+      const vergessen = spiel.maVergessen && spiel.maVergessen.tag === spiel.tag && (spiel.maVergessen.liste || []).some(v => v.i === i);
+      if (vergessen) offenB.push([nm, "heute vergessen"]);
+      else { const draussen = !!(p.weide || p.paddock), F = []; let kraft = false; try { kraft = kraftNoetig(p, b); } catch (er) {}   // v838 (Dome): Grundversorgung (Heu, Futter, Wasser, Misten) bei jedem Pferd prüfen, auch bei Pensionspferden – draußen zählt nur das Misten der Box
+        if (!draussen) { if (!b.krippeVoll) F.push("Heu"); if (kraft && !b.kraftVoll) F.push("Futter"); if (boxenStufe(b) === 1 && b.wasserTag !== spiel.tag) F.push("Wasser"); }
+        if (b.mistig) F.push("Misten");
+        if (F.length) { const tx = "nicht versorgt: " + F.join(", "), da = offenB.find(o => o[0] === nm && o[1].includes(`(${WB_ART.stall[1]})`));
+          if (da) da[1] += " – " + tx; else offenB.push([nm, tx + (Z.stall[i] ? "" : " – kein Mitarbeiter eingeteilt, bitte selbst versorgen")]); } } });
     L.forEach(x => { const P = plan.get(x.p); if (P && !P.ziel && (x.p.weidegang || "nie") !== "nie") offenW.push([`${esc(x.p.name)}`, "noch keine feste Weide"]); });
     ZL.forEach(z => { const alle = L.filter(x => { const P = plan.get(x.p); return P && P.ziel === z.id; }), zwei = wbModusVon(z) === "jeden2", schon = new Set();
       // Dome 24.10.: bei „alle 2 Tage“ je Tag (A/B) prüfen – wer an verschiedenen Tagen draußen ist, trifft sich nicht
@@ -16496,7 +16503,9 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     // Pferdepfleger äppelt jeden Arbeitstag eine Weide ab (die am längsten nicht abgeäppelte mit Pferden)
     const aepflerN = aktive("pfleger").filter(m => maDarf(m, "aepfeln")).length + aktive("stallbursche").filter(m => maDarf(m, "misten")).length + aktive("azubi").filter(m => azubiPasst(m, "stall") && maDarf(m, "misten")).length;   // v664 (Dome 23.10.): alle, die auch die Boxen misten, äppeln Weiden ab und misten Sandpaddocks – je Mitarbeiter eine Weide und ein Sandpaddock am Tag
     for (let i = 0; i < aepflerN; i++) { const w = weiden().filter(x => (x.kot || 0) > 0 && !(x.aepfel != null && spiel.tag - x.aepfel < tpj() / 2)).sort((a, b) => (a.aepfel || -999) - (b.aepfel || -999))[0]; if (!w) break; w.aepfel = spiel.tag; w.kot = 0; }   // v388: Absturz behoben, wenn keine Weide Äpfel hat
-    if (aepflerN) { try { paddocks().filter(g => (g.mist || 0) > 0).sort((a, b) => (b.mist || 0) - (a.mist || 0)).slice(0, aktive("stallbursche").filter(m => maDarf(m, "misten")).length + aktive("azubi").filter(m => azubiPasst(m, "stall") && maDarf(m, "misten")).length).forEach(g => { g.mist = 0; }); } catch (e) { } }
+  }
+  function paddockMistenMorgen() {   // v838 (Dome): Sandpaddocks misten Stallbursche/Azubi in der Morgenrunde (wie die Boxen) – vorher in der Nacht, danach kamen in derselben Nacht die neuen Äpfel dazu und der Sandpaddock sah morgens trotzdem ungemistet aus
+    try { paddocks().filter(g => (g.mist || 0) > 0).sort((a, b) => (b.mist || 0) - (a.mist || 0)).slice(0, aktive("stallbursche").filter(m => maDarf(m, "misten")).length + aktive("azubi").filter(m => azubiPasst(m, "stall") && maDarf(m, "misten")).length).forEach(g => { g.mist = 0; }); } catch (e) { console.error(e); }
   }
   function weideJahreszeit() {
     const H = spiel.hof; if (!H) return; weidenSync();

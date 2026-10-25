@@ -17,7 +17,7 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ### v835/v836 (Claude Pro, 25.10.)
 - v835 Hals-Verlängerung bei müder Haltung entfernt → Dome: war richtig, in v836 zurückgenommen. Stehend ist der Hals seit v723 unverändert (Vergleich v722/heute); was Dome bei Paul als zu lang sieht, ist noch unklar (Aufnahme mit „Fehler melden“ erbeten).
-- **Offen, Antwort von Dome nötig:** (1) Denkblase/roter Punkt bei alten chronischen Befunden (z. B. Melanom) – Vorschlag: nur bei neuen, noch nicht untersuchten oder akuten unbehandelten Befunden; chronische zeigen nur die Plakette, außer sie werden schlimmer. (2) Tierarzt-Symbol, Befund-Plakette und Gesundheits-Ring öffnen dasselbe Fenster – Vorschlag: Tierarzt-Symbol fragt direkt „Tierarzt rufen?“.
+- **Offen, Antwort von Dome nötig:** (1) ~~Denkblase bei chronischen Befunden~~ → **erledigt v837** (Dome: ja). (2) Tierarzt-Symbol, Befund-Plakette und Gesundheits-Ring öffnen dasselbe Fenster – Vorschlag: Tierarzt-Symbol fragt direkt „Tierarzt rufen?“.
 
 ## Sitzung 25.10. Nachmittag (Claude Pro) – Auftrag Dome, Stand v834, alles auf `main`
 | Teil | Stand |

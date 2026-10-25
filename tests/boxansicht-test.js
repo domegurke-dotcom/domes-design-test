@@ -3,7 +3,7 @@
 const { chromium } = require('playwright'); const path = require('path');
 const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = process.argv[3];
 (async () => { const b = await chromium.launch(); const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (c || x == null ? '' : ' – ' + JSON.stringify(x)));
-  const start = async (w, h) => { const pg = await b.newPage({ viewport: { width: w, height: h } }); const errs = []; pg.on('pageerror', e => errs.push(e.message)); pg.errs = errs;
+  const start = async (w, h) => { const pg = await b.newPage({ viewport: { width: w, height: h } }); const errs = []; pg.on('pageerror', e => errs.push(e.message)); pg.errs = errs; if (process.env.PCZOOM) await pg.addInitScript(() => localStorage.setItem('zuchtstall-pczoom', '1'));
     await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(600);
     await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('#chLos'); await pg.waitForTimeout(300); await pg.click('#dlgKnoepfe button');
     await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'H'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(300);

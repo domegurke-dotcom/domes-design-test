@@ -8,6 +8,38 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Pferdezucht</title>
+<script>
+  // v831 (Dome 25.10.): PC-Ansicht fest eingestellt – das Spiel ist für 1366 × 768 gebaut und wird auf größeren PC-Bildschirmen als Ganzes vergrößert (CSS-Zoom),
+  // damit es überall gleich aussieht. Alles, was Koordinaten liest oder setzt (Maus, Rechtecke, Scrollen, SVG), wird hier zentral in „Spiel-Pixel“ umgerechnet –
+  // neuer Code muss nichts davon beachten. Handy/Tablet (Touch) bleiben unverändert. Unter Playwright nur mit localStorage["zuchtstall-pczoom"].
+  (function () {
+    const BW = 1366, BH = 768, d = document.documentElement, W = window;
+    const iwD = Object.getOwnPropertyDescriptor(W, "innerWidth") || Object.getOwnPropertyDescriptor(Window.prototype, "innerWidth");
+    const ihD = Object.getOwnPropertyDescriptor(W, "innerHeight") || Object.getOwnPropertyDescriptor(Window.prototype, "innerHeight");
+    const iwE = () => iwD.get.call(W), ihE = () => ihD.get.call(W);
+    let erlaubt = false; try { erlaubt = !navigator.webdriver || !!localStorage.getItem("zuchtstall-pczoom"); } catch (e) { }
+    const pc = () => erlaubt && !navigator.maxTouchPoints && W.matchMedia && W.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    let Z = 1; W.pcZoom = () => Z;
+    const setzen = () => { const z = pc() ? Math.min(iwE() / BW, ihE() / BH) : 1; Z = z > 1.02 ? Math.floor(z * 1000) / 1000 : 1; d.style.zoom = Z === 1 ? "" : String(Z); d.style.setProperty("--z", String(Z)); d.classList.toggle("pczoom", Z !== 1); };
+    setzen(); W.addEventListener("resize", setzen, true);
+    const geteilt = (proto, keys) => keys.forEach(k => { const o = Object.getOwnPropertyDescriptor(proto, k); if (!o || !o.get) return; Object.defineProperty(proto, k, { configurable: true, enumerable: o.enumerable, get() { const v = o.get.call(this); return Z === 1 ? v : v / Z; } }); });
+    geteilt(MouseEvent.prototype, ["clientX", "clientY", "pageX", "pageY", "x", "y"]);
+    if (W.Touch) geteilt(Touch.prototype, ["clientX", "clientY", "pageX", "pageY"]);
+    if (W.VisualViewport) geteilt(VisualViewport.prototype, ["width", "height", "offsetLeft", "offsetTop", "pageLeft", "pageTop"]);
+    Object.defineProperty(W, "innerWidth", { configurable: true, get: () => iwE() / Z, set() { } });
+    Object.defineProperty(W, "innerHeight", { configurable: true, get: () => ihE() / Z, set() { } });
+    ["scrollX", "scrollY", "pageXOffset", "pageYOffset"].forEach(k => { const o = Object.getOwnPropertyDescriptor(W, k) || Object.getOwnPropertyDescriptor(Window.prototype, k); if (o && o.get) Object.defineProperty(W, k, { configurable: true, get: () => o.get.call(W) / Z, set() { } }); });
+    const rechteck = r => Z === 1 ? r : new DOMRect(r.x / Z, r.y / Z, r.width / Z, r.height / Z);
+    const gbcr = Element.prototype.getBoundingClientRect; Element.prototype.getBoundingClientRect = function () { return rechteck(gbcr.call(this)); };
+    const gcr = Element.prototype.getClientRects; Element.prototype.getClientRects = function () { const l = gcr.call(this); return Z === 1 ? l : Array.from(l, rechteck); };
+    const efp = Document.prototype.elementFromPoint, efps = Document.prototype.elementsFromPoint;
+    Document.prototype.elementFromPoint = function (x, y) { return efp.call(this, x * Z, y * Z); };
+    Document.prototype.elementsFromPoint = function (x, y) { return efps.call(this, x * Z, y * Z); };
+    if (W.SVGGraphicsElement) { const sc = SVGGraphicsElement.prototype.getScreenCTM; SVGGraphicsElement.prototype.getScreenCTM = function () { const m = sc.call(this); return !m || Z === 1 ? m : new DOMMatrix([m.a / Z, m.b / Z, m.c / Z, m.d / Z, m.e / Z, m.f / Z]); }; }
+    const rollen = f => function (a, b) { if (Z === 1) return f.apply(this, arguments); if (a && typeof a === "object") { const o = { ...a }; if (o.top != null) o.top *= Z; if (o.left != null) o.left *= Z; return f.call(this, o); } return f.call(this, (a || 0) * Z, (b || 0) * Z); };
+    W.scrollTo = rollen(W.scrollTo); W.scroll = rollen(W.scroll); W.scrollBy = rollen(W.scrollBy);
+  })();
+</script>
 <style>
   :root {
     --holz: #8b5a3c; --holz-dunkel: #5b3a24; --holz-hell: #b07a52;
@@ -19,7 +51,7 @@
   body {
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     background: linear-gradient(#bfe3f5, #e4f3fb); color: var(--text);
-    min-height: 100dvh; display: flex; flex-direction: column;
+    min-height: calc(100dvh / var(--z, 1)); display: flex; flex-direction: column;
   }
   html, body { overflow-x: clip; }   /* v437 (Dome): nichts darf breiter als der Bildschirm werden – sonst zoomt Chrome (Android) nach dem Drehen heraus und die Kopfleiste wirkt zu schmal */
   header {
@@ -89,7 +121,7 @@
   @keyframes wolkenZiehen { from { transform: translate(-3px, 0); } to { transform: translate(4px, 0); } }
   #stall.wischen { touch-action: none; cursor: crosshair; } #stall .staub { animation: staubWeg .5s ease-out forwards; } @keyframes staubWeg { to { opacity: 0; transform: translateY(6px); } }
   .kachel.aktiv-wisch { outline: 3px solid #5a9a6a; outline-offset: 1px; }
-  #stall { width: 100%; height: min(75vw, calc(100dvh - 64px)); display: block; }
+  #stall { width: 100%; height: min(calc(75vw / var(--z, 1)), calc(calc(100dvh / var(--z, 1)) - 64px)); display: block; }
   .karte { width: 100%; max-width: 520px; background: var(--karte); border-radius: 14px; padding: 14px 16px; box-shadow: 0 4px 14px rgba(0,0,0,.12); }
   .karte h2 { margin: 0; font-size: 1.2rem; }
   .unter { color: var(--leise); margin: 2px 0 10px; font-size: .95rem; }
@@ -129,7 +161,7 @@
   @keyframes hopsen { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
   #dlg { position: fixed; inset: 0; z-index: 50; background: rgba(30,20,12,.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
   #dlg[hidden] { display: none; }
-  .dlg-karte { background: #fffaf2; color: var(--text); border-radius: 16px; padding: 18px 18px 14px; max-width: 440px; width: 100%; max-height: 90dvh; overflow: auto; box-shadow: 0 10px 40px rgba(0,0,0,.35); }
+  .dlg-karte { background: #fffaf2; color: var(--text); border-radius: 16px; padding: 18px 18px 14px; max-width: 440px; width: 100%; max-height: calc(90dvh / var(--z, 1)); overflow: auto; box-shadow: 0 10px 40px rgba(0,0,0,.35); }
   .dlg-karte h3 { margin: 0 0 8px; font-size: 1.08rem; } .dlg-karte p { margin: 6px 0; line-height: 1.4; }
   .dlg-knoepfe { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; } .dlg-knoepfe .knopf { flex: 1; width: auto; min-width: 120px; padding: 11px; }
   .knopf.zweit { background: #e9dcc8; color: var(--text); }
@@ -324,7 +356,7 @@
   svg.kopf-offen { visibility: hidden; }   /* v734: Kopfbild erst zeigen, wenn der Ausschnitt gemessen ist */
   .pf-sort { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; } .pf-tab td small { white-space: nowrap; } .pf-tab td small.pf-ext { white-space: normal; min-width: 80px; } .pf-wisch { display: none; } @media (max-width: 600px) and (orientation: portrait) { .pf-wisch { display: inline; } } .pf-sort.an { color: var(--holz); font-weight: 700; }
   .ver-tab { width: 100%; border-collapse: collapse; font-size: .82rem; margin: 6px 0; } .ver-tab th, .ver-tab td { text-align: left; padding: 4px 6px; border-bottom: 1px solid #e2d6c3; vertical-align: top; } .ver-tab th { color: var(--leise); font-size: .75rem; }
-  body.tippt .schirm.offen > .schirm-innen { padding-bottom: 55vh; }
+  body.tippt .schirm.offen > .schirm-innen { padding-bottom: calc(55vh / var(--z, 1)); }
   .gentest-kachel { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; border: 2px solid var(--akzent); border-radius: 12px; padding: 10px 12px; margin: 0 0 12px; background: #fff; font: inherit; color: var(--text); cursor: pointer; box-shadow: 0 2px 0 #e7c4a3; }
   .paar-liste.boxen-liste { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   @media (orientation: landscape) { .paar-liste.boxen-liste { grid-template-columns: repeat(5, minmax(0, 1fr)); max-width: 640px; margin-left: auto; margin-right: auto; } }
@@ -336,7 +368,7 @@
   .gl-kopf { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; background: #5a3b26; color: #fff; }
   .gl-kopf b { font-size: 1rem; } .gl-kopf .knopf { width: auto; padding: 6px 14px; }
   .gl-bild { background: linear-gradient(#dff1fa, #f4fbff); padding: 4px 10px 6px; border-bottom: 2px solid #e2d6c3; }
-  .gl-bild svg { width: 100%; height: 26vh; display: block; }
+  .gl-bild svg { width: 100%; height: calc(26vh / var(--z, 1)); display: block; }
   .gl-ergebnis { text-align: center; font-size: .9rem; margin: 2px 0 0; } .gl-alter { display: flex; align-items: center; gap: 8px; font-size: .8rem; color: var(--leise); } .gl-alter input { flex: 1; accent-color: var(--akzent); }
   .gl-steuer { overflow: auto; padding: 10px 12px 24px; }
   .gl-titel { font-weight: 700; font-size: .85rem; margin: 10px 0 4px; color: var(--leise); }
@@ -354,7 +386,7 @@
   @media (orientation: landscape) and (max-height: 600px), (min-width: 900px) {
     #genLabor { grid-template-columns: minmax(0, 42%) minmax(0, 1fr); grid-template-rows: auto 1fr; }
     .gl-kopf { grid-column: 1 / -1; } .gl-bild { border-bottom: 0; border-right: 2px solid #e2d6c3; display: flex; flex-direction: column; justify-content: center; }
-    .gl-bild svg { height: auto; max-height: 62vh; }
+    .gl-bild svg { height: auto; max-height: calc(62vh / var(--z, 1)); }
   }
   .rasse-warn { margin: 8px 0 4px; padding: 9px 11px; border-radius: 10px; background: #fdecea; border: 1.5px solid #e0a39b; color: #7a2a20; font-size: .86rem; line-height: 1.4; } .rasse-warn b { display: block; margin-bottom: 2px; }
   .gt-kacheln { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 6px 0 4px; }
@@ -516,7 +548,7 @@
   body.ansehen { padding-bottom: calc(46px + env(safe-area-inset-bottom)); }
   body.ansehen .schirm, body.ansehen #dlg, body.ansehen #lese { bottom: calc(46px + env(safe-area-inset-bottom)); }
   .ans-aus { opacity: .42 !important; filter: grayscale(.7); cursor: not-allowed !important; }
-  #ansHinweis { position: fixed; left: 50%; bottom: calc(58px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 10000; background: #2b1d12; color: #fff; padding: 8px 14px; border-radius: 10px; font-size: .9rem; max-width: calc(100vw - 32px); text-align: center; }
+  #ansHinweis { position: fixed; left: 50%; bottom: calc(58px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 10000; background: #2b1d12; color: #fff; padding: 8px 14px; border-radius: 10px; font-size: .9rem; max-width: calc(calc(100vw / var(--z, 1)) - 32px); text-align: center; }
   /* W6: Waschplatz-/Solarium-Ansicht – Boxteile vor dem Pferd ausblenden */
   #stall.waschAnsicht #traenke, #stall.waschAnsicht #plaketten { display: none; }
   /* T1: Hinweisblasen (💡, blau – anders als die weißen Pferde-/Info-Sprechblasen) und leuchtender Ring */
@@ -542,8 +574,8 @@
   body.tutorial[data-tutkap="1"] #menueKnopf, body.tutorial[data-tutkap="1"] #kontoAnzeige, body.tutorial[data-tutkap="2"] #kontoAnzeige { visibility: hidden; }
   html body.tutorial #stall #krippenHinweis, html body.tutorial #stall #kraftHinweis, html body.tutorial #stall #mistHinweis { display: none !important; }   /* Dome 20.10.: im Tutorial nur eine Aufgabe auf einmal */
   body.tutorial #tutBand { z-index: 53; } body.tutorial #dlg { bottom: var(--tutH, 52px); }
-  @media (max-height: 520px) { #dlg { padding-top: 8px !important; padding-bottom: 8px !important; } .dlg-karte { max-height: calc(100dvh - 16px); padding: 12px 16px 10px; } body.tutorial .dlg-karte { max-height: calc(100dvh - var(--tutH, 52px) - 16px); } }   /* Dome 21.10.: Fenster im Handy quer nie höher als der sichtbare Platz (auch über dem Tutorial-Band) */   /* Band bleibt auch über Fenstern erreichbar (Kapitel überspringen) */
-  @media (min-height: 521px) { body.tutorial .dlg-karte { max-height: calc(100dvh - var(--tutH, 52px) - 32px); } }   /* v650: auch hochkant passt das Fenster über das Band (vorher 90dvh: Rand oben abgeschnitten, Knopf unter dem Band) */
+  @media (max-height: 520px) { #dlg { padding-top: 8px !important; padding-bottom: 8px !important; } .dlg-karte { max-height: calc(calc(100dvh / var(--z, 1)) - 16px); padding: 12px 16px 10px; } body.tutorial .dlg-karte { max-height: calc(calc(100dvh / var(--z, 1)) - var(--tutH, 52px) - 16px); } }   /* Dome 21.10.: Fenster im Handy quer nie höher als der sichtbare Platz (auch über dem Tutorial-Band) */   /* Band bleibt auch über Fenstern erreichbar (Kapitel überspringen) */
+  @media (min-height: 521px) { body.tutorial .dlg-karte { max-height: calc(calc(100dvh / var(--z, 1)) - var(--tutH, 52px) - 32px); } }   /* v650: auch hochkant passt das Fenster über das Band (vorher calc(90dvh / var(--z, 1)): Rand oben abgeschnitten, Knopf unter dem Band) */
   body.tutorial .fk-korb { bottom: 8px; }   /* Dome 21.10.: das Padding unter dem Band zählt schon beim Kleben – sonst sitzt der Knopf zu weit oben */ body.tutorial .schirm { padding-bottom: calc(var(--tutH, 52px) + 12px) !important; }   /* nichts unter dem Tutorial-Band */
   body.tutorial #hinweisBlase.ueber { z-index: 52; } body.tutorial #hinweisRing.ueber { z-index: 51; }
   #hinweisBlase.durchlassen { pointer-events: none; } #hinweisBlase.durchlassen button { pointer-events: auto; }
@@ -637,7 +669,7 @@
   .rasse b { display: block; font-size: .92rem; padding: 0 4px; }
   .rasse span { display: block; font-size: .8rem; color: var(--leise); padding: 0 4px; }
   .hinweis { font-size: .85rem; color: var(--leise); margin: 0 0 12px; }
-  .vorschau { position: relative; background: linear-gradient(#dff1fa, #fff 70%); overflow: hidden; width: 100cqw; margin-left: calc(50% - 50cqw); max-height: calc(100dvh - var(--leisteH, 56px)); display: flex; align-items: center; }
+  .vorschau { position: relative; background: linear-gradient(#dff1fa, #fff 70%); overflow: hidden; width: 100cqw; margin-left: calc(50% - 50cqw); max-height: calc(calc(100dvh / var(--z, 1)) - var(--leisteH, 56px)); display: flex; align-items: center; }
   .inhalt:has(> .vorschau) { padding-top: 0; }
   #auswahl { overflow-x: hidden; container-type: inline-size; }
   html:has(#auswahl.offen), html:has(#auswahl.offen) body { overflow: hidden; }
@@ -651,7 +683,7 @@
   .blaettern.links { left: 6px; } .blaettern.rechts { right: 6px; }
   @media (min-width: 900px) and (hover: hover) { .blaettern.rechts { right: 64px; } }
   .blaettern:active { background: rgba(91,58,36,.7); }
-  .vorschau svg { width: 100%; display: block; max-height: calc(100dvh - var(--leisteH, 56px)); }
+  .vorschau svg { width: 100%; display: block; max-height: calc(calc(100dvh / var(--z, 1)) - var(--leisteH, 56px)); }
   .feld { margin-top: 16px; }
   .feld > label, .feld > .titel { display: block; font-weight: 700; margin-bottom: 6px; font-size: .95rem; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -678,7 +710,7 @@
   .fs-kachel:disabled { opacity: .35; cursor: default; }
   .var-hinweis { position: absolute; top: 8px; left: calc(var(--rgB) + var(--pf) + 8px); right: calc(var(--pf) + var(--fsB) + var(--msB) + 8px); z-index: 2; text-align: center; pointer-events: none; } .var-hinweis span { display: inline-block; background: rgba(255,255,255,.86); border: 1.5px solid #e2d6c3; border-radius: 10px; padding: 3px 10px; font-size: .78rem; font-weight: 700; color: var(--akzent); }   /* v456: welche Variante gerade gezeigt wird */
   .sort-seg { max-width: 520px; margin: 6px 0 10px; grid-column: 1 / -1; flex-wrap: wrap; } .kont-kopf { margin: 14px 0 4px; padding-bottom: 3px; border-bottom: 2px solid #e2d6c3; color: var(--akzent); font-size: 1rem; } .kont-kopf small { color: var(--leise); font-weight: 500; }   /* v455: Sortierung nach Kontinent */
-  @media (orientation: landscape) { .vorschau { height: calc(100dvh - var(--leisteH, 56px)); } .vorschau svg { height: 100%; } .vorschau .gross-huelle { height: 100%; } }   /* v458 (Dome): PC – Stockmaßbild füllt den Schirm, Text erst beim Runterscrollen */
+  @media (orientation: landscape) { .vorschau { height: calc(calc(100dvh / var(--z, 1)) - var(--leisteH, 56px)); } .vorschau svg { height: 100%; } .vorschau .gross-huelle { height: 100%; } }   /* v458 (Dome): PC – Stockmaßbild füllt den Schirm, Text erst beim Runterscrollen */
   /* Fellfarben als kleine Kacheln rechts im Bild (quer und PC) */
   .farbspalte { position: absolute; right: calc(var(--pf) + 2px); top: 8px; bottom: 8px; width: calc(var(--fsB) - 8px); overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 2px; z-index: 2; scrollbar-width: none; }
   .farbspalte::-webkit-scrollbar { display: none; }
@@ -752,9 +784,9 @@
     body.vollbild header h1 { visibility: hidden; }
     body.vollbild main { padding: 0 0 16px; }
     .inhalt:has(> .vorschau) { padding-top: 0; }
-    .vorschau { width: 100cqw; margin-left: calc(50% - 50cqw); border-radius: 0; height: calc(100dvh - var(--leisteH, 56px)); display: flex; align-items: center; background: linear-gradient(#dff1fa, #fff 70%); }
+    .vorschau { width: 100cqw; margin-left: calc(50% - 50cqw); border-radius: 0; height: calc(calc(100dvh / var(--z, 1)) - var(--leisteH, 56px)); display: flex; align-items: center; background: linear-gradient(#dff1fa, #fff 70%); }
     .vorschau svg { width: 100%; height: 100%; } .vorschau .gross-huelle { height: 100%; }
-    body.vollbild #stall { width: 100vw; height: 100vh; height: 100dvh; max-width: none; border-radius: 0; box-shadow: none; }
+    body.vollbild #stall { width: calc(100vw / var(--z, 1)); height: calc(100vh / var(--z, 1)); height: calc(100dvh / var(--z, 1)); max-width: none; border-radius: 0; box-shadow: none; }
   }
   body.spar *, body.spar *::before { animation: none !important; transition: none !important; }
   /* ---------- Startmenü / Hauptmenü / Charaktererstellung ---------- */
@@ -763,7 +795,7 @@
   .schirm.offen { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
   .schirm.offen > .schirm-innen { margin: auto 0; flex-shrink: 0; }   /* mittig, aber bei langem Inhalt oben scrollbar */
   .schirm-innen { width: 100%; max-width: 560px; padding: max(24px, env(safe-area-inset-top)) 13px 28px; display: flex; flex-direction: column; gap: 12px; }
-  .schirm h1 { margin: 0; text-align: center; font-size: clamp(1.8rem, 6vw, 2.6rem); text-shadow: 0 3px 0 rgba(0,0,0,.3); }
+  .schirm h1 { margin: 0; text-align: center; font-size: clamp(1.8rem, calc(6vw / var(--z, 1)), 2.6rem); text-shadow: 0 3px 0 rgba(0,0,0,.3); }
   .schirm .unter { text-align: center; color: #f3e6d3; margin: -4px 0 10px; }
   .schirm .logo { font-size: 3.6rem; text-align: center; line-height: 1; }
   .sknopf { display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px 18px; border: 0; border-radius: 14px; font: inherit; font-size: 1.1rem; font-weight: 700;
@@ -833,7 +865,7 @@
   .plan-radial .rl { position: absolute; transform: translate(-50%, 0); margin-top: 26px; font-size: .62rem; line-height: 1.1; text-align: center; white-space: nowrap; color: #2b1d14; background: rgba(255,250,240,.94); border-radius: 6px; padding: 1px 4px; pointer-events: none; box-shadow: 0 1px 3px rgba(0,0,0,.25); } .plan-radial .rl small { display: block; color: #6b5a48; }
   .plan-leiste.radial .plan-kn, .plan-leiste.radial > .geb-kn { display: none; }
   .plan-kopf { position: absolute; width: 34px; height: 30px; pointer-events: none; background: #fffaf0; border: 1.5px solid #6b4d33; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.35); } .plan-kopf svg { width: 100%; height: 100%; display: block; }
-  .plan-scroll { position: relative; overflow: auto; max-height: 72vh; border-radius: 10px; background: #a9cf8a; padding: 4px; margin: 0 0 4px; -webkit-overflow-scrolling: touch; }
+  .plan-scroll { position: relative; overflow: auto; max-height: calc(72vh / var(--z, 1)); border-radius: 10px; background: #a9cf8a; padding: 4px; margin: 0 0 4px; -webkit-overflow-scrolling: touch; }
   .plan-raster { display: block; height: auto; max-width: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   .pl-geb { cursor: pointer; } .pl-geb.an .pl-k { stroke: #1f5fbf; stroke-width: 1.6; } .pl-geb.rot .pl-k { stroke: #c62828; stroke-width: 1.6; }
   .pl-baustelle { fill: rgba(240, 150, 40, .55); stroke: #e08a1e; stroke-width: 1; stroke-dasharray: 2 1.5; }
@@ -845,7 +877,7 @@
   .plan-leiste { display: flex; flex-direction: column; gap: 4px; background: #fffaf0; border: 2px solid #1f5fbf; border-radius: 10px; padding: 8px 10px; margin: 0 0 8px; } .plan-leiste small { color: var(--leise); }
   .plan-tipp { margin: 0 0 8px; color: var(--leise); } .plan-meld { margin: 0 0 6px; background: #fff3cd; border-radius: 8px; padding: 6px 8px; font-size: .9rem; } .plan-hinweis { background: #eaf2ff; border-radius: 8px; padding: 8px 10px; margin: 0 0 8px; font-size: .92rem; }
   .pl-vor { pointer-events: none; stroke-width: 1.4; stroke-dasharray: 3 1.5; } .pl-vor.ok { fill: rgba(60, 170, 60, .35); stroke: #2e7d32; } .pl-vor.bad { fill: rgba(220, 40, 40, .35); stroke: #b71c1c; } .pl-rot { color: #b71c1c; } .pl-gruen { color: #2e7d32; } .plan-kn .geb-kn { display: flex; flex-wrap: wrap; gap: 4px; }
-  .pl-geb.aus { opacity: .55; cursor: default; } .pl-pfeil { cursor: pointer; } .pl-pfeil.aus { opacity: .5; cursor: default; } .plan-scroll.ort { max-height: none; overflow: hidden; margin-bottom: 4px; } .plan-scroll.ort svg { height: auto; max-height: 42vh; }
+  .pl-geb.aus { opacity: .55; cursor: default; } .pl-pfeil { cursor: pointer; } .pl-pfeil.aus { opacity: .5; cursor: default; } .plan-scroll.ort { max-height: none; overflow: hidden; margin-bottom: 4px; } .plan-scroll.ort svg { height: auto; max-height: calc(42vh / var(--z, 1)); }
   .pl-kand { cursor: pointer; } .pl-kand rect { fill: rgba(60, 170, 60, .28); stroke: #2e7d32; stroke-width: 1.2; stroke-dasharray: 4 2; } .pl-kand text { fill: #1b5e20; font-weight: 700; } .pl-stueck { fill: rgba(31, 95, 191, .18); }
   .pl-leg-bau { background: rgba(240, 150, 40, .55) !important; border: 1.5px dashed #e08a1e !important; }
   body.plan-zieht, body.plan-zieht * { user-select: none; -webkit-user-select: none; }
@@ -907,7 +939,7 @@
 .t-gruppe{border-bottom:1px solid var(--linie,#e6dccb);margin:0 0 6px}.t-gruppe>summary{cursor:pointer;padding:8px 2px;font-size:1.02em;list-style-position:inside}.t-gruppe>summary small{color:var(--leise)}.t-gruppe[open]>summary{margin-bottom:4px}
   /* Dome (v349): PC – alle Ansichten und Menüs so breit wie der Infobereich unter der Box, Kacheln mit mehr Spalten */
   @media (min-width: 900px) and (min-height: 601px) {
-    .schirm-innen { max-width: max(560px, calc(var(--boxBreite, 940px) + (100vw - var(--boxBreite, 940px)) / 3)); }   /* Dome (v708): Seitenrand zum Bildschirmrand um 1/3 kleiner */
+    .schirm-innen { max-width: max(560px, calc(var(--boxBreite, 940px) + (calc(100vw / var(--z, 1)) - var(--boxBreite, 940px)) / 3)); }   /* Dome (v708): Seitenrand zum Bildschirmrand um 1/3 kleiner */
     .hm-kacheln { grid-template-columns: repeat(4, 1fr); }
     .kacheln.quadrat, .kacheln.quadrat.markt-kacheln { grid-template-columns: repeat(6, minmax(0, 150px)); justify-content: center; }
     .paar-liste, .paar-liste.boxen-liste { grid-template-columns: repeat(6, minmax(0, 1fr)); max-width: none; }
@@ -917,7 +949,7 @@
     .inhalt:has(> .enz-tabs) { max-width: 1000px; }
     .enz-grid.enz-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }   /* Dome 24.10.: Kopf-, Hals-, Rückenformen, Kopfabzeichen, Fellfarben am PC mit 5 Spalten */   /* v741: alle Enzyklopädie-Reiter (nicht nur Rassen) mit dem kleineren Seitenrand */
     /* Dome (v451): Steckbrief bei Kauf, Deckanzeigen usw. (Dialog) und der gelesene Steckbrief so breit wie die Menüs; Bild links, Werte rechts */
-    .dlg-karte.ansehen, .lese-innen { max-width: max(560px, calc(var(--boxBreite, 940px) + (100vw - var(--boxBreite, 940px)) / 3)); }
+    .dlg-karte.ansehen, .lese-innen { max-width: max(560px, calc(var(--boxBreite, 940px) + (calc(100vw / var(--z, 1)) - var(--boxBreite, 940px)) / 3)); }
     .dlg-karte.ansehen .sb-oben { display: grid; grid-template-columns: minmax(0, 45%) minmax(0, 1fr); gap: 16px; align-items: start; } .dlg-karte.ansehen .sb-oben .sb-bild svg { height: 230px; }
     .lese-bild svg { height: 260px; }
   }
@@ -949,11 +981,11 @@
 
   /* ---------- Boxansicht neu, Etappe B2 (PC): Fenster mit Rücksprung statt Reiter unter dem Bild ---------- */
   body.boxfenster #info { display: none; }
-  body.boxfenster main { padding-bottom: 0; gap: 0; } body.boxfenster #stall { height: min(75vw, calc(100dvh - var(--kopfH, 64px))); }   /* Dome 25.10.: am PC kein Scrollen und kein blauer Streifen unter der Box */
+  body.boxfenster main { padding-bottom: 0; gap: 0; } body.boxfenster #stall { height: min(calc(75vw / var(--z, 1)), calc(calc(100dvh / var(--z, 1)) - var(--kopfH, 64px))); }   /* Dome 25.10.: am PC kein Scrollen und kein blauer Streifen unter der Box */
   #infoHinter { display: none; }
   body.boxfenster.infoOffen #infoHinter { display: block; position: fixed; inset: 0; background: rgba(30,20,12,.5); z-index: 30; }
-  body.boxfenster.infoOffen #info { display: block; position: fixed; z-index: 31; left: 50%; transform: translateX(-50%); top: calc(var(--kopfH, 64px) + 14px); max-height: calc(100dvh - var(--kopfH, 64px) - 28px); width: min(1040px, 94vw); box-sizing: border-box; overflow: auto; margin: 0; padding: 0 0 12px; background: #f3ead8; border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,.55); }
-  body.boxfenster.infoOffen.infoUnten #info { top: auto; bottom: 0; max-height: 40vh; border-radius: 16px 16px 0 0; }
+  body.boxfenster.infoOffen #info { display: block; position: fixed; z-index: 31; left: 50%; transform: translateX(-50%); top: calc(var(--kopfH, 64px) + 14px); max-height: calc(calc(100dvh / var(--z, 1)) - var(--kopfH, 64px) - 28px); width: min(1040px, calc(94vw / var(--z, 1))); box-sizing: border-box; overflow: auto; margin: 0; padding: 0 0 12px; background: #f3ead8; border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,.55); }
+  body.boxfenster.infoOffen.infoUnten #info { top: auto; bottom: 0; max-height: calc(40vh / var(--z, 1)); border-radius: 16px 16px 0 0; }
   body.boxfenster.infoOffen.infoUnten #infoHinter { display: none; }
   body.boxfenster #info .modus { display: none; }
   body.boxfenster #info[data-fenster="versorgung"] .reiter, body.boxfenster #info[data-fenster="ausruestung"] .reiter, body.boxfenster #info[data-fenster="orte"] .reiter { display: none; }
@@ -976,10 +1008,10 @@
   body.boxfenster #info [data-vs="heute"] ul.liste > li#futterZeile .txt { align-items: flex-start; }
   /* Orte: Karte groß, Doppelklick = Zoom */
   body.boxfenster #info[data-fenster="orte"] .plan-scroll { max-height: none; }
-  body.boxfenster #info[data-fenster="orte"] .plan-scroll svg.plan-raster { width: auto; max-width: 100%; height: calc(100dvh - var(--kopfH, 64px) - 170px); max-height: none; display: block; }
+  body.boxfenster #info[data-fenster="orte"] .plan-scroll svg.plan-raster { width: auto; max-width: 100%; height: calc(calc(100dvh / var(--z, 1)) - var(--kopfH, 64px) - 170px); max-height: none; display: block; }
   body.boxfenster #info[data-fenster="orte"] .plan-scroll:not(.plan-zoom) { width: fit-content; max-width: 100%; margin: 0 auto 4px; }
-  body.boxfenster.infoOffen #info[data-fenster="orte"] { width: min(1400px, 96vw); max-width: none; }
-  body.boxfenster #info[data-fenster="orte"] .plan-scroll.plan-zoom { overflow: auto; max-height: 70vh; }
+  body.boxfenster.infoOffen #info[data-fenster="orte"] { width: min(1400px, calc(96vw / var(--z, 1))); max-width: none; }
+  body.boxfenster #info[data-fenster="orte"] .plan-scroll.plan-zoom { overflow: auto; max-height: calc(70vh / var(--z, 1)); }
   body.boxfenster #info[data-fenster="orte"] .plan-scroll.plan-zoom svg.plan-raster { width: 220%; max-width: none; }
   /* Putzkiste als Kreis um das Pferd */
   .bxtool { position: absolute; width: 64px; height: 64px; border-radius: 50%; padding: 0; background: rgba(255,250,240,.88); border: 3px solid #fff; box-shadow: 0 2px 10px rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; font-size: 30px; pointer-events: auto; cursor: pointer; font-family: inherit; }
@@ -1024,12 +1056,12 @@
   body.bxquer .bxchip { font-size: 11.5px; padding: 2px 8px; white-space: normal; text-align: left; }
   body.bxmobil .bxhinweis { white-space: normal; max-width: 92%; text-align: center; }
   body.bxmobil.boxfenster.infoOffen #info { left: 0; right: 0; transform: none; width: 100%; max-width: none; top: var(--kopfH, 64px); bottom: 0; max-height: none; border-radius: 14px 14px 0 0; padding: 0 env(safe-area-inset-right) calc(12px + env(safe-area-inset-bottom)) env(safe-area-inset-left); }
-  body.bxmobil.boxfenster.infoOffen.infoUnten #info { top: auto; max-height: 45vh; }
+  body.bxmobil.boxfenster.infoOffen.infoUnten #info { top: auto; max-height: calc(45vh / var(--z, 1)); }
   body.bxmobil.boxfenster #info .karte { margin: 0 8px; }
   body.bxmobil .info-kopf { padding: 8px 10px; gap: 6px; flex-wrap: nowrap; } body.bxmobil .info-kopf b { font-size: 1.02rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   body.bxhoch .info-kopf .vs-tabs { flex-shrink: 0; } body.bxhoch .info-kopf .vs-tabs button { padding: 4px 7px; font-size: .85rem; }
   #bxUnten .bxhinweis { position: static; transform: none; margin: 0 auto 12px; max-width: none; } body.bxmobil .vs-tabs button { padding: 5px 9px; }
-  body.bxquer.boxfenster #info[data-fenster="orte"] .plan-scroll svg.plan-raster { height: calc(100dvh - var(--kopfH, 64px) - 112px); }
+  body.bxquer.boxfenster #info[data-fenster="orte"] .plan-scroll svg.plan-raster { height: calc(calc(100dvh / var(--z, 1)) - var(--kopfH, 64px) - 112px); }
   body.bxhoch.boxfenster #info[data-fenster="orte"] .bx-ortk ~ .plan-scroll, body.bxhoch.boxfenster #info[data-fenster="orte"] .bx-ortk ~ .plan-scroll + p { display: none; }
   .bx-ortk { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 10px 8px; }
   .bx-ortk .ok { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; border: 2px solid #e2d4bb; background: #fff; border-radius: 14px; padding: 9px 4px 8px; font: inherit; color: inherit; cursor: pointer; min-height: 86px; }
@@ -1256,7 +1288,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "830";
+  const SPIEL_VERSION = "831";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1264,12 +1296,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=830"></script>
-<script src="pferd.js?v=830"></script>
-<script src="boxstufen.js?v=830"></script>
-<script src="kopfneu.js?v=830"></script>
-<script src="waschbild.js?v=830"></script>
-<script src="avatare.js?v=830"></script>
+<script src="lz-string.min.js?v=831"></script>
+<script src="pferd.js?v=831"></script>
+<script src="boxstufen.js?v=831"></script>
+<script src="kopfneu.js?v=831"></script>
+<script src="waschbild.js?v=831"></script>
+<script src="avatare.js?v=831"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -10808,7 +10840,7 @@
     const gesehen = spiel.neuGesehen == null ? 653 : spiel.neuGesehen;
     return NEUES.filter(n => n[0] > gesehen && n[0] <= NEUES_STAND);
   }
-  function neuesInnenHTML(neu) { return `<p>Seit du zuletzt gespielt hast, hat sich Folgendes geändert (⚠️ = wird schwieriger):</p><div class="neu-liste" style="max-height:55vh;overflow:auto">${neu.map((n, i) => `<details ${i === 0 ? "open" : ""}><summary><b>${n[3] ? "⚠️ " : ""}${esc(n[1])}</b></summary><p>${esc(n[2])}</p></details>`).join("")}</div>`; }
+  function neuesInnenHTML(neu) { return `<p>Seit du zuletzt gespielt hast, hat sich Folgendes geändert (⚠️ = wird schwieriger):</p><div class="neu-liste" style="max-height:calc(55vh / var(--z, 1));overflow:auto">${neu.map((n, i) => `<details ${i === 0 ? "open" : ""}><summary><b>${n[3] ? "⚠️ " : ""}${esc(n[1])}</b></summary><p>${esc(n[2])}</p></details>`).join("")}</div>`; }
   function neuesKarteHTML() { const neu = neuesListe(); if (!neu.length) return "";
     return `<div class="bf-karte plan-karte" id="neuKarte"><b>🆕 Neu in deinem Spiel</b> <small>(Update vom ${NEUES_DATUM[NEUES_STAND] || ""})</small>${neuesInnenHTML(neu)}<div class="bf-knoepfe"><button class="mini-knopf" id="neuGelesen">✔ Gelesen</button></div></div>`; }
   function neuesGelesen() { spiel.neuGesehen = NEUES_STAND; speichern(); neuesMenueSetzen(); }
@@ -13736,7 +13768,7 @@
     const liste = () => { const L = sicht(); return L.length ? L.map(x => `<li style="margin:5px 0"><label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" data-ark="${x.key}" ${arSel.has(x.key) ? "checked" : ""}><span><b>${esc(x.p.name)}</b> · ${x.art === "friedhof" ? `† ${esc(jzName(x.jz).replace(/^\S+ /, ""))}` : x.jz ? `nicht mehr bei dir seit ${esc(jzName(x.jz))}` : "nicht mehr bei dir"} · ca. ${kbTxt(x.gb)}${x.p.gekuerzt ? " · schon gekürzt" : ""}<br><small>${x.nach.length ? `Vorfahre von ${x.nach.slice(0, 3).map(q => esc(q.name)).join(", ")}${x.nach.length > 3 ? " …" : ""}` : "keine Nachkommen bei dir"}${x.best ? " · ⭐ in der Bestenliste" : ""}${x.erfolg ? " · mit Turniererfolgen" : ""}</small></span></label></li>`).join("") : `<li><small>Keine Pferde mit diesen Filtern.</small></li>`; };
     dialog(`<h3>🐴 Friedhof und Archiv aufräumen</h3>${meld ? `<p class="text"><b>${meld}</b></p>` : ""}<p class="text"><small>Wähle Pferde aus. „Details löschen“ behält Name, Rasse, Geschlecht, Farbe, Lebensdaten, Todesursache und Lebensbilanz (der Grabstein bleibt). „Ganz löschen“ entfernt das Pferd. Stammbäume deiner Pferde behalten ihre eigenen Eltern-Daten.</small></p>
       <p class="text" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label>Länger her als <select id="arJahre"><option value="0">egal</option>${[1, 2, 3, 5].map(n => `<option value="${n}" ${arFilter.jahre === n ? "selected" : ""}>${n} ${n === 1 ? "Jahr" : "Jahre"}</option>`).join("")}</select></label><label><input type="checkbox" id="arKinder" ${arFilter.ohneKinder ? "checked" : ""}> ohne Nachkommen bei dir</label><label><input type="checkbox" id="arErfolg" ${arFilter.ohneErfolg ? "checked" : ""}> ohne Turniererfolge</label></p>
-      <ul style="list-style:none;padding:0;margin:0;max-height:46vh;overflow:auto" id="arListe">${liste()}</ul>`,
+      <ul style="list-style:none;padding:0;margin:0;max-height:calc(46vh / var(--z, 1));overflow:auto" id="arListe">${liste()}</ul>`,
       [["Details löschen, Grabstein bleibt", () => tierLoeschen("details", alle)], ["Ganz löschen", () => tierLoeschen("ganz", alle), "rot"], ["Zurück", () => aufraeumenDialog(), "zweit"]], "breit");
     const neu = () => { $("arListe").innerHTML = liste(); bindeListe(); }, bindeListe = () => document.querySelectorAll("[data-ark]").forEach(c => c.onchange = () => { if (c.checked) arSel.add(c.dataset.ark); else arSel.delete(c.dataset.ark); });
     $("arJahre").onchange = e => { arFilter.jahre = +e.target.value; neu(); }; $("arKinder").onchange = e => { arFilter.ohneKinder = e.target.checked; neu(); }; $("arErfolg").onchange = e => { arFilter.ohneErfolg = e.target.checked; neu(); }; bindeListe();

@@ -24,10 +24,12 @@ Die Nachrichten von Claude Team (v805–v824) sind übernommen und hier gelösch
 | Boxansicht mobil (hochkant + quer, Fenster, Kreise, Putzkiste, Orte-Kacheln) | ✅ v825 |
 | Weihnachtsgeld (`PLAN-WEIHNACHTEN.md` D) | ✅ v826 (A–C nicht beauftragt) |
 | Aufzucht-Offenstall (`PLAN-OFFENSTALL.md` 1–3) | ✅ v827 |
-| Test Symbole PC (Weide/Sandpaddock, Pension) | offen |
-| Test Krankheitsmeldungen (Pension/eigene) | offen |
+| Test Symbole PC (Weide/Sandpaddock, Pension) | ✅ v828 – 105 ✓; Fehler gefunden und behoben: Plaketten öffneten am PC nichts |
+| Test Krankheitsmeldungen (Pension/eigene) | ✅ v828 – `krankmeldung-test` 17 ✓ in PC, hochkant, quer |
 | Tutorial-Etappe der Boxansicht | wartet auf Domes Ja (nur mit großem Test) |
 
+**Nicht gelaufen:** große Tests (etappen-, hof-gesamt-, neuladen-test) und Tutorial-Spieler – nur mit Domes Ja und Bilder-Variante. Kleine Tests dieser Sitzung grün: boxmobil (5 Größen), boxfenster, boxfenster-alle, boxansicht, weihnachtsgeld, offenstall, krankmeldung, pension-krank, krankheiten, hofplan, flaeche, bauen-komfort, anbau, orte, kamm, hinweise, whiteboard, berufe-popup.
+**Offene Fragen:** `OFFENE-FRAGEN.md`, Abschnitt „Sitzung 25.10.“. Update-Fenster für v825–v828: nur auf Domes Ansage.
 **Achtung:** Handy-Tests der Box brauchen `localStorage["zuchtstall-boxfenster"]` (sonst alte Ansicht unter Playwright) – `tests/boxmobil-test.js`.
 
 ---

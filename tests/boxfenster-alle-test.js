@@ -1,4 +1,4 @@
-// B2 (PLAN-BOXANSICHT.md, Dome 25.10.): jedes Symbol und jeder Kreis-Eintrag am PC – eigenes Pferd und Pensionspferd, in der Box und auf der Weide
+// B2 (PLAN-BOXANSICHT.md, Dome 25.10.): jedes Symbol und jeder Kreis-Eintrag am PC – eigenes Pferd und Pensionspferd, in der Box, auf der Weide und auf dem Sandpaddock (v828)
 // Start: NODE_PATH=/opt/node22/lib/node_modules node tests/boxfenster-alle-test.js [BxH] [Ordner]
 const { chromium } = require('playwright'); const path = require('path');
 const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = process.argv[3];
@@ -41,5 +41,17 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
   await fall('Eigenes Pferd, Weide', `(() => { const p = (${neu})(); aufWeide(p, spiel.boxen[0]); })()`);
   await fall('Pensionspferd, Box', `(() => { const p = (${neu})(); p.einsteller = 'ex1'; einstellerListe().push({ eid: 'ex1', vn: 'Ina', nn: 'Test', haltung: 'box', leistungen: {}, zufr: 80, stufe: 1, preis: 200 }); })()`);
   await fall('Pensionspferd, Weide', `(() => { const p = (${neu})(); p.einsteller = 'ex1'; einstellerListe().push({ eid: 'ex1', vn: 'Ina', nn: 'Test', haltung: 'weide', leistungen: {}, zufr: 80, stufe: 1, preis: 200 }); aufWeide(p, spiel.boxen[0]); })()`);
+  // v828 (Dome 25.10.: „besonders wenn die Pferde/Pensionspferde auf der Weide/Sandpaddock sind“)
+  const pd = () => { if (!gebaeude().some(g => g.gid === 'gPdT')) gebaeude().push({ gid: 'gPdT', typ: 'sandpaddock', stufe: 2, zustand: 100 }); const g = paddocks().find(x => x.gid === 'gPdT'), b = spiel.boxen[0], p = b.pferd; rausAusBox(b); p.paddock = { seit: spiel.tag, pid: g.gid }; p.paddockZuletzt = spiel.tag; };
+  await fall('Eigenes Pferd, Sandpaddock', `(() => { (${neu})(); (${pd})(); })()`);
+  await fall('Pensionspferd, Sandpaddock', `(() => { const p = (${neu})(); p.einsteller = 'ex1'; einstellerListe().push({ eid: 'ex1', vn: 'Ina', nn: 'Test', haltung: 'paddock', leistungen: {}, zufr: 80, stufe: 1, preis: 200 }); (${pd})(); })()`);
+  // krank draußen: Plakette statt Denkblase, Tierarzt-Symbol rot, Klemmbrett nennt den Befund
+  await pg.evaluate(() => { const p = spiel.boxen[0].pferd; befundListe(p).push({ id: 'bfS', art: 'husten', grad: 2, seit: spiel.tag, ursache: 'Test', bemerkt: { von: 'du', tag: spiel.tag }, meldungen: [], vermutung: null }); zeigeStall(); zeigeTag(); }); await pg.waitForTimeout(400);
+  let k = await pg.evaluate(() => ({ chips: [...document.querySelectorAll('.bxchip')].map(x => x.textContent), denk: !!document.querySelector('.bxdenk'), ta: (document.querySelector('#boxUI [data-bx="tierarzt"] .bxd') || {}).className, ring: (document.querySelector('#kopfRinge .kring') || {}).textContent }));
+  ok('Pensionspferd krank auf dem Sandpaddock: Plaketten Befund + Besitzer informieren, Tierarzt-Symbol rot, keine Denkblase draußen', k.chips.some(c => /Befund/.test(c)) && k.chips.some(c => /Besitzer/.test(c)) && /\br\b/.test(k.ta || '') && !k.denk, k);
+  if (ORD) await pg.screenshot({ path: `${ORD}/alle-krank-sandpaddock.png` });
+  await pg.click('#boxUI [data-bx="tierarzt"]'); await pg.waitForTimeout(400);
+  k = await pg.evaluate(() => ({ f: bxFenster, tab: bxTab, besV: !!document.querySelector('#info [data-besvor]'), ta: !!document.getElementById('tierarztKnopf') }));
+  ok('Tierarzt-Symbol öffnet Gesundheit mit „Besitzer informieren“ (Pferd bleibt draußen)', k.f === 'versorgung' && k.tab === 'gesund' && (k.besV || k.ta), k);
   ok('keine Seitenfehler', !errs.length, errs);
   out.forEach(l => console.log(l)); await b.close(); process.exit(out.some(l => l[0] === '✗') ? 1 : 0); })();

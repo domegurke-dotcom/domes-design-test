@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### v845 (Claude Pro, 25.10.)
+- Leckerli (Domes Vorschlag 2): Tüte mit Möhre am rechten Boxrand (`#leckTuete`, alle Boxstufen), antippen → Fenster `leckFenster` (Möhre/Leckerli mit Vorrat, Zähler, bleibt nach dem Geben offen). Regeln unverändert (3 am Tag, Betteln). Alte Leckerli-Karte nur noch in der alten Ansicht. Test `tests/leckerli-test.js` (3 Ansichten grün). Offen: Dome fragen, ob Möhre und Leckerli verschieden wirken sollen (wirken gleich).
+
 ### v844 (Claude Pro, 25.10.)
 - Klemmbrett: jeder Klick führt dorthin, wo man die Aufgabe erledigt (getestet, auch die leuchtende Stelle im Bild). Termine kurz mit Info-Knopf.
 

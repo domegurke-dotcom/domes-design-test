@@ -13,9 +13,10 @@ const { chromium } = require('playwright');
     spiel.mitarbeiter = [{ id: "m1", name: "Jakob", typ: "stallbursche", ab: jzJetzt(), bis: null, gehalt: 300, zufr: 70, w: false, wissen: {}, eig: [] }];
     pd.mist = 3; const da = aktive("stallbursche").length; paddockMistenMorgen(); const mit = pd.mist;
     pd.mist = 0; p.paddock = { seit: spiel.tag, pid: pd.gid }; spiel.boxen[0].krippeVoll = true; let nacht = null, fehl = null; try { naechsteNacht(); nacht = paddocks()[0].mist || 0; } catch (e) { fehl = String(e); }
-    return { ohne, da, mit, nacht, fehl }; });
+    const w = weiden()[0]; let weide = null; if (w) { w.kot = 4; w.aepfel = spiel.tag - 1; paddockMistenMorgen(); weide = w.kot; }
+    return { ohne, da, mit, nacht, fehl, weide }; });
   const ok = (n, v) => console.log((v ? "✓ " : "✗ ") + n);
   if (r.kein) { ok("Sandpaddock gebaut", false); } else {
-  ok("ohne Mitarbeiter bleibt der Mist liegen", r.ohne === 3); ok("Stallbursche ist da", r.da === 1); ok("Stallbursche mistet morgens den Sandpaddock", r.mit === 0); ok("nach einer echten Nacht ist der Sandpaddock morgens sauber", r.nacht === 0); }
+  ok("ohne Mitarbeiter bleibt der Mist liegen", r.ohne === 3); ok("Stallbursche ist da", r.da === 1); ok("Stallbursche mistet morgens den Sandpaddock", r.mit === 0); ok("nach einer echten Nacht ist der Sandpaddock morgens sauber", r.nacht === 0); ok("Weide, die gestern abgeäppelt wurde, wird heute wieder abgeäppelt", r.weide === 0); }
   ok("keine Fehler " + errs.join(";"), !errs.length); console.log(JSON.stringify(r));
   await b.close(); })();

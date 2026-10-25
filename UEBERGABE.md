@@ -15,6 +15,11 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### Lokale Sitzung auf Domes PC (Claude Pro, 25.10.) – keine Code-Änderung, Stand v850
+- Blender-Verbindung geprüft: erreichbar (Standardszene Kamera/Cube/Licht, Datei noch nicht gespeichert). Leerer Ordner `blender/` im Projektordner angelegt (Git zeigt ihn erst, wenn eine Datei drin liegt). Noch nichts committet oder gepusht.
+- **Eimer in Blender gebaut (Dome, 25.10.):** `blender/eimer.blend` (leerer schwarzer Eimer, Bügel an den Ankern verankert, nach unten geklappt und berührt die Wand nur leicht, Form so, dass er mit Abstand am Rand entlangläuft) und `blender/eimer-hafer.blend` (Eimer mit Hafer: Haufen + 700 Körner, Objekte `hafer_*`). Stil: flache Farben, Kontur über Solidify „kontur“ mit Material `tinte`. Original von Dome: `eimer2.blend` (Downloads, unverändert). **Noch nicht im Spiel verwendet** – Dome fragt, ob der Eimer als Futtereimer ins Spiel soll (Render als Bild nötig, bisher sind Eimer SVG-Zeichnungen in `boxstufen.js`).
+- Blender-Tools gibt es nur in lokalen Sitzungen auf Domes PC, nicht in der Cloud-Sitzung. Wer abwechselnd lokal und in der Cloud arbeitet: vorher `git pull`.
+
 ### v850 (Claude Pro, 25.10.)
 - **Ursache „Text ragt rechts über den Rand“ gefunden:** Domes Bildschirm ist größer als 1366 px, der PC-Zoom (v831) rechnet `innerWidth` um, `document.documentElement.clientWidth` aber nicht – die Tutorial-Blase und die Blasen-Funktionen (`blasePosition`, Zeilen 4397/4414) nutzten clientWidth und setzten die Blase 70 px zu weit rechts. Jetzt `Math.min(clientWidth, innerWidth)`; geprüft mit PC-Zoom 1920×1080 (Blase vorher bis 1439, jetzt bis 1351 bei 1366). **Neuer Code: nie `clientWidth`/`clientHeight` von `documentElement` für die Fensterbreite nehmen, `innerWidth` nutzen.**
 - Grüner Tutorial-Haken bleibt links an seinem Kopfleisten-Platz (`#tutHaken.fest` bekommt left/top aus der ursprünglichen Lage).

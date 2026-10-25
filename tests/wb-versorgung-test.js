@@ -1,0 +1,18 @@
+// v838: Whiteboard-Übersicht „Noch offen“ meldet nicht versorgte Boxen (Heu, Futter, Wasser, Misten) – auch bei Pensionspferden
+const { chromium } = require('playwright');
+(async () => { const b = await chromium.launch(); const pg = await b.newPage({ viewport: { width: 1366, height: 768 } });
+  const errs = []; pg.on('pageerror', e => errs.push(e.message));
+  await pg.goto('file://' + __dirname + '/../index.html'); await pg.waitForTimeout(700);
+  await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('#chLos'); await pg.waitForTimeout(300); await pg.click('#dlgKnoepfe button');
+  await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'H'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(400);
+  const r = await pg.evaluate(() => { document.getElementById('dlg').hidden = true; speicherSperre = true; spiel.stufenAn = false;
+    const mk = (i, n) => { const p = neuesPferd({ rein: true, rasse: "quarter", geschlecht: "Wallach", alter: 8, name: n }); p.pflege = erzeugePflege(p); spiel.boxen[i].pferd = p; return p; };
+    const a = mk(0, "Joker"), c = mk(1, "Simba");
+    const e = { eid: "e1", vn: "Anna", nn: "Test", pferdId: a.id, leistungen: {}, haltung: "box", preis: 200, zufr: 70 }; spiel.einsteller = [e]; a.einsteller = "e1";
+    spiel.boxen[0].krippeVoll = false; spiel.boxen[0].mistig = true; spiel.boxen[1].krippeVoll = true; spiel.boxen[1].mistig = false; spiel.boxen[1].kraftVoll = true; spiel.boxen[1].wasserTag = spiel.tag;
+    const fr = fremd(a), h = whiteboardHTML(); const off = (h.match(/<div class="wb-offen">[\s\S]*?<\/div>/) || [""])[0];
+    return { fremd: fr, joker: /Joker\s*– nicht versorgt: Heu[^–]*Misten/.test(off.replace(/<[^>]+>/g, "")), simba: /Simba\s*– nicht versorgt/.test(off.replace(/<[^>]+>/g, "")), off: off.replace(/<[^>]+>/g, " ").slice(0, 400) }; });
+  const ok = (n, v) => console.log((v ? "✓ " : "✗ ") + n);
+  ok("Testpferd ist Pensionspferd", r.fremd); ok("Pensionspferd ohne Heu/Misten steht unter Noch offen", r.joker); ok("versorgtes Pferd steht nicht drin", !r.simba); ok("keine Fehler " + errs.join(";"), !errs.length);
+  if (!r.joker) console.log(r.off);
+  await b.close(); })();

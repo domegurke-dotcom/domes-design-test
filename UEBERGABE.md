@@ -15,7 +15,11 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-### v835/v836 (Claude Pro, 25.10.)
+### v838 (Claude Pro, 25.10., Domes Aufnahme 8)
+- Whiteboard-Übersicht meldet nicht versorgte Boxen (Heu, Futter, Wasser, Misten) jetzt auch bei Pensionspferden.
+- Sandpaddocks werden morgens gemistet (vorher nachts, danach kam neuer Mist dazu). Weiterhin je Stallbursche/Azubi ein Sandpaddock am Tag (Domes Regel v664).
+
+## v835/v836 (Claude Pro, 25.10.)
 - v835 Hals-Verlängerung bei müder Haltung entfernt → Dome: war richtig, in v836 zurückgenommen. Stehend ist der Hals seit v723 unverändert (Vergleich v722/heute); was Dome bei Paul als zu lang sieht, ist noch unklar (Aufnahme mit „Fehler melden“ erbeten).
 - **Offen, Antwort von Dome nötig:** (1) ~~Denkblase bei chronischen Befunden~~ → **erledigt v837** (Dome: ja). (2) Tierarzt-Symbol, Befund-Plakette und Gesundheits-Ring öffnen dasselbe Fenster – Vorschlag: Tierarzt-Symbol fragt direkt „Tierarzt rufen?“.
 

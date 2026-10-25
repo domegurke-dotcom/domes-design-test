@@ -15,9 +15,19 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-### Sitzung 25.10. Nachmittag (Claude Pro) – Auftrag Dome, Stand v831
-**Reihenfolge:** (1) ✅ v830 Hals bei Fress-Animation nicht mehr länger · (2) ✅ v831 PC-Ansicht fest (Zoom ab 1366×768) · (3) ✅ v832 Orte-Karte zoombar (`ortKarteZoom`; Tutorial-Schritt „Karte zoomen“ kommt mit Punkt 4) · (4) **in Arbeit (v833):** Tutorial auf die neue Box-Ansicht – Anfänger ✓ PC/quer/hochkant (v833), Fortgeschrittene ✓ und Experten ✓ am PC (v834); offen: Handy-Läufe nach v834, dann großer Test. Tutorial auf die neue Box-Ansicht umstellen (`boxNeuAn()` im Tutorial an, Ziele auf Symbole/Kreise/Fenster), Domes Regeln beachten: Mitarbeiter versorgen erst ab Anfänger Kap. 3 (Kap. 1+2 selbst), siehe v639 · (5) großer Test mit `BILDER=fehler` (etappen-, hof-gesamt-, neuladen-test) + Tutorial-Spieler (anf 390×844, 844×390, 1366×768 – Bilder NUR beim Anfänger-Tutorial, nie parallel).
-**Autostart 15:05:** `UEBERGABE.md` lesen, beim nächsten offenen Punkt weitermachen. Wenig Volumen – nach jedem Punkt committen und auf `main` hochladen.
+### Sitzung 25.10. Nachmittag (Claude Pro) – Auftrag Dome, Stand v834, alles auf `main`
+| Teil | Stand |
+|---|---|
+| Hals bei Fress-Animation nicht mehr länger | ✅ v830 (kurze Hälse erreichen den Boden nicht ganz) |
+| PC-Ansicht fest (ab 1366×768 als Ganzes vergrößert) | ✅ v831 |
+| Box → Orte: Karte zoombar (Mausrad, zwei Finger, + / − / Ganz) | ✅ v832 (hochkant bleibt Kacheln – Dome: so lassen) |
+| Tutorial auf die neue Box-Ansicht (alle drei Tutorials, Schritt „Karte zoomen“) | ✅ v833/v834 |
+| Großer Test (`BILDER=fehler`) | ✅ etappen-test „alles ok“, hof-gesamttest Fehler [], neuladen-test „alles ok“, 0 Fehlerbilder |
+| Tutorial-Spieler | ✅ anf 1366×768 / 844×390 / 390×844 (Bilder nur anf, Scratchpad), fort 1366×768 + 390×844, exp 1366×768 + 844×390 |
+
+**Behoben nebenbei:** in `tutKapitel` verschluckte ein Kommentar mitten in der Zeile das Zurücksetzen zu Kapitelbeginn (Box 1, Reiter, Putzen) – seit v639.
+**Offen / zu fragen:** Update-Fenster (Änderungen ab v829 unveröffentlicht, nur auf Domes Ansage); Optik der Fress-Haltung bei Shetty/Haflinger (Kopf zwischen den Vorderbeinen, Maul nicht ganz am Boden) – Dome ansehen lassen.
+**Autostart 15:05** hat gefeuert und ist erledigt (kein weiterer Wecker).
 
 ### Sitzung 25.10. (Claude Pro, Opus) – Auftrag von Dome, Start 10:05
 Die Nachrichten von Claude Team (v805–v824) sind übernommen und hier gelöscht – Details stehen je Version in `CLAUDE.md`.

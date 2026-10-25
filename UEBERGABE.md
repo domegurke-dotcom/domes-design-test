@@ -15,7 +15,10 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-### v839 (Claude Pro, 25.10.)
+### v840 (Claude Pro, 25.10.)
+- Whiteboard: „heute vergessen“ verschwindet, sobald die Box versorgt ist.
+
+## v839 (Claude Pro, 25.10.)
 - Weiden werden täglich abgeäppelt (Dome: „mach das“): je Mitarbeiter eine Weide am Tag in der Morgenrunde, vorher höchstens alle halbe Jahreszeit und nachts.
 - Offen: Antwort zum Tierarzt-Symbol (direkt „Tierarzt rufen?“), Hals von Paul (Aufnahme mit „Fehler melden“ erbeten).
 

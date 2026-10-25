@@ -53,7 +53,8 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
   await pg.keyboard.press('Escape'); await pg.evaluate(() => { const p = spiel.boxen[0].pferd; delete p.einsteller; spiel.einsteller = []; zeigeStall(); }); await pg.waitForTimeout(300);
   // Orte: Plan im Fenster, Doppelklick zoomt
   await pg.click('#boxUI [data-bx="orte"]'); await pg.waitForTimeout(400); z = await zust(); ok('Orte öffnet ein Fenster mit dem Hofplan', z.f === 'orte' && await pg.isVisible('#info .plan-scroll'), z);
-  await pg.dblclick('#info .plan-scroll'); await pg.waitForTimeout(200); ok('Doppelklick auf den Plan zoomt hinein', await pg.evaluate(() => document.querySelector('#info .plan-scroll').classList.contains('plan-zoom')));
+  { const vb0 = await pg.evaluate(() => document.getElementById('planOrtSvg').getAttribute('viewBox')); await pg.click('.ort-zoom [data-oz="1"]', { force: true }).catch(() => {}); await pg.waitForTimeout(200);   // v832: Zoom über die Leiste statt Doppelklick
+    ok('„+“ in der Zoom-Leiste zoomt in den Plan', await pg.evaluate(v => !!document.querySelector('.ort-zoom') && document.getElementById('planOrtSvg').getAttribute('viewBox') !== v, vb0)); }
   if (ORD) await pg.screenshot({ path: `${ORD}/boxfenster-orte-${W}x${H}.png` });
   await pg.keyboard.press('Escape'); await pg.waitForTimeout(300);
   // Steckbrief

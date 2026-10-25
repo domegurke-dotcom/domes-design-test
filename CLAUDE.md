@@ -29,6 +29,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - Grundsatz: Kommen neue Rassen dazu, bekommen sie ihre Erbkrankheiten, Eigenheiten, Hufqualität, Körperbau (Gewicht) und Futtertyp gleich mit.
 
 - **Bei Unklarem erst nachfragen** (Dome, 24.10.2026): Ist ein Wunsch missverständlich oder mehrdeutig formuliert, vor dem Einbauen kurz nachfragen – nicht raten und zweimal bauen.
+- **Ältere, gut funktionierende Sachen nie ungefragt ändern** (Dome, 25.10.2026): Betrifft eine Änderung etwas Älteres, das schon lief (auch wenn es wie die Ursache eines gemeldeten Fehlers aussieht), erst Dome fragen („mir ist aufgefallen … soll ich das ändern?“) und auf ein Ja warten.
 - **`UEBERGABE.md` bei JEDER Auslieferung mitpflegen** (Dome, 24.10.2026: „immer pflegen, das ist wichtig“) – nicht erst am Sitzungsende.
 
 ## Selbstständig arbeiten (Dome, von Claude Pro formuliert, 20.10.2026)

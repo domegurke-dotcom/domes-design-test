@@ -17,6 +17,8 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
       await pg.evaluate(() => { bxFenster = null; bxRing = null; if (bxPutz) bxPutzZu(); document.body.classList.remove('infoOffen'); zeigeAkte(); }); await pg.waitForTimeout(150); };
     const pruefFenster = async (was) => pg.evaluate(was => { const I = document.getElementById('info'), dlg = !document.getElementById('dlg').hidden;
       return { f: bxFenster, putz: bxPutz && putzModus, dlg, txt: dlg ? document.querySelector('#dlg').innerText.slice(0, 60) : (I.innerText || '').replace(/\s+/g, ' ').slice(0, 80), sicht: document.body.classList.contains('infoOffen') && I.getBoundingClientRect().height > 60 }; }, was);
+    for (const [i, z0] of (await pg.$$eval('#kopfRinge [data-vstab]', a => a.map(x => x.dataset.vstab))).entries()) { await pg.click(`#kopfRinge .kring:nth-child(${i + 1})`); await pg.waitForTimeout(350); const z = await pruefFenster();
+      ok(`${name}: Ring ${i + 1} öffnet Versorgung → ${z0}`, z.f === 'versorgung' && z.sicht && await pg.evaluate(t => bxTab === t, z0), z); await zu(); }
     for (const k of syms) {
       if (k === 'fuettern') { await pg.click(`#boxUI [data-bx="${k}"]`); await pg.waitForTimeout(300); const z = await pruefFenster(); ok(`${name}: Füttern öffnet ein Fenster`, z.dlg, z); await zu(); continue; }
       await pg.click(`#boxUI [data-bx="${k}"]`); await pg.waitForTimeout(350);

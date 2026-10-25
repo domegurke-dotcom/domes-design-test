@@ -19,10 +19,10 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
   ok('Fenster-Modus an (body.boxfenster)', await pg.evaluate(() => document.body.classList.contains('boxfenster')));
   let z = await pg.evaluate(() => [...document.querySelectorAll('#boxUI .bxs')].map(x => x.dataset.bx));
   ok('kein eigenes Putzen-Symbol mehr (liegt unter Ausrüstung)', !z.includes('putzen') && z.includes('ausruestung'), z);
-  await pg.click('#boxUI [data-bx="versorgung"]'); await pg.waitForTimeout(300);
-  z = await pg.evaluate(() => ({ ring: [...document.querySelectorAll('#boxUI [data-bxring]')].map(x => x.dataset.bxring), links: [...document.querySelectorAll('#boxUI .bxs')].map(x => x.dataset.bx), zu: !!document.querySelector('#boxUI .bxtool.zu') }));
-  ok('Versorgung öffnet einen Kreis (Heute, Gesundheit), Symbol wird ✕, Füttern ausgeblendet', z.ring.join() === 'heute,gesund' && z.zu && !z.links.includes('fuettern') && !z.links.includes('versorgung'), z);
-  await pg.click('#boxUI [data-bxring="heute"]'); await pg.waitForTimeout(400); z = await zust();
+  await pg.click('#kopfRinge [data-vstab="heute"]'); await pg.waitForTimeout(400);
+  z = await pg.evaluate(() => ({ links: [...document.querySelectorAll('#boxUI .bxs')].map(x => x.dataset.bx), ringe: [...document.querySelectorAll('#kopfRinge [data-vstab]')].map(x => x.dataset.vstab) }));
+  ok('kein Versorgung-Symbol mehr, die Ringe öffnen die Versorgung (Gesund → Gesundheit, Wohl/Pflege → Heute)', !z.links.includes('versorgung') && z.ringe.join() === 'gesund,heute,heute', z);
+  z = await zust();
   ok('Versorgung öffnet ein Fenster über der Box (fest, ganz im Bild, ohne Scrollen)', z.f === 'versorgung' && z.offen && z.fest && z.imBild && z.y === 0, z);
   ok('Fenster-Kopf: Titel mit Pferdename, Reiter Heute/Gesundheit', /Versorgung · Flocke/.test(z.titel) && z.tabs.join() === 'heute*,gesund', z);
   ok('Reiter „Heute“ zeigt nur die Tages-Versorgung', z.sichtbar.join() === 'heute', z.sichtbar);
@@ -32,18 +32,18 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
   await pg.click('#info .info-zu'); await pg.waitForTimeout(300); z = await zust(); ok('✕ schließt das Fenster', !z.f && !z.offen, z);
   // krankes Pferd → Tierarzt öffnet direkt Gesundheit
   await pg.evaluate(() => { const p = spiel.boxen[0].pferd; befundListe(p).push({ id: 'bfT', art: 'husten', grad: 2, seit: spiel.tag, ursache: 'Test', bemerkt: { von: 'du', tag: spiel.tag }, meldungen: [], vermutung: null }); zeigeStall(); });
-  await pg.waitForTimeout(300); await pg.click('#boxUI [data-bx="versorgung"]'); await pg.waitForTimeout(200); await pg.click('#boxUI .bxtool.zu'); await pg.waitForTimeout(200);
-  ok('✕ in der Mitte schließt den Kreis', !(await pg.$('#boxUI [data-bxring]')));
+  await pg.waitForTimeout(300);
+  await pg.click('#boxUI [data-bx="ausruestung"]'); await pg.waitForTimeout(200); await pg.click('#boxUI .bxtool.zu'); await pg.waitForTimeout(200); ok('✕ in der Mitte schließt den Kreis', !(await pg.$('#boxUI [data-bxring]')));
   await pg.click('#boxUI [data-bx="tierarzt"]'); await pg.waitForTimeout(400); z = await zust();
   ok('Tierarzt öffnet Versorgung auf „Gesundheit“ mit Tierarzt-Knopf', z.f === 'versorgung' && z.tabs.includes('gesund*') && await pg.isVisible('#tierarztKnopf'), z);
   await pg.keyboard.press('Escape'); await pg.waitForTimeout(300); z = await zust(); ok('Escape schließt das Fenster', !z.f && !z.offen, z);
   // Pensionspferd → Reiter Besitzer
   await pg.evaluate(() => { const p = spiel.boxen[0].pferd; p.einsteller = 'ex1'; einstellerListe().push({ eid: 'ex1', vn: 'Ina', nn: 'Test', haltung: 'box', leistungen: {}, zufr: 80, stufe: 1, preis: 200 }); zeigeStall(); });
-  await pg.waitForTimeout(200); await pg.click('#boxUI [data-bx="versorgung"]'); await pg.waitForTimeout(300);
-  ok('Pensionspferd: Kreis mit „Besitzer“', !!(await pg.$('#boxUI [data-bxring="besitzer"]')));
-  await pg.click('#boxUI [data-bxring="heute"]'); await pg.waitForTimeout(400); z = await zust();
-  ok('Pensionspferd: dritter Reiter „Besitzer“', z.tabs.some(t => /^besitzer/.test(t)), z.tabs);
-  await pg.click('#info [data-vstab="besitzer"]'); await pg.waitForTimeout(300); z = await zust(); ok('Reiter „Besitzer“ zeigt nur die Besitzer-Karte', z.sichtbar.join() === 'besitzer', z.sichtbar);
+  await pg.waitForTimeout(200);
+  ok('Pensionspferd: dritter Ring öffnet „Besitzer“', await pg.$eval('#kopfRinge .kring:nth-child(3)', x => x.dataset.vstab) === 'besitzer');
+  await pg.click('#kopfRinge [data-vstab="besitzer"]'); await pg.waitForTimeout(400); z = await zust();
+  ok('Pensionspferd: Fenster mit Reiter „Besitzer“ (aktiv)', z.tabs.includes('besitzer*'), z.tabs);
+  z = await zust(); ok('Reiter „Besitzer“ zeigt nur die Besitzer-Karte', z.sichtbar.join() === 'besitzer', z.sichtbar);
   await pg.keyboard.press('Escape'); await pg.evaluate(() => { const p = spiel.boxen[0].pferd; delete p.einsteller; spiel.einsteller = []; zeigeStall(); }); await pg.waitForTimeout(300);
   // Orte: Plan im Fenster, Doppelklick zoomt
   await pg.click('#boxUI [data-bx="orte"]'); await pg.waitForTimeout(400); z = await zust(); ok('Orte öffnet ein Fenster mit dem Hofplan', z.f === 'orte' && await pg.isVisible('#info .plan-scroll'), z);

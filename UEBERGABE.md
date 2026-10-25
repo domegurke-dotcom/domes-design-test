@@ -15,7 +15,11 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-### v838 (Claude Pro, 25.10., Domes Aufnahme 8)
+### v839 (Claude Pro, 25.10.)
+- Weiden werden täglich abgeäppelt (Dome: „mach das“): je Mitarbeiter eine Weide am Tag in der Morgenrunde, vorher höchstens alle halbe Jahreszeit und nachts.
+- Offen: Antwort zum Tierarzt-Symbol (direkt „Tierarzt rufen?“), Hals von Paul (Aufnahme mit „Fehler melden“ erbeten).
+
+## v838 (Claude Pro, 25.10., Domes Aufnahme 8)
 - Whiteboard-Übersicht meldet nicht versorgte Boxen (Heu, Futter, Wasser, Misten) jetzt auch bei Pensionspferden.
 - Sandpaddocks werden morgens gemistet (vorher nachts, danach kam neuer Mist dazu). Weiterhin je Stallbursche/Azubi ein Sandpaddock am Tag (Domes Regel v664).
 

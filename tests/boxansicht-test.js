@@ -28,7 +28,7 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
   await pg.evaluate(() => { const p = spiel.boxen[0].pferd; befundListe(p).push({ id: 'bfT', art: 'husten', grad: 2, seit: spiel.tag, ursache: 'Test', bemerkt: { von: 'du', tag: spiel.tag }, meldungen: [], vermutung: null }); p.pflege.gesundheit = 62; p.boxenruhe = spiel.tag; p.quarantaene = spiel.tag; zeigeStall(); });
   await pg.waitForTimeout(300); L = await lage();
   ok('bemerkter Befund: Tierarzt-Symbol erscheint (auch für Anfänger)', L.sym.includes('tierarzt'), L.sym);
-  ok('Plaketten Befund, Boxenruhe, Quarantäne', L.chips.some(c => /Befund/.test(c)) && L.chips.some(c => /Boxenruhe/.test(c)) && L.chips.some(c => /Quarantäne/.test(c)), L.chips);
+  ok('Plaketten Boxenruhe, Quarantäne (unklarer Befund steht in der Denkblase, nicht doppelt)', !L.chips.some(c => /Befund/.test(c)) && L.chips.some(c => /Boxenruhe/.test(c)) && L.chips.some(c => /Quarantäne/.test(c)), L.chips);
   ok('Denkblase „Mir geht’s nicht gut“ mit Anzeichen', /nicht gut/.test(L.denk), L.denk);
   ok('Gesundheits-Ring zeigt 62 %', /62/.test(L.ringe[0]), L.ringe);
   ok('auch mit Tierarzt: nichts auf Pfeil, Schild, Pferd', !L.aufPfeil && !L.aufSchild && !L.aufPferd && !L.ueberlapp, L);

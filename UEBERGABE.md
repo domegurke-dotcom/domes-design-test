@@ -22,9 +22,9 @@ Jede Aufgabe ist ein eigener Commit auf `main`, `CLAUDE.md` bei der jeweiligen V
 | 1 Shampoo-Reste (`p.schaum` bis zum Abspülen, längstens 3 Tage; Wohl −1/Nacht, Mauke/Sommerekzem ×1,5, kein Glanz, Pension −1 Zufriedenheit, Pfleger spülen aus) | v853 | `tests/shampoo-reste-test.js` ✓ (alter `shampoo-test.js` unverändert ✓) |
 | 2 Quarantäne-Pflicht Veterinäramt (nur Influenza, Herpes, Druse; Brief, Frist 1 Tag, danach Mangel `quarantaene` bei der Kontrolle; Kontaktpferde auch kleines Blutbild) | v854 | `tests/quarantaene-pflicht-test.js` ✓ (veterinaer-test ✓) |
 | 3 Weihnachten A–C (Geschenke der Einsteller, Stall des Jahres, Sponsor mit Banner/Futtergutschein) | v855 | `tests/weihnachten-test.js` ✓ (weihnachtsgeld-, hofplan-, pension-krank-, sammelbriefe-, morgen-test ✓) |
-| 4 Tutorial-Texte kürzen T-A bis T-C (alle 3 Tutorials, 228 Schritte, höchstens 2 Sätze, fett) | v856 | nur Seitenladen geprüft; Tutorial-Spieler/großer Test **nicht** gelaufen |
+| 4 Tutorial-Texte kürzen T-A bis T-C (alle 3 Tutorials, 228 Schritte, höchstens 2 Sätze, fett; v858: «Mehr dazu» mit dem früheren langen Text) | v856/v858 | `tests/tutorial-mehr-test.js` ✓; Tutorial-Spieler/großer Test **nicht** gelaufen |
 **Nicht gelaufen:** große Tests, Tutorial-Spieler (Regel: nur mit Domes Ansage). Pilot (Kap. 1–2) und Rest der Tutorial-Texte kamen in einem Zug (Dome sagte «weiter bis 4 fertig»); Skripte zum Ändern lagen im Scratchpad (`tutapply.js`: Texte der Reihe nach je Kapitel ersetzen).
-**Offene Fragen** stehen in `OFFENE-FRAGEN.md` (Abschnitt «Sitzung 26.10.»), nicht hier.
+Domes Antworten zu den Fragen sind in v858 umgesetzt (Quarantäne bis gesund, Stall des Jahres je Stallart, «Mehr dazu» im Tutorial, Gutschein in der Futterkammer).
 **Als Nächstes (wartet auf Dome):** Tutorial T-D (erst tippen, dann erklären), T-E (Hofplan-Kapitel), T-F (Test) · Mitarbeiter-Auftrag (Opus) · Aqua-Center (Opus). **Tests auf Domes PC:** Startbefehl in `CLAUDE.md`, Abschnitt «Testen».
 
 ### Abgleich mit dem Projekt-Chat (Claude Pro, 26.10.)

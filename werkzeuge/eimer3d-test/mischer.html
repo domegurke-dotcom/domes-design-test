@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Eimer 3D – Mischer</title>
 <style>
-  :root { --panel: 188px; }
+  :root { --panel: 214px; }
+  button.an { background: #2b1d14; color: #fff; }
   html, body { margin: 0; height: 100%; background: #f2efe9; overflow: hidden; font-family: system-ui, sans-serif; touch-action: none; color: #2b1d14; }
   canvas { display: block; width: 100%; height: calc(100% - var(--panel)); }
   #panel { position: fixed; left: 0; right: 0; bottom: 0; height: var(--panel); box-sizing: border-box; padding: 8px max(12px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-bottom)); background: #fffc; border-top: 2px solid #2b1d14; touch-action: pan-y; overflow: hidden; }
@@ -15,7 +16,7 @@
   #voreinst { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
   button { font: inherit; font-size: 13px; padding: 5px 9px; border-radius: 10px; border: 2px solid #2b1d14; background: #fff; color: #2b1d14; }
   #info { position: fixed; left: max(10px, env(safe-area-inset-left)); top: max(10px, env(safe-area-inset-top)); font-size: 13px; background: #fffc; padding: 6px 10px; border-radius: 10px; }
-  @media (orientation: landscape) and (max-height: 520px) { :root { --panel: 150px; } .zeile { height: 22px; } #voreinst { margin-bottom: 0; } }
+  @media (orientation: landscape) and (max-height: 520px) { :root { --panel: 176px; } .zeile { height: 22px; } #voreinst { margin-bottom: 0; } }
 </style>
 </head>
 <body>
@@ -23,6 +24,9 @@
 <div id="info">lädt …</div>
 <div id="panel">
   <div id="voreinst">
+    <button class="beh an" data-b="eimer">Eimer</button>
+    <button class="beh" data-b="k2">Krippe Stufe 2</button>
+    <button class="beh" data-b="k3">Krippe Stufe 3</button>
     <button data-v="55,30,15,0">Hafer-Müsli</button>
     <button data-v="0,35,15,50">Schnitzel-Müsli</button>
     <button data-v="35,20,15,30">Aufbau</button>
@@ -82,6 +86,11 @@ function neuesMaterial(alt) {
 
 const gruppe = new THREE.Group();
 scene.add(gruppe);
+const gE = new THREE.Group(), gK = { k2: new THREE.Group(), k3: new THREE.Group() };   // Behälter: Eimer, Krippe Stufe 2, Krippe Stufe 3
+gruppe.add(gE, gK.k2, gK.k3);
+// Krippen (Maße in Modelleinheiten; 1 Einheit ≈ 0,79 cm): Breite, Tiefe, Höhe, Wand, Verjüngung nach unten
+const KRIPPE = { k2: { datei: "krippe2.glb", w: 76, d: 46, h: 23, wall: 1.8, tp: 0.80, cam: 1.75 }, k3: { datei: "krippe3.glb", w: 102, d: 52, h: 28, wall: 2.0, tp: 0.78, cam: 2.15 } };
+let aktiv = "eimer";
 const SORTEN = ["hafer", "muesli", "mineral", "ruebe"];
 const typen = { hafer: [], muesli: [], mineral: [], ruebe: [] };   // je Sorte: { teile: [InstancedMesh], fp }
 const CAP = 1500;
@@ -90,8 +99,12 @@ const CAP = 1500;
 const lader = new GLTFLoader();
 const eimerFertig = new Promise((ok, fehler) => lader.load("./eimer-teile.glb", (g) => {
   g.scene.traverse((o) => { if (o.isMesh) o.material = neuesMaterial(o.material); });
-  gruppe.add(g.scene); ok();
+  gE.add(g.scene); ok();
 }, undefined, fehler));
+const krippenFertig = Promise.all(Object.keys(KRIPPE).map((id) => new Promise((ok, fehler) => lader.load("./" + KRIPPE[id].datei, (g) => {
+  g.scene.traverse((o) => { if (o.isMesh) o.material = neuesMaterial(o.material); });
+  gK[id].add(g.scene); ok();
+}, undefined, fehler))));
 
 // ---- Körner (je Form ein Modell, wird vielfach ausgestreut) ----
 const kornFertig = new Promise((ok, fehler) => lader.load("./koerner.glb", (g) => {
@@ -123,20 +136,25 @@ const haufenMat = new THREE.MeshLambertMaterial({ side: THREE.DoubleSide });
   for (const r of [0, 3, 6, 9, 12, 14.5, 16.4]) pt.push(new THREE.Vector2(r, zf(r)));
   pt.push(new THREE.Vector2(15.6, 25), new THREE.Vector2(14.8, 21));
   const haufen = new THREE.Mesh(new THREE.LatheGeometry(pt, 48), haufenMat);
-  gruppe.add(haufen);
+  gE.add(haufen);
+}
+// Krippen: Füllung als flacher Block bis kurz unter den Rand; Platz für die Körner = Innenfläche auf Füllhöhe
+for (const id of Object.keys(KRIPPE)) {
+  const K = KRIPPE[id];
+  K.zl = K.h - 2.6;                                                                   // Füllhöhe (Blender-z)
+  const innen = (z) => ({ b: (K.w / 2) * (K.tp + (1 - K.tp) * z / K.h) - K.wall - 1.0, t: (K.d / 2) * (K.tp + (1 - K.tp) * z / K.h) - K.wall - 1.0 });
+  K.iw = innen(K.zl).b; K.id = innen(K.zl).t;
+  const block = new THREE.Mesh(new THREE.BoxGeometry(K.iw * 2 - 0.4, 2.6, K.id * 2 - 0.4), haufenMat);   // flache Platte direkt unter den Körnern (bleibt im Trog)
+  block.position.set(0, K.zl - 1.3, 0); gK[id].add(block);
 }
 const BASIS = { hafer: "lin:0.26,0.09,0.01", muesli: "#5a3a1e", mineral: "#3a3820", ruebe: "#3a1d16" };
 
 // ---- feste Zufalls-Plätze (so ändern sich die Körner beim Regeln kaum) ----
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const R = mulberry(20261026);
-const PLAETZE = [];
 const conv = (v) => new THREE.Vector3(v.x, v.z, -v.y);       // Blender (z oben) → three (y oben)
-for (let i = 0; i < 2600; i++) {
-  const th = R() * 2 * Math.PI, r = 14.6 * Math.sqrt(R());
-  const pos = new THREE.Vector3(r * Math.cos(th), r * Math.sin(th), zf(r) + (R() * 0.55 - 0.1));
-  const s = 2 * 2.0 * r / (15.9 * 15.9);
-  const n = new THREE.Vector3(s * Math.cos(th), s * Math.sin(th), 1).normalize();
+// Platz = Lage + Ausrichtung eines Korns auf der Oberfläche (pos, n in Blender-Achsen)
+function platz(pos, n) {
   const a = R() * 2 * Math.PI;
   const t = n.clone().cross(new THREE.Vector3(Math.cos(a), Math.sin(a), 0.3)).normalize();
   const b = n.clone().cross(t);
@@ -146,9 +164,23 @@ for (let i = 0; i < 2600; i++) {
   const T = t.clone().applyQuaternion(q), B = b.clone().applyQuaternion(q), N = n.clone().applyQuaternion(q);
   // Körner liegen lang = x, kurz = y, breit = z (in three-Achsen): x → T, y → N, z → −B
   const m = new THREE.Matrix4().makeBasis(conv(T), conv(N), conv(B).negate()).setPosition(conv(pos));
-  PLAETZE.push({ m, u: R(), v: R() });
+  return { m, u: R(), v: R() };
 }
-const FLAECHE = 1300;
+const PLAETZE = { eimer: [], k2: [], k3: [] };
+for (let i = 0; i < 2600; i++) {                                // Eimer: Kuppel
+  const th = R() * 2 * Math.PI, r = 14.6 * Math.sqrt(R());
+  const s = 2 * 2.0 * r / (15.9 * 15.9);
+  PLAETZE.eimer.push(platz(new THREE.Vector3(r * Math.cos(th), r * Math.sin(th), zf(r) + (R() * 0.55 - 0.1)), new THREE.Vector3(s * Math.cos(th), s * Math.sin(th), 1).normalize()));
+}
+for (const id of Object.keys(KRIPPE)) {                          // Krippen: Rechteck, leicht gewölbt
+  const K = KRIPPE[id];
+  for (let i = 0; i < 4200; i++) {
+    const ux = R() * 2 - 1, uy = R() * 2 - 1, x = ux * (K.iw - 1.6), y = uy * (K.id - 1.6);
+    const wolbung = 1.4 * (1 - (ux * ux + uy * uy) / 2);
+    PLAETZE[id].push(platz(new THREE.Vector3(x, y, K.zl + wolbung + (R() * 0.55 - 0.1)), new THREE.Vector3(-0.35 * ux, -0.35 * uy, 1).normalize()));
+  }
+}
+const FLAECHE = 1300;                                            // bedeckte Fläche im Eimer; Krippen: gleiche Dichte je Fläche
 
 const anteil = { hafer: 55, muesli: 30, mineral: 15, ruebe: 0 };
 function mischen() {
@@ -164,8 +196,9 @@ function mischen() {
   const gew = SORTEN.map((s) => (summe ? anteil[s] / summe : 0) / fpm[s]); const gs = gew.reduce((x, y) => x + y, 0);
   const zaehler = new Map(); let flaeche = 0;
   for (const alle of SORTEN) for (const t of typen[alle]) for (const p of t.teile) zaehler.set(p, 0);
-  if (gs > 0) for (const pl of PLAETZE) {
-    if (flaeche >= FLAECHE) break;
+  const K = KRIPPE[aktiv], ziel = K ? FLAECHE / (Math.PI * 14.6 * 14.6) * 4 * (K.iw - 1.6) * (K.id - 1.6) : FLAECHE;
+  if (gs > 0) for (const pl of PLAETZE[aktiv]) {
+    if (flaeche >= ziel) break;
     let u = pl.u * gs, k = 0; while (k < 3 && u > gew[k]) { u -= gew[k]; k++; }
     const t = typen[SORTEN[k]]; if (!t.length) continue;
     const typ = t[Math.min(t.length - 1, Math.floor(pl.v * t.length))];
@@ -180,10 +213,20 @@ function groesse() {
   const b = canvas.getBoundingClientRect();
   renderer.setSize(b.width, b.height, false);
   camera.aspect = b.width / b.height;
-  camera.position.z = camera.aspect < 0.9 ? 92 / camera.aspect * 0.9 : 92;
+  const f = KRIPPE[aktiv] ? KRIPPE[aktiv].cam : 1;               // Krippen sind breiter → weiter weg
+  camera.position.set(0, 46 * f,(camera.aspect < 0.9 ? 92 / camera.aspect * 0.9 : 92) * f);
+  camera.lookAt(0, KRIPPE[aktiv] ? KRIPPE[aktiv].h * 0.6 : 15, 0);
   camera.updateProjectionMatrix();
 }
 addEventListener("resize", groesse); groesse();
+function behaelter(id) {
+  aktiv = id;
+  gE.visible = id === "eimer"; gK.k2.visible = id === "k2"; gK.k3.visible = id === "k3";
+  document.querySelectorAll("button.beh").forEach((b) => b.classList.toggle("an", b.dataset.b === id));
+  groesse(); mischen();
+}
+document.querySelectorAll("button.beh").forEach((b) => b.onclick = () => behaelter(b.dataset.b));
+gK.k2.visible = false; gK.k3.visible = false;
 let geplant = false;
 function planen() { if (geplant) return; geplant = true; requestAnimationFrame(() => { geplant = false; mischen(); }); }
 document.querySelectorAll("input[data-s]").forEach((el) => el.addEventListener("input", () => { anteil[el.dataset.s] = +el.value; planen(); }));
@@ -206,7 +249,7 @@ function lauf(t) {
   requestAnimationFrame(lauf);
 }
 requestAnimationFrame(lauf);
-Promise.all([eimerFertig, kornFertig]).then(() => { info.dataset.ok = 1; info.textContent = "ziehen = drehen"; mischen(); })
+Promise.all([eimerFertig, kornFertig, krippenFertig]).then(() => { info.dataset.ok = 1; info.textContent = "ziehen = drehen"; mischen(); })
   .catch((e) => { info.textContent = "Fehler: " + e.message; });
 </script>
 </body>

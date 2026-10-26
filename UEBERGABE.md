@@ -15,6 +15,11 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### Eimer Etappe 1 FERTIG (Claude Pro, 26.10.) – Dome: „mach nur 1, den Umbau der Boxenstufen machen wir in einem Rutsch, wenn alles gebaut ist“
+- **Maßstab fürs Spiel:** `STALL.cmZuEinheit = 0,86` (1 cm = 0,86 SVG-Einheiten, Pferd = Stockmaß × 0,86). Eimer-Modell: 39,4 Blender-Einheiten Ø oben = **31 cm** (12-l-Eimer) → 1 Modelleinheit ≈ 0,79 cm ≈ **0,68 SVG-Einheiten**; Eimer wird so ≈ 27 breit × 19 hoch im Box-Bild (der alte SVG-Futtereimer war ca. 34 × 26 = zu groß). Krippe Stufe 2: 76 × 46 × 23 Einheiten (≈ 60 × 36 × 18 cm, dunkler Kunststoff, Wandhalterung); Stufe 3: 102 × 52 × 28 (≈ 80 × 41 × 22 cm, Edelstahl, Halterung).
+- **Gebaut:** `koerner.glb` (28 Körner), `eimer-teile.glb`, `krippe2.glb`, `krippe3.glb` (je ~23 KB); `mischer.html` wählt Eimer / Krippe Stufe 2 / Krippe Stufe 3 (Auswahl oben im Panel), Inhalt nach Reglern gemischt, Rechteck-Streuung mit gleicher Dichte je Fläche (`PLAETZE.k2/k3`, `KRIPPE`). Blender: `blender/eimer-alle.blend` (Arbeitsdatei, jetzt mit Krippen `krippe2_*`/`krippe3_*` und Körnern `korn_*`). Voll/leer: leer = nur Behälter, voll = Mischung; Wasser wie bisher `wasser_*` an/aus.
+- **Offen/Hinweise:** Dome testet die Krippen am Handy (Bilder pro Sekunde bei den größeren Flächen – im Vorschaufenster 31 B/s bei Stufe 2, auf dem Handy mit Eimer 59–60). Einbau der Stufen (E2–E4) erst „in einem Rutsch“ nach Domes Ansage. Die dunkle Scheibe `Cylinder.001` bleibt der Grund, dass der Eimer nur „voll“ geht.
+
 ### Eimer im Spiel – Domes Antworten (26.10.), Plan steht, Start wartet auf ihr „Ja“
 - **Wo:** Der Eimer gibt es nur in **Boxenstufe 1** (Futter- und Wassereimer am Boden) und **auf der Weide** (`weideBildSVG`, `[data-keimer]`). In **Boxenstufe 2+3** kommt das Futter in die **Futterkrippe – die muss noch gebaut werden** (3D, im selben Stil).
 - **Perspektive:** wie jetzt – schräg von oben (man schaut in die Box; der Eimer steht am Boden).

@@ -26,7 +26,7 @@ Zeitpunkt: letzter Tag im Winter vor dem Jahreswechsel (Briefe am Morgen „24.1
 
 ## Stand
 - **D Weihnachtsgeld gebaut (v826, Claude Pro, Dome 25.10.: „bauen“)** – Zahlen wie oben vorgeschlagen (`WG` in index.html), Zufriedenheit: Vorschlag +8, doppelt +15, weniger anteilig (mind. +2); keins −10, je volles Jahr −2 mehr (höchstens −16). „Eingesprungen“ = Überstunden für einen fehlenden Kollegen (`m.ueberstunden`), dazu Nachtdienst, Turnierbegleitung als Reiter, angeleitete Azubis. Ein Fenster mit Eingabefeld je Mitarbeiter (Vorschlag vorausgefüllt, Summe live) ersetzt die drei Knöpfe „wie vorgeschlagen / selbst anpassen / keins“. Nicht beantwortet bis zum Jahreswechsel: Frage verfällt ohne Folgen. Test `tests/weihnachtsgeld-test.js`.
-- **A–C (Einsteller-Geschenke, Stall des Jahres, Sponsor) noch nicht gebaut** – Auftrag war nur das Weihnachtsgeld.
+- **A–C gebaut in v855 (Claude Pro, 26.10.)** – Zahlen wie vorgeschlagen (Details in `CLAUDE.md` bei v855, Konstanten `XMAS`); Gold ab 80 Punkten, Silber 70, Bronze 62, Anerkennung 55 sind meine Schätzung.
 
 ## Etappen (Vorschlag)
 1. D Weihnachtsgeld (Zähler, Fenster, Wirkung) · 2. A Einsteller-Geschenke · 3. B Stall des Jahres · 4. C Sponsor · dann Hinweise/Enzyklopädie (bzn) und Tests.

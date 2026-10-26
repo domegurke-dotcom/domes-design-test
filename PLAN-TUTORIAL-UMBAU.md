@@ -9,7 +9,8 @@ Anlass: Aufnahme 9 (Trollhof) und Domes Rückmeldungen. **Noch nichts gebaut.** 
 4. Pferdeköpfe der Reiter im Plan beginnen **oben links** im Gebäude/der Anlage (Dome, Aufnahme 9; `planReiterKoepfe`).
 
 ## Stand (Claude Pro, 26.10.)
-- **T-A bis T-C gebaut (v856):** alle Tutorial-Texte gekürzt, Schlüsselwörter fett. T-D, T-E, T-F offen (Dome gibt das OK).
+- **T-A bis T-C gebaut (v856):** alle Tutorial-Texte gekürzt, Schlüsselwörter fett; v858 «Mehr dazu» mit dem früheren langen Text.
+- **T-D und T-E gebaut (v859, Opus):** Erklärung erst nach dem Antippen (`S.nach`, `TUT_NACH`, 58 Schritte), Hofplan-Kapitel neu (Kreis, ✔, Blaupause, Verschieben, Bauland), Reiterköpfe oben links. **Offen: T-F** (Tutorial-Spieler anf/fort/exp in 3 Ansichten + großer Test, nur auf Domes Ansage) und die offenen Punkte unten.
 
 ## Etappen
 - **T-A: Textstil + Pilotkapitel.** Regeln festlegen (max. 2 Sätze je Schritt, Schlüsselwörter `<b>`, Rest in „Mehr dazu“), Kapitel 1 „Versorgen und Pflegen“ und 2 „Richtig füttern“ des Anfänger-Tutorials umschreiben. Dome sieht sich den Stil an.

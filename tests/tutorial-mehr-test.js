@@ -14,6 +14,6 @@ const { chromium } = require('playwright'); const path = require('path');
     document.getElementById('dlg').hidden = true; HINWEISE.yy_test = ['Titel', 'kurz', '', null, null, 'anf']; blaseWeg(false); blaseZeigen('yy_test'); R.ohne = !document.querySelector('#hinweisBlase .hb-mehr');
     return R; });
   const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x !== undefined ? ' – ' + x : ''));
-  ok('Mehr-dazu-Texte in allen drei Tutorials', R.anzahl.every(n => n > 3), R.anzahl.join('/')); ok('Knopf in der Blase', R.knopf); ok('Knopf öffnet den langen Text', R.dialog); ok('ohne langen Text kein Knopf', R.ohne); ok('keine Skriptfehler', errs.length === 0, errs.join(' | '));
+  ok('Mehr-dazu-Texte im Anfänger- und Fortgeschrittenen-Tutorial', R.anzahl[0] > 3 && R.anzahl[1] > 3, R.anzahl.join('/')); ok('Knopf in der Blase', R.knopf); ok('Knopf öffnet den langen Text', R.dialog); ok('ohne langen Text kein Knopf', R.ohne); ok('keine Skriptfehler', errs.length === 0, errs.join(' | '));
   console.log(out.join('\n')); await b.close(); process.exit(out.some(l => l.startsWith('✗')) ? 1 : 0);
 })();

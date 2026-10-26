@@ -1303,7 +1303,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "851";
+  const SPIEL_VERSION = "852";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1311,12 +1311,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=851"></script>
-<script src="pferd.js?v=851"></script>
-<script src="boxstufen.js?v=851"></script>
-<script src="kopfneu.js?v=851"></script>
-<script src="waschbild.js?v=851"></script>
-<script src="avatare.js?v=851"></script>
+<script src="lz-string.min.js?v=852"></script>
+<script src="pferd.js?v=852"></script>
+<script src="boxstufen.js?v=852"></script>
+<script src="kopfneu.js?v=852"></script>
+<script src="waschbild.js?v=852"></script>
+<script src="avatare.js?v=852"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -11973,10 +11973,15 @@
   }
   // Punkt im SVG
   function svgPunkt(ev) { const st = $("stall"), m = st.getScreenCTM(); if (!m) return null; const pt = st.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; return pt.matrixTransform(m.inverse()); }
+  // v852: Diagnose für „Putzen ohne Fortschritt“ – schreibt nur in eine laufende Aufnahme (die ersten 14 Ereignisse je Putzvorgang), ändert nichts am Spiel
+  function wischDiag(w, was, o) {
+    if (!AUF.laufend || !w || (w.diag || 0) >= 14) return; w.diag = (w.diag || 0) + 1;
+    try { tagebuch("Wischen-Diagnose", { x: was, extra: Object.assign({ tool: w.tool, zoom: window.pcZoom ? pcZoom() : 1, dpr: devicePixelRatio, iw: Math.round(innerWidth), ih: Math.round(innerHeight), fort: Math.round(w.fort * 1000) / 1000 }, o || {}) }); } catch (e) { }
+  }
   function wischBewegen(ev) {
-    if (!wisch || !wisch.druck) return; if (B().pferd !== wisch.p) { wischEnde(false); return; } const w = wisch, q = svgPunkt(ev); if (!q) return;
+    if (!wisch || !wisch.druck) return; if (B().pferd !== wisch.p) { wischDiag(wisch, "Pferd in der Box gewechselt", {}); wischEnde(false); return; } const w = wisch, q = svgPunkt(ev); if (!q) { wischDiag(w, "kein SVG-Punkt", {}); return; }
     const l = w.letzte; w.letzte = q; if (!l) return;
-    const weg = Math.hypot(q.x - l.x, q.y - l.y); if (weg > 60) return;   // Sprünge zählen nicht
+    const weg = Math.hypot(q.x - l.x, q.y - l.y); if (weg > 60) { wischDiag(w, "Sprung ignoriert", { weg: Math.round(weg), cx: Math.round(ev.clientX), cy: Math.round(ev.clientY) }); return; }   // Sprünge zählen nicht
     if (w.tool === "huf") {
       let neu = false; w.klumpen.forEach(k => { if (!k.weg && Math.hypot(q.x - k.x, q.y - k.y) < k.r + 7) { k.weg = true; neu = true; } });
       if (neu) { if (w.klumpen.every(k => k.weg)) { w.huf++; if (w.huf >= 4) { wischEnde(true); return; } w.klumpen = hufKlumpen(); } wischZeichnen(); }
@@ -11985,7 +11990,7 @@
     // Bürste/Kamm: nur Bewegung über dem Pferd zählt; Kamm nur oben (Mähne) und hinten (Schweif)
     let bb; try { bb = $("pferdPlatz").getBBox(); } catch (e) { return; }
     const drin = q.x >= bb.x && q.x <= bb.x + bb.width && q.y >= bb.y && q.y <= bb.y + bb.height;
-    if (!drin) return;
+    if (!drin) { wischDiag(w, "außerhalb des Pferdes", { cx: Math.round(ev.clientX), cy: Math.round(ev.clientY), qx: Math.round(q.x), qy: Math.round(q.y), bb: [bb.x, bb.y, bb.width, bb.height].map(Math.round) }); return; }
     if (w.tool === "kamm") {   // Dome 20.10.: nur über Mähne und Schweif (mit etwas Rand), nicht neben dem Pferd
       const teile = [...document.querySelectorAll("#pferdPlatz .maehnePfad, #pferdPlatz .schweif, #pferdPlatz .schopfTeil")];   // Dome 21.10.: Mähne, Schopf und Schweif
       if (teile.length) { const rs = teile.map(e => e.getBoundingClientRect()), lang = Math.max(...rs.map(r => r.right)) - Math.min(...rs.map(r => r.left)), m = Math.max(16, lang * 0.1), cx = ev.clientX, cy = ev.clientY; if (!rs.some(r => { return cx >= r.left - m && cx <= r.right + m && cy >= r.top - m && cy <= r.bottom + m; })) return; }
@@ -11996,7 +12001,7 @@
         $("stall").insertAdjacentHTML("beforeend", Array.from({ length: 3 }, () => `<circle class="tropfen" cx="${(q.x + (Math.random() - .5) * 18).toFixed(1)}" cy="${(q.y + Math.random() * 12).toFixed(1)}" r="${(1.2 + Math.random() * 1.8).toFixed(1)}" fill="${w.tool === "shampoo" && Math.random() < .5 ? "#ffffff" : "#8fd0f5"}" stroke="#3b8fc4" stroke-width=".4" opacity=".85"/>`).join("")); }
       if (w.fort >= 1) { wischEnde(true); return; } if (Math.floor(vorher * 4) !== Math.floor(w.fort * 4)) wischZeichnen(); else wischZeichnen(); return; }
     const noetig = w.tool === "streicheln" ? 300 : 350 + 6 * (w.tool === "buerste" ? w.start.fell : w.start.maehne);
-    const vorher = w.fort; w.fort = Math.min(1, w.fort + weg / noetig);
+    const vorher = w.fort; w.fort = Math.min(1, w.fort + weg / noetig); wischDiag(w, "Fortschritt", { weg: Math.round(weg * 10) / 10, noetig: Math.round(noetig), cx: Math.round(ev.clientX), cy: Math.round(ev.clientY) });
     if (Math.random() < 0.25) { setTimeout(() => document.querySelectorAll("#stall .staub.alt").forEach(c => c.remove()), 0); document.querySelectorAll("#stall .staub").forEach(c => c.classList.add("alt")); }
     if (Math.random() < 0.25) $("stall").insertAdjacentHTML("beforeend", `<circle class="staub" cx="${(q.x + (Math.random() - .5) * 14).toFixed(1)}" cy="${(q.y + (Math.random() - .5) * 10).toFixed(1)}" r="${(1.5 + Math.random() * 2).toFixed(1)}" fill="${w.tool === "buerste" ? "#b89a6e" : "#d8c7a6"}" pointer-events="none"/>`);
     const p = w.p, d = (p.dreck = p.dreck || { fell: 0, maehne: 0, seit: null });
@@ -12006,8 +12011,8 @@
     wischZeichnen();
   }
   (() => { const st = $("stall"); if (!st) return;
-    st.addEventListener("pointerdown", ev => { if (!wisch) return; ev.preventDefault(); ev.stopPropagation(); wisch.druck = true; wisch.letzte = svgPunkt(ev); try { st.setPointerCapture(ev.pointerId); } catch (e) {} }, true);
-    st.addEventListener("pointermove", ev => { if (wisch) { ev.preventDefault(); wischBewegen(ev); } }, true);
+    st.addEventListener("pointerdown", ev => { if (!wisch) return; ev.preventDefault(); ev.stopPropagation(); wisch.druck = true; wisch.letzte = svgPunkt(ev); wischDiag(wisch, "Druck", { cx: Math.round(ev.clientX), cy: Math.round(ev.clientY), q: wisch.letzte ? [Math.round(wisch.letzte.x), Math.round(wisch.letzte.y)] : null }); try { st.setPointerCapture(ev.pointerId); } catch (e) {} }, true);
+    st.addEventListener("pointermove", ev => { if (wisch) { if (!wisch.druck && ev.buttons) wischDiag(wisch, "Maus gedrückt, aber kein Druck-Ereignis angekommen", { cx: Math.round(ev.clientX), cy: Math.round(ev.clientY) }); ev.preventDefault(); wischBewegen(ev); } }, true);
     ["pointerup", "pointercancel"].forEach(t => st.addEventListener(t, () => { if (wisch) { wisch.druck = false; wisch.letzte = null; } setTimeout(() => document.querySelectorAll("#stall .staub").forEach(c => c.remove()), 400); }, true));
     st.addEventListener("click", ev => { if (wisch) { ev.preventDefault(); ev.stopPropagation(); } }, true);
   })();

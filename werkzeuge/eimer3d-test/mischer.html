@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Eimer 3D – Mischer</title>
+<style>
+  :root { --panel: 188px; }
+  html, body { margin: 0; height: 100%; background: #f2efe9; overflow: hidden; font-family: system-ui, sans-serif; touch-action: none; color: #2b1d14; }
+  canvas { display: block; width: 100%; height: calc(100% - var(--panel)); }
+  #panel { position: fixed; left: 0; right: 0; bottom: 0; height: var(--panel); box-sizing: border-box; padding: 8px max(12px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-bottom)); background: #fffc; border-top: 2px solid #2b1d14; touch-action: pan-y; overflow: hidden; }
+  .zeile { display: grid; grid-template-columns: 112px 1fr 44px; align-items: center; gap: 8px; height: 28px; font-size: 14px; }
+  .zeile input { width: 100%; }
+  .zeile b { text-align: right; font-variant-numeric: tabular-nums; }
+  #voreinst { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+  button { font: inherit; font-size: 13px; padding: 5px 9px; border-radius: 10px; border: 2px solid #2b1d14; background: #fff; color: #2b1d14; }
+  #info { position: fixed; left: max(10px, env(safe-area-inset-left)); top: max(10px, env(safe-area-inset-top)); font-size: 13px; background: #fffc; padding: 6px 10px; border-radius: 10px; }
+  @media (orientation: landscape) and (max-height: 520px) { :root { --panel: 150px; } .zeile { height: 22px; } #voreinst { margin-bottom: 0; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="info">lädt …</div>
+<div id="panel">
+  <div id="voreinst">
+    <button data-v="55,30,15,0">Hafer-Müsli</button>
+    <button data-v="0,35,15,50">Schnitzel-Müsli</button>
+    <button data-v="35,20,15,30">Aufbau</button>
+    <button data-v="100,0,0,0">Nur Hafer</button>
+    <button id="dreh">Drehen: aus</button>
+  </div>
+  <div class="zeile"><span>Hafer</span><input type="range" min="0" max="100" value="55" data-s="hafer"><b></b></div>
+  <div class="zeile"><span>Müsli</span><input type="range" min="0" max="100" value="30" data-s="muesli"><b></b></div>
+  <div class="zeile"><span>Mineralfutter</span><input type="range" min="0" max="100" value="15" data-s="mineral"><b></b></div>
+  <div class="zeile"><span>Rübenschnitzel</span><input type="range" min="0" max="100" value="0" data-s="ruebe"><b></b></div>
+</div>
+<script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "./lib/loaders/GLTFLoader.js";
+
+const canvas = document.getElementById("c");
+const info = document.getElementById("info");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(28, 1, 1, 400);
+camera.position.set(0, 46, 92);
+camera.lookAt(0, 15, 0);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8a96, 1.9));
+const sonne = new THREE.DirectionalLight(0xffffff, 1.3);
+sonne.position.set(-30, 60, 50);
+scene.add(sonne);
+
+// ---- Farben (aus Domes Blender-Dateien) ----
+const FARBEN = {
+  stahl: [0.349, 0.375, 0.428], rand: [0.076, 0.082, 0.119], gummi: [0.043, 0.047, 0.071],
+  innen: [0.011, 0.011, 0.02], tinte: [0.003, 0.003, 0.005],
+};
+const INHALT = [
+  [/^hafer_hell/, "lin:0.85,0.52,0.09"], [/^hafer_mittel/, "lin:0.71,0.34,0.04"], [/^hafer_dunkel/, "lin:0.49,0.18,0.02"],
+  [/^muesli_flocken/, "#e8d9b0"], [/^muesli_pellets/, "#5a3a22"], [/^muesli_gelb/, "#e0b030"], [/^muesli_rot/, "#b0383a"], [/^muesli_orange/, "#d9702a"],
+  [/^mineral_hell/, "#8a8450"], [/^mineral_mittel/, "#6b6a3a"], [/^mineral_dunkel/, "#4a4a28"],
+  [/^ruebe_hell/, "#a8604a"], [/^ruebe_mittel/, "#7e4030"], [/^ruebe_dunkel/, "#55291f"],
+];
+function farbe(c, wert) {
+  if (wert.startsWith("lin:")) c.setRGB(...wert.slice(4).split(",").map(Number), THREE.LinearSRGBColorSpace);
+  else c.set(wert);
+}
+function neuesMaterial(alt) {
+  const name = alt.name.replace(/\.\d{3}$/, "");           // „tinte.001“ → „tinte“
+  const neu = (name === "tinte") ? new THREE.MeshBasicMaterial() : new THREE.MeshLambertMaterial();
+  if (FARBEN[name]) neu.color.setRGB(...FARBEN[name], THREE.LinearSRGBColorSpace);
+  else neu.color.copy(alt.color);
+  for (const [re, w] of INHALT) if (re.test(name)) farbe(neu.color, w);
+  // Kontur = umgestülpte Hülle: nur ihre Rückseiten sind sichtbar
+  neu.side = (name === "tinte") ? THREE.FrontSide : THREE.DoubleSide;
+  neu.userData.name = name;
+  return neu;
+}
+
+const gruppe = new THREE.Group();
+scene.add(gruppe);
+const SORTEN = ["hafer", "muesli", "mineral", "ruebe"];
+const typen = { hafer: [], muesli: [], mineral: [], ruebe: [] };   // je Sorte: { teile: [InstancedMesh], fp }
+const CAP = 1500;
+
+// ---- Eimer ----
+const lader = new GLTFLoader();
+const eimerFertig = new Promise((ok, fehler) => lader.load("./eimer-teile.glb", (g) => {
+  g.scene.traverse((o) => { if (o.isMesh) o.material = neuesMaterial(o.material); });
+  gruppe.add(g.scene); ok();
+}, undefined, fehler));
+
+// ---- Körner (je Form ein Modell, wird vielfach ausgestreut) ----
+const kornFertig = new Promise((ok, fehler) => lader.load("./koerner.glb", (g) => {
+  g.scene.children.forEach((knoten) => {
+    const sorte = (/^korn_([a-z]+)_/.exec(knoten.name) || [])[1];
+    if (!typen[sorte]) return;
+    const meshes = []; knoten.traverse((c) => { if (c.isMesh) meshes.push(c); });
+    const teile = []; let fp = 1;
+    for (const m of meshes) {
+      const mat = neuesMaterial(m.material);
+      if (mat.userData.name !== "tinte") {                      // Fläche aus dem Körper (lang × breit)
+        m.geometry.computeBoundingBox();
+        const s = m.geometry.boundingBox.getSize(new THREE.Vector3()); fp = s.x * s.z;
+      }
+      const inst = new THREE.InstancedMesh(m.geometry, mat, CAP);
+      inst.count = 0; inst.frustumCulled = false;
+      gruppe.add(inst); teile.push(inst);
+    }
+    typen[sorte].push({ teile, fp });
+  });
+  ok();
+}, undefined, fehler));
+
+// ---- Haufen darunter (Kuppel, bis unter den Rand) ----
+const zf = (r) => 28.6 - 2.0 * Math.pow(r / 15.9, 2);
+const haufenMat = new THREE.MeshLambertMaterial({ side: THREE.DoubleSide });
+{
+  const pt = [];
+  for (const r of [0, 3, 6, 9, 12, 14.5, 16.4]) pt.push(new THREE.Vector2(r, zf(r)));
+  pt.push(new THREE.Vector2(15.6, 25), new THREE.Vector2(14.8, 21));
+  const haufen = new THREE.Mesh(new THREE.LatheGeometry(pt, 48), haufenMat);
+  gruppe.add(haufen);
+}
+const BASIS = { hafer: "lin:0.26,0.09,0.01", muesli: "#5a3a1e", mineral: "#3a3820", ruebe: "#3a1d16" };
+
+// ---- feste Zufalls-Plätze (so ändern sich die Körner beim Regeln kaum) ----
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const R = mulberry(20261026);
+const PLAETZE = [];
+const conv = (v) => new THREE.Vector3(v.x, v.z, -v.y);       // Blender (z oben) → three (y oben)
+for (let i = 0; i < 2600; i++) {
+  const th = R() * 2 * Math.PI, r = 14.6 * Math.sqrt(R());
+  const pos = new THREE.Vector3(r * Math.cos(th), r * Math.sin(th), zf(r) + (R() * 0.55 - 0.1));
+  const s = 2 * 2.0 * r / (15.9 * 15.9);
+  const n = new THREE.Vector3(s * Math.cos(th), s * Math.sin(th), 1).normalize();
+  const a = R() * 2 * Math.PI;
+  const t = n.clone().cross(new THREE.Vector3(Math.cos(a), Math.sin(a), 0.3)).normalize();
+  const b = n.clone().cross(t);
+  const qt = new THREE.Quaternion().setFromAxisAngle(t, (R() - 0.5) * 0.6);
+  const qb = new THREE.Quaternion().setFromAxisAngle(b, (R() - 0.5) * 1.1);
+  const q = qb.multiply(qt);
+  const T = t.clone().applyQuaternion(q), B = b.clone().applyQuaternion(q), N = n.clone().applyQuaternion(q);
+  // Körner liegen lang = x, kurz = y, breit = z (in three-Achsen): x → T, y → N, z → −B
+  const m = new THREE.Matrix4().makeBasis(conv(T), conv(N), conv(B).negate()).setPosition(conv(pos));
+  PLAETZE.push({ m, u: R(), v: R() });
+}
+const FLAECHE = 1300;
+
+const anteil = { hafer: 55, muesli: 30, mineral: 15, ruebe: 0 };
+function mischen() {
+  const fpm = {}; let summe = 0;
+  for (const s of SORTEN) { const t = typen[s]; fpm[s] = t.length ? t.reduce((x, y) => x + y.fp, 0) / t.length : 1; summe += anteil[s]; }
+  const zeilen = document.querySelectorAll(".zeile");
+  SORTEN.forEach((s, i) => { zeilen[i].querySelector("b").textContent = summe ? Math.round(100 * anteil[s] / summe) + " %" : "–"; });
+  // Haufenfarbe = Mittel der Sorten nach Anteil
+  const c = new THREE.Color(0, 0, 0), tmp = new THREE.Color();
+  for (const s of SORTEN) { farbe(tmp, BASIS[s]); const w = summe ? anteil[s] / summe : 0; c.r += tmp.r * w; c.g += tmp.g * w; c.b += tmp.b * w; }
+  haufenMat.color.copy(c);
+  // Gewicht je Sorte: Anteil ÷ mittlere Fläche (kleine Körner brauchen mehr Stück)
+  const gew = SORTEN.map((s) => (summe ? anteil[s] / summe : 0) / fpm[s]); const gs = gew.reduce((x, y) => x + y, 0);
+  const zaehler = new Map(); let flaeche = 0;
+  for (const alle of SORTEN) for (const t of typen[alle]) for (const p of t.teile) zaehler.set(p, 0);
+  if (gs > 0) for (const pl of PLAETZE) {
+    if (flaeche >= FLAECHE) break;
+    let u = pl.u * gs, k = 0; while (k < 3 && u > gew[k]) { u -= gew[k]; k++; }
+    const t = typen[SORTEN[k]]; if (!t.length) continue;
+    const typ = t[Math.min(t.length - 1, Math.floor(pl.v * t.length))];
+    for (const inst of typ.teile) { const i = zaehler.get(inst); if (i < CAP) { inst.setMatrixAt(i, pl.m); zaehler.set(inst, i + 1); } }
+    flaeche += typ.fp;
+  }
+  for (const [inst, n] of zaehler) { inst.count = n; inst.instanceMatrix.needsUpdate = true; }
+}
+
+// ---- Bedienung ----
+function groesse() {
+  const b = canvas.getBoundingClientRect();
+  renderer.setSize(b.width, b.height, false);
+  camera.aspect = b.width / b.height;
+  camera.position.z = camera.aspect < 0.9 ? 92 / camera.aspect * 0.9 : 92;
+  camera.updateProjectionMatrix();
+}
+addEventListener("resize", groesse); groesse();
+let geplant = false;
+function planen() { if (geplant) return; geplant = true; requestAnimationFrame(() => { geplant = false; mischen(); }); }
+document.querySelectorAll("input[data-s]").forEach((el) => el.addEventListener("input", () => { anteil[el.dataset.s] = +el.value; planen(); }));
+document.querySelectorAll("button[data-v]").forEach((b) => b.onclick = () => {
+  const w = b.dataset.v.split(",").map(Number);
+  SORTEN.forEach((s, i) => { anteil[s] = w[i]; document.querySelector(`input[data-s=${s}]`).value = w[i]; });
+  planen();
+});
+let zieht = false, x0 = 0, dreht = false;
+canvas.addEventListener("pointerdown", (e) => { zieht = true; x0 = e.clientX; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener("pointermove", (e) => { if (!zieht) return; gruppe.rotation.y += (e.clientX - x0) * 0.01; x0 = e.clientX; });
+canvas.addEventListener("pointerup", () => { zieht = false; });
+document.getElementById("dreh").onclick = (e) => { dreht = !dreht; e.target.textContent = "Drehen: " + (dreht ? "an" : "aus"); };
+
+let n = 0, t0 = performance.now();
+function lauf(t) {
+  if (dreht) gruppe.rotation.y += 0.01;
+  renderer.render(scene, camera);
+  n++; if (t - t0 > 1000) { if (info.dataset.ok) info.textContent = "ziehen = drehen · " + n + " B/s"; n = 0; t0 = t; }
+  requestAnimationFrame(lauf);
+}
+requestAnimationFrame(lauf);
+Promise.all([eimerFertig, kornFertig]).then(() => { info.dataset.ok = 1; info.textContent = "ziehen = drehen"; mischen(); })
+  .catch((e) => { info.textContent = "Fehler: " + e.message; });
+</script>
+</body>
+</html>

@@ -15,6 +15,8 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+**Projekt Blender (Dome, 26.10.):** Alles, was in Blender gebaut wird (`blender/`, `werkzeuge/eimer3d-test/`), ist ein eigenes Projekt nur zwischen Dome und Claude im Coding-Chat – kein Thema für den Projekt-Chat (`PROJEKT-CHAT-THEMEN.md`).
+
 ### Benennung (Dome, 26.10.): **„Eimer Stufe 1“** = der schwarze Eimer (Basis-Ausrüstung), **„Eimer Stufe 2“** = grüner Einhängeeimer (halbrund, flache Rückseite, zwei schwarze Haken, Bügel; Entwurf `blender/eimer-stufe2.blend`). **Stufe = Ausrüstungsstufe, nicht Boxenstufe:** beide Eimer kommen in **Boxenstufe 1**; Stufe 2 ist eine **spätere Kaufverbesserung (bessere Utensilien, noch nicht möglich, später)**. Die **Krippen für Boxenstufe 2 und 3 sind davon getrennt** (werden von Dome nochmal neu festgelegt). Auf `mischer.html` heißt der Knopf „Eimer Stufe 1“; die Dateinamen (`eimer-*.glb`, `blender/eimer*.blend`) bleiben vorerst, damit nichts bricht.
 
 ### Eimer Stufe 2 (Claude Pro, 26.10.) – fertig in Blender + auf `mischer.html`, noch nicht im Spiel

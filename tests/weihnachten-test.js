@@ -37,6 +37,9 @@ const { chromium } = require('playwright'); const path = require('path');
     pensionRegeln().ansehen = 100; sponsorTag(); R.ende = !spiel.hof.sponsor && briefe(/Sponsoring beendet/).length === 1; R.gutBleibt = futterkammer().gutschein > 0;
     // Geld-Sponsor
     spiel.hof.sponsorJ = null; pensionRegeln().ansehen = 180; const g3 = spiel.geld; sponsorAnnehmen(SA.aktion, 'geld'); R.geld = spiel.geld - g3 === 1000;
+    // andere Stallarten
+    const own = neu('Eigene'); own.pflege.gesundheit = 100; own.pflege.wohl = 100; spiel.boxen[5].pferd = own; spiel.hof.art = 'zucht'; R.zArt = stallArt() === 'zucht' && stallBewertbar(); R.zPkt = Math.round(stallPunkte().punkte);
+    spiel.hof.art = 'renn'; R.rArt = stallArt() === 'ausbildung'; spiel.hof.art = 'gnadenhof'; R.gArt = stallArt() === 'gnadenhof' && stallBewertbar(); own.pate = { vn: 'A', nn: 'B', betrag: 10 }; R.gPkt = Math.round(stallPunkte().punkte); spiel.hof.art = 'ausbildung'; R.aBew = stallBewertbar(); own.einsteller = null; spiel.hof.art = 'pension';
     // Team weitergeben
     spiel.mitarbeiter = spiel.mitarbeiter || []; const x = bewerber('stallbursche')[0]; spiel.mitarbeiter.push({ id: 'maW', typ: 'stallbursche', name: x.name, w: x.w, wissen: { ...x.wissen }, eig: [...x.eig], gehalt: x.gehalt, ab: jzJetzt(), bis: null, zufr: 50 });
     return R; });
@@ -44,6 +47,7 @@ const { chromium } = require('playwright'); const path = require('path');
   ok('ein Sammelbrief der Einsteller', R.brief === 1); ok('Geld 115–200 € gebucht', R.max, R.summe); ok('Brief-Aktion mit Summe', R.aktion); ok('Texte: Karte ja, Schlechter nicht', R.text); ok('einmal je Jahr', R.einmal);
   ok('durchschnittlicher Hof bekommt eine Antwort des Vereins', R.erste); ok('sehr schwacher Hof: kein Preis', R.kein); ok('guter Hof: Preis, Brief, Liste', R.preis && R.liste, 'Punkte ' + R.punkte + ', Geld ' + R.preisGeld); ok('Zeile in der Hof-Übersicht', R.zeile); ok('Vorfall im Jahr: kein Preis', R.vorfall);
   ok('Sponsor-Angebot ab Ansehen 140, nicht darunter', R.angebot && R.keinAngebot); ok('Futtergutschein 1.500 € ohne Geld', R.gut); ok('Banner nur am Reitplatz', R.banner); ok('Futterkauf verrechnet den Gutschein', R.kauf);
+  ok('Zuchtstall wird nach Zucht-Kriterien bewertet', R.zArt, R.zPkt); ok('Rennstall zählt als Ausbildungsstall', R.rArt); ok('Gnadenhof: Kriterien + Paten erhöhen die Punkte', R.gArt && R.gPkt >= R.zPkt - 40, R.gPkt); ok('Ausbildungsstall mit eigenem Pferd bewertbar', R.aBew);
   ok('Ruf unter 110: Sponsoring endet, Gutschein bleibt', R.ende && R.gutBleibt); ok('Geld-Sponsor 1.000 €', R.geld); ok('keine Skriptfehler', errs.length === 0, errs.join(' | '));
   console.log(out.join('\n')); await b.close(); process.exit(out.some(l => l.startsWith('✗')) ? 1 : 0);
 })();

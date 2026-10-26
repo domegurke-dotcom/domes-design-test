@@ -18,7 +18,7 @@ const { chromium } = require('playwright'); const path = require('path');
     quarPflichtTag(); R.einBrief = briefe(/Quarantäne-Pflicht/) === 1;
     R.sofortKeinMangel = !vetMaengel().some(m => m.art === 'quarantaene');
     spiel.tag += 2; R.mangel = vetMaengel().filter(m => m.art === 'quarantaene').length; R.schwer = vetMaengel().filter(m => m.art === 'quarantaene').every(m => m.schwer);
-    A.quarantaene = spiel.tag; B2.quarantaene = spiel.tag; R.mangelBlut = vetMaengel().filter(m => m.art === 'quarantaene').map(m => m.text).join('|');
+    A.quarantaene = spiel.tag - 50; B2.quarantaene = spiel.tag; R.lang = inQuarantaene(A); R.mangelBlut = vetMaengel().filter(m => m.art === 'quarantaene').map(m => m.text).join('|');
     spiel.blutbilder = [{ pid: B2.id, name: B2.name, gross: false, fertig: spiel.tag + 2, gefunden: [] }]; quarPflichtTag(); R.keinMangel = vetMaengel().filter(m => m.art === 'quarantaene').length;
     // Hautpilz löst nichts aus
     A.befunde = []; delete A.quarPflicht; delete B2.quarPflicht; const h = befundNeu(A, 'hautpilz', 2, 'Test'); h.bemerkt = true; h.diagnose = spiel.tag; delete h.inkub; const n0 = briefe(/Quarantäne-Pflicht/); quarPflichtTag(); R.pilz = briefe(/Quarantäne-Pflicht/) === n0 && !A.quarPflicht;
@@ -29,6 +29,6 @@ const { chromium } = require('playwright'); const path = require('path');
   ok('krankes Pferd bekommt die Pflicht', R.pflichtKrank); ok('Nachbarbox ist Kontaktpferd', R.pflichtNachbar); ok('Pferd weiter weg nicht', !R.pflichtFern); ok('ein Brief, nicht doppelt', R.brief === 1 && R.einBrief);
   ok('am Tag des Briefs noch kein Mangel', R.sofortKeinMangel); ok('nach der Frist: 2 Mängel, schwer', R.mangel === 2 && R.schwer, R.mangel);
   ok('in Quarantäne: Kontaktpferd ohne Blutbild bleibt Mangel', /Blutbild/.test(R.mangelBlut), R.mangelBlut); ok('mit Quarantäne und Blutbild: keine Mängel', R.keinMangel === 0, R.keinMangel);
-  ok('Hautpilz löst nichts aus', R.pilz); ok('Herpes löst aus, Heilung beendet Pflicht', R.herpes && R.geheilt); ok('keine Skriptfehler', errs.length === 0, errs.join(' | '));
+  ok('krankes Pferd bleibt in Quarantäne, auch nach Wochen', R.lang); ok('Hautpilz löst nichts aus', R.pilz); ok('Herpes löst aus, Heilung beendet Pflicht', R.herpes && R.geheilt); ok('keine Skriptfehler', errs.length === 0, errs.join(' | '));
   console.log(out.join('\n')); await b.close(); process.exit(out.some(l => l.startsWith('✗')) ? 1 : 0);
 })();

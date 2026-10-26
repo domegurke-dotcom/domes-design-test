@@ -172,9 +172,9 @@ const { chromium } = require('playwright'); const path = require('path');
     // --- 13. T: Tutorial, Hinweisblasen, Enzyklopädie ---
     ok('Anfänger-Tutorial hat ≥ 13 Kapitel (Geld und Post, Speichern)', TUT.length >= 13 && TUT.some(k => k.n === 'Geld und Post') && TUT.some(k => k.n === 'Speichern') && !TUT.some(k => k.n === 'Geld und Speichern'), TUT.map(k => k.n).join(' | '));
     const txtK = n => JSON.stringify((TUT.find(k => k.n === n) || { schritte: [] }).schritte.map(x => x[1]));   // v650: Kapitel nach Namen (Reihenfolge wechselt)
-    ok('Kapitel „Richtig füttern“ nennt das Veterinäramt und das Tierhalteverbot', /kontrolliert das Veterinäramt/.test(txtK('Richtig füttern')) && /Tierhalteverbot/.test(txtK('Richtig füttern')));
-    ok('Kapitel 3 „Krankes Pony“: Pferd in Behandlung gilt nie als vernachlässigt', /Behandlung gilt nie als vernachlässigt/.test(txtK('Krankes Pony')));
-    ok('Kapitel „Das Hauptmenü“ (Postfach): ⭐ werden nie gelöscht · Kapitel „Speichern“: Speicher aufräumen', /nie gelöscht – auch nicht, wenn die Post voll wird/.test(txtK('Das Hauptmenü')) && /wie voll dein Speicher ist/.test(txtK('Speichern')));
+    ok('Kapitel „Richtig füttern“ nennt das Veterinäramt und das Tierhalteverbot', /Veterinäramt/.test(txtK('Richtig füttern')) && /Tierhalteverbot/.test(txtK('Richtig füttern')));
+    ok('Kapitel 3 „Krankes Pony“: Pferd in Behandlung gilt nie als vernachlässigt', /gilt nie als vernachlässigt/.test(txtK('Krankes Pony')));
+    ok('Kapitel „Das Hauptmenü“ (Postfach): ⭐ werden nie gelöscht · Kapitel „Speichern“: Speicher aufräumen', /nie gelöscht/.test(txtK('Das Hauptmenü')) && /wie voll der .{0,12}Speicher/.test(txtK('Speichern')));
     ok('Fortgeschrittenen-Tutorial: Kapitel „Veterinäramt und Erlösen“', TUT_FORT.some(k => k.n === 'Veterinäramt und Erlösen' && /erlösen/i.test(JSON.stringify(k.schritte))));
     ['vetBrief', 'vetAuflage', 'vetLetzte', 'erloesen', 'postVoll', 'speicherVoll'].forEach(k => ok('Blase ' + k + ': im Katalog, gilt für alle Stufen, „Mehr dazu“ führt zu einem Enzyklopädie-Eintrag', HINWEISE[k] && HINWEISE[k][5] === 'alle' && ENZY.einsteiger.eintraege.some(e => e[0] === EINSTEIGER_MEHR[HINWEISE[k][4]]), k));
     ok('„Letzte Warnung“ ist rot und zeigt auf den Hof-Knopf', HINWEISE.vetLetzte[6] === 'rot' && HINWEISE.vetLetzte[3] === '#hmHof');

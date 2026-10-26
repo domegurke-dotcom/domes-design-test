@@ -15,13 +15,23 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-### START DER NÄCHSTEN SITZUNG (Claude Pro, 26.10., Sonnet): Aufgaben 1–4, Dome gibt je Aufgabe das OK
-Reihenfolge (Dome: leicht nach aufwendig), jede einzeln: umsetzen, kleinen Test schreiben und laufen lassen, Version hochzählen (5 Stellen + `version.json`), **eigener Commit**, `CLAUDE.md`/`UEBERGABE.md` nachführen, hochladen, Test-Anleitung geben, auf Dome warten. Letzter Stand: v852.
-1. ✅ **Shampoo-Reste FERTIG (v853, Claude Pro, 26.10.)**, wartet auf Domes Abnahme: `p.schaum` bleibt bis zum Abspülen (längstens 3 Tage, `SHAMPOO_REST`), Wohlbefinden −1 je Nacht, Mauke/Sommerekzem ×1,5, kein Fellglanz, Pensionspferd Besitzer −1 Zufriedenheit je Nacht, Pfleger spülen abends immer aus. Test `tests/shampoo-reste-test.js` grün (Pension-Zufriedenheit nicht einzeln getestet), Tutorial-Spieler nicht gelaufen (Regel: nur mit großem Test; Tutorial-Schritte Shampoo/Abspülen prüfen weiter `p.schaum === spiel.tag`, unverändert gültig). Details in `CLAUDE.md` bei v853. **Für Team: Aufgabe 2 (Quarantäne-Pflicht) ist die nächste, sobald Dome das OK gibt.**
-2. **Quarantäne-Pflicht Veterinäramt** (Dome entschieden: nur **Influenza, Herpes, Druse**; Hautpilz und Würmer nie): Brief mit 1 Tag Frist (kranke und Kontaktpferde in Quarantäne, kleines Blutbild für Kontaktpferde), danach Mangel bei der Kontrolle (`vetMaengelBox`, Auflage und Nachkontrolle wie v601). Pensionspferde gehen schon seit v691 automatisch in Quarantäne. Vorschlag von Coding, Ablauf nicht Wort für Wort bestätigt.
-3. **Weihnachten A–C** nach `PLAN-WEIHNACHTEN.md` (A Einsteller-Geschenke mit Jahresschnitt der Zufriedenheit und Sammelbrief, B „Stall des Jahres“ Urkunde/Bronze 500/Silber 1.500/Gold 3.000 €, C Sponsor ab Ansehen 140 mit Banner am Reitplatz). Eine Etappe nach der anderen, Hinweisblase, Stufen-Eintrag und bzn-Eintrag nicht vergessen. Weihnachtsspende für Anfänger bleibt unverändert.
-4. **Tutorial-Texte kürzen (T-A bis T-C)**, `PLAN-TUTORIAL-UMBAU.md`: erst Pilot (Anfänger-Kapitel 1 und 2) zur Stilprüfung durch Dome, dann der Rest; höchstens 2 Sätze je Schritt, Schlüsselwörter fett, Hintergrund hinter „Mehr dazu“. Nur Text ändern, keine Selektoren (`[data-…]`) anfassen.
-**Tests auf Domes PC:** Node und Playwright laufen (`CLAUDE.md`, Abschnitt „Testen“, dort steht der Startbefehl für PowerShell mit `C:\Users\dome_\werkzeug-node`). Tutorial-Spieler nur zusammen mit dem großen Test; große Tests und Bilder-Variante nur nach Frage an Dome. Danach (später, Dome gibt frei): Mitarbeiter-Auftrag (Opus), dann Aqua-Center (Opus) mit Beispielbildern im Waschplatz-Stil (Teich, Halle, Laufband; das Hilfsskript lag nur im Zwischenordner).
+### AUFGABEN 1–4 FERTIG (Claude Pro, 26.10., Sonnet, v853–v856) – für Claude Team zum Übernehmen
+Jede Aufgabe ist ein eigener Commit auf `main`, `CLAUDE.md` bei der jeweiligen Version nachgeführt, Version zuletzt **856**. Domes Abnahme steht bei allen aus.
+| Aufgabe | Version | Test |
+|---|---|---|
+| 1 Shampoo-Reste (`p.schaum` bis zum Abspülen, längstens 3 Tage; Wohl −1/Nacht, Mauke/Sommerekzem ×1,5, kein Glanz, Pension −1 Zufriedenheit, Pfleger spülen aus) | v853 | `tests/shampoo-reste-test.js` ✓ (alter `shampoo-test.js` unverändert ✓) |
+| 2 Quarantäne-Pflicht Veterinäramt (nur Influenza, Herpes, Druse; Brief, Frist 1 Tag, danach Mangel `quarantaene` bei der Kontrolle; Kontaktpferde auch kleines Blutbild) | v854 | `tests/quarantaene-pflicht-test.js` ✓ (veterinaer-test ✓) |
+| 3 Weihnachten A–C (Geschenke der Einsteller, Stall des Jahres, Sponsor mit Banner/Futtergutschein) | v855 | `tests/weihnachten-test.js` ✓ (weihnachtsgeld-, hofplan-, pension-krank-, sammelbriefe-, morgen-test ✓) |
+| 4 Tutorial-Texte kürzen T-A bis T-C (alle 3 Tutorials, 228 Schritte, höchstens 2 Sätze, fett) | v856 | nur Seitenladen geprüft; Tutorial-Spieler/großer Test **nicht** gelaufen |
+**Nicht gelaufen:** große Tests, Tutorial-Spieler (Regel: nur mit Domes Ansage). Pilot (Kap. 1–2) und Rest der Tutorial-Texte kamen in einem Zug (Dome sagte «weiter bis 4 fertig»); Skripte zum Ändern lagen im Scratchpad (`tutapply.js`: Texte der Reihe nach je Kapitel ersetzen).
+**Offene Fragen an Dome** stehen unten bei «Fragen nach Aufgabe 1–4» (Claude Pro stellt sie im Chat; Antworten bitte hier eintragen/umsetzen).
+**Als Nächstes (wartet auf Dome):** Tutorial T-D (erst tippen, dann erklären), T-E (Hofplan-Kapitel), T-F (Test) · Mitarbeiter-Auftrag (Opus) · Aqua-Center (Opus). **Tests auf Domes PC:** Startbefehl in `CLAUDE.md`, Abschnitt «Testen».
+
+### Fragen nach Aufgabe 1–4 (Claude Pro, 26.10.)
+1. **Quarantäne-Pflicht:** Kranke Pferde müssen bis zur Heilung in Quarantäne sein, die Quarantäne selbst läuft aber nur 2–5 Tage (`quarTage`) – danach wäre es wieder ein Mangel, und du müsstest sie erneut in Quarantäne setzen. Soll die Pflicht bis zur Heilung gelten (jetzt so) oder nur einmal 2–5 Tage?
+2. **Stall des Jahres:** Punkte 35 % Ansehen, 30 % Zufriedenheit, 15 % Turniererfolge, 20 % Gebäudezustand; Gold ab 80, Silber 70, Bronze 62, Anerkennung 55. Nur Höfe mit Einstellern werden bewertet. Passt das? (Fohlenschau-Erfolge zählen nicht mit.)
+3. **Sponsor:** das Banner sieht man nur im Hofplan am Reitplatz, der Rest des Futtergutscheins steht nur in der Hof-Übersicht (nicht in der Futterkammer). Reicht das?
+4. **Tutorial-Stil:** Texte jetzt knapp mit fetten Schlüsselwörtern; der Hintergrund fiel weg (steht im Einsteiger-Wissen). Soll im Tutorial ein «Mehr dazu»-Knopf auf den Wissens-Eintrag führen, oder lieber ganz ohne?
 
 
 ### Abgleich mit dem Projekt-Chat (Claude Pro, 26.10.)

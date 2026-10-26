@@ -7,7 +7,7 @@ const fs = require("fs"), path = require("path");
 const ROOT = path.join(__dirname, "..");
 (async () => {
   const b = await chromium.launch(), p = await b.newPage();
-  await p.setContent(`<body>${fs.readFileSync(path.join(ROOT, "pferd kopf.svg"), "utf8").replace(/<\?xml[^>]*>/, "")}</body>`);
+  await p.setContent(`<body>${fs.readFileSync(path.join(ROOT, "zeichnungen", "pferd-kopf.svg"), "utf8").replace(/<\?xml[^>]*>/, "")}</body>`);
   const K = await p.evaluate(() => {
     const svg = document.querySelector("svg"), LBL = "inkscape:label";
     const lab = e => e.getAttribute(LBL) || "";

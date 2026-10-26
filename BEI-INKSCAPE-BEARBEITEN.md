@@ -1,6 +1,6 @@
 # Bei Inkscape bearbeiten
 
-Was in `pferd kopf.svg` noch fehlt oder nicht ganz der Realität entspricht. Gesammelt von Claude für Dome, Stand v429 (18.10.2026).
+Was in `zeichnungen/pferd-kopf.svg` noch fehlt oder nicht ganz der Realität entspricht. Gesammelt von Claude für Dome, Stand v429 (18.10.2026).
 Nach dem Zeichnen einfach hochladen – `werkzeuge/kopf-export.js` übernimmt neue oder geänderte Ebenen, Claude baut sie ins Spiel ein.
 **Wichtig:** Jede Änderung in **allen 19 Kopfformen** machen (jede Form hat ihre eigenen Gruppen `kopfabzeichen` und `maulfärbung`). Ebenennamen genau so schreiben wie hier angegeben.
 

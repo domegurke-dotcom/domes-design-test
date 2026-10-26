@@ -15,6 +15,14 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### Eimer im Spiel – Domes Antworten (26.10.), Plan steht, Start wartet auf ihr „Ja“
+- **Wo:** Der Eimer gibt es nur in **Boxenstufe 1** (Futter- und Wassereimer am Boden) und **auf der Weide** (`weideBildSVG`, `[data-keimer]`). In **Boxenstufe 2+3** kommt das Futter in die **Futterkrippe – die muss noch gebaut werden** (3D, im selben Stil).
+- **Perspektive:** wie jetzt – schräg von oben (man schaut in die Box; der Eimer steht am Boden).
+- **Größe:** **realistisch**, passend zur Pferdegröße im Bild (Pferde sind in echter Größe/Stockmaß gezeichnet). Zu prüfen: Maßstab Stockmaß ↔ SVG-Einheiten in `pferd.js`/Box; Futtereimer ca. 12 l (oben Ø ~30 cm, Höhe ~25 cm) – Eimer in Blender hat Ø ~39 Einheiten, wird skaliert.
+- **Zustände:** Eimer und Futter nur **voll oder leer** (kein „halb“). Voll = Mischung nach Futterplan (Mischer), leer = nur der Eimer. Wassereimer: voll (Wasser) oder leer.
+- **Zuordnung Futtersorte → Korn:** „bauen wir Stück für Stück“ (erst Hafer, Müsli, Mineralfutter, Rübenschnitzel; weitere Sorten später je ein Korn).
+- **Vorgeschlagene Etappen:** E1 Maße und Blender-Anpassung (Eimer realistisch skaliert, Wasser voll/leer, Krippe Stufe 2/3 bauen) → E2 Einbau Stufe 1 (3D-Feld im Box-SVG hinter dem Pferd, Klickflächen `.sKrippe`/`.sWasser` bleiben, voll/leer aus `p.futterHeute`/Wasserstand) → E3 Krippe Stufe 2+3 → E4 Eimer auf der Weide. Modell für E2: Opus (greift in die Boxansicht ein). Boxansicht ist älteres, gut laufendes Gebiet → Dome fragt vorher, alles wie in `CLAUDE.md` (Version hochzählen, Tests in drei Ansichten, `UEBERGABE.md`).
+
 ### Eimer-Mischer (Claude Pro, 26.10.) – Testseite `werkzeuge/eimer3d-test/mischer.html`, noch nicht im Spiel
 - **Fertig, so wie unten für den Spieleinsatz vorgeschlagen:** `eimer-teile.glb` (Eimer, 0,25 MB) + `koerner.glb` (28 Kornformen, 2 je Material, 0,15 MB) werden in `mischer.html` per `InstancedMesh` vielfach ausgestreut. Vier Regler (Hafer, Müsli, Mineralfutter, Rübenschnitzel, werden zu % normiert) + Voreinstellungen. Feste Zufallsplätze (`PLAETZE`, Seed 20261026), je Platz Sorte nach Anteil ÷ mittlerer Kornfläche; es wird gefüllt, bis `FLAECHE` 1300 erreicht ist; Haufenfarbe = Mittel der Sorten. Bei 61 B/s lokal. Das ist die Vorlage für „Eimer zeigt den Futterplan“.
 - **Grenzen/offen:** Füllhöhe ist fest „voll bis zum Rand“ (halb voll braucht, dass die dunkle Scheibe `Cylinder.001` „innen“ bei z = 22 entfernt/tiefer gelegt wird, sonst verdeckt sie den Inhalt). Zuordnung Futterplan → Sorten (Spiel-`FUTTER`-Liste) ist noch offen; je Sorte braucht es ein Korn (Blender-Skript: Inseln aus den Haufen, Hauptachsen-Ausrichtung, 2 je Material).

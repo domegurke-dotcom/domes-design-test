@@ -740,6 +740,9 @@
   .ma-wissen i { font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ma-wissen b { display: block; height: 6px; border-radius: 3px; background: #eadfcc; overflow: hidden; } .ma-wissen em { display: block; height: 100%; background: #8a6a3e; }
   .ma-wissen small { text-align: right; color: var(--leise); font-variant-numeric: tabular-nums; }
+  .ma-wissen span { cursor: pointer; } .ma-wissen .wst { display: none; grid-column: 1 / -1; text-decoration: none; font-size: .7rem; color: #6b4d33; } .ma-wissen span.offen .wst { display: block; }
+  .ma-wissen span.stark i { font-weight: 700; color: #7a5a00; } .ma-wissen span.stark em { background: linear-gradient(90deg, #d9a400, #f3c844); }
+  .ma-stark { padding: 2px 10px 4px; font-size: .8rem; color: #6b4d33; } .wb-stark { font-weight: 400; }
   .kachel.halb { opacity: .6; }
   .pn-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 8px 0; } .pn-kachel { display: flex; flex-direction: column; align-items: stretch; padding: 8px 6px 4px; font-size: .78rem; } .pn-kachel .ma-zeile { padding: 4px 0 0; } .pn-kachel .ma-zeile small { font-size: .74rem; }
   .pn-rahmen { width: 100%; max-width: 112px; margin: 0 auto; cursor: pointer; } .pn-kachel .bf-knoepfe { padding: 2px 0 4px !important; justify-content: center; }
@@ -1303,7 +1306,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "859";
+  const SPIEL_VERSION = "860";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1311,12 +1314,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=859"></script>
-<script src="pferd.js?v=859"></script>
-<script src="boxstufen.js?v=859"></script>
-<script src="kopfneu.js?v=859"></script>
-<script src="waschbild.js?v=859"></script>
-<script src="avatare.js?v=859"></script>
+<script src="lz-string.min.js?v=860"></script>
+<script src="pferd.js?v=860"></script>
+<script src="boxstufen.js?v=860"></script>
+<script src="kopfneu.js?v=860"></script>
+<script src="waschbild.js?v=860"></script>
+<script src="avatare.js?v=860"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -8602,6 +8605,7 @@
     if (f.abcTag === spiel.tag) return `Mit ${esc(f.name)} hast du heute schon geübt.`;
     // Tempo (Dome): je Jahreszeit gleich viel Fortschritt und Zuwachs – bei 4 Tagen zählt eine Übung mehr, bei 10 weniger (Bezug 7)
     const x = 7 / tpj();
+    if (!m) spielerLernt("zucht");   // S1: der Spieler lernt in allem, was er selbst macht
     werteErgaenzen(f); f.abcTag = spiel.tag; f.fohlenABC = Math.min(FOHLEN_ABC_MAX, Math.round(((f.fohlenABC || 0) + x) * 100) / 100);
     wertPlus(f, "vertrauen", 0.8 * x); wertPlus(f, "gehorsam", 0.5 * x); beruehrt(f, m ? m.id : "du", "kontakt"); speichern();
     const n = f.fohlenABC, was = n <= 2 ? "Halfter anlegen und streicheln" : n <= 5 ? "ein paar Schritte am Strick führen" : n < FOHLEN_ABC_MAX ? "Hufe geben und überall anfassen lassen" : "Halfter, Führen und Hufe geben klappen schon prima";
@@ -8629,6 +8633,7 @@
   const trainerFaktor = m => m ? 0.8 + 0.4 * ((m.wissen && m.wissen.ruecken) || 0) / 100 : 1;
   function trainieren(p, k, ort, m) {
     werteErgaenzen(p); skalaErgaenzen(p);
+    if (!m) spielerLernt(["bodenarbeit", "freiarbeit", "spazieren"].includes(k) ? "verhalten" : "ruecken");   // S1: selbst trainiert → Rücken, Boden-/Freiarbeit → Verhalten
     const U = UEBUNG[k], d = datum(), wetter = wetterHeute(d), kosten = uebKosten(p, k), wer = m ? m.name : null;
     const bk = BEWEG_UEB[k] || "reiten", stoer = bewegSchaden(p, bk); let wehrt = "";   // v527: jede Übung ist eine Bewegungsart – „reiten“ = alles außer Schritt/Longe/Boden-/Freiarbeit
     if (bk !== "reiten" && !behHeute(p).a[bk] && (p.befunde || []).some(b => (HILFT[b.art] || {})[bk] || (SCHADET[b.art] || {})[bk])) { const t = behandeln(p, bk, null, wer || undefined); if (/wehrt sich/.test(t)) wehrt = t; }
@@ -10804,8 +10809,19 @@
   const stallGroesse = () => STALL_GROESSE.find(([bis]) => spiel.boxen.length <= bis)[1];
   const GROESSE_RANG = { klein: 0, mittel: 1, "groß": 2 };
   // 7 Wissensbereiche (Erfahrung 0–100)
-  const WISSEN = [["futter", "Fütterung/Verdauung", "🌾", "Fütterung"], ["klima", "Stallklima/Atemwege", "💨", "Stallklima"], ["haut", "Haut/Fell/Wunden", "🧴", "Haut & Fell"], ["huf", "Hufe/Bewegung", "🦶", "Hufe"],
+  const WISSEN = [["futter", "Fütterung/Verdauung", "🌾", "Fütterung"], ["klima", "Stallhygiene & Atemwege", "🧹", "Stallhygiene"], ["haut", "Haut/Fell/Wunden", "🧴", "Haut & Fell"], ["huf", "Hufe/Bewegung", "🦶", "Hufe"],
     ["zucht", "Zucht/Geburt/Fohlen", "🍼", "Zucht"], ["verhalten", "Verhalten", "🧠", "Verhalten"], ["ruecken", "Rücken/Training", "🏇", "Rücken"]];
+  // S1 (PLAN-MITARBEITER, Dome 26.10.): 8. Bereich „Umgang mit Einstellern“ nur für Pferdewirt Haltung und Service und den Stallmeister im Pensionsstall (Schlüssel einsteller, fehlt bei allen anderen)
+  const WISSEN_EIN = ["einsteller", "Umgang mit Einstellern", "🗣️", "Einsteller"], EIN_START = { pferdewirtHS: 40, stallmeister: 30 };
+  const hatEinstellerBereich = (typ) => typ === "pferdewirtHS" || (typ === "stallmeister" && !!(spiel.hof && spiel.hof.art === "pension"));
+  function einstellerBereichSetzen(m, typ) { const t = typ || m.typ; if (m.wissen && m.wissen.einsteller == null && hatEinstellerBereich(t)) m.wissen.einsteller = EIN_START[t] || 30; return m; }
+  const WISSEN_STUFEN = [[80, "Experte"], [60, "sehr erfahren"], [40, "erfahren"], [20, "Grundkenntnisse"], [0, "Anfänger"]];
+  const wissenStufe = v => (WISSEN_STUFEN.find(x => (v || 0) >= x[0]) || WISSEN_STUFEN[4])[1];
+  const wissenListe = w => WISSEN.concat(w && w.einsteller != null ? [WISSEN_EIN] : []);
+  function staerken(w) {   // die 1–2 höchsten Bereiche; zweiter nur, wenn er sich vom dritten abhebt; bei Gleichstand aller Bereiche keine Stärke
+    const L = wissenListe(w).map(x => [x[0], (w || {})[x[0]] || 0]).sort((a, b) => b[1] - a[1]); if (!L.length || L[0][1] <= L[L.length - 1][1]) return [];
+    const S = [L[0][0]]; if (L[1] && L[1][1] > (L[2] ? L[2][1] : -1) && L[1][1] > L[L.length - 1][1]) S.push(L[1][0]); else if (L[1] && L[1][1] === L[0][1] && (!L[2] || L[2][1] < L[1][1])) S.push(L[1][0]); return S; }
+  const staerkeIcos = w => staerken(w).map(k => wissenListe(w).find(x => x[0] === k)[2]).join("");
   const wissenStart = (basis, extra) => Object.fromEntries(WISSEN.map(([k]) => [k, extra[k] != null ? extra[k] : basis]));
   const MA_TYP = {
     azubi: { name: "Azubi", w: "Azubi", mehr: "Azubis", ico: "🎒", gehalt: 100, boxen: 2, ab: "klein", start: wissenStart(5, {}), lernt: ["futter", "klima"],
@@ -10870,6 +10886,7 @@
     if (!m.typ) m.typ = "stallbursche";
     if (!m.wissen) m.wissen = { ...MA_TYP[m.typ].start };
     if (!m.eig) m.eig = [];
+    einstellerBereichSetzen(m);
     if (m.w == null) m.w = MA_NAMEN_W.includes(m.name);
     return m;
   }
@@ -11168,6 +11185,7 @@
     const jetzt = jzJetzt();
     if (!spiel.bewerber || spiel.bewerber.jz !== jetzt) spiel.bewerber = { jz: jetzt, liste: {} };
     if (!spiel.bewerber.liste[typ]) spiel.bewerber.liste[typ] = bewerberErzeugen(typ);
+    spiel.bewerber.liste[typ].forEach(x => { if (x.wissen && x.wissen.einsteller == null && hatEinstellerBereich(typ)) x.wissen.einsteller = Math.max(0, Math.min(100, Math.round((EIN_START[typ] || 30) * (0.8 + 0.4 * Math.random())))); });   // S1: 8. Bereich für Pferdewirt Haltung und Service / Stallmeister im Pensionsstall
     return spiel.bewerber.liste[typ];
   }
   // zu Beginn jeder Jahreszeit: Gehalt für die letzte Jahreszeit, Abgänge, Neuanfänge
@@ -11230,6 +11248,7 @@
     const zucht = spiel.boxen.some(b => b.fohlen || (b.pferd && b.pferd.traechtig));
     (spiel.mitarbeiter || []).map(maErgaenzen).filter(m => maDa(m)).forEach(m => {
       const T = MA_TYP[m.typ];
+      if (m.wissen && m.wissen.einsteller != null && einstellerListe().some(e => !e.art)) maLernt(m, "einsteller", 0.15);   // S1: Umgang mit Einstellern lernt man an Einsteller-Pferden
       if (m.typ === "azubi") { if (!ausbilderDa(m) || !gearbeitet.has(m)) return; azubiErgaenzen(m); FACH[m.fach].lernt.forEach((k, n) => maLernt(m, k, n < 2 ? 0.4 : 0.25)); return; }
       if (m.typ === "pferdewirt") { maLernt(m, "zucht", zucht ? 0.25 : 0.08); ["futter", "klima", "haut", "verhalten"].forEach(k => maLernt(m, k, 0.05)); return; }
       if (m.typ === "stallmeister") { T.lernt.forEach(k => maLernt(m, k, 0.06)); return; }
@@ -12891,7 +12910,7 @@
       const ort = p.klinik ? "🏥" : p.turnier ? "🏆" : p.weide ? "🌿" : paddockVon(p) ? "🟫" : "";
       return `<div class="wb-box${ziel("b:" + i)}" data-wbz="b:${i}"><div class="wb-nr">${nrT}</div><div class="wb-in"><div class="wb-rahmen" data-wbq="k:${i}" data-wbgo="${i}" title="${wbAbweichung(p) ? `⚠️ ${esc(wbAbweichung(p))} – ` : ""}${esc(p.name)} – antippen: zur Box · gedrückt halten und ziehen: in eine andere Box"><span class="paar-bild">${kopfBild(p, 10)}${ort ? `<i class="wb-ort">${ort}</i>` : ""}</span><span class="paar-brett"><b>${esc(p.name)}</b></span></div><div class="wb-stab n${(reihen.match(/wb-ma-zeile/g) || []).length}">${reihen}</div></div>${versZeilen(b, p)}${fremd(p) ? pnZeilen(b, p) : wuZeilen(i, p)}</div>`; };
     const maReihe = MAs.length ? MAs.map(m => { const a = wbArt(m), n = Object.values(Z[a]).filter(x => x === m).length, kap = maKapazitaet(m), da = maDa(m);
-      return `<div class="wb-ma${sel("m:" + m.id)}${da ? "" : " weg"}" data-wbq="m:${m.id}" title="${esc(m.name)} (${esc(maTitel(m))}) – ziehen oder antippen und dann eine Box antippen">${maAva(m, 44)}<b>${esc(m.name)}</b><small>${esc(maTitel(m))}</small><small class="wb-kap">${da ? `${WB_ART[a][0]} ${n} von ${kap} Boxen` : maKrank(m) ? "🤒 krank" : "🏖️ im Urlaub"}</small></div>`; }).join("")
+      return `<div class="wb-ma${sel("m:" + m.id)}${da ? "" : " weg"}" data-wbq="m:${m.id}" title="${esc(m.name)} (${esc(maTitel(m))}) – ziehen oder antippen und dann eine Box antippen">${maAva(m, 44)}<b>${esc(m.name)}${staerkeIcos(m.wissen) ? ` <span class="wb-stark" title="Stark in: ${staerken(m.wissen).map(k => wissenListe(m.wissen).find(x => x[0] === k)[3]).join(", ")}">${staerkeIcos(m.wissen)}</span>` : ""}</b><small>${esc(maTitel(m))}</small><small class="wb-kap">${da ? `${WB_ART[a][0]} ${n} von ${kap} Boxen` : maKrank(m) ? "🤒 krank" : "🏖️ im Urlaub"}</small></div>`; }).join("")
       : `<small class="wb-leer">Noch keine Mitarbeiter – unter Hofverwaltung → Mitarbeiter stellst du welche ein.</small>`;
     wbZiele().forEach(z => { if (wbModusVon(z) === "jeden2") wbVerteilen(z); });
     const L = spiel.boxen.map((b, i) => ({ b, i, p: b.pferd })).filter(x => x.p && !x.b.tot && !x.b.offen), plan = new Map(L.map(x => [x.p, wbPlanVon(x.p)])), heute = wbHalbHeute(), ZL = wbZiele();
@@ -17202,6 +17221,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Mitarbeiter (Hofverwaltung → Mitarbeiter):</b> Stallgröße klein bis 8 Boxen, mittel 9–19, groß ab 20. Gehalt pro Jahreszeit (am Ende gezahlt, im Adminmodus kostenlos), erfahrene Bewerber wollen bis +25 %: ${Object.values(MA_TYP).map(T => `${T.name} ${fmt(T.gehalt)}${T.boxen ? ` (${T.boxen} Boxen)` : ""}${T.ab !== "klein" ? ` – bewirbt sich ${abText(T.ab)}` : ""}`).join(" · ")}. Nachtzuschlag ${fmt(NACHTZUSCHLAG)} pro Nacht. Zu jeder Jahreszeit 2–3 neue Bewerber je Stelle (Erfahrung um die Startwerte ×0,6–1,5, 0–2 Eigenschaften ohne Gegensätze). Beginn immer zur nächsten Jahreszeit; gekündigt arbeiten sie bis Ende der Jahreszeit; reicht das Geld nicht, nehmen sie das Gehalt trotzdem und kündigen.</p>
       <p><b>Azubi und Ausbilder:</b> Einen Azubi gibt es nur mit freiem Ausbilderplatz: Pferdewirt (beide Fachrichtungen) und Stallmeister je 2 Azubis, Bereiter nur im Ausbildungsstall, der Spieler mit Ausbilderschein (einmalig ${fmt(AUSBILDERSCHEIN)}) 1 Azubi; Pferdepfleger nicht. Ausbilder krank/im Urlaub: Azubi arbeitet, lernt nichts, Fehler +10 %. Ausbilder weg: neuer wird automatisch gesucht, sonst Warnbrief und nach 1 Jahreszeit Abbruch. Ausbildung ${AUSBILDUNG_JZ / 4} Jahre, Gehalt ${AZUBI_GEHALT.map(fmt).join(" / ")} pro Jahreszeit. Lernt je Arbeitstag mit Ausbilder +0,4 in den ersten beiden und +0,25 in den anderen Bereichen der Fachrichtung (${Object.values(FACH).map(F => `${F.n}: ${F.lernt.map(k => (WISSEN.find(w => w[0] === k) || [])[3]).join(", ")}`).join(" · ")}). Abschlussprüfung: Chance (Schnitt der 4 Bereiche − 8) ÷ 22, zwischen 10 und 95 %; bestanden → Brief mit Übernehmen (Gehalt der Fachkraft, Erfahrung/Eigenschaften bleiben, fehlendes Grundwissen bis zur Hälfte der Startwerte) oder Gehen lassen (sonst geht er zum Ende der Jahreszeit); durchgefallen → ${VERLAENGERUNG_JZ} Jahreszeiten Verlängerung. Fachrichtung nach Stallart (Zuchtstall → Pferdezucht → Pferdewirt Zucht und Haltung; Ausbildungsstall → Klassische Reitausbildung → Bereiter; Pension/Gnadenhof → Haltung und Service; Rennstall → Pferderennen; Westernstall → Spezialreitweisen). Stallarten kommen mit dem Hof-Ausbau – bis dahin gilt der Hof als Zuchtstall (<code>spiel.stallarten</code>). Pferdewirt Haltung und Service ${fmt(MA_TYP.pferdewirtHS.gehalt)}: nur mit Pensionsstall/Gnadenhof.</p>
       <p><b>Arbeit jeden Morgen</b> (nach Boxnummer): Stallburschen und Azubis füttern und misten (Weide nur, wenn Heu nötig ist), mit Stallmeister schafft ein Stallbursche 5 statt 3 Boxen, fleißig +1 Box. Pfleger putzen (Bürste + Kamm) und schneiden Mähne/Schopf auf Wunschlänge. Bereiter trainieren Pferde ab 3 Jahren mit über 50 % Gesundheit (nicht auf der Weide, ohne Boxenruhe) – siehe „Training daheim“. Fehler (vergisst eine Box): Azubi 25 % × (1 − Erfahrung Fütterung/Stallklima ÷ 50), mindestens 3 %; schusselig +8 %; zuverlässig nie. Ruhige Hand: Vertrauen der versorgten Pferde +0,2 pro Tag; ungeduldig −0,1 (nicht unter 20).</p>
+      <p><b>Stärken und Stufen (S1, v860, Dome 26.10.):</b> Bereich „Stallklima“ heißt jetzt <b>Stallhygiene &amp; Atemwege</b> 🧹 (Schlüssel <code>klima</code> bleibt). Stufen-Wörter: ${WISSEN_STUFEN.slice().reverse().map(x => `ab ${x[0]} ${x[1]}`).join(", ")} (Antippen eines Balkens zeigt das Wort). <b>Stärken</b> (<code>staerken</code>): der höchste Bereich und der zweithöchste, wenn er sich vom dritten abhebt; sind alle Bereiche gleich, gibt es keine Stärke. Goldener Balken mit ⭐, zuerst in der Liste, Zeile „Stark in …“, Symbole am Whiteboard. 8. Bereich <b>Umgang mit Einstellern</b> 🗣️ (<code>einsteller</code>) nur für Pferdewirt Haltung und Service (Start ${EIN_START.pferdewirtHS}) und Stallmeister im Pensionsstall (Start ${EIN_START.stallmeister}), gelernt an Einsteller-Pferden (0,15 je Arbeitstag). Der Spieler lernt in allen Bereichen, in denen er selbst arbeitet (Training → Rücken, Boden-/Freiarbeit/Spaziergang → Verhalten, Fohlen-ABC → Zucht, dazu Füttern, Misten, Putzen, Hufe wie bisher).</p>
       <p><b>Erfahrung</b> (7 Bereiche, 0–100): ${WISSEN.map(w => w[1]).join(", ")}. Startwerte: ${Object.values(MA_TYP).map(T => `${T.name} ${WISSEN.map(([k]) => T.start[k]).join("/")}`).join(" · ")} (Reihenfolge wie oben). Pro Arbeitstag +0,25 in den Hauptbereichen (Bereiter Hufe +0,12) × (1 − Erfahrung ÷ 110), lernbegierig ×1,5; Azubis lernen nur, wenn ein Pferdewirt oder Stallmeister da ist. Pferdewirt: Zucht +0,25 (mit tragender Stute oder Fohlen, sonst +0,08), Pflegebereiche +0,05; Stallmeister überall +0,06. Spieler startet überall mit 10 und lernt einmal am Tag +0,3 beim Füttern (Fütterung), Misten (Stallklima) und Putzen (Haut).</p>
       <p><b>Zufriedenheit</b> (versteckt, 0–100, Start ${ZUFR_START}; Spieler sieht nur „wirkt zufrieden“ ab 65 / „ganz okay“ ab 40 / „unzufrieden“): normaler Arbeitstag +0,2 (bis 80), Überstunden −1, weniger Gehalt als heute üblich −0,2 pro Tag, Nachtdienst −5 (Nachteule +1), Urlaub genehmigt +5 (ohne Antwort +2), abgelehnt −15, im Urlaub +0,5 pro Tag. Unter ${KUENDIGEN_AB}: jeden Tag 10 % Chance auf Kündigung zum Ende der Jahreszeit (Brief). <b>Urlaub</b> (Dome: einmal im Jahr 1–3 Tage, da ein Spieljahr nur 4 Jahreszeiten hat): Chance ${Math.round(URLAUB_CHANCE * 100)} % pro Tag, bis es im Jahr einmal geklappt hat; Antrag per Brief 2 Tage vorher (Genehmigen/Ablehnen, ohne Antwort genehmigt). <b>Krank</b> 1–3 Tage: ${(KRANK_CHANCE * 100).toLocaleString("de-DE")} % pro Tag, ×2,5 bei Überstunden, ×2 unter 40 Zufriedenheit. Fehlt jemand, übernehmen Kollegen aus demselben Beruf je 1 Box mehr (Überstunden), der Rest bleibt liegen.</p>
       <p><b>Nachtdienst bei Geburten:</b> Pferdewirt (immer) oder Pferdepfleger (kleiner/mittlerer Stall), Nachteulen zuerst. Mit Aufsicht: Nachtzuschlag, Fohlen 100 % Gesundheit, Stute Wohlbefinden +5, Zucht-Erfahrung +1,5. Ohne Aufsicht: 15 % Chance, dass das Fohlen schwach ist (Gesundheit 70–85 %).</p>
@@ -17223,19 +17243,23 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     </div>`;
   }
   // Erfahrung als kleine Balken (7 Bereiche)
-  const wissenHTML = w => `<div class="ma-wissen">${WISSEN.map(([k, n, ico, kurz]) => { const v = Math.round((w || {})[k] || 0); return `<span title="${n}: ${v}"><i>${ico} ${kurz}</i><b><em style="width:${v}%"></em></b><small>${v}</small></span>`; }).join("")}</div>`;
+  const wissenHTML = w => { const St = staerken(w), L = wissenListe(w).slice().sort((a, b) => (St.includes(b[0]) ? 1 : 0) - (St.includes(a[0]) ? 1 : 0) || St.indexOf(a[0]) - St.indexOf(b[0]));   // S1: Stärken zuerst, golden mit ⭐; Antippen zeigt das Stufen-Wort
+    return `<div class="ma-wissen">${L.map(([k, n, ico, kurz]) => { const v = Math.round((w || {})[k] || 0), st = St.includes(k); return `<span class="${st ? "stark" : ""}" data-wst="1" title="${n}: ${v} – ${wissenStufe(v)}"><i>${st ? "⭐ " : ""}${ico} ${kurz}</i><b><em style="width:${v}%"></em></b><small>${v}</small><u class="wst">${wissenStufe(v)}</u></span>`; }).join("")}</div>`; };
+  const staerkeHTML = w => { const St = staerken(w); return `<div class="ma-stark">${St.length ? `⭐ <b>Stark in:</b> ${St.map(k => wissenListe(w).find(x => x[0] === k)[3]).join(", ")}` : `<small>noch keine Stärke, wächst mit der Arbeit</small>`}</div>`; };
+  document.addEventListener("click", e => { const x = e.target.closest && e.target.closest(".ma-wissen [data-wst]"); if (x) x.classList.toggle("offen"); });
   const eigHTML = m => (m.eig || []).length ? `<div class="ma-eig">${m.eig.map(e => `<span title="${MA_EIGEN[e].info}">${MA_EIGEN[e].n}<small> – ${MA_EIGEN[e].info}</small></span>`).join("")}</div>` : `<div class="ma-eig leer">keine besonderen Eigenschaften</div>`;
   function mitarbeiterDialog(typ) {
+    tippMerken("maStaerke");   // S1/S9 (PLAN-MITARBEITER)
     const T = MA_TYP[typ], jetzt = jzJetzt(), sb = angestellte(typ), ok = maVerfuegbar(typ);
     const status = m => m.ab > jetzt ? `fängt ${jzName(m.ab)} an` : m.bis != null ? `gekündigt – arbeitet bis Ende ${jzName(m.bis).replace(/^\S+ /, "")}` : "arbeitet";
     const extra = typ === "pfleger" ? `<p><small>Die Wunschlänge stellst du beim Schneiden ein (Pflege → Ausrüstung → Schere): Häkchen bei der Länge, die bleiben soll. Der Pfleger kürzt nur – wachsen muss es von selbst.</small></p>` : "";
     const bw = ok ? bewerber(typ) : [];
     dialog(`<h3>${T.ico} ${T.name}</h3><p>Ein ${T.name} ${T.aufgabe}${T.boxen ? ` <b>${T.boxen} Boxen</b> (nach Boxnummer)` : ""}. ${T.info} Gehalt ab <b>${fmt(T.gehalt)} pro Jahreszeit</b>, gezahlt am Ende jeder Jahreszeit.</p>${extra}
       <p><small>Neue Leute fangen immer zu Beginn der nächsten Jahreszeit an. Kündigst du, arbeiten sie noch bis zum Ende der Jahreszeit. Kannst du das Gehalt nicht bezahlen, kündigen sie selbst – das letzte Gehalt nehmen sie sich trotzdem.</small></p>
-      ${sb.length ? `<h4 class="ma-titel">Angestellt</h4><div class="ma-liste">${sb.map((m, i) => `<div class="ma-karte"><div class="ma-zeile"><span><b class="ma-name">${maAva(m, 34)}<span>${esc(m.name)}</span></b><small>${maTitel(m)} · ${fmt(m.gehalt)} pro Jahreszeit · ${status(m)}${maAktiv(m) ? ` · ${maUrlaub(m) ? "🏖️ im Urlaub" : maKrank(m) ? "🤒 krank" : zufrText(m)}${spiel.admin ? ` (Zufriedenheit ${Math.round(zufr(m))})` : ""}` : ""}${m.typ === "azubi" ? (() => { azubiErgaenzen(m); const A = ausbilderVon(m); return `<br>🎓 ${FACH[m.fach].n} · ${ausbildungsJahr(m)}. Ausbildungsjahr · Ausbilder: ${A ? (A.id === "du" ? "du" : esc(A.name)) + (ausbilderDa(m) ? "" : " (fehlt gerade)") : "⚠️ keiner"} · Prüfung ${jzName(m.pruefung).replace(/^\S+ /, "")}${m.bestanden ? " · ✅ bestanden" : ""}`; })() : m.ausgebildet ? `<br>🎓 bei dir ausgebildet (${m.ausgebildet})` : ""}</small></span>${m.bis == null ? `<button class="knopf zweit" data-kuend="${i}">${m.ab > jetzt ? "Absagen" : "Kündigen"}</button>` : ""}</div>${m.typ === "azubi" ? `<div class="ma-aufgaben"><small>Einsatz (2 Boxen):</small><button class="mini-knopf ${m.einsatz !== "putzen" ? "an" : ""}" data-azeins="${i}:stall">🧹 Stalldienst</button><button class="mini-knopf ${m.einsatz === "putzen" ? "an" : ""}" data-azeins="${i}:putzen">🧽 Putzen</button></div>` : ""}${(MA_AUFGABEN_TYP[m.typ] || []).length && !(m.typ === "azubi" && m.einsatz === "putzen") ? `<div class="ma-aufgaben"><small>Aufgaben:</small>${MA_AUFGABEN_TYP[m.typ].map(k => `<label><input type="checkbox" data-maauf="${i}:${k}" ${maDarf(m, k) ? "checked" : ""}> ${MA_AUFGABEN[k]}</label>`).join("")}</div>` : ""}${eigHTML(m)}${wissenHTML(m.wissen)}</div>`).join("")}</div>` : ""}
+      ${sb.length ? `<h4 class="ma-titel">Angestellt</h4><div class="ma-liste">${sb.map((m, i) => `<div class="ma-karte"><div class="ma-zeile"><span><b class="ma-name">${maAva(m, 34)}<span>${esc(m.name)}</span></b><small>${maTitel(m)} · ${fmt(m.gehalt)} pro Jahreszeit · ${status(m)}${maAktiv(m) ? ` · ${maUrlaub(m) ? "🏖️ im Urlaub" : maKrank(m) ? "🤒 krank" : zufrText(m)}${spiel.admin ? ` (Zufriedenheit ${Math.round(zufr(m))})` : ""}` : ""}${m.typ === "azubi" ? (() => { azubiErgaenzen(m); const A = ausbilderVon(m); return `<br>🎓 ${FACH[m.fach].n} · ${ausbildungsJahr(m)}. Ausbildungsjahr · Ausbilder: ${A ? (A.id === "du" ? "du" : esc(A.name)) + (ausbilderDa(m) ? "" : " (fehlt gerade)") : "⚠️ keiner"} · Prüfung ${jzName(m.pruefung).replace(/^\S+ /, "")}${m.bestanden ? " · ✅ bestanden" : ""}`; })() : m.ausgebildet ? `<br>🎓 bei dir ausgebildet (${m.ausgebildet})` : ""}</small></span>${m.bis == null ? `<button class="knopf zweit" data-kuend="${i}">${m.ab > jetzt ? "Absagen" : "Kündigen"}</button>` : ""}</div>${m.typ === "azubi" ? `<div class="ma-aufgaben"><small>Einsatz (2 Boxen):</small><button class="mini-knopf ${m.einsatz !== "putzen" ? "an" : ""}" data-azeins="${i}:stall">🧹 Stalldienst</button><button class="mini-knopf ${m.einsatz === "putzen" ? "an" : ""}" data-azeins="${i}:putzen">🧽 Putzen</button></div>` : ""}${(MA_AUFGABEN_TYP[m.typ] || []).length && !(m.typ === "azubi" && m.einsatz === "putzen") ? `<div class="ma-aufgaben"><small>Aufgaben:</small>${MA_AUFGABEN_TYP[m.typ].map(k => `<label><input type="checkbox" data-maauf="${i}:${k}" ${maDarf(m, k) ? "checked" : ""}> ${MA_AUFGABEN[k]}</label>`).join("")}</div>` : ""}${staerkeHTML(m.wissen)}${eigHTML(m)}${wissenHTML(m.wissen)}</div>`).join("")}</div>` : ""}
       <h4 class="ma-titel">Bewerbungen ${ok ? `für ${jzName(jetzt).replace(/^\S+ /, "")}` : ""}</h4>
       ${!ok ? (typ === "azubi" ? `<p>Einen Azubi kannst du erst einstellen, wenn ein Ausbilder einen Platz frei hat: Pferdewirt oder Stallmeister (je 2 Azubis) oder du selbst mit Ausbilderschein (1 Azubi, Kurs ${fmt(AUSBILDERSCHEIN)} unter Hofverwaltung → Mitarbeiter). Der Pferdepfleger darf nicht ausbilden.</p>` : T.staelle ? `<p>Für diese Stelle bewirbt sich nur jemand, wenn dieser Hof ein ${T.staelle.map(x => STALLART_NAME[x]).join(" oder ")} ist (Stallart kommt mit dem Hof-Ausbau H7).${typ === "bereiter" ? ` Bis dahin kommt ein <b>Bereiter nach Bedarf</b>: Trainingstage je Pferd stellst du unter Box → Pflege → Orte → Reitplatz ein, je Einheit ${fmt(BEREITER_EINHEIT)}.` : ""}</p>` : `<p>Für diese Stelle bewirbt sich erst jemand, wenn dein Stall größer ist (<b>${abText(T.ab)}</b>, du hast ${spiel.boxen.length}).</p>`)
-        : bw.length ? `<div class="ma-liste">${bw.map((x, i) => `<div class="ma-karte"><div class="ma-zeile"><span><b class="ma-name">${maAva(x, 34)}<span>${esc(x.name)}</span></b><small>${x.w ? T.w : T.name} · ${typ === "azubi" ? `${fmt(x.gehalt)} pro Jahreszeit im 1. Jahr` : `möchte <b>${fmt(x.gehalt)}</b> pro Jahreszeit`}</small></span>${typ === "azubi" && fachAngebot().length > 1 ? fachAngebot().map(f => `<button class="knopf" data-einst="${i}" data-fach="${f}">${FACH[f].n}</button>`).join("") : `<button class="knopf" data-einst="${i}">Einstellen</button>`}</div>${eigHTML(x)}${wissenHTML(x.wissen)}</div>`).join("")}</div>`
+        : bw.length ? `<div class="ma-liste">${bw.map((x, i) => `<div class="ma-karte"><div class="ma-zeile"><span><b class="ma-name">${maAva(x, 34)}<span>${esc(x.name)}</span></b><small>${x.w ? T.w : T.name} · ${typ === "azubi" ? `${fmt(x.gehalt)} pro Jahreszeit im 1. Jahr` : `möchte <b>${fmt(x.gehalt)}</b> pro Jahreszeit`}</small></span>${typ === "azubi" && fachAngebot().length > 1 ? fachAngebot().map(f => `<button class="knopf" data-einst="${i}" data-fach="${f}">${FACH[f].n}</button>`).join("") : `<button class="knopf" data-einst="${i}">Einstellen</button>`}</div>${staerkeHTML(x.wissen)}${eigHTML(x)}${wissenHTML(x.wissen)}</div>`).join("")}</div>`
         : `<p>Diese Jahreszeit hat sich niemand mehr beworben. Zur nächsten Jahreszeit kommen neue Bewerbungen.</p>`}`,
       [["Schließen", null, "zweit"]], "breit");
     document.querySelectorAll("[data-azeins]").forEach(b => b.onclick = () => { const [i, k] = b.dataset.azeins.split(":"), m = sb[+i]; if (k === "putzen") m.einsatz = "putzen"; else delete m.einsatz; speichern(); mitarbeiterDialog(typ); });   // v398
@@ -17364,7 +17388,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         ${(() => { const pb = maBoxen("pfleger"); return pb.length ? `<p class="text" style="margin:6px 0 0">🧽 Geputzt und geschnitten wird in <b>Box ${pb.map(i => bnr(i)).join(", ")}</b>.</p>` : ""; })()}
         ${(() => { const rb = maBoxen("bereiter"); return rb.length ? `<p class="text" style="margin:6px 0 0">🏇 Vom Bereiter trainiert werden die Pferde aus <b>Box ${rb.map(i => bnr(i)).join(", ")}</b>.</p>` : ""; })()}
         <h4 class="ma-titel">🎓 Ausbilderschein</h4><p class="text" style="margin:0 0 4px">${spiel.ausbilderschein ? `✅ Du hast den Ausbilderschein und darfst selbst einen Azubi ausbilden${angestellte("azubi").some(z => z.ausbilder === "du" && z.bis == null) ? " (Platz belegt)" : " (Platz frei)"}.` : `Mit dem Ausbilderschein darfst du selbst einen Azubi ausbilden – im kleinen Stall die einzige Möglichkeit. Einmaliger Kurs: <b>${fmt(AUSBILDERSCHEIN)}</b>.`}</p>${spiel.ausbilderschein ? "" : `<button class="knopf" id="ausbilderschein" style="width:auto;padding:8px 14px">🎓 Ausbilderschein machen · ${fmt(AUSBILDERSCHEIN)}</button>`}
-        <h4 class="ma-titel">Deine eigene Erfahrung</h4><p class="text" style="margin:0 0 4px"><small>Wächst, wenn du selbst fütterst, mistest und putzt.</small></p>${wissenHTML(spiel.wissen || wissenStart(10, {}))}`;
+        <h4 class="ma-titel">Deine eigene Erfahrung</h4><p class="text" style="margin:0 0 4px"><small>Wächst in allem, was du selbst machst: Füttern, Misten, Putzen, Hufe, Training, Bodenarbeit, Fohlen.</small></p>${staerkeHTML(spiel.wissen || wissenStart(10, {}))}${wissenHTML(spiel.wissen || wissenStart(10, {}))}`;
     } else if (hofReiter === "einst") {
       inhalt = `${speicherAnzeigeHTML()}<button class="sknopf" id="hfDatei" style="margin-top:0"><span class="i">💾</span><span>Spielstand downloaden<small>Zuletzt heruntergeladen: ${exportText()}</small></span></button>
         <button class="sknopf" id="hfAufraeumen"><span class="i">🧹</span><span>Speicher aufräumen<small>alte Briefe, Spam, Friedhof und Archiv – nur auf Knopfdruck</small></span></button>
@@ -17912,6 +17936,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     vetAuflage: ["Auflage vom Veterinäramt", "Behebe die Mängel bis zur Frist, sonst zählt es als neuer Vorfall.", "", null, "veterinaer", "alle"],
     quarPflicht: ["Quarantäne-Pflicht", "Bei Druse, Influenza oder Herpes verlangt das Veterinäramt Quarantäne für das kranke Pferd und seine Kontaktpferde – plus kleines Blutbild für die Kontaktpferde. Du hast einen Tag Zeit.", "Beides findest du in der Versorgung des kranken Pferdes unter „Kontaktpferde“. Wird es nicht umgesetzt, ist das bei der nächsten Kontrolle ein Mangel.", null, "veterinaer", "alle"],
     weihnachten: ["Weihnachten am Hof", "Zu Weihnachten bekommst du Post: Einsteller schicken Geschenke, der Verein kürt den „Stall des Jahres“, und bei gutem Ruf meldet sich ein Sponsor.", "Das alles hängt an zufriedenen Einstellern, einem guten Ansehen, gepflegten Gebäuden und einem sauberen Veterinäramt-Konto.", null, "weihnachten", "alle"],
+    maStaerke: ["Stärken der Mitarbeiter", "⭐ zeigt seine Stärken. Tipp auf einen Balken, dann siehst du die Stufe.", "", ".ma-stark", "geld", "alle"],
     vetLetzte: ["Letzte Warnung", "Letzte Warnung vom Veterinäramt: Beim nächsten Vorfall verlierst du alle Pferde.", "", "#hmHof", "veterinaer", "alle", "rot"],
     offenGruppe: ["Offenstall in Gruppen", "Im großen Aufzucht-Offenstall leben die Jungpferde in Gruppen (z. B. Absetzer, Jährlinge, Junghengste). Heu, Misten und Wasser machst du für die ganze Gruppe auf einmal.", "Wer älter wird, zieht zu Beginn der Jahreszeit von selbst in seine neue Gruppe – halte dort einen Platz frei.", "[data-og]", null, "fort"],
     weihnachtsgeld: ["Weihnachtsgeld", "Jeden Winter fragt dich die Hofverwaltung nach Weihnachtsgeld für deine Mitarbeiter. Wer lange dabei ist, selten krank war und für andere eingesprungen ist, bekommt mehr vorgeschlagen.", "Gezahltes Weihnachtsgeld macht zufrieden – gar keins ärgert, besonders langjährige Mitarbeiter.", null, "geld", "alle"],

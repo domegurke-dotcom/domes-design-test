@@ -1303,7 +1303,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "853";
+  const SPIEL_VERSION = "854";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1311,12 +1311,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=853"></script>
-<script src="pferd.js?v=853"></script>
-<script src="boxstufen.js?v=853"></script>
-<script src="kopfneu.js?v=853"></script>
-<script src="waschbild.js?v=853"></script>
-<script src="avatare.js?v=853"></script>
+<script src="lz-string.min.js?v=854"></script>
+<script src="pferd.js?v=854"></script>
+<script src="boxstufen.js?v=854"></script>
+<script src="kopfneu.js?v=854"></script>
+<script src="waschbild.js?v=854"></script>
+<script src="avatare.js?v=854"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -3365,7 +3365,7 @@
   // ---------- V2: Kontrollen, Auflagen und Meldungen (PLAN-TIERHALTEVERBOT-SPEICHER) ----------
   // Anlässe: nach jedem Vorfall (zufälliger Tag in den nächsten 2 Jahreszeiten), nach einer Meldung (innerhalb von 7 Tagen), Nachkontrolle am Tag nach Fristende. Läuft tagsüber nach der Morgenrunde der Mitarbeiter.
   const VET2 = { meldeTag: 0.05, meldeMax: 0.25, melde: { einsteller: 0.5, tierarzt: 0.5, hufschmied: 0.5 }, meldeTage: 7, fristMin: 7, ansehen: -3, hufWochen: 4 };   // Meldechance je Mangel/Tag, Höchstchance, Chance je Besuch (selbst gesetzt), Frist, Pensionsansehen, Hufschmied überfällig in Wochen
-  const VET_SCHWER = ["futter", "wasser", "krankheit", "gesundheit", "fohlen"];   // diese neuen Mängel sprechen bei der Nachkontrolle gegen den Betrieb
+  const VET_SCHWER = ["futter", "wasser", "krankheit", "gesundheit", "fohlen", "quarantaene"];   // diese neuen Mängel sprechen bei der Nachkontrolle gegen den Betrieb
   function bitSchieben(b, feld, wert) { if (!b.pferd) return; const h = b[feld], alt = h && h.pid === b.pferd.id ? h.bits : 0; b[feld] = { pid: b.pferd.id, bits: ((alt << 1) | wert) & 7 }; }   // letzte 3 Nächte als Bits (1 = hungrig/durstig)
   const bitsAn = (b, feld) => { const h = b[feld]; return h && b.pferd && h.pid === b.pferd.id ? h.bits : 0; };
   const bitsZahl = n => (n & 1) + ((n >> 1) & 1) + ((n >> 2) & 1);
@@ -3380,6 +3380,8 @@
     if (zuLangeDreckig(p)) add("dreck", "länger als eine Jahreszeit nicht geputzt");
     if (hufUeberfaellig(p)) add("huf", "Hufe seit Wochen überfällig");
     if (befundListe(p).some(x => !imInkub(x) && x.grad >= 3) && !vetInBehandlung(p)) add("krankheit", "sichtbar krank, aber ohne Behandlung");
+    const Q = p.quarPflicht;   // v854: Quarantäne-Pflicht (Influenza, Herpes, Druse) – nach der Frist ein Mangel
+    if (Q && spiel.tag > Q.bis && (Q.krank || spiel.tag <= Q.ende)) { if (!inQuarantaene(p)) add("quarantaene", Q.krank ? "ansteckend krank, aber nicht in Quarantäne" : "Kontaktpferd nicht in Quarantäne"); else if (!Q.krank && !Q.blut) add("quarantaene", "Kontaktpferd ohne Blutbild"); }
     if (b.fohlen && alterJZ(b.fohlen) >= 3) L.push({ art: "fohlen", key: b.fohlen.id + "|fohlen", pid: b.fohlen.id, text: `Box ${bnr(i)}: Fohlen ${b.fohlen.name} ohne eigene Box`, schwer: true });
     if (p.pflege.gesundheit < 30 && !vetAusnahme(p)) add("gesundheit", `Gesundheit unter 30 %`);
     return L;
@@ -7279,6 +7281,28 @@
         const q = x.q; q.quarantaene = spiel.tag; if (q.weide) vonWeideHolen(x.box);
         (spiel.blutbilder = spiel.blutbilder || []).push({ pid: q.id, name: q.name, gross: false, fertig: spiel.tag + 2, gefunden: [] });
         gemeldet.add(q.name + "|" + p.name); brief("Hofverwaltung", `Pflicht: ${q.name} in Quarantäne`, `bei <b>${esc(p.name)}</b> ist eine ansteckende Krankheit festgestellt worden. Das Pensionspferd <b>${esc(q.name)}</b> hatte Kontakt (${x.grund.join(", ")}). Wie in jedem Pensionsstall ist es deshalb <b>eine Jahreszeit in Quarantäne</b>, ein kleines Blutbild wurde abgenommen (der Besitzer zahlt, das Ergebnis kommt in 2 Tagen).`, { pferde: [q] }); }); });
+  }
+  // v854 (Dome 26.10.): Veterinäramt – bei Influenza, Herpes oder Druse im eigenen Stall ist Quarantäne Pflicht (kranke Pferde und Kontaktpferde, Frist 1 Tag, Kontaktpferde zusätzlich kleines Blutbild);
+  // danach zählt es als Mangel bei der Kontrolle (`vetMaengelBox`, Auflage und Nachkontrolle wie sonst). Hautpilz und Würmer nie. Pensionspferde gehen seit v691 selbst in Quarantäne (`kontaktPflicht`).
+  const QUAR_PFLICHT = { arten: ["influenza", "herpes", "druse"], frist: 1 };
+  const quarKrank = p => befundListe(p).filter(b => QUAR_PFLICHT.arten.includes(b.art) && (b.diagnose || b.bemerkt));
+  function quarPflichtTag() {
+    const neu = [], bis = spiel.tag + QUAR_PFLICHT.frist;
+    spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot || fremd(p)) return;
+      const Q = p.quarPflicht;
+      if (Q && !Q.krank && spiel.tag > Q.ende) delete p.quarPflicht;
+      else if (Q && !Q.krank && !Q.blut && (spiel.blutbilder || []).some(x => x.pid === p.id)) Q.blut = true;
+      const k = quarKrank(p);
+      if (!k.length) { if (Q && Q.krank) delete p.quarPflicht; return; }
+      if (Q && Q.krank) return;
+      p.quarPflicht = { krank: true, start: spiel.tag, bis, art: k[0].art };
+      const kont = kontaktListe(p, false).map(x => x.q).filter(q => !(q.quarPflicht && q.quarPflicht.krank));
+      kont.forEach(q => { q.quarPflicht = { krank: false, start: spiel.tag, bis, ende: bis + quarTage(), blut: false }; });
+      neu.push({ p, art: k[0].art, kont }); });
+    if (!neu.length) return;
+    const zeile = x => `<li><b>${esc(x.p.name)}</b> (${esc(KRANK[x.art].n)})${x.kont.length ? `: Kontaktpferde ${x.kont.map(q => `<b>${esc(q.name)}</b>`).join(", ")}` : ""}</li>`;
+    brief("Veterinäramt", "Veterinäramt: Quarantäne-Pflicht", `auf <b>${esc(hofName())}</b> ist eine <b>anzeigepflichtige Infektion</b> festgestellt worden:<ul>${neu.map(zeile).join("")}</ul>Bitte stellen Sie die kranken Pferde und alle Kontaktpferde bis zum <b>Tag ${datum(bis).t} im ${datumLang(datum(bis))}</b> in <b>Quarantäne</b> (eigene Box, kein Weidegang, eigenes Putzzeug) und lassen Sie bei den Kontaktpferden ein <b>kleines Blutbild</b> machen. Beides geht in der Versorgung des kranken Pferdes unter „Kontaktpferde“. Wird das nicht umgesetzt, ist das bei der nächsten Kontrolle ein Mangel.`, { pferde: neu.map(x => x.p) });
+    tippMerken("quarPflicht");
   }
   function kontaktKarteHTML(p) {
     if (!ansteckendeBefunde(p).some(b => b.diagnose || b.bemerkt)) return "";
@@ -11710,6 +11734,7 @@
     if (datum().t === 1) { jedenHof(() => { stallartJahreszeit(); patenJahreszeit(); pensionJahreszeit(); bereiterPensionAbrechnung(); fremdFohlenJahreszeit(); offenstallJahreszeit(); kreditJahreszeit(); landJahreszeit(); gebaeudeJahreszeit(); reheJahreszeit(); wbPlanJahreszeit(); weideJahreszeit(); verderbJahreszeit(); abfohlHinweis(); jahreszeitBeginn(); externJahreszeit(); mitarbeiterJahreszeit(); maGebaeudeJahreszeit(); bereiterAbrechnung(); maKnappPruefen(); dispoJahreszeit(); bestenAlle(); auktionsEnde(); fohlenAbsetzen(); stutenAusAbfohl(); }, true); spamAufraeumen(); hoefeVersteigern(); jahresbericht(); try { rarJahreszeit(); } catch (e) { console.error("Raritäten:", e); } try { stufeBrief(); } catch (e) { console.error("Stufe:", e); } }   // Geburten, Umzüge, Tierschutz, Verkäufe – nach der Nacht
     turnierKalender();
     jedenHof(hofMorgen, true);
+    jedenHof(() => { try { quarPflichtTag(); } catch (e) { console.error("Quarantäne-Pflicht:", e); } });
     jedenHof(vetMeldungTag); vetKontrolleTag();   // V2: Meldungen, Kontrolle nach der Morgenrunde
     blutbilderTag();     // Laborergebnisse
   }
@@ -17130,6 +17155,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Scheckung „fast weiß“ (v729):</b> <code>musterMerkmal</code> – Stufe 3 der Muster-Ausprägung (ex.muster ≥ ${MUSTER_STUFEN[2]}) bei To/Sb/Sw; Anteil = <code>musterQ(rasse)</code> (Chance auf ≥ 0,95, Rasse-Verschiebung <code>MUSTER_RASSE</code>) × Anteil der Rasse mit dem Scheckgen (nur wenn das Gen nicht schon selbst als seltenes Merkmal zählt). Raritäten-Markt: <code>RAR.fastweiss</code> ${prozent(RAR.fastweiss)} der Genrariäten bei Rassen mit Scheckgen, nur wenn das Pferd dadurch mindestens „selten“ ist (Paint/Tinker/Shire fallen heraus).</p>
       <p><b>Schimmel-Anlagen (v726):</b> zählen bei Pferden mit Schimmel-Gen als Merkmale (<code>SCHIMMEL_RAR</code>): weiß ab ${SCHIMMEL_RAR.spaet.ab} J. (${prozent(SCHIMMEL_RAR.spaet.q)}), Fell dunkel ab ${SCHIMMEL_RAR.dunkel.ab} (${prozent(SCHIMMEL_RAR.dunkel.q)}), Mähne früh ab ${SCHIMMEL_RAR.maehne.ab} (${prozent(SCHIMMEL_RAR.maehne.q)}), Anteile selbst gesetzt. Raritäten-Markt: <code>SCHIMMEL_KOMBI</code> (alle drei zusammen = „voll“: 18 J., Kurve 0,85, Mähne 0,6, G/g, E/E wenn die Rasse es nicht selten macht; außerdem Zweier-Kombis und „spät“ allein), nur Rassen mit Schimmel-Gen.</p>
       <p><b>Seltenheit (R1, v556):</b> Wahrscheinlichkeit, dass ein zufälliges reinrassiges Pferd der Rasse dieses Merkmal hat. Stufen: selten &lt; ${SELTEN_STUFEN[1].bis * 100} %, sehr selten &lt; ${SELTEN_STUFEN[2].bis * 100} %, einzigartig &lt; ${SELTEN_STUFEN[3].bis * 100} %, Ausnahmepferd &lt; ${SELTEN_STUFEN[4].bis * 100} % (Preis ×1,5), Jahrhundertpferd &lt; ${SELTEN_STUFEN[5].bis * 100} % (Preis ×2). <b>Gen-Rarität:</b> je Fellfarben-Gen (ohne DMRT3) die Häufigkeit des Genotyps in der Rasse (Hardy-Weinberg aus <code>RASSE_GENE</code>; A mit At; BR1 bei Hengsten nur ein Allel); ein Genotyp mit Häufigkeit unter <code>SELTEN_MERKMAL</code> = ${SELTEN_MERKMAL} zählt als seltenes Merkmal, die Häufigkeiten aller seltenen Merkmale werden multipliziert (mindestens 10<sup>−6</sup> je Merkmal); nur Pferde ab 99 % Rassenanteil (Mischlinge haben gar keine Seltenheit, auch nicht durch Leistung); sichtbar erst nach dem Fellfarben-Test (Adminmodus immer). <b>Leistungs-Rarität</b> ab ${SELTEN_ALTER} Jahren: Rang in der Rasse (Tabelle <code>SELTEN_SCHWELLE</code> aus 20.000 Pferden je Rasse: obere 5 % / 1 % / 0,1 %; weil es zwei Kategorien sind, gilt die Wahrscheinlichkeit 1 − (1 − Anteil)²: obere 1 % → ≈ 2 % = selten, obere 0,1 % → ≈ 0,2 % = sehr selten, obere 5 % → ≈ 10 % = keine Seltenheit) bei Gangwerk (Schnitt Schritt/Trab/Galopp) und Aufschlüsselung (Schnitt der 13 Werte, wie sie der Spieler sieht; Charakter zählt nicht) oder Ausbildung (Klasse S bzw. Open: ≥ 1 Platzierung = 3 % selten, ≥ 5 Siege = 1 % sehr selten, ≥ 15 Siege davon ≥ 3 auf großen Turnieren = 0,1 % einzigartig); die seltenste Kategorie zählt. Gen und Leistung werden multipliziert.</p>
+      <p><b>Quarantäne-Pflicht (v854, Dome 26.10.):</b> Ist im eigenen Stall <b>Influenza, Herpes oder Druse</b> festgestellt (bemerkt oder diagnostiziert), schickt das Veterinäramt am nächsten Morgen einen Brief: kranke Pferde und Kontaktpferde (Weide, Nachbarbox, gleiche Hände – wie bei den Kontaktpferden in der Versorgung) in Quarantäne, Kontaktpferde zusätzlich kleines Blutbild, Frist ${QUAR_PFLICHT.frist} Tag (<code>p.quarPflicht</code>). Danach ist es ein Mangel bei der Kontrolle (<code>vetMaengelBox</code>, Art „quarantaene“ zählt als schwer): kranke Pferde bis zur Heilung, Kontaktpferde bis ${quarTage()} Tage nach der Frist. Hautpilz und Würmer nie. Pensionspferde gehen seit v691 selbst in Quarantäne.</p>
       <p><b>Veterinäramt und Tierhalteverbot (V1–V4, v600–v603, Dome 20.10.2026):</b> Vorfälle <code>spiel.veterinaer.vorfaelle</code> (gelten für alle Höfe zusammen, alles in einer Nacht = ein Vorfall). Strafe ${fmt(VET.strafe[0])} beim 1. Vorfall, danach ${fmt(VET.strafe[1])}. Tierhalteverbot ab dem ${VET.verbotAb.fort}. Vorfall (Anfänger: ${VET.verbotAb.anf}.) – alle Pferde fort, Spiel verloren. Verjährung: ${VET.entlastetJz} Jahreszeiten (2 Spieljahre) ohne neuen Vorfall, dann fällt der älteste weg. Ausnahmen (keine Beschlagnahme): in Behandlung, behandelte chronische Krankheit, Gesundheit höchstens ${VET.altNah} Punkte unter <code>gesundheitMax</code> (und ≤ 30 %), Klinik, in den ersten ${VET.neuTage} Tagen nach dem Kauf. Beschlagnahmte Pferde in der Klinik: Ziel = Minimum aus 75 %, <code>gesundheitMax</code> und der Krankheitsdecke (100 − 12 je Grad, chronisch 6), Behandlung ${fmt(KLINIK_BEFUND)} je Krankheit und Tag, Todeschance ${prozent(KLINIK_TOD)} je Tag bei schwer vorerkrankten oder sehr alten Pferden unter 50 % (Friedhof, kein Vorfall). <b>Kontrollen:</b> nach einem Vorfall zufällig in den nächsten 2 Jahreszeiten, nach einer Meldung innerhalb von ${VET2.meldeTage} Tagen, Nachkontrolle am Tag nach der Frist (Frist: Jahreszeitende, mindestens ${VET2.fristMin} Tage). Meldungen: anonym ${prozent(VET2.meldeTag)} je Mangel und Tag, höchstens ${prozent(VET2.meldeMax)}; Einsteller/Tierarzt/Hufschmied ${prozent(VET2.melde.einsteller)} je Besuch mit sichtbarem Mangel; höchstens eine offene Meldung. Mängel: Mist ab Stufe 3, Futter mind. 2 von 3 Nächten hungrig, Wasser 2 Nächte leer (Boxstufe 1), Dreck &gt; 1 Jahreszeit, Hufe mehr als ${VET2.hufWochen} Wochen (= ${VET2.hufWochen}/13 Jahreszeit) überfällig, Krankheit ab „mittel“ ohne Behandlung, Fohlen ohne eigene Box ab 3 Jahreszeiten, Gesundheit unter 30 %. Mit Mängeln sinkt das Pensionsansehen um ${-VET2.ansehen}. <b>Erlösen:</b> ${fmt(ERLOESEN.preis)}, möglich bei „keine Heilung mehr möglich“ (<code>KEINE_HEILUNG</code>: ${Object.entries(KEINE_HEILUNG).map(([k, g]) => `${KRANK[k].n} ab Grad ${g}`).join(", ")}; sonstige chronische ab Grad 5) oder altersschwach unter ${ERLOESEN.unter} %; Pensionspferde nur mit Zustimmung (Antwort am nächsten Morgen, Besitzer zahlt).</p>
       <p><b>Aufzucht-Offenstall mit Ausbau (v827, PLAN-OFFENSTALL.md):</b> Stufe 1/2/3 = ${OFFEN_STUFE.plaetze.join(" / ")} Plätze für ${BAUTEN.aufzucht.preis.map(fmt).join(" / ")}, Grundriss 8 × 4 / 10 × 8 / 16 × 10 Kacheln, Bauland ${PLATZ_STUFE.aufzucht.map(x => x * 1e4).join(" / ")} m² (+${Math.round((WEGE_ZUSCHLAG - 1) * 100)} % Wege). Der Umbau fügt die neuen Plätze hinzu (<code>offenPlaetzeAuffuellen</code>). Das Spiel teilt die Plätze automatisch in ${OFFEN_STUFE.gruppen.join(" / ")} Gruppen (<code>b.og</code>, <code>offenGruppenSetzen</code>): Stufe 1 eine Herde · Stufe 2 „Stuten und Wallache“ (mit Hengstfohlen unter 1½ J.) und „Junghengste“ ab 1½ J. (mit Wallach als Onkel) · Stufe 3 „Absetzer“ unter 1 J., „Jährlinge“ 1–2 J. (Hengste unter 1½ J.), „Junghengste“ (+ Onkel), „Ältere Stuten und Wallache“ ab 2 J. mit den Tanten (<code>offenGruppeVon</code>). Freie Plätze nur in der eigenen Gruppe (<code>offenPlatz(p)</code>), Herde/Sozialverhalten/ungeplante Bedeckung je Gruppe (<code>offenstallNacht</code>), zu Beginn jeder Jahreszeit ziehen älter gewordene Pferde in ihre neue Gruppe (Sammelbrief, ist dort voll: Hinweis; <code>offenNeuEinteilen</code>). Versorgung je Gruppe: Knöpfe Heu/Kraftfutter/Misten/Wasser in Versorgung · Heute (<code>offenGruppeHTML</code>); Stallbursche/Azubi: je angefangene ${OFFEN_GRUPPE_AUFW} Pferde einer Gruppe zählen wie 1 Box (12 Pferde = 3 Boxen = ein ganzer Stallbursche), die ganze Gruppe macht derselbe Mitarbeiter (<code>maZuteilung</code>).</p>
       <p><b>Weihnachtsgeld (v826, PLAN-WEIHNACHTEN.md D):</b> am vorletzten Wintertag morgens (<code>weihnachtsgeldTag</code>) bekommt jeder Hof mit Angestellten ein Fenster (<code>spiel.wgOffen</code>, <code>weihnachtsgeldFenster</code>). Vorschlag je Mitarbeiter = Gehalt je Jahreszeit × ${Math.round(WG.grund * 100)} % × (1 + ${Math.round(WG.jahr * 100)} % je volles Jahr im Betrieb, höchstens +${Math.round(WG.jahrMax * 100)} % − ${Math.round(WG.krank * 100)} % je Krankheitstag im Jahr, höchstens −${Math.round(WG.krankMax * 100)} % + ${Math.round(WG.extra * 100)} % je übernommene Arbeit, höchstens +${Math.round(WG.extraMax * 100)} %), auf 10 € gerundet; unter 1 Jahreszeit im Betrieb nichts. Gezählt wird je Spieljahr in <code>m.wgJ</code> (Krankheitstage, eingesprungen = Überstunden für einen fehlenden Kollegen, Nachtdienst bei Geburten, Turnierbegleitung als Reiter) plus angeleitete Azubis. Zufriedenheit: Vorschlag +${WG.zufr}, doppelt +${WG.zufrMax}, weniger anteilig (mindestens +${WG.zufrMin}); keins ${WG.keins}, je volles Jahr ${WG.keinsJahr} mehr (höchstens ${WG.keinsMax}). Nicht beantwortet bis zum Jahreswechsel: die Frage verfällt ohne Folgen. Gebucht als „Weihnachtsgeld …“.</p>
@@ -17778,6 +17804,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     speicherVoll: ["Dein Speicher wird voll", "Dein Speicher wird voll. Unter Hofverwaltung – Einstellungen kannst du aufräumen oder als Datei sichern.", "", null, "speicherwissen", "alle"],
     vetBrief: ["Veterinäramt", "Das Veterinäramt prüft, ob deine Pferde gut versorgt sind. Deinen Stand siehst du unter Hofverwaltung – Hof.", "", null, "veterinaer", "alle"],
     vetAuflage: ["Auflage vom Veterinäramt", "Behebe die Mängel bis zur Frist, sonst zählt es als neuer Vorfall.", "", null, "veterinaer", "alle"],
+    quarPflicht: ["Quarantäne-Pflicht", "Bei Druse, Influenza oder Herpes verlangt das Veterinäramt Quarantäne für das kranke Pferd und seine Kontaktpferde – plus kleines Blutbild für die Kontaktpferde. Du hast einen Tag Zeit.", "Beides findest du in der Versorgung des kranken Pferdes unter „Kontaktpferde“. Wird es nicht umgesetzt, ist das bei der nächsten Kontrolle ein Mangel.", null, "veterinaer", "alle"],
     vetLetzte: ["Letzte Warnung", "Letzte Warnung vom Veterinäramt: Beim nächsten Vorfall verlierst du alle Pferde.", "", "#hmHof", "veterinaer", "alle", "rot"],
     offenGruppe: ["Offenstall in Gruppen", "Im großen Aufzucht-Offenstall leben die Jungpferde in Gruppen (z. B. Absetzer, Jährlinge, Junghengste). Heu, Misten und Wasser machst du für die ganze Gruppe auf einmal.", "Wer älter wird, zieht zu Beginn der Jahreszeit von selbst in seine neue Gruppe – halte dort einen Platz frei.", "[data-og]", null, "fort"],
     weihnachtsgeld: ["Weihnachtsgeld", "Jeden Winter fragt dich die Hofverwaltung nach Weihnachtsgeld für deine Mitarbeiter. Wer lange dabei ist, selten krank war und für andere eingesprungen ist, bekommt mehr vorgeschlagen.", "Gezahltes Weihnachtsgeld macht zufrieden – gar keins ärgert, besonders langjährige Mitarbeiter.", null, "geld", "alle"],

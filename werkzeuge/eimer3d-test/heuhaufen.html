@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Heuhaufen 3D – Test</title>
+<style>
+  :root { --panel: 190px; }
+  html, body { margin: 0; height: 100%; background: #f2efe9; overflow: hidden; font-family: system-ui, sans-serif; touch-action: none; color: #2b1d14; }
+  canvas { display: block; width: 100%; height: calc(100% - var(--panel)); }
+  #panel { position: fixed; left: 0; right: 0; bottom: 0; height: var(--panel); box-sizing: border-box; padding: 8px max(12px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-bottom)); background: #fffc; border-top: 2px solid #2b1d14; overflow: hidden; }
+  #knoepfe { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+  button { font: inherit; font-size: 13px; padding: 5px 9px; border-radius: 10px; border: 2px solid #2b1d14; background: #fff; color: #2b1d14; }
+  button.an { background: #2b1d14; color: #fff; }
+  .zeile { display: grid; grid-template-columns: 96px 1fr 44px; align-items: center; gap: 8px; font-size: 14px; height: 28px; }
+  .zeile input { width: 100%; }
+  .zeile b { font-variant-numeric: tabular-nums; font-size: 13px; text-align: right; }
+  #info { position: fixed; left: max(10px, env(safe-area-inset-left)); top: max(10px, env(safe-area-inset-top)); font-size: 13px; background: #fffc; padding: 6px 10px; border-radius: 10px; }
+  @media (orientation: landscape) and (max-height: 520px) { :root { --panel: 130px; } .zeile { height: 21px; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="info">lädt …</div>
+<div id="panel">
+  <div id="knoepfe">
+    <button data-v="100,0,0">Nur Heu</button>
+    <button data-v="0,100,0">Nur Futterstroh</button>
+    <button data-v="0,0,100">Nur staubiges Heu</button>
+    <button data-v="50,50,0">Heu + Stroh</button>
+    <button id="dreh">Drehen: aus</button>
+  </div>
+  <div class="zeile"><span>Heu</span><input type="range" min="0" max="100" value="100" data-a="heu"><b></b></div>
+  <div class="zeile"><span>Futterstroh</span><input type="range" min="0" max="100" value="0" data-a="stroh"><b></b></div>
+  <div class="zeile"><span>Heu staubig</span><input type="range" min="0" max="100" value="0" data-a="staub"><b></b></div>
+</div>
+<script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "./lib/loaders/GLTFLoader.js";
+
+const canvas = document.getElementById("c"), info = document.getElementById("info");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(28, 1, 1, 800);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8a96, 1.9));
+const sonne = new THREE.DirectionalLight(0xffffff, 1.3); sonne.position.set(-30, 60, 50); scene.add(sonne);
+
+const HALM = {                                     // Halm-Sorten: Farbe, Anteil innerhalb der Art
+  heu:   [["gruen", "#7c9a3c", .50], ["oliv", "#8a8a3a", .25], ["braun", "#8a6a34", .25]],
+  stroh: [["hell", "#e8d08c", .60], ["beige", "#d2b46a", .40]],
+  staub: [["grau", "#aeb095", .40], ["gruen", "#8f9a70", .30], ["hell", "#c9c4a0", .30]],
+};
+const ARTEN = ["heu", "stroh", "staub"];
+const BASIS = { heu: new THREE.Color("#55601f"), stroh: new THREE.Color("#b08f44"), staub: new THREE.Color("#7c7e62") };   // Farbe des Haufens darunter
+const koerperMat = new THREE.MeshLambertMaterial({ side: THREE.DoubleSide });
+function neuesMaterial(alt) {
+  const name = alt.name.replace(/\.\d{3}$/, "");
+  if (name === "tinte") { const m = new THREE.MeshBasicMaterial({ side: THREE.FrontSide }); m.color.set("#080809"); return m; }
+  if (name === "heu_basis") return koerperMat;
+  const m = new THREE.MeshLambertMaterial({ side: THREE.DoubleSide }); m.color.copy(alt.color); return m;
+}
+const lader = new GLTFLoader();
+const laden = (datei) => new Promise((ok, f) => lader.load("./" + datei, (g) => ok(g.scene), undefined, f));
+
+const gruppe = new THREE.Group(); scene.add(gruppe);
+const typen = { heu: [], stroh: [], staub: [] }, CAP = 4700;
+const anteil = { heu: 100, stroh: 0, staub: 0 };
+
+// ---- Form des Haufens (muss zu Blender passen: Radius 40, Höhe 40) ----
+const AX = 50, AY = 31;                                  // Grundfläche: Ellipse (lang nach links auslaufend)
+const GIPFEL = [[7, 0, 25, 13, 15], [-16, 3, 17, 17, 14], [-36, 0, 6, 11, 10]];   // (x, y, Höhe, Breite x, Breite y): Spitze rechts, lange flache Seite links
+function einzel(x, y) {
+  const re = Math.hypot(x / AX, y / AY); if (re >= 1) return 0;
+  const f = Math.pow(1 - re * re, 0.55);
+  let h = 0; for (const [cx, cy, a, sx, sy] of GIPFEL) h += a * Math.exp(-((x - cx) ** 2 / (2 * sx * sx) + (y - cy) ** 2 / (2 * sy * sy)));
+  return h * f * (1 + 0.07 * Math.sin(0.5 * x + 2 * Math.cos(0.4 * y)));
+}
+// zwei Haufen: ein großer und ein kleiner (0,56 ×) vorne rechts, weiches Maximum – beide bleiben erkennbar
+const KX = 22, KY = -20, KS = 0.62, KW = 0.6;
+function hoehe(x, y) {
+  const h1 = einzel(x, y), h2 = KS * einzel((x - KX) / KS, (y - KY) / KS);
+  if (h1 <= 0 && h2 <= 0) return 0;
+  return Math.log(Math.exp(KW * h1) + Math.exp(KW * h2) - 1) / KW;
+}
+const nahe = (x, y, f) => Math.hypot(x / AX, y / AY) < f || Math.hypot((x - KX) / (AX * KS), (y - KY) / (AY * KS)) < f;
+function zufallPunkt(f) {                                          // zufälliger Punkt auf dem Gelände beider Haufen
+  for (;;) { const x = -52 + 108 * R(), y = -44 + 76 * R(); if (nahe(x, y, f)) return [x, y]; }
+}
+const conv = (v) => new THREE.Vector3(v.x, v.z, -v.y);       // Blender (z oben) → three (y oben)
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const R = mulberry(26102026);
+// Platz: Halm liegt auf der Oberfläche, steht heraus, oder liegt verstreut auf dem Boden um den Haufen
+const PLAETZE = [];
+let hangA = 0, hangStark = 0;
+function platz(art) {
+  let x, y, z, n;
+  if (art === "boden") {                                          // lose Halme rund um den Haufen
+    do { [x, y] = zufallPunkt(1.5); } while (hoehe(x, y) > 0.5);
+    z = hoehe(x, y) + 0.25; n = new THREE.Vector3(0, 0, 1);
+  } else {
+    if (art === "ragt" && R() < 0.55) {                           // Schopf: viele Halme stehen an den beiden Spitzen
+      if (R() < 0.62) { x = 7 + (R() + R() - 1) * 13; y = (R() + R() - 1) * 9; } else { x = KX + 7 * KS + (R() + R() - 1) * 7; y = KY + (R() + R() - 1) * 5; }
+    } else { do { [x, y] = zufallPunkt(0.97); } while (hoehe(x, y) < 0.8); }
+    z = hoehe(x, y) + (art === "ragt" ? 0.4 : 0.5);
+    const e = 0.6, gx = (hoehe(x + e, y) - hoehe(x - e, y)) / (2 * e), gy = (hoehe(x, y + e) - hoehe(x, y - e)) / (2 * e);
+    n = new THREE.Vector3(-gx, -gy, 1).normalize();
+    if (art === "liegt") { hangA = Math.atan2(-gy, -gx); hangStark = Math.hypot(gx, gy); }   // Halme fließen vom Gipfel nach unten
+  }
+  let a = R() * 2 * Math.PI;
+  if (art === "liegt" && hangStark > 0.05) a = hangA + (R() - 0.5) * 1.0;
+  const t = n.clone().cross(new THREE.Vector3(Math.cos(a), Math.sin(a), 0.3)).normalize(), b = n.clone().cross(t);
+  const heb = art === "ragt" ? 0.6 + 0.8 * R() : (R() - 0.5) * 0.5;
+  const q = new THREE.Quaternion().setFromAxisAngle(b, heb).multiply(new THREE.Quaternion().setFromAxisAngle(t, (R() - 0.5) * 0.6));
+  const T = t.clone().applyQuaternion(q), B = b.clone().applyQuaternion(q), N = n.clone().applyQuaternion(q);
+  const lang = 0.55 + 0.6 * R(), dick = art === "boden" ? 0.45 : 0.42 + 0.2 * R();   // Halme unterschiedlich lang, dünn
+  const m = new THREE.Matrix4().makeBasis(conv(T), conv(N), conv(B).negate()).setPosition(conv(new THREE.Vector3(x, y, z)));
+  m.multiply(new THREE.Matrix4().makeScale(lang, dick, dick));
+  return { m, u: R(), v: R() };
+}
+for (let i = 0; i < 4300; i++) PLAETZE.push(platz("liegt"));
+for (let i = 0; i < 800; i++) PLAETZE.push(platz("ragt"));
+for (let i = 0; i < 400; i++) PLAETZE.push(platz("boden"));
+
+function mischen() {
+  const summe = ARTEN.reduce((x, a) => x + anteil[a], 0) || 1;
+  const c = new THREE.Color(0, 0, 0);
+  ARTEN.forEach((a, i) => {
+    const w = anteil[a] / summe; c.r += BASIS[a].r * w; c.g += BASIS[a].g * w; c.b += BASIS[a].b * w;
+    document.querySelectorAll(".zeile b")[i].textContent = Math.round(100 * w) + " %";
+  });
+  koerperMat.color.copy(c);
+  const zaehler = new Map();
+  for (const art of ARTEN) for (const t of typen[art]) zaehler.set(t.inst, 0);
+  for (const pl of PLAETZE) {
+    let w0 = pl.u * summe, art = ARTEN[ARTEN.length - 1];
+    for (const a of ARTEN) { if (w0 <= anteil[a]) { art = a; break; } w0 -= anteil[a]; }
+    const liste = typen[art]; if (!liste.length) continue;
+    let w = pl.v * liste.reduce((x, y) => x + y.anteil, 0), typ = liste[0];
+    for (const t of liste) { if (w <= t.anteil) { typ = t; break; } w -= t.anteil; typ = t; }
+    const i = zaehler.get(typ.inst); if (i < CAP) { typ.inst.setMatrixAt(i, pl.m); zaehler.set(typ.inst, i + 1); }
+  }
+  for (const [inst, n] of zaehler) { inst.count = n; inst.instanceMatrix.needsUpdate = true; }
+}
+
+function groesse() {
+  const b = canvas.getBoundingClientRect();
+  renderer.setSize(b.width, b.height, false); camera.aspect = b.width / b.height;
+  const z = camera.aspect < 0.8 ? 190 / camera.aspect * 0.62 : 190;
+  camera.position.set(2, 12 + 80, z * 1.15); camera.lookAt(2, 8, -6); camera.updateProjectionMatrix();
+}
+addEventListener("resize", groesse); groesse();
+document.querySelectorAll("button[data-v]").forEach((b) => b.onclick = () => {
+  const w = b.dataset.v.split(",").map(Number);
+  ARTEN.forEach((a, i) => { anteil[a] = w[i]; document.querySelector(`input[data-a=${a}]`).value = w[i]; });
+  mischen();
+});
+document.querySelectorAll("input[data-a]").forEach((el) => el.addEventListener("input", () => { anteil[el.dataset.a] = +el.value; mischen(); }));
+let zieht = false, x0 = 0, dreht = false;
+canvas.addEventListener("pointerdown", (e) => { zieht = true; x0 = e.clientX; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener("pointermove", (e) => { if (!zieht) return; gruppe.rotation.y += (e.clientX - x0) * 0.01; x0 = e.clientX; });
+canvas.addEventListener("pointerup", () => { zieht = false; });
+document.getElementById("dreh").onclick = (e) => { dreht = !dreht; e.target.textContent = "Drehen: " + (dreht ? "an" : "aus"); };
+
+let n = 0, t0 = performance.now();
+function lauf(t) {
+  if (dreht) gruppe.rotation.y += 0.01;
+  renderer.render(scene, camera);
+  n++; if (t - t0 > 1000) { if (info.dataset.ok) info.textContent = "ziehen = drehen · " + n + " B/s"; n = 0; t0 = t; }
+  requestAnimationFrame(lauf);
+}
+requestAnimationFrame(lauf);
+
+Promise.all([laden("heuhaufen.glb"), laden("halme.glb")]).then(([sh, sa]) => {
+  sh.traverse((o) => { if (o.isMesh) o.material = neuesMaterial(o.material); }); gruppe.add(sh);
+  const halme = {}; sa.traverse((o) => { if (o.isMesh) halme[o.name.replace(/^halm_/, "")] = o; });
+  for (const art of ARTEN) for (const [name, hex, anteilTyp] of HALM[art]) {
+    const m = halme[art + "_" + name]; if (!m) continue;
+    const mat = new THREE.MeshLambertMaterial({ side: THREE.DoubleSide }); mat.color.set(hex);
+    const inst = new THREE.InstancedMesh(m.geometry, mat, CAP); inst.count = 0; inst.frustumCulled = false; gruppe.add(inst);
+    typen[art].push({ inst, anteil: anteilTyp });
+  }
+  info.dataset.ok = 1; info.textContent = "ziehen = drehen"; mischen();
+}).catch((e) => { info.textContent = "Fehler: " + e.message; });
+</script>
+</body>
+</html>

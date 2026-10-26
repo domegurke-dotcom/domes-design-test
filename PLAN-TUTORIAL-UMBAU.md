@@ -8,6 +8,9 @@ Anlass: Aufnahme 9 (Trollhof) und Domes Rückmeldungen. **Noch nichts gebaut.** 
 3. **Hofplan richtig erklären** (Kapitel „Hofausbau“, Aufnahme 9: „die komplette Bedienung des Hofplans wurde nicht erklärt, der Spieler konnte nichts testen und wurde nicht durch die Kreissymbole geleitet“): Gebäude antippen → Kreis → Reparieren/Ausbauen/Anbauen/Namen/Abreißen/Infos; Bauland antippen; Ziehen/Drehen; Blaupause + ✔-Bestätigung mit Preis/Bauzeit. Der Spieler soll jedes davon einmal selbst tun (mit Rücknahme-Möglichkeit).
 4. Pferdeköpfe der Reiter im Plan beginnen **oben links** im Gebäude/der Anlage (Dome, Aufnahme 9; `planReiterKoepfe`).
 
+## Stand (Claude Pro, 26.10.)
+- **T-A bis T-C gebaut (v856):** alle Tutorial-Texte gekürzt, Schlüsselwörter fett. T-D, T-E, T-F offen (Dome gibt das OK).
+
 ## Etappen
 - **T-A: Textstil + Pilotkapitel.** Regeln festlegen (max. 2 Sätze je Schritt, Schlüsselwörter `<b>`, Rest in „Mehr dazu“), Kapitel 1 „Versorgen und Pflegen“ und 2 „Richtig füttern“ des Anfänger-Tutorials umschreiben. Dome sieht sich den Stil an.
 - **T-B: restliche Anfänger-Kapitel** (3–15) im selben Stil.

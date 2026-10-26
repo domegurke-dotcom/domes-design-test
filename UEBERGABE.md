@@ -15,6 +15,10 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### Abgleich mit dem Projekt-Chat (Claude Pro, 26.10.)
+- Dome hat Codings Abgleichantwort (`ANTWORT-AN-PROJEKT-CHAT-26-10.md`) dem Projekt-Chat gegeben; der hat die Themenliste (`reihenfolge.md`) eingearbeitet. Entschieden: **Veredler-Rassen abgenommen (18.10.)**, **„Disziplinen-Überarbeitung“** = Pony-/Kinderklassen und Amateur-/Profi-Ligen bei Disziplinen und LK-Stufen (später, Punkt 28 in `PROJEKT-CHAT-THEMEN.md`). Plan-Köpfe von `PLAN-RASSEN`, `PLAN-BOXANSICHT`, `PLAN-OFFENSTALL` korrigiert.
+- **Alle Umbauten warten auf Domes OK** (Shampoo-Reste, Quarantäne-Pflicht, Weihnachten A–C, Tutorial-Texte kürzen; Aufträge Mitarbeiter (12) und Aqua-Center (13) kommen später von Dome). Mitarbeiter-Auftrag S2 gilt wie geschrieben (auch wenn kleine Ställe keine leichte Arbeit mehr durch Mitarbeiter bekommen). Tests: Node und Playwright liegen jetzt auf Domes PC (`CLAUDE.md`, Abschnitt Testen).
+
 ### Offen: Putzen ohne Fortschritt auf 4K (Claude Pro, 26.10., v852)
 - Aufnahme „Pflegen nicht möglich“ (Mudir, Pensionspferd, Boxenruhe): Bürste/Kamm/Huf/Streicheln zeigen 0 %. Passiert auf einem 4K-Bildschirm mit 150 % Windows-Skalierung (PC-Zoom ≈ 1,655), **nicht** auf Domes 1920×1080 mit 125 % (Zoom aus). Zoom-Rechnung in Chromium geprüft: stimmig. Ursache offen.
 - **Nächster Schritt:** Dome schickt eine Aufnahme vom 4K-Rechner (Strg+F5, Einstellungen → Aufnahme starten, Mudir bürsten, beenden, Datei) – darin stehen die Einträge „Wischen-Diagnose“. Daraus die Ursache bestimmen, erst dann am Zoom etwas ändern. Zoom-Ausbau und „Bühne mit Skalierung“ hat Dome abgelehnt (Pflegeaufwand), Zoom bleibt vorerst.

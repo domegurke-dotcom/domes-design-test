@@ -24,15 +24,8 @@ Jede Aufgabe ist ein eigener Commit auf `main`, `CLAUDE.md` bei der jeweiligen V
 | 3 Weihnachten A–C (Geschenke der Einsteller, Stall des Jahres, Sponsor mit Banner/Futtergutschein) | v855 | `tests/weihnachten-test.js` ✓ (weihnachtsgeld-, hofplan-, pension-krank-, sammelbriefe-, morgen-test ✓) |
 | 4 Tutorial-Texte kürzen T-A bis T-C (alle 3 Tutorials, 228 Schritte, höchstens 2 Sätze, fett) | v856 | nur Seitenladen geprüft; Tutorial-Spieler/großer Test **nicht** gelaufen |
 **Nicht gelaufen:** große Tests, Tutorial-Spieler (Regel: nur mit Domes Ansage). Pilot (Kap. 1–2) und Rest der Tutorial-Texte kamen in einem Zug (Dome sagte «weiter bis 4 fertig»); Skripte zum Ändern lagen im Scratchpad (`tutapply.js`: Texte der Reihe nach je Kapitel ersetzen).
-**Offene Fragen an Dome** stehen unten bei «Fragen nach Aufgabe 1–4» (Claude Pro stellt sie im Chat; Antworten bitte hier eintragen/umsetzen).
+**Offene Fragen** stehen in `OFFENE-FRAGEN.md` (Abschnitt «Sitzung 26.10.»), nicht hier.
 **Als Nächstes (wartet auf Dome):** Tutorial T-D (erst tippen, dann erklären), T-E (Hofplan-Kapitel), T-F (Test) · Mitarbeiter-Auftrag (Opus) · Aqua-Center (Opus). **Tests auf Domes PC:** Startbefehl in `CLAUDE.md`, Abschnitt «Testen».
-
-### Fragen nach Aufgabe 1–4 (Claude Pro, 26.10.)
-1. **Quarantäne-Pflicht:** Kranke Pferde müssen bis zur Heilung in Quarantäne sein, die Quarantäne selbst läuft aber nur 2–5 Tage (`quarTage`) – danach wäre es wieder ein Mangel, und du müsstest sie erneut in Quarantäne setzen. Soll die Pflicht bis zur Heilung gelten (jetzt so) oder nur einmal 2–5 Tage?
-2. **Stall des Jahres:** Punkte 35 % Ansehen, 30 % Zufriedenheit, 15 % Turniererfolge, 20 % Gebäudezustand; Gold ab 80, Silber 70, Bronze 62, Anerkennung 55. Nur Höfe mit Einstellern werden bewertet. Passt das? (Fohlenschau-Erfolge zählen nicht mit.)
-3. **Sponsor:** das Banner sieht man nur im Hofplan am Reitplatz, der Rest des Futtergutscheins steht nur in der Hof-Übersicht (nicht in der Futterkammer). Reicht das?
-4. **Tutorial-Stil:** Texte jetzt knapp mit fetten Schlüsselwörtern; der Hintergrund fiel weg (steht im Einsteiger-Wissen). Soll im Tutorial ein «Mehr dazu»-Knopf auf den Wissens-Eintrag führen, oder lieber ganz ohne?
-
 
 ### Abgleich mit dem Projekt-Chat (Claude Pro, 26.10.)
 - Dome hat Codings Abgleichantwort (`ANTWORT-AN-PROJEKT-CHAT-26-10.md`) dem Projekt-Chat gegeben; der hat die Themenliste (`reihenfolge.md`) eingearbeitet. Entschieden: **Veredler-Rassen abgenommen (18.10.)**, **„Disziplinen-Überarbeitung“** = Pony-/Kinderklassen und Amateur-/Profi-Ligen bei Disziplinen und LK-Stufen (später, Punkt 28 in `PROJEKT-CHAT-THEMEN.md`). Plan-Köpfe von `PLAN-RASSEN`, `PLAN-BOXANSICHT`, `PLAN-OFFENSTALL` korrigiert.

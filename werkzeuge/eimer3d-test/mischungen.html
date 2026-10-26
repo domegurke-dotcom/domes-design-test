@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Eimer 3D – Mischungen</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #f2efe9; overflow: hidden; font-family: system-ui, sans-serif; touch-action: none; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #leiste { position: fixed; left: max(10px, env(safe-area-inset-left)); top: max(10px, env(safe-area-inset-top)); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  button { font: inherit; padding: 8px 12px; border-radius: 10px; border: 2px solid #2b1d14; background: #fff; color: #2b1d14; }
+  button.an { background: #2b1d14; color: #fff; }
+  #info { font-size: 13px; color: #2b1d14; background: #fffc; padding: 6px 10px; border-radius: 10px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="leiste">
+  <button class="mix an" data-mix="mix1">1 · Hafer-Müsli</button>
+  <button class="mix" data-mix="mix2">2 · Schnitzel-Müsli</button>
+  <button class="mix" data-mix="mix3">3 · Aufbau</button>
+  <button id="dreh">Drehen: aus</button>
+  <span id="info">lädt …</span>
+</div>
+<script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "./lib/loaders/GLTFLoader.js";
+
+const canvas = document.getElementById("c");
+const info = document.getElementById("info");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(28, 1, 1, 400);
+camera.position.set(0, 46, 92);
+camera.lookAt(0, 15, 0);
+
+// Licht wie die Studio-Beleuchtung von Blender (weich von oben, etwas von vorn)
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8a96, 1.9));
+const sonne = new THREE.DirectionalLight(0xffffff, 1.3);
+sonne.position.set(-30, 60, 50);
+scene.add(sonne);
+
+// Farben der Materialien aus Domes Blender-Datei (linear)
+const FARBEN = {
+  stahl: [0.349, 0.375, 0.428], rand: [0.076, 0.082, 0.119], gummi: [0.043, 0.047, 0.071],
+  innen: [0.011, 0.011, 0.02], tinte: [0.003, 0.003, 0.005],
+};
+
+const INHALT = [
+  [/^muesli_basis/, "#5a3a1e"], [/^muesli_flocken/, "#e8d9b0"], [/^muesli_pellets/, "#5a3a22"],
+  [/^muesli_gelb/, "#e0b030"], [/^muesli_rot/, "#b0383a"], [/^muesli_orange/, "#d9702a"],
+  [/^mineral_basis/, "#3a3820"], [/^mineral_hell/, "#8a8450"], [/^mineral_mittel/, "#6b6a3a"], [/^mineral_dunkel/, "#4a4a28"],
+  [/^ruebe_basis/, "#3a1d16"], [/^ruebe_hell/, "#a8604a"], [/^ruebe_mittel/, "#7e4030"], [/^ruebe_dunkel/, "#55291f"],
+];
+const gruppe = new THREE.Group();
+scene.add(gruppe);
+const teile = { mix1: [], mix2: [], mix3: [] };   // drei Beispielmischungen, immer nur eine sichtbar
+
+new GLTFLoader().load("./eimer-mischungen.glb", (gltf) => {
+  const modell = gltf.scene;
+  modell.traverse((o) => {
+    if (!o.isMesh) return;
+    const alt = o.material, name = alt.name.replace(/\.\d{3}$/, "");   // „tinte.001“ → „tinte“
+    const neu = (name === "tinte") ? new THREE.MeshBasicMaterial() : new THREE.MeshLambertMaterial();
+    if (FARBEN[name]) neu.color.setRGB(...FARBEN[name], THREE.LinearSRGBColorSpace);
+    else neu.color.copy(alt.color);
+    // Kontur = umgestülpte Hülle: nur die Rückseiten der Hülle sichtbar (Blender: „Rückseiten ausblenden“)
+    // Hafer-Farben über den Namensanfang (Blender hängt manchmal „.001“ an)
+    if (/^hafer_basis/.test(name)) neu.color.setRGB(0.26, 0.09, 0.01, THREE.LinearSRGBColorSpace);
+    if (/^hafer_hell/.test(name)) neu.color.setRGB(0.85, 0.52, 0.09, THREE.LinearSRGBColorSpace);
+    if (/^hafer_mittel/.test(name)) neu.color.setRGB(0.71, 0.34, 0.04, THREE.LinearSRGBColorSpace);
+    if (/^hafer_dunkel/.test(name)) neu.color.setRGB(0.49, 0.18, 0.02, THREE.LinearSRGBColorSpace);
+    // Müsli, Mineralfutter, Rübenschnitzel: sRGB-Farben aus Blender (setzt linear um)
+    for (const [re, hex] of INHALT) if (re.test(name)) neu.color.set(hex);
+    if (name === "mix_basis") neu.color.setRGB(0.20, 0.07, 0.01, THREE.LinearSRGBColorSpace);
+    neu.side = (name === "tinte") ? THREE.FrontSide : THREE.DoubleSide;
+    o.material = neu;
+    let p = o; while (p) { const m = /^(mix\d)_/.exec(p.name); if (m) { teile[m[1]].push(o); break; } p = p.parent; }
+  });
+  zeige("mix1");
+  gruppe.add(modell);
+  info.textContent = "ziehen = drehen";
+}, undefined, (e) => { info.textContent = "Fehler: " + e.message; });
+
+function groesse() {
+  const b = canvas.getBoundingClientRect();
+  renderer.setSize(b.width, b.height, false);
+  camera.aspect = b.width / b.height;
+  // schmales Hochformat: etwas weiter weg, damit der Eimer ganz sichtbar bleibt
+  camera.position.z = camera.aspect < 0.9 ? 92 / camera.aspect * 0.9 : 92;
+  camera.updateProjectionMatrix();
+}
+addEventListener("resize", groesse); groesse();
+
+// Drehen mit Maus/Finger
+let zieht = false, x0 = 0;
+canvas.addEventListener("pointerdown", (e) => { zieht = true; x0 = e.clientX; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener("pointermove", (e) => { if (!zieht) return; gruppe.rotation.y += (e.clientX - x0) * 0.01; x0 = e.clientX; });
+canvas.addEventListener("pointerup", () => { zieht = false; });
+let dreht = false;
+document.getElementById("dreh").onclick = (e) => { dreht = !dreht; e.target.textContent = "Drehen: " + (dreht ? "an" : "aus"); };
+function zeige(name) {
+  for (const k in teile) teile[k].forEach((o) => { o.visible = (k === name); });
+  document.querySelectorAll("button.mix").forEach((b) => b.classList.toggle("an", b.dataset.mix === name));
+}
+document.querySelectorAll("button.mix").forEach((b) => { b.onclick = () => zeige(b.dataset.mix); });
+
+// Bilder pro Sekunde
+let n = 0, t0 = performance.now();
+function lauf(t) {
+  if (dreht) gruppe.rotation.y += 0.01;
+  renderer.render(scene, camera);
+  n++; if (t - t0 > 1000) { if (info.textContent.indexOf("B/s") > -1 || info.textContent.startsWith("ziehen")) info.textContent = "ziehen = drehen · " + n + " B/s"; n = 0; t0 = t; }
+  requestAnimationFrame(lauf);
+}
+requestAnimationFrame(lauf);
+</script>
+</body>
+</html>

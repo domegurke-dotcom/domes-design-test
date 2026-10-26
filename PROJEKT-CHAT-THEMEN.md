@@ -28,7 +28,7 @@ Diese Punkte sind zu groß oder brauchen erst eine Planung. Darum hat Claude sie
 
 15. **Speicherplatz:** geplant 20.10.2026, siehe `PLAN-TIERHALTEVERBOT-SPEICHER.md` (Etappen P1, P2).
 16. **Tierhalteverbot bei wiederholter schwerer Vernachlässigung:** geplant 20.10.2026, siehe `PLAN-TIERHALTEVERBOT-SPEICHER.md` (Etappen V1–V4).
-17. **Wasserlaufband/Aqua-Training als eigenes Gebäude** (Dome, 19.10.2026, später planen): Muskeln, Kondition, Reha. Gehört nicht in den Waschplatz (`PLAN-WASCHPLATZ.md`).
+17. **Wasserlaufband/Aqua-Training als eigenes Gebäude** (Dome, 19.10.2026) – **geplant → PLAN-AQUA.md** (26.10.2026): Muskeln, Kondition, Reha. Gehört nicht in den Waschplatz (`PLAN-WASCHPLATZ.md`).
 18. **Hinweisblasen, Spielumfang je Erfahrungsstufe, Tutorials** (Dome, 20.10.2026). **Geplant → `PLAN-HINWEISE.md`** (T1–T6, mit `PLAN-HINWEISE-TEXTE.md`, `PLAN-TUTORIAL.md`, `PLAN-STUFEN.md`; nach B4, R2–R4 und Waschplatz).
 
 19. **Körung, Stutenschau, Hengstleistungsprüfung** (Dome, 20.10.2026, später planen): hängt an der Zuchtbuch-Klasse aus `PLAN-MERKMALE.md` (bis dahin „Körung kommt später“ bei Hengsten).

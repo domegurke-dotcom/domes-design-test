@@ -100,6 +100,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - Letzte Version bei Aktualisierung dieser Datei: **852** (Hälse 10 % kürzer, Leckerli-Tüte; Tests Boxansicht/Krankheitsmeldungen, Stand in `UEBERGABE.md`).
 
 ## Testen
+- **Auf Domes Windows-PC (seit 26.10.2026, Dome: „ja mach das“):** Node 22 (portabel) und Playwright liegen in `C:\Users\dome_\werkzeug-node\` (außerhalb des Projekts: `node\`, `pw\node_modules`, Chromium in `%LOCALAPPDATA%\ms-playwright`). Tests starten in PowerShell: `$base='C:\Users\dome_\werkzeug-node'; $env:Path = "$base\node;" + $env:Path; $env:NODE_PATH = "$base\pw\node_modules"; node tests/<test>.js` (Umgebungsvariablen wie `BILDER=fehler` und `BILDER_ORDNER` vorher setzen). Geprüft: `tests/finanzen-diagramm-test.js` ✓.
 - Playwright (Chromium vorinstalliert) – Skript lädt `index.html` per `file://`, Spiel starten: `#smNeu` → `#chName` ausfüllen → `#chLos` → Kreditbrief schließen (`#dlgKnoepfe button`) → `[data-immo="pension"]` → `#kaufName` → `#dlgKnoepfe button:first-child`. Admin: `spiel.admin = true`.
 - Falle bei Ersetzungen per Skript: Ein `//`-Kommentar mitten in einer Zeile macht den Rest der Zeile zum Kommentar (ist mehrfach passiert, z. B. Weide-Fütterung v244–v263). Kommentare immer ans Zeilenende.
 - Vor dem Ausliefern Syntax prüfen (jeden `<script>`-Block mit `new Function(...)`, `node --check pferd.js`) und Screenshots in den drei Ansichten ansehen.

@@ -1,4 +1,4 @@
-# Plan: Aufzucht-Offenstall mit Ausbau (nur geplant, noch nichts gebaut – Dome, 24.10.2026)
+# Plan: Aufzucht-Offenstall mit Ausbau – ✅ gebaut in v827 (Dome, 25.10.2026; Gruppen-Übung noch offen, siehe PROJEKT-CHAT-THEMEN.md Punkt 27)
 
 Stand: Dome hat Plätze 10 / 25 / 50, die Preise und Variante A (Gruppen) beschlossen und sagt: „noch nicht bauen, nur planen“. Start erst nach ihrem Ja.
 

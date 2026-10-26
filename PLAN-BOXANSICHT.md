@@ -1,4 +1,4 @@
-# Plan: Boxansicht ohne Scrollen (nur geplant, noch nichts gebaut – Dome, 24.10.2026)
+# Plan: Boxansicht ohne Scrollen – ✅ gebaut (PC B1 v815, B2 v818–v821, mobil v825, Tutorial v833/v834; Dome 26.10.2026: „Spielansicht aufräumen“ erledigt)
 
 **Ziel (Dome):** Das Pferd soll sich im **Vollbild** versorgen lassen, **ohne nach unten zu scrollen** – **intuitiv und übersichtlich**. Neu: Symbole wie im Hofplan-Kreismenü; Orte, Ausrüstung usw. öffnen ein **Fenster mit Rücksprung** in die Box. Dome: „erstmal nur reden und planen, nichts bauen“. Start erst nach ihrem ausdrücklichen Ja.
 

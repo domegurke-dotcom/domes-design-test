@@ -1,4 +1,4 @@
-# Plan: Veredler-Rassen (nach dem Hof-Ausbau H1–H8) – ✅ umgesetzt in v316 (alle 7 Rassen, Abnahme durch Dome offen)
+# Plan: Veredler-Rassen (nach dem Hof-Ausbau H1–H8) – ✅ umgesetzt in v316 (alle 7 Rassen), Domes Abnahme erledigt (18.10.2026, bestätigt 26.10.2026)
 
 Aus OFFENE-FRAGEN.md hierher verschoben (12.10.2026) – Domes Antworten stehen unten, alles beantwortet. Erst starten, wenn der Hof-Ausbau fertig ist.
 

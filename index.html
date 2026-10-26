@@ -1303,7 +1303,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "850";
+  const SPIEL_VERSION = "851";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1311,12 +1311,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=850"></script>
-<script src="pferd.js?v=850"></script>
-<script src="boxstufen.js?v=850"></script>
-<script src="kopfneu.js?v=850"></script>
-<script src="waschbild.js?v=850"></script>
-<script src="avatare.js?v=850"></script>
+<script src="lz-string.min.js?v=851"></script>
+<script src="pferd.js?v=851"></script>
+<script src="boxstufen.js?v=851"></script>
+<script src="kopfneu.js?v=851"></script>
+<script src="waschbild.js?v=851"></script>
+<script src="avatare.js?v=851"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -16669,7 +16669,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
           : `<p class="text">In ${finanzJahr} gab es noch keine Einnahmen oder Ausgaben.</p>`}</div>`}`;
   }
   // ---------- Dome 21.10.: Finanzen als Liniendiagramm (Einnahmen, Ausgaben, Insgesamt je Jahreszeit; die letzten 5 Jahre, mit Pfeilen jahresweise verschiebbar) ----------
-  const FIN_FARBE = { ein: "#2a78d6", aus: "#eb6834", ges: "#1baf7a" }, FIN_NAME = { ein: "Einnahmen", aus: "Ausgaben", ges: "Insgesamt" }, FIN_SONDER = /^(Hofkauf|Kredit \(Auszahlung\)|Eigenanteil vom zentralen Konto)$/;
+  const FIN_FARBE = { ein: "#2a78d6", aus: "#eb6834", ges: "#1baf7a", kto: "#7a5bd0" }, FIN_NAME = { ein: "Einnahmen", aus: "Ausgaben", ges: "Insgesamt", kto: "Kontostand" }, FIN_SONDER = /^(Hofkauf|Kredit \(Auszahlung\)|Eigenanteil vom zentralen Konto)$/;
   let finDiaEnde = null, finSel = null;   // letztes Jahr des Fensters · gewählte Jahreszeit (Index im Fenster)
   function finanzWerte(j, sIdx) {   // Einnahmen/Ausgaben einer Jahreszeit ohne Hofkauf, Eigenanteil und Kreditauszahlung (die verzerren das Bild)
     const P = ((spiel.finanzSaison || {})[j] || {})[sIdx]; if (!P) return { ein: 0, aus: 0 };
@@ -16680,14 +16680,16 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     const jahre = Object.keys(FS).map(Number).filter(n => !isNaN(n) && Object.keys(FS[n] || {}).length); const frueh = jahre.length ? Math.min(...jahre) : aktJ;
     const erst = jahre.length ? frueh * 4 + Math.min(...Object.keys(FS[frueh]).map(Number)) : aktJ * 4 + jetzt.s, jetztIdx = aktJ * 4 + jetzt.s;
     if (finDiaEnde == null || finDiaEnde > aktJ) finDiaEnde = aktJ; finDiaEnde = Math.max(Math.min(finDiaEnde, aktJ), Math.min(aktJ, frueh + 4));
+    const netto = {}, kto = {}; Object.entries(FS).forEach(([j, S]) => Object.entries(S || {}).forEach(([sz, P]) => { netto[Number(j) * 4 + Number(sz)] = Object.values(P || {}).reduce((a, e) => a + (e.ein || 0) - (e.aus || 0), 0); }));   // v851: Kontostand am Ende jeder Jahreszeit, rückwärts vom heutigen Geld (mit allen Buchungen, auch Hofkauf und Kredit)
+    { let g = spiel.geld || 0; for (let k = jetztIdx; k >= erst; k--) { kto[k] = g; g -= netto[k] || 0; } }
     const start = finDiaEnde - 4, pt = [];
     for (let y = start; y <= finDiaEnde; y++) for (let sI = 0; sI < 4; sI++) { const idx = y * 4 + sI, ok = idx >= erst && idx <= jetztIdx, w = ok ? finanzWerte(y, sI) : null;
-      pt.push({ j: y, s: sI, ein: w ? w.ein : null, aus: w ? w.aus : null, ges: w ? w.ein - w.aus : null }); }
+      pt.push({ j: y, s: sI, ein: w ? w.ein : null, aus: w ? w.aus : null, ges: w ? w.ein - w.aus : null, kto: w ? kto[idx] : null }); }
     return { pt, start, ende: finDiaEnde, links: start > frueh, rechts: finDiaEnde < aktJ };
   }
   const finZahl = v => Math.round(v).toLocaleString("de-DE");
   function finanzDiagrammHTML() {
-    const D = finanzDiagrammDaten(), L = spiel.finLinien = spiel.finLinien || { ein: true, aus: true, ges: true }, an = Object.keys(FIN_NAME).filter(k => L[k]);
+    const D = finanzDiagrammDaten(), L = spiel.finLinien = spiel.finLinien || { ein: true, aus: true, ges: true, kto: true }; if (L.kto === undefined) L.kto = true; const an = Object.keys(FIN_NAME).filter(k => L[k]);
     const schmal = innerWidth < 600, W = schmal ? 420 : 680, H = schmal ? 330 : 300, ML = schmal ? 56 : 58, MR = 12, MT = 16, MB = 40, N = D.pt.length, pw = (W - ML - MR) / N, X = i => ML + pw * (i + 0.5);
     const vals = an.flatMap(k => D.pt.map(p => p[k]).filter(v => v != null)), lo = Math.min(0, ...(vals.length ? vals : [0])), hi = Math.max(0, ...(vals.length ? vals : [0]));
     const roh = (hi - lo || 100) / 4, mag = Math.pow(10, Math.floor(Math.log10(roh))), schritt = [1, 2, 2.5, 5, 10].map(m => m * mag).find(m => m >= roh) || roh;
@@ -16702,12 +16704,12 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <div class="fd-legende">${Object.keys(FIN_NAME).map(k => `<label class="${L[k] ? "an" : ""}"><input type="checkbox" data-flinie="${k}" ${L[k] ? "checked" : ""}><span class="fd-schl" style="background:${FIN_FARBE[k]}"></span>${FIN_NAME[k]}</label>`).join("")}</div>
       ${an.length ? `<svg class="fd-svg" viewBox="0 0 ${W} ${H}" role="img" tabindex="0" aria-label="Liniendiagramm der Finanzen je Jahreszeit, ${D.start} bis ${D.ende}" data-fw="${W}" data-fml="${ML}" data-fpw="${pw}" data-fn="${N}">${gitter}${jahrTxt}${linien}<line id="finFad" class="fd-fadenkreuz" y1="${MT}" y2="${H - MB}" x1="0" x2="0" style="display:none"/><g id="finMark"></g><rect x="${ML}" y="${MT}" width="${W - ML - MR}" height="${H - MT - MB}" fill="transparent" class="fd-treffer"/></svg>
         <div class="fd-ablesung" id="finAbl" aria-live="polite"></div>` : `<p class="text">Wähle mindestens eine Linie aus.</p>`}
-      <p class="text fin-sonder"><small>Je Jahreszeit; „Insgesamt“ = Einnahmen minus Ausgaben. Hofkauf, Eigenanteil und Kreditauszahlung sind nicht eingerechnet. Die genauen Posten stehen in der Tabelle.</small></p></div>`;
+      <p class="text fin-sonder"><small>Je Jahreszeit; „Insgesamt“ = Einnahmen minus Ausgaben. Hofkauf, Eigenanteil und Kreditauszahlung sind dort nicht eingerechnet. „Kontostand“ ist das Geld am Ende der Jahreszeit (alles eingerechnet). Die genauen Posten stehen in der Tabelle.</small></p></div>`;
   }
   function finanzDiagrammBinden(nb) {
     nb.querySelectorAll("[data-fansicht]").forEach(b => b.onclick = () => { spiel.finAnsicht = b.dataset.fansicht; speichern(); zeigeHof(); });
     nb.querySelectorAll("[data-fpfeil]").forEach(b => b.onclick = () => { finDiaEnde = (finDiaEnde == null ? datum().j : finDiaEnde) + (+b.dataset.fpfeil); finSel = null; zeigeHof(); });
-    nb.querySelectorAll("[data-flinie]").forEach(c => c.onchange = () => { (spiel.finLinien = spiel.finLinien || { ein: true, aus: true, ges: true })[c.dataset.flinie] = c.checked; speichern(); zeigeHof(); });
+    nb.querySelectorAll("[data-flinie]").forEach(c => c.onchange = () => { (spiel.finLinien = spiel.finLinien || { ein: true, aus: true, ges: true, kto: true })[c.dataset.flinie] = c.checked; speichern(); zeigeHof(); });
     const svg = nb.querySelector(".fd-svg"); if (!svg) return;
     const D = finanzDiagrammDaten(), W = +svg.dataset.fw, ML = +svg.dataset.fml, pw = +svg.dataset.fpw, N = +svg.dataset.fn, an = Object.keys(FIN_NAME).filter(k => (spiel.finLinien || {})[k] !== false);
     const zeige = i => { finSel = i; const p = D.pt[i], fad = svg.querySelector("#finFad"), mk = svg.querySelector("#finMark"), abl = nb.querySelector("#finAbl"); if (!p || p.ein == null) return;

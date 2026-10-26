@@ -15,6 +15,10 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### Eimer: drei Beispielmischungen (Claude Pro, 26.10.) – noch nicht im Spiel
+- **Dome-Wunsch:** der Eimer soll später das Futter **je nach Futterplan zusammengemischt** zeigen (Mengenverhältnis, Füllhöhe nach Gesamtmenge; Kraftfutter in der Krippe, nicht Heu). Als Vorstufe drei Beispielmischungen gebaut: `mix1` Hafer 55 / Müsli 30 / Mineral 15, `mix2` Rübenschnitzel 50 / Müsli 35 / Mineral 15, `mix3` Hafer 35 / Rübe 30 / Müsli 20 / Mineral 15 (erfundene Prozente). Verfahren: Körner aus den fertigen Inhalten per Zusammenhang herausgelöst (Hauptachsen-Ausrichtung), nach **bedeckter Fläche** (nicht Stückzahl) gewichtet und mit festem Zufall neu auf die Kuppel gestreut.
+- Dateien: `blender/eimer-mischungen.blend` (Eimer + 3 Mischungen), Testseite `werkzeuge/eimer3d-test/mischungen.html` (+ `eimer-mischungen.glb`, 10,8 MB – für den Spieleinsatz viel zu groß). **Für den Einbau ins Spiel:** nicht fertige Haufen laden, sondern je Futtersorte **ein Korn (Instanzen)** und im Spiel (three.js `InstancedMesh`, fester Zufall je Pferd/Box) nach Futterplan streuen – spart Größe und erlaubt jede Mischung. Wartet weiter auf Domes Antworten: wo, Perspektive, Größe.
+
 ### Lokale Sitzung auf Domes PC (Claude Pro, 25.10.) – keine Code-Änderung, Stand v850
 - Blender-Verbindung geprüft: erreichbar (Standardszene Kamera/Cube/Licht, Datei noch nicht gespeichert). Leerer Ordner `blender/` im Projektordner angelegt (Git zeigt ihn erst, wenn eine Datei drin liegt). Noch nichts committet oder gepusht.
 - **Eimer in Blender gebaut (Dome, 25.10.):** `blender/eimer.blend` (leerer schwarzer Eimer, Bügel an den Ankern verankert, nach unten geklappt und berührt die Wand nur leicht, Form so, dass er mit Abstand am Rand entlangläuft) und `blender/eimer-hafer.blend` (Eimer mit Hafer: Haufen + 700 Körner, Objekte `hafer_*`). Stil: flache Farben, Kontur über Solidify „kontur“ mit Material `tinte`. Original von Dome: `eimer2.blend` (Downloads, unverändert). **Noch nicht im Spiel verwendet.**

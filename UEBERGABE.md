@@ -15,6 +15,11 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### Offen: Putzen ohne Fortschritt auf 4K (Claude Pro, 26.10., v852)
+- Aufnahme „Pflegen nicht möglich“ (Mudir, Pensionspferd, Boxenruhe): Bürste/Kamm/Huf/Streicheln zeigen 0 %. Passiert auf einem 4K-Bildschirm mit 150 % Windows-Skalierung (PC-Zoom ≈ 1,655), **nicht** auf Domes 1920×1080 mit 125 % (Zoom aus). Zoom-Rechnung in Chromium geprüft: stimmig. Ursache offen.
+- **Nächster Schritt:** Dome schickt eine Aufnahme vom 4K-Rechner (Strg+F5, Einstellungen → Aufnahme starten, Mudir bürsten, beenden, Datei) – darin stehen die Einträge „Wischen-Diagnose“. Daraus die Ursache bestimmen, erst dann am Zoom etwas ändern. Zoom-Ausbau und „Bühne mit Skalierung“ hat Dome abgelehnt (Pflegeaufwand), Zoom bleibt vorerst.
+- Blender/Pferdekopf-Versuche (2.5D und 3D) hat Dome verworfen und löschen lassen; Heuhaufen „Neu füllen“ ist fertig (`blender/testseiten/heuhaufen.html`).
+
 **Projekt Blender (Dome, 26.10.):** Alles, was in Blender gebaut wird (`blender/`, `blender/testseiten/`), ist ein eigenes Projekt nur zwischen Dome und Claude im Coding-Chat – kein Thema für den Projekt-Chat (`PROJEKT-CHAT-THEMEN.md`).
 
 ### Benennung (Dome, 26.10.): **„Eimer Stufe 1“** = der schwarze Eimer (Basis-Ausrüstung), **„Eimer Stufe 2“** = grüner Einhängeeimer (halbrund, flache Rückseite, zwei schwarze Haken, Bügel; Entwurf `blender/eimer-stufe2.blend`). **Stufe = Ausrüstungsstufe, nicht Boxenstufe:** beide Eimer kommen in **Boxenstufe 1**; Stufe 2 ist eine **spätere Kaufverbesserung (bessere Utensilien, noch nicht möglich, später)**. Die **Krippen für Boxenstufe 2 und 3 sind davon getrennt** (werden von Dome nochmal neu festgelegt). Auf `mischer.html` heißt der Knopf „Eimer Stufe 1“; die Dateinamen (`eimer-*.glb`, `blender/eimer*.blend`) bleiben vorerst, damit nichts bricht.

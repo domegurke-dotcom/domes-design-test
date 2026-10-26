@@ -27,6 +27,7 @@
     <button class="beh an" data-b="eimer">Eimer Stufe 1</button>
     <button class="beh" data-b="e2">Eimer Stufe 2</button>
     <button id="farbe" style="display:none">Farbe: grün</button>
+    <button id="wasser">Wasser: aus</button>
     <button class="beh" data-b="k2">Krippe Stufe 2</button>
     <button class="beh" data-b="k3">Krippe Stufe 3</button>
     <button data-v="55,30,15,0">Hafer-Müsli</button>
@@ -74,8 +75,8 @@ function farbe(c, wert) {
   if (wert.startsWith("lin:")) c.setRGB(...wert.slice(4).split(",").map(Number), THREE.LinearSRGBColorSpace);
   else c.set(wert);
 }
-const HEX = { eimer2_gruen: "#3a6a3c", eimer2_schwarz: "#17191c", eimer2_silber: "#d3d9e0" };   // Eimer Stufe 2 (Körper grün oder schwarz)
-let e2Koerper = null;
+const HEX = { eimer2_gruen: "#3a6a3c", eimer2_schwarz: "#17191c", eimer2_silber: "#d3d9e0", wasser: "#3f6f8a", wasser_ring: "#6f9db5" };   // Eimer Stufe 2 (Körper grün oder schwarz), Wasser
+let e2Koerper = null, haufenE = null, wasserAn = false;
 function neuesMaterial(alt) {
   const name = alt.name.replace(/\.\d{3}$/, "");           // „tinte.001“ → „tinte“
   const neu = (name === "tinte") ? new THREE.MeshBasicMaterial() : new THREE.MeshLambertMaterial();
@@ -108,7 +109,14 @@ const eimerFertig = new Promise((ok, fehler) => lader.load("./eimer-teile.glb", 
   g.scene.traverse((o) => { if (o.isMesh) o.material = neuesMaterial(o.material); });
   gE.add(g.scene); ok();
 }, undefined, fehler));
-const krippenFertig = Promise.all(Object.keys(KRIPPE).map((id) => new Promise((ok, fehler) => lader.load("./" + KRIPPE[id].datei, (g) => {
+// Wasser (dasselbe dunkle, trübe Wasser mit Wellenringen in Eimer Stufe 1 und 2): ersetzt das Futter
+const wasserGr = { eimer: new THREE.Group(), e2: new THREE.Group() };
+gE.add(wasserGr.eimer); gK.e2.add(wasserGr.e2); wasserGr.eimer.visible = false; wasserGr.e2.visible = false;
+const wasserFertig = Promise.all([["wasser-stufe1.glb", "eimer"], ["wasser-stufe2.glb", "e2"]].map(([datei, id]) => new Promise((ok, fehler) => lader.load("./" + datei, (g) => {
+  g.scene.traverse((o) => { if (o.isMesh) o.material = neuesMaterial(o.material); });
+  wasserGr[id].add(g.scene); ok();
+}, undefined, fehler))));
+const krippenFertig =Promise.all(Object.keys(KRIPPE).map((id) => new Promise((ok, fehler) => lader.load("./" + KRIPPE[id].datei, (g) => {
   g.scene.traverse((o) => { if (o.isMesh) o.material = neuesMaterial(o.material); });
   gK[id].add(g.scene); ok();
 }, undefined, fehler))));
@@ -142,8 +150,8 @@ const haufenMat = new THREE.MeshLambertMaterial({ side: THREE.DoubleSide });
   const pt = [];
   for (const r of [0, 3, 6, 9, 12, 14.5, 16.4]) pt.push(new THREE.Vector2(r, zf(r)));
   pt.push(new THREE.Vector2(15.6, 25), new THREE.Vector2(14.8, 21));
-  const haufen = new THREE.Mesh(new THREE.LatheGeometry(pt, 48), haufenMat);
-  gE.add(haufen);
+  haufenE = new THREE.Mesh(new THREE.LatheGeometry(pt, 48), haufenMat);
+  gE.add(haufenE);
 }
 // Krippen: Füllung als flacher Block bis kurz unter den Rand; Platz für die Körner = Innenfläche auf Füllhöhe
 for (const id of Object.keys(KRIPPE)) {
@@ -162,7 +170,7 @@ for (const id of Object.keys(KRIPPE)) {
     block = new THREE.Mesh(new THREE.BoxGeometry(K.iw * 2 - 0.4, 2.6, K.id * 2 - 0.4), haufenMat);   // flache Platte direkt unter den Körnern (bleibt im Trog)
     block.position.set(0, K.zl - 1.3, 0);
   }
-  gK[id].add(block);
+  gK[id].add(block); K.block = block;
 }
 const BASIS = { hafer: "lin:0.26,0.09,0.01", muesli: "#5a3a1e", mineral: "#3a3820", ruebe: "#3a1d16" };
 
@@ -217,7 +225,11 @@ function mischen() {
   const zaehler = new Map(); let flaeche = 0;
   for (const alle of SORTEN) for (const t of typen[alle]) for (const p of t.teile) zaehler.set(p, 0);
   const K = KRIPPE[aktiv], ziel = K ? FLAECHE / (Math.PI * 14.6 * 14.6) * (K.form === "d" ? Math.PI / 2 : 4) * (K.iw - 1.6) * (K.id - 1.6) : FLAECHE;
-  if (gs > 0) for (const pl of PLAETZE[aktiv]) {
+  const mitWasser = wasserAn && (aktiv === "eimer" || aktiv === "e2");                 // Wasser ersetzt das Futter
+  wasserGr.eimer.visible = mitWasser && aktiv === "eimer"; wasserGr.e2.visible = mitWasser && aktiv === "e2";
+  if (haufenE) haufenE.visible = !(mitWasser && aktiv === "eimer");
+  if (KRIPPE.e2.block) KRIPPE.e2.block.visible = !(mitWasser && aktiv === "e2");
+  if (gs > 0 && !mitWasser) for (const pl of PLAETZE[aktiv]) {
     if (flaeche >= ziel) break;
     let u = pl.u * gs, k = 0; while (k < 3 && u > gew[k]) { u -= gew[k]; k++; }
     const t = typen[SORTEN[k]]; if (!t.length) continue;
@@ -243,11 +255,13 @@ function behaelter(id) {
   aktiv = id;
   gE.visible = id === "eimer"; gK.k2.visible = id === "k2"; gK.k3.visible = id === "k3"; gK.e2.visible = id === "e2";
   document.getElementById("farbe").style.display = id === "e2" ? "" : "none";
+  document.getElementById("wasser").style.display = (id === "eimer" || id === "e2") ? "" : "none";
   document.querySelectorAll("button.beh").forEach((b) => b.classList.toggle("an", b.dataset.b === id));
   groesse(); mischen();
 }
 document.querySelectorAll("button.beh").forEach((b) => b.onclick = () => behaelter(b.dataset.b));
 gK.k2.visible = false; gK.k3.visible = false; gK.e2.visible = false;
+document.getElementById("wasser").onclick = (e) => { wasserAn = !wasserAn; e.target.textContent = "Wasser: " + (wasserAn ? "an" : "aus"); mischen(); };
 document.getElementById("farbe").onclick = (e) => {                   // Eimer Stufe 2: Farbe grün ↔ schwarz
   const schwarz = e.target.textContent.endsWith("grün");
   if (e2Koerper) e2Koerper.color.set(schwarz ? "#34373d" : HEX.eimer2_gruen);
@@ -275,7 +289,7 @@ function lauf(t) {
   requestAnimationFrame(lauf);
 }
 requestAnimationFrame(lauf);
-Promise.all([eimerFertig, kornFertig, krippenFertig]).then(() => { info.dataset.ok = 1; info.textContent = "ziehen = drehen"; mischen(); })
+Promise.all([eimerFertig, kornFertig, krippenFertig, wasserFertig]).then(() => { info.dataset.ok = 1; info.textContent = "ziehen = drehen"; mischen(); })
   .catch((e) => { info.textContent = "Fehler: " + e.message; });
 </script>
 </body>

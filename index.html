@@ -1310,7 +1310,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "867";
+  const SPIEL_VERSION = "868";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1318,12 +1318,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=867"></script>
-<script src="pferd.js?v=867"></script>
-<script src="boxstufen.js?v=867"></script>
-<script src="kopfneu.js?v=867"></script>
-<script src="waschbild.js?v=867"></script>
-<script src="avatare.js?v=867"></script>
+<script src="lz-string.min.js?v=868"></script>
+<script src="pferd.js?v=868"></script>
+<script src="boxstufen.js?v=868"></script>
+<script src="kopfneu.js?v=868"></script>
+<script src="waschbild.js?v=868"></script>
+<script src="avatare.js?v=868"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -11013,7 +11013,7 @@
   }
   const abText = ab => ab === "mittel" ? "ab 9 Boxen" : ab === "groß" ? "ab 20 Boxen" : "";
   // Boxen je Angestelltem: Grundzahl, Stallburschen mit Stallmeister 5, fleißig +1
-  const maKapazitaet = m => { const T = MA_TYP[m.typ]; if (!T.boxen) return 0; return (m.typ === "stallbursche" && aktive("stallmeister").length ? 5 : T.boxen) + (hatEig(m, "fleissig") ? 1 : 0); };
+  const maKapazitaet = m => { const T = MA_TYP[m.typ]; if (!T.boxen) return 0; return (m.typ === "stallbursche" && aktive("stallmeister").length ? 5 : T.boxen) + (hatEig(m, "fleissig") ? 1 : 0) - (probeErsteJz(m) ? 1 : 0); };   // S7: Einarbeitung 1 Box weniger
   // Wer versorgt heute welche Box? art "stall" (Azubi + Stallbursche), "pfleger", "bereiter" → [{ i, m }]
   const MA_ART = { stall: ["stallbursche", "azubi"], pfleger: ["pfleger", "pferdewirtHS", "pferdewirt", "azubi"], bereiter: ["bereiter"] };
   const azubiPasst = (m, art) => m.typ !== "azubi" || (m.einsatz === "mitlaufen" ? false : art === "pfleger" ? m.einsatz === "putzen" : art === "stall" ? m.einsatz !== "putzen" : true);   // v398 (Dome): Azubi entweder Stalldienst oder Putzen   // v396: Pferdewirt Pferdezucht betreut 3 Boxen (putzen, Fohlen-ABC)
@@ -11145,7 +11145,8 @@
       return `<div class="lg-zeile"><b>${(wissenListe({ einsteller: 1 }).find(x => x[0] === k) || [])[2] || ""} ${N(k)}</b> <small>${v}${du ? "" : ` / Grenze ${cap}${!maBB(m).includes(k) && !(m.kurse && m.kurse[k]) && m.typ !== "stallmeister" ? " (mit Lehrgang 75)" : ""}`}</small><span>${t.length ? t.map(x => x.voll ? `<button class="mini-knopf" disabled>Tag ${x.t} · ausgebucht</button>` : `<button class="mini-knopf" data-lgbuch="${k}:${x.t}" ${offen ? "disabled" : ""}>Tag ${x.t} · ${fmt(LEHRGANG.preis)}</button>`).join("") : `<small class="leise">nicht angeboten</small>`}</span></div>`; }).join("");
     dialog(`<h3>📚 Fortbildung für ${wer}</h3><p class="text">Ein Lehrgang dauert <b>${LEHRGANG.tage} Tage</b>, kostet <b>${fmt(LEHRGANG.preis)}</b> und bringt <b>+${LEHRGANG.plus}</b> im Bereich${du ? "" : " – außerhalb des Berufs hebt er die Grenze von 50 auf 75"}. Gebucht wird für <b>${jzName(jz)}</b>, höchstens ein Lehrgang je Jahreszeit.${du ? " Du fehlst dabei nicht im Stall." : " In der Zeit fehlt der Mitarbeiter wie im Urlaub."}</p>
       ${offen ? `<p class="wn-hinweis">📅 Gebucht: <b>${N(K.k)}</b>, ${jzName(K.jz)}, ab Tag ${K.t} <button class="mini-knopf" data-lgstorno="1">Absagen (Geld zurück)</button></p>` : ""}<div class="lg-liste">${liste}</div>`, [["Schließen", zurueck || null, "zweit"]], "breit");
-    document.querySelectorAll("[data-lgbuch]").forEach(b => b.onclick = () => { const [k, t] = b.dataset.lgbuch.split(":"); if (!spiel.admin && geldFrei() < LEHRGANG.preis) { dialog(`<h3>Zu wenig Geld</h3>${dispoHinweis()}`, [["OK", () => lehrgangDialog(m, zurueck)]]); return; }
+    document.querySelectorAll("[data-lgbuch]").forEach(b => b.onclick = () => { const [k, t] = b.dataset.lgbuch.split(":");
+      if (!du) { const v = jzStartTag(jz) + (+t - 1); if ([m.urlaub && m.urlaub.ok !== false ? [m.urlaub.von, m.urlaub.bis] : null, m.uWunsch ? [m.uWunsch.von, m.uWunsch.bis] : null].some(x => x && tageUeber(v, v + LEHRGANG.tage - 1, x[0], x[1]))) { dialog(`<h3>Geht nicht</h3><p>Der Lehrgang fällt auf den Urlaub von ${esc(m.name)}.</p>`, [["OK", () => lehrgangDialog(m, zurueck)]]); return; } }   // S7 if (!spiel.admin && geldFrei() < LEHRGANG.preis) { dialog(`<h3>Zu wenig Geld</h3>${dispoHinweis()}`, [["OK", () => lehrgangDialog(m, zurueck)]]); return; }
       if (!spiel.admin) buchen(-LEHRGANG.preis, `Lehrgang ${N(k)} (${du ? "du" : m.name})`); const kurs = { k, jz, t: +t, tag: jzStartTag(jz) + (+t - 1) }; if (du) spiel.kurs = kurs; else m.kurs = kurs; speichern(); lehrgangDialog(m, zurueck); });
     const st = document.querySelector("[data-lgstorno]"); if (st) st.onclick = () => { if (!spiel.admin) buchen(LEHRGANG.preis, `Lehrgang abgesagt (${du ? "du" : m.name})`); if (du) delete spiel.kurs; else delete m.kurs; speichern(); lehrgangDialog(m, zurueck); };
   }
@@ -11271,6 +11272,91 @@
   const maKrank = m => !!(m.krankBis && spiel.tag <= m.krankBis);
   const maDa = m => maAktiv(m) && !maUrlaub(m) && !maKrank(m) && !maLehrgang(m) && !maSchule(m);   // S5 Lehrgang, S6 Berufsschule: im Lehrgang fehlt er wie im Urlaub
   const URLAUB_CHANCE = 0.06, KRANK_CHANCE = 0.015, KUENDIGEN_AB = 25;
+  // S7 (PLAN-MITARBEITER): Probezeit für neue Fachkräfte (2 Jahreszeiten, kein Urlaub, 1. Jz 75 % Gehalt und 1 Box weniger, fristlose Kündigung beidseitig)
+  // und Urlaub als ein Block je Jahr (Tempo 4/7/10: 2/3/4 Tage), geplant per Sammelbrief „Urlaubsplanung“ zu Beginn jeder Jahreszeit für die nächste. Zahlen: Startwerte, leicht änderbar
+  const PROBE = { jz: 2, gehalt: 0.75, kuendigen: 0.03, unzufr: 45 };
+  const inProbe = m => m.probe != null && jzJetzt() < m.probe;
+  const probeErsteJz = (m, jz = jzJetzt()) => m.probe != null && jz === m.ab;
+  const URLAUB = { tage: { 4: 2, 7: 3, 10: 4 }, schieb: { 4: 1, 7: 2, 10: 3 }, fest: 0.1, ablehnen: -5, naechste: -1, ok: 2, schiebNein: -2 };
+  const urlaubTage = () => URLAUB.tage[tpj()] || Math.max(2, Math.round(tpj() * 0.4));
+  const urlaubSchieb = () => URLAUB.schieb[tpj()] || Math.max(1, Math.round(tpj() * 0.3));
+  const jahrVonJz = jz => datum(jzStartTag(jz)).j;
+  const URLAUB_GRUND = ["Hochzeit in der Familie", "Familienfeier", "Umzug", "gebuchte Reise"];
+  const tageUeber = (a1, b1, a2, b2) => a1 <= b2 && a2 <= b1;
+  function maWegTage(m, ohne) {   // belegte Tage: Lehrgang, Berufsschule, Urlaub (ohne = Wunsch, der gerade geplant wird)
+    const L = []; if (m.kurs && !m.kurs.fertig && m.kurs.tag != null) L.push([m.kurs.tag, m.kurs.tag + LEHRGANG.tage - 1, "Lehrgang"]);
+    if (m.schule) L.push([m.schule.tag, m.schule.tag + AZUBI.schuleTage - 1, "Berufsschule"]);
+    if (m.urlaub && m.urlaub.ok !== false && m.urlaub.bis >= spiel.tag) L.push([m.urlaub.von, m.urlaub.bis, "Urlaub"]);
+    if (m.uWunsch && m.uWunsch !== ohne) L.push([m.uWunsch.von, m.uWunsch.bis, "Urlaubswunsch"]);
+    return L;
+  }
+  function urlaubWunschMachen(m, n) {   // n = Jahreszeit, für die geplant wird
+    const tage = urlaubTage(), t0 = jzStartTag(n), frei = [];
+    for (let o = 0; o <= tpj() - tage; o++) { const von = t0 + o, bis = von + tage - 1; if (!maWegTage(m).some(([a, b]) => tageUeber(von, bis, a, b))) frei.push(von); }
+    if (!frei.length) return null;
+    const von = frei[Math.floor(Math.random() * frei.length)], fest = m.typ !== "azubi" && !m.uVor && Math.random() < URLAUB.fest;
+    return { jz: n, von, bis: von + tage - 1, von0: von, fest, grund: fest ? URLAUB_GRUND[Math.floor(Math.random() * URLAUB_GRUND.length)] : "", vor: !!m.uVor };
+  }
+  function urlaubJahreszeit() {   // zu Beginn jeder Jahreszeit (nach den Gehältern)
+    const jetzt = jzJetzt(), n = jetzt + 1, s = datum(jzStartTag(n)).s, y = jahrVonJz(n), neu = [];
+    (spiel.mitarbeiter || []).map(maErgaenzen).forEach(m => { const w = m.uWunsch;
+      if (w && w.jz <= jetzt) { if (w.jz === jetzt) { m.urlaub = { von: w.von, bis: w.bis, ok: true }; m.urlaubJahr = jahrVonJz(w.jz); zufrAendern(m, URLAUB.ok); } delete m.uWunsch; } });   // offen geblieben = genehmigt
+    if (spiel.tutorial) return;
+    (spiel.mitarbeiter || []).forEach(m => {
+      if (!maAktiv(m, n) || (m.bis != null && m.bis <= n) || (m.probe != null && n < m.probe) || m.uWunsch) return;
+      if (m.urlaubJahr === y || (m.urlaub && m.urlaub.ok && m.urlaub.von >= jzStartTag(n))) return;
+      if (m.uJz == null) m.uJz = m.typ === "azubi" ? 1 : [0, 1, 1, 2, 3][Math.floor(Math.random() * 5)];
+      const dran = m.typ === "azubi" ? s === 1 : m.uVor || s === m.uJz || s === 3;   // Winter = letzte Chance im Jahr
+      if (!dran) return; const w = urlaubWunschMachen(m, n); if (!w) return; m.uWunsch = w; neu.push(m); });
+    if (!neu.length) return;
+    brief("Hofverwaltung", `Urlaubsplanung ${jzName(n)}`, `Für <b>${jzName(n)}</b> haben ${neu.length === 1 ? "ein Mitarbeiter" : `${neu.length} Mitarbeiter`} Urlaub beantragt:<br>${neu.map(m => `• <b>${esc(m.name)}</b> (${maTitel(m)}): ${urlaubSpanne(m.uWunsch)}${m.uWunsch.fest ? ` – fest (${m.uWunsch.grund})` : ""}${m.uWunsch.vor ? " – hat Vorrang" : ""}`).join("<br>")}${urlaubKonflikte(neu).length ? `<br><br>⚠️ ${urlaubKonflikte(neu).join("<br>⚠️ ")}` : ""}<br><br>Du kannst Wünsche ein paar Tage verschieben (±${urlaubSchieb()}), in die nächste Jahreszeit schieben, genehmigen oder ablehnen. Was zu Beginn von ${jzName(n)} noch offen ist, gilt als genehmigt.`, { aktion: { typ: "uplan", jz: n } });
+  }
+  const urlaubSpanne = w => `${jzName(w.jz)}, Tag ${datum(w.von).t}${w.bis > w.von ? `–${datum(w.bis).t}` : ""} (${w.bis - w.von + 1} Tage)`;
+  function urlaubKonflikte(liste) {   // zwei aus demselben Beruf gleichzeitig weg
+    const out = [], alle = (spiel.mitarbeiter || []).filter(x => maAktiv(x));
+    liste.forEach(m => { const w = m.uWunsch; if (!w) return; alle.filter(x => x !== m && x.typ === m.typ).forEach(x => { maWegTage(x).forEach(([a, b, was]) => { if (tageUeber(w.von, w.bis, a, b) && !(was === "Urlaubswunsch" && liste.indexOf(x) > liste.indexOf(m))) out.push(`${esc(m.name)} und ${esc(x.name)} (beide ${MA_TYP[m.typ].name}) wären gleichzeitig weg (${was}).`); }); }); });
+    return [...new Set(out)];
+  }
+  function urlaubStatus(m) {   // Anzeige im Mitarbeiter-Dialog
+    const y = datum().j, u = m.urlaub;
+    if (inProbe(m)) return `in der Probezeit kein Urlaub`;
+    if (u && u.ok && u.bis >= spiel.tag) return spiel.tag >= u.von ? "gerade im Urlaub" : `genehmigt, ${jzName(jzVonTag(u.von))}, ${u.bis - u.von + 1} Tage`;
+    if (u && u.ok && datum(u.von).j === y) return "genommen";
+    if (m.uWunsch) return `beantragt für ${jzName(m.uWunsch.jz)}`;
+    if (m.urlaubJahr === y) return "genommen";
+    return "noch nicht geplant";
+  }
+  const jzVonTag = tag => { let j = jzJetzt(); while (jzStartTag(j) > tag) j--; while (jzStartTag(j + 1) <= tag) j++; return j; };
+  function urlaubPlanDialog(zurueck) {
+    const L = (spiel.mitarbeiter || []).filter(m => m.uWunsch && maAktiv(m, m.uWunsch.jz)), sch = urlaubSchieb();
+    if (!L.length) { dialog(`<h3>🏖️ Urlaubsplanung</h3><p>Es gibt gerade keine offenen Urlaubswünsche.</p>`, [["OK", zurueck || null]]); return; }
+    const zeile = (m, i) => { const w = m.uWunsch, az = m.typ === "azubi", kann = !w.fest && !az, t0 = jzStartTag(w.jz), t1 = t0 + tpj() - 1;
+      const weg = maWegTage(m, w), links = kann && w.von > Math.max(t0, w.von0 - sch) && !weg.some(([a, b]) => tageUeber(w.von - 1, w.bis - 1, a, b)), rechts = kann && w.bis < Math.min(t1, w.von0 + sch + (w.bis - w.von)) && !weg.some(([a, b]) => tageUeber(w.von + 1, w.bis + 1, a, b));
+      const k = urlaubKonflikte([m]), wahl = w.wahl || "";
+      return `<div class="ma-karte"><div class="ma-zeile"><span><b class="ma-name">${maAva(m, 30)}<span>${esc(m.name)}</span></b><small>${maTitel(m)} · ${urlaubSpanne(w)}${w.von !== w.von0 ? ` · verschoben (Wunsch: Tag ${datum(w.von0).t})` : ""}${w.fest ? ` · <b>fest</b> (${w.grund})` : ""}${w.vor ? " · hat Vorrang" : ""}${az ? " · Azubi: nur genehmigen" : ""}</small></span></div>
+        ${k.length ? `<p class="wn-hinweis">⚠️ ${k.join(" ")}</p>` : ""}<div class="ma-aufgaben">${kann ? `<button class="mini-knopf" data-uschieb="${i}:-1" ${links ? "" : "disabled"}>◀ 1 Tag früher</button><button class="mini-knopf" data-uschieb="${i}:1" ${rechts ? "" : "disabled"}>1 Tag später ▶</button>` : ""}
+        <button class="mini-knopf ${wahl === "ok" ? "an" : ""}" data-uwahl="${i}:ok">✔ Genehmigen</button>${kann && !w.vor ? `<button class="mini-knopf ${wahl === "naechste" ? "an" : ""}" data-uwahl="${i}:naechste">⏭ Nächste Jahreszeit</button>` : ""}${!az ? `<button class="mini-knopf ${wahl === "nein" ? "an" : ""}" data-uwahl="${i}:nein">✕ Ablehnen</button>` : ""}</div></div>`; };
+    dialog(`<h3>🏖️ Urlaubsplanung</h3><p class="text">Jeder hat einmal im Jahr <b>${urlaubTage()} Tage</b> Urlaub am Stück. Verschieben geht um bis zu ${sch} ${sch === 1 ? "Tag" : "Tage"} – ob er das annimmt, hängt von seiner Laune ab. „Nächste Jahreszeit“ ärgert kaum (dann hat sein Wunsch Vorrang), Ablehnen ärgert deutlich. Ohne Entscheidung gilt der Wunsch als genehmigt.</p><div class="ma-liste">${L.map(zeile).join("")}</div>`,
+      [["Plan abschicken", () => urlaubPlanAbschicken(L, zurueck)], ["Später", zurueck || null, "zweit"]], "breit");
+    document.querySelectorAll("[data-uschieb]").forEach(b => b.onclick = () => { const [i, d] = b.dataset.uschieb.split(":"), w = L[+i].uWunsch; w.von += +d; w.bis += +d; speichern(); urlaubPlanDialog(zurueck); });
+    document.querySelectorAll("[data-uwahl]").forEach(b => b.onclick = () => { const [i, k] = b.dataset.uwahl.split(":"), w = L[+i].uWunsch; w.wahl = w.wahl === k ? "" : k; speichern(); urlaubPlanDialog(zurueck); });
+  }
+  function urlaubPlanAbschicken(L, zurueck) {
+    const info = [];
+    L.forEach(m => { const w = m.uWunsch; if (!w || !w.wahl) return;
+      if (w.wahl === "ok") { if (w.von !== w.von0 && Math.random() > Math.min(0.95, 0.3 + zufr(m) / 100 * 0.7)) { const d = w.bis - w.von; w.von = w.von0; w.bis = w.von0 + d; zufrAendern(m, URLAUB.schiebNein); info.push(`${esc(m.name)} möchte den Urlaub lieber wie gewünscht nehmen – genehmigt für ${urlaubSpanne(w)}.`); }
+        else info.push(`${esc(m.name)}: genehmigt, ${urlaubSpanne(w)}.`);
+        m.urlaub = { von: w.von, bis: w.bis, ok: true }; m.urlaubJahr = jahrVonJz(w.jz); zufrAendern(m, URLAUB.ok); delete m.uVor; delete m.uWunsch; }
+      else if (w.wahl === "naechste") { m.uVor = true; zufrAendern(m, URLAUB.naechste); delete m.uWunsch; info.push(`${esc(m.name)}: in die nächste Jahreszeit verschoben (dann mit Vorrang).`); }
+      else if (w.wahl === "nein") { m.uVor = true; zufrAendern(m, URLAUB.ablehnen); delete m.uWunsch; info.push(`${esc(m.name)}: abgelehnt – ${maPron(m).er} ist enttäuscht und fragt nächste Jahreszeit wieder.`); } });
+    speichern(); dialog(`<h3>🏖️ Plan abgeschickt</h3><p>${info.length ? info.join("<br>") : "Nichts entschieden – die Wünsche bleiben offen."}</p>`, [["OK", zurueck || null]]);
+  }
+  function probeFristlos(m, vonIhm) {   // Probezeit: Kündigung gilt sofort, Gehalt anteilig
+    const tage = Math.max(0, spiel.tag - jzStartTag(jzJetzt())), g = Math.round(m.gehalt * (probeErsteJz(m) ? PROBE.gehalt : 1) * tage / tpj());
+    if (g > 0 && !spiel.admin) buchen(-g, `Gehalt ${maTitel(m)} ${m.name} (anteilig)`);
+    spiel.mitarbeiter = (spiel.mitarbeiter || []).filter(x => x !== m); prot(vonIhm ? "Mitarbeiter hat selbst gekündigt" : "Mitarbeiter gekündigt", { p: m.name });
+    brief("Hofverwaltung", vonIhm ? `${m.name} hört sofort auf` : `${m.name}: Kündigung in der Probezeit`, `${vonIhm ? `${maTitel(m)} <b>${esc(m.name)}</b> hat in der Probezeit gekündigt – das gilt sofort. ${maPron(m).Er} hat sich hier nicht wohlgefühlt.` : `{Du hast|Sie haben} ${maTitel(m)} <b>${esc(m.name)}</b> in der Probezeit gekündigt – das gilt sofort.`} Anteiliges Gehalt: ${fmt(g)}.`, maBr(m));
+  }
   // jeden Morgen nach der Arbeit: Zufriedenheit, Urlaubsanträge, Krankheit, Kündigung
   function mitarbeiterLaune() {
     const jahr = datum().j;
@@ -11290,12 +11376,8 @@
         brief("Hofverwaltung", `${m.name} ist krank`, `${titel} <b>${esc(m.name)}</b> hat sich krank gemeldet und fällt ${tage === 1 ? "heute" : `${tage} Tage`} aus. ${MA_TYP[m.typ].boxen ? `${P.seine === "seine" ? "Seine" : "Ihre"} Boxen übernehmen Kollegen aus demselben Beruf (je 1 Box mehr) – sonst muss {du|Sie} sie selbst versorgen.` : ""}`, maBr(m));
         return;
       }
-      // Urlaub: einmal im Jahr 1–3 Tage, Antrag per Brief 2 Tage vorher
-      if (m.urlaubJahr !== jahr && !(m.urlaub && m.urlaub.bis >= spiel.tag) && (m.typ !== "azubi" || datum().s === 1) && Math.random() < URLAUB_CHANCE) {   // S6: Azubi nur im Sommer
-        const tage = 1 + Math.floor(Math.random() * 3), von = spiel.tag + 2;
-        m.urlaubJahr = jahr; m.urlaub = { von, bis: von + tage - 1, ok: null };
-        brief("Hofverwaltung", `Urlaubsantrag von ${m.name}`, `${titel} <b>${esc(m.name)}</b> möchte ${tage === 1 ? "einen Tag" : `${tage} Tage`} Urlaub nehmen – ab übermorgen (${datumText(datum(von))}, Tag ${datum(von).t}${tage > 1 ? ` bis Tag ${datum(von + tage - 1).t}` : ""}). Ohne Antwort gilt der Urlaub als genehmigt.<br><br>Während des Urlaubs übernehmen Kollegen aus demselben Beruf je 1 Box mehr, den Rest {musst du|müssen Sie} selbst versorgen.`, { aktion: { typ: "urlaub", ma: m.id }, ...maBr(m) });
-      }
+      // S7: Urlaub kommt jetzt über die Urlaubsplanung (urlaubJahreszeit) – Probezeit: unzufrieden → kündigt sofort
+      if (inProbe(m) && zufr(m) < PROBE.unzufr && Math.random() < PROBE.kuendigen) { probeFristlos(m, true); return; }
       // niedrige Zufriedenheit: Kündigung zum Ende der Jahreszeit
       if (m.bis == null && zufr(m) < KUENDIGEN_AB && Math.random() < 0.1) {
         m.bis = jzJetzt(); m.selbstGekuendigt = true; prot("Mitarbeiter hat selbst gekündigt", { p: m.name });   // S4
@@ -11340,16 +11422,18 @@
     spiel.mitarbeiter = (spiel.mitarbeiter || []).map(maErgaenzen).filter(m => {
       const T = MA_TYP[m.typ], P = maPron(m), titel = maTitel(m);
       if (maAktiv(m, vorher)) {
-        const reicht = spiel.admin || (spiel.geld || 0) >= m.gehalt;
-        if (!spiel.admin) buchen(-m.gehalt, `Gehalt ${titel} ${m.name}`);   // im Adminmodus kostet kein Angestellter Geld
+        const geh = probeErsteJz(m, vorher) ? Math.round(m.gehalt * PROBE.gehalt) : m.gehalt;   // S7: 1. Jahreszeit der Probezeit 75 %
+        const reicht = spiel.admin || (spiel.geld || 0) >= geh;
+        if (!spiel.admin) buchen(-geh, `Gehalt ${titel} ${m.name}${geh !== m.gehalt ? " (Einarbeitung 75 %)" : ""}`);   // im Adminmodus kostet kein Angestellter Geld
         if (m.bis === vorher) { brief("Hofverwaltung", `${m.name} hat aufgehört`, `${titel} <b>${esc(m.name)}</b> hat ${P.seine} letzte Jahreszeit beendet und ${P.sein} Gehalt von ${fmt(m.gehalt)} bekommen.`, maBr(m)); return false; }
         if (!reicht) m.knapp = jetzt;   // v418 (Dome): erst abwarten, ob am Jahreszeit-Beginn noch Geld reinkommt (Pension, Verkäufe) – Entscheidung in maKnappPruefen()
       }
       if (m.ab === jetzt && m.typ === "azubi") { azubiErgaenzen(m); const A = ausbilderVon(m); brief("Hofverwaltung", `${m.name} fängt heute an`, `Azubi <b>${esc(m.name)}</b> beginnt heute die Ausbildung zum Pferdewirt, Fachrichtung <b>${FACH[m.fach].n}</b> (3 Jahre). Ausbilder: ${A ? (A.id === "du" ? "{du selbst|Sie selbst}" : `<b>${esc(A.name)}</b>`) : "noch keiner"}. ${maPron(m).Er} hilft beim Füttern und Misten in ${maKapazitaet(m)} Boxen.`, maBr(m)); return true; }
-      if (m.ab === jetzt) brief("Hofverwaltung", `${m.name} fängt heute an`, `${titel} <b>${esc(m.name)}</b> arbeitet ab heute auf {deinem|Ihrem} Hof. ${P.Er} ${T.aufgabe}${T.boxen ? ` ${maKapazitaet(m)} Boxen` : ""}.`, maBr(m));
+      if (m.ab === jetzt) brief("Hofverwaltung", `${m.name} fängt heute an`, `${titel} <b>${esc(m.name)}</b> arbeitet ab heute auf {deinem|Ihrem} Hof. ${P.Er} ${T.aufgabe}${T.boxen ? ` ${maKapazitaet(m)} Boxen` : ""}.${m.probe != null ? ` Probezeit bis Ende ${jzName(m.probe - 1)} (in dieser Jahreszeit Einarbeitung: 75 % Gehalt${T.boxen ? ", 1 Box weniger" : ""}).` : ""}`, maBr(m));
       return true;
     });
     azubisJahreszeit();   // Azubis: Gehalt nach Ausbildungsjahr, Ausbilder, Abschlussprüfung
+    try { urlaubJahreszeit(); } catch (e) { console.error("Urlaub:", e); }   // S7
   }
   // jeden Morgen: Stallburschen und Azubis füttern und misten, Pfleger putzen und schneiden, Bereiter bewegen – und alle sammeln Erfahrung
   function mitarbeiterTag() {
@@ -17388,6 +17472,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Azubi und Ausbilder:</b> Einen Azubi gibt es nur mit freiem Ausbilderplatz: Pferdewirt (beide Fachrichtungen) und Stallmeister je 2 Azubis, Bereiter nur im Ausbildungsstall, der Spieler mit Ausbilderschein (einmalig ${fmt(AUSBILDERSCHEIN)}) 1 Azubi; Pferdepfleger nicht. Ausbilder krank/im Urlaub: Azubi arbeitet, lernt nichts, Fehler +10 %. Ausbilder weg: neuer wird automatisch gesucht, sonst Warnbrief und nach 1 Jahreszeit Abbruch. Ausbildung ${AUSBILDUNG_JZ / 4} Jahre, Gehalt ${AZUBI_GEHALT.map(fmt).join(" / ")} pro Jahreszeit. Lernt je Arbeitstag mit Ausbilder +0,4 in den ersten beiden und +0,25 in den anderen Bereichen der Fachrichtung (${Object.values(FACH).map(F => `${F.n}: ${F.lernt.map(k => (WISSEN.find(w => w[0] === k) || [])[3]).join(", ")}`).join(" · ")}). Abschlussprüfung: Chance (Schnitt der 4 Bereiche − 8) ÷ 22, zwischen 10 und 95 %; bestanden → Brief mit Übernehmen (Gehalt der Fachkraft, Erfahrung/Eigenschaften bleiben, fehlendes Grundwissen bis zur Hälfte der Startwerte) oder Gehen lassen (sonst geht er zum Ende der Jahreszeit); durchgefallen → ${VERLAENGERUNG_JZ} Jahreszeiten Verlängerung. Fachrichtung nach Stallart (Zuchtstall → Pferdezucht → Pferdewirt Pferdezucht; Ausbildungsstall → Klassische Reitausbildung → Bereiter; Pension/Gnadenhof → Haltung und Service; Rennstall → Pferderennen; Westernstall → Spezialreitweisen). Stallarten kommen mit dem Hof-Ausbau – bis dahin gilt der Hof als Zuchtstall (<code>spiel.stallarten</code>). Pferdewirt Haltung und Service ${fmt(MA_TYP.pferdewirtHS.gehalt)}: nur mit Pensionsstall/Gnadenhof.</p>
       <p><b>Arbeit jeden Morgen</b> (nach Boxnummer): Stallburschen und Azubis füttern und misten (Weide nur, wenn Heu nötig ist), mit Stallmeister schafft ein Stallbursche 5 statt 3 Boxen, fleißig +1 Box. Pfleger putzen (Bürste + Kamm) und schneiden Mähne/Schopf auf Wunschlänge. Bereiter trainieren Pferde ab 3 Jahren mit über 50 % Gesundheit (nicht auf der Weide, ohne Boxenruhe) – siehe „Training daheim“. Fehler (vergisst eine Box): Azubi 25 % × (1 − Erfahrung Fütterung/Stallklima ÷ 50), mindestens 3 %; schusselig +8 %; zuverlässig nie. Ruhige Hand: Vertrauen der versorgten Pferde +0,2 pro Tag; ungeduldig −0,1 (nicht unter 20).</p>
       <p><b>Höchstenergie und Überlastung (A2, v861, PLAN-AQUA):</b> Höchstenergie = bisher × Ausdauer-Faktor (1 + ${ENERGIE_A2.ausdauer} × (Ausdauer − 60) ÷ 100, ${ENERGIE_A2.ausMin}–${ENERGIE_A2.ausMax}) × Alter (unter ${ENERGIE_A2.jung} Jahren ×${ENERGIE_A2.jungF}, ab ${ENERGIE_A2.alt} Jahren −${Math.round(ENERGIE_A2.altJahr * 100)} % je Jahr, höchstens −${Math.round(ENERGIE_A2.altMax * 100)} %), Leiste bis ${ENERGIE_A2.anzeige}. Arbeitsstufe leicht/mittel/schwer ab ${ARBEIT_STUFE.map(x => Math.round(x * 100) + " %").join(" / ")} der Höchstenergie (Arbeitsschnitt = 0,6 × alt + 0,4 × heute). Turnier im Arbeitsschnitt nach Klasse E–S: ${TURNIER_ARBEIT.join(" / ")}. <b>Überlastung</b> = ${UEBERLAST.naechte} Nächte hintereinander „schwer“: ${UEBERLAST.arten.join(", ")} ×${UEBERLAST.f}, bis die Arbeit wieder unter „schwer“ liegt.</p>
+      <p><b>Probezeit und Urlaub (S7, v868):</b> Neue Fachkräfte (nicht Azubis) haben ${PROBE.jz} Jahreszeiten Probezeit: kein Urlaub, in der 1. Jahreszeit ${Math.round(PROBE.gehalt * 100)} % Gehalt und 1 Box weniger, Kündigung gilt sofort (anteiliges Gehalt); unter Zufriedenheit ${PROBE.unzufr} kündigt er mit ${Math.round(PROBE.kuendigen * 100)} % je Tag selbst. Urlaub: ein Block im Jahr, Tempo 4/7/10 = ${URLAUB.tage[4]}/${URLAUB.tage[7]}/${URLAUB.tage[10]} Tage, in seiner Lieblings-Jahreszeit (spätestens im Winter; Azubi nur Sommer). Zu Beginn jeder Jahreszeit kommt der Sammelbrief „Urlaubsplanung“ für die nächste: verschieben ±${URLAUB.schieb[4]}/${URLAUB.schieb[7]}/${URLAUB.schieb[10]} Tage (angenommen mit 30 % + 70 % × Zufriedenheit, sonst ${URLAUB.schiebNein}), genehmigen (+${URLAUB.ok}), nächste Jahreszeit (${URLAUB.naechste}, dann Vorrang, nicht noch einmal), ablehnen (${URLAUB.ablehnen}, fragt wieder). ${Math.round(URLAUB.fest * 100)} % der Wünsche sind fest (Hochzeit …): nur genehmigen/ablehnen. Azubi: nur genehmigen. Offen gebliebene gelten zu Beginn der Jahreszeit als genehmigt. Warnung, wenn zwei aus demselben Beruf gleichzeitig weg sind; Urlaub nie auf Lehrgang/Berufsschule.</p>
       <p><b>Azubi (S6, v867):</b> Bewerbungen nur im Sommer, Beginn im Herbst. Ausbilder wählen (beim Einstellen und später „Ausbilder wechseln“): passend ist ${Object.entries(AUSB_PASST).map(([f, L]) => `${FACH[f].n} – ${L.map(t => MA_TYP[t] ? MA_TYP[t].name : t).join("/")}`).join(", ")}, Stallmeister immer; unpassend ×${AZUBI.unpassend}; Lerntempo × (0,6 + 0,8 × Erfahrung des Ausbilders im Bereich ÷ 100). Du als Ausbilder: er lernt nur in den Bereichen, in denen du heute selbst gearbeitet hast. 1. Jahr Grundausbildung (alle Bereiche ${AZUBI.grund}, Fachrichtung ×1,3), 2.–3. Jahr Fachrichtung ${AZUBI.fach}/${AZUBI.fachRest}, übrige ${AZUBI.rest} (je Arbeitstag × 7 ÷ Tage je Jahreszeit). Einsatz Stalldienst, Putzen oder <b>Mitlaufen</b> (ab Fortgeschritten: nicht im Stall, ×${AZUBI.mitlaufen}, nur in den Bereichen des Ausbilders) – jeder Wechsel gilt ab dem nächsten Morgen. Pflicht-Lehrgang 1 je Ausbildungsjahr (automatisch, ${fmt(LEHRGANG.preis)}), Berufsschule jeden Winter ${AZUBI.schuleTage} Tage (+${AZUBI.schule} in allen Bereichen, keine Kosten). Urlaub nur im Sommer. Ergebnis nach 3 Jahren: Fachrichtung etwa 35–45, mit Pflicht-Lehrgang 45–55, übrige etwa 15.</p>
       <p><b>Lehrgänge (S5, v866, ab Fortgeschritten):</b> Hofverwaltung → Mitarbeiter → Beruf → „📚 Fortbildung“ (oder „Selbst einen Lehrgang machen“ bei deiner Erfahrung): je Bereich ${fmt(LEHRGANG.preis)}, ${LEHRGANG.tage} Tage weg (zählt wie Urlaub, Kollegen übernehmen), +${LEHRGANG.plus} im Bereich, außerhalb des Berufs Grenze 50 → 75. Gebucht wird für die nächste Jahreszeit, höchstens 1 je Jahreszeit und Person; je Bereich ${Math.round(LEHRGANG.angebot * 100)} % Chance auf 1–2 Termine, ${Math.round(LEHRGANG.voll * 100)} % ausgebucht (fest je Spielstand und Jahreszeit). ${Math.round(LEHRGANG.absage * 100)} % sagt der Veranstalter zu Beginn der Jahreszeit ab (Brief, Geld zurück). Du selbst: gleiche Kosten, ohne Fehltage, keine Grenze.</p>
       <p><b>Whiteboard-Passung (S4, v865):</b> Zustand des Pferdes → Bereich (nur Bekanntes: bemerkte/diagnostizierte Befunde über den Bereich der Krankheit, Futterzustand ≤ 3 / ≥ 8 → Fütterung, sehr dreckig → Haut, Hufschmied fällig → Hufe, tragend/Fohlen → Zucht, jung (unter 3 J.) oder nervös → Verhalten, im Training → Rücken, Einsteller-Pferd → Einsteller). Grün ab Wert 40 im Bereich, gelb („wenig Erfahrung“) unter 20; Eigenschaften: ruhige Hand grün / ungeduldig gelb bei jungen oder nervösen, aufmerksam grün / schusselig gelb bei kranken Pferden. Mitarbeiter gewählt → Boxen grün/gelb umrandet, in der Box Schlagwort neben dem Namen, Antippen zeigt den Grund. Nur Hinweise, die Zuteilung bleibt frei.</p>
@@ -17428,7 +17513,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     const bw = ok ? bewerber(typ) : [];
     dialog(`<h3>${T.ico} ${T.name}</h3><p>Ein ${T.name} ${T.aufgabe}${T.boxen ? ` <b>${T.boxen} Boxen</b> (nach Boxnummer)` : ""}. ${T.info} Gehalt ab <b>${fmt(T.gehalt)} pro Jahreszeit</b>, gezahlt am Ende jeder Jahreszeit.</p>${extra}
       <p><small>Neue Leute fangen immer zu Beginn der nächsten Jahreszeit an. Kündigst du, arbeiten sie noch bis zum Ende der Jahreszeit. Kannst du das Gehalt nicht bezahlen, kündigen sie selbst – das letzte Gehalt nehmen sie sich trotzdem.</small></p>
-      ${sb.length ? `<h4 class="ma-titel">Angestellt</h4><div class="ma-liste">${sb.map((m, i) => `<div class="ma-karte"><div class="ma-zeile"><span><b class="ma-name">${maAva(m, 34)}<span>${esc(m.name)}</span></b><small>${maTitel(m)} · ${fmt(m.gehalt)} pro Jahreszeit · ${status(m)}${maAktiv(m) ? ` · ${maUrlaub(m) ? "🏖️ im Urlaub" : maKrank(m) ? "🤒 krank" : zufrText(m)}${spiel.admin ? ` (Zufriedenheit ${Math.round(zufr(m))})` : ""}` : ""}${m.typ === "azubi" ? (() => { azubiErgaenzen(m); const A = ausbilderVon(m); return `<br>🎓 ${FACH[m.fach].n} · ${ausbildungsJahr(m)}. Ausbildungsjahr · Ausbilder: ${A ? (A.id === "du" ? "du" : esc(A.name)) + (ausbilderDa(m) ? "" : " (fehlt gerade)") : "⚠️ keiner"} · Prüfung ${jzName(m.pruefung).replace(/^\S+ /, "")}${m.bestanden ? " · ✅ bestanden" : ""}`; })() : m.ausgebildet ? `<br>🎓 bei dir ausgebildet (${m.ausgebildet})` : ""}</small></span>${m.bis == null ? `<span class="ma-knr">${freiStufe("lehrgang") && maAktiv(m) ? `<button class="knopf zweit" data-lgma="${i}">📚 Fortbildung</button>` : ""}<button class="knopf zweit" data-kuend="${i}">${m.ab > jetzt ? "Absagen" : "Kündigen"}</button></span>` : ""}</div>${m.kurs && !m.kurs.fertig ? `<div class="ma-stark"><small>📚 ${maLehrgang(m) ? "gerade im Lehrgang" : `Lehrgang gebucht: ${jzName(m.kurs.jz)}, ab Tag ${m.kurs.t}`} (${(wissenListe({ einsteller: 1 }).find(x => x[0] === m.kurs.k) || [])[3] || m.kurs.k})</small></div>` : ""}${m.typ === "azubi" ? `<div class="ma-aufgaben"><small>Einsatz:</small><button class="mini-knopf ${!m.einsatz ? "an" : ""}" data-azeins="${i}:stall">🧹 Stalldienst</button><button class="mini-knopf ${m.einsatz === "putzen" ? "an" : ""}" data-azeins="${i}:putzen">🧽 Putzen</button>${freiStufe("mitlaufen") && m.ausbilder && m.ausbilder !== "du" ? `<button class="mini-knopf ${m.einsatz === "mitlaufen" ? "an" : ""}" data-azeins="${i}:mitlaufen" title="lernt mehr, aber nur in den Bereichen des Ausbilders – fehlt dann im Stall">🚶 Mitlaufen</button>` : ""}${m.einsatzNeu ? `<small>ab morgen: ${{ stall: "Stalldienst", putzen: "Putzen", mitlaufen: "Mitlaufen" }[m.einsatzNeu.e]}</small>` : ""}${ausbilderListe().some(a => a.belegt < a.plaetze && a.id !== m.ausbilder) ? `<button class="mini-knopf" data-ausbwechsel="${i}">🎓 Ausbilder wechseln</button>` : ""}</div>` : ""}${(MA_AUFGABEN_TYP[m.typ] || []).length && !(m.typ === "azubi" && m.einsatz === "putzen") ? `<div class="ma-aufgaben"><small>Aufgaben:</small>${MA_AUFGABEN_TYP[m.typ].map(k => `<label><input type="checkbox" data-maauf="${i}:${k}" ${maDarf(m, k) ? "checked" : ""}> ${MA_AUFGABEN[k]}</label>`).join("")}</div>` : ""}${staerkeHTML(m.wissen)}${(n => n ? `<div class="ma-stark"><small>📈 seit letzter Jahreszeit: +${n} ${n === 1 ? "Stufe" : "Stufen"}</small></div>` : "")((m.aufst || []).filter(a => a.jz >= jzJetzt() - 1).length)}${eigHTML(m)}${wissenHTML(m.wissen)}</div>`).join("")}</div>` : ""}
+      ${sb.length ? `<h4 class="ma-titel">Angestellt</h4><div class="ma-liste">${sb.map((m, i) => `<div class="ma-karte"><div class="ma-zeile"><span><b class="ma-name">${maAva(m, 34)}<span>${esc(m.name)}</span></b><small>${maTitel(m)} · ${fmt(m.gehalt)} pro Jahreszeit · ${status(m)}${inProbe(m) && maAktiv(m) ? ` · Probezeit bis ${jzName(m.probe - 1)}` : ""}${maAktiv(m) && m.bis == null ? ` · 🏖️ Urlaub: ${urlaubStatus(m)}` : ""}${maAktiv(m) ? ` · ${maUrlaub(m) ? "🏖️ im Urlaub" : maKrank(m) ? "🤒 krank" : zufrText(m)}${spiel.admin ? ` (Zufriedenheit ${Math.round(zufr(m))})` : ""}` : ""}${m.typ === "azubi" ? (() => { azubiErgaenzen(m); const A = ausbilderVon(m); return `<br>🎓 ${FACH[m.fach].n} · ${ausbildungsJahr(m)}. Ausbildungsjahr · Ausbilder: ${A ? (A.id === "du" ? "du" : esc(A.name)) + (ausbilderDa(m) ? "" : " (fehlt gerade)") : "⚠️ keiner"} · Prüfung ${jzName(m.pruefung).replace(/^\S+ /, "")}${m.bestanden ? " · ✅ bestanden" : ""}`; })() : m.ausgebildet ? `<br>🎓 bei dir ausgebildet (${m.ausgebildet})` : ""}</small></span>${m.bis == null ? `<span class="ma-knr">${freiStufe("lehrgang") && maAktiv(m) ? `<button class="knopf zweit" data-lgma="${i}">📚 Fortbildung</button>` : ""}<button class="knopf zweit" data-kuend="${i}">${m.ab > jetzt ? "Absagen" : inProbe(m) ? "Fristlos kündigen" : "Kündigen"}</button></span>` : ""}</div>${m.kurs && !m.kurs.fertig ? `<div class="ma-stark"><small>📚 ${maLehrgang(m) ? "gerade im Lehrgang" : `Lehrgang gebucht: ${jzName(m.kurs.jz)}, ab Tag ${m.kurs.t}`} (${(wissenListe({ einsteller: 1 }).find(x => x[0] === m.kurs.k) || [])[3] || m.kurs.k})</small></div>` : ""}${m.typ === "azubi" ? `<div class="ma-aufgaben"><small>Einsatz:</small><button class="mini-knopf ${!m.einsatz ? "an" : ""}" data-azeins="${i}:stall">🧹 Stalldienst</button><button class="mini-knopf ${m.einsatz === "putzen" ? "an" : ""}" data-azeins="${i}:putzen">🧽 Putzen</button>${freiStufe("mitlaufen") && m.ausbilder && m.ausbilder !== "du" ? `<button class="mini-knopf ${m.einsatz === "mitlaufen" ? "an" : ""}" data-azeins="${i}:mitlaufen" title="lernt mehr, aber nur in den Bereichen des Ausbilders – fehlt dann im Stall">🚶 Mitlaufen</button>` : ""}${m.einsatzNeu ? `<small>ab morgen: ${{ stall: "Stalldienst", putzen: "Putzen", mitlaufen: "Mitlaufen" }[m.einsatzNeu.e]}</small>` : ""}${ausbilderListe().some(a => a.belegt < a.plaetze && a.id !== m.ausbilder) ? `<button class="mini-knopf" data-ausbwechsel="${i}">🎓 Ausbilder wechseln</button>` : ""}</div>` : ""}${(MA_AUFGABEN_TYP[m.typ] || []).length && !(m.typ === "azubi" && m.einsatz === "putzen") ? `<div class="ma-aufgaben"><small>Aufgaben:</small>${MA_AUFGABEN_TYP[m.typ].map(k => `<label><input type="checkbox" data-maauf="${i}:${k}" ${maDarf(m, k) ? "checked" : ""}> ${MA_AUFGABEN[k]}</label>`).join("")}</div>` : ""}${staerkeHTML(m.wissen)}${(n => n ? `<div class="ma-stark"><small>📈 seit letzter Jahreszeit: +${n} ${n === 1 ? "Stufe" : "Stufen"}</small></div>` : "")((m.aufst || []).filter(a => a.jz >= jzJetzt() - 1).length)}${eigHTML(m)}${wissenHTML(m.wissen)}</div>`).join("")}</div>` : ""}
       <h4 class="ma-titel">Bewerbungen ${ok ? `für ${jzName(jetzt).replace(/^\S+ /, "")}` : ""}</h4>
       ${!ok ? (typ === "azubi" ? `<p>Einen Azubi kannst du erst einstellen, wenn ein Ausbilder einen Platz frei hat: Pferdewirt oder Stallmeister (je 2 Azubis) oder du selbst mit Ausbilderschein (1 Azubi, Kurs ${fmt(AUSBILDERSCHEIN)} unter Hofverwaltung → Mitarbeiter). Der Pferdepfleger darf nicht ausbilden.</p>` : T.staelle ? `<p>Für diese Stelle bewirbt sich nur jemand, wenn dieser Hof ein ${T.staelle.map(x => STALLART_NAME[x]).join(" oder ")} ist (Stallart kommt mit dem Hof-Ausbau H7).${typ === "bereiter" ? ` Bis dahin kommt ein <b>Bereiter nach Bedarf</b>: Trainingstage je Pferd stellst du unter Box → Pflege → Orte → Reitplatz ein, je Einheit ${fmt(BEREITER_EINHEIT)}.` : ""}</p>` : `<p>Für diese Stelle bewirbt sich erst jemand, wenn dein Stall größer ist (<b>${abText(T.ab)}</b>, du hast ${spiel.boxen.length}).</p>`)
         : bw.length ? `<div class="ma-liste">${bw.map((x, i) => `<div class="ma-karte"><div class="ma-zeile"><span><b class="ma-name">${maAva(x, 34)}<span>${esc(x.name)}</span></b><small>${x.w ? T.w : T.name} · ${typ === "azubi" ? `${fmt(x.gehalt)} pro Jahreszeit im 1. Jahr` : `möchte <b>${fmt(x.gehalt)}</b> pro Jahreszeit`}</small></span>${typ === "azubi" && fachAngebot().length > 1 ? fachAngebot().map(f => `<button class="knopf" data-einst="${i}" data-fach="${f}">${FACH[f].n}</button>`).join("") : `<button class="knopf" data-einst="${i}">Einstellen</button>`}</div>${staerkeHTML(x.wissen)}${eigHTML(x)}${wissenHTML(x.wissen)}</div>`).join("")}</div>`
@@ -17438,11 +17523,11 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     document.querySelectorAll("[data-maauf]").forEach(c => c.onchange = () => { const [i, k] = c.dataset.maauf.split(":"), m = sb[+i]; m.aus = m.aus || {}; if (c.checked) delete m.aus[k]; else m.aus[k] = true; speichern(); });
     document.querySelectorAll("[data-lgma]").forEach(b => b.onclick = () => lehrgangDialog(sb[+b.dataset.lgma], () => mitarbeiterDialog(typ)));   // S5
     document.querySelectorAll("[data-kuend]").forEach(b => b.onclick = () => { const m = sb[+b.dataset.kuend]; prot("Mitarbeiter gekündigt", { p: m.name });   // S4
-      if (m.ab > jetzt) spiel.mitarbeiter = spiel.mitarbeiter.filter(x => x !== m); else m.bis = jetzt;
+      if (m.ab > jetzt) spiel.mitarbeiter = spiel.mitarbeiter.filter(x => x !== m); else if (inProbe(m)) { probeFristlos(m, false); } else m.bis = jetzt;   // S7: Probezeit = sofort
       speichern(); zeigeHof(); mitarbeiterDialog(typ); });
     document.querySelectorAll("[data-einst]").forEach(b => b.onclick = () => { const x = bw[+b.dataset.einst]; if (!x) return;
       const mach = ausb => { const neu = { id: "ma" + Date.now().toString(36), typ, name: x.name, w: x.w, wissen: { ...x.wissen }, eig: [...x.eig], gehalt: x.gehalt, ab: jetzt + 1, bis: null, av: x.av };
-        if (typ === "azubi") { neu.ausbilder = ausb; neu.fach = b.dataset.fach || fachAngebot()[0] || "zucht"; neu.pruefung = neu.ab + AUSBILDUNG_JZ; }
+        if (typ === "azubi") { neu.ausbilder = ausb; neu.fach = b.dataset.fach || fachAngebot()[0] || "zucht"; neu.pruefung = neu.ab + AUSBILDUNG_JZ; } else neu.probe = neu.ab + PROBE.jz;   // S7 Probezeit
         (spiel.mitarbeiter = spiel.mitarbeiter || []).push(neu); prot("Mitarbeiter eingestellt: " + MA_TYP[typ].name, { p: neu.name });   // S4
         spiel.bewerber.liste[typ] = bw.filter(y => y !== x);
         speichern(); zeigeHof(); mitarbeiterDialog(typ); };
@@ -17738,6 +17823,8 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       if (A.antwort || !z || z.typ !== "azubi") return `<p class="brief-aktion-info">${A.antwort === "ja" || (z && z.typ !== "azubi") ? "✅ Übernommen." : "👋 Verabschiedet."}</p>`;
       const Z = MA_TYP[FACH[z.fach].ziel];
       return `<div class="brief-aktion"><button class="knopf" data-baktion="azubi-ja" data-bid="${br.id}">✅ Übernehmen · ${fmt(Z.gehalt)} pro Jahreszeit</button><button class="knopf zweit" data-baktion="azubi-nein" data-bid="${br.id}">👋 Gehen lassen</button></div>`; }
+    if (A.typ === "uplan") { const offen = (spiel.mitarbeiter || []).some(m => m.uWunsch && m.uWunsch.jz === A.jz && !m.uWunsch.wahl); if (!offen || jzJetzt() >= A.jz) return `<p class="brief-aktion-info">✅ Urlaubsplan erledigt.</p>`;
+      return `<div class="brief-aktion"><button class="knopf" data-baktion="uplan" data-bid="${br.id}">🏖️ Urlaub planen</button></div>`; }   // S7
     if (A.typ === "urlaub") { const m = (spiel.mitarbeiter || []).find(x => x.id === A.ma), u = m && m.urlaub;
       if (!u || A.antwort || u.ok != null) return `<p class="brief-aktion-info">${(A.antwort || (u && u.ok ? "ja" : "nein")) === "ja" ? "✅ Urlaub genehmigt." : "❌ Urlaub abgelehnt."}</p>`;
       return `<div class="brief-aktion"><button class="knopf" data-baktion="urlaub-ja" data-bid="${br.id}">✅ Genehmigen</button><button class="knopf zweit" data-baktion="urlaub-nein" data-bid="${br.id}">Ablehnen</button></div>`; }
@@ -17799,6 +17886,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       else if (b.dataset.baktion === "azubi-ja" || b.dataset.baktion === "azubi-nein") { const z = (spiel.mitarbeiter || []).find(x => x.id === A.ma); if (!z) { nachher(); return; }
         if (b.dataset.baktion === "azubi-ja") { azubiUebernehmen(z); A.antwort = "ja"; zufrAendern(z, 10); } else { A.antwort = "nein"; z.bis = jzJetzt(); }
         speichern(); nachher(); }
+      else if (b.dataset.baktion === "uplan") { if (hid) { dialog(`<p>Wechsle erst zum Hof <b>${esc(hofVon(hid).name)}</b>, dann kannst du dort den Urlaub planen.</p>`, [["OK", nachher]]); return; } $("dlg").hidden = true; urlaubPlanDialog(nachher); }   // S7
       else if (b.dataset.baktion === "urlaub-ja" || b.dataset.baktion === "urlaub-nein") { const m = (spiel.mitarbeiter || []).find(x => x.id === A.ma), ja = b.dataset.baktion === "urlaub-ja";
         A.antwort = ja ? "ja" : "nein"; if (m && m.urlaub && m.urlaub.ok == null) { m.urlaub.ok = ja; zufrAendern(m, ja ? 5 : -15); } speichern(); nachher(); }
       else if (b.dataset.baktion === "bieten") { const a = auktionFinden(A.pferd); if (a) { $("dlg").hidden = true; bieten(a, nachher); } }

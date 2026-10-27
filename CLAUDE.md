@@ -97,7 +97,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (6 Stellen in index.html: lz-string.min.js, pferd.js, boxstufen.js, kopfneu.js, waschbild.js, avatare.js) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **874** (Aqua A5 – Aqua- und Mitarbeiter-Auftrag komplett, A4 Personal/Reha/Pension, A1 Gebäude, A3 Grundspiel, Mitarbeiter S9 Blasen/Tutorial – Auftrag komplett, S8 Kalender, S7 Probezeit/Urlaub, S6 Azubi, S5, S4, Tutorial-Fehler, Mitarbeiter S3, S2, A2 Höchstenergie, Mitarbeiter S1 Stärken; Tutorial: erst tippen, dann erklären + Hofplan-Kapitel; «Mehr dazu» im Tutorial, Stall des Jahres je Stallart, Futtergutschein in der Futterkammer, Tutorial-Texte gekürzt, Weihnachten A–C, Quarantäne-Pflicht, Shampoo-Reste; davor Hälse 10 % kürzer, Leckerli-Tüte; Tests Boxansicht/Krankheitsmeldungen, Stand in `UEBERGABE.md`).
+- Letzte Version bei Aktualisierung dieser Datei: **874** (Mitarbeiter-Auftrag S1–S9 und Aqua-Center A1–A5 komplett, v860–v874; Stand in `UEBERGABE.md`).
 
 ## Testen
 - **Auf Domes Windows-PC (seit 26.10.2026, Dome: „ja mach das“):** Node 22 (portabel) und Playwright liegen in `C:\Users\dome_\werkzeug-node\` (außerhalb des Projekts: `node\`, `pw\node_modules`, Chromium in `%LOCALAPPDATA%\ms-playwright`). Tests starten in PowerShell: `$base='C:\Users\dome_\werkzeug-node'; $env:Path = "$base\node;" + $env:Path; $env:NODE_PATH = "$base\pw\node_modules"; node tests/<test>.js` (Umgebungsvariablen wie `BILDER=fehler` und `BILDER_ORDNER` vorher setzen). Geprüft: `tests/finanzen-diagramm-test.js` ✓.

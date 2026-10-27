@@ -118,4 +118,5 @@ Reihenfolge einhalten. A2 und der Pausennachts-Teil von A3 (Abschnitt A3 Punkt 8
 Externe Fachleute auf Termin (Osteopath, Zahnarzt, Sattler) und der Physiotherapeut als externer Termin sind ein eigenes Thema. Ausbildungsstall außer Haus mit eigener Wassertechnik (Thema 14). Eigene gezeichnete Bilder für Teich, Halle und Laufband (jetzt nur Emoji).
 
 ## Stand
-- Vom Projekt-Chat übernommen (Claude Pro, 27.10.2026). Noch nichts gebaut.
+- Vom Projekt-Chat übernommen (Claude Pro, 27.10.2026).
+- **A2 fertig (v861)** (früh ausgeliefert, wie im Auftrag erlaubt). A1, A3–A5 offen; A1 und A4 hängen am Mitarbeiter-Auftrag.

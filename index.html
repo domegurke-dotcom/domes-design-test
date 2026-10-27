@@ -1326,7 +1326,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "876";
+  const SPIEL_VERSION = "877";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1334,12 +1334,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=876"></script>
-<script src="pferd.js?v=876"></script>
-<script src="boxstufen.js?v=876"></script>
-<script src="kopfneu.js?v=876"></script>
-<script src="waschbild.js?v=876"></script>
-<script src="avatare.js?v=876"></script>
+<script src="lz-string.min.js?v=877"></script>
+<script src="pferd.js?v=877"></script>
+<script src="boxstufen.js?v=877"></script>
+<script src="kopfneu.js?v=877"></script>
+<script src="waschbild.js?v=877"></script>
+<script src="avatare.js?v=877"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -5141,7 +5141,7 @@
     INFO.querySelectorAll("[data-solar]").forEach(k => k.onclick = () => { meldung = solarium(p); speichern(); zeigeStall(); zeigeTag(); zeigeAkte(); });
     INFO.querySelectorAll("[data-aquaw]").forEach(k => k.onclick = () => { (p.aquaWunsch = p.aquaWunsch || {}).modus = k.dataset.aquaw; speichern(); zeigeAkte(); });   // A4
     INFO.querySelectorAll("[data-aquap]").forEach(k => k.onclick = () => { (p.aquaWunsch = p.aquaWunsch || { modus: "aus" }).prog = k.dataset.aquap; speichern(); zeigeAkte(); });
-    INFO.querySelectorAll("[data-aqua]").forEach(k => k.onclick = () => { const [pr, mi] = k.dataset.aqua.split(":"); if (aquaSperre(p, box, pr)) return; if (fremd(p) && !pensionDarf(p, "aqua")) { dialog(`<h3>🏊 Pensionspferd</h3><p>Der Besitzer hat Aqua nicht gebucht.</p>`); return; } if (fremd(p) && ((spiel.wissen || {}).ruecken || 0) < PHYSIO.rueckenFremd && !((spiel.wissen || {}).wasser > 0)) { dialog(`<h3>🏊 Pensionspferd</h3><p>Fremde Pferde stellt nur der Therapeut oder ein Mitarbeiter mit Lehrgang aufs Band – du brauchst dafür Erfahrung im Bereich Rücken ab ${PHYSIO.rueckenFremd} oder den Lehrgang „Wasserarbeit“.</p>`); return; } meldung = aquaEinheit(p, box, pr, +mi, null); speichern(); zeigeStall(); zeigeTag(); zeigeAkte(); });   // A1
+    INFO.querySelectorAll("[data-aqua]").forEach(k => k.onclick = () => { const [pr, mi] = k.dataset.aqua.split(":"); if (aquaSperre(p, box, pr)) return; if (aquaLaeuft) return; if (fremd(p) && !pensionDarf(p, "aqua")) { dialog(`<h3>🏊 Pensionspferd</h3><p>Der Besitzer hat Aqua nicht gebucht.</p>`); return; } if (fremd(p) && ((spiel.wissen || {}).ruecken || 0) < PHYSIO.rueckenFremd && !((spiel.wissen || {}).wasser > 0)) { dialog(`<h3>🏊 Pensionspferd</h3><p>Fremde Pferde stellt nur der Therapeut oder ein Mitarbeiter mit Lehrgang aufs Band – du brauchst dafür Erfahrung im Bereich Rücken ab ${PHYSIO.rueckenFremd} oder den Lehrgang „Wasserarbeit“.</p>`); return; } aquaLaeuft = true; aquaFortschritt(+mi, () => { aquaLaeuft = false; meldung = aquaEinheit(p, box, pr, +mi, null); speichern(); zeigeStall(); zeigeTag(); zeigeAkte(); }); });   // A1 · Fortschrittsbalken
     INFO.querySelectorAll("[data-wasch]").forEach(k => k.onclick = () => { const w = k.dataset.wasch; meldung = "";   // W2: Waschplatz-Werkzeuge
       if (w === "shampoo" && !(spiel.shampoo > 0) && !spiel.admin) { dialog(`<h3>🧴 Kein Shampoo da</h3><p>Pferdeshampoo kaufst du in der <b>Futterkammer</b> (Hofverwaltung → Hof → Futterkammer, unten bei der Stallapotheke): eine Flasche kostet ${fmt(WASCH.shampooPreis)} und reicht für ${WASCH.shampooN} Anwendungen.</p>`); return; }
       if (w === "shampoo" && !(spiel.shampoo > 0)) { spiel.shampoo = WASCH.shampooN; }
@@ -12137,11 +12137,38 @@
       const e = fremd(p) ? einstellerVon(p) : null; if (e) e.solarSumme = (e.solarSumme || 0) + PENSION_LEISTUNG.solarium.preis; });
   }
   // W6: Domes Bilder (waschbild.js) – in der Waschplatz-/Solarium-Ansicht hinter dem Pferd statt der Box (Stufe, mit/ohne Gummimatten)
+  // ---------- Aqua-Bild (Platzhalter, Dome 27.10.): Hintergrund je Stufe, das Pferd steht davor, Wasser deckt Bauch und Beine ----------
+  const AQUA_BILD = {   // viewBox 400 × 300 wie die Waschplatz-Bilder · v = Hintergrund, w = Wasserschicht vor dem Pferd
+    1: { v: `<rect width="400" height="300" fill="#cde8f7"/><rect y="150" width="400" height="150" fill="#bfe3a8"/><path d="M0 195 Q70 178 140 195 T280 195 T400 190 L400 300 L0 300Z" fill="#5fb4d6"/><rect x="10" y="168" width="110" height="10" fill="#9b7448"/><rect x="22" y="178" width="7" height="40" fill="#7c5b34"/><rect x="100" y="178" width="7" height="40" fill="#7c5b34"/><path d="M340 160 q10-40 28-6 q12-30 22 6" fill="none" stroke="#5e8f46" stroke-width="6"/><circle cx="60" cy="40" r="22" fill="#ffe27a"/>`,
+      w: `<path d="M0 205 Q70 190 140 205 T280 205 T400 200 L400 300 L0 300Z" fill="#4aa3c7" opacity=".55"/><path d="M0 210 Q70 198 140 210 T280 210 T400 206" fill="none" stroke="#bfe8f5" stroke-width="3" opacity=".8"/>`, y: 205, txt: "Schwimmteich" },
+  2: { v: `<rect width="400" height="300" fill="#d9d4cb"/><rect width="400" height="90" fill="#8d7c64"/><g stroke="#bda87f" stroke-width="4"><line x1="0" y1="90" x2="190" y2="30"/><line x1="400" y1="90" x2="210" y2="30"/><line x1="200" y1="0" x2="200" y2="35"/></g><rect y="150" width="400" height="30" fill="#cfc7b8"/><rect y="180" width="400" height="120" fill="#4fb0cf"/><g stroke="#9ed8ea" stroke-width="2" fill="none"><path d="M0 215 h400"/><path d="M0 250 h400"/></g>`,
+      w: `<rect y="205" width="400" height="95" fill="#4aa3c7" opacity=".5"/><path d="M0 207 q25-8 50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0" fill="none" stroke="#bfe8f5" stroke-width="3" opacity=".8"/>`, y: 205, txt: "Schwimmhalle" },
+  3: { v: `<rect width="400" height="300" fill="#d9d4cb"/><rect width="400" height="80" fill="#8d7c64"/><rect x="10" y="95" width="120" height="70" rx="6" fill="#4fb0cf"/><rect x="250" y="95" width="140" height="150" rx="6" fill="#5b6770"/><rect x="258" y="150" width="124" height="60" fill="#4fb0cf" opacity=".6"/><rect x="258" y="190" width="124" height="14" fill="#2f2f33"/><rect y="215" width="400" height="85" fill="#cfc7b8"/>`,
+      w: `<rect x="80" y="190" width="320" height="40" fill="#4aa3c7" opacity=".5"/><path d="M80 192 q16-7 32 0 t32 0 t32 0 t32 0 t32 0 t32 0 t32 0 t32 0 t32 0 t32 0" fill="none" stroke="#bfe8f5" stroke-width="3" opacity=".8"/>`, y: 190, txt: "Aqua-Center (Wasserlaufband)" } };
+  let aquaLaeuft = false;
+  function aquaBildSetzen(box, st) {
+    const g = aquaGeb(), stufe = Math.max(1, Math.min(3, g ? g.stufe || 1 : 3)), B = AQUA_BILD[stufe], pp = $("pferdPlatz");
+    pp.insertAdjacentHTML("beforebegin", `<g id="waschBild" pointer-events="none">${B.v}</g>`);
+    pp.insertAdjacentHTML("afterend", `<g id="aquaWasser" pointer-events="none">${B.w}<text x="200" y="292" text-anchor="middle" font-size="14" fill="#fff" opacity=".9" font-family="Arial">${B.txt}</text></g>`);
+    st.classList.add("waschAnsicht");
+    const aus = el => { if (el && el.style.display !== "none") { el.style.display = "none"; el.dataset.waschAus = "1"; } };
+    let n = pp.nextElementSibling; while (n) { if (n.id !== "boxSchildKnopf" && n.id !== "aquaWasser") aus(n); n = n.nextElementSibling; }
+    st.querySelectorAll(":scope > .stufeEl").forEach(aus);
+  }
+  function aquaFortschritt(min, danach) {   // Fortschrittsbalken statt Wischen: kurz sichtbar, dann geht die Einheit los (Sparmodus: sofort)
+    if (spiel.sparmodus || spiel.tutorial) { danach(); return; }
+    const st = $("stall"); let bar = $("aquaBalken"); if (bar) bar.remove();
+    st.insertAdjacentHTML("beforeend", `<g id="aquaBalken" pointer-events="none"><rect x="60" y="262" width="280" height="16" rx="8" fill="#e7dfcf" stroke="#6b5a40"/><rect id="aquaBalkenFuell" x="60" y="262" width="0" height="16" rx="8" fill="#6aa84f"/><text id="aquaBalkenTxt" x="200" y="274" text-anchor="middle" font-size="11" font-family="Arial" fill="#222" font-weight="700">0 von ${min} Min.</text></g>`);
+    const t0 = Date.now(), dauer = 1800, tick = () => { const q = Math.min(1, (Date.now() - t0) / dauer), F = $("aquaBalkenFuell"), T = $("aquaBalkenTxt"); if (!F) { danach(); return; }
+      F.setAttribute("width", Math.round(280 * q)); T.textContent = `${Math.round(min * q)} von ${min} Min.`; if (q < 1) requestAnimationFrame(tick); else setTimeout(() => { const b2 = $("aquaBalken"); if (b2) b2.remove(); danach(); }, 150); };
+    requestAnimationFrame(tick);
+  }
   let waschBildUhr = null;
   const waschBildPlanen = () => { cancelAnimationFrame(waschBildUhr); waschBildUhr = requestAnimationFrame(() => { try { waschBildSetzen(B()); } catch (e) { console.error("Waschbild:", e); } }); };   // erst nach dem ganzen Stallbild
   function waschBildSetzen(box) {
-    const st = $("stall"), alt = $("waschBild"); if (alt) alt.remove(); st.classList.remove("waschAnsicht");
+    const st = $("stall"), alt = $("waschBild"); if (alt) alt.remove(); if ($("aquaWasser")) $("aquaWasser").remove(); if ($("aquaBalken")) $("aquaBalken").remove(); st.classList.remove("waschAnsicht");
     st.querySelectorAll("[data-wasch-aus]").forEach(el => { el.style.display = ""; delete el.dataset.waschAus; });
+    if (ortModus === "aqua" && box && box.pferd && !box.pferd.weide && !paddockVon(box.pferd) && aktenModus === "pflege") { aquaBildSetzen(box, st); return; }   // Aqua: Platzhalter-Hintergrund, Pferd im Wasser
     const p = box && box.pferd, W = window.WASCHBILD; if (!p || !W || p.weide || paddockVon(p) || aktenModus !== "pflege" || (ortModus !== "waschplatz" && ortModus !== "solarium")) return;
     const sol = ortModus === "solarium", g = sol ? solarGeb() : waschGeb(), stufe = Math.max(1, Math.min(3, g ? g.stufe || 1 : 3)), k = (sol ? "s" : "w") + stufe + (g && g.gummi && stufe >= 2 ? "g" : "");
     const svg = W[k] || W[(sol ? "s" : "w") + stufe]; if (!svg) return;

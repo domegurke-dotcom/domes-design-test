@@ -142,4 +142,4 @@ Osteopath, Physiotherapeut, Pferdezahnarzt, Sattler (externe Fachleute auf Termi
 
 ## Stand
 - Vom Projekt-Chat übernommen (Claude Pro, 27.10.2026).
-- **S1 (v860), S2 (v862), S3 (v863), S4 (v865), S5 (v866) fertig.** S6–S9 offen.
+- **S1 (v860), S2 (v862), S3 (v863), S4 (v865), S5 (v866), S6 (v867) fertig.** S7–S9 offen. In S6 nicht gebaut: Einsatz-Wahl am Whiteboard (nur im Azubi-Dialog).

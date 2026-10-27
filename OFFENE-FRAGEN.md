@@ -82,3 +82,8 @@ Dome: Lizenzen als echte Regel; Welche Lizenzen / ob Klassische Reitausbildung /
 - Gangpferd = Tölt oder Pass, ab 4 Jahren; Vorteile Nenngeld ×0,5 und Tölt-/Passtraining ×1,2 (wie Western-/Rennstall).
 - Offen: Hinweisblase fehlt; Rennbahn-Info nennt 0,8 ha, `PLATZ.rennbahn` ist 2 ha; Trail/Westernstall sind für Fortgeschrittene baubar, der Pferdewirt Spezialreitweisen aber nicht einstellbar (Frage an Dome gestellt).
 - Nächstes Thema laut Dome: Lizenzen (`PROJEKT-CHAT-THEMEN.md` Punkt 30) – erst im Projekt-Chat planen.
+
+## Notiz Dome 27.10.: Gehälter der Mitarbeiter anpassen (noch nicht gebaut)
+Dome: Ein Pferdepfleger darf nicht so viel verdienen wie ein Pferdewirt – deutlicher Unterschied.
+Stand jetzt (`MA_TYP.*.gehalt`, je Jahreszeit): Hofhelfer 280 · Stallbursche 300 · Pferdepfleger 330 · Pferdewirt Pferdehaltung und Service 340 · Pferdewirt Pferdezucht 360 · Pferdewirt Klassische Reitausbildung / Spezialreitweisen 420 · Pferdewirt Pferderennen 450 · Fütterungsberater 450 · Physiotherapeut 480 · Pferdewirtschaftsmeister 500.
+Achtung: Die Löhne galten seit v806 als „abgeschlossen, nicht mehr anfassen“ – Dome hebt das hiermit für diesen Punkt auf. Vor dem Bauen neue Zahlen mit Dome abstimmen (Pfleger runter oder Pferdewirte rauf?). Bestehende Angestellte behalten ihr Gehalt, sonst fragen.

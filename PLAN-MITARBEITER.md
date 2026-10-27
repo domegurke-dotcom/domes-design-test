@@ -142,4 +142,4 @@ Osteopath, Physiotherapeut, Pferdezahnarzt, Sattler (externe Fachleute auf Termi
 
 ## Stand
 - Vom Projekt-Chat übernommen (Claude Pro, 27.10.2026).
-- **S1 (v860), S2 (v862), S3 (v863), S4 (v865), S5 (v866), S6 (v867), S7 (v868), S8 (v869) fertig.** S9 offen. S8 noch ohne Deckstation und Rückkehr aus Aufzucht/Ausbildungsstall. S7: Urlaubsplanung vorerst als Fenster aus dem Sammelbrief, Kalender-Anzeige kommt mit S8. In S6 nicht gebaut: Einsatz-Wahl am Whiteboard (nur im Azubi-Dialog).
+- **S1 (v860), S2 (v862), S3 (v863), S4 (v865), S5 (v866), S6 (v867), S7 (v868), S8 (v869), S9 (v870) fertig – Auftrag komplett.** S9 Tutorial: Anfänger-Kapitel „Mitarbeiter“ mit Stallhygiene-Bewerber und Kalender; **nicht gebaut:** Husten-Testpferd und Whiteboard-Ziehen bis zum grünen Haken (Anfänger haben kein Whiteboard, bräuchte den Tutorial-Spieler-Test – Dome fragen). S8 noch ohne Deckstation und Rückkehr aus Aufzucht/Ausbildungsstall. S7: Urlaubsplanung vorerst als Fenster aus dem Sammelbrief, Kalender-Anzeige kommt mit S8. In S6 nicht gebaut: Einsatz-Wahl am Whiteboard (nur im Azubi-Dialog).

@@ -1326,7 +1326,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "871";
+  const SPIEL_VERSION = "872";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1334,12 +1334,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=871"></script>
-<script src="pferd.js?v=871"></script>
-<script src="boxstufen.js?v=871"></script>
-<script src="kopfneu.js?v=871"></script>
-<script src="waschbild.js?v=871"></script>
-<script src="avatare.js?v=871"></script>
+<script src="lz-string.min.js?v=872"></script>
+<script src="pferd.js?v=872"></script>
+<script src="boxstufen.js?v=872"></script>
+<script src="kopfneu.js?v=872"></script>
+<script src="waschbild.js?v=872"></script>
+<script src="avatare.js?v=872"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2300,7 +2300,7 @@
     let m = b.muskel + MUSKEL_ZAHL.kraft * ((p.werte.ist.kraft || 0) - (p.werte.anlage.kraft || 0));
     const fz = futterZustand(p); if (fz < MUSKEL_ZAHL.futterGrenze) m -= MUSKEL_ZAHL.futter * (MUSKEL_ZAHL.futterGrenze - fz);
     m -= Math.min(MUSKEL_ZAHL.alterMax, Math.max(0, bauJahre(p) - MUSKEL_ZAHL.alterAb));
-    if (p.boxenruhe || (p.befunde || []).some(x => spiel.tag - (x.seit || spiel.tag) > tpj())) m -= MUSKEL_ZAHL.krank;
+    if ((p.boxenruhe || (p.befunde || []).some(x => spiel.tag - (x.seit || spiel.tag) > tpj())) && !aquaKuerzlich(p, AQUA.muskelTage)) m -= MUSKEL_ZAHL.krank;   // A1: Aqua in den letzten 2 Tagen hält die Muskeln
     return Math.max(0, Math.min(100, Math.round(m * 10) / 10));
   }
   // Huf (Ist): Abweichung der Anlage vom Zuchtziel × 0,7 bei guter Hufpflege (Hufschmied-Termin eingehalten, Hufe in der letzten Jahreszeit ausgekratzt), × 1,5 bei vernachlässigter (Termin deutlich überfällig oder zwei Jahreszeiten nicht ausgekratzt)
@@ -3124,6 +3124,7 @@
   function frei(f, x) {   // Dome 20.10. (Anfänger): futterplan (selbst ändern), charakter (Details), training (freie Übungswahl), pfaendung1 (Pfändung im 1. Jahr)
     const S = STUFE();
     if (f === "markt") return !S.maerkte || S.maerkte.includes(x);
+    if (f === "bauen" && x === "aqua") return !S.bauen;   // A1 (Dome 26.10.): Aqua-Center nur für Experten
     if (f === "bauen") return !S.bauen || (S.bauen === "ohneRenn" ? x !== "rennbahn" : S.bauen.includes(x));
     if (f === "ma") return !S.ma || (S.ma === "ohneTrainer" ? !["renntrainer", "westerntrainer"].includes(x) : S.ma.includes(x));
     if (f === "krank") return !S.krank || (S.krank === "fort" ? !KRANK_EXPERTE.includes(x) && !(BEFUND_ZUSATZ && BEFUND_ZUSATZ[x]) : S.krank.includes(x));
@@ -4979,6 +4980,8 @@
           <div class="kacheln quadrat"><button class="kachel ${sp ? "fehlt" : "klickbar"}" data-solar="1" ${sp ? "disabled" : ""}><span class="ico">☀️</span><b>10 Minuten Wärme</b><small>${datum().s === 3 && !(p.trainHeute && p.trainHeute.tag === spiel.tag && p.trainHeute.liste.length) ? "zum Aufwärmen vor dem Reiten" : "trocknen und entspannen"}</small></button></div>
           ${g && st >= 2 && !g.gummi ? `<button class="knopf zweit" data-matten="solarium" style="width:auto;margin:4px 0">🟫 Gummimatten verlegen · ${fmt(MATTEN_PREIS)}</button>` : ""}
           <p class="text"><small>Trocknet nasse und verschwitzte Pferde sofort. Im Winter 2× am Tag: vorher zum Aufwärmen (ersetzt Bodenarbeit/Longieren), nachher zum Trocknen – beides zusammen beugt Lahmheit und Kreuzverschlag vor. Sonst 1× nach dem Training.</small></p>` + zurueckOrt();
+      } else if (ortModus === "aqua") {   // A1: Aqua-Center
+        inhalt = meld + aquaHTML(p, box) + zurueckOrt();
       } else if (ortModus === "labor") {
         inhalt = meld + `<p class="text" style="margin:0 0 4px">🔬 <b>Büro</b> · Der Tierarzt schickt eine Haarprobe von ${esc(p.name)} ein – dafür muss ${pron(p).er} nicht wegfahren.</p>
           <div class="kacheln quadrat">${Object.entries(LABOR_TESTS).map(([id, T]) => kOrt("lt-" + id, T.ico, T.kurz, testGemacht(p, id) ? "schon gemacht" : testLaeuft(p, id) ? "im Labor …" : fmt(laborPreis(p, id)), T.info, !testGemacht(p, id) && !testLaeuft(p, id))).join("")}</div>
@@ -5018,6 +5021,7 @@
         ["koppel", "🐎", "Koppel", "Weide oder Sandpaddock", "Weide · Sand"],
         ["waschplatz", "🚿", "Wasch\u00adplatz", "zum Abspritzen und Hufe waschen", "Abspritzen"],
         ["solarium", "☀️", "Solarium", "trocknen und aufwärmen", "Wärme"],
+        ["aqua", "🏊", "Aqua", "Schwimmen und Wasserlaufband", "Wasser"],   // A1
         ["roundpen", "⭕", "Round\u00adpen", "runder Platz für Longieren und Bodenarbeit", "Longieren"],
         ["reitplatz", "🏟️", "Reit\u00adplatz", "Sandplatz 20 × 40 m für Dressur und Springen", "20 × 40 m"],
         ["reithalle", "🏛️", "Reit\u00adhalle", "überdachtes Reiten bei jedem Wetter", "überdacht"],
@@ -5025,7 +5029,7 @@
         ["rennbahn", "🏁", "Renn\u00adbahn", "Trainingsbahn für Rennpferde", "Galopp"],
         ["trail", "🪵", "Trail-\u00adParcours", "Hindernisse für Western-Trail", "Trail"],
       ].filter(([k]) => k === "koppel" || k === "gelaende" || spiel.admin || (spiel.anlage && spiel.anlage[k]));   // Dome (v354): nur Kacheln für gebaute Orte (Gelände immer)
-      const ortKachel = ([k, ico, n, info, kurz]) => (k === "waschplatz" || k === "solarium") && ortOffen(k) ? kOrt(k, ico, n, kurz, info) : k === "koppel" ? kOrt("koppel", ico, n, p.weide ? "auf der Weide" : p.paddock ? "auf dem Sandpaddock" : "Weide · Sandpaddock", "Weide oder Sandpaddock") : k === "paddock" ? kOrt("paddock", ico, "Sand\u00adpaddock", p.paddock ? "zurück in die Box" : paddocks().length ? "Auslauf" : "nicht gebaut", p.paddock ? "Pferd vom Sandpaddock zurück in die Box holen" : "Pferd auf einen Sandpaddock bringen", !!p.paddock || paddocks().length > 0) : k === "weide" ? kOrt("weide", ico, n, p.weide ? "zurück in die Box" : "Weidegang", p.weide ? "Pferd von der Weide zurück in die Box holen" : "Pferd auf die Weide bringen") : TRAIN_ORTE[k] && ortOffen(k) && fremd(p) && !darfAlsBereiter(p) ? kOrt("tr-" + k, ico, n, "nur der Besitzer", `${info} – Pensionspferd: reiten nur der Besitzer und der Bereiter`, false) : TRAIN_ORTE[k] && ortOffen(k) ? kOrt("tr-" + k, ico, n, spiel.anlage[k] ? (pensionReiterHeute(k).length ? `Training · 🐴 ${pensionReiterHeute(k).length}` : "Training") : "🛠️ Training", `${info} – Training`) : `<div class="kachel ${spiel.anlage[k] || spiel.admin ? "" : "fehlt"}" title="${n.replace(/\u00ad/g, "")}: ${info}${spiel.anlage[k] || spiel.admin ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${spiel.anlage[k] ? kurz : spiel.admin ? "🛠️ Admin" : kurz}</small></div>`;   // Dome (v353): Trainingsplätze unter „Training“
+      const ortKachel = ([k, ico, n, info, kurz]) => (k === "waschplatz" || k === "solarium" || k === "aqua") && ortOffen(k) ? kOrt(k, ico, n, kurz, info) : k === "koppel" ? kOrt("koppel", ico, n, p.weide ? "auf der Weide" : p.paddock ? "auf dem Sandpaddock" : "Weide · Sandpaddock", "Weide oder Sandpaddock") : k === "paddock" ? kOrt("paddock", ico, "Sand\u00adpaddock", p.paddock ? "zurück in die Box" : paddocks().length ? "Auslauf" : "nicht gebaut", p.paddock ? "Pferd vom Sandpaddock zurück in die Box holen" : "Pferd auf einen Sandpaddock bringen", !!p.paddock || paddocks().length > 0) : k === "weide" ? kOrt("weide", ico, n, p.weide ? "zurück in die Box" : "Weidegang", p.weide ? "Pferd von der Weide zurück in die Box holen" : "Pferd auf die Weide bringen") : TRAIN_ORTE[k] && ortOffen(k) && fremd(p) && !darfAlsBereiter(p) ? kOrt("tr-" + k, ico, n, "nur der Besitzer", `${info} – Pensionspferd: reiten nur der Besitzer und der Bereiter`, false) : TRAIN_ORTE[k] && ortOffen(k) ? kOrt("tr-" + k, ico, n, spiel.anlage[k] ? (pensionReiterHeute(k).length ? `Training · 🐴 ${pensionReiterHeute(k).length}` : "Training") : "🛠️ Training", `${info} – Training`) : `<div class="kachel ${spiel.anlage[k] || spiel.admin ? "" : "fehlt"}" title="${n.replace(/\u00ad/g, "")}: ${info}${spiel.anlage[k] || spiel.admin ? "" : " (fehlt)"}"><span class="ico">${ico}</span><b>${n}</b><small>${spiel.anlage[k] ? kurz : spiel.admin ? "🛠️ Admin" : kurz}</small></div>`;   // Dome (v353): Trainingsplätze unter „Training“
       const abc = box.fohlen && alterJZ(box.fohlen) < 2 ? kOrt("fohlenabc", "🍼", "Fohlen-ABC", box.fohlen.abcTag === spiel.tag ? "heute geübt" : abcStand(box.fohlen), "Halfter, Führen, Hufe geben – mit dem Fohlen üben")
         + (waschGeb() || spiel.admin ? kOrt("fohlendusche", "🚿", "Duschen üben", box.fohlen.duschTag === spiel.tag ? "heute geübt" : `${Math.min(3, box.fohlen.wasserGewohnt || 0)}/3`, "Fohlen an Wasser gewöhnen (Beine und Hufe) – am Tag vor der Fohlenschau gibt es Pluspunkte") : "") : "";
       // Dome (v354): Boxart wechseln – Stallbox, Paddock-Box, Abfohlbox (nur, wenn gebaut)
@@ -5130,11 +5134,12 @@
       speichern(); zeigeStall(); zeigeTag(); };
     const azk = $("angebotZurueck"); if (azk) azk.onclick = () => angebotZurueckziehen(p, () => zeigeAkte());
     // ---------- Karte Ort ----------
-    INFO.querySelectorAll("[data-matten]").forEach(k => k.onclick = () => { const g = k.dataset.matten === "solarium" ? solarGeb() : waschGeb(); if (!g) return;   // W6: Gummimatten am Waschplatz/im Solarium (ab Stufe 2, einmal)
+    INFO.querySelectorAll("[data-matten]").forEach(k => k.onclick = () => { const g = k.dataset.matten === "solarium" ? solarGeb() : k.dataset.matten === "aqua" ? aquaGeb() : waschGeb(); if (!g) return;   // W6: Gummimatten am Waschplatz/im Solarium (ab Stufe 2, einmal)
       if (geldFrei() < MATTEN_PREIS) { dialog(`<h3>Nicht genug Geld</h3>${dispoHinweis()}<p>Gummimatten kosten ${fmt(MATTEN_PREIS)}.</p>`); return; }
       dialog(`<h3>🟫 Gummimatten verlegen?</h3><p>Rutschfeste Matten für ${k.dataset.matten === "solarium" ? "das Pferdesolarium" : "den Waschplatz"} für <b>${fmt(MATTEN_PREIS)}</b>. ${k.dataset.matten === "solarium" ? "Wohlbefinden +4 statt +3 je Anwendung." : "Kein Ausrutschen mehr, Wohlbefinden +1 beim Waschen."}</p>`,
         [["Verlegen", () => { buchen(-MATTEN_PREIS, "Gummimatten"); g.gummi = true; prot("Bauauftrag", { x: "Gummimatten " + k.dataset.matten }); meldung = "🟫 Die Gummimatten liegen."; speichern(); zeigeStall(); zeigeAkte(); }], ["Abbrechen", null, "zweit"]]); });
     INFO.querySelectorAll("[data-solar]").forEach(k => k.onclick = () => { meldung = solarium(p); speichern(); zeigeStall(); zeigeTag(); zeigeAkte(); });
+    INFO.querySelectorAll("[data-aqua]").forEach(k => k.onclick = () => { const [pr, mi] = k.dataset.aqua.split(":"); if (aquaSperre(p, box, pr)) return; meldung = aquaEinheit(p, box, pr, +mi, null); speichern(); zeigeStall(); zeigeTag(); zeigeAkte(); });   // A1
     INFO.querySelectorAll("[data-wasch]").forEach(k => k.onclick = () => { const w = k.dataset.wasch; meldung = "";   // W2: Waschplatz-Werkzeuge
       if (w === "shampoo" && !(spiel.shampoo > 0) && !spiel.admin) { dialog(`<h3>🧴 Kein Shampoo da</h3><p>Pferdeshampoo kaufst du in der <b>Futterkammer</b> (Hofverwaltung → Hof → Futterkammer, unten bei der Stallapotheke): eine Flasche kostet ${fmt(WASCH.shampooPreis)} und reicht für ${WASCH.shampooN} Anwendungen.</p>`); return; }
       if (w === "shampoo" && !(spiel.shampoo > 0)) { spiel.shampoo = WASCH.shampooN; }
@@ -6909,6 +6914,8 @@
       if (f.kolik != null) f.kolik *= 1 - Bf; if (f.husten != null) f.husten *= 1 - Bk; MA_VORTEIL.haut.forEach(k => { if (f[k] != null) f[k] *= 1 - Bh; }); MA_VORTEIL.huf.forEach(k => { if (f[k] != null) f[k] *= 1 - Bu; }); }   // A2: Überlastung (3 Nächte hintereinander schwere Arbeit)
     if (f.hufrehe != null && befundListe(p).some(b => b.art === "ems")) f.hufrehe *= 3;   // EMS: Hufrehe-Gefahr
     if (f.schlund != null && befundListe(p).some(b => b.art === "megaoes")) f.schlund *= 3;   // Megaösophagus: Schlundverstopfung
+    if (aquaKuerzlich(p, AQUA.reheTage) >= AQUA.reheMin) ["hufrehe", "ems"].forEach(k => { if (f[k] != null) f[k] *= AQUA.rehe; });   // A1: regelmäßig Aqua senkt Hufrehe/EMS
+    if (p.aquaTeich === spiel.tag - 1) { if (p.getrocknet !== spiel.tag - 1) ["mauke", "hautpilz"].forEach(k => { if (f[k] != null) f[k] *= 2; }); if (datum().s === 1 && f.sommerekzem != null) f.sommerekzem *= 1.3; }   // A1: Teich – schmutzig, Mücken
     const SF = STUFE().krankF;   // T2: Krankheiten je Stufe (Liste und Faktor)
     return Object.keys(KRANK).filter(k => f[k] != null && freiStufe("krank", k)).map(k => [k, BEFUND_RISIKO * KRANK[k].gew * konst * wohlF * (k === "arthrose" || k === "cushing" ? 1 : altF) * f[k] * SF]);
   }
@@ -11502,6 +11509,7 @@
       return true;
     });
     azubisJahreszeit();   // Azubis: Gehalt nach Ausbildungsjahr, Ausbilder, Abschlussprüfung
+    try { aquaJahreszeit(); } catch (e) { console.error("Aqua:", e); }   // A1: Blaualgen
     try { urlaubJahreszeit(); } catch (e) { console.error("Urlaub:", e); }   // S7
   }
   // jeden Morgen: Stallburschen und Azubis füttern und misten, Pfleger putzen und schneiden, Bereiter bewegen – und alle sammeln Erfahrung
@@ -11937,6 +11945,83 @@
   function abtrocknen(p) {   // Handtuch (Stufe 1) oder Schweißmesser (ab Stufe 2): nicht mehr nass; trocken reiben ersetzt auch das Abschwitzen
     const war = p.nass === spiel.tag || p.schweiss === spiel.tag; delete p.nass; delete p.nassBeine; delete p.schweiss; p.getrocknet = spiel.tag; prot("Abtrocknen selbst", { p });
     return `${waschStufe() >= 2 ? "🧽 Mit dem Schweißmesser" : "🧺 Mit dem Handtuch"} ${war ? `ist ${esc(p.name)} jetzt trocken.` : `trocken gerieben – ${esc(p.name)} war nicht nass.`}`;
+  }
+  // ---------- A1 (PLAN-AQUA): Aqua-Center – Stufe 1 Schwimmteich, 2 Schwimmhalle, 3 Halle mit Wasserlaufband ----------
+  const AQUA = { namen: ["Schwimmteich", "Schwimmhalle", "Aqua-Center (Halle mit Wasserlaufband)"], plaetze: [1, 2, 4], dauer: { 10: 0.5, 20: 1, 30: 1.5 }, alter: 12, rutsch: 0.01, angstX: 3, panik: 0.01,
+    algen: 0.1, algenTage: 3, schmutz: 30, ungewohnt: 0.5, zustandHalb: 40, fzAb: 7, fzJe: 5, rehe: 0.8, reheTage: 14, reheMin: 3, muskelTage: 2, ruf: [2, 4, 6], gelaende: 0.15, rueckenLernt: 0.3 };
+  const AQUA_PROG = {
+    schwimmen: { n: "Schwimmen", ico: "🏊", ab: 1, e: 24, w: { ausdauer: .8, kraft: .5, regeneration: .5, beweglichkeit: .3 }, info: "Herz-Kreislauf und Kondition, schont Sehnen und Gelenke" },
+    reha: { n: "Reha", ico: "🐢", ab: 3, e: 12, w: { ausdauer: .32, kraft: .24, regeneration: .24, beweglichkeit: .16 }, reha: true, info: "Laufband, hoher Wasserstand, Schritt – sehr schonend, auch mit Befund" },
+    aufbau: { n: "Aufbau", ico: "💪", ab: 3, e: 24, w: { ausdauer: .8, kraft: .6, regeneration: .6, beweglichkeit: .4 }, muskel: 1.25, info: "Laufband, mittlerer Wasserstand, Trab – baut Muskeln auf" },
+    kondition: { n: "Kondition", ico: "🔥", ab: 3, e: 34, w: { ausdauer: 1, kraft: .7, zaehigkeit: .5, regeneration: .4 }, gesund: true, gewohnt: true, info: "Laufband, niedriger Wasserstand, Trab und Galopp – nur gesund und an Wasser gewöhnt" } };
+  const aquaGeb = () => gebaeude().filter(g => g.typ === "aqua" && !g.bau).sort((a, b) => (b.stufe || 1) - (a.stufe || 1))[0] || null;
+  const aquaStufe = () => { const g = aquaGeb(); return g ? g.stufe || 1 : spiel.admin ? 3 : 0; };
+  function aquaKuerzlich(p, tage) { return (p.aquaLog || []).filter(t => spiel.tag - t < tage && t <= spiel.tag).length; }
+  const AQUA_SPERRE = { erkaeltung: "ist erkältet", husten: "hustet", influenza: "hat Fieber", druse: "hat Fieber (Druse)", verletzung: "hat eine offene Wunde", hufabszess: "hat einen Hufverband", kolik: "hat eine Kolik", hufrehe: "hat Hufrehe", asthma: "hat Asthma – Aqua ist gesperrt", aorta: "hat Herzprobleme", ataxie: "hat Ataxie", shivers: "hat Shivers", magen: "hat ein Magengeschwür" };
+  const AQUA_HINTEN = ["kissing", "spat"];   // Schwimmen belastet Rücken und Hinterhand
+  function aquaAlgenAktiv() { const g = aquaGeb(); return !!(g && (g.stufe || 1) === 1 && g.algen && spiel.tag <= g.algen); }
+  function aquaSperre(p, box, prog) {   // "" = erlaubt, sonst Grund
+    const st = aquaStufe(), P = AQUA_PROG[prog];
+    if (!st) return "Es gibt noch kein Aqua-Center";
+    const g = aquaGeb(); if (g && g.zustand <= 0) return "Das Aqua-Center ist kaputt (Zustand 0 %) – erst reparieren lassen";
+    if (P && st < P.ab) return `${P.n} gibt es erst mit dem Wasserlaufband (Stufe 3)`;
+    if (p.klinik) return "ist in der Klinik"; if (p.weide || paddockVon(p)) return "ist draußen – erst in die Box holen"; if (p.turnier) return "ist heute auf dem Turnier";
+    if (alterJZ(p) < AQUA.alter) return "ist noch zu jung (ab 3 Jahren)";
+    if (box && box.fohlen && alterJZ(box.fohlen) < 2) return "hat ein Fohlen bei Fuß";
+    if (p.traechtig && jzJetzt() >= p.traechtig.geburt - 1) return "ist hochtragend (letzte Jahreszeit)";
+    if (futterZustand(p) <= 3) return "ist zu dünn – der Pfleger rät ab";
+    if (aquaKuerzlich(p, 1)) return "war heute schon im Wasser (1× am Tag)";
+    if (st === 1 && datum().s === 3) return "Der Teich ist zugefroren – ab der Schwimmhalle geht es ganzjährig";
+    if (aquaAlgenAktiv() && !spiel.admin) return "Blaualgen im Teich – ein paar Tage nicht schwimmen";
+    const bf = bekannteBefunde(p).filter(b => !imInkub(b)), k = bf.map(b => b.art).find(a => AQUA_SPERRE[a]); if (k) return AQUA_SPERRE[k];
+    if (st === 1 && (datum().s === 2 || datum().s === 3) && bf.some(b => b.art === "cushing")) return "hat Cushing – im Herbst und Winter nur in der Halle";
+    if (P && P.gesund && bf.length) return `${P.n} nur für gesunde Pferde – nimm Reha oder Aufbau`;
+    if (P && P.gewohnt && !aquaGewohnt(p)) return `${P.n} erst, wenn das Pferd ans Wasser gewöhnt ist`;
+    if (prog === "schwimmen") { const h = bf.find(b => AQUA_HINTEN.includes(b.art) || (b.art === "lahmheit" && b.hinten)); if (h) { tippMerken("aquaHinten"); return `Schwimmen belastet Rücken und Hinterhand (${befundSicht(p, h).name})${st >= 3 ? " – das Wasserlaufband ist schonender" : ""}`; } }
+    const vor = (spiel.turniere || []).some(t => t.tag === spiel.tag + 1 && (t.nennung || []).some(n => n.pid === p.id)); if (vor && prog !== "reha") return "startet morgen auf dem Turnier – heute nur Reha";
+    return "";
+  }
+  function aquaGewohnt(p) { const need = wasserAngst(p) ? WASCH.gewohntAngst : WASCH.gewohnt, halb = (p.wasserGewohnt || 0) >= need; return (p.aquaGewohnt || 0) >= (halb ? (wasserAngst(p) ? 2 : 1) : need); }
+  function aquaEinheit(p, box, prog, min, m) {   // eine Einheit im Wasser – m = Mitarbeiter (sonst du)
+    const P = AQUA_PROG[prog], df = AQUA.dauer[min] || 1, st = aquaStufe(), g = aquaGeb(), gewohnt = aquaGewohnt(p);
+    let F = df * (gewohnt ? 1 : AQUA.ungewohnt) * (g && g.zustand < AQUA.zustandHalb ? 0.5 : 1) * wohlFaktor(p) * fzLeistung(p);
+    const kosten = Math.round(P.e * df), out = [], plus = {};
+    p.energie = Math.max(-30, Math.round(energie(p) - kosten));
+    const T = (p.trainHeute = p.trainHeute && p.trainHeute.tag === spiel.tag ? p.trainHeute : { tag: spiel.tag, liste: [], verbraucht: 0 }); T.verbraucht += kosten; T.aqua = (T.aqua || 0) + 1;
+    if (!gewohnt) { const n = p.aquaGewohnt || 0; p.aquaGewohnt = n + 1; const pen = Math.max(-3, -3 + n); if (pen < 0) { wohlAendern(p, pen, "hat noch Angst vor dem Wasser"); out.push(`noch nicht ans Wasser gewöhnt – halbe Wirkung, Wohlbefinden ${pen}`); } } else p.aquaGewohnt = (p.aquaGewohnt || 0) + 1;
+    Object.entries(P.w).forEach(([k, x]) => { const d = wertPlus(p, k, x * F * TRAIN_W * proTag(1)); if (d) plus[k] = d; });
+    if (!P.reha) { const d = diszPlus(p, "gelaende", AQUA.gelaende * F * TRAIN_D * proTag(1)); if (d) plus.gelaende = d; }   // halbe Konditionseinheit für Gelände/Kondition
+    p.aquaLog = (p.aquaLog || []).filter(t => spiel.tag - t < AQUA.reheTage).concat(spiel.tag);
+    if (p.trainTag !== spiel.tag) { p.trainTag = spiel.tag; p.trainTage = (p.trainTage || 0) + (P.muskel ? P.muskel : 1); }
+    p.arbeitTag = spiel.tag; p.boxTage = 0;
+    p.nass = spiel.tag; delete p.getrocknet; p.aquaTag = { tag: spiel.tag, prog, min, wer: m ? m.name : "du" };
+    if (st === 1) { const d = (p.dreck = p.dreck && typeof p.dreck === "object" ? p.dreck : { fell: 0, maehne: 0, seit: null }); d.fell = Math.min(100, d.fell + AQUA.schmutz); d.maehne = Math.min(100, d.maehne + AQUA.schmutz / 2); if (d.fell >= 50 && d.seit == null) d.seit = spiel.tag; p.aquaTeich = spiel.tag; }
+    if (futterZustand(p) >= AQUA.fzAb) { p.aquaAbn = (p.aquaAbn || 0) + 1; if (p.aquaAbn >= AQUA.fzJe) { p.aquaAbn = 0; p.fzTage = (p.fzTage || 0) - Math.ceil(fzSchwelle() / 2); out.push("nimmt langsam ab"); } }
+    const angst = wasserAngst(p) || charE(p, "sensibel").hoch > 0.5, matten = g && g.gummi && st >= 2;
+    if (!matten && Math.random() < AQUA.rutsch * (angst || !gewohnt ? AQUA.angstX : 1) && !befundListe(p).some(b => b.art === "verletzung")) { befundNeu(p, "verletzung", 1, st === 1 ? "am Steg ausgerutscht" : "auf der Rampe ausgerutscht", m ? m.name : "du"); out.push("⚠️ ist ausgerutscht – kleine Verletzung"); }
+    else if (!gewohnt && (p.aquaGewohnt || 0) === 1 && angst && Math.random() < AQUA.panik && !befundListe(p).some(b => b.art === "verletzung")) { befundNeu(p, "verletzung", 1, "Panik im Wasser", m ? m.name : "du"); out.push("⚠️ ist in Panik geraten – kleine Verletzung"); }
+    if (matten) wohlAendern(p, 1, "rutschfeste Matten");
+    if (!m) { spielerLernt("ruecken", AQUA.rueckenLernt); OHREN_REAKT[p.id] = { zeit: Date.now(), mag: gewohnt }; }
+    prot(`Aqua ${P.n} (${m ? "Personal" : "selbst"})`, { p }); tippMerken("aquaNass");
+    const W = Object.entries(plus).map(([k, v]) => `${k === "gelaende" ? "Kondition (Gelände)" : (WERTE_KOERPER.find(x => x.key === k) || { titel: k }).titel} +${String(Math.round(v * 10) / 10).replace(".", ",")}`).join(", ");
+    return `${P.ico} ${esc(p.name)}: ${min} Minuten ${P.n}${st === 1 ? " im Teich" : st === 2 ? " in der Schwimmhalle" : prog === "schwimmen" ? " im Becken" : " auf dem Wasserlaufband"} (⚡ −${kosten})${W ? ` · ${W}` : ""}${out.length ? ` · ${out.join(" · ")}` : ""}. ${esc(p.name)} ist jetzt <b>nass</b> – bitte abtrocknen (Waschplatz oder Solarium).`;
+  }
+  function aquaJahreszeit() {   // Blaualgen im Hochsommer (nur Teich)
+    const g = gebaeude().find(x => x.typ === "aqua" && !x.bau && (x.stufe || 1) === 1); if (!g || datum().s !== 1) return;
+    if (Math.random() < AQUA.algen) { const ab = spiel.tag + Math.floor(Math.random() * Math.max(1, tpj() - AQUA.algenTage)); g.algen = ab + AQUA.algenTage - 1; g.algenAb = ab;
+      brief("Hofverwaltung", "Blaualgen im Schwimmteich", `Im Schwimmteich haben sich <b>Blaualgen</b> gebildet. Bis Tag ${datum(g.algen).t} bitte kein Pferd schwimmen lassen – Blaualgen sind giftig. Ab der Schwimmhalle (Stufe 2) gibt es das nicht mehr.`); tippMerken("aquaAlgen"); }
+  }
+  function aquaHTML(p, box) {   // Ort-Ansicht
+    const st = aquaStufe(), g = aquaGeb(), H = p.aquaTag && p.aquaTag.tag === spiel.tag ? p.aquaTag : null;
+    const progs = Object.keys(AQUA_PROG).filter(k => st >= AQUA_PROG[k].ab || spiel.admin);
+    const sp0 = aquaSperre(p, box, null);
+    const knopf = (k, min) => { const P = AQUA_PROG[k], sp = aquaSperre(p, box, k), ko = Math.round(P.e * AQUA.dauer[min]); return `<button class="kachel ${sp ? "fehlt" : "klickbar"}" data-aqua="${k}:${min}" ${sp ? "disabled" : ""} title="${P.n}: ${P.info}${sp ? " – " + sp : ""}"><span class="ico">${P.ico}</span><b>${P.n} · ${min} Min.</b><small>${sp ? sp.replace(/^(ist |hat )/, "") : `⚡ ${ko}${ko > energie(p) ? " · zu müde" : ""}`}</small></button>`; };
+    return `<p class="text" style="margin:0 0 4px">🏊 <b>${g ? AQUA.namen[st - 1] : "Aqua-Center"}</b>${g ? ` · Stufe ${st} · ${AQUA.plaetze[st - 1]} ${AQUA.plaetze[st - 1] === 1 ? "Platz" : "Plätze"}${g.zustand < AQUA.zustandHalb ? ` · ⚠️ Zustand ${Math.round(g.zustand)} % – halbe Wirkung` : ""}${aquaAlgenAktiv() ? " · 🦠 Blaualgen" : ""}` : " · 🛠️ nur Admin"}</p>
+      <p class="text" style="margin:0 0 4px"><small>⚡ Energie ${Math.max(0, energie(p))} / ${energieMax(p)}${aquaGewohnt(p) ? " · 💧 ans Wasser gewöhnt" : ` · noch nicht ans Wasser gewöhnt (${p.aquaGewohnt || 0}×) – halbe Wirkung`}${H ? ` · heute schon: ${AQUA_PROG[H.prog].n} ${H.min} Min.` : ""}${nassHeute(p) ? " · 💧 nass" : ""}</small></p>
+      ${sp0 ? `<p class="text">🚫 ${esc(p.name)} ${esc(sp0)}.</p>` : ""}
+      ${[20, 10, 30].map(min => `<div class="kacheln quadrat">${progs.map(k => knopf(k, min)).join("")}</div>`).join("")}
+      <p class="text"><small>Einmal am Tag. 10 / 20 / 30 Minuten wirken halb / normal / anderthalbfach – und kosten so viel Energie. Danach ist das Pferd nass: bitte abtrocknen (Waschplatz oder Solarium), sonst im Herbst/Winter Erkältung und Mauke.${st === 1 ? " Der Teich macht schmutzig und friert im Winter zu." : ""}${st >= 2 && g && !g.gummi ? " Gummimatten verhindern Ausrutschen." : ""}</small></p>
+      ${g && st >= 2 && !g.gummi ? `<button class="knopf zweit" data-matten="aqua" style="width:auto;margin:4px 0">🟫 Gummimatten verlegen · ${fmt(MATTEN_PREIS)}</button>` : ""}`;
   }
   // ---------- W3 (PLAN-WASCHPLATZ.md): Pferdesolarium – eigenes Gebäude ----------
   // trocknet nasse und verschwitzte Pferde sofort; Winter 2× am Tag (vor dem Reiten = Aufwärmen, danach), sonst 1× nach dem Training; mehr ist gesperrt (Haut)
@@ -14609,7 +14694,7 @@
     if (spiel.hof.pacht == null) spiel.hof.pacht = 0;
     hofReihe();
   }
-  const ANLAGE_NAME = { reitplatz: "Reitplatz", roundpen: "Roundpen", reithalle: "Reithalle", gelaende: "Gelände", waschplatz: "Waschplatz", solarium: "Pferdesolarium" };
+  const ANLAGE_NAME = { reitplatz: "Reitplatz", roundpen: "Roundpen", reithalle: "Reithalle", gelaende: "Gelände", waschplatz: "Waschplatz", solarium: "Pferdesolarium", aqua: "Aqua-Center" };
   // Makler: Angebot wechselt einmal im Jahr (Zustand zufällig)
   const MAKLER_VORLAGEN = [
     { typ: "grund", n: "Leeres Grundstück", bild: "grund", boxen: [0, 0], ha: [3, 8], weide: 0, anlagen: [] },
@@ -14785,7 +14870,7 @@
   // 1 Kachel = 5 × 5 m (25 m²), ein Bauland-Stück = 0,5 ha = 20 × 10 Kacheln. Bauland = Stücke in hof.plan.st [{x, y, b, h}], Lage der Gebäude/Anlagen in hof.plan.pos[id] = {x, y, r} (r = gedreht).
   // Was noch nicht liegt, steht im Feld „zum Bauen“. Anbauten (gebElternVon) haben keine eigene Lage – sie machen das Hauptgebäude länger. Weiden liegen unter dem Bauland (nicht bebaubar).
   const PLAN_M = 5, PLAN_STUECK = [20, 10], PLAN_START_HA = 0.5, PLAN_S = 10;   // Kachel in m · 0,5-ha-Stück in Kacheln · Bauland neuer Spiele · SVG-Einheiten je Kachel
-  const PLAN_FARBE = { stall: "#c9a782", paddock: "#d9b48f", quarantaene: "#e8d07a", abfohlbox: "#e9b7c6", aufzucht: "#cdb38f", reitplatz: "#ecdcb8", reithalle: "#c3c9cf", roundpen: "#ecdcb8", trail: "#d8c9a4", rennbahn: "#d9c49a", sandpaddock: "#e3cf9f", waschplatz: "#bfe0f0", solarium: "#ffe0a0", lager: "#e6c86a", grundlager: "#e9d58e", sattelkammer: "#b89a7a", park: "#c9c9c9" };
+  const PLAN_FARBE = { stall: "#c9a782", paddock: "#d9b48f", quarantaene: "#e8d07a", abfohlbox: "#e9b7c6", aufzucht: "#cdb38f", reitplatz: "#ecdcb8", reithalle: "#c3c9cf", roundpen: "#ecdcb8", trail: "#d8c9a4", rennbahn: "#d9c49a", sandpaddock: "#e3cf9f", waschplatz: "#bfe0f0", solarium: "#ffe0a0", aqua: "#9fd4ea", lager: "#e6c86a", grundlager: "#e9d58e", sattelkammer: "#b89a7a", park: "#c9c9c9" };
   const PARKPLATZ = { n: "Parkplatz", ico: "🚚", info: "Platz für Auto und Pferdeanhänger – von hier fährt der Pferdeanhänger los" };
   const planAn = () => !!spiel.hof;
   const planTyp = typ => !!BAUTEN[typ] && typ !== "weide" && typ !== "heudampfer";
@@ -14805,6 +14890,7 @@
       case "trail": return [8, 4];
       case "rennbahn": return [40, 20];
       case "sandpaddock": return [Math.max(4, c(((PD_STUFE_M2[st] || 400) + PD_FLAECHE * (menge || 0)) / (4 * PLAN_M * PLAN_M))), 4];
+      case "aqua": return [[5, 4], [4, 3], [5, 4]][st - 1];   // A1: Teich 500 m², Halle 300 m², Halle mit Laufband 500 m²
       case "lager": case "grundlager": return [4, 2];
       case "park": return [3, 2];
       default: return [1, 1];   // Waschplatz, Solarium, Sattelkammer
@@ -14958,6 +15044,7 @@
     if (t === "abfohlbox") return { id: box && box.abfohl ? "box" : "zuAbfohl", txt: "Abfohlbox", an: true };
     if (t === "aufzucht") return { id: box && box.offen ? "box" : "offenstall", txt: box && box.offen ? "Platz im Offenstall" : "in den Aufzucht-Offenstall umziehen", an: true };
     if (t === "sandpaddock") return { id: "paddock", txt: p && p.paddock ? "zurück in die Box" : "auf den Sandpaddock", an: true };
+    if (t === "aqua") return { id: "aqua", txt: AQUA.namen[Math.max(1, (g && g.stufe) || 1) - 1], an: ortOffen("aqua") };   // A1
     if (t === "waschplatz" || t === "solarium") return { id: t, txt: t === "waschplatz" ? "Waschplatz" : "Solarium", an: ortOffen(t) };
     const o = BAUTEN[t] && BAUTEN[t].anlage;
     if (t === "verwaltung") return { id: "labor", txt: fr ? "Büro – nur der Besitzer" : "Büro: Gentests mit einer Haarprobe", an: !fr && freiStufe("labor") };
@@ -15105,7 +15192,7 @@
   function planVorschauRadial(box, svg, sc) {   // v793 (Dome): Blaupause bestätigen
     const v = planVorschau, P = hofPlan(), it = planItems().find(x => x.id === v.id), g = gebaeude().find(x => x.gid === v.id);
     if (!it || !g || !P.pos[it.id] || planKonflikt(it.id, planRechteck(it, P.pos[it.id]))) { planVRad = false; return; }
-    const lab = v.art === "ausbau" ? "Weiter zum Ausbau" : `${fmt(bauPreis(g.typ, v.stufe, { anbau: g.gid, boxen: v.menge }))} · ${planZeitSpanne(BAUTEN[g.typ].zeit)}`;
+    const lab = v.art === "ausbau" ? "Weiter zum Ausbau" : `${fmt(bauPreis(g.typ, v.stufe, { anbau: g.gid, boxen: v.menge }))} · ${planZeitSpanne(zeitSt(BAUTEN[g.typ].zeit, v.stufe))}`;
     planBestKreis(box, svg, sc, it, lab, () => { const b = box.querySelector("[data-pvok]"); if (b && !b.disabled) b.click(); }, "Abbrechen", () => { planVRad = false; planNeu(); }, () => { planVorschauEnde(true); planNeu(); });
   }
   function planBestRadial(box, svg, sc) {   // v794 (Dome): Reparieren, Abreißen, Ausbauen (ohne Blaupause) – gleiche Bestätigung wie beim Vergrößern
@@ -15353,6 +15440,7 @@
     zeit: "kurz", aussen: true, anlage: "paddock", info: "Auslauf mit Sandboden" },
     waschplatz: { n: "Wasch\u00adplatz", ico: "🚿", preis: [800, 1500, 3000], zeit: "kurz", anlage: "waschplatz", einmal: true, info: "zum Abspritzen und Hufe waschen" },
     solarium: { n: "Pferde\u00adsolarium", ico: "☀️", preis: [1200, 2000, 3200], zeit: "kurz", anlage: "solarium", einmal: true, info: "trocknet nasse und verschwitzte Pferde, wärmt im Winter auf" },   // W3 (Dome 19.10.)
+    aqua: { n: "Aqua-Center", ico: "🏊", preis: [15000, 60000, 150000], zeit: [1, 2, 2], anlage: "aqua", einmal: true, info: "Stufe 1 Schwimmteich, Stufe 2 Schwimmhalle (ganzjährig), Stufe 3 Halle mit Wasserlaufband (Reha, Aufbau, Kondition) – nur für Experten" },   // A1 (PLAN-AQUA)
     sattelkammer: { n: "Sattel\u00adkammer", ico: "🧰", preis: [1500, 3000, 6000], zeit: .5, anlage: "sattelkammer", einmal: true, bald: "noch ohne Funktion – kommt mit der Ausrüstung", info: "für Sättel und Trensen (Funktion kommt mit der Ausrüstung)" },
     lager: { n: "Heu- und Stroh\u00adlager", ico: "🌾", preis: [4000, 8000, 15000], zeit: 1, einmal: true, platz: [4000, 6000, 9000], info: "mehr Platz für Heu, Stroh und Einstreu (Kraftfutter und Zusätze lagern in den Futterkammern der Ställe)" },
     grundlager: { n: "Heu- und Stroh\u00adlager (Grundlager)", ico: "🌾", fest: 0, einmal: true, info: "das Lager, das jeder Hof von Anfang an hat (2.000 kg Heu, Stroh und Einstreu) – mehr Platz bringt das Lager-Gebäude unter Bauen" },
@@ -15363,8 +15451,8 @@
     aufzucht: { n: "Aufzucht-Offen\u00adstall", ico: "🐎", preis: [15000, 40000, 90000], zeit: 1, boxen: 10, einmal: true, info: "Offenstall mit Liegehalle und Auslauf: Fohlen und Jungpferde (½–3 Jahre) wachsen zusammen auf, erwachsene Stuten als „Tanten“ – Stufe 1/2/3: 10/25/50 Plätze in 1/2/4 Gruppen, nur im Zuchtstall" },   // PLAN-OFFENSTALL.md (Dome 24.10., gebaut 25.10.)
   };
   // Dome (v347): Bauen-Kacheln nach Wichtigkeit (Land als Kachel)
-  const BAU_WICHTIG = ["verwaltung", "stall", "weideland", "reitplatz", "sandpaddock", "lager", "roundpen", "reithalle", "paddock", "gummi", "bauland", "quarantaene", "abfohlbox", "waschplatz", "solarium", "sattelkammer", "heudampfer", "trail", "rennbahn", "aufzucht"];
-  const BAU_REIHE = ["verwaltung", "stall", "paddock", "reitplatz", "roundpen", "reithalle", "trail", "weide", "sandpaddock", "waschplatz", "solarium", "sattelkammer", "lager", "heudampfer", "quarantaene", "abfohlbox", "rennbahn", "aufzucht"];
+  const BAU_WICHTIG = ["verwaltung", "stall", "weideland", "reitplatz", "sandpaddock", "lager", "roundpen", "reithalle", "paddock", "gummi", "bauland", "quarantaene", "abfohlbox", "waschplatz", "solarium", "aqua", "sattelkammer", "heudampfer", "trail", "rennbahn", "aufzucht"];
+  const BAU_REIHE = ["verwaltung", "stall", "paddock", "reitplatz", "roundpen", "reithalle", "trail", "weide", "sandpaddock", "waschplatz", "solarium", "aqua", "sattelkammer", "lager", "heudampfer", "quarantaene", "abfohlbox", "rennbahn", "aufzucht"];
   const VERFALL = [0, 4, 2.5, 1.5];          // Zustand-Punkte je Jahreszeit nach Stufe
   const UNTERHALT = 0.005, UMBAU_AUFSCHLAG = 0.2, HOFHELFER_REPARATUR = 3;   // je Arbeitstag (Standardtempo)
   // Gebäude des Hofs (ältere Spielstände: aus Boxen und Anlagen erzeugt)
@@ -15397,7 +15485,8 @@
     zaeuneErgaenzen(); verwaltungErgaenzen(); grundlagerErgaenzen();
     return G;
   }
-  const bauTage = z => z === "kurz" ? Math.max(1, Math.round(tpj() * 0.3)) + (Math.random() < .5 ? 1 : 0) : z === "halle" ? Math.round((2 + Math.random()) * tpj()) : Math.max(1, Math.round(z * tpj()));
+  const zeitSt = (z, st) => Array.isArray(z) ? z[Math.min(3, Math.max(1, st || 1)) - 1] : z;   // A1: Bauzeit je Stufe (Aqua-Center 1 / 2 / 2 Jahreszeiten)
+  const bauTage = (z, st) => (z = zeitSt(z, st)) === "kurz" ? Math.max(1, Math.round(tpj() * 0.3)) + (Math.random() < .5 ? 1 : 0) : z === "halle" ? Math.round((2 + Math.random()) * tpj()) : Math.max(1, Math.round(z * tpj()));
   const gebName = g => (g.name ? esc(g.name) : `${BAUTEN[g.typ].n}${g.anbau ? ` (Anbau${g.boxen ? " +" + g.boxen : ""})` : ""}${g.ha ? ` ${g.ha} ha${g.pacht ? " (gepachtet)" : ""}` : ""}`);   // v672 (Dome): Gebäude und Anlagen lassen sich benennen wie Weiden
   const imBau = () => gebaeude().filter(g => g.bau);
   const zaunText = g => `${haTxt(g.ha)} Zaun im Bau – noch ${g.bau.rest} ${g.bau.rest === 1 ? "Tag" : "Tage"}${datum().s === 3 ? " · ❄️ ruht im Winter" : ""}`;   // v298: Zaun im Bau bei Land/Weiden zeigen
@@ -15431,7 +15520,7 @@
     if (!spiel.admin) buchen(-preis, `Bau: ${B.n}`); prot("Bauauftrag: " + B.n.replace(/\u00ad/g, ""), { b: -preis });   // S4
     if (stufe === 3) { const z = bauZuschuss(preis); if (z) buchen(z, `Bauzuschuss Stufe 3: ${B.n.replace(/\u00ad/g, "")}`); }   // Dome (v295)
     if (typ === "heudampfer") { gebaeude().push({ gid: "g" + Math.random().toString(36).slice(2, 8), typ, stufe: 0, zustand: 100, preis }); (spiel.anlage = spiel.anlage || {}).heudampfer = true; return true; }
-    const g = { gid: "g" + Math.random().toString(36).slice(2, 8), typ, stufe, zustand: 100, preis, bau: { rest: bauTage(B.zeit), art: "neu" } };
+    const g = { gid: "g" + Math.random().toString(36).slice(2, 8), typ, stufe, zustand: 100, preis, bau: { rest: bauTage(B.zeit, stufe), art: "neu" } };
     if (opt.anbau) g.anbau = opt.anbau;
     if (B.boxen || (opt.anbau && B.jeBox)) g.boxen = opt.boxen || (opt.anbau ? B.schritt : B.boxen);   // v681: Sandpaddock-Vergrößerung = Pferdeplätze
     if (B.jeHa) g.ha = opt.ha || 1;
@@ -15549,7 +15638,7 @@
       if (frei.length) { const nb = frei.shift(); umbauUmzug(b, nb); eZufr(e, UMBAU.zufrUmzug, "Umzug wegen Umbau"); zeilen.push(`${esc(p.name)} (${esc(eName(e))}) → Box ${bnr(spiel.boxen.indexOf(nb))}`); }
       else if (w === "nachlass" && weideDa()) { const ziel = umbauRaus(p, b, g); e.nachlass = g.gid; eZufr(e, UMBAU.zufrNachlass, "Umbau – Pferd draußen"); zeilen.push(`${esc(p.name)} (${esc(eName(e))}) → ${ziel}, ${prozent(UMBAU.nachlass)} Nachlass`); }
       else { pensionAnsehen(UMBAU.ansehenOhne); pensionAuszug(e, "selbst gekündigt – kein Platz während des Umbaus"); zeilen.push(`${esc(p.name)} (${esc(eName(e))}) → <b>hat gekündigt</b> und ist ausgezogen`); } });
-    g.bau = { rest: Math.max(1, Math.round(bauTage(BAUTEN[g.typ].zeit) / 2)), art: "umbau", ziel: g.stufe + 1, kosten };
+    g.bau = { rest: Math.max(1, Math.round(bauTage(BAUTEN[g.typ].zeit, g.stufe + 1) / 2)), art: "umbau", ziel: g.stufe + 1, kosten };
     umbauBoxen(g).forEach(b => b.gesperrt = true);
     if (spiel.hof) spiel.hof.wert = (spiel.hof.wert || 0) + kosten;
     const warGeplant = !!g.plan; delete g.plan;
@@ -15663,6 +15752,7 @@
       if (--g.bau.rest > 0) return;
       const art = g.bau.art; delete g.bau; g.zustand = 100;
       bauFertig(g, art);
+      if (g.typ === "aqua") { try { pensionAnsehen(AQUA.ruf[Math.max(1, g.stufe || 1) - 1]); } catch (e) { } tippMerken("aquaFertig"); }   // A1: Stallruf einmalig +2/+4/+6
     });
   }
   function bauFertig(g, art) {
@@ -15820,7 +15910,7 @@
       ${opt.ziel ? `<div class="kr-wahl"><label>Weide <select id="bauZiel"><option value="neu" ${opt.ziel === "neu" ? "selected" : ""}>neue Weide (für Pferde)</option><option value="wiese" ${opt.ziel === "wiese" ? "selected" : ""}>neue Futterwiese (keine Pferde, Heu)</option>${weiden().map(w => `<option value="${w.wid}" ${opt.ziel === w.wid ? "selected" : ""}>${esc(w.name)} vergrößern (${haTxt(w.ha)})</option>`).join("")}</select></label></div>` : ""}
       ${mengen ? `<div class="kr-wahl"><label>${B.jeHa ? "Fläche" : typ === "sandpaddock" ? `mehr Platz (je ${PD_FLAECHE} m² = 1 Großpferd)` : "Boxen"} <select id="bauMenge">${mengen.map(x => `<option value="${x}" ${x === menge ? "selected" : ""}>${x}${B.jeHa ? " ha" : ""}</option>`).join("")}</select></label></div>` : ""}
       <div class="bau-stufen">${[1, 2, 3].map(s => `<button class="bau-stufe ${s === stufe ? "an" : ""}" data-bst="${s}"><b>Stufe ${s}</b><small>${STUFE_NAME[s]}</small><span>${fmt(bauPreis(typ, s, opt))}</span></button>`).join("")}</div>
-      <p style="margin-bottom:0"><small>${platzVon(typ, opt.boxen, stufe) ? `Platz: ${haTxt(platzVon(typ, opt.boxen, stufe))} Bauland inkl. Wege und Abstände (frei ${haTxt(baulandFrei())}) · ` : ""}Bauzeit (Standardtempo): ${tage(B.zeit)}${B.aussen ? " · Außenarbeit: ruht im Winter" : ""} · Höhere Stufe: mehr Wohlbefinden, weniger Verletzungen, zufriedenere Mitarbeiter, später höherer Pensionspreis, langsamerer Verfall.</small></p>`,
+      <p style="margin-bottom:0"><small>${platzVon(typ, opt.boxen, stufe) ? `Platz: ${haTxt(platzVon(typ, opt.boxen, stufe))} Bauland inkl. Wege und Abstände (frei ${haTxt(baulandFrei())}) · ` : ""}Bauzeit (Standardtempo): ${tage(zeitSt(B.zeit, stufe))}${B.aussen ? " · Außenarbeit: ruht im Winter" : ""} · Höhere Stufe: mehr Wohlbefinden, weniger Verletzungen, zufriedenere Mitarbeiter, später höherer Pensionspreis, langsamerer Verfall.</small></p>`,
       [["🏗️ Bauen", () => { if (bauStarten(typ, stufe, opt)) { speichern(); planNachBau(); } }], ["Abbrechen", null, "zweit"]], "breit");
     document.querySelectorAll("[data-bst]").forEach(b => b.onclick = () => bauDialog(typ, anbauVon, +b.dataset.bst, menge));
     if ($("bauMenge")) $("bauMenge").onchange = () => bauDialog(typ, anbauVon, stufe, +$("bauMenge").value);
@@ -15867,7 +15957,7 @@
   // Offenstall für 10 / 25 / 50 Jungpferde mit Liegehalle und Auslauf ≈ 800 / 2.000 / 4.000 m² (PLATZ_STUFE.aufzucht), Roundpen Ø 18 m, Sandpaddock ≈ 500 m², Lagerhalle ≈ 200 m², Quarantäne 2 Boxen + Vorraum ≈ 60 m², Waschplatz/Sattelkammer/Abfohlbox ≈ 20 m²
   const PLATZ = { stall: 0.003, paddock: 0.005, reitplatz: 0.09, reithalle: 0.1, rennbahn: 2, aufzucht: 0.08, roundpen: 0.03, trail: 0.08, sandpaddock: 0.05, waschplatz: 0.002, solarium: 0.0012, lager: 0.02, sattelkammer: 0.002, quarantaene: 0.003, abfohlbox: 0.002 };   // v367: Stall, Paddockboxen, Quarantäne und Abfohlstall je Box
   // v667 (Dome 23.10.): Flächen nach echten Maßen – Reitplatz Stufe 1 20×40 m (0,08 ha), Stufe 2 20×60 m (0,12 ha), Stufe 3 40×80 m (0,32 ha); Sandpaddock 150 m² je Pferd (2/3/4 Pferde); Rennbahn 2 ha; dazu +30 % für Wege, Zufahrt und Abstände (WEGE_ZUSCHLAG)
-  const WEGE_ZUSCHLAG = 1.3, PLATZ_STUFE = { reitplatz: [0.08, 0.12, 0.32], reithalle: [0.08, 0.12, 0.32], sandpaddock: [0.04, 0.06, 0.08], roundpen: [0.0144, 0.0324, 0.0576], aufzucht: [0.08, 0.2, 0.4] };   // v798: Roundpen 12 / 18 / 24 m Durchmesser (Quadrat 144 / 324 / 576 m²); v684: Sandpaddock 400/600/800 m²
+  const WEGE_ZUSCHLAG = 1.3, PLATZ_STUFE = { reitplatz: [0.08, 0.12, 0.32], reithalle: [0.08, 0.12, 0.32], sandpaddock: [0.04, 0.06, 0.08], roundpen: [0.0144, 0.0324, 0.0576], aufzucht: [0.08, 0.2, 0.4], aqua: [0.05, 0.03, 0.05] };   // v798: Roundpen 12 / 18 / 24 m Durchmesser (Quadrat 144 / 324 / 576 m²); v684: Sandpaddock 400/600/800 m²
   const platzVon = (typ, boxen, stufe) => { const st = Math.min(3, Math.max(1, stufe || 1));
     const roh = ["stall", "paddock", "quarantaene", "abfohlbox"].includes(typ) ? PLATZ[typ] * (boxen || BAUTEN[typ].boxen) : typ === "sandpaddock" && boxen ? PD_FLAECHE / 10000 * boxen : PLATZ_STUFE[typ] ? PLATZ_STUFE[typ][st - 1] : PLATZ[typ] || 0;
     return Math.round(roh * WEGE_ZUSCHLAG * 10000) / 10000; };
@@ -17589,6 +17679,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Azubi und Ausbilder:</b> Einen Azubi gibt es nur mit freiem Ausbilderplatz: Pferdewirt (beide Fachrichtungen) und Stallmeister je 2 Azubis, Bereiter nur im Ausbildungsstall, der Spieler mit Ausbilderschein (einmalig ${fmt(AUSBILDERSCHEIN)}) 1 Azubi; Pferdepfleger nicht. Ausbilder krank/im Urlaub: Azubi arbeitet, lernt nichts, Fehler +10 %. Ausbilder weg: neuer wird automatisch gesucht, sonst Warnbrief und nach 1 Jahreszeit Abbruch. Ausbildung ${AUSBILDUNG_JZ / 4} Jahre, Gehalt ${AZUBI_GEHALT.map(fmt).join(" / ")} pro Jahreszeit. Lernt je Arbeitstag mit Ausbilder +0,4 in den ersten beiden und +0,25 in den anderen Bereichen der Fachrichtung (${Object.values(FACH).map(F => `${F.n}: ${F.lernt.map(k => (WISSEN.find(w => w[0] === k) || [])[3]).join(", ")}`).join(" · ")}). Abschlussprüfung: Chance (Schnitt der 4 Bereiche − 8) ÷ 22, zwischen 10 und 95 %; bestanden → Brief mit Übernehmen (Gehalt der Fachkraft, Erfahrung/Eigenschaften bleiben, fehlendes Grundwissen bis zur Hälfte der Startwerte) oder Gehen lassen (sonst geht er zum Ende der Jahreszeit); durchgefallen → ${VERLAENGERUNG_JZ} Jahreszeiten Verlängerung. Fachrichtung nach Stallart (Zuchtstall → Pferdezucht → Pferdewirt Pferdezucht; Ausbildungsstall → Klassische Reitausbildung → Bereiter; Pension/Gnadenhof → Haltung und Service; Rennstall → Pferderennen; Westernstall → Spezialreitweisen). Stallarten kommen mit dem Hof-Ausbau – bis dahin gilt der Hof als Zuchtstall (<code>spiel.stallarten</code>). Pferdewirt Haltung und Service ${fmt(MA_TYP.pferdewirtHS.gehalt)}: nur mit Pensionsstall/Gnadenhof.</p>
       <p><b>Arbeit jeden Morgen</b> (nach Boxnummer): Stallburschen und Azubis füttern und misten (Weide nur, wenn Heu nötig ist), mit Stallmeister schafft ein Stallbursche 5 statt 3 Boxen, fleißig +1 Box. Pfleger putzen (Bürste + Kamm) und schneiden Mähne/Schopf auf Wunschlänge. Bereiter trainieren Pferde ab 3 Jahren mit über 50 % Gesundheit (nicht auf der Weide, ohne Boxenruhe) – siehe „Training daheim“. Fehler (vergisst eine Box): Azubi 25 % × (1 − Erfahrung Fütterung/Stallklima ÷ 50), mindestens 3 %; schusselig +8 %; zuverlässig nie. Ruhige Hand: Vertrauen der versorgten Pferde +0,2 pro Tag; ungeduldig −0,1 (nicht unter 20).</p>
       <p><b>Höchstenergie und Überlastung (A2, v861, PLAN-AQUA):</b> Höchstenergie = bisher × Ausdauer-Faktor (1 + ${ENERGIE_A2.ausdauer} × (Ausdauer − 60) ÷ 100, ${ENERGIE_A2.ausMin}–${ENERGIE_A2.ausMax}) × Alter (unter ${ENERGIE_A2.jung} Jahren ×${ENERGIE_A2.jungF}, ab ${ENERGIE_A2.alt} Jahren −${Math.round(ENERGIE_A2.altJahr * 100)} % je Jahr, höchstens −${Math.round(ENERGIE_A2.altMax * 100)} %), Leiste bis ${ENERGIE_A2.anzeige}. Arbeitsstufe leicht/mittel/schwer ab ${ARBEIT_STUFE.map(x => Math.round(x * 100) + " %").join(" / ")} der Höchstenergie (Arbeitsschnitt = 0,6 × alt + 0,4 × heute). Turnier im Arbeitsschnitt nach Klasse E–S: ${TURNIER_ARBEIT.join(" / ")}. <b>Überlastung</b> = ${UEBERLAST.naechte} Nächte hintereinander „schwer“: ${UEBERLAST.arten.join(", ")} ×${UEBERLAST.f}, bis die Arbeit wieder unter „schwer“ liegt.</p>
+      <p><b>Aqua-Center (A1, v872, nur Experte):</b> ${AQUA.namen.map((n, i) => `Stufe ${i + 1} ${n}: ${fmt(BAUTEN.aqua.preis[i])}, ${String(PLATZ_STUFE.aqua[i]).replace(".", ",")} ha, Bauzeit ${BAUTEN.aqua.zeit[i]} Jz, ${AQUA.plaetze[i]} ${AQUA.plaetze[i] === 1 ? "Platz" : "Plätze"}`).join(" · ")}; einmal je Hof, Stallruf bei Fertigstellung +${AQUA.ruf.join("/+")}. Programme (Energie): ${Object.values(AQUA_PROG).map(P => `${P.n} ${P.e} (ab Stufe ${P.ab})`).join(", ")}; 10/20/30 Minuten ×${AQUA.dauer[10]}/×${AQUA.dauer[20]}/×${AQUA.dauer[30]} auf Wirkung und Energie, einmal am Tag, nicht ans Wasser gewöhnt halbe Wirkung (Gewöhnung wie Waschplatz, wer ans Waschen gewöhnt ist, braucht nur 1 bzw. 2 Einheiten), Zustand unter ${AQUA.zustandHalb} % halbe Wirkung. Zählt als ${AQUA.gelaende} Gelände-Stand (Kondition), Muskeln: Aufbau ×${AQUA_PROG.aufbau.muskel} Trainingstag, kein Muskelabbau bei Boxenruhe mit Aqua in den letzten ${AQUA.muskelTage} Tagen. Sperren: unter 3 Jahren, Fohlen bei Fuß, letzte Jz der Tragzeit, Futterzustand ≤ 3, ${Object.values(AQUA_SPERRE).join(", ")}, draußen, Klinik, Turniertag (Vortag nur Reha); Schwimmen nicht bei ${AQUA_HINTEN.join("/")}; Kondition nur gesund und gewöhnt. Danach nass (abtrocknen!). Teich: macht schmutzig (+${AQUA.schmutz}), im Winter zugefroren, Blaualgen im Sommer mit ${Math.round(AQUA.algen * 100)} % (${AQUA.algenTage} Tage), Mauke/Hautpilz ×2 ohne Abtrocknen, Sommerekzem ×1,3; Cushing im Herbst/Winter nur Halle. Ausrutschen ${AQUA.rutsch * 100} % (×${AQUA.angstX} ängstlich/ungewöhnt, Gummimatten ab Stufe 2: nie, Wohl +1), Panik ${AQUA.panik * 100} % in der ersten Einheit. Futterzustand ab ${AQUA.fzAb}: je ${AQUA.fzJe} Einheiten −½ Stufe; ≥ ${AQUA.reheMin} Einheiten in ${AQUA.reheTage} Tagen: Hufrehe/EMS ×${AQUA.rehe}.</p>
       <p><b>Verlauf chronischer Befunde, Schubtage, Pausennächte (Aqua A3, v871):</b> Chronische Befunde (${Object.keys(CHRON).map(k => KRANK[k] ? KRANK[k].n : k).join(", ")}): Grad 1 kein Dauerabzug an Gesundheit/Wohlbefinden, Grad 2 halber Abzug, ab Grad 3 wie bisher. Schubtage ab Fortgeschritten: an Auslösertagen (Winter/Kälte, ${SCHUB.ruheTage}+ Tage ohne Arbeit, Überlastung, Sommer, Frühling, Staub – je Befund) Schub mit ${Math.round(SCHUB.chance[1] * 100)} % (Grad 1) / ${Math.round(SCHUB.chance[2] * 100)} % (Grad 2), ab Grad 3 dauerhaft. Training am Schubtag ×${SCHUB.faktor[1]} / ×${SCHUB.faktor[2]} / ×${SCHUB.faktor[3]}, beim Reiten Wohlbefinden −3 – außer nach dem Aufwärmen (Longieren, Solarium oder zwei leichte Übungen; Spaziergang allein reicht nicht; Pferdewirt/Bereiter/Stallmeister mit Rücken ab ${SCHUB.maRuecken} wärmt selbst auf). Turnier: wird abgeritten, Note Grad 2 ×${SCHUB.turnier[2]}, ab 3 ×${SCHUB.turnier[3]}, Schubchance am Turniertag ×${SCHUB.turnierChance}. Pausennacht: die Nacht nach einem Turnier bleibt jeder Befund, wie er ist (keine Besserung, kein Verschlechtern, kein Abzug). Befundkarte „So verläuft es“ mit Hilft/Schadet aus HILFT/SCHADET.</p>
       <p><b>Kalender (S8, v869):</b> Hofverwaltung → Kalender, ein Blatt je Jahreszeit, eine Kachel je Tag (Tempo 4: 4 in einer Reihe, 7: 7, 10: 2 × 5), bis ${KAL.voraus} Jahreszeiten voraus, je Kachel bis ${KAL.ico} Symbole und „+n“. Inhalt: Urlaub (Wunsch gestrichelt), Lehrgang, Berufsschule, Ende der Probezeit, Abschlussprüfung, Arbeitsbeginn, letzter Arbeitstag, gemeldete Turniere und Hausturnier, erwartete Geburt, Rückkehr aus der Klinik, Hufschmied (Dauerauftrag), fällige Rechnungen, Ende eigener Verkäufe, Gehaltstag mit Summe. Noch nicht drin: Deckstation, Rückkehr aus Aufzucht/Ausbildungsstall.</p>
       <p><b>Probezeit und Urlaub (S7, v868):</b> Neue Fachkräfte (nicht Azubis) haben ${PROBE.jz} Jahreszeiten Probezeit: kein Urlaub, in der 1. Jahreszeit ${Math.round(PROBE.gehalt * 100)} % Gehalt und 1 Box weniger, Kündigung gilt sofort (anteiliges Gehalt); unter Zufriedenheit ${PROBE.unzufr} kündigt er mit ${Math.round(PROBE.kuendigen * 100)} % je Tag selbst. Urlaub: ein Block im Jahr, Tempo 4/7/10 = ${URLAUB.tage[4]}/${URLAUB.tage[7]}/${URLAUB.tage[10]} Tage, in seiner Lieblings-Jahreszeit (spätestens im Winter; Azubi nur Sommer). Zu Beginn jeder Jahreszeit kommt der Sammelbrief „Urlaubsplanung“ für die nächste: verschieben ±${URLAUB.schieb[4]}/${URLAUB.schieb[7]}/${URLAUB.schieb[10]} Tage (angenommen mit 30 % + 70 % × Zufriedenheit, sonst ${URLAUB.schiebNein}), genehmigen (+${URLAUB.ok}), nächste Jahreszeit (${URLAUB.naechste}, dann Vorrang, nicht noch einmal), ablehnen (${URLAUB.ablehnen}, fragt wieder). ${Math.round(URLAUB.fest * 100)} % der Wünsche sind fest (Hochzeit …): nur genehmigen/ablehnen. Azubi: nur genehmigen. Offen gebliebene gelten zu Beginn der Jahreszeit als genehmigt. Warnung, wenn zwei aus demselben Beruf gleichzeitig weg sind; Urlaub nie auf Lehrgang/Berufsschule.</p>
@@ -18335,6 +18426,10 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     schubtag: ["Schubtag", () => "Dein Pferd geht heute steif. Longieren oder zwei leichte Übungen zum Aufwärmen, dann geht es besser.", "", null, "training", "fort"],
     verlauf: ["So verläuft es", "Bei chronischen Krankheiten steht oben, wie sie verlaufen, was hilft und was schadet.", "", null, "krank", "fort"],
     pausennacht: ["Pausennacht", () => `${esc(spiel.pauseName || "Dein Pferd")} war unterwegs. Der Befund bleibt heute, wie er ist.`, "", null, "krank", "alle"],
+    aquaFertig: ["Aqua-Center", "Dein Aqua-Center steht! Schwimmen und Laufband findest du unter Pferdepflege → Orte.", "", null, "training", "exp"],
+    aquaNass: ["Nass nach dem Aqua", "Das Pferd ist nass. Bitte abtrocknen, sonst droht Mauke oder Erkältung.", "", null, "training", "exp"],
+    aquaAlgen: ["Blaualgen", "Blaualgen im Teich! Für ein paar Tage nicht schwimmen.", "", null, "training", "exp"],
+    aquaHinten: ["Schwimmen gesperrt", "Schwimmen belastet Rücken und Hinterhand. Das Wasserlaufband ist schonender.", "", null, "training", "exp"],
     kalender: ["Kalender", "Hier siehst du alle Termine. Urlaubswünsche stehen gestrichelt drin, bis du entschieden hast.", "", null, "geld", "alle"],
     maBewerbung: ["Bewerber vergleichen", "Vergleiche die Balken. Schwächen verraten Bewerber nicht immer.", "", null, "geld", "alle"],
     eigeneErfahrung: ["Deine Erfahrung", "Auch du lernst: Was du selbst machst, darin wirst du erfahrener.", "", null, "geld", "alle"],

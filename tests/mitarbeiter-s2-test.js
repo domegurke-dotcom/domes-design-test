@@ -7,7 +7,7 @@ const { chromium } = require('playwright'); const path = require('path');
   await pg.click('#smNeu'); await pg.waitForTimeout(150); await pg.fill('#chName', 'Test'); await pg.click('#chLos'); await pg.waitForTimeout(150);
   await pg.click('#dlgKnoepfe button'); await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'Testhof'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(400);
   const R = await pg.evaluate(() => { const R = {}; document.getElementById('dlg').hidden = true; spiel.tippsAus = true; spiel.stufenAn = false;
-    R.name = MA_TYP.pferdewirt.name; R.alt = document.documentElement.innerHTML.includes('Zucht und Haltung');
+    R.name = MA_TYP.pferdewirt.name; R.alt = Object.values(MA_TYP).some(T => /Zucht und Haltung/.test(T.name + T.w + T.mehr));
     R.pflAuf = (MA_AUFGABEN_TYP.pfleger || []).join(','); R.pwAuf = MA_AUFGABEN_TYP.pferdewirt.includes('leicht');
     const mk = (typ, w) => ({ id: 'm' + typ + Math.random(), typ, name: 'Test', wissen: { ...w }, eig: [], gehalt: 300, ab: 0, bis: null });
     spiel.mitarbeiter = [];

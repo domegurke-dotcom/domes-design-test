@@ -73,3 +73,6 @@ Stichprobe 500 Pferde je Rasse (`neuesPferd` mit Markt-Farbverteilung). **Zu hä
 - **Noch nicht gebaut:** Kalender ohne Deckstation-Termine; schlechter Sattel als Schub-Auslöser (keine Ausrüstung).
 - **Texte So verläuft es** (neun chronische Krankheiten, Liste `CHRON` im Code) – Dome liest durch.
 - Von Dome bestätigt (27.10.): Aqua-Zufriedenheit, Pausennacht und alle selbst gesetzten Zahlen bleiben so.
+
+## Lizenzen für Pferdewirte (Dome 27.10., „als echte Regel“) – Entwurf, bitte beantworten
+Dome will, dass Pferdewirt Spezialreitweisen (Western, später Gangpferde) und Pferdewirt Pferderennen eine **Lizenz** brauchen. Mein Vorschlag, leicht änderbar: Lizenz = ein Lehrgang wie „Wasserarbeit“ (150 €, 2 Tage, einmal je Mitarbeiter, `m.kurse.lizenz`), Bewerber bringen sie manchmal mit (30 %), ohne Lizenz trainiert der Mitarbeiter die Disziplin nicht. Fragen: (1) Welche Lizenzen? Vorschlag: Westernlizenz (Spezialreitweisen im Westernstall), Gangpferdelizenz (neuer **Gangpferdestall**? gibt es noch nicht), Trainerlizenz Galopp/Trab (Pferderennen). (2) Auch Pferdewirt Klassische Reitausbildung mit Trainerlizenz (FN)? (3) Bewerber mit Lizenz teurer? (4) Soll der Spieler selbst Lizenzen machen können (wie Ausbilderschein)? Nicht gebaut, bis beantwortet.

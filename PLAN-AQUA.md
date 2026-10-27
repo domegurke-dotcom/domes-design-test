@@ -121,4 +121,4 @@ Externe Fachleute auf Termin (Osteopath, Zahnarzt, Sattler) und der Physiotherap
 - Vom Projekt-Chat übernommen (Claude Pro, 27.10.2026).
 - **A2 fertig (v861)** (früh ausgeliefert, wie im Auftrag erlaubt).
 - **A3 Grundspiel fertig (v871):** Verlauf chronischer Befunde, Schubtage, Aufwärmen, Turnier-Schub, „So verläuft es“, Pausennacht nach dem Turnier. Offen in A3: Aqua-Reha als Behandlung (Punkt 1–3, kommt mit A1), Hinweis „Mittel reicht nur noch für morgen“, Aqua am Turniertag (Punkt 10, mit A1).
-- Mitarbeiter-Auftrag ist komplett (v870) – A1/A4 können jetzt gebaut werden.
+- **A1 fertig (v872):** Gebäude, Programme, Sperren, Teich (Winter, Blaualgen, Schmutz), Gewöhnung, Risiken, Gewicht/Hufrehe, Muskelschutz, Ort-Ansicht. Noch nicht: Mehrfachauswahl „Pferde zum Aqua schicken“ im Hauptmenü (kommt mit A4, dann mit Personal), Rennstall-Erholungstag.

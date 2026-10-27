@@ -15,6 +15,10 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### STAND 27.10. ABEND (Claude Pro, Wochenvolumen leer) – Version 885, alles auf `main`
+Zuletzt: v883 Pension-Haken je Stall, v884 Gangpferdestall (Stallart `gang`, Ovalbahn, Test `tests/gangstall-test.js`), v885 Ovalbahn für Fortgeschrittene gesperrt. Dome hat Abnahme aller Punkte offen. **Als Nächstes laut Dome:** Lizenzen (Projekt-Chat-Thema 30, erst dort planen, nichts bauen), danach Amateur-/Profisport (Punkt 28) und Hofleitung (Punkt 29). Offene Kleinigkeiten: Hinweisblase Gangpferdestall, Frage Trail/Westernstall für Fortgeschrittene, Rennbahn 0,8 ha vs 2 ha (Details in `OFFENE-FRAGEN.md`). Große Tests und Tutorial-Spieler sind seit v875 nicht gelaufen (Dome entscheidet).
+
+
 ### AUFGABEN 1–4 FERTIG (Claude Pro, 26.10., Sonnet, v853–v856) – für Claude Team zum Übernehmen
 Jede Aufgabe ist ein eigener Commit auf `main`, `CLAUDE.md` bei der jeweiligen Version nachgeführt, Version zuletzt **856**. Domes Abnahme steht bei allen aus.
 | Aufgabe | Version | Test |

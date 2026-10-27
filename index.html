@@ -1326,7 +1326,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "870";
+  const SPIEL_VERSION = "871";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1334,12 +1334,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=870"></script>
-<script src="pferd.js?v=870"></script>
-<script src="boxstufen.js?v=870"></script>
-<script src="kopfneu.js?v=870"></script>
-<script src="waschbild.js?v=870"></script>
-<script src="avatare.js?v=870"></script>
+<script src="lz-string.min.js?v=871"></script>
+<script src="pferd.js?v=871"></script>
+<script src="boxstufen.js?v=871"></script>
+<script src="kopfneu.js?v=871"></script>
+<script src="waschbild.js?v=871"></script>
+<script src="avatare.js?v=871"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -6939,6 +6939,56 @@
     if (R.wert > 0) return `<span class="rk warn">🟡 Die Behandlung hilft nur wenig – fehlt noch etwas?${R.verlauf === "besser" ? " (etwas besser)" : ""}</span>`;
     return `<span class="rk warn">⚠️ Die Behandlung von gestern hat nicht geholfen${R.verlauf === "schlimmer" ? " – es ist schlimmer geworden" : ""}. Falsches Mittel?</span>`;
   }
+  // A3 (PLAN-AQUA, Grundspiel): Verlauf chronischer Befunde (Grad 1 kein Dauerabzug, Grad 2 halb), Schubtage mit Auslösern, Aufwärmen hebt den Malus auf, Pausennächte (Turnier)
+  const CHRON = {
+    arthrose: { an: ["kalt", "ruhe", "ueberlast"], text: "Anfangs kaum Beschwerden, nur bei Kälte, nach langer Ruhe und harter Arbeit. Ohne Behandlung schreitet sie schneller fort." },
+    sommerekzem: { an: ["sommer"], text: "Juckt vor allem im Sommer, wenn die Mücken fliegen. Im Winter ist meist Ruhe." },
+    cushing: { an: ["fruehling"], text: "Schleichend: im Frühling (Gras, Fellwechsel) geht es schlechter. Mit Medikament und passendem Futter lebt ein Pferd lange gut damit." },
+    asthma: { an: ["staub", "kalt"], text: "Staub und kalte Luft machen das Atmen schwer. Staubarmes Heu und Einstreu und viel frische Luft halten es ruhig." },
+    spat: { an: ["ruhe"], text: "Nach Ruhetagen geht das Pferd steif, mit Bewegung läuft es sich ein. Unbehandelt wird es langsam schlimmer." },
+    kissing: { an: ["ruhe"], text: "Nach Ruhephasen und unter dem Reiter zeigt es Rückenschmerzen. Gezielte Muskelarbeit stützt den Rücken." },
+    pssm: { an: ["ruhe"], text: "Nach Ruhetagen und mit zu viel Stärke im Futter verkrampft die Muskulatur. Tägliche Bewegung und ölreiches Futter helfen." },
+    ems: { an: ["fruehling"], text: "Im Frühling (zuckerreiches Gras) steigt das Hufrehe-Risiko. Abnehmen, Bewegung und wenig Zucker helfen." },
+    lymphoedem: { an: ["ruhe"], text: "Nach langem Stehen schwellen die Beine an. Bewegung und Pflege der Beine halten es klein." },
+  };
+  const SCHUB = { chance: { 1: 0.25, 2: 0.4 }, faktor: { 1: 0.85, 2: 0.7, 3: 0.6 }, turnier: { 1: 1, 2: 0.97, 3: 0.94 }, turnierChance: 0.5, ruheTage: 3, maRuecken: 30, verlauf: { 1: 0, 2: 0.5 } };
+  const SCHUB_GRUND = { kalt: "es ist kalt", ruhe: "nach langer Ruhe", ueberlast: "nach sehr harter Arbeit", sommer: "Sommer – die Mücken", fruehling: "Frühlingsgras und Fellwechsel", staub: "Staub" };
+  const schubAn = () => !(stufeAktiv() && ((spiel.spieler && spiel.spieler.stufe) || "anf") === "anf");   // Schubtage ab Fortgeschritten (Anfänger: kaum Krankheiten)
+  function schubAusloeser(p, art) {   // → Grund-Schlüssel oder null
+    const s = datum().s, C = CHRON[art]; if (!C) return null;
+    for (const a of C.an) { if (a === "kalt" && s === 3) return a; if (a === "sommer" && s === 1) return a; if (a === "fruehling" && s === 0) return a;
+      if (a === "ruhe" && ((p.boxTage || 0) >= SCHUB.ruheTage || (p.boxenruhe && (p.boxTage || 0) >= SCHUB.ruheTage))) return a;
+      if (a === "ueberlast" && typeof ueberlastet === "function" && ueberlastet(p)) return a;
+      if (a === "staub" && p.futterStatus && p.futterStatus.staub) return a; }
+    return null;
+  }
+  function schubNacht(p, b) {   // zu Beginn des neuen Tages (in befundeNacht)
+    if (!CHRON[b.art] || !schubAn()) { delete b.schub; return; }
+    if (b.grad >= 3) { b.schub = { tag: spiel.tag, grund: "dauer" }; return; }
+    const a = schubAusloeser(p, b.art); if (!a) { delete b.schub; return; }
+    const tur = (spiel.turniere || []).some(t => t.tag === spiel.tag && (t.nennung || []).some(n => n.pid === p.id));
+    if (Math.random() < (SCHUB.chance[b.grad] || 0) * (tur ? SCHUB.turnierChance : 1)) b.schub = { tag: spiel.tag, grund: a }; else delete b.schub;
+  }
+  function schubHeute(p) {   // schlimmster Schub heute → { b, grad, grund, text }
+    let best = null; befundListe(p).forEach(b => { if (b.schub && b.schub.tag === spiel.tag && (!best || b.grad > best.grad)) best = { b, grad: Math.min(3, b.grad), grund: b.schub.grund }; });
+    if (best) best.text = best.grund === "dauer" ? "ist dauerhaft etwas beeinträchtigt" : `geht heute steif (${SCHUB_GRUND[best.grund] || best.grund})`;
+    return best;
+  }
+  const schubTurnierF = p => { const S = schubHeute(p); return S ? SCHUB.turnier[S.grad] : 1; };   // auf dem Turnier wird abgeritten (aufgewärmt)
+  function schubWarm(p, T, m) {   // Longieren, Solarium oder zwei leichte Übungen – Pferdewirt/Bereiter mit Rücken ab 30 wärmt von selbst auf
+    if (p.aufgewaermt === spiel.tag) return true;
+    const L = (T && T.liste || []).filter(e => !e.abbruch); if (L.some(e => e.k === "longieren") || L.filter(e => AUFWAERMEN.includes(e.k)).length >= 2) return true;
+    return !!(m && ["pferdewirt", "pferdewirtHS", "bereiter", "stallmeister"].includes(m.typ) && ((m.wissen || {}).ruecken || 0) >= SCHUB.maRuecken);
+  }
+  const SCHUB_TIPP = "Tipp: Longieren oder zwei leichte Übungen (z. B. Spaziergang und Bodenarbeit) zum Aufwärmen, dann geht es besser.";
+  function verlaufHTML(p) {   // „So verläuft es“ oben in der Befundkarte chronischer Befunde (ab Fortgeschritten)
+    if (!schubAn()) return "";
+    const bs = bekannteBefunde(p).filter(b => b.diagnose && CHRON[b.art] && KRANK[b.art] && !verdachtVon(p, b)); if (!bs.length) return "";
+    const nm = k => (AKTION[k] && AKTION[k].n) || (APO[k] && APO[k].n) || k, S = schubHeute(p);
+    tippMerken("verlauf");
+    return bs.map(b => { const H = Object.entries(HILFT[b.art] || {}).filter(([, v]) => v > 0).sort((x, y) => y[1] - x[1]).slice(0, 4).map(([k]) => nm(k)), X = Object.entries(SCHADET[b.art] || {}).filter(([, v]) => v > 0).sort((x, y) => y[1] - x[1]).slice(0, 3).map(([k]) => nm(k));
+      return `<div class="bf-karte" style="border-color:#b8a27a;background:#fffaf0"><b>📈 So verläuft es: ${KRANK[b.art].n}</b>${S && S.b === b ? `<small>⚠️ <b>Heute Schub:</b> ${S.grund === "dauer" ? "dauerhaft beeinträchtigt" : SCHUB_GRUND[S.grund]}. ${SCHUB_TIPP}</small>` : ""}<small>${CHRON[b.art].text}</small>${H.length ? `<small>✅ Hilft: ${H.join(", ")}</small>` : ""}${X.length ? `<small>❌ Schadet: ${X.join(", ")}</small>` : ""}</div>`; }).join("");
+  }
   function befundeNacht() {
     spiel.boxen.forEach((box, i) => {
       const p = box.pferd; if (!p || p.klinik || box.tot || !p.pflege) return;
@@ -6955,6 +7005,8 @@
         if (imInkub(b)) return;   // Inkubation: schon ansteckend, aber noch keine Anzeichen und keine Wirkung
         herpesVerfohlen(p, b, i);
         if (b.art === "sommerekzem" && datum().s !== 1 && !b.bemerkt) { befundAbschliessen(p, b, "nach dem Sommer abgeklungen"); return; }
+        if (p.pauseTag === spiel.tag - 1) { b.pause = spiel.tag; if (b.bemerkt || b.diagnose) { spiel.pauseName = p.name; tippMerken("pausennacht"); } schubNacht(p, b); return; }   // A3: Pausennacht – war unterwegs (Turnier), Befund bleibt wie er ist
+        schubNacht(p, b);   // A3: Schubtag bei chronischen Befunden
         // Behandlung von gestern (Spieler, Mitarbeiter-Plan oder Tierarzt): bessert, bremst die Verschlechterung, mildert die Wirkung
         const BW = behandlungsWert(p, b), regF = 1.3 - ((p.werte && p.werte.ist && p.werte.ist.regeneration) || 50) / 100 * 0.6;
         // Heiltempo nach Spieltempo (Dome): bei 4 bzw. 7 Tagen je Jahreszeit schneller als bei 10
@@ -6971,9 +7023,9 @@
         else rueck("gleich");
         b.gradMax = Math.max(b.gradMax || 0, b.grad);
         b.behGestern = BW.wert;
-        const wirk = 1 - 0.6 * BW.wert;
+        const wirk = (1 - 0.6 * BW.wert) * (CHRON[b.art] && SCHUB.verlauf[b.grad] != null ? SCHUB.verlauf[b.grad] : 1);   // A3: chronisch Grad 1 kein Dauerabzug, Grad 2 halb
         p.pflege.gesundheit = Math.max(1, Math.round((p.pflege.gesundheit - K.g * b.grad * wirk) * 10) / 10);
-        wohlAendern(p, -1.5 * b.grad * wirk, `${b.diagnose ? K.n : "fühlt sich nicht gut"}`);
+        if (wirk > 0) wohlAendern(p, -1.5 * b.grad * wirk, `${b.diagnose ? K.n : "fühlt sich nicht gut"}`);
         // Tierarzt kennt den Fall und es wird ernst: Warnbrief
         if (b.tierarzt && BW.wert < 0.3 && b.grad >= 4 && b.warnBrief !== b.grad) { b.warnBrief = b.grad; b.gewarnt = true;
           brief("Tierarztpraxis", `Sorge um ${p.name}`, `wir machen uns große Sorgen um <b>${esc(p.name)}</b> (Box ${bnr(i)}): Die ${K.n} ist jetzt <b>${GRAD_TEXT[b.grad]}</b>. Bitte {ruf|rufen Sie} uns sofort wieder an – ohne Behandlung kann es lebensgefährlich werden.`, { pferde: [p], aktion: { typ: "befund", pid: p.id, bid: b.id } }); }
@@ -7261,7 +7313,7 @@
       <small>${inQuarantaene(p) ? `🚧 Unter Quarantäne – noch ${tageTxt2(quarTage() - (spiel.tag - p.quarantaene))}: kein Weidegang, eigenes Putzzeug, weniger Ansteckung über Luft, Nachbarbox und Hände.` : krankAnst ? "⚠️ Ansteckend! Quarantäne schützt die anderen Pferde." : "Quarantäne für Neuzugänge oder ansteckend kranke Pferde: 1 Jahreszeit eigene Box, kein Weidegang, eigenes Putzzeug."}${geimpft(p) ? " · 💉 geimpft" : ""}${eigenesPutzzeug(p) && !inQuarantaene(p) ? " · 🧰 eigenes Putzzeug" : ""}</small>
       <div class="bf-knoepfe"><button class="mini-knopf ${inQuarantaene(p) ? "an" : ""}" data-quar="1">🚧 Quarantäne ${inQuarantaene(p) ? "beenden" : "an"}</button><button class="mini-knopf" data-blut="0">🩸 kleines Blutbild ${fmt(VORSORGE.blutKlein)}</button><button class="mini-knopf" data-blut="1">🩸 großes Blutbild ${fmt(VORSORGE.blutGross)}</button>${fremd(p) ? "" : `<button class="mini-knopf" data-ucheck="1">🩺 Untersuchung wie AKU</button>`}${p.blutprobe && !p.blutprobe.geprueft ? `<button class="mini-knopf" data-probe="1">🧪 eingelagerte Blutprobe vom Kauf prüfen ${fmt(PROBE_PRUEFEN)}</button>` : ""}</div>
       ${krankAnst || inQuarantaene(p) || nurDa ? `<div class="bf-knoepfe"><small>Mitarbeiter nur für ${esc(p.name)} einteilen (trägt nichts weiter):</small>${nurDa ? `<button class="mini-knopf an" data-nurfuer="weg">👤 ${esc(nurDa.name)} – beenden</button>` : maListe.length ? maListe.map(m => `<button class="mini-knopf" data-nurfuer="${m.id}">👤 ${esc(m.name)}</button>`).join("") : "<small>keine Stallburschen oder Pfleger angestellt</small>"}</div>` : ""}</div>`;
-    return `${karten}${befundPlanHTML(p)}${kontaktKarteHTML(p)}${behandlungHTML(p, box)}${opKarteHTML(p)}${vorsorgeKarte}<button class="knopf" id="tierarztKnopf" style="width:auto;padding:9px 14px;margin-top:8px">🩺 Tierarzt rufen · Hausbesuch ${fmt(TIERARZT_BESUCH)} + Behandlung</button>${erloesenGrund(p) ? (tippMerken("erloesen"), `<button class="knopf zweit" id="erloesenKnopf" style="width:auto;padding:9px 14px;margin-top:8px">🕊️ Vom Tierarzt erlösen lassen${fremd(p) ? " · Besitzer fragen" : ` · ${fmt(ERLOESEN.preis)}`}</button>${fremd(p) && (einstellerVon(p) || {}).erloesen ? `<small style="display:block">Der Besitzer antwortet morgen.</small>` : ""}`) : ""}`;
+    return `${karten}${verlaufHTML(p)}${befundPlanHTML(p)}${kontaktKarteHTML(p)}${behandlungHTML(p, box)}${opKarteHTML(p)}${vorsorgeKarte}<button class="knopf" id="tierarztKnopf" style="width:auto;padding:9px 14px;margin-top:8px">🩺 Tierarzt rufen · Hausbesuch ${fmt(TIERARZT_BESUCH)} + Behandlung</button>${erloesenGrund(p) ? (tippMerken("erloesen"), `<button class="knopf zweit" id="erloesenKnopf" style="width:auto;padding:9px 14px;margin-top:8px">🕊️ Vom Tierarzt erlösen lassen${fremd(p) ? " · Besitzer fragen" : ` · ${fmt(ERLOESEN.preis)}`}</button>${fremd(p) && (einstellerVon(p) || {}).erloesen ? `<small style="display:block">Der Besitzer antwortet morgen.</small>` : ""}`) : ""}`;
   }
   // v685 (Dome 23.10.): der ganze Behandlungsplan des Tierarztes in der Versorgung – was heilt (und wie lange), ob geritten werden darf, welche Bewegung hilft und was verboten ist
   const REIT_NEIN = 0.3, REIT_LEICHT = 0.1;   // Schadenswert „Reiten“ ab dem es heißt: nein / nur leichte Arbeit
@@ -8693,6 +8745,7 @@
     if (ort === "reithalle" && vorliebeStufe(vorliebe(p, "reithalle")) === "nicht") F *= 0.85;
     const kalt = d.s === 3 && U.reiten && !T.liste.length && p.aufgewaermt !== spiel.tag;   // Winter: ohne Aufwärmen (W3: Solarium vorher wärmt auf)
     if (kalt) { F *= 0.8; hinweise.push("nicht aufgewärmt: im Winter erst Bodenarbeit, Longieren oder Spaziergang – so lernt es 20 % weniger und fühlt sich unwohl"); wohlAendern(p, -3, "im Winter ohne Aufwärmen geritten"); }   // Dome (v260)
+    { const SH = schubHeute(p); if (SH && !schubWarm(p, T, m)) { F *= SCHUB.faktor[SH.grad]; hinweise.push(`${esc(p.name)} ${SH.text} – lernt ${Math.round((1 - SCHUB.faktor[SH.grad]) * 100)} % weniger. ${SCHUB_TIPP}`); if (U.reiten) wohlAendern(p, -3, "Schubtag ohne Aufwärmen"); if (!m) tippMerken("schubtag"); } }   // A3
     if (ueber) { F *= 0.6; hinweise.push("müde – lernt kaum noch"); }
     if (p.haferSticht >= spiel.tag) { F *= 0.85; hinweise.push("übermütig – der Hafer sticht"); }
     if (futterZustand(p) <= 2) { F *= 0.85; hinweise.push("zu dünn – wenig Kraft"); } else if (futterZustand(p) >= 8) { F *= 0.9; hinweise.push("zu dick – schnell außer Atem"); }
@@ -9360,7 +9413,7 @@
   // Nacht nach dem Turniertag: Ergebnisse berechnen, Brief, Preisgeld, Erfolge, LK – Pferd ist am nächsten Morgen wieder da
   function turnierNacht() {
     const ein = (box, p, profi) => { if (!p || !p.turnier || p.turnier.tag !== spiel.tag) return;   // v399: profi = Ausbildungsstall stellt das Pferd vor
-      const t = (spiel.turniere || []).find(x => x.id === p.turnier.tid); delete p.turnier;
+      const t = (spiel.turniere || []).find(x => x.id === p.turnier.tid); delete p.turnier; p.pauseTag = spiel.tag;   // A3: die Nacht nach dem Turnier ist eine Pausennacht
       if (box) { box.krippeVoll = fuetternAusLager(box, "turnier"); box.mistig = false; box.mistStufe = 0; }   // war den ganzen Tag weg: unterwegs aus der eigenen Futterkammer gefüttert, Box sauber
       if (!t) return;
       const rz = zufall("turnier-erg-" + t.id + p.id), starts = t.nennung.filter(n => n.pid === p.id).map(n => t.pruef.find(x => x.id === n.prid)).filter(Boolean);
@@ -9373,7 +9426,7 @@
         const kost = P.disz === "distanz" ? Math.round(25 + 0.6 * P.km) : START_ENERGIE[P.disz] || 30, E = energie(p), muede = kost > E; p.energie = Math.max(-30, E - kost);
         const g = p.pflege.gesundheit, form = (0.85 + 0.15 * wohlbefinden(p) / 100) * (0.8 + 0.2 * Math.min(1, g / 85)) * (muede ? 0.85 : 1);
         const grp = LK_GRUPPE[P.disz], RT = nennReiter(t.nennung.find(n => n.pid === p.id && n.prid === P.id), P, profi), reiterF = reiterGruppeVon(P.disz) && RT.koennen != null ? reiterTurnierFaktor(RT.koennen, P) : 1;   // K3: Können des Reiters gegen die Anforderung der Klasse (×0,80 … ×1,08)
-        const wert = startWert(p, P.disz) * stufenMalus(p, P) * form * stress * reiterF * fzLeistung(p) * hufTurnierF(p, P.disz) * (t.halle && nachtblind(p) ? NACHTBLIND.halle : 1) * (1 + (rz() + rz() + rz() - 1.5) * 0.16), niveau = feldNiveau(t, P);
+        const wert = startWert(p, P.disz) * stufenMalus(p, P) * form * stress * reiterF * fzLeistung(p) * hufTurnierF(p, P.disz) * (t.halle && nachtblind(p) ? NACHTBLIND.halle : 1) * schubTurnierF(p) * (1 + (rz() + rz() + rz() - 1.5) * 0.16), niveau = feldNiveau(t, P);   // A3: Schub (Grad 2 −3 %, ab 3 −6 %)
         const vet = P.disz === "distanz" ? distanzVet(p, P, muede, rz) : null;
         if (vet && vet.aus) { if (vet.lahm) befundNeu(p, "lahmheit", 1, "Distanzritt", "Tierarzt beim Distanzritt");
           if (RT.selbst) reiterTurnier(P, t.art, null, false);   // K1: ausgeschieden zählt als Start
@@ -17536,6 +17589,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Azubi und Ausbilder:</b> Einen Azubi gibt es nur mit freiem Ausbilderplatz: Pferdewirt (beide Fachrichtungen) und Stallmeister je 2 Azubis, Bereiter nur im Ausbildungsstall, der Spieler mit Ausbilderschein (einmalig ${fmt(AUSBILDERSCHEIN)}) 1 Azubi; Pferdepfleger nicht. Ausbilder krank/im Urlaub: Azubi arbeitet, lernt nichts, Fehler +10 %. Ausbilder weg: neuer wird automatisch gesucht, sonst Warnbrief und nach 1 Jahreszeit Abbruch. Ausbildung ${AUSBILDUNG_JZ / 4} Jahre, Gehalt ${AZUBI_GEHALT.map(fmt).join(" / ")} pro Jahreszeit. Lernt je Arbeitstag mit Ausbilder +0,4 in den ersten beiden und +0,25 in den anderen Bereichen der Fachrichtung (${Object.values(FACH).map(F => `${F.n}: ${F.lernt.map(k => (WISSEN.find(w => w[0] === k) || [])[3]).join(", ")}`).join(" · ")}). Abschlussprüfung: Chance (Schnitt der 4 Bereiche − 8) ÷ 22, zwischen 10 und 95 %; bestanden → Brief mit Übernehmen (Gehalt der Fachkraft, Erfahrung/Eigenschaften bleiben, fehlendes Grundwissen bis zur Hälfte der Startwerte) oder Gehen lassen (sonst geht er zum Ende der Jahreszeit); durchgefallen → ${VERLAENGERUNG_JZ} Jahreszeiten Verlängerung. Fachrichtung nach Stallart (Zuchtstall → Pferdezucht → Pferdewirt Pferdezucht; Ausbildungsstall → Klassische Reitausbildung → Bereiter; Pension/Gnadenhof → Haltung und Service; Rennstall → Pferderennen; Westernstall → Spezialreitweisen). Stallarten kommen mit dem Hof-Ausbau – bis dahin gilt der Hof als Zuchtstall (<code>spiel.stallarten</code>). Pferdewirt Haltung und Service ${fmt(MA_TYP.pferdewirtHS.gehalt)}: nur mit Pensionsstall/Gnadenhof.</p>
       <p><b>Arbeit jeden Morgen</b> (nach Boxnummer): Stallburschen und Azubis füttern und misten (Weide nur, wenn Heu nötig ist), mit Stallmeister schafft ein Stallbursche 5 statt 3 Boxen, fleißig +1 Box. Pfleger putzen (Bürste + Kamm) und schneiden Mähne/Schopf auf Wunschlänge. Bereiter trainieren Pferde ab 3 Jahren mit über 50 % Gesundheit (nicht auf der Weide, ohne Boxenruhe) – siehe „Training daheim“. Fehler (vergisst eine Box): Azubi 25 % × (1 − Erfahrung Fütterung/Stallklima ÷ 50), mindestens 3 %; schusselig +8 %; zuverlässig nie. Ruhige Hand: Vertrauen der versorgten Pferde +0,2 pro Tag; ungeduldig −0,1 (nicht unter 20).</p>
       <p><b>Höchstenergie und Überlastung (A2, v861, PLAN-AQUA):</b> Höchstenergie = bisher × Ausdauer-Faktor (1 + ${ENERGIE_A2.ausdauer} × (Ausdauer − 60) ÷ 100, ${ENERGIE_A2.ausMin}–${ENERGIE_A2.ausMax}) × Alter (unter ${ENERGIE_A2.jung} Jahren ×${ENERGIE_A2.jungF}, ab ${ENERGIE_A2.alt} Jahren −${Math.round(ENERGIE_A2.altJahr * 100)} % je Jahr, höchstens −${Math.round(ENERGIE_A2.altMax * 100)} %), Leiste bis ${ENERGIE_A2.anzeige}. Arbeitsstufe leicht/mittel/schwer ab ${ARBEIT_STUFE.map(x => Math.round(x * 100) + " %").join(" / ")} der Höchstenergie (Arbeitsschnitt = 0,6 × alt + 0,4 × heute). Turnier im Arbeitsschnitt nach Klasse E–S: ${TURNIER_ARBEIT.join(" / ")}. <b>Überlastung</b> = ${UEBERLAST.naechte} Nächte hintereinander „schwer“: ${UEBERLAST.arten.join(", ")} ×${UEBERLAST.f}, bis die Arbeit wieder unter „schwer“ liegt.</p>
+      <p><b>Verlauf chronischer Befunde, Schubtage, Pausennächte (Aqua A3, v871):</b> Chronische Befunde (${Object.keys(CHRON).map(k => KRANK[k] ? KRANK[k].n : k).join(", ")}): Grad 1 kein Dauerabzug an Gesundheit/Wohlbefinden, Grad 2 halber Abzug, ab Grad 3 wie bisher. Schubtage ab Fortgeschritten: an Auslösertagen (Winter/Kälte, ${SCHUB.ruheTage}+ Tage ohne Arbeit, Überlastung, Sommer, Frühling, Staub – je Befund) Schub mit ${Math.round(SCHUB.chance[1] * 100)} % (Grad 1) / ${Math.round(SCHUB.chance[2] * 100)} % (Grad 2), ab Grad 3 dauerhaft. Training am Schubtag ×${SCHUB.faktor[1]} / ×${SCHUB.faktor[2]} / ×${SCHUB.faktor[3]}, beim Reiten Wohlbefinden −3 – außer nach dem Aufwärmen (Longieren, Solarium oder zwei leichte Übungen; Spaziergang allein reicht nicht; Pferdewirt/Bereiter/Stallmeister mit Rücken ab ${SCHUB.maRuecken} wärmt selbst auf). Turnier: wird abgeritten, Note Grad 2 ×${SCHUB.turnier[2]}, ab 3 ×${SCHUB.turnier[3]}, Schubchance am Turniertag ×${SCHUB.turnierChance}. Pausennacht: die Nacht nach einem Turnier bleibt jeder Befund, wie er ist (keine Besserung, kein Verschlechtern, kein Abzug). Befundkarte „So verläuft es“ mit Hilft/Schadet aus HILFT/SCHADET.</p>
       <p><b>Kalender (S8, v869):</b> Hofverwaltung → Kalender, ein Blatt je Jahreszeit, eine Kachel je Tag (Tempo 4: 4 in einer Reihe, 7: 7, 10: 2 × 5), bis ${KAL.voraus} Jahreszeiten voraus, je Kachel bis ${KAL.ico} Symbole und „+n“. Inhalt: Urlaub (Wunsch gestrichelt), Lehrgang, Berufsschule, Ende der Probezeit, Abschlussprüfung, Arbeitsbeginn, letzter Arbeitstag, gemeldete Turniere und Hausturnier, erwartete Geburt, Rückkehr aus der Klinik, Hufschmied (Dauerauftrag), fällige Rechnungen, Ende eigener Verkäufe, Gehaltstag mit Summe. Noch nicht drin: Deckstation, Rückkehr aus Aufzucht/Ausbildungsstall.</p>
       <p><b>Probezeit und Urlaub (S7, v868):</b> Neue Fachkräfte (nicht Azubis) haben ${PROBE.jz} Jahreszeiten Probezeit: kein Urlaub, in der 1. Jahreszeit ${Math.round(PROBE.gehalt * 100)} % Gehalt und 1 Box weniger, Kündigung gilt sofort (anteiliges Gehalt); unter Zufriedenheit ${PROBE.unzufr} kündigt er mit ${Math.round(PROBE.kuendigen * 100)} % je Tag selbst. Urlaub: ein Block im Jahr, Tempo 4/7/10 = ${URLAUB.tage[4]}/${URLAUB.tage[7]}/${URLAUB.tage[10]} Tage, in seiner Lieblings-Jahreszeit (spätestens im Winter; Azubi nur Sommer). Zu Beginn jeder Jahreszeit kommt der Sammelbrief „Urlaubsplanung“ für die nächste: verschieben ±${URLAUB.schieb[4]}/${URLAUB.schieb[7]}/${URLAUB.schieb[10]} Tage (angenommen mit 30 % + 70 % × Zufriedenheit, sonst ${URLAUB.schiebNein}), genehmigen (+${URLAUB.ok}), nächste Jahreszeit (${URLAUB.naechste}, dann Vorrang, nicht noch einmal), ablehnen (${URLAUB.ablehnen}, fragt wieder). ${Math.round(URLAUB.fest * 100)} % der Wünsche sind fest (Hochzeit …): nur genehmigen/ablehnen. Azubi: nur genehmigen. Offen gebliebene gelten zu Beginn der Jahreszeit als genehmigt. Warnung, wenn zwei aus demselben Beruf gleichzeitig weg sind; Urlaub nie auf Lehrgang/Berufsschule.</p>
       <p><b>Azubi (S6, v867):</b> Bewerbungen nur im Sommer, Beginn im Herbst. Ausbilder wählen (beim Einstellen und später „Ausbilder wechseln“): passend ist ${Object.entries(AUSB_PASST).map(([f, L]) => `${FACH[f].n} – ${L.map(t => MA_TYP[t] ? MA_TYP[t].name : t).join("/")}`).join(", ")}, Stallmeister immer; unpassend ×${AZUBI.unpassend}; Lerntempo × (0,6 + 0,8 × Erfahrung des Ausbilders im Bereich ÷ 100). Du als Ausbilder: er lernt nur in den Bereichen, in denen du heute selbst gearbeitet hast. 1. Jahr Grundausbildung (alle Bereiche ${AZUBI.grund}, Fachrichtung ×1,3), 2.–3. Jahr Fachrichtung ${AZUBI.fach}/${AZUBI.fachRest}, übrige ${AZUBI.rest} (je Arbeitstag × 7 ÷ Tage je Jahreszeit). Einsatz Stalldienst, Putzen oder <b>Mitlaufen</b> (ab Fortgeschritten: nicht im Stall, ×${AZUBI.mitlaufen}, nur in den Bereichen des Ausbilders) – jeder Wechsel gilt ab dem nächsten Morgen. Pflicht-Lehrgang 1 je Ausbildungsjahr (automatisch, ${fmt(LEHRGANG.preis)}), Berufsschule jeden Winter ${AZUBI.schuleTage} Tage (+${AZUBI.schule} in allen Bereichen, keine Kosten). Urlaub nur im Sommer. Ergebnis nach 3 Jahren: Fachrichtung etwa 35–45, mit Pflicht-Lehrgang 45–55, übrige etwa 15.</p>
@@ -18278,6 +18332,9 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     maGrenze: ["Grenze erreicht", "In Bereichen außerhalb seines Berufs kommt ein Mitarbeiter nur bis „erfahren“ (50). Mit einem Lehrgang kommt er weiter (bis 75).", "", null, "geld", "alle"],
     turnierBox: ["Box trotzdem versorgen", "Auch wenn dein Pferd heute auf dem Turnier ist, muss seine Box versorgt werden: Futter, Wasser und Misten – abends kommt es zurück.", "Das macht dein Stallbursche, wenn du einen hast.", null, "futter", "alle"],
     wbPassung: ["Passt er zum Pferd?", "Grün heißt, er passt gut zu diesem Pferd, gelb heißt, ihm fehlt Erfahrung. Tipp aufs Zeichen für den Grund.", "", null, "whiteboard", "alle"],
+    schubtag: ["Schubtag", () => "Dein Pferd geht heute steif. Longieren oder zwei leichte Übungen zum Aufwärmen, dann geht es besser.", "", null, "training", "fort"],
+    verlauf: ["So verläuft es", "Bei chronischen Krankheiten steht oben, wie sie verlaufen, was hilft und was schadet.", "", null, "krank", "fort"],
+    pausennacht: ["Pausennacht", () => `${esc(spiel.pauseName || "Dein Pferd")} war unterwegs. Der Befund bleibt heute, wie er ist.`, "", null, "krank", "alle"],
     kalender: ["Kalender", "Hier siehst du alle Termine. Urlaubswünsche stehen gestrichelt drin, bis du entschieden hast.", "", null, "geld", "alle"],
     maBewerbung: ["Bewerber vergleichen", "Vergleiche die Balken. Schwächen verraten Bewerber nicht immer.", "", null, "geld", "alle"],
     eigeneErfahrung: ["Deine Erfahrung", "Auch du lernst: Was du selbst machst, darin wirst du erfahrener.", "", null, "geld", "alle"],

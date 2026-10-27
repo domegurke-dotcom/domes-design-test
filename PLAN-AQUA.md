@@ -119,4 +119,6 @@ Externe Fachleute auf Termin (Osteopath, Zahnarzt, Sattler) und der Physiotherap
 
 ## Stand
 - Vom Projekt-Chat übernommen (Claude Pro, 27.10.2026).
-- **A2 fertig (v861)** (früh ausgeliefert, wie im Auftrag erlaubt). A1, A3–A5 offen; A1 und A4 hängen am Mitarbeiter-Auftrag.
+- **A2 fertig (v861)** (früh ausgeliefert, wie im Auftrag erlaubt).
+- **A3 Grundspiel fertig (v871):** Verlauf chronischer Befunde, Schubtage, Aufwärmen, Turnier-Schub, „So verläuft es“, Pausennacht nach dem Turnier. Offen in A3: Aqua-Reha als Behandlung (Punkt 1–3, kommt mit A1), Hinweis „Mittel reicht nur noch für morgen“, Aqua am Turniertag (Punkt 10, mit A1).
+- Mitarbeiter-Auftrag ist komplett (v870) – A1/A4 können jetzt gebaut werden.

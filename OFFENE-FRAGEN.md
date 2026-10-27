@@ -76,3 +76,9 @@ Stichprobe 500 Pferde je Rasse (`neuesPferd` mit Markt-Farbverteilung). **Zu hä
 
 ## Lizenzen für Pferdewirte (Dome 27.10., „als echte Regel“) – Stand
 Dome: Lizenzen als echte Regel; Welche Lizenzen / ob Klassische Reitausbildung / ob teurer: **„wie in real“** (Claude hat die echten Lizenzen aus dem Gedächtnis aufgelistet, noch nicht geprüft); der Spieler kann selbst Lizenzen machen, **aber nur mit den Voraussetzungen**. Noch nicht gebaut. Vorschlag aus dem echten System (FN-Trainerlizenzen C/B/A je Disziplin, Westernreiten über EWU/FN, Gangpferde über IPZV, Galopp über das Direktorium für Vollblutzucht und Rennen, Trab über den Traberverband): Lizenz je Disziplin und Stufe (C unten, B darüber), Voraussetzung = Reitabzeichen/Können in der Disziplin plus Lehrgang, wer sie hat, ist teurer. Zahlen (Kosten, Können-Schwelle, Gehaltsaufschlag) bitte mit Dome klären; auch Gangpferdestall als neue Stallart. Dazu Thema 29 in `PROJEKT-CHAT-THEMEN.md` (Hofleitung).
+
+## Gangpferdestall (v884/v885, Claude Pro 27.10.) – selbst gesetzte Zahlen
+- Ovalbahn: Preise 6.000 / 11.000 / 18.000 €, 110 × 30 m (0,33 ha, ~254 m Umlauf; IPZV verlangt mind. 250 m), Bauzeit wie Rennbahn.
+- Gangpferd = Tölt oder Pass, ab 4 Jahren; Vorteile Nenngeld ×0,5 und Tölt-/Passtraining ×1,2 (wie Western-/Rennstall).
+- Offen: Hinweisblase fehlt; Rennbahn-Info nennt 0,8 ha, `PLATZ.rennbahn` ist 2 ha; Trail/Westernstall sind für Fortgeschrittene baubar, der Pferdewirt Spezialreitweisen aber nicht einstellbar (Frage an Dome gestellt).
+- Nächstes Thema laut Dome: Lizenzen (`PROJEKT-CHAT-THEMEN.md` Punkt 30) – erst im Projekt-Chat planen.

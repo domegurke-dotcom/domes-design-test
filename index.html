@@ -750,6 +750,7 @@
   .kal-det { margin-top: 8px; background: #fff; border: 1.5px solid #e2d6c3; border-radius: 10px; padding: 8px 10px; display: grid; gap: 4px; }
   .kal-det .offen { opacity: .65; border-left: 2px dashed #8a6d3b; padding-left: 6px; }
   @media (max-width: 420px) { .kal-tag { min-height: 54px; padding: 3px; } .kal-ico { font-size: .85rem; } }
+  .wb-pens { display: flex; align-items: center; gap: 6px; margin: 2px 0 6px; font-size: .9rem; cursor: pointer; }
   .ma-karte { border: 1.5px solid #e2d6c3; border-radius: 10px; background: #fff; padding: 2px 0 8px; }
   .ma-karte .ma-zeile { border: 0; background: none; }
   .ma-eig { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 10px 6px; font-size: .78rem; }
@@ -1326,7 +1327,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "882";
+  const SPIEL_VERSION = "883";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1334,12 +1335,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=882"></script>
-<script src="pferd.js?v=882"></script>
-<script src="boxstufen.js?v=882"></script>
-<script src="kopfneu.js?v=882"></script>
-<script src="waschbild.js?v=882"></script>
-<script src="avatare.js?v=882"></script>
+<script src="lz-string.min.js?v=883"></script>
+<script src="pferd.js?v=883"></script>
+<script src="boxstufen.js?v=883"></script>
+<script src="kopfneu.js?v=883"></script>
+<script src="waschbild.js?v=883"></script>
+<script src="avatare.js?v=883"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -13406,6 +13407,8 @@
     const wuZeilen = (i, p) => { const K = Object.keys(WUNSCH).filter(k => angestellt.includes(WUNSCH[k][2]) && (k !== "waschen" || waschGeb()) && (k !== "solarium" || solarGeb()) && (k !== "weide" || weideDa() || paddocks().length)), AQ = aquaZeile(i, p); if (!K.length && !AQ) return "";
       return `<div class="wb-pn wb-wu"><small class="wb-pn-k">🧑‍🌾 Dein Wunsch an die Mitarbeiter:</small>${K.map(k => `<label class="wb-pn-z wb-wu-z"><input type="checkbox" data-wbwu="${i}:${k}"${wunschEin(p, k) ? " checked" : ""}> ${WUNSCH[k][0]} ${WUNSCH[k][1]}</label>`).join("")}${AQ}</div>`; };
     const rehaZeile = p => { if (!p.rehaSeit || !aquaRehaNoetig(p) || spiel.tag - (p.rehaLetzt || -99) > AQUA.reheTage) return ""; return `<div class="wb-pn wb-reha"><small class="wb-pn-k">🐢 Aqua-Reha seit ${datum(p.rehaSeit).t}. ${jzName(jzVonTag(p.rehaSeit)).replace(/ \d+$/, "")} (${spiel.tag - p.rehaSeit + 1}. Tag) – bis zur Besserung</small></div>`; };
+    const pensRow = (k, id) => { if (!["stall", "paddock"].includes(k) || !id || id === "-" || !pensionRegeln().offen) return ""; const g = gebaeude().find(x => x.gid === id); if (!g) return "";   // Dome 27.10.: Haken je Stall
+      return `<label class="wb-pens" title="Neue Einsteller ziehen nur in Ställe mit Haken. Wer schon eingezogen ist, bleibt dort."><input type="checkbox" data-wbpens="${id}"${g.pensionNein ? "" : " checked"}> 🏡 Pensionspferde dürfen hier einziehen</label>`; };
     const nr = {}, bauten = {};   // Dome: jeder Stall zählt seine Boxen selbst (Boxenstall 1, Boxenstall 2 …)
     BOX_GRUPPEN.forEach(([k]) => { const ids = []; spiel.boxen.forEach((b, i) => { if (boxGruppe(b) !== k) return; const id = gebWurzel(b.geb); if (!ids.includes(id)) ids.push(id); const n = spiel.boxen.slice(0, i).filter(c => boxGruppe(c) === k && gebWurzel(c.geb) === id).length + 1; nr[i] = n; }); ids.forEach((id, j) => { const g = id !== "-" && gebaeude().find(x => x.gid === id), tn = g ? BAUTEN[g.typ].n : ""; bauten[k + "|" + id] = ids.length > 1 ? (g && g.name ? esc(g.name) : `${(tn || BOX_GRUPPEN.find(x => x[0] === k)[2]).replace(/\u00ad/g, "")} ${j + 1}`) : ""; }); });
     const wm = wbWahl && wbWahl.startsWith("m:") ? (spiel.mitarbeiter || []).find(m => m.id === wbWahl.slice(2)) : null;   // S4: gewählter Mitarbeiter – Boxen grün/gelb
@@ -13439,7 +13442,7 @@
     const egalK = egal.length ? `<div class="wb-weide wb-egal"><div class="wb-wkopf"><b>🔀 Weide egal</b><small>die Mitarbeiter nehmen die beste</small></div><div class="wb-egal-l">${egal.map(x => { const k = `c:${x.i}:-:-`; return `<span class="wb-chip${sel(k)}" data-wbq="${k}">${kopfBild(x.p, true)}<span class="wb-cn">${esc(x.p.name)}${wbGs(x.p)}</span></span>`; }).join("")}</div></div>` : "";
     const imBox = L.filter(x => { const P = plan.get(x.p); return !P || !P.ziel; }), draussen = L.filter(x => { const P = plan.get(x.p); return P && P.ziel; }).length;
     const boxenTeil = `<h3 class="wb-h">📋 Boxen und Mitarbeiter</h3>${wbSicht === "boxen" ? pensionStallHTML() + vergessenHinweis() : ""}<p class="wb-tipp">Antippen: zur Box. Pferd gedrückt halten und ziehen: in eine andere freie Box – auch wenn es gerade draußen ist. ${TOUCH ? "Mitarbeiter unten gedrückt halten" : "Mitarbeiter unten mit der Maus"} und auf eine Box ziehen – oder antippen und dann die Box antippen. 📌 = fest zugeteilt, ○ = automatisch (verteilt sich von selbst wie bisher).</p>
-      ${gruppen.map(([k, ico, n]) => `${gruppen.length > 1 ? `<div class="wb-gruppe">${ico} ${n}</div>` : ""}${[...new Set(spiel.boxen.filter(b => boxGruppe(b) === k).map(b => gebWurzel(b.geb)))].map(id => `${bauten[k + "|" + id] ? `<div class="wb-gruppe wb-bau">${bauten[k + "|" + id]}</div>` : ""}<div class="wb-boxen">${spiel.boxen.map((b, i) => boxGruppe(b) === k && gebWurzel(b.geb) === id ? zelle(b, i) : "").join("")}</div>`).join("")}`).join("")}
+      ${gruppen.map(([k, ico, n]) => `${gruppen.length > 1 ? `<div class="wb-gruppe">${ico} ${n}</div>` : ""}${[...new Set(spiel.boxen.filter(b => boxGruppe(b) === k).map(b => gebWurzel(b.geb)))].map(id => `${bauten[k + "|" + id] ? `<div class="wb-gruppe wb-bau">${bauten[k + "|" + id]}</div>` : ""}${pensRow(k, id)}<div class="wb-boxen">${spiel.boxen.map((b, i) => boxGruppe(b) === k && gebWurzel(b.geb) === id ? zelle(b, i) : "").join("")}</div>`).join("")}`).join("")}
       <div class="wb-ma-reihe" id="wbMaReihe">${maReihe}</div>`;
     const jzKn = `<span class="wb-jz">${JZ.map(([n, ico], j) => `<button class="mini-knopf${wbView() === j ? " an" : ""}" data-wbjz="${j}" title="${n}${j === wbAkt() ? " (jetzt)" : ""}">${ico}<span class="wb-jzn"> ${n}</span>${j === wbAkt() ? " •" : ""}</button>`).join("")}</span>`;
     const weidenTeil = `<div class="wb-jzzeile"><h3 class="wb-h">🌿 Weideplan</h3>${jzKn.replace('<span class="wb-jz">', '<span class="wb-jz"><button class="mini-knopf" data-wbkopie="1" title="Einteilung dieser Jahreszeit in eine andere kopieren">📋 Kopieren</button>')}</div>${wbLive() ? "" : `<div class="klasse">📅 Plan für <b>${JZ[wbView()][0]}</b> – gilt ab Beginn der Jahreszeit. Wo du nichts änderst, bleibt es wie in der Jahreszeit davor.</div>`}<p class="wb-tipp">Oben rechts wählst du die Jahreszeit und planst jede Weide und jeden Sandpaddock im Voraus. Pro Weide oder Sandpaddock stellst du „täglich“ oder „alle 2 Tage“ ein. Pferd von unten auf die Weide ziehen (oder antippen und dann die Weide antippen) – bei „alle 2 Tage“ auf die linke (${wbHalbName("a")}) oder rechte Hälfte (${wbHalbName("b")}), auf beide = jeden Tag. Orange umrandet: hat dort gestern gestritten, rot: schon öfter gestritten, grün: hat dort einen Freund. Rot gepunktet: Hufrehe-Gefahr im Frühling – besser auf den Sandpaddock oder in die Box (Pferde in Paddockboxen bleiben dann automatisch in der Box). Auch Pensionspferde kannst du frei einteilen, der Besitzer merkt es an der Zufriedenheit. Raus bringen Stallbursche und Azubi in der Morgenrunde.</p>
@@ -13485,8 +13488,8 @@
     if ($("bxBauen")) $("bxBauen").onclick = () => zeigeBauenFenster();
     if ($("pnZurPension")) $("pnZurPension").onclick = () => { hofBereich = "pension"; zeigeHof("hof"); };
     const W = nb.querySelector(".wb"); wbZiehenInit();
-    W.onchange = e => { const q = e.target.closest && e.target.closest("[data-wbaqua]"); if (q) { const [i, k] = q.dataset.wbaqua.split(":"), p = spiel.boxen[+i].pferd; if (!p) return; (p.aquaWunsch = p.aquaWunsch || { modus: "aus" })[k] = q.value; speichern(); zeigeWhiteboard(); return; }   /* Dome 27.10.: Aqua-Wunsch */ const c = e.target.closest && e.target.closest("[data-wbwu]"); if (!c) return; const [i, k] = c.dataset.wbwu.split(":"), p = spiel.boxen[+i].pferd; if (!p) return; (p.leist = p.leist || {})[k] = c.checked; speichern(); zeigeWhiteboard(); if (!c.checked && (k === "fuettern" || k === "misten") && !p.leistHinweis) { p.leistHinweis = 1; speichern(); dialog(`<h3>ℹ️ Kurz gesagt</h3><p>Ohne Haken bei ${WUNSCH[k][1]} macht das für <b>${esc(p.name)}</b> kein Mitarbeiter – das musst du dann selbst übernehmen (sonst bleibt es liegen). Der freie Platz des Stallburschen geht an andere Pferde, zum Beispiel Pensionspferde.</p>`, [["Verstanden", () => zeigeWhiteboard()]]); } };
-    W.onclick = e => { if (e.target.closest("[data-wbwu]") || e.target.closest(".wb-wu-z")) return; if (Date.now() - wbGezogenAm < 400) return;
+    W.onchange = e => { const pn = e.target.closest && e.target.closest("[data-wbpens]"); if (pn) { const g = gebaeude().find(x => x.gid === pn.dataset.wbpens); if (g) { g.pensionNein = !pn.checked; speichern(); zeigeWhiteboard(); } return; }   /* Dome 27.10.: Pension je Stall */ const q = e.target.closest && e.target.closest("[data-wbaqua]"); if (q) { const [i, k] = q.dataset.wbaqua.split(":"), p = spiel.boxen[+i].pferd; if (!p) return; (p.aquaWunsch = p.aquaWunsch || { modus: "aus" })[k] = q.value; speichern(); zeigeWhiteboard(); return; }   /* Dome 27.10.: Aqua-Wunsch */ const c = e.target.closest && e.target.closest("[data-wbwu]"); if (!c) return; const [i, k] = c.dataset.wbwu.split(":"), p = spiel.boxen[+i].pferd; if (!p) return; (p.leist = p.leist || {})[k] = c.checked; speichern(); zeigeWhiteboard(); if (!c.checked && (k === "fuettern" || k === "misten") && !p.leistHinweis) { p.leistHinweis = 1; speichern(); dialog(`<h3>ℹ️ Kurz gesagt</h3><p>Ohne Haken bei ${WUNSCH[k][1]} macht das für <b>${esc(p.name)}</b> kein Mitarbeiter – das musst du dann selbst übernehmen (sonst bleibt es liegen). Der freie Platz des Stallburschen geht an andere Pferde, zum Beispiel Pensionspferde.</p>`, [["Verstanden", () => zeigeWhiteboard()]]); } };
+    W.onclick = e => { if (e.target.closest("[data-wbwu]") || e.target.closest(".wb-wu-z") || e.target.closest(".wb-pens")) return; if (Date.now() - wbGezogenAm < 400) return;
       const sv = e.target.closest("[data-wbsicht]"); if (sv) { wbSicht = sv.dataset.wbsicht; wbWahl = null; zeigeWhiteboard(); window.scrollTo(0, 0); return; }
       if (e.target.closest("[data-wbkopie]")) { wbKopierenDialog(); return; }
       const jz = e.target.closest("[data-wbjz]"); if (jz) { wbJz = +jz.dataset.wbjz === wbAkt() ? null : +jz.dataset.wbjz; wbWahl = null; zeigeWhiteboard(); return; }
@@ -16193,7 +16196,8 @@
   const leistungFaellig = (e, k) => e.leistungen[k] && leistungMoeglich(k) && (!PENSION_LEISTUNG[k].saison || PENSION_LEISTUNG[k].saison.includes(datum().s));
   // erledigen Mitarbeiter die Leistung automatisch?
   const pflegeTeam = () => ["pfleger", "pferdewirt", "pferdewirtHS", "stallmeister"].some(t => aktive(t).some(m => maDarf(m, "decke")));
-  const pensionBoxFrei = b => boxFrei(b) && !b.quar && !b.abfohl && !umbauGeplant(b);   // H4: keine neuen Einsteller in Boxen, die bald umgebaut werden
+  const pensionStallOk = b => { const id = gebWurzel(b.geb), g = id && id !== "-" ? gebaeude().find(x => x.gid === id) : null; return !g || !g.pensionNein; };   // Dome 27.10.: Haken im Whiteboard – welcher Stall darf Pensionspferde aufnehmen
+  const pensionBoxFrei = b => boxFrei(b) && !b.quar && !b.abfohl && !umbauGeplant(b) && pensionStallOk(b);   // H4: keine neuen Einsteller in Boxen, die bald umgebaut werden
   // v680 (Dome 23.10.): Plätze getrennt nach normalen Boxen (R.max) und Paddockboxen (R.maxPaddock), 99 = alle freien
   const pensionBelegt = pd => einstellerListe().filter(e => !e.art && !!(pensionBox(e) || {}).paddock === pd).length + (spiel.pensionAnfragen || []).filter(a => a.angenommen && !a.art && !!(spiel.boxen[a.box] || {}).paddock === pd).length;
   const pensionPlaetzeArt = pd => { const R = pensionRegeln(); return Math.max(0, (pd ? R.maxPaddock : R.max) - pensionBelegt(pd)); };

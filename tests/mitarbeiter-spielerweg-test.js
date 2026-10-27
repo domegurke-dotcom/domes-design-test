@@ -32,11 +32,9 @@ const { chromium } = require('playwright'); const path = require('path');
   const U2 = await pg.evaluate(() => { const A = angestellte('pfleger')[0]; return { ok: !!(A.urlaub && A.urlaub.ok), wunschWeg: !A.uWunsch, von: A.urlaub && A.urlaub.von }; });
   ok('Plan abgeschickt: Urlaub genehmigt, Wunsch erledigt', U2.ok && U2.wunschWeg, JSON.stringify(U2)); await pg.evaluate(() => zu());
   // 3. Kalender zeigt den Urlaub
-  await pg.evaluate(() => { kalJz = null; kalTag = null; zeigeHof('kalender'); }); await pg.waitForTimeout(250);
-  const vor = await pg.evaluate(() => { const t = jzStartTag(jzJetzt() + 1) <= (angestellte('pfleger')[0].urlaub || {}).von; return t; });
-  if (vor) await klick('#kalNach');
-  const tageK = await pg.$$('.kal-tag'); const tv = await pg.evaluate(() => (angestellte('pfleger')[0].urlaub || {}).von);
-  const idx = await pg.evaluate(v => { const j = kalJz; return v - jzStartTag(j); }, tv); if (tageK[idx]) { await tageK[idx].evaluate(e => e.click()); await pg.waitForTimeout(200); }
+  await pg.evaluate(() => { kalTag = null; zeigeHof('kalender'); }); await pg.waitForTimeout(250);
+  const idx = await pg.evaluate(() => { const v = (angestellte('pfleger')[0].urlaub || {}).von; return v - jzStartTag(jzJetzt()); });
+  const tageK = await pg.$$('.kal-tag'); if (tageK[idx]) { await tageK[idx].evaluate(e => e.click()); await pg.waitForTimeout(200); }
   ok('Kalender: Tag antippen zeigt „Alt hat Urlaub“', await pg.evaluate(() => /Alt hat Urlaub/.test((document.querySelector('.kal-det') || {}).textContent || '')));
   // 4. Fristlos kündigen in der Probezeit
   await pg.evaluate(() => zeigeHof('mitarbeiter')); await pg.waitForTimeout(250); await klick('[data-ma="stallbursche"]');

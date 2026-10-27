@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 27.10. (Claude Team) – v891
+Einsteller mit Raritätenpferden und Qualität nach Stallstufe (Details in CLAUDE.md v891, Domes Antworten: auch Stufe 2 mit geringer Chance, nur anspruchsvoller + zahlen gern mehr, kein Update-Fenster). Offen: Gehalts-Notiz Pferdepfleger/Pferdewirt (OFFENE-FRAGEN.md, Zahlen fehlen).
+
 ### 27.10. (Claude Team) – v890
 Update-Fenster Stufe 9 für die Spieler veröffentlicht (Domes Auswahl, Liste in CLAUDE.md bei v890), `tests/neues-popup-test.js` angepasst und grün. Sonst nichts geändert.
 

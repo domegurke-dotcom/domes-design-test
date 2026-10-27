@@ -1327,7 +1327,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "890";
+  const SPIEL_VERSION = "891";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1335,12 +1335,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=890"></script>
-<script src="pferd.js?v=890"></script>
-<script src="boxstufen.js?v=890"></script>
-<script src="kopfneu.js?v=890"></script>
-<script src="waschbild.js?v=890"></script>
-<script src="avatare.js?v=890"></script>
+<script src="lz-string.min.js?v=891"></script>
+<script src="pferd.js?v=891"></script>
+<script src="boxstufen.js?v=891"></script>
+<script src="kopfneu.js?v=891"></script>
+<script src="waschbild.js?v=891"></script>
+<script src="avatare.js?v=891"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -16249,24 +16249,29 @@
     const w = r() < 0.75, vn = pick(w ? MA_NAMEN_W : MA_NAMEN_M), nn = pensionNN(pick);   // in echt sind die meisten Einsteller Frauen
     const paddockFrei = spiel.boxen.some(b => b.paddock && pensionBoxFrei(b)) && pensionPlaetzeArt(true) > 0;
     const g = r() < PENSION.hengst ? "Hengst" : r() < 0.5 ? "Stute" : "Wallach", jahre = 4 + Math.floor(r() * 15);
-    const p = mkPferd("e" + spiel.tag + Math.random().toString(36).slice(2, 7), pick(RASSEN).id, r() < 0.55 ? 0 : 1 + Math.floor(r() * 3), jahre, r, g);
-    p.training = Math.floor(r() * Math.min(110, (jahre - 3) * 22));
+    const stFrei = [...new Set(spiel.boxen.filter(b => pensionBoxFrei(b) && !b.paddock && !b.quar && !b.abfohl && !b.offen).map(boxenStufe))], hochSt = Math.max(0, ...stFrei), qual = Math.max(0, hochSt - 1);   // v891 (Dome): je besser der Stall, desto besser die Pferde der Einsteller
+    let p = mkPferd("e" + spiel.tag + Math.random().toString(36).slice(2, 7), pick(RASSEN).id, r() < 0.55 + 0.1 * qual ? 0 : 1 + Math.floor(r() * 3), jahre, r, g);
+    const rarSt = hochSt >= 3 ? 3 : hochSt === 2 ? 2 : 0, rarCh = rarSt === 3 ? Math.min(0.1, 0.04 + Math.max(0, ansehenWirk() - 100) / 1000) : rarSt === 2 ? 0.015 : 0; let rar = false;   // Raritätenpferde nur bei freier Stufe-3-Box (4–10 % je nach Ansehen) oder Stufe-2-Box (1,5 %)
+    if (rarCh && r() < rarCh) for (let i = 0; i < 60 && !rar; i++) { const q = mkPferd("e" + spiel.tag + Math.random().toString(36).slice(2, 7), pick(RASSEN).id, r() < 0.55 + 0.1 * qual ? 0 : 1 + Math.floor(r() * 3), jahre, r, g); if (seltenheit(q, true).stufe >= 1) { p = q; rar = true; } }
+    p.training = Math.min(110, Math.floor(r() * Math.min(110, (jahre - 3) * 22)) + (jahre >= 5 ? qual * 8 : 0));
     if (g === "Stute" && jahre >= 4 && jahre <= 16 && r() < PENSION.tragend * (zuchtHof() ? 1 : 0.3)) { const v = mkPferd("ev" + spiel.tag + Math.random().toString(36).slice(2, 6), p.rasse, 0, 6 + Math.floor(r() * 8), r, "Hengst"), seit = jzJetzt() - 1 - Math.floor(r() * 2);
       p.traechtig = { vater: hengstKopie(v), seit, geburt: seit + 4 }; }   // Dome (v317): manchmal eine tragende Stute – steht im Anfrage-Brief
     const bf = Math.max(0.5, Math.min(1.5, ansehenWirk() / 100)), L = {}; PL_REIHE.forEach(k => { if (leistungAngeboten(k) && (k !== "paddockbox" || paddockFrei) && r() < PENSION_LEISTUNG[k].chance * bf * (k === "paddockbox" ? pdNachfrage() : 1)) L[k] = true; });
     if (!L.paddockbox && pensionPlaetzeArt(false) <= 0 && paddockFrei && leistungAngeboten("paddockbox")) L.paddockbox = true;   // nur noch Paddockbox-Plätze frei
     if (g === "Hengst" && paddockFrei && leistungAngeboten("paddockbox") && r() < 0.6 * Math.min(1, pdNachfrage())) L.paddockbox = true;   // Hengste oft lieber in die Paddockbox (Dome: dürfen aber auch in normale Boxen)
     const weide = spiel.hof && (spiel.hof.weideHa || 0) > 0, sand = spiel.anlage && spiel.anlage.paddock;
+    if (rar) delete L.paddockbox;   // v891: Raritätenpferde wollen eine Box
     const haltung = g === "Hengst" ? (L.paddockbox ? "paddockbox" : sand ? "sandpaddock" : "box") : weide && r() < 0.75 ? "weide" : sand ? "sandpaddock" : weide ? "weide" : "box";
     const stufenAlle = [...new Set(spiel.boxen.filter(b => !b.paddock && !b.quar && !b.abfohl && !b.offen).map(boxenStufe))], stufenFrei = [...new Set(spiel.boxen.filter(b => pensionBoxFrei(b) && !b.paddock).map(boxenStufe))];
-    let stufeWunsch = 0; if (stufenAlle.length > 1 && stufenFrei.length && !L.paddockbox) { const gew = stufenFrei.map(st => [st, [0, 3, 2, 1][st]]); let t = gew.reduce((x, y) => x + y[1], 0) * r(); for (const [st, wt] of gew) { t -= wt; if (t <= 0) { stufeWunsch = st; break; } } }   // v668 (Dome): Einsteller bewerben sich gezielt auf eine Boxstufe (teurere seltener)
-    const a = { aid: "a" + Math.random().toString(36).slice(2, 8), vn, nn, w, pferd: p, leistungen: L, haltung, stufeWunsch, tag: spiel.tag, bis: spiel.tag + PENSION.anfrageTage, bluttest: R.bluttest, blutErg: R.bluttest === "vorher" ? { entz: befundListe(p).some(b => ANSTECKEND[b.art] || ["druse", "erkaeltung", "husten", "verletzung", "hufabszess", "mauke"].includes(b.art)) } : null, ...(L.bewegen ? { bewegenAnteil: [0.3, 0.45, 0.6][Math.floor(r() * 3)] } : {}) };
+    let stufeWunsch = 0; if (rar) stufeWunsch = rarSt; else if (stufenAlle.length > 1 && stufenFrei.length && !L.paddockbox) { const gew = stufenFrei.map(st => [st, [0, 3, 2, 1][st]]); let t = gew.reduce((x, y) => x + y[1], 0) * r(); for (const [st, wt] of gew) { t -= wt; if (t <= 0) { stufeWunsch = st; break; } } }   // v668 (Dome): Einsteller bewerben sich gezielt auf eine Boxstufe (teurere seltener)
+    const a = { aid: "a" + Math.random().toString(36).slice(2, 8), vn, nn, w, pferd: p, leistungen: L, haltung, stufeWunsch, rar, tag: spiel.tag, bis: spiel.tag + PENSION.anfrageTage, bluttest: R.bluttest, blutErg: R.bluttest === "vorher" ? { entz: befundListe(p).some(b => ANSTECKEND[b.art] || ["druse", "erkaeltung", "husten", "verletzung", "hufabszess", "mauke"].includes(b.art)) } : null, ...(L.bewegen ? { bewegenAnteil: [0.3, 0.45, 0.6][Math.floor(r() * 3)] } : {}) };
     (spiel.pensionAnfragen = spiel.pensionAnfragen || []).push(a); R.letzteAnfrage = jzJetzt();
     const lt = PL_REIHE.filter(k => L[k]).map(k => PENSION_LEISTUNG[k].n);
     brief(eName(a), `Anfrage: Pensionsplatz für ${p.name}`, `ich suche einen Pensionsplatz für {mein Pferd|mein Pferd} <b>${esc(p.name)}</b> (${rasseById(p.rasse).name.replace(/ \(.*\)/, "")}, ${p.geschlecht}, ${jahre} Jahre). {Euer|Ihr} Hof wurde mir empfohlen.
       ${p.traechtig ? `<br><br>🤰 <b>${esc(p.name)} ist tragend</b> (von ${esc(p.traechtig.vater.name)}) – das Fohlen kommt zu Beginn von <b>${jzName(p.traechtig.geburt)}</b> und soll bei {euch|Ihnen} zur Welt kommen.` : ""}
       ${L.paddockbox ? (st => `<br><br>Eine <b>Paddockbox</b> hätte ich gern – laut {deinem|Ihrem} Aushang kostet sie ${fmt((R.preis[st] || PENSION_PREIS[st]) + pdAufVon(R, st))} je Jahreszeit.`)(boxenStufe(spiel.boxen.find(b => b.paddock && pensionBoxFrei(b)) || { paddock: true })) : ""}
       ${stufeWunsch ? `<br><br>Am liebsten hätte ich eine Box der <b>Stufe ${stufeWunsch}</b> (${STUFE_NAME[stufeWunsch]}) – das kostet ${fmt(R.preis[stufeWunsch] || PENSION_PREIS[stufeWunsch])} je Jahreszeit.` : ""}
+      ${rar ? `<br><br>⭐ <b>${esc(p.name)}</b> ist ein ganz besonderes Pferd – ich lege großen Wert auf erstklassige Unterbringung und Betreuung.` : ""}
       <br><br>Wichtig wäre mir: <b>${HALTUNG_TXT[haltung]}</b>${lt.length ? `; dazu möchte ich buchen: ${lt.join(", ")}` : ""}. ${a.bluttest === "vorher" ? `Den Bluttest lege ich bei (kleines Blutbild, ${a.blutErg && a.blutErg.entz ? "<b>Entzündungswerte erhöht</b>" : "Entzündungswerte unauffällig"}).` : a.bluttest === "nachreichen" ? "Den Bluttest reiche ich nach." : ""}
       <br><br>Hätte{st du|n Sie} einen Platz frei? Ich würde mich über eine Antwort in den nächsten ${PENSION.anfrageTage} Tagen freuen.`, { aktion: { typ: "einsteller", aid: a.aid }, w });
   }
@@ -16343,7 +16348,7 @@
       const q = a.bluttest !== "vorher" && !a.art ? spiel.boxen.findIndex(b => b.quar && boxFrei(b)) : -1;
       const nb = spiel.boxen[q >= 0 ? q : i], p = a.pferd, R = pensionRegeln();
       p.pflege = erzeugePflege(p); p.maehneSeit = spiel.tag; p.schopfSeit = spiel.tag;
-      const e = { eid: "e" + Math.random().toString(36).slice(2, 8), vn: a.vn, nn: a.nn, w: a.w, pid: p.id, stufe: boxenStufe(spiel.boxen[i]), leistungen: { ...a.leistungen }, haltung: a.haltung, bewegenAnteil: a.bewegenAnteil,
+      const e = { eid: "e" + Math.random().toString(36).slice(2, 8), vn: a.vn, nn: a.nn, w: a.w, pid: p.id, stufe: boxenStufe(spiel.boxen[i]), leistungen: { ...a.leistungen }, haltung: a.haltung, rar: !!a.rar, bewegenAnteil: a.bewegenAnteil,
         zufr: PENSION.start, seit: jzJetzt(), einzug: spiel.tag, bluttest: a.bluttest, kuendigt: null, log: [], befSeen: [] };
       e.preis = a.art ? a.preis : R.preis[e.stufe] || PENSION_PREIS[e.stufe];
       if (!a.art && a.leistungen.paddockbox && spiel.boxen[i].paddock) e.pdA = pdAufVon(R, e.stufe);   // v680: Aufpreis der Paddockbox bei Vertragsbeginn
@@ -16377,6 +16382,7 @@
   const GEGENSATZ = [["wird nach meinem Wunsch gefüttert", "wird nicht nach meinem Wunsch gefüttert"], ["der regelmäßige Weidegang", "kein Weidegang"], ["der regelmäßige Auslauf auf dem Sandpaddock", "kein Auslauf auf dem Sandpaddock"], ["gut gefüttert und gemistet", "hatte Hunger"], ["gut gefüttert und gemistet", "Box nicht gemistet"], ["Training nach Wunsch", "anders trainiert"]];   // v654 (Dome): in einer Rückmeldung nie 👍 und 👎 zum selben Thema – der neuere Grund gewinnt
   const gegenTeil = g => { const r = []; GEGENSATZ.forEach(([a, b]) => { if (g === a) r.push(b); if (g === b || g.startsWith(b + " ")) r.push(a); }); return r; };
   function eZufr(e, d, grund) {
+    if (e.rar && d < 0) d *= 1.3;   // v891: Besitzer eines Raritätenpferdes sind anspruchsvoller
     if (grund) { const gg = gegenTeil(grund); if (gg.length) { const weg = x => !gg.some(t => x.grund === t || x.grund.startsWith(t + " ")); e.log = (e.log || []).filter(weg); e.plus = (e.plus || []).filter(weg); } }
     e.zufr = Math.max(0, Math.min(100, Math.round((e.zufr + d) * 10) / 10));
     if (d < 0 && grund) { e.log = [{ tag: spiel.tag, grund }, ...(e.log || []).filter(x => x.grund !== grund)].slice(0, 8); }
@@ -16491,7 +16497,7 @@
       if (neu === e.preis) { delete e.preisNeu; return; }   // zurück auf den alten Preis
       if (neu < e.preis) { e.preisNeu = { preis: neu, ab: jzJetzt() + 1, ok: true }; const ab = !!e.stufeAb; delete e.stufeAb; if (!ab) eZufr(e, 2, "günstigerer Preis");
         brief(eName(e), `Neuer Preis für ${p.name}`, ab ? `<b>${esc(p.name)}</b> steht jetzt in einer einfacheren Box – gefallen hat mir das nicht. Immerhin zahle ich ab der nächsten Jahreszeit nur noch <b>${fmt(neu)}</b> statt ${fmt(e.preis)}.` : `vielen Dank für die Nachricht – ab der nächsten Jahreszeit zahle ich für <b>${esc(p.name)}</b> also nur noch <b>${fmt(neu)}</b> statt ${fmt(e.preis)}. Das freut mich!`, { w: e.w, pferde: [p] }); return; }
-      const r = neu / e.preis - 1, ja = Math.max(0.05, Math.min(0.97, 0.95 - 2.5 * r + (e.zufr - 60) / 80));
+      const r = neu / e.preis - 1, ja = Math.max(0.05, Math.min(0.97, 0.95 - 2.5 * r * (e.rar ? 0.4 : 1) + (e.zufr - 60) / 80 + (e.rar ? 0.1 : 0)));   // v891: zahlen Raritäten-Besitzer gern mehr
       if (Math.random() < ja) { e.preisNeu = { preis: neu, ab: jzJetzt() + 1, ok: true };
         brief(eName(e), `Neuer Preis für ${p.name}`, `{deine|Ihre} Preiserhöhung habe ich bekommen. Ab der nächsten Jahreszeit zahle ich für <b>${esc(p.name)}</b> dann <b>${fmt(neu)}</b> statt ${fmt(e.preis)} – in Ordnung.`, { w: e.w, pferde: [p] }); return; }
       if (Math.random() < 0.6) { const angebot = Math.round((e.preis + (neu - e.preis) * (0.35 + Math.random() * 0.3)) / 5) * 5;

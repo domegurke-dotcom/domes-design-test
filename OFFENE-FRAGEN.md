@@ -70,6 +70,6 @@ Stichprobe 500 Pferde je Rasse (`neuesPferd` mit Markt-Farbverteilung). **Zu hä
 **Beantwortet 25.10. (Dome) und umgesetzt in v829:** Admin-Test im Ausrüstungs-Kreis, Offenstall-Gruppe nach Größe (je 5 Pferde = 1 Box), Brief mit „Besitzer informieren“ und Ort, Denkblase draußen, Weihnachtsgeld-Zahlen und Offenstall-Umbau so lassen, Hochkant-Symbolreihe so lassen. Offen bleibt nur das Tutorial.
 
 ## Sitzung 27.10. (Claude Pro) – noch offen
-- **Noch nicht gebaut:** Kalender ohne Deckstation-Termine; schlechter Sattel als Schub-Auslöser (keine Ausrüstung); Aqua: Mehrfachauswahl Pferde zum Aqua schicken, Reha-Zeitraum im Whiteboard, Rennstall-Erholungstag.
+- **Noch nicht gebaut:** Kalender ohne Deckstation-Termine; schlechter Sattel als Schub-Auslöser (keine Ausrüstung).
 - **Texte So verläuft es** (neun chronische Krankheiten, Liste `CHRON` im Code) – Dome liest durch.
 - Von Dome bestätigt (27.10.): Aqua-Zufriedenheit, Pausennacht und alle selbst gesetzten Zahlen bleiben so.

@@ -16,7 +16,7 @@ const ORD = process.argv[2];
       A.urlaub = { von: t0 + 1, bis: t0 + 3, ok: true }; B.uWunsch = { jz: jz + 1, von: t0 + 2, bis: t0 + 4, von0: t0 + 2, fest: false, vor: false }; B.kurs = { k: 'haut', jz: jz + 1, t: 6, tag: t0 + 5 };
       spiel.mitarbeiter = [A, B];
       const p = spiel.boxen.find(x => x.pferd) && spiel.boxen.find(x => x.pferd).pferd; if (p) p.traechtig = { vater: { name: 'V' }, seit: jz - 3, geburt: jz + 1 };
-      R.spalten = {}; [4, 7, 10].forEach(t => { const alt = spiel.tempo; spiel.tempo = t; kalJz = null; const d = document.createElement('div'); d.innerHTML = kalenderHTML(); const g = d.querySelector('.kal-raster'); R.spalten[t] = [g.style.gridTemplateColumns.match(/repeat\((\d+)/)[1], d.querySelectorAll('.kal-tag').length].join('x'); spiel.tempo = alt; });
+      R.spalten = {}; [4, 7, 10].forEach(t => { const alt = spiel.tempo; spiel.tempo = t; kalJz = null; const d = document.createElement('div'); d.innerHTML = kalenderHTML(); const g = d.querySelector('.kal-raster'); R.bloecke = (R.bloecke || 0) || d.querySelectorAll('.kal-blatt').length; R.spalten[t] = [g.style.gridTemplateColumns.match(/repeat\((\d+)/)[1], d.querySelectorAll('.kal-tag').length / 3].join('x'); spiel.tempo = alt; });
       const T = kalTermine(jz + 1); R.arten = [...new Set(T.map(x => x.ico))].join(''); R.offen = T.some(x => x.offen && /Berta/.test(x.text));
       R.gehalt = T.some(x => x.ico === '💶' && x.tag === t0 && /630/.test(x.text.replace(/\D/g, '')));
       zeigeHof('kalender'); return R; });
@@ -26,10 +26,8 @@ const ORD = process.argv[2];
       ok('Termine: Urlaub, Lehrgang, Geburt, Gehaltstag', ['🏖️', '📚', '💶'].every(i => R.arten.includes(i)) && (R.arten.includes('🐣') || true), R.arten);
       ok('Urlaubswunsch gestrichelt (offen)', R.offen); ok('Gehaltstag mit Summe', R.gehalt);
     }
-    const vor = await pg.$('#kalNach'); let n = 0; while (vor && !(await pg.$eval('#kalNach', e => e.disabled)) && n < 6) { await pg.click('#kalNach'); n++; await pg.waitForTimeout(80); }
-    if (W === 1366) ok('höchstens 3 Jahreszeiten voraus', n === 3, n);
-    await pg.click('#kalVor'); await pg.waitForTimeout(80); await pg.click('#kalVor'); await pg.waitForTimeout(80); await pg.click('#kalVor'); await pg.waitForTimeout(80); await pg.click('#kalNach'); await pg.waitForTimeout(80);
-    const k = await pg.$$('.kal-tag'); await k[2].click(); await pg.waitForTimeout(120);
+    if (W === 1366) ok('drei Jahreszeiten untereinander, keine Pfeile', R.bloecke === 3 && !(await pg.$('#kalNach')) && !(await pg.$('#kalVor')), R.bloecke);
+    const k = await pg.$$('.kal-tag'); const nT = await pg.evaluate(() => tpj()); await k[nT + 2].click(); await pg.waitForTimeout(120);
     const det = await pg.$eval('.kal-det', e => e.textContent).catch(() => '');
     ok(`${W}×${H}: Tag antippen zeigt Einzelheiten`, /Berta|Anton/.test(det), det.slice(0, 60));
     const ueber = await pg.evaluate(() => { const r = [...document.querySelectorAll('.kal-tag')].map(e => e.getBoundingClientRect()); const sw = document.documentElement.scrollWidth > innerWidth + 1; return { sw, zuSchmal: r.some(x => x.width < 30) }; });

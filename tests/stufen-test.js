@@ -22,7 +22,7 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Anfänger: kein Tod durch Krankheit', STUFE().krankTod === false);
     // Dome 20.10.: Anfänger – fester Futterplan, Charakter ohne Details, fester Trainingsweg, keine Pfändung im 1. Jahr
     zeigeTag(); futterDialog(p, box); const fk = [...document.querySelectorAll('#dlgKnoepfe button')].map(x => x.textContent);
-    ok('Anfänger: Futterplan nicht selbst änderbar (Experte statt Futterplan-Knopf)', !fk.some(t => /Futterplan/.test(t)) && fk.some(t => /Futterexperte/.test(t)) && /stellt sich der Futterplan selbst ein/.test(document.getElementById('dlgInhalt').textContent), fk.join('|'));
+    ok('Anfänger: Futterplan nicht selbst änderbar (kein Futterplan-Knopf, seit v847 auch kein „Futterexperte fragen“)', !fk.some(t => /Futterplan|Futterexperte/.test(t)) &&/stellt sich der Futterplan selbst ein/.test(document.getElementById('dlgInhalt').textContent), fk.join('|'));
     futterplanDialog(p, box); ok('Anfänger: Futterplan-Fenster leitet um', !/Mahlzeiten am Tag<\/label>|data-fpmahl/.test(document.getElementById('dlgInhalt').innerHTML) && /Futter für/.test(document.getElementById('dlgInhalt').textContent));
     const an = futterAnlass(p, box); p.expertArchiv = { [an.k]: { v: 3, mahl: 3, kg: { heu: 9, mineral: 0.1 }, anlass: an.k, umst: an.text, tag: spiel.tag } }; delete p.expertAuto;
     ok('Anfänger: Empfehlung des Futterexperten wird automatisch übernommen', expertAuto(p, box) && p.futterplan && p.futterplan.vom === 'experte');

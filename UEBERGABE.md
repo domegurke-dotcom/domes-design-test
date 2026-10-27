@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 27.10. (Claude Team) – v890
+Update-Fenster Stufe 9 für die Spieler veröffentlicht (Domes Auswahl, Liste in CLAUDE.md bei v890), `tests/neues-popup-test.js` angepasst und grün. Sonst nichts geändert.
+
 ### STAND 27.10. ABEND (Claude Pro, Wochenvolumen leer) – Version 889, alles auf `main`
 Zuletzt: v883 Pension-Haken je Stall, v884 Gangpferdestall (Stallart `gang`, Ovalbahn, Test `tests/gangstall-test.js`), v889: Fohlenchampionat zählt doppelt für „Stall des Jahres“ (Zuchtstall: Sieg 6, platziert 2 Punkte; selbst gesetzt). v888: Stall des Jahres zählt Turniererfolge nur, wenn sie zum Stall passen (Rennstall Rennen, Gangpferdestall Tölt/Pass/Passrennen, Westernstall Western, Ausbildungsstall Englisch+Distanz, Pension alle); Fohlenschau (Prämie 1, Champion 3 Punkte) zählt beim Zuchtstall im Fohlen-Kriterium; Test tests/stall-punkte-test.js. Alte Zähler des laufenden Jahres zählen für Nicht-Pension nicht. v887: Gangpferdestall zählt bei „Stall des Jahres“ wie Ausbildungs-/Renn-/Westernstall (`stallArt`). v885/v886: Renn-, Western- und Gangpferdestall samt Rennbahn, Ovalbahn und Trail-Parcours nur für Experten (Anfänger und Fortgeschrittene gesperrt, `frei("stallart")`, Test `tests/stallart-stufe-test.js`); der Pferdewirt Spezialreitweisen fehlt damit für Fortgeschrittene (war schon so). Offene Frage Trail/Westernstall damit erledigt. Dome hat Abnahme aller Punkte offen. **Als Nächstes laut Dome:** Lizenzen (Projekt-Chat-Thema 30, erst dort planen, nichts bauen), danach Amateur-/Profisport (Punkt 28) und Hofleitung (Punkt 29). Offene Kleinigkeiten: Hinweisblase Gangpferdestall, Frage Trail/Westernstall für Fortgeschrittene, Rennbahn 0,8 ha vs 2 ha (Details in `OFFENE-FRAGEN.md`). Große Tests und Tutorial-Spieler sind seit v875 nicht gelaufen (Dome entscheidet).
 

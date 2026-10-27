@@ -69,9 +69,7 @@ Stichprobe 500 Pferde je Rasse (`neuesPferd` mit Markt-Farbverteilung). **Zu hä
 
 **Beantwortet 25.10. (Dome) und umgesetzt in v829:** Admin-Test im Ausrüstungs-Kreis, Offenstall-Gruppe nach Größe (je 5 Pferde = 1 Box), Brief mit „Besitzer informieren“ und Ort, Denkblase draußen, Weihnachtsgeld-Zahlen und Offenstall-Umbau so lassen, Hochkant-Symbolreihe so lassen. Offen bleibt nur das Tutorial.
 
-## Sitzung 27.10. (Claude Pro) – noch offen, bitte ansehen
-- **Aqua-Zufriedenheit (Pension):** je Einheit bisher +0,3/+0,5/+0,8 (Teich/Halle/Laufband). Waschen und Solarium geben +0,3. Vorschlag: Aqua auch +0,3 – Dome entscheidet.
-- **Pausennacht:** gilt nur nach dem Turnier (andere Nachtfahrten gibt es im Spiel nicht). Erklärung an Dome gegeben, Antwort steht aus.
-- **Selbst gesetzte Zahlen – bitte kurz absegnen:** Probezeit: unzufrieden (unter 45) kündigt mit 3 % je Tag fristlos. Urlaub: Lieblings-Jahreszeit zufällig (Sommer doppelt), Verschieben wird mit 30 % + 70 % × Zufriedenheit angenommen, sonst bleibt der Termin (−2). Azubi: nach 3 Jahren Fachrichtung etwa 35–45 (mit Pflicht-Lehrgängen 45–55), Rest etwa 15, Mitlaufen ×1,5, unpassender Ausbilder ×0,7. Aqua: Mindestalter 3 Jahre, Teich 25 × 20 m, Halle 20 × 15 m, Personal trocknet gleich ab, Pensionspferde alle 2 Tage, Stallmeister +1 nur mit Therapeut oder Lehrgangs-Mitarbeiter, du heilst mit Reha nur nach dem Lehrgang Wasserarbeit.
+## Sitzung 27.10. (Claude Pro) – noch offen
 - **Noch nicht gebaut:** Kalender ohne Deckstation-Termine; schlechter Sattel als Schub-Auslöser (keine Ausrüstung); Aqua: Mehrfachauswahl Pferde zum Aqua schicken, Reha-Zeitraum im Whiteboard, Rennstall-Erholungstag.
 - **Texte So verläuft es** (neun chronische Krankheiten, Liste `CHRON` im Code) – Dome liest durch.
+- Von Dome bestätigt (27.10.): Aqua-Zufriedenheit, Pausennacht und alle selbst gesetzten Zahlen bleiben so.

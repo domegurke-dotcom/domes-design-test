@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 30.10. (Claude Team, Opus) – v929: Schimmel-Details, Rassen-Notizen
+Domes „anpassen“ zu den Schimmel-Punkten: Grau-Fohlen dunkel mit Brille, dunkles Langhaar (nie ganz weiß), Blutmale, Vitiligo, G/G seltener Fliegen/mehr Melanome. Neue Datei `RASSEN-NOTIZEN.md` (Rassen aus den PDFs, noch nicht im Spiel). Pony-Regel (unter 148 cm) als Nachtrag zu Projekt-Chat-Thema 28. Tests schimmel-details, kit, seltenheit, raritaeten, schimmel-rar ✓. Selbst gesetzt: Anteile 20 % / 4 % / 10 % (ab 12 J.), Melanom G/G ×1,3. Offen an Dome: Sabino 1 bei Clydesdale/Shire (Quelle: kein SB1), SB1 bei Shetty/Quarter fehlt, Tobiano beim Trakehner fehlt, neue Grau-Allele G2/G3 (Studie 2024), ältere PDFs nochmal hochladen.
+
 ### 30.10. (Claude Team, Opus) – v928: Pferdetypen-Reiter, Schimmel-Erklärfenster, Pinto/Paint
 Aus Domes 4 PDFs (Size & Build, Light Horses, Grey, Pinto vs. Paint). Nur per Bild (3 Ansichten) und Klicktest geprüft. Offene Fragen an Dome siehe Antwort vom 30.10. (Schimmel-Details, Paint/Appaloosa-Grau).
 

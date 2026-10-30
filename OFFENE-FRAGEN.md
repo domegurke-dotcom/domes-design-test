@@ -94,3 +94,5 @@ Domes Antworten 27.10.: (1) Qualifikation = Erfahrung/Wissensstufen, Stärken �
 ## Sitzung 30.10. (Claude Team) – selbst gesetzte Zahlen v915
 - **nd1-Häufigkeit je Rasse** (`ND1`): Anteil des nd1-Allels unter den Nicht-Falb-Allelen, z. B. Araber .3, Quarter/Paint/Appaloosa .35, Friese .05, sonst .15 – keine belastbaren Zahlen je Rasse gefunden (nur: nd1 ist bei vielen Rassen häufig). Sichtbar ist der schwache Aalstrich bei nd1/nd1 oder bei nd1/d mit Streifen-Anlage (Araber ≈ 30 % mit sichtbarem Strich).
 - **Smoky Black** leicht bräunlich (28 % Richtung Braun gemischt) – nur nach Bild gewählt.
+- **Champagne-Häufigkeit** (v917): Quarter .004, Paint .004, Appaloosa .003 (Allel; ≈ 0,6–0,8 % der Pferde) – keine Zahlen gefunden, nur „selten“. Falbe + Champagne zeigt sich als Champagne (kein eigener „Dun Champagne“).
+- **Hellfuchs (Sandy Chestnut)** (v916): ≈ 25 % der Fuchsfohlen (Farbton-Anlage wie beim Hellbraunen).

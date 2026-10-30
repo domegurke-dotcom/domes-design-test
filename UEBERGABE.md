@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 30.10. (Claude Team, Opus) – v916/v917: Sandy Chestnut, Champagne, Erklärfenster Splash/Overo/Champagne
+v916 Hellfuchs (Sandy Chestnut) `sandfuchs` über `ex.ton`; v917 Champagne-Gen `Ch` (Quarter/Paint/Appaloosa, selten) + Erklärfenster splash/overo/champagne. Tests seltenheit-, schimmel-rar-, raritaeten-, zucht-, spielstand-test ✓. Champagne-Häufigkeit ist meine Schätzung. Offen: Splashed White ist im Spiel ein Gen (in echt SW1–SW5 an zwei Genen, SW3–5 reinerbig tödlich) – nur auf Domes Wunsch ändern.
+
 ### 30.10. (Claude Team, Opus) – v915: Falben/Cream/nd1 nach Domes Antworten
 Frosting bei allen Falben, Dunskin/Smoky Grulla/Dunalino (Fjord: Gelb-/Weißfalbe richtig zugeordnet), Smoky Black leicht bräunlich (Name erst nach Test), Gen nd1 (Details CLAUDE.md v915). Tests: seltenheit-, schimmel-rar-, raritaeten-, zucht-test ✓, Bilder angesehen. nd1-Häufigkeiten je Rasse sind meine Schätzung (`ND1`, OFFENE-FRAGEN.md). **Offen:** Domes 4 neue PDFs (Splashed White, Roan, Frame Overo, Champagne) → Erklärfenster; Champagne-Gen gibt es im Spiel nicht (Frage an Dome); Domes Frage „Sandy Chestnut“.
 

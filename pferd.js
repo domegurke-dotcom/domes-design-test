@@ -29,6 +29,11 @@ const FARBEN_BASIS = {
   weissfalbe:    { name: "Dunalino (Weißfalbe)",   body: "#f0e4c8", mane: "#f3ead6", stripe: "#c4956a", hoof: "#8a7a66" },   // Dome 30.10.: Fuchs + Falbe + Cream (beim Fjordpferd Weißfalbe/ulsblakk)
   gelbfalbe:     { name: "Dunskin (Gelbfalbe)",    body: "#dcc08a", mane: "#241d1a", points: "#3a2e26", stripe: "#3a2e26", hoof: "#3c332b" },   // Dome 30.10.: Brauner + Falbe + Cream (beim Fjordpferd Gelbfalbe/gulblakk)
   smokygrulla:   { name: "Smoky Grulla",           body: "#b3a894", mane: "#2a2522", points: "#2f2a26", stripe: "#2f2a26", head: "#958b7c", hoof: "#2c2a29" },   // Dome 30.10.: Rappe + Falbe + Cream
+  goldchampagne:   { name: "Gold Champagne",         body: "#d8b06c", mane: "#efe2c2", muzzle: "#c9a3a8", hoof: "#9a8672" },   // Dome 30.10.: Champagne-Gen (Ch) – Rot wird Gold, Schwarz wird Taupe
+  amberchampagne:  { name: "Amber Champagne",        body: "#c8a469", mane: "#6f5a4a", points: "#76604f", muzzle: "#c9a3a8", hoof: "#7a6656" },
+  sablechampagne:  { name: "Sable Champagne",        body: "#8c7058", mane: "#5c4838", points: "#5f4a3a", muzzle: "#c9a3a8", hoof: "#6a5646" },
+  classicchampagne:{ name: "Classic Champagne",      body: "#8e8174", mane: "#5f5248", points: "#64574c", muzzle: "#c9a3a8", hoof: "#6a5e54" },
+  ivorychampagne:  { name: "Ivory Champagne",        body: "#ecdfc4", mane: "#f3ebd8", muzzle: "#d8b0b0", hoof: "#b9a88f" },
   mushroom:      { name: "Mushroom (Sepia)",       body: "#a08467", mane: "#eadfc4", hoof: "#5a4a3c" },
   mushbrauner:   { name: "Mushroom-Brauner (Sepia-Brauner)", body: "#94735a", mane: "#1d1818", points: "#2a2220", hoof: "#2c2a29" },
   apricot:       { name: "Apricot (Pearl)",        body: "#e6c7a0", mane: "#efd8b5", muzzle: "#d8a699", hoof: "#b9a88f" },
@@ -1168,7 +1173,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     ohrL = {};   // v492 (Dome): nahes Ohr erst nach der Mähne zeichnen – sonst verdeckt die Mähne das Ohr, wenn es nach hinten zeigt oder angelegt ist
     g += `<g transform="matrix(${ekMatrix})">${kopfNeuSVG(eigenKopf, "ek" + uid, { fell: C.russ ? head : head, muschel,   /* v492 (Dome): Rußanflug direkt in der Kopffarbe – als eigene Schicht gab er am Rand der Kopffläche einen hellen Haarstrich */ maehne: schopfFarbe, ink: INK, statisch: opt.statisch, augenZu: opt.augenZu, schattierung: schatt, schattOhr, ohrLAussen: ohrL, uebMaske, alter: kopfAlter,
       marwari: !!k.curl, wimper: opt.wimper != null ? opt.wimper : (opt.geschlecht === "Stute" || stufe === "fohlen"), ohrR: OS.R, ohrL: OS.L, ohrSpiel: OS.spiel !== false, seed: opt.seed || rasseId,
-      ohneUeb: !schopfL || rasseId === "tekke", abz: opt.kopfAbz, maul: opt.maul || (C.grau > .3 ? "dunkel" : undefined), ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, augenRing: C.grau > .3 && !opt.maul ? { farbe: C.muzzle, st: C.grau } : /schwarzbrauner/.test(farbId) ? { farbe: "#a8643a", st: .5 } : null, /* v481 (Dome): Schwarzbraune – kupferfarben ums Auge (Platzhalter) */ lpHaut: !!(LP && LP.haut) || !!opt.kroete, kroeteHell: !LP && !!opt.kroete, sklera: !!(LP && LP.sklera), augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
+      ohneUeb: !schopfL || rasseId === "tekke", abz: opt.kopfAbz, maul: opt.maul || (C.grau > .3 ? "dunkel" : undefined), ohrGr: opt.ohrGr || OHR_RASSE[rasseId] || 1, augenRing: C.grau > .3 && !opt.maul ? { farbe: C.muzzle, st: C.grau } : /schwarzbrauner/.test(farbId) ? { farbe: "#a8643a", st: .5 } : null, /* v481 (Dome): Schwarzbraune – kupferfarben ums Auge (Platzhalter) */ lpHaut: !!(LP && LP.haut) || !!opt.kroete || !!opt.champ || /champagne/.test(farbId), kroeteHell: !LP && (!!opt.kroete || !!opt.champ || /champagne/.test(farbId)), sklera: !!(LP && LP.sklera), augeAmber: !!opt.champ || /champagne/.test(farbId), augeBlau: opt.augeBlau != null ? opt.augeBlau : /isabell/.test(farbId) })}</g>`;
   }
   // Mähne
   if (maehneD) g += `<path class="maehnePfad" d="${maehneD}" fill="${maneOuter}" stroke="${INK}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
@@ -1495,7 +1500,7 @@ function kopfNeuSVG(key, uid, o = {}) {
   const blinkZu = o.statisch || o.augenZu ? "" : '<animate attributeName="opacity" values="0;1;0" keyTimes="0;.93;.97" calcMode="discrete" dur="4.5s" repeatCount="indefinite"/>';
   const lidZu = `<path d="M346.69,328.97C368,346 397,336 409.56,305.9M370,341.5L366.5,356M392,336.5L397,350" fill="none" stroke="${ink}" stroke-width="9" stroke-linecap="round"/>`;
   const auge = `<g transform="translate(${ac2.x.toFixed(2)},${ac2.y.toFixed(2)}) scale(${as}) translate(${-ac.x},${-ac.y})">` +
-    `<g${o.augenZu ? ' opacity="0"' : ""}>${blinkAuf}${K.augeClip.replace("r15-ekp2-auge-3", uid + "-auge")}${(t => o.sklera ? t.replace("</ellipse>", `</ellipse><ellipse cx="31" cy="1" rx="7.5" ry="19" fill="#f3eee4"/>`) : t)(farbe(o.augeBlau ? K.augeBlau : K.auge).replace("r15-ekp2-auge-3", uid + "-auge"))}${o.wimper ? farbe(K.wimper) : ""}</g>` +
+    `<g${o.augenZu ? ' opacity="0"' : ""}>${blinkAuf}${K.augeClip.replace("r15-ekp2-auge-3", uid + "-auge")}${(t => o.sklera ? t.replace("</ellipse>", `</ellipse><ellipse cx="31" cy="1" rx="7.5" ry="19" fill="#f3eee4"/>`) : t)((t => o.augeAmber && !o.augeBlau ? t.replace(/#2e1a0e/g, "#a5701f") : t)(farbe(o.augeBlau ? K.augeBlau : K.auge).replace("r15-ekp2-auge-3", uid + "-auge")))}${o.wimper ? farbe(K.wimper) : ""}</g>` +
     (o.statisch && !o.augenZu ? "" : `<g opacity="${o.augenZu ? 1 : 0}">${blinkZu}${lidZu}</g>`) + `</g>`;
   const fell = F.fell.replace('transform="', `transform="${kmText(am)} `);
   // Maulfärbung und Kopfabzeichen liegen auf dem Fell, unter Schattierung und Linien (Reihenfolge wie in Domes Datei)
@@ -1588,6 +1593,11 @@ const FARBBESCHREIBUNG = {
   fuchs: "Rotbraunes Fell, Mähne und Schweif gleichfarbig.",
   dfuchs: "Dunkler, schokoladen- bis leberbrauner Fuchs mit gleichfarbiger oder dunklerer Mähne (Sooty-Gen) – sehr dunkle heißen auch Kohlfuchs.",
   hellfuchs: "Fuchs mit heller Flachsmähne – typisch Haflinger.",
+  goldchampagne: "Champagne auf Fuchs: goldenes Fell mit Metallschimmer, Mähne meist elfenbeinfarben, rosa-lila gesprenkelte Haut um Augen und Maul, bernsteinfarbene Augen.",
+  amberchampagne: "Champagne auf Brauner: goldbraunes Fell, Mähne, Schweif und Beine taupe (graubraun) statt schwarz, gesprenkelte Haut, helle Augen.",
+  sablechampagne: "Champagne auf Schwarzbraun: dunkles Braun bis Schokolade mit taupefarbener Mähne, gesprenkelte Haut, helle Augen.",
+  classicchampagne: "Champagne auf Rappe: taupe bis lila-grau mit Metallschimmer, Mähne etwas dunkler, gesprenkelte Haut, bernsteinfarbene Augen.",
+  ivorychampagne: "Champagne und Cream zusammen: sehr hell elfenbeinfarben, gesprenkelte rosa Haut, helle Augen.",
   sandfuchs: "Heller, sandfarbener Fuchs (Sandy Chestnut) – Mähne und Schweif gleichfarbig oder etwas heller, nicht weiß. Wie hell ein Fuchs ist, wird über mehrere Gene vererbt.",
   dunkelfuchs: "Dunkler, schokoladiger Fuchs mit Flachsmähne.",
   palomino: "Goldgelbes Fell mit weißer Mähne (Fuchs + ein Cream-Gen).",

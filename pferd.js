@@ -17,6 +17,7 @@ const FARBEN_BASIS = {
   fuchs:         { name: "Fuchs",                  body: "#b65a29", mane: "#a64c22", hoof: "#4a3a30" },
   dfuchs:        { name: "Dunkelfuchs",            body: "#86401f", russ: "#4a2010", mane: "#5f2913", hoof: "#3c3029" },
   hellfuchs:     { name: "Fuchs mit Flachsmähne",  body: "#c98843", mane: "#f3e6c2", hoof: "#4a3a30" },
+  sandfuchs:     { name: "Hellfuchs (Sandy Chestnut)", body: "#d29a5c", mane: "#c68a52", hoof: "#4a3a30" },   // Dome 30.10.: heller, sandfarbener Fuchs, Mähne gleichfarbig (Farbton-Anlage wie beim Hellbraunen)
   dunkelfuchs:   { name: "Dunkelfuchs mit Flachsmähne", body: "#96502a", russ: "#52281a", mane: "#eadbb0", hoof: "#3c3029" },
   palomino:      { name: "Palomino",               body: "#dcb164", mane: "#f6eed6", hoof: "#6b5a48" },
   isabell:       { name: "Isabell (Cremello)",     body: "#efe4cc", mane: "#f7f1e3", muzzle: "#d8a699", hoof: "#b9a88f" },
@@ -1587,6 +1588,7 @@ const FARBBESCHREIBUNG = {
   fuchs: "Rotbraunes Fell, Mähne und Schweif gleichfarbig.",
   dfuchs: "Dunkler, schokoladen- bis leberbrauner Fuchs mit gleichfarbiger oder dunklerer Mähne (Sooty-Gen) – sehr dunkle heißen auch Kohlfuchs.",
   hellfuchs: "Fuchs mit heller Flachsmähne – typisch Haflinger.",
+  sandfuchs: "Heller, sandfarbener Fuchs (Sandy Chestnut) – Mähne und Schweif gleichfarbig oder etwas heller, nicht weiß. Wie hell ein Fuchs ist, wird über mehrere Gene vererbt.",
   dunkelfuchs: "Dunkler, schokoladiger Fuchs mit Flachsmähne.",
   palomino: "Goldgelbes Fell mit weißer Mähne (Fuchs + ein Cream-Gen).",
   isabell: "Cremefarben mit rosa Haut und blauen Augen (doppeltes Cream-Gen).",

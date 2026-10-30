@@ -15,6 +15,19 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 30.10. (Claude Team, Sonnet) – v910–v914: Farb-Erklärfenster fertig ausgebaut, Rußung neu – nächste Sitzung: Thema „Fellfarben-Erklärungen/Optik“ weiter
+Alles auf `main` (letzter Stand v914, Commit `6198ca8`). Nur per Klicktest/Bild geprüft; **große Tests und `tests/optik-pruefung.js` nicht gelaufen** (Dome wollte keine großen Tests).
+- **v910:** Erklärfenster (Enz – Fellfarben, `FARB_ERKL`): „Dun“ heißt im Text „Falbe (Dun)“; je Punkt und je Name ein kleines Pferdebild (`FARB_BILD`, `.fe-zeile`/`.fe-klein`).
+- **v911:** Schemabilder (`enzySchema`, `FARB_SCHEMA`): Pferd blass mit roter Markierung – Aalstrich, Zebrastreifen, Schulterstreifen, Frosting (Falbe), umgekehrtes V (Roan). Positionen sind Anteile der Pferdebox, ungefähr. „Points“ heißt im Text „Körperenden (englisch Points)“ (Dome fragte nach deutschem Wort – es gibt keinen festen).
+- **v912–v914 Rußung (Dome mit Fotos von Sooty-Pferden):** `C.russ` (Dunkelbrauner, Dunkelfuchs, Dunkelfuchs mit Flachsmähne, Rußfalbe) = Verlauf von oben (Hals/Rücken/Kruppe am dunkelsten) mit Ringen im Übergang zum Bauch (Muster `rp-`, Turbulenzfilter `rf-`), keine Lichtflecke Schulter/Hüfte mehr (waren die Ursache der „Äpfel“ auf dem Dunkelbraunen: einzelne Ruß-Ovale ließen helle Lücken). Schwarzbrauner: kupferbraune Ringe auf Rippen/Flanke (`kp-`, `kf-`) – **Dome will das gleichmäßige Raster so lassen** (ein Versuch mit unregelmäßigeren Ringen sah nicht besser aus, verworfen). **Kopf:** bei den Ruß-Farben bekommt der Kopf (und die Ohren) in `schattLage` denselben Filter wie der Hals – erst Licht/Schatten, dann Ruß darüber (Deckkraft .78); Rußfalbe-Kopf ist noch einen Hauch grauer als der Hals.
+- **Offen / nächste Schritte:**
+  1. Dome schickt weitere PDFs zu Fellfarben („ich habe noch mehr“): für Schimmel, Schecken (Tobiano/Overo/Sabino/Splashed White), Tigerschecke, Lackschimmel usw. neue Gruppen in `FARB_ERKL` + `farbGruppe` (+ Bilder in `FARB_BILD`/`FARB_SCHEMA`); bei einem neuen Typ erst ein Beispielfenster zeigen. Texte vorher mit `pdftotext` lesen (nicht als Bild).
+  2. Offene Frage an Dome (unbeantwortet): Frosting bei jeder Falbe (bei uns nur Fjordpferd), nd1 fehlt im Spiel, Cream+Falbe auf Braun/Schwarz zeigt beides „Weißfalbe“ (Dunskin/Smoky Grulla fehlen), Smoky Black wird wie Rappe gezeichnet.
+  3. Aalstrich ist im Pferdebild nur eine feine blasse Linie, im Schemabild rot hervorgehoben – ggf. Zeichnung stärker (nur auf Domes Wunsch).
+  4. Dunkelbrauner/Dunkelfuchs: Ringe im Übergang kaum sichtbar (Kontrast zu klein) – nur auf Wunsch nachbessern.
+  5. Weiter wartend (Dome): Skelett-Funktionen (Roan-V am Knochen, Lackschimmel-Flecken, AKU-Röntgenbild – kommen mit besserem Skelett, Inkscape-Liste 0e), Tutorial-Schritt Einstreu-Symbol, Update-Fenster (`NEUES_STAND` 889), `AUFNAHME-AUSWERTUNG-30-10.md` nach v897 nachführen, Min/Max-Zonen-Blatt prüfen (meine Lesart: Körper = Min, Gesicht + untere Beine nur bei Max – nicht bestätigt).
+- **Arbeitsweise (Dome):** kurz, freundlich, deutsch; erst Bilder zeigen, dann einbauen; keine großen Tests ohne Rückfrage; Entwürfe nur auf den Entwicklungs-Branch `claude/eager-franklin-tx69vt`, erst nach „einbauen/lad hoch“ auf `main`. Scratchpad-Skripte (Vergleichsbilder `r1–r3.js`, `e10*.js`) sind nicht im Repo – bei Bedarf neu schreiben (Seite mit Playwright laden, `zeichnePferd(rasse, farbId, {seed, statisch: 1})` in ein `<svg viewBox>` setzen, Screenshot).
+
 ### 30.10. (Claude Team, Sonnet) – v909: Erklärfenster für 8 Farbgruppen mit „Woher kommt die Farbe?“ (PDFs Silver/Cream/Dun/3 Base Colors); weitere PDFs von Dome folgen – v907: Erklärfenster in Enz – Fellfarben (Roan, Dun, Buckskin; weitere nach Domes PDFs über `FARB_ERKL`) – v906 auf `main` (Roan-Wolken, Pangaré 3 Stufen, Lackschimmel Varnish Roan, Skelett-Entwurf; Dome 30.10.: „einbauen, kein Test, erst später“ – Tests stehen aus)
 - Roan als Wolken (Light/Medium/Heavy) + Jahreszeit, Alter, Corn spots, umgekehrtes V, Strawberry/Lilac; Lackschimmel mit großen Farbflecken (Domes „Bild 1“) + hellere Mähne; Pangaré in 3 Stufen (`opt.pangareK` 1–3 aus `ex.pangare`). Schalter in pferd.js: `ROAN_NEU`, `LACK_NEU`, `PANGARE_NEU` (false = alte Darstellung).
 - Skelett: `zeichnungen/skelett.svg` (aus Domes Bild nachgezeichnet), `zeichnungen/skelett-punkte.json`, `werkzeuge/skelett-export.js` → `skelett.js` (lazy per `skelettLaden`), `opt.skelett` legt es verformt über das Pferd (`skelettSVG`, Zielpunkte in `zeichnePferd`). Austauschbar; Wunschliste in `BEI-INKSCAPE-BEARBEITEN.md` 0e. Idee Röntgenbild bei der AKU (Dome: „mega“) noch nicht gebaut.
@@ -297,12 +310,7 @@ Domes Wünsche zu Whiteboard, Mitarbeitern, Waschplatz/Solarium sind umgesetzt (
 
 - **30.10. (Claude Team, v899/v900):** Domes Antworten zu Aufnahme 11 eingebaut (siehe CLAUDE.md v898–v900). Offen: Einstreu-Rückwunsch des Besitzers (schlechter) mit Einigung, Einstreu-Knopf als Kreissymbol unter Füttern + Tutorial, Roan-Schecke-Optik (73), Heu-Rückgabe (22), Azubi-Gruppe (44/70/71), roter Punkt Tierarzt (40).
 
-- v910 (Dome 30.10.): Erklärfenster: Dun→Falbe im Text, kleine Pferdebilder je Punkt und Name (`FARB_BILD`). Nur per Klicktest geprüft.
 
-- v911 (Dome 30.10.): Erklärfenster mit Schemabildern (FARB_SCHEMA) und „Körperenden“ statt „Points“. Klicktest + Bild geprüft.
 
-- v912 (Dome 30.10.): Rußung neu (Verlauf + Ringe), Schwarzbrauner mit Kupferringen, Kopf passend zum Hals. Nur per Bild geprüft; Optik-Prüfung `tests/optik-pruefung.js` nicht gelaufen.
 
-- v913 (Dome 30.10.): Ruß-Farben: Kopf ohne Hellfilter, Farbe wie der Hals. Nur per Bild geprüft.
 
-- v914 (Dome 30.10.): Ruß-Farben: Kopf mit demselben Filter wie der Hals (Licht/Schatten, dann Ruß). Nur per Bild geprüft.

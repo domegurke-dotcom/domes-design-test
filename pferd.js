@@ -34,9 +34,9 @@ const FARBEN_BASIS = {
   rappschecke:   { name: "Rappschecke",            body: "#211e1f", mane: "#121011", hoof: "#2c2a29", pattern: "tobiano" },
   braunschecke:  { name: "Braunschecke",           body: "#7c3f1d", mane: "#161212", points: "#1b1616", hoof: "#2c2a29", pattern: "tobiano" },
   fuchsschecke:  { name: "Fuchsschecke",           body: "#b65a29", mane: "#a64c22", hoof: "#4a3a30", pattern: "tobiano" },
-  blueroan:      { name: "Blue Roan",              body: "#757c82", mane: "#1a1818", points: "#222021", head: "#2c2a2a", pattern: "roan", hoof: "#2c2a29" },
-  bayroan:       { name: "Bay Roan",               body: "#946a52", mane: "#161212", points: "#1b1616", head: "#3a2218", pattern: "roan", hoof: "#2c2a29" },
-  rotschimmel:   { name: "Red Roan",     body: "#c3947c", mane: "#8a4424", points: "#8f4a28", head: "#9a4e2a", pattern: "roan", hoof: "#4a3a30" },
+  blueroan:      { name: "Blue Roan", roanBase: "#2b292a",              body: "#757c82", mane: "#1a1818", points: "#222021", head: "#2c2a2a", pattern: "roan", hoof: "#2c2a29" },
+  bayroan:       { name: "Bay Roan", roanBase: "#7c3f1d",               body: "#946a52", mane: "#161212", points: "#1b1616", head: "#3a2218", pattern: "roan", hoof: "#2c2a29" },
+  rotschimmel:   { name: "Red Roan", roanBase: "#b65a29",     body: "#c3947c", mane: "#8a4424", points: "#8f4a28", head: "#9a4e2a", pattern: "roan", hoof: "#4a3a30" },
   hellbrauner:   { name: "Hellbrauner",            body: "#a8643a", mane: "#1d1716", points: "#2a201c", hoof: "#2c2a29" },
   schwarzbrauner:{ name: "Schwarzbrauner",         body: "#2a1d18", mane: "#100d0d", points: "#141010", muzzle: "#8a5a3a", hoof: "#2c2a29" },
   lethalwhite:   { name: "Weiß (Lethal White)",    body: "#f7f3ee", mane: "#f3eee6", muzzle: "#e3b5ae", hoof: "#cdbfa8" },
@@ -49,7 +49,7 @@ const MUSTER = {
 function musterFarbe(id, t) {
   const m = /^(to|ov|tv|tg|fs|sb|sk|sa|sw|rn)_(.+)$/.exec(id); if (!m || !t[m[2]]) return null;   // v505: to_ = Tobiano auf jeder Grundfarbe (Rapp-/Braun-/Fuchsschecke bleiben eigene Farben)
   const B = t[m[2]], [name, pattern] = MUSTER[m[1]], e = { ...B, pattern, name: `${name} (${B.name.replace(/ \(.*\)$/, "")})` };
-  if (m[1] === "rn") { const kurz = B.name.replace(/ \(.*\)$/, "").replace(/^Dunkelfuchs mit Flachsmähne$/, "Dunkelfuchs (Flachsmähne)"); return { ...B, pattern: "roan", name: `${kurz} Roan`, body: mix(B.body, "#f2efe9", .4), head: B.head || B.body, points: B.points || mix(B.body, "#000000", .3) }; }   // Dome 30.10.: Roan als Muster über jeder Grundfarbe – Kopf und Beine behalten die Grundfarbe
+  if (m[1] === "rn") { const kurz = B.name.replace(/ \(.*\)$/, "").replace(/^Dunkelfuchs mit Flachsmähne$/, "Dunkelfuchs (Flachsmähne)"); return { ...B, pattern: "roan", roanBase: B.body, name: `${kurz} Roan`, body: mix(B.body, "#f2efe9", .4), head: B.head || B.body, points: B.points || mix(B.body, "#000000", .3) }; }   // Dome 30.10.: Roan als Muster über jeder Grundfarbe – Kopf und Beine behalten die Grundfarbe
   if (pattern === "leopard" || pattern === "fewspot") delete e.stripe;   // v510 (Dome): Aalstrich bleibt bei Scheckungen (wird unter dem Weiß gezeichnet), nur bei fast weißen Tigern nicht
   if (pattern === "tovero" || pattern === "fewspot") { e.head = mix(B.head || B.body, "#f7f5f1", pattern === "fewspot" ? .75 : .2); e.hoof = "#b8a88f"; }
   if (pattern === "leopard") { e.head = mix(B.head || B.body, "#f7f5f1", .45); e.hoof = "#b8a88f"; }
@@ -58,7 +58,10 @@ function musterFarbe(id, t) {
   return e;
 }
 // Roan in 3 Stufen (v439): wenig = Grundfarbe scheint stärker durch, viel = sehr hell; andere Muster unverändert (deren Stufe steckt in der Zeichnung)
+var PANGARE_NEU = true;   // Dome 30.10.: Pangaré auch am Körper (false = nur Mehlmaul, Vergleich)
+var ROAN_NEU = true;   // Dome 30.10.: Roan als weiße Wolken mit weichem Rand (Light/Medium/Heavy) statt gleichmäßigem Schleier; false = alte Darstellung (Vergleich)
 function musterStufeFarbe(C, st) {
+  if (ROAN_NEU && C.pattern === "roan" && C.roanBase && C.roanDeck == null) return { ...C, body: C.roanBase, roanW: st == null ? 1 : st };   // Grundfarbe bleibt, das Weiß kommt als Wolke darüber
   if (st == null || st === 1 || C.pattern !== "roan" || C.roanDeck != null) return C;   // roanDeck = Schimmel im Ausgrauen, nicht betroffen
   return { ...C, body: st === 0 ? mix(C.body, C.points || C.mane || C.body, .45) : mix(C.body, "#f2efe9", .35) };   // Stufe 3 („fast weiß“) gibt es beim Roan nicht – wie „viel“
 }
@@ -641,6 +644,13 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     : mStop(.15, 0) + mStop(.35, mtA) + mStop(.48, 0) + mStop(.62, mtB) + mStop(.75, 0)) + `</linearGradient>`;
 
   const bx = `x="${f(minX - 5)}" y="${f(minY - 5)}" width="${f(maxX - minX + 10)}" height="${f(-minY + 10)}"`;
+  if (C.pattern === "roan" && C.roanW != null) {   // Roan-Wolken: Dichte je Stufe (0 Light, 1 Medium, 2 Heavy), Rand läuft weich aus
+    const W = C.roanW, bl = [[.52, .3, .15, .18, 1], [.4, .5, .12, .15, .8], [.64, .45, .13, .18, .8]], mid = [[.5, .45, .36, .4, 1], [.3, .4, .22, .3, .9], [.7, .5, .24, .35, .9], [.48, .2, .3, .2, .8]], hv = [[.5, .5, .6, .6, 1], [.25, .4, .3, .5, 1], [.75, .5, .3, .5, 1], [.5, .3, .5, .35, 1]];
+    const PK = (W === 0 ? bl : W === 1 ? mid : hv).map(([cx, cy, rx, ry, o]) => `<ellipse cx="${f(cx * L)}" cy="${f(top + cy * D)}" rx="${f(rx * L)}" ry="${f(ry * D)}" fill="#fff" opacity="${o}"/>`).join("") + (W === 0 ? "" : `<ellipse cx="${f(0.12 * L)}" cy="${f(top - 0.35 * D)}" rx="${f(0.2 * L)}" ry="${f(0.5 * D)}" fill="#fff" opacity="${W === 1 ? .55 : .9}"/>`);   // zusätzlich eine Wolke am Hals
+    defs += `<filter id="rw-${uid}" filterUnits="userSpaceOnUse" ${bx}><feGaussianBlur stdDeviation="${f(D * (W === 0 ? .16 : .12))}"/></filter>` +
+      `<mask id="rwm-${uid}" maskUnits="userSpaceOnUse" ${bx}><g filter="url(#rw-${uid})">${PK}</g></mask>` +
+      `<mask id="rwa-${uid}" maskUnits="userSpaceOnUse" ${bx}><g mask="url(#rwm-${uid})"><rect ${bx} fill="#fff" mask="url(#mk-${uid})"/></g></mask>`;
+  }
   if (C.pattern === "dapple" || C.pattern === "roan" || C.pattern === "fleck") defs += `<mask id="mk-${uid}" maskUnits="userSpaceOnUse" ${bx}><g filter="url(#wm6-${uid})"><path d="${halsD}" fill="#fff"/><path d="${glatt(rumpf)}" fill="#fff" transform="translate(0,-3)"/></g></mask><filter id="wm6-${uid}" filterUnits="userSpaceOnUse" ${bx}><feGaussianBlur stdDeviation="5"/></filter>`;
   defs += `<filter id="wm-${uid}" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="1.3"/></filter>`;
   defs += `<filter id="wb-${uid}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.2"/></filter>`;
@@ -707,7 +717,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     let dots = ""; for (let i = 0; i < Math.round(34 * T * T / 121); i++) dots += `<ellipse cx="${f(rs() * T)}" cy="${f(rs() * T)}" rx="${f(0.22 + rs() * 0.3)}" ry="${f(0.35 + rs() * 0.35)}" fill="#fbfaf6" opacity="${f(0.6 + rs() * 0.4)}"/>`;
     return `<pattern id="p${id}" patternUnits="userSpaceOnUse" width="${T}" height="${T}">${dots}</pattern><mask id="m${id}" maskUnits="userSpaceOnUse" ${bx}><g filter="url(#wb-${uid})" fill="#fff" stroke="#fff" stroke-width="${f(weite)}" opacity="${f(Math.min(1, dichte))}">${inner}</g></mask><rect ${bx} fill="url(#p${id})" mask="url(#m${id})"/>`; };
   if (C.pattern === "dapple") g += `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#dp-${uid})" mask="url(#mk-${uid})"/></g>`;
-  if (C.pattern === "roan") g += `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#rn-${uid})" mask="url(#mk-${uid})"${C.roanDeck != null && C.roanDeck < 1 ? ` opacity="${C.roanDeck.toFixed(2)}"` : ""}/></g>`;
+  if (C.pattern === "roan" && C.roanW != null) g += `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="#f6f1e8" opacity="${[.38, .6, .8][C.roanW]}" mask="url(#rwa-${uid})"/>${stichel(`<rect ${bx}/>`, 0, 1, 15).replace(/mask="url\(#m(st\d+-${uid})\)"/, `mask="url(#rwa-${uid})"`)}</g>`;
+  else if (C.pattern === "roan") g += `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="url(#rn-${uid})" mask="url(#mk-${uid})"${C.roanDeck != null && C.roanDeck < 1 ? ` opacity="${C.roanDeck.toFixed(2)}"` : ""}/></g>`;
   if (C.pattern === "fleck") g += `<g clip-path="url(#cl-${uid})"><rect ${bx} fill="url(#fk-${uid})" opacity=".8"/></g>`;
   if (C.pattern === "tobiano") {
     const flecken = [];
@@ -929,6 +940,9 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   if (!liegt) g += `<defs><linearGradient id="bs-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(bottom - 0.05 * D)}" x2="0" y2="${f(bottom * 0.55)}"><stop offset="0" stop-color="${schatten}" stop-opacity=".55"/><stop offset="1" stop-color="${schatten}" stop-opacity="0"/></linearGradient>` +
     `<mask id="bm-${uid}" maskUnits="userSpaceOnUse" ${bx}><g filter="url(#bf-${uid})"><path d="${glatt(vorderN)}" fill="#fff"/><path d="${glatt(hinterN)}" fill="#fff"/><path d="${glatt(rumpf)}" fill="#000"/></g></mask><filter id="bf-${uid}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${f(0.06 * D)}"/></filter></defs>` +
     `<g mask="url(#bm-${uid})"><rect ${bx} fill="url(#bs-${uid})"/></g>`;
+  if (!liegt && opt.pangareK && PANGARE_NEU) { const pl = mix(C.body, "#efe3d0", .72);   // Dome 30.10.: Pangaré hellt auch Bauch, Flanken und Beininnenseiten auf (nicht nur das Maul), Fesseln/Hufe bleiben dunkel
+    g += `<defs><linearGradient id="pg-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(top + 0.35 * D)}" x2="0" y2="${f(bottom + 0.9 * Lg)}"><stop offset="0" stop-color="${pl}" stop-opacity="0"/><stop offset=".4" stop-color="${pl}" stop-opacity=".8"/><stop offset=".75" stop-color="${pl}" stop-opacity=".75"/><stop offset="1" stop-color="${pl}" stop-opacity="0"/></linearGradient>` +
+      `<clipPath id="pgc-${uid}"><path d="${glatt(rumpf)}"/><path d="${glatt(vorderN)}"/><path d="${glatt(hinterN)}"/><path d="${glatt(vorderF)}"/><path d="${glatt(hinterF)}"/></clipPath></defs><g clip-path="url(#pgc-${uid})"><rect ${bx} fill="url(#pg-${uid})"/></g>`; }
   g += `</g>`;
   // v688 (Dome 23.10.): gewaschenes Pferd (Shampoo, Öl) glänzt – weiche Lichtflächen auf Rücken, Schulter, Kruppe und Bauchlinie, nur wenn kaum Schmutz drauf ist
   if (opt.fellGlanz && !(opt.dreck > 20)) {

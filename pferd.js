@@ -1229,6 +1229,10 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     return { svg: `<g>${b}</g>`, box: { minX: fx - 1.6 * w, maxX: fx + 1.8 * w, minY: bottom - 8 } };
   }
   // Einzelteile für Zeichenvorlagen (Krita/Inkscape)
+  if (opt.zonen && !liegt) {   // Darstellung der Min/Max-Zonen (Dome 30.10., Varnish-Roan-Blatt): Körper blau, Kopf und untere Beine grün – nur zum Zeigen
+    g += `<defs><clipPath id="zb-${uid}"><rect x="-100" y="${f(-0.42 * Lg)}" width="${f(L + 200)}" height="${f(0.5 * Lg + 5)}"/></clipPath><clipPath id="zu-${uid}"><path d="${glatt(vorderN)}"/><path d="${glatt(hinterN)}"/><path d="${glatt(vorderF)}"/><path d="${glatt(hinterF)}"/></clipPath></defs>` +
+      `<path d="${halsD}" fill="#3aa6e0" opacity=".45"/><path d="${glatt(rumpf)}" fill="#3aa6e0" opacity=".45"/><path d="${glatt(kopf)}" fill="#3cb043" opacity=".55"/><g clip-path="url(#zu-${uid})"><g clip-path="url(#zb-${uid})"><rect ${bx} fill="#3cb043" opacity=".55"/></g></g>`;
+  }
   if (opt.skelett && typeof SKELETT !== "undefined" && !liegt) {   // Dome 30.10.: Skelett über das Pferd gelegt (zur Prüfung / später Röntgenbild)
     const Zs = { genick: Pll, nase: hp(1.0, 0.1), halsbasis: P((Wn.x + Cn.x) / 2, (Wn.y + Cn.y) / 2), brustvorn: P(-0.05 * H, top + 0.45 * D), kruppeEnde: P(L, croupY + 4), widerrist: Wn, bauch: P(0.55 * L, bottom), ellbogen: P(0.16 * L, bottom - 0.08 * D), vorderbein: P(0.16 * L, 0), boden: P(0.5 * L, 0), huefte: P(0.82 * L, top + 0.35 * D), hinterbein: P(0.83 * L, 0) };
     g += skelettSVG(Zs, SKELETT, uid, opt.skelett);

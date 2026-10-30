@@ -15,10 +15,10 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
-### 30.10. (Claude Team, Sonnet) – Entwürfe auf Branch `claude/eager-franklin-tx69vt`, noch NICHT auf `main` (warten auf Domes Freigabe)
+### 30.10. (Claude Team, Sonnet) – v906 auf `main` (Roan-Wolken, Pangaré 3 Stufen, Lackschimmel Varnish Roan, Skelett-Entwurf; Dome 30.10.: „einbauen, kein Test, erst später“ – Tests stehen aus)
 - Roan als Wolken (Light/Medium/Heavy) + Jahreszeit, Alter, Corn spots, umgekehrtes V, Strawberry/Lilac; Lackschimmel mit großen Farbflecken (Domes „Bild 1“) + hellere Mähne; Pangaré in 3 Stufen (`opt.pangareK` 1–3 aus `ex.pangare`). Schalter in pferd.js: `ROAN_NEU`, `LACK_NEU`, `PANGARE_NEU` (false = alte Darstellung).
 - Skelett: `zeichnungen/skelett.svg` (aus Domes Bild nachgezeichnet), `zeichnungen/skelett-punkte.json`, `werkzeuge/skelett-export.js` → `skelett.js` (lazy per `skelettLaden`), `opt.skelett` legt es verformt über das Pferd (`skelettSVG`, Zielpunkte in `zeichnePferd`). Austauschbar; Wunschliste in `BEI-INKSCAPE-BEARBEITEN.md` 0e. Idee Röntgenbild bei der AKU (Dome: „mega“) noch nicht gebaut.
-- Offen: Version/Enzyklopädie/CLAUDE.md erst beim Einbauen auf `main`.
+- Offen (Dome 30.10.): Tutorial-Schritt für das Einstreu-Symbol; Dun/Buckskin-Funde (siehe CLAUDE.md v906) klären; Min/Max-Zonen des Varnish-Roan-Blatts prüfen; Enzyklopädie-Fellfarben mit Erklärfenster aus Domes PDFs (Klick → Fenster mit Rücksprung, vereinfacht, mit unseren Bildern); Tests später. Gestrichen: Azubi-Meldung Nr. 44.
 
 ### 30.10. (Claude Team, Sonnet) – v897–v905 (alles auf `main`)
 - v897–v900: Whiteboard für Anfänger, Boxen 4/6/8/10, Urkunden „Stall des Jahres“ (Liste in hvw – Hof), Pferdewirte machen Stallarbeit, Einsteller zahlen 5 % verspätet, Antworten zu Aufnahme 11, Fehler melden mit Bild (Datei/Bildschirm), Einstreu-Regeln. Details: CLAUDE.md v897–v900.

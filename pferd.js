@@ -506,7 +506,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
 
   // --- Schweif ---
   const Tb = P(L - 0.015 * H, croupY + 1.5 + k.croup * 3.5);
-  const tl = Math.min(k.tail * H, -Tb.y - dLiegen - 1.5), tv = k.tvol, s = k.tset;
+  const lpDuenn = opt.lp && opt.lp.duenn ? 1 : 0;   // Dome 30.10.: viele Leopard-Pferde haben einen dünnen, kurzen Schweif („Rattenschwanz“)
+  const tl = Math.min(k.tail * H * (1 - .22 * lpDuenn), -Tb.y - dLiegen - 1.5), tv = k.tvol * (1 - .65 * lpDuenn), s = k.tset;
   const X = Tb.x, Y = Tb.y;
   const schweifD =
     `M${f(X)},${f(Y)}C${f(X + 3)},${f(Y - 18 * s - 0.5)} ${f(X + 8 + 12 * s)},${f(Y - 14 * s + 3)} ${f(X + 7 + 11 * s + tv * 3)},${f(Y + 0.3 * tl - 4 * s)}` +
@@ -790,6 +791,12 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     for (let x = sMinX; x <= maxX; x += 6) wl.push(P(x, -(bh + 0.1 * Math.sin(x * 0.21) + rnd() * 0.06) * Lg));
     wl.push(P(maxX, 2));
     g += `<path d="${eckig(wl)}" fill="#f7f5f1"/></g>`;
+    if (opt.tinte) {   // Dome 30.10.: reinerbiger Tobiano (To/To) – kleine runde Farbtupfer im Weiß („Tintenflecke“), manche verwaschen („Katzenpfoten“); eigener Zufall, ändert nichts am übrigen Muster
+      const rt = zufall((opt.seed || rasseId) + "-tinte"), n = 5 + Math.floor(rt() * 7);
+      let t = "<g>";
+      for (let i = 0; i < n; i++) { const x = 0.08 * L + rt() * 0.84 * L, y = top + 0.15 * D + rt() * 0.75 * D, r = 1.6 + rt() * 2.6, matt = rt() < .3;
+        t += `<ellipse cx="${f(x)}" cy="${f(y)}" rx="${f(r * (matt ? 1.4 : 1))}" ry="${f(r * (matt ? 1.1 : .9))}" fill="${C.body}" opacity="${matt ? .5 : 1}"${matt ? ` filter="url(#wm-${uid})"` : ""}/>`; }
+      g += t + "</g>"; }
   }
   // Overo, Tovero, Tiger: Flecken / Punkte
   if (["overo", "tovero", "leopard", "fewspot", "blanket", "snowcap", "sabino", "splash"].includes(C.pattern)) {
@@ -1124,6 +1131,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
 
   // Schweif (mit Strähnen)
   const tailStr = (o, sc) => `M${f(X + 1 + 3 * s + o)},${f(Y + 8 - 10 * s)}C${f(X + 4 + 8 * s + tv * 2 + o)},${f(Y + 0.35 * tl)} ${f(X + 3 + 6 * s + tv * 3 + o)},${f(Y + 0.7 * tl)} ${f(X + 2 + 5 * s + tv * 2 + o * 0.6)},${f(Y + tl * sc)}`;
+  if (lpDuenn) g += `<g transform="translate(${f(X)} 0) scale(.62 1) translate(${f(-X)} 0)">`;   // dünner Leopard-Schweif: schmaler
   g += `<g class="schweif"><animateTransform attributeName="transform" type="rotate" values="0 ${f(X)} ${f(Y)};5 ${f(X)} ${f(Y)};-2 ${f(X)} ${f(Y)};0 ${f(X)} ${f(Y)}" dur="3.4s" repeatCount="indefinite"/>` +
     `<path d="${schweifD}" fill="${tailCol}" stroke="${INK}" stroke-width="2.4" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>` +
     (dunKern ? `<clipPath id="sw-${uid}"><path d="${schweifD}"/></clipPath><g clip-path="url(#sw-${uid})"><path d="${tailStr(-0.6 + 0.4 * tv, 1.05)}" fill="none" stroke="${dunKern}" stroke-width="${f(2.4 + 2.6 * tv)}" stroke-linecap="round"/></g>` +
@@ -1141,6 +1149,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       for (let i = 0; i < m; i++) { const t = 0.2 + rf() * 0.65, x = X + 2 + 6 * s + tv * 2.5 + (rf() - 0.5) * 6, y = Y + tl * t, a = rf() * 180;
         h += `<path d="M${f(x - 2.2)},${f(y)}l4.4,0" transform="rotate(${f(a)} ${f(x)} ${f(y)})" stroke="#d9b45a" stroke-width="1.1" stroke-linecap="round"/>`; }
       return h; })() : "") + `</g>`;
+  if (lpDuenn) g += "</g>";
 
   if (eigenKopf) {
     // Handgezeichneter Kopf: Stirn- und Nasenpunkt der Zeichnung auf den Spielkopf abbilden

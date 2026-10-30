@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 30.10. (Claude Team, Sonnet) – v931: Sabino Shire/Clydesdale (Dome: „passt“)
+Shire `Sb` .08 → .04 (Schätzung). Clydesdale `Sb` bleibt .12 (Domes Bild: ca. ¼ mit Körperweiß, meist am Bauch ≈ passt zu ~23 % Trägern); die Verschiebung „mehr Weiß“ (`MUSTER_RASSE.clydesdale` .3) ist raus – Ausprägung meist „wenig Weiß“. Seltenheits-Test ✓, Syntax ✓. Punkt (1) unten ist damit erledigt.
+
 ### 30.10. (Claude Team, Sonnet) – v930 + Stand für die nächste Sitzung
 v930: Melanom später/seltener bei jungen Schimmeln und vom Tempo des Grauwerdens abhängig; Sabino 1 bei Shetty/Quarter, Tobiano beim Trakehner (Schätzungen); Turnier-Arten in `PROJEKT-CHAT-THEMEN.md` Nr. 28. **Stand heute (30.10.):** v915–v930 sind Farben/Muster/Erklärfenster aus Domes PDFs (Frosting, nd1, Champagne, Splash-Formen, Sandy Chestnut, Fohlenfell, Tobiano/Sabino/Leopard/DW/Schimmel-Fenster, KIT-Gen, Pferdetypen-Reiter). **Offen/nächste Schritte:** (1) Dome fragen: Sabino bei Clydesdale/Shire senken? (Quellen: kein SB1; Dome sagte auf Bild, Clydesdales hätten selten auffällige Scheckungen → vermutlich ja, Zahlen Clydesdale Sb .12, Shire .08 sind hoch). (2) Ältere PDFs (Silver, Cream, Dun, 3 Base Colors, Studien) nochmal hochladen, Rassen in `RASSEN-NOTIZEN.md` nachtragen. (3) Weitere PDFs von Dome folgen (nicht nur Farben → Platz in der Enzyklopädie suchen wie bei „Pferdetypen“). (4) Neue Grau-Allele G2/G3 sind als Melanom-Tempo-Kopplung eingebaut, keine eigenen Gene. Regeln: Farbnamen nur echte deutsche, sonst englisch; Randabstand-Regel (Nase/Ohren) für alle Bilder; große Tests nur nach Rückfrage.
 

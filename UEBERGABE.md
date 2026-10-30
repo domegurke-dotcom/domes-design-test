@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 30.10. (Claude Team, Opus) – v915: Falben/Cream/nd1 nach Domes Antworten
+Frosting bei allen Falben, Dunskin/Smoky Grulla/Dunalino (Fjord: Gelb-/Weißfalbe richtig zugeordnet), Smoky Black leicht bräunlich (Name erst nach Test), Gen nd1 (Details CLAUDE.md v915). Tests: seltenheit-, schimmel-rar-, raritaeten-, zucht-test ✓, Bilder angesehen. nd1-Häufigkeiten je Rasse sind meine Schätzung (`ND1`, OFFENE-FRAGEN.md). **Offen:** Domes 4 neue PDFs (Splashed White, Roan, Frame Overo, Champagne) → Erklärfenster; Champagne-Gen gibt es im Spiel nicht (Frage an Dome); Domes Frage „Sandy Chestnut“.
+
 ### 30.10. (Claude Team, Sonnet) – v910–v914: Farb-Erklärfenster fertig ausgebaut, Rußung neu – nächste Sitzung: Thema „Fellfarben-Erklärungen/Optik“ weiter
 Alles auf `main` (letzter Stand v914, Commit `6198ca8`). Nur per Klicktest/Bild geprüft; **große Tests und `tests/optik-pruefung.js` nicht gelaufen** (Dome wollte keine großen Tests).
 - **v910:** Erklärfenster (Enz – Fellfarben, `FARB_ERKL`): „Dun“ heißt im Text „Falbe (Dun)“; je Punkt und je Name ein kleines Pferdebild (`FARB_BILD`, `.fe-zeile`/`.fe-klein`).

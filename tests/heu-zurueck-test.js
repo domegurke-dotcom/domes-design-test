@@ -10,11 +10,12 @@ const { chromium } = require('playwright'); const path = require('path');
     spiel.tag = jzStartTag(Math.floor(jzJetzt() / 4) * 4 + 1) + 2;   // Sommer
     const F = futterkammer(); F.lager.heu = 500; const box = spiel.boxen[0];
     const vor = F.lager.heu; fuetternAusLager(box, 'du', 'rau'); box.krippeVoll = true; R.nach = F.lager.heu; R.krippe = box.krippeVoll;
-    p.weideZuletzt = spiel.tag - 1; aufWeide(p, box); R.heuNoetig = heuNoetigP(p); R.zurueck = F.lager.heu; R.krippeDanach = box.krippeVoll; R.vor = vor; R.sommer = datum().s;
+    p.weideZuletzt = spiel.tag - 1; aufWeide(p, box); R.heuNoetig = heuNoetigP(p); R.zurueck = F.lager.heu; R.krippeDanach = box.krippeVoll; R.heuOk = heuOk(p, box); R.vers = bxVersorgung(p, box).find(x => x[0] === 'Heu')[1]; R.vor = vor; R.sommer = datum().s;
     return R; });
   const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x !== undefined ? ' – ' + x : ''));
   ok('Heu wurde gegeben (Lager sinkt, Raufe voll)', R.nach < R.vor && R.krippe, JSON.stringify(R));
   ok(R.heuNoetig ? 'Weide hat zu wenig Gras – Heu bleibt (Test sagt nur, ob die Rückgabe stimmt)' : 'Genug Gras: Heu zurück im Lager, Raufe leer', R.heuNoetig ? R.zurueck === R.nach && R.krippeDanach : Math.abs(R.zurueck - R.vor) < 0.01 && !R.krippeDanach, JSON.stringify(R));
+  ok('Weide mit genug Gras: Heu zählt als versorgt (kein ✗ im Whiteboard/Ring)', R.heuOk === true && R.vers === true, JSON.stringify(R));
   ok('keine Skriptfehler', errs.length === 0, errs.join(' | '));
   console.log(out.join('\n')); await b.close(); process.exit(out.some(l => l.startsWith('✗')) ? 1 : 0);
 })();

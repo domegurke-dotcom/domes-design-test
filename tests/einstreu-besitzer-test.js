@@ -18,6 +18,9 @@ const { chromium } = require('playwright'); const path = require('path');
     // schlechter: ablehnen (Zufall hoch)
     box.einstreuWunsch = { k: 'streuStroh', tag: spiel.tag - 1 }; Math.random = () => 0.99; einstreuAntworten(); Math.random = r0;
     ok('Schlechter (Stroh statt Späne): Besitzer lehnt ab, Einstreu bleibt', box.einstreu === 'spaene' && (spiel.post || []).some(x => /nicht annehmen/.test(x.text)));
+    // Dome 30.10.: schlechtere Einstreu per Klick – der Besitzer wird nicht gefragt
+    box.einstreu = 'spaene'; delete box.einstreuWunsch; einstreuWahl(box, () => { }); document.querySelector('[data-estreu="streuStroh"]').click();
+    ok('Schlechtere Einstreu gilt sofort, keine Rückfrage', box.einstreu === 'streuStroh' && !box.einstreuWunsch); box.einstreu = 'spaene';
     // Tierarzt empfiehlt: kann nicht ablehnen
     P.einstreuRat = { art: 'husten', tag: spiel.tag, von: 'Tierarzt' }; befundNeu(P, 'husten', 2, 'Test'); box.einstreu = 'streuStroh'; box.einstreuWunsch = { k: 'pellets', tag: spiel.tag - 1 }; Math.random = () => 0.99; einstreuAntworten(); Math.random = r0;
     ok('Vom Tierarzt empfohlen: Besitzer lehnt nicht ab', box.einstreu === 'pellets');

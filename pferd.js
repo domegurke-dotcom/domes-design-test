@@ -22,7 +22,7 @@ const FARBEN_BASIS = {
   palomino:      { name: "Palomino",               body: "#dcb164", mane: "#f6eed6", hoof: "#6b5a48" },
   isabell:       { name: "Isabell",     body: "#efe4cc", mane: "#f7f1e3", muzzle: "#d8a699", hoof: "#b9a88f" },
   buckskin:      { name: "Buckskin",               body: "#c9a064", mane: "#171313", points: "#1d1818", hoof: "#2c2a29" },
-  russbuckskin:  { name: "Rußfalbe", body: "#c2a172", russ: "#5f4d3d", mane: "#141111", points: "#1a1515", hoof: "#2c2a29" },   // v484 (Dome): Buckskin mit Rußanflug (Sty) – dunkler Kopf/Hals, heller Körper
+  russbuckskin:  { name: "Sooty Buckskin", body: "#c2a172", russ: "#5f4d3d", mane: "#141111", points: "#1a1515", hoof: "#2c2a29" },   // v484 (Dome): Buckskin mit Rußanflug (Sty) – dunkler Kopf/Hals, heller Körper
   braunfalbe:    { name: "Braunfalbe",             body: "#c9a878", mane: "#1d1818", points: "#2a2220", stripe: "#2a2220", hoof: "#2c2a29" },
   rotfalbe:      { name: "Rotfalbe",               body: "#d8a882", mane: "#9a5a38", stripe: "#9e5c38", hoof: "#5a4538" },
   mausfalbe:     { name: "Mausfalbe",     body: "#8f887c", mane: "#1a1818", points: "#1f1d1c", stripe: "#1f1d1c", head: "#6d675f", hoof: "#2c2a29" },
@@ -1604,7 +1604,7 @@ const FARBBESCHREIBUNG = {
   palomino: "Goldgelbes Fell mit weißer Mähne (Fuchs + ein Cream-Gen).",
   isabell: "Cremefarben mit rosa Haut und blauen Augen (doppeltes Cream-Gen; englisch Cremello, Perlino oder Smoky Cream).",
   buckskin: "Gelbbraunes Fell mit schwarzen Beinen und schwarzer Mähne.",
-  russbuckskin: "Buckskin mit Rußanflug (englisch Sooty Buckskin) (Gen Sty): Kopf und Hals dunkel überhaucht, Körper hell gelblich bis silbrig, schwarze Beine und Mähne. Beim Achal-Tekkiner mit Glanz „Gold-Rußfalbe“.",
+  russbuckskin: "Buckskin mit Rußanflug (Gen Sty, deutsch etwa „rußiger Buckskin“): Kopf und Hals dunkel überhaucht, Körper hell gelblich bis silbrig, schwarze Beine und Mähne. Beim Achal-Tekkiner mit Glanz „Gold-Sooty-Buckskin“.",
   braunfalbe: "Falbfarben mit Aalstrich und dunklen Beinen.",
   rotfalbe: "Falbe auf Fuchsbasis, rötlicher Aalstrich.",
   mausfalbe: "Mausgraues Fell mit dunklem Kopf, Beinen und Aalstrich (Grullo).",

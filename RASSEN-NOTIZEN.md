@@ -88,3 +88,6 @@ Quelle jeweils in Klammern: Tobiano, Sabino, Leopard, DW (Dominant White), Splas
 | Karabair | Usbekistan | Leopard-Komplex (Leopard) |
 | Mongolischer Altai | Mongolei | Leopard-Komplex (Leopard) |
 | Manipuri-Pony | Indien | Ursprung des Polo – darum heißen Polopferde „Ponys“ (Typen) |
+
+## Nachtrag 30.10.
+Racking Horse (USA, Gangpferd, Leicht-PDF) und Mongolisches Pony stehen in den Quellen; Camarillo und Freiberger siehe oben. Clydesdale/Shire: weiße Abzeichen kommen laut Sabino-PDF nicht vom Gen SB1 (anderes KIT-Allel oder anderes Gen – nicht belegt).

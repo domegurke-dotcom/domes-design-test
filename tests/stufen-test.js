@@ -15,7 +15,7 @@ const { chromium } = require('playwright'); const path = require('path');
     const m1 = markt(); ok('Anfänger: nur Händler/Tierschutz (kein Auktionshaus, keine Raritäten)', !m1.includes('auktion') && !m1.includes('raritaeten') && m1.includes('tierschutz'), m1.join(','));
     ok('Anfänger: Zucht/Labor gesperrt', !frei('zucht') && !frei('labor'));
     ok('Anfänger: Turnier S gesperrt, E erlaubt (Sperrgrund)', /nur Wettbewerbe/.test(ns(p, T, S4) || '') && !/nur Wettbewerbe/.test(ns(p, T, E0) || ''), ns(p, T, S4));
-    ok('Anfänger: Bauen nur Stall/Weide/Reitplatz', frei('bauen', 'reitplatz') && !frei('bauen', 'roundpen') && !frei('bauen', 'waschplatz'));
+    ok('Anfänger: Bauen Stall/Paddockboxen/Weide/Reitplatz/Sandpaddock/Roundpen (v896), kein Waschplatz', frei('bauen', 'reitplatz') && frei('bauen', 'roundpen') && frei('bauen', 'sandpaddock') && frei('bauen', 'paddock') && !frei('bauen', 'waschplatz'));
     ok('Anfänger: Mitarbeiter ohne Bereiter', frei('ma', 'stallbursche') && !frei('ma', 'bereiter'));
     ok('Anfänger: nur ein Hof', /einen Hof/.test(immoSperre2({ mid: 'x', preis: 10 }) || ''));
     const k1 = krank(); ok('Anfänger: nur Husten/Erkältung/Verletzung/Mauke', k1.every(k => ['husten', 'erkaeltung', 'verletzung', 'mauke'].includes(k)), k1.join(','));

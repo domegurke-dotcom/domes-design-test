@@ -44,7 +44,7 @@ const { chromium } = require('playwright'); const path = require('path');
     spiel.mitarbeiter = spiel.mitarbeiter || []; const x = bewerber('stallbursche')[0]; spiel.mitarbeiter.push({ id: 'maW', typ: 'stallbursche', name: x.name, w: x.w, wissen: { ...x.wissen }, eig: [...x.eig], gehalt: x.gehalt, ab: jzJetzt(), bis: null, zufr: 50 });
     return R; });
   const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x !== undefined ? ' – ' + x : ''));
-  ok('ein Sammelbrief der Einsteller', R.brief === 1); ok('Geld 115–200 € gebucht', R.max, R.summe); ok('Brief-Aktion mit Summe', R.aktion); ok('Texte: Karte ja, Schlechter nicht', R.text); ok('einmal je Jahr', R.einmal);
+  ok('ein Sammelbrief der Einsteller', R.brief === 1); ok('Geld 115–200 € gebucht', R.max, R.summe); ok('Brief ohne „Ans Team“-Knopf (v896, Geld gehört dem Hof)', !R.aktion); ok('Texte: Karte ja, Schlechter nicht', R.text); ok('einmal je Jahr', R.einmal);
   ok('durchschnittlicher Hof bekommt eine Antwort des Vereins', R.erste); ok('sehr schwacher Hof: kein Preis', R.kein); ok('guter Hof: Preis, Brief, Liste', R.preis && R.liste, 'Punkte ' + R.punkte + ', Geld ' + R.preisGeld); ok('Zeile in der Hof-Übersicht', R.zeile); ok('Vorfall im Jahr: kein Preis', R.vorfall);
   ok('Sponsor-Angebot ab Ansehen 140, nicht darunter', R.angebot && R.keinAngebot); ok('Futtergutschein 1.500 € ohne Geld', R.gut); ok('Banner nur am Reitplatz', R.banner); ok('Futterkauf verrechnet den Gutschein', R.kauf);
   ok('Zuchtstall wird nach Zucht-Kriterien bewertet', R.zArt, R.zPkt); ok('Rennstall zählt als Ausbildungsstall', R.rArt); ok('Gnadenhof: Kriterien + Paten erhöhen die Punkte', R.gArt && R.gPkt >= R.zPkt - 40, R.gPkt); ok('Ausbildungsstall mit eigenem Pferd bewertbar', R.aBew);

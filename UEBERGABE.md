@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 31.10. (Claude Team, Sonnet) – Rassen-Notizen und Animationstool
+PDFs liegen in `pdfs/` (in `.gitignore`, nicht auf GitHub). Ältere PDFs (Silver, Cream, Dun, 3 Base Colors, Muster, Island, TWH) sind in `RASSEN-NOTIZEN.md` ausgewertet (neue Rassen Nordlandspferd, Finnpferd, Murgese – nicht gebaut). Neues Projekt: Ordner `animationstool/` (2D-Animationstool für Pferdebewegungen, siehe README dort; baut auf `zeichnungen/skelett.svg` auf; wartet auf Domes OK und die Bewegungs-PDF).
+
 ### 30.10. (Claude Team, Sonnet) – v931: Sabino Shire/Clydesdale (Dome: „passt“)
 Shire `Sb` .08 → .04 (Schätzung). Clydesdale `Sb` bleibt .12 (Domes Bild: ca. ¼ mit Körperweiß, meist am Bauch ≈ passt zu ~23 % Trägern); die Verschiebung „mehr Weiß“ (`MUSTER_RASSE.clydesdale` .3) ist raus – Ausprägung meist „wenig Weiß“. Seltenheits-Test ✓, Syntax ✓. Punkt (1) unten ist damit erledigt.
 

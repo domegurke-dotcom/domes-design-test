@@ -282,3 +282,5 @@ Domes Wünsche zu Whiteboard, Mitarbeitern, Waschplatz/Solarium sind umgesetzt (
 **v817 (Claude Team, 24.10.):** Whiteboard-Kopieren der Jahreszeit-Einteilung. Plan `PLAN-WEIHNACHTEN.md` (A–D) geschrieben, wartet auf Domes Ja. Offene Frage v816 erledigt (Dome: passt).
 
 - **30.10. (Claude Team, v897):** Whiteboard für Anfänger, Boxenwahl 4/6/8/10, Urkunde Stall des Jahres mit Punkten, Abbrechen im Fehlerfenster. Offen: Screenshot im Fehlerfenster (Datei + Bildschirm), Stalldienst-Frage (Dome), Zahlungsmoral.
+
+- **30.10. (Claude Team, v899/v900):** Domes Antworten zu Aufnahme 11 eingebaut (siehe CLAUDE.md v898–v900). Offen: Einstreu-Rückwunsch des Besitzers (schlechter) mit Einigung, Einstreu-Knopf als Kreissymbol unter Füttern + Tutorial, Roan-Schecke-Optik (73), Heu-Rückgabe (22), Azubi-Gruppe (44/70/71), roter Punkt Tierarzt (40).

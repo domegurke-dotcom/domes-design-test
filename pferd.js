@@ -295,7 +295,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const TYP = { duenn: { bauch: -1, hq: 0.88, crest: -0.03, legT: 0.94 }, sportlich: { bauch: -0.45, hq: 1.07, crest: 0.025, legT: 1 }, normal: { bauch: 0, hq: 1, crest: 0, legT: 1 }, dick: { bauch: 1, hq: 1.12, crest: 0.07, legT: 1.04 } }[typ] || { bauch: 0, hq: 1, crest: 0, legT: 1 };
   const R = rasseById(rasseId), stufe = opt.alterStufe || null, kBasis = bauK({ ...R.k, ...ALTERS_K(stufe, R.k), ...(opt.k || {}) }, opt.bau);   // M1: Exterieur des Pferdes wirkt nach dem Alter als Faktor (höchstens ±15 %)
   if (R.k.neck >= HALS_KURZ_AB && !(opt.k && opt.k.neck != null)) kBasis.neck *= HALS_KURZ;   // v846 (Dome 25.10.): Hälse normaler Länge 10 % kürzer, kurze Hälse (< .52) bleiben
-  const k = { ...kBasis, hq: (kBasis.hq || 1) * TYP.hq, crest: kBasis.crest + TYP.crest, legT: kBasis.legT * TYP.legT, nk: Math.max(kBasis.nk || 0, typ === "dick" ? 0.7 : 0) }, C = musterStufeFarbe(FARBEN[farbId] || FARBEN.schimmel, opt.musterStufe);
+  const k = { ...kBasis, hq: (kBasis.hq || 1) * TYP.hq, crest: kBasis.crest + TYP.crest, legT: kBasis.legT * TYP.legT, nk: Math.max(kBasis.nk || 0, typ === "dick" ? 0.7 : 0) }, C = (c => opt.dunCh && !c.stripe ? { ...c, body: mix(c.body, "#f3ead8", .16), stripe: mix(c.mane, c.body, .2) } : c)(musterStufeFarbe(FARBEN[farbId] || FARBEN.schimmel, opt.musterStufe));   // Dome 30.10.: Dun Champagne – Falbe + Champagne: etwas heller, mit Aalstrich
   const uid = "p" + (++_uid);
   const rnd = zufall(opt.seed || rasseId + farbId);
   const hengst = opt.geschlecht === "Hengst";

@@ -96,3 +96,4 @@ Domes Antworten 27.10.: (1) Qualifikation = Erfahrung/Wissensstufen, Stärken �
 - **Smoky Black** leicht bräunlich (28 % Richtung Braun gemischt) – nur nach Bild gewählt.
 - **Champagne-Häufigkeit** (v917): Quarter .004, Paint .004, Appaloosa .003 (Allel; ≈ 0,6–0,8 % der Pferde) – keine Zahlen gefunden, nur „selten“. Falbe + Champagne zeigt sich als Champagne (kein eigener „Dun Champagne“).
 - **Hellfuchs (Sandy Chestnut)** (v916): ≈ 25 % der Fuchsfohlen (Farbton-Anlage wie beim Hellbraunen).
+- **Splashed-White-Formen** (v918): SW3/SW2/SW5/SW4-Häufigkeiten und Taubheit SW2 40 % geschätzt (nur „sehr selten, einzelne Zuchtlinien“ belegt).

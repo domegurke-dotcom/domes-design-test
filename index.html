@@ -1331,7 +1331,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "917";
+  const SPIEL_VERSION = "918";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1339,12 +1339,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=917"></script>
-<script src="pferd.js?v=917"></script>
-<script src="boxstufen.js?v=917"></script>
-<script src="kopfneu.js?v=917"></script>
-<script src="waschbild.js?v=917"></script>
-<script src="avatare.js?v=917"></script>
+<script src="lz-string.min.js?v=918"></script>
+<script src="pferd.js?v=918"></script>
+<script src="boxstufen.js?v=918"></script>
+<script src="kopfneu.js?v=918"></script>
+<script src="waschbild.js?v=918"></script>
+<script src="avatare.js?v=918"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -1471,10 +1471,19 @@
     ["Mu", "Mushroom (Shetty)", "Mu", "n", "nur reinerbig (Mu/Mu) und nur sichtbar auf Fuchs oder Braun: dilutes das rote Pigment zu einem Sepia-Ton – bei Füchsen mit Flachsmähne, bei Braunen bleibt die Mähne schwarz; auf Rappen ohne Wirkung (rezessiv, beim Shetlandpony)"],   // v744 (Dome): UC-Davis-Studie 2022, a.f. 0,23
     ["Prl", "Pearl (Perle)", "Prl", "n", "rezessiver Verwandter des Cream-Gens: reinerbig (Prl/Prl) auf Fuchs ein einheitlich blasses Apricot; zusammen mit einem Cream-Gen (Cr + Prl) wie ein doppeltes Cream (Isabell) – mischerbige Pferde sehen normal aus (v. a. Andalusier/Lusitano, selten beim Tinker)"],   // v744
     ["Ch", "Champagne", "Ch", "n", "dominant: hellt Rot zu Gold und Schwarz zu Taupe auf, rosa-lila gesprenkelte Haut, bernsteinfarbene bis grüne Augen, oft Metallschimmer (Gold, Amber, Sable, Classic Champagne) – bei unseren Rassen nur Quarter Horse, Paint und Appaloosa, selten"],   // Dome 30.10.
+    ["Pax", "Splashed White (PAX3)", "SW2", "n", "zweites Splash-Gen (PAX3): SW2 (Quarter/Paint, oft taub) und SW4 (Appaloosa-Familie, reinerbig nicht lebensfähig) – mit Splash auf MITF zusammen sehr viel Weiß"],   // Dome 30.10.
   ];
   const GEN = Object.fromEntries(GENE.map(x => [x[0], x]));
-  const hat = (g, k) => !!g[k] && g[k].includes(GEN[k][2]);
-  const anzahl = (g, k) => (g[k] || []).filter(x => x === GEN[k][2]).length;
+  const istDom = (k, x) => k === "Sw" || k === "Pax" ? /^SW/.test(x) : x === GEN[k][2];   // Dome 30.10.: Splashed White hat mehrere Formen (SW1/SW3/SW5 auf MITF, SW2/SW4 auf PAX3)
+  const hat = (g, k) => !!g[k] && g[k].some(x => istDom(k, x));
+  const anzahl = (g, k) => (g[k] || []).filter(x => istDom(k, x)).length;
+  // Splashed White: SW1 = Allel "SW" (Häufigkeit RASSE_GENE.Sw), die übrigen Formen sehr selten je Rasse (Schätzung nach den Zuchtlinien)
+  const SW_ALLEL = { quarter: { SW3: .002, SW2: .0015 }, paint: { SW3: .003, SW2: .002, SW5: .001 }, appaloosa: { SW4: .0015 } };
+  const SW_STARK = ["SW2", "SW3", "SW4", "SW5"], SW_LETAL = ["SW3", "SW4", "SW5"];   // stark: meist viel Weiß · letal: reinerbig nicht lebensfähig
+  const swAnz = g => anzahl(g, "Sw") + anzahl(g, "Pax");
+  const swDa = g => hat(g, "Sw") || hat(g, "Pax");
+  const swStark = g => [...(g.Sw || []), ...(g.Pax || [])].some(x => SW_STARK.includes(x));
+  const swLetal = g => SW_LETAL.some(a => [...(g.Sw || []), ...(g.Pax || [])].filter(x => x === a).length === 2);
   // fehlende Gene (ältere Spielstände) rezessiv ergänzen
   const genNorm = g => { if (g) GENE.forEach(([k, , , rez]) => { if (!g[k]) g[k] = [rez, rez]; }); return g; };
   // Häufigkeit des dominanten Allels je Rasse (alles nicht Genannte: kommt nicht vor)
@@ -1511,7 +1520,7 @@
   }
   const FARB_GENE_KEYS = k => k !== "Dm";
   const genFreq = (rasse, k) => { if (k === "Dm") return DMRT3[rasse] || 0; const t = RASSE_GENE[rasse]; return t ? (t[k] || 0) : ({ E: .5, A: .5, F: .7, Sty: .1 })[k] || 0; };
-  const allel = (rasse, k, r) => r() < genFreq(rasse, k) ? GEN[k][2] : (k === "A" && r() < (genFreq(rasse, "At") || .05) ? "At" : GEN[k][3]);
+  const allel = (rasse, k, r) => k === "Pax" ? "n" : r() < genFreq(rasse, k) ? GEN[k][2] : (k === "A" && r() < (genFreq(rasse, "At") || .05) ? "At" : GEN[k][3]);
   // sichtbare Geburtsfarbe aus den Genen (ohne Schimmelung – die kommt mit dem Alter)
   // ton: Farbton-Veranlagung (mehrere Gene) – heller oder normaler Brauner
   // ow: wie viel Weiß ein Overo-Träger zeigt – unter 0,2 sieht man fast nichts (versteckter Träger, nur der Gentest zeigt ihn)
@@ -1526,7 +1535,7 @@
     if (lp) return (hat(g, "Patn") ? (lp === 2 ? "fs_" : "tg_") : (lp === 2 ? "sk_" : "sb_")) + b;
     if (hat(g, "O") && !(ow != null && ow < .2 && !hat(g, "To"))) return (hat(g, "To") ? "tv_" : "ov_") + b;
     if (hat(g, "To")) return ({ fuchs: "fuchsschecke", brauner: "braunschecke", rappe: "rappschecke" })[b] || "to_" + b;   // v505 (Dome): Tobiano behält jede Grundfarbe (Falbe, Dunkelbrauner, Palomino …)
-    if (hat(g, "Sw") && !hat(g, "Rn")) return "sw_" + b;   // v426: Splashed White
+    if (swDa(g) && !hat(g, "Rn")) return "sw_" + b;   // v426: Splashed White
     if (hat(g, "Sb") && !hat(g, "Rn")) return "sa_" + b;   // v316: Sabino
     if (hat(g, "Rn")) { const RD = { rappe: "blueroan", brauner: "bayroan", fuchs: "rotschimmel" }; if (RD[b]) return RD[b]; return ROAN_BASEN.includes(b) && FARBEN["rn_" + b] ? "rn_" + b : (/^(isabell|weissfalbe)$/.test(b) ? b : schwarz && !braun ? "blueroan" : braun ? "bayroan" : "rotschimmel"); }   // Dome 30.10.: Roan ist ein Muster über jeder Grundfarbe (Buckskin Roan, Palomino Roan …); Rappe/Brauner/Fuchs behalten Blue/Bay/Red Roan
     return b;
@@ -1592,6 +1601,7 @@
   }
   function genVon(p) {
     if (!p.gen) { p.gen = genAusFarbe(p.farbe, p.id || p.name, p.rasse); if (!GRAU_WAHL[p.farbe] && ohneTon(phaenotyp(p.gen)) !== ohneTon(p.farbe)) p.farbe = phaenotyp(p.gen, p.ex && p.ex.ton); }
+    if (!p.swV) { p.swV = 1; const t = SW_ALLEL[p.rasse]; if (t) { const r = zufall("sw-" + (p.id || p.nr || p.name)); genNorm(p.gen); p.gen.Sw = p.gen.Sw.map(x => x === "n" ? (r() < (t.SW3 || 0) ? "SW3" : r() < (t.SW5 || 0) ? "SW5" : x) : x); p.gen.Pax = p.gen.Pax.map(x => x === "n" ? (r() < (t.SW2 || 0) ? "SW2" : r() < (t.SW4 || 0) ? "SW4" : x) : x); if (swLetal(p.gen)) { p.gen.Sw[1] = "n"; p.gen.Pax[1] = "n"; } if (!GRAU_WAHL[p.farbe] && swDa(p.gen) && !/^sw_|_/.test(p.farbe)) p.farbe = farbeAus(p.gen, p.ex); } }   // Dome 30.10.: SW2–SW5 einmal nachtragen (eigener Zufallsstrom)
     if (!p.nd1V) { p.nd1V = 1; const r = zufall("nd1-" + (p.id || p.nr || p.name)), f = ND1[p.rasse] != null ? ND1[p.rasse] : ND1_SONST; if (p.gen.D) p.gen.D = p.gen.D.map(x => x === "d" && r() < f ? "nd1" : x); }   // Dome 30.10.: nd1 (Non-Dun 1) als drittes Allel am Falb-Ort (D > nd1 > d), eigener Zufallsstrom
     if (!p.gen.Hf) p.gen.Hf = p.farbe === "braunfalbe" && p.ex && p.ex.ton != null && p.ex.ton < .1 ? ["Hf", "Hf"] : ["n", "n"];   // v736: bisherige Hellfalben (Farbton-Veranlagung) bekommen das Gen
     genNorm(p.gen);
@@ -1649,7 +1659,7 @@
   // sichtbares Erscheinungsbild am Kopf – immer gleich für dasselbe Pferd (aus Genen, Veranlagung und Pferde-ID)
   function kopfZeichen(p) {
     if (!p || (!p.gen && !p.farbe)) return { abz: [], maul: null, augeBlau: false };
-    const g = genVon(p), ex = exVon(p), id = p.id || p.nr || p.name, b = grundfarbe(g, ex.ton), sw = anzahl(g, "Sw");
+    const g = genVon(p), ex = exVon(p), id = p.id || p.nr || p.name, b = grundfarbe(g, ex.ton), sw = swAnz(g);
     if (anzahl(g, "O") === 2) return { abz: [], maul: null, augeBlau: false };   // Lethal White: ohnehin ganz weiß
     const w = sigmoid(logit(ex.weiss) + weissZuschlag(g, ex));
     const haupt = ABZ_STUFEN.find(([t]) => w < t)[1], abz = haupt ? [haupt] : [];
@@ -1675,13 +1685,14 @@
   const MUSTER_KOPF_TYP = { splash: ["blesse", "breiteBlesse", "laterne", "laterne"], sabino: ["schmaleBlesse", "blesse", "breiteBlesse", "laterne"], overo: ["blesse", "breiteBlesse", "laterne"], tovero: ["breiteBlesse", "laterne", "laterne", "laterne"], dw: ["stern", "blesse", "breiteBlesse", "laterne"] };
   // Logit-Zuschlag der Gene auf die Weiß-Anlage
   // v440 (Dome): bei „viel“ und „fast weiß“ mehr Weiß am Kopf – nur bei Splash, Overo, Tovero, Sabino und Dominant White (beim Tobiano bleibt der Kopf meist dunkel)
-  const weissZuschlag = (g, ex) => { const sw = anzahl(g, "Sw"), weissGen = sw || hat(g, "Sb") || hat(g, "O") || hat(g, "W");
+  const weissZuschlag = (g, ex) => { const sw = Math.min(2, swAnz(g) + (swStark(g) ? 1 : 0)), weissGen = sw || hat(g, "Sb") || hat(g, "O") || hat(g, "W");
     return (!hat(g, "E") ? ABZ_ZUSCHLAG.fuchs : 0) + (sw === 2 ? ABZ_ZUSCHLAG.Sw2 : sw ? ABZ_ZUSCHLAG.Sw1 : 0) + (hat(g, "Sb") ? ABZ_ZUSCHLAG.Sb : 0) + (hat(g, "O") ? ABZ_ZUSCHLAG.O : 0) + (hat(g, "W") ? ABZ_ZUSCHLAG.W : 0)
       + (weissGen && ex && ex.muster != null ? MUSTER_KOPF[musterStufeAus(ex.muster)] : 0); };
   // Admin (Gene selbst wählen): Weiß-Anlage so setzen, dass genau dieses Abzeichen herauskommt (Mitte der Stufe, Gene eingerechnet)
   function weissFuer(abz, g, ex) { const i = ABZ_STUFEN.findIndex(([, a]) => a === abz), lo = i ? ABZ_STUFEN[i - 1][0] : 0, hi = Math.min(.995, ABZ_STUFEN[i][0]);
     return Math.round(Math.max(.001, Math.min(.999, sigmoid(logit((lo + hi) / 2) - weissZuschlag(g, ex)))) * 1000) / 1000; }
-  const istTaub = p => { const n = anzahl(genVon(p), "Sw"); return n > 0 && zufall("taub-" + (p.id || p.nr || p.name))() < TAUB_SW[n]; };
+  const istTaub = p => { const g = genVon(p), n = Math.min(2, swAnz(g)); return n > 0 && zufall("taub-" + (p.id || p.nr || p.name))() < (g.Pax && g.Pax.includes("SW2") ? TAUB_SW2 : TAUB_SW[n]); };
+  const TAUB_SW2 = .4;   // Dome 30.10.: SW2 (PAX3) ist öfter mit Taubheit verbunden – Schätzung
   // Dome (v427): taube Pferde erschrecken beim Putzen, wenn man unbemerkt herankommt – ist die Taubheit per Hörtest bekannt, kündigt man sich an (Hand zeigen, Boden stampfen)
   const TAUB_SCHRECK = .25, TAUB_SCHRECK_WOHL = -1.5;
   // Anzeige (sichtbar, keine Genetik): „Stern mit Schnippe“, „Mehlmaul“, „blau (Glasauge)“
@@ -1724,8 +1735,8 @@
   function musterZufall(rasse, r) { return Math.round(sigmoid(logit(r()) + (MUSTER_RASSE[rasse] || 0)) * 100) / 100; }
   const musterStufeAus = m => m < MUSTER_STUFEN[0] ? 0 : m < MUSTER_STUFEN[1] ? 1 : m < MUSTER_STUFEN[2] ? 2 : 3;
   // v444 (Dome): mehrere Weiß-Gene addieren sich – jedes weitere (Tobiano, Overo, Sabino, Splash, Dominant White) hebt die Ausprägung um eine Stufe (wie in echt)
-  const WEISS_GENE = ["To", "O", "Sb", "Sw", "W"];
-  const weissGeneZahl = (g, ex) => WEISS_GENE.filter(k => hat(g, k) && !(k === "O" && ex && ex.ow < .2 && !hat(g, "To"))).length - (hat(g, "To") && hat(g, "O") ? 1 : 0);   // Tovero (To + O) ist schon ein eigenes Muster
+  const WEISS_GENE = ["To", "O", "Sb", "Sw", "Pax", "W"];
+  const weissGeneZahl = (g, ex) => WEISS_GENE.filter(k => hat(g, k) && !(k === "O" && ex && ex.ow < .2 && !hat(g, "To"))).length - (hat(g, "To") && hat(g, "O") ? 1 : 0) + (swStark(g) ? 1 : 0);   // Tovero (To + O) ist schon ein eigenes Muster
   const musterStufeVon = p => { if (!p || (!p.gen && !p.ex)) return 1; const ex = exVon(p), n = p.gen ? weissGeneZahl(p.gen, ex) : 0; return Math.min(3, musterStufeAus(ex.muster) + Math.max(0, n - 1)); };
   // ---------- v440 Scheckmuster Schritt 2 (PLAN-SCHECKUNG.md) ----------
   // Birdcatcher-Tupfen: vererbte Anlage (v483); dunkler Brindle (Chimäre): Zufall je Pferd – in echt nicht vererbbar
@@ -1893,6 +1904,7 @@
     if (p && p.rasse === "tekke" && TEKKE_GOLD[id] && glanzVon(p) > 0) return TEKKE_GOLD[id];   // v443 (Dome): Fellfarbe „Gold“ beim Achal-Tekkiner
     if (p && p.rasse === "noriker" && id === "blueroan") return "Mohrenkopf (Blauschimmel)";
     if (p && p.rasse === "fjord" && (id === "weissfalbe" || id === "gelbfalbe")) return id === "weissfalbe" ? "Weißfalbe (ulsblakk)" : "Gelbfalbe (gulblakk)";   // Dome 30.10.: norwegische Farbschläge – Weißfalbe = Rotfalbe + Cream, Gelbfalbe = Braunfalbe + Cream
+    if (p && /champagne$/.test(String(id).replace(/^[a-z]{2}_/, "")) && (p.gen || p.farbe) && hat(genVon(p), "D") && hat(genVon(p), "Ch")) { const n = FARBEN[id] ? FARBEN[id].name : id; return n.replace(" Champagne", " Dun Champagne"); }   // Dome 30.10.: Falbe + Champagne
     if (p && id === "rappe" && (p.gen || p.farbe) && smokyVon(p) && testGemacht(p, "farbe")) return "Smoky Black (Rappe mit Cream)";   // Dome 30.10.: ohne Fellfarben-Test sieht man nur einen Rappen   // v445: so heißt der Roan mit dunklem Kopf beim Noriker
     { const t0 = String(id).match(/^to_([^~]+)/); if (t0) return scheckeTri(t0[1]); }   // v505: Tobiano auf jeder Grundfarbe
     const m = String(id).match(/^(ov|tv)_([^~]+)/); if (!m) return id === "braunschecke" ? scheckeTri("brauner") : FARBEN[id] ? FARBEN[id].name : id;
@@ -2244,7 +2256,7 @@
   const kopfOpt = (p, andere) => { if (!p) return {}; const kz = kopfZeichen(p);
     const b = beinZeichen(p), z = zebraVon(p);
     return { bau: bauOpt(p), kopfform: kopfVon(p), ohrStellung: ohrenVon(p, andere), eigenKopf: p.nase === "spiel" ? false : undefined, kopfAbz: kz.zeichnung || kz.abz, maul: kz.maul, roanOpt: { alter: p.geb ? alterJahre(p) : 8, stute: p.geschlecht === "Stute", winter: (spiel && spiel.tag && typeof datum === "function") ? (datum().s === 3 ? 1 : datum().s === 2 ? .5 : 0) : 0 }, pangareK: kz.maul === "mehl" ? ((p.ex && p.ex.pangare >= .85) ? 3 : (p.ex && p.ex.pangare >= .65) ? 2 : 1) : 0, augeBlau: kz.augeBlau,
-      beinAbz: { vn: b.bvl, vf: b.bvr, hn: b.bhl, hf: b.bhr }, zebra: z.zebra, schulter: z.schulter, ohrGr: ohrGrVon(p), musterStufe: musterStufeVon(p), ...(z2 => ({ rabi: z2.rabi, birdcatcher: z2.bird, bendor: z2.bendor, bendorZone: z2.bendorZone, brindle: z2.brindle, brindleArt: z2.brindleArt, dw: z2.dw, lp: z2.lp }))(zeichenVon(p)), kroete: anzahl(genVon(p), "Cr") === 2, smoky: smokyVon(p) ? 1 : 0, nd1: nd1Von(p) ? 1 : 0, glanz: glanzVon(p), bronze: bronzeVon(p), glanzAepfel: aepfelVon(p), fellGlanz: p.fellGlanz != null && p.schaum == null && spiel.tag != null && p.fellGlanz >= spiel.tag - 1 ? 1 : 0,   // v688 (Dome): nach dem Shampoo/Öl glänzt das Fell sichtbar
+      beinAbz: { vn: b.bvl, vf: b.bvr, hn: b.bhl, hf: b.bhr }, zebra: z.zebra, schulter: z.schulter, ohrGr: ohrGrVon(p), musterStufe: musterStufeVon(p), ...(z2 => ({ rabi: z2.rabi, birdcatcher: z2.bird, bendor: z2.bendor, bendorZone: z2.bendorZone, brindle: z2.brindle, brindleArt: z2.brindleArt, dw: z2.dw, lp: z2.lp }))(zeichenVon(p)), kroete: anzahl(genVon(p), "Cr") === 2, smoky: smokyVon(p) ? 1 : 0, dunCh: hat(genVon(p), "Ch") && hat(genVon(p), "D") ? 1 : 0, nd1: nd1Von(p) ? 1 : 0, glanz: glanzVon(p), bronze: bronzeVon(p), glanzAepfel: aepfelVon(p), fellGlanz: p.fellGlanz != null && p.schaum == null && spiel.tag != null && p.fellGlanz >= spiel.tag - 1 ? 1 : 0,   // v688 (Dome): nach dem Shampoo/Öl glänzt das Fell sichtbar
        ...kombiVon(p) }; };
   // Hengste der Deckstation – fest für die ganze Jahreszeit gespeichert (jeder mit eigener Akte)
   function deckhengste(stute) {
@@ -2492,6 +2504,8 @@
     const g = Math.random() < .5 ? "Stute" : "Hengst", d = datum(), her = { gang: {}, charakter: {}, ex: {} };
     // Fellfarbe: von jedem Elternteil ein Allel
     const fGen = genVererben(genVon(M), genVon(V));
+    for (let i = 0; i < 30 && swLetal(fGen); i++) { fGen.Sw = [zufallAus(M.gen.Sw), zufallAus(V.gen.Sw)]; fGen.Pax = [zufallAus(M.gen.Pax), zufallAus(V.gen.Pax)]; }   // Dome 30.10.: SW3/SW4/SW5 reinerbig nicht lebensfähig
+    if (swLetal(fGen)) { fGen.Sw = [fGen.Sw[0], "n"]; fGen.Pax = [fGen.Pax[0], "n"]; }
     for (let i = 0; i < 30 && anzahl(fGen, "W") === 2; i++) fGen.W = [zufallAus(M.gen.W), zufallAus(V.gen.W)];   // v440: W/W ist nicht lebensfähig (die Stute wäre leer geblieben)
     if (anzahl(fGen, "W") === 2) fGen.W = ["W", "n"];
     fGen.Br1 = [zufallAus(M.gen.Br1), g === "Stute" ? V.gen.Br1[0] : "n"];   // v440: BR1 liegt auf dem X-Chromosom – Töchter bekommen das X des Vaters, Söhne nur das der Mutter
@@ -2501,7 +2515,7 @@
     her.sm = erben(M, V, smVon, { min: 70, max: 195, mut: 11 });
     const ziel = Math.round(her.sm.wert), rasse = rasseZuordnen(anteile, ziel);
     const f = { id: "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: (n => n === M.name || n === V.name ? pferdeName(g, rasse, "zucht") : n)(pferdeName(g, rasse, "zucht")), rasse, farbe: phaenotyp(fGen), geschlecht: g,
-      zielStockmass: ziel, geb: { s: d.s, j: d.j }, gebTag: spiel.tag, mutter: M.name, gen: fGen, nd1V: 1, anteile,
+      zielStockmass: ziel, geb: { s: d.s, j: d.j }, gebTag: spiel.tag, mutter: M.name, gen: fGen, nd1V: 1, swV: 1, anteile,
       grauHinweis: hat(M.gen, "G") || hat(V.gen, "G"),
       maehne: "steh", maehneSeit: spiel.tag, schopf: naturSchopf(rasse) ? "ohne" : undefined, schopfSeit: spiel.tag };   // jedes Fohlen kommt mit Stehmähne und ohne Schopf zur Welt
     f.genFuer = f.farbe;
@@ -3069,7 +3083,8 @@
   };
 
   const stufeVonP = w => { let st = 0; SELTEN_STUFEN.forEach((x, i) => { if (x && w <= x.bis) st = i; }); return st; };   // die Grenze selbst zählt noch mit
-  const alProb = (rasse, k, a) => { const f = genFreq(rasse, k); if (k === "A" && (RASSE_GENE[rasse] || {}).At != null) { const fAt = genFreq(rasse, "At"); return a === "A" ? f : a === "At" ? (1 - f) * fAt : (1 - f) * (1 - fAt); } return a === GEN[k][2] ? f : 1 - f; };
+  const alProb = (rasse, k, a) => { if (k === "Sw" || k === "Pax") { const t = SW_ALLEL[rasse] || {}, sw1 = k === "Sw" ? genFreq(rasse, "Sw") : 0, ex = k === "Sw" ? ["SW3", "SW5"] : ["SW2", "SW4"], rest = 1 - sw1 - ex.reduce((s, x) => s + (t[x] || 0), 0); return a === "SW" ? sw1 : ex.includes(a) ? (t[a] || 0) : rest; }
+    const f = genFreq(rasse, k); if (k === "A" && (RASSE_GENE[rasse] || {}).At != null) { const fAt = genFreq(rasse, "At"); return a === "A" ? f : a === "At" ? (1 - f) * fAt : (1 - f) * (1 - fAt); } return a === GEN[k][2] ? f : 1 - f; };
   function genotypProb(rasse, k, g, hengst) {
     const al = g[k] || [GEN[k][3], GEN[k][3]]; if (k === "Br1" && hengst) return alProb(rasse, k, al[0]);   // X-Chromosom: Hengste haben nur ein Allel
     const pa = alProb(rasse, k, al[0]), pb = alProb(rasse, k, al[1]); return al[0] === al[1] ? pa * pb : 2 * pa * pb;
@@ -3806,7 +3821,8 @@
   };
   // Gene mit Erbkrankheit, wenn ein Fohlen sie von beiden Eltern bekommt
   // v440: Dominant White – W/W-Embryonen sterben sehr früh ab, die Stute bleibt leer (je ¼ bei zwei mischerbigen Trägern)
-  const wwLeer = (st, h) => Math.random() < anzahl(genVon(st), "W") / 2 * anzahl(genVon(h), "W") / 2;
+  const wwLeer = (st, h) => { const a = genVon(st), b = genVon(h), al = (g, x) => [...(g.Sw || []), ...(g.Pax || [])].filter(y => y === x).length / 2;
+    return Math.random() < anzahl(a, "W") / 2 * anzahl(b, "W") / 2 + SW_LETAL.reduce((s, x) => s + al(a, x) * al(b, x), 0); };   // Dome 30.10.: auch SW3/SW4/SW5 reinerbig nicht lebensfähig
   const GEFAHR_GENE = [
     { gen: "O", titel: "Zwei Overo-Pferde", gentext: "das Overo-Gen (O)", sichtbar: q => /^(ov|tv)_/.test(q.farbe),
       folge: "Jedes vierte Fohlen aus dieser Verpaarung wäre ein <b>Lethal-White-Fohlen</b> (O/O): Ihm fehlen Nervenzellen im Darm, es stirbt in den ersten Lebenstagen.", rat: "Verantwortungsvolle Züchter verpaaren zwei Overos nicht miteinander." },
@@ -3881,7 +3897,8 @@
       Patn: n => n ? "Muster-Gen: mit Lp ganzer Körper getigert" : "kein PATN1 – mit Lp nur Schabracke",
       Dm: n => n === 2 ? "A/A – meist Fünfgänger (Tölt und Pass)" : n ? "A/C – meist Viergänger (Tölt)" : "C/C – keine Spezialgangart",
       Sb: n => n ? (n === 2 ? "Sabino, reinerbig" : "Sabino") : "kein Sabino",
-      Sw: n => n ? (n === 2 ? "Splashed White, reinerbig – sehr viel Weiß" : "Splashed White") + " – Splash-Pferde sind manchmal taub (Hörtest)" : "kein Splashed White",
+      Sw: n => n ? (n === 2 ? "Splashed White, reinerbig – sehr viel Weiß" : "Splashed White") + ` (${g.Sw.filter(x => x !== "n").map(x => x === "SW" ? "SW1" : x).join(", ")})` + (g.Sw.some(x => SW_LETAL.includes(x)) ? " – ⚠️ nie mit einem Träger derselben Form verpaaren (reinerbig nicht lebensfähig)" : "") + " – Splash-Pferde sind manchmal taub (Hörtest)" : "kein Splashed White",
+      Pax: n => n ? `Splashed White auf PAX3 (${g.Pax.filter(x => x !== "n").join(", ")})` + (g.Pax.includes("SW4") ? " – ⚠️ SW4 reinerbig nicht lebensfähig" : "") + (g.Pax.includes("SW2") ? " – oft taub (Hörtest)" : "") : "kein Splashed White (PAX3)",
       W: n => n ? "Dominant White – ⚠️ nie mit einem anderen W-Träger verpaaren (25 % der Embryonen nicht lebensfähig)" : "kein Dominant White",
       Br1: n => p.geschlecht === "Stute" ? (n === 2 ? "Brindle 1, reinerbig – weiße Streifen" : n ? "Brindle 1 – weiße Streifen" : "kein Brindle 1") : g.Br1[0] === "BR1" ? "Brindle 1 auf dem X-Chromosom – selbst ohne Streifen, alle Töchter bekommen es" : "kein Brindle 1",
     };
@@ -5453,7 +5470,7 @@
   function musterAnwenden() {
     const m = MUSTER_WAHL.find(x => x.k === wahl.muster); if (!m) return;
     const base = musterBasis(wahl.farbeWahl || wahl.farbe), g = genAusFarbe(base, wahl.id + "-m", wahl.rasse);
-    ["To", "O", "Sw", "Sb", "Rn", "Lp", "Patn", "W", "Br1", "G"].forEach(k => { g[k] = [GEN[k][3], GEN[k][3]]; });   // erst alle Muster-Gene weg, dann nur das gewählte
+    ["To", "O", "Sw", "Pax", "Sb", "Rn", "Lp", "Patn", "W", "Br1", "G"].forEach(k => { g[k] = [GEN[k][3], GEN[k][3]]; });   // erst alle Muster-Gene weg, dann nur das gewählte
     Object.entries(m.gen || {}).forEach(([k, n]) => { const [, , dom, rez] = GEN[k]; g[k] = n === 2 ? [dom, dom] : [dom, rez]; });
     const ex = exVon({ id: wahl.id, rasse: wahl.rasse, ex: wahl.ex || exZufall(zufall("wahl-" + wahl.id)) });
     Object.assign(ex, { rabi: .2, bendor: .2, bird: 0, brin: 0, snow: 0, frost: 0, lack: 0, muster: MS_STUFEN[Math.min(3, wahl.mStufe == null ? 1 : wahl.mStufe)][0] }, m.ex || {});
@@ -5759,7 +5776,7 @@
     if (!wahl.labor) { const weissGen = (wahl.gen && ["Sb", "Sw", "O", "W"].some(k => hat(wahl.gen, k))) || /^(sa|sw|ov|tv)_/.test(wahl.farbe);   // v505 (Dome): Tobiano hat typisch einen dunklen Kopf – kein Kopfweiß in der Rassenansicht
       Object.assign(exVon(wahl), weissGen ? { pangare: 0 } : { weiss: 0, bvl: 0, bvr: 0, bhl: 0, bhr: 0, pangare: 0 }, { aepfelA: wahl.aepfelVar ? .9 : 0 });
       if (weissGen && wahl.gen) { const g = wahl.gen, ex = exVon(wahl), st = Math.min(3, musterStufeAus(ex.muster != null ? ex.muster : .55));   // v507 (Dome): Kopfweiß, das zur Scheckung typisch dazugehört, immer zeigen (je Ausprägung)
-        const typ = hat(g, "O") && hat(g, "To") ? MUSTER_KOPF_TYP.tovero : anzahl(g, "Sw") ? MUSTER_KOPF_TYP.splash : hat(g, "O") ? MUSTER_KOPF_TYP.overo : hat(g, "Sb") ? MUSTER_KOPF_TYP.sabino : MUSTER_KOPF_TYP.dw;
+        const typ = hat(g, "O") && hat(g, "To") ? MUSTER_KOPF_TYP.tovero : swAnz(g) ? MUSTER_KOPF_TYP.splash : hat(g, "O") ? MUSTER_KOPF_TYP.overo : hat(g, "Sb") ? MUSTER_KOPF_TYP.sabino : MUSTER_KOPF_TYP.dw;
         ex.weiss = weissFuer(typ[st] || typ[typ.length - 1], g, ex); ex.schnA = .99; } }   // v480 (Dome): Rassenansicht ohne Abzeichen und Mehlmaul – Weiß nur, wenn es zur Scheckung gehört (eigene Wahl unter „Gene selbst wählen“)
     const z = zeichnePferd(wahl.rasse, fb(wahl, wahl.alter), { seed: wahl.id, geschlecht: wahl.geschlecht, alterStufe: stufeAusMonaten(wahl.alter * 12), ...kopfOpt(wahl), bau: wahlBauOpt() });
     saisonFix = null;
@@ -12702,6 +12719,7 @@
    ["lex_tekke_bronze", "buckskin", "Bronzefalbe (Achal-Tekkiner)", "Heller, rosig-goldener Buckskin mit starkem Bronzeglanz. Der Ton wird vererbt.", { glanzLex: .9, bronzeLex: true }],
    ["lex_tekke_silber", "isabell", "Silber-Isabell (Achal-Tekkiner)", "Doppel-Cream (Isabell/Perlino) mit silbrigem Metallglanz.", { glanzLex: .9 }],
    ["lex_smokyblack", "rappe", "Smoky Black", "Rappe mit einer Anlage Cream (Cr): fast schwarz, nur leicht bräunlich-matt – kaum von einem Rappen zu unterscheiden. Im Spiel heißt er erst nach dem Fellfarben-Test so.", { lexOpt: { smoky: 1 } }],
+   ["lex_dunchampagne", "amberchampagne", "Dun Champagne", "Falbe und Champagne zusammen (hier Amber Dun Champagne): Champagne-Farbe, etwas heller, mit Aalstrich und oft Zebra- und Schulterstreifen wie bei jeder Falbe.", { lexOpt: { dunCh: 1, zebra: .7 } }],
    ["lex_nd1", "brauner", "Urzeichnung ohne Falbe (nd1)", "Gen nd1 (Non-Dun 1): das Fell wird nicht aufgehellt, aber ein schwacher Aalstrich kann bleiben – „Pseudo-Falbe“. Häufig bei vielen Rassen, nur der Gentest zeigt es sicher.", { lexOpt: { nd1: 1 } }],
    ["lex_rabicano", "brauner", "Rabicano", "Weiße Stichelhaare an Flanke und Schweifansatz („Stinktierschweif“), mit dem Alter oft mehr. Vererbte Anlage.", { lexOpt: { rabi: 2 } }],
    ["lex_birdcatcher", "fuchs", "Birdcatcher-Tupfen", "Kleine weiße Tupfen im Fell, die mit dem Alter mehr werden. Vererbte Anlage.", { lexOpt: { birdcatcher: 22 } }],
@@ -12729,7 +12747,7 @@
    ["lex_tekke_perl", "isabell", "Perl-Isabell (Achal-Tekkiner)", "Doppel-Cream mit goldenem Perlglanz – der berühmte „goldene“ Tekkiner. Der Ton wird vererbt.", { glanzLex: .9, bronzeLex: true }]].forEach(([id, b, n, t, x]) => { FARBEN[id] = { ...FARBEN[b], ...x, lexBasis: b, name: n }; FARBBESCHREIBUNG[id] = t; });
   // Fellfarben in der Enzyklopädie nach Farbfamilien: Rappen, Braune, Füchse, Falben, Cremefarben, Roans, Schimmel, Schecken, Tiger
   const FARB_REIHE = ["rappe", "windfarben", "brauner", "hellbrauner", "dunkelbrauner", "schwarzbrauner", "mushbrauner", "fuchs", "sandfuchs", "dfuchs", "hellfuchs", "dunkelfuchs", "mushroom", "apricot", 
-    "braunfalbe", "lex_hellfalbe", "rotfalbe", "mausfalbe", "gelbfalbe", "weissfalbe", "smokygrulla", "palomino", "buckskin", "russbuckskin", "isabell", "lex_smokyblack", "lex_nd1", "goldchampagne", "amberchampagne", "sablechampagne", "classicchampagne", "ivorychampagne", "lex_tekke_gold", "lex_tekke_bronze", "lex_tekke_silber", "lex_tekke_perl", "lex_glanzaepfel", "blueroan", "bayroan", "rotschimmel", "lex_rabicano", "lex_birdcatcher", "lex_bendor", "lex_brindle_dunkel", "lex_brindle_weiss", "lex_dw",
+    "braunfalbe", "lex_hellfalbe", "rotfalbe", "mausfalbe", "gelbfalbe", "weissfalbe", "smokygrulla", "palomino", "buckskin", "russbuckskin", "isabell", "lex_smokyblack", "lex_nd1", "goldchampagne", "amberchampagne", "sablechampagne", "classicchampagne", "ivorychampagne", "lex_dunchampagne", "lex_tekke_gold", "lex_tekke_bronze", "lex_tekke_silber", "lex_tekke_perl", "lex_glanzaepfel", "blueroan", "bayroan", "rotschimmel", "lex_rabicano", "lex_birdcatcher", "lex_bendor", "lex_brindle_dunkel", "lex_brindle_weiss", "lex_dw",
     "grauschimmel", "braunschimmel", "fuchsschimmel", "apfelschimmel", "schimmel", "fliegenschimmel", "rappschecke", "braunschecke", "fuchsschecke", "ov_brauner", "tv_fuchs",
     "tg_brauner", "fs_rappe", "sb_rappe", "sk_brauner", "lex_lackschimmel", "lex_snowflake", "lex_frost", "lex_pintaloosa", "lex_rn_buckskin", "lex_rn_palomino", "lex_rn_mausfalbe", "lex_rn_braunfalbe", "lex_rn_rotfalbe", "lex_rn_dunkelfuchs", "lex_rn_gelbfalbe", "lex_rn_windfarben", "lex_roanschecke", "lex_roanschecke_bay", "lex_roanschecke_red", "lex_tricolor", "lethalwhite"];
   const farbRang = id => { const i = FARB_REIHE.indexOf(id); return i < 0 ? 999 : i; };
@@ -12934,14 +12952,15 @@
       vergleich: "Buckskin oder Falbe? Schau auf den Rücken: Streifen = Falbe, keine Streifen = Buckskin." },
     splash: { titel: "Splashed White – wie in weiße Farbe getaucht", liste: [["sw_brauner", "Splashed White"], ["sa_brauner", "Sabino"], ["ov_brauner", "Frame Overo"]],
       kurz: "Ein Splashed White sieht aus, als hätte man es von unten in weiße Farbe getaucht: weiße Beine, eine breite Blesse und Weiß am Bauch, das selten bis zum Rücken reicht. Die Ränder des Weiß sind glatt und scharf.",
-      woher: "Splashed White kommt von <b>zwei verschiedenen Genen</b> (MITF und PAX3) mit fünf bekannten Formen (SW1 bis SW5). Alle sind <b>dominant</b>: eine Anlage reicht. Weil es zwei Gene sind, kann ein Pferd bis zu vier Anlagen tragen – dann ist es sehr weiß. Im Spiel gibt es dafür ein Gen <b>Sw</b>.",
+      woher: "Splashed White kommt von <b>zwei verschiedenen Genen</b> (MITF und PAX3) mit fünf bekannten Formen (SW1 bis SW5). Alle sind <b>dominant</b>: eine Anlage reicht. Weil es zwei Gene sind, kann ein Pferd bis zu vier Anlagen tragen – dann ist es sehr weiß. SW3, SW4 und SW5 sind <b>reinerbig nicht lebensfähig</b> (der Embryo stirbt früh). Es sind also keine fünf verschiedenen Muster: alle sehen ähnlich aus, sie unterscheiden sich in der Menge an Weiß, in der Rasse und darin, ob sie reinerbig tödlich sind.",
       punkte: [
         ["Glatte Ränder", "Die weißen Flächen haben scharfe, glatte Ränder ohne Sprenkel oder Stichelhaare."],
         ["Von unten nach oben", "Weiß an Beinen, Bauch, Brust und Hals, waagerecht verteilt – der Rücken bleibt meist farbig."],
         ["Kopf", "Breite Blesse, unten oft noch breiter. Blaue Augen sind häufig, auch ohne Weiß um das Auge."],
         ["Mähne und Schweif", "Die Mähne ist meist farbig, der Schweif oft weiß oder mit weißer Spitze."],
         ["Wenig bis viel", "Von fast nichts (nur Abzeichen) bis fast ganz weiß, dann bleiben nur Ohren und Rückenlinie farbig."],
-        ["Taubheit", "Manche Splashed-White-Pferde sind taub, wenn das Innenohr keine Farbe hat. Ein Hörtest im Labor zeigt es."]],
+        ["Taubheit", "Manche Splashed-White-Pferde sind taub, wenn das Innenohr keine Farbe hat – bei SW2 häufiger. Ein Hörtest im Labor zeigt es."],
+        ["Die fünf Formen", "SW1: die häufigste, sehr alt, bei vielen Rassen (Quarter, Paint, Appaloosa, Trakehner, Shetty, Isländer …), meist wenig bis mittel Weiß. SW2: nur Quarter/Paint aus einer Stute von 1987, oft taub. SW3: sehr selten, Quarter/Paint, meist viel Weiß. SW4: eine Appaloosa-Familie. SW5: eine Paint-Familie."]],
       namen: ["Splashed White auf Brauner, Fuchs, Rappe – auf jeder Grundfarbe und Verdünnung.", "Piebald: Weiß auf Rappe. Skewbald: Weiß auf jeder anderen Farbe.", "Pinto: Schecke jeder Rasse. Paint: nur die Rasse Paint Horse."],
       vergleich: "Splashed White oder Sabino? Beide haben weiße Beine und viel Weiß am Kopf. Beim Splashed White sind die Ränder glatt, beim Sabino gesprenkelt (wie Roan)." },
     overo: { titel: "Frame Overo – Weiß im Rahmen", liste: [["ov_brauner", "Frame Overo"], ["braunschecke", "Tobiano"], ["tv_fuchs", "Tovero"]],
@@ -12965,7 +12984,7 @@
         ["Metallglanz", "Viele Champagne-Pferde glänzen metallisch, vor allem Gold Champagne."],
         ["Fohlen", "Fohlen kommen mit rosa Haut und blauen Augen zur Welt. Anders als beim Palomino dauert die Umfärbung Monate, nicht Tage."],
         ["Dunkle Äpfel", "Manche Champagne-Pferde haben dunklere Äpfel im Fell."]],
-      namen: ["Gold Champagne: auf Fuchs – goldenes Fell, Mähne meist elfenbein.", "Classic Champagne: auf Rappe – taupe, manchmal lila oder grünlich wirkend, Mähne dunkler.", "Amber Champagne: auf Brauner – goldenes Fell, Mähne, Schweif und Beine schokoladenbraun.", "Sable Champagne: auf Schwarzbraun – sieht fast aus wie Classic.", "Ivory Champagne: Champagne und Cream zusammen – sehr hell elfenbeinfarben."],
+      namen: ["Gold Champagne: auf Fuchs – goldenes Fell, Mähne meist elfenbein.", "Classic Champagne: auf Rappe – taupe, manchmal lila oder grünlich wirkend, Mähne dunkler.", "Amber Champagne: auf Brauner – goldenes Fell, Mähne, Schweif und Beine schokoladenbraun.", "Sable Champagne: auf Schwarzbraun – sieht fast aus wie Classic.", "Ivory Champagne: Champagne und Cream zusammen – sehr hell elfenbeinfarben.", "Dun Champagne: Champagne und Falbe zusammen – mit Aalstrich, z. B. Amber Dun Champagne."],
       vergleich: "Champagne oder Palomino/Buckskin? Schau auf Haut und Augen: Champagne hat helle, gesprenkelte Haut und helle Augen, Palomino und Buckskin haben dunkle Haut und braune Augen." }
   };
   // v911 (Dome 30.10.): Schemabilder – Pferd mit eingezeichneter Markierung (Anteile der Pferdebox, y von oben)
@@ -12991,7 +13010,7 @@
     silber: { punkte: { 0: ["windfarben"] }, namen: { 0: ["windfarben"] } },
     cream: { punkte: { 0: ["palomino"], 1: ["buckskin"], 3: ["isabell"] }, namen: { 0: ["palomino"], 1: ["buckskin"], 3: ["isabell"] } },
     dun: { punkte: { 0: ["mausfalbe"], 1: ["braunfalbe"], 2: ["rotfalbe"], 3: ["gelbfalbe"] }, namen: { 0: ["braunfalbe"], 1: ["mausfalbe"], 2: ["rotfalbe"], 3: ["gelbfalbe"], 4: ["smokygrulla"], 5: ["weissfalbe"] } },
-    champagne: { punkte: { 0: ["goldchampagne"], 2: ["goldchampagne"] }, namen: { 0: ["goldchampagne"], 1: ["classicchampagne"], 2: ["amberchampagne"], 3: ["sablechampagne"], 4: ["ivorychampagne"] } },
+    champagne: { punkte: { 0: ["goldchampagne"], 2: ["goldchampagne"] }, namen: { 0: ["goldchampagne"], 1: ["classicchampagne"], 2: ["amberchampagne"], 3: ["sablechampagne"], 4: ["ivorychampagne"], 5: ["amberchampagne", { dunCh: 1, zebra: .7 }] } },
     splash: { punkte: { 0: ["sw_brauner"] }, namen: {} },
     overo: { punkte: { 0: ["ov_brauner"] }, namen: { 0: ["ov_brauner"], 1: ["tv_fuchs"] } },
     buckskin: { punkte: { 0: ["buckskin"], 1: ["buckskin"] }, namen: { 0: ["buckskin"], 1: ["russbuckskin"], 2: ["palomino"] } }
@@ -13009,7 +13028,7 @@
     if (/^(brauner|hellbrauner|dunkelbrauner|schwarzbrauner)$/.test(id)) return "brauner";
     if (/^sw_/.test(id)) return "splash";
     if (/^(ov|tv)_/.test(id)) return "overo";
-    if (/champagne/.test(id)) return "champagne";
+    if (/champagne/.test(id) || id === "lex_dunchampagne" || n === "lex_dunchampagne") return "champagne";
     return null; }
   function farbErklaerung(id, name) {
     const kat = ENZY.farben, e = kat.eintraege.find(x => String(x[4]) === id && x[0] === name) || kat.eintraege.find(x => String(x[4]) === id); if (!e) return;

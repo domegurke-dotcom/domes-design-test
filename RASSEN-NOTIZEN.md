@@ -2,7 +2,7 @@
 
 Sammlung aller Rassen, die in Domes PDFs vorkommen, aber noch nicht im Spiel sind – mit dem, was die Quellen über sie sagen. **Nichts davon ist eingebaut** (Regel in `CLAUDE.md`: neue Rassen erst, wenn Dome es sagt). Neue PDFs: Rassen hier nachtragen (Dome, 30.10.2026).
 
-Quelle jeweils in Klammern: Tobiano, Sabino, Leopard, DW (Dominant White), Splash, Overo, Roan, Champagne, Grau, Typen (Horses by Size & Build), Leicht (4 Types of Light Horses), Pinto (Pinto vs. Paint). Ältere PDFs (Silver, Cream, Dun, 3 Base Colors, Studien) sind noch nicht ausgewertet – sie liegen nicht mehr in der Sitzung.
+Quelle jeweils in Klammern: Tobiano, Sabino, Leopard, DW (Dominant White), Splash, Overo, Roan, Champagne, Grau, Typen (Horses by Size & Build), Leicht (4 Types of Light Horses), Pinto (Pinto vs. Paint). Ältere PDFs (Silver, Cream, Dun, 3 Base Colors, Horse Colors and Patterns, Icelandic, Tennessee) sind seit 31.10. ausgewertet (Abschnitt „Nachtrag 31.10.“); alle PDFs liegen im Ordner `pdfs/` (nicht auf GitHub). Die Studien (Genes 2022, Durward-Akhurst 2024 u. a.) sind in v731–v750 eingearbeitet.
 
 ## Kaltblüter
 | Rasse | Herkunft | Was die Quellen sagen |
@@ -91,3 +91,22 @@ Quelle jeweils in Klammern: Tobiano, Sabino, Leopard, DW (Dominant White), Splas
 
 ## Nachtrag 30.10.
 Racking Horse (USA, Gangpferd, Leicht-PDF) und Mongolisches Pony stehen in den Quellen; Camarillo und Freiberger siehe oben. Clydesdale/Shire: weiße Abzeichen kommen laut Sabino-PDF nicht vom Gen SB1 (anderes KIT-Allel oder anderes Gen – nicht belegt).
+
+## Nachtrag 31.10.2026 (Domes ältere PDFs: Silver, Cream, Dun, 3 Base Colors, Horse Colors and Patterns, Icelandic, Tennessee)
+Quellen: Silver, Cream, Dun (Buckskin vs Dun), Basis (3 Base Colors), Muster (Horse Colors and Patterns), Island (Icelandic Horse), TWH (Tennessee Walking Horse).
+
+**Neue Rassen (nicht im Spiel, nicht in den Tabellen oben):**
+| Rasse | Herkunft | Was die Quellen sagen |
+|---|---|---|
+| Nordlandspferd (Nordland-Pony) | Norwegen | Silber kommt vor (Silver) |
+| Finnpferd (Finnhorse) | Finnland | Silber kommt vor (Silver) |
+| Murgese | Italien | fast nur schwarz (Basis) |
+
+**Zusätze zu schon aufgeführten Rassen (alles Farb-Gene):**
+- Cream (Cream): häufig bei Quarter Horse, Morgan, American Saddlebred, Tennessee Walking Horse, Missouri Fox Trotter, Lusitano und PRE; auch bei Akhal-Tekkiner, Minipferd, Isländer, Connemara und Welsh Pony; seltener bei Vollblut und manchen Warmblütern. Manche Zuchtbücher lassen Doppel-Cream (Cremello, Perlino) nicht eintragen.
+- Silber (Silver): selten, aber häufig beim Isländer. Außerdem Nordlandspferd, Shetty, Welsh Mountain, Finnpferd, Ardenner; gelegentlich Welsh Pony, schwedisches Warmblut, Araber; in Amerika Rocky Mountain Horse, Morgan, Paint, Quarter Horse, Saddlebred, Minipferd, Peruanischer Paso. Silber hängt mit Augenfehlern (MCOA) zusammen.
+- Dun (Dun): Urfarbe; die Quellen leiten den Isländer über das Mongolische Pferd her, das auch Vorfahr von Fjord, Exmoor, Highland Pony, Shetty und Connemara sei (Dun/Island).
+- Grundfarben (Basis): Suffolk Punch und Haflinger haben nur Füchse (Haflinger immer mit Flachsmähne); Friese und Murgese fast nur Rappen; Cleveland Bay nur Braune. Zuchtbuch-Pflichtfarben (Muster): Cleveland Bay braun, Friese schwarz, Suffolk Fuchs.
+- Muster (Muster): Frame Overo + Lethal White, Silber + Augenfehler, Leopard homozygot + Nachtblindheit – schon im Spiel.
+- Isländer (Island): 125–145 cm (Stuten Ø 136, Hengste Ø 138), jede Farbe und jedes Weißmuster erlaubt, Vollreife erst mit 6–7 Jahren, Töltt + Flugpass (nicht alle Pferde können den Pass – Erbanlage, im Spiel über DMRT3).
+- Tennessee Walking Horse (TWH): 148–173 cm, drei Gangarten (Flat Foot Walk, Running Walk, Kanter), manche zusätzlich Fox Trot, Rack, Stepping Pace (in der Zucht unerwünscht); Rasse aus Narragansett Pacer, Canadian Pacer, spanischen Mustangs, Morgan, Standardbred, Vollblut, Saddlebred; Gründerhengst Black Allan (1886); Soring (Schmerzmittel/Ketten) ist ein großes Problem, Zuchtbuch geschlossen seit 1939.

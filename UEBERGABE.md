@@ -300,3 +300,5 @@ Domes Wünsche zu Whiteboard, Mitarbeitern, Waschplatz/Solarium sind umgesetzt (
 - v910 (Dome 30.10.): Erklärfenster: Dun→Falbe im Text, kleine Pferdebilder je Punkt und Name (`FARB_BILD`). Nur per Klicktest geprüft.
 
 - v911 (Dome 30.10.): Erklärfenster mit Schemabildern (FARB_SCHEMA) und „Körperenden“ statt „Points“. Klicktest + Bild geprüft.
+
+- v912 (Dome 30.10.): Rußung neu (Verlauf + Ringe), Schwarzbrauner mit Kupferringen, Kopf passend zum Hals. Nur per Bild geprüft; Optik-Prüfung `tests/optik-pruefung.js` nicht gelaufen.

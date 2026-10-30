@@ -285,7 +285,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const MG = opt.glanz != null ? opt.glanz : C.glanzLex || (k.metallic ? 1 : 0), fidT = C.lexBasis || farbId, bronzeOpt = opt.bronze || C.bronzeLex;   // v485: Lexikon-Einträge (Enzyklopädie) mit festem Glanz/Ton   // v446 (Dome): Metallglanz 0–1 – nicht jeder Achal-Tekkiner glänzt gleich stark, Mischlinge anteilig
   const bronze = MG > .3 && !!bronzeOpt && /buckskin/.test(fidT), perl = MG > .3 && !!bronzeOpt && /isabell/.test(fidT);   // v482: Perlglanz – Isabell (Doppel-Cream) golden-perlmuttfarben statt silbrig   // v482 (Dome): Bronzeglanz – heller, rosig-goldener Buckskin
   const gold = !bronze && MG > .3 && /palomino|buckskin|falbe/i.test(fidT) && !/mausfalbe|weissfalbe/.test(fidT);   // v479: Mausfalbe (schwarzbasiert) und Weißfalbe nicht golden   // v443: Achal-Tekkiner „Gold“ – satteres Goldgelb, dazu goldener Glanz (unten)
-  const body = perl ? mix(C.body, "#ead3a2", .55 * MG) : bronze ? mix(C.body, "#d4a878", .6 * MG) : gold ? mix(C.body, "#e8a92a", .5 * MG) : MG > .3 && /isabell/.test(farbId) ? mix(C.body, "#dfe3ea", .35 * MG) : C.body, mane = DW === 3 ? "#efebe2" : C.mane, head = DW === 3 ? "#f4f1ea" : C.head || body;
+  const body = perl ? mix(C.body, "#ead3a2", .55 * MG) : bronze ? mix(C.body, "#d4a878", .6 * MG) : gold ? mix(C.body, "#e8a92a", .5 * MG) : MG > .3 && /isabell/.test(farbId) ? mix(C.body, "#dfe3ea", .35 * MG) : C.body, mane = DW === 3 ? "#efebe2" : (LACK_NEU && opt.lp && opt.lp.lack > 0 ? mix(C.mane, "#ecdcb8", Math.min(.8, opt.lp.lack * .85)) : C.mane), head = DW === 3 ? "#f4f1ea" : C.head || body;
   const pts = C.points || null;
   const hoof = C.pattern === "tobiano" || ganzWeiss ? "#b8a88f" : (C.hoof || "#3b3531");
   const SW = "#f7f5f1", spotFarbe = C.spot || mix(body, pts || body, .35);
@@ -861,11 +861,12 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // v441 Leopard-Komplex (PLAN-SCHECKUNG.md Schritt 3): Lackschimmel (wird mit dem Alter heller, über Knochen bleibt es dunkel), Snowflake, Frost
   if (LP) {
     const rl = zufall((opt.seed || rasseId) + "-lp"), koerper = `<path d="${halsD}" fill="#fff"/><path d="${glatt(rumpf)}" fill="#fff"/>`;
-    if (LP.lack > 0 && LACK_NEU) {   // Dome 30.10. (Foto Varnish Roan): fast weißer Körper, die Farbe bleibt als Flecken über den Knochenpunkten (Schulter, Widerrist, Ellbogen, Hüfte, Flanke/Knie), Beine und Kopf bleiben farbig
-      const sc = 1 - 0.3 * Math.min(1, LP.lack), rb = [[0.1, top + 0.32 * D, 0.1, 0.26], [0.33, top + 0.08 * D, 0.11, 0.12], [0.2, bottom - 0.1 * D, 0.09, 0.2], [0.8, top + 0.18 * D, 0.13, 0.26], [0.72, bottom - 0.3 * D, 0.12, 0.3], [0.5, top + 0.62 * D, 0.07, 0.14]]
-        .map(([x, y, rx, ry]) => `<ellipse cx="${f((x + (rl() - .5) * .04) * L)}" cy="${f(y)}" rx="${f(rx * sc * L)}" ry="${f(ry * sc * D)}" fill="#000" opacity="${f(0.75 + rl() * 0.25)}"/>`).join("");
-      g += `<defs><filter id="lb-${uid}" filterUnits="userSpaceOnUse" ${bx}><feGaussianBlur stdDeviation="${f(D * .06)}"/></filter><mask id="lm-${uid}" maskUnits="userSpaceOnUse" ${bx}><rect ${bx} fill="#fff"/><g filter="url(#lb-${uid})">${rb}</g></mask></defs>` +
-        `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="#f1ece2" opacity="${f(Math.min(.93, LP.lack * 1.05))}" mask="url(#lm-${uid})"/>${stichel(koerper, 3, LP.lack * .7, 23)}</g>`;
+    if (LP.lack > 0 && LACK_NEU) {   // Dome 30.10. (Foto + Stufenblatt Varnish Roan): 1 Schleier auf Rücken/Hüfte/Flanke → weiß breitet sich aus, die Grundfarbe bleibt als kleine Tupfen (viele bei „viel“), Kopf und untere Beine farbig, Mähne/Schweif hellen auf
+      const lk = Math.min(1, LP.lack), nT = Math.round(lk < .35 ? 0 : 25 + 150 * (lk - .35)), sp = [];
+      for (let i = 0; i < nT; i++) { const hx = rl() < .5 ? .15 + rl() * .3 : .55 + rl() * .4, x = hx * L, y = top + (0.04 + Math.pow(rl(), .8) * 0.8) * D, r = 0.9 + rl() * 1.8; sp.push(`<ellipse cx="${f(x)}" cy="${f(y)}" rx="${f(r * (1.1 + rl() * .5))}" ry="${f(r)}" fill="#000" opacity="${f(.55 + rl() * .4)}"/>`); }
+      const bauch = `<ellipse cx="${f(0.5 * L)}" cy="${f(bottom + 0.05 * D)}" rx="${f(0.42 * L)}" ry="${f(0.24 * D)}" fill="#000" opacity="${f(.65 - .35 * lk)}"/><ellipse cx="${f(0.02 * L)}" cy="${f(top + 0.8 * D)}" rx="${f(0.1 * L)}" ry="${f(0.25 * D)}" fill="#000" opacity=".5"/>`;   // Bauch und Brust bleiben dunkler
+      g += `<defs><filter id="lb-${uid}" filterUnits="userSpaceOnUse" ${bx}><feGaussianBlur stdDeviation="${f(D * .09)}"/></filter><filter id="lt-${uid}" filterUnits="userSpaceOnUse" ${bx}><feGaussianBlur stdDeviation=".35"/></filter><mask id="lm-${uid}" maskUnits="userSpaceOnUse" ${bx}><rect ${bx} fill="#fff"/><g filter="url(#lb-${uid})">${bauch}</g><g filter="url(#lt-${uid})">${sp.join("")}</g></mask></defs>` +
+        `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="#f1ece2" opacity="${f(.28 + .67 * lk)}" mask="url(#lm-${uid})"/>${stichel(koerper, 3, lk * .8, 17)}</g>`;
     } else if (LP.lack > 0) {
       g += `<g clip-path="url(#cr-${uid})">${stichel(koerper, 3, LP.lack, 29)}${stichel(koerper, 3, LP.lack * 0.85, 23)}${LP.lack > .5 ? stichel(koerper, 3, (LP.lack - .5) * 2, 31) : ""}</g>`;
       const marke = [[0.0, top + 0.45 * D, 0.06, 0.16], [0.13, bottom - 0.12 * D, 0.05, 0.14], [0.8, top + 0.12 * D, 0.06, 0.12], [0.74, bottom - 0.2 * D, 0.06, 0.16], [0.35, top + 0.06 * D, 0.1, 0.08]]

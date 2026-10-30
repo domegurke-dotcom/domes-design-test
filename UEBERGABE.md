@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 30.10. (Claude Team, Opus) – v892
+Gehalt nach Qualifikation für Pferdepfleger und Pferdewirte gebaut (Details CLAUDE.md v892, Test `tests/gehalt-test.js` ✓). Offen: Pferdewirtschaftsmeister verdient fest 500 €, ein erfahrener Pferdewirt kann darüber liegen – Frage an Dome in OFFENE-FRAGEN.md.
+
 ### 27.10. (Claude Team) – v891
 Einsteller mit Raritätenpferden und Qualität nach Stallstufe (Details in CLAUDE.md v891, Domes Antworten: auch Stufe 2 mit geringer Chance, nur anspruchsvoller + zahlen gern mehr, kein Update-Fenster). Offen: Gehalts-Notiz Pferdepfleger/Pferdewirt (OFFENE-FRAGEN.md, Zahlen fehlen).
 

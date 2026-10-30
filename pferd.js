@@ -25,8 +25,9 @@ const FARBEN_BASIS = {
   braunfalbe:    { name: "Braunfalbe",             body: "#c9a878", mane: "#1d1818", points: "#2a2220", stripe: "#2a2220", hoof: "#2c2a29" },
   rotfalbe:      { name: "Rotfalbe",               body: "#d8a882", mane: "#9a5a38", stripe: "#9e5c38", hoof: "#5a4538" },
   mausfalbe:     { name: "Mausfalbe (Grullo)",     body: "#8f887c", mane: "#1a1818", points: "#1f1d1c", stripe: "#1f1d1c", head: "#6d675f", hoof: "#2c2a29" },
-  weissfalbe:    { name: "Weißfalbe",              body: "#efe5cc", mane: "#ebdfc4", stripe: "#c3a67a", hoof: "#8a7a66" },
-  gelbfalbe:     { name: "Gelbfalbe",              body: "#e2c07f", mane: "#efe3c4", stripe: "#b3844a", hoof: "#6b5a48" },
+  weissfalbe:    { name: "Dunalino (Weißfalbe)",   body: "#f0e4c8", mane: "#f3ead6", stripe: "#c4956a", hoof: "#8a7a66" },   // Dome 30.10.: Fuchs + Falbe + Cream (beim Fjordpferd Weißfalbe/ulsblakk)
+  gelbfalbe:     { name: "Dunskin (Gelbfalbe)",    body: "#dcc08a", mane: "#241d1a", points: "#3a2e26", stripe: "#3a2e26", hoof: "#3c332b" },   // Dome 30.10.: Brauner + Falbe + Cream (beim Fjordpferd Gelbfalbe/gulblakk)
+  smokygrulla:   { name: "Smoky Grulla",           body: "#b3a894", mane: "#2a2522", points: "#2f2a26", stripe: "#2f2a26", head: "#958b7c", hoof: "#2c2a29" },   // Dome 30.10.: Rappe + Falbe + Cream
   mushroom:      { name: "Mushroom (Sepia)",       body: "#a08467", mane: "#eadfc4", hoof: "#5a4a3c" },
   mushbrauner:   { name: "Mushroom-Brauner (Sepia-Brauner)", body: "#94735a", mane: "#1d1818", points: "#2a2220", hoof: "#2c2a29" },
   apricot:       { name: "Apricot (Pearl)",        body: "#e6c7a0", mane: "#efd8b5", muzzle: "#d8a699", hoof: "#b9a88f" },
@@ -91,7 +92,7 @@ const RASSEN = [
     k: { nk: 0.3, len: 1.0, depth: .41, legT: .075, neck: .56, nAng: 58, crest: .04, head: .42, hAng: 55, profile: .3, hw: .95, jw: 1, muz: .9, ear: .115, curl: true, mane: "lang", maneLen: .12, vol: .6, fore: .4, tail: .7, tvol: .8, tset: .5, feather: 0, croup: .3, hq: 1, eye: 1.1 } },
   { id: "fjord", name: "Fjordpferd (Norweger)", herkunft: "Norwegen", h: [135, 150],
     text: "Kompaktes Falbpferd aus Norwegen. Fünf Farbschläge: Braunfalbe (norweg. brunblakk, rund 90 %), Rotfalbe (rødblakk), Mausfalbe (grå), Weißfalbe (ulsblakk) und Gelbfalbe (gulblakk, sehr selten). Typisch sind die Urzeichnung – Aalstrich vom Schweif über den Rücken bis in die Mähne, oft Zebrastreifen an den Beinen und dunkle Streifen am Widerrist bzw. an der Schulter – und die kurz und aufrecht geschnittene Stehmähne mit dunklem Mittelstreifen. Weiße Abzeichen sind im Zuchtstandard unerwünscht: höchstens ein kleiner Stern bei Stuten und Wallachen, bei Hengsten noch strenger",
-    farben: ["braunfalbe", "rotfalbe", "mausfalbe", "weissfalbe", "gelbfalbe"], farbAnteil: { braunfalbe: .72, rotfalbe: .12, mausfalbe: .07, weissfalbe: .03, gelbfalbe: .06 },
+    farben: ["braunfalbe", "rotfalbe", "mausfalbe", "weissfalbe", "gelbfalbe"], farbAnteil: { braunfalbe: .72, rotfalbe: .12, mausfalbe: .07, weissfalbe: .06, gelbfalbe: .03 },
     k: { nk: 1, len: .98, depth: .52, legT: .1, neck: .45, nAng: 48, crest: .08, head: .44, hAng: 50, profile: 0, hw: 1.1, jw: 1.1, muz: 1, ear: .085, mane: "fjord", maneLen: 0, vol: 1, fore: .5, tail: .75, tvol: 1, tset: .2, feather: .15, croup: .5, hq: 1.05, eye: 1 } },
   { id: "haflinger", name: "Haflinger", herkunft: "Südtirol / Österreich", h: [138, 150],
     text: "Kräftiges Gebirgspferd, immer fuchsfarben mit heller Flachsmähne.",
@@ -313,8 +314,10 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   const ganzWeiss = fastWeiss || DW >= 2;
   const MG = opt.glanz != null ? opt.glanz : C.glanzLex || (k.metallic ? 1 : 0), fidT = C.lexBasis || farbId, bronzeOpt = opt.bronze || C.bronzeLex;   // v485: Lexikon-Einträge (Enzyklopädie) mit festem Glanz/Ton   // v446 (Dome): Metallglanz 0–1 – nicht jeder Achal-Tekkiner glänzt gleich stark, Mischlinge anteilig
   const bronze = MG > .3 && !!bronzeOpt && /buckskin/.test(fidT), perl = MG > .3 && !!bronzeOpt && /isabell/.test(fidT);   // v482: Perlglanz – Isabell (Doppel-Cream) golden-perlmuttfarben statt silbrig   // v482 (Dome): Bronzeglanz – heller, rosig-goldener Buckskin
-  const gold = !bronze && MG > .3 && /palomino|buckskin|falbe/i.test(fidT) && !/mausfalbe|weissfalbe/.test(fidT);   // v479: Mausfalbe (schwarzbasiert) und Weißfalbe nicht golden   // v443: Achal-Tekkiner „Gold“ – satteres Goldgelb, dazu goldener Glanz (unten)
-  const body = perl ? mix(C.body, "#ead3a2", .55 * MG) : bronze ? mix(C.body, "#d4a878", .6 * MG) : gold ? mix(C.body, "#e8a92a", .5 * MG) : MG > .3 && /isabell/.test(farbId) ? mix(C.body, "#dfe3ea", .35 * MG) : C.body, mane = DW === 3 ? "#efebe2" : (LACK_NEU && opt.lp && opt.lp.lack > 0 ? mix(C.mane, "#ecdcb8", Math.min(.8, opt.lp.lack * .85)) : C.mane), head = DW === 3 ? "#f4f1ea" : C.head || body;
+  const gold = !bronze && MG > .3 && /palomino|buckskin|falbe/i.test(fidT) && !/mausfalbe|weissfalbe|smokygrulla/.test(fidT);   // v479: Mausfalbe (schwarzbasiert) und Weißfalbe nicht golden   // v443: Achal-Tekkiner „Gold“ – satteres Goldgelb, dazu goldener Glanz (unten)
+  let body = perl ? mix(C.body, "#ead3a2", .55 * MG) : bronze ? mix(C.body, "#d4a878", .6 * MG) : gold ? mix(C.body, "#e8a92a", .5 * MG) : MG > .3 && /isabell/.test(farbId) ? mix(C.body, "#dfe3ea", .35 * MG) : C.body;
+  let mane = DW === 3 ? "#efebe2" : (LACK_NEU && opt.lp && opt.lp.lack > 0 ? mix(C.mane, "#ecdcb8", Math.min(.8, opt.lp.lack * .85)) : C.mane), head = DW === 3 ? "#f4f1ea" : C.head || body;
+  if (opt.smoky && !gold) { body = mix(body, "#5a4433", .28); mane = mix(mane, "#4a3a2e", .18); if (!C.head) head = body; }   // Dome 30.10.: Smoky Black (eine Anlage Cream auf Rappe) – fast schwarz, leicht bräunlich-matt
   const pts = C.points || null;
   const hoof = C.pattern === "tobiano" || ganzWeiss ? "#b8a88f" : (C.hoof || "#3b3531");
   const SW = "#f7f5f1", spotFarbe = C.spot || mix(body, pts || body, .35);
@@ -344,7 +347,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     if (DW === 2) { ab(0, .4); schweifWeiss = .6; }
   }
   const tailCol = DW === 3 ? mane : dunKern ? dunHell : (k.mane === "fjord" ? mix(maneOuter, maneStripe, 0.25) : mane);
-  if (mstil === "fjord" && k.mane !== "fjord") { maneOuter = dunKern ? dunHell : mane; maneStripe = dunKern; }   // Stehmähne: mit Aalstrich zweifarbig wie beim Norweger
+  const frost = C.stripe && k.mane !== "fjord" && !ganzWeiss && DW !== 3 ? mix(mane, "#efe6d2", .62) : null;   // Dome 30.10.: Frosting bei jeder Falbe – hellere Haare am Mähnenrand und am Schweifansatz
+  if (mstil === "fjord" && k.mane !== "fjord") { maneOuter = dunKern ? dunHell : frost || mane; maneStripe = dunKern || (frost ? mane : null); }   // Stehmähne: mit Aalstrich zweifarbig wie beim Norweger
   if (mstil !== "fjord" && k.mane === "fjord") { maneOuter = mix("#efe6d2", C.stripe || mane, 0.2); maneStripe = null; }
 
   // --- Rumpf ---
@@ -920,6 +924,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       `<filter id="uf-${uid}" filterUnits="userSpaceOnUse" x="${f(Pn.x - 3 * hl)}" y="${f(Pn.y - 3 * hl)}" width="${f(6 * hl)}" height="${f(6 * hl)}"><feGaussianBlur stdDeviation="${f(0.15 * hl)}"/></filter><g clip-path="url(#cr-${uid})"><path d="${eckig(q)}" fill="url(#uh-${uid})" filter="url(#uf-${uid})"/></g>`;
   }
   if (C.stripe && !ganzWeiss && !WEISS_MUSTER.includes(C.pattern)) g += aalStrich();
+  else if (opt.nd1 && !C.stripe && !ganzWeiss && dunkelWert > 45) g += `<path d="${glatt([P(0.2 * L, -H + 0.5), P(0.42 * L, top + 2.5), P(0.62 * L, top + 1.6), P(0.82 * L, croupY), Tb], false)}" fill="none" stroke="${mix(body, "#120c08", .6)}" stroke-width="3.2" stroke-linecap="round" opacity=".55" transform="translate(0 1.6)" clip-path="url(#cr-${uid})"/>`;   // Dome 30.10.: nd1 – schwacher Aalstrich ohne Falb-Verdünnung
   if (C.muzzle && !eigenKopf) g += `<ellipse cx="${f(hp(0.93, 0.12).x)}" cy="${f(hp(0.93, 0.12).y)}" rx="${f(0.13 * hl)}" ry="${f(0.1 * hl)}" transform="rotate(${f(90 - k.hAng)} ${f(hp(0.93, 0.12).x)} ${f(hp(0.93, 0.12).y)})" fill="${C.muzzle}" opacity=".8" filter="url(#wm-${uid})"/>`;
   // Abzeichen (weiß): Kopf und Beine
   const abz = opt.abzeichen || (C.pattern === "sabino" ? { kopf: rnd() < .6 ? "blesse" : "laterne", beine: rnd() < .55 ? "hochweiss" : "strumpf" }
@@ -1119,6 +1124,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
       return `<clipPath id="sws-${uid}"><path d="${schweifD}"/></clipPath><g clip-path="url(#sws-${uid})">${h}</g>`; })() : "") +
     inkFein(tailStr(0, 0.88), 1.1, 'opacity=".55"') + inkFein(tailStr(2.5 + tv, 0.7), 1, 'opacity=".45"') +
     `<path d="${tailStr(-1.5, 0.6)}" fill="none" stroke="${mix(tailCol, "#ffffff", .45)}" stroke-width="1.6" stroke-linecap="round" opacity=".7" vector-effect="non-scaling-stroke"/>` +
+    (frost ? `<clipPath id="tf-${uid}"><path d="${schweifD}"/></clipPath><g clip-path="url(#tf-${uid})">${[-3, -1.2, 0.6, 2.4, 4.2].map(o => `<path d="${tailStr(o + tv, 0.32)}" fill="none" stroke="${frost}" stroke-width="1.4" stroke-linecap="round" opacity=".8"/>`).join("")}</g>` : "") +
     (opt.filz > 0 ? (() => { const rf = zufall((opt.seed || rasseId) + "-filz"), m = Math.round(1 + Math.min(100, opt.filz) / 100 * 7); let h = "";
       for (let i = 0; i < m; i++) { const t = 0.2 + rf() * 0.65, x = X + 2 + 6 * s + tv * 2.5 + (rf() - 0.5) * 6, y = Y + tl * t, a = rf() * 180;
         h += `<path d="M${f(x - 2.2)},${f(y)}l4.4,0" transform="rotate(${f(a)} ${f(x)} ${f(y)})" stroke="#d9b45a" stroke-width="1.1" stroke-linecap="round"/>`; }
@@ -1183,6 +1189,11 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     }
     const h1 = add(kamm(0.3), mul(nOut, 0.5)), h2 = add(kamm(0.75), mul(nOut, 0.5));
     g += `<path d="M${f(h1.x)},${f(h1.y)}Q${f(kamm(0.52).x)},${f(kamm(0.52).y + 2)} ${f(h2.x)},${f(h2.y)}" fill="none" stroke="${mix(maneOuter, "#ffffff", .45)}" stroke-width="2" stroke-linecap="round" opacity=".7" vector-effect="non-scaling-stroke"/>`;
+
+  }
+  if (frost && (mstil === "lang" || mstil === "kurz")) { const runter = norm(P(0.12, 1));
+    const rand = [0.04, 0.2, 0.36, 0.52, 0.68, 0.84, 0.97].map(t => add(kamm(t), mul(nOut, 0.4 + k.vol * 1.1)));
+    g += `<g clip-path="url(#mf-${uid})"><clipPath id="mf-${uid}"><path d="${maehneD}"/></clipPath><path d="${glatt(rand, false)}" fill="none" stroke="${frost}" stroke-width="2.6" stroke-linecap="round" opacity=".8"/></g>`;   // heller Haarrand oben an der Mähne
   }
   if (streifenD) g += `<path d="${streifenD}" fill="${maneStripe}"/>`;
 
@@ -1584,8 +1595,9 @@ const FARBBESCHREIBUNG = {
   braunfalbe: "Falbfarben mit Aalstrich und dunklen Beinen.",
   rotfalbe: "Falbe auf Fuchsbasis, rötlicher Aalstrich.",
   mausfalbe: "Mausgraues Fell mit dunklem Kopf, Beinen und Aalstrich (Grullo).",
-  weissfalbe: "Sehr helle, fast weiße Falbfarbe.",
-  gelbfalbe: "Gelbliche Falbfarbe mit heller Mähne.",
+  weissfalbe: "Dunalino: Rotfalbe mit einem Cream-Gen – sehr helles, fast weißes Fell, helle Mähne mit rötlichem Aalstrich. Beim Fjordpferd heißt sie Weißfalbe (ulsblakk).",
+  gelbfalbe: "Dunskin: Braunfalbe mit einem Cream-Gen – hell gelbliches Fell, dunkle Mähne und Beine, Aalstrich. Beim Fjordpferd heißt sie Gelbfalbe (gulblakk) und ist sehr selten.",
+  smokygrulla: "Smoky Grulla: Mausfalbe mit einem Cream-Gen – heller, sandig-grauer Körper, dunkler Kopf, schwarze Mähne und Beine, Aalstrich.",
   windfarben: "Dunkles Fell mit heller, silbriger Mähne (Silver-Gen).",
   mushroom: "Sepia-Fell (rauchiges Braun) mit heller Flachsmähne – Mushroom-Gen, beim Shetlandpony.",
   mushbrauner: "Brauner mit sepiafarbenem Körper, aber schwarzer Mähne, Schweif und Beinen (Mushroom-Gen auf Braun).",

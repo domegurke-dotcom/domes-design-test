@@ -21,6 +21,7 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
     for (const [i, z0] of (await pg.$$eval('#kopfRinge [data-vstab]', a => a.map(x => x.dataset.vstab))).entries()) { await pg.click(`#kopfRinge .kring:nth-child(${i + 1})`); await pg.waitForTimeout(350); const z = await pruefFenster();
       ok(`${name}: Ring ${i + 1} öffnet Versorgung → ${z0}`, z.f === 'versorgung' && z.sicht && await pg.evaluate(t => bxTab === t, z0), z); await zu(); }
     for (const k of syms) {
+      if (k === 'einstreu') { await pg.click(`#boxUI [data-bx="${k}"]`); await pg.waitForTimeout(300); const z = await pruefFenster(); ok(`${name}: Einstreu öffnet das Einstreu-Fenster und die Wahl klappt`, z.dlg && /Einstreu/.test(z.txt), z); const nE = await pg.evaluate(() => document.querySelectorAll('#dlgInhalt [data-estreu]').length); ok(`${name}: Einstreu-Fenster bietet die Einstreu-Sorten zum Antippen an`, nE >= 3, nE); await pg.evaluate(() => { const b = document.querySelector('#dlgInhalt [data-estreu]'); if (b) b.click(); }); await pg.waitForTimeout(200); await zu(); continue; }
       if (k === 'fuettern') { await pg.click(`#boxUI [data-bx="${k}"]`); await pg.waitForTimeout(300); const z = await pruefFenster(); ok(`${name}: Füttern öffnet ein Fenster`, z.dlg, z); await zu(); continue; }
       await pg.click(`#boxUI [data-bx="${k}"]`); await pg.waitForTimeout(350);
       const items = await pg.$$eval('#boxUI [data-bxring]', a => a.map(x => x.dataset.bxring + (x.dataset.aus ? '(aus)' : '')));

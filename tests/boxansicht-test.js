@@ -20,7 +20,7 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
       aufPfeil: sym.some(s => pfeile.some(p => ueber(R(s), p))), aufSchild: [...sym, ...chips].some(s => ueber(R(s), schild)), aufPferd: sym.some(s => ueber(R(s), pferd)), ueberlapp: sym.some((s, i) => sym.some((t, j) => j > i && ueber(R(s), R(t)))) }; });
   let L = await lage();
   ok('PC: neue Boxansicht ist an', L.an, L);
-  ok('Anfänger, gesundes Pferd: 6 Symbole, kein Tierarzt', L.sym.length === 6 && !L.sym.includes('tierarzt'), L.sym);
+  ok('Anfänger, gesundes Pferd: 7 Symbole, kein Tierarzt', L.sym.length === 7 && !L.sym.includes('tierarzt'), L.sym);
   ok('drei Ringe in der Kopfleiste (Gesund, Wohl, Pflege)', L.ringe.length === 3 && /Gesund/.test(L.ringe[0]) && /Pflege/.test(L.ringe[2]), L.ringe);
   ok('keine Plakette, keine Denkblase beim gesunden Pferd', !L.chips.length && !L.denk, L);
   ok('Symbole liegen nicht auf Pfeil, Schild oder Pferd und überlappen sich nicht', !L.aufPfeil && !L.aufSchild && !L.aufPferd && !L.ueberlapp, L);

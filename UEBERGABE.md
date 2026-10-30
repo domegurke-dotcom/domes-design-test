@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 30.10. (Claude Team, Opus) – v918: Splashed White in 5 Formen (SW1–SW5, zwei Gene, SW3–5 reinerbig tödlich), Dun Champagne
+Details CLAUDE.md v918; Tests seltenheit-, schimmel-rar-, raritaeten-, zucht-, spielstand-, krankheiten-test ✓. **Offen (Dome 30.10.):** bei allen Farben nur deutsche Namen, englische Bezeichnung erst in Klammern in der Beschreibung – Vorschlagsliste an Dome gegeben, wartet auf Antwort.
+
 ### 30.10. (Claude Team, Opus) – v916/v917: Sandy Chestnut, Champagne, Erklärfenster Splash/Overo/Champagne
 v916 Hellfuchs (Sandy Chestnut) `sandfuchs` über `ex.ton`; v917 Champagne-Gen `Ch` (Quarter/Paint/Appaloosa, selten) + Erklärfenster splash/overo/champagne. Tests seltenheit-, schimmel-rar-, raritaeten-, zucht-, spielstand-test ✓. Champagne-Häufigkeit ist meine Schätzung. Offen: Splashed White ist im Spiel ein Gen (in echt SW1–SW5 an zwei Genen, SW3–5 reinerbig tödlich) – nur auf Domes Wunsch ändern.
 

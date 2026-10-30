@@ -50,7 +50,7 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
   // krank draußen: Plakette statt Denkblase, Tierarzt-Symbol rot, Klemmbrett nennt den Befund
   await pg.evaluate(() => { const p = spiel.boxen[0].pferd; befundListe(p).push({ id: 'bfS', art: 'husten', grad: 2, seit: spiel.tag, ursache: 'Test', bemerkt: { von: 'du', tag: spiel.tag }, meldungen: [], vermutung: null }); zeigeStall(); zeigeTag(); }); await pg.waitForTimeout(400);
   let k = await pg.evaluate(() => ({ chips: [...document.querySelectorAll('.bxchip')].map(x => x.textContent), denk: !!document.querySelector('.bxdenk'), ta: (document.querySelector('#boxUI [data-bx="tierarzt"] .bxd') || {}).className, ring: (document.querySelector('#kopfRinge .kring') || {}).textContent }));
-  ok('Pensionspferd krank auf dem Sandpaddock: Denkblase auch draußen (Dome 25.10.), Plakette Besitzer informieren, Tierarzt-Symbol rot', k.denk && k.chips.some(c => /Besitzer/.test(c)) && /\br\b/.test(k.ta || ''), k);
+  ok('Pensionspferd krank auf dem Sandpaddock: keine Denkblase seit v847, Plakette Besitzer informieren, Tierarzt-Symbol rot', k.chips.some(c => /Besitzer/.test(c)) && /\br\b/.test(k.ta || ''), k);
   if (ORD) await pg.screenshot({ path: `${ORD}/alle-krank-sandpaddock.png` });
   await pg.click('#boxUI [data-bx="tierarzt"]'); await pg.waitForTimeout(400);
   k = await pg.evaluate(() => ({ f: bxFenster, tab: bxTab, besV: !!document.querySelector('#info [data-besvor]'), ta: !!document.getElementById('tierarztKnopf') }));

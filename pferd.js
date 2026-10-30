@@ -41,9 +41,9 @@ const FARBEN_BASIS = {
   rappschecke:   { name: "Rappschecke",            body: "#211e1f", mane: "#121011", hoof: "#2c2a29", pattern: "tobiano" },
   braunschecke:  { name: "Braunschecke",           body: "#7c3f1d", mane: "#161212", points: "#1b1616", hoof: "#2c2a29", pattern: "tobiano" },
   fuchsschecke:  { name: "Fuchsschecke",           body: "#b65a29", mane: "#a64c22", hoof: "#4a3a30", pattern: "tobiano" },
-  blueroan:      { name: "Blauschimmel", roanBase: "#2b292a",              body: "#757c82", mane: "#1a1818", points: "#222021", head: "#2c2a2a", pattern: "roan", hoof: "#2c2a29" },
-  bayroan:       { name: "Stichelbrauner", roanBase: "#7c3f1d",               body: "#946a52", mane: "#161212", points: "#1b1616", head: "#3a2218", pattern: "roan", hoof: "#2c2a29" },
-  rotschimmel:   { name: "Rotschimmel", roanBase: "#b65a29",     body: "#c3947c", mane: "#8a4424", points: "#8f4a28", head: "#9a4e2a", pattern: "roan", hoof: "#4a3a30" },
+  blueroan:      { name: "Blue Roan", roanBase: "#2b292a",              body: "#757c82", mane: "#1a1818", points: "#222021", head: "#2c2a2a", pattern: "roan", hoof: "#2c2a29" },
+  bayroan:       { name: "Bay Roan", roanBase: "#7c3f1d",               body: "#946a52", mane: "#161212", points: "#1b1616", head: "#3a2218", pattern: "roan", hoof: "#2c2a29" },
+  rotschimmel:   { name: "Red Roan", roanBase: "#b65a29",     body: "#c3947c", mane: "#8a4424", points: "#8f4a28", head: "#9a4e2a", pattern: "roan", hoof: "#4a3a30" },
   hellbrauner:   { name: "Hellbrauner",            body: "#a8643a", mane: "#1d1716", points: "#2a201c", hoof: "#2c2a29" },
   schwarzbrauner:{ name: "Schwarzbrauner",         body: "#2a1d18", mane: "#100d0d", points: "#141010", muzzle: "#8a5a3a", hoof: "#2c2a29" },
   lethalwhite:   { name: "Weiß (tödliches Overo-Weiß)",    body: "#f7f3ee", mane: "#f3eee6", muzzle: "#e3b5ae", hoof: "#cdbfa8" },
@@ -51,12 +51,12 @@ const FARBEN_BASIS = {
 // Scheckungen, die auf jeder Grundfarbe vorkommen: Kürzel + "_" + Grundfarbe (z. B. "ov_brauner")
 //  to Tobiano (v505) · ov Overo · tv Tovero · tg Tigerschecke · fs Wenigpunkt-Tiger · sb Schabrackentiger · sk Schabracke ohne Punkte (Snowcap) · sa Sabino (v316) · sw Splashed White (v426)
 const MUSTER = {
-  to: ["Schecke", "tobiano"], ov: ["Rahmenschecke", "overo"], tv: ["Rahmen-Plattenschecke", "tovero"], tg: ["Tigerschecke", "leopard"], fs: ["Wenigpunkt-Tiger", "fewspot"], sb: ["Schabrackentiger", "blanket"], sk: ["Schabracke ohne Punkte", "snowcap"], sa: ["Stichelschecke", "sabino"], rn: ["Stichelschimmel", "roan"], sw: ["Splash-Schecke", "splash"],
+  to: ["Schecke", "tobiano"], ov: ["Rahmenschecke", "overo"], tv: ["Rahmen-Plattenschecke", "tovero"], tg: ["Tigerschecke", "leopard"], fs: ["Wenigpunkt-Tiger", "fewspot"], sb: ["Schabrackentiger", "blanket"], sk: ["Schabracke ohne Punkte", "snowcap"], sa: ["Stichelschecke", "sabino"], rn: ["Roan", "roan"], sw: ["Splash-Schecke", "splash"],
 };
 function musterFarbe(id, t) {
   const m = /^(to|ov|tv|tg|fs|sb|sk|sa|sw|rn)_(.+)$/.exec(id); if (!m || !t[m[2]]) return null;   // v505: to_ = Tobiano auf jeder Grundfarbe (Rapp-/Braun-/Fuchsschecke bleiben eigene Farben)
   const B = t[m[2]], [name, pattern] = MUSTER[m[1]], e = { ...B, pattern, name: `${name} (${B.name.replace(/ \(.*\)$/, "")})` };
-  if (m[1] === "rn") { const kurz = B.name.replace(/ \(.*\)$/, "").replace(/^Dunkelfuchs mit Flachsmähne$/, "Dunkelfuchs (Flachsmähne)"); return { ...B, pattern: "roan", roanBase: B.body, name: `Stichelschimmel (${kurz})`, body: mix(B.body, "#f2efe9", .4), head: B.head || B.body, points: B.points || mix(B.body, "#000000", .3) }; }   // Dome 30.10.: Roan als Muster über jeder Grundfarbe – Kopf und Beine behalten die Grundfarbe
+  if (m[1] === "rn") { const kurz = B.name.replace(/ \(.*\)$/, "").replace(/^Dunkelfuchs mit Flachsmähne$/, "Dunkelfuchs (Flachsmähne)"); return { ...B, pattern: "roan", roanBase: B.body, name: `${kurz} Roan${m[2] === "hellfuchs" ? " (Strawberry Roan)" : /^(dfuchs|dunkelfuchs)$/.test(m[2]) ? " (Lilac Roan)" : ""}`, body: mix(B.body, "#f2efe9", .4), head: B.head || B.body, points: B.points || mix(B.body, "#000000", .3) }; }   // Dome 30.10.: Roan als Muster über jeder Grundfarbe – Kopf und Beine behalten die Grundfarbe
   if (pattern === "leopard" || pattern === "fewspot") delete e.stripe;   // v510 (Dome): Aalstrich bleibt bei Scheckungen (wird unter dem Weiß gezeichnet), nur bei fast weißen Tigern nicht
   if (pattern === "tovero" || pattern === "fewspot") { e.head = mix(B.head || B.body, "#f7f5f1", pattern === "fewspot" ? .75 : .2); e.hoof = "#b8a88f"; }
   if (pattern === "leopard") { e.head = mix(B.head || B.body, "#f7f5f1", .45); e.hoof = "#b8a88f"; }
@@ -1585,7 +1585,7 @@ const FARBBESCHREIBUNG = {
   schimmel: "Weißes Fell – Schimmel werden dunkel geboren und hellen mit dem Alter auf.",
   grauschimmel: "Rappe mit Schimmel-Gen auf dem Weg zum weißen Schimmel: immer mehr weiße Haare im schwarzen Fell.",
   braunschimmel: "Brauner mit Schimmel-Gen auf dem Weg zum weißen Schimmel – die schwarzen Beine und das Langhaar hellen mit auf.",
-  fuchsschimmel: "Fuchs mit Schimmel-Gen: rötlich-graues Fell, wird mit den Jahren weiß. Nicht zu verwechseln mit dem Rotschimmel (Stichelschimmel, englisch Roan).",
+  fuchsschimmel: "Fuchs mit Schimmel-Gen: rötlich-graues Fell, wird mit den Jahren weiß. Nicht zu verwechseln mit dem Red Roan.",
   fliegenschimmel: "Spätphase mancher Schimmel: im weißen Fell erscheinen wieder kleine farbige Sprenkel – meist ab etwa 8–15 Jahren.",
   apfelschimmel: "Grauschimmel mit hellen, runden Flecken (Äpfeln) im Fell.",
   rappe: "Schwarzes Fell, schwarze Mähne und schwarzer Schweif. Sommerrappen sind im Sommerfell tiefschwarz und im Winterfell ausgeblichen, Winterrappen sind nur im Winterfell richtig schwarz und bleichen im Sommer in der Sonne rostbraun aus.",
@@ -1618,7 +1618,7 @@ const FARBBESCHREIBUNG = {
   rappschecke: "Schwarz-weiß gescheckt (Plattenschecke, englisch Tobiano).",
   braunschecke: "Braun-weiß gescheckt.",
   fuchsschecke: "Fuchsfarben-weiß gescheckt.",
-  blueroan: "Schwarzes Fell mit eingestreuten weißen Haaren, wirkt bläulich (Stichelschimmel auf Rappe, englisch Blue Roan).",
+  blueroan: "Schwarzes Fell mit eingestreuten weißen Haaren, wirkt bläulich (Roan auf Rappe).",
   hellbrauner: "Heller, rötlich-goldener Brauner mit schwarzen Beinen, Mähne und Schweif. Wie hell ein Brauner ist, wird über mehrere Gene vererbt.",
   schwarzbrauner: "Fast schwarzer Brauner – erkennbar am helleren, rötlichen „Kupfermaul“, kupferfarbenen Haaren um die Augen, in den Flanken und hinter dem Ellbogen (Agouti-Variante At).",
   lethalwhite: "(englisch Lethal White) Fast ganz weißes Fohlen mit rosa Haut von zwei Overo-Eltern (O/O). Ihm fehlen Nervenzellen im Darm – es stirbt in den ersten Lebenstagen (Lethal-White-Overo-Syndrom).",
@@ -1630,8 +1630,8 @@ const FARBBESCHREIBUNG = {
   fs_rappe: "Wenigpunkt-Tiger (Fewspot): fast ganz weiß mit nur wenigen Punkten – reinerbiger Tiger (Lp/Lp). Lp/Lp-Pferde sind nachtblind (CSNB).",
   sb_rappe: "Schabrackentiger: weiße „Decke“ über Kruppe und Hüfte mit farbigen Punkten. Gen Lp ohne PATN1.",
   sk_brauner: "Schabracke ohne Punkte (Snowcap): weiße Decke ohne Punkte – reinerbiger Tiger (Lp/Lp) ohne PATN1. Lp/Lp-Pferde sind nachtblind (CSNB).",
-  bayroan: "Stichelschimmel auf Brauner (englisch Bay Roan): weiße Haare im braunen Fell, Kopf, Mähne, Schweif und Beine bleiben dunkel – hellt nicht auf.",
-  rotschimmel: "Stichelschimmel auf Fuchs (englisch Red Roan): schon bei der Geburt weiße Stichelhaare im roten Fell – hellt nicht auf. Nicht zu verwechseln mit einem Fuchs, der zum Schimmel wird.",
+  bayroan: "Roan auf Brauner: weiße Haare im braunen Fell, Kopf, Mähne, Schweif und Beine bleiben dunkel – hellt nicht auf.",
+  rotschimmel: "Roan auf Fuchs: schon bei der Geburt weiße Stichelhaare im roten Fell – hellt nicht auf. Nicht zu verwechseln mit einem Fuchs, der zum Schimmel wird.",
 };
 // Scheckungs-Beispiele für das Lexikon
 ["ov_brauner", "tv_fuchs", "tg_brauner", "fs_rappe", "sb_rappe", "sk_brauner", "sa_brauner", "sw_brauner"].forEach(id => FARBEN[id]);

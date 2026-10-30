@@ -9,7 +9,7 @@ const [W, H] = (process.argv[2] || '844x390').split('x').map(Number), ORD = proc
   const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : ''));
   let R = await pg.evaluate(() => { const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : ''));
     document.getElementById('dlg').hidden = true; speicherSperre = true; spiel.tippsAus = true; VET.verbotAb = 99; spiel.geld = 20000;
-    spiel.stufenAn = true; spiel.spieler.stufe = 'anf'; zeigeBoxen(); ok('Anfänger: alte Boxenansicht, kein Whiteboard', !document.getElementById('wbUmschalt') && !document.querySelector('.wb') && !!document.querySelector('.boxen-liste'));
+    spiel.stufenAn = true; spiel.spieler.stufe = 'anf'; zeigeBoxen(); ok('Anfänger: Whiteboard offen (seit v897)', !!document.querySelector('.wb'));
     spiel.spieler.stufe = 'fort'; zeigeBoxen(); ok('Fortgeschritten: Stall zeigt direkt das Whiteboard', !!document.querySelector('.wb') && !document.getElementById('wbUmschalt'));
     while (spiel.boxen.length < 4) spiel.boxen.push({ pferd: null });
     const mk = (n, g) => { const P = neuesPferd({ rasse: 'paint', geschlecht: g, alter: 8, name: n }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); return P; };

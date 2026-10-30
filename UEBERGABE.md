@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 30.10. (Claude Team, Opus) – v927: KIT-Gen, Sabino-Weiß, Tintenflecke, Dominant White Araber, dünner Leopard-Schweif
+Domes Ja zu allen 5 Punkten aus v926. Tests kit-, seltenheit-, raritaeten-, schimmel-rar-, zucht-, spielstand-, krankheiten-test ✓. Selbst gesetzt: Araber W .00005, `LP_DUENN` .5, Tintenflecke 5–11 Stück. Als Nächstes: Domes 4 neue PDFs (Size/Build, Light Horses, Pinto vs Paint, Grey) für die Enzyklopädie.
+
 ### 30.10. (Claude Team, Opus) – v926: Erklärfenster Tobiano, Sabino, Leopard, Dominant White
 Aus Domes 4 PDFs (Bilder darin fehlten großteils). Erklärfenster-Bilder halten jetzt die Rand-Regel (Nase/Ohren gleicher Abstand). Offen, an Dome gefragt: To/Sb/Rn/W sind in echt alle KIT-Allele (max. 2 je Pferd), im Spiel getrennte Gene; Sb/Sb im Spiel nicht fast weiß; To/To ohne „Tintenflecke“; W3 beim Araber (seit v738 kein W); Leopard-Schweif dünn wird nicht gezeichnet.
 

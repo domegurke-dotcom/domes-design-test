@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 30.10. (Claude Team, Opus) – v926: Erklärfenster Tobiano, Sabino, Leopard, Dominant White
+Aus Domes 4 PDFs (Bilder darin fehlten großteils). Erklärfenster-Bilder halten jetzt die Rand-Regel (Nase/Ohren gleicher Abstand). Offen, an Dome gefragt: To/Sb/Rn/W sind in echt alle KIT-Allele (max. 2 je Pferd), im Spiel getrennte Gene; Sb/Sb im Spiel nicht fast weiß; To/To ohne „Tintenflecke“; W3 beim Araber (seit v738 kein W); Leopard-Schweif dünn wird nicht gezeichnet.
+
 ### 30.10. (Claude Team, Opus) – v919–v922: Lichtflecke bei Ruß-Farben, Farbnamen
 v919 Lichtflecke an Schulter/Hüfte auch bei Dunkelbrauner/Dunkelfuchs/Rußfalbe. v920 erfundene deutsche Namen → von Dome als irreführend abgelehnt, v921 Roans wieder englisch, **v922: beides zurückgenommen**, nur echte deutsche Namen ohne englischen Zusatz (Regel in CLAUDE.md v922). Offen: Rassen-Texte nennen Farben teils mit englischen Namen (passt zur Regel, wenn kein deutscher existiert). v923: Rußfalbe → Sooty Buckskin, Tekkiner Gold-/Bronze-Buckskin (Domes Ja). v924 Fohlenfell im Spiel, v925 alle 11 Erklärfenster neu wie die PDFs (Domes Ja).
 

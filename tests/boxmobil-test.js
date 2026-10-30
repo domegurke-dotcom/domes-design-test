@@ -25,13 +25,13 @@ const [W, H] = (process.argv[2] || '390x844').split('x').map(Number), ORD = proc
   if (HOCH) {
     const z = await pg.evaluate(() => ({ reihe: [...document.querySelectorAll('#bxUnten .bx-reihe [data-bx]')].map(x => x.dataset.bx), balken: [...document.querySelectorAll('#bxUnten .bx-bal')].map(x => x.dataset.vstab), kb: !!document.querySelector('#bxUnten .klemmbrett'),
       ringe: getComputedStyle(document.getElementById('kopfRinge')).display, imBild: document.querySelectorAll('#boxUI .bxs').length, stallUnten: document.getElementById('stall').getBoundingClientRect().bottom, reiheOben: document.querySelector('#bxUnten .bx-reihe').getBoundingClientRect().top }));
-    ok('hochkant: Symbolreihe unter dem Bild (Tierarzt, Füttern, Orte, Ausrüstung, Steckbrief)', z.reihe.join() === 'tierarzt,fuettern,orte,ausruestung,steckbrief' && z.reiheOben >= z.stallUnten - 1, z);
+    ok('hochkant: Symbolreihe unter dem Bild (Tierarzt, Füttern, Einstreu, Orte, Ausrüstung, Steckbrief)', z.reihe.join() === 'tierarzt,fuettern,einstreu,orte,ausruestung,steckbrief' && z.reiheOben >= z.stallUnten - 1, z);
     ok('hochkant: drei Balken (Gesundheit, Wohlbefinden, Pflege), keine Ringe oben, keine Symbole im Bild', z.balken.join() === 'gesund,heute,heute' && z.ringe === 'none' && z.imBild === 0, z);
     ok('hochkant: Klemmbrett „Flocke · heute“ unter den Balken', z.kb);
     ok('hochkant: Symbolreihe passt in die Breite', await imBild('#bxUnten .bx-reihe .bxs'));
   } else {
     const z = await pg.evaluate(() => ({ sym: [...document.querySelectorAll('#boxUI .bxs')].map(x => x.dataset.bx), ringe: [...document.querySelectorAll('#kopfRinge .kring')].length, unten: document.getElementById('bxUnten').offsetParent }));
-    ok('quer: Symbole am Rand, Ringe in der Kopfleiste, nichts unter dem Bild', z.sym.join() === 'tierarzt,fuettern,orte,ausruestung,steckbrief' && z.ringe === 3 && !z.unten, z);
+    ok('quer: Symbole am Rand, Ringe in der Kopfleiste, nichts unter dem Bild', z.sym.join() === 'tierarzt,fuettern,einstreu,orte,ausruestung,steckbrief' && z.ringe === 3 && !z.unten, z);
     ok('quer: Symbole überdecken sich nicht', !(await ueberlapp('#boxUI .bxs')), await ueberlapp('#boxUI .bxs'));
     ok('quer: Ringe überdecken weder Geld noch Brief/Menü', await pg.evaluate(() => { const R = [...document.querySelectorAll('#kopfRinge .kring')].map(x => x.getBoundingClientRect()), A = ['kontoAnzeige', 'kopfTagEnde'].map(id => document.getElementById(id)).filter(x => x && x.offsetParent).map(x => x.getBoundingClientRect()), m = document.querySelector('header .menue').getBoundingClientRect();
       return R.every(r => A.every(a => r.left >= a.right - 1) && r.right <= m.left - 50); }));

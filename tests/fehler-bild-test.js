@@ -19,6 +19,15 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   await pg.fill('#aufFehlerText', 'Test mit Bild'); await pg.click('[data-af="fertig"]');
   r = await pg.evaluate(() => { const e = AUF.laufend.eintraege.filter(x => x.a === 'FEHLER').pop(); return e ? { x: e.x, bild: (e.bild || '').slice(0, 22) } : null; });
   ok('Bild wird als JPEG am Eintrag gespeichert', r && r.x === 'Test mit Bild' && /^data:image\/jpeg/.test(r.bild), JSON.stringify(r) + ' | ' + hinweis);
+  // 3. Bildschirm aufnehmen (Handy-Weg: Ansicht wird nachgezeichnet, Eingabefenster ist nicht im Bild)
+  await pg.evaluate(() => { spiel.tippsAus = true; aufFehlerFrage(); }); await pg.click('[data-af="ja"]');
+  await pg.evaluate(() => { Object.defineProperty(navigator, 'userAgent', { get: () => 'Android' }); });
+  await pg.click('[data-af="schirm"]'); await pg.waitForTimeout(2500);
+  r = await pg.evaluate(() => ({ t: document.getElementById('aufFehlerBild').textContent, sichtbar: document.getElementById('aufFehlerFenster').style.visibility }));
+  ok('Bildschirm aufnehmen ohne getDisplayMedia: Bild angehängt, Fenster danach wieder sichtbar', /Bild angehängt/.test(r.t) && r.sichtbar === '', JSON.stringify(r));
+  await pg.fill('#aufFehlerText', 'mit Schirm'); await pg.click('[data-af="fertig"]');
+  r = await pg.evaluate(() => new Promise(res => { const e = AUF.laufend.eintraege.filter(x => x.a === 'FEHLER').pop(); const im = new Image(); im.onload = () => { const c = document.createElement('canvas'); c.width = 40; c.height = 40; const g = c.getContext('2d'); g.drawImage(im, 0, 0, 40, 40); const d = g.getImageData(0, 0, 40, 40).data; const f = new Set(); for (let i = 0; i < d.length; i += 4) f.add(d[i] + ',' + d[i + 1] + ',' + d[i + 2]); res({ farben: f.size, w: im.width }); }; im.src = e.bild; }));
+  ok('Aufgenommene Ansicht ist nicht leer (mehrere Farben)', r.farben > 5, JSON.stringify(r));
   ok('keine Skriptfehler', errs.length === 0, errs.join(' | '));
   console.log(out.join('\n')); await b.close(); process.exit(out.some(l => l.startsWith('✗')) ? 1 : 0);
 })();

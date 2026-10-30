@@ -13,14 +13,16 @@ const { chromium } = require('playwright'); const path = require('path');
     const pf0 = gehaltSoll({ typ: 'pfleger', wissen: wissenStart(10, {}) }), pw0 = gehaltSoll({ typ: 'pferdewirt', wissen: wissenStart(10, {}) });
     const pfX = gehaltSoll({ typ: 'pfleger', wissen: wissenStart(10, { haut: 85, huf: 85, verhalten: 65 }), kurse: { haut: 1 } });
     const pwX = gehaltSoll({ typ: 'pferdewirt', wissen: wissenStart(10, { zucht: 85, haut: 65, futter: 65 }), kurse: { zucht: 1, futter: 1 } });
+    window.meister = gehaltSoll({ typ: 'stallmeister', wissen: wissenStart(40, {}) });
     const bw = bewerberErzeugen('pferdewirt').map(x => x.gehalt === gehaltSoll({ typ: 'pferdewirt', wissen: x.wissen })), sb = bewerberErzeugen('stallbursche').map(x => x.gehalt >= 300);
     const mk = (id, g) => maErgaenzen({ id, typ: 'pferdewirt', name: id, w: true, wissen: wissenStart(10, { zucht: 85, haut: 65, futter: 65 }), eig: [], gehalt: g, ab: 0, bis: null });
     spiel.mitarbeiter = [mk('Anna', 400), mk('Berta', 400), mk('Carla', 400), mk('Dora', 2000)];
     nachtBisJz();
     const br = n => spiel.post.find(x => /bittet um mehr Gehalt/.test(x.betreff) && x.betreff.startsWith(n));
-    return { pf0, pw0, pfX, pwX, bw: bw.every(Boolean), sb: sb.every(Boolean), briefe: ['Anna', 'Berta', 'Carla'].map(n => !!br(n)), dora: !!br('Dora'), ids: ['Anna', 'Berta'].map(n => br(n) && br(n).id), soll: gehaltSoll(spiel.mitarbeiter[0]) }; });
+    return { meister, pf0, pw0, pfX, pwX, bw: bw.every(Boolean), sb: sb.every(Boolean), briefe: ['Anna', 'Berta', 'Carla'].map(n => !!br(n)), dora: !!br('Dora'), ids: ['Anna', 'Berta'].map(n => br(n) && br(n).id), soll: gehaltSoll(spiel.mitarbeiter[0]) }; });
   ok('Grundgehalt Pfleger 250, Pferdewirt 400', R.pf0 === 250 && R.pw0 === 400, R.pf0 + '/' + R.pw0);
   ok('Pfleger mit Erfahrung/Lehrgang/Stärke verdient mehr, bleibt unter erfahrenem Pferdewirt', R.pfX > 250 && R.pfX < R.pwX && R.pwX > 400, R.pfX + '/' + R.pwX);
+  ok('Pferdewirtschaftsmeister (Start-Wissen) verdient mehr als ein erfahrener Pferdewirt', R.meister > R.pwX, R.meister + '/' + R.pwX);
   ok('Pferdewirt-Bewerber verlangen genau das Soll-Gehalt, Stallbursche unverändert', R.bw && R.sb);
   ok('Gehaltswunsch-Briefe für unterbezahlte Pferdewirte, keiner für den gut bezahlten', R.briefe.every(Boolean) && !R.dora, JSON.stringify(R.briefe) + ' Dora ' + R.dora);
   // Zustimmen (Anna) und Ablehnen (Berta) über das Postfach

@@ -35,7 +35,8 @@ const FARBEN_BASIS = {
   braunschecke:  { name: "Braunschecke",           body: "#7c3f1d", mane: "#161212", points: "#1b1616", hoof: "#2c2a29", pattern: "tobiano" },
   fuchsschecke:  { name: "Fuchsschecke",           body: "#b65a29", mane: "#a64c22", hoof: "#4a3a30", pattern: "tobiano" },
   blueroan:      { name: "Blue Roan",              body: "#757c82", mane: "#1a1818", points: "#222021", head: "#2c2a2a", pattern: "roan", hoof: "#2c2a29" },
-  rotschimmel:   { name: "Rotschimmel (Roan)",     body: "#c3947c", mane: "#8a4424", points: "#8f4a28", head: "#9a4e2a", pattern: "roan", hoof: "#4a3a30" },
+  bayroan:       { name: "Bay Roan",               body: "#946a52", mane: "#161212", points: "#1b1616", head: "#3a2218", pattern: "roan", hoof: "#2c2a29" },
+  rotschimmel:   { name: "Red Roan",     body: "#c3947c", mane: "#8a4424", points: "#8f4a28", head: "#9a4e2a", pattern: "roan", hoof: "#4a3a30" },
   hellbrauner:   { name: "Hellbrauner",            body: "#a8643a", mane: "#1d1716", points: "#2a201c", hoof: "#2c2a29" },
   schwarzbrauner:{ name: "Schwarzbrauner",         body: "#2a1d18", mane: "#100d0d", points: "#141010", muzzle: "#8a5a3a", hoof: "#2c2a29" },
   lethalwhite:   { name: "Weiß (Lethal White)",    body: "#f7f3ee", mane: "#f3eee6", muzzle: "#e3b5ae", hoof: "#cdbfa8" },
@@ -113,7 +114,7 @@ const RASSEN = [
     k: { len: 1.02, depth: .41, legT: .075, neck: .6, nAng: 45, crest: .02, head: .42, hAng: 50, profile: 0, hw: .92, jw: 1, muz: .9, ear: .1, mane: "kurz", maneLen: .05, vol: .6, fore: .3, tail: .6, tvol: .6, tset: .3, feather: 0, croup: .3, hq: 1, eye: 1.05 } },
   { id: "quarter", name: "Quarter Horse", herkunft: "USA", h: [142, 163],
     text: "Muskulöses Westernpferd mit kurzem Kopf, großen Ganaschen und extrem kräftiger Hinterhand.",
-    farben: ["fuchs", "dfuchs", "brauner", "rappe", "palomino", "buckskin", "braunfalbe", "mausfalbe", "blueroan", "rotschimmel", "ov_brauner"],
+    farben: ["fuchs", "dfuchs", "brauner", "rappe", "palomino", "buckskin", "braunfalbe", "mausfalbe", "blueroan", "bayroan", "rotschimmel", "ov_brauner"],
     warnung: "In dieser Rasse kommt das Overo-Gen (Frame Overo) vor. Werden zwei Overo-Träger verpaart, ist jedes vierte Fohlen ein Lethal-White-Fohlen (O/O): Ihm fehlen Nervenzellen im Darm, es bekommt schwere Koliken und stirbt in den ersten Lebenstagen. Vor der Zucht mit einem Overo den Partner per Gentest prüfen!",
     k: { nk: 0.7, len: .96, depth: .47, legT: .09, neck: .5, nAng: 54, crest: .05, head: .42, hAng: 56, profile: 0, hw: 1.08, jw: 1.06, muz: .95, ear: .085, mane: "kurz", maneLen: .06, vol: .8, fore: .3, tail: .65, tvol: .8, tset: .1, feather: 0, croup: .5, hq: 1.2, eye: 1 } },
   { id: "hannoveraner", name: "Hannoveraner", herkunft: "Deutschland", h: [160, 175],
@@ -151,7 +152,7 @@ const RASSEN = [
     k: { nk: 1, len: 1.0, depth: .52, legT: .11, neck: .47, nAng: 52, crest: .08, head: .44, hAng: 53, profile: 0, hw: 1.08, jw: 1.05, muz: 1, ear: .085, mane: "lang", maneLen: .3, vol: 1.3, fore: 1, tail: .9, tvol: 1.3, tset: .2, feather: .7, croup: .6, hq: 1.05, eye: 1 } },
   { id: "dales", name: "Dales-Pony", herkunft: "England (Pennines)", h: [140, 148],
     text: "Größter der englischen Bergponys: kräftig, mit starken Hufen, kräftigem Trab, viel Mähne und Fesselbehang – früher Packpony in den Bleiminen.",
-    farben: ["rappe", "brauner", "dunkelbrauner", "schimmel", "blueroan"],
+    farben: ["rappe", "brauner", "dunkelbrauner", "schimmel", "blueroan", "bayroan"],
     k: { nk: 1, len: 1.01, depth: .53, legT: .115, neck: .49, nAng: 54, crest: .09, head: .45, hAng: 54, profile: .05, hw: 1.1, jw: 1.05, muz: 1, ear: .085, mane: "lang", maneLen: .3, vol: 1.3, fore: 1, tail: .9, tvol: 1.3, tset: .2, feather: .8, croup: .6, hq: 1.08, eye: 1 } },
   { id: "angloaraber", name: "Anglo-Araber", herkunft: "Frankreich / Polen", h: [155, 165],
     text: "Kreuzung aus Englischem Vollblut und Araber (mindestens 25 % Araber) – leistungsstark, ausdauernd und edel, für Vielseitigkeit, Springen und Rennen.",
@@ -180,7 +181,7 @@ const RASSEN = [
   // v445 (Dome): Noriker, Lewitzer, Barock Pinto
   { id: "noriker", name: "Noriker", herkunft: "Österreich (Pinzgau)", h: [155, 165],
     text: "Trittsicheres Kaltblut aus den Alpen – kräftig, aber beweglich, oft braun, als Tiger, Schecke oder „Mohrenkopf“ (Roan mit dunklem Kopf).",
-    farben: ["brauner", "rappe", "fuchs", "dunkelfuchs", "hellfuchs", "blueroan", "sb_brauner", "tg_brauner", "braunschecke"],
+    farben: ["brauner", "rappe", "fuchs", "dunkelfuchs", "hellfuchs", "blueroan", "bayroan", "sb_brauner", "tg_brauner", "braunschecke"],
     warnung: "Im Noriker kommt das Leopard-Gen (Tiger) vor. Werden zwei Tiger verpaart, ist jedes vierte Fohlen Lp/Lp und damit nachtblind (CSNB).",
     k: { nk: 1, len: 1.05, depth: .5, legT: .118, neck: .53, nAng: 55, crest: .08, head: .46, hAng: 56, profile: .1, hw: 1.08, jw: 1.05, muz: 1.02, ear: .095, mane: "lang", maneLen: .2, vol: 1.1, fore: .8, tail: .7, tvol: 1.1, tset: .2, feather: .3, croup: .6, hq: 1.08, eye: .95 } },
   { id: "lewitzer", name: "Lewitzer", herkunft: "Deutschland (Mecklenburg)", h: [130, 148],
@@ -1531,7 +1532,8 @@ const FARBBESCHREIBUNG = {
   fs_rappe: "Wenigpunkt-Tiger (Fewspot): fast ganz weiß mit nur wenigen Punkten – reinerbiger Tiger (Lp/Lp). Lp/Lp-Pferde sind nachtblind (CSNB).",
   sb_rappe: "Schabrackentiger: weiße „Decke“ über Kruppe und Hüfte mit farbigen Punkten. Gen Lp ohne PATN1.",
   sk_brauner: "Schabracke ohne Punkte (Snowcap): weiße Decke ohne Punkte – reinerbiger Tiger (Lp/Lp) ohne PATN1. Lp/Lp-Pferde sind nachtblind (CSNB).",
-  rotschimmel: "Roan auf Fuchs: schon bei der Geburt weiße Stichelhaare im roten Fell – ein unveränderlicher Schimmel, hellt nicht auf.",
+  bayroan: "Roan auf Brauner: weiße Haare im braunen Fell, Kopf, Mähne, Schweif und Beine bleiben dunkel – hellt nicht auf.",
+  rotschimmel: "Roan auf Fuchs (Red Roan): schon bei der Geburt weiße Stichelhaare im roten Fell – hellt nicht auf. Nicht zu verwechseln mit einem Fuchs, der zum Schimmel wird.",
 };
 // Scheckungs-Beispiele für das Lexikon
 ["ov_brauner", "tv_fuchs", "tg_brauner", "fs_rappe", "sb_rappe", "sk_brauner", "sa_brauner", "sw_brauner"].forEach(id => FARBEN[id]);

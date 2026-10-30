@@ -44,7 +44,7 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Marke hinter dem Namen nur bei Stufe > 0', seltenMarke(K).includes('data-selten') && seltenMarke(G2) === '');
     ok('Plakette (rund) bei seltenen Pferden', plakettenVon(K).some(x => x.rund && x.stufe === 5) && !plakettenVon(G2).some(x => x.rund));
     ok('Plakette im Boxbild', /<circle/.test(plakettenSVG([K])));
-    spiel.boxen[0].pferd = K; K.pflege.gesundheit = 100; verkaufDialog(K, () => {}); ok('Verkaufsfenster: Hinweis „nur auf dem Raritäten-Markt“', /nur auf dem Raritäten-Markt mehr wert/.test(document.getElementById('dlgInhalt').innerText)); zu();
+    spiel.stufenAn = false; spiel.boxen[0].pferd = K; K.pflege.gesundheit = 100; verkaufDialog(K, () => {});   /* seit v896 nur für Experten sichtbar */ ok('Verkaufsfenster: Hinweis „nur auf dem Raritäten-Markt“', /nur auf dem Raritäten-Markt mehr wert/.test(document.getElementById('dlgInhalt').innerText)); zu();
     seltenDialog(K); const dt = document.getElementById('dlgInhalt').innerText; ok('Info-Fenster: Stufe, Gene, Leistung, Hinweis', /Jahrhundertpferd/.test(dt) && /Extension/.test(dt) && /Gangwerk/.test(dt) && /Raritäten-Markt/.test(dt), dt.replace(/\s+/g, ' ').slice(0, 160)); zu();
     // --- 7. Verteilung je Rasse (Stichprobe 400) ---
     const zeilen = []; let ausserhalb = [];

@@ -44,11 +44,12 @@ const FARBEN_BASIS = {
 // Scheckungen, die auf jeder Grundfarbe vorkommen: Kürzel + "_" + Grundfarbe (z. B. "ov_brauner")
 //  to Tobiano (v505) · ov Overo · tv Tovero · tg Tigerschecke · fs Wenigpunkt-Tiger · sb Schabrackentiger · sk Schabracke ohne Punkte (Snowcap) · sa Sabino (v316) · sw Splashed White (v426)
 const MUSTER = {
-  to: ["Schecke", "tobiano"], ov: ["Overo", "overo"], tv: ["Tovero", "tovero"], tg: ["Tigerschecke", "leopard"], fs: ["Wenigpunkt-Tiger", "fewspot"], sb: ["Schabrackentiger", "blanket"], sk: ["Schabracke ohne Punkte", "snowcap"], sa: ["Sabino", "sabino"], sw: ["Splashed White", "splash"],
+  to: ["Schecke", "tobiano"], ov: ["Overo", "overo"], tv: ["Tovero", "tovero"], tg: ["Tigerschecke", "leopard"], fs: ["Wenigpunkt-Tiger", "fewspot"], sb: ["Schabrackentiger", "blanket"], sk: ["Schabracke ohne Punkte", "snowcap"], sa: ["Sabino", "sabino"], rn: ["Roan", "roan"], sw: ["Splashed White", "splash"],
 };
 function musterFarbe(id, t) {
-  const m = /^(to|ov|tv|tg|fs|sb|sk|sa|sw)_(.+)$/.exec(id); if (!m || !t[m[2]]) return null;   // v505: to_ = Tobiano auf jeder Grundfarbe (Rapp-/Braun-/Fuchsschecke bleiben eigene Farben)
+  const m = /^(to|ov|tv|tg|fs|sb|sk|sa|sw|rn)_(.+)$/.exec(id); if (!m || !t[m[2]]) return null;   // v505: to_ = Tobiano auf jeder Grundfarbe (Rapp-/Braun-/Fuchsschecke bleiben eigene Farben)
   const B = t[m[2]], [name, pattern] = MUSTER[m[1]], e = { ...B, pattern, name: `${name} (${B.name.replace(/ \(.*\)$/, "")})` };
+  if (m[1] === "rn") { const kurz = B.name.replace(/ \(.*\)$/, "").replace(/^Dunkelfuchs mit Flachsmähne$/, "Dunkelfuchs (Flachsmähne)"); return { ...B, pattern: "roan", name: `${kurz} Roan`, body: mix(B.body, "#f2efe9", .4), head: B.head || B.body, points: B.points || mix(B.body, "#000000", .3) }; }   // Dome 30.10.: Roan als Muster über jeder Grundfarbe – Kopf und Beine behalten die Grundfarbe
   if (pattern === "leopard" || pattern === "fewspot") delete e.stripe;   // v510 (Dome): Aalstrich bleibt bei Scheckungen (wird unter dem Weiß gezeichnet), nur bei fast weißen Tigern nicht
   if (pattern === "tovero" || pattern === "fewspot") { e.head = mix(B.head || B.body, "#f7f5f1", pattern === "fewspot" ? .75 : .2); e.hoof = "#b8a88f"; }
   if (pattern === "leopard") { e.head = mix(B.head || B.body, "#f7f5f1", .45); e.hoof = "#b8a88f"; }

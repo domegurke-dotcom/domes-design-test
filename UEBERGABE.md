@@ -304,3 +304,5 @@ Domes Wünsche zu Whiteboard, Mitarbeitern, Waschplatz/Solarium sind umgesetzt (
 - v912 (Dome 30.10.): Rußung neu (Verlauf + Ringe), Schwarzbrauner mit Kupferringen, Kopf passend zum Hals. Nur per Bild geprüft; Optik-Prüfung `tests/optik-pruefung.js` nicht gelaufen.
 
 - v913 (Dome 30.10.): Ruß-Farben: Kopf ohne Hellfilter, Farbe wie der Hals. Nur per Bild geprüft.
+
+- v914 (Dome 30.10.): Ruß-Farben: Kopf mit demselben Filter wie der Hals (Licht/Schatten, dann Ruß). Nur per Bild geprüft.

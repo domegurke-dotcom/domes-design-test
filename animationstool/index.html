@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Animationstool</title>
+<style>
+  :root { --bg: #f4efe6; --karte: #fffdf8; --rand: #d8cdb8; --text: #2a2420; --leise: #7a6e60; --akzent: #b5651d; --boden: #5a4a3a;
+    --vl: #3cb043; --vr: #f0a020; --hl: #e0402a; --hr: #2a8fe0; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, "Segoe UI", sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: #3b2f25; color: #f4efe6; }
+  header h1 { font-size: 17px; margin: 0 12px 0 0; font-weight: 600; }
+  header input[type=text] { background: #4d3f33; color: #fff; border: 1px solid #6b5a4a; border-radius: 6px; padding: 5px 8px; width: 220px; }
+  header .rechts { margin-left: auto; display: flex; gap: 8px; }
+  button { font: inherit; padding: 6px 11px; border-radius: 7px; border: 1px solid var(--rand); background: var(--karte); color: var(--text); cursor: pointer; }
+  button:hover { border-color: var(--akzent); }
+  button.an { background: var(--akzent); color: #fff; border-color: var(--akzent); }
+  header button { background: #4d3f33; color: #f4efe6; border-color: #6b5a4a; }
+  main { display: grid; grid-template-columns: 1fr 300px; gap: 12px; padding: 12px; align-items: start; }
+  .links { display: grid; gap: 10px; min-width: 0; }
+  #buehne { height: 62vh; min-height: 380px; }
+  aside { position: sticky; top: 12px; max-height: calc(100vh - 24px); }
+  .karte { background: var(--karte); border: 1px solid var(--rand); border-radius: 10px; }
+  #buehne { position: relative; min-height: 0; overflow: hidden; }
+  #svg { width: 100%; height: 100%; display: block; user-select: none; }
+  .steuer { display: flex; align-items: center; gap: 8px; padding: 8px 10px; flex-wrap: wrap; }
+  .steuer input[type=range] { flex: 1; min-width: 200px; }
+  .zeit { font-variant-numeric: tabular-nums; width: 64px; text-align: right; color: var(--leise); }
+  #gangbild, #spur { width: 100%; display: block; }
+  .unterzeile { display: flex; gap: 16px; padding: 4px 12px 8px; color: var(--leise); flex-wrap: wrap; align-items: center; }
+  .unterzeile b { color: var(--text); }
+  .ok { color: #2e8b3a; font-weight: 600; } .nein { color: #c0392b; font-weight: 600; }
+  aside { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+  aside .karte { padding: 10px 12px; }
+  aside h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--leise); margin: 0 0 8px; display: flex; align-items: center; gap: 6px; }
+  label.zeile { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0; }
+  label.zeile input[type=range] { width: 130px; }
+  select { font: inherit; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--rand); background: #fff; }
+  .knoepfe { display: flex; flex-wrap: wrap; gap: 6px; }
+  .info-knopf { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--leise); color: var(--leise); font: italic 600 12px/16px Georgia, serif; text-align: center; padding: 0; cursor: pointer; background: none; text-transform: none; }
+  .info-text { display: none; font-size: 13px; color: var(--leise); background: #f7f1e6; border-radius: 6px; padding: 6px 8px; margin: 4px 0 8px; text-transform: none; letter-spacing: 0; }
+  .info-text.offen { display: block; }
+  .beine { display: grid; grid-template-columns: auto 1fr; gap: 3px 8px; font-size: 13px; }
+  .punkt { display: inline-block; width: 11px; height: 11px; border-radius: 50%; vertical-align: -1px; margin-right: 4px; }
+  .gelenk { cursor: grab; }
+  .gelenk:hover circle.sicht { stroke-width: 1.2; }
+  .ziehen { cursor: grabbing !important; }
+  .hinweis { font-size: 12px; color: var(--leise); }
+  #status { font-size: 13px; }
+  kbd { background: #eee6d8; border: 1px solid var(--rand); border-radius: 4px; padding: 0 4px; font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🐎 Animationstool</h1>
+  <input type="text" id="name" value="Neue Bewegung" title="Name der Bewegung">
+  <div class="rechts">
+    <button id="rueck" title="Rückgängig (Strg+Z)">↶ Rückgängig</button>
+    <button id="speichern">💾 Als Datei speichern</button>
+    <button id="ladenKnopf">📂 Datei laden</button>
+    <input type="file" id="ladenDatei" accept=".json,application/json" hidden>
+  </div>
+</header>
+<main>
+  <div class="links">
+    <div class="karte" id="buehne"><svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div class="karte steuer">
+      <button id="play" title="Abspielen (Leertaste)">▶ Abspielen</button>
+      <button id="kfZurueck" title="Voriger Keyframe (←)">⏮</button>
+      <button id="kfVor" title="Nächster Keyframe (→)">⏭</button>
+      <input type="range" id="zeit" min="0" max="1000" value="0" step="1">
+      <span class="zeit" id="zeitText">0 %</span>
+      <label title="Abspieltempo">Tempo <select id="tempo"><option value=".1">0,1×</option><option value=".25">0,25×</option><option value=".5">0,5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label>
+      <button id="kfNeu" title="Keyframe an dieser Stelle (K)">＋ Keyframe</button>
+      <button id="kfWeg" title="Gewählten Keyframe löschen (Entf)">− Keyframe</button>
+      <button id="kopieren" title="Pose kopieren (Strg+C)">Pose kopieren</button>
+      <button id="einfuegen" title="Pose einfügen (Strg+V)">Pose einfügen</button>
+    </div>
+    <div class="karte">
+      <svg id="gangbild" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="unterzeile">
+        <span>Stützfolge: <b id="folge">–</b></span>
+        <span id="pdfVergleich"></span>
+        <span>Takte: <b id="takte">–</b></span>
+      </div>
+    </div>
+    <div class="karte">
+      <svg id="spur" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="unterzeile">
+        <span>Schrittlänge: <b id="schrittlaenge">–</b></span>
+        <span>Übertreten links: <b id="uebL">–</b></span>
+        <span>Übertreten rechts: <b id="uebR">–</b></span>
+      </div>
+    </div>
+  </div>
+  <aside>
+    <div class="karte">
+      <h2>Jetzt <button class="info-knopf" data-info="iJetzt">i</button></h2>
+      <div class="info-text" id="iJetzt"><b>Stütze</b> = wie viele Hufe gerade am Boden sind (Einbein-, Zweibein-, Dreibeinstütze, 0 = Schwebephase). Ein Huf gilt als am Boden, wenn er höchstens 0,6 Einheiten über der Bodenlinie ist. <b>Fußt auf</b> = erstes Sechstel der Stützphase, <b>belastet</b> = Mitte, <b>fußt ab</b> = letztes Sechstel, <b>Schwebe</b> = Hangbeinphase (Huf in der Luft).</div>
+      <div id="status"></div>
+      <div class="beine" id="beine" style="margin-top:8px"></div>
+    </div>
+    <div class="karte">
+      <h2>Vorlage <button class="info-knopf" data-info="iVorlage">i</button></h2>
+      <div class="info-text" id="iVorlage">Erzeugt eine ganze Bewegung aus der Fußfolge (nach den PDFs von horsesandus: Schritt 3:2:3:2, Trab 2:0:2:0, Galopp 1:3:2:3:1:0). Danach kannst du jeden Keyframe von Hand ändern. Die Schrittlänge ist durch die Beinlänge der Zeichnung begrenzt.</div>
+      <label class="zeile">Gangart <select id="gang"></select></label>
+      <label class="zeile">Schrittlänge <input type="range" id="sweep" min="30" max="80" value="64"><span id="sweepText"></span></label>
+      <label class="zeile">Keyframes je Schritt <select id="kfAnzahl"><option>8</option><option>12</option><option selected>16</option><option>24</option></select></label>
+      <button id="vorlageLaden" style="width:100%">Vorlage erzeugen</button>
+    </div>
+    <div class="karte">
+      <h2>Pferd</h2>
+      <label class="zeile">Rasse <select id="rasse"></select></label>
+      <label class="zeile">Farbe <select id="farbe"><option value="brauner">Brauner</option><option value="fuchs">Fuchs</option><option value="rappe">Rappe</option><option value="schimmel">Schimmel</option><option value="palomino">Palomino</option></select></label>
+      <label class="zeile">Pferd im Hintergrund <input type="range" id="pferdDeck" min="0" max="100" value="35"></label>
+      <label class="zeile">Fernes Beinpaar zeigen <input type="checkbox" id="fernZeigen" checked></label>
+      <label class="zeile">Knochenlänge halten <input type="checkbox" id="knochenFest" checked></label>
+      <label class="zeile">Bodenlinie mitbewegen <input type="checkbox" id="bodenLauf" checked></label>
+      <div class="hinweis">Gelenk mit der Maus ziehen. Widerrist zieht das ganze Pferd. Ohne „Knochenlänge halten“ bewegt sich nur der eine Punkt.</div>
+    </div>
+    <div class="karte">
+      <h2>Vorlagebild <button class="info-knopf" data-info="iBild">i</button></h2>
+      <div class="info-text" id="iBild">Ein Bild (z. B. aus <code>pdfs/Bilder</code>) unter die Bühne legen, um eine Haltung nachzubilden. Mit „Bild verschieben“ ziehst du es mit der Maus, das Mausrad ändert dann die Größe.</div>
+      <div class="knoepfe"><button id="bildWahl">Bild wählen</button><button id="bildWeg">Entfernen</button><button id="bildZiehen">Bild verschieben</button><button id="bildSpiegel">Spiegeln</button></div>
+      <input type="file" id="bildDatei" accept="image/*" hidden>
+      <label class="zeile">Deckkraft <input type="range" id="bildDeck" min="0" max="100" value="45"></label>
+    </div>
+    <div class="karte">
+      <h2>Tasten</h2>
+      <div class="hinweis"><kbd>Leertaste</kbd> abspielen · <kbd>←</kbd> <kbd>→</kbd> Keyframe · <kbd>,</kbd> <kbd>.</kbd> Zeit fein · <kbd>K</kbd> Keyframe · <kbd>Entf</kbd> löschen · <kbd>Strg+Z</kbd> rückgängig</div>
+    </div>
+  </aside>
+</main>
+
+<script src="../pferd.js"></script>
+<script src="../kopfneu.js"></script>
+<script>
+(() => {   // eigener Bereich: pferd.js hat schon globale Namen wie dist, glatt …
+"use strict";
+// ================= Grundlagen =================
+// Koordinaten wie in pferd.js: Pferd schaut nach links, Boden bei y = 0, nach oben negativ, Widerrist ≈ −100.
+// Das Pferd steht von der rechten Seite gesehen: nahes Beinpaar = rechts (VR, HR), fernes = links (VL, HL).
+const NS = "http://www.w3.org/2000/svg";
+const $ = id => document.getElementById(id);
+const BEINE = {
+  VL: { name: "Vorne links", farbe: "#3cb043", vorn: true, nah: false },
+  VR: { name: "Vorne rechts", farbe: "#f0a020", vorn: true, nah: true },
+  HL: { name: "Hinten links", farbe: "#e0402a", vorn: false, nah: false },
+  HR: { name: "Hinten rechts", farbe: "#2a8fe0", vorn: false, nah: true },
+};
+const BEIN_REIHE = ["HL", "VL", "HR", "VR"];   // Reihenfolge im Gangbild: links oben, rechts unten (wie in den PDF-Bildern)
+const VORN_TEILE = ["bug", "ellbogen", "karpal", "fessel", "huf"], HINTEN_TEILE = ["hueft", "knie", "sprung", "fessel", "huf"];
+const NAMEN = { widerrist: "Widerrist", kruppe: "Kruppe", genick: "Genick", nase: "Nase", schweif: "Schweif", bug: "Buggelenk", ellbogen: "Ellbogen", karpal: "Vorderfußwurzel", fessel: "Fesselkopf", huf: "Huf", hueft: "Hüftgelenk", knie: "Knie", sprung: "Sprunggelenk" };
+// Gelenke in Eltern-vor-Kind-Reihenfolge
+const GELENKE = [["widerrist", null], ["kruppe", "widerrist"], ["genick", "widerrist"], ["nase", "genick"], ["schweif", "kruppe"]];
+for (const b of ["VL", "VR"]) VORN_TEILE.forEach((t, i) => GELENKE.push([b + "_" + t, i ? b + "_" + VORN_TEILE[i - 1] : "widerrist"]));
+for (const b of ["HL", "HR"]) HINTEN_TEILE.forEach((t, i) => GELENKE.push([b + "_" + t, i ? b + "_" + HINTEN_TEILE[i - 1] : "kruppe"]));
+const ELTERN = Object.fromEntries(GELENKE), REIHE = GELENKE.map(g => g[0]);
+const KINDER = {}; for (const [k, e] of GELENKE) if (e) (KINDER[e] = KINDER[e] || []).push(k);
+const nameVon = k => { const [a, b] = k.split("_"); return b ? `${NAMEN[b]} (${BEINE[a].name})` : NAMEN[a]; };
+const BODEN_TOL = 0.6;   // Huf höchstens so hoch über dem Boden = Stütze
+
+const kopie = o => JSON.parse(JSON.stringify(o));
+const dist = (a, b) => Math.hypot(b.x - a.x, b.y - a.y);
+const winkel = (a, b) => Math.atan2(b.y - a.y, b.x - a.x);
+const dreh = (p, um, w) => { const c = Math.cos(w), s = Math.sin(w), x = p.x - um.x, y = p.y - um.y; return { x: um.x + x * c - y * s, y: um.y + x * s + y * c }; };
+const wDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
+const glatt = u => u * u * (3 - 2 * u);
+const rad = g => g * Math.PI / 180;
+const f1 = v => Math.round(v * 10) / 10;
+
+// ================= Zustand =================
+const S = {
+  rasse: "hannoveraner", farbe: "brauner", ruhe: null, geo: null, pferdSVG: "", box: null,
+  kf: [], wahl: -1, t: 0, spielt: false, tempo: 1, dauer: 1.1, gang: "schritt", sweep: 64,
+  ablage: null, rueck: [], bild: null, bildModus: false,
+};
+
+// ================= Ruhehaltung aus der Spielzeichnung =================
+function bbox(d) { const n = d.match(/-?\d+\.?\d*/g).map(Number), xs = [], ys = []; for (let i = 0; i + 1 < n.length; i += 2) { xs.push(n[i]); ys.push(n[i + 1]); } return { x1: Math.min(...xs), x2: Math.max(...xs), y1: Math.min(...ys), y2: Math.max(...ys) }; }
+function ruheHaltung(rasse, farbe) {
+  const z = zeichnePferd(rasse, farbe, { teile: 1, statisch: true });
+  const T = z.teile, L = z.L, D = z.D, top = z.top, bot = z.bottom, Wp = z.punkte.widerrist, Hw = -Wp.y;
+  const mx = b => (b.x1 + b.x2) / 2;
+  const hv = mx(bbox(T.hufVornNah)), hvF = mx(bbox(T.hufVornFern)), hh = mx(bbox(T.hufHintenNah)), hhF = mx(bbox(T.hufHintenFern));
+  const rumpf = bbox(T.rumpf), schweif = bbox(T.schweif);
+  const P = {};
+  P.widerrist = { x: Wp.x, y: Wp.y };
+  P.kruppe = { x: 0.82 * L, y: rumpf.y1 + 1 };
+  P.genick = { ...z.punkte.genick }; P.nase = { ...z.punkte.nase };
+  P.schweif = { x: schweif.x2 - 4, y: schweif.y2 };
+  // Gelenkhöhen nach echten Verhältnissen (Anteil der Widerristhöhe): Buggelenk .66, Ellbogen .58, Vorderfußwurzel .29, Fesselkopf .13 · Hüftgelenk .62, Knie .47, Sprunggelenk .36
+  const vorn = (x, dx) => ({ bug: { x: z.punkte.brust.x + 7 + dx, y: -0.66 * Hw }, ellbogen: { x: x + 5, y: -0.58 * Hw }, karpal: { x: x + 2, y: -0.29 * Hw }, fessel: { x: x + 3.5, y: -0.13 * Hw }, huf: { x, y: 0 } });
+  const hinten = (x, dx) => ({ hueft: { x: 0.86 * L + dx, y: -0.62 * Hw }, knie: { x: x - 12, y: -0.47 * Hw }, sprung: { x: x + 8, y: -0.36 * Hw }, fessel: { x: x + 3.5, y: -0.13 * Hw }, huf: { x, y: 0 } });
+  for (const [b, o] of [["VR", vorn(hv, 0)], ["VL", vorn(hvF, hvF - hv)], ["HR", hinten(hh, 0)], ["HL", hinten(hhF, hhF - hh)]]) for (const k in o) P[b + "_" + k] = o[k];
+  const R = rasseById(rasse);
+  return { P, Hw, cmJe: (R.h[0] + R.h[1]) / 2 / Hw, svg: zeichnePferd(rasse, farbe, { statisch: true }).svg, box: z.box, L, top, bot, D };
+}
+
+// ================= Pose als Winkel (für Zwischenbilder und Rassenwechsel) =================
+function zuWinkeln(P) { const A = { wurzel: { ...P.widerrist } }; for (const [k, e] of GELENKE) if (e) A[k] = { w: winkel(P[e], P[k]), l: dist(P[e], P[k]) }; return A; }
+function ausWinkeln(A) { const P = { widerrist: { ...A.wurzel } }; for (const [k, e] of GELENKE) if (e) { const a = A[k]; P[k] = { x: P[e].x + Math.cos(a.w) * a.l, y: P[e].y + Math.sin(a.w) * a.l }; } return P; }
+function mische(PA, PB, u) {
+  const A = zuWinkeln(PA), B = zuWinkeln(PB), M = { wurzel: { x: A.wurzel.x + (B.wurzel.x - A.wurzel.x) * u, y: A.wurzel.y + (B.wurzel.y - A.wurzel.y) * u } };
+  for (const [k, e] of GELENKE) if (e) M[k] = { w: A[k].w + wDiff(A[k].w, B[k].w) * u, l: A[k].l + (B[k].l - A[k].l) * u };
+  return ausWinkeln(M);
+}
+function poseBei(t) {
+  const K = S.kf; if (!K.length) return kopie(S.ruhe.P); if (K.length === 1) return kopie(K[0].P);
+  let i = K.findIndex(k => k.t > t); if (i < 0) i = K.length;
+  const a = K[(i - 1 + K.length) % K.length], b = K[i % K.length];
+  let span = b.t - a.t; if (span <= 0) span += 1; let u = t - a.t; if (u < 0) u += 1;
+  return mische(a.P, b.P, span ? u / span : 0);
+}
+
+// ================= Vorlagen aus der Fußfolge =================
+// ph = Zeitpunkt des Auffußens im Schritt (0–1), d = Anteil der Stützphase, lift = Huf-Höhe in der Schwebe, flex = Beugung in Grad.
+const GAENGE = {
+  schritt: { name: "Schritt", ph: { HL: 0, VL: .25, HR: .5, VR: .75 }, d: .62, sweep: 64, lift: { v: 9, h: 8 }, flex: { karpal: 60, fesV: 40, sprung: 25, fesH: 35 }, dauer: 1.1, pdf: "3:2:3:2:3:2:3:2",
+    koerper: t => ({ dy: 0.8 * Math.cos(4 * Math.PI * (t - .1)), pitch: 0, nick: 4 * Math.sin(4 * Math.PI * (t - .2)) }) },
+  trab: { name: "Trab", ph: { HL: 0, VR: 0, HR: .5, VL: .5 }, d: .4, sweep: 64, lift: { v: 16, h: 13 }, flex: { karpal: 95, fesV: 50, sprung: 35, fesH: 45 }, dauer: .75, pdf: "2:0:2:0",
+    koerper: t => ({ dy: 2.2 * Math.cos(4 * Math.PI * (t - .2)), pitch: 0, nick: 1.5 * Math.cos(4 * Math.PI * (t - .2)) }) },
+  galoppR: { name: "Galopp (Rechtsgalopp)", ph: { HL: 0, HR: .25, VL: .25, VR: .45 }, d: .35, sweep: 64, lift: { v: 20, h: 16 }, flex: { karpal: 100, fesV: 55, sprung: 40, fesH: 50 }, dauer: .6, pdf: "1:3:2:3:1:0",
+    koerper: t => ({ dy: 2 * Math.cos(2 * Math.PI * (t - .35)), pitch: 5 * Math.cos(2 * Math.PI * (t - .15)), nick: -6 * Math.cos(2 * Math.PI * (t - .15)) }) },
+  galoppL: { name: "Galopp (Linksgalopp)", ph: { HR: 0, HL: .25, VR: .25, VL: .45 }, d: .35, sweep: 64, lift: { v: 20, h: 16 }, flex: { karpal: 100, fesV: 55, sprung: 40, fesH: 50 }, dauer: .6, pdf: "1:3:2:3:1:0",
+    koerper: t => ({ dy: 2 * Math.cos(2 * Math.PI * (t - .35)), pitch: 5 * Math.cos(2 * Math.PI * (t - .15)), nick: -6 * Math.cos(2 * Math.PI * (t - .15)) }) },
+};
+// Beugung in der Schwebe: vorn Vorderfußwurzel und Fessel nach hinten, hinten Sprunggelenk nach vorn und Fessel nach hinten.
+// Streckung in der Stützphase (wenn das Bein sonst nicht reicht): vorn Fessel, hinten Sprunggelenk.
+function unterteil(R, b, beugung, streck) {
+  const v = BEINE[b].vorn, T = v ? VORN_TEILE : HINTEN_TEILE, P = {};
+  for (const t of T.slice(1)) P[t] = { ...R[b + "_" + t] };
+  const [, oben, mitte, fes, huf] = T, F = GAENGE[S.gang].flex || {};
+  const g1 = v ? -rad(F.karpal || 0) * beugung : rad(F.sprung || 0) * beugung - rad(30) * streck;
+  const g2 = v ? -rad(F.fesV || 0) * beugung + rad(25) * streck : -rad(F.fesH || 0) * beugung;
+  for (const t of [fes, huf]) P[t] = dreh(P[t], P[mitte], g1);
+  P[huf] = dreh(P[huf], P[fes], g2);
+  return { P, oben, huf };
+}
+function beinLoesen(R, b, wurzel, ziel, beugung, stuetze) {
+  // Zwei-Knochen-Lösung: Wurzel → oberes Gelenk (fest lang), oberes Gelenk → Huf (Unterteil als starre Form, gebeugt)
+  const T = BEINE[b].vorn ? VORN_TEILE : HINTEN_TEILE, w0 = R[b + "_" + T[0]], o0 = R[b + "_" + T[1]], a = dist(w0, o0);
+  let streck = 0, U = unterteil(R, b, beugung, 0);
+  const dZiel = dist(wurzel, ziel);
+  if (stuetze) for (let i = 0; i < 12 && dZiel > a + dist(U.P[U.oben], U.P[U.huf]) - 0.3 && streck < 1; i++) { streck = Math.min(1, streck + 0.1); U = unterteil(R, b, 0, streck); }
+  const bv = dist(U.P[U.oben], U.P[U.huf]);
+  const seite = Math.sign(wDiff(winkel(w0, R[b + "_huf"]), winkel(w0, o0))) || 1;   // Knickrichtung wie in der Ruhehaltung (Ellbogen hinter, Knie vor der Linie zum Huf)
+  const d = Math.min(dZiel, a + bv - 0.01), wz = winkel(wurzel, ziel);
+  const cosA = Math.max(-1, Math.min(1, (a * a + d * d - bv * bv) / (2 * a * d)));
+  const wo = wz + seite * Math.acos(cosA);
+  const oben = { x: wurzel.x + Math.cos(wo) * a, y: wurzel.y + Math.sin(wo) * a };
+  const hufZiel = { x: wurzel.x + Math.cos(wz) * d, y: wurzel.y + Math.sin(wz) * d };
+  const drehW = winkel(oben, hufZiel) - winkel(U.P[U.oben], U.P[U.huf]);
+  const erg = { [b + "_" + T[0]]: wurzel, [b + "_" + T[1]]: oben };
+  for (const t of T.slice(2)) { const q = dreh(U.P[t], U.P[U.oben], drehW); erg[b + "_" + t] = { x: q.x - U.P[U.oben].x + oben.x, y: q.y - U.P[U.oben].y + oben.y }; }
+  return erg;
+}
+// Schulterblatt und Becken schwingen mit (wie in echt): Buggelenk dreht um den Widerrist, Hüftgelenk um die Kruppe – ein Teil der Beinbewegung.
+const MITSCHWINGEN = { vorn: .3, hinten: .25 };
+const mittelXVon = (R, b) => R[b + "_huf"].x + (BEINE[b].vorn ? -2 : -8);   // Stützphase rund um den Stand des Hufs, hinten etwas weiter unter den Bauch
+function wurzelGedreht(P, R, b, ziel) {
+  const v = BEINE[b].vorn, wk = b + "_" + (v ? "bug" : "hueft"), dreh0 = v ? "widerrist" : "kruppe";
+  const um = P[dreh0], w = P[wk], huf0 = { x: R[b + "_huf"].x + (w.x - R[wk].x), y: R[b + "_huf"].y + (w.y - R[wk].y) };
+  const phi = (v ? MITSCHWINGEN.vorn : MITSCHWINGEN.hinten) * wDiff(winkel(um, huf0), winkel(um, ziel));
+  return dreh(w, um, phi);
+}
+function vorlagePose(G, t, sweep) {
+  const R = S.ruhe.P, K = G.koerper(t), mitte = { x: (R.widerrist.x + R.kruppe.x) / 2, y: R.widerrist.y + 15 };
+  const koerper = p => { const q = dreh(p, mitte, -rad(K.pitch)); return { x: q.x, y: q.y + K.dy }; };
+  const P = {};
+  for (const k of ["widerrist", "kruppe", "schweif", "VL_bug", "VR_bug", "HL_hueft", "HR_hueft"]) P[k] = koerper(R[k]);
+  // Hals und Kopf: um den Widerrist nicken (positiv = Kopf runter)
+  for (const k of ["genick", "nase"]) { const q = koerper(R[k]); P[k] = dreh(q, P.widerrist, -rad(K.nick)); }
+  for (const b of Object.keys(BEINE)) {
+    const mittelX = mittelXVon(R, b);
+    let s = (t - G.ph[b] + 1) % 1, ziel, beugung = 0, stuetze = s < G.d;
+    if (stuetze) { const u = s / G.d; ziel = { x: mittelX - sweep / 2 + sweep * u, y: 0 }; }
+    else { const v = (s - G.d) / (1 - G.d); ziel = { x: mittelX + sweep / 2 - sweep * glatt(v), y: -(BEINE[b].vorn ? G.lift.v : G.lift.h) * Math.sqrt(Math.sin(Math.PI * v)) }; beugung = Math.sin(Math.PI * Math.min(1, v * 1.15)); }
+    const w = wurzelGedreht(P, R, b, ziel); P[b + "_" + (BEINE[b].vorn ? "bug" : "hueft")] = w;
+    Object.assign(P, beinLoesen(R, b, w, ziel, beugung, stuetze));
+  }
+  return P;
+}
+function erreichbar(b, ziel) {   // reicht das Bein (mit Mitschwingen und gestreckt) bis zum Ziel am Boden?
+  const R = S.ruhe.P, T = BEINE[b].vorn ? VORN_TEILE : HINTEN_TEILE, U = unterteil(R, b, 0, 1);
+  const w = wurzelGedreht(R, R, b, ziel), reich = dist(R[b + "_" + T[0]], R[b + "_" + T[1]]) + dist(U.P[U.oben], U.P[U.huf]) - 2.5;   // 2,5 Reserve für das Auf und Ab des Körpers
+  return dist(w, ziel) <= reich;
+}
+function maxSweep() {   // größte Schrittlänge der Stützphase, die alle vier Beine vorn und hinten erreichen
+  const R = S.ruhe.P; let m = 140;
+  for (const b of Object.keys(BEINE)) { const x = mittelXVon(R, b); let lo = 0, hi = 140;
+    for (let i = 0; i < 20; i++) { const s = (lo + hi) / 2; if (erreichbar(b, { x: x - s / 2, y: 0 }) && erreichbar(b, { x: x + s / 2, y: 0 })) lo = s; else hi = s; }
+    m = Math.min(m, lo); }
+  return Math.max(20, Math.floor(m));
+}
+function vorlageErzeugen() {
+  merken();
+  const G = GAENGE[S.gang], n = +$("kfAnzahl").value, sweep = Math.min(S.sweep, maxSweep());
+  // Zeitpunkte: gleichmäßiges Raster plus jedes Auffußen und Abfußen (sonst landen Hufe zwischen zwei Keyframes zu früh oder zu spät)
+  const zeiten = []; for (let i = 0; i < n; i++) zeiten.push(i / n);
+  for (const b in G.ph) for (const z of [G.ph[b], (G.ph[b] + G.d) % 1]) zeiten.push(+z.toFixed(4));
+  zeiten.sort((a, b) => a - b); const T = zeiten.filter((z, i) => !i || z - zeiten[i - 1] > .004);
+  S.kf = T.map(t => ({ t, P: vorlagePose(G, t, sweep) }));
+  S.dauer = G.dauer; S.vorlage = { gang: S.gang, sweep, pdf: G.pdf }; S.wahl = 0; S.t = 0;
+  $("name").value = G.name; allesNeu();
+}
+
+// ================= Auswertung: Stütze, Fußfolge, Hufspuren =================
+const amBoden = P => Object.fromEntries(Object.keys(BEINE).map(b => [b, P[b + "_huf"].y >= -BODEN_TOL]));
+function auswerten(n = 400) {
+  const reihe = []; for (let i = 0; i < n; i++) { const P = poseBei(i / n); reihe.push({ t: i / n, boden: amBoden(P), huf: Object.fromEntries(Object.keys(BEINE).map(b => [b, P[b + "_huf"].x])) }); }
+  // Stützphasen je Bein
+  const phasen = {}; for (const b of Object.keys(BEINE)) {
+    phasen[b] = []; const auf = reihe.map(r => r.boden[b]);
+    if (auf.every(x => x)) { phasen[b].push({ von: 0, bis: 1, ganz: true }); continue; }
+    const start = auf.findIndex((x, i) => x && !auf[(i - 1 + n) % n]); if (start < 0) continue;
+    for (let k = 0; k < n; k++) { const i = (start + k) % n; if (auf[i] && !auf[(i - 1 + n) % n]) { let j = i; while (auf[(j + 1) % n] && (j + 1) % n !== i) j = (j + 1) % n; phasen[b].push({ von: i / n, bis: ((j + 1) % n) / n || 1 }); } }
+  }
+  // Stützfolge (Anzahl Hufe am Boden, zusammengefasst)
+  const anzahl = reihe.map(r => Object.values(r.boden).filter(Boolean).length);
+  // Abschnitte gleicher Anzahl; Splitter unter 1,5 % des Ablaufs (Hufe, die fast gleichzeitig auffußen) zählen nicht
+  const abschn = []; for (let i = 0; i < n; i++) { const l = abschn[abschn.length - 1]; if (l && l.n === anzahl[i]) l.len++; else abschn.push({ n: anzahl[i], len: 1 }); }
+  if (abschn.length > 1 && abschn[0].n === abschn[abschn.length - 1].n) abschn[0].len += abschn.pop().len;
+  let folge = []; for (const a of abschn.filter(a => a.len >= .015 * n)) if (!folge.length || folge[folge.length - 1] !== a.n) folge.push(a.n);
+  if (folge.length > 1 && folge[0] === folge[folge.length - 1]) folge.pop();
+  // Takte: Auffuß-Zeitpunkte, die weniger als 2 % auseinander liegen, zählen als ein Takt
+  const auffuss = []; for (const b of Object.keys(BEINE)) for (const p of phasen[b]) if (!p.ganz) auffuss.push({ b, t: p.von });
+  auffuss.sort((a, b) => a.t - b.t);
+  let takte = []; for (const a of auffuss) { const l = takte[takte.length - 1]; if (l && a.t - l.t < .02) l.b.push(a.b); else takte.push({ t: a.t, b: [a.b] }); }
+  if (takte.length > 1 && 1 - takte[takte.length - 1].t + takte[0].t < .02) { takte[0].b.push(...takte.pop().b); }   // Takt kurz vor 100 % gehört zum ersten
+  if (takte.length) { const nah = t => Math.min(t, 1 - t), i = takte.reduce((m, k, j) => nah(k.t) < nah(takte[m].t) ? j : m, 0); takte = takte.slice(i).concat(takte.slice(0, i)); }   // mit dem Takt bei 0 % beginnen (wie im PDF)
+  return { reihe, phasen, anzahl, folge, takte };
+}
+function folgeText(folge) { return folge.join(":"); }
+function folgeGleich(folge, soll) {   // gleich, wenn eine Drehung der Folge passt
+  const a = folge.join(":"), s = soll.split(":"); for (let i = 0; i < s.length; i++) if (s.slice(i).concat(s.slice(0, i)).join(":") === a) return true; return false;
+}
+function zustandBein(A, b, t) {
+  for (const p of A.phasen[b]) {
+    if (p.ganz) return "steht";
+    let len = p.bis - p.von; if (len <= 0) len += 1; let u = t - p.von; if (u < 0) u += 1;
+    if (u <= len) { const q = u / len; return q < 1 / 6 ? "fußt auf" : q > 5 / 6 ? "fußt ab" : "belastet"; }
+  }
+  return "Schwebe";
+}
+
+// ================= Zeichnen =================
+const el = (tag, at = {}, eltern) => { const e = document.createElementNS(NS, tag); for (const k in at) e.setAttribute(k, at[k]); if (eltern) eltern.appendChild(e); return e; };
+let A = null;   // Auswertung (wird bei Änderungen neu gerechnet)
+function buehneZeichnen() {
+  const svg = $("svg"), R = S.ruhe, b = R.box;
+  const x1 = b.minX - 22, x2 = b.maxX + 22, y1 = b.minY - 8, y2 = 8;
+  svg.setAttribute("viewBox", `${x1} ${y1} ${x2 - x1} ${y2 - y1}`);
+  svg.innerHTML = "";
+  // Vorlagebild
+  if (S.bild) { const B = S.bild; const g = el("g", { transform: `translate(${B.x},${B.y}) scale(${B.spiegel ? -B.s : B.s},${B.s})`, opacity: $("bildDeck").value / 100 }, svg);
+    el("image", { href: B.url, x: B.spiegel ? -B.w : 0, y: 0, width: B.w, height: B.h, id: "vorlageBild" }, g).style.cursor = S.bildModus ? "move" : "default"; }
+  // Boden
+  el("line", { x1, x2, y1: 0, y2: 0, stroke: "#5a4a3a", "stroke-width": 1.2 }, svg);
+  const lauf = el("g", { id: "bodenStriche" }, svg);
+  for (let x = Math.floor(x1 / 10) * 10; x < x2 + 40; x += 10) el("line", { x1: x, x2: x - 4, y1: 0.6, y2: 4, stroke: "#9b8b78", "stroke-width": .6 }, lauf);
+  // Pferd
+  const pg = el("g", { id: "pferd", opacity: $("pferdDeck").value / 100, "pointer-events": "none" }, svg); pg.innerHTML = R.svg;
+  el("g", { id: "figur" }, svg);
+  figurZeichnen();
+}
+function figurZeichnen() {
+  const g = $("figur"); if (!g) return; g.innerHTML = ""; g.style.pointerEvents = S.bildModus ? "none" : "";
+  const P = poseBei(S.t), boden = amBoden(P), fern = $("fernZeigen").checked;
+  const strich = (a, b, farbe, w, op = 1) => el("line", { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: farbe, "stroke-width": w, "stroke-linecap": "round", opacity: op }, g);
+  const bein = b => { const T = BEINE[b].vorn ? VORN_TEILE : HINTEN_TEILE, nah = BEINE[b].nah, op = nah ? 1 : .55;
+    for (let i = 1; i < T.length; i++) strich(P[b + "_" + T[i - 1]], P[b + "_" + T[i]], i >= 3 ? BEINE[b].farbe : (nah ? "#3b2f25" : "#8a7c6c"), nah ? 2.2 : 1.6, op);
+    if (boden[b]) el("circle", { cx: P[b + "_huf"].x, cy: 0, r: 3.2, fill: "none", stroke: BEINE[b].farbe, "stroke-width": 1, opacity: op }, g); };
+  if (fern) { bein("HL"); bein("VL"); }
+  strich(P.widerrist, P.kruppe, "#3b2f25", 3); strich(P.widerrist, P.genick, "#3b2f25", 2.6); strich(P.genick, P.nase, "#3b2f25", 2.6); strich(P.kruppe, P.schweif, "#7a6e60", 1.4);
+  for (const b of ["VR", "HR"]) { strich(b === "VR" ? P.widerrist : P.kruppe, P[b + "_" + (b === "VR" ? "bug" : "hueft")], "#3b2f25", 2.2); }
+  if (fern) { strich(P.widerrist, P.VL_bug, "#8a7c6c", 1.6, .55); strich(P.kruppe, P.HL_hueft, "#8a7c6c", 1.6, .55); }
+  bein("HR"); bein("VR");
+  for (const k of REIHE) {
+    const [b] = k.split("_"); if (BEINE[b] && !BEINE[b].nah && !fern) continue;
+    const grp = el("g", { class: "gelenk", "data-g": k }, g), farbe = BEINE[b] ? BEINE[b].farbe : "#3b2f25", nah = !BEINE[b] || BEINE[b].nah;
+    el("circle", { cx: P[k].x, cy: P[k].y, r: 4.5, fill: "transparent" }, grp);
+    el("circle", { class: "sicht", cx: P[k].x, cy: P[k].y, r: k === "widerrist" ? 2.4 : 1.6, fill: nah ? "#fff" : "#eee6d8", stroke: farbe, "stroke-width": .8, opacity: nah ? 1 : .7 }, grp);
+    el("title", {}, grp).textContent = nameVon(k);
+  }
+  const st = $("bodenStriche"); if (st) { const sw = S.vorlage ? S.vorlage.sweep / (GAENGE[S.vorlage.gang].d) : 0; st.setAttribute("transform", $("bodenLauf").checked && S.spielt ? `translate(${(S.t * sw) % 10},0)` : ""); }
+  statusZeigen(P);
+}
+function statusZeigen(P) {
+  if (!A) return;
+  const boden = amBoden(P), n = Object.values(boden).filter(Boolean).length;
+  const art = ["Schwebephase", "Einbeinstütze", "Zweibeinstütze", "Dreibeinstütze", "Vierbeinstütze"][n];
+  $("status").innerHTML = `<b>${art}</b> (${n} ${n === 1 ? "Huf" : "Hufe"} am Boden)` + (S.kf[S.wahl] && Math.abs(S.kf[S.wahl].t - S.t) < 1e-6 ? ` · Keyframe ${S.wahl + 1} von ${S.kf.length}` : "");
+  $("beine").innerHTML = BEIN_REIHE.map(b => `<span><span class="punkt" style="background:${BEINE[b].farbe}"></span>${BEINE[b].name}</span><span>${zustandBein(A, b, S.t)}</span>`).join("");
+}
+function gangbildZeichnen() {
+  const svg = $("gangbild"), W = 1000, zeile = 22, oben = 26, H = oben + 4 * zeile + 34;
+  svg.setAttribute("viewBox", `0 0 ${W + 120} ${H}`); svg.style.height = H * 0.9 + "px"; svg.innerHTML = "";
+  const x = t => 110 + t * W;
+  // Raster
+  for (let i = 0; i <= 8; i++) el("line", { x1: x(i / 8), x2: x(i / 8), y1: oben - 4, y2: oben + 4 * zeile, stroke: "#e8dfd0", "stroke-width": 1 }, svg);
+  BEIN_REIHE.forEach((b, i) => {
+    const y = oben + i * zeile;
+    el("text", { x: 4, y: y + 15, "font-size": 13, fill: "#2a2420" }, svg).textContent = BEINE[b].name;
+    el("rect", { x: x(0), y: y + 3, width: W, height: zeile - 6, fill: "#f3ede2" }, svg);
+    for (const p of A.phasen[b]) {
+      const teile = p.ganz ? [[0, 1]] : p.bis > p.von ? [[p.von, p.bis]] : [[p.von, 1], [0, p.bis]];
+      for (const [a, c] of teile) el("rect", { x: x(a), y: y + 3, width: (c - a) * W, height: zeile - 6, fill: BEINE[b].farbe, rx: 3 }, svg);
+      if (!p.ganz) el("circle", { cx: x(p.von), cy: y + zeile / 2, r: 4.5, fill: "#fff", stroke: BEINE[b].farbe, "stroke-width": 2 }, svg);
+    }
+  });
+  // Stütze-Zahlen
+  const yz = oben + 4 * zeile + 4; let i0 = 0;
+  for (let i = 1; i <= A.anzahl.length; i++) if (i === A.anzahl.length || A.anzahl[i] !== A.anzahl[i0]) {
+    const a = i0 / A.anzahl.length, c = i / A.anzahl.length, n = A.anzahl[i0];
+    el("rect", { x: x(a), y: yz, width: (c - a) * W, height: 16, fill: ["#c0392b", "#f6d6a8", "#f0e6d4", "#e2d6c0", "#d4c6ac"][n], stroke: "#fff", "stroke-width": 1 }, svg);
+    if ((c - a) * W > 12) el("text", { x: x((a + c) / 2), y: yz + 12, "font-size": 11, "text-anchor": "middle", fill: n ? "#2a2420" : "#fff" }, svg).textContent = n;
+    i0 = i;
+  }
+  el("text", { x: 4, y: yz + 12, "font-size": 12, fill: "#7a6e60" }, svg).textContent = "Hufe am Boden";
+  // Keyframes
+  S.kf.forEach((k, i) => { const d = el("path", { d: `M${x(k.t)},6 l5,6 l-5,6 l-5,-6z`, fill: i === S.wahl ? "#b5651d" : "#bfb19c", style: "cursor:pointer" }, svg); d.addEventListener("click", () => kfWaehlen(i)); });
+  el("text", { x: 4, y: 16, "font-size": 12, fill: "#7a6e60" }, svg).textContent = "Keyframes";
+  // aktuelle Zeit
+  el("line", { x1: x(S.t), x2: x(S.t), y1: 2, y2: H - 2, stroke: "#b5651d", "stroke-width": 2, id: "zeitStrich" }, svg);
+  svg.onclick = e => { const p = svgPunkt(svg, e); if (p.y > 20 && p.x >= 110 && p.x <= 110 + W) zeitSetzen((p.x - 110) / W); };
+  // Texte darunter
+  $("folge").textContent = folgeText(A.folge);
+  const soll = S.vorlage && GAENGE[S.vorlage.gang].pdf;
+  $("pdfVergleich").innerHTML = soll ? `laut PDF ${soll}: ` + (folgeGleich(A.folge, soll) ? `<span class="ok">✓ passt</span>` : `<span class="nein">✗ weicht ab</span>`) : "";
+  $("takte").textContent = A.takte.length ? A.takte.length + " (" + A.takte.map(k => k.b.map(b => BEINE[b].name.replace("Vorne ", "V ").replace("Hinten ", "H ")).join(" + ")).join(" → ") + ")" : "–";
+}
+function spurZeichnen() {
+  // Hufspuren von oben: links oben, rechts unten, das Pferd läuft nach links. Zwei Schritte.
+  const svg = $("spur"), R = S.ruhe, cm = R.cmJe;
+  const sl = S.vorlage ? S.vorlage.sweep / GAENGE[S.vorlage.gang].d : null;
+  svg.innerHTML = "";
+  if (!sl) { svg.setAttribute("viewBox", "0 0 1000 30"); el("text", { x: 10, y: 20, "font-size": 13, fill: "#7a6e60" }, svg).textContent = "Hufspuren erscheinen, sobald eine Vorlage erzeugt ist (dafür wird die Vorwärtsbewegung gebraucht)."; $("schrittlaenge").textContent = "–"; $("uebL").textContent = $("uebR").textContent = "–"; return; }
+  const abdr = [];   // {b, x (Welt), t}
+  // Die Spielzeichnung zeigt das ferne Beinpaar leicht versetzt (Perspektive) – für die Spur von oben wird dieser Versatz herausgerechnet
+  const versatz = b => BEINE[b].nah ? 0 : R.P[b + "_huf"].x - R.P[b[0] + "R_huf"].x;
+  for (const b of Object.keys(BEINE)) for (const p of A.phasen[b]) if (!p.ganz) for (const k of [0, 1, 2]) { const t = p.von + k, P = poseBei(p.von % 1); abdr.push({ b, t, x: P[b + "_huf"].x - versatz(b) - sl * t }); }
+  const xs = abdr.map(a => a.x), xmin = Math.min(...xs) - 12, xmax = Math.max(...xs) + 12, W = xmax - xmin, H = W / 8, r = H * .07, fs = H * .1;
+  svg.setAttribute("viewBox", `${xmin} 0 ${W} ${H}`);
+  el("rect", { x: xmin, y: H * .04, width: W, height: H * .92, fill: "#ece3d3", rx: r }, svg);
+  el("line", { x1: xmin, x2: xmax, y1: H / 2, y2: H / 2, stroke: "#d8cdb8", "stroke-dasharray": `${r} ${r}`, "stroke-width": r * .15 }, svg);
+  el("text", { x: xmin + r, y: H * .16, "font-size": fs, fill: "#7a6e60" }, svg).textContent = "links";
+  el("text", { x: xmin + r, y: H * .9, "font-size": fs, fill: "#7a6e60" }, svg).textContent = "rechts";
+  el("text", { x: xmax - r, y: H * .16, "font-size": fs, fill: "#7a6e60", "text-anchor": "end" }, svg).textContent = "← Laufrichtung (Ansicht von oben)";
+  for (const a of abdr) { const links = a.b[1] === "L", v = BEINE[a.b].vorn, y = links ? H * .33 : H * .67;
+    el(v ? "circle" : "ellipse", v ? { cx: a.x, cy: y, r: r * 1.15, fill: BEINE[a.b].farbe, opacity: .9 } : { cx: a.x, cy: y, rx: r, ry: r * 1.2, fill: BEINE[a.b].farbe, opacity: .9 }, svg);
+    el("text", { x: a.x, y: y + fs * .33, "font-size": fs * .9, "text-anchor": "middle", fill: "#fff", "font-weight": 600 }, svg).textContent = v ? "V" : "H"; }
+  // Übertreten: Hinterhuf landet vor (+) oder hinter (−) dem letzten Abdruck des Vorderhufs derselben Seite
+  const ueb = s => { const hv = abdr.filter(a => a.b === "V" + s).sort((p, q) => p.t - q.t), hh = abdr.filter(a => a.b === "H" + s).sort((p, q) => p.t - q.t);
+    const h = hh.find(q => hv.some(v => v.t < q.t)); if (!h) return null; const v = hv.filter(p => p.t < h.t).pop(); return v.x - h.x; };
+  const zeig = (id, w) => { $(id).textContent = w == null ? "–" : `${w >= 0 ? "+" : "−"}${Math.abs(Math.round(w * cm))} cm ` + (w >= 0 ? "(Hinterhuf vor dem Vorderhuf)" : "(Hinterhuf hinter dem Vorderhuf)"); };
+  zeig("uebL", ueb("L")); zeig("uebR", ueb("R"));
+  $("schrittlaenge").textContent = `${Math.round(sl * cm)} cm (ein ganzer Bewegungsablauf)`;
+}
+function svgPunkt(svg, e) { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); }
+
+// ================= Bearbeiten =================
+function merken() { S.rueck.push(JSON.stringify(S.kf)); if (S.rueck.length > 60) S.rueck.shift(); }
+function rueckgaengig() { if (!S.rueck.length) return; S.kf = JSON.parse(S.rueck.pop()); S.wahl = Math.min(S.wahl, S.kf.length - 1); allesNeu(); }
+function kfAnZeit(anlegen) {   // Keyframe zur aktuellen Zeit (wird bei Bedarf angelegt)
+  let i = S.kf.findIndex(k => Math.abs(k.t - S.t) < 1e-6); if (i >= 0 || !anlegen) return i;
+  const P = poseBei(S.t); S.kf.push({ t: S.t, P }); S.kf.sort((a, b) => a.t - b.t); return S.kf.findIndex(k => k.t === S.t);
+}
+function kfWaehlen(i) { if (i < 0 || !S.kf.length) return; S.wahl = (i + S.kf.length) % S.kf.length; S.t = S.kf[S.wahl].t; stop(); zeitNeu(); }
+function unterbaum(k) { const r = [k]; for (let i = 0; i < r.length; i++) for (const c of KINDER[r[i]] || []) r.push(c); return r; }
+let zug = null;
+function ziehenStart(e) {
+  const g = e.target.closest(".gelenk"); if (!g) return; e.preventDefault(); stop();
+  merken(); const i = kfAnZeit(true); S.wahl = i; const k = g.dataset.g;
+  zug = { k, i, start: svgPunkt($("svg"), e), P0: kopie(S.kf[i].P) }; document.body.classList.add("ziehen");
+}
+function ziehenBewegen(e) {
+  if (!zug) return; const p = svgPunkt($("svg"), e), P = kopie(zug.P0), k = zug.k, e0 = ELTERN[k];
+  if (!e0) { const dx = p.x - zug.start.x, dy = p.y - zug.start.y; for (const q in P) { P[q].x += dx; P[q].y += dy; } }
+  else if ($("knochenFest").checked) { const w = winkel(P[e0], p) - winkel(P[e0], P[k]); for (const q of unterbaum(k)) P[q] = dreh(P[q], P[e0], w); }
+  else P[k] = { x: p.x, y: p.y };
+  S.kf[zug.i].P = P; A = auswerten(200); figurZeichnen();
+}
+function ziehenEnde() { if (!zug) return; zug = null; document.body.classList.remove("ziehen"); allesNeu(); }
+
+// ================= Zeit und Abspielen =================
+let letzter = 0;
+function schleife(ts) {
+  if (!S.spielt) return; const dt = letzter ? (ts - letzter) / 1000 : 0; letzter = ts;
+  S.t = (S.t + dt * S.tempo / S.dauer) % 1; zeitNeu(true); requestAnimationFrame(schleife);
+}
+function spielen() { if (S.spielt) return stop(); S.spielt = true; letzter = 0; $("play").textContent = "⏸ Pause"; requestAnimationFrame(schleife); }
+function stop() { S.spielt = false; $("play").textContent = "▶ Abspielen"; }
+function zeitSetzen(t) { stop(); S.t = ((t % 1) + 1) % 1; const i = kfAnZeit(false); if (i >= 0) S.wahl = i; zeitNeu(); }
+function zeitNeu(schnell) {
+  $("zeit").value = Math.round(S.t * 1000); $("zeitText").textContent = Math.round(S.t * 100) + " %";
+  figurZeichnen();
+  const z = $("zeitStrich"); if (z) { const x = 110 + S.t * 1000; z.setAttribute("x1", x); z.setAttribute("x2", x); }
+  if (!schnell) gangbildZeichnen();
+}
+
+// ================= Gesamt =================
+function allesNeu() { A = auswerten(); buehneZeichnen(); gangbildZeichnen(); spurZeichnen(); autoSpeichern(); $("zeit").value = Math.round(S.t * 1000); $("zeitText").textContent = Math.round(S.t * 100) + " %"; }
+function rasseSetzen(rasse, farbe) {
+  const alt = S.ruhe; S.rasse = rasse; S.farbe = farbe; S.ruhe = ruheHaltung(rasse, farbe);
+  if (alt && S.kf.length) {   // Keyframes auf die neue Rasse übertragen: gleiche Winkel, Knochen im Verhältnis
+    const RA = zuWinkeln(alt.P), RN = zuWinkeln(S.ruhe.P);
+    S.kf = S.kf.map(k => { const K = zuWinkeln(k.P), N = { wurzel: { x: RN.wurzel.x + K.wurzel.x - RA.wurzel.x, y: RN.wurzel.y + K.wurzel.y - RA.wurzel.y } };
+      for (const [g, e] of GELENKE) if (e) N[g] = { w: K[g].w, l: RN[g].l * K[g].l / RA[g].l };
+      const P = ausWinkeln(N), vorher = amBoden(k.P);
+      // Hufe, die vorher am Boden standen, wieder auf den Boden setzen (andere Rassen haben andere Beinlängen)
+      for (const b of Object.keys(BEINE)) if (vorher[b]) { const T = BEINE[b].vorn ? VORN_TEILE : HINTEN_TEILE; Object.assign(P, beinLoesen(S.ruhe.P, b, P[b + "_" + T[0]], { x: P[b + "_huf"].x, y: 0 }, 0, true)); }
+      return { t: k.t, P }; });
+  }
+  $("sweep").max = maxSweep(); sweepAnzeigen();
+  allesNeu();
+}
+
+function sweepAnzeigen() {   // Regler = Weg des Hufs in der Stützphase; angezeigt wird die ganze Schrittlänge (Weg ÷ Anteil der Stützphase)
+  const sw = Math.min(S.sweep, maxSweep()); $("sweepText").textContent = Math.round(sw / GAENGE[S.gang].d * S.ruhe.cmJe) + " cm";
+}
+
+// ================= Speichern und Laden =================
+const SPEICHER = "animationstool-v1";
+function daten() { return { typ: "zuchtstall-animation", format: 1, name: $("name").value, rasse: S.rasse, farbe: S.farbe, dauer: S.dauer, vorlage: S.vorlage || null,
+  hinweis: "Koordinaten wie pferd.js: Pferd schaut nach links, Boden y = 0, nach oben negativ. Gelenke je Keyframe (t = 0–1 im Bewegungsablauf).",
+  ruhe: S.ruhe.P, keyframes: S.kf.map(k => ({ t: +k.t.toFixed(4), P: Object.fromEntries(Object.entries(k.P).map(([g, p]) => [g, [f1(p.x), f1(p.y)]])) })) }; }
+function datenLaden(D) {
+  if (D.typ !== "zuchtstall-animation") throw new Error("Das ist keine Datei vom Animationstool.");
+  $("name").value = D.name || "Bewegung"; S.dauer = D.dauer || 1; S.vorlage = D.vorlage || null; if (S.vorlage) S.gang = S.vorlage.gang;
+  S.kf = (D.keyframes || []).map(k => ({ t: k.t, P: Object.fromEntries(Object.entries(k.P).map(([g, p]) => [g, Array.isArray(p) ? { x: p[0], y: p[1] } : p])) }));
+  S.ruhe = null; S.wahl = S.kf.length ? 0 : -1; S.t = 0;
+  $("rasse").value = D.rasse; $("farbe").value = D.farbe || "brauner"; $("gang").value = S.gang;
+  rasseSetzenOhneUebertrag(D.rasse, D.farbe || "brauner");
+}
+function rasseSetzenOhneUebertrag(r, f) { S.rasse = r; S.farbe = f; S.ruhe = ruheHaltung(r, f); $("sweep").max = maxSweep(); allesNeu(); }
+let speicherZeit = 0;
+function autoSpeichern() { clearTimeout(speicherZeit); speicherZeit = setTimeout(() => { try { localStorage.setItem(SPEICHER, JSON.stringify(daten())); } catch (e) { /* Speicher voll oder gesperrt */ } }, 400); }
+function dateiSpeichern() {
+  const blob = new Blob([JSON.stringify(daten(), null, 1)], { type: "application/json" }), a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = ($("name").value || "bewegung").replace(/[^\wäöüÄÖÜß -]/g, "").replace(/\s+/g, "_").replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/Ä/g, "Ae").replace(/Ö/g, "Oe").replace(/Ü/g, "Ue").replace(/ß/g, "ss") + ".json";
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+// ================= Vorlagebild =================
+function bildLaden(datei) {
+  const url = URL.createObjectURL(datei), img = new Image();
+  img.onload = () => {   // so groß, dass das ganze Bild in die Bühne passt, mittig
+    const v = $("svg").viewBox.baseVal, s = Math.min(v.width / img.width, v.height / img.height);
+    S.bild = { url, w: img.width, h: img.height, s, x: v.x + (v.width - img.width * s) / 2, y: v.y + (v.height - img.height * s) / 2, spiegel: false }; buehneZeichnen(); };
+  img.src = url;
+}
+let bildZug = null;
+
+// ================= Start =================
+function start() {
+  for (const r of [...RASSEN].sort((a, b) => a.name.localeCompare(b.name, "de"))) $("rasse").add(new Option(r.name, r.id));
+  for (const k in GAENGE) $("gang").add(new Option(GAENGE[k].name, k));
+  $("rasse").value = S.rasse;
+  let gespeichert = null; try { gespeichert = JSON.parse(localStorage.getItem(SPEICHER)); } catch (e) { gespeichert = null; }
+  if (gespeichert && gespeichert.keyframes && gespeichert.keyframes.length) { try { datenLaden(gespeichert); } catch (e) { gespeichert = null; } }
+  if (!gespeichert) { S.ruhe = ruheHaltung(S.rasse, S.farbe); S.gang = "schritt"; $("sweep").max = maxSweep(); vorlageErzeugen(); S.rueck = []; }
+  $("sweep").value = Math.min(S.sweep, maxSweep()); sweepAnzeigen();
+
+  $("play").onclick = spielen;
+  $("zeit").oninput = e => zeitSetzen(e.target.value / 1000);
+  $("tempo").onchange = e => S.tempo = +e.target.value;
+  $("kfVor").onclick = () => kfWaehlen(S.kf.findIndex(k => k.t > S.t + 1e-6) < 0 ? 0 : S.kf.findIndex(k => k.t > S.t + 1e-6));
+  $("kfZurueck").onclick = () => { let i = -1; S.kf.forEach((k, j) => { if (k.t < S.t - 1e-6) i = j; }); kfWaehlen(i < 0 ? S.kf.length - 1 : i); };
+  $("kfNeu").onclick = () => { merken(); S.wahl = kfAnZeit(true); allesNeu(); };
+  $("kfWeg").onclick = () => { if (S.wahl < 0 || S.kf.length <= 1) return; merken(); S.kf.splice(S.wahl, 1); S.wahl = Math.min(S.wahl, S.kf.length - 1); allesNeu(); };
+  $("kopieren").onclick = () => { S.ablage = poseBei(S.t); };
+  $("einfuegen").onclick = () => { if (!S.ablage) return; merken(); const i = kfAnZeit(true); S.kf[i].P = kopie(S.ablage); S.wahl = i; allesNeu(); };
+  $("rueck").onclick = rueckgaengig;
+  $("gang").onchange = e => { S.gang = e.target.value; $("sweep").max = maxSweep(); sweepAnzeigen(); };
+  $("sweep").oninput = e => { S.sweep = +e.target.value; sweepAnzeigen(); };
+  $("vorlageLaden").onclick = () => { if (S.kf.length && !confirm("Die jetzige Bewegung wird ersetzt. Weiter? (Rückgängig geht mit Strg+Z)")) return; vorlageErzeugen(); };
+  $("rasse").onchange = e => rasseSetzen(e.target.value, S.farbe);
+  $("farbe").onchange = e => rasseSetzen(S.rasse, e.target.value);
+  for (const id of ["pferdDeck", "fernZeigen", "bodenLauf", "bildDeck"]) $(id).addEventListener("input", buehneZeichnen);
+  $("name").oninput = autoSpeichern;
+  $("speichern").onclick = dateiSpeichern;
+  $("ladenKnopf").onclick = () => $("ladenDatei").click();
+  $("ladenDatei").onchange = e => { const f = e.target.files[0]; if (!f) return; f.text().then(t => { try { merken(); datenLaden(JSON.parse(t)); } catch (err) { alert("Datei konnte nicht geladen werden: " + err.message); } }); e.target.value = ""; };
+  $("bildWahl").onclick = () => $("bildDatei").click();
+  $("bildDatei").onchange = e => { if (e.target.files[0]) bildLaden(e.target.files[0]); e.target.value = ""; };
+  $("bildWeg").onclick = () => { S.bild = null; buehneZeichnen(); };
+  $("bildSpiegel").onclick = () => { if (S.bild) { S.bild.spiegel = !S.bild.spiegel; S.bild.x += (S.bild.spiegel ? 1 : -1) * S.bild.w * S.bild.s; buehneZeichnen(); } };
+  $("bildZiehen").onclick = () => { S.bildModus = !S.bildModus; $("bildZiehen").classList.toggle("an", S.bildModus); $("figur").style.pointerEvents = S.bildModus ? "none" : ""; buehneZeichnen(); };
+  document.querySelectorAll(".info-knopf").forEach(k => k.onclick = () => $(k.dataset.info).classList.toggle("offen"));
+
+  const svg = $("svg");
+  svg.addEventListener("pointerdown", e => {
+    if (S.bildModus && S.bild) { bildZug = { p: svgPunkt(svg, e), x: S.bild.x, y: S.bild.y }; svg.setPointerCapture(e.pointerId); return; }
+    ziehenStart(e); if (zug) svg.setPointerCapture(e.pointerId);
+  });
+  svg.addEventListener("pointermove", e => {
+    if (bildZug) { const p = svgPunkt(svg, e); S.bild.x = bildZug.x + p.x - bildZug.p.x; S.bild.y = bildZug.y + p.y - bildZug.p.y; const g = $("vorlageBild").parentNode; g.setAttribute("transform", `translate(${S.bild.x},${S.bild.y}) scale(${S.bild.spiegel ? -S.bild.s : S.bild.s},${S.bild.s})`); return; }
+    ziehenBewegen(e);
+  });
+  svg.addEventListener("pointerup", () => { bildZug = null; ziehenEnde(); });
+  svg.addEventListener("wheel", e => { if (!S.bildModus || !S.bild) return; e.preventDefault(); const f = e.deltaY < 0 ? 1.05 : 1 / 1.05; S.bild.s *= f; buehneZeichnen(); }, { passive: false });
+
+  document.addEventListener("keydown", e => {
+    if (e.target.tagName === "INPUT" && e.target.type === "text") return;
+    if (e.key === " ") { e.preventDefault(); spielen(); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); $("kfVor").click(); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); $("kfZurueck").click(); }
+    else if (e.key === ".") zeitSetzen(S.t + 0.005);
+    else if (e.key === ",") zeitSetzen(S.t - 0.005);
+    else if (e.key.toLowerCase() === "k" && !e.ctrlKey) $("kfNeu").click();
+    else if (e.key === "Delete") $("kfWeg").click();
+    else if (e.ctrlKey && e.key.toLowerCase() === "z") { e.preventDefault(); rueckgaengig(); }
+    else if (e.ctrlKey && e.key.toLowerCase() === "c") $("kopieren").click();
+    else if (e.ctrlKey && e.key.toLowerCase() === "v") $("einfuegen").click();
+  });
+  window.addEventListener("resize", () => { gangbildZeichnen(); spurZeichnen(); });
+  zeitNeu();
+}
+start();
+window.ANI = { S, zeitSetzen, auswerten, poseBei, GAENGE };   // für Tests
+})();
+</script>
+</body>
+</html>

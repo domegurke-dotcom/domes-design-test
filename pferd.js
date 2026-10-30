@@ -324,7 +324,12 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   let body = perl ? mix(C.body, "#ead3a2", .55 * MG) : bronze ? mix(C.body, "#d4a878", .6 * MG) : gold ? mix(C.body, "#e8a92a", .5 * MG) : MG > .3 && /isabell/.test(farbId) ? mix(C.body, "#dfe3ea", .35 * MG) : C.body;
   let mane = DW === 3 ? "#efebe2" : (LACK_NEU && opt.lp && opt.lp.lack > 0 ? mix(C.mane, "#ecdcb8", Math.min(.8, opt.lp.lack * .85)) : C.mane), head = DW === 3 ? "#f4f1ea" : C.head || body;
   if (opt.smoky && !gold) { body = mix(body, "#5a4433", .28); mane = mix(mane, "#4a3a2e", .18); if (!C.head) head = body; }   // Dome 30.10.: Smoky Black (eine Anlage Cream auf Rappe) – fast schwarz, leicht bräunlich-matt
-  const pts = C.points || null;
+  let pts = C.points || null;
+  // Dome 30.10.: Fohlenfell – die ersten Monate sehen Fohlen anders aus als später: schwarze mausgrau, Braune mit hellen Beinen, alle anderen etwas heller (opt.fohlenFell 0–1, ohne Angabe beim Fohlen voll)
+  const FF = opt.fohlenFell != null ? opt.fohlenFell : (stufe === "fohlen" ? 1 : 0);
+  if (FF > 0 && !DW && !C.grau) { const hell = hexRgb(body).reduce((x, y) => x + y) / 3;
+    if (hell < 55) { body = mix(body, "#716b66", .6 * FF); mane = mix(mane, "#3d3836", .35 * FF); if (pts) pts = mix(pts, "#57514d", .5 * FF); if (C.head) head = mix(head, "#716b66", .5 * FF); else head = body; }
+    else { body = mix(body, "#f1e2c8", .2 * FF); if (!C.head) head = body; else head = mix(head, "#f1e2c8", .2 * FF); if (pts && !C.stripe) pts = mix(pts, body, .55 * FF); } }
   const hoof = C.pattern === "tobiano" || ganzWeiss ? "#b8a88f" : (C.hoof || "#3b3531");
   const SW = "#f7f5f1", spotFarbe = C.spot || mix(body, pts || body, .35);
   const dunkel = c => mix(c, "#1b1530", 0.25);

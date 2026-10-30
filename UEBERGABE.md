@@ -15,6 +15,13 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 30.10. (Claude Team, Sonnet) – v897–v905 (alles auf `main`)
+- v897–v900: Whiteboard für Anfänger, Boxen 4/6/8/10, Urkunden „Stall des Jahres“ (Liste in hvw – Hof), Pferdewirte machen Stallarbeit, Einsteller zahlen 5 % verspätet, Antworten zu Aufnahme 11, Fehler melden mit Bild (Datei/Bildschirm), Einstreu-Regeln. Details: CLAUDE.md v897–v900.
+- v901–v903: Bildschirm aufnehmen auch am Handy, Heu geht zurück in die Futterkammer (Weide mit Gras), Besitzer-Rückwunsch zu Stroh (`einstreuRueckBriefe`), Einstreu-Symbol, Hofwert-Linie im Diagramm, Weide/Heu-✗ im Whiteboard behoben (`heuOk`), Urkundenliste.
+- v904: Bay Roan (Roan auf Brauner), „Red Roan“ statt Rotschimmel (Roan auf Fuchs).
+- **v905:** Roan als Muster über jeder Grundfarbe (`rn_<Farbe>`, `ROAN_BASEN`, `MUSTER.rn`, Gen `Rn`): Buckskin/Palomino/Mausfalbe/Braunfalbe/Rotfalbe/Dunkelfuchs/Gelbfalbe/Windfarben/Dunkelbrauner/Schwarzbrauner Roan; Rappe/Brauner/Fuchs bleiben Blue/Bay/Red Roan. Enzyklopädie: 8 neue Roan-Einträge, Text in bzn. Geprüft: Farbbild, seltenheit-/schimmel-rar-test grün.
+- **Offen:** Tutorial-Schritt für das Einstreu-Symbol; Azubi-Meldung Nr. 44 (Weide nicht erledigt); `AUFNAHME-AUSWERTUNG-30-10.md` nach v897 nicht nachgeführt; Boxfenster-alle-Test nur am PC; Update-Fenster nur auf Domes Ansage (`NEUES_STAND` 889); Criollo nur auf Domes „Go“.
+
 ### 30.10. (Claude Team, Sonnet) – v895/v896: Auswertung Aufnahme 11
 Stand und Rest-Liste: `AUFNAHME-AUSWERTUNG-30-10.md` (74 Meldungen; erledigt, beantwortet, offen mit Fragen). Wichtigster Fund: Putzen ging bei 125 % Windows-Skalierung nicht (v895, `svgPunkt` mit `createSVGPoint`). Nächste Schritte: Dome beantwortet die Fragen am Ende der Datei, dann Azubi-Gruppe (26/27/43/44/62/70/71), Einstreu-Briefe (29/30/35/36), Zahlungsmoral (54/57/63).
 

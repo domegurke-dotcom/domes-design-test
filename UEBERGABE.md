@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 30.10. (Claude Team, Sonnet) – v895/v896: Auswertung Aufnahme 11
+Stand und Rest-Liste: `AUFNAHME-AUSWERTUNG-30-10.md` (74 Meldungen; erledigt, beantwortet, offen mit Fragen). Wichtigster Fund: Putzen ging bei 125 % Windows-Skalierung nicht (v895, `svgPunkt` mit `createSVGPoint`). Nächste Schritte: Dome beantwortet die Fragen am Ende der Datei, dann Azubi-Gruppe (26/27/43/44/62/70/71), Einstreu-Briefe (29/30/35/36), Zahlungsmoral (54/57/63).
+
 ### 30.10. (Claude Team, Opus) – v892
 Gehalt nach Qualifikation für Pferdepfleger und Pferdewirte gebaut (Details CLAUDE.md v892, Test `tests/gehalt-test.js` ✓). v893/v894: Pferdewirtschaftsmeister auch nach Qualifikation (Dome: Grundgehalt 750 € + 25 € je Zuschlag), Frage erledigt.
 

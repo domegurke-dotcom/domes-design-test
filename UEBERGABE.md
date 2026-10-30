@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 30.10. (Claude Team, Opus) – v928: Pferdetypen-Reiter, Schimmel-Erklärfenster, Pinto/Paint
+Aus Domes 4 PDFs (Size & Build, Light Horses, Grey, Pinto vs. Paint). Nur per Bild (3 Ansichten) und Klicktest geprüft. Offene Fragen an Dome siehe Antwort vom 30.10. (Schimmel-Details, Paint/Appaloosa-Grau).
+
 ### 30.10. (Claude Team, Opus) – v927: KIT-Gen, Sabino-Weiß, Tintenflecke, Dominant White Araber, dünner Leopard-Schweif
 Domes Ja zu allen 5 Punkten aus v926. Tests kit-, seltenheit-, raritaeten-, schimmel-rar-, zucht-, spielstand-, krankheiten-test ✓. Selbst gesetzt: Araber W .00005, `LP_DUENN` .5, Tintenflecke 5–11 Stück. Als Nächstes: Domes 4 neue PDFs (Size/Build, Light Horses, Pinto vs Paint, Grey) für die Enzyklopädie.
 

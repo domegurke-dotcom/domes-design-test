@@ -28,6 +28,9 @@ Nach dem Zeichnen einfach hochladen – `werkzeuge/kopf-export.js` übernimmt ne
 
 ## Fehlt noch (neue Ebenen)
 
+### 0e. Besseres Skelett für das Pferd (Dome, 30.10.2026 – später, wenn gefunden)
+Dome sucht eine bessere Skelett-Zeichnung (Seitenansicht, möglichst als SVG). Gewünscht: Knochen als **benannte Ebenen/Gruppen** (schädel, halswirbel, brustwirbel-rippen, schulterblatt, oberarm, unterarm-vorderfusswurzel, fessel-vorne, huf-vorne, becken, oberschenkel, kniescheibe, unterschenkel, sprunggelenk, fessel-hinten, huf-hinten, schweif) und kleine Kreise als **Eckpunkte** in einer Ebene `punkte` (Genick, Nase, Halsbasis, Widerrist, Schultergelenk, Ellbogen, Vorderknie, Hüfthöcker, Hüftgelenk, Kniescheibe, Sprunggelenk, Schweifansatz, Hufe). Das Spiel verformt das Skelett teilweise über jede Pferdeform (siehe `zeichnungen/skelett-punkte.json`, `werkzeuge/skelett-export.js`). Aktuell ist ein aus Domes Bild nachgezeichnetes Platzhalter-Skelett (`zeichnungen/skelett.svg`) im Einsatz. Wird ersetzt: neue SVG nach `zeichnungen/skelett.svg`, Punkte in der JSON anpassen, Export laufen lassen. Fellfarben, die davon abhängen (Lackschimmel-Flecken über den Knochen, Roan-V, Appaloosa), dann nachziehen. **Bonus-Idee (Dome: „mega“):** Röntgenbild bei der Ankaufsuntersuchung (Spat, Hufrolle, Kissing Spines …).
+
 ### 0d. Kötenbehang und Ohrformen für die Rassemerkmale (Dome, 20.10.2026 – später aufarbeiten)
 - In der Karte Merkmale – Rassemerkmale fehlen die Zeilen **„Behang“** und **„Ohren“** (PLAN-MERKMALE Punkt 19), weil es dafür noch nichts zu prüfen gibt: Der Kötenbehang (`behang` in pferd.js) ist ausgeblendet, die Ohren sind immer rassetypisch.
 - **Bitte zeichnen (wenn du Zeit hast):** Kötenbehang (Fesselbehang) in 2–3 Stärken für Kaltblut/Cob/Friese/Fell/Dales und abweichende Ohrformen (z. B. Marwari-Ohren nach innen gebogen, zu kurz/zu lang). Danach baut Claude die beiden Zeilen samt Verstoß (Typnote −0,5, Marktwert −5 %) ein.

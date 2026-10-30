@@ -15,6 +15,11 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 30.10. (Claude Team, Sonnet) – Entwürfe auf Branch `claude/eager-franklin-tx69vt`, noch NICHT auf `main` (warten auf Domes Freigabe)
+- Roan als Wolken (Light/Medium/Heavy) + Jahreszeit, Alter, Corn spots, umgekehrtes V, Strawberry/Lilac; Lackschimmel mit großen Farbflecken (Domes „Bild 1“) + hellere Mähne; Pangaré in 3 Stufen (`opt.pangareK` 1–3 aus `ex.pangare`). Schalter in pferd.js: `ROAN_NEU`, `LACK_NEU`, `PANGARE_NEU` (false = alte Darstellung).
+- Skelett: `zeichnungen/skelett.svg` (aus Domes Bild nachgezeichnet), `zeichnungen/skelett-punkte.json`, `werkzeuge/skelett-export.js` → `skelett.js` (lazy per `skelettLaden`), `opt.skelett` legt es verformt über das Pferd (`skelettSVG`, Zielpunkte in `zeichnePferd`). Austauschbar; Wunschliste in `BEI-INKSCAPE-BEARBEITEN.md` 0e. Idee Röntgenbild bei der AKU (Dome: „mega“) noch nicht gebaut.
+- Offen: Version/Enzyklopädie/CLAUDE.md erst beim Einbauen auf `main`.
+
 ### 30.10. (Claude Team, Sonnet) – v897–v905 (alles auf `main`)
 - v897–v900: Whiteboard für Anfänger, Boxen 4/6/8/10, Urkunden „Stall des Jahres“ (Liste in hvw – Hof), Pferdewirte machen Stallarbeit, Einsteller zahlen 5 % verspätet, Antworten zu Aufnahme 11, Fehler melden mit Bild (Datei/Bildschirm), Einstreu-Regeln. Details: CLAUDE.md v897–v900.
 - v901–v903: Bildschirm aufnehmen auch am Handy, Heu geht zurück in die Futterkammer (Weide mit Gras), Besitzer-Rückwunsch zu Stroh (`einstreuRueckBriefe`), Einstreu-Symbol, Hofwert-Linie im Diagramm, Weide/Heu-✗ im Whiteboard behoben (`heuOk`), Urkundenliste.

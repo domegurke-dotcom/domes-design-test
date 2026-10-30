@@ -252,6 +252,35 @@ function bauK(k, bau) {
     croup: (k.croup || 0) - 0.15 * Math.max(0.4, Math.abs(k.croup || 0)) * s };
 }
 const HALS_KURZ = 0.9, HALS_KURZ_AB = 0.52;   // Dome 25.10.: normale Hälse wirkten zu lang
+// ---------- Skelett (Dome 30.10.): zeichnungen/skelett.svg + skelett-punkte.json → skelett.js (window.SKELETT), wird teilweise verformt über die Pferdeform gelegt. Austauschbar: neue SVG + Punkte, werkzeuge/skelett-export.js ----------
+function skelettSVG(Z, SK, uid, deckkraft) {
+  const D = SK.daten, W = D.breite, pk = n => { const q = D.punkte[n]; if (!q) throw new Error("Skelettpunkt fehlt: " + n); return q; }, zl = n => { const q = Z[n]; if (!q) throw new Error("Zielpunkt fehlt: " + n); return q; };
+  const spiegel = x => D.spiegeln ? W - x : x;
+  let defs = "", teile = "";
+  D.teile.forEach((t, i) => {
+    const F = t.fit; let tf;
+    if (F.typ === "aehnlich") {
+      const [[a1, b1], [a2, b2]] = F.paare, m1 = [spiegel(pk(a1)[0]), pk(a1)[1]], m2 = [spiegel(pk(a2)[0]), pk(a2)[1]], g1 = zl(b1), g2 = zl(b2);
+      const dx = m2[0] - m1[0], dy = m2[1] - m1[1], den = dx * dx + dy * dy, ex = g2.x - g1.x, ey = g2.y - g1.y, ar = (ex * dx + ey * dy) / den, ai = (ey * dx - ex * dy) / den;
+      tf = (x, y) => { const mx = spiegel(x) - m1[0], my = y - m1[1]; return [g1.x + ar * mx - ai * my, g1.y + ai * mx + ar * my]; };
+    } else if (F.typ === "achsen") {
+      const [[xa, xb], [xc, xd]] = F.x, [[ya, yb], [yc, yd]] = F.y, mx1 = spiegel(pk(xa)[0]), mx2 = spiegel(pk(xc)[0]), ax = (zl(xd).x - zl(xb).x) / (mx2 - mx1), ay = (zl(yd).y - zl(yb).y) / (pk(yc)[1] - pk(ya)[1]);
+      tf = (x, y) => [zl(xb).x + ax * (spiegel(x) - mx1), zl(yb).y + ay * (y - pk(ya)[1])];
+    } else {   // "hoehe": Maßstab aus der Höhe zwischen zwei Punkten, in x gleich skaliert
+      const [[ya, yb], [yc, yd]] = F.y, s = (zl(yd).y - zl(yb).y) / (pk(yc)[1] - pk(ya)[1]), mxr = spiegel(pk(F.x[0])[0]), gx = zl(F.x[1]).x;
+      tf = (x, y) => [gx + s * (spiegel(x) - mxr), zl(yb).y + s * (y - pk(ya)[1])];
+    }
+    const o = tf(0, 0), ex = tf(1, 0), ey = tf(0, 1), m = [ex[0] - o[0], ex[1] - o[1], ey[0] - o[0], ey[1] - o[1], o[0], o[1]].map(v => +v.toFixed(5)).join(" ");
+    defs += `<clipPath id="sk${i}-${uid}">${t.clip.map(([x1, y1, x2, y2]) => `<rect x="${x1}" y="${y1}" width="${x2 - x1}" height="${y2 - y1}"/>`).join("")}</clipPath>`;
+    teile += `<g transform="matrix(${m})"><g clip-path="url(#sk${i}-${uid})">${SK.svg}</g></g>`;
+  });
+  return `<defs>${defs}</defs><g class="skelett" opacity="${deckkraft === true ? .75 : deckkraft}" pointer-events="none">${teile}</g>`;
+}
+function skelettLaden(fertig) {   // lädt skelett.js erst, wenn es gebraucht wird (0,7 MB)
+  if (typeof SKELETT !== "undefined") return fertig && fertig();
+  const s = document.createElement("script"); s.src = "skelett.js"; s.onload = () => fertig && fertig(); document.head.appendChild(s);
+}
+
 function zeichnePferd(rasseId, farbId, opt = {}) {
   { const LX = FARBEN[farbId] && FARBEN[farbId].lexOpt; if (LX) opt = { ...LX, ...opt }; }   // v486: Enzyklopädie-Einträge bringen ihre Zeichnung mit (Rabicano, Brindle, Lp …)
   // Körpertyp: duenn | sportlich | normal | dick
@@ -1200,6 +1229,10 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     return { svg: `<g>${b}</g>`, box: { minX: fx - 1.6 * w, maxX: fx + 1.8 * w, minY: bottom - 8 } };
   }
   // Einzelteile für Zeichenvorlagen (Krita/Inkscape)
+  if (opt.skelett && typeof SKELETT !== "undefined" && !liegt) {   // Dome 30.10.: Skelett über das Pferd gelegt (zur Prüfung / später Röntgenbild)
+    const Zs = { genick: Pll, nase: hp(1.0, 0.1), halsbasis: P((Wn.x + Cn.x) / 2, (Wn.y + Cn.y) / 2), brustvorn: P(-0.05 * H, top + 0.45 * D), kruppeEnde: P(L, croupY + 4), widerrist: Wn, bauch: P(0.55 * L, bottom), ellbogen: P(0.16 * L, bottom - 0.08 * D), vorderbein: P(0.16 * L, 0), boden: P(0.5 * L, 0), huefte: P(0.82 * L, top + 0.35 * D), hinterbein: P(0.83 * L, 0) };
+    g += skelettSVG(Zs, SKELETT, uid, opt.skelett);
+  }
   if (opt.teile) return { svg: `<g transform="translate(0,${f(dLiegen)})">${g}</g>`, box: { minX, maxX, minY: minY + dLiegen }, dy: dLiegen, liegt,
     teile: liegt ? { hals: halsD, rumpf: glatt(rumpf), hinterbein: glatt(hinterLiegend), vorderbein: glatt(vorderLiegend), vorderbeinUnten: eckig(vorderLiegendUnten), maehne: maehneD, schweif: schweifD, kopf: glatt(kopf) }
       : { hals: halsD, rumpf: glatt(rumpf), vorderbeinNah: glatt(vorderN), vorderbeinFern: glatt(vorderF), hinterbeinNah: glatt(hinterN), hinterbeinFern: glatt(hinterF),

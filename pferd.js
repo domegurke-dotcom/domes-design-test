@@ -58,6 +58,7 @@ function musterFarbe(id, t) {
   return e;
 }
 // Roan in 3 Stufen (v439): wenig = Grundfarbe scheint stärker durch, viel = sehr hell; andere Muster unverändert (deren Stufe steckt in der Zeichnung)
+var LACK_NEU = true;   // Dome 30.10.: Lackschimmel (Varnish Roan) fast weiß mit Farbflecken über den Knochen; false = alte Darstellung (Vergleich)
 var PANGARE_NEU = true;   // Dome 30.10.: Pangaré auch am Körper (false = nur Mehlmaul, Vergleich)
 var ROAN_NEU = true;   // Dome 30.10.: Roan als weiße Wolken mit weichem Rand (Light/Medium/Heavy) statt gleichmäßigem Schleier; false = alte Darstellung (Vergleich)
 function musterStufeFarbe(C, st) {
@@ -860,7 +861,12 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
   // v441 Leopard-Komplex (PLAN-SCHECKUNG.md Schritt 3): Lackschimmel (wird mit dem Alter heller, über Knochen bleibt es dunkel), Snowflake, Frost
   if (LP) {
     const rl = zufall((opt.seed || rasseId) + "-lp"), koerper = `<path d="${halsD}" fill="#fff"/><path d="${glatt(rumpf)}" fill="#fff"/>`;
-    if (LP.lack > 0) {
+    if (LP.lack > 0 && LACK_NEU) {   // Dome 30.10. (Foto Varnish Roan): fast weißer Körper, die Farbe bleibt als Flecken über den Knochenpunkten (Schulter, Widerrist, Ellbogen, Hüfte, Flanke/Knie), Beine und Kopf bleiben farbig
+      const sc = 1 - 0.3 * Math.min(1, LP.lack), rb = [[0.1, top + 0.32 * D, 0.1, 0.26], [0.33, top + 0.08 * D, 0.11, 0.12], [0.2, bottom - 0.1 * D, 0.09, 0.2], [0.8, top + 0.18 * D, 0.13, 0.26], [0.72, bottom - 0.3 * D, 0.12, 0.3], [0.5, top + 0.62 * D, 0.07, 0.14]]
+        .map(([x, y, rx, ry]) => `<ellipse cx="${f((x + (rl() - .5) * .04) * L)}" cy="${f(y)}" rx="${f(rx * sc * L)}" ry="${f(ry * sc * D)}" fill="#000" opacity="${f(0.75 + rl() * 0.25)}"/>`).join("");
+      g += `<defs><filter id="lb-${uid}" filterUnits="userSpaceOnUse" ${bx}><feGaussianBlur stdDeviation="${f(D * .06)}"/></filter><mask id="lm-${uid}" maskUnits="userSpaceOnUse" ${bx}><rect ${bx} fill="#fff"/><g filter="url(#lb-${uid})">${rb}</g></mask></defs>` +
+        `<g clip-path="url(#cr-${uid})"><rect ${bx} fill="#f1ece2" opacity="${f(Math.min(.93, LP.lack * 1.05))}" mask="url(#lm-${uid})"/>${stichel(koerper, 3, LP.lack * .7, 23)}</g>`;
+    } else if (LP.lack > 0) {
       g += `<g clip-path="url(#cr-${uid})">${stichel(koerper, 3, LP.lack, 29)}${stichel(koerper, 3, LP.lack * 0.85, 23)}${LP.lack > .5 ? stichel(koerper, 3, (LP.lack - .5) * 2, 31) : ""}</g>`;
       const marke = [[0.0, top + 0.45 * D, 0.06, 0.16], [0.13, bottom - 0.12 * D, 0.05, 0.14], [0.8, top + 0.12 * D, 0.06, 0.12], [0.74, bottom - 0.2 * D, 0.06, 0.16], [0.35, top + 0.06 * D, 0.1, 0.08]]
         .map(([x, y, rx, ry]) => klecks(rl, x * L, y, rx * L, ry * D, dunkel(body))).join("");   // „Varnish marks“ an Bug, Ellbogen, Hüfthöcker, Knie, Widerrist

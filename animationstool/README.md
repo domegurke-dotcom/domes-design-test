@@ -31,7 +31,7 @@
 - Schlichtes Pferd aus Teilen (Rumpf, Hals, Kopf mit Ohr/Auge, Mähne, Schweif, Beine als runde Glieder mit Hufen), folgt den Punkten der Strichfigur und läuft beim Abspielen mit (`protoZeichnen`, Farben `PROTO`). Keine Rasse, kommt nicht ins Spiel. Schalter „Prototyp-Pferd zeigen“ und „Prototyp deckend“ (Karte Pferd); das Spielpferd im Hintergrund steht dafür standardmäßig auf 0 %.
 
 ## Grenzen / offen
-- Die Vorlagen-Schritte sind kürzer als in echt (Schritt ca. 106 cm statt 160–180 cm, Trab ca. 165 cm, Galopp ca. 189 cm beim Hannoveraner), und im Schritt landet der Hinterhuf ca. 30 cm hinter dem Vorderhuf statt in oder vor seiner Spur. Grund: am Ende der Stützphase muss das Bein gestreckt den Boden erreichen; Abrollen über die Zehe, Durchtreten der Fessel und stärkeres Mitschwingen von Schulter/Becken fehlen noch. Von Hand je Keyframe korrigierbar.
+- **Schrittlänge (31.10.):** Schulterblatt/Becken schwingen nur so weit mit, wie das Bein es braucht (`MITSCHWINGEN` .4/.35 bis `MITSCHWINGEN_MAX` .65/.6) – Schritt beim Hannoveraner jetzt bis ca. 139 cm (vorher 106–115). Echt sind 160–180 cm: die Grenze ist die Höhe des Hüftgelenks; mehr ginge nur mit Abrollen über die Zehe und Durchtreten der Fessel (nicht gebaut). Mehr Schulterschwung sah unnatürlich aus (Buggelenk wanderte aus der Brust). Vor jedem Auffußen steht ein zusätzlicher Keyframe (sonst berührte der Huf im Trab zu früh den Boden).
 - Noch keine Tölt-, Pass-, Running-Walk-Vorlagen (Bilder dafür liegen in `pdfs/Bilder`).
 - Die Bewegung wird noch nicht im Spiel benutzt; das Spielpferd im Hintergrund bewegt sich nicht mit.
 

@@ -343,11 +343,17 @@ function beinLoesen(R, b, wurzel, ziel, beugung, stuetze) {
 // Schulterblatt und Becken schwingen mit (wie in echt): Buggelenk dreht um den Widerrist, Hüftgelenk um die Kruppe – ein Teil der Beinbewegung.
 const MITSCHWINGEN = { vorn: .4, hinten: .35 };
 const mittelXVon = (R, b) => R[b + "_huf"].x + (BEINE[b].vorn ? -2 : -8);   // Stützphase rund um den Stand des Hufs, hinten etwas weiter unter den Bauch
+function beinReich(R, b) {   // größte Länge vom Bug-/Hüftgelenk bis zum Huf (Bein gestreckt), mit 2,5 Reserve für das Auf und Ab des Körpers
+  const T = teileVon(b), U = unterteil(R, b, 0, 1); return dist(R[b + '_' + T[0]], R[b + '_' + T[1]]) + dist(U.P[U.oben], U.P[U.huf]) - 2.5;
+}
+// Schulterblatt/Becken schwingen nur so weit mit, wie das Bein es braucht (Dome 31.10.: längere Schritte wie in echt) – von MITSCHWINGEN bis MITSCHWINGEN_MAX
+const MITSCHWINGEN_MAX = { vorn: .65, hinten: .6 };
 function wurzelGedreht(P, R, b, ziel) {
-  const v = BEINE[b].vorn, wk = b + "_" + (v ? "bug" : "hueft"), dreh0 = v ? "widerrist" : "kruppe";
-  const um = P[dreh0], w = P[wk], huf0 = { x: R[b + "_huf"].x + (w.x - R[wk].x), y: R[b + "_huf"].y + (w.y - R[wk].y) };
-  const phi = (v ? MITSCHWINGEN.vorn : MITSCHWINGEN.hinten) * wDiff(winkel(um, huf0), winkel(um, ziel));
-  return dreh(w, um, phi);
+  const v = BEINE[b].vorn, wk = b + '_' + (v ? 'bug' : 'hueft'), dreh0 = v ? 'widerrist' : 'kruppe';
+  const um = P[dreh0], w = P[wk], huf0 = { x: R[b + '_huf'].x + (w.x - R[wk].x), y: R[b + '_huf'].y + (w.y - R[wk].y) }, dw = wDiff(winkel(um, huf0), winkel(um, ziel));
+  const f0 = v ? MITSCHWINGEN.vorn : MITSCHWINGEN.hinten, f1 = v ? MITSCHWINGEN_MAX.vorn : MITSCHWINGEN_MAX.hinten, reich = beinReich(R, b);
+  for (let f = f0; f < f1 + 1e-9; f += .05) { const q = dreh(w, um, f * dw); if (dist(q, ziel) <= reich) return q; }
+  return dreh(w, um, f1 * dw);
 }
 function vorlagePose(G, t, sweep) {
   const R = S.ruhe.P, K = G.koerper(t), mitte = { x: (R.widerrist.x + R.kruppe.x) / 2, y: R.widerrist.y + 15 };
@@ -368,12 +374,11 @@ function vorlagePose(G, t, sweep) {
 }
 function erreichbar(b, ziel) {   // reicht das Bein (mit Mitschwingen und gestreckt) bis zum Ziel am Boden?
   const R = S.ruhe.P, T = BEINE[b].vorn ? VORN_TEILE : HINTEN_TEILE, U = unterteil(R, b, 0, 1);
-  const w = wurzelGedreht(R, R, b, ziel), reich = dist(R[b + "_" + T[0]], R[b + "_" + T[1]]) + dist(U.P[U.oben], U.P[U.huf]) - 2.5;   // 2,5 Reserve für das Auf und Ab des Körpers
-  return dist(w, ziel) <= reich;
+  return dist(wurzelGedreht(R, R, b, ziel), ziel) <= beinReich(R, b) + 1e-6;
 }
 function maxSweep() {   // größte Schrittlänge der Stützphase, die alle vier Beine vorn und hinten erreichen
-  const R = S.ruhe.P; let m = 140;
-  for (const b of Object.keys(BEINE)) { const x = mittelXVon(R, b); let lo = 0, hi = 140;
+  const R = S.ruhe.P; let m = 160;
+  for (const b of Object.keys(BEINE)) { const x = mittelXVon(R, b); let lo = 0, hi = 160;
     for (let i = 0; i < 20; i++) { const s = (lo + hi) / 2; if (erreichbar(b, { x: x - s / 2, y: 0 }) && erreichbar(b, { x: x + s / 2, y: 0 })) lo = s; else hi = s; }
     m = Math.min(m, lo); }
   return Math.max(20, Math.floor(m));
@@ -383,7 +388,7 @@ function vorlageErzeugen(still) {
   const G = GAENGE[S.gang], n = +$("kfAnzahl").value, sweep = Math.min(S.sweep, maxSweep());
   // Zeitpunkte: gleichmäßiges Raster plus jedes Auffußen und Abfußen (sonst landen Hufe zwischen zwei Keyframes zu früh oder zu spät)
   const zeiten = []; for (let i = 0; i < n; i++) zeiten.push(i / n);
-  for (const b in G.ph) for (const z of [G.ph[b], (G.ph[b] + G.d) % 1]) zeiten.push(+z.toFixed(4));
+  for (const b in G.ph) for (const z of [G.ph[b], (G.ph[b] + G.d) % 1, (G.ph[b] + .975) % 1]) zeiten.push(+z.toFixed(4));   // auch kurz vor dem Auffußen, damit der Huf nicht zu früh den Boden berührt
   zeiten.sort((a, b) => a - b); const T = zeiten.filter((z, i) => !i || z - zeiten[i - 1] > .004);
   S.kf = T.map(t => ({ t, P: vorlagePose(G, t, sweep) }));
   S.dauer = G.dauer; S.vorlage = { gang: S.gang, sweep, pdf: G.pdf }; S.wahl = 0; S.t = 0;
@@ -885,7 +890,7 @@ function start() {
   zeitNeu();
 }
 start();
-window.ANI = { S, zeitSetzen, auswerten, poseBei, GAENGE, maxSweep, MITSCHWINGEN, pruefen };   // für Tests
+window.ANI = { S, zeitSetzen, auswerten, poseBei, GAENGE, maxSweep, MITSCHWINGEN, MITSCHWINGEN_MAX, pruefen };   // für Tests
 })();
 </script>
 </body>

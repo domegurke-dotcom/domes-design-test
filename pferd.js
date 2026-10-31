@@ -133,7 +133,7 @@ const RASSEN = [
     text: "Großrahmiges Warmblut für Dressur und Springen – langer Hals, gerader Kopf, viel Rahmen.",
     farben: ["brauner", "dunkelbrauner", "fuchs", "dfuchs", "rappe", "schimmel"],
     k: { nk: 0.4, len: 1.03, depth: .45, legT: .09, neck: .6, nAng: 52, crest: .05, head: .44, hAng: 55, profile: 0, hw: 1, jw: 1, muz: 1, ear: .1, mane: "kurz", maneLen: .05, vol: .7, fore: .3, tail: .65, tvol: .8, tset: .3, feather: 0, croup: .4, hq: 1, eye: 1 } },
-  { id: "isi", name: "Islandpferd", herkunft: "Island", h: [130, 145],
+  { id: "isi", name: "Islandpferd", herkunft: "Island", h: [125, 145],
     text: "Robustes Gangpferd (Tölt!) mit dichter Doppelmähne und fast allen Farben der Pferdewelt.",
     farben: ["fuchs", "dfuchs", "brauner", "rappe", "schimmel", "braunfalbe", "mausfalbe", "palomino", "windfarben", "isabell", "fuchsschecke", "braunschecke"],
     k: { nk: 0.7, len: 1.0, depth: .53, legT: .1, neck: .45, nAng: 50, crest: .06, head: .44, hAng: 52, profile: 0, hw: 1.05, jw: 1.05, muz: 1, ear: .08, mane: "lang", maneLen: .25, vol: 1.3, fore: 1.1, tail: .9, tvol: 1.3, tset: .2, feather: .15, croup: .6, hq: 1, eye: 1 } },

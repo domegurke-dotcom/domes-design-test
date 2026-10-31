@@ -47,7 +47,7 @@
   .gelenk:hover circle.sicht { stroke-width: 1.2; }
   .ziehen { cursor: grabbing !important; }
   .hinweis { font-size: 12px; color: var(--leise); }
-  #meldung { position: fixed; left: 50%; top: 58px; transform: translateX(-50%); background: #2e6b34; color: #fff; padding: 8px 14px; border-radius: 8px; z-index: 20; box-shadow: 0 2px 8px #0003; max-width: 70vw; }
+  #meldung { position: fixed; left: 50%; top: 58px; transform: translateX(-50%); background: #2e6b34; color: #fff; padding: 8px 14px; border-radius: 8px; z-index: 20; box-shadow: 0 2px 8px #0003; max-width: 70vw; pointer-events: none; opacity: .93; }
   #meldung[hidden] { display: none; }
   .pr-zeile { cursor: pointer; padding: 3px 0; border-bottom: 1px dotted var(--rand); font-size: 13px; }
   .pr-zeile:hover { color: var(--akzent); }
@@ -88,7 +88,7 @@
     <li><b>Seiten</b>: das Pferd schaut nach links, du siehst seine <b>linke</b> Seite. Kräftig = linke Beine (vorne grün, hinten rot), blass = rechte Beine (vorne gelb, hinten blau).</li>
   </ul>
   <h3>Ein Bein weiter vortreten lassen (der einfachste Weg)</h3>
-  <ol><li>Rechts in „Bein ändern“ das Bein wählen.</li><li>Auf <b>◀ weiter vor</b> klicken – jedes Mal 5 cm, über die ganze Bewegung fließend.</li><li><b>▶ Abspielen</b> und anschauen. Zu viel? <b>weniger ▶</b> oder Strg+Z.</li></ol>
+  <ol><li>Rechts in „Bein ändern“ das Bein wählen.</li><li>Auf <b>◀ weiter vor</b> klicken – jedes Mal 5 cm, über die ganze Bewegung fließend. Genauso geht <b>weiter nach hinten ▶</b> für das hintere Ende, wenn das Bein abfußt.</li><li><b>▶ Abspielen</b> und anschauen. Zu viel? <b>weniger ▶</b> oder Strg+Z.</li></ol>
   <h3>Eine Stelle von Hand ändern</h3>
   <ol><li>Mit <b>⏭</b> zu einem Keyframe springen (oder auf eine Raute im Gangbild tippen).</li><li>Einen Punkt mit der Maus ziehen. Mit „Knochenlänge halten“ dreht sich alles darunter mit, die Knochen bleiben gleich lang.</li><li>Auch den Keyframe davor und danach ein wenig anpassen – die Schatten zeigen, wo das Bein dort ist. So springt nichts.</li><li>Ein Huf, der knapp über oder im Boden landet, wird automatisch genau auf den Boden gesetzt.</li></ol>
   <h3>Links und rechts gleich machen</h3>
@@ -145,7 +145,8 @@
       <h2>Bein ändern <button class="info-knopf" data-info="iBein">i</button></h2>
       <div class="info-text" id="iBein">Ändert ein Bein über die <b>ganze Bewegung</b> auf einmal, fließend – du musst nicht jeden Keyframe einzeln anfassen. Jeder Klick 5 cm. Strg+Z nimmt es zurück.</div>
       <label class="zeile">Bein <select id="beinWahl"><option value="VL">Vorne links (grün)</option><option value="HL">Hinten links (rot)</option><option value="VR">Vorne rechts (gelb)</option><option value="HR">Hinten rechts (blau)</option></select></label>
-      <div class="knoepfe"><button id="beinVor">◀ weiter vor</button><button id="beinZurueck">weniger ▶</button></div>
+      <div class="knoepfe"><button id="beinVor">◀ weiter vor</button><button id="beinZurueck">weniger vor ▶</button></div>
+      <div class="knoepfe" style="margin-top:6px"><button id="beinHintenWeniger">◀ weniger nach hinten</button><button id="beinHinten">weiter nach hinten ▶</button></div>
       <div class="knoepfe" style="margin-top:6px"><button id="rechtsWieLinks" title="Rechte Beine bekommen die Bewegung der linken, einen halben Schritt später">Rechts wie links</button><button id="linksWieRechts">Links wie rechts</button></div>
       <label class="zeile">Hufe auf den Boden fangen <input type="checkbox" id="hufFangen" checked></label>
     </div>
@@ -651,18 +652,18 @@ function hufAufBoden(P, b) {   // ganzes Bein um Bug/Hüfte drehen, bis der Huf 
 function hufeFangen(P) {   // nach dem Ziehen: Hufe knapp über oder im Boden landen genau auf dem Boden
   let n = 0; for (const b of Object.keys(BEINE)) { const y = P[b + "_huf"].y; if (y > -1.5 && Math.abs(y) > .01 && hufAufBoden(P, b)) n++; } return n;
 }
-function beinVor(b, cm) {   // Bein über die ganze Bewegung weiter vor (cm > 0) oder weniger weit treten lassen – am meisten dort, wo es am weitesten vorn ist, fließend
+function beinVor(b, cm, hinten) {   // hinten = true: am hinteren Ende der Bewegung (Abfußen) weiter nach hinten (cm > 0) bzw. weniger   // Bein über die ganze Bewegung weiter vor (cm > 0) oder weniger weit treten lassen – am meisten dort, wo es am weitesten vorn ist, fließend
   if (!S.kf.length) return; merken();
   const T = teileVon(b), rel = S.kf.map(k => k.P[b + "_huf"].x - k.P[b + "_" + T[0]].x), lo = Math.min(...rel), hi = Math.max(...rel), d = cm / S.ruhe.cmJe;
   let zuWeit = 0;
   S.kf.forEach((k, i) => {
-    const P = k.P, w = P[b + "_" + T[0]], h = P[b + "_huf"], g = hi > lo ? (hi - rel[i]) / (hi - lo) : 1, x = h.x - d * g, amBod = h.y >= -BODEN_TOL;
+    const P = k.P, w = P[b + "_" + T[0]], h = P[b + "_huf"], g = hi > lo ? (hinten ? rel[i] - lo : hi - rel[i]) / (hi - lo) : 1, x = h.x + (hinten ? d : -d) * g, amBod = h.y >= -BODEN_TOL;
     if (amBod) { const L = beinLoesen(S.ruhe.P, b, w, { x, y: 0 }, 0, true); Object.assign(P, L); if (P[b + "_huf"].y < -BODEN_TOL) zuWeit++; }
     else { const L = dist(w, h), c = Math.max(-1, Math.min(1, (x - w.x) / L)), a = winkel(w, h), z1 = Math.acos(c), z = Math.abs(wDiff(a, z1)) < Math.abs(wDiff(a, -z1)) ? z1 : -z1, dd = wDiff(a, z);
       for (const t of T.slice(1)) P[b + "_" + t] = dreh(P[b + "_" + t], w, dd); if (P[b + "_huf"].y > 0) hufAufBoden(P, b); }
   });
   allesNeu();
-  hilfeMeldung(zuWeit ? "⚠️ Weiter geht es nicht ganz: an " + zuWeit + " Stellen ist das Bein schon ganz gestreckt und hebt vom Boden ab. Ein Stück zurück (▶) hilft." : (cm > 0 ? "✔ " + BEINE[b].name + " tritt jetzt " + cm + " cm weiter vor." : "✔ " + BEINE[b].name + " tritt jetzt " + (-cm) + " cm weniger weit vor."));
+  hilfeMeldung(zuWeit ? "⚠️ Weiter geht es nicht ganz: an " + zuWeit + " Stellen ist das Bein schon ganz gestreckt und hebt vom Boden ab. Ein Stück zurücknehmen hilft." : hinten ? "✔ " + BEINE[b].name + " schwingt jetzt " + Math.abs(cm) + " cm " + (cm > 0 ? "weiter" : "weniger weit") + " nach hinten." : (cm > 0 ? "✔ " + BEINE[b].name + " tritt jetzt " + cm + " cm weiter vor." : "✔ " + BEINE[b].name + " tritt jetzt " + (-cm) + " cm weniger weit vor."));
 }
 function seiteUebertragen(von, beine) {   // „Rechts wie links“: das Bein der anderen Seite bekommt dieselbe Bewegung, einen halben Schritt versetzt
   if (!S.kf.length) return; merken();
@@ -823,7 +824,8 @@ function start() {
   $("rueck").onclick = rueckgaengig;
   $("hilfeKnopf").onclick = () => $("hilfe").hidden = false; $("hilfeZu").onclick = () => $("hilfe").hidden = true;
   $("hilfe").onclick = e => { if (e.target.id === "hilfe") $("hilfe").hidden = true; };
-  $("beinVor").onclick = () => beinVor($("beinWahl").value, 5); $("beinZurueck").onclick = () => beinVor($("beinWahl").value, -5);
+  $("beinVor").onclick = () => beinVor($("beinWahl").value, 5);
+  $("beinHinten").onclick = () => beinVor($("beinWahl").value, 5, true); $("beinHintenWeniger").onclick = () => beinVor($("beinWahl").value, -5, true); $("beinZurueck").onclick = () => beinVor($("beinWahl").value, -5);
   $("rechtsWieLinks").onclick = () => { if (/galopp/.test(S.gang) && !confirm("Im Galopp bewegen sich links und rechts verschieden. Trotzdem übertragen?")) return; seiteUebertragen("L", ["V", "H"]); };
   $("linksWieRechts").onclick = () => { if (/galopp/.test(S.gang) && !confirm("Im Galopp bewegen sich links und rechts verschieden. Trotzdem übertragen?")) return; seiteUebertragen("R", ["V", "H"]); };
   $("pruefKnopf").onclick = pruefenZeigen; $("reparieren").onclick = reparieren;

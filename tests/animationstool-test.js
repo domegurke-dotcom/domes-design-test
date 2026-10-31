@@ -25,10 +25,10 @@ const { chromium } = require('playwright'); const path = require('path'); const 
  await p.keyboard.press('Control+z'); await p.waitForTimeout(150);
  ok('Strg+Z macht es rückgängig', (await p.evaluate(() => ANI.S.kf.length)) === n0);
  // 3. Widerrist zieht das ganze Pferd
- await p.evaluate(() => ANI.zeitSetzen(0)); await p.waitForTimeout(100);
+ await p.evaluate(() => { ANI.zeitSetzen(0); window.scrollTo(0, 0); }); await p.waitForTimeout(150);
  const w = await p.locator('[data-g="widerrist"] circle').first().boundingBox(); const k0 = await p.evaluate(() => ANI.poseBei(0).nase);
  await p.mouse.move(w.x + w.width / 2, w.y + w.height / 2); await p.mouse.down(); await p.mouse.move(w.x + w.width / 2, w.y - 20, { steps: 5 }); await p.mouse.up();
- const k1 = await p.evaluate(() => ANI.poseBei(0).nase); ok('Widerrist hebt das ganze Pferd (Nase mit)', k1.y < k0.y - 2);
+ const k1 = await p.evaluate(() => ANI.poseBei(0).nase); ok('Widerrist hebt das ganze Pferd (Nase mit) ' + k0.y.toFixed(1) + ' → ' + k1.y.toFixed(1), k1.y < k0.y - 2);
  await p.keyboard.press('Control+z');
  // 4. Tasten: Pfeil rechts springt zum nächsten Keyframe
  await p.keyboard.press('ArrowRight'); const t1 = await p.evaluate(() => ANI.S.t); ok('→ springt zum nächsten Keyframe (' + t1.toFixed(3) + ')', t1 > 0 && t1 < 0.1);
@@ -96,6 +96,18 @@ const { chromium } = require('playwright'); const path = require('path'); const 
  const nachX = await p.evaluate(() => Math.min(...ANI.S.kf.map(k => k.P.VL_huf.x - k.P.VL_bug.x)));
  const cm = await p.evaluate(() => ANI.S.ruhe.cmJe);
  ok('Vorne links tritt 10 cm weniger weit vor (' + Math.round((nachX - vorX) * cm) + ' cm), Stützfolge ' + await p.textContent('#folge'), Math.abs((nachX - vorX) * cm - 10) < 1.5 && (await p.textContent('#folge')) === '3:2:3:2:3:2:3:2');
+ // 13b. Bein weiter nach hinten (Dome 31.10.)
+ for (const bn of ['VL', 'HL']) {
+  p.once('dialog', d => d.accept()); await p.click('#original'); await p.waitForTimeout(200);
+  const hx0 = await p.evaluate(b => Math.max(...ANI.S.kf.map(k => k.P[b + '_huf'].x - k.P[b + (b[0] === 'V' ? '_bug' : '_hueft')].x)), bn);
+  await p.selectOption('#beinWahl', bn); await p.click('#beinHinten'); await p.click('#beinHinten'); await p.waitForTimeout(200);
+  const hx1 = await p.evaluate(b => Math.max(...ANI.S.kf.map(k => k.P[b + '_huf'].x - k.P[b + (b[0] === 'V' ? '_bug' : '_hueft')].x)), bn);
+  const ver = Math.round((hx1 - hx0) * cm), meld = await p.textContent('#meldung');
+  ok(bn + ' schwingt weiter nach hinten (' + ver + ' cm' + (/geht es nicht/.test(meld) ? ', Grenze erreicht' : '') + '), Stützfolge ' + await p.textContent('#folge'), ver > 3 && (await p.textContent('#folge')) === '3:2:3:2:3:2:3:2');
+  await p.click('#beinHintenWeniger'); await p.click('#beinHintenWeniger'); await p.waitForTimeout(200);
+  const hx2 = await p.evaluate(b => Math.max(...ANI.S.kf.map(k => k.P[b + '_huf'].x - k.P[b + (b[0] === 'V' ? '_bug' : '_hueft')].x)), bn);
+  ok(bn + ': „weniger nach hinten“ nimmt es wieder zurück (' + Math.round((hx2 - hx0) * cm) + ' cm Abstand zum Original)', Math.abs((hx2 - hx0) * cm) < 4);
+ }
  // 14. Rechts wie links
  await p.click('#rechtsWieLinks'); await p.waitForTimeout(200);
  const gleich = await p.evaluate(() => { const k = ANI.S.kf[0], Q = ANI.poseBei((k.t + .5) % 1); return Math.abs((k.P.VR_huf.x - k.P.VR_bug.x) - (Q.VL_huf.x - Q.VL_bug.x)) < .5; });

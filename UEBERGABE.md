@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 1.11. später (Claude Team, Sonnet) – v938
+Einsteller-Angebot jetzt 1/10 im Jahr, Knopf „Untersuchen (AKU)“ im Brief (du zahlst, kein Rezept), `sandpaddock-test` repariert. Tests einsteller-verkauf (21 ✓) und Pension-Tests grün. **Noch offen:** Update-Liste für die Spieler (Dome: „warte noch kurz“).
+
 ### 1.11. (Claude Team, Sonnet) – v937: Einsteller verkaufen ihr Pferd
 Neue Funktion nach Domes Wunsch (Antworten: selten ca. 1 von 15 im Jahr mit Grund, Brief mit Gegenangebot, Pferd bleibt in der Box und der Vertrag endet, bekannte Krankheiten stehen im Brief). Details und Zahlen in CLAUDE.md (v937) und der bzn-Übersicht. Test `tests/einsteller-verkauf-test.js` ✓ (17), Pension-Tests ✓, Brief in 844×390 angesehen. **Offen:** die Update-Liste für die Spieler (Dome: „warte noch kurz“); Rack hat in v936 eigene Stützdauer je Bein; `tests/sandpaddock-test.js` klickt noch auf das alte „Ort“ und läuft in der neuen Boxansicht nicht (Test veraltet).
 

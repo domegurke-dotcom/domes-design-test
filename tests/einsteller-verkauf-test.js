@@ -21,7 +21,7 @@ const { chromium } = require('playwright'); const path = require('path');
     // Häufigkeit: 4000 Jahreszeiten für einen zufriedenen Stammkunden (Erwartung 1/60)
     let n = 0; const sicher = spiel.post.length; for (let i = 0; i < 4000; i++) { e3.verkauf = null; const vorher = spiel.post.length; einstellerVerkaufBriefe(); if (e3.verkauf) n++; } r.haeufig = n; spiel.post.length = sicher; e3.verkauf = null; return r; });
   ok('Nur der zufriedene Stammkunde (nicht 50 % Zufriedenheit, nicht neu) bietet an', JSON.stringify(T.briefe) === '["e3"]' && !T.e1 && !T.e2, JSON.stringify(T.briefe));
-  ok('Häufigkeit etwa 1/60 je Jahreszeit (= 1/15 im Jahr)', T.haeufig > 30 && T.haeufig < 110, T.haeufig + ' von 4000');
+  ok('Häufigkeit etwa 1/40 je Jahreszeit (= 1/10 im Jahr)', T.haeufig > 60 && T.haeufig < 150, T.haeufig + ' von 4000');
 
   // 2. Brief
   await pg.evaluate(() => { const L = einstellerListe(); L.forEach(e => { if (e.eid !== 'e3') { const bx = pensionBox(e); bx.pferd = null; } }); spiel.einsteller = L.filter(e => e.eid === 'e3'); spiel.post = (spiel.post || []).filter(x => !(x.aktion && x.aktion.typ === 'einstVerkauf')); const e = einstellerListe()[0]; e.verkauf = null; einstellerVerkaufBrief(e); });
@@ -61,4 +61,13 @@ const { chromium } = require('playwright'); const path = require('path');
   ok('Nach 5 Tagen gilt das Angebot nicht mehr', /nicht mehr/.test(await pg.evaluate(() => document.body.innerText)) && !(await pg.$('[data-baktion="ev-ja"]')));
   await pg.evaluate(() => { const e = einstellerListe()[0]; e.verkaufSperre = 0; e.verkauf = null; einstellerVerkaufBrief(e); spiel.geld = -1900; }); await oeffne(); await klick('[data-baktion="ev-ja"]');
   ok('Zu wenig Geld: Hinweis, nichts gekauft', /Nicht genug Geld/.test(await pg.evaluate(() => document.getElementById('dlg').innerText)) && (await info()).e === 1 && (await info()).geld === -1900);
+  // 7. AKU-Knopf: Untersuchung aus dem Brief, danach zurück zum Brief
+  await pg.evaluate(() => { const e = einstellerListe()[0]; e.verkaufSperre = 0; e.verkauf = null; e.zufr = 80; spiel.tag = 1; einstellerVerkaufBrief(e); spiel.geld = 100000; });
+  await oeffne(); ok('Brief hat den Knopf „Untersuchen (AKU)“', !!(await pg.$('[data-baktion="ev-aku"]')));
+  const rechn0 = await pg.evaluate(() => (spiel.post || []).filter(x => /Untersuchung .* Rechnung/.test(x.betreff)).length);
+  await klick('[data-baktion="ev-aku"]'); const stufen = await pg.$$eval('[data-uk]', l => l.map(x => x.dataset.uk));
+  ok('Untersuchungs-Fenster zeigt die AKU-Stufen', stufen.length === 3, stufen.join(','));
+  await klick('[data-uk="klein"]'); const erg = await pg.evaluate(() => document.getElementById('dlg').innerText);
+  ok('Ergebnis der Untersuchung erscheint, die Rechnung kommt', /Ergebnis/.test(erg) && await pg.evaluate(r => (spiel.post || []).filter(x => /Untersuchung .* Rechnung/.test(x.betreff)).length === r + 1, rechn0));
+  await klick('#dlgKnoepfe button'); ok('OK führt zurück zum Brief (Kaufen-Knopf wieder da)', !!(await pg.$('[data-baktion="ev-ja"]')) && await pg.evaluate(() => document.getElementById('dlg').hidden));
   console.log(out.join('\n')); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(out.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

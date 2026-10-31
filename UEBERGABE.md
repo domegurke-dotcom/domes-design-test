@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 1.11. (Claude Team) – Blender-Verbindung für Claude Team
+Das Blender-Add-on „MCP“ (Blender Lab, in Domes Blender 5.2 installiert) läuft im offenen Fenster als TCP-Server auf `localhost:9876` (JSON `{type:"execute", code, strict_json:false}` mit Null-Byte am Ende; im Code `result = …` setzen). Claude Team braucht keinen MCP-Eintrag in der Claude-Konfiguration: `node werkzeuge/blender-senden.js <datei.py>` (Node liegt in `C:\Users\dome_\werkzeug-node\node`) schickt Python direkt ans offene Fenster. Der Leckstein wurde so in Domes Fenster geholt (Objekte `salz`, `seil`, Ansicht Workbench/Studio mit Backface Culling). Ohne laufenden Server im Fenster kommt „FEHLER connect ECONNREFUSED“.
+
 ### 1.11. (Claude Team, Sonnet) – Blender: Salzleckstein
 Neu: `blender/leckstein.blend` (Himalaya-Salzbrocken mit Bruchflächen und Loch, verdrillte Hanfschnur als Schlaufe mit Knoten – nach Domes drei Fotos), `blender/testseiten/leckstein.glb`, Bauskript `blender/leckstein-bauen.py` (`blender -b --python blender/leckstein-bauen.py -- <Projektordner> <Vorschau.png>`). **Zeichenstil wie die anderen Blender-Modelle:** Workbench, Studio-Licht, Materialfarben, schwarze Kontur als umgestülpte Hülle (Solidify `kontur`, Material `tinte`), **im Szenen-Reiter Workbench muss `show_backface_culling` an sein, sonst wird alles schwarz**. Ein Eintrag im Spiel gibt es noch nicht (Leckstein im Spiel ist weiter die SVG-Zeichnung `LECK` in `boxstufen.js`). Kein Blender-MCP in dieser Sitzung; Blender 5.2 liegt unter `C:\Program Files\Blender Foundation\Blender 5.2\` und lässt sich ohne Fenster mit `-b --python` steuern.
 

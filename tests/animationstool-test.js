@@ -56,7 +56,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
  await p.reload(); await p.waitForTimeout(600); ok('Nach Neuladen ist die Bewegung noch da (Rasse ' + await p.inputValue('#rasse') + ')', (await p.inputValue('#rasse')) === 'shetty');
  // 10. Skelett einrichten: Punkt auf der Zeichnung verschieben, fernes Bein zieht mit, Huf bleibt am Boden, Bewegung wird übertragen, bleibt nach Neuladen
  await p.evaluate(() => window.scrollTo(0, 0)); await p.click('#skelettKnopf'); await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(150);
- ok('Einrichten-Modus: Band sichtbar, Abspielen gesperrt', await p.isVisible('#skelettBand') && await p.evaluate(() => getComputedStyle(document.querySelector('.steuer')).pointerEvents === 'none'));
+ ok('Einrichten-Modus: kein Band mehr, Abspielen gesperrt', !(await p.isVisible('#skelettBand')) && await p.evaluate(() => getComputedStyle(document.querySelector('.steuer')).pointerEvents === 'none'));
  const r0 = await p.evaluate(() => JSON.parse(JSON.stringify(ANI.S.ruhe.P)));
  const kn = await p.locator('[data-g="VL_karpal"] circle').first().boundingBox();
  await p.mouse.move(kn.x + kn.width / 2, kn.y + kn.height / 2); await p.mouse.down(); await p.mouse.move(kn.x + kn.width / 2 + 12, kn.y + kn.height / 2 - 10, { steps: 6 }); await p.mouse.up(); await p.waitForTimeout(100);
@@ -67,7 +67,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
  ok('Huf verschoben und bleibt auf dem Boden (y = ' + r1.HL_huf.y + ')', r1.HL_huf.x < r0.HL_huf.x - 1 && r1.HL_huf.y === 0);
  ok('Ellbogen unverändert (nur der eine Punkt)', r1.VL_ellbogen.x === r0.VL_ellbogen.x && r1.VL_ellbogen.y === r0.VL_ellbogen.y);
  await p.locator('#buehne').screenshot({ path: out + '/skelett-einrichten.png' });
- await p.click('#skelettFertig'); await p.waitForTimeout(300);
+ await p.click('#skelettKnopf'); await p.waitForTimeout(300);
  const kfK = await p.evaluate(() => { const R = ANI.S.ruhe.P, P = ANI.S.kf[0].P, d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y); return [d(P.VL_karpal, P.VL_fessel), d(R.VL_karpal, R.VL_fessel)]; });
  ok('Bewegung auf das neue Skelett übertragen (Knochen ' + kfK.map(v => v.toFixed(1)).join(' / ') + '), Stützfolge ' + await p.textContent('#folge'), Math.abs(kfK[0] - kfK[1]) < .3);
  ok('Hinweis: eigenes Skelett gespeichert', (await p.textContent('#skelettInfo')).includes('eigenes Skelett'));
@@ -129,8 +129,27 @@ const { chromium } = require('playwright'); const path = require('path'); const 
  await p.mouse.move(ep.x, ep.y); await p.mouse.down(); await p.mouse.move(ep.x - 80, ep.y + 20, { steps: 8 }); await p.mouse.up();
  const rel = await p.evaluate(() => ANI.relWinkel(ANI.poseBei(ANI.S.t), 'VL_ellbogen').rel * 180 / Math.PI);
  ok('Ziehen hält die Winkelgrenze (' + rel.toFixed(1) + '°)', rel >= -10.5 && rel <= 10.5);
- await p.evaluate(() => document.querySelector('[data-ankerweg]').click()); await p.evaluate(() => { delete ANI.GR.V_ellbogen; });
- await p.click('#original'); await p.waitForTimeout(200);
+ p.once('dialog', d => d.accept()); await p.evaluate(() => document.querySelector('[data-ankerweg]').click()); await p.waitForTimeout(150); await p.evaluate(() => { delete ANI.GR.V_ellbogen; });
+ p.once('dialog', d => d.accept()); await p.click('#original'); await p.waitForTimeout(200);
+ // Vorlagen halten Winkelgrenzen ein, Ankerpunkt-Knick bleibt, Rückgängig für Ankerpunkte und Grenzen (Dome 31.10.)
+ p.once('dialog', d => d.accept()); await p.click('#original'); await p.waitForTimeout(200); await p.evaluate(() => { ANI.zeitSetzen(0); });
+ await p.evaluate(() => { const P = ANI.poseBei(0), a = P.VL_karpal, c = P.VL_fessel, svg = document.getElementById('svg'), pt = svg.createSVGPoint(); pt.x = (a.x + c.x) / 2; pt.y = (a.y + c.y) / 2; const q = pt.matrixTransform(svg.getScreenCTM()); window.__anker = { x: q.x, y: q.y }; });
+ const ap2 = await p.evaluate(() => window.__anker); await p.click('#ankerNeu'); await p.mouse.click(ap2.x, ap2.y); await p.waitForTimeout(200);
+ await p.keyboard.press('Control+z'); await p.waitForTimeout(150); ok('Rückgängig nimmt den Ankerpunkt zurück', (await p.evaluate(() => ANI.EXTRA.length)) === 0);
+ await p.click('#ankerNeu'); await p.mouse.click(ap2.x, ap2.y); await p.waitForTimeout(200);
+ await p.evaluate(() => { const k = ANI.S.kf[0], a = k.P.VL_karpal, c = k.P.VL_fessel; const dx = c.x - a.x, dy = c.y - a.y, l = Math.hypot(dx, dy); k.P.VL_z1 = { x: (a.x + c.x) / 2 - dy / l * 3, y: (a.y + c.y) / 2 + dx / l * 3 }; ANI.S.t = k.t; });
+ const knickVor = await p.evaluate(() => ANI.extraLokal(ANI.poseBei(0)).VL_z1.v);
+ p.once('dialog', d => d.accept()); await p.click('#vorlageLaden'); await p.waitForTimeout(300);
+ const knickNach = await p.evaluate(() => ANI.extraLokal(ANI.poseBei(0)).VL_z1.v);
+ ok('Knick des Ankerpunkts bleibt bei neuer Vorlage (' + knickVor.toFixed(3) + ' → ' + knickNach.toFixed(3) + ')', Math.abs(knickVor) > .02 && Math.abs(knickNach - knickVor) < .01);
+ await p.selectOption('#wGelenk', 'V_ellbogen'); await p.click('#wNeu'); await p.fill('#wMax', '30'); await p.press('#wMax', 'Tab'); await p.fill('#wMin', '-20'); await p.press('#wMin', 'Tab');
+ p.once('dialog', d => d.accept()); await p.click('#vorlageLaden'); await p.waitForTimeout(300);
+ ok('Neue Vorlage hält die Winkelgrenze ein (keine Verstöße)', (await p.evaluate(() => ANI.pruefen().filter(f => f.art === 'grenze').length)) === 0);
+ for (let i = 0; i < 4; i++) { await p.keyboard.press('Control+z'); await p.waitForTimeout(120); }
+ ok('Rückgängig nimmt die Winkelgrenze zurück', !(await p.evaluate(() => ANI.GR.V_ellbogen)));
+ p.once('dialog', d => d.accept()); await p.evaluate(() => document.querySelector('[data-ankerweg]') && document.querySelector('[data-ankerweg]').click()); await p.waitForTimeout(150);
+ if (await p.evaluate(() => ANI.S.winkelModus)) await p.click('#wTool');
+ p.once('dialog', d => d.accept()); await p.click('#original'); await p.waitForTimeout(200);
  const cmAlt = cm;
  // 14. Rechts wie links
  await p.click('#rechtsWieLinks'); await p.waitForTimeout(200);

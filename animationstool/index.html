@@ -55,14 +55,11 @@
   #hilfe[hidden] { display: none; }
   #hilfe .innen { background: var(--karte); border-radius: 12px; max-width: 760px; max-height: 86vh; overflow-y: auto; padding: 18px 24px; }
   #hilfe h3 { margin: 16px 0 6px; } #hilfe li { margin: 4px 0; }
-  #skelettBand { background: #3b2f25; color: #f4efe6; border-radius: 8px; padding: 8px 12px; display: flex; gap: 12px; align-items: center; font-size: 13px; }
-  #skelettBand[hidden] { display: none; }
   #zoomLeiste { position: absolute; right: 8px; top: 8px; display: flex; gap: 4px; align-items: center; background: #fffdf8d9; border: 1px solid var(--rand); border-radius: 8px; padding: 3px 5px; z-index: 2; }
   #zoomLeiste button { padding: 1px 9px; } #zoomLeiste span { min-width: 46px; text-align: center; font-variant-numeric: tabular-nums; color: var(--leise); }
   body.anker #svg { cursor: crosshair; } body.zoomt #svg { cursor: grab; }
   .wgriff { cursor: pointer; } #wGelenk { max-width: 165px; }
   .zeile-klein { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: 13px; } .zeile-klein input[type=number] { width: 64px; }
-  #skelettBand button { background: #b5651d; color: #fff; border-color: #b5651d; margin-left: auto; white-space: nowrap; }
   body.einrichten .gesperrt-bei-skelett { opacity: .35; pointer-events: none; }
   #status { font-size: 13px; }
   kbd { background: #eee6d8; border: 1px solid var(--rand); border-radius: 4px; padding: 0 4px; font-size: 12px; }
@@ -106,7 +103,6 @@
 </div></div>
 <main>
   <div class="links">
-    <div id="skelettBand" hidden><span>🦴 <b>Skelett einrichten</b> – schiebe jeden Punkt auf das passende Gelenk der Zeichnung. Hufe bleiben auf dem Boden. Gilt für diese Rasse und wird gespeichert.</span><button id="skelettFertig">✔ Fertig</button></div>
     <div class="karte" id="buehne"><svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
       <div id="zoomLeiste" title="Zoomen: Mausrad. Verschieben: gezoomt die Maus auf leerer Fläche ziehen (oder mittlere/rechte Maustaste)"><button id="zoomMinus">−</button><span id="zoomText">100 %</span><button id="zoomPlus">+</button><button id="zoomGanz">Ganz</button></div></div>
     <div class="karte steuer gesperrt-bei-skelett">
@@ -324,6 +320,26 @@ function ergaenzeP(P) {   // fehlende Ankerpunkte einer Pose genau auf den Knoch
   }
   return P;
 }
+function extraLokal(P) {   // Lage der Ankerpunkte in der Sicht ihres Knochens: u = Stelle entlang, v = seitlicher Knick (beides als Anteil der Knochenlänge)
+  const o = {};
+  for (const x of EXTRA) for (const b of x.typ === "V" ? ["VL", "VR"] : ["HL", "HR"]) {
+    const id = b + "_z" + x.n, a = P[b + "_" + x.von], c = P[b + "_" + x.nach], z = P[id]; if (!a || !c || !z) continue;
+    const dx = c.x - a.x, dy = c.y - a.y, l2 = dx * dx + dy * dy || 1; o[id] = { u: ((z.x - a.x) * dx + (z.y - a.y) * dy) / l2, v: ((z.x - a.x) * -dy + (z.y - a.y) * dx) / l2 };
+  }
+  return o;
+}
+function extraAnwenden(P, loc) {   // Ankerpunkte wieder in dieselbe Lage zu ihrem Knochen bringen (auch wenn der Knochen jetzt anders liegt)
+  for (const id in loc) { const [b, t] = id.split("_"), x = EXTRA.find(q => "z" + q.n === t); if (!x) continue; const a = P[b + "_" + x.von], c = P[b + "_" + x.nach]; if (!a || !c) continue;
+    const dx = c.x - a.x, dy = c.y - a.y; P[id] = { x: a.x + dx * loc[id].u - dy * loc[id].v, y: a.y + dy * loc[id].u + dx * loc[id].v }; }
+  return P;
+}
+function grenzenAnwenden(P) {   // alle Gelenke in ihre Winkelgrenzen holen (Eltern zuerst, der ganze Unterbaum dreht mit); gibt die Zahl der Korrekturen zurück
+  let n = 0;
+  for (const k of REIHE) { const lim = GR[limitKey(k)], r = lim && relWinkel(P, k); if (!r) continue;
+    const grad = r.rel * 180 / Math.PI; if (grad >= lim[0] - 1e-6 && grad <= lim[1] + 1e-6) continue;
+    const d = rad(Math.max(lim[0], Math.min(lim[1], grad))) - r.rel, e = ELTERN[k]; for (const q of unterbaum(k)) if (P[q]) P[q] = dreh(P[q], P[e], d); n++; }
+  return n;
+}
 function extraNeuAus(P) { for (const k of Object.keys(P)) if (istExtra(k)) delete P[k]; return ergaenzeP(P); }
 const limitKey = k => { const m = /^([VH])[LR]_(.+)$/.exec(k); return m ? m[1] + "_" + m[2] : k; };
 const nahKey = lk => { const m = /^([VH])_(.+)$/.exec(lk); return m ? m[1] + "L_" + m[2] : lk; };
@@ -467,10 +483,11 @@ function vorlageErzeugen(still) {
   const zeiten = []; for (let i = 0; i < n; i++) zeiten.push(i / n);
   for (const b in G.ph) { const B = beinPhase(G, b, sweep); for (const z of [B.ph, (B.ph + B.d) % 1, (B.ph + .975) % 1]) zeiten.push(+z.toFixed(4)); }   // auch kurz vor dem Auffußen, damit der Huf nicht zu früh den Boden berührt
   zeiten.sort((a, b) => a - b); const T = zeiten.filter((z, i) => !i || z - zeiten[i - 1] > .004);
-  S.kf = T.map(t => ({ t, P: vorlagePose(G, t, sweep) }));
+  const locFn = EXTRA.length && !S.extraVergessen ? (S.kf.length ? t => extraLokal(poseBei(t)) : () => extraLokal(S.ruhe.P)) : null;   // Knicke der Ankerpunkte bleiben erhalten
+  S.kf = T.map(t => { const P = ergaenzeP(vorlagePose(G, t, sweep)); if (locFn) extraAnwenden(P, locFn(t)); grenzenAnwenden(P); return { t, P }; });
   S.dauer = G.dauer; S.vorlage = { gang: S.gang, sweep, pdf: G.pdf, beinX: S.beinX ? kopie(S.beinX) : null }; S.wahl = 0; S.t = 0;
   $("name").value = G.name; S.unberuehrt = true; allesNeu();
-  S.warnGrenze = ""; if (Object.keys(GR).length) { const v = pruefen().filter(f => f.art === "grenze"); if (v.length) { S.warnGrenze = "⚠️ " + v.length + " Stelle" + (v.length > 1 ? "n" : "") + " der Bewegung liegen außerhalb deiner Winkelgrenzen – „Bewegung prüfen“ zeigt wo."; hilfeMeldung(S.warnGrenze); } }
+  S.warnGrenze = ""; if (Object.keys(GR).length) { const v = pruefen().filter(f => f.art === "boden" || f.art === "rutsch" || f.art === "sprung"); if (v.length) { S.warnGrenze = "⭕ Deine Winkelgrenzen sind eingehalten – dadurch erreichen die Hufe an " + v.length + " Stelle" + (v.length > 1 ? "n" : "") + " den Boden nicht oder rutschen. Weitere Grenzen helfen, kleinere Schritte auch („Bewegung prüfen“ zeigt wo)."; hilfeMeldung(S.warnGrenze); } }
 }
 
 // ================= Auswertung: Stütze, Fußfolge, Hufspuren =================
@@ -674,10 +691,15 @@ function spurZeichnen() {
 function svgPunkt(svg, e) { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); }
 
 // ================= Bearbeiten =================
-function merken() { S.unberuehrt = false; S.rueck.push(JSON.stringify(S.kf)); if (S.rueck.length > 60) S.rueck.shift(); }
+const schnappschuss = () => JSON.stringify({ kf: S.kf, extra: EXTRA, gr: GR });
+function merkenStruktur() { S.rueck.push(schnappschuss()); if (S.rueck.length > 60) S.rueck.shift(); }   // Ankerpunkte und Winkelgrenzen ändern die Vorlage nicht
+function merken() { S.unberuehrt = false; merkenStruktur(); }
 function rueckgaengig() {
   if (S.einrichten) { if (S.skRueck.length) { S.ruhe.P = S.skRueck.pop(); skelettSichern(S.rasse, S.ruhe.P); figurZeichnen(); } return; }
-  if (!S.rueck.length) return; S.kf = JSON.parse(S.rueck.pop()); S.wahl = Math.min(S.wahl, S.kf.length - 1); allesNeu(); }
+  if (!S.rueck.length) return; const o = JSON.parse(S.rueck.pop());
+  if (Array.isArray(o)) S.kf = o;
+  else { S.kf = o.kf; if (JSON.stringify([o.extra, o.gr]) !== JSON.stringify([EXTRA, GR])) { EXTRA = o.extra; GR = o.gr; gelenkeBauen(); extraSichern(); grenzenSichern(); for (const k of S.kf) ergaenzeP(k.P); ergaenzeP(S.ruhe.P); ergaenzeP(S.ruhe.schaetzung); listenNeu(); } }
+  S.wahl = Math.min(S.wahl, S.kf.length - 1); allesNeu(); }
 function kfAnZeit(anlegen) {   // Keyframe zur aktuellen Zeit (wird bei Bedarf angelegt)
   let i = S.kf.findIndex(k => Math.abs(k.t - S.t) < 1e-6); if (i >= 0 || !anlegen) return i;
   const P = poseBei(S.t); S.kf.push({ t: S.t, P }); S.kf.sort((a, b) => a.t - b.t); return S.kf.findIndex(k => k.t === S.t);
@@ -834,7 +856,7 @@ function listenNeu() {
 }
 function winkelInfo() {
   const lim = GR[S.wGelenk]; $("wMin").value = lim ? lim[0] : ""; $("wMax").value = lim ? lim[1] : ""; $("wMin").disabled = $("wMax").disabled = !lim; $("wWeg").disabled = !lim; $("wNeu").disabled = !!lim;
-  $("wInfo").textContent = lim ? "Erlaubt: " + lim[0] + "° bis " + lim[1] + "° (Plus = im Uhrzeigersinn)." : (S.wGelenk ? "Für dieses Gelenk gibt es noch keine Grenze." : "");
+  $("wInfo").textContent = lim ? "Erlaubt: " + lim[0] + "° bis " + lim[1] + "° (Plus = im Uhrzeigersinn). Vorlagen halten sie ein." : (S.wGelenk ? "Für dieses Gelenk gibt es noch keine Grenze." : "");
 }
 function ankerSetzen(e) {   // Klick auf einen Beinknochen: Zusatzgelenk an beiden Seiten einsetzen
   S.ankerModus = false; document.body.classList.remove("anker"); $("ankerNeu").classList.remove("an");
@@ -844,7 +866,7 @@ function ankerSetzen(e) {   // Klick auf einen Beinknochen: Zusatzgelenk an beid
       if (!best || d < best.d) best = { d, b, von: T[i], nach: T[i + 1], f: u }; } }
   if (!best || best.d > 9 / Math.sqrt(ZM.z)) { hilfeMeldung("Zu weit weg – klicke direkt auf einen Knochen eines Beins. (Nochmal „Ankerpunkt setzen“ drücken.)"); return; }
   if (EXTRA.length >= 8) { hilfeMeldung("Mehr als 8 Ankerpunkte sind nicht möglich."); return; }
-  const n = Math.max(0, ...EXTRA.map(x => x.n)) + 1;
+  merkenStruktur(); const n = Math.max(0, ...EXTRA.map(x => x.n)) + 1;
   EXTRA.push({ n, typ: BEINE[best.b].vorn ? "V" : "H", von: best.von, nach: best.nach, f: Math.round(klemm(best.f, .12, .88) * 100) / 100, name: "Ankerpunkt " + n });
   ankerAnwenden(); hilfeMeldung("✔ Ankerpunkt " + n + " sitzt jetzt auf dem Knochen " + NAMEN[best.von] + " → " + NAMEN[best.nach] + " (links und rechts). Ziehe ihn wie ein Gelenk.");
 }
@@ -852,16 +874,16 @@ function ankerAnwenden() {
   gelenkeBauen(); extraSichern(); for (const k of S.kf) ergaenzeP(k.P); ergaenzeP(S.ruhe.P); ergaenzeP(S.ruhe.schaetzung); listenNeu(); allesNeu();
 }
 function ankerWeg(n) {
-  if (!confirm("Ankerpunkt entfernen? Die Beinknochen bleiben, wie sie sind.")) return;
-  EXTRA = EXTRA.filter(x => x.n !== n); for (const t of ["V", "H"]) delete GR[t + "_z" + n]; grenzenSichern(); ankerAnwenden();
+  if (!confirm("Ankerpunkt entfernen? Die Beinknochen bleiben, wie sie sind. (Strg+Z holt ihn zurück.)")) return;
+  merkenStruktur(); EXTRA = EXTRA.filter(x => x.n !== n); for (const t of ["V", "H"]) delete GR[t + "_z" + n]; grenzenSichern(); ankerAnwenden();
 }
 function skelettInfo() { listenNeu(); $("skelettInfo").textContent = S.ruhe.eigen ? "Für " + rasseName(S.rasse) + " ist ein eigenes Skelett gespeichert." : "Für " + rasseName(S.rasse) + " gilt noch die Schätzung."; }
 function einrichtenStart() {
   stop(); S.einrichten = true; S.skAlt = kopie(S.ruhe.P); S.skRueck = [];
-  document.body.classList.add("einrichten"); $("skelettBand").hidden = false; $("skelettKnopf").textContent = "✔ Fertig"; buehneZeichnen();
+  document.body.classList.add("einrichten"); $("skelettKnopf").textContent = "✔ Fertig"; buehneZeichnen();
 }
 function einrichtenEnde() {
-  S.einrichten = false; document.body.classList.remove("einrichten"); $("skelettBand").hidden = true; $("skelettKnopf").textContent = "🦴 Skelett einrichten";
+  S.einrichten = false; document.body.classList.remove("einrichten"); $("skelettKnopf").textContent = "🦴 Skelett einrichten";
   if (JSON.stringify(S.skAlt) !== JSON.stringify(S.ruhe.P) && S.kf.length) { merken(); S.kf = uebertragen(S.skAlt, S.ruhe.P); }
   $("sweep").max = maxSweep(); sweepAnzeigen(); skelettInfo(); allesNeu();
 }
@@ -958,10 +980,9 @@ function start() {
     if (!confirm("Bewegung auf das Original „" + GAENGE[S.gang].name + "“ zurücksetzen? Deine Änderungen an den Keyframes gehen verloren (Strg+Z holt sie zurück).")) return;
     if (S.einrichten) einrichtenEnde();
     S.beinX = null; S.sweep = Math.max(20, Math.floor(maxSweep() - 2 * 5.5 / S.ruhe.cmJe)); $("sweep").value = S.sweep;   // etwas unter der Grenze, damit „weiter vor/hinten“ Spielraum hat
-    $("kfAnzahl").value = "16"; sweepAnzeigen(); vorlageErzeugen();
+    $("kfAnzahl").value = "16"; sweepAnzeigen(); S.extraVergessen = true; vorlageErzeugen(); S.extraVergessen = false;   // Original = auch die Ankerpunkte wieder gerade
   };
   $("skelettKnopf").onclick = () => S.einrichten ? einrichtenEnde() : einrichtenStart();
-  $("skelettFertig").onclick = einrichtenEnde;
   $("skelettSchaetz").onclick = skelettSchaetzung;
   $("rasse").addEventListener("mousedown", () => { if (S.einrichten) einrichtenEnde(); });
   $("gang").onchange = e => { S.gang = e.target.value; $("sweep").max = maxSweep(); if (S.unberuehrt) vorlageErzeugen(true); sweepAnzeigen(); };
@@ -986,9 +1007,9 @@ function start() {
   $("ankerNeu").onclick = () => { if (S.einrichten) { hilfeMeldung("Erst das Skelett fertig einrichten (✔ Fertig)."); return; } S.ankerModus = !S.ankerModus; document.body.classList.toggle("anker", S.ankerModus); $("ankerNeu").classList.toggle("an", S.ankerModus); if (S.ankerModus) hilfeMeldung("Klicke jetzt auf einen Beinknochen, an dem der Ankerpunkt sitzen soll."); };
   $("wTool").onclick = () => { S.winkelModus = !S.winkelModus; $("wTool").classList.toggle("an", S.winkelModus); $("wTool").textContent = S.winkelModus ? "⭕ Kreis ausblenden" : "⭕ Kreis zeigen"; figurZeichnen(); };
   $("wGelenk").onchange = e => { S.wGelenk = e.target.value; if (!S.winkelModus) $("wTool").click(); else { winkelInfo(); figurZeichnen(); } };
-  $("wNeu").onclick = () => { const k = nahKey(S.wGelenk), r = relWinkel(S.ruhe.P, k); if (!r) return; const m = Math.round(r.rel * 180 / Math.PI); GR[S.wGelenk] = [m - 40, m + 40]; grenzenSichern(); if (!S.winkelModus) $("wTool").click(); winkelInfo(); figurZeichnen(); hilfeMeldung("⭕ Grenze gesetzt: " + (m - 40) + "° bis " + (m + 40) + "° – ziehe die weißen Griffe oder gib die Grad ein."); };
-  $("wWeg").onclick = () => { delete GR[S.wGelenk]; grenzenSichern(); winkelInfo(); figurZeichnen(); };
-  const wZahl = () => { const lim = GR[S.wGelenk]; if (!lim) return; const a = Math.round(+$("wMin").value), b = Math.round(+$("wMax").value); if (isNaN(a) || isNaN(b)) return; GR[S.wGelenk] = [Math.max(-179, Math.min(a, b - 1)), Math.min(179, Math.max(b, a + 1))]; grenzenSichern(); figurZeichnen(); winkelInfo(); };
+  $("wNeu").onclick = () => { const k = nahKey(S.wGelenk), r = relWinkel(S.ruhe.P, k); if (!r) return; const m = Math.round(r.rel * 180 / Math.PI); merkenStruktur(); GR[S.wGelenk] = [m - 40, m + 40]; grenzenSichern(); if (!S.winkelModus) $("wTool").click(); winkelInfo(); figurZeichnen(); hilfeMeldung("⭕ Grenze gesetzt: " + (m - 40) + "° bis " + (m + 40) + "° – ziehe die weißen Griffe oder gib die Grad ein."); };
+  $("wWeg").onclick = () => { merkenStruktur(); delete GR[S.wGelenk]; grenzenSichern(); winkelInfo(); figurZeichnen(); };
+  const wZahl = () => { const lim = GR[S.wGelenk]; if (!lim) return; const a = Math.round(+$("wMin").value), b = Math.round(+$("wMax").value); if (isNaN(a) || isNaN(b)) return; merkenStruktur(); GR[S.wGelenk] = [Math.max(-179, Math.min(a, b - 1)), Math.min(179, Math.max(b, a + 1))]; grenzenSichern(); figurZeichnen(); winkelInfo(); };
   $("wMin").onchange = wZahl; $("wMax").onchange = wZahl;
   svg0 = $("svg");
 
@@ -996,7 +1017,7 @@ function start() {
   svg.addEventListener("pointerdown", e => {
     if (S.ankerModus && e.button === 0) { e.preventDefault(); ankerSetzen(e); return; }
     const griff = e.target.closest && e.target.closest(".wgriff");
-    if (griff) { e.preventDefault(); wZug = griff.dataset.w; svg.setPointerCapture(e.pointerId); return; }
+    if (griff) { e.preventDefault(); merkenStruktur(); wZug = griff.dataset.w; svg.setPointerCapture(e.pointerId); return; }
     if (e.button === 1 || e.button === 2 || (e.button === 0 && ZM.z > 1 && !S.bildModus && !(e.target.closest && e.target.closest(".gelenk")))) { e.preventDefault(); panZug = { p: svgPunkt(svg, e) }; svg.setPointerCapture(e.pointerId); return; }
     if (S.bildModus && S.bild) { bildZug = { p: svgPunkt(svg, e), x: S.bild.x, y: S.bild.y }; svg.setPointerCapture(e.pointerId); return; }
     ziehenStart(e); if (zug) svg.setPointerCapture(e.pointerId);
@@ -1030,7 +1051,7 @@ function start() {
   zeitNeu();
 }
 start();
-window.ANI = { S, zeitSetzen, auswerten, poseBei, GAENGE, maxSweep, MITSCHWINGEN, MITSCHWINGEN_MAX, pruefen, ZM, relWinkel, klemmWinkel, get EXTRA() { return EXTRA; }, get GR() { return GR; }, get REIHE() { return REIHE; } };   // für Tests
+window.ANI = { S, zeitSetzen, auswerten, poseBei, GAENGE, maxSweep, MITSCHWINGEN, MITSCHWINGEN_MAX, pruefen, extraLokal, ZM, relWinkel, klemmWinkel, get EXTRA() { return EXTRA; }, get GR() { return GR; }, get REIHE() { return REIHE; } };   // für Tests
 })();
 </script>
 </body>

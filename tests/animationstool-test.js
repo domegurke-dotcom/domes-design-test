@@ -113,6 +113,9 @@ const { chromium } = require('playwright'); const path = require('path'); const 
  ok('Höher heben: Vorderfußwurzel kommt ' + Math.round((ke0.k - ke1.k) * cm) + ' cm höher, Ellbogen sackt nicht ab', (ke0.k - ke1.k) * cm > 6 && (ke1.e - ke0.e) * cm < 3);
  await p.click('#beinTief'); await p.click('#beinTief'); await p.waitForTimeout(250);
  ok('„weniger hoch“ nimmt es zurück', Math.abs((await p.evaluate(new Function('b', 'const h = ' + huebe.toString() + '; return h(b);'), 'VL')) - h0) < .3);
+ await p.selectOption('#rasse', 'probe'); await p.waitForTimeout(300);
+ ok('Probepferd wählbar: ohne Spielbild, Takt ' + await p.textContent('#folge'), (await p.evaluate(() => ANI.S.ruhe.svg === '' && ANI.S.rasse === 'probe')) && (await p.textContent('#folge')) === '3:2:3:2:3:2:3:2' && (await p.evaluate(() => ANI.pruefen().length)) === 0);
+ await p.selectOption('#rasse', 'hannoveraner'); await p.waitForTimeout(300);
  const cmAlt = cm;
  // 14. Rechts wie links
  await p.click('#rechtsWieLinks'); await p.waitForTimeout(200);

@@ -245,8 +245,12 @@ const S = {
 
 // ================= Ruhehaltung aus der Spielzeichnung =================
 function bbox(d) { const n = d.match(/-?\d+\.?\d*/g).map(Number), xs = [], ys = []; for (let i = 0; i + 1 < n.length; i += 2) { xs.push(n[i]); ys.push(n[i + 1]); } return { x1: Math.min(...xs), x2: Math.max(...xs), y1: Math.min(...ys), y2: Math.max(...ys) }; }
+// Probepferd (Dome 31.10.): keine Rasse, nur zum Üben – Maße wie ein mittleres Warmblut (160 cm), ohne Spielbild im Hintergrund
+const PROBE = { id: "probe", name: "Probepferd (ohne Bild)", basis: "hannoveraner", h: [160, 160] };
+const rasseName = id => id === PROBE.id ? PROBE.name : rasseById(id).name;
 function ruheHaltung(rasse, farbe) {
-  const z = zeichnePferd(rasse, farbe, { teile: 1, statisch: true });
+  const probe = rasse === PROBE.id, zr = probe ? PROBE.basis : rasse;
+  const z = zeichnePferd(zr, farbe, { teile: 1, statisch: true });
   const T = z.teile, L = z.L, D = z.D, top = z.top, bot = z.bottom, Wp = z.punkte.widerrist, Hw = -Wp.y;
   const mx = b => (b.x1 + b.x2) / 2;
   const hv = mx(bbox(T.hufVornNah)), hvF = mx(bbox(T.hufVornFern)), hh = mx(bbox(T.hufHintenNah)), hhF = mx(bbox(T.hufHintenFern));
@@ -260,9 +264,9 @@ function ruheHaltung(rasse, farbe) {
   const vorn = (x, dx) => ({ bug: { x: z.punkte.brust.x + 7 + dx, y: -0.66 * Hw }, ellbogen: { x: x + 5, y: -0.58 * Hw }, karpal: { x: x + 2, y: -0.29 * Hw }, fessel: { x: x + 3.5, y: -0.13 * Hw }, huf: { x, y: 0 } });
   const hinten = (x, dx) => ({ hueft: { x: 0.86 * L + dx, y: -0.62 * Hw }, knie: { x: x - 12, y: -0.47 * Hw }, sprung: { x: x + 8, y: -0.36 * Hw }, fessel: { x: x + 3.5, y: -0.13 * Hw }, huf: { x, y: 0 } });
   for (const [b, o] of [["VL", vorn(hv, 0)], ["VR", vorn(hv, 0)], ["HL", hinten(hh, 0)], ["HR", hinten(hh, 0)]]) for (const k in o) P[b + "_" + k] = o[k];   // Dome 31.10.: ferne Beine stehen parallel genau hinter den nahen (kein Perspektiv-Versatz wie in der Spielzeichnung)
-  const R = rasseById(rasse), schaetzung = kopie(P), eigen = skelettEigen()[rasse];
+  const R = probe ? PROBE : rasseById(rasse), schaetzung = kopie(P), eigen = skelettEigen()[rasse];
   if (eigen) for (const k in eigen) if (P[k]) P[k] = { x: eigen[k][0], y: eigen[k][1] };
-  return { P, schaetzung, eigen: !!eigen, Hw, cmJe: (R.h[0] + R.h[1]) / 2 / Hw, svg: zeichnePferd(rasse, farbe, { statisch: true }).svg, box: z.box, L, top, bot, D };
+  return { P, schaetzung, eigen: !!eigen, Hw, cmJe: (R.h[0] + R.h[1]) / 2 / Hw, svg: probe ? "" : zeichnePferd(rasse, farbe, { statisch: true }).svg, box: z.box, L, top, bot, D };
 }
 
 // Seiten tauschen: bis Format 1 waren links und rechts vertauscht (Dome 31.10.)
@@ -766,7 +770,7 @@ function uebertragen(altP, neuP) {   // Keyframes von einem Skelett aufs andere:
 }
 
 // ================= Skelett einrichten =================
-function skelettInfo() { $("skelettInfo").textContent = S.ruhe.eigen ? "Für " + rasseById(S.rasse).name + " ist ein eigenes Skelett gespeichert." : "Für " + rasseById(S.rasse).name + " gilt noch die Schätzung."; }
+function skelettInfo() { $("skelettInfo").textContent = S.ruhe.eigen ? "Für " + rasseName(S.rasse) + " ist ein eigenes Skelett gespeichert." : "Für " + rasseName(S.rasse) + " gilt noch die Schätzung."; }
 function einrichtenStart() {
   stop(); S.einrichten = true; S.skAlt = kopie(S.ruhe.P); S.skRueck = [];
   document.body.classList.add("einrichten"); $("skelettBand").hidden = false; $("skelettKnopf").textContent = "✔ Fertig"; buehneZeichnen();
@@ -778,7 +782,7 @@ function einrichtenEnde() {
 }
 function skelettSchaetzung() {
   if (!S.ruhe.eigen && !S.einrichten) return;
-  if (!confirm("Eigenes Skelett für " + rasseById(S.rasse).name + " löschen und die Schätzung nehmen?")) return;
+  if (!confirm("Eigenes Skelett für " + rasseName(S.rasse) + " löschen und die Schätzung nehmen?")) return;
   const alt = kopie(S.ruhe.P); S.ruhe.P = kopie(S.ruhe.schaetzung); S.ruhe.eigen = false; skelettSichern(S.rasse, null);
   if (S.einrichten) { figurZeichnen(); return; }
   if (S.kf.length) { merken(); S.kf = uebertragen(alt, S.ruhe.P); }
@@ -825,6 +829,7 @@ let bildZug = null;
 
 // ================= Start =================
 function start() {
+  $("rasse").add(new Option(PROBE.name, PROBE.id));
   for (const r of [...RASSEN].sort((a, b) => a.name.localeCompare(b.name, "de"))) $("rasse").add(new Option(r.name, r.id));
   for (const k in GAENGE) $("gang").add(new Option(GAENGE[k].name, k));
   $("rasse").value = S.rasse;

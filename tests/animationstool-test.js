@@ -6,8 +6,17 @@ const { chromium } = require('playwright'); const path = require('path'); const 
  const ok = (n, c) => console.log((c ? '✓ ' : '✗ ') + n);
  await p.goto('file:///' + path.resolve('animationstool/index.html').split(String.fromCharCode(92)).join('/')); await p.waitForTimeout(600);
  await p.evaluate(() => localStorage.removeItem('animationstool-v1')); await p.reload(); await p.waitForTimeout(600);
- for (const [g, soll] of [['schritt', '3:2:3:2:3:2:3:2'], ['trab', '2:0:2:0'], ['galoppR', '1:3:2:3:1:0'], ['galoppL', '1:3:2:3:1:0']]) { p.once('dialog', d => d.accept()); await p.selectOption('#gang', g); await p.click('#vorlageLaden'); await p.waitForTimeout(200);
+ for (const [g, soll] of [['schritt', '3:2:3:2:3:2:3:2'], ['trab', '2:0:2:0'], ['galoppR', '1:3:2:3:1:0'], ['galoppL', '1:3:2:3:1:0'], ['flachwalk', '3:2:3:2:3:2:3:2'], ['steppingpace', '3:2:3:2'], ['saddlerack', '3:2:3:2:3:2:3:2'], ['rack', '2:1:2:1:2:1:2:1'], ['foxtrot', '2:3:2:3:2:3:2:3'], ['pass', '2:0:2:0']]) { p.once('dialog', d => d.accept()); await p.selectOption('#gang', g); await p.click('#vorlageLaden'); await p.waitForTimeout(200);
   ok('Vorlage ' + g + ': Stützfolge ' + await p.textContent('#folge') + ', Takte ' + await p.textContent('#takte'), (await p.textContent('#pdfVergleich')).includes('passt')); }
+ { // Running Walk: Stütze 2/3 Hufe, Hinterhuf tritt weit über; Regler „Hinterhuf übertritt“ wirkt
+  p.once('dialog', d => d.accept()); await p.selectOption('#gang', 'laufwalk'); await p.click('#vorlageLaden'); await p.waitForTimeout(200);
+  const zahl = async () => parseInt((await p.textContent('#uebL')).replace('−', '-').replace('+', ''));
+  const u0 = await zahl(); ok('Running Walk: Hinterhuf tritt über (' + u0 + ' cm)', u0 >= 20);
+  const rk = async () => (p.once('dialog', d => d.accept()), await p.selectOption('#gang', 'rack'), await p.click('#vorlageLaden'), await p.waitForTimeout(200), await zahl());
+  const r0 = await rk(); ok('Rack/Tölt: Hinterhuf bleibt dahinter (' + r0 + ' cm)', r0 <= 0);
+  await p.evaluate(() => { const e = document.getElementById('ueber'); e.value = 20; e.dispatchEvent(new Event('input')); }); await p.waitForTimeout(200);
+  const r1 = await zahl(); ok('Regler „Hinterhuf übertritt“ +20 schiebt den Hinterhuf nach vorn (' + r0 + ' → ' + r1 + ' cm)', r1 > r0 + 10);
+  await p.evaluate(() => { const e = document.getElementById('ueber'); e.value = 0; e.dispatchEvent(new Event('input')); }); }
  p.once('dialog', d => d.accept()); await p.selectOption('#gang', 'schritt'); await p.click('#vorlageLaden'); await p.waitForTimeout(200);
  // 1. zwischen zwei Keyframes ein Gelenk ziehen → neuer Keyframe, Huf bewegt
  await p.evaluate(() => ANI.zeitSetzen(0.03)); await p.waitForTimeout(100);

@@ -164,6 +164,7 @@
       <div class="info-text" id="iVorlage">Erzeugt eine ganze Bewegung aus der Fußfolge (nach den PDFs von horsesandus: Schritt 3:2:3:2, Trab 2:0:2:0, Galopp 1:3:2:3:1:0). Danach kannst du jeden Keyframe von Hand ändern. Die Schrittlänge ist durch die Beinlänge der Zeichnung begrenzt.</div>
       <label class="zeile">Gangart <select id="gang"></select></label>
       <label class="zeile">Schrittlänge <input type="range" id="sweep" min="18" max="80" value="64"><span id="sweepText"></span></label>
+      <label class="zeile">Hinterhuf übertritt <input type="range" id="ueber" min="-60" max="80" value="0" title="Verschiebt die Hinterhufe nach vorn (+) oder hinten (−), zusätzlich zur Gangart"><span id="ueberText"></span></label>
       <label class="zeile">Keyframes je Schritt <select id="kfAnzahl"><option>8</option><option>12</option><option selected>16</option><option>24</option></select></label>
       <button id="vorlageLaden" style="width:100%">Vorlage erzeugen</button>
     </div>
@@ -264,7 +265,7 @@ const f1 = v => Math.round(v * 10) / 10;
 // ================= Zustand =================
 const S = {
   rasse: "hannoveraner", farbe: "brauner", ruhe: null, geo: null, pferdSVG: "", box: null,
-  kf: [], wahl: -1, t: 0, spielt: false, tempo: 1, dauer: 1.1, gang: "schritt", sweep: 64,
+  kf: [], wahl: -1, t: 0, spielt: false, tempo: 1, dauer: 1.1, gang: "schritt", sweep: 64, ueber: 0,
   ablage: null, rueck: [], bild: null, bildModus: false,
 };
 
@@ -383,7 +384,7 @@ function poseBei(t) {
 // ================= Vorlagen aus der Fußfolge =================
 // ph = Zeitpunkt des Auffußens im Schritt (0–1), d = Anteil der Stützphase, lift = Huf-Höhe in der Schwebe, flex = Beugung in Grad.
 const GAENGE = {
-  schritt: { name: "Schritt", ph: { HL: 0, VL: .25, HR: .5, VR: .75 }, d: .62, sweep: 64, lift: { v: 9, h: 8 }, flex: { karpal: 60, fesV: 40, sprung: 25, fesH: 35 }, dauer: 1.1, pdf: "3:2:3:2:3:2:3:2",
+  schritt: { name: "Schritt", ph: { HL: 0, VL: .25, HR: .5, VR: .75 }, d: .62, sweep: 64, ueber: 5, lift: { v: 9, h: 8 }, flex: { karpal: 60, fesV: 40, sprung: 25, fesH: 35 }, dauer: 1.1, pdf: "3:2:3:2:3:2:3:2",
     koerper: t => ({ dy: 0.8 * Math.cos(4 * Math.PI * (t - .1)), pitch: 0, nick: 4 * Math.sin(4 * Math.PI * (t - .2)) }) },
   trab: { name: "Trab", ph: { HL: 0, VR: 0, HR: .5, VL: .5 }, d: .4, sweep: 64, lift: { v: 16, h: 13 }, flex: { karpal: 95, fesV: 50, sprung: 35, fesH: 45 }, dauer: .75, pdf: "2:0:2:0",
     koerper: t => ({ dy: 2.2 * Math.cos(4 * Math.PI * (t - .2)), pitch: 0, nick: 1.5 * Math.cos(4 * Math.PI * (t - .2)) }) },
@@ -392,6 +393,18 @@ const GAENGE = {
   galoppL: { name: "Galopp (Linksgalopp)", ph: { HR: 0, HL: .25, VR: .25, VL: .45 }, d: .35, sweep: 64, lift: { v: 20, h: 16 }, flex: { karpal: 100, fesV: 55, sprung: 40, fesH: 50 }, dauer: .6, pdf: "1:3:2:3:1:0",
     koerper: t => ({ dy: 2 * Math.cos(2 * Math.PI * (t - .35)), pitch: 5 * Math.cos(2 * Math.PI * (t - .15)), nick: -6 * Math.cos(2 * Math.PI * (t - .15)) }) },
 };
+// Gangarten zwischen Pass und Trab (PDF „Ambling Horse Gaits“): immer Fußfolge HL–VL–HR–VR, nur Takt und Stütze unterscheiden sich.
+// ueber = Verschiebung des Hinterhuf-Standes nach vorn (cm): positiv = Hinterhuf tritt über den Vorderhuf, negativ = bleibt dahinter.
+const kb = (a, b, c) => t => ({ dy: a * Math.cos(4 * Math.PI * (t - .2)), pitch: 0, nick: b * Math.sin(4 * Math.PI * (t - c)) });
+Object.assign(GAENGE, {
+  flachwalk: { name: "Flat Foot Walk", ph: { HL: 0, VL: .25, HR: .5, VR: .75 }, d: .57, sweep: 64, ueber: 22, lift: { v: 12, h: 9 }, flex: { karpal: 70, fesV: 42, sprung: 28, fesH: 38 }, dauer: .95, pdf: "3:2:3:2:3:2:3:2", koerper: kb(.8, 5, .2) },
+  laufwalk: { name: "Running Walk", ph: { HL: 0, VL: .25, HR: .5, VR: .75 }, d: .52, sweep: 64, ueber: 25, lift: { v: 15, h: 10 }, flex: { karpal: 85, fesV: 46, sprung: 30, fesH: 40 }, dauer: .8, koerper: kb(.9, 8, .2) },
+  steppingpace: { name: "Stepping Pace", ph: { HL: 0, VL: .1, HR: .5, VR: .6 }, d: .6, sweep: 64, ueber: -26, lift: { v: 13, h: 10 }, flex: { karpal: 80, fesV: 44, sprung: 28, fesH: 40 }, dauer: .8, pdf: "3:2:3:2", koerper: kb(.5, 2, .2) },
+  saddlerack: { name: "Saddle Rack", ph: { HL: 0, VL: .25, HR: .5, VR: .75 }, d: .56, sweep: 64, ueber: -16, lift: { v: 16, h: 11 }, flex: { karpal: 90, fesV: 48, sprung: 34, fesH: 44 }, dauer: .85, pdf: "3:2:3:2:3:2:3:2", koerper: kb(1.4, 1.5, .2) },
+  rack: { name: "Rack (Tölt)", ph: { HL: 0, VL: .25, HR: .5, VR: .75 }, d: .46, sweep: 64, ueber: -39, lift: { v: 18, h: 12 }, flex: { karpal: 95, fesV: 50, sprung: 36, fesH: 46 }, dauer: .65, pdf: "2:1:2:1:2:1:2:1", koerper: kb(1.6, 1.5, .2) },
+  foxtrot: { name: "Fox Trot", ph: { VL: 0, HR: .1, VR: .5, HL: .6 }, d: .56, sweep: 64, ueber: 14, lift: { v: 14, h: 11 }, flex: { karpal: 80, fesV: 45, sprung: 32, fesH: 42 }, dauer: .75, pdf: "2:3:2:3:2:3:2:3", koerper: kb(1.5, 3, .1) },
+  pass: { name: "Pass (Rennpass)", ph: { HL: 0, VL: 0, HR: .5, VR: .5 }, d: .4, sweep: 64, ueber: 0, lift: { v: 16, h: 13 }, flex: { karpal: 95, fesV: 50, sprung: 36, fesH: 46 }, dauer: .55, pdf: "2:0:2:0", koerper: t => ({ dy: 2 * Math.cos(4 * Math.PI * (t - .2)), pitch: 0, nick: 1 * Math.cos(4 * Math.PI * (t - .2)) }) },
+});
 // Beugung in der Schwebe: vorn Vorderfußwurzel und Fessel nach hinten, hinten Sprunggelenk nach vorn und Fessel nach hinten.
 // Streckung in der Stützphase (wenn das Bein sonst nicht reicht): vorn Fessel, hinten Sprunggelenk.
 function unterteil(R, b, beugung, streck) {
@@ -424,7 +437,8 @@ function beinLoesen(R, b, wurzel, ziel, beugung, stuetze) {
 }
 // Schulterblatt und Becken schwingen mit (wie in echt): Buggelenk dreht um den Widerrist, Hüftgelenk um die Kruppe – ein Teil der Beinbewegung.
 const MITSCHWINGEN = { vorn: .4, hinten: .35 };
-const mittelXVon = (R, b) => R[b + "_huf"].x + (BEINE[b].vorn ? -2 : -8);   // Stützphase rund um den Stand des Hufs, hinten etwas weiter unter den Bauch
+const ueberCm = G => ((G && G.ueber) || 0) + (S.ueber || 0);   // Verschiebung der Hinterhufe nach vorn in cm (Gangart + dein Regler)
+const mittelXVon = (R, b, G) => R[b + "_huf"].x + (BEINE[b].vorn ? -2 : -8 - ueberCm(G || GAENGE[S.gang]) / S.ruhe.cmJe);   // Stützphase rund um den Stand des Hufs, hinten etwas weiter unter den Bauch
 function beinReich(R, b) {   // größte Länge vom Bug-/Hüftgelenk bis zum Huf (Bein gestreckt), mit 2,5 Reserve für das Auf und Ab des Körpers
   const T = teileVon(b), U = unterteil(R, b, 0, 1); return dist(R[b + '_' + T[0]], R[b + '_' + T[1]]) + dist(U.P[U.oben], U.P[U.huf]) - 2.5;
 }
@@ -451,7 +465,7 @@ function vorlagePose(G, t, sweep) {
   // Hals und Kopf: um den Widerrist nicken (positiv = Kopf runter)
   for (const k of ["genick", "nase"]) { const q = koerper(R[k]); P[k] = dreh(q, P.widerrist, -rad(K.nick)); }
   for (const b of Object.keys(BEINE)) {
-    const mittelX = mittelXVon(R, b);
+    const mittelX = mittelXVon(R, b, G);
     const B = beinPhase(G, b, sweep), vorn = BEINE[b].vorn, lift0 = vorn ? G.lift.v : G.lift.h, lift = lift0 + (vorn ? 0 : B.E.hoch);   // vorn: Höher heben über den Unterarm (unten), nicht über die Hubhöhe – sonst sackt der Ellbogen ab
     let s = (t - B.ph + 1) % 1, ziel, beugung = 0, stuetze = s < B.d;
     if (stuetze) { const u = s / B.d; ziel = { x: mittelX + B.von + (B.bis - B.von) * u, y: 0 }; }
@@ -485,7 +499,7 @@ function vorlageErzeugen(still) {
   zeiten.sort((a, b) => a - b); const T = zeiten.filter((z, i) => !i || z - zeiten[i - 1] > .004);
   const locFn = EXTRA.length && !S.extraVergessen ? (S.kf.length ? t => extraLokal(poseBei(t)) : () => extraLokal(S.ruhe.P)) : null;   // Knicke der Ankerpunkte bleiben erhalten
   S.kf = T.map(t => { const P = ergaenzeP(vorlagePose(G, t, sweep)); if (locFn) extraAnwenden(P, locFn(t)); grenzenAnwenden(P); return { t, P }; });
-  S.dauer = G.dauer; S.vorlage = { gang: S.gang, sweep, pdf: G.pdf, beinX: S.beinX ? kopie(S.beinX) : null }; S.wahl = 0; S.t = 0;
+  S.dauer = G.dauer; S.vorlage = { gang: S.gang, sweep, ueber: S.ueber || 0, pdf: G.pdf, beinX: S.beinX ? kopie(S.beinX) : null }; S.wahl = 0; S.t = 0;
   $("name").value = G.name; S.unberuehrt = true; allesNeu();
   S.warnGrenze = ""; if (Object.keys(GR).length) { const v = pruefen().filter(f => f.art === "boden" || f.art === "rutsch" || f.art === "sprung"); if (v.length) { S.warnGrenze = "⭕ Deine Winkelgrenzen sind eingehalten – dadurch erreichen die Hufe an " + v.length + " Stelle" + (v.length > 1 ? "n" : "") + " den Boden nicht oder rutschen. Weitere Grenzen helfen, kleinere Schritte auch („Bewegung prüfen“ zeigt wo)."; hilfeMeldung(S.warnGrenze); } }
 }
@@ -683,7 +697,8 @@ function spurZeichnen() {
     el("text", { x: a.x, y: y + fs * .33, "font-size": fs * .9, "text-anchor": "middle", fill: "#fff", "font-weight": 600 }, svg).textContent = v ? "V" : "H"; }
   // Übertreten: Hinterhuf landet vor (+) oder hinter (−) dem letzten Abdruck des Vorderhufs derselben Seite
   const ueb = s => { const hv = abdr.filter(a => a.b === "V" + s).sort((p, q) => p.t - q.t), hh = abdr.filter(a => a.b === "H" + s).sort((p, q) => p.t - q.t);
-    const h = hh.find(q => hv.some(v => v.t < q.t)); if (!h) return null; const v = hv.filter(p => p.t < h.t).pop(); return v.x - h.x; };
+    const h = hh.find(q => hv.some(v => v.t < q.t)); if (!h) return null;
+    const v = hv.filter(p => p.t < h.t).pop(); return v.x - h.x; };
   const zeig = (id, w) => { $(id).textContent = w == null ? "–" : `${w >= 0 ? "+" : "−"}${Math.abs(Math.round(w * cm))} cm ` + (w >= 0 ? "(Hinterhuf vor dem Vorderhuf)" : "(Hinterhuf hinter dem Vorderhuf)"); };
   zeig("uebL", ueb("L")); zeig("uebR", ueb("R"));
   $("schrittlaenge").textContent = `${Math.round(sl * cm)} cm (ein ganzer Bewegungsablauf)`;
@@ -750,13 +765,13 @@ function hufeFangen(P) {   // nach dem Ziehen: Hufe knapp über oder im Boden la
 function beinVor(b, cm, art) {   // art: "vor" | "hinten" | "hoch" – verstellt die Vorlage für dieses Bein und rechnet die Bewegung neu (Huf steht in der Stützphase fest)
   if (!S.vorlage) { hilfeMeldung("Erst eine Vorlage erzeugen (Karte „Vorlage“)."); return; }
   if (!S.unberuehrt && !confirm("„Bein ändern“ rechnet die Bewegung aus der Vorlage neu – deine Änderungen von Hand an den Keyframes gehen dabei verloren (Strg+Z holt sie zurück). Weiter?")) return;
-  S.beinX = S.beinX || {}; const e = S.beinX[b] = { ...beinX(b) }, alt = e[art], G = GAENGE[S.vorlage.gang], sw = S.vorlage.sweep, mx = mittelXVon(S.ruhe.P, b);
+  S.beinX = S.beinX || {}; const e = S.beinX[b] = { ...beinX(b) }, alt = e[art], G = GAENGE[S.vorlage.gang], sw = S.vorlage.sweep, mx = mittelXVon(S.ruhe.P, b, G);
   e[art] = Math.round((alt + cm / S.ruhe.cmJe) * 100) / 100;
   if (art === "hoch") e.hoch = Math.max(-.6 * (BEINE[b].vorn ? G.lift.v : G.lift.h), Math.min(30, e.hoch));
   const B = beinPhase(G, b, sw);
   if (art !== "hoch" && (B.d > .9 || B.d < .2 || !erreichbar(b, { x: mx + B.von, y: 0 }) || !erreichbar(b, { x: mx + B.bis, y: 0 }))) {
     e[art] = alt; hilfeMeldung(B.d > .9 ? "⚠️ Weiter geht es nicht: das Bein stünde fast immer am Boden." : B.d < .2 ? "⚠️ Weniger geht nicht: das Bein wäre kaum noch am Boden." : "⚠️ Weiter geht es nicht: das Bein ist ganz gestreckt."); return; }
-  S.gang = S.vorlage.gang; S.sweep = sw; vorlageErzeugen();
+  S.gang = S.vorlage.gang; S.sweep = sw; S.ueber = S.vorlage.ueber || 0; vorlageErzeugen();
   const n = BEINE[b].name, w = Math.abs(cm) + " cm";
   hilfeMeldung("✔ " + n + (art === "vor" ? (cm > 0 ? " fußt " + w + " weiter vorn auf (etwas früher)." : " fußt " + w + " weniger weit vorn auf.") : art === "hinten" ? (cm > 0 ? " fußt " + w + " weiter hinten ab (etwas später)." : " fußt " + w + " weniger weit hinten ab.") : (cm > 0 ? " wird " + w + " höher gehoben." : " wird " + w + " weniger hoch gehoben.")));
 }
@@ -764,7 +779,7 @@ function seiteUebertragen(von, beine) {   // „Rechts wie links“: das Bein de
   if (!S.kf.length) return;
   if (S.vorlage && S.unberuehrt) {   // unveränderte Vorlage: Bein-Einstellungen übertragen und neu rechnen
     const nach = von === "L" ? "R" : "L"; S.beinX = S.beinX || {}; for (const vh of beine) S.beinX[vh + nach] = { ...beinX(vh + von) };
-    S.gang = S.vorlage.gang; S.sweep = S.vorlage.sweep; vorlageErzeugen();
+    S.gang = S.vorlage.gang; S.sweep = S.vorlage.sweep; S.ueber = S.vorlage.ueber || 0; vorlageErzeugen();
     hilfeMeldung("✔ Die " + (nach === "R" ? "rechten" : "linken") + " Beine sind jetzt eingestellt wie die " + (von === "L" ? "linken" : "rechten") + "."); return;
   }
   merken();
@@ -897,7 +912,7 @@ function skelettSchaetzung() {
 }
 
 function sweepAnzeigen() {   // Regler = Weg des Hufs in der Stützphase; angezeigt wird die ganze Schrittlänge (Weg ÷ Anteil der Stützphase)
-  const sw = Math.min(S.sweep, maxSweep()); $("sweepText").textContent = Math.round(sw / GAENGE[S.gang].d * S.ruhe.cmJe) + " cm" + (S.unberuehrt ? "" : " – „Vorlage erzeugen“");
+  const sw = Math.min(S.sweep, maxSweep()); $("ueberText").textContent = (ueberCm(GAENGE[S.gang]) >= 0 ? "+" : "−") + Math.abs(Math.round(ueberCm(GAENGE[S.gang]))) + " cm (Gangart " + (GAENGE[S.gang].ueber || 0) + (S.ueber ? (S.ueber > 0 ? " + " : " − ") + Math.abs(S.ueber) : "") + ")"; $("sweepText").textContent = Math.round(sw / GAENGE[S.gang].d * S.ruhe.cmJe) + " cm" + (S.unberuehrt ? "" : " – „Vorlage erzeugen“");
 }
 
 // ================= Speichern und Laden =================
@@ -908,7 +923,7 @@ function daten() { return { typ: "zuchtstall-animation", format: 2, name: $("nam
   skelett: S.ruhe.eigen ? skelettEigen()[S.rasse] || null : null, ruhe: S.ruhe.P, keyframes: S.kf.map(k => ({ t: +k.t.toFixed(4), P: Object.fromEntries(Object.entries(k.P).filter(([g]) => REIHE.includes(g)).map(([g, p]) => [g, [f1(p.x), f1(p.y)]])) })) }; }
 function datenLaden(D) {
   if (D.typ !== "zuchtstall-animation") throw new Error("Das ist keine Datei vom Animationstool.");
-  $("name").value = D.name || "Bewegung"; S.dauer = D.dauer || 1; S.vorlage = D.vorlage || null; if (S.vorlage) S.gang = S.vorlage.gang; S.beinX = S.vorlage && S.vorlage.beinX ? kopie(S.vorlage.beinX) : null;
+  $("name").value = D.name || "Bewegung"; S.dauer = D.dauer || 1; S.vorlage = D.vorlage || null; if (S.vorlage) { S.gang = S.vorlage.gang; S.ueber = S.vorlage.ueber || 0; $("ueber").value = S.ueber; } S.beinX = S.vorlage && S.vorlage.beinX ? kopie(S.vorlage.beinX) : null;
   const alt = (D.format || 1) < 2, lr = P => alt ? tauschLR(P) : P;   // Format 1: links und rechts waren vertauscht
   S.kf = (D.keyframes || []).map(k => ({ t: k.t, P: lr(Object.fromEntries(Object.entries(k.P).map(([g, p]) => [g, Array.isArray(p) ? { x: p[0], y: p[1] } : p]))) }));
   if (D.skelett) skelettSichern(D.rasse, lr(Object.fromEntries(Object.entries(D.skelett).map(([k, p]) => [k, { x: p[0], y: p[1] }]))));   // Skelett aus der Datei übernehmen
@@ -979,13 +994,14 @@ function start() {
   $("original").onclick = () => {   // Dome 31.10.: zurück zur Original-Vorlage der gewählten Gangart (Standard-Schrittlänge, 16 Keyframes); das eigene Skelett bleibt
     if (!confirm("Bewegung auf das Original „" + GAENGE[S.gang].name + "“ zurücksetzen? Deine Änderungen an den Keyframes gehen verloren (Strg+Z holt sie zurück).")) return;
     if (S.einrichten) einrichtenEnde();
-    S.beinX = null; S.sweep = Math.max(20, Math.floor(maxSweep() - 2 * 5.5 / S.ruhe.cmJe)); $("sweep").value = S.sweep;   // etwas unter der Grenze, damit „weiter vor/hinten“ Spielraum hat
+    S.beinX = null; S.ueber = 0; $("ueber").value = 0; S.sweep = Math.max(20, Math.floor(maxSweep() - 2 * 5.5 / S.ruhe.cmJe)); $("sweep").value = S.sweep;   // etwas unter der Grenze, damit „weiter vor/hinten“ Spielraum hat
     $("kfAnzahl").value = "16"; sweepAnzeigen(); S.extraVergessen = true; vorlageErzeugen(); S.extraVergessen = false;   // Original = auch die Ankerpunkte wieder gerade
   };
   $("skelettKnopf").onclick = () => S.einrichten ? einrichtenEnde() : einrichtenStart();
   $("skelettSchaetz").onclick = skelettSchaetzung;
   $("rasse").addEventListener("mousedown", () => { if (S.einrichten) einrichtenEnde(); });
   $("gang").onchange = e => { S.gang = e.target.value; $("sweep").max = maxSweep(); if (S.unberuehrt) vorlageErzeugen(true); sweepAnzeigen(); };
+  $("ueber").oninput = e => { S.ueber = +e.target.value; $("sweep").max = maxSweep(); if (S.unberuehrt) vorlageErzeugen(true); sweepAnzeigen(); };
   $("sweep").oninput = e => { S.sweep = +e.target.value; if (S.unberuehrt) vorlageErzeugen(true); sweepAnzeigen(); };   // unveränderte Vorlage: sofort neu
   $("vorlageLaden").onclick = () => { if (S.kf.length && !confirm("Die jetzige Bewegung wird ersetzt. Weiter? (Rückgängig geht mit Strg+Z)")) return; vorlageErzeugen(); };
   $("rasse").onchange = e => rasseSetzen(e.target.value, S.farbe);

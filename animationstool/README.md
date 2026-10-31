@@ -27,6 +27,9 @@
 - **Prüfen:** verzogene Knochen (> 12 %), Huf im Boden, Ellbogen/Knie falsch herum, Huf springt (> 40 cm und sehr schnell) – Zeile antippen springt zum Keyframe; „Automatisch reparieren“ stellt Knochenlängen und Hufe richtig. Alle Original-Vorlagen (Hannoveraner, Shetty, Shire, Araber) ohne Meldung.
 - **Schrittlänge:** Schulter/Becken schwingen mehr mit (`MITSCHWINGEN` .4/.35), Regler ab 18, wirkt sofort, solange die Bewegung unverändert ist (sonst Hinweis „Vorlage erzeugen“).
 
+## Prototypenpferd (Selbststart 31.10.)
+- Schlichtes Pferd aus Teilen (Rumpf, Hals, Kopf mit Ohr/Auge, Mähne, Schweif, Beine als runde Glieder mit Hufen), folgt den Punkten der Strichfigur und läuft beim Abspielen mit (`protoZeichnen`, Farben `PROTO`). Keine Rasse, kommt nicht ins Spiel. Schalter „Prototyp-Pferd zeigen“ und „Prototyp deckend“ (Karte Pferd); das Spielpferd im Hintergrund steht dafür standardmäßig auf 0 %.
+
 ## Grenzen / offen
 - Die Vorlagen-Schritte sind kürzer als in echt (Schritt ca. 106 cm statt 160–180 cm, Trab ca. 165 cm, Galopp ca. 189 cm beim Hannoveraner), und im Schritt landet der Hinterhuf ca. 30 cm hinter dem Vorderhuf statt in oder vor seiner Spur. Grund: am Ende der Stützphase muss das Bein gestreckt den Boden erreichen; Abrollen über die Zehe, Durchtreten der Fessel und stärkeres Mitschwingen von Schulter/Becken fehlen noch. Von Hand je Keyframe korrigierbar.
 - Noch keine Tölt-, Pass-, Running-Walk-Vorlagen (Bilder dafür liegen in `pdfs/Bilder`).

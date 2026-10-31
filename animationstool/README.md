@@ -22,3 +22,7 @@
 
 ## Test
 `tests/animationstool-test.js <Scratchpad-Ordner>` (Windows-PC: Startbefehl wie in `CLAUDE.md`, Abschnitt „Testen“) – Stützfolgen aller Vorlagen, Ziehen, Rückgängig, Abspielen, Speichern/Laden, Rassenwechsel, Vorlagebild, Neuladen (25 Prüfungen, inkl. Skelett einrichten).
+
+## Notizen aus Domes PDFs (31.10., noch nicht eingebaut)
+- **Equine Skeletal:** Skelettbild mit allen Knochen (Schulterblatt, Oberarm, Unterarm, Vorderfußwurzel, Röhrbein, Fessel, Hufbein; Becken, Oberschenkel, Knie, Unterschenkel, Sprunggelenk) – gute Vorlage zum Ausrichten der Strichfigur (Vorlagebild, `pdfs/`). Sonst geht es um Wachstumsfugen (geschlossen mit ca. 6 Jahren, Rücken zuletzt) – eher für das Spiel (Training junger Pferde) als für die Animation.
+- **Ambling Gaits:** alle Gangarten zwischen Pass und Trab („Gangspektrum“): Pass (2-Takt lateral, Schwebe), Stepping Pace (lateral, ungleicher 4-Takt, Hinterhuf etwas vor Vorderhuf, Stütze 2:3, schneller 2:1), Saddle Rack/Rack (gleichmäßiger 4-Takt), Flat Foot Walk/Running Walk (gleichmäßiger 4-Takt), Fox Trot (diagonal, ungleicher 4-Takt, Hinterhuf etwas vor Vorderhuf). Fußfolge immer HL–VL–HR–VR. Damit lassen sich die Vorlagen allein über Phasenverschiebung bauen (lateral → gleichmäßig → diagonal).

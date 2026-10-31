@@ -73,6 +73,7 @@
     <div class="karte" id="buehne"><svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg></div>
     <div class="karte steuer gesperrt-bei-skelett">
       <button id="play" title="Abspielen (Leertaste)">▶ Abspielen</button>
+      <button id="stand" title="Pferd ruhig stehend zeigen (Ruhehaltung)">🐴 Stand</button>
       <button id="kfZurueck" title="Voriger Keyframe (←)">⏮</button>
       <button id="kfVor" title="Nächster Keyframe (→)">⏭</button>
       <input type="range" id="zeit" min="0" max="1000" value="0" step="1">
@@ -389,7 +390,7 @@ function buehneZeichnen() {
 }
 function figurZeichnen() {
   const g = $("figur"); if (!g) return; g.innerHTML = ""; g.style.pointerEvents = S.bildModus ? "none" : "";
-  const P = S.einrichten ? S.ruhe.P : poseBei(S.t), boden = amBoden(P), fern = $("fernZeigen").checked;
+  const P = S.einrichten || S.stand ? S.ruhe.P : poseBei(S.t), boden = amBoden(P), fern = $("fernZeigen").checked;
   const strich = (a, b, farbe, w, op = 1) => el("line", { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: farbe, "stroke-width": w, "stroke-linecap": "round", opacity: op }, g);
   const bein = b => { const T = BEINE[b].vorn ? VORN_TEILE : HINTEN_TEILE, nah = BEINE[b].nah, op = nah ? 1 : .55;
     for (let i = 1; i < T.length; i++) strich(P[b + "_" + T[i - 1]], P[b + "_" + T[i]], i >= 3 ? BEINE[b].farbe : (nah ? "#3b2f25" : "#8a7c6c"), nah ? 2.2 : 1.6, op);
@@ -410,6 +411,7 @@ function figurZeichnen() {
   statusZeigen(P);
 }
 function statusZeigen(P) {
+  if (S.stand && !S.einrichten) { $("status").innerHTML = "<b>Stand</b> – das Pferd steht ruhig (Ruhehaltung). Zum Bearbeiten wieder auf „Stand“ oder „Abspielen“ klicken."; $("beine").innerHTML = ""; return; }
   if (S.einrichten) { $("status").innerHTML = "<b>Skelett einrichten</b><br>Fahre mit der Maus über einen Punkt, um seinen Namen zu sehen."; $("beine").innerHTML = ""; return; }
   if (!A) return;
   const boden = amBoden(P), n = Object.values(boden).filter(Boolean).length;
@@ -497,6 +499,7 @@ function unterbaum(k) { const r = [k]; for (let i = 0; i < r.length; i++) for (c
 let zug = null;
 function ziehenStart(e) {
   const g = e.target.closest(".gelenk"); if (!g) return; e.preventDefault(); stop();
+  if (S.stand && !S.einrichten) return;   // im Stand nichts verschieben
   if (S.einrichten) { S.skRueck.push(kopie(S.ruhe.P)); zug = { k: g.dataset.g, einrichten: true, start: svgPunkt($("svg"), e), P0: kopie(S.ruhe.P) }; document.body.classList.add("ziehen"); return; }
   merken(); const i = kfAnZeit(true); S.wahl = i; const k = g.dataset.g;
   zug = { k, i, start: svgPunkt($("svg"), e), P0: kopie(S.kf[i].P) }; document.body.classList.add("ziehen");
@@ -524,9 +527,10 @@ function schleife(ts) {
   if (!S.spielt) return; const dt = letzter ? (ts - letzter) / 1000 : 0; letzter = ts;
   S.t = (S.t + dt * S.tempo / S.dauer) % 1; zeitNeu(true); requestAnimationFrame(schleife);
 }
-function spielen() { if (S.einrichten) return; if (S.spielt) return stop(); S.spielt = true; letzter = 0; $("play").textContent = "⏸ Pause"; requestAnimationFrame(schleife); }
+function standAus() { if (!S.stand) return; S.stand = false; $("stand").classList.remove("an"); figurZeichnen(); }
+function spielen() { if (S.einrichten) return; standAus(); if (S.spielt) return stop(); S.spielt = true; letzter = 0; $("play").textContent = "⏸ Pause"; requestAnimationFrame(schleife); }
 function stop() { S.spielt = false; $("play").textContent = "▶ Abspielen"; }
-function zeitSetzen(t) { stop(); S.t = ((t % 1) + 1) % 1; const i = kfAnZeit(false); if (i >= 0) S.wahl = i; zeitNeu(); }
+function zeitSetzen(t) { stop(); standAus(); S.t = ((t % 1) + 1) % 1; const i = kfAnZeit(false); if (i >= 0) S.wahl = i; zeitNeu(); }
 function zeitNeu(schnell) {
   $("zeit").value = Math.round(S.t * 1000); $("zeitText").textContent = Math.round(S.t * 100) + " %";
   figurZeichnen();
@@ -629,6 +633,7 @@ function start() {
   $("kopieren").onclick = () => { S.ablage = poseBei(S.t); };
   $("einfuegen").onclick = () => { if (!S.ablage) return; merken(); const i = kfAnZeit(true); S.kf[i].P = kopie(S.ablage); S.wahl = i; allesNeu(); };
   $("rueck").onclick = rueckgaengig;
+  $("stand").onclick = () => { if (S.stand) return standAus(); stop(); S.stand = true; $("stand").classList.add("an"); figurZeichnen(); };   // Dome 31.10.: Pferd stehend zeigen
   $("original").onclick = () => {   // Dome 31.10.: zurück zur Original-Vorlage der gewählten Gangart (Standard-Schrittlänge, 16 Keyframes); das eigene Skelett bleibt
     if (!confirm("Bewegung auf das Original „" + GAENGE[S.gang].name + "“ zurücksetzen? Deine Änderungen an den Keyframes gehen verloren (Strg+Z holt sie zurück).")) return;
     if (S.einrichten) einrichtenEnde();

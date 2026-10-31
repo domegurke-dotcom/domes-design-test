@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 1.11. (Claude Team, Sonnet) – v939: Update-Fenster veröffentlicht
+Dome hat die Einträge ausgewählt (siehe CLAUDE.md v939, dort steht auch, was sie nicht wollte). `NEUES_STAND` 938. Test neues-popup ✓. Nächstes Fenster nur mit Änderungen ab v939.
+
 ### 1.11. später (Claude Team, Sonnet) – v938
 Einsteller-Angebot jetzt 1/10 im Jahr, Knopf „Untersuchen (AKU)“ im Brief (du zahlst, kein Rezept), `sandpaddock-test` repariert. Tests einsteller-verkauf (21 ✓) und Pension-Tests grün. **Noch offen:** Update-Liste für die Spieler (Dome: „warte noch kurz“).
 

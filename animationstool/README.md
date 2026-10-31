@@ -27,6 +27,11 @@
 - **Prüfen:** verzogene Knochen (> 12 %), Huf im Boden, Ellbogen/Knie falsch herum, Huf springt (> 40 cm und sehr schnell) – Zeile antippen springt zum Keyframe; „Automatisch reparieren“ stellt Knochenlängen und Hufe richtig. Alle Original-Vorlagen (Hannoveraner, Shetty, Shire, Araber) ohne Meldung.
 - **Schrittlänge:** Schulter/Becken schwingen mehr mit (`MITSCHWINGEN` .4/.35), Regler ab 18, wirkt sofort, solange die Bewegung unverändert ist (sonst Hinweis „Vorlage erzeugen“).
 
+## Bein ändern ohne Rutschen (Dome 31.10.)
+- „Bein ändern“ verstellt die **Vorlage je Bein** (`S.beinX[b]` = {vor, hinten, hoch} in Einheiten, gespeichert in `vorlage.beinX`) und rechnet die Bewegung neu (`beinPhase`): weiter vor = früher auffußen, weiter hinten = später abfußen – der Huf steht in der Stützphase fest, der Takt darf sich dabei ändern (wie in echt). ▲ höher heben = mehr Hub und Beugung. Grenzen: Bein ganz gestreckt, Stützphase über 90 % oder unter 20 %. Bei Handänderungen fragt das Tool vorher. „Rechts wie links“ überträgt bei unveränderter Vorlage die Einstellungen. ↺ Original setzt sie zurück und lässt etwas Spielraum (Schritt 2 × 5,5 cm unter der Grenze).
+- **Prüfen** meldet einen rutschenden Huf (am Boden mehr als 3 Einheiten anders unterwegs als der Körper).
+- **Ferne Beine parallel:** im Skelett stehen die fernen Beine genau hinter den nahen (kein Perspektiv-Versatz wie in der Spielzeichnung); nahe Punkte liegen obenauf.
+
 ## Prototypenpferd (Selbststart 31.10.)
 - Schlichtes Pferd aus Teilen (Rumpf, Hals, Kopf mit Ohr/Auge, Mähne, Schweif, Beine als runde Glieder mit Hufen), folgt den Punkten der Strichfigur und läuft beim Abspielen mit (`protoZeichnen`, Farben `PROTO`). Keine Rasse, kommt nicht ins Spiel. Schalter „Prototyp-Pferd zeigen“ und „Prototyp deckend“ (Karte Pferd); das Spielpferd im Hintergrund steht dafür standardmäßig auf 0 %.
 

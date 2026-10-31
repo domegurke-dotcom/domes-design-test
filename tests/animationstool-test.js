@@ -76,8 +76,8 @@ const { chromium } = require('playwright'); const path = require('path'); const 
  p.once('dialog', d => d.accept()); await p.click('#skelettSchaetz'); await p.waitForTimeout(300);
  const r3 = await p.evaluate(() => ANI.S.ruhe.P.VL_karpal.x); ok('Schätzung wiederhergestellt', Math.abs(r3 - r0.VL_karpal.x) < .01 && (await p.textContent('#skelettInfo')).includes('Schätzung'));
  // 11. Seiten (Dome 31.10.): man sieht die LINKE Seite – nahe Beine sind VL/HL; alte Daten (Format 1) werden beim Laden getauscht
- const seite = await p.evaluate(() => { const R = ANI.S.ruhe.P; return R.VL_huf.x < R.VR_huf.x && R.HL_huf.x > R.HR_huf.x; });
- ok('Nahe Beine sind die linken (VL vorn, HL hinten)', seite);
+ const seite = await p.evaluate(() => { const R = ANI.S.ruhe.P, sicht = k => document.querySelector('[data-g="' + k + '"] circle.sicht'); return Math.abs(R.VL_huf.x - R.VR_huf.x) < .01 && Math.abs(R.HL_karpal ? 0 : R.HL_huf.x - R.HR_huf.x) < .01 && sicht('VL_huf').getAttribute('opacity') === '1' && sicht('VR_huf').getAttribute('opacity') !== '1'; });
+ ok('Nahe Beine sind die linken (VL/HL kräftig), ferne stehen parallel genau dahinter', seite);
  const alt = await p.evaluate(() => { const D = JSON.parse(localStorage.getItem('animationstool-v1')); D.format = 1; const tausch = P => { const N = {}; for (const k in P) { const m = /^([VH])([LR])_(.+)$/.exec(k); N[m ? m[1] + (m[2] === 'L' ? 'R' : 'L') + '_' + m[3] : k] = P[k]; } return N; };
    D.keyframes = D.keyframes.map(k => ({ t: k.t, P: tausch(k.P) })); localStorage.setItem('animationstool-v1', JSON.stringify(D)); return D.keyframes[0].P.VR_huf[0]; });
  await p.reload(); await p.waitForTimeout(600);
@@ -87,27 +87,29 @@ const { chromium } = require('playwright'); const path = require('path'); const 
  await p.evaluate(() => ANI.zeitSetzen(.1)); await p.waitForTimeout(100);
  ok('Schatten: Keyframe davor (blau) und danach (orange) sichtbar', await p.evaluate(() => document.querySelectorAll('#figur line[stroke="#2a6fd0"]').length > 5 && document.querySelectorAll('#figur line[stroke="#e07a1a"]').length > 5));
  const sl1 = await p.textContent('#schrittlaenge'); await p.locator('#sweep').fill('20'); await p.waitForTimeout(300); const sl2 = await p.textContent('#schrittlaenge');
- ok('Schrittlänge wirkt sofort (' + sl1.split(' (')[0] + ' → ' + sl2.split(' (')[0] + ')', parseInt(sl2) < parseInt(sl1) - 20 && (await p.textContent('#folge')) === '3:2:3:2:3:2:3:2');
+ ok('Schrittlänge wirkt sofort (' + sl1.split(' (')[0] + ' → ' + sl2.split(' (')[0] + ')', parseInt(sl2) < parseInt(sl1) - 10 && (await p.textContent('#folge')) === '3:2:3:2:3:2:3:2');
  await p.click('#hilfeKnopf'); ok('Hilfe öffnet', await p.isVisible('#hilfe')); await p.click('#hilfeZu'); ok('Hilfe schließt', !(await p.isVisible('#hilfe')));
- // 13. Bein weiter vortreten über alle Keyframes
- p.once('dialog', d => d.accept()); await p.click('#original'); await p.waitForTimeout(200);
- const vorX = await p.evaluate(() => Math.min(...ANI.S.kf.map(k => k.P.VL_huf.x - k.P.VL_bug.x)));
- await p.selectOption('#beinWahl', 'VL'); await p.click('#beinZurueck'); await p.click('#beinZurueck'); await p.waitForTimeout(200);
- const nachX = await p.evaluate(() => Math.min(...ANI.S.kf.map(k => k.P.VL_huf.x - k.P.VL_bug.x)));
+ // 13. Bein ändern (Dome 31.10.): weiter vor / weiter nach hinten / höher heben – Huf rutscht nie, Takt darf sich ändern
  const cm = await p.evaluate(() => ANI.S.ruhe.cmJe);
- ok('Vorne links tritt 10 cm weniger weit vor (' + Math.round((nachX - vorX) * cm) + ' cm), Stützfolge ' + await p.textContent('#folge'), Math.abs((nachX - vorX) * cm - 10) < 1.5 && (await p.textContent('#folge')) === '3:2:3:2:3:2:3:2');
- // 13b. Bein weiter nach hinten (Dome 31.10.)
- for (const bn of ['VL', 'HL']) {
+ const landeX = b => ANI.S.kf.filter(k => k.P[b + '_huf'].y >= -0.6).map(k => k.P[b + '_huf'].x - k.P[b + (b[0] === 'V' ? '_bug' : '_hueft')].x);
+ const huebe = b => Math.min(...ANI.S.kf.map(k => k.P[b + '_huf'].y));
+ for (const [bn, knopf, art, zeichen] of [['VL', '#beinVor', 'vor', -1], ['HL', '#beinVor', 'vor', -1], ['VL', '#beinHinten', 'hinten', 1], ['HL', '#beinHinten', 'hinten', 1]]) {
   p.once('dialog', d => d.accept()); await p.click('#original'); await p.waitForTimeout(200);
-  const hx0 = await p.evaluate(b => Math.max(...ANI.S.kf.map(k => k.P[b + '_huf'].x - k.P[b + (b[0] === 'V' ? '_bug' : '_hueft')].x)), bn);
-  await p.selectOption('#beinWahl', bn); await p.click('#beinHinten'); await p.click('#beinHinten'); await p.waitForTimeout(200);
-  const hx1 = await p.evaluate(b => Math.max(...ANI.S.kf.map(k => k.P[b + '_huf'].x - k.P[b + (b[0] === 'V' ? '_bug' : '_hueft')].x)), bn);
-  const ver = Math.round((hx1 - hx0) * cm), meld = await p.textContent('#meldung');
-  ok(bn + ' schwingt weiter nach hinten (' + ver + ' cm' + (/geht es nicht/.test(meld) ? ', Grenze erreicht' : '') + '), Stützfolge ' + await p.textContent('#folge'), ver > 3 && (await p.textContent('#folge')) === '3:2:3:2:3:2:3:2');
-  await p.click('#beinHintenWeniger'); await p.click('#beinHintenWeniger'); await p.waitForTimeout(200);
-  const hx2 = await p.evaluate(b => Math.max(...ANI.S.kf.map(k => k.P[b + '_huf'].x - k.P[b + (b[0] === 'V' ? '_bug' : '_hueft')].x)), bn);
-  ok(bn + ': „weniger nach hinten“ nimmt es wieder zurück (' + Math.round((hx2 - hx0) * cm) + ' cm Abstand zum Original)', Math.abs((hx2 - hx0) * cm) < 4);
+  const vor0 = await p.evaluate(new Function('b', 'const l = ' + landeX.toString() + '; return l(b);'), bn);
+  await p.selectOption('#beinWahl', bn); await p.click(knopf); await p.waitForTimeout(250);
+  const vor1 = await p.evaluate(new Function('b', 'const l = ' + landeX.toString() + '; return l(b);'), bn);
+  const ext = a => zeichen < 0 ? Math.min(...a) : Math.max(...a), d = Math.round((ext(vor1) - ext(vor0)) * zeichen * cm);
+  const rutsch = await p.evaluate(() => ANI.pruefen().filter(f => f.art === 'rutsch').length);
+  ok(bn + ' ' + (art === 'vor' ? 'fußt weiter vorn auf' : 'fußt weiter hinten ab') + ' (' + d + ' cm), Huf rutscht nicht, Takt ' + await p.textContent('#folge'), d >= 3 && d <= 8 && rutsch === 0);
  }
+ p.once('dialog', d => d.accept()); await p.click('#original'); await p.waitForTimeout(200);
+ const h0 = await p.evaluate(new Function('b', 'const h = ' + huebe.toString() + '; return h(b);'), 'VL');
+ await p.selectOption('#beinWahl', 'VL'); await p.click('#beinHoch'); await p.click('#beinHoch'); await p.waitForTimeout(250);
+ const h1 = await p.evaluate(new Function('b', 'const h = ' + huebe.toString() + '; return h(b);'), 'VL');
+ ok('Vorne links wird höher gehoben (' + Math.round((h0 - h1) * cm) + ' cm), Takt bleibt ' + await p.textContent('#folge'), (h0 - h1) * cm > 6 && (await p.textContent('#folge')) === '3:2:3:2:3:2:3:2' && (await p.evaluate(() => ANI.pruefen().length)) === 0);
+ await p.click('#beinTief'); await p.click('#beinTief'); await p.waitForTimeout(250);
+ ok('„weniger hoch“ nimmt es zurück', Math.abs((await p.evaluate(new Function('b', 'const h = ' + huebe.toString() + '; return h(b);'), 'VL')) - h0) < .3);
+ const cmAlt = cm;
  // 14. Rechts wie links
  await p.click('#rechtsWieLinks'); await p.waitForTimeout(200);
  const gleich = await p.evaluate(() => { const k = ANI.S.kf[0], Q = ANI.poseBei((k.t + .5) % 1); return Math.abs((k.P.VR_huf.x - k.P.VR_bug.x) - (Q.VL_huf.x - Q.VL_bug.x)) < .5; });

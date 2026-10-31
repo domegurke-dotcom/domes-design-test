@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 1.11. (Claude Team, Sonnet) – v937: Einsteller verkaufen ihr Pferd
+Neue Funktion nach Domes Wunsch (Antworten: selten ca. 1 von 15 im Jahr mit Grund, Brief mit Gegenangebot, Pferd bleibt in der Box und der Vertrag endet, bekannte Krankheiten stehen im Brief). Details und Zahlen in CLAUDE.md (v937) und der bzn-Übersicht. Test `tests/einsteller-verkauf-test.js` ✓ (17), Pension-Tests ✓, Brief in 844×390 angesehen. **Offen:** die Update-Liste für die Spieler (Dome: „warte noch kurz“); Rack hat in v936 eigene Stützdauer je Bein; `tests/sandpaddock-test.js` klickt noch auf das alte „Ort“ und läuft in der neuen Boxansicht nicht (Test veraltet).
+
 ### 31.10. nachts (Claude Team, Sonnet) – v936: Absturzfehler behoben, Rack, Testlauf
 **Wichtig:** Seit v899 stürzte der Tageswechsel ab, sobald ein Pensionspferd mit Sandpaddock-Wunsch im Stall stand (`qq is not defined`, Kommentar mitten in der Zeile). Behoben in v936. Gefunden, weil Dome den großen Test mit „Bilder bei Fehlern“ wollte: `etappen-test` danach 351 ✓, `hof-gesamttest` und `neuladen-test` ✓ (liefen noch vor dem Fix, der Fehler betrifft nur Sandpaddock-Pension). **Dome wollte eigentlich nicht den großen Test, sondern dass Claude die Etappen v860–v890 (Mitarbeiter, Aqua, Weihnachten, Tutorials) selbst nachspielt** – das ist über die kleinen Spielerweg-Tests passiert (~35 Tests, alle grün; zwei Tests zufallsabhängig: `mitarbeiter-spielerweg` (Urlaub-Verschieben, Probezeit-Kapazität), `sandpaddock-test` klickt noch auf das alte „Ort“ und läuft in der neuen Boxansicht nicht – Test veraltet, kein Spielfehler).
 **Animationstool:** Rack hat jetzt je Bein eine eigene Stützdauer (Beine einer Seite heben zugleich ab), Stützfolge 1:2:1:2, Test 59 ✓. Mähne auf der anderen Seite zeichnet Dome selbst in Inkscape (nur der Mähnenkamm ist dann am sichtbaren Hals zu sehen).

@@ -1336,7 +1336,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "936";
+  const SPIEL_VERSION = "937";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1344,12 +1344,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=936"></script>
-<script src="pferd.js?v=936"></script>
-<script src="boxstufen.js?v=936"></script>
-<script src="kopfneu.js?v=936"></script>
-<script src="waschbild.js?v=936"></script>
-<script src="avatare.js?v=936"></script>
+<script src="lz-string.min.js?v=937"></script>
+<script src="pferd.js?v=937"></script>
+<script src="boxstufen.js?v=937"></script>
+<script src="kopfneu.js?v=937"></script>
+<script src="waschbild.js?v=937"></script>
+<script src="avatare.js?v=937"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -4274,6 +4274,7 @@
     [/^Jahresbericht/, "jahresbericht", "Jahresbericht"], [/^Willkommen/, "gnadenhof", "Gnadenhof: Ankunft"], [/^Abschied/, "tod", "Pferd verstorben"], [/^Gentest|^Laborergebnis/, "gentest", "Laborergebnis"],
     [/^Veterinäramt:/, "veterinaer", "Veterinäramt"],
     [/^Post aufgeräumt/, "post-aufgeraeumt", "Hofverwaltung: Post aufgeräumt"],
+    [/^Kaufangebot: /, "einst-verkauf", "Einsteller: Kaufangebot"],
   ];
   const briefTyp = betreff => (BRIEF_TYPEN.find(([re]) => re.test(betreff)) || [, "sonstiges", "Sonstige Nachricht"]);
   // Briefe: immer „Sie“ – bis der Absender nach einigen Briefen das „Du“ anbietet und der Spieler zustimmt.
@@ -17010,6 +17011,39 @@
       if (ziel < 0) return; const nst = boxenStufe(spiel.boxen[ziel]), preis = R.preis[nst] || PENSION_PREIS[nst]; e.stufeFrage = jzJetzt();
       brief(eName(e), `Frage: bessere Box für ${p.name}?`, `ich bin mit {deinem|Ihrem} Stall sehr zufrieden. Ist zufällig noch eine Box der <b>Stufe ${nst}</b> (${STUFE_NAME[nst]}) frei? Dann würde ich <b>${esc(p.name)}</b> gern dorthin umziehen lassen und dafür <b>${fmt(preis)}</b> statt ${fmt(e.preis)} je Jahreszeit zahlen.`, { w: e.w, pferde: [p], aktion: { typ: "stufeWunsch", eid: e.eid, ziel, nst, preis } }); });
   }
+  // v937 (Dome 1.11.): Einsteller bieten ihr Pferd manchmal zum Kauf an – Brief mit Preis, Gegenangebot (höchstens 2 Runden), Annehmen = das Pferd gehört dir, der Einsteller zieht aus.
+  // Anlass selten (ca. 1 Einsteller von 15 im Jahr), nur zufriedene Stammkunden. Der Besitzer hat einen versteckten Mindestpreis. Alle Zahlen von Claude.
+  const EINST_VERKAUF = { jahr: 1 / 15, minZufr: 60, minJz: 2, tage: 5, wunsch: [1.05, 1.25], minimum: [0.82, 0.97], eilig: [0.72, 0.88], runden: 2, sperreJz: 4, unfair: 0.75, unfairZufr: -3 };
+  const EV_GRUND = [["geld", "leider ist das Geld bei mir gerade knapp, und ich muss mich schweren Herzens von {P} trennen.", true], ["reiten", "ich habe das Reiten aufgegeben und möchte {P} in gute Hände geben."], ["umzug", "ich ziehe beruflich weit weg und kann {P} nicht mitnehmen."], ["nachwuchs", "bei uns kommt Nachwuchs, ich werde kaum noch Zeit für {P} haben."], ["passt", "{P} und ich passen auf Dauer nicht zusammen – ich suche etwas anderes."]];
+  const evRund = x => Math.max(50, Math.round(x / 50) * 50);
+  function einstellerVerkaufBriefe() {   // Beginn jeder Jahreszeit (aus pensionJahreszeit)
+    const V = EINST_VERKAUF;
+    einstellerListe().forEach(e => { if (e.art || e.kuendigt != null || e.offen || e.verkauf || (e.verkaufSperre || 0) > jzJetzt() || (e.zufr || 0) < V.minZufr || jzJetzt() - (e.seit || 0) < V.minJz) return;
+      if (Math.random() > V.jahr / 4) return; einstellerVerkaufBrief(e); });
+  }
+  function einstellerVerkaufBrief(e) {   // legt Preis und Mindestpreis fest und schickt den Brief (auch für Tests)
+    const V = EINST_VERKAUF, bx = pensionBox(e), p = bx && bx.pferd; if (!p || bx.tot || p.klinik || e.verkauf) return false;
+    const G = EV_GRUND[Math.floor(Math.random() * EV_GRUND.length)], mw = marktwert(p), zw = (a, b) => a + Math.random() * (b - a);
+    const preis = evRund(mw * zw(...V.wunsch)), min = Math.min(evRund(mw * zw(...(G[2] ? V.eilig : V.minimum))), preis - 50), bis = spiel.tag + V.tage;
+    const bef = befundListe(p).filter(b => b.bemerkt || b.diagnose).map(b => befundSicht(p, b).name);
+    e.verkauf = { pid: p.id, min, tag: spiel.tag };
+    brief(eName(e), `Kaufangebot: ${p.name}`, `ich muss {dir|Ihnen} etwas sagen: ${G[1].replace("{P}", `<b>${esc(p.name)}</b>`)}<br><br>Darum meine Frage: {Möchtest du|Möchten Sie} <b>${esc(p.name)}</b> (${rasseName(p.rasse)}, ${alterText(p)}) kaufen? Ich dachte an <b>${fmt(preis)}</b>.${bef.length ? " Bekannt ist: " + bef.join(", ") + "." : " Gesundheitlich ist mir nichts Besonderes bekannt."} Das Angebot gilt bis Tag ${bis}. {Du kannst|Sie können} auch ein Gegenangebot machen.`, { w: e.w, pferde: [p], aktion: { typ: "einstVerkauf", eid: e.eid, pid: p.id, preis, min, runde: 0, bis } });
+    tippMerken("einstVerkauf"); return true;
+  }
+  function einstellerKaufen(e, p, preis) {   // das Pferd wird dein eigenes, bleibt in seiner Box, der Einsteller zieht aus
+    buchen(-preis, `Pferdekauf vom Einsteller: ${p.name}`); prot("Kauf: Einsteller", { p, b: -preis });
+    delete p.einsteller; if (p.putzzeug === "besitzer") delete p.putzzeug; delete p.zuchtWunsch; if (p.gedeckt && p.gedeckt.besitzer) p.gedeckt.besitzer = false; p.gekauftTag = spiel.tag;
+    const L = einstellerListe(); L.splice(L.indexOf(e), 1);
+    brief(eName(e), `Danke – ${p.name} ist jetzt bei {dir|Ihnen}`, `vielen Dank für das gute Geschäft. Ich weiß, dass <b>${esc(p.name)}</b> bei {dir|Ihnen} in guten Händen ist. Meine Sachen hole ich in den nächsten Tagen ab – die Box gehört jetzt {dir|Ihnen}.`, { w: e.w, pferde: [p] });
+    pensionAnsehen(1);
+  }
+  function einstellerGegenangebot(A, e, p, betrag) {   // Antwort des Besitzers auf dein Gegenangebot (höchstens EINST_VERKAUF.runden Runden)
+    const V = EINST_VERKAUF; A.runde = (A.runde || 0) + 1;
+    if (betrag >= A.min) { A.preis = betrag; A.fest = true; A.hinweis = `${eName(e)}: „Einverstanden – ${fmt(betrag)}.“`; return; }
+    if (A.runde < V.runden && betrag >= A.min * 0.9) { const neu = evRund(A.min + (A.preis - A.min) * 0.3); A.preis = Math.max(neu, A.min); A.hinweis = `${eName(e)}: „${fmt(betrag)} ist mir zu wenig. Wie wäre es mit ${fmt(A.preis)}?“`; return; }
+    if (betrag < A.min * V.unfair) eZufr(e, V.unfairZufr, "viel zu niedriges Kaufangebot");
+    A.antwort = `❌ ${eName(e)} lehnt ab und zieht das Angebot zurück.`; e.verkauf = null; e.verkaufSperre = jzJetzt() + V.sperreJz;
+  }
   function pensionPreisPruefen() {
     const R = pensionRegeln();
     einstellerListe().forEach(e => { if (e.art || e.kuendigt != null) return; const p = (pensionBox(e) || {}).pferd; if (!p) return;
@@ -17109,6 +17143,7 @@
   function pensionJahreszeit() {
     fremdEndeJahreszeit();   // H7 (c): Beritt/Aufzucht zu Ende → Besitzer holt ab
     try { stufenWunschBriefe(); } catch (er) { console.error("Boxstufen-Wunsch:", er); }   // v668
+    try { einstellerVerkaufBriefe(); } catch (er) { console.error("Einsteller verkauft:", er); }   // v937
     besitzerExperteJahreszeit();   // v333: Besitzer holt sich manchmal selbst einen Fütterungsberater
     const L = einstellerListe(), jetzt = jzJetzt(), s = datum().s;
     L.filter(e => e.kuendigt != null && e.kuendigt < jetzt).forEach(e => pensionAuszug(e, e.kuendGrund === "du" ? "Vertrag gekündigt" : e.kuendGrund === "zahlung" ? "Zahlungsverzug" : e.kuendGrund === "preis" ? "zu teuer" : "unzufrieden"));
@@ -18319,6 +18354,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Ansteckung (Etappe F):</b> ansteckend sind ${Object.keys(ANSTECKEND).map(k => KRANK[k].n).join(", ")}. Nach der Ansteckung erst Inkubation (Influenza 2, Druse/Herpes/Pilz 3, Würmer 4 Tage): schon ansteckend, aber ohne Anzeichen – nur das große Blutbild findet sie. Chance pro Nacht je krankem Pferd: ${Object.entries(ANSTECKEND).map(([k, A]) => `${KRANK[k].n} ${Object.entries(A).map(([w, x]) => `${w} ${String(x).replace(".", ",")}`).join("/")}`).join(" · ")}. Wege: Weide (beide auf der Weide), Luft (im Stall ÷ (1 + Boxabstand)), Kontakt (Nachbarbox), Tränke (alle im Stall), Putzzeug (vom selben geputzt, nicht beide mit eigenem Putzzeug), Träger (vom selben Mitarbeiter oder dir gestern versorgt; zuverlässige oder erfahrene ab 50 machen das bemerkte kranke Pferd zuletzt ×0,3). Quarantäne (1 Jahreszeit): kein Weidegang, eigenes Putzzeug, Luft ×0,5, Kontakt ×0,2, Träger ×0,3, keine Tränke. Ein Mitarbeiter „nur für dieses Pferd“ versorgt nur dieses und trägt nichts weiter. Geimpft (Influenza/Herpes, 2 Jahreszeiten) ×0,3 und Start eine Stufe leichter; Wurmkur in der letzten Jahreszeit: Würmer ×0,2. × Konstitution (1,5 − Anlage ÷ 100). Herpes bei tragenden Stuten: Verfohlen 5 % je Grad pro Nacht. Neuzugänge bringen etwas mit: ${Object.entries(NEUZUGANG_RISIKO).map(([q, x]) => `${q} ${Math.round(x * 100)} %`).join(", ")} (Influenza 30 %, Druse 15 %, Herpes 10 %, Pilz 20 %, Würmer 25 %).</p>
       <p><b>Weitere AKU (v380):</b> nach einer AKU kann eine andere Stufe dazugebucht werden (nicht dieselbe); das Protokoll fasst alle Befunde zusammen, die Wertminderung zählt alle gefundenen Befunde. Danach „Pferd kaufen? Ja / Nein“ (Tierschutz: aufnehmen).</p>
       <p><b>Spielstand und Speicherplätze (PLAN-SPIELSTAND.md, v519):</b> Schlüssel im Browser: Autospeicher <code>zuchtstall-v2</code> (läuft immer mit, kurz verzögert 0,4 s und sofort beim Verlassen/Verstecken der Seite), Platz 1 <code>zuchtstall-p1</code>, Platz 2 <code>zuchtstall-p2</code> (nur selbst gespeichert, mit Kurzinfo Hof/Datum/Tag/Version/echtes Datum), Alles gepackt mit lz-string (<code>compressToUTF16</code>; ungepackte alte Stände beginnen mit „{“ und werden beim nächsten Speichern gepackt). Größe jetzt: ${(() => { try { const j = JSON.stringify(spiel).length, g = packen(spiel).length; return `ungepackt ${j.toLocaleString("de-DE")} Zeichen → gepackt ${g.toLocaleString("de-DE")} Zeichen (${Math.round(g / j * 100)} %)`; } catch (e) { return "–"; } })()}. Spiel-Nummer <code>spiel.spielId</code>, eigener Speicherplatz <code>spiel.platz</code> (null = noch nie gespeichert; neues Spiel legt keinen Speicherstand an, Tipp „Spiel speichern“; beim ersten Speichern Speicherplatz wählen), Turnier-Sortierung <code>spiel.tsort</code>. „Ungespeicherter Fortschritt“ = Tag, Geld, Pferde/Fohlen, Einsteller, Mitarbeiter, Kredite oder Briefe weichen vom Platz ab (<code>fortschritt</code>). Platzwechsel lädt den Stand in den Autospeicher und startet die Seite neu (Merker <code>zuchtstall-start</code> in sessionStorage → direkt ins Spiel). Speichern schlägt fehl → rote Meldung mit Datei-Knopf, höchstens 1× je Spieltag. Spiel verloren → nur der Autospeicher wird gelöscht. Datei (S2/S3): <code>Zuchtstall_&lt;Hof&gt;_Jahr&lt;jj&gt;-&lt;Jahreszeit&gt;_&lt;Datum&gt;.json</code>, Umlaute im Dateinamen als ae/oe/ue/ss (v523, auch im Notfall-Fenster) – im Spiel bleibt der Hofname mit Umlauten.</p>
+      <p><b>Einsteller verkaufen ihr Pferd (v937):</b> Einmal je Jahreszeit würfelt jeder zufriedene Stammkunde (Zufriedenheit ≥ 60, mindestens 2 Jahreszeiten im Hof, kein Beritt/Aufzucht): Chance 1/15 je Jahr (÷ 4 je Jahreszeit). Brief mit Wunschpreis = Marktwert × 1,05–1,25 (gerundet auf 50 €), versteckter Mindestpreis × 0,82–0,97 (bei Geldsorgen × 0,72–0,88); gilt 5 Tage. Gegenangebot (95/90/85/80/70 %): ab Mindestpreis Einverstanden, sonst bis 10 % darunter ein Gegenvorschlag (höchstens 2 Runden), danach Absage und 4 Jahreszeiten Ruhe; unter 75 % des Mindestpreises −3 Zufriedenheit. Kauf: Pferd bleibt in der Box, Einsteller zieht aus, Ansehen +1.</p>
       <p><b>Hofchronik (B2, v548):</b> Dieselben Zähler wie das Spielprotokoll, aber <b>je Hof</b> getrennt (<code>spiel.chronik[Hof]["Jahr-Jahreszeit"].k</code>); das Spielprotokoll bleibt als „Gesamt“. Neu gezählt: Turnier-Start/Sieg/Platz <b>je Disziplin und Klasse</b> („Turnier Dressur L: Sieg“), höchste erreichte Klasse je Disziplin, „Abgabe: Gnadenhof / Tierschutz / Händler (Rückgabe)“, „Pferd gepfändet“, höchster und tiefster Kontostand je Jahreszeit (<code>hoch</code>/<code>tief</code>, gemessen bei jeder Buchung), Höfe gekauft/verkauft/verloren mit Name und Jahreszeit (<code>spiel.chronikHoefe</code>). Alte Spielstände haben keine Aufteilung nach Höfen (Anzeige später „–“). Die Anzeige (Jahresbericht, Verloren-Bilanz) folgt in B3/B4.</p>
       <p><b>Hinweisblasen (T1, v568):</b> ersetzen die Tipp-Fenster (nur Spielstart und „Geld wird knapp“ bleiben Fenster). Blase mit Pfeil und Ring, Antippen = weg. Leitfaden der ersten Tage (zählt nicht gegen das Limit, gesehen oder erledigt → nächster Schritt): ${LEITFADEN.map(x => HINWEISE[x[0]][0]).join(" → ")}. Nebentipps höchstens 1 je Ansicht und 3 je Spieltag, nie während Fenster, Wischen, Box-Ziehen, Menü oder Tagwechsel. Stufe: Anfänger alle, Fortgeschrittene nur die wichtigen, Experten keine (einschaltbar). ☰ → Hilfe listet die gesehenen Tipps, Enzyklopädie „🌱 Einsteiger-Wissen“ für „Mehr dazu“. ${Object.keys(HINWEISE).length} Hinweise im Katalog.</p>
       <p><b>Spielumfang je Stufe (T2, v569):</b> für alle Spiele (<code>spiel.stufenAn</code>; alte Spielstände von vor v569 werden beim Laden automatisch <b>Experte</b>; der Schalter dafür in den Einstellungen wurde in v763 entfernt, Dome 24.10.). ${["anf", "fort", "exp"].map(k => { const S = ERFAHRUNG_STUFEN[k]; return `<b>${S.n}</b>: ${S.hoefe} ${S.hoefe === 1 ? "Hof" : "Höfe"}, Märkte ${S.maerkte ? S.maerkte.length : "alle"}, Zucht ${S.zucht ? "ja" : "nein"}, Labor ${S.labor ? "ja" : "nein"}, Turniere bis ${S.turnierMax < 1 ? "E" : S.turnierMax < 3 ? "M" : "alle"}${S.championat ? " inkl. Championate" : ""}, Krankheiten ×${String(S.krankF).replace(".", ",")}${S.krankTod ? "" : " (kein Tod durch Krankheit)"}`; }).join(" · ")}. Umstellen jederzeit (Hofverwaltung → Einstellungen), die Weihnachtsspende bleibt an der Stufe beim Spielstart. Nach einem Jahr Brief „Bereit für mehr?“. <b>Anfänger zusätzlich (Dome 20.10., v574):</b> fester Futterplan (<code>futterFest</code>: kein Futterplan-Fenster, Standardplan Heu + Mineral, Empfehlung des Fütterungsberater und Futterwunsch des Besitzers werden immer automatisch übernommen – Knopf „Fütterungsberater fragen“), Charakter-Reiter nur mit Vorlieben/Abneigungen, fester Trainingsweg (<code>ANF_WEG</code>/<code>anfWeg</code>: unter 3 Jahren Bodenarbeit → Spaziergang → Longieren; Takt/Losgelassenheit unter 50 %: Longieren → Dressur → Ausritt; Anlehnung/Schwung unter 50 %: Dressur → Stangen → Ausritt; danach Dressur → Springgymnastik → Konditionstraining – am Trainingsort nur diese Übungen), keine Pfändung im ersten Spieljahr (<code>pfaendSchutz</code>: Tag ≤ 4 × Tage je Jahreszeit; Mahnungen, Mahngebühren und Dispozinsen laufen weiter, Hinweis „Schonfrist für Anfänger“ in den Briefen). Alte Spielstände (vor v569) werden beim Laden Experte.</p>
@@ -18712,6 +18748,10 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     if (A.typ === "kaufangebot") { const a = (spiel.angebote || []).find(y => y.id === A.pferd && y.vorschlag && y.vorschlag.id === A.vid);
       if (A.antwort) return `<p class="brief-aktion-info">${A.antwort === "ja" ? "✅ Angenommen – verkauft." : "Abgelehnt."}</p>`;
       return a ? `<div class="brief-aktion"><button class="knopf" data-baktion="kauf-ja" data-bid="${br.id}">✅ Annehmen · ${fmt(A.betrag)}</button><button class="knopf zweit" data-baktion="kauf-nein" data-bid="${br.id}">Ablehnen</button></div>` : `<p class="brief-aktion-info">Dieser Vorschlag gilt nicht mehr.</p>`; }
+    if (A.typ === "einstVerkauf") { const e = einstellerListe().find(x => x.eid === A.eid), bx = e && pensionBox(e);
+      if (A.antwort) return `<p class="brief-aktion-info">${A.antwort}</p>`;
+      if (!e || !bx || bx.pferd.id !== A.pid || spiel.tag > A.bis) return `<p class="brief-aktion-info">⌛ Das Angebot gilt nicht mehr.</p>`;
+      return `${A.hinweis ? `<p class="brief-aktion-info">${A.hinweis}</p>` : ""}<div class="brief-aktion" style="flex-wrap:wrap;gap:6px"><button class="knopf" data-baktion="ev-ja" data-bid="${br.id}">✅ Kaufen · ${fmt(A.preis)}</button>${A.fest ? "" : `<button class="knopf zweit" data-baktion="ev-gegen" data-bid="${br.id}">💬 Gegenangebot</button>`}<button class="knopf zweit" data-baktion="ev-nein" data-bid="${br.id}">Ablehnen</button></div>`; }
     if (A.typ === "stufeWunsch") { const e = einstellerListe().find(x => x.eid === A.eid), nb = spiel.boxen[A.ziel], ok = e && e.kuendigt == null && nb && pensionBoxFrei(nb) && boxenStufe(nb) === A.nst && e.stufe < A.nst && pensionBox(e);
       if (A.antwort) return `<p class="brief-aktion-info">${A.antwort}</p>`;
       if (!ok) return `<p class="brief-aktion-info">Das gilt nicht mehr (die Box ist nicht mehr frei oder der Einsteller ist weg).</p>`;
@@ -18781,6 +18821,14 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         else if (Math.random() < 0.3) { N.ok = true; A.antwort = `✅ ${esc(eName(e))} ist einverstanden und zahlt ab der nächsten Jahreszeit ${fmt(N.preis)}.`; }
         else { delete e.preisNeu; e.kuendigt = jzJetzt(); e.kuendGrund = "preis"; pensionAnsehen(-2); A.antwort = `📦 ${esc(eName(e))} kündigt zum Ende dieser Jahreszeit${p ? ` und holt ${esc(p.name)} ab` : ""}.`; }
         speichern(); nachher(); return; }
+      if (["ev-ja", "ev-nein", "ev-gegen"].includes(b.dataset.baktion)) { const e = einstellerListe().find(x => x.eid === A.eid), bx = e && pensionBox(e), p = bx && bx.pferd;
+        if (!p || p.id !== A.pid || spiel.tag > A.bis || A.antwort) { A.antwort = A.antwort || "Das gilt nicht mehr."; speichern(); nachher(); return; }
+        if (b.dataset.baktion === "ev-nein") { A.antwort = `Abgelehnt – ${eName(e)} behält ${esc(p.name)} und bleibt bei dir.`; e.verkauf = null; e.verkaufSperre = jzJetzt() + EINST_VERKAUF.sperreJz; speichern(); nachher(); return; }
+        if (b.dataset.baktion === "ev-ja") { if (geldFrei() < A.preis) { dialog(`<h3>Nicht genug Geld</h3><p>${esc(p.name)} kostet ${fmt(A.preis)}.</p>${dispoHinweis()}`); return; }
+          A.antwort = `✅ Gekauft für ${fmt(A.preis)} – ${esc(p.name)} gehört jetzt dir.`; e.verkauf = null; einstellerKaufen(e, p, A.preis); speichern(); postIconSetzen(); nachher(); return; }
+        const ang = [0.95, 0.9, 0.85, 0.8, 0.7].map(f => evRund(A.preis * f));
+        dialog(`<h3>💬 Gegenangebot</h3><p>${esc(p.name)}: ${eName(e)} möchte ${fmt(A.preis)}. Was bietest du? Ist es zu wenig, kommt ein Gegenvorschlag – nach ${EINST_VERKAUF.runden} Runden ist Schluss.</p><div class="kr-wahl">${ang.map(x => `<button class="knopf zweit" data-evgeb="${x}">${fmt(x)}</button>`).join("")}</div>`, [["Abbrechen", nachher, "zweit"]]);
+        document.querySelectorAll("[data-evgeb]").forEach(x => x.onclick = () => { einstellerGegenangebot(A, e, p, +x.dataset.evgeb); $("dlg").hidden = true; speichern(); nachher(); }); return; }
       if (["er-ja", "er-nein", "er-gegen"].includes(b.dataset.baktion)) { const e = einstellerListe().find(x => x.eid === A.eid); if (!e || !pensionBox(e)) { A.antwort = "Das gilt nicht mehr."; speichern(); nachher(); return; }
         if (b.dataset.baktion === "er-gegen") { const bx = pensionBox(e), opts = Object.keys(EINSTREU).filter(k => !EINSTREU[k].staub && k !== bx.einstreu && (spiel.lager ? true : true));
           dialog(`<h3>💬 Gegenvorschlag</h3><p>Welche andere staubarme Einstreu schlägst du vor? Er nimmt sie mit etwa ${Math.round(EINSTREU_RUECK.gegenAnnahme * 100)} % Wahrscheinlichkeit an (zufriedene Besitzer eher), die Zusatzleistung bleibt.</p><div class="kr-wahl">${opts.map(k => `<button class="knopf zweit" data-ergegen="${k}">${FUTTER[k].n}</button>`).join("")}</div>`, [["Abbrechen", nachher, "zweit"]]);
@@ -19201,6 +19249,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     steckbrief: ["Steckbrief", "Hier steht alles über das Pferd: Daten, Gangwerk, Charakter und Ausbildung. Vieles steckt verborgen in den Genen – das zeigen nur Labortests.", "", "#info .reiter", null, "anf"],
     balken: ["Gesundheit und Wohlbefinden", "Die Balken zeigen, wie es dem Pferd geht. Wird einer niedrig, kümmere dich zuerst darum.", "", "#info .karte", null, "anf"],
     futterexperte: ["Fütterungsberater", "Der Fütterungsberater stellt einen passenden Plan zusammen. Beim ersten Pferd kommt er am ersten Tag kostenlos.", "", null, "futter", "anf"],
+    einstVerkauf: ["Ein Einsteller verkauft sein Pferd", "Ein Einsteller bietet dir sein Pferd zum Kauf an. Du kannst annehmen, ein Gegenangebot machen oder ablehnen. Zu niedrige Gebote lehnt er nach zwei Runden ab.", "Bekannte Krankheiten stehen im Brief; versteckte findet nur eine Untersuchung. Kaufst du, zieht er aus und das Pferd bleibt in seiner Box.", null, null, "alle"],
     besInfo: ["Besitzer informieren", "Bei einem kranken Pensionspferd entscheidet der Besitzer. Sag ihm, was du vermutest, und schlage vor: Tierarzt oder Behandlung durch dich (wenn du „Medikamente geben“ anbietest).", "Liegt deine Annahme daneben, sinkt seine Zufriedenheit – schätze lieber vorsichtig ein.", "[data-besvor]", null, "anf"],
     tierarzt: ["Tierarzt rufen", "Frisst das Pferd nicht, lahmt oder hustet es, rufe den Tierarzt. Er findet die Krankheit und schreibt auf, was du tun musst.", "Lieber einmal zu früh rufen – am nächsten Tag liest du seine Rückmeldung.", "#tierarztKnopf", "krank", "fort"],
     selbst: ["Selbst behandeln", "Kleine Dinge behandelst du selbst: Wundsalbe, Verband, Boxenruhe – das Mittel kommt aus der Stallapotheke in der Futterkammer.", "Bei Fieber oder Lahmheit trotzdem den Tierarzt rufen.", null, "krank", "anf"],

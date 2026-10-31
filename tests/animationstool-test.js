@@ -103,10 +103,14 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   ok(bn + ' ' + (art === 'vor' ? 'fußt weiter vorn auf' : 'fußt weiter hinten ab') + ' (' + d + ' cm), Huf rutscht nicht, Takt ' + await p.textContent('#folge'), d >= 3 && d <= 8 && rutsch === 0);
  }
  p.once('dialog', d => d.accept()); await p.click('#original'); await p.waitForTimeout(200);
+ const kE = () => p.evaluate(() => { let k = 1e9, e = -1e9; for (let i = 0; i < 200; i++) { const P = ANI.poseBei(i / 200); k = Math.min(k, P.VL_karpal.y); e = Math.max(e, P.VL_ellbogen.y); } return { k, e }; });
+ const ke0 = await kE();
  const h0 = await p.evaluate(new Function('b', 'const h = ' + huebe.toString() + '; return h(b);'), 'VL');
  await p.selectOption('#beinWahl', 'VL'); await p.click('#beinHoch'); await p.click('#beinHoch'); await p.waitForTimeout(250);
  const h1 = await p.evaluate(new Function('b', 'const h = ' + huebe.toString() + '; return h(b);'), 'VL');
  ok('Vorne links wird höher gehoben (' + Math.round((h0 - h1) * cm) + ' cm), Takt bleibt ' + await p.textContent('#folge'), (h0 - h1) * cm > 6 && (await p.textContent('#folge')) === '3:2:3:2:3:2:3:2' && (await p.evaluate(() => ANI.pruefen().length)) === 0);
+ const ke1 = await kE();
+ ok('Höher heben: Vorderfußwurzel kommt ' + Math.round((ke0.k - ke1.k) * cm) + ' cm höher, Ellbogen sackt nicht ab', (ke0.k - ke1.k) * cm > 6 && (ke1.e - ke0.e) * cm < 3);
  await p.click('#beinTief'); await p.click('#beinTief'); await p.waitForTimeout(250);
  ok('„weniger hoch“ nimmt es zurück', Math.abs((await p.evaluate(new Function('b', 'const h = ' + huebe.toString() + '; return h(b);'), 'VL')) - h0) < .3);
  const cmAlt = cm;

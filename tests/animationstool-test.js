@@ -6,7 +6,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
  const ok = (n, c) => console.log((c ? '✓ ' : '✗ ') + n);
  await p.goto('file:///' + path.resolve('animationstool/index.html').split(String.fromCharCode(92)).join('/')); await p.waitForTimeout(600);
  await p.evaluate(() => localStorage.removeItem('animationstool-v1')); await p.reload(); await p.waitForTimeout(600);
- for (const [g, soll] of [['schritt', '3:2:3:2:3:2:3:2'], ['trab', '2:0:2:0'], ['galoppR', '1:3:2:3:1:0'], ['galoppL', '1:3:2:3:1:0'], ['flachwalk', '3:2:3:2:3:2:3:2'], ['steppingpace', '3:2:3:2'], ['saddlerack', '3:2:3:2:3:2:3:2'], ['rack', '2:1:2:1:2:1:2:1'], ['foxtrot', '2:3:2:3:2:3:2:3'], ['pass', '2:0:2:0']]) { p.once('dialog', d => d.accept()); await p.selectOption('#gang', g); await p.click('#vorlageLaden'); await p.waitForTimeout(200);
+ for (const [g, soll] of [['schritt', '3:2:3:2:3:2:3:2'], ['trab', '2:0:2:0'], ['galoppR', '1:3:2:3:1:0'], ['galoppL', '1:3:2:3:1:0'], ['flachwalk', '3:2:3:2:3:2:3:2'], ['steppingpace', '3:2:3:2'], ['saddlerack', '3:2:3:2:3:2:3:2'], ['rack', '1:2:1:2'], ['foxtrot', '2:3:2:3:2:3:2:3'], ['pass', '2:0:2:0']]) { p.once('dialog', d => d.accept()); await p.selectOption('#gang', g); await p.click('#vorlageLaden'); await p.waitForTimeout(200);
   ok('Vorlage ' + g + ': Stützfolge ' + await p.textContent('#folge') + ', Takte ' + await p.textContent('#takte'), (await p.textContent('#pdfVergleich')).includes('passt')); }
  { // Running Walk: Stütze 2/3 Hufe, Hinterhuf tritt weit über; Regler „Hinterhuf übertritt“ wirkt
   p.once('dialog', d => d.accept()); await p.selectOption('#gang', 'laufwalk'); await p.click('#vorlageLaden'); await p.waitForTimeout(200);

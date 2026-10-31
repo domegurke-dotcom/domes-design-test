@@ -401,7 +401,7 @@ Object.assign(GAENGE, {
   laufwalk: { name: "Running Walk", ph: { HL: 0, VL: .25, HR: .5, VR: .75 }, d: .52, sweep: 64, ueber: 25, lift: { v: 15, h: 10 }, flex: { karpal: 85, fesV: 46, sprung: 30, fesH: 40 }, dauer: .8, koerper: kb(.9, 8, .2) },
   steppingpace: { name: "Stepping Pace", ph: { HL: 0, VL: .1, HR: .5, VR: .6 }, d: .6, sweep: 64, ueber: -26, lift: { v: 13, h: 10 }, flex: { karpal: 80, fesV: 44, sprung: 28, fesH: 40 }, dauer: .8, pdf: "3:2:3:2", koerper: kb(.5, 2, .2) },
   saddlerack: { name: "Saddle Rack", ph: { HL: 0, VL: .25, HR: .5, VR: .75 }, d: .56, sweep: 64, ueber: -16, lift: { v: 16, h: 11 }, flex: { karpal: 90, fesV: 48, sprung: 34, fesH: 44 }, dauer: .85, pdf: "3:2:3:2:3:2:3:2", koerper: kb(1.4, 1.5, .2) },
-  rack: { name: "Rack (Tölt)", ph: { HL: 0, VL: .25, HR: .5, VR: .75 }, d: .46, sweep: 64, ueber: -39, lift: { v: 18, h: 12 }, flex: { karpal: 95, fesV: 50, sprung: 36, fesH: 46 }, dauer: .65, pdf: "2:1:2:1:2:1:2:1", koerper: kb(1.6, 1.5, .2) },
+  rack: { name: "Rack (Tölt)", ph: { HL: 0, VL: .25, HR: .5, VR: .75 }, d: .375, dd: { HL: .5, HR: .5, VL: .25, VR: .25 }, sweep: 64, ueber: -46, lift: { v: 18, h: 12 }, flex: { karpal: 95, fesV: 50, sprung: 36, fesH: 46 }, dauer: .65, pdf: "1:2:1:2", koerper: kb(1.6, 1.5, .2) },
   foxtrot: { name: "Fox Trot", ph: { VL: 0, HR: .1, VR: .5, HL: .6 }, d: .56, sweep: 64, ueber: 14, lift: { v: 14, h: 11 }, flex: { karpal: 80, fesV: 45, sprung: 32, fesH: 42 }, dauer: .75, pdf: "2:3:2:3:2:3:2:3", koerper: kb(1.5, 3, .1) },
   pass: { name: "Pass (Rennpass)", ph: { HL: 0, VL: 0, HR: .5, VR: .5 }, d: .4, sweep: 64, ueber: 0, lift: { v: 16, h: 13 }, flex: { karpal: 95, fesV: 50, sprung: 36, fesH: 46 }, dauer: .55, pdf: "2:0:2:0", koerper: t => ({ dy: 2 * Math.cos(4 * Math.PI * (t - .2)), pitch: 0, nick: 1 * Math.cos(4 * Math.PI * (t - .2)) }) },
 });
@@ -453,9 +453,10 @@ function wurzelGedreht(P, R, b, ziel) {
 }
 // Bein-Einstellungen je Bein (Dome 31.10.): vor/hinten = zusätzlicher Weg in Einheiten am Anfang/Ende der Stützphase, hoch = zusätzliche Hubhöhe
 const beinX = b => (S.beinX && S.beinX[b]) || { vor: 0, hinten: 0, hoch: 0 };
+const beinDauer = (G, b) => (G.dd && G.dd[b]) || G.d;   // Stützdauer je Bein (Rack: Hinterbeine länger als Vorderbeine, damit die Beine einer Seite zugleich abheben)
 function beinPhase(G, b, sweep) {   // weiter vor = früher auffußen, weiter hinten = später abfußen – der Körper zieht gleich schnell weiter, der Huf steht still
-  const E = beinX(b), v = sweep / G.d;   // Weg des Körpers je Bewegungsablauf
-  return { ph: (G.ph[b] - E.vor / v + 1) % 1, d: (sweep + E.vor + E.hinten) / v, von: -sweep / 2 - E.vor, bis: sweep / 2 + E.hinten, E };
+  const E = beinX(b), v = sweep / G.d, sw = sweep * beinDauer(G, b) / G.d;   // v = Weg des Körpers je Bewegungsablauf; sw = Weg dieses Beins in der Stützphase
+  return { ph: (G.ph[b] - E.vor / v + 1) % 1, d: (sw + E.vor + E.hinten) / v, von: -sw / 2 - E.vor, bis: sw / 2 + E.hinten, E };
 }
 function vorlagePose(G, t, sweep) {
   const R = S.ruhe.P, K = G.koerper(t), mitte = { x: (R.widerrist.x + R.kruppe.x) / 2, y: R.widerrist.y + 15 };
@@ -485,8 +486,8 @@ function erreichbar(b, ziel) {   // reicht das Bein (mit Mitschwingen und gestre
 }
 function maxSweep() {   // größte Schrittlänge der Stützphase, die alle vier Beine vorn und hinten erreichen
   const R = S.ruhe.P; let m = 160;
-  for (const b of Object.keys(BEINE)) { const x = mittelXVon(R, b); let lo = 0, hi = 160;
-    for (let i = 0; i < 20; i++) { const s = (lo + hi) / 2; if (erreichbar(b, { x: x - s / 2, y: 0 }) && erreichbar(b, { x: x + s / 2, y: 0 })) lo = s; else hi = s; }
+  for (const b of Object.keys(BEINE)) { const x = mittelXVon(R, b), G = GAENGE[S.gang], fb = beinDauer(G, b) / G.d; let lo = 0, hi = 160;
+    for (let i = 0; i < 20; i++) { const s = (lo + hi) / 2; if (erreichbar(b, { x: x - s * fb / 2, y: 0 }) && erreichbar(b, { x: x + s * fb / 2, y: 0 })) lo = s; else hi = s; }
     m = Math.min(m, lo); }
   return Math.max(20, Math.floor(m));
 }

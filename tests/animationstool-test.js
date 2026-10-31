@@ -116,6 +116,21 @@ const { chromium } = require('playwright'); const path = require('path'); const 
  await p.selectOption('#rasse', 'probe'); await p.waitForTimeout(300);
  ok('Probepferd wählbar: ohne Spielbild, Takt ' + await p.textContent('#folge'), (await p.evaluate(() => ANI.S.ruhe.svg === '' && ANI.S.rasse === 'probe')) && (await p.textContent('#folge')) === '3:2:3:2:3:2:3:2' && (await p.evaluate(() => ANI.pruefen().length)) === 0);
  await p.selectOption('#rasse', 'hannoveraner'); await p.waitForTimeout(300);
+ // Zoom, Ankerpunkt, Winkelgrenze, Bildgröße (Dome 31.10.)
+ await p.evaluate(() => { document.getElementById('zoomGanz').click(); document.getElementById('zoomPlus').click(); document.getElementById('zoomPlus').click(); });
+ ok('Zoom: Knopf + vergrößert, Ganz setzt zurück', (await p.evaluate(() => ANI.ZM.z)) > 1.9 && (await p.evaluate(() => { document.getElementById('zoomGanz').click(); return ANI.ZM.z; })) === 1);
+ await p.evaluate(() => { ANI.zeitSetzen(0); const P = ANI.poseBei(0), a = P.VL_karpal, c = P.VL_fessel, svg = document.getElementById('svg'), pt = svg.createSVGPoint(); pt.x = (a.x + c.x) / 2; pt.y = (a.y + c.y) / 2; const q = pt.matrixTransform(svg.getScreenCTM()); window.__anker = { x: q.x, y: q.y }; });
+ const ap = await p.evaluate(() => window.__anker); await p.click('#ankerNeu'); await p.mouse.click(ap.x, ap.y); await p.waitForTimeout(200);
+ ok('Ankerpunkt auf dem Bein (links und rechts), Takt bleibt', (await p.evaluate(() => ANI.REIHE.filter(k => /_z1$/.test(k)).length)) === 2 && (await p.textContent('#folge')) === '3:2:3:2:3:2:3:2' && (await p.evaluate(() => ANI.pruefen().length)) === 0);
+ await p.selectOption('#wGelenk', 'V_ellbogen'); await p.click('#wNeu'); await p.fill('#wMax', '10'); await p.press('#wMax', 'Tab'); await p.fill('#wMin', '-10'); await p.press('#wMin', 'Tab');
+ ok('Winkelgrenze gesetzt, Prüfen meldet Verstöße', JSON.stringify(await p.evaluate(() => ANI.GR.V_ellbogen)) === '[-10,10]' && (await p.evaluate(() => ANI.pruefen().filter(f => f.art === 'grenze').length)) > 0);
+ await p.click('#wTool'); await p.evaluate(() => ANI.zeitSetzen(0));
+ const ep = await p.evaluate(() => { const P = ANI.poseBei(0), svg = document.getElementById('svg'), pt = svg.createSVGPoint(); pt.x = P.VL_ellbogen.x; pt.y = P.VL_ellbogen.y; const q = pt.matrixTransform(svg.getScreenCTM()); return { x: q.x, y: q.y }; });
+ await p.mouse.move(ep.x, ep.y); await p.mouse.down(); await p.mouse.move(ep.x - 80, ep.y + 20, { steps: 8 }); await p.mouse.up();
+ const rel = await p.evaluate(() => ANI.relWinkel(ANI.poseBei(ANI.S.t), 'VL_ellbogen').rel * 180 / Math.PI);
+ ok('Ziehen hält die Winkelgrenze (' + rel.toFixed(1) + '°)', rel >= -10.5 && rel <= 10.5);
+ await p.evaluate(() => document.querySelector('[data-ankerweg]').click()); await p.evaluate(() => { delete ANI.GR.V_ellbogen; });
+ await p.click('#original'); await p.waitForTimeout(200);
  const cmAlt = cm;
  // 14. Rechts wie links
  await p.click('#rechtsWieLinks'); await p.waitForTimeout(200);

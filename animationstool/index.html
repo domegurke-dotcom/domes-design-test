@@ -167,7 +167,9 @@
       <h2>Pferd</h2>
       <label class="zeile">Rasse <select id="rasse"></select></label>
       <label class="zeile">Farbe <select id="farbe"><option value="brauner">Brauner</option><option value="fuchs">Fuchs</option><option value="rappe">Rappe</option><option value="schimmel">Schimmel</option><option value="palomino">Palomino</option></select></label>
-      <label class="zeile">Pferd im Hintergrund <input type="range" id="pferdDeck" min="0" max="100" value="35"></label>
+      <label class="zeile">Pferd im Hintergrund <input type="range" id="pferdDeck" min="0" max="100" value="0"></label>
+      <label class="zeile" title="Schlichtes Pferd aus Teilen, das den Punkten folgt – nur zum Ansehen">Prototyp-Pferd zeigen <input type="checkbox" id="protoZeigen" checked></label>
+      <label class="zeile">Prototyp deckend <input type="range" id="protoDeck" min="10" max="100" value="85"></label>
       <label class="zeile">Fernes Beinpaar zeigen <input type="checkbox" id="fernZeigen" checked></label>
       <label class="zeile">Knochenlänge halten <input type="checkbox" id="knochenFest" checked></label>
       <label class="zeile">Bodenlinie mitbewegen <input type="checkbox" id="bodenLauf" checked></label>
@@ -443,12 +445,14 @@ function buehneZeichnen() {
   for (let x = Math.floor(x1 / 10) * 10; x < x2 + 40; x += 10) el("line", { x1: x, x2: x - 4, y1: 0.6, y2: 4, stroke: "#9b8b78", "stroke-width": .6 }, lauf);
   // Pferd
   const pg = el("g", { id: "pferd", opacity: Math.max(S.einrichten ? .8 : 0, $("pferdDeck").value / 100), "pointer-events": "none" }, svg); pg.innerHTML = R.svg;
+  el("g", { id: "proto", "pointer-events": "none" }, svg);
   el("g", { id: "figur" }, svg);
   figurZeichnen();
 }
 function figurZeichnen() {
   const g = $("figur"); if (!g) return; g.innerHTML = ""; g.style.pointerEvents = S.bildModus ? "none" : "";
   const P = S.einrichten || S.stand ? S.ruhe.P : poseBei(S.t), boden = amBoden(P), fern = $("fernZeigen").checked;
+  protoZeichnen(P);
   if (!S.einrichten && !S.stand && !S.spielt && $("zwiebel").checked && S.kf.length > 1) zwiebel(g, fern);
   const strich = (a, b, farbe, w, op = 1) => el("line", { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: farbe, "stroke-width": w, "stroke-linecap": "round", opacity: op }, g);
   const bein = b => { const T = BEINE[b].vorn ? VORN_TEILE : HINTEN_TEILE, nah = BEINE[b].nah, op = nah ? 1 : .55;
@@ -468,6 +472,45 @@ function figurZeichnen() {
   }
   const st = $("bodenStriche"); if (st) { const sw = S.vorlage ? S.vorlage.sweep / (GAENGE[S.vorlage.gang].d) : 0; st.setAttribute("transform", $("bodenLauf").checked && S.spielt ? `translate(${(S.t * sw) % 10},0)` : ""); }
   statusZeigen(P);
+}
+// ================= Prototypenpferd (Dome 31.10.): schlichtes Pferd aus Teilen, folgt den Punkten – nur zum Ansehen, keine Rasse =================
+const PROTO = { fell: "#a9805e", fern: "#86634a", maehne: "#3b2a20", huf: "#2c2420", linie: "#2a1f18" };
+function glattPfad(pts, zu) {   // weiche Kurve durch die Punkte (Catmull-Rom → Bézier)
+  const n = pts.length, q = i => pts[zu ? (i + n) % n : Math.max(0, Math.min(n - 1, i))];
+  let d = "M" + pts[0].x.toFixed(2) + "," + pts[0].y.toFixed(2);
+  for (let i = 0; i < (zu ? n : n - 1); i++) { const p0 = q(i - 1), p1 = q(i), p2 = q(i + 1), p3 = q(i + 2);
+    d += "C" + (p1.x + (p2.x - p0.x) / 6).toFixed(2) + "," + (p1.y + (p2.y - p0.y) / 6).toFixed(2) + " " + (p2.x - (p3.x - p1.x) / 6).toFixed(2) + "," + (p2.y - (p3.y - p1.y) / 6).toFixed(2) + " " + p2.x.toFixed(2) + "," + p2.y.toFixed(2); }
+  return d + (zu ? "Z" : "");
+}
+function protoZeichnen(P) {
+  const g = $("proto"); if (!g) return; g.innerHTML = ""; if (!$("protoZeigen").checked) return;
+  g.setAttribute("opacity", $("protoDeck").value / 100);
+  const R = S.ruhe, W = P.widerrist, K = P.kruppe, Lb = dist(W, K), u = { x: (K.x - W.x) / Lb, y: (K.y - W.y) / Lb }, n = { x: -u.y, y: u.x }, D = R.D || 45;
+  const rf = (a, b) => ({ x: W.x + u.x * a * Lb + n.x * b * D, y: W.y + u.y * a * Lb + n.y * b * D });   // Punkt im Körper: a entlang Rücken, b nach unten
+  const glied = (a, b, w, farbe) => { el("line", { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: PROTO.linie, "stroke-width": w + 1.2, "stroke-linecap": "round" }, g); el("line", { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: farbe, "stroke-width": w, "stroke-linecap": "round" }, g); };
+  const BREITE = { vorn: [10, 6.5, 4, 3.4], hinten: [12, 7, 4.2, 3.4] };
+  const oben = b => { const T = teileVon(b), f = BEINE[b].nah ? PROTO.fell : PROTO.fern; glied(P[b + "_" + T[0]], P[b + "_" + T[1]], BREITE[BEINE[b].vorn ? "vorn" : "hinten"][0] + 2, f); };   // Oberarm/Oberschenkel liegen im Körper
+  const bein = b => { const T = teileVon(b), f = BEINE[b].nah ? PROTO.fell : PROTO.fern, B = BREITE[BEINE[b].vorn ? "vorn" : "hinten"];
+    for (let i = 1; i < T.length - 1; i++) glied(P[b + "_" + T[i]], P[b + "_" + T[i + 1]], B[i], i >= 3 ? f : f);
+    const h = P[b + "_huf"], fe = P[b + "_fessel"], w = winkel(fe, h), q = (dx, dy) => ({ x: h.x + Math.cos(w) * dy - Math.sin(w) * dx, y: h.y + Math.sin(w) * dy + Math.cos(w) * dx });
+    el("path", { d: "M" + [q(-2.6, -2.2), q(2.4, -2.2), q(3.4, 0.6), q(-2.8, 0.6)].map(p => p.x.toFixed(2) + "," + p.y.toFixed(2)).join("L") + "Z", fill: PROTO.huf, stroke: PROTO.linie, "stroke-width": .5 }, g); };
+  oben("HR"); oben("VR"); bein("HR"); bein("VR");   // fernes Beinpaar hinter dem Körper
+  // Schweif
+  const sAns = rf(1.03, .1), sMit = { x: (sAns.x + P.schweif.x) / 2 + 4, y: (sAns.y + P.schweif.y) / 2 };
+  el("path", { d: glattPfad([sAns, sMit, P.schweif], false), fill: "none", stroke: PROTO.maehne, "stroke-width": 5, "stroke-linecap": "round" }, g);
+  // Hals und Kopf
+  const G = P.genick, N = P.nase, hk = winkel(G, N), hl = dist(G, N), kp = (a, b) => ({ x: G.x + Math.cos(hk) * a * hl - Math.sin(hk) * b * hl, y: G.y + Math.sin(hk) * a * hl + Math.cos(hk) * b * hl });
+  const hals = [rf(.05, -.05), G, kp(.12, .38), rf(-.12, .62)];
+  el("path", { d: glattPfad([hals[0], { x: (hals[0].x + G.x) / 2, y: (hals[0].y + G.y) / 2 - 3 }, G, kp(.25, .34), { x: (kp(.12, .38).x + hals[3].x) / 2, y: (kp(.12, .38).y + hals[3].y) / 2 + 2 }, hals[3], rf(.2, .3)], true), fill: PROTO.fell, stroke: PROTO.linie, "stroke-width": 1 }, g);
+  el("path", { d: glattPfad([kp(-.05, -.08), kp(.5, -.16), kp(1.02, -.06), kp(1.0, .16), kp(.6, .28), kp(.1, .36)], true), fill: PROTO.fell, stroke: PROTO.linie, "stroke-width": 1 }, g);
+  el("path", { d: "M" + [kp(.0, -.08), kp(-.02, -.42), kp(.16, -.1)].map(p => p.x.toFixed(2) + "," + p.y.toFixed(2)).join("L") + "Z", fill: PROTO.fell, stroke: PROTO.linie, "stroke-width": 1 }, g);   // Ohr
+  el("circle", { cx: kp(.32, .02).x, cy: kp(.32, .02).y, r: 1.1, fill: PROTO.linie }, g);   // Auge
+  el("path", { d: glattPfad([rf(.02, -.08), G, kp(-.04, -.1)], false), fill: "none", stroke: PROTO.maehne, "stroke-width": 3.2, "stroke-linecap": "round" }, g);   // Mähne
+  oben("HL"); oben("VL");   // nahe Oberarme/Oberschenkel: der Rumpf liegt darüber
+  // Rumpf
+  const rumpf = [[-.08, .05], [-.18, .42], [-.08, .8], [.18, 1.0], [.5, 1.04], [.78, .95], [1.02, .7], [1.1, .3], [.98, -.02], [.62, .06], [.3, .07], [.08, -.03]].map(([a, b]) => rf(a, b));
+  el("path", { d: glattPfad(rumpf, true), fill: PROTO.fell, stroke: PROTO.linie, "stroke-width": 1 }, g);
+  bein("HL"); bein("VL");   // nahes Beinpaar vor dem Körper
 }
 function nachbarKf() {   // Keyframe direkt davor und danach (bezogen auf die jetzige Zeit)
   const K = S.kf, e = 1e-6; let vor = -1, nach = -1;
@@ -799,7 +842,7 @@ function start() {
   $("vorlageLaden").onclick = () => { if (S.kf.length && !confirm("Die jetzige Bewegung wird ersetzt. Weiter? (Rückgängig geht mit Strg+Z)")) return; vorlageErzeugen(); };
   $("rasse").onchange = e => rasseSetzen(e.target.value, S.farbe);
   $("farbe").onchange = e => rasseSetzen(S.rasse, e.target.value);
-  for (const id of ["pferdDeck", "fernZeigen", "bodenLauf", "bildDeck", "zwiebel"]) $(id).addEventListener("input", buehneZeichnen);
+  for (const id of ["pferdDeck", "fernZeigen", "bodenLauf", "bildDeck", "zwiebel", "protoZeigen", "protoDeck"]) $(id).addEventListener("input", buehneZeichnen);
   $("name").oninput = autoSpeichern;
   $("speichern").onclick = dateiSpeichern;
   $("ladenKnopf").onclick = () => $("ladenDatei").click();

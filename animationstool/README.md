@@ -13,6 +13,7 @@
 - **Vorlagebild** (z. B. aus `pdfs/Bilder`) unter die Bühne legen, verschieben, Mausrad = Größe, spiegeln, Deckkraft.
 - **Rasse wechseln** überträgt die Bewegung (gleiche Winkel, Knochen im Verhältnis; Hufe am Boden bleiben am Boden).
 - **Speichern:** automatisch im Browser (`localStorage["animationstool-v1"]`), als Datei (`.json`, `typ: zuchtstall-animation`), Datei laden. Koordinaten wie `pferd.js` (Pferd schaut nach links, Boden y = 0, oben negativ).
+- **🐴 Stand** (neben Abspielen, Dome 31.10.): zeigt das Pferd ruhig stehend (Ruhehaltung), nichts verschiebbar; nochmal Stand, Abspielen oder Zeitregler = zurück zur Bewegung.
 - **↺ Original** (oben, Dome 31.10.): setzt die Bewegung auf die Original-Vorlage der gewählten Gangart zurück (Standard-Schrittlänge, 16 Keyframes), eigenes Skelett bleibt, Strg+Z nimmt es zurück.
 - Tasten: Leertaste, ← →, `,` `.`, K, Entf, Strg+Z/C/V.
 

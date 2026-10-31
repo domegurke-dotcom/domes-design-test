@@ -4,6 +4,7 @@
 
 ## Was es kann (Stand 31.10.)
 - **Strichfigur** auf dem Spielpferd: Widerrist, Kruppe, Genick, Nase, Schweif; je Vorderbein Buggelenk, Ellbogen, Vorderfußwurzel, Fesselkopf, Huf; je Hinterbein Hüftgelenk, Knie, Sprunggelenk, Fesselkopf, Huf. Gelenke mit der Maus ziehen; „Knochenlänge halten“ dreht das Gelenk samt allem darunter um sein Elterngelenk, der Widerrist verschiebt das ganze Pferd.
+- **Skelett einrichten** (Karte „Skelett“): Pferd steht still, jeder Punkt wird einzeln auf das passende Gelenk der Zeichnung geschoben (Hufe bleiben am Boden, fernes Bein zieht auf Wunsch mit). Gilt je Rasse, gespeichert im Browser (`localStorage["animationstool-skelett"]`) und in der gespeicherten Datei (`skelett`). Bei „Fertig“ wird die Bewegung auf das neue Skelett übertragen; „Schätzung wiederherstellen“ nimmt wieder die Gelenkhöhen.
 - **Keyframes:** Ziehen zwischen zwei Keyframes legt automatisch einen neuen an. Dazwischen wird über die Winkel der Knochen gerechnet (Knochen bleiben gleich lang).
 - **Vorlagen** Schritt, Trab, Galopp (Rechts-/Linksgalopp) aus der Fußfolge der PDFs (horsesandus): Stützfolge Schritt 3:2:3:2, Trab 2:0:2:0, Galopp 1:3:2:3:1:0, Takt-Reihenfolge wie im PDF. Schulterblatt und Becken schwingen mit (`MITSCHWINGEN`).
 - **Gangbild:** Stützphase je Bein als Balken (Farben wie in den PDF-Bildern: hinten links rot, vorne links grün, hinten rechts blau, vorne rechts orange), Hufe am Boden je Zeitpunkt, Vergleich mit der Stützfolge aus dem PDF (✓/✗), Takte.
@@ -20,4 +21,4 @@
 - Die Bewegung wird noch nicht im Spiel benutzt; das Spielpferd im Hintergrund bewegt sich nicht mit.
 
 ## Test
-`tests/animationstool-test.js <Scratchpad-Ordner>` (Windows-PC: Startbefehl wie in `CLAUDE.md`, Abschnitt „Testen“) – Stützfolgen aller Vorlagen, Ziehen, Rückgängig, Abspielen, Speichern/Laden, Rassenwechsel, Vorlagebild, Neuladen (17 Prüfungen).
+`tests/animationstool-test.js <Scratchpad-Ordner>` (Windows-PC: Startbefehl wie in `CLAUDE.md`, Abschnitt „Testen“) – Stützfolgen aller Vorlagen, Ziehen, Rückgängig, Abspielen, Speichern/Laden, Rassenwechsel, Vorlagebild, Neuladen (25 Prüfungen, inkl. Skelett einrichten).

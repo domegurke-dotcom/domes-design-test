@@ -32,8 +32,8 @@
 - **Prüfen** meldet einen rutschenden Huf (am Boden mehr als 3 Einheiten anders unterwegs als der Körper).
 - **Ferne Beine parallel:** im Skelett stehen die fernen Beine genau hinter den nahen (kein Perspektiv-Versatz wie in der Spielzeichnung); nahe Punkte liegen obenauf.
 
-## Prototypenpferd (Selbststart 31.10.)
-- Schlichtes Pferd aus Teilen (Rumpf, Hals, Kopf mit Ohr/Auge, Mähne, Schweif, Beine als runde Glieder mit Hufen), folgt den Punkten der Strichfigur und läuft beim Abspielen mit (`protoZeichnen`, Farben `PROTO`). Keine Rasse, kommt nicht ins Spiel. Schalter „Prototyp-Pferd zeigen“ und „Prototyp deckend“ (Karte Pferd); das Spielpferd im Hintergrund steht dafür standardmäßig auf 0 %.
+## Prototypenpferd
+- Am 31.10. gebaut, auf Domes Wunsch am selben Tag wieder entfernt (ganzes Teil: Zeichnung, Haken, Regler). Die Bühne zeigt jetzt Strichfigur und – mit dem Regler „Pferd im Hintergrund“ – das Spielpferd. Das „Probepferd“ in der Rassenliste bleibt (Strichfigur ohne Spielbild).
 
 ## Grenzen / offen
 - **Schrittlänge (31.10.):** Schulterblatt/Becken schwingen nur so weit mit, wie das Bein es braucht (`MITSCHWINGEN` .4/.35 bis `MITSCHWINGEN_MAX` .65/.6) – Schritt beim Hannoveraner jetzt bis ca. 139 cm (vorher 106–115). Echt sind 160–180 cm: die Grenze ist die Höhe des Hüftgelenks; mehr ginge nur mit Abrollen über die Zehe und Durchtreten der Fessel (nicht gebaut). Mehr Schulterschwung sah unnatürlich aus (Buggelenk wanderte aus der Brust). Vor jedem Auffußen steht ein zusätzlicher Keyframe (sonst berührte der Huf im Trab zu früh den Boden).

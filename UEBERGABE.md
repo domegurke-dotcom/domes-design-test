@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 1.11. (Claude Team, Sonnet) – Blender: Salzleckstein
+Neu: `blender/leckstein.blend` (Himalaya-Salzbrocken mit Bruchflächen und Loch, verdrillte Hanfschnur als Schlaufe mit Knoten – nach Domes drei Fotos), `blender/testseiten/leckstein.glb`, Bauskript `blender/leckstein-bauen.py` (`blender -b --python blender/leckstein-bauen.py -- <Projektordner> <Vorschau.png>`). **Zeichenstil wie die anderen Blender-Modelle:** Workbench, Studio-Licht, Materialfarben, schwarze Kontur als umgestülpte Hülle (Solidify `kontur`, Material `tinte`), **im Szenen-Reiter Workbench muss `show_backface_culling` an sein, sonst wird alles schwarz**. Ein Eintrag im Spiel gibt es noch nicht (Leckstein im Spiel ist weiter die SVG-Zeichnung `LECK` in `boxstufen.js`). Kein Blender-MCP in dieser Sitzung; Blender 5.2 liegt unter `C:\Program Files\Blender Foundation\Blender 5.2\` und lässt sich ohne Fenster mit `-b --python` steuern.
+
 ### 1.11. (Claude Team, Sonnet) – v939: Update-Fenster veröffentlicht
 Dome hat die Einträge ausgewählt (siehe CLAUDE.md v939, dort steht auch, was sie nicht wollte). `NEUES_STAND` 938. Test neues-popup ✓. Nächstes Fenster nur mit Änderungen ab v939.
 

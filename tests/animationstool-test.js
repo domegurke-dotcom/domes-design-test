@@ -54,4 +54,25 @@ const { chromium } = require('playwright'); const path = require('path'); const 
  await p.screenshot({ path: out + '/bedien-bild.png' });
  // 9. Neu laden: Autospeicher
  await p.reload(); await p.waitForTimeout(600); ok('Nach Neuladen ist die Bewegung noch da (Rasse ' + await p.inputValue('#rasse') + ')', (await p.inputValue('#rasse')) === 'shetty');
+ // 10. Skelett einrichten: Punkt auf der Zeichnung verschieben, fernes Bein zieht mit, Huf bleibt am Boden, Bewegung wird übertragen, bleibt nach Neuladen
+ await p.evaluate(() => window.scrollTo(0, 0)); await p.click('#skelettKnopf'); await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(150);
+ ok('Einrichten-Modus: Band sichtbar, Abspielen gesperrt', await p.isVisible('#skelettBand') && await p.evaluate(() => getComputedStyle(document.querySelector('.steuer')).pointerEvents === 'none'));
+ const r0 = await p.evaluate(() => JSON.parse(JSON.stringify(ANI.S.ruhe.P)));
+ const kn = await p.locator('[data-g="VR_karpal"] circle').first().boundingBox();
+ await p.mouse.move(kn.x + kn.width / 2, kn.y + kn.height / 2); await p.mouse.down(); await p.mouse.move(kn.x + kn.width / 2 + 12, kn.y + kn.height / 2 - 10, { steps: 6 }); await p.mouse.up(); await p.waitForTimeout(100);
+ const hf = await p.locator('[data-g="HR_huf"] circle').first().boundingBox();
+ await p.mouse.move(hf.x + hf.width / 2, hf.y + hf.height / 2); await p.mouse.down(); await p.mouse.move(hf.x + hf.width / 2 - 15, hf.y + hf.height / 2 - 20, { steps: 6 }); await p.mouse.up(); await p.waitForTimeout(100);
+ const r1 = await p.evaluate(() => JSON.parse(JSON.stringify(ANI.S.ruhe.P)));
+ ok('Vorderfußwurzel verschoben, fernes Bein mit (' + (r1.VR_karpal.x - r0.VR_karpal.x).toFixed(1) + ' / ' + (r1.VL_karpal.x - r0.VL_karpal.x).toFixed(1) + ')', r1.VR_karpal.x - r0.VR_karpal.x > 1 && Math.abs((r1.VR_karpal.x - r0.VR_karpal.x) - (r1.VL_karpal.x - r0.VL_karpal.x)) < .01);
+ ok('Huf verschoben und bleibt auf dem Boden (y = ' + r1.HR_huf.y + ')', r1.HR_huf.x < r0.HR_huf.x - 1 && r1.HR_huf.y === 0);
+ ok('Ellbogen unverändert (nur der eine Punkt)', r1.VR_ellbogen.x === r0.VR_ellbogen.x && r1.VR_ellbogen.y === r0.VR_ellbogen.y);
+ await p.locator('#buehne').screenshot({ path: out + '/skelett-einrichten.png' });
+ await p.click('#skelettFertig'); await p.waitForTimeout(300);
+ const kfK = await p.evaluate(() => { const R = ANI.S.ruhe.P, P = ANI.S.kf[0].P, d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y); return [d(P.VR_karpal, P.VR_fessel), d(R.VR_karpal, R.VR_fessel)]; });
+ ok('Bewegung auf das neue Skelett übertragen (Knochen ' + kfK.map(v => v.toFixed(1)).join(' / ') + '), Stützfolge ' + await p.textContent('#folge'), Math.abs(kfK[0] - kfK[1]) < .3);
+ ok('Hinweis: eigenes Skelett gespeichert', (await p.textContent('#skelettInfo')).includes('eigenes Skelett'));
+ await p.reload(); await p.waitForTimeout(600);
+ const r2 = await p.evaluate(() => ANI.S.ruhe.P.VR_karpal.x); ok('Nach Neuladen ist das eigene Skelett noch da', Math.abs(r2 - r1.VR_karpal.x) < .11);
+ p.once('dialog', d => d.accept()); await p.click('#skelettSchaetz'); await p.waitForTimeout(300);
+ const r3 = await p.evaluate(() => ANI.S.ruhe.P.VR_karpal.x); ok('Schätzung wiederhergestellt', Math.abs(r3 - r0.VR_karpal.x) < .01 && (await p.textContent('#skelettInfo')).includes('Schätzung'));
  console.log('Seitenfehler:', fehler.length ? fehler.join(' | ') : 'keine'); await b.close(); })();

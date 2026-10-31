@@ -12,13 +12,13 @@ const { chromium } = require('playwright'); const path = require('path'); const 
  // 1. zwischen zwei Keyframes ein Gelenk ziehen → neuer Keyframe, Huf bewegt
  await p.evaluate(() => ANI.zeitSetzen(0.03)); await p.waitForTimeout(100);
  const n0 = await p.evaluate(() => ANI.S.kf.length);
- const g = p.locator('[data-g="VR_huf"] circle').first(); const bb = await g.boundingBox();
- const vor = await p.evaluate(() => ANI.poseBei(0.03).VR_huf);
+ const g = p.locator('[data-g="VL_huf"] circle').first(); const bb = await g.boundingBox();
+ const vor = await p.evaluate(() => ANI.poseBei(0.03).VL_huf);
  await p.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2); await p.mouse.down(); await p.mouse.move(bb.x - 40, bb.y - 30, { steps: 8 }); await p.mouse.up(); await p.waitForTimeout(150);
- const nach = await p.evaluate(() => ANI.poseBei(0.03).VR_huf), n1 = await p.evaluate(() => ANI.S.kf.length);
+ const nach = await p.evaluate(() => ANI.poseBei(0.03).VL_huf), n1 = await p.evaluate(() => ANI.S.kf.length);
  ok('Ziehen legt Keyframe an (' + n0 + ' → ' + n1 + ')', n1 === n0 + 1);
  ok('Huf hat sich bewegt', Math.abs(nach.x - vor.x) > 3 && Math.abs(nach.y - vor.y) > 3);
- const lang = await p.evaluate(() => { const P = ANI.poseBei(0.03), R = ANI.S.ruhe.P, d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y); return [d(P.VR_fessel, P.VR_huf), d(R.VR_fessel, R.VR_huf)]; });
+ const lang = await p.evaluate(() => { const P = ANI.poseBei(0.03), R = ANI.S.ruhe.P, d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y); return [d(P.VL_fessel, P.VL_huf), d(R.VL_fessel, R.VL_huf)]; });
  ok('Knochenlänge gehalten (' + lang.map(v => v.toFixed(2)).join(' / ') + ')', Math.abs(lang[0] - lang[1]) < 0.05);
  await p.screenshot({ path: out + '/bedien-gezogen.png' });
  // 2. Rückgängig
@@ -58,21 +58,55 @@ const { chromium } = require('playwright'); const path = require('path'); const 
  await p.evaluate(() => window.scrollTo(0, 0)); await p.click('#skelettKnopf'); await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(150);
  ok('Einrichten-Modus: Band sichtbar, Abspielen gesperrt', await p.isVisible('#skelettBand') && await p.evaluate(() => getComputedStyle(document.querySelector('.steuer')).pointerEvents === 'none'));
  const r0 = await p.evaluate(() => JSON.parse(JSON.stringify(ANI.S.ruhe.P)));
- const kn = await p.locator('[data-g="VR_karpal"] circle').first().boundingBox();
+ const kn = await p.locator('[data-g="VL_karpal"] circle').first().boundingBox();
  await p.mouse.move(kn.x + kn.width / 2, kn.y + kn.height / 2); await p.mouse.down(); await p.mouse.move(kn.x + kn.width / 2 + 12, kn.y + kn.height / 2 - 10, { steps: 6 }); await p.mouse.up(); await p.waitForTimeout(100);
- const hf = await p.locator('[data-g="HR_huf"] circle').first().boundingBox();
+ const hf = await p.locator('[data-g="HL_huf"] circle').first().boundingBox();
  await p.mouse.move(hf.x + hf.width / 2, hf.y + hf.height / 2); await p.mouse.down(); await p.mouse.move(hf.x + hf.width / 2 - 15, hf.y + hf.height / 2 - 20, { steps: 6 }); await p.mouse.up(); await p.waitForTimeout(100);
  const r1 = await p.evaluate(() => JSON.parse(JSON.stringify(ANI.S.ruhe.P)));
- ok('Vorderfußwurzel verschoben, fernes Bein mit (' + (r1.VR_karpal.x - r0.VR_karpal.x).toFixed(1) + ' / ' + (r1.VL_karpal.x - r0.VL_karpal.x).toFixed(1) + ')', r1.VR_karpal.x - r0.VR_karpal.x > 1 && Math.abs((r1.VR_karpal.x - r0.VR_karpal.x) - (r1.VL_karpal.x - r0.VL_karpal.x)) < .01);
- ok('Huf verschoben und bleibt auf dem Boden (y = ' + r1.HR_huf.y + ')', r1.HR_huf.x < r0.HR_huf.x - 1 && r1.HR_huf.y === 0);
- ok('Ellbogen unverändert (nur der eine Punkt)', r1.VR_ellbogen.x === r0.VR_ellbogen.x && r1.VR_ellbogen.y === r0.VR_ellbogen.y);
+ ok('Vorderfußwurzel verschoben, fernes Bein mit (' + (r1.VL_karpal.x - r0.VL_karpal.x).toFixed(1) + ' / ' + (r1.VR_karpal.x - r0.VR_karpal.x).toFixed(1) + ')', r1.VL_karpal.x - r0.VL_karpal.x > 1 && Math.abs((r1.VL_karpal.x - r0.VL_karpal.x) - (r1.VR_karpal.x - r0.VR_karpal.x)) < .01);
+ ok('Huf verschoben und bleibt auf dem Boden (y = ' + r1.HL_huf.y + ')', r1.HL_huf.x < r0.HL_huf.x - 1 && r1.HL_huf.y === 0);
+ ok('Ellbogen unverändert (nur der eine Punkt)', r1.VL_ellbogen.x === r0.VL_ellbogen.x && r1.VL_ellbogen.y === r0.VL_ellbogen.y);
  await p.locator('#buehne').screenshot({ path: out + '/skelett-einrichten.png' });
  await p.click('#skelettFertig'); await p.waitForTimeout(300);
- const kfK = await p.evaluate(() => { const R = ANI.S.ruhe.P, P = ANI.S.kf[0].P, d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y); return [d(P.VR_karpal, P.VR_fessel), d(R.VR_karpal, R.VR_fessel)]; });
+ const kfK = await p.evaluate(() => { const R = ANI.S.ruhe.P, P = ANI.S.kf[0].P, d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y); return [d(P.VL_karpal, P.VL_fessel), d(R.VL_karpal, R.VL_fessel)]; });
  ok('Bewegung auf das neue Skelett übertragen (Knochen ' + kfK.map(v => v.toFixed(1)).join(' / ') + '), Stützfolge ' + await p.textContent('#folge'), Math.abs(kfK[0] - kfK[1]) < .3);
  ok('Hinweis: eigenes Skelett gespeichert', (await p.textContent('#skelettInfo')).includes('eigenes Skelett'));
  await p.reload(); await p.waitForTimeout(600);
- const r2 = await p.evaluate(() => ANI.S.ruhe.P.VR_karpal.x); ok('Nach Neuladen ist das eigene Skelett noch da', Math.abs(r2 - r1.VR_karpal.x) < .11);
+ const r2 = await p.evaluate(() => ANI.S.ruhe.P.VL_karpal.x); ok('Nach Neuladen ist das eigene Skelett noch da', Math.abs(r2 - r1.VL_karpal.x) < .11);
  p.once('dialog', d => d.accept()); await p.click('#skelettSchaetz'); await p.waitForTimeout(300);
- const r3 = await p.evaluate(() => ANI.S.ruhe.P.VR_karpal.x); ok('Schätzung wiederhergestellt', Math.abs(r3 - r0.VR_karpal.x) < .01 && (await p.textContent('#skelettInfo')).includes('Schätzung'));
+ const r3 = await p.evaluate(() => ANI.S.ruhe.P.VL_karpal.x); ok('Schätzung wiederhergestellt', Math.abs(r3 - r0.VL_karpal.x) < .01 && (await p.textContent('#skelettInfo')).includes('Schätzung'));
+ // 11. Seiten (Dome 31.10.): man sieht die LINKE Seite – nahe Beine sind VL/HL; alte Daten (Format 1) werden beim Laden getauscht
+ const seite = await p.evaluate(() => { const R = ANI.S.ruhe.P; return R.VL_huf.x < R.VR_huf.x && R.HL_huf.x > R.HR_huf.x; });
+ ok('Nahe Beine sind die linken (VL vorn, HL hinten)', seite);
+ const alt = await p.evaluate(() => { const D = JSON.parse(localStorage.getItem('animationstool-v1')); D.format = 1; const tausch = P => { const N = {}; for (const k in P) { const m = /^([VH])([LR])_(.+)$/.exec(k); N[m ? m[1] + (m[2] === 'L' ? 'R' : 'L') + '_' + m[3] : k] = P[k]; } return N; };
+   D.keyframes = D.keyframes.map(k => ({ t: k.t, P: tausch(k.P) })); localStorage.setItem('animationstool-v1', JSON.stringify(D)); return D.keyframes[0].P.VR_huf[0]; });
+ await p.reload(); await p.waitForTimeout(600);
+ ok('Alte Datei (Seiten vertauscht) wird beim Laden umgestellt', await p.evaluate(x => Math.abs(ANI.S.kf[0].P.VL_huf.x - x) < .11, alt));
+ // 12. Schatten des Keyframes davor/danach, Schrittlänge wirkt sofort, Hilfe
+ p.once('dialog', d => d.accept()); await p.click('#original'); await p.waitForTimeout(200);
+ await p.evaluate(() => ANI.zeitSetzen(.1)); await p.waitForTimeout(100);
+ ok('Schatten: Keyframe davor (blau) und danach (orange) sichtbar', await p.evaluate(() => document.querySelectorAll('#figur line[stroke="#2a6fd0"]').length > 5 && document.querySelectorAll('#figur line[stroke="#e07a1a"]').length > 5));
+ const sl1 = await p.textContent('#schrittlaenge'); await p.locator('#sweep').fill('20'); await p.waitForTimeout(300); const sl2 = await p.textContent('#schrittlaenge');
+ ok('Schrittlänge wirkt sofort (' + sl1.split(' (')[0] + ' → ' + sl2.split(' (')[0] + ')', parseInt(sl2) < parseInt(sl1) - 20 && (await p.textContent('#folge')) === '3:2:3:2:3:2:3:2');
+ await p.click('#hilfeKnopf'); ok('Hilfe öffnet', await p.isVisible('#hilfe')); await p.click('#hilfeZu'); ok('Hilfe schließt', !(await p.isVisible('#hilfe')));
+ // 13. Bein weiter vortreten über alle Keyframes
+ p.once('dialog', d => d.accept()); await p.click('#original'); await p.waitForTimeout(200);
+ const vorX = await p.evaluate(() => Math.min(...ANI.S.kf.map(k => k.P.VL_huf.x - k.P.VL_bug.x)));
+ await p.selectOption('#beinWahl', 'VL'); await p.click('#beinZurueck'); await p.click('#beinZurueck'); await p.waitForTimeout(200);
+ const nachX = await p.evaluate(() => Math.min(...ANI.S.kf.map(k => k.P.VL_huf.x - k.P.VL_bug.x)));
+ const cm = await p.evaluate(() => ANI.S.ruhe.cmJe);
+ ok('Vorne links tritt 10 cm weniger weit vor (' + Math.round((nachX - vorX) * cm) + ' cm), Stützfolge ' + await p.textContent('#folge'), Math.abs((nachX - vorX) * cm - 10) < 1.5 && (await p.textContent('#folge')) === '3:2:3:2:3:2:3:2');
+ // 14. Rechts wie links
+ await p.click('#rechtsWieLinks'); await p.waitForTimeout(200);
+ const gleich = await p.evaluate(() => { const k = ANI.S.kf[0], Q = ANI.poseBei((k.t + .5) % 1); return Math.abs((k.P.VR_huf.x - k.P.VR_bug.x) - (Q.VL_huf.x - Q.VL_bug.x)) < .5; });
+ ok('Rechts wie links: rechtes Vorderbein = linkes, einen halben Schritt später', gleich);
+ // 15. Prüfen findet einen verzogenen Knochen, Reparieren behebt ihn
+ p.once('dialog', d => d.accept()); await p.click('#original'); await p.waitForTimeout(200);
+ await p.evaluate(() => ANI.zeitSetzen(ANI.S.kf[2].t)); await p.uncheck('#knochenFest'); await p.waitForTimeout(100);
+ const kp = await p.locator('[data-g="VL_karpal"] circle').first().boundingBox();
+ await p.mouse.move(kp.x + kp.width / 2, kp.y + kp.height / 2); await p.mouse.down(); await p.mouse.move(kp.x + 40, kp.y - 30, { steps: 5 }); await p.mouse.up(); await p.check('#knochenFest');
+ await p.click('#pruefKnopf'); await p.waitForTimeout(100); const pr = await p.textContent('#pruefErg');
+ ok('Prüfen findet den verzogenen Knochen', /verzogener Knochen/.test(pr));
+ await p.click('#reparieren'); await p.waitForTimeout(200); const rep2 = await p.textContent('#pruefErg'); ok('Reparieren: danach alles in Ordnung' + (/Alles in Ordnung/.test(rep2) ? '' : ' – ' + rep2.slice(0, 300)), /Alles in Ordnung/.test(rep2));
+ await p.screenshot({ path: out + '/anfaenger.png' });
  console.log('Seitenfehler:', fehler.length ? fehler.join(' | ') : 'keine'); await b.close(); })();

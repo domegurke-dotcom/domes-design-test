@@ -18,13 +18,22 @@
 - **↺ Original** (oben, Dome 31.10.): setzt die Bewegung auf die Original-Vorlage der gewählten Gangart zurück (Standard-Schrittlänge, 16 Keyframes), eigenes Skelett bleibt, Strg+Z nimmt es zurück.
 - Tasten: Leertaste, ← →, `,` `.`, K, Entf, Strg+Z/C/V.
 
+## Anfänger-Hilfen (Selbststart 31.10. nachts)
+- **Seiten richtig:** das Pferd schaut nach links, man sieht seine LINKE Seite – kräftig = links (vorne grün, hinten rot), blass = rechts (vorne gelb, hinten blau). Ältere Dateien und Skelette (Format 1, Seiten vertauscht) werden beim Laden einmal umgestellt (`tauschLR`, Dateiformat 2, Skelett-Speicher `_v: 2`).
+- **❓ Hilfe** (oben): Begriffe (Pose, Keyframe, Vorlage, Schatten, Seiten) und Schritt-für-Schritt-Anleitungen.
+- **Schatten:** Keyframe davor (blau) und danach (orange) blass im Bild (Schalter „Keyframe davor/danach zeigen“).
+- **Bein ändern:** Bein wählen, „◀ weiter vor“ / „weniger ▶“ = 5 cm über die ganze Bewegung, am stärksten dort, wo der Huf am weitesten vorn ist (`beinVor`; Stützphasen über `beinLoesen`, Huf bleibt am Boden). „Rechts wie links“ / „Links wie rechts“: Gegenseite bekommt dieselbe Bewegung einen halben Schritt später (`seiteUebertragen`, im Galopp mit Rückfrage).
+- **Hufe auf den Boden fangen:** nach dem Ziehen landet ein Huf, der weniger als 1,5 über oder im Boden ist, genau auf dem Boden (ganzes Bein dreht um Bug/Hüfte, Form bleibt; `hufAufBoden`).
+- **Prüfen:** verzogene Knochen (> 12 %), Huf im Boden, Ellbogen/Knie falsch herum, Huf springt (> 40 cm und sehr schnell) – Zeile antippen springt zum Keyframe; „Automatisch reparieren“ stellt Knochenlängen und Hufe richtig. Alle Original-Vorlagen (Hannoveraner, Shetty, Shire, Araber) ohne Meldung.
+- **Schrittlänge:** Schulter/Becken schwingen mehr mit (`MITSCHWINGEN` .4/.35), Regler ab 18, wirkt sofort, solange die Bewegung unverändert ist (sonst Hinweis „Vorlage erzeugen“).
+
 ## Grenzen / offen
 - Die Vorlagen-Schritte sind kürzer als in echt (Schritt ca. 106 cm statt 160–180 cm, Trab ca. 165 cm, Galopp ca. 189 cm beim Hannoveraner), und im Schritt landet der Hinterhuf ca. 30 cm hinter dem Vorderhuf statt in oder vor seiner Spur. Grund: am Ende der Stützphase muss das Bein gestreckt den Boden erreichen; Abrollen über die Zehe, Durchtreten der Fessel und stärkeres Mitschwingen von Schulter/Becken fehlen noch. Von Hand je Keyframe korrigierbar.
 - Noch keine Tölt-, Pass-, Running-Walk-Vorlagen (Bilder dafür liegen in `pdfs/Bilder`).
 - Die Bewegung wird noch nicht im Spiel benutzt; das Spielpferd im Hintergrund bewegt sich nicht mit.
 
 ## Test
-`tests/animationstool-test.js <Scratchpad-Ordner>` (Windows-PC: Startbefehl wie in `CLAUDE.md`, Abschnitt „Testen“) – Stützfolgen aller Vorlagen, Ziehen, Rückgängig, Abspielen, Speichern/Laden, Rassenwechsel, Vorlagebild, Neuladen (25 Prüfungen, inkl. Skelett einrichten).
+`tests/animationstool-test.js <Scratchpad-Ordner>` (Windows-PC: Startbefehl wie in `CLAUDE.md`, Abschnitt „Testen“) – Stützfolgen aller Vorlagen, Ziehen, Rückgängig, Abspielen, Speichern/Laden, Rassenwechsel, Vorlagebild, Neuladen (35 Prüfungen, inkl. Skelett einrichten, Seiten, Schatten, Bein ändern, Prüfen).
 
 ## Notizen aus Domes PDFs (31.10., noch nicht eingebaut)
 - **Equine Skeletal:** Skelettbild mit allen Knochen (Schulterblatt, Oberarm, Unterarm, Vorderfußwurzel, Röhrbein, Fessel, Hufbein; Becken, Oberschenkel, Knie, Unterschenkel, Sprunggelenk) – gute Vorlage zum Ausrichten der Strichfigur (Vorlagebild, `pdfs/`). Sonst geht es um Wachstumsfugen (geschlossen mit ca. 6 Jahren, Rücken zuletzt) – eher für das Spiel (Training junger Pferde) als für die Animation.

@@ -53,7 +53,7 @@ for v in bm.verts: v.co = Vector((v.co.x * B, v.co.y * B, v.co.z * 4.0 - 2.0))  
 for f in bm.faces: f.material_index = 0
 platte = objekt("stroh_ebene1_boden", bm, eb1, [GRUND, TINTE]); kontur(platte, 1.2, 1)
 bm = bmesh.new()
-for i in range(7500):
+for i in range(12000):
     a = random.uniform(0, math.tau); p = random.uniform(-0.09, 0.09)
     halm(bm, farbe(BODEN_GEW), Vector((random.uniform(-B / 2 + 8, B / 2 - 8), random.uniform(-B / 2 + 8, B / 2 - 8), random.uniform(0.3, 2.4))),
          Vector((math.cos(a), math.sin(a), math.tan(p))), random.uniform(16, 34), random.uniform(1.5, 2.3), 1, 0.04, random.uniform(-0.5, 0.5))

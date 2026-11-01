@@ -60,8 +60,8 @@ for i in range(12000):
 muster = objekt("stroh_ebene1_muster", bm, eb1, HALM)
 
 # ---------- Ebene 2: kleine, lockere Heuhaufen in verschiedenen Größen (keine Grasbüschel) ----------
-# Höhe nie über 2/3 der Eimerhöhe (Eimer Stufe 1 = 28,8 Einheiten → höchstens 19,2). Die Halme liegen kreuz und quer auf der Haufenform, lose abgehoben.
-EIMER_H = 28.8; MAX_H = EIMER_H * 2 / 3
+# Höhe nie über 2/3 der Eimerhöhe (Eimer Stufe 1, auf 12 Liter skaliert: 31,6 Einheiten → höchstens 21,1). Die Halme liegen kreuz und quer auf der Haufenform, lose abgehoben.
+EIMER_H = 28.8 * 1.097; MAX_H = EIMER_H * 2 / 3   # Eimer Stufe 1 auf 12 Liter vergrößert (Skala 1,097, Füllgrenze 12 Liter) → Höhe 31,6, Grenze 21,1
 GROESSEN = [(14, 22, 13), (24, 36, 21), (40, 56, 8)]   # (Radius von, bis, Anzahl) – kleine, mittlere, große Haufen
 orte = []
 for rmin, rmax, anzahl in GROESSEN[::-1]:   # große zuerst, damit sie Platz finden
@@ -90,7 +90,8 @@ for n, (cx, cy, r, H) in enumerate(orte, 1):
         rich = normiert(tang * math.cos(anh) + nrm * math.sin(anh))
         laenge = random.uniform(15, 28) * (0.75 + 0.25 * min(1, r / 40))
         if p.z + laenge * rich.z - 0.28 * laenge > H:               # nie über die Höhengrenze
-            rich.z = max(-0.2, (H - p.z + 0.28 * laenge) / laenge); rich = normiert(rich)
+            zc = max(-0.2, min(rich.z, (H - p.z + 0.28 * laenge) / laenge)); hor = Vector((rich.x, rich.y, 0)); hor = hor.normalized() if hor.length > 1e-6 else Vector((1, 0, 0))
+            rich = hor * math.sqrt(1 - zc * zc) + Vector((0, 0, zc))   # nur die Steigung verringern, Länge bleibt 1 (sonst richtet die Normierung steile Halme wieder auf)
         halm(bm, farbe(HAUFEN_GEW), p, rich, laenge, random.uniform(1.4, 2.1), 2, 0.28, random.uniform(-0.9, 0.9))
     hl = objekt(f"stroh_haufen_{n:02d}_halme", bm, eb2, HALM); hl.location = (cx, cy, 0)
 

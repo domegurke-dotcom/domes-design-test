@@ -6,8 +6,13 @@ import bpy, math, random
 from mathutils import Vector, Matrix, Quaternion
 
 QUELLE = "C:/Users/dome_/Documents/domes-design-test-git/blender/heunetz.blend"
-POS = globals().get("POS", (50.0, 110.0, 0.3))
-SKALA = globals().get("SKALA", 3.0)   # Dome 1.11.: dreimal so groß wie Pros Originalhaufen (Original ≈ 100 breit, 32 hoch)
+POS = globals().get("POS", (50.0, 110.0, 2.0))   # z = 2,0: der Haufen liegt auf Ebene 1 der Einstreu (Halme dort bis etwa z = 2,7), nicht auf der Grundplatte
+DICHTE_HEU = 60.0      # kg je m³ lose geschüttetes Heu (Schätzung)
+VOL0_M3 = 0.0250       # Volumen von Pros Originalhaufen (Maßstab 1 Einheit = 0,79 cm, per Integral der Höhenfunktion gerechnet)
+# Größe nach Menge (Dome 1.11.): TAGESMENGE_KG = Raufutter-Tagesmenge aus dem Futterplan → Skalierung = Kubikwurzel(Volumen / Originalvolumen), Volumen = kg / Dichte.
+# Ohne TAGESMENGE_KG gilt SKALA (Dome 1.11.: dreimal so groß wie das Original; entspricht bei dieser Dichte etwa 40 kg).
+TAGESMENGE_KG = globals().get("TAGESMENGE_KG")
+SKALA = ((TAGESMENGE_KG / DICHTE_HEU / VOL0_M3) ** (1 / 3)) if TAGESMENGE_KG else globals().get("SKALA", 3.0)
 random.seed(26102026)
 R = random.random
 AX, AY = 50, 31

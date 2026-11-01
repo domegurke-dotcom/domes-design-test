@@ -63,32 +63,38 @@ def haufen_bauen(sammlung, praefix, nr, cx, cy, r, H, M, ry=None, seed=None):
     hl = mesh_objekt(name + "_halme", V, F, MI, sammlung, M["halme"]); hl.location = (cx, cy, 0)
     return kb, hl
 
-def boden_bauen(sammlung, praefix, B, ox, oy, M, anzahl=None, seed=5):
-    """Ebene 1: flache Grundplatte B × B (Einheiten) mit Kontur und flach liegenden Halmen als Muster, Mitte bei (ox, oy)."""
+def boden_bauen(sammlung, praefix, BX, BY, ox, oy, M, anzahl=None, seed=5):
+    """Ebene 1: flache Grundplatte BX (Länge, x) × BY (Breite, y) (Einheiten) mit Kontur und flach liegenden Halmen als Muster, Mitte bei (ox, oy)."""
     random.seed(seed)
     bm = bmesh.new(); bmesh.ops.create_cube(bm, size=1.0)
-    for v in bm.verts: v.co = Vector((v.co.x * B, v.co.y * B, v.co.z * 4.0 - 2.0))
+    for v in bm.verts: v.co = Vector((v.co.x * BX, v.co.y * BY, v.co.z * 4.0 - 2.0))
     for f in bm.faces: f.material_index = 0
     me = bpy.data.meshes.new(praefix + "_boden"); bm.to_mesh(me); bm.free(); me.materials.append(M["grund"]); me.materials.append(M["tinte"])
     platte = bpy.data.objects.new(praefix + "_boden", me); sammlung.objects.link(platte); platte.location = (ox, oy, 0); kontur(platte, 1.2, 1)
-    n = anzahl or int(B * B * 12000 / (443.0 * 443.0)); V, F, MI = [], [], []
+    n = anzahl or int(BX * BY * 12000 / (443.0 * 443.0)); V, F, MI = [], [], []
     for i in range(n):
         a = random.uniform(0, math.tau); p = random.uniform(-0.09, 0.09)
-        halm(V, F, MI, farbe(BODEN_GEW), Vector((random.uniform(-B / 2 + 8, B / 2 - 8), random.uniform(-B / 2 + 8, B / 2 - 8), random.uniform(0.3, 2.4))),
+        halm(V, F, MI, farbe(BODEN_GEW), Vector((random.uniform(-BX / 2 + 8, BX / 2 - 8), random.uniform(-BY / 2 + 8, BY / 2 - 8), random.uniform(0.3, 2.4))),
              Vector((math.cos(a), math.sin(a), math.tan(p))), random.uniform(16, 34), random.uniform(1.5, 2.3), 1, 0.04, random.uniform(-0.5, 0.5))
     mu = mesh_objekt(praefix + "_muster", V, F, MI, sammlung, M["halme"]); mu.location = (ox, oy, 0)
     return platte, mu
 
-def verteilen(B, radien, seed=3, runden=25, jitter=0.22):
-    """Gleichmäßig und trotzdem zufällig über die Fläche B × B verteilen (Lloyd-Verteilung, danach zufälliges Verrücken). Gibt Positionen und Bedeckung (Anteil, 0–1) zurück."""
+def verteilen(BX, BY, radien, seed=3, runden=25, jitter=0.22, ziel=0.90):
+    """Gleichmäßig und trotzdem zufällig über die Fläche BX × BY verteilen (Lloyd-Verteilung, danach zufälliges Verrücken).
+    Die Haufen werden so weit vergrößert (Radius, nicht Höhe), bis mindestens ziel (0–1) der Fläche bedeckt ist. Gibt Positionen, Radien und Bedeckung zurück."""
     import numpy as np
-    rng = np.random.default_rng(seed); R = np.array(radien, dtype=float); K = len(R); pos = rng.uniform(-B * 0.45, B * 0.45, (K, 2))
-    Z = 6.0; N = int(B / Z); xs = -B / 2 + (np.arange(N) + 0.5) * Z; cells = np.array([(x, y) for x in xs for y in xs])
-    for _ in range(runden):
-        d = np.hypot(cells[:, None, 0] - pos[None, :, 0], cells[:, None, 1] - pos[None, :, 1]) - R[None, :] * 0.7; n = d.argmin(1)
-        for k in range(K):
-            m = n == k
-            if m.any(): lim = B / 2 - R[k] * 0.45; pos[k] = np.clip(0.5 * pos[k] + 0.5 * cells[m].mean(0), -lim, lim)
-    lim = (B / 2 - R * 0.45)[:, None]; pos = np.clip(pos + rng.uniform(-jitter, jitter, (K, 2)) * R[:, None], -lim, lim)
-    d = np.hypot(cells[:, None, 0] - pos[None, :, 0], cells[:, None, 1] - pos[None, :, 1]) - R[None, :] * 0.85
-    return pos, float((d.min(1) <= 0).mean())
+    rng = np.random.default_rng(seed); R0 = np.array(radien, dtype=float); K = len(R0); Z = 6.0
+    xs = -BX / 2 + (np.arange(int(BX / Z)) + 0.5) * Z; ys = -BY / 2 + (np.arange(int(BY / Z)) + 0.5) * Z; cells = np.array([(x, y) for x in xs for y in ys])
+    def bed(pos, R): d = np.hypot(cells[:, None, 0] - pos[None, :, 0], cells[:, None, 1] - pos[None, :, 1]) - R[None, :] * 0.85; return float((d.min(1) <= 0).mean())
+    f = 1.0
+    while True:
+        R = R0 * f; pos = rng.uniform(-1, 1, (K, 2)) * np.array([BX, BY]) * 0.45
+        for _ in range(runden):
+            d = np.hypot(cells[:, None, 0] - pos[None, :, 0], cells[:, None, 1] - pos[None, :, 1]) - R[None, :] * 0.7; n = d.argmin(1)
+            for k in range(K):
+                m = n == k
+                if m.any(): lx, ly = BX / 2 - R[k] * 0.45, BY / 2 - R[k] * 0.45; c = 0.5 * pos[k] + 0.5 * cells[m].mean(0); pos[k] = [max(-lx, min(lx, c[0])), max(-ly, min(ly, c[1]))]
+        lim = np.stack([BX / 2 - R * 0.45, BY / 2 - R * 0.45], 1); pos = np.clip(pos + rng.uniform(-jitter, jitter, (K, 2)) * R[:, None], -lim, lim)
+        b = bed(pos, R)
+        if b >= ziel or f > 1.6: return pos, R, b
+        f += 0.05

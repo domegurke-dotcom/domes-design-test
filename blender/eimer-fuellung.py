@@ -90,14 +90,28 @@ else:
         if halter: o.parent = halter
         return o
     b = V[BASIS[FUTTER]]; basis_mat, tinte = b.material_slots[0].material, b.material_slots[1].material
-    S = 1.5; ext = 40; n = int(2 * ext / S) + 1; bm = bmesh.new(); gitter = {}
-    for i in range(n):
-        for j in range(n):
-            x, y = -ext + i * S, -ext + j * S
-            if innen(x, y, -0.6 if EIMER == "stufe2" else -0.3): gitter[(i, j)] = bm.verts.new((x, y, oberflaeche(x, y)))   # Grundfläche samt Kontur (0,3) bleibt innerhalb der Wand (vorher +0,6: ragte beim runden Eimer durch die Wand)
-    for (i, j) in list(gitter):
-        q = [gitter.get((i, j)), gitter.get((i + 1, j)), gitter.get((i + 1, j + 1)), gitter.get((i, j + 1))]
-        if all(q): f = bm.faces.new(q); f.smooth = False; f.material_index = 0
+    S = 1.5; ext = 40; bm = bmesh.new()
+    # Dome 2.11.: Grundfläche rund statt aus Gitterquadraten (sah im Eimer eckig aus): Ringe von der Mitte zum Rand, Rand = größter Abstand, der noch innerhalb der Wand liegt (Grundfläche samt Kontur 0,3 bleibt innerhalb der Wand)
+    mx, my = (0.0, 0.0) if EIMER == "stufe1" else (0.0, -12.0); RAND_M = -0.6 if EIMER == "stufe2" else -0.3; NW, NR = 72, 10
+    def rmax(w):
+        lo, hi = 0.0, float(ext)
+        for _ in range(24):
+            mid = (lo + hi) / 2
+            if innen(mx + mid * math.cos(w), my + mid * math.sin(w), RAND_M): lo = mid
+            else: hi = mid
+        return lo
+    rm = [rmax(math.tau * k / NW) for k in range(NW)]
+    mitte = bm.verts.new((mx, my, oberflaeche(mx, my))); ringe = []
+    for r_ in range(1, NR + 1):
+        ring = []
+        for k in range(NW):
+            w = math.tau * k / NW; x, y = mx + rm[k] * r_ / NR * math.cos(w), my + rm[k] * r_ / NR * math.sin(w)
+            ring.append(bm.verts.new((x, y, oberflaeche(x, y))))
+        ringe.append(ring)
+    for k in range(NW):
+        f = bm.faces.new([mitte, ringe[0][k], ringe[0][(k + 1) % NW]]); f.smooth = False; f.material_index = 0
+        for r_ in range(NR - 1):
+            f = bm.faces.new([ringe[r_][k], ringe[r_ + 1][k], ringe[r_ + 1][(k + 1) % NW], ringe[r_][(k + 1) % NW]]); f.smooth = False; f.material_index = 0
     neues_objekt(f"fuellung_{EIMER}_basis", bm, [basis_mat, tinte], 0.3)
     flaeche_oben = flaeche(h)
     for sorte, dichte in SORTEN[FUTTER].items():

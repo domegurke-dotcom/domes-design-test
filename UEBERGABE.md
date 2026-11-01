@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. nachts (Claude Team) – Böden aufgeräumt (Dome)
+Die alten Strohböden (mind. 90 % Bedeckung) samt Mistigkeit 1–3 sind gelöscht; die dichten (99,5 %) heißen jetzt ohne „-dicht“: `strohboxenboden-<a–e>-<Maß>.blend` und `…-mistigkeit-<1–3>.blend`. Es bleiben Stroh (20 Dateien) und Hanf `hanfboxenboden-…` (20 Dateien). **Folge:** die Bauskripte `boxenboeden-bauen.py`, `strohboxenboden-mistigkeit1/2/3-speichern.py`, `strohboxenboden-dicht-speichern.py` und `mistigkeit-dicht-hanf-speichern.py` (Stroh-Teil) beziehen sich auf die alten Dateinamen und laufen so nicht mehr; Stroh-Mistigkeit entsteht bei Bedarf mit der Regel aus `mistigkeit-dicht-hanf-speichern.py` (Quelle = `strohboxenboden-<a–e>-<Maß>.blend`).
+
 ### 2.11. nachts (Claude Team) – Hanf-Böden, dichte Strohböden, Mistigkeit dafür
 Neue Dateien in `blender/` (die Original-Strohböden bleiben unverändert): `hanfboxenboden-<a–e>-<Maß>.blend` (Kopie des Strohbodens, Hanfsplitter + dünne Nadeln nach vier Fotos von Dome, Haufen so verteilt, dass Ebene 1 zu ~99,5 % bedeckt ist, Haufen bis ×1,4 breiter; Skript `hanfboxenboden-speichern.py`), `strohboxenboden-<a–e>-<Maß>-dicht.blend` (Stroh mit ~99,5 % Bedeckung, Skript `strohboxenboden-dicht-speichern.py`) und je Mistigkeit 1–3 dazu (`…-dicht-mistigkeit-<1–3>.blend`, `hanfboxenboden-…-mistigkeit-<1–3>.blend`, Skript `mistigkeit-dicht-hanf-speichern.py`, gleiche Regeln wie bei Stroh, ohne Äpfel). Nur Zahlen geprüft (Bedeckung, Haufenzahlen), Aussehen nicht angesehen. `hanf-tauschen.py`/`hanf-verteilen.py` = Zwischenschritte im offenen Fenster (Box A liegt dort noch mit Hanf, nicht gespeichert). Spiel unverändert.
 

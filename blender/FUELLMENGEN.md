@@ -27,8 +27,8 @@ Maßstab: 1 Modelleinheit = 0,79 cm, also 1 Einheit³ = 0,000493 Liter. Alle Zah
 
 ## Futtereimer (`blender/eimer-fuellung.py`)
 
-- Füllgrenze (Dome 1.11.: Pros Wasserlinie 25,4 / 31,4 als Ausgangspunkt, dann „Stufe 1 etwas niedriger, Stufe 2 etwas höher“): Eimer Stufe 1 bei **z = 24,0**, Eimer Stufe 2 bei **z = 33,0** (jeweils im unskalierten Modell, gleichmäßig mit dem Eimer skaliert). Die Werte stehen in `FUELLGRENZE_Z` in `eimer-fuellung.py` und lassen sich dort nachziehen.
-- Damit sie bei **12 Litern** liegt, sind die Eimer skaliert: **Stufe 1 × 1,126** (Höhe 32,4 Einheiten ≈ 25,6 cm), **Stufe 2 × 0,894**. Der unskalierte Eimer fasste bis zu diesen Linien 8,4 l (Stufe 1) und 16,8 l (Stufe 2).
+- Füllgrenze (Dome 1.11.: Pros Wasserlinie 25,4 / 31,4 als Ausgangspunkt, dann „Stufe 1 etwas niedriger, Stufe 2 etwas höher“): Eimer Stufe 1 bei **z = 24,0**, Eimer Stufe 2 bei **z = 34,4** (erst 31,4, dann 33,0, Dome: noch etwas höher) (jeweils im unskalierten Modell, gleichmäßig mit dem Eimer skaliert). Die Werte stehen in `FUELLGRENZE_Z` in `eimer-fuellung.py` und lassen sich dort nachziehen.
+- Damit sie bei **12 Litern** liegt, sind die Eimer skaliert: **Stufe 1 × 1,126** (Höhe 32,4 Einheiten ≈ 25,6 cm), **Stufe 2 × 0,878**. Der unskalierte Eimer fasste bis zu diesen Linien 8,4 l (Stufe 1) und 17,7 l (Stufe 2).
 - Eimer Stufe 1 (rund): innen 13,5 Einheiten Radius am Boden bis 18,0 am Rand; Stufe 2 (halbrund, Rückseite gerade): Halbachse x 18,4 bis 24,8 und Tiefe 27,2 bis 34,8.
 - Schüttdichte kg je Liter: **Hafer 0,50**, **Müsli 0,40**, **Mineralfutter 0,65**, **Rübenschnitzel 0,25**.
 - Höchstmenge (12 Liter): Hafer 6,0 kg, Müsli 4,8 kg, Mineral 7,8 kg, Rübenschnitzel 3,0 kg.
@@ -37,7 +37,7 @@ Maßstab: 1 Modelleinheit = 0,79 cm, also 1 Einheit³ = 0,000493 Liter. Alle Zah
 | Liter | 1 | 2 | 3 | 4 | 5 | 6 | 8 | 10 | 12 |
 |---|---|---|---|---|---|---|---|---|---|
 | Eimer Stufe 1 | 3,3 | 5,6 | 7,8 | 9,9 | 11,9 | 13,8 | 17,5 | 20,9 | 24,0 |
-| Eimer Stufe 2 | 4,5 | 7,8 | 10,9 | 13,8 | 16,6 | 19,2 | 24,2 | 28,8 | 33,0 |
+| Eimer Stufe 2 | 4,7 | 8,2 | 11,4 | 14,4 | 17,3 | 20,1 | 25,2 | 30,0 | 34,4 |
 
 - Liter = Menge in kg ÷ Schüttdichte. Über 12 Liter bleibt die Füllung an der Füllgrenze.
 - Die obersten Körner ragen etwa 1,2 Einheiten über die Oberfläche; das Skript senkt die Oberfläche entsprechend ab, damit sie genau an der Füllgrenze enden.

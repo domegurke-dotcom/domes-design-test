@@ -14,7 +14,7 @@ LITER_PRO_E3 = 0.79 ** 3 / 1000.0      # 1 Modelleinheit = 0,79 cm  →  1 Einhe
 # Dome 1.11.: BEIDE Eimer fassen bis zur Füllgrenze (Rand − 1,2) genau 12 Liter. Dafür werden die Eimer gleichmäßig skaliert: Stufe 1 war zu klein (8,6 l → größer), Stufe 2 zu groß (18,7 l → kleiner).
 FASSUNG_L = 12.0
 # Füllgrenze = die Linie, die Dome früher festgelegt hat: Wasserspiegel in Pros Modellen wasser-stufe1.glb (z = 25,2–25,6) und wasser-stufe2.glb (z = 31,4–31,8), „bis unter den Rand“ (sonst schwarzer Konturstreifen)
-FUELLGRENZE_Z = {"stufe1": 24.0, "stufe2": 33.0}   # Dome 1.11.: Stufe 1 etwas niedriger (war 25,4), Stufe 2 etwas höher (war 31,4)
+FUELLGRENZE_Z = {"stufe1": 24.0, "stufe2": 34.4}   # Dome 1.11.: Stufe 1 etwas niedriger (war 25,4), Stufe 2 etwas höher (war 31,4, dann 33,0, jetzt 34,4 – Dome: noch etwas höher; über z = 34 verengt sich der Eimer um 1,4, deshalb sind die Körner dort mit mehr Randabstand gestreut)
 EIMER_SKALA = {}   # wird in festlegen() aus dem Fassungsvermögen berechnet
 DICHTE = {"hafer": 0.50, "muesli": 0.40, "mineral": 0.65, "ruebe": 0.25}   # Schüttdichte kg je Liter (Schätzung nach üblichen Werten)
 # Stücke je Flächeneinheit (aus Pros Füllungen für den runden Eimer abgeleitet: Stücke ÷ 876 Einheiten²)
@@ -99,7 +99,7 @@ else:
         bm = bmesh.new(); plaetze = 0; anzahl = int(dichte * flaeche_oben)
         while plaetze < anzahl:
             x, y = random.uniform(-ext, ext), random.uniform(-ext, ext)
-            if not innen(x, y, -1.2): continue
+            if not innen(x, y, -1.6 if EIMER == "stufe2" else -1.2): continue
             vor = random.choice((v0, v1)); drehung = Matrix.Rotation(random.uniform(0, math.tau), 3, "Z") @ Matrix.Rotation(random.uniform(-0.45, 0.45), 3, "X") @ Matrix.Rotation(random.uniform(-0.45, 0.45), 3, "Y")
             pos = Vector((x, y, oberflaeche(x, y) + random.uniform(0.15, 0.55)))
             vv = [bm.verts.new(drehung @ p.co + pos) for p in vor.data.vertices]

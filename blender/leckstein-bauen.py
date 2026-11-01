@@ -11,59 +11,57 @@ col = bpy.data.collections.new("Leckstein"); bpy.context.scene.collection.childr
 def objekt(name, me):
     o = bpy.data.objects.new(name, me); col.objects.link(o); return o
 
-# ---------- Salzbrocken: Eiform, unruhig, kantig; Lochachse = y ----------
-BX, BY, BZ = 9.0, 7.4, 6.8   # Halbachsen (Modelleinheiten; 1 Einheit ≈ 0,8 cm → Stein ≈ 14 cm breit)
+# ---------- Salzbrocken: Tonne (runder Querschnitt, flache Enden), Loch genau in der Mitte, raue Oberfläche; Lochachse = y ----------
+BX, BY, BZ = 7.2, 8.6, 7.2   # Halbachsen (Modelleinheiten; 1 Einheit ≈ 0,8 cm → Stein ≈ 11 cm dick, 14 cm lang)
+N = 3.0                      # Superellipsoid: >2 macht die Enden flacher und die Kanten runder (Tonnenform)
 bm = bmesh.new(); bmesh.ops.create_icosphere(bm, subdivisions=4, radius=1.0)
 for v in bm.verts:
-    p = v.co.copy(); q = Vector((p.x * BX, p.y * BY, p.z * BZ))
-    r = 1 + 0.17 * noise.noise(q * 0.17 + Vector((3, 1, 7))) + 0.06 * noise.noise(q * 0.5 + Vector((9, 4, 2)))
-    # leicht abgeflachte Seiten wie gebrochenes Salz
-    f = 1 - 0.07 * max(0, abs(p.x) - 0.55) * 2
-    v.co = Vector((p.x * BX * r * f, p.y * BY * r, p.z * BZ * r))
+    p = v.co.copy(); k = (abs(p.x) ** N + abs(p.y) ** N + abs(p.z) ** N) ** (1 / N); p = p / k   # auf die Superellipsoid-Fläche
+    q = Vector((p.x * BX, p.y * BY, p.z * BZ))
+    r = 1 + 0.05 * noise.noise(q * 0.2 + Vector((3, 1, 7)))   # leicht unregelmäßig, aber gleichmäßig dick rund ums Loch
+    v.co = Vector((q.x * r, q.y * r, q.z * r))
 me = bpy.data.meshes.new("salz"); bm.to_mesh(me); bm.free()
 salz = objekt("salz", me)
 bpy.context.view_layer.objects.active = salz; salz.select_set(True)
-# Bruchflächen: mehrere Ebenen schneiden den Brocken ab (wie gebrochenes Steinsalz)
+# Bruchflächen: viele kleine Ebenen schneiden Ecken und Kanten ab (wie gebrochenes Steinsalz)
 def schnitt(rich, tiefe):
-    rich = Vector(rich).normalized(); rd = 1 / math.sqrt((rich.x / BX) ** 2 + (rich.y / BY) ** 2 + (rich.z / BZ) ** 2)
+    rich = Vector(rich).normalized(); rd = 1 / (abs(rich.x / BX) ** N + abs(rich.y / BY) ** N + abs(rich.z / BZ) ** N) ** (1 / N)
     bpy.ops.mesh.primitive_cube_add(size=60, location=rich * (rd * tiefe + 30)); c = bpy.context.active_object
     c.rotation_euler = rich.to_track_quat("Z", "Y").to_euler()
     m = salz.modifiers.new("schnitt", "BOOLEAN"); m.object = c; m.operation = "DIFFERENCE"; m.solver = "EXACT"
     bpy.context.view_layer.objects.active = salz; bpy.ops.object.modifier_apply(modifier=m.name); bpy.data.objects.remove(c, do_unlink=True)
-for rich, tiefe in (((1, 0.25, 0.1), 0.80), ((-1, -0.2, 0.15), 0.83), ((0.2, 1, 0.3), 0.86), ((-0.1, -1, 0.1), 0.85), ((0.3, 0.1, 1), 0.78), ((-0.4, 0.1, -1), 0.80), ((0.9, -0.6, 0.7), 0.82), ((-0.8, 0.7, 0.6), 0.84), ((0.7, 0.8, -0.6), 0.86), ((-0.6, -0.8, -0.5), 0.84)):
-    schnitt(rich, tiefe)
-for i in range(14):   # weitere Bruchflächen, damit fast die ganze Oberfläche aus ebenen Flächen besteht
+for i in range(34):
     d = Vector((random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1)))
-    if d.length > 0.2: schnitt(d, random.uniform(0.86, 0.93))
-# Loch quer durch (y-Achse), im oberen Drittel
-HZ = 2.4
-bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=1.75, depth=30, location=(0.3, 0, HZ), rotation=(math.pi / 2, 0, 0))
+    if d.length > 0.2: schnitt(d, random.uniform(0.90, 0.97))
+# Loch quer durch, genau in der Mitte (gleicher Abstand zum Rand)
+HZ = 0.0
+bpy.ops.mesh.primitive_cylinder_add(vertices=28, radius=2.7, depth=30, location=(0, 0, HZ), rotation=(math.pi / 2, 0, 0))
 loch = bpy.context.active_object; loch.name = "loch"
 bo = salz.modifiers.new("loch", "BOOLEAN"); bo.object = loch; bo.operation = "DIFFERENCE"; bo.solver = "EXACT"
 bpy.context.view_layer.objects.active = salz; bpy.ops.object.modifier_apply(modifier=bo.name)
 bpy.data.objects.remove(loch, do_unlink=True)
-# kleine Unebenheit auf den entstandenen Flächen, dann flach schattieren
+# raue, kristalline Oberfläche: Beulen und Splitter, dann flach schattieren
 bm = bmesh.new(); bm.from_mesh(salz.data)
 for v in bm.verts:
-    v.co += v.normal * 0.04 * noise.noise(v.co * 1.4 + Vector((5, 8, 1)))
+    if (v.co.x ** 2 + v.co.z ** 2) ** 0.5 < 3.0: continue   # die Lochwand bleibt glatt
+    v.co += v.normal * (0.30 * noise.noise(v.co * 1.7 + Vector((5, 8, 1))) + 0.14 * noise.noise(v.co * 4.2 + Vector((2, 6, 9))))
 bm.to_mesh(salz.data); bm.free()
 salz.data.polygons.foreach_set("use_smooth", [False] * len(salz.data.polygons))
-salz.location.z = -BZ * 0.0   # Mitte bei z = 0
 # ---------- Zeichenstil wie im Spiel: flache Farbflächen (Workbench), schwarze Kontur als umgestülpte Hülle ("tinte") ----------
 def srgb(x): x = x / 255; return x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4
 def mat(name, rgb):
     c = tuple(srgb(x) for x in rgb); m = bpy.data.materials.new(name); m.use_nodes = True; b = m.node_tree.nodes["Principled BSDF"]
     b.inputs["Base Color"].default_value = c + (1,); b.inputs["Roughness"].default_value = 0.8; m.diffuse_color = c + (1,); return m
 TINTE = mat("tinte", (0, 0, 0)); TINTE.use_backface_culling = True
-SALZ = [mat("salz_dunkel", (255, 128, 84)), mat("salz_orange", (255, 160, 116)), mat("salz_rosa", (255, 204, 184)), mat("salz_weiss", (255, 255, 250))]
+SALZ = [mat("salz_dunkel", (255, 118, 80)), mat("salz_orange", (255, 156, 112)), mat("salz_rosa", (255, 196, 176)), mat("salz_weiss", (255, 244, 232)), mat("salz_hellrosa", (255, 226, 212))]
 salz.data.materials.clear()
-for m in SALZ + [TINTE] * 4: salz.data.materials.append(m)   # Plätze 4–7: Tinte für die Kontur (material_offset 4)
-for pl in salz.data.polygons:   # Farbflächen je Bruchfläche: orange, dunkler Orange, rosa und weiße Adern
-    c = pl.center; n = noise.noise(c * 0.1 + Vector((1, 2, 3))); a = noise.noise(c * 0.15 + Vector((9, 1, 5)))
-    pl.material_index = 3 if abs(a) < 0.045 else (2 if n > 0.15 else (0 if n < -0.18 else 1))
+for m in SALZ + [TINTE] * 5: salz.data.materials.append(m)   # Plätze 5–9: Tinte für die Kontur (material_offset 5)
+for pl in salz.data.polygons:   # fleckig: Orange und Rosa in Wolken, weiße Kristallflecken
+    c = pl.center; v = noise.noise(c * 0.16 + Vector((1, 2, 3))); w = noise.noise(c * 0.5 + Vector((4, 4, 4)))
+    pl.material_index = 3 if w > 0.33 else (4 if w > 0.2 else (2 if v > 0.12 else (0 if v < -0.15 else 1)))
 def kontur(o, dicke, versatz):
     m = o.modifiers.new("kontur", "SOLIDIFY"); m.thickness = dicke; m.offset = 1; m.use_flip_normals = True; m.use_rim = False; m.material_offset = versatz
-kontur(salz, 0.3, 4)
+kontur(salz, 0.3, 5)
 
 # ---------- Hanfschnur: dreifach verdrillte Schlaufe durch das Loch ----------
 def catmull(pts, n=14, geschlossen=True):
@@ -75,7 +73,7 @@ def catmull(pts, n=14, geschlossen=True):
             out.append(0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t ** 3))
     return out
 Y = lambda y, z: Vector((0.3, y, z))
-ring = [Y(-7.0, HZ), Y(-8.7, 5.5), Y(-6.4, 14), Y(-2.2, 22), Y(0, 26), Y(2.2, 22), Y(6.4, 14), Y(8.7, 5.5), Y(7.0, HZ), Y(0, HZ - 0.4)]
+ring = [Y(-8.8, HZ), Y(-10.8, 4), Y(-9.4, 11), Y(-5.6, 18.5), Y(-2, 24), Y(0, 27), Y(2, 24), Y(5.6, 18.5), Y(9.4, 11), Y(10.8, 4), Y(8.8, HZ), Y(0, HZ - 0.3)]
 pfad = catmull(ring, 14)
 laenge = sum((pfad[(i + 1) % len(pfad)] - pfad[i]).length for i in range(len(pfad)))
 steigung = laenge / round(laenge / 3.4)
@@ -98,12 +96,12 @@ def knoten(pos, r, name):
     bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=10, radius=r, location=pos, scale=(1, 1, 0.8))
     o = bpy.context.active_object; o.name = name; col.objects.link(o); bpy.context.scene.collection.objects.unlink(o); seilteile.append(o)
     o.data.polygons.foreach_set("use_smooth", [True] * len(o.data.polygons)); return o
-knoten((0.3, 0, 26.2), 1.25, "seil_knoten")
+knoten((0.3, 0, 27.2), 1.25, "seil_knoten")
 for sgn in (-1, 1):
-    ende = [Vector((0.3, 0, 26.6)), Vector((0.3, sgn * 2.6, 29.6)), Vector((0.3, sgn * 5.6, 31.0))]
+    ende = [Vector((0.3, 0, 27.6)), Vector((0.3, sgn * 2.6, 30.6)), Vector((0.3, sgn * 5.6, 32.0))]
     kurve = catmull(ende, 8, False) + [ende[-1]]
     for k in range(3): strang(kurve, k, 0.2, 0.18, False, f"seil_ende{sgn}_{k}")
-    knoten((0.3, sgn * 6.0, 31.0), 0.95, f"seil_endknoten{sgn}")
+    knoten((0.3, sgn * 6.0, 32.0), 0.95, f"seil_endknoten{sgn}")
 # alles Seil in ein Objekt
 bpy.ops.object.select_all(action="DESELECT")
 for o in seilteile:
@@ -122,8 +120,8 @@ sh.light = "STUDIO"; sh.studio_light = "paint.sl"; sh.color_type = "MATERIAL"; s
 sc.view_settings.view_transform = "Standard"; sc.display.render_aa = "8"; sc.render.film_transparent = True
 sc.render.resolution_x, sc.render.resolution_y = 700, 900
 cam = bpy.data.objects.new("c", bpy.data.cameras.new("c")); sc.collection.objects.link(cam); sc.camera = cam
-cam.data.type = "ORTHO"; cam.data.ortho_scale = 46; cam.location = (48, -60, 36)
-cam.rotation_euler = (Vector((0.3, 0, 14)) - cam.location).to_track_quat("-Z", "Y").to_euler()
+cam.data.type = "ORTHO"; cam.data.ortho_scale = 52; cam.location = (66, -42, 26)
+cam.rotation_euler = (Vector((0.3, 0, 13)) - cam.location).to_track_quat("-Z", "Y").to_euler()
 w = bpy.data.worlds.new("w"); sc.world = w; w.color = (0.93, 0.9, 0.84)
 
 # ---------- speichern, exportieren, Vorschau ----------

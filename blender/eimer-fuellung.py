@@ -14,7 +14,7 @@ LITER_PRO_E3 = 0.79 ** 3 / 1000.0      # 1 Modelleinheit = 0,79 cm  →  1 Einhe
 # Dome 1.11.: BEIDE Eimer fassen bis zur Füllgrenze (Rand − 1,2) genau 12 Liter. Dafür werden die Eimer gleichmäßig skaliert: Stufe 1 war zu klein (8,6 l → größer), Stufe 2 zu groß (18,7 l → kleiner).
 FASSUNG_L = 12.0
 # Füllgrenze = die Linie, die Dome früher festgelegt hat: Wasserspiegel in Pros Modellen wasser-stufe1.glb (z = 25,2–25,6) und wasser-stufe2.glb (z = 31,4–31,8), „bis unter den Rand“ (sonst schwarzer Konturstreifen)
-FUELLGRENZE_Z = {"stufe1": 25.4, "stufe2": 31.4}
+FUELLGRENZE_Z = {"stufe1": 24.0, "stufe2": 33.0}   # Dome 1.11.: Stufe 1 etwas niedriger (war 25,4), Stufe 2 etwas höher (war 31,4)
 EIMER_SKALA = {}   # wird in festlegen() aus dem Fassungsvermögen berechnet
 DICHTE = {"hafer": 0.50, "muesli": 0.40, "mineral": 0.65, "ruebe": 0.25}   # Schüttdichte kg je Liter (Schätzung nach üblichen Werten)
 # Stücke je Flächeneinheit (aus Pros Füllungen für den runden Eimer abgeleitet: Stücke ÷ 876 Einheiten²)

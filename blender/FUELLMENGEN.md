@@ -27,8 +27,8 @@ Maßstab: 1 Modelleinheit = 0,79 cm, also 1 Einheit³ = 0,000493 Liter. Alle Zah
 
 ## Futtereimer (`blender/eimer-fuellung.py`)
 
-- Füllgrenze = Wasserlinie in Pros Modellen (Dome hatte sie früher festgelegt): Eimer Stufe 1 bei z = 25,4, Eimer Stufe 2 bei z = 31,4 (jeweils im unskalierten Modell, gleichmäßig mit dem Eimer skaliert).
-- Damit sie bei **12 Litern** liegt, sind die Eimer skaliert: **Stufe 1 × 1,097**, **Stufe 2 × 0,913**. Der leere, unskalierte Eimer fasste bis dorthin 9,8 l (Stufe 1) und 14,2 l (Stufe 2).
+- Füllgrenze (Dome 1.11.: Pros Wasserlinie 25,4 / 31,4 als Ausgangspunkt, dann „Stufe 1 etwas niedriger, Stufe 2 etwas höher“): Eimer Stufe 1 bei **z = 24,0**, Eimer Stufe 2 bei **z = 33,0** (jeweils im unskalierten Modell, gleichmäßig mit dem Eimer skaliert). Die Werte stehen in `FUELLGRENZE_Z` in `eimer-fuellung.py` und lassen sich dort nachziehen.
+- Damit sie bei **12 Litern** liegt, sind die Eimer skaliert: **Stufe 1 × 1,126** (Höhe 32,4 Einheiten ≈ 25,6 cm), **Stufe 2 × 0,894**. Der unskalierte Eimer fasste bis zu diesen Linien 8,4 l (Stufe 1) und 16,8 l (Stufe 2).
 - Eimer Stufe 1 (rund): innen 13,5 Einheiten Radius am Boden bis 18,0 am Rand; Stufe 2 (halbrund, Rückseite gerade): Halbachse x 18,4 bis 24,8 und Tiefe 27,2 bis 34,8.
 - Schüttdichte kg je Liter: **Hafer 0,50**, **Müsli 0,40**, **Mineralfutter 0,65**, **Rübenschnitzel 0,25**.
 - Höchstmenge (12 Liter): Hafer 6,0 kg, Müsli 4,8 kg, Mineral 7,8 kg, Rübenschnitzel 3,0 kg.
@@ -36,16 +36,16 @@ Maßstab: 1 Modelleinheit = 0,79 cm, also 1 Einheit³ = 0,000493 Liter. Alle Zah
 
 | Liter | 1 | 2 | 3 | 4 | 5 | 6 | 8 | 10 | 12 |
 |---|---|---|---|---|---|---|---|---|---|
-| Eimer Stufe 1 | 3,5 | 5,9 | 8,3 | 10,5 | 12,7 | 14,7 | 18,6 | 22,2 | 25,4 |
-| Eimer Stufe 2 | 4,3 | 7,4 | 10,3 | 13,1 | 15,7 | 18,2 | 23,0 | 27,3 | 31,4 |
+| Eimer Stufe 1 | 3,3 | 5,6 | 7,8 | 9,9 | 11,9 | 13,8 | 17,5 | 20,9 | 24,0 |
+| Eimer Stufe 2 | 4,5 | 7,8 | 10,9 | 13,8 | 16,6 | 19,2 | 24,2 | 28,8 | 33,0 |
 
 - Liter = Menge in kg ÷ Schüttdichte. Über 12 Liter bleibt die Füllung an der Füllgrenze.
 - Die obersten Körner ragen etwa 1,2 Einheiten über die Oberfläche; das Skript senkt die Oberfläche entsprechend ab, damit sie genau an der Füllgrenze enden.
-- **Offen (Frage an Dome):** Zeigt der Eimer die Menge **je Mahlzeit** (so wird die Krippe ja bei jeder Fütterung neu gefüllt) oder die Tagesmenge? Ist die Menge je Mahlzeit gemeint, rechnet das Spiel kg je Mahlzeit.
+- **Menge je Mahlzeit oder Tagesmenge?** Das Spiel begrenzt Kraftfutter **je Mahlzeit** auf 0,5 % des Körpergewichts (`kraftMahl = Gewicht × 0,005`; 600 kg → 3 kg, 900 kg Kaltblut → 4,5 kg) und verteilt die Tagesmenge auf 2 oder 3 Mahlzeiten. **Je Mahlzeit** passt es fast immer in 12 Liter (Hafer 4,5 kg = 9 l, Müsli 4,5 kg = 11 l). Nur eingeweichtes Futter (Rübenschnitzel, Heucobs) könnte darüber kommen. Die **Tagesmenge** kann dagegen über 12 Liter gehen (600 kg, 3 Mahlzeiten, bis 9 kg Hafer = 18 l). **Empfehlung: Eimer zeigt die Menge je Mahlzeit**, bei mehr als 12 Litern bleibt die Füllung an der Füllgrenze.
 
 ## Strohhaufen (Einstreu Ebene 2, `blender/einstreu-stroh-bauen.py`)
 
-- Höchstens **2/3 der Höhe von Eimer Stufe 1**: Eimer 28,8 × 1,097 = 31,6 Einheiten hoch, also höchstens 21,1. Der höchste Haufen ist 18,8 hoch.
+- Höchstens **2/3 der Höhe von Eimer Stufe 1**: Eimer 28,8 × 1,126 = 32,4 Einheiten hoch, also höchstens 21,6. Der höchste Haufen ist 19,2 hoch.
 
 ## Wie beides im Blender-Fenster läuft
 

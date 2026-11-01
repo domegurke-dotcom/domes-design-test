@@ -22,7 +22,7 @@
 <canvas id="c"></canvas>
 <div id="info">lädt …</div>
 <div id="panel">
-  <div class="reihe"><span>Einstreu</span><button data-mat="stroh">Stroh</button><button data-mat="hanf">Leinstroh / Hanf</button></div>
+  <div class="reihe"><span>Einstreu</span><button data-mat="stroh">Stroh</button><button data-mat="hanf">Leinstroh / Hanf</button><button data-mat="spaene">Späne</button></div>
   <div class="reihe"><span>Boxgröße</span>
     <button data-gr="a">A 3×3</button><button data-gr="b">B 3×4</button><button data-gr="c">C 4×4</button><button data-gr="d">D 4×5</button><button data-gr="e">E 5×5</button></div>
   <div class="reihe"><span>Pferd in der Box</span><span id="pferde" style="display:contents"></span></div>
@@ -50,7 +50,9 @@ const GROESSEN = { a: "3×3 m", b: "3×4 m", c: "4×4 m", d: "4×5 m", e: "5×5 
 const E_CM = 0.79;   // 1 Modelleinheit = 0,79 cm
 const APFEL_JE_M2 = [0, 5.6, 10.9, 16.6];   // wie in Blender: Fläche A (9 m²) 50 / 98 / 149 Äpfel
 const PLATT_CM = 5;
+const NAME_MAT = { stroh: "Stroh", hanf: "Leinstroh/Hanf", spaene: "Späne" };
 const STROH_ZIEL = new THREE.Color(138 / 255, 98 / 255, 34 / 255).convertSRGBToLinear();   // Stroh wird mit der Mistigkeit dunkel pissgelb-bräunlich (Dome)
+const SPAENE_ZIEL = new THREE.Color(140 / 255, 98 / 255, 44 / 255).convertSRGBToLinear();   // Späne werden mit der Mistigkeit dunkel gelbbraun
 const HANF_DUNKEL = [0, 0.22, 0.45, 0.68], HANF_ZIEL = new THREE.Color(110 / 255, 84 / 255, 62 / 255).convertSRGBToLinear();   // Leinstroh/Hanf wird mit der Mistigkeit dunkler (Foto 6, Dome): braun-grau wie feuchter, benutzter Hanf
 
 // ---- Laden ----
@@ -88,8 +90,8 @@ async function apfelLaden() {
 
 // ---- Mistigkeit anwenden ----
 function stufeAnwenden(B) {
-  const faktor = B.daten.hanf ? 0.75 : 1;
-  const zielFarbe = B.daten.hanf ? HANF_ZIEL : STROH_ZIEL;
+  const faktor = B.daten.kompakt || 1;
+  const zielFarbe = B.daten.hanf ? HANF_ZIEL : B.daten.mat === "spaene" ? SPAENE_ZIEL : STROH_ZIEL;
   B.wurzel.traverse((o) => { if (!o.isMesh) return; for (const m of [].concat(o.material)) if (m.userData.basis) m.color.copy(m.userData.basis).lerp(zielFarbe, HANF_DUNKEL[S.st]); });
   for (const h of B.haufen) {
     let sicht = true, sk = 1;
@@ -218,7 +220,7 @@ async function zeigen() {
   const nr = ++ladeNr; const key = S.mat + "-" + S.gr;
   info.textContent = "lädt …";
   let B;
-  try { B = await boden(S.mat, S.gr); } catch (e) { if (nr === ladeNr) info.textContent = (S.mat === "hanf" ? "Leinstroh/Hanf" : "Stroh") + " " + S.gr.toUpperCase() + ": noch nicht fertig angepasst – kommt später."; return; }
+  try { B = await boden(S.mat, S.gr); } catch (e) { if (nr === ladeNr) info.textContent = NAME_MAT[S.mat] + " " + S.gr.toUpperCase() + ": noch nicht fertig angepasst – kommt später."; return; }
   if (nr !== ladeNr) return;
   if (aktuell && aktuell !== B) scene.remove(aktuell.wurzel);
   if (!aepfelVorlagen.length) await apfelLaden();
@@ -227,7 +229,7 @@ async function zeigen() {
   const n = aepfelStreuen(B);
   ziel.set(0, 6, 0); dist = Math.max(B.daten.bx, B.daten.by) * 2.5;
   const sicht = B.haufen.filter((h) => h.sichtbar).length;
-  info.textContent = `${S.mat === "hanf" ? "Leinstroh/Hanf" : "Stroh"} · Box ${S.gr.toUpperCase()} (${GROESSEN[S.gr]}) · ` + (S.st ? `Mistigkeit ${S.st}` : "frisch eingestreut") + ` · ${sicht} von ${B.haufen.length} Haufen` + (S.st && S.aepfel ? ` · ${GROESSE[S.pferd].name} · ${n} Pferdeäpfel` : "");
+  info.textContent = `${NAME_MAT[S.mat]} · Box ${S.gr.toUpperCase()} (${GROESSEN[S.gr]}) · ` + (S.st ? `Mistigkeit ${S.st}` : "frisch eingestreut") + ` · ${sicht} von ${B.haufen.length} Haufen` + (S.st && S.aepfel ? ` · ${GROESSE[S.pferd].name} · ${n} Pferdeäpfel` : "");
 }
 function knoepfe() {
   document.querySelectorAll("[data-mat]").forEach((b) => b.classList.toggle("an", b.dataset.mat === S.mat));
@@ -258,7 +260,7 @@ document.getElementById("blender").onclick = async (e) => {   // gerade gezeigte
 document.getElementById("dreh").onclick = () => { S.dreh = !S.dreh; knoepfe(); };
 const pf = document.getElementById("pferde");
 for (const [k, v] of Object.entries(GROESSE)) { const b = document.createElement("button"); b.dataset.pf = k; b.textContent = v.name; b.onclick = () => { S.pferd = k; knoepfe(); zeigen(); }; pf.appendChild(b); }
-const h = location.hash.slice(1).split("-"); if (h.length === 3 && GROESSEN[h[1]]) { S.mat = h[0] === "hanf" ? "hanf" : "stroh"; S.gr = h[1]; S.st = Math.max(0, Math.min(3, +h[2] || 0)); }
+const h = location.hash.slice(1).split("-"); if (h.length === 3 && GROESSEN[h[1]]) { S.mat = h[0] === "hanf" ? "hanf" : h[0] === "spaene" ? "spaene" : "stroh"; S.gr = h[1]; S.st = Math.max(0, Math.min(3, +h[2] || 0)); }
 function groesse() { const w = innerWidth, hh = innerHeight - parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--panel")); renderer.setSize(w, hh, false); camera.aspect = w / hh; camera.updateProjectionMatrix(); }
 window.__aepfel = { S, zeigen: () => zeigen(), liste: () => { aepfelGruppe.updateMatrixWorld(true); return aepfelGruppe.children.map((o) => ({ typ: o.userData.typ, m: o.matrixWorld.elements })); } };   // für den Export nach Blender (Dome: Äpfel speichern)
 addEventListener("resize", groesse); groesse(); knoepfe(); zeigen();

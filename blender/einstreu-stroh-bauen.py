@@ -62,14 +62,14 @@ muster = objekt("stroh_ebene1_muster", bm, eb1, HALM)
 # ---------- Ebene 2: kleine, lockere Heuhaufen in verschiedenen Größen (keine Grasbüschel) ----------
 # Höhe nie über 2/3 der Eimerhöhe (Eimer Stufe 1 = 28,8 Einheiten → höchstens 19,2). Die Halme liegen kreuz und quer auf der Haufenform, lose abgehoben.
 EIMER_H = 28.8; MAX_H = EIMER_H * 2 / 3
-GROESSEN = [(14, 22, 10), (24, 36, 16), (40, 56, 6)]   # (Radius von, bis, Anzahl) – kleine, mittlere, große Haufen
+GROESSEN = [(14, 22, 13), (24, 36, 21), (40, 56, 8)]   # (Radius von, bis, Anzahl) – kleine, mittlere, große Haufen
 orte = []
 for rmin, rmax, anzahl in GROESSEN[::-1]:   # große zuerst, damit sie Platz finden
     ges = 0
     for versuch in range(600):
         if ges >= anzahl: break
         r = random.uniform(rmin, rmax); x = random.uniform(-B / 2 + r + 8, B / 2 - r - 8); y = random.uniform(-B / 2 + r + 8, B / 2 - r - 8)
-        if all(math.hypot(x - ox, y - oy) > r + orr + 8 for ox, oy, orr, _ in orte):
+        if all(math.hypot(x - ox, y - oy) > 0.45 * (r + orr) for ox, oy, orr, _ in orte):
             hoehe = min(MAX_H, 5.0 + (r - 14) / (56 - 14) * (MAX_H - 5.0)) * random.uniform(0.85, 1.0)   # größer = höher, aber nie über der Grenze
             orte.append((x, y, r, hoehe)); ges += 1
 def normiert(v): return v.normalized() if v.length > 1e-6 else Vector((0, 0, 1))

@@ -80,7 +80,7 @@ async function apfelLaden() {
     const g = await laden(`./pferdeapfel-${n}.glb`);
     g.traverse((o) => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map((m) => material(m, !!o.geometry.attributes.normal)) : material(o.material, !!o.geometry.attributes.normal); });
     const bb = new THREE.Box3().setFromObject(g);
-    aepfelVorlagen.push({ g, w, gr: Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z), minY: bb.min.y });
+    aepfelVorlagen.push({ name: n, g, w, gr: Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z), minY: bb.min.y });
   }
 }
 
@@ -120,12 +120,12 @@ function aepfelStreuen(B) {
   let kipp = 0; const zentren = [];
   const setze = (x, y, z) => {
     const w = R() * 10; let a = 0, v; for (v of aepfelVorlagen) { a += v.w; if (w < a) break; }
-    const o = v.g.clone(true); const s = 0.9 + 0.2 * R(); o.scale.setScalar(s); o.rotation.y = R() * 6.283; o.rotation.x = (R() - .5) * kipp; o.rotation.z = (R() - .5) * kipp;
+    const o = v.g.clone(true); o.userData.typ = v.name; const s = 0.9 + 0.2 * R(); o.scale.setScalar(s); o.rotation.y = R() * 6.283; o.rotation.x = (R() - .5) * kipp; o.rotation.z = (R() - .5) * kipp;
     o.position.set(x, z - v.minY * s - 0.3, -y); aepfelGruppe.add(o); platz.push([x, y]); n++;
   };
   const grenze = (x, y) => Math.abs(x) < bx / 2 - 4 && Math.abs(y) < by / 2 - 4;
   // Dome: wenige Einzeläpfel, dafür echte Haufen (dicht, in der Mitte übereinander gestapelt, am Rand locker)
-  const einzel = Math.round(soll * 0.1), inHaufen = soll - einzel;   // Vorbild Dome-Fotos: kompakter Haufen mit 2–3 Lagen, ein paar Äpfel daneben
+  const nHaufen = (3 + Math.floor(R() * 3)) * S.st, nEinzel = (3 + Math.floor(R() * 3)) * S.st;   // Dome: nach einer Nacht immer 3–5 Haufen + 3–5 einzelne Äpfel (Stufe 2 und 3 das Doppelte/Dreifache, Annahme von Claude)   // Vorbild Dome-Fotos: kompakter Haufen mit 2–3 Lagen, ein paar Äpfel daneben
   const RHO = 0.27 * gr;   // Stützkugel je Apfel (kleiner als der Apfel): die Äpfel gehen teils ineinander
   const stapel = (x, y, z, c) => {   // Apfel fällt auf den Haufen. Schwerkraft: er liegt auf dem Boden oder ruht auf mindestens zwei Äpfeln darunter, zwischen ihnen – sonst rollt er weg (Platz verworfen)
     let zc = z + RHO;
@@ -138,18 +138,18 @@ function aepfelStreuen(B) {
     }
     c.aepfel.push({ x, y, zc }); setze(x, y, zc - RHO); return true;
   };
-  while (n < inHaufen && zu < 8000) {
+  for (let hp = 0; hp < nHaufen && zu < 8000; hp++) {
     let cx, cy, cz;
     do { cx = (R() - .5) * (bx - 24); cy = (R() - .5) * (by - 24); cz = versuch(cx, cy); zu++; } while ((cz === null || !frei(cx, cy, gr * 3)) && zu < 8000);
     if (cz === null) break;
-    const k = Math.min(inHaufen - n, 12 + Math.floor(R() * 9)), c = { x: cx, y: cy, r: gr * (0.55 + 0.045 * k), aepfel: [] }; kipp = 0.9; zentren.push(c);
+    const k = 12 + Math.floor(R() * 9), c = { x: cx, y: cy, r: gr * (0.55 + 0.045 * k), aepfel: [] }; kipp = 0.9; zentren.push(c);
     for (let i = 0; i < k; i++) for (let t = 0; t < 120; t++) {
       const rr = c.r * Math.pow(R(), 0.8), a = R() * 6.283, x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
       if (!grenze(x, y) || !c.aepfel.every((q) => Math.hypot(q.x - x, q.y - y) > gr * 0.2)) continue; const z = versuch(x, y); if (z === null) continue; if (stapel(x, y, z, c)) break;
     }
   }
   kipp = 0.3;
-  while (n < soll && zu < 12000) { const c = zentren.length ? zentren[Math.floor(R() * zentren.length)] : null, a = R() * 6.283, d = c ? c.r + gr * (0.9 + 1.4 * R()) : 0, x = c ? c.x + Math.cos(a) * d : (R() - .5) * (bx - 12), y = c ? c.y + Math.sin(a) * d : (R() - .5) * (by - 12); zu++; if (!grenze(x, y)) continue; const z = versuch(x, y); if (z !== null && frei(x, y, gr * 0.9)) setze(x, y, z); }
+  for (let ez = 0, nz = n; n - nz < nEinzel && zu < 12000; ) { const c = zentren.length ? zentren[Math.floor(R() * zentren.length)] : null, a = R() * 6.283, d = c ? c.r + gr * (0.9 + 1.4 * R()) : 0, x = c ? c.x + Math.cos(a) * d : (R() - .5) * (bx - 12), y = c ? c.y + Math.sin(a) * d : (R() - .5) * (by - 12); zu++; if (!grenze(x, y)) continue; const z = versuch(x, y); if (z !== null && frei(x, y, gr * 0.9)) setze(x, y, z); }
   return n;
 }
 
@@ -203,6 +203,7 @@ document.getElementById("neu").onclick = () => { S.seed++; zeigen(); };
 document.getElementById("dreh").onclick = () => { S.dreh = !S.dreh; knoepfe(); };
 const h = location.hash.slice(1).split("-"); if (h.length === 3 && GROESSEN[h[1]]) { S.mat = h[0] === "hanf" ? "hanf" : "stroh"; S.gr = h[1]; S.st = Math.max(0, Math.min(3, +h[2] || 0)); }
 function groesse() { const w = innerWidth, hh = innerHeight - parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--panel")); renderer.setSize(w, hh, false); camera.aspect = w / hh; camera.updateProjectionMatrix(); }
+window.__aepfel = { S, zeigen: () => zeigen(), liste: () => { aepfelGruppe.updateMatrixWorld(true); return aepfelGruppe.children.map((o) => ({ typ: o.userData.typ, m: o.matrixWorld.elements })); } };   // für den Export nach Blender (Dome: Äpfel speichern)
 addEventListener("resize", groesse); groesse(); knoepfe(); zeigen();
 (function lauf() { if (S.dreh) yaw += 0.004; kamera(); renderer.render(scene, camera); requestAnimationFrame(lauf); })();
 </script>

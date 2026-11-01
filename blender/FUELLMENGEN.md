@@ -62,7 +62,7 @@ Nicht gemistet, eine weitere Nacht um: auf Fläche A ist **das Drittel mit 14 cm
 
 ## Einstreu Stufe 3 der Mistigkeit (Dome 2.11.)
 
-Noch eine Nacht ohne Misten: zusätzlich ist **das Drittel mit 10 cm ausgeblendet**; es bleibt nur das Drittel, das schon auf 5 cm platt getreten war (Dome: „eigentlich die ganze Ebene 2“). **Noch mehr Pferdeäpfel:** 15 Haufen mit 6–11 Äpfeln und 24 einzelne (auf Fläche A zusammen 149). Erzeugt mit `pferdeaepfel-bauen.py` (`STREUEN = True`, `NACHT = 3`). Noch nicht als Datei gespeichert.
+Noch eine Nacht ohne Misten: zusätzlich ist **das Drittel mit 10 cm ausgeblendet**; es bleibt nur das Drittel, das schon auf 5 cm platt getreten war (Dome: „eigentlich die ganze Ebene 2“). **Noch mehr Pferdeäpfel:** 15 Haufen mit 6–11 Äpfeln und 24 einzelne (auf Fläche A zusammen 149). Gespeichert als `strohboxenboden-<a–e>-<Maß>-mistigkeit-3.blend` (ohne Eimer, Heu, Äpfel; Skript `strohboxenboden-mistigkeit3-speichern.py`). Äpfel: `pferdeaepfel-bauen.py` (`STREUEN = True`, `NACHT = 3`) zeigt die Verteilung, das Spiel setzt sie zufällig. **Dome: das platte Drittel (5 cm) bleibt – passt.**
 
 ## Strohhaufen (Einstreu Ebene 2, `blender/einstreu-stroh-bauen.py`)
 

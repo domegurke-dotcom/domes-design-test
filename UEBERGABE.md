@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. nachts (Claude Team) – Mistigkeit Stufe 3 gespeichert
+`blender/strohboxenboden-<a–e>-<Maß>-mistigkeit-3.blend`: nur das platte Drittel (5 cm) bleibt, die Drittel mit 14 und 10 cm sind ausgeblendet; ohne Eimer, Heu, Äpfel (Dome: passt so). Äpfel bei Stufe 3 noch mehr als bei Stufe 2 (Fläche A: 15 Haufen + 24 einzelne = 149), Verteilung durch das Spiel. Skript `strohboxenboden-mistigkeit3-speichern.py`.
+
 ### 2.11. nachts (Claude Team) – Mistigkeit: Namen und Stufe 3
 Einzelböden heißen jetzt `strohboxenboden-<a–e>-<Maß>-mistigkeit-1.blend` (nach einer Nacht, vorher `-nach-einer-nacht`), `-mistigkeit-2.blend` (zwei Nächte, 14-cm-Drittel ausgeblendet) – Skripte `strohboxenboden-mistigkeit1-speichern.py`, `…mistigkeit2-speichern.py`. **Stufe 3** (dritte Nacht: auch das 10-cm-Drittel ausgeblendet, 15 Haufen + 24 einzelne Äpfel) steht nur im Blender-Fenster (`pferdeaepfel-bauen.py`, `NACHT = 3`), noch nicht als Datei gespeichert.
 

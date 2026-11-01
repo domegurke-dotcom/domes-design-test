@@ -21,6 +21,6 @@ for mat_ in ("strohboxenboden", "hanfboxenboden", "spaeneboxenboden"):
         for o in list(bpy.data.objects):
             if not o.name.startswith(P + "_"): bpy.data.objects.remove(o, do_unlink=True)
         out = f"{PROJ}/blender/testseiten/boxenboden/{'hanf' if mat_.startswith('hanf') else 'spaene' if mat_.startswith('spaene') else 'stroh'}-{name}"
-        json.dump({"bx": bx, "by": by, "mass": mass, "haufen": haufen, "hanf": mat_.startswith("hanf"), "kompakt": 1 if name == "a" else 0.75 if mat_.startswith("hanf") else 0.7 if mat_.startswith("spaene") else 1, "mat": mat_[:-10]}, open(out + ".json", "w"))
+        json.dump({"bx": bx, "by": by, "mass": mass, "haufen": haufen, "hanf": mat_.startswith("hanf"), "kompakt": 1, "mat": mat_[:-10]}, open(out + ".json", "w"))
         bpy.ops.export_scene.gltf(filepath=out + ".glb", export_format="GLB", export_apply=True, export_texcoords=False, export_normals=("stroh" in out), export_cameras=False, export_lights=False, use_selection=False)
         print("EXPORT", out.split("/")[-1], len(haufen))

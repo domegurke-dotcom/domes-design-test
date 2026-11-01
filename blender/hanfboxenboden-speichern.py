@@ -24,7 +24,7 @@ def splitter(V, F, MI, p, rich, mh, chip=False, sc=1.0, pn=0.75, dim=None):   # 
     halm(V, F, MI, (7 + random.choices(range(3), NADEL_GEW)[0]) if nadel else random.choices(range(7), gew())[0], p, rich, l, b, 1, 0.0, random.uniform(-0.9, 0.9) if random.random() < 0.85 else random.uniform(-1.5, 1.5)); return l * b
 for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d", "4x5"), ("e", "5x5")]):
     if name not in NUR: continue
-    kmp = 1.0 if name == "a" else KOMPAKT   # Dome 2.11.: Haufenhöhen wie beim Stroh (10/14/18 cm) – erst nur Box A, B–E folgen nach Freigabe
+    kmp = 1.0   # Dome 2.11.: Haufenhöhen wie beim Stroh (10/14/18 cm) – erst nur Box A, B–E folgen nach Freigabe
     bpy.ops.wm.open_mainfile(filepath=f"{PROJ}/blender/strohboxenboden-{name}-{mass}.blend")
     for i, c in enumerate(HANF):
         m = mat(f"hanf_{i}", c); cc = tuple(srgb(x) for x in c) + (1,); m.diffuse_color = cc; m.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = cc

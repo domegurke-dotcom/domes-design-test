@@ -1,4 +1,4 @@
-# Speichert jeden Boxenboden (A–E) aus boxboeden-stroh.blend als eigene Datei, Boden-Mitte im Ursprung (0, 0): blender/strohboxenboden-<a–e>-<Länge>x<Breite>.blend (Dome 2.11.2026)
+# Speichert jeden Boxenboden (A–E) aus boxboeden-stroh.blend als eigene Datei, Boden-Mitte im Ursprung (0, 0): blender/strohboxenboden-<a–e>-<Länge>x<Breite>-roh.blend (lockere Rohfassung, danach strohboxenboden-dicht-speichern.py) (Dome 2.11.2026)
 # Aufruf ohne Fenster: blender -b --python blender/boxboeden-einzeln-speichern.py -- <Projektordner>
 import bpy, sys
 PROJ = sys.argv[sys.argv.index("--") + 1]
@@ -12,6 +12,6 @@ for name, mass in [("A", "3x3"), ("B", "3x4"), ("C", "4x4"), ("D", "4x5"), ("E",
     cx = bpy.data.objects[f"box{name}_boden"].location.x
     for o in bpy.data.objects:
         if o.parent is None: o.location.x -= cx   # Boden-Mitte in den Ursprung
-    ziel = f"{PROJ}/blender/strohboxenboden-{name.lower()}-{mass}.blend"
+    ziel = f"{PROJ}/blender/strohboxenboden-{name.lower()}-{mass}-roh.blend"
     bpy.ops.wm.save_as_mainfile(filepath=ziel)
     print("GESPEICHERT", ziel, len(bpy.data.objects), "Boden bei", round(bpy.data.objects[f"box{name}_boden"].location.x, 2))

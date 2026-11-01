@@ -1,0 +1,94 @@
+# Gemeinsame Bausteine für die Stroh-Einstreu in Blender (Dome): Materialien, Halm, Haufen (Ebene 2), Boden (Ebene 1), gleichmäßige Verteilung.
+# Wird mit exec(open("blender/strohlib.py").read(), globals()) geladen (Aufrufer: boxenboeden-bauen.py, haufen-dazu.py).
+# Maßstab: 1 Modelleinheit = 0,79 cm. Zeichenstil: Workbench, Studio-Licht, Materialfarben, schwarze Kontur (Solidify „kontur“, Material „tinte“).
+import bpy, bmesh, math, random
+from mathutils import Vector, Matrix
+
+E = 0.79   # cm je Einheit
+def srgb(x): x = x / 255; return x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4
+def mat(name, rgb):
+    m = bpy.data.materials.get(name)
+    if m: return m
+    c = tuple(srgb(x) for x in rgb); m = bpy.data.materials.new(name); m.use_nodes = True; b = m.node_tree.nodes["Principled BSDF"]
+    b.inputs["Base Color"].default_value = c + (1,); b.inputs["Roughness"].default_value = 0.8; m.diffuse_color = c + (1,); return m
+def materialien():
+    t = mat("tinte", (0, 0, 0)); t.use_backface_culling = True
+    return {"tinte": t, "grund": mat("stroh_grund", (178, 126, 44)), "haufen": mat("stroh_haufen_koerper", (222, 170, 74)),
+            "halme": [mat("halm_gold", (236, 190, 86)), mat("halm_hell", (250, 218, 132)), mat("halm_bernstein", (214, 150, 50)), mat("halm_blass", (252, 236, 176)), mat("halm_dunkel", (176, 118, 36))]}
+BODEN_GEW = [28, 8, 30, 4, 30]; HAUFEN_GEW = [18, 38, 8, 32, 4]   # Boden etwas dunkler, Haufen heller – so heben sie sich ab
+def farbe(gew): return random.choices(range(5), gew)[0]
+def kontur(o, dicke, versatz):
+    m = o.modifiers.new("kontur", "SOLIDIFY"); m.thickness = dicke; m.offset = 1; m.use_flip_normals = True; m.use_rim = False; m.material_offset = versatz
+
+def halm(V, F, MI, mi, basis, richtung, laenge, breite, segmente, haengen, roll):
+    """Ein Halm als schmales, leicht gebogenes Band, beidseitig sichtbar (eigene Punkte für die Rückseite). V/F/MI sind Listen (Punkte, Flächen, Materialnummern)."""
+    r = richtung.normalized(); s = r.cross(Vector((0, 0, 1)))
+    if s.length < 0.05: s = Vector((1, 0, 0))
+    s = (Matrix.Rotation(roll, 3, r) @ s.normalized()).normalized(); reihe = []
+    for i in range(segmente + 1):
+        t = i / segmente; p = basis + r * laenge * t + Vector((0, 0, -1)) * haengen * laenge * t * t; w = breite * (1 - 0.55 * t) / 2
+        reihe.append(((p - s * w)[:], (p + s * w)[:]))
+    for i in range(segmente):
+        a, b = reihe[i]; c, d = reihe[i + 1]; k = len(V); V.extend([a, b, c, d, a, b, c, d])
+        F.append((k, k + 1, k + 3, k + 2)); MI.append(mi); F.append((k + 6, k + 7, k + 5, k + 4)); MI.append(mi)
+def mesh_objekt(name, V, F, MI, sammlung, mats):
+    me = bpy.data.meshes.new(name); me.from_pydata(V, [], F); me.update()
+    for m in mats: me.materials.append(m)
+    me.polygons.foreach_set("material_index", MI); me.polygons.foreach_set("use_smooth", [False] * len(F))
+    o = bpy.data.objects.new(name, me); sammlung.objects.link(o); return o
+def normiert(v): return v.normalized() if v.length > 1e-6 else Vector((0, 0, 1))
+
+def haufen_bauen(sammlung, praefix, nr, cx, cy, r, H, M, ry=None, seed=None):
+    """Ein kleiner lockerer Heuhaufen (Körper + Halme) bei (cx, cy), Radius r, Höhe H (Einheiten). Die Halme liegen kreuz und quer, nie über H."""
+    random.seed(seed if seed is not None else 1000 + nr)
+    ry = ry or r * random.uniform(0.8, 1.1); kuppel = H * 0.7
+    bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=20, v_segments=10, radius=1.0)
+    for v in bm.verts: v.co = Vector((v.co.x * r, v.co.y * ry, max(v.co.z, -0.1) * kuppel + 1.5))
+    for f in bm.faces: f.material_index = 0; f.smooth = False
+    name = f"{praefix}{nr:02d}"; me = bpy.data.meshes.new(name + "_koerper"); bm.to_mesh(me); bm.free()
+    me.materials.append(M["haufen"]); me.materials.append(M["tinte"])
+    kb = bpy.data.objects.new(name + "_koerper", me); sammlung.objects.link(kb); kb.location = (cx, cy, 0); kontur(kb, 0.8, 1)
+    V, F, MI = [], [], []
+    for i in range(int(r * r * 0.22)):
+        th = math.acos(random.random() ** 0.8) * 0.93; w = random.uniform(0, math.tau)
+        p = Vector((r * math.sin(th) * math.cos(w), ry * math.sin(th) * math.sin(w), kuppel * math.cos(th) + 1.5))
+        nrm = normiert(Vector((math.sin(th) * math.cos(w) / r, math.sin(th) * math.sin(w) / ry, math.cos(th) / kuppel)))
+        zufall = Vector((random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1)))
+        tang = normiert(zufall - nrm * zufall.dot(nrm)); anh = math.radians(random.uniform(0, 38))
+        rich = normiert(tang * math.cos(anh) + nrm * math.sin(anh)); laenge = random.uniform(15, 28) * (0.75 + 0.25 * min(1, r / 40))
+        if p.z + laenge * rich.z - 0.28 * laenge > H:
+            zc = max(-0.2, min(rich.z, (H - p.z + 0.28 * laenge) / laenge)); hor = Vector((rich.x, rich.y, 0)); hor = hor.normalized() if hor.length > 1e-6 else Vector((1, 0, 0))
+            rich = hor * math.sqrt(1 - zc * zc) + Vector((0, 0, zc))
+        halm(V, F, MI, farbe(HAUFEN_GEW), p, rich, laenge, random.uniform(1.4, 2.1), 2, 0.28, random.uniform(-0.9, 0.9))
+    hl = mesh_objekt(name + "_halme", V, F, MI, sammlung, M["halme"]); hl.location = (cx, cy, 0)
+    return kb, hl
+
+def boden_bauen(sammlung, praefix, B, ox, oy, M, anzahl=None, seed=5):
+    """Ebene 1: flache Grundplatte B × B (Einheiten) mit Kontur und flach liegenden Halmen als Muster, Mitte bei (ox, oy)."""
+    random.seed(seed)
+    bm = bmesh.new(); bmesh.ops.create_cube(bm, size=1.0)
+    for v in bm.verts: v.co = Vector((v.co.x * B, v.co.y * B, v.co.z * 4.0 - 2.0))
+    for f in bm.faces: f.material_index = 0
+    me = bpy.data.meshes.new(praefix + "_boden"); bm.to_mesh(me); bm.free(); me.materials.append(M["grund"]); me.materials.append(M["tinte"])
+    platte = bpy.data.objects.new(praefix + "_boden", me); sammlung.objects.link(platte); platte.location = (ox, oy, 0); kontur(platte, 1.2, 1)
+    n = anzahl or int(B * B * 12000 / (443.0 * 443.0)); V, F, MI = [], [], []
+    for i in range(n):
+        a = random.uniform(0, math.tau); p = random.uniform(-0.09, 0.09)
+        halm(V, F, MI, farbe(BODEN_GEW), Vector((random.uniform(-B / 2 + 8, B / 2 - 8), random.uniform(-B / 2 + 8, B / 2 - 8), random.uniform(0.3, 2.4))),
+             Vector((math.cos(a), math.sin(a), math.tan(p))), random.uniform(16, 34), random.uniform(1.5, 2.3), 1, 0.04, random.uniform(-0.5, 0.5))
+    mu = mesh_objekt(praefix + "_muster", V, F, MI, sammlung, M["halme"]); mu.location = (ox, oy, 0)
+    return platte, mu
+
+def verteilen(B, radien, seed=3, runden=25, jitter=0.22):
+    """Gleichmäßig und trotzdem zufällig über die Fläche B × B verteilen (Lloyd-Verteilung, danach zufälliges Verrücken). Gibt Positionen und Bedeckung (Anteil, 0–1) zurück."""
+    import numpy as np
+    rng = np.random.default_rng(seed); R = np.array(radien, dtype=float); K = len(R); pos = rng.uniform(-B * 0.45, B * 0.45, (K, 2))
+    Z = 6.0; N = int(B / Z); xs = -B / 2 + (np.arange(N) + 0.5) * Z; cells = np.array([(x, y) for x in xs for y in xs])
+    for _ in range(runden):
+        d = np.hypot(cells[:, None, 0] - pos[None, :, 0], cells[:, None, 1] - pos[None, :, 1]) - R[None, :] * 0.7; n = d.argmin(1)
+        for k in range(K):
+            m = n == k
+            if m.any(): lim = B / 2 - R[k] * 0.45; pos[k] = np.clip(0.5 * pos[k] + 0.5 * cells[m].mean(0), -lim, lim)
+    lim = (B / 2 - R * 0.45)[:, None]; pos = np.clip(pos + rng.uniform(-jitter, jitter, (K, 2)) * R[:, None], -lim, lim)
+    d = np.hypot(cells[:, None, 0] - pos[None, :, 0], cells[:, None, 1] - pos[None, :, 1]) - R[None, :] * 0.85
+    return pos, float((d.min(1) <= 0).mean())

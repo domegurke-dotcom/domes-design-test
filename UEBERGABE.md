@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. nachts (Claude Team) – Blender: 8 Haufen dazu, vier Boxenböden A–D, Boxenmaße
+**Einstreu Ebene 2:** 8 Haufen dazu (Nr. 148–155, Liste `dazu` in `einstreu-haufen-zustand.json`, in die größten Lücken gesetzt: 3 × 18 cm, 3 × 14 cm, 2 × 10 cm) → jetzt 92 Haufen. **Boxmaße** in `blender/BOXMASSE.md` (Boxenstall/Quarantäne/Paddock 3/4/5 m, Abfohlstall 4/5/6 m). **Vier Boxenböden** A 3×3, B 4×4, C 5×5, D 6×6 m mit Stroh in 2 Ebenen (68/120/188/271 Haufen, Bedeckung 85–88 %), 2,5 m Abstand, vorne beschriftet: `blender/boxboeden-stroh.blend`, Skripte `boxenboeden-bauen.py` + gemeinsame Bibliothek `strohlib.py`; im offenen Fenster liegen sie rechts neben dem 3,5-m-Boden. Dome schrieb „a–e“ (fünf Buchstaben), es gibt aber vier Größen – offen, was E sein soll.
+
 ### 2.11. spät (Claude Team) – Blender: echtes Innenprofil Eimer Stufe 2, Haufenhöhen 18 / 14 / 10 cm
 **Eimer Stufe 2:** die Innenwand war aus den Eckpunkten falsch geschätzt (24,8 statt 20,5 bei z = 32) → Füllung ragte durch die Wand. Jetzt echtes Profil per Strahlen gemessen (`A2`/`B2`/`BK` in `eimer-fuellung.py`), Eimer-Skala für 12 l nun **0,951** (war 0,879), Strahlenprüfung: 0 Punkte über der Wand (Stufe 1 und 2). `eimer-stufe1-12l.blend` und `eimer-stufe2-12l.blend` neu gespeichert. **Einstreu Ebene 2:** Maximalhöhe 18 cm; je 28 der 84 Haufen auf 18 / 14 / 10 cm (große hoch, kleine niedrig, mit Zufall), Zustand in `einstreu-haufen-zustand.json` (`hoehen_cm`). **Boxenmaße für das Spiel (Dome fragte nach Stute + Fohlen, Hengste, Kaltblüter):** siehe Antwort im Chat vom 2.11., die Werte stehen auch in `FUELLMENGEN.md` nicht – sie sind eine Auskunft, noch nicht im Spiel.
 

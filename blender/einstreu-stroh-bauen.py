@@ -116,6 +116,12 @@ if os.path.exists(ZUSTAND):
         if str(int(nr)) not in Z: bpy.data.objects.remove(o, do_unlink=True)
         else:
             d = Z[str(int(nr))]; o.location.x, o.location.y = d["x"], d["y"]; o.scale.z = d["skala_z"]
+# Dome 2.11.: 8 Haufen dazu (Liste "dazu" im Zustand), gebaut mit der gemeinsamen Bibliothek strohlib.py
+if os.path.exists(ZUSTAND):
+    exec(open(PROJ + "/blender/strohlib.py", encoding="utf-8").read(), globals())
+    _M = materialien()
+    for h in json.load(open(ZUSTAND, encoding="utf-8")).get("dazu", []):
+        haufen_bauen(eb2, "stroh_haufen_", h["nr"], h["x"], h["y"], h["r"], h["hoehe_cm"] / 0.79, _M, seed=h["seed"])
 # ---------- Szene wie bei den anderen Blender-Modellen ----------
 bpy.ops.object.select_all(action="DESELECT")
 sc = bpy.context.scene; sc.render.engine = "BLENDER_WORKBENCH"; sh = sc.display.shading

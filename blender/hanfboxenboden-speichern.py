@@ -21,7 +21,7 @@ def masse(chip=False, sc=1.0, pn=0.75):   # Maße eines Teilchens: (Nadel?, Län
     return (False, random.uniform(1.5, 5.5) / E * sc, random.uniform(0.3, 0.9) / E * sc)
 def splitter(V, F, MI, p, rich, mh, chip=False, sc=1.0, pn=0.75, dim=None):   # gibt die Fläche des Teilchens zurück
     nadel, l, b = dim or masse(chip, sc, pn)
-    halm(V, F, MI, (7 + random.choices(range(3), NADEL_GEW)[0]) if nadel else random.choices(range(7), gew())[0], p, rich, l, b, 1, 0.0, random.uniform(-0.3, 0.3)); return l * b
+    halm(V, F, MI, (7 + random.choices(range(3), NADEL_GEW)[0]) if nadel else random.choices(range(7), gew())[0], p, rich, l, b, 1, 0.0, random.uniform(-0.9, 0.9) if random.random() < 0.85 else random.uniform(-1.5, 1.5)); return l * b
 for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d", "4x5"), ("e", "5x5")]):
     if name not in NUR: continue
     bpy.ops.wm.open_mainfile(filepath=f"{PROJ}/blender/strohboxenboden-{name}-{mass}.blend")
@@ -47,7 +47,7 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
     def hset(x, y, v):
         k = (int(x // CELL), int(y // CELL))
         if v > hg.get(k, 2.0): hg[k] = v
-    HMAX = 4.5   # höchste Streuhöhe über der Platte (Einheiten)
+    HMAX = 6.0   # höchste Streuhöhe über der Platte (Einheiten)
     LT = 3.5   # angenommene Teilchenlänge für die Auflage (Einheiten)
     def lege(x, y, chip=False):   # ein Teilchen fällt auf das, was darunter liegt (echte Länge, liegt auf dem höchsten Punkt, kaum geneigt – nichts schwebt); gibt die Fläche zurück
         dim = masse(chip, 1.4, 0.4); L = dim[1]
@@ -56,9 +56,10 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
             if abs(x + dx) <= BX / 2 - 1 and abs(x - dx) <= BX / 2 - 1 and abs(y + dy) <= BY / 2 - 1 and abs(y - dy) <= BY / 2 - 1: break
         else: return 0.0
         pts = [(x + dx * t_, y + dy * t_) for t_ in (-1.0, -0.5, 0.0, 0.5, 1.0)]; hs_ = [hh(px, py) for px, py in pts]
-        zs = min(sum(hs_[0:3]) / 3 + 0.1, 2.0 + HMAX); ze = min(sum(hs_[2:5]) / 3 + 0.1, 2.0 + HMAX)   # liegt auf dem Mittel darunter (drückt sich etwas ein, keine Brücken über Hohlräume), nie höher als HMAX über der Platte
+        lock_ = random.uniform(0.0, 0.9)   # locker: manche liegen etwas höher auf
+        zs = min(sum(hs_[0:3]) / 3 + 0.1 + lock_, 2.0 + HMAX); ze = min(sum(hs_[2:5]) / 3 + 0.1 + lock_, 2.0 + HMAX)   # liegt auf dem Mittel darunter (drückt sich etwas ein, keine Brücken über Hohlräume), nie höher als HMAX über der Platte
         fl = math.sin(x / 45 + ph[4]) * math.sin(y / 41 + ph[5]); PATCH[0] = 1 if fl > 0.3 else -1 if fl < -0.3 else 0
-        fl_ = splitter(V, F, MI, Vector((x - dx, y - dy, zs)), Vector((math.cos(a), math.sin(a), max(-0.15, min(0.15, (ze - zs) / L)))), mh, chip, 1.4, 0.0, dim)
+        fl_ = splitter(V, F, MI, Vector((x - dx, y - dy, zs)), Vector((math.cos(a), math.sin(a), max(-0.3, min(0.3, (ze - zs) / L)))), mh, chip, 1.4, 0.0, dim)
         for (px, py), zz in zip(pts, (zs, (3 * zs + ze) / 4, (zs + ze) / 2, (zs + 3 * ze) / 4, ze)): hset(px, py, zz + 0.35)
         return fl_
     # Ebene 1 deckt die Bodenplatte ganz ab (Dome: schöne Übergänge wie beim Stroh): erst ein Raster, in jeder Zelle ein größeres Teilchen, dann Zufall und Klumpen bis zur Zielfläche
@@ -90,7 +91,7 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
             nrm = normiert(Vector((math.sin(th) * math.cos(w) / r, math.sin(th) * math.sin(w) / ry, math.cos(th) / kuppel)))
             zu = Vector((random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1))); tang = normiert(zu - nrm * zu.dot(nrm))
             rc_ = normiert(tang + nrm * random.uniform(-0.05, 0.12) + Vector((random.uniform(-.2, .2), random.uniform(-.2, .2), random.uniform(-.08, .08))))
-            zmax_ = 0.8 if random.random() < 0.03 else 0.2   # nur einzelne Teilchen stehen schräg nach oben, die meisten liegen (Schwerkraft)
+            zmax_ = 0.8 if random.random() < 0.06 else 0.32   # nur einzelne Teilchen stehen schräg nach oben, die meisten liegen (Schwerkraft)
             if rc_.z > zmax_ or rc_.z < -0.4:
                 hr_ = Vector((rc_.x, rc_.y, 0)); hr_ = hr_.normalized() if hr_.length > 1e-6 else Vector((1, 0, 0)); zc_ = max(-0.4, min(zmax_, rc_.z)); rc_ = hr_ * math.sqrt(1 - zc_ * zc_) + Vector((0, 0, zc_))
             splitter(V, F, MI, p + nrm * 0.2, rc_, mh)

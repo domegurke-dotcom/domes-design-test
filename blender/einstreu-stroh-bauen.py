@@ -1,7 +1,7 @@
 # Einstreu Stroh (Boxenboden) in zwei Ebenen – Blender 5.x, läuft ohne Fenster:
 #   blender -b --python einstreu-stroh-bauen.py -- <Projektordner> <Vorschau.png>
 # Ebene 1: flacher Boden mit Muster aus flach liegenden Halmen (darauf stehen Eimer, Pferd …)
-# Ebene 2: einzelne aufgelockerte Bereiche (Haufen) mit aufgestellten, abgespreizten Halmen
+# Ebene 2: kleine, lockere Heuhaufen in verschiedenen Größen (höchstens 2/3 Eimerhöhe)
 # Maßstab wie die anderen Modelle: 1 Einheit ≈ 0,79 cm → Box 3,5 × 3,5 m = 443 Einheiten
 import bpy, bmesh, math, random, sys
 from mathutils import Vector, Matrix
@@ -19,10 +19,11 @@ def mat(name, rgb):
     b.inputs["Base Color"].default_value = c + (1,); b.inputs["Roughness"].default_value = 0.8; m.diffuse_color = c + (1,); return m
 TINTE = mat("tinte", (0, 0, 0)); TINTE.use_backface_culling = True
 GRUND = mat("stroh_grund", (178, 126, 44))
-HAUFEN = mat("stroh_haufen_koerper", (196, 142, 52))
+HAUFEN = mat("stroh_haufen_koerper", (222, 170, 74))
 HALM = [mat("halm_gold", (236, 190, 86)), mat("halm_hell", (250, 218, 132)), mat("halm_bernstein", (214, 150, 50)), mat("halm_blass", (252, 236, 176)), mat("halm_dunkel", (176, 118, 36))]
 GEWICHT = [30, 26, 20, 14, 10]
-def farbe(): return random.choices(range(5), GEWICHT)[0]
+BODEN_GEW = [28, 8, 30, 4, 30]; HAUFEN_GEW = [18, 38, 8, 32, 4]   # Boden etwas dunkler, Haufen heller – so heben sie sich ab
+def farbe(gew=None): return random.choices(range(5), gew or BODEN_GEW)[0]
 def kontur(o, dicke, versatz):
     m = o.modifiers.new("kontur", "SOLIDIFY"); m.thickness = dicke; m.offset = 1; m.use_flip_normals = True; m.use_rim = False; m.material_offset = versatz
 
@@ -54,28 +55,43 @@ platte = objekt("stroh_ebene1_boden", bm, eb1, [GRUND, TINTE]); kontur(platte, 1
 bm = bmesh.new()
 for i in range(7500):
     a = random.uniform(0, math.tau); p = random.uniform(-0.09, 0.09)
-    halm(bm, farbe(), Vector((random.uniform(-B / 2 + 8, B / 2 - 8), random.uniform(-B / 2 + 8, B / 2 - 8), random.uniform(0.3, 2.4))),
+    halm(bm, farbe(BODEN_GEW), Vector((random.uniform(-B / 2 + 8, B / 2 - 8), random.uniform(-B / 2 + 8, B / 2 - 8), random.uniform(0.3, 2.4))),
          Vector((math.cos(a), math.sin(a), math.tan(p))), random.uniform(16, 34), random.uniform(1.5, 2.3), 1, 0.04, random.uniform(-0.5, 0.5))
 muster = objekt("stroh_ebene1_muster", bm, eb1, HALM)
 
-# ---------- Ebene 2: einzelne aufgelockerte Bereiche ----------
+# ---------- Ebene 2: kleine, lockere Heuhaufen in verschiedenen Größen (keine Grasbüschel) ----------
+# Höhe nie über 2/3 der Eimerhöhe (Eimer Stufe 1 = 28,8 Einheiten → höchstens 19,2). Die Halme liegen kreuz und quer auf der Haufenform, lose abgehoben.
+EIMER_H = 28.8; MAX_H = EIMER_H * 2 / 3
+GROESSEN = [(14, 22, 5), (24, 36, 8), (40, 56, 3)]   # (Radius von, bis, Anzahl) – kleine, mittlere, große Haufen
 orte = []
-for versuch in range(400):
-    if len(orte) >= 13: break
-    r = random.uniform(30, 58); x = random.uniform(-B / 2 + r + 10, B / 2 - r - 10); y = random.uniform(-B / 2 + r + 10, B / 2 - r - 10)
-    if all(math.hypot(x - ox, y - oy) > r + orr + 14 for ox, oy, orr in orte): orte.append((x, y, r))
-for n, (cx, cy, r) in enumerate(orte, 1):
+for rmin, rmax, anzahl in GROESSEN[::-1]:   # große zuerst, damit sie Platz finden
+    ges = 0
+    for versuch in range(600):
+        if ges >= anzahl: break
+        r = random.uniform(rmin, rmax); x = random.uniform(-B / 2 + r + 8, B / 2 - r - 8); y = random.uniform(-B / 2 + r + 8, B / 2 - r - 8)
+        if all(math.hypot(x - ox, y - oy) > r + orr + 8 for ox, oy, orr, _ in orte):
+            hoehe = min(MAX_H, 5.0 + (r - 14) / (56 - 14) * (MAX_H - 5.0)) * random.uniform(0.85, 1.0)   # größer = höher, aber nie über der Grenze
+            orte.append((x, y, r, hoehe)); ges += 1
+def normiert(v): return v.normalized() if v.length > 1e-6 else Vector((0, 0, 1))
+for n, (cx, cy, r, H) in enumerate(orte, 1):
+    ry = r * random.uniform(0.8, 1.1); kuppel = H * 0.7   # niedriger Haufenkörper, der Rest der Höhe kommt von den lose aufliegenden Halmen
     bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=20, v_segments=10, radius=1.0)
-    for v in bm.verts: v.co = Vector((v.co.x * r * 1.0, v.co.y * r * 1.0, max(v.co.z, -0.1) * r * 0.2 + 2.0))
+    for v in bm.verts: v.co = Vector((v.co.x * r, v.co.y * ry, max(v.co.z, -0.1) * kuppel + 1.5))
     for f in bm.faces: f.material_index = 0
-    kb = objekt(f"stroh_haufen_{n:02d}_koerper", bm, eb2, [HAUFEN, TINTE]); kb.location = (cx, cy, 0); kontur(kb, 0.9, 1)
+    kb = objekt(f"stroh_haufen_{n:02d}_koerper", bm, eb2, [HAUFEN, TINTE]); kb.location = (cx, cy, 0); kontur(kb, 0.8, 1)
     bm = bmesh.new()
-    for i in range(int(r * r * 0.26)):
-        rb = r * math.sqrt(random.random()) ** 1.15; w = random.uniform(0, math.tau); bx, by = rb * math.cos(w), rb * math.sin(w)
-        az = w + random.gauss(0, 1.15); nach_innen = rb / r
-        pitch = max(math.radians(8), math.radians(72 - 50 * nach_innen) + random.gauss(0, 0.22))
-        rich = Vector((math.cos(az) * math.cos(pitch), math.sin(az) * math.cos(pitch), math.sin(pitch)))
-        halm(bm, farbe(), Vector((bx, by, random.uniform(2.0, 5.0))), rich, max(10, 30 - 11 * nach_innen + random.uniform(-5, 5)), random.uniform(1.4, 2.1), 2, 0.28, random.uniform(-0.9, 0.9))
+    for i in range(int(r * r * 0.34)):
+        th = math.acos(random.random() ** 0.8) * 0.93; w = random.uniform(0, math.tau)   # eher oben auf dem Haufen
+        p = Vector((r * math.sin(th) * math.cos(w), ry * math.sin(th) * math.sin(w), kuppel * math.cos(th) + 1.5))
+        nrm = normiert(Vector((math.sin(th) * math.cos(w) / r, math.sin(th) * math.sin(w) / ry, math.cos(th) / kuppel)))
+        zufall = Vector((random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1)))
+        tang = normiert(zufall - nrm * zufall.dot(nrm))              # kreuz und quer entlang der Oberfläche
+        anh = math.radians(random.uniform(0, 38))                    # lose: ein Stück von der Oberfläche abgehoben
+        rich = normiert(tang * math.cos(anh) + nrm * math.sin(anh))
+        laenge = random.uniform(15, 28) * (0.75 + 0.25 * min(1, r / 40))
+        if p.z + laenge * rich.z - 0.28 * laenge > H:               # nie über die Höhengrenze
+            rich.z = max(-0.2, (H - p.z + 0.28 * laenge) / laenge); rich = normiert(rich)
+        halm(bm, farbe(HAUFEN_GEW), p, rich, laenge, random.uniform(1.4, 2.1), 2, 0.28, random.uniform(-0.9, 0.9))
     hl = objekt(f"stroh_haufen_{n:02d}_halme", bm, eb2, HALM); hl.location = (cx, cy, 0)
 
 # ---------- Szene wie bei den anderen Blender-Modellen ----------

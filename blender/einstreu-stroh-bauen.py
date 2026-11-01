@@ -61,7 +61,7 @@ muster = objekt("stroh_ebene1_muster", bm, eb1, HALM)
 
 # ---------- Ebene 2: kleine, lockere Heuhaufen in verschiedenen Größen (keine Grasbüschel) ----------
 # Höhe nie über 2/3 der Eimerhöhe (Eimer Stufe 1, auf 12 Liter skaliert: 32,4 Einheiten → höchstens 21,6). Die Halme liegen kreuz und quer auf der Haufenform, lose abgehoben.
-EIMER_H = 28.8 * 1.126; MAX_H = EIMER_H * 2 / 3   # Eimer Stufe 1 auf 12 Liter vergrößert (Skala 1,126, Füllgrenze 12 Liter) → Höhe 32,4, Grenze 21,6
+EIMER_H = 28.8 * 1.126; MAX_H = 18 / 0.79   # Dome 2.11.: Maximalhöhe der Haufen 18 cm (22,8 Einheiten); die endgültigen Höhen (18 / 14 / 10 cm je ein Drittel) setzt einstreu-haufen-zustand.json
 GROESSEN = [(14, 22, 0.30), (24, 36, 0.45), (40, 56, 0.25)]   # (Radius von, bis, Anteil) – kleine, mittlere, große Haufen
 # Dome 1.11.: die Haufen so anordnen, dass kaum Freifläche bleibt. Rasterzellen (8 Einheiten) zeigen, was noch frei ist; jeder neue Haufen kommt auf eine freie Stelle
 # (Haufen dürfen ineinander übergehen), bis höchstens 3 % frei sind. Am Rand werden die Haufen kleiner, damit sie nicht über die Platte ragen.

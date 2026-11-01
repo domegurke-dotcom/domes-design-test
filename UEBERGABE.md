@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. spät (Claude Team) – Blender: echtes Innenprofil Eimer Stufe 2, Haufenhöhen 18 / 14 / 10 cm
+**Eimer Stufe 2:** die Innenwand war aus den Eckpunkten falsch geschätzt (24,8 statt 20,5 bei z = 32) → Füllung ragte durch die Wand. Jetzt echtes Profil per Strahlen gemessen (`A2`/`B2`/`BK` in `eimer-fuellung.py`), Eimer-Skala für 12 l nun **0,951** (war 0,879), Strahlenprüfung: 0 Punkte über der Wand (Stufe 1 und 2). `eimer-stufe1-12l.blend` und `eimer-stufe2-12l.blend` neu gespeichert. **Einstreu Ebene 2:** Maximalhöhe 18 cm; je 28 der 84 Haufen auf 18 / 14 / 10 cm (große hoch, kleine niedrig, mit Zufall), Zustand in `einstreu-haufen-zustand.json` (`hoehen_cm`). **Boxenmaße für das Spiel (Dome fragte nach Stute + Fohlen, Hengste, Kaltblüter):** siehe Antwort im Chat vom 2.11., die Werte stehen auch in `FUELLMENGEN.md` nicht – sie sind eine Auskunft, noch nicht im Spiel.
+
 ### 2.11. später (Claude Team) – Blender: Eimer Stufe 2 Wulst, Haufen auf 20 cm
 **Eimer Stufe 2:** unter dem Rand verengt sich die Innenwand bei z = 34 um 1,4 (Wulst) – das fehlte im Profil, Futter ragte dort durch. In `eimer-fuellung.py` ergänzt (Überstand jetzt −0,34 = innen), Skala des Eimers 0,879, `eimer-stufe1-12l.blend` / `eimer-stufe2-12l.blend` neu gespeichert, `leckstein.blend` ist mit dem anliegenden Seil gespeichert. **Einstreu Ebene 2:** Dome wollte 1/9 der Haufen auf 20 cm Höhe (25,3 Einheiten, liegt über der alten 21,6-Grenze): 9 von 84 Haufen (Nr. 2, 18, 24, 47, 74, 98, 112, 116, 131), im Zustand `einstreu-haufen-zustand.json` (`hoch20`).
 

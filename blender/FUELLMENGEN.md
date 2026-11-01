@@ -27,10 +27,10 @@ Maßstab: 1 Modelleinheit = 0,79 cm, also 1 Einheit³ = 0,000493 Liter. Alle Zah
 
 ## Futtereimer (`blender/eimer-fuellung.py`)
 
-- **Innenwand Stufe 2 (Dome 2.11.):** bei z = 34 verengt sich die Wand um 1,4 (Wulst unter dem Rand), dort ragte Futter durch; das Profil in `eimer-fuellung.py` kennt das jetzt (größter Überstand −0,34, also innen).
+- **Prüfung (Dome 2.11.):** Futter durch die Wand wird jetzt mit Strahlen vom Innenraum gegen die echte Eimerwand geprüft (alle Eckpunkte der Füllung samt Kontur). Ergebnis: kein Punkt über der Wand (größter Überstand −0,02 Stufe 1, −0,1 Stufe 2). Früher war das Wandprofil von Stufe 2 aus Eckpunkten geschätzt und viel zu weit (24,8 statt 20,5 bei z = 32).
 - Füllgrenze (Dome 1.11.: Pros Wasserlinie 25,4 / 31,4 als Ausgangspunkt, dann „Stufe 1 etwas niedriger, Stufe 2 etwas höher“): Eimer Stufe 1 bei **z = 24,0**, Eimer Stufe 2 bei **z = 34,4** (erst 31,4, dann 33,0, Dome: noch etwas höher) (jeweils im unskalierten Modell, gleichmäßig mit dem Eimer skaliert). Die Werte stehen in `FUELLGRENZE_Z` in `eimer-fuellung.py` und lassen sich dort nachziehen.
-- Damit sie bei **12 Litern** liegt, sind die Eimer skaliert: **Stufe 1 × 1,126** (Höhe 32,4 Einheiten ≈ 25,6 cm), **Stufe 2 × 0,879**. Der unskalierte Eimer fasste bis zu diesen Linien 8,4 l (Stufe 1) und 17,7 l (Stufe 2).
-- Eimer Stufe 1 (rund): innen 13,5 Einheiten Radius am Boden bis 18,0 am Rand; Stufe 2 (halbrund, Rückseite gerade): Halbachse x 18,4 bis 24,8 und Tiefe 27,2 bis 34,8.
+- Damit sie bei **12 Litern** liegt, sind die Eimer skaliert: **Stufe 1 × 1,126** (Höhe 32,4 Einheiten ≈ 25,6 cm), **Stufe 2 × 0,951**. Der unskalierte Eimer fasste bis zu diesen Linien 8,4 l (Stufe 1) und 14,0 l (Stufe 2).
+- Eimer Stufe 1 (rund): innen 13,5 Einheiten Radius am Boden bis 18,0 am Rand; Stufe 2 (halbrund, Rückseite gerade): Halbachse x 18,5 (unten) bis 20,7 (z = 34) und Tiefe 27,4 bis 30,7, Rückwand bei y = −1,0 (Messwerte mit Strahlen gegen das Modell, Tabelle `A2`/`B2`/`BK` in `eimer-fuellung.py`).
 - Schüttdichte kg je Liter: **Hafer 0,50**, **Müsli 0,40**, **Mineralfutter 0,65**, **Rübenschnitzel 0,25**.
 - Höchstmenge (12 Liter): Hafer 6,0 kg, Müsli 4,8 kg, Mineral 7,8 kg, Rübenschnitzel 3,0 kg.
 - Füllhöhe (im unskalierten Modell, z von unten) je Liter:
@@ -38,7 +38,7 @@ Maßstab: 1 Modelleinheit = 0,79 cm, also 1 Einheit³ = 0,000493 Liter. Alle Zah
 | Liter | 1 | 2 | 3 | 4 | 5 | 6 | 8 | 10 | 12 |
 |---|---|---|---|---|---|---|---|---|---|
 | Eimer Stufe 1 | 3,3 | 5,6 | 7,8 | 9,9 | 11,9 | 13,8 | 17,5 | 20,9 | 24,0 |
-| Eimer Stufe 2 | 4,7 | 8,1 | 11,3 | 14,4 | 17,3 | 20,0 | 25,1 | 29,9 | 34,4 |
+| Eimer Stufe 2 | 4,1 | 7,2 | 10,2 | 13,1 | 16,0 | 18,8 | 24,2 | 29,4 | 34,4 |
 
 - Liter = Menge in kg ÷ Schüttdichte. Über 12 Liter bleibt die Füllung an der Füllgrenze.
 - Die obersten Körner ragen etwa 1,2 Einheiten über die Oberfläche; das Skript senkt die Oberfläche entsprechend ab, damit sie genau an der Füllgrenze enden.
@@ -46,8 +46,8 @@ Maßstab: 1 Modelleinheit = 0,79 cm, also 1 Einheit³ = 0,000493 Liter. Alle Zah
 
 ## Strohhaufen (Einstreu Ebene 2, `blender/einstreu-stroh-bauen.py`)
 
-- **84 Haufen**, etwa 1/3 (18 von ihnen) auf **Maximalhöhe** und **9 Haufen (1/9) auf 20 cm = 25,3 Einheiten** (Dome 2.11.; das liegt über der Grenze, die übrigen bleiben darunter). Zustand in `einstreu-haufen-zustand.json`.
-- Sonst höchstens **2/3 der Höhe von Eimer Stufe 1**: Eimer 28,8 × 1,126 = 32,4 Einheiten hoch, also höchstens 21,6. Der höchste Haufen ist 19,2 hoch.
+- **84 Haufen** (Dome 2.11.): je ein Drittel auf **18 cm** (22,8 Einheiten, die größeren Haufen), **14 cm** (17,7) und **10 cm** (12,7, die kleineren), je 28 Haufen. Zustand in `einstreu-haufen-zustand.json`.
+- Maximalhöhe jetzt **18 cm** (22,8 Einheiten). Die frühere Grenze 2/3 der Eimerhöhe (21,6) gilt nicht mehr.
 
 ## Wie beides im Blender-Fenster läuft
 

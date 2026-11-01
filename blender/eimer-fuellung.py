@@ -27,12 +27,15 @@ def lerp(tab, z):
         if z <= z1: return w0 + (w1 - w0) * max(0.0, (z - z0) / (z1 - z0))
     return tab[-1][1]
 R1 = [(0.8, 13.5), (4.0, 14.0), (12.0, 15.1), (20.0, 16.4), (24.8, 17.6), (25.7, 18.0)]   # Innenradius Eimer Stufe 1 nach Höhe
-A2 = [(1.0, 18.4), (32.2, 24.8), (34.0, 23.4), (37.0, 24.8), (40.0, 24.8)]; B2 = [(1.0, 27.2), (32.2, 34.8), (34.0, 33.4), (37.0, 34.8), (40.0, 34.8)]   # Dome 2.11.: bei z = 34 verengt sich die Innenwand um 1,4 (Wulst unter dem Rand) – dort ragte Futter durch die Wand   # Innenmaße Eimer Stufe 2: Halbachse x, Tiefe nach -y
+# Innenprofil Eimer Stufe 2: gemessen mit Strahlen vom Innenraum gegen die Wand (Halbachse x, Tiefe nach -y; die Eckpunkte-Ringe des Modells täuschten eine viel weitere Wand vor)
+A2 = [(1.0, 18.9), (3.0, 18.45), (6.0, 18.67), (10.0, 18.95), (15.0, 19.3), (20.0, 19.66), (25.0, 20.01), (28.0, 20.23), (30.0, 20.36), (32.0, 20.5), (33.0, 20.57), (34.0, 20.72), (34.5, 21.0), (35.0, 21.51), (36.0, 23.22), (40.0, 23.2)]
+B2 = [(1.0, 27.3), (3.0, 27.35), (6.0, 27.67), (10.0, 28.09), (15.0, 28.62), (20.0, 29.14), (25.0, 29.67), (28.0, 29.99), (30.0, 30.2), (32.0, 30.41), (33.0, 30.51), (34.0, 30.68), (34.5, 30.99), (35.0, 31.46), (36.0, 33.12), (40.0, 33.1)]
+BK = [(1.0, 0.97), (32.5, 0.98), (33.0, 1.04), (33.5, 1.29), (34.0, 1.55), (34.5, 1.24), (35.0, 1.02), (37.0, 1.43), (40.0, 1.43)]   # Abstand der geraden Rückwand (Innenseite) von y = 0
 Z0, RIM = (0.8, 25.7) if EIMER == "stufe1" else (1.0, 37.0)
 HMAX = FUELLGRENZE_Z[EIMER]
 def flaeche(z):
     if EIMER == "stufe1": return math.pi * lerp(R1, z) ** 2
-    return math.pi * lerp(A2, z) * lerp(B2, z) / 2
+    return math.pi * lerp(A2, z) * lerp(B2, z) / 2 - 2 * lerp(A2, z) * lerp(BK, z)   # Halbellipse minus der Streifen hinter der Rückwand
 def liter_roh(h):   # Volumen des unskalierten Modells in Litern
     v, z = 0.0, Z0
     while z < h: v += flaeche(z + 0.05) * 0.1; z += 0.1
@@ -59,7 +62,7 @@ else:
     liter = KG / DICHTE[FUTTER]; h, passt = hoehe_fuer_liter(liter)
     def innen(x, y, zuschlag=0.0):
         if EIMER == "stufe1": return x * x + y * y <= (lerp(R1, h) + zuschlag) ** 2
-        return y <= -1.0 + zuschlag and (x / (lerp(A2, h) + zuschlag)) ** 2 + (y / (lerp(B2, h) + zuschlag)) ** 2 <= 1   # die gerade Rückwand liegt innen bei y = -1,0 (Wand 1,0 dick nach innen); Zuschlag negativ = Abstand zur Wand
+        return y <= -lerp(BK, h) + zuschlag and (x / (lerp(A2, h) + zuschlag)) ** 2 + (y / (lerp(B2, h) + zuschlag)) ** 2 <= 1   # die gerade Rückwand liegt innen bei y = -1,0 (Wand 1,0 dick nach innen); Zuschlag negativ = Abstand zur Wand
     KORN_UEBERSTAND = 1.6 if FUTTER == "muesli" else 1.2   # die obersten Körner ragen etwa so weit über die Oberfläche → Oberfläche so tiefer, dass die Körner genau an der Füllgrenze enden
     def oberflaeche(x, y): return h - KORN_UEBERSTAND + 0.22 * noise.noise(Vector((x * 0.14, y * 0.14, 5.0)))
     for o in [o for o in bpy.data.objects if o.name.startswith("korn_")]: bpy.data.objects.remove(o, do_unlink=True)   # Reste eines abgebrochenen Laufs
@@ -88,7 +91,7 @@ else:
     for i in range(n):
         for j in range(n):
             x, y = -ext + i * S, -ext + j * S
-            if innen(x, y, -0.3): gitter[(i, j)] = bm.verts.new((x, y, oberflaeche(x, y)))   # Grundfläche samt Kontur (0,3) bleibt innerhalb der Wand (vorher +0,6: ragte beim runden Eimer durch die Wand)
+            if innen(x, y, -0.6 if EIMER == "stufe2" else -0.3): gitter[(i, j)] = bm.verts.new((x, y, oberflaeche(x, y)))   # Grundfläche samt Kontur (0,3) bleibt innerhalb der Wand (vorher +0,6: ragte beim runden Eimer durch die Wand)
     for (i, j) in list(gitter):
         q = [gitter.get((i, j)), gitter.get((i + 1, j)), gitter.get((i + 1, j + 1)), gitter.get((i, j + 1))]
         if all(q): f = bm.faces.new(q); f.smooth = False; f.material_index = 0

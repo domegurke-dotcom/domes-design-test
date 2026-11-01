@@ -49,7 +49,11 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
         if v > hg.get(k, 2.0): hg[k] = v
     LT = 3.5   # angenommene Teilchenlänge für die Auflage (Einheiten)
     def lege(x, y, chip=False):   # ein Teilchen fällt auf das, was darunter liegt (echte Länge, liegt auf dem höchsten Punkt, kaum geneigt – nichts schwebt); gibt die Fläche zurück
-        dim = masse(chip, 1.4, 0.0); L = dim[1]; a = random.uniform(0, math.tau); dx, dy = math.cos(a) * L / 2, math.sin(a) * L / 2
+        dim = masse(chip, 1.4, 0.0); L = dim[1]
+        for _ in range(10):   # beide Enden müssen auf der Bodenplatte liegen (nichts hängt über den Rand)
+            a = random.uniform(0, math.tau); dx, dy = math.cos(a) * L / 2, math.sin(a) * L / 2
+            if abs(x + dx) <= BX / 2 - 1 and abs(x - dx) <= BX / 2 - 1 and abs(y + dy) <= BY / 2 - 1 and abs(y - dy) <= BY / 2 - 1: break
+        else: return 0.0
         pts = [(x + dx * t_, y + dy * t_) for t_ in (-1.0, -0.5, 0.0, 0.5, 1.0)]; hs_ = [hh(px, py) for px, py in pts]
         zs = max(hs_[0], hs_[1], hs_[2]) + 0.2; ze = max(hs_[2], hs_[3], hs_[4]) + 0.2; zm = max(zs, ze)   # beide Hälften liegen auf; die Mitte auf dem Höheren
         zs = max(zs, zm - 0.25 * L); ze = max(ze, zm - 0.25 * L)
@@ -58,13 +62,13 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
         for (px, py), zz in zip(pts, (zs, (3 * zs + ze) / 4, (zs + ze) / 2, (zs + 3 * ze) / 4, ze)): hset(px, py, zz + 0.35)
         return fl_
     # Ebene 1 deckt die Bodenplatte ganz ab (Dome: schöne Übergänge wie beim Stroh): erst ein Raster, in jeder Zelle ein größeres Teilchen, dann Zufall und Klumpen bis zur Zielfläche
-    for gx in range(int(-BX / 2 + 5), int(BX / 2 - 5), 4):
-        for gy in range(int(-BY / 2 + 5), int(BY / 2 - 5), 4): lege(gx + random.uniform(-2, 2), gy + random.uniform(-2, 2), True)
+    for gx in range(int(-BX / 2 + 2), int(BX / 2 - 1), 4):
+        for gy in range(int(-BY / 2 + 2), int(BY / 2 - 1), 4): lege(gx + random.uniform(-2, 2), gy + random.uniform(-2, 2), True)
     flaeche = 0.0; ziel_ = 1.2 * BX * BY
     while flaeche < ziel_:
         if random.random() < 0.6: cx, cy, cs = random.choice(klumpen); x, y = random.gauss(cx, cs), random.gauss(cy, cs)
         else: x, y = random.uniform(-BX / 2, BX / 2), random.uniform(-BY / 2, BY / 2)
-        if abs(x) > BX / 2 - 6 or abs(y) > BY / 2 - 6: continue
+        if abs(x) > BX / 2 - 2 or abs(y) > BY / 2 - 2: continue
         flaeche += lege(x, y)
     PATCH[0] = 0
     import json; json.dump({"cell": CELL, "hg": [[k[0], k[1], round(v, 2)] for k, v in hg.items()]}, open(f"{PROJ}/blender/testseiten/boxenboden/hoehe-spaene-{name}.json", "w"))   # Höhenraster der Ebene 1: darauf liegen die Pferdeäpfel
@@ -85,7 +89,11 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
             px_, py_ = warp(p.x, p.y, 1 - min(1, max(0, (p.z - 1.5 * KOMPAKT) / kuppel)), ph); p = Vector((kl(pos[i][0] + px_, LX) - pos[i][0], kl(pos[i][1] + py_, LY) - pos[i][1], p.z))
             nrm = normiert(Vector((math.sin(th) * math.cos(w) / r, math.sin(th) * math.sin(w) / ry, math.cos(th) / kuppel)))
             zu = Vector((random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1))); tang = normiert(zu - nrm * zu.dot(nrm))
-            splitter(V, F, MI, p + nrm * 0.2, normiert(tang + nrm * random.uniform(-0.05, 0.12) + Vector((random.uniform(-.2, .2), random.uniform(-.2, .2), random.uniform(-.08, .08)))), mh)
+            rc_ = normiert(tang + nrm * random.uniform(-0.05, 0.12) + Vector((random.uniform(-.2, .2), random.uniform(-.2, .2), random.uniform(-.08, .08))))
+            zmax_ = 0.8 if random.random() < 0.03 else 0.2   # nur einzelne Teilchen stehen schräg nach oben, die meisten liegen (Schwerkraft)
+            if rc_.z > zmax_ or rc_.z < -0.4:
+                hr_ = Vector((rc_.x, rc_.y, 0)); hr_ = hr_.normalized() if hr_.length > 1e-6 else Vector((1, 0, 0)); zc_ = max(-0.4, min(zmax_, rc_.z)); rc_ = hr_ * math.sqrt(1 - zc_ * zc_) + Vector((0, 0, zc_))
+            splitter(V, F, MI, p + nrm * 0.2, rc_, mh)
         for _ in range(int(r * ry * 0.5)):   # loses Hanf, das rund um den Haufen ausläuft
             a_ = random.uniform(0, math.tau); rr = random.uniform(0.95, 1.7); x_, y_ = warp(r * rr * math.cos(a_), ry * rr * math.sin(a_), 1, ph); b_ = random.uniform(0, math.tau)
             if abs(pos[i][0] + x_) > LX or abs(pos[i][1] + y_) > LY: continue

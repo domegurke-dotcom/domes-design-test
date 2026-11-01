@@ -98,3 +98,52 @@ def verteilen(BX, BY, radien, seed=3, runden=25, jitter=0.22, ziel=0.90):
         b = bed(pos, R)
         if b >= ziel or f > 1.6: return pos, R, b
         f += 0.05
+
+def huelle_xy(objekte, rand=1.5, zmax=None):
+    """Umriss (konvexe Hülle in der Draufsicht, Weltkoordinaten) einer Gruppe von Objekten, um rand Einheiten nach außen versetzt. Gibt Liste von (x, y) zurück."""
+    import numpy as np
+    pts = []
+    for o in objekte:
+        if o.type != "MESH": continue
+        M = np.array(o.matrix_world); v = np.empty(len(o.data.vertices) * 3); o.data.vertices.foreach_get("co", v); v = v.reshape(-1, 3)
+        w = v @ M[:3, :3].T + M[:3, 3]
+        if zmax is not None: w = w[w[:, 2] <= zmax]
+        pts.extend(map(tuple, w[:, :2]))
+    P = sorted(set((round(x, 2), round(y, 2)) for x, y in pts))
+    kreuz = lambda o, p, q: (p[0] - o[0]) * (q[1] - o[1]) - (p[1] - o[1]) * (q[0] - o[0])
+    unten, oben = [], []
+    for p in P:
+        while len(unten) >= 2 and kreuz(unten[-2], unten[-1], p) <= 0: unten.pop()
+        unten.append(p)
+    for p in reversed(P):
+        while len(oben) >= 2 and kreuz(oben[-2], oben[-1], p) <= 0: oben.pop()
+        oben.append(p)
+    H = unten[:-1] + oben[:-1]; cx = sum(p[0] for p in H) / len(H); cy = sum(p[1] for p in H) / len(H)
+    out = []
+    for x, y in H:
+        d = math.hypot(x - cx, y - cy) or 1.0; out.append((x + (x - cx) / d * rand, y + (y - cy) / d * rand))
+    return out
+
+def freihalten(stroh_objekte, hindernisse, rand=1.5):
+    """Dome 2.11.: Stroh (Ebene 2) geht nie in andere Objekte hinein, nur bis ran. Löscht alle Flächen der Stroh-Objekte, die mit einem Punkt innerhalb des Umrisses
+    (Draufsicht, +rand) eines Hindernisses liegen. hindernisse: Liste von Objektgruppen (je Gruppe ein Umriss, z. B. Eimer, Heuhaufen). Gibt die Zahl der gelöschten Flächen zurück."""
+    import numpy as np
+    polys = [huelle_xy(g, rand) for g in hindernisse]
+    def innen(P, pts):   # Punkte im konvexen Polygon (Hülle gegen den Uhrzeigersinn)
+        ok = np.ones(len(pts), dtype=bool); n = len(P)
+        for i in range(n):
+            (x1, y1), (x2, y2) = P[i], P[(i + 1) % n]
+            ok &= (x2 - x1) * (pts[:, 1] - y1) - (y2 - y1) * (pts[:, 0] - x1) >= 0
+        return ok
+    geloescht = 0
+    for o in stroh_objekte:
+        if o.type != "MESH" or not len(o.data.polygons): continue
+        M = np.array(o.matrix_world); v = np.empty(len(o.data.vertices) * 3); o.data.vertices.foreach_get("co", v); v = v.reshape(-1, 3)
+        w = (v @ M[:3, :3].T + M[:3, 3])[:, :2]; drin = np.zeros(len(w), dtype=bool)
+        for P in polys: drin |= innen(P, w)
+        if not drin.any(): continue
+        bm = bmesh.new(); bm.from_mesh(o.data); bm.verts.ensure_lookup_table()
+        weg = [f for f in bm.faces if any(drin[vv.index] for vv in f.verts)]
+        bmesh.ops.delete(bm, geom=weg, context="FACES"); bmesh.ops.delete(bm, geom=[vv for vv in bm.verts if not vv.link_faces], context="VERTS")
+        bm.to_mesh(o.data); bm.free(); o.data.update(); geloescht += len(weg)
+    return geloescht

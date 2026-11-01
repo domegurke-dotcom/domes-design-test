@@ -48,6 +48,10 @@ Maßstab: 1 Modelleinheit = 0,79 cm, also 1 Einheit³ = 0,000493 Liter. Alle Zah
 - Die obersten Körner ragen etwa 1,2 Einheiten über die Oberfläche; das Skript senkt die Oberfläche entsprechend ab, damit sie genau an der Füllgrenze enden.
 - **Menge je Mahlzeit oder Tagesmenge?** Das Spiel begrenzt Kraftfutter **je Mahlzeit** auf 0,5 % des Körpergewichts (`kraftMahl = Gewicht × 0,005`; 600 kg → 3 kg, 900 kg Kaltblut → 4,5 kg) und verteilt die Tagesmenge auf 2 oder 3 Mahlzeiten. **Je Mahlzeit** passt es fast immer in 12 Liter (Hafer 4,5 kg = 9 l, Müsli 4,5 kg = 11 l). Nur eingeweichtes Futter (Rübenschnitzel, Heucobs) könnte darüber kommen. Die **Tagesmenge** kann dagegen über 12 Liter gehen (600 kg, 3 Mahlzeiten, bis 9 kg Hafer = 18 l). **Entscheidung Dome 2.11.: Eimer zeigt die Tagesmenge**, bei mehr als 12 Litern bleibt die Füllung an der Füllgrenze.
 
+## Einstreu Ebene 2 und andere Objekte (Dome 2.11.)
+
+Stroh geht **nie in andere Objekte hinein, nur bis ran** (Eimer, Heuhaufen, später Leckstein, Heunetz …). Umsetzung: `freihalten(stroh_objekte, hindernisse, rand)` in `blender/strohlib.py` – löscht alle Strohflächen der Ebene 2 (Haufenkörper und Halme), die mit einem Punkt im Umriss (Draufsicht, +1,5 Einheiten) eines Hindernisses liegen. Wird nach dem Aufstellen von Eimer, Heu usw. aufgerufen; bei Fläche A im Fenster mit Eimer 1 und Heuhaufen geschehen (24.462 Flächen entfernt). Ebene 1 (flacher Boden) bleibt unter Eimer und Heu, weil beides darauf steht.
+
 ## Strohhaufen (Einstreu Ebene 2, `blender/einstreu-stroh-bauen.py`)
 
 - **84 Haufen** (Dome 2.11.): je ein Drittel auf **18 cm** (22,8 Einheiten, die größeren Haufen), **14 cm** (17,7) und **10 cm** (12,7, die kleineren), je 28 Haufen. Zustand in `einstreu-haufen-zustand.json`.

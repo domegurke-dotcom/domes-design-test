@@ -28,7 +28,7 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
     bpy.ops.wm.open_mainfile(filepath=f"{PROJ}/blender/strohboxenboden-{name}-{mass}.blend")
     for i, c in enumerate(HANF):
         m = mat(f"hanf_{i}", c); cc = tuple(srgb(x) for x in c) + (1,); m.diffuse_color = cc; m.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = cc
-    mh = [bpy.data.materials[f"hanf_{i}"] for i in range(10)]; grund = mat("hanf_grund", (160, 142, 108)); haufenm = mat("hanf_haufen_koerper", (200, 182, 142))
+    mh = [bpy.data.materials[f"hanf_{i}"] for i in range(10)]; grund = mat("hanf_grund", (205, 188, 150)); haufenm = mat("hanf_haufen_koerper", (200, 182, 142))
     P = "box" + name.upper(); b = bpy.data.objects[f"{P}_boden"]; b.data.materials[0] = grund
     BX = max(v.co.x for v in b.data.vertices) * 2; BY = max(v.co.y for v in b.data.vertices) * 2
     ks = []; R0 = []
@@ -64,9 +64,9 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
         for (px, py), zz in zip(pts, (zs, (3 * zs + ze) / 4, (zs + ze) / 2, (zs + 3 * ze) / 4, ze)): hset(px, py, zz + 0.35)
         return fl_
     # Ebene 1 deckt die Bodenplatte ganz ab (Dome: schöne Übergänge wie beim Stroh): erst ein Raster, in jeder Zelle ein größeres Teilchen, dann Zufall und Klumpen bis zur Zielfläche
-    for gx in range(int(-BX / 2 + 2), int(BX / 2 - 1), 4):
-        for gy in range(int(-BY / 2 + 2), int(BY / 2 - 1), 4): lege(gx + random.uniform(-2, 2), gy + random.uniform(-2, 2), True)
-    flaeche = 0.0; ziel_ = 1.2 * BX * BY
+    for gx in range(int(-BX / 2 + 2), int(BX / 2 - 1), 3):
+        for gy in range(int(-BY / 2 + 2), int(BY / 2 - 1), 3): lege(gx + random.uniform(-1.5, 1.5), gy + random.uniform(-1.5, 1.5), True)
+    flaeche = 0.0; ziel_ = 2.2 * BX * BY
     while flaeche < ziel_:
         if random.random() < 0.6: cx, cy, cs = random.choice(klumpen); x, y = random.gauss(cx, cs), random.gauss(cy, cs)
         else: x, y = random.uniform(-BX / 2, BX / 2), random.uniform(-BY / 2, BY / 2)

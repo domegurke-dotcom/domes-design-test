@@ -79,7 +79,8 @@ async function boden(mat, gr) {
     haufen.push({ ...h, objs: [k, l].filter(Boolean), sy: [k, l].filter(Boolean).map((o) => o.scale.y), koerper: k });
   }
   const ober = {}; for (const st of [1, 2, 3]) { try { ober[st] = await (await fetch(`./boxenboden/oberflaeche-${key}-${st}.json`)).json(); } catch (e) { /* ohne Messung: altes Höhenraster */ } }   // gemessene Oberfläche der Streu je Stufe (aus Blender)
-  return (cache[key] = { wurzel, daten, haufen, hoehe, ober });
+  let ober1 = null; try { ober1 = await (await fetch(`./boxenboden/oberflaeche1-${key}.json`)).json(); } catch (e) { ober1 = null; }   // gemessene Oberfläche nur der Bodenschicht (Ebene 1)
+  return (cache[key] = { wurzel, daten, haufen, hoehe, ober, ober1 });
 }
 const aepfelVorlagen = [];
 async function apfelLaden() {
@@ -142,6 +143,12 @@ function aepfelStand(B) {
   const versuch = (x, y, r) => {   // Variante a (Dome): Äpfel liegen auf Ebene 1 (Höhenraster der Bodenschicht), der Haufen der Ebene 2 darunter wird weggeschoben; unter hohen Haufen gibt es keine Stelle (null)
     if (B.hoehe) {
       if (!deck(x, y, r === undefined ? gr * 0.6 : r).ok) return null;
+      const O1 = B.ober1;
+      if (O1) {   // Apfel liegt auf den höchsten Spänen/Halmen unter seiner Standfläche (5×5 Felder ≈ 4 Einheiten rundum), also wirklich auf der Oberfläche der Ebene 1
+        const ix = Math.floor((x - O1.x0) / O1.cell), iy = Math.floor((y - O1.y0) / O1.cell); let m = 2.0;
+        for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) { const jx = ix + dx, jy = iy + dy; if (jx >= 0 && jy >= 0 && jx < O1.nx && jy < O1.ny) m = Math.max(m, O1.z[jy * O1.nx + jx]); }
+        return m - 0.1;
+      }
       const c = B.hoehe.cell, ix = Math.floor(x / c), iy = Math.floor(y / c);
       return Math.max(2.0, (B.hoehe.m.get(ix + "," + iy) || 2.35) - 0.35);
     }

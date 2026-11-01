@@ -16,12 +16,12 @@ def gew():
 def warp(x, y, t, ph):   # Haufen laufen unregelmäßig aus (Dome 2.11.): Umriss je Winkel verschieden, unten breiter als oben (t = 0 oben, 1 unten)
     a = math.atan2(y, x); s = (1 + 0.22 * math.sin(2 * a + ph[0]) + 0.16 * math.sin(3 * a + ph[1]) + 0.10 * math.sin(5 * a + ph[2])) * (1 + 0.3 * t * t)
     return x * s, y * s
-def splitter(V, F, MI, p, rich, mh, chip=False, sc=1.0, pn=0.75):   # gibt die Fläche des Teilchens zurück
-    if not chip and random.random() < pn:
-        l = random.uniform(1.2, 4.0) / E * sc; b = random.uniform(0.08, 0.2) / E * sc
-        halm(V, F, MI, 7 + random.choices(range(3), NADEL_GEW)[0], p, rich, l, b, 1, 0.0, random.uniform(-1.2, 1.2)); return l * b
-    l = random.uniform(1.5, 5.5) / E * sc; b = random.uniform(0.3, 0.9) / E * sc
-    halm(V, F, MI, random.choices(range(7), gew())[0], p, rich, l, b, 1, 0.0, random.uniform(-1.2, 1.2)); return l * b
+def masse(chip=False, sc=1.0, pn=0.75):   # Maße eines Teilchens: (Nadel?, Länge, Breite) in Einheiten
+    if not chip and random.random() < pn: return (True, random.uniform(1.2, 4.0) / E * sc, random.uniform(0.08, 0.2) / E * sc)
+    return (False, random.uniform(1.5, 5.5) / E * sc, random.uniform(0.3, 0.9) / E * sc)
+def splitter(V, F, MI, p, rich, mh, chip=False, sc=1.0, pn=0.75, dim=None):   # gibt die Fläche des Teilchens zurück
+    nadel, l, b = dim or masse(chip, sc, pn)
+    halm(V, F, MI, (7 + random.choices(range(3), NADEL_GEW)[0]) if nadel else random.choices(range(7), gew())[0], p, rich, l, b, 1, 0.0, random.uniform(-1.2, 1.2)); return l * b
 for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d", "4x5"), ("e", "5x5")]):
     if name not in NUR: continue
     bpy.ops.wm.open_mainfile(filepath=f"{PROJ}/blender/strohboxenboden-{name}-{mass}.blend")
@@ -48,12 +48,14 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
         k = (int(x // CELL), int(y // CELL))
         if v > hg.get(k, 2.0): hg[k] = v
     LT = 3.5   # angenommene Teilchenlänge für die Auflage (Einheiten)
-    def lege(x, y, chip=False):   # ein Teilchen fällt auf das, was darunter liegt; gibt die Fläche zurück
-        a = random.uniform(0, math.tau); dx, dy = math.cos(a) * LT / 2, math.sin(a) * LT / 2
-        hs, he = hh(x - dx, y - dy), hh(x + dx, y + dy); hm = hh(x, y); zs = max(hs, hm) + 0.2; ze = max(he, hm) + 0.2
+    def lege(x, y, chip=False):   # ein Teilchen fällt auf das, was darunter liegt (echte Länge, liegt auf dem höchsten Punkt, kaum geneigt – nichts schwebt); gibt die Fläche zurück
+        dim = masse(chip, 1.4, 0.4); L = dim[1]; a = random.uniform(0, math.tau); dx, dy = math.cos(a) * L / 2, math.sin(a) * L / 2
+        pts = [(x + dx * t_, y + dy * t_) for t_ in (-1.0, -0.5, 0.0, 0.5, 1.0)]; hs_ = [hh(px, py) for px, py in pts]
+        zs = max(hs_[0], hs_[1], hs_[2]) + 0.2; ze = max(hs_[2], hs_[3], hs_[4]) + 0.2; zm = max(zs, ze)   # beide Hälften liegen auf; die Mitte auf dem Höheren
+        zs = max(zs, zm - 0.25 * L); ze = max(ze, zm - 0.25 * L)
         fl = math.sin(x / 45 + ph[4]) * math.sin(y / 41 + ph[5]); PATCH[0] = 1 if fl > 0.3 else -1 if fl < -0.3 else 0
-        fl_ = splitter(V, F, MI, Vector((x - dx, y - dy, zs)), Vector((math.cos(a), math.sin(a), max(-0.5, min(0.5, (ze - zs) / LT)))), mh, chip, 1.4, 0.4)
-        for t_, zz in ((-1, zs), (0, (zs + ze) / 2), (1, ze)): hset(x + dx * t_, y + dy * t_, zz + 0.35)
+        fl_ = splitter(V, F, MI, Vector((x - dx, y - dy, zs)), Vector((math.cos(a), math.sin(a), max(-0.15, min(0.15, (ze - zs) / L)))), mh, chip, 1.4, 0.0, dim)
+        for (px, py), zz in zip(pts, (zs, (3 * zs + ze) / 4, (zs + ze) / 2, (zs + 3 * ze) / 4, ze)): hset(px, py, zz + 0.35)
         return fl_
     # Ebene 1 deckt die Bodenplatte ganz ab (Dome: schöne Übergänge wie beim Stroh): erst ein Raster, in jeder Zelle ein größeres Teilchen, dann Zufall und Klumpen bis zur Zielfläche
     for gx in range(int(-BX / 2 + 5), int(BX / 2 - 5), 4):

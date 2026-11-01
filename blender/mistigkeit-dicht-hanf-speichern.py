@@ -12,11 +12,11 @@ for basis in [b for b in ("strohboxenboden-{n}-{m}", "hanfboxenboden-{n}-{m}") i
             bpy.ops.wm.open_mainfile(filepath=quelle + ".blend")
             random.seed(200 + k); hoehen = ([18, 14, 10] * (n // 3 + 1))[:n]; random.shuffle(hoehen)   # gleiche Reihenfolge wie beim Bauen
             platt = weg = 0
-            if "hanf" in basis:   # Hanf wird mit der Mistigkeit dunkler (Dome, Foto): Farben zur braun-grauen Zielfarbe
-                w = [0, 0.22, 0.45, 0.68][stufe]
+            if True:   # Hanf wird mit der Mistigkeit dunkler (braun-grau), Stroh dunkel pissgelb-bräunlich (Dome)
+                w = [0, 0.22, 0.45, 0.68][stufe]; ZIEL = (110, 84, 62) if "hanf" in basis else (138, 98, 34); pre = ("hanf",) if "hanf" in basis else ("stroh", "halm")
                 for m in bpy.data.materials:
-                    if m.name.startswith("hanf") and m.node_tree:
-                        c = m.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value; z = [srgb(x) for x in (110, 84, 62)]
+                    if m.name.startswith(pre) and m.node_tree:
+                        c = m.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value; z = [srgb(x) for x in ZIEL]
                         nc = tuple(c[i] + (z[i] - c[i]) * w for i in range(3)) + (1,); m.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = nc; m.diffuse_color = nc
             for i, h in enumerate(hoehen, 1):
                 for suf in ("koerper", "halme"):

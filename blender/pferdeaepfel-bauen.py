@@ -99,6 +99,13 @@ if STREUEN:
     bpy.context.view_layer.update()
     stroh = [o for o in box.objects if "_haufen_" in o.name]
     weg = freihalten(stroh, gruppen[:len(haufen)], 5.0) + freihalten(stroh, gruppen[len(haufen):], 2.5)   # Haufen: Stroh weggedrückt, ringsum frei (so bleiben die Äpfel sichtbar); einzelne Äpfel etwas weniger   # das Stroh geht nicht in die Äpfel hinein (Dome), unter dem Haufen liegt nur der flache Boden
+    # Nächster Morgen (Dome 2.11.): das Stroh Ebene 2 ist platter getreten – die Haufen, die frisch 18 cm hoch waren (ein Drittel), sind nur noch 14 cm
+    random.seed(200); _h = ([18, 14, 10] * (68 // 3 + 1))[:68]; random.shuffle(_h)
+    for _i, _x in enumerate(_h, 1):
+        if _x == 18:
+            for _s in ("koerper", "halme"):
+                _o = bpy.data.objects.get(f"boxA_haufen_{_i:02d}_{_s}")
+                if _o: _o.scale.z = 14.0 / 18.0
     for a in sam.objects:
         for m in a.modifiers:
             if m.type == "SOLIDIFY": m.show_viewport = True

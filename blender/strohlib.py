@@ -29,8 +29,8 @@ def halm(V, F, MI, mi, basis, richtung, laenge, breite, segmente, haengen, roll)
         t = i / segmente; p = basis + r * laenge * t + Vector((0, 0, -1)) * haengen * laenge * t * t; w = breite * (1 - 0.55 * t) / 2
         reihe.append(((p - s * w)[:], (p + s * w)[:]))
     for i in range(segmente):
-        a, b = reihe[i]; c, d = reihe[i + 1]; k = len(V); V.extend([a, b, c, d, a, b, c, d])
-        F.append((k, k + 1, k + 3, k + 2)); MI.append(mi); F.append((k + 6, k + 7, k + 5, k + 4)); MI.append(mi)
+        a, b = reihe[i]; c, d = reihe[i + 1]; k = len(V); V.extend([a, b, c, d])   # nur eine Fläche je Stück (Dome 2.11.: halb so groß, Material zeigt beide Seiten – Backface-Culling aus)
+        F.append((k, k + 1, k + 3, k + 2)); MI.append(mi)
 def mesh_objekt(name, V, F, MI, sammlung, mats):
     me = bpy.data.meshes.new(name); me.from_pydata(V, [], F); me.update()
     for m in mats: me.materials.append(m)

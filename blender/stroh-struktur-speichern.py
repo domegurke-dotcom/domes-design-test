@@ -64,5 +64,5 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
             halm(V, F, MI, farbe(HAUFEN_GEW), p + nrm * 0.3, rich, laenge, random.uniform(1.4, 2.1), 2, 0.06, random.uniform(-0.9, 0.9))
         alt = bpy.data.objects[f"{P}_haufen_{k:02d}_halme"]; sam = alt.users_collection[0]; loc = alt.location.copy(); bpy.data.objects.remove(alt, do_unlink=True)
         mesh_objekt(f"{P}_haufen_{k:02d}_halme", V, F, MI, sam, M["halme"]).location = loc; n += 1
-    ziel = f"{PROJ}/blender/strohboxenboden-{name}-{mass}.blend"; bpy.ops.wm.save_as_mainfile(filepath=ziel)
+    ziel = f"{PROJ}/blender/strohboxenboden-{name}-{mass}.blend"; bpy.ops.wm.save_as_mainfile(filepath=ziel, compress=True)
     print("GESPEICHERT", ziel.split("/")[-1], len(MI) // 2, "Halme")

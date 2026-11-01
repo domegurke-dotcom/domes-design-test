@@ -23,6 +23,6 @@ for basis in [b for b in ("strohboxenboden-{n}-{m}", "hanfboxenboden-{n}-{m}", "
                     o = bpy.data.objects.get(f"box{name.upper()}_haufen_{i:02d}_{suf}")
                     if not o: continue
                     if h == 18: o.scale.z = 5.0 / (18.0 * 1.0); platt += 1
-                    elif (h == 14 and stufe >= 2) or (h == 10 and stufe >= 3): o.hide_viewport = True; o.hide_render = True; weg += 1
-            ziel = f"{quelle}-mistigkeit-{stufe}.blend"; bpy.ops.wm.save_as_mainfile(filepath=ziel)
+                    elif (h == 14 and stufe >= 2) or (h == 10 and stufe >= 3): bpy.data.objects.remove(o, do_unlink=True); weg += 1   # ausgeblendete Haufen werden gelöscht (Dome 2.11.: Teilchen im nicht sichtbaren Bereich sparen)
+            ziel = f"{quelle}-mistigkeit-{stufe}.blend"; bpy.ops.wm.save_as_mainfile(filepath=ziel, compress=True)
             print("GESPEICHERT", ziel.split("/")[-1], "platt:", platt // 2, "ausgeblendet:", weg // 2, "von", n)

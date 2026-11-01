@@ -101,5 +101,5 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
             if abs(pos[i][0] + x_) > LX or abs(pos[i][1] + y_) > LY: continue
             splitter(V, F, MI, Vector((x_, y_, random.uniform(2.3, 2.6))), Vector((math.cos(b_), math.sin(b_), random.uniform(-.15, .15))), mh)
         ersetze(f"{P}_haufen_{k:02d}_halme", V, F, MI, (pos[i][0], pos[i][1], 0))
-    ziel = f"{PROJ}/blender/hanfboxenboden-{name}-{mass}.blend"; bpy.ops.wm.save_as_mainfile(filepath=ziel)
+    ziel = f"{PROJ}/blender/hanfboxenboden-{name}-{mass}.blend"; bpy.ops.wm.save_as_mainfile(filepath=ziel, compress=True)
     print("GESPEICHERT", ziel.split("/")[-1], "Haufen:", len(ks), "Bedeckung:", round(bed, 4), "max. Breitenfaktor:", round(float((R / R0).max()), 2))

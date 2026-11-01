@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. nachts (Claude Team) – Hanf-Böden, dichte Strohböden, Mistigkeit dafür
+Neue Dateien in `blender/` (die Original-Strohböden bleiben unverändert): `hanfboxenboden-<a–e>-<Maß>.blend` (Kopie des Strohbodens, Hanfsplitter + dünne Nadeln nach vier Fotos von Dome, Haufen so verteilt, dass Ebene 1 zu ~99,5 % bedeckt ist, Haufen bis ×1,4 breiter; Skript `hanfboxenboden-speichern.py`), `strohboxenboden-<a–e>-<Maß>-dicht.blend` (Stroh mit ~99,5 % Bedeckung, Skript `strohboxenboden-dicht-speichern.py`) und je Mistigkeit 1–3 dazu (`…-dicht-mistigkeit-<1–3>.blend`, `hanfboxenboden-…-mistigkeit-<1–3>.blend`, Skript `mistigkeit-dicht-hanf-speichern.py`, gleiche Regeln wie bei Stroh, ohne Äpfel). Nur Zahlen geprüft (Bedeckung, Haufenzahlen), Aussehen nicht angesehen. `hanf-tauschen.py`/`hanf-verteilen.py` = Zwischenschritte im offenen Fenster (Box A liegt dort noch mit Hanf, nicht gespeichert). Spiel unverändert.
+
 ### 2.11. nachts (Claude Team) – Mistigkeit Stufe 3 gespeichert
 `blender/strohboxenboden-<a–e>-<Maß>-mistigkeit-3.blend`: nur das platte Drittel (5 cm) bleibt, die Drittel mit 14 und 10 cm sind ausgeblendet; ohne Eimer, Heu, Äpfel (Dome: passt so). Äpfel bei Stufe 3 noch mehr als bei Stufe 2 (Fläche A: 15 Haufen + 24 einzelne = 149), Verteilung durch das Spiel. Skript `strohboxenboden-mistigkeit3-speichern.py`.
 

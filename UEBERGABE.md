@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. nachts (Claude Team) – FÜR DIE NÄCHSTE SITZUNG
+**Dome hat Ja gesagt (2.11.), aber erst in der nächsten Sitzung:** Friese, Quarter, Paint und Appaloosa in `LEICHTFUTTRIG` eintragen (index.html, bei `const LEICHTFUTTRIG`). Achtung Folge: die Liste steuert auch `reheGefaehrdet` (Hufrehe-Warnung/Weide im Frühling), `appetit`, Strohpellet-Einstreu-Warnung und Müsli-Hufrehe – diese Rassen gehen dann im Frühling nicht mehr auf die Weide. Vorher Dome nochmal an die Folge erinnern, dann `krankheiten-test`, `weihnachten-test`, `orte-test` laufen lassen, Version 941, `CLAUDE.md` nachführen.
+
 ### 2.11. nachts (Claude Team) – v940 Futterplan echte Werte, Eimerbild-Antworten
 **v940:** Heu 6 → 7 MJ je kg (Heulage/Heucobs 8, Luzerne 9, Öl 35), Standard-Heu rechnet mit `FUTTER.heu.e`; `krankheiten-test` und `weihnachten-test` grün. **Offen (Rückfrage an Dome):** Friese/Quarter/Paint/Appaloosa als leichtfuttrig – die Liste steuert auch die Hufrehe-Warnung im Frühling (kein Weidegang). **Plan Eimerbild:** Dome hat die fünf offenen Fragen beantwortet (siehe `PLAN-EIMERBILD.md`), die Etappen E1–E6 starten erst, wenn die 3D-Eimer ins Spiel kommen.
 

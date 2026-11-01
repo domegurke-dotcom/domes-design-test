@@ -43,10 +43,14 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
         if not ko: break
         xs = [v.co.x for v in ko.data.vertices]; ys = [v.co.y for v in ko.data.vertices]; zs = [v.co.z for v in ko.data.vertices]
         r = max(abs(min(xs)), max(xs)); ry = max(abs(min(ys)), max(ys)); kuppel = max(zs) - 1.5; H = kuppel / 0.7
+        LX, LY = BX / 2 - 2, BY / 2 - 2   # Dome 2.11.: Haufenkörper und Halme nicht über den Boxenrand hinaus (Umriss sauber quadratisch wie bei Hanf und Späne)
+        for v in ko.data.vertices:
+            v.co.x = max(-LX, min(LX, ko.location.x + v.co.x)) - ko.location.x; v.co.y = max(-LY, min(LY, ko.location.y + v.co.y)) - ko.location.y
         random.seed(900 + 100 * j + k); V, F, MI = [], [], []
         for q_ in range(int(r * ry * 0.42) + int(r * ry * 0.30)):   # die letzten 0,30 liegen am unteren Rand der Haufen, damit der Körper dort nicht frei liegt
             th = math.acos(random.random() ** 0.8) * 0.93 if q_ < int(r * ry * 0.42) else random.uniform(0.95, 1.45); w = random.uniform(0, math.tau)
             p = Vector((r * math.sin(th) * math.cos(w), ry * math.sin(th) * math.sin(w), kuppel * math.cos(th) + 1.5))
+            p.x = max(-LX, min(LX, ko.location.x + p.x)) - ko.location.x; p.y = max(-LY, min(LY, ko.location.y + p.y)) - ko.location.y
             nrm = normiert(Vector((math.sin(th) * math.cos(w) / r, math.sin(th) * math.sin(w) / ry, math.cos(th) / kuppel)))
             zu = Vector((random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1))); tang = normiert(zu - nrm * zu.dot(nrm)); anh = math.radians(random.uniform(0, 10))
             rich = normiert(tang * math.cos(anh) + nrm * math.sin(anh)); laenge = random.uniform(15, 28) * (0.75 + 0.25 * min(1, r / 40))

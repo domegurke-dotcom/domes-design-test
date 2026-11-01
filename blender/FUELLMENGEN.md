@@ -50,7 +50,7 @@ Maßstab: 1 Modelleinheit = 0,79 cm, also 1 Einheit³ = 0,000493 Liter. Alle Zah
 
 ## Einstreu Ebene 2 und andere Objekte (Dome 2.11.)
 
-Stroh geht **nie in andere Objekte hinein, nur bis ran** (Eimer, Heuhaufen, später Leckstein, Heunetz …). Umsetzung: `freihalten(stroh_objekte, hindernisse, rand)` in `blender/strohlib.py` – löscht alle Strohflächen der Ebene 2 (Haufenkörper und Halme), die mit einem Punkt im Umriss (Draufsicht, +1,5 Einheiten) eines Hindernisses liegen. Wird nach dem Aufstellen von Eimer, Heu usw. aufgerufen; bei Fläche A im Fenster mit Eimer 1 und Heuhaufen geschehen (24.462 Flächen entfernt). Ebene 1 (flacher Boden) bleibt unter Eimer und Heu, weil beides darauf steht.
+Stroh geht **nie in andere Objekte hinein, nur bis ran** (Eimer, später Leckstein, Heunetz …). **Ausnahme Heuhaufen (Dome 2.11.): dort darf die Ebene 2 hinein.** Umsetzung: `freihalten(stroh_objekte, hindernisse, rand)` in `blender/strohlib.py` – löscht alle Strohflächen der Ebene 2 (Haufenkörper und Halme), die mit einem Punkt im Umriss (Draufsicht, +1,5 Einheiten) eines Hindernisses liegen. Wird nach dem Aufstellen von Eimer, Heu usw. aufgerufen; bei Fläche A im Fenster nur mit Eimer 1 geschehen (1.154 Flächen entfernt). Ebene 1 (flacher Boden) bleibt unter dem Eimer, weil er darauf steht.
 
 ## Strohhaufen (Einstreu Ebene 2, `blender/einstreu-stroh-bauen.py`)
 

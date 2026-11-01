@@ -52,9 +52,9 @@ Maßstab: 1 Modelleinheit = 0,79 cm, also 1 Einheit³ = 0,000493 Liter. Alle Zah
 
 Stroh geht **nie in andere Objekte hinein, nur bis ran** (Eimer, später Leckstein, Heunetz …). **Ausnahme Heuhaufen (Dome 2.11.): dort darf die Ebene 2 hinein.** Umsetzung: `freihalten(stroh_objekte, hindernisse, rand)` in `blender/strohlib.py` – löscht alle Strohflächen der Ebene 2 (Haufenkörper und Halme), die mit einem Punkt im Umriss (Draufsicht, +1,5 Einheiten) eines Hindernisses liegen. Wird nach dem Aufstellen von Eimer, Heu usw. aufgerufen; bei Fläche A im Fenster nur mit Eimer 1 geschehen (1.154 Flächen entfernt). Ebene 1 (flacher Boden) bleibt unter dem Eimer, weil er darauf steht.
 
-## Einstreu am nächsten Morgen (Dome 2.11.)
+## Einstreu nach einer Nacht (Dome 2.11.)
 
-Das Stroh Ebene 2 wird über Nacht **platter**: die Haufen, die frisch auf 18 cm waren (ein Drittel), gehen auf **5 cm** zurück (Skala z = 5/18; erst 14 cm, dann Dome: 5 cm). Dazu liegen Pferdeäpfel (`pferdeaepfel-bauen.py`). Frisch eingestreut: Bedeckung mindestens 90 %, Haufen 18/14/10 cm.
+Das Stroh Ebene 2 wird über Nacht **platter**: die Haufen, die frisch auf 18 cm waren (ein Drittel), gehen auf **5 cm** zurück (Skala z = 5/18; erst 14 cm, dann Dome: 5 cm). Gespeichert als `strohboxenboden-<a–e>-<Maß>-nach-einer-nacht.blend` (ohne Eimer, ohne Heu, ohne Äpfel; Skript `strohboxenboden-nach-einer-nacht-speichern.py`). **Pferdeäpfel (`pferdeaepfel.blend`, drei Typen) setzt das Spiel später zufällig, aber nie in andere Objekte hinein** (Beispiel `pferdeaepfel-bauen.py`: 5 Haufen mit 6–11 Äpfeln und einzelne, weggerollte – Stroh um die Haufen weggedrückt, `freihalten`). Frisch eingestreut: Bedeckung mindestens 90 %, Haufen 18/14/10 cm.
 
 ## Strohhaufen (Einstreu Ebene 2, `blender/einstreu-stroh-bauen.py`)
 

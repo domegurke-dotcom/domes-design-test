@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. nachts (Claude Team) – Einstreu nach einer Nacht
+`blender/strohboxenboden-<a–e>-<Maß>-nach-einer-nacht.blend`: wie frisch eingestreut, nur das Drittel mit 18 cm ist auf 5 cm platt getreten (Dome), ohne Eimer, Heu und Äpfel. Äpfel verteilt das Spiel später zufällig, nie in andere Objekte (Vorlagen `pferdeaepfel.blend`). Skript `strohboxenboden-nach-einer-nacht-speichern.py`.
+
 ### 2.11. nachts (Claude Team) – Blender: Pferdeäpfel
 Drei Äpfel als Vorlagen (rund, weich mit Halmen, hart/klein) in `blender/pferdeaepfel.blend` (+ `testseiten/pferdeaepfel.glb`), Skript `blender/pferdeaepfel-bauen.py` (mit `STREUEN = True` im offenen Fenster: Fläche A so, als müsste man am nächsten Morgen misten – 5 Haufen mit 7–11 Äpfeln, 7 einzelne, Stroh um die Haufen weggedrückt). Im Fenster nicht gespeichert (wie Fläche A).
 

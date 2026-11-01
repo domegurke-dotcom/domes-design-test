@@ -68,7 +68,8 @@ function material(alt, hatNormalen) {
 async function boden(mat, gr) {
   const key = mat + "-" + gr; if (cache[key]) return cache[key];
   const daten = await (await fetch(`./boxenboden/${key}.json`)).json();
-  const wurzel = await laden(`./boxenboden/${key}.glb`);
+  const wurzel = await laden(`./boxenboden/${key}.glb`); let hoehe = null;
+  try { const hj = await (await fetch(`./boxenboden/hoehe-${key}.json`)).json(); hoehe = { cell: hj.cell, m: new Map(hj.hg.map((q) => [q[0] + "," + q[1], q[2]])) }; } catch (e) { hoehe = null; }   // Höhe der Streu (Ebene 1) für die Äpfel
   const P = "box" + gr.toUpperCase(), haufen = [];
   wurzel.traverse((o) => { if (!o.isMesh) return; if (!o.geometry.attributes.normal) o.geometry.computeVertexNormals();   // Hanf/Späne kommen ohne Normalen (kleinere Dateien): hier berechnet, damit jedes Teilchen Licht und Schatten bekommt
     o.material = Array.isArray(o.material) ? o.material.map((m) => material(m, true)) : material(o.material, true); });
@@ -77,7 +78,7 @@ async function boden(mat, gr) {
     const k = wurzel.getObjectByName(`${P}_haufen_${nn}_koerper`), l = wurzel.getObjectByName(`${P}_haufen_${nn}_halme`);
     haufen.push({ ...h, objs: [k, l].filter(Boolean), sy: [k, l].filter(Boolean).map((o) => o.scale.y), koerper: k });
   }
-  return (cache[key] = { wurzel, daten, haufen });
+  return (cache[key] = { wurzel, daten, haufen, hoehe });
 }
 const aepfelVorlagen = [];
 async function apfelLaden() {
@@ -128,7 +129,12 @@ function aepfelStand(B) {
   let traeger = [];
   const versuch = (x, y) => {   // Höhe von Boden oder platt getretenem Haufen (≤ LIM), sonst null
     rc.set(new THREE.Vector3(x, 200, -y), ab); const t = rc.intersectObjects(traeger, true);
-    return !t.length || t[0].point.y > LIM ? null : t[0].point.y;
+    if (!t.length) return null; let h = t[0].point.y;
+    if (B.hoehe && /_boden/.test((t[0].object.parent && t[0].object.parent.name || "") + t[0].object.name)) {   // auf dem Boden: Höhe der Streu (3×3 Felder um den Apfel)
+      const c = B.hoehe.cell, ix = Math.floor(x / c), iy = Math.floor(y / c);
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) h = Math.max(h, B.hoehe.m.get((ix + dx) + "," + (iy + dy)) || 0);
+    }
+    return h > LIM ? null : h;
   };
   const recs = [], piles = [];
   const frei = (x, y, d, gs) => recs.every((q) => Math.hypot(q.x - x, q.y - y) > d * gr * Math.max(gs, q.gs));

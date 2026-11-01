@@ -55,6 +55,7 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
         splitter(V, F, MI, Vector((x - dx, y - dy, zs)), Vector((math.cos(a), math.sin(a), max(-0.5, min(0.5, (ze - zs) / LT)))), mh)
         for t_, zz in ((-1, zs), (0, (zs + ze) / 2), (1, ze)): hset(x + dx * t_, y + dy * t_, zz + 0.35)
     PATCH[0] = 0
+    import json; json.dump({"cell": CELL, "hg": [[k[0], k[1], round(v, 2)] for k, v in hg.items()]}, open(f"{PROJ}/blender/testseiten/boxenboden/hoehe-hanf-{name}.json", "w"))   # Höhenraster der Ebene 1: darauf liegen die Pferdeäpfel
     ersetze(f"{P}_muster", V, F, MI, b.location)
     for i, ko in enumerate(ks):
         f = R[i] / R0[i]; ko.location = (pos[i][0], pos[i][1], 0); ko.scale = (f, f, 1)

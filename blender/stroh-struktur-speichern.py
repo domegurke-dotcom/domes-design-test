@@ -24,10 +24,16 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
         if abs(x) > BX / 2 - 10 or abs(y) > BY / 2 - 10: continue
         L = random.uniform(16, 34); a = random.uniform(0, math.tau); ca, sa = math.cos(a), math.sin(a)
         pts = [(x + ca * L * t, y + sa * L * t) for t in (0.0, 0.25, 0.5, 0.75, 1.0)]
-        z = max(hh(px, py) for px, py in pts) + 0.2   # liegt auf dem höchsten Punkt darunter
+        zs = [hh(px, py) + 0.2 for px, py in pts]   # Halm legt sich über das, was darunter liegt (hängt durch, nichts schwebt): Höhe je Punkt, nicht tiefer als 1,2 unter dem Nachbarn (Halme sind steif)
+        for _ in range(3):
+            for i in range(5): zs[i] = max(zs[i], (zs[i - 1] - 1.2) if i > 0 else 0, (zs[i + 1] - 1.2) if i < 4 else 0)
         fl = math.sin(x / 45 + ph[0]) * math.sin(y / 41 + ph[1]); gew = HAUFEN_GEW if fl > 0.3 else [34, 2, 34, 1, 45] if fl < -0.3 else BODEN_GEW
-        halm(V, F, MI, farbe(gew), Vector((x, y, z)), Vector((ca, sa, random.uniform(-0.05, 0.05))), L, random.uniform(1.5, 2.3), 1, 0.04, random.uniform(-0.5, 0.5))
-        for px, py in pts: hset(px, py, z + 0.4)
+        ci = farbe(gew); br = random.uniform(1.5, 2.3); ro = random.uniform(-0.5, 0.5)
+        for i in range(4):   # vier angeschlossene Stücke folgen dem Höhenverlauf
+            p0 = Vector((pts[i][0], pts[i][1], zs[i])); p1 = Vector((pts[i + 1][0], pts[i + 1][1], zs[i + 1])); d = p1 - p0
+            halm(V, F, MI, ci, p0, d, d.length, br, 1, 0.0, ro)
+        for (px, py), zz in zip(pts, zs): hset(px, py, zz + 0.4)
+    import json; json.dump({"cell": CELL, "hg": [[k[0], k[1], round(v, 2)] for k, v in hg.items()]}, open(f"{PROJ}/blender/testseiten/boxenboden/hoehe-stroh-{name}.json", "w"))   # Höhenraster der Ebene 1: darauf liegen die Pferdeäpfel
     alt = bpy.data.objects[f"{P}_muster"]; sam = alt.users_collection[0]; loc = alt.location.copy(); bpy.data.objects.remove(alt, do_unlink=True)
     mesh_objekt(f"{P}_muster", V, F, MI, sam, M["halme"]).location = loc
     # Ebene 2 (Haufen): Halme liegen an der Oberfläche statt abzustehen (Schwerkraft, Dome 2.11.): Neigung höchstens 10° von der Fläche weg

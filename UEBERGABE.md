@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. nachts (Claude Team) – Eimerfüllung unsichtbar (behoben) und Futterplan-Prüfung
+**Fehler:** Eimer Stufe 1 hatte Pros dunkle Innenscheibe (Material innen) knapp unter dem Rand – jede Füllung darunter (unter etwa 10 l) war unsichtbar. Scheibe liegt jetzt auf dem Boden (`eimer-fuellung.py`, `eimer-stufe1-12l.blend` neu gespeichert). Stufe 2 geprüft, ohne Scheibe. **Beispiel Friese 8 J., 600 kg:** Hafer 2 kg/Tag, Heu 10 kg/Tag. **Futterplan-Prüfung (nur gerechnet, im Spiel nichts geändert, Fragen an Dome):** Heu hat im Spiel 6 MJ je kg (echt gutes Heu etwa 7–7,5 MJ ME) – darum gibt der Standard-/Expertenplan Arbeitspferden 2,2–2,5 kg Heu je 100 kg (Friese leichte Arbeit 12,7 kg, kein Hafer; echt wären etwa 9–10 kg Heu + 1–2 kg Hafer). Öl 30 MJ (echt etwa 35–37). Friese, Quarter, Paint, Appaloosa nicht als leichtfuttrig geführt (Friese hat aber EMS-Neigung). Gewichte, Kraftfutter je Mahlzeit (0,5 %), Stärke (1 g/kg), Raufutter-Minimum (1,5 %), Arbeitszuschläge (25/50/100 %) passen zur Realität.
+
 ### 2.11. nachts (Claude Team) – Blender: Boxenböden einzeln, Tagesmenge
 Boxenböden A 3×3, B 3×4, C 4×4, D 4×5, E 5×5 m (Länge × Breite) als `blender/strohboxenboden-<a–e>-<Maß>.blend`, jeweils im Ursprung, Bedeckung mind. 90 % (`boxenboeden-bauen.py`, `boxboeden-einzeln-speichern.py`, `strohlib.py`, Maße `BOXMASSE.md`). **Dome-Entscheidung:** Heuhaufen und Eimer zeigen die **Tagesmenge**; über 12 l wird nur bis 12 l gefüllt (`FUELLMENGEN.md`). Im Fenster: Fläche A mit Eimer 1 (3 kg Hafer) und Heuhaufen (10 kg), Friese 8 J. fit, nicht gespeichert.
 

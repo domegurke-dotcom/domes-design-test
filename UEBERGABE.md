@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. nachts (Claude Team) – Blender: Boxenböden einzeln, Tagesmenge
+Boxenböden A 3×3, B 3×4, C 4×4, D 4×5, E 5×5 m (Länge × Breite) als `blender/strohboxenboden-<a–e>-<Maß>.blend`, jeweils im Ursprung, Bedeckung mind. 90 % (`boxenboeden-bauen.py`, `boxboeden-einzeln-speichern.py`, `strohlib.py`, Maße `BOXMASSE.md`). **Dome-Entscheidung:** Heuhaufen und Eimer zeigen die **Tagesmenge**; über 12 l wird nur bis 12 l gefüllt (`FUELLMENGEN.md`). Im Fenster: Fläche A mit Eimer 1 (3 kg Hafer) und Heuhaufen (10 kg), Friese 8 J. fit, nicht gespeichert.
+
 ### 2.11. nachts (Claude Team) – Blender: 8 Haufen dazu, vier Boxenböden A–D, Boxenmaße
 **Einstreu Ebene 2:** 8 Haufen dazu (Nr. 148–155, Liste `dazu` in `einstreu-haufen-zustand.json`, in die größten Lücken gesetzt: 3 × 18 cm, 3 × 14 cm, 2 × 10 cm) → jetzt 92 Haufen. **Boxmaße** in `blender/BOXMASSE.md` (Boxenstall/Quarantäne/Paddock 3/4/5 m, Abfohlstall 4/5/6 m). **Vier Boxenböden** A 3×3, B 4×4, C 5×5, D 6×6 m mit Stroh in 2 Ebenen (68/120/188/271 Haufen, Bedeckung 85–88 %), 2,5 m Abstand, vorne beschriftet: `blender/boxboeden-stroh.blend`, Skripte `boxenboeden-bauen.py` + gemeinsame Bibliothek `strohlib.py`; im offenen Fenster liegen sie rechts neben dem 3,5-m-Boden. Dome schrieb „a–e“ (fünf Buchstaben), es gibt aber vier Größen – offen, was E sein soll.
 

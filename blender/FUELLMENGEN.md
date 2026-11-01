@@ -4,6 +4,8 @@
 
 Maßstab: 1 Modelleinheit = 0,79 cm, also 1 Einheit³ = 0,000493 Liter. Alle Zahlen sind Schätzungen von Claude, die Schüttdichten stammen aus üblichen Werten.
 
+**Entscheidung Dome 2.11.:** Heuhaufen **und** Eimer zeigen die **Tagesmenge** aus dem Futterplan. Übersteigt die Tagesmenge das Volumen des Eimers (12 Liter), wird optisch nur bis 12 Liter gefüllt. Beispiel Friese (8 Jahre, fit, 600 kg): Heu 10 kg (Skala 1,88), Hafer 3 kg = 6 Liter. Fläche A (3 × 3 m) mit Eimer und Heuhaufen: Position Eimer (620, 100), Heu (800, −40).
+
 ## Heuhaufen (Raufutter, `blender/heuhaufen-nur-heu.py`)
 
 - Originalhaufen von Pro (`heunetz.blend`, `heuhaufen_koerper`): Volumen **0,0250 m³ = 25 Liter**, etwa 100 Einheiten (79 cm) breit und 32 hoch.
@@ -42,7 +44,7 @@ Maßstab: 1 Modelleinheit = 0,79 cm, also 1 Einheit³ = 0,000493 Liter. Alle Zah
 
 - Liter = Menge in kg ÷ Schüttdichte. Über 12 Liter bleibt die Füllung an der Füllgrenze.
 - Die obersten Körner ragen etwa 1,2 Einheiten über die Oberfläche; das Skript senkt die Oberfläche entsprechend ab, damit sie genau an der Füllgrenze enden.
-- **Menge je Mahlzeit oder Tagesmenge?** Das Spiel begrenzt Kraftfutter **je Mahlzeit** auf 0,5 % des Körpergewichts (`kraftMahl = Gewicht × 0,005`; 600 kg → 3 kg, 900 kg Kaltblut → 4,5 kg) und verteilt die Tagesmenge auf 2 oder 3 Mahlzeiten. **Je Mahlzeit** passt es fast immer in 12 Liter (Hafer 4,5 kg = 9 l, Müsli 4,5 kg = 11 l). Nur eingeweichtes Futter (Rübenschnitzel, Heucobs) könnte darüber kommen. Die **Tagesmenge** kann dagegen über 12 Liter gehen (600 kg, 3 Mahlzeiten, bis 9 kg Hafer = 18 l). **Empfehlung: Eimer zeigt die Menge je Mahlzeit**, bei mehr als 12 Litern bleibt die Füllung an der Füllgrenze.
+- **Menge je Mahlzeit oder Tagesmenge?** Das Spiel begrenzt Kraftfutter **je Mahlzeit** auf 0,5 % des Körpergewichts (`kraftMahl = Gewicht × 0,005`; 600 kg → 3 kg, 900 kg Kaltblut → 4,5 kg) und verteilt die Tagesmenge auf 2 oder 3 Mahlzeiten. **Je Mahlzeit** passt es fast immer in 12 Liter (Hafer 4,5 kg = 9 l, Müsli 4,5 kg = 11 l). Nur eingeweichtes Futter (Rübenschnitzel, Heucobs) könnte darüber kommen. Die **Tagesmenge** kann dagegen über 12 Liter gehen (600 kg, 3 Mahlzeiten, bis 9 kg Hafer = 18 l). **Entscheidung Dome 2.11.: Eimer zeigt die Tagesmenge**, bei mehr als 12 Litern bleibt die Füllung an der Füllgrenze.
 
 ## Strohhaufen (Einstreu Ebene 2, `blender/einstreu-stroh-bauen.py`)
 

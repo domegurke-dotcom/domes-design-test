@@ -89,7 +89,9 @@ async function apfelLaden() {
     const bb = new THREE.Box3().setFromObject(g);
     aepfelVorlagen.push({ name: n, g, w, gr: Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z), minY: bb.min.y });
   }
+  try { BIB = await (await fetch("./boxenboden/aepfel-bibliothek.json")).json(); } catch (e) { BIB = null; }   // Haufen aus der Blender-Bibliothek (Physik: gefallen und liegengeblieben)
 }
+let BIB = null;
 
 // ---- Mistigkeit anwenden ----
 function stufeAnwenden(B) {
@@ -149,6 +151,7 @@ function aepfelStand(B) {
   const neu = (x, y, zb, pile, kipp, E, alt_) => {
     const w = R() * E.tw.reduce((a, b) => a + b, 0); let a = 0, ti = 0; for (let i = 0; i < aepfelVorlagen.length; i++) { a += E.tw[i]; if (w < a) { ti = i; break; } }
     const q = alt_ || { ti, gs: E.gs, s: (0.9 + 0.2 * R()) * E.gs };
+    if (alt_) delete alt_.mw;   // verstreute Äpfel werden einzeln gelegt (Euler)
     q.x = x; q.y = y; q.zb = zb; q.pile = pile; q.ry = R() * 6.283; q.rx = (R() - .5) * kipp; q.rz = (R() - .5) * kipp; if (!alt_) recs.push(q); return q;
   };
   const stapel = (x, y, z, c) => {   // Schwerkraft: auf dem Boden oder auf mindestens zwei Äpfeln darunter, zwischen ihnen
@@ -185,6 +188,16 @@ function aepfelStand(B) {
         let cx, cy, cz;
         do { cx = (R() - .5) * (bx - 24); cy = (R() - .5) * (by - 24); cz = versuch(cx, cy); zu++; } while ((cz === null || !frei(cx, cy, 3, E.gs)) && zu < 6000);
         if (cz === null) break;
+        if (BIB) {   // fertiger Haufen aus der Bibliothek, passende Größe, zufällige Variante und Drehung
+          let key = "warm", bd = 9; for (const [kk, gg] of Object.entries(BIB.groessen)) if (Math.abs(gg - E.gs) < bd) { bd = Math.abs(gg - E.gs); key = kk; }
+          const vs = BIB.haufen[key], va = vs[Math.floor(R() * vs.length)], yaw = R() * 6.283, base = cz - 0.3;
+          const T = new THREE.Matrix4().makeTranslation(cx, base, -cy).multiply(new THREE.Matrix4().makeRotationY(yaw)), c = { x: cx, y: cy, r: 0, aepfel: [], verteilt: false, E, rho };
+          for (const a of va) {
+            const mw = T.clone().multiply(new THREE.Matrix4().fromArray(a.m)), e = mw.elements, q = { ti: aepfelVorlagen.findIndex((v) => v.name === a.typ), gs: E.gs, s: Math.hypot(e[0], e[1], e[2]), x: e[12], y: -e[14], zb: e[13], ry: 0, rx: 0, rz: 0, mw: e.slice(), pile: c, zc: 0 };
+            c.r = Math.max(c.r, Math.hypot(q.x - cx, q.y - cy) + gr * E.gs * 0.5); recs.push(q); c.aepfel.push(q);
+          }
+          piles.push(c); eigene.push(c); continue;
+        }
         const k = Math.round((12 + Math.floor(R() * 9)) * E.kf), c = { x: cx, y: cy, r: gr * E.gs * (0.55 + 0.045 * k), aepfel: [], verteilt: false, E, rho }; piles.push(c); eigene.push(c);
         for (let i = 0; i < k; i++) for (let t = 0; t < 120; t++) {
           const rr = c.r * Math.pow(R(), 0.8), a = R() * 6.283, x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
@@ -197,7 +210,7 @@ function aepfelStand(B) {
         if (!grenze(x, y) || !frei(x, y, 0.9, E.gs)) continue; const z = versuch(x, y); if (z === null) continue; neu(x, y, z, null, 0.3, E); n++;
       }
     }
-    stand[s] = recs.map((q) => ({ ti: q.ti, s: q.s, x: q.x, y: q.y, zb: q.zb, ry: q.ry, rx: q.rx, rz: q.rz }));
+    stand[s] = recs.map((q) => ({ ti: q.ti, s: q.s, x: q.x, y: q.y, zb: q.zb, ry: q.ry, rx: q.rx, rz: q.rz, mw: q.mw }));
   }
   S.st = alt; stufeAnwenden(B); B.wurzel.updateMatrixWorld(true);
   B.stand = stand; B.standSchl = schl; return stand;
@@ -207,8 +220,10 @@ function aepfelStreuen(B) {
   if (!S.aepfel || S.st === 0 || !aepfelVorlagen.length) return 0;
   const liste = aepfelStand(B)[S.st];
   for (const q of liste) {
-    const v = aepfelVorlagen[q.ti], o = v.g.clone(true); o.userData.typ = v.name; o.scale.setScalar(q.s); o.rotation.set(q.rx, q.ry, q.rz);
-    o.position.set(q.x, q.zb - v.minY * q.s - 0.3, -q.y); aepfelGruppe.add(o);
+    const v = aepfelVorlagen[q.ti], o = v.g.clone(true); o.userData.typ = v.name;
+    if (q.mw) { o.matrix.fromArray(q.mw); o.matrix.decompose(o.position, o.quaternion, o.scale); }
+    else { o.scale.setScalar(q.s); o.rotation.set(q.rx, q.ry, q.rz); o.position.set(q.x, q.zb - v.minY * q.s - 0.3, -q.y); }
+    aepfelGruppe.add(o);
   }
   return liste.length;
 }
@@ -266,7 +281,12 @@ const pf = document.getElementById("pferde");
 for (const [k, v] of Object.entries(GROESSE)) { const b = document.createElement("button"); b.dataset.pf = k; b.textContent = v.name; b.onclick = () => { S.pferd = k; knoepfe(); zeigen(); }; pf.appendChild(b); }
 const h = location.hash.slice(1).split("-"); if (h.length === 3 && GROESSEN[h[1]]) { S.mat = h[0] === "hanf" ? "hanf" : h[0] === "spaene" ? "spaene" : "stroh"; S.gr = h[1]; S.st = Math.max(0, Math.min(3, +h[2] || 0)); }
 function groesse() { const w = innerWidth, hh = innerHeight - parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--panel")); renderer.setSize(w, hh, false); camera.aspect = w / hh; camera.updateProjectionMatrix(); }
-window.__aepfel = { S, zeigen: () => zeigen(), liste: () => { aepfelGruppe.updateMatrixWorld(true); return aepfelGruppe.children.map((o) => ({ typ: o.userData.typ, m: o.matrixWorld.elements })); } };   // für den Export nach Blender (Dome: Äpfel speichern)
+window.__aepfel = { S, gaps: (nmax) => {   // Prüfung: Abstand der Apfel-Unterseite zur darunterliegenden Fläche (alles Sichtbare außer dem Apfel selbst)
+    aepfelGruppe.updateMatrixWorld(true); const rc = new THREE.Raycaster(), alle = []; aktuell.wurzel.traverse((o) => { if (o.isMesh) { let v = o.visible; o.traverseAncestors((q) => { if (!q.visible) v = false; }); if (v && !/tinte/.test(o.material.name || "")) alle.push(o); } });
+    return aepfelGruppe.children.slice(0, nmax || 999).map((o) => { const bb = new THREE.Box3().setFromObject(o), c = bb.getCenter(new THREE.Vector3()); const hid = []; o.traverse((q) => { if (q.isMesh) { hid.push(q); q.visible = false; } }); const ziele = alle.concat(aepfelGruppe.children.filter((q) => q !== o)); let best = 99; const rad = Math.min(bb.max.x - bb.min.x, bb.max.z - bb.min.z) * 0.3;   // Kontakt = kleinster Abstand unter der Standfläche (9 Strahlen)
+      for (let k = 0; k < 9; k++) { const a = k * 0.785, rr = k ? rad : 0; rc.set(new THREE.Vector3(c.x + Math.cos(a) * rr, bb.min.y + 1.5, c.z + Math.sin(a) * rr), new THREE.Vector3(0, -1, 0)); const t = rc.intersectObjects(ziele, true); if (t.length) best = Math.min(best, bb.min.y + 1.5 - t[0].point.y - 1.5); }
+      hid.forEach((q) => { q.visible = true; }); return +best.toFixed(2); });
+  }, cam: (y, p, d, tx, ty, tz) => { yaw = y; pitch = p; dist = d; ziel.set(tx, ty, tz); }, zeigen: () => zeigen(), liste: () => { aepfelGruppe.updateMatrixWorld(true); return aepfelGruppe.children.map((o) => ({ typ: o.userData.typ, m: o.matrixWorld.elements })); } };   // für den Export nach Blender (Dome: Äpfel speichern)
 addEventListener("resize", groesse); groesse(); knoepfe(); zeigen();
 (function lauf() { if (S.dreh) yaw += 0.004; kamera(); renderer.render(scene, camera); requestAnimationFrame(lauf); })();
 </script>

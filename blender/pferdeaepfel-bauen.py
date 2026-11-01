@@ -10,6 +10,7 @@ from mathutils import Vector, Matrix, noise
 
 PROJ = sys.argv[sys.argv.index("--") + 1] if "--" in sys.argv else "C:/Users/dome_/Documents/domes-design-test-git"
 STREUEN = globals().get("STREUEN", False)
+NACHT = globals().get("NACHT", 1)   # 1 = nach einer Nacht (5 Haufen, 7 einzelne Äpfel), 2 = nicht gemistet, zweite Nacht um (10 Haufen, 16 einzelne, das Drittel mit 14 cm ausgeblendet)
 exec(open(PROJ + "/blender/strohlib.py", encoding="utf-8").read(), globals())
 
 TYPEN = {   # Name: (Halbachsen x, y, z in Einheiten, Farbe, Unebenheit, Halme)
@@ -66,9 +67,9 @@ if STREUEN:
     BX, BY, CX = 380, 380, 730.0
     random.seed(4711); haufen = []
     versuche = 0
-    while len(haufen) < 5 and versuche < 2000:
+    while len(haufen) < (5 if NACHT == 1 else 10) and versuche < 4000:
         versuche += 1; x, y = CX + random.uniform(-BX / 2 + 40, BX / 2 - 40), random.uniform(-BY / 2 + 40, BY / 2 - 40)
-        if math.hypot(x - 620, y - 100) < 60 or im_heu(x, y) or any(math.hypot(x - h[0], y - h[1]) < 70 for h in haufen): continue
+        if math.hypot(x - 620, y - 100) < 60 or im_heu(x, y) or any(math.hypot(x - h[0], y - h[1]) < (70 if NACHT == 1 else 52) for h in haufen): continue
         haufen.append((x, y, random.choice((9, 7, 11, 6, 8))))
     gruppen = []
     for hi, (hx, hy, n) in enumerate(haufen):
@@ -86,7 +87,7 @@ if STREUEN:
             gruppe.append(a)
         gruppen.append(gruppe)
     einzeln = []   # ein paar einzelne, weggerollte Äpfel
-    for k in range(7):
+    for k in range(7 if NACHT == 1 else 16):
         for _ in range(200):
             x, y = CX + random.uniform(-BX / 2 + 30, BX / 2 - 30), random.uniform(-BY / 2 + 30, BY / 2 - 30)
             if math.hypot(x - 620, y - 100) < 50 or im_heu(x, y): continue
@@ -106,6 +107,12 @@ if STREUEN:
             for _s in ("koerper", "halme"):
                 _o = bpy.data.objects.get(f"boxA_haufen_{_i:02d}_{_s}")
                 if _o: _o.scale.z = 5.0 / 18.0
+    if NACHT >= 2:   # Dome 2.11.: nicht gemistet, noch eine Nacht – die Haufen mit 14 cm sind ausgeblendet (nicht gelöscht)
+        for _i, _x in enumerate(_h, 1):
+            if _x == 14:
+                for _s in ("koerper", "halme"):
+                    _o = bpy.data.objects.get(f"boxA_haufen_{_i:02d}_{_s}")
+                    if _o: _o.hide_viewport = True; _o.hide_render = True
     for a in sam.objects:
         for m in a.modifiers:
             if m.type == "SOLIDIFY": m.show_viewport = True

@@ -56,6 +56,10 @@ Stroh geht **nie in andere Objekte hinein, nur bis ran** (Eimer, später Leckste
 
 Das Stroh Ebene 2 wird über Nacht **platter**: die Haufen, die frisch auf 18 cm waren (ein Drittel), gehen auf **5 cm** zurück (Skala z = 5/18; erst 14 cm, dann Dome: 5 cm). Gespeichert als `strohboxenboden-<a–e>-<Maß>-nach-einer-nacht.blend` (ohne Eimer, ohne Heu, ohne Äpfel; Skript `strohboxenboden-nach-einer-nacht-speichern.py`). **Pferdeäpfel einzeln: `pferdeapfel-rund.blend`, `pferdeapfel-weich.blend`, `pferdeapfel-hart.blend` (+ `.glb` in `testseiten/`, Ursprung = Mitte der Unterseite, Maße in Einheiten rund 10,4 × 9,0 × 6,3, weich 13,0 × 10,2 × 6,0, hart 7,9 × 6,7 × 5,2; Skript `pferdeaepfel-einzeln-speichern.py`) setzt das Spiel später zufällig, aber nie in andere Objekte hinein** (Beispiel `pferdeaepfel-bauen.py`: 5 Haufen mit 6–11 Äpfeln und einzelne, weggerollte – Stroh um die Haufen weggedrückt, `freihalten`). Frisch eingestreut: Bedeckung mindestens 90 %, Haufen 18/14/10 cm.
 
+## Einstreu nach zwei Nächten ohne Misten (Dome 2.11.)
+
+Nicht gemistet, eine weitere Nacht um: auf Fläche A ist **das Drittel mit 14 cm ausgeblendet** (nicht gelöscht), das Drittel mit 18 cm bleibt auf 5 cm platt, das Drittel mit 10 cm bleibt; **die Zahl der Pferdeäpfel ist erhöht** (10 Haufen mit 6–11 Äpfeln statt 5, 16 einzelne statt 7, zusammen 98 statt 50 Äpfel). Erzeugt mit `pferdeaepfel-bauen.py` (`STREUEN = True`, `NACHT = 2`). Noch nicht als Datei gespeichert.
+
 ## Strohhaufen (Einstreu Ebene 2, `blender/einstreu-stroh-bauen.py`)
 
 - **84 Haufen** (Dome 2.11.): je ein Drittel auf **18 cm** (22,8 Einheiten, die größeren Haufen), **14 cm** (17,7) und **10 cm** (12,7, die kleineren), je 28 Haufen. Zustand in `einstreu-haufen-zustand.json`.

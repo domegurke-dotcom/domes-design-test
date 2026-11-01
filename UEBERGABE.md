@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. nachts (Claude Team) – v940 Futterplan echte Werte, Eimerbild-Antworten
+**v940:** Heu 6 → 7 MJ je kg (Heulage/Heucobs 8, Luzerne 9, Öl 35), Standard-Heu rechnet mit `FUTTER.heu.e`; `krankheiten-test` und `weihnachten-test` grün. **Offen (Rückfrage an Dome):** Friese/Quarter/Paint/Appaloosa als leichtfuttrig – die Liste steuert auch die Hufrehe-Warnung im Frühling (kein Weidegang). **Plan Eimerbild:** Dome hat die fünf offenen Fragen beantwortet (siehe `PLAN-EIMERBILD.md`), die Etappen E1–E6 starten erst, wenn die 3D-Eimer ins Spiel kommen.
+
 ### 2.11. nachts (Claude Team) – Plan Eimerbild
 `PLAN-EIMERBILD.md` angelegt (nur Plan): Draufsicht-Rundbilder der Futtereimer aus Blender je Füllstand, Eimer-Fenster beim Antippen, im Stallbild nur leer/gefüllt, Anzeige im Futterplan; Tagesmenge, Füllgrenze 12 l. Offene Fragen im Plan (Mischfutter, Eimer je Boxstufe, Größe, Heu, Futterplan-Werte). Eimerfüllung jetzt rund (nicht eckig), Innenscheibe-Fehler behoben, Stroh Ebene 2 hält Abstand zu Objekten (außer Heu), Einzel-Böden `strohboxenboden-a…e`.
 

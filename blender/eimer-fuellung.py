@@ -27,7 +27,7 @@ def lerp(tab, z):
         if z <= z1: return w0 + (w1 - w0) * max(0.0, (z - z0) / (z1 - z0))
     return tab[-1][1]
 R1 = [(0.8, 13.5), (4.0, 14.0), (12.0, 15.1), (20.0, 16.4), (24.8, 17.6), (25.7, 18.0)]   # Innenradius Eimer Stufe 1 nach Höhe
-A2 = [(1.0, 18.4), (32.2, 24.8), (40.0, 24.8)]; B2 = [(1.0, 27.2), (32.2, 34.8), (40.0, 34.8)]   # Innenmaße Eimer Stufe 2: Halbachse x, Tiefe nach -y
+A2 = [(1.0, 18.4), (32.2, 24.8), (34.0, 23.4), (37.0, 24.8), (40.0, 24.8)]; B2 = [(1.0, 27.2), (32.2, 34.8), (34.0, 33.4), (37.0, 34.8), (40.0, 34.8)]   # Dome 2.11.: bei z = 34 verengt sich die Innenwand um 1,4 (Wulst unter dem Rand) – dort ragte Futter durch die Wand   # Innenmaße Eimer Stufe 2: Halbachse x, Tiefe nach -y
 Z0, RIM = (0.8, 25.7) if EIMER == "stufe1" else (1.0, 37.0)
 HMAX = FUELLGRENZE_Z[EIMER]
 def flaeche(z):

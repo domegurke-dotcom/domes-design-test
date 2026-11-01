@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. später (Claude Team) – Blender: Eimer Stufe 2 Wulst, Haufen auf 20 cm
+**Eimer Stufe 2:** unter dem Rand verengt sich die Innenwand bei z = 34 um 1,4 (Wulst) – das fehlte im Profil, Futter ragte dort durch. In `eimer-fuellung.py` ergänzt (Überstand jetzt −0,34 = innen), Skala des Eimers 0,879, `eimer-stufe1-12l.blend` / `eimer-stufe2-12l.blend` neu gespeichert, `leckstein.blend` ist mit dem anliegenden Seil gespeichert. **Einstreu Ebene 2:** Dome wollte 1/9 der Haufen auf 20 cm Höhe (25,3 Einheiten, liegt über der alten 21,6-Grenze): 9 von 84 Haufen (Nr. 2, 18, 24, 47, 74, 98, 112, 116, 131), im Zustand `einstreu-haufen-zustand.json` (`hoch20`).
+
 ### 2.11. (Claude Team) – Blender: Seil, Eimerfüllung, Haufen (Dome-Wünsche vom 1./2.11.)
 **Leckstein:** das Seil folgt jetzt als konvexe Hülle (gespanntes Seil) der Rundung des Steins – Stirnfläche und obere Kante – bis zum Berührpunkt und zieht dann gerade zum Knoten (`D = 0,62` Abstand Seilmitte–Stein in `leckstein-bauen.py`). **Eimerfüllung:** die Grundfläche der Füllung (mit Kontur) ragte beim runden Eimer 0,3 durch die Wand, beim grünen Eimer lag die Rückwand 1,0 zu weit hinten – behoben in `eimer-fuellung.py` (Prüfskript: größter Überstand über der Innenwand −0,05 / −0,24, also innen); `eimer-stufe1-12l.blend` und `eimer-stufe2-12l.blend` neu gespeichert. **Einstreu Ebene 2:** 84 Haufen, etwa 1/3 (27) auf Maximalhöhe 21,6 gestreckt, gleichmäßig und zufällig verteilt (Bedeckung ≈ 85 %); der Zustand steht in `blender/einstreu-haufen-zustand.json`, `einstreu-stroh-bauen.py` übernimmt ihn. **Immer wieder dieselbe Falle:** keine `#`-Kommentare mitten in Zeilen (Python) und keine `//`-Kommentare mitten in Zeilen (JavaScript), sie schlucken den Rest der Zeile.
 

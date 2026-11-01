@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. nachts (Claude Team) – Blender: Pferdeäpfel
+Drei Äpfel als Vorlagen (rund, weich mit Halmen, hart/klein) in `blender/pferdeaepfel.blend` (+ `testseiten/pferdeaepfel.glb`), Skript `blender/pferdeaepfel-bauen.py` (mit `STREUEN = True` im offenen Fenster: Fläche A so, als müsste man am nächsten Morgen misten – 5 Haufen mit 7–11 Äpfeln, 7 einzelne, Stroh um die Haufen weggedrückt). Im Fenster nicht gespeichert (wie Fläche A).
+
 ### 2.11. nachts (Claude Team) – FÜR DIE NÄCHSTE SITZUNG
 **Dome hat Ja gesagt (2.11.), aber erst in der nächsten Sitzung:** Friese, Quarter, Paint und Appaloosa in `LEICHTFUTTRIG` eintragen (index.html, bei `const LEICHTFUTTRIG`). Achtung Folge: die Liste steuert auch `reheGefaehrdet` (Hufrehe-Warnung/Weide im Frühling), `appetit`, Strohpellet-Einstreu-Warnung und Müsli-Hufrehe – diese Rassen gehen dann im Frühling nicht mehr auf die Weide. Vorher Dome nochmal an die Folge erinnern, dann `krankheiten-test`, `weihnachten-test`, `orte-test` laufen lassen, Version 941, `CLAUDE.md` nachführen.
 

@@ -1,7 +1,7 @@
 # Einstreu Stufe 2 der Mistigkeit (Dome 2.11.2026): nicht gemistet, zwei Nächte um. Aus den frisch eingestreuten Einzelböden (strohboxenboden-<a–e>-<Maß>.blend):
 # das Drittel mit 18 cm ist auf 5 cm platt getreten (Skala z = 5/18), das Drittel mit 14 cm ist ausgeblendet (nicht gelöscht), das Drittel mit 10 cm bleibt.
 # Ohne Eimer, Heu und Pferdeäpfel (die verteilt das Spiel später zufällig, nie in andere Objekte; mehr Äpfel als bei Stufe 1).
-# Ergebnis: blender/strohboxenboden-<a–e>-<Maß>-mistigkeit-2.blend   (Stufe 1 = …-nach-einer-nacht.blend)
+# Ergebnis: blender/strohboxenboden-<a–e>-<Maß>-mistigkeit-2.blend   (Stufe 1 = …-mistigkeit-1.blend)
 # Aufruf ohne Fenster: blender -b --python blender/strohboxenboden-mistigkeit2-speichern.py -- <Projektordner>
 import bpy, sys, random
 PROJ = sys.argv[sys.argv.index("--") + 1]

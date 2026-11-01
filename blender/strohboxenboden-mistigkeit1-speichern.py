@@ -1,6 +1,6 @@
 # Einstreu nach einer Nacht (Dome 2.11.2026): aus den frisch eingestreuten Einzelböden (strohboxenboden-<a–e>-<Maß>.blend) werden die Haufen, die frisch 18 cm hoch waren
 # (ein Drittel), auf 5 cm platt getreten (Skala z = 5/18); die Haufen mit 14 und 10 cm bleiben. Ohne Eimer, ohne Heu, ohne Pferdeäpfel (die verteilt das Spiel später zufällig, nie in andere Objekte).
-# Ergebnis: blender/strohboxenboden-<a–e>-<Maß>-nach-einer-nacht.blend
+# Ergebnis: blender/strohboxenboden-<a–e>-<Maß>-mistigkeit-1.blend
 # Aufruf ohne Fenster: blender -b --python blender/strohboxenboden-morgen-speichern.py -- <Projektordner>
 import bpy, sys, random
 PROJ = sys.argv[sys.argv.index("--") + 1]
@@ -13,6 +13,6 @@ for k, (name, mass, n) in enumerate([("a", "3x3", 68), ("b", "3x4", 90), ("c", "
         for suf in ("koerper", "halme"):
             o = bpy.data.objects.get(f"box{name.upper()}_haufen_{i:02d}_{suf}")
             if o: o.scale.z = 5.0 / 18.0; platt += 1
-    ziel = f"{PROJ}/blender/strohboxenboden-{name}-{mass}-nach-einer-nacht.blend"
+    ziel = f"{PROJ}/blender/strohboxenboden-{name}-{mass}-mistigkeit-1.blend"
     bpy.ops.wm.save_as_mainfile(filepath=ziel)
     print("GESPEICHERT", ziel, "platt:", platt // 2, "von", n)

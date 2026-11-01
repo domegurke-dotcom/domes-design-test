@@ -15,14 +15,17 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. nachts (Claude Team) – Mistigkeit: Namen und Stufe 3
+Einzelböden heißen jetzt `strohboxenboden-<a–e>-<Maß>-mistigkeit-1.blend` (nach einer Nacht, vorher `-nach-einer-nacht`), `-mistigkeit-2.blend` (zwei Nächte, 14-cm-Drittel ausgeblendet) – Skripte `strohboxenboden-mistigkeit1-speichern.py`, `…mistigkeit2-speichern.py`. **Stufe 3** (dritte Nacht: auch das 10-cm-Drittel ausgeblendet, 15 Haufen + 24 einzelne Äpfel) steht nur im Blender-Fenster (`pferdeaepfel-bauen.py`, `NACHT = 3`), noch nicht als Datei gespeichert.
+
 ### 2.11. nachts (Claude Team) – Mistigkeit Stufe 2
-`blender/strohboxenboden-<a–e>-<Maß>-mistigkeit-2.blend`: Drittel 18 cm auf 5 cm platt, Drittel 14 cm ausgeblendet, Drittel 10 cm bleibt; ohne Eimer, Heu, Äpfel. Stufe 1 der Mistigkeit = `…-nach-einer-nacht.blend`. Äpfel: bei Stufe 2 etwa doppelt so viele (Beispiel 98 statt 50 auf Fläche A), Verteilung durch das Spiel.
+`blender/strohboxenboden-<a–e>-<Maß>-mistigkeit-2.blend`: Drittel 18 cm auf 5 cm platt, Drittel 14 cm ausgeblendet, Drittel 10 cm bleibt; ohne Eimer, Heu, Äpfel. Stufe 1 der Mistigkeit = `…-mistigkeit-1.blend` (früher …-nach-einer-nacht). Äpfel: bei Stufe 2 etwa doppelt so viele (Beispiel 98 statt 50 auf Fläche A), Verteilung durch das Spiel.
 
 ### 2.11. nachts (Claude Team) – Pferdeäpfel einzeln
 `blender/pferdeapfel-rund|weich|hart.blend` (+ `testseiten/pferdeapfel-<typ>.glb`), Ursprung Mitte der Unterseite, mit Kontur; Skript `pferdeaepfel-einzeln-speichern.py`. Das Spiel verteilt sie später einzeln, zufällig und nie in andere Objekte.
 
 ### 2.11. nachts (Claude Team) – Einstreu nach einer Nacht
-`blender/strohboxenboden-<a–e>-<Maß>-nach-einer-nacht.blend`: wie frisch eingestreut, nur das Drittel mit 18 cm ist auf 5 cm platt getreten (Dome), ohne Eimer, Heu und Äpfel. Äpfel verteilt das Spiel später zufällig, nie in andere Objekte (Vorlagen `pferdeaepfel.blend`). Skript `strohboxenboden-nach-einer-nacht-speichern.py`.
+`blender/strohboxenboden-<a–e>-<Maß>-mistigkeit-1.blend`: wie frisch eingestreut, nur das Drittel mit 18 cm ist auf 5 cm platt getreten (Dome), ohne Eimer, Heu und Äpfel. Äpfel verteilt das Spiel später zufällig, nie in andere Objekte (Vorlagen `pferdeaepfel.blend`). Skript `strohboxenboden-mistigkeit1-speichern.py`.
 
 ### 2.11. nachts (Claude Team) – Blender: Pferdeäpfel
 Drei Äpfel als Vorlagen (rund, weich mit Halmen, hart/klein) in `blender/pferdeaepfel.blend` (+ `testseiten/pferdeaepfel.glb`), Skript `blender/pferdeaepfel-bauen.py` (mit `STREUEN = True` im offenen Fenster: Fläche A so, als müsste man am nächsten Morgen misten – 5 Haufen mit 7–11 Äpfeln, 7 einzelne, Stroh um die Haufen weggedrückt). Im Fenster nicht gespeichert (wie Fläche A).

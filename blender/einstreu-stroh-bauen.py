@@ -62,7 +62,7 @@ muster = objekt("stroh_ebene1_muster", bm, eb1, HALM)
 # ---------- Ebene 2: kleine, lockere Heuhaufen in verschiedenen Größen (keine Grasbüschel) ----------
 # Höhe nie über 2/3 der Eimerhöhe (Eimer Stufe 1 = 28,8 Einheiten → höchstens 19,2). Die Halme liegen kreuz und quer auf der Haufenform, lose abgehoben.
 EIMER_H = 28.8; MAX_H = EIMER_H * 2 / 3
-GROESSEN = [(14, 22, 5), (24, 36, 8), (40, 56, 3)]   # (Radius von, bis, Anzahl) – kleine, mittlere, große Haufen
+GROESSEN = [(14, 22, 10), (24, 36, 16), (40, 56, 6)]   # (Radius von, bis, Anzahl) – kleine, mittlere, große Haufen
 orte = []
 for rmin, rmax, anzahl in GROESSEN[::-1]:   # große zuerst, damit sie Platz finden
     ges = 0

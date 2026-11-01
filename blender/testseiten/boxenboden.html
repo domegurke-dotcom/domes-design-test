@@ -134,13 +134,20 @@ function aepfelStand(B) {
   const grenze = (x, y) => Math.abs(x) < bx / 2 - 4 && Math.abs(y) < by / 2 - 4;
   let traeger = [];
   const LIMM = B.daten.mat === "stroh" ? 10.5 : 9.4;
-  const deck = (x, y, r) => {   // Welche sichtbaren Haufen (Ebene 2) liegen unter der Stelle? platt getretene werden weggeschoben, hohe verhindern die Stelle
+  const KONTINGENT = () => 4 + S.st;   // Dome: die Ebene 2 darf nicht so stark verschwinden – je Nacht werden höchstens 5/6/7 platt getretene Haufen weggeschoben, je Apfelhaufen nur der nächste
+  const anzahlWeg = () => { let n = 0; B.wegAb.forEach((v) => { if (v === S.st) n++; }); return n; };
+  const deck = (x, y, r) => {   // Welche sichtbaren Haufen (Ebene 2) liegen unter der Stelle? hohe verhindern die Stelle, ein platt getretener darf weggeschoben werden (solange das Kontingent reicht)
     const platt = []; let ok = true;
-    for (const hp of B.haufen) { if (!hp.sichtbar) continue; const f = hp.h === 18 ? 0.6 : 0.2, rr = hp.h === 18 ? 1 : 0.8;   // platt: Haufen wird auch am Rand weggeschoben; hoch: nur wenn die Mitte des Apfels im Haufen liegt (am flachen Rand dürfen Äpfel liegen)
+    for (const hp of B.haufen) { if (!hp.sichtbar) continue; const f = hp.h === 18 ? 0.3 : 0.2, rr = hp.h === 18 ? 0.8 : 0.8;
       const dx = (x - hp.x) / (hp.rx * rr + r * f), dy = (y - hp.y) / (hp.ry * rr + r * f); if (dx * dx + dy * dy < 1) { if (hp.h === 18) platt.push(hp); else ok = false; } }
+    if (platt.length && anzahlWeg() >= KONTINGENT()) ok = false;
     return { ok, platt };
   };
-  const festlegen = (x, y, r) => { if (!B.hoehe) return; for (const hp of deck(x, y, r).platt) { B.wegAb.set(hp.i, S.st); hp.sichtbar = false; } };
+  const festlegen = (x, y, r) => {   // der nächste platt getretene Haufen wird weggeschoben (nur dieser eine)
+    if (!B.hoehe) return; const pl = deck(x, y, r).platt; if (!pl.length) return;
+    let best = pl[0], bd = 1e9; for (const hp of pl) { const d = Math.hypot(hp.x - x, hp.y - y); if (d < bd) { bd = d; best = hp; } }
+    B.wegAb.set(best.i, S.st); best.sichtbar = false;
+  };
   const versuch = (x, y, r, cm) => {   // cm = Einsinktiefe: Haufen 2 cm, Einzeläpfel und verstreute Äpfel 0,75 cm (Dome: einzeln nur 0,5–1 cm)   // Variante a (Dome): Äpfel liegen auf Ebene 1 (Höhenraster der Bodenschicht), der Haufen der Ebene 2 darunter wird weggeschoben; unter hohen Haufen gibt es keine Stelle (null)
     if (B.hoehe) {
       if (!deck(x, y, r === undefined ? gr * 0.6 : r).ok) return null;

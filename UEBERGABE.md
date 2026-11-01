@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. nachts (Claude Team) – Plan Eimerbild
+`PLAN-EIMERBILD.md` angelegt (nur Plan): Draufsicht-Rundbilder der Futtereimer aus Blender je Füllstand, Eimer-Fenster beim Antippen, im Stallbild nur leer/gefüllt, Anzeige im Futterplan; Tagesmenge, Füllgrenze 12 l. Offene Fragen im Plan (Mischfutter, Eimer je Boxstufe, Größe, Heu, Futterplan-Werte). Eimerfüllung jetzt rund (nicht eckig), Innenscheibe-Fehler behoben, Stroh Ebene 2 hält Abstand zu Objekten (außer Heu), Einzel-Böden `strohboxenboden-a…e`.
+
 ### 2.11. nachts (Claude Team) – Eimerfüllung unsichtbar (behoben) und Futterplan-Prüfung
 **Fehler:** Eimer Stufe 1 hatte Pros dunkle Innenscheibe (Material innen) knapp unter dem Rand – jede Füllung darunter (unter etwa 10 l) war unsichtbar. Scheibe liegt jetzt auf dem Boden (`eimer-fuellung.py`, `eimer-stufe1-12l.blend` neu gespeichert). Stufe 2 geprüft, ohne Scheibe. **Beispiel Friese 8 J., 600 kg:** Hafer 2 kg/Tag, Heu 10 kg/Tag. **Futterplan-Prüfung (nur gerechnet, im Spiel nichts geändert, Fragen an Dome):** Heu hat im Spiel 6 MJ je kg (echt gutes Heu etwa 7–7,5 MJ ME) – darum gibt der Standard-/Expertenplan Arbeitspferden 2,2–2,5 kg Heu je 100 kg (Friese leichte Arbeit 12,7 kg, kein Hafer; echt wären etwa 9–10 kg Heu + 1–2 kg Hafer). Öl 30 MJ (echt etwa 35–37). Friese, Quarter, Paint, Appaloosa nicht als leichtfuttrig geführt (Friese hat aber EMS-Neigung). Gewichte, Kraftfutter je Mahlzeit (0,5 %), Stärke (1 g/kg), Raufutter-Minimum (1,5 %), Arbeitszuschläge (25/50/100 %) passen zur Realität.
 

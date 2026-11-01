@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. nachts (Claude Team) – Mistigkeit Stufe 2
+`blender/strohboxenboden-<a–e>-<Maß>-mistigkeit-2.blend`: Drittel 18 cm auf 5 cm platt, Drittel 14 cm ausgeblendet, Drittel 10 cm bleibt; ohne Eimer, Heu, Äpfel. Stufe 1 der Mistigkeit = `…-nach-einer-nacht.blend`. Äpfel: bei Stufe 2 etwa doppelt so viele (Beispiel 98 statt 50 auf Fläche A), Verteilung durch das Spiel.
+
 ### 2.11. nachts (Claude Team) – Pferdeäpfel einzeln
 `blender/pferdeapfel-rund|weich|hart.blend` (+ `testseiten/pferdeapfel-<typ>.glb`), Ursprung Mitte der Unterseite, mit Kontur; Skript `pferdeaepfel-einzeln-speichern.py`. Das Spiel verteilt sie später einzeln, zufällig und nie in andere Objekte.
 

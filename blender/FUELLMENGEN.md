@@ -58,7 +58,7 @@ Das Stroh Ebene 2 wird über Nacht **platter**: die Haufen, die frisch auf 18 cm
 
 ## Einstreu nach zwei Nächten ohne Misten (Dome 2.11.)
 
-Nicht gemistet, eine weitere Nacht um: auf Fläche A ist **das Drittel mit 14 cm ausgeblendet** (nicht gelöscht), das Drittel mit 18 cm bleibt auf 5 cm platt, das Drittel mit 10 cm bleibt; **die Zahl der Pferdeäpfel ist erhöht** (10 Haufen mit 6–11 Äpfeln statt 5, 16 einzelne statt 7, zusammen 98 statt 50 Äpfel). Erzeugt mit `pferdeaepfel-bauen.py` (`STREUEN = True`, `NACHT = 2`). Noch nicht als Datei gespeichert.
+Nicht gemistet, eine weitere Nacht um: auf Fläche A ist **das Drittel mit 14 cm ausgeblendet** (nicht gelöscht), das Drittel mit 18 cm bleibt auf 5 cm platt, das Drittel mit 10 cm bleibt; **die Zahl der Pferdeäpfel ist erhöht** (10 Haufen mit 6–11 Äpfeln statt 5, 16 einzelne statt 7, zusammen 98 statt 50 Äpfel). Das ist **Stufe 2 der Mistigkeit** (Stufe 1 = nach einer Nacht). Gespeichert als `strohboxenboden-<a–e>-<Maß>-mistigkeit-2.blend` (ohne Eimer, Heu, Äpfel; Skript `strohboxenboden-mistigkeit2-speichern.py`). Äpfel: `pferdeaepfel-bauen.py` (`STREUEN = True`, `NACHT = 2`) zeigt die Verteilung, das Spiel setzt sie zufällig.
 
 ## Strohhaufen (Einstreu Ebene 2, `blender/einstreu-stroh-bauen.py`)
 

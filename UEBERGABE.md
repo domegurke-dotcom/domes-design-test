@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. nacht (Claude Team) – Einstreu-Böden B–E in der kleineren Fassung (läuft)
+Alles zusammen neu bauen: `bash werkzeuge/einstreu-bauen.sh [a b c d e]` (Git-Bash, Blender 5.2; Reihenfolge Stroh → Hanf → Späne → Ansichtsdaten → Mistigkeit → Oberfläche; ~20 Min. für B–E). Stand: Box A (Stroh/Hanf/Späne) in der kleineren Fassung und von Dome abgenommen („passt“); B–E wurden zuletzt am 2.11. abends gebaut (quadratischer Stroh-Umriss, Strohhöhen bei Hanf/Späne, dichter Boden) und werden jetzt mit einseitigen Teilchen, gelöschten ausgeblendeten Haufen und Komprimierung neu erzeugt. Danach nur noch nötig: Stroh B–E (tracked, kleiner als vorher) committen und pushen; Hanf/Späne bleiben lokal. Dome-Entscheidungen: verdeckte Teilchen werden **nicht** entfernt; Hochladen von Hanf/Späne nur, wenn alle Dateien unter 100 MB sind.
+
 ### 2.11. nacht (Claude Team) – Einstreu-Dateien kleiner (nur Box A, Dome: erst A, dann B–E)
 Dome-Auftrag „Teilchen im nicht sichtbaren Bereich minimieren, Detailgrad beibehalten": (1) in den Mistigkeit-Dateien werden die ausgeblendeten Haufen **gelöscht** statt nur ausgeblendet (`mistigkeit-dicht-hanf-speichern.py`); (2) Teilchen **einseitig** (eine Fläche, 4 statt 8 Punkte – `halm()` in `strohlib.py`, Materialien zeigen beide Seiten, Backface-Culling aus); (4) Blender-Dateien **komprimiert** gespeichert (`compress=True`). Box A: Stroh 16,6 → 10,9 / 8,4 / 7,2 MB (frisch/Stufe 2/3), Hanf 26,8 → 18,1 / 14,7 / 13,2 MB, Späne 40,0 → 24,5 / 19,7 / 17,7 MB (zusammen 334 → 188 MB, −44 %); Aussehen unverändert (Späne Stufe 2 verglichen). **Punkt 3 (verdeckte Teilchen entfernen) wird NICHT gemacht – Dome 2.11.: „lass ganz raus, nicht nur erstmal". Nicht wieder vorschlagen.** B–E noch in alter Größe (nicht neu gebaut), Hanf/Späne weiter nur lokal (Späne E 130 MB > GitHub-Grenze 100 MB). Stroh A in Git neu.
 

@@ -50,6 +50,9 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
             nrm = normiert(Vector((math.sin(th) * math.cos(w) / r, math.sin(th) * math.sin(w) / ry, math.cos(th) / kuppel)))
             zu = Vector((random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1))); tang = normiert(zu - nrm * zu.dot(nrm)); anh = math.radians(random.uniform(0, 10))
             rich = normiert(tang * math.cos(anh) + nrm * math.sin(anh)); laenge = random.uniform(15, 28) * (0.75 + 0.25 * min(1, r / 40))
+            zmax = 0.9 if random.random() < 0.08 else 0.22   # Dome: nur einzelne Halme stehen nach oben, die meisten liegen (höchstens ~13° steigend)
+            if rich.z > zmax or rich.z < -0.4:
+                hor = Vector((rich.x, rich.y, 0)); hor = hor.normalized() if hor.length > 1e-6 else Vector((1, 0, 0)); zc = max(-0.4, min(zmax, rich.z)); rich = hor * math.sqrt(1 - zc * zc) + Vector((0, 0, zc))
             px_, py_ = ko.location.x + p.x, ko.location.y + p.y   # Halme enden nie über dem Boxenrand (dort würden sie hängen)
             for _ in range(8):
                 if abs(px_ + rich.x * laenge) <= BX / 2 - 2 and abs(py_ + rich.y * laenge) <= BY / 2 - 2: break

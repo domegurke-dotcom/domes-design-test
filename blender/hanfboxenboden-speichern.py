@@ -24,6 +24,7 @@ def splitter(V, F, MI, p, rich, mh, chip=False, sc=1.0, pn=0.75, dim=None):   # 
     halm(V, F, MI, (7 + random.choices(range(3), NADEL_GEW)[0]) if nadel else random.choices(range(7), gew())[0], p, rich, l, b, 1, 0.0, random.uniform(-0.9, 0.9) if random.random() < 0.85 else random.uniform(-1.5, 1.5)); return l * b
 for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d", "4x5"), ("e", "5x5")]):
     if name not in NUR: continue
+    kmp = 1.0 if name == "a" else KOMPAKT   # Dome 2.11.: Haufenhöhen wie beim Stroh (10/14/18 cm) – erst nur Box A, B–E folgen nach Freigabe
     bpy.ops.wm.open_mainfile(filepath=f"{PROJ}/blender/strohboxenboden-{name}-{mass}.blend")
     for i, c in enumerate(HANF):
         m = mat(f"hanf_{i}", c); cc = tuple(srgb(x) for x in c) + (1,); m.diffuse_color = cc; m.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = cc
@@ -76,18 +77,18 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
     ersetze(f"{P}_muster", V, F, MI, b.location)
     for i, ko in enumerate(ks):
         f = R[i] / R0[i]; ko.location = (pos[i][0], pos[i][1], 0); ko.scale = (f, f, 1)
-        for v in ko.data.vertices: v.co.z *= KOMPAKT
+        for v in ko.data.vertices: v.co.z *= kmp
         ph = [random.Random(31 * (i + 1) + q + 100 * j).uniform(0, math.tau) for q in range(3)]; zs_ = [v.co.z for v in ko.data.vertices]; zlo, zhi = min(zs_), max(zs_)
         LX, LY = BX / 2 - 2, BY / 2 - 2; kl = lambda w, g: max(-g, min(g, w))   # nichts über den Boxenrand hinaus
         for v in ko.data.vertices:
             v.co.x, v.co.y = warp(v.co.x, v.co.y, 1 - (v.co.z - zlo) / max(1e-6, zhi - zlo), ph)
             v.co.x = (kl(pos[i][0] + f * v.co.x, LX) - pos[i][0]) / f; v.co.y = (kl(pos[i][1] + f * v.co.y, LY) - pos[i][1]) / f
-        k = i + 1; r = ko["r0"] * f; ry = ko["ry0"] * f; kuppel = max(v.co.z for v in ko.data.vertices) - 1.5 * KOMPAKT
+        k = i + 1; r = ko["r0"] * f; ry = ko["ry0"] * f; kuppel = max(v.co.z for v in ko.data.vertices) - 1.5 * kmp
         random.seed(7000 + 100 * j + k); V, F, MI = [], [], []
         for _ in range(int(r * ry * 1.1)):   # Haufenteilchen so groß und locker wie auf Ebene 1 (Dome: die Lockerheit von Mistigkeit 3 überall): 1,4-fach, weniger, höher aufliegend
             th = math.acos(random.random() ** 0.8) * 0.95; w = random.uniform(0, math.tau)
-            p = Vector((r * math.sin(th) * math.cos(w), ry * math.sin(th) * math.sin(w), kuppel * math.cos(th) + 1.5 * KOMPAKT))
-            px_, py_ = warp(p.x, p.y, 1 - min(1, max(0, (p.z - 1.5 * KOMPAKT) / kuppel)), ph); p = Vector((kl(pos[i][0] + px_, LX) - pos[i][0], kl(pos[i][1] + py_, LY) - pos[i][1], p.z))
+            p = Vector((r * math.sin(th) * math.cos(w), ry * math.sin(th) * math.sin(w), kuppel * math.cos(th) + 1.5 * kmp))
+            px_, py_ = warp(p.x, p.y, 1 - min(1, max(0, (p.z - 1.5 * kmp) / kuppel)), ph); p = Vector((kl(pos[i][0] + px_, LX) - pos[i][0], kl(pos[i][1] + py_, LY) - pos[i][1], p.z))
             nrm = normiert(Vector((math.sin(th) * math.cos(w) / r, math.sin(th) * math.sin(w) / ry, math.cos(th) / kuppel)))
             zu = Vector((random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1))); tang = normiert(zu - nrm * zu.dot(nrm))
             rc_ = normiert(tang + nrm * random.uniform(-0.05, 0.12) + Vector((random.uniform(-.2, .2), random.uniform(-.2, .2), random.uniform(-.08, .08))))

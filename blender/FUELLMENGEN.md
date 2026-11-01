@@ -54,7 +54,7 @@ Stroh geht **nie in andere Objekte hinein, nur bis ran** (Eimer, später Leckste
 
 ## Einstreu am nächsten Morgen (Dome 2.11.)
 
-Das Stroh Ebene 2 wird über Nacht **platter**: die Haufen, die frisch auf 18 cm waren (ein Drittel), gehen auf **14 cm** zurück (Skala z = 14/18). Dazu liegen Pferdeäpfel (`pferdeaepfel-bauen.py`). Frisch eingestreut: Bedeckung mindestens 90 %, Haufen 18/14/10 cm.
+Das Stroh Ebene 2 wird über Nacht **platter**: die Haufen, die frisch auf 18 cm waren (ein Drittel), gehen auf **5 cm** zurück (Skala z = 5/18; erst 14 cm, dann Dome: 5 cm). Dazu liegen Pferdeäpfel (`pferdeaepfel-bauen.py`). Frisch eingestreut: Bedeckung mindestens 90 %, Haufen 18/14/10 cm.
 
 ## Strohhaufen (Einstreu Ebene 2, `blender/einstreu-stroh-bauen.py`)
 

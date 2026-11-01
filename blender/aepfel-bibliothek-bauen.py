@@ -14,7 +14,7 @@ from mathutils import Vector, Matrix, Euler
 PROJ = sys.argv[sys.argv.index("--") + 1]
 GROESSEN = {"kalt": 1.15, "warm": 1.0, "pony": 0.8, "fohlen": 0.6}
 TYPEN = ("rund", "weich", "hart"); TW = {"normal": [5, 3, 2], "fohlen": [2, 7, 1]}
-HAUFEN_N, VERSTREUT_N = 8, 6; SIM = 0.87; FRAMES = 150
+HAUFEN_N, VERSTREUT_N = 8, 6; SIM = 0.82; FRAMES = 150
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 vorlage = {}
@@ -43,7 +43,7 @@ def physik(apfel_liste, sam, gref):
     boden = bpy.data.objects.new("boden_sim", None); sam.objects.link(boden)
     # flache Schale (Mitte z = 0, nach außen leicht ansteigend), damit die Äpfel zur Mitte rollen und liegenbleiben; außerhalb eben
     import bmesh
-    tiefe = 0.22 * gref; rmax = 2.4 * gref; N = 24; bm = bmesh.new(); mitte = bm.verts.new((0, 0, 0))
+    tiefe = 0.4 * gref; rmax = 2.0 * gref; N = 24; bm = bmesh.new(); mitte = bm.verts.new((0, 0, 0))
     ringe = [[bm.verts.new((math.cos(j / N * math.tau) * rr * gref, math.sin(j / N * math.tau) * rr * gref, tiefe * (rr * gref / rmax) ** 2)) for j in range(N)] for rr in (0.3, 0.6, 0.9, 1.2, 1.5, 1.8, 2.1, 2.4)]
     for j in range(N): bm.faces.new((mitte, ringe[0][j], ringe[0][(j + 1) % N]))
     for a in range(len(ringe) - 1):
@@ -52,10 +52,10 @@ def physik(apfel_liste, sam, gref):
     for j in range(N): bm.faces.new((ringe[-1][j], aussen[j], aussen[(j + 1) % N], ringe[-1][(j + 1) % N]))
     me = bpy.data.meshes.new("boden_sim"); bm.to_mesh(me); bm.free()
     ground = bpy.data.objects.new("boden_sim_mesh", me); sam.objects.link(ground)
-    bpy.context.view_layer.objects.active = ground; ground.select_set(True); bpy.ops.rigidbody.object_add(type="PASSIVE"); ground.rigid_body.collision_shape = "MESH"; ground.rigid_body.friction = 1.0; ground.rigid_body.restitution = 0.0
+    bpy.context.view_layer.objects.active = ground; ground.select_set(True); bpy.ops.rigidbody.object_add(type="PASSIVE"); ground.rigid_body.collision_shape = "MESH"; ground.rigid_body.friction = 4.0; ground.rigid_body.restitution = 0.0
     for o in apfel_liste:
         bpy.context.view_layer.objects.active = o; o.select_set(True); bpy.ops.rigidbody.object_add(type="ACTIVE")
-        rb = o.rigid_body; rb.collision_shape = "CONVEX_HULL"; rb.friction = 1.0; rb.restitution = 0.0; rb.linear_damping = 0.8; rb.angular_damping = 0.95; rb.mass = 1.0
+        rb = o.rigid_body; rb.collision_shape = "CONVEX_HULL"; rb.friction = 4.0; rb.restitution = 0.0; rb.linear_damping = 0.9; rb.angular_damping = 0.98   # Pferdeäpfel sind keine Steine: leicht matschig, bleiben aufeinander liegen (hohe Reibung, kaum Rollen); rb.mass = 1.0
         rb.use_margin = True; rb.collision_margin = 0.0
     scn.frame_start = 1; scn.frame_end = FRAMES
     for f in range(1, FRAMES + 1): scn.frame_set(f)
@@ -72,18 +72,18 @@ daten = {"einheit_cm": 0.79, "apfel_durchmesser": GR, "groessen": GROESSEN, "hau
 for gname, gs in GROESSEN.items():
     gi = list(GROESSEN).index(gname); daten["haufen"][gname] = []; daten["verstreut"][gname] = []
     for n in range(1, HAUFEN_N + VERSTREUT_N + 1):
-        ganz = n <= HAUFEN_N; random.seed(1000 * gi + n); k = 11 + random.randint(0, 4); sam = c_hau if ganz else c_ver
+        ganz = n <= HAUFEN_N; random.seed(1000 * gi + n); k = 12 + random.randint(0, 2); sam = c_hau if ganz else c_ver
         name = f"haufen_{gname}_{n}" if ganz else f"verstreut_{gname}_{n - HAUFEN_N}"
         emp = bpy.data.objects.new(name, None); emp.empty_display_type = "PLAIN_AXES"; emp.empty_display_size = GR * gs; sam.objects.link(emp)
         tw = TW["fohlen" if gname == "fohlen" else "normal"]; liste = []
         for i in range(k):
             typ = random.choices(TYPEN, tw)[0]; s = gs * (0.9 + 0.2 * random.random())
             if ganz:   # Startlage ohne Überlappung: Schicht 1 Ring um die Mitte, darüber versetzte Schichten; sie fallen von knapp oben
-                kap = [7, 5, 3]; sch = 0; rest = i
+                kap = [6, 5, 3]; sch = 0; rest = i
                 while rest >= kap[sch]: rest -= kap[sch]; sch += 1
-                anz = min(kap[sch], k - sum(kap[:sch])); a = (rest / max(1, anz)) * math.tau + sch * 0.5 + random.uniform(-0.1, 0.1)
-                rr = GR * gs * (1.6, 0.9, 0.75)[sch] if sch < 3 and anz > 1 else 0.0   # Schichten ohne Überlappung, jede höher und enger; einzelne ganz oben in der Mitte
-                ort = (math.cos(a) * rr, math.sin(a) * rr, GR * gs * (0.45 + 1.15 * sch)); rot = (0.0, 0.0, random.uniform(0, math.tau)); sc = s * SIM
+                anz = min(kap[sch], k - sum(kap[:sch])); a = (rest / max(1, anz)) * math.tau + sch * 0.5 + random.uniform(-0.3, 0.3)
+                rr = GR * gs * (1.45, 0.9, 0.75)[sch] * random.uniform(0.95, 1.12) if anz > 1 else 0.0   # Schichten ohne Überlappung, jede höher und enger; einzelne ganz oben in der Mitte
+                ort = (math.cos(a) * rr, math.sin(a) * rr, GR * gs * (0.45 + 1.2 * sch)); rot = (0.0, 0.0, random.uniform(0, math.tau)); sc = s * SIM
             else:      # einzeln auf dem Boden, leicht verteilt, fast flach
                 for _t in range(80):
                     rr = GR * gs * (0.8 + 2.4 * math.sqrt(random.random())); a = random.uniform(0, math.tau); p = (math.cos(a) * rr, math.sin(a) * rr)
@@ -93,6 +93,8 @@ for gname, gs in GROESSEN.items():
         if ganz:
             mats = physik(liste, sam, GR * gs)
             for o, m in zip(liste, mats): o.matrix_basis = m; o.scale = o.scale / SIM   # nach der Simulation auf volle Größe: die Äpfel gehen leicht ineinander
+            for o in liste:   # matschig: Äpfel, auf denen andere liegen, sind etwas zusammengedrückt (flacher, breiter)
+                if any(q is not o and q.location.z > o.location.z + 0.3 * GR * gs and math.hypot(q.location.x - o.location.x, q.location.y - o.location.y) < 0.9 * GR * gs for q in liste): o.scale = (o.scale.x * 1.05, o.scale.y * 1.05, o.scale.z * 0.88)
             cx = sum(o.location.x for o in liste) / k; cy = sum(o.location.y for o in liste) / k
             for o in liste: o.location.x -= cx; o.location.y -= cy
         for o in liste: o.parent = emp

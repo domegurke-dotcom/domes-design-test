@@ -38,16 +38,22 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
         alt = bpy.data.objects[nm]; sam = alt.users_collection[0]; bpy.data.objects.remove(alt, do_unlink=True); mesh_objekt(nm, V, F, MI, sam, mh).location = loc
     random.seed(11 + j); V, F, MI = [], [], []   # Ebene 1 mit viel Struktur (Dome 2.11.): Hügel und Mulden, Klumpen, hellere und dunklere Flecken, Teile stehen schräg
     ph = [random.uniform(0, math.tau) for _ in range(6)]
-    relief = lambda x, y: 3.2 * math.sin(x / 37 + ph[0]) * math.cos(y / 29 + ph[1]) + 2.2 * math.sin(x / 17 + y / 23 + ph[2]) + 1.6 * math.sin(y / 13 - x / 31 + ph[3])
     klumpen = [(random.uniform(-BX / 2, BX / 2), random.uniform(-BY / 2, BY / 2), random.uniform(14, 36)) for _ in range(int(BX * BY / 1800))]
-    for _ in range(int(BX * BY / 22)):
-        if random.random() < 0.55:
-            cx, cy, cs = random.choice(klumpen); x, y = random.gauss(cx, cs), random.gauss(cy, cs); extra = random.uniform(0, 3.5)
-        else: x, y = random.uniform(-BX / 2, BX / 2), random.uniform(-BY / 2, BY / 2); extra = 0.0
-        if abs(x) > BX / 2 - 4 or abs(y) > BY / 2 - 4: continue
-        z = 2.2 + max(0.0, relief(x, y) * 0.7 + 1.5) + extra + random.uniform(0, 2.0)
+    CELL = 3.0; hg = {}   # Höhenraster: jedes Teilchen fällt auf das, was darunter liegt (Schwerkraft, Dome 2.11.) – nichts schwebt, Struktur entsteht durch Stapeln
+    hh = lambda x, y: hg.get((int(x // CELL), int(y // CELL)), 2.0)
+    def hset(x, y, v):
+        k = (int(x // CELL), int(y // CELL))
+        if v > hg.get(k, 2.0): hg[k] = v
+    LT = 3.5   # angenommene Teilchenlänge für die Auflage (Einheiten)
+    for _ in range(int(BX * BY / 1800)):
+        if random.random() < 0.6: cx, cy, cs = random.choice(klumpen); x, y = random.gauss(cx, cs), random.gauss(cy, cs)
+        else: x, y = random.uniform(-BX / 2, BX / 2), random.uniform(-BY / 2, BY / 2)
+        if abs(x) > BX / 2 - 6 or abs(y) > BY / 2 - 6: continue
+        a = random.uniform(0, math.tau); dx, dy = math.cos(a) * LT / 2, math.sin(a) * LT / 2
+        hs, he = hh(x - dx, y - dy), hh(x + dx, y + dy); hm = hh(x, y); zs = max(hs, hm) + 0.2; ze = max(he, hm) + 0.2
         fl = math.sin(x / 45 + ph[4]) * math.sin(y / 41 + ph[5]); PATCH[0] = 1 if fl > 0.3 else -1 if fl < -0.3 else 0
-        a = random.uniform(0, math.tau); splitter(V, F, MI, Vector((x, y, z)), Vector((math.cos(a), math.sin(a), random.uniform(-0.9, 0.9))), mh)
+        splitter(V, F, MI, Vector((x - dx, y - dy, zs)), Vector((math.cos(a), math.sin(a), max(-0.5, min(0.5, (ze - zs) / LT)))), mh)
+        for t_, zz in ((-1, zs), (0, (zs + ze) / 2), (1, ze)): hset(x + dx * t_, y + dy * t_, zz + 0.35)
     PATCH[0] = 0
     ersetze(f"{P}_muster", V, F, MI, b.location)
     for i, ko in enumerate(ks):
@@ -66,11 +72,11 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
             px_, py_ = warp(p.x, p.y, 1 - min(1, max(0, (p.z - 1.5 * KOMPAKT) / kuppel)), ph); p = Vector((kl(pos[i][0] + px_, LX) - pos[i][0], kl(pos[i][1] + py_, LY) - pos[i][1], p.z))
             nrm = normiert(Vector((math.sin(th) * math.cos(w) / r, math.sin(th) * math.sin(w) / ry, math.cos(th) / kuppel)))
             zu = Vector((random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1))); tang = normiert(zu - nrm * zu.dot(nrm))
-            splitter(V, F, MI, p + nrm * 0.3, normiert(tang + nrm * random.uniform(-0.1, 0.3) + Vector((random.uniform(-.3, .3), random.uniform(-.3, .3), random.uniform(-.15, .15)))), mh)
+            splitter(V, F, MI, p + nrm * 0.2, normiert(tang + nrm * random.uniform(-0.05, 0.12) + Vector((random.uniform(-.2, .2), random.uniform(-.2, .2), random.uniform(-.08, .08)))), mh)
         for _ in range(int(r * ry * 0.5)):   # loses Hanf, das rund um den Haufen ausläuft
             a_ = random.uniform(0, math.tau); rr = random.uniform(0.95, 1.7); x_, y_ = warp(r * rr * math.cos(a_), ry * rr * math.sin(a_), 1, ph); b_ = random.uniform(0, math.tau)
             if abs(pos[i][0] + x_) > LX or abs(pos[i][1] + y_) > LY: continue
-            splitter(V, F, MI, Vector((x_, y_, random.uniform(2.3, 3.6))), Vector((math.cos(b_), math.sin(b_), random.uniform(-.15, .15))), mh)
+            splitter(V, F, MI, Vector((x_, y_, random.uniform(2.3, 2.6))), Vector((math.cos(b_), math.sin(b_), random.uniform(-.15, .15))), mh)
         ersetze(f"{P}_haufen_{k:02d}_halme", V, F, MI, (pos[i][0], pos[i][1], 0))
     ziel = f"{PROJ}/blender/spaeneboxenboden-{name}-{mass}.blend"; bpy.ops.wm.save_as_mainfile(filepath=ziel)
     print("GESPEICHERT", ziel.split("/")[-1], "Haufen:", len(ks), "Bedeckung:", round(bed, 4), "max. Breitenfaktor:", round(float((R / R0).max()), 2))

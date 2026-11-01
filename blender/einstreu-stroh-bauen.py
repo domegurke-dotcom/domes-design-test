@@ -108,6 +108,29 @@ for n, (cx, cy, r, H) in enumerate(orte, 1):
 # Dome 1.11.: jeder fünfte Haufen ist wieder gelöscht (zum Nachschauen waren sie erst ausgeblendet) – 147 → 118 Haufen
 import re
 for o in [o for o in bpy.data.objects if re.match(r"stroh_haufen_([0-9]+)_", o.name) and int(re.match(r"stroh_haufen_([0-9]+)_", o.name).group(1)) % 5 == 0]: bpy.data.objects.remove(o, do_unlink=True)
+# Dome 1.11.: noch einmal jeder fünfte der übrigen Haufen gelöscht (118 → 94), die Übrigen gleichmäßig über den Boden verteilt (Voronoi-Verteilung: jede Rasterzelle gehört dem Haufen mit dem kleinsten Abstand abzüglich 0,7 Radius, die Haufen rücken zum Schwerpunkt ihrer Zellen)
+paare = {}
+for o in bpy.data.objects:
+    mm = re.match(r"stroh_haufen_([0-9]+)_(koerper|halme)$", o.name)
+    if mm: paare.setdefault(int(mm.group(1)), {})[mm.group(2)] = o
+nrs = sorted(paare); sicht = [nr for i, nr in enumerate(nrs) if i % 5 != 0]
+for nr in [nr for i, nr in enumerate(nrs) if i % 5 == 0]:
+    for o in paare[nr].values(): bpy.data.objects.remove(o, do_unlink=True)
+radius = {nr: max(abs(v.co.x) for v in paare[nr]["koerper"].data.vertices) for nr in sicht}
+pos = {nr: [paare[nr]["koerper"].location.x, paare[nr]["koerper"].location.y] for nr in sicht}
+ZZ = 6.0; NN = int(B / ZZ); zellen = [(-B / 2 + (i + 0.5) * ZZ, -B / 2 + (j + 0.5) * ZZ) for i in range(NN) for j in range(NN)]
+for _ in range(25):
+    summe = {n: [0.0, 0.0, 0] for n in sicht}
+    for cx, cy in zellen:
+        n = min(sicht, key=lambda k: math.hypot(cx - pos[k][0], cy - pos[k][1]) - radius[k] * 0.7)
+        s = summe[n]; s[0] += cx; s[1] += cy; s[2] += 1
+    for n in sicht:
+        s = summe[n]
+        if s[2]:
+            lim = B / 2 - radius[n] * 0.45
+            pos[n][0] = max(-lim, min(lim, 0.5 * pos[n][0] + 0.5 * s[0] / s[2])); pos[n][1] = max(-lim, min(lim, 0.5 * pos[n][1] + 0.5 * s[1] / s[2]))
+for n in sicht:
+    for o in paare[n].values(): o.location.x, o.location.y = pos[n]
 # ---------- Szene wie bei den anderen Blender-Modellen ----------
 bpy.ops.object.select_all(action="DESELECT")
 sc = bpy.context.scene; sc.render.engine = "BLENDER_WORKBENCH"; sh = sc.display.shading

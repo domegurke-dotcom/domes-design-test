@@ -6,7 +6,8 @@ import bpy, math, random
 from mathutils import Vector, Matrix, Quaternion
 
 QUELLE = "C:/Users/dome_/Documents/domes-design-test-git/blender/heunetz.blend"
-POS = globals().get("POS", (130.0, 100.0, 0.3))
+POS = globals().get("POS", (50.0, 110.0, 0.3))
+SKALA = globals().get("SKALA", 3.0)   # Dome 1.11.: dreimal so groß wie Pros Originalhaufen (Original ≈ 100 breit, 32 hoch)
 random.seed(26102026)
 R = random.random
 AX, AY = 50, 31
@@ -63,7 +64,7 @@ V = {o.name: o for o in nach.objects}
 for o in [o for o in bpy.data.objects if o.get("heuhaufen_heu")]: bpy.data.objects.remove(o, do_unlink=True)
 for c in [c for c in bpy.data.collections if c.name == "Heuhaufen_Heu"]: bpy.data.collections.remove(c)
 col = bpy.data.collections.new("Heuhaufen_Heu"); bpy.context.scene.collection.children.link(col)
-halter = bpy.data.objects.new("heuhaufen_heu", None); halter.empty_display_type = "PLAIN_AXES"; halter["heuhaufen_heu"] = 1; halter.location = POS; col.objects.link(halter)
+halter = bpy.data.objects.new("heuhaufen_heu", None); halter.empty_display_type = "PLAIN_AXES"; halter["heuhaufen_heu"] = 1; halter.location = POS; halter.scale = (SKALA, SKALA, SKALA); col.objects.link(halter)
 koerper = V["heuhaufen_koerper"]; col.objects.link(koerper); koerper.parent = halter; koerper["heuhaufen_heu"] = 1
 basis = koerper.material_slots[0].material; c = tuple(srgb(x) for x in (85, 96, 31)) + (1,)   # Haufenfarbe „Nur Heu“
 basis.diffuse_color = c

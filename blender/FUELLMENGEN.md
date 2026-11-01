@@ -29,6 +29,8 @@ Maßstab: 1 Modelleinheit = 0,79 cm, also 1 Einheit³ = 0,000493 Liter. Alle Zah
 
 ## Futtereimer (`blender/eimer-fuellung.py`)
 
+- **Fehler gefunden und behoben (Dome 2.11.):** Eimer Stufe 1 hatte eine dunkle Innenscheibe (Material „innen“) knapp unter dem Rand (z = 22). Sie verdeckte jede Füllung darunter, also alles unter etwa 10 Litern Hafer – nur ein fast voller Eimer war sichtbar. Die Scheibe liegt jetzt auf dem Eimerboden (z = 0,9, Skala 0,8). Eimer Stufe 2 hat keine solche Scheibe (geprüft mit 1,5 kg Müsli von oben).
+
 - **Prüfung (Dome 2.11.):** Futter durch die Wand wird jetzt mit Strahlen vom Innenraum gegen die echte Eimerwand geprüft (alle Eckpunkte der Füllung samt Kontur). Ergebnis: kein Punkt über der Wand (größter Überstand −0,02 Stufe 1, −0,1 Stufe 2). Früher war das Wandprofil von Stufe 2 aus Eckpunkten geschätzt und viel zu weit (24,8 statt 20,5 bei z = 32).
 - Füllgrenze (Dome 1.11.: Pros Wasserlinie 25,4 / 31,4 als Ausgangspunkt, dann „Stufe 1 etwas niedriger, Stufe 2 etwas höher“): Eimer Stufe 1 bei **z = 24,0**, Eimer Stufe 2 bei **z = 34,4** (erst 31,4, dann 33,0, Dome: noch etwas höher) (jeweils im unskalierten Modell, gleichmäßig mit dem Eimer skaliert). Die Werte stehen in `FUELLGRENZE_Z` in `eimer-fuellung.py` und lassen sich dort nachziehen.
 - Damit sie bei **12 Litern** liegt, sind die Eimer skaliert: **Stufe 1 × 1,126** (Höhe 32,4 Einheiten ≈ 25,6 cm), **Stufe 2 × 0,951**. Der unskalierte Eimer fasste bis zu diesen Linien 8,4 l (Stufe 1) und 14,0 l (Stufe 2).

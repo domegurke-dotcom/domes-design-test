@@ -74,8 +74,25 @@ def catmull(pts, n=14, geschlossen=True):
             out.append(0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t ** 3))
     return out
 Y = lambda y, z: Vector((0.3, y, z))
-ring = [Y(-8.8, HZ), Y(-10.8, 4), Y(-9.4, 11), Y(-5.6, 18.5), Y(-2, 24), Y(0, 27), Y(2, 24), Y(5.6, 18.5), Y(9.4, 11), Y(10.8, 4), Y(8.8, HZ), Y(0, HZ - 0.3)]
-pfad = catmull(ring, 14)
+# Schwerkraft: der Stein hängt unter dem Knoten, das Seil liegt im Loch oben auf (Seilradius ≈ 0,5), läuft an den Stirnflächen hoch bis zur Oberkante
+# und zieht von dort straff geradlinig zum Knoten. Ecken werden nur leicht abgerundet (Chaikin), damit die Stränge gespannt bleiben.
+RZ = 2.7 - 0.5   # Seilmitte im Loch: Lochradius minus Seilradius
+ecken = [Y(8.0, RZ), Y(9.1, RZ + 0.7), Y(9.1, 7.7), Y(0, 28.4), Y(-9.1, 7.7), Y(-9.1, RZ + 0.7), Y(-8.0, RZ), Y(0, RZ)]
+def chaikin(punkte, runden):
+    for _ in range(runden):
+        neu = []
+        for i in range(len(punkte)):
+            p, q = punkte[i], punkte[(i + 1) % len(punkte)]
+            neu += [p * 0.9 + q * 0.1, p * 0.1 + q * 0.9]
+        punkte = neu
+    return punkte
+def dichter(punkte, schritt=0.6):   # gleichmäßig viele Punkte entlang der geraden Stücke
+    out = []
+    for i in range(len(punkte)):
+        p, q = punkte[i], punkte[(i + 1) % len(punkte)]; n = max(1, int((q - p).length / schritt))
+        out += [p.lerp(q, j / n) for j in range(n)]
+    return out
+pfad = dichter(chaikin(ecken, 2))
 laenge = sum((pfad[(i + 1) % len(pfad)] - pfad[i]).length for i in range(len(pfad)))
 steigung = laenge / round(laenge / 3.4)
 seilteile = []
@@ -97,12 +114,12 @@ def knoten(pos, r, name):
     bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=10, radius=r, location=pos, scale=(1, 1, 0.8))
     o = bpy.context.active_object; o.name = name; col.objects.link(o); bpy.context.scene.collection.objects.unlink(o); seilteile.append(o)
     o.data.polygons.foreach_set("use_smooth", [True] * len(o.data.polygons)); return o
-knoten((0.3, 0, 27.2), 1.25, "seil_knoten")
-for sgn in (-1, 1):
-    ende = [Vector((0.3, 0, 27.6)), Vector((0.3, sgn * 2.6, 30.6)), Vector((0.3, sgn * 5.6, 32.0))]
+knoten((0.3, 0, 27.4), 1.25, "seil_knoten")
+for sgn in (-1, 1):   # lose Enden hängen nach unten, vor und hinter dem Strang
+    ende = [Vector((0.3, 0, 27.4)), Vector((0.3 + sgn * 1.6, sgn * 1.2, 25.4)), Vector((0.3 + sgn * 2.2, sgn * 1.5, 22.4))]
     kurve = catmull(ende, 8, False) + [ende[-1]]
     for k in range(3): strang(kurve, k, 0.2, 0.18, False, f"seil_ende{sgn}_{k}")
-    knoten((0.3, sgn * 6.0, 32.0), 0.95, f"seil_endknoten{sgn}")
+    knoten((0.3 + sgn * 2.2, sgn * 1.5, 21.9), 0.95, f"seil_endknoten{sgn}")
 # alles Seil in ein Objekt
 bpy.ops.object.select_all(action="DESELECT")
 for o in seilteile:

@@ -102,6 +102,7 @@ function stufeAnwenden(B) {
     let sicht = true, sk = 1;
     if (h.h === 18 && S.st >= 1) sk = PLATT_CM / (18 * faktor);
     else if ((h.h === 14 && S.st >= 2) || (h.h === 10 && S.st >= 3)) sicht = false;
+    if (B.wegAb && B.wegAb.has(h.i) && B.wegAb.get(h.i) <= S.st) sicht = false;   // Variante a (Dome): wo Äpfel liegen, ist der platt getretene Haufen der Ebene 2 weggeschoben
     h.objs.forEach((o, i) => { o.visible = sicht; o.scale.y = h.sy[i] * sk; });
     h.sichtbar = sicht;
   }
@@ -126,25 +127,31 @@ const GROESSE = {   // Quellen: Kotmenge ≈ 5 % des Körpergewichts je Tag, 4�
 function aepfelStand(B) {
   const schl = S.seed + "|" + S.pferd;
   if (B.stand && B.standSchl === schl) return B.stand;
+  B.wegAb = new Map();
   const { bx, by } = B.daten, R = mulberry(S.seed * 7919 + S.gr.charCodeAt(0) * 13 + S.pferd.charCodeAt(0)), alt = S.st, erz = GROESSE[S.pferd].erz;
   const gr = aepfelVorlagen[0].gr, LIM = 8.5, rc = new THREE.Raycaster(), ab = new THREE.Vector3(0, -1, 0);
   const grenze = (x, y) => Math.abs(x) < bx / 2 - 4 && Math.abs(y) < by / 2 - 4;
   let traeger = [];
   const LIMM = B.daten.mat === "stroh" ? 10.5 : 9.4;
-  const versuch = (x, y) => {   // Höhe der Streu-Oberfläche (aus Blender gemessen, Mittel über 3×3 Felder, ein Stück eingedrückt); zu hohe Haufen = null
+  const deck = (x, y, r) => {   // Welche sichtbaren Haufen (Ebene 2) liegen unter der Stelle? platt getretene werden weggeschoben, hohe verhindern die Stelle
+    const platt = []; let ok = true;
+    for (const hp of B.haufen) { if (!hp.sichtbar) continue; const dx = (x - hp.x) / (hp.rx + r), dy = (y - hp.y) / (hp.ry + r); if (dx * dx + dy * dy < 1) { if (hp.h === 18) platt.push(hp); else ok = false; } }
+    return { ok, platt };
+  };
+  const festlegen = (x, y, r) => { if (!B.hoehe) return; for (const hp of deck(x, y, r).platt) { B.wegAb.set(hp.i, S.st); hp.sichtbar = false; } };
+  const versuch = (x, y, r) => {   // Variante a (Dome): Äpfel liegen auf Ebene 1 (Höhenraster der Bodenschicht), der Haufen der Ebene 2 darunter wird weggeschoben; unter hohen Haufen gibt es keine Stelle (null)
+    if (B.hoehe) {
+      if (!deck(x, y, r === undefined ? gr * 0.6 : r).ok) return null;
+      const c = B.hoehe.cell, ix = Math.floor(x / c), iy = Math.floor(y / c);
+      return Math.max(2.0, (B.hoehe.m.get(ix + "," + iy) || 2.35) - 0.35);
+    }
     const OB = B.ober && B.ober[S.st];
     if (OB) {
       const ix = Math.floor((x - OB.x0) / OB.cell), iy = Math.floor((y - OB.y0) / OB.cell); let sum = 0, n = 0;
       for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { const jx = ix + dx, jy = iy + dy; if (jx >= 0 && jy >= 0 && jx < OB.nx && jy < OB.ny) { sum += OB.z[jy * OB.nx + jx]; n++; } }
       if (!n) return null; const h = sum / n - 0.3; return h > LIMM ? null : h;
     }
-    rc.set(new THREE.Vector3(x, 200, -y), ab); const t = rc.intersectObjects(traeger, true);
-    if (!t.length) return null; let h = t[0].point.y;
-    if (B.hoehe && /_boden/.test((t[0].object.parent && t[0].object.parent.name || "") + t[0].object.name)) {
-      const c = B.hoehe.cell, ix = Math.floor(x / c), iy = Math.floor(y / c);
-      h = Math.max(h, (B.hoehe.m.get(ix + "," + iy) || 0) - 0.35);
-    }
-    return h > LIM ? null : h;
+    return null;
   };
   const recs = [], piles = [];
   const frei = (x, y, d, gs) => recs.every((q) => Math.hypot(q.x - x, q.y - y) > d * gr * Math.max(gs, q.gs));
@@ -178,7 +185,7 @@ function aepfelStand(B) {
         for (const q of teile) for (let t = 0; t < 80; t++) {
           const rr = gr * p.E.gs * (0.8 + 2.4 * Math.sqrt(R())), a = R() * 6.283, x = p.x + Math.cos(a) * rr, y = p.y + Math.sin(a) * rr;
           if (!grenze(x, y) || !frei(x, y, 0.85, p.E.gs)) continue; const z = versuch(x, y); if (z === null) continue;
-          neu(x, y, z, p, 0.4, p.E, q); recs.push(q); p.aepfel.push(q); break;
+          neu(x, y, z, p, 0.4, p.E, q); recs.push(q); p.aepfel.push(q); festlegen(x, y, gr * p.E.gs * 0.6); break;
         }
       });
     }
@@ -186,7 +193,7 @@ function aepfelStand(B) {
       const nH = 3 + Math.floor(R() * 3), nE = 3 + Math.floor(R() * 3), rho = 0.27 * gr * E.gs, eigene = []; let zu = 0;
       for (let hp = 0; hp < nH && zu < 6000; hp++) {
         let cx, cy, cz;
-        do { cx = (R() - .5) * (bx - 24); cy = (R() - .5) * (by - 24); cz = versuch(cx, cy); zu++; } while ((cz === null || !frei(cx, cy, 3, E.gs)) && zu < 6000);
+        do { cx = (R() - .5) * (bx - 24); cy = (R() - .5) * (by - 24); cz = versuch(cx, cy, gr * E.gs * 2.2); zu++; } while ((cz === null || !frei(cx, cy, 3, E.gs)) && zu < 6000);
         if (cz === null) break;
         if (BIB) {   // fertiger Haufen aus der Bibliothek, passende Größe, zufällige Variante und Drehung
           let key = "warm", bd = 9; for (const [kk, gg] of Object.entries(BIB.groessen)) if (Math.abs(gg - E.gs) < bd) { bd = Math.abs(gg - E.gs); key = kk; }
@@ -202,7 +209,7 @@ function aepfelStand(B) {
             const a = va[ai], mw = mws[ai], e = mw.elements, q ={ ti: aepfelVorlagen.findIndex((v) => v.name === a.typ), gs: E.gs, s: Math.hypot(e[0], e[1], e[2]), x: e[12], y: -e[14], zb: e[13], ry: 0, rx: 0, rz: 0, mw: e.slice(), pile: c, zc: 0 };
             c.r = Math.max(c.r, Math.hypot(q.x - cx, q.y - cy) + gr * E.gs * 0.5); recs.push(q); c.aepfel.push(q);
           }
-          piles.push(c); eigene.push(c); continue;
+          festlegen(cx, cy, c.r); piles.push(c); eigene.push(c); continue;
         }
         const k = Math.round((12 + Math.floor(R() * 9)) * E.kf), c = { x: cx, y: cy, r: gr * E.gs * (0.55 + 0.045 * k), aepfel: [], verteilt: false, E, rho }; piles.push(c); eigene.push(c);
         for (let i = 0; i < k; i++) for (let t = 0; t < 120; t++) {
@@ -213,7 +220,7 @@ function aepfelStand(B) {
       for (let n = 0; n < nE && zu < 9000; ) {   // einzelne Äpfel, meist neben einem eigenen Haufen
         const c = eigene.length ? eigene[Math.floor(R() * eigene.length)] : null, a = R() * 6.283, d = c ? Math.max(c.r, gr * E.gs * 1.2) + gr * E.gs * (0.9 + 1.4 * R()) : 0;
         const x = c ? c.x + Math.cos(a) * d : (R() - .5) * (bx - 12), y = c ? c.y + Math.sin(a) * d : (R() - .5) * (by - 12); zu++;
-        if (!grenze(x, y) || !frei(x, y, 0.9, E.gs)) continue; const z = versuch(x, y); if (z === null) continue; neu(x, y, z, null, 0.3, E); n++;
+        if (!grenze(x, y) || !frei(x, y, 0.9, E.gs)) continue; const z = versuch(x, y, gr * E.gs * 0.7); if (z === null) continue; neu(x, y, z, null, 0.3, E); festlegen(x, y, gr * E.gs * 0.7); n++;
       }
     }
     stand[s] = recs.map((q) => ({ ti: q.ti, s: q.s, x: q.x, y: q.y, zb: q.zb, ry: q.ry, rx: q.rx, rz: q.rz, mw: q.mw }));

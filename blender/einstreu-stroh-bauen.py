@@ -105,6 +105,9 @@ for n, (cx, cy, r, H) in enumerate(orte, 1):
         halm(bm, farbe(HAUFEN_GEW), p, rich, laenge, random.uniform(1.4, 2.1), 2, 0.28, random.uniform(-0.9, 0.9))
     hl = objekt(f"stroh_haufen_{n:02d}_halme", bm, eb2, HALM); hl.location = (cx, cy, 0)
 
+# Dome 1.11.: jeder fünfte Haufen ist wieder gelöscht (zum Nachschauen waren sie erst ausgeblendet) – 147 → 118 Haufen
+import re
+for o in [o for o in bpy.data.objects if re.match(r"stroh_haufen_([0-9]+)_", o.name) and int(re.match(r"stroh_haufen_([0-9]+)_", o.name).group(1)) % 5 == 0]: bpy.data.objects.remove(o, do_unlink=True)
 # ---------- Szene wie bei den anderen Blender-Modellen ----------
 bpy.ops.object.select_all(action="DESELECT")
 sc = bpy.context.scene; sc.render.engine = "BLENDER_WORKBENCH"; sh = sc.display.shading

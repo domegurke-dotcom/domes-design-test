@@ -13,7 +13,7 @@ def objekt(name, me):
 
 # ---------- Salzbrocken: Tonne (runder Querschnitt, flache Enden), Loch genau in der Mitte, raue Oberfläche; Lochachse = y ----------
 BX, BY, BZ = 6.65, 8.23, 6.65   # Halbachsen (Modelleinheiten; 1 Einheit = 0,79 cm): Domes Maße 10,5 cm dick und 13 cm lang (Lochachse), 2 kg (≈ 0,95 Liter Steinsalz)
-N = 4.0                      # Superellipsoid: >2 macht die Enden flacher und die Kanten runder (Tonnenform); 4,0 passt zu Domes 2 kg bei 10,5 × 13 cm
+N = 3.0                      # Superellipsoid: >2 macht die Enden flacher und die Kanten runder (Tonnenform). Dome 1.11.: nur die MASSE von der Foto-Vorlage übernehmen, die weiche Form bleibt (N = 4 wurde zu eckig)
 bm = bmesh.new(); bmesh.ops.create_icosphere(bm, subdivisions=5, radius=1.0)
 for v in bm.verts:
     p = v.co.copy(); k = (abs(p.x) ** N + abs(p.y) ** N + abs(p.z) ** N) ** (1 / N); p = p / k   # auf die Superellipsoid-Fläche

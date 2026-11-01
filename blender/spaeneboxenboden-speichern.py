@@ -84,17 +84,17 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
             v.co.x = (kl(pos[i][0] + f * v.co.x, LX) - pos[i][0]) / f; v.co.y = (kl(pos[i][1] + f * v.co.y, LY) - pos[i][1]) / f
         k = i + 1; r = ko["r0"] * f; ry = ko["ry0"] * f; kuppel = max(v.co.z for v in ko.data.vertices) - 1.5 * KOMPAKT
         random.seed(7000 + 100 * j + k); V, F, MI = [], [], []
-        for _ in range(int(r * ry * 1.5)):
+        for _ in range(int(r * ry * 0.85)):   # Haufenteilchen so groß und locker wie auf Ebene 1 (Dome: die Lockerheit von Mistigkeit 3 überall): 1,4-fach, weniger, höher aufliegend
             th = math.acos(random.random() ** 0.8) * 0.95; w = random.uniform(0, math.tau)
             p = Vector((r * math.sin(th) * math.cos(w), ry * math.sin(th) * math.sin(w), kuppel * math.cos(th) + 1.5 * KOMPAKT))
             px_, py_ = warp(p.x, p.y, 1 - min(1, max(0, (p.z - 1.5 * KOMPAKT) / kuppel)), ph); p = Vector((kl(pos[i][0] + px_, LX) - pos[i][0], kl(pos[i][1] + py_, LY) - pos[i][1], p.z))
             nrm = normiert(Vector((math.sin(th) * math.cos(w) / r, math.sin(th) * math.sin(w) / ry, math.cos(th) / kuppel)))
             zu = Vector((random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1))); tang = normiert(zu - nrm * zu.dot(nrm))
             rc_ = normiert(tang + nrm * random.uniform(-0.05, 0.12) + Vector((random.uniform(-.2, .2), random.uniform(-.2, .2), random.uniform(-.08, .08))))
-            zmax_ = 0.8 if random.random() < 0.06 else 0.32   # nur einzelne Teilchen stehen schräg nach oben, die meisten liegen (Schwerkraft)
+            zmax_ = 0.8 if random.random() < 0.08 else 0.45   # nur einzelne Teilchen stehen schräg nach oben, die meisten liegen (Schwerkraft)
             if rc_.z > zmax_ or rc_.z < -0.4:
                 hr_ = Vector((rc_.x, rc_.y, 0)); hr_ = hr_.normalized() if hr_.length > 1e-6 else Vector((1, 0, 0)); zc_ = max(-0.4, min(zmax_, rc_.z)); rc_ = hr_ * math.sqrt(1 - zc_ * zc_) + Vector((0, 0, zc_))
-            splitter(V, F, MI, p + nrm * 0.2, rc_, mh)
+            splitter(V, F, MI, p + nrm * (0.2 + random.uniform(0.0, 0.9)), rc_, mh, False, 1.4, 0.0)
         for _ in range(int(r * ry * 0.5)):   # loses Hanf, das rund um den Haufen ausläuft
             a_ = random.uniform(0, math.tau); rr = random.uniform(0.95, 1.7); x_, y_ = warp(r * rr * math.cos(a_), ry * rr * math.sin(a_), 1, ph); b_ = random.uniform(0, math.tau)
             if abs(pos[i][0] + x_) > LX or abs(pos[i][1] + y_) > LY: continue

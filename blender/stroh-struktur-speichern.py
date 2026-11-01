@@ -30,5 +30,26 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
         for px, py in pts: hset(px, py, z + 0.4)
     alt = bpy.data.objects[f"{P}_muster"]; sam = alt.users_collection[0]; loc = alt.location.copy(); bpy.data.objects.remove(alt, do_unlink=True)
     mesh_objekt(f"{P}_muster", V, F, MI, sam, M["halme"]).location = loc
+    # Ebene 2 (Haufen): Halme liegen an der Oberfläche statt abzustehen (Schwerkraft, Dome 2.11.): Neigung höchstens 10° von der Fläche weg
+    n = 0; k = 0
+    while True:
+        k += 1; ko = bpy.data.objects.get(f"{P}_haufen_{k:02d}_koerper")
+        if not ko: break
+        xs = [v.co.x for v in ko.data.vertices]; ys = [v.co.y for v in ko.data.vertices]; zs = [v.co.z for v in ko.data.vertices]
+        r = max(abs(min(xs)), max(xs)); ry = max(abs(min(ys)), max(ys)); kuppel = max(zs) - 1.5; H = kuppel / 0.7
+        random.seed(900 + 100 * j + k); V, F, MI = [], [], []
+        for q_ in range(int(r * ry * 0.42) + int(r * ry * 0.30)):   # die letzten 0,30 liegen am unteren Rand der Haufen, damit der Körper dort nicht frei liegt
+            th = math.acos(random.random() ** 0.8) * 0.93 if q_ < int(r * ry * 0.42) else random.uniform(0.95, 1.45); w = random.uniform(0, math.tau)
+            p = Vector((r * math.sin(th) * math.cos(w), ry * math.sin(th) * math.sin(w), kuppel * math.cos(th) + 1.5))
+            nrm = normiert(Vector((math.sin(th) * math.cos(w) / r, math.sin(th) * math.sin(w) / ry, math.cos(th) / kuppel)))
+            zu = Vector((random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1))); tang = normiert(zu - nrm * zu.dot(nrm)); anh = math.radians(random.uniform(0, 10))
+            rich = normiert(tang * math.cos(anh) + nrm * math.sin(anh)); laenge = random.uniform(15, 28) * (0.75 + 0.25 * min(1, r / 40))
+            px_, py_ = ko.location.x + p.x, ko.location.y + p.y   # Halme enden nie über dem Boxenrand (dort würden sie hängen)
+            for _ in range(8):
+                if abs(px_ + rich.x * laenge) <= BX / 2 - 2 and abs(py_ + rich.y * laenge) <= BY / 2 - 2: break
+                laenge *= 0.7
+            halm(V, F, MI, farbe(HAUFEN_GEW), p + nrm * 0.3, rich, laenge, random.uniform(1.4, 2.1), 2, 0.06, random.uniform(-0.9, 0.9))
+        alt = bpy.data.objects[f"{P}_haufen_{k:02d}_halme"]; sam = alt.users_collection[0]; loc = alt.location.copy(); bpy.data.objects.remove(alt, do_unlink=True)
+        mesh_objekt(f"{P}_haufen_{k:02d}_halme", V, F, MI, sam, M["halme"]).location = loc; n += 1
     ziel = f"{PROJ}/blender/strohboxenboden-{name}-{mass}.blend"; bpy.ops.wm.save_as_mainfile(filepath=ziel)
     print("GESPEICHERT", ziel.split("/")[-1], len(MI) // 2, "Halme")

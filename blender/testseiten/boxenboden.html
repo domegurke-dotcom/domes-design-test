@@ -126,20 +126,26 @@ function aepfelStreuen(B) {
   const grenze = (x, y) => Math.abs(x) < bx / 2 - 4 && Math.abs(y) < by / 2 - 4;
   // Dome: wenige Einzeläpfel, dafür echte Haufen (dicht, in der Mitte übereinander gestapelt, am Rand locker)
   const einzel = Math.round(soll * 0.1), inHaufen = soll - einzel;   // Vorbild Dome-Fotos: kompakter Haufen mit 2–3 Lagen, ein paar Äpfel daneben
-  const RHO = 0.33 * gr;   // Stützkugel je Apfel (kleiner als der Apfel): so fallen die Äpfel aufeinander und gehen teils ineinander
-  const stapel = (x, y, z, c) => {   // Apfel fällt auf den Haufen: bleibt auf Boden oder auf den Äpfeln darunter liegen
+  const RHO = 0.27 * gr;   // Stützkugel je Apfel (kleiner als der Apfel): die Äpfel gehen teils ineinander
+  const stapel = (x, y, z, c) => {   // Apfel fällt auf den Haufen. Schwerkraft: er liegt auf dem Boden oder ruht auf mindestens zwei Äpfeln darunter, zwischen ihnen – sonst rollt er weg (Platz verworfen)
     let zc = z + RHO;
     for (const q of c.aepfel) { const d = Math.hypot(q.x - x, q.y - y); if (d < 2 * RHO) zc = Math.max(zc, q.zc + Math.sqrt(4 * RHO * RHO - d * d)); }
-    c.aepfel.push({ x, y, zc }); setze(x, y, zc - RHO);
+    if (zc > z + RHO + 0.05) {
+      const st = c.aepfel.filter((q) => { const d = Math.hypot(q.x - x, q.y - y); return d < 2 * RHO && q.zc < zc - 0.1 && Math.abs(q.zc + Math.sqrt(4 * RHO * RHO - d * d) - zc) < 0.2 * RHO; });
+      if (st.length < 2) return false;
+      const mx = st.reduce((a, q) => a + q.x, 0) / st.length, my = st.reduce((a, q) => a + q.y, 0) / st.length;
+      if (Math.hypot(mx - x, my - y) > 0.8 * RHO) return false;
+    }
+    c.aepfel.push({ x, y, zc }); setze(x, y, zc - RHO); return true;
   };
   while (n < inHaufen && zu < 8000) {
     let cx, cy, cz;
     do { cx = (R() - .5) * (bx - 24); cy = (R() - .5) * (by - 24); cz = versuch(cx, cy); zu++; } while ((cz === null || !frei(cx, cy, gr * 3)) && zu < 8000);
     if (cz === null) break;
     const k = Math.min(inHaufen - n, 12 + Math.floor(R() * 9)), c = { x: cx, y: cy, r: gr * (0.55 + 0.045 * k), aepfel: [] }; kipp = 0.9; zentren.push(c);
-    for (let i = 0; i < k; i++) for (let t = 0; t < 60; t++) {
+    for (let i = 0; i < k; i++) for (let t = 0; t < 120; t++) {
       const rr = c.r * Math.pow(R(), 0.8), a = R() * 6.283, x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
-      if (!grenze(x, y) || !c.aepfel.every((q) => Math.hypot(q.x - x, q.y - y) > gr * 0.28)) continue; const z = versuch(x, y); if (z === null) continue; stapel(x, y, z, c); break;
+      if (!grenze(x, y) || !c.aepfel.every((q) => Math.hypot(q.x - x, q.y - y) > gr * 0.2)) continue; const z = versuch(x, y); if (z === null) continue; if (stapel(x, y, z, c)) break;
     }
   }
   kipp = 0.3;

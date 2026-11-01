@@ -59,7 +59,7 @@ else:
     liter = KG / DICHTE[FUTTER]; h, passt = hoehe_fuer_liter(liter)
     def innen(x, y, zuschlag=0.0):
         if EIMER == "stufe1": return x * x + y * y <= (lerp(R1, h) + zuschlag) ** 2
-        return y <= -0.4 and (x / (lerp(A2, h) + zuschlag)) ** 2 + (y / (lerp(B2, h) + zuschlag)) ** 2 <= 1
+        return y <= -1.0 + zuschlag and (x / (lerp(A2, h) + zuschlag)) ** 2 + (y / (lerp(B2, h) + zuschlag)) ** 2 <= 1   # die gerade Rückwand liegt innen bei y = -1,0 (Wand 1,0 dick nach innen); Zuschlag negativ = Abstand zur Wand
     KORN_UEBERSTAND = 1.6 if FUTTER == "muesli" else 1.2   # die obersten Körner ragen etwa so weit über die Oberfläche → Oberfläche so tiefer, dass die Körner genau an der Füllgrenze enden
     def oberflaeche(x, y): return h - KORN_UEBERSTAND + 0.22 * noise.noise(Vector((x * 0.14, y * 0.14, 5.0)))
     for o in [o for o in bpy.data.objects if o.name.startswith("korn_")]: bpy.data.objects.remove(o, do_unlink=True)   # Reste eines abgebrochenen Laufs
@@ -88,7 +88,7 @@ else:
     for i in range(n):
         for j in range(n):
             x, y = -ext + i * S, -ext + j * S
-            if innen(x, y, 0.6): gitter[(i, j)] = bm.verts.new((x, y, oberflaeche(x, y)))
+            if innen(x, y, -0.3): gitter[(i, j)] = bm.verts.new((x, y, oberflaeche(x, y)))   # Grundfläche samt Kontur (0,3) bleibt innerhalb der Wand (vorher +0,6: ragte beim runden Eimer durch die Wand)
     for (i, j) in list(gitter):
         q = [gitter.get((i, j)), gitter.get((i + 1, j)), gitter.get((i + 1, j + 1)), gitter.get((i, j + 1))]
         if all(q): f = bm.faces.new(q); f.smooth = False; f.material_index = 0
@@ -99,7 +99,7 @@ else:
         bm = bmesh.new(); plaetze = 0; anzahl = int(dichte * flaeche_oben)
         while plaetze < anzahl:
             x, y = random.uniform(-ext, ext), random.uniform(-ext, ext)
-            if not innen(x, y, -1.6 if EIMER == "stufe2" else -1.2): continue
+            if not innen(x, y, -1.6 if EIMER == "stufe2" else -1.9): continue
             vor = random.choice((v0, v1)); drehung = Matrix.Rotation(random.uniform(0, math.tau), 3, "Z") @ Matrix.Rotation(random.uniform(-0.45, 0.45), 3, "X") @ Matrix.Rotation(random.uniform(-0.45, 0.45), 3, "Y")
             pos = Vector((x, y, oberflaeche(x, y) + random.uniform(0.15, 0.55)))
             vv = [bm.verts.new(drehung @ p.co + pos) for p in vor.data.vertices]

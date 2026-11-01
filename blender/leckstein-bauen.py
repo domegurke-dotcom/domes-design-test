@@ -77,7 +77,30 @@ Y = lambda y, z: Vector((0.3, y, z))
 # Schwerkraft: der Stein hängt unter dem Knoten, das Seil liegt im Loch oben auf (Seilradius ≈ 0,5), läuft an den Stirnflächen hoch bis zur Oberkante
 # und zieht von dort straff geradlinig zum Knoten. Ecken werden nur leicht abgerundet (Chaikin), damit die Stränge gespannt bleiben.
 RZ = 2.7 - 0.5   # Seilmitte im Loch: Lochradius minus Seilradius
-ecken = [Y(8.0, RZ), Y(9.1, RZ + 0.7), Y(9.1, 7.2), Y(0, 28.4), Y(-9.1, 7.2), Y(-9.1, RZ + 0.7), Y(-8.0, RZ), Y(0, RZ)]
+# Dome 1.11.: das Seil muss näher am Stein liegen. Gespanntes Seil = konvexe Hülle aus dem (um den Seilradius vergrößerten) Steinquerschnitt und dem Knoten:
+# es folgt der Rundung des Steins (Stirnfläche und obere Kante) bis zum Berührpunkt und zieht von dort gerade zum Knoten.
+D = 0.62   # Abstand Seilmitte – Steinoberfläche (Seilradius ≈ 0,5 + Kontur 0,3 − etwas Anpressdruck)
+def profil(theta):   # Querschnitt des Steins in der y–z-Ebene (gleiche Superellipse wie der Stein, N = 3)
+    c, sn = math.cos(theta), math.sin(theta)
+    return ((BY + D) * math.copysign(abs(c) ** (2 / N), c), (BZ + D) * math.copysign(abs(sn) ** (2 / N), sn))
+def huelle(punkte):   # konvexe Hülle (Monotone Chain)
+    P = sorted(set(punkte)); kreuz = lambda o, p, q: (p[0] - o[0]) * (q[1] - o[1]) - (p[1] - o[1]) * (q[0] - o[0])
+    unten, oben = [], []
+    for p in P:
+        while len(unten) >= 2 and kreuz(unten[-2], unten[-1], p) <= 0: unten.pop()
+        unten.append(p)
+    for p in reversed(P):
+        while len(oben) >= 2 and kreuz(oben[-2], oben[-1], p) <= 0: oben.pop()
+        oben.append(p)
+    return unten[:-1] + oben[:-1]
+APEX = (0.0, 28.4)
+kurve = [profil(math.tau * i / 360) for i in range(360) if profil(math.tau * i / 360)[1] >= RZ - 0.01] + [APEX]
+H = huelle(kurve)
+# Hülle gegen den Uhrzeigersinn: von der rechten Lochöffnung (y > 0, z = RZ) über die Kante zum Knoten und links wieder hinunter
+rechts = [p for p in H if p[0] >= 0 and p[1] >= RZ - 0.01]; rechts.sort(key=lambda p: (p[1], -p[0]))
+links = [(-p[0], p[1]) for p in rechts]
+aufw = [Y(0, 0) if False else Y(p[0], p[1]) for p in rechts if p != APEX]
+ecken = [Y(8.0, RZ)] + [Y(p[0], p[1]) for p in rechts if p != APEX] + [Y(APEX[0], APEX[1])] + [Y(-p[0], p[1]) for p in reversed([q for q in rechts if q != APEX])] + [Y(-8.0, RZ), Y(0, RZ)]
 def chaikin(punkte, runden):
     for _ in range(runden):
         neu = []

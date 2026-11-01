@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. (Claude Team) – Blender: Seil, Eimerfüllung, Haufen (Dome-Wünsche vom 1./2.11.)
+**Leckstein:** das Seil folgt jetzt als konvexe Hülle (gespanntes Seil) der Rundung des Steins – Stirnfläche und obere Kante – bis zum Berührpunkt und zieht dann gerade zum Knoten (`D = 0,62` Abstand Seilmitte–Stein in `leckstein-bauen.py`). **Eimerfüllung:** die Grundfläche der Füllung (mit Kontur) ragte beim runden Eimer 0,3 durch die Wand, beim grünen Eimer lag die Rückwand 1,0 zu weit hinten – behoben in `eimer-fuellung.py` (Prüfskript: größter Überstand über der Innenwand −0,05 / −0,24, also innen); `eimer-stufe1-12l.blend` und `eimer-stufe2-12l.blend` neu gespeichert. **Einstreu Ebene 2:** 84 Haufen, etwa 1/3 (27) auf Maximalhöhe 21,6 gestreckt, gleichmäßig und zufällig verteilt (Bedeckung ≈ 85 %); der Zustand steht in `blender/einstreu-haufen-zustand.json`, `einstreu-stroh-bauen.py` übernimmt ihn. **Immer wieder dieselbe Falle:** keine `#`-Kommentare mitten in Zeilen (Python) und keine `//`-Kommentare mitten in Zeilen (JavaScript), sie schlucken den Rest der Zeile.
+
 ### 1.11. spät (Claude Team) – Blender: gespeicherte Dateien
 Neu gespeichert (Dome 1.11.): `blender/eimer-stufe1-12l.blend` (+ `testseiten/eimer-stufe1-12l.glb`: runder Eimer × 1,126, Hafer bis zur Füllgrenze = 12 l = 6 kg) und `blender/eimer-stufe2-12l.blend` (+ glb: grüner Eimer × 0,878, Müsli bis zur Füllgrenze = 12 l = 4,8 kg), gebaut mit `blender/eimer-12l-speichern.py`. `blender/einstreu-stroh.blend` hat jetzt 118 Haufen (jeder fünfte wurde gelöscht, 147 → 118; Skript angepasst). `blender/leckstein.blend`: Maße 10,6 × 12,9 cm (Foto 10,5 × 13), weiche Tonnenform wie zuvor (N = 3; ein kantigerer Versuch wurde zurückgenommen), ca. 1,8 kg – Dome wollte nur die Maße übernehmen. In Domes offenem Fenster hängt der Leckstein 1 m über der Einstreu (z = 129,3).
 

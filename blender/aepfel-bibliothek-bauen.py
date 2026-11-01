@@ -101,6 +101,6 @@ for gname, gs in GROESSEN.items():
         emp["aepfel"] = k; emp["groesse"] = gname; emp["art"] = "ganz" if ganz else "verstreut"
         daten["haufen" if ganz else "verstreut"][gname].append([{"typ": [t for t in TYPEN if vorlage[t].data == o.data][0], "m": [round(v, 4) for col in zip(*mat3(o.matrix_basis)) for v in col]} for o in liste])
 scn["einheit_cm"] = 0.79
-bpy.ops.wm.save_as_mainfile(filepath=f"{PROJ}/blender/pferdeaepfel-bibliothek.blend")
+bpy.context.preferences.filepaths.save_version = 0; bpy.ops.wm.save_as_mainfile(filepath=f"{PROJ}/blender/pferdeaepfel-bibliothek.blend")
 json.dump(daten, open(f"{PROJ}/blender/testseiten/boxenboden/aepfel-bibliothek.json", "w"))
 print("GESPEICHERT pferdeaepfel-bibliothek.blend", len(c_ein.objects), "Einzeläpfel,", HAUFEN_N * 4, "Haufen,", VERSTREUT_N * 4, "verstreut")

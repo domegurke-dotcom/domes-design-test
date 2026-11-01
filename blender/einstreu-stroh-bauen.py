@@ -62,16 +62,26 @@ muster = objekt("stroh_ebene1_muster", bm, eb1, HALM)
 # ---------- Ebene 2: kleine, lockere Heuhaufen in verschiedenen Größen (keine Grasbüschel) ----------
 # Höhe nie über 2/3 der Eimerhöhe (Eimer Stufe 1, auf 12 Liter skaliert: 32,4 Einheiten → höchstens 21,6). Die Halme liegen kreuz und quer auf der Haufenform, lose abgehoben.
 EIMER_H = 28.8 * 1.126; MAX_H = EIMER_H * 2 / 3   # Eimer Stufe 1 auf 12 Liter vergrößert (Skala 1,126, Füllgrenze 12 Liter) → Höhe 32,4, Grenze 21,6
-GROESSEN = [(14, 22, 13), (24, 36, 21), (40, 56, 8)]   # (Radius von, bis, Anzahl) – kleine, mittlere, große Haufen
+GROESSEN = [(14, 22, 0.30), (24, 36, 0.45), (40, 56, 0.25)]   # (Radius von, bis, Anteil) – kleine, mittlere, große Haufen
+# Dome 1.11.: die Haufen so anordnen, dass kaum Freifläche bleibt. Rasterzellen (8 Einheiten) zeigen, was noch frei ist; jeder neue Haufen kommt auf eine freie Stelle
+# (Haufen dürfen ineinander übergehen), bis höchstens 3 % frei sind. Am Rand werden die Haufen kleiner, damit sie nicht über die Platte ragen.
+ZELLE = 8.0; NZ = int(B / ZELLE)
+frei = {(i, j) for i in range(NZ) for j in range(NZ)}
+def zentrum(i, j): return (-B / 2 + (i + 0.5) * ZELLE, -B / 2 + (j + 0.5) * ZELLE)
 orte = []
-for rmin, rmax, anzahl in GROESSEN[::-1]:   # große zuerst, damit sie Platz finden
-    ges = 0
-    for versuch in range(600):
-        if ges >= anzahl: break
-        r = random.uniform(rmin, rmax); x = random.uniform(-B / 2 + r + 8, B / 2 - r - 8); y = random.uniform(-B / 2 + r + 8, B / 2 - r - 8)
-        if all(math.hypot(x - ox, y - oy) > 0.45 * (r + orr) for ox, oy, orr, _ in orte):
-            hoehe = min(MAX_H, 5.0 + (r - 14) / (56 - 14) * (MAX_H - 5.0)) * random.uniform(0.85, 1.0)   # größer = höher, aber nie über der Grenze
-            orte.append((x, y, r, hoehe)); ges += 1
+while len(frei) > 0.03 * NZ * NZ and len(orte) < 170:
+    i, j = random.choice(sorted(frei)); x, y = zentrum(i, j)
+    rmin, rmax, _ = random.choices(GROESSEN, [g[2] for g in GROESSEN])[0]
+    r = random.uniform(rmin, rmax)
+    rand_abstand = B / 2 - max(abs(x), abs(y))                      # Abstand der Zelle zum Plattenrand
+    r = max(10.0, min(r, 1.8 * rand_abstand + 10))
+    x = max(-B / 2 + r * 0.45, min(B / 2 - r * 0.45, x)); y = max(-B / 2 + r * 0.45, min(B / 2 - r * 0.45, y))
+    hoehe = min(MAX_H, 5.0 + (r - 14) / (56 - 14) * (MAX_H - 5.0)) * random.uniform(0.85, 1.0)   # größer = höher, aber nie über der Grenze
+    orte.append((x, y, r, hoehe))
+    for zi, zj in list(frei):
+        cx, cy = zentrum(zi, zj)
+        if math.hypot(cx - x, cy - y) <= r * 0.85: frei.discard((zi, zj))
+print("FREI", round(100 * len(frei) / (NZ * NZ), 1), "% bei", len(orte), "Haufen")
 def normiert(v): return v.normalized() if v.length > 1e-6 else Vector((0, 0, 1))
 for n, (cx, cy, r, H) in enumerate(orte, 1):
     ry = r * random.uniform(0.8, 1.1); kuppel = H * 0.7   # niedriger Haufenkörper, der Rest der Höhe kommt von den lose aufliegenden Halmen
@@ -80,7 +90,7 @@ for n, (cx, cy, r, H) in enumerate(orte, 1):
     for f in bm.faces: f.material_index = 0
     kb = objekt(f"stroh_haufen_{n:02d}_koerper", bm, eb2, [HAUFEN, TINTE]); kb.location = (cx, cy, 0); kontur(kb, 0.8, 1)
     bm = bmesh.new()
-    for i in range(int(r * r * 0.34)):
+    for i in range(int(r * r * 0.22)):   # weniger Halme je Haufen, weil sich die Haufen überlappen
         th = math.acos(random.random() ** 0.8) * 0.93; w = random.uniform(0, math.tau)   # eher oben auf dem Haufen
         p = Vector((r * math.sin(th) * math.cos(w), ry * math.sin(th) * math.sin(w), kuppel * math.cos(th) + 1.5))
         nrm = normiert(Vector((math.sin(th) * math.cos(w) / r, math.sin(th) * math.sin(w) / ry, math.cos(th) / kuppel)))

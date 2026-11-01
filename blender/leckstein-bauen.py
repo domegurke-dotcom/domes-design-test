@@ -12,8 +12,8 @@ def objekt(name, me):
     o = bpy.data.objects.new(name, me); col.objects.link(o); return o
 
 # ---------- Salzbrocken: Tonne (runder Querschnitt, flache Enden), Loch genau in der Mitte, raue Oberfläche; Lochachse = y ----------
-BX, BY, BZ = 7.2, 8.6, 7.2   # Halbachsen (Modelleinheiten; 1 Einheit ≈ 0,8 cm → Stein ≈ 11 cm dick, 14 cm lang)
-N = 3.0                      # Superellipsoid: >2 macht die Enden flacher und die Kanten runder (Tonnenform)
+BX, BY, BZ = 6.65, 8.23, 6.65   # Halbachsen (Modelleinheiten; 1 Einheit = 0,79 cm): Domes Maße 10,5 cm dick und 13 cm lang (Lochachse), 2 kg (≈ 0,95 Liter Steinsalz)
+N = 4.0                      # Superellipsoid: >2 macht die Enden flacher und die Kanten runder (Tonnenform); 4,0 passt zu Domes 2 kg bei 10,5 × 13 cm
 bm = bmesh.new(); bmesh.ops.create_icosphere(bm, subdivisions=5, radius=1.0)
 for v in bm.verts:
     p = v.co.copy(); k = (abs(p.x) ** N + abs(p.y) ** N + abs(p.z) ** N) ** (1 / N); p = p / k   # auf die Superellipsoid-Fläche
@@ -77,7 +77,7 @@ Y = lambda y, z: Vector((0.3, y, z))
 # Schwerkraft: der Stein hängt unter dem Knoten, das Seil liegt im Loch oben auf (Seilradius ≈ 0,5), läuft an den Stirnflächen hoch bis zur Oberkante
 # und zieht von dort straff geradlinig zum Knoten. Ecken werden nur leicht abgerundet (Chaikin), damit die Stränge gespannt bleiben.
 RZ = 2.7 - 0.5   # Seilmitte im Loch: Lochradius minus Seilradius
-ecken = [Y(8.0, RZ), Y(9.1, RZ + 0.7), Y(9.1, 7.7), Y(0, 28.4), Y(-9.1, 7.7), Y(-9.1, RZ + 0.7), Y(-8.0, RZ), Y(0, RZ)]
+ecken = [Y(8.0, RZ), Y(9.1, RZ + 0.7), Y(9.1, 7.2), Y(0, 28.4), Y(-9.1, 7.2), Y(-9.1, RZ + 0.7), Y(-8.0, RZ), Y(0, RZ)]
 def chaikin(punkte, runden):
     for _ in range(runden):
         neu = []

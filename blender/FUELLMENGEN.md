@@ -4,7 +4,7 @@
 
 Maßstab: 1 Modelleinheit = 0,79 cm, also 1 Einheit³ = 0,000493 Liter. Alle Zahlen sind Schätzungen von Claude, die Schüttdichten stammen aus üblichen Werten.
 
-**Entscheidung Dome 2.11.:** Heuhaufen **und** Eimer zeigen die **Tagesmenge** aus dem Futterplan. Übersteigt die Tagesmenge das Volumen des Eimers (12 Liter), wird optisch nur bis 12 Liter gefüllt. Beispiel Friese (8 Jahre, fit, 600 kg): Heu 10 kg (Skala 1,88), Hafer 3 kg = 6 Liter. Fläche A (3 × 3 m) mit Eimer und Heuhaufen: Position Eimer (620, 100), Heu (800, −40).
+**Entscheidung Dome 2.11.:** Heuhaufen **und** Eimer zeigen die **Tagesmenge** aus dem Futterplan. Übersteigt die Tagesmenge das Volumen des Eimers (12 Liter), wird optisch nur bis 12 Liter gefüllt. Beispiel Friese (8 Jahre, fit, 600 kg): Heu 10 kg (Skala 1,88), Hafer 2 kg = 4 Liter. Fläche A (3 × 3 m) mit Eimer und Heuhaufen: Position Eimer (620, 100), Heu (800, −40).
 
 ## Heuhaufen (Raufutter, `blender/heuhaufen-nur-heu.py`)
 

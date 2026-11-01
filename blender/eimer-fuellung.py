@@ -72,6 +72,9 @@ else:
     V = {o.name.split(".0")[0]: o for o in nach.objects}   # Namen ohne .001-Endung
     halter = bpy.data.objects.get(PARENT) if PARENT else None
     if halter: halter.scale = (EIMER_SKALA[EIMER],) * 3; halter.location.z = globals().get("STAND_Z", 1.6)   # Eimer steht auf Ebene 1 der Einstreu (STAND_Z überschreibt das, z. B. 0,45 für die einzelnen Eimer-Dateien)
+    if halter and EIMER == "stufe1":   # Dome 2.11.: Pros dunkle Innenscheibe (Material "innen") lag knapp unter dem Rand und verdeckte jede Füllung darunter – sie liegt jetzt auf dem Eimerboden
+        for o in halter.children:
+            if o.type == "MESH" and any(m.name.startswith("innen") for m in o.data.materials): o.location.z = 0.9; o.scale = (0.8, 0.8, 1.0)
     for o in [o for o in bpy.data.objects if o.name.startswith(f"fuellung_{EIMER}_")]: bpy.data.objects.remove(o, do_unlink=True)
     for c in [c for c in bpy.data.collections if c.name.startswith((f"Fuellung_{EIMER}", "Muesli_Stufe2"))]: bpy.data.collections.remove(c)
     for o in [o for o in bpy.data.objects if o.name.startswith("muesli_s2_") and EIMER == "stufe2"]: bpy.data.objects.remove(o, do_unlink=True)

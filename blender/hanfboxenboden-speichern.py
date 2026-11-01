@@ -16,9 +16,12 @@ def gew():
 def warp(x, y, t, ph):   # Haufen laufen unregelmäßig aus (Dome 2.11.): Umriss je Winkel verschieden, unten breiter als oben (t = 0 oben, 1 unten)
     a = math.atan2(y, x); s = (1 + 0.22 * math.sin(2 * a + ph[0]) + 0.16 * math.sin(3 * a + ph[1]) + 0.10 * math.sin(5 * a + ph[2])) * (1 + 0.3 * t * t)
     return x * s, y * s
-def splitter(V, F, MI, p, rich, mh):
-    if random.random() < 0.75: halm(V, F, MI, 7 + random.choices(range(3), NADEL_GEW)[0], p, rich, random.uniform(1.2, 4.0) / E, random.uniform(0.08, 0.2) / E, 1, 0.0, random.uniform(-1.2, 1.2)); return
-    halm(V, F, MI, random.choices(range(7), gew())[0], p, rich, random.uniform(1.5, 5.5) / E, random.uniform(0.3, 0.9) / E, 1, 0.0, random.uniform(-1.2, 1.2))
+def splitter(V, F, MI, p, rich, mh, chip=False, sc=1.0, pn=0.75):   # gibt die Fläche des Teilchens zurück
+    if not chip and random.random() < pn:
+        l = random.uniform(1.2, 4.0) / E * sc; b = random.uniform(0.08, 0.2) / E * sc
+        halm(V, F, MI, 7 + random.choices(range(3), NADEL_GEW)[0], p, rich, l, b, 1, 0.0, random.uniform(-1.2, 1.2)); return l * b
+    l = random.uniform(1.5, 5.5) / E * sc; b = random.uniform(0.3, 0.9) / E * sc
+    halm(V, F, MI, random.choices(range(7), gew())[0], p, rich, l, b, 1, 0.0, random.uniform(-1.2, 1.2)); return l * b
 for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d", "4x5"), ("e", "5x5")]):
     if name not in NUR: continue
     bpy.ops.wm.open_mainfile(filepath=f"{PROJ}/blender/strohboxenboden-{name}-{mass}.blend")
@@ -45,15 +48,22 @@ for j, (name, mass) in enumerate([("a", "3x3"), ("b", "3x4"), ("c", "4x4"), ("d"
         k = (int(x // CELL), int(y // CELL))
         if v > hg.get(k, 2.0): hg[k] = v
     LT = 3.5   # angenommene Teilchenlänge für die Auflage (Einheiten)
-    for _ in range(int(BX * BY / 1800)):
-        if random.random() < 0.6: cx, cy, cs = random.choice(klumpen); x, y = random.gauss(cx, cs), random.gauss(cy, cs)
-        else: x, y = random.uniform(-BX / 2, BX / 2), random.uniform(-BY / 2, BY / 2)
-        if abs(x) > BX / 2 - 6 or abs(y) > BY / 2 - 6: continue
+    def lege(x, y, chip=False):   # ein Teilchen fällt auf das, was darunter liegt; gibt die Fläche zurück
         a = random.uniform(0, math.tau); dx, dy = math.cos(a) * LT / 2, math.sin(a) * LT / 2
         hs, he = hh(x - dx, y - dy), hh(x + dx, y + dy); hm = hh(x, y); zs = max(hs, hm) + 0.2; ze = max(he, hm) + 0.2
         fl = math.sin(x / 45 + ph[4]) * math.sin(y / 41 + ph[5]); PATCH[0] = 1 if fl > 0.3 else -1 if fl < -0.3 else 0
-        splitter(V, F, MI, Vector((x - dx, y - dy, zs)), Vector((math.cos(a), math.sin(a), max(-0.5, min(0.5, (ze - zs) / LT)))), mh)
+        fl_ = splitter(V, F, MI, Vector((x - dx, y - dy, zs)), Vector((math.cos(a), math.sin(a), max(-0.5, min(0.5, (ze - zs) / LT)))), mh, chip, 1.4, 0.4)
         for t_, zz in ((-1, zs), (0, (zs + ze) / 2), (1, ze)): hset(x + dx * t_, y + dy * t_, zz + 0.35)
+        return fl_
+    # Ebene 1 deckt die Bodenplatte ganz ab (Dome: schöne Übergänge wie beim Stroh): erst ein Raster, in jeder Zelle ein größeres Teilchen, dann Zufall und Klumpen bis zur Zielfläche
+    for gx in range(int(-BX / 2 + 5), int(BX / 2 - 5), 4):
+        for gy in range(int(-BY / 2 + 5), int(BY / 2 - 5), 4): lege(gx + random.uniform(-2, 2), gy + random.uniform(-2, 2), True)
+    flaeche = 0.0; ziel_ = 1.2 * BX * BY
+    while flaeche < ziel_:
+        if random.random() < 0.6: cx, cy, cs = random.choice(klumpen); x, y = random.gauss(cx, cs), random.gauss(cy, cs)
+        else: x, y = random.uniform(-BX / 2, BX / 2), random.uniform(-BY / 2, BY / 2)
+        if abs(x) > BX / 2 - 6 or abs(y) > BY / 2 - 6: continue
+        flaeche += lege(x, y)
     PATCH[0] = 0
     import json; json.dump({"cell": CELL, "hg": [[k[0], k[1], round(v, 2)] for k, v in hg.items()]}, open(f"{PROJ}/blender/testseiten/boxenboden/hoehe-hanf-{name}.json", "w"))   # Höhenraster der Ebene 1: darauf liegen die Pferdeäpfel
     ersetze(f"{P}_muster", V, F, MI, b.location)

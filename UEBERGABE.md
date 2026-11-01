@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. nachts (Claude Team) – Testseite Boxenboden (Stroh/Hanf, Mistigkeit, Äpfel)
+`blender/testseiten/boxenboden.html` (Server: `werkzeuge/statisch.js`, in `.claude/launch.json` als „testseiten", Port 8765; Adresse `http://localhost:8765/boxenboden.html#hanf-a-2`): Einstreu Stroh/Hanf, Box A–E, Mistigkeit frisch/1/2/3 (die Seite schaltet selbst: 18-cm-Haufen platt, 14/10-cm aus), Pferdeäpfel an/aus und neu verteilen (nur auf Boden oder platt getretenen Haufen, Anzahl wie in Blender 5,6/10,9/16,6 je m²). Daten: `blender/boxenboden-viewer-export.py` → `blender/testseiten/boxenboden/*.glb/.json` (**nicht in Git**, `.gitignore`; Hanf-GLB nur A, B–E „später"). **Hanf A wurde überarbeitet** (Foto 5: kompakter, flachere Haufen ×0,75, viele dünne Nadeln, Dichte ×2); `hanfboxenboden-b…e` sind noch der ältere Stand, ebenso `hanfboxenboden-a-…-mistigkeit-1–3` (müssen für A neu erzeugt werden). Alle `hanfboxenboden-*.blend` sind lokal und nicht in Git (zu groß, `.gitignore`).
+
 ### 2.11. nachts (Claude Team) – Böden aufgeräumt (Dome)
 Die alten Strohböden (mind. 90 % Bedeckung) samt Mistigkeit 1–3 sind gelöscht; die dichten (99,5 %) heißen jetzt ohne „-dicht“: `strohboxenboden-<a–e>-<Maß>.blend` und `…-mistigkeit-<1–3>.blend`. Es bleiben Stroh (20 Dateien) und Hanf `hanfboxenboden-…` (20 Dateien). **Folge:** die Bauskripte `boxenboeden-bauen.py`, `strohboxenboden-mistigkeit1/2/3-speichern.py`, `strohboxenboden-dicht-speichern.py` und `mistigkeit-dicht-hanf-speichern.py` (Stroh-Teil) beziehen sich auf die alten Dateinamen und laufen so nicht mehr; Stroh-Mistigkeit entsteht bei Bedarf mit der Regel aus `mistigkeit-dicht-hanf-speichern.py` (Quelle = `strohboxenboden-<a–e>-<Maß>.blend`).
 

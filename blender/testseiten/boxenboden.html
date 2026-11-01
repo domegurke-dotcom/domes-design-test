@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Boxenboden 3D – Test</title>
+<style>
+  :root { --panel: 170px; }
+  html, body { margin: 0; height: 100%; background: #f2efe9; overflow: hidden; font-family: system-ui, sans-serif; touch-action: none; color: #2b1d14; }
+  canvas { display: block; width: 100%; height: calc(100% - var(--panel)); }
+  #panel { position: fixed; left: 0; right: 0; bottom: 0; height: var(--panel); box-sizing: border-box; padding: 8px max(12px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-bottom)); background: #fffc; border-top: 2px solid #2b1d14; overflow: auto; }
+  .reihe { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 6px; }
+  .reihe > span { font-size: 13px; min-width: 84px; font-weight: 600; }
+  button { font: inherit; font-size: 13px; padding: 5px 9px; border-radius: 10px; border: 2px solid #2b1d14; background: #fff; color: #2b1d14; }
+  button.an { background: #2b1d14; color: #fff; }
+  button:disabled { opacity: .35; }
+  #info { position: fixed; left: max(10px, env(safe-area-inset-left)); top: max(10px, env(safe-area-inset-top)); font-size: 13px; background: #fffc; padding: 6px 10px; border-radius: 10px; max-width: 80vw; }
+  @media (orientation: landscape) and (max-height: 520px) { :root { --panel: 120px; } .reihe { margin-bottom: 3px; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="info">lädt …</div>
+<div id="panel">
+  <div class="reihe"><span>Einstreu</span><button data-mat="stroh">Stroh</button><button data-mat="hanf">Leinstroh / Hanf</button></div>
+  <div class="reihe"><span>Boxgröße</span>
+    <button data-gr="a">A 3×3</button><button data-gr="b">B 3×4</button><button data-gr="c">C 4×4</button><button data-gr="d">D 4×5</button><button data-gr="e">E 5×5</button></div>
+  <div class="reihe"><span>Mistigkeit</span>
+    <button data-st="0">frisch</button><button data-st="1">1 · nach 1 Nacht</button><button data-st="2">2 · nach 2 Nächten</button><button data-st="3">3 · nach 3 Nächten</button>
+    <button id="aepfel">Pferdeäpfel: an</button><button id="neu">Äpfel neu verteilen</button><button id="dreh">Drehen: aus</button></div>
+</div>
+<script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "./lib/loaders/GLTFLoader.js";
+
+const canvas = document.getElementById("c"), info = document.getElementById("info");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(28, 1, 5, 6000);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8a96, 1.9));
+const sonne = new THREE.DirectionalLight(0xffffff, 1.3); sonne.position.set(-30, 60, 50); scene.add(sonne);
+
+// ---- Zustand ----
+const S = { mat: "stroh", gr: "a", st: 0, aepfel: true, dreh: false, seed: 1 };
+const GROESSEN = { a: "3×3 m", b: "3×4 m", c: "4×4 m", d: "4×5 m", e: "5×5 m" };
+const E_CM = 0.79;   // 1 Modelleinheit = 0,79 cm
+const APFEL_JE_M2 = [0, 5.6, 10.9, 16.6];   // wie in Blender: Fläche A (9 m²) 50 / 98 / 149 Äpfel
+const PLATT_CM = 5;
+
+// ---- Laden ----
+const lader = new GLTFLoader();
+const laden = (datei) => new Promise((ok, f) => lader.load(datei, (g) => ok(g.scene), undefined, f));
+const cache = {};
+function material(alt, hatNormalen) {
+  const name = (alt.name || "").replace(/\.\d{3}$/, "");
+  if (name === "tinte") { const m = new THREE.MeshBasicMaterial({ side: THREE.FrontSide }); m.color.set("#080809"); return m; }
+  const m = hatNormalen ? new THREE.MeshLambertMaterial({ side: THREE.DoubleSide }) : new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
+  m.color.copy(alt.color); return m;
+}
+async function boden(mat, gr) {
+  const key = mat + "-" + gr; if (cache[key]) return cache[key];
+  const daten = await (await fetch(`./boxenboden/${key}.json`)).json();
+  const wurzel = await laden(`./boxenboden/${key}.glb`);
+  const P = "box" + gr.toUpperCase(), haufen = [];
+  wurzel.traverse((o) => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map((m) => material(m, !!o.geometry.attributes.normal)) : material(o.material, !!o.geometry.attributes.normal); });
+  for (const h of daten.haufen) {
+    const nn = String(h.i).padStart(2, "0");
+    const k = wurzel.getObjectByName(`${P}_haufen_${nn}_koerper`), l = wurzel.getObjectByName(`${P}_haufen_${nn}_halme`);
+    haufen.push({ ...h, objs: [k, l].filter(Boolean), sy: [k, l].filter(Boolean).map((o) => o.scale.y), koerper: k });
+  }
+  return (cache[key] = { wurzel, daten, haufen });
+}
+const aepfelVorlagen = [];
+async function apfelLaden() {
+  for (const [n, w] of [["rund", 5], ["weich", 3], ["hart", 2]]) {
+    const g = await laden(`./pferdeapfel-${n}.glb`);
+    g.traverse((o) => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map((m) => material(m, !!o.geometry.attributes.normal)) : material(o.material, !!o.geometry.attributes.normal); });
+    const bb = new THREE.Box3().setFromObject(g);
+    aepfelVorlagen.push({ g, w, gr: Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z), minY: bb.min.y });
+  }
+}
+
+// ---- Mistigkeit anwenden ----
+function stufeAnwenden(B) {
+  const faktor = B.daten.hanf ? 0.75 : 1;
+  for (const h of B.haufen) {
+    let sicht = true, sk = 1;
+    if (h.h === 18 && S.st >= 1) sk = PLATT_CM / (18 * faktor);
+    else if ((h.h === 14 && S.st >= 2) || (h.h === 10 && S.st >= 3)) sicht = false;
+    h.objs.forEach((o, i) => { o.visible = sicht; o.scale.y = h.sy[i] * sk; });
+    h.sichtbar = sicht;
+  }
+}
+
+// ---- Pferdeäpfel ----
+const aepfelGruppe = new THREE.Group(); scene.add(aepfelGruppe);
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function aepfelStreuen(B) {
+  aepfelGruppe.clear();
+  if (!S.aepfel || S.st === 0 || !aepfelVorlagen.length) return 0;
+  const { bx, by } = B.daten, flaeche = bx * by * E_CM * E_CM / 10000, soll = Math.round(flaeche * APFEL_JE_M2[S.st]);
+  const R = mulberry(S.seed * 7919 + S.st * 131 + S.gr.charCodeAt(0));
+  const traeger = [B.wurzel.getObjectByName("box" + S.gr.toUpperCase() + "_boden")];
+  B.haufen.forEach((h) => { if (h.sichtbar && h.koerper) traeger.push(h.koerper); });
+  const rc = new THREE.Raycaster(), ab = new THREE.Vector3(0, -1, 0), platz = [];
+  const gr = aepfelVorlagen[0].gr, LIM = 8.5;   // nur auf Boden oder auf den platt getretenen Haufen (≈ 5 cm), nie in/auf höhere Haufen
+  const mitte = new THREE.Vector3(); B.wurzel.updateMatrixWorld(true);
+  function versuch(x, y) {   // x, y in Blender-Koordinaten; gibt Höhe (three y) oder null
+    rc.set(new THREE.Vector3(x, 200, -y), ab); const t = rc.intersectObjects(traeger, true);
+    if (!t.length || t[0].point.y > LIM) return null;
+    return t[0].point.y;
+  }
+  const frei = (x, y, d) => platz.every((p) => Math.hypot(p[0] - x, p[1] - y) > d);
+  let n = 0, zu = 0;
+  const setze = (x, y, z) => {
+    const w = R() * 10; let a = 0, v; for (v of aepfelVorlagen) { a += v.w; if (w < a) break; }
+    const o = v.g.clone(true); const s = 0.9 + 0.2 * R(); o.scale.setScalar(s); o.rotation.y = R() * 6.283;
+    o.position.set(x, z - v.minY * s - 0.3, -y); aepfelGruppe.add(o); platz.push([x, y]); n++;
+  };
+  const grenze = (x, y) => Math.abs(x) < bx / 2 - 4 && Math.abs(y) < by / 2 - 4;
+  const haufenN = Math.round(soll * 0.55 / 8);   // etwa die Hälfte liegt in kleinen Häufchen (7–9 Äpfel), der Rest einzeln
+  for (let c = 0; c < haufenN && zu < 4000; c++) {
+    let cx, cy, cz;
+    do { cx = (R() - .5) * (bx - 20); cy = (R() - .5) * (by - 20); cz = versuch(cx, cy); zu++; } while ((cz === null || !frei(cx, cy, gr * 2.2)) && zu < 4000);
+    const k = 6 + Math.floor(R() * 4);
+    for (let i = 0; i < k; i++) { for (let t = 0; t < 30; t++) { const r = gr * (0.4 + 2.2 * R()) , a = R() * 6.283, x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r; if (!grenze(x, y) || !frei(x, y, gr * 0.7)) continue; const z = versuch(x, y); if (z !== null) { setze(x, y, z); break; } } }
+  }
+  while (n < soll && zu < 8000) { const x = (R() - .5) * (bx - 12), y = (R() - .5) * (by - 12); zu++; const z = versuch(x, y); if (z !== null && frei(x, y, gr * 0.9)) setze(x, y, z); }
+  return n;
+}
+
+// ---- Kamera (Ziehen = drehen, Mausrad/Zwei Finger = zoomen) ----
+let yaw = 0.6, pitch = 0.75, dist = 900, ziel = new THREE.Vector3();
+function kamera() {
+  camera.position.set(ziel.x + dist * Math.cos(pitch) * Math.sin(yaw), ziel.y + dist * Math.sin(pitch), ziel.z + dist * Math.cos(pitch) * Math.cos(yaw));
+  camera.lookAt(ziel);
+}
+const zeiger = new Map(); let letztePinch = 0;
+canvas.addEventListener("pointerdown", (e) => { canvas.setPointerCapture(e.pointerId); zeiger.set(e.pointerId, [e.clientX, e.clientY]); });
+canvas.addEventListener("pointerup", (e) => { zeiger.delete(e.pointerId); letztePinch = 0; });
+canvas.addEventListener("pointermove", (e) => {
+  if (!zeiger.has(e.pointerId)) return; const alt = zeiger.get(e.pointerId); zeiger.set(e.pointerId, [e.clientX, e.clientY]);
+  if (zeiger.size === 1) { yaw -= (e.clientX - alt[0]) * 0.007; pitch = Math.max(0.12, Math.min(1.5, pitch + (e.clientY - alt[1]) * 0.006)); }
+  else if (zeiger.size === 2) { const [a, b] = [...zeiger.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (letztePinch) dist = Math.max(120, Math.min(3000, dist * letztePinch / d)); letztePinch = d; }
+});
+canvas.addEventListener("wheel", (e) => { e.preventDefault(); dist = Math.max(120, Math.min(3000, dist * (e.deltaY > 0 ? 1.1 : 0.91))); }, { passive: false });
+
+// ---- Anzeige ----
+let aktuell = null, ladeNr = 0;
+async function zeigen() {
+  const nr = ++ladeNr; const key = S.mat + "-" + S.gr;
+  info.textContent = "lädt …";
+  let B;
+  try { B = await boden(S.mat, S.gr); } catch (e) { if (nr === ladeNr) info.textContent = (S.mat === "hanf" ? "Leinstroh/Hanf" : "Stroh") + " " + S.gr.toUpperCase() + ": noch nicht fertig angepasst – kommt später."; return; }
+  if (nr !== ladeNr) return;
+  if (aktuell && aktuell !== B) scene.remove(aktuell.wurzel);
+  if (!aepfelVorlagen.length) await apfelLaden();
+  if (nr !== ladeNr) return;
+  aktuell = B; scene.add(B.wurzel); stufeAnwenden(B); B.wurzel.updateMatrixWorld(true);
+  const n = aepfelStreuen(B);
+  ziel.set(0, 6, 0); dist = Math.max(B.daten.bx, B.daten.by) * 2.5;
+  const sicht = B.haufen.filter((h) => h.sichtbar).length;
+  info.textContent = `${S.mat === "hanf" ? "Leinstroh/Hanf" : "Stroh"} · Box ${S.gr.toUpperCase()} (${GROESSEN[S.gr]}) · ` + (S.st ? `Mistigkeit ${S.st}` : "frisch eingestreut") + ` · ${sicht} von ${B.haufen.length} Haufen` + (S.st && S.aepfel ? ` · ${n} Pferdeäpfel` : "");
+}
+function knoepfe() {
+  document.querySelectorAll("[data-mat]").forEach((b) => b.classList.toggle("an", b.dataset.mat === S.mat));
+  document.querySelectorAll("[data-gr]").forEach((b) => b.classList.toggle("an", b.dataset.gr === S.gr));
+  document.querySelectorAll("[data-st]").forEach((b) => b.classList.toggle("an", +b.dataset.st === S.st));
+  document.getElementById("aepfel").textContent = "Pferdeäpfel: " + (S.aepfel ? "an" : "aus");
+  document.getElementById("aepfel").disabled = document.getElementById("neu").disabled = S.st === 0;
+  document.getElementById("dreh").textContent = "Drehen: " + (S.dreh ? "an" : "aus");
+  location.hash = `${S.mat}-${S.gr}-${S.st}`;
+}
+document.querySelectorAll("[data-mat]").forEach((b) => b.onclick = () => { S.mat = b.dataset.mat; knoepfe(); zeigen(); });
+document.querySelectorAll("[data-gr]").forEach((b) => b.onclick = () => { S.gr = b.dataset.gr; knoepfe(); zeigen(); });
+document.querySelectorAll("[data-st]").forEach((b) => b.onclick = () => { S.st = +b.dataset.st; knoepfe(); zeigen(); });
+document.getElementById("aepfel").onclick = () => { S.aepfel = !S.aepfel; knoepfe(); zeigen(); };
+document.getElementById("neu").onclick = () => { S.seed++; zeigen(); };
+document.getElementById("dreh").onclick = () => { S.dreh = !S.dreh; knoepfe(); };
+const h = location.hash.slice(1).split("-"); if (h.length === 3 && GROESSEN[h[1]]) { S.mat = h[0] === "hanf" ? "hanf" : "stroh"; S.gr = h[1]; S.st = Math.max(0, Math.min(3, +h[2] || 0)); }
+function groesse() { const w = innerWidth, hh = innerHeight - parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--panel")); renderer.setSize(w, hh, false); camera.aspect = w / hh; camera.updateProjectionMatrix(); }
+addEventListener("resize", groesse); groesse(); knoepfe(); zeigen();
+(function lauf() { if (S.dreh) yaw += 0.004; kamera(); renderer.render(scene, camera); requestAnimationFrame(lauf); })();
+</script>
+</body>
+</html>

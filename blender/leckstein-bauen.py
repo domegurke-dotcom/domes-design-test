@@ -14,7 +14,7 @@ def objekt(name, me):
 # ---------- Salzbrocken: Tonne (runder Querschnitt, flache Enden), Loch genau in der Mitte, raue Oberfläche; Lochachse = y ----------
 BX, BY, BZ = 7.2, 8.6, 7.2   # Halbachsen (Modelleinheiten; 1 Einheit ≈ 0,8 cm → Stein ≈ 11 cm dick, 14 cm lang)
 N = 3.0                      # Superellipsoid: >2 macht die Enden flacher und die Kanten runder (Tonnenform)
-bm = bmesh.new(); bmesh.ops.create_icosphere(bm, subdivisions=4, radius=1.0)
+bm = bmesh.new(); bmesh.ops.create_icosphere(bm, subdivisions=5, radius=1.0)
 for v in bm.verts:
     p = v.co.copy(); k = (abs(p.x) ** N + abs(p.y) ** N + abs(p.z) ** N) ** (1 / N); p = p / k   # auf die Superellipsoid-Fläche
     q = Vector((p.x * BX, p.y * BY, p.z * BZ))
@@ -30,9 +30,6 @@ def schnitt(rich, tiefe):
     c.rotation_euler = rich.to_track_quat("Z", "Y").to_euler()
     m = salz.modifiers.new("schnitt", "BOOLEAN"); m.object = c; m.operation = "DIFFERENCE"; m.solver = "EXACT"
     bpy.context.view_layer.objects.active = salz; bpy.ops.object.modifier_apply(modifier=m.name); bpy.data.objects.remove(c, do_unlink=True)
-for i in range(34):
-    d = Vector((random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1)))
-    if d.length > 0.2: schnitt(d, random.uniform(0.90, 0.97))
 # Loch quer durch, genau in der Mitte (gleicher Abstand zum Rand)
 HZ = 0.0
 bpy.ops.mesh.primitive_cylinder_add(vertices=28, radius=2.7, depth=30, location=(0, 0, HZ), rotation=(math.pi / 2, 0, 0))
@@ -40,11 +37,15 @@ loch = bpy.context.active_object; loch.name = "loch"
 bo = salz.modifiers.new("loch", "BOOLEAN"); bo.object = loch; bo.operation = "DIFFERENCE"; bo.solver = "EXACT"
 bpy.context.view_layer.objects.active = salz; bpy.ops.object.modifier_apply(modifier=bo.name)
 bpy.data.objects.remove(loch, do_unlink=True)
+# gleichmäßige Dreiecksstruktur über den ganzen Stein (wie Domes Vorbild): erst gleichmäßig neu vernetzen, dann zu unregelmäßigen Dreiecken zusammenfassen
+rm = salz.modifiers.new("neu", "REMESH"); rm.mode = "VOXEL"; rm.voxel_size = 0.5
+bpy.context.view_layer.objects.active = salz; bpy.ops.object.modifier_apply(modifier=rm.name)
+dc = salz.modifiers.new("dreiecke", "DECIMATE"); dc.ratio = 0.05; dc.use_collapse_triangulate = True
+bpy.ops.object.modifier_apply(modifier=dc.name)
 # raue, kristalline Oberfläche: Beulen und Splitter, dann flach schattieren
 bm = bmesh.new(); bm.from_mesh(salz.data)
 for v in bm.verts:
-    if (v.co.x ** 2 + v.co.z ** 2) ** 0.5 < 3.0: continue   # die Lochwand bleibt glatt
-    v.co += v.normal * (0.30 * noise.noise(v.co * 1.7 + Vector((5, 8, 1))) + 0.14 * noise.noise(v.co * 4.2 + Vector((2, 6, 9))))
+    v.co += v.normal * (0.34 * noise.noise(v.co * 1.5 + Vector((5, 8, 1))) + 0.12 * noise.noise(v.co * 3.5 + Vector((2, 6, 9))))
 bm.to_mesh(salz.data); bm.free()
 salz.data.polygons.foreach_set("use_smooth", [False] * len(salz.data.polygons))
 # ---------- Zeichenstil wie im Spiel: flache Farbflächen (Workbench), schwarze Kontur als umgestülpte Hülle ("tinte") ----------
@@ -57,8 +58,8 @@ SALZ = [mat("salz_dunkel", (255, 118, 80)), mat("salz_orange", (255, 156, 112)),
 salz.data.materials.clear()
 for m in SALZ + [TINTE] * 5: salz.data.materials.append(m)   # Plätze 5–9: Tinte für die Kontur (material_offset 5)
 for pl in salz.data.polygons:   # fleckig: Orange und Rosa in Wolken, weiße Kristallflecken
-    c = pl.center; v = noise.noise(c * 0.16 + Vector((1, 2, 3))); w = noise.noise(c * 0.5 + Vector((4, 4, 4)))
-    pl.material_index = 3 if w > 0.33 else (4 if w > 0.2 else (2 if v > 0.12 else (0 if v < -0.15 else 1)))
+    c = pl.center; v = noise.noise(c * 0.3 + Vector((1, 2, 3))); w = noise.noise(c * 0.45 + Vector((4, 4, 4)))
+    pl.material_index = 3 if w > 0.3 else (4 if w > 0.18 else (2 if v > 0.14 else (0 if v < -0.1 else 1)))
 def kontur(o, dicke, versatz):
     m = o.modifiers.new("kontur", "SOLIDIFY"); m.thickness = dicke; m.offset = 1; m.use_flip_normals = True; m.use_rim = False; m.material_offset = versatz
 kontur(salz, 0.3, 5)

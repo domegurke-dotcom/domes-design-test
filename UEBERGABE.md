@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. nachts (Claude Team) – Pferdeäpfel einzeln
+`blender/pferdeapfel-rund|weich|hart.blend` (+ `testseiten/pferdeapfel-<typ>.glb`), Ursprung Mitte der Unterseite, mit Kontur; Skript `pferdeaepfel-einzeln-speichern.py`. Das Spiel verteilt sie später einzeln, zufällig und nie in andere Objekte.
+
 ### 2.11. nachts (Claude Team) – Einstreu nach einer Nacht
 `blender/strohboxenboden-<a–e>-<Maß>-nach-einer-nacht.blend`: wie frisch eingestreut, nur das Drittel mit 18 cm ist auf 5 cm platt getreten (Dome), ohne Eimer, Heu und Äpfel. Äpfel verteilt das Spiel später zufällig, nie in andere Objekte (Vorlagen `pferdeaepfel.blend`). Skript `strohboxenboden-nach-einer-nacht-speichern.py`.
 

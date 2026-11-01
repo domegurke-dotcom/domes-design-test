@@ -1,11 +1,11 @@
 # Vier Boxenböden mit Stroh-Einstreu (Ebene 1 Boden, Ebene 2 lockere Haufen 18/14/10 cm je ein Drittel), Dome 2.11.2026.
-# Maße siehe BOXMASSE.md (Länge × Breite, Länge entlang x): A 3 x 3, B 4 x 3, C 4 x 4, D 5 x 4, E 5 x 5 m, 2,5 m Abstand. Bodenbedeckung mind. 90 % (frisch eingestreut). Vor jedem Boden steht Name + Größe.
+# Maße siehe BOXMASSE.md (Länge × Breite, Länge entlang x): A 3 x 3, B 3 x 4, C 4 x 4, D 4 x 5, E 5 x 5 m, 2,5 m Abstand. Bodenbedeckung mind. 90 % (frisch eingestreut). Vor jedem Boden steht Name + Größe.
 # Im offenen Fenster: Skript ausführen (fügt hinzu). Ohne Fenster: blender -b --python boxenboeden-bauen.py -- <Projektordner>  (speichert boxboeden-stroh.blend/.glb)
 import bpy, sys, math, random
 PROJ = sys.argv[sys.argv.index("--") + 1] if "--" in sys.argv else "C:/Users/dome_/Documents/domes-design-test-git"
 exec(open(PROJ + "/blender/strohlib.py", encoding="utf-8").read(), globals())
 EINH = 126.6   # Einheiten je Meter
-BOEDEN = [("A", 3, 3), ("B", 4, 3), ("C", 4, 4), ("D", 5, 4), ("E", 5, 5)]   # (Name, Länge m, Breite m)
+BOEDEN = [("A", 3, 3), ("B", 3, 4), ("C", 4, 4), ("D", 4, 5), ("E", 5, 5)]   # (Name, Länge m, Breite m)
 LUECKE = 2.5 * EINH; X0 = 540.0   # erster Boden beginnt rechts neben dem 3,5-m-Boden
 FLAECHE0, HAUFEN0 = 443.0 ** 2, 92   # Dichte wie beim 3,5-m-Boden mit 92 Haufen
 def beschriftung(sam, text, x, y, M):

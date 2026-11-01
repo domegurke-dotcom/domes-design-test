@@ -28,7 +28,7 @@
   <div class="reihe"><span>Pferd in der Box</span><span id="pferde" style="display:contents"></span></div>
   <div class="reihe"><span>Mistigkeit</span>
     <button data-st="0">frisch</button><button data-st="1">1 · nach 1 Nacht</button><button data-st="2">2 · nach 2 Nächten</button><button data-st="3">3 · nach 3 Nächten</button>
-    <button id="aepfel">Pferdeäpfel: an</button><button id="neu">Äpfel neu verteilen</button><button id="dreh">Drehen: aus</button><button id="blender">💾 In Blender speichern</button></div>
+    <button id="aepfel">Pferdeäpfel: an</button><button id="neu">Äpfel neu verteilen</button><button id="dreh">Drehen: aus</button></div>
 </div>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
 <script type="module">
@@ -78,7 +78,8 @@ async function boden(mat, gr) {
     const k = wurzel.getObjectByName(`${P}_haufen_${nn}_koerper`), l = wurzel.getObjectByName(`${P}_haufen_${nn}_halme`);
     haufen.push({ ...h, objs: [k, l].filter(Boolean), sy: [k, l].filter(Boolean).map((o) => o.scale.y), koerper: k });
   }
-  return (cache[key] = { wurzel, daten, haufen, hoehe });
+  const ober = {}; for (const st of [1, 2, 3]) { try { ober[st] = await (await fetch(`./boxenboden/oberflaeche-${key}-${st}.json`)).json(); } catch (e) { /* ohne Messung: altes Höhenraster */ } }   // gemessene Oberfläche der Streu je Stufe (aus Blender)
+  return (cache[key] = { wurzel, daten, haufen, hoehe, ober });
 }
 const aepfelVorlagen = [];
 async function apfelLaden() {
@@ -127,12 +128,19 @@ function aepfelStand(B) {
   const gr = aepfelVorlagen[0].gr, LIM = 8.5, rc = new THREE.Raycaster(), ab = new THREE.Vector3(0, -1, 0);
   const grenze = (x, y) => Math.abs(x) < bx / 2 - 4 && Math.abs(y) < by / 2 - 4;
   let traeger = [];
-  const versuch = (x, y) => {   // Höhe von Boden oder platt getretenem Haufen (≤ LIM), sonst null
+  const LIMM = B.daten.mat === "stroh" ? 10.5 : 9.4;
+  const versuch = (x, y) => {   // Höhe der Streu-Oberfläche (aus Blender gemessen, Mittel über 3×3 Felder, ein Stück eingedrückt); zu hohe Haufen = null
+    const OB = B.ober && B.ober[S.st];
+    if (OB) {
+      const ix = Math.floor((x - OB.x0) / OB.cell), iy = Math.floor((y - OB.y0) / OB.cell); let sum = 0, n = 0;
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { const jx = ix + dx, jy = iy + dy; if (jx >= 0 && jy >= 0 && jx < OB.nx && jy < OB.ny) { sum += OB.z[jy * OB.nx + jx]; n++; } }
+      if (!n) return null; const h = sum / n - 0.3; return h > LIMM ? null : h;
+    }
     rc.set(new THREE.Vector3(x, 200, -y), ab); const t = rc.intersectObjects(traeger, true);
     if (!t.length) return null; let h = t[0].point.y;
-    if (B.hoehe && /_boden/.test((t[0].object.parent && t[0].object.parent.name || "") + t[0].object.name)) {   // auf dem Boden: Höhe der Streu (3×3 Felder um den Apfel)
+    if (B.hoehe && /_boden/.test((t[0].object.parent && t[0].object.parent.name || "") + t[0].object.name)) {
       const c = B.hoehe.cell, ix = Math.floor(x / c), iy = Math.floor(y / c);
-      h = Math.max(h, (B.hoehe.m.get(ix + "," + iy) || 0) - 0.35);   // Apfel liegt auf der Oberfläche der Streu (Höhenraster liegt 0,35 über der Fläche), nicht darüber
+      h = Math.max(h, (B.hoehe.m.get(ix + "," + iy) || 0) - 0.35);
     }
     return h > LIM ? null : h;
   };
@@ -253,17 +261,6 @@ document.querySelectorAll("[data-gr]").forEach((b) => b.onclick = () => { S.gr =
 document.querySelectorAll("[data-st]").forEach((b) => b.onclick = () => { S.st = +b.dataset.st; knoepfe(); zeigen(); });
 document.getElementById("aepfel").onclick = () => { S.aepfel = !S.aepfel; knoepfe(); zeigen(); };
 document.getElementById("neu").onclick = () => { S.seed++; zeigen(); };
-document.getElementById("blender").onclick = async (e) => {   // gerade gezeigte Wahl (Einstreu, Box, Pferd) für alle drei Mistigkeitsstufen als Blender-Dateien speichern
-  const b = e.currentTarget, alt = S.st; b.disabled = true; b.textContent = "speichert …";
-  try {
-    const B = await boden(S.mat, S.gr); aepfelStand(B); const o = { mat: S.mat, gr: S.gr, pferd: S.pferd, stufen: {} };
-    for (const st of [1, 2, 3]) { S.st = st; stufeAnwenden(B); o.stufen[st] = B.stand[st].map((q) => { const v = aepfelVorlagen[q.ti], g = new THREE.Object3D(); g.scale.setScalar(q.s); g.rotation.set(q.rx, q.ry, q.rz); g.position.set(q.x, q.zb - v.minY * q.s - 0.3, -q.y); g.updateMatrix(); return { typ: v.name, m: g.matrix.elements }; }); }
-    S.st = alt; stufeAnwenden(B);
-    const res = await fetch("/blender-aepfel", { method: "POST", body: JSON.stringify(o) }), t = await res.text();
-    info.textContent = res.ok ? "Gespeichert: " + t : "Fehler: " + t;
-  } catch (err) { info.textContent = "Fehler: " + err.message; }
-  b.disabled = false; b.textContent = "💾 In Blender speichern";
-};
 document.getElementById("dreh").onclick = () => { S.dreh = !S.dreh; knoepfe(); };
 const pf = document.getElementById("pferde");
 for (const [k, v] of Object.entries(GROESSE)) { const b = document.createElement("button"); b.dataset.pf = k; b.textContent = v.name; b.onclick = () => { S.pferd = k; knoepfe(); zeigen(); }; pf.appendChild(b); }

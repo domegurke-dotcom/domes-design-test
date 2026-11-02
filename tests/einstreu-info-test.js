@@ -15,8 +15,10 @@ const BILD = process.argv[2];
     ok('vier i-Knöpfe bei den Einstreuarten', knoepfe.sort().join() === ['leinstroh', 'pellets', 'spaene', 'streuStroh'].join(), knoepfe.join(','));
     ok('Futter ohne i-Knopf (nur Einstreu)', (await pg.$$eval('.fk-zeile .gl-info-k', a => a.length)) === 4);
     ok('alle Infos zu Beginn zu', (await pg.$$eval('.fk-einfo', a => a.every(x => x.hidden))));
+    const kurz = await pg.$$eval('.fk-zeile:has([data-fkinfo]) .fk-info > small', a => a.map(x => x.innerText));
+    ok('Kurztext nur noch „x kg je Box und Tag“ (alte Erklärung entfernt)', kurz.length === 4 && kurz.every(x => /^\d+ kg je Box und Tag/.test(x) && !/saugfähig|staubt|weich|staubarm/.test(x)), kurz.join(' | '));
     await pg.click('[data-fkinfo="pellets"]');
-    const t = await pg.$eval('#fke-pellets', e => ({ h: e.hidden, txt: e.innerText }));
+    const t =await pg.$eval('#fke-pellets', e => ({ h: e.hidden, txt: e.innerText }));
     ok('Pellets aufgeklappt mit Vor- und Nachteilen', !t.h && /Vorteile/.test(t.txt) && /Nachteile/.test(t.txt) && /Strahlfäule/.test(t.txt) && /angefeuchtet/.test(t.txt));
     if (BILD) { await pg.$eval('#fke-pellets', e => e.scrollIntoView({ block: 'center' })); await pg.screenshot({ path: path.join(BILD, `einstreu-info-${w}x${h}.png`) }); }
     await pg.click('[data-fkinfo="streuStroh"]');

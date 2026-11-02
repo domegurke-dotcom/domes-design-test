@@ -10,7 +10,7 @@ exec(open(f"{PROJ}/blender/strohlib.py").read(), globals())
 PELLET = [(226, 207, 170), (210, 186, 144), (236, 221, 187), (194, 167, 124), (178, 148, 106)]   # hellbeige, sandbraun, blass, dunkler, selten dunkelbraun (Fotos 1–3)
 GEW = [28, 30, 22, 14, 6]
 KRUEMEL = [(214, 190, 148), (222, 200, 160), (206, 180, 138), (190, 162, 118), (232, 214, 180)]   # Sand wie im Dome-Foto: cremig-hell, 3 = weiche Schattentöne, 4 = ganz helle Stellen; wird mit der Mistigkeit dunkler
-KMP = 1.0   # TEST (Dome 2.11.): Haufenhöhen wie beim Stroh 18 / 14 / 10 cm; vorher 10.0 / 18.0 = 10 / 7,8 / 5,6 cm
+KMP = 1.0   # Haufenhöhen wie beim Stroh: 18 / 14 / 10 cm (Dome 2.11.), hoher Haufen bei Mistigkeit 1 platt auf 5 cm
 ZERFALL = [0.25, 0.25, 0.25]   # Anteil, der ab Mistigkeit 1 / 2 / 3 zu Sand wird: 25 % / 50 % / 75 % (kumuliert), die restlichen 25 % bleiben ganze Pellets (Dome 2.11.); frisch gar kein Sand
 KR_JE = 4   # Krümel je Pellet: kleine, körnige Teilchen wie grober Sand (Dome)
 CELL = 1.5; HMAX = 9.0; W0 = 2.0   # lockerer wie die Späne (Dome 2.11.): höhere Streuhöhe, Pellets liegen unterschiedlich hoch auf und lehnen schräg an   # Höhenraster, höchste Streuhöhe über der Platte, Plattenoberseite

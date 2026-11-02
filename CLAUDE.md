@@ -77,6 +77,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 - `PLAN-WEIHNACHTEN.md` – Weihnachten am Hof: Geschenke der Einsteller, „Stall des Jahres“, Sponsor nach Ruf, Weihnachtsgeld für Mitarbeiter (Dauer, Krankheit, Einspringen); **D Weihnachtsgeld gebaut (v826)**, A–C nur geplant.
 - `PLAN-TUTORIAL-UMBAU.md` – Tutorial-Texte kürzen (alle drei Tutorials, Schlüsselwörter fett), „erst tippen, dann erklären“, Hofplan-Bedienung erklären; **nur geplant (Dome 25.10.: „plane ihn“), nichts gebaut**, Etappen T-A bis T-F.
 - `PLAN-EIMERBILD.md` – Futtereimer von oben zeigen (Rundbilder aus Blender je Füllstand, Eimer-Fenster, Stallbild nur leer/gefüllt, Futterplan-Anzeige); Tagesmenge, Füllgrenze 12 l; **nur geplant (Dome 2.11.), Etappen E1–E6 (E6 Heunetz) werden erst gestartet, wenn die 3D-Eimer ins Spiel kommen**, Fragen beantwortet (im Plan).
+- `EINSTREU-NOTIZEN.md` – Recherche zu Stroh/Späne/Strohpellets/Hanf/Leinstroh (HAFL 2017, Uni Göttingen 2013, Begründungen der Halter) und die Spielwerte-Änderungen von v942 (Pellets ohne Härte-Malus, Leinstroh/Hanf als staubend); offen: Hanf und Leinstroh trennen, Pellets anfeuchten.
 - `PROJEKT-CHAT-THEMEN.md` – große Themen, die Dome im Projekt-Chat plant (Ausbildungsstall je Disziplin, Deckhengst, Merkmale-Karte, Reiter-Erfahrung, zwei Fohlen je Box/Zwillinge …) – nicht eigenmächtig umsetzen.
 - `OFFENE-FRAGEN.md` – Fragen, die Claude in Domes Abwesenheit mit der empfohlenen Lösung entschieden hat; mit Dome durchgehen und danach anpassen. **Stand 20.10.2026: nur die selbst gesetzten Zahlen und Hinweise zum Veterinäramt-Auftrag (siehe Datei); alle Nachtfragen sind beantwortet.**
 - Nach jeder Etappe: testen, hochladen, Dome eine Test-Anleitung mit ausgeschriebenen Wegen geben, auf Rückmeldung warten, Etappe im Plan abhaken.
@@ -102,7 +103,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Versionierung (bei JEDER Auslieferung)
 - `SPIEL_VERSION = "NNN"` in index.html, `?v=NNN` (6 Stellen in index.html: lz-string.min.js, pferd.js, boxstufen.js, kopfneu.js, waschbild.js, avatare.js) und `version.json` gemeinsam hochzählen. Die Version steht klein unten im Startmenü.
-- Letzte Version bei Aktualisierung dieser Datei: **941** (Aqua-Bild, Aqua-Nachtrag, Nachtrag 27.10., Mitarbeiter-Auftrag S1–S9 und Aqua-Center A1–A5 komplett, v860–v874; Stand in `UEBERGABE.md`).
+- Letzte Version bei Aktualisierung dieser Datei: **942** (Einstreu-Werte nach Recherche, siehe `EINSTREU-NOTIZEN.md`; davor 941: Aqua-Bild, Aqua-Nachtrag, Nachtrag 27.10., Mitarbeiter-Auftrag S1–S9 und Aqua-Center A1–A5 komplett, v860–v874; Stand in `UEBERGABE.md`).
 
 ## Testen
 - **Auf Domes Windows-PC (seit 26.10.2026, Dome: „ja mach das“):** Node 22 (portabel) und Playwright liegen in `C:\Users\dome_\werkzeug-node\` (außerhalb des Projekts: `node\`, `pw\node_modules`, Chromium in `%LOCALAPPDATA%\ms-playwright`). Tests starten in PowerShell: `$base='C:\Users\dome_\werkzeug-node'; $env:Path = "$base\node;" + $env:Path; $env:NODE_PATH = "$base\pw\node_modules"; node tests/<test>.js` (Umgebungsvariablen wie `BILDER=fehler` und `BILDER_ORDNER` vorher setzen). Geprüft: `tests/finanzen-diagramm-test.js` ✓.

@@ -1,0 +1,32 @@
+# Einstreu – Recherche und Spielwerte (Claude Pro, 2.11.2026, Dome: „finde heraus, warum man das eine oder andere nimmt“)
+
+Quellenlage: unabhängig sind nur zwei Quellen; alles andere sind Hersteller-, Händler- und Forenangaben (so gekennzeichnet).
+- **HAFL 2017** (Hochschule für Agrar-, Forst- und Lebensmittelwissenschaften, Schweiz, „Die Qual der Wahl“, Bulletin 07/2017): Strohpellets, Hobelspäne und Langstroh, 5 Pferde, 7 Nächte, dazu Labortest der Saugfähigkeit von 30 Produkten. Staub nicht untersucht.
+- **Uni Göttingen, Prof. Hessel 2013** („Stäube und Schadgase in der Pferdehaltung“, Vortragsfolien, Uni Hohenheim): Staub und Ammoniak je Einstreu im Labor (rotierende Probe) und im Praxisversuch. Die Messwerte stehen nur in Grafiken, nur die Schlussfolgerungen waren als Text lesbar.
+- Nicht lesbar waren: das Schweizer BLV-Merkblatt „Einstreu Liegebereich von Pferden“ (404) und der Artikel „Einstreu & Atemwege“ des Bayerischen Pferdezentrums (PDF ohne Text).
+
+## Belegte Aussagen
+- **Saugfähigkeit (HAFL, Labor):** Strohpellets/-krümel/-granulate und Sägemehl im Schnitt gleich hoch und am saugstärksten (7 der 10 besten Produkte Strohpellets, einzelne Pellets 128–321 g Wasser/h, kleine Pellets saugen mehr als grobe); **Holzgranulate, Hobelspäne und Langstroh nahmen am wenigsten Wasser auf.**
+- **Mist und Arbeit (HAFL):** Mistmenge bei Hobelspänen und Strohpellets signifikant tiefer als bei Langstroh. Misten von 5 Boxen: Strohpellets 12 min, Langstroh 17 min, Hobelspäne 23 min (die Person war Stroh gewohnt). Anschaffungskosten Späne und Pellets knapp dreimal so hoch wie Langstroh; mit Arbeitszeit und Mistentsorgung haben Strohpellets ein günstiges Preis-Leistungs-Verhältnis.
+- **Liegen und Fressen (HAFL):** Kein signifikanter Unterschied in der Liegedauer zwischen Stroh, Strohpellets und Spänen. Späne und (behandelte) Strohpellets wurden von keinem Pferd gefressen; Stroh dient als Beschäftigung (darum bei Pellets/Spänen zusätzlich Stroh angeboten).
+- **Staub (Göttingen):** Späne und Strohpellets können die Partikelkonzentration in der Stallluft gegenüber Stroh senken. **Hanf und Leinstroh erzeugten im Laborversuch hohe Schwebstaubwerte** (Gegenteil der Herstellerwerbung „staubarm“). Das Einstreuen, Misten, Fegen und Füttern erhöht den Staub deutlich. Richtwert Ammoniak im Pferdestall 10 ppm, über 30 ppm schwere Schäden; Ammoniak wirkt hornabbauend (keratolytisch) und reizt Schleimhäute.
+
+## Begründungen, warum man sich für welche Einstreu entscheidet (überwiegend Praxis/Hersteller)
+- **Stroh:** am billigsten, überall zu bekommen, natürlich, angenehme warme Liegefläche, Beschäftigung (Kauen) – aber höchste Mistmenge (Mist zur Hälfte harngetränkte Einstreu), geringe Saugfähigkeit, Staub/Pilzsporen bei schlechter Ware (Atemwege, Husten/Allergie), Verstopfungskolik, wenn das Pferd viel frisst. Wer Stroh nimmt: Mistmatratze und Landwirt, der den Mist abnimmt, billig, Pferd kaut.
+- **Späne:** gelten als staub- und keimärmer als Stroh, werden nicht gefressen, bequem zu misten/zu kompostieren (Herkunft/Qualität wichtig: nur entstaubte, unbehandelte, **kein Schwarznuss-Holz**, das ist giftig) – aber geringe Saugfähigkeit, teurer, Misten dauert, Staub bei feinen/billigen Spänen. Wer Späne nimmt: Allergiker/Hustenpferde, Pferde die Stroh fressen, Wunsch nach sauberer Box.
+- **Strohpellets:** höchste Saugfähigkeit, wenig Mist (nur nasse Stellen raus, Rest bleibt), schnell zu misten, platzsparend zu lagern, wenig Staub, zusätzlich Beschäftigungsstroh möglich – aber teurer in der Anschaffung, müssen **angefeuchtet** werden, damit sie aufquellen und eine weiche Matte bilden (trocken/nass gefroren funktioniert das nicht), bei zu viel Nässe Ammoniak, einzelne Pferde fressen sie. Wer Pellets nimmt: wenig Zeit zum Misten, Mistentsorgung kostet, empfindliche Atemwege.
+- **Hanf (Schäben) und Leinstroh (Flachsschäben):** Hersteller: 400–500 % Saugkraft, reizarm, weich, verrotten gut, werden kaum gefressen, deshalb beliebt bei Kolikpferden, Allergikern und empfindlichen Hufen (Strahlfäule: „trockene Oberfläche“) – aber teurer, oft nur palettenweise, und im Labor hoher Staub (Göttingen). Das sind verschiedene Materialien (Hanf = Hanfstängel, Lein = Flachsstängel), im Spiel zusammen „Leinstroh/Hanf“.
+- **Gummimatten:** weich gepolstert, sparen Einstreu, aber nass und rutschig, müssen ausreichend eingestreut werden (Spiel: `gummi`).
+- **Bei Hufrehe, Arthrose, Kolik:** weiche, tiefe, nicht fressbare Einstreu wird allgemein empfohlen – dazu fand sich **keine unabhängige Quelle**, das ist Stallpraxis.
+
+## Änderungen im Spiel (v942, Dome: „ändere die Abweichungen“)
+1. Leinstroh/Hanf zählt als **staubend** (`staub: true`, wie Stroh) und steht nicht mehr bei Husten, Erkältung, Asthma, Influenza, Druse im `EINSTREU_RAT`; zählt nicht mehr als „bessere Einstreu“ der Pension. Bleibt weich (+0,8), kaum gefressen, bei Kolik/Hufrehe/Arthrose/Strahlfäule/Mauke empfohlen.
+2. Strohpellets: **Malus „liegen etwas hart“ (−0,5 Wohlbefinden je Nacht) entfernt**, Text „angefeuchtet eingestreut“ (HAFL: kein Unterschied beim Liegen; Hersteller: angefeuchtet weiche Matte).
+3. **Späne `strahl` bleibt 1:** Späne und Stroh nehmen laut HAFL beide am wenigsten Wasser auf – gleicher Wert ist stimmig.
+4. Preise bleiben (Stroh 0,15 €/kg · 7 kg, Pellets 0,40 · 2 kg, Späne 0,50 · 4 kg, Leinstroh/Hanf 0,60 · 3 kg) – Verhältnis passt zu „knapp dreimal so teuer je kg“.
+
+## Offen (Dome entscheidet)
+- **Hanf und Leinstroh trennen?** Heute eine Einstreu „Leinstroh/Hanf“ (Eintrag `leinstroh`, in `F.lager`, `box.einstreu`, Spielständen). Trennen hieße neuer Eintrag `hanf` (eigener Preis, Menge je Box und Tag, Rat), Übernahme alter Spielstände (`leinstroh` → beide?), Hanf-Pflaster/Bilder, Tests. Preise/Mengen dafür sind nicht belegt (Hanfeinstreu laut Händler ca. 15 € für 30 l).
+- **Pellets vor dem Einstreuen anfeuchten** als Spielmechanik (Wasser/Zeit)? Nicht gebaut.
+- **Beschäftigungsstroh bei Pellets/Späne** (Pferde brauchen Kau-Beschäftigung): nicht gebaut.
+- **Staub bei Spänen:** billige, feine Späne sind staubig, die Güteklasse spielt eine Rolle – im Spiel gibt es nur eine Sorte.

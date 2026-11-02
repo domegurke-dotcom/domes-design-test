@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. (Claude Pro) – Heunetz auf 92 % verkleinert (Fassung 8 kg)
+Dome 2.11.: Netz war mit ~171 l (≈ 10 kg bei 60 kg/m³) größer als ein normales Netz (Handel 5–8 kg). In `blender/heunetz.blend` alle acht Netz-Objekte (voll: `heu_koerper`, `knoten`, `netz`, `schlaufe`; leer: `…_leer`, `oese_leer`) mit Objekt-Skala 0,92 → ≈ 133 l ≈ 8 kg (Plan-Antwort 5 in `PLAN-EIMERBILD.md`). `heunetz-voll.glb`/`-leer.glb` neu exportiert (Skala steckt in den Knoten, `export_apply=True` – nur so ist der Export mit dem alten identisch), `heunetz.html`: `H`/`RMAX` × 0,92, Kamera 52. **Für den Einbau:** Netz-Höhe 105 cm, Radius ≈ 26,7 cm; prall = 8 kg. Die Halme/Netz-Stufen (2/4/6/8 kg) fehlen noch (E6).
+
 ### 2.11. (Claude Pro) – v941 LEICHTFUTTRIG um Quarter, Paint, Appaloosa erweitert
 Dome 2.11.: ja, nach Quellen-Prüfung (Quarter/Appaloosa belegt, Paint wegen Verwandtschaft; **Friese nicht**, keine Quelle). Wirkt auf Futterbedarf −15 %, Hufrehe-Risiko, Müsli statt Hafer und `reheGefaehrdet` (Weide im Frühling). `index.html` (Zeile `const LEICHTFUTTRIG`), `tests/krankheiten-test.js` (+1 Prüfung), Version 941. Krankheiten-Test grün (ein früherer roter Lauf war zufällig). Kein Update-Fenster-Eintrag.
 

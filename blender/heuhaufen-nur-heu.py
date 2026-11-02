@@ -5,7 +5,7 @@
 import bpy, math, random
 from mathutils import Vector, Matrix, Quaternion
 
-QUELLE = "C:/Users/dome_/Documents/domes-design-test-git/blender/heunetz.blend"
+QUELLE = "C:/Users/dome_/Documents/Projekt Pferdespiel/domes-design-test-git/blender/heunetz.blend"
 POS = globals().get("POS", (50.0, 110.0, 2.0))   # z = 2,0: der Haufen liegt auf Ebene 1 der Einstreu (Halme dort bis etwa z = 2,7), nicht auf der Grundplatte
 DICHTE_HEU = 60.0      # kg je m³ lose geschüttetes Heu (Schätzung)
 VOL0_M3 = 0.0250       # Volumen von Pros Originalhaufen (Maßstab 1 Einheit = 0,79 cm, per Integral der Höhenfunktion gerechnet)

@@ -8,7 +8,7 @@
 import bpy, bmesh, math, random, sys
 from mathutils import Vector, Matrix, noise
 
-PROJ = sys.argv[sys.argv.index("--") + 1] if "--" in sys.argv else "C:/Users/dome_/Documents/domes-design-test-git"
+PROJ = sys.argv[sys.argv.index("--") + 1] if "--" in sys.argv else "C:/Users/dome_/Documents/Projekt Pferdespiel/domes-design-test-git"
 STREUEN = globals().get("STREUEN", False)
 NACHT = globals().get("NACHT", 1)   # 1 = nach einer Nacht (5 Haufen, 7 einzelne Äpfel), 2 = nicht gemistet, zweite Nacht um (10 Haufen, 16 einzelne, das Drittel mit 14 cm ausgeblendet), 3 = dritte Nacht (15 Haufen, 24 einzelne, auch das Drittel mit 10 cm ausgeblendet)
 exec(open(PROJ + "/blender/strohlib.py", encoding="utf-8").read(), globals())

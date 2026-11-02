@@ -5,7 +5,7 @@
 import bpy, bmesh, math, random
 from mathutils import Vector, Matrix, noise
 
-QUELLE = "C:/Users/dome_/Documents/domes-design-test-git/blender/eimer-alle.blend"
+QUELLE = "C:/Users/dome_/Documents/Projekt Pferdespiel/domes-design-test-git/blender/eimer-alle.blend"
 PARENT = globals().get("PARENT")
 random.seed(31)
 A, TIEFE = 24.4, 34.2            # Innenmaße: Halbachse x, Tiefe nach -y (Wand 1,0 abgezogen)

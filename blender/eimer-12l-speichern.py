@@ -16,6 +16,11 @@ def einen(quelle, halter_name, eimer, futter, kg, ziel):
     print("ERGEBNIS", ziel, ns["result"], "Skala", round(halter.scale.x, 3))
     sc = bpy.context.scene; sc.render.engine = "BLENDER_WORKBENCH"; sc.display.shading.show_backface_culling = True
     bpy.ops.wm.save_as_mainfile(filepath=f"{PROJ}/blender/{ziel}.blend")
+    for m in bpy.data.materials:   # glTF liest nur Materialien mit Principled am Ausgang; Pros zweiter Ausgang (Cycles -> Diffuse) machte Stahl/Gummi/Rand/Innen farblos -> erst nach dem Speichern der .blend entfernen
+        if m.use_nodes and m.node_tree:
+            for x in [x for x in m.node_tree.nodes if x.bl_idname == "ShaderNodeOutputMaterial" and x.target == "CYCLES"]: m.node_tree.nodes.remove(x)
+            for x in m.node_tree.nodes:   # der glTF-Export ignoriert Ausgänge mit Ziel EEVEE -> auf "ALL"
+                if x.bl_idname == "ShaderNodeOutputMaterial": x.target = "ALL"
     bpy.ops.object.select_all(action="SELECT")
     for o in bpy.data.objects:
         if o.type == "CAMERA": o.select_set(False)

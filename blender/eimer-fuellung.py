@@ -6,7 +6,7 @@
 import bpy, bmesh, math, random
 from mathutils import Vector, Matrix, noise
 
-QUELLE = "C:/Users/dome_/Documents/domes-design-test-git/blender/eimer-alle.blend"
+QUELLE = "C:/Users/dome_/Documents/Projekt Pferdespiel/domes-design-test-git/blender/eimer-alle.blend"
 EIMER = globals().get("EIMER", "stufe2"); FUTTER = globals().get("FUTTER", "muesli"); KG = globals().get("KG", 2.0)
 PARENT = globals().get("PARENT"); NUR_TABELLE = globals().get("NUR_TABELLE", False)
 random.seed(77)

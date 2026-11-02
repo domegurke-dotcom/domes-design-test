@@ -26,6 +26,7 @@
   <div id="knoepfe">
     <button class="zu an" data-z="voll">Heunetz voll</button>
     <button class="zu" data-z="leer">Heunetz leer</button>
+    <button class="kg" data-kg="2">2 kg</button><button class="kg" data-kg="4">4 kg</button><button class="kg" data-kg="6">6 kg</button><button class="kg an" data-kg="8">8 kg</button>
     <button data-v="100,0,0">Nur Heu</button>
     <button data-v="0,100,0">Nur Futterstroh</button>
     <button data-v="0,0,100">Nur staubiges Heu</button>
@@ -72,24 +73,27 @@ const lader = new GLTFLoader();
 const laden = (datei) => new Promise((ok, f) => lader.load("./" + datei, (g) => ok(g.scene), undefined, f));
 
 const gruppe = new THREE.Group(); scene.add(gruppe);
-const gVoll = new THREE.Group(), gLeer = new THREE.Group(); gruppe.add(gVoll, gLeer); gLeer.visible = false;
+const gVollKg = {}, gVoll = new THREE.Group(), gLeer = new THREE.Group(); gruppe.add(gVoll, gLeer); gLeer.visible = false;
 const typen = { heu: [], stroh: [], staub: [] }, CAP = 2600;
 let voll = true;
 const anteil = { heu: 100, stroh: 0, staub: 0 };               // Mengenverhältnis, wird auf 100 % umgerechnet
 
 // ---- Form des Netzes (wie in Blender: Höhe 114, Radius 29, mal 0,92 = Fassung 8 kg; leicht klumpig) ----
-const H = 114 * 0.92, RMAX = 29 * 0.92;
+const H = 114 * 0.92, RMAX = 29 * 0.92; let K = 1;   // K = Längenfaktor der Füllung: (kg / 8) hoch ein Drittel, das Netz hängt an der Spitze (z = H)
 const lumpen = (u, s) => 1 + 0.045 * Math.sin(7 * Math.PI * u + 9 * s) * Math.sin(5 * Math.PI * s) + 0.03 * Math.sin(13 * Math.PI * u - 4 * s);
 const radius = (s, u) => (s <= 0 || s >= 1) ? 0 : RMAX * Math.pow(Math.sin(Math.PI * Math.pow(s, 1.35)), 0.55) * lumpen(u, s);
-const punkt = (u, s, off = 0) => { const r = radius(s, u) + off, th = 2 * Math.PI * u; return new THREE.Vector3(r * Math.cos(th), r * Math.sin(th), H * (1 - s)); };   // Blender-Achsen
+const punkt = (u, s, off = 0) => { const r = radius(s, u) * K + off, th = 2 * Math.PI * u; return new THREE.Vector3(r * Math.cos(th), r * Math.sin(th), H * (1 - K * s)); };   // Blender-Achsen
 const conv = (v) => new THREE.Vector3(v.x, v.z, -v.y);
 
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-const R = mulberry(7312026);
+let R;
 // Plätze: Halm liegt (liegend) auf der Oberfläche oder steht durch die Maschen (ragend)
-const PLAETZE = [];
-for (let i = 0; i < 2600; i++) {
-  const ragt = i >= 2050;
+let PLAETZE = [];
+function bauePlaetze(kg) {
+  K = Math.cbrt(kg / 8); R = mulberry(7312026); PLAETZE = [];
+  const ANZ = Math.round(2600 * K * K);   // Halme ~ Oberfläche (K²), davon wie beim vollen Netz knapp ein Fünftel ragend
+for (let i = 0; i < ANZ; i++) {
+  const ragt = i >= ANZ * 2050 / 2600;
   const s = 0.15 + 0.82 * R(), u = R();
   const pos = punkt(u, s, ragt ? 0.2 : 0.3);
   const n = punkt(u, s + 0.004).sub(punkt(u, s - 0.004)).cross(punkt(u + 0.004, s).sub(punkt(u - 0.004, s)));     // Normale (Blender-Achsen)
@@ -102,6 +106,8 @@ for (let i = 0; i < 2600; i++) {
   const m = new THREE.Matrix4().makeBasis(conv(T), conv(N), conv(B).negate()).setPosition(conv(pos));
   PLAETZE.push({ m, u: R(), v: R(), ragt });
 }
+}
+bauePlaetze(8);
 
 function mischen() {
   const summe = ARTEN.reduce((x, a) => x + anteil[a], 0) || 1;
@@ -136,6 +142,10 @@ function groesse() {
   camera.position.set(0, 52 + 70, z); camera.lookAt(0, 52, 0); camera.updateProjectionMatrix();
 }
 addEventListener("resize", groesse); groesse();
+document.querySelectorAll("button.kg").forEach((b) => b.onclick = () => {
+  document.querySelectorAll("button.kg").forEach((x) => x.classList.toggle("an", x === b));
+  Object.entries(gVollKg).forEach(([kg, m]) => m.visible = kg === b.dataset.kg); bauePlaetze(+b.dataset.kg); mischen();
+});
 document.querySelectorAll("button.zu").forEach((b) => b.onclick = () => zustand(b.dataset.z === "voll"));
 document.querySelectorAll("button[data-v]").forEach((b) => b.onclick = () => {
   const w = b.dataset.v.split(",").map(Number);
@@ -158,8 +168,8 @@ function lauf(t) {
 }
 requestAnimationFrame(lauf);
 
-Promise.all([laden("heunetz-voll.glb"), laden("heunetz-leer.glb"), laden("halme.glb")]).then(([sv, sl, sh]) => {
-  sv.traverse((o) => { if (o.isMesh) o.material = neuesMaterial(o.material); }); gVoll.add(sv);
+Promise.all([laden("heunetz-voll.glb"), laden("heunetz-leer.glb"), laden("halme.glb"), laden("heunetz-voll-2kg.glb"), laden("heunetz-voll-4kg.glb"), laden("heunetz-voll-6kg.glb")]).then(([sv, sl, sh, s2, s4, s6]) => {
+  Object.entries({ 8: sv, 2: s2, 4: s4, 6: s6 }).forEach(([kg, m]) => { m.traverse((o) => { if (o.isMesh) o.material = neuesMaterial(o.material); }); m.visible = kg === "8"; gVoll.add(m); gVollKg[kg] = m; });
   sl.traverse((o) => { if (o.isMesh) o.material = neuesMaterial(o.material); }); gLeer.add(sl);
   const halme = {}; sh.traverse((o) => { if (o.isMesh) halme[o.name.replace(/^halm_/, "")] = o; });
   for (const art of ARTEN) for (const [name, hex, anteilTyp] of HALM[art]) {

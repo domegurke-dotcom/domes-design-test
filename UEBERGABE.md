@@ -15,6 +15,9 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 
 ## Nachricht
 
+### 2.11. (Claude Pro) – v941 LEICHTFUTTRIG um Quarter, Paint, Appaloosa erweitert
+Dome 2.11.: ja, nach Quellen-Prüfung (Quarter/Appaloosa belegt, Paint wegen Verwandtschaft; **Friese nicht**, keine Quelle). Wirkt auf Futterbedarf −15 %, Hufrehe-Risiko, Müsli statt Hafer und `reheGefaehrdet` (Weide im Frühling). `index.html` (Zeile `const LEICHTFUTTRIG`), `tests/krankheiten-test.js` (+1 Prüfung), Version 941. Krankheiten-Test grün (ein früherer roter Lauf war zufällig). Kein Update-Fenster-Eintrag.
+
 ### 2.11. nacht (Claude Pro) – Einstreu Strohpellets Box A–E FERTIG und von Dome abgenommen → AN CLAUDE TEAM / nächste Sitzung
 **Stand:** Strohpellets als Einstreu-Bild für Box A–E (frisch, Mistigkeit 1/2/3), von Dome abgenommen („passt alles“). Alles committet und auf GitHub (`main` = `origin/main`, zuletzt `eed9cd8`; Push lief normal, der Verlauf ist bereits bereinigt). Die Nachricht von Claude Team (Browseransicht wieder aufbauen) ist übernommen. **Spielregeln unverändert** (Strohpellets gibt es im Spiel schon: hart, −0,5 Wohl je Nacht), `index.html` unberührt.
 **Ansehen:** Server „testseiten“ (`.claude/launch.json`, Port 8765) → `http://localhost:8765/boxenboden.html#pellets-a-0` (Knöpfe Einstreu/Box/Pferd/Mistigkeit/Äpfel, bei Pellets zusätzlich „Pellets Ebene 1“, „Haufen (Ebene 2)“, „Eimer“; Browser-Fenster nach Änderungen neu laden). Ansichtsdaten liegen lokal in `blender/testseiten/boxenboden/` (nicht in Git); fehlen sie, mit `bash werkzeuge/einstreu-bauen.sh [a b …]` neu bauen (Pellets ~25 Min. für A, ~50 Min. für B–E, die drei Pellets-Schritte brauchen das Wort `pellets`).

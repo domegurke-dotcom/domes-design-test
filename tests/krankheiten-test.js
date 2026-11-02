@@ -26,6 +26,7 @@ const NEU_VL = ['sarkoid', 'hautkrebs', 'ems', 'aorta', 'megaoes', 'shiver', 'kr
     NEU_VL.forEach(k => { check('VERANLAGUNG ' + k, !!VERANLAGUNG[k]); check('VL_INFO ' + k, !!VL_INFO[k]); Object.keys(VERANLAGUNG[k].rassen).forEach(r => check('Rasse ' + r + ' in VL ' + k, !!rasseById(r))); });
     Object.values(OP_KLINIK).forEach(O => O.art.forEach(a => check('OP-Befund ' + a, a === 'pfeifen' || !!KRANK[a])));
     check('Shire leichtfuttrig', LEICHTFUTTRIG.includes('shire'));
+    check('Quarter, Paint, Appaloosa leichtfuttrig', ['quarter','paint','appaloosa'].every(r => LEICHTFUTTRIG.includes(r)));
     A.datenFehler = fehler.slice();
     // ---- Hilfen ----
     window.leer = () => { spiel.boxen.forEach(bx => { bx.pferd = null; bx.fohlen = null; bx.tot = false; }); };

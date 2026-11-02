@@ -22,18 +22,19 @@
 <canvas id="c"></canvas>
 <div id="info">lädt …</div>
 <div id="panel">
-  <div class="reihe"><span>Einstreu</span><button data-mat="stroh">Stroh</button><button data-mat="hanf">Leinstroh / Hanf</button><button data-mat="spaene">Späne</button></div>
+  <div class="reihe"><span>Einstreu</span><button data-mat="stroh">Stroh</button><button data-mat="hanf">Leinstroh / Hanf</button><button data-mat="spaene">Späne</button><button data-mat="pellets">Strohpellets</button></div>
   <div class="reihe"><span>Boxgröße</span>
     <button data-gr="a">A 3×3</button><button data-gr="b">B 3×4</button><button data-gr="c">C 4×4</button><button data-gr="d">D 4×5</button><button data-gr="e">E 5×5</button></div>
   <div class="reihe"><span>Pferd in der Box</span><span id="pferde" style="display:contents"></span></div>
   <div class="reihe"><span>Mistigkeit</span>
     <button data-st="0">frisch</button><button data-st="1">1 · nach 1 Nacht</button><button data-st="2">2 · nach 2 Nächten</button><button data-st="3">3 · nach 3 Nächten</button>
-    <button id="aepfel">Pferdeäpfel: an</button><button id="neu">Äpfel neu verteilen</button><button id="dreh">Drehen: aus</button></div>
+    <button id="aepfel">Pferdeäpfel: an</button><button id="neu">Äpfel neu verteilen</button><button id="dreh">Drehen: aus</button><button id="e1pel">Pellets Ebene 1: an</button><button id="hauf">Haufen (Ebene 2): an</button><button id="eimer">Eimer: an</button></div>
 </div>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
 <script type="module">
 import * as THREE from "three";
 import { GLTFLoader } from "./lib/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "./lib/meshopt_decoder.module.js";   // entpackt komprimierte GLB (Meshopt, Dome 2.11.: Dateien kleiner)
 
 const canvas = document.getElementById("c"), info = document.getElementById("info");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -45,18 +46,19 @@ scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8a96, 1.9));
 const sonne = new THREE.DirectionalLight(0xffffff, 1.3); sonne.position.set(-30, 60, 50); scene.add(sonne);
 
 // ---- Zustand ----
-const S = { mat: "stroh", gr: "a", pferd: "warm", st: 0, aepfel: true, dreh: false, seed: 1 };
+const S = { eimer: true, e1pel: true, haufAn: true, mat: "stroh", gr: "a", pferd: "warm", st: 0, aepfel: true, dreh: false, seed: 1 };
 const GROESSEN = { a: "3×3 m", b: "3×4 m", c: "4×4 m", d: "4×5 m", e: "5×5 m" };
 const E_CM = 0.79;   // 1 Modelleinheit = 0,79 cm
 const APFEL_JE_M2 = [0, 5.6, 10.9, 16.6];   // wie in Blender: Fläche A (9 m²) 50 / 98 / 149 Äpfel
 const PLATT_CM = 5;
-const NAME_MAT = { stroh: "Stroh", hanf: "Leinstroh/Hanf", spaene: "Späne" };
+const NAME_MAT = { stroh: "Stroh", hanf: "Leinstroh/Hanf", spaene: "Späne", pellets: "Strohpellets" };
 const STROH_ZIEL = new THREE.Color(138 / 255, 98 / 255, 34 / 255).convertSRGBToLinear();   // Stroh wird mit der Mistigkeit dunkel pissgelb-bräunlich (Dome)
 const SPAENE_ZIEL = new THREE.Color(140 / 255, 98 / 255, 44 / 255).convertSRGBToLinear();   // Späne werden mit der Mistigkeit dunkel gelbbraun
+const PELLETS_ZIEL = new THREE.Color(105 / 255, 80 / 255, 55 / 255).convertSRGBToLinear();   // Strohpellets zerfallen mit der Mistigkeit zu Krümeln und werden dunkel erdbraun (Dome, Foto 4)
 const HANF_DUNKEL = [0, 0.22, 0.45, 0.68], HANF_ZIEL = new THREE.Color(110 / 255, 84 / 255, 62 / 255).convertSRGBToLinear();   // Leinstroh/Hanf wird mit der Mistigkeit dunkler (Foto 6, Dome): braun-grau wie feuchter, benutzter Hanf
 
 // ---- Laden ----
-const lader = new GLTFLoader();
+const lader = new GLTFLoader(); lader.setMeshoptDecoder(MeshoptDecoder);
 const laden = (datei) => new Promise((ok, f) => lader.load(datei, (g) => ok(g.scene), undefined, f));
 const cache = {};
 function material(alt, hatNormalen) {
@@ -76,7 +78,9 @@ async function boden(mat, gr) {
   for (const h of daten.haufen) {
     const nn = String(h.i).padStart(2, "0");
     const k = wurzel.getObjectByName(`${P}_haufen_${nn}_koerper`), l = wurzel.getObjectByName(`${P}_haufen_${nn}_halme`);
-    haufen.push({ ...h, objs: [k, l].filter(Boolean), sy: [k, l].filter(Boolean).map((o) => o.scale.y), koerper: k });
+    const teile = []; wurzel.traverse((o) => { if (o.name.startsWith(`${P}_haufen_${nn}_`) && /__(bis|ab)\d/.test(o.name)) teile.push(o); });   // Pellets: Teile je Zerfallsstufe
+    const alle = [k, l, ...teile].filter(Boolean);
+    haufen.push({ ...h, objs: alle, sy: alle.map((o) => o.scale.y), koerper: k });
   }
   const ober = {}; for (const st of [1, 2, 3]) { try { ober[st] = await (await fetch(`./boxenboden/oberflaeche-${key}-${st}.json`)).json(); } catch (e) { /* ohne Messung: altes Höhenraster */ } }   // gemessene Oberfläche der Streu je Stufe (aus Blender)
   let ober1 = null; try { ober1 = await (await fetch(`./boxenboden/oberflaeche1-${key}.json`)).json(); } catch (e) { ober1 = null; }   // gemessene Oberfläche nur der Bodenschicht (Ebene 1)
@@ -94,17 +98,38 @@ async function apfelLaden() {
 }
 let BIB = null; const EINSINK_CM = 2.0;   // so tief sinken die Äpfel in die Streu ein (Dome: 1–3 cm, nicht versinken)
 
+// ---- Eimer (Maßstab- und Stehprüfung, Dome 2.11.): Futtereimer Stufe 1 mit 12 l, steht mit flachem Boden auf der höchsten Stelle der Ebene 1 ----
+let eimerObj = null, eimerBox = null; const EIMER_POS = [-0.28, 0.22];   // Anteil der Boxbreite/-länge (x, y), links hinten
+async function eimerSetzen(B) {
+  if (!eimerObj) { try { eimerObj = await laden("./eimer-stufe1-12l.glb"); const EIMER_FARBE = { stahl: [0.349, 0.375, 0.428], gummi: [0.043, 0.047, 0.071], innen: [0.011, 0.011, 0.02], rand: [0.076, 0.082, 0.119] };   // Farben aus eimer-stufe1-12l.blend (beim GLB-Export gingen sie verloren, der Eimer war weiß)
+    const faerbe = (m, n) => { const mm = material(m, n); const c = EIMER_FARBE[(m.name || "").replace(/.d{3}$/, "")]; if (c) mm.color.setRGB(c[0], c[1], c[2]); mm.userData.basis = null; return mm; };   // basis = null: die Mistigkeit-Tönung der Einstreu darf den Eimer nicht umfärben
+    eimerObj.traverse((o) => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map((m) => faerbe(m, !!o.geometry.attributes.normal)) : faerbe(o.material, !!o.geometry.attributes.normal); }); eimerBox = new THREE.Box3().setFromObject(eimerObj); } catch (e) { eimerObj = null; return; } }
+  if (eimerObj.parent) eimerObj.parent.remove(eimerObj);
+  if (!S.eimer || !B.ober1) return;
+  const O = B.ober1, bx = B.daten.bx, by = B.daten.by, tx = EIMER_POS[0] * bx, ty = EIMER_POS[1] * by, rad = Math.max(eimerBox.max.x - eimerBox.min.x, eimerBox.max.z - eimerBox.min.z) / 2;
+  let gz = 2; for (let dy = -rad; dy <= rad; dy += O.cell) for (let dx = -rad; dx <= rad; dx += O.cell) { if (dx * dx + dy * dy > rad * rad) continue; const ix = Math.round((tx + dx - O.x0) / O.cell - 0.5), iy = Math.round((ty + dy - O.y0) / O.cell - 0.5); if (ix >= 0 && iy >= 0 && ix < O.nx && iy < O.ny) gz = Math.max(gz, O.z[iy * O.nx + ix]); }
+  const cx = (eimerBox.min.x + eimerBox.max.x) / 2, cz = (eimerBox.min.z + eimerBox.max.z) / 2;
+  eimerObj.position.set(tx - cx, gz - eimerBox.min.y, -ty - cz); B.wurzel.add(eimerObj); eimerObj.updateMatrixWorld(true);
+  window.eimerInfo = { hoeheCm: +((eimerBox.max.y - eimerBox.min.y) * E_CM).toFixed(1), breiteCm: +(rad * 2 * E_CM).toFixed(1), boden: +gz.toFixed(2) };
+}
+
 // ---- Mistigkeit anwenden ----
+function stufeOk(name) {   // Strohpellets: "…__bis<N>" = ganze Pellets bis Mistigkeit N, "…__ab<N>" = Krümel ab Mistigkeit N
+  const m = /__(bis|ab)(\d)/.exec(name); if (!m) return true; return m[1] === "bis" ? S.st <= +m[2] : S.st >= +m[2];
+}
+window.namen = () => { const n = []; if (aktuell) aktuell.wurzel.traverse((o) => { if (n.length < 25) n.push(o.type + ":" + o.name); }); return n; };
+window.pruefung = () => { const r = { st: S.st, e1pel: S.e1pel, haufAn: S.haufAn, e1: {}, haufen: { sichtbar: 0, gesamt: 0 } }; if (!aktuell) return r; aktuell.wurzel.traverse((o) => { if (!/^box/.test(o.name) || !/__(bis|ab)\d/.test(o.name)) return; let sicht = true, p = o; while (p) { if (p.visible === false) sicht = false; p = p.parent; } if (/_haufen_/.test(o.name)) { r.haufen.gesamt++; if (sicht) r.haufen.sichtbar++; } else r.e1[o.name.replace(/^boxA_/, "")] = sicht; }); return r; };
 function stufeAnwenden(B) {
+  B.wurzel.traverse((o) => { if (o.name.startsWith("box") && !/_haufen_/.test(o.name) && /__(bis|ab)\d/.test(o.name)) o.visible = stufeOk(o.name) && (S.e1pel || !/_muster_p__/.test(o.name)); });   // auch Gruppen; Knopf „Pellets Ebene 1“ blendet die Pellets des Bodens aus (Prüfung, Dome) (Objekte mit mehreren Materialien kommen als Gruppe an)   // Ebene 1 (Boden) je Stufe
   const faktor = B.daten.kompakt || 1;
-  const zielFarbe = B.daten.hanf ? HANF_ZIEL : B.daten.mat === "spaene" ? SPAENE_ZIEL : STROH_ZIEL;
+  const zielFarbe = B.daten.hanf ? HANF_ZIEL : B.daten.mat === "spaene" ? SPAENE_ZIEL : B.daten.mat === "pellets" ? PELLETS_ZIEL : STROH_ZIEL;
   B.wurzel.traverse((o) => { if (!o.isMesh) return; for (const m of [].concat(o.material)) if (m.userData.basis) m.color.copy(m.userData.basis).lerp(zielFarbe, HANF_DUNKEL[S.st]); });
   for (const h of B.haufen) {
     let sicht = true, sk = 1;
-    if (h.h === 18 && S.st >= 1) sk = PLATT_CM / (18 * faktor);
+    if (h.h === 18 && S.st >= 1) sk = (B.daten.platt || PLATT_CM) / (18 * faktor);
     else if ((h.h === 14 && S.st >= 2) || (h.h === 10 && S.st >= 3)) sicht = false;
     if (B.wegAb && B.wegAb.has(h.i) && B.wegAb.get(h.i) <= S.st) sicht = false;   // Variante a (Dome): wo Äpfel liegen, ist der platt getretene Haufen der Ebene 2 weggeschoben
-    h.objs.forEach((o, i) => { o.visible = sicht; o.scale.y = h.sy[i] * sk; });
+    h.objs.forEach((o, i) => { o.visible = sicht && S.haufAn && stufeOk(o.name); o.scale.y = h.sy[i] * sk; });
     h.sichtbar = sicht;
   }
 }
@@ -291,7 +316,7 @@ async function zeigen() {
   if (aktuell && aktuell !== B) scene.remove(aktuell.wurzel);
   if (!aepfelVorlagen.length) await apfelLaden();
   if (nr !== ladeNr) return;
-  aktuell = B; scene.add(B.wurzel); stufeAnwenden(B); B.wurzel.updateMatrixWorld(true);
+  aktuell = B; scene.add(B.wurzel); await eimerSetzen(B); stufeAnwenden(B); B.wurzel.updateMatrixWorld(true);
   const n = aepfelStreuen(B);
   ziel.set(0, 6, 0); dist = Math.max(B.daten.bx, B.daten.by) * 2.5;
   const sicht = B.haufen.filter((h) => h.sichtbar).length;
@@ -305,6 +330,9 @@ function knoepfe() {
   document.getElementById("aepfel").textContent = "Pferdeäpfel: " + (S.aepfel ? "an" : "aus");
   document.getElementById("aepfel").disabled = document.getElementById("neu").disabled = S.st === 0;
   document.getElementById("dreh").textContent = "Drehen: " + (S.dreh ? "an" : "aus");
+  document.getElementById("eimer").textContent = "Eimer: " + (S.eimer ? "an" : "aus");
+  document.getElementById("e1pel").textContent = "Pellets Ebene 1: " + (S.e1pel ? "an" : "aus"); document.getElementById("e1pel").style.display = S.mat === "pellets" ? "" : "none";
+  document.getElementById("hauf").textContent = "Haufen (Ebene 2): " + (S.haufAn ? "an" : "aus"); document.getElementById("hauf").style.display = S.mat === "pellets" ? "" : "none";
   location.hash = `${S.mat}-${S.gr}-${S.st}`;
 }
 document.querySelectorAll("[data-mat]").forEach((b) => b.onclick = () => { S.mat = b.dataset.mat; knoepfe(); zeigen(); });
@@ -313,9 +341,12 @@ document.querySelectorAll("[data-st]").forEach((b) => b.onclick = () => { S.st =
 document.getElementById("aepfel").onclick = () => { S.aepfel = !S.aepfel; knoepfe(); zeigen(); };
 document.getElementById("neu").onclick = () => { S.seed++; zeigen(); };
 document.getElementById("dreh").onclick = () => { S.dreh = !S.dreh; knoepfe(); };
+document.getElementById("hauf").onclick = () => { S.haufAn = !S.haufAn; knoepfe(); if (aktuell) { stufeAnwenden(aktuell); aktuell.wurzel.updateMatrixWorld(true); } };
+document.getElementById("eimer").onclick = () => { S.eimer = !S.eimer; knoepfe(); if (aktuell) eimerSetzen(aktuell); };
+document.getElementById("e1pel").onclick = () => { S.e1pel = !S.e1pel; knoepfe(); if (aktuell) { stufeAnwenden(aktuell); aktuell.wurzel.updateMatrixWorld(true); } };
 const pf = document.getElementById("pferde");
 for (const [k, v] of Object.entries(GROESSE)) { const b = document.createElement("button"); b.dataset.pf = k; b.textContent = v.name; b.onclick = () => { S.pferd = k; knoepfe(); zeigen(); }; pf.appendChild(b); }
-const h = location.hash.slice(1).split("-"); if (h.length === 3 && GROESSEN[h[1]]) { S.mat = h[0] === "hanf" ? "hanf" : h[0] === "spaene" ? "spaene" : "stroh"; S.gr = h[1]; S.st = Math.max(0, Math.min(3, +h[2] || 0)); }
+const h = location.hash.slice(1).split("-"); if (h.length === 3 && GROESSEN[h[1]]) { S.mat = ["hanf", "spaene", "pellets"].includes(h[0]) ? h[0] : "stroh"; S.gr = h[1]; S.st = Math.max(0, Math.min(3, +h[2] || 0)); }
 function groesse() { const w = innerWidth, hh = innerHeight - parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--panel")); renderer.setSize(w, hh, false); camera.aspect = w / hh; camera.updateProjectionMatrix(); }
 window.__aepfel = { S, gaps: (nmax) => {   // Prüfung: Abstand der Apfel-Unterseite zur darunterliegenden Fläche (alles Sichtbare außer dem Apfel selbst)
     aepfelGruppe.updateMatrixWorld(true); const rc = new THREE.Raycaster(), alle = []; aktuell.wurzel.traverse((o) => { if (o.isMesh) { let v = o.visible; o.traverseAncestors((q) => { if (!q.visible) v = false; }); if (v && !/tinte/.test(o.material.name || "")) alle.push(o); } });

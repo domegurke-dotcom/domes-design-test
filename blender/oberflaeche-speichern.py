@@ -5,7 +5,7 @@
 import bpy, sys, json
 import numpy as np
 from mathutils import bvhtree, Vector
-_a = sys.argv[sys.argv.index("--") + 1:]; PROJ = _a[0]; GRS = [x for x in _a[1:] if x in list("abcde")] or list("abcde"); MATS = [x for x in _a[1:] if x in ("stroh", "hanf", "spaene")] or ["stroh", "hanf", "spaene"]; EINS = "ebene1" in _a   # "ebene1": nur die Bodenschicht (Ebene 1) ohne Haufen, aus der frischen Datei → oberflaeche1-<mat>-<gr>.json (Äpfel liegen auf Ebene 1)
+_a = sys.argv[sys.argv.index("--") + 1:]; PROJ = _a[0]; GRS = [x for x in _a[1:] if x in list("abcde")] or list("abcde"); MATS = [x for x in _a[1:] if x in ("stroh", "hanf", "spaene", "pellets")] or ["stroh", "hanf", "spaene"]; EINS = "ebene1" in _a   # "ebene1": nur die Bodenschicht (Ebene 1) ohne Haufen, aus der frischen Datei → oberflaeche1-<mat>-<gr>.json (Äpfel liegen auf Ebene 1)
 MASS = {"a": "3x3", "b": "3x4", "c": "4x4", "d": "4x5", "e": "5x5"}; CELL = 2.0
 for mat in MATS:
     for gr in GRS:

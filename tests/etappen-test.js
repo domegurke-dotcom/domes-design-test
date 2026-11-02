@@ -216,10 +216,10 @@ const B = require('./bilder');   // Bilder-Schalter: BILDER=aus|fehler|alle, sie
           pensionAnfrageNeu(); const a = spiel.pensionAnfragen.slice(-1)[0]; a.bluttest = 'vorher'; pensionAnnehmen(a); nacht(1); }
         const e = einstellerListe().find(x => pensionBox(x) && !pensionBox(x).pferd.weide), b = e && pensionBox(e);
         if (b && b.pferd && !b.pferd.weide) { const F = futterkammer(); e.leistungen.einstreu = true; b.einstreu = 'streuStroh'; F.lager.spaene = 50; F.lager.streuStroh = 100; nacht(1);
-          ok('H6 Pension „bessere Einstreu“: staubarme Sorte statt Stroh', b.einstreu === 'spaene', FUTTER[b.einstreu].n);
+          ok('H6 Pension „staubarme Einstreu“: staubarme Sorte statt Stroh', b.einstreu === 'spaene', FUTTER[b.einstreu].n);
           Object.keys(EINSTREU).filter(k => !EINSTREU[k].staub).forEach(k => F.lager[k] = 0); b.einstreu = 'streuStroh'; nacht(1);
-          ok('H6 Nur Stroh trotz Buchung → Einsteller unzufrieden', (e.log || []).some(x => /bessere Einstreu/.test(x.grund || '')), (e.log || []).slice(0, 2).map(x => x.grund).join(', ')); }
-        else ok('H6 Pension „bessere Einstreu“ (kein Einsteller zum Testen)', true);
+          ok('H6 Nur Stroh trotz Buchung → Einsteller unzufrieden', (e.log || []).some(x => /staubarme Einstreu/.test(x.grund || '')), (e.log || []).slice(0, 2).map(x => x.grund).join(', ')); }
+        else ok('H6 Pension „staubarme Einstreu“ (kein Einsteller zum Testen)', true);
         ansehen('H6 Pension mit „bessere Einstreu“', () => pensionHTML('')); }
 
       // ---------- H6 Futterwiese ----------

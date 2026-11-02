@@ -29,7 +29,7 @@ const { chromium } = require('playwright'); const path = require('path');
     zeigeWhiteboard(); const t2 = document.getElementById('nebenSchirm').innerText;
     ok('Pension: Pflege steht da (Besitzer pflegt heute selbst)', /Pflege[\s\S]{0,60}Besitzer/.test(t2), t2.slice(t2.indexOf('Pluto'), t2.indexOf('Pluto') + 300));
     ok('Pension: Waschen steht da (heute nicht nötig)', /Waschen[\s\S]{0,30}nicht nötig/.test(t2), '');
-    ok('Pension: bessere Einstreu steht da', /bessere Einstreu|Bessere Einstreu/.test(t2), '');
+    ok('Pension: staubarme Einstreu steht da', /staubarme Einstreu|Staubarme Einstreu/.test(t2), '');
     // Übersicht „Noch offen“: bei „alle 2 Tage“ je Tag prüfen (Peggy Tag A, Jewel Tag B treffen sich nicht)
     spiel.boxen[2].pferd = null; spiel.einsteller = []; gebaeude().push({ gid: 'pd1', typ: 'sandpaddock', stufe: 1, zustand: 100 }); spiel.anlage.paddock = true;
     const zp = wbZiele().find(x => x.pd); ok('Sandpaddock im Whiteboard', !!zp, JSON.stringify(wbZiele().map(x => x.id)));

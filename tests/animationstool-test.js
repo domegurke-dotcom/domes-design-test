@@ -55,7 +55,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
  ok('Shetty: Bewegung übertragen, keine kaputten Punkte; Stützfolge ' + await p.textContent('#folge'), r);
  await p.locator('#buehne').screenshot({ path: out + '/bedien-shetty.png' });
  // 8. Vorlagebild
- await p.setInputFiles('#bildDatei', path.resolve('pdfs/Bilder/horse_gaits_the-walk.jpg')); await p.waitForTimeout(500);
+ await p.setInputFiles('#bildDatei', path.resolve('../arbeitsordner/pdfs/Bilder/horse_gaits_the-walk.jpg')); await p.waitForTimeout(500);
  ok('Vorlagebild liegt unter der Bühne', await p.locator('#vorlageBild').count() === 1);
  await p.click('#bildZiehen'); await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(100); const vb = await p.locator('#vorlageBild').boundingBox();
  await p.mouse.move(vb.x + 50, vb.y + 50); await p.mouse.down(); await p.mouse.move(vb.x + 120, vb.y + 80, { steps: 5 }); await p.mouse.up();

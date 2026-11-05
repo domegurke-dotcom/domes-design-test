@@ -3,6 +3,9 @@
 Dome arbeitet abwechselnd mit zwei Claude-Konten am Spiel: **Claude Team** und **Claude Pro**.
 Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto beim nächsten Start weiß, was passiert ist.
 
+## ZUERST NACH DEM LESEN (Dome, 5.11.2026): Boxenansicht im Browser wieder öffnen
+Nach dem Lesen dieser Übergabe **sofort die Boxenwand-Ansicht im eingebauten Browser öffnen** (Dome will sie gleich sehen): Testserver prüfen/starten (im Arbeitsordner `C:\Users\dome_\Documents\Projekt Pferdespiel\arbeitsordner`: `C:\Users\dome_\werkzeug-node\node\node.exe werkzeuge/statisch.js 8765`, läuft er schon, nichts tun), dann `http://localhost:8765/boxenwand.html` mit `preview_start` (Parameter `url`) bzw. `navigate` öffnen. Der Umschalter für die Boxgröße steht im Reiter „Ansicht“. Danach mit dem Plan weiter, der unten bei „PLAN NÄCHSTE SITZUNG“ steht.
+
 ## Regeln für diese Datei
 1. Beim Start einer Sitzung diese Datei lesen.
 2. Steht unten als Absender **das andere Konto**: Infos lesen und übernehmen (CLAUDE.md, Pläne und Code sind schon aktuell – die Datei erklärt nur, was neu ist). Danach den Abschnitt „Nachricht“ **löschen**.
@@ -14,6 +17,16 @@ Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto
 ---
 
 ## Nachricht
+
+### PLAN NÄCHSTE SITZUNG (Dome, 5.11.): Pony 2,5 × 2,5 m (P1) bekommt auch die kaputten Ansichten
+Dome: „Bei Pony 2,5 × 2,5 m sollten auch die kaputten Ansichten sein, also Rückwände, Seitenwände, Türen usw.“ (die Regel „kaputte Wände nur für 2 × 2 und 3 × 3 m“ vom 4.11. gilt damit für **P1 (2,5 × 2,5) und Box A (3 × 3)**; P2 und P3 sowie B–E bleiben ohne). Schritte:
+1. **Seitenwände D–H für P1 bauen** (Wandcode `m25`, Länge 2,5 m): `blender/boxenwand-links-speichern.py -- <Arbeitsordner> m25 "d,e,f,g,h,dr,er,fr,gr,hr,dR,eR,fR,gR,hR,drR,erR,frR,grR,hrR"`, danach `boxenwaende-kombi-speichern.py` (Code `m25`, Einzeldateien nicht behalten). Dateien `boxenwand-links|rechts-m25-<Variante>` müssen im Viewer ladbar sein; 20 Stück, Bau etwa 10–20 Minuten.
+2. **Viewer:** `altOk()` in `boxenwand.html` um `"p1"` erweitern (heute nur `["a"]`), dann Block „Alter Stall“ und Schalter „Zustand (alte Wände)“ bei P1 prüfen; Wandhöhe `hs` 0,76 gilt auch für die alten Wände (Decals, Matsch, Rost, Nägel und gebogene Stäbe der kaputten Wände sind auf 2,30 m ausgelegt: nach dem Stauchen ansehen und ggf. nachbessern; die gezielten Reparaturen für Wand F links und D rechts gelten nur beim 3-m-Modell `a`).
+3. **Rückwand-Muster kaputt** (Putz kaputt 1–3 und die Alt-Muster) und **Türen/Fenster der kaputten Wände** (Tür 1/2, Fenster 1/2 mit Ponyöffnung 1,20 × 2,20 m, `tu: 221`) bei P1 ansehen: Schieber, Scharniere, Matsch am Türfuß, Brettfugen, Zargen-Schmutz, Fensterschmutz. Besonders prüfen, dass das hohe Fenster (bis 2,20 m) bei den kaputten Wänden D–H keinen Schmutz in der Höhe bekommt.
+4. **Einstreu bei P1** mit der Mistigkeit 0–3 und alter Wand prüfen (Matsch/Stroh, Nägel im Matsch).
+5. **Blender-Export nachziehen:** `boxenwand-tueren-kombi.blend` hat die Ponyöffnung nur für Wand C – für d–h kaputt/repariert ergänzen (Export `boxenwand.exportieren`, Empfänger `werkzeuge/export-server.js`, Einlesen `export-in-blender-lesen.py`, danach `ansicht-weit-setzen.py`); Rückwände für P1 sind in `boxenwand-rueckwaende-kombi.blend` schon da.
+6. **Preiskatalog:** `PREISKATALOG-BOXEN.md` – Altbau-Wände D–H gibt es nur kaputt 300 / repariert 700 (3 m); Wert für 2,5 m mit Längenfaktor 0,94 und Ponyhöhe ×0,80 ergänzen und Dome nennen.
+7. Danach `UEBERGABE.md`/`CLAUDE.md` nachführen, Dome Ergebnis zeigen (Bilder von P1 mit D–H kaputt und repariert).
 
 ### 5.11. (Claude, Sitzung vom 4./5.11.) – BOXENWAND: STAND FÜR DIE NÄCHSTE SITZUNG (nur Arbeitsordner, nichts im Spiel, nichts committet)
 

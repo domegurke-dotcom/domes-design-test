@@ -5,7 +5,7 @@ Live: https://domegurke-dotcom.github.io/domes-design-test/ (GitHub Pages, Branc
 Spielerin/Auftraggeberin: **Dome** – zeichnet Teile selbst in Krita/Inkscape (Pferdeköpfe, Schöpfe, Fell-SVGs).
 Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, was sich geändert hat.
 
-**Zuerst `UEBERGABE.md` lesen** (Austausch zwischen den Konten **Claude Team** und **Claude Pro**): Nachricht vom anderen Konto übernehmen und löschen, am Sitzungsende eigene Nachricht hineinschreiben – Regeln stehen in der Datei.
+**Zuerst `UEBERGABE.md` lesen** (und danach – Dome 5.11.2026 – die Boxenwand-Ansicht im eingebauten Browser wieder öffnen, siehe Abschnitt „ZUERST NACH DEM LESEN“ dort; Plan für die nächste Sitzung: kaputte Ansichten für Pony 2,5 × 2,5 m) (Austausch zwischen den Konten **Claude Team** und **Claude Pro**): Nachricht vom anderen Konto übernehmen und löschen, am Sitzungsende eigene Nachricht hineinschreiben – Regeln stehen in der Datei.
 
 ## Feste Regeln von Dome (immer beachten)
 - **Auffälliges immer sagen** (Dome, 19.10.2026, gilt für Claude Team und Pro): Fällt dir beim Arbeiten etwas auf (Lücke, Unstimmigkeit, vergessener Zusammenhang, etwas Unrealistisches, ungeprüfte Annahme, Folgefehler), sag es Dome ausdrücklich am Ende der Antwort – auch wenn sie nicht danach gefragt hat. Nicht eigenmächtig ändern (siehe nächste Regel), aber nie verschweigen. Dome vergisst auch mal etwas.

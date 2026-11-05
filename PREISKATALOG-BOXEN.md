@@ -59,6 +59,8 @@ Der 3-m-Preis der Tabelle oben wird mit dem Längenfaktor aus den GROWI-Stufen (
 - Die 5-m-Wand (Box D 4 × 5 m, Box E 5 × 5 m) wird aus zwei Wänden à 2,5 m mit gemeinsamem Mittelpfosten gebaut und kostet das Doppelte der 2,5-m-Wand (Dome 4.11.). Bei I/I2 und J/J2 sieht die 5-m-Wand im Viewer gleich aus (Kurve vorn und hinten); gerechnet wird zweimal der Preis der 2,5-m-Wand der gewählten Variante.
 - Rechenbeispiel Wand C 3,5 m: 1.450 € × 1,123 = 1.628 → **1.630 €**.
 
+**Reparierte Altbau-Wände D–H für alle Boxgrößen (Dome 5.11.: eine reparierte Wand kann in jeder Boxgröße eingebaut sein; kaputt gibt es nur bei Box A und P1) – selbst gesetzt, Rechenweg wie oben (700 € für 3 m × Längenfaktor, gerundet auf 10 €), je Wand:** 2,5 m **660 €** · 3,0 m **700 €** · 3,5 m **790 €** · 4,0 m **900 €** · 5 m (zwei Wände à 2,5 m) **1.320 €**; Ponyboxen (Höhe ×0,80): P1 2,5 m **530 €** · P2/P3 3,5 m **630 €**. Diese reparierten Wände sind auch **neu kaufbar** (Dome 5.11.: „ja“) und kosten dann diesen Preis; die kaputten Wände sind nie kaufbar (nur Altbestand, Wert 300 € für 3 m bei Box A, 230 € bei P1).
+
 ## Ponyboxen (Dome 4.11.: P1 2,5 × 2,5 m · P2 2,5 × 3,5 m · P3 3,5 × 3,5 m) – selbst gesetzte Preise
 
 **Seitenwände** (Gesamthöhe 1,75 m statt 2,30 m): Preis der gleichen Länge aus der Tabelle oben × **0,80**. Annahme von Claude: Holz, Gitter und Beschläge hängen etwa an der Höhe, Pfosten, Riegel und Montage nicht – deshalb nur −20 % statt −24 % (1,75 / 2,30 = 0,76). Dome fragen. Gerundet auf 10 €.
@@ -74,7 +76,8 @@ Der 3-m-Preis der Tabelle oben wird mit dem Längenfaktor aus den GROWI-Stufen (
 | J2 | 1.810 | 2.160 |
 
 Rechenweg Wand C 2,5 m: 1.450 × 0,942 × 0,80 = 1.093 → 1.090. Wand C 3,5 m: 1.450 × 1,123 × 0,80 = 1.303 → 1.300.
-Hinweis: Die Seitenwand ist so lang wie die Box (P1 2,5 m, P2 und P3 3,5 m). Die alten Wände D–H gibt es für Ponys nicht.
+Hinweis: Die Seitenwand ist so lang wie die Box (P1 2,5 m, P2 und P3 3,5 m).
+**Alte Wände D–H bei P1 (Dome 5.11.): kaputt nur P1 (nicht kaufbar, Altbestand); repariert bei allen Ponyboxen (P2/P3 siehe unten) und neu kaufbar:** kaputt 300 × 0,942 × 0,80 = 226 → **230 €** · repariert 700 × 0,942 × 0,80 = 527 → **530 €** je Wand (selbst gesetzt, gleicher Rechenweg wie die Neuwände).
 
 **Tür** (Öffnung 1,20 m breit, 2,20 m hoch wie bei den Pferdeboxen, Teilung Tür/Fenster auf Ponyhöhe): Preis × 1,20 / 1,30 (schmaler):
 - Tür 1: 1.100 × 0,923 = **1.020 €** · Tür 2: 1.400 × 0,923 = **1.290 €**

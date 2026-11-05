@@ -14,7 +14,7 @@ Zeichen-Aufgaben stehen in `BEI-INKSCAPE-BEARBEITEN.md`, große Themen in `PROJE
    - Hufe überfällig als Mangel: mehr als 4 Wochen = 4/13 Jahreszeit über dem Hufschmied-Intervall.
 2. **Hinweise zum Auftrag:** (a) Die „Rücksicherung“ gibt es seit v522 nicht mehr; statt dessen kann der Platz „Verloren“ aufgeräumt werden. (b) Der Stammbaum eines Pferdes speichert die Eltern-Daten selbst – Details eines gelöschten Vorfahren gehen dort nicht verloren, nur sein Steckbrief; die Warnung beim Aufräumen sagt das so. (c) Pferde mit Erfolgen und die 3 wertvollsten Pferde kommen beim Tod automatisch in die Bestenliste – dafür fragt das Aufräumen zusätzlich. (d) Experten sehen die neuen Blasen nur, wenn „Tipps“ in den Einstellungen an sind (Experten haben Tipps standardmäßig aus).
 
-_Reitunterricht (Dome 20.10., v606): auch der feste Bereiter kostet 60 € (Zusatzleistung), trainiert aber am nächsten Morgen normal. Frühere Antworten (Dome, 20.10.2026): Fragen 1–12 der Nachtsitzung beantwortet („so lassen“); Nachbau v598: Fremd-Vergleich (Interieur nur grob), Blasen merkVorschau/merkFohlenschau, Pferdebild und Kryptorchismus im Admin, Reiter-Test-Toleranz. Offen vermerkt: Zeilen Behang/Ohren in den Rassemerkmalen (siehe PLAN-MERKMALE.md und BEI-INKSCAPE-BEARBEITEN.md)._
+_Reitunterricht (Dome 20.10., v606): auch der feste Bereiter kostet 60 € (Zusatzleistung), trainiert aber am nächsten Morgen normal. Frühere Antworten (Dome, 20.10.2026): Fragen 1–12 der Nachtsitzung beantwortet („so lassen“); Nachbau v598: Fremd-Vergleich (Interieur nur grob), Blasen merkVorschau/merkFohlenschau, Pferdebild und Kryptorchismus im Admin, Reiter-Test-Toleranz. Offen vermerkt: Zeilen Behang/Ohren in den Rassemerkmalen (siehe PLAN-MERKMALE.md (gelöscht) und BEI-INKSCAPE-BEARBEITEN.md)._
 
 
 ## Nachtrag 23.10.2026 (Claude Team)
@@ -97,3 +97,12 @@ Domes Antworten 27.10.: (1) Qualifikation = Erfahrung/Wissensstufen, Stärken �
 - **Champagne-Häufigkeit** (v917): Quarter .004, Paint .004, Appaloosa .003 (Allel; ≈ 0,6–0,8 % der Pferde) – keine Zahlen gefunden, nur „selten“. Falbe + Champagne zeigt sich als Champagne (kein eigener „Dun Champagne“).
 - **Hellfuchs (Sandy Chestnut)** (v916): ≈ 25 % der Fuchsfohlen (Farbton-Anlage wie beim Hellbraunen).
 - **Splashed-White-Formen** (v918): SW3/SW2/SW5/SW4-Häufigkeiten und Taubheit SW2 40 % geschätzt (nur „sehr selten, einzelne Zuchtlinien“ belegt).
+
+## Reste aus den gelöschten Plan-Dateien (5.11.2026, Fly – Aufräumen der PLAN-*.md; Originale in Git-Verlauf und `projekt-archiv/`)
+- **Hinweise/Stufen (aus PLAN-HINWEISE):** Stufen gelten nur für neue Spiele (`spiel.stufenAn`); Tutorial-Band im Handy quer liegt ca. 30 px über dem Boxbild; von Dome noch nicht bestätigt: Höfe-Anzahl je Stufe, Turnierklassen je Stufe, Märkte, Mitarbeiter, Wetter; Domes Abnahme der Hinweise/Tutorials steht aus.
+- **Aqua-Center, später (aus PLAN-AQUA):** externe Fachleute auf Termin (Osteopath, Zahnarzt, Sattler, Physio); Ausbildungsstall außer Haus (Thema 14); eigene Bilder für Teich/Halle/Laufband (bisher Emoji/Platzhalter, v877).
+- **Mitarbeiter-Kalender (aus PLAN-MITARBEITER):** noch ohne Deckstation-Termine (Stand v875).
+- **Offenstall, nicht gebaut (aus PLAN-OFFENSTALL):** Gruppen-Übung (steht in PROJEKT-CHAT-THEMEN.md Punkt 27), eigene Gruppen-Kachel mit Blättern in der Stallansicht, Gruppenüberschriften im Whiteboard, Tutorial-Info.
+- **Abnahmen von Dome, die laut CLAUDE.md noch ausstehen:** Spielstand, Tierhalteverbot/Speicher, Waschplatz, Raritäten R2/R3, Hofplan.
+- **Tutorial-Umbau** (`PLAN-TUTORIAL-UMBAU.md` bleibt): T-F offen, Offene Punkte stehen dort.
+- **Eimerbild** (`PLAN-EIMERBILD.md` bleibt): wartet auf die 3D-Eimer.

@@ -1,56 +1,13 @@
 # Übergabe zwischen den Claude-Konten
 
 Dome arbeitet abwechselnd mit drei Claude-Konten am Spiel: **Claude Team**, **Claude Pro** und **Fly** (neu ab 5.11.2026).
-Diese Datei ist der Austausch zwischen beiden – damit das jeweils andere Konto beim nächsten Start weiß, was passiert ist.
+Diese Datei ist der Austausch zwischen den Konten – damit das jeweils andere Konto beim nächsten Start weiß, was passiert ist. **Hier steht nie etwas Dauerhaftes** (Dome, 5.11.2026): Dauerhaftes (Regeln, Arbeitsweise, Technik-Fallen) gehört in `CLAUDE.md`; in diese Datei nur Vergängliches (Stand, Offenes, Nachricht an das andere Konto), das nach dem Lesen gelöscht oder in `CLAUDE.md`/den Plänen aufgehoben wird.
 
 ## ZUERST NACH DEM LESEN (Dome, 5.11.2026): Boxenansicht im Browser wieder öffnen
 Nach dem Lesen dieser Übergabe **sofort die Boxenwand-Ansicht im eingebauten Browser öffnen** (Dome will sie gleich sehen): Testserver prüfen/starten (im Arbeitsordner `C:\Users\dome_\Documents\Projekt Pferdespiel\arbeitsordner`: `C:\Users\dome_\werkzeug-node\node\node.exe werkzeuge/statisch.js 8765`, läuft er schon, nichts tun), dann `http://localhost:8765/boxenwand.html` mit `preview_start` (Parameter `url`) bzw. `navigate` öffnen. Der Umschalter für die Boxgröße steht im Reiter „Ansicht“. Danach mit dem Plan weiter, der unten bei „PLAN NÄCHSTE SITZUNG“ steht.
 
-## NEU: Konto „Fly“ – Einarbeitung (geschrieben von Claude Pro, 5.11.2026, nach einer langen Sitzung mit Dome)
-Fly, willkommen. Das hier ist, wie Dome und ich arbeiten und reden – bitte genauso weitermachen, damit Dome nichts umlernen muss. **Erst CLAUDE.md lesen** (feste Regeln, Spielsysteme, Tests), dann diese Datei von oben bis zum Abschnitt „Nachricht“.
-
-**1. Wer ist Dome / wie sie schreibt**
-- Dome ist die Auftraggeberin und zeichnet selbst (Krita/Inkscape). Sie spricht Deutsch, schreibt knapp, oft nur ein Wort („prüfen“, „entfernen“, „anpassen“, „mach das“, „ja, bauen“). Das ist ein vollwertiger Auftrag – nicht nachfragen, ob sie es wirklich meint.
-- Sie antwortet gern **auf einzelne Zeilen meiner letzten Nachricht** (zitiert mit „> …“) und schreibt darunter ihre Antwort. Jede Zeile einzeln beantworten.
-- Sie schickt Bilder (Screenshots) als Beleg. Erst das Bild genau ansehen, dann handeln. Was sie dort zeigt, ist die Wahrheit, nicht meine Annahme.
-- Sie sagt oft „unter 20 % Volumen“, wenn das Kontingent knapp wird. Dann: sofort den Stand in `UEBERGABE.md` sichern, Wichtigstes zuerst, nichts Halbes anfangen.
-
-**2. Wie ich antworte (bitte übernehmen)**
-- **Immer Deutsch, freundlich, kurz.** Am Ende kurz sagen, was sich geändert hat. Keine langen Vorreden.
-- **Ehrlich und genau berichten:** Was ich angesehen/gemessen habe, nenne ich; was nicht, sage ich ausdrücklich („nicht neu angesehen“, „nur im Viewer“, „nichts committet“). Nie „fertig“ sagen, wenn nur ein Teil geprüft ist.
-- **Zahlen statt Behauptungen:** wenn etwas „gleich aussehen“ soll (Dreckhöhe, Füllmenge), messen (Pixel-/Zahlenmessung im Browser) und Werte in einer kleinen Tabelle nennen.
-- **Vorschläge nummeriert** (1., 2., …), damit Dome mit der Nummer antworten kann. Bei Entscheidungen: Empfehlung zuerst, Alternative dazu, eine einzige klare Frage.
-- **Auffälliges immer sagen** (Regel in CLAUDE.md), auch ungefragt, am Ende der Antwort – aber nicht eigenmächtig ändern.
-- Dome liest die Antworten am Handy/Browser-Pane mit: Menüpfade ausgeschrieben („Hauptmenü - Stall - Box …“), keine Fachwörter ohne Erklärung. Wenn sie fragt „was meinst du damit?“, einfach und konkret erklären.
-
-**3. Wie ich arbeite (Ablauf)**
-1. Kurz sagen, was ich vorhabe (Umfang, Aufwand), bei größeren Sachen **vorher klares Ja abwarten** (siehe CLAUDE.md „Selbstständig arbeiten“).
-2. **Vor jeder Änderung Sicherung** der Datei in den Scratchpad (z. B. `boxenwand-vor-….html`), damit Dome „mach wieder rückgängig“ in einer Minute erledigt ist. Das kommt oft vor.
-3. Ändern, **im Browser-Pane ansehen** (Screenshot, Zoom, Konsole auf Fehler prüfen), Zahlen messen, dann berichten.
-4. `UEBERGABE.md` **bei jeder Änderung** nachführen (Dome: „immer pflegen, das ist wichtig“): was, wo, Sicherung, was nicht geprüft ist.
-5. **Nichts committen/pushen**, solange Dome es nicht sagt (diese Sitzung: alles nur lokal im Arbeitsordner).
-
-**4. Was Dome nicht mag (aus dieser Sitzung gelernt – bitte nicht wiederholen)**
-- **Eigenmächtig Dinge neu erfinden:** Ich habe beim Heunetz das ganze Netz durch ein selbstgebautes ersetzt („vollkommen falsch, du hast das Netz und die Maschen verändert“) und die Pfeiler von Wand E erst in Metall, dann in Holz umgebaut. Beides musste zurück. **Originale Modelle/Optik nie ersetzen; nur das ändern, was verlangt ist.** Im Zweifel erst fragen („mir ist aufgefallen …, soll ich?“).
-- **Älteres, das funktioniert, nicht ungefragt ändern** (Dome 25.10.). Auch wenn es wie die Ursache aussieht: erst fragen.
-- **Zu viel auf einmal:** lieber eine kleine Änderung, ansehen, nachfragen.
-- Bei Unklarem **nachfragen statt raten und zweimal bauen** (z. B. bei „hebe die Schwerkraft auf“ (Heunetz) habe ich nachgefragt; Dome hat es dann zurückgezogen und alles rückgängig machen lassen – **nicht weil es unklar war, sondern weil sie gemerkt hat, dass das Volumen für den Umbau nicht mehr gereicht hätte** (Korrektur von Dome, 5.11.). Merke: sagt Dome bei knappem Volumen „mach rückgängig“, ist das Budget der Grund, nicht ein Fehler von dir; der Wunsch kann für eine spätere Sitzung offen bleiben).
-
-**5. Technik-Fallen (hat mich mehrfach Zeit gekostet)**
-- **Kommentar mitten in eine Zeile** (`// …`) schluckt den Rest der Zeile (Seite blieb auf „lädt …“). Kommentare **immer ans Zeilenende** oder in eigene Zeile. Nach jedem Skript-Patch: Seite neu laden, Konsole prüfen.
-- Auf Domes PC gibt es **kein Python**. Dateien patche ich mit **Node (portabel)**: `C:Usersdome_werkzeug-node
-ode
-ode.exe` und kleinen `fix*.js`-Skripten im Scratchpad (Text suchen, auf **genau eine** Fundstelle prüfen, ersetzen). Blender 5.2: `C:Program FilesBlender FoundationBlender 5.2lender.exe`.
-- **Testserver:** im Arbeitsordner `node werkzeuge/statisch.js 8765`; Seiten: `http://localhost:8765/boxenwand.html`, `boxenboden.html`, `heuhaufen.html`, `heunetz.html`, `mischer.html`. Export in Blender: `node werkzeuge/export-server.js 8766`, im Viewer `boxenwand.exportieren(name,'rueck')` / `boxenwand.exportWand(name,'wandl'|'wandr')`, einlesen mit `blender/export-in-blender-lesen.py -- <Arbeitsordner> <Namensanfang> <Ausgabe.blend>`, Dreck stufen mit `blender/dreck-stufen.py` (`dreck_stufen()`), Sichtweite mit `ansicht-weit-setzen.py`. Der Browser-Tab muss **vorne** sein, sonst laufen lange Skripte nicht (Timer gedrosselt) – Skripte lieber mit Ergebnis-Variable (`window.__ex`) starten und abfragen.
-- **Kombi-Skript** `boxenwaende-kombi-speichern.py` baut die Datei aus den vorhandenen Einzeldateien **neu** und überschreibt alte Inhalte – zum Ergänzen `boxenwaende-kombi-anhaengen.py` benutzen.
-- Dome löscht nichts selbst; ich lösche **nur auf ausdrückliches Ja** (z. B. „entfernen“ zu einer genannten Liste).
-- Der Viewer (`boxenwand.html`) ist ein **Arbeitsordner-Werkzeug, nicht das Spiel**. Dreck-Änderungen dort gelten **nicht** automatisch in den Blender-Dateien (deshalb der Export oben).
-
-**6. Wo wir gerade stehen (Stand 5.11.2026)**
-Siehe oben die Zusammenfassung „ZUSAMMENFASSUNG DER SITZUNG“ im Abschnitt „Nachricht“ und die Einzelnotizen darunter. Kurz: Wände/Dreck/Ponybox fertig im Viewer und in neuen Blender-Dateien; **offen:** Heunetz-Füllmengen bei 4/6 kg (zuerst Zielbild mit Dome abstimmen, Netzmodell nie ersetzen), Dreck-Kombis einzeln ansehen, größere Boxen und Tür 2/3 mit neuem Dreck ansehen.
-
-**7. Zusammenarbeit der Konten**
-Wer als Absender unten steht und nicht du bist, hat Neues für dich: lesen, übernehmen, **den Abschnitt „Nachricht“ danach löschen** und am Ende der eigenen Sitzung selbst eine Nachricht hinterlassen (Absender = dein Konto). Weißt du nicht, welches Konto du bist: Dome fragen (du bist vermutlich **Fly**).
+## Nachricht an Fly (einmalig, nach dem Lesen löschen)
+Fly, willkommen. Lies **CLAUDE.md, Abschnitt „Arbeitsweise mit Dome“** (dort steht dauerhaft, wie wir arbeiten und kommunizieren, auch wenn du allein arbeitest). Der aktuelle Stand steht unten in der „ZUSAMMENFASSUNG DER SITZUNG“. Danach diesen Absatz löschen und am Ende deiner Sitzung selbst eine Nachricht hinterlassen.
 
 ---
 
@@ -127,7 +84,6 @@ Dome: „geh alle Pläne durch, unwichtige und doppelte löschen“. Drei Prüfe
 ### 5.11. (Claude Pro) – ZUSAMMENFASSUNG DER SITZUNG (zum Weiterarbeiten)
 **Erledigt (nur Arbeitsordner, nichts committet, nichts im Spiel):** Ponybox P1 hat kaputte Wände D–H (`m25`), reparierte Wände D–H gibt es für alle Boxgrößen (`l4`, `l25`, `m35`), Preise im `PREISKATALOG-BOXEN.md`; Blender-Dateien aufgeräumt (`l2`/`l5`/`.blend1` gelöscht, rechte Wände heißen `rechts`, Ponytüren in `boxenwand-tueren-pony-kombi.blend`); Eimer-Skripte laden aus `eimer-kombi.blend`; Viewer `boxenwand.html`: weicher gestufter Dreck überall (`dreckProfil`, `DRECK_ST` 1,5, Pony über `dreckS()`), E-Pfeiler, Putz kaputt, G-Latten, Schimmel entfernt; neue Blender-Dateien mit Dreck: `boxenwand-seitenwaende-kaputt-kombi.blend`, `-rueckwaende-kaputt-kombi.blend`, `-tueren-kaputt-kombi.blend` (Skript `dreck-stufen.py`).
 **Offen:** Heunetz-Füllmengen (siehe unten, `heunetz.html` ist Original); Dreck-Kombis nicht einzeln angesehen; B/C/D/E und Tür 2/3 mit dem neuen Dreck nicht angesehen; Blender-Modelle der Pfeiler von E bleiben weiß; Viewer-Änderungen sind nicht im Spiel.
-**Regeln aus dieser Sitzung:** nie Kommentar mitten in eine Zeile setzen (zerstörte mehrfach Zeilen); Netzmodelle des Heunetzes nie ersetzen; Älteres nur nach Rückfrage ändern.
 
 ### PLAN NÄCHSTE SITZUNG (Dome, 5.11.): Pony 2,5 × 2,5 m (P1) bekommt auch die kaputten Ansichten
 Dome: „Bei Pony 2,5 × 2,5 m sollten auch die kaputten Ansichten sein, also Rückwände, Seitenwände, Türen usw.“ (die Regel „kaputte Wände nur für 2 × 2 und 3 × 3 m“ vom 4.11. gilt damit für **P1 (2,5 × 2,5) und Box A (3 × 3)**; P2 und P3 sowie B–E bleiben ohne). Schritte:

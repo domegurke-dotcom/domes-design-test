@@ -5,7 +5,64 @@ Live: https://domegurke-dotcom.github.io/domes-design-test/ (GitHub Pages, Branc
 Spielerin/Auftraggeberin: **Dome** – zeichnet Teile selbst in Krita/Inkscape (Pferdeköpfe, Schöpfe, Fell-SVGs).
 Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, was sich geändert hat.
 
-**Zuerst `UEBERGABE.md` lesen** (und danach – Dome 5.11.2026 – die Boxenwand-Ansicht im eingebauten Browser wieder öffnen, siehe Abschnitt „ZUERST NACH DEM LESEN“ dort; Plan für die nächste Sitzung: kaputte Ansichten für Pony 2,5 × 2,5 m) (Austausch zwischen den Konten **Claude Team**, **Claude Pro** und **Fly** – Fly findet in `UEBERGABE.md` den Abschnitt „NEU: Konto Fly – Einarbeitung“ mit Arbeits- und Kommunikationsstil): Nachricht vom anderen Konto übernehmen und löschen, am Sitzungsende eigene Nachricht hineinschreiben – Regeln stehen in der Datei.
+**Zuerst `UEBERGABE.md` lesen** (und danach – Dome 5.11.2026 – die Boxenwand-Ansicht im eingebauten Browser wieder öffnen, siehe Abschnitt „ZUERST NACH DEM LESEN“ dort; Plan für die nächste Sitzung: kaputte Ansichten für Pony 2,5 × 2,5 m) (Austausch zwischen den Konten **Claude Team**, **Claude Pro** und **Fly** – Arbeits- und Kommunikationsstil steht dauerhaft in diesem Abschnitt „Arbeitsweise mit Dome“ weiter unten): Nachricht vom anderen Konto übernehmen und löschen, am Sitzungsende eigene Nachricht hineinschreiben – Regeln stehen in der Datei.
+
+## Arbeitsweise mit Dome (für ALLE Konten – Claude Team, Claude Pro und neu **Fly**; geschrieben von Claude Pro, 5.11.2026)
+So arbeiten und reden Dome und die Claude-Konten; bitte genauso weitermachen, damit Dome nichts umlernen muss. **`UEBERGABE.md` enthält nie etwas Dauerhaftes** (Dome, 5.11.): Dauerhaftes steht hier in `CLAUDE.md`, die Übergabe nur für den aktuellen Stand und Nachrichten an das andere Konto.
+
+**1. Wer ist Dome / wie sie schreibt**
+- Dome ist die Auftraggeberin und zeichnet selbst (Krita/Inkscape). Sie spricht Deutsch, schreibt knapp, oft nur ein Wort („prüfen“, „entfernen“, „anpassen“, „mach das“, „ja, bauen“). Das ist ein vollwertiger Auftrag – nicht nachfragen, ob sie es wirklich meint.
+- Sie antwortet gern **auf einzelne Zeilen meiner letzten Nachricht** (zitiert mit „> …“) und schreibt darunter ihre Antwort. Jede Zeile einzeln beantworten.
+- Sie schickt Bilder (Screenshots) als Beleg. Erst das Bild genau ansehen, dann handeln. Was sie dort zeigt, ist die Wahrheit, nicht meine Annahme.
+- Sie sagt oft „unter 20 % Volumen“, wenn das Kontingent knapp wird. Dann: sofort den Stand in `UEBERGABE.md` sichern, Wichtigstes zuerst, nichts Halbes anfangen.
+
+**2. Wie ich antworte (bitte übernehmen)**
+- **Immer Deutsch, freundlich, kurz.** Am Ende kurz sagen, was sich geändert hat. Keine langen Vorreden.
+- **Ehrlich und genau berichten:** Was ich angesehen/gemessen habe, nenne ich; was nicht, sage ich ausdrücklich („nicht neu angesehen“, „nur im Viewer“, „nichts committet“). Nie „fertig“ sagen, wenn nur ein Teil geprüft ist.
+- **Zahlen statt Behauptungen:** wenn etwas „gleich aussehen“ soll (Dreckhöhe, Füllmenge), messen (Pixel-/Zahlenmessung im Browser) und Werte in einer kleinen Tabelle nennen.
+- **Vorschläge nummeriert** (1., 2., …), damit Dome mit der Nummer antworten kann. Bei Entscheidungen: Empfehlung zuerst, Alternative dazu, eine einzige klare Frage.
+- **Auffälliges immer sagen** (Regel in CLAUDE.md), auch ungefragt, am Ende der Antwort – aber nicht eigenmächtig ändern.
+- Dome liest die Antworten am Handy/Browser-Pane mit: Menüpfade ausgeschrieben („Hauptmenü - Stall - Box …“), keine Fachwörter ohne Erklärung. Wenn sie fragt „was meinst du damit?“, einfach und konkret erklären.
+
+**3. Wie ich arbeite (Ablauf)**
+1. Kurz sagen, was ich vorhabe (Umfang, Aufwand), bei größeren Sachen **vorher klares Ja abwarten** (siehe CLAUDE.md „Selbstständig arbeiten“).
+2. **Vor jeder Änderung Sicherung** der Datei in den Scratchpad (z. B. `boxenwand-vor-….html`), damit Dome „mach wieder rückgängig“ in einer Minute erledigt ist. Das kommt oft vor.
+3. Ändern, **im Browser-Pane ansehen** (Screenshot, Zoom, Konsole auf Fehler prüfen), Zahlen messen, dann berichten.
+4. `UEBERGABE.md` **bei jeder Änderung** nachführen (Dome: „immer pflegen, das ist wichtig“): was, wo, Sicherung, was nicht geprüft ist.
+5. **Nichts committen/pushen**, solange Dome es nicht sagt (diese Sitzung: alles nur lokal im Arbeitsordner).
+
+**4. Was Dome nicht mag (aus dieser Sitzung gelernt – bitte nicht wiederholen)**
+- **Eigenmächtig Dinge neu erfinden:** Ich habe beim Heunetz das ganze Netz durch ein selbstgebautes ersetzt („vollkommen falsch, du hast das Netz und die Maschen verändert“) und die Pfeiler von Wand E erst in Metall, dann in Holz umgebaut. Beides musste zurück. **Originale Modelle/Optik nie ersetzen; nur das ändern, was verlangt ist.** Im Zweifel erst fragen („mir ist aufgefallen …, soll ich?“).
+- **Älteres, das funktioniert, nicht ungefragt ändern** (Dome 25.10.). Auch wenn es wie die Ursache aussieht: erst fragen.
+- **Zu viel auf einmal:** lieber eine kleine Änderung, ansehen, nachfragen.
+- Bei Unklarem **nachfragen statt raten und zweimal bauen** (z. B. bei „hebe die Schwerkraft auf“ (Heunetz) habe ich nachgefragt; Dome hat es dann zurückgezogen und alles rückgängig machen lassen – **nicht weil es unklar war, sondern weil sie gemerkt hat, dass das Volumen für den Umbau nicht mehr gereicht hätte** (Korrektur von Dome, 5.11.). Merke: sagt Dome bei knappem Volumen „mach rückgängig“, ist das Budget der Grund, nicht ein Fehler von dir; der Wunsch kann für eine spätere Sitzung offen bleiben).
+
+**5. Technik-Fallen (hat mich mehrfach Zeit gekostet)**
+- **Kommentar mitten in eine Zeile** (`// …`) schluckt den Rest der Zeile (Seite blieb auf „lädt …“). Kommentare **immer ans Zeilenende** oder in eigene Zeile. Nach jedem Skript-Patch: Seite neu laden, Konsole prüfen.
+- Auf Domes PC gibt es **kein Python**. Dateien patche ich mit **Node (portabel)**: `C:Usersdome_werkzeug-node
+ode
+ode.exe` und kleinen `fix*.js`-Skripten im Scratchpad (Text suchen, auf **genau eine** Fundstelle prüfen, ersetzen). Blender 5.2: `C:Program FilesBlender FoundationBlender 5.2lender.exe`.
+- **Testserver:** im Arbeitsordner `node werkzeuge/statisch.js 8765`; Seiten: `http://localhost:8765/boxenwand.html`, `boxenboden.html`, `heuhaufen.html`, `heunetz.html`, `mischer.html`. Export in Blender: `node werkzeuge/export-server.js 8766`, im Viewer `boxenwand.exportieren(name,'rueck')` / `boxenwand.exportWand(name,'wandl'|'wandr')`, einlesen mit `blender/export-in-blender-lesen.py -- <Arbeitsordner> <Namensanfang> <Ausgabe.blend>`, Dreck stufen mit `blender/dreck-stufen.py` (`dreck_stufen()`), Sichtweite mit `ansicht-weit-setzen.py`. Der Browser-Tab muss **vorne** sein, sonst laufen lange Skripte nicht (Timer gedrosselt) – Skripte lieber mit Ergebnis-Variable (`window.__ex`) starten und abfragen.
+- **Kombi-Skript** `boxenwaende-kombi-speichern.py` baut die Datei aus den vorhandenen Einzeldateien **neu** und überschreibt alte Inhalte – zum Ergänzen `boxenwaende-kombi-anhaengen.py` benutzen.
+- Dome löscht nichts selbst; ich lösche **nur auf ausdrückliches Ja** (z. B. „entfernen“ zu einer genannten Liste).
+- Der Viewer (`boxenwand.html`) ist ein **Arbeitsordner-Werkzeug, nicht das Spiel**. Dreck-Änderungen dort gelten **nicht** automatisch in den Blender-Dateien (deshalb der Export oben).
+
+**7. Zusammenarbeit der Konten**
+Steht in `UEBERGABE.md` eine Nachricht eines anderen Kontos: lesen, übernehmen, den Absatz danach **löschen** und am Ende der eigenen Sitzung selbst eine Nachricht hinterlassen (Absender = dein Konto). Weißt du nicht, welches Konto du bist: Dome fragen.
+
+**8. Wenn du allein arbeitest und Dome später alles ansieht (Ablauf von Auftrag bis Abnahme)**
+1. **Auftrag klären:** Dome gibt einen Auftrag (oft ein Satz, manchmal mit Bild). Du sagst kurz: Umfang, Aufwand, was du **nicht** anfasst. Bei Größerem wartest du auf ihr klares „Ja“. Ist etwas mehrdeutig: eine kurze Frage (mit Empfehlung und 2 Antwortknöpfen), nicht raten.
+2. **Ein Schritt nach dem anderen:** Höchstens **eine Etappe** eines freigegebenen Plans allein, dann aufhören und Dome Bescheid geben. Ein ganzes Thema nur, wenn sie es ausdrücklich sagt. Keine „Vorarbeit“ für spätere Schritte.
+3. **Selbst entscheiden darfst du:** wie etwas technisch gebaut wird, eindeutige Fehler beheben, Tests schreiben, Texte/Notizen aktuell halten, kleine Zahlen innerhalb des Auftrags (die Zahlen danach nennen). **Auf Dome warten:** neue oder geänderte Spielmechanik, Unrealistisches, alles an ihren Zeichnungen, große Tests, Löschen, Committen.
+4. **Fragen, wenn Dome nicht da ist:** geht es ohne Antwort nicht weiter und hat die Frage **keine Spielmechanik-Folge**, nimm die empfohlene Lösung, baue sie **leicht änderbar** (eine Zahl/ein Schalter) und trage sie in `OFFENE-FRAGEN.md` ein. Hat sie Spielmechanik-Folge: **nicht entscheiden**, eintragen und mit etwas anderem aus dem Plan weitermachen. Beantwortete Fragen werden später gemeinsam gelöscht.
+5. **Prüfen, bevor du „fertig“ sagst:** ansehen (Browser-Pane, die drei Ansichten PC/Handy quer/Handy hochkant nur bei Änderungen am Aussehen), Konsole auf Fehler, Zahlen messen, bei reiner Logik kleines Test-Skript. **Große Tests** (Hof-Gesamttest, Neuladen-Test, Etappen-Test, alle Ansichten) nur nach Rückfrage und nie mit Bildern ohne ihr Ja; Tutorial-Tests nur zusammen mit dem großen Test.
+6. **Stand sichern – nach jeder Etappe sofort:** `UEBERGABE.md` (was, wo, Sicherung, was **nicht** geprüft ist), Plan-Datei, `CLAUDE.md`, `OFFENE-FRAGEN.md`; Sicherungen im Scratchpad. So kann ein anderes Konto (oder du nach einem Abbruch) nahtlos weitermachen.
+7. **Abgabe an Dome:** kurze Zusammenfassung im Chat: (a) was jetzt wahr ist, (b) was **nicht** geprüft ist, (c) selbst gesetzte Zahlen, (d) **Test-Anleitung mit ausgeschriebenen Wegen** („Hauptmenü - Stall - Box - …“) bzw. Link/Seite, (e) was auffällt (Regel „Auffälliges immer sagen“), (f) eine einzige Frage mit Empfehlung zuerst. Kein Commit ohne Auftrag.
+8. **Dome schaut später an:** sie öffnet das Ergebnis selbst (Browser-Pane/Handy), antwortet **Zeile für Zeile** (zitiert) mit „Passt so“, „anpassen“, „entfernen“ oder „mach wieder rückgängig“. Dann: genau das tun, **ohne zu diskutieren**; bei „rückgängig“ die Sicherung zurückspielen, prüfen und kurz bestätigen. Merke: „rückgängig“ heißt nicht, dass du etwas falsch gemacht hast – oft ist es Geschmack oder das Volumen.
+9. **Modellwechsel/Volumen:** Dome schaltet bei langen Läufen das Modell von Hand um (Claude kann es nicht). Läufe in **Phasen** (siehe CLAUDE.md „Mehr-Etappen-Lauf“) enden mit einem Satz in `UEBERGABE.md` („Phase X fertig – bitte umschalten und ‚weiter‘ sagen“). Wird das Volumen knapp, sagt sie es („unter 20 %“): dann **nichts Neues anfangen**, Stand sichern, Offenes eintragen, aufhören.
+10. **Autostart/Wecker:** ein Wecker darf nur innerhalb einer Phase weitermachen: beim Wecken zuerst `UEBERGABE.md` lesen, nächste offene Etappe der aktuellen Phase machen, am Phasenende anhalten.
+11. **Nicht tun, wenn du allein bist:** Themen aus `PROJEKT-CHAT-THEMEN.md` außerhalb eines freigegebenen Plans, neue Spielmechanik, die nicht im Plan steht, große Tests mit Bildern, Löschen, Committen, Verlauf umschreiben, Zeichnungen von Dome ändern, Originalmodelle ersetzen.
+12. **Offene Erinnerungen (liegen im Gedächtnis dieses Projekts):** den ca. 2 GB großen GitHub-Verlauf verkleinern (nie ohne ausdrückliches Ja; Ablauf siehe unten bei „Ordner-Umzug/Verlauf“) und für `arbeitsordnerlender` eine Liste „welche Datei wohin“ erstellen (Plan B, bei der nächsten Sitzung nachfragen).
 
 ## Feste Regeln von Dome (immer beachten)
 - **Auffälliges immer sagen** (Dome, 19.10.2026, gilt für Claude Team und Pro): Fällt dir beim Arbeiten etwas auf (Lücke, Unstimmigkeit, vergessener Zusammenhang, etwas Unrealistisches, ungeprüfte Annahme, Folgefehler), sag es Dome ausdrücklich am Ende der Antwort – auch wenn sie nicht danach gefragt hat. Nicht eigenmächtig ändern (siehe nächste Regel), aber nie verschweigen. Dome vergisst auch mal etwas.

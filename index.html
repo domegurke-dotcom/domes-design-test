@@ -1337,7 +1337,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "943";
+  const SPIEL_VERSION = "944";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1345,12 +1345,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=943"></script>
-<script src="pferd.js?v=943"></script>
-<script src="boxstufen.js?v=943"></script>
-<script src="kopfneu.js?v=943"></script>
-<script src="waschbild.js?v=943"></script>
-<script src="avatare.js?v=943"></script>
+<script src="lz-string.min.js?v=944"></script>
+<script src="pferd.js?v=944"></script>
+<script src="boxstufen.js?v=944"></script>
+<script src="kopfneu.js?v=944"></script>
+<script src="waschbild.js?v=944"></script>
+<script src="avatare.js?v=944"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -1451,7 +1451,7 @@
   }
   function alterJZ(p) { sichereGeburt(p); const d = datum(); return (d.j * 4 + d.s) - (p.geb.j * 4 + p.geb.s); }
   const alterJahre = p => Math.floor(alterJZ(p) / 4);
-  function alterText(p) { const z = alterJZ(p); if (z <= 0) return "neugeboren"; if (z < 4) return `${z * 3} Monate`; const y = Math.floor(z / 4); return `${y} ${y === 1 ? "Jahr" : "Jahre"}`; }
+  function alterText(p) { const z = alterJZ(p); if (z <= 0) return "neugeboren"; if (z < 4) { const m = Math.max(1, Math.round(z * 3)); return `${m} ${m === 1 ? "Monat" : "Monate"}`; } const y = Math.floor(z / 4); return `${y} ${y === 1 ? "Jahr" : "Jahre"}`; }
   const ALTERSSTUFEN = [[6, "🍼 Fohlen", "wächst bei der Mutter auf"], [12, "🐴 Fohlen / Absetzer", "wird langsam selbstständiger"], [24, "🌱 Jährling", "Wachstum, noch kein Reitpferd"],
     [36, "🌱 Jungpferd", "körperliche Entwicklung, Ausbildung beginnt langsam"], [60, "🐎 Jungpferd", "Ausbildung und Einreiten"], [180, "🐎 Erwachsenes Pferd", "volle Leistungsphase"],
     [240, "🐎 Reifes Pferd", "weiterhin leistungsfähig, aber etwas älter"], [Infinity, "👴 Senior", "Alterserscheinungen nehmen langsam zu"]];
@@ -1684,7 +1684,8 @@
   const MAUL_DUNKEL = .7;   // Braunfalben (und Weißfalben) ohne Pangaré: so viele haben ein dunkles Maul – Mausfalben immer (dunkler Kopf)
   // blaue Augen: Doppel-Cream immer, sonst so oft bei Splash, Frame Overo und Laterne (Weiß über dem Auge → Glasauge)
   const AUGE_BLAU = { Sw: .85, O: .25, laterne: .4 };
-  const TAUB_SW = [0, .08, .2];   // Splash: so viele Pferde sind taub (ein/zwei Allele) – versteckt, nur Admin
+  const TAUB_STUFE = [0, 0, .15, .4];   // Splash: Anteil tauber Pferde nach Weißausdehnung (musterStufeVon 1 wenig/typisch, 2 viel, 3 fast weiß) – es gibt keine veröffentlichten Prozentzahlen, nur: Taubheit vor allem bei sehr weißen Pferden (Dome 5.11.: an die Weißausdehnung koppeln); Zahlen sind Schätzungen, versteckt, nur Admin/Hörtest
+const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mit zwei Varianten war in der Originalarbeit taub – mindestens so viel (Schätzung)
   function weissZufall(rasse, r) { return Math.round(sigmoid(logit(r()) + (WEISS_RASSE[rasse] || 0)) * 100) / 100; }
   function pangareZufall(rasse, r) { const q = PANGARE_RASSE[rasse] != null ? PANGARE_RASSE[rasse] : PANGARE_SONST; return Math.round((r() < q ? .5 + r() * .5 : r() * .49) * 100) / 100; }
   // sichtbares Erscheinungsbild am Kopf – immer gleich für dasselbe Pferd (aus Genen, Veranlagung und Pferde-ID)
@@ -1722,8 +1723,8 @@
   // Admin (Gene selbst wählen): Weiß-Anlage so setzen, dass genau dieses Abzeichen herauskommt (Mitte der Stufe, Gene eingerechnet)
   function weissFuer(abz, g, ex) { const i = ABZ_STUFEN.findIndex(([, a]) => a === abz), lo = i ? ABZ_STUFEN[i - 1][0] : 0, hi = Math.min(.995, ABZ_STUFEN[i][0]);
     return Math.round(Math.max(.001, Math.min(.999, sigmoid(logit((lo + hi) / 2) - weissZuschlag(g, ex)))) * 1000) / 1000; }
-  const istTaub = p => { const g = genVon(p), n = Math.min(2, swAnz(g)); return n > 0 && zufall("taub-" + (p.id || p.nr || p.name))() < (g.Pax && g.Pax.includes("SW2") ? TAUB_SW2 : TAUB_SW[n]); };
-  const TAUB_SW2 = .4;   // Dome 30.10.: SW2 (PAX3) ist öfter mit Taubheit verbunden – Schätzung
+  const istTaub = p => { const g = genVon(p), n = Math.min(2, swAnz(g)); if (!n) return false; let w = TAUB_STUFE[musterStufeVon(p)] || 0; if (n === 2) w = Math.max(w, TAUB_ZWEI); if (g.Pax && g.Pax.includes("SW2")) w = Math.min(0.9, w * TAUB_SW2); return zufall("taub-" + (p.id || p.nr || p.name))() < w; };
+  const TAUB_SW2 = 1.5;   // Dome 30.10.: SW2 (PAX3) ist öfter mit Taubheit verbunden – Faktor auf die Weißausdehnungs-Wahrscheinlichkeit (Schätzung)
   // Dome (v427): taube Pferde erschrecken beim Putzen, wenn man unbemerkt herankommt – ist die Taubheit per Hörtest bekannt, kündigt man sich an (Hand zeigen, Boden stampfen)
   const TAUB_SCHRECK = .25, TAUB_SCHRECK_WOHL = -1.5;
   // Anzeige (sichtbar, keine Genetik): „Stern mit Schnippe“, „Mehlmaul“, „blau (Glasauge)“
@@ -13831,7 +13832,8 @@
     const grund = () => { if (ziel && !ziel.pd && ziel.w.gesperrt) return " (Weide gesperrt)"; if (ziel && ziel.pd && !paddockPasst(ziel.g, p)) return " (Sandpaddock zu voll)"; return ""; };
     if (heute && ziel && !draussen) return `${p.name} soll laut Plan heute auf ${zn}, steht aber in der Box${grund()}`;
     if (heute && ziel && ((p.weide && (ziel.pd || p.weide.wid !== ziel.id)) || (p.paddock && (!ziel.pd || p.paddock.pid !== ziel.id)))) return `${p.name} soll laut Plan auf ${zn}, steht aber ${p.weide ? "auf der Weide" : "auf dem Sandpaddock"}`;
-    const h = haltungJetzt(e, p), wfrei = !!(e && (h === "weide" || h === "sandpaddock") && weideFrei(e, 1, h === "weide" ? "weideZ" : "padZ")), fr = t => wfrei ? t + " – noch im freien Rahmen, der Besitzer beschwert sich deshalb nicht" : t;   // v801 (Dome): der rote Rahmen bleibt als Orientierung, der Tooltip sagt nur, dass es noch keinen Ärger gibt
+    if (!e && draussen && !pl) { const D = wbDat(p); if (D && (D.auslauf === "box" || (D.weidegang || "nie") === "nie")) return `${p.name} soll laut Plan in der Box bleiben, steht aber ${p.weide ? "auf der Weide" : "auf dem Sandpaddock"}`; }   // v945 (Dome 5.11.): Plan „Box“, Pferd steht draußen → gleicher roter Rahmen
+    const h = haltungJetzt(e, p), wfrei =!!(e && (h === "weide" || h === "sandpaddock") && weideFrei(e, 1, h === "weide" ? "weideZ" : "padZ")), fr = t => wfrei ? t + " – noch im freien Rahmen, der Besitzer beschwert sich deshalb nicht" : t;   // v801 (Dome): der rote Rahmen bleibt als Orientierung, der Tooltip sagt nur, dass es noch keinen Ärger gibt
     if (e && !draussen && datum().s !== 3 && (h === "weide" || h === "sandpaddock") && !(pl && pl.ziel && !heute) && !(b.paddock && h === "sandpaddock")) return fr(`${p.name} hat ${h === "weide" ? "Weide" : h !== e.haltung ? "Weide gebucht – im Frühling wegen Hufrehe-Gefahr Sandpaddock –" : "Sandpaddock"}${h !== e.haltung ? "" : " gebucht"}, steht aber in der Box${pl && pl.ziel ? "" : " (kein Plan im Whiteboard)"}${h === "weide" && !weiden().some(w => !w.wiese && !w.gesperrt) ? " – alle Weiden gesperrt" : ""}`);
     if (e && h === "weide" && p.paddock && !pl) return fr(`${p.name} hat Weide gebucht, steht aber auf dem Sandpaddock`);
     if (e && h !== e.haltung && p.weide) return `${p.name} steht auf der Weide – im Frühling wegen Hufrehe-Gefahr bitte auf den Sandpaddock`;
@@ -14520,7 +14522,7 @@
     spiel.rar = { mj: d.j, karte: false, vor: alt.wahl || alt.vor || {}, wahl: {}, auk: laufend, weg: [] };
     rarCache = null; const L = rarAngebot(); L.forEach(h => { if (h.rarHaupt) (spiel.rar.wahl[h.rasse] = [].concat(spiel.rar.wahl[h.rasse] || [])).push(h.rarHaupt); });
     const bsp = L.slice().sort((a, b) => b.rarStufe - a.rarStufe || b.preis - a.preis).filter((h, i, A) => A.findIndex(x => x.rasse === h.rasse) === i).slice(0, 3);
-    brief(RAR.absender, `Raritäten-Markt ${d.j}/${jj(d.j + 1)} ist eröffnet`, `der neue Raritäten-Markt ist eröffnet: <b>je Rasse 2 seltene Pferde</b> mit Fellfarben-Test, Abstammungsnachweis und Erbkrankheiten-Test. Das Angebot gilt bis zum Ende des Frühlings. Drei Beispiele:<ul class="liste">${bsp.map(h => `<li>${seltenSymbol(h.rarStufe, 18)} <b>${esc(h.name)}</b> · ${esc(rasseName(h.rasse))} · ${esc(SELTEN_STUFEN[h.rarStufe] ? SELTEN_STUFEN[h.rarStufe].n : "")} · ab ${fmt(h.preis)}</li>`).join("")}</ul>Eintritt mit der Jahreskarte: ${fmt(RAR.eintritt)} (Pferdemarkt → Raritäten-Markt).`);
+    if (freiStufe("markt", "raritaeten")) brief(RAR.absender, `Raritäten-Markt ${d.j}/${jj(d.j + 1)} ist eröffnet`, `der neue Raritäten-Markt ist eröffnet: <b>je Rasse 2 seltene Pferde</b> mit Fellfarben-Test, Abstammungsnachweis und Erbkrankheiten-Test. Das Angebot gilt bis zum Ende des Frühlings. Drei Beispiele:<ul class="liste">${bsp.map(h => `<li>${seltenSymbol(h.rarStufe, 18)} <b>${esc(h.name)}</b> · ${esc(rasseName(h.rasse))} · ${esc(SELTEN_STUFEN[h.rarStufe] ? SELTEN_STUFEN[h.rarStufe].n : "")} · ab ${fmt(h.preis)}</li>`).join("")}</ul>Eintritt mit der Jahreskarte: ${fmt(RAR.eintritt)} (Pferdemarkt → Raritäten-Markt).`);
   }
   function rarKarte(danach) {   // Jahreskarte 25 € (Admin frei)
     if (!spiel.admin && geldFrei() < RAR.eintritt) { dialog(`<h3>Nicht genug Geld</h3>${dispoHinweis()}<p>Die Jahreskarte kostet ${fmt(RAR.eintritt)}.</p>`); return; }
@@ -15448,8 +15450,8 @@
     if (!eigen) return `Dir fehlt der Eigenanteil: die Hälfte des Preises (${fmt(Math.ceil(A.preis / 2))}) muss auf dem zentralen Konto liegen (jetzt ${fmt(zentral().geld)}).`;
     return "";
   }
-  // Dome (v295): ganzen Hof verkaufen – nur wenn leer (keine Pferde, Einsteller, Pferde außer Haus); Erlös 90 % des Hofwerts, Kredit wird abgelöst, Rest + Hofkasse aufs zentrale Konto
-  const HOF_VERKAUF = 0.9;
+  // Dome (v295): ganzen Hof verkaufen – nur wenn leer (keine Pferde, Einsteller, Pferde außer Haus); Erlös 95 % des Hofwerts (Dome 5.11.: echt ca. 95–97 % nach Makler), Kredit wird abgelöst, Rest + Hofkasse aufs zentrale Konto
+  const HOF_VERKAUF = 0.95;
   function hofVerkaufInfo(hid) { return imHof(hid, () => { const H = spiel.hof, pferde = spiel.boxen.filter(b => b.pferd || b.fohlen).length + (spiel.extern || []).length, eins = einstellerListe().length;
     const erloes = Math.round((H.wert || 0) * HOF_VERKAUF), schuld = restschuld(), kasse = runde2(spiel.geld || 0);
     return { name: H.name, pferde, eins, erloes, schuld, kasse, netto: runde2(erloes + kasse - schuld) }; }); }
@@ -15458,7 +15460,7 @@
     const V = hofVerkaufInfo(hid);
     if (V.pferde || V.eins) { dialog(`<h3>🏷️ ${esc(V.name)} verkaufen</h3><p>Erst muss der Hof leer sein: ${V.pferde ? `${V.pferde} eigene ${V.pferde === 1 ? "Pferd" : "Pferde"} (auch außer Haus) – per Pferdeanhänger zu einem anderen Hof bringen, verkaufen oder abgeben` : ""}${V.pferde && V.eins ? " und " : ""}${V.eins ? `${V.eins} Einsteller – kündigen` : ""}.</p>`); return; }
     if (V.netto < 0) { dialog(`<h3>🏷️ ${esc(V.name)} verkaufen</h3><p>Der Erlös (${fmt(V.erloes)}) und die Hofkasse (${fmt(V.kasse)}) reichen nicht, um den Kredit (${fmt(V.schuld)}) abzulösen.</p>`); return; }
-    dialog(`<h3>🏷️ ${esc(V.name)} verkaufen?</h3><p>Ein Käufer zahlt <b>${fmt(V.erloes)}</b> (90 % des Hofwerts).${V.schuld ? ` Davon wird der Kredit (${fmt(V.schuld)}) abgelöst.` : ""} Zusammen mit der Hofkasse (${fmt(V.kasse)}) gehen <b>${fmt(V.netto)}</b> auf das zentrale Konto. Mitarbeiter werden entlassen, Futter und Lager bleiben beim Hof. Das lässt sich nicht rückgängig machen.</p>`,
+    dialog(`<h3>🏷️ ${esc(V.name)} verkaufen?</h3><p>Ein Käufer zahlt <b>${fmt(V.erloes)}</b> (${prozent(HOF_VERKAUF)} des Hofwerts).${V.schuld ? ` Davon wird der Kredit (${fmt(V.schuld)}) abgelöst.` : ""} Zusammen mit der Hofkasse (${fmt(V.kasse)}) gehen <b>${fmt(V.netto)}</b> auf das zentrale Konto. Mitarbeiter werden entlassen, Futter und Lager bleiben beim Hof. Das lässt sich nicht rückgängig machen.</p>`,
       [["Verkaufen", () => { if (hid === aktivHid()) hofWechseln(hofReihe().find(h => h !== hid));
         zentralBuchen(V.netto, `Verkauf ${V.name}`); chronikHof('verkauft', V.name); delete spiel.hoefe[hid]; spiel.hofReihe = hofReihe().filter(h => h !== hid);
         brief("Makler", `${V.name} verkauft`, `der Verkauf von <b>${esc(V.name)}</b> ist abgeschlossen: Erlös ${fmt(V.erloes)}${V.schuld ? `, davon Kredit abgelöst ${fmt(V.schuld)}` : ""}, Hofkasse ${fmt(V.kasse)}. <b>${fmt(V.netto)}</b> sind auf {deinem|Ihrem} zentralen Konto.`);
@@ -16040,7 +16042,7 @@
     if ($("landZaun")) $("landZaun").onclick = () => { $("dlg").hidden = true; bauDialog("weide"); };   // v358: statt der Kachel „Weide einzäunen“
     if ($("landVerk")) $("landVerk").onclick = () => landVerkaufDialog(() => landDialog(art, ziel, danach));
   }
-  // v374 (Dome): eigenes, nicht eingezäuntes Weideland verkaufen (z. B. nach dem Zaunabbau) – Erlös 90 % wie beim Hofverkauf
+  // v374 (Dome): eigenes, nicht eingezäuntes Weideland verkaufen (z. B. nach dem Zaunabbau) – Erlös wie beim Hofverkauf (`HOF_VERKAUF`)
   const eigenesFreiesLand = () => { const H = spiel.hof || {}; return runde2(Math.min(freiesLand(), Math.max(0, (H.ha || 0) - bauHa()))); };
   function landVerkaufDialog(danach) {
     const H = spiel.hof, max = eigenesFreiesLand(), je = Math.round(LAND_PREIS * HOF_VERKAUF), opt = [0.5, 1, 2, 3, 4, 5].filter(x => x < max - 1e-9).concat([max]);
@@ -16132,7 +16134,7 @@
     trail: { n: "Trail-Parcours", ico: "🪵", preis: [800, 1500, 2500], zeit: "kurz", aussen: true, anlage: "trail", einmal: true, info: "Hindernisse für Western-Trail" },
     reithalle: { n: "Reit\u00adhalle", ico: "🏛️", preis: [10000, 40000, 100000], zeit: "halle", anlage: "reithalle", einmal: true, kap: [7, 10, 18], info: "überdachtes Reiten bei jedem Wetter – gleiche Größen wie der Reitplatz: Stufe 1 20 × 40 m (bis 7 Reiter gleichzeitig), Stufe 2 20 × 60 m (bis 10), Stufe 3 40 × 80 m (bis 18)" },
     ovalbahn: { n: "Ovalbahn", ico: "🐴", preis: [6000, 11000, 18000], zeit: 1, aussen: true, anlage: "ovalbahn", einmal: true, info: "Bahn für Tölt und Pass (Gangpferde), mindestens 250 m Umlauf – 110 × 30 m, braucht 0,33 ha Bauland, Bedingung für den Gangpferdestall" },
-    rennbahn: { n: "Rennbahn", ico: "🏁", preis: [15000, 25000, 40000], zeit: 1, aussen: true, anlage: "rennbahn", einmal: true, info: "Trainingsbahn (Sand, etwa 1.000 m) für Galopptraining – braucht 0,8 ha Bauland, Bedingung für den Rennstall" },
+    rennbahn: { n: "Rennbahn", ico: "🏁", preis: [15000, 25000, 40000], zeit: 1, aussen: true, anlage: "rennbahn", einmal: true, info: "Trainingsbahn (Sand, etwa 1.000 m) für Galopptraining – braucht 2 ha Bauland, Bedingung für den Rennstall" },
     weide: { n: "Weide einzäunen", ico: "🌿", preis: [400, 1000, 3000], jeHa: true, zeit: "kurz", aussen: true, info: "macht freies Land zur Weide (je ha)" },
     sandpaddock: { n: "Sandpaddock", ico: "🟫", preis: [3000, 7500, 15000], jeBox: [1500, 2500, 3750], schritt: 1,   // v681 (Dome 23.10.): vergrößern je Pferdeplatz (150 m²), Preis = Stufenpreis ÷ Plätze   // v380 (Dome): Stufen im Verhältnis wie die Boxen (1 : 2,5 : 6)
     zeit: "kurz", aussen: true, anlage: "paddock", info: "Auslauf mit Sandboden" },
@@ -18074,7 +18076,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Maulfärbung (v428):</b> Veranlagung Pangaré (versteckt, <code>ex.pangare</code>, vererbt wie oben), wirksam ab 0,5. So viele Marktpferde haben sie: ${Object.entries(PANGARE_RASSE).map(([r, v]) => `${rasseById(r).name} ${Math.round(v * 100)} %`).join(" · ")} · alle anderen ${Math.round(PANGARE_SONST * 100)} %. Pangaré hellt nur rotes Pigment auf: Mehlmaul bei Braunen, Füchsen und ihren Falben/Cream-Varianten – bei Rappen und Mausfalben unsichtbar (wird trotzdem vererbt). Mehlmaul ist kein Abzeichen (nur aufgehellte Haare). Schwarzbraune (At) haben immer ein Kupfermaul. Dunkles Maul: Mausfalben immer, Braun- und Weißfalben ohne Pangaré zu ${Math.round(MAUL_DUNKEL * 100)} %. Alle anderen Pferde haben ein normales Maul in Fellfarbe. Beim Ausschimmeln (ab halb weiß) und bei Doppel-Cream verschwindet die Maulfärbung. Krötenmaul folgt.</p>
       <p><b>Augen:</b> Doppel-Cream (Cremello, Perlino, Smoky Cream) immer blau. Sonst blaues „Glasauge“ bei Splashed White ${Math.round(AUGE_BLAU.Sw * 100)} %, Frame Overo ${Math.round(AUGE_BLAU.O * 100)} %, Laterne ${Math.round(AUGE_BLAU.laterne * 100)} % – alle anderen braun.</p>
       <p><b>KIT-Gen (v926):</b> Tobiano (To), Sabino 1 (Sb), Roan (Rn) und Dominant White (W) sind in echt verschiedene Formen desselben Gens (KIT). Ein Pferd trägt davon höchstens zwei – eine von der Mutter, eine vom Vater – und gibt immer genau eine davon weiter (nie zwei zugleich). Im Spiel bleiben es vier Gene, aber jeder der beiden Plätze trägt höchstens eine dieser Anlagen (<code>KIT</code>, <code>kitFix</code>; Vererbung des ganzen Platzes in <code>genVererben</code>). Alte Spielstände mit mehr Anlagen behalten die sichtbarsten (Reihenfolge W, To, Sb, Rn), die Farbe wird neu bestimmt. Splashed White (MITF/PAX3), Frame Overo (EDNRB) und Leopard (TRPM1) liegen auf anderen Genen und kommen dazu.</p>
-      <p><b>Splashed White</b> (Gen SW, dominant, neu v426): Häufigkeit des Allels Quarter ${RASSE_GENE.quarter.Sw * 100} % · Welsh Cob ${RASSE_GENE.welshcob.Sw * 100} % · Islandpferd ${String(RASSE_GENE.isi.Sw * 100).replace(".", ",")} % · Shetty ${String(RASSE_GENE.shetty.Sw * 100).replace(".", ",")} % · Hannoveraner/Trakehner ${String(RASSE_GENE.hannoveraner.Sw * 100).replace(".", ",")} %. Aussehen: weißer Bauch mit glattem Rand, hohe weiße Beine, viel Weiß am Kopf, meist blaue Augen („Splashed White (Brauner)“ usw.; Tobiano, Overo, Tiger und Roan überdecken das Körperbild, Splash geht vor Sabino). Labortest Fellfarben. Taub (versteckt): ${Math.round(TAUB_SW[1] * 100)} % mischerbig, ${Math.round(TAUB_SW[2] * 100)} % reinerbig – zeigt nur der Hörtest (BAER, Labor ${LABOR_TESTS.hoer.preis} €, Tierarzt vor Ort, Ergebnis nach ${LABOR_TESTS.hoer.tage} Tag). Folge (v427): Beim Putzen erschrickt ein taubes Pferd zu ${Math.round(TAUB_SCHRECK * 100)} % (Wohlbefinden ${String(TAUB_SCHRECK_WOHL).replace(".", ",")}), solange der Hörtest es nicht gezeigt hat – danach kündigt man sich an. Admin-Rassenansicht „Gene selbst wählen“: Kopfabzeichen, Schnippe, Maul (Pangaré) und Augen wählbar (setzt Weiß-Anlage/Pangaré passend, wird so vererbt), Splash zu jeder einfarbigen Farbe.</p>
+      <p><b>Splashed White</b> (Gen SW, dominant, neu v426): Häufigkeit des Allels Quarter ${RASSE_GENE.quarter.Sw * 100} % · Welsh Cob ${RASSE_GENE.welshcob.Sw * 100} % · Islandpferd ${String(RASSE_GENE.isi.Sw * 100).replace(".", ",")} % · Shetty ${String(RASSE_GENE.shetty.Sw * 100).replace(".", ",")} % · Hannoveraner/Trakehner ${String(RASSE_GENE.hannoveraner.Sw * 100).replace(".", ",")} %. Aussehen: weißer Bauch mit glattem Rand, hohe weiße Beine, viel Weiß am Kopf, meist blaue Augen („Splashed White (Brauner)“ usw.; Tobiano, Overo, Tiger und Roan überdecken das Körperbild, Splash geht vor Sabino). Labortest Fellfarben. Taub (versteckt, wie in echt vor allem bei sehr weißen Splash-Pferden): bei viel Weiß ${Math.round(TAUB_STUFE[2] * 100)} %, bei fast weiß ${Math.round(TAUB_STUFE[3] * 100)} %, bei zwei Splash-Allelen mindestens ${Math.round(TAUB_ZWEI * 100)} % (alles Schätzungen, SW2 ×${String(TAUB_SW2).replace(".", ",")}) – zeigt nur der Hörtest (BAER, Labor ${LABOR_TESTS.hoer.preis} €, Tierarzt vor Ort, Ergebnis nach ${LABOR_TESTS.hoer.tage} Tag). Folge (v427): Beim Putzen erschrickt ein taubes Pferd zu ${Math.round(TAUB_SCHRECK * 100)} % (Wohlbefinden ${String(TAUB_SCHRECK_WOHL).replace(".", ",")}), solange der Hörtest es nicht gezeigt hat – danach kündigt man sich an. Admin-Rassenansicht „Gene selbst wählen“: Kopfabzeichen, Schnippe, Maul (Pangaré) und Augen wählbar (setzt Weiß-Anlage/Pangaré passend, wird so vererbt), Splash zu jeder einfarbigen Farbe.</p>
       <h3>🦵 Beinabzeichen, Zebrastreifen, Ohren, Fjord (v430)</h3>
       <p><b>Beinabzeichen:</b> jedes Bein hat eine eigene versteckte Anlage (<code>ex.bvl</code>, <code>bvr</code>, <code>bhl</code>, <code>bhr</code>), einzeln vererbt wie alle Veranlagungen. Wirksames Weiß (Logit) = Bein-Anlage + ${String(BEIN_KOPF).replace(".", ",")} × Weiß-Anlage des Kopfs + ${String(BEIN_GEN).replace(".", ",")} × Gen-Zuschlag (Fuchs, Sabino, Splash, Overo) + Hinterbein ${String(BEIN_HINTEN).replace(".", ",")}. Marktpferde: Bein-Anlage je Rasse verschoben (0,8 × Kopf-Verschiebung).</p>
       ${verTab(["Weiß bis", "Beinabzeichen"], BEIN_STUFEN.map(([t, a]) => [t === Infinity ? "1" : String(t).replace(".", ","), a ? BEIN_NAME[a] : "keins"]))}

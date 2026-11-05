@@ -9,6 +9,7 @@ Mit Dome immer **auf Deutsch** sprechen, freundlich, knapp; am Ende kurz sagen, 
 
 ## Arbeitsweise mit Dome (für ALLE Konten – Claude Team, Claude Pro und neu **Fly**; geschrieben von Claude Pro, 5.11.2026)
 So arbeiten und reden Dome und die Claude-Konten; bitte genauso weitermachen, damit Dome nichts umlernen muss. **`UEBERGABE.md` enthält nie etwas Dauerhaftes** (Dome, 5.11.): Dauerhaftes steht hier in `CLAUDE.md`, die Übergabe nur für den aktuellen Stand und Nachrichten an das andere Konto.
+**Gedächtnis lesen (Dome, 5.11.):** Zu Beginn jeder Sitzung zusätzlich die Gedächtnisdatei lesen: `C:Usersdome_.claudeprojectsC--Users-dome--Documents-Projekt-PferdespielmemoryMEMORY.md` und die dort verlinkten Dateien (werden bei diesem Projekt meist automatisch geladen; ist das nicht der Fall, selbst öffnen). Dort stehen Erinnerungen (z. B. GitHub-Verlauf verkleinern, `arbeitsordnerlender` sortieren) und Regeln, die Dome gesagt hat.
 
 **1. Wer ist Dome / wie sie schreibt**
 - Dome ist die Auftraggeberin und zeichnet selbst (Krita/Inkscape). Sie spricht Deutsch, schreibt knapp, oft nur ein Wort („prüfen“, „entfernen“, „anpassen“, „mach das“, „ja, bauen“). Das ist ein vollwertiger Auftrag – nicht nachfragen, ob sie es wirklich meint.

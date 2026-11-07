@@ -28,6 +28,11 @@ Nach dem Zeichnen einfach hochladen – `werkzeuge/kopf-export.js` übernimmt ne
 - **Ändern:** In den drei Schweinsköpfen die Ebene an dieselbe Stelle wie bei den anderen Kopfformen (z. B. Schafskopf) schieben – oder gleich mit 1d überarbeiten.
 - Bis dahin zeichnet das Spiel den Übergang beim Schweinskopf gar nicht (`pferd.js`, Zeile mit `ohneUeb`: `/^schwein/.test(eigenKopf)`). Danach `werkzeuge/kopf-export.js` laufen lassen und die Ausnahme wieder entfernen (macht Claude).
 
+### 1f. Schnippe beim Keilkopf (keil1–3) und Schafskopf (schaf1–3) liegt neben dem Kopf (Claude, 8.11.2026, v952)
+- **Problem:** Das Abzeichen „Schnippe“ ist bei diesen sechs Köpfen als kleiner Strich oberhalb des Kopfes (über der Stirn, außerhalb der Fläche) gezeichnet – im Spiel sichtbar als schwarzer Strich über dem Pferd (z. B. in der Pferdekachel eines Rappen mit Schnippe, Hannoveraner = Keilkopf). Bei allen anderen Kopfformen liegt die Schnippe am Maul.
+- **Ändern:** In `keil1–3` und `schaf1–3` die Ebene `schnippe` (unter `kopfabzeichen`) auf die Nase/das Maul schieben wie bei `gerade`. Danach `werkzeuge/kopf-export.js` laufen lassen.
+- Im Spiel nichts geändert (nur Domes Zeichnung).
+
 ### 1c. Keilkopf stark und Schafskopf stark überarbeiten (Dome, v462)
 - Dome überarbeitet die Formen `keilkopf-stark` und `schafskopf-stark` selbst. Danach `werkzeuge/kopf-export.js` laufen lassen; dabei auch `maulfärbung` und `kopfabzeichen` dieser beiden Formen anpassen, damit sie zur neuen Form passen.
 

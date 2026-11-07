@@ -6,7 +6,7 @@ const { chromium } = require('playwright'); const path = require('path');
   await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'H'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(300);
   const R = await pg.evaluate(() => { const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : ''));
     document.getElementById('dlg').hidden = true; speicherSperre = true; spiel.stufenAn = false; spiel.tippsAus = true; VET.verbotAb = 99; spiel.geld = 20000;
-    const mk = (n, g) => { const P = neuesPferd({ rasse: 'paint', geschlecht: g, alter: 8, name: n }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); P.weidegang = 'taeglich'; return P; };
+    const mk = (n, g) => { const P = neuesPferd({ rasse: 'hannoveraner', geschlecht: g, alter: 8, name: n }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); P.weidegang = 'taeglich'; return P; };
     const A = mk('Anna', 'Stute'), B2 = mk('Berta', 'Stute'); spiel.boxen[0].pferd = A; spiel.boxen[1].pferd = B2; spiel.boxen.forEach(bx => { bx.krippeVoll = true; });
     spiel.mitarbeiter = [{ id: 'm1', name: 'Paul', typ: 'stallbursche', ab: jzJetzt() - 1, bis: null, gehalt: 300, zufr: 80, w: false, wissen: {} }]; spiel.futter.lager.heu = 5000;
     if (datum().s === 3) spiel.kal = null;

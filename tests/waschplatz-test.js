@@ -12,7 +12,7 @@ const ORDNER = process.argv[2];
     const neu = o => { const p = neuesPferd(o); p.pflege = erzeugePflege(p); p.werte = p.werte || erzeugeWerte(p); ['impf', 'wurm', 'zahn', 'huf'].forEach(k => p.pflege[k] = spiel.tag); return p; };
     const p = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Nixe' }); spiel.boxen[0].pferd = p; aktBox = 0; spiel.aktBox = 0;
     R.ohne = waschStufe(); gebaeude().push({ gid: 'gw', typ: 'waschplatz', stufe: 1, zustand: 100 }); spiel.anlage.waschplatz = true; R.mit = waschStufe();
-    const nacht = () => { spiel.boxen.forEach(x => { x.krippeVoll = !!x.pferd; x.mistig = false; }); naechsteNacht(); document.getElementById('dlg').hidden = true; };
+    const nacht = () => { spiel.boxen.forEach(x => { x.krippeVoll = !!x.pferd; x.mistig = false; x.wasserTag = spiel.tag; }); const q0 = spiel.boxen[0].pferd; if (q0) { q0.befunde = (q0.befunde || []).filter(b => b.art === 'mauke' || b.art === 'erkaeltung'); q0.pflege.gesundheit = Math.max(q0.pflege.gesundheit, 60); } naechsteNacht(); document.getElementById('dlg').hidden = true; };
     while (datum().s !== 1) nacht(); p.befunde = []; p.pflege.gesundheit = 100;
     R.sommer = waschErlaubt(p);
     p.dreck = { fell: 70, maehne: 60, seit: spiel.tag - 2 }; p.wasserGewohnt = 0; const w0 = p.pflege.wohl;
@@ -73,7 +73,7 @@ const ORDNER = process.argv[2];
   ok('Sperre bei Erkältung', /erkältet/.test(A.sperre), A.sperre); ok('Verschwitzt nach viel Training', A.schweiss, 'verbraucht ' + A.verbraucht + (A.trainFehler ? ' ' + A.trainFehler : ''));
   ok('Mauke: gewaschen + getrocknet + Salbe besser', A.m1.wert > A.m0.wert, JSON.stringify([A.m0, A.m1])); ok('Mauke: gewaschen ohne Trocknen schadet', A.m2.schaden > A.m0.schaden, JSON.stringify(A.m2));
   // Oberfläche: Sommer, Waschplatz im Ort, Abspritzen durch Wischen
-  await pg.evaluate(() => { let p = spiel.boxen[0].pferd; if (!p) { p = neuesPferd({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Nixe' }); p.pflege = erzeugePflege(p); spiel.boxen[0].pferd = p; } const nacht = () => { spiel.boxen.forEach(x => { x.krippeVoll = !!x.pferd; x.mistig = false; }); naechsteNacht(); document.getElementById('dlg').hidden = true; };
+  await pg.evaluate(() => { let p = spiel.boxen[0].pferd; if (!p) { p = neuesPferd({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Nixe' }); p.pflege = erzeugePflege(p); spiel.boxen[0].pferd = p; } const nacht = () => { spiel.boxen.forEach(x => { x.krippeVoll = !!x.pferd; x.mistig = false; x.wasserTag = spiel.tag; }); const q0 = spiel.boxen[0].pferd; if (q0) { q0.befunde = (q0.befunde || []).filter(b => b.art === 'mauke' || b.art === 'erkaeltung'); q0.pflege.gesundheit = Math.max(q0.pflege.gesundheit, 60); } naechsteNacht(); document.getElementById('dlg').hidden = true; };
     while (datum().s !== 1) nacht(); if (!spiel.boxen[0].pferd) spiel.boxen[0].pferd = p; p.befunde = []; p.pflege.gesundheit = 100; p.dreck = { fell: 60, maehne: 40, seit: null }; document.querySelectorAll('.schirm.offen').forEach(x => x.classList.remove('offen')); zeigeStall(); zeigeTag(); aktenModus = 'pflege'; aktenReiter = 'platz'; ortModus = 'waschplatz'; zeigeAkte(); });
   await pg.waitForTimeout(300); await pg.evaluate(() => { document.getElementById('dlg').hidden = true; });
   const K = await pg.evaluate(() => [...document.querySelectorAll('[data-wasch]')].map(x => x.dataset.wasch + (x.disabled ? '-' : '+')).join(','));

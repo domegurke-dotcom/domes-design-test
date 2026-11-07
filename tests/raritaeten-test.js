@@ -8,7 +8,7 @@ const ORDNER = process.argv[2];
   await pg.click('#smNeu'); await pg.waitForTimeout(150); await pg.fill('#chName', 'Test'); await pg.click('#chLos'); await pg.waitForTimeout(150);
   await pg.click('#dlgKnoepfe button'); await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'Testhof'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(400);
   const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : ''));
-  const A = await pg.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.tippsAus = true;
+  const A = await pg.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.tippsAus = true; spiel.stufenAn = false;
     const zu = rarOffen(); const nacht = () => { spiel.boxen.forEach(x => { x.krippeVoll = !!x.pferd; x.mistig = false; }); naechsteNacht(); document.getElementById('dlg').hidden = true; };
     while (datum().s !== 1 || datum().t !== 1) nacht();
     const L = rarAngebot(), st = [0, 0, 0, 0, 0, 0]; L.forEach(h => st[h.rarStufe]++);

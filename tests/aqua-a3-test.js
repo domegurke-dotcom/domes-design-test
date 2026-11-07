@@ -14,7 +14,7 @@ const { chromium } = require('playwright'); const path = require('path');
     // ohne Pause: es tut sich etwas (Gesundheit sinkt)
     p.pauseTag = -5; const g1 = p.pflege.gesundheit; spiel.tag++; befundeNacht(); R.ohnePause = p.pflege.gesundheit < g1 || x.grad !== 3;
     // Verlauf: Arthrose Grad 1 kein Abzug, Grad 2 halb, Grad 3 voll
-    const verlust = grad => { const y = neu('arthrose', grad); KRANK.arthrose.schlimmer0 = KRANK.arthrose.schlimmer; KRANK.arthrose.schlimmer = 0; p.pflege.gesundheit = 80; p.pauseTag = -5; spiel.tag++; befundeNacht(); KRANK.arthrose.schlimmer = KRANK.arthrose.schlimmer0; return Math.round((80 - p.pflege.gesundheit) * 100) / 100; };
+    const verlust = grad => { const y = neu('arthrose', grad); KRANK.arthrose.schlimmer0 = KRANK.arthrose.schlimmer; KRANK.arthrose.schlimmer = 0; p.pflege.gesundheit = 80; p.pauseTag = -5; spiel.tag++; const mr0 = Math.random; Math.random = () => 0.9999; befundeNacht(); Math.random = mr0; KRANK.arthrose.schlimmer = KRANK.arthrose.schlimmer0; return Math.round((80 - p.pflege.gesundheit) * 100) / 100; };
     R.verl = [1, 2, 3].map(verlust);
     // Schub: Winter + Arthrose Grad 1 → 25 %, Grad 2 → 40 %
     spiel.spieler = spiel.spieler || {}; spiel.spieler.stufe = 'fort';

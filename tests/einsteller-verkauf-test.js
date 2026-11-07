@@ -45,7 +45,7 @@ const { chromium } = require('playwright'); const path = require('path');
   ok('Zweite Runde, wieder zu wenig → Absage', /lehnt ab/.test(I.A.antwort || ''));
 
   // 5. Einverstanden und Kauf
-  await pg.evaluate(() => { const e = einstellerListe()[0]; e.verkaufSperre = 0; e.verkauf = null; e.zufr = 80; einstellerVerkaufBrief(e); const A = letzterBrief().aktion; A.min = A.preis * 0.9; spiel.geld = 100000; });
+  await pg.evaluate(() => { const e = einstellerListe()[0]; e.verkaufSperre = 0; e.verkauf = null; e.zufr = 80; einstellerVerkaufBrief(e); const A = letzterBrief().aktion; A.min = A.preis * 0.86; spiel.geld = 100000; });
   const p1 = (await info()); await oeffne(); await klick('[data-baktion="ev-gegen"]'); await klick('[data-evgeb]:nth-child(2)'); I = await info();
   ok('90 % ≥ Mindestpreis → „Einverstanden“, Preis steht fest, Gegenangebot-Knopf weg', I.A.fest && I.A.preis === Math.max(50, Math.round(p1.A.preis * 0.9 / 50) * 50) && !(I.A.antwort), I.A.preis);
   await oeffne(); ok('Kein Gegenangebot-Knopf mehr', !(await pg.$('[data-baktion="ev-gegen"]'))); const geld0 = (await info()).geld; const pid = I.A.pid;

@@ -27,7 +27,8 @@ const { chromium } = require('playwright'); const path = require('path');
   await klick(`[data-brief="${U.brief}"]`); await klick('[data-baktion="uplan"]');
   ok('Urlaubsplan-Fenster öffnet aus dem Brief', await pg.evaluate(() => /Urlaubsplanung/.test(document.getElementById('dlgInhalt').textContent)));
   const von0 = await pg.evaluate(() => angestellte('pfleger')[0].uWunsch.von);
-  await klick('[data-uschieb="0:1"]'); const von1 = await pg.evaluate(() => angestellte('pfleger')[0].uWunsch.von); ok('„1 Tag später“ verschiebt den Wunsch', von1 === von0 + 1, `${von0}→${von1}`);
+  const richtung = await pg.evaluate(() => (document.querySelector('[data-uschieb="0:1"]') || {}).disabled ? -1 : 1);   // der Wunsch liegt zufällig am Rand des Fensters: dann geht nur die andere Richtung
+  await klick(`[data-uschieb="0:${richtung}"]`); const von1 = await pg.evaluate(() => angestellte('pfleger')[0].uWunsch.von); ok(richtung === 1 ? '„1 Tag später“ verschiebt den Wunsch' : '„1 Tag früher“ verschiebt den Wunsch (Wunsch lag am rechten Rand)', von1 === von0 + richtung, `${von0}→${von1}`);
   await klick('[data-uwahl="0:ok"]'); await pg.evaluate(() => { [...document.querySelectorAll('#dlgKnoepfe button')].find(k => /Plan abschicken/.test(k.textContent))?.click(); }); await pg.waitForTimeout(300);
   const U2 = await pg.evaluate(() => { const A = angestellte('pfleger')[0]; return { ok: !!(A.urlaub && A.urlaub.ok), wunschWeg: !A.uWunsch, von: A.urlaub && A.urlaub.von }; });
   ok('Plan abgeschickt: Urlaub genehmigt, Wunsch erledigt', U2.ok && U2.wunschWeg, JSON.stringify(U2)); await pg.evaluate(() => zu());

@@ -28,7 +28,7 @@ const FAELLE = {
       window.einsteller = () => { pensionAnfrageNeu(); const a = spiel.pensionAnfragen[spiel.pensionAnfragen.length - 1]; a.bluttest = 'vorher'; pensionAnnehmen(a); a.tag = spiel.tag - 1; pensionEinzug(); zu(); const bx = spiel.boxen.find(x => x.pferd && x.pferd.einsteller); delete bx.quar; return bx.pferd; };
       window.paddockDa = () => { if (!gebaeude().some(g => g.gid === 'gpdT')) gebaeude().push({ gid: 'gpdT', typ: 'sandpaddock', stufe: 1, zustand: 100 }); };
       spiel.hof.weideHa = Math.max(spiel.hof.weideHa || 0, 2); spiel.anlage.weide = true;
-      const p = eval('(' + src + ')')(); aktBox = spiel.boxen.indexOf(boxVon(p)); spiel.aktBox = aktBox; speichern();
+      const p = eval('(' + src + ')')(); aktBox = spiel.boxen.indexOf(boxVon(p)); spiel.aktBox = aktBox; spiel.tippsAus = true; speichern();
     }, FAELLE[name].toString());
     await pg.reload(); await pg.waitForTimeout(800);
     const start = await pg.evaluate(() => { const s = document.getElementById('smWeiter'); return !!(s && s.offsetParent !== null && !s.disabled); });

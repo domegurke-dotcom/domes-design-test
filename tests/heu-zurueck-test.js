@@ -15,7 +15,7 @@ const { chromium } = require('playwright'); const path = require('path');
   const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x !== undefined ? ' – ' + x : ''));
   ok('Heu wurde gegeben (Lager sinkt, Raufe voll)', R.nach < R.vor && R.krippe, JSON.stringify(R));
   ok(R.heuNoetig ? 'Weide hat zu wenig Gras – Heu bleibt (Test sagt nur, ob die Rückgabe stimmt)' : 'Genug Gras: Heu zurück im Lager, Raufe leer', R.heuNoetig ? R.zurueck === R.nach && R.krippeDanach : Math.abs(R.zurueck - R.vor) < 0.01 && !R.krippeDanach, JSON.stringify(R));
-  ok('Weide mit genug Gras: Heu zählt als versorgt (kein ✗ im Whiteboard/Ring)', R.heuOk === true && R.vers === true, JSON.stringify(R));
+  ok('Weide mit genug Gras: Heu zählt als versorgt (kein rotes Kreuz im Whiteboard/Ring)', R.heuOk === true && R.vers === true, JSON.stringify(R));
   ok('keine Skriptfehler', errs.length === 0, errs.join(' | '));
   console.log(out.join('\n')); await b.close(); process.exit(out.some(l => l.startsWith('✗')) ? 1 : 0);
 })();

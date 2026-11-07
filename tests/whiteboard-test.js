@@ -12,7 +12,7 @@ const [W, H] = (process.argv[2] || '844x390').split('x').map(Number), ORD = proc
     spiel.stufenAn = true; spiel.spieler.stufe = 'anf'; zeigeBoxen(); ok('Anfänger: Whiteboard offen (seit v897)', !!document.querySelector('.wb'));
     spiel.spieler.stufe = 'fort'; zeigeBoxen(); ok('Fortgeschritten: Stall zeigt direkt das Whiteboard', !!document.querySelector('.wb') && !document.getElementById('wbUmschalt'));
     while (spiel.boxen.length < 4) spiel.boxen.push({ pferd: null });
-    const mk = (n, g) => { const P = neuesPferd({ rasse: 'paint', geschlecht: g, alter: 8, name: n }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); return P; };
+    const mk = (n, g) => { const P = neuesPferd({ rasse: 'hannoveraner', geschlecht: g, alter: 8, name: n }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); return P; };
     ['Anna', 'Berta', 'Cora', 'Dora'].forEach((n, i) => { spiel.boxen[i].pferd = mk(n, 'Stute'); spiel.boxen[i].krippeVoll = true; });
     const J = jzJetzt() - 1; spiel.mitarbeiter = [{ id: 'm1', name: 'Paul', typ: 'stallbursche', ab: J, bis: null, gehalt: 300, zufr: 80, w: false, wissen: {} }, { id: 'm2', name: 'Lena', typ: 'stallbursche', ab: J, bis: null, gehalt: 300, zufr: 80, w: true, wissen: {} }];
     spiel.futter.lager.heu = 5000; if (!weiden().some(w => w.wid === 'w2')) weiden().push({ wid: 'w2', name: 'Weide 2', ha: 2, gras: 80, matsch: 0 });

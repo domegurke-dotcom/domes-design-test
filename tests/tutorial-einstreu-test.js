@@ -12,12 +12,14 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number);
   await pg.evaluate(() => { const T = spiel.tutorial, K = tutListe()[T.kap]; T.schritt = K.schritte.findIndex(s => s[0] === 'Versorgung öffnen'); futterkammer().lager.spaene = 20; spiel.boxen[0].einstreu = 'spaene'; });
   await pg.waitForTimeout(800);
   const st = () => pg.evaluate(() => { const T = spiel.tutorial, K = tutListe()[T.kap], bl = document.getElementById('hinweisBlase'); return { s: T.schritt, nach: T.nach, titel: (K.schritte[T.schritt] || [''])[0], fertig: T.geschafft === T.kap, blase: bl && !bl.hidden ? bl.textContent.slice(0, 90) : '' }; });
-  const klick = async sel => { const el = await pg.$(sel); if (!el) return false; await el.scrollIntoViewIfNeeded().catch(() => { }); await pg.waitForTimeout(300); const r = await el.boundingBox(); if (!r) return false; await pg.mouse.click(r.x + r.width / 2, r.y + r.height / 2); await pg.waitForTimeout(500); return true; };
+  const klick = async sel => { const el = await pg.$(sel); if (!el) return false; await pg.waitForTimeout(300); let r = null; for (let i = 0; i < 12; i++) { await pg.waitForTimeout(150); const n = await el.boundingBox(); if (n && r && n.x === r.x && n.y === r.y) break; r = n; }   // warten, bis das Fenster/der Balken ruhig steht (Einblend-Animation)
+    if (!r) return false; await pg.mouse.move(r.x + 4, r.y + 4); await pg.waitForTimeout(250); await pg.mouse.click(r.x + r.width / 2, r.y + r.height / 2); await pg.waitForTimeout(500); return true; };
   const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x !== undefined ? ' – ' + x : ''));
   const s0 = await st(); ok('Schritt „Versorgung öffnen“ wird gezeigt', s0.titel === 'Versorgung öffnen' && /Einstreu/.test(s0.blase), s0.blase);
   if (!(await klick('#kopfRinge [data-vstab="heute"]:not([hidden])')) || (await st()).titel === 'Versorgung öffnen') await klick('.bx-bal[data-vstab="heute"]'); const s1 = await st(); ok('Ring öffnet die Versorgung', s1.titel === 'Einstreu ändern', s1.titel);
   if (process.env.LAUT) console.log('vor ändern', JSON.stringify(await pg.evaluate(() => { const a = document.getElementById('einstreuAendern'); if (!a) return 'kein Knopf'; const r = a.getBoundingClientRect(), e = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return { r: [Math.round(r.x), Math.round(r.y), Math.round(r.width)], oben: e && (e.id || e.className), tab: bxTab }; })));
-  await klick('#einstreuAendern'); const s2 = await st(); ok('„ändern“ öffnet die Einstreu-Wahl', s2.titel === 'Späne wählen', s2.titel);
+  await klick('#einstreuAendern'); let s2 = await st(); if (s2.titel !== 'Späne wählen') { await klick('#einstreuAendern'); s2 = await st(); }   // selten wird der erste Mausklick vom Browser verschluckt (kein Ereignis kommt an) – wie beim Spieler: noch einmal tippen
+   ok('„ändern“ öffnet die Einstreu-Wahl', s2.titel === 'Späne wählen', s2.titel);
   await klick('[data-estreu="spaene"]'); await pg.waitForTimeout(600); const s3 = await st(); ok('Späne gewählt → Erklärung danach', s3.nach === s2.s && /nackt|Einstreu/.test(s3.blase), s3.blase);
   await klick('#hinweisBlase p'); await pg.waitForTimeout(800); const s4 = await st(); ok('Kapitel geschafft', s4.fertig, JSON.stringify(s4));
   ok('keine Skriptfehler', errs.length === 0, errs.join(' | '));

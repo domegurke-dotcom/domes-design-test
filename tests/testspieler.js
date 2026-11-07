@@ -1,3 +1,5 @@
+// Stand 8.11.2026: Anfänger und Fortgeschritten übernehmen Teile der Experten-Verbesserungen (siehe UEBERGABE.md), mit mehr Fehlern.
+// WICHTIG (Dome 8.11.): Testspieler-Typ (Nr. 1/2/3 = wie gut jemand spielt) und Spielmodus (Anfänger/Fortgeschritten/Experte = was das Spiel freigibt) sind zwei verschiedene Dinge. Standard: alle Typen im Experten-Modus; anderer Modus nur mit MODUS=anf|fort.
 // Testspieler (Dome, v377/v380): drei Spielertypen spielen je 10 Jahre ab einem neuen Spiel – so logisch wie möglich wie ein echter Spieler.
 // NUR AUF DOMES ANWEISUNG STARTEN – kostet Volumen.
 // Start: NODE_PATH=/opt/node22/lib/node_modules node tests/testspieler.js [1|2|3] [Jahre]   (ohne Zahl: alle drei, Standard 10 Jahre)
@@ -13,12 +15,14 @@ const SPIELER = {
        fuettern: 0.3, wasser: 0.35, misten: 0.45, putzen: 0.7, postSpaet: 0.5, anfrageAnnehmen: 1, futterErstWennLeer: true, tierarzt: 0.35, weide: 0.5, tippsBefolgen: 0.9,
        // Strategie: hält sich an den Start-Tipp, behält Fohlen aus Liebe zu lange, nimmt immer den günstigsten Hengst, verkauft Stuten nie, tilgt kaum
        leistAb: 0, leistungen: ["putzen"], stutenMax: 1, wallachMax: 3, wallachLust: 0.75, kaufAbstand: 8, puffer: 4000, bauAbstand: 8, trainAnteil: 0.2, handelMax: 0, hengstTeuerAb: Infinity, fohlenFruehVerkaufenUnter: 300, stuteVerkaufenNach: 99, hengsteBehalten: false, bauReserve: 4000, tilgenAb: 20000, turniere: false, bauKredit: true, kreditMax: 20000, stuteAbBoxen: 0, bauWennFrei: 0,
+       weidePflege: true, einBauProJahr: true, anbauSchritt: 2, pflegerAb: 6,   // v947+: wie beim Experten Weide/Sandpaddock pflegen (Tipp: Hufrehe-Warnung im Frühling), jedes Jahr nur ein Bauprojekt, Pfleger erst bei vielen Einstellern
        // Bauen: wenig und spät – repariert erst, wenn es schlimm ist; Stall nur bis 12 Boxen, ab Jahr 3 ein Reitplatz, kein Umbau
        maxBoxen: 12, reparaturUnter: 40, neubau: ['reitplatz'], umbau: [] },
   2: { name: "Nr. 2 – Fortgeschritten (Spiel ein paar Mal gespielt, etwas Pferdeahnung, einige Fehler, befolgt Tipps teilweise)", stufe: "fort",
        fuettern: 0.1, wasser: 0.12, misten: 0.15, putzen: 0.4, postSpaet: 0.15, anfrageAnnehmen: 1, futterErstWennLeer: true, tierarzt: 0.7, weide: 0.7, tippsBefolgen: 0.5,
        // Strategie: Domes Weg fast genau – eine Stute, Hengst nach Kontostand, Fohlen früher verkaufen, wenn das Geld knapp ist, Stute nach dem 3. Fohlen verkaufen
-       leistAb: 0, leistungen: ["putzen", "decke", "medizin", "einstreu"], preisAbstand: 4, preisAuslastung: 0.8, preisZufr: 65, stutenMax: 3, wallachMax: 2, wallachLust: 0.4, kaufAbstand: 6, puffer: 3000, bauAbstand: 6, trainAnteil: 0.5, handelMax: 0, hengstTeuerAb: 8000, fohlenFruehVerkaufenUnter: 1500, stuteVerkaufenNach: 1, hengsteBehalten: true, bauReserve: 1500, tilgenAb: 6000, turniere: true, bauKredit: true, kreditMax: 22000, stuteAbBoxen: 0, bauWennFrei: 1,
+       leistAb: 0, leistungen: ["putzen", "decke", "medizin", "einstreu"], preisAbstand: 4, preisAuslastung: 0.8, preisZufr: 65, stutenMax: 3, wallachMax: 2, wallachLust: 0.4, kaufAbstand: 6, puffer: 3000, bauAbstand: 6, trainAnteil: 0.5, handelMax: 2, hengstTeuerAb: 8000, fohlenFruehVerkaufenUnter: 1500, stuteVerkaufenNach: 1, hengsteBehalten: true, bauReserve: 1500, tilgenAb: 6000, turniere: true, bauKredit: true, kreditMax: 22000, stuteAbBoxen: 0, bauWennFrei: 1,
+       zufriedenPflege: true, lueckenWahrsch: 0.6, weidePflege: true, reparaturJanuar: true, einBauProJahr: true, anbauSchritt: 2, pflegerAb: 6, umbauKreditAb: 8, hausturnier: true,   // v947+: wie der Experte, aber weniger gründlich
        // Bauen: Stall bis 20 Boxen, Reitplatz ab Jahr 3, Roundpen ab Jahr 5, Boxenstall-Umbau auf Stufe 2 ab Jahr 4, repariert bei unter 60
        maxBoxen: 20, reparaturUnter: 60, neubau: ['reitplatz', 'roundpen'], umbau: [['stall', 2]] },
   3: { name: "Nr. 3 – Experte (Spiel oft gespielt, kennt sich gut aus, wenige Fehler, macht eher sein Ding)", stufe: "exp",
@@ -36,7 +40,7 @@ async function spiele(nr, jahre) {
   const fehler = []; pg.on("pageerror", e => fehler.push(e.message));
   await pg.goto("file://" + path.resolve(__dirname, "..", "index.html")); await pg.waitForTimeout(800);
   await pg.click("#smNeu"); await pg.fill("#chName", "Testspieler " + nr);
-  await pg.click(`[data-stufe="${process.env.MODUS || S.stufe}"]`);   // MODUS=exp: alle spielen im Experten-Modus
+  await pg.click(`[data-stufe="${process.env.MODUS || "exp"}"]`);   // Spielmodus (Sperren des Spiels) ist etwas anderes als die Spielstärke des Testspielers (S.stufe): Standard = Experten-Modus (alles frei), MODUS=anf|fort spielt mit den Sperren des Spiels
    await pg.click("#chLos"); await pg.waitForTimeout(300);
   await pg.click("#dlgKnoepfe button"); await pg.click('[data-immo="pension"]'); await pg.fill("#kaufName", "Pension " + nr); await pg.click("#dlgKnoepfe button:first-child");
   await pg.waitForTimeout(500);
@@ -118,7 +122,7 @@ async function spiele(nr, jahre) {
           if (befundListe(p).some(x => x.bemerkt && !x.diagnose) && (spiel.geld || 0) > TIERARZT_BESUCH) { try { tierarztBesuch(p, b, () => {}); } catch (er) { } knopf(); zu(); }
           const plan = new Set(); befundListe(p).filter(x => x.diagnose).forEach(x => (PLAN[x.art] || []).forEach(k => plan.add(k))); plan.forEach(k => { if (k !== "boxenruhe") { try { behandeln(p, k, dosisKlasse(gewichtAnzeige(p)), "du"); } catch (er) { } } }); }); zu(); };
       // ---------- Experte: wo Stallbursche/Azubi etwas nicht gemacht haben, springt er ein (Dome 7.11.) ----------
-      const luecken = () => { if (!Sx.zufriedenPflege) return; spiel.boxen.forEach((box, i) => { const p = box.pferd; if (!p || box.tot || p.klinik || p.turnier) return; aktBox = i; const was = [];
+      const luecken = () => { if (!Sx.zufriedenPflege) return; spiel.boxen.forEach((box, i) => { const p = box.pferd; if (!p || box.tot || p.klinik || p.turnier) return; if (Sx.lueckenWahrsch != null && zuf() > Sx.lueckenWahrsch) return; aktBox = i;   // Fortgeschritten: springt nur bei 60 % der Boxen ein const was = [];
           if (!p.weide && !box.krippeVoll) { if (fuetternAusLager(box, "du", "rau")) { box.krippeVoll = true; was.push("gefüttert"); } if (kraftNoetig(p, box)) { fuetternAusLager(box, "du", "kraft"); box.kraftVoll = true; } }
           if (box.mistig) { box.mistig = false; box.mistStufe = 0; was.push("gemistet"); } if (box.wasserTag !== spiel.tag) { box.wasserTag = spiel.tag; was.push("Wasser"); }
           if (fremd(p)) { const e = einstellerVon(p); if (e && !e.art) { try { pensionAufgaben(e, box).filter(x => !x.ok).forEach(x => { if (x.k === "putzen") { putzen(p, "buerste"); putzen(p, "kamm"); p.ausgekratzt = spiel.tag; was.push("Pflege"); } if (x.k === "maehne") { besitzerWunschLaenge(p); pflegerSchneiden(p); was.push("Mähne"); } if (x.k === "decke") e.decke = spiel.tag; if (x.k === "futter") { const WF = besitzerFutter(p, box); if (WF) { p.futterplan = JSON.parse(JSON.stringify(WF)); was.push("Futterplan"); } } if (x.k === "medizin") { befundListe(p).filter(b => b.diagnose).forEach(b => (PLAN[b.art] || []).forEach(k => { if (k !== "boxenruhe") { try { behandeln(p, k, dosisKlasse(gewichtAnzeige(p)), "du"); } catch (er) { } } })); was.push("Medizin"); } }); } catch (er) { } } }

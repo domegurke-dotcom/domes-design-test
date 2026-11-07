@@ -58,7 +58,7 @@ const B = require('./bilder');   // Bilder-Schalter: BILDER=aus|fehler|alle, sie
       // ---------- F2 Futterplan ----------
       const B = futterBedarf(p, box), W = planWerte(p, box), C = bedarfCheck(W);
       ok('F2 Bedarf berechnet (Energie MJ)', B.energie > 30 && B.energie < 150, B.energie + ' MJ');
-      ok('F2 Standardplan deckt Energie/Raufutter', C[0][2] === 'passt' && C[2][2] === 'passt', C.map(c => c[0] + ' ' + c[2]).join(', '));
+      ok('F2 Standardplan deckt Raufutter, Energie nicht zu wenig (Haflinger ist leichtfuttrig: das Heu-Minimum von 1,5 kg je 100 kg liegt über dem Bedarf, „viel“ ist dort gewollt, v945)', C[2][2] === 'passt' && C[0][2] !== 'wenig', C.map(c => c[0] + ' ' + c[2]).join(', '));
       ansehen('F2 Futterplan-Fenster (Box – ppf – vsg)', () => futterplanDialog(p, box, zu));
 
       // ---------- F3 Futterzustand ----------

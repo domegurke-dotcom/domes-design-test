@@ -1,0 +1,28 @@
+// v985 (Dome 8.11.): Whiteboard · Mitarbeiter unten umschaltbar – „Alle“ (nach Beruf sortiert, mehrere Reihen) und „Gruppen“ (Berufs-Kacheln, antippen → Mitarbeiter in einer Reihe)
+const { chromium } = require('playwright'); const path = require('path');
+(async () => { const b = await chromium.launch(); const errs = []; const pg = await b.newPage({ viewport: { width: 1100, height: 900 } }); pg.on('pageerror', e => errs.push(e.message));
+  await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(500);
+  await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('[data-stufe="exp"]'); await pg.click('#chLos'); await pg.waitForTimeout(250); await pg.click('#dlgKnoepfe button');
+  await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'W'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(250);
+  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.stufenAn = false; spiel.tippsAus = true; spiel.geld = 1e7;
+    ['Anna', 'Berta'].forEach((n, i) => { const P = neuesPferd({ rasse: 'paint', geschlecht: 'Stute', alter: 8, name: n }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); werteErgaenzen(P); spiel.boxen[i].pferd = P; });
+    const mk = (typ, id, name) => { const x0 = bewerber(typ)[0]; return { id, typ, name, w: true, wissen: { ...x0.wissen }, eig: [], gehalt: x0.gehalt, ab: jzJetzt() - 2, bis: null }; };
+    spiel.mitarbeiter = [mk('pfleger', 'p1', 'Jonas'), mk('physio', 'ph', 'Luca'), mk('stallbursche', 's1', 'Frieda'), mk('pfleger', 'p2', 'Johann'), mk('stallbursche', 's2', 'Ida'), mk('pferdewirtHS', 'hs', 'Amelie')];
+    gebaeude().push({ gid: 'gaq', typ: 'aqua', stufe: 2, zustand: 100 }); wbSicht = 'boxen'; wbWahl = null; delete spiel.wbMaSicht; zeigeWhiteboard(); });
+  const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (c ? '' : ' – ' + (x || '')));
+  const namen = () => pg.$$eval('#wbMaReihe .wb-ma > b', x => x.map(e => e.textContent.replace(/[^A-Za-zÄÖÜäöüß]/g, '')).join(','));
+  let n = await namen(); ok('Standard „Alle“: nach Beruf sortiert (Stallbursche, Pfleger, Pferdewirt HS, Physio)', /Frieda.*Ida.*Jonas.*Johann.*Amelie/.test(n) || /Ida.*Frieda.*Johann.*Jonas.*Amelie/.test(n), n);
+  ok('Knöpfe „Alle“ und „Gruppen“ da, „Alle“ aktiv', !!(await pg.$('[data-wbmas="alle"].an')) && !!(await pg.$('[data-wbmas="gruppen"]')));
+  ok('Alle: mehrere Reihen möglich (flex-wrap)', await pg.$eval('#wbMaReihe', e => getComputedStyle(e).flexWrap === 'wrap'));
+  if (process.env.BILD) await pg.screenshot({ path: process.env.BILD.replace('.png', '-alle.png') });
+  await pg.$eval('[data-wbmas="gruppen"]', e => e.click()); await pg.waitForTimeout(100);
+  const kach = await pg.$$eval('#wbMaReihe .wb-gk', x => x.map(e => e.textContent.replace(/\s+/g, ' ').trim()));
+  ok('Gruppen: eine Kachel je Beruf mit „n angestellt“', kach.length === 4 && kach.some(k => /2 angestellt/.test(k)) && !(await pg.$('#wbMaReihe .wb-ma')), kach.join(' | '));
+  if (process.env.BILD) await pg.screenshot({ path: process.env.BILD.replace('.png', '-gruppen.png') });
+  await pg.$eval('[data-wbmag="pfleger"]', e => e.click()); await pg.waitForTimeout(100); n = await namen();
+  ok('Kachel „Pfleger“ antippen: nur Jonas und Johann in einer Reihe', /^Jonas,Johann$|^Johann,Jonas$/.test(n), n);
+  ok('„‹ Gruppen“ führt zurück', !!(await pg.$('[data-wbmag=""]'))); if (process.env.BILD) await pg.screenshot({ path: process.env.BILD.replace('.png', '-reihe.png') });
+  await pg.$eval('[data-wbmag=""]', e => e.click()); await pg.waitForTimeout(100); ok('Zurück: wieder die Kacheln', (await pg.$$('#wbMaReihe .wb-gk')).length === 4);
+  await pg.$eval('[data-wbmas="alle"]', e => e.click()); await pg.waitForTimeout(100); ok('Zurück zu „Alle“', (await namen()).split(',').length >= 5);
+  const z = await pg.evaluate(() => wbOk('m:s1', 'b:0')); ok('Zuteilen funktioniert weiter (Stallbursche → Box 1 erlaubt)', z === true);
+  out.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(out.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

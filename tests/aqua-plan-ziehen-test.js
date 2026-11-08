@@ -25,7 +25,7 @@ const { chromium } = require('playwright'); const path = require('path');
   const n2 = await namen(); ok('Cora ist nach dem Ziehen ganz oben', n2.startsWith('Cora'), n2);
   const slot = await pg.$eval('.aq-zeile:not(.aus)', e => e.textContent); ok('Cora hat Platz (dran)', /dran/.test(slot), slot);
   if (process.env.BILD) await pg.screenshot({ path: process.env.BILD });
-  await pg.evaluate(() => { document.getElementById('nbZurueck').click(); }); ok('Zurück ins Whiteboard', await pg.$('#wbAquaPlan') !== null);
+  await pg.evaluate(() => { document.querySelector('.info-zu').click(); }); ok('Zurück ins Whiteboard', await pg.$('#wbAquaPlan') !== null);
   const rang = await pg.evaluate(() => { const t0 = spiel.tag; naechsteNacht(); return spiel.boxen.slice(0, 3).map(bx => bx.pferd.name + ':' + (aquaLetzt(bx.pferd) >= t0 ? 'ja' : 'nein')).join(); });
   ok('Am Morgen war Cora (oben) im Wasser', /Cora:ja/.test(rang), rang);
   out.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(out.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

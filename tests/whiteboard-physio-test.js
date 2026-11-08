@@ -17,7 +17,7 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Blauer Knopf „Aqua-Plan“ im Whiteboard, kein Listenblock mehr', !!document.getElementById('wbAquaPlan') && !document.querySelector('.wb-aqua li')); document.getElementById('wbAquaPlan').click(); const bl = document.querySelector('.aq-panel'); ok('Fenster „Aqua-Plan“ mit 3 Pferden, je Zeile Bild im Holzrahmen', !!bl && bl.querySelectorAll('.aq-zeile').length === 3 && bl.querySelectorAll('.aq-rahmen .paar-bild svg, .aq-rahmen .paar-bild img').length === 3, bl && bl.textContent);
     ok('Zeile zeigt Alter, Geschlecht, eigenes/Pension, Übung', /8 Jahre · Stute · ⭐ eigenes Pferd/.test(bl.textContent) && /Schwimmen|schwimmen/.test(bl.textContent), bl.textContent.slice(0, 200));
     ok('Zwei Plätze: zwei dran, eines wartet', bl.querySelectorAll('.aq-st.ok').length === 2 && bl.querySelectorAll('.aq-st.wt').length === 1, bl.innerHTML.length);
-    document.getElementById('nbZurueck').click(); ok('Zurück führt ins Whiteboard', !!document.getElementById('wbAquaPlan')); ok('Karte zeigt 2 von 2 belegt', /2 von 2 Aqua-Plätzen/.test(document.querySelector('.wb-ma-info').textContent), document.querySelector('.wb-ma-info').textContent);
+    document.querySelector('.info-zu').click(); ok('Zurück führt ins Whiteboard', !!document.getElementById('wbAquaPlan')); ok('Karte zeigt 2 von 2 belegt', /2 von 2 Aqua-Plätzen/.test(document.querySelector('.wb-ma-info').textContent), document.querySelector('.wb-ma-info').textContent);
     // „heute sicher“ schiebt Cora nach oben
     document.getElementById('wbAquaPlan').click(); const namen = () => [...document.querySelectorAll('.aq-text > b')].map(x => x.textContent);
     const vorher = namen().join(); document.querySelector('[data-aqs="2"]').click();
@@ -25,7 +25,7 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Nochmal tippen nimmt es zurück', (document.querySelector('[data-aqs="2"]').click(), namen()[0] !== 'Cora'));
     // Reha geht vor normalen Terminen
     const R2 = spiel.boxen[1].pferd; R2.aquaWunsch = { modus: 'reha' }; const bf = befundNeu(R2, 'sehne', 2, 'Test', 'du'); bf.diagnose = spiel.tag; bf.bemerkt = bf.bemerkt || { tag: spiel.tag, von: 'du' };
-    document.getElementById('nbZurueck').click(); const AP = aquaPlan(true); ok('Reha-Pferd (Berta) steht vor den normalen Terminen', AP.K[0].p === R2 || AP.K.findIndex(x => x.p === R2) <= 1, AP.K.map(x => x.p.name).join());
+    document.querySelector('.info-zu').click(); const AP = aquaPlan(true); ok('Reha-Pferd (Berta) steht vor den normalen Terminen', AP.K[0].p === R2 || AP.K.findIndex(x => x.p === R2) <= 1, AP.K.map(x => x.p.name).join());
     // aquaMorgen arbeitet nach demselben Plan
     spiel.boxen.forEach(bx => { if (bx.pferd) { bx.pferd.aquaSicher = 0; bx.pferd.aquaLog = []; } }); spiel.boxen[2].pferd.aquaSicher = spiel.tag; aquaMorgen();
     ok('Morgens: das „sichere“ Pferd (Cora) war im Wasser', aquaLetzt(spiel.boxen[2].pferd) === spiel.tag, JSON.stringify(spiel.boxen[2].pferd.aquaLog));

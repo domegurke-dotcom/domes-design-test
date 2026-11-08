@@ -48,9 +48,9 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number);
     // Whiteboard-Haken
     wbSicht = 'boxen'; zeigeBoxen(); const bw = document.querySelector('#nebenSchirm .wb');
     ok('Whiteboard: Haken je Pferd', bw && bw.querySelectorAll('[data-wbwu]').length >= 10, '' + (bw && bw.querySelectorAll('[data-wbwu]').length));
-    const cb = bw.querySelector('[data-wbwu="0:putzen"]'); ok('Haken Putzen bei Anna an', cb && cb.checked);
+    const cb = bw.querySelector('[data-wbwu="0:putzen+maehne"]'); ok('Haken Putzen bei Anna an', cb && cb.checked);
     cb.checked = false; cb.dispatchEvent(new Event('change', { bubbles: true })); ok('Haken abwählen speichert p.leist', A.leist.putzen === false);
-    ok('Haken bleiben nach Neuzeichnen', !document.querySelector('[data-wbwu="0:putzen"]').checked);
+    ok('Haken bleiben nach Neuzeichnen', !document.querySelector('[data-wbwu="0:putzen+maehne"]').checked);
     ok('Solarium-Haken bei Anna (Standard aus → hier explizit false)', !document.querySelector('[data-wbwu="0:solarium"]').checked);
     // Futterkammer
     spiel.shampoo = 0; const g0 = spiel.geld; const h = apothekeKammerHTML(); ok('Futterkammer: Kachel Pferdeshampoo', /data-shampookauf/.test(h) && /Pferdeshampoo/.test(h));

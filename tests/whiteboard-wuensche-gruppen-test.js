@@ -1,0 +1,23 @@
+// v975 (Dome 8.11.): „Dein Wunsch an die Mitarbeiter“ nach Zuständigen geordnet (Stalldienst, Pflege, Bewegung, Training); Füttern + Misten und Putzen + Mähne zusammen; leichte Arbeit nur mit Pferdewirt; externer Bereiter als eigene Zeile
+const { chromium } = require('playwright'); const path = require('path');
+(async () => { const b = await chromium.launch(); const errs = []; const pg = await b.newPage({ viewport: { width: 1366, height: 768 } }); pg.on('pageerror', e => errs.push(e.message));
+  await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(500);
+  await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('[data-stufe="exp"]'); await pg.click('#chLos'); await pg.waitForTimeout(250); await pg.click('#dlgKnoepfe button');
+  await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'W'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(250);
+  const R = await pg.evaluate(() => { const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (c ? '' : ' – ' + (x || ''))); document.getElementById('dlg').hidden = true; spiel.stufenAn = false; spiel.tippsAus = true; spiel.geld = 1e7;
+    const P = neuesPferd({ rasse: 'paint', geschlecht: 'Stute', alter: 8, name: 'Anna' }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); werteErgaenzen(P); spiel.boxen[0].pferd = P;
+    const ma = (typ, id, name) => { const x0 = bewerber(typ)[0]; (spiel.mitarbeiter = spiel.mitarbeiter || []).push({ id, typ, name, w: true, wissen: { ...x0.wissen }, eig: [], gehalt: x0.gehalt, ab: jzJetzt() - 2, bis: null }); };
+    const lies = () => { wbSicht = 'boxen'; wbWahl = null; zeigeWhiteboard(); const d = document.querySelector('details[data-wbwud="0"]'); return { gr: d ? [...d.querySelectorAll('.wb-wu-gk')].map(x => x.textContent.trim()) : [], keys: d ? [...d.querySelectorAll('[data-wbwu]')].map(x => x.dataset.wbwu.split(':')[1]) : [], text: d ? d.textContent : '' }; };
+    ma('stallbursche', 'sb1', 'Paul'); ma('pfleger', 'pf1', 'Jonas'); let r = lies();
+    ok('Gruppen Stalldienst und Pflege', r.gr.join('|').includes('Stalldienst') && r.gr.join('|').includes('Pflege') && !/Bewegung/.test(r.gr.join('|')), r.gr.join('|'));
+    ok('Füttern + Misten und Putzen + Mähne/Schopf sind je ein Haken', r.keys.includes('fuettern+misten') && r.keys.includes('putzen+maehne') && !r.keys.includes('fuettern') && !r.keys.includes('misten') && !r.keys.includes('maehne'), r.keys.join());
+    ok('Ohne Pferdewirt keine „leichte Arbeit“', !r.keys.includes('leicht'), r.keys.join());
+    const c = document.querySelector('[data-wbwu="0:fuettern+misten"]'); c.checked = false; c.dispatchEvent(new Event('change', { bubbles: true }));
+    ok('Sammel-Haken aus: Füttern UND Misten aus', P.leist && P.leist.fuettern === false && P.leist.misten === false, JSON.stringify(P.leist));
+    r = lies(); ok('Haken bleibt aus nach dem Neuzeichnen', !document.querySelector('[data-wbwu="0:fuettern+misten"]').checked); P.leist = {};
+    ma('pferdewirtHS', 'pw1', 'Amelie'); r = lies(); ok('Mit Pferdewirt: Gruppe „Bewegung“ mit leichter Arbeit', /Bewegung/.test(r.gr.join('|')) && r.keys.includes('leicht'), r.gr.join('|') + ' / ' + r.keys.join());
+    r = lies(); ok('Ohne Bereiter und ohne gebuchten Bereiter keine Trainingszeile', !/Training/.test(r.gr.join('|')) && !/externer Bereiter/.test(r.text));
+    P.bereiterTage = 4; r = lies(); ok('Externer Bereiter gebucht: eigene Zeile „externer Bereiter, 4 von … Tagen“', /Training/.test(r.gr.join('|')) && /externer Bereiter, 4 von/.test(r.text), r.text);
+    ma('bereiter', 'be1', 'Bert'); r = lies(); ok('Angestellter Bereiter: Haken „Training“, keine Zeile „externer Bereiter“', r.keys.includes('training') && !/externer Bereiter/.test(r.text), r.keys.join());
+    return out; });
+  R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(R.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

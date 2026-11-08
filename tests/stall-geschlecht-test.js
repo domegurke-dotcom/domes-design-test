@@ -29,5 +29,9 @@ const { chromium } = require('playwright'); const path = require('path');
     // Stallname
     const g = { gid: 'gnm', typ: 'stall', stufe: 1, zustand: 100, name: 'Sonnenhof-Stall', boxen: 6 }; gebaeude().push(g); spiel.boxen.forEach(bx => { if (!bx.quar && !bx.abfohl && !bx.paddock && !bx.offen) bx.geb = 'gnm'; });
     k = kopf(); ok('Eigener Stallname steht in der Kopfzeile', /Sonnenhof-Stall/.test(document.querySelector('.wb-kopfzeile').textContent), document.querySelector('.wb-kopfzeile') && document.querySelector('.wb-kopfzeile').textContent);
+    // Abfohlstall: keine Auswahl, immer erlaubt
+    const ab = JSON.parse(JSON.stringify(spiel.boxen[0])); ab.pferd = null; ab.fohlen = null; ab.abfohl = true; ab.geb = 'gAb'; spiel.boxen.push(ab); spiel.hof.stallGeschl = { 'abfohl|gAb': { s: false } };
+    ok('Abfohlstall: Hengst und Stute immer erlaubt (auch bei alter Regel)', stallErlaubt(ab, He) && stallErlaubt(ab, St));
+    wbSicht = 'boxen'; wbWahl = null; zeigeWhiteboard(); ok('Abfohlstall hat keine Geschlechter-Knöpfe', ![...document.querySelectorAll('[data-wbgs]')].some(x => /^abfohl/.test(x.dataset.wbgs)) && [...document.querySelectorAll('.wb-kopfzeile')].some(x => /Abfohl/.test(x.textContent) && !x.querySelector('[data-wbgs]')), '');
     return out; });
   R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(R.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

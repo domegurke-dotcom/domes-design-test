@@ -1,0 +1,31 @@
+// v975 (Dome 8.11.): Aqua-Plan-Fenster – Zeilen gedrückt halten und verschieben, Dringlichkeit 1–3 Punkte, Reihenfolge gilt am nächsten Morgen
+const { chromium } = require('playwright'); const path = require('path');
+(async () => { const b = await chromium.launch(); const errs = []; const pg = await b.newPage({ viewport: { width: 1100, height: 900 } }); pg.on('pageerror', e => errs.push(e.message));
+  await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(500);
+  await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('[data-stufe="exp"]'); await pg.click('#chLos'); await pg.waitForTimeout(250); await pg.click('#dlgKnoepfe button');
+  await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'W'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(250);
+  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.stufenAn = false; spiel.tippsAus = true; spiel.geld = 1e7; VET.verbotAb = 99;
+    ['Anna', 'Berta', 'Cora'].forEach((n, i) => { const P = neuesPferd({ rasse: 'paint', geschlecht: 'Stute', alter: 8, name: n }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); werteErgaenzen(P); P.pflege.gesundheit = 100; P.aquaWunsch = { modus: '1' }; spiel.boxen[i].pferd = P; });
+    const x0 = bewerber('physio')[0]; (spiel.mitarbeiter = spiel.mitarbeiter || []).push({ id: 'ph1', typ: 'physio', name: 'Petra', w: true, wissen: { ...x0.wissen }, eig: [], gehalt: x0.gehalt, ab: jzJetzt() - 2, bis: null });
+    gebaeude().push({ gid: 'gaq', typ: 'aqua', stufe: 3, zustand: 100 }); const R2 = spiel.boxen[1].pferd; R2.aquaWunsch = { modus: 'reha' }; const bf = befundNeu(R2, 'sehne', 4, 'Test', 'du'); bf.diagnose = spiel.tag; bf.bemerkt = bf.bemerkt || { tag: spiel.tag, von: 'du' };
+    const D = neuesPferd({ rasse: 'paint', geschlecht: 'Wallach', alter: 5, name: 'Dora' }); D.pflege = erzeugePflege(D); D.werte = D.werte || erzeugeWerte(D); werteErgaenzen(D); D.aquaWunsch = { modus: '3' }; D.aquaLog = [spiel.tag]; spiel.boxen[3].pferd = D;
+    wbSicht = 'boxen'; wbWahl = null; zeigeWhiteboard(); document.getElementById('wbAquaPlan').click(); });
+  const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (c ? '' : ' – ' + (x || '')));
+  const ok0 = gr => { ok('Pferd, das heute nicht dran ist (Dora), steht ausgegraut unten mit „alle 3 Tage“', gr.length === 1 && /Dora/.test(gr[0]) && /alle 3 Tage/.test(gr[0]) && /nicht dran/.test(gr[0]), gr.join('|')); };
+  ok0(await pg.$$eval('.aq-zeile.aus', x => x.map(e => e.textContent)));
+  const namen = () => pg.$$eval('.aq-text > b', x => x.map(e => e.textContent).join());
+  const v = await namen(); ok('Reha-Pferd Berta steht oben, Dora (nicht dran) nicht in der Reihenfolge', v.startsWith('Berta') && v.endsWith('Dora') === true, v); const oft = await pg.$$eval('.aq-zeile:not(.aus) .aq-oft', x => x.map(e => e.textContent).join()); ok('Jede Zeile nennt die Häufigkeit', oft === 'täglich,nur bei Reha,täglich' || /täglich/.test(oft) && /nur bei Reha/.test(oft), oft);
+  const dr = await pg.$$eval('.aq-zeile:not(.aus) .aq-dr', x => x.map(e => e.textContent.replace(/\s/g, '').length + ':' + e.querySelector('i').textContent.length));
+  ok('Dringlichkeit: Berta (Reha, Grad 4) 3 Punkte, die anderen (lange nicht dran) 2', dr[0] === '3:0' && dr[1] === '3:1', dr.join());
+  // Cora nach oben ziehen (gedrückt halten)
+  const boxen = await pg.$$eval('.aq-zeile:not(.aus)', x => x.map(e => { const r = e.getBoundingClientRect(); return { y: r.top + r.height / 2, x: r.left + 150, n: e.querySelector('.aq-text > b').textContent }; }));
+  const c = boxen.find(z => z.n === 'Cora'), top = boxen[0];
+  await pg.mouse.move(c.x, c.y); await pg.mouse.down(); await pg.waitForTimeout(550); ok('Nach 0,4 s gedrückt: Zeile hebt sich ab', !!(await pg.$('.aq-zeile.zieht')));
+  await pg.mouse.move(c.x, (c.y + top.y) / 2, { steps: 5 }); await pg.mouse.move(c.x, top.y - 20, { steps: 8 }); await pg.mouse.up(); await pg.waitForTimeout(150);
+  const n2 = await namen(); ok('Cora ist nach dem Ziehen ganz oben', n2.startsWith('Cora'), n2);
+  const slot = await pg.$eval('.aq-zeile:not(.aus)', e => e.textContent); ok('Cora hat Platz (dran)', /dran/.test(slot), slot);
+  await pg.screenshot({ path: process.env.BILD || 'NUL', fullPage: false });
+  await pg.evaluate(() => { document.getElementById('nbZurueck').click(); }); ok('Zurück ins Whiteboard', await pg.$('#wbAquaPlan') !== null);
+  const rang = await pg.evaluate(() => { const t0 = spiel.tag; naechsteNacht(); return spiel.boxen.slice(0, 3).map(bx => bx.pferd.name + ':' + (aquaLetzt(bx.pferd) >= t0 ? 'ja' : 'nein')).join(); });
+  ok('Am Morgen war Cora (oben) im Wasser', /Cora:ja/.test(rang), rang);
+  out.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(out.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

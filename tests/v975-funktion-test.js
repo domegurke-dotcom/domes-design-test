@@ -1,0 +1,22 @@
+// v975: Funktionsprobe über einen echten Tageswechsel – Aqua-Plan (Plätze, „heute sicher“) und Sammel-Wunsch Füttern + Misten
+const { chromium } = require('playwright'); const path = require('path');
+(async () => { const b = await chromium.launch(); const errs = []; const pg = await b.newPage({ viewport: { width: 1366, height: 768 } }); pg.on('pageerror', e => errs.push(e.message));
+  await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(500);
+  await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('[data-stufe="exp"]'); await pg.click('#chLos'); await pg.waitForTimeout(250); await pg.click('#dlgKnoepfe button');
+  await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'W'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(250);
+  const R = await pg.evaluate(() => { const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (c ? '' : ' – ' + (x || ''))); document.getElementById('dlg').hidden = true; spiel.stufenAn = false; spiel.tippsAus = true; spiel.geld = 1e7; VET.verbotAb = 99;
+    const mk = (name) => { const P = neuesPferd({ rasse: 'paint', geschlecht: 'Stute', alter: 8, name }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); werteErgaenzen(P); P.pflege.gesundheit = 100; P.aquaWunsch = { modus: '1' }; return P; };
+    ['Anna', 'Berta', 'Cora'].forEach((n, i) => { spiel.boxen[i].pferd = mk(n); });
+    const x0 = bewerber('physio')[0]; (spiel.mitarbeiter = spiel.mitarbeiter || []).push({ id: 'ph1', typ: 'physio', name: 'Petra', w: true, wissen: { ...x0.wissen }, eig: [], gehalt: x0.gehalt, ab: jzJetzt() - 2, bis: null });
+    gebaeude().push({ gid: 'gaq', typ: 'aqua', stufe: 1, zustand: 100 });
+    const plaetze = AQUA.plaetze[0], proTag = PHYSIO.proTag[0], P = aquaPlan(true);
+    ok('Plan hat Plätze', P && P.slots.length >= 1, P && P.slots.length);
+    const Cora = spiel.boxen[2].pferd; Cora.aquaSicher = spiel.tag;
+    const P2 = aquaPlan(true); ok('„heute sicher“: Cora steht an erster Stelle und hat einen Platz', P2.V[0].x.p === Cora && !!P2.V[0].s, P2.V.map(v => v.x.p.name + (v.s ? '+' : '-')).join());
+    const erwartet = P2.V.filter(v => v.s).map(v => v.x.p.name).sort().join(); const tag0 = spiel.tag;
+    naechsteNacht(); spiel.tutorial = false;
+    const im = spiel.boxen.slice(0, 3).map(bx => bx.pferd).filter(p => p && aquaLetzt(p) >= tag0).map(p => p.name).sort().join();
+    ok('Tageswechsel: genau die Pferde mit Platz waren im Wasser', im === erwartet && erwartet.includes('Cora'), im + ' / ' + erwartet);
+    const ohne = spiel.boxen.slice(0, 3).map(bx => bx.pferd).filter(p => p && aquaLetzt(p) < tag0).length; ok('Pferde ohne Platz: ' + ohne + ' (Plätze ' + P2.slots.length + ', Pferde 3)', ohne === Math.max(0, 3 - P2.slots.length));
+    return out; });
+  R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(R.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

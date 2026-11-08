@@ -21,7 +21,7 @@ const { chromium } = require('playwright'); const path = require('path');
     // 3. Beides, gemeinsame Kapazität: Box 3 zählt nicht doppelt
     spiel.boxen[0].maPlan = {}; spiel.boxen[1].maPlan = {}; wbAnwenden('m:pw1', 'b:2'); [...document.querySelectorAll('#dlgKnoepfe button')].find(x => /Beides/.test(x.textContent)).click();
     ok('Beides gesetzt', spiel.boxen[2].maPlan.stall === 'pw1' && spiel.boxen[2].maPlan.pfleger === 'pw1', JSON.stringify(spiel.boxen[2].maPlan));
-    wbSicht = 'boxen'; wbWahl = null; zeigeWhiteboard(); const kap = document.querySelector('.wb-ma[data-wbq="m:pw1"] .wb-kap'); ok('Anzeige: jede Box nur einmal gezählt (3 Boxen = 3, nicht 6), beide Symbole', kap && /3 von/.test(kap.textContent) && /🧹/.test(kap.textContent) && /🧽/.test(kap.textContent), kap && kap.textContent);
+    wbSicht = 'boxen'; wbWahl = null; zeigeWhiteboard(); const kap = document.querySelector('.wb-ma[data-wbq="m:pw1"] .wb-kap'); ok('Anzeige nach Tätigkeiten: Box mit Füttern und Putzen = von 6, beide Symbole', kap && /von 6 Tätigkeiten/.test(kap.textContent) && /🧹/.test(kap.textContent) && /🧽/.test(kap.textContent), kap && kap.textContent);
     ok('Beide Zeilen im Whiteboard sichtbar', document.querySelectorAll('.wb-ma-zeile').length >= 2, document.querySelectorAll('.wb-ma-zeile').length);
     // 4. Stallbursche unverändert: keine Frage
     const x1 = bewerber('stallbursche')[0]; spiel.mitarbeiter.push({ id: 'sb1', typ: 'stallbursche', name: 'Paul', w: false, wissen: { ...x1.wissen }, eig: [], gehalt: x1.gehalt, ab: jzJetzt() - 2, bis: null });

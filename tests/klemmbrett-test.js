@@ -47,7 +47,7 @@ const R = [], ok = (n, v, d) => R.push((v ? '✓ ' : '✗ ') + n + (v || d == nu
   await ziel('Weidegang', `document.getElementById('info').dataset.fenster === 'orte' && !!document.querySelector('#info [data-ort="weide"], #info [data-okort="weide"]')`, 'Weidegang → Orte (Weide)');
   if (Z1.some(z => /Futterplan nach Wunsch/.test(z.txt) && !z.aus)) await ziel('Futterplan nach Wunsch', `!document.getElementById('dlg').hidden && /Fütterung|Futter/.test(document.getElementById('dlgInhalt').innerText)`, 'Futterplan nach Wunsch → Fütterung');
   await ziel('Pflege', `putzModus === true && !!document.querySelector('[data-bxtool]')`, 'Pflege → Putz-Werkzeuge');
-  if (Z1.some(z => /Einstreu/.test(z.txt) && !z.aus)) await ziel('Einstreu', `!!document.querySelector('#einstreuAendern.bxblink')`, 'bessere Einstreu → Einstreu ändern');
+  if (Z1.some(z => /Einstreu/.test(z.txt) && !z.aus)) await ziel('Einstreu', `!!document.querySelector('#dlg:not([hidden]) #dlgInhalt')`, 'bessere Einstreu → Einstreu ändern');
   // alle Zeilen haben ein bekanntes Ziel
   const bek = ['heu', 'krippe', 'wasser', 'mist', 'putz', 'gesund', 'besitzer', 'orte', 'fuettern', 'einstreu'];
   ok('jede Klemmbrett-Zeile hat ein bekanntes Ziel', [...Z0, ...Z1].every(z => bek.includes(z.kb)), JSON.stringify([...Z0, ...Z1].filter(z => !bek.includes(z.kb))));

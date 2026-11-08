@@ -51,7 +51,7 @@ const [W, H] = (process.argv[2] || '844x390').split('x').map(Number), ORD = proc
     window.paarBeziehung = echt;
     { const w2 = weiden().find(w => w.wid === 'w2'); wbModusSetzen('w2', 'taeglich'); zeigeBoxen(); ok('täglich: eine Spalte, alle Pferde jeden Tag', !!document.querySelector('[data-wbz="w:w2:t"]') && !document.querySelector('[data-wbz="w:w2:a"]') && A.weidegang === 'taeglich' && C.weidegang === 'taeglich'); wbAnwenden('p:1', 'w:w2:t'); ok('auf „täglich“ legen = jeden Tag', Bp.auslaufZiel === 'w2' && Bp.weidegang === 'taeglich' && !Bp.weideTag); wbAnwenden('c:1:w2:t', 'drin'); ok('wieder in die Box', !Bp.weidegang); wbModusSetzen('w2', 'jeden2'); zeigeBoxen(); ok('Wechsel auf „alle 2 Tage“ verteilt Pferde auf genau einen Tag', [A, C].every(p => p.weidegang === 'jeden2' && (p.weideTag === 'a' || p.weideTag === 'b')) && A.weideTag !== C.weideTag, A.weideTag + C.weideTag); ok('alle 2 Tage: zwei Hälften', !!document.querySelector('[data-wbz="w:w2:a"]') && !!document.querySelector('[data-wbz="w:w2:b"]')); }
     wbSicht = 'boxen'; zeigeBoxen();
-    ok('Mitarbeiter-Reihe mit „x von y Boxen“', /von 3 Boxen/.test(document.getElementById('wbMaReihe').textContent), document.getElementById('wbMaReihe').textContent.slice(0, 80));
+    ok('Mitarbeiter-Reihe mit „x von y Boxen“', /von 3 Tätigkeiten/.test(document.getElementById('wbMaReihe').textContent), document.getElementById('wbMaReihe').textContent.slice(0, 80));
     return out; });
   out.push(...R);
   // Antippen: Mitarbeiter wählen, dann Box antippen

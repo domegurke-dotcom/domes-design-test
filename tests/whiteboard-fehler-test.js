@@ -16,7 +16,7 @@ const { chromium } = require('playwright'); const path = require('path');
     const z = maZuteilung('stall'); ok('Fest zugeteilt + heute auf der Weide: zählt als versorgt', z.some(x => x.i === 0 && x.m === m), JSON.stringify(z.map(x => x.i)));
     hofReiter = 'hof'; spiel.stallAnsicht = 'board'; wbSicht = 'boxen'; zeigeWhiteboard();
     const t = document.getElementById('nebenSchirm').innerText; ok('Kein „heute niemand“', !/heute niemand/.test(t), t.slice(0, 200));
-    ok('Zähler zeigt 2 von …', /2 von \d+ Boxen/.test(t), (t.match(/\d+ von \d+ Boxen/) || [''])[0]);
+    ok('Zähler zeigt 2 von …', /2 von \d+ Tätigkeit/.test(t), (t.match(/\d+ von \d+ Tätigkeit/) || [''])[0]);
     // automatisch zugeteilt bei Bea → ✕ → niemand
     const x = document.querySelector('[data-wbloes="1:stall"]'); ok('✕ auch beim automatisch zugeteilten Mitarbeiter', !!x, '');
     if (x) { x.click(); ok('Box 2: niemand', spiel.boxen[1].maPlan && spiel.boxen[1].maPlan.stall === '-' && !maZuteilung('stall').some(y => y.i === 1), JSON.stringify(spiel.boxen[1].maPlan));

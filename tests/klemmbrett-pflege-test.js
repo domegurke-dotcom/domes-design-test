@@ -1,0 +1,23 @@
+// v969 (Dome 8.11., Aufnahmen 19/20): Ring „Pflege“ zählt wie das Klemmbrett; Behandlung des Befunds ist abgehakt, wenn heute etwas Wirksames gegeben wurde
+const { chromium } = require('playwright'); const path = require('path');
+(async () => { const b = await chromium.launch(); const errs = []; const pg = await b.newPage({ viewport: { width: 1366, height: 768 } }); pg.on('pageerror', e => errs.push(e.message));
+  await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(500);
+  await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('[data-stufe="exp"]'); await pg.click('#chLos'); await pg.waitForTimeout(250); await pg.click('#dlgKnoepfe button');
+  await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'W'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(250);
+  const R = await pg.evaluate(() => { const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (c ? '' : ' – ' + (x || ''))); document.getElementById('dlg').hidden = true; spiel.stufenAn = false; spiel.tippsAus = true; spiel.geld = 1e6;
+    const P = neuesPferd({ rasse: 'paint', geschlecht: 'Stute', alter: 8, name: 'Doutzen' }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); werteErgaenzen(P); spiel.boxen[0].pferd = P; const bx = spiel.boxen[0];
+    bx.krippeVoll = true; bx.kraftVoll = true; bx.wasserTag = spiel.tag; bx.mistig = false; P.geputzt = { tag: spiel.tag, mit: ['buerste', 'kamm'] }; P.dreck = { fell: 0, maehne: 0 }; delete P.ausgekratzt;
+    const bf = befundNeu(P, 'lahmheit', 1, 'AKU', 'du'); bf.diagnose = spiel.tag; bf.bemerkt = bf.bemerkt || { tag: spiel.tag, von: 'du' };
+    const kb = () => klemmbrettListe(P, bx).filter(x => x[3] !== 'vorsorge'), zeile = t => kb().find(x => new RegExp(t).test(x[1]));
+    const D = () => bxDaten(P, bx).dritte;
+    ok('Hufe nicht ausgekratzt → Zeile offen, Ring nicht voll', zeile('Hufe') && !zeile('Hufe')[2] && D().n < D().m, JSON.stringify(D()));
+    ok('Ring zählt dasselbe wie das Klemmbrett', D().m === kb().length && D().n === kb().filter(x => x[2]).length, JSON.stringify(D()) + ' / ' + kb().length);
+    ok('Behandlung Lahmheit noch offen (nichts gegeben)', zeile('Behandlung') && !zeile('Behandlung')[2]);
+    ok('Tierarzt-Symbol rot (Befund, heute nichts Wirksames)', bxAmpel('tierarzt', bxDaten(P, bx), bx) === 'r', bxAmpel('tierarzt', bxDaten(P, bx), bx));
+    behHeute(P).a.schritt = 1; ok('Schritt führen (schadet): Tierarzt bleibt rot', bxAmpel('tierarzt', bxDaten(P, bx), bx) === 'r'); ok('Schritt führen ist keine Hilfe bei Lahmheit → bleibt offen', !zeile('Behandlung')[2]);
+    behHeute(P).a.kuehlen = 1; ok('Kühlen gegeben → Behandlung abgehakt', zeile('Behandlung')[2] === true);
+    ok('Kühlen gegeben: Tierarzt-Symbol gelb', bxAmpel('tierarzt', bxDaten(P, bx), bx) === 'y', bxAmpel('tierarzt', bxDaten(P, bx), bx));
+    delete behHeute(P).a.kuehlen; P.boxenruhe = true; ok('Boxenruhe läuft → Behandlung abgehakt', zeile('Behandlung')[2] === true); P.boxenruhe = false;
+    P.ausgekratzt = spiel.tag; behHeute(P).a.schmerzmittel = 3; ok('Alles erledigt → Ring voll', D().n === D().m && D().m >= 6, JSON.stringify(D()));
+    return out; });
+  R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(R.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

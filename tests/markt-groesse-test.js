@@ -11,6 +11,7 @@ const { chromium } = require('playwright'); const path = require('path');
       ok(`${name}: Fohlenauktion ` + (s === 1 || s === 2 ? '10–20' : '(keine)'), s === 1 || s === 2 ? zw(M.fohlen.length, 10, 20) : M.fohlen.length === 0, M.fohlen.length); ok(`${name}: Tierschutz 2–4`, zw(M.notfall.length, 2, 4), M.notfall.length); }
     spiel.tag = 1; while (datum().s !== 1) spiel.tag++; spiel.markt = null; marktNeu(); const g = gestuetPferde('araber'); ok('Gestüt 3–5 je Rasse', zw(g.length, 3, 5), g.length);
     const M2 = marktNeu(), L2 = [...M2.auktion.map(x => x.pferd.id), ...M2.fohlen.map(x => x.pferd.id), ...M2.privat.map(h => h.id), ...marktpferde().map(h => h.id)]; ok('Keine doppelten Pferde-IDs', new Set(L2).size === L2.length, L2.length + ' / ' + new Set(L2).size);
+    spiel.rennKauf = []; verkaufsrennenFremde({ name: 'Testrennen' }, { name: 'VR' }, Math.random, false); ok('Verkaufsrennen: 6–8 fremde Starter', zw(spiel.rennKauf.length, 6, 8), spiel.rennKauf.length);
     ['privat', 'haendler', 'auktion', 'fohlen', 'gestuet', 'tierschutz'].forEach(k => { zeigeSchirm(null); zeigeMarkt(k); ok('Rubrik ' + k + ' wird angezeigt', document.querySelectorAll('#nebenSchirm .paar').length > 0 || k === 'gestuet', k); });
     return out; });
   R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(R.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

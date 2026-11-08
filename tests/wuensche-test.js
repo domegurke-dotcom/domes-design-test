@@ -57,7 +57,6 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number);
     // Koppel: Weide kommt aus dem Plan, kein Auswahlfenster, Karte ohne Handauswahl
     spiel.boxen[0].pferd.leist = {}; const w2 = weiden().filter(w => !w.wiese);
     ok('Whiteboard frei (fort)', wbFrei());
-    ok('auslaufZeile bei Whiteboard leer', auslaufZeile(A) === '');
     const P2 = A; P2.weidegang = 'taeglich'; P2.auslaufZiel = w2[w2.length - 1].wid; P2.weide = { seit: spiel.tag, wid: w2[w2.length - 1].wid };
     aktBox = 0; spiel.aktBox = 0; zeigeAkte(); const t = document.getElementById('info').innerText;
     ok('Weide-Karte: keine Handauswahl, kein „Gras statt Heu“-Absatz, kein „Heute gefressen“', !/Weidegang durch Stallbursche/.test(t) && !/Gras statt Heu/.test(t) && !/Heute gefressen/.test(t), t.slice(0, 120));

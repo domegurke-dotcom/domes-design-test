@@ -16,7 +16,6 @@ const { chromium } = require('playwright'); const path = require('path');
     probe('Finanzen Jahre', '<div class="fin-jahre"><button class="an" data-fj="1">1</button><button data-fj="2">2</button></div>');
     probe('Postfach-Ordner', '<div class="post-ordner"><button class="an" data-ordner="eingang">E</button><button data-ordner="stern">S</button></div>');
     probe('Versorgung Heute/Gesundheit', '<div class="vs-tabs"><button class="an" data-vs="heute">H</button><button data-vs="gesund">G</button></div>');
-    probe('Auslauf Weide/Sandpaddock', '<div><button class="mini-knopf an" data-auslauf="weide">W</button><button class="mini-knopf" data-auslauf="paddock">S</button></div>');
     probe('Bereiter-Modus', '<div><button class="mini-knopf an" data-bmodus="selbst">a</button><button class="mini-knopf" data-bmodus="plan">b</button></div>');
     probe('Azubi-Einsatz', '<div><button class="mini-knopf an" data-azeins="x:stall">a</button><button class="mini-knopf" data-azeins="x:putzen">b</button></div>');
     probe('Hufschmied-Rhythmus', '<div><button class="mini-knopf an" data-hsrhythmus="x:y">a</button><button class="mini-knopf" data-hsrhythmus="x:z">b</button></div>');

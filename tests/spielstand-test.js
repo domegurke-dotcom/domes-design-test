@@ -78,7 +78,7 @@ const URL_ = 'file://' + path.resolve(__dirname, '..', 'index.html');
       const [fc] = await Promise.all([pg.waitForEvent('filechooser'), knopf('Speicherplatz ' + n)]); await fc.setFiles(f); await pg.waitForTimeout(300); return dlg(); };
     ok('Laden: kaputtes JSON → Meldung', /kein Zuchtstall-Spielstand/.test(await laden(1, schreibe('k.json', '{ kaputt'))));
     ok('Laden: vor dem Hof-Ausbau → Meldung', /vor dem Hof-Ausbau/.test(await laden(1, schreibe('a.json', { ...D, spiel: { ...D.spiel, hofAusbau: undefined } }))));
-    ok('Laden: neuere Version → Meldung', /neueren Spielversion/.test(await laden(1, schreibe('n.json', { ...D, version: '999' }))));
+    ok('Laden: neuere Version → Meldung', /neueren Spielversion/.test(await laden(1, schreibe('n.json', { ...D, version: '99999' }))));
     const v = await laden(1, schreibe('o.json', { ...D, spiel: { ...D.spiel, tag: 0 } })); await knopf('Ja, laden');
     ok('Laden: Vorschau, ältere Datei → „schon weiter … Trotzdem laden?“', /Vorschau/.test(v) && /schon weiter/.test(await dlg()));
     await knopf('Abbrechen');

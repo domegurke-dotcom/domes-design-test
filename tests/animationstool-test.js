@@ -1,7 +1,9 @@
 // Animationstool (animationstool/index.html): Vorlagen passen zu den PDF-Stützfolgen, Bedienung mit echten Mausklicks.
 // Aufruf: node tests/animationstool-test.js <Scratchpad-Ordner für Bilder und die gespeicherte Datei>
 const { chromium } = require('playwright'); const path = require('path'); const fs = require('fs');
-(async () => { const out = process.argv[2] || fs.mkdtempSync(path.join(require('os').tmpdir(), 'animtest-'));   // ohne Ordner-Argument: Systemordner statt „undefined/“ im Projekt const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 1366, height: 768 }, acceptDownloads: true }); const p = await ctx.newPage();
+(async () => { const out = process.argv[2] || fs.mkdtempSync(path.join(require('os').tmpdir(), 'animtest-'));
+ /* ohne Ordner-Argument: Systemordner statt „undefined/“ im Projekt */
+ const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 1366, height: 768 }, acceptDownloads: true }); const p = await ctx.newPage();
  const fehler = []; p.on('pageerror', e => fehler.push(e.message));
  const ok = (n, c) => console.log((c ? '✓ ' : '✗ ') + n);
  await p.goto('file:///' + path.resolve('animationstool/index.html').split(String.fromCharCode(92)).join('/')); await p.waitForTimeout(600);

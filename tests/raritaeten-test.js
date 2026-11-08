@@ -48,7 +48,7 @@ const ORDNER = process.argv[2];
   const B = await pg.evaluate(() => { const a = Object.values(spiel.rar.auk || {})[0]; return a ? { fuehrt: a.fuehrt, gebot: a.gebot, pferdGespeichert: JSON.stringify(spiel.rar).includes('"werte"'), id: a.id, dauer: a.endeTag - spiel.tag, tpj: tpj() } : null; });
   ok('Auktion läuft ab dem ersten Gebot eine Jahreszeit (Tage)', B && B.dauer === B.tpj, B && B.dauer + ' Tage');
   ok('Gebot abgegeben, du führst', B && B.fuehrt === 'du', JSON.stringify(B)); ok('Pferd nicht im Spielstand gespeichert', B && !B.pferdGespeichert);
-  const C = await pg.evaluate(id => { const vor = spiel.geld, a = spiel.rar.auk[id]; a.max = 0; const nacht = () => { spiel.boxen.forEach(x => { x.krippeVoll = !!x.pferd; x.mistig = false; }); naechsteNacht(); document.getElementById('dlg').hidden = true; };
+  const C = await pg.evaluate(id => { const vor = spiel.geld, a = spiel.rar.auk[id]; a.max = 1; const nacht = () => { spiel.boxen.forEach(x => { x.krippeVoll = !!x.pferd; x.mistig = false; }); naechsteNacht(); document.getElementById('dlg').hidden = true; };
     const ende = a.endeTag; let vorEnde = null; while (spiel.tag < ende) { if (spiel.tag === ende - 1) vorEnde = !a.vorbei; nacht(); }
     const box = spiel.boxen.find(x => x.pferd && x.pferd.id === id); return { vorEnde, im: !!box, quar: box && !!box.quar, bezahlt: Math.round(vor - spiel.geld), gebot: a.gebot, weg: spiel.rar.weg.includes(id), brief: spiel.post.some(x => /^Zuschlag/.test(x.betreff)),
       fin: Object.values(spiel.finanzSaison || {}).some(J => Object.values(J).some(S => Object.keys(S).some(k => /^Raritäten-Markt: /.test(k) && !/Eintritt/.test(k)))) }; }, B.id);
@@ -62,7 +62,7 @@ const ORDNER = process.argv[2];
   // Dome 20.10.: Gebot am letzten Frühlingstag läuft über das Marktjahr hinaus weiter
   const U = await pg.evaluate(() => { const nacht = () => { spiel.boxen.forEach(x => { x.krippeVoll = !!x.pferd; x.mistig = false; }); naechsteNacht(); document.getElementById('dlg').hidden = true; };
     let n = 0; while (!(datum().s === 0 && datum().t === tpj()) && n++ < 400) nacht();
-    spiel.geld = 500000; const h = rarAngebot()[5], a = rarAuktion(h); a.gebot = h.preis; a.gebote = 1; a.duMax = h.preis; a.fuehrt = 'du'; a.duGeboten = true; a.hid = aktivHid(); a.endeTag = spiel.tag + tpj(); a.max = 0;
+    spiel.geld = 500000; const h = rarAngebot()[5], a = rarAuktion(h); a.gebot = h.preis; a.gebote = 1; a.duMax = h.preis; a.fuehrt = 'du'; a.duGeboten = true; a.hid = aktivHid(); a.endeTag = spiel.tag + tpj(); a.max = 1;
     const id = h.id, mj0 = spiel.rar.mj; nacht(); const neuMj = spiel.rar.mj !== mj0, laeuft = !!spiel.rar.auk[id] && !spiel.rar.auk[id].vorbei, sichtbar = (zeigeMarkt('raritaeten'), document.getElementById('nebenSchirm').textContent.includes(h.name));
     while (spiel.tag < spiel.rar.auk[id].endeTag) nacht();
     return { neuMj, laeuft, sichtbar, im: spiel.boxen.some(x => x.pferd && x.pferd.id === id) }; });

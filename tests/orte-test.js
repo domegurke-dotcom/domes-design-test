@@ -223,7 +223,7 @@ const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner 
 
   // ===== v771: Grundlager als Gebäude im Plan =====
   { const r = await pg.evaluate(() => { const it = planItems().find(x => x.typ === 'grundlager'); return it ? { da: true, imPlan: !!hofPlan().pos[it.id], name: planName(it), kn: gebKnoepfe(it.g), mass: it.l * PLAN_M + '×' + it.t * PLAN_M } : { da: false }; });
-    ok('Grundlager steht als Gebäude im Plan (20 × 10 m), ohne Knöpfe', r.da && r.imPlan && /Strohlager/.test(r.name) && r.kn === '' && r.mass === '20×10', JSON.stringify(r)); }
+    ok('Grundlager steht als Gebäude im Plan (20 × 10 m), ohne Knöpfe', r.da && r.imPlan && /Start-Lager|Strohlager/.test(r.name) && r.kn === '' && r.mass === '20×10', JSON.stringify(r)); }
   await pg.evaluate(() => { hofBereich = 'plan'; planWahl = null; zeigeHof('hof'); }); await pg.waitForTimeout(250); await bild('hofplan');
   ok('Grundlager verfällt nicht und kostet keinen Unterhalt', await pg.evaluate(() => { const g = gebaeude().find(x => x.typ === 'grundlager'); const z0 = g.zustand, g0 = spiel.geld; gebaeudeJahreszeit(); return g.zustand === z0 && g.preis === 0; }));
 

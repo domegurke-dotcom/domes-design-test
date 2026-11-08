@@ -10,12 +10,17 @@ const { chromium } = require('playwright'); const path = require('path');
   const ziehen = async (pg, gid) => { const el = await pg.$(`#planSvg [data-pit="${gid}"]`); if (!el) return false; const bb = await el.boundingBox(); await pg.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2); await pg.mouse.down(); await pg.waitForTimeout(250); await pg.mouse.move(bb.x + bb.width / 2 + 40, bb.y + bb.height / 2 + 20, { steps: 5 }); await pg.waitForTimeout(100); await pg.mouse.up(); await pg.waitForTimeout(250); return true; };
   const frisch = (pg, typ, stufe, gid) => pg.evaluate(([typ, stufe, gid]) => { document.getElementById('dlg').hidden = true; spiel.tippsAus = true; spiel.stufenAn = false; spiel.geld = 1e8; VET.verbotAb = 99;
     const alt = gebaeude().filter(x => x.typ === typ); alt.forEach(a => gebaeude().splice(gebaeude().indexOf(a), 1)); const B = BAUTEN[typ], g = { gid, typ, stufe, zustand: 100 }; if (B.jeBox) g.boxen = B.boxen || B.schritt || 1; gebaeude().push(g);
+    if (typ === 'ovalbahn' || typ === 'rennbahn') { spiel.hof.bauHa = 8; planLandAbgleich(hofPlan()); }   // große Anlagen brauchen mehr Bauland
     planAutoSetzen(); Object.keys(hofPlan().pos).forEach(k => { if (k !== gid) delete hofPlan().pos[k]; }); zeigeHof('hof'); const t = [...document.querySelectorAll('button')].find(x => /Hofplan/.test(x.textContent) && x.offsetParent); if (t) t.click(); return !!hofPlan().pos[gid]; }, [typ, stufe, gid]);
   const meld = (ok, text, x) => { n++; console.log((ok ? '✓ ' : '✗ ') + text + (ok || !x ? '' : ' – ' + x)); if (!ok) bad++; };
   for (const typ of typen) for (const stufe of [1, 2]) {
     const gid = 'gx_' + typ, pg = await neuSpiel(); if (!(await frisch(pg, typ, stufe, gid))) { console.log('– ' + typ + ' Stufe ' + stufe + ': nicht im Plan setzbar'); await pg.close(); continue; } await pg.waitForTimeout(300);
     const art = await pg.evaluate(([gid]) => { const g = gebaeude().find(x => x.gid === gid); if (umbauSperre(g)) return 'gesperrt'; return planAusbauMitBlaupause(g) ? 'blaupause' : 'direkt'; }, [gid]), name = `${typ} Stufe ${stufe} (Ausbau ${art})`;
-    if (art === 'gesperrt') console.log('– ' + typ + ' Stufe ' + stufe + ': Ausbau gesperrt (z. B. höchste Stufe)');
+    if (art === 'gesperrt' && typ === 'grundlager') {   // Start-Lager: kein Ausbau, dafür Aufwerten (Heu- und Strohlager)
+      await pg.evaluate(id => { planWahl = id; planNeu(); }, gid); await ziehen(pg, gid); await pg.evaluate(id => { planWahl = id; planNeu(); }, gid); await pg.waitForTimeout(250);
+      const k = await pg.evaluate(() => { const i = [...document.querySelectorAll('.plan-radial .rl')].findIndex(x => /Aufwerten/.test(x.textContent)); if (i < 0) return 'kein Aufwerten-Knopf'; document.querySelectorAll('.plan-radial [data-ri]')[i].click(); return 'ok'; }); await pg.waitForTimeout(300);
+      meld(k === 'ok' && await pg.evaluate(() => !document.getElementById('dlg').hidden), name + ': Aufwerten nach dem Ziehen öffnet den Bau-Dialog des Heu- und Strohlagers', k); }
+    else if (art === 'gesperrt') console.log('– ' + typ + ' Stufe ' + stufe + ': Ausbau gesperrt (z. B. höchste Stufe)');
     else if (art === 'blaupause') {
       await pg.evaluate(id => { planWahl = id; planAusbauStart(gebaeude().find(x => x.gid === id)); }, gid); await pg.waitForTimeout(250); await ziehen(pg, gid);
       const z = await pg.evaluate(id => ({ vor: !!planVorschau && planVorschau.id === id, wahl: planWahl === id, ok: !!document.querySelector('[data-pvok]') }), gid); meld(z.vor && z.wahl && z.ok, name + ': nach dem Ziehen bleibt die Blaupause mit Bestätigen-Knopf', JSON.stringify(z));

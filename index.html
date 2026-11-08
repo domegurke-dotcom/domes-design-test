@@ -170,7 +170,7 @@
   .paar-liste { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 8px; }
   @media (max-width: 420px) { .paar-liste { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } }
   .paar { display: flex; flex-direction: column; padding: 0; border: 0; background: none; font: inherit; cursor: pointer; text-align: center; min-width: 0; }
-  .anh-panel { grid-column: 1/-1; width: 100%; max-width: 760px; margin: 0 auto; } .anh-wahl { position: relative; border-radius: 12px; outline: 3px solid transparent; outline-offset: 2px; } .anh-wahl.markiert { outline-color: var(--akzent); } .anh-wahl .haken { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 2px solid var(--akzent); color: var(--akzent); font-weight: 800; display: flex; align-items: center; justify-content: center; pointer-events: none; } .anh-wahl.markiert .haken { background: var(--akzent); color: #fff; } .anh-liste { margin-bottom: 10px; }
+  .anh-panel { grid-column: 1/-1; width: 100%; max-width: 760px; margin: 0 auto; } .anh-wahl { position: relative; border-radius: 12px; outline: 3px solid transparent; outline-offset: 2px; } .anh-wahl.markiert { outline-color: var(--akzent); } .anh-wahl.garantie { outline-color: #2e8b3d; } .paar.garantie .paar-bild { border-color: #2e8b3d; box-shadow: 0 0 0 3px #2e8b3d; } .garantie-mark { color: #2e8b3d; font-weight: 700; } .anh-wahl .haken { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 2px solid var(--akzent); color: var(--akzent); font-weight: 800; display: flex; align-items: center; justify-content: center; pointer-events: none; } .anh-wahl.markiert .haken { background: var(--akzent); color: #fff; } .anh-liste { margin-bottom: 10px; }
   .paar-bild { display: block; aspect-ratio: 1; overflow: hidden; background: linear-gradient(#dff1fa, #f4fbff); border: 4px solid #6b4226; border-radius: 8px 8px 0 0;
     box-shadow: inset 0 0 0 1px #3d2414; }
   .paar-bild svg { display: block; width: 100%; height: 100%; }
@@ -1340,7 +1340,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "959";
+  const SPIEL_VERSION = "960";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1348,12 +1348,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=959"></script>
-<script src="pferd.js?v=959"></script>
-<script src="boxstufen.js?v=959"></script>
-<script src="kopfneu.js?v=959"></script>
-<script src="waschbild.js?v=959"></script>
-<script src="avatare.js?v=959"></script>
+<script src="lz-string.min.js?v=960"></script>
+<script src="pferd.js?v=960"></script>
+<script src="boxstufen.js?v=960"></script>
+<script src="kopfneu.js?v=960"></script>
+<script src="waschbild.js?v=960"></script>
+<script src="avatare.js?v=960"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2859,10 +2859,23 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       : `<br><br>💞 <b>Wieder decken:</b> Die <b>Fohlenrosse</b> kommt etwa 7–10 Tage nach der Geburt – ab morgen kann sie wieder gedeckt werden (etwas kleinere Chance), sonst bei jeder weiteren Rosse in der Decksaison (Frühling und Sommer). Das Fohlen bleibt dabei bei ihr.`;
   }
   // v956 (Dome 8.11.): der Kern des Deckens (Kosten buchen, Ergebnis auswürfeln, Verletzung) – für den Einzelablauf (verpaaren) und den Pferdeanhänger „Deckstation“ (mehrere Stuten)
+  // v959 (Dome 8.11.): Deckgarantie – Nachdecken in derselben Decksaison (Frühling/Sommer) beim selben Hengst der Deckstation kostet keine zweite Decktaxe; wird die Stute bis zum Saisonende nicht tragend, gibt es die Decktaxe zurück (wie Trächtigkeitsprämie/Lebendfohlengarantie in echten Deckverträgen)
+  const deckHid = h => h.id || h.name;
+  function nachdeckFrei(stute, hengst) { const G = stute && stute.deckGar, d = datum(); return !!G && istDeckstation(hengst) && G.vh === deckHid(hengst) && G.jahr === d.j && d.s <= 1 && !stute.traechtig; }
+  function deckGarantieTag() {   // jede Nacht: Erstattung erst, wenn die Decksaison vorbei ist UND der Spieler sicher weiß, dass die Stute nicht tragend ist (Trächtigkeitsnachweis oder Rosse); ungewiss = keine Erstattung
+    const d = datum();
+    alleEigenenPferde().forEach(({ p }) => { const G = p.deckGar; if (!G || fremd(p)) return;
+      const vorbei = G.jahr < d.j || d.s >= 2;
+      if (p.traechtig || (p.gedeckt && p.gedeckt.erfolg)) { if (vorbei) delete p.deckGar; return; }   // tragend (oder noch unklar, aber in Wahrheit tragend): erfüllt
+      if (!vorbei || p.gedeckt) return;   // Saison läuft noch bzw. noch nicht untersucht/keine Rosse: der Spieler weiß es nicht sicher
+      delete p.deckGar;
+      buchen(G.taxe, `Decktaxe zurück: ${p.name}`); prot("Decktaxe erstattet", { p, b: G.taxe });
+      brief("Deckstation", `Decktaxe für ${p.name} erstattet`, `die Decksaison ist zu Ende und es steht fest, dass <b>${esc(p.name)}</b> nicht tragend geworden ist. Laut Deckvertrag erstatten wir die Decktaxe von <b>${fmt(G.taxe)}</b> für <b>${esc(G.vn || "den Hengst")}</b>. Transport und Tierarzt bleiben bei Ihnen. Im Frühling {versuchst du|versuchen Sie} es gern wieder.`, { pferde: [p] }); });
+  }
   function deckKern(stute, hengst, art) {
-    const A = DECK_ART[art], eigenH = !istDeckstation(hengst), jetzt = jzJetzt(), taxe = istDeckstation(hengst) ? Math.round(decktaxe(hengst) * (A.taxeF || 1) / 10) * 10 : 0;
+    const A = DECK_ART[art], eigenH = !istDeckstation(hengst), jetzt = jzJetzt(), frei = nachdeckFrei(stute, hengst), taxe = istDeckstation(hengst) && !frei ? Math.round(decktaxe(hengst) * (A.taxeF || 1) / 10) * 10 : 0;
     const extra = A.tierarzt ? A.tierarzt : eigenH ? 0 : A.transport;
-    if (taxe) buchen(-taxe, `${art === "tief" ? "Samenportion" : "Decktaxe"}: ${hengst.name}`);
+    if (taxe) { buchen(-taxe, `${art === "tief" ? "Samenportion" : "Decktaxe"}: ${hengst.name}`); if (datum().s <= 1) stute.deckGar = { vh: deckHid(hengst), vn: hengst.name, jahr: datum().j, taxe, tag: spiel.tag }; }
     if (extra) buchen(-extra, A.tierarzt ? `Tierarzt: Besamung ${stute.name}` : `Transport zur Deckstation: ${stute.name}`);
     prot("Bedeckung", { p: stute, o: `${hengst.name} (${A.n})`, b: -taxe - extra });   // S4
     // v535 (Dome): ob es geklappt hat, weiß man erst später (Trächtigkeitsuntersuchung oder Rosse) – früher Embryoverlust bis ~Tag 40 möglich
@@ -2875,7 +2888,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     return { taxe, extra, verl, ok };
   }
   function verpaaren(stute, hengst) {
-    const taxe = istDeckstation(hengst) ? decktaxe(hengst) : 0;
+    const taxe = istDeckstation(hengst) && !nachdeckFrei(stute, hengst) ? decktaxe(hengst) : 0;
     if (taxe && geldFrei() < taxe) { dialog(`<h3>Nicht genug Geld</h3>${dispoHinweis()}<p>Die Decktaxe für <b>${esc(hengst.name)}</b> beträgt ${fmt(taxe)}, du hast ${fmt(spiel.geld || 0)}.</p>`); return; }
     const eigenH = !istDeckstation(hengst), nurNatur = NUR_NATURSPRUNG.includes(stute.rasse) && NUR_NATURSPRUNG.includes(hengst.rasse);
     const taxe0 = taxe, taxeVon = art => Math.round(taxe0 * ((DECK_ART[art] && DECK_ART[art].taxeF) || 1) / 10) * 10;   // v537: Tiefgefriersamen günstiger
@@ -2886,7 +2899,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       const s = datum().s;
       const liegt = fohlenNochLiegend(spiel.boxen.find(b => b.pferd === stute));   // v536 (Dome): Stute bleibt beim liegenden Fohlen in der Box – Natursprung erst, wenn es steht
       dialog(`<h3>💞 ${esc(stute.name)} × ${esc(hengst.name)}</h3><p>Wie soll gedeckt werden?</p>${liegt ? `<div class="wn-hinweis" style="margin:8px 0">🐎 <b>Natursprung</b> geht noch nicht – das Fohlen liegt noch, ${esc(stute.name)} bleibt bei ihm in der Box. Besamen geht in der Box.</div>` : zeile("natur")}${nurNatur ? `<p class="text"><small>🏇 Galopper (Vollblut) dürfen laut Zuchtbuch nur im Natursprung gezüchtet werden.</small></p>` : zeile("besamung") + (eigenH ? "" : zeile("tief"))}
-        <p class="text"><small>Die Chance hängt vom Wohlbefinden${eigenH ? " beider Pferde" : " der Stute"} und vom Alter der Stute ab (ab 15 Jahren sinkt sie)${s === 2 ? ". Im Herbst rossen nur noch einzelne Stuten – die Chance ist deutlich kleiner" : ""}${spiel.boxen.some(b => b.pferd === stute && b.fohlen && alterJZ(b.fohlen) === 0) ? ". In der Fohlenrosse kurz nach der Geburt ist sie etwas kleiner" : ""}. Ob die Stute tragend ist, zeigt erst die Trächtigkeitsuntersuchung – oder ob sie wieder rosst.</small></p>`,
+        <p class="text"><small>Die Chance hängt vom Wohlbefinden${eigenH ? " beider Pferde" : " der Stute"} und vom Alter der Stute ab (ab 15 Jahren sinkt sie)${s === 2 ? ". Im Herbst rossen nur noch einzelne Stuten – die Chance ist deutlich kleiner" : ""}${spiel.boxen.some(b => b.pferd === stute && b.fohlen && alterJZ(b.fohlen) === 0) ? ". In der Fohlenrosse kurz nach der Geburt ist sie etwas kleiner" : ""}. Ob die Stute tragend ist, zeigt erst die Trächtigkeitsuntersuchung – oder ob sie wieder rosst.${istDeckstation(hengst) ? ` Deckgarantie: Nachdecken in dieser Decksaison beim selben Hengst kostet keine zweite Decktaxe${nachdeckFrei(stute, hengst) ? " (gilt jetzt)" : ""}; steht bis Ende des Sommers fest (Trächtigkeitsuntersuchung oder Rosse), dass sie nicht tragend ist, bekommst du die Decktaxe zurück.` : ""}</small></p>`,
         [...(liegt ? [] : [[`${DECK_ART.natur.ico} Natursprung`, () => decken("natur")]]), ...(nurNatur ? [] : [[`${DECK_ART.besamung.ico} Besamung`, () => decken("besamung"), liegt ? "" : "zweit"]]), ...(nurNatur || eigenH ? [] : [[`${DECK_ART.tief.ico} Tiefgefriersamen`, () => decken("tief"), "zweit"]]), ["Abbrechen", null, "zweit"]]);
       $("dlgInhalt").querySelectorAll("[data-dinfo]").forEach(b => b.onclick = () => { const x = $("dinfo-" + b.dataset.dinfo); x.style.display = x.style.display === "none" ? "block" : "none"; });
     };
@@ -4883,7 +4896,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       const eigene = spiel.boxen.map((b, i) => ({ b, i })).filter(({ b, i }) => i !== aktBox && b.pferd && !b.tot && b.pferd.geschlecht === ziel);
       const deck = p.geschlecht === "Stute" ? deckhengste(p) : [];
       window.__deckListe = deck;
-      const kachel = (q, attr, sperre, alter) => `<button class="paar ${sperre ? "gesperrt" : ""}" data-rasse="${q.rasse}" ${sperre ? "disabled" : attr} title="${esc(q.name)}${sperre ? " – " + sperre : ""}">
+      const kachel = (q, attr, sperre, alter) => `<button class="paar ${sperre ? "gesperrt" : ""}${!sperre && nachdeckFrei(p, q) ? " garantie" : ""}" data-rasse="${q.rasse}" ${sperre ? "disabled" : attr} title="${esc(q.name)}${sperre ? " – " + sperre : ""}">
           <span class="paar-bild">${kopfBild(q)}</span>
           <span class="paar-brett"><b>${esc(q.name)}</b><span>${rasseById(q.rasse).name}</span><span>${alter}${sperre ? ` · ${sperre}` : ""}</span>${!sperre && inzucht(p, q).length ? `<span class="inzucht-mark">⚠️ Inzucht</span>` : ""}</span></button>`;
       inhalt = `<p class="text" style="margin:0 0 4px">💞 <b>${esc(p.name)} verpaaren mit …</b> · Tragzeit 4 Jahreszeiten (ca. 11 Monate)</p>
@@ -4892,7 +4905,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
           : `<p class="text" style="margin:4px 0">Du hast keine ${mz} in deinem Stall.</p>`}
         ${datum().s > 1 ? `<h3 class="paar-titel">🏆 Deckstation <small>Decksaison: Frühling und Sommer</small></h3><p class="text" style="margin:4px 0">Die Hengste der Gestüte decken nur in der Decksaison – ab dem Frühling wieder. Eigene Hengste kannst du jederzeit einsetzen.</p>`
           : deck.length ? `<h3 class="paar-titel">🏆 Deckstation <small>Decksaison · wechselt jede Jahreszeit</small></h3>
-        <div class="paar-liste">${deck.map((h, i) => kachel(h, `data-deck="${i}"`, groessenSperre(p, h), `${h.alter} Jahre · ${fmt(decktaxe(h))}`)).join("")}</div>` : ""}
+        <div class="paar-liste">${deck.map((h, i) => kachel(h, `data-deck="${i}"`, groessenSperre(p, h), nachdeckFrei(p, h) ? `${h.alter} Jahre · <span class="garantie-mark">✔ bezahlt – Nachdecken frei</span>` : `${h.alter} Jahre · ${fmt(decktaxe(h))}`)).join("")}</div>` : ""}
         <button class="knopf zweit" id="deckZurueck" style="width:100%;margin-top:14px">‹ Zurück</button>`;
     } else if (aktenReiter === "genetik") {
       const sperre = zuchtSperre(p, box);
@@ -5483,6 +5496,17 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     root.querySelectorAll("[data-sortseg] button").forEach(b => b.onclick = () => { spiel.sortKont = b.dataset.sort || false; speichern(); neu(); });
     const k = konts.includes(spiel.sortKont) ? spiel.sortKont : null;
     kacheln.forEach(c => { c.style.display = k && kontinentVon(c.dataset.rasse) !== k ? "none" : ""; });
+  }
+  // v960 (Dome 8.11.): Raritäten-Markt zusätzlich nach Seltenheit filtern (selten, sehr selten …) – zusammen mit dem Kontinent-Filter, in allen Rubriken (Alle, Asien, Europa …)
+  function rarFiltern(root, neu) {
+    if (!root || marktBereich !== "raritaeten") return;
+    const kach = [...root.querySelectorAll("[data-rarstufe]")]; if (!kach.length) return;
+    const alt = root.querySelector("[data-rarseg]"); if (alt) alt.remove();
+    const stufen = [...new Set(kach.map(c => +c.dataset.rarstufe))].sort((a, b) => a - b), akt = stufen.includes(+spiel.sortRar) ? +spiel.sortRar : null, seg = root.querySelector("[data-sortseg]");
+    const html = `<div class="segment sort-seg" data-rarseg><button data-rar="" class="${akt == null ? "an" : ""}">Alle Seltenheiten</button>${stufen.map(s => `<button data-rar="${s}" class="${akt === s ? "an" : ""}">${seltenSymbol(s, 14)} ${esc((SELTEN_STUFEN[s] || { n: "selten" }).n)}</button>`).join("")}</div>`;
+    if (seg) seg.insertAdjacentHTML("afterend", html); else kach[0].parentNode.insertAdjacentHTML("beforebegin", html);
+    root.querySelectorAll("[data-rarseg] button").forEach(b => b.onclick = () => { spiel.sortRar = b.dataset.rar === "" ? false : +b.dataset.rar; speichern(); neu(); });
+    kach.forEach(c => { if (akt != null && +c.dataset.rarstufe !== akt) c.style.display = "none"; });
   }
   const rassenABC = () => RASSEN.slice().sort((a, b) => a.name.localeCompare(b.name, "de"));   // Dome (v324): Rassen nach Namen (ABC)
   function zeigeRassen() { enzyKat = "rassen"; zeigeEnzy(); }
@@ -11145,6 +11169,10 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     fleissig: { n: "fleißig", info: "schafft 1 Box mehr" },
     lernbegierig: { n: "lernbegierig", info: "sammelt schneller Erfahrung" },
     nachteule: { n: "Nachteule", info: "macht Nachtdienste gern" } };
+  // v960 (Dome 8.11.): Eigenschaften, die für den Beruf Sinn haben – der Hofhelfer repariert Gebäude und versorgt keine Pferde (keine Boxen, keine Vertrauens-/Krankheits-Eigenschaften)
+  const EIG_NUR = { hofhelfer: ["fleissig", "lernbegierig"], futterexperte: ["lernbegierig"], physio: ["lernbegierig"], stallmeister: ["lernbegierig"] };
+  const eigGilt = (typ, e) => !EIG_NUR[typ] || EIG_NUR[typ].includes(e);
+  const eigInfo = (typ, e) => typ === "hofhelfer" && e === "fleissig" ? "repariert mehr (+1 Punkt je Arbeitstag)" : MA_EIGEN[e].info;
   const MA_NAMEN_M = ["Jonas", "Paul", "Finn", "Luca", "Tom", "Ben", "Felix", "Noah", "Elias", "Leon", "Moritz", "Jakob", "Anton", "Emil", "Karl", "Theo",
     "Max", "Lukas", "David", "Simon", "Jan", "Niklas", "Tim", "Henry", "Oskar", "Matteo", "Julian", "Fabian", "Malte", "Hannes", "Ole", "Mats", "Johann", "Vincent", "Leo", "Samuel", "Linus", "Benedikt", "Marlon", "Florian"];   // v723 (Dome): mehr Namen, damit sie sich nicht doppeln
   const MA_NAMEN_W = ["Lena", "Mia", "Hannah", "Sophie", "Lea", "Clara", "Ida", "Greta", "Marie", "Emma", "Frieda", "Lotte", "Anna", "Paula", "Nele", "Ronja",
@@ -11710,7 +11738,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       const w = Math.random() < 0.5, namen = (w ? MA_NAMEN_W : MA_NAMEN_M).filter(x => !schonDa.has(x)), name = zufallAus(namen.length ? namen : (w ? MA_NAMEN_W : MA_NAMEN_M)); schonDa.add(name);
       const wissen = Object.fromEntries(WISSEN.map(([key]) => [key, Math.max(1, Math.min(95, Math.round(T.start[key] * (0.6 + Math.random() * 0.9))))]));
       const anz = Math.random() < 0.35 ? 0 : Math.random() < 0.7 ? 1 : 2, eig = [];
-      while (eig.length < anz) { const e = zufallAus(Object.keys(MA_EIGEN)); if (!eig.includes(e) && !eig.includes(MA_EIGEN[e].gegen)) eig.push(e); }
+      const poolE = Object.keys(MA_EIGEN).filter(e => eigGilt(typ, e)); for (let v = 0; eig.length < anz && v < 40; v++) { const e = zufallAus(poolE); if (!eig.includes(e) && !eig.includes(MA_EIGEN[e].gegen)) eig.push(e); }
       const schnitt = o => Object.values(o).reduce((a, x) => a + x, 0) / WISSEN.length;
       const plus = Math.max(0, Math.min(0.25, (schnitt(wissen) / schnitt(T.start) - 1) * 0.6));   // erfahrene Bewerber wollen bis +25 %
       liste.push({ id: "bw" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), typ, name, w, wissen, eig, gehalt: typ === "azubi" ? AZUBI_GEHALT[0] : GEHALT[typ] ? gehaltSoll({ typ, wissen }) : Math.round(T.gehalt * (1 + plus) / 10) * 10 });   // v892: Pfleger/Pferdewirte nach Qualifikation
@@ -12536,6 +12564,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     ansteckungNacht(); // ansteckende Krankheiten verbreiten sich
     waiseNacht();     // Waisenfohlen: Flasche oder Hunger
     deckNacht();      // v535: Rosse oder Trächtigkeit nach dem Decken
+    deckGarantieTag(); // v959: Decktaxe zurück, wenn die Stute in der Decksaison nicht tragend wurde
     pensionZuchtNacht();   // v542: Besitzer von Pensionsstuten züchten selbst
     befundeNacht();   // Krankheiten und Verletzungen: neu, Verlauf, Wirkung
     spiel.boxen.forEach(b => { delete b.nachtMist; });   // v365
@@ -14270,17 +14299,17 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     const warn = (s, h) => { const gefahr = GEFAHR_GENE.find(G => { const pos = q => (testGemacht(q, "farbe") || testGemacht(q, "krank")) && hat(genVon(q), G.gen), bekannt = q => pos(q) || G.sichtbar(q); return (pos(s) || pos(h)) && bekannt(s) && bekannt(h); }); if (gefahr && !gefahr.harmlos) return gefahr.titel; const eg = erbGefahr(s, h); return eg ? "Erbkrankheit: " + ERBKRANK[eg.k].n : ""; };
     const zeilen = gew.map((x, i) => { const s = x.p, H0 = deckhengste(s), liegt = fohlenNochLiegend(x.box), nurNatur = NUR_NATURSPRUNG.includes(s.rasse);
       const arten = ["natur", "besamung", "tief"].filter(a => !(a === "natur" && liegt) && !(nurNatur && a !== "natur")); return { i, s, x, H0, arten, liegt, nurNatur, wahl: Math.max(0, H0.findIndex(h => !groessenSperre(s, h))), art: arten[0] }; });
-    const kostVon = (h, art) => { const A = DECK_ART[art]; return Math.round(decktaxe(h) * (A.taxeF || 1) / 10) * 10 + (A.tierarzt || A.transport || 0); };
+    const kostVon = (h, art, s) => { const A = DECK_ART[art]; return (s && nachdeckFrei(s, h) ? 0 : Math.round(decktaxe(h) * (A.taxeF || 1) / 10) * 10) + (A.tierarzt || A.transport || 0); };
     // Hengst-Kachel wie in der normalen Deckstation (Steckbrief – Verpaaren mit …): Bild, Name, Rasse, Alter · Decktaxe, Inzucht-Hinweis
     const kachel = (z, h, j) => { const sperre = groessenSperre(z.s, h), an = j === z.wahl && !sperre;
-      return `<div class="anh-wahl ${an ? "markiert" : ""}"><button class="paar ${sperre ? "gesperrt" : ""}" data-rasse="${h.rasse}" data-dsh="${z.i}:${j}" ${sperre ? "disabled" : ""} title="${esc(h.name)}${sperre ? " – " + sperre : ""}">
+      return `<div class="anh-wahl ${an ? "markiert" : ""}${!sperre && nachdeckFrei(z.s, h) ? " garantie" : ""}"><button class="paar ${sperre ? "gesperrt" : ""}" data-rasse="${h.rasse}" data-dsh="${z.i}:${j}" ${sperre ? "disabled" : ""} title="${esc(h.name)}${sperre ? " – " + sperre : ""}">
           <span class="paar-bild">${kopfBild(h)}</span>
-          <span class="paar-brett"><b>${esc(h.name)}</b><span>${rasseById(h.rasse).name}</span><span>${h.alter} Jahre · ${fmt(decktaxe(h))}${sperre ? ` · ${sperre}` : ""}</span>${!sperre && inzucht(z.s, h).length ? `<span class="inzucht-mark">⚠️ Inzucht</span>` : ""}</span></button><span class="haken">${an ? "✓" : ""}</span></div>`; };
+          <span class="paar-brett"><b>${esc(h.name)}</b><span>${rasseById(h.rasse).name}</span><span>${h.alter} Jahre · ${nachdeckFrei(z.s, h) ? `<span class="garantie-mark">✔ bezahlt – Nachdecken frei</span>` : fmt(decktaxe(h))}${sperre ? ` · ${sperre}` : ""}</span>${!sperre && inzucht(z.s, h).length ? `<span class="inzucht-mark">⚠️ Inzucht</span>` : ""}</span></button><span class="haken">${an ? "✓" : ""}</span></div>`; };
     const artZeile = (z, a) => { const A = DECK_ART[a]; return `<div class="wn-hinweis" style="margin:6px 0"><label style="cursor:pointer"><input type="radio" name="dsa${z.i}" value="${a}" data-dsa="${z.i}"${z.art === a ? " checked" : ""}> <b>${A.ico} ${A.n}</b></label> <button class="gl-info-k" data-dinfo="${z.i}:${a}" aria-label="Erklärung">i</button> · Chance je Rosse etwa <b data-dsc="${z.i}:${a}"></b> · <span data-dsk="${z.i}:${a}"></span><span class="gl-info" id="dinfo-${z.i}-${a}" style="display:none;margin-top:4px">${A.info}${a === "besamung" ? " Hier: gekühlter Versandsamen der Deckstation." : ""}</span></div>`; };
-    dialog(`<p class="text" style="margin:0 0 4px">💞 <b>${gew.length} ${gew.length === 1 ? "Stute" : "Stuten"} zur Deckstation</b> · Tragzeit 4 Jahreszeiten (ca. 11 Monate)</p><p class="text" style="margin:4px 0">Wähle für jede Stute den Hengst und die Art. Die Decktaxe zahlst du je Stute; nach dem Decken zeigt sich erst später, ob sie tragend ist.</p>${zeilen.map(z => `<h3 class="paar-titel">🐴 ${esc(z.s.name)} <small>${rasseName(z.s.rasse)}</small></h3>${z.H0.length ? `<h3 class="paar-titel">🏆 Deckstation <small>Decksaison · wechselt jede Jahreszeit</small></h3><div class="paar-liste">${z.H0.map((h, j) => kachel(z, h, j)).join("")}</div>
+    dialog(`<p class="text" style="margin:0 0 4px">💞 <b>${gew.length} ${gew.length === 1 ? "Stute" : "Stuten"} zur Deckstation</b> · Tragzeit 4 Jahreszeiten (ca. 11 Monate)</p><p class="text" style="margin:4px 0">Wähle für jede Stute den Hengst und die Art. Die Decktaxe zahlst du je Stute; Nachdecken in der Decksaison beim selben Hengst ist frei; steht bis Sommerende sicher fest, dass sie nicht tragend ist, gibt es die Decktaxe zurück. Ob sie tragend ist, zeigt sich später.</p>${zeilen.map(z => `<h3 class="paar-titel">🐴 ${esc(z.s.name)} <small>${rasseName(z.s.rasse)}</small></h3>${z.H0.length ? `<h3 class="paar-titel">🏆 Deckstation <small>Decksaison · wechselt jede Jahreszeit</small></h3><div class="paar-liste">${z.H0.map((h, j) => kachel(z, h, j)).join("")}</div>
         ${z.liegt ? `<div class="wn-hinweis" style="margin:8px 0">🐎 <b>Natursprung</b> geht noch nicht – das Fohlen liegt noch, ${esc(z.s.name)} bleibt bei ihm in der Box.</div>` : ""}${z.arten.map(a => artZeile(z, a)).join("")}${z.nurNatur ? `<p class="text"><small>🏇 Galopper (Vollblut) dürfen laut Zuchtbuch nur im Natursprung gezüchtet werden.</small></p>` : ""}<small class="dsw" data-dsw="${z.i}" style="display:block;color:#a02a1c"></small>` : `<p class="text" style="margin:4px 0">Kein passender Hengst in der Deckstation.</p>`}`).join("")}<p class="text" id="dsKosten"></p>`,
       [["Losfahren", () => {
-        const wahl = zeilen.filter(z => z.H0.length).map(z => ({ z, h: z.H0[z.wahl], art: z.art, ok: document.querySelector(`[data-dsok="${z.i}"]`) ? document.querySelector(`[data-dsok="${z.i}"]`).checked : true })), summe = wahl.reduce((a, w) => a + kostVon(w.h, w.art), 0);
+        const wahl = zeilen.filter(z => z.H0.length).map(z => ({ z, h: z.H0[z.wahl], art: z.art, ok: document.querySelector(`[data-dsok="${z.i}"]`) ? document.querySelector(`[data-dsok="${z.i}"]`).checked : true })), summe = wahl.reduce((a, w) => a + kostVon(w.h, w.art, w.z.s), 0);
         if (!spiel.admin && geldFrei() < summe) { dialog(`<h3>Nicht genug Geld</h3>${dispoHinweis()}<p>Das Decken kostet zusammen ${fmt(summe)}, du hast ${fmt(spiel.geld || 0)}.</p>`); return; }
         const L = [];
         wahl.forEach(w => { const s = w.z.s; if (!w.ok) { L.push(`⛔ ${esc(s.name)}: nicht gedeckt (Warnung nicht bestätigt)`); return; }
@@ -14288,9 +14317,9 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
           const K = deckKern(s, w.h, w.art); L.push(`💞 ${esc(s.name)} × ${esc(w.h.name)} (${DECK_ART[w.art].n}, ${fmt(K.taxe + K.extra)})${K.verl ? " – ⚠️ beim Decken geschlagen" : ""}`); });
         anhMeldung = `<div><b>Gedeckt:</b></div>` + L.map(t => `<div>${t}</div>`).join("") + `<div class="text"><small>Ob sie tragend sind, zeigt sich später (Trächtigkeitsuntersuchung im Steckbrief).</small></div>`;
         anhAuswahl = new Set(); speichern(); zeigeTag(); zeigeAnhaenger(); }], ["Abbrechen", null, "zweit"]], "breit");
-    const aktual = () => { let summe = 0; zeilen.forEach(z => { if (!z.H0.length) return; const h = z.H0[z.wahl]; summe += kostVon(h, z.art);
-      z.arten.forEach(a => { const c = document.querySelector(`[data-dsc="${z.i}:${a}"]`), k = document.querySelector(`[data-dsk="${z.i}:${a}"]`), A = DECK_ART[a], taxe = Math.round(decktaxe(h) * (A.taxeF || 1) / 10) * 10;
-        if (c) c.textContent = Math.round(deckChance(z.s, h, a) * 20) * 5 + " %"; if (k) k.innerHTML = `${fmt(kostVon(h, a))} (inkl. ${a === "tief" ? "Samenportion" : "Decktaxe"} ${fmt(taxe)})`; });
+    const aktual = () => { let summe = 0; zeilen.forEach(z => { if (!z.H0.length) return; const h = z.H0[z.wahl]; summe += kostVon(h, z.art, z.s);
+      z.arten.forEach(a => { const c = document.querySelector(`[data-dsc="${z.i}:${a}"]`), k = document.querySelector(`[data-dsk="${z.i}:${a}"]`), A = DECK_ART[a], taxe = nachdeckFrei(z.s, h) ? 0 : Math.round(decktaxe(h) * (A.taxeF || 1) / 10) * 10;
+        if (c) c.textContent = Math.round(deckChance(z.s, h, a) * 20) * 5 + " %"; if (k) k.innerHTML = `${fmt(kostVon(h, a, z.s))} (${taxe ? `inkl. ${a === "tief" ? "Samenportion" : "Decktaxe"} ${fmt(taxe)}` : "Nachdecken: Decktaxe frei"})`; });
       const w = warn(z.s, h), el = document.querySelector(`[data-dsw="${z.i}"]`); if (el) el.innerHTML = w ? `⚠️ ${esc(w)} – <label><input type="checkbox" data-dsok="${z.i}"> trotzdem decken</label>` : ""; });
       $("dsKosten").innerHTML = `Zusammen: <b>${fmt(summe)}</b>`; };
     document.querySelectorAll("[data-dsh]").forEach(b => b.onclick = () => { const [i, j] = b.dataset.dsh.split(":").map(Number); zeilen[i].wahl = j;
@@ -14698,11 +14727,13 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     return kopf("💎 Raritäten-Markt", `Je Rasse 2 seltene Pferde mit Fellfarben-Test, Abstammungsnachweis und Erbkrankheiten-Test. Gekauft wird per Auktion (Startgebot = Preis). Andere bieten erst mit, wenn du geboten hast – ab deinem ersten Gebot läuft die Auktion ${tpj()} Tage (eine Jahreszeit).`)
       + `<p class="text voll" style="margin:4px 0"><small>${SELTEN_HINWEIS}</small></p><button class="knopf zweit" id="rarEigen" style="width:auto;margin:4px 0">📤 Eigenes Pferd anbieten</button> ${spiel.admin ? `<button class="knopf zweit" id="rarNeu" style="width:auto">🛠️ Raritäten neu würfeln</button>` : ""}`
       + `<div class="paar-liste">${L.map(h => { const a = (spiel.rar.auk || {})[h.id], du = a && a.fuehrt === "du", ueber = a && a.duGeboten && !du && !a.vorbei, st = SELTEN_STUFEN[h.rarStufe];
-        return pferdKachel(h, { ort: "Raritäten-Markt", rahmen: du ? "gruen" : ueber ? "rot" : "", zeilen: [rasseName(h.rasse), `${h.geschlecht} · ${alterText(h)}`, `${st ? seltenSymbol(h.rarStufe, 16) + " " + esc(st.n) : ""}`, a && a.gebote ? `<b>${fmt(a.gebot)}</b> · ${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"}` : `<b>ab ${fmt(h.preis)}</b>`, du ? `✅ du führst · max ${fmt(a.duMax || a.gebot)}` : ueber ? "⚠️ überboten" : "", a && a.endeTag && !a.vorbei ? `⏳ bis ${tagText(a.endeTag - 1)}` : ""],
+        return pferdKachel(h, { ort: "Raritäten-Markt", daten: `data-rarstufe="${h.rarStufe}"`, rahmen: du ? "gruen" : ueber ? "rot" : "", zeilen: [rasseName(h.rasse), `${h.geschlecht} · ${alterText(h)}`, `${st ? seltenSymbol(h.rarStufe, 16) + " " + esc(st.n) : ""}`, a && a.gebote ? `<b>${fmt(a.gebot)}</b> · ${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"}` : `<b>ab ${fmt(h.preis)}</b>`, du ? `✅ du führst · max ${fmt(a.duMax || a.gebot)}` : ueber ? "⚠️ überboten" : "", a && a.endeTag && !a.vorbei ? `⏳ bis ${tagText(a.endeTag - 1)}` : ""],
           aktion: [du ? "Höchstgebot erhöhen" : `Bieten · ab ${fmt(a && a.fuehrt ? a.gebot + bietSchritt(a) : (a ? a.gebot : h.preis))}`, () => { if (!spiel.rar || spiel.rar.mj !== rarMj()) return; bieten((spiel.rar.auk || {})[h.id] || rarAuktion(h)); }],
           extra: { warn: rarWarn(h), zeilen: [["Seltenheit", st ? `${seltenSymbol(h.rarStufe, 18)} ${esc(st.n)}` : "–"], ["Startgebot", `<b>${fmt(h.preis)}</b>`], ...rarAnpreisung(h)] } }); }).join("")}</div></div>`;
   }
   // Limit des stärksten anderen Bieters: meist um den Marktwert, manchmal ein Liebhaber, der richtig Druck macht
+  // v960 (Dome 8.11.): Raritäten-Markt – der Preis ist schon der Startpreis, deshalb liegen die Höchstgebote der anderen Bieter darüber: 15 % kein Interessent, 40 % bis +60 %, 30 % bis +140 %, 12 % bis +250 %, 3 % mehr
+  function rarNpcLimit(wert, r = Math.random) { const u = r(), f = u < .15 ? .9 + r() * .1 : u < .55 ? 1.1 + r() * .5 : u < .85 ? 1.6 + r() * .8 : u < .97 ? 2.4 + r() * 1.1 : 3.5 + r() * 2; return Math.round(wert * f / 50) * 50; }
   function npcLimit(wert, r = Math.random) { const u = r(), f = u < .65 ? .7 + r() * .6 : u < .87 ? 1.3 + r() * .7 : u < .96 ? 2 + r() * 1.5 : 3.5 + r() * 2.5; return Math.round(wert * f / 50) * 50; }
   // Geld, das schon in deinen anderen Höchstgeboten steckt (führend), ist nicht mehr frei
   const gebundenesGeld = ausser => { const M = spiel.markt || {}; return [...(M.auktion || []), ...(M.fohlen || []), ...rarAuktionen()].filter(a => a !== ausser && !a.vorbei && a.fuehrt === "du").reduce((s, a) => s + (a.duMax || a.gebot), 0); };
@@ -14712,7 +14743,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   function auktionsNacht() {
     const M = spiel.markt || {};
     [...(M.auktion || []), ...(M.fohlen || []), ...rarAuktionen().filter(a => a.duGeboten)].forEach(a => { if (a.vorbei) return;   // R3: Raritäten – Gegenbieter erst, wenn du mitbietest
-      if (a.maxV !== 2) { a.max = Math.max(a.max, npcLimit(a.wert)); a.maxV = 2; }
+      if (a.maxV !== 2 || (a.rar && !a.max)) { a.max = Math.max(a.max, a.rar ? rarNpcLimit(a.wert) : npcLimit(a.wert)); a.maxV = 2; }   // v960: Raritäten hatten max 0 → nie ein Gegenbieter
       if (a.gebot + bietSchritt(a) > a.max) return;
       const druck = a.max > a.wert * 1.3;   // starker Bieter: bietet häufiger
       if (a.fuehrt === "du" ? Math.random() < (druck ? .8 : .55) : Math.random() < (druck ? .5 : .3)) {
@@ -14769,30 +14800,33 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   }
   // nachher: danach dorthin zurück, wo man herkam (z. B. zum Brief im Postfenster); sonst Auktionshaus neu zeichnen
   function bieten(a, nachher) {
+    let wert = 0;
     const zurueck = () => nachher ? nachher() : zeigeMarkt();
     const fuehrst = a.fuehrt === "du", neu = fuehrst ? (a.duMax || a.gebot) + bietSchritt(a) : a.fuehrt ? a.gebot + bietSchritt(a) : a.gebot;
     if (!a.fohlen && zielBox() < 0) { dialog(`<h3>Keine Box frei</h3><p>Zum Mitbieten brauchst du eine freie Box für ${esc(a.pferd.name)}.</p>`, [["OK", nachher || null]]); return; }
     const gebunden = gebundenesGeld(a), frei = Math.max(0, (spiel.geld || 0) + (spiel.admin ? 0 : DISPO.rahmen) - gebunden);
     if (frei < neu) { dialog(`<h3>Nicht genug Geld</h3>${dispoHinweis()}<p>Das nächste Gebot wäre ${fmt(neu)}. Frei verfügbar hast du ${fmt(frei)}${gebunden ? ` (${fmt(gebunden)} stecken schon in deinen anderen Höchstgeboten)` : ""}.</p>`, [["OK", nachher || null]]); return; }
     // eigenes Gebot: mindestens das nächste Gebot, höchstens so viel Geld, wie du hast
-    const max = Math.max(neu, Math.min(Math.floor(frei / 50) * 50, Math.round(Math.max(neu * 3, a.wert * 4) / 50) * 50));
+    const max = Math.max(neu, Math.min(Math.floor(frei / 50) * 50, neu + 30 * bietSchritt(a))), fein = Math.max(50, Math.round(bietSchritt(a) / 5 / 50) * 50);   // v960 (Dome 8.11.): höchstens 30 Schritte (150 % des Werts) über dem nächsten Gebot – sonst war der Regler viel zu grob
     dialog(`<h3>🔨 Auf ${esc(a.pferd.name)} bieten</h3><p>${fuehrst ? `✅ Du führst mit <b>${fmt(a.gebot)}</b>, dein Höchstgebot ist <b>${fmt(a.duMax || a.gebot)}</b>. Du kannst es erhöhen.` : `Aktuelles Gebot: <b>${fmt(a.gebot)}</b> (${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"}). Mindestgebot: <b>${fmt(neu)}</b>.`}</p>
-      <label class="fest-preis">Dein Höchstgebot: <b id="gebotWert">${fmt(neu)}</b><input type="range" id="gebotRegler" min="${neu}" max="${max}" step="50" value="${neu}"></label>
+      <label class="fest-preis">Dein Höchstgebot: <b id="gebotWert">${fmt(neu)}</b><input type="range" id="gebotRegler" min="${neu}" max="${max}" step="${fein}" value="${neu}"></label>
+      <label class="fest-preis">oder genau eintippen: <input type="number" id="gebotZahl" min="${neu}" max="${max}" step="50" value="${neu}" style="width:9em"> €</label>
       <div class="gebot-schnell">${[0, 1, 3, 5].map(k => `<button class="knopf zweit" data-gplus="${k}">${k ? `+${fmt(k * bietSchritt(a))}` : "Mindestgebot"}</button>`).join("")}</div>
       <p><small>Frei verfügbar: <b>${fmt(frei)}</b>${gebunden ? ` (${fmt(gebunden)} in anderen Höchstgeboten gebunden)` : ""}. Wie bei eBay: Du gibst an, wie viel du höchstens zahlen willst. Bezahlt wird nur so viel wie nötig – ein Schritt über dem nächsten Bieter. Vorsicht: Manchmal bietet ein Liebhaber mit – dann wird es teuer. ${a.rar ? (a.endeTag ? `Die Auktion läuft bis ${tagText(a.endeTag - 1)}` : `Mit deinem ersten Gebot startet die Auktion und läuft ${tpj()} Tage (eine Jahreszeit)`) : "Die Auktion endet mit dieser Jahreszeit"} – wird dein Höchstgebot überboten, bekommst du einen Brief.${a.fohlen ? ` 🍼 ${esc(a.pferd.name)} bleibt bis zum Absetzen bei der Mutter und kommt zu Beginn der nächsten Jahreszeit zu dir – dann brauchst du eine freie Box und das Geld.` : ""}</small></p>`,
-      [[fuehrst ? "Erhöhen" : "Bieten", () => { const g = Math.max(neu, +$("gebotRegler").value);
+      [[fuehrst ? "Erhöhen" : "Bieten", () => { const g = Math.max(neu, wert);
         if (!fuehrst) { a.gebot = neu; a.gebote++; }   // aktuelles Gebot: nur das Nötigste, der Rest ist dein verdecktes Höchstgebot
         if (a.rar && !a.endeTag) a.endeTag = (spiel.tag || 1) + tpj();   // Raritäten: läuft ab deinem ersten Gebot eine Jahreszeit lang
         a.duMax = g; a.fuehrt = "du"; a.duGeboten = true; a.hid = aktivHid(); speichern(); zurueck(); }], [`🩺 ${a.pferd.akuErg ? "AKU-Ergebnis" : "Ankaufsuntersuchung"}`, () => akuDialog(a.pferd, "Auktion", null, () => bieten(a, nachher)), "zweit"], ["Abbrechen", nachher || null, "zweit"]]);
-    const rg = $("gebotRegler"), zeig = () => $("gebotWert").textContent = fmt(+rg.value);
-    rg.oninput = zeig;
-    document.querySelectorAll("[data-gplus]").forEach(b => b.onclick = () => { rg.value = Math.min(max, neu + +b.dataset.gplus * bietSchritt(a)); zeig(); });
+    const rg = $("gebotRegler"), zh = $("gebotZahl"); wert = neu;
+    const setze = v => { wert = Math.max(neu, Math.min(max, Math.round((+v || neu) / 50) * 50)); rg.value = wert; zh.value = wert; $("gebotWert").textContent = fmt(wert); };
+    rg.oninput = () => setze(rg.value); zh.onchange = () => setze(zh.value);
+    document.querySelectorAll("[data-gplus]").forEach(b => b.onclick = () => setze(neu + +b.dataset.gplus * bietSchritt(a)));
   }
   let gestuetWahl = null;
   // einheitliche Pferde-Kachel (wie bei der Deckstation): Kopf im Holzrahmen + Infobrett – antippen öffnet das Infofenster
-  function pferdKachel(q, { zeilen = [], sperre = "", attr = "", ort = "", aktion = null, extra = null, rahmen = "" } = {}) {
+  function pferdKachel(q, { zeilen = [], sperre = "", attr = "", ort = "", aktion = null, extra = null, rahmen = "", daten = "" } = {}) {
     const an = attr || (sperre && !ort ? "disabled" : ansehen(q, ort, aktion, extra));
-    return `<button class="paar ${sperre ? "gesperrt" : ""} ${rahmen ? "rahmen-" + rahmen : ""}" data-rasse="${q.rasse}" ${an} title="${esc(q.name)}${sperre ? " – " + esc(sperre) : ""}">
+    return `<button class="paar ${sperre ? "gesperrt" : ""} ${rahmen ? "rahmen-" + rahmen : ""}" data-rasse="${q.rasse}" ${daten} ${an} title="${esc(q.name)}${sperre ? " – " + esc(sperre) : ""}">
       <span class="paar-bild">${kopfBild(q)}</span>
       <span class="paar-brett"><b>${esc(q.name)}</b>${zeilen.map(z => `<span>${z}</span>`).join("")}${sperre ? `<span>${esc(sperre)}</span>` : ""}</span></button>`;
   }
@@ -14887,6 +14921,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
           extra: { zeilen: [["Gesundheit", `${h.notGesundheit} %`], ["Schutzgebühr", `<b>${fmt(h.preis)}</b>`]] } })).join("")}</div>` : `<p style="margin:6px 0 0">Gerade keine Notfallpferde.</p>`}</div>`; }
     zeigeNeben("🏷️ Pferdemarkt", html);
     rasseSortieren($("nebenSchirm"), zeigeMarkt);   // v455 (Dome): alle Kaufrubriken nach Kontinent sortierbar
+    rarFiltern($("nebenSchirm"), zeigeMarkt);   // v960: Raritäten-Markt auch nach Seltenheit
     $("nebenSchirm").querySelectorAll("[data-mb]").forEach(b => b.onclick = () => { marktBereich = b.dataset.mb; zeigeMarkt(); $("nebenSchirm").scrollTop = 0; });
     if ($("mkUebersicht")) $("mkUebersicht").onclick = () => { marktBereich = null; gestuetWahl = null; zeigeMarkt(); };
     if ($("mkGestuete")) $("mkGestuete").onclick = () => { gestuetWahl = null; zeigeMarkt(); };
@@ -16642,7 +16677,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   // Hofhelfer: repariert jeden Arbeitstag das schlechteste Gebäude
   function hofhelferTag() {
     const H = (spiel.mitarbeiter || []).filter(m => m.typ === "hofhelfer" && maAktiv(m) && maDa(m) && maDarf(m, "reparieren")); if (!H.length) return;
-    H.forEach(() => { const g = gebaeude().filter(x => !x.bau && !ohnePflege(x.typ) && x.zustand < 100).sort((a, b) => a.zustand - b.zustand)[0]; if (g) g.zustand = Math.min(100, g.zustand + HOFHELFER_REPARATUR * proTag(1)); });
+    H.forEach(m => { const g = gebaeude().filter(x => !x.bau && !ohnePflege(x.typ) && x.zustand < 100).sort((a, b) => a.zustand - b.zustand)[0]; if (g) g.zustand = Math.min(100, g.zustand + (HOFHELFER_REPARATUR + (hatEig(m, "fleissig") ? 1 : 0)) * proTag(1)); });   // v960: fleißiger Hofhelfer +1 Punkt
   }
   // Wirkung der Stufe: Wohlbefinden, Verletzungen in der Box, Zufriedenheit der Mitarbeiter
   function boxWohl(p, b) {
@@ -18664,7 +18699,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     return `<div class="ma-wissen">${L.map(([k, n, ico, kurz]) => { const v = Math.round((w || {})[k] || 0), st = St.includes(k); return `<span class="${st ? "stark" : ""}" data-wst="1" title="${n}: ${v} – ${wissenStufe(v)}"><i>${st ? "⭐ " : ""}${ico} ${kurz}</i><b><em style="width:${v}%"></em></b><small>${v}</small><u class="wst"><b>${wissenStufe(v)}</b>${vorteilText(k, v) ? ` – ${vorteilText(k, v)}` : ""}</u></span>`; }).join("")}</div>`; };
   const staerkeHTML = (w, ohne) => { if (ohne) return ""; const St = staerken(w); return `<div class="ma-stark">${St.length ? `⭐ <b>Stark in:</b> ${St.map(k => wissenListe(w).find(x => x[0] === k)[3]).join(", ")}` : `<small>noch keine Stärke, wächst mit der Arbeit</small>`}</div>`; };
   document.addEventListener("click", e => { const x = e.target.closest && e.target.closest(".ma-wissen [data-wst]"); if (x) x.classList.toggle("offen"); if (e.target.closest && e.target.closest("#lgDu")) lehrgangDialog("du", () => zeigeHof()); });
-  const eigHTML = m => (m.eig || []).length ? `<div class="ma-eig">${m.eig.map(e => `<span title="${MA_EIGEN[e].info}">${MA_EIGEN[e].n}<small> – ${MA_EIGEN[e].info}</small></span>`).join("")}</div>` : `<div class="ma-eig leer">keine besonderen Eigenschaften</div>`;
+  const eigHTML = m => (m.eig || []).filter(e => eigGilt(m.typ, e)).length ? `<div class="ma-eig">${m.eig.filter(e => eigGilt(m.typ, e)).map(e => `<span title="${eigInfo(m.typ, e)}">${MA_EIGEN[e].n}<small> – ${eigInfo(m.typ, e)}</small></span>`).join("")}</div>` : `<div class="ma-eig leer">keine besonderen Eigenschaften</div>`;
   function mitarbeiterDialog(typ) {
     tippMerken("maStaerke");   // S1/S9 (PLAN-MITARBEITER)
     const T = MA_TYP[typ], jetzt = jzJetzt(), sb = angestellte(typ), ok = maVerfuegbar(typ);
@@ -18674,10 +18709,10 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     if (bw.length) tippMerken("maBewerbung");   // S9
     dialog(`<h3>${T.ico} ${T.name}</h3><p>Ein ${T.name} ${T.aufgabe}${T.boxen ? (T.taet ? ` <b>${T.boxen} Tätigkeiten</b> (je Box: Füttern und Misten = 1, Putzen = 1, Fohlen üben = 1)` : ` <b>${T.boxen} Boxen</b> (nach Boxnummer)`) : ""}. ${T.info} Gehalt ab <b>${fmt(T.gehalt)} pro Jahreszeit</b>, gezahlt am Ende jeder Jahreszeit.</p>${extra}
       <p><small>Neue Leute fangen immer zu Beginn der nächsten Jahreszeit an. Kündigst du, arbeiten sie noch bis zum Ende der Jahreszeit. Kannst du das Gehalt nicht bezahlen, kündigen sie selbst – das letzte Gehalt nehmen sie sich trotzdem.</small></p>
-      ${sb.length ? `<h4 class="ma-titel">Angestellt</h4><div class="ma-liste">${sb.map((m, i) => `<div class="ma-karte"><div class="ma-zeile"><span><b class="ma-name">${maAva(m, 34)}<span>${esc(m.name)}</span></b><small>${maTitel(m)} · ${fmt(m.gehalt)} pro Jahreszeit · ${status(m)}${inProbe(m) && maAktiv(m) ? ` · Probezeit bis ${jzName(m.probe - 1)}` : ""}${maAktiv(m) && m.bis == null ? ` · 🏖️ Urlaub: ${urlaubStatus(m)}${m.uWunsch ? ` <button class="mini-knopf" data-uplanma="1">🏖️ Urlaub ansehen/ändern</button>` : ""}` : ""}${maAktiv(m) ? ` · ${maUrlaub(m) ? "🏖️ im Urlaub" : maKrank(m) ? "🤒 krank" : maLehrgang(m) ? "📚 im Lehrgang" : maSchule(m) ? "🏫 Berufsschule" : zufrText(m)}${spiel.admin ? ` (Zufriedenheit ${Math.round(zufr(m))})` : ""}` : ""}${m.typ === "azubi" ? (() => { azubiErgaenzen(m); const A = ausbilderVon(m); return `<br>🎓 ${ausbildungsJahr(m) >= 2 ? FACH[m.fach].n + " · " : "Grundausbildung · "}${ausbildungsJahr(m)}. Ausbildungsjahr · Ausbilder: ${A ? (A.id === "du" ? "du" : esc(A.name)) + (ausbilderDa(m) ? "" : " (fehlt gerade)") : "⚠️ keiner"} · Prüfung ${jzName(m.pruefung).replace(/^\S+ /, "")}${m.bestanden ? " · ✅ bestanden" : ""}`; })() : m.ausgebildet ? `<br>🎓 bei dir ausgebildet (${m.ausgebildet})` : ""}</small></span>${m.bis == null ? `<span class="ma-knr">${freiStufe("lehrgang") && maAktiv(m) ? `<button class="knopf zweit" data-lgma="${i}">📚 Fortbildung</button>` : ""}<button class="knopf zweit" data-kuend="${i}">${m.ab > jetzt ? "Absagen" : inProbe(m) ? "Fristlos kündigen" : "Kündigen"}</button></span>` : ""}</div>${m.kurs && !m.kurs.fertig ? `<div class="ma-stark"><small>📚 ${maLehrgang(m) ? "gerade im Lehrgang" : `Lehrgang gebucht: ${jzName(m.kurs.jz)}, ab Tag ${m.kurs.t}`} (${(wissenListe({ einsteller: 1 }).find(x => x[0] === m.kurs.k) || [])[3] || m.kurs.k})</small></div>` : ""}${m.typ === "azubi" ? `<div class="ma-aufgaben"><small>Einsatz:</small><button class="mini-knopf ${!m.einsatz ? "an" : ""}" data-azeins="${i}:stall">🧹 Stalldienst</button><button class="mini-knopf ${m.einsatz === "putzen" ? "an" : ""}" data-azeins="${i}:putzen">🧽 Putzen</button>${freiStufe("mitlaufen") && m.ausbilder && m.ausbilder !== "du" ? `<button class="mini-knopf ${m.einsatz === "mitlaufen" ? "an" : ""}" data-azeins="${i}:mitlaufen" title="lernt mehr, aber nur in den Bereichen des Ausbilders – fehlt dann im Stall">🚶 Mitlaufen</button>` : ""}${m.einsatzNeu ? `<small>ab morgen: ${{ stall: "Stalldienst", putzen: "Putzen", mitlaufen: "Mitlaufen" }[m.einsatzNeu.e]}</small>` : ""}${ausbilderListe().some(a => a.belegt < a.plaetze && a.id !== m.ausbilder) ? `<button class="mini-knopf" data-ausbwechsel="${i}">🎓 Ausbilder wechseln</button>` : ""}</div>` : ""}${(MA_AUFGABEN_TYP[m.typ] || []).length && !(m.typ === "azubi" && m.einsatz === "putzen") ? `<div class="ma-aufgaben"><small>Aufgaben:</small>${MA_AUFGABEN_TYP[m.typ].map(k => `<label><input type="checkbox" data-maauf="${i}:${k}" ${maDarf(m, k) ? "checked" : ""}> ${MA_AUFGABEN[k]}</label>`).join("")}</div>` : ""}${aquaGeb() && AQUA_HELFER.includes(m.typ) ? `<div class="ma-aufgaben"><label><input type="checkbox" data-maaqua="${i}" ${maAquaHilft(m) ? "checked" : ""}> 🏊 Hilft beim Aqua</label>${maWasserKurs(m) ? "<small>🌊 Lehrgang Wasserarbeit</small>" : ""}</div>` : maWasserKurs(m) ? `<div class="ma-stark"><small>🌊 Lehrgang Wasserarbeit</small></div>` : ""}${staerkeHTML(m.wissen, m.typ === "hofhelfer")}${(n => n ? `<div class="ma-stark"><small>📈 seit letzter Jahreszeit: +${n} ${n === 1 ? "Stufe" : "Stufen"}</small></div>` : "")((m.aufst || []).filter(a => a.jz >= jzJetzt() - 1).length)}${eigHTML(m)}${wissenHTML(m.wissen, m.typ === "hofhelfer")}</div>`).join("")}</div>` : ""}
+      ${sb.length ? `<h4 class="ma-titel">Angestellt</h4><div class="ma-liste">${sb.map((m, i) => `<div class="ma-karte"><div class="ma-zeile"><span><b class="ma-name">${maAva(m, 34)}<span>${esc(m.name)}</span></b><small>${maTitel(m)} · ${fmt(m.gehalt)} pro Jahreszeit · ${status(m)}${inProbe(m) && maAktiv(m) ? ` · Probezeit bis ${jzName(m.probe - 1)}` : ""}${maAktiv(m) && m.bis == null ? ` · 🏖️ Urlaub: ${urlaubStatus(m)}${m.uWunsch ? ` <button class="mini-knopf" data-uplanma="1">🏖️ Urlaub ansehen/ändern</button>` : ""}` : ""}${maAktiv(m) ? ` · ${maUrlaub(m) ? "🏖️ im Urlaub" : maKrank(m) ? "🤒 krank" : maLehrgang(m) ? "📚 im Lehrgang" : maSchule(m) ? "🏫 Berufsschule" : zufrText(m)}${spiel.admin ? ` (Zufriedenheit ${Math.round(zufr(m))})` : ""}` : ""}${m.typ === "azubi" ? (() => { azubiErgaenzen(m); const A = ausbilderVon(m); return `<br>🎓 ${ausbildungsJahr(m) >= 2 ? FACH[m.fach].n + " · " : "Grundausbildung · "}${ausbildungsJahr(m)}. Ausbildungsjahr · Ausbilder: ${A ? (A.id === "du" ? "du" : esc(A.name)) + (ausbilderDa(m) ? "" : " (fehlt gerade)") : "⚠️ keiner"} · Prüfung ${jzName(m.pruefung).replace(/^\S+ /, "")}${m.bestanden ? " · ✅ bestanden" : ""}`; })() : m.ausgebildet ? `<br>🎓 bei dir ausgebildet (${m.ausgebildet})` : ""}</small></span>${m.bis == null ? `<span class="ma-knr">${freiStufe("lehrgang") && maAktiv(m) ? `<button class="knopf zweit" data-lgma="${i}">📚 Fortbildung</button>` : ""}<button class="knopf zweit" data-kuend="${i}">${m.ab > jetzt ? "Absagen" : inProbe(m) ? "Fristlos kündigen" : "Kündigen"}</button></span>` : ""}</div>${m.kurs && !m.kurs.fertig ? `<div class="ma-stark"><small>📚 ${maLehrgang(m) ? "gerade im Lehrgang" : `Lehrgang gebucht: ${jzName(m.kurs.jz)}, ab Tag ${m.kurs.t}`} (${(wissenListe({ einsteller: 1 }).find(x => x[0] === m.kurs.k) || [])[3] || m.kurs.k})</small></div>` : ""}${m.typ === "azubi" ? `<div class="ma-aufgaben"><small>Einsatz:</small><button class="mini-knopf ${!m.einsatz ? "an" : ""}" data-azeins="${i}:stall">🧹 Stalldienst</button><button class="mini-knopf ${m.einsatz === "putzen" ? "an" : ""}" data-azeins="${i}:putzen">🧽 Putzen</button>${freiStufe("mitlaufen") && m.ausbilder && m.ausbilder !== "du" ? `<button class="mini-knopf ${m.einsatz === "mitlaufen" ? "an" : ""}" data-azeins="${i}:mitlaufen" title="lernt mehr, aber nur in den Bereichen des Ausbilders – fehlt dann im Stall">🚶 Mitlaufen</button>` : ""}${m.einsatzNeu ? `<small>ab morgen: ${{ stall: "Stalldienst", putzen: "Putzen", mitlaufen: "Mitlaufen" }[m.einsatzNeu.e]}</small>` : ""}${ausbilderListe().some(a => a.belegt < a.plaetze && a.id !== m.ausbilder) ? `<button class="mini-knopf" data-ausbwechsel="${i}">🎓 Ausbilder wechseln</button>` : ""}</div>` : ""}${(MA_AUFGABEN_TYP[m.typ] || []).length && !(m.typ === "azubi" && m.einsatz === "putzen") ? `<div class="ma-aufgaben"><small>Aufgaben:</small>${MA_AUFGABEN_TYP[m.typ].map(k => `<label><input type="checkbox" data-maauf="${i}:${k}" ${maDarf(m, k) ? "checked" : ""}> ${MA_AUFGABEN[k]}</label>`).join("")}</div>` : ""}${aquaGeb() && AQUA_HELFER.includes(m.typ) ? `<div class="ma-aufgaben"><label><input type="checkbox" data-maaqua="${i}" ${maAquaHilft(m) ? "checked" : ""}> 🏊 Hilft beim Aqua</label>${maWasserKurs(m) ? "<small>🌊 Lehrgang Wasserarbeit</small>" : ""}</div>` : maWasserKurs(m) ? `<div class="ma-stark"><small>🌊 Lehrgang Wasserarbeit</small></div>` : ""}${staerkeHTML(m.wissen, m.typ === "hofhelfer")}${(n => n ? `<div class="ma-stark"><small>📈 seit letzter Jahreszeit: +${n} ${n === 1 ? "Stufe" : "Stufen"}</small></div>` : "")((m.aufst || []).filter(a => a.jz >= jzJetzt() - 1).length)}${eigHTML(m)}${(m.typ === "hofhelfer" ? "" : wissenHTML(m.wissen))}</div>`).join("")}</div>` : ""}
       <h4 class="ma-titel">Bewerbungen ${ok ? `für ${jzName(jetzt).replace(/^\S+ /, "")}` : ""}</h4>
       ${!ok ? (typ === "azubi" ? `<p>Einen Azubi kannst du erst einstellen, wenn ein Ausbilder einen Platz frei hat: Pferdewirt oder Pferdewirtschaftsmeister (je 2 Azubis) oder du selbst mit Ausbilderschein (1 Azubi, Kurs ${fmt(AUSBILDERSCHEIN)} unter Hofverwaltung → Mitarbeiter). Der Pferdepfleger darf nicht ausbilden.</p>` : T.staelle ? `<p>Für diese Stelle bewirbt sich nur jemand, wenn dieser Hof ein ${T.staelle.map(x => STALLART_NAME[x]).join(" oder ")} ist (Stallart kommt mit dem Hof-Ausbau H7).${typ === "bereiter" ? ` Bis dahin kommt ein <b>Bereiter nach Bedarf</b>: Trainingstage je Pferd stellst du unter Box → Pflege → Orte → Reitplatz ein, je Einheit ${fmt(BEREITER_EINHEIT)}.` : ""}</p>` : `<p>Für diese Stelle bewirbt sich erst jemand, wenn dein Stall größer ist (<b>${abText(T.ab)}</b>, du hast ${spiel.boxen.length}).</p>`)
-        : bw.length ? `<div class="ma-liste">${bw.map((x, i) => `<div class="ma-karte"><div class="ma-zeile"><span><b class="ma-name">${maAva(x, 34)}<span>${esc(x.name)}</span></b><small>${x.w ? T.w : T.name} · ${typ === "azubi" ? `${fmt(x.gehalt)} pro Jahreszeit im 1. Jahr` : `möchte <b>${fmt(x.gehalt)}</b> pro Jahreszeit`}</small></span>${typ === "azubi" && fachAngebot().length > 1 ? fachAngebot().map(f => `<button class="knopf" data-einst="${i}" data-fach="${f}">${FACH[f].n}</button>`).join("") : `<button class="knopf" data-einst="${i}">Einstellen</button>`}</div>${staerkeHTML(x.wissen, typ === "hofhelfer")}${eigHTML(x)}${wissenHTML(x.wissen, typ === "hofhelfer")}</div>`).join("")}</div>`
+        : bw.length ? `<div class="ma-liste">${bw.map((x, i) => `<div class="ma-karte"><div class="ma-zeile"><span><b class="ma-name">${maAva(x, 34)}<span>${esc(x.name)}</span></b><small>${x.w ? T.w : T.name} · ${typ === "azubi" ? `${fmt(x.gehalt)} pro Jahreszeit im 1. Jahr` : `möchte <b>${fmt(x.gehalt)}</b> pro Jahreszeit`}</small></span>${typ === "azubi" && fachAngebot().length > 1 ? fachAngebot().map(f => `<button class="knopf" data-einst="${i}" data-fach="${f}">${FACH[f].n}</button>`).join("") : `<button class="knopf" data-einst="${i}">Einstellen</button>`}</div>${staerkeHTML(x.wissen, typ === "hofhelfer")}${eigHTML(x)}${(typ === "hofhelfer" ? "" : wissenHTML(x.wissen))}</div>`).join("")}</div>`
         : typ === "azubi" && datum().s !== 1 && !spiel.tutorial ? `<p>Azubis bewerben sich nur im <b>Sommer</b> – die Ausbildung beginnt immer im Herbst.</p>` : `<p>Diese Jahreszeit hat sich niemand mehr beworben. Zur nächsten Jahreszeit kommen neue Bewerbungen.</p>`}`,
       [["Schließen", null, "zweit"]], "breit");
     document.querySelectorAll("[data-azeins]").forEach(b => b.onclick = () => { const [i, k] = b.dataset.azeins.split(":"), m = sb[+i]; const jetztE = m.einsatz || "stall"; if (k === jetztE) delete m.einsatzNeu; else { m.einsatzNeu = { e: k, ab: spiel.tag + 1 }; if (k === "mitlaufen") tippMerken("azubiMitlaufen"); } speichern(); mitarbeiterDialog(typ); });   // v398 · S6: gilt ab dem nächsten Morgen (heute hat er schon gearbeitet)
@@ -18701,6 +18736,11 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   let pnMeld = "";
   // ---------- Hofverwaltung → Pferde (Dome, v324): alle Pferde auf dem Hof als sortierbare Tabelle ----------
   let pfTab = { filter: "alle", sort: "name", ab: 1 };
+  // v960 (Dome 8.11.): Spalte „Tragend“ – „ja“ nur, wenn die Trächtigkeit sicher nachgewiesen ist (Ultraschall nach der sicheren Zeit); sonst „nein“, bei positivem, aber noch frühem Ultraschall mit Hinweis; Hengste, Wallache und junge Stuten „–“
+  const tragendVon = p => { if (!p || p.geschlecht !== "Stute" || alterJZ(p) < ZUCHTALTER) return { k: 0, txt: "–" };
+    if (p.traechtig && p.traechtig.sicher === true) return { k: 2, txt: "<b>ja</b>" };
+    if (p.gedeckt && p.gedeckt.tuPos) return { k: 1, txt: 'nein <small title="Ultraschall positiv – in den ersten Wochen kann die Stute das Fohlen noch verlieren">(Ultraschall positiv, noch nicht sicher)</small>' };
+    return { k: 1, txt: "nein" }; };
   function pferdeTabZeilen() {
     const L = [];
     spiel.boxen.forEach((b, i) => { if (b.tot) return;
@@ -18712,17 +18752,17 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
           gesundTxt: `${g} %${bef.length ? ` · ${bef.map(x => befundSicht(p, x).name || (KRANK[x.art] || {}).n || x.art).join(", ")}` : ""}${p.klinik ? " · 🏥 Klinik" : ""}`,
           heute: !e ? "" : !aufg.length ? "–" : aufg.every(a => a.ok) ? "✓ alles erledigt" : aufg.filter(a => !a.ok).map(a => a.txt).join(", "),
           heuteOffen: aufg.filter(a => !a.ok).length,
-          wert: pension ? null : marktwert(p) }); }); });
+          tragend: tragendVon(p), wert: pension ? null : marktwert(p) }); }); });
     (spiel.extern || []).forEach((e, i) => { const p = e.pferd, bef = bekannteBefunde(p), g = Math.round((p.pflege && p.pflege.gesundheit) != null ? p.pflege.gesundheit : 100);   // v326: Aufzuchtstation/Ausbildungsstall (früher „Außer Haus“)
       L.push({ p, box: -1, extern: i, ort: e.ort, pension: false, name: p.name, geschlecht: p.geschlecht, alter: alterJZ(p), alterTxt: alterText(p), rasse: rasseById(p.rasse).name, gesund: g,
-        gesundTxt: `${g} %${bef.length ? ` · ${bef.map(x => befundSicht(p, x).name || (KRANK[x.art] || {}).n || x.art).join(", ")}` : ""}`, heute: "", heuteOffen: 0, wert: marktwert(p) }); });
+        gesundTxt: `${g} %${bef.length ? ` · ${bef.map(x => befundSicht(p, x).name || (KRANK[x.art] || {}).n || x.art).join(", ")}` : ""}`, heute: "", heuteOffen: 0, tragend: tragendVon(p), wert: marktwert(p) }); });
     return L;
   }
   function pferdeTabHTML() {
     const alle = pferdeTabZeilen(), F = pfTab, l = alle.filter(z => F.filter === "alle" || (F.filter === "eigen" ? !z.pension : z.pension));
-    const key = { name: z => z.name.toLowerCase(), geschlecht: z => z.geschlecht, alter: z => z.alter, rasse: z => z.rasse, gesund: z => z.gesund, heute: z => z.pension ? z.heuteOffen : -1, wert: z => z.wert == null ? -1 : z.wert }[F.sort] || (z => z.name);
+    const key = { name: z => z.name.toLowerCase(), geschlecht: z => z.geschlecht, alter: z => z.alter, rasse: z => z.rasse, gesund: z => z.gesund, tragend: z => z.tragend.k, heute: z => z.pension ? z.heuteOffen : -1, wert: z => z.wert == null ? -1 : z.wert }[F.sort] || (z => z.name);
     l.sort((a, b) => { const x = key(a), y = key(b); return (typeof x === "string" ? x.localeCompare(y, "de") : x - y) * F.ab || a.name.localeCompare(b.name, "de"); });
-    const sp = [["name", "Name"], ["geschlecht", "Geschlecht"], ["alter", "Alter"], ["rasse", "Rasse"], ["gesund", "Gesund\u00adheit"], ...(F.filter !== "eigen" ? [["heute", "Pension heute"]] : []), ...(F.filter !== "pension" ? [["wert", "Markt\u00adwert"]] : [])];
+    const sp = [["name", "Name"], ["geschlecht", "Geschlecht"], ["alter", "Alter"], ["rasse", "Rasse"], ["gesund", "Gesund\u00adheit"], ["tragend", "Tragend"], ...(F.filter !== "eigen" ? [["heute", "Pension heute"]] : []), ...(F.filter !== "pension" ? [["wert", "Markt\u00adwert"]] : [])];
     const kurzRasse = r => r.replace(/ \(.*\)/, "").replace("Englisches Vollblut", "Vollblut");
     const n = k => alle.filter(z => k === "alle" || (k === "eigen" ? !z.pension : z.pension)).length;
     return `<div class="fin-tabs">${[["alle", "Alle"], ["eigen", "Eigene Pferde"], ["pension", "Pensionspferde"]].map(([k, t]) => `<button data-pff="${k}" class="${F.filter === k ? "an" : ""}">${t} (${n(k)})</button>`).join("")}</div>
@@ -18730,7 +18770,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         ${l.map(z => `<tr ${z.extern != null ? `data-pfext="${z.extern}"` : `data-pfbox="${z.box}"${z.fohlen ? ' data-pffohlen="1"' : ""}`}>${sp.map(([k]) => `<td class="${k === "wert" ? "re nw" : k === "alter" ? "nw2" : k === "gesund" && z.gesund < 50 ? "pf-warn" : ""}">${
           k === "name" ? `<b>${esc(z.name)}</b>${z.p && !z.pension ? seltenMarke(z.p, 26) : ""}${z.p && !z.pension ? zuchtbuchMarke(z.p) : ""}${z.p && !z.pension ? praemienMarke(z.p) : ""}${z.fohlen ? " <small>🍼 bei Fuß</small>" : ""}${z.extern != null ? `<small class="pf-ext">${z.ort === "aufzucht" ? "🍼" : "🎓"} ${ORT_NAME[z.ort].replace("\u00ad", "")} · ${fmt(KOSTEN[z.ort])}/Tag</small><button class="mini-knopf pf-hol" data-hol="${z.extern}">🏠 Zurückholen</button>` : `<small>Box ${bnr(z.box)}${z.pension ? " · 🏡" : ""}</small>`}`
           : k === "alter" ? z.alterTxt.replace(/ Jahre?$/, "\u00a0J.").replace(/ Monate$/, "\u00a0Mon.") : k === "gesund" ? esc(z.gesundTxt) : k === "heute" ? (z.pension ? (z.heute ? `<span class="${z.heuteOffen ? "pf-offen" : "pf-ok"}">${z.heute}</span>` : "–") : "")
-          : k === "wert" ? (z.wert == null ? "" : fmt(z.wert)) : k === "rasse" ? esc(kurzRasse(z.rasse)) : esc(String(z[k]))}</td>`).join("")}</tr>`).join("")}</table></div>
+          : k === "tragend" ? z.tragend.txt : k === "wert" ? (z.wert == null ? "" : fmt(z.wert)) : k === "rasse" ? esc(kurzRasse(z.rasse)) : esc(String(z[k]))}</td>`).join("")}</tr>`).join("")}</table></div>
         ${(spiel.extern || []).length && F.filter !== "pension" ? `<p class="text" style="margin:6px 0 0"><small>🍼🎓 Außer Haus (Aufzuchtstation, Ausbildungsstall): ${(spiel.extern || []).length} · laufende Kosten <b>${fmt((spiel.extern || []).reduce((a, e) => a + KOSTEN[e.ort], 0))} pro Tag</b></small></p>` : ""}
         <p class="text" style="margin:6px 0 0"><small>Spaltenkopf antippen zum Sortieren (nochmal = umgekehrt). Zeile antippen → zur Box bzw. zum Steckbrief (Pferde außer Haus).<span class="pf-wisch"> Zur Seite wischen für weitere Spalten.</span></small></p>`
       : `<p class="text" style="margin:8px 0">${F.filter === "pension" ? "Keine Pensionspferde auf dem Hof." : F.filter === "eigen" ? "Keine eigenen Pferde auf dem Hof." : "Noch keine Pferde auf dem Hof."}</p>`}`;

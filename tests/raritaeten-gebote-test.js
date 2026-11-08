@@ -27,6 +27,10 @@ const { chromium } = require('playwright'); const path = require('path');
     zh.value = String(neu * 20); zh.dispatchEvent(new Event('change')); ok('Zu hohe Eingabe wird auf das Maximum gekappt', +rg.value === +rg.max && +zh.value === +rg.max, rg.value + ' / ' + zh.value);
     zh.value = String(neu + 500); zh.dispatchEvent(new Event('change')); [...document.querySelectorAll('#dlgKnoepfe button')].find(x => /Bieten/.test(x.textContent)).click();
     ok('Bieten übernimmt genau den eingegebenen Betrag als Höchstgebot', a1.duMax === neu + 500 && a1.fuehrt === 'du' && a1.gebot === neu, a1.duMax + ' / ' + (neu + 500));
+    // Brief „Überboten“: Erneut bieten auch in der nächsten Jahreszeit (Auktion läuft noch)
+    { const h = L[2], a = rarAuktion(h); a.vorbei = false; a.jz = jzJetzt() - 1; a.endeTag = spiel.tag + 3; a.duGeboten = true; a.fuehrt = 'npc'; a.gebot = h.preis + 500; a.mj = spiel.rar.mj;
+      const html = briefAktionHTML({ id: 'bx', aktion: { typ: 'bieten', pferd: h.id } }); ok('Überboten-Brief einer laufenden Raritäten-Auktion hat „Erneut bieten“ (auch nach Wechsel der Jahreszeit)', /Erneut bieten/.test(html), html);
+      a.endeTag = spiel.tag - 1; ok('Abgelaufene Auktion: kein Knopf', !/Erneut bieten/.test(briefAktionHTML({ id: 'bx', aktion: { typ: 'bieten', pferd: h.id } }))); a.endeTag = spiel.tag + 3; }
     // Filter nach Seltenheit zusammen mit dem Kontinent-Filter
     document.getElementById('dlg').hidden = true; spiel.rar.karte = true; spiel.sortKont = false; spiel.sortRar = false; zeigeSchirm(null); zeigeMarkt('raritaeten');
     const sicht = () => [...document.querySelectorAll('#nebenSchirm [data-rarstufe]')].filter(c => c.style.display !== 'none');

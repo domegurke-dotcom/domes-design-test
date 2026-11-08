@@ -1340,7 +1340,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "960";
+  const SPIEL_VERSION = "961";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1348,12 +1348,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=960"></script>
-<script src="pferd.js?v=960"></script>
-<script src="boxstufen.js?v=960"></script>
-<script src="kopfneu.js?v=960"></script>
-<script src="waschbild.js?v=960"></script>
-<script src="avatare.js?v=960"></script>
+<script src="lz-string.min.js?v=961"></script>
+<script src="pferd.js?v=961"></script>
+<script src="boxstufen.js?v=961"></script>
+<script src="kopfneu.js?v=961"></script>
+<script src="waschbild.js?v=961"></script>
+<script src="avatare.js?v=961"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -14423,7 +14423,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     const jetzt = jzJetzt(), gek = spiel.marktGekauft || [];
     if (!spiel.marktStand || spiel.marktStand.jz !== jetzt) {
       const r = zufall("markt-" + jetzt + (spiel.spieler ? spiel.spieler.name : ""));
-      spiel.marktStand = { jz: jetzt, liste: Array.from({ length: 6 }, (_, i) => {
+      spiel.marktStand = { jz: jetzt, liste: Array.from({ length: MARKT_ANZ.haendler }, (_, i) => {
         const ra = RASSEN[Math.floor(r() * RASSEN.length)], g = ["Stute", "Hengst", "Wallach"][Math.floor(r() * 3)], jahre = 1 + Math.floor(r() * 14);
         // normaler Pferdemarkt: reinrassige Pferde und Mischlinge – Rassen der 8 Urgroßeltern
         const w = r(), fremdAnz = w < .35 ? 0 : w < .6 ? 1 : w < .8 ? 2 : w < .92 ? 4 : 3, andere = RASSEN.filter(x => x.id !== ra.id);
@@ -14484,11 +14484,13 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     let x = r() * 100; const l = MARKT_FZ[art]; let fz = 5; for (const [z, w] of l) { if ((x -= w) < 0) { fz = z; break; } }
     h.fz = fz; h.typ = fz <= 3 ? "duenn" : fz >= 7 ? "dick" : "normal"; return h;
   }
+  // v961 (Dome 8.11.): Angebot je Pferdemarkt-Rubrik, näher an echten Märkten (Verdener Auktion ~55–90 Reitpferde und 30–105 Fohlen, Pferdemarkt ~8 Pferde je Händler, online sehr viele Anzeigen); [Mindestzahl, Spanne] = Mindestzahl + 0…Spanne−1
+  const MARKT_ANZ = { privat: [6, 5], haendler: 12, auktion: [8, 5], fohlen: [10, 11], notfall: [2, 3], gestuet: [3, 3] };
   function marktNeu() {
     const jetzt = jzJetzt(), alt = spiel.markt; if (alt && alt.jz === jetzt && alt.v === 3) return alt;
     const r = zufall("markt3-" + jetzt + (spiel.spieler ? spiel.spieler.name : "")), M = { jz: jetzt, gestuet: {}, v: 3 };
     // Privatanzeigen: wenige Pferde, oft älter und Mix, 70–100 % des Marktwerts, Gesundheit erst nach dem Kauf sichtbar
-    M.privat = Array.from({ length: 2 + Math.floor(r() * 3) }, (_, i) => {
+    M.privat = Array.from({ length: MARKT_ANZ.privat[0] + Math.floor(r() * MARKT_ANZ.privat[1]) }, (_, i) => {
       const w = r(), fo = r() < fohlenChance(), h = mkPferd("pv" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, w < .2 ? 0 : 1 + Math.floor(r() * 4), fo ? 5 + Math.floor(r() * 12) : 5 + Math.floor(r() * 15), r, fo ? "Stute" : null, undefined, "privat");
       h.training = Math.floor(r() * 60); h.verdeckt = Math.round(45 + r() * 55); marktErfolge(h, r);
       h.ahnenUnbekannt = AHNEN_LUECKE.filter(() => r() < .3);
@@ -14498,18 +14500,18 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       const wGesund = marktwert(h), wEcht = marktwert({ ...h, pflege: { gesundheit: h.verdeckt } });
       h.preis = Math.round(((wGesund + wEcht) / 2 + (h.fohlenBeiFuss ? marktwert(h.fohlenBeiFuss) : 0)) * saisonF() * (.7 + r() * .3) / 50) * 50; return h; });
     // Auktionshaus: ausgesuchte Jungpferde, Start beim halben Marktwert
-    M.auktion = Array.from({ length: 3 + Math.floor(r() * 3) }, (_, i) => {
+    M.auktion = Array.from({ length: MARKT_ANZ.auktion[0] + Math.floor(r() * MARKT_ANZ.auktion[1]) }, (_, i) => {
       const jahre = 1 + Math.floor(r() * 4), h = mkPferd("au" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, r() < .7 ? 0 : 1, jahre, r, null, zuechterGeb(jahre, r), "zuechter"), wert = Math.round(marktwert(h) * saisonF());
       const start = Math.max(100, Math.round(wert / 2 / 50) * 50); marktKoerper(h, r, "zuechter");
       return { pferd: h, wert, start, gebot: start, gebote: 0, fuehrt: null, max: npcLimit(wert, r) }; });
     // Fohlenauktion (Sommer, Herbst): Frühlingsfohlen vom Züchter, abgeholt nach dem Absetzen zu Beginn der nächsten Jahreszeit
-    M.fohlen = !fohlenZeit() ? [] : Array.from({ length: 3 + Math.floor(r() * 3) }, (_, i) => {
+    M.fohlen = !fohlenZeit() ? [] : Array.from({ length: MARKT_ANZ.fohlen[0] + Math.floor(r() * MARKT_ANZ.fohlen[1]) }, (_, i) => {
       const h = mkPferd("fa" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, 0, 0, r, r() < .5 ? "Stute" : "Hengst", { s: 0, j: datum().j }, "zuechter"); marktFohlenschau(h, r);   // viele Auktionsfohlen sind schon vorgestellt
       const wert = Math.round(marktwert(h) * saisonF());
       const start = Math.max(100, Math.round(wert / 2 / 50) * 50);
       return { pferd: h, wert, start, gebot: start, gebote: 0, fuehrt: null, fohlen: true, max: npcLimit(wert, r) }; });
     // Notfallpferde beim Tierschutz: schlechter Zustand, für eine Schutzgebühr
-    M.notfall = Array.from({ length: 1 + Math.floor(r() * 2) }, (_, i) => {
+    M.notfall = Array.from({ length: MARKT_ANZ.notfall[0] + Math.floor(r() * MARKT_ANZ.notfall[1]) }, (_, i) => {
       const fo = r() < fohlenChance() * .35, h = mkPferd("nf" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, Math.floor(r() * 5), fo ? 6 + Math.floor(r() * 12) : 8 + Math.floor(r() * 15), r, fo ? "Stute" : null);
       if (fo) mitFohlen(h, r);
       marktKoerper(h, r, "notfall");
@@ -14522,7 +14524,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   function gestuetPferde(rasse) {
     const M = marktNeu(); if (M.gestuet[rasse]) return M.gestuet[rasse];
     const r = zufall("gest-" + M.jz + rasse), ver = VEREDELUNG[rasse] || [];
-    M.gestuet[rasse] = Array.from({ length: 2 + Math.floor(r() * 2) }, (_, i) => {
+    M.gestuet[rasse] = Array.from({ length: MARKT_ANZ.gestuet[0] + Math.floor(r() * MARKT_ANZ.gestuet[1]) }, (_, i) => {
       const g = ["Stute", "Hengst", "Wallach"][Math.floor(r() * 3)], plaetze = Array.from({ length: 8 }, (_, k) => k === 0 && ver.length && r() < .35 ? ver[0] : rasse);
       const jahre = 1 + Math.floor(r() * 4), h = neuesPferd({ id: "gs" + M.jz + rasse + i, name: pferdeName(g, rasse, "zucht", r), rasse, plaetze, geschlecht: g, alter: jahre, geb: zuechterGeb(jahre, r) });
       ["schritt", "trab", "galopp"].forEach(k => h.werte.gang[k] = Math.min(10, h.werte.gang[k] + .5));   // gute Abstammung: bessere Gänge
@@ -19045,7 +19047,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       if (!u || A.antwort || u.ok != null) return `<p class="brief-aktion-info">${(A.antwort || (u && u.ok ? "ja" : "nein")) === "ja" ? "✅ Urlaub genehmigt." : "❌ Urlaub abgelehnt."}</p>`;
       return `<div class="brief-aktion"><button class="knopf" data-baktion="urlaub-ja" data-bid="${br.id}">✅ Genehmigen</button><button class="knopf zweit" data-baktion="urlaub-nein" data-bid="${br.id}">Ablehnen</button></div>`; }
     if (A.typ === "bieten") { const a = auktionFinden(A.pferd);
-      const aktuell = a && !a.vorbei && (a.rar ? a.jz === jzJetzt() : spiel.markt.jz === jzJetzt());
+      const aktuell = a && !a.vorbei && (a.rar ? !rarAuktionVorbei(a) : spiel.markt.jz === jzJetzt());   // v961 (Dome 8.11.): Raritäten-Auktionen laufen eine Jahreszeit ab dem ersten Gebot – der Brief kommt oft in der nächsten Jahreszeit, trotzdem „Erneut bieten“
       if (aktuell && a.fuehrt === "du") return `<p class="brief-aktion-info">✅ Du führst wieder – dein Höchstgebot: ${fmt(a.duMax || a.gebot)}.</p>`;
       return aktuell ? `<div class="brief-aktion"><button class="knopf" data-baktion="bieten" data-bid="${br.id}">🔨 Erneut bieten</button></div>` : ""; }
     if (A.typ === "rennkauf") { const k = (spiel.rennKauf || []).find(x => x.rid === A.rid && x.bis >= spiel.tag);   // H8: Starter aus dem Verkaufsrennen kaufen

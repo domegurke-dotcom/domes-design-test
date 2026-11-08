@@ -743,7 +743,7 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     if (C.pattern === "leopard" && !ganzWeiss) for (let i = 0; i < 9; i++) g += `<ellipse cx="${f(sMinX + rnd() * (maxX - sMinX))}" cy="${f(-rnd() * Lg)}" rx="${f(1.6 + rnd() * 1.8)}" ry="${f(1.4 + rnd() * 1.5)}" fill="${dunkel(spotFarbe)}"/>`;
     g += `</g>`;
   }
-  if (!liegt) { const sf = dunkel(C.stripe || C.points || body), wf = dunkel("#f6f4ee");
+  if (!liegt) { const sf = dunkel(C.stripe || C.points || body), wf = "#f6f4ee";   // v998 (Dome): das Weiß der fernen Beine (Abzeichen) blieb sonst grau – jetzt weiß wie bei den nahen Beinen
     g += zebraStreifen(fx2, "vf", sf) + zebraStreifen(hx2, "hf", sf) + beinWeiss(BA.vf, fx2, "vf", wf) + beinWeiss(BA.hf, hx2, "hf", wf); }
   g += `<g stroke="${INK}" stroke-width="1.6" vector-effect="non-scaling-stroke">` +
     (liegt ? [] : [[huf(fx2), BA.vf], [huf(hx2), BA.hf]]).map(([h, st]) => `<path d="${eckig(h)}" fill="${hufFill(st, true)}" vector-effect="non-scaling-stroke"/>`).join("") + "</g></g>";

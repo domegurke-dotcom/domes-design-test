@@ -22,6 +22,9 @@ const { chromium } = require('playwright'); const path = require('path');
     const vorher = aquaLetzt(A); aquaMorgen(); ok('Morgens: Anna war im Aqua-Center', aquaLetzt(A) === spiel.tag, vorher + ' → ' + aquaLetzt(A));
     // Platzgrenze: Stufe 2 = 2 Plätze am Tag
     wbAnwenden('m:ph1', 'b:1'); wbAnwenden('m:ph1', 'b:2'); const zu = maZuteilung('aqua'); ok('Höchstens 2 Pferde (Stufe 2) werden dem Therapeuten angerechnet', zu.length === 2, zu.length);
+    // Aufgabenauswahl: bei „nur bei Reha“ keine Übungsauswahl (der Therapeut entscheidet)
+    const sel = md => { spiel.boxen[1].pferd.aquaWunsch = { modus: md }; wbSicht = 'boxen'; wbWahl = null; zeigeWhiteboard(); return { prog: !!document.querySelector('[data-wbaqua="1:prog"]'), hinweis: /Therapeut wählt/.test(document.body.innerText) || !!document.querySelector('.wb-pn-z small[title*="Therapeut"]') }; };
+    const sr = sel('reha'), s2 = sel('2'); ok('Nur bei Reha: keine Auswahl Schwimmen/Aufbau/Kondition, Hinweis „Therapeut wählt“', !sr.prog && sr.hinweis, JSON.stringify(sr)); ok('Alle 2 Tage: Übungsauswahl da', s2.prog, JSON.stringify(s2));
     // Ohne Aqua-Center nicht zuteilbar
     gebaeude().pop(); ok('Ohne Aqua-Center nicht zuteilbar', !wbOk('m:ph1', 'b:0'));
     return out; });

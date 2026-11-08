@@ -1,0 +1,21 @@
+// v990 (Dome 8.11.): Hofverwaltung → Mitarbeiter → Tierarzt: mehrere Pferde auf einmal impfen und Zähne machen lassen, eine Rechnung
+const { chromium } = require('playwright'); const path = require('path');
+(async () => { const b = await chromium.launch(); const errs = []; const pg = await b.newPage({ viewport: { width: 1100, height: 900 } }); pg.on('pageerror', e => errs.push(e.message));
+  await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(500);
+  await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('[data-stufe="exp"]'); await pg.click('#chLos'); await pg.waitForTimeout(250); await pg.click('#dlgKnoepfe button');
+  await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'W'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(250);
+  const R = await pg.evaluate(() => { const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (c ? '' : ' – ' + (x || ''))); document.getElementById('dlg').hidden = true; spiel.stufenAn = false; spiel.tippsAus = true; spiel.geld = 1e7;
+    const mk = (n, i) => { const P = neuesPferd({ rasse: 'paint', geschlecht: 'Stute', alter: 8, name: n }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); werteErgaenzen(P); spiel.boxen[i].pferd = P; return P; };
+    const A = mk('Anna', 0), B = mk('Berta', 1), C = mk('Cora', 2); spiel.tag = 100;
+    A.pflege.impf = 0; A.pflege.zahn = 0; B.pflege.impf = 99; B.pflege.zahn = 99; C.pflege.impf = 0; C.pflege.zahn = 99;
+    zeigeHof('mitarbeiter'); const kach = document.getElementById('tierarztAlle'); ok('Kachel „Tierarzt“ in Hofverwaltung → Mitarbeiter, „2 fällig“', !!kach && /Tierarzt/.test(kach.textContent.replace(/­/g, '')) && /2 fällig/.test(kach.textContent), kach && kach.textContent);
+    kach.click(); const dl = document.getElementById('dlgInhalt'); const ci = [...dl.querySelectorAll('[data-tzi]')].map(c => c.checked), cz = [...dl.querySelectorAll('[data-tzz]')].map(c => c.checked);
+    ok('Dialog: Impfung vorgewählt bei Anna und Cora, Zähne nur bei Anna', JSON.stringify(ci) === '[true,false,true]' && JSON.stringify(cz) === '[true,false,false]', JSON.stringify([ci, cz]));
+    ok('Knopf nennt die Summe (60 + 60 + 70 + Anfahrt 60)', /250/.test(document.getElementById('dlgKnoepfe').textContent.replace(/\./g, '')), document.getElementById('dlgKnoepfe').textContent);
+    const z = document.querySelector('[data-tzz="1"]'); z.checked = true; z.dispatchEvent(new Event('change', { bubbles: true })); ok('Zusätzlich Zähne bei Berta wählen: Summe steigt um 70 (Anfahrt nur einmal)', /320/.test(document.getElementById('dlgKnoepfe').textContent.replace(/\./g, '')), document.getElementById('dlgKnoepfe').textContent);
+    const geld0 = spiel.geld, briefe0 = (spiel.post || []).length; const btn = [...document.querySelectorAll('#dlgKnoepfe button')].find(x => /Tierarzt kommen lassen/.test(x.textContent)); btn.click();
+    ok('Geimpft: Anna und Cora; Zähne: Anna und Berta', geimpft(A) && geimpft(C) && !zahnUeber(A) && !zahnUeber(B) && A.pflege.impf === spiel.tag && A.pflege.zahn === spiel.tag && B.pflege.zahn === spiel.tag && C.pflege.zahn === 99, JSON.stringify([A.pflege, B.pflege, C.pflege]));
+    ok('Genau eine Rechnung (ein Brief) für alle', (spiel.post || []).length - briefe0 === 1, String((spiel.post || []).length - briefe0));
+    const br = (spiel.post || []).find(x => /Tierarzt: Impfen und Zähne/.test(x.betreff || '')); ok('Rechnung nennt alle Pferde und Posten', br && /Anna/.test(JSON.stringify(br)) && /Cora/.test(JSON.stringify(br)) && /Berta/.test(JSON.stringify(br)), JSON.stringify(br).slice(0, 300));
+    return out; });
+  R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(R.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

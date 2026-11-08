@@ -16,6 +16,6 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Keine Jahreszeit-Überschriften, Symbol an der Schleife', !/class="pinn-jz"/.test(html) && /pinn-jzi/.test(html));
     ok('Sortierung „nach Klasse“ ohne Jahreszeit-Symbole', !/pinn-jzi/.test(pinnGrossHTML(P, 'klasse')));
     const host = document.createElement('div'); host.innerHTML = html; document.body.appendChild(host); const a = host.querySelector('[data-psort="jahr"]'), n = host.querySelector('[data-psort="klasse"]'), cs = x => getComputedStyle(x).backgroundColor;
-    ok('Aktiver Knopf weiß, nicht aktiver nicht weiß', a.classList.contains('an') && /255, 255, 255\)$/.test(cs(a)) && !/255, 255, 255\)$/.test(cs(n)), cs(a) + ' / ' + cs(n)); host.remove();
+    ok('Aktiver Knopf in der Farbe der aktiven Steckbrief-Karte, nicht aktiver beige', a.classList.contains('an') && /255, 250, 240\)$/.test(cs(a)) && !/255, 250, 240\)$/.test(cs(n)), cs(a) + ' / ' + cs(n)); host.remove();
     return out; });
   R.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(R.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

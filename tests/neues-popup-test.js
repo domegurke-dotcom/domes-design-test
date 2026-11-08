@@ -36,7 +36,7 @@ const { chromium } = require('playwright'); const path = require('path');
   r = await P(677, 0); ok('Spieler mit erstem Fenster gesehen: acht Fenster (1/8 …)', !r.h && /\(1\/10\)/.test(r.t) && /Paddockboxen/.test(r.t)); r = await D(); ok('… dann das dritte', !r.h && /\(2\/10\)/.test(r.t) && /Matsch/.test(r.t)); r = await D(); ok('… und das vierte', !r.h && /\(3\/10\)/.test(r.t) && /Hofplan als Raster/.test(r.t)); await pg.click('#dlgKnoepfe button'); await pg.waitForTimeout(400);
   r = await P(694, 0); ok('Spieler mit zweitem Fenster gesehen: sieben Fenster', !r.h && /\(1\/9\)/.test(r.t) && /Matsch/.test(r.t) && !/Paddockboxen/.test(r.t)); r = await D(); ok('… und das vierte', !r.h && /\(2\/9\)/.test(r.t) && /Hofplan als Raster/.test(r.t)); await pg.click('#dlgKnoepfe button'); await pg.waitForTimeout(400);
   r = await P(653, 694); ok('Popup 2 schon gezeigt: noch sieben', !r.h && /Matsch/.test(r.t) && /\(1\/9\)/.test(r.t)); r = await D(); ok('… und das vierte', !r.h && /Hofplan als Raster/.test(r.t)); await pg.click('#dlgKnoepfe button'); await pg.waitForTimeout(400);
-  r = await P(653, 971); ok('alles gezeigt: kein Fenster', r.h);
+  r = await P(653, 975); ok('alles gezeigt: kein Fenster', r.h);
 
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.neuGesehen = 653; delete spiel.neuPopup; neuesLaeuft = false; zeigeSchirm('startMenue'); neuesPruefen(); });
   await pg.waitForTimeout(2200); r = await pg.evaluate(() => ({ h: document.getElementById('dlg').hidden, p: spiel.neuPopup }));

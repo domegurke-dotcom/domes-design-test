@@ -24,7 +24,7 @@ const { chromium } = require('playwright'); const path = require('path');
   await pg.mouse.move(c.x, (c.y + top.y) / 2, { steps: 5 }); await pg.mouse.move(c.x, top.y - 20, { steps: 8 }); await pg.mouse.up(); await pg.waitForTimeout(150);
   const n2 = await namen(); ok('Cora ist nach dem Ziehen ganz oben', n2.startsWith('Cora'), n2);
   const slot = await pg.$eval('.aq-zeile:not(.aus)', e => e.textContent); ok('Cora hat Platz (dran)', /dran/.test(slot), slot);
-  await pg.screenshot({ path: process.env.BILD || 'NUL', fullPage: false });
+  if (process.env.BILD) await pg.screenshot({ path: process.env.BILD });
   await pg.evaluate(() => { document.getElementById('nbZurueck').click(); }); ok('Zurück ins Whiteboard', await pg.$('#wbAquaPlan') !== null);
   const rang = await pg.evaluate(() => { const t0 = spiel.tag; naechsteNacht(); return spiel.boxen.slice(0, 3).map(bx => bx.pferd.name + ':' + (aquaLetzt(bx.pferd) >= t0 ? 'ja' : 'nein')).join(); });
   ok('Am Morgen war Cora (oben) im Wasser', /Cora:ja/.test(rang), rang);

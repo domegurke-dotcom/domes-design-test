@@ -1,0 +1,28 @@
+// v975: Aqua-Plan-Fenster auf dem Handy hochkant (390x844, Touch): nichts läuft über, Zeile mit dem Finger gedrückt halten und ziehen
+const { chromium } = require('playwright'); const path = require('path');
+(async () => { const b = await chromium.launch(); const errs = []; const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 }); const pg = await ctx.newPage(); pg.on('pageerror', e => errs.push(e.message));
+  await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(500);
+  await pg.$eval('#smNeu', e => e.click()); await pg.fill('#chName', 'T'); await pg.$eval('[data-stufe="exp"]', e => e.click()); await pg.$eval('#chLos', e => e.click()); await pg.waitForTimeout(250); await pg.$eval('#dlgKnoepfe button', e => e.click());
+  await pg.$eval('[data-immo="pension"]', e => e.click()); await pg.fill('#kaufName', 'W'); await pg.$eval('#dlgKnoepfe button:first-child', e => e.click()); await pg.waitForTimeout(250);
+  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.stufenAn = false; spiel.tippsAus = true; spiel.geld = 1e7; VET.verbotAb = 99;
+    ['Anna', 'Berta', 'Cora', 'Dora'].forEach((n, i) => { const P = neuesPferd({ rasse: 'paint', geschlecht: 'Stute', alter: 8, name: n }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); werteErgaenzen(P); P.pflege.gesundheit = 100; P.aquaWunsch = { modus: i === 3 ? '3' : '1' }; if (i === 3) P.aquaLog = [spiel.tag]; spiel.boxen[i].pferd = P; });
+    const R2 = spiel.boxen[1].pferd; R2.aquaWunsch = { modus: 'reha' }; const bf = befundNeu(R2, 'sehne', 4, 'Test', 'du'); bf.diagnose = spiel.tag; bf.bemerkt = bf.bemerkt || { tag: spiel.tag, von: 'du' };
+    const x0 = bewerber('physio')[0]; (spiel.mitarbeiter = spiel.mitarbeiter || []).push({ id: 'ph1', typ: 'physio', name: 'Petra', w: true, wissen: { ...x0.wissen }, eig: [], gehalt: x0.gehalt, ab: jzJetzt() - 2, bis: null });
+    gebaeude().push({ gid: 'gaq', typ: 'aqua', stufe: 3, zustand: 100 }); wbSicht = 'boxen'; wbWahl = null; zeigeWhiteboard(); });
+  const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (c ? '' : ' – ' + (x || '')));
+  const kn = await pg.$('#wbAquaPlan'); ok('Knopf „Aqua-Plan“ sichtbar', !!kn && await kn.isVisible()); await kn.scrollIntoViewIfNeeded(); await kn.evaluate(e => e.click()); await pg.waitForTimeout(200);
+  const m = await pg.evaluate(() => { const p = document.querySelector('.aq-panel'), r = p.getBoundingClientRect(); return { l: r.left, r: r.right, sw: document.documentElement.scrollWidth, iw: innerWidth, ueber: [...p.querySelectorAll('.aq-zeile')].filter(z => z.getBoundingClientRect().right > r.right + 1 || z.scrollWidth > z.clientWidth + 1).length }; });
+  ok('Nichts läuft seitlich über', m.sw <= m.iw && m.ueber === 0 && m.r <= m.iw, JSON.stringify(m));
+  if (process.env.BILD) await pg.screenshot({ path: process.env.BILD });
+  const namen = () => pg.$$eval('.aq-zeile:not(.aus) .aq-text > b', x => x.map(e => e.textContent).join());
+  ok('Start: Berta (Reha) oben', (await namen()).startsWith('Berta'), await namen());
+  const zs = await pg.$$eval('.aq-zeile:not(.aus)', x => x.map(e => { const r = e.getBoundingClientRect(); return { x: r.left + r.width * 0.5, y: r.top + r.height / 2, n: e.querySelector('.aq-text > b').textContent }; }));
+  const c = zs.find(z => z.n === 'Cora'), top = zs[0]; const cdp = await ctx.newCDPSession(pg), T = (type, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: c.x, y }] });
+  const sy0 = await pg.evaluate(() => document.getElementById('nebenSchirm').scrollTop);
+  await T('touchStart', c.y); await pg.waitForTimeout(550); ok('Finger gedrückt gehalten: Zeile hebt sich ab', !!(await pg.$('.aq-zeile.zieht')));
+  for (let i = 1; i <= 10; i++) { await T('touchMove', c.y + (top.y - 25 - c.y) * i / 10); await pg.waitForTimeout(30); } await T('touchEnd'); await pg.waitForTimeout(250);
+  const n2 = await namen(); ok('Cora steht nach dem Ziehen ganz oben', n2.startsWith('Cora'), n2);
+  ok('Seite hat beim Ziehen nicht gescrollt', Math.abs((await pg.evaluate(() => document.getElementById('nebenSchirm').scrollTop)) - sy0) < 5);
+  if (process.env.BILD) await pg.screenshot({ path: process.env.BILD.replace('.png', '2.png') });
+  await pg.evaluate(() => document.getElementById('nbZurueck').click()); ok('Zurück ins Whiteboard', !!(await pg.$('#wbAquaPlan')));
+  out.forEach(l => console.log(l)); console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(';') : '✓ keine Seitenfehler'); await b.close(); process.exit(out.some(l => l[0] === '✗') || errs.length ? 1 : 0); })();

@@ -1,4 +1,4 @@
-// Aqua A4 + Reha (v873, PLAN-AQUA.md): Physiotherapeut nur mit Gebäude und ≤ Plätze, Kapazität (Stufe 2, 2 Therapeuten, 2 Helfer, Stallmeister = 7), Helfer fehlt bei einer Box, Reha heilt nur mit Therapeut (Arthrose-Verschlechterung halbiert), Lehrgang Wasserarbeit, Pension (Preis, Abrechnung), alter Spielstand
+// Aqua A4 + Reha (v873, PLAN-AQUA.md): Physiotherapeut nur mit Gebäude und ≤ Plätze, Kapazität (Stufe 2, 2 Therapeuten, 2 Helfer, Meister +2 je Therapeut = 10), Helfer fehlt bei einer Box, Reha heilt nur mit Therapeut (Arthrose-Verschlechterung halbiert), Lehrgang Wasserarbeit, Pension (Preis, Abrechnung), alter Spielstand
 // Start (Domes PC, siehe CLAUDE.md): node tests/aqua-a4-test.js
 const { chromium } = require('playwright'); const path = require('path');
 (async () => {
@@ -37,7 +37,7 @@ const { chromium } = require('playwright'); const path = require('path');
     return R; });
   const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x !== undefined ? ' – ' + x : ''));
   ok('Physiotherapeut nur mit Aqua-Center', !R.ohne && R.mit); ok('höchstens so viele wie Plätze (Stufe 2: 2)', !R.voll);
-  ok('Kapazität Stufe 2: 2 Therapeuten + 2 Helfer + Stallmeister = 7', R.anzahl === 7 && R.fehlt === 3, `${R.anzahl} (ohne Platz: ${R.fehlt})`);
+  ok('Kapazität Stufe 2: 2 Therapeuten à 2 + 2 Helfer + Meister (je Therapeut +2) = 10', R.anzahl === 10 && R.fehlt === 0, `${R.anzahl} (ohne Platz: ${R.fehlt})`);
   ok('Helfer fehlt bei einer Box', R.helfer); ok('Personal trocknet ab', R.trocken);
   ok('Reha nötig bei Arthrose → Programm Reha', R.rehaNoetig && R.wunsch === 'reha', R.wunsch);
   ok('Reha mit Therapeut zählt als Behandlung, du ohne Lehrgang nicht', R.bw > 0 && R.bwDu === 0, `${R.bw} / ${R.bwDu}`);

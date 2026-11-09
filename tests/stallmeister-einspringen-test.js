@@ -22,7 +22,7 @@ const { chromium } = require('playwright'); const path = require('path');
     set([mei, sb, pf]); R.mitTeam = { sb: von('stall', 'stallbursche'), mStall: von('stall', 'stallmeister'), pf: von('pfleger', 'pfleger'), mPf: von('pfleger', 'stallmeister') };
     // D) Meister nicht zuteilbar: Whiteboard-Karte da, ohne Zuteilungs-Attribut
     set([mei, sb]); wbSicht = 'boxen'; zeigeWhiteboard();
-    R.karte = (() => { const k = [...document.querySelectorAll('.wb-ma-info')].find(x => /Pferdewirtschaftsmeister/.test(x.textContent)); return k ? { text: k.textContent.replace(/\s+/g, ' ').trim(), zuteilbar: k.hasAttribute('data-wbq') } : null; })();
+    R.karte = (() => { const k = [...document.querySelectorAll('.wb-ma-info')].find(x => /Pferdewirtschaftsmeister/.test(x.textContent.replace(/\u00ad/g, ''))); return k ? { text: k.textContent.replace(/\u00ad/g, '').replace(/\s+/g, ' ').trim(), zuteilbar: k.hasAttribute('data-wbq') } : null; })();
     // E) echter Tageswechsel mit Meister als Einspringer: keine Fehler, Krippe gefüllt
     set([mei]); spiel.boxen.forEach(x => { x.krippeVoll = false; }); spiel.mitarbeiter = [mei]; maBoxCache = null; const t0 = spiel.tag; naechsteNacht(); document.getElementById('dlg').hidden = true;
     R.nacht = { tag: spiel.tag - t0, gefuettert: spiel.boxen.slice(0, n).filter(x => x.krippeVoll).length };

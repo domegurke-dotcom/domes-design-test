@@ -176,11 +176,11 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Hahnentritt: Marktwert ×0,85, Besonderheit in der Liste', nah0(besondWertFaktor(Hh) / w0, RM_ZAHL.hahnWert) && besondListe(Hh).some(x => x.k === 'hahn'));
     function nah0(a, b) { return Math.abs(a - b) < 1e-9; }
     // --- Zuchtbuch ---
-    const Z = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Z', id: 'rm5' }); const zb = zuchtbuchVon(Z);
-    ok('Zuchtbuch: Stute ab 3 J. hat eine Klasse', !!zb && ZUCHTBUCH.some(k => k[1] === zb.n));
+    const Z = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Z', id: 'rm5' }); Z.zbBestand = true; const zb = zuchtbuchVon(Z);   // v1004: neue Stuten erst nach der Eintragung – Bestand gilt als eingetragen
+    ok('Zuchtbuch: Stute ab 3 J. hat eine Klasse', !!zb && VERBAND.hannoveraner.stufen.some(k => k.n === zb.n));
     const Hn = neu({ rasse: 'hannoveraner', geschlecht: 'Hengst', alter: 8, name: 'Hn', id: 'rm6' }); const Fo = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 1, name: 'Fo', id: 'rm7' });
     ok('Zuchtbuch: Hengst, Jungpferd und Mischling ohne Klasse', zuchtbuchVon(Hn) === null && zuchtbuchVon(Fo) === null && zuchtbuchVon(Mi) === null);
-    ok('Zuchtbuch-Schwellen 8/7/6', ZUCHTBUCH.map(k => k[0]).join() === '8,7,6,0' && ZUCHTBUCH[0][1] === 'Hauptstutbuch');
+    ok('Zuchtbuch-Abteilungen wie der Hannoveraner Verband (v1004)', VERBAND.hannoveraner.stufen.map(k => k.n).join() === 'Hauptstutbuch,Stutbuch,Vorbuch' && VERBAND.hannoveraner.stufen[0].ab === 6);
     // --- Wirkung auf Typnote und Marktwert ---
     const T = neu({ rasse: 'friese', geschlecht: 'Stute', alter: 1, name: 'T', id: 'rm8' }); const t0 = typRoh(T); T.kopf = { f: 'schwein', s: 3 };
     ok('Typnote sinkt bei Verstoß (Schweinskopf bzw. Rassemerkmal)', typRoh(T) < t0);

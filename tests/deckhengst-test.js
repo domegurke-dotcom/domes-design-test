@@ -48,7 +48,7 @@ const { chromium } = require('playwright'); const path = require('path');
         spiel.tag = G.tag; dhTermineTag(); ok('Am Decktag gedeckt', G.status === 'gedeckt', G.status);
         const reg = H.deckFremd.register.slice(-1)[0]; ok('Decktaxe zweiteilig (Rest = Trächtigkeitstaxe)', reg.ok ? reg.rest === G.taxe - Math.round(G.taxe / 2) : reg.rest === 0, JSON.stringify(reg));
         const g2 = spiel.geld; spiel.tag = G.tag + 2; dhTermineTag(); ok('Abreise: Box frei, Boxengeld bezahlt', !spiel.boxen.some(b => b.pferd && b.pferd.gastStute === G.id) && spiel.geld - g2 >= 2 * DH.boxengeld, spiel.geld - g2);
-        reg.rest = 100; const g3 = spiel.geld; spiel.tag = reg.tag + tpj(); dhGastTag(); ok('Trächtigkeitstaxe nach einer Jahreszeit', spiel.geld - g3 >= 100 && reg.rest === 0 && reg.restBezahlt === 100, spiel.geld - g3); } }
+        const R0 = (spiel.dhRest || []).find(x => x.tag === reg.tag && x.stute === reg.stute), soll = R0 ? R0.rest : 0, g3 = spiel.geld; spiel.tag = reg.tag + tpj(); dhRestTag(); ok('Trächtigkeitstaxe nach einer Jahreszeit (nur wenn tragend)', spiel.geld - g3 === soll && reg.rest === 0 && (!R0 || reg.restBezahlt === soll), (spiel.geld - g3) + ' / ' + soll); } }
     // Besamung: Hengst außer Haus
     H.stationTag = spiel.tag; ok('Besamungsstation: Training gesperrt', /Besamungsstation/.test(trainSperre(H, spiel.boxen[0]))); delete H.stationTag;
     // Papiere: ungekörter eigener Vater → keine Papiere

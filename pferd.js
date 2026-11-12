@@ -1446,9 +1446,9 @@ function erzeugePflege(pferd, heute) {
 
 // Körperproportionen je Altersstufe (junge Pferde: lange Beine, kurzer flacher Rumpf, großer Kopf, kurzer Schweif)
 function ALTERS_K(stufe, k) {
-  if (stufe === "fohlen") return { len: k.len * 0.84, depth: k.depth * 0.8, legT: k.legT * 0.72, neck: k.neck * 0.92, head: k.head * 1.14, crest: 0.015, nk: Math.max(0.5, (k.nk || 0) * 0.9), aMax: Math.min(k.nAng, 50),
+  if (stufe === "fohlen") return { len: k.len * 0.84, depth: k.depth * 0.7, /* Beine ca. 40 % länger als beim Erwachsenen gemessen an der Höhe: Röhrbein wächst nach der Geburt nur ca. 20 %, Fohlen 63 % der Endhöhe */ legT: k.legT * 0.72, neck: k.neck * 0.92, head: k.head * 1.14, crest: 0.015, nk: Math.max(0.5, (k.nk || 0) * 0.9), aMax: Math.min(k.nAng, 50),
     tail: k.tail * 0.5, tvol: Math.min(k.tvol, 0.7) * 0.8, feather: 0, croup: -0.6, hq: (k.hq || 1) * 0.94, fore: Math.min(k.fore, 0.5) };
-  if (stufe === "jaehrling") return { len: k.len * 0.92, depth: k.depth * 0.88, legT: k.legT * 0.85, neck: k.neck * 0.95, head: k.head * 1.06, crest: k.crest * 0.5, aMax: Math.min(k.nAng + 3, 56), nk: Math.max(0.5, k.nk || 0),
+  if (stufe === "jaehrling") return { len: k.len * 0.92, depth: k.depth * 0.86, legT: k.legT * 0.85, neck: k.neck * 0.95, head: k.head * 1.06, crest: k.crest * 0.5, aMax: Math.min(k.nAng + 3, 56), nk: Math.max(0.5, k.nk || 0),
     tail: k.tail * 0.75, tvol: k.tvol * 0.8, feather: (k.feather || 0) * 0.5, croup: k.croup - 0.3 };
   if (stufe === "jungpferd") return { depth: k.depth * 0.95, legT: k.legT * 0.94, neck: k.neck * 0.98, crest: k.crest * 0.75, aMax: Math.min(k.nAng + 5, 62), tail: k.tail * 0.92 };
   if (stufe === "reif") return { sag: 1 };

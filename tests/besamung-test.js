@@ -51,8 +51,8 @@ const { chromium } = require('playwright'); const path = require('path');
     if (G && bg) { bstGastAntwort(bg, true); ok('Gasthengst zugesagt', G.status === 'ok');
       spiel.tag = 1 + 4 * tpj(); H1.deckFremd.test = H2.deckFremd.test = datum().j; for (let i = 0; i < 3; i++) { mitZufall(0.01, () => bstTag()); spiel.tag++; }
       ok('Decksaison: Tage und Besamungen gezählt', G.tage === 3 && G.n >= 1, G.tage + '/' + G.n);
-      const g5 = spiel.geld, tg5 = (g.tg || []).reduce((x, L) => x + (L.summe || 0), 0); spiel.tag = 1 + 6 * tpj(); bstTag(); const tgPlus = (g.tg || []).reduce((x, L) => x + (L.summe || 0), 0) - tg5;
-      ok('Herbst: Abrechnung des Gasthengsts', G.status === 'fertig' && spiel.geld - g5 - tgPlus + BST.tierarzt + (g.tg || []).reduce((a, x) => a + x.portionen, 0) * BST.tgLager === G.summe && G.summe > 0, G.status + ' ' + (spiel.geld - g5) + ' / ' + G.summe); }
+      const g5 = spiel.geld, tg5 = (g.tg || []).reduce((x, L) => x + (L.summe || 0), 0); spiel.tag = 1 + 6 * tpj(); const portVor = (g.tg || []).reduce((a, x) => a + x.portionen, 0); /* Lagergebühr gilt für die Portionen vor einem zufälligen Verkauf */ bstTag(); const tgPlus = (g.tg || []).reduce((x, L) => x + (L.summe || 0), 0) - tg5;
+      ok('Herbst: Abrechnung des Gasthengsts', G.status === 'fertig' && spiel.geld - g5 - tgPlus + BST.tierarzt + portVor * BST.tgLager === G.summe && G.summe > 0, G.status + ' ' + (spiel.geld - g5) + ' / ' + G.summe); }
     // Stufe 3: EU-Zulassung
     g.stufe = 3; besamungDialog(null); const eb = $('bstEU'); ok('Stufe 3: Knopf EU-Zulassung', !!eb); if (eb) eb.click(); zu();
     spiel.tag = g.eu.ab; bstTag(); ok('EU-Zulassung: höhere Pauschale', bstEU() && bstPauschale() === Math.round(BST.pauschale * BST.euF / 10) * 10, bstPauschale());

@@ -1,0 +1,31 @@
+// v1010 (Themenliste Nr. 8, Dome 6.11.): Kreis „Fohlen“ auch für Aufzucht-Fohlen von 2–8 Jahreszeiten im Offenstall
+// Start: NODE_PATH=/opt/node22/lib/node_modules node tests/offenstall-fohlenkreis-test.js [BxH] [Ordner für Bilder]
+const { chromium } = require('playwright'); const path = require('path');
+const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = process.argv[3];
+(async () => { const b = await chromium.launch(); const pg = await b.newPage({ viewport: { width: W, height: H } }); const errs = []; pg.on('pageerror', e => errs.push(e.message));
+  await pg.addInitScript(() => localStorage.setItem('zuchtstall-boxfenster', '1'));
+  await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(600);
+  await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('#chLos'); await pg.waitForTimeout(300); await pg.click('#dlgKnoepfe button');
+  await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'H'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(300);
+  const R = await pg.evaluate(async () => { const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x != null && !c ? ' – ' + x : ''));
+    document.getElementById('dlg').hidden = true; speicherSperre = true; spiel.tippsAus = true; VET.verbotAb = 99; spiel.stufenAn = false;
+    const Hf = spiel.hof; Hf.art = 'zucht'; spiel.stallarten = ['zucht']; delete Hf.artCache; spiel.geld = 300000; Hf.bauHa = (Hf.bauHa || 0) + 3;
+    const mkP = (name, g, jahre) => { const p = neuesPferd({ rein: true, rasse: 'hannoveraner', geschlecht: g, alter: Math.max(1, Math.ceil(jahre)), name }); p.geb = gebGenau(jahre); p.pflege = erzeugePflege(p); werteErgaenzen(p); return p; };
+    bauStarten('aufzucht', 1); planAutoSetzen(); const g = gebaeude().find(x => x.typ === 'aufzucht'); g.bau.rest = 0; bauFertig(g, 'neu'); delete g.bau; spiel.hofFenster = []; document.getElementById('dlg').hidden = true;
+    const zeig = (p) => { const z = offenPlatz(p); spiel.boxen[z].pferd = p; aktBox = z; spiel.aktBox = z; bxRing = null; zeigeStall(); zeigeTag(); zeigeAkte(); return spiel.boxen[z]; };
+    const kreis = () => document.querySelector('.bxs[data-bx="fohlen"]'), punkt = () => { const k = kreis(); const d = k && k.querySelector('.bxd'); return d ? d.className.replace('bxd', '').trim() : ''; };
+    const abs = mkP('Absetzer', 'Stute', 0.6); const bx = zeig(abs);
+    ok('Offenstall-Fohlen (' + alterJZ(abs) + ' Jz): Kreis „Fohlen“ da', !!kreis());
+    ok('Roter Punkt: heute noch nicht geübt', punkt() === 'r', punkt());
+    kreis().click(); await new Promise(r => setTimeout(r, 150));
+    const items = [...document.querySelectorAll('[data-bxring]')].map(x => x.dataset.bxring);
+    ok('Ohne Waschplatz nur Fohlen-ABC', items.join() === 'abc', items.join());
+    document.querySelector('[data-bxring="abc"]').click(); await new Promise(r => setTimeout(r, 150));
+    ok('Fohlen-ABC geübt', abs.abcTag === spiel.tag && abs.fohlenABC > 0, abs.fohlenABC); const dlg = document.getElementById('dlg'); ok('Rückmeldung als Fenster', !dlg.hidden && /Fohlen-ABC/.test(dlg.textContent), dlg.hidden + ' ' + dlg.textContent.slice(0, 200)); dlg.hidden = true;
+    ok('Grüner Punkt danach', punkt() === 'g', punkt());
+    bx.pferd = null; const alt8 = mkP('Acht', 'Stute', 2.0); zeig(alt8); ok('8 Jz (' + alterJZ(alt8) + '): Kreis da', !!kreis());
+    const zb = spiel.boxen.indexOf(boxVon(alt8)); spiel.boxen[zb].pferd = null; const alt9 = mkP('Neun', 'Stute', 2.3); zeig(alt9); ok('9 Jz (' + alterJZ(alt9) + '): kein Kreis', !kreis());
+    const tz = spiel.boxen.indexOf(boxVon(alt9)); spiel.boxen[tz].pferd = null; const tante = mkP('Tante', 'Stute', 10); zeig(tante); ok('Tante (erwachsen): kein Kreis', !kreis());
+    return out; });
+  R.forEach(x => console.log(x)); const rot = R.filter(x => x.startsWith('✗')).length; if (ORD) await pg.screenshot({ path: path.join(ORD, `offen-fohlenkreis-${W}x${H}.png`) });
+  console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(' | ') : '✓ keine Seitenfehler'); console.log(rot ? `${rot} ✗` : 'alles ✓'); await b.close(); })();

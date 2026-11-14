@@ -8,24 +8,24 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'W'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(250);
   const L = [], ok = (n, c, x = '') => L.push((c ? '✓ ' : '✗ ') + n + (x !== '' ? ' (' + x + ')' : ''));
   const r1 = await pg.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.stufenAn = false; spiel.tippsAus = true;
-    const start = { rw: pensionRichtwert(1), nf: lageNachfrage(), pf: lagePreisF() };
+    const start = { rw: pensionRichtwert(1), nf: lageNachfrage(), pf: lagePreisF(), H: { bl: spiel.hof.bundesland, ort: spiel.hof.ort, lage: spiel.hof.lage } };
     const k = kredite()[0]; if (k) k.getilgt = k.summe; zentral().geld = 5e6;
     const A = maklerAngebote(); return { start, A: A.map(a => ({ mid: a.mid, land: a.land, lage: a.lage, text: a.text, boxen: a.boxen })) }; });
-  ok('Starthof ohne Lage: Faktoren 1', r1.start.pf === 1 && r1.start.nf === 1, JSON.stringify(r1.start));
-  ok('jedes Angebot hat eine Lage', r1.A.every(a => a.lage && a.lage.stadt && a.lage.ew >= 1e5 && a.lage.km >= 5 && a.lage.km <= 80), r1.A.map(a => a.lage && a.lage.stadt + ' ' + a.lage.km).join(', '));
+  ok('Starthof (Standard Verden): Lage aus dem Ort', r1.start.H.bl === '03' && r1.start.H.ort === 'Verden (Aller)' && r1.start.H.lage && r1.start.pf === 1.05 * (r1.start.H.lage.km <= 15 ? 1.2 : r1.start.H.lage.km <= 30 ? 1.1 : 1), JSON.stringify(r1.start));
+  ok('jedes Angebot hat eine Lage', r1.A.every(a => a.lage && a.lage.stadt && a.lage.ew >= 1e5 && a.lage.km >= 3 && a.lage.km <= 120), r1.A.map(a => a.lage && a.lage.stadt + ' ' + a.lage.km).join(', '));
   ok('Lage steht im Text', r1.A.every(a => a.text.includes(' km bis ' + a.lage.stadt)));
-  // Lage-Verteilung über viele Jahre: ≈ 55 % stadtnah, Städte gehören zum Land (oder Nachbar-Stadtstaat)
-  const vert = await pg.evaluate(() => { let nah = 0, n = 0, falsch = 0; for (let j = 1; j < 400; j++) for (let i = 0; i < 4; i++) { const land = maklerLand(j, i), L = maklerLage(j, i, land); n++; if (L.km <= 30) nah++; if (!GROSSSTADT[land].some(c => c[0] === L.stadt)) falsch++; } return { nah: nah / n, falsch }; });
-  ok('≈ 55 % stadtnah', vert.nah > 0.5 && vert.nah < 0.6, Math.round(vert.nah * 100) + ' %'); ok('Städte passen zum Bundesland', vert.falsch === 0);
+  // v1030 (Etappe M1): Lage kommt aus festen Orten je Bundesland; die Stadt ist die nächste Großstadt (Luftlinie)
+  const vert = await pg.evaluate(() => { let falsch = 0; maklerAngebote().forEach(A => { const g = lageAusOrt(A.land, A.ort); if (!g || g.stadt !== A.lage.stadt || g.km !== A.lage.km) falsch++; }); return { falsch }; });
+  ok('Lage passt zum Ort', vert.falsch === 0, vert.falsch);
   // Kaufen mit Klicks: ein Hof mit Boxen
-  const ziel = r1.A.find(a => a.boxen > 0);
+  const ziel = r1.A.find(a => a.boxen > 0 && a.land === '03') || r1.A.find(a => a.boxen > 0);
   await pg.evaluate(() => zeigeImmobilien()); await pg.waitForTimeout(300);
   if (ORD) await pg.screenshot({ path: ORD + '/lage-makler.png', fullPage: false });
   await pg.click(`[data-makler="${ziel.mid}"]`); await pg.waitForTimeout(300);
   const kaufTxt = await pg.evaluate(() => document.getElementById('dlg').innerText);
   await pg.fill('#kaufName', 'Lagehof'); const knopf = await pg.$$('#dlgKnoepfe button'); await knopf[0].click(); await pg.waitForTimeout(400);
   for (let i = 0; i < 4; i++) { const d = await pg.evaluate(() => !document.getElementById('dlg').hidden); if (!d) break; await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(300); }
-  const r2 = await pg.evaluate(mid => { const hid = hofReihe().find(h => hofVon(h).lage); if (!hid) return { fehlt: true, hoefe: hofReihe().length };
+  const r2 = await pg.evaluate(mid => { const hid = hofReihe().find(h => h !== 'h1' && hofVon(h).lage); if (!hid) return { fehlt: true, hoefe: hofReihe().length };
     hofWechseln(hid); const H = spiel.hof, R = pensionRegeln(); R.offen = true; R.preis = { ...PENSION_PREIS };
     const erw = (PENSION_LAND[H.bundesland] || 1) * (H.lage.km <= 15 ? 1.2 : H.lage.km <= 30 ? 1.1 : 1);
     return { lage: H.lage, bl: H.bundesland, pf: lagePreisF(), erw, nf: lageNachfrage(), rw: pensionRichtwert(1), roh: PENSION_PREIS[1] * (1 + (ansehenWirk() - 100) / 400) }; }, ziel.mid);

@@ -58,11 +58,13 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   const kText = await pg.$eval('#nebenSchirm .paar', e => e.innerText); ok('Kachel: Besichtigung heute', /Besichtigung heute/.test(kText));
   const boxenVor = await pg.evaluate(() => spiel.boxen.filter(b => b.pferd).length);
   await pg.click('#nebenSchirm .paar'); await pg.waitForTimeout(300);
-  await pg.click('#dlgKnoepfe button:has-text("Ansehen und kaufen")'); await pg.waitForTimeout(300);
+  await pg.click('#dlgKnoepfe button:has-text("Hinfahren und ansehen")'); await pg.waitForTimeout(300);   // M3: Besichtigung = Fahrt
+  await pg.click('#dlgKnoepfe button:has-text("Mit Pferdeanhänger")'); await pg.waitForTimeout(300);
+  await pg.click('#nebenSchirm .paar'); await pg.waitForTimeout(300); if (!/verlangt werden/.test(await dlgText())) { await pg.click('#dlgKnoepfe button:has-text("Ansehen")'); await pg.waitForTimeout(300); }
   await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(400);
   const r3 = await pg.evaluate(() => ({ n: spiel.boxen.filter(b => b.pferd).length, txt: document.getElementById('dlg').innerText }));
   ok('Pferd gekauft und im Stall', r3.n === boxenVor + 1, r3.txt.slice(0, 60).replace(/\s+/g, ' '));
-  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; zeigeMarkt(); }); await pg.waitForTimeout(300);
+  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; besuchHeim(); document.getElementById('dlg').hidden = true; marktBereich = 'zeitung'; zeigeMarkt('zeitung'); }); await pg.waitForTimeout(300);
   ok('gekauftes Pferd nicht mehr in der Zeitung', (await pg.$$eval('#nebenSchirm .paar', l => l.length)) === nAnz - 1);
   // eigene Kleinanzeige über „Pferd verkaufen“
   await pg.evaluate(() => { const p = spiel.boxen.find(b => b.pferd).pferd; p.pflege.gesundheit = 100; verkaufDialog(p, () => {}); }); await pg.waitForTimeout(300);

@@ -1372,7 +1372,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "1031";
+  const SPIEL_VERSION = "1032";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1380,12 +1380,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=1031"></script>
-<script src="pferd.js?v=1031"></script>
-<script src="boxstufen.js?v=1031"></script>
-<script src="kopfneu.js?v=1031"></script>
-<script src="waschbild.js?v=1031"></script>
-<script src="avatare.js?v=1031"></script>
+<script src="lz-string.min.js?v=1032"></script>
+<script src="pferd.js?v=1032"></script>
+<script src="boxstufen.js?v=1032"></script>
+<script src="kopfneu.js?v=1032"></script>
+<script src="waschbild.js?v=1032"></script>
+<script src="avatare.js?v=1032"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -8442,13 +8442,14 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       const b = f.ansteckend ? anstecken(p, f.art, `mitgebracht (${quelle})`) : befundNeu(p, f.art, f.grad, `beim Kauf schon vorhanden (${quelle})`);
       if (!b) return;
       if (f.gefunden) { b.diagnose = spiel.tag; b.bemerkt = { von: "AKU", tag: spiel.tag }; b.tierarzt = true; }
+      if (f.gesehen && !f.gefunden) b.bemerkt = b.bemerkt || { von: "dir beim Besuch", tag: spiel.tag };   /* M3 */
       if (f.maskiert) b.inkub = spiel.tag + 2;   // Schmerzmittel wirkt noch 2 Tage – erst dann sieht man die Lahmheit
     });
     if (h.ocd != null) { p.ocd = h.ocd; p.ocdGeprueft = true; }
     { const gf = befundListe(p).filter(b => b.tierarzt && b.diagnose === spiel.tag); if (gf.length) { const R = rezeptNachBefund(p, gf); if (R.posten.length) rechnungStellen("Tierarztpraxis", "klinik", R.posten, [p.id], `Rezept ${p.name} – Rechnung`, `nach der Ankaufsuntersuchung hat der Tierarzt für <b>${esc(p.name)}</b> die Rezepte ausgestellt: ${R.mittel.map(k => APO[k].n).join(", ")}.`); } }   // v654 (Dome): Rezept auch nach der AKU
     if (F.some(f => f.gebiss && f.gefunden)) p.gebissFehler = true;   // v516: Tierarzt hat den Gebissfehler bei der AKU gesehen
     if (h.probe) p.blutprobe = { tag: spiel.tag, quelle, maskiert: F.some(f => f.maskiert), preis: h.preis };
-    ["akuF", "akuErg", "akuKlasse", "akuVerhandelt", "probe"].forEach(k => delete p[k]);
+    ["akuF", "akuErg", "akuKlasse", "akuVerhandelt", "probe", "sicht", "standplatz", "anzOrt", "anzKm", "anzJz"].forEach(k => delete p[k]);
   }
   // eingelagerte Blutprobe später prüfen (z. B. wenn das Pferd plötzlich lahmt)
   function probePruefen(p) {
@@ -16521,10 +16522,11 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       return imHof(hid, () => {
         const p = I.pferd, zb = neuzugangBox(p);
         if (zb < 0) { buchen(-REISE_WARTEN, `Wartebox Import: ${p.name}`);
-          if (!I.gewartet) brief("Pferdetransporte International", `${p.name} wartet auf eine Box`, `${esc(p.name)} ist aus der Quarantäne zurück, aber auf <b>${esc(hofName())}</b> ist keine Box frei. Bis eine frei wird, steht ${pron(p).er} bei uns – ${fmt(REISE_WARTEN)} je Tag.`, { pferde: [p] });
+          if (!I.gewartet) brief(I.von || "Pferdetransporte International", `${p.name} wartet auf eine Box`, `${esc(p.name)} ist aus der Quarantäne zurück, aber auf <b>${esc(hofName())}</b> ist keine Box frei. Bis eine frei wird, steht ${pron(p).er} bei uns – ${fmt(REISE_WARTEN)} je Tag.`, { pferde: [p] });
           I.gewartet = true; return true; }
-        p.pflege = erzeugePflege(p); p.maehneSeit = spiel.tag; p.schopfSeit = spiel.tag; p.gekauftTag = spiel.tag; p.importiert = { aus: I.ziel, tag: spiel.tag };
-        const nb = spiel.boxen[zb]; nb.pferd = p; nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false; quarantaeneNeu(nb);
+        if (!I.fertig) { p.pflege = erzeugePflege(p); p.maehneSeit = spiel.tag; p.schopfSeit = spiel.tag; } p.gekauftTag = spiel.tag; if (I.ziel) p.importiert = { aus: I.ziel, tag: spiel.tag };   /* M3: Pferde vom Transportunternehmen kommen fertig (Pflege, Befunde vom Kauf) */
+        const nb = spiel.boxen[zb]; nb.pferd = p; nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false; if (p.fohlenBeiFuss) { nb.fohlen = p.fohlenBeiFuss; delete p.fohlenBeiFuss; } quarantaeneNeu(nb);
+        if (I.text) { brief(I.von || "Pferdetransporte", `${p.name} ist angekommen`, I.text.replace("{box}", bnr(zb)), { pferde: [p] }); alterAktualisieren(); return false; }
         brief("Pferdetransporte International", `${p.name} ist angekommen`, `${esc(p.name)} hat Quarantäne und Flug aus den ${REISE[I.ziel] ? REISE[I.ziel].n : "USA"} gut überstanden und steht jetzt in Box ${bnr(zb)}. Gib ${pron(p).ihm} ein paar Tage Ruhe zum Eingewöhnen.`, { pferde: [p] });
         return false; });
     });
@@ -16562,10 +16564,13 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   const AKU_PREIS = AKU.klein.preis;
   function privatKaufen(h) {
     const verdeckt = p => { p.pflege.gesundheit = h.verdeckt; p.verdecktGezeigt = !h.aku; delete p.verdeckt; delete p.aku; };
-    const kauf = preis => { if (kaufPruefen(h, preis)) pferdEinstellen(h, preis, "Privatkauf", verdeckt); };
-    dialog(`<h3>🏡 ${esc(h.name)} von privat</h3><p>${rasseById(h.rasse).name} · ${h.geschlecht} · ${alterText(h)}${h.fohlenBeiFuss ? ` · mit Fohlen <b>${esc(h.fohlenBeiFuss.name)}</b> (${h.fohlenBeiFuss.geschlecht}, ${alterText(h.fohlenBeiFuss)})` : ""} · verlangt werden <b>${fmt(h.preis)}</b>.</p>${h.aku ? `<p>🩺 Ankaufsuntersuchung: Gesundheit <b>${h.verdeckt} %</b>.</p>` : `<p><small>Privatverkauf: keine Ankaufsuntersuchung – wie gesund ${esc(h.name)} ist, siehst du erst nach dem Kauf. Du kannst vorher einen Tierarzt schicken (${fmt(AKU_PREIS)}).</small></p>`}
+    if (h.anzOrt) { const T = zeitungTermin(h.id); if (T && T.tag === spiel.tag) return besuchStart({ art: "pferd", h, ort: h.anzOrt, km: h.anzKm, name: `Besichtigung ${h.name}` }); }   /* M3: Kleinanzeigen nur vor Ort */
+    if (besuchAktiv() && besuchAktiv().pferde.includes(h)) return besuchPferd(h);
+    const o = besuchOrt(h), kauf = preis => fernKauf(h, preis); void verdeckt;   /* M3: aus der Ferne bringt ein Transportunternehmen das Pferd */
+    dialog(`<h3>🏡 ${esc(h.name)} von privat</h3><p>${rasseById(h.rasse).name} · ${h.geschlecht} · ${alterText(h)}${h.fohlenBeiFuss ? ` · mit Fohlen <b>${esc(h.fohlenBeiFuss.name)}</b> (${h.fohlenBeiFuss.geschlecht}, ${alterText(h.fohlenBeiFuss)})` : ""} · verlangt werden <b>${fmt(h.preis)}</b>.</p>${h.aku ? `<p>🩺 Ankaufsuntersuchung: Gesundheit <b>${h.verdeckt} %</b>.</p>` : `<p><small>Privatverkauf: keine Ankaufsuntersuchung – wie gesund ${esc(h.name)} ist, siehst du erst nach dem Kauf. Du kannst vorher einen Tierarzt schicken (${fmt(AKU_PREIS)}) – oder selbst hinfahren und ${pron(h).ihn} ansehen.</small></p>`}
+      <p><small>📍 Steht in <b>${esc(o.ort)}</b>${o.km != null ? ` (${o.km} km)` : ""}. Kaufst du ohne Besuch, bringt ein Transportunternehmen ${pron(h).ihn} morgen (${fmt(transportPreis(o.km))}).</small></p>
       ${h.verhandelt ? `<p><small>Der Verkäufer hat deinen Preisvorschlag schon abgelehnt.</small></p>` : `<label class="fest-preis">Dein Preisvorschlag: <b id="pvWert">${fmt(Math.round(h.preis * .9 / 50) * 50)}</b><input type="range" id="pvPreis" min="${Math.round(h.preis * .5 / 50) * 50}" max="${h.preis}" step="50" value="${Math.round(h.preis * .9 / 50) * 50}"></label>`}`,
-      [[`Kaufen · ${fmt(h.preis)}`, () => kauf(h.preis)], [`🩺 ${h.akuErg ? "AKU-Ergebnis" : "Ankaufsuntersuchung"}`, () => akuDialog(h, "Privat", () => kauf(h.preis), () => privatKaufen(h)), "zweit"], ...(h.verhandelt ? [] : [["Vorschlagen", () => {
+      [[`Kaufen · ${fmt(h.preis)}`, () => kauf(h.preis)], ...(o.km != null ? [[`🚗 Hinfahren und ansehen`, () => besuchStart({ art: "pferd", h, ort: o.ort, km: o.km, name: `Besichtigung ${h.name}` }), "zweit"]] : []), [`🩺 ${h.akuErg ? "AKU-Ergebnis" : "Ankaufsuntersuchung"}`, () => akuDialog(h, "Privat", () => kauf(h.preis), () => privatKaufen(h)), "zweit"], ...(h.verhandelt ? [] : [["Vorschlagen", () => {
         const v = h.vorschlag, q = v / h.preis, ok = Math.random() < (q >= .95 ? 1 : q >= .85 ? .6 : q >= .75 ? .3 : .05);
         if (ok) dialog(`<h3>🤝 Angenommen!</h3><p>Der Verkäufer ist mit <b>${fmt(v)}</b> einverstanden.</p>`, [["Kaufen", () => kauf(v)], ["Abbrechen", null, "zweit"]]);
         else { h.verhandelt = true; speichern(); dialog(`<h3>Abgelehnt</h3><p>Für ${fmt(v)} möchte der Verkäufer ${esc(h.name)} nicht abgeben. Der Preis bleibt bei ${fmt(h.preis)}.</p>`); } }, "zweit"]]), ["Abbrechen", null, "zweit"]]);
@@ -16658,12 +16663,12 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     const B_ = MARKT_BEREICHE.find(x => x[0] === marktBereich), geld = `<span>Dein Geld: ${fmt(spiel.geld || 0)}</span>`;
     const kopf = (t, sub) => `<button class="zurueck-s voll" id="mkUebersicht" style="align-self:flex-start;justify-self:start">‹ Pferdemarkt</button><div class="panel voll"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>${t}</b>${geld}</div>${sub ? `<p style="margin:4px 0 0;font-size:.85rem;opacity:.75">${sub}</p>` : ""}`;
     let html = "";
-    if (!B_) html = `<div class="panel voll"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>Was möchtest du tun?</b>${geld}</div>
+    if (!B_ && marktBereich !== "besuch") html = (besuchAktiv() ? `<div class="panel voll"><b>🚗 Du bist unterwegs: ${esc(besuchAktiv().name)} in ${esc(besuchAktiv().ort)}</b> <button class="knopf" id="besuchZurueck" style="width:auto;padding:6px 12px;margin-left:8px">Zum Besuch</button></div>` : "") + `<div class="panel voll"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>Was möchtest du tun?</b>${geld}</div>
       <div class="kacheln quadrat markt-kacheln">${MARKT_BEREICHE.filter(([id]) => freiStufe("markt", id)).map(([id, ico, n, kurz, an0], _i, _l, an = an0 && (id !== "fohlen" || fohlenZeit())) => `<button class="kachel ${an ? "klickbar" : "fehlt"}" data-mb="${id}" ${an ? "" : "disabled"}><span class="ico">${ico}</span><b>${n}</b><small>${!an ? (id === "fohlen" ? "nur Sommer und Herbst" : "bald") : id === "zeitung" ? zeitungKachelText() : id === "raritaeten" && !rarOffen() ? "öffnet im Sommer" : id === "angebote" ? `${eigene.length} ${eigene.length === 1 ? "Angebot" : "Angebote"}` : id === "tierschutz" && ts.length ? `${ts.length} ${ts.length === 1 ? "Pferd" : "Pferde"}` : kurz}</small></button>`).join("")}</div></div>`;
     else if (marktBereich === "angebote") html = kopf("🏷️ Meine Verkaufspferde", "Antippen für alle Infos oder um ein Angebot zurückzuziehen.") + angebotListe + `</div>`;
     else if (marktBereich === "haendler") html = kopf("🐴 Pferdehändler", "Das Angebot wechselt jede Jahreszeit. Antippen für alle Infos.") + kaufListe + `</div>`;
     else if (marktBereich === "privat") { const pv = marktNeu().privat.filter(h => !(spiel.marktGekauft || []).includes(h.id));
-      html = kopf("🏡 Privatanzeigen", "Inserate von Privatleuten aus ganz Deutschland – günstiger, aber ohne Ankaufsuntersuchung, und du kennst die Pferde nur von Fotos. Ein Preisvorschlag ist möglich.") + (pv.length ? `<div class="paar-liste">${pv.map(h => pferdKachel(h, { ort: "Privatanzeige", zeilen: [rasseById(h.rasse).name, `${h.geschlecht} · ${alterText(h)}`, ...(h.fohlenBeiFuss ? [`🍼 mit Fohlen (${alterText(h.fohlenBeiFuss)})`] : []), inseratZeile(h), `<b>${fmt(h.preis)}</b>`],
+      html = kopf("🏡 Privatanzeigen", "Inserate von Privatleuten aus ganz Deutschland – günstiger, aber ohne Ankaufsuntersuchung, und du kennst die Pferde nur von Fotos. Du kannst hinfahren und sie ansehen oder sie dir bringen lassen. Ein Preisvorschlag ist möglich.") + (pv.length ? `<div class="paar-liste">${pv.map(h => pferdKachel(h, { ort: "Privatanzeige", zeilen: [rasseById(h.rasse).name, `${h.geschlecht} · ${alterText(h)}`, ...(h.fohlenBeiFuss ? [`🍼 mit Fohlen (${alterText(h.fohlenBeiFuss)})`] : []), inseratZeile(h), `<b>${fmt(h.preis)}</b>`],
         aktion: [`Kaufen · ${fmt(h.preis)}`, () => privatKaufen(h)], extra: { zeilen: [["Preis", `<b>${fmt(h.preis)}</b>`], ["Standort", inseratZeile(h)], ["Gesundheit", h.aku ? `${h.verdeckt} % (Ankaufsuntersuchung)` : "unbekannt (keine Untersuchung)"]] } })).join("")}</div>` : `<p>Gerade keine Anzeigen.</p>`) + `</div>`; }
     else if (marktBereich === "auktion" || marktBereich === "fohlen") { const fo = marktBereich === "fohlen", au = fo ? (marktNeu().fohlen || []) : marktNeu().auktion;
       html = (fo ? kopf("🍼 Fohlenauktion", "Frühlingsfohlen vom Züchter. Sie bleiben bis zum Absetzen bei der Mutter – mit dem Zuschlag zu Beginn der nächsten Jahreszeit kommen sie zu dir.") : kopf("🔨 Auktionshaus", "Ausgesuchte Jungpferde. Die Auktion endet mit der Jahreszeit – das Höchstgebot bekommt den Zuschlag."))
@@ -16686,13 +16691,14 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
             aktion: [`Kaufen · ${fmt(k.preis)}`, () => { if (rennKaufen(k, () => zeigeMarkt())) zeigeMarkt(); }], extra: { zeilen: [["Preis", `<b>${fmt(k.preis)}</b>`], ["Rennen", esc(k.rennen || "Verkaufsrennen")]] } })).join("")}</div>` : `<p class="voll">Gerade ist kein Pferd aus einem Verkaufsrennen zu haben.</p>`) + `</div>`; }
     else if (marktBereich === "raritaeten") html = rarMarktHTML(kopf);
     else if (marktBereich === "reisen") html = reisenHTML(kopf);
+    else if (marktBereich === "besuch") html = besuchHTML(kopf);   /* Etappe M3 */
     else if (marktBereich === "zeitung") { tippMerken("zeitung"); html = zeitungHTML(kopf); }   /* Etappe M1 */
     else if (marktBereich === "tierschutz") { const nf = marktNeu().notfall.filter(h => !(spiel.marktGekauft || []).includes(h.id));
       html = kopf("🐾 Tierschutz", "Deine abgeholten Pferde kannst du hier zurückkaufen.") + tsListe + `</div>
         <div class="panel voll"><b>🆘 Notfallpferde</b><p style="margin:4px 0 0;font-size:.85rem;opacity:.75">Pferde in schlechtem Zustand suchen ein Zuhause – für eine Schutzgebühr. Bedingung: gesund pflegen und mindestens ein Jahr behalten – vorher kein Verkauf, nur Rückgabe ohne Erstattung.</p>
-        ${nf.length ? `<div class="paar-liste">${nf.map(h => pferdKachel(h, { ort: "Tierschutz (Notfall)", zeilen: [`${rasseById(h.rasse).name} · ${alterText(h)}`, ...(h.fohlenBeiFuss ? [`🍼 mit Fohlen (${alterText(h.fohlenBeiFuss)})`] : []), `Gesundheit ${h.notGesundheit} %`, `<b>${fmt(h.preis)}</b>`],
+        ${nf.length ? `<div class="paar-liste">${nf.map(h => pferdKachel(h, { ort: "Tierschutz (Notfall)", zeilen: [`${rasseById(h.rasse).name} · ${alterText(h)}`, ((o) => `🐾 ${esc(o.ort)}${o.km != null ? ` · ${o.km} km` : ""}`)(tsOrt(h)), ...(h.fohlenBeiFuss ? [`🍼 mit Fohlen (${alterText(h.fohlenBeiFuss)})`] : []), `Gesundheit ${h.notGesundheit} %`, `<b>${fmt(h.preis)}</b>`],
           aktion: [`Aufnehmen · ${fmt(h.preis)}`, () => { if (kaufPruefen(h, h.preis)) dialog(`<h3>🆘 ${esc(h.name)} aufnehmen?</h3><p>${h.fohlenBeiFuss ? `Mit Fohlen <b>${esc(h.fohlenBeiFuss.name)}</b> (${alterText(h.fohlenBeiFuss)}). ` : ""}Schutzgebühr: <b>${fmt(h.preis)}</b>. ${esc(h.name)} ist in schlechtem Zustand (Gesundheit ${h.notGesundheit} %). Du verpflichtest dich, ${pron(h).ihn} gesund zu pflegen und mindestens ein Jahr zu behalten – vorher darfst du ${pron(h).ihn} nicht verkaufen, nur ohne Erstattung an den Tierschutz zurückgeben.</p>`,
-            [[`🩺 ${h.akuErg ? "AKU-Ergebnis" : "Ankaufsuntersuchung"}`, () => akuDialog(h, "Tierschutz", () => { if (kaufPruefen(h, h.preis)) pferdEinstellen(h, h.preis, "Schutzgebühr", p => { p.pflege.gesundheit = h.notGesundheit; p.schutzBis = jzJetzt() + 4; if (p.fohlenBeiFuss) p.fohlenBeiFuss.schutzBis = p.schutzBis; delete p.notGesundheit; }); }, () => zeigeMarkt()), "zweit"], ["Aufnehmen", () => pferdEinstellen(h, h.preis, "Schutzgebühr", p => { p.pflege.gesundheit = h.notGesundheit; p.schutzBis = jzJetzt() + 4; if (p.fohlenBeiFuss) p.fohlenBeiFuss.schutzBis = p.schutzBis; delete p.notGesundheit; })], ["Abbrechen", null, "zweit"]]); }],
+            [...((o) => o.km != null ? [[`🚗 Hinfahren (${o.km} km)`, () => besuchStart({ art: "pferd", h, ort: o.ort, km: o.km, name: o.name }), "zweit"]] : [])(tsOrt(h)), [`🩺 ${h.akuErg ? "AKU-Ergebnis" : "Ankaufsuntersuchung"}`, () => akuDialog(h, "Tierschutz", () => { if (kaufPruefen(h, h.preis)) pferdEinstellen(h, h.preis, "Schutzgebühr", p => { p.pflege.gesundheit = h.notGesundheit; p.schutzBis = jzJetzt() + 4; if (p.fohlenBeiFuss) p.fohlenBeiFuss.schutzBis = p.schutzBis; delete p.notGesundheit; }); }, () => zeigeMarkt()), "zweit"], ["Aufnehmen", () => pferdEinstellen(h, h.preis, "Schutzgebühr", p => { p.pflege.gesundheit = h.notGesundheit; p.schutzBis = jzJetzt() + 4; if (p.fohlenBeiFuss) p.fohlenBeiFuss.schutzBis = p.schutzBis; delete p.notGesundheit; })], ["Abbrechen", null, "zweit"]]); }],
           extra: { zeilen: [["Gesundheit", `${h.notGesundheit} %`], ["Schutzgebühr", `<b>${fmt(h.preis)}</b>`]] } })).join("")}</div>` : `<p style="margin:6px 0 0">Gerade keine Notfallpferde.</p>`}</div>`; }
     zeigeNeben("🏷️ Pferdemarkt", html);
     rasseSortieren($("nebenSchirm"), zeigeMarkt);   // v455 (Dome): alle Kaufrubriken nach Kontinent sortierbar
@@ -16706,6 +16712,8 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     $("nebenSchirm").querySelectorAll("[data-gest]").forEach(b => b.onclick = () => { gestuetWahl = b.dataset.gest; zeigeMarkt(); $("nebenSchirm").scrollTop = 0; });
     $("nebenSchirm").querySelectorAll("[data-reise]").forEach(b => b.onclick = () => reiseAntreten(b.dataset.reise));   /* Etappe 8c */
     if ($("reiseHeim")) $("reiseHeim").onclick = () => tagBeenden();
+    if ($("besuchHeim")) $("besuchHeim").onclick = () => besuchHeim();
+    if ($("besuchZurueck")) $("besuchZurueck").onclick = () => { marktBereich = "besuch"; zeigeMarkt(); };
     if (marktBereich === "zeitung") zeitungVerbinden();
     const verkaufAuswahl = () => {
       const liste = spiel.boxen.map((b, i) => ({ b, i })).filter(({ b }) => b.pferd && !b.tot && !b.pferd.klinik);
@@ -17524,7 +17532,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   function zeitungHTML(kopf) {
     const H = spiel.hof, Z = zeitungDaten(), pos = hofPos();
     if (!pos) return kopf(`📰 ${ZEITUNG.name}`, "Die Lokalzeitung bringt Kleinanzeigen, Termine und Stellengesuche aus der Region.") + `<p class="text">Wo liegt dein Hof <b>${esc(hofName())}</b>? Das wird einmal festgelegt und bestimmt, was in der Zeitung steht.</p>${ortWahlHTML("ztw", H && H.bundesland || "03")}<button class="knopf" id="ztOrtOk" style="width:auto;padding:8px 14px">📍 Hier liegt mein Hof</button></div>`;
-    if (!Z.abo) return kopf(`📰 ${ZEITUNG.name}`, `Lokalzeitung für ${esc(hofOrtText())} und Umgebung`) + `<p class="text">Der ${ZEITUNG.name} kommt einmal pro Jahreszeit in den Briefkasten am Hoftor – wenn du Mitarbeiter hast, legen sie ihn dir ins Büro. Darin: <b>Kleinanzeigen</b> von Pferdebesitzern im Umkreis von ${ZEITUNG.umkreis} km, <b>Termine</b> (Pferdemärkte, Auktionen, Fohlenauktionen) und <b>Stellengesuche</b>. Pferde aus den Anzeigen kannst du nach einer Besichtigung kaufen.</p>
+    if (!Z.abo) return kopf(`📰 ${ZEITUNG.name}`, `Lokalzeitung für ${esc(hofOrtText())} und Umgebung`) + `<p class="text">Der ${ZEITUNG.name} kommt einmal pro Jahreszeit in den Briefkasten am Hoftor – wenn du Mitarbeiter hast, legen sie ihn dir ins Büro. Darin: <b>Kleinanzeigen</b> von Pferdebesitzern im Umkreis von ${ZEITUNG.umkreis} km, <b>Termine</b> (Pferdemärkte, Auktionen, Fohlenauktionen) und <b>Stellengesuche</b>. Pferde aus den Anzeigen kannst du nach einer Besichtigung kaufen, zu den Terminen kannst du hinfahren.</p>
       <p class="text">Abo: <b>${fmt(ZEITUNG.abo)}</b> je Jahreszeit, jederzeit zum Ende der Jahreszeit kündbar. Die aktuelle Ausgabe bekommst du gleich dazu.</p><button class="knopf" id="ztAbo" style="width:auto;padding:8px 14px">📰 Abo abschließen · ${fmt(ZEITUNG.abo)}</button>
       <p class="text"><small>Eine eigene Verkaufsanzeige gibst du über „Pferd verkaufen“ auf – dafür brauchst du kein Abo.</small></p></div>`;
     if (!zeitungAktuell(Z)) zeitungZustellen(Z);
@@ -17533,9 +17541,9 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     const stellen = Object.keys(MA_TYP).filter(t => t !== "azubi" && maVerfuegbar(t)).flatMap(t => bewerber(t).slice(0, 1).map(b => ({ b, t }))).slice(0, ZEITUNG.stellen);
     const kl = anz.length ? `<div class="paar-liste">${anz.map(h => { const T = zeitungTermin(h.id), heute = T && T.tag === spiel.tag;
       return pferdKachel(h, { ort: `Kleinanzeige · ${h.anzOrt}`, zeilen: [rasseById(h.rasse).name, `${h.geschlecht} · ${alterText(h)}`, ...(h.fohlenBeiFuss ? [`🍼 mit Fohlen (${alterText(h.fohlenBeiFuss)})`] : []), `📍 ${esc(h.anzOrt)} · ${h.anzKm} km`, `<b>${fmt(h.preis)}</b>`, ...(T ? [heute ? "🔎 Besichtigung heute" : `📅 Besichtigung ${tagText(T.tag)}`] : [])],
-        aktion: heute ? [`🔎 Ansehen und kaufen`, () => privatKaufen(h)] : [T ? "📅 Termin ändern" : "📅 Besichtigung ausmachen", () => besichtigungAusmachen(h, () => zeigeMarkt())],
+        aktion: heute ? [`🚗 Hinfahren und ansehen`, () => privatKaufen(h)] : [T ? "📅 Termin ändern" : "📅 Besichtigung ausmachen", () => besichtigungAusmachen(h, () => zeigeMarkt())],
         extra: { zeilen: [["Preis", `<b>${fmt(h.preis)}</b>`], ["Ort", `${esc(h.anzOrt)} (${h.anzKm} km)`]] } }); }).join("")}</div>` : `<p class="text">In dieser Ausgabe gibt es keine Pferde-Anzeigen.</p>`;
-    const tl = ter.length ? `<div class="fin-posten-liste">${ter.map(t => `<div class="fin-posten"><span>${TERMIN_ICO[t.art]} <b>${esc(t.n)}</b><small> ${TERMIN_ART[t.art]} · ${esc(t.ort)} (${t.km} km)</small></span><b class="nw">${tagText(t.tag)}</b></div>`).join("")}</div><p class="text"><small>Hinfahren kommt bald – bis dahin stehen die Termine zum Vormerken im Kalender.</small></p>` : `<p class="text">In den nächsten zwei Jahreszeiten gibt es im Umkreis von ${ZEITUNG.umkreis} km keine Pferdemärkte oder Auktionen.</p>`;
+    const tl = ter.length ? `<div class="fin-posten-liste">${ter.map(t => `<div class="fin-posten"><span>${TERMIN_ICO[t.art]} <b>${esc(t.n)}</b><small> ${TERMIN_ART[t.art]} · ${esc(t.ort)} (${t.km} km)</small></span><b class="nw">${t.tag === spiel.tag ? `<button class="mini-knopf" data-ztermin="${esc(t.n)}">🚗 Heute – hinfahren</button>` : tagText(t.tag)}</b></div>`).join("")}</div><p class="text"><small>Am Tag des Termins kannst du hinfahren: Pferde ansehen, vorführen lassen, kaufen oder auf der Auktion mitbieten. Die Termine stehen auch im Kalender.</small></p>` : `<p class="text">In den nächsten zwei Jahreszeiten gibt es im Umkreis von ${ZEITUNG.umkreis} km keine Pferdemärkte oder Auktionen.</p>`;
     const sl = stellen.length ? stellen.map(({ b, t }, i) => { const o = orte.length ? orte[(b.name.length * 7 + i) % orte.length] : null;
       return `<div class="fin-posten"><span>👤 <b>${esc(b.name)}</b><small> sucht eine Stelle als ${esc(MA_TYP[t].name)}${o ? ` · aus ${esc(o[0])} (${o[1]} km)` : ""}</small></span></div>`; }).join("") + `<button class="knopf zweit" id="ztMa" style="width:auto;padding:6px 12px;margin-top:6px">👥 Zu den Mitarbeitern</button>` : `<p class="text">Keine Stellengesuche für Berufe, die du gerade einstellen kannst.</p>`;
     return kopf(`📰 ${ZEITUNG.name} · ${jzName(jz)}`, `Lokalzeitung für ${esc(hofOrtText())} · alles im Umkreis von ${ZEITUNG.umkreis} km · gilt die ganze Jahreszeit`)
@@ -17551,11 +17559,156 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       buchen(-ZEITUNG.abo, "Zeitungsabo"); Z.abo = true; delete Z.kuendigung; zeitungZustellen(Z); prot("Zeitung: Abo"); speichern(); zeigeMarkt(); };
     if ($("ztKuend")) $("ztKuend").onclick = () => { if (Z.kuendigung) delete Z.kuendigung; else Z.kuendigung = true; speichern(); zeigeMarkt(); };
     if ($("ztMa")) $("ztMa").onclick = () => zeigeHof("mitarbeiter");
+    document.querySelectorAll("[data-ztermin]").forEach(b => b.onclick = () => { const t = regionTermine(jzJetzt()).find(x => x.tag === spiel.tag && x.n === b.dataset.ztermin); if (t) besuchStart({ art: "termin", t, ort: t.ort, km: t.km, name: t.n }); });   /* M3 */
   }
   // Etappe M2 (Dome 14.11.2026): Inserate im Internet kommen aus ganz Deutschland – Standort fest je Pferd (eigener Zufallsstrom), Entfernung zum Hof per Luftlinie
   const ALLE_ORTE = (() => { const m = new Map(); Object.values(HOF_ORTE).forEach(l => l.forEach(O => m.set(O[0], [O[1], O[2]]))); Object.entries(STADT_POS).forEach(([n, p]) => { if (!m.has(n)) m.set(n, p); }); return [...m]; })();
   function inseratOrt(h) { const r = zufall("inserat-ort-" + h.id), o = ALLE_ORTE[Math.floor(r() * ALLE_ORTE.length)], pos = hofPos(); return { ort: o[0], km: pos ? Math.round(kmLuft(pos, o[1])) : null }; }
   const inseratZeile = h => { const o = inseratOrt(h); return `📍 ${esc(o.ort)}${o.km != null ? ` · ${o.km} km` : ""}`; };
+  // ---------- Etappe M3 (PLAN-MARKT-UND-BESUCHE, Dome 14.11.2026): Besuche vor Ort – Fahrt kostet Geld und Zeit, vor Ort ansehen, vorführen lassen, AKU, kaufen oder mitbieten ----------
+  // Fahrtkosten (Recherche 14.11.2026): Auto 0,30 €/km = Kilometerpauschale für Dienstreisen (§ 9 EStG; ADAC-Vollkosten Mittelklasse 42–53 ct/km inkl. Wertverlust);
+  // mit Pferdeanhänger 0,50 €/km (Gespann braucht etwa 15 l/100 km statt 6–9 l, Praxisberichte autoplenum.de) + Anhängermiete 65 € je Tag (meister-job.de: 50–80 €/Tag);
+  // Pferdetransport-Unternehmen (Einzeltransport) 1,80 €/km einfache Strecke, mindestens 120 € (meister-job.de: 1,00–2,50 €/km); Hotel 90 €/Nacht (businesstraveller.com: Schnitt rund 90 €);
+  // Gastbox für ein gekauftes Pferd 50 €/Nacht (Boxenmiete bei Veranstaltungen 50–65 €/Tag, bayerns-pferde.de). Zeit nach Dome: bis 50 km ein Tagesabschnitt, bis 250 km der ganze Tag, weiter 2 Tage mit Übernachtung.
+  // Selbst gesetzt: höchstens 2 kurze Besuche am Tag (Morgen, Mittag), vor Ort 15 Prozentpunkte mehr Chance beim Handeln, einmal je Pferd.
+  const BESUCH = { autoKm: 0.3, anhKm: 0.5, anhMiete: 65, transKm: 1.8, transMin: 120, hotel: 90, gastbox: 50, kurzKm: 50, tagKm: 250, kurzMax: 2, handeln: 0.15 };
+  // Tierschutz-Höfe mit Vermittlung (notizen AUKTIONEN-TIERSCHUTZ.md), Koordinaten OpenStreetMap (Nominatim) 14.11.2026
+  const TS_ORTE = [["Pferdeklappe e.V.", "Norderbrarup", 54.6548, 9.7704], ["Tierschutzzentrum Weidefeld", "Kappeln", 54.6642, 9.9318], ["Pferdegnadenhof „Die Arche“", "Ilsede", 52.2602, 10.2155],
+    ["Pferde und Esel in Not e.V.", "Holzminden", 51.899, 9.5741], ["Tierheim Bremen", "Bremen", 53.0758, 8.8072], ["Pferdeschutzhof Klepperstall", "Zülpich", 50.6922, 6.6473], ["Kölner Schutzhof für Pferde", "Köln", 50.9384, 6.96],
+    ["Pferdehilfe Saarland e.V.", "Neunkirchen", 49.3499, 7.1842], ["Tierheim Horb", "Horb am Neckar", 48.4448, 8.6915], ["Equiluna e.V.", "Marktschellenberg", 47.696, 13.0463], ["Tierheim Berlin", "Berlin-Falkenberg", 52.5693, 13.54],
+    ["Pferdeschutzhof Cobbel", "Tangerhütte", 52.4342, 11.8061], ["Tierhilfsdienst Gnadenhof Ahlum", "Rohrberg", 52.7066, 11.0403], ["Pferdeschutzhof Saara", "Saara", 50.9336, 12.4207]];
+  // Auktionen der Verbände: welche Rassen dort verkauft werden (Warmblut-Verbände ohne eigene Rasse im Spiel → Hannoveraner als Warmblut)
+  const TERMIN_RASSE = [[/Trakehner/, ["trakehner"]], [/Galopper/, ["vollblut"]], [/Traber/, ["traber"]], [/Haflinger/, ["haflinger"]], [/Kaltblut/, ["noriker"]], [/Riedlinger/, ["hannoveraner", "haflinger", "noriker"]]];
+  const BESUCH_DAUER = { kurz: "einen Tagesabschnitt", tag: "den ganzen Tag", zwei: "zwei Tage mit Übernachtung" };
+  const besuchDauer = km => km <= BESUCH.kurzKm ? "kurz" : km <= BESUCH.tagKm ? "tag" : "zwei";
+  function besuchKosten(km, anh) { const d = besuchDauer(km), tage = d === "zwei" ? 2 : 1, fahrt = Math.round(2 * km * (anh ? BESUCH.anhKm : BESUCH.autoKm)), miete = anh ? BESUCH.anhMiete * tage : 0, hotel = d === "zwei" ? BESUCH.hotel : 0;
+    return { d, fahrt, miete, hotel, summe: fahrt + miete + hotel }; }
+  const transportPreis = km => Math.max(BESUCH.transMin, Math.round((km || 0) * BESUCH.transKm / 10) * 10);
+  function tsOrt(h) { const r = zufall("ts-ort-" + h.id), T = TS_ORTE[Math.floor(r() * TS_ORTE.length)], pos = hofPos(); return { name: T[0], ort: T[1], km: pos ? Math.round(kmLuft(pos, [T[2], T[3]])) : null }; }
+  function besuchOrt(h) { if (h.anzOrt) return { ort: h.anzOrt, km: h.anzKm }; if (h.notfall) return tsOrt(h); return inseratOrt(h); }
+  const besuchAktiv = () => spiel.besuch && spiel.besuch.tag === spiel.tag ? spiel.besuch : null;
+  const besucheHeute = () => spiel.besuchHeute && spiel.besuchHeute.tag === spiel.tag ? spiel.besuchHeute : { tag: spiel.tag, n: 0, lang: false };
+  const besuchQuelle = h => h.notfall ? "Tierschutz" : h.standplatz || "Privat";
+  // Fahrt antreten. Z: { art: "pferd", h, ort, km, name } oder { art: "termin", t, ort, km, name }
+  function besuchStart(Z) {
+    if (besuchAktiv()) { marktBereich = "besuch"; zeigeMarkt(); return; }
+    if (Z.km == null) { dialog(`<h3>🚗 Wo liegt dein Hof?</h3><p>Leg zuerst in der Lokalzeitung fest, wo dein Hof liegt – dann weißt du, wie weit es ist.</p>`); return; }
+    const H = besucheHeute(), d = besuchDauer(Z.km);
+    if (H.lang || (d !== "kurz" && H.n) || H.n >= BESUCH.kurzMax) { dialog(`<h3>🚗 Heute nicht mehr</h3><p>${H.lang ? "Du warst heute schon lange unterwegs." : d !== "kurz" ? `Für ${Z.km} km brauchst du den ganzen Tag – heute bist du schon gefahren. Fahr ein andermal früh los.` : `Mehr als ${BESUCH.kurzMax} kurze Besuche schaffst du an einem Tag nicht.`}</p>`); return; }
+    const fohlen = Z.art === "termin" && Z.t.art === "fohlen", K0 = besuchKosten(Z.km, false), K1 = besuchKosten(Z.km, true), leute = (spiel.mitarbeiter || []).some(m => maAktiv(m));
+    const teile = K => `Fahrt ${fmt(K.fahrt)}${K.miete ? ` + Anhänger ${fmt(K.miete)}` : ""}${K.hotel ? ` + Hotel ${fmt(K.hotel)}` : ""}`;
+    const los = anh => { const K = anh ? K1 : K0; if (geldFrei() < K.summe) { dialog(`<h3>Nicht genug Geld</h3>${dispoHinweis()}<p>Die Fahrt kostet ${fmt(K.summe)}.</p>`); return; }
+      buchen(-K.fahrt, `Fahrt nach ${Z.ort}`); if (K.miete) buchen(-K.miete, `Anhängermiete: Fahrt nach ${Z.ort}`); if (K.hotel) buchen(-K.hotel, `Hotel in ${Z.ort}`);
+      const B = { tag: spiel.tag, art: Z.art, ort: Z.ort, km: Z.km, name: Z.name, d: K.d, anh, pferde: [], lose: [] };
+      if (Z.art === "termin") { B.termin = { art: Z.t.art, n: Z.t.n }; terminAngebot(Z.t, B); } else { Z.h.standplatz = Z.h.standplatz || (Z.h.notfall ? undefined : "Privat"); B.pferde = [Z.h]; }
+      spiel.besuch = B; spiel.besuchHeute = { tag: spiel.tag, n: H.n + 1, lang: K.d !== "kurz" };
+      prot("Besuch vor Ort", { x: Z.ort, b: -K.summe }); speichern(); marktBereich = "besuch"; zeigeMarkt(); if ($("nebenSchirm")) $("nebenSchirm").scrollTop = 0; };
+    dialog(`<h3>🚗 Fahrt nach ${esc(Z.ort)}</h3><p><b>${esc(Z.name)}</b> · ${Z.km} km entfernt. Hin und zurück brauchst du <b>${BESUCH_DAUER[d]}</b>${d === "kurz" ? "" : d === "tag" ? " – die Heimfahrt beendet den Tag" : " – du übernachtest im Hotel, die Heimfahrt beendet den zweiten Tag"}.${d !== "kurz" ? (leute ? " Deine Mitarbeiter kümmern sich so lange um den Hof." : " ⚠️ Du hast keine Mitarbeiter – versorge deine Pferde vor der Abfahrt.") : ""}</p>
+      ${fohlen ? `<p><small>Fohlen bleiben bis zum Absetzen bei der Mutter – der Züchter bringt sie zu Beginn der nächsten Jahreszeit (Transport ${fmt(transportPreis(Z.km))}). Ein Anhänger lohnt sich hier nicht.</small></p>`
+        : `<p><small>🚗 <b>Nur mit dem Auto:</b> Kaufst du ein Pferd, bringt es ein Transportunternehmen am nächsten Tag (${fmt(transportPreis(Z.km))}).<br>🚚 <b>Mit Pferdeanhänger</b> (gemietet): Ein gekauftes Pferd kommt gleich mit dir nach Hause${d === "zwei" ? ` (über Nacht in einer Gastbox, ${fmt(BESUCH.gastbox)})` : ""}.</small></p>`}`,
+      [[`🚗 Mit dem Auto · ${fmt(K0.summe)}`, () => los(false)], ...(fohlen ? [] : [[`🚚 Mit Pferdeanhänger · ${fmt(K1.summe)}`, () => los(true)]]), ["Abbrechen", null, "zweit"]]);
+    const kn = document.querySelectorAll("#dlgKnoepfe button"); if (kn[0]) kn[0].title = teile(K0); if (kn[1] && !fohlen) kn[1].title = teile(K1);
+  }
+  // Angebot vor Ort: Pferdemarkt = Händler und Privatleute mit ihren Pferden; Auktion/Fohlenauktion = Lose, auf die man im Saal mitbietet
+  function terminAngebot(t, B) {
+    const r = zufall("termin-" + t.n + "-" + spiel.tag + (spiel.spieler ? spiel.spieler.name : "")), key = "tm" + spiel.tag + "-" + (t.ort || "").replace(/[^A-Za-z]/g, "").slice(0, 6);
+    if (t.art === "markt" || t.art === "schau") { B.pferde = Array.from({ length: (t.art === "markt" ? 6 : 3) + Math.floor(r() * 4) }, (_, i) => { const h = privatPferd(key + "-" + i, r); h.standplatz = r() < 0.4 ? "Händler" : "Privat"; return h; }); return; }
+    const R = (TERMIN_RASSE.find(([re]) => re.test(t.n)) || [null, ["hannoveraner"]])[1], fo = t.art === "fohlen";
+    B.lose = Array.from({ length: (fo ? 8 : 6) + Math.floor(r() * 5) }, (_, i) => {
+      const rasse = R[Math.floor(r() * R.length)], jahre = fo ? 0 : /Galopper|Traber|Jährling/.test(t.n) ? 1 : 2 + Math.floor(r() * 3);
+      const h = fo ? mkPferd(key + "-" + i, rasse, 0, 0, r, r() < 0.5 ? "Stute" : "Hengst", { s: 0, j: datum().j }, "zuechter") : mkPferd(key + "-" + i, rasse, 0, jahre, r, null, zuechterGeb(jahre, r), "zuechter");
+      if (fo) marktFohlenschau(h, r); else marktKoerper(h, r, "zuechter"); zbKauf(h, "Auktion");
+      const wert = Math.round(marktwert(h) * saisonF()), start = Math.max(100, Math.round(wert / 2 / 50) * 50);
+      return { nr: i + 1, pferd: h, wert, start, max: Math.max(start, npcLimit(wert, r)), fohlen: fo }; });
+  }
+  // Was man mit eigenen Augen sieht: ansehen = Gesamteindruck, Haut, Augen; vorführen lassen = Lahmheit im Trab, Takt, Husten (nichts, was ein Schmerzmittel verdeckt)
+  const SICHT_TEXT = { lahmheit: "lahmt im Trab", husten: "hustet beim Antraben", mondblind: "ein Auge sieht trüb aus", sarkoid: "krustige, warzige Stelle an der Haut", augenkrebs: "Wucherung am Augenlid" };
+  function besuchSehen(h, was) {
+    const S = (h.sicht = h.sicht || { funde: [] }), F = akuFunde(h, besuchQuelle(h)), r = zufall("sicht-" + was + "-" + h.id);
+    const merk = f => { if (f.gesehen) return; f.gesehen = true; S.funde.push(SICHT_TEXT[f.art] || f.text.replace(/ \((Röntgen|Ultraschall)\)/, "")); };
+    if (was === "ansehen") { S.ansehen = true; const g = h.notfall ? h.notGesundheit : h.verdeckt;
+      S.eindruck = g == null ? "wirkt gesund und gepflegt" : g >= 85 ? "wirkt gesund, munter und gepflegt" : g >= 65 ? "wirkt etwas matt – vielleicht nicht ganz fit" : g >= 45 ? "wirkt matt und müde, das Fell ist stumpf" : "ist in schlechtem Zustand";
+      F.filter(f => ["sarkoid", "mondblind", "augenkrebs"].includes(f.art)).forEach(merk); }
+    else { S.vorfuehren = true; F.forEach(f => { if (f.maskiert) return; if (f.check === "gang" || (f.check === "longe" && r() < 0.6) || (f.art === "husten" && r() < 0.5)) merk(f); }); }
+    prot("Besuch: " + (was === "ansehen" ? "angesehen" : "vorgeführt"), { x: h.name }); speichern();
+  }
+  const besuchSichtText = h => { const S = h.sicht; if (!S || (!S.ansehen && !S.vorfuehren)) return ""; return `<div class="panel" style="margin:6px 0"><b>👀 Dein Eindruck</b>${S.ansehen ? `<p style="margin:4px 0">${esc(h.name)} ${S.eindruck}.</p>` : ""}${S.funde.length ? `<p style="margin:4px 0">⚠️ ${S.funde.map(esc).join(" · ")}</p>` : `<p style="margin:4px 0">${S.vorfuehren ? "Beim Vorführen läuft alles sauber und im Takt." : "Sonst fällt dir nichts auf."}</p>`}${S.vorfuehren ? "" : `<p style="margin:4px 0"><small>Lahmheiten zeigen sich erst beim Vorführen.</small></p>`}</div>`; };
+  // gekauftes Pferd: mit Anhänger gleich mit nach Hause, sonst bringt es ein Transportunternehmen (bzw. der Züchter das Fohlen nach dem Absetzen)
+  function besuchLiefern(h, preis, posten, quelle, zusatz, ankunft, km, von, text) {
+    const t = transportPreis(km); buchen(-preis, `${posten}: ${h.name}`); buchen(-t, `Pferdetransport: ${h.name}`); marktGekauftMerken(h.id); prot("Kauf: " + posten, { p: h, b: -(preis + t) });
+    const p = JSON.parse(JSON.stringify(h)); delete p.preis; ["sicht", "standplatz", "anzOrt", "anzKm", "anzJz"].forEach(k => delete p[k]);
+    p.pflege = erzeugePflege(p); p.maehneSeit = spiel.tag; p.schopfSeit = spiel.tag; if (zusatz) zusatz(p); akuUebernehmen(p, h, quelle);
+    (spiel.importe = spiel.importe || []).push({ hid: aktivHid(), pferd: p, ankunft, fertig: true, von: von || "Pferdetransporte", text: text || `${esc(p.name)} ist gut angekommen und steht jetzt in Box {box}. Gib ${pron(p).ihm} ein paar Tage Ruhe zum Eingewöhnen.` });
+    speichern(); return t;
+  }
+  const kaufZusatz = (h, quelle) => quelle === "Tierschutz" ? p => { p.pflege.gesundheit = h.notGesundheit; p.schutzBis = jzJetzt() + 4; if (p.fohlenBeiFuss) p.fohlenBeiFuss.schutzBis = p.schutzBis; delete p.notGesundheit; }
+    : h.verdeckt != null ? p => { p.pflege.gesundheit = h.verdeckt; p.verdecktGezeigt = !h.aku && !(h.sicht && h.sicht.ansehen); delete p.verdeckt; delete p.aku; } : null;
+  function besuchKauf(h, preis) {
+    const B = besuchAktiv(); if (!B || !kaufPruefen(h, preis)) return; const quelle = besuchQuelle(h), posten = quelle === "Tierschutz" ? "Schutzgebühr" : quelle === "Privat" ? "Privatkauf" : quelle;
+    (B.gekauft = B.gekauft || []).push(h.id);
+    if (B.anh) { if (B.d === "zwei") buchen(-BESUCH.gastbox, `Gastbox über Nacht: ${h.name}`); h.sicht = undefined; pferdEinstellen(h, preis, posten, kaufZusatz(h, quelle)); return; }
+    const t = besuchLiefern(h, preis, posten, quelle, kaufZusatz(h, quelle), spiel.tag + 1, B.km);
+    zeigeMarkt(); dialog(`<h3>🤝 Gekauft!</h3><p><b>${esc(h.name)}</b> gehört jetzt dir. Ein Transportunternehmen bringt ${pron(h).ihn} <b>morgen</b> auf deinen Hof (${fmt(t)}).</p>`);
+  }
+  // Pferd vor Ort: ansehen, vorführen lassen, AKU, Preis vorschlagen, kaufen
+  function besuchPferd(h) {
+    const B = besuchAktiv(); if (!B) return zeigeMarkt(); const quelle = besuchQuelle(h), S = h.sicht || {}, ts = quelle === "Tierschutz", zurueck = () => besuchPferd(h);
+    const kauf = preis => besuchKauf(h, preis), haendler = quelle === "Händler";
+    dialog(`<h3>${ts ? "🐾" : haendler ? "🐴" : "🏡"} ${esc(h.name)}${ts ? ` beim ${esc(B.name)}` : haendler ? " beim Händler" : " von privat"}</h3><p>${rasseById(h.rasse).name} · ${h.geschlecht} · ${alterText(h)}${h.fohlenBeiFuss ? ` · mit Fohlen <b>${esc(h.fohlenBeiFuss.name)}</b>` : ""} · ${ts ? "Schutzgebühr" : "verlangt werden"} <b>${fmt(h.preis)}</b>.</p>${besuchSichtText(h)}
+      ${h.aku ? `<p>🩺 Ankaufsuntersuchung: Gesundheit <b>${h.verdeckt} %</b>.</p>` : ""}${ts ? `<p><small>Bedingung: gesund pflegen und mindestens ein Jahr behalten.</small></p>` : ""}
+      ${ts || h.verhandelt ? (h.verhandelt ? `<p><small>${h.verhandelt === "ja" ? "✅ Ihr habt euch geeinigt." : "Der Verkäufer bleibt bei seinem Preis."}</small></p>` : "") : `<label class="fest-preis">Dein Preisvorschlag: <b id="pvWert">${fmt(Math.round(h.preis * .9 / 50) * 50)}</b><input type="range" id="pvPreis" min="${Math.round(h.preis * .5 / 50) * 50}" max="${h.preis}" step="50" value="${Math.round(h.preis * .9 / 50) * 50}"></label>`}`,
+      [[`${ts ? "Aufnehmen" : "Kaufen"} · ${fmt(h.preis)}`, () => kauf(h.preis)], ...(S.ansehen ? [] : [["👀 Genau ansehen", () => { besuchSehen(h, "ansehen"); zurueck(); }, "zweit"]]), ...(S.vorfuehren ? [] : [["🏃 Vorführen lassen", () => { besuchSehen(h, "vorfuehren"); zurueck(); }, "zweit"]]),
+        [`🩺 ${h.akuErg ? "AKU-Ergebnis" : "AKU"}`, () => akuDialog(h, quelle, kauf, zurueck), "zweit"],
+        ...(ts || h.verhandelt ? [] : [["Vorschlagen", () => { const v = h.vorschlag, q = v / h.preis, plus = BESUCH.handeln + ((h.sicht && h.sicht.funde.length) ? 0.1 : 0);   // vor Ort: bessere Chance, gesehene Mängel helfen beim Handeln
+          const ok = Math.random() < Math.min(1, (q >= .95 ? 1 : q >= .85 ? .6 : q >= .75 ? .3 : .05) + plus); h.verhandelt = ok ? "ja" : "nein"; if (ok) h.preis = v; speichern();
+          if (ok) dialog(`<h3>🤝 Handschlag!</h3><p>Der Verkäufer ist mit <b>${fmt(v)}</b> einverstanden.</p>`, [["Kaufen", () => kauf(v)], ["Noch überlegen", zurueck, "zweit"]]);
+          else dialog(`<h3>Abgelehnt</h3><p>Für ${fmt(v)} gibt der Verkäufer ${esc(h.name)} nicht her. Der Preis bleibt bei ${fmt(h.preis)}.</p>`, [["OK", zurueck]]); }, "zweit"]]), ["Zurück", () => zeigeMarkt(), "zweit"]], "breit");
+    const pv = $("pvPreis"); if (pv) { h.vorschlag = +pv.value; pv.oninput = () => { h.vorschlag = +pv.value; $("pvWert").textContent = fmt(+pv.value); }; }
+  }
+  // Auktion vor Ort: Limit setzen, der Auktionator ruft auf – wer das höhere Limit hat, bekommt den Zuschlag (ein Schritt über dem anderen)
+  function besuchBieten(a) {
+    const B = besuchAktiv(); if (!B || a.weg) return; const h = a.pferd;
+    if (zielBox(h) < 0 && !a.fohlen) { dialog(`<h3>Keine Box frei</h3><p>Für ${esc(h.name)} brauchst du eine freie Box.${keineBoxGrund(h)}</p>`); return; }
+    const extra = a.fohlen || !B.anh ? transportPreis(B.km) : (B.d === "zwei" ? BESUCH.gastbox : 0), frei = Math.floor((geldFrei() - extra) / 50) * 50;
+    if (frei < a.start) { dialog(`<h3>Nicht genug Geld</h3>${dispoHinweis()}<p>Der Ausruf liegt bei ${fmt(a.start)}${extra ? ` (dazu ${fmt(extra)} für den Transport)` : ""}.</p>`); return; }
+    const max = Math.max(a.start, Math.min(frei, a.start + 40 * bietSchritt(a)));
+    dialog(`<h3>🔨 Los ${a.nr}: ${esc(h.name)}</h3><p>${rasseById(h.rasse).name} · ${h.geschlecht} · ${alterText(h)} · Ausruf <b>${fmt(a.start)}</b>.</p><p>Wie weit gehst du mit? Den Zuschlag bekommt, wer am längsten mitbietet – du zahlst nur einen Schritt mehr als der letzte Mitbieter.${a.fohlen ? " Das Fohlen kommt nach dem Absetzen zu Beginn der nächsten Jahreszeit." : ""}</p>
+      <label class="fest-preis">Dein Limit: <b id="bbWert">${fmt(a.start)}</b><input type="range" id="bbLimit" min="${a.start}" max="${max}" step="50" value="${a.start}"></label>`,
+      [["🔨 Mitbieten", () => { const lim = +$("bbLimit").value; prot("Besuch: Auktion", { x: h.name });
+        if (lim <= a.max) { a.weg = "fremd"; a.preis = Math.min(a.max, Math.max(a.start, lim + bietSchritt(a))); speichern(); zeigeMarkt(); dialog(`<h3>🔨 Zuschlag an einen anderen Bieter</h3><p>Bei <b>${fmt(a.preis)}</b> bist du ausgestiegen – ${esc(h.name)} geht an einen anderen Bieter.</p>`); return; }
+        const preis = Math.max(a.start, Math.min(lim, a.max + bietSchritt(a))); a.weg = "du"; a.preis = preis; (B.gekauft = B.gekauft || []).push(h.id);
+        if (a.fohlen) { const t = besuchLiefern(h, preis, "Auktion", "Auktion", null, jzStartTag(jzJetzt() + 1), B.km, B.name, `{dein|Ihr} Fohlen <b>${esc(h.name)}</b> ist abgesetzt und steht jetzt in Box {box}.`); zeigeMarkt(); dialog(`<h3>🔨 Zuschlag: ${fmt(preis)}!</h3><p>${esc(h.name)} gehört dir. Der Züchter bringt ${pron(h).ihn} nach dem Absetzen zu Beginn der nächsten Jahreszeit (Transport ${fmt(t)}).</p>`); return; }
+        if (B.anh) { if (B.d === "zwei") buchen(-BESUCH.gastbox, `Gastbox über Nacht: ${h.name}`); pferdEinstellen(h, preis, "Auktion"); return; }
+        const t = besuchLiefern(h, preis, "Auktion", "Auktion", null, spiel.tag + 1, B.km); zeigeMarkt(); dialog(`<h3>🔨 Zuschlag: ${fmt(preis)}!</h3><p>${esc(h.name)} gehört dir. Ein Transportunternehmen bringt ${pron(h).ihn} morgen (${fmt(t)}).</p>`); }],
+        [`🩺 ${h.akuErg ? "AKU-Ergebnis" : "Ankaufsuntersuchung"}`, () => akuDialog(h, "Auktion", null, () => besuchBieten(a)), "zweit"], ["Zurück", null, "zweit"]], "breit");
+    const rg = $("bbLimit"); rg.oninput = () => $("bbWert").textContent = fmt(+rg.value);
+  }
+  function besuchHTML(kopf) {
+    const B = besuchAktiv(); if (!B) return kopf("🚗 Unterwegs", "") + `<p>Du bist gerade nicht unterwegs.</p></div>`;
+    tippMerken("besuch"); const gek = new Set(B.gekauft || []), ico = B.termin ? TERMIN_ICO[B.termin.art] : "🚗";
+    const pf = B.pferde.filter(h => !gek.has(h.id)), heim = B.d === "kurz" ? "🏠 Heimfahren" : "🏠 Heimfahren (Tag beenden)";
+    const liste = pf.length ? `<div class="paar-liste">${pf.map((h, i) => { const q = besuchQuelle(h), S = h.sicht || {};
+      return pferdKachel(h, { ort: q === "Tierschutz" ? B.name : q === "Händler" ? "Händler" : "Privat", daten: `data-bpf="${i}"`, zeilen: [rasseById(h.rasse).name, `${h.geschlecht} · ${alterText(h)}`, ...(h.fohlenBeiFuss ? [`🍼 mit Fohlen`] : []), `<b>${fmt(h.preis)}</b>`, S.funde && S.funde.length ? `⚠️ ${esc(S.funde[0])}` : S.ansehen || S.vorfuehren ? "👀 angesehen" : ""],
+        aktion: ["Ansehen", () => besuchPferd(h)], extra: { zeilen: [["Preis", `<b>${fmt(h.preis)}</b>`], ["Verkäufer", q]] } }); }).join("")}</div>` : "";
+    const lose = (B.lose || []).length ? `<div class="paar-liste">${B.lose.map(a => pferdKachel(a.pferd, { ort: `Los ${a.nr}`, rahmen: a.weg === "du" ? "gruen" : "", zeilen: [rasseById(a.pferd.rasse).name, `${a.pferd.geschlecht} · ${alterText(a.pferd)}`, a.weg ? (a.weg === "du" ? `✅ dein Zuschlag: ${fmt(a.preis)}` : `verkauft für ${fmt(a.preis)}`) : `Ausruf ${fmt(a.start)}`],
+      aktion: a.weg ? null : ["Mitbieten", () => besuchBieten(a)], extra: { zeilen: [["Ausruf", fmt(a.start)]] } })).join("")}</div>` : "";
+    return kopf(`${ico} ${esc(B.name)} · ${esc(B.ort)}`, `${B.km} km von zu Hause · ${B.anh ? "mit Pferdeanhänger – gekaufte Pferde kommen gleich mit" : "mit dem Auto – gekaufte Pferde bringt ein Transportunternehmen"} · Hin und zurück: ${BESUCH_DAUER[B.d]}`)
+      + (liste || lose || `<p>${B.pferde.length || (B.lose || []).length ? "Hier ist nichts mehr zu haben." : "Hier ist heute nichts zu haben."}</p>`)
+      + `<p class="text"><small>${lose ? "Tippe ein Los an, um mitzubieten. Eine Ankaufsuntersuchung kannst du vorher machen lassen." : "Tippe ein Pferd an: genau ansehen und vorführen lassen kostet nichts – nur so siehst du, ob es lahmt. Vor Ort lässt sich besser handeln als am Telefon."}</small></p>
+      <button class="knopf" id="besuchHeim" style="width:auto;margin-top:8px">${heim}</button></div>`;
+  }
+  function besuchHeim() {
+    const B = besuchAktiv(); if (!B) return; delete spiel.besuch; prot("Besuch: Heimfahrt", { x: B.ort }); marktBereich = null;
+    if (B.d === "kurz") { speichern(); zeigeMarkt(); dialog(`<h3>🏠 Wieder zu Hause</h3><p>Du bist zurück von ${esc(B.name)} in ${esc(B.ort)}.</p>`); return; }
+    speichern(); zeigeMarkt();
+    if (B.d === "zwei") { naechsteNacht(); if (spiel.verloren) { spielVerloren(); return; } }   // erste Nacht im Hotel, die Heimfahrt am zweiten Tag beendet ihn
+    tagBeenden();
+  }
+  // Privatanzeige aus der Ferne kaufen: ohne Besichtigung, ein Transportunternehmen bringt das Pferd am nächsten Tag
+  function fernKauf(h, preis) {
+    if (!kaufPruefen(h, preis + transportPreis(besuchOrt(h).km))) return; const o = besuchOrt(h), t = besuchLiefern(h, preis, "Privatkauf", "Privat", kaufZusatz(h, "Privat"), spiel.tag + 1, o.km);
+    zeigeMarkt(); dialog(`<h3>🤝 Gekauft!</h3><p><b>${esc(h.name)}</b> gehört jetzt dir. Ein Transportunternehmen holt ${pron(h).ihn} in ${esc(o.ort)} ab und bringt ${pron(h).ihn} <b>morgen</b> auf deinen Hof (${fmt(t)}).</p>`);
+  }
   function zeitungKalender(jz, add) {   // kalTermine: Besichtigungen immer, Termine der Region mit Abo
     const Z = zeitungDaten(); (Z.termine || []).forEach(t => add(t.tag, "pferd", "🔎", `Besichtigung: ${esc(t.name)} in ${esc(t.ort)}`));
     if (Z.abo) regionTermine(jz).forEach(t => add(t.tag, "turnier", TERMIN_ICO[t.art], `${esc(t.n)} in ${esc(t.ort)} (${t.km} km)`));
@@ -20618,7 +20771,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Marktwert und eigener Verkauf:</b> Marktwert aus Gangwerk (Notenschnitt − 2,5) / 6, Ausbildungsstand, Alter und Gesundheit, plus die Kosten aller gemachten Gentests (getestete Pferde verkaufen sich besser). Stute mit Fohlen bei Fuß: beide Marktwerte zusammen, das Fohlen wird mitverkauft (allein nicht). Festpreis (Regler 50–160 % des Marktwerts, Chance wird angezeigt): bis 90 % des Marktwerts 98 % Verkaufschance, bis Marktwert 93 %, darüber sinkend (110 % ≈ 59 %, 120 % ≈ 38 %, 130 % ≈ 24 %, 150 % ≈ 10 %), aber nie unter 4 % (Liebhaber). Gerechnet mit dem Saisonpreis der Jahreszeit, in der du das Pferd einstellst. Während das Angebot läuft, schicken Interessenten manchmal Preisvorschläge per Brief (jede Nacht 15 %, bei deutlich überhöhtem Preis 35 %; 75–105 % des Marktwerts, immer unter deinem Preis) – annehmen verkauft sofort, ablehnen lässt das Angebot weiterlaufen. Auktion startet bei ½ des Marktwerts und läuft 2 Jahreszeiten; Abbruch nach dem ersten Gebot kostet die Hälfte des letzten Gebots. Gnadenhof: halber Marktwert.</p>
       <h3>🏷️ Pferdemarkt (wechselt jede Jahreszeit)</h3>
       ${verTab(["Bereich", "Angebot", "Preis", "Besonderheit"], [
-        ["🏡 Privatanzeigen", "2–4 Pferde, 5–19 J., oft Mix; Stuten auch mit Fohlen bei Fuß (Frühling 45 %, Sommer 40 %, Herbst 8 %, Winter 5 %); Körperform meist normal, etwa 20 % zu dick, 5 % zu dünn", "70–100 %", `Ankaufsuntersuchung ${fmt(AKU_PREIS)} zeigt die Gesundheit vorher. Preisvorschlag (1× je Pferd): ab 95 % sicher, 85–95 % 60 %, 75–85 % 30 %, sonst 5 %. Gesundheit erst nach Kauf (der Preis berücksichtigt sie zur Hälfte – Privatleute kennen ihr Pferd), je Großelternteil 30 % „unbekannt“ – dann Rasse „Abstammung unvollständig“ ohne Anteile, bis ein Abstammungsnachweis die Großeltern ermittelt`],
+        ["🏡 Privatanzeigen", "2–4 Pferde, 5–19 J., oft Mix; Stuten auch mit Fohlen bei Fuß (Frühling 45 %, Sommer 40 %, Herbst 8 %, Winter 5 %); Körperform meist normal, etwa 20 % zu dick, 5 % zu dünn", "70–100 %", `Ankaufsuntersuchung ${fmt(AKU_PREIS)} zeigt die Gesundheit vorher. Ohne Besuch bringt ein Transportunternehmen das Pferd am nächsten Tag (${fmt(BESUCH.transKm)}/km, mindestens ${fmt(BESUCH.transMin)}); beim Besuch vor Ort (Etappe M3) Fahrt ${fmt(BESUCH.autoKm)}/km mit Auto bzw. ${fmt(BESUCH.anhKm)}/km + ${fmt(BESUCH.anhMiete)}/Tag mit Anhänger, ansehen/vorführen zeigt Lahmheit und Haut, Handeln +${Math.round(BESUCH.handeln*100)} Prozentpunkte. Preisvorschlag (1× je Pferd): ab 95 % sicher, 85–95 % 60 %, 75–85 % 30 %, sonst 5 %. Gesundheit erst nach Kauf (der Preis berücksichtigt sie zur Hälfte – Privatleute kennen ihr Pferd), je Großelternteil 30 % „unbekannt“ – dann Rasse „Abstammung unvollständig“ ohne Anteile, bis ein Abstammungsnachweis die Großeltern ermittelt`],
         ["🐴 Pferdehändler", "6 Pferde, 1–14 J.", "110–130 %", "Gesundheit mind. 75 %, Rückgabe 3 Tage gegen 20 % Abzug"],
         ["🔨 Auktionshaus", "3–5 Pferde, 1–4 J., vom Züchter (Geburt 85 % Frühling, 10 % Winter, 5 % Sommer)", "Start 50 %", "Höchstgebot wie bei eBay: du legst dein Maximum fest, gezahlt wird nur ein Schritt über dem nächsten Bieter (Schritt 5 %, mind. 50 €); andere Bieter nachts (Limit: 65 % der Auktionen 70–130 % des Marktwerts, 22 % 130–200 %, 9 % Liebhaber mit 200–350 %, 4 % Sammler mit 350–600 % – starke Bieter bieten auch öfter), Höchstgebote nur bis zum frei verfügbaren Geld (Geld in anderen führenden Höchstgeboten ist gebunden), Zuschlag zu Beginn der nächsten Jahreszeit – nur mit freier Box und genug Geld. Grüner Rahmen: du führst, oranger: überboten (Brief mit „Erneut bieten“)"],
         ["🍼 Fohlenauktion", "3–5 Frühlingsfohlen, nur Sommer und Herbst", "Start 50 %", "wie Auktionshaus; Zuschlag zu Beginn der nächsten Jahreszeit, dann wird das Fohlen abgesetzt geliefert (freie Box + Geld nötig, zum Bieten noch nicht)"],
@@ -21668,6 +21821,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     weide: ["Weide", "Auf der Weide muss abgeäppelt werden, bei Matsch kann man sie sperren. Abends kommen alle Pferde wieder in die Box.", "", null, null, "anf"],
     waschplatz: ["Waschplatz", "Abspritzen macht das Fell sauber, danach immer abtrocknen. Nass über Nacht drohen Mauke und Erkältung.", "", null, null, "fort"],
     turnier: ["Turnier", "Du nennst dein Pferd bis zum Vortag, das Ergebnis kommt am nächsten Tag per Brief.", "Nenne nur Prüfungen, die zum Ausbildungsstand passen.", null, null, "fort"],
+    besuch: ["Besuche vor Ort", "Unterwegs kannst du Pferde genau ansehen und vorführen lassen – nur so siehst du, ob eines lahmt. Mit Anhänger kommt ein gekauftes Pferd gleich mit, sonst bringt es ein Transportunternehmen.", "", null, null, "anf"],
     zeitung: ["Lokalzeitung", "Einmal pro Jahreszeit kommen Kleinanzeigen, Termine und Stellengesuche aus der Region. Pferde aus den Anzeigen kaufst du nach einer Besichtigung.", "", null, null, "anf"],
     verkaufen: ["Verkaufen", "Verkaufe über den Steckbrief: zum Festpreis oder als Auktion. Alte Pferde können auf den Gnadenhof.", "", null, null, "anf"],
     speichern: ["Speichern", "Dein Spiel läuft im Autospeicher. Einen festen Stand speicherst du unter ☰ → „Spiel speichern“ – am besten am Ende jeder Jahreszeit.", "", "#menueKnopf", "speichern", "fort"],

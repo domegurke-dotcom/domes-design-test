@@ -110,6 +110,13 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   const r6b = await pg.evaluate(() => { const I = spiel.importe.slice(-1)[0]; return { ank: I.ankunft === jzStartTag(jzJetzt() + 1), t: document.getElementById('dlg').innerText }; });
   ok('Fohlen: Kaltblut, kommt nach dem Absetzen', r6.kalt && r6.fohlen && r6b.ank && /nächsten Jahreszeit/.test(r6b.t), JSON.stringify(r6));
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; besuchHeim(); document.getElementById('dlg').hidden = true; });
+  // 6b. 2-Tage-Fahrt mit dem Mond beenden = auch zwei Nächte
+  await versorgen(); await pg.evaluate(() => { spiel.besuchHeute = null; besuchStart({ art: 'termin', t: { art: 'auktion', n: 'Holsteiner Frühjahrsauktion', ort: 'Elmshorn' }, ort: 'Elmshorn', km: 600, name: 'Holsteiner Frühjahrsauktion' }); });
+  await knopf('Mit dem Auto'); const r6c = await pg.evaluate(() => ({ t: spiel.tag, hol: spiel.besuch.lose.every(a => a.pferd.rasse === 'holsteiner') })); await versorgen();
+  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; tagBeenden(); }); await pg.waitForTimeout(2600);
+  const r6d = await pg.evaluate(t => ({ tage: spiel.tag - t, weg: !spiel.besuch }), r6c.t);
+  ok('Holsteiner Auktion verkauft Holsteiner', r6c.hol); ok('2-Tage-Fahrt mit dem Mond beendet: zwei Tage', r6d.tage === 2 && r6d.weg, JSON.stringify(r6d));
+  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; });
   // 7. Tierschutz: echter Ort und Hinfahren
   await pg.evaluate(() => { marktBereich = 'tierschutz'; zeigeMarkt('tierschutz'); }); await pg.waitForTimeout(300);
   const tsK = await pg.$$eval('#nebenSchirm .paar', l => l.map(x => x.innerText.replace(/\s+/g, ' ')));

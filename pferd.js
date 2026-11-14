@@ -145,6 +145,15 @@ const RASSEN = [
     text: "Großrahmiges Warmblut für Dressur und Springen – langer Hals, gerader Kopf, viel Rahmen.",
     farben: ["brauner", "dunkelbrauner", "fuchs", "dfuchs", "rappe", "schimmel"],
     k: { nk: 0.4, len: 1.03, depth: .45, legT: .09, neck: .6, nAng: 52, crest: .05, head: .44, hAng: 55, profile: 0, hw: 1, jw: 1, muz: 1, ear: .1, mane: "kurz", maneLen: .05, vol: .7, fore: .3, tail: .65, tvol: .8, tset: .3, feather: 0, croup: .4, hq: 1, eye: 1 } },
+  // Holsteiner und Oldenburger (v1033, Dome 14.11.2026) – Spielkopf wie Hannoveraner, bis Dome eigene Köpfe zeichnet
+  { id: "holsteiner", name: "Holsteiner", herkunft: "Schleswig-Holstein / Deutschland", h: [160, 175],
+    text: "Großrahmiges, kräftiges Warmblut aus Holstein mit viel Vollblut im Pedigree – vor allem für das Springen gezüchtet, mit starker Hinterhand und viel Vermögen.",
+    farben: ["brauner", "dunkelbrauner", "fuchs", "dfuchs", "rappe", "schimmel"],
+    k: { nk: 0.4, len: 1.02, depth: .46, legT: .092, neck: .58, nAng: 52, crest: .06, head: .44, hAng: 55, profile: 0, hw: 1, jw: 1.02, muz: 1, ear: .1, mane: "kurz", maneLen: .05, vol: .7, fore: .3, tail: .65, tvol: .8, tset: .3, feather: 0, croup: .45, hq: 1.06, eye: 1 } },
+  { id: "oldenburger", name: "Oldenburger", herkunft: "Oldenburger Land / Deutschland", h: [162, 175],
+    text: "Modernes Sportpferd aus dem Oldenburger Land – vor allem für die Dressur gezüchtet, langbeinig, mit langem Hals und schwungvollen, raumgreifenden Gängen.",
+    farben: ["brauner", "dunkelbrauner", "rappe", "fuchs", "dfuchs", "schimmel"],
+    k: { nk: 0.35, len: 1.03, depth: .44, legT: .088, neck: .62, nAng: 54, crest: .05, head: .43, hAng: 55, profile: 0, hw: .98, jw: 1, muz: .98, ear: .1, mane: "kurz", maneLen: .05, vol: .7, fore: .3, tail: .65, tvol: .8, tset: .32, feather: 0, croup: .38, hq: 1, eye: 1.02 } },
   { id: "isi", name: "Islandpferd", herkunft: "Island", h: [125, 145],
     text: "Robustes Gangpferd (Tölt!) mit dichter Doppelmähne und fast allen Farben der Pferdewelt.",
     farben: ["fuchs", "dfuchs", "brauner", "rappe", "schimmel", "braunfalbe", "mausfalbe", "palomino", "windfarben", "isabell", "fuchsschecke", "braunschecke"],
@@ -222,7 +231,7 @@ const RASSEN = [
 // Spiel-Kopflänge k.head = KOPF_REAL × KOPF_STIL (Cartoon-Faktor, für alle Rassen gleich). Bei Änderungen am Körper NUR diese Tabelle/den Faktor anpassen,
 // nicht k.head einzeln – so bleiben die Rassen untereinander proportional. Neue Rassen hier mit eintragen.
 const KOPF_STIL = 1.2;
-const KOPF_REAL = { araber: .35, shagya: .35, angloaraber: .355, tekke: .36, vollblut: .36, traber: .37, franztraber: .37, standardbred: .38, quarter: .36, marwari: .36, trakehner: .365, hannoveraner: .37, andalusier: .37, lipizzaner: .37,
+const KOPF_REAL = { araber: .35, shagya: .35, angloaraber: .355, tekke: .36, vollblut: .36, traber: .37, franztraber: .37, standardbred: .38, quarter: .36, marwari: .36, trakehner: .365, hannoveraner: .37, holsteiner: .37, oldenburger: .37, andalusier: .37, lipizzaner: .37,
   knabstrupper: .37, appaloosa: .365, paint: .36, lewitzer: .39, barockpinto: .38, noriker: .40, friese: .38, welshcob: .38, haflinger: .39, fjord: .39, isi: .39, fell: .39, dales: .39, tinker: .39, shire: .40, clydesdale: .40, shetty: .45 };
 RASSEN.forEach(r => { if (KOPF_REAL[r.id]) r.k.head = Math.round(KOPF_REAL[r.id] * KOPF_STIL * 1000) / 1000; });
 const rasseById = id => RASSEN.find(r => r.id === id);
@@ -1331,6 +1340,8 @@ const PROFIL = {
   standardbred: { gang: [5.5, 8.5, 5], char: [80, 60, 80, 65, 75, 45, 80], dress: .5, koerper: [65, 85, 88, 90, 60, 75, 65, 60, 70, 60], kopf: [65, 60, 75] },
   quarter:      { gang: [5.5, 5, 6],     char: [35, 75, 65, 80, 80, 85, 40], dress: .75, koerper: [80, 60, 75, 90, 90, 65, 75, 75, 70, 75], kopf: [65, 70, 85] },
   hannoveraner: { gang: [6.5, 6.5, 6.5], char: [60, 60, 70, 70, 80, 60, 65], dress: 1, koerper: [75, 70, 65, 65, 65, 80, 75, 65, 65, 65], kopf: [75, 70, 70] },
+  holsteiner: { gang: [6.5, 6.5, 6.5], char: [60, 60, 70, 70, 80, 60, 65], dress: .95, koerper: [80, 70, 65, 65, 65, 80, 75, 65, 65, 65], kopf: [75, 70, 70] },
+  oldenburger: { gang: [6.5, 6.5, 6.5], char: [60, 60, 70, 70, 80, 60, 65], dress: 1.06, koerper: [75, 70, 65, 65, 65, 80, 75, 65, 65, 65], kopf: [75, 70, 70] },
   isi:          { gang: [5.5, 5, 5.5],   char: [60, 70, 80, 75, 80, 75, 45], dress: .7, toelt: 1, pass: .55, koerper: [65, 80, 50, 55, 65, 60, 70, 90, 80, 90], kopf: [65, 60, 65] },
   tinker:       { gang: [5, 5, 4.5],     char: [30, 70, 55, 85, 60, 85, 30], dress: .6, koerper: [75, 65, 40, 45, 50, 55, 55, 80, 65, 80], kopf: [55, 60, 50] },
   tekke:        { gang: [6, 5.5, 7],     char: [85, 55, 85, 55, 75, 40, 80], dress: .7, koerper: [60, 90, 85, 80, 65, 70, 65, 85, 80, 75], kopf: [70, 55, 80] },
@@ -1482,9 +1493,9 @@ var KOPF_GROESSE = 1.15;
 const ABZ_VARIANTE = { "schmaleBlesse~geschwungen": { name: "geschwungen", freq: .022, scale: 25, seed: 11 }, "blesse~unregelmaessig": { name: "unregelmäßiger Rand", freq: .022, scale: 25, seed: 13 } };
 // Ohrgröße je Rasse (v430, Dome): Araber klein und fein, Ponys und Quarter klein, Kaltblüter groß – alle anderen 1
 const OHR_RASSE = { traber: .95, franztraber: .95, standardbred: .95, araber: .82, shagya: .85, angloaraber: .88, quarter: .88, shetty: .85, isi: .88, welshcob: .88, fell: .9, dales: .92, fjord: .9, haflinger: .95, vollblut: .95, lipizzaner: .95,
-  appaloosa: .9, paint: .88, knabstrupper: 1, lewitzer: .88, noriker: 1.05, barockpinto: 1, tekke: 1.08, marwari: 1, shire: 1.12, clydesdale: 1.12, tinker: 1.05, friese: 1, andalusier: 1, hannoveraner: 1, trakehner: 1 };
+  appaloosa: .9, paint: .88, knabstrupper: 1, lewitzer: .88, noriker: 1.05, barockpinto: 1, tekke: 1.08, marwari: 1, shire: 1.12, clydesdale: 1.12, tinker: 1.05, friese: 1, andalusier: 1, hannoveraner: 1, holsteiner: 1, oldenburger: 1, trakehner: 1 };
 // typische Kopfform je Rasse (fehlt die Rasse: gerader Kopf)
-const KOPFFORM_RASSE = { traber: "gerade", franztraber: "gerade", standardbred: "ramsnase", araber: "hecht", shagya: "hecht", angloaraber: "hecht", welshcob: "hecht", vollblut: "keil", trakehner: "keil", hannoveraner: "keil", tekke: "keil",
+const KOPFFORM_RASSE = { traber: "gerade", franztraber: "gerade", standardbred: "ramsnase", araber: "hecht", shagya: "hecht", angloaraber: "hecht", welshcob: "hecht", vollblut: "keil", trakehner: "keil", hannoveraner: "keil", holsteiner: "keil", oldenburger: "keil", tekke: "keil",
   shire: "ramsnase", clydesdale: "ramsnase", tinker: "ramsnase", friese: "ramsnase", barockpinto: "ramsnase", andalusier: "ramsnase", lipizzaner: "rams" };
 // alte Admin-Wahl (p.nase) → neue Form
 const RASSE_KOPF = new Proxy({}, { get: (t, r) => typeof r === "string" ? kopfKey({ f: KOPFFORM_RASSE[r] || "gerade", s: 2 }) : undefined });
@@ -1618,7 +1629,7 @@ const FREMDBLUT = {
   traber: "standardbred", franztraber: "standardbred", standardbred: "vollblut",
   araber: "vollblut", friese: "andalusier", marwari: "araber", fjord: "haflinger", haflinger: "araber",
   shetty: "isi", shire: "tinker", andalusier: "araber", lipizzaner: "andalusier", vollblut: "araber",
-  quarter: "vollblut", hannoveraner: "vollblut", isi: "fjord", tinker: "shire", tekke: "araber",
+  quarter: "vollblut", hannoveraner: "vollblut", holsteiner: "vollblut", oldenburger: "vollblut", isi: "fjord", tinker: "shire", tekke: "araber",
   trakehner: "vollblut", welshcob: "araber", clydesdale: "shire", fell: "dales", dales: "fell", angloaraber: "vollblut", shagya: "araber",
   appaloosa: "quarter", knabstrupper: "trakehner", paint: "quarter", noriker: "haflinger", lewitzer: "welshcob", barockpinto: "friese",
 };
@@ -1683,7 +1694,7 @@ const NAMEN_HOBBY = {
   Mann: ["Max", "Moritz", "Jonny", "Charly", "Fritz", "Sammy", "Benny", "Lucky", "Pepe", "Bruno", "Oskar", "Theo", "Emil", "Felix", "Paul", "Anton", "Balou", "Rocky", "Blacky", "Flash", "Snoopy", "Bambi", "Tommy", "Willi", "Leo", "Tobi", "Pablo", "Joker", "Merlin", "Sunny", "Teddy", "Krümel", "Fips", "Jacky", "Ronny", "Hansi", "Fred", "Louis", "Elvis", "Simba", "Nemo", "Pünktchen", "Dakota", "Cooper", "Milo", "Ole", "Bob", "Jimmy", "Cäsar", "Rudi", "Pumuckl", "Tinto", "Speedy", "Frodo", "Rambo", "Gandalf", "Picasso", "Shadow", "Lasse", "Bento"],
 };
 // Zuchtnamen nach Rassengruppe: [Stuten, Hengste] – teils mit Vorsilbe (Sir, Donna …) zusammengesetzt
-const ZUCHT_GRUPPE = { traber: "traber", standardbred: "traber", franztraber: "franztraber", hannoveraner: "warm", trakehner: "warm", lipizzaner: "barock", andalusier: "spanisch", araber: "araber", angloaraber: "araber", shagya: "araber", tekke: "tekke", marwari: "marwari", vollblut: "vollblut", appaloosa: "western", paint: "western", knabstrupper: "knab", noriker: "noriker", lewitzer: "pony", barockpinto: "friese",
+const ZUCHT_GRUPPE = { traber: "traber", standardbred: "traber", franztraber: "franztraber", hannoveraner: "warm", holsteiner: "warm", oldenburger: "warm", trakehner: "warm", lipizzaner: "barock", andalusier: "spanisch", araber: "araber", angloaraber: "araber", shagya: "araber", tekke: "tekke", marwari: "marwari", vollblut: "vollblut", appaloosa: "western", paint: "western", knabstrupper: "knab", noriker: "noriker", lewitzer: "pony", barockpinto: "friese",
   quarter: "western", isi: "isi", friese: "friese", haflinger: "haflinger", fjord: "fjord", shetty: "pony", welshcob: "welsh", fell: "britpony", dales: "britpony", shire: "britkalt", clydesdale: "britkalt", tinker: "tinker" };
 const ZUCHT_NAMEN = {
   traber: { S: ["Speedy Girl", "Abbelena", "Tiffany Diamant", "Queen of Speed", "Bella Trotter", "Lady Express", "Sunny Hanover", "Miss Lindy"], H: ["Express Boy", "Speedy Lindy", "Diamant Hanover", "Victory Wind", "Ready Cash", "Turbo Star", "Super Trotter", "Flash Boko"], von: ["Hanover", "Boko", "Diamant", "As", "Bi"] },   // Traber: oft Zuchtname angehängt (selbst gesetzt)

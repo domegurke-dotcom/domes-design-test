@@ -37,6 +37,7 @@ const GRUPPEN = {
   koepfe: () => { const l = []; for (const k of Object.keys(KOPF_NEU.formen)) for (const f of ["palomino", "rappe"]) l.push([`Kopf ${k} ${f}`, "quarter", f, { eigenKopf: k }]); return l; },
   ohren: () => { const l = []; for (const st of ["vorne", "seite", "hinten", "angelegt"]) for (const [r, f, m] of [["hannoveraner", "fuchs", "lang"], ["haflinger", "hellfuchs", "extralang"], ["araber", "rappe", "kurz"]])
     l.push([`Ohren ${st} ${r} Mähne ${m}`, r, f, { ohrStellung: { R: st, L: st, spiel: false }, maehne: m }]); return l; },
+  warmblut2: () => { const l = []; for (const r of ["holsteiner", "oldenburger"]) { for (const f of ["brauner", "dunkelbrauner", "rappe", "fuchs", "schimmel"]) l.push([`${r} ${f}`, r, f, {}]); l.push([`${r} Fohlen`, r, "brauner", { alterStufe: "fohlen" }]); } return l; },   // Holsteiner/Oldenburger (14.11.2026)
   traber: () => { const l = []; for (const r of ["traber", "franztraber", "standardbred"]) { for (const f of ["brauner", "dunkelbrauner", "rappe", "fuchs"]) l.push([`${r} ${f}`, r, f, {}]); l.push([`${r} Fohlen`, r, "brauner", { alterStufe: "fohlen" }]); } return l; },   // Traber (15.11.2026)
   alter: () => { const l = []; for (const a of ["fohlen", "jaehrling", "jungpferd", "reif", "senior"]) for (const [r, f] of [["haflinger", "hellfuchs"], ["andalusier", "schimmel"], ["tekke", "dunkelbrauner"], ["tinker", "rappschecke"]])
     l.push([`${a} ${r} ${f}`, r, f, { alterStufe: a, glanz: r === "tekke" ? 1 : undefined }]); return l; },

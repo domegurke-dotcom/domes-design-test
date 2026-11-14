@@ -1372,7 +1372,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "1027";
+  const SPIEL_VERSION = "1028";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1380,12 +1380,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=1027"></script>
-<script src="pferd.js?v=1027"></script>
-<script src="boxstufen.js?v=1027"></script>
-<script src="kopfneu.js?v=1027"></script>
-<script src="waschbild.js?v=1027"></script>
-<script src="avatare.js?v=1027"></script>
+<script src="lz-string.min.js?v=1028"></script>
+<script src="pferd.js?v=1028"></script>
+<script src="boxstufen.js?v=1028"></script>
+<script src="kopfneu.js?v=1028"></script>
+<script src="waschbild.js?v=1028"></script>
+<script src="avatare.js?v=1028"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -4171,6 +4171,18 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     const V = f.ahnen && f.ahnen.vater ? lebendNachNr(f.ahnen.vater.nr) : null;
     [mutter, V].forEach(E => { if (E) E[feld] = (E[feld] || 0) + 1; });
   }
+  // Rassen-Preisfaktor (Dome 15.11.2026: „JA, bauen“): Marktwert × (Median der Angebotspreise der Rasse ÷ 8.000 €, dem Median über alle Rassen), Grenzen ×0,3 … ×2.
+  // Angebotspreise ehorses.de vom 14.11.2026 (erwachsene Pferde 5–12 J., geritten, Freizeit bis mittleres Niveau, ohne Fohlen/Sport-Ausreißer/US-Auktionen), Quellen je Rasse in notizen\RASSEN-PREISE-2026.md.
+  // Annahmen (dünne Daten): Marwari (kein EU-Markt) 12.000, Lewitzer (fast nur Mixe inseriert) 3.500, Friese/Hannoveraner auf Freizeitniveau statt Inserat-Median.
+  const RASSE_PREIS = { araber: 7500, friese: 10000, marwari: 12000, fjord: 8000, haflinger: 7500, shetty: 2000, shire: 10000, andalusier: 9900, lipizzaner: 10400, vollblut: 4900,
+    traber: 3100, franztraber: 3250, standardbred: 4800, quarter: 11000, hannoveraner: 15000, isi: 9500, tinker: 5500, tekke: 10000, trakehner: 12000, welshcob: 7700,
+    clydesdale: 6500, fell: 7500, dales: 7500, angloaraber: 9000, shagya: 7500, appaloosa: 9000, knabstrupper: 8000, paint: 11000, noriker: 5500, lewitzer: 3500, barockpinto: 7750 };
+  const RASSE_PREIS_BEZUG = 8000, RASSE_PREIS_GRENZE = [0.3, 2];
+  function rassePreisF(p) {   // Mischlinge anteilig nach Rassenanteilen
+    let a; try { a = anteileVon(p); } catch (e) { a = null; } if (!a || !Object.keys(a).length) a = { [p.rasse]: 100 };
+    let s = 0, t = 0; Object.entries(a).forEach(([r, x]) => { s += x * (RASSE_PREIS[r] || RASSE_PREIS_BEZUG); t += x; });
+    return Math.max(RASSE_PREIS_GRENZE[0], Math.min(RASSE_PREIS_GRENZE[1], t ? s / t / RASSE_PREIS_BEZUG : 1));
+  }
   function marktwert(p) {
     const w = p.werte || erzeugeWerte(p), g = p.werte ? gangGezeigt(p) : w.gang;   // gezeigte Note (Veranlagung + Ausbildung)
     const gn = [g.schritt, g.trab, g.galopp].reduce((a, b) => a + b, 0) / 3;           // 4 … 10
@@ -4185,7 +4197,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     const dreckF = (1 - 0.15 * dreckWert(p) / 100) * (p.fellGlanz >= (spiel.tag || 1) - 1 && p.schaum == null ? 1.02 : 1);   // ungeputzt: bis zu 15 % weniger wert · Öl: glänzendes Fell +2 %
     const bl = befundListe(p).filter(b => b.diagnose), befundF = Math.max(0.4, 1 - bl.reduce((a, b) => a + (KRANK[b.art].chronisch ? 0.1 : 0) + (b.beh ? 0.02 : 0.06) * b.grad, 0));   // bekannte Befunde senken den Preis, chronische dauerhaft
     const erbF = testGemacht(p, "krank") ? Object.keys(ERBKRANK).reduce((a, k) => a * (erbKrank(p, k) ? 0.75 : (erbVon(p)[k] || 0) ? 0.92 : 1), 1) : 1;   // getestete Träger sind für die Zucht weniger wert
-    const v = (1500 + 4500 * gangF * gangF + 5000 * ausb) * alterF * gesund * reinF * dreckF * befundF * erbF * fohlenschauFaktor(p) * abstFaktor(p) * exterieurFaktor(p) * zbWertFaktor(p) * (KOPF_WERT[kopfFehler(kopfVon(p))] || 1) * (fjordWeissFehler(p) ? FJORD_WEISS_WERT : 1);   // Fohlenschau-Note und Prämienfohlen
+    const v = (1500 + 4500 * gangF * gangF + 5000 * ausb) * rassePreisF(p) * alterF * gesund * reinF * dreckF * befundF * erbF * fohlenschauFaktor(p) * abstFaktor(p) * exterieurFaktor(p) * zbWertFaktor(p) * (KOPF_WERT[kopfFehler(kopfVon(p))] || 1) * (fjordWeissFehler(p) ? FJORD_WEISS_WERT : 1);   // Fohlenschau-Note und Prämienfohlen
     return Math.max(100, Math.round(v / 50) * 50) + testWert(p) + erfolgWert(p);   // Turniererfolge steigern den Wert   // gemachte Gentests: Käufer zahlen die Testkosten mit
   }
   const testWert = p => Object.keys(LABOR_TESTS).filter(t => testGemacht(p, t)).reduce((s, t) => s + laborPreis(p, t), 0);
@@ -7327,7 +7339,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
         else if ((!K.chronisch || b.grad > 1) && Math.random() < besser) { b.grad--; b.besserTag = spiel.tag; rueck("besser");
           if (b.grad <= 0) { if (BW.wert > 0 && !b.diagnose) { b.diagnose = spiel.tag; befundAufklaeren(p, b); }
             befundAbschliessen(p, b, BW.wert > 0 ? (b.tierarzt ? "geheilt (Tierarzt-Plan)" : b.hufschmied ? "geheilt (Rat vom Hufschmied)" : "geheilt (selbst behandelt)") : "von selbst verheilt"); return; } }
-        else if (Math.random() < K.schlimmer * (1 - BW.wert) * (K.chronisch && b.diagnose ? 0.5 : 1) * (b.art === "pssm" && p.futterStatus && p.futterStatus.oel >= 0.2 ? 0.5 : 1) + BW.schaden && b.grad < 5) { b.grad++; if (b.grad === 5) b.grad5 = spiel.tag; rueck("schlimmer"); }
+        else if (Math.random() < K.schlimmer * (1 - BW.wert) * (K.chronisch && b.diagnose ? 0.5 : 1) * ((b.art === "pssm" || b.art === "rer") && p.futterStatus && p.futterStatus.oel >= 0.2 ? 0.5 : 1) + BW.schaden && b.grad < 5) { b.grad++; if (b.grad === 5) b.grad5 = spiel.tag; rueck("schlimmer"); }
         else rueck("gleich");
         b.gradMax = Math.max(b.gradMax || 0, b.grad);
         b.behGestern = BW.wert;
@@ -9352,6 +9364,29 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   const kolikSchwerNeu = (p, ort) => { kolikArtLetzt = kolikArtWahl(p, ort); return KOLIK_ART[kolikArtLetzt].schwer; };
   const kolikPuls = b => b.puls || (b.puls = 36 + b.grad * 10 + Math.floor(Math.random() * 6));
   const HORNSPALT_RUECKFALL = 0.2;   // Schweizer Studie (54 Pferde): etwa 20 % Rückfall
+  // ---------- RER – wiederkehrender Kreuzverschlag (Dome 15.11.2026: „Ja“) ----------
+  // Quellen: Norton u. a. 2016 (Standardbred, Erblichkeit 0,39–0,49, ≈ 6 % betroffen), MacLeay u. a. 1999 (Vollblut 5–10 %, Stuten häufiger, nervöse Pferde deutlich öfter),
+  // Valberg (Michigan State): stärkearm/fettreich senkt CK nach etwa 1 Woche, tägliche Bewegung/Auslauf statt Boxenruhe, Dantrolen vorbeugend; kein Gentest – Diagnose über CK/AST nach Belastung.
+  // RER.f geeicht: Traber-Stute (Anlage ≈ 0,3) mit hartem Training an etwa 5 von 7 Tagen ≈ 6 % je Jahr (selbst gesetzt).
+  const RER = { arbeit: 30, f: 16, stute: 1.5, heiss: 2.5, staerke: 2, oel: 0.5 };
+  Object.assign(VERANLAGUNG, { rer: { n: "Neigung zu RER (Kreuzverschlag)", rassen: { vollblut: 0.35, standardbred: 0.3, traber: 0.3, franztraber: 0.25, angloaraber: 0.2, araber: 0.1 }, sonst: 0.03 } });
+  Object.assign(VL_INFO, { rer: "Neigung zu RER (wiederkehrender Kreuzverschlag) – vor allem Vollblüter und Traber, Stuten und nervöse Pferde öfter. Es gibt keinen Gentest." });
+  KRANK.rer = { n: "RER (wiederkehrender Kreuzverschlag)", ico: "💪", bereich: "ruecken", chronisch: true, gew: .02, start: [1, 2], selbst: 0, schlimmer: .04, g: .5, kosten: 110,
+    anz: ["schwitzt nach dem Training stark und geht hinten steif", "die Kruppenmuskeln sind nach der Arbeit hart und schmerzen"], schwer: "kann sich nach der Arbeit kaum bewegen, der Urin ist dunkel",
+    rat: "RER lässt sich nicht heilen, aber gut kontrollieren: stärkearm und ölreich füttern (Muskelfutter), jeden Tag bewegen und Auslauf geben – keine Boxenruhe. Ruhige Umgebung, nervöse Pferde zuerst arbeiten. Bei häufigen Anfällen gibt der Tierarzt vor dem Training ein Medikament (Dantrolen)." };
+  Object.assign(KRANK_INFO, { rer: "Wiederkehrender Kreuzverschlag (RER, Recurrent Exertional Rhabdomyolysis): Bei Vollblütern und Trabern im Renntraining verkrampfen die Muskeln nach der Arbeit – harte Kruppe, Schwitzen, dunkler Urin. Erblich, kein Gentest; Stuten und nervöse Pferde sind häufiger betroffen. Viel Stärke im Futter und Ruhetage machen es schlimmer, ölreiches Futter und tägliche Bewegung helfen." });
+  HILFT.rer = { schritt: .4, schmerzmittel: .3, longe: .3, frei: .2, auslauf: .3 }; SCHADET.rer = { boxenruhe: .1, reiten: .2 };
+  PLAN.rer = ["schritt", "schmerzmittel"];
+  STOER_TEXT.rer = "schwitzt stark, die Kruppe wird hart und es will nicht mehr vorwärts";
+  URSACHE.rer = p => "Veranlagung (Muskelstoffwechsel)" + (fsVon(p).staerkeViel ? ", viel Stärke im Futter" : "");
+  UCHECK.rer = "blutGross"; TURNIER_GRENZE.rer = 2;
+  CHRON.rer = { an: ["ruhe"], text: "Nach Ruhetagen und mit viel Stärke im Futter verkrampft die Muskulatur bei der Arbeit. Tägliche Bewegung, Auslauf und ölreiches, stärkearmes Futter helfen." };
+  VERDACHT.rer = { bild: "Muskelkrampf nach dem Training", diff: ["Kreuzverschlag durch Überlastung", "RER (wiederkehrender Kreuzverschlag)", "PSSM (Muskelerkrankung)"], verdacht: "RER (wiederkehrender Kreuzverschlag)",
+    klar: "Belastungstest: Muskelwerte (CK, AST) im Blut vor und nach leichter Arbeit – einen Gentest gibt es nicht", test: { n: "Belastungstest (CK/AST)", ico: "🩸", preis: gotPreis(["allg"], 60), tage: 1 } };
+  ERB_BEFUND.push("rer"); KRANK_EXPERTE.push("rer"); VL_BEFUND_NEU.rer = "rer";
+  BEFUND_ZUSATZ.rer = (p, box, ort, s, j) => { const v = veranlagungVon(p).rer || 0, T = p.trainHeute;
+    if (j < 2 || !v || !T || T.tag !== spiel.tag - 1 || (T.verbraucht || 0) < RER.arbeit) return 0;   // nur nach harter Arbeit am Vortag
+    const S = fsVon(p); return RER.f * v * v * (p.geschlecht === "Stute" ? RER.stute : 1) * (heissPferd(p) ? RER.heiss : 1) * (S.staerkeViel ? RER.staerke : 1) * (S.oel >= 0.2 ? RER.oel : 1); };
   setTimeout(() => { try { ["sohlenprellung", "nageltritt", "hufbeinbruch", "fesseltraeger", "schale"].forEach(k => { if (!MA_VORTEIL.huf.includes(k)) MA_VORTEIL.huf.push(k); }); } catch (e) { } }, 0);   // MA_VORTEIL steht weiter unten
 
   // Boxenruhe zählt nicht mehr, wenn nichts mehr da ist (gesund geworden – Boxenruhe wurde nur noch nicht beendet): Pferd darf starten
@@ -12289,7 +12324,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   const SPEZIAL = {
     schonkost: { n: "Schonkost (Mash)", ico: "🥣", e: 9, ei: 10, rf: 15, zs: 8, preis: 1.60, fuer: ["kolik"], info: "nach Kolik oder Kolik-OP – leicht verdaulich" },
     rehe: { n: "Strukturfutter Rehe/Cushing", ico: "🌿", e: 8, ei: 9, rf: 30, zs: 4, preis: 1.40, fuer: ["hufrehe", "cushing"], info: "zucker- und stärkearm – bei Hufrehe, Cushing, Übergewicht" },
-    pssm: { n: "Muskelfutter (PSSM)", ico: "💪", e: 14, ei: 11, rf: 18, zs: 4, preis: 1.80, fuer: ["pssm"], info: "ölreich, fast ohne Stärke – bei PSSM" },
+    pssm: { n: "Muskelfutter (PSSM)", ico: "💪", e: 14, ei: 11, rf: 18, zs: 4, preis: 1.80, fuer: ["pssm", "rer"], info: "ölreich, fast ohne Stärke – bei PSSM und RER" },
     magen: { n: "Magenschonfutter", ico: "🫶", e: 10, ei: 11, rf: 20, zs: 6, preis: 1.90, fuer: ["magengeschwuer"], info: "puffert die Magensäure – bei Magengeschwüren" },
     senior: { n: "Seniorenfutter", ico: "👴", e: 10, ei: 13, rf: 18, zs: 10, preis: 1.50, fuer: [], info: "leicht kaubar und gut verwertbar – ab etwa 20 Jahren" },
     immun: { n: "Aufbaufutter", ico: "🛡️", e: 11, ei: 14, rf: 14, zs: 12, preis: 2.20, fuer: [], info: "Vitamine und Eiweiß für das Immunsystem – für schwache und abgemagerte Pferde" } };
@@ -12303,7 +12338,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     const hat = a => befundListe(p).some(b => b.art === a && (b.diagnose || b.bemerkt)), alt = a => (p.befundAlt || []).some(x => x.art === a && x.bis >= spiel.tag - 7);
     if (hat("kolik") || alt("kolik")) return "schonkost";
     if (hat("hufrehe") || hat("cushing") || hat("ems")) return "rehe";   // v514: EMS bekommt das zuckerarme Rehe-Futter
-    if (hat("pssm")) return "pssm";
+    if (hat("pssm") || hat("rer")) return "pssm";
     if (hat("magengeschwuer")) return "magen";
     if (futterZustand(p) <= 2 || befundListe(p).filter(b => b.diagnose).length >= 2) return "immun";
     if (alterJZ(p) >= SENIOR_AB) return "senior";
@@ -13737,7 +13772,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   const PHYSIO = { proTag: [1, 2, 3], rueckenFremd: 60, zufr: [0.3, 0.5, 0.8], pension: [30, 45, 60] };
   const AQUA_DUERFEN = ["pferdewirt", "pferdewirtHS", "stallmeister", "renntrainer", "bereiter"];   // mit Lehrgang „Wasserarbeit“: Schwimmen, Aufbau, Kondition (keine Reha)
   const AQUA_HELFER = ["azubi", "pfleger", "pferdewirtHS", "pferdewirt", "stallmeister"];
-  const AQUA_HILFT = { lahmheit: .5, arthrose: .5, sehne: .5, spat: .4, hufrolle: .3, kissing: .4, pssm: .3, ems: .3, lymphoedem: .4, cushing: .1 };
+  const AQUA_HILFT = { lahmheit: .5, arthrose: .5, sehne: .5, spat: .4, hufrolle: .3, kissing: .4, pssm: .3, rer: .3, ems: .3, lymphoedem: .4, cushing: .1 };
   Object.entries(AQUA_HILFT).forEach(([k, v]) => { (HILFT[k] = HILFT[k] || {}).aqua = v; });
   AKTION.aqua = { n: "Aqua-Reha", ico: "🏊", ueb: true, info: "Wasserlaufband (Reha) durch den Pferdephysiotherapeuten – bremst Gelenk-, Sehnen- und Rückenleiden" };
   const AQUA_MODI = [["aus", "aus"], ["reha", "nur bei Reha"], ["3", "alle 3 Tage"], ["2", "alle 2 Tage"], ["1", "täglich"]];
@@ -17300,18 +17335,46 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   const bodenFaktor = bl => BODEN_KAUFWERT[bl] ? BODEN_KAUFWERT[bl] / BODEN_DE : 1;
   const MAKLER_LAENDER = Object.keys(BL_NAME).filter(k => !["02", "04", "11"].includes(k));   // Stadtstaaten: kein Hof vom Makler (selbst gesetzt)
   function maklerLand(j, i) { const r = zufall("makler-land-" + j + "-" + i + "-" + (spiel.spieler && spiel.spieler.name)); return MAKLER_LAENDER[Math.floor(r() * MAKLER_LAENDER.length)]; }   // eigener Zufallsstrom: übrige Angebotswerte bleiben gleich
+  // Pensionspreis nach Lage (Dome 15.11.2026: „Ja“ + „mehr Anfragen, wenn die Stadt mehr Einwohner hat“): Großstädte (ab 100.000 Einwohnern) je Bundesland,
+  // Einwohner 31.12.2025 (Wikipedia „Liste der Großstädte in Deutschland“, Zahlen der Statistischen Landesämter, abgerufen 15.11.2026). Für das Umland zählen Nachbar-Stadtstaaten mit
+  // (Hamburg für Schleswig-Holstein und Niedersachsen, Bremen für Niedersachsen, Berlin für Brandenburg).
+  const GROSSSTADT = {
+    "01": [["Kiel", 251842], ["Lübeck", 217061], ["Hamburg", 1869473]], "02": [["Hamburg", 1869473]],
+    "03": [["Hannover", 522803], ["Braunschweig", 252811], ["Oldenburg", 177355], ["Osnabrück", 166257], ["Göttingen", 130521], ["Wolfsburg", 129813], ["Salzgitter", 104433], ["Bremen", 588413], ["Hamburg", 1869473]],
+    "04": [["Bremen", 588413], ["Bremerhaven", 118502]],
+    "05": [["Köln", 1025523], ["Düsseldorf", 619444], ["Dortmund", 600880], ["Essen", 573618], ["Duisburg", 500810], ["Bochum", 358880], ["Wuppertal", 357243], ["Bielefeld", 331419], ["Bonn", 323587], ["Münster", 306368],
+      ["Mönchengladbach", 267176], ["Gelsenkirchen", 266199], ["Aachen", 263703], ["Krefeld", 230738], ["Oberhausen", 213178], ["Hagen", 189983], ["Hamm", 179108], ["Mülheim an der Ruhr", 171674], ["Leverkusen", 168299],
+      ["Solingen", 164621], ["Herne", 156266], ["Paderborn", 155906], ["Neuss", 153767], ["Bottrop", 118482], ["Recklinghausen", 114851], ["Remscheid", 113333], ["Bergisch Gladbach", 111174], ["Siegen", 102450], ["Moers", 101298]],
+    "06": [["Frankfurt am Main", 760656], ["Wiesbaden", 288584], ["Kassel", 196799], ["Darmstadt", 168253], ["Offenbach am Main", 133195]],
+    "07": [["Mainz", 223888], ["Ludwigshafen am Rhein", 177055], ["Koblenz", 113020], ["Trier", 105054], ["Kaiserslautern", 100247]],
+    "08": [["Stuttgart", 609365], ["Mannheim", 319536], ["Karlsruhe", 309247], ["Freiburg im Breisgau", 238299], ["Heidelberg", 156092], ["Pforzheim", 134422], ["Heilbronn", 132516], ["Ulm", 130288], ["Reutlingen", 119040]],
+    "09": [["München", 1505036], ["Nürnberg", 531159], ["Augsburg", 301786], ["Regensburg", 151517], ["Ingolstadt", 140799], ["Würzburg", 133753], ["Fürth", 131344], ["Erlangen", 116450]],
+    "10": [["Saarbrücken", 182859]], "11": [["Berlin", 3700577]], "12": [["Potsdam", 185137], ["Berlin", 3700577]], "13": [["Rostock", 204929]],
+    "14": [["Leipzig", 615932], ["Dresden", 562764], ["Chemnitz", 247252]], "15": [["Magdeburg", 244494], ["Halle (Saale)", 226186]], "16": [["Erfurt", 217159], ["Jena", 109353]] };
+  // Preis: Länderfaktor nach den Medianen der Inserate (notizen PENSIONSPREISE-2026.md: Bayern 518 €, NRW 480 €, Thüringen/MV/Saarland 350–370 €), Stadtnähe wie die
+  // Preisumfrage Sachsen 2023 (kreisfreie Städte +23 %); Nachfrage nach Stadtgröße, nimmt mit der Entfernung ab (bis 60 km) – Zahlen selbst gesetzt.
+  const PENSION_LAND = { "09": 1.15, "05": 1.1, "02": 1.05, "03": 1.05, "07": 1.05, "11": 1.05, "06": 1, "08": 1, "12": 1, "15": 1, "01": 0.95, "04": 0.95, "10": 0.9, "13": 0.9, "14": 0.9, "16": 0.9 };
+  const LAGE = { nah: 0.55, preis: [[15, 1.2], [30, 1.1]], ew: [[1e6, 1.5], [5e5, 1.35], [1e5, 1.2]], weitKm: 60 };
+  function maklerLage(j, i, land) {   // eigener Zufallsstrom: übrige Angebotswerte bleiben gleich
+    const L = GROSSSTADT[land] || []; if (!L.length) return null; const r = zufall("makler-lage-" + j + "-" + i + "-" + (spiel.spieler && spiel.spieler.name));
+    let x = r() * L.reduce((a, c) => a + Math.sqrt(c[1]), 0), S = L[0]; for (const c of L) { x -= Math.sqrt(c[1]); if (x <= 0) { S = c; break; } }
+    const km = r() < LAGE.nah ? 5 + Math.floor(r() * 26) : 31 + Math.floor(r() * 50); return { stadt: S[0], ew: S[1], km };
+  }
+  const lageText = L => L ? `${L.km} km bis ${L.stadt} (${L.ew.toLocaleString("de-DE")} Einwohner)` : "";
+  function lagePreisF(H = spiel.hof) { if (!H) return 1; const L = H.lage, nah = L ? (LAGE.preis.find(([k]) => L.km <= k) || [0, 1])[1] : 1; return (PENSION_LAND[H.bundesland] || 1) * nah; }
+  function lageNachfrage(H = spiel.hof) { const L = H && H.lage; if (!L) return 1; const f = (LAGE.ew.find(([e]) => L.ew >= e) || [0, 1])[1]; return 1 + (f - 1) * Math.max(0, 1 - L.km / LAGE.weitKm); }
   function maklerAngebote() {
-    const j = datum().j; if (spiel.makler && spiel.makler.j === j) { spiel.makler.liste.forEach((A, i) => { if (!A.land) A.land = maklerLand(j, i); }); return spiel.makler.liste; }   // alte Liste dieses Jahres: Bundesland nachtragen, Preis bleibt
+    const j = datum().j; if (spiel.makler && spiel.makler.j === j) { spiel.makler.liste.forEach((A, i) => { if (!A.land) A.land = maklerLand(j, i); if (A.lage === undefined) { A.lage = maklerLage(j, i, A.land); if (A.lage) A.text = A.text.replace(`📍 ${BL_NAME[A.land]} · `, `📍 ${BL_NAME[A.land]}, ${lageText(A.lage)} · `); } }); return spiel.makler.liste; }   // alte Liste dieses Jahres: Bundesland nachtragen, Preis bleibt
     const r = zufall("makler-" + j + "-" + (spiel.spieler && spiel.spieler.name)), ri = (a, b) => a + Math.floor(r() * (b - a + 1));
     const vorl = [MAKLER_VORLAGEN[0], ...MAKLER_VORLAGEN.slice(1).sort(() => r() - 0.5).slice(0, 3)];
     const liste = vorl.map((V, i) => {
       const stufe = V.boxen[1] ? (r() < .5 ? 1 : r() < .7 ? 2 : 3) : 0, boxen = V.boxen[1] ? ri(V.boxen[0] / 2, V.boxen[1] / 2) * 2 : 0, ha = ri(V.ha[0], V.ha[1]), weide = Math.round(ha * V.weide);
       const bauha = Math.max(1, Math.ceil((0.2 + boxen * 0.1 / 6 + V.anlagen.reduce((a, k) => a + ({ reitplatz: .1, reithalle: .15 })[k], 0) + 0.1) * 2) / 2);
-      const land = maklerLand(j, i), bf = bodenFaktor(land);
+      const land = maklerLand(j, i), bf = bodenFaktor(land), lage = maklerLage(j, i, land);
       let preis = (Math.max(0, ha - bauha) * LAND_PREIS + bauha * BAULAND_PREIS) * bf + (boxen ? MAKLER_PREIS.hofstelle + boxen * MAKLER_PREIS.box[stufe] : 0) + V.anlagen.reduce((a, k) => a + (MAKLER_PREIS[k] ? MAKLER_PREIS[k][stufe || 1] : 0), 0);   // v808: Weideland je ha + Bauland je ha + Gebäude (wie der Sachwert des Start-Hofs)
       preis = Math.round(preis * (0.9 + r() * 0.2) / 500) * 500;
-      return { mid: `m${j}-${i}`, typ: V.typ, n: V.n, bild: V.bild, boxen, stufe, ha, weide, bauha, anlagen: V.anlagen, preis, land,
-        text: `📍 ${BL_NAME[land]} · ` + (boxen ? `${boxen} ${STUFE_ADJ[stufe]} Boxen · ${V.anlagen.map(k => ANLAGE_NAME[k]).concat(["Gelände"]).join(" · ")} · ${ha} ha: ${haTxt(bauha)} Bauland, ${weide} ha Weide` : `${ha} ha, davon 1 ha Bauland – Stall, Reitplatz und Weiden baust du selbst`) };
+      return { mid: `m${j}-${i}`, typ: V.typ, n: V.n, bild: V.bild, boxen, stufe, ha, weide, bauha, anlagen: V.anlagen, preis, land, lage,
+        text: `📍 ${BL_NAME[land]}${lage ? `, ${lageText(lage)}` : ""} · ` + (boxen ? `${boxen} ${STUFE_ADJ[stufe]} Boxen · ${V.anlagen.map(k => ANLAGE_NAME[k]).concat(["Gelände"]).join(" · ")} · ${ha} ha: ${haTxt(bauha)} Bauland, ${weide} ha Weide` : `${ha} ha, davon 1 ha Bauland – Stall, Reitplatz und Weiden baust du selbst`) };
     });
     spiel.makler = { j, liste, gekauft: [] };
     return liste;
@@ -17450,7 +17513,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     const H = { geld: 0, boxen: Array.from({ length: A.boxen }, (_, i) => ({ nr: i + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false, stufe: A.stufe })),
       anlage: { stall: A.boxen > 0, paddock: false, weide: A.weide > 0, waschplatz: false, roundpen: false, reitplatz: A.anlagen.includes("reitplatz"), reithalle: A.anlagen.includes("reithalle"), gelaende: true, anhaenger: true },
       stallarten: ["pension"], mitarbeiter: [], futter: { lager: {}, warn: {} }, aktBox: 0,
-      hof: { hid, name, id: A.typ, art: "pension", bundesland: A.land || undefined, ha: A.ha, weideHa: A.weide, bauHa: A.bauha || 1, planNeu: 1, flaecheV: 1, halleV: 1, pachtV: 1, stufe: A.stufe, wert: A.preis, kauf: { tag: spiel.tag, preis: A.preis, eigen }, pacht: 0 } };
+      hof: { hid, name, id: A.typ, art: "pension", bundesland: A.land || undefined, lage: A.lage || undefined, ha: A.ha, weideHa: A.weide, bauHa: A.bauha || 1, planNeu: 1, flaecheV: 1, halleV: 1, pachtV: 1, stufe: A.stufe, wert: A.preis, kauf: { tag: spiel.tag, preis: A.preis, eigen }, pacht: 0 } };
     (spiel.hoefe = spiel.hoefe || {})[hid] = H; hofReihe().push(hid); chronikHof("gekauft", H.hof && H.hof.name || "Hof");
     imHof(hid, () => {
       buchen(-A.preis, "Hofkauf"); buchen(eigen, "Eigenanteil vom zentralen Konto"); stallartBrief("pension");
@@ -18687,7 +18750,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   function verwaltungStufe() { const g = gebaeude().find(x => x.typ === "verwaltung" && !(x.bau && x.bau.art !== "umbau") && !x.abriss); return g && g.zustand >= 50 ? Math.max(1, Math.min(3, g.stufe || 1)) : 0; }
   const verwaltungAnsehen = () => VERWALTUNG.ansehen[Math.max(0, verwaltungStufe() - 1)] || 0;
   const ansehenWirk = () => Math.max(0, Math.min(200, pensionRegeln().ansehen + verwaltungAnsehen()));
-  const pensionRichtwert = st => PENSION_PREIS[st] * (1 + (ansehenWirk() - 100) / 400);
+  const pensionRichtwert = st => PENSION_PREIS[st] * lagePreisF() * (1 + (ansehenWirk() - 100) / 400);   // 15.11.2026: × Lage (Bundesland, Stadtnähe)
   const pensionGeduld = () => Math.max(0, (100 - ansehenWirk()) / 5);
   const BLUTTEST_TXT = { vorher: "Bluttest vorher einreichen", nachreichen: "Bluttest nachreichen", keiner: "kein Bluttest nötig" };
   const HALTUNG_TXT = { weide: "🌿 Weidegang", sandpaddock: "🟫 Sandpaddock", box: "🏠 nur Box", paddockbox: "🏡 Paddockbox", offenstall: "🐎 Aufzucht im Offenstall" };
@@ -18775,7 +18838,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     const frei = spiel.boxen.filter(pensionBoxFrei); const n = Math.min(frei.length, pensionPlaetze()); if (!n) return 0;
     const st = frei.reduce((a, b) => a + boxenStufe(b), 0) / frei.length;
     const preisF = pensionPreisF();   // 25 % teurer → etwa halb so viele
-    const f = PENSION.anfrage / tpj() * PENSION.stufe[Math.round(st)] * (1 + ausstattungBonus()) * Math.max(0.3, Math.min(1.5, ansehenWirk() / 100)) * preisF * PENSION.blut[R.bluttest] * (vorteil("pension") ? 1.3 : 1) * hausBonus();   // H7: Pensionsstall – mehr Anfragen
+    const f = PENSION.anfrage / tpj() * PENSION.stufe[Math.round(st)] * (1 + ausstattungBonus()) * Math.max(0.3, Math.min(1.5, ansehenWirk() / 100)) * preisF * PENSION.blut[R.bluttest] * (vorteil("pension") ? 1.3 : 1) * hausBonus() * lageNachfrage();   // H7: Pensionsstall – mehr Anfragen
     return 1 - Math.pow(1 - Math.min(0.5, f), n);
   }
   // v654 (Dome): kein Nachname doppelt unter Einstellern und offenen Anfragen
@@ -19292,14 +19355,15 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     return `${meld ? `<div class="klasse">${meld}</div>` : ""}<h4 class="ma-titel" style="margin-top:0">🏡 Pension</h4>
       <p class="text" style="margin:0 0 6px"><label class="fp-check" style="flex-wrap:nowrap"><input type="checkbox" id="pnOffen" ${R.offen ? "checked" : ""}> Pensionsplätze anbieten</label><small>Einsteller fragen per Brief an, wenn Boxen frei sind. Wie oft, hängt von der Stufe der Boxen, Reithalle und Roundpen, deinem Ruf, dem Preis und der Bluttest-Regel ab.${spiel.admin ? ` <i>Admin: Ansehen ${R.ansehen}, Anfrage-Chance heute ${Math.round(pensionChance() * 1000) / 10} %</i>` : ""}</small></p>
       <dl class="werte">
+        ${spiel.hof.bundesland ? `<dt>Lage</dt><dd>📍 ${BL_NAME[spiel.hof.bundesland] || ""}${spiel.hof.lage ? `, ${lageText(spiel.hof.lage)}` : ""}<small class="pn-dd">${lagePreisF() > 1.001 ? `Einsteller zahlen hier etwa ${Math.round((lagePreisF() - 1) * 100)} % mehr als im Schnitt` : lagePreisF() < 0.999 ? `Einsteller zahlen hier etwa ${Math.round((1 - lagePreisF()) * 100)} % weniger als im Schnitt` : "Pensionspreise wie im Schnitt"}${lageNachfrage() > 1.001 ? " · die Stadt in der Nähe bringt mehr Anfragen" : ""}</small></dd>` : ""}
         <dt>Plätze${pdDa ? " in Boxen" : ""}</dt><dd>${knopfPM("max", R.max, R.max >= 99 ? "alle freien Boxen" : `höchstens ${R.max}`)}<small class="pn-dd">${pensionBelegt(false)} belegt · ${spiel.boxen.filter(b => pensionBoxFrei(b) && !b.paddock).length} Boxen frei${spiel.boxen.some(gastReserviert) ? ` · 🏠 ${spiel.boxen.filter(gastReserviert).length} für Gaststuten frei gehalten (Deckhengst-Fenster)` : ""}</small></dd>
         ${pdDa ? `<dt>Plätze in Paddockboxen</dt><dd>${knopfPM("maxp", R.maxPaddock, R.maxPaddock >= 99 ? "alle freien Paddockboxen" : R.maxPaddock ? `höchstens ${R.maxPaddock}` : "keine")}<small class="pn-dd">${pensionBelegt(true)} belegt · ${spiel.boxen.filter(b => pensionBoxFrei(b) && b.paddock).length} Paddockboxen frei</small></dd>` : ""}
         <dt>Bluttest</dt><dd><span class="bf-knoepfe">${Object.keys(BLUTTEST_TXT).map(k => `<button class="mini-knopf ${R.bluttest === k ? "an" : ""}" data-pnblut="${k}">${BLUTTEST_TXT[k]}</button>`).join("")}</span><small class="pn-dd">strenger = weniger Anfragen, aber weniger Gefahr, dass ein Neuer eine Krankheit einschleppt</small></dd>
       </dl>
       <h4 class="ma-titel">💶 Preis pro Stallbox</h4>
-      ${[1, 2, 3].filter(st => spiel.boxen.some(b => !b.paddock && !b.quar && !b.abfohl && !b.offen && boxenStufe(b) === st)).map(st => `<div class="pn-preis"><span>Stufe ${st} <small>(${STUFE_NAME[st]})</small></span>${knopfPM("p" + st, R.preis[st], fmt(R.preis[st]))}<small>Richtwert ${fmt(PENSION_PREIS[st])} je Jahreszeit</small></div>`).join("")}<p class="text" style="margin:2px 0 6px"><small>💶 Ein neuer Preis gilt auch für die bisherigen Einsteller – ab der nächsten Jahreszeit. Sie antworten am nächsten Tag per Brief: einverstanden, verhandeln oder kündigen (je höher die Erhöhung und je unzufriedener, desto eher). Günstiger freut alle.</small></p>
+      ${[1, 2, 3].filter(st => spiel.boxen.some(b => !b.paddock && !b.quar && !b.abfohl && !b.offen && boxenStufe(b) === st)).map(st => `<div class="pn-preis"><span>Stufe ${st} <small>(${STUFE_NAME[st]})</small></span>${knopfPM("p" + st, R.preis[st], fmt(R.preis[st]))}<small>Richtwert ${fmt(Math.round(PENSION_PREIS[st] * lagePreisF() / 5) * 5)} je Jahreszeit</small></div>`).join("")}<p class="text" style="margin:2px 0 6px"><small>💶 Ein neuer Preis gilt auch für die bisherigen Einsteller – ab der nächsten Jahreszeit. Sie antworten am nächsten Tag per Brief: einverstanden, verhandeln oder kündigen (je höher die Erhöhung und je unzufriedener, desto eher). Günstiger freut alle.</small></p>
       <p class="text" style="margin:2px 0 0"><small>Gilt für neue Verträge. Teurer heißt weniger Anfragen (25 % über dem Richtwert etwa halb so viele), günstiger mehr.</small></p>
-      ${pdSt.length ? `<h4 class="ma-titel">🏡 Preis pro Paddockbox</h4>${pdSt.map(st => `<div class="pn-preis"><span>Stufe ${st} <small>(${STUFE_NAME[st]})</small></span>${knopfPM("pa" + st, R.pdPreis[st], fmt(Math.max(R.pdPreis[st], R.preis[st])))}<small>Richtwert ${fmt(PENSION_PD_PREIS[st])} je Jahreszeit</small></div>`).join("")}<p class="text" style="margin:2px 0 6px"><small>Gilt für neue Verträge (bisherige Einsteller zahlen weiter ihren Preis). Teurer heißt: seltener wird eine Paddockbox gewünscht. Mindestens der Preis der Stallbox gleicher Stufe.</small></p>` : ""}
+      ${pdSt.length ? `<h4 class="ma-titel">🏡 Preis pro Paddockbox</h4>${pdSt.map(st => `<div class="pn-preis"><span>Stufe ${st} <small>(${STUFE_NAME[st]})</small></span>${knopfPM("pa" + st, R.pdPreis[st], fmt(Math.max(R.pdPreis[st], R.preis[st])))}<small>Richtwert ${fmt(Math.round(PENSION_PD_PREIS[st] * lagePreisF() / 5) * 5)} je Jahreszeit</small></div>`).join("")}<p class="text" style="margin:2px 0 6px"><small>Gilt für neue Verträge (bisherige Einsteller zahlen weiter ihren Preis). Teurer heißt: seltener wird eine Paddockbox gewünscht. Mindestens der Preis der Stallbox gleicher Stufe.</small></p>` : ""}
       <h4 class="ma-titel">🧰 Zusatzleistungen anbieten</h4>
       ${PL_REIHE.filter(k => k !== "paddockbox" && leistungMoeglich(k)).map(k => { const P = PENSION_LEISTUNG[k], ok = leistungMoeglich(k);   // v896 (Dome 30.10.): Zusatzleistungen ohne Gebäude/Freischaltung gar nicht erst zeigen
         return `<label class="pn-leist ${ok ? "" : "aus"}"><input type="checkbox" data-pnleist="${k}" ${R.leistungen[k] && ok ? "checked" : ""} ${ok ? "" : "disabled"}><span><b>${P.ico} ${P.n} · ${fmt(P.preis)}${P.jeTag ? " je Einheit" : ""}</b><small>${ok ? P.info : k === "decke" ? "geht noch nicht – Decken kommen später" : k === "waschen" ? "nur mit Waschplatz (Hof → Bauen)" : k === "solarium" ? "nur mit Pferdesolarium (Hof → Bauen)" : "nur mit Paddockboxen (Hof → Bauen)"}</small></span></label>`; }).join("")}
@@ -20184,7 +20248,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       <p><b>Bauen:</b> neue Gebäude liegen im Feld „Zum Bauen“, die Bauzeit läuft erst, wenn sie stehen. Anbau = Gebäude wird länger (Ende oder Anfang), Ausbau kann es vergrößern (Reitplatz, Sandpaddock): erst Vorschau grün/rot, dann bestätigen; Baustellen orange und nicht verschiebbar, beim Abriss nur der wegfallende Teil. Bauland in 0,5-ha-Stücken für ${fmt(Math.round(PLAN_STUECK_HA * BAULAND_PREIS))} rechts, links oder unten; unbebaute Stücke verkaufen (${prozent(HOF_VERKAUF)}) oder verschieben, das Bauland muss zusammenhängen. Box → Orte zeigt denselben Plan: Ziel antippen (Ställe = umziehen, Plätze = Training, Parkplatz = Pferdeanhänger, Waschplatz, Solarium, Sandpaddock), Weide und Gelände als Pfeile am Rand außerhalb des Hofs.</p>
       <h3>🏘️ Hof-Ausbau (H2: mehrere Höfe, Land, Hofplan)</h3>
       <p><b>Bis zu ${MAX_HOEFE} Höfe</b>, jeder mit eigener Kasse, eigenen Boxen, Anlagen, Mitarbeitern, Futterkammer, Lager, Rechnungen, Krediten und Verkaufsanzeigen (<code>HOF_FELDER</code>). Der aktive Hof liegt in <code>spiel</code>, die anderen in <code>spiel.hoefe</code>; Reihenfolge <code>spiel.hofReihe</code>. Jede Nacht laufen alle Höfe (<code>jedenHof</code>): Versorgung, Training, Hufe, Ansteckung, Befunde, Rechnungen, Kredit, Pacht, Geburten, Gehälter, Mitarbeiter, Turnierpferde. Nur einmal: Markt/Auktion, Labor, Blutbild, Tierschutz-Klinik, externer Gnadenhof, Turnierkalender. Wer einen Hof nicht versorgt (selbst oder Mitarbeiter), hat dort hungrige Pferde.</p>
-      <p><b>Makler</b> (Immobilien-Menü, wechselt einmal im Jahr): 1 leeres Grundstück + 3 fertige Höfe mit zufälliger Stufe (50 % Stufe 1, 35 % Stufe 2, 15 % Stufe 3). Preis (v808; seit Etappe 8b × Bundesland-Faktor nach echten Bodenpreisen, BODEN_KAUFWERT) = Weideland ${fmt(LAND_PREIS)}/ha + Bauland ${fmt(BAULAND_PREIS)}/ha (Bauland mindestens 1 ha) + Hofstelle/Büro ${fmt(MAKLER_PREIS.hofstelle)} + Boxen je ${MAKLER_PREIS.box.slice(1).map(fmt).join(" / ")} (Stufe 1/2/3) + Reitplatz ${MAKLER_PREIS.reitplatz.slice(1).map(fmt).join(" / ")} + Reithalle ${MAKLER_PREIS.reithalle.slice(1).map(fmt).join(" / ")}, ±10 %. Kaufbar, wenn der erste Kredit zur Hälfte getilgt ist und die Hälfte des Preises in der Kasse des aktiven Hofs liegt. Eigenanteil ½ aus dem aktiven Hof, Rest Kredit des neuen Hofs (${prozent(KREDIT.zins)}, ${KREDIT.jz / 4} Jahre). Startgeld für den neuen Hof frei wählbar (500-€-Schritte) – sonst fließt kein Geld zwischen den Höfen. Neue Höfe starten als Pensionsstall (Stallart wählbar ab H7).</p>
+      <p><b>Makler</b> (Immobilien-Menü, wechselt einmal im Jahr): 1 leeres Grundstück + 3 fertige Höfe mit zufälliger Stufe (50 % Stufe 1, 35 % Stufe 2, 15 % Stufe 3). Lage (15.11.2026): Bundesland und nächste Großstadt mit Entfernung (<code>GROSSSTADT</code>, 55 % bis 30 km) – Pension-Richtwert × <code>PENSION_LAND</code> × Stadtnähe (bis 15 km ×1,2, bis 30 km ×1,1), Anfragen × Stadtgröße (ab 1 Mio. ×1,5, ab 500.000 ×1,35, ab 100.000 ×1,2; nimmt bis 60 km auf 1 ab). Preis (v808; seit Etappe 8b × Bundesland-Faktor nach echten Bodenpreisen, BODEN_KAUFWERT) = Weideland ${fmt(LAND_PREIS)}/ha + Bauland ${fmt(BAULAND_PREIS)}/ha (Bauland mindestens 1 ha) + Hofstelle/Büro ${fmt(MAKLER_PREIS.hofstelle)} + Boxen je ${MAKLER_PREIS.box.slice(1).map(fmt).join(" / ")} (Stufe 1/2/3) + Reitplatz ${MAKLER_PREIS.reitplatz.slice(1).map(fmt).join(" / ")} + Reithalle ${MAKLER_PREIS.reithalle.slice(1).map(fmt).join(" / ")}, ±10 %. Kaufbar, wenn der erste Kredit zur Hälfte getilgt ist und die Hälfte des Preises in der Kasse des aktiven Hofs liegt. Eigenanteil ½ aus dem aktiven Hof, Rest Kredit des neuen Hofs (${prozent(KREDIT.zins)}, ${KREDIT.jz / 4} Jahre). Startgeld für den neuen Hof frei wählbar (500-€-Schritte) – sonst fließt kein Geld zwischen den Höfen. Neue Höfe starten als Pensionsstall (Stallart wählbar ab H7).</p>
       <p><b>Land:</b> kaufen ${fmt(LAND_PREIS)}/ha (Hofwert steigt), pachten ${fmt(PACHT_PREIS)} je ha und Jahreszeit (Abbuchung zu Beginn der Jahreszeit, „Pacht“), Pacht jederzeit kündbar. Seit v297 zählt Pachtland als Weideland: beim Pachten wählen „neue Weide“, „neue Futterwiese“ oder „Weide X vergrößern“ (Zaun wird gleich gebaut). Endet die Pacht, schrumpfen die Weiden wieder (zuletzt angelegte zuerst). Die Flächenprämie zählt das Pachtland mit. Neues Land = freies Grünland (Weide erst durch Einzäunen, H3). Hofplan: 1 Kachel = 1 ha (Hofstelle, Weide, frei, Pacht).</p>
       <p><b>Umzug:</b> Pferdeanhänger → Eigener Hof (beide Anhänger), Fohlen bei Fuß ziehen mit, nicht in Quarantäne, Zielhof braucht freie Boxen. Stress wie beim Fremden („neuer Stall“). <b>Zwangsversteigerung</b> eines von mehreren Höfen: nur dieser Hof ist weg, das Spiel geht weiter; beim letzten Hof ist das Spiel verloren. <b>Sondertilgung</b> (Finanzen → Bank): ab 100 €, ohne Gebühr, Rate bleibt, Laufzeit wird kürzer; nicht bei offener Rate.</p>
       <h3>🏗️ Hof-Ausbau (H3: Bauen, Stufen, Verfall)</h3>

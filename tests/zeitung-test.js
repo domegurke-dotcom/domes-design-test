@@ -74,6 +74,14 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     Z.kuendigung = true; zeitungJahreszeit(); spiel.mitarbeiter = []; return { ...a, nachK: Z.abo }; });
   ok('neue Jahreszeit: 135 € abgebucht, Zeitung im Büro', r5.abz === 135 && r5.lage === 'buero' && r5.gelesen === false, JSON.stringify(r5));
   ok('Kündigung beendet das Abo', r5.nachK === false);
+  // Etappe M2 (v1031): Privatinserate aus ganz Deutschland mit Standort und Entfernung (Klick auf die Rubrik)
+  await pg.evaluate(() => { document.getElementById('dlg').hidden = true; marktBereich = null; zeigeMarkt(null); }); await pg.waitForTimeout(300);
+  await pg.click('[data-mb="privat"]'); await pg.waitForTimeout(400);
+  const ins = await pg.$$eval('#nebenSchirm .paar', l => l.map(x => x.innerText.replace(/\s+/g, ' ')));
+  const insOrt = await pg.evaluate(() => marktNeu().privat.map(h => inseratOrt(h)));
+  ok('Inserate mit Standort und km', ins.length > 0 && ins.every(t => /📍 .+ · \d+ km/.test(t)), ins.slice(0, 2).join(' | '));
+  ok('Standorte aus ganz Deutschland, fest je Pferd', insOrt.every(o => o.ort && o.km >= 0 && o.km < 900) && JSON.stringify(insOrt) === JSON.stringify(await pg.evaluate(() => marktNeu().privat.map(h => inseratOrt(h)))), insOrt.map(o => o.ort + ' ' + o.km).join(', '));
+  await bild('m2-inserate');
   // alter Spielstand ohne Ort: Zeitung fragt nach der Lage
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; delete spiel.hof.bundesland; delete spiel.hof.ort; delete spiel.hof.lage; marktBereich = 'zeitung'; zeigeMarkt(); }); await pg.waitForTimeout(300);
   ok('ohne Lage: Ortswahl in der Zeitung', !!(await pg.$('#ztwLand')));

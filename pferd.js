@@ -124,6 +124,18 @@ const RASSEN = [
     text: "Das Rennpferd schlechthin: lange Beine, tiefe Brust, langer schräger Hals und feiner Kopf.",
     farben: ["brauner", "dunkelbrauner", "fuchs", "dfuchs", "rappe", "schimmel"],
     k: { len: 1.02, depth: .41, legT: .075, neck: .6, nAng: 45, crest: .02, head: .42, hAng: 50, profile: 0, hw: .92, jw: 1, muz: .9, ear: .1, mane: "kurz", maneLen: .05, vol: .6, fore: .3, tail: .6, tvol: .6, tset: .3, feather: 0, croup: .3, hq: 1, eye: 1.05 } },
+  { id: "traber", name: "Deutscher Traber", herkunft: "Deutschland", h: [155, 170],
+    text: "Rennpferd für Trabrennen vor dem Sulky: kräftig bemuskelte Hinterhand, trockene Beine mit kurzen Fesseln, harte Hufe – im Renntrab 45–50 km/h. Nach der Rennkarriere oft ein ausdauerndes Freizeitpferd.",
+    farben: ["brauner", "dunkelbrauner", "rappe", "fuchs"],
+    k: { len: 1.05, depth: .42, legT: .075, neck: .56, nAng: 40, crest: .03, head: .44, hAng: 48, profile: 0, hw: .95, jw: 1, muz: .95, ear: .11, mane: "kurz", maneLen: .08, vol: .7, fore: .3, tail: .65, tvol: .65, tset: .32, feather: 0, croup: .33, hq: 1.05, eye: 1 } },
+  { id: "franztraber", name: "Französischer Traber", herkunft: "Frankreich (Normandie)", h: [154, 167],
+    text: "Kompakter, ausdauernder Traber aus der Normandie, langsamer reif als das Standardbred. Läuft vor dem Sulky und unter dem Sattel (Trabrennen „monté“); wird auch auf Reiteignung gezüchtet.",
+    farben: ["fuchs", "brauner", "dunkelbrauner", "rappe"],
+    k: { len: 1.03, depth: .44, legT: .08, neck: .56, nAng: 42, crest: .04, head: .45, hAng: 48, profile: 0, hw: .96, jw: 1, muz: .96, ear: .11, mane: "kurz", maneLen: .1, vol: .75, fore: .35, tail: .65, tvol: .7, tset: .32, feather: 0, croup: .34, hq: 1.06, eye: 1 } },
+  { id: "standardbred", name: "Standardbred (Amerikanischer Traber)", herkunft: "USA", h: [152, 163],
+    text: "Der schnellste Traber der Welt und Grundlage fast aller Traberzuchten; läuft im Trab oder – als Passgänger – im Pass. Etwas schwerer als ein Vollblut, großer Kopf, oft mit Ramsnase.",
+    farben: ["brauner", "dunkelbrauner", "rappe", "fuchs"],
+    k: { len: 1.04, depth: .43, legT: .08, neck: .54, nAng: 40, crest: .04, head: .46, hAng: 48, profile: .25, hw: .97, jw: 1.02, muz: .97, ear: .12, mane: "kurz", maneLen: .08, vol: .7, fore: .3, tail: .65, tvol: .65, tset: .32, feather: 0, croup: .33, hq: 1.08, eye: 1 } },
   { id: "quarter", name: "Quarter Horse", herkunft: "USA", h: [142, 163],
     text: "Muskulöses Westernpferd mit kurzem Kopf, großen Ganaschen und extrem kräftiger Hinterhand.",
     farben: ["fuchs", "dfuchs", "brauner", "rappe", "palomino", "buckskin", "braunfalbe", "mausfalbe", "blueroan", "bayroan", "rotschimmel", "ov_brauner"],
@@ -210,7 +222,7 @@ const RASSEN = [
 // Spiel-Kopflänge k.head = KOPF_REAL × KOPF_STIL (Cartoon-Faktor, für alle Rassen gleich). Bei Änderungen am Körper NUR diese Tabelle/den Faktor anpassen,
 // nicht k.head einzeln – so bleiben die Rassen untereinander proportional. Neue Rassen hier mit eintragen.
 const KOPF_STIL = 1.2;
-const KOPF_REAL = { araber: .35, shagya: .35, angloaraber: .355, tekke: .36, vollblut: .36, quarter: .36, marwari: .36, trakehner: .365, hannoveraner: .37, andalusier: .37, lipizzaner: .37,
+const KOPF_REAL = { araber: .35, shagya: .35, angloaraber: .355, tekke: .36, vollblut: .36, traber: .37, franztraber: .37, standardbred: .38, quarter: .36, marwari: .36, trakehner: .365, hannoveraner: .37, andalusier: .37, lipizzaner: .37,
   knabstrupper: .37, appaloosa: .365, paint: .36, lewitzer: .39, barockpinto: .38, noriker: .40, friese: .38, welshcob: .38, haflinger: .39, fjord: .39, isi: .39, fell: .39, dales: .39, tinker: .39, shire: .40, clydesdale: .40, shetty: .45 };
 RASSEN.forEach(r => { if (KOPF_REAL[r.id]) r.k.head = Math.round(KOPF_REAL[r.id] * KOPF_STIL * 1000) / 1000; });
 const rasseById = id => RASSEN.find(r => r.id === id);
@@ -1314,6 +1326,9 @@ const PROFIL = {
   andalusier:   { gang: [6, 6, 6],       char: [60, 65, 75, 80, 80, 65, 70], dress: .95, koerper: [75, 65, 55, 60, 75, 80, 75, 65, 65, 70], kopf: [75, 70, 70] },
   lipizzaner:   { gang: [5.5, 6, 5.5],   char: [55, 65, 75, 75, 85, 70, 65], dress: 1, koerper: [80, 65, 50, 60, 70, 80, 75, 70, 65, 75], kopf: [80, 75, 65] },
   vollblut:     { gang: [5.5, 5.5, 7.5], char: [90, 55, 85, 60, 80, 35, 85], dress: .7, koerper: [65, 80, 95, 90, 60, 70, 65, 60, 70, 55], kopf: [70, 55, 85] },
+  traber:       { gang: [5.5, 8, 5.5], char: [80, 60, 80, 65, 75, 45, 80], dress: .55, koerper: [65, 80, 85, 92, 60, 75, 65, 60, 70, 60], kopf: [65, 60, 75] },   // Trab im Mittelpunkt (selbst gesetzt)
+  franztraber:  { gang: [6, 8, 6], char: [70, 65, 80, 65, 70, 50, 75], dress: .6, koerper: [70, 80, 80, 95, 65, 75, 65, 60, 70, 60], kopf: [65, 60, 75] },
+  standardbred: { gang: [5.5, 8.5, 5], char: [80, 60, 80, 65, 75, 45, 80], dress: .5, koerper: [65, 85, 88, 90, 60, 75, 65, 60, 70, 60], kopf: [65, 60, 75] },
   quarter:      { gang: [5.5, 5, 6],     char: [35, 75, 65, 80, 80, 85, 40], dress: .75, koerper: [80, 60, 75, 90, 90, 65, 75, 75, 70, 75], kopf: [65, 70, 85] },
   hannoveraner: { gang: [6.5, 6.5, 6.5], char: [60, 60, 70, 70, 80, 60, 65], dress: 1, koerper: [75, 70, 65, 65, 65, 80, 75, 65, 65, 65], kopf: [75, 70, 70] },
   isi:          { gang: [5.5, 5, 5.5],   char: [60, 70, 80, 75, 80, 75, 45], dress: .7, toelt: 1, pass: .55, koerper: [65, 80, 50, 55, 65, 60, 70, 90, 80, 90], kopf: [65, 60, 65] },
@@ -1466,10 +1481,10 @@ var KOPF_GROESSE = 1.15;
 // Varianten der Kopfabzeichen (v434, von Dome ausgesucht): unregelmäßiger Rand über Turbulenz
 const ABZ_VARIANTE = { "schmaleBlesse~geschwungen": { name: "geschwungen", freq: .022, scale: 25, seed: 11 }, "blesse~unregelmaessig": { name: "unregelmäßiger Rand", freq: .022, scale: 25, seed: 13 } };
 // Ohrgröße je Rasse (v430, Dome): Araber klein und fein, Ponys und Quarter klein, Kaltblüter groß – alle anderen 1
-const OHR_RASSE = { araber: .82, shagya: .85, angloaraber: .88, quarter: .88, shetty: .85, isi: .88, welshcob: .88, fell: .9, dales: .92, fjord: .9, haflinger: .95, vollblut: .95, lipizzaner: .95,
+const OHR_RASSE = { traber: .95, franztraber: .95, standardbred: .95, araber: .82, shagya: .85, angloaraber: .88, quarter: .88, shetty: .85, isi: .88, welshcob: .88, fell: .9, dales: .92, fjord: .9, haflinger: .95, vollblut: .95, lipizzaner: .95,
   appaloosa: .9, paint: .88, knabstrupper: 1, lewitzer: .88, noriker: 1.05, barockpinto: 1, tekke: 1.08, marwari: 1, shire: 1.12, clydesdale: 1.12, tinker: 1.05, friese: 1, andalusier: 1, hannoveraner: 1, trakehner: 1 };
 // typische Kopfform je Rasse (fehlt die Rasse: gerader Kopf)
-const KOPFFORM_RASSE = { araber: "hecht", shagya: "hecht", angloaraber: "hecht", welshcob: "hecht", vollblut: "keil", trakehner: "keil", hannoveraner: "keil", tekke: "keil",
+const KOPFFORM_RASSE = { traber: "gerade", franztraber: "gerade", standardbred: "ramsnase", araber: "hecht", shagya: "hecht", angloaraber: "hecht", welshcob: "hecht", vollblut: "keil", trakehner: "keil", hannoveraner: "keil", tekke: "keil",
   shire: "ramsnase", clydesdale: "ramsnase", tinker: "ramsnase", friese: "ramsnase", barockpinto: "ramsnase", andalusier: "ramsnase", lipizzaner: "rams" };
 // alte Admin-Wahl (p.nase) → neue Form
 const RASSE_KOPF = new Proxy({}, { get: (t, r) => typeof r === "string" ? kopfKey({ f: KOPFFORM_RASSE[r] || "gerade", s: 2 }) : undefined });
@@ -1600,6 +1615,7 @@ function naturSchopf(rasseId) {
 //  Namen und Fremdblut (Stammbaum selbst entsteht in index.html)
 // =====================================================================
 const FREMDBLUT = {
+  traber: "standardbred", franztraber: "standardbred", standardbred: "vollblut",
   araber: "vollblut", friese: "andalusier", marwari: "araber", fjord: "haflinger", haflinger: "araber",
   shetty: "isi", shire: "tinker", andalusier: "araber", lipizzaner: "andalusier", vollblut: "araber",
   quarter: "vollblut", hannoveraner: "vollblut", isi: "fjord", tinker: "shire", tekke: "araber",
@@ -1667,9 +1683,11 @@ const NAMEN_HOBBY = {
   Mann: ["Max", "Moritz", "Jonny", "Charly", "Fritz", "Sammy", "Benny", "Lucky", "Pepe", "Bruno", "Oskar", "Theo", "Emil", "Felix", "Paul", "Anton", "Balou", "Rocky", "Blacky", "Flash", "Snoopy", "Bambi", "Tommy", "Willi", "Leo", "Tobi", "Pablo", "Joker", "Merlin", "Sunny", "Teddy", "Krümel", "Fips", "Jacky", "Ronny", "Hansi", "Fred", "Louis", "Elvis", "Simba", "Nemo", "Pünktchen", "Dakota", "Cooper", "Milo", "Ole", "Bob", "Jimmy", "Cäsar", "Rudi", "Pumuckl", "Tinto", "Speedy", "Frodo", "Rambo", "Gandalf", "Picasso", "Shadow", "Lasse", "Bento"],
 };
 // Zuchtnamen nach Rassengruppe: [Stuten, Hengste] – teils mit Vorsilbe (Sir, Donna …) zusammengesetzt
-const ZUCHT_GRUPPE = { hannoveraner: "warm", trakehner: "warm", lipizzaner: "barock", andalusier: "spanisch", araber: "araber", angloaraber: "araber", shagya: "araber", tekke: "tekke", marwari: "marwari", vollblut: "vollblut", appaloosa: "western", paint: "western", knabstrupper: "knab", noriker: "noriker", lewitzer: "pony", barockpinto: "friese",
+const ZUCHT_GRUPPE = { traber: "traber", standardbred: "traber", franztraber: "franztraber", hannoveraner: "warm", trakehner: "warm", lipizzaner: "barock", andalusier: "spanisch", araber: "araber", angloaraber: "araber", shagya: "araber", tekke: "tekke", marwari: "marwari", vollblut: "vollblut", appaloosa: "western", paint: "western", knabstrupper: "knab", noriker: "noriker", lewitzer: "pony", barockpinto: "friese",
   quarter: "western", isi: "isi", friese: "friese", haflinger: "haflinger", fjord: "fjord", shetty: "pony", welshcob: "welsh", fell: "britpony", dales: "britpony", shire: "britkalt", clydesdale: "britkalt", tinker: "tinker" };
 const ZUCHT_NAMEN = {
+  traber: { S: ["Speedy Girl", "Abbelena", "Tiffany Diamant", "Queen of Speed", "Bella Trotter", "Lady Express", "Sunny Hanover", "Miss Lindy"], H: ["Express Boy", "Speedy Lindy", "Diamant Hanover", "Victory Wind", "Ready Cash", "Turbo Star", "Super Trotter", "Flash Boko"], von: ["Hanover", "Boko", "Diamant", "As", "Bi"] },   // Traber: oft Zuchtname angehängt (selbst gesetzt)
+  franztraber: { S: ["Belle de Mai", "Jolie du Bocage", "Reine des Prés", "Fleur d'Écajeul", "Douce de Retz"], H: ["Roi du Vent", "Prince d'Écajeul", "Bold du Bocage", "Fakir de Retz", "Tonnerre des Prés"] },
   warm: { vorS: ["Donna", "Lady", "Fürstin", "Gräfin", "Bella", "Royal", "Miss", "Dame"], vorH: ["Sir", "Lord", "Fürst", "Don", "Grand", "Royal", "Baron", "Graf", "Prince", "Count"],
     S: ["Fleur", "Rubina", "Cassandra", "Florentine", "Valentina", "Diamanta", "Sambalina", "Sarabande", "Cornetta", "Quintana", "Bonita", "Esmeralda", "Galante", "Celeste", "Fiorella", "Anastasia", "Wolkenspiel", "Sonnenwende", "Herzdame", "Rondeau", "Belissima", "Dancing Queen", "Feine Dame", "Amour", "Fürstenliebe", "Laurentia", "Rivage", "Siena", "Vivaldi", "Weltschönheit"],
     H: ["Diamant", "Falkenstein", "Rubinstein", "Cornado", "Feuerglanz", "Valentino", "Silberstern", "Wolkenstürmer", "Bellini", "Cassius", "Lancelot", "Sandokan", "Quintus", "Romanov", "Florian", "Montana", "Brillant", "Escudo", "Dynamo", "Weltmeister", "Fürstenball", "Donnerwetter", "Sansibar", "Belvedere", "Quatermain", "Rockefeller", "Lord Byron", "Sorento", "Vivaldi", "Grafenstolz"] },

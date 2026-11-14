@@ -1372,7 +1372,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "1022";
+  const SPIEL_VERSION = "1027";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1380,12 +1380,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=1022"></script>
-<script src="pferd.js?v=1022"></script>
-<script src="boxstufen.js?v=1022"></script>
-<script src="kopfneu.js?v=1022"></script>
-<script src="waschbild.js?v=1022"></script>
-<script src="avatare.js?v=1022"></script>
+<script src="lz-string.min.js?v=1027"></script>
+<script src="pferd.js?v=1027"></script>
+<script src="boxstufen.js?v=1027"></script>
+<script src="kopfneu.js?v=1027"></script>
+<script src="waschbild.js?v=1027"></script>
+<script src="avatare.js?v=1027"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -1565,6 +1565,7 @@
     paint: { E: .3, A: .58, At: .1, F: .7, Sty: .1, Cr: .1, Ch: .004, D: .045, Rn: .04, G: .04, O: .10, To: .16, Sb: .017, Sw: .053, Br1: .0003, Prl: .007 },
     noriker: { E: .42, A: .3, At: .05, F: .5, Sty: .15, Rn: .05, To: .03, Lp: .05, Patn: .3 }, lewitzer: { E: .6, A: .5, F: .7, Sty: .1, Cr: .05, To: .65, G: .03, Sw: .01 },   // v445
     barockpinto: { E: .9, A: .15, F: .9, Sty: .05, To: .6 },
+    traber: { E: .55, A: .65, At: .25, F: .85, Sty: .2, G: .02 }, franztraber: { E: .4, A: .65, At: .15, F: .8, Sty: .15, G: .01 }, standardbred: { E: .55, A: .7, At: .25, F: .85, Sty: .2, G: .01 },   // Traber (Dome 15.11.2026, Anteile selbst geschätzt)
   };
   const LP_OHNE = .2;
   // Dome 30.10.: Anteil des nd1-Allels unter den Nicht-Falb-Allelen je Rasse (Schätzung: nd1 ist bei vielen Rassen häufig, genaue Zahlen je Rasse fehlen) – D > nd1 > d (nd2)
@@ -1573,10 +1574,13 @@
   const smokyVon = p => { if (!p) return false; const g = genVon(p); return hat(g, "E") && !hat(g, "A") && !g.A.includes("At") && anzahl(g, "Cr") === 1 && anzahl(g, "Prl") === 0 && !hat(g, "D"); };
   const farbeAus = (g, ex) => phaenotyp(g, ex && ex.ton, ex && ex.ow, ex && ex.muster);
   // Gangpferde-Gen (DMRT3) – Anteil des A-Allels je Rasse
-  const DMRT3 = { isi: .8, marwari: .35, quarter: .052, shetty: .03 };
+  const DMRT3 = { isi: .8, marwari: .35, quarter: .052, shetty: .03, traber: .95, franztraber: .77, standardbred: 1 };   // Traber: Andersson 2012 (Nature), Ricard 2015
+  const TRABER = ["traber", "franztraber", "standardbred"];
+  // Traber tragen das Gen für schnellen Trab statt Tölt: kein Tölt; Pass nur beim Standardbred (Passgänger, etwa die Hälfte, selbst gesetzt)
   // Tölt und Pass passend zum Gen: C/C keine, A/C Tölt, A/A Tölt und Pass
-  function gangNachGen(gang, g, r = Math.random) {
+  function gangNachGen(gang, g, r = Math.random, rasse) {
     const n = anzahl(genNorm(g), "Dm"), neu = () => Math.round((6 + r() * 2.5) * 2) / 2;
+    if (TRABER.includes(rasse)) { delete gang.toelt; if (!(rasse === "standardbred" && n === 2)) delete gang.pass; else if (gang.pass == null && r() < .5) gang.pass = Math.max(5, neu()); return gang; }
     if (n === 0) { delete gang.toelt; delete gang.pass; }
     if (n >= 1 && gang.toelt == null) gang.toelt = neu();
     if (n === 1) delete gang.pass;
@@ -2004,7 +2008,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   // Wachstum: Anteil der Endgröße nach Alter in Monaten
   const wuchs = m => m >= 66 ? 1 : m <= 0 ? 0.6 : [[0, .6], [3, .73], [6, .82], [12, .89], [24, .97], [48, .993], [66, 1]].reduce((r, [a, f], i, arr) => (m >= a && i < arr.length - 1 && m < arr[i + 1][0]) ? f + (arr[i + 1][1] - f) * (m - a) / (arr[i + 1][0] - a) : r, 1);   // Dome 31.10. (PDF „Baby Horse“): 3 Monate 73 %, 6 Monate 82 %, 12 Monate 89 %, 2 Jahre ≈ 97 %, ausgewachsen mit 5–6 Jahren
   const datumLang = (d = datum()) => `${JZ[d.s][0]} ${d.j}`;
-  const alterAktualisieren = () => [...spiel.boxen.flatMap(b => [b.pferd, b.fohlen]), ...(spiel.extern || []).map(e => e.pferd), ...(spiel.gnadenhof || []).map(e => e.pferd), ...(spiel.tierschutz || []).flatMap(t => [t.pferd, t.fohlen])].forEach(p => { if (!p) return; sichereGeburt(p); p.alter = alterJahre(p);
+  const alterAktualisieren = () => [...spiel.boxen.flatMap(b => [b.pferd, b.fohlen, b.fohlen2]), ...(spiel.extern || []).map(e => e.pferd), ...(spiel.gnadenhof || []).map(e => e.pferd), ...(spiel.tierschutz || []).flatMap(t => [t.pferd, t.fohlen])].forEach(p => { if (!p) return; sichereGeburt(p); p.alter = alterJahre(p);
     if (p.zielStockmass) p.stockmass = Math.round(p.zielStockmass * wuchs(alterJZ(p) * 3)); });
   alterAktualisieren();
   const B = () => spiel.boxen[aktBox];
@@ -2019,7 +2023,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   const ausbStand = p => ausbildungsWerte({ ...p, alter: alterJahre(p) });
   // alle Pferde, die dem Spieler gehören, mit ihrem Aufenthaltsort
   const alleEigenenPferde = () => [
-    ...spiel.boxen.flatMap((b, i) => [b.pferd && { p: b.pferd, ort: b.pferd.klinik ? `Klinik (Box ${bnr(i)})` : b.pferd.weide ? `Weide (Box ${bnr(i)})` : `Box ${bnr(i)}`, box: i }, b.fohlen && { p: b.fohlen, ort: `Box ${bnr(i)} (bei der Mutter)`, box: i }].filter(Boolean)),
+    ...spiel.boxen.flatMap((b, i) => [b.pferd && { p: b.pferd, ort: b.pferd.klinik ? `Klinik (Box ${bnr(i)})` : b.pferd.weide ? `Weide (Box ${bnr(i)})` : `Box ${bnr(i)}`, box: i }, b.fohlen && { p: b.fohlen, ort: `Box ${bnr(i)} (bei der Mutter)`, box: i }, b.fohlen2 && { p: b.fohlen2, ort: `Box ${bnr(i)} (bei der Mutter)`, box: i }].filter(Boolean)),
     ...(spiel.extern || []).map(e => ({ p: e.pferd, ort: ORT_NAME[e.ort] })),
     ...(spiel.gnadenhof || []).map(g => ({ p: g.pferd, ort: "Gnadenhof" })),
   ];
@@ -2082,7 +2086,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   const mischAnteile = (a, b) => { const m = {}; [normAnteile(a), normAnteile(b)].forEach(x => Object.entries(x).forEach(([k, v]) => m[k] = (m[k] || 0) + v / 2)); return normAnteile(m); };
   const anteileVon = P => normAnteile(P.anteile || { [P.rasse]: 100 });
   // Veredelung: Veredler (z. B. Vollblut, Araber, Trakehner) zählen nur bei Rassen, deren Zuchtbuch das erlaubt, zur eigenen Rasse
-  const VEREDELUNG = { hannoveraner: ["vollblut", "araber", "trakehner", "angloaraber"], quarter: ["vollblut"], haflinger: ["araber", "shagya"], tinker: ["shire", "clydesdale", "fell", "dales", "welshcob"],
+  const VEREDELUNG = { traber: ["standardbred", "franztraber"], franztraber: ["standardbred"], hannoveraner: ["vollblut", "araber", "trakehner", "angloaraber"], quarter: ["vollblut"], haflinger: ["araber", "shagya"], tinker: ["shire", "clydesdale", "fell", "dales", "welshcob"],
     trakehner: ["vollblut", "araber", "shagya", "angloaraber"], angloaraber: ["vollblut", "araber"], shagya: ["araber"],
     appaloosa: ["quarter", "vollblut", "araber"], paint: ["quarter", "vollblut"], knabstrupper: ["vollblut", "trakehner", "hannoveraner"], lewitzer: ["welshcob", "araber", "trakehner"], barockpinto: ["friese", "tinker", "paint"] };   // v447: Barock Pinto = Friese × Pinto (Dome-Quelle)   // v442: Zuchtbuch ApHC, APHA, Knabstrupper-Verband   // v316: Zuchtbuch-Regeln (Veredler zählen zur eigenen Rasse)
   const veredler = (rasse, k) => (VEREDELUNG[rasse] || []).includes(k);
@@ -2174,7 +2178,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       const g = AHN_GESCHLECHT(k), nr = "0" + Array.from({ length: 10 }, () => Math.floor(r() * 10)).join(""), w = erzeugeWerte({ id: "ahn" + nr, rasse: rasseVon[k] });
       const ex = exZufall(r);
       A[k] = { name: name(g, rasseVon[k]), nr, geschlecht: g, rasse: rasseVon[k], anteile: ant[k], farbe: farbeAus(gen[k], ex), grauHinweis: grauH(k), gen: gen[k], ex,
-        werte: { gang: gangNachGen({ ...w.gang }, gen[k], r), charakter: w.charakter }, sm: sm[k], geb: geb[k] };
+        werte: { gang: gangNachGen({ ...w.gang }, gen[k], r, rasseVon[k]), charakter: w.charakter }, sm: sm[k], geb: geb[k] };
     });
     p.ahnen = A;
     return A;
@@ -2240,7 +2244,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     }
     p.genFuer = p.farbe;
     p.grauHinweis = elternGrau(p);
-    p.werte = erzeugeWerte(p); p.werte.reinrassig = reinAnteil(p.anteile, p.rasse); gangNachGen(p.werte.gang, p.gen, r);
+    p.werte = erzeugeWerte(p); p.werte.reinrassig = reinAnteil(p.anteile, p.rasse); gangNachGen(p.werte.gang, p.gen, r, p.rasse);
     if (o.charakter) Object.assign(p.werte.charakter, o.charakter);   // Admin: Charakter selbst gewählt
     nrVon(p);
     p.alter = alterJahre(p); p.stockmass = Math.round(p.zielStockmass * wuchs(alterJZ(p) * 3));
@@ -2371,7 +2375,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   // Zuchtziel (Mitte) je Rassengruppe – Reihenfolge der Zahlen: rahmen, halsL, halsA, schulter, ruecken, kruppe, muskel, fundament, fessel, huf (Stellung vorne/hinten überall 50 = gerade)
   const BAU_GRUPPEN = { edel: [62, 62, 64, 62, 45, 62, 45, 42, 55, 50], warmblut: [55, 60, 58, 65, 55, 55, 55, 55, 55, 50], barock: [42, 55, 70, 55, 50, 38, 58, 55, 58, 50], western: [42, 42, 38, 58, 48, 45, 72, 55, 50, 50],
     kaltblut: [45, 42, 55, 48, 50, 40, 68, 72, 48, 55], cob: [38, 42, 52, 50, 48, 40, 62, 62, 48, 55], islaender: [42, 50, 58, 55, 50, 42, 60, 62, 48, 55], kleinpony: [38, 38, 50, 45, 48, 40, 60, 60, 45, 55] };
-  const BAU_GRUPPE = { araber: "edel", shagya: "edel", angloaraber: "edel", vollblut: "edel", tekke: "edel", marwari: "edel", hannoveraner: "warmblut", trakehner: "warmblut", friese: "barock", andalusier: "barock", lipizzaner: "barock", barockpinto: "barock", knabstrupper: "barock",
+  const BAU_GRUPPE = { traber: "warmblut", franztraber: "warmblut", standardbred: "warmblut", araber: "edel", shagya: "edel", angloaraber: "edel", vollblut: "edel", tekke: "edel", marwari: "edel", hannoveraner: "warmblut", trakehner: "warmblut", friese: "barock", andalusier: "barock", lipizzaner: "barock", barockpinto: "barock", knabstrupper: "barock",
     quarter: "western", paint: "western", appaloosa: "western", shire: "kaltblut", clydesdale: "kaltblut", noriker: "kaltblut", tinker: "cob", welshcob: "cob", fell: "cob", dales: "cob", haflinger: "cob", lewitzer: "cob", fjord: "cob", isi: "islaender", shetty: "kleinpony" };
   const BAU_EINZEL = { vollblut: { halsA: 50, halsL: 58, fundament: 45 }, araber: { ruecken: 38 }, friese: { fundament: 58, fessel: 60 }, andalusier: { muskel: 60 }, lipizzaner: { muskel: 60 }, quarter: { kruppe: 42 }, tinker: { fundament: 66 }, fell: { fundament: 66 }, dales: { fundament: 66 }, fjord: { halsL: 38 } };
   const bauKlemm = x => Math.max(0, Math.min(100, Math.round(x)));
@@ -2614,7 +2618,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     const gangKeys = [...new Set([...Object.keys(M.werte.gang || {}), ...Object.keys(V.werte.gang || {}), "schritt", "trab", "galopp"])];
     w.gang = {}; gangKeys.forEach(k => { const e = erben(M, V, x => x.werte && x.werte.gang ? x.werte.gang[k] : undefined, { halb: true, min: 4, max: 10, mut: 1.5 }); her.gang[k] = e; if (e.wert != null) w.gang[k] = e.wert; });
     ["schritt", "trab", "galopp"].forEach(k => { if (w.gang[k] == null) w.gang[k] = erzeugeWerte(f).gang[k]; });
-    gangNachGen(w.gang, fGen);   // Tölt/Pass nur mit dem Gangpferde-Gen
+    gangNachGen(w.gang, fGen, undefined, f.rasse);   // Tölt/Pass nur mit dem Gangpferde-Gen
     Object.keys(w.charakter).forEach(k => { const e = erben(M, V, x => x.werte && x.werte.charakter ? x.werte.charakter[k] : undefined, { min: 3, max: 97, mut: 20 }); her.charakter[k] = e; if (e.wert != null) w.charakter[k] = e.wert; });
     // Anlagen (körperliche und mentale Obergrenzen) nach demselben Schlüssel wie der Charakter
     her.anlage = {}; Object.keys(w.anlage).forEach(k => { const e = erben(M, V, x => x.werte && x.werte.anlage ? x.werte.anlage[k] : undefined, { min: 5, max: 100, mut: 12 }); her.anlage[k] = e; if (e.wert != null) w.anlage[k] = e.wert; });
@@ -2892,6 +2896,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     if (Math.random() >= ZWILLING.zweiLeben) { f2.todesursache = "Zwilling, tot geboren"; begraben(f2, `Box ${bnr(i)}`); spiel.friedhof[spiel.friedhof.length - 1].alter = "tot geboren";
       return `<br><br>⚠️ <b>Es waren Zwillinge:</b> Der zweite Zwilling (${esc(f2.name)}) kam tot zur Welt. ${esc(f.name)} ist schwach (Gesundheit ${f.pflege.gesundheit} %) – gut versorgen.`; }
     f2.pflege.gesundheit = 55 + Math.round(Math.random() * 15);
+    if (!b.fohlen2) { b.fohlen2 = f2; f2.waise = { art: "flasche", tag: spiel.tag }; return `<br><br>🍼🍼 <b>Zwillinge!</b> ${esc(p.name)} hat zwei lebende Fohlen bekommen – das ist sehr selten. Beide sind schwach und stehen bei der Mutter in Box ${bnr(i)}. Die Milch reicht nur für eines: <b>${esc(f2.name)}</b> bekommt zusätzlich die Flasche (${fmt(WAISE.flasche)} am Tag). In der ersten Woche brauchen Zwillinge Aufsicht – mit Nachtdienst (Pferdewirt) oder Abfohlbox geht es ihnen besser.`; }
     const zb = neuzugangBox(f2);
     if (zb < 0) { f2.todesursache = "Zwilling, zu schwach (keine Box frei)"; begraben(f2, `Box ${bnr(i)}`);
       return `<br><br>⚠️ <b>Es waren Zwillinge!</b> Der zweite Zwilling (${esc(f2.name)}) war sehr schwach – ohne freie Box zum Aufpäppeln hat er es nicht geschafft.`; }
@@ -3016,7 +3021,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     else wahl();
   }
   function fohlenUmstellen(box, frei) {
-    const f = box.fohlen; delete box.fohlen;
+    const f = box.fohlen; delete box.fohlen; fohlenNachruecken(box);
     const nb = spiel.boxen[frei];
     nb.pferd = { ...f, werte: f.werte || erzeugeWerte(f), pflege: f.pflege || erzeugePflege(f), maehneSeit: f.maehneSeit || spiel.tag, schopfSeit: f.schopfSeit || spiel.tag };
     ahnenFuellen(nb.pferd);
@@ -3195,7 +3200,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   }
   // ---------- R1 (PLAN-RARITAETEN.md, Dome 19.10.2026): Seltenheit für jedes Pferd ----------
   // Seltenheit = Wahrscheinlichkeit, dass ein zufälliges reinrassiges Pferd derselben Rasse dieses Merkmal hat. Gen-Rarität (Fellfarben-Gene) und Leistungs-Rarität (Rang in der Rasse), einzeln oder multipliziert.
-  const SELTEN_MERKMAL_RASSE = { araber: 0.1, friese: 0.01, marwari: 0.01, fjord: 0.02, haflinger: 0.1, shetty: 0.02, shire: 0.01, andalusier: 0.04, lipizzaner: 0.1, vollblut: 0.08, quarter: 0.01, hannoveraner: 0.01, isi: 0.01, tinker: 0.1, tekke: 0.03, trakehner: 0.01, welshcob: 0.02, clydesdale: 0.03, fell: 0.01, dales: 0.02, angloaraber: 0.03, shagya: 0.02, appaloosa: 0.02, knabstrupper: 0.03, paint: 0.01, noriker: 0.03, lewitzer: 0.02, barockpinto: 0.01 };   // Schwelle je Rasse (v559), Ziel etwa 4 % der Pferde je Rasse mind. selten; fehlt eine Rasse, gilt SELTEN_MERKMAL
+  const SELTEN_MERKMAL_RASSE = { traber: 0.03, franztraber: 0.03, standardbred: 0.03, araber: 0.1, friese: 0.01, marwari: 0.01, fjord: 0.02, haflinger: 0.1, shetty: 0.02, shire: 0.01, andalusier: 0.04, lipizzaner: 0.1, vollblut: 0.08, quarter: 0.01, hannoveraner: 0.01, isi: 0.01, tinker: 0.1, tekke: 0.03, trakehner: 0.01, welshcob: 0.02, clydesdale: 0.03, fell: 0.01, dales: 0.02, angloaraber: 0.03, shagya: 0.02, appaloosa: 0.02, knabstrupper: 0.03, paint: 0.01, noriker: 0.03, lewitzer: 0.02, barockpinto: 0.01 };   // Schwelle je Rasse (v559), Ziel etwa 4 % der Pferde je Rasse mind. selten; fehlt eine Rasse, gilt SELTEN_MERKMAL
   const SELTEN_MERKMAL = 0.07;   // Genotyp mit einer Häufigkeit darunter zählt als seltenes Merkmal. Abstimmung per Stichprobe (28 Rassen × 1.500 Pferde): 0,07 → je Rasse 1–18 % mit Gen-Seltenheit (ein einzelner Genotyp unter 5 % macht schon „selten“, darunter geht es nicht); bei 0,30 wären es bis zu 60 %
   const SELTEN_STUFEN = [null, { n: "selten", bis: 0.03 }, { n: "sehr selten", bis: 0.01 }, { n: "einzigartig", bis: 0.001 }, { n: "Ausnahmepferd", bis: 0.0001, faktor: 1.5 }, { n: "Jahrhundertpferd", bis: 0.00001, faktor: 2 }];
   const SELTEN_HINWEIS = "Seltenheit macht ein Pferd nur auf dem Raritäten-Markt mehr wert. Im normalen Pferdemarkt zählt sie nicht.";
@@ -3230,6 +3235,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     tinker: [5.5, 5.67, 6, 61.77, 62.62, 63.69],
     trakehner: [7.17, 7.33, 7.67, 73.92, 74.85, 75.92],
     vollblut: [6.83, 7, 7.33, 72.85, 73.69, 74.54],
+    traber: [7, 7.17, 7.5, 72.31, 73.15, 74.15], franztraber: [7.33, 7.5, 7.83, 72.85, 73.77, 74.85], standardbred: [7, 7.17, 7.5, 72.69, 73.62, 74.46],   // werkzeuge/seltenheit-schwellen.js, 15.11.2026
     welshcob: [6.67, 6.83, 7.17, 69.54, 70.38, 71.38]
   };
 
@@ -3513,7 +3519,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     const e = { pferd: p, ort, seit: spiel.tag };
     if (ort === "ausbildung") e.vorher = { training: p.training || 0, werte: ausbStand(p) };   // für den Ausbildungsbericht
     (spiel.extern = spiel.extern || []).push(e);
-    if (istFohlen) delete box.fohlen;
+    if (istFohlen) { delete box.fohlen; fohlenNachruecken(box); }
     else { box.pferd = null; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0; box.tot = false;
       if (p.traechtig) box.reserviert = p.id; }   // tragende Stute: ihre Box bleibt für die Rückkehr zum Abfohlen frei
     if (!p.pflege) p.pflege = erzeugePflege(p);
@@ -3677,7 +3683,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       spiel.boxen.forEach(b => { const p = b.pferd; if (!p) return;
         if (fremd(p)) { const e = einstellerVon(p); if (e) { einstellerListe().splice(einstellerListe().indexOf(e), 1); brief(eName(e), `${p.name}: Vertrag beendet`, `ich habe gehört, dass {dir|Ihnen} die Tierhaltung verboten wurde. Ich habe <b>${esc(p.name)}</b> abgeholt – unser Vertrag ist beendet.`, { w: e.w }); } }
         else { pferde++; prot("Pferd fortgenommen", { p }); archivieren(p); if (b.fohlen) { pferde++; archivieren(b.fohlen); } }
-        b.pferd = null; delete b.fohlen; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; b.tot = false; });
+        b.pferd = null; delete b.fohlen; delete b.fohlen2; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; b.tot = false; });
       (spiel.extern || []).forEach(e => { pferde++; prot("Pferd fortgenommen", { p: e.pferd }); archivieren(e.pferd); }); spiel.extern = []; spiel.angebote = []; spiel.tierschutz = [];
       chronikHof("verloren", hofName());
     });
@@ -3703,7 +3709,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       else if (f) { f.pflege = f.pflege || erzeugePflege(f); spiel.tierschutz.push({ pferd: f, frist: jzJetzt() + 2, preis: tierschutzPreis(f) }); }
       (spiel.tierschutz = spiel.tierschutz || []).push(t); weg.push(`${esc(p.name)}${f ? ` mit Fohlen ${esc(f.name)}` : ""} (Box ${bnr(i)})`);
       spiel.angebote = (spiel.angebote || []).filter(a => a.id !== p.id);
-      b.pferd = null; delete b.fohlen; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; b.tot = false;
+      b.pferd = null; delete b.fohlen; delete b.fohlen2; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; b.tot = false;
     });
     vetVorfall("tod", `${tote.join(", ")} ${tote.length === 1 ? "ist" : "sind"} gestorben – zu lange zu wenig Futter, Pflege oder tierärztliche Behandlung${weg.length ? `; beschlagnahmt: ${weg.map(x => x.replace(/<[^>]*>/g, "")).join(", ")}` : ""}`);
     if (weg.length) brief("Tierschutzverein", `Pferde beschlagnahmt`, `Wegen der Vernachlässigung bei {dir|Ihnen} waren weitere Pferde in einem sehr schlechten Zustand. Wir haben sie <b>beschlagnahmt</b>: ${weg.join(", ")}. Sie kommen zuerst in die Klinik, bis sie wieder so gesund sind, wie Alter und Krankheit es zulassen. Danach {kannst du|können Sie} sie im Pferdemarkt unter „Tierschutz“ zurückkaufen – für den halben Marktwert plus die Klinikkosten.`);
@@ -4286,7 +4292,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   function tierschutzRueckgabe(p, nachher) {
     const box = boxVon(p); if (!box) return;
     dialog(`<h3>🐾 ${esc(p.name)} zurückgeben?</h3><p>${esc(p.name)} ist ein Notfallpferd. Laut Vertrag darf ${pron(p).er} bis ${jzName(p.schutzBis)} nicht verkauft werden. Du kannst ${pron(p).ihn} aber an den Tierschutz zurückgeben – die Schutzgebühr wird nicht erstattet.</p>`,
-      [["Zurückgeben", () => { prot("Abgabe: Tierschutz", { p }); archivieren(p); if (box.fohlen) { archivieren(box.fohlen); delete box.fohlen; }
+      [["Zurückgeben", () => { prot("Abgabe: Tierschutz", { p }); archivieren(p); if (box.fohlen) { archivieren(box.fohlen); delete box.fohlen; } if (box.fohlen2) { archivieren(box.fohlen2); delete box.fohlen2; }
         box.pferd = null; box.tot = false; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0;
         ruf("Tierschutzverein", -5);
         brief("Tierschutzverein", `${p.name} ist zurück bei uns`, `{du hast|Sie haben} <b>${esc(p.name)}</b> an uns zurückgegeben. Wir kümmern uns jetzt wieder um ${pron(p).ihn}. Die Schutzgebühr wird laut Vertrag nicht erstattet.`, { pferde: [p] });
@@ -4339,7 +4345,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
         buchen(preis, `Verkauf: ${p.name}`); archivieren(p); prot(a.art === "auktion" ? "Verkauf (Auktion)" : "Verkauf (Festpreis)", { p, b: preis });   // S4
         // Fohlen bei Fuß geht mit der Mutter (auch wenn es inzwischen in eine eigene Box umgezogen ist)
         let fohlenName = "";
-        if (b.fohlen) { fohlenName = b.fohlen.name; archivieren(b.fohlen); delete b.fohlen; }
+        if (b.fohlen) { fohlenName = b.fohlen.name; archivieren(b.fohlen); delete b.fohlen; } if (b.fohlen2) { archivieren(b.fohlen2); delete b.fohlen2; }
         else if (a.fohlenId) { const fb2 = spiel.boxen.find(x => x.pferd && x.pferd.id === a.fohlenId); if (fb2) { fohlenName = fb2.pferd.name; archivieren(fb2.pferd); fb2.pferd = null; fb2.krippeVoll = false; fb2.mistig = false; fb2.mistStufe = 0; } }
         if (p.schutzBis && jetzt < p.schutzBis) { buchen(-NOTFALL_STRAFE, `Strafe Tierschutz: ${p.name}`); ruf("Tierschutzverein", -5); brief("Tierschutzverein", `Strafe: ${p.name} verkauft`, `<b>${esc(p.name)}</b> war ein Notfallpferd und hätte mindestens ein Jahr bei {dir|Ihnen} bleiben müssen. Für den vorzeitigen Verkauf wurden <b>${fmt(NOTFALL_STRAFE)}</b> Strafe abgebucht.`); }
         b.pferd = null; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; b.tot = false;
@@ -4578,7 +4584,8 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       brief("Hofverwaltung", `${p.name}: zurück in eine normale Box`, `<b>${esc(p.name)}</b> hat kein Fohlen mehr bei sich und ist aus der Abfohlbox in Box ${bnr(z)} umgezogen – die Abfohlbox ist wieder frei.`, { pferde: [p] }); });
   }
   // v418 (Dome): Fohlen ab 2 Jahreszeiten ziehen in eine eigene Box – erst am Ende des Jahreszeit-Wechsels, damit Boxen, die dabei frei werden (Pension, Verkauf), noch zählen
-  function fohlenAbsetzen() {
+  function fohlenAbsetzen() { fohlenAbsetzen0(); if (spiel.boxen.some(b => b.fohlen2 === undefined && b.fohlenNach)) fohlenAbsetzen0(); spiel.boxen.forEach(b => delete b.fohlenNach); }
+  function fohlenAbsetzen0() {
     const jetzt = jzJetzt();
     spiel.boxen.forEach(b => {
       const f = b.fohlen; if (!f) return;
@@ -4601,7 +4608,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       if (a === 2 && !f.tsHinweis) { f.tsHinweis = true; brief("Tierschutzverein", `Hinweis zu ${f.name}`, `uns wurde mitgeteilt, dass das Fohlen <b>${esc(f.name)}</b> keine eigene Box hat. Bekommt ${pr.er} nicht in dieser oder der nächsten Jahreszeit eine eigene Box, werden wir ${pr.ihn} abholen.`); }
       else if (a === 3) brief("Tierschutzverein", `Letzte Warnung: ${f.name}`, `<b>${esc(f.name)}</b> hat immer noch keine eigene Box. Bis zum Ende dieser Jahreszeit muss eine Box bereitstehen, sonst holen wir ${pr.ihn} ab.`);
       else {
-        delete b.fohlen;
+        delete b.fohlen; fohlenNachruecken(b);
         const pf = { ...f, werte: f.werte || erzeugeWerte(f), pflege: erzeugePflege(f) };
         spiel.tierschutz.push({ pferd: pf, frist: jetzt + 2, preis: tierschutzPreis(pf) });
         ruf("Tierschutzverein", -5); vetVorfall("fohlen", `das Fohlen ${f.name} hatte keine eigene Box und wurde vom Tierschutz abgeholt`);
@@ -4815,6 +4822,10 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       const fs = f.stockmass * STALL.cmZuEinheit / 100, fcx = (fz.box.minX + fz.box.maxX) / 2, fx = STALL.mitte - 34;
       fohlenSVG = `<g transform="translate(${(fx + fcx * fs).toFixed(1)},${STALL.boden + 10}) scale(${(-fs).toFixed(4)},${fs.toFixed(4)})">${anim(fz.svg)}</g>`;
     }
+    const f2 = B().fohlen2;   // zweites Fohlen (Zwilling/Leihmutter): steht auf der anderen Seite, Blick nach links
+    if (f2) { const fz2 = zeichnePferd(f2.rasse, fb(f2), { alterStufe: stufeKey(f2), seed: f2.id, geschlecht: f2.geschlecht, maehne: f2.maehne, schopf: f2.schopf, haltung: fohlenLiegt(f2) ? "liegend" : "normal", ...kopfOpt(f2) });
+      const fs2 = f2.stockmass * STALL.cmZuEinheit / 100, fcx2 = (fz2.box.minX + fz2.box.maxX) / 2, fx2 = STALL.mitte + 44;
+      fohlenSVG += `<g transform="translate(${(fx2 - fcx2 * fs2).toFixed(1)},${STALL.boden + 12}) scale(${fs2.toFixed(4)},${fs2.toFixed(4)})">${anim(fz2.svg)}</g>`; }
     // Fellwechsel: beim ersten Anblick nach dem Wechsel (Sommerfell, Herbst, Winterfell) kurz eine Sprechblase
     const fellText = tot ? "" : fellwechsel(p);
     const blase = fellText ? (() => { let by = STALL.boden + z.box.minY * s - 30, bx = STALL.mitte, tx = bx; const bw = 96;
@@ -5077,6 +5088,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
             return `<li><span class="ico">🥕</span><span class="txt">Leckerli<small>${p.bettelt ? "⚠️ bettelt und schnappt – ein paar Tage höchstens 3" : "bis 3 am Tag stärken das Vertrauen"} ${["moehren", "leckerli"].map(k => `<button class="mini-knopf" data-leck="${k}" ${(F.lager[k] || 0) + 1e-9 < LECK_STUECK[k] ? "disabled" : ""}>${FUTTER[k].ico} ${k === "moehren" ? "Möhre" : "Leckerli"}</button>`).join(" ")}${(F.lager.moehren || 0) < 0.1 && (F.lager.leckerli || 0) < 0.01 ? " <i>(Futterkammer: keine vorrätig)</i>" : ""}</small></span><span class="stat ${L > 3 ? "warn" : "ok"}">heute ${L}</span></li>`; })()}
           ${boxFensterAn() ? "" : `          <li><span class="ico">💧</span><span class="txt">Wasser<small>Selbsttränke</small></span><span class="stat ok">frisch</span></li>`}
           ${box.fohlen ? (() => { const fg = box.fohlen.pflege ? box.fohlen.pflege.gesundheit : 100; return `<li><span class="ico">🍼</span><span class="txt">Fohlen ${esc(box.fohlen.name)}<small>wird mit der Mutter versorgt</small></span><span class="stat ${fg >= 65 ? "ok" : fg >= 45 ? "warn" : "bad"}">${fg.toLocaleString("de-DE", { maximumFractionDigits: 1 })} %</span></li>`; })() : ""}
+          ${box.fohlen2 ? (() => { const f2 = box.fohlen2, fg = f2.pflege ? f2.pflege.gesundheit : 100, W = f2.waise || {}; return `<li><span class="ico">🍼</span><span class="txt">${f2.zwilling ? "Zwilling" : "Zweites Fohlen"} ${esc(f2.name)}<small>${W.art === "leihmutter" ? "trinkt bei der Leihmutter mit" : alterJZ(f2) >= 2 ? "frisst schon allein" : `die Milch reicht nur für eines – Flasche ${fmt(WAISE.flasche)} am Tag`}</small></span><span class="stat ${fg >= 65 ? "ok" : fg >= 45 ? "warn" : "bad"}">${fg.toLocaleString("de-DE", { maximumFractionDigits: 1 })} %</span></li>`; })() : ""}
           ${boxFensterAn() ? "" : `          ${befundZeilen(p)}`}
           ${boxFensterAn() ? "" : `          <li><span class="ico">🧹</span><span class="txt">Boxenhygiene<small>${box.ohneEinstreu ? "⚠️ keine Einstreu" : EINSTREU[box.einstreu] ? `Einstreu: ${FUTTER[box.einstreu].n}` : "noch nicht eingestreut"}</small></span><span class="stat ${box.mistig ? "warn" : "ok"}">${box.mistig ? "ausmisten" : "sauber"}</span></li>
           ${(() => { const d = p.dreck || {}, sf = dreckStufe(d.fell), sm = dreckStufe(d.maehne);
@@ -5343,7 +5355,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     const abk = $("abgebenKnopf"); if (abk) abk.onclick = () => abgebenDialog(p, () => { zeigeStall(); zeigeTag(); });
     const entK = $("entfernenKnopf"); if (entK) entK.onclick = () => {   // Adminmodus: Pferd (mit Fohlen bei Fuß) ohne Geld und Brief aus der Box nehmen
       spiel.angebote = (spiel.angebote || []).filter(x => x.id !== p.id);
-      box.pferd = null; delete box.fohlen; box.tot = false; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0;
+      box.pferd = null; delete box.fohlen; delete box.fohlen2; box.tot = false; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0;
       speichern(); zeigeStall(); zeigeTag(); };
     const azk = $("angebotZurueck"); if (azk) azk.onclick = () => angebotZurueckziehen(p, () => zeigeAkte());
     // ---------- Karte Ort ----------
@@ -5556,7 +5568,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
 
   // Rassen stehen jetzt als erster Reiter in der Enzyklopädie
   // ---------- v455 (Dome): Rassen nach Kontinent sortieren (Enzyklopädie, Pferdemarkt, Deckanzeigen) – Umschalter „Alle / Nach Kontinent“, Kontinente A–Z ----------
-  const KONTINENT = { araber: "Asien", marwari: "Asien", tekke: "Asien", quarter: "Nordamerika", appaloosa: "Nordamerika", paint: "Nordamerika" };   // alle anderen Rassen: Europa (nach Herkunft)
+  const KONTINENT = { standardbred: "Nordamerika", araber: "Asien", marwari: "Asien", tekke: "Asien", quarter: "Nordamerika", appaloosa: "Nordamerika", paint: "Nordamerika" };   // alle anderen Rassen: Europa (nach Herkunft)
   const kontinentVon = id => KONTINENT[id] || "Europa";
   // v462 (Dome): statt „Nach Kontinent“ direkt die Kontinente als Knöpfe (A–Z, nur die in dieser Liste vorkommen) – ein Knopf zeigt nur dessen Rassen
   const sortSegment = konts => `<div class="segment sort-seg" data-sortseg><button data-sort="" class="${konts.includes(spiel.sortKont) ? "" : "an"}">Alle</button>${konts.map(k => `<button data-sort="${k}" class="${spiel.sortKont === k ? "an" : ""}">${k}</button>`).join("")}</div>`;
@@ -7003,8 +7015,27 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   }
   // Waisenfohlen (Dome): Flasche, Aufzuchtstation – Leihmutter folgt (eine Box hat nur Platz für ein Fohlen bei Fuß)
   const WAISE = { flasche: 6, hunger: 15, wohl: 10, amme: 1200, annehmen: 0.8 };   // Ammenstute: Miete bis zum Absetzen inkl. Futter · Leihmutter nimmt das Fohlen mit 80 % an
-  const leihmuetter = p => spiel.boxen.filter(b => b.pferd && !b.tot && b.pferd !== p && b.fohlen && alterJZ(b.fohlen) < 2 && !fremd(b.pferd) && !b.pferd.klinik).map(b => b.pferd);
+  const leihmuetter = p => spiel.boxen.filter(b => b.pferd && !b.tot && b.pferd !== p && b.fohlen && !b.fohlen2 && alterJZ(b.fohlen) < 2 && !fremd(b.pferd) && !b.pferd.klinik).map(b => b.pferd);
+  // ---------- Zwei Fohlen in einer Box (Auftrag 12, Dome 14.11.2026: „ja“): Zwillinge und Leihmutter-Fohlen stehen wirklich bei der Mutter (b.fohlen2) ----------
+  // Die Milch reicht nur für eines: das zweite trinkt die Flasche (WAISE.flasche) bzw. bei der Leihmutter mit. Zählt als eine Box (selbst gesetzt).
+  function fohlenNachruecken(b) { if (b && !b.fohlen && b.fohlen2) { b.fohlen = b.fohlen2; delete b.fohlen2; b.fohlenNach = true; if (b.fohlen.waise && b.fohlen.waise.art === "flasche" && b.pferd && !b.tot) delete b.fohlen.waise; } }
+  function zweitFohlenEigeneBox(f, alt) {
+    const zb = neuzugangBox(f); f.pflege = f.pflege || erzeugePflege(f); f.werte = f.werte || erzeugeWerte(f);
+    if (zb >= 0) { const nb = spiel.boxen[zb]; nb.pferd = f; nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false; if (alterJZ(f) < 2) f.waise = f.waise && f.waise.art === "flasche" ? f.waise : { tag: spiel.tag }; else delete f.waise;
+      brief("Tierarztpraxis", `${f.name} hat eine eigene Box`, `${esc(f.name)} steht jetzt in Box ${bnr(zb)}${f.waise && !f.waise.art ? " und braucht Milch (Box – Pferdepflege – Versorgung)" : ""}.`, { pferde: [f] }); return; }
+    if (alt) { alt.fohlen2 = f; }   // keine freie Box: bleibt beim Geschwister
+  }
+  function zweitFohlenNacht() {
+    spiel.boxen.forEach(b => { const f = b.fohlen2; if (!f || b.tot) return; if (!b.pferd) { delete b.fohlen2; zweitFohlenEigeneBox(f, null); return; }
+      if (!b.fohlen) { fohlenNachruecken(b); return; }
+      f.pflege = f.pflege || erzeugePflege(f); werteErgaenzen(f);
+      if (alterJZ(f) >= 2) { delete f.waise; return; }
+      const W = f.waise || {}; if (W.art === "flasche" || !W.art) { buchen(-WAISE.flasche, "Futter"); wertPlus(f, "vertrauen", 0.3); } else sozialPlus(f, 1);
+      if (f.zwilling && spiel.tag - (f.gebTag || 0) < Math.round(7 * tpj() / 91) + 1 && !b.abfohl && !aktive("pferdewirt").length && Math.random() < 0.15) { f.pflege.gesundheit = Math.max(1, r2(f.pflege.gesundheit - 10)); }   // erste Woche ohne Aufsicht: schwache Zwillinge (selbst gesetzt)
+    });
+  }
   function waiseNacht() {
+    try { zweitFohlenNacht(); } catch (e) { console.error("Zweites Fohlen:", e); }
     spiel.boxen.forEach(b => { const p = b.pferd; if (!p || !p.waise || b.tot) return;
       if (alterJZ(p) >= 2) { delete p.waise; return; }   // im Absetzalter: frisst jetzt allein
       if (p.waise.art === "flasche") { buchen(-WAISE.flasche, "Futter"); werteErgaenzen(p); wertPlus(p, "vertrauen", 0.3); return; }   // Flaschenfohlen hängen sehr am Menschen
@@ -7034,7 +7065,9 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     else if (w === "amme") { if (!spiel.admin && geldFrei() < WAISE.amme) { dialog(`<h3>Zu wenig Geld</h3>${dispoHinweis()}<p>Die Ammenstute kostet ${fmt(WAISE.amme)}.</p>`); return; } if (!spiel.admin) buchen(-WAISE.amme, `Ammenstute: ${p.name}`); p.waise.art = "amme"; }
     else if (w.startsWith("lm:")) { const M = leihmuetter(p).find(q => q.id === w.slice(3)); if (!M) return;
       if (Math.random() > WAISE.annehmen) { p.waise.versucht = (p.waise.versucht || []).concat(M.id); dialog(`<h3>🐴 Nicht angenommen</h3><p><b>${esc(M.name)}</b> lässt ${esc(p.name)} nicht trinken und drängt das Fohlen weg. Das kommt vor – eine andere Lösung wählen.</p>`); speichern(); zeigeStall(); zeigeTag(); return; }
-      p.waise.art = "leihmutter"; p.waise.mid = M.id; dialog(`<h3>🐴 Angenommen!</h3><p><b>${esc(M.name)}</b> hat ${esc(p.name)} angenommen und säugt jetzt zwei Fohlen.</p>`); }
+      p.waise.art = "leihmutter"; p.waise.mid = M.id; const MB = spiel.boxen.find(x => x.pferd === M);
+      if (MB && !MB.fohlen2) { MB.fohlen2 = p; box.pferd = null; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0; aktBox = spiel.boxen.indexOf(MB); spiel.aktBox = aktBox; }   // zieht wirklich zur Leihmutter, die eigene Box wird frei
+      dialog(`<h3>🐴 Angenommen!</h3><p><b>${esc(M.name)}</b> hat ${esc(p.name)} angenommen und säugt jetzt zwei Fohlen${MB && MB.fohlen2 === p ? ` – ${esc(p.name)} ist zu ihr in Box ${bnr(spiel.boxen.indexOf(MB))} gezogen` : ""}.</p>`); }
     else { delete p.waise; ANH_ZIEL.aufzucht.aus(p, box, false); }
     speichern(); zeigeStall(); zeigeTag(); });
   function tote() {
@@ -7044,7 +7077,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     spiel.boxen.forEach((b, i) => {
       const f = b.fohlen; if (!f || !f.lethalWhite || spiel.tag < (f.lwTag || 0)) return;
       f.todesursache = "Lethal-White-Overo-Syndrom (Erbkrankheit, O/O)";
-      begraben(f, `Box ${bnr(i)}`); spiel.friedhof[spiel.friedhof.length - 1].alter = "1 Tag"; delete b.fohlen;
+      begraben(f, `Box ${bnr(i)}`); spiel.friedhof[spiel.friedhof.length - 1].alter = "1 Tag"; delete b.fohlen; fohlenNachruecken(b);
       const M = b.pferd, V = f.ahnen && f.ahnen.vater;
       brief("Tierarztpraxis", `Abschied von ${f.name}`, `es tut uns sehr leid: Das Fohlen <b>${esc(f.name)}</b> (Box ${bnr(i)}) ist gestorben.
         <br><br><b>Todesursache:</b> Lethal-White-Overo-Syndrom (LWOS). Beide Eltern${M && V ? ` (${esc(M.name)} und ${esc(V.name)})` : ""} tragen das Overo-Gen, ${esc(f.name)} hat es von beiden geerbt (O/O). Solchen Fohlen fehlen Nervenzellen im Darm – der Darm kann nicht arbeiten, es kommt zu schweren Koliken. Die Krankheit ist nicht heilbar; wir haben ${pron(f).ihn} erlöst, damit ${pron(f).er} nicht leiden musste.
@@ -7054,7 +7087,8 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       if (!b.tot || !b.pferd) return;
       begraben(b.pferd, `Box ${bnr(i)}`);
       spiel.angebote = (spiel.angebote || []).filter(x => x.id !== b.pferd.id);
-      const f = b.fohlen, M = b.pferd, vernachl = /Entkräftung|unbehandelt/.test(M.todesursache || ""); delete b.fohlen;
+      const f = b.fohlen, M = b.pferd, vernachl = /Entkräftung|unbehandelt/.test(M.todesursache || ""), f2 = b.fohlen2; delete b.fohlen; delete b.fohlen2;
+      if (f2) zweitFohlenEigeneBox(f2, b);   // zwei Fohlen in einer Box
       b.pferd = null; b.tot = false; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0;
       if (!f) return;
       // Dome: Tod durch Vernachlässigung → der Tierschutz nimmt das Fohlen mit
@@ -7762,7 +7796,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   }
   // ---------- Behandlung und Stallapotheke (Etappe D) ----------
   // Gewicht aus Stockmaß und Körperbau (kg ≈ k × Stockmaß³ ÷ 10 000), angezeigt als „ca.“ mit etwas Schätzfehler
-  const BAU = { shetty: 1.55, fjord: 1.55, haflinger: 1.55, isi: 1.55, shire: 1.55, tinker: 1.5, friese: 1.4, quarter: 1.45, marwari: 1.15, araber: 1.3, andalusier: 1.35, lipizzaner: 1.4, hannoveraner: 1.3, vollblut: 1.15, tekke: 1.1, trakehner: 1.25, welshcob: 1.5, clydesdale: 1.5, fell: 1.55, dales: 1.55, angloaraber: 1.2, shagya: 1.28, appaloosa: 1.42, paint: 1.45, knabstrupper: 1.32, noriker: 1.55, lewitzer: 1.45, barockpinto: 1.4 };   // v316, v442
+  const BAU = { traber: 1.2, franztraber: 1.25, standardbred: 1.22, shetty: 1.55, fjord: 1.55, haflinger: 1.55, isi: 1.55, shire: 1.55, tinker: 1.5, friese: 1.4, quarter: 1.45, marwari: 1.15, araber: 1.3, andalusier: 1.35, lipizzaner: 1.4, hannoveraner: 1.3, vollblut: 1.15, tekke: 1.1, trakehner: 1.25, welshcob: 1.5, clydesdale: 1.5, fell: 1.55, dales: 1.55, angloaraber: 1.2, shagya: 1.28, appaloosa: 1.42, paint: 1.45, knabstrupper: 1.32, noriker: 1.55, lewitzer: 1.45, barockpinto: 1.4 };   // v316, v442
   const gewicht = p => Math.round((BAU[p.rasse] || 1.35) * Math.pow(p.stockmass || 150, 3) / 10000 * (0.95 + zufall("kg-" + p.id)() * 0.1) * (1 + 0.03 * ((p.fz || 5) - 5)));   // Futterzustand: ±3 % je Stufe
   const gewichtAnzeige = p => Math.round(gewicht(p) * (0.96 + zufall("kgs-" + p.id)() * 0.08) / 10) * 10;
   const DOSIS = [[300, "bis 300 kg"], [450, "301–450 kg"], [550, "451–550 kg"], [700, "551–700 kg"], [Infinity, "über 700 kg"]];   // Dome: Grenzen eindeutig; Dosis nach dem angezeigten (geschätzten) Gewicht
@@ -7951,7 +7985,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   }
   // ---------- Hufe und Hufschmied (Etappe E) ----------
   // Hufqualität 5–100 (vererbt, Rasse wirkt mit; nur Admin sieht sie): instabil unter 35, stabil ab 65 · Hufwachstum langsam/normal/schnell (vererbt)
-  const HUF_RASSE = { fjord: 72, haflinger: 70, isi: 75, shetty: 75, tinker: 65, marwari: 62, araber: 60, tekke: 58, quarter: 55, andalusier: 52, lipizzaner: 55, friese: 42, shire: 45, hannoveraner: 48, vollblut: 30, trakehner: 50, welshcob: 72, clydesdale: 48, fell: 80, dales: 80, angloaraber: 45, shagya: 62, appaloosa: 72, paint: 55, knabstrupper: 60, noriker: 68, lewitzer: 72, barockpinto: 45 };   // v316 · v442: Appaloosas sind für harte, gestreifte Hufe bekannt
+  const HUF_RASSE = { traber: 60, franztraber: 58, standardbred: 62, fjord: 72, haflinger: 70, isi: 75, shetty: 75, tinker: 65, marwari: 62, araber: 60, tekke: 58, quarter: 55, andalusier: 52, lipizzaner: 55, friese: 42, shire: 45, hannoveraner: 48, vollblut: 30, trakehner: 50, welshcob: 72, clydesdale: 48, fell: 80, dales: 80, angloaraber: 45, shagya: 62, appaloosa: 72, paint: 55, knabstrupper: 60, noriker: 68, lewitzer: 72, barockpinto: 45 };   // v316 · v442: Appaloosas sind für harte, gestreifte Hufe bekannt
   const HUF_WACHS = { langsam: 2, normal: 1, schnell: 0.5 };   // Hufschmied alle … Jahreszeiten
   const HUF_PREIS = { barhuf: 30, beschlag: 100, eisen: 40, anfahrt: 20 };
   // Hufschuhe: je Pferd ein Paar vorne und/oder hinten
@@ -8555,7 +8589,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     // Dome (v323): wie in echt – Sommerekzem, OCD und empfindliche Atemwege kommen in allen Rassen vor (unterschiedlich oft); Kehlkopfpfeifen nur bei großen Pferden (Ponys praktisch nie), Lymphödem (CPL) nur bei Kaltblütern/Cobs mit Fesselbehang
     ekzem: { n: "Sommerekzem", rassen: { isi: 0.6, tinker: 0.5, barockpinto: 0.4, lewitzer: 0.25, noriker: 0.15, haflinger: 0.45, welshcob: 0.4, fell: 0.35, dales: 0.35, friese: 0.35, shetty: 0.3, fjord: 0.25, shagya: 0.15 }, sonst: 0.08 },
     pfeifen: { n: "Kehlkopfpfeifen", rassen: { noriker: 0.2, barockpinto: 0.1, lewitzer: 0, vollblut: 0.35, hannoveraner: 0.3, trakehner: 0.2, angloaraber: 0.25, clydesdale: 0.3, shire: 0.3, friese: 0.1, tinker: 0.08, araber: 0.02, shagya: 0.03, shetty: 0, isi: 0, fjord: 0, haflinger: 0, welshcob: 0, fell: 0, dales: 0 }, sonst: 0.05 },
-    ocd: { n: "OCD/Chips", rassen: { hannoveraner: 0.3, vollblut: 0.25, quarter: 0.2, trakehner: 0.25, angloaraber: 0.2, friese: 0.25, andalusier: 0.15, lipizzaner: 0.12, shetty: 0.03, isi: 0.03, fell: 0.04, dales: 0.04 }, sonst: 0.08 },
+    ocd: { n: "OCD/Chips", rassen: { traber: 0.2, franztraber: 0.25, standardbred: 0.2, hannoveraner: 0.3, vollblut: 0.25, quarter: 0.2, trakehner: 0.25, angloaraber: 0.2, friese: 0.25, andalusier: 0.15, lipizzaner: 0.12, shetty: 0.03, isi: 0.03, fell: 0.04, dales: 0.04 }, sonst: 0.08 },
     atem: { n: "Empfindliche Atemwege", rassen: { lipizzaner: 0.3, hannoveraner: 0.25, friese: 0.25, andalusier: 0.2, trakehner: 0.2 }, sonst: 0.12 },
     eru: { n: "Mondblindheit (ERU)", rassen: { appaloosa: 0.45, knabstrupper: 0.4, isi: 0.15, noriker: 0.1 }, sonst: 0.06 },   // v442: häufigste Augenkrankheit, Tigerpferde mit vielfachem Risiko
     lymph: { n: "Lymphödem (CPL)", rassen: { barockpinto: 0.18, noriker: 0.15, lewitzer: 0, clydesdale: 0.45, shire: 0.4, tinker: 0.25, friese: 0.15, fell: 0.08, dales: 0.08, welshcob: 0.05 }, sonst: 0 } };   // v316: chronisch progressives Lymphödem der Kaltblüter mit Fesselbehang → Mauke
@@ -8672,6 +8706,8 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   UEBUNG.galopptraining.skN = { galopp: { 2: .7, 4: .6 } };
   UEBUNG.passtraining.skN = { pass: { 1: .8, 2: .6, 3: .5 } }; UEBUNG.dressur.skN = { pass: { 0: .3 } };
   ["bodenarbeit", "longieren", "spazieren"].forEach(k => UEBUNG[k].skN = { galopp: { 0: .5 } });
+  UEBUNG.trabtraining = { n: "Trab\u00adtraining", ico: "🏁", wo: "bahn", ab: 6, e: 34, vl: "gelaende", nurRasse: p => SKALEN_N.trab.nur(p), nurTxt: "nur für Traber", skN: { trab: { 0: .8, 1: .7, 2: .7, 3: .6 } }, w: { beschleunigung: 1, ausdauer: .8, kraft: .4, regeneration: .3 }, gangP: .02, info: "Gewöhnen, Einfahren, Joggen und Tempoarbeit vor dem Sulky" };
+  UEBUNG.trabquali = { n: "Qualifika\u00adtions\u00adlauf", ico: "⏱️", wo: "bahn", ab: 8, e: 30, vl: "gelaende", nurRasse: p => SKALEN_N.trab.nur(p), nurTxt: "nur für Traber", skN: { trab: { 4: 1 } }, w: { beschleunigung: .5, gehorsam: .4, konzentration: .4 }, info: "Probelauf über 1.000 m – Pflicht vor dem ersten Trabrennen (HVT: schneller als 1:25,0 je km)" };
   UEBUNG.startmaschine = { n: "Start\u00admaschine", ico: "🚪", wo: "bahn", ab: 6, e: 14, vl: "gelaende", nurRasse: p => SKALEN_N.galopp.nur(p), skN: { galopp: { 3: 1 } }, w: { vertrauen: .6, gehorsam: .5, reaktion: .4 }, info: "ruhig in der Startbox stehen und herausspringen – Pflicht vor dem ersten Rennen" };
   UEBUNG.anreiten = { n: "Anreiten", ico: "🐴", wo: "boden", ab: 12, e: 20, vl: "longieren", w: { vertrauen: .8, gehorsam: .6 }, info: "Sattel, Trense und das erste Aufsitzen – das junge Pferd gewöhnt sich an den Reiter" };
   UEBUNG.einreiten = { n: "Einreiten", ico: "🏇", wo: "platz", ab: 12, e: 22, vl: "dressur", reiten: true, sk: { 0: .4, 1: .3 }, w: { gehorsam: .7, konzentration: .4 }, info: "kurze Reitphasen: das Pferd lernt Schenkel-, Zügel- und Gewichtshilfen" };
@@ -8753,17 +8789,22 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   };
   // Trabrennen (vorbereitet, erst mit der Rasse Traber): Gewöhnen → Einfahren → Joggen → Tempoarbeit → Qualifikation (HVT: schneller als 1:25,0 je km, nach 6 Monaten ohne Rennen neu)
   const TRAB_STUFEN = ["Gewöhnen", "Einfahren", "Joggen", "Tempoarbeit", "Qualifikation"], TRAB_QUALI = { kmZeit: 85, neuNachJz: 2, ab: 8 };
+  SKALEN_N.trab = { feld: "skalaT", n: "Traber-Ausbildung (HVT)", stufen: TRAB_STUFEN, von: "gelaende", exp: true, nur: p => TRABER.includes(p.rasse) };
   const SKALA_N_INFO = {
     western: ["gleichmäßiger Takt in allen Gangarten", "das Pferd gibt im Genick und Körper nach, ohne Spannung", "die Hinterbeine treten aktiv unter den Körper", "Vor- und Hinterhand laufen auf einer Linie", "feinste Hilfen genügen – Stopps, Wendungen, Rückwärts", "das Pferd trägt sich selbst im Gleichgewicht"],
     springen: ["Trab- und Galoppstangen, kleine Cavaletti – Takt und Auge", "Reihen aus kleinen Sprüngen – Technik und Kraft", "einzelne Sprünge aus dem Galopp", "Abstände und Kombinationen reiten", "ein ganzer Parcours"],
     distanz: ["lange, ruhige Arbeit in Schritt, Trab und Galopp", "längere Strecken, erste Tempowechsel", "Intervall- und Tempoarbeit"],
     galopp: ["Trense und Gurt, Führen, Longe, Anhänger – als Jährling", "Sattel und Reiter (Anreiten und Einreiten)", "Schritt, Trab, kurzer Canter", "ruhig in der Startbox stehen und herausspringen", "schnelle Arbeit auf der Bahn"],
+    trab: ["Geschirr, Fahrleinen und Sulky kennenlernen", "vor dem Sulky gehen und lenken lassen", "lange, ruhige Trabstrecken (Jogging)", "schnelle Stücke auf der Bahn", "Qualifikationsrennen: 1.000 m schneller als 1:25,0 je km"],
     pass: ["Muskeln und Gleichgewicht durch Flachwerk", "kurze Pass-Stücke", "längere Strecken im sauberen Pass", "Pass im Renntempo"],
   };
   // Anreiten (an den Reiter gewöhnen) und Einreiten (an die Hilfen gewöhnen) – viele benutzen beide Wörter gleich; Dome hat die Unterscheidung gewählt.
   // Alter: Vollblüter ab 1,5 Jahren (Galopper mit etwa 18 Monaten), alle anderen ab 3 Jahren (FN). Dauer je etwa 1 Jahreszeit bei Tempo 7 (selbst gesetzt, mit tpj umgerechnet).
-  const EINREIT_LEICHT = ["dressur", "ausritt"];   // während des Einreitens erlaubt (Vorschlag: Dressurarbeit und Ausritt im Schritt/Trab)
-  const reitStartAb = p => p.rasse === "vollblut" ? 6 : 12;
+  const EINREIT_LEICHT = ["dressur", "ausritt"];
+  // Deutscher Galopp: Untersuchung durch einen Tierarzt vor dem ersten Eintritt ins Training und erneut vor dem ersten Start (erst dann Starterlaubnis), dazu die Ständestartprüfung.
+  // Kosten nach der GOT: allgemeine Untersuchung + Lahmheitsuntersuchung (gotPreis, 2-facher Satz + MwSt, Annahme).
+  const galoppTierarztPreis = () => gotPreis(["allg", "lahm"]);   // während des Einreitens erlaubt (Vorschlag: Dressurarbeit und Ausritt im Schritt/Trab)
+  const reitStartAb = p => p.rasse === "vollblut" || TRABER.includes(p.rasse) ? 6 : 12;   // Traber werden mit etwa 1,5 Jahren eingefahren
   function reitStand(p) {
     if (!p) return { an: 100, ein: 100 };
     if (p.anreiten == null) { const fertig = alterJZ(p) >= 12 || (p.skala || []).some(x => x > 0) || !!p.training; p.anreiten = fertig ? 100 : 0; p.einreiten = fertig ? 100 : 0; }
@@ -8780,6 +8821,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   function skalaN(p, art) {
     const S = SKALEN_N[art]; if (!S) return [];
     if (!Array.isArray(p[S.feld])) { const darf = !S.nur || S.nur(p), alt = darf && S.von ? (p.disz && p.disz[S.von] != null ? p.disz[S.von] : diszStandAlt(p, S.von)) : 0; p[S.feld] = skalaVerteilen(S.stufen.length, alt || 0);
+      if (art === "trab" && darf && alterJZ(p) >= 12) { const s = p[S.feld]; for (let i = 0; i < 5; i++) s[i] = Math.max(s[i], 60 - i * 2); }   /* erwachsene Traber vom Markt: schon qualifiziert */
       if (art === "galopp" && darf && alterJZ(p) >= 8 && reitFertig(p)) { const s = p[S.feld]; for (let i = 0; i < 4; i++) s[i] = Math.max(s[i], 60 - i * 3); }   /* erwachsene Galopper aus alten Spielständen und vom Markt: Grundausbildung und Startmaschinen-Test haben sie schon */ }
     return p[S.feld];
   }
@@ -9067,9 +9109,9 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   const BAU_RUECKEN = { hannoveraner: 1.5, trakehner: 1.5, angloaraber: 1.5, vollblut: 1.8, knabstrupper: 1.2, quarter: 1, paint: 1, appaloosa: 1, andalusier: 0.8, lipizzaner: 0.8, araber: 0.5, shagya: 0.6 };
   const BAU_HUFROLLE = { quarter: 1.6, paint: 1.4, appaloosa: 1.2, hannoveraner: 1.3, trakehner: 1.3, vollblut: 1.3, angloaraber: 1.1, andalusier: 0.9, lipizzaner: 0.9, friese: 0.9 };
   const BAU_SPAT = { isi: 2, quarter: 1.4, paint: 1.2, hannoveraner: 1.2, trakehner: 1.2, welshcob: 1, haflinger: 0.8 };
-  const BAU_SEHNE = { vollblut: 2.5, angloaraber: 2, araber: 1.3, quarter: 1.3, hannoveraner: 1.2, trakehner: 1.2, shetty: 0.4, haflinger: 0.5, fjord: 0.5, shire: 0.4, clydesdale: 0.4, noriker: 0.4 };
-  const BAU_RENNEN = { vollblut: 1, angloaraber: 0.9, araber: 0.4, quarter: 0.5, tekke: 0.4 };
-  const BAU_BRUCH = { vollblut: 2, angloaraber: 1.5, quarter: 0.8, araber: 0.5 };
+  const BAU_SEHNE = { traber: 1.5, franztraber: 1.4, standardbred: 1.5, vollblut: 2.5, angloaraber: 2, araber: 1.3, quarter: 1.3, hannoveraner: 1.2, trakehner: 1.2, shetty: 0.4, haflinger: 0.5, fjord: 0.5, shire: 0.4, clydesdale: 0.4, noriker: 0.4 };
+  const BAU_RENNEN = { traber: 0.6, franztraber: 0.6, standardbred: 0.6, vollblut: 1, angloaraber: 0.9, araber: 0.4, quarter: 0.5, tekke: 0.4 };
+  const BAU_BRUCH = { traber: 1, franztraber: 1, standardbred: 1, vollblut: 2, angloaraber: 1.5, quarter: 0.8, araber: 0.5 };
   const BAU_STEIN = { araber: 1.5, shagya: 1.3, angloaraber: 1, vollblut: 0.5 };   // v532: Darmstein in echt selten (Araber-Risiko höher, aber absolut gering)
   // Renntag (Galopprennen): Lungenblutung (EIPH, ≈ 1,5 % der Starts bei Vollblütern) und Röhrbeinbruch (≈ 0,16 % der Starts, junge Vollblüter); übermüdet doppelt so oft
   function rennRisiko(p, muede, zeilen) {
@@ -9099,12 +9141,19 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   // Fakten und Quellen: arbeitsordner\Projekte\05-Krankheiten\01-huf-bewegung.md. Zahlen ohne Quelle selbst gesetzt (Konstanten).
   // 1) Allgemeiner Untersuchungs-Baukasten (Beschluss 9: schrittweise wie in echt, der Tierarzt schlägt immer nur den nächsten sinnvollen Schritt vor).
   //    Lahmheit = Anzeichen; orthopädischer Untersuchungsgang (Flexikon): Grunduntersuchung → Beugeproben → Leitungs-/Gelenkanästhesien → Bildgebung. Preise selbst gesetzt.
+  // Preise der Untersuchungsschritte nach der Gebührenordnung für Tierärzte (GOT, Anlage Teil B, einfacher Satz seit 22.11.2022; Pferd):
+  // allgemeine Untersuchung Nr. 4 = 30,78 €, Lahmheitsuntersuchung Nr. 837 = 51,31 €, Leitungsanästhesie Nr. 285 = 15,39 €, Gelenkanästhesie Nr. 286 = 30,78 €, Röntgen Nr. 166/167 = 26,53/18,03 € je Aufnahme,
+  // Ultraschall Nr. 180 = 58,92 €, Endoskopie Atemwege Nr. 160 = 76,96 €, BAL Nr. 905 = 121,90 €, Gastroskopie Nr. 162 = 153,94 €, Tupfer Nr. 249 = 8,21 € / endoskopisch Nr. 250 = 20,45 €,
+  // rektale Untersuchung Nr. 439 = 43,50 €, Nasenschlundsonde Nr. 443 = 39,02 €, Punktion Nr. 103 = 20,54 €. Annahme (selbst gesetzt): abgerechnet wird der 2-fache Satz + 19 % MwSt (GOT_FAKTOR);
+  // Laborkosten (PCR, BAL-Zytologie, Laktat) und die Belastungsendoskopie in der Klinik stehen nicht in der GOT – geschätzt.
+  const GOT = { allg: 30.78, lahm: 51.31, leitung: 15.39, gelenk: 30.78, r12: 26.53, rW: 18.03, ultra: 58.92, endo: 76.96, bal: 121.90, gastro: 153.94, tupfer: 8.21, tupferEndo: 20.45, rektal: 43.50, sonde: 39.02, punktion: 20.54 }, GOT_FAKTOR = 2;
+  const gotPreis = (posten, labor = 0) => Math.round((posten.reduce((a, k) => a + GOT[k], 0) * GOT_FAKTOR * 1.19 + labor) / 5) * 5;
   const UNTERSUCHUNG = {
     lahm: { n: "Lahmheitsuntersuchung", stufen: [
-      { n: "Grunduntersuchung", ico: "🩺", preis: 80, text: "Vorbericht, Ansehen im Stand, Abtasten, Hufzange, Vorführen im Schritt und Trab, Longe" },
-      { n: "Beugeproben", ico: "🦵", preis: 90, text: "das Bein wird eine Minute gebeugt, dann trabt das Pferd an – lahmt es danach mehr, liegt der Schmerz in den gebeugten Gelenken" },
-      { n: "Leitungs- und Gelenkanästhesien", ico: "💉", preis: 160, text: "Nerven oder Gelenke werden nacheinander betäubt – geht das Pferd danach klar, liegt der Schmerz dort" },
-      { n: "Röntgen und Ultraschall", ico: "🩻", preis: 320, text: "Bilder vom eingegrenzten Bereich: Röntgen zeigt Knochen und Gelenke, Ultraschall Sehnen und Bänder" } ] } };
+      { n: "Grunduntersuchung", ico: "🩺", preis: gotPreis(["allg", "lahm"]), text: "Vorbericht, Ansehen im Stand, Abtasten, Hufzange, Vorführen im Schritt und Trab, Longe" },
+      { n: "Beugeproben", ico: "🦵", preis: gotPreis(["lahm"]), text: "das Bein wird eine Minute gebeugt, dann trabt das Pferd an – lahmt es danach mehr, liegt der Schmerz in den gebeugten Gelenken" },
+      { n: "Leitungs- und Gelenkanästhesien", ico: "💉", preis: gotPreis(["leitung", "leitung", "leitung", "gelenk"]), text: "Nerven oder Gelenke werden nacheinander betäubt – geht das Pferd danach klar, liegt der Schmerz dort" },
+      { n: "Röntgen und Ultraschall", ico: "🩻", preis: gotPreis(["r12", "r12", "rW", "rW", "ultra"]), text: "Bilder vom eingegrenzten Bereich: Röntgen zeigt Knochen und Gelenke, Ultraschall Sehnen und Bänder" } ] } };
   // ab welcher Stufe die Ursache eindeutig ist (0 = schon nach der Grunduntersuchung) und wo sie eingegrenzt wird
   const LAHM_KLAR = { lahmheit: 1, sohlenprellung: 0, nageltritt: 0, hufrolle: 2, spat: 2, sehne: 3, fesseltraeger: 3, hufbeinbruch: 3, fraktur: 3, schale: 3 };
   const LAHM_ORT = { lahmheit: "Beugeproben ohne Befund – keine Gelenke betroffen, eher eine Zerrung oder Prellung", sohlenprellung: "Hufzange: die Sohle ist druckempfindlich", nageltritt: "ein Einstich im Strahl",
@@ -9203,19 +9252,19 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   // ---------- Coding-Auftrag 14 (Dome 14.11.2026): Krankheiten Bereich 2 – Atemwege ----------
   // Fakten und Quellen: arbeitsordner\Projekte\05-Krankheiten\02-atemwege.md. Husten, Fieber, Ausfluss sind Anzeichen; die Grunduntersuchung (Fieber, Abhören, Rückatmung) klärt nur eindeutige Fälle
   // (Erkältung, Druse mit dicken Kehlgangs-Lymphknoten), sonst schlägt der Tierarzt den passenden Spezialtest vor. Abhören kann etwas übersehen. Preise selbst gesetzt (bisherige Testpreise übernommen).
-  UNTERSUCHUNG.atem = { n: "Atemwegsuntersuchung", grund: { n: "Grunduntersuchung der Atemwege", ico: "🩺", preis: 70, text: "Fieber messen, Abhören, Rückatmung, Lymphknoten und Nasenausfluss ansehen" } };
+  UNTERSUCHUNG.atem = { n: "Atemwegsuntersuchung", grund: { n: "Grunduntersuchung der Atemwege", ico: "🩺", preis: gotPreis(["allg"]), text: "Fieber messen, Abhören, Rückatmung, Lymphknoten und Nasenausfluss ansehen" } };
   const ATEM_KLAR = { erkaeltung: 0, druse: 0, husten: 1, influenza: 1, herpes: 1, asthma: 1, kehlkopf: 1, eiph: 1, luftsackempyem: 1, luftsackmykose: 1, sinusitis: 1, ddsp: 1 };
   const ATEM_TEST = {
-    husten: { n: "Endoskopie und Nasentupfer", ico: "🔦", preis: 160, tage: 2, text: "Blick in die Atemwege und Abstrich aus der Nase", fund: "gereizte Schleimhaut, kein Erreger – Staub reizt die Atemwege" },
-    influenza: { n: "Nasentupfer (PCR)", ico: "🧪", preis: 90, tage: 2, text: "Abstrich aus der Nase ins Labor", fund: "Influenzavirus nachgewiesen" },
-    herpes: { n: "Nasentupfer (PCR)", ico: "🧪", preis: 90, tage: 2, text: "Abstrich aus der Nase ins Labor", fund: "Herpesvirus (EHV) nachgewiesen" },
-    asthma: { n: "Lungenspülung (BAL)", ico: "🫁", preis: 220, tage: 2, text: "Spülflüssigkeit aus der Lunge wird im Labor untersucht", fund: "viele Entzündungszellen in der Spülflüssigkeit" },
-    kehlkopf: { n: "Endoskopie unter Belastung", ico: "🔦", preis: 380, text: "Endoskop während der Arbeit auf dem Laufband oder unter dem Reiter", fund: "der Kehlkopf öffnet sich auf einer Seite nicht richtig" },
-    eiph: { n: "Endoskopie nach dem Rennen", ico: "🔦", preis: 180, text: "Blick in die Luftröhre kurz nach starker Belastung", fund: "Blut in der Luftröhre" },
-    luftsackempyem: { n: "Endoskopie der Luftsäcke", ico: "🔦", preis: 180, text: "Endoskop in die Luftsäcke", fund: "Eiter im Luftsack" },
-    luftsackmykose: { n: "Endoskopie der Luftsäcke", ico: "🔦", preis: 180, text: "Endoskop in die Luftsäcke", fund: "Pilzbelag an der Luftsackwand" },
-    sinusitis: { n: "Röntgen des Kopfes", ico: "🩻", preis: 200, text: "Röntgenbild der Nebenhöhlen und Backenzähne", fund: "Flüssigkeit in der Nebenhöhle" },
-    ddsp: { n: "Endoskopie unter Belastung", ico: "🔦", preis: 380, text: "Endoskop während höchster Anstrengung", fund: "das Gaumensegel verlagert sich unter Belastung" } };
+    husten: { n: "Endoskopie und Nasentupfer", ico: "🔦", preis: gotPreis(["endo", "tupferEndo"], 50), tage: 2, text: "Blick in die Atemwege und Abstrich aus der Nase", fund: "gereizte Schleimhaut, kein Erreger – Staub reizt die Atemwege" },
+    influenza: { n: "Nasentupfer (PCR)", ico: "🧪", preis: gotPreis(["tupfer"], 50), tage: 2, text: "Abstrich aus der Nase ins Labor", fund: "Influenzavirus nachgewiesen" },
+    herpes: { n: "Nasentupfer (PCR)", ico: "🧪", preis: gotPreis(["tupfer"], 50), tage: 2, text: "Abstrich aus der Nase ins Labor", fund: "Herpesvirus (EHV) nachgewiesen" },
+    asthma: { n: "Lungenspülung (BAL)", ico: "🫁", preis: gotPreis(["endo", "bal"], 60), tage: 2, text: "Spülflüssigkeit aus der Lunge wird im Labor untersucht", fund: "viele Entzündungszellen in der Spülflüssigkeit" },
+    kehlkopf: { n: "Endoskopie unter Belastung", ico: "🔦", preis: gotPreis(["endo"], 400), text: "Endoskop während der Arbeit auf dem Laufband oder unter dem Reiter", fund: "der Kehlkopf öffnet sich auf einer Seite nicht richtig" },
+    eiph: { n: "Endoskopie nach dem Rennen", ico: "🔦", preis: gotPreis(["endo"]), text: "Blick in die Luftröhre kurz nach starker Belastung", fund: "Blut in der Luftröhre" },
+    luftsackempyem: { n: "Endoskopie der Luftsäcke", ico: "🔦", preis: gotPreis(["endo", "tupferEndo"]), text: "Endoskop in die Luftsäcke", fund: "Eiter im Luftsack" },
+    luftsackmykose: { n: "Endoskopie der Luftsäcke", ico: "🔦", preis: gotPreis(["endo"]), text: "Endoskop in die Luftsäcke", fund: "Pilzbelag an der Luftsackwand" },
+    sinusitis: { n: "Röntgen des Kopfes", ico: "🩻", preis: gotPreis(["r12", "r12", "rW", "rW"]), text: "Röntgenbild der Nebenhöhlen und Backenzähne", fund: "Flüssigkeit in der Nebenhöhle" },
+    ddsp: { n: "Endoskopie unter Belastung", ico: "🔦", preis: gotPreis(["endo"], 400), text: "Endoskop während höchster Anstrengung", fund: "das Gaumensegel verlagert sich unter Belastung" } };
   const ATEM_BILD = { erkaeltung: "Husten und Nasenausfluss", druse: "Fieber und dicke Lymphknoten", husten: "Husten", influenza: "Fieber und Husten", herpes: "Fieber und Nasenausfluss", asthma: "chronischer Husten, schwere Atmung",
     kehlkopf: "Atemgeräusch bei Belastung", eiph: "Leistungsabfall nach starker Belastung", luftsackempyem: "eitriger Nasenausfluss", luftsackmykose: "einseitiges Nasenbluten", sinusitis: "übelriechender Nasenausfluss auf einer Seite", ddsp: "gurgelndes Geräusch bei höchster Anstrengung" };
   const ATEM_GRUND = { erkaeltung: "leichter, klarer Ausfluss, kein hohes Fieber", druse: "Fieber, dicke Lymphknoten im Kehlgang", husten: "kein Fieber, Lunge klingt unauffällig", influenza: "Fieber (39,5 °C), trockener Husten", herpes: "Fieber, klarer Nasenausfluss",
@@ -9264,15 +9313,15 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   // Gruppe „bauch“ im Untersuchungs-Baukasten
   UNTERSUCHUNG.bauch = { n: "Untersuchung von Magen und Darm" };
   const BAUCH_KLAR = { kolik: b => b.kolikArt === "verlagerung" ? 1 : 0, magengeschwuer: () => 1, darmstein: () => 1 };
-  const BAUCH_GRUND = { kolik: { n: "Kolik-Untersuchung beim Hausbesuch", ico: "🩺", preis: 120, text: "Puls, Atmung, Darmgeräusche, Nasenschlundsonde und rektale Untersuchung" },
-    magengeschwuer: { n: "Grunduntersuchung", ico: "🩺", preis: 70, text: "Ansehen, Abhören, Fütterung und Haltung besprechen" }, darmstein: { n: "Kolik-Untersuchung beim Hausbesuch", ico: "🩺", preis: 120, text: "Puls, Darmgeräusche, rektale Untersuchung" } };
-  const BAUCH_TEST = { kolik: { n: "Klinik-Untersuchung (Ultraschall, Bauchpunktion, Laktat)", ico: "🏥", preis: 350, text: "zeigt, ob der Darm verlagert oder verschlungen ist – dann hilft nur die OP", fund: "Dünndarm verlagert, Bauchflüssigkeit verändert" },
-    magengeschwuer: { n: "Magenspiegelung (Gastroskopie)", ico: "🔦", preis: 250, text: "Magengeschwüre sieht man nur mit dem Endoskop – die Anzeichen sagen nichts über die Schwere", fund: "Geschwüre an der Magenschleimhaut" },
-    darmstein: { n: "Röntgen des Bauchs", ico: "🩻", preis: 250, text: "Darmsteine sind im Röntgenbild zu sehen", fund: "ein Darmstein im Dickdarm" } };
+  const BAUCH_GRUND = { kolik: { n: "Kolik-Untersuchung beim Hausbesuch", ico: "🩺", preis: gotPreis(["allg", "rektal", "sonde"]), text: "Puls, Atmung, Darmgeräusche, Nasenschlundsonde und rektale Untersuchung" },
+    magengeschwuer: { n: "Grunduntersuchung", ico: "🩺", preis: gotPreis(["allg"]), text: "Ansehen, Abhören, Fütterung und Haltung besprechen" }, darmstein: { n: "Kolik-Untersuchung beim Hausbesuch", ico: "🩺", preis: gotPreis(["allg", "rektal"]), text: "Puls, Darmgeräusche, rektale Untersuchung" } };
+  const BAUCH_TEST = { kolik: { n: "Klinik-Untersuchung (Ultraschall, Bauchpunktion, Laktat)", ico: "🏥", preis: gotPreis(["ultra", "punktion"], 15), text: "zeigt, ob der Darm verlagert oder verschlungen ist – dann hilft nur die OP", fund: "Dünndarm verlagert, Bauchflüssigkeit verändert" },
+    magengeschwuer: { n: "Magenspiegelung (Gastroskopie)", ico: "🔦", preis: gotPreis(["gastro"]), text: "Magengeschwüre sieht man nur mit dem Endoskop – die Anzeichen sagen nichts über die Schwere", fund: "Geschwüre an der Magenschleimhaut" },
+    darmstein: { n: "Röntgen des Bauchs", ico: "🩻", preis: gotPreis(["r12", "r12", "rW", "rW"]), text: "Darmsteine sind im Röntgenbild zu sehen", fund: "ein Darmstein im Dickdarm" } };
   // Gruppe „zahn“: Zahnkontrolle (Maulgatter, Ansehen, Abtasten), bei Verdacht Röntgen
   const ZAHN_KLAR = { eotrh: 1 };
-  const ZAHN_GRUND = { n: "Zahnkontrolle", ico: "🦷", preis: 70, text: "mit Maulgatter ansehen und abtasten" };
-  const ZAHN_TEST = { eotrh: { n: "Röntgen der Schneidezähne", ico: "🩻", preis: 150, text: "zeigt, ob sich Zahnwurzeln auflösen", fund: "aufgelöste und verdickte Wurzeln an den Schneidezähnen" } };
+  const ZAHN_GRUND = { n: "Zahnkontrolle", ico: "🦷", preis: gotPreis(["allg"]), text: "mit Maulgatter ansehen und abtasten" };
+  const ZAHN_TEST = { eotrh: { n: "Röntgen der Schneidezähne", ico: "🩻", preis: gotPreis(["r12", "r12"]), text: "zeigt, ob sich Zahnwurzeln auflösen", fund: "aufgelöste und verdickte Wurzeln an den Schneidezähnen" } };
   ["kolik", "magengeschwuer", "darmstein"].forEach(k => { VERDACHT[k] = { sofort: true, lahm: true, ursacheBleibt: false, bild: k === "magengeschwuer" ? "Fressunlust und Unwohlsein" : "Kolik", diff: ["Krampf- oder Gaskolik", "Verstopfung", "Verlagerung", "Magen"], klar: "Untersuchung in Stufen" }; });
   VERDACHT.eotrh = { sofort: true, lahm: true, bild: "Probleme an den Schneidezähnen", diff: ["Zahnstein", "Zahnfleischentzündung", "EOTRH"], klar: "Zahnkontrolle und Röntgen" };
   // Zahnerkrankung EOTRH (Schneidezähne lösen sich auf): ältere Pferde ab ca. 15 J., Wallache, Warm-/Voll-/Kaltblut und Cushing-Pferde häufiger
@@ -9344,7 +9393,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   function uebSperre(p, k, ort) {
     const U = UEBUNG[k];
     if (U.gangart && !(p.werte && p.werte.gang[U.gangart] != null)) return U.gangart === "toelt" ? "kann nicht tölten" : "kann keinen Pass";
-    if (U.nurRasse && !U.nurRasse(p)) return "nur für Galopper";   // Auftrag 11
+    if (U.nurRasse && !U.nurRasse(p)) return U.nurTxt || "nur für Galopper";   // Auftrag 11
     if (k === "anreiten" || k === "einreiten") { const R = reitStand(p); if (alterJZ(p) < reitStartAb(p)) return `ab ${jzAlterTxt(reitStartAb(p))}`; if (k === "anreiten" && R.an >= 100) return "schon angeritten"; if (k === "einreiten" && R.an < 100) return "erst anreiten"; if (k === "einreiten" && R.ein >= 100) return "schon eingeritten"; }
     else if (U.reiten && alterJZ(p) >= U.ab) { const R = reitStand(p); if (R.an < 100) return "erst anreiten"; if (R.ein < 100 && !EINREIT_LEICHT.includes(k)) return "erst einreiten"; }
     if (k !== "anreiten" && k !== "einreiten" && alterJZ(p) < U.ab) return `ab ${jzAlterTxt(U.ab)}`;
@@ -9450,6 +9499,8 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       if (k === "passtraining" && passZuOft(p)) { f *= 0.3; hinweise.push(`${esc(p.name)} hatte in den letzten 7 Tagen schon ${PASS_MAX} × Passtraining – zu oft: Übertraining, kaum Fortschritt. Besser Intervall- oder Bergauf-Training.`); wohlAendern(p, -4, "zu oft Passtraining"); }
       Object.entries(L).forEach(([i, g]) => { const x = skalaNPlus(p, art, +i, g * f * TRAIN_SK * proTag(1)); if (x) (nPlus[art] = nPlus[art] || {})[i] = x; }); });
     if (k === "passtraining") (p.passLog = (p.passLog || []).filter(t => spiel.tag - t < 7)).push(spiel.tag);
+    if (k === "galopptraining" && !p.galoppTA && !((p.uebKann || {}).galopptraining > 1) && !(p.erfolge || []).some(e => e.disz === "galopprennen")) { p.galoppTA = spiel.tag; const pr0 = galoppTierarztPreis(); if (!fremd(p)) buchen(-pr0, `Tierarzt: Untersuchung vor Trainingsbeginn (${p.name})`);
+      hinweise.push(`Vor dem ersten Galopptraining hat der Tierarzt ${esc(p.name)} untersucht (${fmt(pr0)}) – so ist es bei Deutscher Galopp Pflicht.`); }
     if (k === "anreiten" || k === "einreiten") { reitStand(p); const vor = p[k]; p[k] = Math.min(100, r2(vor + 100 / tpj() * Math.max(0.6, Math.min(1.3, F))));
       if (SKALEN_N.galopp.nur(p)) skalaNPlus(p, "galopp", 1, (p[k] - vor) / 2);
       if (p[k] >= 100 && vor < 100 && !fremd(p) && !spiel.tutorial) brief("Ausbilder", k === "anreiten" ? `${p.name} ist angeritten` : `${p.name} ist eingeritten`, k === "anreiten" ? `<b>${esc(p.name)}</b> trägt jetzt einen Reiter – als Nächstes lernt ${pron(p).er} die Hilfen (Übung „Einreiten“).` : `<b>${esc(p.name)}</b> kennt jetzt die Hilfen und ist eingeritten – alle Reit-Übungen und Turniere unter dem Sattel sind möglich. Viele Ausbilder gönnen jungen Pferden danach eine Koppelpause, bevor die richtige Arbeit beginnt.`, { pferde: [p] });
@@ -9611,7 +9662,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     return out;
   }
   // H7 (b): Rennpferde- und Pferdewirt Spezialreitweisen – jeden Morgen bis zu 4 passende eigene Pferde, die heute noch nicht trainiert wurden
-  const rennpferd = q => (q.rasse === "vollblut" && alterJZ(q) >= 8) || (["araber", "tekke"].includes(q.rasse) && alterJZ(q) >= 12);
+  const rennpferd = q => (q.rasse === "vollblut" && alterJZ(q) >= 8) || (TRABER.includes(q.rasse) && alterJZ(q) >= 8) || (["araber", "tekke"].includes(q.rasse) && alterJZ(q) >= 12);
   const gangpferd = q => alterJZ(q) >= 16 && !!(q.werte && q.werte.gang && (q.werte.gang.toelt != null || q.werte.gang.pass != null));   // Gangpferdestall (Dome 27.10.)
   const gangHof = () => !!(spiel.hof && spiel.hof.art === "gang");
   const westernpferd = q => alterJZ(q) >= 12 && (["quarter", "paint", "appaloosa"].includes(q.rasse) || ((q.disz || {}).western || 0) > 0);
@@ -9698,6 +9749,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     if (D === DISZ.distanz) return skalaNSchnitt(p, "distanz");
     if (D === DISZ.galopprennen && SKALEN_N.galopp.nur(p)) return skalaNSchnitt(p, "galopp");
     if (D === DISZ.passrennen && SKALEN_N.pass.nur(p)) return skalaNSchnitt(p, "pass");
+    if (D === DISZ.trabrennen && SKALEN_N.trab.nur(p)) return skalaNSchnitt(p, "trab");
     if (D.a === "dressur") { const aw = ausbildungsWerte({ ...p, alter: alterJahre(p) }); return aw.reduce((a, x) => a + x.wert, 0) / aw.length; }
     if (D.a === "vielseitigkeit") return 0.25 * diszAusb(p, DISZ.dressur) + 0.35 * diszStand(p, "springen") + 0.4 * diszStand(p, "gelaende");
     return diszStand(p, D.a);
@@ -9903,6 +9955,8 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     if (alterJZ(p) < (P.ab || 16)) return `erst ab ${jzAlterTxt(P.ab || 16)}`;
     if (DISZ[P.disz] && !reitFertig(p)) return reitStand(p).an < 100 ? "noch nicht angeritten" : "noch nicht eingeritten";   // Auftrag 11
     if (P.disz === "galopprennen" && SKALEN_N.galopp.nur(p) && (skalaN(p, "galopp")[3] || 0) < 50) return "Startmaschinen-Test fehlt (Übung Startmaschine bis 50 %)";
+    if (P.disz === "distanz") { const ds = distCeiSperre(p, P); if (ds) return ds; }   // FEI-Qualifikationsweg
+    if (P.disz === "trabrennen" && SKALEN_N.trab.nur(p) && (skalaN(p, "trab")[4] || 0) < 50) return "Qualifikation fehlt (Übung Qualifikationslauf bis 50 %)";   // HVT: Qualifikationsrennen vor dem ersten Start
     const tr = traechtigSperre(p, P, t.tag); if (tr) return tr;
     if (P.jung && (alterJZ(p) < P.jung[0] || alterJZ(p) > P.jung[1])) return "Altersgrenze";
     if (DISZ[P.disz] && DISZ[P.disz].nur && !DISZ[P.disz].nur(p)) return "kann diese Gangart nicht";
@@ -10036,6 +10090,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   function ergebnisText(disz, wert, niveau, rz, stufe) {
     const d = wert - niveau, zeitTxt = s => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, "0").replace(".", ",")}`;
     if (disz === "galopprennen") { const z = Math.round((99 - d * 0.25 + rz() * 2) * 10) / 10; return { sort: -z, txt: `${zeitTxt(z)} min` }; }
+    if (disz === "trabrennen") { if (d < -10 && rz() < 0.25) return { sort: -999, txt: "Galoppade – disqualifiziert" }; const z = Math.round((77 - d * 0.15 + rz() * 1.5) * 10) / 10; return { sort: -z, txt: `km-Zeit ${zeitTxt(z)}` }; }
     if (disz === "passrennen") { if (d < -8 && rz() < 0.3) return { sort: -999, txt: "Galoppsprung – ungültig" }; const z = Math.round((23.5 - d * 0.06 + rz() * 0.8) * 100) / 100; return { sort: -z, txt: `${String(z.toFixed(2)).replace(".", ",")} s` }; }
     if (disz === "distanz") { const v = Math.max(8, 12.5 + d * 0.12 + (rz() - 0.5)); return { sort: v, txt: `Ø ${String(v.toFixed(1)).replace(".", ",")} km/h` }; }
     if (disz === "toelt") { const n = Math.max(3, Math.min(9.5, 6 + d / 12 + (rz() - 0.5) * 0.6)); return { sort: n, txt: `Note ${n.toFixed(2).replace(".", ",")}` }; }
@@ -10163,12 +10218,15 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
         const g = p.pflege.gesundheit, form = (0.85 + 0.15 * wohlbefinden(p) / 100) * (0.8 + 0.2 * Math.min(1, g / 85)) * (muede ? 0.85 : 1);
         const grp = LK_GRUPPE[P.disz], RT = nennReiter(t.nennung.find(n => n.pid === p.id && n.prid === P.id), P, profi), reiterF = reiterGruppeVon(P.disz) && RT.koennen != null ? reiterTurnierFaktor(RT.koennen, P) : 1;   // K3: Können des Reiters gegen die Anforderung der Klasse (×0,80 … ×1,08)
         const wert = startWert(p, P.disz) * stufenMalus(p, P) * form * stress * reiterF * fzLeistung(p) * hufTurnierF(p, P.disz) * (t.halle && nachtblind(p) ? NACHTBLIND.halle : 1) * schubTurnierF(p) * (1 + (rz() + rz() + rz() - 1.5) * 0.16), niveau = feldNiveau(t, P);   // A3: Schub (Grad 2 −3 %, ab 3 −6 %)
-        const vet = P.disz === "distanz" ? distanzVet(p, P, muede, rz) : null;
+        let vet = P.disz === "distanz" ? distanzVet(p, P, muede, rz) : null;
+        if (P.disz === "galopprennen" && !p.starterlaubnis && !(p.erfolge || []).some(e => e.disz === "galopprennen")) { const pr0 = galoppTierarztPreis(); if (!fremd(p)) buchen(-pr0, `Tierarzt: Starterlaubnis (${p.name})`);   // vor dem ersten Start
+          if (aktiveBefunde(p).some(b => !imInkub(b) && b.grad >= 2) || p.pflege.gesundheit < 70) vet = { aus: "keine Starterlaubnis – der Tierarzt hält das Pferd nicht für fit genug" }; else p.starterlaubnis = spiel.tag; }
         if (vet && vet.aus) { if (vet.lahm) befundNeu(p, "lahmheit", 1, "Distanzritt", "Tierarzt beim Distanzritt");
           if (RT.selbst) reiterTurnier(P, t.art, null, false);   // K1: ausgeschieden zählt als Start
           bilanzZaehlen(p, P, null, t.art); (p.erfolge = p.erfolge || []).unshift({ tag: spiel.tag, turnier: t.name, art: t.art, disz: P.disz, stufe: P.stufe, pruef: P.name, platz: P.starter, von: P.starter, erg: vet.aus, geld: 0, plaziert: false, aus: true });
           prot("Turnierstart", { p, o: t.name }); protKlasse("Start", p, t, P); zeilen.push(`<li><b>${esc(P.name)}</b>: ❌ ${vet.aus}</li>`); return; }
-        const ich = ergebnisText(P.disz, wert, niveau, rz, P.stufe), andere = Array.from({ length: P.starter - 1 }, () => ergebnisText(P.disz, niveau + (rz() + rz() + rz() - 1.5) * 14, niveau, rz, P.stufe).sort);
+        const ich = ergebnisText(P.disz, wert, niveau, rz, P.stufe); if (P.disz === "distanz") try { distQualiZaehlen(p, P, ich.sort); } catch (e) { }   // Auftrag 11: Qualifikationsweg
+        const andere = Array.from({ length: P.starter - 1 }, () => ergebnisText(P.disz, niveau + (rz() + rz() + rz() - 1.5) * 14, niveau, rz, P.stufe).sort);
         const platz = 1 + andere.filter(s => s > ich.sort).length, plaziert = platz <= Math.max(3, Math.ceil(P.starter / 4));
         let geld = 0; if (plaziert && preisgeld(t, P)) { const anteil = PREIS_ANTEIL.slice(0, Math.max(3, Math.ceil(P.starter / 4))), summe = anteil.reduce((a, b) => a + b, 0); geld = Math.round(preisgeld(t, P) * (anteil[platz - 1] || 0.05) / summe / 5) * 5; }
         geldSumme += geld;
@@ -10427,7 +10485,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     const g = reiterGruppeVon(P.disz), anf = reiterAnforderung(P), recht = k => anf <= k + 10 ? "" : "Können reicht nicht für diese Klasse", L = [];
     if (P.jockey) {
       const sp = REITGELD * (vorteil("renn") ? 0.5 : 1), k = reiterKoennen("rennen");
-      L.push({ id: "jockey", name: "Jockey", koennen: REITER_PROFI, kosten: 0, ok: "" });
+      L.push({ id: "jockey", name: P.disz === "trabrennen" ? "Berufsfahrer" : "Jockey", koennen: REITER_PROFI, kosten: 0, ok: "" });
       if (k >= RENNEN_SELBST_AB && freiStufe("reiterWahl")) tippMerken("rennenSelbst");
       L.push({ id: "du", name: "Du selbst", koennen: k, kosten: -sp, ok: !freiStufe("reiterWahl") ? "ab Stufe Fortgeschritten" : k >= RENNEN_SELBST_AB ? "" : `erst ab Können ${RENNEN_SELBST_AB} (Amateurlizenz)` });
       return L;
@@ -10538,18 +10596,40 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
         ...["C", "B", "A"].map((k, i) => pr("galopprennen", i, `Araberrennen Kl. ${k}`, { starter: n(6, 12), rassen: ["araber", "tekke"], ab: 12, nenn: [40, 60, 90][i], preis: [800, 1500, 3000][i], niveau: [46, 55, 64][i], jockey: true })),
         ...["C", "B"].map((k, i) => pr("galopprennen", i, `Anglo-Araber-Rennen Kl. ${k}`, { starter: n(5, 10), rassen: ["angloaraber"], ab: 12, nenn: [40, 60][i], preis: [900, 1800][i], niveau: [50, 59][i], jockey: true })),   // Dome (v339): wie in Frankreich – eigene Rennen für Anglo-Araber
         pr("galopprennen", 0, "Verkaufsrennen (Vollblut)", { starter: n(6, 12), rassen: ["vollblut"], ab: 8, nenn: 60, preis: 1500, niveau: 48, jockey: true, verkauf: true })]);   // H8: nur Rennställe, jeder Starter ist danach zum Verkaufspreis zu haben
-      neu("distanz", "distanz", `Distanzritt ${ortW()}`, [["Einführungsritt (30 km)", 20, 30, 40], ["Kurze Distanz (50 km)", 20, 50, 60], ["Mittlere Distanz (70 km)", 24, 70, 80], ["Lange Distanz (100 km)", 28, 100, 120]]
-        .map(([nm, ab, km, ng], i) => pr("distanz", i, nm, { starter: n(10, 30), ab, km, nenn: ng, preis: [0, 0, 150, 400][i], niveau: [40, 56, 70, 80][i] })));
+      neu("distanz", "distanz", `Distanzritt ${ortW()}`, [["Einführungsritt (30 km)", 20, 30, 40], ["Kurze Distanz (50 km)", 20, 50, 60], ["Mittlere Distanz (70 km)", 24, 70, 80], ["Lange Distanz (100 km)", 28, 100, 120],
+          ["CEI 1* (100 km)", DIST_CEI[1].ab, 100, 150, 1], ["CEI 2* (120 km)", DIST_CEI[2].ab, 120, 200, 2], ["CEI 3* (160 km)", DIST_CEI[3].ab, 160, 300, 3]]   // Auftrag 11 Nr. 4/9: FEI-Qualifikationsweg
+        .map(([nm, ab, km, ng, cei], i) => pr("distanz", Math.min(i, 3), nm, { starter: n(10, 30), ab, km, nenn: ng, preis: [0, 0, 150, 400, 600, 1000, 2000][i], niveau: [40, 56, 70, 80, 84, 88, 92][i], ...(cei ? { cei } : {}) })));
     }
     neu("gangpferde", "gangpferde", `${D.s === 3 ? "Tölt auf Eis" : "Islandpferde- und Gangpferdeturnier"} ${ortW()}`, [
       ...["Einsteiger", "D", "C", "B", "A"].map((k, i) => pr("toelt", i, `Tölt ${k}`, { ab: 16, nenn: [15, 20, 25, 30, 40][i], preis: [0, 0, 0, 150, 300][i], niveau: STUFE_WERT[i] + 3 })),
       ...(D.s === 3 ? [] : [pr("passrennen", 0, "Passrennen 250 m", { starter: n(6, 14), ab: 20, nenn: 25, preis: 200, niveau: 56 })])]);
+    { const rt = zufall("trab-" + key), nt = (a, b) => a + Math.floor(rt() * (b - a + 1)), T = ["traber", "franztraber", "standardbred"];   // Trabrenntag das ganze Jahr (eigener Zufall, damit die anderen Turniere gleich bleiben)
+      const pt = (s, name, x) => ({ id: "p" + Math.floor(rt() * 1e9).toString(36), disz: "trabrennen", stufe: s, name, rassen: T, jockey: true, ...x });
+      neu("renntag", "rennen", `Trabrenntag ${TURNIER_ORTE[Math.floor(rt() * TURNIER_ORTE.length)]}`, [
+        pt(0, "Rennen für Zweijährige (2.000 m)", { starter: nt(6, 10), ab: 8, jung: [8, 11], nenn: 40, preis: 1500, niveau: 48 }),
+        ...["III", "II", "I"].map((k, i) => pt(i, `Trabrennen Klasse ${k} (2.000 m)`, { starter: nt(8, 12), ab: 12, nenn: [40, 70, 120][i], preis: [1200, 2500, 6000][i], niveau: [50, 60, 70][i] })),
+        pt(3, "Zuchtrennen (2.100 m)", { starter: nt(8, 12), ab: 12, jung: [12, 23], nenn: 200, preis: 15000, niveau: 78 })]); }
   }
   // kann das Pferd hier überhaupt je starten? (Rasse, Gangart) – sonst taucht das Turnier im Kalender nicht auf
   const passtGrundsaetzlich = (p, P) => { if (P.zb) return false; const fb = fsBox(p); if (P.fohlenschau) return !!(fb && fb.fohlen) && fsKlasse(fb.fohlen) === P.klasse; if (fb && fb.fohlen) return false;   // Stute mit Fohlen bei Fuß: nur Fohlenschau
     return passtGrundsaetzlich0(p, P); };
   const passtGrundsaetzlich0 = (p, P) => (!P.rassen || reinRasse(p, P.rassen)) && !(P.disz === "toelt" && p.werte && p.werte.gang.toelt == null) && !(P.disz === "passrennen" && p.werte && p.werte.gang.pass == null);
   // Tierarztkontrolle beim Distanzritt: vorher Lahmheit, nachher Puls (höchstens 64)
+  // FEI Endurance Rules, Kapitel V, Art. 832.3: Einsteiger (Novice) = 2 Ritte 40–79 km und 2 Ritte 80–100 km, höchstens 16 km/h; Art. 832.4.2: ab 8 Jahren befreit, wer in 3 Jahren 480 km in Ritten ab 80 km geschafft hat.
+  // Mindestalter nach den FEI-Regeln 2020/2025: Novice 5, CEI 1* 6, CEI 2* 7, CEI 3* 8 Jahre. Aufstieg: ein geschaffter Ritt der Stufe darunter (vereinfacht, selbst gesetzt).
+  const DIST_CEI = { 1: { ab: 24, vor: "novice" }, 2: { ab: 28, vor: 1 }, 3: { ab: 32, vor: 2 } }, DIST_MAX_KMH = 16;
+  const distQ = p => (p.distQuali = p.distQuali || { kurz: 0, lang: 0, km: [] });
+  const noviceFertig = p => { const Q = distQ(p); if (Q.kurz >= 2 && Q.lang >= 2) return true; return alterJZ(p) >= 32 && Q.km.filter(x => spiel.tag - x.tag <= 12 * tpj() && x.km >= 80).reduce((a, x) => a + x.km, 0) >= 480; };
+  function distQualiZaehlen(p, P, kmh) {
+    const Q = distQ(p); Q.km.push({ tag: spiel.tag, km: P.km }); if (Q.km.length > 30) Q.km.shift();
+    if (P.cei) { Q["cei" + P.cei] = (Q["cei" + P.cei] || 0) + 1; return; }
+    if (kmh > DIST_MAX_KMH) return; if (P.km >= 40 && P.km <= 79) Q.kurz++; else if (P.km >= 80 && P.km <= 100) Q.lang++;
+  }
+  function distCeiSperre(p, P) {
+    if (!P.cei) return ""; const C = DIST_CEI[P.cei], Q = distQ(p);
+    if (C.vor === "novice") return noviceFertig(p) ? "" : `Einsteigerritte fehlen (${Math.min(2, Q.kurz)}/2 × 40–79 km, ${Math.min(2, Q.lang)}/2 × 80–100 km)`;
+    return (Q["cei" + C.vor] || 0) >= 1 ? "" : `erst CEI ${C.vor}* schaffen`;
+  }
   function distanzVet(p, P, muede, rz) {
     if (aktiveBefunde(p).some(b => !imInkub(b) && ["lahmheit", "hufabszess", "hufrehe", "arthrose"].includes(b.art))) return { aus: "beim Tierarzt-Check vor dem Start lahm – nicht zugelassen" };
     const ist = p.werte.ist, puls = Math.round(48 + (100 - (ist.ausdauer || 50)) * 0.12 + (100 - (ist.regeneration || 50)) * 0.06 + P.km / 100 * (1 - (ist.ausdauer || 50) / 100) * 12 + (muede ? 8 : 0) + rz() * 5);
@@ -10669,6 +10749,9 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     hannoveraner: { v: "Hannoveraner Verband", sys: "noten", ehre: "leist", haupt: 2, stufen: [{ n: "Hauptstutbuch", f: "gold", ab: 6, min: 5, gen: "4" }, { n: "Stutbuch", f: "silber", gen: "eltern" }, { n: "Vorbuch", f: "gruen", ab: 5, min: 4 }] },
     trakehner: { v: "Trakehner Verband", sys: "noten", ehre: "elite", stufen: [{ n: "Stutbuch I", f: "gold", ab: 5, min: 4, gen: "eltern" }, { n: "Stutbuch II", f: "silber" }] },
     vollblut: { v: "Deutscher Galopp (Gestütbuch)", sys: "gsb", stufen: [{ n: "Gestütbuch", f: "gold" }] },
+    traber: { v: "Hauptverband für Traberzucht (HVT)", sys: "hvt", stufen: [{ n: "Traber-Zuchtbuch", f: "gold" }] },
+    franztraber: { v: "Le Trot (Stud-Book du Trotteur Français)", sys: "hvt", stufen: [{ n: "Stud-Book", f: "gold" }] },
+    standardbred: { v: "United States Trotting Association (USTA)", sys: "hvt", stufen: [{ n: "Register", f: "gold" }] },
     angloaraber: { v: "Zuchtverband für Deutsche Pferde (VZAP)", sys: "noten", stufen: [{ n: "Stutbuch I", f: "gold", ab: 6, min: 5, gen: "4" }, { n: "Stutbuch II", f: "silber", gen: "eltern" }, { n: "Anhang", f: "gruen" }] },
     araber: { v: "Zuchtverband für Deutsche Pferde (VZAP)", sys: "noten", stufen: [{ n: "Leistungsstutbuch", f: "gold", ab: 6, min: 5, gen: "4", slp: true }, { n: "Eintragungsstutbuch", f: "silber", gen: "eltern" }, { n: "Basisstutbuch", f: "gruen" }] },
     shagya: { v: "Zuchtverband für Deutsche Pferde (VZAP)", sys: "noten", stufen: [{ n: "Hauptstutbuch", f: "gold", ab: 6, min: 5, gen: "4" }, { n: "Stutbuch II", f: "silber", gen: "eltern" }, { n: "Anhang", f: "gruen" }] },
@@ -10695,7 +10778,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     lewitzer: ZB_FILIALE("Pferdezuchtverband Mecklenburg-Vorpommern (Ursprung)"),
     barockpinto: { v: "Zuchtverband für Sportpferde fremder Abstammung (ZSSE)", sys: "noten", stufen: [{ n: "Stutbuch I", f: "gold", ab: 6, min: 5, gen: "4" }, { n: "Stutbuch II", f: "silber", gen: "eltern" }, { n: "Vorbuch", f: "gruen", ab: 5 }] },
   };
-  const ZB_AUTO = ["gsb", "abst", "dales"];   // kein Prüfverfahren – die Stufe ergibt sich aus der Abstammung (wie echt)
+  const ZB_AUTO = ["gsb", "abst", "dales", "hvt"];   // kein Prüfverfahren – die Stufe ergibt sich aus der Abstammung (wie echt)
   // Zahlen (selbst gesetzt, wo nicht echt belegt): Gebühren nach Plan Punkt 9, SLP bestanden ab 5,0, Prämie ab 7,5 (echt), Wertfaktoren
   const ZB = { spreizung: 1.4, mitte: 0, tagesform: 1.4, gebuehr: { schau: 60, hof: 200, feld: 70, station: 750 }, stationTierarzt: 120, jahr: 40, slpBest: 5, praemie: 7.5, staats: 7.5, altersAbzug: 0.2, anmeldung: 2, termine: [0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 3, 3],
     wert: { gold: 1.06, silber: 1.03, bronze: 1.01, gruen: 0.98, praemie: 1.05, staats: 1.1, fohlenPraemie: 1.05, fohlenStaats: 1.1, ohnePapiere: 0.85 } };
@@ -10790,7 +10873,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   // automatische Systeme (keine Prüfung): Vollblut, Shire/Clydesdale, Dales
   function zbAuto(p) {
     const V = verbandVon(p), bek = zbAhnenBekannt(p), rein = !istMischling(p), A = (() => { try { return reinAnteil(anteileVon(p), p.rasse); } catch (e) { return 0; } })();
-    if (V.sys === "gsb") return rein && zbElternBekannt(p) ? 0 : null;   // Gestütbuch: beide Eltern eingetragen, Natursprung (Besamung gibt es beim Vollblut nicht)
+    if (V.sys === "gsb" || V.sys === "hvt") return rein && zbElternBekannt(p) ? 0 : null;   // Gestütbuch: beide Eltern eingetragen, Natursprung (Besamung gibt es beim Vollblut nicht)
     if (V.sys === "abst") { if (rein && zbElternBekannt(p) && zbMutterOk(p, false)) return 0; return V.stufen.length === 3 ? (A >= 75 ? 1 : A >= 50 ? 2 : null) : (A >= 50 ? 1 : null); }
     if (V.sys === "dales") { if (!rein) return A >= 50 ? 3 : null; if (!bek) return 2; const weiss = rasseMerkmale(p).z.some(x => x.n === "Abzeichen" && x.st >= 2); return weiss ? 1 : 0; }
     return null;
@@ -10859,7 +10942,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   // Kategorien: PERH phänotypische Erhaltungspopulation, ERH Erhaltungspopulation (Ne < 200), BEO Beobachtungspopulation (200 < Ne < 1000), NG nicht gefährdet (Ne > 1000).
   // Nur einheimische Rassen stehen auf der Liste; im Spiel: Hannoveraner und Trakehner (Rassegruppe Deutsche Reitpferde), Lewitzer, Vollblut.
   const ROTE_LISTE_KAT = { PERH: ["🟥", "phänotypische Erhaltungspopulation", "so wenige Tiere oder so stark vermischt, dass nur noch das Aussehen erhalten werden kann"], ERH: ["🟧", "Erhaltungspopulation", "stark gefährdet – ein Erhaltungsprogramm ist nötig"], BEO: ["🟨", "Beobachtungspopulation", "gefährdet – wird beobachtet, Samen und Embryonen werden eingefroren"], NG: ["🟩", "nicht gefährdet", "genug Zuchttiere"] };
-  const ROTE_LISTE = { hannoveraner: "NG", trakehner: "NG", lewitzer: "NG", vollblut: "NG" };
+  const ROTE_LISTE = { traber: "NG", hannoveraner: "NG", trakehner: "NG", lewitzer: "NG", vollblut: "NG" };
   const ROTE_LISTE_ALLE = { PERH: ["Beberbecker", "Lehmkuhlener Pony", "Leutstettener", "Pfalz-Ardenner Kaltblut", "Rottaler", "Senner"], ERH: ["Alt-Württemberger", "Dülmener", "Schleswiger Kaltblut"],
     BEO: ["Ostfriesisch-Altoldenburgisches Schweres Warmblut", "Rheinisch-Deutsches Kaltblut", "Sächsisch-Thüringisches Schweres Warmblut", "Schwarzwälder Kaltblut", "Süddeutsches Kaltblut"],
     NG: ["Aegidienberger", "Deutscher Traber", "Deutsches Classic Pony", "Deutsches Part-Bred Shetland Pony", "Deutsches Reitpony", "Deutsche Reitpferde (u. a. Hannoveraner, Holsteiner, Oldenburger, Trakehner, Westfale)", "Edelbluthaflinger", "Europäisches Appaloosa-Pony", "Hannoversches Kaltblut Schleswiger Ursprungs", "Kleines Deutsches Pony", "Kleines Deutsches Reitpferd", "Leonharder", "Lewitzer", "Vollblut"] };
@@ -10943,7 +11026,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
         + (V.sys === "linear" && Z.lg ? `<p class="text"><small>Lineare Beschreibung: Leistungsgruppe <b>${["", "I", "II", "III", "IV"][Z.lg]}</b></small></p>` : "")
         + (Z.noten && V.sys !== "linear" ? `<p class="text"><small>Eintragung: ${["typ", "koerper", "korrekt", "schritt", "trab", "eindruck"].map(k => `${ZB_NOTEN_NAME[k]} ${Z.noten[k]}`).join(" · ")} · Gesamt <b>${n(Z.noten.gesamt)}</b></small></p>` : "")
         + (Z.slp ? `<p class="text"><small>Stutenleistungsprüfung: <b>${n(Z.slp)}</b>${Z.slp >= ZB.slpBest ? " (bestanden)" : " (nicht bestanden)"}</small></p>` : "")
-        + (ZB_AUTO.includes(V.sys) ? `<p class="text"><small>${V.sys === "gsb" ? "Beim Englischen Vollblut gibt es keine Stutenschau: Im Gestütbuch steht jede Stute, deren Eltern eingetragen sind und die aus einem Natursprung stammt. Gute Stuten erkennt man an ihren Rennen." : V.sys === "dales" ? "Bei der Dales Pony Society gibt es keine Noten: Section A = reinrassig mit erlaubtem Weiß, Section B = mehr Weiß, Section X = Abstammung lückenhaft, Teilblut = Mischling." : "Bei dieser Gesellschaft gibt es keine Prüfung: Die Stufe steigt mit jeder Generation eingetragener Vorfahren („Grading-up“)."}</small></p>` : "");
+        + (ZB_AUTO.includes(V.sys) ? `<p class="text"><small>${V.sys === "hvt" ? "Bei den Trabern gibt es keine Stutenschau: Ins Zuchtbuch kommt jede Stute, deren Eltern in einem anerkannten Traber-Zuchtbuch stehen. Gute Stuten erkennt man an ihren Rennzeiten." : V.sys === "gsb" ? "Beim Englischen Vollblut gibt es keine Stutenschau: Im Gestütbuch steht jede Stute, deren Eltern eingetragen sind und die aus einem Natursprung stammt. Gute Stuten erkennt man an ihren Rennen." : V.sys === "dales" ? "Bei der Dales Pony Society gibt es keine Noten: Section A = reinrassig mit erlaubtem Weiß, Section B = mehr Weiß, Section X = Abstammung lückenhaft, Teilblut = Mischling." : "Bei dieser Gesellschaft gibt es keine Prüfung: Die Stufe steigt mit jeder Generation eingetragener Vorfahren („Grading-up“)."}</small></p>` : "");
     const T = (spiel.turniere || []).filter(t => zbTermin(t) && ["stutenschau", "slp"].includes(t.art) && t.tag >= spiel.tag), zeile = (t, P) => { const drin = t.nennung.some(x => x.pid === p.id), sp = drin ? "" : zbSperre(p, t, P);
       return `<li class="tp-zeile"><span><b>${esc(zbWestern(p) && P.zb === "feld" ? t.name.replace("(Feld)", "(Feld, Westernreiten)") : t.name)}</b><small>${tagText(t.tag)} · ${fmt(zbKosten(P.zb))}${info(P.zb)}${sp ? `<br>${esc(sp)}` : ""}</small></span>${drin ? (spiel.tag <= t.tag - ZB.anmeldung ? `<button class="mini-knopf an" data-zbab="${t.id}">✓ angemeldet</button>` : `<span class="stat ok">angemeldet</span>`) : sp ? "" : `<button class="mini-knopf" data-zbnenn="${t.id}">Anmelden</button>`}</li>`; };
     const gruppe = (titel, L) => L.length ? `<h4 style="margin:10px 0 4px">${titel}</h4><ul class="tp-liste">${L.join("")}</ul>` : "";
@@ -11092,6 +11175,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     hannoveraner: { sys: "koer", ab: 10, note: 7.5, geb: { koer: 300, hb: 1000 }, lp: HLP(24, 50, "Hengstleistungsprüfung (14 oder 50 Tage)") },
     trakehner: { sys: "koer", ab: 8, note: 7.5, geb: { koer: 300, hb: 1000 }, lp: HLP(24, 50, "Hengstleistungsprüfung (14 oder 50 Tage)") },
     vollblut: { sys: "auto", n: "Gestütbuch (Deckhengst)" },
+    traber: { sys: "auto", n: "Deckhengst (HVT, nach Rennleistung)" }, franztraber: { sys: "auto", n: "Étalon approuvé (nach Rennleistung)" }, standardbred: { sys: "auto", n: "Deckhengst (USTA)" },
     angloaraber: { sys: "koer", ab: 12, note: 7 }, araber: { sys: "koer", ab: 12, note: 7 }, shagya: { sys: "koer", ab: 12, note: 7, min: 7 },
     tekke: { sys: "koer", ab: 12, note: 7 }, lipizzaner: { sys: "koer", ab: 12, note: 7 }, andalusier: { sys: "koer", ab: 12, note: 7, n: "Aptitud Básica (zur Zucht geeignet)" },
     marwari: { sys: "lizenz", ab: 12, n: "Registriert (Deckhengst)" },
@@ -11550,7 +11634,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     try { const zb = p && p.id && freiStufe("zucht") ? zuchtbuchVon(p) : null; if (zb) L.push({ zb: true, n: zb.n, f: zb.f, zf: zb.farbe, farbe: "#c9a24a", zeichen: "", text: `Zuchtbuch: ${zb.n}${zb.titel ? ` · ${zb.titel}` : ""}` }); } catch (e) {}   // v983 (Dome): Zuchtbuch-Wappen als Plakette neben dem Box-Schild
     return L;
   }
-  const plakettenBreite = () => { const b = B(); return b && !b.tot ? Math.min(6, [b.pferd, b.fohlen].filter(Boolean).reduce((a, q) => a + plakettenVon(q).length, 0)) * 15 : 0; };
+  const plakettenBreite = () => { const b = B(); return b && !b.tot ? Math.min(6, [b.pferd, b.fohlen, b.fohlen2].filter(Boolean).reduce((a, q) => a + plakettenVon(q).length, 0)) * 15 : 0; };
   function ehrenZeilen(p) {   // v987 (Dome 8.11.): Steckbrief · Daten · Ehrungen – jede mit ihrem Symbol (P, ★, C/1–3, Wappen, Seltenheit), nach Erhalt sortiert; Reihenfolge (Dome): erst Fohlen-Ehrungen (nach Erhalt), dann Seltenheit, dann Zuchtbuch
     const L = plakettenVon(p), rang = x => x.tag != null ? 0 : x.rund ? 1 : 2, sym = x => x.zb ? zuchtbuchSymbol(x.n, 22, x.zf) : x.rund ? seltenSymbol(x.stufe, 22) : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13 16" width="18" height="22" style="vertical-align:middle" role="img" aria-label="${esc(x.text)}"><rect x=".55" y=".55" width="11.9" height="14.9" rx="2.5" fill="${x.farbe}" stroke="#2b1d14" stroke-width="1.1"/><rect x="2" y="2" width="9" height="12" rx="1.5" fill="none" stroke="#fff6d8" stroke-width=".7" opacity=".8"/><text x="6.5" y="11.5" text-anchor="middle" font-size="8" font-weight="800" fill="#2b1d12" font-family="system-ui, sans-serif">${esc(x.zeichen)}</text></svg>`;
     return L.map((x, i) => ({ x, i })).sort((a, b) => rang(a.x) - rang(b.x) || (a.x.tag || 0) - (b.x.tag || 0) || a.i - b.i).map(({ x }) => `${sym(x)} ${x.zb ? `Zuchtbuch: <b>${esc(x.n)}</b>${x.text.includes(" · ") ? ` · ${esc(x.text.split(" · ")[1])}` : ""}${x.f !== 1 ? ` <small>(Marktwert ${x.f > 1 ? "+" : "−"}${Math.round(Math.abs(x.f - 1) * 100)} %)</small>` : ""}` : esc(x.text)}`).join("<br>");
@@ -13811,7 +13895,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   }
   // Mähne und Schopf wachsen alle 2 Jahreszeiten eine Stufe – auch beim Fohlen bei der Mutter
   function wachsen(b) {
-      [b.pferd, b.fohlen].forEach(pf2 => { if (!pf2) return;
+      [b.pferd, b.fohlen, b.fohlen2].forEach(pf2 => { if (!pf2) return;
       const idx = MAEHNEN.findIndex(m => m[0] === (pf2.maehne || naturMaehne(pf2.rasse)));
       if (spiel.tag - (pf2.maehneSeit || spiel.tag) >= (2 * tpj())) {
         if (idx < MAEHNEN.length - 1) pf2.maehne = MAEHNEN[idx + 1][0];
@@ -14763,7 +14847,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       auch: [["friese", "leichtes Kaltblut / Barockpferd"], ["tinker", "kräftiger Cob-Typ"], ["haflinger", "Kaltblut-Pony"], ["fjord", "Kaltblut-Pony"]] },
     { k: "warm", t: "Leichtes Pferd (Reitpferd)", bild: [["hannoveraner", "brauner"], ["vollblut", "fuchs"], ["araber", "schimmel"]], groesse: "meist 144–175 cm, 400–640 kg",
       merk: ["langer, beweglicher Hals", "schräge Schulter: weiche, raumgreifende Bewegung", "Rücken nicht zu breit, deutlicher Widerrist – der Sattel liegt gut", "lange, schlanke Beine für Tempo"],
-      rassen: ["hannoveraner", "trakehner", "vollblut", "angloaraber", "araber", "shagya", "tekke", "marwari", "knabstrupper", "quarter", "paint", "appaloosa", "andalusier", "lipizzaner", "barockpinto"], extra: "Alle leichten Pferde gehen weit zurück auf den Araber und den nordafrikanischen Berber. Warmblüter haben zusätzlich Kaltblut im Stammbaum, Vollblüter (Englisches Vollblut, Araber) nicht." },
+      rassen: ["hannoveraner", "trakehner", "vollblut", "angloaraber", "araber", "shagya", "tekke", "marwari", "knabstrupper", "quarter", "paint", "appaloosa", "andalusier", "lipizzaner", "barockpinto", "traber", "franztraber", "standardbred"], extra: "Alle leichten Pferde gehen weit zurück auf den Araber und den nordafrikanischen Berber. Warmblüter haben zusätzlich Kaltblut im Stammbaum, Vollblüter (Englisches Vollblut, Araber) nicht." },
     { k: "pony", t: "Pony", bild: [["shetty", "palomino"], ["welshcob", "fuchs"], ["fell", "rappe"]], groesse: "meist unter 148 cm",
       merk: ["stämmig, rund, dichte Knochen", "dicker Hals, breite Brust", "kurzer Kopf, große Augen, kleine Ohren", "kurze Beine im Verhältnis zum Körper, harte Hufe", "dichtes Fell, viel Mähne und Schweif", "für die Größe sehr stark, klug – manchmal stur"],
       rassen: ["shetty", "fjord", "haflinger", "welshcob", "fell", "dales", "lewitzer", "isi"], extra: "Bei Turnieren zählt jedes Pferd unter 148 cm als Pony, egal welche Rasse. Die Zuchtverbände schauen zusätzlich auf Körperbau und Wesen. Manches bleibt aus Tradition ein „Pferd“, obwohl es Ponygröße hat – zum Beispiel das Islandpferd." } ];
@@ -15172,12 +15256,34 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     dialog(`<h3>🏺 Grab von ${esc(g.name)} auflösen?</h3><p>${hof ? "Der Platz auf deinem Gedenkplatz wird frei (kostenlos)." : "Die Grabpflege-Gebühr endet ab der nächsten Jahreszeit."} Der Grabstein im Pferdefriedhof bleibt als Erinnerung.</p>`,
       [["Auflösen", () => { delete g.grab; g.aufgeloest = jzJetzt(); prot("Grab aufgelöst", { x: g.name }); speichern(); zeigeFriedhof(); }], ["Abbrechen", null, "zweit"]]);
   }
-  function gedenkErweitern() {
+  // Dome 14.11.2026: der Gedenkplatz wächst Quadrat für Quadrat wie die Hofwege – jedes Quadrat (5 × 5 m) direkt daneben bringt +10 Urnenplätze für 2.000 €
+  const gedenkFeldIds = G => Array.from({ length: G.felder || 0 }, (_, i) => G.gid + "-f" + i);
+  function gedenkKacheln() {
+    const G = gedenkplatz(), P = hofPlan(); if (!G || !P) return []; const L = [], it = planItems().find(x => x.id === G.gid), p = P.pos[G.gid];
+    if (it && p) { const R = planRechteck(it, p); for (let y = R.y; y < R.y + R.h; y++) for (let x = R.x; x < R.x + R.b; x++) L.push([x, y]); }
+    gedenkFeldIds(G).forEach(id => { const q = P.pos[id]; if (q) L.push([q.x, q.y]); }); return L;
+  }
+  function gedenkFeldPruefen(x, y, extra = []) {   // "" = passt; sonst Grund
+    const G = gedenkplatz(); if (!G) return "kein"; if ((G.plaetze || FRIEDHOF_PREIS.plaetze) + FRIEDHOF_PREIS.plaetze * (extra.length + 1) > FRIEDHOF_PREIS.max) return "voll";
+    const P = hofPlan(), R = { x, y, b: 1, h: 1 }; if (!P.pos[G.gid]) return "nichtGestellt"; if (!planImLand(P, R)) return "rand";
+    const alle = [...gedenkKacheln(), ...extra]; if (alle.some(([a, b]) => a === x && b === y) || planKonflikt("_gedenk", R)) return "belegt";
+    return alle.some(([a, b]) => Math.abs(a - x) + Math.abs(b - y) === 1) ? "" : "dran";
+  }
+  function gedenkFeldSetzen(x, y) {
+    const G = gedenkplatz(), P = hofPlan(), id = G.gid + "-f" + (G.felder || 0); P.pos[id] = { x, y };
+    G.felder = (G.felder || 0) + 1; G.plaetze = (G.plaetze || FRIEDHOF_PREIS.plaetze) + FRIEDHOF_PREIS.plaetze; G.preis = (G.preis || BAUTEN.gedenkplatz.fest) + FRIEDHOF_PREIS.anbau;
+    if (P.wege) P.wege = P.wege.filter(k => k !== x + "," + y);
+  }
+  function gedenkErweitern() {   // altes Spiel: das nächste freie Quadrat direkt daneben
     const G = gedenkplatz(); if (!G) return; const P = G.plaetze || FRIEDHOF_PREIS.plaetze;
     if (P >= FRIEDHOF_PREIS.max) { dialog(`<h3>🕯️ Gedenkplatz</h3><p>Mehr als ${FRIEDHOF_PREIS.max} Plätze gehen nicht.</p>`); return; }
-    if (geldFrei() < FRIEDHOF_PREIS.anbau) { dialog(`<h3>Nicht genug Geld</h3>${dispoHinweis()}<p>Der Anbau kostet ${fmt(FRIEDHOF_PREIS.anbau)}.</p>`); return; }
-    dialog(`<h3>🕯️ Gedenkplatz erweitern?</h3><p>+${FRIEDHOF_PREIS.plaetze} Urnenplätze für <b>${fmt(FRIEDHOF_PREIS.anbau)}</b> (jetzt ${P}, danach ${P + FRIEDHOF_PREIS.plaetze}).</p>`,
-      [["Erweitern", () => { buchen(-FRIEDHOF_PREIS.anbau, "Gedenkplatz erweitern"); G.plaetze = P + FRIEDHOF_PREIS.plaetze; G.preis = (G.preis || BAUTEN.gedenkplatz.fest) + FRIEDHOF_PREIS.anbau; prot("Gedenkplatz erweitert", { x: G.plaetze }); speichern(); zeigeFriedhof(); }], ["Abbrechen", null, "zweit"]]);
+    if (geldFrei() < FRIEDHOF_PREIS.anbau) { dialog(`<h3>Nicht genug Geld</h3>${dispoHinweis()}<p>Ein Quadrat kostet ${fmt(FRIEDHOF_PREIS.anbau)}.</p>`); return; }
+    const K = gedenkKacheln(), frei = []; K.forEach(([x, y]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => { if (!frei.length && gedenkFeldPruefen(x + dx, y + dy) === "") frei.push([x + dx, y + dy]); }));
+    const gestellt = !!hofPlan().pos[G.gid];
+    if (gestellt && !frei.length) { dialog(`<h3>🕯️ Kein Platz daneben</h3><p>Direkt neben dem Gedenkplatz ist kein freies Quadrat auf dem Bauland. Verschiebe ihn oder kaufe Bauland dazu (Hof → Bauen → Hofplan).</p>`); return; }
+    dialog(`<h3>🕯️ Gedenkplatz erweitern?</h3><p>Ein Quadrat (5 × 5 m) direkt daneben: +${FRIEDHOF_PREIS.plaetze} Urnenplätze für <b>${fmt(FRIEDHOF_PREIS.anbau)}</b> (jetzt ${P}, danach ${P + FRIEDHOF_PREIS.plaetze}). In der neuen Ansicht wählst du die Quadrate selbst aus, wie beim Hofweg.</p>`,
+      [["Erweitern", () => { buchen(-FRIEDHOF_PREIS.anbau, "Gedenkplatz erweitern"); if (frei.length) gedenkFeldSetzen(...frei[0]); else { G.plaetze = P + FRIEDHOF_PREIS.plaetze; G.preis = (G.preis || BAUTEN.gedenkplatz.fest) + FRIEDHOF_PREIS.anbau; }
+        prot("Gedenkplatz erweitert", { x: G.plaetze }); speichern(); zeigeFriedhof(); }], ["Abbrechen", null, "zweit"]]);
   }
   function grabPflegen() { spiel.grabPflege = jzJetzt(); prot("Gräber gepflegt", {}); speichern(); zeigeFriedhof(); }
   function grabstein(g) {
@@ -15948,12 +16054,17 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   }
   // Verkaufspferde: wechseln jede Jahreszeit (wie die Deckstation)
   // Verkaufspferde: wechseln jede Jahreszeit, fest gespeichert (jedes mit eigener Akte)
+  // Dome 15.11.2026: Rassen, die aus ihrem Herkunftsland nicht (oder kaum) in die EU kommen, gibt es nur auf dem Raritätenmarkt.
+  // Marwari: Indien beschränkt die Ausfuhr (Lizenz, teils Verbot), Einfuhr aus Indien wegen Afrikanischer Pferdepest blockiert; 2023 lebten 8 Marwaris in Deutschland, etwa 35 außerhalb Indiens (Schwäbische Zeitung).
+  // Achal-Tekkiner: Turkmenistan kontrolliert die Ausfuhr streng, aber in Deutschland gibt es Züchter und ein Zuchtbuch – auf dem normalen Markt nur seltener (Anteil selbst gesetzt).
+  const NUR_RARITAET = ["marwari"], MARKT_SELTENER = { tekke: 0.35 };
+  function marktRasse(r) { for (let k = 0; k < 12; k++) { const ra = RASSEN[Math.floor(r() * RASSEN.length)]; if (NUR_RARITAET.includes(ra.id)) continue; if (MARKT_SELTENER[ra.id] != null && r() > MARKT_SELTENER[ra.id]) continue; return ra; } return RASSEN.find(x => x.id === "hannoveraner") || RASSEN[0]; }
   function marktpferde() {
     const jetzt = jzJetzt(), gek = spiel.marktGekauft || [];
     if (!spiel.marktStand || spiel.marktStand.jz !== jetzt) {
       const r = zufall("markt-" + jetzt + (spiel.spieler ? spiel.spieler.name : ""));
       spiel.marktStand = { jz: jetzt, liste: Array.from({ length: MARKT_ANZ.haendler }, (_, i) => {
-        const ra = RASSEN[Math.floor(r() * RASSEN.length)], g = ["Stute", "Hengst", "Wallach"][Math.floor(r() * 3)], jahre = 1 + Math.floor(r() * 14);
+        const ra = marktRasse(r), g = ["Stute", "Hengst", "Wallach"][Math.floor(r() * 3)], jahre = 1 + Math.floor(r() * 14);
         // normaler Pferdemarkt: reinrassige Pferde und Mischlinge – Rassen der 8 Urgroßeltern
         const w = r(), fremdAnz = w < .35 ? 0 : w < .6 ? 1 : w < .8 ? 2 : w < .92 ? 4 : 3, andere = RASSEN.filter(x => x.id !== ra.id);
         const fremd = [andere[Math.floor(r() * andere.length)].id, andere[Math.floor(r() * andere.length)].id];
@@ -15969,7 +16080,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     return spiel.marktStand.liste.filter(h => !gek.includes(h.id));
   }
   // ---------- Pferdemarkt: Privatanzeigen, Auktionshaus, Gestüte, Notfallpferde – alles wechselt jede Jahreszeit ----------
-  const GESTUET_NAMEN = { araber: "Gestüt Wüsten\u00adwind", friese: "Gestüt Friesen\u00adhof", marwari: "Gestüt Marwar", fjord: "Gestüt Fjord\u00adblick", haflinger: "Haflinger\u00adhof Alpen\u00adblick",
+  const GESTUET_NAMEN = { traber: "Traber\u00adgestüt Wiesen\u00adgrund", franztraber: "Haras du Bocage", standardbred: "Blue Meadow Farm", araber: "Gestüt Wüsten\u00adwind", friese: "Gestüt Friesen\u00adhof", marwari: "Gestüt Marwar", fjord: "Gestüt Fjord\u00adblick", haflinger: "Haflinger\u00adhof Alpen\u00adblick",
     shetty: "Pony\u00adgestüt Nord\u00adwind", shire: "Gestüt Eichen\u00adgrund", andalusier: "Gestüt Sierra Blanca", lipizzaner: "Gestüt Karst\u00adblick", vollblut: "Gestüt Renn\u00adbahn\u00adwiese",
     quarter: "Silver Creek Ranch", hannoveraner: "Gestüt Linden\u00adhof", isi: "Gestüt Island\u00adwiese", tinker: "Gestüt Klee\u00adblatt", tekke: "Gestüt Karakum",
     trakehner: "Gestüt Elch\u00adwiese", welshcob: "Gestüt Hügel\u00adland", clydesdale: "Gestüt Tal\u00adblick", fell: "Pony\u00adgestüt Berg\u00adwiese", dales: "Pony\u00adgestüt Hoch\u00admoor", angloaraber: "Gestüt Sonnen\u00adhang", shagya: "Gestüt Puszta",
@@ -16020,7 +16131,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     const r = zufall("markt3-" + jetzt + (spiel.spieler ? spiel.spieler.name : "")), M = { jz: jetzt, gestuet: {}, v: 3 };
     // Privatanzeigen: wenige Pferde, oft älter und Mix, 70–100 % des Marktwerts, Gesundheit erst nach dem Kauf sichtbar
     M.privat = Array.from({ length: MARKT_ANZ.privat[0] + Math.floor(r() * MARKT_ANZ.privat[1]) }, (_, i) => {
-      const w = r(), fo = r() < fohlenChance(), h = mkPferd("pv" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, w < .2 ? 0 : 1 + Math.floor(r() * 4), fo ? 5 + Math.floor(r() * 12) : 5 + Math.floor(r() * 15), r, fo ? "Stute" : null, undefined, "privat");
+      const w = r(), fo = r() < fohlenChance(), h = mkPferd("pv" + jetzt + "-" + i, marktRasse(r).id, w < .2 ? 0 : 1 + Math.floor(r() * 4), fo ? 5 + Math.floor(r() * 12) : 5 + Math.floor(r() * 15), r, fo ? "Stute" : null, undefined, "privat");
       h.training = Math.floor(r() * 60); h.verdeckt = Math.round(45 + r() * 55); marktErfolge(h, r);
       h.ahnenUnbekannt = AHNEN_LUECKE.filter(() => r() < .3);
       if (fo) mitFohlen(h, r);
@@ -16030,18 +16141,18 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       h.preis = Math.round(((wGesund + wEcht) / 2 + (h.fohlenBeiFuss ? marktwert(h.fohlenBeiFuss) : 0)) * saisonF() * (.7 + r() * .3) / 50) * 50; return h; });
     // Auktionshaus: ausgesuchte Jungpferde, Start beim halben Marktwert
     M.auktion = Array.from({ length: MARKT_ANZ.auktion[0] + Math.floor(r() * MARKT_ANZ.auktion[1]) }, (_, i) => {
-      const jahre = 1 + Math.floor(r() * 4), h = mkPferd("au" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, r() < .7 ? 0 : 1, jahre, r, null, zuechterGeb(jahre, r), "zuechter"), _zb = zbKauf(h, "Auktion"), wert = Math.round(marktwert(h) * saisonF());
+      const jahre = 1 + Math.floor(r() * 4), h = mkPferd("au" + jetzt + "-" + i, marktRasse(r).id, r() < .7 ? 0 : 1, jahre, r, null, zuechterGeb(jahre, r), "zuechter"), _zb = zbKauf(h, "Auktion"), wert = Math.round(marktwert(h) * saisonF());
       const start = Math.max(100, Math.round(wert / 2 / 50) * 50); marktKoerper(h, r, "zuechter");
       return { pferd: h, wert, start, gebot: start, gebote: 0, fuehrt: null, max: npcLimit(wert, r) }; });
     // Fohlenauktion (Sommer, Herbst): Frühlingsfohlen vom Züchter, abgeholt nach dem Absetzen zu Beginn der nächsten Jahreszeit
     M.fohlen = !fohlenZeit() ? [] : Array.from({ length: MARKT_ANZ.fohlen[0] + Math.floor(r() * MARKT_ANZ.fohlen[1]) }, (_, i) => {
-      const h = mkPferd("fa" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, 0, 0, r, r() < .5 ? "Stute" : "Hengst", { s: 0, j: datum().j }, "zuechter"); marktFohlenschau(h, r); zbKauf(h, "Auktion");   // viele Auktionsfohlen sind schon vorgestellt
+      const h = mkPferd("fa" + jetzt + "-" + i, marktRasse(r).id, 0, 0, r, r() < .5 ? "Stute" : "Hengst", { s: 0, j: datum().j }, "zuechter"); marktFohlenschau(h, r); zbKauf(h, "Auktion");   // viele Auktionsfohlen sind schon vorgestellt
       const wert = Math.round(marktwert(h) * saisonF());
       const start = Math.max(100, Math.round(wert / 2 / 50) * 50);
       return { pferd: h, wert, start, gebot: start, gebote: 0, fuehrt: null, fohlen: true, max: npcLimit(wert, r) }; });
     // Notfallpferde beim Tierschutz: schlechter Zustand, für eine Schutzgebühr
     M.notfall = Array.from({ length: MARKT_ANZ.notfall[0] + Math.floor(r() * MARKT_ANZ.notfall[1]) }, (_, i) => {
-      const fo = r() < fohlenChance() * .35, h = mkPferd("nf" + jetzt + "-" + i, RASSEN[Math.floor(r() * RASSEN.length)].id, Math.floor(r() * 5), fo ? 6 + Math.floor(r() * 12) : 8 + Math.floor(r() * 15), r, fo ? "Stute" : null);
+      const fo = r() < fohlenChance() * .35, h = mkPferd("nf" + jetzt + "-" + i, marktRasse(r).id, Math.floor(r() * 5), fo ? 6 + Math.floor(r() * 12) : 8 + Math.floor(r() * 15), r, fo ? "Stute" : null);
       if (fo) mitFohlen(h, r);
       marktKoerper(h, r, "notfall"); zbKauf(h, "Tierschutz");
       h.notGesundheit = Math.round(25 + r() * 20); h.preis = Math.round((150 + r() * 150 + (h.fohlenBeiFuss ? 100 : 0)) / 10) * 10; h.notfall = true; return h; });
@@ -16459,7 +16570,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
         spiel.tierschutz = spiel.tierschutz.filter(x => x !== t);
         const nb = spiel.boxen[frei];
         nb.pferd = { ...t.pferd, pflege: t.pferd.pflege || erzeugePflege(t.pferd), maehneSeit: spiel.tag, schopfSeit: spiel.tag };
-        if (t.fohlen) nb.fohlen = t.fohlen;
+        if (t.fohlen) nb.fohlen = t.fohlen; if (t.fohlen2) nb.fohlen2 = t.fohlen2;
         nb.krippeVoll = false; nb.mistig = false; nb.mistStufe = 0; nb.tot = false;
         alterAktualisieren(); speichern(); zeigeMarkt();
         dialog(`<h3>🏠 Willkommen zurück!</h3><p>${esc(t.pferd.name)} steht jetzt in Box ${bnr(frei)}.</p>`);
@@ -16511,7 +16622,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
         zeilen: [rasseById(a.pferd.rasse).name, `${a.pferd.geschlecht} · ${alterText(a.pferd)}`, `<b>${fmt(a.gebot)}</b> · ${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"}`, a.fuehrt === "du" ? `✅ du führst · max ${fmt(a.duMax || a.gebot)}` : a.vorbei ? "beendet" : a.duGeboten ? "⚠️ überboten" : ""],
         aktion: a.vorbei ? null : [a.fuehrt === "du" ? "Höchstgebot erhöhen" : `Bieten · ab ${fmt(a.fuehrt ? a.gebot + bietSchritt(a) : a.gebot)}`, () => bieten(a)], extra: { zeilen: [["Höchstgebot", `<b>${fmt(a.gebot)}</b>`], ["Gebote", a.gebote]] } })).join("")}</div></div>`; }
     else if (marktBereich === "gestuet") {
-      if (!gestuetWahl) html = kopf("🏰 Gestüte", "Reinrassige Pferde mit vollständigen Papieren und Fellfarben-Test. Wähle ein Gestüt.") + `<div class="kacheln quadrat markt-kacheln">${rassenABC().map(r => `<button class="kachel klickbar" data-gest="${r.id}" data-rasse="${r.id}"><span class="ico">🏰</span><b>${GESTUET_NAMEN[r.id]}</b><small>${r.name}</small></button>`).join("")}</div></div>`;
+      if (!gestuetWahl) html = kopf("🏰 Gestüte", "Reinrassige Pferde mit vollständigen Papieren und Fellfarben-Test. Wähle ein Gestüt.") + `<div class="kacheln quadrat markt-kacheln">${rassenABC().filter(r => !NUR_RARITAET.includes(r.id)).map(r => `<button class="kachel klickbar" data-gest="${r.id}" data-rasse="${r.id}"><span class="ico">🏰</span><b>${GESTUET_NAMEN[r.id]}</b><small>${r.name}</small></button>`).join("")}</div></div>`;
       else { const gp = gestuetPferde(gestuetWahl).filter(h => !(spiel.marktGekauft || []).includes(h.id));
         html = `<button class="zurueck-s voll" id="mkGestuete" style="align-self:flex-start;justify-self:start">‹ Gestüte</button>` + kopf(`🏰 ${GESTUET_NAMEN[gestuetWahl]}`, `${rasseById(gestuetWahl).name} · reinrassig, mit Papieren und Fellfarben-Test`).replace(/<button class="zurueck-s voll" id="mkUebersicht"[^>]*>[^<]*<\/button>/, "")
           + (gp.length ? `<div class="paar-liste">${gp.map(h => pferdKachel(h, { ort: GESTUET_NAMEN[gestuetWahl], zeilen: [`${h.geschlecht} · ${alterText(h)}`, `<b>${fmt(h.preis)}</b>`],
@@ -16741,7 +16852,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     try { if (letzterHof()) verlorenSchnapp = schnappMachen(); } catch (e) { console.error("Verloren-Stand:", e); }
     const liste = [];
     spiel.boxen.forEach(b => { const p = b.pferd; if (!p || b.tot || fremd(p)) return; prot("Pferd gepfändet", { p }); const w = Math.round(verkaufsWert(p) * PFAENDUNG / 10) * 10; liste.push({ name: p.name, fohlen: b.fohlen ? b.fohlen.name : "", w });
-      archivieren(p); if (b.fohlen) { archivieren(b.fohlen); delete b.fohlen; } b.pferd = null; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; });
+      archivieren(p); if (b.fohlen) { archivieren(b.fohlen); delete b.fohlen; } if (b.fohlen2) { archivieren(b.fohlen2); delete b.fohlen2; } b.pferd = null; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; });
     (spiel.extern || []).forEach(e => { prot("Pferd gepfändet", { p: e.pferd }); const w = Math.round(marktwert(e.pferd) * PFAENDUNG / 10) * 10; liste.push({ name: e.pferd.name, fohlen: "", w }); archivieren(e.pferd); });
     spiel.extern = []; spiel.angebote = [];
     const erloes = liste.reduce((a, x) => a + x.w, 0); if (erloes) buchen(erloes, "Pfändung: Zwangsverkauf der Pferde");
@@ -17394,6 +17505,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       const [l0] = planMassTyp(g.typ, planMenge(g, k => !k.bau && !k.abriss), g.stufe || 1);
       if (planVorschau && planVorschau.id === g.gid) return { id: g.gid, typ: g.typ, g, l: planVorschau.mass[0], t: planVorschau.mass[1], l0: Math.min(planVorschau.mass[0], l), t0: t, vor: true };
       return { id: g.gid, typ: g.typ, g, l, t, l0: Math.min(l, l0) }; });
+    gebaeude().filter(g => g.typ === "gedenkplatz" && !g.bau && g.felder).forEach(g => gedenkFeldIds(g).forEach(id => L.push({ id, typ: "gedenkplatz", g, l: 1, t: 1, l0: 1, feld: true })));   // Dome 14.11.: Gedenkplatz-Quadrate
     L.push({ id: "park", typ: "park", g: null, l: 3, t: 2, l0: 3 });
     return L;
   }
@@ -17900,8 +18012,8 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   const freieBoxIn = hid => imHof(hid, () => spiel.boxen.filter(boxFrei).length);
   function umziehen(p, box, hid, istFohlen) {
     const mit = !istFohlen && box.fohlen ? box.fohlen : null;
-    if (istFohlen) delete box.fohlen;
-    else { box.pferd = null; delete box.fohlen; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0; box.tot = false; }
+    if (istFohlen) { delete box.fohlen; fohlenNachruecken(box); }
+    else { box.pferd = null; delete box.fohlen; delete box.fohlen2; box.krippeVoll = false; box.mistig = false; box.mistStufe = 0; box.tot = false; }
     spiel.angebote = (spiel.angebote || []).filter(a => a.id !== p.id); delete p.weide; delete p.paddock;
     (spiel.mitarbeiter || []).forEach(m => { if (m.nurFuer === p.id) delete m.nurFuer; });
     fahrtStress(p, "umzug"); if (mit) fahrtStress(mit, "umzug");
@@ -18139,8 +18251,8 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     umbauBeginnen(g, preis); return true;
   }
   function umbauUmzug(b, nb) {
-    nb.pferd = b.pferd; if (b.fohlen) nb.fohlen = b.fohlen; nb.krippeVoll = b.krippeVoll; nb.mistig = false; nb.mistStufe = 0; nb.tot = false; if (b.leckstein) nb.leckstein = b.leckstein;
-    b.pferd = null; delete b.fohlen; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; delete b.vorWeide;
+    nb.pferd = b.pferd; if (b.fohlen) nb.fohlen = b.fohlen; if (b.fohlen2) nb.fohlen2 = b.fohlen2; nb.krippeVoll = b.krippeVoll; nb.mistig = false; nb.mistStufe = 0; nb.tot = false; if (b.leckstein) nb.leckstein = b.leckstein;
+    b.pferd = null; delete b.fohlen; delete b.fohlen2; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; delete b.vorWeide;
   }
   // v414 (Dome): Umbau – Pferd nach draußen; im Frühling bei Hufrehe-Gefahr auf einen freien Sandpaddock statt auf die Weide
   function umbauRaus(p, b, g) {
@@ -18526,8 +18638,8 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       const pe = einstellerVon(p), frei = x => !x.quar && boxFrei(x) && stallErlaubt(x, p) && (!pe || !pe.leistungen.paddockbox || x.paddock);
       let z = b.fohlen ? spiel.boxen.findIndex(x => x.abfohl && frei(x)) : spiel.boxen.findIndex(x => !x.abfohl && frei(x)); if (z < 0) z = spiel.boxen.findIndex(frei);   // v972 (Dome 8.11.): stute mit Fohlen zuerst in die Abfohlbox (Platz), alle anderen nicht in die Abfohlbox, wenn sonst etwas frei ist
       if (z < 0) { if (spiel.boxen.some(x => !x.quar && boxFrei(x)) && p.quarHinweis !== jzJetzt()) { p.quarHinweis = jzJetzt(); brief("Hofverwaltung", `${p.name}: keine passende Box nach der Quarantäne`, `<b>${esc(p.name)}</b> hat die Quarantäne überstanden, aber in den Ställen mit freien Boxen {darfst du|dürfen Sie} ${p.geschlecht === "Stute" ? "keine Stuten" : p.geschlecht === "Hengst" ? "keine Hengste" : "keine Wallache"} halten (Hofverwaltung → Hof → Whiteboard · Boxen, oben rechts beim Stall). ${pron(p).er === "sie" ? "Sie" : "Er"} bleibt vorerst im Quarantänestall.`, { pferde: [p] }); } return; }   // v966 (Dome 8.11.): Geschlechter-Auswahl je Stall gilt auch hier
-      const nb = spiel.boxen[z]; nb.pferd = p; if (b.fohlen) nb.fohlen = b.fohlen; nb.krippeVoll = b.krippeVoll; nb.mistig = false; nb.mistStufe = 0; nb.tot = false;
-      b.pferd = null; delete b.fohlen; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0;
+      const nb = spiel.boxen[z]; nb.pferd = p; if (b.fohlen) nb.fohlen = b.fohlen; if (b.fohlen2) nb.fohlen2 = b.fohlen2; nb.krippeVoll = b.krippeVoll; nb.mistig = false; nb.mistStufe = 0; nb.tot = false;
+      b.pferd = null; delete b.fohlen; delete b.fohlen2; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0;
       brief("Hofverwaltung", `${p.name} hat die Quarantäne verlassen`, `<b>${esc(p.name)}</b> hat die Quarantäne gesund überstanden und ist vom Quarantänestall (Box ${bnr(i)}) in Box ${bnr(z)} umgezogen.${nb.fohlen && !nb.abfohl ? ` ⚠️ Es war keine Abfohlbox frei – ${esc(p.name)} und das Fohlen ${esc(nb.fohlen.name)} haben in dieser Box weniger Platz. Eine Abfohlbox bekommst du unter Hofverwaltung → Hof → Bauen (Abfohlstall), oder mach eine frei.` : ""}`, { pferde: [p] });
     });
   }
@@ -19107,7 +19219,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     // Dome 24.10.: wer mit offener Rechnung auszieht, ist nicht aus dem Schneider – die Schuld bleibt und wird weiter angemahnt
     if (e.offen) { const o = e.offen; (spiel.pensionSchulden = spiel.pensionSchulden || []).push({ name: eName(e), w: e.w, pferd: p ? p.name : "", box: o.box, leist: o.leist, gebuehr: o.gebuehr || 0, mahn: o.mahn || 0, faellig: Math.max(o.faellig, spiel.tag + 1) }); delete e.offen;
       brief("Hofverwaltung", `${eName(e)} schuldet noch Geld`, `${eName(e)} ist ausgezogen, hat das Pensionsgeld für <b>${esc(p ? p.name : "das Pferd")}</b> aber noch nicht bezahlt (${fmt(o.box + o.leist + (o.gebuehr || 0))}). Die Mahnungen laufen weiter – zahlt ${ePron(e).sie} trotzdem nicht, geht die Forderung ans Inkasso.`); }
-    if (b) { b.pferd = null; delete b.fohlen; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; b.tot = false; }
+    if (b) { b.pferd = null; delete b.fohlen; delete b.fohlen2; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; b.tot = false; }
     L.splice(L.indexOf(e), 1);
     if (p) brief("Hofverwaltung", `${p.name} ist ausgezogen`, `${eName(e)} hat <b>${esc(p.name)}</b> abgeholt (${grund}). Box ${bnr(spiel.boxen.indexOf(b))} ist wieder frei.`);
   }
@@ -19159,7 +19271,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     if (schuld) { const wert = Math.round(marktwert(p) * PENSION.entsch); pensionAnsehen(-15); buchen(-wert, "Pension: Entschädigung"); vetVorfall("pension", `Pensionspferd ${p.name} ist durch Vernachlässigung gestorben`);
       brief(eName(e), `${p.name} ist tot`, `ich bin fassungslos: <b>${esc(p.name)}</b> ist bei {euch|Ihnen} gestorben (${esc(p.todesursache)}). Das wäre bei guter Versorgung nicht passiert. Unser Vertrag ist beendet, und ich verlange Schadenersatz: <b>${fmt(wert)}</b> (der Wert von ${esc(p.name)}) – das Geld ist bereits abgebucht.`, { w: e.w }); }
     else brief(eName(e), `${p.name} ist tot`, `ich bin sehr traurig: <b>${esc(p.name)}</b> ist gestorben (${esc(p.todesursache || "Ursache unbekannt")}). Danke, dass {ihr euch|Sie sich} so gut gekümmert {habt|haben}. Unser Vertrag ist damit beendet.`, { w: e.w });
-    b.pferd = null; delete b.fohlen; b.tot = false; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0;
+    b.pferd = null; delete b.fohlen; delete b.fohlen2; b.tot = false; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0;
     return true;
   }
   // Hofverwaltung → Hof → Pension: Regeln, Preise, Leistungen, Einsteller, offene Anfragen
@@ -19493,7 +19605,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   }
   const offenPlatz = p => { if (p) offenGruppenSetzen(); return spiel.boxen.findIndex(b => offenFrei(b) && (!p || (b.og || 0) === offenGruppeVon(p))); };   // mit Pferd: freier Platz in seiner Gruppe
   function inBoxUmziehen(box, z) {   // Pferd (samt Fohlen) von box in Box z umziehen
-    const ziel = spiel.boxen[z], p = box.pferd; ziel.pferd = p; if (box.fohlen) { ziel.fohlen = box.fohlen; delete box.fohlen; }
+    const ziel = spiel.boxen[z], p = box.pferd; ziel.pferd = p; if (box.fohlen) { ziel.fohlen = box.fohlen; delete box.fohlen; } if (box.fohlen2) { ziel.fohlen2 = box.fohlen2; delete box.fohlen2; }
     ziel.krippeVoll = box.krippeVoll || false; ziel.kraftVoll = box.kraftVoll || false; if (box.wasserTag != null) ziel.wasserTag = box.wasserTag; else delete ziel.wasserTag; ziel.mistig = false; ziel.mistStufe = 0; ziel.tot = false;   // v655 (Dome 23.10.): Futter und Einstreu wandern mit in die neue Box
     if (box.einstreu) ziel.einstreu = box.einstreu; else delete ziel.einstreu; if (box.ohneEinstreu) ziel.ohneEinstreu = box.ohneEinstreu; else delete ziel.ohneEinstreu;
     if (box.vorWeide) { ziel.vorWeide = box.vorWeide; delete box.vorWeide; }   // Pferd gerade draußen: der Stand für die Rückkehr zieht mit
@@ -19609,7 +19721,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     if (art === "ausbildung") { const ber = angestellte("bereiter").length; return [["Reitplatz", !!A.reitplatz], ["Roundpen oder Reithalle", !!(A.roundpen || A.reithalle)], [`mindestens 1 Bereiter (${ber})`, ber >= 1]]; }
     if (art === "gnadenhof") { const falsch = P.filter(q => !(istSenior(q) || befundListe(q).length || q.schutzBis || altersschwach(q))), zucht = P.some(q => q.traechtig) || spiel.boxen.some(b => b.fohlen), verk = (spiel.angebote || []).length;
       return [[`nur alte, kranke oder Notfallpferde${falsch.length ? ` (nicht: ${falsch.map(q => esc(q.name)).join(", ")})` : ""}`, !falsch.length], ["keine Zucht", !zucht], ["kein Verkauf", !verk]]; }
-    if (art === "renn") { const r = P.filter(q => (q.rasse === "vollblut" && alterJZ(q) >= 8) || (["araber", "tekke"].includes(q.rasse) && alterJZ(q) >= 12)).length; const rt = angestellte("renntrainer").length; return [["Rennbahn", gebaeude().some(g => g.typ === "rennbahn" && !g.bau)], [`mindestens 2 Rennpferde (${r})`, r >= 2], [`Pferdewirt Pferderennen (${rt})`, rt >= 1]]; }   // Dome: Vollblüter laufen schon zweijährig, Araber/Achal-Tekkiner ab 3
+    if (art === "renn") { const r = P.filter(q => (q.rasse === "vollblut" && alterJZ(q) >= 8) || (TRABER.includes(q.rasse) && alterJZ(q) >= 8) || (["araber", "tekke"].includes(q.rasse) && alterJZ(q) >= 12)).length; const rt = angestellte("renntrainer").length; return [["Rennbahn", gebaeude().some(g => g.typ === "rennbahn" && !g.bau)], [`mindestens 2 Rennpferde (${r})`, r >= 2], [`Pferdewirt Pferderennen (${rt})`, rt >= 1]]; }   // Dome: Vollblüter laufen schon zweijährig, Araber/Achal-Tekkiner ab 3
     if (art === "western") { const w = P.filter(q => ["quarter", "paint", "appaloosa"].includes(q.rasse) || ((q.disz || {}).western || 0) > 0).length; return [["Reitplatz", !!A.reitplatz], ["Trail-Parcours", !!A.trail], [`mindestens 2 Westernpferde (${w})`, w >= 2], [`Pferdewirt Spezialreitweisen (${angestellte("westerntrainer").length})`, angestellte("westerntrainer").length >= 1]]; }
     if (art === "gang") { const g = P.filter(gangpferd).length; return [["Ovalbahn", gebaeude().some(x => x.typ === "ovalbahn" && !x.bau)], [`mindestens 2 Gangpferde (${g})`, g >= 2], [`Pferdewirt Spezialreitweisen (${angestellte("westerntrainer").length})`, angestellte("westerntrainer").length >= 1]]; }   // Dome 27.10.: wie der Rennstall, mit eigener Bahn (Ovalbahn)
     return [];
@@ -20403,7 +20515,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   function pferdeTabZeilen() {
     const L = [];
     spiel.boxen.forEach((b, i) => { if (b.tot) return;
-      [b.pferd, b.fohlen].forEach((p, j) => { if (!p) return; const e = fremd(p) ? einstellerVon(p) : null, fohlenFremd = j === 1 && b.pferd && fremd(b.pferd);
+      [b.pferd, b.fohlen, b.fohlen2].forEach((p, j) => { if (!p) return; const e = fremd(p) ? einstellerVon(p) : null, fohlenFremd = j === 1 && b.pferd && fremd(b.pferd);
         const pension = !!e || fohlenFremd, aufg = e ? pensionAufgaben(e, b) : [];
         const bef = bekannteBefunde(p), g = Math.round((p.pflege && p.pflege.gesundheit) != null ? p.pflege.gesundheit : 100);
         L.push({ p, box: i, fohlen: j === 1, pension,
@@ -21579,7 +21691,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
         ["Gnadenhof", "Tippe auf <b>Gnadenhof</b>.", "#hmGnade", () => $("nebenSchirm").classList.contains("offen") && /Gnadenhof/.test(($("nebenSchirm").querySelector("h1") || {}).textContent || "")],
         ["Der Gnadenhof", "Hier verbringen Pferde ab 20 Jahren ihren <b>Lebensabend</b> – du kannst sie besuchen, aber nichts mehr mit ihnen machen. Tippe auf diese Blase.", null, () => false, true, ".gnade-pferd"],
         ["Zurück", "Tippe oben links auf den <b>Pfeil</b> zurück.", "#nbZurueck, .zurueck-s", () => !$("nebenSchirm").classList.contains("offen"), true],
-        ["Pferdefriedhof", "Tippe auf <b>Pferdefriedhof</b>.", "#hmFried", () => $("nebenSchirm").classList.contains("offen") && /Pferdefriedhof/.test(($("nebenSchirm").querySelector("h1") || {}).textContent || "")],
+        ["Pferdefriedhof", "Tippe auf <b>Pferdefriedhof</b>. Hier steht jedes verstorbene Pferd – mit einem eigenen <b>Gedenkplatz</b> (Bauen) kannst du die Urnen auf deinem Hof beisetzen.", "#hmFried", () => $("nebenSchirm").classList.contains("offen") && /Pferdefriedhof/.test(($("nebenSchirm").querySelector("h1") || {}).textContent || "")],
         ["Der Friedhof", "Hier erinnern <b>Grabsteine</b> an gestorbene Pferde. Tippe auf diese Blase.", null, () => false, true, ".grab"],
         ["Zurück", "Tippe wieder auf den <b>Pfeil</b> zurück.", "#nbZurueck, .zurueck-s", () => !$("nebenSchirm").classList.contains("offen"), true],
         ["Hofverwaltung", "Tippe auf <b>Hofverwaltung</b>.", "#hmHof", () => $("nebenSchirm").classList.contains("offen") && /Hofverwaltung/.test(($("nebenSchirm").querySelector("h1") || {}).textContent || "")],

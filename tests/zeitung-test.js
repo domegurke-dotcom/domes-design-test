@@ -7,7 +7,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   const bild = async n => { if (ORD) await pg.screenshot({ path: ORD + '/' + n + '.png' }); };
   const dlgText = () => pg.evaluate(() => document.getElementById('dlg').hidden ? '' : document.getElementById('dlg').innerText);
   await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(400);
-  await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('[data-stufe="exp"]'); await pg.click('#chLos'); await pg.waitForTimeout(250); await pg.click('#dlgKnoepfe button');
+  await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('#chLos'); await pg.waitForTimeout(250); await pg.click('#dlgKnoepfe button');
   await pg.click('[data-immo="pension"]'); await pg.waitForTimeout(200);
   // Startwahl: Bundesland + Ort
   ok('Kauffenster hat Bundesland und Ort', !!(await pg.$('#kaufLand')) && !!(await pg.$('#kaufOrt')));

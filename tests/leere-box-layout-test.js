@@ -3,7 +3,7 @@ const { chromium } = require('playwright'); const path = require('path');
 (async () => { const b = await chromium.launch(); const errs = []; const pg = await b.newPage({ viewport: { width: 1464, height: 691 } }); pg.on('pageerror', e => errs.push(e.message));
   await pg.addInitScript(() => localStorage.setItem('zuchtstall-boxfenster', '1'));
   await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(500);
-  await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('[data-stufe="exp"]'); await pg.click('#chLos'); await pg.waitForTimeout(250); await pg.click('#dlgKnoepfe button');
+  await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('#chLos'); await pg.waitForTimeout(250); await pg.click('#dlgKnoepfe button');
   await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'W'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(250);
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.stufenAn = false; spiel.tippsAus = true; const P = neuesPferd({ rasse: 'paint', geschlecht: 'Stute', alter: 8, name: 'Mama' }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); spiel.boxen[0].pferd = P; spiel.boxen[1].einstreu = 'streuStroh'; zeigeSchirm(null); aktBox = 0; spiel.aktBox = 0; zeigeStall(); });
   const mess = async () => { await pg.waitForTimeout(500); return pg.evaluate(() => { const s = document.getElementById('stall').getBoundingClientRect(), h = document.querySelector('header').getBoundingClientRect(); return { box: aktBox, stH: Math.round(s.height), top: Math.round(s.top), hb: Math.round(h.bottom), doc: document.documentElement.scrollHeight, vh: innerHeight, leer: document.body.classList.contains('bxleer'), info: getComputedStyle(document.getElementById('info')).display, text: !!document.querySelector('.bxleertext'), syms: document.querySelectorAll('[data-bxleer]').length }; }); };
@@ -24,7 +24,7 @@ const { chromium } = require('playwright'); const path = require('path');
   // Handy quer (Dome: Queransicht ebenfalls anpassen)
   const q = await b.newPage({ viewport: { width: 844, height: 390 }, hasTouch: true }); q.on('pageerror', e => errs.push(e.message)); await q.addInitScript(() => localStorage.setItem('zuchtstall-boxfenster', '1'));
   await q.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await q.waitForTimeout(500);
-  await q.click('#smNeu'); await q.fill('#chName', 'T'); await q.click('[data-stufe="exp"]'); await q.click('#chLos'); await q.waitForTimeout(250); await q.click('#dlgKnoepfe button');
+  await q.click('#smNeu'); await q.fill('#chName', 'T'); await q.click('#chLos'); await q.waitForTimeout(250); await q.click('#dlgKnoepfe button');
   await q.click('[data-immo="pension"]'); await q.fill('#kaufName', 'W'); await q.click('#dlgKnoepfe button:first-child'); await q.waitForTimeout(250);
   await q.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.stufenAn = false; spiel.tippsAus = true; zeigeSchirm(null); aktBox = 1; spiel.aktBox = 1; zeigeStall(); }); await q.waitForTimeout(600);
   const Q = await q.evaluate(() => ({ leer: document.body.classList.contains('bxleer'), doc: document.documentElement.scrollHeight, vh: innerHeight, info: getComputedStyle(document.getElementById('info')).display, text: !!document.querySelector('.bxleertext'), syms: document.querySelectorAll('[data-bxleer]').length }));

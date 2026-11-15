@@ -19,9 +19,9 @@ const BIS = Math.min(tMax, process.env.JAHRE ? 1 + 4 * TEMPO * +process.env.JAHR
   const browser = await chromium.launch(); const pg = await browser.newPage({ viewport: { width: 1366, height: 768 } });
   const fehler = []; pg.on("pageerror", e => fehler.push(e.message));
   await pg.goto("file://" + path.resolve(__dirname, "..", "index.html")); await pg.waitForTimeout(800);
-  await pg.click("#smNeu"); await pg.fill("#chName", "Nachspieler"); await pg.click(`[data-stufe="${MODUS}"]`); await pg.click("#chLos"); await pg.waitForTimeout(300);
+  await pg.click("#smNeu"); await pg.fill("#chName", "Nachspieler"); await pg.click("#chLos"); await pg.waitForTimeout(300);
   await pg.click("#dlgKnoepfe button"); await pg.click('[data-immo="pension"]'); await pg.fill("#kaufName", "Pension Nachspieler"); await pg.click("#dlgKnoepfe button:first-child"); await pg.waitForTimeout(500);
-  await pg.evaluate(t => { spiel.tempo = t; speicherSperre = true; spiel.tippsAus = true; }, TEMPO);
+  await pg.evaluate(([t, m]) => { spiel.tempo = t; speicherSperre = true; spiel.tippsAus = true; if (m !== "anf" && m !== "fort" && spiel.frei) { spiel.frei.alles = true; spiel.frei.stufe = 4; } }, [TEMPO, MODUS]);   // v1038: alte Aufnahmen im Experten-Modus = alles frei
   console.log(`===== Nachspieler: ${path.basename(REC)} – ${E.length} Einträge zum Nachspielen von ${alle.length}, Tempo ${TEMPO}, Modus ${MODUS}, Tage ${t0}–${BIS} =====`);
   if (t0 !== 1) console.log("WARNUNG: die Aufnahme beginnt erst an Tag " + t0 + " – der Hof kann vom Hof der Aufnahme abweichen");
   const stat = { ok: 0, skip: {}, log: [] };

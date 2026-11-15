@@ -6,7 +6,7 @@ const { chromium } = require('playwright'); const path = require('path');
   await pg.click('#smNeu'); await pg.waitForTimeout(120); await pg.fill('#chName', 'T'); await pg.click('#chLos'); await pg.waitForTimeout(120);
   await pg.click('#dlgKnoepfe button'); await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'H'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(350);
   for (const st of ['fort', 'exp', 'anf']) {
-    const R = await pg.evaluate(s => { document.getElementById('dlg').hidden = true; spiel.stufenAn = true; spiel.spieler.stufe = s; spiel.hof.bauHa += 2; try { planLandAbgleich(); } catch (e) { } hofBereich = 'uebersicht'; zeigeHof('hof');
+    const R = await pg.evaluate(s => { document.getElementById('dlg').hidden = true; spiel.stufenAn = true; spiel.spieler.stufe = s; delete spiel.frei; /* v1038: alte Stufen-Tabellen */ spiel.hof.bauHa += 2; try { planLandAbgleich(); } catch (e) { } hofBereich = 'uebersicht'; zeigeHof('hof');
       document.querySelectorAll('details.bzn-e').forEach(d => d.open = true);
       const wahl = [...document.querySelectorAll('[data-stallart]')].map(x => x.dataset.stallart);
       const bau = ['rennbahn', 'ovalbahn', 'trail', 'reitplatz'].map(k => freiStufe('bauen', k));

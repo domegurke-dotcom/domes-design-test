@@ -20,7 +20,7 @@ const [W, H] = (process.argv[2] || '1366x768').split('x').map(Number), ORD = pro
   z = await pg.evaluate(() => { const A = { id: 'az', typ: 'azubi', name: 'Azu', ab: jzJetzt() - 2, ausbilder: 'm3', gehalt: 100 }; spiel.mitarbeiter.push(maErgaenzen(A)); const d = wgDaten(spiel.mitarbeiter[2]); spiel.mitarbeiter.pop(); return { x: d.x, azubi: d.art.azubi }; });
   ok('Ein angeleiteter Azubi zählt als übernommene Arbeit', z.x === 1 && z.azubi === 1, z);
   // 2. Zähler im Spiel: Krankheit, Nachtdienst, Turnier
-  z = await pg.evaluate(() => { const m = spiel.mitarbeiter[2]; delete m.wgJ; const r = Math.random; Math.random = () => 0; try { m.zufr = 30; mitarbeiterLaune(); } finally { Math.random = r; } return { k: (m.wgJ || {}).k, bis: m.krankBis }; });
+  z = await pg.evaluate(() => { const m = spiel.mitarbeiter[2]; delete m.wgJ; const r = Math.random; Math.random = () => 0; try { m.zufr = 30; mitarbeiterLaune(); } finally { Math.random = r; m.zufr = 60; }   /* 15.11.: zurück auf 60 – sonst kündigt die Mitarbeiterin in der Probezeit in den folgenden Nächten und fehlt im Fenster */ return { k: (m.wgJ || {}).k, bis: m.krankBis }; });
   ok('Krankmeldung zählt die Krankheitstage fürs Jahr', z.k >= 1, z);
   // 3. bis zum vorletzten Wintertag
   z = await pg.evaluate(() => { let n = 0; while (!(datum().s === 3 && datum().t === tpj() - 1) && n < 60) { document.getElementById('dlg').hidden = true; naechsteNacht(); n++; } spiel.mitarbeiter.forEach(m => { m.zufr = 60; m.bis = null; }); return { n, offen: (spiel.wgOffen || []).length, s: datum().s, t: datum().t }; });

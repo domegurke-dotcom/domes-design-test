@@ -13,7 +13,7 @@ const ORDNER = process.argv[2];
     if (ORDNER) await pg.screenshot({ path: `${ORDNER}/charakter-${ansicht}.png` });
     await pg.click('#hinweisBlase'); await pg.waitForTimeout(500);
     const t2 = await pg.evaluate(() => { const b = document.getElementById('hinweisBlase'); return b && !b.hidden ? b.textContent : ''; });
-    if (ansicht === 'hoch') ok('Antippen → nächste Blase „Erfahrung“', /Erfahrung/.test(t2), t2.slice(0, 40));
+    if (ansicht === 'hoch') ok('Antippen → Blase weg (v1038: keine Erfahrungs-Wahl mehr)', !/Erfahrung/.test(t2), t2.slice(0, 40));
     await pg.fill('#chName', 'Test'); await pg.click('#chLos'); await pg.waitForTimeout(400);
     await pg.click('#dlgKnoepfe button'); await pg.waitForTimeout(500);
     const t3 = await pg.evaluate(() => { const b = document.getElementById('hinweisBlase'); return b && !b.hidden ? b.textContent : ''; });

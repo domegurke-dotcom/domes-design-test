@@ -10,7 +10,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   const kachel = async (i, aktion) => { const l = await pg.$$('#nebenSchirm .paar'); await l[i].click(); await pg.waitForTimeout(300); const t = await dlgText(); if (aktion && !new RegExp(aktion.wenn).test(t)) await knopf(aktion.knopf); };
   const versorgen = () => pg.evaluate(() => spiel.boxen.forEach(x => { if (x.pferd) { x.krippeVoll = true; x.mistig = false; x.mistStufe = 0; if (x.pferd.pflege) x.pferd.pflege.gesundheit = Math.max(80, x.pferd.pflege.gesundheit); } }));
   await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(400);
-  await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('[data-stufe="exp"]'); await pg.click('#chLos'); await pg.waitForTimeout(250); await pg.click('#dlgKnoepfe button');
+  await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('#chLos'); await pg.waitForTimeout(250); await pg.click('#dlgKnoepfe button');
   await pg.click('[data-immo="pension"]'); await pg.waitForTimeout(200);
   await pg.selectOption('#kaufLand', '09'); await pg.waitForTimeout(100); await pg.selectOption('#kaufOrt', 'Landshut'); await pg.waitForTimeout(100);
   await pg.fill('#kaufName', 'Besuchshof'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(300);

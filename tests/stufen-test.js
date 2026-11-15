@@ -6,7 +6,7 @@ const { chromium } = require('playwright'); const path = require('path');
   await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(700);
   await pg.click('#smNeu'); await pg.waitForTimeout(150); await pg.fill('#chName', 'Test'); await pg.click('#chLos'); await pg.waitForTimeout(150);
   await pg.click('#dlgKnoepfe button'); await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'Testhof'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(400);
-  const R = await pg.evaluate(() => { const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : '')); document.getElementById('dlg').hidden = true; spiel.tippsAus = true;
+  const R = await pg.evaluate(() => { const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : '')); document.getElementById('dlg').hidden = true; delete spiel.frei; /* v1038: prüft die alten Stufen-Tabellen (gelten noch für Tutorials/Azubi) */ spiel.tippsAus = true;
     const p = neuesPferd({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Stufe' }); p.pflege = erzeugePflege(p); spiel.boxen[0].pferd = p; aktBox = 0; const box = spiel.boxen[0];
     const markt = () => { zeigeMarkt(null); return [...document.querySelectorAll('[data-mb]')].map(x => x.dataset.mb); };
     const krank = () => befundRisiko(p, box, 'box').map(x => x[0]);

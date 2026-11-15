@@ -2,7 +2,7 @@
 const { chromium } = require('playwright'); const path = require('path');
 (async () => { const b = await chromium.launch(); const errs = []; const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 }); const pg = await ctx.newPage(); pg.on('pageerror', e => errs.push(e.message));
   await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(500);
-  await pg.$eval('#smNeu', e => e.click()); await pg.fill('#chName', 'T'); await pg.$eval('[data-stufe="exp"]', e => e.click()); await pg.$eval('#chLos', e => e.click()); await pg.waitForTimeout(250); await pg.$eval('#dlgKnoepfe button', e => e.click());
+  await pg.$eval('#smNeu', e => e.click()); await pg.fill('#chName', 'T'); await pg.$eval('#chLos', e => e.click()); await pg.waitForTimeout(250); await pg.$eval('#dlgKnoepfe button', e => e.click());
   await pg.$eval('[data-immo="pension"]', e => e.click()); await pg.fill('#kaufName', 'W'); await pg.$eval('#dlgKnoepfe button:first-child', e => e.click()); await pg.waitForTimeout(250);
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.stufenAn = false; spiel.tippsAus = true; spiel.geld = 1e7; VET.verbotAb = 99;
     ['Anna', 'Berta', 'Cora', 'Dora'].forEach((n, i) => { const P = neuesPferd({ rasse: 'paint', geschlecht: 'Stute', alter: 8, name: n }); P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); werteErgaenzen(P); P.pflege.gesundheit = 100; P.aquaWunsch = { modus: i === 3 ? '3' : '1' }; if (i === 3) P.aquaLog = [spiel.tag]; spiel.boxen[i].pferd = P; });

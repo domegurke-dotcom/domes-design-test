@@ -3,7 +3,7 @@ const { chromium } = require('playwright'); const path = require('path');
 (async () => { const b = await chromium.launch(); const errs = []; let bad = 0, n = 0;
   const neuSpiel = async () => { const pg = await b.newPage({ viewport: { width: 1464, height: 691 } }); pg.on('pageerror', e => errs.push(e.message));
     await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(350);
-    await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('[data-stufe="exp"]'); await pg.click('#chLos'); await pg.waitForTimeout(200); await pg.click('#dlgKnoepfe button');
+    await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('#chLos'); await pg.waitForTimeout(200); await pg.click('#dlgKnoepfe button');
     await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'Plan'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(200); return pg; };
   const p0 = await neuSpiel(); const typen = await p0.evaluate(() => Object.keys(BAUTEN).filter(t => planTyp(t))); await p0.close();
   console.log('Gebäudetypen im Hofplan:', typen.join(', '));

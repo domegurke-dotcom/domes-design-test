@@ -8,7 +8,7 @@ const ORD = process.env.BILDER_ORDNER || null; if (ORD) fs.mkdirSync(ORD, { recu
   const ev = (f, a) => pg.evaluate(f, a);
   const dlgText = () => ev(() => document.getElementById('dlg').hidden ? '' : document.getElementById('dlgInhalt').textContent.replace(/\s+/g, ' '));
   await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(500);
-  await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('[data-stufe="exp"]'); await pg.click('#chLos'); await pg.waitForTimeout(250); await pg.click('#dlgKnoepfe button');
+  await pg.click('#smNeu'); await pg.fill('#chName', 'T'); await pg.click('#chLos'); await pg.waitForTimeout(250); await pg.click('#dlgKnoepfe button');
   await pg.click('[data-immo="pension"]'); await pg.fill('#kaufName', 'W'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(300);
   await ev(() => { document.getElementById('dlg').hidden = true; spiel.stufenAn = false; spiel.tippsAus = true; spiel.geld = 500000;
     window.mk = (n, rasse, g, alter, i) => { const P = neuesPferd({ rasse, geschlecht: g, alter, name: n }); P.anteile = { [rasse]: 100 }; P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); werteErgaenzen(P); P.pflege.gesundheit = 100; P.pflege.impf = spiel.tag; P.training = 60; spiel.boxen[i].pferd = P; return P; };

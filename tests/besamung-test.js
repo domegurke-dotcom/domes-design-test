@@ -1,4 +1,4 @@
-// v1006 (Dome 12.11.2026): Deckhengst Etappe 3 – eigene Besamungsstation (nur Experte): Erlaubnis, Plätze, Hengst bleibt daheim, Pauschale, Tiefgefriersamen, Gasthengste, EU-Zulassung
+// v1006 (Dome 12.11.2026): Deckhengst Etappe 3 – eigene Besamungsstation (ab Freischalt-Stufe 4): Erlaubnis, Plätze, Hengst bleibt daheim, Pauschale, Tiefgefriersamen, Gasthengste, EU-Zulassung
 const { chromium } = require('playwright'); const path = require('path');
 (async () => { const b = await chromium.launch(); const pg = await b.newPage({ viewport: { width: 1366, height: 768 } }); const errs = []; pg.on('pageerror', e => errs.push(e.message));
   await pg.goto('file://' + path.resolve(__dirname, '..', 'index.html')); await pg.waitForTimeout(600);
@@ -7,8 +7,8 @@ const { chromium } = require('playwright'); const path = require('path');
   const R = await pg.evaluate(() => { const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (c ? '' : ' – ' + x)); const zu = () => { document.getElementById('dlg').hidden = true; };
     zu(); spiel.tippsAus = true; VET.verbotAb = 99; spiel.geld = 200000; spiel.kal = null; spiel.tag = 1; zbBestand();
     const rnd = Math.random, mitZufall = (z, f) => { Math.random = () => z; try { f(); } finally { Math.random = rnd; } };
-    // Stufen-Sperre: nur Experte
-    spiel.stufenAn = true; spiel.spieler.stufe = 'fort'; ok('Fortgeschritten: Station gesperrt', !freiStufe('bauen', 'besamung')); spiel.spieler.stufe = 'exp'; ok('Experte: Station frei', freiStufe('bauen', 'besamung')); spiel.stufenAn = false;
+    // Stufen-Sperre: seit v1038 Freischalt-Stufen (spiel.frei) statt Modi – Besamungsstation erst ab Stufe 4 bzw. „Alles freischalten“
+    { const fAlt = spiel.frei; spiel.stufenAn = true; spiel.frei = { punkte: 0, stufe: 3 }; ok('Stufe 3: Station gesperrt', !freiStufe('bauen', 'besamung')); spiel.frei = { punkte: 0, stufe: 4 }; ok('Stufe 4: Station frei', freiStufe('bauen', 'besamung')); spiel.frei = { punkte: 0, stufe: 1, alles: true }; ok('Alles freigeschaltet: Station frei', freiStufe('bauen', 'besamung')); spiel.frei = fAlt; spiel.stufenAn = false; }
     ok('Gebäude in der Bauliste und im Hofplan', !!BAUTEN.besamung && BAU_REIHE.includes('besamung') && planMassTyp('besamung', 0, 2).join() === '5,3', planMassTyp('besamung', 0, 2));
     const mk = (n, i, gekoert = true) => { const P = neuesPferd({ rasse: 'hannoveraner', geschlecht: 'Hengst', alter: 6, name: n }); P.anteile = { hannoveraner: 100 }; P.pflege = erzeugePflege(P); P.werte = P.werte || erzeugeWerte(P); P.pflege.gesundheit = 100; P.pflege.impf = spiel.tag; ahnenFuellen(P); nrVon(P);
       if (gekoert) P.hb = { s: 'end', tag: 1 }; P.deckFremd = { an: true, versand: true, natur: true, test: datum().j }; spiel.boxen[i].pferd = P; return P; };

@@ -23,12 +23,12 @@ const { chromium } = require('playwright'); const path = require('path');
     // Hautpilz löst nichts aus
     A.befunde = []; delete A.quarPflicht; delete B2.quarPflicht; const h = befundNeu(A, 'hautpilz', 2, 'Test'); h.bemerkt = true; h.diagnose = spiel.tag; delete h.inkub; const n0 = briefe(/Quarantäne-Pflicht/); quarPflichtTag(); R.pilz = briefe(/Quarantäne-Pflicht/) === n0 && !A.quarPflicht;
     // geheilt: Pflicht weg
-    A.befunde = []; const d2 = befundNeu(A, 'herpes', 2, 'Test'); d2.bemerkt = true; delete d2.inkub; quarPflichtTag(); R.herpes = !!A.quarPflicht; A.befunde = []; quarPflichtTag(); R.geheilt = !A.quarPflicht;
+    A.befunde = []; const d2 = befundNeu(A, 'herpes', 2, 'Test'); d2.bemerkt = true; delete d2.inkub; quarPflichtTag(); R.herpes = !!A.quarPflicht; A.befunde = []; quarPflichtTag(); R.geheilt = !!A.quarPflicht && !A.quarPflicht.krank && A.quarPflicht.nach === 'herpes' && inQuarantaene(A);   /* v1043: nach der Heilung noch 21–28 Tage Quarantäne */
     return R; });
   const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x ? ' – ' + x : ''));
   ok('krankes Pferd bekommt die Pflicht', R.pflichtKrank); ok('Nachbarbox ist Kontaktpferd', R.pflichtNachbar); ok('Pferd weiter weg nicht', !R.pflichtFern); ok('ein Brief, nicht doppelt', R.brief === 1 && R.einBrief);
   ok('am Tag des Briefs noch kein Mangel', R.sofortKeinMangel); ok('nach der Frist: 2 Mängel, schwer', R.mangel === 2 && R.schwer, R.mangel);
   ok('in Quarantäne: Kontaktpferd ohne Blutbild bleibt Mangel', /Blutbild/.test(R.mangelBlut), R.mangelBlut); ok('mit Quarantäne und Blutbild: keine Mängel', R.keinMangel === 0, R.keinMangel);
-  ok('krankes Pferd bleibt in Quarantäne, auch nach Wochen', R.lang); ok('Hautpilz löst nichts aus', R.pilz); ok('Herpes löst aus, Heilung beendet Pflicht', R.herpes && R.geheilt); ok('keine Skriptfehler', errs.length === 0, errs.join(' | '));
+  ok('krankes Pferd bleibt in Quarantäne, auch nach Wochen', R.lang); ok('Hautpilz löst nichts aus', R.pilz); ok('Herpes löst aus, nach der Heilung noch Quarantäne (21–28 Tage)', R.herpes && R.geheilt); ok('keine Skriptfehler', errs.length === 0, errs.join(' | '));
   console.log(out.join('\n')); await b.close(); process.exit(out.some(l => l.startsWith('✗')) ? 1 : 0);
 })();

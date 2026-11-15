@@ -15,6 +15,7 @@ const { chromium } = require('playwright'); const path = require('path');
     // Körung im Herbst
     spiel.kal = null; spiel.tag = 1 + 2 * tpj(); turnierKalender(); const K = spiel.turniere.filter(t => t.art === 'koerung' && t.tag >= spiel.tag + 2).sort((a, b) => a.tag - b.tag)[0];
     ok('Herbst: Körtermin im Kalender', !!K, spiel.turniere.filter(t => t.art === 'koerung').map(t => t.tag).join());
+    H.tests = { krank: true };   /* v1048: Pflicht-Gentest (WFFS) vor der Körung */
     zuchtverbandDialog(H, null); ok('Zuchtverband-Fenster für Hengste', /Körung/.test($('dlg').textContent) && /Hannoveraner Verband/.test($('dlg').textContent), $('dlg').textContent.slice(0, 150));
     const kb = K && document.querySelector(`[data-hvnenn="${K.id}"]`), g0 = spiel.geld; if (kb) kb.click();
     ok('Zur Körung angemeldet (250 €)', K && K.nennung.some(n => n.pid === H.id) && g0 - spiel.geld === hengstKosten('koer', H), g0 - spiel.geld); zu();

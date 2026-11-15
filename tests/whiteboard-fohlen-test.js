@@ -49,9 +49,9 @@ const { chromium } = require('playwright'); const path = require('path');
     wbSicht = 'boxen'; wbWahl = null; zeigeWhiteboard(); const kap3 = document.querySelector('.wb-ma[data-wbq="m:pz1"] .wb-kap'); ok('Anzeige mit 🍼 für Fohlen üben', kap3 && /🍼/.test(kap3.textContent), kap3 && kap3.textContent);
     // 12. Wurmkur durch Mitarbeiter („Medikamente geben“)
     const R0 = Math.random; Math.random = () => 0.99; while (datum().s % 2) spiel.tag++;
-    M.pflege.wurm = spiel.tag - 2 * tpj(); apotheke().wurmkur = 2; M.weide = null; delete M.behHeute; wurmkurMitarbeiter();
+    M.pflege.wurm = spiel.tag - 4 * tpj(); /* v1044: selektiv – Sicherheits-Wurmkur einmal im Jahr */ apotheke().wurmkur = 2; M.weide = null; delete M.behHeute; wurmkurMitarbeiter();
     ok('Mitarbeiter gibt die Wurmkur aus der Stallapotheke', M.pflege.wurm === spiel.tag && apotheke().wurmkur === 1, M.pflege.wurm + ' / ' + apotheke().wurmkur);
-    m.aus = { behandeln: true }; M.pflege.wurm = spiel.tag - 2 * tpj(); delete M.behHeute; wurmkurMitarbeiter(); ok('Ohne „Medikamente geben“ passiert nichts', M.pflege.wurm !== spiel.tag);
+    m.aus = { behandeln: true }; M.pflege.wurm = spiel.tag - 4 * tpj(); /* v1044: selektiv – Sicherheits-Wurmkur einmal im Jahr */ delete M.behHeute; wurmkurMitarbeiter(); ok('Ohne „Medikamente geben“ passiert nichts', M.pflege.wurm !== spiel.tag);
     m.aus = {}; apotheke().wurmkur = 0; delete M.behHeute; wurmkurMitarbeiter(); ok('Eigenes Pferd: ohne Wurmkur im Lager nichts', M.pflege.wurm !== spiel.tag);
     ok('… aber ein Brief „Wurmkur fehlt“ kommt', (spiel.post || []).some(x => x.betreff === 'Wurmkur fehlt'));
     const nb = spiel.post.length; delete M.behHeute; wurmkurMitarbeiter(); ok('Brief nur einmal je Jahreszeit', spiel.post.length === nb);

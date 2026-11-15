@@ -41,7 +41,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   // Einstellungen: Knopf zeigt Stufe und Punkte, „Alles freischalten“ mit Klicks
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; hofReiter = 'einst'; zeigeHof(); }); await pg.waitForTimeout(300);
   const kt = await pg.evaluate(() => (document.getElementById('hfStufe') || {}).innerText || '');
-  ok('Einstellungen: Freischalt-Stufe 3 von 4 mit Punkten', /Freischalt-Stufe 3 von 4/.test(kt) && /noch 350 Punkte bis Stufe 4/.test(kt), kt.replace(/\s+/g, ' '));
+  ok('Einstellungen: Freischalt-Stufe 3 von 4 mit Punkten', /Freischalt-Stufe 3 von 4/.test(kt) && /noch 550 Punkte bis Stufe 4/.test(kt), kt.replace(/\s+/g, ' '));
   await pg.click('#hfStufe'); await pg.waitForTimeout(300); let d = await dlgText();
   ok('Fenster: Balken, Stufen mit ✅/🔒', /Freischalt-Stufe 3 von 4/.test(d) && /✅/.test(d) && /🔒/.test(d) && !!(await pg.$('.frei-balken')), d.slice(0, 120).replace(/\s+/g, ' ')); await bild('frei-fenster');
   await knopf('Alles freischalten'); d = await dlgText(); ok('Rückfrage „nicht rückgängig“', /nicht rückgängig/.test(d));

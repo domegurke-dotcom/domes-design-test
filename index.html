@@ -1372,7 +1372,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "1051";
+  const SPIEL_VERSION = "1052";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1380,12 +1380,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=1051"></script>
-<script src="pferd.js?v=1051"></script>
-<script src="boxstufen.js?v=1051"></script>
-<script src="kopfneu.js?v=1051"></script>
-<script src="waschbild.js?v=1051"></script>
-<script src="avatare.js?v=1051"></script>
+<script src="lz-string.min.js?v=1052"></script>
+<script src="pferd.js?v=1052"></script>
+<script src="boxstufen.js?v=1052"></script>
+<script src="kopfneu.js?v=1052"></script>
+<script src="waschbild.js?v=1052"></script>
+<script src="avatare.js?v=1052"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2878,28 +2878,34 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   // Erkennen im Ultraschall (Tag 14–16); Abdrücken früh 85–93 %, nach Tag 20 nur 25–50 % (Dome: 90 % / 40 %), misslingt es, sind beide verloren. Unbehandelt meist Verfohlen, zwei lebende selten und dann schwach.
   // Selbst gesetzt: Grundchance (so eingestellt, dass etwa 1–1,5 % aller Trächtigkeiten Zwillinge sind), Rassenfaktoren, Preis fürs Abdrücken, Verfohlen je Jahreszeit 30 % (≈ 65 % insgesamt), von den übrigen 15 % zwei lebende.
   const ZWILLING = { basis: 0.012, rasse: { vollblut: 1.6, araber: 1.6, angloaraber: 1.6, tekke: 1.6, shagya: 1.4, trakehner: 1.3, shetty: .25, welshcob: .4, fell: .3, dales: .3, isi: .4, fjord: .4, haflinger: .5 }, alt: [7, 16, 1.2],
-    frueh: 0.9, spaet: 0.4, preis: 250, verfohlenJz: 0.3, zweiLeben: 0.15 };
+    frueh: 0.9, spaet: 0.4, preis: 250, verfohlenJz: 0.3, zweiLeben: 0.15,
+    aufsichtX: { maAbfohl: 2, ma: 1.6, abfohl: 1.3, kamera: 1.15 },   // 17.11.2026 (Auftrag 12 Rest): Aufsicht bei der Geburt – zweiter Zwilling überlebt öfter (selbst gesetzt)
+    besitzerJa: 0.9 };   // Pensionsstute: der Besitzer lässt fast immer abdrücken (selbst gesetzt)
   function zwillingChance(p) { const rf = ZWILLING.rasse[p.rasse] ?? 1, j = alterJahre(p), af = j >= ZWILLING.alt[0] && j <= ZWILLING.alt[1] ? ZWILLING.alt[2] : 1; return ZWILLING.basis * rf * (0.4 + 1.2 * anl(p, "zwillA")) * af; }
   const zwillingX = p => { const X = p.gedeckt || p.traechtig; return X && (X.zw || X.zwilling) && X.erfolg !== false ? X : null; };
   function zwillingErkannt(p, frueh) {
     const X = zwillingX(p); if (!X || X.zwBekannt) return ""; X.zwBekannt = true; X.zwFrueh = !!frueh;
-    if (!fremd(p)) brief("Tierarztpraxis", `${p.name}: Zwillinge im Ultraschall`, `im Ultraschall sind bei <b>${esc(p.name)}</b> <b>zwei Fruchtblasen</b> zu sehen – Zwillinge. Beim Pferd ist das gefährlich: Meist verliert die Stute beide, und kommen sie doch zur Welt, sind sie oft schwach, und die Milch reicht nur für eines. ${frueh ? "Jetzt, so früh, lässt sich eine Fruchtblase noch gut abdrücken – dann bleibt in etwa 9 von 10 Fällen eine Trächtigkeit." : "So spät gelingt das Abdrücken nur noch selten (etwa 4 von 10). Misslingt es, verliert sie beide."} Kosten ${fmt(ZWILLING.preis)}.`, { pferde: [p], aktion: { typ: "zwilling", pid: p.id } });
+    if (fremd(p)) { const ja = Math.random() < ZWILLING.besitzerJa; zwillingAbdruecken(p, ja, true);   // 17.11.2026 (Auftrag 12 Rest): bei Pensionsstuten entscheidet und zahlt der Besitzer
+      brief("Tierarztpraxis", `${p.name}: Zwillinge im Ultraschall`, `bei der Pensionsstute <b>${esc(p.name)}</b> waren im Ultraschall zwei Fruchtblasen zu sehen. Wir haben mit den Besitzern gesprochen: ${ja ? `Auf ihren Wunsch haben wir eine abgedrückt (die Kosten tragen die Besitzer) – ${X.zwAntwort === "ok" ? "das hat geklappt, die Stute trägt jetzt nur noch ein Fohlen" : "leider hat die Stute dabei beide verloren"}.` : "Sie möchten beide behalten. Bitte {achte|achten Sie} gut auf die Stute – Zwillinge gehen oft verloren."}`, { pferde: [p] });
+      return "Zwei Fruchtblasen – Zwillinge. Der Besitzer entscheidet, was geschieht (Brief der Tierarztpraxis)."; }
+    brief("Tierarztpraxis", `${p.name}: Zwillinge im Ultraschall`, `im Ultraschall sind bei <b>${esc(p.name)}</b> <b>zwei Fruchtblasen</b> zu sehen – Zwillinge. Beim Pferd ist das gefährlich: Meist verliert die Stute beide, und kommen sie doch zur Welt, sind sie oft schwach, und die Milch reicht nur für eines. ${frueh ? "Jetzt, so früh, lässt sich eine Fruchtblase noch gut abdrücken – dann bleibt in etwa 9 von 10 Fällen eine Trächtigkeit." : "So spät gelingt das Abdrücken nur noch selten (etwa 4 von 10). Misslingt es, verliert sie beide."} Kosten ${fmt(ZWILLING.preis)}.`, { pferde: [p], aktion: { typ: "zwilling", pid: p.id } });
     return "Achtung: zwei Fruchtblasen – Zwillinge! Der Tierarzt schickt dir dazu einen Brief.";
   }
-  function zwillingAbdruecken(p, ja) {
+  function zwillingAbdruecken(p, ja, besitzer) {
     const X = zwillingX(p); if (!X || X.zwAntwort) return;
-    if (!ja) { X.zwAntwort = "nein"; prot("Zwillinge behalten", { p }); speichern(); return; }
-    if (!spiel.admin) buchen(-ZWILLING.preis, `Tierarzt: Zwilling abdrücken (${p.name})`); prot("Zwilling abgedrückt", { p, b: -ZWILLING.preis });
+    if (!ja) { X.zwAntwort = "nein"; if (!besitzer) prot("Zwillinge behalten", { p }); speichern(); return; }
+    if (!besitzer) { if (!spiel.admin) buchen(-ZWILLING.preis, `Tierarzt: Zwilling abdrücken (${p.name})`); prot("Zwilling abgedrückt", { p, b: -ZWILLING.preis }); }
     const ok = Math.random() < (X.zwFrueh ? ZWILLING.frueh : ZWILLING.spaet); X.zwAntwort = ok ? "ok" : "weg";
+    if (besitzer) { if (ok) { X.zw = false; X.zwilling = false; } else { delete p.gedeckt; delete p.traechtig; delete p.rosseAb; } speichern(); return; }
     if (ok) { X.zw = false; X.zwilling = false; brief("Tierarztpraxis", `${p.name}: eine Fruchtblase abgedrückt`, `das Abdrücken hat geklappt: <b>${esc(p.name)}</b> trägt jetzt nur noch ein Fohlen.`, { pferde: [p] }); }
     else { delete p.gedeckt; delete p.traechtig; delete p.rosseAb; brief("Tierarztpraxis", `${p.name}: beide Fruchtblasen verloren`, `es tut uns leid: Beim Abdrücken hat <b>${esc(p.name)}</b> beide Fruchtblasen verloren. Sie ist jetzt leer${DECK_SAISON[datum().s] > 0 ? " und kann sofort wieder gedeckt werden" : " – im Frühling kann sie wieder gedeckt werden"}.`, { pferde: [p] }); }
     speichern();
   }
-  function zwillingGeburt(b, i, p, T, f) {   // nach einer Geburt, wenn es Zwillinge waren
+  function zwillingGeburt(b, i, p, T, f, aufsicht) {   // nach einer Geburt, wenn es Zwillinge waren; 17.11.: mit Aufsicht bei der Geburt (Nachtdienst/Abfohlbox) überlebt der zweite öfter (ZWILLING.aufsichtX, selbst gesetzt)
     f.pflege = f.pflege || erzeugePflege(f); f.pflege.gesundheit = Math.min(f.pflege.gesundheit, 60 + Math.round(Math.random() * 15)); f.zwilling = true;   // Zwillinge sind immer schwach
     const f2 = geburt({ pferd: p }, T.vater, true); if (!f2 || f2.lethalWhite || f2.erbTot) return "";
     f2.pflege = erzeugePflege(f2); f2.zwilling = true; f2.gebTag = spiel.tag;
-    if (Math.random() >= ZWILLING.zweiLeben) { f2.todesursache = "Zwilling, tot geboren"; begraben(f2, `Box ${bnr(i)}`); spiel.friedhof[spiel.friedhof.length - 1].alter = "tot geboren";
+    if (Math.random() >= ZWILLING.zweiLeben * (ZWILLING.aufsichtX[aufsicht] || 1)) { f2.todesursache = "Zwilling, tot geboren"; begraben(f2, `Box ${bnr(i)}`); spiel.friedhof[spiel.friedhof.length - 1].alter = "tot geboren";
       return `<br><br>⚠️ <b>Es waren Zwillinge:</b> Der zweite Zwilling (${esc(f2.name)}) kam tot zur Welt. ${esc(f.name)} ist schwach (Gesundheit ${f.pflege.gesundheit} %) – gut versorgen.`; }
     f2.pflege.gesundheit = 55 + Math.round(Math.random() * 15);
     if (!b.fohlen2) { b.fohlen2 = f2; f2.waise = { art: "flasche", tag: spiel.tag }; return `<br><br>🍼🍼 <b>Zwillinge!</b> ${esc(p.name)} hat zwei lebende Fohlen bekommen – das ist sehr selten. Beide sind schwach und stehen bei der Mutter in Box ${bnr(i)}. Die Milch reicht nur für eines: <b>${esc(f2.name)}</b> bekommt zusätzlich die Flasche (${fmt(WAISE.flasche)} am Tag). In der ersten Woche brauchen Zwillinge Aufsicht – mit Nachtdienst (Pferdewirt) oder Abfohlbox geht es ihnen besser.`; }
@@ -4628,7 +4634,8 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     });
     // v535 (Dome, Zucht-Studie): später Verlust der Trächtigkeit (Plazentainfektion, Nabelschnur, Zwillinge …) – etwa 3 % über die ganze Tragzeit
     alleEigenenPferde().forEach(({ p }) => { const T = p.traechtig; if (!T || fremd(p) || jetzt <= T.seit || jetzt >= T.geburt || Math.random() >= (T.zwilling ? ZWILLING.verfohlenJz : VERFOHLEN_JZ) * a18VerfohlenF(p, T)) return;   /* Auftrag 12: Zwillinge verfohlen oft */
-      delete p.traechtig; prot("verfohlt", { p });
+      const zwVerf = !!T.zwilling; delete p.traechtig; prot("verfohlt", { p });   /* 17.11.2026 (Auftrag 12 Rest): bei bekannten Zwillingen nennt der Brief die Ursache */
+      if (zwVerf && T.zwBekannt) { brief("Tierarztpraxis", `${p.name} hat verfohlt`, `es tut uns sehr leid: <b>${esc(p.name)}</b> hat die Zwillinge verloren. Das ist bei Zwillingen leider die häufigste Folge – meist reicht der Platz in der Gebärmutter nicht für zwei. ${esc(p.name)} erholt sich und kann ${DECK_SAISON[datum().s] > 0 ? "in der nächsten Rosse" : "ab dem Frühling"} wieder gedeckt werden.`, { pferde: [p] }); return; }
       brief("Tierarztpraxis", `${p.name} hat verfohlt`, `es tut uns sehr leid: <b>${esc(p.name)}</b> hat ihr Fohlen verloren. Die Ursache bleibt oft unklar (z. B. Infektion der Plazenta, verdrehte Nabelschnur oder Zwillinge) – etwa 3 von 100 Stuten verfohlen im Lauf der Trächtigkeit. ${esc(p.name)} erholt sich und kann ${DECK_SAISON[datum().s] > 0 ? "in der nächsten Rosse" : "ab dem Frühling"} wieder gedeckt werden.`, { pferde: [p] }); });
     stutenInAbfohl(jetzt);   // v418/v419: falls noch nicht geschehen, zieht die Stute spätestens zur Geburt in die Abfohlbox
     spiel.boxen.forEach((b, i) => {
@@ -4652,7 +4659,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       if (Math.random() < STUTE_GEBURT_TOD * (/^ma/.test(nd.aufsicht) ? 0.5 : 1)) { b.tot = true; p.pflege.gesundheit = 0; p.todesursache = "Geburtskomplikation (innere Blutung)";
         brief("Tierarztpraxis", `Abschied von ${p.name}`, `es tut uns sehr leid: <b>${esc(p.name)}</b> (Box ${bnr(i)}) hat ihr Fohlen <b>${esc(f.name)}</b> zur Welt gebracht, ist aber kurz danach an einer inneren Blutung gestorben (Riss einer Gebärmutterarterie – das kommt selten vor und ist kaum zu verhindern). Das Fohlen lebt und braucht jetzt Milch.`, { pferde: [p] });
         return; }
-      if (T0.zwilling) { try { nd.text += zwillingGeburt(b, i, p, T0, f); nd.schwach = true; } catch (e) { console.error("Zwillinge:", e); } }   // Auftrag 12
+      if (T0.zwilling) { try { nd.text += zwillingGeburt(b, i, p, T0, f, nd.aufsicht); nd.schwach = true; } catch (e) { console.error("Zwillinge:", e); } }   // Auftrag 12
       if (f.erbTod && ["wffs", "nfs"].includes(f.erbTod.k)) { nd.schwach = true; nd.text += `<br><br>⚠️ <b>Mit dem Fohlen stimmt etwas nicht:</b> ${ERBKRANK[f.erbTod.k].text}.`; }
       brief("Tierarztpraxis", `${p.name} hat ein Fohlen bekommen!`, `herzlichen Glückwunsch! <b>${esc(p.name)}</b> (Box ${bnr(i)}) hat zu Beginn von ${datumLang()} ein ${nd.schwach ? "" : "gesundes "}${f.geschlecht === "Stute" ? "Stutfohlen" : "Hengstfohlen"} zur Welt gebracht: <b>${esc(f.name)}</b>.
         <br><br>Vater: <b>${esc(f.ahnen.vater.name)}</b> (${rasseById(f.ahnen.vater.rasse).name}) · Farbe: ${farbText(f)} · Rasse: ${rasseById(f.rasse).name}${nd.text}${fremd(p) ? "" : wiederDeckenText()}`);
@@ -7068,24 +7075,60 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     $("totText").style.display = box.tot ? "" : "none";
     if (!box.pferd || box.pferd.pflege) zeigeAkte();
   }
+  // ---------- PLAN-EIMERBILD E2 (17.11.2026, Dome 2.11.: als Blase, gut erkennbar, darf kurz das Pferd verdecken) ----------
+  // Bilder: Draufsicht schräg von oben aus den 3D-Eimern der App (bilder/eimer/eimer-<stufe>-<sorte>-<liter>.webp, Füllstände 1/2/3/4/6/9/12 l, leer = eimer-<stufe>.webp).
+  // Menge = heute gegebenes Krippenfutter (alles außer Raufutter), Liter über die Schüttdichte (FUELLMENGEN.md), höchstens 12 l (Füllgrenze); die größte Sorte bestimmt das Bild, Sorten ohne eigenes Bild (Spezialfutter, Öl …) wie Müsli (gemischte Körner).
+  const EIMER_LITER_JE_KG = { hafer: 0.50, muesli: 0.40, mineral: 0.65, ruebe: 0.25, kraftpellets: 0.60, aufzucht: 0.62, luzerne: 0.15, heucobs: 1 / 3, moehren: 0.50, oel: 0.92, vite: 0.6 };
+  const EIMER_BILD_SORTEN = ["hafer", "muesli", "mineral", "ruebe", "kraftpellets", "aufzucht", "luzerne", "heucobs", "moehren"], EIMER_STUFEN_L = [1, 2, 3, 4, 6, 9, 12];
+  function eimerInhalt(box, kgPlan) {   // kgPlan: Mengen aus dem Futterplan (E4) statt des heute Gegebenen
+    const p = box && box.pferd, G = kgPlan || (p && p.futterHeute && p.futterHeute.tag === spiel.tag ? p.futterHeute.genutzt || {} : {});
+    const L = Object.entries(G).filter(([k, kg]) => kg > 0 && FUTTER[k] && FUTTER[k].art !== "raufutter" && FUTTER[k].art !== "einstreu" && k !== "leckstein" && k !== "leckerli");
+    const liter = Math.min(12, L.reduce((a, [k, kg]) => a + kg / (EIMER_LITER_JE_KG[k] || 0.45), 0)), kg = L.reduce((a, [, x]) => a + x, 0);
+    const haupt = L.slice().sort((a, b) => b[1] - a[1])[0], sorte = haupt ? (EIMER_BILD_SORTEN.includes(haupt[0]) ? haupt[0] : "muesli") : null;
+    const stufe = Math.min(3, Math.max(1, boxenStufe(box) || 1)) >= 2 ? "stufe2" : "stufe1";
+    const stL = liter > 0.05 ? EIMER_STUFEN_L.reduce((a, x) => Math.abs(x - liter) < Math.abs(a - liter) ? x : a, 12) : 0;
+    return { stufe, sorte, liter: Math.round(liter * 10) / 10, kg: Math.round(kg * 100) / 100, stL, sorten: L.map(([k]) => k), bild: `bilder/eimer/eimer-${stufe}${sorte && stL ? "-" + sorte + "-" + stL : ""}.webp` };
+  }
+  // PLAN-EIMERBILD E6 (17.11.2026): Heu – Box Stufe 3 mit Heunetz (bis 8 kg prall, darunter 2/3/4/6 kg, leer), sonst Heuhaufen nach Tagesmenge (Bilder aus den 3D-Modellen der App, Größe = Kubikwurzel(kg / 60 / 0,025))
+  function heuInhalt(box) {
+    const p = box && box.pferd, G = p && p.futterHeute && p.futterHeute.tag === spiel.tag ? p.futterHeute.genutzt || {} : {};
+    const L = Object.entries(G).filter(([k, kg]) => kg > 0 && FUTTER[k] && FUTTER[k].art === "raufutter" && k !== "heucobs"), kg = Math.round(L.reduce((a, [, x]) => a + x, 0) * 10) / 10;
+    const netz = (boxenStufe(box) || 1) >= 3 && !p.weide && !p.paddock, near = (a, v) => a.reduce((x, y) => Math.abs(y - v) < Math.abs(x - v) ? y : x, a[0]);
+    const bild = netz ? `bilder/heu/heunetz-${kg <= 0.05 ? 0 : kg >= 7 ? 8 : near([2, 3, 4, 6], kg)}.webp` : `bilder/heu/heuhaufen-${near([2, 4, 6, 8, 10, 12, 15], Math.max(2, kg))}.webp`;
+    return { netz, kg, bild, sorten: L.map(([k]) => k) };
+  }
+  function heuBlase(box) { const H = heuInhalt(box); if (!H.kg) return null; const E = { bild: H.bild }; window.heuBlaseStand = H;
+    return futterBlaseZeigen(H.bild, `${String(H.kg).replace(".", ",")} kg ${esc(H.sorten.map((k) => FUTTER[k].n).slice(0, 2).join(", "))}`, H.netz ? (H.kg >= 8 ? "im Heunetz – prall voll (es fasst etwa 8 kg)" : "im Heunetz") : "als Heuhaufen in der Ecke"); }
+  function futterBlaseZeigen(src, zeile1, zeile2) { let b = document.getElementById("eimerBlase");
+    if (!b) { b = document.createElement("div"); b.id = "eimerBlase"; b.setAttribute("role", "status"); b.style.cssText = "position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);z-index:60;background:#fffaf0;border:3px solid #b8682f;border-radius:22px;padding:10px 16px 12px;box-shadow:0 8px 28px rgba(0,0,0,.35);text-align:center;font-weight:700;color:#3a2a1a;max-width:min(80vw,280px);cursor:pointer"; b.onclick = () => b.remove(); document.body.appendChild(b); }
+    b.innerHTML = `<img src="${src}" alt="" width="150" height="150" style="display:block;margin:0 auto 4px"><div>${zeile1}</div><small style="font-weight:400">${zeile2}</small>`; clearTimeout(b._t); b._t = setTimeout(() => b.remove(), 4000); return b; }
+  function eimerBlase(box) {
+    const E = eimerInhalt(box); let b = document.getElementById("eimerBlase");
+    if (!b) { b = document.createElement("div"); b.id = "eimerBlase"; b.setAttribute("role", "status"); b.style.cssText = "position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);z-index:60;background:#fffaf0;border:3px solid #b8682f;border-radius:22px;padding:10px 16px 12px;box-shadow:0 8px 28px rgba(0,0,0,.35);text-align:center;font-weight:700;color:#3a2a1a;max-width:min(80vw,280px);cursor:pointer"; b.onclick = () => b.remove(); document.body.appendChild(b); }
+    const fmtKg = (x) => String(x).replace(".", ","), was = E.sorte ? E.sorten.map((k) => FUTTER[k].n).slice(0, 3).join(", ") : "leer";
+    b.innerHTML = `<img src="${E.bild}" alt="Futtereimer" width="150" height="150" style="display:block;margin:0 auto 4px"><div>${E.sorte ? `${fmtKg(E.kg)} kg ${esc(was)}` : "Der Eimer ist leer"}</div><small style="font-weight:400">${E.sorte ? `${fmtKg(E.liter)} von 12 Litern` : "heute noch nichts in der Krippe"}</small>`;
+    clearTimeout(b._t); b._t = setTimeout(() => b.remove(), 4000); window.eimerBlaseStand = E; return E;
+  }
   $("krippe").addEventListener("click", () => {   // H6 (Dome): Krippe = alles außer Heu laut Futterplan
     const box = B();
     if (box.pferd) (spiel.infoGesehen = spiel.infoGesehen || {}).krippe = true;
+    if (box.pferd && box.kraftVoll && !box.tot && !box.pferd.klinik && !box.pferd.weide) { zeigeTag(); eimerBlase(box); return; }   /* volle Krippe antippen: Blase mit der Menge */
     if (!box.pferd || box.tot || box.pferd.klinik || box.pferd.weide || box.kraftVoll) { zeigeTag(); return; }
     if (!kraftNoetig(box.pferd, box)) { zeigeTag(); dialog(`<h3>🥣 Krippe</h3><p>Im Futterplan von ${esc(box.pferd.name)} steht nichts außer Heu – die Krippe bleibt leer. Heu kommt auf den Heuhaufen hinten links.</p>`); return; }
     fuetternAusLager(box, "du", "kraft"); box.kraftVoll = true; reaktionZeigen(reaktion(box.pferd, "fuettern")); spielerLernt("futter"); fressStart(box.pferd, Math.min(3, Math.max(1, boxenStufe(box) || 2)) === 1 ? "boden" : "krippe");   // v723: Kopf zur Krippe (Stufe 1: Futtereimer am Boden → ganz runter)
     const fehlt = (box.pferd.futterHeute || {}).fehlt || [];
     if (fehlt.length) dialog(`<h3>🌾 Nicht alles da</h3><p>In der Futterkammer ${fehlt.length === 1 ? "ist" : "sind"} <b>${fehlt.map(k => FUTTER[k].n).join(", ")}</b> alle.</p>`);
-    speichern(); zeigeTag();
+    speichern(); zeigeTag(); if (!fehlt.length) eimerBlase(box);   /* PLAN-EIMERBILD E2 */
   });
   $("heuhaufen").addEventListener("click", e => {   // H6 (Dome): Heuhaufen = Heu/Raufutter
     e.stopPropagation(); const box = B(); if (box.pferd) (spiel.infoGesehen = spiel.infoGesehen || {}).heuhaufen = true;
+    if (box.pferd && box.krippeVoll && !box.tot && !box.pferd.klinik && !box.pferd.weide) { zeigeTag(); heuBlase(box); return; }   /* E6: volles Heu antippen */
     if (!box.pferd || box.tot || box.pferd.klinik || box.pferd.weide || box.krippeVoll) { zeigeTag(); return; }
     if (!fuetternAusLager(box, "du", "rau")) { dialog(`<h3>🌾 Kein Heu mehr</h3><p>In der Futterkammer ist nicht genug Heu (oder anderes Raufutter) für ${esc(box.pferd.name)}. Im Futterhandel nachkaufen: Hofverwaltung → Hof → Futterkammer.</p>`, [["Zur Futterkammer", () => zeigeFutterkammerFenster(() => zeigeSchirm(null))], ["Schließen", null, "zweit"]]); return; }
     box.krippeVoll = true; reaktionZeigen(reaktion(box.pferd, "fuettern")); spielerLernt("futter"); beruehrt(box.pferd, "du", "stall"); fressStart(box.pferd, "boden");   // v723: Kopf runter zum Heu
     const fehlt = (box.pferd.futterHeute || {}).fehlt || [];
     if (fehlt.length) dialog(`<h3>🌾 Nicht alles da</h3><p>In der Futterkammer ${fehlt.length === 1 ? "ist" : "sind"} <b>${fehlt.map(k => FUTTER[k].n).join(", ")}</b> alle – ${esc(box.pferd.name)} hat heute ohne ${fehlt.length === 1 ? "diese Sorte" : "diese Sorten"} gefressen. Nachkaufen: Hofverwaltung → Hof → Futterkammer (Lieferung am nächsten Morgen).</p>`, [["Zur Futterkammer", () => zeigeFutterkammerFenster(() => zeigeSchirm(null))], ["OK", null, "zweit"]]);
-    speichern(); zeigeTag();
+    speichern(); zeigeTag(); if (!((box.pferd.futterHeute || {}).fehlt || []).length) heuBlase(box);   /* E6 */
   });
   const ausmisten = () => {
     const box = B();
@@ -7139,7 +7182,9 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       if (p.waise.art === "flasche") { buchen(-WAISE.flasche, "Futter"); werteErgaenzen(p); wertPlus(p, "vertrauen", 0.3); return; }   // Flaschenfohlen hängen sehr am Menschen
       if (p.waise.art === "amme") { werteErgaenzen(p); sozialPlus(p, 1); return; }   // Ammenstute in der Box: trinkt und lernt Pferdeverhalten
       if (p.waise.art === "leihmutter") { const M = spiel.boxen.find(x => x.pferd && x.pferd.id === p.waise.mid && !x.tot && x.fohlen);
-        if (M) { werteErgaenzen(p); sozialPlus(p, 1); return; }
+        if (M) { werteErgaenzen(p); sozialPlus(p, 1);
+          if (!M.fohlen2 && b !== M) { M.fohlen2 = p; b.pferd = null; b.krippeVoll = false; b.mistig = false; b.mistStufe = 0; }   // 17.11.2026 (Auftrag 12 Rest): Leihmutter-Fohlen alter Spielstände ziehen zur Leihmutter, wenn dort Platz ist
+          return; }
         delete p.waise.art; delete p.waise.mid; p.waise.tag = spiel.tag; brief("Tierarztpraxis", `${p.name} braucht wieder Milch`, `die Leihmutter von <b>${esc(p.name)}</b> ist nicht mehr da – das Fohlen braucht ab morgen wieder Milch (Box – Pferdepflege – Versorgung).`, { pferde: [p] }); return; }
       if (spiel.tag <= p.waise.tag) return;
       p.pflege.gesundheit = Math.max(1, Math.round((p.pflege.gesundheit - WAISE.hunger) * 10) / 10); wohlAendern(p, -WAISE.wohl, "hungrig – keine Milch");
@@ -8799,7 +8844,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   // wo: boden = Roundpen, Reitplatz, Reithalle · platz = Reitplatz, Reithalle · gelaende = Gelände
   const UEBUNG = {
     bodenarbeit: { n: "Boden­arbeit", ico: "🤝", wo: "fuehren", ab: 2, e: 12, vl: "bodenarbeit", w: { vertrauen: 1.2, gehorsam: 1, konzentration: .4 }, info: "Führen, Weichen, Stillstehen – Vertrauen und Gehorsam, schon für Fohlen" },
-    freiarbeit: { n: "Frei­arbeit", ico: "🦋", wo: "boden", ab: 4, e: 15, vl: "bodenarbeit", w: { vertrauen: 1, gehorsam: .5, reaktion: .5, beweglichkeit: .4 }, info: "ohne Strick, nur mit Körpersprache" },
+    freiarbeit: { n: "Frei­arbeit", ico: "🦋", wo: "roundpen", ab: 4, e: 15, vl: "bodenarbeit", w: { vertrauen: 1, gehorsam: .5, reaktion: .5, beweglichkeit: .4 }, info: "ohne Strick, nur mit Körpersprache – nur im Roundpen" },   /* Dome 17.11.2026: Freiarbeit/Join-up nur im Roundpen, nicht auf dem Reitplatz */
     longieren: { n: "Longieren", ico: "🌀", wo: "boden", ab: 10, e: 18, vl: "longieren", sk: { 0: 1, 1: .8 }, w: { gehorsam: .4, ausdauer: .4, beweglichkeit: .3 }, info: "Takt und Losgelassenheit – gut zum Aufwärmen" },
     stangen: { n: "Stangen­arbeit", ico: "📏", wo: "boden", ab: 10, e: 18, vl: "stangen", sk: { 0: .5 }, w: { koordination: .9, konzentration: .6, beweglichkeit: .3 }, gang: .02, d: { springen: .2 }, info: "Trab- und Galoppstangen – Koordination und Gangwerk" },
     doppellonge: { n: "Doppel­longe", ico: "🎗️", wo: "platz", ab: 12, e: 24, vl: "longieren", sk: { 2: .6, 3: .6, 4: .5, 5: .5 }, w: { kraft: .4, gehorsam: .3 }, info: "Anlehnung bis Versammlung, ohne Reitergewicht" },
@@ -8826,6 +8871,10 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   UEBUNG.ausritt.skN = { distanz: { 0: .6 } }; UEBUNG.kondition.skN = { distanz: { 0: .5, 1: .7, 2: .5 } };
   UEBUNG.galopptraining.skN = { galopp: { 2: .7, 4: .6 } };
   UEBUNG.passtraining.skN = { pass: { 1: .8, 2: .6, 3: .5 } }; UEBUNG.dressur.skN = { pass: { 0: .3 } };
+  // 17.11.2026 (Auftrag 11 Rest, Nr. 12/15/16): Pass aus dem Galopp (passtraining) oder aus dem Tölt (passtoelt) – aus dem Tölt wird der Tölt mit der Zeit passig (Takt leidet; Stärke selbst gesetzt: −0,03 Gangbonus je Training)
+  UEBUNG.passtraining.n = "Pass­training (aus dem Galopp)"; UEBUNG.passtraining.info = "Rennpass aus dem Galopp angeritten – nur für Pferde mit Pass";
+  UEBUNG.passtoelt = { ...UEBUNG.passtraining, n: "Pass­training (aus dem Tölt)", ico: "🌀", info: "Rennpass aus dem Tölt angeritten – leichter für junge Passer, aber oft so geritten wird der Tölt passig (Takt leidet)" };
+  const PASS_TOELT_ABZUG = 0.03, istPassUeb = k => k === "passtraining" || k === "passtoelt";
   ["bodenarbeit", "longieren", "spazieren"].forEach(k => UEBUNG[k].skN = { galopp: { 0: .5 } });
   UEBUNG.trabtraining = { n: "Trab\u00adtraining", ico: "🏁", wo: "bahn", ab: 6, e: 34, vl: "gelaende", nurRasse: p => SKALEN_N.trab.nur(p), nurTxt: "nur für Traber", skN: { trab: { 0: .8, 1: .7, 2: .7, 3: .6 } }, w: { beschleunigung: 1, ausdauer: .8, kraft: .4, regeneration: .3 }, gangP: .02, info: "Gewöhnen, Einfahren, Joggen und Tempoarbeit vor dem Sulky" };
   UEBUNG.trabquali = { n: "Qualifika\u00adtions\u00adlauf", ico: "⏱️", wo: "bahn", ab: 8, e: 30, vl: "gelaende", nurRasse: p => SKALEN_N.trab.nur(p), nurTxt: "nur für Traber", skN: { trab: { 4: 1 } }, w: { beschleunigung: .5, gehorsam: .4, konzentration: .4 }, info: "Probelauf über 1.000 m – Pflicht vor dem ersten Trabrennen (HVT: schneller als 1:25,0 je km)" };
@@ -8833,7 +8882,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   UEBUNG.anreiten = { n: "Anreiten", ico: "🐴", wo: "boden", ab: 12, e: 20, vl: "longieren", w: { vertrauen: .8, gehorsam: .6 }, info: "Sattel, Trense und das erste Aufsitzen – das junge Pferd gewöhnt sich an den Reiter" };
   UEBUNG.einreiten = { n: "Einreiten", ico: "🏇", wo: "platz", ab: 12, e: 22, vl: "dressur", reiten: true, sk: { 0: .4, 1: .3 }, w: { gehorsam: .7, konzentration: .4 }, info: "kurze Reitphasen: das Pferd lernt Schenkel-, Zügel- und Gewichtshilfen" };
   const TRAIN_GRUPPE = ["roundpen", "reitplatz", "reithalle", "stallgasse", "gelaende", "rennbahn", "ovalbahn", "trail"];
-  const UEB_WO = { boden: ["roundpen", "reitplatz", "reithalle"], fuehren: ["roundpen", "reitplatz", "reithalle", "stallgasse"], platz: ["reitplatz", "reithalle"], gelaende: ["gelaende"], bahn: ["rennbahn"], gang: ["ovalbahn", "reitplatz", "reithalle"], trail: ["trail"] };
+  const UEB_WO = { roundpen: ["roundpen"], boden: ["roundpen", "reitplatz", "reithalle"], fuehren: ["roundpen", "reitplatz", "reithalle", "stallgasse"], platz: ["reitplatz", "reithalle"], gelaende: ["gelaende"], bahn: ["rennbahn"], gang: ["ovalbahn", "reitplatz", "reithalle"], trail: ["trail"] };
   // Dome (v338): mit Roundpen gibt es die Bodenarbeit (Boden-/Freiarbeit, Longieren, Stangen) nicht mehr auf dem Reitplatz; ein Roundpen Stufe 3 ist überdacht – dann auch nicht mehr in der Reithalle
   const ROUNDPEN_TAG = 2;   // v995 (Dome): je Roundpen höchstens 2 Pferde am Tag – egal ob Spieler, Mitarbeiter oder Pensionsreiter
   const eigeneRoundpenHeute = () => spiel.boxen.filter(b => b.pferd && !b.tot && !fremd(b.pferd) && b.pferd.trainHeute && b.pferd.trainHeute.tag === spiel.tag && (b.pferd.trainHeute.orte || []).includes("roundpen")).length;
@@ -8910,6 +8959,13 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   };
   // Trabrennen (vorbereitet, erst mit der Rasse Traber): Gewöhnen → Einfahren → Joggen → Tempoarbeit → Qualifikation (HVT: schneller als 1:25,0 je km, nach 6 Monaten ohne Rennen neu)
   const TRAB_STUFEN = ["Gewöhnen", "Einfahren", "Joggen", "Tempoarbeit", "Qualifikation"], TRAB_QUALI = { kmZeit: 85, neuNachJz: 2, ab: 8 };
+  function trabQualiStand(p) {   // "" = darf starten; sonst Grund. Alte Spielstände: Qualifikationslauf-Stufe ab 50 % zählt als qualifiziert (ab heute)
+    if (!p.trabQuali && (skalaN(p, "trab")[4] || 0) >= 50) p.trabQuali = { tag: spiel.tag, alt: true };
+    if (!p.trabQuali) return `Qualifikation fehlt (Übung Qualifikationslauf: 1.000 m schneller als ${kmZeitTxt(TRAB_QUALI.kmZeit)})`;
+    const letzt = Math.max(p.trabQuali.tag, ...(p.erfolge || []).filter(e => e.disz === "trabrennen").map(e => e.tag || 0));
+    return spiel.tag - letzt > TRAB_QUALI.neuNachJz * tpj() ? "Qualifikation abgelaufen (6 Monate ohne Rennen) – neu qualifizieren (Übung Qualifikationslauf)" : "";
+  }
+  const kmZeitTxt = s => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, "0").replace(".", ",")}`;   // 17.11.2026: km-Zeit wie im Rennergebnis (1:24,3)
   SKALEN_N.trab = { feld: "skalaT", n: "Traber-Ausbildung (HVT)", stufen: TRAB_STUFEN, von: "gelaende", exp: true, nur: p => TRABER.includes(p.rasse) };
   const SKALA_N_INFO = {
     western: ["gleichmäßiger Takt in allen Gangarten", "das Pferd gibt im Genick und Körper nach, ohne Spannung", "die Hinterbeine treten aktiv unter den Körper", "Vor- und Hinterhand laufen auf einer Linie", "feinste Hilfen genügen – Stopps, Wendungen, Rückwärts", "das Pferd trägt sich selbst im Gleichgewicht"],
@@ -9036,7 +9092,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   function gangGezeigt(p) {
     const g = { ...p.werte.gang }, b = gangBonus(p);
     if (b) ["schritt", "trab", "galopp"].forEach(k => { if (g[k] != null) g[k] = Math.min(10, g[k] + b); });
-    if (g.toelt != null && p.gangToelt) g.toelt = Math.min(10, g.toelt + Math.floor(p.gangToelt * 2 + 1e-9) / 2);   // Töltarbeit: bis +1
+    if (g.toelt != null && p.gangToelt) g.toelt = Math.max(0, Math.min(10, g.toelt + Math.floor(p.gangToelt * 2 + 1e-9) / 2));   // Töltarbeit: bis +1; Pass aus dem Tölt: bis −1 (17.11.)
     if (g.pass != null && p.gangPass) g.pass = Math.min(10, g.pass + Math.floor(p.gangPass * 2 + 1e-9) / 2);       // Passtraining: bis +1
     return g;
   }
@@ -11000,10 +11056,15 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     Object.entries(U.sk || {}).forEach(([i, g]) => { i = +i; const x = skalaPlus(p, i, g * F * (i <= 2 ? gew : 1) * TRAIN_SK * proTag(1)); if (x) skPlus[i] = x; });
     const dPlus = {}; Object.entries(U.d || {}).forEach(([k2, g]) => { const x = diszPlus(p, k2, g * F * TRAIN_D * proTag(1)); if (x) dPlus[k2] = x; });
     const nPlus = {}; Object.entries(U.skN || {}).forEach(([art, L]) => { let f = F;   // Auftrag 11: Stufen der Disziplinen
-      if (k === "passtraining" && passZuOft(p)) { f *= 0.3; hinweise.push(`${esc(p.name)} hatte in den letzten 7 Tagen schon ${PASS_MAX} × Passtraining – zu oft: Übertraining, kaum Fortschritt. Besser Intervall- oder Bergauf-Training.`); wohlAendern(p, -4, "zu oft Passtraining"); }
+      if (istPassUeb(k) && passZuOft(p)) { f *= 0.3; hinweise.push(`${esc(p.name)} hatte in den letzten 7 Tagen schon ${PASS_MAX} × Passtraining – zu oft: Übertraining, kaum Fortschritt. Besser Intervall- oder Bergauf-Training.`); wohlAendern(p, -4, "zu oft Passtraining"); }
       Object.entries(L).forEach(([i, g]) => { const x = skalaNPlus(p, art, +i, g * f * TRAIN_SK * proTag(1)); if (x) (nPlus[art] = nPlus[art] || {})[i] = x; }); });
-    if (k === "passtraining") (p.passLog = (p.passLog || []).filter(t => spiel.tag - t < 7)).push(spiel.tag);
-    if (k === "galopptraining" && !p.galoppTA && !((p.uebKann || {}).galopptraining > 1) && !(p.erfolge || []).some(e => e.disz === "galopprennen")) { p.galoppTA = spiel.tag; const pr0 = galoppTierarztPreis(); if (!fremd(p)) buchen(-pr0, `Tierarzt: Untersuchung vor Trainingsbeginn (${p.name})`);
+    if (istPassUeb(k)) (p.passLog = (p.passLog || []).filter(t => spiel.tag - t < 7)).push(spiel.tag);
+    if (k === "passtoelt" && p.werte.gang && p.werte.gang.toelt != null) { p.gangToelt = r2(Math.max(-1, (p.gangToelt || 0) - PASS_TOELT_ABZUG)); if ((p.gangToelt || 0) < 0 && !p.passigHinweis) { p.passigHinweis = 1; hinweise.push(`${esc(p.name)}s Tölt wird passiger – zu oft Pass aus dem Tölt. Töltarbeit und Pass aus dem Galopp helfen.`); } }
+    if (k === "trabquali" && (skalaN(p, "trab")[3] || 0) >= 20) {   // 17.11.2026 (Auftrag 11 Rest): echter Qualifikationslauf über 1.000 m (HVT: schneller als 1:25,0 je km); km-Zeit aus dem Trabrennen-Wert (Formel selbst gesetzt)
+      const z = Math.round((95 - 0.18 * diszWert(p, "trabrennen").wert + Math.random() * 1.5) * 10) / 10;
+      if (z < TRAB_QUALI.kmZeit) { p.trabQuali = { tag: spiel.tag, zeit: z }; hinweise.push(`⏱️ Qualifiziert! ${esc(p.name)} lief den Kilometer in ${kmZeitTxt(z)} (nötig: schneller als ${kmZeitTxt(TRAB_QUALI.kmZeit)}) und darf jetzt Trabrennen laufen.`); prot("Traber qualifiziert", { p }); }
+      else hinweise.push(`⏱️ ${esc(p.name)} lief den Kilometer in ${kmZeitTxt(z)} – für die Qualifikation muss es schneller als ${kmZeitTxt(TRAB_QUALI.kmZeit)} sein. Weiter Trab- und Tempoarbeit, dann noch einmal versuchen.`); }
+    if (k === "galopptraining" && !p.galoppTA &&!((p.uebKann || {}).galopptraining > 1) && !(p.erfolge || []).some(e => e.disz === "galopprennen")) { p.galoppTA = spiel.tag; const pr0 = galoppTierarztPreis(); if (!fremd(p)) buchen(-pr0, `Tierarzt: Untersuchung vor Trainingsbeginn (${p.name})`);
       hinweise.push(`Vor dem ersten Galopptraining hat der Tierarzt ${esc(p.name)} untersucht (${fmt(pr0)}) – so ist es bei Deutscher Galopp Pflicht.`); }
     if (k === "anreiten" || k === "einreiten") { reitStand(p); const vor = p[k]; p[k] = Math.min(100, r2(vor + 100 / tpj() * Math.max(0.6, Math.min(1.3, F))));
       if (SKALEN_N.galopp.nur(p)) skalaNPlus(p, "galopp", 1, (p[k] - vor) / 2);
@@ -11460,7 +11521,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     if (DISZ[P.disz] && !reitFertig(p)) return reitStand(p).an < 100 ? "noch nicht angeritten" : "noch nicht eingeritten";   // Auftrag 11
     if (P.disz === "galopprennen" && SKALEN_N.galopp.nur(p) && (skalaN(p, "galopp")[3] || 0) < 50) return "Startmaschinen-Test fehlt (Übung Startmaschine bis 50 %)";
     if (P.disz === "distanz") { const ds = distCeiSperre(p, P); if (ds) return ds; }   // FEI-Qualifikationsweg
-    if (P.disz === "trabrennen" && SKALEN_N.trab.nur(p) && (skalaN(p, "trab")[4] || 0) < 50) return "Qualifikation fehlt (Übung Qualifikationslauf bis 50 %)";
+    if (P.disz === "trabrennen" && SKALEN_N.trab.nur(p)) { const q = trabQualiStand(p); if (q) return q; }   /* 17.11.2026 (Auftrag 11 Rest): echte Qualifikation, nach 6 Monaten ohne Rennen neu */
     if (P.disz === "trabrennen" && alterJZ(p) >= (p.geschlecht === "Stute" ? 11 : 15) * 4) return `zu alt für Trabrennen (HVT: Stuten bis 10, Hengste und Wallache bis 14 Jahre)`;   /* v1050 (R3, Dome) */   // HVT: Qualifikationsrennen vor dem ersten Start
     const tr = traechtigSperre(p, P, t.tag); if (tr) return tr;
     if (P.jung && (alterJZ(p) < P.jung[0] || alterJZ(p) > P.jung[1])) return "Altersgrenze";
@@ -11860,7 +11921,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     western: { n: "Western", lk: true, disz: ["reining", "pleasure", "trail"], ueb: { western: 1, trailarbeit: 1 } },
     rennen: { n: "Rennen", lk: false, disz: ["galopprennen", "trabrennen", "passrennen"], ueb: { galopptraining: 1, kondition: 0.5, ausritt: 0.5 } },   // Nachtrag 9.2: Gelände-Arbeit ohne Rennbahn nur zur Hälfte
     distanz: { n: "Distanz", lk: false, disz: ["distanz"], ueb: { ausritt: 1, kondition: 1 } },
-    gangpferde: { n: "Gangpferde", lk: false, disz: ["toelt"], ueb: { toeltarbeit: 1, passtraining: 1 } } };
+    gangpferde: { n: "Gangpferde", lk: false, disz: ["toelt"], ueb: { toeltarbeit: 1, passtraining: 1, passtoelt: 1 } } };
   const REITER_ANFORD = [10, 30, 50, 70, 85], REITER_KL_FAKTOR = [1, 1.25, 1.5, 1.75, 2];   // Anforderung je Klasse E/A/L/M/S (Western Einsteiger … Open) und Wachstumsfaktor je Klasse
   const REITER = { alt: { 7: 10, 6: 22, 5: 38, 4: 52, 3: 66, 2: 80, 1: 92 }, start: 10, training: 0.15, turnier: { start: 0.3, platz: 0.8, sieg: 1.5 }, unterricht: 0.8, unterrichtBis: 60, unterrichtDoppelUnter: 30, nahe: 10, abnahme: 120 };   // Zuwachs × (1 − Können / 120)
   const reiterGruppeVon = disz => Object.keys(REITER_DISZ).find(g => REITER_DISZ[g].disz.includes(disz));
@@ -13937,7 +13998,8 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       <div class="fp-liste"><p class="fk-gruppe">Raufutter</p>${PLAN_SORTEN.filter(k => FUTTER[k].art === "raufutter").map(zeile).join("")}
         <p class="fk-gruppe">Kraftfutter</p>${PLAN_SORTEN.filter(k => FUTTER[k].art === "kraftfutter").map(zeile).join("")}
         <p class="fk-gruppe">Zusätze</p>${PLAN_SORTEN.filter(k => FUTTER[k].art === "zusatz").map(zeile).join("")}
-        ${(() => { const sp = PLAN_SORTEN.filter(k => FUTTER[k].art === "spezial" && (P.kg[k] || spezialFrei(FUTTER[k].spezial))); return sp.length ? `<p class="fk-gruppe">Spezialfutter</p>${sp.map(zeile).join("")}` : ""; })()}</div>
+        ${(() => { const sp = PLAN_SORTEN.filter(k => FUTTER[k].art === "spezial" && (P.kg[k] || spezialFrei(FUTTER[k].spezial))); return sp.length ? `<p class="fk-gruppe">Spezialfutter</p>${sp.map(zeile).join("")}` : ""; })()}
+        ${(() => { try { const E = eimerInhalt(box, P.kg); return `<div class="fp-eimer" style="display:flex;align-items:center;gap:10px;margin:8px 0 2px"><img src="${E.bild}" alt="Futtereimer" width="64" height="64"><small>${E.sorte ? `So voll wird der Eimer am Tag: <b>${String(E.liter).replace(".", ",")} von 12 Litern</b>${E.liter >= 12 ? " (mehr passt nicht hinein)" : ""}` : "Der Eimer bleibt leer – nur Raufutter."}</small></div>`; } catch (e) { return ""; } })()}</div>   <!-- PLAN-EIMERBILD E4 (17.11.2026) -->
       ${p.umstellung ? `<p class="text fp-umst"><small>🔄 <b>Futterumstellung: Tag ${umstellungTag(p)} von 3</b> – der neue Plan wird langsam eingeführt (heute ${umstellungTag(p) === 1 ? "⅓" : umstellungTag(p) === 2 ? "⅔" : "ganz"} neu), damit der Darm sich gewöhnen kann. Gefüttert und aus der Futterkammer genommen werden die Mengen „heute“.</small></p>` : ""}
       ${futterexperteAngestellt() ? `<p class="text" style="margin:6px 0"><label class="fp-check"><input type="checkbox" id="fpBetreut" ${p.expertBetreut || !eigener ? "checked" : ""} ${eigener ? "" : "disabled"}> 🌾 Fütterungsberater berechnet den Plan jede Jahreszeit neu</label></p>` : ""}
       <p class="text" style="margin:6px 0"><label class="fp-check"><input type="checkbox" id="fpWaessern" ${p.heuWaessern ? "checked" : ""}> 💧 Heu vor dem Füttern wässern <small>(bindet den Staub – gut bei Husten · ${heudampfer() ? "mit dem Heudampfer ohne Mehraufwand" : "kostet Zeit: zählt beim Stallburschen wie 1½ Boxen"})</small></label></p>
@@ -15755,6 +15817,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   function naechsteNacht0() {
     if (spiel.ansehen) return;
     try { azubiAbend(); } catch (e) { console.error("Azubi:", e); }
+    try { stellenTag(); } catch (e) { console.error("Stellen:", e); }   // Auftrag 20 (M5b-1)
     try { grabWahlTag(); } catch (e) { console.error("Grab:", e); }   // Auftrag 10: ohne Wahl nach 2 Tagen Abholung   // Etappe 8e: Versorgung des Tages zählt für die Praxisnote
     try { erfahrungNacht(); } catch (e) { console.error("Erfahrung:", e); }   // v1038: Versorgung und neue Klassen des Tages
     jedenHof(() => { try { waschAbend(); } catch (e) { console.error("Waschen:", e); } tote(); turnierNacht(); try { zbNacht(); zbJahresgebuehr(); } catch (e) { console.error("Zuchtverband:", e); } }, true);   // W4: abends waschen Pfleger/Einsteller-Leistung · Turnierpferde von heute: Ergebnis (Brief kommt am nächsten Tag)
@@ -16286,6 +16349,10 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       ["🐎 Anreiten und Einreiten", "Ein junges Pferd lernt zuerst, Sattel, Trense und einen Reiter auf dem Rücken zu tragen – das nennen manche Ausbilder Anreiten. Danach lernt es, auf Schenkel, Zügel und Gewicht zu reagieren – das Einreiten. Viele benutzen beide Wörter gleich. In den ersten Wochen wird vor jedem Reiten 10–15 Minuten longiert, die Reitphasen sind kurz. Die meisten Reitpferde werden mit 3 bis 4 Jahren angeritten, Galopper schon mit etwa 18 Monaten; Traber werden ab 1½ Jahren eingefahren. Oft folgt danach eine Koppelpause von etwa einem halben Jahr."],
       ["🎓 Ausbildungsstufen der Disziplinen", "Die Ausbildungsskala (Takt, Losgelassenheit, Anlehnung, Schwung, Geraderichtung, Versammlung) gilt laut FN für alle Disziplinen. Die Westernreiter der EWU beschreiben eigene Stufen: Takt, Losgelassenheit und Nachgiebigkeit, Aktivierung der Hinterhand, Geraderichten, absolute Durchlässigkeit und Balance. Springpferde bauen auf den ersten drei Stufen der Skala auf und lernen dann Stangen und Cavaletti, Reihen, Einzelsprünge, Distanzen und Kombinationen und zuletzt den Parcours. Distanzpferde trainieren nach einer Pyramide: Grundtraining mit langer, ruhiger Arbeit, dann Aufbau- und Intensivtraining mit Tempo und Intervallen; internationale Ritte gibt es erst nach Qualifikationsritten. Galopper lernen als Jährling Trense, Gurt, Führen und Longe, werden angeritten, gehen Schritt, Trab und kurzen Canter, üben die Startmaschine und kommen dann in die schnelle Arbeit – vor dem ersten Rennen stehen Tierarzt und Startmaschinen-Test. Rennpass wird selten geritten: Spitzentrainer machen weniger als zweimal pro Woche Passtraining."],
       ["🟥 Die Rote Liste der Pferderassen", "In Deutschland gibt es 28 einheimische Pferderassen. Wie gefährdet sie sind, legt die Bundesanstalt für Landwirtschaft und Ernährung fest – nach der effektiven Populationsgröße, also danach, wie viele verschiedene Zuchttiere wirklich zur nächsten Generation beitragen. Stark gefährdet (Erhaltungspopulation) sind Alt-Württemberger, Dülmener und Schleswiger Kaltblut. Senner, Rottaler, Leutstettener, Beberbecker, Lehmkuhlener Pony und Pfalz-Ardenner Kaltblut sind so selten oder so vermischt, dass nur noch ihr Aussehen erhalten werden kann. Unter Beobachtung stehen fünf Rassen, darunter das Schwarzwälder Kaltblut und das Rheinisch-Deutsche Kaltblut. Nicht gefährdet sind 14 Rassen, zum Beispiel die Deutschen Reitpferde, der Deutsche Traber, der Lewitzer und das Vollblut. Erhalten werden alte Rassen am besten, indem man sie züchtet und nutzt; viele Bundesländer zahlen dafür eine Haltungsprämie. (Rote Liste 2025, Einstufung nach den Beständen 2023)"],
+      ["🏺 Wenn ein Pferd stirbt", "In Deutschland darf ein totes Pferd meist nicht im Ganzen auf dem eigenen Grundstück begraben werden – es wird von der Tierkörperbeseitigung abgeholt. Wer sein Pferd in Erinnerung behalten möchte, kann es in einem Tierkrematorium einäschern lassen. Die Asche darf danach auch auf dem eigenen Hof beigesetzt werden, zum Beispiel auf einem kleinen Gedenkplatz, oder auf einem Tierfriedhof, der das Grab gegen eine Gebühr pflegt."],
+      ["👯 Zwillinge beim Pferd", "Nur 1–2 von 100 Trächtigkeiten sind Zwillinge, aber sie sind ein häufiger Grund für Fehlgeburten. Sie entstehen, wenn die Stute zwei Eizellen gleichzeitig abgibt – bei Vollblütern öfter als bei Warmblütern, bei Ponys selten; die Neigung wird vererbt. Der Tierarzt sieht Zwillinge im Ultraschall etwa 14–16 Tage nach dem Decken. Dann drückt er meist eine Fruchtblase ab, damit die andere sicher wachsen kann – früh gelingt das in etwa 9 von 10 Fällen, später viel seltener. Ohne Behandlung verliert die Stute meist beide Fohlen. Kommen doch zwei lebend zur Welt, sind sie oft klein und schwach, die Milch reicht nur für eins, und beide brauchen in der ersten Woche Tag und Nacht Aufsicht."],
+      ["🏇 Traber: vom Einfahren zur Qualifikation", "Traber werden nicht angeritten, sondern eingefahren: erst an Halfter, Gebiss und Geschirr gewöhnt, dann an der Longe und Doppellonge vom Boden gefahren, danach ziehen sie eine Schleppe (einen halben Autoreifen) und erst zuletzt den Sulky. Dann folgt ruhiges Joggen im Trab, später schnellere Trainingsmeilen. Bevor ein Traber in Deutschland Rennen laufen darf, muss er eine Qualifikation schaffen: einen Kilometer schneller als 1:25,0 Minuten. Läuft er sechs Monate kein Rennen, muss er sich neu qualifizieren."],
+      ["💨 Rennpass", "Pass ist eine Gangart, bei der die Beine einer Seite gemeinsam fußen, mit einer Schwebe dazwischen – im Rennen schaffen Islandpferde damit über 45 km/h. Rennpass wird aus dem Galopp oder aus dem Tölt geritten. Kommt er oft aus dem Tölt, kann der Tölt mit der Zeit „passig“ werden, also seinen gleichmäßigen Takt verlieren. Spitzentrainer reiten Pass selten, meist weniger als zweimal pro Woche, und trainieren sonst mit Intervallen und bergauf."],
       ["📐 Pferd oder Pony?", "Bei Turnieren gilt jedes Pferd unter 148 cm als Pony. Die Zuchtverbände sehen zusätzlich auf Körperbau (stämmig, kurze Beine, dichte Mähne) und Wesen. Manches bleibt aus Tradition ein Pferd, obwohl es Ponygröße hat, zum Beispiel das Islandpferd. Alle Polopferde heißen dagegen Polo-Ponys, weil der Sport aus Indien stammt. Miniaturpferde sind sehr klein, gelten aber nicht als Ponys."],
     ] },
     krank: { titel: "🩺 Krankheiten", text: true, eintraege: [   // v1042 (Auftrag 13, Lernen im Spiel): Huf und Bewegung – nur Wissen, keine Spielregeln; Quellen: arbeitsordner\Projekte\05-Krankheiten\01-huf-bewegung.md
@@ -17146,6 +17213,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     if (sp) { if (!still) dialog(`<h3>🕯️ Geht nicht</h3><p>${sp}</p>`); return false; }
     const preis = grabPreis(g, art); if (preis) buchen(-preis, `${art === "abholung" ? "Tierkörperbeseitigung" : "Einäscherung und Beisetzung"}: ${g.name}`);
     g.wahl = art; if (art !== "abholung") { g.grab = art; g.grabSeit = jzJetzt(); }
+    if (!still) dialog(`<h3>🕯️ ${esc(g.name)}</h3><p>${art === "hof" ? `${esc(g.name)} wurde eingeäschert und ruht jetzt auf {deinem|Ihrem} Gedenkplatz.` : art === "fremd" ? `${esc(g.name)} wurde eingeäschert und auf dem Tierfriedhof beigesetzt. Der Friedhof pflegt das Grab.` : `Die Tierkörperbeseitigung holt ${esc(g.name)} ab.`} Der Grabstein steht im Pferdefriedhof.</p>`);   // 17.11.2026 (Auftrag 10 Rest): Rückmeldung zur Wahl
     prot("Bestattung gewählt", { x: art }); speichern(); return true;
   }
   function grabWahlTag() { (spiel.friedhof || []).forEach(g => { if (g.wahl === "offen" && spiel.tag >= (g.wahlTag || 0) + FRIEDHOF_PREIS.frist - 1) grabWaehlen(g, "abholung", true); }); }
@@ -17985,6 +18053,17 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     quarter: "Silver Creek Ranch", hannoveraner: "Gestüt Linden\u00adhof", holsteiner: "Gestüt Elb\u00admarsch", oldenburger: "Gestüt Moor\u00adwiese", isi: "Gestüt Island\u00adwiese", tinker: "Gestüt Klee\u00adblatt", tekke: "Gestüt Karakum",
     trakehner: "Gestüt Elch\u00adwiese", welshcob: "Gestüt Hügel\u00adland", clydesdale: "Gestüt Tal\u00adblick", fell: "Pony\u00adgestüt Berg\u00adwiese", dales: "Pony\u00adgestüt Hoch\u00admoor", angloaraber: "Gestüt Sonnen\u00adhang", shagya: "Gestüt Puszta",
     appaloosa: "Spotted Hills Ranch", paint: "Painted Valley Ranch", knabstrupper: "Gestüt Tiger\u00adhof", noriker: "Pinzgauer Zucht\u00adhof", lewitzer: "Gestüt Lewitz\u00adwiese", barockpinto: "Stal De Bonte Hoeve" };
+  // Coding-Auftrag 19, Teil M4b-1 (17.11.2026): echte Gestüte statt erfundener (Dome 15.11.: „Nur echte Gestüte“, neutral, Hinweis „Fiktive Pferde, reale Orte“).
+  // Quelle: notizen/RECHERCHE-M4A-GESTUETE-JE-RASSE.md (Belastbarkeit gut/sehr gut/mittel). Schwach belegte und offene Rassen behalten vorerst ihr bisheriges Gestüt (Frage an Dome).
+  const GESTUET_ECHT = { araber: ["Gestüt Marbach", "Gomadingen-Marbach (Baden-Württemberg)"], friese: ["Gestüt Wickeschliede", "Meinerzhagen (Nordrhein-Westfalen)"], fjord: ["Fjordpferdehof Eitenmüller", "Reichelsheim (Hessen)"],
+    haflinger: ["Haflinger Gestüt Meura", "Meura (Thüringen)"], shetty: ["Ponygestüt Holstein", "Gettorf (Schleswig-Holstein)"], shire: ["Cotebrook Shire Horse Centre", "Cotebrook, Cheshire (England)"], andalusier: ["Barockgestüt Treidelhof", "Güterfelde (Brandenburg)"],
+    lipizzaner: ["Bundesgestüt Piber", "Köflach (Österreich)"], vollblut: ["Gestüt Schlenderhan", "Bergheim (Nordrhein-Westfalen)"], traber: ["Gestüt Helenenhof", "Aukrug (Schleswig-Holstein)"], franztraber: ["Haras national du Pin", "Le Pin-au-Haras (Frankreich)"],
+    standardbred: ["Hanover Shoe Farms", "Hanover, Pennsylvania (USA)"], quarter: ["Gestüt Papenhorst", "Edemissen (Niedersachsen)"], hannoveraner: ["Landgestüt Celle", "Celle (Niedersachsen)"], holsteiner: ["Holsteiner Hengststation Elmshorn", "Elmshorn (Schleswig-Holstein)"],
+    oldenburger: ["Gestüt Vorwerk", "Cappeln (Niedersachsen)"], isi: ["Islandpferdegestüt Kronshof", "Dahlenburg (Niedersachsen)"], trakehner: ["Gestüt Hörstein", "Alzenau (Bayern)"], welshcob: ["Barockgestüt Treidelhof", "Güterfelde (Brandenburg)"],
+    angloaraber: ["Haras national de Pompadour", "Arnac-Pompadour (Frankreich)"], shagya: ["Shagya-Araber-Gestüt Eichenhof", "Friesack (Brandenburg)"], appaloosa: ["OC Horses Ranch", "Heckenbach (Rheinland-Pfalz)"], knabstrupper: ["Barockgestüt Treidelhof", "Güterfelde (Brandenburg)"],
+    paint: ["OC Horses Ranch", "Heckenbach (Rheinland-Pfalz)"], noriker: ["Gestüt Schwaiganger", "Ohlstadt (Bayern)"] };
+  Object.entries(GESTUET_ECHT).forEach(([r, [n]]) => { GESTUET_NAMEN[r] = n; });
+  const gestuetOrt = r => (GESTUET_ECHT[r] || [])[1] || "";
   const AHNEN_LUECKE = ["vatersvater", "vatersmutter", "muttersvater", "muttersmutter"];
   // Saisonpreise: im Frühling sind Pferde gefragt (teurer), im Winter gibt es Schnäppchen
   const SAISON_PREIS = [1.1, 1.05, 1, .9], saisonF = () => SAISON_PREIS[datum().s];
@@ -18568,9 +18647,9 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
         zeilen: [rasseById(a.pferd.rasse).name, `${a.pferd.geschlecht} · ${alterText(a.pferd)}`, `<b>${fmt(a.gebot)}</b> · ${a.gebote} ${a.gebote === 1 ? "Gebot" : "Gebote"}`, a.fuehrt === "du" ? `✅ du führst · max ${fmt(a.duMax || a.gebot)}` : a.vorbei ? "beendet" : a.duGeboten ? "⚠️ überboten" : ""],
         aktion: a.vorbei ? null : [a.fuehrt === "du" ? "Höchstgebot erhöhen" : `Bieten · ab ${fmt(a.fuehrt ? a.gebot + bietSchritt(a) : a.gebot)}`, () => bieten(a)], extra: { zeilen: [["Höchstgebot", `<b>${fmt(a.gebot)}</b>`], ["Gebote", a.gebote]] } })).join("")}</div></div>`; }
     else if (marktBereich === "gestuet") {
-      if (!gestuetWahl) html = kopf("🏰 Gestüte", "Reinrassige Pferde mit vollständigen Papieren und Fellfarben-Test. Wähle ein Gestüt.") + `<div class="kacheln quadrat markt-kacheln">${rassenABC().filter(r => !NUR_RARITAET.includes(r.id)).map(r => `<button class="kachel klickbar" data-gest="${r.id}" data-rasse="${r.id}"><span class="ico">🏰</span><b>${GESTUET_NAMEN[r.id]}</b><small>${r.name}</small></button>`).join("")}</div></div>`;
+      if (!gestuetWahl) html = kopf("🏰 Gestüte", "Reinrassige Pferde mit vollständigen Papieren und Fellfarben-Test. Wähle ein Gestüt.") + `<div class="kacheln quadrat markt-kacheln">${rassenABC().filter(r => !NUR_RARITAET.includes(r.id)).map(r => `<button class="kachel klickbar" data-gest="${r.id}" data-rasse="${r.id}"><span class="ico">🏰</span><b>${GESTUET_NAMEN[r.id]}</b><small>${r.name}${gestuetOrt(r.id) ? ` · ${gestuetOrt(r.id).replace(/ (.*)$/, "")}` : ""}</small></button>`).join("")}</div><p class="text"><small>🏰 Echte Gestüte, fiktive Pferde: Namen und Orte sind real, die Pferde im Spiel sind ausgedacht.</small></p></div>`;
       else { const gp = gestuetPferde(gestuetWahl).filter(h => !(spiel.marktGekauft || []).includes(h.id));
-        html = `<button class="zurueck-s voll" id="mkGestuete" style="align-self:flex-start;justify-self:start">‹ Gestüte</button>` + kopf(`🏰 ${GESTUET_NAMEN[gestuetWahl]}`, `${rasseById(gestuetWahl).name} · reinrassig, mit Papieren und Fellfarben-Test`).replace(/<button class="zurueck-s voll" id="mkUebersicht"[^>]*>[^<]*<\/button>/, "")
+        html = `<button class="zurueck-s voll" id="mkGestuete" style="align-self:flex-start;justify-self:start">‹ Gestüte</button>` + kopf(`🏰 ${GESTUET_NAMEN[gestuetWahl]}`, `${rasseById(gestuetWahl).name} · reinrassig, mit Papieren und Fellfarben-Test${gestuetOrt(gestuetWahl) ? ` · ${gestuetOrt(gestuetWahl)}` : ""}${GESTUET_ECHT[gestuetWahl] ? " · Fiktive Pferde, reale Orte" : ""}`).replace(/<button class="zurueck-s voll" id="mkUebersicht"[^>]*>[^<]*<\/button>/, "")
           + (gp.length ? `<div class="paar-liste">${gp.map(h => pferdKachel(h, { ort: GESTUET_NAMEN[gestuetWahl], zeilen: [`${h.geschlecht} · ${alterText(h)}`, `<b>${fmt(h.preis)}</b>`],
             aktion: [`Kaufen · ${fmt(h.preis)}`, () => { if (kaufPruefen(h, h.preis)) dialog(`<h3>🏰 ${esc(h.name)} kaufen?</h3><p>${rasseById(h.rasse).name} · ${h.geschlecht} · ${alterText(h)} vom ${GESTUET_NAMEN[gestuetWahl]} für <b>${fmt(h.preis)}</b>.</p>`, [["Kaufen", () => pferdEinstellen(h, h.preis, "Gestüt")], [`🩺 ${h.akuErg ? "AKU-Ergebnis" : "Ankaufsuntersuchung"}`, () => akuDialog(h, "Gestüt", () => { if (kaufPruefen(h, h.preis)) pferdEinstellen(h, h.preis, "Gestüt"); }, () => zeigeMarkt()), "zweit"], ["Abbrechen", null, "zweit"]]); }],
             extra: { zeilen: [["Preis", `<b>${fmt(h.preis)}</b>`], ["Gestüt", GESTUET_NAMEN[gestuetWahl]]] } })).join("")}</div>` : `<p>Diese Jahreszeit ist alles verkauft.</p>`) + `</div>`; } }
@@ -18915,7 +18994,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       else { if (modus === "ganz") delete spiel.archiv[x.p.id]; else spiel.archiv[x.p.id] = pferdKuerzen(x.p); } });
       arSel = new Set(); speichern(); speichernJetzt(); aufraeumenFertig(frei); };
     const zweite = () => best.length ? dialog(`<h3>⭐ Bestenliste</h3><p>${best.map(x => `<b>${esc(x.p.name)}</b>`).join(", ")} ${best.length === 1 ? "steht" : "stehen"} in deiner Bestenliste. Wirklich ${modus === "ganz" ? "ganz löschen" : "die Details löschen"}?</p>`, [["Ja, trotzdem", tun, "rot"], ["Zurück", () => tierAufraeumenDialog(), "zweit"]]) : tun();
-    dialog(`<h3>🐴 ${wahl.length} ${wahl.length === 1 ? "Pferd" : "Pferde"} ${modus === "ganz" ? "ganz löschen" : "kürzen"}?</h3><p>Es werden ca. <b>${kbTxt(frei)}</b> frei: ${wahl.slice(0, 6).map(x => esc(x.p.name)).join(", ")}${wahl.length > 6 ? " …" : ""}. Das lässt sich nicht rückgängig machen.</p>${warn.length ? `<p class="text"><small>${warn.slice(0, 4).map(x => `<b>${esc(x.p.name)}</b> ist Vorfahre von ${x.nach.slice(0, 3).map(q => esc(q.name)).join(", ")}${x.nach.length > 3 ? " …" : ""}`).join("; ")}. Der Stammbaum bleibt (die Eltern-Daten stehen dort selbst), nur ${warn.length === 1 ? "der Steckbrief des Vorfahren" : "die Steckbriefe der Vorfahren"} gehen verloren.</small></p>` : ""}<p>Sicher?</p>`,
+    dialog(`<h3>🐴 ${wahl.length} ${wahl.length === 1 ? "Pferd" : "Pferde"} ${modus === "ganz" ? "ganz löschen" : "kürzen"}?</h3><p>Es werden ca. <b>${kbTxt(frei)}</b> frei: ${wahl.slice(0, 6).map(x => esc(x.p.name)).join(", ")}${wahl.length > 6 ? " …" : ""}. Das lässt sich nicht rückgängig machen.</p>${modus === "ganz" && wahl.some(x => x.g && x.g.grab) ? `<p class="text"><small>🏺 ${wahl.filter(x => x.g && x.g.grab).map(x => esc(x.p.name)).join(", ")} ${wahl.filter(x => x.g && x.g.grab).length === 1 ? "hat ein Urnengrab – es wird" : "haben ein Urnengrab – die Gräber werden"} dabei aufgelöst.</small></p>` : ""}${warn.length ? `<p class="text"><small>${warn.slice(0, 4).map(x => `<b>${esc(x.p.name)}</b> ist Vorfahre von ${x.nach.slice(0, 3).map(q => esc(q.name)).join(", ")}${x.nach.length > 3 ? " …" : ""}`).join("; ")}. Der Stammbaum bleibt (die Eltern-Daten stehen dort selbst), nur ${warn.length === 1 ? "der Steckbrief des Vorfahren" : "die Steckbriefe der Vorfahren"} gehen verloren.</small></p>` : ""}<p>Sicher?</p>`,
       [["Ja, " + (modus === "ganz" ? "löschen" : "kürzen"), zweite, "rot"], ["Zurück", () => tierAufraeumenDialog(), "zweit"]]);
   }
   // ---------- B4 (PLAN-BILANZ.md, Dome): Spiel verloren – Abschlussbilanz, Platz „Verloren“ und „Nur ansehen“ ----------
@@ -22827,6 +22906,115 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   const staerkeHTML = (w, ohne) => { if (ohne) return ""; const St = staerken(w); return `<div class="ma-stark">${St.length ? `⭐ <b>Stark in:</b> ${St.map(k => wissenListe(w).find(x => x[0] === k)[3]).join(", ")}` : `<small>noch keine Stärke, wächst mit der Arbeit</small>`}</div>`; };
   document.addEventListener("click", e => { const x = e.target.closest && e.target.closest(".ma-wissen [data-wst]"); if (x) x.classList.toggle("offen"); if (e.target.closest && e.target.closest("#lgDu")) lehrgangDialog("du", () => zeigeHof()); });
   const eigHTML = m => (m.eig || []).filter(e => eigGilt(m.typ, e)).length ? `<div class="ma-eig">${m.eig.filter(e => eigGilt(m.typ, e)).map(e => `<span title="${eigInfo(m.typ, e)}">${MA_EIGEN[e].n}<small> – ${eigInfo(m.typ, e)}</small></span>`).join("")}</div>` : `<div class="ma-eig leer">keine besonderen Eigenschaften</div>`;
+  // ---------- Coding-Auftrag 20, Teil M5b-1 (17.11.2026, Dome 16.11.: „alles allein abarbeiten“): Mitarbeiter über Stellenanzeige ----------
+  // Recherche: notizen/RECHERCHE-M5A-STELLENANZEIGE.md. Echt: Zeitungsanzeige 2–7 €/mm (klein ≈ 150 €, groß ≈ 400 €), Arbeitsagentur/Online-Jobbörse kostenlos,
+  // Personalvermittler 20–30 % vom Jahresgehalt (hier 25 % = 1 Gehalt je Jahreszeit). Selbst gesetzt: Bewerbungen nach ≈ 1 Monat (tpj()/3 Tage), Wartezeit ½ Jahreszeit,
+  // Anzahl/Güte der Bewerber nach Medium und Gehalt. Fragen im Gespräch selbst formuliert nach Ausbildungs-/Meisterprüfungsverordnung (Quellen in der Recherche).
+  // Noch nicht gebaut (offene Fragen an Dome): Probetag, Teilzeit/Minijob, HufNetz-Jobbörse in der App, Azubis über Anzeige (Azubis weiter wie bisher im Sommer).
+  const STELLE = { medien: { zeitung: { n: "Kleinanzeige im Kreisboten", preis: 150, anz: 2 }, zeitungGross: { n: "Große Anzeige im Kreisboten", preis: 400, anz: 3 }, online: { n: "Online-Jobbörse (kostenlos)", preis: 0, anz: 2 } },
+    gehalt: { weniger: { n: "unter dem Üblichen (−10 %)", f: 0.9, anz: -1, guete: 0.85 }, normal: { n: "üblich", f: 1, anz: 0, guete: 1 }, mehr: { n: "über dem Üblichen (+10 %)", f: 1.1, anz: 1, guete: 1.15 } },
+    agenturAnteil: 1, wartenJz: 0.5, absageWeniger: 0.5 };
+  const STELLE_TYPEN = ["stallbursche", "pfleger", "pferdewirt", "pferdewirtHS", "bereiter", "stallmeister"];
+  const GESPRAECH_ALLE = [["Warum möchten Sie bei uns arbeiten?", "Eine gute Antwort zeigt: kennt den Betrieb, hat echte Motivation, will bleiben.", "eig:zuverlaessig"],
+    ["Wie stehen Sie zu Wochenend- und Feiertagsdiensten?", "Pferde brauchen jeden Tag Versorgung – gut ist eine realistische, ehrliche Antwort.", "eig:zuverlaessig"]];
+  const GESPRAECH = {
+    pferdewirt: [["Woran erkennen Sie, dass eine Stute rossig ist?", "Hindrängen zu anderen Pferden, Schweif zur Seite, häufig Harn absetzen, „Blitzen“; manche Stuten rossen still (Probieren, Tierarzt).", "zucht"],
+      ["Wann ist der beste Zeitpunkt zum Besamen?", "Um den Eisprung – der Tierarzt bestimmt ihn per Ultraschall; die Rosse dauert etwa 5–7 Tage.", "zucht"],
+      ["Woran sehen Sie, dass eine Stute bald abfohlt?", "Volles Euter, Harztropfen (etwa 1–4 Tage vorher), eingefallene Beckenbänder, Unruhe, Schwitzen.", "zucht"],
+      ["Was tun Sie in den ersten Stunden nach der Geburt?", "Fohlen steht und trinkt Biestmilch, Nachgeburt prüfen, bei Problemen Tierarzt – ruhig bleiben, nicht stören.", "zucht"],
+      ["Was ist Ihnen beim Umgang mit Deckhengsten wichtig?", "Sicherheit: Respekt, feste Regeln, Schutzausrüstung, nie allein an rossige Stuten.", "verhalten"],
+      ["Wie beurteilen Sie ein junges Pferd?", "Auge fürs Pferd: Exterieur (Fundament, Rahmen), Gänge, Rassetyp.", "zucht"]],
+    pferdewirtHS: [["Ein Einsteller beschwert sich über das Heu. Was tun Sie?", "Ruhig zuhören, Heu prüfen, Lösung anbieten, Chef informieren.", "einsteller"],
+      ["Wie stellen Sie eine Ration für ein leichtfuttriges Pony zusammen?", "Viel Raufutter, wenig Kraftfutter und Zucker, Heunetz, Gewicht beobachten.", "futter"],
+      ["Woran erkennen Sie, dass ein Pferd krank ist?", "Frisst nicht, Puls (Ruhe etwa 28–44), Atmung (8–16) oder Temperatur (etwa 37,2–38,2 °C) außerhalb normal.", "haut"],
+      ["Ein Pferd scharrt, schaut zum Bauch und wälzt sich. Was tun Sie?", "Kolik-Verdacht ist ein Notfall: sofort Tierarzt, kein Futter, Pferd beobachten.", "futter"],
+      ["Was gehört für Sie zu guter Stallhygiene?", "Täglich misten, staubarm arbeiten, lüften, Tränken sauber halten.", "klima"],
+      ["Wie pflegen Sie eine Weide über das Jahr?", "Abäppeln, nachsäen, Weiden wechseln, im Frühling langsam anweiden.", "futter"]],
+    bereiter: [["Nennen Sie die Ausbildungsskala.", "Takt, Losgelassenheit, Anlehnung, Schwung, Geraderichtung, Versammlung – in dieser Reihenfolge.", "ruecken"],
+      ["Wie reiten Sie ein junges Pferd an?", "Geduldig, Schritt für Schritt: Gewöhnung an Sattel und Longe, kurze Einheiten, nichts erzwingen.", "verhalten"],
+      ["Ein Pferd geht klamm und taktunrein. Was machen Sie?", "Training stoppen, Lahmheit prüfen, Tierarzt – nicht weiterreiten.", "huf"],
+      ["Wie bereiten Sie ein Pferd auf eine Prüfung vor?", "Aufbau über Wochen, Verladen üben, Impfung gültig.", "ruecken"],
+      ["Wann darf ein Pferd mehr gefordert werden?", "Wenn die Grundlagen sitzen und das Pferd zufrieden und gesund ist.", "verhalten"],
+      ["Welche Erfolge haben Sie auf Turnieren?", "Zeigt Können – aber Vorsicht: hier wird gern übertrieben.", "ruecken"]],
+    pfleger: [["Wie läuft bei Ihnen ein normaler Stalltag ab?", "Zeigt Routine und Zuverlässigkeit: feste Abläufe, nichts vergessen.", "eig:zuverlaessig"],
+      ["Was prüfen Sie beim Putzen?", "Verletzungen, Wärme an den Beinen, Hufe auskratzen.", "haut"],
+      ["Was tun Sie, wenn ein Pferd nicht frisst?", "Sofort melden, nicht abwarten.", "futter"],
+      ["Wie gehen Sie mit einem Pferd um, das tritt oder beißt?", "Ruhig und konsequent bleiben, nie allein ein Risiko eingehen.", "verhalten"],
+      ["Haben Sie schon auf Turnieren betreut?", "Zeigt Erfahrung – hier wird gern übertrieben.", "huf"]],
+    stallbursche: [["Können Sie auch früh morgens und am Wochenende?", "Zuverlässigkeit ist im Stall das Wichtigste.", "eig:zuverlaessig"],
+      ["Haben Sie schon mit Pferden gearbeitet?", "Erfahrung hilft, Quereinsteiger sind aber oft willkommen.", "verhalten"],
+      ["Wie mistet man eine Box richtig?", "Mist und nasse Stellen raus, trockene Einstreu zurück, frisch nachstreuen.", "klima"],
+      ["Was tun Sie, wenn ein Wassereimer leer ist oder ein Pferd lahmt?", "Mitdenken: sofort auffüllen, Auffälliges melden.", "eig:aufmerksam"],
+      ["Wie gehen Sie an ein fremdes Pferd heran?", "Ansprechen, von vorne-seitlich kommen, nie von hinten überraschen.", "verhalten"]],
+    stallmeister: [["Wie teilen Sie das Team für einen Stall mit 30 Pferden ein?", "Klare Zuständigkeiten, Stärken nutzen, Vertretung planen.", "eig:zuverlaessig"],
+      ["Ein Mitarbeiter vergisst immer wieder Aufgaben. Was tun Sie?", "Gespräch, Checkliste, kontrollieren – erst dann Konsequenzen.", "verhalten"],
+      ["Wie kalkulieren Sie einen Pensionspreis?", "Futter, Einstreu, Lohn, Gebäude und Gewinn einrechnen.", "futter"],
+      ["Wie planen Sie Termine mit Tierarzt und Hufschmied?", "Sammeltermine, Kalender, nichts verpassen.", "huf"],
+      ["Was tun Sie bei einem Seuchenfall (z. B. Druse) im Stall?", "Quarantäne, Tierarzt, Hygiene, Einsteller informieren.", "klima"]] };
+  const ERFAHRUNG_WORT = v => v < 25 ? "noch wenig Erfahrung" : v < 45 ? "ein paar Jahre Erfahrung" : v < 65 ? "mehrere Jahre Erfahrung" : "lange Berufserfahrung";
+  const ZEUGNIS_WORT = { zuverlaessig: "„stets sehr zuverlässig“", fleissig: "„mit großem Fleiß“", ruhig: "„ruhig und besonnen im Umgang mit Pferden“", aufmerksam: "„aufmerksam und umsichtig“", lernbegierig: "„sehr lernbereit“", ungeduldig: "„engagiert“", schusselig: "„bemüht“", nachteule: "„flexibel bei den Arbeitszeiten“" };
+  const stellenPost = () => (spiel.bewerbungen = spiel.bewerbungen || {});
+  const wissenSchnitt = x => { const v = Object.values(x.wissen || {}); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0; };
+  function stelleAufgeben(typ, medium, geh) {
+    const M = STELLE.medien[medium], G = STELLE.gehalt[geh]; if (!M || !G || !STELLE_TYPEN.includes(typ)) return false;
+    if (M.preis && !spiel.admin && geldFrei() < M.preis) { dialog(`<h3>Zu wenig Geld</h3>${dispoHinweis()}<p>Die Anzeige kostet ${fmt(M.preis)}.</p>`); return false; }
+    if (M.preis && !spiel.admin) buchen(-M.preis, `Stellenanzeige: ${MA_TYP[typ].name}`);
+    (spiel.stellen = spiel.stellen || []).push({ id: "st" + Date.now().toString(36), typ, medium, geh, tag: spiel.tag, ab: spiel.tag + Math.max(1, Math.ceil(tpj() / 3)) });
+    prot("Stellenanzeige aufgegeben", { x: typ + "/" + medium + "/" + geh, b: -M.preis }); speichern(); return true;
+  }
+  function stellenTag() {
+    (spiel.stellen || []).forEach(S => { if (S.fertig || spiel.tag < S.ab) return; S.fertig = true; const M = STELLE.medien[S.medium], G = STELLE.gehalt[S.geh], T = MA_TYP[S.typ];
+      const n = Math.max(0, M.anz + G.anz + (Math.random() < 0.3 ? 1 : 0)), L = bewerberErzeugen(S.typ).concat(bewerberErzeugen(S.typ)).slice(0, n);
+      if (!L.length) { brief("Kreisbote", `Ihre Anzeige: ${T.name}`, `auf {deine|Ihre} Anzeige für eine Stelle als <b>${T.name}</b> hat sich leider niemand gemeldet. Mit einem höheren Gehalt oder einer größeren Anzeige melden sich meist mehr Leute.`); return; }
+      L.forEach(x => { Object.keys(x.wissen || {}).forEach(k => { x.wissen[k] = Math.max(0, Math.min(100, Math.round(x.wissen[k] * G.guete))); }); x.gehalt = Math.round(x.gehalt * G.f / 10) * 10;
+        const bid = "bw" + Math.random().toString(36).slice(2, 9), best = wissenListe(x.wissen).slice().sort((a, b) => (x.wissen[b[0]] || 0) - (x.wissen[a[0]] || 0))[0];
+        stellenPost()[bid] = { x, typ: S.typ, tag: spiel.tag, status: "neu", stelle: S.id };
+        const zeug = (x.eig || []).map(e => ZEUGNIS_WORT[e]).filter(Boolean).slice(0, 2);
+        brief(x.name, `Bewerbung als ${x.w ? T.w || T.name : T.name}`, `ich bewerbe mich auf {deine|Ihre} Anzeige als <b>${x.w ? T.w || T.name : T.name}</b>. Ich habe ${ERFAHRUNG_WORT(wissenSchnitt(x))}${best ? `, ${wissenSchnitt(x) < 25 ? "am meisten" : "besonders"} im Bereich ${best[1]}` : ""}.${zeug.length ? ` Mein letzter Arbeitgeber schreibt im Zeugnis: ${zeug.join(" und ")}.` : ""}<br><br>Über eine Einladung zum Gespräch würde ich mich freuen.<br><small>Hinweis: Wer lange keine Antwort bekommt, nimmt eine andere Stelle an.</small>`, { aktion: { typ: "bewerbung", bid } }); });
+      prot("Bewerbungen erhalten", { x: S.typ + ": " + L.length }); });
+    const warten = Math.max(2, Math.ceil(tpj() * STELLE.wartenJz));
+    Object.entries(stellenPost()).forEach(([bid, B]) => { if (B.status === "neu" && spiel.tag - B.tag > warten) { B.status = "weg"; brief(`${B.x.name}`, "Absage", `leider habe ich inzwischen eine andere Stelle angenommen. Danke trotzdem für {dein|Ihr} Interesse.`); } });
+    (spiel.stellen || []).splice(0, (spiel.stellen || []).length, ...(spiel.stellen || []).filter(S => !S.fertig || spiel.tag - S.ab < 4 * tpj()));
+  }
+  function stelleEinstellen(typ, x, gehalt) {
+    const jetzt = jzJetzt(), neu = { id: "ma" + Date.now().toString(36), typ, name: x.name, w: x.w, wissen: { ...x.wissen }, eig: [...(x.eig || [])], gehalt, ab: jetzt + 1, bis: null, av: x.av };
+    neu.probe = neu.ab + PROBE.jz; (spiel.mitarbeiter = spiel.mitarbeiter || []).push(neu);
+    prot("Mitarbeiter eingestellt: " + MA_TYP[typ].name, { p: neu.name }); tagebuch("Aktion mitarbeiterEinstellen", { extra: { k: "mitarbeiterEinstellen", ar: [typ], weg: "anzeige" } }); speichern(); return neu;
+  }
+  function gespraechAntwort(x, frage) {
+    const [f, tipp, ber] = frage; let v;
+    if (/^eig:/.test(ber)) { const e = ber.slice(4), hat = (x.eig || []).includes(e), schlecht = (x.eig || []).some(k => ["schusselig", "ungeduldig"].includes(k)); v = hat ? 75 : schlecht ? 25 : 50; }
+    else v = (x.wissen || {})[ber] != null ? x.wissen[ber] : wissenSchnitt(x);
+    const ueber = (x.eig || []).includes("ungeduldig") && Math.random() < 0.4;
+    const a = ueber ? "Klingt sehr selbstsicher, wird aber bei Nachfragen vage – übertreibt vielleicht." : v >= 60 ? "Antwortet sicher, genau und mit Beispielen aus der Praxis." : v >= 35 ? "Antwortet im Kern richtig, aber etwas unsicher." : "Weicht aus und bleibt vage.";
+    return { f, a, tipp, gut: !ueber && v >= 60 };
+  }
+  function gespraechDialog(bid, nachher) {
+    const B = stellenPost()[bid]; if (!B || B.status !== "neu") return; const T = MA_TYP[B.typ], x = B.x, alle = GESPRAECH_ALLE.concat(GESPRAECH[B.typ] || []);
+    dialog(`<h3>💬 Vorstellungsgespräch mit ${esc(x.name)}</h3><p>${esc(x.name)} sitzt im Büro. Wähle <b>3 bis 4 Fragen</b> – die Antworten verraten, was ${x.w ? "sie" : "er"} kann.</p>
+      <div class="gs-fragen">${alle.map((q, i) => `<label style="display:flex;gap:8px;margin:5px 0;align-items:flex-start"><input type="checkbox" data-gsf="${i}"><span>${esc(q[0])}</span></label>`).join("")}</div><p id="gsHinweis" class="text"><small>Noch keine Frage gewählt.</small></p>`,
+      [["Fragen stellen", () => { const w = [...document.querySelectorAll("[data-gsf]:checked")].map(c => alle[+c.dataset.gsf]); if (w.length < 3 || w.length > 4) { setTimeout(() => gespraechDialog(bid, nachher), 0); return; } gespraechErgebnis(bid, w, nachher); }], ["Später", () => nachher && nachher(), "zweit"]], "breit");
+    document.querySelectorAll("[data-gsf]").forEach(c => c.onchange = () => { const n = document.querySelectorAll("[data-gsf]:checked").length; $("gsHinweis").innerHTML = `<small>${n} von 3–4 Fragen gewählt.</small>`; });
+  }
+  function gespraechErgebnis(bid, fragen, nachher) {
+    const B = stellenPost()[bid]; if (!B) return; const x = B.x, T = MA_TYP[B.typ], A = fragen.map(q => gespraechAntwort(x, q)), gut = A.filter(a => a.gut).length;
+    B.wunsch = B.wunsch || Math.round(x.gehalt * (1 + Math.random() * 0.1) / 10) * 10; B.gefragt = true; prot("Vorstellungsgespräch", { p: x.name });
+    const eig = (x.eig || [])[0], eindruck = gut >= 3 ? "Sehr guter Eindruck: kennt sich aus." : gut >= 1 ? "Ordentlicher Eindruck, an manchen Stellen unsicher." : "Eher schwacher Eindruck.";
+    const zeige = () => dialog(`<h3>💬 ${esc(x.name)} – Ergebnis</h3>${A.map(a => `<div class="pn-kasten"><b>${esc(a.f)}</b><small>${esc(a.a)}</small><small>💡 <i>${esc(a.tipp)}</i></small></div>`).join("")}
+      <p><b>${eindruck}</b>${eig && MA_EIGEN[eig] ? ` Wirkt ${MA_EIGEN[eig].n.toLowerCase()}.` : ""}</p><p>Gehaltswunsch: <b>${fmt(B.wunsch)}</b> pro Jahreszeit (üblich: ${fmt(gehaltSoll({ typ: B.typ, wissen: x.wissen }))}). Anfang: nächste Jahreszeit, mit Probezeit.</p>`,
+      [[`Einstellen · ${fmt(B.wunsch)}`, () => { stelleEinstellen(B.typ, x, B.wunsch); B.status = "ja"; brief(x.name, "Zusage", `vielen Dank für die Zusage! Ich fange zu Beginn der nächsten Jahreszeit an.`); nachher && nachher(); }],
+       [`Weniger anbieten · ${fmt(Math.round(B.wunsch * 0.9 / 10) * 10)}`, () => { if (Math.random() < STELLE.absageWeniger) { B.status = "weg"; dialog(`<h3>💬 ${esc(x.name)}</h3><p>Das ist mir zu wenig – dann suche ich weiter. Schade!</p>`, [["OK", () => nachher && nachher()]]); } else { B.wunsch = Math.round(B.wunsch * 0.9 / 10) * 10; dialog(`<h3>💬 ${esc(x.name)}</h3><p>Na gut, einverstanden mit ${fmt(B.wunsch)}.</p>`, [["Weiter", zeige]]); } speichern(); }, "zweit"],
+       ["Absagen", () => { B.status = "nein"; speichern(); nachher && nachher(); }, "zweit"]], "breit");
+    speichern(); zeige();
+  }
+  function stelleDialog(typ, zurueck) {
+    const T = MA_TYP[typ]; if (!STELLE_TYPEN.includes(typ)) return;
+    dialog(`<h3>📰 Stellenanzeige: ${T.name}</h3><p>Die Bewerbungen kommen gesammelt nach etwa ${Math.max(1, Math.ceil(tpj() / 3))} ${Math.ceil(tpj() / 3) === 1 ? "Tag" : "Tagen"} per Post. Im Gespräch erfährst du mehr – die Briefe nennen nur Erfahrung und Zeugnis.</p>
+      <p><b>Wo?</b></p>${Object.entries(STELLE.medien).map(([k, M], i) => `<label style="display:block;margin:4px 0"><input type="radio" name="stMed" value="${k}" ${i === 0 ? "checked" : ""}> ${M.n}${M.preis ? ` · ${fmt(M.preis)}` : ""}</label>`).join("")}
+      <p><b>Gehalt?</b> <small>(üblich etwa ${fmt(T.gehalt)} pro Jahreszeit und mehr, je nach Erfahrung)</small></p>${Object.entries(STELLE.gehalt).map(([k, G]) => `<label style="display:block;margin:4px 0"><input type="radio" name="stGeh" value="${k}" ${k === "normal" ? "checked" : ""}> ${G.n}</label>`).join("")}
+      <p><small>Mehr Gehalt bringt mehr und bessere Bewerbungen, weniger Gehalt weniger.</small></p>`,
+      [["Anzeige aufgeben", () => { const m = (document.querySelector('[name="stMed"]:checked') || {}).value, g = (document.querySelector('[name="stGeh"]:checked') || {}).value; if (stelleAufgeben(typ, m, g)) dialog(`<h3>📰 Anzeige läuft</h3><p>Die Bewerbungen kommen in etwa ${Math.max(1, Math.ceil(tpj() / 3))} Tagen per Post.</p>`, [["OK", zurueck]]); }], ["Zurück", zurueck, "zweit"]]);
+  }
   function mitarbeiterDialog(typ) {
     tippMerken("maStaerke");   // S1/S9 (PLAN-MITARBEITER)
     const T = MA_TYP[typ], jetzt = jzJetzt(), sb = angestellte(typ), ok = maVerfuegbar(typ);
@@ -22837,12 +23025,14 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     dialog(`<h3>${T.ico} ${T.name}</h3><p>Ein ${T.name} ${T.aufgabe}${T.boxen ? (T.taet ? ` <b>${T.boxen} Tätigkeiten</b> (je Box: Füttern und Misten = 1, Putzen = 1, Fohlen üben = 1)` : ` <b>${T.boxen} Boxen</b> (nach Boxnummer)`) : ""}. ${T.info} Gehalt ab <b>${fmt(T.gehalt)} pro Jahreszeit</b>, gezahlt am Ende jeder Jahreszeit.</p>${extra}
       <p><small>Neue Leute fangen immer zu Beginn der nächsten Jahreszeit an. Kündigst du, arbeiten sie noch bis zum Ende der Jahreszeit. Kannst du das Gehalt nicht bezahlen, kündigen sie selbst – das letzte Gehalt nehmen sie sich trotzdem.</small></p>
       ${sb.length ? `<h4 class="ma-titel">Angestellt</h4><div class="ma-liste">${sb.map((m, i) => `<div class="ma-karte"><div class="ma-zeile"><span><b class="ma-name">${maAva(m, 34)}<span>${esc(m.name)}</span></b><small>${maTitel(m)} · ${fmt(m.gehalt)} pro Jahreszeit · ${status(m)}${inProbe(m) && maAktiv(m) ? ` · Probezeit bis ${jzName(m.probe - 1)}` : ""}${maAktiv(m) && m.bis == null ? ` · 🏖️ Urlaub: ${urlaubStatus(m)}${m.uWunsch ? ` <button class="mini-knopf" data-uplanma="1">🏖️ Urlaub ansehen/ändern</button>` : ""}` : ""}${maAktiv(m) ? ` · ${maUrlaub(m) ? "🏖️ im Urlaub" : maKrank(m) ? "🤒 krank" : maLehrgang(m) ? "📚 im Lehrgang" : maSchule(m) ? "🏫 Berufsschule" : zufrText(m)}${spiel.admin ? ` (Zufriedenheit ${Math.round(zufr(m))})` : ""}` : ""}${m.typ === "azubi" ? (() => { azubiErgaenzen(m); const A = ausbilderVon(m); return `<br>🎓 ${ausbildungsJahr(m) >= 2 ? FACH[m.fach].n + " · " : "Grundausbildung · "}${ausbildungsJahr(m)}. Ausbildungsjahr · Ausbilder: ${A ? (A.id === "du" ? "du" : esc(A.name)) + (ausbilderDa(m) ? "" : " (fehlt gerade)") : "⚠️ keiner"} · Prüfung ${jzName(m.pruefung).replace(/^\S+ /, "")}${m.bestanden ? " · ✅ bestanden" : ""}`; })() : m.ausgebildet ? `<br>🎓 bei dir ausgebildet (${m.ausgebildet})` : ""}</small></span>${m.bis == null ? `<span class="ma-knr">${freiStufe("lehrgang") && maAktiv(m) ? `<button class="knopf zweit" data-lgma="${i}">📚 Fortbildung</button>` : ""}<button class="knopf zweit" data-kuend="${i}">${m.ab > jetzt ? "Absagen" : inProbe(m) ? "Fristlos kündigen" : "Kündigen"}</button></span>` : ""}</div>${m.kurs && !m.kurs.fertig ? `<div class="ma-stark"><small>📚 ${maLehrgang(m) ? "gerade im Lehrgang" : `Lehrgang gebucht: ${jzName(m.kurs.jz)}, ab Tag ${m.kurs.t}`} (${(wissenListe({ einsteller: 1 }).find(x => x[0] === m.kurs.k) || [])[3] || m.kurs.k})</small></div>` : ""}${m.typ === "azubi" ? `<div class="ma-aufgaben"><small>Einsatz:</small><button class="mini-knopf ${!m.einsatz ? "an" : ""}" data-azeins="${i}:stall">🧹 Stalldienst</button><button class="mini-knopf ${m.einsatz === "putzen" ? "an" : ""}" data-azeins="${i}:putzen">🧽 Putzen</button>${freiStufe("mitlaufen") && m.ausbilder && m.ausbilder !== "du" ? `<button class="mini-knopf ${m.einsatz === "mitlaufen" ? "an" : ""}" data-azeins="${i}:mitlaufen" title="lernt mehr, aber nur in den Bereichen des Ausbilders – fehlt dann im Stall">🚶 Mitlaufen</button>` : ""}${m.einsatzNeu ? `<small>ab morgen: ${{ stall: "Stalldienst", putzen: "Putzen", mitlaufen: "Mitlaufen" }[m.einsatzNeu.e]}</small>` : ""}${ausbilderListe().some(a => a.belegt < a.plaetze && a.id !== m.ausbilder) ? `<button class="mini-knopf" data-ausbwechsel="${i}">🎓 Ausbilder wechseln</button>` : ""}</div>` : ""}${(MA_AUFGABEN_TYP[m.typ] || []).length && !(m.typ === "azubi" && m.einsatz === "putzen") ? `<div class="ma-aufgaben"><small>Aufgaben:</small>${MA_AUFGABEN_TYP[m.typ].map(k => `<label><input type="checkbox" data-maauf="${i}:${k}" ${maDarf(m, k) ? "checked" : ""}> ${MA_AUFGABEN[k]}</label>`).join("")}</div>` : ""}${aquaGeb() && AQUA_HELFER.includes(m.typ) ? `<div class="ma-aufgaben"><label><input type="checkbox" data-maaqua="${i}" ${maAquaHilft(m) ? "checked" : ""}> 🏊 Hilft beim Aqua</label>${maWasserKurs(m) ? "<small>🌊 Lehrgang Wasserarbeit</small>" : ""}</div>` : maWasserKurs(m) ? `<div class="ma-stark"><small>🌊 Lehrgang Wasserarbeit</small></div>` : ""}${staerkeHTML(m.wissen, m.typ === "hofhelfer")}${(n => n ? `<div class="ma-stark"><small>📈 seit letzter Jahreszeit: +${n} ${n === 1 ? "Stufe" : "Stufen"}</small></div>` : "")((m.aufst || []).filter(a => a.jz >= jzJetzt() - 1).length)}${eigHTML(m)}${(m.typ === "hofhelfer" ? "" : wissenHTML(m.wissen))}</div>`).join("")}</div>` : ""}
-      <h4 class="ma-titel">Bewerbungen ${ok ? `für ${jzName(jetzt).replace(/^\S+ /, "")}` : ""}</h4>
+      ${ok && STELLE_TYPEN.includes(typ) ? `<div class="brief-aktion"><button class="knopf" id="stelleNeu">📰 Stellenanzeige aufgeben</button></div><p><small>Oder schnell über die Personalvermittlung (unten) – sie kostet ein Gehalt als Gebühr.</small></p>` : ""}
+      <h4 class="ma-titel">${typ === "azubi" ? "Bewerbungen" : "Personalvermittlung (Agentur)"} ${ok ? `für ${jzName(jetzt).replace(/^\S+ /, "")}` : ""}</h4>
       ${!ok ? (typ === "azubi" ? `<p>Einen Azubi kannst du erst einstellen, wenn ein Ausbilder einen Platz frei hat: Pferdewirt oder Pferdewirtschaftsmeister (je 2 Azubis) oder du selbst mit Ausbilderschein (1 Azubi, Kurs ${fmt(AUSBILDERSCHEIN)} unter Hofverwaltung → Mitarbeiter). Der Pferdepfleger darf nicht ausbilden.</p>` : T.staelle ? `<p>Für diese Stelle bewirbt sich nur jemand, wenn dieser Hof ein ${T.staelle.map(x => STALLART_NAME[x]).join(" oder ")} ist (Stallart kommt mit dem Hof-Ausbau H7).${typ === "bereiter" ? ` Bis dahin kommt ein <b>Bereiter nach Bedarf</b>: Trainingstage je Pferd stellst du unter Box → Pflege → Orte → Reitplatz ein, je Einheit ${fmt(BEREITER_EINHEIT)}.` : ""}</p>` : `<p>Für diese Stelle bewirbt sich erst jemand, wenn dein Stall größer ist (<b>${abText(T.ab)}</b>, du hast ${spiel.boxen.length}).</p>`)
-        : bw.length ? `<div class="ma-liste">${bw.map((x, i) => `<div class="ma-karte"><div class="ma-zeile"><span><b class="ma-name">${maAva(x, 34)}<span>${esc(x.name)}</span></b><small>${x.w ? T.w : T.name} · ${typ === "azubi" ? `${fmt(x.gehalt)} pro Jahreszeit im 1. Jahr` : `möchte <b>${fmt(x.gehalt)}</b> pro Jahreszeit`}</small></span>${typ === "azubi" && fachAngebot().length > 1 ? fachAngebot().map(f => `<button class="knopf" data-einst="${i}" data-fach="${f}">${FACH[f].n}</button>`).join("") : `<button class="knopf" data-einst="${i}">Einstellen</button>`}</div>${staerkeHTML(x.wissen, typ === "hofhelfer")}${eigHTML(x)}${(typ === "hofhelfer" ? "" : wissenHTML(x.wissen))}</div>`).join("")}</div>`
+        : bw.length ? `<div class="ma-liste">${bw.map((x, i) => `<div class="ma-karte"><div class="ma-zeile"><span><b class="ma-name">${maAva(x, 34)}<span>${esc(x.name)}</span></b><small>${x.w ? T.w : T.name} · ${typ === "azubi" ? `${fmt(x.gehalt)} pro Jahreszeit im 1. Jahr` : `möchte <b>${fmt(x.gehalt)}</b> pro Jahreszeit`}</small></span>${typ === "azubi" && fachAngebot().length > 1 ? fachAngebot().map(f => `<button class="knopf" data-einst="${i}" data-fach="${f}">${FACH[f].n}</button>`).join("") : `<button class="knopf" data-einst="${i}">Einstellen${typ === "azubi" ? "" : ` · Gebühr ${fmt(Math.round(x.gehalt * STELLE.agenturAnteil))}`}</button>`}</div>${staerkeHTML(x.wissen, typ === "hofhelfer")}${eigHTML(x)}${(typ === "hofhelfer" ? "" : wissenHTML(x.wissen))}</div>`).join("")}</div>`
         : typ === "azubi" && datum().s !== 1 && !spiel.tutorial ? `<p>Azubis bewerben sich nur im <b>Sommer</b> – die Ausbildung beginnt immer im Herbst.</p>` : `<p>Diese Jahreszeit hat sich niemand mehr beworben. Zur nächsten Jahreszeit kommen neue Bewerbungen.</p>`}`,
       [["Schließen", null, "zweit"]], "breit");
     document.querySelectorAll("[data-azeins]").forEach(b => b.onclick = () => { const [i, k] = b.dataset.azeins.split(":"), m = sb[+i]; const jetztE = m.einsatz || "stall"; if (k === jetztE) delete m.einsatzNeu; else { m.einsatzNeu = { e: k, ab: spiel.tag + 1 }; if (k === "mitlaufen") tippMerken("azubiMitlaufen"); } speichern(); mitarbeiterDialog(typ); });   // v398 · S6: gilt ab dem nächsten Morgen (heute hat er schon gearbeitet)
+    { const sn = $("stelleNeu"); if (sn) sn.onclick = () => stelleDialog(typ, () => mitarbeiterDialog(typ)); }   // Auftrag 20
     document.querySelectorAll("[data-maauf]").forEach(c => c.onchange = () => { const [i, k] = c.dataset.maauf.split(":"), m = sb[+i]; m.aus = m.aus || {}; if (c.checked) delete m.aus[k]; else m.aus[k] = true; speichern(); });
     document.querySelectorAll("[data-lgma]").forEach(b => b.onclick = () => lehrgangDialog(sb[+b.dataset.lgma], () => mitarbeiterDialog(typ)));   // S5
     document.querySelectorAll("[data-maaqua]").forEach(c => c.onchange = () => { sb[+c.dataset.maaqua].aquaHilf = c.checked; speichern(); });   // A4
@@ -22850,7 +23040,9 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       if (m.ab > jetzt) spiel.mitarbeiter = spiel.mitarbeiter.filter(x => x !== m); else if (inProbe(m)) { probeFristlos(m, false); } else m.bis = jetzt;   // S7: Probezeit = sofort
       speichern(); zeigeHof(); mitarbeiterDialog(typ); });
     document.querySelectorAll("[data-einst]").forEach(b => b.onclick = () => { const x = bw[+b.dataset.einst]; if (!x) return;
-      const mach = ausb => { const neu = { id: "ma" + Date.now().toString(36), typ, name: x.name, w: x.w, wissen: { ...x.wissen }, eig: [...x.eig], gehalt: x.gehalt, ab: jetzt + 1, bis: null, av: x.av };
+      const gebuehr = typ === "azubi" ? 0 : Math.round(x.gehalt * STELLE.agenturAnteil);   // Auftrag 20: Personalvermittlung kostet wie echt (20–30 % vom Jahresgehalt ≈ 1 Gehalt je Jahreszeit)
+      if (gebuehr && !spiel.admin && geldFrei() < gebuehr) { dialog(`<h3>Zu wenig Geld</h3>${dispoHinweis()}<p>Die Vermittlungsgebühr der Agentur beträgt ${fmt(gebuehr)}.</p>`, [["OK", () => mitarbeiterDialog(typ)]]); return; }
+      const mach = ausb => { if (gebuehr && !spiel.admin) buchen(-gebuehr, `Personalvermittlung: ${x.name}`); const neu = { id: "ma" + Date.now().toString(36), typ, name: x.name, w: x.w, wissen: { ...x.wissen }, eig: [...x.eig], gehalt: x.gehalt, ab: jetzt + 1, bis: null, av: x.av };
         if (typ === "azubi") { neu.ausbilder = ausb; neu.fach = b.dataset.fach || fachAngebot()[0] || "zucht"; neu.pruefung = neu.ab + AUSBILDUNG_JZ; } else neu.probe = neu.ab + PROBE.jz;   // S7 Probezeit
         (spiel.mitarbeiter = spiel.mitarbeiter || []).push(neu); prot("Mitarbeiter eingestellt: " + MA_TYP[typ].name, { p: neu.name }); tagebuch("Aktion mitarbeiterEinstellen", { extra: { k: "mitarbeiterEinstellen", ar: [typ], fach: neu.fach || "" } });   // S4
         spiel.bewerber.liste[typ] = bw.filter(y => y !== x);
@@ -23304,6 +23496,9 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       if (!X || !X.zwBekannt) return `<p class="brief-aktion-info">Erledigt.</p>`;
       if (X.zwAntwort) return `<p class="brief-aktion-info">${X.zwAntwort === "ok" ? "✅ Abgedrückt – eine Trächtigkeit bleibt." : X.zwAntwort === "weg" ? "❌ Beide verloren." : "Nicht abgedrückt – Zwillinge behalten."}</p>`;
       return `<div class="brief-aktion"><button class="knopf" data-baktion="zw-ja" data-bid="${br.id}">🩺 Abdrücken · ${fmt(ZWILLING.preis)}</button><button class="knopf zweit" data-baktion="zw-nein" data-bid="${br.id}">Nicht abdrücken</button></div>`; }
+    if (A.typ === "bewerbung") { const Bw = (spiel.bewerbungen || {})[A.bid]; if (!Bw) return "";   // Auftrag 20
+      if (Bw.status !== "neu") return `<p class="brief-aktion-info">${Bw.status === "ja" ? "✅ Eingestellt." : Bw.status === "nein" ? "Abgesagt." : "Hat eine andere Stelle angenommen."}</p>`;
+      return `<div class="brief-aktion"><button class="knopf" data-baktion="bw-gespraech" data-bid="${br.id}">💬 Zum Gespräch einladen</button><button class="knopf zweit" data-baktion="bw-absage" data-bid="${br.id}">Absagen</button></div>`; }
     if (A.typ === "grab") { const g = (spiel.friedhof || []).find(x => x.gid === A.gid); if (!g) return "";   // Auftrag 10
       if (g.wahl !== "offen") return `<p class="brief-aktion-info">${g.grab ? GRAB_NAME[g.grab] : "Von der Tierkörperbeseitigung abgeholt."}</p>`;
       const sp = grabWahlSperre("hof");
@@ -23323,6 +23518,8 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   }
   function briefAktionAus(b, br, A, nachher) {
     if (b.dataset.baktion === "zw-ja" || b.dataset.baktion === "zw-nein") { const x = alleEigenenPferde().find(y => y.p.id === A.pid); if (x) zwillingAbdruecken(x.p, b.dataset.baktion === "zw-ja"); nachher(); return; }   // Auftrag 12
+    if (b.dataset.baktion === "bw-gespraech") { gespraechDialog(A.bid, nachher); return; }   // Auftrag 20
+    if (b.dataset.baktion === "bw-absage") { const Bw = (spiel.bewerbungen || {})[A.bid]; if (Bw && Bw.status === "neu") { Bw.status = "nein"; prot("Bewerbung abgesagt", { p: Bw.x.name }); speichern(); } nachher(); return; }
     if (/^grab-/.test(b.dataset.baktion)) { grabWaehlen((spiel.friedhof || []).find(x => x.gid === A.gid), b.dataset.baktion.slice(5)); nachher(); return; }   // Auftrag 10
     if (b.dataset.baktion === "az-pruef") { if (!A.antwort) azubiPruefung(A.art, br, nachher); return; }   // Etappe 8e
     if (b.dataset.baktion === "az-hof") { $("dlg").hidden = true; azubiEigenerHof(); return; }

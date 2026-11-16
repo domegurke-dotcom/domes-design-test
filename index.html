@@ -1372,7 +1372,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "1065";
+  const SPIEL_VERSION = "1066";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1380,12 +1380,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=1065"></script>
-<script src="pferd.js?v=1065"></script>
-<script src="boxstufen.js?v=1065"></script>
-<script src="kopfneu.js?v=1065"></script>
-<script src="waschbild.js?v=1065"></script>
-<script src="avatare.js?v=1065"></script>
+<script src="lz-string.min.js?v=1066"></script>
+<script src="pferd.js?v=1066"></script>
+<script src="boxstufen.js?v=1066"></script>
+<script src="kopfneu.js?v=1066"></script>
+<script src="waschbild.js?v=1066"></script>
+<script src="avatare.js?v=1066"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -1448,6 +1448,7 @@
   if (hatSpielstand && !spiel.frei && !spiel.tutorial && spiel.hof) spiel.frei = { punkte: 0, stufe: 4, alles: true, alt: true };   // v1038 (Dome 15.11.): alte Spielstände – alles frei
   if (hatSpielstand && spiel.tsort == null) { try { spiel.tsort = localStorage.getItem("zuchtstall-tsort") || "datum"; } catch (e) { spiel.tsort = "datum"; } }   // S1 Punkt 7: Turnier-Sortierung gehört zum Spielstand
   if (!spiel.anlage) spiel.anlage = { stall: true, paddock: true, weide: false, waschplatz: false, roundpen: false, reitplatz: false, reithalle: false, gelaende: true, anhaenger: true };
+  if (hatSpielstand && !spiel.anhKauf) [spiel.hof, ...Object.values(spiel.hoefe || {}).map(x => x && x.hof)].forEach(H => { if (H && H.anhaenger === undefined) H.anhaenger = { alt: true }; });   /* v1066 (Dome 21.11.): alte Spielstände behalten ihren Anhänger */
   spiel.anlage.anhaenger = true; if (!spiel.hof) { spiel.anlage.weide = true; spiel.anlage.reitplatz = true; spiel.anlage.gelaende = true; }   // Start: Reitplatz und Gelände (Training daheim) – ab H2 je Hof
   if (!spiel.ausruestung) spiel.ausruestung = { halfter: true, strick: true, putzkiste: true, sattel: false, trense: false, schabracke: false, decke: false, gamaschen: false, schere: true, medizin: true };
   if (spiel.ausruestung.medizin == null) spiel.ausruestung.medizin = true;
@@ -8080,7 +8081,9 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
           dialog(`<h3>🐛 Wurmkur</h3><p>${txt}${p.pflege.wurm === spiel.tag ? " Der Wurmkur-Termin ist erneuert." : ""}</p>`); });
         return; }
       dialog(`<h3>${w === "impfung" ? "💉 Impfen" : "🦷 Zahnkontrolle"}</h3><p>${w === "impfung" ? `Impfung gegen Influenza und Herpes für ${esc(p.name)}${giVon(p) < 3 ? ` (Grundimmunisierung, ${giVon(p) + 1}. von 3 Impfungen)` : ""}: <b>${fmt(VORSORGE.impfung)}</b>. Schützt etwa 2 Jahreszeiten – weniger Ansteckung, leichtere Verläufe, schützt tragende Stuten vor dem Verfohlen.` : `Zahnkontrolle für ${esc(p.name)}: Der Tierarzt sieht mit dem Maulgatter nach und raspelt nur, wenn Haken oder Wellen da sind. Kontrolle <b>${fmt(M15.zahnKontrolle)}</b>, Raspeln bei Bedarf + ${fmt(M15.zahnRaspeln)}. Ungepflegte Zähne machen Kolik, Schlundverstopfung und Abmagern wahrscheinlicher.`}</p>`,
-        [["Tierarzt kommen lassen", () => { vorsorge(p, w); speichern(); zeigeAkte(); }], ["Abbrechen", null, "zweit"]]); });
+        spiel.tutorial ? [["Tierarzt kommen lassen", () => { vorsorge(p, w); speichern(); zeigeAkte(); }], ["Abbrechen", null, "zweit"]]
+          : vetVorsorgeVon(p, w) ? [["Termin absagen", () => { const T = vetVorsorgeVon(p, w); T.was = T.was.filter(x => x !== w); if (!T.was.length) spiel.vetTermine = vetTermine().filter(x => x !== T); speichern(); zeigeAkte(); }, "zweit"], ["OK", null]]
+          : [...[1, 2].map(d => [`📅 Termin ${d === 1 ? "morgen" : "übermorgen"}`, () => { vetVorsorgeTermin(p, w, spiel.tag + d); zeigeAkte(); dialog(`<h3>📅 Termin steht</h3><p>Der Tierarzt kommt ${d === 1 ? "morgen" : "übermorgen"} vormittags. Jemand muss da sein: du auf diesem Hof, ein Mitarbeiter oder bei Pensionspferden der Besitzer. Der Termin steht im Kalender.</p>`); }]), ["Abbrechen", null, "zweit"]]); });   /* v1066: Termin über den Kalender */
     document.querySelectorAll("[data-ucheck]").forEach(el => el.onclick = () => untersuchungDialog(p, box));
     document.querySelectorAll("[data-tu]").forEach(el => el.onclick = () => traechtigkeitsUntersuchung(p, () => zeigeAkte()));   // v959 (Dome 8.11.): Trächtigkeitsuntersuchung bei Befunde · Quarantäne · Labor
     document.querySelectorAll("[data-blut]").forEach(el => el.onclick = () => { const g = el.dataset.blut === "1";
@@ -8549,7 +8552,13 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   const tierarztFaellig = p => ({ impfung: impfFaellig(p), zahn: !!zahnUeber(p) });
   /* v1064: Tierarzt rufen – Termin über den Kalender (frühestens morgen) oder Notfall sofort */
   const vetTermine = () => (spiel.vetTermine = spiel.vetTermine || []);
-  const vetTerminVon = p => vetTermine().find(t => t.pid === p.id && t.tag >= spiel.tag);
+  const vetTerminVon = p => vetTermine().find(t => t.pid === p.id && t.tag >= spiel.tag && !t.was);   /* Termin wegen Krankheit */
+  const vetVorsorgeVon = (p, w) => vetTermine().find(t => t.pid === p.id && t.tag >= spiel.tag && t.was && (!w || t.was.includes(w)));   /* v1066: Impfung/Zahn als Termin (Dome 21.11.) */
+  function vetVorsorgeTermin(p, w, tag) {
+    const T = vetTermine().find(t => t.pid === p.id && t.tag === tag && t.was); if (T) { if (!T.was.includes(w)) T.was.push(w); }
+    else vetTermine().push({ id: "vt" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), pid: p.id, name: p.name, tag, hid: aktivHid(), was: [w] });
+    prot("Tierarzt-Termin Vorsorge", { p, x: w + " Tag " + tag }); tippMerken("vetTermin"); speichern();
+  }
   function vetTerminMachen(p, tag) {
     if (vetTerminVon(p) || tag <= spiel.tag) return false; vetTermine().push({ id: "vt" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), pid: p.id, name: p.name, tag, hid: aktivHid() });
     prot("Tierarzt-Termin", { p, x: "Tag " + tag }); tippMerken("vetTermin"); speichern(); return true;
@@ -8570,21 +8579,25 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     const L = vetTermine().filter(t => t.hid === aktivHid() && t.tag === spiel.tag); if (!L.length) return;
     spiel.vetTermine = vetTermine().filter(t => !L.includes(t));
     const maDaHier = (spiel.mitarbeiter || []).some(m => !m.probetag && maDa(m)), du = aktivHid() === spielerHof;
+    const vors = [];
     L.forEach(t => { const box = spiel.boxen.find(b => b.pferd && b.pferd.id === t.pid && !b.tot), p = box && box.pferd; if (!p || p.klinik) return;
       const da = du || maDaHier || fremd(p);
+      if (da && t.was) { t.was.forEach(w => vors.push({ p, was: w })); return; }   /* v1066: Impfung/Zahn */
       if (da) { tierarztBesuch(p, box, null, null, { still: true }); return; }
       prot("Tierarzt-Termin ausgefallen", { p, b: -TIERARZT_BESUCH });
-      rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: Anfahrt – Termin ausgefallen`, betrag: vetAnfahrtHeute() ? 0 : (spiel.vetAnfahrt = spiel.tag, TIERARZT_BESUCH) }], [p.id], `Termin bei ${p.name} ausgefallen – Rechnung`, `wir waren heute für <b>${esc(p.name)}</b> auf ${esc(hofName())}, aber es war niemand da. Ohne jemanden, der das Pferd hält, können wir nicht untersuchen. Die Anfahrt müssen wir trotzdem berechnen. Bitte einen neuen Termin machen – oder im Notfall den Notdienst rufen.<br><br>`); });
+      rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: Anfahrt – Termin ausgefallen${t.was ? " (" + t.was.map(w => w === "impfung" ? "Impfung" : "Zähne").join(", ") + ")" : ""}`, betrag: vetAnfahrtHeute() ? 0 : (spiel.vetAnfahrt = spiel.tag, TIERARZT_BESUCH) }], [p.id], `Termin bei ${p.name} ausgefallen – Rechnung`, `wir waren heute für <b>${esc(p.name)}</b> auf ${esc(hofName())}, aber es war niemand da. Ohne jemanden, der das Pferd hält, können wir nicht untersuchen. Die Anfahrt müssen wir trotzdem berechnen. Bitte einen neuen Termin machen – oder im Notfall den Notdienst rufen.<br><br>`); });
+    if (vors.length) vorsorgeSammel(vors);   /* v1066: eine Rechnung, eine Anfahrt */
   }
   function tierarztDialog(pferde, danach) {
     const wahl = new Map(pferde.map(p => [p.id, { impfung: tierarztFaellig(p).impfung, zahn: tierarztFaellig(p).zahn }]));
     const summe = () => { let s = 0; wahl.forEach(w => { if (w.impfung) s += VORSORGE.impfung; if (w.zahn) s += VORSORGE.zahn; }); return s ? s + (vetAnfahrtHeute() ? 0 : TIERARZT_BESUCH) : 0; };
     const zeichnen = () => {
-      dialog(`<h3>🩺 Tierarzt</h3><p class="text">Impfung gegen Influenza und Herpes <b>${fmt(VORSORGE.impfung)}</b> je Pferd (schützt etwa 2 Jahreszeiten), Zahnkontrolle <b>${fmt(VORSORGE.zahn)}</b> je Pferd (Raspeln nur bei Bedarf, + ${fmt(M15.zahnRaspeln)}). Dazu kommt die Anfahrt <b>${fmt(TIERARZT_BESUCH)}</b> – nur einmal am Tag, egal für wie viele Pferde${vetAnfahrtHeute() ? " (heute schon bezahlt)" : ""}. Eine Rechnung.</p>
+      dialog(`<h3>🩺 Tierarzt</h3><p class="text">Impfung gegen Influenza und Herpes <b>${fmt(VORSORGE.impfung)}</b> je Pferd (schützt etwa 2 Jahreszeiten), Zahnkontrolle <b>${fmt(VORSORGE.zahn)}</b> je Pferd (Raspeln nur bei Bedarf, + ${fmt(M15.zahnRaspeln)}). Dazu kommt die Anfahrt <b>${fmt(TIERARZT_BESUCH)}</b> – nur einmal am Tag, egal für wie viele Pferde${vetAnfahrtHeute() && spiel.tutorial ? " (heute schon bezahlt)" : ""}. Eine Rechnung.${spiel.tutorial ? "" : " Der Tierarzt kommt als Termin morgen vormittags."}</p>
         <div class="ma-liste">${pferde.map((p, i) => { const f = tierarztFaellig(p), w = wahl.get(p.id);
           return `<div class="ma-karte"><div class="ma-zeile"><span><b>${esc(p.name)}</b><small>Impfung: ${f.impfung ? "⚠️ <b>fällig</b>" : `gültig, zuletzt vor ${tageTxt2(spiel.tag - p.pflege.impf)}`} · Zähne: ${f.zahn ? "⚠️ <b>überfällig</b>" : `ok, zuletzt vor ${tageTxt2(spiel.tag - (p.pflege.zahn || 0))}`}</small></span></div>
             <div class="bf-knoepfe" style="padding:0 10px"><label class="mini-knopf"><input type="checkbox" data-tzi="${i}" ${w.impfung ? "checked" : ""}> 💉 Impfung ${fmt(VORSORGE.impfung)}</label><label class="mini-knopf"><input type="checkbox" data-tzz="${i}" ${w.zahn ? "checked" : ""}> 🦷 Zähne ${fmt(VORSORGE.zahn)}</label></div></div>`; }).join("")}</div>`,
-        [["Schließen", danach, "zweit"], [summe() ? `Tierarzt kommen lassen (${fmt(summe())})` : "Nichts gewählt", () => { const l = []; pferde.forEach(p => { const w = wahl.get(p.id); if (w.impfung) l.push({ p, was: "impfung" }); if (w.zahn) l.push({ p, was: "zahn" }); }); if (!l.length) return zeichnen();
+        [["Schließen", danach, "zweit"], [summe() ? (spiel.tutorial ? `Tierarzt kommen lassen (${fmt(summe())})` : `📅 Termin morgen (${fmt(summe())})`) : "Nichts gewählt", () => { const l = []; pferde.forEach(p => { const w = wahl.get(p.id); if (w.impfung) l.push({ p, was: "impfung" }); if (w.zahn) l.push({ p, was: "zahn" }); }); if (!l.length) return zeichnen();
+          if (!spiel.tutorial) { l.forEach(x => vetVorsorgeTermin(x.p, x.was, spiel.tag + 1)); dialog(`<h3>📅 Termin steht</h3><p class="text">Der Tierarzt kommt morgen vormittags: ${l.filter(x => x.was === "impfung").length} ${l.filter(x => x.was === "impfung").length === 1 ? "Impfung" : "Impfungen"}, ${l.filter(x => x.was === "zahn").length} Zahnkontrolle${l.filter(x => x.was === "zahn").length === 1 ? "" : "n"}. Jemand muss da sein (du, ein Mitarbeiter). Die Rechnung kommt danach per Brief.</p>`, [["OK", danach]]); return; }   /* v1066 */
           vorsorgeSammel(l); speichern(); dialog(`<h3>🩺 Erledigt</h3><p class="text">Der Tierarzt war da: ${l.filter(x => x.was === "impfung").length} ${l.filter(x => x.was === "impfung").length === 1 ? "Impfung" : "Impfungen"}, ${l.filter(x => x.was === "zahn").length} Zahnkontrolle${l.filter(x => x.was === "zahn").length === 1 ? "" : "n"}. Die Rechnung kommt per Brief.</p>`, [["OK", danach]]); }]], "breit");
       document.querySelectorAll("[data-tzi]").forEach(c => c.onchange = () => { wahl.get(pferde[+c.dataset.tzi].id).impfung = c.checked; zeichnen(); });
       document.querySelectorAll("[data-tzz]").forEach(c => c.onchange = () => { wahl.get(pferde[+c.dataset.tzz].id).zahn = c.checked; zeichnen(); });
@@ -15603,8 +15616,18 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     return foTxt + `<p class="text">🐴 <b>Herde:</b> ${andere.map(q => esc(q.name)).join(", ")}${neu.length ? `<br><small>Noch in der Eingewöhnung mit ${neu.map(q => esc(q.name)).join(", ")} – nach ${HERDE_KENNEN} gemeinsamen Weidetagen kennen sie sich.</small>` : `<br><small>Alle kennen sich schon.</small>`}${schlecht.length ? `<br><small>⚠️ ${esc(p.name)} versteht sich nicht mit ${schlecht.map(q => esc(q.name)).join(", ")} (oft Streit) – besser auf verschiedene Weiden stellen.</small>` : ""}</p>`;
   }
   // Stress bei Fahrten mit dem Pferdeanhänger und Neuem (Klinik, fremde Herde): scheu und nervös leiden, gelassen bremst
+  /* v1066 (Dome 21.11.2026, Auftrag 25 Block 4 Punkt 4): eigener Pferdeanhänger (gebraucht, 2 Pferde, etwa 6.700 € – Händlerangebote 2025: gebraucht 6.700–7.300 €, neu um 10.000 €).
+     Ohne eigenen Anhänger bringt ein Pferdetaxi das Pferd in die Klinik und zurück: TiHo-Transport bis 50 km 92,40 €, darüber 1,12 €/km – Entfernung = Lage des Hofs (nächste Großstadt), Hin- und Rückfahrt (selbst gesetzt) */
+  const ANHAENGER_KAUF = { preis: 6700 }, KLINIK_TAXI = { pauschal: 92.4, bisKm: 50, km: 1.12, ohneLage: 30 };
+  const eigenerAnhaenger = () => !!(spiel.hof && spiel.hof.anhaenger);
+  const klinikTaxi = () => { const km = (spiel.hof && spiel.hof.lage && spiel.hof.lage.km) || KLINIK_TAXI.ohneLage; return Math.round(2 * (KLINIK_TAXI.pauschal + Math.max(0, km - KLINIK_TAXI.bisKm) * KLINIK_TAXI.km)); };
+  function anhaengerKaufen() {
+    if (eigenerAnhaenger()) return false; if (!spiel.admin && geldFrei() < ANHAENGER_KAUF.preis) { dialog(`<h3>Zu wenig Geld</h3>${dispoHinweis()}<p>Der Anhänger kostet ${fmt(ANHAENGER_KAUF.preis)}.</p>`); return false; }
+    if (!spiel.admin) buchen(-ANHAENGER_KAUF.preis, "Pferdeanhänger gekauft"); spiel.hof.anhaenger = { tag: spiel.tag, preis: ANHAENGER_KAUF.preis }; prot("Pferdeanhänger gekauft", { b: -ANHAENGER_KAUF.preis }); tippMerken("anhaenger"); speichern(); return true;
+  }
   function fahrtStress(p, ziel) {
     if (p && ziel === "klinik") prot("Klinik", { p });   // S4
+    if (p && ziel === "klinik" && !p.einsteller && !spiel.tutorial && !eigenerAnhaenger()) { const k = klinikTaxi(); buchen(-k, `Pferdetaxi zur Klinik und zurück: ${p.name}`); }   /* v1066: ohne eigenen Anhänger */
     if (p) p.fahrtTag = spiel.tag;   /* v1044: Transport reizt den Magen */
     if (!p || !p.werte) return;
     reaktionZeigen(reaktion(p, "verladen"));
@@ -18151,9 +18174,9 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       sperre: (p, b) => anhGrund(p, b) || (dispoLimit() ? "Dispo am Limit" : "") || (b.fohlen ? "mit Fohlen bei Fuß" : alterJZ(p) < AUSBILDUNGSALTER ? "ab 3 Jahren" : ""),
       kurz: () => `${fmt(KOSTEN.ausbildung)} / Tag`, aus: (p, b) => { fahrtStress(p, "ausbildung"); wegbringen(p, "ausbildung", b, false); } },
     stationaer: { ico: "🛏️", name: "Stationär behandeln", info: "Bleibt in der Klinik, bis die Gesundheit mindestens 75 % beträgt und die Krankheiten auskuriert sind – erholt sich doppelt so schnell", wohin: "in die Klinik", wo: "in der Klinik",
-      beschreibung: "Kranke Pferde und Pferde unter 75 % Gesundheit – bleiben bis 75 % und bis alle behandelbaren Krankheiten weg sind (je offene Krankheit und Tag: Behandlung 20 €, Infusionen 30 €, Intensivüberwachung 65 €), Fälliges wie Impfung und Zahnbehandlung wird gleich miterledigt, Rechnung danach", kosten: () => `${fmt(KOSTEN.klinik)} pro Tag und Pferd`,
+      beschreibung: "Kranke Pferde und Pferde unter 75 % Gesundheit – bleiben bis 75 % und bis alle behandelbaren Krankheiten weg sind (je offene Krankheit und Tag: Behandlung 20 €, Infusionen 30 €, Intensivüberwachung 65 €), Fälliges wie Impfung und Zahnbehandlung wird gleich miterledigt, Rechnung danach", kosten: () => `${fmt(KOSTEN.klinik)} pro Tag und Pferd${eigenerAnhaenger() || spiel.tutorial ? "" : ` + Pferdetaxi hin und zurück ${fmt(klinikTaxi())} je Pferd (kein eigener Anhänger)`}`,
       sperre: (p, b) => anhGrund(p, b, false) || (p.pflege && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p)) && !befundListe(p).some(x => (x.bemerkt || x.diagnose) && KRANK[x.art] && !KRANK[x.art].chronisch) ? "nicht nötig" : ""),   /* v1062 (Dome): Aufnahme auch über 75 %, wenn eine bemerkte behandelbare Krankheit da ist */
-      kurz: () => `${fmt(KOSTEN.klinik)} / Tag`, aus: p => { fahrtStress(p, "klinik"); p.klinik = { seit: spiel.tag }; delete p.weide; spiel.angebote = (spiel.angebote || []).filter(a => a.id !== p.id); } },
+      kurz: () => `${fmt(KOSTEN.klinik)} / Tag${eigenerAnhaenger() || spiel.tutorial ? "" : ` + Taxi ${fmt(klinikTaxi())}`}`, aus: p => { fahrtStress(p, "klinik"); p.klinik = { seit: spiel.tag }; delete p.weide; spiel.angebote = (spiel.angebote || []).filter(a => a.id !== p.id); } },
     kastration: { ico: "✂️", name: "Hengst kastrieren", info: "Kastration: 2 Tage Klinik, danach ist er ein Wallach", wohin: "zur Kastration in die Klinik", wo: "in der Klinik",
       beschreibung: "Hengste ab 1 Jahr – 2 Tage Klinik, danach Wallach", kosten: () => `${fmt(KOSTEN.kastration)} je Hengst inklusive 2 Tage Klinik`,
       sperre: (p, b) => p.geschlecht !== "Hengst" ? "nur Hengste" : anhGrund(p, b) || (alterJZ(p) < KASTRATION_AB ? "ab 1 Jahr" : ""),
@@ -18261,7 +18284,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   function zeigeAnhaenger() {
     const meld = anhMeldung ? `<div class="klasse">${anhMeldung}</div>` : "", zur = t => `<button class="zurueck" id="anhZurueck">${t}</button>`;
     let html;
-    if (!anhZiel) html = meld + `<p class="text" style="margin:0 0 4px">🚚 <b>Pferdeanhänger</b> · Wohin soll es gehen? Danach wählst du alle Pferde aus, die mitfahren sollen.</p><div class="kacheln quadrat">${anhKacheln("start", null)}</div>`;
+    if (!anhZiel) html = meld + `<p class="text" style="margin:0 0 4px">🚚 <b>Pferdeanhänger</b> · Wohin soll es gehen? Danach wählst du alle Pferde aus, die mitfahren sollen.</p>${spiel.tutorial ? "" : eigenerAnhaenger() ? `<p class="text" style="margin:0 0 6px"><small>✅ Du hast einen eigenen Pferdeanhänger.</small></p>` : `<div class="pn-kasten" style="margin:0 0 8px"><b>🚚 Noch kein eigener Anhänger</b><small>Fahrten in die Klinik macht ein Pferdetaxi (hin und zurück etwa ${fmt(klinikTaxi())} von deinem Hof), für Besuche mit Pferd mietest du einen Anhänger (${fmt(BESUCH.anhMiete)} am Tag). Ein gebrauchter 2-Pferde-Anhänger kostet ${fmt(ANHAENGER_KAUF.preis)}.</small><div class="bf-knoepfe"><button class="knopf" id="anhKaufen" style="width:auto">🚚 Anhänger kaufen · ${fmt(ANHAENGER_KAUF.preis)}</button></div></div>`}<div class="kacheln quadrat">${anhKacheln("start", null)}</div>`;
     else if (anhZiel === "klinik") html = meld + `<p class="text" style="margin:0 0 4px">🏥 <b>Tierklinik</b> · Welche Behandlung?</p><div class="kacheln quadrat">${anhKacheln("klinik", null)}</div>` + zur("‹ Zurück zum Anhänger");
     else if (anhZiel === "abgeben") html = meld + `<p class="text" style="margin:0 0 4px">👋 <b>Abgeben</b></p><div class="kacheln quadrat">${anhKacheln("abgeben", null)}</div>` + zur("‹ Zurück zum Anhänger");
     else {
@@ -18276,6 +18299,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     anhMeldung = "";
     zeigeNeben("🚚 Pferdeanhänger", `<div class="panel anh-panel">${html}</div>`);
     const nb = $("nebenSchirm");
+    if ($("anhKaufen")) $("anhKaufen").onclick = () => dialog(`<h3>🚚 Pferdeanhänger kaufen?</h3><p>Gebrauchter 2-Pferde-Anhänger für <b>${fmt(ANHAENGER_KAUF.preis)}</b>. Damit fährst du selbst in die Klinik und zu Besuchen – kein Pferdetaxi, keine Anhängermiete mehr.</p>`, [["Kaufen", () => { if (anhaengerKaufen()) { anhMeldung = "🚚 Der Anhänger steht auf dem Hof."; zeigeAnhaenger(); } }], ["Abbrechen", null, "zweit"]]);   /* v1066 */
     nb.querySelectorAll("[data-anhziel]").forEach(k => k.onclick = () => {
       const id = k.dataset.anhziel;
       if (id === "verkaufen") { anhVerkaufen(); return; }
@@ -19023,7 +19047,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   function kalTermine(jz) {
     const t0 = jzStartTag(jz), t1 = t0 + tpj() - 1, L = [], drin = t => t >= t0 && t <= t1, add = (tag, art, ico, text, offen) => { if (drin(tag)) L.push({ tag, art, ico, text, offen: !!offen }); };
     Object.values(spiel.bewerbungen || {}).forEach(B => { if (B.probe && B.status === "neu" && !B.probe.fertig) add(B.probe.tag, "ma", "🧹", `Probetag: ${esc(B.x.name)}`); });   /* Auftrag 25 Block 2 */
-    (spiel.vetTermine || []).forEach(T => { if (T.hid === aktivHid()) add(T.tag, "pferd", "🩺", `Tierarzt: ${esc(T.name)}`); });   /* v1064 */
+    (spiel.vetTermine || []).forEach(T => { if (T.hid === aktivHid()) add(T.tag, "pferd", T.was ? "💉" : "🩺", `Tierarzt: ${esc(T.name)}${T.was ? " (" + T.was.map(w => w === "impfung" ? "Impfung" : "Zähne").join(", ") + ")" : ""}`); });   /* v1064 */
     const spanne = (a, b, art, ico, text, offen) => { for (let t = Math.max(a, t0); t <= Math.min(b, t1); t++) add(t, art, ico, text, offen); };
     (spiel.mitarbeiter || []).forEach(m => { const n = esc(m.name);
       if (m.urlaub && m.urlaub.ok !== false) spanne(m.urlaub.von, m.urlaub.bis, "ma", "🏖️", `${n} hat Urlaub`);
@@ -19566,7 +19590,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   function neuesSpielAnlegen(c, tempo, I, name, tutorial) {
     c.hof = name;
     if (!tutorial) try { tagebuch("Neues Spiel", { x: name + " (" + (c.name || "") + ")", extra: { tempo: spiel.tempo || 7, modus: stufeAktiv() } }); } catch (e) { }
-    spiel = { geld: startKapital(), spieler: c, tag: 1, tempo, tempoNeu: true, aktBox: 0, sparmodus: spiel.sparmodus, hofAusbau: HOF_AUSBAU, stufenAn: true, neuGesehen: +SPIEL_VERSION, ...(tutorial ? { tutorial: { kap: 0 } } : { frei: { punkte: startAzubi ? FREI_PUNKTE[2] : 0, stufe: startAzubi ? 2 : 1 } }),   /* v1038: nach der Ausbildung gleich Stufe 2 */
+    spiel = { anhKauf: 1, geld: startKapital(), spieler: c, tag: 1, tempo, tempoNeu: true, aktBox: 0, sparmodus: spiel.sparmodus, hofAusbau: HOF_AUSBAU, stufenAn: true, neuGesehen: +SPIEL_VERSION, ...(tutorial ? { tutorial: { kap: 0 } } : { frei: { punkte: startAzubi ? FREI_PUNKTE[2] : 0, stufe: startAzubi ? 2 : 1 } }),   /* v1038: nach der Ausbildung gleich Stufe 2 */
       boxen: Array.from({ length: I.boxen }, (_, i) => ({ nr: i + 1, pferd: null, krippeVoll: false, mistig: false, mistStufe: 0, tot: false, stufe: I.stufe })),
       anlage: tutorial ? spiel.anlage : { stall: true, paddock: true, weide: true, waschplatz: false, roundpen: false, reitplatz: true, reithalle: false, gelaende: true, anhaenger: true }, ausruestung: spiel.ausruestung, stallarten: ["pension"],   // v847 (Dome 25.10.): jeder neue Hof startet mit Reitplatz und Gelände (vorher erbte er die Anlagen des vorigen Spiels/Tutorials)
       hof: { hid: "h1", name, id: I.id, art: "pension", ha: runde2(I.ha - (1 - PLAN_START_HA)), weideHa: I.weide, bauHa: PLAN_START_HA, planNeu: 1, flaecheV: 1, halleV: 1, pachtV: 1, stufe: I.stufe, wert: I.preis, kauf: { tag: 1, preis: I.preis, eigen: I.eigen }, pacht: 0, pension: { max: PENSION_START_PLAETZE } }, hofReihe: ["h1"], hoefe: {} };
@@ -19896,7 +19920,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   const TERMIN_RASSE = [[/Holsteiner/, ["holsteiner"]], [/Oldenburger/, ["oldenburger"]], [/DSP/, ["hannoveraner", "holsteiner", "oldenburger", "trakehner"]], [/Trakehner/, ["trakehner"]], [/Galopper/, ["vollblut"]], [/Traber/, ["traber"]], [/Haflinger/, ["haflinger"]], [/Kaltblut/, ["noriker"]], [/Riedlinger/, ["hannoveraner", "haflinger", "noriker"]]];
   const BESUCH_DAUER = { kurz: "einen Tagesabschnitt", tag: "den ganzen Tag", zwei: "zwei Tage mit Übernachtung" };
   const besuchDauer = km => km <= BESUCH.kurzKm ? "kurz" : km <= BESUCH.tagKm ? "tag" : "zwei";
-  function besuchKosten(km, anh) { const d = besuchDauer(km), tage = d === "zwei" ? 2 : 1, fahrt = Math.round(2 * km * (anh ? BESUCH.anhKm : BESUCH.autoKm)), miete = anh ? BESUCH.anhMiete * tage : 0, hotel = d === "zwei" ? BESUCH.hotel : 0;
+  function besuchKosten(km, anh) { const d = besuchDauer(km), tage = d === "zwei" ? 2 : 1, fahrt = Math.round(2 * km * (anh ? BESUCH.anhKm : BESUCH.autoKm)), miete = anh && !eigenerAnhaenger() ? BESUCH.anhMiete * tage : 0, hotel = d === "zwei" ? BESUCH.hotel : 0;
     return { d, fahrt, miete, hotel, summe: fahrt + miete + hotel }; }
   const transportPreis = km => Math.max(BESUCH.transMin, Math.round((km || 0) * BESUCH.transKm / 10) * 10);
   function tsOrt(h) { const r = zufall("ts-ort-" + h.id), T = TS_ORTE[Math.floor(r() * TS_ORTE.length)], pos = hofPos(); return { name: T[0], ort: T[1], km: pos ? Math.round(kmLuft(pos, [T[2], T[3]])) : null }; }
@@ -24338,6 +24362,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     versicherung: ["Versicherungen", "Die Beiträge werden zu Beginn jeder Jahreszeit abgebucht. Was die Versicherung übernimmt, steht auf der Rechnung.", "", null, "geld", "alle"],
     haftpflicht: ["Haftpflicht", "Richtet ein Pferd bei anderen Schaden an, zahlt die Pferdehalter-Haftpflicht (Hofverwaltung → Finanzen → Versicherungen).", "", null, "geld", "alle"],
     kaufMangel: ["Mangel nach dem Kauf", "Zeigt sich eine Krankheit, die beim Kauf schon da war, kannst du bei Händler und Gestüt 6 Monate lang vom Kauf zurücktreten.", "", null, "geld", "alle"],
+    anhaenger: ["Eigener Anhänger", "Mit eigenem Anhänger fährst du selbst in die Klinik und zu Besuchen – kein Pferdetaxi, keine Anhängermiete.", "", null, "geld", "alle"],
     vetTermin: ["Tierarzt-Termin", "Der Tierarzt kommt am Termin vormittags. Jemand muss da sein – du, ein Mitarbeiter oder der Besitzer des Pensionspferds.", "", null, "krank", "alle"],
     vetNotfall: ["Notdienst", "Im Notfall kommt der Tierarzt sofort, kostet aber das Doppelte plus Notdienstgebühr. Für alles, was einen Tag warten kann, lieber einen Termin machen.", "", null, "krank", "alle"],
     kolikTisch: ["Anruf aus dem OP", "Die Klinik braucht heute eine Entscheidung – sie steht im Brief.", "", null, "geld", "alle"],

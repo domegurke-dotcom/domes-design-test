@@ -22,8 +22,9 @@ const { chromium } = require('playwright'); const path = require('path');
         const kurz = a.k + ': ' + r.replace(p.name, 'X').slice(0, 60); behLog[kurz] = (behLog[kurz] || 0) + 1; }); };
     for (let d = 0; d < 7 * 4 * 3 + 7 * 2 && !spiel.azubi.fertig; d++) {
       if (d === 5) [['lahmheit', 3], ['husten', 3], ['arthrose', 3], ['mauke', 3]].forEach(([k, g], i) => { const x = P()[i]; if (x) befundNeu(x.pferd, k, g, 'Testfall', 'du'); });   /* gezielt krank machen: Behandlung muss klappen */
-      P().forEach((x) => { if (x.pferd.klinik) return; if (!fuetternAusLager(x, 'du')) nichtGefuettert++; else x.krippeVoll = true; x.mistig = false; x.mistStufe = 0; x.wasserTag = spiel.tag; if (d % 7 === 0) x.pferd.dreck = { fell: 0, maehne: 0, seit: null }; behandle(x); });   /* einmal pro Woche gründlich geputzt */
+      P().forEach((x) => { if (x.pferd.klinik) return; if (!fuetternAusLager(x, 'du')) nichtGefuettert++; else x.krippeVoll = true; x.mistig = false; x.mistStufe = 0; x.wasserTag = spiel.tag; if (d % 7 === 0) x.pferd.dreck = { fell: 0, maehne: 0, seit: null }; aktBox = spiel.boxen.indexOf(x); spiel.aktBox = aktBox; try { anzeichenBeimBesuch(x); } catch (e) { } behandle(x); });   /* 19.11.: wie ein echter Azubi die Box besuchen – dabei fällt eine Krankheit auf (vorher blieb sie bis Grad 5 unbemerkt, das Veterinäramt sah sie aber) */   /* einmal pro Woche gründlich geputzt */
       naechsteNacht(); zu(); tage++;
+      P().forEach(x => befundListe(x.pferd).filter(y => !imInkub(y) && y.grad >= 3 && !y.bemerkt).forEach(y => { const k = x.pferd.name + " " + y.art + " G" + y.grad + " seit " + (y.seit || y.tag || "?") + " ursache " + (y.ursache || ""); (window.__unbemerkt = window.__unbemerkt || {})[k] = (window.__unbemerkt[k] || 0) + 1; }));
       P().forEach(x => { if (!x.pferd.klinik && befundListe(x.pferd).some(y => y.bemerkt && !imInkub(y) && y.grad >= 3) && !vetInBehandlung(x.pferd)) unbehandelt.push(spiel.tag + ' ' + x.pferd.name + ' ' + befundListe(x.pferd).map(y => y.art + 'G' + y.grad).join(',')); });
       for (const br of spiel.post) { const A = br.aktion; if (!A || A.typ !== 'azubiPruef' || A.antwort) continue;
         if (A.art === 'zp') zp = true; else ap = true;
@@ -35,6 +36,8 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Alle 4 Pferde leben und sind bei dir', P().length === 4 && P().every(x => !x.pferd.beschlagnahmt), P().map(x => x.pferd.name).join(', '));
     const VF = (spiel.veterinaer || {}).vorfaelle || [];
     out.push('  Info: Behandlungen: ' + Object.entries(behLog).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([k, v]) => v + '× ' + k).join(' | '));
+    out.push('  Info: unbemerkt ab Grad 3: ' + JSON.stringify(window.__unbemerkt || {}));
+    ok('Keine schwere Krankheit bleibt länger als 2 Nächte unbemerkt (Box täglich besucht)', Object.values(window.__unbemerkt || {}).every(n => n <= 2), JSON.stringify(window.__unbemerkt || {}));
     out.push('  Info: Befunde am Ende: ' + P().map(x => x.pferd.name + ' ' + befundListe(x.pferd).filter(y => y.bemerkt).map(y => y.art + ' G' + y.grad + (y.diagnose ? ' (Diagnose)' : '')).join(',')).join(' · '));
     ok('Kranke Pferde waren jede Nacht in Behandlung', !unbehandelt.length, unbehandelt.length + ': ' + unbehandelt.slice(0, 6).join(' | '));
     ok('Kein Vorfall beim Veterinäramt', !VF.length, JSON.stringify(VF));

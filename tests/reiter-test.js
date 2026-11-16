@@ -97,7 +97,8 @@ const { chromium } = require('playwright'); const path = require('path');
     const training = (fest, koennen, ma) => { const x = tp('T' + Math.random(), fest); x.energie = 100; x.werte.ist.vertrauen = 50; spiel.boxen[0].pferd = x; spiel.reiter.koennen.dressur = koennen; spiel.reiter.hinw = 0;
       const e = trainieren(x, 'longieren', 'reitplatz', ma || null); return { e, x, sk: Object.values(e.skPlus || {}).reduce((a, b) => a + b, 0), vt: x.werte.ist.vertrauen }; };
     const T1 = training({ dressur: 50 }, 10), T2 = training({ dressur: 50 }, 90), T3 = training({ dressur: 50 }, 50), T4 = training({ dressur: 10 }, 50);
-    ok('Reiter 2 Klassen weiter lernt mehr als gleich, gleich mehr als Pferd 2 Klassen weiter (Ausbildungsskala)', T2.sk > T3.sk && T3.sk > T1.sk, `${T2.sk.toFixed(3)} > ${T3.sk.toFixed(3)} > ${T1.sk.toFixed(3)}`);
+    { const mw = (k) => { let x = 0; for (let n = 0; n < 12; n++) x += training({ dressur: 50 }, k).sk; return x / 12; }, m2 = mw(90), m3 = mw(50), m1 = mw(10);   /* 19.11.: Mittel aus 12 Trainings – ein einzelnes Training streut zufällig */
+      ok('Reiter 2 Klassen weiter lernt mehr als gleich, gleich mehr als Pferd 2 Klassen weiter (Ausbildungsskala, Mittel aus 12 Trainings)', m2 > m3 && m3 > m1, `${m2.toFixed(3)} > ${m3.toFixed(3)} > ${m1.toFixed(3)}`); }
     ok('Verhältnis weit/gleich etwa 0,5 (Pferd 2 weiter, Können 10 vs. 50: 0,5 gegen 1,0 – Wetter etc. gleich)', nah(T1.sk / T3.sk, 0.5, 0.2), (T1.sk / T3.sk).toFixed(3));
     ok('Vertrauen sinkt bei v ≤ −2 um etwa 0,3 × proTag (Zufall der Vorlieben: mag +0,2, mag nicht −0,1)', T1.vt <= 50 - 0.3 * proTag(1) + 0.21 && T1.vt >= 50 - 0.3 * proTag(1) - 0.15, T1.vt.toFixed(2));
     ok('Reiter weiter oder gleich: der Abstand kostet kein Vertrauen, das Pferd weiter als der Reiter schon', abstandVertrauen(reiterAbstand(tp('x', { dressur: 50 }), 'longieren', kf('dressur', 90)).v) === 0 && abstandVertrauen(reiterAbstand(tp('y', { dressur: 50 }), 'longieren', kf('dressur', 50)).v) === 0 && T2.vt > T1.vt);
@@ -139,7 +140,8 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Anforderung mindestens 10 (Wettbewerb: Können 10 → ×1,0)', nah(RF(10, { disz: 'dressur', stufe: -1 }), 1));
     const tp3 = (name, fest) => { const x = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 9, name }); x.reiterStandFest = fest || {}; x.erfolge = []; return x; };
     const T0 = (art, Pr) => ({ id: 'k3' + Math.random(), tag: spiel.tag + 3, art, name: 'Testturnier', halle: false, nennung: [], pruef: [Pr] });
-    const stufeSetzen = s => { spiel.stufenAn = true; spiel.spieler = spiel.spieler || {}; spiel.spieler.stufe = s; };
+    /* v1038: die Modi gelten nur noch für alte Spielstände ohne Freischalt-Stufen – hier ein solcher Stand (spiel.frei weg) */
+    const FREI0 = spiel.frei; const stufeSetzen = s => { spiel.frei = null; spiel.stufenAn = true; spiel.spieler = spiel.spieler || {}; spiel.spieler.stufe = s; };
     const pM = { id: 'pm', disz: 'dressur', stufe: 3, name: 'Dressur Kl. M', starter: 12 }, pS = { id: 'ps', disz: 'dressur', stufe: 4, name: 'Dressur Kl. S', starter: 12 };
     spiel.lk.dressur = 7; spiel.reiter.koennen.dressur = 10;
     stufeSetzen('anf'); ok('Anfänger: nur „Du selbst“ (keine Reiterwahl)', reiterOptionen(tp3('A'), T0('regional', pM), pM).map(o => o.id).join() === 'du');
@@ -189,12 +191,18 @@ const { chromium } = require('playwright'); const path = require('path');
       const m1 = lkErfolg('springen', 0, 2); ok('Erfolge reichen (1 Platzierung), Können 10 < 15: kein Aufstieg, Blase vorgemerkt', m1 === '' && spiel.lk.springen === 7 && spiel.tippWarte.includes('lkWartet'));
       spiel.reiter.koennen.springen = 16; const m2 = lkErfolg('springen', 0, 3); ok('Mit Können 16: Aufstieg auf LK 6 (Erfolge haben sich gesammelt)', /LK 6/.test(m2) && spiel.lk.springen === 6); }
     // ==================== K4 ====================
-    { const st = s => { spiel.stufenAn = true; spiel.spieler = spiel.spieler || {}; spiel.spieler.stufe = s; }; spiel.reiter.koennen.dressur = 40; spiel.admin = false;
+    { const st = s => { spiel.frei = null; spiel.stufenAn = true; spiel.spieler = spiel.spieler || {}; spiel.spieler.stufe = s; }; spiel.reiter.koennen.dressur = 40; spiel.admin = false;   /* alter Spielstand mit Modus (v1038) */
       st('anf'); let h = reiterHTML(); ok('Anfänger: nur LK und Startrecht der vier Gruppen, keine Können-Balken, Reitunterricht-Knopf da', (h.match(/<tr><td>/g) || []).length === 4 && !/class="balken"/.test(h) && /id="ruKnopf"/.test(h) && !/Rennen/.test(h.split('lk-tab')[1].split('</table>')[0]));
       st('fort'); h = reiterHTML(); ok('Fortgeschritten: sieben Gruppen mit Balken, Schwelle der nächsten LK, Wirkung, ohne Zahlen', (h.match(/<tr><td>/g) || []).length === 7 && (h.match(/class="balken"/g) || []).length === 7 && /nächste LK ab/.test(h) && /lernen bei dir voll/.test(h) && !/Können 40/.test(h));
       st('exp'); h = reiterHTML(); ok('Experte: Zahlen und Tooltip mit den genauen Zuwächsen', /Können 40/.test(h) && /Zuwachs bisher: Training/.test(h) && /Unterricht \+0,8/.test(h));
       ok('Wirkungstext: Können 40 → Pferde bis Klasse A lernen voll, ab Klasse L bremst es', /bis Klasse A lernen bei dir voll, ab Klasse L bremst/.test(h.split('Dressur')[1] || ''));
       ok('Stufen: Balken ab Fortgeschritten, Zahlen nur Experte', (() => { st('anf'); const a = freiStufe('reiterBalken'), b2 = freiStufe('reiterZahlen'); st('fort'); const c = freiStufe('reiterBalken'), d = freiStufe('reiterZahlen'); st('exp'); return !a && !b2 && c && !d && freiStufe('reiterZahlen'); })());
+      /* neues Spiel mit Freischalt-Stufen (v1038): Reiterwahl und volle Anzeige schon auf Stufe 1, Turniere erst ab Stufe 3 */
+      { spiel.frei = FREI0 || { punkte: 0, stufe: 1 }; spiel.frei.stufe = 1; spiel.frei.alles = false; spiel.stufenAn = true;
+        const fz = freiSystem(), wahl = reiterOptionen(tp3('Fz'), T0('gross', pM), pM).map(o => o.id), h1 = reiterHTML(), bal = freiStufe('reiterBalken') && freiStufe('reiterZahlen'), tur1 = STUFE().turnierMax;
+        spiel.frei.stufe = 3; const tur3 = STUFE().turnierMax; spiel.frei.stufe = 1;
+        ok('Freischalt-Stufe 1: Reiterwahl für alle (' + wahl.join() + '), Balken und Zahlen sichtbar', fz && wahl.length > 1 && bal && (h1.match(/class="balken"/g) || []).length >= 4, JSON.stringify({ fz, wahl, bal }));
+        ok('Freischalt-Stufen: Turniere erst ab Stufe 3 (' + tur1 + ' → ' + tur3 + ')', tur1 === 0 && tur3 > 0); spiel.frei = null; }
       ok('STUFE_NEU nennt Reiter-Können (fort und exp)', STUFE_NEU.fort.some(x => /Reiter-Können/.test(x)) && STUFE_NEU.exp.some(x => /Reiter-Könnens/.test(x)));
       const hw = ['reiterKarte', 'reiterTraining', 'reiterUnterricht', 'reiterWahl', 'rennenSelbst', 'lkWartet', 'reiterBesser']; ok('Hinweise R1–R6 + Rennen selbst im System, „Mehr dazu“ → Reiter-Können', hw.every(k => HINWEISE[k]) && ['reiterKarte', 'reiterTraining', 'reiterUnterricht', 'reiterWahl', 'rennenSelbst'].every(k => HINWEISE[k][4] === 'reiter') && EINSTEIGER_MEHR.reiter);
       ok('Enzyklopädie: Einsteiger-Wissen „Reiter-Können“', /Reiter-Können/.test(document.documentElement.innerHTML) && /Bereiter und Profis/.test(document.documentElement.innerHTML));

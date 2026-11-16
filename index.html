@@ -1372,7 +1372,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "1055";
+  const SPIEL_VERSION = "1056";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1380,12 +1380,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=1055"></script>
-<script src="pferd.js?v=1055"></script>
-<script src="boxstufen.js?v=1055"></script>
-<script src="kopfneu.js?v=1055"></script>
-<script src="waschbild.js?v=1055"></script>
-<script src="avatare.js?v=1055"></script>
+<script src="lz-string.min.js?v=1056"></script>
+<script src="pferd.js?v=1056"></script>
+<script src="boxstufen.js?v=1056"></script>
+<script src="kopfneu.js?v=1056"></script>
+<script src="waschbild.js?v=1056"></script>
+<script src="avatare.js?v=1056"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -11016,6 +11016,28 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   // Lerntempo = Lernfähigkeit × Wohlbefinden × Vorliebe × Charakter × Befunde × Trainer (du 1 · Bereiter 0,8–1,2 je nach Fachwissen Rücken/Reiten)
   const trainerFaktor = m => m ? 0.8 + 0.4 * ((m.wissen && m.wissen.ruecken) || 0) / 100 : 1;
   // M6b (Dome 16.11.2026): „selbst gemacht“ (App: Übung selbst gesteuert) – Ergebnis nach Ausführung 0–1; „schnell“ (kein opt) = bisheriges Ergebnis. Zahlen selbst gesetzt.
+  /* v1056 (Dome 18.11.2026, Auftrag 22 R5): Ereignisse am Weg beim Reiten im Gelände. Wie stark ein Pferd erschrickt (wegSchreck 0–1), hängt ab von Mut, Nervenstärke,
+     Ausbildungsstand/Alter, Gelände-Erfahrung (p.gelRitte: Pferde, die oft ins Gelände gehen, werden ruhiger) und der Gewöhnung an genau dieses Ding (p.wegGew[art] −3 … +3).
+     Richtig reagiert (anhalten, schauen lassen, hinführen) → Vertrauen steigt, Gewöhnung +1; ausgewichen → Gewöhnung −1 (Ausweichen belohnt die Flucht, Christensen, ISES 2012); gestraft → zusätzlich Vertrauen sinkt.
+     Alle Zahlen selbst gesetzt. Quellen: notizen/RECHERCHE-R1-ROUNDPEN-AUSRITT.md Abschnitt 5. */
+  const WEG = { chance: 0.3, vertrauen: { hin: 0.4, strafe: -0.8 }, gewMax: 3, gewWirkung: 0.08, ritte: 0.01, ritteMax: 0.2, gruppe: 0.7, leicht: 0.3, stark: 0.65 };
+  const WEG_ARTEN = { reh: "ein Reh springt über den Weg", traktor: "ein Traktor kommt entgegen", rad: "ein Radfahrer kommt schnell entgegen", hund: "ein fremder Hund läuft bellend heran", pfuetze: "eine große Pfütze", plane: "eine flatternde Plane am Wegrand", stamm: "ein Baumstamm liegt quer über dem Weg", schirm: "ein Spaziergänger mit offenem Regenschirm", kinderwagen: "ein Kinderwagen kommt entgegen", kuehe: "neugierige Kühe am Weidezaun" };
+  function wegSchreck(p, art, gruppe) { werteErgaenzen(p); const c = (p.werte && p.werte.charakter) || {}, z = k => (c[k] == null ? 50 : c[k]) / 100;
+    let unerf = Math.max(0, Math.min(1, 1 - ((p.anreiten == null ? 100 : p.anreiten) + (p.einreiten == null ? 100 : p.einreiten)) / 200)); if (alterJZ(p) < 16) unerf = Math.max(unerf, 0.5);
+    let s = 0.15 + 0.4 * (1 - z("mut")) + 0.25 * (1 - z("nerven")) + 0.2 * unerf - Math.min(WEG.ritteMax, (p.gelRitte || 0) * WEG.ritte) - WEG.gewWirkung * ((p.wegGew || {})[art] || 0);
+    if (gruppe) s *= WEG.gruppe;   /* hinter einem erfahrenen Pferd ist es sicherer */
+    return Math.max(0, Math.min(1, Math.round(s * 100) / 100)); }
+  function wegStufe(s) { return s < WEG.leicht ? 1 : s < WEG.stark ? 2 : 3; }   /* 1 zögert nur · 2 bleibt stehen · 3 springt zur Seite */
+  function wegAntwort(p, art, wahl) { if (!WEG_ARTEN[art]) return null; werteErgaenzen(p); const G = (p.wegGew = p.wegGew || {}), vor = G[art] || 0; let plus = 0;
+    if (wahl === "hin") { G[art] = Math.min(WEG.gewMax, vor + 1); plus = wertPlus(p, "vertrauen", WEG.vertrauen.hin) || 0; }
+    else { G[art] = Math.max(-WEG.gewMax, vor - 1); if (wahl === "strafe") { const v0 = p.werte.ist.vertrauen || 0; p.werte.ist.vertrauen = Math.max(0, Math.round((v0 + WEG.vertrauen.strafe) * 100) / 100); plus = p.werte.ist.vertrauen - v0; } }
+    prot("Ausritt: " + (wahl === "hin" ? "richtig" : "falsch") + " reagiert (" + art + ")", { p }); return { art, wahl, plus, gew: G[art] }; }
+  function wegAuto(p) { const arten = Object.keys(WEG_ARTEN), art = arten[Math.floor(Math.random() * arten.length)], st = wegStufe(wegSchreck(p, art));
+    const K = (spiel.reiter && spiel.reiter.koennen) || {}, k = Math.max(0, ...Object.values(K).map(Number).filter(isFinite)), gut = Math.random() < 0.55 + 0.004 * k; wegAntwort(p, art, gut ? "hin" : "ausweich"); tippMerken("wegEreignis");
+    const wie = ["spitzt nur die Ohren und zögert kurz", "bleibt stehen und starrt hin", "erschrickt heftig und springt zur Seite"][st - 1];
+    return "🌳 Am Weg: " + WEG_ARTEN[art] + " – " + esc(p.name) + " " + wie + ". " + (gut ? "Du lässt es in Ruhe schauen und reitest dann ruhig weiter – das gibt Vertrauen, beim nächsten Mal bleibt es ruhiger." : "Du weichst in großem Bogen aus – so lernt es, dass Ausweichen hilft, und scheut beim nächsten Mal eher."); }
+  /* v1056 (Auftrag 22 R6, Pflege nach dem Ritt): wer das letzte Stück im Schritt am langen Zügel reitet, bringt das Pferd trocken heim (echt: 10–15 Minuten Schritt, Recherche R1 Abschnitt 4.3/4.4) */
+  function trockenReiten(p) { if (!p || p.schweiss !== spiel.tag) return false; p.schweiss = null; prot("Ausritt: trocken geritten", { p }); return true; }
   const SELBST_FAKTOR = { min: 0.85, max: 1.2 };
   function trainieren(p, k, ort, m, opt) {
     werteErgaenzen(p); skalaErgaenzen(p);
@@ -11110,6 +11132,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
         if (h.gr < echt[s] && Math.random() < 0.3 && !aktiveBefunde(p).some(b => b.art === "verletzung" && /Hufschuh/.test(b.ursache))) { befundNeu(p, "verletzung", 1, `Scheuerstelle – Hufschuhe ${s} zu klein`, m ? m.name : "du"); folgen.push(`⚠️ Die Hufschuhe ${s} sind zu klein – Scheuerstelle am Ballen`); }
         if (h.gr > echt[s] && Math.random() < 0.12) { folgen.push(`${esc(p.name)} stolpert – die Hufschuhe ${s} sitzen zu locker`);
           if (Math.random() < 0.25) { befundNeu(p, "lahmheit", 1, `gestolpert – Hufschuhe ${s} zu groß`, m ? m.name : "du"); folgen.push("⚠️ danach lahmt " + esc(p.name) + " leicht"); } } }); }
+    if (ort === "gelaende" && U.reiten) { p.gelRitte = (p.gelRitte || 0) + 1; if (!m && !(opt && opt.guete != null) && Math.random() < WEG.chance) folgen.push(wegAuto(p)); }   /* v1056: Ereignis am Weg (schnell geritten: du reagierst je nach Reiter-Können) */
     // v381 (Dome): barhuf ohne Hufschuhe im Gelände – Hufe laufen sich ab, empfindliche Hufe werden fühlig (mit Beschlag kein Risiko)
     if (ort === "gelaende" && (!p.beschlag || p.eisenWeg) && !hufschuheDran(p)) { const ch = HUF_GELAENDE[hufStufe(p)] || 0;
       if (Math.random() < ch && !aktiveBefunde(p).some(b => b.art === "lahmheit")) { befundNeu(p, "lahmheit", 1, "barhuf im Gelände – Hufe abgelaufen, fühlig", m ? m.name : "du"); folgen.push(`⚠️ ${esc(p.name)} geht auf dem steinigen Weg fühlig – barhuf ohne Hufschuhe oder Beschlag`); } }
@@ -23899,6 +23922,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
   const UMSTELLEN_TXT = TOUCH ? "Pferd mit dem Finger gedrückt halten, bis es sich anhebt, und in eine grün markierte Box ziehen." : "Pferd mit der Maus anklicken, festhalten und in eine grün markierte Box ziehen.";
   const BOXWECHSEL_TXT = TOUCH ? "Mit den Pfeilen im Bild oder durch Wischen nach links oder rechts kommst du zur nächsten Box." : "Mit den Pfeilen im Bild oder den Pfeiltasten ← → der Tastatur kommst du zur nächsten Box.";
   const TIPPS = {
+    wegEreignis: ["🌳 Ereignisse am Weg", "Beim Ausritt begegnet euch manchmal etwas Unheimliches: ein Reh, ein Traktor, eine flatternde Plane, Kühe am Zaun. Wie stark dein Pferd erschrickt, hängt von seinem Mut, seinen Nerven, seiner Ausbildung und seiner Erfahrung im Gelände ab.", "Anhalten, schauen lassen und ruhig hinführen gibt Vertrauen – beim nächsten Mal bleibt dein Pferd ruhiger. Wer ausweicht oder straft, macht es beim nächsten Mal schlimmer."],
     speichern: ["💾 Spiel speichern nicht vergessen", "Dein Spiel läuft im Autospeicher. Einen festen Speicherstand gibt es erst, wenn du selbst speicherst – über das Menü ☰ → „💾 Spiel speichern“. Beim ersten Mal wählst du Speicherplatz 1 oder 2.", "Speichere regelmäßig, z. B. am Ende jeder Jahreszeit. Mit „Spielstand downloaden“ (Hofverwaltung → Einstellungen) kannst du dein Spiel auch auf ein anderes Gerät mitnehmen."],
     start: ["🗺️ So schaffst du die ersten 2 Jahre", `Dein Hof ist gekauft, der Rest vom Startkapital liegt in der Kasse. Die Bank bucht jede Jahreszeit eine Kreditrate ab – dafür muss immer Geld da sein.<ul>
       <li><b>Die ersten 2 Jahre am besten kein eigenes Pferd kaufen:</b> Kümmere dich gut um die Pensionspferde – sie bringen jede Jahreszeit sicheres Geld. Ein eigenes Pferd kostet dagegen Futter, Tierarzt und Hufschmied.</li>

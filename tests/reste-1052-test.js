@@ -55,10 +55,10 @@ const { chromium } = require('playwright'); const path = require('path');
   ok('Qualifikationslauf meldet die km-Zeit (geschafft oder nicht)', !r.err && /Kilometerzeit von 1:\d\d,\d/.test(r.h), JSON.stringify(r));
   // 8) Pass aus dem Tölt
   r = await pg.evaluate(() => { const U = UEBUNG.passtoelt, P = neu(8, 'isi', { g: 'Wallach', alter: 8 }); P.werte.gang.toelt = P.werte.gang.toelt ?? 7; P.werte.gang.pass = P.werte.gang.pass ?? 6;
-    const t0 = gangGezeigt(P).toelt; for (let i = 0; i < 40; i++) { P.gangToelt = r2(Math.max(-1, (P.gangToelt || 0) - PASS_TOELT_ABZUG)); }
-    return { da: !!U, n: U && U.n, gang: U && U.gangart, skN: U && JSON.stringify(U.skN), t0, t1: gangGezeigt(P).toelt, ist: istPassUeb('passtoelt') && istPassUeb('passtraining') }; });
+    const t0 = gangGezeigt(P).toelt; for (let i = 0; i < 40; i++) { P.gangToelt = r2(Math.max(-PASS_TOELT_MAX, (P.gangToelt || 0) - PASS_TOELT_ABZUG)); }
+    return { da: !!U, n: U && U.n, gang: U && U.gangart, skN: U && JSON.stringify(U.skN), t0, t1: gangGezeigt(P).toelt, abz: PASS_TOELT_ABZUG, ist: istPassUeb('passtoelt') && istPassUeb('passtraining') }; });
   ok('Übung „Passtraining (aus dem Tölt)“ wie Passtraining, zählt beim Übertraining mit', r.da && /Tölt/.test(r.n) && r.gang === 'pass' && /pass/.test(r.skN) && r.ist, JSON.stringify(r));
-  ok('Zu oft Pass aus dem Tölt: Tölt-Note sinkt (passig)', r.t1 === r.t0 - 1, JSON.stringify(r));
+  ok('Zu oft Pass aus dem Tölt: Tölt-Note sinkt (passig), höchstens um 0,5 (Auftrag 25)', r.t1 === r.t0 - 0.5 && r.abz === 0.015, JSON.stringify(r));
   // 9) Wissenskarten
   r = await pg.evaluate(() => ENZY.wissen.eintraege.map(e => e[0]).filter(t => /stirbt|Zwillinge|Traber|Rennpass/.test(t)));
   ok('Wissenskarten: Tod, Zwillinge, Traber, Rennpass', r.length === 4, JSON.stringify(r));

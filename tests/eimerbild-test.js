@@ -15,6 +15,9 @@ const { chromium } = require('playwright'); const path = require('path'); const 
       spiel.futter.lager.heu = 500; spiel.futter.lager.hafer = 50; spiel.futter.lager.mineral = 5;
       aktBox = 0; spiel.aktBox = 0; zeigeSchirm(null); aktenModus = 'pflege'; aktenReiter = 'versorgung'; zeigeStall(); zeigeTag(); document.getElementById('stall').scrollIntoView({ block: 'center' }); });
     await pg.waitForTimeout(300);
+    { const TM = await pg.evaluate(() => { const r = (id) => { const e = document.getElementById(id); if (!e || e.style.display === "none") return null; const q = e.getBoundingClientRect(); return { t: e.textContent.trim(), w: Math.round(q.width), h: Math.round(q.height), drin: q.top >= 0 && q.bottom <= innerHeight }; }; return { kr: r("mengeKrippe"), heu: r("mengeHeu") }; });   /* Auftrag 25: Tagesmengen immer sichtbar, auch vor dem Füttern */
+      if (O) await pg.screenshot({ path: `${O}/mengen-${name}.png` });
+      ok(`${name}: Tagesmengen stehen schon vor dem Füttern im Stall (${TM.kr && TM.kr.t} · ${TM.heu && TM.heu.t})`, TM.kr && TM.kr.t === "Heu 9 kg · Krippe 1,6 kg am Tag" && !TM.heu && TM.kr.w > 20 && TM.kr.drin, JSON.stringify(TM)); }
     /* echter Klick auf den Futtereimer/die Krippe im Stallbild */
     const ziel = await pg.$('.stufeEl .sKrippe') || await pg.$('#krippe'); await ziel.click({ force: true }); await pg.waitForTimeout(600);
     let st = await pg.evaluate(() => { const b = document.getElementById('eimerBlase'), i = b && b.querySelector('img'); return { da: !!b, txt: b ? b.innerText.replace(/\s+/g, ' ') : '', bild: i ? i.getAttribute('src') : '', geladen: !!(i && i.complete && i.naturalWidth > 0), E: window.eimerBlaseStand || null }; });

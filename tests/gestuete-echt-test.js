@@ -17,7 +17,12 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     const t2 = await pg.evaluate(() => document.getElementById('nebenSchirm').innerText);
     ok(`${name}: Gestütsseite Celle mit Ort und Hinweis`, /Landgestüt Celle/.test(t2) && /Celle \(Niedersachsen\)/.test(t2) && /Fiktive Pferde, reale Orte/.test(t2), t2.slice(0, 200));
     const h = await pg.evaluate(() => { const p = gestuetPferde('hannoveraner')[0]; return p && p.gestuet; }); ok(`${name}: Gestütspferde tragen den echten Namen (${h})`, h === 'Landgestüt Celle', h);
-    const t3 = await pg.evaluate(() => GESTUET_NAMEN.tekke + ' / ' + GESTUET_NAMEN.tinker); ok(`${name}: offene/schwach belegte Rassen unverändert (${t3})`, !/Celle|Marbach/.test(t3) && t3.length > 5, t3);
+    const t3 = await pg.evaluate(() => ({ alle: RASSEN.filter(r => !GESTUET_ECHT[r.id]).map(r => r.id), tekke: GESTUET_NAMEN.tekke + ' – ' + gestuetOrt('tekke'), dales: GESTUET_NAMEN.dales + ' – ' + gestuetOrt('dales') }));
+    ok(`${name}: alle Rassen haben ein echtes Gestüt (${t3.tekke}; ${t3.dales})`, !t3.alle.length && /Berolina – Lautertal/.test(t3.tekke) && /Moffinber Stud – Ingleton/.test(t3.dales), JSON.stringify(t3));
+    await pg.evaluate(() => { gestuetWahl = null; zeigeMarkt(); }); await pg.waitForTimeout(300); if (O) await pg.screenshot({ path: `${O}/gestuete-neu-${name}.png`, fullPage: true });
+    if (await pg.$('[data-gest="clydesdale"]')) { await pg.click('[data-gest="clydesdale"]'); await pg.waitForTimeout(500); if (O) await pg.screenshot({ path: `${O}/blackstone-${name}.png` });
+      const t4 = await pg.evaluate(() => document.getElementById('nebenSchirm').innerText); ok(`${name}: Gestütsseite Clydesdale per Klick mit echtem Namen und Ort`, /Blackstone Clydesdales/.test(t4) && /Cumnock/.test(t4) && /Fiktive Pferde, reale Orte/.test(t4), t4.slice(0, 200)); }
+    else ok(`${name}: Kachel Clydesdale in der Übersicht`, false, 'keine Kachel');
     await pg.close();
   }
   ok('keine Seitenfehler', !errs.length, errs.join(' | '));

@@ -169,7 +169,7 @@ const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner 
   await pg.evaluate(() => { spiel.pensionHeute = null; spiel.boxen.forEach(b => { if (b.pferd) delete b.pferd.trainHeute; }); spiel.boxen.forEach(b => { if (b.pferd && b.pferd.einsteller && /^ex\d$/.test(b.pferd.einsteller)) b.pferd = null; }); spiel.einsteller = (spiel.einsteller || []).filter(e => !/^ex\d$/.test(e.eid)); planNeu(); });
   // Whiteboard: roter Rahmen
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.boxen.forEach(b => { if (b.pferd) b.pferd.reheOk = spiel.tag; });
-    const p = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna').pferd; const g = paddocks()[0]; wbIstSetzen(p, g.gid); delete p.weideNachm; const w = weiden().find(x => !x.wiese); p.weide = { seit: spiel.tag, wid: w.wid }; stallAlt = false; wbSicht = 'weiden'; zeigeWhiteboard(); });
+    const p = spiel.boxen.find(x => x.pferd && x.pferd.name === 'Anna').pferd; const g = paddocks()[0]; wbIstSetzen(p, g.gid); p.wbHand = spiel.tag; /* v1054: von Hand gelegt gilt sofort, auch ohne Mitarbeiter */ delete p.weideNachm; const w = weiden().find(x => !x.wiese); p.weide = { seit: spiel.tag, wid: w.wid }; stallAlt = false; wbSicht = 'weiden'; zeigeWhiteboard(); });
   await pg.waitForTimeout(200);
   ok('Whiteboard: Sandpaddock geplant, Pferd steht auf der Weide → roter gepunkteter Rahmen', await pg.evaluate(() => !![...document.querySelectorAll('#nebenSchirm .wb-chip.rehe')].find(x => /Anna/.test(x.textContent)) || /Anna soll laut Plan/.test(document.querySelector('#nebenSchirm').innerHTML)));
   await bild('rahmen');
@@ -241,7 +241,7 @@ const [bw, bh] = (process.argv[2] || '1366x768').split('x').map(Number), ordner 
     const g = paddocks()[0], bx = spiel.boxen.find(x => x.pferd === window.__e3), vorher = window.__e3.name;   // Sandpaddock voll stellen, dann Plan für Voll auf genau diesen
     paddockPferde(g).forEach(q => { const bq = spiel.boxen.find(x => x.pferd === q); if (bq) { delete q.paddock; zurueckInBox(bq); } });
     const fueller = spiel.boxen.filter(x => x.pferd && !fremd(x.pferd) && !x.tot).map(x => x.pferd).slice(0, 3); fueller.forEach(q => { const bq = spiel.boxen.find(x => x.pferd === q); rausAusBox(bq); q.paddock = { seit: spiel.tag, pid: g.gid }; });
-    window.__voll = [paddockPasst(g, window.__e3), g.gid]; wbIstSetzen(window.__e3, g.gid); zeigeWhiteboard(); });
+    window.__voll = [paddockPasst(g, window.__e3), g.gid]; wbIstSetzen(window.__e3, g.gid); window.__e3.wbHand = spiel.tag; /* v1054: von Hand gelegt */ zeigeWhiteboard(); });
   { const r = await pg.evaluate(() => ({ voll: window.__voll, pid: window.__e3.paddock && window.__e3.paddock.pid })); ok('Plan gilt, auch wenn der Sandpaddock voll ist: Pferd steht dort', r.pid === r.voll[1], JSON.stringify(r)); }
   // Pinnwand
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; const bx = spiel.boxen.find(x => x.pferd); const p = bx.pferd; p.schleifen = Array.from({ length: 12 }, (_, i) => ({ st: 1 + i % 3, pl: 1 + i % 6, c: false, von: 8, platz: 1 + i % 6, pruef: 'Dressur A', turnier: 'Test', tag: 5 + i })); pinnwandOeffnen(p); });

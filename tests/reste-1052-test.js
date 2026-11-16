@@ -52,7 +52,7 @@ const { chromium } = require('playwright'); const path = require('path');
   r = await pg.evaluate(() => { const P = spiel.boxen[6].pferd; delete P.trabQuali; P.skalaT = [80, 80, 80, 60, 10]; P.energie = 100; delete P.trainHeute; let e = null, err = '';
     try { e = trainieren(P, 'trabquali', 'rennbahn'); } catch (x) { err = x.message; } const h = (P.trainHeute && P.trainHeute.hinweise) || (e && e.hinweise) || [];
     return { err, h: h.join(' | ').slice(0, 300), q: P.trabQuali || null }; });
-  ok('Qualifikationslauf meldet die km-Zeit (geschafft oder nicht)', !r.err && /lief den Kilometer in 1:\d\d,\d/.test(r.h), JSON.stringify(r));
+  ok('Qualifikationslauf meldet die km-Zeit (geschafft oder nicht)', !r.err && /Kilometerzeit von 1:\d\d,\d/.test(r.h), JSON.stringify(r));
   // 8) Pass aus dem Tölt
   r = await pg.evaluate(() => { const U = UEBUNG.passtoelt, P = neu(8, 'isi', { g: 'Wallach', alter: 8 }); P.werte.gang.toelt = P.werte.gang.toelt ?? 7; P.werte.gang.pass = P.werte.gang.pass ?? 6;
     const t0 = gangGezeigt(P).toelt; for (let i = 0; i < 40; i++) { P.gangToelt = r2(Math.max(-1, (P.gangToelt || 0) - PASS_TOELT_ABZUG)); }

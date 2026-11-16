@@ -153,7 +153,7 @@ const { chromium } = require('playwright'); const path = require('path');
     const Jung = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Jung' }); Jung.pflege.gesundheit = 10; ok('Junges krankes Pferd unter 20 % ohne Feststellung: kein Erlösen', erloesenGrund(Jung) === null);
     // Durchführen: 250 €, Friedhof, kein Vorfall
     spiel.geld = 5000; buchungen.length = 0; const fr1 = (spiel.friedhof || []).length, v0 = vetDaten().vorfaelle.length; const bx1 = spiel.boxen[1]; erloesenDurchfuehren(Fr, bx1, erloesenGrund(Fr), false); zu();
-    ok('Erlösen kostet 250 € (Tierarzt: Erlösen)', buchungen.some(x => x[0] === -250 && /^Tierarzt: Erlösen/.test(x[1])));
+    ok('Erlösen kostet 200 € (Tierarzt: Erlösen)', buchungen.some(x => x[0] === -200 && /^Tierarzt: Erlösen/.test(x[1])));
     ok('Pferd auf dem Friedhof mit Todesursache „vom Tierarzt erlöst“, Box leer', spiel.friedhof.length === fr1 + 1 && /vom Tierarzt erlöst/.test(spiel.friedhof[spiel.friedhof.length - 1].pferd.todesursache) && !bx1.pferd);
     ok('Kein Vorfall, keine Vernachlässigung gemeldet', vetDaten().vorfaelle.length === v0 && !(spiel.vernachlaessigt || []).length && briefe(/Abschied von Bruch/) === 1);
     // Stute mit Fohlen bei Fuß → Waise

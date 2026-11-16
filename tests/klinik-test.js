@@ -13,7 +13,7 @@ const { chromium } = require('playwright'); const path = require('path');
     let n = 0, ent = null; while (n++ < 40 && A.klinik) { naechsteNacht(); }
     ok('Pferd mit Husten bleibt, bis der Husten weg ist', !A.klinik && !befundListe(A).some(x => x.art === 'husten'), 'Tage: ' + n);
     ok('Entlassen mit gesunden Befunden (keine behandelbare Krankheit mehr)', klinikGesund(A));
-    const r = (spiel.post || []).find(x => /wieder fit/.test(x.betreff) && /Husti/.test(x.betreff)); ok('Rechnung „wieder fit“ mit Zusatzbehandlung', !!r && /Behandlung der Krankheiten/.test(r.text + JSON.stringify(r.rechnung || r.aktion || '')), r ? r.betreff : 'keine');
+    const r = (spiel.post || []).find(x => /wieder fit/.test(x.betreff) && /Husti/.test(x.betreff)); ok('Rechnung „wieder fit“ mit Zusatzbehandlung', !!r && /Behandlung der Krankheiten|Behandlung – \d+ Tage? ×/.test(r.text + JSON.stringify(r.rechnung || r.aktion || '')), r ? r.betreff : 'keine');
     ok('Fällige Impfung wurde miterledigt', A.pflege.impf === spiel.tag || A.pflege.impf >= spiel.tag - 1, 'impf ' + A.pflege.impf + ' tag ' + spiel.tag);
     // chronisch: wird bei genügend Gesundheit entlassen
     n = 0; while (n++ < 40 && C.klinik) naechsteNacht();

@@ -1372,7 +1372,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "1054";
+  const SPIEL_VERSION = "1055";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1380,12 +1380,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=1054"></script>
-<script src="pferd.js?v=1054"></script>
-<script src="boxstufen.js?v=1054"></script>
-<script src="kopfneu.js?v=1054"></script>
-<script src="waschbild.js?v=1054"></script>
-<script src="avatare.js?v=1054"></script>
+<script src="lz-string.min.js?v=1055"></script>
+<script src="pferd.js?v=1055"></script>
+<script src="boxstufen.js?v=1055"></script>
+<script src="kopfneu.js?v=1055"></script>
+<script src="waschbild.js?v=1055"></script>
+<script src="avatare.js?v=1055"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -2592,7 +2592,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   // angezeigter Wert: nur vererbte Werte = Anlage (mit Altersfaktor), sonst aktueller Stand (höchstens bis zur Altersgrenze)
   const wertVon = (p, x) => { werteErgaenzen(p); return x.art === "anlage" ? wertGrenze(p, x.key) : x.art === "training" ? Math.min(p.werte.ist[x.key] || 0, wertGrenze(p, x.key)) : (p.werte.ist[x.key] || 0); };
   function geburt(box, vater, still) {
-    const M = box.pferd, V = vater || M.traechtig.vater; if (!still) prot("Fohlen geboren", { p: M });   // S4 · still: Marktfohlen (Tierschutz, Händler …) zählen nicht als gezüchtet
+    const M = box.pferd, V = vater || M.traechtig.vater; if (!still) { prot("Fohlen geboren", { p: M }); M.abfohlTag = spiel.tag; }   /* v1055: für die Rennsperre der Traberstute (6 Monate nach dem Abfohlen) */   // S4 · still: Marktfohlen (Tierschutz, Händler …) zählen nicht als gezüchtet
     ahnenFuellen(M); ahnenFuellen(V); nrVon(M); nrVon(V); exVon(V);
     const g = Math.random() < .5 ? "Stute" : "Hengst", d = datum(), her = { gang: {}, charakter: {}, ex: {} };
     // Fellfarbe: von jedem Elternteil ein Allel
@@ -8958,9 +8958,24 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     pass: { feld: "skalaP", n: "Pass-Ausbildung", stufen: ["Grundlage", "Pass finden", "Pass festigen", "Rennpass"], von: "gelaende", exp: true, nur: p => !!(p.werte && p.werte.gang && p.werte.gang.pass != null) },
   };
   // Trabrennen (vorbereitet, erst mit der Rasse Traber): Gewöhnen → Einfahren → Joggen → Tempoarbeit → Qualifikation (HVT: schneller als 1:25,0 je km, nach 6 Monaten ohne Rennen neu)
-  const TRAB_STUFEN = ["Gewöhnen", "Einfahren", "Joggen", "Tempoarbeit", "Qualifikation"], TRAB_QUALI = { kmZeit: 85, neuNachJz: 2, ab: 8 };
+  const TRAB_STUFEN = ["Gewöhnen", "Einfahren", "Joggen", "Tempoarbeit", "Qualifikation"], TRAB_QUALI = { kmZeit: 85, neuNachJz: 2, ab: 8, disqFolge: 4 };
+  /* v1055 (Dome 17.11.2026 „Ja, einbauen“): weitere Regeln aus § 28 TRO (HVT). Kalender: Frühling = März–Mai, Sommer = Juni–August (je 92 Tage).
+     Zweijährige: Qualifikation erst ab 15. Mai, Rennen erst ab 15. Juni, höchstens 8 Starts (Rennen und Qualifikationen zusammen). Stute: frühestens 6 Monate (2 Jahreszeiten) nach dem Abfohlen.
+     Schutzsperre: nach Abmeldung aus Gesundheitsgründen 12 Kalendertage – im Spielmaßstab der nächste Spieltag. Nicht abbildbar (ein Spieltag ist länger): „nicht an zwei Kalendertagen in Folge“, „Zweijährige nur einmal in 7 Tagen“. */
+  const TRAB_28 = { quali: [0, 75 / 92], rennen: [1, 14 / 92], zweiMax: 8, fohlenJz: 2, schutzTage: 12 };
+  const trabZweijaehrig = p => alterJZ(p) < 12;
+  const trabVorStichtag = (tag, [jz, anteil]) => { const d = datum(tag), x = d.s + (d.t - 1) / tpj(); return d.s <= jz && x < jz + anteil; };   /* Winter (Januar/Februar) wird nicht geprüft – Zweijährige sind dann meist noch zu jung */
+  const trabSchutzTage = () => Math.max(1, Math.round(TRAB_28.schutzTage * tpj() / 92));
+  function trab28Sperre(p, tag, quali) {
+    if (trabZweijaehrig(p)) { if (trabVorStichtag(tag, quali ? TRAB_28.quali : TRAB_28.rennen)) return quali ? "Zweijährige dürfen erst ab dem 15. Mai zur Qualifikation (Ende Frühling)" : "Zweijährige dürfen erst ab dem 15. Juni Rennen laufen (Anfang Sommer)";
+      if ((p.trabZwei || 0) >= TRAB_28.zweiMax) return `Zweijährige dürfen höchstens ${TRAB_28.zweiMax} Starts haben (Rennen und Qualifikationen)`; }
+    if (!quali && p.geschlecht === "Stute" && p.abfohlTag != null && tag - p.abfohlTag < TRAB_28.fohlenJz * tpj()) return "frühestens sechs Monate nach dem Abfohlen wieder im Rennen";
+    if (!quali && p.trabSchutz != null && tag <= p.trabSchutz) return "Schutzsperre nach der Abmeldung aus Gesundheitsgründen (12 Tage)";
+    return "";
+  }
   function trabQualiStand(p) {   // "" = darf starten; sonst Grund. Alte Spielstände: Qualifikationslauf-Stufe ab 50 % zählt als qualifiziert (ab heute)
     if (!p.trabQuali && (skalaN(p, "trab")[4] || 0) >= 50) p.trabQuali = { tag: spiel.tag, alt: true };
+    if (p.trabNeuQuali) return "viermal in Folge disqualifiziert – neu qualifizieren (Übung Qualifikationslauf)";   /* v1055: HVT, § 51 Abs. 4 TRO */
     if (!p.trabQuali) return `Qualifikation fehlt (Übung Qualifikationslauf: ${alterJZ(p) < 12 ? "1.600" : "1.900"} m mit Kilometerzeit ${kmZeitTxt(TRAB_QUALI.kmZeit)} oder schneller)`;
     const letzt = Math.max(p.trabQuali.tag, ...(p.erfolge || []).filter(e => e.disz === "trabrennen").map(e => e.tag || 0));
     return spiel.tag - letzt > TRAB_QUALI.neuNachJz * tpj() ? "Qualifikation abgelaufen (6 Monate ohne Rennen) – neu qualifizieren (Übung Qualifikationslauf)" : "";
@@ -11060,9 +11075,10 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       Object.entries(L).forEach(([i, g]) => { const x = skalaNPlus(p, art, +i, g * f * TRAIN_SK * proTag(1)); if (x) (nPlus[art] = nPlus[art] || {})[i] = x; }); });
     if (istPassUeb(k)) (p.passLog = (p.passLog || []).filter(t => spiel.tag - t < 7)).push(spiel.tag);
     if (k === "passtoelt" && p.werte.gang && p.werte.gang.toelt != null) { p.gangToelt = r2(Math.max(-1, (p.gangToelt || 0) - PASS_TOELT_ABZUG)); if ((p.gangToelt || 0) < 0 && !p.passigHinweis) { p.passigHinweis = 1; hinweise.push(`${esc(p.name)}s Tölt wird passiger – zu oft Pass aus dem Tölt. Töltarbeit und Pass aus dem Galopp helfen.`); } }
-    if (k === "trabquali" && (skalaN(p, "trab")[3] || 0) >= 20) {   // 17.11.2026 (Auftrag 11 Rest): echter Qualifikationslauf (HVT, § 51 TRO: zweijährig mind. 1.600 m, ab dreijährig mind. 1.900 m, Kilometerzeit 1:25,0 oder besser); km-Zeit aus dem Trabrennen-Wert (Formel selbst gesetzt)
+    if (k === "trabquali" && trab28Sperre(p, spiel.tag, true)) hinweise.push(`⏱️ Noch keine Qualifikation möglich: ${trab28Sperre(p, spiel.tag, true)}. Der Lauf zählt heute nur als Training.`);
+    else if (k === "trabquali" && (skalaN(p, "trab")[3] || 0) >= 20) { if (trabZweijaehrig(p)) p.trabZwei = (p.trabZwei || 0) + 1;   // 17.11.2026 (Auftrag 11 Rest): echter Qualifikationslauf (HVT, § 51 TRO: zweijährig mind. 1.600 m, ab dreijährig mind. 1.900 m, Kilometerzeit 1:25,0 oder besser); km-Zeit aus dem Trabrennen-Wert (Formel selbst gesetzt)
       const z = Math.round((95 - 0.18 * diszWert(p, "trabrennen").wert + Math.random() * 1.5) * 10) / 10;
-      if (z <= TRAB_QUALI.kmZeit) { p.trabQuali = { tag: spiel.tag, zeit: z }; hinweise.push(`⏱️ Qualifiziert! ${esc(p.name)} lief über ${alterJZ(p) < 12 ? "1.600" : "1.900"} m eine Kilometerzeit von ${kmZeitTxt(z)} (nötig: ${kmZeitTxt(TRAB_QUALI.kmZeit)} oder schneller) und darf jetzt Trabrennen laufen.`); prot("Traber qualifiziert", { p }); }
+      if (z <= TRAB_QUALI.kmZeit) { p.trabQuali = { tag: spiel.tag, zeit: z }; delete p.trabNeuQuali; delete p.trabDisq; hinweise.push(`⏱️ Qualifiziert! ${esc(p.name)} lief über ${alterJZ(p) < 12 ? "1.600" : "1.900"} m eine Kilometerzeit von ${kmZeitTxt(z)} (nötig: ${kmZeitTxt(TRAB_QUALI.kmZeit)} oder schneller) und darf jetzt Trabrennen laufen.`); prot("Traber qualifiziert", { p }); }
       else hinweise.push(`⏱️ ${esc(p.name)} lief eine Kilometerzeit von ${kmZeitTxt(z)} – für die Qualifikation braucht es ${kmZeitTxt(TRAB_QUALI.kmZeit)} oder schneller. Weiter Trab- und Tempoarbeit, dann noch einmal versuchen.`); }
     if (k === "galopptraining" && !p.galoppTA &&!((p.uebKann || {}).galopptraining > 1) && !(p.erfolge || []).some(e => e.disz === "galopprennen")) { p.galoppTA = spiel.tag; const pr0 = galoppTierarztPreis(); if (!fremd(p)) buchen(-pr0, `Tierarzt: Untersuchung vor Trainingsbeginn (${p.name})`);
       hinweise.push(`Vor dem ersten Galopptraining hat der Tierarzt ${esc(p.name)} untersucht (${fmt(pr0)}) – so ist es bei Deutscher Galopp Pflicht.`); }
@@ -11521,8 +11537,8 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     if (DISZ[P.disz] && !reitFertig(p)) return reitStand(p).an < 100 ? "noch nicht angeritten" : "noch nicht eingeritten";   // Auftrag 11
     if (P.disz === "galopprennen" && SKALEN_N.galopp.nur(p) && (skalaN(p, "galopp")[3] || 0) < 50) return "Startmaschinen-Test fehlt (Übung Startmaschine bis 50 %)";
     if (P.disz === "distanz") { const ds = distCeiSperre(p, P); if (ds) return ds; }   // FEI-Qualifikationsweg
-    if (P.disz === "trabrennen" && SKALEN_N.trab.nur(p)) { const q = trabQualiStand(p); if (q) return q; }   /* 17.11.2026 (Auftrag 11 Rest): echte Qualifikation, nach 6 Monaten ohne Rennen neu */
-    if (P.disz === "trabrennen" && alterJZ(p) >= (p.geschlecht === "Stute" ? 11 : 15) * 4) return `zu alt für Trabrennen (HVT: Stuten bis 10, Hengste und Wallache bis 14 Jahre)`;   /* v1050 (R3, Dome) */   // HVT: Qualifikationsrennen vor dem ersten Start
+    if (P.disz === "trabrennen" && SKALEN_N.trab.nur(p)) { const q = trabQualiStand(p) || trab28Sperre(p, t.tag, false); if (q) return q; }   /* 17.11.2026 (Auftrag 11 Rest): echte Qualifikation, nach 6 Monaten ohne Rennen neu */
+    if (P.disz === "trabrennen" && alterJZ(p) >= (p.geschlecht === "Stute" ? 11 : 15) * 4) return `zu alt für Trabrennen (HVT: Stuten bis 10, Hengste und Wallache bis 14 Jahre)`;   /* v1050 (R3, Dome); belegt 17.11.2026: § 28 TRO im Wortlaut */   // HVT: Qualifikationsrennen vor dem ersten Start
     const tr = traechtigSperre(p, P, t.tag); if (tr) return tr;
     if (P.jung && (alterJZ(p) < P.jung[0] || alterJZ(p) > P.jung[1])) return "Altersgrenze";
     if (DISZ[P.disz] && DISZ[P.disz].nur && !DISZ[P.disz].nur(p)) return "kann diese Gangart nicht";
@@ -11606,6 +11622,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     document.querySelectorAll("[data-tzurueck]").forEach(b => b.onclick = () => { const [tid, prid] = b.dataset.tzurueck.split(":"), t = spiel.turniere.find(x => x.id === tid);
       const n = t.nennung.find(x => x.pid === p.id && x.prid === prid), P = t.pruef.find(x => x.id === prid), kr = krankHinweis(p, P), geld = n && n.geld || 0;   // v417 (Dome): krank abmelden → Nenngeld zurück (Tierarzt-Attest)
       t.nennung = t.nennung.filter(x => !(x.pid === p.id && x.prid === prid));
+      if (kr && P && P.disz === "trabrennen") p.trabSchutz = t.tag + trabSchutzTage();   /* v1055: § 28 TRO Schutzsperre */
       if (kr && geld) { buchen(geld, "Turniere: Nenngeld erstattet (krank abgemeldet)"); zeigeTag(); meldung = `💶 ${esc(p.name)} ist krank abgemeldet – ${fmt(geld)} Nenngeld zurück.`; }
       speichern(); turnierDialog(p, zurueck); });
   }
@@ -11791,7 +11808,9 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
           if (RT.selbst) reiterTurnier(P, t.art, null, false);   // K1: ausgeschieden zählt als Start
           bilanzZaehlen(p, P, null, t.art); (p.erfolge = p.erfolge || []).unshift({ tag: spiel.tag, turnier: t.name, art: t.art, disz: P.disz, stufe: P.stufe, pruef: P.name, platz: P.starter, von: P.starter, erg: vet.aus, geld: 0, plaziert: false, aus: true });
           prot("Turnierstart", { p, o: t.name }); protKlasse("Start", p, t, P); zeilen.push(`<li><b>${esc(P.name)}</b>: ❌ ${vet.aus}</li>`); return; }
-        const ich = ergebnisText(P.disz, wert, niveau, rz, P.stufe); if (P.disz === "distanz") try { distQualiZaehlen(p, P, ich.sort); } catch (e) { }   // Auftrag 11: Qualifikationsweg
+        const ich = ergebnisText(P.disz, wert, niveau, rz, P.stufe);
+        if (P.disz === "trabrennen") { if (trabZweijaehrig(p)) p.trabZwei = (p.trabZwei || 0) + 1; if (ich.sort === -999) { p.trabDisq = (p.trabDisq || 0) + 1; if (p.trabDisq >= TRAB_QUALI.disqFolge) { p.trabNeuQuali = spiel.tag; p.trabDisq = 0; ich.txt += " – zum vierten Mal in Folge: vor dem nächsten Rennen neu qualifizieren"; } } else delete p.trabDisq; }   /* v1055: Wiederqualifikation nach vier Disqualifikationen in Folge (HVT, § 51 Abs. 4 TRO) */
+        if (P.disz === "distanz") try { distQualiZaehlen(p, P, ich.sort); } catch (e) { }   // Auftrag 11: Qualifikationsweg
         const andere = Array.from({ length: P.starter - 1 }, () => ergebnisText(P.disz, niveau + (rz() + rz() + rz() - 1.5) * 14, niveau, rz, P.stufe).sort);
         const platz = 1 + andere.filter(s => s > ich.sort).length, plaziert = platz <= Math.max(3, Math.ceil(P.starter / 4));
         let geld = 0; if (plaziert && preisgeld(t, P)) { const anteil = PREIS_ANTEIL.slice(0, Math.max(3, Math.ceil(P.starter / 4))), summe = anteil.reduce((a, b) => a + b, 0); geld = Math.round(preisgeld(t, P) * (anteil[platz - 1] || 0.05) / summe / 5) * 5; }

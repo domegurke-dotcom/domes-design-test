@@ -44,7 +44,7 @@ const { chromium } = require('playwright'); const path = require('path');
     P.trabQuali.tag = spiel.tag - 2 * tpj() - 1; const s2 = trabQualiStand(P);
     P.erfolge = [{ tag: spiel.tag - 2, disz: 'trabrennen' }]; const s3 = trabQualiStand(P);
     const alt = neu(7, 'traber', { g: 'Wallach', alter: 5 }); (alt.skalaT = alt.skalaT || [0, 0, 0, 0, 0])[4] = 60; const s4 = trabQualiStand(alt);
-    return { s0, s1, s2, s3, s4, zeit: kmZeitTxt(84.2), inSperre: [...document.scripts].some(x => x.textContent.includes('const q = trabQualiStand(p); if (q) return q;')) }; });
+    return { s0, s1, s2, s3, s4, zeit: kmZeitTxt(84.2), inSperre: [...document.scripts].some(x => x.textContent.includes('const q = trabQualiStand(p) || trab28Sperre(p, t.tag, false); if (q) return q;')) }; });
   ok('Traber: ohne Qualifikation gesperrt, mit Quali frei', /Qualifikation fehlt/.test(r.s0) && r.s1 === '' && r.inSperre, JSON.stringify(r));
   ok('Traber: 6 Monate ohne Rennen → Quali abgelaufen; Rennen dazwischen hält sie gültig', /abgelaufen/.test(r.s2) && r.s3 === '', JSON.stringify(r));
   ok('Traber alter Spielstand (Quali-Stufe ≥ 50 %) gilt als qualifiziert; km-Zeit 1:24,2', r.s4 === '' && r.zeit === '1:24,2', JSON.stringify(r));

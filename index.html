@@ -1372,7 +1372,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "1062";
+  const SPIEL_VERSION = "1063";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1380,12 +1380,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=1062"></script>
-<script src="pferd.js?v=1062"></script>
-<script src="boxstufen.js?v=1062"></script>
-<script src="kopfneu.js?v=1062"></script>
-<script src="waschbild.js?v=1062"></script>
-<script src="avatare.js?v=1062"></script>
+<script src="lz-string.min.js?v=1063"></script>
+<script src="pferd.js?v=1063"></script>
+<script src="boxstufen.js?v=1063"></script>
+<script src="kopfneu.js?v=1063"></script>
+<script src="waschbild.js?v=1063"></script>
+<script src="avatare.js?v=1063"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -3806,6 +3806,107 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   }
   // beschlagnahmte Pferde in der Klinik (V1, Dome 20.10.): +16 % pro Tag, aber nur so gesund, wie Alter und Krankheiten es erlauben (höchstens 75 %); Krankheiten werden behandelt (Kosten in t.kosten), chronische bleiben; dann 2 Jahreszeiten Rückkauf. Stirbt ein schwer vorerkranktes Pferd, kommt es auf deinen Pferdefriedhof (kein neuer Vorfall).
   /* v1062 (Auftrag 25 Block 4, Dome): Zusatz nach Leistung je Krankheit und Tag – Intensivüberwachung 65 € (TiHo 63,49 €), Infusion 30 € (TiHo 28,25 €), sonst 20 €. Welche Krankheit was braucht, ist selbst gesetzt: Intensiv ab Grad 4, Infusion bei Kolik, Vergiftung, Botulismus, Hyperlipämie, Kreuzverschlag, Tetanus */
+  /* ---------- v1063 (Auftrag 25 Block 4, Etappe 4b, Dome): Versicherungen. Quellen in notizen/RECHERCHE-B4B-VERSICHERUNG.md ----------
+     OP-Versicherung je Pferd nach R+V (Monatsbeitrag ab 21,71 / 58,05 / 103,14 € → ×3 je Jahreszeit; Grenzen je OP; Wartezeit 3 Monate, Kolik 5 Tage, Chip-OP nur Exzellent nach 12 Monaten; Kastration nicht versichert; Vorerkrankungen ausgeschlossen).
+     Lebensversicherung je Pferd: 1,7 % der Summe im Jahr (R+V „ab“), Eintritt bis 13 Jahre, Untersuchung beim Abschluss, zahlt bei Tod und Nottötung – nicht bei Vernachlässigung.
+     Haftpflicht für den ganzen Hof (Dome): 110 € im Jahr (HUK: 110 € je Pferd). Schäden selbst gesetzt: etwa 3 je 100 Pferde und Jahr. */
+  const VERS_OP = { basis: { n: "Basis", jz: 65, kolik: 1500, gross: 1500, sonst: 500, chip: 0 }, premium: { n: "Premium", jz: 175, kolik: Infinity, gross: 4000, sonst: 1500, chip: 0 }, exzellent: { n: "Exzellent", jz: 310, kolik: Infinity, gross: Infinity, sonst: Infinity, chip: Infinity } };
+  const VERS_LEBEN = { satz: 0.017, alterMax: 13, untersuchung: 200, min: 1000 }, HAFTPFLICHT = { jahr: 110, jz: 28, chanceJahr: 0.03 };
+  const opKategorie = k => k === "kolik" || k === "steinop" ? "kolik" : k === "frakturop" ? "gross" : k === "arthroskopie" ? "chip" : k === "kryptop" || k === "kastration" ? null : "sonst";
+  const opWarteTage = kat => kat === "kolik" ? Math.max(1, Math.round(5 * tpj() / 91)) : kat === "chip" ? 4 * tpj() : tpj();
+  const versGrenzeTxt = g => g === Infinity ? "unbegrenzt" : g ? "bis " + fmt(g) : "nicht versichert";
+  function versOpPosten(p, k, summe) {   /* Posten „Versicherung übernimmt“ (negativ) bzw. Hinweis, warum sie nicht zahlt */
+    const V = p && !fremd(p) && p.vers && p.vers.op; if (!V || !VERS_OP[V.tarif] || !(summe > 0)) return [];
+    const T = VERS_OP[V.tarif], kat = opKategorie(k), nein = t => [{ text: `${p.name}: OP-Versicherung (${T.n}) zahlt nicht – ${t}`, betrag: 0 }];
+    if (!kat) return nein("Kastrationen sind nicht versichert");
+    const grenze = T[kat]; if (!grenze) return nein(kat === "chip" ? "Chip-OPs nur im Tarif Exzellent" : "nicht versichert");
+    const warte = opWarteTage(kat); if (spiel.tag - V.ab < warte) return nein(`noch in der Wartezeit (${warte} ${warte === 1 ? "Tag" : "Tage"} ab Abschluss)`);
+    const arten = k === "kolik" ? ["kolik"] : ((OP_KLINIK[k] || {}).art || []); if (arten.some(a => (V.aus || []).includes(a))) return nein("die Krankheit war beim Abschluss schon bekannt");
+    const zahlt = Math.round(Math.min(summe, grenze) * 100) / 100; prot("OP-Versicherung zahlt", { p, b: zahlt });
+    return [{ text: `${p.name}: OP-Versicherung (${T.n}) übernimmt${grenze < summe ? ` (${versGrenzeTxt(grenze)} je OP)` : ""}`, betrag: -zahlt }];
+  }
+  const versKurz = (p, k, summe) => { const V = p && p.vers && p.vers.op; if (fremd(p)) return ""; if (!V) return "Keine OP-Versicherung – die Kosten trägst du ganz."; const x = versOpPosten(p, k, summe)[0]; return x ? (x.betrag < 0 ? `🛡️ OP-Versicherung (${VERS_OP[V.tarif].n}): übernimmt etwa ${fmt(-x.betrag)}.` : "🛡️ " + x.text.replace(p.name + ": ", "") + ".") : ""; };
+  const lebenSumme = p => Math.max(VERS_LEBEN.min, Math.round(marktwert(p) / 500) * 500);
+  const lebenJz = L => Math.round(L.summe * VERS_LEBEN.satz / 4);
+  function versJahreszeit() {   /* Beiträge zu Beginn jeder Jahreszeit (je Hof) */
+    let op = 0, nOp = 0, le = 0, nLe = 0;
+    alleEigenenPferde().map(x => x.p).filter(p => !fremd(p) && p.vers).forEach(p => { const V = p.vers; if (V.op && VERS_OP[V.op.tarif]) { op += VERS_OP[V.op.tarif].jz; nOp++; } if (V.leben) { le += lebenJz(V.leben); nLe++; } });
+    if (op) buchen(-op, `OP-Versicherung (${nOp} ${nOp === 1 ? "Pferd" : "Pferde"})`); if (le) buchen(-le, `Lebensversicherung (${nLe} ${nLe === 1 ? "Pferd" : "Pferde"})`);
+    if (spiel.hof && spiel.hof.haftpflicht) buchen(-HAFTPFLICHT.jz, "Pferdehalter-Haftpflicht");
+  }
+  function versOpAbschliessen(p, tarif) {
+    const T = VERS_OP[tarif]; if (!T || fremd(p)) return false; if (!spiel.admin && geldFrei() < T.jz) { dialog(`<h3>Zu wenig Geld</h3>${dispoHinweis()}<p>Der erste Beitrag kostet ${fmt(T.jz)}.</p>`); return false; }
+    if (!spiel.admin) buchen(-T.jz, `OP-Versicherung: ${p.name}`);
+    p.vers = p.vers || {}; p.vers.op = { tarif, ab: spiel.tag, aus: [...new Set(befundListe(p).filter(b => b.bemerkt || b.diagnose).map(b => b.art))] };
+    prot("OP-Versicherung abgeschlossen", { p, x: tarif, b: -T.jz }); tippMerken("versicherung"); speichern(); return true;
+  }
+  function versLebenAbschliessen(p) {
+    if (fremd(p) || (p.vers && p.vers.leben)) return false; if (alterJZ(p) / 4 > VERS_LEBEN.alterMax) return false;
+    const summe = lebenSumme(p), L = { summe, ab: spiel.tag }, kost = VERS_LEBEN.untersuchung + lebenJz(L);
+    if (!spiel.admin && geldFrei() < kost) { dialog(`<h3>Zu wenig Geld</h3>${dispoHinweis()}<p>Untersuchung und erster Beitrag kosten ${fmt(kost)}.</p>`); return false; }
+    if (!spiel.admin) buchen(-VERS_LEBEN.untersuchung, `Untersuchung für die Lebensversicherung: ${p.name}`);
+    const krank = befundListe(p).filter(b => (b.grad || 1) >= 3 || (KRANK[b.art] && KRANK[b.art].chronisch));   /* die Untersuchung findet auch Unbemerktes */
+    prot("Lebensversicherung beantragt", { p, b: -VERS_LEBEN.untersuchung });
+    if (krank.length) { krank.forEach(b => { if (!b.bemerkt) b.bemerkt = { von: "Tierarzt", tag: spiel.tag }; }); speichern(); return { abgelehnt: krank.map(b => befundSicht(p, b).name) }; }
+    if (!spiel.admin) buchen(-lebenJz(L), `Lebensversicherung: ${p.name}`); p.vers = p.vers || {}; p.vers.leben = L; tippMerken("versicherung"); speichern(); return { ok: true, summe };
+  }
+  function versLebenTod(p) {
+    const L = p && p.vers && p.vers.leben; if (!L || spiel.tutorial || fremd(p)) return; delete p.vers.leben;
+    if (/Entkräftung|unbehandelt|Vernachlässig/i.test(p.todesursache || "")) { brief("Pferdeversicherung", `Lebensversicherung: ${p.name}`, `es tut uns leid um <b>${esc(p.name)}</b>. Leider können wir nicht zahlen: ${esc(p.name)} ist an Vernachlässigung gestorben (${esc(p.todesursache)}). Grobe Fahrlässigkeit ist nicht versichert.`, { pferde: [p] }); return; }
+    buchen(L.summe, `Lebensversicherung: ${p.name}`); prot("Lebensversicherung zahlt", { p, b: L.summe });
+    brief("Pferdeversicherung", `Lebensversicherung: ${p.name}`, `es tut uns sehr leid um <b>${esc(p.name)}</b>. Die Lebensversicherung zahlt die Versicherungssumme von <b>${fmt(L.summe)}</b> – das Geld ist schon auf {deinem|Ihrem} Konto.`, { pferde: [p] });
+  }
+  function haftpflichtTag() {   /* Schäden, die eigene Pferde anderen zufügen – mit Haftpflicht zahlt die Versicherung */
+    if (spiel.tutorial || spiel.ansehen) return; const P = alleEigenenPferde().map(x => x.p).filter(p => !fremd(p) && !p.klinik); if (!P.length) return;
+    if (Math.random() >= 1 - Math.pow(1 - HAFTPFLICHT.chanceJahr / (4 * tpj()), P.length)) return;
+    haftpflichtSchaden(P[Math.floor(Math.random() * P.length)]);
+  }
+  function haftpflichtSchaden(p, nr) {
+    const fp = (spiel.boxen.find(b => b.pferd && fremd(b.pferd) && !b.tot) || {}).pferd, e = fp ? einstellerVon(fp) : null;
+    const A = [["Familie Becker", `ist nachts aus der Koppel ausgebrochen und hat den Gemüsegarten von Familie Becker zertrampelt`, 300, 1200],
+      ["Familie Krüger", `hat beim Führen auf dem Hof ausgeschlagen und das geparkte Auto von Familie Krüger verbeult`, 600, 2500],
+      ...(fp ? [[e ? eName(e) : "Einsteller", `hat auf der Weide das Pensionspferd ${fp.name} getreten – der Besitzer schickt die Tierarztrechnung`, 400, 2000]] : [])];
+    const a = A[nr != null ? nr % A.length : Math.floor(Math.random() * A.length)], betrag = Math.round((a[2] + Math.random() * (a[3] - a[2])) / 10) * 10, H = spiel.hof || {};
+    prot("Haftpflicht-Schaden", { p, b: H.haftpflicht ? 0 : -betrag }); tippMerken("haftpflicht");
+    if (H.haftpflicht) { brief("Pferdehalter-Haftpflicht", `Schaden durch ${p.name}`, `<b>${esc(p.name)}</b> ${a[1]}. Der Schaden beträgt ${fmt(betrag)}. Die Pferdehalter-Haftpflicht hat ihn direkt bezahlt – für {dich|Sie} entstehen keine Kosten.`, { pferde: [p] }); return { versichert: true, betrag }; }
+    rechnungStellen(a[0], "schaden", [{ text: `${p.name}: Schaden`, betrag }], [p.id], `Schaden durch ${p.name} – Rechnung`, `<b>${esc(p.name)}</b> ${a[1]}. Als Halter {haftest du|haften Sie} für den Schaden – eine Pferdehalter-Haftpflicht {hast du|haben Sie} nicht (Hofverwaltung → Finanzen → Versicherungen).<br><br>`);
+    return { versichert: false, betrag };
+  }
+  /* Anruf vom OP-Tisch: erlösen oder weiter operieren */
+  function kolikTischWahl(pid, wahl, auto) {
+    let fertig = null; const lauf = fn => typeof pid === "object" ? fn() : jedenHof(fn);   /* in der Nacht: direkt im laufenden Hof */
+    lauf(() => { if (fertig) return; const i = spiel.boxen.findIndex(b => b.pferd && (b.pferd === pid || b.pferd.id === pid)); if (i < 0) return; const b = spiel.boxen[i], p = b.pferd; if (!p.klinik || !p.klinik.tisch) { fertig = { schon: true }; return; }
+      delete p.klinik.tisch; prot("Kolik-OP: Entscheidung", { p, x: wahl + (auto ? " (ohne Antwort)" : "") });
+      if (wahl === "erloesen" || Math.random() >= KOLIK_TISCH.ueberlebt) {
+        const erl = wahl === "erloesen"; b.tot = true; p.pflege.gesundheit = 0; p.todesursache = erl ? "Kolik – auf dem OP-Tisch erlöst" : "Kolik (trotz Operation)"; delete p.klinik;
+        const posten = erl ? [{ text: `${p.name}: Kolik-OP begonnen (Narkose, Bauchschnitt), auf dem OP-Tisch erlöst`, betrag: KOLIK_TISCH.preis }] : [{ text: `${p.name}: Kolik-OP`, betrag: KOLIK_OP }, { text: `${p.name}: Darmstück entfernt (Resektion)`, betrag: KOLIK_TISCH.resektion }];
+        rechnungStellen("Tierarztpraxis", "klinik", [...posten, ...versOpPosten(p, "kolik", posten.reduce((a, x) => a + x.betrag, 0))], [p.id], `${p.name}: Kolik-OP – Rechnung`,
+          erl ? `${auto ? "wir konnten {dich|Sie} nicht erreichen. " : ""}<b>${esc(p.name)}</b> ist in der Narkose eingeschlafen – ${pron(p).er} hat nichts gespürt. Es tut uns sehr leid.<br><br>` : `es tut uns sehr leid: <b>${esc(p.name)}</b> hat die Operation trotz allem nicht überstanden.<br><br>`);
+        fertig = { tot: true, erl }; return; }
+      p.klinik.resektion = true; p.klinik.bis = (p.klinik.bis || spiel.tag) + KOLIK_TISCH.weiterTage; fertig = { lebt: true }; }); speichern(); return fertig;
+  }
+  function versHTML() {
+    const H = spiel.hof || {}, P = alleEigenenPferde().map(x => x.p).filter(p => !fremd(p)), hp = H.haftpflicht;
+    const zeile = p => { const V = p.vers || {}, O = V.op, L = V.leben, w = O ? Math.max(0, opWarteTage("sonst") - (spiel.tag - O.ab)) : 0, alt = alterJZ(p) / 4 > VERS_LEBEN.alterMax;
+      return `<tr><td><b>${esc(p.name)}</b></td><td>${O ? `${VERS_OP[O.tarif].n}${w ? ` <small>(Wartezeit noch ${w} ${w === 1 ? "Tag" : "Tage"}, Kolik ab sofort)</small>` : ""}${(O.aus || []).length ? ` <small>ohne: ${O.aus.map(a => (KRANK[a] || {}).n || a).join(", ")}</small>` : ""} ` : "– "}<button class="mini-knopf" data-vop="${p.id}">${O ? "Ändern" : "Abschließen"}</button></td>
+        <td>${L ? `${fmt(L.summe)} · ${fmt(lebenJz(L))} je Jz <button class="mini-knopf" data-vlebenaus="${p.id}">Kündigen</button>` : alt ? `<small>nur bis ${VERS_LEBEN.alterMax} Jahre</small>` : `<button class="mini-knopf" data-vleben="${p.id}">Abschließen</button>`}</td></tr>`; };
+    return `<div class="pn-kasten"><b>🛡️ Pferdehalter-Haftpflicht (ganzer Hof)</b><small>Zahlt Schäden, die deine Pferde anderen zufügen: ausgebrochen in Nachbars Garten, Tritt gegen ein Einsteller-Pferd, ein verbeultes Auto. ${fmt(HAFTPFLICHT.jahr)} im Jahr (${fmt(HAFTPFLICHT.jz)} je Jahreszeit).</small>
+      <div class="bf-knoepfe">${hp ? `<small>✅ abgeschlossen am ${tagText(hp.ab)}</small><button class="mini-knopf" data-vhp="aus">Kündigen</button>` : `<button class="mini-knopf" data-vhp="an">Abschließen · ${fmt(HAFTPFLICHT.jz)} je Jahreszeit</button>`}</div></div>
+      <h4 class="ma-titel">🏥 OP- und Lebensversicherung je Pferd</h4>${P.length ? `<table class="ver-tab"><tr><th>Pferd</th><th>OP-Versicherung</th><th>Lebensversicherung</th></tr>${P.map(zeile).join("")}</table>` : "<p>Du hast noch keine eigenen Pferde.</p>"}
+      <p><small><b>OP-Versicherung</b> zahlt Operationen in der Klinik samt Klinikaufenthalt bis zur Grenze des Tarifs. Wartezeit: 1 Jahreszeit (Kolik ${opWarteTage("kolik")} ${opWarteTage("kolik") === 1 ? "Tag" : "Tage"}, Chip-OP 4 Jahreszeiten). Krankheiten, die beim Abschluss schon bekannt sind, und Kastrationen sind nicht versichert. <b>Lebensversicherung</b>: ${(VERS_LEBEN.satz * 100).toLocaleString("de-DE", { maximumFractionDigits: 2 })} % der Versicherungssumme (Marktwert beim Abschluss) im Jahr, Abschluss bis ${VERS_LEBEN.alterMax} Jahre nach einer Untersuchung (${fmt(VERS_LEBEN.untersuchung)}); zahlt die Summe bei Tod und Erlösen – nicht bei Vernachlässigung. Beiträge werden zu Beginn jeder Jahreszeit abgebucht, der erste beim Abschluss.</small></p>
+      <table class="ver-tab"><tr><th>Tarif</th><th>je Jahreszeit</th><th>Kolik-OP</th><th>Bauch, Bruch</th><th>andere OPs</th><th>Chip-OP</th></tr>${Object.values(VERS_OP).map(T => `<tr><td>${T.n}</td><td>${fmt(T.jz)}</td><td>${versGrenzeTxt(T.kolik)}</td><td>${versGrenzeTxt(T.gross)}</td><td>${versGrenzeTxt(T.sonst)}</td><td>${versGrenzeTxt(T.chip)}</td></tr>`).join("")}</table>`;
+  }
+  function versBinden(nb) {
+    const pf = id => (alleEigenenPferde().find(x => x.p.id === id) || {}).p, neu = () => zeigeHof();
+    nb.querySelectorAll("[data-vhp]").forEach(b => b.onclick = () => { const H = spiel.hof; if (b.dataset.vhp === "an") { if (!spiel.admin && geldFrei() < HAFTPFLICHT.jz) { dialog(`<h3>Zu wenig Geld</h3>${dispoHinweis()}`); return; } if (!spiel.admin) buchen(-HAFTPFLICHT.jz, "Pferdehalter-Haftpflicht"); H.haftpflicht = { ab: spiel.tag }; tippMerken("haftpflicht"); prot("Haftpflicht abgeschlossen", { b: -HAFTPFLICHT.jz }); } else { delete H.haftpflicht; prot("Haftpflicht gekündigt", {}); } speichern(); neu(); });
+    nb.querySelectorAll("[data-vop]").forEach(b => b.onclick = () => { const p = pf(b.dataset.vop); if (!p) return; const V = (p.vers || {}).op, bek = befundListe(p).filter(x => x.bemerkt || x.diagnose);
+      dialog(`<h3>🏥 OP-Versicherung für ${esc(p.name)}</h3><p>${V ? `Jetzt: <b>${VERS_OP[V.tarif].n}</b>. Ein Wechsel ist ein neuer Vertrag – die Wartezeit beginnt neu.` : "Welcher Tarif?"}</p><ul style="margin:4px 0 8px 18px;padding:0">${Object.values(VERS_OP).map(T => `<li><b>${T.n}</b> (${fmt(T.jz)} je Jahreszeit): Kolik-OP ${versGrenzeTxt(T.kolik)}, Bauch und Bruch ${versGrenzeTxt(T.gross)}, andere OPs ${versGrenzeTxt(T.sonst)}, Chip-OP ${versGrenzeTxt(T.chip)}</li>`).join("")}</ul>${bek.length ? `<p><small>Schon bekannt und deshalb nicht versichert: ${bek.map(x => esc(befundSicht(p, x).name)).join(", ")}.</small></p>` : ""}<p><small>Der erste Beitrag wird sofort abgebucht. Gekündigt wird sofort, ohne Erstattung.</small></p>`,
+        [...Object.entries(VERS_OP).filter(([k]) => !V || V.tarif !== k).map(([k, T]) => [`${T.n} · ${fmt(T.jz)} je Jz`, () => { if (versOpAbschliessen(p, k)) neu(); }]), ...(V ? [["Kündigen", () => { delete p.vers.op; prot("OP-Versicherung gekündigt", { p }); speichern(); neu(); }, "rot"]] : []), ["Abbrechen", null, "zweit"]], "breit"); });
+    nb.querySelectorAll("[data-vleben]").forEach(b => b.onclick = () => { const p = pf(b.dataset.vleben); if (!p) return; const su = lebenSumme(p);
+      dialog(`<h3>🕊️ Lebensversicherung für ${esc(p.name)}</h3><p>Versicherungssumme: <b>${fmt(su)}</b> (Marktwert). Beitrag: <b>${fmt(lebenJz({ summe: su }))}</b> je Jahreszeit.</p><p>Vorher untersucht der Tierarzt ${esc(p.name)} (${fmt(VERS_LEBEN.untersuchung)}). Findet er eine schwere oder chronische Krankheit, lehnt die Versicherung ab.</p>`,
+        [["Untersuchen und abschließen", () => { const e = versLebenAbschliessen(p); if (e && e.abgelehnt) dialog(`<h3>🕊️ Abgelehnt</h3><p>Der Tierarzt hat bei ${esc(p.name)} gefunden: <b>${e.abgelehnt.map(esc).join(", ")}</b>. Die Versicherung nimmt ${pron(p).ihn} deshalb nicht auf.</p>`, [["OK", neu]]); else if (e) neu(); }], ["Abbrechen", null, "zweit"]]); });
+    nb.querySelectorAll("[data-vlebenaus]").forEach(b => b.onclick = () => { const p = pf(b.dataset.vlebenaus); if (!p || !p.vers) return; delete p.vers.leben; prot("Lebensversicherung gekündigt", { p }); speichern(); neu(); });
+  }
   const KLINIK_LEISTUNG = { intensiv: { n: "Intensivüberwachung", preis: 65 }, infusion: { n: "Infusionen", preis: 30 }, sonst: { n: "Behandlung", preis: 20 } }, KLINIK_INFUSION = ["kolik", "vergiftung", "botulismus", "hyperlipaemie", "kreuzverschlag", "tetanus"];
   const klinikLeistung = b => (b.grad || 1) >= 4 ? "intensiv" : KLINIK_INFUSION.includes(b.art) ? "infusion" : "sonst";
   const KLINIK_BEFUND = 20, KLINIK_TOD = 0.04;   // Behandlungskosten je Krankheit und Tag · Chance je Tag, dass ein schwer vorerkranktes oder sehr altes Pferd in den ersten Tagen stirbt (selbst gesetzt, Dome informieren)
@@ -3891,26 +3992,34 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       p.pflege.gesundheit = Math.min(gesundheitMax(p), Math.round((p.pflege.gesundheit + 16) * 10) / 10);
       if (!op) klinikBehandeln(p);   // v660 (Dome): in der Klinik werden die Krankheiten wirklich behandelt (Zusatzkosten je Krankheit und Tag)
       if (OP_KLINIK[p.klinik.op] && spiel.tag >= p.klinik.bis && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {   // v422: Tie-back, Melanom
-        const O = OP_KLINIK[p.klinik.op], extra = p.klinik.rechnung || 0, tage = Math.round(extra / KOSTEN.klinik), ok = Math.random() < (O.erfolgVon ? O.erfolgVon(p) : O.erfolg);
+        const opKey = p.klinik.op, O = OP_KLINIK[p.klinik.op], extra = p.klinik.rechnung || 0, tage = Math.round(extra / KOSTEN.klinik), ok = Math.random() < (O.erfolgVon ? O.erfolgVon(p) : O.erfolg);
         delete p.klinik; delete p.dreck;
         if (O.nachher) O.nachher(p, ok); else befundListe(p).filter(x => O.art.includes(x.art)).forEach(x => { if (ok) befundAbschliessen(p, x, "operiert"); else x.grad = Math.max(1, x.grad - 1); });
         if (O.ruheWochen) { p.ruheBis = spiel.tag + Math.max(1, Math.round(O.ruheWochen * tpj() / 13)); p.boxenruhe = true; }   /* v1042: Boxenruhe nach Arthroskopie/Bruch-OP */
         if (ok && O.wallach) { p.geburtsGeschlecht = p.geburtsGeschlecht || "Hengst"; p.geschlecht = "Wallach"; p.kastriert = jzJetzt(); p.kastriertAlterJZ = alterJZ(p); }   // v514: Kryptorchiden-Kastration
-        rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: ${O.n} inkl. ${O.tage} Tage Klinik`, betrag: O.preis }, ...(extra ? [{ text: `${p.name}: ${tageTxt(tage)} zusätzliche Behandlung × ${fmt(KOSTEN.klinik)}`, betrag: extra }] : [])], [p.id], `${p.name}: ${O.n} – Rechnung`,
+        rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: ${O.n} inkl. ${O.tage} Tage Klinik`, betrag: O.preis }, ...(extra ? [{ text: `${p.name}: ${tageTxt(tage)} zusätzliche Behandlung × ${fmt(KOSTEN.klinik)}`, betrag: extra }] : []), ...versOpPosten(p, opKey, O.preis + extra)], [p.id], `${p.name}: ${O.n} – Rechnung`,
           `${ok ? `die Operation von <b>${esc(p.name)}</b> ist gut verlaufen – ${O.fertig || (O.art.includes("melanom") ? "die Melanome sind entfernt" : "der Kehlkopf ist wieder frei")}.` : `die Operation von <b>${esc(p.name)}</b> hat leider nur teilweise geholfen – es ist besser als vorher, aber nicht ganz weg.`} ${pron(p).er[0].toUpperCase() + pron(p).er.slice(1)} steht wieder in Box ${bnr(i)}. Bitte in den nächsten Tagen nur ruhig im Schritt bewegen und dann langsam wieder antrainieren.<br><br>`);
         return;
       }
+      if (p.klinik.op === "kolik" && p.klinik.tisch) { if (spiel.tag > p.klinik.tisch) kolikTischWahl(p, "erloesen", true); return; }   /* v1063: Anruf vom OP-Tisch – ohne Antwort erlöst der Tierarzt */
       if (p.klinik.op === "kolik" && !p.klinik.opWurf) { p.klinik.opWurf = true;   // v535 (Dome, Studie): wie in echt überleben etwa 80 % eine Kolik-OP
-        if (Math.random() < kolikOpTod(p)) { b.tot = true; p.pflege.gesundheit = 0; p.todesursache = "Kolik (trotz Operation)"; delete p.klinik;
-          rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: Kolik-OP`, betrag: KOLIK_OP }], [p.id], `${p.name}: Kolik-OP – Rechnung`,
+        if (Math.random() < kolikOpTod(p)) {
+          if (!fremd(p) && !spiel.tutorial && Math.random() < KOLIK_TISCH.anteil) { p.klinik.tisch = spiel.tag; tippMerken("kolikTisch");   /* v1063 (Dome): Erlösen auf dem OP-Tisch als Entscheidung */
+            brief("Tierklinik", `Anruf aus dem OP: ${p.name}`, `wir operieren <b>${esc(p.name)}</b> gerade. Ein Stück Darm ist schon stark geschädigt. Wir können es entfernen und weiter operieren – dann überlebt ${pron(p).er} nur mit etwa ${Math.round(KOLIK_TISCH.ueberlebt * 100)} % Chance, und die OP wird teurer (+${fmt(KOLIK_TISCH.resektion)}, ${KOLIK_TISCH.weiterTage} Tage länger Klinik). Oder wir lassen ${pron(p).ihn} schlafen und erlösen ${pron(p).ihn} auf dem OP-Tisch (${fmt(KOLIK_TISCH.preis)} für Narkose und Eingriff bis hier).<br><br><small>Bitte {entscheide|entscheiden Sie} heute. Erreichen wir {dich|Sie} nicht, erlösen wir ${esc(p.name)}, damit ${pron(p).er} nicht leiden muss.</small>`, { pferde: [p], aktion: { typ: "kolikTisch", pid: p.id } });
+            return; }
+          b.tot = true; p.pflege.gesundheit = 0; p.todesursache = "Kolik (trotz Operation)"; delete p.klinik;
+          rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: Kolik-OP`, betrag: KOLIK_OP }, ...versOpPosten(p, "kolik", KOLIK_OP)], [p.id], `${p.name}: Kolik-OP – Rechnung`,
             `es tut uns sehr leid: <b>${esc(p.name)}</b> hat die Kolik-Operation nicht überstanden. Der Darm war schon zu stark geschädigt – wir haben alles versucht, {du hast|Sie haben} nichts falsch gemacht.<br><br>`);
           return; } }
       if (p.klinik.op === "kolik" && spiel.tag >= p.klinik.bis && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {
-        const extra = p.klinik.rechnung || 0, tage = Math.round(extra / KOSTEN.klinik);
+        const extra = p.klinik.rechnung || 0, tage = Math.round(extra / KOSTEN.klinik), res = p.klinik.resektion ? KOLIK_TISCH.resektion : 0;
         delete p.klinik; delete p.dreck;
         befundListe(p).filter(b => b.art === "kolik").forEach(b => befundAbschliessen(p, b, "operiert"));
-        rechnungStellen("Tierarztpraxis", "klinik", [{ text: `${p.name}: Kolik-OP inkl. ${KOLIK_OP_TAGE} Tage Klinik`, betrag: KOLIK_OP }, ...(extra ? [{ text: `${p.name}: ${tageTxt(tage)} zusätzliche Behandlung × ${fmt(KOSTEN.klinik)}`, betrag: extra }] : [])], [p.id], `${p.name} hat die Kolik-OP überstanden – Rechnung`,
-          `die Operation von <b>${esc(p.name)}</b> ist gut verlaufen. ${pron(p).er[0].toUpperCase() + pron(p).er.slice(1)} steht wieder in Box ${bnr(i)}.<br><br>`);
+        p.kolikOpTag = spiel.tag; let wunde = "";   /* v1063: Nachkolik-Risiko ein Jahr, Wundinfektion */
+        if (Math.random() < NACH_KOLIK.wunde) { const bw = befundNeu(p, "verletzung", 2, "Wundinfektion nach der Kolik-OP", "Tierklinik"); if (bw) bw.diagnose = bw.diagnose || { tag: spiel.tag, von: "Tierklinik" }; wunde = ` Die Bauchnaht hat sich leicht entzündet – bitte sauber halten und behandeln (steht in der Versorgung).`; }
+        const posten = [{ text: `${p.name}: Kolik-OP inkl. ${KOLIK_OP_TAGE} Tage Klinik`, betrag: KOLIK_OP }, ...(res ? [{ text: `${p.name}: Darmstück entfernt (Resektion)`, betrag: res }] : []), ...(extra ? [{ text: `${p.name}: ${tageTxt(tage)} zusätzliche Behandlung × ${fmt(KOSTEN.klinik)}`, betrag: extra }] : [])];
+        rechnungStellen("Tierarztpraxis", "klinik", [...posten, ...versOpPosten(p, "kolik", posten.reduce((a, x) => a + x.betrag, 0))], [p.id], `${p.name} hat die Kolik-OP überstanden – Rechnung`,
+          `die Operation von <b>${esc(p.name)}</b> ist gut verlaufen. ${pron(p).er[0].toUpperCase() + pron(p).er.slice(1)} steht wieder in Box ${bnr(i)}.${wunde} Im ersten Jahr nach einer Kolik-OP bekommt etwa jedes fünfte Pferd wieder eine Kolik – bitte gleichmäßig füttern und nichts plötzlich umstellen.<br><br>`);
         return;
       }
       if (op && spiel.tag >= p.klinik.bis && p.pflege.gesundheit >= Math.min(75, gesundheitMax(p))) {
@@ -3974,6 +4083,10 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
         if (fr.length === pferde.length) { brief(von, betreff.replace(/ – Rechnung$/, " – Bericht").replace(/Rechnung$/, "Bericht"), text + notiz, { pferde: fr }); return; }
         pferde = pferde.filter(id => !fr.some(q => q.id === id)); text += notiz; } }
     if (!mahnung && von === "Tierarztpraxis" && vorteil("gnadenhof")) { const summe = posten.reduce((a, x) => a + (x.betrag > 0 ? x.betrag : 0), 0); if (summe > 0) posten = [...posten, { text: `Gnadenhof-Rabatt ${Math.round(GNADEN_RABATT * 100)} %`, betrag: -Math.round(summe * GNADEN_RABATT * 100) / 100 }]; }   // H7 (e): Tierarztrabatt
+    /* v1063: zahlt eine Versicherung alles, kommt keine 0-€-Rechnung, sondern ein Bericht mit den Posten */
+    if (!mahnung && posten.some(x => x.betrag < 0) && posten.reduce((a, x) => a + (x.betrag || 0), 0) <= 0.005) {
+      const tab0 = `<table class="ver-tab"><tr><th>Posten</th><th>Betrag</th></tr>${posten.map(x => `<tr><td>${esc(x.text)}</td><td>${fmt(x.betrag)}</td></tr>`).join("")}<tr><td><b>zu zahlen</b></td><td><b>${fmt(0)}</b></td></tr></table>`;
+      brief(von, betreff.replace(/ – Rechnung$/, " – Bericht").replace(/Rechnung$/, "Bericht"), text + tab0 + "<p><small>Es ist nichts zu bezahlen.</small></p>", { pferde: (pferde || []).map(id => (alleEigenenPferde().find(x => x.p.id === id) || {}).p).filter(Boolean) }); return; }
     const alt = (spiel.rechnungen || []).filter(x => x.von === von);
     const alteMahnung = alt.filter(x => x.stufe === 1);
     const r = { id: "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), von, art, tag: spiel.tag,
@@ -4598,6 +4711,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   const sterbeChance = p => { const m = sterbeChanceJahr(alterJZ(p) / 4); return m >= 1 ? 1 : 1 - Math.pow(1 - m, 1 / 4); };   // je Jahreszeit
   // läuft zu Beginn jeder Jahreszeit
   function jahreszeitBeginn() {
+    try { versJahreszeit(); } catch (e) { console.error("Versicherungen:", e); }   // v1063
     alleEigenenPferde().forEach(x => { fitJahreszeit(x.p); werteAltern(x.p); });   // Werte über der Altersgrenze sinken langsam mit
     erbJahreszeit();   // Erbkrankheiten und Veranlagungen zeigen sich mit dem Alter
     lecksteinJahreszeit();   // jede Box bekommt einen neuen Salzleckstein aus der Futterkammer
@@ -7169,6 +7283,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     zubehoerInsLager(p); pateAbschied(p); bestenPflegen(p); prot("Todesfall", { p, o: p.todesursache });   // S4
     (spiel.friedhof = spiel.friedhof || []).push({ pferd: JSON.parse(JSON.stringify(p)), name: p.name, rasse: p.rasse, geschlecht: p.geschlecht, farbe: fb(p), farbName: farbName(p, fb(p)), geb: p.geb ? { ...p.geb } : null, tod: jzJetzt(), alter: alterText(p), ort, nachkommen: p.nachkommen || 0, ursache: p.todesursache || "unbekannt" });
     try { grabWahlBrief(spiel.friedhof[spiel.friedhof.length - 1]); } catch (e) { console.error("Grab:", e); }   // Auftrag 10: Urnengrab, Tierfriedhof oder Abholung
+    if (ort !== "Tierschutz-Klinik") try { versLebenTod(p); } catch (e) { console.error("Lebensversicherung:", e); }   // v1063
   }
   function erbTodPruefen() {
     const pruefe = (q, wo, weg) => { const T = q && q.erbTod; if (!T) return; if (spiel.tag < T.tag || (T.jz && jzJetzt() < T.jz)) return;
@@ -7302,7 +7417,11 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       anz: ["zittert leicht und speichelt", "wirkt benommen"], schwer: "zittert stark, schwitzt und taumelt" } };
   const GRAD_TEXT = ["", "leicht", "mittel", "deutlich", "schwer", "lebensbedrohlich"];
   const BEFUND_RISIKO = 0.04;            // Grundrisiko pro Nacht (× Anteil) – bei guter Haltung etwa 1–2 Befunde pro Spieljahr
-  const TIERARZT_BESUCH = 60, KOLIK_OP = 3000, KOLIK_OP_TAGE = 3;
+  const TIERARZT_BESUCH = 60, KOLIK_OP = 9500, KOLIK_OP_TAGE = 7;   /* v1063 (Auftrag 25 Block 4, Dome): Kolik-OP wie echt (Uelzener-Rechnungen 2024 Ø über 13.000 €, OP-Gebühr TiHo 1.418 € + Narkose + Klinik; Liegedauer Median 6–7 Tage) – 9.500 € inkl. 7 Tage Klinik, danach Tagessatz */
+  /* Erlösen auf dem OP-Tisch (Dome): ein Teil der Todesfälle zeigt sich schon bei der OP (Darm zu stark geschädigt) – der Tierarzt ruft an, der Spieler entscheidet. Anteil, Kosten und Überlebenschance selbst gesetzt */
+  const KOLIK_TISCH = { anteil: 0.6, preis: 3500, resektion: 2500, weiterTage: 2, ueberlebt: 0.4 };
+  /* nach der Kolik-OP (Quellen Bereich 7: 20 % neue Kolik im 1. Jahr, Wundinfektion 9–20 %): Kolik-Risiko ×2 für 4 Jahreszeiten, Wundinfektion 15 % */
+  const NACH_KOLIK = { faktor: 2, jz: 4, wunde: 0.15 };
   const KOLIK_OP_TOD = 0.25;   // v535 (Dome): etwa 1 von 5 Pferden stirbt trotz Kolik-OP (in echt überleben 75–90 % die ersten Wochen)
   const befundBremse = p => { const l = aktiveBefunde(p).filter(b => b.diagnose || b.bemerkt); return Math.max(0.2, 1 - l.reduce((a, b) => a + b.grad * 0.12, 0)); };   // für Training (Etappe 4)
   // alte Speicherstände: ein einzelner Befund (Streit) → Liste
@@ -7351,7 +7470,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     const f = {
       verletzung: ort === "weide" ? 0.3 : ort === "box" && box ? 0.3 * boxVerletzung(box) : 0.3,   // v533 (Dome): Ziel 30–40 Verletzungen je 100 Pferdejahre (vorher 120)
       lahmheit: zaeh * (j >= 15 ? 1.5 : 1) * (befundListe(p).some(b => b.art === "verletzung") ? 1.5 : 1),
-      kolik: (hungrig ? 2 : 1) * (s === 3 ? 1.3 : 1) * (p.stressTag != null && spiel.tag - p.stressTag <= 1 ? KOLIK_STRESS : 1),   // v671 (Dome): Stress (Hengst unruhig wegen Stuten im Stall) erhöht das Kolik-Risiko
+      kolik: (hungrig ? 2 : 1) * (s === 3 ? 1.3 : 1) * (p.stressTag != null && spiel.tag - p.stressTag <= 1 ? KOLIK_STRESS : 1) * (p.kolikOpTag != null && spiel.tag - p.kolikOpTag <= NACH_KOLIK.jz * tpj() ? NACH_KOLIK.faktor : 1),   /* v1063: nach einer Kolik-OP ein Jahr lang doppeltes Risiko */   // v671 (Dome): Stress (Hengst unruhig wegen Stuten im Stall) erhöht das Kolik-Risiko
       husten: (mist ? 1.5 : 1) * (dreck ? 1.2 : 1) * (s === 3 ? 2 : s === 2 ? 1.5 : 1) * (ort === "weide" ? 0.5 : 1),
       erkaeltung: (mist ? 1.3 : 1) * (s === 3 ? 2 : s === 2 ? 1.5 : 1) * (ort === "weide" ? 0.7 : 1),
       hufrehe: (ort === "weide" && s === 0 ? 3 : 1), magengeschwuer: wohl < 50 ? 1.5 : 1,
@@ -7684,7 +7803,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     speichern();
     if (besitzer) { if (opNoetig) { fahrtStress(p, "klinik"); delete p.weide; opNoetig.beh = spiel.tag; p.klinik = { seit: spiel.tag, op: "kolik", bis: spiel.tag + KOLIK_OP_TAGE }; } return; }
     const fertig = () => { if (danach) danach(); };
-    if (opNoetig) dialog(`<h3>🌀 ${esc(p.name)} muss operiert werden</h3><p>Die Kolik ist ${GRAD_TEXT[opNoetig.grad]}. Ohne Operation in der Klinik stirbt ${pron(p).er} wahrscheinlich.</p><p>Kolik-OP: <b>${fmt(KOLIK_OP)}</b> inklusive ${KOLIK_OP_TAGE} Tage Klinik, danach ${fmt(KOSTEN.klinik)} pro Tag, bis ${pron(p).er} wieder bei 75 % ist. Du bekommst die Rechnung bei der Entlassung.</p>`,
+    if (opNoetig) dialog(`<h3>🌀 ${esc(p.name)} muss operiert werden</h3><p>Die Kolik ist ${GRAD_TEXT[opNoetig.grad]}. Ohne Operation in der Klinik stirbt ${pron(p).er} wahrscheinlich.</p><p>Kolik-OP: <b>${fmt(KOLIK_OP)}</b> inklusive ${KOLIK_OP_TAGE} Tage Klinik, danach ${fmt(KOSTEN.klinik)} pro Tag, bis ${pron(p).er} wieder bei 75 % ist. Du bekommst die Rechnung bei der Entlassung.</p><p><small>${versKurz(p, "kolik", KOLIK_OP)}</small></p>`,
       [["In die Klinik", () => { fahrtStress(p, "klinik"); delete p.weide; opNoetig.beh = spiel.tag; p.klinik = { seit: spiel.tag, op: "kolik", bis: spiel.tag + KOLIK_OP_TAGE }; speichern(); fertig(); }, ""], ["Nicht operieren", () => { opNoetig.gewarnt = true; opNoetig.opNein = true; fertig(); }, "rot"]]);
     else dialog(`<h3>🩺 Tierarzt war da</h3>${zeilen.length ? `<ul>${zeilen.join("")}</ul>${planTxt}` : `<p>${esc(p.name)} ist gesund – der Tierarzt hat nichts gefunden.</p>`}<p><small>Die Rechnung kommt per Brief.</small></p>`, [["OK", fertig]]);
   }
@@ -15936,6 +16055,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     turnierKalender();
     try { probetagMorgen(); } catch (e) { console.error("Probetag:", e); }   // Auftrag 25 Block 2: vor der Morgenrunde
     jedenHof(hofMorgen, true);
+    jedenHof(() => { try { haftpflichtTag(); } catch (e) { console.error("Haftpflicht:", e); } }, true);   // v1063
     jedenHof(() => { try { dhTermineTag(); hengstFristTag(); } catch (e) { console.error("Deckhengst:", e); } }, true);   // v1005
     jedenHof(() => { try { bstTag(); } catch (e) { console.error("Besamungsstation:", e); } }, true);   // v1006: eigene Besamungsstation
     jedenHof(() => { try { atem14Tag(); } catch (e) { console.error("Atemwege (v1043):", e); } }, true);
@@ -23356,7 +23476,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
       inhalt = pferdeTabHTML();
     } else if (hofReiter === "finanzen") {
       const offenK = kredite().some(k => (k.offen || []).length);
-      inhalt = `<div class="fin-tabs"><button data-ftab="konto" class="${finanzTab === "konto" ? "an" : ""}">📊 Konto</button><button data-ftab="bank" class="${finanzTab === "bank" ? "an" : ""}">🏦 Bank${offenK ? " ⚠️" : ""}</button></div>` + (finanzTab === "bank" ? bankHTML() : finanzenHTML());
+      inhalt = `<div class="fin-tabs"><button data-ftab="konto" class="${finanzTab === "konto" ? "an" : ""}">📊 Konto</button><button data-ftab="bank" class="${finanzTab === "bank" ? "an" : ""}">🏦 Bank${offenK ? " ⚠️" : ""}</button><button data-ftab="vers" class="${finanzTab === "vers" ? "an" : ""}">🛡️ Versicherungen</button></div>` + (finanzTab === "bank" ? bankHTML() : finanzTab === "vers" ? versHTML() : finanzenHTML());
     } else if (hofReiter === "boxen") {
       inhalt = `<div class="hf-kopf"><b>Boxen (${spiel.boxen.length})</b><button class="hf-plus" id="hfPlus" aria-label="Box hinzufügen">+</button></div>` +
         spiel.boxen.map((b, i) => `<div class="hf-box"><span>Box ${bnr(i)}: <b>${b.pferd ? esc(b.pferd.name) : "leer"}</b>${b.fohlen ? ` <small>+ Fohlen ${esc(b.fohlen.name)}</small>` : ""}${b.pferd && b.pferd.klinik ? ` <small>🏥 in der Klinik</small>` : ""}</span>${i > 0 ? `<button class="hf-minus" data-weg="${i}" ${b.pferd ? "disabled title=\"Box ist belegt\"" : ""} aria-label="Box ${bnr(i)} entfernen">−</button>` : ""}</div>`).join("");
@@ -23472,6 +23592,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     nb.querySelectorAll("details.fin-saison").forEach(d => d.addEventListener("toggle", () => { finOffen[d.dataset.finkey] = d.open; }));
     nb.querySelectorAll("[data-ftab]").forEach(b => b.onclick = () => { finanzTab = b.dataset.ftab; zeigeHof(); });
     if (hofReiter === "finanzen" && finanzTab === "bank") bankBinden(nb, () => zeigeHof());
+    if (hofReiter === "finanzen" && finanzTab === "vers") versBinden(nb);   // v1063
     nb.querySelectorAll("[data-fs]").forEach(b => b.onclick = () => { finanzStart += +b.dataset.fs; zeigeHof(); });
     nb.querySelectorAll("[data-zahle]").forEach(b => b.onclick = () => rechnungZahlen(b.dataset.zahle, () => zeigeHof()));
     if ($("hfStufe")) $("hfStufe").onclick = () => freiSystem() ? freiDialog(() => zeigeHof()) : stufeWaehlen(() => zeigeHof());   // T2
@@ -23704,6 +23825,8 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     if (A.typ === "bewerbung") { const Bw = (spiel.bewerbungen || {})[A.bid]; if (!Bw) return "";   // Auftrag 20
       if (Bw.status !== "neu") return `<p class="brief-aktion-info">${Bw.status === "ja" ? "✅ Eingestellt." : Bw.status === "nein" ? "Abgesagt." : "Hat eine andere Stelle angenommen."}</p>`;
       return `<div class="brief-aktion"><button class="knopf" data-baktion="bw-gespraech" data-bid="${br.id}">${Bw.gefragt ? "💬 Entscheiden" : "💬 Zum Gespräch einladen"}</button><button class="knopf zweit" data-baktion="bw-absage" data-bid="${br.id}">Absagen</button></div>`; }
+    if (A.typ === "kolikTisch") { let p = null; jedenHof(() => { const b = spiel.boxen.find(x => x.pferd && x.pferd.id === A.pid); if (b) p = b.pferd; }); if (!p || !p.klinik || !p.klinik.tisch) return `<p class="brief-aktion-info">${A.antwort || "Entschieden."}</p>`;   /* v1063 */
+      return `<div class="brief-aktion"><button class="knopf" data-baktion="tisch-weiter" data-bid="${br.id}">Weiter operieren · +${fmt(KOLIK_TISCH.resektion)}</button><button class="knopf rot" data-baktion="tisch-erloesen" data-bid="${br.id}">Erlösen</button></div>`; }
     if (A.typ === "grab") { const g = (spiel.friedhof || []).find(x => x.gid === A.gid); if (!g) return "";   // Auftrag 10
       if (g.wahl !== "offen") return `<p class="brief-aktion-info">${g.grab ? GRAB_NAME[g.grab] : "Von der Tierkörperbeseitigung abgeholt."}</p>`;
       const sp = grabWahlSperre("hof");
@@ -23725,6 +23848,8 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     if (b.dataset.baktion === "zw-ja" || b.dataset.baktion === "zw-nein") { const x = alleEigenenPferde().find(y => y.p.id === A.pid); if (x) zwillingAbdruecken(x.p, b.dataset.baktion === "zw-ja"); nachher(); return; }   // Auftrag 12
     if (b.dataset.baktion === "bw-gespraech") { const Bw = (spiel.bewerbungen || {})[A.bid]; if (Bw && Bw.gefragt) bewerbungEntscheid(A.bid, nachher); else gespraechDialog(A.bid, nachher); return; }   // Auftrag 20
     if (b.dataset.baktion === "bw-absage") { const Bw = (spiel.bewerbungen || {})[A.bid]; if (Bw && Bw.status === "neu") { Bw.status = "nein"; prot("Bewerbung abgesagt", { p: Bw.x.name }); speichern(); } nachher(); return; }
+    if (/^tisch-/.test(b.dataset.baktion)) { const w = b.dataset.baktion === "tisch-weiter" ? "weiter" : "erloesen", e = kolikTischWahl(A.pid, w); A.antwort = !e || e.schon ? "Schon entschieden." : e.lebt ? "✅ Weiter operiert – die OP ist gelungen, das Pferd erholt sich in der Klinik." : e.erl ? "🕊️ Auf dem OP-Tisch erlöst." : "Weiter operiert – das Pferd hat es nicht geschafft.";
+      dialog(`<h3>🏥 Tierklinik</h3><p>${A.antwort}</p>`, [["OK", nachher]]); return; }   /* v1063 */
     if (b.dataset.baktion === "sektion") { sektionBestellen((spiel.friedhof || []).find(x => x.gid === A.gid)); return; }   /* v1062 */
     if (/^grab-/.test(b.dataset.baktion)) { grabWaehlen((spiel.friedhof || []).find(x => x.gid === A.gid), b.dataset.baktion.slice(5)); nachher(); return; }   // Auftrag 10
     if (b.dataset.baktion === "az-pruef") { if (!A.antwort) azubiPruefung(A.art, br, nachher); return; }   // Etappe 8e
@@ -24132,6 +24257,9 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     aquaHinten: ["Schwimmen gesperrt", "Schwimmen belastet Rücken und Hinterhand. Das Wasserlaufband ist schonender.", "", null, "training", "exp"],
     kalender: ["Kalender", "Hier siehst du alle Termine. Urlaubswünsche stehen gestrichelt drin, bis du entschieden hast.", "", null, "geld", "alle"],
     maBewerbung: ["Bewerber vergleichen", "Vergleiche die Balken. Schwächen verraten Bewerber nicht immer.", "", null, "geld", "alle"],
+    versicherung: ["Versicherungen", "Die Beiträge werden zu Beginn jeder Jahreszeit abgebucht. Was die Versicherung übernimmt, steht auf der Rechnung.", "", null, "geld", "alle"],
+    haftpflicht: ["Haftpflicht", "Richtet ein Pferd bei anderen Schaden an, zahlt die Pferdehalter-Haftpflicht (Hofverwaltung → Finanzen → Versicherungen).", "", null, "geld", "alle"],
+    kolikTisch: ["Anruf aus dem OP", "Die Klinik braucht heute eine Entscheidung – sie steht im Brief.", "", null, "geld", "alle"],
     probetag: ["Probetag", "Der Bewerber arbeitet morgen einen Tag mit. Abends kommt ein Bericht – dann entscheidest du.", "", null, "geld", "alle"],
     teilzeit: ["Teilzeit und Minijob", "Teilzeit (20 Stunden) schafft halb so viel, Minijob (10 Stunden) ein Viertel – das Gehalt sinkt genauso.", "", null, "geld", "fort"],
     eigeneErfahrung: ["Deine Erfahrung", "Auch du lernst: Was du selbst machst, darin wirst du erfahrener.", "", null, "geld", "alle"],

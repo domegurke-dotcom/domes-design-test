@@ -33,11 +33,12 @@ const { chromium } = require('playwright'); const path = require('path');
   r = await D(); ok('danach zehntes Fenster (10/10) vom 1.11. mit Wachstum, Farben und Einsteller-Verkauf', !r.h && /\(10\/12\)/.test(r.t) && /Einsteller verkaufen ihr Pferd/.test(r.t) && /1.11.2026/.test(r.t) && /Wachstum der Fohlen/.test(r.t));
   r = await D(); ok('danach elftes Fenster (11/11) vom 8.11. mit Märkten, Deckstation und Mitarbeitern', !r.h && /\(11\/12\)/.test(r.t) && /8.11.2026/.test(r.t) && /Deckstation im Pferdeanhänger/.test(r.t) && /Pferdemärkte/.test(r.t) && /Mitarbeiter und Whiteboard/.test(r.t));
   r = await D(); ok('danach zwölftes Fenster (12/12) vom 9.11. mit Whiteboard-Leiste, Rosse-Meldung und Ehrungen', !r.h && /\(12\/12\)/.test(r.t) && /9.11.2026/.test(r.t) && /Rosse-Meldung/.test(r.t) && /Ehrungen und Fohlenschau/.test(r.t));
+  r = await D(); ok('danach dreizehntes Fenster (13/13) vom 17.11. mit Zucht, Hof, Stufen und Stellenanzeige', !r.h && /(13/13)/.test(r.t) && /17.11.2026/.test(r.t) && /Eignungsprüfung der Stuten/.test(r.t) && /Freischalt-Stufen statt Modi/.test(r.t) && /Stellenanzeige/.test(r.t) && !/Azubi-Modus/.test(r.t));
   await pg.click('#dlgKnoepfe button'); await pg.waitForTimeout(400);
   r = await P(677, 0); ok('Spieler mit erstem Fenster gesehen: acht Fenster (1/8 …)', !r.h && /\(1\/11\)/.test(r.t) && /Paddockboxen/.test(r.t)); r = await D(); ok('… dann das dritte', !r.h && /\(2\/11\)/.test(r.t) && /Matsch/.test(r.t)); r = await D(); ok('… und das vierte', !r.h && /\(3\/11\)/.test(r.t) && /Hofplan als Raster/.test(r.t)); await pg.click('#dlgKnoepfe button'); await pg.waitForTimeout(400);
   r = await P(694, 0); ok('Spieler mit zweitem Fenster gesehen: sieben Fenster', !r.h && /\(1\/10\)/.test(r.t) && /Matsch/.test(r.t) && !/Paddockboxen/.test(r.t)); r = await D(); ok('… und das vierte', !r.h && /\(2\/10\)/.test(r.t) && /Hofplan als Raster/.test(r.t)); await pg.click('#dlgKnoepfe button'); await pg.waitForTimeout(400);
   r = await P(653, 694); ok('Popup 2 schon gezeigt: noch sieben', !r.h && /Matsch/.test(r.t) && /\(1\/10\)/.test(r.t)); r = await D(); ok('… und das vierte', !r.h && /Hofplan als Raster/.test(r.t)); await pg.click('#dlgKnoepfe button'); await pg.waitForTimeout(400);
-  r = await P(653, 1001); ok('alles gezeigt: kein Fenster', r.h);
+  r = await P(653, 1052); ok('alles gezeigt: kein Fenster', r.h);
 
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.neuGesehen = 653; delete spiel.neuPopup; neuesLaeuft = false; zeigeSchirm('startMenue'); neuesPruefen(); });
   await pg.waitForTimeout(2200); r = await pg.evaluate(() => ({ h: document.getElementById('dlg').hidden, p: spiel.neuPopup }));

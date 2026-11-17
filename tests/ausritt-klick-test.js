@@ -39,6 +39,12 @@ const L = []; const ok = (n, c, x) => { L.push((c ? "✓ " : "✗ ") + n + (c ? 
     /* Pferdewissen-Karte und bzn-Eintrag */
     const W = await pg.evaluate(() => { const k = ENZY.wissen.eintraege.find((e) => /Scheuen im Gelände/.test(e[0])); spiel.admin = true; let bzn = ""; try { bzn = weitereDatenHTML(); } catch (e) { bzn = "Fehler " + e.message; } return { karte: k ? k[1] : "", bzn: (bzn.match(/Ereignisse am Weg[^<]*<\/b>[^]*?<\/p>/) || [""])[0] }; });
     ok("Pferdewissen: Karte „Scheuen im Gelände“ mit Fakten (Christensen, rote Schleife, Pferdelänge)", /Christensen/.test(W.karte) && /rote Schleife/.test(W.karte) && /Pferdelänge/.test(W.karte), W.karte.slice(0, 80));
+    /* Auftrag 25 Block 3: Karte „Reiten im Gelände: Wege und Regeln“ – mit echtem Klick auf den Reiter Pferdewissen */
+    await pg.evaluate(() => { enzyKat = "rassen"; zeigeEnzy(); }); await pg.waitForTimeout(300); await pg.click('#auswahl [data-kat="wissen"]'); await pg.waitForTimeout(400);
+    const WK = await pg.evaluate(() => { const k = [...document.querySelectorAll("#auswahl .enz-karte")].find((e) => /Wege und Regeln/.test(e.textContent)); return k ? k.textContent : ""; });
+    await bild("wissen-gelaende");
+    ok("Pferdewissen (Klick): Karte „Reiten im Gelände: Wege und Regeln“ mit Reitplakette NRW und Quellen der Karte", /§ 62 Landesnaturschutzgesetz NRW/.test(WK) && /25 €/.test(WK) && /OpenStreetMap/.test(WK) && /Bundeswaldgesetz/.test(WK), WK.slice(0, 120));
+    await pg.evaluate(() => { const z = document.querySelector("#auswahl #zu"); if (z) z.click(); });
     ok("bzn: Abschnitt „Ereignisse am Weg“ mit den Zahlen", /wegSchreck/.test(W.bzn) && /rittPause/.test(W.bzn) && /\+4 Energie/.test(W.bzn), W.bzn.slice(0, 160));
     const br = await pg.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1); ok("kein seitliches Scrollen", br);
     ok("keine Skriptfehler", !errs.length, errs.join(" | "));

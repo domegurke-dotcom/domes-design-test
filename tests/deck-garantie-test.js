@@ -23,7 +23,7 @@ const { chromium } = require('playwright'); const path = require('path');
     S.gedeckt = { vater: H, art: 'natur', tag: spiel.tag, seit: jzJetzt(), erfolg: false }; spiel.tag = 1; while (!(datum().s === 2 && datum().t === 1)) spiel.tag++; g0 = spiel.geld; const nb = (spiel.post || []).length; deckGarantieTag();
     ok('Sommerende, aber ungewiss (keine Untersuchung, keine Rosse): keine Erstattung', spiel.geld === g0 && S.deckGar, spiel.geld - g0);
     delete S.gedeckt; deckGarantieTag();
-    ok('Sobald sicher nicht tragend (Nachweis/Rosse): Decktaxe erstattet', spiel.geld - g0 === taxe, spiel.geld - g0); ok('Brief der Deckstation', (spiel.post || []).length === nb + 1 && /erstattet/.test(spiel.post[0].betreff), spiel.post[0] && spiel.post[0].betreff);
+    ok('Sobald sicher nicht tragend: 50 % Gutschrift fürs nächste Jahr statt Erstattung (M4G)', spiel.geld === g0 && (spiel.deckGut || []).some(x => x.betrag === Math.round(taxe * 0.5 / 10) * 10 && x.jahr === datum().j + 1), JSON.stringify(spiel.deckGut)); ok('Brief der Deckstation', (spiel.post || []).length === nb + 1 && /Gutschrift/.test(spiel.post[0].betreff), spiel.post[0] && spiel.post[0].betreff);
     ok('Garantie danach weg', !S.deckGar); const g1 = spiel.geld; deckGarantieTag(); ok('Nicht doppelt erstattet', spiel.geld === g1);
     // tragend: keine Rückzahlung
     spiel.tag = 1; const T = mkStute(1, 'Berta'); deckKern(T, H, 'natur'); T.gedeckt.erfolg = true; T.traechtig = { vater: H, seit: jzJetzt(), geburt: jzJetzt() + 4, art: 'natur', sicher: true }; delete T.gedeckt; while (!(datum().s === 2 && datum().t === 1)) spiel.tag++; g0 = spiel.geld; deckGarantieTag();

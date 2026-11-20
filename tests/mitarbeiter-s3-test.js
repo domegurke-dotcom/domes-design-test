@@ -13,7 +13,7 @@ const { chromium } = require('playwright'); const path = require('path');
     spiel.mitarbeiter = []; const r0 = risk();
     spiel.mitarbeiter = [mk('stallbursche', { futter: 85, klima: 65 })]; const r1 = risk(); R.kolik80 = r1.kolik / r0.kolik; R.husten60 = r1.husten / r0.husten;
     spiel.mitarbeiter = [mk('stallbursche', { futter: 65 })]; R.kolik60 = risk().kolik / r0.kolik;
-    spiel.mitarbeiter = [mk('stallmeister', { futter: 85 })]; R.sm = risk().kolik / r0.kolik;
+    spiel.mitarbeiter = [mk('stallbursche', { futter: 20 }), mk('stallmeister', { futter: 85 })]; R.sm = risk().kolik / r0.kolik;   /* 26.11.2026: arbeitet der Meister allein in der Box, wirkt er voll – »halb« gilt, wenn ein anderer in der Box arbeitet */
     spiel.mitarbeiter = [mk('stallbursche', { futter: 85 }), mk('stallmeister', { futter: 85 })]; R.beide = risk().kolik / r0.kolik;
     spiel.mitarbeiter = [mk('stallbursche', { futter: 85 })]; spiel.boxen[0].maPlan = { stall: '-' }; R.fremdeBox = risk().kolik / r0.kolik; delete spiel.boxen[0].maPlan;
     R.txt = vorteilText('futter', 65); R.txt0 = vorteilText('huf', 30);
@@ -22,7 +22,7 @@ const { chromium } = require('playwright'); const path = require('path');
   const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x !== undefined ? ' – ' + x : ''));
   const r = x => Math.round(x * 100) / 100;
   ok('Experte Fütterung: Kolik −20 %', r(R.kolik80) === 0.8, r(R.kolik80)); ok('sehr erfahren Stallhygiene: Husten −10 %', r(R.husten60) === 0.9, r(R.husten60)); ok('sehr erfahren Fütterung: Kolik −10 %', r(R.kolik60) === 0.9, r(R.kolik60));
-  ok('Stallmeister halb (−10 % statt −20 %)', r(R.sm) === 0.9, r(R.sm)); ok('zwei Leute im selben Bereich: der bessere zählt (−20 %)', r(R.beide) === 0.8, r(R.beide));
+  ok('Stallmeister arbeitet in der Box mit: volle Wirkung (−20 %); nur als reine Aufsicht halb', r(R.sm) === 0.8, r(R.sm));   /* 26.11.2026: der Meister kann alles und übernimmt Boxen selbst (Dome 8./9.11.) – »halb« gilt nur noch, wo er nicht selbst in der Box arbeitet */ ok('zwei Leute im selben Bereich: der bessere zählt (−20 %)', r(R.beide) === 0.8, r(R.beide));
   ok('versorgt er die Box nicht, wirkt nichts', r(R.fremdeBox) === 1, r(R.fremdeBox));
   ok('Antippen zeigt Vorteil und nächste Stufe', /Kolik 10 % seltener/.test(R.txt) && /ab Experte: Kolik 20 %/.test(R.txt) && /noch kein besonderer Vorteil/.test(R.txt0), R.txt + ' | ' + R.txt0);
   ok('Verhalten Experte: Vertrauen wächst schneller', R.vertrauen >= 1.15, R.vertrauen);

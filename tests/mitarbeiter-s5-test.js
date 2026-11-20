@@ -26,7 +26,7 @@ const { chromium } = require('playwright'); const path = require('path');
   const out = [], ok = (n, c, x) => out.push((c ? '✓ ' : '✗ ') + n + (x !== undefined ? ' – ' + x : ''));
   ok('Termine für die nächste Jahreszeit, immer gleich', R.termine > 3 && R.gleich, R.termine); ok('Buchen kostet 150 €', R.knopf && R.bezahlt === 150 && R.kurs, R.bezahlt); ok('höchstens 1 Lehrgang je Jahreszeit', R.zweiter);
   ok('2 Tage weg', R.weg === 2, R.weg); ok('+10 im Fremdbereich über die alte Grenze 50, neue Grenze 75', R.futter === 60 && R.grenze === 75, `${R.futter} / ${R.grenze}`); ok('Brief „bestanden“', R.brief);
-  ok('Absage: Geld zurück, Brief', R.absage); ok('Spieler selbst +10', R.du === 10, R.du); ok('ab Fortgeschritten', R.anf === false && R.fort === true);
+  ok('Absage: Geld zurück, Brief', R.absage); ok('Spieler selbst +10', R.du === 10, R.du); /* 26.11.2026: Modi-Umbau (v1038) – es gibt keine Stufen-Sperre je Modus mehr, die Prüfung „ab Fortgeschritten“ entfällt */
   ok('keine Skriptfehler', errs.length === 0, errs.join(' | '));
   console.log(out.join('\n')); await b.close(); process.exit(out.some(l => l.startsWith('✗')) ? 1 : 0);
 })();

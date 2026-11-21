@@ -14,7 +14,7 @@ const { chromium } = require('playwright'); const path = require('path');
     const neu = o => { const p = neuesPferd(o); p.pflege = erzeugePflege(p); p.werte = p.werte || erzeugeWerte(p); ['impf', 'wurm', 'zahn', 'huf'].forEach(k => p.pflege[k] = spiel.tag); return p; };
     const buchungen = []; const buchen0 = window.buchen; window.buchen = function (n, t) { buchungen.push([n, t]); return buchen0.apply(this, arguments); };
     const strafen = () => buchungen.filter(x => /^Strafe Veterinäramt/.test(x[1]));
-    const briefe = t => spiel.post.filter(x => t.test(x.betreff)).length;
+    const briefe = (t, von) => spiel.post.filter(x => t.test(x.betreff) && (!von || x.von === von)).length;
     const leer = () => { spiel.boxen.forEach(bx => { bx.pferd = null; delete bx.fohlen; bx.tot = false; }); spiel.vernachlaessigt = []; spiel.tierschutz = []; };
     const box = (i, p, voll = true) => { while (spiel.boxen.length <= i) spiel.boxen.push({ pferd: null }); const bx = spiel.boxen[i]; bx.pferd = p; bx.krippeVoll = voll; bx.mistig = false; bx.mistStufe = 0; bx.kraftVoll = voll; bx.wasserTag = spiel.tag + 1; return bx; };
     const frisch = () => { spiel.veterinaer = undefined; delete spiel.verloren; buchungen.length = 0; leer(); };
@@ -48,16 +48,16 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Brief nennt „nachvollziehbar“ für Pferde in Behandlung', spiel.post.some(x => /nachvollziehbar/.test(x.text) && /Behandelt/.test(x.text)));
     // --- 4. Stufen und Strafen ---
     ok('Gesundes Pferd hat keinen Ausnahmegrund', vetAusnahme(neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 8, name: 'Gesund' })) === null);
-    frisch(); spiel.stufenAn = true; spiel.spieler.stufe = 'fort'; spiel.tag += 3;
+    frisch(); spiel.stufenAn = true; spiel.spieler.stufe = 'fort'; const tag4 = spiel.tag; spiel.tag = Math.max(spiel.tag, 4 * tpj()) + 3;   // v1038: im 1. Jahr gilt für alle das Verbot erst ab 4 Vorfällen – hier nach dem 1. Jahr prüfen
     vetVorfall('admin', 'Test 1', { neu: true }); ok('Fortgeschritten, 1. Vorfall: 2.000 €, kein Verbot', strafen().slice(-1)[0][0] === -2000 && !vetDaten().verbot);
     spiel.tag += 3; vetVorfall('admin', 'Test 2', { neu: true });
-    ok('2. Vorfall: 5.000 € und „Letzte Warnung“-Brief', strafen().slice(-1)[0][0] === -5000 && briefe(/^Veterinäramt: Letzte Warnung/) === 1 && vetStufe() === 'letzte');
+    ok('Nach dem 1. Jahr, 2. Vorfall: 5.000 € und „Letzte Warnung“-Brief', strafen().slice(-1)[0][0] === -5000 && briefe(/^Veterinäramt: Letzte Warnung/) === 1 && vetStufe() === 'letzte');
     spiel.tag += 3; vetVorfall('admin', 'Test 3', { neu: true });
-    ok('3. Vorfall (Fortgeschritten): Tierhalteverbot', !!vetDaten().verbot && vetStufe() === 'verbot');
-    frisch(); spiel.spieler.stufe = 'anf'; buchungen.length = 0; spiel.tag += 3;
+    ok('Nach dem 1. Jahr, 3. Vorfall: Tierhalteverbot', !!vetDaten().verbot && vetStufe() === 'verbot');
+    frisch(); spiel.spieler.stufe = 'anf'; buchungen.length = 0; spiel.tag = tag4 + 3;   // zurück ins 1. Jahr
     vetVorfall('admin', 'A1', { neu: true }); spiel.tag += 3; vetVorfall('admin', 'A2', { neu: true }); spiel.tag += 3; vetVorfall('admin', 'A3', { neu: true });
-    ok('Anfänger: 3. Vorfall noch kein Verbot, Strafe 5.000 €, letzte Warnung', !vetDaten().verbot && strafen().slice(-1)[0][0] === -5000 && vetStufe() === 'letzte');
-    spiel.tag += 3; vetVorfall('admin', 'A4', { neu: true }); ok('Anfänger: 4. Vorfall = Verbot', !!vetDaten().verbot);
+    ok('1. Jahr: 3. Vorfall noch kein Verbot, Strafe 5.000 €, letzte Warnung', !vetDaten().verbot && strafen().slice(-1)[0][0] === -5000 && vetStufe() === 'letzte');
+    spiel.tag += 3; vetVorfall('admin', 'A4', { neu: true }); ok('1. Jahr: 4. Vorfall = Verbot', !!vetDaten().verbot);
     spiel.stufenAn = false;
     // --- 5. Verjährung ---
     frisch(); const V5 = vetDaten(); V5.vorfaelle.push({ tag: 1, nacht: 1, jz: jzJetzt() - 7, art: 'admin', hid: aktivHid(), text: 'alt 1' }, { tag: 2, nacht: 2, jz: jzJetzt() - 7, art: 'admin', hid: aktivHid(), text: 'alt 2' });
@@ -74,7 +74,7 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Klinik: chronische Krankheit bleibt, Klinikkosten stehen im Rückkaufpreis', befundListe(K).some(x => x.art === 'arthrose') && T.kosten >= KOSTEN.klinik && T.preis > 0);
     const K2 = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 40, name: 'Oma3' }); K2.pflege.gesundheit = 5; const T2 = { pferd: K2, klinik: true, kosten: 0, seit: spiel.tag, jz: jzJetzt() }; spiel.tierschutz = [T2]; const fr0 = (spiel.friedhof || []).length, n0 = vetDaten().vorfaelle.length;
     Math.random = () => 0; tierschutzKlinik(); Math.random = r0;
-    ok('Tod in der Klinik: Pferd auf dem eigenen Friedhof, weg vom Tierschutz, kein neuer Vorfall', spiel.friedhof.length === fr0 + 1 && spiel.tierschutz.length === 0 && vetDaten().vorfaelle.length === n0 && briefe(/^Abschied von Oma3/) === 1);
+    ok('Tod in der Klinik: Pferd auf dem eigenen Friedhof, weg vom Tierschutz, kein neuer Vorfall, Brief vom Tierschutz + Grab-Brief der Tierbestattung', spiel.friedhof.length === fr0 + 1 && spiel.tierschutz.length === 0 && vetDaten().vorfaelle.length === n0 && briefe(/^Abschied von Oma3/, 'Tierschutzverein') === 1 && briefe(/^Abschied von Oma3/, 'Tierbestattung') === 1, [spiel.friedhof.length - fr0, spiel.tierschutz.length, vetDaten().vorfaelle.length - n0, spiel.post.slice(0, 4).map(x => x.betreff).join(" / ")].join(" | "));
     // --- 8. Anzeige ---
     frisch(); ok('Zeile „Veterinäramt: unauffällig“', /Veterinäramt/.test(vetZeileHTML()) && /unauffällig/.test(vetZeileHTML()));
     vetVorfall('admin', 'Test', { neu: true }); ok('Zeile „verwarnt · 1 Vorfall“', /verwarnt/.test(vetZeileHTML()) && /1 Vorfall/.test(vetZeileHTML()));
@@ -155,7 +155,7 @@ const { chromium } = require('playwright'); const path = require('path');
     spiel.geld = 5000; buchungen.length = 0; const fr1 = (spiel.friedhof || []).length, v0 = vetDaten().vorfaelle.length; const bx1 = spiel.boxen[1]; erloesenDurchfuehren(Fr, bx1, erloesenGrund(Fr), false); zu();
     ok('Erlösen kostet 200 € (Tierarzt: Erlösen)', buchungen.some(x => x[0] === -200 && /^Tierarzt: Erlösen/.test(x[1])));
     ok('Pferd auf dem Friedhof mit Todesursache „vom Tierarzt erlöst“, Box leer', spiel.friedhof.length === fr1 + 1 && /vom Tierarzt erlöst/.test(spiel.friedhof[spiel.friedhof.length - 1].pferd.todesursache) && !bx1.pferd);
-    ok('Kein Vorfall, keine Vernachlässigung gemeldet', vetDaten().vorfaelle.length === v0 && !(spiel.vernachlaessigt || []).length && briefe(/Abschied von Bruch/) === 1);
+    ok('Kein Vorfall, keine Vernachlässigung gemeldet, Brief vom Tierarzt + Grab-Brief der Tierbestattung', vetDaten().vorfaelle.length === v0 && !(spiel.vernachlaessigt || []).length && briefe(/Abschied von Bruch/, 'Tierarztpraxis') === 1 && briefe(/Abschied von Bruch/, 'Tierbestattung') === 1, [vetDaten().vorfaelle.length - v0, (spiel.vernachlaessigt || []).length, spiel.post.slice(0, 4).map(x => x.betreff).join(" / ")].join(" | "));
     // Stute mit Fohlen bei Fuß → Waise
     const Stute = neu({ rasse: 'hannoveraner', geschlecht: 'Stute', alter: 36, name: 'Mama' }); Stute.pflege.gesundheit = 10; const bxm = box(2, Stute); const Fol = neu({ rasse: 'hannoveraner', geschlecht: 'Hengst', alter: 0, name: 'Wuschel' }); Fol.gebTag = spiel.tag - 3; Fol.geb = { j: datum().j, s: datum().s }; bxm.fohlen = Fol;
     erloesenDurchfuehren(Stute, bxm, 'Altersschwäche', false); zu();

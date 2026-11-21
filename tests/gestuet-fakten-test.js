@@ -32,7 +32,8 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     const bx = spiel.boxen.find(x => x.pferd && x.pferd.id === 'tr1'); return { fertig, zurueck: !!bx, gedeckt: !!(bx && bx.pferd.gedeckt), art: bx && bx.pferd.gedeckt && bx.pferd.gedeckt.art, extern: (spiel.extern || []).some(x => x.pferd && x.pferd.id === 'tr1'), kosten: g0 - spiel.geld, antw: br.aktion.antwort, html: briefAktionHTML(br) }; }, l.br);
   ok('Jetzt abholen: Stute zurück, gedeckt wie zu Hause, Transport bezahlt', ab.fertig && ab.zurueck && ab.gedeckt && ab.art === 'natur' && !ab.extern && ab.kosten > 0, JSON.stringify(ab).slice(0, 220));
   ok('Brief zeigt danach nur noch die Antwort', /zurück in Box/.test(ab.html) && !/ga-ja/.test(ab.html), ab.html.replace(/<[^>]+>/g, '').slice(0, 100));
-  const tu = await pg.evaluate(() => { let n = 0; while (n < 20) { naechsteNacht(); n++; const bx = spiel.boxen.find(x => x.pferd && x.pferd.id === 'tr1'); if (!bx.pferd.gedeckt) return { n, traechtig: !!bx.pferd.traechtig }; } return { n, offen: true }; });
+  /* 22.11.2026: Stute jeden Tag füttern, misten, tränken – sonst stirbt sie zufällig an Entkräftung (Testfehler, kein Spielfehler) */
+  const tu = await pg.evaluate(() => { let n = 0; while (n < 20) { spiel.boxen.forEach(x => { if (x.pferd && !x.pferd.klinik) { x.krippeVoll = true; x.mistig = false; x.mistStufe = 0; x.wasserTag = spiel.tag; } }); naechsteNacht(); n++; const bx = spiel.boxen.find(x => x.pferd && x.pferd.id === 'tr1'); if (!bx.pferd.gedeckt) return { n, traechtig: !!bx.pferd.traechtig }; } return { n, offen: true }; });
   ok('Danach läuft die Trächtigkeit wie beim Decken zu Hause weiter', !tu.offen, JSON.stringify(tu));
   ok('keine Fehler in der Konsole', !errs.length, errs.join(' | ').slice(0, 300));
   console.log(L.join('\n')); console.log(L.every(x => x.startsWith('✓')) ? 'alles ok' : 'FEHLER'); await b.close(); })();

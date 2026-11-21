@@ -25,6 +25,7 @@ const GRUPPEN = {
     ["Krötenmaul Isabell", "quarter", "isabell", { kroete: true }],
     ["Beine weiß", "hannoveraner", "fuchs", { beinAbz: { vn: "hochweiss", vf: "fuss", hn: "fessel", hf: "krone" } }],
     ["Zebra Falbe", "fjord", "braunfalbe", { zebra: true, schulter: true }]],
+  pangare: () => { const l = []; for (const f of ["brauner", "fuchs", "dunkelbrauner"]) for (const s of [1, 2, 3]) l.push([`Pangaré ${f} Stufe ${s}`, "noriker", f, { pangareK: s, pangare: true }]); return l; },   /* Dome 21.11.2026: auch ferne Beine innen */
   tekke: () => { const l = []; for (const f of ["rappe", "schwarzbrauner", "dunkelbrauner", "brauner", "dfuchs", "fuchs", "russbuckskin", "buckskin", "palomino", "isabell", "schimmel"])
     for (const g of [0, 1]) l.push([`Tekke ${f} ${g ? "Glanz" : "matt"}`, "tekke", f, { glanz: g }]);
     l.push(["Tekke Bronze", "tekke", "buckskin", { glanz: 1, bronze: true }], ["Tekke Perl", "tekke", "isabell", { glanz: 1, bronze: true }]); return l; },

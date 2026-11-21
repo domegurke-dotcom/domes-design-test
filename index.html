@@ -1372,7 +1372,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "1069";
+  const SPIEL_VERSION = "1070";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1380,12 +1380,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=1069"></script>
-<script src="pferd.js?v=1069"></script>
-<script src="boxstufen.js?v=1069"></script>
-<script src="kopfneu.js?v=1069"></script>
-<script src="waschbild.js?v=1069"></script>
-<script src="avatare.js?v=1069"></script>
+<script src="lz-string.min.js?v=1070"></script>
+<script src="pferd.js?v=1070"></script>
+<script src="boxstufen.js?v=1070"></script>
+<script src="kopfneu.js?v=1070"></script>
+<script src="waschbild.js?v=1070"></script>
+<script src="avatare.js?v=1070"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -20893,6 +20893,143 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     if (art === "gnadenhof") { if (fremd(p)) return mFehl("?", "Pensionspferd."); const s = abgabeSperre(p, b, false); if (s) return mFehl("Geht gerade nicht", s); const halb = aufGnadenhof(p, b); speichern(); return { ok: true, h3: "🌿 Auf dem Gnadenhof", text: `${esc(p.name)} lebt jetzt auf dem Gnadenhof. ${fmt(halb)} wurden gutgeschrieben.`, weg: true }; }
     return mFehl("?", "Unbekannte Aktion.");
   }
+  /* ---------- Teil B (21.11.2026): Lokalzeitung im App-Fenster (zuchtstall-app fenster/zeitung.html) – dieselben Regeln wie zeitungHTML/zeitungVerbinden, nur ohne Dialoge ---------- */
+  function zeitungStellen() {   /* wie zeitungHTML: je Beruf der erste Bewerber aus der Zeitung, Herkunftsort aus der Region */
+    const orte = orteImUmkreis();
+    return Object.keys(MA_TYP).filter(t => t !== "azubi" && maVerfuegbar(t)).slice(0, ZEITUNG.stellen).flatMap(t => zeitungBewerber(t).slice(0, 1).map(b => ({ b, t }))).map(({ b, t }, i) => {
+      const o = orte.length ? orte[(b.name.length * 7 + i) % orte.length] : null, w = b.wissen || {}, n = maAvaNr(b), hh = t === "hofhelfer";
+      return { typ: t, name: b.name, beruf: b.w ? MA_TYP[t].w : MA_TYP[t].name, ico: MA_TYP[t].ico || "👤", gehalt: b.gehalt, aus: o ? o[0] : "", km: o ? o[1] : null,
+        gesicht: n != null && window.MA_BILDER ? window.MA_BILDER[b.w ? "w" : "m"][n] : "",
+        stark: hh ? [] : staerken(w).map(k => { const x = wissenListe(w).find(y => y[0] === k); return x[2] + " " + x[3]; }),
+        eig: (b.eig || []).filter(e => eigGilt(t, e) && MA_EIGEN[e]).map(e => ({ n: MA_EIGEN[e].n, info: eigInfo(t, e) })),
+        wissen: hh ? [] : wissenListe(w).map(x => ({ ico: x[2], n: x[3], w: Math.round(w[x[0]] || 0), stufe: wissenStufe(w[x[0]]) })) };
+    });
+  }
+  function zeitungApp() {
+    const H = spiel.hof, Z = zeitungDaten(), pos = hofPos(), jz = jzJetzt();
+    const R = { name: ZEITUNG.name, preis: ZEITUNG.abo, umkreis: ZEITUNG.umkreis, anzeige: ZEITUNG.anzeige, geld: spiel.geld || 0, jz: jzName(jz), hof: hofName(), ort: pos ? hofOrtText() : "", abo: !!Z.abo, kuendigung: !!Z.kuendigung, ansehen: !!spiel.ansehen };
+    if (!pos) { R.ortFehlt = true; R.bl = (H && H.bundesland) || "03"; R.laender = blReihe().map(k => ({ k, n: BL_NAME[k], orte: (HOF_ORTE[k] || []).map(o => o[0]) })); return R; }
+    if (!Z.abo) return R;
+    if (!zeitungAktuell(Z)) zeitungZustellen(Z);
+    if (!Z.gelesen) { Z.gelesen = true; Z.lage = "gelesen"; tippMerken("zeitung"); speichern(); }
+    R.anzeigen = zeitungAnzeigen().map(h => { const T = zeitungTermin(h.id); return mPf(h, { preis: h.preis, ort: h.anzOrt, km: h.anzKm, termin: T ? { heute: T.tag === spiel.tag, wann: tagText(T.tag), tag: T.tag } : null, recht: kaufRechtTxt("Privat") }); });
+    R.termine = regionTermine(jz).filter(t => t.tag >= spiel.tag).concat(regionTermine(jz + 1)).filter((t, i, l) => l.findIndex(x => x.n === t.n) === i).slice(0, 12)
+      .map(t => ({ n: t.n, ico: TERMIN_ICO[t.art], artN: TERMIN_ART[t.art], ort: t.ort, km: t.km, heute: t.tag === spiel.tag, wann: tagText(t.tag), gid: t.gid || "" }));
+    R.stellen = zeitungStellen();
+    return R;
+  }
+  function zeitungAktion(art, a, b) {
+    if (spiel.ansehen) return mFehl("Nur ansehen", "Im Ansehen-Modus geht das nicht.");
+    const Z = zeitungDaten(), h = a != null ? zeitungAnzeigen().find(x => x.id === a) : null;
+    if (art === "ort") { if (!hofOrtSetzen(String(a), String(b))) return mFehl("?", "Diesen Ort gibt es nicht."); prot("Zeitung: Hof-Lage", { x: String(b) }); speichern(); return { ok: true }; }
+    if (art === "abo") { if (Z.abo) return { ok: true }; if (geldFrei() < ZEITUNG.abo) return mFehl("Nicht genug Geld", `Das Abo kostet ${fmt(ZEITUNG.abo)} je Jahreszeit.`);
+      buchen(-ZEITUNG.abo, "Zeitungsabo"); Z.abo = true; delete Z.kuendigung; zeitungZustellen(Z); prot("Zeitung: Abo"); speichern(); return { ok: true }; }
+    if (art === "kuend") { if (Z.kuendigung) delete Z.kuendigung; else Z.kuendigung = true; speichern(); return { ok: true, kuendigung: !!Z.kuendigung }; }
+    if (art === "tage") { if (!h) return mFehl("Schon weg", "Diese Anzeige gibt es nicht mehr."); const ende = jzStartTag(jzJetzt() + 2) - 1, L = [];
+      for (let t = spiel.tag; t <= ende; t++) L.push({ tag: t, t: t === spiel.tag ? "heute" : t === spiel.tag + 1 ? "morgen" : tagText(t) }); const T = zeitungTermin(h.id);
+      return { ok: true, tage: L, bis: jzName(jzJetzt() + 1).replace(/^\S+ /, ""), jetzt: T ? T.tag : null }; }
+    if (art === "termin") { if (!h) return mFehl("Schon weg", "Diese Anzeige gibt es nicht mehr."); const tag = Math.round(+b), ende = jzStartTag(jzJetzt() + 2) - 1;
+      if (!(tag >= spiel.tag && tag <= ende)) return mFehl("Kein gültiger Tag", "Bitte einen Tag bis Ende der nächsten Jahreszeit wählen.");
+      Z.termine = (Z.termine || []).filter(t => t.id !== h.id); Z.termine.push({ id: h.id, jz: h.anzJz, tag, name: h.name, ort: h.anzOrt }); prot("Zeitung: Besichtigung", { x: h.name }); speichern();
+      return { ok: true, h3: "📅 Besichtigung ausgemacht", text: `Der Verkäufer in <b>${esc(h.anzOrt)}</b> erwartet dich ${tag === spiel.tag ? "<b>heute</b>" : tag === spiel.tag + 1 ? "<b>morgen</b>" : `am <b>${tagText(tag)}</b>`}. Bis dahin hält er ${esc(h.name)} für dich zurück. Der Termin steht im Kalender.` }; }
+    if (art === "hin") { if (!h) return mFehl("Schon weg", "Diese Anzeige gibt es nicht mehr."); const T = zeitungTermin(h.id); if (!T || T.tag !== spiel.tag) return mFehl("📅 Nicht heute", "Hinfahren kannst du am Tag der Besichtigung.");
+      return mHin({ art: "pferd", h, ort: h.anzOrt, km: h.anzKm, name: `Besichtigung ${h.name}` }, !!b); }
+    if (art === "terminHin") { const t = regionTermine(jzJetzt()).find(x => x.tag === spiel.tag && x.n === a); if (!t) return mFehl("?", "Dieser Termin ist nicht heute."); if (t.gid) return { ok: true, gestuet: t.gid };
+      prot("Termin: hinfahren", { n: t.n }); return mHin({ art: "termin", t, ort: t.ort, km: t.km, name: t.n }, !!b); }
+    if (art === "bild") return { ok: true, bild: h ? mBildGross(h) : "" };
+    if (art === "einstellen") { const typ = String(a); if (!MA_TYP[typ] || typ === "azubi" || !maVerfuegbar(typ)) return mFehl("?", "Diese Stelle kannst du gerade nicht besetzen.");
+      const zb = zeitungBewerber(typ), x = zb[0]; if (!x) return mFehl("Schon vergeben", "Dieses Stellengesuch gibt es nicht mehr."); const jetzt = jzJetzt();   /* wie data-einstz in mitarbeiterDialog: ohne Vermittlungsgebühr */
+      const neu = { id: "ma" + Date.now().toString(36), typ, name: x.name, w: x.w, wissen: { ...x.wissen }, eig: [...x.eig], gehalt: x.gehalt, ab: jetzt + 1, bis: null, av: x.av }; neu.probe = neu.ab + PROBE.jz;
+      (spiel.mitarbeiter = spiel.mitarbeiter || []).push(neu); prot("Mitarbeiter eingestellt: " + MA_TYP[typ].name, { p: neu.name }); tagebuch("Aktion mitarbeiterEinstellen", { extra: { k: "mitarbeiterEinstellen", ar: [typ], fach: "" } });
+      spiel.zeitungBew.liste[typ] = zb.filter(y => y !== x); speichern();
+      return { ok: true, h3: "🤝 Eingestellt!", text: `<b>${esc(x.name)}</b> fängt ${jzName(neu.ab)} als ${esc(x.w ? MA_TYP[typ].w : MA_TYP[typ].name)} an – Gehalt ${fmt(x.gehalt)} je Jahreszeit, die ersten ${PROBE.jz} Jahreszeiten Probezeit. Keine Vermittlungsgebühr.` }; }
+    return mFehl("?", "Unbekannte Aktion.");
+  }
+  /* ---------- Teil B (21.11.2026): Finanzen im App-Fenster (zuchtstall-app fenster/finanzen.html) – Konto (Tabelle, Diagramm), Bank, Versicherungen; dieselben Regeln wie finanzenHTML/bankHTML/versHTML, ohne Dialoge ---------- */
+  function finApp(jahr, ende) {
+    const g = spiel.geld || 0, F = spiel.finanzen || {}, jetzt = String(datum().j), jahre = [...new Set([...Object.keys(F), jetzt])].sort(), J0 = jahre.includes(String(jahr)) ? String(jahr) : jetzt;
+    const J = F[J0] || {}, posten = Object.entries(J), ein = posten.reduce((s, [, e]) => s + e.ein, 0), aus = posten.reduce((s, [, e]) => s + e.aus, 0);
+    const SONDER = /^(Hofkauf|Kredit \(Auszahlung\)|Eigenanteil vom zentralen Konto|Erbe)$/, sP = posten.filter(([k]) => SONDER.test(k));
+    const gruppen = posten.length ? finanzSaisonGruppen(J0, J).map(([titel, P]) => ({ titel, sum: Math.round(Object.values(P).reduce((a, e) => a + e.ein - e.aus, 0)),
+      posten: Object.entries(P).sort((a, b) => (b[1].ein + b[1].aus) - (a[1].ein + a[1].aus)).map(([k, e]) => ({ k, n: e.n || 1, ein: Math.round(e.ein), aus: Math.round(e.aus) })) })) : [];
+    if (ende != null) finDiaEnde = +ende; const D = finanzDiagrammDaten();
+    const H = spiel.hof || {}, L = kredite(), lauf = L.filter(kreditLaeuft), offenK = lauf.some(k => (k.offen || []).length), rahmen = kreditRahmen();
+    const Pf = alleEigenenPferde().map(x => x.p).filter(p => !fremd(p));
+    return { geld: Math.round(g), frei: Math.round(geldFrei()), admin: !!spiel.admin, ansehen: !!spiel.ansehen,
+      dispo: g < 0 && !spiel.admin ? { minus: Math.round(-g), rahmen: DISPO.rahmen, zins: prozent(DISPO.zins), stufe: g <= -1500 ? 2 : g <= -1000 ? 1 : 0 } : null,
+      rechnungen: (spiel.rechnungen || []).map(r => ({ id: r.id, von: r.von, betrag: Math.round(r.betrag), mahnung: !!r.stufe, bis: tagText(r.faellig) })),
+      konto: { jahre, jahr: J0, ein: Math.round(ein), aus: Math.round(aus), sonder: sP.map(([k, e]) => ({ k: k === "Kredit (Auszahlung)" ? "Kreditauszahlung" : k, w: Math.round(e.ein - e.aus) })),
+        ohneEin: Math.round(ein - sP.reduce((a, [, e]) => a + e.ein, 0)), ohneAus: Math.round(aus - sP.reduce((a, [, e]) => a + e.aus, 0)), gruppen },
+      dia: { pt: D.pt.map(p => ({ ...p, n: `${JZ[p.s][1]} ${JZ[p.s][0]} ${p.j}` })), start: D.start, ende: D.ende, links: D.links, rechts: D.rechts, farben: FIN_FARBE, namen: FIN_NAME, linien: spiel.finLinien || { ein: true, aus: true, ges: true, kto: true, hw: true } },
+      bank: { kredite: lauf.map(k => ({ id: k.id, name: k.name, summe: Math.round(k.summe), zins: prozent(k.zins), jahre: k.raten / 4, ant: Math.round(k.getilgt / k.summe * 100), rest: Math.round(k.rest), rate: Math.round(k.rate), bezahlt: k.bezahlt, raten: k.raten,
+          kuerzer: k.getilgt > 0 && restRaten(k) + k.bezahlt + (k.offen || []).length < k.raten ? restRaten(k) : null, zinsen: Math.round(k.zinsen), naechste: k.rest - (k.offen || []).reduce((a, r) => a + r.tilgung, 0) > 0.005 ? jzName(jzJetzt() + 1) : "",
+          offen: (k.offen || []).length ? { n: k.offen.length, summe: Math.round(offenSumme(k)), letzte: k.offen.length >= KREDIT.verpasst - 1 } : null })),
+        keiner: !L.length, rahmen: Math.round(rahmen), hofwert: Math.round(hofWert()), restschuld: Math.round(restschuld()), beleihung: prozent(KREDIT.beleihung), zins: prozent(KREDIT.zins), laufzeiten: KREDIT.laufzeiten, sperre: offenK },
+      vers: { hp: H.haftpflicht ? { ab: tagText(H.haftpflicht.ab) } : null, hpJz: HAFTPFLICHT.jz, hpJahr: HAFTPFLICHT.jahr, tarife: Object.entries(VERS_OP).map(([k, T]) => ({ k, n: T.n, jz: T.jz, kolik: versGrenzeTxt(T.kolik), gross: versGrenzeTxt(T.gross), sonst: versGrenzeTxt(T.sonst), chip: versGrenzeTxt(T.chip) })),
+        satz: (VERS_LEBEN.satz * 100).toLocaleString("de-DE", { maximumFractionDigits: 2 }), alterMax: VERS_LEBEN.alterMax, untersuchung: VERS_LEBEN.untersuchung, warteKolik: opWarteTage("kolik"),
+        pferde: Pf.map(p => { const V = p.vers || {}, O = V.op, Le = V.leben, w = O ? Math.max(0, opWarteTage("sonst") - (spiel.tag - O.ab)) : 0, su = Le ? null : lebenSumme(p);
+          return { id: p.id, name: p.name, bild: mBild(p), op: O ? { k: O.tarif, n: VERS_OP[O.tarif].n, warte: w, ohne: (O.aus || []).map(a => (KRANK[a] || {}).n || a) } : null, leben: Le ? { summe: Math.round(Le.summe), jz: lebenJz(Le) } : null,
+            alt: alterJZ(p) / 4 > VERS_LEBEN.alterMax, lebenNeu: su != null ? { summe: Math.round(su), jz: lebenJz({ summe: su }) } : null,
+            bekannt: befundListe(p).filter(x => x.bemerkt || x.diagnose).map(x => befundSicht(p, x).name) }; }) } };
+  }
+  function finAktion(art, a, b) {
+    if (spiel.ansehen) return mFehl("Nur ansehen", "Im Ansehen-Modus geht das nicht.");
+    const pf = id => (alleEigenenPferde().find(x => x.p.id === id) || {}).p, k = a != null ? kredite().find(x => x.id === a) : null, nichtGenug = (t) => mFehl("Nicht genug Geld", `${t} Mit Dispo kannst du bis −${fmt(DISPO.rahmen)} ins Minus gehen.`);
+    if (art === "linie") { const Lk = spiel.finLinien = spiel.finLinien || { ein: true, aus: true, ges: true, kto: true }; if (FIN_NAME[a]) Lk[a] = !!b; speichern(); return { ok: true }; }
+    if (art === "zahlen") { const r = (spiel.rechnungen || []).find(x => x.id === a); if (!r) return { ok: true }; if (geldFrei() < r.betrag) return nichtGenug(`Die ${r.stufe ? "Mahnung" : "Rechnung"} über ${fmt(r.betrag)} kannst du noch nicht bezahlen.`);
+      rechnungZahlen(a); return { ok: true, h3: "🧾 Bezahlt", text: `${r.stufe ? "Mahnung" : "Rechnung"} von <b>${esc(r.von)}</b> über ${fmt(r.betrag)} ist bezahlt.` }; }
+    if (art === "krZahl") { if (!k || !(k.offen || []).length) return { ok: true }; const vorher = k.offen.length; while (k.offen.length && rateGeht(k.offen[0].betrag + (k.offen[0].gebuehr || 0))) rateZahlen(k, k.offen.shift());
+      if (k.offen.length === vorher) return nichtGenug(`Die offene Rate über ${fmt(runde2(k.offen[0].betrag + (k.offen[0].gebuehr || 0)))} kannst du noch nicht bezahlen.`);
+      if (!k.offen.length) ruf(KREDIT.bank, 5); if (!kreditLaeuft(k)) kreditFertigBrief(k); speichern(); return { ok: true, h3: "💶 Bezahlt", text: k.offen.length ? `${vorher - k.offen.length} Raten bezahlt, ${k.offen.length} noch offen.` : "Alle offenen Raten sind bezahlt." }; }
+    if (art === "stInfo" || art === "st") { if (!k) return mFehl("?", "Diesen Kredit gibt es nicht."); if ((k.offen || []).length) return mFehl("Erst offene Raten bezahlen", "Solange eine Rate offen ist, nimmt die Bank keine Sondertilgung an.");
+      const rest = runde2(k.rest), max = Math.min(rest, Math.floor((spiel.geld || 0) * 100) / 100); if (max < 100) return mFehl("Zu wenig Geld", "Für eine Sondertilgung brauchst du mindestens 100 € in der Kasse.");
+      if (art === "stInfo") return { ok: true, name: k.name, rest: Math.round(rest), restRaten: restRaten(k), rate: Math.round(k.rate), stufen: [...new Set([...[500, 1000, 2000, 3000, 5000, 10000, 20000].filter(x => x < max), max])].map(x => ({ w: x, alles: x === rest })) };
+      const bt = Math.min(max, +b); if (!(bt > 0)) return mFehl("?", "Kein Betrag."); buchen(-bt, "Kredit: Sondertilgung"); k.rest = runde2(k.rest - bt); k.getilgt = runde2(k.getilgt + bt); prot("Kredit: Sondertilgung", { b: -bt });
+      if (!kreditLaeuft(k)) kreditFertigBrief(k); speichern(); return { ok: true, h3: "💶 Zurückgezahlt", text: kreditLaeuft(k) ? `${fmt(bt)} getilgt. Restschuld jetzt ${fmt(k.rest)}, noch etwa ${restRaten(k)} Raten.` : `${esc(k.name)} ist ganz abbezahlt.` }; }
+    if (art === "krRate") return { ok: true, rate: Math.round(kreditRate(+a, KREDIT.zins, +b)) };
+    if (art === "krNeu") { const s = Math.round(+a), n = +b; if (kredite().filter(kreditLaeuft).some(x => (x.offen || []).length)) return mFehl("Kein neuer Kredit", "Solange eine Rate offen ist, gibt die Bank keinen neuen Kredit.");
+      if (!(s >= 1000 && s <= kreditRahmen()) || s % 1000 || !KREDIT.laufzeiten.includes(n)) return mFehl("Geht nicht", `Die Bank leiht in 1.000-€-Schritten bis ${fmt(kreditRahmen())}.`);
+      const kn = kreditNeu(s, n, `Kredit ${kredite().length + 1}`); brief(KREDIT.bank, "Ihr neuer Kredit", `wir haben {dir|Ihnen} ${fmt(s)} auf {dein|Ihr} Hofkonto überwiesen. Rate je Jahreszeit: <b>${fmt(kn.rate)}</b>, ${kn.raten} Raten, erste Rate zu Beginn ${jzName(jzJetzt() + 1)}.`);
+      speichern(); return { ok: true, h3: "🏦 Kredit aufgenommen", text: `${fmt(s)} sind auf deinem Hofkonto. Die Rate von <b>${fmt(kn.rate)}</b> wird ab ${jzName(jzJetzt() + 1)} zu Beginn jeder Jahreszeit abgebucht.` }; }
+    if (art === "hp") { const H = spiel.hof; if (a === "an") { if (H.haftpflicht) return { ok: true }; if (!spiel.admin && geldFrei() < HAFTPFLICHT.jz) return nichtGenug(`Der erste Beitrag kostet ${fmt(HAFTPFLICHT.jz)}.`);
+        if (!spiel.admin) buchen(-HAFTPFLICHT.jz, "Pferdehalter-Haftpflicht"); H.haftpflicht = { ab: spiel.tag }; tippMerken("haftpflicht"); prot("Haftpflicht abgeschlossen", { b: -HAFTPFLICHT.jz }); }
+      else { delete H.haftpflicht; prot("Haftpflicht gekündigt", {}); } speichern(); return { ok: true }; }
+    if (art === "op") { const p = pf(a); if (!p) return mFehl("?", "Pferd nicht gefunden."); if (b === "aus") { if (p.vers) delete p.vers.op; prot("OP-Versicherung gekündigt", { p }); speichern(); return { ok: true }; }
+      const T = VERS_OP[b]; if (!T) return mFehl("?", "Unbekannter Tarif."); if (!spiel.admin && geldFrei() < T.jz) return nichtGenug(`Der erste Beitrag kostet ${fmt(T.jz)}.`);
+      return versOpAbschliessen(p, b) ? { ok: true, h3: "🏥 OP-Versicherung abgeschlossen", text: `${esc(p.name)} ist im Tarif <b>${T.n}</b> versichert (${fmt(T.jz)} je Jahreszeit). Wartezeit 1 Jahreszeit, Kolik ab ${opWarteTage("kolik") === 1 ? "morgen" : opWarteTage("kolik") + " Tagen"}.` } : mFehl("?", "Hat nicht geklappt."); }
+    if (art === "leben") { const p = pf(a); if (!p) return mFehl("?", "Pferd nicht gefunden."); if (p.vers && p.vers.leben) return { ok: true }; if (alterJZ(p) / 4 > VERS_LEBEN.alterMax) return mFehl("Zu alt", `Abschluss nur bis ${VERS_LEBEN.alterMax} Jahre.`);
+      const kost = VERS_LEBEN.untersuchung + lebenJz({ summe: lebenSumme(p) }); if (!spiel.admin && geldFrei() < kost) return nichtGenug(`Untersuchung und erster Beitrag kosten ${fmt(kost)}.`);
+      const e = versLebenAbschliessen(p); if (e && e.abgelehnt) return { ok: false, h3: "🕊️ Abgelehnt", text: `Der Tierarzt hat bei ${esc(p.name)} gefunden: <b>${e.abgelehnt.map(esc).join(", ")}</b>. Die Versicherung nimmt ${pron(p).ihn} deshalb nicht auf.` };
+      return e ? { ok: true, h3: "🕊️ Lebensversicherung abgeschlossen", text: `${esc(p.name)} ist mit <b>${fmt(p.vers.leben.summe)}</b> versichert (${fmt(lebenJz(p.vers.leben))} je Jahreszeit).` } : mFehl("?", "Hat nicht geklappt."); }
+    if (art === "lebenAus") { const p = pf(a); if (p && p.vers) { delete p.vers.leben; prot("Lebensversicherung gekündigt", { p }); speichern(); } return { ok: true }; }
+    return mFehl("?", "Unbekannte Aktion.");
+  }
+  /* ---------- Teil B (21.11.2026): Anbau/Ausbau mit Vorschau im 3D-Hof der App – dieselbe planVorschau wie im Hofplan (data-pvseite, data-pvok), nur ohne 2D-Plan ---------- */
+  function gebGross(art, gid, menge, stufe, seite) {
+    const g = gebaeude().find(x => x.gid === gid); if (!g) return mFehl("?", "Gebäude nicht gefunden."); const h = gebElternVon(g) || g, v0 = planVorschau;
+    if (!v0 || v0.id !== h.gid || v0.art !== art || (art === "anbau" && ((menge && menge !== v0.menge) || (stufe && stufe !== v0.stufe)))) {
+      const s = art === "ausbau" ? planAusbauStart(g) : planAnbauStart(g, menge || undefined, stufe || undefined); if (!s) return { ok: true, direkt: true }; }
+    const v = planVorschau, P = hofPlan();
+    if (art === "anbau" && seite != null && !!seite !== !!v.seite) { const p = P.pos[v.id], d = v.mass[0] - v.l0; v.seite = seite ? 1 : 0; P.pos[v.id] = v.seite ? (p.r ? { ...v.alt, y: v.alt.y - d } : { ...v.alt, x: v.alt.x - d }) : { ...v.alt }; }
+    const it = planItems().find(x => x.id === v.id), R = planRechteck(it, P.pos[v.id]), rot = planKonflikt(v.id, R), hg = gebaeude().find(x => x.gid === v.id), B = BAUTEN[hg.typ], z = gebaeude().find(x => x.gid === v.g) || hg;
+    return { ok: true, art, id: v.id, name: planName(it), mass: v.mass.map(x => x * PLAN_M), l0: v.l0 * PLAN_M, R, alt: planRechteck({ ...it, l: v.l0, t: it.t0 || it.t }, v.alt),
+      rot: rot ? (rot === "rand" ? "Ragt über das Bauland" : `Überschneidet sich mit ${planName(planItems().find(x => x.id === rot) || {})}`) : "",
+      menge: v.menge || 0, stufe: v.stufe || 0, seite: !!v.seite, mengen: art === "anbau" ? [1, 2, 3].map(i => i * (B.schritt || 1)) : [], paddock: hg.typ === "sandpaddock", pdFl: PD_FLAECHE,
+      preis: art === "anbau" ? bauPreis(hg.typ, v.stufe, { anbau: hg.gid, boxen: v.menge }) : umbauPreis(z), gebStufe: hg.stufe || 1, stufen: STUFE_NAME, zielStufe: Math.min(3, (z.stufe || 1) + 1), geldFrei: Math.round(geldFrei()) };
+  }
+  function gebGrossAb() { planVorschauEnde(true); planWahl = null; return { ok: true }; }
+  function gebGrossOk() {
+    const v = planVorschau; if (!v) return mFehl("?", "Es läuft keine Vorschau."); const g = gebaeude().find(x => x.gid === v.id); if (!g) return mFehl("?", "Gebäude nicht gefunden.");
+    const it = planItems().find(x => x.id === v.id); if (planKonflikt(v.id, planRechteck(it, hofPlan().pos[v.id]))) return mFehl("🚫 Passt nicht", "Verschiebe das Gebäude oder seine Nachbarn, wechsle die Seite oder kaufe Bauland dazu.");
+    if (v.art === "ausbau") { const z = gebaeude().find(x => x.gid === v.g) || g; planVorschauEnde(false); planWahl = null; umbauDialog(z); return { ok: true, dialog: !$("dlg").hidden }; }
+    const m = v.menge, st = v.stufe; planVorschauEnde(false); planWahl = null;
+    if (bauStarten(g.typ, st, { anbau: g.gid, boxen: m })) { speichern(); return { ok: true, h3: "🏗️ Anbau beauftragt", text: `${esc(gebName(g).replace(/­/g, ""))}: +${m} ${g.typ === "sandpaddock" ? "Platz" : m === 1 ? "Box" : "Boxen"} auf Stufe ${st}. Die Baustelle ist auf dem Hof zu sehen.` }; }
+    hofPlan().pos[v.id] = { ...v.alt }; return { ok: false, dialog: !$("dlg").hidden };
+  }
+  /* ---------- Teil B (21.11.2026): Bauland kaufen im 3D-Hof der App – Stellen wie im Hofplan (planStueckKandidaten), Kauf über planLandKaufen (Fenster) ---------- */
+  function blKand() { if (!planAn()) return { ok: false, h3: "Kein Hofplan", text: "Dieser Hof hat keinen Hofplan." };
+    return { ok: true, preis: Math.round(PLAN_STUECK_HA * BAULAND_PREIS), geldFrei: Math.round(geldFrei()), ha: PLAN_STUECK_HA, m: PLAN_STUECK.map(x => x * PLAN_M), kand: planStueckKandidaten(-1).map((k, i) => ({ i, x: k.x, y: k.y, b: k.b, h: k.h, seite: k.seite })) }; }
+  function blKauf(i) { const k = planStueckKandidaten(-1)[+i]; if (!k) return false; hofBereich = "plan"; zeigeHof("hof"); planVorschauEnde(true); planWahl = null; planLand = { modus: "kauf" }; planLandKaufen(k); return !$("dlg").hidden; }
   // Klicks auf der Gestütsseite und beim Besuch (an document, damit die Seite nach jedem Neuzeichnen funktioniert)
   document.addEventListener("click", ev => {
     const t = ev.target.closest && ev.target.closest("[data-gbesuch],[data-gmerk],[data-gdecken],[data-gfern],[data-gfuehrung],[data-gkarte],[data-gvor],[data-gbpf],[data-gbl]"); if (!t || !spiel) return;

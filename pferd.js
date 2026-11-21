@@ -764,6 +764,8 @@ function zeichnePferd(rasseId, farbId, opt = {}) {
     if (C.pattern === "leopard" && !ganzWeiss) for (let i = 0; i < 9; i++) g += `<ellipse cx="${f(sMinX + rnd() * (maxX - sMinX))}" cy="${f(-rnd() * Lg)}" rx="${f(1.6 + rnd() * 1.8)}" ry="${f(1.4 + rnd() * 1.5)}" fill="${dunkel(spotFarbe)}"/>`;
     g += `</g>`;
   }
+  if (!liegt && opt.pangareK && PANGARE_NEU) { const ps = opt.pangareK === true ? 2 : opt.pangareK, pl = mix(C.body, "#efe3d0", [.55, .72, .88][ps - 1]), pa = [.55, .8, .95][ps - 1] * 0.85, pe = [0.55, 0.9, 1.0][ps - 1], rotB = !C.points, pl2 = rotB ? mix(pl, "#f6ecd8", .4) : pl;   /* Dome 21.11.2026: Pangaré auch auf der Innenseite der fernen Beine (etwas schattiger) */
+    g += `<defs><linearGradient id="pgf-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(bottom - 0.05 * D)}" x2="0" y2="${f(bottom + pe * Lg)}"><stop offset="0" stop-color="${pl}" stop-opacity="${f(pa)}"/><stop offset=".6" stop-color="${pl}" stop-opacity="${f(pa * .95)}"/><stop offset="1" stop-color="${pl2}" stop-opacity="${rotB ? f(pa * .85) : 0}"/></linearGradient></defs><g clip-path="url(#cf-${uid})"><rect ${bx} fill="url(#pgf-${uid})"/></g>`; }
   if (!liegt) { const sf = dunkel(C.stripe || C.points || body), wf = "#f6f4ee";   // v998 (Dome): das Weiß der fernen Beine (Abzeichen) blieb sonst grau – jetzt weiß wie bei den nahen Beinen
     g += zebraStreifen(fx2, "vf", sf) + zebraStreifen(hx2, "hf", sf) + beinWeiss(BA.vf, fx2, "vf", wf) + beinWeiss(BA.hf, hx2, "hf", wf); }
   g += `<g stroke="${INK}" stroke-width="1.6" vector-effect="non-scaling-stroke">` +

@@ -16,41 +16,41 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   await pg.fill('#kaufName', 'Gestütshof'); await pg.click('#dlgKnoepfe button:first-child'); await pg.waitForTimeout(300);
   await pg.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.stufenAn = false; spiel.tippsAus = true; spiel.geld = 90000; spiel.admin = false; VET.verbotAb = Object.fromEntries(Object.keys(VET.verbotAb).map(k => [k, 99])); });
   // 1. Daten und Herde
-  const h1 = await pg.evaluate(() => { const fehlt = RASSEN.map(r => r.id).filter(r => !gestuetVon(r)); const H = gHerde('celle'), M = gHerde('meura'), V = gVerkauf('meura'); const namen = M.hengste.map(h => h.name);
+  const h1 = await pg.evaluate(() => { const fehlt = RASSEN.map(r => r.id).filter(r => !gestuetVon(r)); const H = gHerde('celle'), M = gHerde('ebbs'), V = gVerkauf('ebbs'); const namen = M.hengste.map(h => h.name);
     return { fehlt, celle: H.hengste.length, celleSt: H.stuten.length, taxe: H.hengste.every(h => h.gTaxe >= 650 && h.gTaxe <= 1150), meura: M.hengste.length, meuraSt: M.stuten.length,
-      vater: V.length && V.every(h => h.ahnen && h.ahnen.vater && M.hengste.concat([]).some(x => x.name === h.ahnen.vater.name) || gKettenCache('meura', datum().j).aktiv(datum().j - 3, true).length), vk: V.length, rein: V.every(h => h.rasse === 'haflinger') }; });
+      vater: V.length && V.every(h => h.ahnen && h.ahnen.vater && M.hengste.concat([]).some(x => x.name === h.ahnen.vater.name) || gKettenCache('ebbs', datum().j).aktiv(datum().j - 3, true).length), vk: V.length, rein: V.every(h => h.rasse === 'haflinger') }; });
   ok('jede Rasse hat ein echtes Gestüt', !h1.fehlt.length, h1.fehlt.join(','));
   ok('Celle: 8 Hengste, keine Stuten, Decktaxe 650–1.150 € (M4E)', h1.celle === 8 && h1.celleSt === 0 && h1.taxe, `${h1.celle}/${h1.celleSt}`);
-  ok('Meura: 6 Hengste, 14 Stuten, Verkaufspferde reinrassig', h1.meura === 6 && h1.meuraSt === 14 && h1.vk >= 1 && h1.rein, `${h1.meura}/${h1.meuraSt}/${h1.vk}`);
-  const h2 = await pg.evaluate(() => { const a = gHerde('meura').hengste.map(h => h.nr).join(); G_CACHE.clear(); G_OBJ.clear(); G_KCACHE.clear(); const b2 = gHerde('meura').hengste.map(h => h.nr).join();
-    const Z = gHerde('meura', datum().j + 25).hengste, eigen = Z.filter(h => h.gHer === 'eigene Zucht').length, wechsel = Z.filter(h => !gHerde('meura').hengste.some(x => x.nr === h.nr)).length;
+  ok('Ebbs: 8 Hengste, 14 Stuten, Verkaufspferde reinrassig', h1.meura === 8 && h1.meuraSt === 14 && h1.vk >= 1 && h1.rein, `${h1.meura}/${h1.meuraSt}/${h1.vk}`);
+  const h2 = await pg.evaluate(() => { const a = gHerde('ebbs').hengste.map(h => h.nr).join(); G_CACHE.clear(); G_OBJ.clear(); G_KCACHE.clear(); const b2 = gHerde('ebbs').hengste.map(h => h.nr).join();
+    const Z = gHerde('ebbs', datum().j + 25).hengste, eigen = Z.filter(h => h.gHer === 'eigene Zucht').length, wechsel = Z.filter(h => !gHerde('ebbs').hengste.some(x => x.nr === h.nr)).length;
     return { gleich: a === b2, eigen, wechsel, groesse: JSON.stringify(spiel.gestuete || {}).length }; });
   ok('Herde aus festem Zufall (gleich nach Neuberechnung)', h2.gleich);
   ok('nach 25 Jahren: Hengste gewechselt, eigene Nachzucht dabei', h2.wechsel >= 4 && h2.eigen >= 1, `${h2.wechsel} neu, ${h2.eigen} eigene Zucht`);
   ok('Spielstand wächst kaum (nur Änderungen gespeichert)', h2.groesse < 300, h2.groesse + ' Zeichen');
-  // 2. Markt – Gestüte – Meura (echte Klicks)
+  // 2. Markt – Gestüte – Ebbs (echte Klicks)
   await pg.evaluate(() => zeigeMarkt(null)); await pg.waitForTimeout(300); await pg.click('[data-mb="gestuet"]'); await pg.waitForTimeout(300);
   await pg.click('[data-gest="haflinger"]'); await pg.waitForTimeout(500); let t = await schirm();
-  ok('Gestütsseite: Name, Hinweis, Hengste, Verkauf, Termine, Karte', /Haflinger Gestüt Meura/.test(t) && /Fiktive Pferde, reale Orte/.test(t) && /Gestütshengste \(6\)/.test(t) && /Verkaufspferde/.test(t) && /Gestütsparade/.test(t) && await pg.$('svg.g-karte') !== null, t.slice(0, 120).replace(/\s+/g, ' '));
+  ok('Gestütsseite: Name, Hinweis, Hengste, Verkauf, Termine, Karte', /Fohlenhof Ebbs/.test(t) && /Fiktive Pferde, reale Orte/.test(t) && /Gestütshengste \(8\)/.test(t) && /Verkaufspferde/.test(t) && /Stutfohlenauktion/.test(t) && await pg.$('svg.g-karte') !== null, t.slice(0, 120).replace(/\s+/g, ' '));
   await bild('m4b-gestuetsseite');
-  await pg.click('[data-gmerk="meura"]'); await pg.waitForTimeout(300);
-  const k1 = await pg.evaluate(() => { const L = []; for (let k = 0; k < 4; k++) L.push(...kalTermine(jzJetzt() + k).filter(x => /Meura/.test(x.text))); return { merk: gZustand('meura').merk, n: L.length }; });
-  ok('Merken: Termine von Meura im Kalender', k1.merk && k1.n >= 4, k1.n + ' Termine');
+  await pg.click('[data-gmerk="ebbs"]'); await pg.waitForTimeout(300);
+  const k1 = await pg.evaluate(() => { const L = []; for (let k = 0; k < 4; k++) L.push(...kalTermine(jzJetzt() + k).filter(x => /Ebbs/.test(x.text))); return { merk: gZustand('ebbs').merk, n: L.length }; });
+  ok('Merken: Termine von Ebbs im Kalender', k1.merk && k1.n >= 4, k1.n + ' Termine');
   // 3. Hinfahren mit dem Auto, Führung, Vorführen, Kauf
-  const g0 = await pg.evaluate(() => spiel.geld); await pg.click('[data-gbesuch="meura"]'); await pg.waitForTimeout(350); let d = await dlgText();
-  ok('Fahrt-Fenster zum Gestüt', /Fahrt nach Meura/.test(d) && /Mit dem Auto/.test(d), d.slice(0, 100).replace(/\s+/g, ' '));
+  const g0 = await pg.evaluate(() => spiel.geld); await pg.click('[data-gbesuch="ebbs"]'); await pg.waitForTimeout(350); let d = await dlgText();
+  ok('Fahrt-Fenster zum Gestüt', /Fahrt nach Ebbs/.test(d) && /Mit dem Auto/.test(d), d.slice(0, 100).replace(/\s+/g, ' '));
   await knopf('Mit dem Auto'); t = await schirm();
   const b1 = await pg.evaluate(g => ({ B: spiel.besuch, abz: g - spiel.geld }), g0);
-  ok('Besuch läuft im Gestüt: Hengste im Stall, Verkaufspferde, Heimfahren', b1.B && b1.B.gestuet === 'meura' && /Hengste im Stall/.test(t) && /Heimfahren/.test(t), b1.B && b1.B.d);
+  ok('Besuch läuft im Gestüt: Hengste im Stall, Verkaufspferde, Heimfahren', b1.B && b1.B.gestuet === 'ebbs' && /Hengste im Stall/.test(t) && /Heimfahren/.test(t), b1.B && b1.B.d);
   await bild('m4b-besuch');
-  const g1 = await pg.evaluate(() => spiel.geld); await pg.click('[data-gfuehrung="meura"]'); await pg.waitForTimeout(350); d = await dlgText();
+  const g1 = await pg.evaluate(() => spiel.geld); await pg.click('[data-gfuehrung="ebbs"]'); await pg.waitForTimeout(350); d = await dlgText();
   const f1 = await pg.evaluate(g => g - spiel.geld, g1);
-  ok('Führung kostet 5 € und erklärt Geschichte und Berufe', f1 === 5 && /1967/.test(d) && /Pferdewirte/.test(d), f1 + ' €');
+  ok('Führung kostet 5 € und erklärt Geschichte und Berufe', f1 === 5 && /1947/.test(d) && /Pferdewirte/.test(d), f1 + ' €');
   await bild('m4b-fuehrung'); await knopf('Danke');
-  await pg.click('[data-gvor="meura|0"]'); await pg.waitForTimeout(300); d = await dlgText(); ok('Hengst vorführen', /wird vorgeführt/.test(d) && /Trab/.test(d)); await knopf('OK');
+  await pg.click('[data-gvor="ebbs|0"]'); await pg.waitForTimeout(300); d = await dlgText(); ok('Hengst vorführen', /wird vorgeführt/.test(d) && /Trab/.test(d)); await knopf('OK');
   const n0 = await pg.evaluate(() => spiel.boxen.filter(x => x.pferd).length + (spiel.importe || []).length);
   await pg.click('[data-gbpf]'); await pg.waitForTimeout(350); d = await dlgText();
-  ok('Verkaufspferd vor Ort: im Gestüt, ansehen, AKU', /im Haflinger Gestüt Meura/.test(d) && /Genau ansehen/.test(d) && /AKU/.test(d), d.slice(0, 80).replace(/\s+/g, ' '));
+  ok('Verkaufspferd vor Ort: im Gestüt, ansehen, AKU', /im Fohlenhof Ebbs/.test(d) && /Genau ansehen/.test(d) && /AKU/.test(d), d.slice(0, 80).replace(/\s+/g, ' '));
   await knopf('Kaufen'); await pg.waitForTimeout(300); d = await dlgText();
   const kf = await pg.evaluate(() => ({ n: spiel.boxen.filter(x => x.pferd).length + (spiel.importe || []).length, post: (spiel.finanzen[String(datum().j)] || {}) }));
   ok('Kauf im Gestüt: Transport bringt das Pferd', kf.n === n0 + 1 && /morgen/.test(d) && Object.keys(kf.post).some(k => /^Gestüt: /.test(k)), Object.keys(kf.post).filter(k => /Gestüt|Eintritt|Führung/.test(k)).join(' | '));
@@ -62,10 +62,10 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     const mk = (id, rasse) => { const p = neuesPferd({ id, name: id === 'st1' ? 'Hanna' : 'Gerda', rasse, geschlecht: 'Stute', alter: 7 }); p.pflege = erzeugePflege(p); p.pflege.gesundheit = 100; p.pflege.wohl = 100; const bx = spiel.boxen.find(x => !x.pferd && !x.reserviert && !x.tot); bx.pferd = p; return bx; };
     mk('st1', 'haflinger'); mk('st2', 'hannoveraner'); speichern(); });
   await pg.evaluate(() => { marktBereich = 'gestuet'; gestuetWahl = 'haflinger'; zeigeMarkt(); }); await pg.waitForTimeout(400);
-  await pg.click('[data-gdecken="meura|1"]'); await pg.waitForTimeout(350); d = await dlgText();
+  await pg.click('[data-gdecken="ebbs|1"]'); await pg.waitForTimeout(350); d = await dlgText();
   ok('Decken: Stute wählen', /welche Stute/.test(d) && /Hanna/.test(d));
   await pg.click('[data-gst="st1"]'); await pg.waitForTimeout(350); d = await dlgText();
-  ok('Deckarten von Meura: Natursprung (Gastbox) und Versandsamen', /Natursprung \(Gastbox\)/.test(d) && /Versandsamen/.test(d) && /Gastbox 12/.test(d), d.slice(0, 160).replace(/\s+/g, ' '));
+  ok('Deckarten von Ebbs: Natursprung (Gastbox) und Versandsamen', /Natursprung \(Gastbox\)/.test(d) && /Versandsamen/.test(d) && /Gastbox 15/.test(d), d.slice(0, 160).replace(/\s+/g, ' '));
   await bild('m4b-deckarten');
   await knopf('Natursprung (Gastbox)'); await pg.waitForTimeout(300); d = await dlgText();
   const gb = await pg.evaluate(() => { const e = (spiel.extern || []).find(x => x.ort === 'gastbox'); return { e: !!e, res: spiel.boxen.some(x => x.reserviert === 'st1'), weg: !spiel.boxen.some(x => x.pferd && x.pferd.id === 'st1') }; });

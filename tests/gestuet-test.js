@@ -21,7 +21,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
       vater: V.length && V.every(h => h.ahnen && h.ahnen.vater && M.hengste.concat([]).some(x => x.name === h.ahnen.vater.name) || gKettenCache('ebbs', datum().j).aktiv(datum().j - 3, true).length), vk: V.length, rein: V.every(h => h.rasse === 'haflinger') }; });
   ok('jede Rasse hat ein echtes Gestüt', !h1.fehlt.length, h1.fehlt.join(','));
   ok('Celle: 8 Hengste, keine Stuten, Decktaxe 650–1.150 € (M4E)', h1.celle === 8 && h1.celleSt === 0 && h1.taxe, `${h1.celle}/${h1.celleSt}`);
-  ok('Ebbs: 8 Hengste, 14 Stuten, Verkaufspferde reinrassig', h1.meura === 8 && h1.meuraSt === 14 && h1.vk >= 1 && h1.rein, `${h1.meura}/${h1.meuraSt}/${h1.vk}`);
+  ok('Ebbs: 5 Hengste, 14 Stuten, Verkaufspferde reinrassig', h1.meura === 5 && h1.meuraSt === 14 && h1.vk >= 1 && h1.rein, `${h1.meura}/${h1.meuraSt}/${h1.vk}`);
   const h2 = await pg.evaluate(() => { const a = gHerde('ebbs').hengste.map(h => h.nr).join(); G_CACHE.clear(); G_OBJ.clear(); G_KCACHE.clear(); const b2 = gHerde('ebbs').hengste.map(h => h.nr).join();
     const Z = gHerde('ebbs', datum().j + 25).hengste, eigen = Z.filter(h => h.gHer === 'eigene Zucht').length, wechsel = Z.filter(h => !gHerde('ebbs').hengste.some(x => x.nr === h.nr)).length;
     return { gleich: a === b2, eigen, wechsel, groesse: JSON.stringify(spiel.gestuete || {}).length }; });
@@ -31,7 +31,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   // 2. Markt – Gestüte – Ebbs (echte Klicks)
   await pg.evaluate(() => zeigeMarkt(null)); await pg.waitForTimeout(300); await pg.click('[data-mb="gestuet"]'); await pg.waitForTimeout(300);
   await pg.click('[data-gest="haflinger"]'); await pg.waitForTimeout(500); let t = await schirm();
-  ok('Gestütsseite: Name, Hinweis, Hengste, Verkauf, Termine, Karte', /Fohlenhof Ebbs/.test(t) && /Fiktive Pferde, reale Orte/.test(t) && /Gestütshengste \(8\)/.test(t) && /Verkaufspferde/.test(t) && /Stutfohlenauktion/.test(t) && await pg.$('svg.g-karte') !== null, t.slice(0, 120).replace(/\s+/g, ' '));
+  ok('Gestütsseite: Name, Hinweis, Hengste, Verkauf, Termine, Karte', /Fohlenhof Ebbs/.test(t) && /Fiktive Pferde, reale Orte/.test(t) && /Gestütshengste \(5\)/.test(t) && /Verkaufspferde/.test(t) && /Stutfohlenauktion/.test(t) && await pg.$('svg.g-karte') !== null, t.slice(0, 120).replace(/\s+/g, ' '));
   await bild('m4b-gestuetsseite');
   await pg.click('[data-gmerk="ebbs"]'); await pg.waitForTimeout(300);
   const k1 = await pg.evaluate(() => { const L = []; for (let k = 0; k < 4; k++) L.push(...kalTermine(jzJetzt() + k).filter(x => /Ebbs/.test(x.text))); return { merk: gZustand('ebbs').merk, n: L.length }; });

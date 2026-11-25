@@ -27,11 +27,13 @@ const [BW, BH] = (process.argv[3] || '1366x768').split('x').map(Number);
     /* OP-Versicherung: Anna Premium, Bella Basis (mit bekanntem Befund) */
     await pg.evaluate(() => { const B = spiel.boxen[1].pferd, bf = befundNeu(B, 'kolik', 1, 'Test'); bf.bemerkt = { von: 'du', tag: spiel.tag }; });
     g0 = await pg.evaluate(() => spiel.geld); await pg.click(`[data-vop="${await pid('Anna')}"]`); await pg.waitForTimeout(250); await bild('V2-tarif');
-    await pg.click('#dlgKnoepfe button[data-txt^="Premium"]'); await pg.waitForTimeout(300);
+    await pg.click('#dlgKnoepfe button[data-txt^="Premium"]'); await pg.waitForTimeout(300); await bild('V2b-sb'); await pg.click('#dlgKnoepfe button[data-txt^="Ohne"]'); await pg.waitForTimeout(300);
     await pg.click(`[data-vop="${await pid('Bella')}"]`); await pg.waitForTimeout(250); t = await pg.innerText('#dlgInhalt');
-    await pg.click('#dlgKnoepfe button[data-txt^="Basis"]'); await pg.waitForTimeout(300);
+    await pg.click('#dlgKnoepfe button[data-txt^="Basis"]'); await pg.waitForTimeout(300); await pg.click('#dlgKnoepfe button[data-txt^="500 €"]'); await pg.waitForTimeout(300);
     r = await pg.evaluate(() => ({ a: spiel.boxen[0].pferd.vers, b: spiel.boxen[1].pferd.vers, geld: spiel.geld }));
-    ok('OP-Versicherung per Klick: Anna Premium, Bella Basis; erste Beiträge 175 € + 65 €', r.a.op.tarif === 'premium' && r.b.op.tarif === 'basis' && g0 - r.geld === 240, JSON.stringify(r));
+    ok('OP-Versicherung per Klick: Anna Premium ohne SB, Bella Basis mit 500 € Selbstbeteiligung; erste Beiträge 175 € + 51 € (65 € × 0,78)', r.a.op.tarif === 'premium' && r.b.op.tarif === 'basis' && r.b.op.sb === 500 && !r.a.op.sb && g0 - r.geld === 226, JSON.stringify(r));
+    const sbr = await pg.evaluate(() => { const B = spiel.boxen[1].pferd; B.vers.op.ab = spiel.tag - 100; const vor = versOpPosten(B, "steinop", 400, true)[0], x1 = versOpPosten(B, "steinop", 400)[0], x2 = versOpPosten(B, "steinop", 400)[0], x3 = versOpPosten(B, "steinop", 400)[0]; const r = { vor: vor.betrag, x1: x1.betrag, x2: x2.betrag, x3: x3.betrag, t: x2.text, gen: B.vers.op.sbGenutzt }; B.vers.op.sbGenutzt = 0; B.vers.op.ab = spiel.tag; return r; });
+    ok('Selbstbeteiligung 500 € je Jahr: 1. OP (400 €) zahlt sie ganz selbst, 2. OP nur 100 € selbst, 3. OP zahlt die Versicherung voll; Vorschau verbraucht nichts', sbr.vor === 0 && sbr.x1 === 0 && sbr.x2 === -300 && sbr.x3 === -400 && /Selbstbeteiligung/.test(sbr.t), JSON.stringify(sbr));
     ok('Bekannte Krankheit (Kolik bei Bella) wird beim Abschluss genannt und ausgeschlossen', /Kolik/.test(t) && r.b.op.aus.includes('kolik'), t.slice(0, 300) + JSON.stringify(r.b));
     await bild('V3-liste');
     /* Wartezeit und Grenzen (direkt geprüft) */
@@ -41,7 +43,7 @@ const [BW, BH] = (process.argv[3] || '1366x768').split('x').map(Number);
       return { w0, k1, s1, s2, c1, kr, bk, bk2, kurz: versKurz(A, 'kolik', KOLIK_OP), kein: versKurz(spiel.boxen[2].pferd, 'kolik', KOLIK_OP) }; });
     ok('Wartezeit: am Abschlusstag zahlt sie nicht, Kolik schon nach 1 Tag', /Wartezeit/.test(r.w0.text) && r.w0.betrag === 0 && r.k1.betrag === -12000, JSON.stringify([r.w0, r.k1]));
     ok('Premium: andere OPs bis 1.500 €, Bauch/Bruch bis 4.000 €, Chip-OP nicht, Kastration nicht', r.s1.betrag === -1500 && r.s2.betrag === -4000 && r.c1.betrag === 0 && /Exzellent/.test(r.c1.text) && r.kr.betrag === 0 && /Kastration/.test(r.kr.text), JSON.stringify([r.s1, r.s2, r.c1, r.kr]));
-    ok('Basis: Vorerkrankung Kolik zahlt nicht, sonst Kolik bis 1.500 €', r.bk.betrag === 0 && /bekannt/.test(r.bk.text) && r.bk2.betrag === -1500, JSON.stringify([r.bk, r.bk2]));
+    ok('Basis: Vorerkrankung Kolik zahlt nicht, sonst Kolik bis 1.500 € abzüglich 500 € Selbstbeteiligung', r.bk.betrag === 0 && /bekannt/.test(r.bk.text) && r.bk2.betrag === -1000 && /Selbstbeteiligung 500/.test(r.bk2.text), JSON.stringify([r.bk, r.bk2]));   /* Bella hat 500 € Selbstbeteiligung */
     ok('Kolik-Fenster nennt die Versicherung („übernimmt etwa 9.500 €“ / „Keine OP-Versicherung“)', /übernimmt etwa 9\.500/.test(r.kurz) && /Keine OP-Versicherung/.test(r.kein), JSON.stringify([r.kurz, r.kein]));
     /* Kolik-OP mit Premium: Rechnung 9.500 € inkl. 7 Tage, Versicherung übernimmt alles */
     r = await pg.evaluate(() => { const zu = () => { document.getElementById('dlg').hidden = true; }; const A = spiel.boxen[0].pferd; A.befunde = []; KOLIK_ART.__ok = { opTod: 0 };
@@ -73,11 +75,11 @@ const [BW, BH] = (process.argv[3] || '1366x768').split('x').map(Number);
     /* Lebensversicherung (Klicks): Fine abschließen, Anna (mit chronischer Krankheit) abgelehnt */
     await pg.evaluate(() => { document.getElementById('dlg').hidden = true; spiel.boxen[5].pferd.befunde = []; spiel.boxen[5].pferd.pflege.gesundheit = 100; const A = spiel.boxen[0].pferd; A.befunde = []; const bf = befundNeu(A, 'arthrose', 2, 'Test'); bf.bemerkt = null; finanzTab = 'vers'; zeigeHof('finanzen'); }); await pg.waitForTimeout(300);
     g0 = await pg.evaluate(() => spiel.geld); const fId = await pid('Fine');
-    await pg.click(`[data-vleben="${fId}"]`); await pg.waitForTimeout(250); await bild('V6-leben'); await pg.click('#dlgKnoepfe button[data-txt^="Untersuchen"]'); await pg.waitForTimeout(300);
+    await pg.click(`[data-vleben="${fId}"]`); await pg.waitForTimeout(250); await bild('V6-leben'); await pg.click('#dlgKnoepfe button[data-txt^="Nur Tod"]'); await pg.waitForTimeout(200); await pg.click('#dlgKnoepfe button[data-txt^="Ohne"]'); await pg.waitForTimeout(300);
     r = await pg.evaluate(() => ({ L: spiel.boxen[5].pferd.vers && spiel.boxen[5].pferd.vers.leben, geld: spiel.geld, mw: Math.max(1000, Math.round(marktwert(spiel.boxen[5].pferd) / 500) * 500) }));
     const sum = r.L && r.L.summe;
     ok(`Lebensversicherung Fine: Summe ${sum} € (Marktwert), Untersuchung 200 € + Beitrag ${Math.round(sum * 0.017 / 4)} €`, r.L && r.L.summe === r.mw && g0 - r.geld === 200 + Math.round(sum * 0.017 / 4), JSON.stringify([r, g0 - r.geld]));
-    await pg.click(`[data-vleben="${await pid('Anna')}"]`); await pg.waitForTimeout(250); await pg.click('#dlgKnoepfe button[data-txt^="Untersuchen"]'); await pg.waitForTimeout(300); t = await pg.innerText('#dlgInhalt'); await bild('V7-abgelehnt'); await pg.click('#dlgKnoepfe button').catch(() => {});
+    await pg.click(`[data-vleben="${await pid('Anna')}"]`); await pg.waitForTimeout(250); await pg.click('#dlgKnoepfe button[data-txt^="Nur Tod"]'); await pg.waitForTimeout(200); await pg.click('#dlgKnoepfe button[data-txt^="Ohne"]'); await pg.waitForTimeout(300); t = await pg.innerText('#dlgInhalt'); await bild('V7-abgelehnt'); await pg.click('#dlgKnoepfe button').catch(() => {});
     r = await pg.evaluate(() => ({ L: (spiel.boxen[0].pferd.vers || {}).leben, bem: !!spiel.boxen[0].pferd.befunde.find(b => b.art === 'arthrose').bemerkt }));
     ok('Anna mit unerkannter Arthrose: Untersuchung findet sie, Versicherung lehnt ab', !r.L && r.bem && /Abgelehnt/.test(t) && /Arthrose/.test(t), t.slice(0, 200) + JSON.stringify(r));
     /* Tod: Fine wird erlöst → Versicherung zahlt; Vernachlässigung zahlt nicht */
@@ -94,8 +96,8 @@ const [BW, BH] = (process.argv[3] || '1366x768').split('x').map(Number);
       return { a, b, d: g - g1, R: R && R.betrag, brief: !!x }; });
     ok(`Haftpflicht-Schaden: mit Versicherung 0 € (Brief), ohne Rechnung von Familie Krüger (${r.R} €)`, r.a.versichert && r.d === 0 && r.brief && !r.b.versichert && r.R === r.b.betrag && r.R >= 600, JSON.stringify(r));
     /* Beiträge zu Beginn der Jahreszeit */
-    r = await pg.evaluate(() => { spiel.hof.haftpflicht = { ab: spiel.tag }; const g = spiel.geld; versJahreszeit(); const lb = alleEigenenPferde().filter(x => x.p.vers && x.p.vers.leben).reduce((a, x) => a + lebenJz(x.p.vers.leben), 0); return { d: g - spiel.geld, soll: 175 + 65 + lb + 28 }; });
-    ok(`Beiträge je Jahreszeit: ${r.d} € (OP 175 + 65, Leben, Haftpflicht 28)`, r.d === r.soll, JSON.stringify(r));
+    r = await pg.evaluate(() => { spiel.hof.haftpflicht = { ab: spiel.tag }; const g = spiel.geld; versJahreszeit(); const lb = alleEigenenPferde().filter(x => x.p.vers && x.p.vers.leben).reduce((a, x) => a + lebenJz(x.p.vers.leben), 0); return { d: g - spiel.geld, soll: 175 + 51 + lb + 28 }; });
+    ok(`Beiträge je Jahreszeit: ${r.d} € (OP 175 + 51 mit Selbstbeteiligung, Leben, Haftpflicht 28)`, r.d === r.soll, JSON.stringify(r));
     ok('keine Seitenfehler', !errs.length, errs.join(' | '));
   } catch (e) { ok('Ablauf', false, e.message.split('\n')[0]); await bild('FEHLER'); }
   console.log(L.join('\n')); await b.close(); process.exit(L.some(x => x.startsWith('✗')) ? 1 : 0);

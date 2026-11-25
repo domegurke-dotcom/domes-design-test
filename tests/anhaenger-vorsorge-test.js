@@ -27,9 +27,12 @@ const [BW, BH] = (process.argv[3] || '1366x768').split('x').map(Number);
     ok(`in die Klinik ohne Anhänger: ${r.d} € Pferdetaxi abgebucht, Klinik-Ziel nennt es`, r.d === r.taxi && r.f && /Pferdetaxi/.test(r.k), JSON.stringify(r));
     /* 3. Anhänger kaufen (Klicks) → danach kein Taxi, keine Miete */
     let g0 = await pg.evaluate(() => spiel.geld);
-    await pg.click('#anhKaufen'); await pg.waitForTimeout(250); await bild('A2-kaufen'); await pg.click('#dlgKnoepfe button[data-txt="Kaufen"]'); await pg.waitForTimeout(300); await bild('A3-gekauft');
+    await pg.click('#anhKaufen'); await pg.waitForTimeout(250); await bild('A2-kaufen'); ok("Kauf-Fenster: 4 Anhänger (gebraucht + 3 neue) mit Unterhalt und Info-Knöpfen", await pg.evaluate(() => document.querySelectorAll("#dlgKnoepfe button").length === 5 && document.querySelectorAll("#dlgInhalt [data-begriff]").length === 3 && /Unterhalt je Jahr/.test(document.getElementById("dlgInhalt").innerText)));
+    await pg.click('#dlgKnoepfe button[data-txt^="Gebraucht"]'); await pg.waitForTimeout(300); await bild('A3-gekauft');
     r = await pg.evaluate(() => { const B = spiel.boxen[1].pferd, bf = befundNeu(B, 'husten', 2, 'Test'); bf.bemerkt = { von: 'du', tag: spiel.tag }; const g = spiel.geld; ANH_ZIEL.stationaer.aus(B, spiel.boxen[1]);
       return { geld: g, d: g - spiel.geld, eigen: eigenerAnhaenger(), mit: besuchKosten(80, true).miete, txt: document.getElementById('nebenSchirm').innerText }; });
+    const un = await pg.evaluate(() => { const g = spiel.geld, A = spiel.hof.anhaenger; jahreszeitBeginn(); const d1 = g - spiel.geld; return { d1, m: A.m, hu: A.huJ, j: datum().j }; });
+    ok(`Unterhalt je Jahreszeit (gebraucht 450 € / Jahr): Buchung enthält 113 € (${JSON.stringify(un)})`, un.m === "gebraucht" && un.hu === un.j, JSON.stringify(un));
     ok('Anhänger gekauft (6.700 €), danach Klinik ohne Taxi und Besuch ohne Anhängermiete', r.eigen && g0 - r.geld === 6700 && r.d === 0 && r.mit === 0 && /eigenen Pferdeanhänger/.test(r.txt), JSON.stringify(r).slice(0, 300));
     r = await pg.evaluate(() => { const H = spiel.hof.anhaenger; delete spiel.hof.anhaenger; const m = besuchKosten(80, true).miete; spiel.hof.anhaenger = H; return m; });
     ok('ohne eigenen Anhänger kostet ein Besuch mit Pferd Anhängermiete', r > 0, String(r));

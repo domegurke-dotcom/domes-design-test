@@ -133,9 +133,36 @@ async function spiele(nr, jahre) {
       const ausbildung = () => { if (!Sx.azubi || istZucht()) return; const d = datum();
         if (!spiel.ausbilderschein) { if (d.s === 0 && (spiel.geld || 0) > AUSBILDERSCHEIN + reserve()) { buchen(-AUSBILDERSCHEIN, "Ausbilderschein (Kurs)"); spiel.ausbilderschein = true; merk("Ausbilderschein gemacht (" + fmt(AUSBILDERSCHEIN) + ")"); } return; }
         if (d.s === 1 && !(spiel.mitarbeiter || []).some(m => m.typ === "azubi" && m.bis == null) && (spiel.geld || 0) > reserve() + 300) { try { mitarbeiterDialog("azubi"); const b = document.querySelector("[data-einst]"); if (b) { b.click(); merk("Azubi eingestellt (Ausbildung beginnt im Herbst)"); } } catch (er) { } zu(); } };
+      // ---------- Einstellen über Stellenanzeige oder Personalvermittlung (26.11.2026, Auftrag 20/25 Block 2) – alles mit echten Klicks in den Fenstern ----------
+      // Weg: Anzeige aufgeben → Bewerbungen abwarten (Brief) → mit allen ein Gespräch (3 Fragen) → den mit dem besten Eindruck einstellen, den anderen absagen.
+      // Anfänger nehmen meist die Agentur (schnell, kostet ein Gehalt), Fortgeschrittene oft die Zeitung, Experten immer die kostenlose Online-Jobbörse.
+      // Kommt auf eine Anzeige keine Bewerbung, nimmt der Spieler beim nächsten Mal die Agentur. Rückgabe true = eingestellt oder läuft noch.
+      const agentur = (typ, grund) => { try { mitarbeiterDialog(typ); const b = document.querySelector("[data-einst]"); if (b) { b.click(); merk(`${MA_TYP[typ].name} über die Personalvermittlung eingestellt (${grund})`); zu(); return true; } } catch (e) { } zu(); return false; };
+      const anstellen = (typ, grund) => { T.anz = T.anz || {}; const AW = { anf: [0.3, "zeitung"], fort: [0.7, "zeitung"], exp: [1, "online"] }[Sx.stufe] || [0, "zeitung"];
+        if (typeof STELLE_TYPEN === "undefined" || !STELLE_TYPEN.includes(typ)) return agentur(typ, grund);
+        const A = T.anz[typ], BW = spiel.bewerbungen || {};
+        if (A && A.offen) { const St = (spiel.stellen || []).find(s => s.id === A.id);
+          if (St && !St.fertig) return true;   // Anzeige läuft noch, Bewerbungen kommen per Post
+          const L = Object.entries(BW).filter(([, B]) => B.stelle === A.id && B.status === "neu");
+          if (!L.length) { A.offen = false; A.fehl = (A.fehl || 0) + 1; merk(`Stellenanzeige ${MA_TYP[typ].name}: keine (passende) Bewerbung mehr – ${A.fehl >= 1 ? "nächstes Mal über die Agentur" : "neuer Versuch"}`); return false; }
+          L.forEach(([bid, B]) => { if (B.antw) return; try { gespraechDialog(bid); [...document.querySelectorAll("[data-gsf]")].slice(0, 3).forEach(c => c.click()); const fb = document.querySelector('#dlgKnoepfe button[data-txt="Fragen stellen"]'); if (fb) fb.click(); } catch (e) { } zu(); });
+          const best = L.filter(([, B]) => B.antw).sort((a, b) => (b[1].gut || 0) - (a[1].gut || 0) || (b[1].x.eig || []).includes("zuverlaessig") - (a[1].x.eig || []).includes("zuverlaessig"))[0];
+          if (!best) { A.offen = false; return false; }
+          let ok = false; try { bewerbungEntscheid(best[0]); const eb = [...document.querySelectorAll("#dlgKnoepfe button")].find(b => /^Einstellen/.test(b.dataset.txt || "")); if (eb && (spiel.geld || 0) > reserve()) { eb.click(); ok = best[1].status === "ja"; } } catch (e) { } zu();
+          if (ok) { merk(`${MA_TYP[typ].name} über Stellenanzeige eingestellt: ${best[1].x.name}, ${best[1].gut || 0} gute Antworten von ${(best[1].antw || []).length}, Gehalt ${fmt(best[1].wunsch)} (${grund}; ${L.length} Bewerbung${L.length > 1 ? "en" : ""})`); T.maAnzeige = (T.maAnzeige || 0) + 1;
+            L.filter(([bid]) => bid !== best[0]).forEach(([bid]) => { try { bewerbungEntscheid(bid); const ab = document.querySelector('#dlgKnoepfe button[data-txt="Absagen"]'); if (ab) ab.click(); } catch (e) { } zu(); });
+            A.offen = false; A.fehl = 0; return true; }
+          return true; }
+        if ((A && A.fehl) || zuf() > AW[0]) { if (A) A.fehl = 0; return agentur(typ, grund); }
+        try { mitarbeiterDialog(typ); const sn = document.getElementById("stelleNeu"); if (!sn) { zu(); return agentur(typ, grund); } sn.click();
+          const r = document.querySelector(`[name="stMed"][value="${AW[1]}"]`); if (r) r.click();
+          const vor = (spiel.stellen || []).length; const ab = document.querySelector('#dlgKnoepfe button[data-txt="Anzeige aufgeben"]'); if (ab) ab.click();
+          const neu = (spiel.stellen || []).length > vor ? spiel.stellen[spiel.stellen.length - 1] : null; zu();
+          if (neu) { T.anz[typ] = { id: neu.id, offen: true, tag: spiel.tag }; merk(`Stellenanzeige aufgegeben: ${MA_TYP[typ].name}, ${STELLE.medien[neu.medium].n} (${grund})`); return true; } } catch (e) { zu(); }
+        return agentur(typ, grund); };
       // ---------- Mitarbeiter: nur 3 Pferde selbst, ab dem 4. ein Stallbursche (je 3 Boxen) – Dome 6.11. ----------
       const personal = () => { const n = pferdeZahl(), sb = (spiel.mitarbeiter || []).filter(m => m.typ === "stallbursche" && m.bis == null).length;
-        const azPlan = Sx.azubi ? 2 : 0; if (n >= 4 && sb < Math.ceil(Math.max(0, n - 3 - azPlan) / 3) && (spiel.geld || 0) > reserve() + 600) { try { mitarbeiterDialog("stallbursche"); const b = document.querySelector("[data-einst]"); if (b) { b.click(); merk(`Stallbursche eingestellt (${n} Pferde)`); } } catch (e) { } zu(); } };
+        const azPlan = Sx.azubi ? 2 : 0; if (n >= 4 && sb < Math.ceil(Math.max(0, n - 3 - azPlan) / 3) && (spiel.geld || 0) > reserve() + 600) anstellen("stallbursche", `${n} Pferde`); };
       // ---------- Zucht nach Domes Strategie (mit Abweichungen je Typ) ----------
       const zucht = () => { if (j <= 2) return;   // Dome 6.11.: die ersten 2 Jahre nur Pensionspferde, eigene Pferde erst danach
         const d = datum(), geld = spiel.geld || 0, E = eigene();
@@ -283,11 +310,11 @@ async function spiele(nr, jahre) {
       const staubarm = () => pensBoxen().every(b => EINSTREU[b.einstreu] && !EINSTREU[b.einstreu].staub);
       const kannErfuellen = k => k === "putzen" || k === "medizin" || k === "waschen" ? true : true;   // Pflege macht der Spieler selbst; ein Pfleger erst, wenn er mindestens Sx.pflegerAb Pferde über seine 3 hinaus pflegen müsste (pflegerBedarf, Dome 7.11.)   // Bewegen: ein Bereiter nach Bedarf kommt von außerhalb (BEREITER_EXTERN), dafür braucht es keinen festen Bereiter
       const vorbereiten = () => { if (istZucht() || j < Sx.leistAb) return; const R = pensionRegeln(), k = Sx.leistungen.find(x => !R.leistungen[x] && leistungMoeglich(x) && !kannErfuellen(x)); if (!k) return;
-        if (k === "putzen" || k === "medizin" || k === "waschen") { if ((spiel.geld || 0) > reserve() + 700) { try { mitarbeiterDialog("pfleger"); const b = document.querySelector("[data-einst]"); if (b) { b.click(); merk(`Pferdepfleger eingestellt (für die Zusatzleistung ${PENSION_LEISTUNG[k].n.replace(/\u00ad/g, '')})`); } } catch (e) { } zu(); } return; }
+        if (k === "putzen" || k === "medizin" || k === "waschen") { if ((spiel.geld || 0) > reserve() + 700) anstellen("pfleger", `für die Zusatzleistung ${PENSION_LEISTUNG[k].n.replace(/\u00ad/g, '')}`); return; }
         if (k === "einstreu") { const F = futterkammer(); pensBoxen().filter(b => !(EINSTREU[b.einstreu] && !EINSTREU[b.einstreu].staub)).slice(0, 2).forEach(b => { if ((F.lager.spaene || 0) < EINSTREU.spaene.kg && (spiel.geld || 0) > 400 + reserve()) { try { futterKaufen("spaene", 200); } catch (e) { } }
             try { einstreuWahl(b); const x = document.querySelector('[data-estreu="spaene"]'); if (x && !x.disabled) { x.click(); merk(`Box ${bnr(spiel.boxen.indexOf(b))} auf Späne umgestellt`); } else zu(); } catch (e) { zu(); } }); } };
       const pflegerBedarf = () => { if (istZucht() || maDa(["pfleger", "pferdewirt", "pferdewirtHS"])) return; const n = einstellerListe().filter(e => !e.art && e.leistungen && (e.leistungen.putzen || e.leistungen.waschen || e.leistungen.medizin)).length; if (n - 3 < (Sx.pflegerAb || 4) || (spiel.geld || 0) <= reserve() + 700) return;
-        try { mitarbeiterDialog("pfleger"); const b = document.querySelector("[data-einst]"); if (b) { b.click(); merk("Pferdepfleger eingestellt (" + n + " Pferde mit gebuchter Pflege, 3 macht er selbst)"); } } catch (er) { } zu(); };
+        anstellen("pfleger", n + " Pferde mit gebuchter Pflege, 3 macht er selbst"); };
       const einstreuWunsch = () => { if (istZucht()) return; einstellerListe().filter(e => !e.art && e.leistungen && e.leistungen.einstreu).forEach(e => { const b = spiel.boxen.find(x => x.pferd && fremd(x.pferd) && einstellerVon(x.pferd) === e); if (!b || b.offen || (EINSTREU[b.einstreu] && !EINSTREU[b.einstreu].staub)) return; const F = futterkammer(); if ((F.lager.spaene || 0) < EINSTREU.spaene.kg && (spiel.geld || 0) > 400 + reserve()) { try { futterKaufen("spaene", 200); } catch (er) { } }
           try { einstreuWahl(b); const x = document.querySelector('[data-estreu="spaene"]'); if (x && !x.disabled) { x.click(); merk("Box " + bnr(spiel.boxen.indexOf(b)) + " auf Späne umgestellt (Einsteller wünscht staubarme Einstreu)"); } else zu(); } catch (er) { zu(); } }); };   // Dome 7.11.: nur wenn ein Einsteller bessere Einstreu haben will
       // Einstreu-Vorrat für alle Boxen eine Jahreszeit im Voraus (wie jeder Spieler)

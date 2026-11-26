@@ -14,7 +14,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   ok('Stufe 1: Reisen frei', await pg.evaluate(() => freiNr() === 1 && freiStufe('markt', 'reisen')));
   // alle Rassen mit Herkunftsland im Ausland haben ein Ziel
   const fehlt = await pg.evaluate(() => RASSEN.map(r => r.id).filter(id => !Object.values(REISE).some(R => R.rassen.includes(id))));
-  ok('nur deutsche Rassen ohne Reiseziel', fehlt.every(x => ['traber', 'hannoveraner', 'holsteiner', 'oldenburger', 'trakehner', 'lewitzer'].includes(x)), fehlt.join(' '));
+  ok('nur deutsche Rassen ohne Reiseziel', fehlt.every(x => ['traber', 'hannoveraner', 'holsteiner', 'oldenburger', 'westfale', 'trakehner', 'lewitzer'].includes(x)), fehlt.join(' '));
   ok('jedes Ziel hat Angebote', await pg.evaluate(() => Object.keys(REISE).every(z => reiseAngebote(z).length >= 6 && reiseAngebote(z).every(h => REISE[z].rassen.includes(h.rasse)))));
   // 1. Spanien: Kachel im Markt antippen, losfahren, Pferd kaufen
   await pg.evaluate(() => zeigeMarkt(null)); await pg.waitForTimeout(300);

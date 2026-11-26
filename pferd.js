@@ -154,6 +154,11 @@ const RASSEN = [
     text: "Modernes Sportpferd aus dem Oldenburger Land – vor allem für die Dressur gezüchtet, langbeinig, mit langem Hals und schwungvollen, raumgreifenden Gängen.",
     farben: ["brauner", "dunkelbrauner", "rappe", "fuchs", "dfuchs", "schimmel"],
     k: { nk: 0.35, len: 1.03, depth: .44, legT: .088, neck: .62, nAng: 54, crest: .05, head: .43, hAng: 55, profile: 0, hw: .98, jw: 1, muz: .98, ear: .1, mane: "kurz", maneLen: .05, vol: .7, fore: .3, tail: .65, tvol: .8, tset: .32, feather: 0, croup: .38, hq: 1, eye: 1.02 } },
+  // Westfale (26.11.2026, Dome: Westfale/Connemara/Welsh Pony einbauen) – Spielkopf wie die anderen Warmblüter (Keilkopf), bis Dome eigene Köpfe zeichnet
+  { id: "westfale", name: "Westfale", herkunft: "Westfalen / Deutschland", h: [160, 175],
+    text: "Vielseitiges Sportpferd aus Westfalen, einem der größten Warmblut-Zuchtgebiete der Welt – im Springen und in der Dressur erfolgreich, kräftig gebaut und leistungsbereit. Erkennbar am Brand „W“ im gekrönten Schild.",
+    farben: ["brauner", "dunkelbrauner", "fuchs", "dfuchs", "rappe", "schimmel", "palomino", "buckskin", "russbuckskin"],
+    k: { nk: 0.4, len: 1.025, depth: .455, legT: .09, neck: .59, nAng: 52, crest: .055, head: .44, hAng: 55, profile: 0, hw: 1, jw: 1.01, muz: 1, ear: .1, mane: "kurz", maneLen: .05, vol: .7, fore: .3, tail: .65, tvol: .8, tset: .3, feather: 0, croup: .42, hq: 1.03, eye: 1 } },
   { id: "isi", name: "Islandpferd", herkunft: "Island", h: [125, 145],
     text: "Robustes Gangpferd (Tölt!) mit dichter Doppelmähne und fast allen Farben der Pferdewelt.",
     farben: ["fuchs", "dfuchs", "brauner", "rappe", "schimmel", "braunfalbe", "mausfalbe", "palomino", "windfarben", "isabell", "fuchsschecke", "braunschecke"],
@@ -175,6 +180,15 @@ const RASSEN = [
     text: "Kraftvoller, temperamentvoller Cob aus Wales mit spektakulärem Trab, dichter Mähne und leichtem Fesselbehang – robust und genügsam.",
     farben: ["fuchs", "dfuchs", "brauner", "rappe", "dunkelbrauner", "palomino", "buckskin", "schimmel"],
     k: { nk: 0.9, len: .98, depth: .5, legT: .1, neck: .52, nAng: 58, crest: .09, head: .42, hAng: 55, profile: -.1, hw: 1.04, jw: 1.1, muz: .95, ear: .085, mane: "lang", maneLen: .22, vol: 1.1, fore: .8, tail: .8, tvol: 1.1, tset: .35, feather: .35, croup: .5, hq: 1.05, eye: 1.1 } },
+  // Connemara-Pony und Welsh Pony (26.11.2026) – Spielkopf (gerader Kopf bzw. Hechtkopf), bis Dome eigene Köpfe zeichnet
+  { id: "connemara", name: "Connemara-Pony", herkunft: "Irland (Connemara)", h: [128, 148],
+    text: "Trittsicheres, ausdauerndes Reitpony von der irischen Westküste – kompakt, mit guter Gurtentiefe, harten Hufen und viel Springvermögen, gutmütig und intelligent. Meist Schimmel, dazu Braune, Falben und Rappen.",
+    farben: ["schimmel", "brauner", "dunkelbrauner", "rappe", "buckskin", "russbuckskin", "braunfalbe", "mausfalbe", "gelbfalbe", "palomino", "isabell", "smokygrulla", "bayroan", "blueroan", "fuchs"],
+    k: { nk: .8, len: .99, depth: .5, legT: .1, neck: .5, nAng: 54, crest: .06, head: .42, hAng: 54, profile: 0, hw: 1.02, jw: 1.05, muz: 1, ear: .09, mane: "lang", maneLen: .16, vol: .95, fore: .6, tail: .8, tvol: 1, tset: .3, feather: .08, croup: .45, hq: 1.05, eye: 1.05 } },
+  { id: "welshpony", name: "Welsh Pony (Sektion A/B)", herkunft: "Wales", h: [105, 137],
+    text: "Edles, zähes Pony aus den walisischen Bergen: das kleine Welsh Mountain Pony (Sektion A, bis 122 cm) und das größere Reitpony (Sektion B, bis 137 cm) – mit dem leicht konkaven Kopf, großen Augen, hoch getragenem Schweif und raumgreifendem Trab.",
+    farben: ["schimmel", "rappe", "brauner", "dunkelbrauner", "fuchs", "dfuchs", "palomino", "buckskin", "russbuckskin", "braunfalbe", "rotfalbe", "mausfalbe", "gelbfalbe", "windfarben", "isabell", "smokygrulla", "bayroan", "blueroan", "rotschimmel"],
+    k: { nk: .9, len: .96, depth: .5, legT: .1, neck: .5, nAng: 56, crest: .07, head: .4, hAng: 55, profile: -.35, hw: 1, jw: 1.1, muz: .88, ear: .08, mane: "lang", maneLen: .2, vol: 1, fore: .7, tail: .85, tvol: 1, tset: .55, feather: .08, croup: .35, hq: 1.04, eye: 1.18 } },
   { id: "clydesdale", name: "Clydesdale", herkunft: "Schottland", h: [163, 183],
     text: "Schottischer Kaltblüter mit viel Weiß (Sabino), hohem Gang und langem, seidigem Fesselbehang – etwas leichter und höherbeiniger als das Shire.",
     farben: ["sa_brauner", "sa_rappe", "brauner", "sa_fuchs", "rappe"],
@@ -232,7 +246,7 @@ const RASSEN = [
 // nicht k.head einzeln – so bleiben die Rassen untereinander proportional. Neue Rassen hier mit eintragen.
 const KOPF_STIL = 1.2;
 const KOPF_REAL = { araber: .35, shagya: .35, angloaraber: .355, tekke: .36, vollblut: .36, traber: .37, franztraber: .37, standardbred: .38, quarter: .36, marwari: .36, trakehner: .365, hannoveraner: .37, holsteiner: .37, oldenburger: .37, andalusier: .37, lipizzaner: .37,
-  knabstrupper: .37, appaloosa: .365, paint: .36, lewitzer: .39, barockpinto: .38, noriker: .40, friese: .38, welshcob: .38, haflinger: .39, fjord: .39, isi: .39, fell: .39, dales: .39, tinker: .39, shire: .40, clydesdale: .40, shetty: .45 };
+  knabstrupper: .37, appaloosa: .365, paint: .36, lewitzer: .39, barockpinto: .38, noriker: .40, friese: .38, welshcob: .38, haflinger: .39, fjord: .39, isi: .39, fell: .39, dales: .39, tinker: .39, shire: .40, clydesdale: .40, shetty: .45, westfale: .37, connemara: .385, welshpony: .37 };
 RASSEN.forEach(r => { if (KOPF_REAL[r.id]) r.k.head = Math.round(KOPF_REAL[r.id] * KOPF_STIL * 1000) / 1000; });
 const rasseById = id => RASSEN.find(r => r.id === id);
 
@@ -1344,11 +1358,14 @@ const PROFIL = {
   hannoveraner: { gang: [6.5, 6.5, 6.5], char: [60, 60, 70, 70, 80, 60, 65], dress: 1, koerper: [75, 70, 65, 65, 65, 80, 75, 65, 65, 65], kopf: [75, 70, 70] },
   holsteiner: { gang: [6.5, 6.5, 6.5], char: [60, 60, 70, 70, 80, 60, 65], dress: .95, koerper: [80, 70, 65, 65, 65, 80, 75, 65, 65, 65], kopf: [75, 70, 70] },
   oldenburger: { gang: [6.5, 6.5, 6.5], char: [60, 60, 70, 70, 80, 60, 65], dress: 1.06, koerper: [75, 70, 65, 65, 65, 80, 75, 65, 65, 65], kopf: [75, 70, 70] },
+  westfale:     { gang: [6.5, 6.5, 6.5], char: [60, 60, 70, 70, 80, 60, 65], dress: 1, koerper: [78, 70, 65, 65, 65, 80, 75, 65, 65, 65], kopf: [75, 70, 70] },   // Westfale: wie Hannoveraner, etwas mehr Kraft (Springen)
   isi:          { gang: [5.5, 5, 5.5],   char: [60, 70, 80, 75, 80, 75, 45], dress: .7, toelt: 1, pass: .55, koerper: [65, 80, 50, 55, 65, 60, 70, 90, 80, 90], kopf: [65, 60, 65] },
   tinker:       { gang: [5, 5, 4.5],     char: [30, 70, 55, 85, 60, 85, 30], dress: .6, koerper: [75, 65, 40, 45, 50, 55, 55, 80, 65, 80], kopf: [55, 60, 50] },
   tekke:        { gang: [6, 5.5, 7],     char: [85, 55, 85, 55, 75, 40, 80], dress: .7, koerper: [60, 90, 85, 80, 65, 70, 65, 85, 80, 75], kopf: [70, 55, 80] },
   trakehner:    { gang: [6.5, 6.5, 6.5], char: [70, 60, 75, 70, 80, 55, 75], dress: .95, koerper: [70, 78, 70, 70, 65, 80, 75, 68, 70, 68], kopf: [75, 70, 75] },
   welshcob:     { gang: [5.5, 7, 5.5],   char: [65, 70, 75, 75, 75, 70, 50], dress: .75, koerper: [75, 75, 50, 60, 60, 65, 65, 82, 72, 82], kopf: [65, 60, 65] },
+  connemara:    { gang: [6, 6, 6.5],     char: [55, 70, 70, 75, 80, 80, 45], dress: .75, koerper: [74, 76, 52, 60, 66, 66, 70, 84, 76, 84], kopf: [66, 64, 68] },   // Connemara: trittsicher, springfreudig, hart (selbst gesetzt nach Zuchtziel)
+  welshpony:    { gang: [5.5, 6.5, 5.5], char: [60, 70, 80, 75, 75, 70, 55], dress: .75, koerper: [68, 72, 50, 62, 78, 72, 70, 80, 74, 80], kopf: [65, 62, 70] },   // Welsh Pony: raumgreifender Trab, wendig (selbst gesetzt nach Zuchtziel)
   clydesdale:   { gang: [6, 5.5, 4.5],   char: [30, 75, 55, 85, 75, 85, 35], dress: .55, koerper: [85, 60, 30, 35, 35, 50, 55, 75, 60, 70], kopf: [55, 65, 45] },
   fell:         { gang: [5.5, 6, 5],     char: [40, 75, 65, 80, 75, 80, 35], dress: .65, koerper: [75, 80, 45, 50, 60, 60, 62, 88, 75, 90], kopf: [60, 60, 60] },
   dales:        { gang: [5.5, 6, 5],     char: [40, 75, 60, 80, 80, 80, 35], dress: .6, koerper: [80, 80, 45, 50, 55, 55, 60, 86, 75, 88], kopf: [60, 62, 55] },
@@ -1495,9 +1512,9 @@ var KOPF_GROESSE = 1.15;
 const ABZ_VARIANTE = { "schmaleBlesse~geschwungen": { name: "geschwungen", freq: .022, scale: 25, seed: 11 }, "blesse~unregelmaessig": { name: "unregelmäßiger Rand", freq: .022, scale: 25, seed: 13 } };
 // Ohrgröße je Rasse (v430, Dome): Araber klein und fein, Ponys und Quarter klein, Kaltblüter groß – alle anderen 1
 const OHR_RASSE = { traber: .95, franztraber: .95, standardbred: .95, araber: .82, shagya: .85, angloaraber: .88, quarter: .88, shetty: .85, isi: .88, welshcob: .88, fell: .9, dales: .92, fjord: .9, haflinger: .95, vollblut: .95, lipizzaner: .95,
-  appaloosa: .9, paint: .88, knabstrupper: 1, lewitzer: .88, noriker: 1.05, barockpinto: 1, tekke: 1.08, marwari: 1, shire: 1.12, clydesdale: 1.12, tinker: 1.05, friese: 1, andalusier: 1, hannoveraner: 1, holsteiner: 1, oldenburger: 1, trakehner: 1 };
+  appaloosa: .9, paint: .88, knabstrupper: 1, lewitzer: .88, noriker: 1.05, barockpinto: 1, tekke: 1.08, marwari: 1, shire: 1.12, clydesdale: 1.12, tinker: 1.05, friese: 1, andalusier: 1, hannoveraner: 1, holsteiner: 1, oldenburger: 1, trakehner: 1, westfale: 1, connemara: .9, welshpony: .85 };
 // typische Kopfform je Rasse (fehlt die Rasse: gerader Kopf)
-const KOPFFORM_RASSE = { traber: "gerade", franztraber: "gerade", standardbred: "ramsnase", araber: "hecht", shagya: "hecht", angloaraber: "hecht", welshcob: "hecht", vollblut: "keil", trakehner: "keil", hannoveraner: "keil", holsteiner: "keil", oldenburger: "keil", tekke: "keil",
+const KOPFFORM_RASSE = { traber: "gerade", franztraber: "gerade", standardbred: "ramsnase", araber: "hecht", shagya: "hecht", angloaraber: "hecht", welshcob: "hecht", welshpony: "hecht", westfale: "keil", vollblut: "keil", trakehner: "keil", hannoveraner: "keil", holsteiner: "keil", oldenburger: "keil", tekke: "keil",
   shire: "ramsnase", clydesdale: "ramsnase", tinker: "ramsnase", friese: "ramsnase", barockpinto: "ramsnase", andalusier: "ramsnase", lipizzaner: "rams" };
 // alte Admin-Wahl (p.nase) → neue Form
 const RASSE_KOPF = new Proxy({}, { get: (t, r) => typeof r === "string" ? kopfKey({ f: KOPFFORM_RASSE[r] || "gerade", s: 2 }) : undefined });
@@ -1632,6 +1649,7 @@ const FREMDBLUT = {
   araber: "vollblut", friese: "andalusier", marwari: "araber", fjord: "haflinger", haflinger: "araber",
   shetty: "isi", shire: "tinker", andalusier: "araber", lipizzaner: "andalusier", vollblut: "araber",
   quarter: "vollblut", hannoveraner: "vollblut", holsteiner: "vollblut", oldenburger: "vollblut", isi: "fjord", tinker: "shire", tekke: "araber",
+  westfale: "vollblut", connemara: "vollblut", welshpony: "araber",
   trakehner: "vollblut", welshcob: "araber", clydesdale: "shire", fell: "dales", dales: "fell", angloaraber: "vollblut", shagya: "araber",
   appaloosa: "quarter", knabstrupper: "trakehner", paint: "quarter", noriker: "haflinger", lewitzer: "welshcob", barockpinto: "friese",
 };
@@ -1697,7 +1715,7 @@ const NAMEN_HOBBY = {
 };
 // Zuchtnamen nach Rassengruppe: [Stuten, Hengste] – teils mit Vorsilbe (Sir, Donna …) zusammengesetzt
 const ZUCHT_GRUPPE = { traber: "traber", standardbred: "traber", franztraber: "franztraber", hannoveraner: "warm", holsteiner: "warm", oldenburger: "warm", trakehner: "warm", lipizzaner: "barock", andalusier: "spanisch", araber: "araber", angloaraber: "araber", shagya: "araber", tekke: "tekke", marwari: "marwari", vollblut: "vollblut", appaloosa: "western", paint: "western", knabstrupper: "knab", noriker: "noriker", lewitzer: "pony", barockpinto: "friese",
-  quarter: "western", isi: "isi", friese: "friese", haflinger: "haflinger", fjord: "fjord", shetty: "pony", welshcob: "welsh", fell: "britpony", dales: "britpony", shire: "britkalt", clydesdale: "britkalt", tinker: "tinker" };
+  quarter: "western", isi: "isi", friese: "friese", haflinger: "haflinger", fjord: "fjord", shetty: "pony", welshcob: "welsh", fell: "britpony", dales: "britpony", shire: "britkalt", clydesdale: "britkalt", tinker: "tinker", westfale: "warm", connemara: "connemara", welshpony: "welsh" };
 const ZUCHT_NAMEN = {
   traber: { S: ["Speedy Girl", "Abbelena", "Tiffany Diamant", "Queen of Speed", "Bella Trotter", "Lady Express", "Sunny Hanover", "Miss Lindy"], H: ["Express Boy", "Speedy Lindy", "Diamant Hanover", "Victory Wind", "Ready Cash", "Turbo Star", "Super Trotter", "Flash Boko"], von: ["Hanover", "Boko", "Diamant", "As", "Bi"] },   // Traber: oft Zuchtname angehängt (selbst gesetzt)
   franztraber: { S: ["Belle de Mai", "Jolie du Bocage", "Reine des Prés", "Fleur d'Écajeul", "Douce de Retz"], H: ["Roi du Vent", "Prince d'Écajeul", "Bold du Bocage", "Fakir de Retz", "Tonnerre des Prés"] },
@@ -1717,6 +1735,7 @@ const ZUCHT_NAMEN = {
   fjord: { S: ["Sigrid", "Solveig", "Ingrid", "Kari", "Liv", "Ragna", "Tora", "Hedda"], H: ["Gjest", "Rolf", "Odin", "Torvald", "Haakon", "Bjørn", "Sverre", "Leiv"] },
   pony: { S: ["Tilly", "Pippa", "Moppel", "Trixi", "Fluffy", "Krümel", "Bonnie", "Wuschel"], H: ["Barnaby", "Pumpkin", "Muffin", "Nugget", "Biscuit", "Hamish", "Rascal", "Pebbles"] },
   welsh: { S: ["Rhiannon", "Gwen", "Seren", "Myfanwy", "Arwen", "Ceridwen", "Eirlys", "Megan"], H: ["Dafydd", "Bryn", "Dylan", "Glyndwr", "Rhys", "Taliesin", "Owain", "Emrys"], von: ["Llanarth", "Derwen", "Thorneyside", "Nebo", "Menai"] },
+  connemara: { S: ["Maeve", "Aoife", "Siobhan", "Niamh", "Grainne", "Orla", "Roisin", "Saoirse"], H: ["Fintan", "Cormac", "Diarmuid", "Oisin", "Padraig", "Seamus", "Donal", "Eamon"], von: ["Clifden", "Letterfrack", "Roundstone", "Inagh"] },
   britpony: { S: ["Heather", "Bramble", "Moorland Rose", "Fern", "Lady Mary", "Primrose"], H: ["Laddie", "Highland Lad", "Moorland Prince", "Bracken", "Rowan", "Heathcliff"] },
   britkalt: { S: ["Duchess", "Bonnie", "Molly", "Maggie", "Lady Victoria", "Bluebell"], H: ["Duke", "Hercules", "Big Ben", "Prince Albert", "Clyde", "Sir Winston"] },
   tinker: { S: ["Maggie May", "Bonny", "Lucky Clover", "Molly Malone", "Shannon", "Kathleen"], H: ["Paddy", "Shamrock", "Mister Ben", "Seamus", "Finnegan", "Murphy"] },

@@ -31,6 +31,15 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Zähler danach N/N', txt(offenGruppeHTML(A, box)).includes('nacheinander ' + N + '/' + N), txt(offenGruppeHTML(A, box)).slice(0, 200));
     // Einzelbox: kein Bonus
     const E = mkP('Einzel', 'Stute', 0.6); E.fohlenABC = 0; const zb = spiel.boxen.findIndex(x => !x.offen && !x.pferd); if (zb >= 0) { spiel.boxen[zb].pferd = E; fohlenABC(E); ok('Einzelbox: kein Bonus', Math.abs(E.fohlenABC - Math.round(x0 * 100) / 100) < 0.011, E.fohlenABC); }
+    // Gruppen-Kachel, Blättern, Whiteboard
+    (spiel.mitarbeiter = spiel.mitarbeiter || []).push({ id: 'maT1', typ: 'stallbursche', name: 'Sven', w: false, wissen: {}, eig: [], gehalt: 300, ab: jzJetzt(), bis: null });
+    stallAlt = true; boxenGruppe = 'offen'; zeigeBoxen(); const kach = document.querySelectorAll('.boxen-liste [data-zubox]'); ok('Stallansicht: eine Kachel je Gruppe (nicht je Platz)', kach.length === offenG(), kach.length + ' / ' + offenG());
+    ok('Kachel zeigt Gruppenname und belegt', /belegt \d+ von \d+/.test(document.querySelector('.boxen-liste').textContent));
+    const b0 = setze(A); aktBox = spiel.boxen.indexOf(b0); spiel.aktBox = aktBox; const jetzt = aktBox; const hn = offenGruppeHTML(A, b0); ok('Blättern-Knöpfe in der Karte', /data-ognav="1"/.test(hn));
+    document.body.insertAdjacentHTML('beforeend', '<button id="navT" data-ognav="1">›</button>'); document.getElementById('navT').click(); await new Promise(r => setTimeout(r, 100)); ok('Blättern wechselt auf ein anderes belegtes Pferd der Gruppe', aktBox !== jetzt && spiel.boxen[aktBox].offen && !!spiel.boxen[aktBox].pferd, jetzt + ' → ' + aktBox);
+    const mm = spiel.mitarbeiter[0]; const og = (spiel.boxen[aktBox].og || 0); ok('Whiteboard: Mitarbeiter darf auf Gruppe', wbOk('m:maT1', 'og:' + og)); ok('Whiteboard: Pferd lässt sich nicht verschieben', !wbOk('p:' + aktBox, 'w:x:t') && !wbOk('k:' + aktBox, 'b:0'));
+    wbAnwenden('m:maT1', 'og:' + og); ok('alle Plätze der Gruppe auf Sven', offenGruppeBoxen(og).every(b => (b.maPlan || {}).stall === 'maT1'));
+    wbSicht = 'boxen'; ok('Whiteboard zeigt den Abschnitt', /Aufzucht-Offenstall/.test(whiteboardHTML()) && /Sven/.test(whiteboardHTML()));
     return out; });
   R.forEach(x => console.log(x)); const rot = R.filter(x => x.startsWith('✗')).length;
   console.log(errs.length ? '✗ Seitenfehler: ' + errs.join(' | ') : '✓ keine Seitenfehler'); console.log(rot ? `${rot} ✗` : 'alles ✓'); await b.close(); })();

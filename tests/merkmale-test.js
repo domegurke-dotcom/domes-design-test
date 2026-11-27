@@ -111,8 +111,7 @@ const { chromium } = require('playwright'); const path = require('path');
     ok('Fehler-Wörter: steile Schulter = starker Fehler, langer Hals = deutlicher Fehler', /sehr steil · starker Fehler/.test(t) && /sehr lang · deutlicher Fehler|lang · deutlicher Fehler/.test(t), (t.match(/Schulter \/ Widerrist[^S]*/) || [''])[0]);
     ok('Satz: Schwächen „zu steile Schulter“ und „zu langer Hals“', /Schwächen: zu steile Schulter und zu langer Hals\./.test(staerkenSatz(A)), staerkenSatz(A));
     ok('Satz ohne Schwächen (alles am Ziel)', /^Stärken: .*Keine auffälligen Schwächen\.$/.test(staerkenSatz(Bq)), staerkenSatz(Bq));
-    stufe('fort'); I = zeig('merkmale'); ok('Fortgeschritten: Balken ja, Noten nein', I.querySelectorAll('.skala.merk').length === 12 && !I.querySelector('.merk-noten'));
-    stufe('anf'); I = zeig('merkmale'); ok('Anfänger: keine Exterieur-Balken, Satz im Gesamteindruck, Vergleichen da', I.querySelectorAll('.skala.merk').length === 0 && /Stärken|Schwächen|durchschnittliches/.test(I.querySelector('[data-merk="gesamt"]').textContent) && !!I.querySelector('#vglKnopf'));
+    /* v1038: keine Modi mehr (Anfänger/Fortgeschritten) – die Prüfungen nach Stufe sind entfallen */
     stufe('exp'); vergleichId = Bq.id; I = zeig('merkmale'); ok('Vergleich: zweite Marke in jedem Exterieur-Balken und zweite Notenzeile', I.querySelectorAll('[data-merk="exterieur"] .skala.merk i.vgl').length === 12 && !!I.querySelector('.merk-noten .vgl-zeile')); vergleichId = null;
     spiel.admin = true; I = zeig('merkmale'); ok('Adminmodus: Zahlen (Wert, Ziel, d; Muskel/Huf mit Anlage und Ist)', /Ziel \d+ · d \d/.test(I.textContent) && /Anlage \d+ · Ist/.test(I.textContent)); spiel.admin = false;
     spiel.merkOffen = {}; I = zeig('gang'); ok('Alter Reiter „gang“ öffnet Merkmale mit Abschnitt Gangwerk', aktenReiter === 'merkmale' && I.querySelector('[data-merk="gang"]').open);
@@ -207,7 +206,7 @@ const { chromium } = require('playwright'); const path = require('path');
     const txt = paarVorschauHTML(st, bruno); spiel.spieler = spiel.spieler || {}; 
     ok('Vorschau: nur Wörter, keine Zahlen/Gene', !/\d|Cr\b|Lp\b/.test(txt.replace(/<[^>]*>/g, '')), txt.replace(/<[^>]*>/g, ' ').slice(0, 120));
     // Stufen: Anfänger sieht keine Vorschau
-    spiel.stufenAn = true; spiel.spieler.stufe = 'anf'; ok('Anfänger: keine Vorschau', paarVorschauHTML(st, bruno) === ''); spiel.spieler.stufe = 'fort'; ok('Fortgeschritten: Vorschau da', paarVorschauHTML(st, bruno) !== ''); spiel.stufenAn = false;
+    ok('Vorschau da (keine Modi mehr seit v1038)', paarVorschauHTML(st, bruno) !== '');
     // Hinweise
     ok('Hinweise M1…M8 im Katalog mit Einsteiger-Eintrag', ['merkKarte', 'merkBalken', 'merkVergleich', 'merkFehler', 'merkHuf', 'merkMuskel', 'merkRasse'].every(k => HINWEISE[k] && EINSTEIGER_MEHR[HINWEISE[k][4]] === '🧬 Beurteilungsbogen'));
     ok('Enzyklopädie: Eintrag „Beurteilungsbogen“', ENZY.einsteiger.eintraege.some(e => e[0] === '🧬 Beurteilungsbogen'));

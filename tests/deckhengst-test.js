@@ -11,7 +11,7 @@ const { chromium } = require('playwright'); const path = require('path');
     const H = mk('Hektor', 'Hengst', 0), V = mk('Vito', 'Hengst', 1, 'vollblut'), Q = mk('Quincy', 'Hengst', 2, 'quarter');
     ok('Neuer Hengst ist nicht gekört', hengstZulassung(H) === null && /Noch nicht gekört/.test(hengstText(H)), hengstText(H));
     ok('Vollblut: Gestütbuch ohne Körung', (hengstZulassung(V) || {}).n === HENGST.vollblut.n, JSON.stringify(hengstZulassung(V)));
-    ok('Quarter erst mit Gentest', hengstZulassung(Q) === null && (Q.tests = { krank: true }) && !!hengstZulassung(Q));
+    ok('Quarter: seit A0 erst nach der Körung (nicht mehr nur Gentest)', hengstZulassung(Q) === null && (Q.tests = { krank: true }) && hengstZulassung(Q) === null && (Q.hb = { s: 'end', tag: spiel.tag }) && !!hengstZulassung(Q));
     // Körung im Herbst
     spiel.kal = null; spiel.tag = 1 + 2 * tpj(); turnierKalender(); const K = spiel.turniere.filter(t => t.art === 'koerung' && t.tag >= spiel.tag + 2).sort((a, b) => a.tag - b.tag)[0];
     ok('Herbst: Körtermin im Kalender', !!K, spiel.turniere.filter(t => t.art === 'koerung').map(t => t.tag).join());

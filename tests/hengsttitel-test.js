@@ -38,6 +38,21 @@ const { chromium } = require('playwright'); const path = require('path');
     const fr = mk('friese', 'Fritz', 4 * 8); fr.hb = { s: 'end', noten, gesamt: 7.8, lp: 6.9, tag: spiel.tag }; o.fr69 = hengstEhren(fr).find(x => x.k === 'stern').ok; fr.hb.lp = 7.1; o.fr71 = hengstEhren(fr).find(x => x.k === 'stern').ok;
     // keine Titel für Rassen ohne belegte Hengst-Titel
     const ar = mk('araber', 'Ali', 4 * 8); ar.hb = { s: 'end', noten, gesamt: 7.8, tag: spiel.tag }; o.araber = hengstEhren(ar).length;
+    o.wapGold = /<svg/.test(hengstWappen(h)); h.hb.s = 'vorl'; o.wapSilber = /<svg/.test(hengstWappen(h)); h.hb.s = 'end'; const un = mk('hannoveraner', 'Ungekoert', 10); o.wapNein = hengstWappen(un) === ''; o.stAbz = /<svg/.test(stutenTitelAbz('Elitestute')) && stutenTitelAbz('') === '';
+    // A0: Quarter, Paint, Appaloosa mit echter Körung und Titeln
+    o.westH = ['quarter', 'paint', 'appaloosa'].map(r => [HENGST[r].sys, HENGST[r].note, HENGST[r].lp && HENGST[r].lp.note]);
+    const qh = mk('quarter', 'Quirin', 6); qh.hb = { s: 'end', noten, gesamt: 7.8, lp: 7.2, tag: spiel.tag };
+    o.q0 = hengstEhren(qh).filter(x => x.ok).map(x => x.k);
+    qh.erfolge = [{ disz: 'reining', stufe: 3, plaziert: true, platz: 1, von: 40 }, { disz: 'reining', stufe: 3, plaziert: true, platz: 1, von: 40 }]; delete qh.zbZ; qh.zbZ = { s: 0, vsS: 0, m: 0, mAlle: 0, vs: 0, vsM: 0, vsL: 0, wp: { reining: 12 } };
+    o.qRom = hengstEhren(qh).filter(x => x.ok).map(x => x.k);
+    const mkK = (i) => { const q = mk('quarter', 'Q' + i, 3); q.papiere = true; q.ahnen = { mutter: { nr: 'm' + (i % 3) } }; return q; }; qh.kinder = [0, 1, 2, 3, 4].map(mkK);
+    o.qElite = hengstEhren(qh).filter(x => x.ok).map(x => x.k);
+    const ph = mk('paint', 'Pablo', 5); ph.hb = { s: 'end', noten: { ...noten, korrekt: 5 }, gesamt: 7.6, lp: 7.1, tag: spiel.tag }; o.paint = hengstEhren(ph).filter(x => x.ok).map(x => x.k);
+    const ap = mk('appaloosa', 'Apo', 6); ap.hb = { s: 'end', noten, gesamt: 7.6, lp: 7.6, tag: spiel.tag }; o.appa = hengstEhren(ap).filter(x => x.ok).map(x => x.k);
+    // Siegerhengst: nur FN-Rassen, nur bei sehr guter Körung
+    const sieg = []; for (let i = 0; i < 60; i++) { const s = mk('westfale', 'S' + i, 5); s.hb = null; sieg.push(s); }
+    let sg = 0, kg = 0, fehl = ''; try { for (let i = 0; i < 40; i++) { const s = mk('westfale', 'S' + i, 5); spiel.boxen[0].pferd = s; hengstKoerung(s, 'Test', Math.random); if (s.hb && (s.hb.s === 'vorl' || s.hb.s === 'end')) kg++; if (s.hb && s.hb.titel && s.hb.titel.sieger) sg++; } } catch (e) { fehl = e.message; }
+    o.sieg = { sg, kg, fehl };
     // Fenster mit echten Klicks
     spiel.boxen[0].pferd = h; spiel.boxen[0].tot = false; hengstVerbandDialog(h, () => {}); o.dlgTitel = !!document.querySelector('[data-hvtitel]') === false ? 'keine Knöpfe (beide Titel verliehen)' : 'Knopf da';
     const dlgText = document.getElementById('dlg').innerText; o.dlgHatTitel = /Prämienhengst/.test(dlgText) && /Elitehengst/.test(dlgText);
@@ -57,6 +72,14 @@ const { chromium } = require('playwright'); const path = require('path');
   ok('Friese: Stern-Hengst ab Prüfung 7,0', r.fr69 === false && r.fr71 === true, [r.fr69, r.fr71].join());
   ok('Araber: keine eigenen Hengst-Titel', r.araber === 0);
   ok('Fenster zeigt Titel; Knöpfe zum Beantragen vorhanden', r.dlgHatTitel === true && r.knoepfe >= 1, r.knoepfe);
+  ok('Wappen: gekörter Hengst ja (gold/silber), ungekörter nein, Stuten-Titel-Abzeichen', r.wapGold && r.wapSilber && r.wapNein && r.stAbz, JSON.stringify([r.wapGold, r.wapSilber, r.wapNein, r.stAbz]));
+  ok('Quarter/Paint/Appaloosa: echte Körung (koer) mit Noten und Leistungsprüfung', JSON.stringify(r.westH) === JSON.stringify([['koer', 7.5, 7], ['koer', 7, 7], ['koer', 7, 7.5]]), JSON.stringify(r.westH));
+  ok('Quarter: Leistungszuchthengst (Prüfung 7,0), noch kein ROM/Elite', r.q0.includes('leistzucht') && !r.q0.includes('leistsport') && !r.q0.includes('elitew'), JSON.stringify(r.q0));
+  ok('Quarter: mit ROM Leistungssporthengst', r.qRom.includes('leistsport'), JSON.stringify(r.qRom));
+  ok('Quarter: 5 Nachkommen aus 3 Stuten = Elitehengst, dazu Premium- und Supremehengst', ['elitew', 'premium', 'supreme'].every(k => r.qElite.includes(k)), JSON.stringify(r.qElite));
+  ok('Paint: Prämienhengst nur ohne Teilnote unter 5,0 (hier 5 → ja), kein Elitehengst', r.paint.includes('praemp') && !r.paint.includes('elitep'), JSON.stringify(r.paint));
+  ok('Appaloosa: Prämienhengst (LG I) und Prämien-Sportleistungshengst', r.appa.includes('praema') && r.appa.includes('spleist') && !r.appa.includes('elitea'), JSON.stringify(r.appa));
+  ok('Siegerhengst: Körung läuft ohne Fehler, Sieger nur unter den Gekörten', !r.sieg.fehl && r.sieg.sg <= r.sieg.kg, JSON.stringify(r.sieg));
   ok('keine Skriptfehler', errs.length === 0, errs.join(' | '));
   console.log(out.join('\n')); await b.close(); process.exit(out.some(x => x[0] === '✗') ? 1 : 0);
 })();

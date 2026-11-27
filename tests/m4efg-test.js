@@ -18,7 +18,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   const d1 = await pg.evaluate(() => { const ids = Object.keys(GESTUETE), feh = []; let hg = 0; ids.forEach(id => { try { const H = gHerde(id); hg += H.hengste.length; gVerkauf(id); } catch (e) { feh.push(id + ': ' + e.message); } });
     const t = id => { const H = gHerde(id).hengste.map(h => h.gTaxe); return [Math.min(...H), Math.max(...H)]; };
     return { n: ids.length, feh, hg, kron: t('kronshof'), schw: t('schwaiganger'), hel: gHerde('helenenhof').hengste.map(h => h.gFg), papen: GESTUETE.papenhorst ? 1 : 0, graditz: !!GESTUETE.graditz, westerau: GESTUETE.westerau && GESTUETE.westerau.r }; });
-  ok('58 Gestüte, alle Herden und Verkaufspferde ohne Fehler', d1.n === 58 && !d1.feh.length, `${d1.n} · ${d1.hg} Hengste · ${d1.feh.join(' | ')}`);
+  ok('mindestens 58 Gestüte, alle Herden und Verkaufspferde ohne Fehler', d1.n >= 58 && !d1.feh.length, `${d1.n} · ${d1.hg} Hengste · ${d1.feh.join(' | ')}`);
   ok('Kronshof 1.400–2.100 €, Schwaiganger 140–200 € (echte Werte)', d1.kron[0] >= 1400 && d1.kron[1] <= 2100 && d1.schw[0] >= 140 && d1.schw[1] <= 200, JSON.stringify([d1.kron, d1.schw]));
   ok('Helenenhof: Fohlengeld 2.000–4.500 € je Hengst', d1.hel.length && d1.hel.every(x => x >= 2000 && x <= 4500), d1.hel.join('/'));
   ok('Papenhorst entfernt (Gestüt-Tausch 21.11.), neue Gestüte Graditz/Westerau da', d1.papen === 0 && d1.graditz && d1.westerau, JSON.stringify(d1.westerau));

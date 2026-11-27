@@ -34,7 +34,7 @@ const { chromium } = require('playwright'); const path = require('path');
     o.koerung = Object.values(S).map(id => [id, HENGST[id] && HENGST[id].sys, HENGST[id] && HENGST[id].note, HENGST[id] && HENGST[id].lp && HENGST[id].lp.note]);
     o.stufen = Object.values(S).map(id => VERBAND[id] && VERBAND[id].stufen.map(x => x.n).join('/'));
     o.auktion = Object.values(S).map(id => !!ST_AUK[id]);
-    o.gestuete = { leybucht: GESTUETE.leybucht.r.join(), cnst: !!GESTUETE.cnst, menai: GESTUET_ECHT.welshpony[0], conn: GESTUET_ECHT.connemara[0] };
+    o.gestuete = { leybucht: GESTUETE.leybucht.r.join(), cnst: !!GESTUETE.cnst, menai: GESTUET_ECHT.welshpony[0], conn: GESTUET_ECHT.connemara[0], redefin: GESTUETE.redefin && GESTUETE.redefin.r.join(), lew: GESTUET_ECHT.lewitzer[0], lindenhof: !!GESTUETE.lindenhof, ekholt: GESTUETE.ekholt && GESTUETE.ekholt.r.join() };
     // keine Tobiano/Overo-Farben bei den Welsh-Sektionen (Zuchtprogramm: alle Farben außer Tobiano und Overo-Scheckung)
     o.schecke = Object.values(S).filter(id => rasseById(id).farben.some(f => /^to_|tobiano|overo|tovero|sabino|splash/.test(f)));
     // Marktwert / Pferd erzeugen
@@ -48,6 +48,7 @@ const { chromium } = require('playwright'); const path = require('path');
   ok('Stutbuch I / II / Anhang bei allen vier Sektionen', r.stufen.every(s => s === 'Stutbuch I/Stutbuch II/Anhang'), JSON.stringify(r.stufen));
   ok('Stutenauktion (WPCS) für alle vier Sektionen', r.auktion.every(Boolean));
   ok('Gestüte: Leybucht = Welsh A, Connemara National Stud, Menai Stud (B)', r.gestuete.leybucht === 'welsha' && r.gestuete.cnst && r.gestuete.menai === 'Menai Stud' && r.gestuete.conn === 'Connemara Pony National Stud', JSON.stringify(r.gestuete));
+  ok('Gestüte 27.11.: Lewitzer = Landgestüt Redefin (Lindenhof weg), Welsh B zusätzlich Gestüt Ekholt', r.gestuete.redefin === 'lewitzer' && r.gestuete.lew === 'Landgestüt Redefin' && !r.gestuete.lindenhof && r.gestuete.ekholt === 'welshpony', JSON.stringify(r.gestuete));
   ok('keine Tobiano/Overo/Scheckungs-Farben bei Welsh', r.schecke.length === 0, r.schecke.join());
   ok('Pferde der vier Sektionen erzeugen, Marktwert > 0', r.pferde.every(p => p[1]), JSON.stringify(r.pferde));
   ok('keine Skriptfehler', errs.length === 0, errs.join(' | '));

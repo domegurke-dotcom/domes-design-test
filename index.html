@@ -1374,7 +1374,7 @@
 <script>
   window.ladeFehler = []; addEventListener("error", e => { if (!window.spielGestartet) window.ladeFehler.push(e.message); });   // v307: Fehler beim Start für das Sicherheitsnetz merken
   // Versionsprüfung: lädt automatisch neu, wenn auf GitHub eine neuere Version liegt
-  const SPIEL_VERSION = "1078";
+  const SPIEL_VERSION = "1079";
   fetch("version.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(v => {
     if (v.version && v.version !== SPIEL_VERSION && !sessionStorage.getItem("neu-" + v.version)) {
       sessionStorage.setItem("neu-" + v.version, "1");
@@ -1382,12 +1382,12 @@
     }
   }).catch(() => {});
 </script>
-<script src="lz-string.min.js?v=1078"></script>
-<script src="pferd.js?v=1078"></script>
-<script src="boxstufen.js?v=1078"></script>
-<script src="kopfneu.js?v=1078"></script>
-<script src="waschbild.js?v=1078"></script>
-<script src="avatare.js?v=1078"></script>
+<script src="lz-string.min.js?v=1079"></script>
+<script src="pferd.js?v=1079"></script>
+<script src="boxstufen.js?v=1079"></script>
+<script src="kopfneu.js?v=1079"></script>
+<script src="waschbild.js?v=1079"></script>
+<script src="avatare.js?v=1079"></script>
 <script>
   // ---------- Spielzustand ----------
   const SPEICHER = "zuchtstall-v2";   // Autospeicher (PLAN-SPIELSTAND.md S1): der laufende Stand, wird nach jeder Aktion geschrieben
@@ -4488,7 +4488,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     let a; try { a = anteileVon(p); } catch (e) { a = null; } if (!a || !Object.keys(a).length) a = { [p.rasse]: 100 };
     let s = 0, t = 0; Object.entries(a).forEach(([r, x]) => { s += x * (RASSE_PREIS[r] || RASSE_PREIS_BEZUG) * ((GESCHLECHT_PREIS[r] || {})[p.geschlecht] || 1); t += x; });
     let f = t ? s / t / RASSE_PREIS_BEZUG : 1;
-    if (p.geschlecht === "Hengst") { let z = false; try { z = !!(HENGST[p.rasse] && HENGST[p.rasse].sys !== "auto" && hengstZulassung(p)); } catch (e) { }   /* Rassen ohne Körung (auto) bekommen keinen Aufpreis */ if (z) f *= GEKOERT_PREIS; }
+    if (p.geschlecht === "Hengst") { let z = false; try { z = !!(HENGST[p.rasse] && HENGST[p.rasse].sys !== "auto" && hengstZulassung(p)); } catch (e) { }   /* Rassen ohne Körung (auto) bekommen keinen Aufpreis */ if (z) { f *= GEKOERT_PREIS; try { f *= hengstTitelFaktor(p); } catch (e) { } } }
     return Math.max(RASSE_PREIS_GRENZE[0], Math.min(RASSE_PREIS_GRENZE[1] * (p.geschlecht === "Hengst" ? GEKOERT_PREIS : 1), f));
   }
   function marktwert(p) {
@@ -11333,12 +11333,14 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     if (f.gebTag != null && spiel.tag - f.gebTag < Math.max(1, Math.round(tpj() / 3))) return `${esc(f.name)} ist noch zu jung – das Fohlen-ABC beginnt mit etwa 1 Monat.`;
     if (f.abcTag === spiel.tag) return `Mit ${esc(f.name)} hast du heute schon geübt.`;
     // Tempo (Dome): je Jahreszeit gleich viel Fortschritt und Zuwachs – bei 4 Tagen zählt eine Übung mehr, bei 10 weniger (Bezug 7)
-    const x = 7 / tpj() * (m ? 1 + vorteilWert((m.wissen || {}).zucht) : 1);   // S3: Zucht-Erfahrung macht das Fohlen-ABC schneller
+    let x = 7 / tpj() * (m ? 1 + vorteilWert((m.wissen || {}).zucht) : 1), lehrer = null;   // S3: Zucht-Erfahrung macht das Fohlen-ABC schneller
+    try { const ob = spiel.boxen.find(b => b.pferd === f && b.offen && !b.tot); if (ob) { const L = offenGruppeBoxen(ob.og || 0).filter(b => b.pferd && b.pferd !== f && !b.tot && !b.pferd.weide && !b.pferd.klinik && !b.pferd.turnier).map(b => b.pferd); lehrer = L.find(offenTante) || L.find(offenOnkel) || L.find(q => (q.fohlenABC || 0) >= FOHLEN_ABC_MAX) || null; if (lehrer) x *= 1.2; } } catch (e) { }   /* Auftrag 27: Tante/Onkel oder ein Fohlen, das es schon kann – ×1,2, nur einmal */
     if (!m) spielerLernt("zucht");   // S1: der Spieler lernt in allem, was er selbst macht
     werteErgaenzen(f); f.abcTag = spiel.tag; f.fohlenABC = Math.min(FOHLEN_ABC_MAX, Math.round(((f.fohlenABC || 0) + x) * 100) / 100);
     wertPlus(f, "vertrauen", 0.8 * x); wertPlus(f, "gehorsam", 0.5 * x); beruehrt(f, m ? m.id : "du", "kontakt"); speichern();
     const n = f.fohlenABC, was = n <= 2 ? "Halfter anlegen und streicheln" : n <= 5 ? "ein paar Schritte am Strick führen" : n < FOHLEN_ABC_MAX ? "Hufe geben und überall anfassen lassen" : "Halfter, Führen und Hufe geben klappen schon prima";
-    return `🍼 Fohlen-ABC mit ${esc(f.name)}: ${was} (${abcStand(f)}).`;
+    if (lehrer) tippMerken("offenLehrer");
+    return `🍼 Fohlen-ABC mit ${esc(f.name)}: ${was} (${abcStand(f)}).${lehrer ? ` ${esc(f.name)} ${offenTante(lehrer) || offenOnkel(lehrer) ? `lernt von ${offenTante(lehrer) ? "Tante" : "Onkel"} ${esc(lehrer.name)} schneller` : `schaut es sich bei ${esc(lehrer.name)} ab`}.` : ""}`;
   }
   // W5 (PLAN-WASCHPLATZ.md): „Duschen üben“ – Fohlen bei Fuß an Wasser gewöhnen (nur Beine/Hufe), macht es weniger scheu; am Vortag einer Fohlenschau: Eindrucksnote +0,3
   const FOHLEN_DUSCHE = { note: 0.3, vertrauen: 0.5, nerven: 0.3 };
@@ -12680,12 +12682,16 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     if (p.zwerg) L.push({ k: "zwerg", n: "Zwergwuchs", t: "bleibt deutlich kleiner" });
     return L;
   }
+  /* 27.11.2026 (Dome): Welsh Ponys und Cobs – Zuchtprogramm Rheinisches Pferdestammbuch 02/2025: Farben „alle Farben, ausgenommen Tobiano und Overo-Scheckung“. Die Scheckung kann als Zufall (Gen To, Sw) auftreten, ist aber nicht zugelassen: Rassemerkmal-Verstoß (schwer), Stuten nur Anhang, Hengste nicht gekört */
+  const WELSH_RASSEN = ["welsha", "welshpony", "welshc", "welshcob"];
+  const welshSchecke = p => !!(p && WELSH_RASSEN.includes(p.rasse) && /^(to|ov|tv|sw)_/.test(String(p.farbe || "")));
   function rasseMerkmale(p) {
     if (!p || !p.rasse || istMischling(p)) return { misch: true, z: [] };
     const ra = rasseById(p.rasse), z = [], add = (n, st, t, kein) => z.push({ n, st, t, kein: !!kein }), streng = RM_STRENG.includes(p.rasse);
     const [lo, hi] = ra.h || [0, 999], sm = smVon(p) || 0, ausser = sm < lo ? lo - sm : sm > hi ? sm - hi : 0;
     add("Größe", ausser === 0 ? 0 : ausser <= RM_ZAHL.groesseNah ? 1 : 2, ausser === 0 ? `${sm} cm – im Rahmen (${lo}–${hi} cm)` : `${sm} cm – ${ausser} cm ${sm < lo ? "unter" : "über"} dem Rahmen (${lo}–${hi} cm)`);
     if (p.farbe && !/_/.test(p.farbe) && ra.farben && ra.farben.length) { const ok = ra.farben.includes(p.farbe) || ra.farben.includes(RM_FARBGRUPPE[p.farbe]); add("Farbe", ok ? 0 : 3, ok ? `${farbText(p)} – zugelassen` : `${farbText(p)} – bei dieser Rasse nicht zugelassen`); }
+    if (WELSH_RASSEN.includes(p.rasse)) { const sch = welshSchecke(p); add("Scheckung", sch ? 3 : 0, sch ? farbText(p) + " – laut Zuchtprogramm nicht zugelassen (Tobiano und Overo-Scheckung): Stuten nur im Anhang, Hengste werden nicht gekört" : "keine Tobiano- oder Overo-Scheckung – zugelassen"); }
     { const kz = kopfZeichen(p), abz = (kz.abz || [])[0] || null, ib = ABZ_STUFEN.findIndex(([, a]) => a === abz), bz = beinZeichen(p), bm = Math.max(0, ...BEINE.map(([k]) => bz[k] ? BEIN_STUFEN.findIndex(([, a]) => a === bz[k]) : 0));
       const kopfViel = ib >= ABZ_STUFEN.findIndex(([, a]) => a === "schmaleBlesse"), kopfGross = ib >= ABZ_STUFEN.findIndex(([, a]) => a === "blesse"), beinViel = bm >= BEIN_STUFEN.findIndex(([, a]) => a === "fessel");
       let st = 0, t = "im Standard";
@@ -12739,11 +12745,11 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     appaloosa: { v: "Appaloosa Horse Club Germany (ApHCG)", sys: "linear", stufen: [{ n: "Stutbuch I", f: "gold", lg: 2, gen: "eltern" }, { n: "Stutbuch II", f: "silber", lg: 3 }, { n: "Basisstutbuch", f: "gruen" }] },
     shetty: ZB_FILIALE("Pferdezuchtverband (Filiale, Ursprung Schottland)"),
     /* 26.11.2026: Welsh Sektion A, B, C, D = ein Zuchtprogramm (Rheinisches Pferdestammbuch), gleiche Stutbuch-Stufen */
-    welshcob: { v: "Pferdezuchtverband (Filiale, Ursprung WPCS)", sys: "noten", stufen: [{ n: "Stutbuch I", f: "gold", ab: 6, min: 5, gen: "eltern" }, { n: "Stutbuch II", f: "silber", gen: "eltern" }, { n: "Anhang", f: "gruen" }] },
-    welsha: { v: "Pferdezuchtverband (Filiale, Ursprung WPCS)", sys: "noten", stufen: [{ n: "Stutbuch I", f: "gold", ab: 6, min: 5, gen: "eltern" }, { n: "Stutbuch II", f: "silber", gen: "eltern" }, { n: "Anhang", f: "gruen" }] },
-    welshc: { v: "Pferdezuchtverband (Filiale, Ursprung WPCS)", sys: "noten", stufen: [{ n: "Stutbuch I", f: "gold", ab: 6, min: 5, gen: "eltern" }, { n: "Stutbuch II", f: "silber", gen: "eltern" }, { n: "Anhang", f: "gruen" }] },
+    welshcob: { v: "Pferdezuchtverband (Filiale, Ursprung WPCS)", sys: "noten", anhangSchwer: true, stufen: [{ n: "Stutbuch I", f: "gold", ab: 6, min: 5, gen: "eltern" }, { n: "Stutbuch II", f: "silber", gen: "eltern" }, { n: "Anhang", f: "gruen" }] },
+    welsha: { v: "Pferdezuchtverband (Filiale, Ursprung WPCS)", sys: "noten", anhangSchwer: true, stufen: [{ n: "Stutbuch I", f: "gold", ab: 6, min: 5, gen: "eltern" }, { n: "Stutbuch II", f: "silber", gen: "eltern" }, { n: "Anhang", f: "gruen" }] },
+    welshc: { v: "Pferdezuchtverband (Filiale, Ursprung WPCS)", sys: "noten", anhangSchwer: true, stufen: [{ n: "Stutbuch I", f: "gold", ab: 6, min: 5, gen: "eltern" }, { n: "Stutbuch II", f: "silber", gen: "eltern" }, { n: "Anhang", f: "gruen" }] },
     /* 26.11.2026: Zuchtprogramme Connemara und Welsh (Rheinisches Pferdestammbuch, Stand 02/2025): Stutbuch I (ab 3 J., Eltern in der Hauptabteilung, Gesamtnote ≥ 6,0, keine Note unter 5,0), Stutbuch II (Eltern in der Hauptabteilung), Anhang; Zuchtbuch geschlossen */
-    welshpony: { v: "Pferdezuchtverband (Filiale, Ursprung WPCS)", sys: "noten", stufen: [{ n: "Stutbuch I", f: "gold", ab: 6, min: 5, gen: "eltern" }, { n: "Stutbuch II", f: "silber", gen: "eltern" }, { n: "Anhang", f: "gruen" }] },
+    welshpony: { v: "Pferdezuchtverband (Filiale, Ursprung WPCS)", sys: "noten", anhangSchwer: true, stufen: [{ n: "Stutbuch I", f: "gold", ab: 6, min: 5, gen: "eltern" }, { n: "Stutbuch II", f: "silber", gen: "eltern" }, { n: "Anhang", f: "gruen" }] },
     connemara: { v: "Rheinisches Pferdestammbuch (Filiale, Ursprung CPBS Clifden)", sys: "noten", stufen: [{ n: "Stutbuch I", f: "gold", ab: 6, min: 5, gen: "eltern" }, { n: "Stutbuch II", f: "silber", gen: "eltern" }, { n: "Anhang", f: "gruen" }] },
     fell: ZB_FILIALE("Rheinisches Pferdestammbuch (Filiale, Ursprung FPS)"),
     dales: { v: "Dales Pony Society (UK)", sys: "dales", stufen: [{ n: "Section A", f: "gold" }, { n: "Section B", f: "silber" }, { n: "Section X", f: "bronze" }, { n: "Teilblut", f: "gruen" }] },
@@ -12849,7 +12855,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
       if (S.cm && sm < S.cm) continue; if (S.slp && !(slp && slp >= (S.slp === true ? ZB.slpBest : S.slp))) continue; if (S.alter && alterJZ(p) < S.alter) continue;
       if (S.lg && !(lg && lg <= S.lg)) continue; if (!zbGenOk(p, S.gen)) continue;
       if (V.quarter && i === 0 && !(testGemacht(p, "krank") && !(erbVon(p).hypp || 0) && !(erbVon(p).pssm || 0) && (p.erfolge || []).some(e => e.plaziert))) continue;   // DQHA: Gentest frei von HYPP/PSSM1 + Eigenleistung
-      if (letzte && schwer && V.sys !== "abst" && V.sys !== "dales") return null;
+      if (letzte && schwer && V.sys !== "abst" && V.sys !== "dales" && !V.anhangSchwer) return null;
       return i; }
     return null;
   }
@@ -13088,7 +13094,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     const notenTxt = V.sys === "marwari" ? `<p>Die Kommission hat geprüft, ob ${esc(p.name)} dem Rassestandard entspricht${i != null ? " – ja. Sie bekommt das Brandzeichen und ihre Registriernummer." : " – leider nein (Rassemerkmale)."}</p>`
       : lin ? `<p>Lineare Beschreibung (−3 … +3, 0 = Zuchtziel): ${lin.L.map(x => `${BAU_NAME[x.k]} ${x.w > 0 ? "+" : ""}${x.w}`).join(" · ")}<br>Leistungsgruppe <b>${["", "I", "II", "III", "IV"][lin.lg]}</b></p>`
       : `<table class="ver-tab"><tr>${["typ", "koerper", "korrekt", "schritt", "trab", "eindruck"].map(k => `<th>${ZB_NOTEN_NAME[k]}</th>`).join("")}<th>Gesamt</th></tr><tr>${["typ", "koerper", "korrekt", "schritt", "trab", "eindruck"].map(k => `<td>${N[k]}</td>`).join("")}<td><b>${nn(N.gesamt)}</b></td></tr></table>`;
-    const tagTxt = (N.tagL.length ? `<p><small>Am Tag aufgefallen: ${N.tagL.join(" · ")}.</small></p>` : "") + (fizo ? `<p>🐎 <b>Reitprüfung (FIZO)</b> – gehört beim Islandpferd zur Eintragung: ${Object.keys(fizo.N).map(k => `${ZB_SLP_NAME[k]} ${nn(fizo.N[k])}`).join(" · ")} · Gesamt <b>${nn(fizo.gesamt)}</b> <small>(35 % Exterieur, 65 % Reiten)</small></p>` : V.fizo && i != null ? `<p><small>${esc(p.name)} wurde nur an der Hand vorgestellt (Jungpferde-Beurteilung). Geritten geprüft wird sie ab 4 Jahren – mit Tölt- oder Dressur-Ausbildung.</small></p>` : "");
+    const tagTxt = (welshSchecke(p) ? '<p><small>⚠️ Das Zuchtprogramm lässt bei Welsh Ponys und Cobs keine Tobiano- oder Overo-Scheckung zu: ' + esc(p.name) + ' kann deshalb höchstens in den Anhang.</small></p>' : "") + (N.tagL.length ? `<p><small>Am Tag aufgefallen: ${N.tagL.join(" · ")}.</small></p>` : "") + (fizo ? `<p>🐎 <b>Reitprüfung (FIZO)</b> – gehört beim Islandpferd zur Eintragung: ${Object.keys(fizo.N).map(k => `${ZB_SLP_NAME[k]} ${nn(fizo.N[k])}`).join(" · ")} · Gesamt <b>${nn(fizo.gesamt)}</b> <small>(35 % Exterieur, 65 % Reiten)</small></p>` : V.fizo && i != null ? `<p><small>${esc(p.name)} wurde nur an der Hand vorgestellt (Jungpferde-Beurteilung). Geritten geprüft wird sie ab 4 Jahren – mit Tölt- oder Dressur-Ausbildung.</small></p>` : "");
     brief(V.v, `Eintragung: ${p.name}`, `{du hast|Sie haben} <b>${esc(p.name)}</b> ${art === "hof" ? "beim Hofbesuch unserer Kommission" : `auf der <b>${esc(ortName)}</b>`} vorgestellt.${notenTxt}${tagTxt}<p>${S ? `${zuchtbuchSymbol(S.n, 34, S.f)} ${esc(p.name)} ist eingetragen im <b>${esc(S.n)}</b>.${anw ? (V.staatsSlp ? " 🎗️ Dazu bekommt sie die <b>Staatsprämien-Anwartschaft</b> – mit bestandener Stutenleistungsprüfung (ab 7,0, bis zum 5. Lebensjahr) wird sie Staatsprämienstute." : " 🎗️ Dazu bekommt sie die <b>Prämienanwartschaft</b> – mit bestandener Stutenleistungsprüfung wird sie Prämienstute.") : ""}${p.zb && p.zb.vp ? " 🎗️ Mit der Note ab 7,33 bekommt sie die <b>Verbandsprämie</b>." : ""}${i > 0 && V.stufen[0].slp ? ` Ins ${esc(V.stufen[0].n)} kommt sie mit bestandener Stutenleistungsprüfung.` : ""}` : `${esc(p.name)} ist leider nicht eintragungsfähig.`}</p>${papiere.length ? `<p>📄 Ihre Fohlen bekommen jetzt doch Papiere: ${papiere.map(esc).join(", ")}.</p>` : ""}`, { pferde: [p] });
     return i;
   }
@@ -13157,8 +13163,8 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
   const HLP = (bis, max, name, note = 7, ab = 0) => ({ bis, max, name, note, ab });
   const HENGST = {
     hannoveraner: { sys: "koer", ab: 10, note: 7.5, geb: { koer: 300, hb: 1000 }, lp: HLP(24, 50, "Hengstleistungsprüfung (14 oder 50 Tage)") },
-    holsteiner: { sys: "koer", ab: 10, note: 7.5, geb: { koer: 300, hb: 1000 }, lp: HLP(24, 50, "Hengstleistungsprüfung (14 oder 50 Tage)") },
-    oldenburger: { sys: "koer", ab: 10, note: 7.5, geb: { koer: 300, hb: 1000 }, lp: HLP(24, 50, "Hengstleistungsprüfung (14 oder 50 Tage)") },
+    holsteiner: { sys: "koer", ab: 10, note: 7.5, geb: { koer: 300, hb: 1000 }, lp: HLP(24, 50, "Hengstleistungsprüfung (14 oder 50 Tage)", 7.8) },
+    oldenburger: { sys: "koer", ab: 10, note: 7, geb: { koer: 300, hb: 1000 }, lp: HLP(24, 50, "Hengstleistungsprüfung (14 oder 50 Tage)") },
     trakehner: { sys: "koer", ab: 8, note: 7.5, geb: { koer: 300, hb: 1000 }, lp: HLP(24, 50, "Hengstleistungsprüfung (14 oder 50 Tage)") },
     /* 26.11.2026: Westfale – Hauptkörung zweijähriger Hengste mit Vorauswahl (Zuchtbescheinigung mit mind. 4 anerkannten HB-I-Vätern, Mutter im Stutbuch I; westfalenpferde.de), Gebühren und Note wie Hannoveraner angenommen (Vermutung), Leistungsprüfung 70 Tage (en.wikipedia Westphalian horse).
        Connemara: Körung ab 2 J., Gesamtnote ≥ 7,0 (keine Note unter 5,0), Hengstleistungsprüfung ab 4 J., HWSD-Gentest Pflicht; Welsh Pony (Sektion A/B): Körung ab 2 J. ≥ 7,0, vorläufiges Hengstbuch I bis zum Ende des 4. Lebensjahres, dann Hengstleistungsprüfung ≥ 6,5 (Zuchtprogramme Rheinisches Pferdestammbuch 02/2025). Kosten Körung/Hengstbuch selbst gesetzt. */
@@ -13206,9 +13212,40 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     const B = p.hb; if (!B || (B.s !== "end" && B.s !== "vorl")) return null;
     return { n: B.s === "vorl" ? "Hengstbuch I (vorläufig)" : H.n || (H.sys === "lizenz" ? "Hengstlizenz" : "Hengstbuch I"), s: B.s, max: B.s === "vorl" && H.lp ? H.lp.max : null };
   }
+
+  /* Etappe A2 (27.11.2026): Hengst-Titel nach FN-Vergaberichtlinie, ZVO Anlage 6/7, FIZO, Noriker, KFPS/ZfdP (notizen/HENGST-UND-STUTENAUSZEICHNUNGEN.md, Abschnitt 5). Gebuehr/Faktoren selbst gesetzt. Titel, die es real nur bei Stuten gibt, gibt es hier nicht. */
+  const HT_WB = ["hannoveraner", "holsteiner", "oldenburger", "trakehner", "westfale"], HT_PONY = ["connemara", "welsha", "welshpony", "welshc", "welshcob"];
+  const HT = { geb: 50, nkElite: 10, nkNoriker: 15, nkFrieseElite: 50, wert: { praem: 1.2, leist: 1.1, elite: 1.2, haupt: 1.1, stern: 1.1, elitef: 1.15, praemb: 1.15, praemh: 1.15 },
+    n: { praem: "Prämienhengst", leist: "Leistungshengst", elite: "Elitehengst", haupt: "Hauptprämiensieger", stern: "Stern-Hengst", elitef: "Elitehengst (Friesen)", praemb: "Prämienbuch (Hengst)", praemh: "Prämienhengstbuch" },
+    ico: { praem: "🥇", leist: "🏆", elite: "👑", haupt: "🎖️", stern: "⭐", elitef: "👑", praemb: "🥇", praemh: "🥇" } };
+  function hengstEhren(p) {
+    const H = HENGST[p.rasse], B = p.hb || {}, L = []; if (!H || p.geschlecht !== "Hengst" || (B.s !== "end" && B.s !== "vorl") || B.bestand) return L;
+    const nf = x => String(x).replace(".", ","), N = B.noten || {}, minN = B.noten ? Math.min(N.typ, N.koerper, N.korrekt, N.schritt, N.trab, N.eindruck) : 0, lp = B.lp || 0, K = zbKinder(p), end = B.s === "end", jahre = Math.floor(alterJZ(p) / 4);
+    const sS = x => { if (!x || !x.erfolge) return false; const c = zbZaehlStand(x); return (c.s || 0) + (c.vsS || 0) > 0; };
+    const pk = q => { const z = q.zb || {}; return Math.max(z.elite || z.leist || z.haupt ? 5 : 0, sS(q) ? 4 : 0, z.staats ? 3 : 0, q.geschlecht === "Hengst" && hengstZulassung(q) ? 3 : 0, z.praemie || z.vp ? 1.5 : 0, q.papiere ? 0.5 : 0); };
+    const pt = K.reduce((a, q) => a + pk(q), 0), fo = K.filter(q => q.papiere).length;
+    const anw = [[(B.gesamt || 0) >= 7.5, `Körnote mindestens 7,5 (${B.gesamt != null ? nf(B.gesamt) : "–"})`], [minN >= 6, `keine Teilnote unter 6,0 (niedrigste ${minN || "–"})`]];
+    if (HT_WB.includes(p.rasse) || HT_PONY.includes(p.rasse)) {
+      L.push({ k: "praem", b: [...anw, [!H.lp || lp >= 7.5, H.lp ? `Leistungsprüfung mindestens 7,5 (${lp ? nf(lp) : "noch nicht"})` : "keine Leistungsprüfung vorgeschrieben"]] });
+      L.push({ k: "leist", b: [[end, "endgültig im Hengstbuch I"], [lp >= 7.5, `Leistungsprüfung mindestens 7,5 (${lp ? nf(lp) : "noch nicht"})`]] });
+      L.push({ k: "elite", b: [[end, "endgültig im Hengstbuch I"], [pt >= HT.nkElite, `mindestens ${HT.nkElite} Punkte durch Nachkommen (${nf(pt)}): Leistungs-/Elitetitel 5, Erfolge in Klasse S 4, Staatsprämie oder gekörter Hengst 3, Prämie 1,5, eingetragenes Fohlen 0,5`]] });
+    }
+    if (p.rasse === "oldenburger") L.push({ k: "haupt", b: [[end, "endgültig im Hengstbuch I"], [fo >= 8, `mindestens 8 eingetragene Fohlen im ersten Jahrgang (${fo})`]] });
+    if (p.rasse === "isi") L.push({ k: "praemb", b: [[jahre >= 6, "mindestens 6 Jahre alt"], [lp >= 8.2, `FIZO-Reitprüfung mindestens 8,2 (${lp ? nf(lp) : "noch nicht"})`]] });
+    if (p.rasse === "noriker") L.push({ k: "praemh", b: [[end, "Haupthengstbuch (30-Tage-Prüfung bestanden)"], [fo >= HT.nkNoriker, `mindestens ${HT.nkNoriker} Nachkommen (${fo})`]] });
+    if (p.rasse === "friese") {
+      L.push({ k: "stern", b: [[end, "Hengstbuch I"], [lp >= 7, `Leistungsprüfung mindestens 7,0 (${lp ? nf(lp) : "noch nicht"})`]] });
+      L.push({ k: "elitef", b: [[end, "Hengstbuch I"], [pt >= HT.nkFrieseElite, `mindestens ${HT.nkFrieseElite} Punkte durch Nachkommen (${nf(pt)})`]] });
+    }
+    const T = B.titel || {}; L.forEach(x => { x.ok = x.b.every(y => y[0]); x.hat = !!T[x.k]; x.n = HT.n[x.k]; x.ico = HT.ico[x.k]; }); return L;
+  }
+  const HT_FARBE = { praem: ["#fff3b8", "#b98a14", "P"], leist: ["#e8f1ff", "#4a6a9a", "L"], elite: ["#fff3b8", "#8a5a10", "E"], haupt: ["#ffe3c2", "#a5521a", "H"], stern: ["#fff3b8", "#b98a14", "★"], elitef: ["#fff3b8", "#8a5a10", "E"], praemb: ["#fff3b8", "#b98a14", "P"], praemh: ["#fff3b8", "#b98a14", "P"] };
+  const htAbzeichen = (k, px = 22) => { const c = HT_FARBE[k] || HT_FARBE.praem; return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="${px}" height="${px}" style="vertical-align:-${Math.round(px / 5)}px" role="img" aria-label="${esc(HT.n[k] || "Titel")}"><circle cx="20" cy="20" r="17" fill="${c[0]}" stroke="${c[1]}" stroke-width="3"/><circle cx="20" cy="20" r="12" fill="none" stroke="${c[1]}" stroke-width="1" opacity=".6"/><text x="20" y="26" text-anchor="middle" font-size="17" font-weight="700" font-family="Georgia,serif" fill="${c[1]}">${c[2]}</text></svg>`; };
+  const hengstTitelNamen = p => { const T = (p.hb && p.hb.titel) || {}; return Object.keys(T).filter(k => T[k] && HT.n[k]).map(k => HT.ico[k] + " " + HT.n[k]); };
+  const hengstTitelFaktor = p => { const T = (p.hb && p.hb.titel) || {}; return Math.max(1, ...Object.keys(T).filter(k => T[k] && HT.wert[k]).map(k => HT.wert[k])); };
   const hengstText = p => hengstText0(p) + (hengstZulassung(p) ? a18GentestVermerk(p) : "");   /* v1048: Gentest-Ergebnis auf der Hengstkarte */
   const hengstText0 = p => { const H = HENGST[p.rasse], z = hengstZulassung(p), B = p.hb || {};
-    if (z) return `🏅 ${esc(z.n)}${z.s === "vorl" && H.lp ? ` – ${esc(H.lp.name)} bis ${Math.floor(H.lp.bis / 4)} Jahre nötig, bis dahin höchstens ${H.lp.max} Stuten im Jahr` : ""}`;
+    if (z) return `🏅 ${esc(z.n)}${hengstTitelNamen(p).length ? " · " + hengstTitelNamen(p).join(" · ") : ""}${z.s === "vorl" && H.lp ? ` – ${esc(H.lp.name)} bis ${Math.floor(H.lp.bis / 4)} Jahre nötig, bis dahin höchstens ${H.lp.max} Stuten im Jahr` : ""}`;
     if (!H) return "";
     if (B.s === "gestrichen") return "❌ aus dem Hengstbuch gestrichen (Leistungsprüfung nicht rechtzeitig bestanden) – Fohlen bekommen keine Papiere";
     if (B.s === "nein") return "❌ nicht gekört – Fohlen bekommen keine Papiere";
@@ -13251,7 +13288,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     prot("Zuchtverband Körung", { p, o: ok ? "gekört" : "nicht gekört" }); if (ok) prot("Stallpunkt Sieg: schau");
     const V = verbandVon(p), lz = H.sys === "lizenz";
     brief(V ? V.v : "Zuchtverband", `${lz ? "Hengstlizenz" : "Körung"}: ${p.name}`, `{du hast|Sie haben} <b>${esc(p.name)}</b> auf der <b>${esc(ortName)}</b> vorgestellt.<table class="ver-tab"><tr>${["typ", "koerper", "korrekt", "schritt", "trab", "eindruck"].map(k => `<th>${ZB_NOTEN_NAME[k]}</th>`).join("")}<th>Gesamt</th></tr><tr>${["typ", "koerper", "korrekt", "schritt", "trab", "eindruck"].map(k => `<td>${N[k]}</td>`).join("")}<td><b>${nn(N.gesamt)}</b></td></tr></table>
-      <p>${ok ? `🏅 ${esc(p.name)} ist <b>${lz ? "lizenziert" : "gekört"}</b>${H.lp ? ` und steht vorläufig im Hengstbuch I. Endgültig wird es mit bestandener ${esc(H.lp.name)} bis ${Math.floor(H.lp.bis / 4)} Jahre – bis dahin höchstens ${H.lp.max} Stuten im Jahr` : ""}. Die Eintragung kostet ${fmt(dhGeb(p).hb)}.` : `${esc(p.name)} ist leider <b>nicht ${lz ? "lizenziert" : "gekört"}</b>${GS.raus.length ? ` (Gesundheitsprüfung: ${GS.raus.join(", ")})` : schwer ? " (Verstoß gegen den Rassestandard)" : ` (nötig: Gesamtnote ${nn(lz ? DH.lizenzNote : H.note)}${lz ? "" : `, keine Note unter ${H.min || 5}`})`}. Er darf trotzdem decken, die Fohlen bekommen aber keine Papiere.`}</p>${GS.text}${a18GentestVermerk(p) ? `<p><small>Gentest im Pass:${a18GentestVermerk(p).replace(/^ · /, " ")}</small></p>` : ""}${!ok ? "<p>💡 Viele Züchter lassen einen nicht gekörten Hengst kastrieren – als Wallach ist er ruhiger und leichter zu verkaufen.</p>" : ""}`, { pferde: [p] });
+      <p>${ok ? `🏅 ${esc(p.name)} ist <b>${lz ? "lizenziert" : "gekört"}</b>${H.lp ? ` und steht vorläufig im Hengstbuch I. Endgültig wird es mit bestandener ${esc(H.lp.name)} bis ${Math.floor(H.lp.bis / 4)} Jahre – bis dahin höchstens ${H.lp.max} Stuten im Jahr` : ""}. Die Eintragung kostet ${fmt(dhGeb(p).hb)}.` : `${esc(p.name)} ist leider <b>nicht ${lz ? "lizenziert" : "gekört"}</b>${GS.raus.length ? ` (Gesundheitsprüfung: ${GS.raus.join(", ")})` : schwer ? (welshSchecke(p) ? " (Verstoß gegen das Zuchtprogramm: Tobiano und Overo-Scheckung sind bei Welsh Ponys und Cobs nicht zugelassen)" : " (Verstoß gegen den Rassestandard)") : ` (nötig: Gesamtnote ${nn(lz ? DH.lizenzNote : H.note)}${lz ? "" : `, keine Note unter ${H.min || 5}`})`}. Er darf trotzdem decken, die Fohlen bekommen aber keine Papiere.`}</p>${GS.text}${a18GentestVermerk(p) ? `<p><small>Gentest im Pass:${a18GentestVermerk(p).replace(/^ · /, " ")}</small></p>` : ""}${!ok ? "<p>💡 Viele Züchter lassen einen nicht gekörten Hengst kastrieren – als Wallach ist er ruhiger und leichter zu verkaufen.</p>" : ""}`, { pferde: [p] });
   }
   function hengstLeistung(p, ortName, rz) {
     const H = HENGST[p.rasse], R = zbSlpNote(p, "station", "profi", rz), B = p.hb, ok = R.gesamt >= H.lp.note, nn = x => String(x).replace(".", ",");
@@ -13273,10 +13310,16 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     const koer = T.filter(t => t.art === "koerung"), lp = T.filter(t => t.art === "hlp" && !hengstSperre(p, null, t.pruef[0]).startsWith("Islandpferde") && !(t.pruef[0].fizo && p.rasse !== "isi"));
     const koerTeil = H && (H.sys === "koer" || H.sys === "lizenz") && !p.hb ? `<h4 style="margin:10px 0 4px">📋 ${H.sys === "lizenz" ? "Hengstlizenz" : "Körung"}${info("koer")}</h4>${koer.length ? `<ul class="tp-liste">${koer.map(zeile).join("")}</ul>` : `<p class="text"><small>Körungen gibt es im Herbst und Winter.</small></p>`}` : "";
     const lpTeil = H && H.lp && B.s === "vorl" ? `<h4 style="margin:10px 0 4px">🐎 ${esc(H.lp.name)}${info("hlp")}</h4>${lp.length ? `<ul class="tp-liste">${lp.map(zeile).join("")}</ul>` : `<p class="text"><small>Gerade ist kein Termin ausgeschrieben (${p.rasse === "isi" ? "Frühling und Sommer" : "Herbst und Winter"}).</small></p>`}` : "";
-    dialog(`<h3>🏅 Zuchtverband – ${esc(p.name)}</h3><p class="text" style="margin:0 0 6px"><b>${esc(V ? V.v : "")}</b><br>${hengstText(p)}</p>${B.noten ? `<p class="text"><small>Körung: ${["typ", "koerper", "korrekt", "schritt", "trab", "eindruck"].map(k => `${ZB_NOTEN_NAME[k]} ${B.noten[k]}`).join(" · ")} · Gesamt <b>${n(B.noten.gesamt)}</b>${B.lp ? ` · Leistungsprüfung ${n(B.lp)}` : ""}</small></p>` : ""}${koerTeil}${lpTeil}
+    const EHR = hengstEhren(p), ehrTeil = EHR.length ? `<h4 style="margin:10px 0 4px">🎖️ Titel${info("titel")}</h4>${EHR.map(x => `<div class="text" style="margin:4px 0"><b>${htAbzeichen(x.k)} ${esc(x.n)}</b>${x.hat ? " ✓ verliehen" : ""}${x.hat ? "" : `<ul style="margin:2px 0 4px 18px;padding:0">${x.b.map(y => `<li>${y[0] ? "✅" : "⬜"} ${esc(y[1])}</li>`).join("")}</ul>${x.ok ? `<button class="mini-knopf" data-hvtitel="${x.k}">Beantragen (${fmt(HT.geb)})</button>` : ""}`}</div>`).join("")}` : "";
+    dialog(`<h3>🏅 Zuchtverband – ${esc(p.name)}</h3><p class="text" style="margin:0 0 6px"><b>${esc(V ? V.v : "")}</b><br>${hengstText(p)}</p>${B.noten ? `<p class="text"><small>Körung: ${["typ", "koerper", "korrekt", "schritt", "trab", "eindruck"].map(k => `${ZB_NOTEN_NAME[k]} ${B.noten[k]}`).join(" · ")} · Gesamt <b>${n(B.noten.gesamt)}</b>${B.lp ? ` · Leistungsprüfung ${n(B.lp)}` : ""}</small></p>` : ""}${koerTeil}${lpTeil}${ehrTeil}
       ${alterJZ(p) >= ZUCHTALTER ? `<p class="text" style="margin-top:10px"><button class="mini-knopf" id="hvDeck">💞 Deckhengst für fremde Stuten …</button></p>` : ""}<p class="text"><small>Anmelden bis 2 Tage vorher. Am Prüfungstag ist ${esc(p.name)} außer Haus (Leistungsprüfung 2 Tage), das Ergebnis kommt per Brief.</small></p>`, [["Schließen", zurueck, "zweit"]], "turnier-dlg");
     const neu = () => hengstVerbandDialog(p, zurueck);
-    document.querySelectorAll("[data-hvinfo]").forEach(b => b.onclick = e => { e.preventDefault(); e.stopPropagation(); dialog(`<h3>ℹ️ ${b.dataset.hvinfo === "koer" ? "Körung" : "Leistungsprüfung"}</h3><p>${b.dataset.hvinfo === "koer" ? `Körgebühr ${fmt(dhGeb(p).koer)}: Die Kommission beurteilt den Hengst an der Hand und frei (Typ, Körperbau, Korrektheit des Gangs, Schritt, Trab, Gesamteindruck)${H && H.note ? `, gekört ab Gesamtnote ${n(H.note)}` : ""}. Mit Erfolg kommt die Eintragung ins Hengstbuch dazu (${fmt(dhGeb(p).hb)}). Jeder Deckhengst kostet außerdem ${fmt(DH.jahr)} Jahresgebühr. Nur gekörte Hengste geben Fohlen mit Papieren.` : `${esc(H.lp.name)} (${fmt(DH.hlp)} – Verbandsgebühr und Station): Eine Station prüft Rittigkeit, Gänge, Springen und Interieur (hier 2 Spieltage). Bestanden ab ${n(H.lp.note)} – dann gilt die Körung endgültig. Ohne sie bis ${Math.floor(H.lp.bis / 4)} Jahre wird der Hengst gestrichen.`}</p>`, [["OK", neu]]); });
+    document.querySelectorAll("[data-hvtitel]").forEach(b => b.onclick = () => { const x = hengstEhren(p).find(y => y.k === b.dataset.hvtitel); if (!x || !x.ok || x.hat) return;
+      if (!spiel.admin && geldFrei() < HT.geb) { dialog(`<h3>Zu wenig Geld</h3>${dispoHinweis()}<p>Gebühr: ${fmt(HT.geb)}.</p>`, [["OK", neu]]); return; }
+      buchen(-HT.geb, "Zuchtverband: " + x.n); p.hb.titel = p.hb.titel || {}; p.hb.titel[x.k] = spiel.tag; prot("Zuchtverband Auszeichnung", { p, o: x.n });
+      brief(V ? V.v : "Zuchtverband", `Titel: ${p.name}`, `wir freuen uns, {dir|Ihnen} mitteilen zu können: <b>${esc(p.name)}</b> trägt ab heute den Titel <b>${esc(x.n)}</b>. Das steht jetzt in seinen Papieren und macht ihn und seine Fohlen wertvoller.`, { pferde: [p] });
+      speichern(); zeigeTag(); neu(); });
+    document.querySelectorAll("[data-hvinfo]").forEach(b => b.onclick = e => { e.preventDefault(); e.stopPropagation(); if (b.dataset.hvinfo === "titel") { dialog(`<h3>ℹ️ Titel für Hengste</h3><p>Hengst-Titel gibt es nur für Leistung und Nachkommen: <b>Prämienhengst</b> (Körnote ab 7,5, keine Teilnote unter 6,0, Leistungsprüfung ab 7,5), <b>Leistungshengst</b> (endgültig im Hengstbuch I, Prüfung ab 7,5) und <b>Elitehengst</b> (mindestens ${HT.nkElite} Punkte durch Nachkommen). Bei Islandpferden, Norikern, Friesen und Oldenburgern gelten die Regeln ihrer Verbände. Ein Titel macht Hengst und Fohlen wertvoller.</p>`, [["OK", neu]]); return; } dialog(`<h3>ℹ️ ${b.dataset.hvinfo === "koer" ? "Körung" : "Leistungsprüfung"}</h3><p>${b.dataset.hvinfo === "koer" ? `Körgebühr ${fmt(dhGeb(p).koer)}: Die Kommission beurteilt den Hengst an der Hand und frei (Typ, Körperbau, Korrektheit des Gangs, Schritt, Trab, Gesamteindruck)${H && H.note ? `, gekört ab Gesamtnote ${n(H.note)}` : ""}. Mit Erfolg kommt die Eintragung ins Hengstbuch dazu (${fmt(dhGeb(p).hb)}). Jeder Deckhengst kostet außerdem ${fmt(DH.jahr)} Jahresgebühr. Nur gekörte Hengste geben Fohlen mit Papieren.` : `${esc(H.lp.name)} (${fmt(DH.hlp)} – Verbandsgebühr und Station): Eine Station prüft Rittigkeit, Gänge, Springen und Interieur (hier 2 Spieltage). Bestanden ab ${n(H.lp.note)} – dann gilt die Körung endgültig. Ohne sie bis ${Math.floor(H.lp.bis / 4)} Jahre wird der Hengst gestrichen.`}</p>`, [["OK", neu]]); });
     document.querySelectorAll("[data-hvnenn]").forEach(b => b.onclick = () => { const t = spiel.turniere.find(x => x.id === b.dataset.hvnenn), P = t && t.pruef[0]; if (!t || hengstSperre(p, t, P)) return; const k = hengstKosten(P.zb, p);
       if (!spiel.admin && geldFrei() < k) { dialog(`<h3>Zu wenig Geld</h3>${dispoHinweis()}<p>Gebühr: ${fmt(k)}.</p>`, [["OK", neu]]); return; }
       t.nennung.push({ pid: p.id, prid: P.id, geld: k, reiter: "profi" }); buchen(-k, "Zuchtverband: " + P.name); prot("Zuchtverband angemeldet", { p, o: P.name }); speichern(); zeigeTag(); neu(); });
@@ -18753,7 +18796,7 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     /* 26.11.2026: Westfale – Nordrhein-Westfälisches Landgestüt Warendorf (gegründet 1826, rund 80 Zuchthengste; landgestuet.nrw.de); Connemara – kein bekanntes Privatgestüt belegt, darum die Zuchtgesellschaft selbst (Clifden, Sitz des Zuchtbuchs und der Connemara Pony Sales); Welsh Pony – Welsh-Gestüt Leybucht, Norden (Welsh A, 7 Hengste 2026); Gestüt-Einträge siehe GESTUETE (warendorf, leybucht, cpbs) – Fragen 61–63 in OFFENE-FRAGEN.md */
     westfale: ["Nordrhein-Westfälisches Landgestüt Warendorf", "Warendorf (Nordrhein-Westfalen)"], connemara: ["Connemara Pony National Stud", "Renvyle, Co. Galway (Irland)"], welshpony: ["Menai Stud", "West-Wales (Wales)"], welsha: ["Welsh-Gestüt Leybucht", "Norden (Niedersachsen)"],
     /* 17.11.2026 abends (Dome: schwach belegte rein, für die vier offenen Rassen weitersuchen) – Belastbarkeit schwach bis mittel, Quellen in der Recherche-Datei */
-    tinker: ["Herzogin-Luise-Gestüt", "Heiligenberg (Baden-Württemberg)"], lewitzer: ["Gestüt Lindenhof", "Mörsdorf (Rheinland-Pfalz)"], barockpinto: ["Gestüt Vrijepaarden", "Tzummarum, Friesland (Niederlande)"], marwari: ["Marwari-Zucht Dundlod", "Dundlod, Rajasthan (Indien)"],
+    tinker: ["Herzogin-Luise-Gestüt", "Heiligenberg (Baden-Württemberg)"], lewitzer: ["Landgestüt Redefin", "Redefin (Mecklenburg-Vorpommern)"], barockpinto: ["Gestüt Vrijepaarden", "Tzummarum, Friesland (Niederlande)"], marwari: ["Marwari-Zucht Dundlod", "Dundlod, Rajasthan (Indien)"],
     tekke: ["Internationaler Achal-Tekkiner-Pferdekomplex", "Arkadag bei Aşgabat (Turkmenistan)"], clydesdale: ["Warm Springs Ranch (Budweiser Clydesdales)", "Boonville, Missouri (USA)"], fell: ["Townend Fell Pony Stud", "Haltcliffe, Cumbria (England)"], dales: ["Moffinber Stud", "Ingleton, North Yorkshire (England)"] };
   Object.entries(GESTUET_ECHT).forEach(([r, [n]]) => { GESTUET_NAMEN[r] = n; });
   const gestuetOrt = r => (GESTUET_ECHT[r] || [])[1] || "";
@@ -20432,8 +20475,13 @@ const TAUB_ZWEI = .5;   // zwei Splash-Allele: ein vollständig weißes Pferd mi
     schwaiganger: { n: "Haupt- und Landgestüt Schwaiganger", ort: "Ohlstadt (Bayern)", land: "DE", pos: [47.6565, 11.2531], typ: "staatlich", r: ["noriker", "haflinger"], h: { noriker: 4, haflinger: 2 }, st: { noriker: 10, haflinger: 4 }, taxe: [140, 200], gb: 12, gbF: 14, gbS: 30, arten: ["natur", "besamung"], vk: ["hof"], on: false,
       t: [], ein: 0, fue: null, ank: true, geb: "tanzhaus,stall,halle,weide",
       txt: "Staatsgut der Bayerischen Staatsgüter: vor allem Warmblut (Deutsches Sportpferd, rund 37 Hengste – im Spiel noch keine eigene Rasse), dazu Süddeutsches Kaltblut (Noriker) und zwei Edelbluthaflinger. Die Hengste werden im Frühjahr auf Deckstationen verteilt; im September ist Gestütsschau auf dem Paradeplatz.", anl: "Rund 850 ha, Haupthaus und Tanzhaus aus dem 18. Jahrhundert.", g: ["Kaltbluthengste", "Stutenzahl"] },
-    lindenhof: { n: "Gestüt Lindenhof", ort: "Mörsdorf (Rheinland-Pfalz)", land: "DE", pos: [50.1029, 7.3443], typ: "privat", r: ["lewitzer"], h: { lewitzer: 1 }, st: { lewitzer: 6 }, taxe: [250, 300], gb: 10, arten: ["natur"], vk: ["hof"], on: true,
-      t: [], ein: 0, fue: null, ank: false, geb: "stall,weide", txt: "Privatgestüt mit Lewitzern, Araber-Halbblütern und Pintos.", anl: "Im Hunsrück.", g: ["Hengstzahl", "Stutenzahl", "Decktaxe", "Gastbox"] },
+    /* 27.11.2026 (Dome „mach das“, VORSCHLAG-GESTUETE-HERKUNFT): Lewitzer – Landgestüt Redefin (Herkunftsland MV) statt Gestüt Lindenhof (nur Verkaufsanzeigen); Welsh B – Gestüt Ekholt (Reitponystation Büscherhoff) als deutsches Gestüt. Hengstzahlen aus Hengstkatalog 2024 bzw. Hengstliste der Station, Decktaxen nicht belegt. */
+    redefin: { n: "Landgestüt Redefin", ort: "Redefin (Mecklenburg-Vorpommern)", land: "DE", pos: [53.3485, 11.2008], typ: "staatlich", r: ["lewitzer"], h: { lewitzer: 3 }, st: {}, taxe: null, gb: null, arten: [], vk: ["hof"], on: false,
+      t: [], ein: 0, fue: null, ank: false, geb: "stall,weide",
+      txt: "1812 gegründet und seit 1993 im Eigentum des Landes: Das Landgestüt stellt 64 Hengste auf acht Stationen. Seit 2021 fördert es den Lewitzer und hat selbst einen Lewitzer-Hengst (Sternenprinz, geboren 2021); im Hengstkatalog 2024 stehen mehrere Lewitzer, dazu Haflinger, Kaltblüter und Reitponys.", anl: "Hengststationen des Landes Mecklenburg-Vorpommern.", g: ["Decktaxe", "Gastbox", "Stutenzahl"] },
+    ekholt: { n: "Gestüt Ekholt (Reitponystation Büscherhoff)", ort: "Seeth-Ekholt (Schleswig-Holstein)", land: "DE", pos: [53.7456, 9.7292], typ: "privat", r: ["welshpony"], h: { welshpony: 7 }, st: {}, taxe: null, gb: null, arten: [], vk: ["hof"], on: false,
+      t: [], ein: 0, fue: null, ank: false, geb: "stall,weide",
+      txt: "Reitponystation im Kreis Pinneberg mit sieben Welsh-B-Hengsten; Ankumshof Kensington war 2022 Bundessieger der Sektion B auf der FN-Bundeshengstschau in Berlin. Die Hengste decken mit Frischsamen oder per Besamung.", anl: "Reitponystation Büscherhoff.", g: ["Decktaxe", "Gastbox", "Stutenzahl", "Deckarten"] },
     vrijepaarden: { n: "Gestüt Vrijepaarden", ort: "Tzummarum, Friesland (Niederlande)", land: "NL", pos: [53.2371, 5.5465], typ: "privat", r: ["barockpinto"], h: { barockpinto: 1 }, st: { barockpinto: 6 }, taxe: [400, 700], gb: 10, arten: ["natur"], vk: ["hof"], on: true,
       t: [], ein: 0, fue: null, ank: false, geb: "stall,weide", txt: "Zucht von Barock Pintos, Friesen und Quarter Horses. Die Rasse entstand in den 1950ern in den Niederlanden aus Friesenstuten und alten Gelderländer Schecken.", anl: "In Friesland.", g: ["Hengstzahl", "Stutenzahl", "Decktaxe", "Gastbox"] },
     moffinber: { n: "Moffinber Stud", ort: "Ingleton, North Yorkshire (England)", land: "UK", pos: [54.1539, -2.4679], typ: "privat", r: ["dales"], h: { dales: 1 }, st: { dales: 4 }, taxe: [700, 900], gb: null, arten: ["tief"], vk: ["hof"], on: false,
@@ -23891,17 +23939,20 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     const n = f => da.filter(f).length, w1 = da.some(b => boxenStufe(b) === 1), kraft = da.filter(b => { try { return kraftNoetig(b.pferd, b); } catch (e) { return false; } });
     const z = (t, ok, alle, attr) => `<button class="knopf${ok >= alle ? " zweit" : ""}" data-og="${attr}" style="width:auto;padding:7px 12px"${!alle ? " disabled" : ""}>${t} ${ok}/${alle}</button>`;
     if (offenG() > 1) tippMerken("offenGruppe");
+    const abcL = da.filter(b => fohlenZiel(b.pferd, b) === b.pferd && ((b.pferd.fohlenABC || 0) < FOHLEN_ABC_MAX || b.pferd.abcTag === spiel.tag)), abcOk = abcL.filter(b => b.pferd.abcTag === spiel.tag).length;
     return `<div class="pn-kasten og-karte"><b>🐎 Offenstall${offenG() > 1 ? ` · Gruppe „${esc(offenGruppenName(k))}“` : ""}</b> <small>${P.length} von ${L.length} Plätzen belegt${P.length > 1 ? ` · ${P.filter(b => b !== box).map(b => esc(b.pferd.name)).slice(0, 6).join(", ")}${P.length > 7 ? " …" : ""}` : ""}</small>
-      <div class="brief-aktion" style="flex-wrap:wrap;gap:6px">${z("🌾 Heu für die Gruppe", n(b => b.krippeVoll), da.length, "heu")}${kraft.length ? z("🥣 Kraftfutter", kraft.filter(b => b.kraftVoll).length, kraft.length, "kraft") : ""}${z("🧹 Misten", n(b => !b.mistig), da.length, "mist")}${w1 ? z("💧 Wasser", n(b => b.wasserTag === spiel.tag), da.length, "wasser") : ""}</div>
+      <div class="brief-aktion" style="flex-wrap:wrap;gap:6px">${z("🌾 Heu für die Gruppe", n(b => b.krippeVoll), da.length, "heu")}${kraft.length ? z("🥣 Kraftfutter", kraft.filter(b => b.kraftVoll).length, kraft.length, "kraft") : ""}${z("🧹 Misten", n(b => !b.mistig), da.length, "mist")}${w1 ? z("💧 Wasser", n(b => b.wasserTag === spiel.tag), da.length, "wasser") : ""}${abcL.length ? z("🍼 Fohlen-ABC: alle nacheinander", abcOk, abcL.length, "abc") : ""}</div>
       <small>Im Offenstall versorgst du die ganze Gruppe auf einmal (Heuraufe, Liegehalle, Tränke). Putzen, Hufe und Tierarzt bleiben je Pferd.</small></div>`;
   }
   function offenGruppeVersorgen(was) {
-    const box = B(); if (!box || !box.offen) return; const L = offenGruppeBoxen(box.og || 0).filter(b => b.pferd && !b.tot && !b.pferd.weide && !b.pferd.klinik && !b.pferd.turnier); let fehlt = 0, n = 0;
+    const box = B(); if (!box || !box.offen) return; const L = offenGruppeBoxen(box.og || 0).filter(b => b.pferd && !b.tot && !b.pferd.weide && !b.pferd.klinik && !b.pferd.turnier); let fehlt = 0, n = 0; const abcMeld = [];
     L.forEach(b => { if (was === "heu" && !b.krippeVoll) { if (fuetternAusLager(b, "du", "rau")) { b.krippeVoll = true; n++; } else fehlt++; }
       if (was === "kraft" && !b.kraftVoll) { let k = false; try { k = kraftNoetig(b.pferd, b); } catch (e) {} if (k) { fuetternAusLager(b, "du", "kraft"); b.kraftVoll = true; n++; } }
       if (was === "mist" && b.mistig) { b.mistig = false; b.mistStufe = 0; n++; }
+      if (was === "abc" && fohlenZiel(b.pferd, b) === b.pferd && b.pferd.abcTag !== spiel.tag && (b.pferd.fohlenABC || 0) < FOHLEN_ABC_MAX && !(b.pferd.gebTag != null && spiel.tag - b.pferd.gebTag < Math.max(1, Math.round(tpj() / 3)))) { abcMeld.push(fohlenABC(b.pferd)); n++; }
       if (was === "wasser" && boxenStufe(b) === 1 && b.wasserTag !== spiel.tag) { b.wasserTag = spiel.tag; n++; } });
     if (n) { if (was === "heu" || was === "kraft") spielerLernt("futter"); if (was === "mist") { spielerLernt("klima"); prot("Misten selbst", { p: box.pferd }); } }
+    if (abcMeld.length) dialog(`<h3>🍼 Fohlen-ABC für die Gruppe</h3>${abcMeld.map(t => `<p>${t}</p>`).join("")}`);
     if (fehlt) dialog(`<h3>🌾 Kein Heu mehr</h3><p>Für ${fehlt} ${fehlt === 1 ? "Pferd" : "Pferde"} der Gruppe reicht das Heu im Lager nicht. Nachkaufen: Hofverwaltung → Hof → Futterkammer.</p>`);
     speichern(); zeigeTag(); try { zeigeAkte(); } catch (e) {}
   }
@@ -25881,6 +25932,7 @@ ${e.blutTag != null ? `<small>🩸 Der Bluttest wird nachgereicht – ${e.blutTa
     eigeneErfahrung: ["Deine Erfahrung", "Auch du lernst: Was du selbst machst, darin wirst du erfahrener.", "", null, "geld", "alle"],
     azubiMitlaufen: ["Mitlaufen", "Er lernt die Arbeit seines Ausbilders, fehlt dann aber im Stall. Das gilt ab morgen.", "", null, "geld", "fort"],
     vetLetzte: ["Letzte Warnung", "Letzte Warnung vom Veterinäramt: Beim nächsten Vorfall verlierst du alle Pferde.", "", "#hmHof", "veterinaer", "alle", "rot"],
+    offenLehrer: ["Lernen in der Gruppe", "Eine ruhige Tante oder ein Onkel in der Gruppe hilft den Fohlen beim Lernen – Pflicht ist sie nicht. Auch ein Fohlen, das das ABC schon kann, wirkt als Vorbild.", "Das Fohlen-ABC geht dann etwa ein Fünftel schneller.", "[data-og]", null, "fort"],
     offenGruppe: ["Offenstall in Gruppen", "Im großen Aufzucht-Offenstall leben die Jungpferde in Gruppen (z. B. Absetzer, Jährlinge, Junghengste). Heu, Misten und Wasser machst du für die ganze Gruppe auf einmal.", "Wer älter wird, zieht zu Beginn der Jahreszeit von selbst in seine neue Gruppe – halte dort einen Platz frei.", "[data-og]", null, "fort"],
     weihnachtsgeld: ["Weihnachtsgeld", "Jeden Winter fragt dich die Hofverwaltung nach Weihnachtsgeld für deine Mitarbeiter. Wer lange dabei ist, selten krank war und für andere eingesprungen ist, bekommt mehr vorgeschlagen.", "Gezahltes Weihnachtsgeld macht zufrieden – gar keins ärgert, besonders langjährige Mitarbeiter.", null, "geld", "alle"],
     erloesen: ["Erlösen", "Der Tierarzt kann ein Pferd erlösen, das nicht mehr gesund wird. Das ist keine Vernachlässigung.", "", null, "krank", "alle"],

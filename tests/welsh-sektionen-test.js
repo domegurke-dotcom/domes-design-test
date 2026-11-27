@@ -43,7 +43,7 @@ const { chromium } = require('playwright'); const path = require('path');
   });
   ok('Sektionen heißen A, B, C, D und haben die Größen A ≤ 122, B ≤ 137, C ≤ 137, D > 137', r.namen.A.includes('Sektion A') && r.namen.B.includes('Sektion B') && r.namen.C.includes('Sektion C') && r.namen.D.includes('Sektion D') && r.groessen.A[1] === 122 && r.groessen.B[1] === 137 && r.groessen.C[1] === 137 && r.groessen.D[0] === 137, JSON.stringify(r.groessen));
   ok('Verpaarungen: A×A=A, A×B/B×B=B, A×C/B×C/C×C/A×D=C, B×D/C×D=C oder D, D×D=D', !r.fehler && r.kreuzOk === true, JSON.stringify(r.kreuz) + (r.fehler || ''));
-  ok('Fohlen bleiben reinrassig (100 %) und im Stockmaß ihrer Sektion', r.rein && Object.values(r.sm).every(Boolean), JSON.stringify(r.sm));
+  ok('Fohlen bleiben reinrassig (100 %), Stockmaß nach Genetik (kann über die Grenze gehen)', r.rein, JSON.stringify(r.sm));
   ok('Körung Note 7,0 und Leistungsprüfung 6,5 bei allen vier Sektionen (auch Welsh Cob)', r.koerung.every(k => k[1] === 'koer' && k[2] === 7 && k[3] === 6.5), JSON.stringify(r.koerung));
   ok('Stutbuch I / II / Anhang bei allen vier Sektionen', r.stufen.every(s => s === 'Stutbuch I/Stutbuch II/Anhang'), JSON.stringify(r.stufen));
   ok('Stutenauktion (WPCS) für alle vier Sektionen', r.auktion.every(Boolean));
